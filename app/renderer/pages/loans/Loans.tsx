@@ -10,7 +10,14 @@ import Card from "../../components/ui/Card";
 import EmptyState from "../../components/ui/EmptyState";
 
 import { getCustomers } from "../../store/customerStore";
-import { addLoan, getLoans } from "../../store/loanStore";
+
+import { addLoan } from "../../store/loanStore";
+
+import { getLoans } from "../../store/loanStore";
+
+import { getSession } from "../../store/authStore";
+
+import { createAuditLog } from "../../store/auditStore";
 
 export default function Loans() {
   const [loans, setLoans] = useState<Loan[]>(getLoans());
@@ -77,7 +84,6 @@ export default function Loans() {
 
       collectionAmount: loan.collectionAmount,
 
-      // New Balance Tracking
       totalCollectedAmount: 0,
 
       outstandingAmount: loan.approvedLoanAmount,
@@ -94,6 +100,20 @@ export default function Loans() {
     };
 
     addLoan(newLoan);
+
+    const session = getSession();
+
+    createAuditLog({
+      action: "CREATE",
+
+      module: "LOAN",
+
+      description: `Loan ${newLoan.finoraLoanId} created for customer ${newLoan.customerId}`,
+
+      performedBy: session?.username ?? "SYSTEM",
+
+      userRole: session?.role ?? "UNKNOWN",
+    });
 
     refresh();
   }
