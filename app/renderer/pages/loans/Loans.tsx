@@ -23,12 +23,17 @@ export default function Loans() {
 
   function saveLoan(loan: {
     customerId: string;
+
     oldLoanNumber: string;
+
     lockerNumber: string;
+
     bagNumber: string;
 
     approvedLoanAmount: number;
+
     receivedAmount: number;
+
     deductionAmount: number;
 
     interestType: "Percentage" | "Rupees" | "Paisa" | "Fixed";
@@ -40,6 +45,7 @@ export default function Loans() {
     duration: number;
 
     calculatedCollectionAmount: number;
+
     collectionAmount: number;
 
     startDate: string;
@@ -71,6 +77,13 @@ export default function Loans() {
 
       collectionAmount: loan.collectionAmount,
 
+      // New Balance Tracking
+      totalCollectedAmount: 0,
+
+      outstandingAmount: loan.approvedLoanAmount,
+
+      lastCollectionDate: null,
+
       lockerNumber: loan.lockerNumber,
 
       bagNumber: loan.bagNumber,
@@ -101,8 +114,11 @@ export default function Loans() {
       <div
         style={{
           display: "grid",
+
           gridTemplateColumns: "repeat(auto-fit,minmax(220px,1fr))",
+
           gap: 16,
+
           marginBottom: 24,
         }}
       >

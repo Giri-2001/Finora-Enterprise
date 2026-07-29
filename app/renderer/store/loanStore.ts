@@ -52,6 +52,39 @@ export function updateLoan(updatedLoan: Loan): void {
   saveLoans(loans);
 }
 
+export function updateLoanAfterCollection(
+  loanId: number,
+  collectionAmount: number,
+  collectionDate: string,
+): void {
+  loans = loans.map((loan) => {
+    if (loan.id !== loanId) {
+      return loan;
+    }
+
+    const totalCollectedAmount = loan.totalCollectedAmount + collectionAmount;
+
+    const outstandingAmount = Math.max(
+      loan.approvedLoanAmount - totalCollectedAmount,
+      0,
+    );
+
+    return {
+      ...loan,
+
+      totalCollectedAmount,
+
+      outstandingAmount,
+
+      lastCollectionDate: collectionDate,
+
+      status: outstandingAmount === 0 ? "Closed" : "Active",
+    };
+  });
+
+  saveLoans(loans);
+}
+
 export function deleteLoan(id: number): void {
   loans = loans.filter((loan) => loan.id !== id);
 
