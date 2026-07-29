@@ -7,12 +7,15 @@ type AppShellProps = {
 
   onNavigate: (page: Page) => void;
 
+  onLogout: () => void;
+
   children: ReactNode;
 };
 
 export default function AppShell({
   currentPage,
   onNavigate,
+  onLogout,
   children,
 }: AppShellProps) {
   return (
@@ -70,6 +73,29 @@ export default function AppShell({
 
           <button type="button" onClick={() => onNavigate("reports")}>
             Reports
+          </button>
+
+          <hr
+            style={{
+              width: "100%",
+              borderColor: "#334155",
+              marginTop: 20,
+            }}
+          />
+
+          <button
+            type="button"
+            onClick={onLogout}
+            style={{
+              background: "#dc2626",
+              color: "#ffffff",
+              border: "none",
+              padding: "8px",
+              borderRadius: 6,
+              cursor: "pointer",
+            }}
+          >
+            Logout
           </button>
         </nav>
       </aside>
