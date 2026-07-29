@@ -4,6 +4,9 @@ import ReceiptButton from "../receipt/ReceiptButton";
 
 import { printReceipt } from "../../utils/receiptGenerator";
 
+import { getCustomers } from "../../store/customerStore";
+import { getLoanById } from "../../store/loanStore";
+
 type CollectionTableProps = {
   collections: Collection[];
 
@@ -14,6 +17,8 @@ export default function CollectionTable({
   collections,
   onDelete,
 }: CollectionTableProps) {
+  const customers = getCustomers();
+
   if (collections.length === 0) {
     return (
       <div
@@ -60,68 +65,91 @@ export default function CollectionTable({
       </thead>
 
       <tbody>
-        {collections.map((collection) => (
-          <tr key={collection.id}>
-            <td style={cellStyle}>{collection.receiptNumber}</td>
+        {collections.map((collection) => {
+          const customer = customers.find(
+            (item) => item.customerId === collection.customerId,
+          );
 
-            <td style={cellStyle}>{collection.loanId}</td>
+          const loan = getLoanById(Number(collection.loanId));
 
-            <td style={cellStyle}>{collection.customerId}</td>
+          return (
+            <tr key={collection.id}>
+              <td style={cellStyle}>{collection.receiptNumber}</td>
 
-            <td style={cellStyle}>{collection.collectionDate}</td>
+              <td style={cellStyle}>{collection.loanId}</td>
 
-            <td style={cellStyle}>{collection.collectionType}</td>
+              <td style={cellStyle}>{collection.customerId}</td>
 
-            <td style={cellStyle}>
-              ₹{collection.totalAmount.toLocaleString("en-IN")}
-            </td>
+              <td style={cellStyle}>{collection.collectionDate}</td>
 
-            <td style={cellStyle}>{collection.paymentMode}</td>
+              <td style={cellStyle}>{collection.collectionType}</td>
 
-            <td style={cellStyle}>{collection.status}</td>
+              <td style={cellStyle}>
+                ₹{collection.totalAmount.toLocaleString("en-IN")}
+              </td>
 
-            <td style={cellStyle}>
-              <div
-                style={{
-                  display: "flex",
-                  gap: 8,
-                }}
-              >
-                <ReceiptButton
-                  onClick={() =>
-                    printReceipt(
-                      collection,
-                      collection.customerId,
-                      collection.loanId,
-                    )
-                  }
-                />
+              <td style={cellStyle}>{collection.paymentMode}</td>
 
-                {onDelete && (
-                  <button
-                    type="button"
-                    onClick={() => onDelete(collection.id)}
-                    style={{
-                      padding: "6px 12px",
+              <td style={cellStyle}>{collection.status}</td>
 
-                      borderRadius: 6,
+              <td style={cellStyle}>
+                <div
+                  style={{
+                    display: "flex",
+                    gap: 8,
+                    flexWrap: "wrap",
+                  }}
+                >
+                  <ReceiptButton
+                    onClick={() =>
+                      printReceipt(
+                        collection,
 
-                      border: "none",
+                        {
+                          name: customer?.name ?? collection.customerId,
 
-                      background: "#dc2626",
+                          phone: customer?.phone,
+                        },
 
-                      color: "#ffffff",
+                        loan?.finoraLoanId ?? collection.loanId,
 
-                      cursor: "pointer",
-                    }}
-                  >
-                    Delete
-                  </button>
-                )}
-              </div>
-            </td>
-          </tr>
-        ))}
+                        {
+                          approvedAmount: loan?.approvedLoanAmount ?? 0,
+
+                          outstandingAmount: loan?.outstandingAmount ?? 0,
+
+                          totalPaid: loan?.totalCollectedAmount ?? 0,
+                        },
+                      )
+                    }
+                  />
+
+                  {onDelete && (
+                    <button
+                      type="button"
+                      onClick={() => onDelete(collection.id)}
+                      style={{
+                        padding: "6px 12px",
+
+                        borderRadius: 6,
+
+                        border: "none",
+
+                        background: "#dc2626",
+
+                        color: "#ffffff",
+
+                        cursor: "pointer",
+                      }}
+                    >
+                      Delete
+                    </button>
+                  )}
+                </div>
+              </td>
+            </tr>
+          );
+        })}
       </tbody>
     </table>
   );

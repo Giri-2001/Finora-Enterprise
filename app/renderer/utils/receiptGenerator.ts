@@ -1,9 +1,27 @@
 import type { Collection } from "../components/collections/types";
 
+type ReceiptLoanDetails = {
+  approvedAmount: number;
+
+  outstandingAmount: number;
+
+  totalPaid: number;
+};
+
+type ReceiptCustomerDetails = {
+  name: string;
+
+  phone?: string;
+};
+
 export function generateReceiptHTML(
   collection: Collection,
-  customerName: string,
+
+  customer: ReceiptCustomerDetails,
+
   loanNumber: string,
+
+  loanDetails: ReceiptLoanDetails,
 ): string {
   return `
   <html>
@@ -20,33 +38,59 @@ export function generateReceiptHTML(
         body {
           font-family: Arial, sans-serif;
           padding: 30px;
+          background: #ffffff;
         }
 
 
         .receipt {
-          max-width: 500px;
+
+          max-width: 550px;
+
           margin: auto;
+
           border: 1px solid #333;
-          padding: 25px;
+
+          padding: 30px;
+
         }
 
 
         h1,
         h3 {
+
           text-align: center;
+
         }
 
 
         .line {
+
           border-top: 1px solid #333;
+
           margin: 20px 0;
+
+        }
+
+
+        .row {
+
+          display: flex;
+
+          justify-content: space-between;
+
+          margin: 8px 0;
+
         }
 
 
         .footer {
-          margin-top: 50px;
+
+          margin-top: 60px;
+
           display: flex;
+
           justify-content: space-between;
+
         }
 
       </style>
@@ -55,6 +99,7 @@ export function generateReceiptHTML(
 
 
     <body>
+
 
       <div class="receipt">
 
@@ -72,55 +117,134 @@ export function generateReceiptHTML(
         <div class="line"></div>
 
 
-        <p>
-          <b>Receipt No:</b>
-          ${collection.receiptNumber}
-        </p>
+        <div class="row">
+          <b>Receipt No</b>
+          <span>${collection.receiptNumber}</span>
+        </div>
 
 
-        <p>
-          <b>Date:</b>
-          ${collection.collectionDate}
-        </p>
-
-
-        <p>
-          <b>Customer:</b>
-          ${customerName}
-        </p>
-
-
-        <p>
-          <b>Loan ID:</b>
-          ${loanNumber}
-        </p>
+        <div class="row">
+          <b>Date</b>
+          <span>${collection.collectionDate}</span>
+        </div>
 
 
         <div class="line"></div>
 
 
-        <p>
-          <b>Payment Type:</b>
-          ${collection.collectionType}
-        </p>
+        <h3>
+          Customer Details
+        </h3>
 
 
-        <p>
-          <b>Payment Mode:</b>
-          ${collection.paymentMode}
-        </p>
+        <div class="row">
+          <b>Name</b>
+          <span>${customer.name}</span>
+        </div>
 
 
-        <p>
-          <b>Amount Paid:</b>
-          ₹${collection.totalAmount.toLocaleString("en-IN")}
-        </p>
+        <div class="row">
+          <b>Phone</b>
+          <span>${customer.phone ?? "-"}</span>
+        </div>
 
 
-        <p>
-          <b>Collected By:</b>
-          ${collection.collectedBy}
-        </p>
+        <div class="row">
+          <b>Loan Number</b>
+          <span>${loanNumber}</span>
+        </div>
+
+
+        <div class="line"></div>
+
+
+        <h3>
+          Loan Summary
+        </h3>
+
+
+        <div class="row">
+          <b>Approved Amount</b>
+
+          <span>
+            ₹${loanDetails.approvedAmount.toLocaleString("en-IN")}
+          </span>
+
+        </div>
+
+
+        <div class="row">
+
+          <b>Total Paid</b>
+
+          <span>
+            ₹${loanDetails.totalPaid.toLocaleString("en-IN")}
+          </span>
+
+        </div>
+
+
+        <div class="row">
+
+          <b>Outstanding</b>
+
+          <span>
+            ₹${loanDetails.outstandingAmount.toLocaleString("en-IN")}
+          </span>
+
+        </div>
+
+
+        <div class="line"></div>
+
+
+        <h3>
+          Payment Details
+        </h3>
+
+
+        <div class="row">
+
+          <b>Payment Type</b>
+
+          <span>
+            ${collection.collectionType}
+          </span>
+
+        </div>
+
+
+        <div class="row">
+
+          <b>Payment Mode</b>
+
+          <span>
+            ${collection.paymentMode}
+          </span>
+
+        </div>
+
+
+        <div class="row">
+
+          <b>Amount Paid Today</b>
+
+          <span>
+            ₹${collection.totalAmount.toLocaleString("en-IN")}
+          </span>
+
+        </div>
+
+
+        <div class="row">
+
+          <b>Collected By</b>
+
+          <span>
+            ${collection.collectedBy}
+          </span>
+
+        </div>
 
 
         <div class="footer">
@@ -139,6 +263,7 @@ export function generateReceiptHTML(
 
       </div>
 
+
     </body>
 
   </html>
@@ -147,8 +272,12 @@ export function generateReceiptHTML(
 
 export function printReceipt(
   collection: Collection,
-  customerName: string,
+
+  customer: ReceiptCustomerDetails,
+
   loanNumber: string,
+
+  loanDetails: ReceiptLoanDetails,
 ): void {
   const windowRef = window.open("", "_blank", "width=700,height=800");
 
@@ -157,7 +286,7 @@ export function printReceipt(
   }
 
   windowRef.document.write(
-    generateReceiptHTML(collection, customerName, loanNumber),
+    generateReceiptHTML(collection, customer, loanNumber, loanDetails),
   );
 
   windowRef.document.close();
