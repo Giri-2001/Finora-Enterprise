@@ -1,10 +1,16 @@
 import Card from "../../components/ui/Card";
 
+import ExportButtons from "../../components/reports/ExportButtons";
+
 import {
   getCollectionReport,
   getCustomerReport,
   getLoanReport,
 } from "../../store/reportStore";
+
+import { exportReportToPDF } from "../../utils/pdfExport";
+
+import { exportReportToExcel } from "../../utils/excelExport";
 
 export default function Reports() {
   const loanReports = getLoanReport();
@@ -28,6 +34,35 @@ export default function Reports() {
       <h1>Reports</h1>
 
       <p>Analyze loans, collections and customer performance.</p>
+
+      <Card title="Export Reports">
+        <ExportButtons
+          onExportPDF={() =>
+            exportReportToPDF("FINORA Loan Report", loanReports)
+          }
+          onExportExcel={() =>
+            exportReportToExcel("FINORA_Loan_Report", loanReports)
+          }
+        />
+
+        <ExportButtons
+          onExportPDF={() =>
+            exportReportToPDF("FINORA Collection Report", collectionReports)
+          }
+          onExportExcel={() =>
+            exportReportToExcel("FINORA_Collection_Report", collectionReports)
+          }
+        />
+
+        <ExportButtons
+          onExportPDF={() =>
+            exportReportToPDF("FINORA Customer Report", customerReports)
+          }
+          onExportExcel={() =>
+            exportReportToExcel("FINORA_Customer_Report", customerReports)
+          }
+        />
+      </Card>
 
       <div
         style={{
