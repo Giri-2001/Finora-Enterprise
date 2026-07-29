@@ -61,7 +61,12 @@ export default function App() {
   }
 
   return (
-    <AppShell currentPage={page} onNavigate={setPage} onLogout={handleLogout}>
+    <AppShell
+      currentPage={page}
+      onNavigate={setPage}
+      onLogout={handleLogout}
+      userRole={session.role}
+    >
       {currentPage}
     </AppShell>
   );

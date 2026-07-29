@@ -1,5 +1,9 @@
 import type { ReactNode } from "react";
 
+import type { UserRole } from "./auth/types";
+
+import { hasPermission } from "../utils/permissions";
+
 type Page = "dashboard" | "customers" | "loans" | "collections" | "reports";
 
 type AppShellProps = {
@@ -9,6 +13,8 @@ type AppShellProps = {
 
   onLogout: () => void;
 
+  userRole: UserRole;
+
   children: ReactNode;
 };
 
@@ -16,6 +22,7 @@ export default function AppShell({
   currentPage,
   onNavigate,
   onLogout,
+  userRole,
   children,
 }: AppShellProps) {
   return (
@@ -39,13 +46,16 @@ export default function AppShell({
           borderRight: "1px solid #1f2937",
         }}
       >
-        <h2
+        <h2>FINORA</h2>
+
+        <p
           style={{
-            margin: 0,
+            fontSize: 12,
+            opacity: 0.7,
           }}
         >
-          FINORA
-        </h2>
+          {userRole}
+        </p>
 
         <nav
           style={{
@@ -59,21 +69,29 @@ export default function AppShell({
             Dashboard
           </button>
 
-          <button type="button" onClick={() => onNavigate("customers")}>
-            Customers
-          </button>
+          {hasPermission(userRole, "CUSTOMERS_VIEW") && (
+            <button type="button" onClick={() => onNavigate("customers")}>
+              Customers
+            </button>
+          )}
 
-          <button type="button" onClick={() => onNavigate("loans")}>
-            Loans
-          </button>
+          {hasPermission(userRole, "LOANS_VIEW") && (
+            <button type="button" onClick={() => onNavigate("loans")}>
+              Loans
+            </button>
+          )}
 
-          <button type="button" onClick={() => onNavigate("collections")}>
-            Collections
-          </button>
+          {hasPermission(userRole, "COLLECTIONS_VIEW") && (
+            <button type="button" onClick={() => onNavigate("collections")}>
+              Collections
+            </button>
+          )}
 
-          <button type="button" onClick={() => onNavigate("reports")}>
-            Reports
-          </button>
+          {hasPermission(userRole, "REPORTS_VIEW") && (
+            <button type="button" onClick={() => onNavigate("reports")}>
+              Reports
+            </button>
+          )}
 
           <hr
             style={{
