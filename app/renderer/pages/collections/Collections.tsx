@@ -18,6 +18,10 @@ import {
 
 import { getLoans, updateLoanAfterCollection } from "../../store/loanStore";
 
+import { getSession } from "../../store/authStore";
+
+import { createAuditLog } from "../../store/auditStore";
+
 export default function Collections() {
   const [collections, setCollections] =
     useState<Collection[]>(getCollections());
@@ -40,6 +44,7 @@ export default function Collections() {
 
   function saveCollection(data: {
     loanId: string;
+
     customerId: string;
 
     collectionDate: string;
@@ -47,7 +52,9 @@ export default function Collections() {
     collectionType: "INTEREST" | "PRINCIPAL" | "BOTH" | "PENALTY";
 
     interestAmount: number;
+
     principalAmount: number;
+
     penaltyAmount: number;
 
     totalAmount: number;
@@ -96,9 +103,25 @@ export default function Collections() {
 
     updateLoanAfterCollection(
       Number(selectedLoanId),
+
       data.totalAmount,
+
       data.collectionDate,
     );
+
+    const session = getSession();
+
+    createAuditLog({
+      action: "CREATE",
+
+      module: "COLLECTION",
+
+      description: `Collection ₹${data.totalAmount.toLocaleString("en-IN")} received for Loan ${selectedLoanId}`,
+
+      performedBy: session?.username ?? "SYSTEM",
+
+      userRole: session?.role ?? "UNKNOWN",
+    });
 
     refresh();
   }
