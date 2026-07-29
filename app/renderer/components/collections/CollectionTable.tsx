@@ -1,5 +1,9 @@
 import type { Collection } from "./types";
 
+import ReceiptButton from "../receipt/ReceiptButton";
+
+import { printReceipt } from "../../utils/receiptGenerator";
+
 type CollectionTableProps = {
   collections: Collection[];
 
@@ -77,27 +81,44 @@ export default function CollectionTable({
             <td style={cellStyle}>{collection.status}</td>
 
             <td style={cellStyle}>
-              {onDelete && (
-                <button
-                  type="button"
-                  onClick={() => onDelete(collection.id)}
-                  style={{
-                    padding: "6px 12px",
+              <div
+                style={{
+                  display: "flex",
+                  gap: 8,
+                }}
+              >
+                <ReceiptButton
+                  onClick={() =>
+                    printReceipt(
+                      collection,
+                      collection.customerId,
+                      collection.loanId,
+                    )
+                  }
+                />
 
-                    borderRadius: 6,
+                {onDelete && (
+                  <button
+                    type="button"
+                    onClick={() => onDelete(collection.id)}
+                    style={{
+                      padding: "6px 12px",
 
-                    border: "none",
+                      borderRadius: 6,
 
-                    background: "#dc2626",
+                      border: "none",
 
-                    color: "#ffffff",
+                      background: "#dc2626",
 
-                    cursor: "pointer",
-                  }}
-                >
-                  Delete
-                </button>
-              )}
+                      color: "#ffffff",
+
+                      cursor: "pointer",
+                    }}
+                  >
+                    Delete
+                  </button>
+                )}
+              </div>
             </td>
           </tr>
         ))}
