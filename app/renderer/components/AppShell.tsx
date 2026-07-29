@@ -1,9 +1,13 @@
-type Page = "dashboard" | "customers" | "loans" | "collections";
+import type { ReactNode } from "react";
+
+type Page = "dashboard" | "customers" | "loans" | "collections" | "reports";
 
 type AppShellProps = {
   currentPage: Page;
+
   onNavigate: (page: Page) => void;
-  children: React.ReactNode;
+
+  children: ReactNode;
 };
 
 export default function AppShell({
@@ -32,7 +36,13 @@ export default function AppShell({
           borderRight: "1px solid #1f2937",
         }}
       >
-        <h2>FINORA</h2>
+        <h2
+          style={{
+            margin: 0,
+          }}
+        >
+          FINORA
+        </h2>
 
         <nav
           style={{
@@ -42,13 +52,25 @@ export default function AppShell({
             gap: "14px",
           }}
         >
-          <button onClick={() => onNavigate("dashboard")}>Dashboard</button>
+          <button type="button" onClick={() => onNavigate("dashboard")}>
+            Dashboard
+          </button>
 
-          <button onClick={() => onNavigate("customers")}>Customers</button>
+          <button type="button" onClick={() => onNavigate("customers")}>
+            Customers
+          </button>
 
-          <button onClick={() => onNavigate("loans")}>Loans</button>
+          <button type="button" onClick={() => onNavigate("loans")}>
+            Loans
+          </button>
 
-          <button onClick={() => onNavigate("collections")}>Collections</button>
+          <button type="button" onClick={() => onNavigate("collections")}>
+            Collections
+          </button>
+
+          <button type="button" onClick={() => onNavigate("reports")}>
+            Reports
+          </button>
         </nav>
       </aside>
 

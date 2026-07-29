@@ -1,8 +1,8 @@
 type SidebarProps = {
-  currentPage: "dashboard" | "customers" | "loans" | "collections";
+  currentPage: "dashboard" | "customers" | "loans" | "collections" | "reports";
 
   onNavigate: (
-    page: "dashboard" | "customers" | "loans" | "collections",
+    page: "dashboard" | "customers" | "loans" | "collections" | "reports",
   ) => void;
 };
 
@@ -68,7 +68,13 @@ export default function Sidebar({ currentPage, onNavigate }: SidebarProps) {
           Collections
         </button>
 
-        <span>Reports</span>
+        <button
+          type="button"
+          onClick={() => onNavigate("reports")}
+          style={buttonStyle(currentPage === "reports")}
+        >
+          Reports
+        </button>
 
         <span>Settings</span>
       </nav>
