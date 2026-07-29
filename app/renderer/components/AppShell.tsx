@@ -4,7 +4,14 @@ import type { UserRole } from "./auth/types";
 
 import { hasPermission } from "../utils/permissions";
 
-type Page = "dashboard" | "customers" | "loans" | "collections" | "reports";
+type Page =
+  | "dashboard"
+  | "customers"
+  | "loans"
+  | "collections"
+  | "reports"
+  | "users"
+  | "audit";
 
 type AppShellProps = {
   currentPage: Page;
@@ -90,6 +97,18 @@ export default function AppShell({
           {hasPermission(userRole, "REPORTS_VIEW") && (
             <button type="button" onClick={() => onNavigate("reports")}>
               Reports
+            </button>
+          )}
+
+          {hasPermission(userRole, "USER_MANAGEMENT") && (
+            <button type="button" onClick={() => onNavigate("users")}>
+              Users
+            </button>
+          )}
+
+          {hasPermission(userRole, "AUDIT_VIEW") && (
+            <button type="button" onClick={() => onNavigate("audit")}>
+              Audit Logs
             </button>
           )}
 
