@@ -9,6 +9,10 @@ import type { User } from "../../components/users/types";
 
 import { addUser, getUsers } from "../../store/authStore";
 
+import { createAuditLog } from "../../store/auditStore";
+
+import { getSession } from "../../store/authStore";
+
 export default function Users() {
   const [users, setUsers] = useState<User[]>(getUsers() as User[]);
 
@@ -48,6 +52,20 @@ export default function Users() {
     };
 
     addUser(user);
+
+    const session = getSession();
+
+    createAuditLog({
+      action: "CREATE",
+
+      module: "USER",
+
+      description: `User ${user.username} created with role ${user.role}`,
+
+      performedBy: session?.username ?? "SYSTEM",
+
+      userRole: session?.role ?? "UNKNOWN",
+    });
 
     refresh();
   }
