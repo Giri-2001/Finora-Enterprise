@@ -3,6 +3,7 @@ import { useMemo, useState } from "react";
 import CustomerStats from "../components/customers/CustomerStats";
 import CustomerTable from "../components/customers/CustomerTable";
 import CustomerForm from "../components/customers/forms/CustomerForm";
+
 import type { Customer } from "../components/customers/types";
 
 import Card from "../components/ui/Card";
@@ -15,6 +16,10 @@ import {
   deleteCustomer as removeCustomer,
   updateCustomer,
 } from "../store/customerStore";
+
+import { getSession } from "../store/authStore";
+
+import { createAuditLog } from "../store/auditStore";
 
 import { generateCustomerId } from "../utils/customerId";
 
@@ -35,9 +40,13 @@ export default function Customers() {
 
   function saveCustomer(customer: {
     id?: number;
+
     name: string;
+
     phone: string;
+
     email: string;
+
     address: string;
   }) {
     setError("");
@@ -48,8 +57,11 @@ export default function Customers() {
 
     if (duplicate) {
       setError("Customer with this phone number already exists.");
+
       return;
     }
+
+    const session = getSession();
 
     if (customer.id) {
       const existing = customers.find((item) => item.id === customer.id);
@@ -58,29 +70,82 @@ export default function Customers() {
 
       updateCustomer({
         ...existing,
+
         ...customer,
       });
 
+      createAuditLog({
+        action: "UPDATE",
+
+        module: "CUSTOMER",
+
+        description: `Customer ${existing.customerId} updated`,
+
+        performedBy: session?.username ?? "SYSTEM",
+
+        userRole: session?.role ?? "UNKNOWN",
+      });
+
       refresh();
+
       setEditingCustomer(null);
+
       return;
     }
 
-    addCustomer({
+    const newCustomer: Customer = {
       id: Date.now(),
+
       customerId: generateCustomerId(customers.length),
+
       name: customer.name,
+
       phone: customer.phone,
+
       email: customer.email,
+
       address: customer.address,
+
       status: "Active",
+    };
+
+    addCustomer(newCustomer);
+
+    createAuditLog({
+      action: "CREATE",
+
+      module: "CUSTOMER",
+
+      description: `Customer ${newCustomer.customerId} created`,
+
+      performedBy: session?.username ?? "SYSTEM",
+
+      userRole: session?.role ?? "UNKNOWN",
     });
 
     refresh();
   }
 
   function deleteCustomer(id: number) {
+    const customer = customers.find((item) => item.id === id);
+
     removeCustomer(id);
+
+    const session = getSession();
+
+    if (customer) {
+      createAuditLog({
+        action: "DELETE",
+
+        module: "CUSTOMER",
+
+        description: `Customer ${customer.customerId} deleted`,
+
+        performedBy: session?.username ?? "SYSTEM",
+
+        userRole: session?.role ?? "UNKNOWN",
+      });
+    }
 
     if (viewingCustomer?.id === id) {
       setViewingCustomer(null);
@@ -100,6 +165,7 @@ export default function Customers() {
           customer.phone.includes(search)
         );
       }),
+
     [customers, search],
   );
 
@@ -119,11 +185,20 @@ export default function Customers() {
         />
       </Card>
 
-      {error && <p style={{ color: "#dc2626" }}>{error}</p>}
+      {error && (
+        <p
+          style={{
+            color: "#dc2626",
+          }}
+        >
+          {error}
+        </p>
+      )}
 
       <Card title={editingCustomer ? "Edit Customer" : "New Customer"}>
         <CustomerForm customer={editingCustomer} onSubmit={saveCustomer} />
       </Card>
+
       <Card title="Customer List">
         {filteredCustomers.length > 0 ? (
           <CustomerTable
