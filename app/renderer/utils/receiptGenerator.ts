@@ -1,5 +1,9 @@
 import type { Collection } from "../components/collections/types";
 
+import { getSession } from "../store/authStore";
+
+import { createAuditLog } from "../store/auditStore";
+
 type ReceiptLoanDetails = {
   approvedAmount: number;
 
@@ -266,6 +270,7 @@ export function generateReceiptHTML(
 
     </body>
 
+
   </html>
   `;
 }
@@ -279,6 +284,20 @@ export function printReceipt(
 
   loanDetails: ReceiptLoanDetails,
 ): void {
+  const session = getSession();
+
+  createAuditLog({
+    action: "CREATE",
+
+    module: "RECEIPT",
+
+    description: `Receipt ${collection.receiptNumber} printed for Loan ${loanNumber}`,
+
+    performedBy: session?.username ?? "SYSTEM",
+
+    userRole: session?.role ?? "UNKNOWN",
+  });
+
   const windowRef = window.open("", "_blank", "width=700,height=800");
 
   if (!windowRef) {
