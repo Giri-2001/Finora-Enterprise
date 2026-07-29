@@ -4,6 +4,8 @@ import type {
   User,
 } from "../components/auth/types";
 
+import { createAuditLog } from "./auditStore";
+
 const USERS_KEY = "finora_users";
 
 const SESSION_KEY = "finora_session";
@@ -80,6 +82,18 @@ export function login(credentials: LoginCredentials): AuthSession | null {
 
   localStorage.setItem(SESSION_KEY, JSON.stringify(session));
 
+  createAuditLog({
+    action: "LOGIN",
+
+    module: "AUTH",
+
+    description: `User ${user.fullName} logged into FINORA`,
+
+    performedBy: user.username,
+
+    userRole: user.role,
+  });
+
   return session;
 }
 
@@ -94,6 +108,22 @@ export function getSession(): AuthSession | null {
 }
 
 export function logout(): void {
+  const session = getSession();
+
+  if (session) {
+    createAuditLog({
+      action: "LOGOUT",
+
+      module: "AUTH",
+
+      description: `User ${session.fullName} logged out from FINORA`,
+
+      performedBy: session.username,
+
+      userRole: session.role,
+    });
+  }
+
   localStorage.removeItem(SESSION_KEY);
 }
 
