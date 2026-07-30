@@ -11,7 +11,8 @@ type Page =
   | "collections"
   | "reports"
   | "users"
-  | "audit";
+  | "audit"
+  | "backup";
 
 type AppShellProps = {
   currentPage: Page;
@@ -36,20 +37,30 @@ export default function AppShell({
     <div
       style={{
         display: "grid",
+
         gridTemplateColumns: "260px 1fr",
+
         gridTemplateRows: "64px 1fr",
+
         width: "100vw",
+
         height: "100vh",
+
         background: "#0f172a",
+
         color: "#ffffff",
+
         fontFamily: "Segoe UI, sans-serif",
       }}
     >
       <aside
         style={{
           gridRow: "1 / 3",
+
           background: "#111827",
+
           padding: "24px",
+
           borderRight: "1px solid #1f2937",
         }}
       >
@@ -58,6 +69,7 @@ export default function AppShell({
         <p
           style={{
             fontSize: 12,
+
             opacity: 0.7,
           }}
         >
@@ -67,8 +79,11 @@ export default function AppShell({
         <nav
           style={{
             marginTop: "40px",
+
             display: "flex",
+
             flexDirection: "column",
+
             gap: "14px",
           }}
         >
@@ -112,10 +127,18 @@ export default function AppShell({
             </button>
           )}
 
+          {hasPermission(userRole, "BACKUP_MANAGEMENT") && (
+            <button type="button" onClick={() => onNavigate("backup")}>
+              Backup
+            </button>
+          )}
+
           <hr
             style={{
               width: "100%",
+
               borderColor: "#334155",
+
               marginTop: 20,
             }}
           />
@@ -125,10 +148,15 @@ export default function AppShell({
             onClick={onLogout}
             style={{
               background: "#dc2626",
+
               color: "#ffffff",
+
               border: "none",
+
               padding: "8px",
+
               borderRadius: 6,
+
               cursor: "pointer",
             }}
           >
@@ -140,11 +168,17 @@ export default function AppShell({
       <header
         style={{
           background: "#111827",
+
           borderBottom: "1px solid #1f2937",
+
           display: "flex",
+
           alignItems: "center",
+
           padding: "0 24px",
+
           fontSize: "20px",
+
           fontWeight: 600,
         }}
       >
@@ -154,6 +188,7 @@ export default function AppShell({
       <main
         style={{
           padding: "24px",
+
           overflow: "auto",
         }}
       >

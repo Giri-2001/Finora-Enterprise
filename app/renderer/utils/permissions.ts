@@ -10,7 +10,8 @@ export type Permission =
   | "REPORTS_VIEW"
   | "EXPORT_REPORTS"
   | "USER_MANAGEMENT"
-  | "AUDIT_VIEW";
+  | "AUDIT_VIEW"
+  | "BACKUP_MANAGEMENT";
 
 const rolePermissions: Record<UserRole, Permission[]> = {
   ADMIN: [
@@ -33,6 +34,8 @@ const rolePermissions: Record<UserRole, Permission[]> = {
     "USER_MANAGEMENT",
 
     "AUDIT_VIEW",
+
+    "BACKUP_MANAGEMENT",
   ],
 
   MANAGER: [

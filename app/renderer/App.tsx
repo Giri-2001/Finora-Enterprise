@@ -7,6 +7,7 @@ import Login from "./pages/auth/Login";
 import { getSession, logout } from "./store/authStore";
 
 import AuditLogs from "./pages/audit/AuditLogs";
+import Backup from "./pages/backup/Backup";
 import Collections from "./pages/collections/Collections";
 import Customers from "./pages/Customers";
 import Dashboard from "./pages/Dashboard";
@@ -21,7 +22,8 @@ export type Page =
   | "collections"
   | "reports"
   | "users"
-  | "audit";
+  | "audit"
+  | "backup";
 
 export default function App() {
   const [session, setSession] = useState(getSession());
@@ -60,6 +62,9 @@ export default function App() {
 
       case "audit":
         return <AuditLogs />;
+
+      case "backup":
+        return <Backup />;
 
       default:
         return <Dashboard />;
