@@ -2,19 +2,9 @@ import type { ReactNode } from "react";
 
 import type { UserRole } from "./auth/types";
 
-import { hasPermission } from "../utils/permissions";
+import type { Page } from "../types/page";
 
-type Page =
-  | "dashboard"
-  | "customers"
-  | "loans"
-  | "collections"
-  | "reports"
-  | "users"
-  | "audit"
-  | "auditArchive"
-  | "backup"
-  | "security";
+import { hasPermission } from "../utils/permissions";
 
 type AppShellProps = {
   currentPage: Page;
@@ -132,6 +122,12 @@ export default function AppShell({
           {hasPermission(userRole, "AUDIT_VIEW") && (
             <button type="button" onClick={() => onNavigate("auditArchive")}>
               Audit Archive
+            </button>
+          )}
+
+          {hasPermission(userRole, "AUDIT_VIEW") && (
+            <button type="button" onClick={() => onNavigate("auditRetention")}>
+              Audit Retention
             </button>
           )}
 
