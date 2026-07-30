@@ -18,6 +18,8 @@ import Compliance from "./pages/compliance/Compliance";
 
 import Interest from "./pages/interest/Interest";
 
+import Payments from "./pages/payments/Payments";
+
 import Backup from "./pages/backup/Backup";
 import Collections from "./pages/collections/Collections";
 import Customers from "./pages/Customers";
@@ -63,6 +65,9 @@ export default function App() {
 
       case "collections":
         return <Collections />;
+
+      case "payments":
+        return <Payments />;
 
       case "reports":
         return <Reports />;

@@ -4,6 +4,7 @@ export type Page =
   | "loans"
   | "interest"
   | "collections"
+  | "payments"
   | "reports"
   | "users"
   | "audit"

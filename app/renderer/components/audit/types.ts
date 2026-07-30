@@ -12,6 +12,7 @@ export type AuditModule =
   | "CUSTOMER"
   | "LOAN"
   | "COLLECTION"
+  | "PAYMENT"
   | "RECEIPT"
   | "USER"
   | "REPORT"

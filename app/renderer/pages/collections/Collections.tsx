@@ -1,5 +1,6 @@
 import { useState } from "react";
 
+import CollectionDashboard from "../../components/collections/CollectionDashboard";
 import CollectionForm from "../../components/collections/CollectionForm";
 import CollectionSummary from "../../components/collections/CollectionSummary";
 import CollectionTable from "../../components/collections/CollectionTable";
@@ -39,8 +40,14 @@ export default function Collections() {
   );
 
   const collectedAmount = collections
+
     .filter((collection) => collection.loanId === selectedLoanId)
-    .reduce((sum, item) => sum + item.totalAmount, 0);
+
+    .reduce(
+      (sum, item) => sum + item.totalAmount,
+
+      0,
+    );
 
   function saveCollection(data: {
     loanId: string;
@@ -116,7 +123,9 @@ export default function Collections() {
 
       module: "COLLECTION",
 
-      description: `Collection ₹${data.totalAmount.toLocaleString("en-IN")} received for Loan ${selectedLoanId}`,
+      description: `Collection ₹${data.totalAmount.toLocaleString(
+        "en-IN",
+      )} received for Loan ${selectedLoanId}`,
 
       performedBy: session?.username ?? "SYSTEM",
 
@@ -132,36 +141,13 @@ export default function Collections() {
     refresh();
   }
 
-  const totalCollection = collections.reduce(
-    (sum, item) => sum + item.totalAmount,
-    0,
-  );
-
   return (
     <div>
       <h1>Collections</h1>
 
       <p>Manage daily, weekly and monthly loan collections.</p>
 
-      <div
-        style={{
-          display: "grid",
-
-          gridTemplateColumns: "repeat(auto-fit,minmax(220px,1fr))",
-
-          gap: 20,
-
-          marginTop: 20,
-        }}
-      >
-        <Card title="Total Collections">
-          <h2>{collections.length}</h2>
-        </Card>
-
-        <Card title="Collected Amount">
-          <h2>₹{totalCollection.toLocaleString("en-IN")}</h2>
-        </Card>
-      </div>
+      <CollectionDashboard collections={collections} />
 
       <Card title="Select Loan">
         <LoanSelector

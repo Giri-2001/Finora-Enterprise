@@ -20,13 +20,9 @@ type AppShellProps = {
 
 export default function AppShell({
   currentPage,
-
   onNavigate,
-
   onLogout,
-
   userRole,
-
   children,
 }: AppShellProps) {
   return (
@@ -108,6 +104,12 @@ export default function AppShell({
           {hasPermission(userRole, "COLLECTIONS_VIEW") && (
             <button type="button" onClick={() => onNavigate("collections")}>
               Collections
+            </button>
+          )}
+
+          {hasPermission(userRole, "COLLECTIONS_VIEW") && (
+            <button type="button" onClick={() => onNavigate("payments")}>
+              Payments
             </button>
           )}
 
