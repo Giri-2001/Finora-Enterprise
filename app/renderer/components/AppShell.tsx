@@ -12,6 +12,7 @@ type Page =
   | "reports"
   | "users"
   | "audit"
+  | "auditArchive"
   | "backup"
   | "security";
 
@@ -125,6 +126,12 @@ export default function AppShell({
           {hasPermission(userRole, "AUDIT_VIEW") && (
             <button type="button" onClick={() => onNavigate("audit")}>
               Audit Logs
+            </button>
+          )}
+
+          {hasPermission(userRole, "AUDIT_VIEW") && (
+            <button type="button" onClick={() => onNavigate("auditArchive")}>
+              Audit Archive
             </button>
           )}
 
