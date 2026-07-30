@@ -2,6 +2,7 @@ export type Page =
   | "dashboard"
   | "customers"
   | "loans"
+  | "interest"
   | "collections"
   | "reports"
   | "users"

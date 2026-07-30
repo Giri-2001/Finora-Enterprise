@@ -20,9 +20,13 @@ type AppShellProps = {
 
 export default function AppShell({
   currentPage,
+
   onNavigate,
+
   onLogout,
+
   userRole,
+
   children,
 }: AppShellProps) {
   return (
@@ -70,13 +74,13 @@ export default function AppShell({
 
         <nav
           style={{
-            marginTop: "40px",
+            marginTop: 40,
 
             display: "flex",
 
             flexDirection: "column",
 
-            gap: "14px",
+            gap: 14,
           }}
         >
           <button type="button" onClick={() => onNavigate("dashboard")}>
@@ -92,6 +96,12 @@ export default function AppShell({
           {hasPermission(userRole, "LOANS_VIEW") && (
             <button type="button" onClick={() => onNavigate("loans")}>
               Loans
+            </button>
+          )}
+
+          {hasPermission(userRole, "LOANS_VIEW") && (
+            <button type="button" onClick={() => onNavigate("interest")}>
+              Interest Engine
             </button>
           )}
 
@@ -187,7 +197,7 @@ export default function AppShell({
 
           padding: "0 24px",
 
-          fontSize: "20px",
+          fontSize: 20,
 
           fontWeight: 600,
         }}
@@ -197,7 +207,7 @@ export default function AppShell({
 
       <main
         style={{
-          padding: "24px",
+          padding: 24,
 
           overflow: "auto",
         }}

@@ -16,6 +16,8 @@ import AuditRetention from "./pages/audit/AuditRetention";
 
 import Compliance from "./pages/compliance/Compliance";
 
+import Interest from "./pages/interest/Interest";
+
 import Backup from "./pages/backup/Backup";
 import Collections from "./pages/collections/Collections";
 import Customers from "./pages/Customers";
@@ -55,6 +57,9 @@ export default function App() {
 
       case "loans":
         return <Loans />;
+
+      case "interest":
+        return <Interest />;
 
       case "collections":
         return <Collections />;
