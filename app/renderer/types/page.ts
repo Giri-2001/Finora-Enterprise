@@ -8,5 +8,6 @@ export type Page =
   | "audit"
   | "auditArchive"
   | "auditRetention"
+  | "compliance"
   | "backup"
   | "security";
