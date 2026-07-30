@@ -14,6 +14,8 @@ import AuditArchive from "./pages/audit/AuditArchive";
 import AuditLogs from "./pages/audit/AuditLogs";
 import AuditRetention from "./pages/audit/AuditRetention";
 
+import Compliance from "./pages/compliance/Compliance";
+
 import Backup from "./pages/backup/Backup";
 import Collections from "./pages/collections/Collections";
 import Customers from "./pages/Customers";
@@ -71,6 +73,9 @@ export default function App() {
 
       case "auditRetention":
         return <AuditRetention />;
+
+      case "compliance":
+        return <Compliance />;
 
       case "backup":
         return <Backup />;
