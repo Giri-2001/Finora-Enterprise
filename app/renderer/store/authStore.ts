@@ -7,6 +7,12 @@ import type {
 import { createAuditLog } from "./auditStore";
 
 import {
+  isAccountLocked,
+  registerFailedLogin,
+  resetLoginAttempts,
+} from "./loginSecurityStore";
+
+import {
   generateSessionId,
   hashPassword,
   verifyPassword,
@@ -81,14 +87,30 @@ export function replaceUsers(updatedUsers: User[]): void {
 }
 
 export function login(credentials: LoginCredentials): AuthSession | null {
+  if (isAccountLocked(credentials.username)) {
+    createAuditLog({
+      action: "LOGIN",
+
+      module: "AUTH",
+
+      description: `Blocked login attempt for locked account ${credentials.username}`,
+
+      performedBy: credentials.username,
+
+      userRole: "UNKNOWN",
+    });
+
+    return null;
+  }
+
   const user = users.find(
     (item) =>
-      item.username === credentials.username &&
-      verifyPassword(credentials.password, item.password) &&
-      item.status === "ACTIVE",
+      item.username === credentials.username && item.status === "ACTIVE",
   );
 
-  if (!user) {
+  if (!user || !verifyPassword(credentials.password, user.password)) {
+    registerFailedLogin(credentials.username);
+
     createAuditLog({
       action: "LOGIN",
 
@@ -103,6 +125,8 @@ export function login(credentials: LoginCredentials): AuthSession | null {
 
     return null;
   }
+
+  resetLoginAttempts(credentials.username);
 
   const session: AuthSession = {
     userId: user.id,
@@ -120,7 +144,11 @@ export function login(credentials: LoginCredentials): AuthSession | null {
     lastActivity: new Date().toISOString(),
   };
 
-  localStorage.setItem(SESSION_KEY, JSON.stringify(session));
+  localStorage.setItem(
+    SESSION_KEY,
+
+    JSON.stringify(session),
+  );
 
   createAuditLog({
     action: "LOGIN",
