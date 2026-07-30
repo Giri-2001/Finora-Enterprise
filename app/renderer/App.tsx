@@ -15,6 +15,7 @@ import Customers from "./pages/Customers";
 import Dashboard from "./pages/Dashboard";
 import Loans from "./pages/loans/Loans";
 import Reports from "./pages/reports/Reports";
+import Security from "./pages/security/Security";
 import Users from "./pages/users/Users";
 
 export type Page =
@@ -25,7 +26,8 @@ export type Page =
   | "reports"
   | "users"
   | "audit"
-  | "backup";
+  | "backup"
+  | "security";
 
 export default function App() {
   const [session, setSession] = useState(getSession());
@@ -67,6 +69,9 @@ export default function App() {
 
       case "backup":
         return <Backup />;
+
+      case "security":
+        return <Security />;
 
       default:
         return <Dashboard />;

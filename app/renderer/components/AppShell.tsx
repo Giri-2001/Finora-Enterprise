@@ -12,7 +12,8 @@ type Page =
   | "reports"
   | "users"
   | "audit"
-  | "backup";
+  | "backup"
+  | "security";
 
 type AppShellProps = {
   currentPage: Page;
@@ -130,6 +131,12 @@ export default function AppShell({
           {hasPermission(userRole, "BACKUP_MANAGEMENT") && (
             <button type="button" onClick={() => onNavigate("backup")}>
               Backup
+            </button>
+          )}
+
+          {hasPermission(userRole, "SECURITY_VIEW") && (
+            <button type="button" onClick={() => onNavigate("security")}>
+              Security
             </button>
           )}
 
