@@ -36,4 +36,8 @@ export type AuthSession = {
   role: UserRole;
 
   loginTime: string;
+
+  sessionId: string;
+
+  lastActivity: string;
 };

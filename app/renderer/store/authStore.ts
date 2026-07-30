@@ -6,6 +6,12 @@ import type {
 
 import { createAuditLog } from "./auditStore";
 
+import {
+  generateSessionId,
+  hashPassword,
+  verifyPassword,
+} from "../utils/security";
+
 const USERS_KEY = "finora_users";
 
 const SESSION_KEY = "finora_session";
@@ -20,7 +26,7 @@ function loadUsers(): User[] {
 
         username: "admin",
 
-        password: "admin123",
+        password: hashPassword("admin123"),
 
         fullName: "FINORA Admin",
 
@@ -55,7 +61,15 @@ export function getUsers(): User[] {
 }
 
 export function addUser(user: User): void {
-  users = [...users, user];
+  users = [
+    ...users,
+
+    {
+      ...user,
+
+      password: hashPassword(user.password),
+    },
+  ];
 
   saveUsers(users);
 }
@@ -70,11 +84,23 @@ export function login(credentials: LoginCredentials): AuthSession | null {
   const user = users.find(
     (item) =>
       item.username === credentials.username &&
-      item.password === credentials.password &&
+      verifyPassword(credentials.password, item.password) &&
       item.status === "ACTIVE",
   );
 
   if (!user) {
+    createAuditLog({
+      action: "LOGIN",
+
+      module: "AUTH",
+
+      description: `Failed login attempt for ${credentials.username}`,
+
+      performedBy: credentials.username,
+
+      userRole: "UNKNOWN",
+    });
+
     return null;
   }
 
@@ -88,6 +114,10 @@ export function login(credentials: LoginCredentials): AuthSession | null {
     role: user.role,
 
     loginTime: new Date().toISOString(),
+
+    sessionId: generateSessionId(),
+
+    lastActivity: new Date().toISOString(),
   };
 
   localStorage.setItem(SESSION_KEY, JSON.stringify(session));
@@ -115,6 +145,24 @@ export function getSession(): AuthSession | null {
   }
 
   return JSON.parse(data) as AuthSession;
+}
+
+export function updateSessionActivity(): void {
+  const session = getSession();
+
+  if (!session) {
+    return;
+  }
+
+  localStorage.setItem(
+    SESSION_KEY,
+
+    JSON.stringify({
+      ...session,
+
+      lastActivity: new Date().toISOString(),
+    }),
+  );
 }
 
 export function logout(): void {
