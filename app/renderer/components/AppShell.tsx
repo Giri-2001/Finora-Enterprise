@@ -71,7 +71,9 @@ export default function AppShell({
             fontWeight: 600,
           }}
         >
-          {currentPage.toUpperCase()}
+          {currentPage === "businessSettings"
+            ? "BUSINESS SETTINGS"
+            : currentPage.toUpperCase()}
         </h1>
       </header>
 
@@ -165,6 +167,10 @@ export default function AppShell({
 
           <button onClick={() => handleNavigate("projector")}>
             Projector Mode
+          </button>
+
+          <button onClick={() => handleNavigate("businessSettings")}>
+            Business Settings
           </button>
 
           <hr />

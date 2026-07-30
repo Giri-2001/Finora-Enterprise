@@ -40,6 +40,8 @@ import Security from "./pages/security/Security";
 
 import ProjectorDashboard from "./pages/projector/ProjectorDashboard";
 
+import BusinessSettings from "./pages/settings/BusinessSettings";
+
 import { runAuditRetentionEngine } from "./utils/auditRetentionEngine";
 
 export default function App() {
@@ -118,6 +120,9 @@ export default function App() {
 
       case "projector":
         return <ProjectorDashboard />;
+
+      case "businessSettings":
+        return <BusinessSettings />;
 
       default:
         return <Dashboard />;

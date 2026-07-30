@@ -14,4 +14,5 @@ export type Page =
   | "compliance"
   | "backup"
   | "security"
-  | "projector";
+  | "projector"
+  | "businessSettings";
