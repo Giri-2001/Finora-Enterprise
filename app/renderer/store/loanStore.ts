@@ -38,6 +38,20 @@ export function getCustomerLoans(customerId: string): Loan[] {
   return loans.filter((loan) => loan.customerId === customerId);
 }
 
+export function generateFinoraLoanId(): string {
+  const number = loans.length + 1;
+
+  return `FINORA-${String(number).padStart(4, "0")}`;
+}
+
+export function calculateOutstandingAmount(loan: Loan): number {
+  return Math.max(
+    loan.approvedLoanAmount - loan.totalCollectedAmount - loan.discountAmount,
+
+    0,
+  );
+}
+
 export function addLoan(loan: Loan): void {
   loans = [...loans, loan];
 
@@ -52,9 +66,33 @@ export function updateLoan(updatedLoan: Loan): void {
   saveLoans(loans);
 }
 
+export function closeLoan(loanId: number): void {
+  loans = loans.map((loan) => {
+    if (loan.id !== loanId) {
+      return loan;
+    }
+
+    return {
+      ...loan,
+
+      status: "Closed",
+
+      outstandingAmount: 0,
+
+      closedDate: new Date().toISOString(),
+
+      updatedAt: new Date().toISOString(),
+    };
+  });
+
+  saveLoans(loans);
+}
+
 export function updateLoanAfterCollection(
   loanId: number,
+
   collectionAmount: number,
+
   collectionDate: string,
 ): void {
   loans = loans.map((loan) => {
@@ -65,7 +103,8 @@ export function updateLoanAfterCollection(
     const totalCollectedAmount = loan.totalCollectedAmount + collectionAmount;
 
     const outstandingAmount = Math.max(
-      loan.approvedLoanAmount - totalCollectedAmount,
+      loan.approvedLoanAmount - totalCollectedAmount - loan.discountAmount,
+
       0,
     );
 
@@ -79,6 +118,8 @@ export function updateLoanAfterCollection(
       lastCollectionDate: collectionDate,
 
       status: outstandingAmount === 0 ? "Closed" : "Active",
+
+      updatedAt: new Date().toISOString(),
     };
   });
 
@@ -109,4 +150,26 @@ export function getActiveLoans(): Loan[] {
 
 export function getClosedLoans(): Loan[] {
   return loans.filter((loan) => loan.status === "Closed");
+}
+
+export function getPendingLoans(): Loan[] {
+  return loans.filter((loan) => loan.status === "Pending");
+}
+
+export function getDefaultLoans(): Loan[] {
+  return loans.filter((loan) => loan.status === "Default");
+}
+
+export function getLoanSummary() {
+  return {
+    total: loans.length,
+
+    active: getActiveLoans().length,
+
+    closed: getClosedLoans().length,
+
+    pending: getPendingLoans().length,
+
+    default: getDefaultLoans().length,
+  };
 }

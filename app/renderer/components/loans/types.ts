@@ -10,49 +10,67 @@ export type Loan = {
   // FINORA Generated Loan ID
   finoraLoanId: string;
 
-  // Existing Owner Loan Number
+  // Owner Existing Loan Number
   oldLoanNumber: string;
 
   // Linked Customer
   customerId: string;
 
-  // Loan Financial Details
+  // Financial Details
+
   approvedLoanAmount: number;
 
   receivedAmount: number;
 
   deductionAmount: number;
 
-  // Interest
+  discountAmount: number;
+
+  // Interest Details
+
   interestType: InterestType;
 
   interestValue: number;
 
-  // Collection
+  // Collection Details
+
   collectionType: CollectionType;
 
   duration: number;
 
-  // Collection Calculation
   calculatedCollectionAmount: number;
 
   collectionAmount: number;
 
-  // Balance Tracking
+  // Payment Tracking
+
   totalCollectedAmount: number;
 
   outstandingAmount: number;
 
   lastCollectionDate: string | null;
 
-  // Gold Loan
+  // Gold Loan Linking
+
   lockerNumber: string;
 
   bagNumber: string;
 
   // Dates
+
   startDate: string;
 
+  closedDate: string | null;
+
+  createdAt: string;
+
+  updatedAt: string;
+
   // Status
+
   status: LoanStatus;
+
+  // Notes
+
+  remarks: string;
 };
