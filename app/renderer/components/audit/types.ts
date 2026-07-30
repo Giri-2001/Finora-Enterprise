@@ -1,4 +1,11 @@
-export type AuditAction = "CREATE" | "UPDATE" | "DELETE" | "LOGIN" | "LOGOUT";
+export type AuditAction =
+  | "CREATE"
+  | "UPDATE"
+  | "DELETE"
+  | "LOGIN"
+  | "LOGOUT"
+  | "EXPORT"
+  | "RESTORE";
 
 export type AuditModule =
   | "AUTH"
@@ -6,8 +13,9 @@ export type AuditModule =
   | "LOAN"
   | "COLLECTION"
   | "RECEIPT"
+  | "USER"
   | "REPORT"
-  | "USER";
+  | "SYSTEM";
 
 export type AuditLog = {
   id: string;

@@ -5,6 +5,7 @@ import Card from "../../components/ui/Card";
 import BackupButton from "../../components/backup/BackupButton";
 import ExportBackupButton from "../../components/backup/ExportBackupButton";
 import RestoreBackupButton from "../../components/backup/RestoreBackupButton";
+import RestoreConfirmation from "../../components/backup/RestoreConfirmation";
 
 import type { BackupRecord } from "../../components/backup/types";
 
@@ -27,6 +28,8 @@ export default function Backup() {
   const [backups, setBackups] = useState<BackupRecord[]>(getBackups());
 
   const [message, setMessage] = useState("");
+
+  const [restoreFile, setRestoreFile] = useState<File | null>(null);
 
   function refresh() {
     setBackups(getBackups());
@@ -88,10 +91,20 @@ export default function Backup() {
     });
   }
 
-  async function handleImport(file: File) {
+  function handleRestoreRequest(file: File) {
+    setRestoreFile(file);
+
+    setMessage("");
+  }
+
+  async function confirmRestore() {
+    if (!restoreFile) {
+      return;
+    }
+
     const session = getSession();
 
-    const success = await importBackupFile(file);
+    const success = await importBackupFile(restoreFile);
 
     if (success) {
       setMessage("Backup restored successfully.");
@@ -111,7 +124,13 @@ export default function Backup() {
       setMessage("Invalid backup file.");
     }
 
+    setRestoreFile(null);
+
     refresh();
+  }
+
+  function cancelRestore() {
+    setRestoreFile(null);
   }
 
   function handleRestore(id: string) {
@@ -153,8 +172,15 @@ export default function Backup() {
 
           <ExportBackupButton onExport={handleExport} />
 
-          <RestoreBackupButton onRestore={handleImport} />
+          <RestoreBackupButton onRestore={handleRestoreRequest} />
         </div>
+
+        {restoreFile && (
+          <RestoreConfirmation
+            onConfirm={confirmRestore}
+            onCancel={cancelRestore}
+          />
+        )}
       </Card>
 
       <Card title="Backup History">

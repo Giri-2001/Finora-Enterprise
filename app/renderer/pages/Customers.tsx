@@ -181,7 +181,7 @@ export default function Customers() {
         <Input
           value={search}
           placeholder="Search by ID, name or phone..."
-          onChange={setSearch}
+          onChange={(event) => setSearch(event.target.value)}
         />
       </Card>
 
