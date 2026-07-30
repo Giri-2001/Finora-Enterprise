@@ -46,58 +46,39 @@ import ThemeSettings from "./pages/settings/ThemeSettings";
 
 import SubscriptionControl from "./pages/subscription/SubscriptionControl";
 
+import AdvancedConfiguration from "./pages/settings/advanced/AdvancedConfiguration";
+
 import { runAuditRetentionEngine } from "./utils/auditRetentionEngine";
 
-
 export default function App() {
-
   const [session, setSession] = useState(getSession());
 
   const [page, setPage] = useState<Page>("dashboard");
 
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
-
   useEffect(() => {
-
     runAuditRetentionEngine();
-
   }, []);
 
-
-
   function handleLogin() {
-
     setSession(getSession());
-
   }
 
-
-
   function handleLogout() {
-
     logout();
 
     setSession(null);
-
   }
 
-
-
   function handleNavigate(nextPage: Page) {
-
     setPage(nextPage);
 
     setSidebarOpen(false);
-
   }
 
-
-
   const currentPage = useMemo(() => {
-
     switch (page) {
-
       case "dashboard":
         return <Dashboard />;
 
@@ -155,49 +136,30 @@ export default function App() {
       case "subscriptionControl":
         return <SubscriptionControl />;
 
+      case "advancedConfiguration":
+        return <AdvancedConfiguration />;
 
       default:
         return <Dashboard />;
-
     }
-
   }, [page]);
 
-
-
   if (!session) {
-
     return <Login onLogin={handleLogin} />;
-
   }
 
-
-
   return (
-
     <SessionGuard>
-
       <AppShell
-
         currentPage={page}
-
         onNavigate={handleNavigate}
-
         onLogout={handleLogout}
-
         userRole={session.role}
-
         sidebarOpen={sidebarOpen}
-
         setSidebarOpen={setSidebarOpen}
-
       >
-
         {currentPage}
-
       </AppShell>
-
     </SessionGuard>
-
   );
 }

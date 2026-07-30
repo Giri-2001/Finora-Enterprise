@@ -17,4 +17,5 @@ export type Page =
   | "projector"
   | "businessSettings"
   | "themeSettings"
-  | "subscriptionControl";
+  | "subscriptionControl"
+  | "advancedConfiguration";

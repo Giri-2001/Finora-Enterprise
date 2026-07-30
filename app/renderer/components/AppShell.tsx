@@ -183,6 +183,10 @@ export default function AppShell({
             Subscription Control
           </button>
 
+          <button onClick={() => handleNavigate("advancedConfiguration")}>
+            Advanced Configuration
+          </button>
+
           <hr />
 
           <button
