@@ -48,6 +48,12 @@ import SubscriptionControl from "./pages/subscription/SubscriptionControl";
 
 import AdvancedConfiguration from "./pages/settings/advanced/AdvancedConfiguration";
 
+import {
+  applyTheme,
+  getSavedAccent,
+  getSavedTheme,
+} from "./utils/themeManager";
+
 import { runAuditRetentionEngine } from "./utils/auditRetentionEngine";
 
 export default function App() {
@@ -59,6 +65,12 @@ export default function App() {
 
   useEffect(() => {
     runAuditRetentionEngine();
+
+    const theme = getSavedTheme();
+
+    const accent = getSavedAccent();
+
+    applyTheme(theme, accent);
   }, []);
 
   function handleLogin() {

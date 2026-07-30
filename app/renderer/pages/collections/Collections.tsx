@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 
 import CollectionDashboard from "../../components/collections/CollectionDashboard";
 import CollectionForm from "../../components/collections/CollectionForm";
@@ -19,9 +19,12 @@ import {
 
 import { getLoans, updateLoanAfterCollection } from "../../store/loanStore";
 
+import { createAuditLog } from "../../store/auditStore";
 import { getSession } from "../../store/authStore";
 
-import { createAuditLog } from "../../store/auditStore";
+function safeNumber(value?: number | null): number {
+  return Number.isFinite(value) ? Number(value) : 0;
+}
 
 export default function Collections() {
   const [collections, setCollections] =
@@ -31,53 +34,46 @@ export default function Collections() {
 
   const [selectedLoanId, setSelectedLoanId] = useState("");
 
-  function refresh() {
+  const selectedLoan = useMemo(
+    () => loans.find((loan) => loan.id.toString() === selectedLoanId) ?? null,
+    [loans, selectedLoanId],
+  );
+
+  const collectedAmount = useMemo(() => {
+    return collections
+      .filter((item) => item.loanId === selectedLoanId)
+      .reduce((sum, item) => sum + safeNumber(item.totalAmount), 0);
+  }, [collections, selectedLoanId]);
+
+  function refreshCollections() {
     setCollections(getCollections());
   }
 
-  const selectedLoan = loans.find(
-    (loan) => loan.id.toString() === selectedLoanId,
-  );
-
-  const collectedAmount = collections
-
-    .filter((collection) => collection.loanId === selectedLoanId)
-
-    .reduce(
-      (sum, item) => sum + item.totalAmount,
-
-      0,
-    );
-
   function saveCollection(data: {
     loanId: string;
-
     customerId: string;
-
     collectionDate: string;
-
     collectionType: "INTEREST" | "PRINCIPAL" | "BOTH" | "PENALTY";
-
     interestAmount: number;
-
     principalAmount: number;
-
     penaltyAmount: number;
-
     totalAmount: number;
-
     paymentMode: "CASH" | "UPI" | "BANK_TRANSFER" | "CHEQUE";
-
     remarks: string;
   }) {
+    if (!selectedLoan) {
+      alert("Please select a loan first.");
+      return;
+    }
+
     const now = new Date().toISOString();
 
-    const newCollection: Collection = {
-      id: Date.now().toString(),
+    const collection: Collection = {
+      id: crypto.randomUUID(),
 
-      loanId: selectedLoanId,
+      loanId: selectedLoan.id.toString(),
 
-      customerId: selectedLoan?.customerId ?? data.customerId,
+      customerId: selectedLoan.customerId,
 
       receiptNumber: `RCPT-${String(collections.length + 1).padStart(5, "0")}`,
 
@@ -85,13 +81,13 @@ export default function Collections() {
 
       collectionType: data.collectionType,
 
-      interestAmount: data.interestAmount,
+      interestAmount: safeNumber(data.interestAmount),
 
-      principalAmount: data.principalAmount,
+      principalAmount: safeNumber(data.principalAmount),
 
-      penaltyAmount: data.penaltyAmount,
+      penaltyAmount: safeNumber(data.penaltyAmount),
 
-      totalAmount: data.totalAmount,
+      totalAmount: safeNumber(data.totalAmount),
 
       paymentMode: data.paymentMode,
 
@@ -106,50 +102,71 @@ export default function Collections() {
       updatedAt: now,
     };
 
-    addCollection(newCollection);
+    addCollection(collection);
 
     updateLoanAfterCollection(
-      Number(selectedLoanId),
-
-      data.totalAmount,
-
-      data.collectionDate,
+      selectedLoan.id,
+      collection.totalAmount,
+      collection.collectionDate,
     );
 
     const session = getSession();
 
     createAuditLog({
       action: "CREATE",
-
       module: "COLLECTION",
-
-      description: `Collection ₹${data.totalAmount.toLocaleString(
+      description: `Collected ₹${collection.totalAmount.toLocaleString(
         "en-IN",
-      )} received for Loan ${selectedLoanId}`,
-
+      )} for Loan ${selectedLoan.finoraLoanId}`,
       performedBy: session?.username ?? "SYSTEM",
-
       userRole: session?.role ?? "UNKNOWN",
     });
 
-    refresh();
+    refreshCollections();
   }
 
   function removeCollection(id: string) {
+    if (!confirm("Delete this collection?")) {
+      return;
+    }
+
     deleteCollection(id);
 
-    refresh();
+    refreshCollections();
   }
 
   return (
-    <div>
-      <h1>Collections</h1>
+    <div
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        gap: 24,
+      }}
+    >
+      <div>
+        <h1
+          style={{
+            margin: 0,
+            color: "var(--text)",
+            fontWeight: 900,
+          }}
+        >
+          Collections
+        </h1>
 
-      <p>Manage daily, weekly and monthly loan collections.</p>
+        <p
+          style={{
+            marginTop: 8,
+            color: "var(--text-muted)",
+          }}
+        >
+          Record, manage and monitor loan collections.
+        </p>
+      </div>
 
       <CollectionDashboard collections={collections} />
 
-      <Card title="Select Loan">
+      <Card title="Loan Selection" subtitle="Choose an active loan">
         <LoanSelector
           loans={loans}
           selectedLoanId={selectedLoanId}
@@ -162,11 +179,16 @@ export default function Collections() {
         collectedAmount={collectedAmount}
       />
 
-      <Card title="New Collection Entry">
+      <Card title="New Collection" subtitle="Enter collection details">
         <CollectionForm onSubmit={saveCollection} />
       </Card>
 
-      <Card title="Collection History">
+      <Card
+        title="Collection History"
+        subtitle={`${collections.length} collection${
+          collections.length === 1 ? "" : "s"
+        } recorded`}
+      >
         <CollectionTable
           collections={collections}
           onDelete={removeCollection}

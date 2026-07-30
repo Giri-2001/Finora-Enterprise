@@ -28,8 +28,8 @@ export default function CustomerStats({ customers }: CustomerStatsProps) {
   const cardStyle: React.CSSProperties = {
     flex: 1,
     minWidth: 220,
-    background: "#ffffff",
-    border: "1px solid #e2e8f0",
+    background: "var(--surface)",
+    border: "1px solid var(--surface-border)",
     borderRadius: 12,
     padding: 20,
     boxShadow: "0 2px 8px rgba(0,0,0,0.05)",
@@ -39,12 +39,12 @@ export default function CustomerStats({ customers }: CustomerStatsProps) {
     fontSize: 30,
     fontWeight: 700,
     marginTop: 12,
-    color: "#0f172a",
+    color: "var(--text)",
   };
 
   const labelStyle: React.CSSProperties = {
     fontSize: 14,
-    color: "#64748b",
+    color: "var(--text-muted)",
     fontWeight: 600,
   };
 
@@ -69,7 +69,7 @@ export default function CustomerStats({ customers }: CustomerStatsProps) {
         <div
           style={{
             ...valueStyle,
-            color: "#16a34a",
+            color: "var(--success)",
           }}
         >
           {activeCustomers}
@@ -78,7 +78,7 @@ export default function CustomerStats({ customers }: CustomerStatsProps) {
         <div
           style={{
             marginTop: 8,
-            color: "#64748b",
+            color: "var(--text-muted)",
             fontSize: 13,
           }}
         >
@@ -92,7 +92,7 @@ export default function CustomerStats({ customers }: CustomerStatsProps) {
         <div
           style={{
             ...valueStyle,
-            color: "#dc2626",
+            color: "var(--danger)",
           }}
         >
           {inactiveCustomers}
@@ -101,7 +101,7 @@ export default function CustomerStats({ customers }: CustomerStatsProps) {
         <div
           style={{
             marginTop: 8,
-            color: "#64748b",
+            color: "var(--text-muted)",
             fontSize: 13,
           }}
         >

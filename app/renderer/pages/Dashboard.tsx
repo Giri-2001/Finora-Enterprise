@@ -16,6 +16,14 @@ import { getBags } from "../store/goldBagStore";
 
 import { getOrnaments } from "../store/goldOrnamentStore";
 
+function safeNumber(value?: number) {
+  return typeof value === "number" && Number.isFinite(value) ? value : 0;
+}
+
+function formatCurrency(value?: number) {
+  return `₹${safeNumber(value).toLocaleString("en-IN")}`;
+}
+
 export default function Dashboard() {
   const customers = getCustomers();
 
@@ -38,20 +46,17 @@ export default function Dashboard() {
   const closedLoans = loans.filter((loan) => loan.status === "Closed");
 
   const outstandingAmount = loans.reduce(
-    (total, loan) => total + loan.outstandingAmount,
-
+    (total, loan) => total + safeNumber(loan.outstandingAmount),
     0,
   );
 
   const approvedAmount = loans.reduce(
-    (total, loan) => total + loan.approvedLoanAmount,
-
+    (total, loan) => total + safeNumber(loan.approvedLoanAmount),
     0,
   );
 
   const todaysCollectionAmount = todaysCollections.reduce(
-    (total, collection) => total + collection.totalAmount,
-
+    (total, collection) => total + safeNumber(collection.totalAmount),
     0,
   );
 
@@ -59,12 +64,12 @@ export default function Dashboard() {
     (locker) => locker.status === "OCCUPIED",
   ).length;
 
-  const availableLockers = lockers.length - occupiedLockers;
+  const availableLockers = Math.max(lockers.length - occupiedLockers, 0);
 
   const releasedBags = bags.filter((bag) => bag.status === "RELEASED").length;
 
   const todaysActivities = auditLogs.filter((log) =>
-    log.createdAt.startsWith(today),
+    log.createdAt?.startsWith(today),
   ).length;
 
   const loginCount = auditLogs.filter((log) => log.action === "LOGIN").length;
@@ -73,7 +78,7 @@ export default function Dashboard() {
     {
       title: "Total Customers",
 
-      value: customers.length.toString(),
+      value: customers.length,
 
       description: "Registered customers",
     },
@@ -81,7 +86,7 @@ export default function Dashboard() {
     {
       title: "Total Loans",
 
-      value: loans.length.toString(),
+      value: loans.length,
 
       description: "Created loans",
     },
@@ -89,7 +94,7 @@ export default function Dashboard() {
     {
       title: "Active Loans",
 
-      value: activeLoans.length.toString(),
+      value: activeLoans.length,
 
       description: "Running loans",
     },
@@ -97,7 +102,7 @@ export default function Dashboard() {
     {
       title: "Closed Loans",
 
-      value: closedLoans.length.toString(),
+      value: closedLoans.length,
 
       description: "Completed loans",
     },
@@ -105,7 +110,7 @@ export default function Dashboard() {
     {
       title: "Approved Amount",
 
-      value: `₹${approvedAmount.toLocaleString("en-IN")}`,
+      value: formatCurrency(approvedAmount),
 
       description: "Total approved loans",
     },
@@ -113,7 +118,7 @@ export default function Dashboard() {
     {
       title: "Outstanding Amount",
 
-      value: `₹${outstandingAmount.toLocaleString("en-IN")}`,
+      value: formatCurrency(outstandingAmount),
 
       description: "Receivable balance",
     },
@@ -121,7 +126,7 @@ export default function Dashboard() {
     {
       title: "Today's Collection",
 
-      value: `₹${todaysCollectionAmount.toLocaleString("en-IN")}`,
+      value: formatCurrency(todaysCollectionAmount),
 
       description: "Today's received amount",
     },
@@ -129,7 +134,7 @@ export default function Dashboard() {
     {
       title: "Collection Count",
 
-      value: todaysCollections.length.toString(),
+      value: todaysCollections.length,
 
       description: "Today's entries",
     },
@@ -137,7 +142,7 @@ export default function Dashboard() {
     {
       title: "Gold Lockers",
 
-      value: lockers.length.toString(),
+      value: lockers.length,
 
       description: "Total lockers",
     },
@@ -145,7 +150,7 @@ export default function Dashboard() {
     {
       title: "Occupied Lockers",
 
-      value: occupiedLockers.toString(),
+      value: occupiedLockers,
 
       description: "Active gold storage",
     },
@@ -153,7 +158,7 @@ export default function Dashboard() {
     {
       title: "Available Lockers",
 
-      value: availableLockers.toString(),
+      value: availableLockers,
 
       description: "Empty lockers",
     },
@@ -161,15 +166,23 @@ export default function Dashboard() {
     {
       title: "Gold Bags",
 
-      value: bags.length.toString(),
+      value: bags.length,
 
       description: "Registered bags",
     },
 
     {
+      title: "Released Bags",
+
+      value: releasedBags,
+
+      description: "Released storage bags",
+    },
+
+    {
       title: "Gold Ornaments",
 
-      value: ornaments.length.toString(),
+      value: ornaments.length,
 
       description: "Stored ornaments",
     },
@@ -177,7 +190,7 @@ export default function Dashboard() {
     {
       title: "Audit Actions",
 
-      value: auditLogs.length.toString(),
+      value: auditLogs.length,
 
       description: "Tracked activities",
     },
@@ -185,7 +198,7 @@ export default function Dashboard() {
     {
       title: "Today's Activities",
 
-      value: todaysActivities.toString(),
+      value: todaysActivities,
 
       description: "Today's operations",
     },
@@ -193,7 +206,7 @@ export default function Dashboard() {
     {
       title: "Login Count",
 
-      value: loginCount.toString(),
+      value: loginCount,
 
       description: "User login activity",
     },
@@ -207,7 +220,7 @@ export default function Dashboard() {
         style={{
           marginBottom: 24,
 
-          color: "#64748b",
+          color: "var(--text-muted)",
         }}
       >
         Complete business overview and operational control.
@@ -216,7 +229,11 @@ export default function Dashboard() {
       <div className="dashboard-grid">
         {metrics.map((metric) => (
           <Card key={metric.title} title={metric.title}>
-            <h2 className="kpi-value">{metric.value}</h2>
+            <h2 className="kpi-value">
+              {typeof metric.value === "number"
+                ? metric.value.toLocaleString("en-IN")
+                : metric.value}
+            </h2>
 
             <p className="kpi-description">{metric.description}</p>
           </Card>

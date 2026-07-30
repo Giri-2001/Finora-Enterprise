@@ -4,8 +4,12 @@ type LoanSummaryProps = {
   loans: Loan[];
 };
 
-function formatCurrency(value: number) {
-  return `₹${value.toLocaleString("en-IN")}`;
+function safeNumber(value?: number): number {
+  return typeof value === "number" && Number.isFinite(value) ? value : 0;
+}
+
+function formatCurrency(value?: number): string {
+  return `₹${safeNumber(value).toLocaleString("en-IN")}`;
 }
 
 export default function LoanSummary({ loans }: LoanSummaryProps) {
@@ -20,111 +24,94 @@ export default function LoanSummary({ loans }: LoanSummaryProps) {
   const defaultLoans = loans.filter((loan) => loan.status === "Default").length;
 
   const totalApproved = loans.reduce(
-    (sum, loan) => sum + loan.approvedLoanAmount,
-
+    (sum, loan) => sum + safeNumber(loan.approvedLoanAmount),
     0,
   );
 
   const totalCollected = loans.reduce(
-    (sum, loan) => sum + loan.totalCollectedAmount,
-
+    (sum, loan) => sum + safeNumber(loan.totalCollectedAmount),
     0,
   );
 
   const totalOutstanding = loans.reduce(
-    (sum, loan) => sum + loan.outstandingAmount,
-
+    (sum, loan) => sum + safeNumber(loan.outstandingAmount),
     0,
   );
 
   const cards = [
     {
       title: "Total Loans",
-
       value: totalLoans,
     },
-
     {
       title: "Active Loans",
-
       value: activeLoans,
     },
-
     {
       title: "Closed Loans",
-
       value: closedLoans,
     },
-
     {
       title: "Pending Loans",
-
       value: pendingLoans,
     },
-
     {
       title: "Default Loans",
-
       value: defaultLoans,
     },
-
     {
       title: "Approved Amount",
-
       value: formatCurrency(totalApproved),
     },
-
     {
       title: "Collected Amount",
-
       value: formatCurrency(totalCollected),
     },
-
     {
       title: "Outstanding Amount",
-
       value: formatCurrency(totalOutstanding),
     },
   ];
 
   return (
-    <div
-      style={{
-        display: "grid",
-
-        gridTemplateColumns: "repeat(auto-fit,minmax(220px,1fr))",
-
-        gap: 16,
-
-        marginBottom: 24,
-      }}
-    >
+    <div className="grid gap-5 grid-cols-[repeat(auto-fit,minmax(220px,1fr))]">
       {cards.map((card) => (
         <div
           key={card.title}
+          className="
+            rounded-2xl
+            border
+            p-6
+            transition-all
+            duration-300
+            hover:-translate-y-1
+            hover:shadow-xl
+          "
           style={{
-            padding: 20,
-
-            borderRadius: 12,
-
-            background: "#ffffff",
-
-            border: "1px solid #e2e8f0",
-
-            boxShadow: "0 2px 8px rgba(0,0,0,0.05)",
+            background: "var(--surface)",
+            borderColor: "var(--surface-border)",
+            boxShadow: "var(--card-shadow)",
           }}
         >
           <p
+            className="text-sm font-bold"
             style={{
-              margin: 0,
-
-              color: "#64748b",
+              color: "var(--text-muted)",
             }}
           >
             {card.title}
           </p>
 
-          <h2>{card.value}</h2>
+          <h2
+            className="mt-3 text-3xl font-black"
+            style={{
+              color: "var(--finora-accent)",
+            }}
+          >
+            {typeof card.value === "number"
+              ? card.value.toLocaleString("en-IN")
+              : card.value}
+          </h2>
         </div>
       ))}
     </div>

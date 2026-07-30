@@ -4,80 +4,142 @@ type LoanHistoryProps = {
   loan: Loan;
 };
 
+function safeNumber(value?: number): number {
+  return typeof value === "number" && Number.isFinite(value) ? value : 0;
+}
+
+function formatCurrency(value?: number): string {
+  return `₹${safeNumber(value).toLocaleString("en-IN")}`;
+}
+
 export default function LoanHistory({ loan }: LoanHistoryProps) {
   const history = [
     {
       title: "Loan Created",
-
-      date: loan.createdAt,
-
-      description: `Loan ${loan.finoraLoanId} created.`,
+      date: loan.createdAt || "-",
+      description: `Loan ${loan.finoraLoanId} was created.`,
+      color: "var(--finora-accent)",
     },
-
     {
       title: "Collections",
-
-      date: loan.lastCollectionDate ?? "-",
-
-      description: `Total collected ₹${loan.totalCollectedAmount.toLocaleString(
-        "en-IN",
+      date: loan.lastCollectionDate || "-",
+      description: `Total collected ${formatCurrency(
+        loan.totalCollectedAmount,
       )}`,
+      color: "var(--success)",
     },
-
     {
-      title: "Balance",
-
-      date: loan.updatedAt,
-
-      description: `Outstanding balance ₹${loan.outstandingAmount.toLocaleString(
-        "en-IN",
+      title: "Outstanding Balance",
+      date: loan.updatedAt || "-",
+      description: `Outstanding balance ${formatCurrency(
+        loan.outstandingAmount,
       )}`,
+      color: "var(--warning)",
     },
-
     {
-      title: "Status",
-
-      date: loan.updatedAt,
-
-      description: `Loan status changed to ${loan.status}`,
+      title: "Loan Status",
+      date: loan.updatedAt || "-",
+      description: `Current status: ${loan.status}`,
+      color: "var(--danger)",
     },
   ];
 
   return (
     <div
       style={{
-        marginTop: 20,
-
-        padding: 20,
-
-        background: "#ffffff",
-
-        borderRadius: 12,
-
-        border: "1px solid #e2e8f0",
+        marginTop: 24,
+        padding: 24,
+        borderRadius: 18,
+        background: "var(--surface)",
+        border: "1px solid var(--surface-border)",
+        boxShadow: "var(--card-shadow)",
       }}
     >
-      <h3>Loan Activity History</h3>
+      <h3
+        style={{
+          marginTop: 0,
+          marginBottom: 24,
+          color: "var(--text)",
+          fontSize: 22,
+          fontWeight: 800,
+        }}
+      >
+        Loan Activity History
+      </h3>
 
-      <div>
-        {history.map((item, index) => (
+      <div
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          gap: 16,
+        }}
+      >
+        {history.map((item) => (
           <div
-            key={index}
+            key={item.title}
             style={{
-              padding: 14,
-
-              borderLeft: "3px solid #2563eb",
-
-              marginBottom: 12,
-
-              background: "#f8fafc",
+              display: "flex",
+              gap: 16,
+              alignItems: "flex-start",
             }}
           >
-            <strong>{item.title}</strong>
+            <div
+              style={{
+                width: 14,
+                height: 14,
+                marginTop: 6,
+                borderRadius: "50%",
+                background: item.color,
+                flexShrink: 0,
+              }}
+            />
 
-            <p>{item.description}</p>
+            <div
+              style={{
+                flex: 1,
+                padding: 18,
+                borderRadius: 16,
+                background: "var(--surface-hover)",
+                border: "1px solid var(--surface-border)",
+              }}
+            >
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  gap: 12,
+                  flexWrap: "wrap",
+                }}
+              >
+                <strong
+                  style={{
+                    color: "var(--text)",
+                  }}
+                >
+                  {item.title}
+                </strong>
 
-            <small>{item.date || "-"}</small>
+                <span
+                  style={{
+                    fontSize: 12,
+                    color: "var(--text-muted)",
+                  }}
+                >
+                  {item.date}
+                </span>
+              </div>
+
+              <p
+                style={{
+                  marginTop: 10,
+                  marginBottom: 0,
+                  color: "var(--text-muted)",
+                  lineHeight: 1.6,
+                }}
+              >
+                {item.description}
+              </p>
+            </div>
           </div>
         ))}
       </div>

@@ -20,6 +20,10 @@ import { exportReportToPDF } from "../../utils/pdfExport";
 
 import { exportReportToExcel } from "../../utils/excelExport";
 
+function formatCurrency(value?: number) {
+  return `₹${(value ?? 0).toLocaleString("en-IN")}`;
+}
+
 export default function Reports() {
   const loanReports = getLoanReport();
 
@@ -34,14 +38,12 @@ export default function Reports() {
   const lockerReports = generateLockerReport();
 
   const totalOutstanding = loanReports.reduce(
-    (sum, loan) => sum + loan.outstandingAmount,
-
+    (sum, loan) => sum + (loan.outstandingAmount ?? 0),
     0,
   );
 
   const totalCollected = collectionReports.reduce(
-    (sum, collection) => sum + collection.amount,
-
+    (sum, collection) => sum + (collection.amount ?? 0),
     0,
   );
 
@@ -87,43 +89,22 @@ export default function Reports() {
             exportReportToExcel("FINORA_Payment_Report", paymentReports)
           }
         />
-
-        <ExportButtons
-          onExportPDF={() =>
-            exportReportToPDF("FINORA Gold Report", goldReports)
-          }
-          onExportExcel={() =>
-            exportReportToExcel("FINORA_Gold_Report", goldReports)
-          }
-        />
-
-        <ExportButtons
-          onExportPDF={() =>
-            exportReportToPDF("FINORA Locker Report", lockerReports)
-          }
-          onExportExcel={() =>
-            exportReportToExcel("FINORA_Locker_Report", lockerReports)
-          }
-        />
       </Card>
 
       <div
         style={{
           display: "grid",
-
           gridTemplateColumns: "repeat(auto-fit,minmax(220px,1fr))",
-
           gap: 20,
-
           marginTop: 20,
         }}
       >
         <Card title="Outstanding Amount">
-          <h2>₹{totalOutstanding.toLocaleString("en-IN")}</h2>
+          <h2>{formatCurrency(totalOutstanding)}</h2>
         </Card>
 
         <Card title="Total Collected">
-          <h2>₹{totalCollected.toLocaleString("en-IN")}</h2>
+          <h2>{formatCurrency(totalCollected)}</h2>
         </Card>
       </div>
 
@@ -134,7 +115,7 @@ export default function Reports() {
 
             <p>Customer: {loan.customerName}</p>
 
-            <p>Balance: ₹{loan.outstandingAmount.toLocaleString("en-IN")}</p>
+            <p>Balance: {formatCurrency(loan.outstandingAmount)}</p>
 
             <p>Status: {loan.status}</p>
           </div>
@@ -146,7 +127,7 @@ export default function Reports() {
           <div key={payment.paymentId} style={rowStyle}>
             <p>Payment: {payment.paymentId}</p>
 
-            <p>Amount: ₹{payment.amount.toLocaleString("en-IN")}</p>
+            <p>Amount: {formatCurrency(payment.amount)}</p>
           </div>
         ))}
       </Card>

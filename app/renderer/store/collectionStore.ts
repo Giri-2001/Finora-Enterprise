@@ -10,14 +10,34 @@ function loadCollections(): Collection[] {
       return [];
     }
 
-    return JSON.parse(data) as Collection[];
+    const parsed = JSON.parse(data);
+
+    if (!Array.isArray(parsed)) {
+      return [];
+    }
+
+    return parsed.map((item) => ({
+      ...item,
+
+      interestAmount: Number(item.interestAmount) || 0,
+
+      principalAmount: Number(item.principalAmount) || 0,
+
+      penaltyAmount: Number(item.penaltyAmount) || 0,
+
+      totalAmount: Number(item.totalAmount) || 0,
+    })) as Collection[];
   } catch {
     return [];
   }
 }
 
 function saveCollections(collections: Collection[]): void {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(collections));
+  localStorage.setItem(
+    STORAGE_KEY,
+
+    JSON.stringify(collections),
+  );
 }
 
 let collections: Collection[] = loadCollections();
@@ -41,14 +61,38 @@ export function getCustomerCollections(customerId: string): Collection[] {
 }
 
 export function addCollection(collection: Collection): void {
-  collections = [...collections, collection];
+  const safeCollection: Collection = {
+    ...collection,
+
+    interestAmount: Number(collection.interestAmount) || 0,
+
+    principalAmount: Number(collection.principalAmount) || 0,
+
+    penaltyAmount: Number(collection.penaltyAmount) || 0,
+
+    totalAmount: Number(collection.totalAmount) || 0,
+  };
+
+  collections = [...collections, safeCollection];
 
   saveCollections(collections);
 }
 
 export function updateCollection(updatedCollection: Collection): void {
   collections = collections.map((collection) =>
-    collection.id === updatedCollection.id ? updatedCollection : collection,
+    collection.id === updatedCollection.id
+      ? {
+          ...updatedCollection,
+
+          interestAmount: Number(updatedCollection.interestAmount) || 0,
+
+          principalAmount: Number(updatedCollection.principalAmount) || 0,
+
+          penaltyAmount: Number(updatedCollection.penaltyAmount) || 0,
+
+          totalAmount: Number(updatedCollection.totalAmount) || 0,
+        }
+      : collection,
   );
 
   saveCollections(collections);
@@ -61,7 +105,17 @@ export function deleteCollection(id: string): void {
 }
 
 export function replaceCollections(updatedCollections: Collection[]): void {
-  collections = [...updatedCollections];
+  collections = updatedCollections.map((collection) => ({
+    ...collection,
+
+    interestAmount: Number(collection.interestAmount) || 0,
+
+    principalAmount: Number(collection.principalAmount) || 0,
+
+    penaltyAmount: Number(collection.penaltyAmount) || 0,
+
+    totalAmount: Number(collection.totalAmount) || 0,
+  }));
 
   saveCollections(collections);
 }

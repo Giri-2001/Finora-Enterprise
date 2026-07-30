@@ -2,37 +2,81 @@ import type { ReactNode } from "react";
 
 type EmptyStateProps = {
   title: string;
+
   description: string;
+
   icon?: ReactNode;
+
   action?: ReactNode;
 };
 
 export default function EmptyState({
   title,
+
   description,
+
   icon,
+
   action,
 }: EmptyStateProps) {
   return (
     <div
       style={{
-        marginTop: 20,
-        padding: "48px 24px",
-        border: "1px dashed #cbd5e1",
-        borderRadius: 12,
-        background: "#ffffff",
+        marginTop: 24,
+
+        padding: "56px 30px",
+
+        border: "1px dashed var(--surface-border)",
+
+        borderRadius: 20,
+
+        background: "var(--surface)",
+
+        color: "var(--text)",
+
         display: "flex",
+
         flexDirection: "column",
+
         alignItems: "center",
+
         justifyContent: "center",
+
         textAlign: "center",
+
+        boxShadow: "var(--card-shadow)",
+
+        transition: "all .25s ease",
+      }}
+      onMouseEnter={(event) => {
+        event.currentTarget.style.transform = "translateY(-3px)";
+      }}
+      onMouseLeave={(event) => {
+        event.currentTarget.style.transform = "translateY(0)";
       }}
     >
       {icon && (
         <div
           style={{
-            fontSize: 42,
-            marginBottom: 16,
+            width: 72,
+
+            height: 72,
+
+            borderRadius: "50%",
+
+            display: "flex",
+
+            alignItems: "center",
+
+            justifyContent: "center",
+
+            background: "rgba(37,99,235,0.12)",
+
+            color: "var(--finora-accent)",
+
+            fontSize: 34,
+
+            marginBottom: 22,
           }}
         >
           {icon}
@@ -42,9 +86,12 @@ export default function EmptyState({
       <h3
         style={{
           margin: 0,
-          color: "#0f172a",
-          fontSize: 22,
-          fontWeight: 700,
+
+          color: "var(--text)",
+
+          fontSize: 24,
+
+          fontWeight: 900,
         }}
       >
         {title}
@@ -52,17 +99,23 @@ export default function EmptyState({
 
       <p
         style={{
-          marginTop: 10,
-          marginBottom: action ? 20 : 0,
-          maxWidth: 420,
-          color: "#64748b",
-          lineHeight: 1.6,
+          marginTop: 12,
+
+          marginBottom: action ? 26 : 0,
+
+          maxWidth: 450,
+
+          color: "var(--text-muted)",
+
+          lineHeight: 1.7,
+
+          fontSize: 15,
         }}
       >
         {description}
       </p>
 
-      {action}
+      {action && <div>{action}</div>}
     </div>
   );
 }

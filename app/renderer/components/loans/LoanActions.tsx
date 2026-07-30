@@ -14,32 +14,46 @@ type LoanActionsProps = {
 
 export default function LoanActions({
   loan,
-
   onView,
-
   onEdit,
-
   onClose,
 }: LoanActionsProps) {
   return (
     <div
       style={{
         display: "flex",
-
+        flexWrap: "wrap",
         gap: 8,
+        alignItems: "center",
       }}
     >
-      <Button type="button" onClick={() => onView?.(loan)}>
-        View
-      </Button>
+      {onView && (
+        <Button type="button" size="small" onClick={() => onView(loan)}>
+          View
+        </Button>
+      )}
 
-      <Button type="button" onClick={() => onEdit?.(loan)}>
-        Edit
-      </Button>
+      {onEdit && (
+        <Button
+          type="button"
+          size="small"
+          variant="secondary"
+          onClick={() => onEdit(loan)}
+        >
+          Edit
+        </Button>
+      )}
 
-      <Button type="button" onClick={() => onClose?.(loan)}>
-        Close
-      </Button>
+      {onClose && (
+        <Button
+          type="button"
+          size="small"
+          variant="danger"
+          onClick={() => onClose(loan)}
+        >
+          Close
+        </Button>
+      )}
     </div>
   );
 }

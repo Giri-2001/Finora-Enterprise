@@ -10,7 +10,7 @@ type CustomerTableProps = {
 };
 
 function getStatusColor(status: Customer["status"]) {
-  return status === "Active" ? "#16a34a" : "#dc2626";
+  return status === "Active" ? "var(--success)" : "var(--danger)";
 }
 
 export default function CustomerTable({
@@ -33,9 +33,9 @@ export default function CustomerTable({
       style={{
         marginTop: 20,
         overflowX: "auto",
-        border: "1px solid #cbd5e1",
+        border: "1px solid var(--surface-border)",
         borderRadius: 12,
-        background: "#ffffff",
+        background: "var(--surface)",
       }}
     >
       <table
@@ -47,8 +47,8 @@ export default function CustomerTable({
       >
         <thead
           style={{
-            background: "#0f172a",
-            color: "#ffffff",
+            background: "var(--surface-border)",
+            color: "var(--text)",
           }}
         >
           <tr>
@@ -73,8 +73,9 @@ export default function CustomerTable({
             <tr
               key={customer.id}
               style={{
-                background: index % 2 === 0 ? "#ffffff" : "#f8fafc",
-                borderBottom: "1px solid #e2e8f0",
+                background: index % 2 === 0 ? "var(--surface)" : "var(--bg)",
+
+                borderBottom: "1px solid var(--surface-border)",
               }}
             >
               <td style={cellStyle}>{customer.customerId}</td>
@@ -147,14 +148,14 @@ const headerStyle: React.CSSProperties = {
   fontWeight: 700,
   fontSize: 14,
   whiteSpace: "nowrap",
-  borderBottom: "1px solid #334155",
+  borderBottom: "1px solid var(--surface-border)",
 };
 
 const cellStyle: React.CSSProperties = {
   padding: "12px 14px",
   textAlign: "left",
   fontSize: 14,
-  color: "#1f2937",
+  color: "var(--text)",
   verticalAlign: "middle",
   whiteSpace: "nowrap",
 };

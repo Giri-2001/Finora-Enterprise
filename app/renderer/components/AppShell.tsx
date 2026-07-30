@@ -1,13 +1,20 @@
 import type { ReactNode } from "react";
 
+import type { Page } from "../types/page";
 import type { UserRole } from "./auth/types";
 
-import type { Page } from "../types/page";
+import {
+  BrandLogo,
+  DashboardIcon,
+  CustomerIcon,
+  LoanIcon,
+  CollectionIcon,
+  ReportIcon,
+} from "./icons";
 
 import { hasPermission } from "../utils/permissions";
 
 import "../styles/layout.css";
-
 type AppShellProps = {
   currentPage: Page;
 
@@ -26,11 +33,17 @@ type AppShellProps = {
 
 export default function AppShell({
   currentPage,
+
   onNavigate,
+
   onLogout,
+
   userRole,
+
   sidebarOpen,
+
   setSidebarOpen,
+
   children,
 }: AppShellProps) {
   function handleNavigate(page: Page) {
@@ -44,8 +57,12 @@ export default function AppShell({
       <div
         style={{
           width: "100vw",
+
           height: "100vh",
+
           overflow: "hidden",
+
+          background: "var(--bg)",
         }}
       >
         {children}
@@ -67,27 +84,33 @@ export default function AppShell({
         <h1
           style={{
             margin: 0,
+
+            color: "var(--text)",
+
             fontSize: 20,
-            fontWeight: 600,
+
+            fontWeight: 800,
           }}
         >
-          {currentPage === "businessSettings"
-            ? "BUSINESS SETTINGS"
-            : currentPage === "subscriptionControl"
-              ? "SUBSCRIPTION CONTROL"
-              : currentPage.toUpperCase()}
+          {currentPage
+            .toString()
+            .replace(/([A-Z])/g, " $1")
+            .toUpperCase()}
         </h1>
       </header>
 
       <aside
         className={sidebarOpen ? "app-sidebar mobile-open" : "app-sidebar"}
       >
-        <h2>FINORA</h2>
+        <div className="sidebar-brand">
+          <BrandLogo />
+        </div>
 
         <p
           style={{
+            color: "var(--text-muted)",
+
             fontSize: 12,
-            opacity: 0.7,
           }}
         >
           {userRole}
@@ -95,10 +118,13 @@ export default function AppShell({
 
         <nav
           style={{
-            marginTop: 40,
+            marginTop: 30,
+
             display: "flex",
+
             flexDirection: "column",
-            gap: 14,
+
+            gap: 10,
           }}
         >
           <button onClick={() => handleNavigate("dashboard")}>Dashboard</button>
@@ -147,18 +173,6 @@ export default function AppShell({
             <button onClick={() => handleNavigate("audit")}>Audit Logs</button>
           )}
 
-          {hasPermission(userRole, "AUDIT_VIEW") && (
-            <button onClick={() => handleNavigate("auditArchive")}>
-              Audit Archive
-            </button>
-          )}
-
-          {hasPermission(userRole, "AUDIT_VIEW") && (
-            <button onClick={() => handleNavigate("auditRetention")}>
-              Audit Retention
-            </button>
-          )}
-
           {hasPermission(userRole, "BACKUP_MANAGEMENT") && (
             <button onClick={() => handleNavigate("backup")}>Backup</button>
           )}
@@ -190,15 +204,14 @@ export default function AppShell({
           <hr />
 
           <button
-            type="button"
             onClick={onLogout}
             style={{
-              background: "#dc2626",
-              color: "#ffffff",
+              background:
+                "linear-gradient(135deg,var(--finora-accent),var(--finora-accent-hover))",
+
+              color: "var(--button-text)",
+
               border: "none",
-              padding: "10px",
-              borderRadius: 6,
-              cursor: "pointer",
             }}
           >
             Logout

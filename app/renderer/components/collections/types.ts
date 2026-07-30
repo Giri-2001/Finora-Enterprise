@@ -8,6 +8,7 @@ export interface Collection {
   id: string;
 
   loanId: string;
+
   customerId: string;
 
   receiptNumber: string;
@@ -17,7 +18,9 @@ export interface Collection {
   collectionType: CollectionType;
 
   interestAmount: number;
+
   principalAmount: number;
+
   penaltyAmount: number;
 
   totalAmount: number;
@@ -31,6 +34,7 @@ export interface Collection {
   status: CollectionStatus;
 
   createdAt: string;
+
   updatedAt: string;
 }
 
@@ -65,5 +69,51 @@ export interface LoanCollectionSummary {
 
   balanceAmount: number;
 
-  lastCollectionDate?: string;
+  lastCollectionDate?: string | null;
+}
+
+export interface CollectionDashboardCard {
+  title: string;
+
+  value: string | number;
+
+  subtitle?: string;
+
+  color?: string;
+
+  icon?: string;
+}
+
+export interface CollectionFilterState {
+  search: string;
+
+  paymentMode: PaymentMode | "";
+
+  collectionType: CollectionType | "";
+
+  status: CollectionStatus | "";
+
+  fromDate: string;
+
+  toDate: string;
+}
+
+export interface CollectionAnalytics {
+  totalCollections: number;
+
+  completedCollections: number;
+
+  pendingCollections: number;
+
+  cancelledCollections: number;
+
+  totalCollectedAmount: number;
+
+  totalInterestAmount: number;
+
+  totalPrincipalAmount: number;
+
+  totalPenaltyAmount: number;
+
+  averageCollectionAmount: number;
 }

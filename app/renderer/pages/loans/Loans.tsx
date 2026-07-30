@@ -31,6 +31,10 @@ import { getSession } from "../../store/authStore";
 
 import { createAuditLog } from "../../store/auditStore";
 
+function safeNumber(value: number | null | undefined): number {
+  return typeof value === "number" && Number.isFinite(value) ? value : 0;
+}
+
 export default function Loans() {
   const [loans, setLoans] = useState<Loan[]>(getLoans());
 
@@ -54,19 +58,13 @@ export default function Loans() {
 
   function saveLoan(loan: {
     customerId: string;
-
     oldLoanNumber: string;
-
     lockerNumber: string;
-
     bagNumber: string;
 
     approvedLoanAmount: number;
-
     receivedAmount: number;
-
     deductionAmount: number;
-
     discountAmount: number;
 
     interestType: "Percentage" | "Rupees" | "Paisa" | "Fixed";
@@ -94,9 +92,25 @@ export default function Loans() {
 
       ...loan,
 
+      approvedLoanAmount: safeNumber(loan.approvedLoanAmount),
+
+      receivedAmount: safeNumber(loan.receivedAmount),
+
+      deductionAmount: safeNumber(loan.deductionAmount),
+
+      discountAmount: safeNumber(loan.discountAmount),
+
+      interestValue: safeNumber(loan.interestValue),
+
+      duration: safeNumber(loan.duration),
+
+      calculatedCollectionAmount: safeNumber(loan.calculatedCollectionAmount),
+
+      collectionAmount: safeNumber(loan.collectionAmount),
+
       totalCollectedAmount: 0,
 
-      outstandingAmount: loan.approvedLoanAmount,
+      outstandingAmount: safeNumber(loan.approvedLoanAmount),
 
       lastCollectionDate: null,
 
@@ -128,27 +142,24 @@ export default function Loans() {
     refresh();
   }
 
-  const filteredLoans = useMemo(
-    () =>
-      loans.filter((loan) => {
-        const text = search.toLowerCase();
+  const filteredLoans = useMemo(() => {
+    return loans.filter((loan) => {
+      const text = search.toLowerCase();
 
-        const matchesSearch =
-          !text ||
-          loan.finoraLoanId.toLowerCase().includes(text) ||
-          loan.oldLoanNumber.toLowerCase().includes(text) ||
-          loan.customerId.toLowerCase().includes(text);
+      const matchesSearch =
+        !text ||
+        loan.finoraLoanId.toLowerCase().includes(text) ||
+        loan.oldLoanNumber.toLowerCase().includes(text) ||
+        loan.customerId.toLowerCase().includes(text);
 
-        const matchesStatus = !status || loan.status === status;
+      const matchesStatus = !status || loan.status === status;
 
-        const matchesCollection =
-          !collectionType || loan.collectionType === collectionType;
+      const matchesCollection =
+        !collectionType || loan.collectionType === collectionType;
 
-        return matchesSearch && matchesStatus && matchesCollection;
-      }),
-
-    [loans, search, status, collectionType],
-  );
+      return matchesSearch && matchesStatus && matchesCollection;
+    });
+  }, [loans, search, status, collectionType]);
 
   function handleEdit(loan: Loan) {
     updateLoan(loan);
@@ -196,13 +207,26 @@ export default function Loans() {
 
   return (
     <div>
-      <h1>Loan Management</h1>
+      <h1
+        style={{
+          color: "var(--text)",
+          fontWeight: 900,
+        }}
+      >
+        Loan Management
+      </h1>
 
-      <p>Manage FINORA loans, balances and collections.</p>
+      <p
+        style={{
+          color: "var(--text-muted)",
+        }}
+      >
+        Manage FINORA loans, balances and collections.
+      </p>
 
       <LoanDashboard loans={loans} />
 
-      <Card title="Search & Filters">
+      <Card title="Search & Filters" subtitle="Find loans quickly">
         <LoanSearch loans={loans} onSearch={setSearch} />
 
         <LoanFilters
@@ -213,11 +237,11 @@ export default function Loans() {
         />
       </Card>
 
-      <Card title="Create Loan">
+      <Card title="Create Loan" subtitle="Register new FINORA loan">
         <LoanForm customers={customers} onSubmit={saveLoan} />
       </Card>
 
-      <Card title="Loan Records">
+      <Card title="Loan Records" subtitle="Complete loan portfolio">
         {filteredLoans.length > 0 ? (
           <LoanTable
             loans={filteredLoans}

@@ -1,9 +1,9 @@
 .app-shell {
   display: grid;
 
-  grid-template-columns: 260px 1fr;
+  grid-template-columns: 270px 1fr;
 
-  grid-template-rows: 64px 1fr;
+  grid-template-rows: 68px 1fr;
 
   width: 100vw;
 
@@ -11,12 +11,14 @@
 
   overflow: hidden;
 
-  background: #f8fafc;
+  background: var(--bg);
 
-  color: #0f172a;
+  color: var(--text);
 }
 
-/* SIDEBAR */
+/* =========================
+   SIDEBAR
+========================= */
 
 .app-sidebar {
   grid-row: 1 / 3;
@@ -25,18 +27,74 @@
 
   flex-direction: column;
 
-  padding: 24px;
+  padding: 26px 18px;
 
-  background: #ffffff;
+  background: var(--surface);
 
-  border-right: 1px solid #e2e8f0;
+  color: var(--text);
+
+  border-right: 1px solid var(--surface-border);
 
   overflow-y: auto;
+
+  transition:
+    transform 0.25s ease,
+    background 0.25s ease;
+
+  box-shadow: 6px 0 25px rgba(0, 0, 0, 0.08);
+}
+
+.app-sidebar h2 {
+  letter-spacing: 1px;
+}
+
+.app-sidebar nav button {
+  width: 100%;
+
+  padding: 11px 14px;
+
+  border-radius: 10px;
+
+  border: 1px solid transparent;
+
+  background: transparent;
+
+  color: var(--text);
+
+  text-align: left;
+
+  cursor: pointer;
+
+  font-weight: 650;
 
   transition: all 0.25s ease;
 }
 
-/* HEADER */
+.app-sidebar nav button:hover {
+  background: var(--surface-hover);
+
+  border-color: var(--surface-border);
+
+  transform: translateX(5px);
+}
+
+.app-sidebar nav button:active {
+  transform: scale(0.97);
+}
+
+.app-sidebar::-webkit-scrollbar {
+  width: 6px;
+}
+
+.app-sidebar::-webkit-scrollbar-thumb {
+  background: var(--surface-border);
+
+  border-radius: 20px;
+}
+
+/* =========================
+   HEADER
+========================= */
 
 .app-header {
   display: flex;
@@ -45,86 +103,95 @@
 
   justify-content: space-between;
 
-  padding: 0 24px;
+  padding: 0 28px;
 
-  background: #ffffff;
+  background: var(--surface);
 
-  border-bottom: 1px solid #e2e8f0;
+  color: var(--text);
+
+  border-bottom: 1px solid var(--surface-border);
+
+  box-shadow: 0 5px 20px rgba(0, 0, 0, 0.06);
 }
 
-/* MOBILE BUTTON */
+.app-header h1 {
+  letter-spacing: 0.5px;
+}
+
+/* =========================
+   MOBILE MENU
+========================= */
 
 .mobile-menu-button {
   display: none;
 
   background: transparent;
 
+  color: var(--text);
+
   border: none;
 
-  font-size: 24px;
+  font-size: 28px;
 
   cursor: pointer;
 }
 
-/* CONTENT */
+.mobile-menu-button:hover {
+  color: var(--finora-accent);
+}
+
+/* =========================
+   CONTENT
+========================= */
 
 .app-content {
   overflow-y: auto;
 
-  padding: 24px;
+  padding: 28px;
 
-  background: #f8fafc;
+  background: var(--bg);
+
+  color: var(--text);
 }
 
-/* TABLET LANDSCAPE */
+/* =========================
+   DARK THEME SHADOW FIX
+========================= */
+
+:root[data-theme="dark"] .app-sidebar,
+:root[data-theme="dark"] .app-header {
+  box-shadow: 0 10px 35px rgba(0, 0, 0, 0.35);
+}
+
+/* =========================
+   TABLET
+========================= */
 
 @media (max-width: 1100px) {
   .app-shell {
-    grid-template-columns: 220px 1fr;
-  }
-
-  .app-sidebar {
-    padding: 20px;
+    grid-template-columns: 230px 1fr;
   }
 
   .app-content {
-    padding: 20px;
-  }
-
-  .app-header {
-    padding: 0 20px;
+    padding: 22px;
   }
 }
-
-/* TABLET PORTRAIT */
 
 @media (max-width: 900px) {
   .app-shell {
-    grid-template-columns: 200px 1fr;
-  }
-
-  .app-sidebar {
-    padding: 16px;
-  }
-
-  .app-content {
-    padding: 18px;
-  }
-
-  .app-sidebar button {
-    font-size: 14px;
+    grid-template-columns: 210px 1fr;
   }
 }
 
-/* MOBILE */
+/* =========================
+   MOBILE
+========================= */
 
 @media (max-width: 768px) {
   .app-shell {
     grid-template-columns: 1fr;
 
-    grid-template-rows:
-      64px
-      1fr;
+    grid-template-rows: 68px 1fr;
   }
 
   .mobile-menu-button {
@@ -134,21 +201,17 @@
   .app-sidebar {
     position: fixed;
 
-    top: 64px;
+    top: 68px;
 
     left: 0;
 
-    width: 280px;
+    width: 290px;
 
-    height: calc(100vh - 64px);
+    height: calc(100vh - 68px);
 
-    z-index: 1000;
+    z-index: 3000;
 
-    transform: translateX(-100%);
-
-    border-right: 1px solid #e2e8f0;
-
-    border-bottom: none;
+    transform: translateX(-110%);
   }
 
   .app-sidebar.mobile-open {
@@ -156,32 +219,24 @@
   }
 
   .app-header {
-    grid-row: 1;
-
     padding: 0 16px;
   }
 
   .app-content {
-    grid-row: 2;
-
     padding: 16px;
   }
 }
 
-/* SMALL MOBILE */
-
 @media (max-width: 480px) {
-  .app-header {
-    padding: 0 12px;
-  }
-
   .app-content {
     padding: 12px;
   }
 
   .app-sidebar {
-    width: 240px;
+    width: 250px;
+  }
 
-    padding: 12px;
+  .app-header h1 {
+    font-size: 16px;
   }
 }

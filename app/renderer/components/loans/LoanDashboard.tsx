@@ -1,5 +1,6 @@
 import type { Loan } from "./types";
 
+import Card from "../ui/Card";
 import LoanSummary from "./LoanSummary";
 
 type LoanDashboardProps = {
@@ -8,20 +9,15 @@ type LoanDashboardProps = {
 
 export default function LoanDashboard({ loans }: LoanDashboardProps) {
   return (
-    <div>
-      <h2>Loan Dashboard</h2>
-
-      <p
-        style={{
-          color: "#64748b",
-
-          marginBottom: 20,
-        }}
+    <section className="w-full">
+      <Card
+        title="Loan Dashboard"
+        subtitle="Overview of FINORA loan portfolio and financial status."
       >
-        Overview of FINORA loan portfolio.
-      </p>
-
-      <LoanSummary loans={loans} />
-    </div>
+        <div className="space-y-6">
+          <LoanSummary loans={loans} />
+        </div>
+      </Card>
+    </section>
   );
 }

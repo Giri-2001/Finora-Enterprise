@@ -4,73 +4,135 @@ type LoanCardProps = {
   loan: Loan;
 };
 
-function formatCurrency(value: number) {
-  return `₹${value.toLocaleString("en-IN")}`;
+function safeNumber(value?: number) {
+  return typeof value === "number" && Number.isFinite(value) ? value : 0;
+}
+
+function formatCurrency(value?: number) {
+  return `₹${safeNumber(value).toLocaleString("en-IN")}`;
+}
+
+function getStatusColor(status: Loan["status"]) {
+  switch (status) {
+    case "Active":
+      return "var(--success)";
+
+    case "Closed":
+      return "var(--finora-accent)";
+
+    case "Default":
+      return "var(--danger)";
+
+    default:
+      return "var(--warning)";
+  }
 }
 
 export default function LoanCard({ loan }: LoanCardProps) {
   return (
     <div
       style={{
-        padding: 20,
+        padding: 24,
 
-        borderRadius: 12,
+        borderRadius: 18,
 
-        background: "#ffffff",
+        background: "var(--surface)",
 
-        border: "1px solid #e2e8f0",
+        border: "1px solid var(--surface-border)",
 
-        boxShadow: "0 2px 8px rgba(0,0,0,0.05)",
+        boxShadow: "var(--card-shadow)",
+
+        color: "var(--text)",
+
+        transition: "all .25s ease",
+      }}
+      onMouseEnter={(event) => {
+        event.currentTarget.style.transform = "translateY(-4px)";
+      }}
+      onMouseLeave={(event) => {
+        event.currentTarget.style.transform = "translateY(0)";
       }}
     >
-      <h3>{loan.finoraLoanId}</h3>
-
-      <p>
-        <strong>Customer:</strong> {loan.customerId}
-      </p>
-
-      <p>
-        <strong>Approved:</strong> {formatCurrency(loan.approvedLoanAmount)}
-      </p>
-
-      <p>
-        <strong>Balance:</strong> {formatCurrency(loan.outstandingAmount)}
-      </p>
-
-      <p>
-        <strong>Collection:</strong> {loan.collectionType}
-      </p>
-
-      <p>
-        <strong>Interest:</strong> {loan.interestValue} {loan.interestType}
-      </p>
-
-      <span
+      <div
         style={{
-          display: "inline-block",
+          display: "flex",
 
-          padding: "5px 12px",
+          justifyContent: "space-between",
 
-          borderRadius: 20,
+          alignItems: "center",
 
-          background:
-            loan.status === "Active"
-              ? "#16a34a"
-              : loan.status === "Closed"
-                ? "#2563eb"
-                : loan.status === "Default"
-                  ? "#dc2626"
-                  : "#ca8a04",
-
-          color: "#ffffff",
-
-          fontSize: 12,
-
-          fontWeight: 600,
+          marginBottom: 18,
         }}
       >
-        {loan.status}
-      </span>
+        <h3
+          style={{
+            margin: 0,
+
+            color: "var(--finora-accent)",
+
+            fontWeight: 900,
+
+            fontSize: 20,
+          }}
+        >
+          {loan.finoraLoanId}
+        </h3>
+
+        <span
+          style={{
+            padding: "6px 14px",
+
+            borderRadius: 30,
+
+            background: getStatusColor(loan.status),
+
+            color: "#ffffff",
+
+            fontSize: 12,
+
+            fontWeight: 800,
+          }}
+        >
+          {loan.status}
+        </span>
+      </div>
+
+      <div
+        style={{
+          display: "flex",
+
+          flexDirection: "column",
+
+          gap: 12,
+
+          color: "var(--text)",
+        }}
+      >
+        <p style={{ margin: 0 }}>
+          <strong>Customer:</strong> {loan.customerId || "N/A"}
+        </p>
+
+        <p style={{ margin: 0 }}>
+          <strong>Approved:</strong> {formatCurrency(loan.approvedLoanAmount)}
+        </p>
+
+        <p style={{ margin: 0 }}>
+          <strong>Balance:</strong> {formatCurrency(loan.outstandingAmount)}
+        </p>
+
+        <p style={{ margin: 0 }}>
+          <strong>Collection:</strong> {loan.collectionType || "N/A"}
+        </p>
+
+        <p style={{ margin: 0 }}>
+          <strong>Interest:</strong> {safeNumber(loan.interestValue)}{" "}
+          {loan.interestType}
+        </p>
+
+        <p style={{ margin: 0 }}>
+          <strong>Duration:</strong> {safeNumber(loan.duration)} Months
+        </p>
+      </div>
     </div>
   );
 }

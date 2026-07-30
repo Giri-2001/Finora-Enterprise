@@ -1,47 +1,42 @@
-import Button from "../ui/Button";
+import type { CSSProperties } from "react";
 
+import Button from "../ui/Button";
 import type { Loan } from "./types";
 
 type LoanTableProps = {
   loans: Loan[];
-
   onView: (loan: Loan) => void;
-
   onEdit: (loan: Loan) => void;
-
   onCloseLoan: (loan: Loan) => void;
 };
 
-function formatCurrency(value: number) {
-  return `₹${value.toLocaleString("en-IN")}`;
+function safeNumber(value?: number): number {
+  return typeof value === "number" && Number.isFinite(value) ? value : 0;
 }
 
-function getStatusColor(status: string) {
+function formatCurrency(value?: number): string {
+  return `₹${safeNumber(value).toLocaleString("en-IN")}`;
+}
+
+function getStatusColor(status: Loan["status"]): string {
   switch (status) {
     case "Active":
-      return "#16a34a";
-
+      return "var(--success)";
     case "Closed":
-      return "#2563eb";
-
+      return "var(--finora-accent)";
     case "Pending":
-      return "#ca8a04";
-
+      return "var(--warning)";
     case "Default":
-      return "#dc2626";
-
+      return "var(--danger)";
     default:
-      return "#6b7280";
+      return "var(--text-muted)";
   }
 }
 
 export default function LoanTable({
   loans,
-
   onView,
-
   onEdit,
-
   onCloseLoan,
 }: LoanTableProps) {
   if (loans.length === 0) {
@@ -49,18 +44,14 @@ export default function LoanTable({
       <div
         style={{
           marginTop: 20,
-
-          padding: 30,
-
-          borderRadius: 12,
-
-          background: "#1e293b",
-
-          color: "#ffffff",
-
+          padding: 48,
+          borderRadius: 18,
+          background: "var(--surface)",
+          border: "1px dashed var(--surface-border)",
+          color: "var(--text-muted)",
           textAlign: "center",
-
-          fontWeight: 600,
+          fontWeight: 700,
+          boxShadow: "var(--card-shadow)",
         }}
       >
         No loans available.
@@ -71,61 +62,53 @@ export default function LoanTable({
   return (
     <div
       style={{
-        overflowX: "auto",
-
         marginTop: 20,
+        overflowX: "auto",
+        borderRadius: 18,
+        border: "1px solid var(--surface-border)",
+        boxShadow: "var(--card-shadow)",
+        background: "var(--surface)",
       }}
     >
       <table
         style={{
           width: "100%",
-
+          minWidth: 1600,
           borderCollapse: "collapse",
-
-          minWidth: 1800,
-
-          background: "#ffffff",
+          color: "var(--text)",
         }}
       >
-        <thead
-          style={{
-            background: "#0f172a",
-
-            color: "#ffffff",
-          }}
-        >
-          <tr>
+        <thead>
+          <tr
+            style={{
+              background: "var(--surface-hover)",
+            }}
+          >
             <th style={headerStyle}>FINORA ID</th>
-
             <th style={headerStyle}>Customer</th>
-
             <th style={headerStyle}>Approved</th>
-
             <th style={headerStyle}>Received</th>
-
             <th style={headerStyle}>Balance</th>
-
             <th style={headerStyle}>Interest</th>
-
             <th style={headerStyle}>Collection</th>
-
             <th style={headerStyle}>Status</th>
-
             <th style={headerStyle}>Actions</th>
           </tr>
         </thead>
 
         <tbody>
-          {loans.map((loan) => (
+          {loans.map((loan, index) => (
             <tr
               key={loan.id}
               style={{
-                borderBottom: "1px solid #e5e7eb",
+                background:
+                  index % 2 === 0 ? "var(--surface)" : "var(--surface-hover)",
+                borderBottom: "1px solid var(--surface-border)",
+                transition: "background 0.2s ease",
               }}
             >
               <td style={cellStyle}>{loan.finoraLoanId}</td>
-
-              <td style={cellStyle}>{loan.customerId}</td>
+              <td style={cellStyle}>{loan.customerId || "N/A"}</td>
 
               <td style={moneyStyle}>
                 {formatCurrency(loan.approvedLoanAmount)}
@@ -138,7 +121,7 @@ export default function LoanTable({
               </td>
 
               <td style={cellStyle}>
-                {loan.interestValue} {loan.interestType}
+                {safeNumber(loan.interestValue)} {loan.interestType}
               </td>
 
               <td style={cellStyle}>{loan.collectionType}</td>
@@ -146,14 +129,15 @@ export default function LoanTable({
               <td style={cellStyle}>
                 <span
                   style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    minWidth: 90,
+                    padding: "6px 14px",
+                    borderRadius: 999,
                     background: getStatusColor(loan.status),
-
-                    color: "#ffffff",
-
-                    padding: "4px 10px",
-
-                    borderRadius: 20,
-
+                    color: "#fff",
+                    fontWeight: 800,
                     fontSize: 12,
                   }}
                 >
@@ -165,19 +149,33 @@ export default function LoanTable({
                 <div
                   style={{
                     display: "flex",
-
                     gap: 8,
+                    flexWrap: "wrap",
                   }}
                 >
-                  <Button type="button" onClick={() => onView(loan)}>
+                  <Button
+                    type="button"
+                    size="small"
+                    onClick={() => onView(loan)}
+                  >
                     View
                   </Button>
 
-                  <Button type="button" onClick={() => onEdit(loan)}>
+                  <Button
+                    type="button"
+                    size="small"
+                    variant="secondary"
+                    onClick={() => onEdit(loan)}
+                  >
                     Edit
                   </Button>
 
-                  <Button type="button" onClick={() => onCloseLoan(loan)}>
+                  <Button
+                    type="button"
+                    size="small"
+                    variant="danger"
+                    onClick={() => onCloseLoan(loan)}
+                  >
                     Close
                   </Button>
                 </div>
@@ -190,24 +188,27 @@ export default function LoanTable({
   );
 }
 
-const headerStyle: React.CSSProperties = {
-  padding: "12px",
-
+const headerStyle: CSSProperties = {
+  padding: "14px",
   textAlign: "left",
-
-  fontWeight: 700,
+  fontWeight: 800,
+  fontSize: 13,
+  whiteSpace: "nowrap",
+  color: "var(--text)",
+  position: "sticky",
+  top: 0,
+  background: "var(--surface-hover)",
 };
 
-const cellStyle: React.CSSProperties = {
-  padding: "12px",
-
-  color: "#1f2937",
+const cellStyle: CSSProperties = {
+  padding: "14px",
+  fontSize: 14,
+  color: "var(--text)",
+  whiteSpace: "nowrap",
 };
 
-const moneyStyle: React.CSSProperties = {
+const moneyStyle: CSSProperties = {
   ...cellStyle,
-
   textAlign: "right",
-
-  fontWeight: 600,
+  fontWeight: 700,
 };
