@@ -2,6 +2,7 @@ import { useState } from "react";
 
 import Card from "../../components/ui/Card";
 
+import SecurityExportButton from "../../components/security/SecurityExportButton";
 import SecurityReport from "../../components/security/SecurityReport";
 import SecurityStats from "../../components/security/SecurityStats";
 
@@ -28,6 +29,20 @@ export default function Security() {
       <h1>Security Management</h1>
 
       <p>Monitor login attempts, locked accounts and security activity.</p>
+
+      <div
+        style={{
+          display: "flex",
+
+          gap: 12,
+
+          marginBottom: 20,
+        }}
+      >
+        <SecurityExportButton format="JSON" />
+
+        <SecurityExportButton format="CSV" />
+      </div>
 
       <SecurityStats />
 
