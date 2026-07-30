@@ -2,6 +2,8 @@ import { useState } from "react";
 
 import Card from "../../components/ui/Card";
 
+import SecurityStats from "../../components/security/SecurityStats";
+
 import {
   getLoginSecurityRecords,
   resetLoginAttempts,
@@ -24,7 +26,9 @@ export default function Security() {
     <div>
       <h1>Security Management</h1>
 
-      <p>Monitor login attempts and manage locked accounts.</p>
+      <p>Monitor login attempts, locked accounts and security activity.</p>
+
+      <SecurityStats />
 
       <Card title="Login Security Records">
         {records.length === 0 ? (
