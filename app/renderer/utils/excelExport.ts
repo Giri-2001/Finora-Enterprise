@@ -1,3 +1,7 @@
+function escapeCSV(value: unknown): string {
+  return `"${String(value ?? "").replace(/"/g, '""')}"`;
+}
+
 export function exportReportToExcel(
   title: string,
   rows: Record<string, unknown>[],
@@ -8,25 +12,45 @@ export function exportReportToExcel(
 
   const headers = Object.keys(rows[0]);
 
+  const generatedAt = new Date().toLocaleString("en-IN");
+
   const csvRows = [
-    headers.join(","),
+    "FINORA ENTERPRISE REPORT",
+
+    `Report: ${title}`,
+
+    `Generated: ${generatedAt}`,
+
+    "",
+
+    headers.map((header) => escapeCSV(header)).join(","),
 
     ...rows.map((row) =>
       headers
+
         .map((header) => {
           const value = row[header];
 
-          return `"${String(value ?? "").replace(/"/g, '""')}"`;
+          if (typeof value === "number") {
+            return escapeCSV(value.toLocaleString("en-IN"));
+          }
+
+          return escapeCSV(value);
         })
+
         .join(","),
     ),
   ];
 
   const csvContent = csvRows.join("\n");
 
-  const blob = new Blob([csvContent], {
-    type: "text/csv;charset=utf-8;",
-  });
+  const blob = new Blob(
+    [csvContent],
+
+    {
+      type: "text/csv;charset=utf-8;",
+    },
+  );
 
   const url = URL.createObjectURL(blob);
 
@@ -34,7 +58,7 @@ export function exportReportToExcel(
 
   link.href = url;
 
-  link.download = `${title}.csv`;
+  link.download = `${title}_${Date.now()}.csv`;
 
   document.body.appendChild(link);
 

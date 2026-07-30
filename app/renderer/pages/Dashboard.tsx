@@ -1,16 +1,31 @@
 import Card from "../components/ui/Card";
+
 import "../styles/dashboard.css";
 
 import { getTodayCollections } from "../store/collectionStore";
+
 import { getCustomers } from "../store/customerStore";
+
 import { getLoans } from "../store/loanStore";
 
 import { getAuditLogs } from "../store/auditStore";
+
+import { getLockers } from "../store/goldLockerStore";
+
+import { getBags } from "../store/goldBagStore";
+
+import { getOrnaments } from "../store/goldOrnamentStore";
 
 export default function Dashboard() {
   const customers = getCustomers();
 
   const loans = getLoans();
+
+  const lockers = getLockers();
+
+  const bags = getBags();
+
+  const ornaments = getOrnaments();
 
   const today = new Date().toISOString().split("T")[0];
 
@@ -20,15 +35,33 @@ export default function Dashboard() {
 
   const activeLoans = loans.filter((loan) => loan.status === "Active");
 
+  const closedLoans = loans.filter((loan) => loan.status === "Closed");
+
   const outstandingAmount = loans.reduce(
     (total, loan) => total + loan.outstandingAmount,
+
+    0,
+  );
+
+  const approvedAmount = loans.reduce(
+    (total, loan) => total + loan.approvedLoanAmount,
+
     0,
   );
 
   const todaysCollectionAmount = todaysCollections.reduce(
     (total, collection) => total + collection.totalAmount,
+
     0,
   );
+
+  const occupiedLockers = lockers.filter(
+    (locker) => locker.status === "OCCUPIED",
+  ).length;
+
+  const availableLockers = lockers.length - occupiedLockers;
+
+  const releasedBags = bags.filter((bag) => bag.status === "RELEASED").length;
 
   const todaysActivities = auditLogs.filter((log) =>
     log.createdAt.startsWith(today),
@@ -46,11 +79,35 @@ export default function Dashboard() {
     },
 
     {
+      title: "Total Loans",
+
+      value: loans.length.toString(),
+
+      description: "Created loans",
+    },
+
+    {
       title: "Active Loans",
 
       value: activeLoans.length.toString(),
 
-      description: "Currently active loans",
+      description: "Running loans",
+    },
+
+    {
+      title: "Closed Loans",
+
+      value: closedLoans.length.toString(),
+
+      description: "Completed loans",
+    },
+
+    {
+      title: "Approved Amount",
+
+      value: `₹${approvedAmount.toLocaleString("en-IN")}`,
+
+      description: "Total approved loans",
     },
 
     {
@@ -58,15 +115,63 @@ export default function Dashboard() {
 
       value: `₹${outstandingAmount.toLocaleString("en-IN")}`,
 
-      description: "Total amount receivable",
+      description: "Receivable balance",
     },
 
     {
-      title: "Today's Collections",
+      title: "Today's Collection",
 
       value: `₹${todaysCollectionAmount.toLocaleString("en-IN")}`,
 
-      description: "Collections received today",
+      description: "Today's received amount",
+    },
+
+    {
+      title: "Collection Count",
+
+      value: todaysCollections.length.toString(),
+
+      description: "Today's entries",
+    },
+
+    {
+      title: "Gold Lockers",
+
+      value: lockers.length.toString(),
+
+      description: "Total lockers",
+    },
+
+    {
+      title: "Occupied Lockers",
+
+      value: occupiedLockers.toString(),
+
+      description: "Active gold storage",
+    },
+
+    {
+      title: "Available Lockers",
+
+      value: availableLockers.toString(),
+
+      description: "Empty lockers",
+    },
+
+    {
+      title: "Gold Bags",
+
+      value: bags.length.toString(),
+
+      description: "Registered bags",
+    },
+
+    {
+      title: "Gold Ornaments",
+
+      value: ornaments.length.toString(),
+
+      description: "Stored ornaments",
     },
 
     {
@@ -74,7 +179,7 @@ export default function Dashboard() {
 
       value: auditLogs.length.toString(),
 
-      description: "Total tracked activities",
+      description: "Tracked activities",
     },
 
     {
@@ -82,7 +187,7 @@ export default function Dashboard() {
 
       value: todaysActivities.toString(),
 
-      description: "Actions performed today",
+      description: "Today's operations",
     },
 
     {
@@ -90,29 +195,22 @@ export default function Dashboard() {
 
       value: loginCount.toString(),
 
-      description: "Total user logins",
-    },
-
-    {
-      title: "Active Users",
-
-      value: new Set(auditLogs.map((log) => log.performedBy)).size.toString(),
-
-      description: "Users performing actions",
+      description: "User login activity",
     },
   ];
 
   return (
     <div className="dashboard">
-      <h1 className="dashboard-title">Dashboard</h1>
+      <h1 className="dashboard-title">FINORA Enterprise Dashboard</h1>
 
       <p
         style={{
           marginBottom: 24,
+
           color: "#64748b",
         }}
       >
-        Welcome to FINORA Enterprise.
+        Complete business overview and operational control.
       </p>
 
       <div className="dashboard-grid">

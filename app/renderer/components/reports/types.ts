@@ -1,4 +1,10 @@
-export type ReportType = "LOAN" | "COLLECTION" | "CUSTOMER";
+export type ReportType =
+  | "LOAN"
+  | "COLLECTION"
+  | "PAYMENT"
+  | "CUSTOMER"
+  | "GOLD"
+  | "LOCKER";
 
 export type ReportPeriod = "TODAY" | "THIS_WEEK" | "THIS_MONTH" | "CUSTOM";
 
@@ -36,6 +42,22 @@ export type CollectionReportRow = {
   paymentMode: "CASH" | "UPI" | "BANK_TRANSFER" | "CHEQUE";
 };
 
+export type PaymentReportRow = {
+  paymentId: string;
+
+  loanId: string;
+
+  customerId: string;
+
+  amount: number;
+
+  paymentType: string;
+
+  paymentMode: "CASH" | "UPI" | "BANK_TRANSFER" | "CHEQUE";
+
+  paymentDate: string;
+};
+
 export type CustomerReportRow = {
   customerId: string;
 
@@ -52,6 +74,30 @@ export type CustomerReportRow = {
   outstandingAmount: number;
 
   status: "Active" | "Inactive";
+};
+
+export type GoldReportRow = {
+  loanId: string;
+
+  customerId: string;
+
+  lockerNumber: string;
+
+  bagNumber: string;
+
+  ornamentCount: number;
+
+  status: "ACTIVE" | "RELEASED";
+};
+
+export type LockerReportRow = {
+  lockerNumber: string;
+
+  status: "AVAILABLE" | "OCCUPIED";
+
+  loanId?: string;
+
+  bagNumber?: string;
 };
 
 export type ReportSummary = {

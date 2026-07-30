@@ -2,11 +2,19 @@ import Card from "../../components/ui/Card";
 
 import ExportButtons from "../../components/reports/ExportButtons";
 
+import ReportDashboard from "../../components/reports/ReportDashboard";
+
 import {
   getCollectionReport,
   getCustomerReport,
   getLoanReport,
 } from "../../store/reportStore";
+
+import {
+  generateGoldReport,
+  generateLockerReport,
+  generatePaymentReport,
+} from "../../utils/reportGenerator";
 
 import { exportReportToPDF } from "../../utils/pdfExport";
 
@@ -19,13 +27,21 @@ export default function Reports() {
 
   const customerReports = getCustomerReport();
 
+  const paymentReports = generatePaymentReport();
+
+  const goldReports = generateGoldReport();
+
+  const lockerReports = generateLockerReport();
+
   const totalOutstanding = loanReports.reduce(
     (sum, loan) => sum + loan.outstandingAmount,
+
     0,
   );
 
   const totalCollected = collectionReports.reduce(
     (sum, collection) => sum + collection.amount,
+
     0,
   );
 
@@ -33,7 +49,16 @@ export default function Reports() {
     <div>
       <h1>Reports</h1>
 
-      <p>Analyze loans, collections and customer performance.</p>
+      <p>FINORA business reports and analytics.</p>
+
+      <ReportDashboard
+        loanCount={loanReports.length}
+        collectionCount={collectionReports.length}
+        paymentCount={paymentReports.length}
+        customerCount={customerReports.length}
+        goldCount={goldReports.length}
+        lockerCount={lockerReports.length}
+      />
 
       <Card title="Export Reports">
         <ExportButtons
@@ -56,10 +81,28 @@ export default function Reports() {
 
         <ExportButtons
           onExportPDF={() =>
-            exportReportToPDF("FINORA Customer Report", customerReports)
+            exportReportToPDF("FINORA Payment Report", paymentReports)
           }
           onExportExcel={() =>
-            exportReportToExcel("FINORA_Customer_Report", customerReports)
+            exportReportToExcel("FINORA_Payment_Report", paymentReports)
+          }
+        />
+
+        <ExportButtons
+          onExportPDF={() =>
+            exportReportToPDF("FINORA Gold Report", goldReports)
+          }
+          onExportExcel={() =>
+            exportReportToExcel("FINORA_Gold_Report", goldReports)
+          }
+        />
+
+        <ExportButtons
+          onExportPDF={() =>
+            exportReportToPDF("FINORA Locker Report", lockerReports)
+          }
+          onExportExcel={() =>
+            exportReportToExcel("FINORA_Locker_Report", lockerReports)
           }
         />
       </Card>
@@ -75,14 +118,6 @@ export default function Reports() {
           marginTop: 20,
         }}
       >
-        <Card title="Loan Records">
-          <h2>{loanReports.length}</h2>
-        </Card>
-
-        <Card title="Collection Records">
-          <h2>{collectionReports.length}</h2>
-        </Card>
-
         <Card title="Outstanding Amount">
           <h2>₹{totalOutstanding.toLocaleString("en-IN")}</h2>
         </Card>
@@ -94,61 +129,55 @@ export default function Reports() {
 
       <Card title="Loan Report">
         {loanReports.map((loan) => (
-          <div
-            key={loan.loanId}
-            style={{
-              padding: 12,
-              borderBottom: "1px solid #334155",
-            }}
-          >
+          <div key={loan.loanId} style={rowStyle}>
             <p>Loan: {loan.loanId}</p>
 
             <p>Customer: {loan.customerName}</p>
 
-            <p>
-              Outstanding: ₹{loan.outstandingAmount.toLocaleString("en-IN")}
-            </p>
+            <p>Balance: ₹{loan.outstandingAmount.toLocaleString("en-IN")}</p>
 
             <p>Status: {loan.status}</p>
           </div>
         ))}
       </Card>
 
-      <Card title="Collection Report">
-        {collectionReports.map((collection) => (
-          <div
-            key={collection.receiptNumber}
-            style={{
-              padding: 12,
-              borderBottom: "1px solid #334155",
-            }}
-          >
-            <p>Receipt: {collection.receiptNumber}</p>
+      <Card title="Payment Report">
+        {paymentReports.map((payment) => (
+          <div key={payment.paymentId} style={rowStyle}>
+            <p>Payment: {payment.paymentId}</p>
 
-            <p>Customer: {collection.customerName}</p>
-
-            <p>Amount: ₹{collection.amount.toLocaleString("en-IN")}</p>
+            <p>Amount: ₹{payment.amount.toLocaleString("en-IN")}</p>
           </div>
         ))}
       </Card>
 
-      <Card title="Customer Report">
-        {customerReports.map((customer) => (
-          <div
-            key={customer.customerId}
-            style={{
-              padding: 12,
-              borderBottom: "1px solid #334155",
-            }}
-          >
-            <p>Customer: {customer.customerName}</p>
+      <Card title="Gold Report">
+        {goldReports.map((gold) => (
+          <div key={gold.loanId} style={rowStyle}>
+            <p>Locker: {gold.lockerNumber}</p>
 
-            <p>Loans: {customer.totalLoans}</p>
+            <p>Bag: {gold.bagNumber}</p>
 
-            <p>Paid: ₹{customer.totalPaid.toLocaleString("en-IN")}</p>
+            <p>Status: {gold.status}</p>
+          </div>
+        ))}
+      </Card>
+
+      <Card title="Locker Report">
+        {lockerReports.map((locker) => (
+          <div key={locker.lockerNumber} style={rowStyle}>
+            <p>Locker: {locker.lockerNumber}</p>
+
+            <p>Status: {locker.status}</p>
           </div>
         ))}
       </Card>
     </div>
   );
 }
+
+const rowStyle = {
+  padding: 12,
+
+  borderBottom: "1px solid #334155",
+};

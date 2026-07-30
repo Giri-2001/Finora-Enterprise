@@ -23,12 +23,20 @@ import Payments from "./pages/payments/Payments";
 import GoldLoan from "./pages/goldLoan/GoldLoan";
 
 import Backup from "./pages/backup/Backup";
+
 import Collections from "./pages/collections/Collections";
+
 import Customers from "./pages/Customers";
+
 import Dashboard from "./pages/Dashboard";
+
 import Loans from "./pages/loans/Loans";
+
 import Reports from "./pages/reports/Reports";
+
 import Users from "./pages/users/Users";
+
+import Security from "./pages/security/Security";
 
 import { runAuditRetentionEngine } from "./utils/auditRetentionEngine";
 
@@ -96,7 +104,7 @@ export default function App() {
         return <Backup />;
 
       case "security":
-        return <Dashboard />;
+        return <Security />;
 
       default:
         return <Dashboard />;

@@ -83,7 +83,7 @@ export default function Backup() {
 
       module: "SYSTEM",
 
-      description: "FINORA backup file exported",
+      description: "FINORA backup exported",
 
       performedBy: session?.username ?? "SYSTEM",
 
@@ -114,7 +114,7 @@ export default function Backup() {
 
         module: "SYSTEM",
 
-        description: "FINORA backup data restored",
+        description: "FINORA backup restored",
 
         performedBy: session?.username ?? "SYSTEM",
 
@@ -129,10 +129,6 @@ export default function Backup() {
     refresh();
   }
 
-  function cancelRestore() {
-    setRestoreFile(null);
-  }
-
   function handleRestore(id: string) {
     restoreBackup(id);
 
@@ -145,11 +141,37 @@ export default function Backup() {
     refresh();
   }
 
+  const latestBackup = backups.length > 0 ? backups[0] : null;
+
   return (
     <div>
       <h1>Backup Management</h1>
 
-      <p>Create, export, restore and manage FINORA data backups.</p>
+      <p>Secure FINORA data backup and recovery system.</p>
+
+      <div
+        style={{
+          display: "grid",
+
+          gridTemplateColumns: "repeat(auto-fit,minmax(220px,1fr))",
+
+          gap: 16,
+
+          marginTop: 20,
+        }}
+      >
+        <Card title="Total Backups">
+          <h2>{backups.length}</h2>
+        </Card>
+
+        <Card title="Latest Backup">
+          <h2>{latestBackup ? latestBackup.status : "None"}</h2>
+        </Card>
+
+        <Card title="Backup Type">
+          <h2>{latestBackup?.backupType ?? "-"}</h2>
+        </Card>
+      </div>
 
       {message && (
         <p
@@ -165,6 +187,7 @@ export default function Backup() {
         <div
           style={{
             display: "flex",
+
             gap: 12,
           }}
         >
@@ -178,7 +201,7 @@ export default function Backup() {
         {restoreFile && (
           <RestoreConfirmation
             onConfirm={confirmRestore}
-            onCancel={cancelRestore}
+            onCancel={() => setRestoreFile(null)}
           />
         )}
       </Card>
@@ -192,6 +215,7 @@ export default function Backup() {
               key={backup.id}
               style={{
                 padding: 12,
+
                 borderBottom: "1px solid #334155",
               }}
             >
