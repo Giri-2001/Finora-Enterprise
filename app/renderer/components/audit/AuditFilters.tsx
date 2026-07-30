@@ -37,7 +37,7 @@ export default function AuditFilters({
       <Input
         value={search}
         placeholder="Search audit events..."
-        onChange={onSearchChange}
+        onChange={(event) => onSearchChange(event.target.value)}
       />
 
       <select
