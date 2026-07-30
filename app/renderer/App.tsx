@@ -2,6 +2,8 @@ import { useMemo, useState } from "react";
 
 import AppShell from "./components/AppShell";
 
+import SessionGuard from "./components/auth/SessionGuard";
+
 import Login from "./pages/auth/Login";
 
 import { getSession, logout } from "./store/authStore";
@@ -76,13 +78,15 @@ export default function App() {
   }
 
   return (
-    <AppShell
-      currentPage={page}
-      onNavigate={setPage}
-      onLogout={handleLogout}
-      userRole={session.role}
-    >
-      {currentPage}
-    </AppShell>
+    <SessionGuard>
+      <AppShell
+        currentPage={page}
+        onNavigate={setPage}
+        onLogout={handleLogout}
+        userRole={session.role}
+      >
+        {currentPage}
+      </AppShell>
+    </SessionGuard>
   );
 }
