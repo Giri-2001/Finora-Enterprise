@@ -12,6 +12,7 @@
     "electron:dev": "npm run electron:build && wait-on tcp:5173 && electron .",
     "build": "vite build && npm run electron:build",
     "typecheck": "tsc --noEmit && tsc -p tsconfig.electron.json --noEmit",
+    "package": "npm run build && electron-builder",
     "preview": "vite preview"
   },
   "dependencies": {
@@ -31,5 +32,32 @@
     "typescript": "^5.9.2",
     "vite": "^8.1.5",
     "wait-on": "^9.0.1"
+  },
+  "build": {
+    "appId": "com.finora.enterprise",
+    "productName": "FINORA Enterprise",
+    "icon": "assets/icons/finora.ico",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "dist/**/*",
+      "dist-electron/**/*",
+      "package.json"
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true
+    }
   }
 }

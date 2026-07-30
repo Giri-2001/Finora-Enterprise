@@ -6,8 +6,11 @@ let mainWindow: BrowserWindow | null = null;
 function createMainWindow(): void {
   mainWindow = new BrowserWindow({
     width: 1400,
+
     height: 900,
+
     minWidth: 1200,
+
     minHeight: 700,
 
     title: "FINORA Enterprise",
@@ -18,18 +21,26 @@ function createMainWindow(): void {
 
     webPreferences: {
       preload: path.join(__dirname, "preload.js"),
+
       contextIsolation: true,
+
       nodeIntegration: false,
+
       sandbox: true,
     },
   });
 
   if (!app.isPackaged) {
     mainWindow.loadURL("http://localhost:5173");
+
     mainWindow.webContents.openDevTools();
   } else {
     mainWindow.loadFile(path.join(__dirname, "../dist/index.html"));
   }
+
+  mainWindow.on("closed", () => {
+    mainWindow = null;
+  });
 }
 
 app.whenReady().then(() => {
