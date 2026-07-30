@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 
 import Card from "../../components/ui/Card";
 
+import AuditExportButton from "../../components/audit/AuditExportButton";
 import AuditFilters from "../../components/audit/AuditFilters";
 import AuditTable from "../../components/audit/AuditTable";
 import AuditTimeline from "../../components/audit/AuditTimeline";
@@ -42,6 +43,20 @@ export default function AuditLogs() {
       <h1>Audit Logs</h1>
 
       <p>Track user activities and system changes inside FINORA.</p>
+
+      <div
+        style={{
+          display: "flex",
+
+          gap: 12,
+
+          marginBottom: 20,
+        }}
+      >
+        <AuditExportButton format="JSON" />
+
+        <AuditExportButton format="CSV" />
+      </div>
 
       <Card title="Audit Filters">
         <AuditFilters
