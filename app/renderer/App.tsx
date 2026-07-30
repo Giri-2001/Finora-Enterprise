@@ -20,6 +20,8 @@ import Interest from "./pages/interest/Interest";
 
 import Payments from "./pages/payments/Payments";
 
+import GoldLoan from "./pages/goldLoan/GoldLoan";
+
 import Backup from "./pages/backup/Backup";
 import Collections from "./pages/collections/Collections";
 import Customers from "./pages/Customers";
@@ -68,6 +70,9 @@ export default function App() {
 
       case "payments":
         return <Payments />;
+
+      case "goldLoan":
+        return <GoldLoan />;
 
       case "reports":
         return <Reports />;

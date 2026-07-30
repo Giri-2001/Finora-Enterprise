@@ -113,6 +113,12 @@ export default function AppShell({
             </button>
           )}
 
+          {hasPermission(userRole, "LOANS_VIEW") && (
+            <button type="button" onClick={() => onNavigate("goldLoan")}>
+              Gold Loan
+            </button>
+          )}
+
           {hasPermission(userRole, "REPORTS_VIEW") && (
             <button type="button" onClick={() => onNavigate("reports")}>
               Reports

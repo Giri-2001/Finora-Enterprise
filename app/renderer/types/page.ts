@@ -5,6 +5,7 @@ export type Page =
   | "interest"
   | "collections"
   | "payments"
+  | "goldLoan"
   | "reports"
   | "users"
   | "audit"
