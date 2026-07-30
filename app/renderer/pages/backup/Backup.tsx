@@ -1,6 +1,9 @@
+import { useState } from "react";
+
 import Card from "../../components/ui/Card";
 
 import BackupButton from "../../components/backup/BackupButton";
+import ExportBackupButton from "../../components/backup/ExportBackupButton";
 
 import type { BackupRecord } from "../../components/backup/types";
 
@@ -15,7 +18,7 @@ import { getSession } from "../../store/authStore";
 
 import { createAuditLog } from "../../store/auditStore";
 
-import { useState } from "react";
+import { exportBackupFile } from "../../utils/backupExporter";
 
 export default function Backup() {
   const [backups, setBackups] = useState<BackupRecord[]>(getBackups());
@@ -50,7 +53,7 @@ export default function Backup() {
     createAuditLog({
       action: "CREATE",
 
-      module: "REPORT",
+      module: "SYSTEM",
 
       description: "FINORA database backup created",
 
@@ -60,6 +63,24 @@ export default function Backup() {
     });
 
     refresh();
+  }
+
+  function handleExport() {
+    const session = getSession();
+
+    exportBackupFile();
+
+    createAuditLog({
+      action: "EXPORT",
+
+      module: "SYSTEM",
+
+      description: "FINORA backup file exported",
+
+      performedBy: session?.username ?? "SYSTEM",
+
+      userRole: session?.role ?? "UNKNOWN",
+    });
   }
 
   function handleRestore(id: string) {
@@ -78,10 +99,19 @@ export default function Backup() {
     <div>
       <h1>Backup Management</h1>
 
-      <p>Create and manage FINORA data backups.</p>
+      <p>Create, export and manage FINORA data backups.</p>
 
-      <Card title="Create Backup">
-        <BackupButton onBackup={handleBackup} />
+      <Card title="Backup Actions">
+        <div
+          style={{
+            display: "flex",
+            gap: 12,
+          }}
+        >
+          <BackupButton onBackup={handleBackup} />
+
+          <ExportBackupButton onExport={handleExport} />
+        </div>
       </Card>
 
       <Card title="Backup History">
@@ -93,6 +123,7 @@ export default function Backup() {
               key={backup.id}
               style={{
                 padding: 12,
+
                 borderBottom: "1px solid #334155",
               }}
             >
