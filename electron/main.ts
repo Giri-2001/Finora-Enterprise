@@ -38,6 +38,12 @@ function createMainWindow(): void {
     mainWindow.loadFile(path.join(__dirname, "../dist/index.html"));
   }
 
+  mainWindow.webContents.on("before-input-event", (_event, input) => {
+    if (input.type === "keyDown" && input.key === "F11") {
+      mainWindow?.setFullScreen(!mainWindow.isFullScreen());
+    }
+  });
+
   mainWindow.on("closed", () => {
     mainWindow = null;
   });

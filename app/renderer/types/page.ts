@@ -13,4 +13,5 @@ export type Page =
   | "auditRetention"
   | "compliance"
   | "backup"
-  | "security";
+  | "security"
+  | "projector";

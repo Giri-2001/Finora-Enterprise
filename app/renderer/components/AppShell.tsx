@@ -39,6 +39,20 @@ export default function AppShell({
     setSidebarOpen(false);
   }
 
+  if (currentPage === "projector") {
+    return (
+      <div
+        style={{
+          width: "100vw",
+          height: "100vh",
+          overflow: "hidden",
+        }}
+      >
+        {children}
+      </div>
+    );
+  }
+
   return (
     <div className="app-shell">
       <header className="app-header">
@@ -148,6 +162,10 @@ export default function AppShell({
           {hasPermission(userRole, "SECURITY_VIEW") && (
             <button onClick={() => handleNavigate("security")}>Security</button>
           )}
+
+          <button onClick={() => handleNavigate("projector")}>
+            Projector Mode
+          </button>
 
           <hr />
 
