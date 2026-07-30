@@ -73,7 +73,9 @@ export default function AppShell({
         >
           {currentPage === "businessSettings"
             ? "BUSINESS SETTINGS"
-            : currentPage.toUpperCase()}
+            : currentPage === "subscriptionControl"
+              ? "SUBSCRIPTION CONTROL"
+              : currentPage.toUpperCase()}
         </h1>
       </header>
 
@@ -175,6 +177,10 @@ export default function AppShell({
 
           <button onClick={() => handleNavigate("themeSettings")}>
             Theme Settings
+          </button>
+
+          <button onClick={() => handleNavigate("subscriptionControl")}>
+            Subscription Control
           </button>
 
           <hr />
