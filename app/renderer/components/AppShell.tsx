@@ -173,6 +173,10 @@ export default function AppShell({
             Business Settings
           </button>
 
+          <button onClick={() => handleNavigate("themeSettings")}>
+            Theme Settings
+          </button>
+
           <hr />
 
           <button

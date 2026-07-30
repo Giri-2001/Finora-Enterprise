@@ -15,4 +15,5 @@ export type Page =
   | "backup"
   | "security"
   | "projector"
-  | "businessSettings";
+  | "businessSettings"
+  | "themeSettings";
