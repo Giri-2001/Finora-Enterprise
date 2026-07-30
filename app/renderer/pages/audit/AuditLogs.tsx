@@ -4,6 +4,7 @@ import Card from "../../components/ui/Card";
 
 import AuditFilters from "../../components/audit/AuditFilters";
 import AuditTable from "../../components/audit/AuditTable";
+import AuditTimeline from "../../components/audit/AuditTimeline";
 
 import { getAuditLogs } from "../../store/auditStore";
 
@@ -51,6 +52,10 @@ export default function AuditLogs() {
           onModuleChange={setModule}
           onActionChange={setAction}
         />
+      </Card>
+
+      <Card title="Activity Timeline">
+        <AuditTimeline logs={filteredLogs} />
       </Card>
 
       <Card title="Activity History">
