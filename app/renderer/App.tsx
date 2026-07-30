@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import type { Page } from "./types/page";
 
@@ -22,10 +22,16 @@ import Loans from "./pages/loans/Loans";
 import Reports from "./pages/reports/Reports";
 import Users from "./pages/users/Users";
 
+import { runAuditRetentionEngine } from "./utils/auditRetentionEngine";
+
 export default function App() {
   const [session, setSession] = useState(getSession());
 
   const [page, setPage] = useState<Page>("dashboard");
+
+  useEffect(() => {
+    runAuditRetentionEngine();
+  }, []);
 
   function handleLogin() {
     setSession(getSession());
