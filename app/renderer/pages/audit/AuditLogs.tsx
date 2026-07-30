@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 
 import Card from "../../components/ui/Card";
 
+import AuditArchiveButton from "../../components/audit/AuditArchiveButton";
 import AuditExportButton from "../../components/audit/AuditExportButton";
 import AuditFilters from "../../components/audit/AuditFilters";
 import AuditTable from "../../components/audit/AuditTable";
@@ -10,13 +11,17 @@ import AuditTimeline from "../../components/audit/AuditTimeline";
 import { getAuditLogs } from "../../store/auditStore";
 
 export default function AuditLogs() {
-  const logs = getAuditLogs();
+  const [logs, setLogs] = useState(getAuditLogs());
 
   const [search, setSearch] = useState("");
 
   const [module, setModule] = useState("");
 
   const [action, setAction] = useState("");
+
+  function refresh() {
+    setLogs(getAuditLogs());
+  }
 
   const filteredLogs = useMemo(
     () =>
@@ -56,6 +61,8 @@ export default function AuditLogs() {
         <AuditExportButton format="JSON" />
 
         <AuditExportButton format="CSV" />
+
+        <AuditArchiveButton onArchiveCreated={refresh} />
       </div>
 
       <Card title="Audit Filters">
