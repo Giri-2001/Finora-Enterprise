@@ -11,33 +11,37 @@ const USERS_KEY = "finora_users";
 const SESSION_KEY = "finora_session";
 
 function loadUsers(): User[] {
-  const data = localStorage.getItem(USERS_KEY);
+  try {
+    const data = localStorage.getItem(USERS_KEY);
 
-  if (!data) {
-    const defaultAdmin: User = {
-      id: "1",
+    if (!data) {
+      const defaultAdmin: User = {
+        id: "1",
 
-      username: "admin",
+        username: "admin",
 
-      password: "admin123",
+        password: "admin123",
 
-      fullName: "FINORA Admin",
+        fullName: "FINORA Admin",
 
-      role: "ADMIN",
+        role: "ADMIN",
 
-      status: "ACTIVE",
+        status: "ACTIVE",
 
-      createdAt: new Date().toISOString(),
+        createdAt: new Date().toISOString(),
 
-      updatedAt: new Date().toISOString(),
-    };
+        updatedAt: new Date().toISOString(),
+      };
 
-    localStorage.setItem(USERS_KEY, JSON.stringify([defaultAdmin]));
+      localStorage.setItem(USERS_KEY, JSON.stringify([defaultAdmin]));
 
-    return [defaultAdmin];
+      return [defaultAdmin];
+    }
+
+    return JSON.parse(data) as User[];
+  } catch {
+    return [];
   }
-
-  return JSON.parse(data) as User[];
 }
 
 function saveUsers(users: User[]): void {
@@ -52,6 +56,12 @@ export function getUsers(): User[] {
 
 export function addUser(user: User): void {
   users = [...users, user];
+
+  saveUsers(users);
+}
+
+export function replaceUsers(updatedUsers: User[]): void {
+  users = [...updatedUsers];
 
   saveUsers(users);
 }

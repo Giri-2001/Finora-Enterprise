@@ -4,6 +4,7 @@ import Card from "../../components/ui/Card";
 
 import BackupButton from "../../components/backup/BackupButton";
 import ExportBackupButton from "../../components/backup/ExportBackupButton";
+import RestoreBackupButton from "../../components/backup/RestoreBackupButton";
 
 import type { BackupRecord } from "../../components/backup/types";
 
@@ -20,8 +21,12 @@ import { createAuditLog } from "../../store/auditStore";
 
 import { exportBackupFile } from "../../utils/backupExporter";
 
+import { importBackupFile } from "../../utils/backupImporter";
+
 export default function Backup() {
   const [backups, setBackups] = useState<BackupRecord[]>(getBackups());
+
+  const [message, setMessage] = useState("");
 
   function refresh() {
     setBackups(getBackups());
@@ -83,6 +88,32 @@ export default function Backup() {
     });
   }
 
+  async function handleImport(file: File) {
+    const session = getSession();
+
+    const success = await importBackupFile(file);
+
+    if (success) {
+      setMessage("Backup restored successfully.");
+
+      createAuditLog({
+        action: "RESTORE",
+
+        module: "SYSTEM",
+
+        description: "FINORA backup data restored",
+
+        performedBy: session?.username ?? "SYSTEM",
+
+        userRole: session?.role ?? "UNKNOWN",
+      });
+    } else {
+      setMessage("Invalid backup file.");
+    }
+
+    refresh();
+  }
+
   function handleRestore(id: string) {
     restoreBackup(id);
 
@@ -99,7 +130,17 @@ export default function Backup() {
     <div>
       <h1>Backup Management</h1>
 
-      <p>Create, export and manage FINORA data backups.</p>
+      <p>Create, export, restore and manage FINORA data backups.</p>
+
+      {message && (
+        <p
+          style={{
+            color: "#22c55e",
+          }}
+        >
+          {message}
+        </p>
+      )}
 
       <Card title="Backup Actions">
         <div
@@ -111,6 +152,8 @@ export default function Backup() {
           <BackupButton onBackup={handleBackup} />
 
           <ExportBackupButton onExport={handleExport} />
+
+          <RestoreBackupButton onRestore={handleImport} />
         </div>
       </Card>
 
@@ -123,7 +166,6 @@ export default function Backup() {
               key={backup.id}
               style={{
                 padding: 12,
-
                 borderBottom: "1px solid #334155",
               }}
             >
@@ -136,7 +178,7 @@ export default function Backup() {
               <p>Created By: {backup.createdBy}</p>
 
               <button type="button" onClick={() => handleRestore(backup.id)}>
-                Restore
+                Mark Restored
               </button>
 
               <button

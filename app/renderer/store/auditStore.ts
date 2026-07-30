@@ -52,6 +52,12 @@ export function createAuditLog(data: Omit<AuditLog, "id" | "createdAt">): void {
   addAuditLog(log);
 }
 
+export function replaceAuditLogs(updatedLogs: AuditLog[]): void {
+  logs = [...updatedLogs];
+
+  saveLogs(logs);
+}
+
 export function clearAuditLogs(): void {
   logs = [];
 
