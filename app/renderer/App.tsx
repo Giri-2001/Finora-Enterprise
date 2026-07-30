@@ -45,6 +45,8 @@ export default function App() {
 
   const [page, setPage] = useState<Page>("dashboard");
 
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+
   useEffect(() => {
     runAuditRetentionEngine();
   }, []);
@@ -57,6 +59,12 @@ export default function App() {
     logout();
 
     setSession(null);
+  }
+
+  function handleNavigate(nextPage: Page) {
+    setPage(nextPage);
+
+    setSidebarOpen(false);
   }
 
   const currentPage = useMemo(() => {
@@ -119,9 +127,11 @@ export default function App() {
     <SessionGuard>
       <AppShell
         currentPage={page}
-        onNavigate={setPage}
+        onNavigate={handleNavigate}
         onLogout={handleLogout}
         userRole={session.role}
+        sidebarOpen={sidebarOpen}
+        setSidebarOpen={setSidebarOpen}
       >
         {currentPage}
       </AppShell>

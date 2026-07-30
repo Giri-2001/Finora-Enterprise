@@ -1,28 +1,103 @@
-type SidebarProps = {
-  currentPage: "dashboard" | "customers" | "loans" | "collections" | "reports";
+import type { Page } from "../types/page";
 
-  onNavigate: (
-    page: "dashboard" | "customers" | "loans" | "collections" | "reports",
-  ) => void;
+type SidebarProps = {
+  currentPage: Page;
+
+  onNavigate: (page: Page) => void;
 };
 
 export default function Sidebar({ currentPage, onNavigate }: SidebarProps) {
   const buttonStyle = (active: boolean) => ({
-    background: "none",
+    background: active ? "#e2e8f0" : "transparent",
+
     border: "none",
-    color: "inherit",
+
+    borderRadius: 6,
+
+    color: "#0f172a",
+
     cursor: "pointer",
+
     textAlign: "left" as const,
+
+    padding: "10px 12px",
+
     fontWeight: active ? 700 : 400,
-    padding: "8px 0",
+
+    transition: "0.2s",
   });
+
+  const menuItems: {
+    page: Page;
+    label: string;
+  }[] = [
+    {
+      page: "dashboard",
+      label: "Dashboard",
+    },
+
+    {
+      page: "customers",
+      label: "Customers",
+    },
+
+    {
+      page: "loans",
+      label: "Loans",
+    },
+
+    {
+      page: "interest",
+      label: "Interest Engine",
+    },
+
+    {
+      page: "collections",
+      label: "Collections",
+    },
+
+    {
+      page: "payments",
+      label: "Payments",
+    },
+
+    {
+      page: "goldLoan",
+      label: "Gold Loan",
+    },
+
+    {
+      page: "reports",
+      label: "Reports",
+    },
+
+    {
+      page: "users",
+      label: "Users",
+    },
+
+    {
+      page: "audit",
+      label: "Audit",
+    },
+
+    {
+      page: "backup",
+      label: "Backup",
+    },
+
+    {
+      page: "security",
+      label: "Security",
+    },
+  ];
 
   return (
     <>
       <h2
         style={{
           margin: 0,
-          fontSize: "22px",
+          fontSize: 22,
         }}
       >
         FINORA
@@ -30,53 +105,25 @@ export default function Sidebar({ currentPage, onNavigate }: SidebarProps) {
 
       <nav
         style={{
-          marginTop: "40px",
+          marginTop: 40,
+
           display: "flex",
+
           flexDirection: "column",
-          gap: "14px",
+
+          gap: 10,
         }}
       >
-        <button
-          type="button"
-          onClick={() => onNavigate("dashboard")}
-          style={buttonStyle(currentPage === "dashboard")}
-        >
-          Dashboard
-        </button>
-
-        <button
-          type="button"
-          onClick={() => onNavigate("customers")}
-          style={buttonStyle(currentPage === "customers")}
-        >
-          Customers
-        </button>
-
-        <button
-          type="button"
-          onClick={() => onNavigate("loans")}
-          style={buttonStyle(currentPage === "loans")}
-        >
-          Loans
-        </button>
-
-        <button
-          type="button"
-          onClick={() => onNavigate("collections")}
-          style={buttonStyle(currentPage === "collections")}
-        >
-          Collections
-        </button>
-
-        <button
-          type="button"
-          onClick={() => onNavigate("reports")}
-          style={buttonStyle(currentPage === "reports")}
-        >
-          Reports
-        </button>
-
-        <span>Settings</span>
+        {menuItems.map((item) => (
+          <button
+            key={item.page}
+            type="button"
+            onClick={() => onNavigate(item.page)}
+            style={buttonStyle(currentPage === item.page)}
+          >
+            {item.label}
+          </button>
+        ))}
       </nav>
     </>
   );

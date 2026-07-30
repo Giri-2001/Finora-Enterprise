@@ -6,6 +6,8 @@ import type { Page } from "../types/page";
 
 import { hasPermission } from "../utils/permissions";
 
+import "../styles/layout.css";
+
 type AppShellProps = {
   currentPage: Page;
 
@@ -15,6 +17,10 @@ type AppShellProps = {
 
   userRole: UserRole;
 
+  sidebarOpen: boolean;
+
+  setSidebarOpen: (open: boolean) => void;
+
   children: ReactNode;
 };
 
@@ -23,31 +29,40 @@ export default function AppShell({
   onNavigate,
   onLogout,
   userRole,
+  sidebarOpen,
+  setSidebarOpen,
   children,
 }: AppShellProps) {
+  function handleNavigate(page: Page) {
+    onNavigate(page);
+
+    setSidebarOpen(false);
+  }
+
   return (
-    <div
-      style={{
-        display: "grid",
-        gridTemplateColumns: "260px 1fr",
-        gridTemplateRows: "64px 1fr",
-        width: "100vw",
-        height: "100vh",
-        background: "#0f172a",
-        color: "#ffffff",
-        fontFamily: "Segoe UI, sans-serif",
-        overflow: "hidden",
-      }}
-    >
+    <div className="app-shell">
+      <header className="app-header">
+        <button
+          type="button"
+          className="mobile-menu-button"
+          onClick={() => setSidebarOpen(!sidebarOpen)}
+        >
+          ☰
+        </button>
+
+        <h1
+          style={{
+            margin: 0,
+            fontSize: 20,
+            fontWeight: 600,
+          }}
+        >
+          {currentPage.toUpperCase()}
+        </h1>
+      </header>
+
       <aside
-        style={{
-          gridRow: "1 / 3",
-          background: "#111827",
-          padding: "24px",
-          borderRight: "1px solid #1f2937",
-          overflowY: "auto",
-          boxSizing: "border-box",
-        }}
+        className={sidebarOpen ? "app-sidebar mobile-open" : "app-sidebar"}
       >
         <h2>FINORA</h2>
 
@@ -66,98 +81,75 @@ export default function AppShell({
             display: "flex",
             flexDirection: "column",
             gap: 14,
-            paddingBottom: 20,
           }}
         >
-          <button type="button" onClick={() => onNavigate("dashboard")}>
-            Dashboard
-          </button>
+          <button onClick={() => handleNavigate("dashboard")}>Dashboard</button>
 
           {hasPermission(userRole, "CUSTOMERS_VIEW") && (
-            <button type="button" onClick={() => onNavigate("customers")}>
+            <button onClick={() => handleNavigate("customers")}>
               Customers
             </button>
           )}
 
           {hasPermission(userRole, "LOANS_VIEW") && (
-            <button type="button" onClick={() => onNavigate("loans")}>
-              Loans
-            </button>
+            <button onClick={() => handleNavigate("loans")}>Loans</button>
           )}
 
           {hasPermission(userRole, "LOANS_VIEW") && (
-            <button type="button" onClick={() => onNavigate("interest")}>
+            <button onClick={() => handleNavigate("interest")}>
               Interest Engine
             </button>
           )}
 
           {hasPermission(userRole, "COLLECTIONS_VIEW") && (
-            <button type="button" onClick={() => onNavigate("collections")}>
+            <button onClick={() => handleNavigate("collections")}>
               Collections
             </button>
           )}
 
           {hasPermission(userRole, "COLLECTIONS_VIEW") && (
-            <button type="button" onClick={() => onNavigate("payments")}>
-              Payments
-            </button>
+            <button onClick={() => handleNavigate("payments")}>Payments</button>
           )}
 
           {hasPermission(userRole, "LOANS_VIEW") && (
-            <button type="button" onClick={() => onNavigate("goldLoan")}>
+            <button onClick={() => handleNavigate("goldLoan")}>
               Gold Loan
             </button>
           )}
 
           {hasPermission(userRole, "REPORTS_VIEW") && (
-            <button type="button" onClick={() => onNavigate("reports")}>
-              Reports
-            </button>
+            <button onClick={() => handleNavigate("reports")}>Reports</button>
           )}
 
           {hasPermission(userRole, "USER_MANAGEMENT") && (
-            <button type="button" onClick={() => onNavigate("users")}>
-              Users
-            </button>
+            <button onClick={() => handleNavigate("users")}>Users</button>
           )}
 
           {hasPermission(userRole, "AUDIT_VIEW") && (
-            <button type="button" onClick={() => onNavigate("audit")}>
-              Audit Logs
-            </button>
+            <button onClick={() => handleNavigate("audit")}>Audit Logs</button>
           )}
 
           {hasPermission(userRole, "AUDIT_VIEW") && (
-            <button type="button" onClick={() => onNavigate("auditArchive")}>
+            <button onClick={() => handleNavigate("auditArchive")}>
               Audit Archive
             </button>
           )}
 
           {hasPermission(userRole, "AUDIT_VIEW") && (
-            <button type="button" onClick={() => onNavigate("auditRetention")}>
+            <button onClick={() => handleNavigate("auditRetention")}>
               Audit Retention
             </button>
           )}
 
           {hasPermission(userRole, "BACKUP_MANAGEMENT") && (
-            <button type="button" onClick={() => onNavigate("backup")}>
-              Backup
-            </button>
+            <button onClick={() => handleNavigate("backup")}>Backup</button>
           )}
 
           {hasPermission(userRole, "SECURITY_VIEW") && (
-            <button type="button" onClick={() => onNavigate("security")}>
-              Security
-            </button>
+            <button onClick={() => handleNavigate("security")}>Security</button>
           )}
 
-          <hr
-            style={{
-              width: "100%",
-              borderColor: "#334155",
-              marginTop: 20,
-            }}
-          />
+          <hr />
 
           <button
             type="button"
@@ -169,7 +161,6 @@ export default function AppShell({
               padding: "10px",
               borderRadius: 6,
               cursor: "pointer",
-              marginBottom: 10,
             }}
           >
             Logout
@@ -177,28 +168,7 @@ export default function AppShell({
         </nav>
       </aside>
 
-      <header
-        style={{
-          background: "#111827",
-          borderBottom: "1px solid #1f2937",
-          display: "flex",
-          alignItems: "center",
-          padding: "0 24px",
-          fontSize: 20,
-          fontWeight: 600,
-        }}
-      >
-        {currentPage.toUpperCase()}
-      </header>
-
-      <main
-        style={{
-          padding: 24,
-          overflow: "auto",
-        }}
-      >
-        {children}
-      </main>
+      <main className="app-content">{children}</main>
     </div>
   );
 }
