@@ -1,10 +1,10 @@
-import logo from "../../../../assets/icons/finora.png";
+import logo from "../../assets/icons/finora.png";
 
 type BrandLogoProps = {
   size?: number;
 };
 
-export default function BrandLogo({ size = 42 }: BrandLogoProps) {
+export default function BrandLogo({ size = 44 }: BrandLogoProps) {
   return (
     <img
       src={logo}

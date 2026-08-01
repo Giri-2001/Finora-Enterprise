@@ -16,6 +16,40 @@ import { getBags } from "../store/goldBagStore";
 
 import { getOrnaments } from "../store/goldOrnamentStore";
 
+import DashboardCard from "../components/ui/DashboardCard";
+
+import {
+  CustomersIcon,
+  LoansIcon,
+  CollectionsIcon,
+  PaymentsIcon,
+  GoldLoanIcon,
+  ReportsIcon,
+  UsersIcon,
+  AuditLogsIcon,
+  DashboardIcon,
+} from "../assets/icons";
+
+const metricIcons: Record<string, string> = {
+  "Total Customers": CustomersIcon,
+  "Total Loans": LoansIcon,
+  "Active Loans": LoansIcon,
+  "Closed Loans": ReportsIcon,
+  "Approved Amount": PaymentsIcon,
+  "Outstanding Amount": CollectionsIcon,
+  "Today's Collection": PaymentsIcon,
+  "Collection Count": CollectionsIcon,
+  "Gold Lockers": LoansIcon,
+  "Occupied Lockers": LoansIcon,
+  "Available Lockers": LoansIcon,
+  "Gold Bags": GoldLoanIcon,
+  "Released Bags": GoldLoanIcon,
+  "Gold Ornaments": GoldLoanIcon,
+  "Audit Actions": AuditLogsIcon,
+  "Today's Activities": DashboardIcon,
+  "Login Count": UsersIcon,
+};
+
 function safeNumber(value?: number) {
   return typeof value === "number" && Number.isFinite(value) ? value : 0;
 }
@@ -23,6 +57,79 @@ function safeNumber(value?: number) {
 function formatCurrency(value?: number) {
   return `₹${safeNumber(value).toLocaleString("en-IN")}`;
 }
+
+/* ==========================================================
+   FUTURE ENTERPRISE KPIs
+
+   Enable these cards when Gold Loan,
+   Audit & Security Dashboard are introduced.
+
+   - Approved Amount
+   - Gold Ornaments
+   - Audit Actions
+   - Today's Activities
+   - Login Count
+
+==========================================================
+
+{
+      title: "Approved Amount",
+
+      value: formatCurrency(approvedAmount),
+
+      description: "Total approved loans",
+    },
+
+
+    {
+      title: "Audit Actions",
+
+      value: auditLogs.length,
+
+      description: "Tracked activities",
+    },
+
+    {
+      title: "Today's Activities",
+
+      value: todaysActivities,
+
+      description: "Today's operations",
+    },
+
+    {
+      title: "Login Count",
+
+      value: loginCount,
+
+      description: "User login activity",
+    },
+
+    {
+      title: "Gold Bags",
+
+      value: bags.length,
+
+      description: "Registered bags",
+    },
+
+    {
+      title: "Released Bags",
+
+      value: releasedBags,
+
+      description: "Released storage bags",
+    },
+
+    {
+      title: "Gold Ornaments",
+
+      value: ornaments.length,
+
+      description: "Stored ornaments",
+    },
+
+========================================================= */
 
 export default function Dashboard() {
   const customers = getCustomers();
@@ -107,13 +214,7 @@ export default function Dashboard() {
       description: "Completed loans",
     },
 
-    {
-      title: "Approved Amount",
 
-      value: formatCurrency(approvedAmount),
-
-      description: "Total approved loans",
-    },
 
     {
       title: "Outstanding Amount",
@@ -163,80 +264,24 @@ export default function Dashboard() {
       description: "Empty lockers",
     },
 
-    {
-      title: "Gold Bags",
-
-      value: bags.length,
-
-      description: "Registered bags",
-    },
-
-    {
-      title: "Released Bags",
-
-      value: releasedBags,
-
-      description: "Released storage bags",
-    },
-
-    {
-      title: "Gold Ornaments",
-
-      value: ornaments.length,
-
-      description: "Stored ornaments",
-    },
-
-    {
-      title: "Audit Actions",
-
-      value: auditLogs.length,
-
-      description: "Tracked activities",
-    },
-
-    {
-      title: "Today's Activities",
-
-      value: todaysActivities,
-
-      description: "Today's operations",
-    },
-
-    {
-      title: "Login Count",
-
-      value: loginCount,
-
-      description: "User login activity",
-    },
   ];
 
   return (
     <div className="dashboard">
-      <h1 className="dashboard-title">FINORA Enterprise Dashboard</h1>
-
-      <p
-        style={{
-          marginBottom: 24,
-
-          color: "var(--text-muted)",
-        }}
-      >
-        Complete business overview and operational control.
-      </p>
 
       <div className="dashboard-grid">
         {metrics.map((metric) => (
-          <Card key={metric.title} title={metric.title}>
-            <h2 className="kpi-value">
-              {typeof metric.value === "number"
-                ? metric.value.toLocaleString("en-IN")
-                : metric.value}
-            </h2>
-
-            <p className="kpi-description">{metric.description}</p>
-          </Card>
+          <DashboardCard
+  key={metric.title}
+  icon={metricIcons[metric.title] ?? DashboardIcon}
+  title={metric.title}
+  value={
+    typeof metric.value === "number"
+      ? metric.value.toLocaleString("en-IN")
+      : metric.value
+  }
+  description={metric.description}
+/>
         ))}
       </div>
     </div>

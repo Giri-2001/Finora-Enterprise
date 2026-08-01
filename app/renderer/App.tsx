@@ -63,6 +63,8 @@ export default function App() {
 
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+
   useEffect(() => {
     runAuditRetentionEngine();
 
@@ -136,8 +138,6 @@ export default function App() {
       case "security":
         return <Security />;
 
-      case "projector":
-        return <ProjectorDashboard />;
 
       case "businessSettings":
         return <BusinessSettings />;
@@ -161,17 +161,20 @@ export default function App() {
   }
 
   return (
-    <SessionGuard>
-      <AppShell
-        currentPage={page}
-        onNavigate={handleNavigate}
-        onLogout={handleLogout}
-        userRole={session.role}
-        sidebarOpen={sidebarOpen}
-        setSidebarOpen={setSidebarOpen}
-      >
-        {currentPage}
-      </AppShell>
-    </SessionGuard>
-  );
+  <SessionGuard>
+    <AppShell
+      currentPage={page}
+      onNavigate={handleNavigate}
+      onLogout={handleLogout}
+      userRole={session.role}
+      sidebarOpen={sidebarOpen}
+      setSidebarOpen={setSidebarOpen}
+
+      sidebarCollapsed={sidebarCollapsed}
+      setSidebarCollapsed={setSidebarCollapsed}
+    >
+      {currentPage}
+    </AppShell>
+  </SessionGuard>
+);
 }

@@ -14,7 +14,6 @@ export type Page =
   | "compliance"
   | "backup"
   | "security"
-  | "projector"
   | "businessSettings"
   | "themeSettings"
   | "subscriptionControl"

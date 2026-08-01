@@ -3,14 +3,26 @@ import type { ReactNode } from "react";
 import type { Page } from "../types/page";
 import type { UserRole } from "./auth/types";
 
+import { BrandLogo } from "./icons";
+
 import {
-  BrandLogo,
   DashboardIcon,
-  CustomerIcon,
-  LoanIcon,
-  CollectionIcon,
-  ReportIcon,
-} from "./icons";
+  CustomersIcon,
+  LoansIcon,
+  InterestEngineIcon,
+  CollectionsIcon,
+  PaymentsIcon,
+  GoldLoanIcon,
+  ReportsIcon,
+  UsersIcon,
+  AuditLogsIcon,
+  BackupIcon,
+  SecurityIcon,
+  BusinessSettingsIcon,
+  ThemeSettingsIcon,
+  SubscriptionIcon,
+  AdvancedConfigurationIcon,
+} from "../assets/icons";
 
 import { hasPermission } from "../utils/permissions";
 
@@ -28,22 +40,22 @@ type AppShellProps = {
 
   setSidebarOpen: (open: boolean) => void;
 
+  sidebarCollapsed: boolean;
+
+setSidebarCollapsed: (collapsed: boolean) => void;
+
   children: ReactNode;
 };
 
 export default function AppShell({
   currentPage,
-
   onNavigate,
-
   onLogout,
-
   userRole,
-
   sidebarOpen,
-
   setSidebarOpen,
-
+  sidebarCollapsed,
+  setSidebarCollapsed,
   children,
 }: AppShellProps) {
   function handleNavigate(page: Page) {
@@ -52,27 +64,13 @@ export default function AppShell({
     setSidebarOpen(false);
   }
 
-  if (currentPage === "projector") {
-    return (
-      <div
-        style={{
-          width: "100vw",
-
-          height: "100vh",
-
-          overflow: "hidden",
-
-          background: "var(--bg)",
-        }}
-      >
-        {children}
-      </div>
-    );
-  }
-
   return (
-    <div className="app-shell">
-      <header className="app-header">
+  <div
+    className={`app-shell ${
+      sidebarCollapsed ? "sidebar-collapsed" : ""
+    }`}
+  >
+    <header className="app-header">
         <button
           type="button"
           className="mobile-menu-button"
@@ -84,27 +82,27 @@ export default function AppShell({
         <h1
           style={{
             margin: 0,
-
+            fontSize: 24,
+            fontWeight: 700,
             color: "var(--text)",
-
-            fontSize: 20,
-
-            fontWeight: 800,
           }}
         >
-          {currentPage
-            .toString()
-            .replace(/([A-Z])/g, " $1")
-            .toUpperCase()}
+          FINORA Enterprise Dashboard
         </h1>
       </header>
 
-      <aside
-        className={sidebarOpen ? "app-sidebar mobile-open" : "app-sidebar"}
-      >
-        <div className="sidebar-brand">
-          <BrandLogo />
-        </div>
+     <aside
+  className={`app-sidebar ${
+    sidebarCollapsed ? "collapsed" : ""
+  } ${sidebarOpen ? "mobile-open" : ""}`}
+>
+       <div
+  className="sidebar-brand"
+  onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+  title={sidebarCollapsed ? "Expand Sidebar" : "Collapse Sidebar"}
+>
+  <BrandLogo />
+</div>
 
         <p
           style={{
@@ -127,95 +125,184 @@ export default function AppShell({
             gap: 10,
           }}
         >
-          <button onClick={() => handleNavigate("dashboard")}>Dashboard</button>
+<button onClick={() => handleNavigate("dashboard")}>
+  <img
+    src={DashboardIcon}
+    alt="Dashboard"
+    className="sidebar-icon"
+  />
 
+  <span>Dashboard</span>
+</button>
           {hasPermission(userRole, "CUSTOMERS_VIEW") && (
-            <button onClick={() => handleNavigate("customers")}>
-              Customers
-            </button>
+            <button
+  onClick={() => {
+    console.log("Customers clicked");
+    handleNavigate("customers");
+  }}
+>
+  <img
+    src={CustomersIcon}
+    alt="Customers"
+    className="sidebar-icon"
+  />
+
+  <span>Customers</span>
+</button>
           )}
 
           {hasPermission(userRole, "LOANS_VIEW") && (
-            <button onClick={() => handleNavigate("loans")}>Loans</button>
-          )}
+<button onClick={() => handleNavigate("loans")}>
+  <img
+    src={LoansIcon}
+    alt="Loans"
+    className="sidebar-icon"
+  />
+  <span>Loans</span>
+</button>          )}
 
           {hasPermission(userRole, "LOANS_VIEW") && (
             <button onClick={() => handleNavigate("interest")}>
-              Interest Engine
-            </button>
+  <img
+    src={InterestEngineIcon}
+    alt="Interest Engine"
+    className="sidebar-icon"
+  />
+  <span>Interest Engine</span>
+</button>
           )}
 
           {hasPermission(userRole, "COLLECTIONS_VIEW") && (
             <button onClick={() => handleNavigate("collections")}>
-              Collections
-            </button>
+  <img
+    src={CollectionsIcon}
+    alt="Collections"
+    className="sidebar-icon"
+  />
+  <span>Collections</span>
+</button>
           )}
 
           {hasPermission(userRole, "COLLECTIONS_VIEW") && (
-            <button onClick={() => handleNavigate("payments")}>Payments</button>
+            <button onClick={() => handleNavigate("payments")}>
+  <img
+    src={PaymentsIcon}
+    alt="Payments"
+    className="sidebar-icon"
+  />
+  <span>Payments</span>
+</button>
           )}
 
           {hasPermission(userRole, "LOANS_VIEW") && (
             <button onClick={() => handleNavigate("goldLoan")}>
-              Gold Loan
-            </button>
+  <img
+    src={GoldLoanIcon}
+    alt="Gold Loan"
+    className="sidebar-icon"
+  />
+  <span>Gold Loan</span>
+</button>
           )}
 
           {hasPermission(userRole, "REPORTS_VIEW") && (
-            <button onClick={() => handleNavigate("reports")}>Reports</button>
+            <button onClick={() => handleNavigate("reports")}>
+  <img
+    src={ReportsIcon}
+    alt="Reports"
+    className="sidebar-icon"
+  />
+  <span>Reports</span>
+</button>
           )}
 
           {hasPermission(userRole, "USER_MANAGEMENT") && (
-            <button onClick={() => handleNavigate("users")}>Users</button>
+            <button onClick={() => handleNavigate("users")}>
+  <img
+    src={UsersIcon}
+    alt="Users"
+    className="sidebar-icon"
+  />
+  <span>Users</span>
+</button>
           )}
 
           {hasPermission(userRole, "AUDIT_VIEW") && (
-            <button onClick={() => handleNavigate("audit")}>Audit Logs</button>
+            <button onClick={() => handleNavigate("audit")}>
+  <img
+    src={AuditLogsIcon}
+    alt="Audit Logs"
+    className="sidebar-icon"
+  />
+  <span>Audit Logs</span>
+</button>
           )}
 
           {hasPermission(userRole, "BACKUP_MANAGEMENT") && (
-            <button onClick={() => handleNavigate("backup")}>Backup</button>
+            <button onClick={() => handleNavigate("backup")}>
+  <img
+    src={BackupIcon}
+    alt="Backup"
+    className="sidebar-icon"
+  />
+  <span>Backup</span>
+</button>
           )}
 
           {hasPermission(userRole, "SECURITY_VIEW") && (
-            <button onClick={() => handleNavigate("security")}>Security</button>
+            <button onClick={() => handleNavigate("security")}>
+  <img
+    src={SecurityIcon}
+    alt="Security"
+    className="sidebar-icon"
+  />
+  <span>Security</span>
+</button>
           )}
 
-          <button onClick={() => handleNavigate("projector")}>
-            Projector Mode
-          </button>
 
           <button onClick={() => handleNavigate("businessSettings")}>
-            Business Settings
-          </button>
+  <img
+    src={BusinessSettingsIcon}
+    alt="Business Settings"
+    className="sidebar-icon"
+  />
+  <span>Business</span>
+</button>
 
           <button onClick={() => handleNavigate("themeSettings")}>
-            Theme Settings
-          </button>
+  <img
+    src={ThemeSettingsIcon}
+    alt="Theme Settings"
+    className="sidebar-icon"
+  />
+  <span>Theme</span>
+</button>
 
           <button onClick={() => handleNavigate("subscriptionControl")}>
-            Subscription Control
-          </button>
+  <img
+    src={SubscriptionIcon}
+    alt="Subscription"
+    className="sidebar-icon"
+  />
+  <span>Subscription</span>
+</button>
 
           <button onClick={() => handleNavigate("advancedConfiguration")}>
-            Advanced Configuration
-          </button>
+  <img
+    src={AdvancedConfigurationIcon}
+    alt="Advanced Configuration"
+    className="sidebar-icon"
+  />
+  <span>Advanced</span>
+</button>
 
-          <hr />
-
-          <button
-            onClick={onLogout}
-            style={{
-              background:
-                "linear-gradient(135deg,var(--finora-accent),var(--finora-accent-hover))",
-
-              color: "var(--button-text)",
-
-              border: "none",
-            }}
-          >
-            Logout
-          </button>
+       <button
+  onClick={onLogout}
+  className="logout-button"
+>
+  <span>Logout</span>
+</button>
         </nav>
       </aside>
 
