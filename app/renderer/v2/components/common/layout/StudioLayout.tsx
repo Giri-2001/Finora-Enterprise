@@ -1,14 +1,17 @@
 /* ===========================================================
-   FINORA ENTERPRISE V2
-   STUDIO LAYOUT
---------------------------------------------------------------
-Master Studio Layout Wrapper
+   FINORA ENTERPRISE OS™
+   STUDIO LAYOUT™
+
+   GLOBAL RESPONSIVE SHELL
 =========================================================== */
 
 import type {
   CSSProperties,
   ReactNode,
 } from "react";
+
+import GlobalHeader
+  from "../header/GlobalHeader";
 
 /* ===========================================================
    TYPES
@@ -18,23 +21,55 @@ interface StudioLayoutProps {
 
   children: ReactNode;
 
+  department?: string;
+
 }
 
 /* ===========================================================
-   STYLES
+   ROOT
 =========================================================== */
 
 const layoutStyle: CSSProperties = {
 
   width: "100%",
 
-  maxWidth: "1600px",
+  minWidth: 0,
 
-  margin: "0 auto",
+  maxWidth: "100%",
 
-  padding: "32px",
+  minHeight: "100vh",
+
+  margin: 0,
+
+  background: "#F8FAFC",
+
+  display: "flex",
+
+  flexDirection: "column",
+
+  overflow: "hidden",
+
+};
+
+const contentStyle: CSSProperties = {
+
+  flex: 1,
+
+  width: "100%",
+
+  padding: "2px 16px 16px",
 
   boxSizing: "border-box",
+
+  overflowX: "hidden",
+
+  overflowY: "auto",
+
+  display: "flex",
+
+  flexDirection: "column",
+
+  gap: "16px",
 
 };
 
@@ -46,13 +81,25 @@ export default function StudioLayout({
 
   children,
 
+  department = "Reception",
+
 }: StudioLayoutProps) {
 
   return (
 
     <main style={layoutStyle}>
 
-      {children}
+      <GlobalHeader
+
+        department={department}
+
+      />
+
+      <section style={contentStyle}>
+
+        {children}
+
+      </section>
 
     </main>
 

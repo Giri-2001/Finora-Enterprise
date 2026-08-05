@@ -1,0 +1,69 @@
+/* ===========================================================
+   FINORA ENTERPRISE OS™
+   CUSTOMER OFFICE CONTROLLER™
+
+   CUSTOMER OFFICE MAPPER
+=========================================================== */
+
+import type {
+  CustomerProfile,
+} from "../../../../../types/customers";
+
+import type {
+  OfficeCustomer,
+} from "../../CustomerOffice/types";
+
+
+/* ===========================================================
+   MAPPER
+=========================================================== */
+
+export default function customerOfficeMapper(
+
+  customers: CustomerProfile[],
+
+): OfficeCustomer[] {
+
+  return customers
+
+    .filter(
+      (customer) =>
+        !customer.internal.isDeleted &&
+        !customer.internal.isArchived,
+    )
+
+    .map(
+
+      (customer) => ({
+
+        id:
+          customer.identity.customerId,
+
+        name:
+          customer.basic.displayName ||
+          customer.basic.fullName,
+
+        phone:
+          customer.basic.mobileNumber,
+
+        branch:
+          customer.identity.businessName,
+
+        kycVerified:
+          true,
+
+        active:
+          customer.identity.isActive,
+
+        outstandingAmount:
+          customer.internal.outstandingAmount,
+
+        nextCollectionDate:
+          customer.internal.lastCollectionAt
+          ?? "",
+
+      }),
+
+    );
+
+}

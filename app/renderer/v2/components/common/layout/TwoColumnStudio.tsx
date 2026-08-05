@@ -28,35 +28,32 @@ interface TwoColumnStudioProps {
 
 const containerStyle: CSSProperties = {
 
-  display: "grid",
+  display:"flex",
 
-  gridTemplateColumns: "2fr 1fr",
+  flexDirection:"column",
 
-  gap: "32px",
+  height:"calc(100vh - 80px)",
 
-  alignItems: "start",
+  overflow:"hidden",
 
-  width: "100%",
+  width:"100%",
 
 };
 
 const leftStyle: CSSProperties = {
 
-  display: "flex",
+ height:"40%",
 
-  flexDirection: "column",
-
-  gap: "24px",
+ overflow:"hidden",
 
 };
 
+
 const rightStyle: CSSProperties = {
 
-  display: "flex",
+ height:"60%",
 
-  flexDirection: "column",
-
-  gap: "24px",
+ overflow:"auto",
 
 };
 

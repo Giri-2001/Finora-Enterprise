@@ -2,7 +2,7 @@ import React from "react";
 
 import ReactDOM from "react-dom/client";
 
-import App from "./App";
+import App from "./v2/app/App";
 
 import "./index.css";
 

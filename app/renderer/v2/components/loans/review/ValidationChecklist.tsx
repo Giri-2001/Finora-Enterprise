@@ -6,38 +6,80 @@
 
 import SummaryCard from "../../common/cards/SummaryCard";
 
+import type {
+  LoanReviewData,
+} from "./types";
+
+
+/* ===========================================================
+   TYPES
+=========================================================== */
+
+interface ValidationChecklistProps {
+
+  review: LoanReviewData;
+
+}
+
 /* ===========================================================
    COMPONENT
 =========================================================== */
 
-export default function ValidationChecklist() {
+export default function ValidationChecklist({
+
+  review,
+
+}: ValidationChecklistProps) {
 
   return (
 
     <SummaryCard title="Validation Checklist">
 
       <ul
-        style={{
-          margin: 0,
-          paddingLeft: "20px",
-          display: "flex",
-          flexDirection: "column",
-          gap: "10px",
-        }}
-      >
-        <li>Customer information completed</li>
+  style={{
+    margin: 0,
+    paddingLeft: "20px",
+    display: "flex",
+    flexDirection: "column",
+    gap: "10px",
+  }}
+>
+  <li>
+    {review.customerName
+      ? "✅ Customer information completed"
+      : "❌ Customer information missing"}
+  </li>
 
-        <li>Finance configuration verified</li>
+  <li>
+    {review.interestRate > 0
+      ? "✅ Finance configuration verified"
+      : "❌ Finance configuration incomplete"}
+  </li>
 
-        <li>Repayment schedule generated</li>
+  <li>
+    {review.totalInstallments > 0
+      ? "✅ Repayment schedule generated"
+      : "❌ Repayment schedule not generated"}
+  </li>
 
-        <li>Guarantor details verified</li>
+  <li>
+    {review.guarantorName
+      ? "✅ Guarantor details verified"
+      : "❌ Guarantor details missing"}
+  </li>
 
-        <li>Disbursement details confirmed</li>
+  <li>
+    {review.netDisbursement > 0
+      ? "✅ Disbursement details confirmed"
+      : "❌ Disbursement not configured"}
+  </li>
 
-        <li>Loan ready for approval</li>
-
-      </ul>
+  <li>
+    {review.loanStatus === "Pending Approval"
+      ? "✅ Loan ready for approval"
+      : "ℹ️ Loan status updated"}
+  </li>
+</ul>
 
     </SummaryCard>
 

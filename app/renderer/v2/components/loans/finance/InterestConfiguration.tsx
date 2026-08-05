@@ -27,10 +27,40 @@ const wrapperStyle: CSSProperties = {
 };
 
 /* ===========================================================
+   TYPES
+=========================================================== */
+
+interface InterestConfigurationProps {
+
+  interestType: string;
+
+  interestRate: string;
+
+  onInterestTypeChange: (
+    value: string,
+  ) => void;
+
+  onInterestRateChange: (
+    value: string,
+  ) => void;
+
+}
+
+/* ===========================================================
    COMPONENT
 =========================================================== */
 
-export default function InterestConfiguration() {
+export default function InterestConfiguration({
+
+  interestType,
+
+  interestRate,
+
+  onInterestTypeChange,
+
+  onInterestRateChange,
+
+}: InterestConfigurationProps) {
 
   return (
 
@@ -41,17 +71,23 @@ export default function InterestConfiguration() {
         required
       >
         <SelectInput
-          options={[
-            {
-              label: "Flat Interest",
-              value: "flat",
-            },
-            {
-              label: "Reducing Balance",
-              value: "reducing",
-            },
-          ]}
-        />
+  value={interestType}
+  onChange={(event) =>
+    onInterestTypeChange(
+      event.target.value,
+    )
+  }
+  options={[
+    {
+      label: "Flat Interest",
+      value: "Flat Interest",
+    },
+    {
+      label: "Reducing Balance",
+      value: "Reducing Balance",
+    },
+  ]}
+/>
       </FormField>
 
       <FormField
@@ -59,9 +95,15 @@ export default function InterestConfiguration() {
         required
       >
         <TextInput
-          type="number"
-          placeholder="Enter interest rate"
-        />
+  type="number"
+  value={interestRate}
+  onChange={(event) =>
+    onInterestRateChange(
+      event.target.value,
+    )
+  }
+  placeholder="Enter interest rate"
+/>
       </FormField>
 
       <FormField

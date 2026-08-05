@@ -12,6 +12,38 @@ import {
 } from "../../common";
 
 /* ===========================================================
+   TYPES
+=========================================================== */
+
+interface GuarantorFormProps {
+
+  guarantorName: string;
+
+  guarantorPhone: string;
+
+  occupation: string;
+
+  address: string;
+
+  onGuarantorNameChange: (
+    value: string,
+  ) => void;
+
+  onGuarantorPhoneChange: (
+    value: string,
+  ) => void;
+
+  onOccupationChange: (
+    value: string,
+  ) => void;
+
+  onAddressChange: (
+    value: string,
+  ) => void;
+
+}
+
+/* ===========================================================
    STYLES
 =========================================================== */
 
@@ -29,7 +61,25 @@ const wrapperStyle: CSSProperties = {
    COMPONENT
 =========================================================== */
 
-export default function GuarantorForm() {
+export default function GuarantorForm({
+
+  guarantorName,
+
+  guarantorPhone,
+
+  occupation,
+
+  address,
+
+  onGuarantorNameChange,
+
+  onGuarantorPhoneChange,
+
+  onOccupationChange,
+
+  onAddressChange,
+
+}: GuarantorFormProps) {
 
   return (
 
@@ -40,8 +90,14 @@ export default function GuarantorForm() {
         required
       >
         <TextInput
-          placeholder="Enter guarantor name"
-        />
+  value={guarantorName}
+  onChange={(event) =>
+    onGuarantorNameChange(
+      event.target.value,
+    )
+  }
+  placeholder="Enter guarantor name"
+/>
       </FormField>
 
       <FormField
@@ -49,24 +105,42 @@ export default function GuarantorForm() {
         required
       >
         <TextInput
-          placeholder="Enter mobile number"
-        />
+  value={guarantorPhone}
+  onChange={(event) =>
+    onGuarantorPhoneChange(
+      event.target.value,
+    )
+  }
+  placeholder="Enter mobile number"
+/>
       </FormField>
 
       <FormField
         label="Occupation"
       >
         <TextInput
-          placeholder="Enter occupation"
-        />
+  value={occupation}
+  onChange={(event) =>
+    onOccupationChange(
+      event.target.value,
+    )
+  }
+  placeholder="Enter occupation"
+/>
       </FormField>
 
       <FormField
         label="Address"
       >
         <TextInput
-          placeholder="Enter address"
-        />
+  value={address}
+  onChange={(event) =>
+    onAddressChange(
+      event.target.value,
+    )
+  }
+  placeholder="Enter address"
+/>
       </FormField>
 
     </div>

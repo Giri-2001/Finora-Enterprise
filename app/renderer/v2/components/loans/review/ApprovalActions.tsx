@@ -9,10 +9,32 @@ import Button from "../../common/buttons/Button";
 import SummaryCard from "../../common/cards/SummaryCard";
 
 /* ===========================================================
+   TYPES
+=========================================================== */
+
+interface ApprovalActionsProps {
+
+  onSaveDraft: () => void;
+
+  onApproveLoan: () => void;
+
+  onRejectLoan: () => void;
+
+}
+
+/* ===========================================================
    COMPONENT
 =========================================================== */
 
-export default function ApprovalActions() {
+export default function ApprovalActions({
+
+  onSaveDraft,
+
+  onApproveLoan,
+
+  onRejectLoan,
+
+}: ApprovalActionsProps) {
 
   return (
 
@@ -26,23 +48,29 @@ export default function ApprovalActions() {
         }}
       >
 
-        <Button>
+        <Button
+  onClick={onSaveDraft}
+>
 
-          Save Draft
+  Save Draft
 
-        </Button>
+</Button>
 
-        <Button>
+        <Button
+  onClick={onApproveLoan}
+>
 
-          Approve Loan
+  Approve Loan
 
-        </Button>
+</Button>
 
-        <Button>
+        <Button
+  onClick={onRejectLoan}
+>
 
-          Reject Loan
+  Reject Loan
 
-        </Button>
+</Button>
 
       </div>
 

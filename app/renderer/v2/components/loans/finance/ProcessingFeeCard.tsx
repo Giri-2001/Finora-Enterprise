@@ -12,10 +12,30 @@ import {
 } from "../../common";
 
 /* ===========================================================
+   TYPES
+=========================================================== */
+
+interface ProcessingFeeCardProps {
+
+  processingFee: string;
+
+  onProcessingFeeChange: (
+    value: string,
+  ) => void;
+
+}
+
+/* ===========================================================
    COMPONENT
 =========================================================== */
 
-export default function ProcessingFeeCard() {
+export default function ProcessingFeeCard({
+
+  processingFee,
+
+  onProcessingFeeChange,
+
+}: ProcessingFeeCardProps) {
 
   return (
 
@@ -25,9 +45,15 @@ export default function ProcessingFeeCard() {
         label="Processing Fee (₹)"
       >
         <TextInput
-          type="number"
-          placeholder="Enter processing fee"
-        />
+  type="number"
+  value={processingFee}
+  onChange={(event) =>
+    onProcessingFeeChange(
+      event.target.value,
+    )
+  }
+  placeholder="Enter processing fee"
+/>
       </FormField>
 
       <FormField

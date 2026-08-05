@@ -20,6 +20,8 @@ interface GuarantorPreviewCardProps {
 
   occupation?: string;
 
+  address?: string;
+
 }
 
 /* ===========================================================
@@ -35,6 +37,8 @@ export default function GuarantorPreviewCard({
   mobileNumber = "--",
 
   occupation = "--",
+
+address = "--",
 
 }: GuarantorPreviewCardProps) {
 
@@ -62,6 +66,14 @@ export default function GuarantorPreviewCard({
         <strong> {mobileNumber}</strong>
 
       </span>
+
+      <span>
+
+  Address :
+
+  <strong> {address}</strong>
+
+</span>
 
       <span>
 

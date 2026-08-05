@@ -33,9 +33,9 @@ export interface CustomerWizardData {
 
   photo?: string;
 
-  name?: string;
+  fullName?: string;
 
-  mobile?: string;
+mobileNumber?: string;
 
   whatsapp?: string;
 
@@ -259,22 +259,27 @@ export default function CustomerWizard() {
 
   const updateWizardData = useCallback(
 
-    (
-      data: Partial<CustomerWizardData>,
-    ) => {
+  (
+    data: Partial<CustomerWizardData>,
+  ) => {
 
-      setWizardData((previous) => ({
+    console.log(
+      "UPDATE WIZARD DATA:",
+      data
+    );
 
-        ...previous,
+    setWizardData((previous) => ({
 
-        ...data,
+      ...previous,
 
-      }));
+      ...data,
 
-    },
+    }));
 
-    [],
-  );
+  },
+
+  [],
+);
 
   /* ===========================================================
      NAVIGATION
@@ -349,19 +354,31 @@ export default function CustomerWizard() {
 
       case 1:
 
-        return (
+  return (
 
-          <Step1Identity />
+    <Step1Identity
 
-        );
+      updateWizardData={
+        updateWizardData
+      }
+
+    />
+
+  );
 
       case 2:
 
-        return (
+return (
 
-          <Step2Basic />
+  <Step2Basic
 
-        );
+    updateWizardData={
+      updateWizardData
+    }
+
+  />
+
+);
 
       case 3:
 
@@ -389,11 +406,17 @@ export default function CustomerWizard() {
 
       default:
 
-        return (
+return (
 
-          <Step6Review />
+  <Step6Review
 
-        );
+    wizardData={wizardData}
+
+    resetWizard={resetWizard}
+
+  />
+
+);
 
     }
 

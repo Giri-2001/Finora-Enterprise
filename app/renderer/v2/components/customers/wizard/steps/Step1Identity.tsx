@@ -166,7 +166,29 @@ const cardPhotoStyle: CSSProperties = {
 
 };
 
-export default function Step1Identity() {
+interface Step1IdentityProps {
+
+  updateWizardData: (
+
+    data: {
+
+      fullName?: string;
+
+      mobileNumber?: string;
+
+      customerId?: string;
+
+    },
+
+  ) => void;
+
+}
+
+export default function Step1Identity({
+
+  updateWizardData,
+
+}: Step1IdentityProps) {
 
   const [state, setState] =
     useState(DEFAULT_STATE);
@@ -191,20 +213,49 @@ export default function Step1Identity() {
   =========================================================== */
 
   function updateField(
-    field: keyof IdentityState,
-    value: string | boolean,
-  ): void {
+  field: keyof IdentityState,
+  value: string | boolean,
+): void {
 
-    setState((previous) => ({
+  setState((previous) => ({
 
-      ...previous,
+    ...previous,
 
-      [field]: value,
+    [field]: value,
 
-    }));
+  }));
+
+  if (field === "customerName") {
+
+    updateWizardData({
+
+      fullName: String(value),
+
+    });
 
   }
 
+  if (field === "mobileNumber") {
+
+    updateWizardData({
+
+      mobileNumber: String(value),
+
+    });
+
+  }
+
+  if (field === "customerId") {
+
+    updateWizardData({
+
+      customerId: String(value),
+
+    });
+
+  }
+
+}
   /* ===========================================================
      UI
   =========================================================== */

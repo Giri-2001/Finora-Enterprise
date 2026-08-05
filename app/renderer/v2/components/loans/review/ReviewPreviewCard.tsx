@@ -6,23 +6,17 @@
 
 import SummaryCard from "../../common/cards/SummaryCard";
 
+import type {
+  LoanReviewData,
+} from "./types";
+
 /* ===========================================================
    TYPES
 =========================================================== */
 
 interface ReviewPreviewCardProps {
 
-  customerName?: string;
-
-  loanAmount?: number;
-
-  interestRate?: number;
-
-  repaymentFrequency?: string;
-
-  paymentMode?: string;
-
-  guarantorName?: string;
+  review: LoanReviewData;
 
 }
 
@@ -32,17 +26,7 @@ interface ReviewPreviewCardProps {
 
 export default function ReviewPreviewCard({
 
-  customerName = "--",
-
-  loanAmount = 0,
-
-  interestRate = 0,
-
-  repaymentFrequency = "--",
-
-  paymentMode = "--",
-
-  guarantorName = "--",
+  review,
 
 }: ReviewPreviewCardProps) {
 
@@ -53,42 +37,42 @@ export default function ReviewPreviewCard({
       <span>
 
         Customer :
-        <strong> {customerName}</strong>
+        <strong> {review.customerName}</strong>
 
       </span>
 
       <span>
 
         Loan Amount :
-        <strong> ₹ {loanAmount}</strong>
+        <strong> ₹ {review.loanAmount}</strong>
 
       </span>
 
       <span>
 
         Interest :
-        <strong> {interestRate}%</strong>
+        <strong> {review.interestRate}%</strong>
 
       </span>
 
       <span>
 
         Repayment :
-        <strong> {repaymentFrequency}</strong>
+        <strong> {review.repaymentType}</strong>
 
       </span>
 
       <span>
 
         Payment Mode :
-        <strong> {paymentMode}</strong>
+        <strong> Pending</strong>
 
       </span>
 
       <span>
 
         Guarantor :
-        <strong> {guarantorName}</strong>
+        <strong> {review.guarantorName}</strong>
 
       </span>
 

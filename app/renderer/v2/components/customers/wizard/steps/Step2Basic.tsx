@@ -38,6 +38,10 @@ interface BasicState
 
 const DEFAULT_STATE: BasicState = {
 
+   fullName: "",
+
+  mobileNumber: "",
+
   fatherOrSpouseName: "",
 
   occupation: "",
@@ -102,7 +106,25 @@ const rightColumnStyle: CSSProperties = {
    COMPONENT
 =========================================================== */
 
-export default function Step2Basic() {
+interface Step2BasicProps {
+
+  updateWizardData: (
+    data: Partial<{
+      fullName: string;
+      mobileNumber: string;
+      whatsapp: string;
+      email: string;
+    }>
+  ) => void;
+
+}
+
+
+export default function Step2Basic({
+
+  updateWizardData,
+
+}: Step2BasicProps) {
 
   const [state, setState] =
     useState<BasicState>(DEFAULT_STATE);
@@ -119,6 +141,27 @@ export default function Step2Basic() {
       [field]: value,
 
     }));
+
+if (field === "fullName") {
+
+  updateWizardData({
+
+    fullName: value,
+
+  });
+
+}
+
+
+if (field === "mobileNumber") {
+
+  updateWizardData({
+
+    mobileNumber: value,
+
+  });
+
+}
 
   }
 

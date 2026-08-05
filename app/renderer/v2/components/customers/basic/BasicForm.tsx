@@ -13,6 +13,10 @@ import type { CSSProperties } from "react";
 
 export interface BasicFormData {
 
+  fullName: string;
+
+  mobileNumber: string;
+
   fatherOrSpouseName: string;
 
   occupation: string;
@@ -89,6 +93,39 @@ export default function BasicForm({
   return (
 
     <section style={wrapperStyle}>
+
+      <label style={labelStyle}>
+  Customer Name
+</label>
+
+<input
+  style={inputStyle}
+  value={value.fullName}
+  placeholder="Enter customer name"
+  onChange={(event) =>
+    onChange(
+      "fullName",
+      event.target.value,
+    )
+  }
+/>
+
+
+<label style={labelStyle}>
+  Mobile Number
+</label>
+
+<input
+  style={inputStyle}
+  value={value.mobileNumber}
+  placeholder="Enter mobile number"
+  onChange={(event) =>
+    onChange(
+      "mobileNumber",
+      event.target.value,
+    )
+  }
+/>
 
       <label style={labelStyle}>
         Father / Spouse Name

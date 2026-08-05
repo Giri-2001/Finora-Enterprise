@@ -154,7 +154,7 @@ body {
 
   color: var(--text);
 
-  overflow: hidden;
+  overflow: auto;
 
   -webkit-font-smoothing: antialiased;
 

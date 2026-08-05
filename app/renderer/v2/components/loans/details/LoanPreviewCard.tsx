@@ -18,6 +18,30 @@ interface LoanPreviewCardProps {
 
   loanType?: string;
 
+  loanStatus?: string;
+
+  interest?: number;
+
+  totalInterest?: number;
+
+  totalPayable?: number;
+
+  installmentAmount?: number;
+
+  loanDate?: string;
+
+maturityDate?: string;
+
+  processingFee?: number;
+
+  advanceDeduction?: number;
+
+  netDisbursement?: number;
+
+  lateFee?: number;
+
+  repaymentType?: string;
+
 }
 
 /* ===========================================================
@@ -32,6 +56,30 @@ export default function LoanPreviewCard({
 
   loanType = "--",
 
+interest = 0,
+
+totalInterest = 0,
+
+totalPayable = 0,
+
+installmentAmount = 0,
+
+loanDate = "--",
+
+maturityDate = "--",
+
+processingFee = 0,
+
+advanceDeduction = 0,
+
+netDisbursement = 0,
+
+lateFee = 0,
+
+repaymentType = "--",
+
+loanStatus = "--",
+
 }: LoanPreviewCardProps) {
 
   return (
@@ -40,21 +88,140 @@ export default function LoanPreviewCard({
 
       <span>
 
-        Customer : <strong>{customerName}</strong>
+        Customer :
+        <strong> {customerName}</strong>
 
       </span>
 
       <span>
 
-        Loan Amount : <strong>₹ {loanAmount}</strong>
+        Loan Amount :
+        <strong> ₹ {loanAmount}</strong>
 
       </span>
 
       <span>
 
-        Loan Type : <strong>{loanType}</strong>
+        Loan Type :
+        <strong> {loanType}</strong>
 
       </span>
+
+      <span>
+
+  Interest :
+
+  <strong> {interest}%</strong>
+
+</span>
+
+<span>
+
+  Total Interest :
+
+  <strong> ₹ {totalInterest.toFixed(2)}</strong>
+
+</span>
+
+<span>
+
+  Total Payable :
+
+  <strong>
+
+    ₹ {totalPayable.toFixed(2)}
+
+  </strong>
+
+</span>
+
+<span>
+
+  Installment :
+
+  <strong>
+
+    ₹ {installmentAmount.toFixed(2)}
+
+  </strong>
+
+</span>
+
+<span>
+
+  Loan Date :
+
+  <strong>
+
+    {loanDate}
+
+  </strong>
+
+</span>
+
+<span>
+
+  Status :
+
+  <strong>
+
+    {loanStatus}
+
+  </strong>
+
+</span>
+
+<span>
+
+  Maturity :
+
+  <strong>
+
+    {maturityDate}
+
+  </strong>
+
+</span>
+
+<span>
+
+  Processing Fee :
+
+  <strong> ₹ {processingFee}</strong>
+
+</span>
+
+<span>
+
+  Advance Deduction :
+
+  <strong> ₹ {advanceDeduction}</strong>
+
+</span>
+
+<span>
+
+  Net Disbursement :
+
+  <strong> ₹ {netDisbursement}</strong>
+
+</span>
+
+<span>
+
+  Late Fee :
+
+  <strong> ₹ {lateFee}</strong>
+
+</span>
+
+<span>
+
+  Repayment :
+
+  <strong> {repaymentType}</strong>
+
+</span>
 
     </SummaryCard>
 

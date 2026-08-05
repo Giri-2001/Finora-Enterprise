@@ -13,10 +13,40 @@ import {
 } from "../../common";
 
 /* ===========================================================
+   TYPES
+=========================================================== */
+
+interface PenaltyConfigurationProps {
+
+  penaltyType: string;
+
+  penaltyValue: string;
+
+  onPenaltyTypeChange: (
+    value: string,
+  ) => void;
+
+  onPenaltyValueChange: (
+    value: string,
+  ) => void;
+
+}
+
+/* ===========================================================
    COMPONENT
 =========================================================== */
 
-export default function PenaltyConfiguration() {
+export default function PenaltyConfiguration({
+
+  penaltyType,
+
+  penaltyValue,
+
+  onPenaltyTypeChange,
+
+  onPenaltyValueChange,
+
+}: PenaltyConfigurationProps) {
 
   return (
 
@@ -26,26 +56,38 @@ export default function PenaltyConfiguration() {
         label="Penalty Type"
       >
         <SelectInput
-          options={[
-            {
-              label: "Fixed Amount",
-              value: "fixed",
-            },
-            {
-              label: "Percentage",
-              value: "percentage",
-            },
-          ]}
-        />
+  value={penaltyType}
+  onChange={(event) =>
+    onPenaltyTypeChange(
+      event.target.value,
+    )
+  }
+  options={[
+    {
+      label: "Fixed Amount",
+      value: "Fixed Amount",
+    },
+    {
+      label: "Percentage",
+      value: "Percentage",
+    },
+  ]}
+/>
       </FormField>
 
       <FormField
         label="Penalty Value"
       >
         <TextInput
-          type="number"
-          placeholder="Enter penalty value"
-        />
+  type="number"
+  value={penaltyValue}
+  onChange={(event) =>
+    onPenaltyValueChange(
+      event.target.value,
+    )
+  }
+  placeholder="Enter penalty value"
+/>
       </FormField>
 
       <FormField
