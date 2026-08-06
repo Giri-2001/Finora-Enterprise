@@ -24,9 +24,9 @@ export const containerStyle: CSSProperties = {
 
   position: "relative",
 
-  width: `${CARD_WIDTH}px`,
+  width: "170px",
 
-  height: `${CARD_HEIGHT}px`,
+  height: "290px",
 
 };
 
@@ -47,7 +47,7 @@ export const innerStyle: CSSProperties = {
   WebkitTransformStyle: "preserve-3d",
 
   transition:
-    "transform .55s ease",
+  "transform .45s cubic-bezier(.22,.61,.36,1)",
 
 };
 
@@ -74,6 +74,9 @@ export const faceStyle: CSSProperties = {
   borderRadius: `${CARD_RADIUS}px`,
 
   overflow: "hidden",
+
+  boxShadow:
+  "0 18px 42px rgba(0,0,0,.18)",
 
 
 };

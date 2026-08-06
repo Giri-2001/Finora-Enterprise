@@ -19,13 +19,13 @@ export const containerStyle: CSSProperties = {
 
   justifyContent: "flex-end",
 
-  gap: "10px",
+  gap: "14px",
 
   width: "100%",
 
   whiteSpace: "nowrap",
 
-    transform: "translateY(-6px)",
+  transform: "translateY(-4px)",
 
 };
 
@@ -35,17 +35,19 @@ export const containerStyle: CSSProperties = {
 
 export const buttonStyle: CSSProperties = {
 
-  width: "28px",
+  width: "34px",
 
-  height: "28px",
+  height: "34px",
 
-  borderRadius: "999px",
+  borderRadius: "12px",
 
-  border: "1px solid #CBD5E1",
 
-  background: "#FFFFFF",
+border: "1px solid rgba(246,213,138,.35)",
 
-  color: "#0F172A",
+  background:
+  "linear-gradient(180deg,#FFFDF8,#F8E7BE)",
+
+  color: "#5A3B16",
 
   cursor: "pointer",
 
@@ -55,14 +57,15 @@ export const buttonStyle: CSSProperties = {
 
   justifyContent: "center",
 
-  fontSize: "12px",
+ fontSize: "13px",
+
 
   fontWeight: 700,
 
   transition: "all .2s ease",
 
   boxShadow:
-    "0 2px 6px rgba(15,23,42,.08)",
+  "0 8px 18px rgba(0,0,0,.18)",
 
   flexShrink: 0,
 
@@ -80,7 +83,7 @@ export const infoStyle: CSSProperties = {
 
   justifyContent: "center",
 
-  minWidth: "120px",
+  minWidth: "140px",
 
   flexShrink: 0,
 
@@ -92,7 +95,7 @@ export const infoStyle: CSSProperties = {
 
 export const totalStyle: CSSProperties = {
 
-  fontSize: "16px",
+  fontSize: "17px",
 
   fontWeight: 700,
 

@@ -39,7 +39,9 @@ export const containerStyle: CSSProperties = {
   willChange: "transform",
 
   transition:
-    "transform .45s cubic-bezier(.22,.61,.36,1)",
+  "transform .35s cubic-bezier(.22,.61,.36,1)",
+
+paddingBottom: "10px",
 
 };
 
@@ -49,16 +51,21 @@ export const containerStyle: CSSProperties = {
 
 export const pinStyle: CSSProperties = {
 
-  width:"8px",
+  width: "10px",
 
-  height:"8px",
+  height: "10px",
 
-  borderRadius:"50%",
+  borderRadius: "50%",
 
   background:
-    "#64748B",
+    "linear-gradient(180deg,#D6B06A,#8A612B)",
 
-  marginBottom:"0px",
+  border: "1px solid #6B4B1D",
+
+  marginBottom: "0px",
+
+  boxShadow:
+    "0 2px 4px rgba(0,0,0,.25)",
 
 };
 
@@ -68,14 +75,14 @@ export const pinStyle: CSSProperties = {
 
 export const ropeStyle: CSSProperties = {
 
-  width:"2px",
+  width: "2px",
 
-  height:"18px",
+  height: "22px",
 
   background:
-    "linear-gradient(180deg,#94A3B8,#475569)",
+    "linear-gradient(180deg,#D5D9E0,#7B8798,#475569)",
 
-  marginTop:"0px",
+  marginTop: "0px",
 
 };
 
@@ -85,12 +92,12 @@ export const ropeStyle: CSSProperties = {
 
 export const hangerStyle: CSSProperties = {
 
-  width:"55px",
+  width:"58px",
 
-  height:"26px",
+  height:"28px",
 
   border:
-    "3px solid #64748B",
+  "3px solid #7C8798",
 
   borderTop:"0",
 
@@ -105,7 +112,7 @@ export const hangerStyle: CSSProperties = {
 
 export const cardContainerStyle: CSSProperties = {
 
-  marginTop: "2px",
+  marginTop: "6px",
 
   transformOrigin: "top center",
 
@@ -118,6 +125,9 @@ export const cardContainerStyle: CSSProperties = {
 
   zIndex: 1,
 
-  paddingBottom: "0px",
+  paddingBottom: "10px",
+
+  filter:
+    "drop-shadow(0 14px 26px rgba(0,0,0,.18))",
 
 };

@@ -13,24 +13,24 @@ import type { CSSProperties } from "react";
 
 export const cardStyle: CSSProperties = {
 
-  width: "165px",
+  width: "170px",
 
-  height: "280px",
+  height: "290px",
 
   background:
   "linear-gradient(180deg,#FFFDF9 0%,#FEFBF5 55%,#FCF5E8 100%)",
 
-  borderRadius: "18px",
+  borderRadius: "22px",
 
   overflow: "hidden",
 
   border: "1px solid rgba(180,145,82,.35)",
 
-  boxShadow:
+ boxShadow:
 `
-0 18px 38px rgba(0,0,0,.22),
-0 6px 12px rgba(139,99,41,.18),
-inset 0 1px 0 rgba(255,255,255,.85)
+0 24px 50px rgba(0,0,0,.24),
+0 8px 18px rgba(139,99,41,.20),
+inset 0 1px 0 rgba(255,255,255,.90)
 `,
 
   display: "flex",
@@ -59,13 +59,13 @@ export const companyStyle: CSSProperties = {
 
   textAlign: "center",
 
-  marginTop: "10px",
+  marginTop: "12px",
 
-  fontSize: "18px",
+  fontSize: "20px",
 
   fontWeight: 800,
 
-  letterSpacing: ".8px",
+  letterSpacing: "1px",
 
   lineHeight: 1.1,
 
@@ -106,13 +106,13 @@ export const titleStyle: CSSProperties = {
 
 export const photoStyle: CSSProperties = {
 
-  width: "92px",
+  width: "96px",
 
-  height: "92px",
+  height: "96px",
 
-  margin: "10px auto 5px",
+  margin: "12px auto 6px",
 
-  borderRadius: "18px",
+  borderRadius: "20px",
 
   background:
     "linear-gradient(180deg,#F8FBFF,#E8F1FC)",
@@ -142,13 +142,13 @@ export const nameStyle: CSSProperties = {
 
   textAlign: "center",
 
-  fontSize: "15px",
+  fontSize: "16px",
 
   fontWeight: 700,
 
   color: "#1E293B",
 
-  marginTop: "4px",
+  marginTop: "6px",
 
   letterSpacing: ".2px",
 
@@ -223,13 +223,13 @@ export const branchStyle: CSSProperties = {
 
 export const qrStyle: CSSProperties = {
 
-  width: "46px",
+  width: "50px",
 
-  height: "46px",
+  height: "50px",
 
-  margin: "12px auto 18px",
+  margin: "14px auto 18px",
 
-  borderRadius: "10px",
+  borderRadius: "12px",
 
   background: "#FFFFFF",
 

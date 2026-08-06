@@ -24,13 +24,13 @@ export const containerStyle: CSSProperties = {
 
   width: "100%",
 
-  gap: "6px",
+  gap: "12px",
 
   overflow: "visible",
 
-  padding: "10px 28px 4px",
+  padding: "16px 28px 18px",
 
-  borderRadius: "28px",
+ borderRadius: "32px",
 
   background:
     `
@@ -50,7 +50,7 @@ export const containerStyle: CSSProperties = {
     `,
 
   boxShadow:
-    "0 22px 60px rgba(0,0,0,.28)",
+  "0 26px 70px rgba(0,0,0,.34)",
 
 };
 
@@ -86,7 +86,7 @@ export const railWrapperStyle: CSSProperties = {
 
   marginTop: "0px",
 
-  marginBottom: "0px",
+  marginBottom: "6px",
 
 };
 
@@ -122,10 +122,10 @@ export const hangerAreaStyle: CSSProperties = {
 
   width: "100%",
 
-  gap: "4px",
+  gap: "10px",
 
   overflow: "visible",
 
-  paddingBottom: "0px",
+ paddingBottom: "8px",
 
 };

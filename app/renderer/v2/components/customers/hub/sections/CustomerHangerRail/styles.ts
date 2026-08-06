@@ -23,7 +23,7 @@ export const containerStyle: CSSProperties = {
 
   width: "100%",
 
-  gap: "4px",
+  gap: "12px",
 
   margin: 0,
 
@@ -65,7 +65,7 @@ export const railWrapperStyle: CSSProperties = {
 
   flexDirection: "column",
 
-  gap: "1px",
+  gap: "10px",
 
 };
 
@@ -77,15 +77,15 @@ export const railStyle: CSSProperties = {
 
   width: "100%",
 
-  height: `${RAIL_HEIGHT}px`,
+  height: "3px",
 
   borderRadius: "999px",
 
   background:
-    "linear-gradient(180deg,#CBD5E1,#94A3B8,#CBD5E1)",
+"linear-gradient(90deg, transparent, rgba(246,213,138,.95), transparent)",
 
   boxShadow:
-  "0 6px 18px rgba(15,23,42,.18)",
+"0 4px 14px rgba(212,175,55,.35)",
 
 };
 
@@ -103,13 +103,15 @@ export const hangerAreaStyle: CSSProperties = {
 
   justifyItems: "center",
 
-  columnGap: "10px",
+  columnGap: "18px",
+
+  rowGap: "12px",
 
   width: "100%",
 
-  overflow: "hidden",
+  overflow: "visible",
 
-  padding: "0 0 0 18px",   // 👈 Moves the whole rail right
+  padding: "0 12px",
 
   boxSizing: "border-box",
 
