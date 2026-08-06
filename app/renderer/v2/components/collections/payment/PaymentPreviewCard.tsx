@@ -1,88 +1,60 @@
 /* ===========================================================
-   FINORA ENTERPRISE V2
-   PAYMENT STUDIO
+   FINORA ENTERPRISE OS™
+   Collections Engine
+
    PAYMENT PREVIEW CARD
 =========================================================== */
 
 import SummaryCard from "../../common/cards/SummaryCard";
 
-/* ===========================================================
-   TYPES
-=========================================================== */
-
-interface PaymentPreviewCardProps {
-
-  paymentMethod?: string;
-
-  referenceNumber?: string;
-
-  receiptNumber?: string;
-
-  collectedBy?: string;
-
-  transactionStatus?: string;
-
-}
+import {
+  useCollectionController,
+} from "../controller";
 
 /* ===========================================================
    COMPONENT
 =========================================================== */
 
-export default function PaymentPreviewCard({
-
-  paymentMethod = "--",
-
-  referenceNumber = "--",
-
-  receiptNumber = "--",
-
-  collectedBy = "--",
-
-  transactionStatus = "--",
-
-}: PaymentPreviewCardProps) {
+export default function PaymentPreviewCard() {
+  const {
+    reviewData,
+  } = useCollectionController();
 
   return (
-
     <SummaryCard title="Payment Preview">
-
       <span>
-
         Payment Method :
-        <strong> {paymentMethod}</strong>
-
+        <strong>
+          {" "}
+          {reviewData.paymentMethod || "--"}
+        </strong>
       </span>
 
       <span>
-
         Reference No :
-        <strong> {referenceNumber}</strong>
-
+        <strong>
+          {" "}
+          {reviewData.paymentReference || "--"}
+        </strong>
       </span>
 
       <span>
-
         Receipt No :
-        <strong> {receiptNumber}</strong>
-
+        <strong>
+          {" "}
+          {reviewData.receiptNumber || "--"}
+        </strong>
       </span>
 
       <span>
-
         Collected By :
-        <strong> {collectedBy}</strong>
-
+        <strong> -- </strong>
       </span>
 
       <span>
-
         Status :
-        <strong> {transactionStatus}</strong>
-
+        <strong> -- </strong>
       </span>
-
     </SummaryCard>
-
   );
-
 }

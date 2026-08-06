@@ -9,6 +9,10 @@ import type {
   LoanInstallment,
 } from "./types";
 
+import {
+  formatCurrency,
+} from "../../../utils/currency/formatCurrency";
+
 /* ===========================================================
    TYPES
 =========================================================== */
@@ -65,7 +69,9 @@ export default function LoanScheduleRow({
         }}
       >
         ₹{" "}
-        {installment.installmentAmount.toFixed(2)}
+        {formatCurrency(
+  installment.installmentAmount,
+)}
       </td>
 
       <td

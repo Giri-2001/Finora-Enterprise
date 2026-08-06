@@ -1,9 +1,11 @@
 /* ===========================================================
    FINORA ENTERPRISE OS™
+
    LAST PAYMENT PREVIEW™
 
    SMART WALL
 =========================================================== */
+
 
 import type {
   OfficeCustomer,
@@ -18,11 +20,33 @@ interface TodayCollectionsPreviewCardProps {
 }
 
 
+
+/* ===========================================================
+   COMPONENT
+=========================================================== */
+
+
 export default function TodayCollectionsPreviewCard({
 
   customer,
 
 }: TodayCollectionsPreviewCardProps) {
+
+
+
+  const lastPayment =
+
+    customer.collections &&
+
+    customer.collections.length > 0
+
+      ? customer.collections[
+          customer.collections.length - 1
+        ]
+
+      : undefined;
+
+
 
   return (
 
@@ -41,6 +65,7 @@ export default function TodayCollectionsPreviewCard({
         overflow: "hidden",
 
         boxShadow:
+
           "0 12px 28px rgba(15,23,42,.08)",
 
         display: "flex",
@@ -51,15 +76,18 @@ export default function TodayCollectionsPreviewCard({
 
     >
 
+
       {/* ======================================
           HEADER
       ====================================== */}
+
 
       <div
 
         style={{
 
           background:
+
             "linear-gradient(180deg,#6F4A23,#8A6135)",
 
           padding: "12px",
@@ -88,11 +116,16 @@ export default function TodayCollectionsPreviewCard({
 
         </div>
 
+
       </div>
+
+
+
 
       {/* ======================================
           BODY
       ====================================== */}
+
 
       <div
 
@@ -114,9 +147,13 @@ export default function TodayCollectionsPreviewCard({
 
       >
 
+
+
         {/* PAYMENT AMOUNT */}
 
+
         <div>
+
 
           <div
 
@@ -138,6 +175,8 @@ export default function TodayCollectionsPreviewCard({
 
           </div>
 
+
+
           <div
 
             style={{
@@ -152,15 +191,23 @@ export default function TodayCollectionsPreviewCard({
 
           >
 
-            ₹0
+            ₹ {lastPayment?.amount ?? 0}
+
 
           </div>
 
+
         </div>
+
+
+
+
 
         {/* PAYMENT DATE */}
 
+
         <div>
+
 
           <div
 
@@ -182,6 +229,9 @@ export default function TodayCollectionsPreviewCard({
 
           </div>
 
+
+
+
           <div
 
             style={{
@@ -196,31 +246,50 @@ export default function TodayCollectionsPreviewCard({
 
           >
 
-            --
+            {lastPayment?.paymentDate || "--"}
+
 
           </div>
 
+
         </div>
 
+
+
+
+
+
         {/* FOOTER */}
+
 
         <div
 
           style={{
 
-            borderTop: "1px solid #E8D8B6",
+            borderTop:
 
-            paddingTop: "10px",
+              "1px solid #E8D8B6",
 
-            display: "flex",
+            paddingTop:
 
-            justifyContent: "space-between",
+              "10px",
 
-            alignItems: "center",
+            display:
+
+              "flex",
+
+            justifyContent:
+
+              "space-between",
+
+            alignItems:
+
+              "center",
 
           }}
 
         >
+
 
           <span
 
@@ -239,6 +308,9 @@ export default function TodayCollectionsPreviewCard({
             View Receipt
 
           </span>
+
+
+
 
           <span
 
@@ -260,11 +332,16 @@ export default function TodayCollectionsPreviewCard({
 
           </span>
 
+
+
         </div>
+
 
       </div>
 
+
     </section>
+
 
   );
 

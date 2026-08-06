@@ -1,77 +1,56 @@
 /* ===========================================================
-   FINORA ENTERPRISE V2
-   PAYMENT STUDIO
+   FINORA ENTERPRISE OS™
+   Collections Engine
+
    PAYMENT SUMMARY
 =========================================================== */
 
 import SummaryCard from "../../common/cards/SummaryCard";
 
-/* ===========================================================
-   TYPES
-=========================================================== */
+import {
+  formatCurrency,
+} from "../../../utils/currency/formatCurrency";
 
-interface PaymentSummaryProps {
-
-  totalAmount?: number;
-
-  paymentMethod?: string;
-
-  collectedBy?: string;
-
-  transactionStatus?: string;
-
-}
+import {
+  useCollectionController,
+} from "../controller";
 
 /* ===========================================================
    COMPONENT
 =========================================================== */
 
-export default function PaymentSummary({
-
-  totalAmount = 0,
-
-  paymentMethod = "--",
-
-  collectedBy = "--",
-
-  transactionStatus = "--",
-
-}: PaymentSummaryProps) {
+export default function PaymentSummary() {
+  const {
+    reviewData,
+  } = useCollectionController();
 
   return (
-
     <SummaryCard title="Payment Summary">
-
       <span>
-
         Total Amount :
-        <strong> ₹ {totalAmount}</strong>
-
+        <strong>
+          {" "}
+          ₹ {formatCurrency(reviewData.paymentAmount)}
+        </strong>
       </span>
 
       <span>
-
         Payment Method :
-        <strong> {paymentMethod}</strong>
-
+        <strong>
+          {" "}
+          {reviewData.paymentMethod || "--"}
+        </strong>
       </span>
 
       <span>
-
         Collected By :
-        <strong> {collectedBy}</strong>
-
+        <strong> -- </strong>
       </span>
 
       <span>
-
         Transaction Status :
-        <strong> {transactionStatus}</strong>
-
+        <strong> -- </strong>
       </span>
-
     </SummaryCard>
-
   );
-
 }

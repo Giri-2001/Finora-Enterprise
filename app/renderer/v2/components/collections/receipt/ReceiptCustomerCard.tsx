@@ -1,77 +1,62 @@
 /* ===========================================================
-   FINORA ENTERPRISE V2
-   RECEIPT STUDIO
+   FINORA ENTERPRISE OS™
+   Collections Engine
+
    RECEIPT CUSTOMER CARD
 =========================================================== */
 
 import SummaryCard from "../../common/cards/SummaryCard";
 
-/* ===========================================================
-   TYPES
-=========================================================== */
+import {
+  formatCurrency,
+} from "../../../utils/currency/formatCurrency";
 
-interface ReceiptCustomerCardProps {
-
-  customerName?: string;
-
-  loanNumber?: string;
-
-  collectionAmount?: number;
-
-  outstandingBalance?: number;
-
-}
+import {
+  useCollectionController,
+} from "../controller";
 
 /* ===========================================================
    COMPONENT
 =========================================================== */
 
-export default function ReceiptCustomerCard({
-
-  customerName = "--",
-
-  loanNumber = "--",
-
-  collectionAmount = 0,
-
-  outstandingBalance = 0,
-
-}: ReceiptCustomerCardProps) {
+export default function ReceiptCustomerCard() {
+  const {
+    reviewData,
+  } = useCollectionController();
 
   return (
-
     <SummaryCard title="Customer Information">
-
       <span>
-
         Customer :
-        <strong> {customerName}</strong>
-
+        <strong>
+          {" "}
+          {reviewData.customerName || "--"}
+        </strong>
       </span>
 
       <span>
-
         Loan Number :
-        <strong> {loanNumber}</strong>
-
+        <strong>
+          {" "}
+          {reviewData.loanNumber || "--"}
+        </strong>
       </span>
 
       <span>
-
         Collection :
-        <strong> ₹ {collectionAmount}</strong>
-
+        <strong>
+          {" "}
+          ₹ {formatCurrency(reviewData.paymentAmount)}
+        </strong>
       </span>
 
       <span>
-
         Outstanding :
-        <strong> ₹ {outstandingBalance}</strong>
-
+        <strong>
+          {" "}
+          ₹ {formatCurrency(reviewData.outstandingBalance)}
+        </strong>
       </span>
-
     </SummaryCard>
-
   );
-
 }

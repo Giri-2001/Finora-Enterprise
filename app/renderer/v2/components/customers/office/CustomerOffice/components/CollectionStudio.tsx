@@ -1,9 +1,26 @@
 /* ===========================================================
    FINORA ENTERPRISE OS™
+
    COLLECTION STUDIO™
 
    CUSTOMER WORKSPACE
 =========================================================== */
+
+
+import {
+  useEffect,
+  useState,
+} from "react";
+
+import type {
+  Loan,
+} from "../types";
+
+
+import {
+  CollectionContext,
+} from "../../../../collections/context/CollectionContext";
+
 
 import CollectionHeader
   from "../../../../collections/details/CollectionHeader";
@@ -24,7 +41,7 @@ import CollectionDraftStatus
   from "../../../../collections/details/CollectionDraftStatus";
 
 
-  import PaymentHeader
+import PaymentHeader
   from "../../../../collections/payment/PaymentHeader";
 
 import PaymentMethodCard
@@ -43,7 +60,7 @@ import PaymentDraftStatus
   from "../../../../collections/payment/PaymentDraftStatus";
 
 
-  import ReceiptHeader
+import ReceiptHeader
   from "../../../../collections/receipt/ReceiptHeader";
 
 import ReceiptCustomerCard
@@ -62,7 +79,7 @@ import ReceiptDraftStatus
   from "../../../../collections/receipt/ReceiptDraftStatus";
 
 
-  import SettlementHeader
+import SettlementHeader
   from "../../../../collections/settlement/SettlementHeader";
 
 import BalanceAdjustment
@@ -81,7 +98,7 @@ import SettlementDraftStatus
   from "../../../../collections/settlement/SettlementDraftStatus";
 
 
-  import ReviewHeader
+import ReviewHeader
   from "../../../../collections/review/ReviewHeader";
 
 import CollectionSummary
@@ -99,390 +116,810 @@ import ReviewPreviewCard
 import ReviewDraftStatus
   from "../../../../collections/review/ReviewDraftStatus";
 
-export default function CollectionStudio() {
+
+
+/* ===========================================================
+   TYPES
+=========================================================== */
+
+interface CollectionStudioProps {
+
+  customerName?: string;
+
+  customerId?: string;
+
+  phoneNumber?: string;
+
+  loans?: Loan[];
+
+}
+
+
+
+/* ===========================================================
+   COMPONENT
+=========================================================== */
+
+
+export default function CollectionStudio({
+
+  customerName,
+
+  customerId,
+
+  phoneNumber,
+
+  loans = [],
+
+}: CollectionStudioProps) {
+
+  const [selectedLoan, setSelectedLoan] =
+  useState<Loan | undefined>(
+    loans[0],
+  );
+
+
+  const [reviewData, setReviewData] =
+
+
+    useState({
+
+
+      customerId: customerId ?? "",
+
+      customerName: customerName ?? "",
+
+      customerPhone: phoneNumber ?? "",
+
+
+      loanId: "",
+
+      loanNumber: "",
+
+      loanAmount: 0,
+
+
+      outstandingBalance: 0,
+
+      todayDue: 0,
+
+      previousDue: 0,
+
+
+      paymentAmount: 0,
+
+      paymentMethod: "",
+
+      paymentReference: "",
+
+
+      penaltyAmount: 0,
+
+      discountAmount: 0,
+
+      advanceAdjustment: 0,
+
+
+      remarks: "",
+
+
+      receiptNumber: "",
+
+      receiptDate: "",
+
+
+      status: "Draft" as "Draft" | "Approved",
+
+
+      createdAt: "",
+
+      updatedAt: "",
+
+    });
+
+    useEffect(() => {
+
+
+  setReviewData((previous) => ({
+
+    ...previous,
+
+    customerId:
+      customerId ?? "",
+
+    customerName:
+      customerName ?? "",
+
+    customerPhone:
+      phoneNumber ?? "",
+
+
+    loanId:
+      selectedLoan?.id ?? "",
+
+    loanNumber:
+  selectedLoan?.loanNumber ??
+selectedLoan?.title ??
+"",
+
+    loanAmount:
+      selectedLoan?.amount ?? 0,
+
+    outstandingBalance:
+      selectedLoan?.outstanding ?? 0,
+
+  }));
+
+}, [
+  customerId,
+  customerName,
+  phoneNumber,
+  selectedLoan,
+]);
+
+
+useEffect(() => {
+
+  function resetCollectionForm() {
+
+    setReviewData((previous) => ({
+
+      ...previous,
+
+      paymentAmount: 0,
+
+      paymentMethod: "",
+
+      paymentReference: "",
+
+      remarks: "",
+
+      receiptNumber: "",
+
+      status: "Draft",
+
+    }));
+
+  }
+
+
+  window.addEventListener(
+    "FINORA_LOAN_UPDATED",
+    resetCollectionForm,
+  );
+
+
+  return () => {
+
+    window.removeEventListener(
+      "FINORA_LOAN_UPDATED",
+      resetCollectionForm,
+    );
+
+  };
+
+
+}, []);
+
 
   return (
 
-    <section
+    <CollectionContext.Provider
 
-      style={{
+      value={{
 
-        background: "#FFFFFF",
+        reviewData,
 
-        border: "1px solid #E2E8F0",
+        onReviewDataChange:
 
-        borderRadius: "20px",
-
-        padding: "28px",
-
-        minHeight: "720px",
-
-        boxShadow:
-          "0 8px 24px rgba(15,23,42,.06)",
-
-        display: "flex",
-
-        flexDirection: "column",
-
-        gap: "28px",
+          setReviewData,
 
       }}
 
     >
 
-      {/* ======================================
-          HEADER
-      ====================================== */}
 
-      <div>
+      <section
 
-        <h2
+        style={{
+
+          background: "#FFFFFF",
+
+          border: "1px solid #E2E8F0",
+
+          borderRadius: "20px",
+
+          padding: "28px",
+
+          minHeight: "720px",
+
+          boxShadow:
+
+            "0 8px 24px rgba(15,23,42,.06)",
+
+          display: "flex",
+
+          flexDirection: "column",
+
+          gap: "28px",
+
+        }}
+
+      >
+
+
+        <CollectionHeader />
+
+        {/* ======================================
+    LOAN SELECTOR
+====================================== */}
+
+{loans.length > 1 && (
+
+  <div
+    style={{
+      background: "#F8FAFC",
+      border: "1px solid #E2E8F0",
+      borderRadius: "12px",
+      padding: "16px",
+      display: "flex",
+      flexDirection: "column",
+      gap: "8px",
+    }}
+  >
+
+    <label
+      style={{
+        fontWeight: 600,
+        color: "#0F172A",
+      }}
+    >
+      Select Loan
+    </label>
+
+
+    <select
+
+      value={
+        selectedLoan?.id ?? ""
+      }
+
+
+      onChange={(event) => {
+
+        const loan =
+          loans.find(
+
+            (item) =>
+              item.id === event.target.value,
+
+          );
+
+
+        setSelectedLoan(loan);
+
+      }}
+
+      style={{
+        padding: "10px",
+        borderRadius: "8px",
+        border: "1px solid #CBD5E1",
+      }}
+
+    >
+
+      {loans.map((loan) => (
+
+        <option
+
+          key={loan.id}
+
+          value={loan.id}
+
+        >
+
+          {loan.loanNumber ?? loan.title}
+          {" - ₹"}
+          {loan.amount}
+
+        </option>
+
+      ))}
+
+
+    </select>
+
+
+  </div>
+
+)}
+
+        <section
 
           style={{
 
-            margin: 0,
+            display: "flex",
 
-            fontSize: "26px",
+            flexDirection: "column",
 
-            fontWeight: 700,
-
-            color: "#0F172A",
+            gap: "24px",
 
           }}
 
         >
 
-          Collection Studio™
 
-        </h2>
+          <CollectionStatistics />
 
-        <p
+
+
+          <div
+
+            style={{
+
+              display: "grid",
+
+              gridTemplateColumns:
+
+                "2fr 1fr",
+
+              gap: "24px",
+
+              alignItems: "start",
+
+            }}
+
+          >
+
+
+            <CollectionForm />
+
+
+            <div
+
+              style={{
+
+                display: "flex",
+
+                flexDirection: "column",
+
+                gap: "18px",
+
+              }}
+
+            >
+
+
+              <CustomerLoanCard />
+
+
+              <CollectionPreviewCard />
+
+
+              <CollectionDraftStatus />
+
+
+            </div>
+
+
+          </div>
+
+
+        </section>
+                {/* ======================================
+            PAYMENT STUDIO
+        ====================================== */}
+
+
+        <section
 
           style={{
 
-            marginTop: "8px",
+            display: "flex",
 
-            color: "#64748B",
+            flexDirection: "column",
 
-            fontSize: "15px",
+            gap: "24px",
 
           }}
 
         >
 
-          Record customer collections, receipts,
-          settlements and payment reviews.
 
-        </p>
+          <PaymentHeader />
 
-      </div>
 
-      {/* ======================================
-          STEP 1
-      ====================================== */}
+          <div
 
-      {/* ======================================
-    COLLECTION DETAILS
-====================================== */}
+            style={{
 
-<section
-  style={{
-    display: "flex",
-    flexDirection: "column",
-    gap: "24px",
-  }}
->
+              display: "grid",
 
-  <CollectionHeader />
+              gridTemplateColumns:
 
-  <CollectionStatistics
+                "2fr 1fr",
 
-  totalCollected={0}
+              gap: "24px",
 
-  outstandingAmount={0}
+              alignItems: "start",
 
-  collectionCount={0}
+            }}
 
-  lastCollectionDate="--"
+          >
 
-/>
 
-  <div
-    style={{
-      display: "grid",
-      gridTemplateColumns: "2fr 1fr",
-      gap: "24px",
-      alignItems: "start",
-    }}
-  >
+            <div
 
-    <CollectionForm />
+              style={{
 
-    <div
-      style={{
-        display: "flex",
-        flexDirection: "column",
-        gap: "18px",
-      }}
-    >
+                display: "flex",
 
-      <CustomerLoanCard />
+                flexDirection: "column",
 
-      <CollectionPreviewCard />
+                gap: "24px",
 
-      <CollectionDraftStatus />
+              }}
 
-    </div>
+            >
 
-  </div>
 
-</section>
+              <PaymentMethodCard />
 
-      {/* ======================================
-          STEP 2
-      ====================================== */}
 
-      {/* ======================================
-    PAYMENT STUDIO
-====================================== */}
+              <PaymentReference />
 
-<section
-  style={{
-    display: "flex",
-    flexDirection: "column",
-    gap: "24px",
-  }}
->
 
-  <PaymentHeader />
+              <PaymentSummary />
 
-  <div
-    style={{
-      display: "grid",
-      gridTemplateColumns: "2fr 1fr",
-      gap: "24px",
-      alignItems: "start",
-    }}
-  >
 
-    <div
-      style={{
-        display: "flex",
-        flexDirection: "column",
-        gap: "24px",
-      }}
-    >
+            </div>
 
-      <PaymentMethodCard />
 
-      <PaymentReference />
 
-      <PaymentSummary />
+            <div
 
-    </div>
+              style={{
 
-    <div
-      style={{
-        display: "flex",
-        flexDirection: "column",
-        gap: "18px",
-      }}
-    >
+                display: "flex",
 
-      <PaymentPreviewCard />
+                flexDirection: "column",
 
-      <PaymentDraftStatus />
+                gap: "18px",
 
-    </div>
+              }}
 
-  </div>
+            >
 
-</section>
 
-      {/* ======================================
-          STEP 3
-      ====================================== */}
+              <PaymentPreviewCard />
 
-      {/* ======================================
-    RECEIPT STUDIO
-====================================== */}
 
-<section
-  style={{
-    display: "flex",
-    flexDirection: "column",
-    gap: "24px",
-  }}
->
+              <PaymentDraftStatus />
 
-  <ReceiptHeader />
 
-  <div
-    style={{
-      display: "grid",
-      gridTemplateColumns: "2fr 1fr",
-      gap: "24px",
-      alignItems: "start",
-    }}
-  >
+            </div>
 
-    <div
-      style={{
-        display: "flex",
-        flexDirection: "column",
-        gap: "24px",
-      }}
-    >
 
-      <ReceiptCustomerCard />
+          </div>
 
-      <ReceiptDetails />
 
-      <ReceiptActions />
+        </section>
 
-    </div>
 
-    <div
-      style={{
-        display: "flex",
-        flexDirection: "column",
-        gap: "18px",
-      }}
-    >
 
-      <ReceiptPreviewCard />
 
-      <ReceiptDraftStatus />
+        {/* ======================================
+            RECEIPT STUDIO
+        ====================================== */}
 
-    </div>
 
-  </div>
+        <section
 
-</section>
+          style={{
 
-      {/* ======================================
-          STEP 4
-      ====================================== */}
+            display: "flex",
 
-      {/* ======================================
-    SETTLEMENT STUDIO
-====================================== */}
+            flexDirection: "column",
 
-<section
-  style={{
-    display: "flex",
-    flexDirection: "column",
-    gap: "24px",
-  }}
->
+            gap: "24px",
 
-  <SettlementHeader />
+          }}
 
-  <div
-    style={{
-      display: "grid",
-      gridTemplateColumns: "2fr 1fr",
-      gap: "24px",
-      alignItems: "start",
-    }}
-  >
+        >
 
-    <div
-      style={{
-        display: "flex",
-        flexDirection: "column",
-        gap: "24px",
-      }}
-    >
 
-      <BalanceAdjustment />
+          <ReceiptHeader />
 
-      <SettlementSummary />
 
-      <SettlementActions />
+          <div
 
-    </div>
+            style={{
 
-    <div
-      style={{
-        display: "flex",
-        flexDirection: "column",
-        gap: "18px",
-      }}
-    >
+              display: "grid",
 
-      <SettlementPreviewCard />
+              gridTemplateColumns:
 
-      <SettlementDraftStatus />
+                "2fr 1fr",
 
-    </div>
+              gap: "24px",
 
-  </div>
+              alignItems: "start",
 
-</section>
+            }}
 
-      {/* ======================================
-          STEP 5
-      ====================================== */}
+          >
 
-      {/* ======================================
-    REVIEW STUDIO
-====================================== */}
 
-<section
-  style={{
-    display: "flex",
-    flexDirection: "column",
-    gap: "24px",
-  }}
->
+            <div
 
-  <ReviewHeader />
+              style={{
 
-  <div
-    style={{
-      display: "grid",
-      gridTemplateColumns: "2fr 1fr",
-      gap: "24px",
-      alignItems: "start",
-    }}
-  >
+                display: "flex",
 
-    <div
-      style={{
-        display: "flex",
-        flexDirection: "column",
-        gap: "24px",
-      }}
-    >
+                flexDirection: "column",
 
-      <CollectionSummary />
+                gap: "24px",
 
-      <ValidationChecklist />
+              }}
 
-      <ReviewActions />
+            >
 
-    </div>
 
-    <div
-      style={{
-        display: "flex",
-        flexDirection: "column",
-        gap: "18px",
-      }}
-    >
+              <ReceiptCustomerCard />
 
-      <ReviewPreviewCard />
 
-      <ReviewDraftStatus />
+              <ReceiptDetails />
 
-    </div>
 
-  </div>
+              <ReceiptActions />
 
-</section>
-    </section>
+
+            </div>
+
+
+
+            <div
+
+              style={{
+
+                display: "flex",
+
+                flexDirection: "column",
+
+                gap: "18px",
+
+              }}
+
+            >
+
+
+              <ReceiptPreviewCard />
+
+
+              <ReceiptDraftStatus />
+
+
+            </div>
+
+
+          </div>
+
+
+        </section>
+
+
+
+
+        {/* ======================================
+            SETTLEMENT STUDIO
+        ====================================== */}
+
+
+        <section
+
+          style={{
+
+            display: "flex",
+
+            flexDirection: "column",
+
+            gap: "24px",
+
+          }}
+
+        >
+
+
+          <SettlementHeader />
+
+
+          <div
+
+            style={{
+
+              display: "grid",
+
+              gridTemplateColumns:
+
+                "2fr 1fr",
+
+              gap: "24px",
+
+              alignItems: "start",
+
+            }}
+
+          >
+
+
+            <div
+
+              style={{
+
+                display: "flex",
+
+                flexDirection: "column",
+
+                gap: "24px",
+
+              }}
+
+            >
+
+
+              <BalanceAdjustment />
+
+
+              <SettlementSummary />
+
+
+              <SettlementActions />
+
+
+            </div>
+
+
+
+            <div
+
+              style={{
+
+                display: "flex",
+
+                flexDirection: "column",
+
+                gap: "18px",
+
+              }}
+
+            >
+
+
+              <SettlementPreviewCard />
+
+
+              <SettlementDraftStatus />
+
+
+            </div>
+
+
+          </div>
+
+
+        </section>
+
+
+
+
+        {/* ======================================
+            REVIEW STUDIO
+        ====================================== */}
+
+
+        <section
+
+          style={{
+
+            display: "flex",
+
+            flexDirection: "column",
+
+            gap: "24px",
+
+          }}
+
+        >
+
+
+          <ReviewHeader />
+
+
+          <div
+
+            style={{
+
+              display: "grid",
+
+              gridTemplateColumns:
+
+                "2fr 1fr",
+
+              gap: "24px",
+
+              alignItems: "start",
+
+            }}
+
+          >
+
+
+            <div
+
+              style={{
+
+                display: "flex",
+
+                flexDirection: "column",
+
+                gap: "24px",
+
+              }}
+
+            >
+
+
+              <CollectionSummary />
+
+
+              <ValidationChecklist />
+
+
+              <ReviewActions />
+
+
+            </div>
+
+
+
+            <div
+
+              style={{
+
+                display: "flex",
+
+                flexDirection: "column",
+
+                gap: "18px",
+
+              }}
+
+            >
+
+
+              <ReviewPreviewCard />
+
+
+              <ReviewDraftStatus />
+
+
+            </div>
+
+
+          </div>
+
+
+        </section>
+
+
+
+      </section>
+
+
+    </CollectionContext.Provider>
+
 
   );
+
 
 }

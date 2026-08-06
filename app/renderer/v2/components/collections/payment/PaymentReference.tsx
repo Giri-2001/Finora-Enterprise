@@ -1,6 +1,7 @@
 /* ===========================================================
-   FINORA ENTERPRISE V2
-   PAYMENT STUDIO
+   FINORA ENTERPRISE OS™
+   Collections Engine
+
    PAYMENT REFERENCE
 =========================================================== */
 
@@ -11,21 +12,34 @@ import {
   TextInput,
 } from "../../common";
 
+import {
+  useCollectionController,
+} from "../controller";
+
 /* ===========================================================
    COMPONENT
 =========================================================== */
 
 export default function PaymentReference() {
+  const {
+    reviewData,
+    updateField,
+  } = useCollectionController();
 
   return (
-
     <SummaryCard title="Payment Reference">
-
       <FormField
         label="Reference Number"
       >
         <TextInput
+          value={reviewData.paymentReference}
           placeholder="Enter transaction reference"
+          onChange={(event) =>
+            updateField(
+              "paymentReference",
+              event.target.value,
+            )
+          }
         />
       </FormField>
 
@@ -42,12 +56,16 @@ export default function PaymentReference() {
         label="Receipt Number"
       >
         <TextInput
+          value={reviewData.receiptNumber}
           placeholder="Enter receipt number"
+          onChange={(event) =>
+            updateField(
+              "receiptNumber",
+              event.target.value,
+            )
+          }
         />
       </FormField>
-
     </SummaryCard>
-
   );
-
 }

@@ -7,6 +7,9 @@
 
 import SummaryCard from "../../common/cards/SummaryCard";
 
+import {
+  formatCurrency,
+} from "../../../utils/currency/formatCurrency";
 /* ===========================================================
    TYPES
 =========================================================== */
@@ -46,28 +49,28 @@ export default function DailyClosing({
       <span>
 
         Opening Balance :
-        <strong> ₹ {openingBalance}</strong>
+        <strong> ₹ {formatCurrency(openingBalance)}</strong>
 
       </span>
 
       <span>
 
         Total Receipts :
-        <strong> ₹ {totalReceipts}</strong>
+        <strong> ₹ {formatCurrency(totalReceipts)}</strong>
 
       </span>
 
       <span>
 
         Total Payments :
-        <strong> ₹ {totalPayments}</strong>
+        <strong> ₹ {formatCurrency(totalPayments)}</strong>
 
       </span>
 
       <span>
 
         Closing Balance :
-        <strong> ₹ {closingBalance}</strong>
+        <strong> ₹ {formatCurrency(closingBalance)}</strong>
 
       </span>
 

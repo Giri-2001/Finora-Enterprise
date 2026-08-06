@@ -7,6 +7,9 @@
 
 import SummaryCard from "../../common/cards/SummaryCard";
 
+import {
+  formatCurrency,
+} from "../../../utils/currency/formatCurrency";
 /* ===========================================================
    TYPES
 =========================================================== */
@@ -53,14 +56,14 @@ export default function CashTransactionList({
       <span>
 
         Cash Receipts :
-        <strong> {cashReceipts}</strong>
+        <strong> ₹ {formatCurrency(cashReceipts)}</strong>
 
       </span>
 
       <span>
 
         Cash Payments :
-        <strong> {cashPayments}</strong>
+        <strong> ₹ {formatCurrency(cashPayments)}</strong>
 
       </span>
 

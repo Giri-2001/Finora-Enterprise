@@ -1,6 +1,7 @@
 /* ===========================================================
-   FINORA ENTERPRISE V2
-   RECEIPT STUDIO
+   FINORA ENTERPRISE OS™
+   Collections Engine
+
    RECEIPT DETAILS
 =========================================================== */
 
@@ -11,6 +12,10 @@ import {
   TextArea,
   TextInput,
 } from "../../common";
+
+import {
+  useCollectionController,
+} from "../controller";
 
 /* ===========================================================
    STYLES
@@ -27,17 +32,26 @@ const wrapperStyle: CSSProperties = {
 =========================================================== */
 
 export default function ReceiptDetails() {
+  const {
+    reviewData,
+    updateField,
+  } = useCollectionController();
 
   return (
-
     <div style={wrapperStyle}>
-
       <FormField
         label="Receipt Number"
         required
       >
         <TextInput
+          value={reviewData.receiptNumber}
           placeholder="Enter receipt number"
+          onChange={(event) =>
+            updateField(
+              "receiptNumber",
+              event.target.value,
+            )
+          }
         />
       </FormField>
 
@@ -47,6 +61,13 @@ export default function ReceiptDetails() {
       >
         <TextInput
           type="date"
+          value={reviewData.receiptDate}
+          onChange={(event) =>
+            updateField(
+              "receiptDate",
+              event.target.value,
+            )
+          }
         />
       </FormField>
 
@@ -63,12 +84,16 @@ export default function ReceiptDetails() {
         label="Remarks"
       >
         <TextArea
+          value={reviewData.remarks}
           placeholder="Enter receipt remarks"
+          onChange={(event) =>
+            updateField(
+              "remarks",
+              event.target.value,
+            )
+          }
         />
       </FormField>
-
     </div>
-
   );
-
 }

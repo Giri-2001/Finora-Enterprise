@@ -1,6 +1,7 @@
 /* ===========================================================
-   FINORA ENTERPRISE V2
-   COLLECTION REVIEW STUDIO
+   FINORA ENTERPRISE OS™
+   Collections Engine
+
    VALIDATION CHECKLIST
 =========================================================== */
 
@@ -11,11 +12,8 @@ import SummaryCard from "../../common/cards/SummaryCard";
 =========================================================== */
 
 export default function ValidationChecklist() {
-
   return (
-
     <SummaryCard title="Validation Checklist">
-
       <ul
         style={{
           margin: 0,
@@ -25,22 +23,30 @@ export default function ValidationChecklist() {
           gap: "10px",
         }}
       >
-        <li>Collection details verified</li>
+        <li>
+          Collection details verified
+        </li>
 
-        <li>Payment information confirmed</li>
+        <li>
+          Payment information confirmed
+        </li>
 
-        <li>Receipt generated successfully</li>
+        <li>
+          Receipt generated successfully
+        </li>
 
-        <li>Settlement verified</li>
+        <li>
+          Settlement verified
+        </li>
 
-        <li>Outstanding balance reviewed</li>
+        <li>
+          Outstanding balance reviewed
+        </li>
 
-        <li>Collection ready for completion</li>
-
+        <li>
+          Collection ready for completion
+        </li>
       </ul>
-
     </SummaryCard>
-
   );
-
 }

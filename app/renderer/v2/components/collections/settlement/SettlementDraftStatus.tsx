@@ -1,38 +1,36 @@
 /* ===========================================================
-   FINORA ENTERPRISE V2
-   COLLECTION STUDIO
+   FINORA ENTERPRISE OS™
+   Collections Engine
+
    SETTLEMENT DRAFT STATUS
 =========================================================== */
 
-import SummaryCard from "../../common/cards/SummaryCard";
+import StudioDraftStatus from "../../common/studio/StudioDraftStatus";
+
+import {
+  useCollectionController,
+} from "../controller";
 
 /* ===========================================================
    COMPONENT
 =========================================================== */
 
 export default function SettlementDraftStatus() {
+  const {
+    reviewData,
+  } = useCollectionController();
 
   return (
-
-    <SummaryCard title="Settlement Draft Status">
-
-      <span>
-        Draft Status :
-        <strong> Draft</strong>
-      </span>
-
-      <span>
-        Settlement :
-        <strong> Pending</strong>
-      </span>
-
-      <span>
-        Updated :
-        <strong> Just Now</strong>
-      </span>
-
-    </SummaryCard>
-
+    <StudioDraftStatus
+      title="Settlement Draft"
+      status={
+        reviewData.status === "Approved"
+          ? "Completed"
+          : "Draft"
+      }
+      updatedAt={
+        reviewData.updatedAt || "Not Saved"
+      }
+    />
   );
-
 }

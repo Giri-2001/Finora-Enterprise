@@ -1,6 +1,7 @@
 /* ===========================================================
-   FINORA ENTERPRISE V2
-   SETTLEMENT STUDIO
+   FINORA ENTERPRISE OS™
+   Collections Engine
+
    SETTLEMENT ACTIONS
 =========================================================== */
 
@@ -12,11 +13,8 @@ import SummaryCard from "../../common/cards/SummaryCard";
 =========================================================== */
 
 export default function SettlementActions() {
-
   return (
-
     <SummaryCard title="Settlement Actions">
-
       <div
         style={{
           display: "flex",
@@ -24,29 +22,30 @@ export default function SettlementActions() {
           flexWrap: "wrap",
         }}
       >
-
-        <Button>
-
+        <Button
+          onClick={() => {
+            console.log("Save Settlement");
+          }}
+        >
           Save Settlement
-
         </Button>
 
-        <Button>
-
+        <Button
+          onClick={() => {
+            console.log("Complete Settlement");
+          }}
+        >
           Complete Settlement
-
         </Button>
 
-        <Button>
-
+        <Button
+          onClick={() => {
+            console.log("Generate Statement");
+          }}
+        >
           Generate Statement
-
         </Button>
-
       </div>
-
     </SummaryCard>
-
   );
-
 }

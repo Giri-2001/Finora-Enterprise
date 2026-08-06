@@ -1,16 +1,21 @@
 /* ===========================================================
    FINORA ENTERPRISE OS™
+
    CUSTOMER OFFICE™
 
    COMPONENT
 =========================================================== */
 
+import {
+  useEffect,
+  useState,
+} from "react";
 
 
 import CustomerProfilePanel
   from "./components/CustomerProfilePanel";
 
-  import CustomerActionsPanel
+import CustomerActionsPanel
   from "./components/CustomerActionsPanel";
 
 import CustomerLoanPreviewCard
@@ -25,8 +30,15 @@ import ActionNeededPreviewCard
 import CustomerLoanPanel
   from "./components/CustomerLoanPanel";
 
+import LoanStudio
+  from "./components/LoanStudio";
+
+import CollectionStudio
+  from "./components/CollectionStudio";
+
 import EmptyState
   from "../../../common/feedback/EmptyState";
+
 
 import {
 
@@ -36,6 +48,7 @@ import {
 
 } from "./constants";
 
+
 import {
 
   hasCustomer,
@@ -44,11 +57,13 @@ import {
 
 } from "./helpers";
 
+
 import type {
 
   CustomerOfficeProps,
 
 } from "./types";
+
 
 import {
 
@@ -70,15 +85,12 @@ import {
 
 } from "./styles";
 
-import { useState } from "react";
-
-import LoanStudio
-  from "./components/LoanStudio";
 
 
 /* ===========================================================
    COMPONENT
 =========================================================== */
+
 
 export default function CustomerOffice({
 
@@ -89,28 +101,86 @@ export default function CustomerOffice({
   const emptyDesk =
     buildEmptyDesk();
 
-    const [workspace, setWorkspace] =
 
-useState<
-  "overview" |
-  "loan" |
-  "collection" |
-  "documents" |
-  "timeline" |
-  "reports"
->("overview");
+  const [workspace, setWorkspace] =
 
-console.log("Selected Customer:", selectedCustomer);
+    useState<
+      | "overview"
+      | "loan"
+      | "collection"
+      | "documents"
+      | "timeline"
+      | "reports"
+    >(
+      "overview",
+    );
+
+    useEffect(() => {
+
+
+  function refreshCustomerLoans() {
+
+
+    console.log(
+      "FINORA LOAN UPDATE RECEIVED",
+    );
+
+
+    window.dispatchEvent(
+      new Event(
+        "FINORA_CUSTOMER_REFRESH",
+      ),
+    );
+
+
+  }
+
+
+  window.addEventListener(
+    "FINORA_LOAN_UPDATED",
+    refreshCustomerLoans,
+  );
+
+
+  return () => {
+
+
+    window.removeEventListener(
+      "FINORA_LOAN_UPDATED",
+      refreshCustomerLoans,
+    );
+
+
+  };
+
+
+}, []);
+
+
+  console.log(
+  "SELECTED CUSTOMER FULL DATA:",
+  selectedCustomer,
+);
+
+console.log(
+  "CUSTOMER LOANS:",
+  selectedCustomer?.loans,
+);
+
 
   return (
 
+
     <section style={containerStyle}>
+
 
       {/* ==========================================
           HEADER
       ========================================== */}
 
+
       <div style={headerStyle}>
+
 
         <h2 style={titleStyle}>
 
@@ -118,155 +188,284 @@ console.log("Selected Customer:", selectedCustomer);
 
         </h2>
 
+
         <p style={subtitleStyle}>
 
           {OFFICE_SUBTITLE}
 
         </p>
 
+
       </div>
+
+
 
       {/* ==========================================
           WORKSPACE
       ========================================== */}
 
+
       {
 
+
         hasCustomer(
+
           selectedCustomer,
+
         )
 
-          ? (
 
-<section style={workspaceStyle}>
+        ? (
 
-  {/* ==========================================
-      LEFT COLUMN
-  ========================================== */}
 
- <div style={leftColumnStyle}>
+          <section style={workspaceStyle}>
 
-  <CustomerProfilePanel
-    customer={selectedCustomer!}
-  />
 
-  <CustomerActionsPanel
+            {/* ======================================
+                LEFT COLUMN
+            ====================================== */}
 
-  onApplyLoan={() =>
-    setWorkspace("loan")
+
+            <div style={leftColumnStyle}>
+
+
+              <CustomerProfilePanel
+
+                customer={
+                  selectedCustomer!
+                }
+
+              />
+
+
+
+              <CustomerActionsPanel
+
+
+                onApplyLoan={() =>
+                  setWorkspace(
+                    "loan",
+                  )
+                }
+
+
+                onCollectPayment={() =>
+                  setWorkspace(
+                    "collection",
+                  )
+                }
+
+
+                onDocuments={() =>
+                  setWorkspace(
+                    "documents",
+                  )
+                }
+
+
+                onTimeline={() =>
+                  setWorkspace(
+                    "timeline",
+                  )
+                }
+
+
+                onReports={() =>
+                  setWorkspace(
+                    "reports",
+                  )
+                }
+
+
+              />
+
+
+
+              <CustomerLoanPreviewCard
+
+                customer={
+                  selectedCustomer!
+                }
+
+              />
+
+
+
+              <TodayCollectionsPreviewCard
+
+                customer={
+                  selectedCustomer!
+                }
+
+              />
+
+
+
+              <ActionNeededPreviewCard
+
+                customer={
+                  selectedCustomer!
+                }
+
+              />
+
+
+            </div>
+
+
+
+
+            {/* ======================================
+                RIGHT COLUMN
+            ====================================== */}
+
+
+            <div style={rightColumnStyle}>
+
+
+              <div style={panelStyle}>
+
+
+                {workspace === "overview" && (
+
+
+                  <CustomerLoanPanel
+
+                    customer={
+                      selectedCustomer!
+                    }
+
+                  />
+
+
+                )}
+
+
+
+                {workspace === "loan" && (
+
+
+                  <LoanStudio
+
+
+                    customerName={
+                      selectedCustomer?.name
+                    }
+
+
+                    customerId={
+                      selectedCustomer?.id
+                    }
+
+
+                    phoneNumber={
+                      selectedCustomer?.phone
+                    }
+
+
+                  />
+
+
+                )}
+
+
+
+               {workspace === "collection" && (
+
+  <CollectionStudio
+
+  customerName={
+    selectedCustomer?.name
   }
 
-  onCollectPayment={() =>
-    setWorkspace("collection")
+  customerId={
+    selectedCustomer?.id
   }
 
-  onDocuments={() =>
-    setWorkspace("documents")
+  phoneNumber={
+    selectedCustomer?.phone
   }
 
-  onTimeline={() =>
-    setWorkspace("timeline")
-  }
-
-  onReports={() =>
-    setWorkspace("reports")
-  }
+  loans={
+ selectedCustomer?.loans ?? []
+ }
 
 />
 
-  <CustomerLoanPreviewCard
-    customer={selectedCustomer!}
-  />
-
-  <TodayCollectionsPreviewCard
-    customer={selectedCustomer!}
-  />
-
-  <ActionNeededPreviewCard
-    customer={selectedCustomer!}
-  />
-
-</div>
-
-  {/* ==========================================
-      RIGHT COLUMN
-  ========================================== */}
-
-  <div style={rightColumnStyle}>
-
-    <div style={panelStyle}>
-
-      {workspace === "overview" && (
-
-  <CustomerLoanPanel
-    customer={selectedCustomer!}
-  />
-
 )}
 
-{workspace === "loan" && (
 
-  <LoanStudio
-
-    customerName={selectedCustomer?.name}
-
-    customerId={selectedCustomer?.id}
-
-    phoneNumber={selectedCustomer?.phone}
-
-  />
-
-)}
-
-    </div>
-
-  </div>
-
-</section>
-
-          )
-
-          : (
-
-            <section
-              style={{
-
-                padding: "24px",
-
-              }}
-            >
-
-              <div
-                style={{
-
-                  maxWidth: "520px",
-
-                  margin: "0 auto",
-
-                }}
-              >
-
-                <EmptyState
-
-                  title={
-                    emptyDesk.title
-                  }
-
-                  description={
-                    emptyDesk.description
-                  }
-
-                />
 
               </div>
 
-            </section>
 
-          )
+            </div>
+
+
+
+          </section>
+
+
+        )
+
+
+        : (
+
+
+          <section
+
+            style={{
+
+              padding: "24px",
+
+            }}
+
+          >
+
+
+            <div
+
+              style={{
+
+                maxWidth: "520px",
+
+                margin: "0 auto",
+
+              }}
+
+            >
+
+
+              <EmptyState
+
+
+                title={
+                  emptyDesk.title
+                }
+
+
+                description={
+                  emptyDesk.description
+                }
+
+
+              />
+
+
+            </div>
+
+
+          </section>
+
+
+        )
+
 
       }
 
+
     </section>
+
 
   );
 

@@ -7,6 +7,9 @@
 
 import SummaryCard from "../../common/cards/SummaryCard";
 
+import {
+  formatCurrency,
+} from "../../../utils/currency/formatCurrency";
 /* ===========================================================
    TYPES
 =========================================================== */
@@ -46,28 +49,28 @@ export default function IncomeSources({
       <span>
 
         Loan Collections :
-        <strong> ₹ {loanCollections}</strong>
+        <strong> ₹ {formatCurrency(loanCollections)}</strong>
 
       </span>
 
       <span>
 
         Processing Fees :
-        <strong> ₹ {processingFees}</strong>
+        <strong> ₹ {formatCurrency(processingFees)}</strong>
 
       </span>
 
       <span>
 
         Penalty Charges :
-        <strong> ₹ {penaltyCharges}</strong>
+        <strong> ₹ {formatCurrency(penaltyCharges)}</strong>
 
       </span>
 
       <span>
 
         Other Income :
-        <strong> ₹ {otherIncome}</strong>
+        <strong> ₹ {formatCurrency(otherIncome)}</strong>
 
       </span>
 

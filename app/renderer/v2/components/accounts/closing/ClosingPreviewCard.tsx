@@ -7,6 +7,9 @@
 
 import SummaryCard from "../../common/cards/SummaryCard";
 
+import {
+  formatCurrency,
+} from "../../../utils/currency/formatCurrency";
 /* ===========================================================
    TYPES
 =========================================================== */
@@ -54,17 +57,17 @@ export default function ClosingPreviewCard({
 
       <span>
         Total Revenue :
-        <strong> ₹ {totalRevenue}</strong>
+        <strong> ₹ {formatCurrency(totalRevenue)}</strong>
       </span>
 
       <span>
         Total Expenses :
-        <strong> ₹ {totalExpenses}</strong>
+        <strong> ₹ {formatCurrency(totalExpenses)}</strong>
       </span>
 
       <span>
         Net Profit :
-        <strong> ₹ {netProfit}</strong>
+        <strong> ₹ {formatCurrency(netProfit)}</strong>
       </span>
 
       <span>

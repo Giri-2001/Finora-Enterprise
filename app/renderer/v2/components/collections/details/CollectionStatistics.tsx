@@ -1,77 +1,62 @@
 /* ===========================================================
-   FINORA ENTERPRISE V2
-   COLLECTION STUDIO
+   FINORA ENTERPRISE OS™
+   Collections Engine
+
    COLLECTION STATISTICS
 =========================================================== */
 
 import SummaryCard from "../../common/cards/SummaryCard";
 
-/* ===========================================================
-   TYPES
-=========================================================== */
+import {
+  formatCurrency,
+} from "../../../utils/currency/formatCurrency";
 
-interface CollectionStatisticsProps {
-
-  totalCollected?: number;
-
-  outstandingAmount?: number;
-
-  collectionCount?: number;
-
-  lastCollectionDate?: string;
-
-}
+import {
+  useCollectionController,
+} from "../controller";
 
 /* ===========================================================
    COMPONENT
 =========================================================== */
 
-export default function CollectionStatistics({
+export default function CollectionStatistics() {
+  const {
+    reviewData,
+  } = useCollectionController();
 
-  totalCollected = 0,
+  const totalCollected =
+    reviewData.paymentAmount;
 
-  outstandingAmount = 0,
+  const outstandingAmount =
+    reviewData.outstandingBalance;
 
-  collectionCount = 0,
+  const collectionCount =
+    reviewData.paymentAmount > 0 ? 1 : 0;
 
-  lastCollectionDate = "--",
-
-}: CollectionStatisticsProps) {
+  const lastCollectionDate =
+    reviewData.receiptDate || "--";
 
   return (
-
     <SummaryCard title="Collection Statistics">
-
       <span>
-
         Total Collected :
-        <strong> ₹ {totalCollected}</strong>
-
+        <strong> ₹ {formatCurrency(totalCollected)}</strong>
       </span>
 
       <span>
-
         Outstanding :
-        <strong> ₹ {outstandingAmount}</strong>
-
+        <strong> ₹ {formatCurrency(outstandingAmount)}</strong>
       </span>
 
       <span>
-
         Collections :
         <strong> {collectionCount}</strong>
-
       </span>
 
       <span>
-
         Last Collection :
         <strong> {lastCollectionDate}</strong>
-
       </span>
-
     </SummaryCard>
-
   );
-
 }

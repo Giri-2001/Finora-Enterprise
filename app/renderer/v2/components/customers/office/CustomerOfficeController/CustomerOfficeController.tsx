@@ -71,8 +71,13 @@
         }
 
         onCustomerSelect={
-          controller.selectCustomer
-        }
+  (customer) => {
+    controller.selectCustomer({
+      ...customer,
+      phone: "",
+    });
+  }
+}
 
         currentPage={
           controller.currentPage

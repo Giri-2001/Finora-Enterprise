@@ -1,6 +1,7 @@
 /* ===========================================================
-   FINORA ENTERPRISE V2
-   RECEIPT STUDIO
+   FINORA ENTERPRISE OS™
+   Collections Engine
+
    RECEIPT ACTIONS
 =========================================================== */
 
@@ -12,11 +13,8 @@ import SummaryCard from "../../common/cards/SummaryCard";
 =========================================================== */
 
 export default function ReceiptActions() {
-
   return (
-
     <SummaryCard title="Receipt Actions">
-
       <div
         style={{
           display: "flex",
@@ -24,23 +22,30 @@ export default function ReceiptActions() {
           flexWrap: "wrap",
         }}
       >
-
-        <Button>
+        <Button
+          onClick={() => {
+            console.log("Preview Receipt");
+          }}
+        >
           Preview Receipt
         </Button>
 
-        <Button>
+        <Button
+          onClick={() => {
+            console.log("Print Receipt");
+          }}
+        >
           Print Receipt
         </Button>
 
-        <Button>
+        <Button
+          onClick={() => {
+            console.log("Download PDF");
+          }}
+        >
           Download PDF
         </Button>
-
       </div>
-
     </SummaryCard>
-
   );
-
 }

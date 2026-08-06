@@ -1,88 +1,69 @@
 /* ===========================================================
-   FINORA ENTERPRISE V2
-   COLLECTION STUDIO
+   FINORA ENTERPRISE OS™
+   Collections Engine
+
    COLLECTION PREVIEW CARD
 =========================================================== */
 
 import SummaryCard from "../../common/cards/SummaryCard";
 
-/* ===========================================================
-   TYPES
-=========================================================== */
+import {
+  formatCurrency,
+} from "../../../utils/currency/formatCurrency";
 
-interface CollectionPreviewCardProps {
-
-  customerName?: string;
-
-  collectionDate?: string;
-
-  collectionAmount?: number;
-
-  paymentMode?: string;
-
-  remarks?: string;
-
-}
-
+import {
+  useCollectionController,
+} from "../controller";
 /* ===========================================================
    COMPONENT
 =========================================================== */
 
-export default function CollectionPreviewCard({
-
-  customerName = "--",
-
-  collectionDate = "--",
-
-  collectionAmount = 0,
-
-  paymentMode = "--",
-
-  remarks = "--",
-
-}: CollectionPreviewCardProps) {
+export default function CollectionPreviewCard() {
+  const {
+    reviewData,
+  } = useCollectionController();
 
   return (
-
     <SummaryCard title="Collection Preview">
-
       <span>
-
         Customer :
-        <strong> {customerName}</strong>
-
+        <strong>
+          {" "}
+          {reviewData.customerName || "--"}
+        </strong>
       </span>
 
       <span>
-
         Collection Date :
-        <strong> {collectionDate}</strong>
-
+        <strong>
+          {" "}
+          {reviewData.receiptDate || "--"}
+        </strong>
       </span>
 
       <span>
-
         Amount :
-        <strong> ₹ {collectionAmount}</strong>
-
+        <strong>
+          {" "}
+          ₹ {formatCurrency(reviewData.paymentAmount)}
+        </strong>
       </span>
 
       <span>
-
         Payment Mode :
-        <strong> {paymentMode}</strong>
-
+        <strong>
+          {" "}
+          {reviewData.paymentMethod || "--"}
+        </strong>
       </span>
 
       <span>
-
         Remarks :
-        <strong> {remarks}</strong>
-
+        <strong>
+          {" "}
+          {reviewData.remarks || "--"}
+        </strong>
       </span>
-
     </SummaryCard>
-
   );
-
 }

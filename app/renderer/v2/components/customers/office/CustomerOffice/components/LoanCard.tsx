@@ -13,27 +13,33 @@ interface LoanCardProps {
 
   loan: {
 
-  id: string;
+    id: string;
 
-  title: string;
+    title: string;
 
-  amount: number;
+    loanNumber?: string;
 
-  outstanding: number;
+    loanType?: string;
 
-  dueDate: string;
+    repaymentType?: string;
 
-  status: "ACTIVE" | "RUNNING" | "CLOSED";
+    amount: number;
 
-  interest?: number;
+    outstanding: number;
 
-  processingFee?: number;
+    dueDate: string;
 
-  loanDate?: string;
+    status: "ACTIVE" | "RUNNING" | "CLOSED";
 
-  guarantor?: string;
+    interest?: number;
 
-}
+    processingFee?: number;
+
+    loanDate?: string;
+
+    guarantor?: string;
+
+  }
 
 }
 
@@ -48,6 +54,12 @@ export default function LoanCard({
     id,
 
     title,
+
+     loanNumber,
+
+    loanType,
+
+    repaymentType,
 
     amount,
 
@@ -151,7 +163,7 @@ export default function LoanCard({
 
           >
 
-            {title}
+            {loanType || title}
 
           </div>
 
@@ -169,7 +181,7 @@ export default function LoanCard({
 
           >
 
-            {id}
+            {loanNumber || id}
 
           </div>
 

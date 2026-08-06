@@ -1,88 +1,76 @@
 /* ===========================================================
-   FINORA ENTERPRISE V2
-   COLLECTION REVIEW STUDIO
+   FINORA ENTERPRISE OS™
+   Collections Engine
+
    COLLECTION SUMMARY
 =========================================================== */
 
 import SummaryCard from "../../common/cards/SummaryCard";
 
-/* ===========================================================
-   TYPES
-=========================================================== */
+import { formatCurrency } from "../../../utils/currency/formatCurrency";
 
-interface CollectionSummaryProps {
-
-  customerName?: string;
-
-  loanNumber?: string;
-
-  totalCollected?: number;
-
-  outstandingBalance?: number;
-
-  settlementStatus?: string;
-
-}
+import {
+  useCollectionController,
+} from "../controller";
 
 /* ===========================================================
    COMPONENT
 =========================================================== */
 
-export default function CollectionSummary({
+export default function CollectionSummary() {
+  const {
+    reviewData,
+  } = useCollectionController();
 
-  customerName = "--",
+  const formattedPaymentAmount = formatCurrency(
+  reviewData.paymentAmount,
+);
 
-  loanNumber = "--",
-
-  totalCollected = 0,
-
-  outstandingBalance = 0,
-
-  settlementStatus = "--",
-
-}: CollectionSummaryProps) {
+const formattedOutstandingBalance = formatCurrency(
+  reviewData.outstandingBalance,
+);
 
   return (
-
     <SummaryCard title="Collection Summary">
-
       <span>
-
         Customer :
-        <strong> {customerName}</strong>
-
+        <strong>
+          {" "}
+          {reviewData.customerName || "--"}
+        </strong>
       </span>
 
       <span>
-
         Loan Number :
-        <strong> {loanNumber}</strong>
-
+        <strong>
+          {" "}
+          {reviewData.loanNumber || "--"}
+        </strong>
       </span>
 
       <span>
-
         Total Collected :
-        <strong> ₹ {totalCollected}</strong>
-
+        <strong>
+  {" "}
+  {formattedPaymentAmount}
+</strong>
       </span>
 
       <span>
-
         Outstanding Balance :
-        <strong> ₹ {outstandingBalance}</strong>
-
+        <strong>
+  {" "}
+  {formattedOutstandingBalance}
+</strong>
       </span>
 
       <span>
-
         Settlement Status :
-        <strong> {settlementStatus}</strong>
-
+        <strong>
+          {" "}
+          {reviewData.status}
+        </strong>
       </span>
-
     </SummaryCard>
-
   );
-
 }

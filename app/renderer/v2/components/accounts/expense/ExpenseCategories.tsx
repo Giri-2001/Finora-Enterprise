@@ -7,6 +7,10 @@
 
 import SummaryCard from "../../common/cards/SummaryCard";
 
+import {
+  formatCurrency,
+} from "../../../utils/currency/formatCurrency";
+
 /* ===========================================================
    TYPES
 =========================================================== */
@@ -46,28 +50,28 @@ export default function ExpenseCategories({
       <span>
 
         Operational :
-        <strong> ₹ {operationalExpenses}</strong>
+        <strong> ₹ {formatCurrency(operationalExpenses)}</strong>
 
       </span>
 
       <span>
 
         Salaries :
-        <strong> ₹ {salaryExpenses}</strong>
+        <strong> ₹ {formatCurrency(salaryExpenses)}</strong>
 
       </span>
 
       <span>
 
         Maintenance :
-        <strong> ₹ {maintenanceExpenses}</strong>
+        <strong> ₹ {formatCurrency(maintenanceExpenses)}</strong>
 
       </span>
 
       <span>
 
         Miscellaneous :
-        <strong> ₹ {miscellaneousExpenses}</strong>
+        <strong> ₹ {formatCurrency(miscellaneousExpenses)}</strong>
 
       </span>
 

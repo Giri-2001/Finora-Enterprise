@@ -1,47 +1,36 @@
 /* ===========================================================
-   FINORA ENTERPRISE V2
-   COLLECTION STUDIO
+   FINORA ENTERPRISE OS™
+   Collections Engine
+
    COLLECTION DRAFT STATUS
 =========================================================== */
 
 import StudioDraftStatus from "../../common/studio/StudioDraftStatus";
 
-/* ===========================================================
-   TYPES
-=========================================================== */
-
-interface CollectionDraftStatusProps {
-
-  savedAt?: string;
-
-  status?: "Draft" | "Completed";
-
-}
+import {
+  useCollectionController,
+} from "../controller";
 
 /* ===========================================================
    COMPONENT
 =========================================================== */
 
-export default function CollectionDraftStatus({
-
-  savedAt = "Not Saved",
-
-  status = "Draft",
-
-}: CollectionDraftStatusProps) {
+export default function CollectionDraftStatus() {
+  const {
+    reviewData,
+  } = useCollectionController();
 
   return (
-
     <StudioDraftStatus
-
       title="Collection Draft"
-
-      status={status}
-
-      updatedAt={savedAt}
-
+      status={
+        reviewData.status === "Approved"
+          ? "Completed"
+          : "Draft"
+      }
+      updatedAt={
+        reviewData.updatedAt || "Not Saved"
+      }
     />
-
   );
-
 }

@@ -1,47 +1,36 @@
 /* ===========================================================
-   FINORA ENTERPRISE V2
-   RECEIPT STUDIO
+   FINORA ENTERPRISE OS™
+   Collections Engine
+
    RECEIPT DRAFT STATUS
 =========================================================== */
 
 import StudioDraftStatus from "../../common/studio/StudioDraftStatus";
 
-/* ===========================================================
-   TYPES
-=========================================================== */
-
-interface ReceiptDraftStatusProps {
-
-  savedAt?: string;
-
-  status?: "Draft" | "Completed";
-
-}
+import {
+  useCollectionController,
+} from "../controller";
 
 /* ===========================================================
    COMPONENT
 =========================================================== */
 
-export default function ReceiptDraftStatus({
-
-  savedAt = "Not Saved",
-
-  status = "Draft",
-
-}: ReceiptDraftStatusProps) {
+export default function ReceiptDraftStatus() {
+  const {
+    reviewData,
+  } = useCollectionController();
 
   return (
-
     <StudioDraftStatus
-
       title="Receipt Draft"
-
-      status={status}
-
-      updatedAt={savedAt}
-
+      status={
+        reviewData.status === "Approved"
+          ? "Completed"
+          : "Draft"
+      }
+      updatedAt={
+        reviewData.updatedAt || "Not Saved"
+      }
     />
-
   );
-
 }

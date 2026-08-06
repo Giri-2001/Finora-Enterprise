@@ -7,6 +7,9 @@
 
 import SummaryCard from "../../common/cards/SummaryCard";
 
+import {
+  formatCurrency,
+} from "../../../utils/currency/formatCurrency";
 /* ===========================================================
    TYPES
 =========================================================== */
@@ -46,21 +49,21 @@ export default function BankReconciliation({
       <span>
 
         Bank Balance :
-        <strong> ₹ {bankBalance}</strong>
+        <strong> ₹ {formatCurrency(bankBalance)}</strong>
 
       </span>
 
       <span>
 
         Ledger Balance :
-        <strong> ₹ {ledgerBalance}</strong>
+        <strong> ₹ {formatCurrency(ledgerBalance)}</strong>
 
       </span>
 
       <span>
 
         Difference :
-        <strong> ₹ {difference}</strong>
+        <strong> ₹ {formatCurrency(difference)}</strong>
 
       </span>
 

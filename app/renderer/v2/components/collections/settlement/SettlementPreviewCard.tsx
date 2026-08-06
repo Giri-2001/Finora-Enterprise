@@ -1,88 +1,66 @@
 /* ===========================================================
-   FINORA ENTERPRISE V2
-   SETTLEMENT STUDIO
+   FINORA ENTERPRISE OS™
+   Collections Engine
+
    SETTLEMENT PREVIEW CARD
 =========================================================== */
 
 import SummaryCard from "../../common/cards/SummaryCard";
 
-/* ===========================================================
-   TYPES
-=========================================================== */
-
-interface SettlementPreviewCardProps {
-
-  customerName?: string;
-
-  totalLoanAmount?: number;
-
-  totalCollected?: number;
-
-  remainingBalance?: number;
-
-  settlementStatus?: string;
-
-}
+import {
+  useCollectionController,
+} from "../controller";
 
 /* ===========================================================
    COMPONENT
 =========================================================== */
 
-export default function SettlementPreviewCard({
-
-  customerName = "--",
-
-  totalLoanAmount = 0,
-
-  totalCollected = 0,
-
-  remainingBalance = 0,
-
-  settlementStatus = "--",
-
-}: SettlementPreviewCardProps) {
+export default function SettlementPreviewCard() {
+  const {
+    reviewData,
+  } = useCollectionController();
 
   return (
-
     <SummaryCard title="Settlement Preview">
-
       <span>
-
         Customer :
-        <strong> {customerName}</strong>
-
+        <strong>
+          {" "}
+          {reviewData.customerName || "--"}
+        </strong>
       </span>
 
       <span>
-
         Total Loan :
-        <strong> ₹ {totalLoanAmount}</strong>
-
+        <strong>
+          {" "}
+          ₹ {reviewData.loanAmount}
+        </strong>
       </span>
 
       <span>
-
         Total Collected :
-        <strong> ₹ {totalCollected}</strong>
-
+        <strong>
+          {" "}
+          ₹ {reviewData.paymentAmount}
+        </strong>
       </span>
 
       <span>
-
         Remaining Balance :
-        <strong> ₹ {remainingBalance}</strong>
-
+        <strong>
+          {" "}
+          ₹ {reviewData.outstandingBalance}
+        </strong>
       </span>
 
       <span>
-
         Status :
-        <strong> {settlementStatus}</strong>
-
+        <strong>
+          {" "}
+          {reviewData.status}
+        </strong>
       </span>
-
     </SummaryCard>
-
   );
-
 }

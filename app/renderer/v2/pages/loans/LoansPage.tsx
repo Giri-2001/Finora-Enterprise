@@ -1,7 +1,10 @@
 /* ===========================================================
-   FINORA OS V2
+   FINORA ENTERPRISE OS™
+
    LOANS PAGE
 =========================================================== */
+
+import { useState } from "react";
 
 import StudioLayout from "../../components/common/layout/StudioLayout";
 
@@ -14,8 +17,46 @@ import LoanForm from "../../components/loans/details/LoanForm";
 =========================================================== */
 
 export default function LoansPage() {
+
+  const [loanAmount, setLoanAmount] =
+    useState("");
+
+  const [loanType, setLoanType] =
+    useState("");
+
+  const [interest, setInterest] =
+    useState("");
+
+  const [processingFee, setProcessingFee] =
+    useState("");
+
+  const [advanceDeduction, setAdvanceDeduction] =
+    useState("");
+
+  const [lateFee, setLateFee] =
+    useState("");
+
+  const [repaymentType, setRepaymentType] =
+    useState("");
+
+  const [duration, setDuration] =
+    useState("");
+
+  const [durationType, setDurationType] =
+    useState("");
+
+  const [loanStatus, setLoanStatus] =
+    useState("");
+
+  const [purpose, setPurpose] =
+    useState("");
+
+  const [remarks, setRemarks] =
+    useState("");
+
   return (
     <StudioLayout>
+
       <LoanHeader />
 
       <LoanStatistics
@@ -29,8 +70,47 @@ export default function LoansPage() {
           marginTop: 24,
         }}
       >
-        <LoanForm />
+
+        <LoanForm
+
+          loanAmount={loanAmount}
+          loanType={loanType}
+          interest={interest}
+          processingFee={processingFee}
+          advanceDeduction={advanceDeduction}
+          lateFee={lateFee}
+
+          repaymentType={repaymentType}
+
+          duration={duration}
+          durationType={durationType}
+
+          loanStatus={loanStatus}
+
+          purpose={purpose}
+          remarks={remarks}
+
+          onLoanAmountChange={setLoanAmount}
+          onLoanTypeChange={setLoanType}
+          onInterestChange={setInterest}
+          onProcessingFeeChange={setProcessingFee}
+          onAdvanceDeductionChange={setAdvanceDeduction}
+          onLateFeeChange={setLateFee}
+
+          onRepaymentTypeChange={setRepaymentType}
+
+          onDurationChange={setDuration}
+          onDurationTypeChange={setDurationType}
+
+          onLoanStatusChange={setLoanStatus}
+
+          onPurposeChange={setPurpose}
+          onRemarksChange={setRemarks}
+
+        />
+
       </div>
+
     </StudioLayout>
   );
 }

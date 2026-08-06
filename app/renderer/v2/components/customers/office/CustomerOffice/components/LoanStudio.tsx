@@ -169,7 +169,8 @@ const [step, setStep] = useState(1);
 
 const [loanAmount, setLoanAmount] = useState("0");
 
-const [loanType, setLoanType] = useState("daily");
+const [loanType, setLoanType] =
+  useState("");
 
 const [loanStatus, setLoanStatus] =
   useState("Pending Approval");
@@ -221,13 +222,8 @@ const [lateFee, setLateFee] =
    REPAYMENT
 ========================================== */
 
-const [
-
-  repaymentType,
-
-  setRepaymentType,
-
-] = useState("Daily");
+const [repaymentType, setRepaymentType] =
+  useState("DAILY");
 
 const [
 
@@ -244,6 +240,7 @@ const [
   setDurationType,
 
 ] = useState("months");
+
 
 /* ==========================================
    GUARANTOR
@@ -291,6 +288,9 @@ const [purpose, setPurpose] =
 const [remarks, setRemarks] =
   useState("");
 
+  const [loanApproved, setLoanApproved] =
+  useState(false);
+
   /* ==========================================
    FINANCE CALCULATIONS
 ========================================== */
@@ -304,33 +304,78 @@ const interestRate =
 const durationValue =
   Number(duration || 0);
 
+/* ==========================================
+   MONTHLY FLAT INTEREST CALCULATION
+========================================== */
+
+
+/* ==========================================
+   INTEREST ENGINE
+
+   FINORA RULE:
+
+   Interest rate always monthly basis
+
+========================================== */
+
+
+const normalizedRepayment =
+
+  repaymentType.toUpperCase();
+
+
+
+const monthlyInterestAmount =
+
+  (principal * interestRate) / 100;
+
+
+/* ==========================================
+   FLAT INTEREST CALCULATION
+========================================== */
+
 const totalInterest =
 
-  durationType === "years"
+  Math.round(
 
-    ? (principal * interestRate * durationValue) / 100
+    repaymentType.toUpperCase() === "MONTHLY"
 
-    : durationType === "months"
+      ? monthlyInterestAmount * durationValue
 
-    ? (principal * interestRate * durationValue) / (100 * 12)
 
-    : durationType === "weeks"
+      : repaymentType.toUpperCase() === "WEEKLY"
 
-    ? (principal * interestRate * durationValue) / (100 * 52)
+      ? (monthlyInterestAmount / 4.33) *
+        durationValue
 
-    : (principal * interestRate * durationValue) / (100 * 365);
 
-    const totalPayable =
+      : repaymentType.toUpperCase() === "DAILY"
 
-  principal +
+      ? (monthlyInterestAmount / 30) *
+        durationValue
 
-  totalInterest;
 
-  const installmentAmount =
+      : monthlyInterestAmount
+
+  );
+
+const totalPayable =
+
+  Math.round(
+
+    principal +
+
+    totalInterest
+
+  );
+
+const installmentAmount =
 
   durationValue > 0
 
-    ? totalPayable / durationValue
+    ? Math.round(
+        totalPayable / durationValue
+      )
 
     : 0;
 
@@ -478,19 +523,109 @@ function handleRejectLoan() {
 
 }
 
+
+
 function handleApproveLoan() {
+
+
+  if (loanApproved) {
+
+    alert(
+      "Loan already created",
+    );
+
+    return;
+
+  }
+
+  if (!loanType) {
+
+  alert(
+    "Please select Loan Type",
+  );
+
+  return;
+
+}
+
+    const normalizedLoanType =
+    loanType.toUpperCase();
+
+
+  const normalizedRepaymentType =
+    repaymentType.toUpperCase();
+
+
+  const existingLoans =
+    JSON.parse(
+      localStorage.getItem("FINORA_LOANS_V2") || "[]",
+    );
+
+
+  const alreadyExists =
+  existingLoans.some(
+    (loan: any) =>
+      loan.customerId === customerId &&
+      loan.title ===
+      (
+        normalizedLoanType === "DAILY"
+          ? "Daily Loan"
+          : normalizedLoanType === "WEEKLY"
+          ? "Weekly Loan"
+          : normalizedLoanType === "MONTHLY"
+          ? "Monthly Loan"
+          : "Loan"
+      ) &&
+      loan.amount === principal,
+  );
+
+
+  if (alreadyExists) {
+
+    alert(
+      "Loan already created",
+    );
+
+    setLoanApproved(true);
+
+    return;
+
+  }
+
+  console.log(
+  "APPROVE LOAN VALUES",
+  {
+    principal,
+    totalPayable,
+    interestRate,
+    durationValue,
+    loanType,
+    schedule,
+  },
+);
+
 
   const loan = buildLoan({
 
     id: crypto.randomUUID(),
 
-    title: `${loanType} Loan`,
+  title:
+  normalizedLoanType === "DAILY"
+    ? "Daily Loan"
+    : normalizedLoanType === "WEEKLY"
+    ? "Weekly Loan"
+    : normalizedLoanType === "MONTHLY"
+    ? "Monthly Loan"
+    : "Loan",
 
-    amount: principal,
+    amount:
+      principal,
 
-    outstanding: totalPayable,
+    outstanding:
+      totalPayable,
 
-    interest: interestRate,
+    interest:
+      interestRate,
 
     processingFee:
       Number(processingFee),
@@ -513,11 +648,15 @@ function handleApproveLoan() {
 
     phoneNumber,
 
-    loanType,
+    loanType:
+  normalizedLoanType,
 
-    repaymentType,
 
-    duration: durationValue,
+repaymentType:
+  normalizedRepaymentType,
+
+    duration:
+      durationValue,
 
     durationType,
 
@@ -534,13 +673,19 @@ function handleApproveLoan() {
 
   });
 
+
   createLoan(loan);
+
+
+  setLoanApproved(true);
+
 
   alert(
     "Loan Created Successfully",
   );
 
 }
+
 
   return (
 
@@ -795,14 +940,14 @@ onLoanStatusChange={
   loanAmount={Number(loanAmount || 0)}
 
   loanType={
-    loanType === "daily"
-      ? "Daily Loan"
-      : loanType === "weekly"
-      ? "Weekly Loan"
-      : loanType === "monthly"
-      ? "Monthly Loan"
-      : "--"
-  }
+  loanType === "DAILY"
+    ? "Daily Loan"
+    : loanType === "WEEKLY"
+    ? "Weekly Loan"
+    : loanType === "MONTHLY"
+    ? "Monthly Loan"
+    : "--"
+}
 
   interest={Number(interest || 0)}
 
@@ -1265,23 +1410,40 @@ maturityDate={
 
   <button
     disabled={false}
+
     onClick={() => {
 
   if (step < 6) {
 
     setStep(step + 1);
 
+  }
+
+  else {
+
+  if (!loanApproved) {
+
+    alert(
+      "Please Approve Loan before finishing review",
+    );
+
+    return;
 
   }
 
 
+  alert(
+    "Loan Review Completed Successfully",
+  );
 
-else {
 
-  handleApproveLoan();
+  setStep(1);
 
 }
+
 }}
+
+
     style={{
       padding: "10px 20px",
       borderRadius: "10px",
@@ -1289,7 +1451,7 @@ else {
       background:
         "linear-gradient(180deg,#8A6135,#6F4A23)",
       color: "#FFF7E3",
-      cursor: step === 6 ? "not-allowed" : "pointer",
+      cursor: "pointer",
     }}
   >
     {step === 6 ? "Finish Review" : "Next →"}

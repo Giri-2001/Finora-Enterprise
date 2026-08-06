@@ -23,7 +23,47 @@ interface CustomerLoanPreviewCardProps {
 
 export default function CustomerLoanPreviewCard({
 
+  customer,
+
 }: CustomerLoanPreviewCardProps) {
+
+
+  const loans =
+    customer.loans ?? [];
+
+
+  const runningLoans =
+    loans.filter(
+
+      (loan) =>
+
+        loan.status === "ACTIVE" ||
+
+        loan.status === "RUNNING",
+
+    );
+
+
+  const closedLoans =
+    loans.filter(
+
+      (loan) =>
+
+        loan.status === "CLOSED",
+
+    );
+
+
+  const outstandingAmount =
+    loans.reduce(
+
+      (total, loan) =>
+
+        total + loan.outstanding,
+
+      0,
+
+    );
 
   return (
 
@@ -175,7 +215,7 @@ export default function CustomerLoanPreviewCard({
 
     >
 
-      02
+      {runningLoans.length}
 
     </div>
 
@@ -273,7 +313,7 @@ export default function CustomerLoanPreviewCard({
 
   >
 
-    ₹0
+    ₹ {outstandingAmount}
 
   </div>
 
@@ -356,7 +396,7 @@ export default function CustomerLoanPreviewCard({
 
     >
 
-      01
+      {closedLoans.length}
 
     </div>
 

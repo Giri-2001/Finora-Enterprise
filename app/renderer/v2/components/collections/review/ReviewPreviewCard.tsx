@@ -1,88 +1,72 @@
 /* ===========================================================
-   FINORA ENTERPRISE V2
-   COLLECTION REVIEW STUDIO
+   FINORA ENTERPRISE OS™
+   Collections Engine
+
    REVIEW PREVIEW CARD
 =========================================================== */
 
 import SummaryCard from "../../common/cards/SummaryCard";
 
-/* ===========================================================
-   TYPES
-=========================================================== */
+import { formatCurrency } from "../../../utils/currency/formatCurrency";
 
-interface ReviewPreviewCardProps {
-
-  customerName?: string;
-
-  totalCollected?: number;
-
-  paymentMethod?: string;
-
-  receiptNumber?: string;
-
-  settlementStatus?: string;
-
-}
+import {
+  useCollectionController,
+} from "../controller";
 
 /* ===========================================================
    COMPONENT
 =========================================================== */
 
-export default function ReviewPreviewCard({
+export default function ReviewPreviewCard() {
+  const {
+    reviewData,
+  } = useCollectionController();
 
-  customerName = "--",
-
-  totalCollected = 0,
-
-  paymentMethod = "--",
-
-  receiptNumber = "--",
-
-  settlementStatus = "--",
-
-}: ReviewPreviewCardProps) {
+  const formattedPaymentAmount = formatCurrency(
+  reviewData.paymentAmount,
+);
 
   return (
-
     <SummaryCard title="Collection Review Preview">
-
       <span>
-
         Customer :
-        <strong> {customerName}</strong>
-
+        <strong>
+  {" "}
+  {formattedPaymentAmount}
+</strong>
       </span>
 
       <span>
-
         Total Collected :
-        <strong> ₹ {totalCollected}</strong>
-
+        <strong>
+          {" "}
+          ₹ {reviewData.paymentAmount}
+        </strong>
       </span>
 
       <span>
-
         Payment Method :
-        <strong> {paymentMethod}</strong>
-
+        <strong>
+          {" "}
+          {reviewData.paymentMethod || "--"}
+        </strong>
       </span>
 
       <span>
-
         Receipt Number :
-        <strong> {receiptNumber}</strong>
-
+        <strong>
+          {" "}
+          {reviewData.receiptNumber || "--"}
+        </strong>
       </span>
 
       <span>
-
         Settlement Status :
-        <strong> {settlementStatus}</strong>
-
+        <strong>
+          {" "}
+          {reviewData.status}
+        </strong>
       </span>
-
     </SummaryCard>
-
   );
-
 }

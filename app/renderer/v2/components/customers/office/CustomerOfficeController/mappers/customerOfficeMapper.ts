@@ -13,6 +13,14 @@ import type {
   OfficeCustomer,
 } from "../../CustomerOffice/types";
 
+import {
+  getLoans,
+} from "../../../../../repositories/loan/loanRepository";
+
+import {
+  collectionRepository,
+} from "../../../../../repositories/collection/collectionRepository";
+
 /* ===========================================================
    MAPPER
 =========================================================== */
@@ -22,6 +30,12 @@ export default function customerOfficeMapper(
   customers: CustomerProfile[],
 
 ): OfficeCustomer[] {
+
+    const loans =
+    getLoans();
+
+    const collections =
+  collectionRepository.getAll();
 
   return customers
 
@@ -34,13 +48,21 @@ export default function customerOfficeMapper(
     .map(
 
       (customer) => ({
+                loans:
+
+          loans.filter(
+            (loan) =>
+              loan.customerId ===
+              customer.identity.customerId,
+          ),
 
         id:
           customer.identity.customerId,
 
         name:
-          customer.basic.displayName ||
-          customer.basic.fullName,
+  customer.basic.displayName ||
+  customer.basic.fullName ||
+  "Unknown",
 
         phone:
           customer.basic.mobileNumber,
@@ -90,6 +112,39 @@ export default function customerOfficeMapper(
 
         nextCollectionDate:
           customer.internal.lastCollectionAt ?? "",
+
+        collections:
+
+  collections
+
+    .filter(
+
+      (collection) =>
+
+        collection.customerId ===
+        customer.identity.customerId,
+
+    )
+
+    .map(
+
+      (collection) => ({
+
+        id:
+          collection.loanId,
+
+        amount:
+          collection.paymentAmount,
+
+        paymentDate:
+          collection.receiptDate,
+
+        receiptNumber:
+          collection.receiptNumber,
+
+      }),
+
+    ),
 
       }),
 

@@ -7,6 +7,9 @@
 
 import SummaryCard from "../../common/cards/SummaryCard";
 
+import {
+  formatCurrency,
+} from "../../../utils/currency/formatCurrency";
 /* ===========================================================
    TYPES
 =========================================================== */
@@ -57,21 +60,21 @@ export default function ExpensePreviewCard({
       <span>
 
         Total Expenses :
-        <strong> ₹ {totalExpenses}</strong>
+        <strong> ₹ {formatCurrency(totalExpenses)}</strong>
 
       </span>
 
       <span>
 
         Approved :
-        <strong> ₹ {approvedExpenses}</strong>
+        <strong> ₹ {formatCurrency(approvedExpenses)}</strong>
 
       </span>
 
       <span>
 
         Pending :
-        <strong> ₹ {pendingExpenses}</strong>
+        <strong> ₹ {formatCurrency(pendingExpenses)}</strong>
 
       </span>
 

@@ -19,6 +19,8 @@ export interface Loan {
 
   title: string;
 
+  loanNumber: string;
+
   amount: number;
 
   outstanding: number;

@@ -1,6 +1,7 @@
 /* ===========================================================
-   FINORA ENTERPRISE V2
-   PAYMENT STUDIO
+   FINORA ENTERPRISE OS™
+   Collections Engine
+
    PAYMENT METHOD CARD
 =========================================================== */
 
@@ -11,21 +12,28 @@ import {
   SelectInput,
 } from "../../common";
 
+import {
+  useCollectionController,
+} from "../controller";
+
 /* ===========================================================
    COMPONENT
 =========================================================== */
 
 export default function PaymentMethodCard() {
+  const {
+    reviewData,
+    updatePaymentMethod,
+  } = useCollectionController();
 
   return (
-
     <SummaryCard title="Payment Method">
-
       <FormField
         label="Collection Method"
         required
       >
         <SelectInput
+          value={reviewData.paymentMethod}
           options={[
             {
               label: "Cash",
@@ -44,6 +52,11 @@ export default function PaymentMethodCard() {
               value: "cheque",
             },
           ]}
+          onChange={(event) =>
+            updatePaymentMethod(
+              event.target.value,
+            )
+          }
         />
       </FormField>
 
@@ -67,9 +80,6 @@ export default function PaymentMethodCard() {
           ]}
         />
       </FormField>
-
     </SummaryCard>
-
   );
-
 }

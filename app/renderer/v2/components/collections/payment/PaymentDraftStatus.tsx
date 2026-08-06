@@ -1,47 +1,36 @@
 /* ===========================================================
-   FINORA ENTERPRISE V2
-   PAYMENT STUDIO
+   FINORA ENTERPRISE OS™
+   Collections Engine
+
    PAYMENT DRAFT STATUS
 =========================================================== */
 
 import StudioDraftStatus from "../../common/studio/StudioDraftStatus";
 
-/* ===========================================================
-   TYPES
-=========================================================== */
-
-interface PaymentDraftStatusProps {
-
-  savedAt?: string;
-
-  status?: "Draft" | "Completed";
-
-}
+import {
+  useCollectionController,
+} from "../controller";
 
 /* ===========================================================
    COMPONENT
 =========================================================== */
 
-export default function PaymentDraftStatus({
-
-  savedAt = "Not Saved",
-
-  status = "Draft",
-
-}: PaymentDraftStatusProps) {
+export default function PaymentDraftStatus() {
+  const {
+    reviewData,
+  } = useCollectionController();
 
   return (
-
     <StudioDraftStatus
-
       title="Payment Draft"
-
-      status={status}
-
-      updatedAt={savedAt}
-
+      status={
+        reviewData.status === "Approved"
+          ? "Completed"
+          : "Draft"
+      }
+      updatedAt={
+        reviewData.updatedAt || "Not Saved"
+      }
     />
-
   );
-
 }

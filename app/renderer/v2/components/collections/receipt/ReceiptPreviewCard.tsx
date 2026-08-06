@@ -1,88 +1,70 @@
 /* ===========================================================
-   FINORA ENTERPRISE V2
-   RECEIPT STUDIO
+   FINORA ENTERPRISE OS™
+   Collections Engine
+
    RECEIPT PREVIEW CARD
 =========================================================== */
 
 import SummaryCard from "../../common/cards/SummaryCard";
 
-/* ===========================================================
-   TYPES
-=========================================================== */
+import {
+  formatCurrency,
+} from "../../../utils/currency/formatCurrency";
 
-interface ReceiptPreviewCardProps {
-
-  receiptNumber?: string;
-
-  customerName?: string;
-
-  collectionAmount?: number;
-
-  paymentMethod?: string;
-
-  receiptDate?: string;
-
-}
+import {
+  useCollectionController,
+} from "../controller";
 
 /* ===========================================================
    COMPONENT
 =========================================================== */
 
-export default function ReceiptPreviewCard({
-
-  receiptNumber = "--",
-
-  customerName = "--",
-
-  collectionAmount = 0,
-
-  paymentMethod = "--",
-
-  receiptDate = "--",
-
-}: ReceiptPreviewCardProps) {
+export default function ReceiptPreviewCard() {
+  const {
+    reviewData,
+  } = useCollectionController();
 
   return (
-
     <SummaryCard title="Receipt Preview">
-
       <span>
-
         Receipt No :
-        <strong> {receiptNumber}</strong>
-
+        <strong>
+          {" "}
+          {reviewData.receiptNumber || "--"}
+        </strong>
       </span>
 
       <span>
-
         Customer :
-        <strong> {customerName}</strong>
-
+        <strong>
+          {" "}
+          {reviewData.customerName || "--"}
+        </strong>
       </span>
 
       <span>
-
         Amount :
-        <strong> ₹ {collectionAmount}</strong>
-
+        <strong>
+          {" "}
+          ₹ {formatCurrency(reviewData.paymentAmount)}
+        </strong>
       </span>
 
       <span>
-
         Payment Method :
-        <strong> {paymentMethod}</strong>
-
+        <strong>
+          {" "}
+          {reviewData.paymentMethod || "--"}
+        </strong>
       </span>
 
       <span>
-
         Receipt Date :
-        <strong> {receiptDate}</strong>
-
+        <strong>
+          {" "}
+          {reviewData.receiptDate || "--"}
+        </strong>
       </span>
-
     </SummaryCard>
-
   );
-
 }

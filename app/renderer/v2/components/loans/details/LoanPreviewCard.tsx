@@ -6,6 +6,10 @@
 
 import SummaryCard from "../../common/cards/SummaryCard";
 
+import {
+  formatCurrency,
+} from "../../../utils/currency/formatCurrency";
+
 /* ===========================================================
    TYPES
 =========================================================== */
@@ -119,7 +123,9 @@ loanStatus = "--",
 
   Total Interest :
 
-  <strong> ₹ {totalInterest.toFixed(2)}</strong>
+  <strong>
+  ₹ {formatCurrency(totalInterest)}
+</strong>
 
 </span>
 
@@ -129,7 +135,7 @@ loanStatus = "--",
 
   <strong>
 
-    ₹ {totalPayable.toFixed(2)}
+    ₹ {formatCurrency(totalPayable)}
 
   </strong>
 
@@ -141,7 +147,7 @@ loanStatus = "--",
 
   <strong>
 
-    ₹ {installmentAmount.toFixed(2)}
+    ₹ {formatCurrency(installmentAmount)}
 
   </strong>
 

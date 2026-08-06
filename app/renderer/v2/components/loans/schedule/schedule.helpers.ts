@@ -9,6 +9,7 @@ import type {
   LoanInstallment,
 } from "./types";
 
+
 /* ===========================================================
    BUILD EMPTY SCHEDULE
 =========================================================== */
@@ -19,6 +20,7 @@ LoanInstallment[] {
   return [];
 
 }
+
 
 /* ===========================================================
    GENERATE SCHEDULE
@@ -44,122 +46,271 @@ export function generateSchedule(
 
 ): LoanInstallment[] {
 
+
+  const roundedTotalPayable =
+
+    Math.round(
+      totalPayable,
+    );
+
+
+  const roundedTotalInterest =
+
+    Math.round(
+      totalInterest,
+    );
+
+
+  const rawInstallmentAmount =
+
+    installments > 0
+
+      ? roundedTotalPayable / installments
+
+      : 0;
+
+
+  const installmentAmount =
+
+    Math.round(
+      rawInstallmentAmount,
+    );
+
+
   return Array.from(
 
     {
       length: installments,
     },
 
+
     (_, index): LoanInstallment => {
 
+
       const dueDate =
+
         new Date(startDate);
 
-        /* ===========================================================
-   EMI CALCULATIONS
-=========================================================== */
 
-const installmentAmount =
 
-  installments > 0
+      /* ===========================================================
+         EMI CALCULATIONS
+      =========================================================== */
 
-    ? totalPayable / installments
 
-    : 0;
+      const finalInstallmentAmount =
 
-    const interestAmount =
+        index === installments - 1
 
-  installments > 0
+          ? Math.max(
 
-    ? totalInterest / installments
+              0,
 
-    : 0;
+              roundedTotalPayable -
 
-    const principalAmount =
+              (
 
-  installmentAmount -
+                installmentAmount *
 
-  interestAmount;
+                index
 
-  const outstandingBalance =
+              ),
 
-  Math.max(
+            )
 
-    0,
+          :
 
-    totalPayable -
+            installmentAmount;
 
-    principalAmount *
 
-    (index + 1),
 
-  );
+      const interestAmount =
+
+        installments > 0
+
+          ?
+
+            Math.round(
+
+              roundedTotalInterest /
+
+              installments
+
+            )
+
+          :
+
+            0;
+
+
+
+      const principalAmount =
+
+        Math.round(
+
+          finalInstallmentAmount -
+
+          interestAmount
+
+        );
+
+
+
+      const outstandingBalance =
+
+        Math.max(
+
+          0,
+
+          Math.round(
+
+            roundedTotalPayable -
+
+            (
+
+              installmentAmount *
+
+              (index + 1)
+
+            )
+
+          ),
+
+        );
+
+
+
+      /* ===========================================================
+         DUE DATE ENGINE
+      =========================================================== */
+
 
       switch (frequency) {
+
 
         case "daily":
 
           dueDate.setDate(
+
             dueDate.getDate() +
-            index,
+
+            (index + 1),
+
           );
 
           break;
+
+
 
         case "weekly":
 
           dueDate.setDate(
+
             dueDate.getDate() +
-            index * 7,
+
+            (
+
+              (index + 1) * 7
+
+            ),
+
           );
 
           break;
+
+
 
         case "monthly":
 
           dueDate.setMonth(
+
             dueDate.getMonth() +
-            index,
+
+            (index + 1),
+
           );
 
           break;
 
+
       }
+
+
 
       return {
 
+
         installmentNumber:
+
           index + 1,
 
+
         dueDate:
+
           dueDate.toISOString(),
 
+
+
         installmentAmount:
-  installmentAmount,
+
+          finalInstallmentAmount,
+
+
 
         principalAmount:
-  principalAmount,
+
+          principalAmount,
+
+
 
         interestAmount:
-  interestAmount,
+
+          interestAmount,
+
+
 
         outstandingBalance:
-  outstandingBalance,
 
-        paidAmount: 0,
+          outstandingBalance,
 
-        penaltyAmount: 0,
 
-        receiptNumber: "",
 
-        paidDate: "",
+        paidAmount:
 
-        status: "Pending",
+          0,
+
+
+
+        penaltyAmount:
+
+          0,
+
+
+
+        receiptNumber:
+
+          "",
+
+
+
+        paidDate:
+
+          "",
+
+
+
+        status:
+
+          "Pending",
+
 
       };
 
+
     },
 
+
   );
+
 
 }

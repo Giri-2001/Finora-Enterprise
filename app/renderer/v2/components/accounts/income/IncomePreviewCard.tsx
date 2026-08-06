@@ -7,6 +7,9 @@
 
 import SummaryCard from "../../common/cards/SummaryCard";
 
+import {
+  formatCurrency,
+} from "../../../utils/currency/formatCurrency";
 /* ===========================================================
    TYPES
 =========================================================== */
@@ -57,21 +60,21 @@ export default function IncomePreviewCard({
       <span>
 
         Total Income :
-        <strong> ₹ {totalIncome}</strong>
+        <strong> ₹ {formatCurrency(totalIncome)}</strong>
 
       </span>
 
       <span>
 
         Verified Income :
-        <strong> ₹ {verifiedIncome}</strong>
+        <strong> ₹ {formatCurrency(verifiedIncome)}</strong>
 
       </span>
 
       <span>
 
         Pending Verification :
-        <strong> ₹ {pendingVerification}</strong>
+        <strong> ₹ {formatCurrency(pendingVerification)}</strong>
 
       </span>
 

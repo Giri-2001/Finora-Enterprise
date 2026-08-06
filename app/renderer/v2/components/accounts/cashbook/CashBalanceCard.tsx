@@ -7,6 +7,10 @@
 
 import SummaryCard from "../../common/cards/SummaryCard";
 
+import {
+  formatCurrency,
+} from "../../../utils/currency/formatCurrency";
+
 /* ===========================================================
    TYPES
 =========================================================== */
@@ -46,21 +50,21 @@ export default function CashBalanceCard({
       <span>
 
         Current Balance :
-        <strong> ₹ {currentBalance}</strong>
+        <strong> ₹ {formatCurrency(currentBalance)}</strong>
 
       </span>
 
       <span>
 
         Minimum Balance :
-        <strong> ₹ {minimumBalance}</strong>
+        <strong> ₹ {formatCurrency(minimumBalance)}</strong>
 
       </span>
 
       <span>
 
         Maximum Balance :
-        <strong> ₹ {maximumBalance}</strong>
+        <strong> ₹ {formatCurrency(maximumBalance)}</strong>
 
       </span>
 

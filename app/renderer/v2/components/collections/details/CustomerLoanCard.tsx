@@ -1,77 +1,54 @@
 /* ===========================================================
-   FINORA ENTERPRISE V2
-   COLLECTION STUDIO
+   FINORA ENTERPRISE OS™
+   Collections Engine
+
    CUSTOMER LOAN CARD
 =========================================================== */
 
 import SummaryCard from "../../common/cards/SummaryCard";
 
-/* ===========================================================
-   TYPES
-=========================================================== */
+import {
+  formatCurrency,
+} from "../../../utils/currency/formatCurrency";
 
-interface CustomerLoanCardProps {
-
-  customerName?: string;
-
-  loanNumber?: string;
-
-  loanAmount?: number;
-
-  outstandingAmount?: number;
-
-}
+import {
+  useCollectionController,
+} from "../controller";
 
 /* ===========================================================
    COMPONENT
 =========================================================== */
 
-export default function CustomerLoanCard({
-
-  customerName = "--",
-
-  loanNumber = "--",
-
-  loanAmount = 0,
-
-  outstandingAmount = 0,
-
-}: CustomerLoanCardProps) {
+export default function CustomerLoanCard() {
+  const {
+    reviewData,
+  } = useCollectionController();
 
   return (
-
     <SummaryCard title="Customer Loan">
-
       <span>
-
         Customer :
-        <strong> {customerName}</strong>
-
+        <strong> {reviewData.customerName || "--"}</strong>
       </span>
 
       <span>
-
         Loan Number :
-        <strong> {loanNumber}</strong>
-
+        <strong> {reviewData.loanNumber || "--"}</strong>
       </span>
 
       <span>
-
         Loan Amount :
-        <strong> ₹ {loanAmount}</strong>
-
+        <strong>
+          ₹ {formatCurrency(reviewData.loanAmount)}
+        </strong>
       </span>
 
       <span>
-
         Outstanding :
-        <strong> ₹ {outstandingAmount}</strong>
-
+        <strong>
+          ₹ {formatCurrency(reviewData.outstandingBalance)}
+        </strong>
       </span>
-
     </SummaryCard>
-
   );
-
 }

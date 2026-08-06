@@ -13,6 +13,7 @@ import type {
   LoanInstallment,
 } from "../../components/loans/schedule/types";
 
+
 /* ===========================================================
    TYPES
 =========================================================== */
@@ -22,6 +23,8 @@ export interface BuildLoanOptions {
   id: string;
 
   title: string;
+
+  loanNumber?: string;
 
   amount: number;
 
@@ -37,27 +40,52 @@ export interface BuildLoanOptions {
 
   guarantor: string;
 
+
+  /* ==========================================
+     CUSTOMER
+  ========================================== */
+
   customerId?: string;
 
-customerName?: string;
+  customerName?: string;
 
-phoneNumber?: string;
+  phoneNumber?: string;
 
-loanType?: string;
 
-repaymentType?: string;
+  /* ==========================================
+     LOAN DETAILS
+  ========================================== */
 
-duration?: number;
+  loanType?: string;
 
-durationType?: string;
+  repaymentType?: string;
 
-advanceDeduction?: number;
+  duration?: number;
 
-netDisbursement?: number;
+  durationType?: string;
 
-purpose?: string;
 
-remarks?: string;
+  /* ==========================================
+     FINANCE
+  ========================================== */
+
+  advanceDeduction?: number;
+
+  netDisbursement?: number;
+
+
+  /* ==========================================
+     NOTES
+  ========================================== */
+
+  purpose?: string;
+
+  remarks?: string;
+
+
+  /* ==========================================
+     STATUS
+  ========================================== */
 
   outstanding: number;
 
@@ -65,9 +93,12 @@ remarks?: string;
 
 }
 
+
 /* ===========================================================
    BUILD LOAN
 =========================================================== */
+
+
 
 export function buildLoan(
 
@@ -81,9 +112,15 @@ export function buildLoan(
 
     title: options.title,
 
+    loanNumber:
+  options.loanNumber ??
+  `FIN-LOAN-${Date.now()}`,
+
+
     amount: options.amount,
 
     outstanding: options.outstanding,
+
 
     interest: options.interest,
 
@@ -91,33 +128,40 @@ export function buildLoan(
 
     lateFee: options.lateFee,
 
+
     loanDate: options.loanDate,
 
     dueDate: options.dueDate,
 
+
     guarantor: options.guarantor,
+
 
     customerId: options.customerId,
 
-customerName: options.customerName,
+    customerName: options.customerName,
 
-phoneNumber: options.phoneNumber,
+    phoneNumber: options.phoneNumber,
 
-loanType: options.loanType,
 
-repaymentType: options.repaymentType,
+    loanType: options.loanType,
 
-duration: options.duration,
+    repaymentType: options.repaymentType,
 
-durationType: options.durationType,
+    duration: options.duration,
 
-advanceDeduction: options.advanceDeduction,
+    durationType: options.durationType,
 
-netDisbursement: options.netDisbursement,
 
-purpose: options.purpose,
+    advanceDeduction: options.advanceDeduction,
 
-remarks: options.remarks,
+    netDisbursement: options.netDisbursement,
+
+
+    purpose: options.purpose,
+
+    remarks: options.remarks,
+
 
     status: "ACTIVE",
 

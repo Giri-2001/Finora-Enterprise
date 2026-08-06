@@ -7,6 +7,10 @@
 
 import SummaryCard from "../../common/cards/SummaryCard";
 
+import {
+  formatCurrency,
+} from "../../../utils/currency/formatCurrency";
+
 /* ===========================================================
    TYPES
 =========================================================== */
@@ -46,28 +50,28 @@ export default function CashBookSummary({
       <span>
 
         Opening Balance :
-        <strong> ₹ {openingBalance}</strong>
+        <strong> ₹ {formatCurrency(openingBalance)}</strong>
 
       </span>
 
       <span>
 
         Cash In :
-        <strong> ₹ {cashIn}</strong>
+        <strong> ₹ {formatCurrency(cashIn)}</strong>
 
       </span>
 
       <span>
 
         Cash Out :
-        <strong> ₹ {cashOut}</strong>
+        <strong> ₹ {formatCurrency(cashOut)}</strong>
 
       </span>
 
       <span>
 
         Closing Balance :
-        <strong> ₹ {closingBalance}</strong>
+        <strong> ₹ {formatCurrency(closingBalance)}</strong>
 
       </span>
 

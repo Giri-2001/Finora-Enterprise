@@ -1,22 +1,28 @@
 /* ===========================================================
    FINORA ENTERPRISE OS™
+
    CUSTOMER SELECTION HOOK™
 
    AUTO SELECTION ENGINE
 =========================================================== */
+
 
 import {
   useEffect,
   useState,
 } from "react";
 
+
 import type {
   OfficeCustomer,
 } from "../../CustomerOffice/types";
 
+
+
 /* ===========================================================
    HOOK
 =========================================================== */
+
 
 export default function useCustomerSelection(
 
@@ -24,9 +30,11 @@ export default function useCustomerSelection(
 
 ) {
 
+
   /* ==========================================
      STATE
   ========================================== */
+
 
   const [
     selectedCustomer,
@@ -35,11 +43,17 @@ export default function useCustomerSelection(
     OfficeCustomer | undefined
   >(undefined);
 
+
+
+
+
   /* ==========================================
      AUTO SELECT FIRST CUSTOMER
   ========================================== */
 
+
   useEffect(() => {
+
 
     if (
 
@@ -49,13 +63,16 @@ export default function useCustomerSelection(
 
     ) {
 
+
       setSelectedCustomer(
 
         customers[0],
 
       );
 
+
     }
+
 
   }, [
 
@@ -65,9 +82,78 @@ export default function useCustomerSelection(
 
   ]);
 
+
+
+
+
+
+  /* ==========================================
+     SYNC SELECTED CUSTOMER
+  ========================================== */
+
+
+  useEffect(() => {
+
+
+    if (!selectedCustomer) {
+
+      return;
+
+    }
+
+
+
+    const updatedCustomer =
+
+      customers.find(
+
+        (customer) =>
+
+          customer.id ===
+          selectedCustomer.id,
+
+      );
+
+
+
+    if (
+
+      updatedCustomer &&
+
+      updatedCustomer !== selectedCustomer
+
+    ) {
+
+
+      setSelectedCustomer(
+
+        updatedCustomer,
+
+      );
+
+
+    }
+
+
+
+  }, [
+
+    customers,
+
+    selectedCustomer,
+
+  ]);
+
+
+
+
+
+
+
   /* ==========================================
      ACTIONS
   ========================================== */
+
 
   function selectCustomer(
 
@@ -75,15 +161,22 @@ export default function useCustomerSelection(
 
   ) {
 
+
     setSelectedCustomer(
 
       customer,
 
     );
 
+
   }
 
+
+
+
+
   function clearSelection() {
+
 
     setSelectedCustomer(
 
@@ -91,20 +184,31 @@ export default function useCustomerSelection(
 
     );
 
+
   }
+
+
+
+
 
   /* ==========================================
      EXPORT
   ========================================== */
 
+
   return {
+
 
     selectedCustomer,
 
+
     selectCustomer,
+
 
     clearSelection,
 
+
   };
+
 
 }

@@ -7,6 +7,9 @@
 
 import SummaryCard from "../../common/cards/SummaryCard";
 
+import {
+  formatCurrency,
+} from "../../../utils/currency/formatCurrency";
 /* ===========================================================
    TYPES
 =========================================================== */
@@ -60,7 +63,7 @@ export default function ReconciliationSummary({
       <span>
 
         Reconciled Amount :
-        <strong> ₹ {reconciledAmount}</strong>
+        <strong> ₹ {formatCurrency(reconciledAmount)}</strong>
 
       </span>
 
