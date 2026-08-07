@@ -8,39 +8,40 @@
 import type { CSSProperties } from "react";
 
 export const containerStyle: CSSProperties = {
-
   display: "flex",
-
   alignItems: "center",
-
   gap: "10px",
 
   cursor: "pointer",
-
   userSelect: "none",
 
+  transition: "all .25s ease",
 };
 
 export const iconStyle: CSSProperties = {
+  color: "#FFFFFF",
 
-  fontSize: "20px",
+  flexShrink: 0,
 
+  filter: "drop-shadow(0 0 4px rgba(212,175,55,.18))",
 };
 
 export const nameStyle: CSSProperties = {
-
   fontSize: "15px",
 
   fontWeight: 700,
 
-  color: "#0F172A",
+  color: "#FFFFFF",
 
+  letterSpacing: ".35px",
+
+  whiteSpace: "nowrap",
+
+  textShadow: "0 1px 6px rgba(0,0,0,.35)",
 };
 
 export const arrowStyle: CSSProperties = {
+  color: "#D4AF37",
 
-  fontSize: "12px",
-
-  color: "#64748B",
-
+  flexShrink: 0,
 };

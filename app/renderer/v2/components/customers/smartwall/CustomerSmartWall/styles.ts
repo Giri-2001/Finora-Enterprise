@@ -5,12 +5,17 @@
    PRESENTATION STYLES
 =========================================================== */
 
-import type { CSSProperties } from "react";
+
+import type {
+  CSSProperties,
+} from "react";
 
 import {
   RAIL_HEIGHT,
   RAIL_RADIUS,
 } from "./constants";
+
+
 
 /* ===========================================================
    ROOT
@@ -24,33 +29,36 @@ export const containerStyle: CSSProperties = {
 
   width: "100%",
 
-  gap: "12px",
+  height: "100%",
 
-  overflow: "visible",
+  flex: 1,
 
-  padding: "16px 28px 18px",
+  flexShrink: 1,
 
- borderRadius: "32px",
+  minHeight: 0,
+
+  gap: "8px",
+
+  overflow: "hidden",
+
+  padding:"16px 28px",
 
   background:
-    `
-    linear-gradient(
-      rgba(18,12,8,.18),
-      rgba(18,12,8,.18)
-    ),
-    linear-gradient(
-      90deg,
-      #4B2E1E 0%,
-      #5B3924 18%,
-      #3D2518 36%,
-      #5D3923 55%,
-      #3A2418 72%,
-      #5C3923 100%
-    )
-    `,
+  `
+  linear-gradient(
+    rgba(18,12,8,.35),
+    rgba(18,12,8,.35)
+  ),
 
-  boxShadow:
-  "0 26px 70px rgba(0,0,0,.34)",
+  linear-gradient(
+    90deg,
+    #3A2115 0%,
+    #5B3420 25%,
+    #402417 50%,
+    #5B3420 75%,
+    #321B12 100%
+  )
+  `,
 
 };
 
@@ -64,17 +72,21 @@ export const headerStyle: CSSProperties = {
 
 };
 
+
 export const titleStyle: CSSProperties = {
 
   display: "none",
 
 };
 
+
 export const subtitleStyle: CSSProperties = {
 
   display: "none",
 
 };
+
+
 
 /* ===========================================================
    PREMIUM RAIL WRAPPER
@@ -90,6 +102,8 @@ export const railWrapperStyle: CSSProperties = {
 
 };
 
+
+
 /* ===========================================================
    PREMIUM WOOD / METAL RAIL
 =========================================================== */
@@ -100,15 +114,21 @@ export const railStyle: CSSProperties = {
 
   height: "2px",
 
-  borderRadius: "999px",
+  borderRadius:
+    RAIL_RADIUS,
 
-  background: "transparent",
+  background:
+    "transparent",
 
-  border: "none",
+  border:
+    "none",
 
-  boxShadow: "none",
+  boxShadow:
+    "none",
 
 };
+
+
 
 /* ===========================================================
    CONTENT
@@ -116,16 +136,20 @@ export const railStyle: CSSProperties = {
 
 export const hangerAreaStyle: CSSProperties = {
 
-  display: "flex",
+display:"flex",
 
-  flexDirection: "column",
+flexDirection:"column",
 
-  width: "100%",
+width:"100%",
 
-  gap: "10px",
+flex:1,
 
-  overflow: "visible",
+minHeight:0,
 
- paddingBottom: "8px",
+gap:"8px",
+
+overflow:"hidden",
+
+paddingBottom:"0",
 
 };

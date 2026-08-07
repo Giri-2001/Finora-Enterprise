@@ -5,7 +5,4 @@
    CONSTANTS
 =========================================================== */
 
-export const DEFAULT_ADMIN_NAME =
-  "Admin";
-
-export const PROFILE_ICON = "👤";
+export const DEFAULT_ADMIN_NAME = "Administrator";

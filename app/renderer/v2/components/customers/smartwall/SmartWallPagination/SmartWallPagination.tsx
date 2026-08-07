@@ -10,6 +10,10 @@ import type {
 } from "./types";
 
 import {
+  getPageDots,
+} from "./helpers";
+
+import {
   IDS_PER_PAGE,
   CUSTOMERS_LABEL,
   PREVIOUS_LABEL,
@@ -77,15 +81,48 @@ export default function SmartWallPagination({
           TOTAL CUSTOMERS
       ========================================== */}
 
-      <div style={infoStyle}>
+      {/* ==========================================
+    PAGE DOTS
+========================================== */}
 
-        <div style={totalStyle}>
+<div
+  style={{
+    display:"flex",
+    alignItems:"center",
+    gap:"10px",
+  }}
+>
 
-          {totalCustomers} {CUSTOMERS_LABEL}
+{
+Array.from(
+{
+length: totalPages,
+},
+(_,index)=>(
 
-        </div>
+<span
+key={index}
+style={{
+width:"10px",
+height:"10px",
+borderRadius:"50%",
+background:
+currentPage === index + 1
+? "#D4AF37"
+: "rgba(255,255,255,.35)",
+boxShadow:
+currentPage === index + 1
+?
+"0 0 10px rgba(212,175,55,.8)"
+:
+"none",
+}}
+/>
 
-      </div>
+))
+}
+
+</div>
 
       {/* ==========================================
           NEXT

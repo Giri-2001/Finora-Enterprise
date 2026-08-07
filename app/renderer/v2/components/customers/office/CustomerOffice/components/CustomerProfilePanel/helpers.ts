@@ -5,8 +5,7 @@
    HELPERS
 =========================================================== */
 
-import finoraLogo
-  from "../../../../../app/assets/finoraenterprise.png";
+import finoraLogo from "../../../../../../app/assets/finoraenterprise.png";
 
 import type {
 

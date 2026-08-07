@@ -22,11 +22,12 @@ import {
 } from "./helpers";
 
 import {
-  containerStyle,
-  pinStyle,
-  ropeStyle,
-  hangerStyle,
-  cardContainerStyle,
+containerStyle,
+pinStyle,
+ropeStyle,
+hangerStyle,
+cardContainerStyle,
+bottomRailStyle,
 } from "./styles";
 
 /* ===========================================================
@@ -47,11 +48,15 @@ export default function CustomerHanger({
 
 const {
 
-  id,
+id,
 
-  name,
+name,
 
-  branch,
+phone,
+
+profilePhoto,
+
+branch,
 
   active,
 
@@ -193,15 +198,17 @@ onClick?.(
           CARD
       ========================================== */}
 
-      <div
+<div
 
-  style={{
+style={{
 
-  ...cardContainerStyle,
+...cardContainerStyle,
 
-  width: "190px",
+width: "190px",
 
-  maxWidth: "190px",
+maxWidth: "190px",
+
+transform: "translateX(3px)",
 
 }}
 
@@ -211,17 +218,21 @@ onClick?.(
 
           front={
 
-            <CustomerIdCard
+ <CustomerIdCard
 
-              customerId={id}
+ customerId={id}
 
-              customerName={name}
+ customerName={name}
 
-              branchName={branch}
+ profilePhoto={customer.profilePhoto}
 
-              kycVerified={kycVerified}
+ phoneNumber={customer.phone}
 
-            />
+ branchName={branch}
+
+ kycVerified={kycVerified}
+
+/>
 
           }
 
@@ -638,6 +649,8 @@ VIEW FULL DETAILS
           flipped={flipped}
 
         />
+
+        <div style={bottomRailStyle}/>
 
       </div>
 

@@ -23,7 +23,7 @@ export const containerStyle: CSSProperties = {
 
   width: "100%",
 
-  gap: "12px",
+  gap: "8px",
 
   margin: 0,
 
@@ -65,7 +65,7 @@ export const railWrapperStyle: CSSProperties = {
 
   flexDirection: "column",
 
-  gap: "10px",
+  gap: "4px",
 
 };
 
@@ -95,23 +95,23 @@ export const railStyle: CSSProperties = {
 
 export const hangerAreaStyle: CSSProperties = {
 
-  display: "grid",
+  display: "flex",
 
-  gridTemplateColumns: "repeat(7, minmax(0,1fr))",
+  justifyContent: "center",
 
-  alignItems: "start",
+  alignItems: "flex-start",
 
-  justifyItems: "center",
-
-  columnGap: "18px",
-
-  rowGap: "12px",
+  gap: "clamp(24px,4vw,70px)",
 
   width: "100%",
 
+  maxWidth: "1400px",
+
+  margin: "0 auto",
+
   overflow: "visible",
 
-  padding: "0 12px",
+  padding: "0 16px",
 
   boxSizing: "border-box",
 

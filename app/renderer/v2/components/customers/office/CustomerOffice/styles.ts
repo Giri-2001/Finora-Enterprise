@@ -17,9 +17,15 @@ export const containerStyle: CSSProperties = {
 
   flexDirection: "column",
 
-  overflow: "visible",
+  width: "100%",
 
-}
+  height: "100vh",
+
+  overflow: "hidden",
+
+  boxSizing: "border-box",
+
+};
 
 /* ===========================================================
    HEADER
@@ -27,7 +33,7 @@ export const containerStyle: CSSProperties = {
 
 export const headerStyle: CSSProperties = {
 
-  padding: "24px",
+  padding: "16px 24px",
 
   borderBottom: "1px solid #E2E8F0",
 
@@ -74,13 +80,19 @@ export const contentStyle: CSSProperties = {
 
   display: "flex",
 
-  alignItems: "center",
+  alignItems: "flex-start",
 
   justifyContent: "center",
 
-  padding: "16px",
+  padding: "8px 16px",
 
   width: "100%",
+
+  flex: 1,
+
+  overflow: "hidden",
+
+  boxSizing: "border-box",
 
 };
 
@@ -92,19 +104,25 @@ export const workspaceStyle: CSSProperties = {
 
   display: "grid",
 
-  gridTemplateColumns: "460px 1fr",
+  gridTemplateColumns: "380px 1fr",
 
-  gap: "16px",
+  gap: "18px",
 
-  padding: "8px 0 0",
+  padding: "0px 0 0",
 
   alignItems: "stretch",
 
   width: "100%",
 
-  minHeight: "0px",
+  flex: 1,
+
+  minHeight: 0,
+
+  height: "100%",
 
   boxSizing: "border-box",
+
+  overflow:"hidden",
 
 };
 
@@ -118,11 +136,12 @@ export const leftColumnStyle: CSSProperties = {
 
   flexDirection: "column",
 
-  gap: "20px",
+  gap: "12px",
 
   height: "100%",
 
 };
+
 /* ===========================================================
    RIGHT COLUMN
 =========================================================== */
@@ -133,9 +152,11 @@ export const rightColumnStyle: CSSProperties = {
 
   flexDirection: "column",
 
-  gap: "20px",
+  gap: "12px",
 
   height: "100%",
+
+  minHeight:0,
 
 };
 
@@ -145,16 +166,20 @@ export const rightColumnStyle: CSSProperties = {
 
 export const panelStyle: CSSProperties = {
 
-  background: "#FFFFFF",
+  background:"#FFFFFF",
 
-  border: "1px solid #E5E7EB",
+  border:"1px solid #E5E7EB",
 
-  borderRadius: "24px",
+  borderRadius:"24px",
 
-  padding: "28px",
+  padding:"18px",
 
-  boxShadow: "0 16px 40px rgba(15,23,42,.08)",
+  height:"100%",
 
-  boxSizing: "border-box",
+  overflow:"hidden",
+
+  boxSizing:"border-box",
+
+  boxShadow:"0 16px 40px rgba(15,23,42,.08)",
 
 };

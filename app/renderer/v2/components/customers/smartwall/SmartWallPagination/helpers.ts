@@ -68,3 +68,20 @@ export function buildTotalPages(
   );
 
 }
+
+/* ===========================================================
+   PAGE DOT BUILDER
+=========================================================== */
+
+export function getPageDots(
+  totalPages: number,
+) {
+
+  return Array.from(
+    {
+      length: totalPages,
+    },
+    (_, index) => index + 1,
+  );
+
+}

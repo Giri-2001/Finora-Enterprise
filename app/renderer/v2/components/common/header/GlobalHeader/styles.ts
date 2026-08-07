@@ -1,8 +1,7 @@
 /* ===========================================================
    FINORA ENTERPRISE OS™
    GLOBAL HEADER™
-
-   STYLES
+   PREMIUM DARK ENTERPRISE STYLES
 =========================================================== */
 
 import type { CSSProperties } from "react";
@@ -12,34 +11,34 @@ import type { CSSProperties } from "react";
 =========================================================== */
 
 export const containerStyle: CSSProperties = {
-
   position: "sticky",
-
   top: 0,
-
   zIndex: 1000,
 
   width: "100%",
-
-  height: "56px",
+  height: "72px",
 
   display: "grid",
-
-  gridTemplateColumns: "320px 1fr 260px",
-
+  gridTemplateColumns: "360px 1fr 300px",
   alignItems: "center",
 
-  padding: "0 24px",
-
-  background: "#FFFFFF",
-
-  borderBottom: "1px solid #E2E8F0",
-
+  padding: "0 28px",
   boxSizing: "border-box",
 
-  boxShadow:
-    "0 4px 12px rgba(15,23,42,.06)",
+  background: `
+    linear-gradient(
+      180deg,
+      #3B2418 0%,
+      #2B1810 100%
+    )
+  `,
 
+  borderBottom: "1px solid rgba(212,175,55,.45)",
+
+  boxShadow: `
+    0 10px 30px rgba(0,0,0,.45),
+    0 1px 0 rgba(212,175,55,.25)
+  `,
 };
 
 /* ===========================================================
@@ -47,15 +46,11 @@ export const containerStyle: CSSProperties = {
 =========================================================== */
 
 export const leftStyle: CSSProperties = {
-
   display: "flex",
-
   alignItems: "center",
-
-  gap: "12px",
+  gap: "14px",
 
   cursor: "pointer",
-
 };
 
 /* ===========================================================
@@ -63,17 +58,14 @@ export const leftStyle: CSSProperties = {
 =========================================================== */
 
 export const logoStyle: CSSProperties = {
+  fontSize: "24px",
+  fontWeight: 900,
 
-  fontSize: "22px",
+  color: "#FFFFFF",
 
-  fontWeight: 800,
-
-  color: "#0F172A",
-
-  letterSpacing: ".5px",
+  letterSpacing: "1px",
 
   userSelect: "none",
-
 };
 
 /* ===========================================================
@@ -81,13 +73,9 @@ export const logoStyle: CSSProperties = {
 =========================================================== */
 
 export const centerStyle: CSSProperties = {
-
   display: "flex",
-
   justifyContent: "center",
-
   alignItems: "center",
-
 };
 
 /* ===========================================================
@@ -95,15 +83,16 @@ export const centerStyle: CSSProperties = {
 =========================================================== */
 
 export const departmentStyle: CSSProperties = {
+  fontSize: "21px",
+  fontWeight: 800,
 
-  fontSize: "18px",
+  color: "#F4D27A",
 
-  fontWeight: 700,
-
-  color: "#334155",
+  letterSpacing: ".5px",
 
   whiteSpace: "nowrap",
 
+  textShadow: "0 2px 8px rgba(0,0,0,.35)",
 };
 
 /* ===========================================================
@@ -111,27 +100,25 @@ export const departmentStyle: CSSProperties = {
 =========================================================== */
 
 export const rightStyle: CSSProperties = {
-
   display: "flex",
-
   justifyContent: "flex-end",
-
   alignItems: "center",
 
-  gap: "18px",
-
+  gap: "20px",
 };
 
 /* ===========================================================
-   ICON
+   ACTION
 =========================================================== */
 
 export const actionStyle: CSSProperties = {
-
   cursor: "pointer",
 
-  fontSize: "18px",
+  fontSize: "20px",
 
   userSelect: "none",
 
+  color: "#FFFFFF",
+
+  transition: "all .25s ease",
 };

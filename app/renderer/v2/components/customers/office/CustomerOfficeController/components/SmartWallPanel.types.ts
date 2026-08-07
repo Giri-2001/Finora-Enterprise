@@ -1,51 +1,69 @@
 /* ===========================================================
-   FINORA ENTERPRISE OS™
-   SMART WALL PANEL™
+FINORA ENTERPRISE OS™
 
-   TYPES
+SMART WALL PANEL™
+
+TYPES
 =========================================================== */
+
 
 import type {
   CustomerRailItem,
 } from "../../../hub/sections/CustomerHangerRail/types";
 
+
 import type {
   SmartWallItem,
 } from "../../../smartwall/CustomerSmartWall/types";
 
-import type { OfficeCustomer } from "../../CustomerOffice/types";
+import type {
+ OfficeCustomer,
+} from "../../CustomerOffice/types";
+
 
 /* ===========================================================
-   COMPONENT PROPS
+COMPONENT PROPS
 =========================================================== */
 
 export interface SmartWallPanelProps {
 
+
   title?: string;
+
 
   smartWallCustomers: SmartWallItem[];
 
+
   railCustomers: CustomerRailItem[];
+
 
   selectedCustomerId?: string;
 
-  onCustomerSelect?: (
-    customer: CustomerRailItem,
-  ) => void;
-
-   currentPage: number;
-
-  totalCustomers: number;
-
-  customersPerPage: number;
 
   selectedCustomer?: OfficeCustomer;
 
+
+  onCustomerSelect?: (
+
+    customer: CustomerRailItem,
+
+  ) => void;
+
+
+
+  currentPage: number;
+
+
+  totalCustomers: number;
+
+
+  customersPerPage: number;
+
+
   onPrevious: () => void;
+
 
   onNext: () => void;
 
+
 }
-
-
-

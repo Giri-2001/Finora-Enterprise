@@ -9,24 +9,20 @@ import {
   useState,
 } from "react";
 
-import CustomerHanger from "../../cards/CustomerHanger";
+import EnterpriseCardGrid
+  from "../../../../common/EnterpriseCardGrid";
+
+import CustomerHanger
+  from "../../cards/CustomerHanger";
 
 import type {
-
   CustomerHangerRailProps,
-
 } from "./types";
 
 import {
-
   containerStyle,
-
   railWrapperStyle,
-
   railStyle,
-
-  hangerAreaStyle,
-
 } from "./styles";
 
 /* ===========================================================
@@ -43,18 +39,14 @@ export default function CustomerHangerRail({
 
 }: CustomerHangerRailProps) {
 
-
-  const [activeCardId, setActiveCardId] =
-    useState<string | null>(null);
+  const [
+    activeCardId,
+    setActiveCardId,
+  ] = useState<string | null>(null);
 
   return (
 
     <section style={containerStyle}>
-
-      {/* ==========================================
-          HEADER
-      ========================================== */}
-
 
       {/* ==========================================
           RAIL
@@ -64,51 +56,49 @@ export default function CustomerHangerRail({
 
         <div style={railStyle} />
 
-        <div style={hangerAreaStyle}>
+        <EnterpriseCardGrid>
 
-          {customers
-  .slice(0, 7)
-  .map((customer) => (
+          {customers.map((customer) => (
 
             <CustomerHanger
 
-  key={customer.id}
+              key={customer.id}
 
-  customer={customer}
+              customer={customer}
 
-  flipped={
-    activeCardId === customer.id
-  }
+              flipped={
+                activeCardId === customer.id
+              }
 
-  onFlip={() => {
+              onFlip={() => {
 
-    setActiveCardId(
+                setActiveCardId(
 
-      activeCardId === customer.id
+                  activeCardId === customer.id
 
-        ? null
+                    ? null
 
-        : customer.id,
+                    : customer.id,
 
-    );
+                );
 
-  }}
+              }}
 
-  onClick={(selected) => {
+              onClick={(selected) => {
 
-    onCustomerSelect?.(
+                onCustomerSelect?.(
 
-      selected,
+                  selected,
 
-    );
+                );
 
-  }}
+              }}
 
-/>
+            />
 
           ))}
 
-        </div>
+        </EnterpriseCardGrid>
 
       </div>
 

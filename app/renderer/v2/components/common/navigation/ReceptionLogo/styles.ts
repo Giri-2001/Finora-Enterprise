@@ -8,33 +8,40 @@
 import type { CSSProperties } from "react";
 
 export const containerStyle: CSSProperties = {
-
   display: "flex",
-
   alignItems: "center",
-
-  gap: "10px",
+  gap: "14px",
 
   cursor: "pointer",
-
   userSelect: "none",
 
+  transition: "all .25s ease",
 };
 
-export const iconStyle: CSSProperties = {
+export const logoStyle: CSSProperties = {
+  width: "52px",
+  height: "52px",
 
-  fontSize: "24px",
+  objectFit: "contain",
 
+  flexShrink: 0,
+
+  filter: "drop-shadow(0 0 6px rgba(212,175,55,.20))",
 };
 
 export const titleStyle: CSSProperties = {
+  color: "#FFFFFF",
 
-  fontSize: "22px",
+  fontSize: "20px",
 
   fontWeight: 800,
 
-  color: "#0F172A",
+  letterSpacing: ".8px",
 
-  letterSpacing: ".4px",
+  whiteSpace: "nowrap",
 
+  textShadow: "0 1px 8px rgba(0,0,0,.35)",
+
+  fontFamily:
+    '"Segoe UI", Inter, system-ui, sans-serif',
 };

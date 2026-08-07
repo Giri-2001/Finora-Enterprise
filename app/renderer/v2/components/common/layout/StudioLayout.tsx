@@ -1,21 +1,30 @@
 /* ===========================================================
-   FINORA ENTERPRISE OS™
-   STUDIO LAYOUT™
+FINORA ENTERPRISE OS™
 
-   GLOBAL RESPONSIVE SHELL
+STUDIO LAYOUT™
+
+GLOBAL RESPONSIVE SHELL
 =========================================================== */
+
 
 import type {
+
   CSSProperties,
+
   ReactNode,
+
 } from "react";
 
+
 import GlobalHeader
-  from "../header/GlobalHeader";
+from "../header/GlobalHeader";
+
+
 
 /* ===========================================================
-   TYPES
+TYPES
 =========================================================== */
+
 
 interface StudioLayoutProps {
 
@@ -23,86 +32,168 @@ interface StudioLayoutProps {
 
   department?: string;
 
+  allowScroll?: boolean;
+
 }
 
+
+
 /* ===========================================================
-   ROOT
+ROOT
 =========================================================== */
+
 
 const layoutStyle: CSSProperties = {
 
+
   width: "100%",
+
+
+  height: "100vh",
+
+
+  minHeight: 0,
+
 
   minWidth: 0,
 
+
   maxWidth: "100%",
 
-  minHeight: "100vh",
 
   margin: 0,
 
-  background: "#F8FAFC",
 
-  display: "flex",
+  background:"#321B12",
 
-  flexDirection: "column",
 
-  overflow: "hidden",
+  display:"flex",
 
-};
 
-const contentStyle: CSSProperties = {
+  flexDirection:"column",
 
-  flex: 1,
 
-  width: "100%",
+  overflow:"hidden",
 
-  padding: "2px 16px 16px",
-
-  boxSizing: "border-box",
-
-  overflowX: "hidden",
-
-  overflowY: "auto",
-
-  display: "flex",
-
-  flexDirection: "column",
-
-  gap: "16px",
 
 };
+
+
+
 
 /* ===========================================================
-   COMPONENT
+   CONTENT BUILDER
 =========================================================== */
+
+function buildContentStyle(
+  allowScroll:boolean,
+):CSSProperties {
+
+return {
+
+flex:1,
+
+width:"100%",
+
+padding:
+
+allowScroll
+
+  ? "16px"
+
+  : "0",
+
+boxSizing:"border-box",
+
+overflowX:"hidden",
+
+overflowY:
+allowScroll
+  ? "auto"
+  : "hidden",
+
+display:"flex",
+
+flexDirection:"column",
+
+gap:
+
+allowScroll
+
+  ? "16px"
+
+  : "0px",
+
+minHeight:0,
+
+};
+
+}
+
+
+
+
+/* ===========================================================
+COMPONENT
+=========================================================== */
+
 
 export default function StudioLayout({
 
+
   children,
 
-  department = "Reception",
 
-}: StudioLayoutProps) {
+  department="Reception",
 
-  return (
 
-    <main style={layoutStyle}>
+  allowScroll=true,
 
-      <GlobalHeader
 
-        department={department}
+}:StudioLayoutProps){
 
-      />
 
-      <section style={contentStyle}>
 
-        {children}
+return (
 
-      </section>
 
-    </main>
+<main
 
-  );
+style={layoutStyle}
+
+>
+
+
+  <GlobalHeader
+
+    department={department}
+
+  />
+
+
+
+  <section
+
+    style={buildContentStyle(
+
+      allowScroll,
+
+    )}
+
+  >
+
+
+    {children}
+
+
+  </section>
+
+
+
+</main>
+
+
+);
+
 
 }

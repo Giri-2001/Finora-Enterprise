@@ -11,9 +11,11 @@ export interface CustomerIdCardProps {
 
   customerName: string;
 
-  photoUrl?: string;
+  profilePhoto?: string;
 
   branchName?: string;
+
+  phoneNumber?: string;
 
   kycVerified?: boolean;
 

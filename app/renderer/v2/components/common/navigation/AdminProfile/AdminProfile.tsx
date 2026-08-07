@@ -5,13 +5,14 @@
    COMPONENT
 =========================================================== */
 
+import {
+  ChevronDown,
+  CircleUserRound,
+} from "lucide-react";
+
 import type {
   AdminProfileProps,
 } from "./types";
-
-import {
-  PROFILE_ICON,
-} from "./constants";
 
 import {
   buildAdminName,
@@ -37,13 +38,13 @@ export default function AdminProfile({
     <div
       style={containerStyle}
       onClick={onClick}
+      title="Admin Menu"
     >
 
-      <span style={iconStyle}>
-
-        {PROFILE_ICON}
-
-      </span>
+      <CircleUserRound
+        size={22}
+        style={iconStyle}
+      />
 
       <span style={nameStyle}>
 
@@ -51,11 +52,10 @@ export default function AdminProfile({
 
       </span>
 
-      <span style={arrowStyle}>
-
-        ▼
-
-      </span>
+      <ChevronDown
+        size={16}
+        style={arrowStyle}
+      />
 
     </div>
 

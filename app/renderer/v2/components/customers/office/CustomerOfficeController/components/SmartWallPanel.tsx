@@ -1,35 +1,31 @@
 /* ===========================================================
    FINORA ENTERPRISE OS™
+
    SMART WALL PANEL™
 
-   COMPONENT
+   CUSTOMER HUB PRESENTATION
 =========================================================== */
 
 import CustomerSmartWall
-  from "../../../smartwall/CustomerSmartWall";
+from "../../../smartwall/CustomerSmartWall";
 
 import CustomerHangerRail
-  from "../../../hub/sections/CustomerHangerRail";
+from "../../../hub/sections/CustomerHangerRail";
 
 import PaginationPanel
-  from "./PaginationPanel";
+from "./PaginationPanel";
 
- import CustomerSearchBar
-  from "../../../topbar/components/CustomerSearchBar/CustomerSearchBar";
+import CustomerSearchBar
+from "../../../topbar/components/CustomerSearchBar/CustomerSearchBar";
 
 import type {
   SmartWallPanelProps,
 } from "./SmartWallPanel.types";
 
+import CustomerHubSummaryCards
+from "./CustomerHubSummaryCards/CustomerHubSummaryCards";
 
-  import CustomerLoanPreviewCard
-  from "../../CustomerOffice/components/CustomerLoanPreviewCard";
 
-  import TodayCollectionsPreviewCard
-  from "../../CustomerOffice/components/TodayCollectionsPreviewCard";
-
-import ActionNeededPreviewCard
-  from "../../CustomerOffice/components/ActionNeededPreviewCard";
 /* ===========================================================
    COMPONENT
 =========================================================== */
@@ -43,8 +39,6 @@ export default function SmartWallPanel({
   railCustomers,
 
   selectedCustomerId,
-
-  selectedCustomer,
 
   onCustomerSelect,
 
@@ -60,276 +54,299 @@ export default function SmartWallPanel({
 
 }: SmartWallPanelProps) {
 
-  return (
 
-    <CustomerSmartWall
+return (
 
-      title={title}
+<CustomerSmartWall
 
-      customers={smartWallCustomers}
+  title={title}
 
-    >
+  customers={smartWallCustomers}
 
-      {/* ==========================================
-          SMART HUB TOOLBAR
-      ========================================== */}
+>
+
+
+{/* =====================================================
+    TOP TOOLBAR
+===================================================== */}
 
 <div
 
 style={{
 
-display: "grid",
+display:"grid",
 
 gridTemplateColumns:
-"360px minmax(420px,1fr) 220px",
+"260px minmax(420px,1fr) 260px",
 
-alignItems: "start",
+alignItems:"center",
 
-width: "100%",
+width:"100%",
 
-height: "32px",
+marginBottom:"14px",
 
-marginBottom: "0px",
-
-columnGap: "20px",
-
-paddingTop: "0px",
+gap:"20px",
 
 }}
 
 >
 
-        {/* ======================================
-            LEFT
-        ====================================== */}
-
-        <div
-
-          style={{
-
-            fontSize: "20px",
-
-            fontWeight: 600,
-
-            color: "#F6D58A",
-
-            lineHeight: "32px",
-
-            marginTop: "-8px",
-
-          }}
-
-        >
-
-          {title}
-
-        </div>
-
-        {/* ======================================
-            CENTER
-        ====================================== */}
-
-        <div
-
-          style={{
-
-            display: "flex",
-
-            justifyContent: "center",
-
-            alignItems: "center",
-
-          }}
-
-        >
 
 {/* ======================================
-    CENTER
+    LEFT ADD CUSTOMER
+====================================== */}
+
+<button
+
+style={{
+
+width:"160px",
+
+height:"42px",
+
+padding:"0",
+
+display:"flex",
+
+alignItems:"center",
+
+justifyContent:"center",
+
+borderRadius:"14px",
+
+border:"none",
+
+cursor:"pointer",
+
+fontWeight:800,
+
+color:"#FFFFFF",
+
+background:
+"linear-gradient(180deg,#C99A55,#8A612B)",
+
+boxShadow:
+"0 8px 20px rgba(0,0,0,.25)",
+
+}}
+
+>
+
++ Add Customer
+
+</button>
+
+
+
+{/* ======================================
+    CENTER SEARCH
 ====================================== */}
 
 <div
-
-  style={{
-
-    display: "flex",
-
-    justifyContent: "center",
-
-    alignItems: "flex-start",
-
-    marginTop: "-12px",
-
-  }}
-
->
-
-  <CustomerSearchBar />
-
-</div>
-        </div>
-
-        {/* ======================================
-            RIGHT
-        ====================================== */}
-
-        <div
-  style={{
-    display: "flex",
-    justifyContent: "flex-end",
-    alignItems: "center",
-
-    paddingRight: "20px",   // 👈 New
-  }}
->
-
-          <PaginationPanel
-
-            currentPage={currentPage}
-
-            totalCustomers={totalCustomers}
-
-            customersPerPage={customersPerPage}
-
-            onPrevious={onPrevious}
-
-            onNext={onNext}
-
-          />
-
-        </div>
-
-      </div>
-
-      {/* ==========================================
-          HANGER RAIL
-      ========================================== */}
-
-      <div
 
 style={{
 
 display:"flex",
 
-flexDirection:"column",
-
-width:"100%",
-
-gap:"22px",
+justifyContent:"center",
 
 }}
 
 >
 
+<CustomerSearchBar />
 
-{/* ===============================
-    CUSTOMER CARDS
-================================ */}
+</div>
+
+
+
+{/* ======================================
+    RIGHT EDIT CUSTOMER
+====================================== */}
 
 <div
 
 style={{
 
-flex: 1,
+display:"flex",
 
-paddingBottom: "6px",
+justifyContent:"flex-end",
 
 }}
 
 >
+
+<button
+
+style={{
+
+width:"160px",
+
+height:"42px",
+
+padding:"0",
+
+display:"flex",
+
+alignItems:"center",
+
+justifyContent:"center",
+
+borderRadius:"14px",
+
+border:"none",
+
+cursor:"pointer",
+
+fontWeight:800,
+
+color:"#FFFFFF",
+
+background:
+"linear-gradient(180deg,#C99A55,#8A612B)",
+
+boxShadow:
+"0 8px 20px rgba(0,0,0,.25)",
+
+}}
+
+>
+
+✏ Edit Customer
+
+</button>
+
+</div>
+
+
+</div>
+
+
+
+{/* =====================================================
+    CUSTOMER ID WALL
+===================================================== */}
+
+
+<div
+
+style={{
+
+flex:1,
+
+minHeight:0,
+
+overflow:"hidden",
+
+}}
+
+>
+
 
 <CustomerHangerRail
 
-  customers={railCustomers}
+customers={railCustomers}
 
-  selectedCustomerId={selectedCustomerId}
+selectedCustomerId={selectedCustomerId}
 
-  onCustomerSelect={onCustomerSelect}
+onCustomerSelect={onCustomerSelect}
 
 />
 
+
 </div>
 
-{/* ==========================================
-    PREMIUM DIVIDER
-========================================== */}
-
-<div
-
-  style={{
-
-    height: "3px",
-
-    width: "100%",
-
-    marginTop: "8px",
-
-    marginBottom: "10px",
-
-    borderRadius: "999px",
-
-    background:
-      "linear-gradient(90deg, transparent, rgba(212,175,55,.9), transparent)",
-
-  }}
-
- />
 
 
-{/* ==========================================
-    SMART INSIGHTS
-========================================== */}
+
+{/* =====================================================
+    PAGINATION
+===================================================== */}
+
 
 <div
 
 style={{
 
-display: "grid",
+display:"flex",
 
-gridTemplateColumns: "repeat(3, minmax(0,1fr))",
+justifyContent:"center",
 
-gap: "22px",
+alignItems:"center",
 
-alignItems: "stretch",
-
-marginTop: "6px",
+marginTop:"12px",
 
 }}
 
 >
 
-{selectedCustomer && (
 
-<CustomerLoanPreviewCard customer={selectedCustomer}/>
+{/* =====================================================
+    CUSTOMER HUB SUMMARY
+===================================================== */}
 
-)}
+<div
 
-{selectedCustomer && (
+style={{
 
-  <TodayCollectionsPreviewCard
+width:"100%",
 
-    customer={selectedCustomer}
+marginTop:"12px",
 
-  />
+}}
 
-)}
+>
 
-{selectedCustomer && (
+<CustomerHubSummaryCards
 
-<ActionNeededPreviewCard
+ totalCustomers={totalCustomers}
 
-  customer={selectedCustomer}
+ activeCustomers={
+   totalCustomers
+ }
+
+
+ currentPage={
+   currentPage
+ }
+
+
+ totalPages={
+   Math.ceil(
+     totalCustomers /
+     customersPerPage
+   )
+ }
+
+
+ onPrevious={
+   onPrevious
+ }
+
+
+ onNext={
+   onNext
+ }
+
 
 />
 
-)}
 
 </div>
 
 
 </div>
 
-    </CustomerSmartWall>
 
-  );
+
+
+
+
+</CustomerSmartWall>
+
+
+);
+
 
 }
+

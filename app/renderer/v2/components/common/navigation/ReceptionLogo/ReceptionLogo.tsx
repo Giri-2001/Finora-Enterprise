@@ -5,51 +5,37 @@
    COMPONENT
 =========================================================== */
 
-import type {
-  ReceptionLogoProps,
-} from "./types";
+import type { ReceptionLogoProps } from "./types";
 
 import {
-  LOGO_ICON,
+  LOGO_IMAGE,
+  LOGO_TITLE,
 } from "./constants";
 
 import {
-  buildLogoTitle,
-} from "./helpers";
-
-import {
   containerStyle,
-  iconStyle,
+  logoStyle,
   titleStyle,
 } from "./styles";
 
 export default function ReceptionLogo({
-
   onClick,
-
 }: ReceptionLogoProps) {
-
   return (
-
     <div
       style={containerStyle}
       onClick={onClick}
+      title="Go to Reception"
     >
-
-      <span style={iconStyle}>
-
-        {LOGO_ICON}
-
-      </span>
+      <img
+        src={LOGO_IMAGE}
+        alt={LOGO_TITLE}
+        style={logoStyle}
+      />
 
       <span style={titleStyle}>
-
-        {buildLogoTitle()}
-
+        {LOGO_TITLE}
       </span>
-
     </div>
-
   );
-
 }

@@ -5,13 +5,11 @@
    COMPONENT
 =========================================================== */
 
+import { Bell } from "lucide-react";
+
 import type {
   NotificationBellProps,
 } from "./types";
-
-import {
-  BELL_ICON,
-} from "./constants";
 
 import {
   buildUnreadCount,
@@ -41,13 +39,13 @@ export default function NotificationBell({
     <div
       style={containerStyle}
       onClick={onClick}
+      title="Notifications"
     >
 
-      <span style={bellStyle}>
-
-        {BELL_ICON}
-
-      </span>
+      <Bell
+        size={20}
+        style={bellStyle}
+      />
 
       {
 

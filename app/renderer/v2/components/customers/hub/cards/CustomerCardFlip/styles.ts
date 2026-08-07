@@ -24,7 +24,7 @@ export const containerStyle: CSSProperties = {
 
   position: "relative",
 
-  width: "170px",
+  width: "180px",
 
   height: "290px",
 

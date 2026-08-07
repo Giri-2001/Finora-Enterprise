@@ -5,8 +5,7 @@
    EXPORTS
 =========================================================== */
 
-export * from "./types";
-
 export * from "./breakpoints";
-
 export * from "./helpers";
+export * from "./layout";
+export * from "./types";

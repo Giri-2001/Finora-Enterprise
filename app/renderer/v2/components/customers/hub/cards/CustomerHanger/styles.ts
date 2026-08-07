@@ -77,7 +77,7 @@ export const ropeStyle: CSSProperties = {
 
   width: "2px",
 
-  height: "22px",
+  height: "12px",
 
   background:
     "linear-gradient(180deg,#D5D9E0,#7B8798,#475569)",
@@ -86,15 +86,16 @@ export const ropeStyle: CSSProperties = {
 
 };
 
+
 /* ===========================================================
    HANGER
 =========================================================== */
 
 export const hangerStyle: CSSProperties = {
 
-  width:"58px",
+  width:"52px",
 
-  height:"28px",
+  height:"22px",
 
   border:
   "3px solid #7C8798",
@@ -102,32 +103,63 @@ export const hangerStyle: CSSProperties = {
   borderTop:"0",
 
   borderRadius:
-    "0 0 40px 40px",
+    "0 0 36px 36px",
 
 };
 
+
 /* ===========================================================
-   CARD
+   CARD WRAPPER
 =========================================================== */
 
 export const cardContainerStyle: CSSProperties = {
 
-  marginTop: "6px",
+  width: "220px",
 
-  transformOrigin: "top center",
+  maxWidth: "220px",
 
-  willChange: "transform",
+  marginTop: "2px",
+
+  transformOrigin:
+    "top center",
+
+  willChange:
+    "transform",
 
   transition:
     "transform .30s ease",
 
-  position: "relative",
+  position:
+    "relative",
 
   zIndex: 1,
 
-  paddingBottom: "10px",
+  paddingBottom:
+    "4px",
 
   filter:
     "drop-shadow(0 14px 26px rgba(0,0,0,.18))",
+
+};
+
+/* ===========================================================
+   CARD FINISHING RAIL
+=========================================================== */
+
+export const bottomRailStyle: CSSProperties = {
+
+  width:"100%",
+
+  height:"3px",
+
+  marginTop:"20px",
+
+  borderRadius:"999px",
+
+  background:
+  "linear-gradient(90deg,transparent,#D4AF37,transparent)",
+
+  boxShadow:
+  "0 4px 12px rgba(212,175,55,.35)",
 
 };

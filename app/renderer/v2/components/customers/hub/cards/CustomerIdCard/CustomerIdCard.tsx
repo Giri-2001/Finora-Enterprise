@@ -1,8 +1,9 @@
 /* ===========================================================
    FINORA ENTERPRISE OS™
-   CUSTOMER ID CARD
 
-   COMPONENT
+   CUSTOMER ID CARD™
+
+   PREMIUM IDENTITY CARD COMPONENT
 =========================================================== */
 
 import finoraLogo from "../../../../../app/assets/finoraenterprise.png";
@@ -12,6 +13,7 @@ import type {
 } from "./types";
 
 import {
+  BRAND_NAME,
   COMPANY_NAME,
 } from "./constants";
 
@@ -22,10 +24,7 @@ import {
   photoStyle,
   nameStyle,
   customerIdStyle,
-  qrStyle,
 } from "./styles";
-
-import { QRCodeSVG } from "qrcode.react";
 
 
 /* ===========================================================
@@ -38,156 +37,294 @@ export default function CustomerIdCard({
 
   customerName,
 
+  phoneNumber,
+
+  profilePhoto,
+
   kycVerified = false,
 
 }: CustomerIdCardProps) {
+
 
   const statusColor =
     kycVerified
       ? "#16A34A"
       : "#DC2626";
 
+
   return (
 
     <article
-  style={{
-    ...cardStyle,
-    position: "relative",
-  }}
->
 
-  {/* ======================================
-    LAMINATE SHINE
-====================================== */}
+      style={{
 
-<div
-  style={{
-    position: "absolute",
-    inset: 0,
-    pointerEvents: "none",
-    borderRadius: "18px",
-    background:
-  "linear-gradient(120deg,rgba(255,255,255,.55) 0%,rgba(255,255,255,.20) 18%,transparent 42%)",
-    opacity: .75,
-    zIndex: 1,
-  }}
-/>
+        ...cardStyle,
 
-  <div
-    style={{
-      position: "relative",
-      zIndex: 2,
-      display: "flex",
-      flexDirection: "column",
-      height: "100%",
-    }}
-  >
+        position: "relative",
 
-      {/* Status Strip */}
+      }}
+
+    >
+
+
+      {/* ======================================
+          PREMIUM LAMINATE EFFECT
+      ====================================== */}
+
+
 
       <div
 
         style={{
 
-          ...statusHeaderStyle,
+          position: "relative",
 
-          background: statusColor,
+          zIndex: 2,
+
+          display: "flex",
+
+          flexDirection: "column",
+
+          height: "100%",
 
         }}
 
-      />
+      >
 
-      {/* Company */}
 
-      <div style={companyStyle}>
-  FINORA
-</div>
 
-<div
-  style={{
-    marginTop: "8px",
-    background:
-  "linear-gradient(180deg,#C99A55 0%,#B1843D 40%,#8A612B 100%)",
-    color: "#FFFFFF",
-    fontSize: "10px",
-    fontWeight: 700,
-    letterSpacing: ".8px",
-    textTransform: "uppercase",
-    padding: "5px 8px",
-    textAlign: "center",
-  }}
+        {/* ======================================
+            STATUS STRIP
+        ====================================== */}
+
+        <div
+
+          style={{
+
+            ...statusHeaderStyle,
+
+            background: statusColor,
+
+          }}
+
+        />
+
+
+
+        {/* ======================================
+            FINORA BRAND
+        ====================================== */}
+
+        <div style={companyStyle}>
+
+          {BRAND_NAME}
+
+        </div>
+
+
+
+        {/* ======================================
+            COMPANY NAME
+        ====================================== */}
+
+        <div
+
+          style={{
+
+            marginTop: "8px",
+
+            background:
+            `
+            linear-gradient(
+            180deg,
+            #E8C778 0%,
+            #B88938 45%,
+            #8A612B 100%
+            )
+            `,
+
+            boxShadow:
+            "inset 0 1px 3px rgba(255,255,255,.5)",
+
+            color:"#FFFFFF",
+
+            fontSize:"10px",
+
+            fontWeight:700,
+
+            letterSpacing:".8px",
+
+            textTransform:"uppercase",
+
+            padding:"5px 8px",
+
+            textAlign:"center",
+
+          }}
+
+        >
+
+          {COMPANY_NAME}
+
+        </div>
+
+
+
+
+        {/* ======================================
+            PROFILE PHOTO / DEFAULT FINORA LOGO
+        ====================================== */}
+
+        <div style={photoStyle}>
+
+
+          {
+
+            profilePhoto
+
+            ?
+
+            (
+
+              <img
+
+                src={profilePhoto}
+
+                alt={customerName}
+
+                style={{
+
+                  width:"100%",
+
+                  height:"100%",
+
+                  objectFit:"cover",
+
+                  objectPosition:"center",
+
+                  borderRadius:"50%",
+
+                  display:"block",
+
+                }}
+
+              />
+
+            )
+
+            :
+
+            (
+
+              <img
+
+                src={finoraLogo}
+
+                alt="FINORA"
+
+                style={{
+
+                  width:"72%",
+
+                  height:"72%",
+
+                  objectFit:"contain",
+
+                  objectPosition:"center",
+
+                  display:"block",
+
+                }}
+
+              />
+
+            )
+
+          }
+
+
+        </div>
+
+
+
+
+        {/* ======================================
+            CUSTOMER NAME
+        ====================================== */}
+
+        <div style={nameStyle}>
+
+          {customerName || "Unknown"}
+
+
+          <div
+
+            style={{
+
+              textAlign:"center",
+
+              fontSize:"12px",
+
+              fontWeight:600,
+
+              color:"#374151",
+
+              marginTop:"6px",
+
+            }}
+
+          >
+
+            📞 {phoneNumber || "—"}
+
+          </div>
+
+
+        </div>
+
+
+
+
+        {/* ======================================
+            CUSTOMER ID
+        ====================================== */}
+
+        <div style={customerIdStyle}>
+
+          {customerId}
+
+        </div>
+
+        <div
+
+style={{
+
+margin:"10px auto 0",
+
+padding:"4px 12px",
+
+borderRadius:"999px",
+
+background:"#DCFCE7",
+
+color:"#166534",
+
+fontSize:"10px",
+
+fontWeight:700,
+
+}}
+
 >
-  {COMPANY_NAME}
-</div>
 
-{/* Photo */}
-
-<div style={photoStyle}>
-
-  <img
-    src={finoraLogo}
-    alt="FINORA"
-    style={{
-      width: "100%",
-      height: "100%",
-      objectFit: "cover",
-      objectPosition: "center",
-      borderRadius: "14px",
-    }}
-  />
+● Active Customer
 
 </div>
 
-      {/* Name */}
 
-      <div style={nameStyle}>
-
-        {customerName}
 
       </div>
 
-      {/* Customer ID */}
-
-      <div style={customerIdStyle}>
-
-        {customerId}
-
-      </div>
-
-
-      {/* KYC */}
-{/* KYC STATUS
- Future:
- Verified = Green
- Pending = Orange
- Rejected = Red
-*/}
-      {/* Branch */}
-
-
-       {/* QR */}
-
-<div style={qrStyle}>
-
-  <QRCodeSVG
-
-    value={
-      `FINORA://CUSTOMER/${customerId}`
-    }
-
-    size={42}
-
-    bgColor="#FFFFFF"
-
-    fgColor="#020617"
-
-    level="H"
-
-  />
-
-</div>
-
-</div>
 
     </article>
 

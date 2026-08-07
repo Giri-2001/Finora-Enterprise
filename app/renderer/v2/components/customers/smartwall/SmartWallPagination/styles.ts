@@ -17,15 +17,13 @@ export const containerStyle: CSSProperties = {
 
   alignItems: "center",
 
-  justifyContent: "flex-end",
+  justifyContent: "center",
 
   gap: "14px",
 
   width: "100%",
 
   whiteSpace: "nowrap",
-
-  transform: "translateY(-4px)",
 
 };
 
@@ -35,12 +33,11 @@ export const containerStyle: CSSProperties = {
 
 export const buttonStyle: CSSProperties = {
 
-  width: "34px",
+  width: "40px",
 
-  height: "34px",
+  height: "40px",
 
   borderRadius: "12px",
-
 
 border: "1px solid rgba(246,213,138,.35)",
 
@@ -83,7 +80,19 @@ export const infoStyle: CSSProperties = {
 
   justifyContent: "center",
 
-  minWidth: "140px",
+  minWidth: "160px",
+
+  height: "40px",
+
+  padding: "0 18px",
+
+  borderRadius: "999px",
+
+  border:
+    "1px solid rgba(246,213,138,.35)",
+
+  background:
+    "linear-gradient(180deg,#FFFDF8,#F8E7BE)",
 
   flexShrink: 0,
 

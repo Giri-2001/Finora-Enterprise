@@ -1,71 +1,170 @@
-  /* ===========================================================
-    FINORA OS V2
-    APPLICATION ENTRY
-  =========================================================== */
+/* ===========================================================
+   FINORA OS V2
+   APPLICATION ENTRY
+=========================================================== */
 
-  import { useState } from "react";
+import { useState } from "react";
 
-  import AppShell from "../layouts/AppShell";
+import AppShell from "../layouts/AppShell";
 
-  import DashboardPage from "../pages/dashboard/DashboardPage";
-  import CustomersPage from "../pages/customers/CustomersPage";
-  import CustomerDepartmentPage
-    from "../pages/customers/CustomerDepartmentPage";
-  import LoansPage from "../pages/loans/LoansPage";
+import ReceptionPage
+  from "../pages/reception";
 
-  import CollectionsPage from "../pages/collections/CollectionsPage";
-  import ReportsPage from "../pages/reports/ReportsPage";
+import DashboardPage
+  from "../pages/dashboard/DashboardPage";
 
-  /* ===========================================================
-    TYPES
-  =========================================================== */
+import CustomersPage
+  from "../pages/customers/CustomersPage";
 
-  type Page =
-    | "dashboard"
-    | "customers"
-    | "customerDepartment"
-    | "loans"
-    | "collections"
-    | "reports";
+import CustomerDepartmentPage
+  from "../pages/customers/CustomerDepartmentPage";
 
-  const DEFAULT_PAGE: Page = "customerDepartment";
+import LoansPage
+  from "../pages/loans/LoansPage";
 
-  /* ===========================================================
-    COMPONENT
-  =========================================================== */
+import CollectionsPage
+  from "../pages/collections/CollectionsPage";
 
-  export default function App() {
+import ReportsPage
+  from "../pages/reports/ReportsPage";
 
-    const [page, setPage] = useState<Page>(DEFAULT_PAGE);
+import type {
+  DepartmentId,
+} from "../pages/reception/types";
 
-    return (
-      <AppShell
-        page={page}
-        onNavigate={setPage}
-      >
-        {page === "dashboard" && (
-          <DashboardPage />
-        )}
+/* ===========================================================
+   TYPES
+=========================================================== */
 
-        {page === "customers" && (
-          <CustomersPage />
-        )}
+type Page =
+  | "reception"
+  | "dashboard"
+  | "customers"
+  | "customerDepartment"
+  | "loans"
+  | "collections"
+  | "reports";
 
-        {page === "customerDepartment" && (
-    <CustomerDepartmentPage />
-  )}
+const DEFAULT_PAGE: Page =
+  "reception";
 
-        {page === "loans" && (
-          <LoansPage />
-        )}
+/* ===========================================================
+   COMPONENT
+=========================================================== */
 
-        {page === "collections" && (
-    <CollectionsPage />
-  )}
+export default function App() {
 
-  {page === "reports" && (
-    <ReportsPage />
-  )}
-      </AppShell>
-    );
+  const [page, setPage] =
+    useState<Page>(DEFAULT_PAGE);
+
+  /* =========================================================
+     RECEPTION NAVIGATION
+  ========================================================= */
+
+  function handleReceptionNavigation(
+
+    department: DepartmentId,
+
+  ) {
+
+    switch (department) {
+
+      case "customers":
+
+        setPage("customerDepartment");
+        break;
+
+      case "loans":
+
+        setPage("loans");
+        break;
+
+      case "collections":
+
+        setPage("collections");
+        break;
+
+      case "reports":
+
+        setPage("reports");
+        break;
+
+      case "accounts":
+
+        // Coming Soon
+        break;
+
+      case "settings":
+
+        // Coming Soon
+        break;
+
+      default:
+
+        break;
+
+    }
+
   }
+
+  return (
+
+    <AppShell
+
+      page={page}
+
+      onNavigate={setPage}
+
+    >
+
+      {page === "reception" && (
+
+        <ReceptionPage
+
+          onNavigate={handleReceptionNavigation}
+
+        />
+
+      )}
+
+      {page === "dashboard" && (
+
+        <DashboardPage />
+
+      )}
+
+      {page === "customers" && (
+
+        <CustomersPage />
+
+      )}
+
+      {page === "customerDepartment" && (
+
+        <CustomerDepartmentPage />
+
+      )}
+
+      {page === "loans" && (
+
+        <LoansPage />
+
+      )}
+
+      {page === "collections" && (
+
+        <CollectionsPage />
+
+      )}
+
+      {page === "reports" && (
+
+        <ReportsPage />
+
+      )}
+
+    </AppShell>
+
+  );
+
+}

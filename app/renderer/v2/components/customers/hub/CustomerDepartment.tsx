@@ -1,9 +1,9 @@
 /* ===========================================================
-   FINORA ENTERPRISE OS™
+FINORA ENTERPRISE OS™
 
-   CUSTOMER DEPARTMENT™
+CUSTOMER DEPARTMENT™
 
-   DIGITAL FINANCE OFFICE
+DIGITAL FINANCE OFFICE
 =========================================================== */
 
 
@@ -15,15 +15,15 @@ import {
 
 
 import StudioLayout
-  from "../../common/layout/StudioLayout";
+from "../../common/layout/StudioLayout";
 
 
 import CustomerOfficeController
-  from "../office/CustomerOfficeController";
+from "../office/CustomerOfficeController";
 
 
 import CustomerWizard
-  from "../wizard/CustomerWizard";
+from "../wizard/CustomerWizard";
 
 
 import {
@@ -32,12 +32,12 @@ import {
 
 
 import customerOfficeMapper
-  from "../office/CustomerOfficeController/mappers/customerOfficeMapper";
+from "../office/CustomerOfficeController/mappers/customerOfficeMapper";
 
 
 
 /* ===========================================================
-   COMPONENT
+COMPONENT
 =========================================================== */
 
 
@@ -52,48 +52,42 @@ export default function CustomerDepartment() {
 
 
 
-const [
-  refreshKey,
-  setRefreshKey,
-] = useState(0);
+  const [
+    refreshKey,
+    setRefreshKey,
+  ] = useState(0);
 
 
-/* ==========================================
-   FINORA DATA UPDATE LISTENER
-========================================== */
-
-useEffect(() => {
 
 
-  function handleLoanUpdate() {
+  /* ==========================================
+     FINORA DATA UPDATE LISTENER
+  ========================================== */
 
 
-    console.log(
-      "FINORA CUSTOMER DATA REFRESH",
-    );
+  useEffect(() => {
 
 
-    setRefreshKey(
-      (previous) => previous + 1,
-    );
+    function handleLoanUpdate() {
 
 
-  }
+      console.log(
+        "FINORA CUSTOMER DATA REFRESH",
+      );
 
 
-  window.addEventListener(
+      setRefreshKey(
 
-    "FINORA_LOAN_UPDATED",
+        (previous) => previous + 1,
 
-    handleLoanUpdate,
-
-  );
+      );
 
 
-  return () => {
+    }
 
 
-    window.removeEventListener(
+
+    window.addEventListener(
 
       "FINORA_LOAN_UPDATED",
 
@@ -102,10 +96,27 @@ useEffect(() => {
     );
 
 
-  };
+
+    return () => {
 
 
-}, []);
+      window.removeEventListener(
+
+        "FINORA_LOAN_UPDATED",
+
+        handleLoanUpdate,
+
+      );
+
+
+    };
+
+
+  }, []);
+
+
+
+
 
   const customers = useMemo(() => {
 
@@ -127,167 +138,67 @@ useEffect(() => {
 
 
 
+
   return (
 
 
-    <StudioLayout>
 
-
-      {/* ==========================================
-          HEADER
-      ========================================== */}
-
-
-      <div
-
-        style={{
-
-          display: "flex",
-
-          justifyContent: "space-between",
-
-          alignItems: "center",
-
-          marginBottom: "20px",
-
-        }}
-
-      >
-
-
-        <div>
-
-
-          <h2
-
-            style={{
-
-              margin: 0,
-
-              fontSize: "28px",
-
-              fontWeight: 700,
-
-            }}
-
-          >
-
-            Customer Department
-
-          </h2>
-
-
-
-          <p
-
-            style={{
-
-              margin: "6px 0 0",
-
-              color: "#64748B",
-
-            }}
-
-          >
-
-            Manage customers, loans and collections
-
-          </p>
-
-
-
-        </div>
-
-
-
-
-        <button
-
-
-          onClick={() =>
-
-            setShowCustomerWizard(true)
-
-          }
-
-
-          style={{
-
-
-            height: "46px",
-
-
-            padding: "0 22px",
-
-
-            borderRadius: "12px",
-
-
-            border: "none",
-
-
-            cursor: "pointer",
-
-
-            fontWeight: 700,
-
-
-            color: "#FFFFFF",
-
-
-            background:
-
-              "linear-gradient(180deg,#A67C38,#7A5625)",
-
-
-          }}
-
-
-        >
-
-
-          + Add Customer
-
-
-        </button>
-
-
-      </div>
-
+    <StudioLayout
+  department="Customers Hub"
+  allowScroll={false}
+>
 
 
 
 
       {/* ==========================================
-          BODY
+          CUSTOMER OFFICE CONTENT ONLY
+
+          HEADER REMOVED
+          RECEPTION STYLE VIEW
       ========================================== */}
 
 
 
-      {showCustomerWizard ? (
+
+      {
 
 
-        <CustomerWizard />
+        showCustomerWizard
 
 
-      ) : (
+        ?
 
 
-        <CustomerOfficeController
+        (
 
-          customers={customers}
+          <CustomerWizard />
 
-        />
+        )
 
 
-      )}
+        :
+
+
+        (
+
+          <CustomerOfficeController
+
+            customers={customers}
+
+          />
+
+        )
+
+
+      }
 
 
 
     </StudioLayout>
 
 
-  );
 
+  );
 
 }

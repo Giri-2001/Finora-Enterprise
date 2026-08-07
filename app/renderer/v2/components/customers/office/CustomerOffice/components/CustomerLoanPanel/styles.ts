@@ -12,15 +12,30 @@ import type { CSSProperties } from "react";
 =========================================================== */
 
 export const containerStyle: CSSProperties = {
+
   background: "#FFFFFF",
+
   border: "1px solid #E2E8F0",
-  borderRadius: "20px",
-  padding: "24px",
-  minHeight: "520px",
-  boxShadow: "0 8px 24px rgba(15,23,42,.06)",
-  display: "flex",
-  flexDirection: "column",
-  gap: "20px",
+
+  borderRadius: "24px",
+
+  padding: "18px",
+
+  boxShadow:
+    "0 16px 40px rgba(15,23,42,.08)",
+
+  display:"flex",
+
+  flexDirection:"column",
+
+  gap:"14px",
+
+  height:"100%",
+
+  boxSizing:"border-box",
+
+  overflow:"hidden",
+
 };
 
 /* ===========================================================
@@ -45,16 +60,26 @@ export const subtitleStyle: CSSProperties = {
 =========================================================== */
 
 export const statisticsGridStyle: CSSProperties = {
-  display: "grid",
-  gridTemplateColumns: "repeat(4,1fr)",
-  gap: "14px",
+
+ display:"grid",
+
+ gridTemplateColumns:"repeat(4,1fr)",
+
+ gap:"10px",
+
 };
 
 export const statisticCardStyle: CSSProperties = {
-  borderRadius: "18px",
-  border: "1px solid #D6B36A",
-  background: "linear-gradient(180deg,#FFFDF8,#FFF6E6)",
-  padding: "18px",
+
+ borderRadius:"14px",
+
+ border:"1px solid #D6B36A",
+
+ background:
+ "linear-gradient(180deg,#FFFDF8,#FFF6E6)",
+
+ padding:"12px",
+
 };
 
 export const statisticLabelStyle: CSSProperties = {
@@ -65,14 +90,14 @@ export const statisticLabelStyle: CSSProperties = {
 
 export const runningValueStyle: CSSProperties = {
   marginTop: "8px",
-  fontSize: "28px",
+  fontSize: "22px",
   fontWeight: 700,
   color: "#15803D",
 };
 
 export const closedValueStyle: CSSProperties = {
   marginTop: "8px",
-  fontSize: "28px",
+  fontSize: "22px",
   fontWeight: 700,
   color: "#B91C1C",
 };
@@ -93,4 +118,40 @@ export const loansSectionStyle: CSSProperties = {
   flexDirection: "column",
   gap: "16px",
   marginTop: "4px",
+};
+
+/* ===========================================================
+   LOAN SECTION HEADER
+=========================================================== */
+
+export const sectionTitleStyle: CSSProperties = {
+
+  margin: 0,
+
+  fontSize: "16px",
+
+  fontWeight: 700,
+
+  color: "#0F172A",
+
+};
+
+
+export const emptyStateStyle: CSSProperties = {
+
+  padding: "24px",
+
+  textAlign: "center",
+
+  borderRadius: "16px",
+
+  border: "1px dashed #D6B36A",
+
+  background:
+    "linear-gradient(180deg,#FFFDF8,#FFF8EC)",
+
+  color: "#7C5A2C",
+
+  fontSize: "14px",
+
 };

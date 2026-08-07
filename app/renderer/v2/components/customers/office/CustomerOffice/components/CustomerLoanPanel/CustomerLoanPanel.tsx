@@ -23,6 +23,8 @@ import {
   closedValueStyle,
   containerStyle,
   loansSectionStyle,
+    sectionTitleStyle,
+  emptyStateStyle,
   runningValueStyle,
   statisticCardStyle,
   statisticLabelStyle,
@@ -103,14 +105,34 @@ export default function CustomerLoanPanel({
         </div>
       </section>
 
-      <section style={loansSectionStyle}>
-        {loans.map((loan) => (
-          <LoanCard
-            key={loan.id}
-            loan={loan}
-          />
-        ))}
-      </section>
+      <h3 style={sectionTitleStyle}>
+  Recent Loans
+</h3>
+
+<section style={loansSectionStyle}>
+
+{
+  loans.length > 0
+
+  ?
+
+  loans.map((loan) => (
+    <LoanCard
+      key={loan.id}
+      loan={loan}
+    />
+  ))
+
+  :
+
+  (
+    <div style={emptyStateStyle}>
+      No loans available
+    </div>
+  )
+}
+
+</section>
     </section>
   );
 }

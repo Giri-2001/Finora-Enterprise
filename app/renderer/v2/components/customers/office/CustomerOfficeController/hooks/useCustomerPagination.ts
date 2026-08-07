@@ -3,7 +3,11 @@
    CUSTOMER PAGINATION HOOK™
 =========================================================== */
 
-import { useMemo, useState } from "react";
+import {
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
 
 import type {
   OfficeCustomer,
@@ -12,11 +16,12 @@ import type {
 import paginateCustomers
   from "../selectors/paginateCustomers";
 
-/* ===========================================================
-   CONSTANTS
-=========================================================== */
+import {
+  getCustomerCardsPerPage,
+} from "../../../../../utils/responsive";
 
-const CUSTOMERS_PER_PAGE = 7;
+import useResponsive
+  from "../../../../../utils/responsive/useResponsive";
 
 /* ===========================================================
    HOOK
@@ -25,6 +30,32 @@ const CUSTOMERS_PER_PAGE = 7;
 export default function useCustomerPagination(
   customers: OfficeCustomer[],
 ) {
+
+  /* ==========================================
+     RESPONSIVE
+  ========================================== */
+
+  const responsive =
+    useResponsive();
+
+  const customersPerPage =
+    getCustomerCardsPerPage(
+      responsive.width,
+    );
+
+    /* ==========================================
+   RESPONSIVE RESET
+========================================== */
+
+useEffect(() => {
+
+  setCurrentPage(1);
+
+}, [
+
+  customersPerPage,
+
+]);
 
   /* ==========================================
      STATE
@@ -43,7 +74,7 @@ export default function useCustomerPagination(
     1,
     Math.ceil(
       customers.length /
-      CUSTOMERS_PER_PAGE,
+      customersPerPage,
     ),
   );
 
@@ -53,12 +84,13 @@ export default function useCustomerPagination(
       return paginateCustomers(
         customers,
         currentPage,
-        CUSTOMERS_PER_PAGE,
+        customersPerPage,
       );
 
     }, [
       customers,
       currentPage,
+      customersPerPage,
     ]);
 
   /* ==========================================
@@ -111,8 +143,7 @@ export default function useCustomerPagination(
 
     resetPage,
 
-    customersPerPage:
-      CUSTOMERS_PER_PAGE,
+    customersPerPage,
 
   };
 

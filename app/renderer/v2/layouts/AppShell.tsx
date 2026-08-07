@@ -9,26 +9,31 @@ import type {
   ReactNode,
 } from "react";
 
+/* ===========================================================
+   PAGE TYPE
+=========================================================== */
+
+export type AppPage =
+  | "reception"
+  | "dashboard"
+  | "customers"
+  | "customerDepartment"
+  | "loans"
+  | "collections"
+  | "reports";
+
+/* ===========================================================
+   PROPS
+=========================================================== */
+
 interface AppShellProps {
 
   children: ReactNode;
 
-  page:
-    | "dashboard"
-    | "customers"
-    | "customerDepartment"
-    | "loans"
-    | "collections"
-    | "reports";
+  page: AppPage;
 
   onNavigate: (
-    page:
-      | "dashboard"
-      | "customers"
-      | "customerDepartment"
-      | "loans"
-      | "collections"
-      | "reports"
+    page: AppPage,
   ) => void;
 
 }

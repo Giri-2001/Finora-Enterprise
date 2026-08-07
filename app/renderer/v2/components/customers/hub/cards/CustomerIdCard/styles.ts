@@ -5,7 +5,12 @@
    PREMIUM PRESENTATION STYLES
 =========================================================== */
 
-import type { CSSProperties } from "react";
+
+import type {
+  CSSProperties,
+} from "react";
+
+
 
 /* ===========================================================
    ROOT
@@ -13,70 +18,91 @@ import type { CSSProperties } from "react";
 
 export const cardStyle: CSSProperties = {
 
-  width: "170px",
+  width: "180px",
 
-  height: "290px",
+  height: "350px",
 
   background:
-  "linear-gradient(180deg,#FFFDF9 0%,#FEFBF5 55%,#FCF5E8 100%)",
+  `
+  linear-gradient(
+    135deg,
+    rgba(255,255,255,.65),
+    transparent 35%
+  ),
+  linear-gradient(
+    180deg,
+    #FFFDF9 0%,
+    #FEFBF5 60%,
+    #FCF5E8 100%
+  )
+  `,
+
+  paddingBottom:"8px",
+
 
   borderRadius: "22px",
 
-  overflow: "hidden",
 
-  border: "1px solid rgba(180,145,82,.35)",
+  overflow:"hidden",
+
+
+  border:
+"1px solid rgba(180,145,82,.35)",
+
 
  boxShadow:
 `
-0 24px 50px rgba(0,0,0,.24),
-0 8px 18px rgba(139,99,41,.20),
-inset 0 1px 0 rgba(255,255,255,.90)
+0 25px 55px rgba(0,0,0,.30),
+0 8px 20px rgba(180,145,82,.25)
 `,
 
-  display: "flex",
 
-  flexDirection: "column",
+  position:"relative",
 
-  transition:
-    "all .28s ease",
+
+  display:"flex",
+
+  flexDirection:"column",
 
 };
+
+
 /* ===========================================================
    STATUS HEADER
 =========================================================== */
 
 export const statusHeaderStyle: CSSProperties = {
 
-  height: "8px",
+  height: "5px",
 
 };
 
+
+
 /* ===========================================================
-   COMPANY
+   COMPANY BRAND
 =========================================================== */
 
 export const companyStyle: CSSProperties = {
 
-  textAlign: "center",
+textAlign:"center",
 
-  marginTop: "12px",
+marginTop:"8px",
 
-  fontSize: "20px",
+fontSize:"13px",
 
-  fontWeight: 800,
+fontWeight:700,
 
-  letterSpacing: "1px",
+letterSpacing:"1.2px",
 
-  lineHeight: 1.1,
+lineHeight:1.1,
 
-  color: "#8A612B",
+color:"#8A612B",
 
-  textTransform: "uppercase",
-
-  textShadow:
-    "0 1px 0 rgba(255,255,255,.9)",
+textTransform:"uppercase",
 
 };
+
 
 /* ===========================================================
    CARD TITLE
@@ -86,19 +112,21 @@ export const titleStyle: CSSProperties = {
 
   textAlign: "center",
 
-  fontSize: "10px",
+  fontSize: "12px",
 
   fontWeight: 600,
 
-  color: "#7C7C7C",
+  color:"#7C7C7C",
 
-  letterSpacing: "2px",
+  letterSpacing:"2px",
 
-  marginTop: "2px",
+  marginTop:"2px",
 
-  textTransform: "uppercase",
+  textTransform:"uppercase",
 
 };
+
+
 
 /* ===========================================================
    PHOTO
@@ -106,53 +134,60 @@ export const titleStyle: CSSProperties = {
 
 export const photoStyle: CSSProperties = {
 
-  width: "96px",
+width:"82px",
 
-  height: "96px",
+height:"82px",
 
-  margin: "12px auto 6px",
+margin:"14px auto 10px",
 
-  borderRadius: "20px",
+borderRadius:"50%",
 
-  background:
-    "linear-gradient(180deg,#F8FBFF,#E8F1FC)",
-
-  border: "3px solid #FFFFFF",
-
-  boxShadow:
+background:
 `
-0 14px 28px rgba(15,23,42,.24),
-inset 0 1px rgba(255,255,255,.95)
+linear-gradient(
+180deg,
+#FFFFFF,
+#E8EEF7
+)
 `,
 
-  display: "flex",
+border:
+"4px solid rgba(255,255,255,.9)",
 
-  alignItems: "center",
+boxShadow:
+`
+0 12px 35px rgba(0,0,0,.25),
+inset 0 0 10px rgba(255,255,255,.8)
+`,
 
-  justifyContent: "center",
+display:"flex",
 
-  overflow: "hidden",
+alignItems:"center",
+
+justifyContent:"center",
+
+overflow:"hidden",
 
 };
+
 /* ===========================================================
    NAME
 =========================================================== */
 
 export const nameStyle: CSSProperties = {
 
-  textAlign: "center",
+  textAlign:"center",
 
-  fontSize: "16px",
+  fontSize:"16px",
 
-  fontWeight: 700,
+  fontWeight:700,
 
-  color: "#1E293B",
+  color:"#1E293B",
 
-  marginTop: "6px",
-
-  letterSpacing: ".2px",
+  marginTop:"2px",
 
 };
+
 
 /* ===========================================================
    CUSTOMER ID
@@ -160,17 +195,32 @@ export const nameStyle: CSSProperties = {
 
 export const customerIdStyle: CSSProperties = {
 
-  textAlign: "center",
+  textAlign:"center",
 
-  marginTop: "6px",
+  margin:"12px auto 0",
 
-  fontSize: "11px",
+  padding:"5px 12px",
 
-  fontWeight: 600,
+  borderRadius:"999px",
 
-  color: "#5B6473",
+  background:
+  "linear-gradient(180deg,#F8E8C5,#EACB8B)",
+
+
+  border:
+  "1px solid rgba(180,145,82,.45)",
+
+
+  fontSize:"11px",
+
+  fontWeight:700,
+
+  color:"#5A3B16",
+
+  width:"fit-content",
 
 };
+
 
 /* ===========================================================
    KYC
@@ -178,28 +228,27 @@ export const customerIdStyle: CSSProperties = {
 
 export const kycStyle: CSSProperties = {
 
-  display: "inline-flex",
+  display:"inline-flex",
 
-  alignItems: "center",
+  alignItems:"center",
 
-  justifyContent: "center",
+  justifyContent:"center",
 
-  margin: "10px auto 0",
+  margin:"8px auto 0",
 
-  padding: "4px 12px",
+  padding:"4px 12px",
 
-  borderRadius: "999px",
+  borderRadius:"999px",
 
-  background: "#ECFDF3",
+  background:"#ECFDF3",
 
-  fontSize: "10px",
+  fontSize:"10px",
 
-  fontWeight: 700,
-
-  boxShadow:
-    "0 2px 6px rgba(34,197,94,.16)",
+  fontWeight:700,
 
 };
+
+
 
 /* ===========================================================
    BRANCH
@@ -207,46 +256,26 @@ export const kycStyle: CSSProperties = {
 
 export const branchStyle: CSSProperties = {
 
-  textAlign: "center",
+  textAlign:"center",
 
-  marginTop: "10px",
+  marginTop:"8px",
 
-  fontSize: "11px",
+  fontSize:"11px",
 
-  color: "#6B7280",
+  color:"#6B7280",
 
 };
 
+
+
 /* ===========================================================
-   QR
+   QR REMOVED FROM FRONT FACE
+
+   BACK SIDE / DIGITAL VIEW LO USE CHEYYALI
 =========================================================== */
 
 export const qrStyle: CSSProperties = {
 
-  width: "50px",
-
-  height: "50px",
-
-  margin: "14px auto 18px",
-
-  borderRadius: "12px",
-
-  background: "#FFFFFF",
-
-  border:
-    "2px solid rgba(180,145,82,.45)",
-
-  padding: "5px",
-
-  boxSizing: "border-box",
-
-  display: "flex",
-
-  alignItems: "center",
-
-  justifyContent: "center",
-
-  boxShadow:
-    "0 4px 12px rgba(15,23,42,.18)",
+  display:"none",
 
 };
