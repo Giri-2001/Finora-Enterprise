@@ -12,6 +12,7 @@
 // - Clear Business Context during logout
 // - Manage top-level page navigation
 // - Route Reception departments to their V2 pages
+// - Enforce authenticated session inactivity protection
 //
 // IMPORTANT:
 //
@@ -35,9 +36,11 @@
 //      ↓
 // BusinessContextProvider
 //      ↓
-// AuthGate
+// AuthenticatedApplication
 //      ↓
-// Login / Authenticated V2 Application
+// SessionGuard
+//      ↓
+// Authenticated V2 Application
 //
 // AUTHENTICATED DATA CONTEXT:
 //
@@ -53,7 +56,7 @@
 //      ↓
 // isolated demonstration storage
 //
-// VERSION : 2.1
+// VERSION : 2.2
 // STATUS  : Production
 // ============================================================
 
@@ -66,7 +69,8 @@ import {
   useState,
 } from "react";
 
-import AppShell from "../layouts/AppShell";
+import AppShell
+  from "../layouts/AppShell";
 
 import ReceptionPage
   from "../pages/reception";
@@ -109,6 +113,9 @@ import type {
 import type {
   DepartmentId,
 } from "../pages/reception/types";
+
+import SessionGuard
+  from "../../components/auth/SessionGuard";
 
 // ============================================================
 // TYPES
@@ -247,7 +254,7 @@ function AuthenticatedApplication() {
 
         if (active) {
 
-          clearContext();
+          await clearContext();
 
           setContextReady(true);
 
@@ -269,7 +276,7 @@ function AuthenticatedApplication() {
 
         if (active) {
 
-          clearContext();
+          await clearContext();
 
           setContextReady(false);
 
@@ -297,7 +304,7 @@ function AuthenticatedApplication() {
 
         if (active) {
 
-          clearContext();
+          await clearContext();
 
           setContextReady(false);
 
@@ -409,7 +416,7 @@ function AuthenticatedApplication() {
 
     logout();
 
-    clearContext();
+    void clearContext();
 
     setSession(null);
 
@@ -543,8 +550,10 @@ function AuthenticatedApplication() {
 // AUTHENTICATED V2 APPLICATION SHELL
 // ============================================================
 //
-// Kept separate so authentication/context lifecycle does not
-// become mixed with page navigation logic.
+// SessionGuard is intentionally mounted only around the
+// authenticated application.
+//
+// Login page is therefore outside SessionGuard.
 //
 
 interface AuthenticatedV2ApplicationProps {
@@ -638,59 +647,63 @@ function AuthenticatedV2Application({
 
   return (
 
-    <AppShell
-  page={page}
-  onNavigate={setPage}
-  onLogout={onLogout}
->
+    <SessionGuard>
 
-      {page === "reception" && (
+      <AppShell
+        page={page}
+        onNavigate={setPage}
+        onLogout={onLogout}
+      >
 
-        <ReceptionPage
-          onNavigate={
-            handleReceptionNavigation
-          }
-        />
+        {page === "reception" && (
 
-      )}
+          <ReceptionPage
+            onNavigate={
+              handleReceptionNavigation
+            }
+          />
 
-      {page === "dashboard" && (
+        )}
 
-        <DashboardPage />
+        {page === "dashboard" && (
 
-      )}
+          <DashboardPage />
 
-      {page === "customers" && (
+        )}
 
-        <CustomersPage />
+        {page === "customers" && (
 
-      )}
+          <CustomersPage />
 
-      {page === "customerDepartment" && (
+        )}
 
-        <CustomerDepartmentPage />
+        {page === "customerDepartment" && (
 
-      )}
+          <CustomerDepartmentPage />
 
-      {page === "loans" && (
+        )}
 
-        <LoansPage />
+        {page === "loans" && (
 
-      )}
+          <LoansPage />
 
-      {page === "collections" && (
+        )}
 
-        <CollectionsPage />
+        {page === "collections" && (
 
-      )}
+          <CollectionsPage />
 
-      {page === "reports" && (
+        )}
 
-        <ReportsPage />
+        {page === "reports" && (
 
-      )}
+          <ReportsPage />
 
-    </AppShell>
+        )}
+
+      </AppShell>
+
+    </SessionGuard>
   );
 }
 
