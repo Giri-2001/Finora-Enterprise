@@ -107,18 +107,25 @@ export default function Step4KYC({
      KYC STATE
   ========================================================= */
 
-  const [
-    kycData,
-    setKycData,
-  ] = useState<KYCFormData>({
-    ...EMPTY_KYC_DATA,
+const [
+  kycData,
+  setKycData,
+] = useState<KYCFormData>({
+  ...EMPTY_KYC_DATA,
 
-    aadhaarNumber:
-      wizardData.aadhaar ?? "",
+  aadhaarNumber:
+    wizardData.aadhaar ?? "",
 
-    panNumber:
-      wizardData.pan ?? "",
-  });
+  panNumber:
+    wizardData.pan ?? "",
+
+  voterId:
+    wizardData.voterId ?? "",
+
+  drivingLicense:
+    wizardData.drivingLicence ?? "",
+});
+
 
   /* =========================================================
      SYNC WIZARD DATA
@@ -126,61 +133,87 @@ export default function Step4KYC({
 
   useEffect(() => {
 
-    setKycData(
-      (previous: KYCFormData) => ({
-        ...previous,
+  setKycData({
 
-        aadhaarNumber:
-          wizardData.aadhaar ??
-          previous.aadhaarNumber,
+    ...EMPTY_KYC_DATA,
 
-        panNumber:
-          wizardData.pan ??
-          previous.panNumber,
-      }),
-    );
+    aadhaarNumber:
+      wizardData.aadhaar ?? "",
 
-  }, [
-    wizardData.aadhaar,
-    wizardData.pan,
-  ]);
+    panNumber:
+      wizardData.pan ?? "",
+
+    voterId:
+      wizardData.voterId ?? "",
+
+    drivingLicense:
+      wizardData.drivingLicence ?? "",
+
+  });
+
+}, [
+  wizardData.aadhaar,
+  wizardData.pan,
+  wizardData.voterId,
+  wizardData.drivingLicence,
+]);
 
   /* =========================================================
      KYC FIELD CHANGE
   ========================================================= */
 
-  const handleKYCChange = (
-    field: keyof KYCFormData,
-    value: string,
-  ) => {
+ const handleKYCChange = (
+  field: keyof KYCFormData,
+  value: string,
+) => {
 
-    setKycData(
-      (previous: KYCFormData) => ({
-        ...previous,
-        [field]: value,
-      }),
-    );
+  setKycData(
+    (previous: KYCFormData) => ({
+      ...previous,
+      [field]: value,
+    }),
+  );
 
-    /* =======================================================
-       SYNC SUPPORTED WIZARD FIELDS
-    ======================================================= */
+  /* =======================================================
+     SYNC SUPPORTED WIZARD FIELDS
+  ======================================================= */
 
-    if (field === "aadhaarNumber") {
+  if (field === "aadhaarNumber") {
 
-      updateWizardData({
-        aadhaar: value,
-      });
+    updateWizardData({
+      aadhaar: value,
+    });
 
-      return;
-    }
+    return;
+  }
 
-    if (field === "panNumber") {
+  if (field === "panNumber") {
 
-      updateWizardData({
-        pan: value,
-      });
-    }
-  };
+    updateWizardData({
+      pan: value,
+    });
+
+    return;
+  }
+
+  if (field === "voterId") {
+
+    updateWizardData({
+      voterId: value,
+    });
+
+    return;
+  }
+
+  if (field === "drivingLicense") {
+
+    updateWizardData({
+      drivingLicence: value,
+    });
+
+    return;
+  }
+};
 
   /* =========================================================
      PREVIEW DATA

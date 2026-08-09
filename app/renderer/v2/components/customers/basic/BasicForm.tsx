@@ -1,14 +1,14 @@
 /* ===========================================================
-   FINORA ENTERPRISE OS™
+FINORA ENTERPRISE OS™
 
-   CUSTOMER BASIC INFORMATION™
+CUSTOMER BASIC INFORMATION™
 
-   STEP 2 — PERSONAL INFORMATION
+STEP 2 — PERSONAL INFORMATION
 
-   Version     : 2.0
-   Phase       : Phase 2
-   Architecture: Enterprise
-   Status      : Production
+Version     : 2.0
+Phase       : Phase 2
+Architecture: Enterprise
+Status      : Production
 =========================================================== */
 
 import type {
@@ -16,226 +16,146 @@ import type {
 } from "react";
 
 /* ===========================================================
-   TYPES
+TYPES
 =========================================================== */
 
 export interface BasicFormData {
-
   fatherOrSpouseName: string;
-
   education: string;
-
   maritalStatus: string;
-
   spouseName: string;
-
 }
 
 interface BasicFormProps {
-
-  value:
-    BasicFormData;
+  value: BasicFormData;
 
   onChange: (
-    field:
-      keyof BasicFormData,
-    value:
-      string,
+    field: keyof BasicFormData,
+    value: string,
   ) => void;
-
 }
 
 /* ===========================================================
-   STYLES
+STYLES
 =========================================================== */
 
 const gridStyle: CSSProperties = {
-
   width: "100%",
-
   display: "grid",
-
-  gridTemplateColumns:
-    "repeat(4,minmax(0,1fr))",
-
+  gridTemplateColumns: "repeat(4,minmax(0,1fr))",
   gap: "14px",
-
 };
 
 const fieldStyle: CSSProperties = {
-
   minWidth: 0,
-
   display: "flex",
-
   flexDirection: "column",
-
   gap: "5px",
-
 };
 
 const labelStyle: CSSProperties = {
-
-  color:
-    "rgba(255,255,255,.68)",
-
+  color: "rgba(255,255,255,.68)",
   fontSize: "10px",
-
   fontWeight: 600,
-
   letterSpacing: ".45px",
-
   textTransform: "uppercase",
-
 };
 
 const requiredStyle: CSSProperties = {
-
   color: "#D4AF37",
-
   marginLeft: "2px",
-
 };
 
 const inputStyle: CSSProperties = {
-
   width: "100%",
-
   height: "38px",
-
-  padding:
-    "0 10px",
-
+  padding: "0 10px",
   boxSizing: "border-box",
-
   borderRadius: "8px",
-
-  border:
-    "1px solid rgba(214,176,106,.22)",
-
+  border: "1px solid rgba(214,176,106,.22)",
   outline: "none",
-
-  background:
-    "rgba(255,255,255,.055)",
-
+  background: "rgba(255,255,255,.055)",
   color: "#F8FAFC",
-
   fontSize: "11px",
-
   fontWeight: 500,
-
 };
 
 const selectStyle: CSSProperties = {
-
   ...inputStyle,
-
   cursor: "pointer",
-
 };
 
 /* ===========================================================
-   LABEL
+DROPDOWN OPTION STYLE
+
+Same visual language as RelationshipSelector.
+This prevents the native white option panel from
+breaking the FINORA Enterprise dark theme.
+=========================================================== */
+
+const optionStyle: CSSProperties = {
+  background: "#43291D",
+  color: "#F8FAFC",
+  fontSize: "11px",
+  fontWeight: 500,
+};
+
+/* ===========================================================
+LABEL
 =========================================================== */
 
 function FieldLabel({
-
   children,
-
   required = false,
-
 }: {
-
   children: string;
-
   required?: boolean;
-
 }) {
-
   return (
-
-    <label
-      style={labelStyle}
-    >
-
+    <label style={labelStyle}>
       {children}
 
       {required && (
-
-        <span
-          style={requiredStyle}
-        >
-
+        <span style={requiredStyle}>
           *
-
         </span>
-
       )}
-
     </label>
-
   );
-
 }
 
 /* ===========================================================
-   COMPONENT
+COMPONENT
 =========================================================== */
 
 export default function BasicForm({
-
   value,
-
   onChange,
-
 }: BasicFormProps) {
-
   return (
-
-    <div
-      style={gridStyle}
-    >
+    <div style={gridStyle}>
 
       {/* =================================================
           FATHER / SPOUSE
       ================================================= */}
 
-      <div
-        style={fieldStyle}
-      >
+      <div style={fieldStyle}>
 
         <FieldLabel required>
-
           Father / Spouse Name
-
         </FieldLabel>
 
         <input
-
           style={inputStyle}
-
-          value={
-            value.fatherOrSpouseName
-          }
-
-          placeholder=
-            "Enter father or spouse name"
-
+          value={value.fatherOrSpouseName}
+          placeholder="Enter father or spouse name"
           onChange={(event) =>
-
             onChange(
-
               "fatherOrSpouseName",
-
               event.target.value,
-
             )
-
           }
-
-          aria-label=
-            "Father or Spouse Name"
-
+          aria-label="Father or Spouse Name"
         />
 
       </div>
@@ -244,98 +164,92 @@ export default function BasicForm({
           EDUCATION
       ================================================= */}
 
-      <div
-        style={fieldStyle}
-      >
+      <div style={fieldStyle}>
 
         <FieldLabel>
-
           Education
-
         </FieldLabel>
 
         <select
-
           style={selectStyle}
-
-          value={
-            value.education
-          }
-
+          value={value.education}
           onChange={(event) =>
-
             onChange(
-
               "education",
-
               event.target.value,
-
             )
-
           }
-
           aria-label="Education"
-
         >
 
-          <option value="">
-
+          <option
+            value=""
+            style={optionStyle}
+          >
             Select education
-
           </option>
 
-          <option value="No Formal Education">
-
+          <option
+            value="No Formal Education"
+            style={optionStyle}
+          >
             No Formal Education
-
           </option>
 
-          <option value="Primary">
-
+          <option
+            value="Primary"
+            style={optionStyle}
+          >
             Primary
-
           </option>
 
-          <option value="Secondary">
-
+          <option
+            value="Secondary"
+            style={optionStyle}
+          >
             Secondary
-
           </option>
 
-          <option value="Intermediate">
-
+          <option
+            value="Intermediate"
+            style={optionStyle}
+          >
             Intermediate
-
           </option>
 
-          <option value="Diploma">
-
+          <option
+            value="Diploma"
+            style={optionStyle}
+          >
             Diploma
-
           </option>
 
-          <option value="Graduate">
-
+          <option
+            value="Graduate"
+            style={optionStyle}
+          >
             Graduate
-
           </option>
 
-          <option value="Post Graduate">
-
+          <option
+            value="Post Graduate"
+            style={optionStyle}
+          >
             Post Graduate
-
           </option>
 
-          <option value="Doctorate">
-
+          <option
+            value="Doctorate"
+            style={optionStyle}
+          >
             Doctorate
-
           </option>
 
-          <option value="Other">
-
+          <option
+            value="Other"
+            style={optionStyle}
+          >
             Other
-
           </option>
 
         </select>
@@ -346,75 +260,64 @@ export default function BasicForm({
           MARITAL STATUS
       ================================================= */}
 
-      <div
-        style={fieldStyle}
-      >
+      <div style={fieldStyle}>
 
         <FieldLabel>
-
           Marital Status
-
         </FieldLabel>
 
         <select
-
           style={selectStyle}
-
-          value={
-            value.maritalStatus
-          }
-
+          value={value.maritalStatus}
           onChange={(event) =>
-
             onChange(
-
               "maritalStatus",
-
               event.target.value,
-
             )
-
           }
-
-          aria-label=
-            "Marital Status"
-
+          aria-label="Marital Status"
         >
 
-          <option value="">
-
+          <option
+            value=""
+            style={optionStyle}
+          >
             Select marital status
-
           </option>
 
-          <option value="Single">
-
+          <option
+            value="Single"
+            style={optionStyle}
+          >
             Single
-
           </option>
 
-          <option value="Married">
-
+          <option
+            value="Married"
+            style={optionStyle}
+          >
             Married
-
           </option>
 
-          <option value="Widowed">
-
+          <option
+            value="Widowed"
+            style={optionStyle}
+          >
             Widowed
-
           </option>
 
-          <option value="Divorced">
-
+          <option
+            value="Divorced"
+            style={optionStyle}
+          >
             Divorced
-
           </option>
 
-          <option value="Separated">
-
+          <option
+            value="Separated"
+            style={optionStyle}
+          >
             Separated
-
           </option>
 
         </select>
@@ -425,47 +328,27 @@ export default function BasicForm({
           SPOUSE NAME
       ================================================= */}
 
-      <div
-        style={fieldStyle}
-      >
+      <div style={fieldStyle}>
 
         <FieldLabel>
-
           Spouse Name
-
         </FieldLabel>
 
         <input
-
           style={inputStyle}
-
-          value={
-            value.spouseName
-          }
-
-          placeholder=
-            "Enter spouse name"
-
+          value={value.spouseName}
+          placeholder="Enter spouse name"
           onChange={(event) =>
-
             onChange(
-
               "spouseName",
-
               event.target.value,
-
             )
-
           }
-
           aria-label="Spouse Name"
-
         />
 
       </div>
 
     </div>
-
   );
-
 }

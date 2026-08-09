@@ -1,12 +1,17 @@
-/* ===========================================================
-   FINORA ENTERPRISE V2
-   CUSTOMER PERSONAL TYPES
-   -----------------------------------------------------------
-   Module  : Customer
-   Section : D - Personal Information
-   Version : 2.0
-   Status  : Production
-=========================================================== */
+/* ==========================================================
+FINORA ENTERPRISE OS™
+
+CUSTOMER PERSONAL INFORMATION™
+
+Module  : Customer
+Section : D - Personal Information
+Version : 2.0
+Status  : Production
+========================================================== */
+
+/* ==========================================================
+IMPORTS
+========================================================== */
 
 import {
   CustomerGender,
@@ -14,9 +19,9 @@ import {
   Occupation,
 } from "./customer.enums";
 
-/* ===========================================================
-   BLOOD GROUP
-=========================================================== */
+/* ==========================================================
+BLOOD GROUP
+========================================================== */
 
 export type BloodGroup =
   | "A+"
@@ -28,9 +33,9 @@ export type BloodGroup =
   | "O+"
   | "O-";
 
-/* ===========================================================
-   EDUCATION
-=========================================================== */
+/* ==========================================================
+EDUCATION
+========================================================== */
 
 export type Education =
   | "No Formal Education"
@@ -43,74 +48,157 @@ export type Education =
   | "Doctorate"
   | "Other";
 
-/* ===========================================================
-   CUSTOMER PERSONAL INFORMATION
-=========================================================== */
+/* ==========================================================
+CUSTOMER PERSONAL INFORMATION
+========================================================== */
 
 export interface CustomerPersonalInformation {
-  /**
-   * Gender
-   */
-  gender: CustomerGender;
 
-  /**
-   * Date of Birth
-   * ISO Format (YYYY-MM-DD)
-   */
-  dateOfBirth?: string;
+/* ========================================================
+GENDER
+======================================================== */
 
-  /**
-   * Calculated Age
-   */
-  age?: number;
+  gender:
+    CustomerGender;
 
-  /**
-   * Marital Status
-   */
-  maritalStatus: MaritalStatus;
+/* ========================================================
+DATE OF BIRTH
 
-  /**
-   * Occupation
-   */
-  occupation: Occupation;
+ISO Format:
+YYYY-MM-DD
+======================================================== */
 
-  /**
-   * Education Qualification
-   */
-  education?: Education;
+  dateOfBirth?:
+    string;
 
-  /**
-   * Monthly Income
-   */
-  monthlyIncome?: number;
+/* ========================================================
+CALCULATED AGE
+======================================================== */
 
-  /**
-   * Annual Income
-   */
-  annualIncome?: number;
+  age?:
+    number;
 
-  /**
-   * Blood Group
-   */
-  bloodGroup?: BloodGroup;
+/* ========================================================
+MARITAL STATUS
+======================================================== */
 
-  /**
-   * Nationality
-   */
-  nationality?: string;
+  maritalStatus:
+    MaritalStatus;
 
-  /**
-   * Religion (Optional)
-   */
-  religion?: string;
+/* ========================================================
+OCCUPATION
+======================================================== */
 
-  /**
-   * Physically Challenged
-   */
-  isDifferentlyAbled: boolean;
+  occupation:
+    Occupation;
 
-  /**
-   * Personal Notes
-   */
-  notes?: string;
+/* ========================================================
+CUSTOM OCCUPATION
+
+Used when occupation is OTHER.
+
+Example:
+occupation     = OTHER
+occupationOther = "Finora Occupation"
+
+This preserves the exact value entered by the user.
+======================================================== */
+
+  occupationOther?:
+    string;
+
+/* ========================================================
+EDUCATION QUALIFICATION
+======================================================== */
+
+  education?:
+    Education;
+
+/* ========================================================
+MONTHLY INCOME
+======================================================== */
+
+  monthlyIncome?:
+    number;
+
+/* ========================================================
+ANNUAL INCOME
+======================================================== */
+
+  annualIncome?:
+    number;
+
+/* ========================================================
+WORK PLACE / BUSINESS
+
+Examples:
+
+- ABC Finance
+- Ramesh Kirana Store
+- Self Business
+- XYZ Company
+======================================================== */
+
+  workPlace?:
+    string;
+
+/* ========================================================
+WORK EXPERIENCE
+
+Stored as entered by the user.
+
+Examples:
+
+- 2 Years
+- 5 Years
+- 10 Years
+======================================================== */
+
+  experience?:
+    string;
+
+/* ========================================================
+NUMBER OF FAMILY MEMBERS
+======================================================== */
+
+  numberOfFamilyMembers?:
+    number;
+
+/* ========================================================
+BLOOD GROUP
+======================================================== */
+
+  bloodGroup?:
+    BloodGroup;
+
+/* ========================================================
+NATIONALITY
+======================================================== */
+
+  nationality?:
+    string;
+
+/* ========================================================
+RELIGION
+
+Optional.
+======================================================== */
+
+  religion?:
+    string;
+
+/* ========================================================
+PHYSICALLY CHALLENGED
+======================================================== */
+
+  isDifferentlyAbled:
+    boolean;
+
+/* ========================================================
+PERSONAL NOTES
+======================================================== */
+
+  notes?:
+    string;
+
 }

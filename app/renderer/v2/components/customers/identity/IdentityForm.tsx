@@ -89,6 +89,23 @@ interface IdentityFormProps {
 }
 
 /* ===========================================================
+   DROPDOWN OPTION STYLE
+
+   Same FINORA Enterprise dark dropdown language used
+   by the other Customer selectors.
+
+   This prevents the native white option panel from
+   breaking the FINORA dark theme.
+=========================================================== */
+
+const optionStyle = {
+  background: "#43291D",
+  color: "#F8FAFC",
+  fontSize: "11px",
+  fontWeight: 500,
+};
+
+/* ===========================================================
    HELPER — CALCULATE AGE
 =========================================================== */
 
@@ -304,19 +321,14 @@ export default function IdentityForm({
             </span>
 
             <input
-
               style={
                 iconReadOnlyInputStyle
               }
-
               value={
                 value.customerId
               }
-
               readOnly
-
               aria-label="FINORA Customer ID"
-
             />
 
           </div>
@@ -346,32 +358,20 @@ export default function IdentityForm({
             </span>
 
             <input
-
               style={
                 iconInputStyle
               }
-
               value={
                 value.customerName
               }
-
-              placeholder=
-                "Enter customer full name"
-
+              placeholder="Enter customer full name"
               onChange={(event) =>
-
                 onChange(
-
                   "customerName",
-
                   event.target.value,
-
                 )
-
               }
-
               aria-label="Customer Name"
-
             />
 
           </div>
@@ -401,34 +401,21 @@ export default function IdentityForm({
             </span>
 
             <input
-
               style={
                 iconInputStyle
               }
-
               value={
                 value.mobileNumber
               }
-
-              placeholder=
-                "Enter mobile number"
-
+              placeholder="Enter mobile number"
               inputMode="tel"
-
               onChange={(event) =>
-
                 onChange(
-
                   "mobileNumber",
-
                   event.target.value,
-
                 )
-
               }
-
               aria-label="Mobile Number"
-
             />
 
           </div>
@@ -444,44 +431,28 @@ export default function IdentityForm({
         >
 
           <input
-
             style={{
               ...inputStyle,
               paddingRight: "14px",
             }}
-
             type="email"
-
             value={
               value.email
             }
-
-            placeholder=
-              "Enter email address"
-
+            placeholder="Enter email address"
             onChange={(event) =>
-
               onChange(
-
                 "email",
-
                 event.target.value,
-
               )
-
             }
-
             aria-label="Email Address"
-
           />
 
         </Field>
 
         {/* =================================================
             WHATSAPP NUMBER
-
-            CHECKBOX IS INSIDE THE SAME INPUT
-            ON THE RIGHT SIDE.
         ================================================= */}
 
         <Field
@@ -505,53 +476,32 @@ export default function IdentityForm({
             </span>
 
             <input
-
               style={{
                 ...iconInputStyle,
-
                 paddingRight: "76px",
-
                 opacity:
                   value.whatsappSame
                     ? 0.72
                     : 1,
-
               }}
-
               value={
                 value.whatsappSame
                   ? value.mobileNumber
                   : value.whatsappNumber
               }
-
-              placeholder=
-                "Enter WhatsApp number"
-
+              placeholder="Enter WhatsApp number"
               inputMode="tel"
-
               disabled={
                 value.whatsappSame
               }
-
               onChange={(event) =>
-
                 onChange(
-
                   "whatsappNumber",
-
                   event.target.value,
-
                 )
-
               }
-
               aria-label="WhatsApp Number"
-
             />
-
-            {/* =========================================
-                SAME NUMBER CHECKBOX
-            ========================================= */}
 
             <label
               style={{
@@ -560,40 +510,27 @@ export default function IdentityForm({
                 top: "50%",
                 transform:
                   "translateY(-50%)",
-
                 display: "flex",
                 alignItems: "center",
                 gap: "4px",
-
                 cursor: "pointer",
-
                 userSelect: "none",
-
                 zIndex: 3,
               }}
               title="WhatsApp uses same mobile number"
             >
 
               <input
-
                 type="checkbox"
-
                 checked={
                   value.whatsappSame
                 }
-
                 onChange={(event) =>
-
                   onChange(
-
                     "whatsappSame",
-
                     event.target.checked,
-
                   )
-
                 }
-
                 style={{
                   width: "14px",
                   height: "14px",
@@ -601,10 +538,7 @@ export default function IdentityForm({
                   accentColor: "#D4AF37",
                   cursor: "pointer",
                 }}
-
-                aria-label=
-                  "WhatsApp uses same number"
-
+                aria-label="WhatsApp uses same number"
               />
 
               <span
@@ -613,8 +547,7 @@ export default function IdentityForm({
                   fontWeight: 700,
                   color:
                     "rgba(255,255,255,.82)",
-                  whiteSpace:
-                    "nowrap",
+                  whiteSpace: "nowrap",
                 }}
               >
 
@@ -630,9 +563,6 @@ export default function IdentityForm({
 
         {/* =================================================
             DATE OF BIRTH
-
-            AGE IS CALCULATED LIVE FROM DOB
-            AND DISPLAYED INSIDE THE SAME INPUT.
         ================================================= */}
 
         <Field
@@ -647,67 +577,40 @@ export default function IdentityForm({
           >
 
             <input
-
               style={{
                 ...inputStyle,
-
                 paddingRight:
                   calculatedAge !== null
                     ? "82px"
                     : "40px",
               }}
-
               type="date"
-
               value={
                 value.dateOfBirth
               }
-
               onChange={(event) =>
-
                 onChange(
-
                   "dateOfBirth",
-
                   event.target.value,
-
                 )
-
               }
-
               aria-label="Date of Birth"
-
             />
-
-            {/* =========================================
-                LIVE AGE
-            ========================================= */}
 
             {calculatedAge !== null && (
 
               <span
                 style={{
                   position: "absolute",
-
                   right: "30px",
-
                   top: "50%",
-
                   transform:
                     "translateY(-50%)",
-
                   fontSize: "10px",
-
                   fontWeight: 800,
-
                   color: "#F3E4C2",
-
-                  whiteSpace:
-                    "nowrap",
-
-                  pointerEvents:
-                    "none",
-
+                  whiteSpace: "nowrap",
+                  pointerEvents: "none",
                   zIndex: 2,
                 }}
               >
@@ -731,17 +634,12 @@ export default function IdentityForm({
         >
 
           <input
-
             style={inputStyle}
-
             value={
               value.businessName
             }
-
             readOnly
-
             aria-label="Business"
-
           />
 
         </Field>
@@ -755,17 +653,12 @@ export default function IdentityForm({
         >
 
           <input
-
             style={inputStyle}
-
             value={
               value.branchName
             }
-
             readOnly
-
             aria-label="Branch"
-
           />
 
         </Field>
@@ -779,54 +672,68 @@ export default function IdentityForm({
         >
 
           <select
-
-            style={inputStyle}
-
+            style={{
+              ...inputStyle,
+              cursor: "pointer",
+            }}
             value={
               value.preferredLanguage
             }
-
             onChange={(event) =>
-
               onChange(
-
                 "preferredLanguage",
-
                 event.target.value as PreferredLanguage,
-
               )
-
             }
-
             aria-label="Preferred Language"
-
           >
 
-            <option value="Telugu">
+            <option
+              value="Telugu"
+              style={optionStyle}
+            >
               Telugu
             </option>
 
-            <option value="English">
+            <option
+              value="English"
+              style={optionStyle}
+            >
               English
             </option>
 
-            <option value="Hindi">
+            <option
+              value="Hindi"
+              style={optionStyle}
+            >
               Hindi
             </option>
 
-            <option value="Tamil">
+            <option
+              value="Tamil"
+              style={optionStyle}
+            >
               Tamil
             </option>
 
-            <option value="Kannada">
+            <option
+              value="Kannada"
+              style={optionStyle}
+            >
               Kannada
             </option>
 
-            <option value="Marathi">
+            <option
+              value="Marathi"
+              style={optionStyle}
+            >
               Marathi
             </option>
 
-            <option value="Other">
+            <option
+              value="Other"
+              style={optionStyle}
+            >
               Other
             </option>
 

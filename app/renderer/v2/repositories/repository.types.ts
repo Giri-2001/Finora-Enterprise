@@ -29,7 +29,6 @@
 // STATUS  : Production Foundation
 // ============================================================
 
-
 // ============================================================
 // IMPORTS
 // ============================================================
@@ -39,7 +38,6 @@ import type {
   StorageResult,
   StorageWriteOptions,
 } from "../storage/storage.types";
-
 
 // ============================================================
 // REPOSITORY ENTITY
@@ -51,11 +49,9 @@ import type {
  * Domain models may contain many additional fields.
  * The repository layer only requires a stable identifier.
  */
-
 export interface RepositoryEntity {
   id: string;
 }
-
 
 // ============================================================
 // REPOSITORY QUERY
@@ -67,10 +63,8 @@ export interface RepositoryEntity {
  * Repositories may add domain-specific filtering later,
  * without exposing storage implementation details.
  */
-
 export interface RepositoryQuery
   extends StorageQuery {}
-
 
 // ============================================================
 // REPOSITORY WRITE OPTIONS
@@ -82,10 +76,8 @@ export interface RepositoryQuery
  * Owner / Demo isolation remains controlled by the
  * StorageManager and storage layer.
  */
-
 export interface RepositoryWriteOptions
   extends StorageWriteOptions {}
-
 
 // ============================================================
 // REPOSITORY CONTRACT
@@ -95,21 +87,25 @@ export interface RepositoryWriteOptions
  * Generic repository contract.
  *
  * TEntity:
- *   Domain entity type.
+ *
+ * - Domain entity type.
  *
  * TCreate:
- *   Type accepted when creating a record.
- *   Defaults to TEntity.
+ *
+ * - Type accepted when creating a record.
+ *
+ * - Defaults to TEntity.
  *
  * TUpdate:
- *   Type accepted when updating a record.
- *   Defaults to TEntity.
+ *
+ * - Type accepted when updating a record.
+ *
+ * - Defaults to TEntity.
  *
  * The repository does not know where the data is stored.
  */
-
 export interface Repository<
-  TEntity,
+  TEntity extends RepositoryEntity,
   TCreate = TEntity,
   TUpdate = TEntity,
 > {
@@ -121,9 +117,8 @@ export interface Repository<
   getAll(
     query?: Partial<RepositoryQuery>,
   ): Promise<
-    StorageResult<TEntity[]>
+    RepositoryListResult<TEntity>
   >;
-
 
   // ----------------------------------------------------------
   // FIND BY ID
@@ -132,9 +127,8 @@ export interface Repository<
   findById(
     id: string,
   ): Promise<
-    StorageResult<TEntity | undefined>
+    RepositoryResult<TEntity | undefined>
   >;
-
 
   // ----------------------------------------------------------
   // SAVE
@@ -144,9 +138,8 @@ export interface Repository<
     record: TCreate,
     options?: RepositoryWriteOptions,
   ): Promise<
-    StorageResult<TEntity>
+    RepositoryResult<TEntity>
   >;
-
 
   // ----------------------------------------------------------
   // UPDATE
@@ -156,9 +149,8 @@ export interface Repository<
     record: TUpdate,
     options?: RepositoryWriteOptions,
   ): Promise<
-    StorageResult<TEntity>
+    RepositoryResult<TEntity>
   >;
-
 
   // ----------------------------------------------------------
   // DELETE
@@ -167,10 +159,9 @@ export interface Repository<
   delete(
     id: string,
   ): Promise<
-    StorageResult<void>
+    RepositoryResult<void>
   >;
 }
-
 
 // ============================================================
 // REPOSITORY READ CONTRACT
@@ -182,25 +173,22 @@ export interface Repository<
  * Useful for services that should not be allowed to mutate
  * persisted domain records.
  */
-
 export interface ReadRepository<
-  TEntity,
+  TEntity extends RepositoryEntity,
 > {
 
   getAll(
     query?: Partial<RepositoryQuery>,
   ): Promise<
-    StorageResult<TEntity[]>
+    RepositoryListResult<TEntity>
   >;
-
 
   findById(
     id: string,
   ): Promise<
-    StorageResult<TEntity | undefined>
+    RepositoryResult<TEntity | undefined>
   >;
 }
-
 
 // ============================================================
 // REPOSITORY WRITE CONTRACT
@@ -211,9 +199,8 @@ export interface ReadRepository<
  *
  * Useful when a service should only persist changes.
  */
-
 export interface WriteRepository<
-  TEntity,
+  TEntity extends RepositoryEntity,
   TCreate = TEntity,
   TUpdate = TEntity,
 > {
@@ -222,25 +209,22 @@ export interface WriteRepository<
     record: TCreate,
     options?: RepositoryWriteOptions,
   ): Promise<
-    StorageResult<TEntity>
+    RepositoryResult<TEntity>
   >;
-
 
   update(
     record: TUpdate,
     options?: RepositoryWriteOptions,
   ): Promise<
-    StorageResult<TEntity>
+    RepositoryResult<TEntity>
   >;
-
 
   delete(
     id: string,
   ): Promise<
-    StorageResult<void>
+    RepositoryResult<void>
   >;
 }
-
 
 // ============================================================
 // PAGINATED RESULT
@@ -251,7 +235,6 @@ export interface WriteRepository<
  *
  * Existing V2 repositories do not need to adopt this yet.
  */
-
 export interface RepositoryPage<
   TEntity,
 > {
@@ -265,7 +248,6 @@ export interface RepositoryPage<
   offset: number;
 }
 
-
 // ============================================================
 // PAGINATED REPOSITORY CONTRACT
 // ============================================================
@@ -276,38 +258,48 @@ export interface RepositoryPage<
  * This is deliberately separate from the base Repository
  * so existing domain repositories are not forced to change.
  */
-
 export interface PaginatedRepository<
-  TEntity,
+  TEntity extends RepositoryEntity,
 > {
 
   getPage(
     query?: Partial<RepositoryQuery>,
   ): Promise<
-    StorageResult<
+    RepositoryResult<
       RepositoryPage<TEntity>
     >
   >;
 }
-
 
 // ============================================================
 // REPOSITORY RESULT ALIASES
 // ============================================================
 
 /**
- * Standard aliases make service/repository code easier to read.
+ * Standard typed repository result.
+ *
+ * IMPORTANT:
+ *
+ * The generic T MUST be forwarded to StorageResult<T>.
+ *
+ * This preserves the concrete payload type across:
+ *
+ * Storage
+ *   ↓
+ * Repository
+ *   ↓
+ * Service
  */
-
 export type RepositoryResult<
-  T,
+  T = unknown,
 > = StorageResult<T>;
 
-
+/**
+ * Standard typed repository list result.
+ */
 export type RepositoryListResult<
   T,
 > = StorageResult<T[]>;
-
 
 // ============================================================
 // REPOSITORY ENTITY IDENTIFIER
@@ -319,11 +311,9 @@ export type RepositoryListResult<
  *
  * This is only a type-level shape.
  */
-
 export interface RepositoryIdentifiable {
   id?: string;
 }
-
 
 // ============================================================
 // REPOSITORY MODULE NAMES
@@ -334,7 +324,6 @@ export interface RepositoryIdentifiable {
  *
  * These are architectural identifiers only.
  */
-
 export enum RepositoryName {
 
   CUSTOMER =
@@ -352,7 +341,6 @@ export enum RepositoryName {
   REPORT =
     "REPORT",
 }
-
 
 // ============================================================
 // END

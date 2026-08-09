@@ -3,9 +3,10 @@
 
    CUSTOMER WIZARD CONTROLLER™
 
-   Version : 2.0
-   Phase   : Phase 2
+   Version     : 2.0
+   Phase       : Phase 2
    Architecture: Enterprise
+   Status      : Production
 
    RESPONSIBILITY:
 
@@ -13,6 +14,8 @@
    - Manage wizard state
    - Manage temporary wizard draft
    - Load existing CustomerProfile through CustomerService
+   - Populate every currently persisted Customer field
+   - Preserve UI-friendly values during Edit mode
    - Pass CustomerProfile to Step 6 Review
    - Preserve existing Customer Add / Edit flow
 
@@ -25,9 +28,9 @@
 =========================================================== */
 
 
-// ===========================================================
-// IMPORTS
-// ===========================================================
+/* ===========================================================
+   IMPORTS
+=========================================================== */
 
 import {
   useCallback,
@@ -36,64 +39,56 @@ import {
   useState,
 } from "react";
 
-
 import CustomerWizardLayout
   from "./layout/CustomerWizardLayout";
-
 
 import CustomerWizardNavigation
   from "./navigation/CustomerWizardNavigation";
 
-
 import CustomerWizardProgress
   from "./progress/CustomerWizardProgress";
-
 
 import Step1Identity
   from "./steps/Step1Identity";
 
-
 import Step2Basic
   from "./steps/Step2Basic";
-
 
 import Step3Address
   from "./steps/Step3Address";
 
-
 import Step4KYC
   from "./steps/Step4KYC";
-
 
 import Step5Nominee
   from "./steps/Step5Nominee";
 
-
 import Step6Review
   from "./steps/Step6Review";
-
 
 import {
   customerService,
 } from "../../../services/customer/customerService";
 
-
 import type {
   OfficeCustomer,
 } from "../office/CustomerOffice/types";
-
 
 import type {
   CustomerProfile,
 } from "../../../types/customers";
 
+import {
+  MaritalStatus,
+  Occupation,
+} from "../../../types/customers/customer.enums";
 
-// ===========================================================
-// TYPES
-// ===========================================================
+
+/* ===========================================================
+   TYPES
+=========================================================== */
 
 export interface CustomerWizardData {
-
 
   /* =========================================================
      STEP 1 — IDENTITY
@@ -131,6 +126,12 @@ export interface CustomerWizardData {
 
   occupation?: string;
 
+  /*
+   * Preserves custom occupation text when the domain
+   * occupation is OTHER.
+   */
+  occupationOther?: string;
+
   monthlyIncome?: string;
 
   education?: string;
@@ -156,6 +157,18 @@ export interface CustomerWizardData {
 
   address?: string;
 
+  currentAddress?: string;
+
+  permanentAddress?: string;
+
+  city?: string;
+
+  district?: string;
+
+  state?: string;
+
+  pinCode?: string;
+
 
   /* =========================================================
      STEP 4 — KYC
@@ -164,6 +177,10 @@ export interface CustomerWizardData {
   aadhaar?: string;
 
   pan?: string;
+
+  voterId?: string;
+
+  drivingLicence?: string;
 
 
   /* =========================================================
@@ -177,13 +194,12 @@ export interface CustomerWizardData {
   nomineeRelationship?: string;
 
   nomineePhoneNumber?: string;
-
 }
 
 
-// ===========================================================
-// WIZARD STEP
-// ===========================================================
+/* ===========================================================
+   WIZARD STEP
+=========================================================== */
 
 export interface WizardStep {
 
@@ -192,114 +208,182 @@ export interface WizardStep {
   title: string;
 
   subtitle: string;
-
 }
 
 
-// ===========================================================
-// CUSTOMER WIZARD PROPS
-// ===========================================================
+/* ===========================================================
+   CUSTOMER WIZARD PROPS
+=========================================================== */
 
 interface CustomerWizardProps {
 
   editCustomer?: OfficeCustomer;
 
   onBackToCustomersHub?: () => void;
-
 }
 
 
-// ===========================================================
-// CONSTANTS
-// ===========================================================
+/* ===========================================================
+   CONSTANTS
+=========================================================== */
 
 const TOTAL_STEPS =
   6;
 
-
 const STORAGE_KEY =
   "finora_customer_draft";
-
 
 const STEPS: WizardStep[] = [
 
   {
     id: 1,
-
-    title:
-      "Identity",
-
-    subtitle:
-      "Customer ID & Photo",
+    title: "Identity",
+    subtitle: "Customer ID & Photo",
   },
-
 
   {
     id: 2,
-
-    title:
-      "Basic Details",
-
-    subtitle:
-      "Personal Information",
+    title: "Basic Details",
+    subtitle: "Personal Information",
   },
-
 
   {
     id: 3,
-
-    title:
-      "Address",
-
-    subtitle:
-      "Customer Address",
+    title: "Address",
+    subtitle: "Customer Address",
   },
-
 
   {
     id: 4,
-
-    title:
-      "KYC",
-
-    subtitle:
-      "Identity Verification",
+    title: "KYC",
+    subtitle: "Identity Verification",
   },
-
 
   {
     id: 5,
-
-    title:
-      "Nominee",
-
-    subtitle:
-      "Family Information",
+    title: "Nominee",
+    subtitle: "Family Information",
   },
-
 
   {
     id: 6,
-
-    title:
-      "Review",
-
-    subtitle:
-      "Verify Everything",
+    title: "Review",
+    subtitle: "Verify Everything",
   },
 
 ];
 
 
-// ===========================================================
-// EDIT PROFILE → WIZARD DATA
-// ===========================================================
+/* ===========================================================
+   UI VALUE MAPPERS
+=========================================================== */
+
+/*
+ * Persisted CustomerProfile values use domain enum values.
+ *
+ * Step 2 UI uses human-readable values.
+ *
+ * Example:
+ *
+ * SINGLE   -> Single
+ * MARRIED  -> Married
+ * WIDOW    -> Widowed
+ * DIVORCED -> Divorced
+ */
+
+function maritalStatusToWizardValue(
+  value:
+    MaritalStatus |
+    string |
+    undefined,
+): string {
+
+  switch (value) {
+
+    case MaritalStatus.SINGLE:
+      return "Single";
+
+    case MaritalStatus.MARRIED:
+      return "Married";
+
+    case MaritalStatus.WIDOW:
+      return "Widowed";
+
+    case MaritalStatus.DIVORCED:
+      return "Divorced";
+
+    default:
+      return "";
+  }
+}
+
+
+/*
+ * Domain occupation values are restored to the
+ * human-readable value expected by the Step 2 UI.
+ *
+ * For OTHER:
+ *
+ * occupation      = OTHER
+ * occupationOther = "Finora Occupation"
+ *
+ * The custom text is restored instead of showing
+ * "OTHER" to the user.
+ */
+
+function occupationToWizardValue(
+  occupation:
+    Occupation |
+    string |
+    undefined,
+  occupationOther?:
+    string,
+): string {
+
+  if (
+    occupation ===
+    Occupation.OTHER
+  ) {
+
+    return (
+      occupationOther ??
+      "Other"
+    );
+
+  }
+
+  return occupation ??
+    "";
+}
+
+
+/* ===========================================================
+   EDIT PROFILE → WIZARD DATA
+
+   Converts persisted CustomerProfile data into the
+   temporary wizard representation.
+
+   IMPORTANT:
+
+   This mapper MUST restore every Customer field that
+   Step 2 can display.
+
+   The mapper also converts domain enum values back into
+   UI-friendly values.
+=========================================================== */
 
 function buildEditWizardData(
   customer: CustomerProfile,
 ): CustomerWizardData {
 
+  const nominee =
+    customer.nominee.nominees?.[0];
+
   return {
+
+    /* =======================================================
+       STEP 1 — IDENTITY
+    ======================================================= */
 
     customerId:
       customer.identity.customerId,
@@ -316,14 +400,165 @@ function buildEditWizardData(
     email:
       customer.basic.email,
 
-  };
+    dateOfBirth:
+      customer.personal.dateOfBirth,
 
+    preferredLanguage:
+      customer.basic.preferredLanguage,
+
+
+    /* =======================================================
+       STEP 2 — BASIC INFORMATION
+    ======================================================= */
+
+    fatherOrSpouseName:
+      customer.basic.fatherName,
+
+    spouseName:
+      customer.basic.spouseName,
+
+    education:
+      customer.personal.education,
+
+    /*
+     * Convert domain enum to Step 2 UI value.
+     */
+    maritalStatus:
+      maritalStatusToWizardValue(
+        customer.personal.maritalStatus,
+      ),
+
+    /*
+     * Restore normal occupation values.
+     *
+     * If occupation is OTHER, restore the exact custom
+     * occupation text when available.
+     */
+    occupation:
+      occupationToWizardValue(
+        customer.personal.occupation,
+        customer.personal.occupationOther,
+      ),
+
+    /*
+     * Preserve the custom occupation independently.
+     *
+     * Step 6 can use this when rebuilding the CustomerProfile.
+     */
+    occupationOther:
+      customer.personal.occupationOther,
+
+    monthlyIncome:
+      typeof customer.personal.monthlyIncome ===
+      "number"
+        ? String(
+            customer.personal.monthlyIncome,
+          )
+        : "",
+
+    /*
+     * These three fields already exist in the current
+     * CustomerPersonalInformation domain model.
+     */
+    workPlace:
+      customer.personal.workPlace,
+
+    experience:
+      customer.personal.experience,
+
+    numberOfFamilyMembers:
+      typeof customer.personal.numberOfFamilyMembers ===
+      "number"
+        ? String(
+            customer.personal.numberOfFamilyMembers,
+          )
+        : "",
+
+
+    /* =======================================================
+       STEP 2 — EMERGENCY
+    ======================================================= */
+
+    emergencyContactName:
+      customer.basic.emergencyContactName,
+
+    emergencyContactMobile:
+      customer.basic.emergencyContactNumber,
+
+
+    /* =======================================================
+       STEP 3 — ADDRESS
+    ======================================================= */
+
+    address:
+      customer.address.currentAddress.street ??
+      "",
+
+    currentAddress:
+      customer.address.currentAddress.street ??
+      "",
+
+    permanentAddress:
+      customer.address.permanentAddress.street ??
+      "",
+
+    city:
+      customer.address.currentAddress.city ??
+      "",
+
+    district:
+      customer.address.currentAddress.district ??
+      "",
+
+    state:
+      customer.address.currentAddress.state ??
+      "",
+
+    pinCode:
+      customer.address.currentAddress.pinCode ??
+      "",
+
+
+    /* =======================================================
+       STEP 4 — KYC
+    ======================================================= */
+
+    aadhaar:
+      customer.kyc.aadhaar?.documentNumber,
+
+    pan:
+      customer.kyc.pan?.documentNumber,
+
+    voterId:
+      customer.kyc.voterId?.documentNumber,
+
+    drivingLicence:
+      customer.kyc.drivingLicense?.documentNumber,
+
+
+    /* =======================================================
+       STEP 5 — NOMINEE
+    ======================================================= */
+
+    nomineeCustomerId:
+      nominee?.nomineeId,
+
+    nomineeName:
+      nominee?.fullName,
+
+    nomineeRelationship:
+      nominee?.relation,
+
+    nomineePhoneNumber:
+      nominee?.mobileNumber,
+
+  };
 }
 
 
-// ===========================================================
-// COMPONENT
-// ===========================================================
+/* ===========================================================
+   COMPONENT
+=========================================================== */
 
 export default function CustomerWizard({
 
@@ -334,35 +569,36 @@ export default function CustomerWizard({
 }: CustomerWizardProps) {
 
 
-  // =========================================================
-  // MODE
-  // =========================================================
+  /* =========================================================
+     MODE
+  ========================================================= */
 
   const isEditMode =
-    Boolean(editCustomer);
+    Boolean(
+      editCustomer,
+    );
 
 
-  // =========================================================
-  // STATE
-  // =========================================================
+  /* =========================================================
+     STATE
+  ========================================================= */
 
   const [
     currentStep,
     setCurrentStep,
   ] = useState(1);
 
-
   const [
     loadingDraft,
     setLoadingDraft,
   ] = useState(true);
 
-
   const [
     wizardData,
     setWizardData,
-  ] = useState<CustomerWizardData>({});
-
+  ] = useState<CustomerWizardData>(
+    {},
+  );
 
   const [
     originalCustomerProfile,
@@ -374,24 +610,21 @@ export default function CustomerWizard({
   );
 
 
-  // =========================================================
-  // CURRENT STEP INFORMATION
-  // =========================================================
+  /* =========================================================
+     CURRENT STEP INFORMATION
+  ========================================================= */
 
   const currentStepInfo =
     useMemo(() => {
 
       return (
-
         STEPS.find(
           (step) =>
-            step.id === currentStep,
+            step.id ===
+            currentStep,
         )
-
         ??
-
         STEPS[0]
-
       );
 
     }, [
@@ -399,9 +632,9 @@ export default function CustomerWizard({
     ]);
 
 
-  // =========================================================
-  // PROGRESS
-  // =========================================================
+  /* =========================================================
+     PROGRESS
+  ========================================================= */
 
   const progress =
     useMemo(() => {
@@ -419,36 +652,29 @@ export default function CustomerWizard({
     ]);
 
 
-  // =========================================================
-  // LOAD EXISTING CUSTOMER FOR EDIT
-  //
-  // IMPORTANT:
-  //
-  // Customer master data is loaded through CustomerService.
-  //
-  // This prevents the UI from knowing about:
-  //
-  // Repository
-  // StorageManager
-  // localStorage
-  // USB
-  // Cloud
-  //
-  // =========================================================
+  /* =========================================================
+     LOAD EXISTING CUSTOMER FOR EDIT
+
+     Customer master reads go through CustomerService.
+
+     No repository or storage access is performed here.
+  ========================================================= */
 
   useEffect(() => {
 
-    const customerId: string =
-  editCustomer?.id ?? "";
+    const customerId =
+      editCustomer?.id ??
+      "";
 
-
-    // -------------------------------------------------------
-    // NEW CUSTOMER MODE
-    // -------------------------------------------------------
+    /* -------------------------------------------------------
+       NEW CUSTOMER MODE
+    ------------------------------------------------------- */
 
     if (!customerId) {
-  return;
-}
+
+      return;
+
+    }
 
 
     let cancelled =
@@ -471,9 +697,9 @@ export default function CustomerWizard({
           );
 
 
-        // ---------------------------------------------------
-        // COMPONENT UNMOUNT / EFFECT CHANGE
-        // ---------------------------------------------------
+        /* ---------------------------------------------------
+           COMPONENT UNMOUNT / EFFECT CHANGE
+        --------------------------------------------------- */
 
         if (cancelled) {
 
@@ -482,9 +708,9 @@ export default function CustomerWizard({
         }
 
 
-        // ---------------------------------------------------
-        // SERVICE FAILURE
-        // ---------------------------------------------------
+        /* ---------------------------------------------------
+           SERVICE FAILURE
+        --------------------------------------------------- */
 
         if (!result.success) {
 
@@ -504,9 +730,9 @@ export default function CustomerWizard({
         }
 
 
-        // ---------------------------------------------------
-        // CUSTOMER NOT FOUND
-        // ---------------------------------------------------
+        /* ---------------------------------------------------
+           CUSTOMER NOT FOUND
+        --------------------------------------------------- */
 
         const existingCustomer =
           result.data;
@@ -530,18 +756,18 @@ export default function CustomerWizard({
         }
 
 
-        // ---------------------------------------------------
-        // STORE ORIGINAL PROFILE
-        // ---------------------------------------------------
+        /* ---------------------------------------------------
+           STORE ORIGINAL PROFILE
+        --------------------------------------------------- */
 
         setOriginalCustomerProfile(
           existingCustomer,
         );
 
 
-        // ---------------------------------------------------
-        // POPULATE WIZARD
-        // ---------------------------------------------------
+        /* ---------------------------------------------------
+           POPULATE WIZARD
+        --------------------------------------------------- */
 
         setWizardData(
           buildEditWizardData(
@@ -550,9 +776,9 @@ export default function CustomerWizard({
         );
 
 
-        // ---------------------------------------------------
-        // EDIT ALWAYS STARTS FROM STEP 1
-        // ---------------------------------------------------
+        /* ---------------------------------------------------
+           EDIT ALWAYS STARTS FROM STEP 1
+        --------------------------------------------------- */
 
         setCurrentStep(
           1,
@@ -606,14 +832,14 @@ export default function CustomerWizard({
   ]);
 
 
-  // =========================================================
-  // AUTO DRAFT
-  //
-  // NEW CUSTOMER MODE ONLY
-  //
-  // This is temporary wizard state.
-  // It is NOT Customer master persistence.
-  // =========================================================
+  /* =========================================================
+     AUTO DRAFT
+
+     NEW CUSTOMER MODE ONLY.
+
+     This is temporary wizard state.
+     It is NOT Customer master persistence.
+  ========================================================= */
 
   const saveDraft =
     useCallback(() => {
@@ -654,9 +880,9 @@ export default function CustomerWizard({
     ]);
 
 
-  // =========================================================
-  // LOAD DRAFT
-  // =========================================================
+  /* =========================================================
+     LOAD DRAFT
+  ========================================================= */
 
   const loadDraft =
     useCallback(() => {
@@ -688,9 +914,9 @@ export default function CustomerWizard({
           };
 
 
-        // ---------------------------------------------------
-        // RESTORE STEP
-        // ---------------------------------------------------
+        /* ---------------------------------------------------
+           RESTORE STEP
+        --------------------------------------------------- */
 
         if (
           typeof draft.currentStep ===
@@ -698,7 +924,9 @@ export default function CustomerWizard({
         ) {
 
           if (
-            draft.currentStep >= 1 &&
+            draft.currentStep >=
+              1
+            &&
             draft.currentStep <=
               TOTAL_STEPS
           ) {
@@ -712,9 +940,9 @@ export default function CustomerWizard({
         }
 
 
-        // ---------------------------------------------------
-        // RESTORE DATA
-        // ---------------------------------------------------
+        /* ---------------------------------------------------
+           RESTORE DATA
+        --------------------------------------------------- */
 
         if (
           draft.wizardData
@@ -741,9 +969,9 @@ export default function CustomerWizard({
     }, []);
 
 
-  // =========================================================
-  // CLEAR DRAFT
-  // =========================================================
+  /* =========================================================
+     CLEAR DRAFT
+  ========================================================= */
 
   const clearDraft =
     useCallback(() => {
@@ -763,15 +991,15 @@ export default function CustomerWizard({
     }, []);
 
 
-  // =========================================================
-  // LIFECYCLE
-  //
-  // NEW CUSTOMER MODE:
-  // Load temporary draft.
-  //
-  // EDIT MODE:
-  // Load CustomerService profile instead.
-  // =========================================================
+  /* =========================================================
+     LIFECYCLE
+
+     NEW CUSTOMER MODE:
+     Load temporary draft.
+
+     EDIT MODE:
+     Load CustomerService profile instead.
+  ========================================================= */
 
   useEffect(() => {
 
@@ -790,9 +1018,9 @@ export default function CustomerWizard({
   ]);
 
 
-  // =========================================================
-  // AUTO SAVE TEMPORARY DRAFT
-  // =========================================================
+  /* =========================================================
+     AUTO SAVE TEMPORARY DRAFT
+  ========================================================= */
 
   useEffect(() => {
 
@@ -813,9 +1041,9 @@ export default function CustomerWizard({
   ]);
 
 
-  // =========================================================
-  // UPDATE WIZARD DATA
-  // =========================================================
+  /* =========================================================
+     UPDATE WIZARD DATA
+  ========================================================= */
 
   const updateWizardData =
     useCallback(
@@ -847,9 +1075,9 @@ export default function CustomerWizard({
     );
 
 
-  // =========================================================
-  // NAVIGATION — NEXT
-  // =========================================================
+  /* =========================================================
+     NAVIGATION — NEXT
+  ========================================================= */
 
   const nextStep =
     useCallback(() => {
@@ -865,9 +1093,9 @@ export default function CustomerWizard({
     }, []);
 
 
-  // =========================================================
-  // NAVIGATION — PREVIOUS
-  // =========================================================
+  /* =========================================================
+     NAVIGATION — PREVIOUS
+  ========================================================= */
 
   const previousStep =
     useCallback(() => {
@@ -883,9 +1111,9 @@ export default function CustomerWizard({
     }, []);
 
 
-  // =========================================================
-  // NAVIGATION — DIRECT STEP
-  // =========================================================
+  /* =========================================================
+     NAVIGATION — DIRECT STEP
+  ========================================================= */
 
   const goToStep =
     useCallback(
@@ -922,9 +1150,9 @@ export default function CustomerWizard({
     );
 
 
-  // =========================================================
-  // RESET WIZARD
-  // =========================================================
+  /* =========================================================
+     RESET WIZARD
+  ========================================================= */
 
   const resetWizard =
     useCallback(() => {
@@ -951,18 +1179,18 @@ export default function CustomerWizard({
     ]);
 
 
-  // =========================================================
-  // CURRENT STEP COMPONENT
-  // =========================================================
+  /* =========================================================
+     CURRENT STEP COMPONENT
+  ========================================================= */
 
   const currentStepComponent =
     useMemo(() => {
 
       switch (currentStep) {
 
-        // ---------------------------------------------------
-        // STEP 1
-        // ---------------------------------------------------
+        /* ---------------------------------------------------
+           STEP 1
+        --------------------------------------------------- */
 
         case 1:
 
@@ -983,15 +1211,19 @@ export default function CustomerWizard({
           );
 
 
-        // ---------------------------------------------------
-        // STEP 2
-        // ---------------------------------------------------
+        /* ---------------------------------------------------
+           STEP 2
+        --------------------------------------------------- */
 
         case 2:
 
           return (
 
             <Step2Basic
+
+              wizardData={
+                wizardData
+              }
 
               updateWizardData={
                 updateWizardData
@@ -1002,9 +1234,9 @@ export default function CustomerWizard({
           );
 
 
-        // ---------------------------------------------------
-        // STEP 3
-        // ---------------------------------------------------
+        /* ---------------------------------------------------
+           STEP 3
+        --------------------------------------------------- */
 
         case 3:
 
@@ -1025,9 +1257,9 @@ export default function CustomerWizard({
           );
 
 
-        // ---------------------------------------------------
-        // STEP 4
-        // ---------------------------------------------------
+        /* ---------------------------------------------------
+           STEP 4
+        --------------------------------------------------- */
 
         case 4:
 
@@ -1048,9 +1280,9 @@ export default function CustomerWizard({
           );
 
 
-        // ---------------------------------------------------
-        // STEP 5
-        // ---------------------------------------------------
+        /* ---------------------------------------------------
+           STEP 5
+        --------------------------------------------------- */
 
         case 5:
 
@@ -1071,9 +1303,9 @@ export default function CustomerWizard({
           );
 
 
-        // ---------------------------------------------------
-        // STEP 6
-        // ---------------------------------------------------
+        /* ---------------------------------------------------
+           STEP 6
+        --------------------------------------------------- */
 
         case 6:
 
@@ -1102,9 +1334,9 @@ export default function CustomerWizard({
           );
 
 
-        // ---------------------------------------------------
-        // FALLBACK
-        // ---------------------------------------------------
+        /* ---------------------------------------------------
+           FALLBACK
+        --------------------------------------------------- */
 
         default:
 
@@ -1122,9 +1354,9 @@ export default function CustomerWizard({
     ]);
 
 
-  // =========================================================
-  // LOADING
-  // =========================================================
+  /* =========================================================
+     LOADING
+  ========================================================= */
 
   if (loadingDraft) {
 
@@ -1146,14 +1378,13 @@ export default function CustomerWizard({
   }
 
 
-  // =========================================================
-  // UI
-  // =========================================================
+  /* =========================================================
+     UI
+  ========================================================= */
 
   return (
 
     <CustomerWizardLayout>
-
 
       {/* ===================================================
           PROGRESS
@@ -1244,10 +1475,9 @@ export default function CustomerWizard({
     </CustomerWizardLayout>
 
   );
-
 }
 
 
-// ===========================================================
-// END
-// ===========================================================
+/* ===========================================================
+   END
+=========================================================== */

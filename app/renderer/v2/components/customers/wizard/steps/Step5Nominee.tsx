@@ -23,8 +23,10 @@
 
    - Customer lookup goes through CustomerService.
    - Presentation components remain business-logic free.
-   - Step 5 local state is synchronized with CustomerWizard.
-   - Global FINORA header remains the workspace header.
+   - Step 5 local state is synchronized explicitly.
+   - No bidirectional state synchronization effect is used.
+   - Failed / unavailable customer lookup must NOT destroy
+     existing wizard draft values.
 
    ARCHITECTURE:
 
@@ -50,40 +52,31 @@ import {
   useState,
 } from "react";
 
-
 import StudioLayout
   from "../../../common/layout/StudioLayout";
 
-
 import TwoColumnStudio
   from "../../../common/layout/TwoColumnStudio";
-
 
 import {
   customerService,
 } from "../../../../services/customer/customerService";
 
-
 import NomineeForm, {
   type NomineeFormData,
 } from "../../nominee/NomineeForm";
 
-
 import RelationshipSelector
   from "../../nominee/RelationshipSelector";
-
 
 import NomineePreviewCard
   from "../../nominee/NomineePreviewCard";
 
-
 import NomineeSummaryCard
   from "../../nominee/NomineeSummaryCard";
 
-
 import NomineeDraftStatus
   from "../../nominee/NomineeDraftStatus";
-
 
 import type {
   CustomerWizardData,
@@ -121,12 +114,18 @@ export default function Step5Nominee({
 
   // =========================================================
   // NOMINEE STATE
+  //
+  // CustomerWizardData is the central wizard source of truth
+  // while the customer is being created or edited.
+  //
+  // Step 5 local state is initialized from that central data.
+  // No continuous reverse synchronization effect is used.
   // =========================================================
 
   const [
     nominee,
     setNominee,
-  ] = useState(() => ({
+  ] = useState<NomineeFormData>(() => ({
 
     nomineeCustomerId:
       wizardData.nomineeCustomerId ??
@@ -149,12 +148,18 @@ export default function Step5Nominee({
 
   // =========================================================
   // LINKED CUSTOMER STATE
+  //
+  // Existing saved nominee name is preserved immediately.
   // =========================================================
 
   const [
     linkedCustomerName,
     setLinkedCustomerName,
-  ] = useState("");
+  ] = useState(
+    () =>
+      wizardData.nomineeName ??
+      "",
+  );
 
 
   // =========================================================
@@ -170,8 +175,16 @@ export default function Step5Nominee({
   // =========================================================
   // CUSTOMER LOOKUP
   //
-  // Customer master lookup is asynchronous because it now
-  // passes through CustomerService → Repository → Storage.
+  // Lookup runs only when the FINORA Customer ID changes.
+  //
+  // IMPORTANT:
+  //
+  // Lookup success updates both:
+  //
+  // 1. Local Step 5 state
+  // 2. Central CustomerWizardData
+  //
+  // Lookup failure NEVER clears existing draft values.
   // =========================================================
 
   useEffect(() => {
@@ -186,22 +199,12 @@ export default function Step5Nominee({
 
     if (!customerId) {
 
-      setLinkedCustomerName("");
+      setLinkedCustomerName(
+        nominee.nomineeName,
+      );
 
-      setIsCustomerLinked(false);
-
-      setNominee(
-        (previous) => ({
-
-          ...previous,
-
-          nomineeName:
-            "",
-
-          phoneNumber:
-            "",
-
-        }),
+      setIsCustomerLinked(
+        false,
       );
 
       return;
@@ -236,27 +239,19 @@ export default function Step5Nominee({
 
 
         // ===================================================
-        // CUSTOMER LOOKUP FAILED
+        // LOOKUP FAILED
+        //
+        // Preserve current draft values.
         // ===================================================
 
         if (!result.success) {
 
-          setLinkedCustomerName("");
+          setLinkedCustomerName(
+            nominee.nomineeName,
+          );
 
-          setIsCustomerLinked(false);
-
-          setNominee(
-            (previous) => ({
-
-              ...previous,
-
-              nomineeName:
-                "",
-
-              phoneNumber:
-                "",
-
-            }),
+          setIsCustomerLinked(
+            false,
           );
 
           return;
@@ -274,22 +269,12 @@ export default function Step5Nominee({
 
         if (!customer) {
 
-          setLinkedCustomerName("");
+          setLinkedCustomerName(
+            nominee.nomineeName,
+          );
 
-          setIsCustomerLinked(false);
-
-          setNominee(
-            (previous) => ({
-
-              ...previous,
-
-              nomineeName:
-                "",
-
-              phoneNumber:
-                "",
-
-            }),
+          setIsCustomerLinked(
+            false,
           );
 
           return;
@@ -302,22 +287,30 @@ export default function Step5Nominee({
         // ===================================================
 
         const customerName =
-          customer.basic.fullName || "";
-
+          customer.basic.fullName ||
+          "";
 
         const customerPhone =
-          customer.basic.mobileNumber || "";
+          customer.basic.mobileNumber ||
+          "";
 
+
+        // ---------------------------------------------------
+        // Update presentation state.
+        // ---------------------------------------------------
 
         setLinkedCustomerName(
           customerName,
         );
 
-
         setIsCustomerLinked(
           true,
         );
 
+
+        // ---------------------------------------------------
+        // Registered customer is authoritative.
+        // ---------------------------------------------------
 
         setNominee(
           (previous) => ({
@@ -332,6 +325,29 @@ export default function Step5Nominee({
 
           }),
         );
+
+
+        // ---------------------------------------------------
+        // Explicitly synchronize authoritative customer
+        // values with the central wizard state.
+        //
+        // IMPORTANT:
+        // This is NOT inside a nominee synchronization effect.
+        // Therefore it cannot create a render loop.
+        // ---------------------------------------------------
+
+        updateWizardData({
+
+          nomineeCustomerId:
+            customerId,
+
+          nomineeName:
+            customerName,
+
+          nomineePhoneNumber:
+            customerPhone,
+
+        });
 
       } catch (error) {
 
@@ -348,22 +364,16 @@ export default function Step5Nominee({
         );
 
 
-        setLinkedCustomerName("");
+        // ---------------------------------------------------
+        // Never destroy existing draft values on lookup error.
+        // ---------------------------------------------------
 
-        setIsCustomerLinked(false);
+        setLinkedCustomerName(
+          nominee.nomineeName,
+        );
 
-        setNominee(
-          (previous) => ({
-
-            ...previous,
-
-            nomineeName:
-              "",
-
-            phoneNumber:
-              "",
-
-          }),
+        setIsCustomerLinked(
+          false,
         );
 
       }
@@ -386,35 +396,12 @@ export default function Step5Nominee({
 
 
   // =========================================================
-  // WIZARD DATA SYNC
-  // =========================================================
-
-  useEffect(() => {
-
-    updateWizardData({
-
-      nomineeCustomerId:
-        nominee.nomineeCustomerId,
-
-      nomineeName:
-        nominee.nomineeName,
-
-      nomineeRelationship:
-        nominee.relationship,
-
-      nomineePhoneNumber:
-        nominee.phoneNumber,
-
-    });
-
-  }, [
-    nominee,
-    updateWizardData,
-  ]);
-
-
-  // =========================================================
   // FIELD CHANGE
+  //
+  // Local state and central wizard state are updated together.
+  //
+  // This replaces the old bidirectional synchronization
+  // useEffect that caused the infinite render loop.
   // =========================================================
 
   const handleChange = (
@@ -438,11 +425,91 @@ export default function Step5Nominee({
       }),
     );
 
+
+    // =======================================================
+    // EXPLICIT WIZARD SYNCHRONIZATION
+    // =======================================================
+
+    if (
+      field ===
+      "nomineeCustomerId"
+    ) {
+
+      updateWizardData({
+
+        nomineeCustomerId:
+          value,
+
+      });
+
+      return;
+
+    }
+
+
+    if (
+      field ===
+      "nomineeName"
+    ) {
+
+      updateWizardData({
+
+        nomineeName:
+          value,
+
+      });
+
+      setLinkedCustomerName(
+        value,
+      );
+
+      setIsCustomerLinked(
+        false,
+      );
+
+      return;
+
+    }
+
+
+    if (
+      field ===
+      "phoneNumber"
+    ) {
+
+      updateWizardData({
+
+        nomineePhoneNumber:
+          value,
+
+      });
+
+      return;
+
+    }
+
+
+    if (
+      field ===
+      "relationship"
+    ) {
+
+      updateWizardData({
+
+        nomineeRelationship:
+          value,
+
+      });
+
+    }
+
   };
 
 
   // =========================================================
   // RELATIONSHIP CHANGE
+  //
+  // RelationshipSelector persists the FINORA enum value.
   // =========================================================
 
   const handleRelationshipChange = (
@@ -459,6 +526,14 @@ export default function Step5Nominee({
 
       }),
     );
+
+
+    updateWizardData({
+
+      nomineeRelationship:
+        value,
+
+    });
 
   };
 
@@ -510,6 +585,10 @@ export default function Step5Nominee({
 
               onChange={
                 handleChange
+              }
+
+              isCustomerLinked={
+                isCustomerLinked
               }
 
             />

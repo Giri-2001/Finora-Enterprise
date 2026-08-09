@@ -1,41 +1,31 @@
 // ============================================================
 // FINORA ENTERPRISE OS™
 //
-// COLLECTIONS ENGINE
-//
 // V2 COLLECTION REPOSITORY
+//
+// COLLECTION REPOSITORY
 //
 // RESPONSIBILITY:
 //
 // - Persist CollectionReviewData through StorageManager
-// - Preserve existing Collection business behavior
-// - Keep Collection identity behavior based on loanId
-// - Keep physical storage implementation outside Collections
+// - Preserve existing Collection behavior
+// - Preserve loanId-based collection identity
+// - Keep collection business logic outside the repository
+// - Prepare Collection persistence for LOCAL / USB / CLOUD
 //
 // IMPORTANT:
 //
 // - No direct localStorage access.
-// - No filesystem access.
+// - No direct filesystem access.
 // - No Electron IPC.
 // - No Collection UI logic.
-// - No Loan business calculations.
-// - No Payment business logic.
-// - Storage access goes through StorageManager.
-//
-// NOTE:
-//
-// Existing Collection records currently use loanId for
-// find/update/delete behavior. This migration intentionally
-// preserves that behavior.
-//
-// A storage-only `id` is added so the common StorageManager
-// has a stable persistence identity without changing the
-// public CollectionReviewData model.
+// - No payment calculations.
+// - No loan calculations.
+// - Storage access goes only through StorageManager.
 //
 // VERSION : 2.0
-// STATUS  : Production
+// STATUS  : Production Foundation
 // ============================================================
-
 
 // ============================================================
 // IMPORTS
@@ -45,16 +35,14 @@ import type {
   CollectionReviewData,
 } from "../../components/collections/CollectionReviewData";
 
-
 import {
   storageManager,
 } from "../../storage/storageManager";
 
-
 import type {
+  StorageQuery,
   StorageResult,
 } from "../../storage/storage.types";
-
 
 // ============================================================
 // CONSTANTS
@@ -63,110 +51,49 @@ import type {
 const COLLECTION_ENTITY =
   "COLLECTION";
 
-
 // ============================================================
-// STORAGE RECORD
+// COLLECTION STORAGE IDENTITY
 // ============================================================
 //
-// Storage-only representation.
+// IMPORTANT:
 //
-// `id` is intentionally NOT exposed to Collection UI logic.
-// `loanId` remains the existing Collection business identity.
+// Existing FINORA Collection behavior identifies records
+// using loanId.
+//
+// We deliberately preserve that behavior in this migration.
+//
+// A separate collectionId is NOT introduced in this step.
+//
+// This avoids changing existing Collection workflows while
+// the storage backbone is being migrated.
 //
 // ============================================================
 
-interface CollectionStorageRecord
-  extends CollectionReviewData {
+function getCollectionId(
+  collection: CollectionReviewData,
+): string {
 
-  id: string;
-
+  return collection.loanId;
 }
 
-
 // ============================================================
-// STORAGE ID BUILDER
-// ============================================================
-//
-// Each Collection persistence record needs a unique physical
-// storage identity.
-//
-// Existing Collection behavior still uses loanId for public
-// lookup/update/delete operations.
-//
+// COLLECTION QUERY
 // ============================================================
 
-function buildStorageId(
-  collection: CollectionReviewData,
-):
-  string {
-
-  const receiptNumber =
-    collection.receiptNumber;
-
-
-  if (
-    receiptNumber
-  ) {
-
-    return receiptNumber;
-
-  }
-
-
-  return [
-    collection.loanId,
-    collection.createdAt ??
-      new Date().toISOString(),
-  ].join("_");
-
-}
-
-
-// ============================================================
-// TO STORAGE RECORD
-// ============================================================
-
-function toStorageRecord(
-  collection: CollectionReviewData,
-):
-  CollectionStorageRecord {
+function buildCollectionQuery(
+  id?: string,
+): StorageQuery {
 
   return {
+    entity:
+      COLLECTION_ENTITY,
 
-    ...collection,
-
-    id:
-      buildStorageId(
-        collection,
-      ),
-
+    id,
   };
-
 }
 
-
 // ============================================================
-// FROM STORAGE RECORD
-// ============================================================
-
-function fromStorageRecord(
-  record: CollectionStorageRecord,
-):
-  CollectionReviewData {
-
-  const {
-    id: _storageId,
-    ...collection
-  } = record;
-
-
-  return collection;
-
-}
-
-
-// ============================================================
-// GET ALL
+// COLLECTION REPOSITORY
 // ============================================================
 
 export class CollectionRepository {
@@ -181,11 +108,9 @@ export class CollectionRepository {
     try {
 
       const result =
-        await storageManager.getAll<CollectionStorageRecord>({
-          entity:
-            COLLECTION_ENTITY,
-        });
-
+        await storageManager.getAll<CollectionReviewData>(
+          buildCollectionQuery(),
+        );
 
       if (
         !result.success ||
@@ -196,28 +121,64 @@ export class CollectionRepository {
 
       }
 
-
-      return result.data.map(
-        fromStorageRecord,
-      );
+      return result.data;
 
     } catch {
 
       return [];
 
     }
-
   }
-
 
   // ==========================================================
   // SAVE
   // ==========================================================
+  //
+  // Existing behavior preserved:
+  //
+  // - Collection is automatically Approved.
+  // - createdAt is preserved when supplied.
+  // - updatedAt is always refreshed.
+  //
+  // ==========================================================
 
   async save(
     collection: CollectionReviewData,
-  ):
-    Promise<CollectionReviewData> {
+  ): Promise<CollectionReviewData> {
+
+    const collectionId =
+      getCollectionId(
+        collection,
+      );
+
+    if (!collectionId) {
+
+      throw new Error(
+        "Collection loan ID is required before saving a collection.",
+      );
+
+    }
+
+    const existing =
+      await storageManager.get<CollectionReviewData>(
+        buildCollectionQuery(
+          collectionId,
+        ),
+      );
+
+    if (
+      existing.success &&
+      existing.data
+    ) {
+
+      throw new Error(
+        "A collection with this loan ID already exists.",
+      );
+
+    }
+
+    const now =
+      new Date().toISOString();
 
     const newCollection:
       CollectionReviewData = {
@@ -229,29 +190,18 @@ export class CollectionRepository {
 
       createdAt:
         collection.createdAt ||
-        new Date().toISOString(),
+        now,
 
       updatedAt:
-        new Date().toISOString(),
-
+        now,
     };
 
-
-    const storageRecord =
-      toStorageRecord(
+    const result =
+      await storageManager.save<CollectionReviewData>(
         newCollection,
       );
 
-
-    const result =
-      await storageManager.save<CollectionStorageRecord>(
-        storageRecord,
-      );
-
-
-    if (
-      !result.success
-    ) {
+    if (!result.success) {
 
       throw new Error(
         result.error ??
@@ -260,105 +210,45 @@ export class CollectionRepository {
 
     }
 
-
     return newCollection;
-
   }
-
 
   // ==========================================================
   // UPDATE
   // ==========================================================
-  //
-  // Existing behavior:
-  //
-  // item.loanId === collection.loanId
-  //
-  // We preserve that behavior instead of changing the
-  // Collection business identity during this migration.
-  //
-  // ==========================================================
 
   async update(
     collection: CollectionReviewData,
-  ):
-    Promise<CollectionReviewData> {
+  ): Promise<CollectionReviewData> {
 
-    const collections =
-      await this.getAll();
-
-
-    const existing =
-      collections.find(
-        (item) =>
-          item.loanId ===
-          collection.loanId,
+    const collectionId =
+      getCollectionId(
+        collection,
       );
 
-
-    if (
-      !existing
-    ) {
+    if (!collectionId) {
 
       throw new Error(
-        "Collection record was not found.",
+        "Collection loan ID is required before updating a collection.",
       );
 
     }
-
 
     const updatedCollection:
       CollectionReviewData = {
 
       ...collection,
 
-      createdAt:
-        collection.createdAt ||
-        existing.createdAt,
-
       updatedAt:
         new Date().toISOString(),
-
     };
 
-
-    const updatedStorageRecord =
-      toStorageRecord(
+    const result =
+      await storageManager.update<CollectionReviewData>(
         updatedCollection,
       );
 
-
-    const storageRecords =
-      collections.map(
-        (item) => {
-
-          if (
-            item.loanId !==
-            collection.loanId
-          ) {
-
-            return toStorageRecord(
-              item,
-            );
-
-          }
-
-
-          return updatedStorageRecord;
-
-        },
-      );
-
-
-    const result =
-      await storageManager.replaceAll(
-        storageRecords,
-      );
-
-
-    if (
-      !result.success
-    ) {
+    if (!result.success) {
 
       throw new Error(
         result.error ??
@@ -367,105 +257,77 @@ export class CollectionRepository {
 
     }
 
-
     return updatedCollection;
-
   }
-
 
   // ==========================================================
   // FIND BY ID
   // ==========================================================
   //
-  // Public lookup remains based on loanId.
-  //
-  // This intentionally preserves the existing Collection
-  // engine behavior.
+  // Existing repository behavior uses loanId as the lookup
+  // identifier.
   //
   // ==========================================================
 
   async findById(
     id: string,
-  ):
-    Promise<CollectionReviewData | null> {
+  ): Promise<CollectionReviewData | null> {
+
+    if (!id) {
+
+      return null;
+
+    }
+
+    const result =
+      await storageManager.get<CollectionReviewData>(
+        buildCollectionQuery(
+          id,
+        ),
+      );
 
     if (
-      !id
+      !result.success
     ) {
 
       return null;
 
     }
 
-
-    const collections =
-      await this.getAll();
-
-
     return (
-      collections.find(
-        (item) =>
-          item.loanId ===
-          id,
-      )
-      ??
+      result.data ??
       null
     );
-
   }
-
 
   // ==========================================================
   // DELETE
   // ==========================================================
   //
-  // Existing behavior deletes by loanId.
+  // Existing behavior:
   //
-  // Preserve that behavior for this migration.
+  // Delete the collection identified by loanId.
   //
   // ==========================================================
 
   async delete(
     id: string,
-  ):
-    Promise<void> {
+  ): Promise<void> {
 
-    if (
-      !id
-    ) {
+    if (!id) {
 
       return;
 
     }
 
-
-    const collections =
-      await this.getAll();
-
-
-    const filtered =
-      collections.filter(
-        (item) =>
-          item.loanId !==
-          id,
-      );
-
-
-    const storageRecords =
-      filtered.map(
-        toStorageRecord,
-      );
-
-
     const result =
-      await storageManager.replaceAll(
-        storageRecords,
+      await storageManager.delete(
+        buildCollectionQuery(
+          id,
+        ),
       );
 
-
-    if (
-      !result.success
-    ) {
+    if (!result.success) {
 
       throw new Error(
         result.error ??
@@ -473,48 +335,8 @@ export class CollectionRepository {
       );
 
     }
-
   }
-
-
-  // ==========================================================
-  // REPLACE ALL
-  // ==========================================================
-  //
-  // Used by future Collection migration/import workflows.
-  //
-  // ==========================================================
-
-  async replaceAll(
-    collections: CollectionReviewData[],
-  ):
-    Promise<StorageResult> {
-
-    if (
-      !collections.length
-    ) {
-
-      return {
-        success: true,
-      };
-
-    }
-
-
-    const storageRecords =
-      collections.map(
-        toStorageRecord,
-      );
-
-
-    return storageManager.replaceAll(
-      storageRecords,
-    );
-
-  }
-
 }
-
 
 // ============================================================
 // SINGLETON
@@ -522,7 +344,6 @@ export class CollectionRepository {
 
 export const collectionRepository =
   new CollectionRepository();
-
 
 // ============================================================
 // END

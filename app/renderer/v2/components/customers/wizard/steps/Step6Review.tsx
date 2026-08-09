@@ -1,40 +1,43 @@
-// ============================================================
-// FINORA ENTERPRISE OS™
-//
-// CUSTOMER WIZARD
-// STEP 6 — REVIEW
-//
-// MODULE  : Customer
-// LAYER   : UI / Review
-// VERSION : 2.0
-// STATUS  : Production
-//
-// RESPONSIBILITY:
-//
-// - Final customer review orchestration
-// - Validation state calculation
-// - Customer profile creation
-// - Existing customer update
-// - Customer Service write
-// - Review action coordination
-//
-// IMPORTANT:
-//
-// - Review components contain presentation only.
-// - Persistence goes through CustomerService.
-// - No direct localStorage access.
-// - No direct repository access.
-// - KYC document entry is NOT treated as verified.
-// - Nominee data follows CustomerNomineeInformation.
-// - Global FINORA header remains the workspace header.
-// - ReviewHeader is intentionally not rendered here.
-//
-// ============================================================
+/* ==========================================================
+   FINORA ENTERPRISE OS™
+
+   CUSTOMER WIZARD
+   STEP 6 — REVIEW
+
+   MODULE  : Customer
+   LAYER   : UI / Review
+   VERSION : 2.0
+   STATUS  : Production
+
+   RESPONSIBILITY:
+
+   - Final customer review orchestration
+   - Validation state calculation
+   - Customer profile creation
+   - Existing customer update
+   - Customer Service write
+   - Step 2 personal information persistence
+   - Step 3 address persistence
+   - Step 4 KYC persistence
+   - Step 5 nominee persistence
+   - Review action coordination
+
+   IMPORTANT:
+
+   - Review components contain presentation only.
+   - Persistence goes through CustomerService.
+   - No direct localStorage access.
+   - No direct repository access.
+   - KYC document entry is NOT treated as verified.
+   - Nominee data follows CustomerNomineeInformation.
+   - Global FINORA header remains the workspace header.
+   - ReviewHeader is intentionally not rendered here.
+========================================================== */
 
 
-// ============================================================
-// IMPORTS
-// ============================================================
+/* ==========================================================
+   IMPORTS
+========================================================== */
 
 import {
   useState,
@@ -99,9 +102,9 @@ import {
 } from "./Step6Review.styles";
 
 
-// ============================================================
-// PROPS
-// ============================================================
+/* ==========================================================
+   PROPS
+========================================================== */
 
 interface Step6ReviewProps {
 
@@ -119,9 +122,9 @@ interface Step6ReviewProps {
 }
 
 
-// ============================================================
-// HELPERS
-// ============================================================
+/* ==========================================================
+   HELPERS
+========================================================== */
 
 function generateCustomerId(): string {
 
@@ -132,9 +135,9 @@ function generateCustomerId(): string {
 }
 
 
-// ============================================================
-// SAFE STRING
-// ============================================================
+/* ==========================================================
+   SAFE STRING
+========================================================== */
 
 function valueOrEmpty(
   value?: string,
@@ -145,9 +148,41 @@ function valueOrEmpty(
 }
 
 
-// ============================================================
-// ENUM HELPERS
-// ============================================================
+/* ==========================================================
+   NUMBER HELPER
+========================================================== */
+
+function toNumber(
+  value?: string,
+): number | undefined {
+
+  const normalized =
+    value?.trim() ?? "";
+
+  if (!normalized) {
+
+    return undefined;
+  }
+
+  const parsed =
+    Number(
+      normalized,
+    );
+
+  if (
+    !Number.isFinite(parsed)
+  ) {
+
+    return undefined;
+  }
+
+  return parsed;
+}
+
+
+/* ==========================================================
+   GENDER
+========================================================== */
 
 function toGender(
   value?: string,
@@ -162,7 +197,6 @@ function toGender(
   ) {
 
     return CustomerGender.MALE;
-
   }
 
   if (
@@ -171,16 +205,15 @@ function toGender(
   ) {
 
     return CustomerGender.FEMALE;
-
   }
 
   return CustomerGender.OTHER;
 }
 
 
-// ============================================================
-// MARITAL STATUS
-// ============================================================
+/* ==========================================================
+   MARITAL STATUS
+========================================================== */
 
 function toMaritalStatus(
   value?: string,
@@ -195,7 +228,6 @@ function toMaritalStatus(
   ) {
 
     return MaritalStatus.MARRIED;
-
   }
 
   if (
@@ -204,7 +236,6 @@ function toMaritalStatus(
   ) {
 
     return MaritalStatus.WIDOW;
-
   }
 
   if (
@@ -213,16 +244,15 @@ function toMaritalStatus(
   ) {
 
     return MaritalStatus.DIVORCED;
-
   }
 
   return MaritalStatus.SINGLE;
 }
 
 
-// ============================================================
-// OCCUPATION
-// ============================================================
+/* ==========================================================
+   OCCUPATION
+========================================================== */
 
 function toOccupation(
   value?: string,
@@ -263,9 +293,9 @@ function toOccupation(
 }
 
 
-// ============================================================
-// EDUCATION
-// ============================================================
+/* ==========================================================
+   EDUCATION
+========================================================== */
 
 function toEducation(
   value?: string,
@@ -309,9 +339,9 @@ function toEducation(
 }
 
 
-// ============================================================
-// NOMINEE RELATION
-// ============================================================
+/* ==========================================================
+   NOMINEE RELATION
+========================================================== */
 
 function toNomineeRelation(
   value?: string,
@@ -361,9 +391,9 @@ function toNomineeRelation(
 }
 
 
-// ============================================================
-// COMPONENT
-// ============================================================
+/* ==========================================================
+   COMPONENT
+========================================================== */
 
 export default function Step6Review({
 
@@ -378,9 +408,9 @@ export default function Step6Review({
 }: Step6ReviewProps) {
 
 
-  // ==========================================================
-  // SAVE STATE
-  // ==========================================================
+  /* ========================================================
+     SAVE STATE
+  ======================================================== */
 
   const [
     isSaving,
@@ -388,9 +418,9 @@ export default function Step6Review({
   ] = useState(false);
 
 
-  // ==========================================================
-  // REVIEW VALUES
-  // ==========================================================
+  /* ========================================================
+     REVIEW VALUES
+  ======================================================== */
 
   const customerId =
     valueOrEmpty(
@@ -442,14 +472,23 @@ export default function Step6Review({
       wizardData.pan,
     );
 
+  const voterId =
+  valueOrEmpty(
+    wizardData.voterId,
+  );
 
-  // ==========================================================
-  // VALIDATION STATE
-  // ==========================================================
+const drivingLicence =
+  valueOrEmpty(
+    wizardData.drivingLicence,
+  );
+
+
+  /* ========================================================
+     VALIDATION
+  ======================================================== */
 
   const identityComplete =
     Boolean(
-      customerId &&
       customerName &&
       mobileNumber,
     );
@@ -460,11 +499,12 @@ export default function Step6Review({
     );
 
   const kycDocumentsProvided =
-    Boolean(
-      aadhaar ||
-      pan,
-    );
-
+  Boolean(
+    aadhaar ||
+    pan ||
+    voterId ||
+    drivingLicence,
+  );
 
   /*
    * Entered KYC documents are never automatically verified.
@@ -480,9 +520,9 @@ export default function Step6Review({
     );
 
 
-  // ==========================================================
-  // CHECKLIST
-  // ==========================================================
+  /* ========================================================
+     CHECKLIST
+  ======================================================== */
 
   const checklistItems = [
 
@@ -534,9 +574,9 @@ export default function Step6Review({
   ];
 
 
-  // ==========================================================
-  // SAVE / UPDATE CUSTOMER
-  // ==========================================================
+  /* ========================================================
+     SAVE / UPDATE CUSTOMER
+  ======================================================== */
 
   const handleSave =
     async (): Promise<void> => {
@@ -582,9 +622,24 @@ export default function Step6Review({
 
       try {
 
-        // ====================================================
-        // EDIT MODE
-        // ====================================================
+        /* ==================================================
+           NORMALIZED STEP 2 VALUES
+        ================================================== */
+
+        const monthlyIncome =
+          toNumber(
+            wizardData.monthlyIncome,
+          );
+
+        const numberOfFamilyMembers =
+          toNumber(
+            wizardData.numberOfFamilyMembers,
+          );
+
+
+        /* ==================================================
+           EDIT MODE
+        ================================================== */
 
         if (isEditMode) {
 
@@ -605,10 +660,119 @@ export default function Step6Review({
             new Date().toISOString();
 
 
+          /* ==================================================
+             PRESERVE EXISTING NOMINEES
+
+             If Step 5 contains nominee data, update the
+             primary nominee. Otherwise preserve existing data.
+          ================================================== */
+
+          const existingNominees =
+            existingCustomer.nominee.nominees ?? [];
+
+          const shouldUpdateNominee =
+            Boolean(
+              nomineeName ||
+              nomineeCustomerId ||
+              nomineePhoneNumber ||
+              nomineeRelationship,
+            );
+
+
+          const updatedNominees =
+            shouldUpdateNominee
+              ? (
+
+                  nomineeName ||
+                  nomineeCustomerId
+                    ? [
+
+                        {
+
+                          nomineeId:
+                            nomineeCustomerId ||
+                            existingNominees[0]?.nomineeId ||
+                            `NOM-${Date.now()}`,
+
+                          fullName:
+                            nomineeName ||
+                            existingNominees[0]?.fullName ||
+                            "Unknown",
+
+                          relation:
+                            toNomineeRelation(
+                              nomineeRelationship ||
+                              existingNominees[0]?.relation,
+                            ),
+
+                          mobileNumber:
+                            nomineePhoneNumber ||
+                            existingNominees[0]?.mobileNumber ||
+                            "",
+
+                          alternateMobileNumber:
+                            existingNominees[0]?.alternateMobileNumber,
+
+                          aadhaarNumber:
+                            existingNominees[0]?.aadhaarNumber,
+
+                          panNumber:
+                            existingNominees[0]?.panNumber,
+
+                          dateOfBirth:
+                            existingNominees[0]?.dateOfBirth,
+
+                          occupation:
+                            existingNominees[0]?.occupation,
+
+                          address:
+                            existingNominees[0]?.address,
+
+                          photoUrl:
+                            existingNominees[0]?.photoUrl,
+
+                          signatureUrl:
+                            existingNominees[0]?.signatureUrl,
+
+                          sharePercentage:
+                            existingNominees[0]?.sharePercentage ??
+                            100,
+
+                          isPrimary:
+                            existingNominees[0]?.isPrimary ??
+                            true,
+
+                          isVerified:
+                            existingNominees[0]?.isVerified ??
+                            false,
+
+                          remarks:
+                            existingNominees[0]?.remarks,
+
+                        },
+
+                        ...existingNominees.slice(1),
+
+                      ]
+                    : existingNominees
+
+                )
+              : existingNominees;
+
+
+          /* ==================================================
+             UPDATED CUSTOMER PROFILE
+          ================================================== */
+
           const updatedCustomer:
             CustomerProfile = {
 
             ...existingCustomer,
+
+
+            /* ================================================
+               IDENTITY
+            ================================================= */
 
             identity: {
 
@@ -618,6 +782,11 @@ export default function Step6Review({
                 now,
 
             },
+
+
+            /* ================================================
+               BASIC INFORMATION
+            ================================================= */
 
             basic: {
 
@@ -659,6 +828,10 @@ export default function Step6Review({
                 ) ||
                 existingCustomer.basic.spouseName,
 
+              preferredLanguage:
+                wizardData.preferredLanguage ??
+                existingCustomer.basic.preferredLanguage,
+
               emergencyContactName:
                 valueOrEmpty(
                   wizardData.emergencyContactName,
@@ -673,8 +846,341 @@ export default function Step6Review({
 
             },
 
+
+            /* ================================================
+               PERSONAL INFORMATION
+
+               THIS IS THE IMPORTANT STEP 2 FIX.
+
+               Previously Edit Mode did not update `personal`
+               at all.
+
+               Now all Step 2 persisted fields are updated.
+            ================================================= */
+
+            personal: {
+
+              ...existingCustomer.personal,
+
+              dateOfBirth:
+                valueOrEmpty(
+                  wizardData.dateOfBirth,
+                ) ||
+                existingCustomer.personal.dateOfBirth,
+
+              maritalStatus:
+                wizardData.maritalStatus
+                  ? toMaritalStatus(
+                      wizardData.maritalStatus,
+                    )
+                  : existingCustomer.personal.maritalStatus,
+
+              occupation:
+                wizardData.occupation
+                  ? toOccupation(
+                      wizardData.occupation,
+                    )
+                  : existingCustomer.personal.occupation,
+
+              /*
+               * Preserve the exact custom occupation entered by
+               * the user when the domain occupation is OTHER.
+               *
+               * Example:
+               *   UI value        = "Finora Occupation"
+               *   occupation      = OTHER
+               *   occupationOther = "Finora Occupation"
+               */
+              occupationOther:
+                toOccupation(
+                  wizardData.occupation,
+                ) === Occupation.OTHER
+                  ? (
+                      valueOrEmpty(
+                        wizardData.occupation,
+                      ) ||
+                      existingCustomer.personal.occupationOther
+                    )
+                  : undefined,
+
+              education:
+                wizardData.education
+                  ? toEducation(
+                      wizardData.education,
+                    )
+                  : existingCustomer.personal.education,
+
+              monthlyIncome:
+                monthlyIncome ??
+                existingCustomer.personal.monthlyIncome,
+
+              workPlace:
+                valueOrEmpty(
+                  wizardData.workPlace,
+                ) ||
+                existingCustomer.personal.workPlace,
+
+              experience:
+                valueOrEmpty(
+                  wizardData.experience,
+                ) ||
+                existingCustomer.personal.experience,
+
+              numberOfFamilyMembers:
+                numberOfFamilyMembers ??
+                existingCustomer.personal.numberOfFamilyMembers,
+
+            },
+
+
+            /* ================================================
+               ADDRESS
+
+               STEP 3 PERSISTENCE
+
+               The Step 3 UI uses a flat wizard representation:
+
+               - currentAddress
+               - permanentAddress
+               - city
+               - district
+               - state
+               - pinCode
+
+               CustomerProfile uses the canonical nested Address
+               model, so every Step 3 value must be mapped into
+               both currentAddress and permanentAddress.
+
+               Existing address fields not represented by the
+               wizard are preserved.
+            ================================================= */
+
+            address: {
+
+              ...existingCustomer.address,
+
+              currentAddress: {
+
+                ...existingCustomer.address.currentAddress,
+
+                street:
+                  wizardData.currentAddress !== undefined
+                    ? valueOrEmpty(
+                        wizardData.currentAddress,
+                      )
+                    : existingCustomer.address.currentAddress.street,
+
+                village:
+                  wizardData.city !== undefined
+                    ? valueOrEmpty(
+                        wizardData.city,
+                      )
+                    : existingCustomer.address.currentAddress.village,
+
+                city:
+                  wizardData.city !== undefined
+                    ? valueOrEmpty(
+                        wizardData.city,
+                      )
+                    : existingCustomer.address.currentAddress.city,
+
+                district:
+                  wizardData.district !== undefined
+                    ? valueOrEmpty(
+                        wizardData.district,
+                      )
+                    : existingCustomer.address.currentAddress.district,
+
+                state:
+                  wizardData.state !== undefined
+                    ? valueOrEmpty(
+                        wizardData.state,
+                      )
+                    : existingCustomer.address.currentAddress.state,
+
+                pinCode:
+                  wizardData.pinCode !== undefined
+                    ? valueOrEmpty(
+                        wizardData.pinCode,
+                      )
+                    : existingCustomer.address.currentAddress.pinCode,
+
+              },
+
+              permanentAddress: {
+
+                ...existingCustomer.address.permanentAddress,
+
+                street:
+                  wizardData.permanentAddress !== undefined
+                    ? valueOrEmpty(
+                        wizardData.permanentAddress,
+                      )
+                    : existingCustomer.address.permanentAddress.street,
+
+                village:
+                  wizardData.city !== undefined
+                    ? valueOrEmpty(
+                        wizardData.city,
+                      )
+                    : existingCustomer.address.permanentAddress.village,
+
+                city:
+                  wizardData.city !== undefined
+                    ? valueOrEmpty(
+                        wizardData.city,
+                      )
+                    : existingCustomer.address.permanentAddress.city,
+
+                district:
+                  wizardData.district !== undefined
+                    ? valueOrEmpty(
+                        wizardData.district,
+                      )
+                    : existingCustomer.address.permanentAddress.district,
+
+                state:
+                  wizardData.state !== undefined
+                    ? valueOrEmpty(
+                        wizardData.state,
+                      )
+                    : existingCustomer.address.permanentAddress.state,
+
+                pinCode:
+                  wizardData.pinCode !== undefined
+                    ? valueOrEmpty(
+                        wizardData.pinCode,
+                      )
+                    : existingCustomer.address.permanentAddress.pinCode,
+
+              },
+
+              isPermanentAddressSame:
+                wizardData.currentAddress !== undefined ||
+                wizardData.permanentAddress !== undefined
+                  ? (
+                      valueOrEmpty(
+                        wizardData.currentAddress,
+                      ) ===
+                      valueOrEmpty(
+                        wizardData.permanentAddress,
+                      )
+                    )
+                  : existingCustomer.address.isPermanentAddressSame,
+
+            },
+
+
+            /* ================================================
+               KYC
+
+               Preserve existing documents.
+
+               New entered values remain PENDING.
+            ================================================= */
+
+            kyc: {
+
+              ...existingCustomer.kyc,
+
+              ...(aadhaar
+                ? {
+
+                    aadhaar: {
+
+                      ...(existingCustomer.kyc.aadhaar ?? {}),
+
+                      documentNumber:
+                        aadhaar,
+
+                      status:
+                        existingCustomer.kyc.aadhaar?.status ??
+                        KYCStatus.PENDING,
+
+                    },
+
+                  }
+                : {}),
+
+              ...(pan
+                ? {
+
+                    pan: {
+
+                      ...(existingCustomer.kyc.pan ?? {}),
+
+                      documentNumber:
+                        pan,
+
+                      status:
+                        existingCustomer.kyc.pan?.status ??
+                        KYCStatus.PENDING,
+
+                    },
+
+                  }
+                : {}),
+
+                ...(voterId
+  ? {
+
+      voterId: {
+
+        ...(existingCustomer.kyc.voterId ?? {}),
+
+        documentNumber:
+          voterId,
+
+        status:
+          existingCustomer.kyc.voterId?.status ??
+          KYCStatus.PENDING,
+
+      },
+
+    }
+  : {}),
+
+...(drivingLicence
+  ? {
+
+      drivingLicense: {
+
+        ...(existingCustomer.kyc.drivingLicense ?? {}),
+
+        documentNumber:
+          drivingLicence,
+
+        status:
+          existingCustomer.kyc.drivingLicense?.status ??
+          KYCStatus.PENDING,
+
+      },
+
+    }
+  : {}),
+
+            },
+
+
+            /* ================================================
+               NOMINEE
+            ================================================= */
+
+            nominee: {
+
+              ...existingCustomer.nominee,
+
+              nominees:
+                updatedNominees,
+
+            },
+
           };
 
+
+          /* ==================================================
+             CUSTOMER SERVICE UPDATE
+          ================================================== */
 
           const result =
             await customerService.update(
@@ -705,9 +1211,9 @@ export default function Step6Review({
         }
 
 
-        // ====================================================
-        // NEW CUSTOMER REGISTRATION
-        // ====================================================
+        /* ==================================================
+           NEW CUSTOMER REGISTRATION
+        ================================================== */
 
         const now =
           new Date().toISOString();
@@ -717,9 +1223,9 @@ export default function Step6Review({
           generateCustomerId();
 
 
-        // ====================================================
-        // DIGITAL LOCKER
-        // ====================================================
+        /* ==================================================
+           DIGITAL LOCKER
+        ================================================== */
 
         const documents = {
 
@@ -738,9 +1244,9 @@ export default function Step6Review({
         };
 
 
-        // ====================================================
-        // CUSTOMER TIMELINE
-        // ====================================================
+        /* ==================================================
+           CUSTOMER TIMELINE
+        ================================================== */
 
         const timeline = {
 
@@ -782,9 +1288,9 @@ export default function Step6Review({
         };
 
 
-        // ====================================================
-        // NOMINEE
-        // ====================================================
+        /* ==================================================
+           NOMINEE
+        ================================================== */
 
         const nominees =
           nomineeName ||
@@ -824,9 +1330,9 @@ export default function Step6Review({
             : [];
 
 
-        // ====================================================
-        // CUSTOMER PROFILE
-        // ====================================================
+        /* ==================================================
+           CUSTOMER PROFILE
+        ================================================== */
 
         const newCustomer:
           CustomerProfile = {
@@ -864,6 +1370,11 @@ export default function Step6Review({
               false,
 
           },
+
+
+          /* ==================================================
+             BASIC INFORMATION
+          ================================================== */
 
           basic: {
 
@@ -918,6 +1429,13 @@ export default function Step6Review({
 
           },
 
+
+          /* ==================================================
+             PERSONAL INFORMATION
+
+             STEP 2 PERSISTENCE
+          ================================================== */
+
           personal: {
 
             gender:
@@ -945,67 +1463,165 @@ export default function Step6Review({
                 wizardData.occupation,
               ),
 
+            /*
+             * Preserve custom occupation text separately when
+             * the selected occupation is OTHER.
+             *
+             * This prevents Edit mode from collapsing the user's
+             * entered value back to the generic "Other" label.
+             */
+            occupationOther:
+              toOccupation(
+                wizardData.occupation,
+              ) === Occupation.OTHER
+                ? valueOrEmpty(
+                    wizardData.occupation,
+                  ) || undefined
+                : undefined,
+
             monthlyIncome:
-              Number(
-                wizardData.monthlyIncome ??
-                0,
-              ),
+              monthlyIncome,
 
             annualIncome:
-              Number(
-                wizardData.monthlyIncome ??
-                0,
-              ) * 12,
+              monthlyIncome !== undefined
+                ? monthlyIncome * 12
+                : undefined,
+
+            workPlace:
+              valueOrEmpty(
+                wizardData.workPlace,
+              ) ||
+              undefined,
+
+            experience:
+              valueOrEmpty(
+                wizardData.experience,
+              ) ||
+              undefined,
+
+            numberOfFamilyMembers:
+              numberOfFamilyMembers,
 
             isDifferentlyAbled:
               false,
 
           },
 
+
+          /* ==================================================
+             ADDRESS
+
+             STEP 3 PERSISTENCE
+
+             Persist every value collected by AddressForm into
+             the canonical CustomerAddressInformation model.
+
+             UI:
+               currentAddress
+               permanentAddress
+               city
+               district
+               state
+               pinCode
+
+             Domain:
+               currentAddress: Address
+               permanentAddress: Address
+          ================================================== */
+
           address: {
 
             currentAddress: {
 
               street:
-                address,
+                valueOrEmpty(
+                  wizardData.currentAddress,
+                ),
 
               village:
-                "",
+                valueOrEmpty(
+                  wizardData.city,
+                ),
+
+              city:
+                valueOrEmpty(
+                  wizardData.city,
+                ),
 
               district:
-                "",
+                valueOrEmpty(
+                  wizardData.district,
+                ),
 
               state:
-                "",
+                valueOrEmpty(
+                  wizardData.state,
+                ),
 
               country:
                 "India",
+
+              pinCode:
+                valueOrEmpty(
+                  wizardData.pinCode,
+                ),
 
             },
 
             permanentAddress: {
 
               street:
-                address,
+                valueOrEmpty(
+                  wizardData.permanentAddress,
+                ) ||
+                valueOrEmpty(
+                  wizardData.currentAddress,
+                ),
 
               village:
-                "",
+                valueOrEmpty(
+                  wizardData.city,
+                ),
+
+              city:
+                valueOrEmpty(
+                  wizardData.city,
+                ),
 
               district:
-                "",
+                valueOrEmpty(
+                  wizardData.district,
+                ),
 
               state:
-                "",
+                valueOrEmpty(
+                  wizardData.state,
+                ),
 
               country:
                 "India",
 
+              pinCode:
+                valueOrEmpty(
+                  wizardData.pinCode,
+                ),
+
             },
 
             isPermanentAddressSame:
-              true,
+              valueOrEmpty(
+                wizardData.permanentAddress,
+              ) ===
+              valueOrEmpty(
+                wizardData.currentAddress,
+              ),
 
           },
+
+
+          /* ==================================================
+             KYC
+          ================================================== */
 
           kyc: {
 
@@ -1041,10 +1657,47 @@ export default function Step6Review({
                 }
               : {}),
 
+              ...(voterId
+  ? {
+
+      voterId: {
+
+        documentNumber:
+          voterId,
+
+        status:
+          KYCStatus.PENDING,
+
+      },
+
+    }
+  : {}),
+
+...(drivingLicence
+  ? {
+
+      drivingLicense: {
+
+        documentNumber:
+          drivingLicence,
+
+        status:
+          KYCStatus.PENDING,
+
+      },
+
+    }
+  : {}),
+
             overallStatus:
               KYCStatus.PENDING,
 
           },
+
+
+          /* ==================================================
+             NOMINEE
+          ================================================== */
 
           nominee: {
 
@@ -1052,7 +1705,17 @@ export default function Step6Review({
 
           },
 
+
+          /* ==================================================
+             DOCUMENTS
+          ================================================== */
+
           documents,
+
+
+          /* ==================================================
+             INTERNAL
+          ================================================== */
 
           internal: {
 
@@ -1097,7 +1760,17 @@ export default function Step6Review({
 
           },
 
+
+          /* ==================================================
+             TIMELINE
+          ================================================== */
+
           timeline,
+
+
+          /* ==================================================
+             STATISTICS
+          ================================================== */
 
           statistics: {
 
@@ -1160,9 +1833,9 @@ export default function Step6Review({
         };
 
 
-        // ====================================================
-        // CUSTOMER SERVICE WRITE
-        // ====================================================
+        /* ==================================================
+           CUSTOMER SERVICE WRITE
+        ================================================== */
 
         const result =
           await customerService.create(
@@ -1198,9 +1871,9 @@ export default function Step6Review({
     };
 
 
-  // ==========================================================
-  // EDIT
-  // ==========================================================
+  /* ========================================================
+     EDIT
+  ======================================================== */
 
   const handleEdit = (): void => {
 
@@ -1211,9 +1884,9 @@ export default function Step6Review({
   };
 
 
-  // ==========================================================
-  // CANCEL
-  // ==========================================================
+  /* ========================================================
+     CANCEL
+  ======================================================== */
 
   const handleCancel = (): void => {
 
@@ -1222,9 +1895,9 @@ export default function Step6Review({
   };
 
 
-  // ==========================================================
-  // VIEW
-  // ==========================================================
+  /* ========================================================
+     VIEW
+  ======================================================== */
 
   return (
 
@@ -1236,21 +1909,7 @@ export default function Step6Review({
 
     >
 
-      {/* ====================================================
-         STEP 6 REVIEW WORKSPACE
-
-         Row 1:
-         Summary | Validation
-
-         Row 2:
-         Checklist | Actions
-      ==================================================== */}
-
       <div style={workspaceStyle}>
-
-        {/* ==================================================
-           LEFT COLUMN
-        ================================================== */}
 
         <div style={leftColumnStyle}>
 
@@ -1288,10 +1947,6 @@ export default function Step6Review({
 
         </div>
 
-
-        {/* ==================================================
-           RIGHT COLUMN
-        ================================================== */}
 
         <div style={rightColumnStyle}>
 
@@ -1363,6 +2018,6 @@ export default function Step6Review({
 }
 
 
-// ============================================================
-// END
-// ============================================================
+/* ==========================================================
+   END
+========================================================== */

@@ -1,68 +1,91 @@
-/* ===========================================================
-   FINORA ENTERPRISE OS™
+// ============================================================
+// FINORA ENTERPRISE OS™
+//
+// V2 STORAGE FOUNDATION
+// LOCAL STORAGE ADAPTER
+//
+// RESPONSIBILITY:
+//
+// - Local browser/Electron renderer persistence
+// - Implement the common StorageAdapter contract
+// - Preserve V2 localStorage-backed persistence
+// - Provide safe CRUD operations
+// - Enforce owner / demo storage isolation
+// - Keep business logic outside the storage layer
+//
+// IMPORTANT:
+//
+// - No Customer logic.
+// - No Loan logic.
+// - No Collection logic.
+// - No Payment logic.
+// - No Report logic.
+// - No Electron IPC.
+// - No cloud logic.
+// - delete() deletes ONE record only.
+// - clear() is the explicit full-entity clear operation.
+//
+// VERSION : 2.0
+// STATUS  : Production
+// ============================================================
 
-   V2 STORAGE FOUNDATION
-   LOCAL STORAGE ADAPTER
-
-   RESPONSIBILITY:
-
-   - Local browser/Electron renderer persistence
-   - Implement the common StorageAdapter contract
-   - Preserve existing localStorage-backed V2 data
-   - Provide safe CRUD operations
-   - Keep business logic outside the storage layer
-
-   IMPORTANT:
-
-   - No Customer logic
-   - No Loan logic
-   - No Collection logic
-   - No Payment logic
-   - No Report logic
-   - No Electron IPC
-   - No cloud logic
-
-   VERSION : 2.0
-   STATUS  : Production
-=========================================================== */
+// ============================================================
+// IMPORTS
+// ============================================================
 
 import {
   DataContext,
-  StorageAdapter,
   StorageAvailability,
-  StorageConfiguration,
   StorageMode,
+} from "../storage.types";
+
+import type {
+  StorageAdapter,
+  StorageConfiguration,
   StorageQuery,
   StorageResult,
   StorageStatus,
   StorageWriteOptions,
 } from "../storage.types";
 
-
-/* ==========================================================
-   STORAGE KEY PREFIX
-========================================================== */
+// ============================================================
+// STORAGE KEY PREFIX
+// ============================================================
 
 const STORAGE_PREFIX =
   "FINORA_V2";
 
+// ============================================================
+// ENTITY NAMES
+// ============================================================
 
-/* ==========================================================
-   ENTITY KEY BUILDER
+const ENTITY_CUSTOMER =
+  "CUSTOMER";
 
-   Keeps each entity isolated.
+const ENTITY_BUSINESS_IDENTITY =
+  "BUSINESS_IDENTITY";
 
-   Examples:
+const ENTITY_BUSINESS_SETTINGS =
+  "BUSINESS_SETTINGS";
 
-   FINORA_V2_REAL_CUSTOMER
-   FINORA_V2_REAL_LOAN
+const ENTITY_LOAN =
+  "LOAN";
 
-   FINORA_V2_DEMO_DEMO-000001_CUSTOMER
+const ENTITY_COLLECTION =
+  "COLLECTION";
 
-   The actual domain repositories can continue using their
-   existing keys during migration. This adapter provides the
-   new common storage namespace.
-========================================================== */
+const ENTITY_PAYMENT =
+  "PAYMENT";
+
+const ENTITY_NOTIFICATION =
+  "NOTIFICATION";
+
+const ENTITY_GENERAL =
+  "GENERAL";
+
+// ============================================================
+// LOCAL STORAGE KEY BUILDER
+// ============================================================
 
 function buildStorageKey(
   query: StorageQuery,
@@ -91,37 +114,30 @@ function buildStorageKey(
   ].join("_");
 }
 
+// ============================================================
+// READ ARRAY
+// ============================================================
 
-/* ==========================================================
-   NORMALIZE ARRAY
-
-   Storage records are persisted as arrays so that the
-   existing V2 localStorage model remains simple and
-   predictable.
-========================================================== */
-
-function readArray<T>(
+function readArray<T = unknown>(
   key: string,
 ): T[] {
 
   try {
 
     const raw =
-      localStorage.getItem(key);
+      localStorage.getItem(
+        key,
+      );
 
     if (!raw) {
-
       return [];
-
     }
 
     const parsed =
       JSON.parse(raw);
 
     if (!Array.isArray(parsed)) {
-
       return [];
-
     }
 
     return parsed as T[];
@@ -129,19 +145,17 @@ function readArray<T>(
   } catch {
 
     return [];
-
   }
 }
 
+// ============================================================
+// WRITE ARRAY
+// ============================================================
 
-/* ==========================================================
-   WRITE ARRAY
-========================================================== */
-
-function writeArray<T>(
+function writeArray<T = unknown>(
   key: string,
   records: T[],
-): StorageResult<void> {
+): StorageResult<T[]> {
 
   try {
 
@@ -152,6 +166,7 @@ function writeArray<T>(
 
     return {
       success: true,
+      data: records,
     };
 
   } catch {
@@ -161,21 +176,12 @@ function writeArray<T>(
       error:
         "Unable to write data to local storage.",
     };
-
   }
 }
 
-
-/* ==========================================================
-   ID EXTRACTION
-
-   Generic storage cannot assume every domain uses the same
-   property name.
-
-   FINORA currently uses different identifiers across
-   existing modules, so this helper supports the common
-   identifier forms without adding domain-specific logic.
-========================================================== */
+// ============================================================
+// ID EXTRACTION
+// ============================================================
 
 function getRecordId(
   record: unknown,
@@ -187,7 +193,6 @@ function getRecordId(
   ) {
 
     return undefined;
-
   }
 
   const value =
@@ -198,7 +203,6 @@ function getRecordId(
   ) {
 
     return value.id;
-
   }
 
   if (
@@ -206,7 +210,6 @@ function getRecordId(
   ) {
 
     return value.customerId;
-
   }
 
   if (
@@ -214,7 +217,6 @@ function getRecordId(
   ) {
 
     return value.loanId;
-
   }
 
   if (
@@ -222,7 +224,6 @@ function getRecordId(
   ) {
 
     return value.paymentId;
-
   }
 
   if (
@@ -230,7 +231,6 @@ function getRecordId(
   ) {
 
     return value.collectionId;
-
   }
 
   if (
@@ -238,34 +238,45 @@ function getRecordId(
   ) {
 
     return value.notificationId;
-
   }
 
   return undefined;
 }
 
-
-/* ==========================================================
-   LOCAL STORAGE ADAPTER
-========================================================== */
+// ============================================================
+// LOCAL STORAGE ADAPTER
+// ============================================================
 
 export class LocalStorageAdapter
   implements StorageAdapter {
 
-  /* ========================================================
-     MODE
-  ======================================================== */
+  // ==========================================================
+  // MODE
+  // ==========================================================
 
   readonly mode =
     StorageMode.LOCAL;
 
+  // ==========================================================
+  // CURRENT CONFIGURATION
+  // ==========================================================
 
-  /* ========================================================
-     INITIALIZE
-  ======================================================== */
+  private configuration:
+    StorageConfiguration = {
+
+    storageMode:
+      StorageMode.LOCAL,
+
+    dataContext:
+      DataContext.REAL,
+  };
+
+  // ==========================================================
+  // INITIALIZE
+  // ==========================================================
 
   async initialize(
-    _configuration: StorageConfiguration,
+    configuration: StorageConfiguration,
   ): Promise<StorageResult<void>> {
 
     try {
@@ -280,8 +291,23 @@ export class LocalStorageAdapter
           error:
             "Local storage is not available.",
         };
-
       }
+
+      if (
+        configuration.storageMode !==
+        StorageMode.LOCAL
+      ) {
+
+        return {
+          success: false,
+          error:
+            "Local storage adapter received an invalid storage mode.",
+        };
+      }
+
+      this.configuration = {
+        ...configuration,
+      };
 
       return {
         success: true,
@@ -294,15 +320,12 @@ export class LocalStorageAdapter
         error:
           "Unable to initialize local storage.",
       };
-
     }
-
   }
 
-
-  /* ========================================================
-     AVAILABILITY
-  ======================================================== */
+  // ==========================================================
+  // AVAILABILITY
+  // ==========================================================
 
   async isAvailable():
     Promise<boolean> {
@@ -315,7 +338,6 @@ export class LocalStorageAdapter
       ) {
 
         return false;
-
       }
 
       const testKey =
@@ -335,15 +357,12 @@ export class LocalStorageAdapter
     } catch {
 
       return false;
-
     }
-
   }
 
-
-  /* ========================================================
-     STATUS
-  ======================================================== */
+  // ==========================================================
+  // STATUS
+  // ==========================================================
 
   async getStatus():
     Promise<StorageStatus> {
@@ -362,7 +381,16 @@ export class LocalStorageAdapter
           : StorageAvailability.UNAVAILABLE,
 
       dataContext:
-        DataContext.REAL,
+        this.configuration.dataContext,
+
+      ownerId:
+        this.configuration.ownerId,
+
+      demoId:
+        this.configuration.demoId,
+
+      storageId:
+        this.configuration.storageId,
 
       checkedAt:
         new Date().toISOString(),
@@ -372,13 +400,11 @@ export class LocalStorageAdapter
           ? "Local storage is ready."
           : "Local storage is unavailable.",
     };
-
   }
 
-
-  /* ========================================================
-     GET ONE
-  ======================================================== */
+  // ==========================================================
+  // GET ONE
+  // ==========================================================
 
   async get<T = unknown>(
     query: StorageQuery,
@@ -389,10 +415,14 @@ export class LocalStorageAdapter
     try {
 
       const key =
-        buildStorageKey(query);
+        buildStorageKey(
+          query,
+        );
 
       const records =
-        readArray<T>(key);
+        readArray<T>(
+          key,
+        );
 
       if (!query.id) {
 
@@ -400,7 +430,6 @@ export class LocalStorageAdapter
           success: true,
           data: undefined,
         };
-
       }
 
       const record =
@@ -422,15 +451,12 @@ export class LocalStorageAdapter
         error:
           "Unable to read local storage.",
       };
-
     }
-
   }
 
-
-  /* ========================================================
-     GET ALL
-  ======================================================== */
+  // ==========================================================
+  // GET ALL
+  // ==========================================================
 
   async getAll<T = unknown>(
     query: StorageQuery,
@@ -441,10 +467,14 @@ export class LocalStorageAdapter
     try {
 
       const key =
-        buildStorageKey(query);
+        buildStorageKey(
+          query,
+        );
 
       let records =
-        readArray<T>(key);
+        readArray<T>(
+          key,
+        );
 
       if (
         typeof query.offset ===
@@ -455,7 +485,6 @@ export class LocalStorageAdapter
           records.slice(
             query.offset,
           );
-
       }
 
       if (
@@ -468,7 +497,6 @@ export class LocalStorageAdapter
             0,
             query.limit,
           );
-
       }
 
       return {
@@ -483,27 +511,24 @@ export class LocalStorageAdapter
         error:
           "Unable to read local storage.",
       };
-
     }
-
   }
 
-
-  /* ========================================================
-     SAVE
-  ======================================================== */
+  // ==========================================================
+  // SAVE
+  // ==========================================================
 
   async save<T = unknown>(
     record: T,
     options?: StorageWriteOptions,
-  ): Promise<
-    StorageResult<T>
-  > {
+  ): Promise<StorageResult<T>> {
 
     try {
 
       const id =
-        getRecordId(record);
+        getRecordId(
+          record,
+        );
 
       if (!id) {
 
@@ -512,14 +537,14 @@ export class LocalStorageAdapter
           error:
             "Storage record requires a supported identifier.",
         };
-
       }
 
       const query: StorageQuery = {
 
         entity:
-          this.resolveEntity(record),
-
+          this.resolveEntity(
+            record,
+          ),
       };
 
       const key =
@@ -529,7 +554,9 @@ export class LocalStorageAdapter
         );
 
       const records =
-        readArray<T>(key);
+        readArray<T>(
+          key,
+        );
 
       const existingIndex =
         records.findIndex(
@@ -547,10 +574,11 @@ export class LocalStorageAdapter
           error:
             "A record with the same identifier already exists.",
         };
-
       }
 
-      records.push(record);
+      records.push(
+        record,
+      );
 
       const result =
         writeArray(
@@ -563,9 +591,9 @@ export class LocalStorageAdapter
         return {
           success: false,
           error:
-            result.error,
+            result.error ??
+            "Unable to save record to local storage.",
         };
-
       }
 
       return {
@@ -580,27 +608,24 @@ export class LocalStorageAdapter
         error:
           "Unable to save record to local storage.",
       };
-
     }
-
   }
 
-
-  /* ========================================================
-     UPDATE
-  ======================================================== */
+  // ==========================================================
+  // UPDATE
+  // ==========================================================
 
   async update<T = unknown>(
     record: T,
     options?: StorageWriteOptions,
-  ): Promise<
-    StorageResult<T>
-  > {
+  ): Promise<StorageResult<T>> {
 
     try {
 
       const id =
-        getRecordId(record);
+        getRecordId(
+          record,
+        );
 
       if (!id) {
 
@@ -609,14 +634,14 @@ export class LocalStorageAdapter
           error:
             "Storage record requires a supported identifier.",
         };
-
       }
 
       const query: StorageQuery = {
 
         entity:
-          this.resolveEntity(record),
-
+          this.resolveEntity(
+            record,
+          ),
       };
 
       const key =
@@ -626,7 +651,9 @@ export class LocalStorageAdapter
         );
 
       const records =
-        readArray<T>(key);
+        readArray<T>(
+          key,
+        );
 
       const index =
         records.findIndex(
@@ -642,7 +669,6 @@ export class LocalStorageAdapter
           error:
             "Storage record was not found.",
         };
-
       }
 
       records[index] =
@@ -659,9 +685,9 @@ export class LocalStorageAdapter
         return {
           success: false,
           error:
-            result.error,
+            result.error ??
+            "Unable to update record in local storage.",
         };
-
       }
 
       return {
@@ -676,38 +702,65 @@ export class LocalStorageAdapter
         error:
           "Unable to update record in local storage.",
       };
-
     }
-
   }
 
-
-  /* ========================================================
-     DELETE
-  ======================================================== */
+  // ==========================================================
+  // DELETE ONE RECORD
+  //
+  // IMPORTANT:
+  //
+  // delete() MUST NEVER clear an entire entity when the
+  // caller forgets to provide an id.
+  // ==========================================================
 
   async delete(
     query: StorageQuery,
-  ): Promise<
-    StorageResult<void>
-  > {
+  ): Promise<StorageResult<void>> {
 
     try {
 
+      if (!query.id) {
+
+        return {
+          success: false,
+          error:
+            "Storage record ID is required for delete.",
+        };
+      }
+
       const key =
-        buildStorageKey(query);
+        buildStorageKey(
+          query,
+        );
 
       const records =
-        readArray<unknown>(key);
+        readArray<unknown>(
+          key,
+        );
+
+      const existing =
+        records.find(
+          (item) =>
+            getRecordId(item) ===
+            query.id,
+        );
+
+      if (!existing) {
+
+        return {
+          success: false,
+          error:
+            "Storage record was not found.",
+        };
+      }
 
       const filtered =
-        query.id
-          ? records.filter(
-              (item) =>
-                getRecordId(item) !==
-                query.id,
-            )
-          : [];
+        records.filter(
+          (item) =>
+            getRecordId(item) !==
+            query.id,
+        );
 
       const result =
         writeArray(
@@ -715,7 +768,19 @@ export class LocalStorageAdapter
           filtered,
         );
 
-      return result;
+      if (!result.success) {
+
+        return {
+          success: false,
+          error:
+            result.error ??
+            "Unable to delete local storage record.",
+        };
+      }
+
+      return {
+        success: true,
+      };
 
     } catch {
 
@@ -724,22 +789,22 @@ export class LocalStorageAdapter
         error:
           "Unable to delete local storage record.",
       };
-
     }
-
   }
 
-
-  /* ========================================================
-     REPLACE ALL
-  ======================================================== */
+  // ==========================================================
+  // REPLACE ALL
+  //
+  // Empty array intentionally performs no operation.
+  //
+  // Use clear() when the caller explicitly intends to
+  // remove the complete entity collection.
+  // ==========================================================
 
   async replaceAll<T = unknown>(
     records: T[],
     options?: StorageWriteOptions,
-  ): Promise<
-    StorageResult<void>
-  > {
+  ): Promise<StorageResult<void>> {
 
     try {
 
@@ -748,7 +813,6 @@ export class LocalStorageAdapter
         return {
           success: true,
         };
-
       }
 
       const firstRecord =
@@ -760,7 +824,6 @@ export class LocalStorageAdapter
           this.resolveEntity(
             firstRecord,
           ),
-
       };
 
       const key =
@@ -769,10 +832,25 @@ export class LocalStorageAdapter
           options,
         );
 
-      return writeArray(
-        key,
-        records,
-      );
+      const result =
+        writeArray(
+          key,
+          records,
+        );
+
+      if (!result.success) {
+
+        return {
+          success: false,
+          error:
+            result.error ??
+            "Unable to replace local storage records.",
+        };
+      }
+
+      return {
+        success: true,
+      };
 
     } catch {
 
@@ -781,28 +859,29 @@ export class LocalStorageAdapter
         error:
           "Unable to replace local storage records.",
       };
-
     }
-
   }
 
-
-  /* ========================================================
-     CLEAR
-  ======================================================== */
+  // ==========================================================
+  // CLEAR
+  //
+  // Explicit full-entity storage clear.
+  // ==========================================================
 
   async clear(
     query: StorageQuery,
-  ): Promise<
-    StorageResult<void>
-  > {
+  ): Promise<StorageResult<void>> {
 
     try {
 
       const key =
-        buildStorageKey(query);
+        buildStorageKey(
+          query,
+        );
 
-      localStorage.removeItem(key);
+      localStorage.removeItem(
+        key,
+      );
 
       return {
         success: true,
@@ -815,15 +894,12 @@ export class LocalStorageAdapter
         error:
           "Unable to clear local storage.",
       };
-
     }
-
   }
 
-
-  /* ========================================================
-     ENTITY RESOLUTION
-  ======================================================== */
+  // ==========================================================
+  // ENTITY RESOLUTION
+  // ==========================================================
 
   private resolveEntity(
     record: unknown,
@@ -834,65 +910,111 @@ export class LocalStorageAdapter
       record === null
     ) {
 
-      return "UNKNOWN";
-
+      return ENTITY_GENERAL;
     }
 
     const value =
       record as Record<string, unknown>;
 
+    // --------------------------------------------------------
+    // CUSTOMER
+    // --------------------------------------------------------
+
     if (
       "identity" in value
     ) {
 
-      return "CUSTOMER";
-
+      return ENTITY_CUSTOMER;
     }
+
+    // --------------------------------------------------------
+    // BUSINESS IDENTITY
+    // --------------------------------------------------------
+
+    if (
+      "businessId" in value &&
+      "businessName" in value &&
+      "branchId" in value &&
+      "branchName" in value
+    ) {
+
+      return ENTITY_BUSINESS_IDENTITY;
+    }
+
+    // --------------------------------------------------------
+    // BUSINESS SETTINGS
+    // --------------------------------------------------------
+
+    if (
+      "businessId" in value &&
+      "address" in value &&
+      "currency" in value
+    ) {
+
+      return ENTITY_BUSINESS_SETTINGS;
+    }
+
+    // --------------------------------------------------------
+    // LOAN
+    // --------------------------------------------------------
 
     if (
       "outstanding" in value &&
       "loanType" in value
     ) {
 
-      return "LOAN";
-
+      return ENTITY_LOAN;
     }
+
+    // --------------------------------------------------------
+    // COLLECTION
+    // --------------------------------------------------------
 
     if (
       "loanId" in value &&
       "status" in value
     ) {
 
-      return "COLLECTION";
-
+      return ENTITY_COLLECTION;
     }
+
+    // --------------------------------------------------------
+    // PAYMENT
+    // --------------------------------------------------------
 
     if (
       "paymentId" in value
     ) {
 
-      return "PAYMENT";
-
+      return ENTITY_PAYMENT;
     }
+
+    // --------------------------------------------------------
+    // NOTIFICATION
+    // --------------------------------------------------------
 
     if (
       "notificationId" in value
     ) {
 
-      return "NOTIFICATION";
-
+      return ENTITY_NOTIFICATION;
     }
 
-    return "GENERAL";
+    // --------------------------------------------------------
+    // GENERAL
+    // --------------------------------------------------------
 
+    return ENTITY_GENERAL;
   }
-
 }
 
-
-/* ==========================================================
-   SINGLETON
-========================================================== */
+// ============================================================
+// SINGLETON
+// ============================================================
 
 export const localStorageAdapter =
   new LocalStorageAdapter();
+
+// ============================================================
+// END
+// ============================================================

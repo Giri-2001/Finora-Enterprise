@@ -18,6 +18,7 @@
 =========================================================== */
 
 import {
+  useEffect,
   useState,
 } from "react";
 
@@ -97,6 +98,8 @@ const DEFAULT_STATE: BasicState = {
 
 interface Step2BasicProps {
 
+  wizardData?: CustomerWizardData;
+
   updateWizardData: (
     data: Partial<CustomerWizardData>,
   ) => void;
@@ -108,6 +111,8 @@ interface Step2BasicProps {
 =========================================================== */
 
 export default function Step2Basic({
+
+  wizardData,
 
   updateWizardData,
 
@@ -123,6 +128,70 @@ export default function Step2Basic({
   ] = useState(
     DEFAULT_STATE,
   );
+
+  /* =========================================================
+   RESTORE WIZARD DATA
+========================================================= */
+
+useEffect(() => {
+
+  if (!wizardData) {
+    return;
+  }
+
+  setState(
+    (previous) => ({
+      ...previous,
+
+      fatherOrSpouseName:
+        wizardData.fatherOrSpouseName ??
+        previous.fatherOrSpouseName,
+
+      education:
+        wizardData.education ??
+        previous.education,
+
+      maritalStatus:
+        wizardData.maritalStatus ??
+        previous.maritalStatus,
+
+      spouseName:
+        wizardData.spouseName ??
+        previous.spouseName,
+
+      occupation:
+        wizardData.occupation ??
+        previous.occupation,
+
+      workPlace:
+        wizardData.workPlace ??
+        previous.workPlace,
+
+      monthlyIncome:
+        wizardData.monthlyIncome ??
+        previous.monthlyIncome,
+
+      experience:
+        wizardData.experience ??
+        previous.experience,
+
+      numberOfFamilyMembers:
+        wizardData.numberOfFamilyMembers ??
+        previous.numberOfFamilyMembers,
+
+      emergencyContactName:
+        wizardData.emergencyContactName ??
+        previous.emergencyContactName,
+
+      emergencyContactMobile:
+        wizardData.emergencyContactMobile ??
+        previous.emergencyContactMobile,
+    }),
+  );
+
+}, [
+  wizardData,
+]);
 
   /* =========================================================
      UPDATE FIELD

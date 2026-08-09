@@ -1,28 +1,29 @@
 /* ===========================================================
-   FINORA ENTERPRISE OS™
+FINORA ENTERPRISE OS™
 
-   CUSTOMER WIZARD
-   STEP 3 — ADDRESS STUDIO™
+CUSTOMER WIZARD
+STEP 3 — ADDRESS STUDIO™
 
-   Version     : 2.0
-   Phase       : Phase 2
-   Architecture: Enterprise
-   Status      : Production
+Version     : 2.0
+Phase       : Phase 2
+Architecture: Enterprise
+Status      : Production
 
-   Responsibility:
+Responsibility:
 
-   - Customer address state
-   - Current address
-   - Permanent address
-   - Location details
-   - Live address preview
-   - Address verification
-   - Future GIS status
-   - Live wizard synchronization
+- Customer address state
+- Current address
+- Permanent address
+- Location details
+- Live address preview
+- Address verification
+- Future GIS status
+- Live wizard synchronization
 =========================================================== */
 
 import {
-  useState,
+useEffect,
+useState,
 } from "react";
 
 import AddressForm, {
@@ -56,10 +57,11 @@ import {
 } from "./Step3Address.styles";
 
 /* ===========================================================
-   TYPES
+TYPES
 =========================================================== */
 
 interface Step3AddressProps {
+
   updateWizardData: (
     data: Partial<CustomerWizardData>,
   ) => void;
@@ -68,71 +70,195 @@ interface Step3AddressProps {
 }
 
 /* ===========================================================
-   DEFAULT STATE
+DEFAULT STATE
 =========================================================== */
 
 const DEFAULT_ADDRESS: AddressFormData = {
-  currentAddress: "",
 
-  permanentAddress: "",
+  currentAddress:
+    "",
 
-  city: "",
+  permanentAddress:
+    "",
 
-  district: "",
+  city:
+    "",
 
-  state: "",
+  district:
+    "",
 
-  pinCode: "",
+  state:
+    "",
+
+  pinCode:
+    "",
 };
 
 /* ===========================================================
-   COMPONENT
+HELPERS
+=========================================================== */
+
+/**
+ * Builds the canonical address value used by the final
+ * customer review layer.
+ *
+ * Structured address fields remain separately synchronized
+ * with CustomerWizardData.
+ *
+ * `address` is the canonical legacy/review value required
+ * by Step 6 validation and CustomerProfile creation.
+ */
+function buildCanonicalAddress(
+  data: AddressFormData,
+): string {
+
+  return (
+    data.currentAddress?.trim() ||
+    data.permanentAddress?.trim() ||
+    ""
+  );
+}
+
+/* ===========================================================
+COMPONENT
 =========================================================== */
 
 export default function Step3Address({
+
   updateWizardData,
+
   wizardData,
+
 }: Step3AddressProps) {
 
   /* =========================================================
-     ADDRESS STATE
+  ADDRESS STATE
   ========================================================= */
 
-  const [
-    address,
-    setAddress,
-  ] = useState<AddressFormData>(
-    DEFAULT_ADDRESS,
-  );
+const [
+address,
+setAddress,
+] = useState<AddressFormData>(
+  DEFAULT_ADDRESS,
+);
 
-  /* =========================================================
-     ADDRESS FIELD UPDATE
-  ========================================================= */
+// =========================================================
+// RESTORE WIZARD ADDRESS
+//
+// Step 3 unmounts when moving to another wizard step.
+// Therefore the local AddressForm state must be rebuilt
+// from the central CustomerWizardData when Step 3 mounts.
+//
+// CustomerWizardData is the temporary source of truth
+// while the customer is still being created.
+// =========================================================
 
-  function updateAddressField(
-    field: keyof AddressFormData,
-    value: string,
-  ): void {
+useEffect(() => {
 
-    setAddress(
-      (previous) => ({
-        ...previous,
-
-        [field]: value,
-      }),
-    );
-
-    updateWizardData({
-      [field]: value,
-    } as Partial<CustomerWizardData>);
+  if (!wizardData) {
+    return;
   }
 
+  setAddress({
+
+    currentAddress:
+      wizardData.currentAddress ??
+      wizardData.address ??
+      "",
+
+    permanentAddress:
+      wizardData.permanentAddress ??
+      "",
+
+    city:
+      wizardData.city ??
+      "",
+
+    district:
+      wizardData.district ??
+      "",
+
+    state:
+      wizardData.state ??
+      "",
+
+    pinCode:
+      wizardData.pinCode ??
+      "",
+
+  });
+
+}, [
+  wizardData,
+]);
+
+/* =========================================================
+   RESTORE EXISTING WIZARD ADDRESS
+========================================================= */
+
+useEffect(() => {
+
+  const savedAddress =
+    wizardData?.address ?? "";
+
+  if (!savedAddress) {
+    return;
+  }
+
+  setAddress(
+    (previous) => ({
+      ...previous,
+
+      currentAddress:
+        savedAddress,
+    }),
+  );
+
+}, [
+  wizardData?.address,
+]);
+
+/* =========================================================
+   ADDRESS FIELD UPDATE
+========================================================= */
+
+function updateAddressField(
+  field: keyof AddressFormData,
+  value: string,
+): void {
+
+  setAddress(
+    (previous) => {
+
+      const nextAddress: AddressFormData = {
+        ...previous,
+
+        [field]:
+          value,
+      };
+
+      updateWizardData({
+        [field]:
+          value,
+
+        address:
+          nextAddress.currentAddress ??
+          "",
+
+      } as Partial<CustomerWizardData>);
+
+      return nextAddress;
+    },
+  );
+}
+
   /* =========================================================
-     UI
+  UI
   ========================================================= */
 
   return (
-    <section
+
+    <div
       style={pageStyle}
     >
 
@@ -257,7 +383,9 @@ export default function Step3Address({
           <div
             style={{
               ...fieldAreaStyle,
-              justifyContent: "center",
+
+              justifyContent:
+                "center",
             }}
           >
 
@@ -285,7 +413,9 @@ export default function Step3Address({
 
                   documentType="Not Provided"
 
-                  verified={false}
+                  verified={
+                    false
+                  }
 
                 />
 
@@ -314,6 +444,7 @@ export default function Step3Address({
                 <AddressPreviewCard
 
                   value={{
+
                     customerName:
                       wizardData?.fullName ||
                       "--",
@@ -329,6 +460,7 @@ export default function Step3Address({
 
                     pinCode:
                       address.pinCode,
+
                   }}
 
                 />
@@ -343,6 +475,12 @@ export default function Step3Address({
 
       </div>
 
-    </section>
+    </div>
+
   );
+
 }
+
+/* ===========================================================
+END
+=========================================================== */
