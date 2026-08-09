@@ -9,7 +9,8 @@
 // - Maintain the active FINORA business access context
 // - Reuse the canonical BusinessAccessContext contract
 // - Provide explicit business-context lifecycle operations
-// - Synchronize the active owner with StorageManager
+// - Synchronize the active data context with StorageManager
+// - Safely reset storage context during logout
 // - Keep authentication implementation outside the service
 // - Keep React/UI implementation outside the service
 //
@@ -29,19 +30,27 @@
 // - Does NOT contain Payment logic.
 // - Does NOT contain Report logic.
 //
-// ARCHITECTURE:
+// DATA CONTEXT:
 //
-// Authentication
-//      ↓
-// BusinessAccessContext
-//      ↓
-// BusinessContextService
-//      ↓
-// StorageManager
+// REAL
+// - Requires ownerId.
+// - Uses owner-scoped production storage.
 //
-// BusinessIdentity remains a separate persisted domain model.
+// DEMO
+// - Requires demoId.
+// - Uses isolated demonstration storage.
 //
-// VERSION : 2.0
+// LOGOUT RESET:
+//
+// clearBusinessContext()
+//      ↓
+// StorageManager.resetDataContext()
+//      ↓
+// Neutral REAL storage context
+//      ↓
+// Clear in-memory business context
+//
+// VERSION : 2.1
 // STATUS  : Production Foundation
 // ============================================================
 
@@ -73,11 +82,15 @@ import type {
 //
 // It is NOT persisted independently.
 //
-// AuthSession remains the persisted authentication/session
-// source.
+// AuthSession remains the authentication/session source.
 //
-// This prevents a second competing source of truth for
-// ownerId / businessId / branchId.
+// This prevents a second competing source of truth for:
+//
+// - ownerId
+// - businessId
+// - branchId
+// - dataContext
+// - demoId
 // ============================================================
 
 let activeBusinessContext:
@@ -90,20 +103,23 @@ let activeBusinessContext:
 // BusinessAccessContext is optional at the authentication
 // type level for backward compatibility.
 //
-// An ACTIVE V2 business context, however, requires all three
-// identifiers:
+// An ACTIVE V2 business context requires:
 //
 // - ownerId
 // - businessId
 // - branchId
 //
-// This distinction allows old sessions to remain compatible
-// while preventing V2 domain operations from accidentally
-// running without a complete business boundary.
+// REAL requires ownerId.
+//
+// DEMO requires demoId.
+//
+// This prevents an accidental switch into an unscoped
+// data environment.
 // ============================================================
 
 function validateBusinessContext(
-  context: BusinessAccessContext,
+  context:
+    BusinessAccessContext,
 ): string | null {
 
   if (!context.ownerId) {
@@ -121,6 +137,34 @@ function validateBusinessContext(
     return "Branch ID is required.";
   }
 
+  // ----------------------------------------------------------
+  // Backward-compatible default
+  // ----------------------------------------------------------
+
+  const dataContext =
+    context.dataContext ??
+    "REAL";
+
+  if (
+    dataContext !== "REAL" &&
+    dataContext !== "DEMO"
+  ) {
+
+    return "Invalid FINORA data context.";
+  }
+
+  // ----------------------------------------------------------
+  // DEMO REQUIRES DEMO ID
+  // ----------------------------------------------------------
+
+  if (
+    dataContext === "DEMO" &&
+    !context.demoId
+  ) {
+
+    return "Demo ID is required for DEMO data context.";
+  }
+
   return null;
 }
 
@@ -133,13 +177,16 @@ function validateBusinessContext(
 //
 // The service does NOT discover the session by itself.
 //
-// This keeps authentication lifecycle and storage startup
+// This keeps authentication lifecycle and storage lifecycle
 // independent from one another.
 // ============================================================
 
 export async function setBusinessContext(
-  context: BusinessAccessContext,
-): Promise<StorageResult> {
+  context:
+    BusinessAccessContext,
+): Promise<
+  StorageResult<void>
+> {
 
   const validationError =
     validateBusinessContext(
@@ -158,19 +205,38 @@ export async function setBusinessContext(
   }
 
   // ----------------------------------------------------------
-  // Establish the REAL owner scope in StorageManager.
+  // Backward-compatible default
   //
-  // BusinessId and BranchId remain application/business
-  // context identifiers. StorageManager currently owns the
-  // physical storage context and owner isolation.
+  // Existing sessions created before DEMO support remain REAL.
+  // ----------------------------------------------------------
+
+  const dataContext =
+    context.dataContext ??
+    "REAL";
+
+  // ----------------------------------------------------------
+  // Establish selected data context in StorageManager.
+  //
+  // REAL:
+  // - ownerId identifies production owner.
+  //
+  // DEMO:
+  // - demoId identifies isolated demonstration storage.
   // ----------------------------------------------------------
 
   const storageResult =
     await storageManager.setDataContext(
-      DataContext.REAL,
+      dataContext === "DEMO"
+        ? DataContext.DEMO
+        : DataContext.REAL,
       {
         ownerId:
           context.ownerId,
+
+        demoId:
+          dataContext === "DEMO"
+            ? context.demoId
+            : undefined,
       },
     );
 
@@ -187,8 +253,8 @@ export async function setBusinessContext(
   }
 
   // ----------------------------------------------------------
-  // Only update the in-memory context after storage context
-  // has been successfully established.
+  // Only update runtime context after StorageManager accepts
+  // the requested data context.
   // ----------------------------------------------------------
 
   activeBusinessContext = {
@@ -201,6 +267,16 @@ export async function setBusinessContext(
 
     branchId:
       context.branchId,
+
+    dataContext:
+      dataContext,
+
+    ...(dataContext === "DEMO"
+      ? {
+          demoId:
+            context.demoId,
+        }
+      : {}),
   };
 
   return {
@@ -211,10 +287,6 @@ export async function setBusinessContext(
 
 // ============================================================
 // GET BUSINESS CONTEXT
-// ============================================================
-//
-// Returns a defensive copy so callers cannot mutate the
-// internal runtime state accidentally.
 // ============================================================
 
 export function getBusinessContext():
@@ -244,13 +316,6 @@ export function hasBusinessContext():
 // ============================================================
 // REQUIRE BUSINESS CONTEXT
 // ============================================================
-//
-// Used by future V2 domain boundaries that require an active
-// business scope.
-//
-// Throwing here is intentional: an unscoped business
-// operation must not silently continue.
-// ============================================================
 
 export function requireBusinessContext():
   BusinessAccessContext {
@@ -272,43 +337,76 @@ export function requireBusinessContext():
 // CLEAR BUSINESS CONTEXT
 // ============================================================
 //
-// Clears the application-level business context.
+// This operation is intentionally asynchronous.
+//
+// Logout must reset the active StorageManager context before
+// declaring the application-level Business Context cleared.
 //
 // IMPORTANT:
 //
-// StorageManager currently uses the existing configuration
-// when an optional ownerId is omitted. Therefore this service
-// does not pretend that passing `undefined` clears the
-// StorageManager owner scope.
+// - Does NOT delete persisted customer/loan/etc. data.
+// - Does NOT clear localStorage records.
+// - Does NOT delete DEMO data.
+// - Does NOT delete REAL data.
+// - Only resets the active runtime storage boundary.
 //
-// The in-memory business context is cleared here.
+// If StorageManager reset fails:
 //
-// A dedicated StorageManager context-reset operation can be
-// introduced later when logout/session lifecycle is integrated.
+// - activeBusinessContext remains intact.
+// - Caller receives the storage error.
+// - React must not falsely report a cleared context.
 // ============================================================
 
-export function clearBusinessContext():
-  void {
+export async function clearBusinessContext():
+  Promise<StorageResult<void>> {
+
+  const storageResult =
+    await storageManager.resetDataContext();
+
+  if (!storageResult.success) {
+
+    return {
+
+      success: false,
+
+      error:
+        storageResult.error ??
+        "Unable to reset FINORA storage context.",
+    };
+  }
+
+  // ----------------------------------------------------------
+  // Storage boundary is now safely reset.
+  // ----------------------------------------------------------
 
   activeBusinessContext =
     null;
+
+  return {
+
+    success: true,
+  };
 }
 
 // ============================================================
 // REPLACE BUSINESS CONTEXT
 // ============================================================
 //
-// Explicit API for future business/branch switching.
+// Explicit API for future business/branch/data-context
+// switching.
 //
-// The new context is established only if storage accepts it.
+// The new context is established only if StorageManager
+// accepts it.
+//
 // If establishment fails, the previous context remains intact.
-//
-// Therefore we do NOT clear the existing context first.
 // ============================================================
 
 export async function replaceBusinessContext(
-  context: BusinessAccessContext,
-): Promise<StorageResult> {
+  context:
+    BusinessAccessContext,
+): Promise<
+  StorageResult<void>
+> {
 
   const validationError =
     validateBusinessContext(
@@ -326,12 +424,31 @@ export async function replaceBusinessContext(
     };
   }
 
+  // ----------------------------------------------------------
+  // Backward-compatible default
+  // ----------------------------------------------------------
+
+  const dataContext =
+    context.dataContext ??
+    "REAL";
+
+  // ----------------------------------------------------------
+  // Establish requested storage/data context.
+  // ----------------------------------------------------------
+
   const storageResult =
     await storageManager.setDataContext(
-      DataContext.REAL,
+      dataContext === "DEMO"
+        ? DataContext.DEMO
+        : DataContext.REAL,
       {
         ownerId:
           context.ownerId,
+
+        demoId:
+          dataContext === "DEMO"
+            ? context.demoId
+            : undefined,
       },
     );
 
@@ -347,6 +464,11 @@ export async function replaceBusinessContext(
     };
   }
 
+  // ----------------------------------------------------------
+  // Update runtime context only after successful storage
+  // initialization.
+  // ----------------------------------------------------------
+
   activeBusinessContext = {
 
     ownerId:
@@ -357,6 +479,16 @@ export async function replaceBusinessContext(
 
     branchId:
       context.branchId,
+
+    dataContext:
+      dataContext,
+
+    ...(dataContext === "DEMO"
+      ? {
+          demoId:
+            context.demoId,
+        }
+      : {}),
   };
 
   return {

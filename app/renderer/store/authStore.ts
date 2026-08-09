@@ -11,6 +11,7 @@
 // - Integrate login security
 // - Create authentication audit logs
 // - Carry Business Access Context into the session
+// - Carry REAL / DEMO data context into the session
 // - Migrate legacy authentication records safely
 //
 // IMPORTANT:
@@ -18,14 +19,16 @@
 // - Existing authentication behavior is preserved.
 // - Existing login-security behavior is preserved.
 // - Existing audit behavior is preserved.
-// - Business context is copied from the authenticated User.
-// - Legacy initial-admin records are migrated automatically.
+// - Existing User records remain backward compatible.
+// - Existing administrator login remains a REAL session.
+// - DEMO session support is represented in the session contract,
+//   but no demo credential is invented here.
 // - No Customer business logic.
 // - No Loan business logic.
 // - No Collection business logic.
 // - No Payment business logic.
 //
-// VERSION : 2.0
+// VERSION : 2.1
 // STATUS  : Production Foundation
 // ============================================================
 
@@ -34,6 +37,7 @@
 // ============================================================
 
 import type {
+  AuthDataContext,
   AuthSession,
   LoginCredentials,
   User,
@@ -87,6 +91,20 @@ const DEFAULT_BUSINESS_ID =
 
 const DEFAULT_BRANCH_ID =
   "BR-001";
+
+// ============================================================
+// DEFAULT AUTHENTICATED DATA CONTEXT
+//
+// Existing administrator accounts are production/REAL
+// accounts.
+//
+// DEMO support is introduced at the session contract level,
+// but no DEMO account is created automatically.
+// ============================================================
+
+const DEFAULT_DATA_CONTEXT:
+  AuthDataContext =
+  "REAL";
 
 // ============================================================
 // LEGACY USER NORMALIZATION
@@ -464,12 +482,11 @@ export function login(
   // ==========================================================
   // SESSION CREATION
   //
-  // Business Access Context is copied directly from the
-  // authenticated User.
+  // Existing users authenticate as REAL sessions.
   //
-  // Because legacy users were normalized during loadUsers(),
-  // the initial administrator now receives the complete V2
-  // business context here.
+  // DEMO session creation will be introduced through an
+  // explicit demo lifecycle rather than by guessing from
+  // username or credentials.
   // ==========================================================
 
   const now =
@@ -510,6 +527,15 @@ export function login(
 
     branchId:
       user.branchId,
+
+    // --------------------------------------------------------
+    // ACTIVE DATA CONTEXT
+    //
+    // Existing authentication remains REAL.
+    // --------------------------------------------------------
+
+    dataContext:
+      DEFAULT_DATA_CONTEXT,
   };
 
   // ==========================================================
@@ -552,13 +578,12 @@ export function login(
 // GET SESSION
 // ============================================================
 //
-// Existing sessions created before V2 Business Context support
-// may not contain ownerId / businessId / branchId.
+// Existing sessions created before V2 data-context support
+// may not contain dataContext.
 //
-// The authenticated user remains the source of truth.
+// Legacy sessions are safely interpreted as REAL sessions.
 //
-// If the current session belongs to an existing user, missing
-// business context is reconciled from that user.
+// Existing business context values are preserved.
 //
 // No new authentication is performed here.
 // ============================================================
@@ -581,7 +606,7 @@ export function getSession():
     const parsedSession =
       JSON.parse(
         data,
-      ) as AuthSession;
+      ) as Partial<AuthSession>;
 
     // --------------------------------------------------------
     // FIND AUTHENTICATED USER
@@ -595,67 +620,136 @@ export function getSession():
       );
 
     // --------------------------------------------------------
-    // RECONCILE LEGACY SESSION
+    // LEGACY DATA CONTEXT MIGRATION
     //
-    // Only fill missing business context.
+    // Existing sessions without dataContext are REAL.
     //
-    // Existing session values are preserved.
+    // We intentionally do not infer DEMO from any existing
+    // field because doing so could expose production data to
+    // an unintended demo context.
+    // --------------------------------------------------------
+
+    const nextDataContext:
+      AuthDataContext =
+      parsedSession.dataContext ===
+        "DEMO"
+        ? "DEMO"
+        : "REAL";
+
+    // --------------------------------------------------------
+    // DEMO SAFETY
+    //
+    // A DEMO session without a demoId is invalid.
+    //
+    // We remove it rather than silently converting it to REAL.
+    // This prevents accidental data-context escalation.
     // --------------------------------------------------------
 
     if (
-      authenticatedUser
+      nextDataContext === "DEMO" &&
+      !parsedSession.demoId
     ) {
 
-      const nextOwnerId =
-        parsedSession.ownerId ??
-        authenticatedUser.ownerId;
+      localStorage.removeItem(
+        SESSION_KEY,
+      );
 
-      const nextBusinessId =
-        parsedSession.businessId ??
-        authenticatedUser.businessId;
-
-      const nextBranchId =
-        parsedSession.branchId ??
-        authenticatedUser.branchId;
-
-      const contextChanged =
-        parsedSession.ownerId !==
-          nextOwnerId ||
-        parsedSession.businessId !==
-          nextBusinessId ||
-        parsedSession.branchId !==
-          nextBranchId;
-
-      if (
-        contextChanged
-      ) {
-
-        const migratedSession: AuthSession = {
-
-          ...parsedSession,
-
-          ownerId:
-            nextOwnerId,
-
-          businessId:
-            nextBusinessId,
-
-          branchId:
-            nextBranchId,
-        };
-
-        localStorage.setItem(
-          SESSION_KEY,
-          JSON.stringify(
-            migratedSession,
-          ),
-        );
-
-        return migratedSession;
-      }
+      return null;
     }
 
-    return parsedSession;
+    // --------------------------------------------------------
+    // RECONCILE BUSINESS CONTEXT
+    //
+    // Existing session values are preserved.
+    // Missing values are recovered from the authenticated
+    // user when available.
+    // --------------------------------------------------------
+
+    const nextOwnerId =
+      parsedSession.ownerId ??
+      authenticatedUser?.ownerId;
+
+    const nextBusinessId =
+      parsedSession.businessId ??
+      authenticatedUser?.businessId;
+
+    const nextBranchId =
+      parsedSession.branchId ??
+      authenticatedUser?.branchId;
+
+    // --------------------------------------------------------
+    // BUILD NORMALIZED SESSION
+    // --------------------------------------------------------
+
+    const normalizedSession:
+      AuthSession = {
+
+      userId:
+        parsedSession.userId ?? "",
+
+      username:
+        parsedSession.username ?? "",
+
+      fullName:
+        parsedSession.fullName ?? "",
+
+      role:
+        parsedSession.role ?? "VIEWER",
+
+      loginTime:
+        parsedSession.loginTime ??
+        new Date().toISOString(),
+
+      sessionId:
+        parsedSession.sessionId ?? "",
+
+      lastActivity:
+        parsedSession.lastActivity ??
+        parsedSession.loginTime ??
+        new Date().toISOString(),
+
+      ownerId:
+        nextOwnerId,
+
+      businessId:
+        nextBusinessId,
+
+      branchId:
+        nextBranchId,
+
+      dataContext:
+        nextDataContext,
+
+      ...(parsedSession.demoId
+        ? {
+            demoId:
+              parsedSession.demoId,
+          }
+        : {}),
+    };
+
+    // --------------------------------------------------------
+    // Persist normalized legacy/session state only when the
+    // stored representation differs from the normalized one.
+    // --------------------------------------------------------
+
+    const normalizedSerialized =
+      JSON.stringify(
+        normalizedSession,
+      );
+
+    if (
+      normalizedSerialized !==
+      data
+    ) {
+
+      localStorage.setItem(
+        SESSION_KEY,
+        normalizedSerialized,
+      );
+    }
+
+    return normalizedSession;
 
   } catch {
 

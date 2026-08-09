@@ -8,6 +8,7 @@
 // - Render the FINORA V2 application
 // - Manage authentication lifecycle for V2
 // - Establish Business Context after successful authentication
+// - Establish REAL / DEMO data context after authentication
 // - Clear Business Context during logout
 // - Manage top-level page navigation
 // - Route Reception departments to their V2 pages
@@ -38,7 +39,21 @@
 //      ↓
 // Login / Authenticated V2 Application
 //
-// VERSION : 2.0
+// AUTHENTICATED DATA CONTEXT:
+//
+// REAL
+//      ↓
+// ownerId
+//      ↓
+// production owner storage
+//
+// DEMO
+//      ↓
+// demoId
+//      ↓
+// isolated demonstration storage
+//
+// VERSION : 2.1
 // STATUS  : Production
 // ============================================================
 
@@ -54,28 +69,28 @@ import {
 import AppShell from "../layouts/AppShell";
 
 import ReceptionPage
-from "../pages/reception";
+  from "../pages/reception";
 
 import DashboardPage
-from "../pages/dashboard/DashboardPage";
+  from "../pages/dashboard/DashboardPage";
 
 import CustomersPage
-from "../pages/customers/CustomersPage";
+  from "../pages/customers/CustomersPage";
 
 import CustomerDepartmentPage
-from "../pages/customers/CustomerDepartmentPage";
+  from "../pages/customers/CustomerDepartmentPage";
 
 import LoansPage
-from "../pages/loans/LoansPage";
+  from "../pages/loans/LoansPage";
 
 import CollectionsPage
-from "../pages/collections/CollectionsPage";
+  from "../pages/collections/CollectionsPage";
 
 import ReportsPage
-from "../pages/reports/ReportsPage";
+  from "../pages/reports/ReportsPage";
 
 import Login
-from "../../pages/auth/Login";
+  from "../../pages/auth/Login";
 
 import {
   getSession,
@@ -267,6 +282,34 @@ function AuthenticatedApplication() {
       }
 
       // ------------------------------------------------------
+      // DEMO SESSION SAFETY
+      //
+      // DEMO sessions must carry a demoId.
+      //
+      // A DEMO session without demoId must never be allowed
+      // to establish a business/storage context.
+      // ------------------------------------------------------
+
+      if (
+        session.dataContext === "DEMO" &&
+        !session.demoId
+      ) {
+
+        if (active) {
+
+          clearContext();
+
+          setContextReady(false);
+
+          setContextError(
+            "The authenticated DEMO session does not contain a valid Demo ID.",
+          );
+        }
+
+        return;
+      }
+
+      // ------------------------------------------------------
       // BEGIN CONTEXT INITIALIZATION
       // ------------------------------------------------------
 
@@ -276,6 +319,19 @@ function AuthenticatedApplication() {
 
         setContextError(null);
       }
+
+      // ------------------------------------------------------
+      // ESTABLISH BUSINESS + DATA CONTEXT
+      //
+      // REAL:
+      // - ownerId is used by StorageManager.
+      //
+      // DEMO:
+      // - demoId is used by StorageManager.
+      //
+      // BusinessId and BranchId remain application/business
+      // boundary identifiers.
+      // ------------------------------------------------------
 
       const result =
         await setContext({
@@ -288,6 +344,12 @@ function AuthenticatedApplication() {
 
           branchId:
             session.branchId,
+
+          dataContext:
+            session.dataContext,
+
+          demoId:
+            session.demoId,
 
         });
 
@@ -488,10 +550,10 @@ function AuthenticatedApplication() {
 interface AuthenticatedV2ApplicationProps {
 
   session:
-  AuthSession;
+    AuthSession;
 
   onLogout():
-  void;
+    void;
 }
 
 function AuthenticatedV2Application({
@@ -577,9 +639,10 @@ function AuthenticatedV2Application({
   return (
 
     <AppShell
-      page={page}
-      onNavigate={setPage}
-    >
+  page={page}
+  onNavigate={setPage}
+  onLogout={onLogout}
+>
 
       {page === "reception" && (
 

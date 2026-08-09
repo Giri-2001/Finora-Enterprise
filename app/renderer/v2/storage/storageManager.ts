@@ -244,6 +244,8 @@ export class StorageManager {
       deviceId?: string;
       storageId?: string;
     },
+
+
   ): Promise<StorageResult<void>> {
 
     const nextConfiguration:
@@ -335,6 +337,79 @@ export class StorageManager {
       success: true,
     };
   }
+
+  // ==========================================================
+// RESET DATA CONTEXT
+// ==========================================================
+//
+// Resets the active runtime storage context to the neutral
+// FINORA startup state.
+//
+// IMPORTANT:
+//
+// - Does NOT delete persisted data.
+// - Does NOT clear localStorage.
+// - Does NOT remove USB/CLOUD data.
+// - Only resets the active in-memory storage boundary.
+// - REAL is used as the neutral post-logout context.
+// - owner/demo identifiers are cleared.
+//
+// This is intentionally different from a data wipe.
+//
+
+async resetDataContext():
+Promise<StorageResult> {
+
+  const nextConfiguration:
+    StorageConfiguration = {
+
+    storageMode:
+      this.configuration.storageMode,
+
+    dataContext:
+      DataContext.REAL,
+  };
+
+  const adapter =
+    this.getAdapter(
+      nextConfiguration.storageMode,
+    );
+
+  if (!adapter) {
+
+    this.initialized =
+      false;
+
+    return {
+
+      success: false,
+
+      error:
+        `Storage mode ${nextConfiguration.storageMode} is not registered.`,
+    };
+  }
+
+  const result =
+    await adapter.initialize(
+      nextConfiguration,
+    );
+
+  if (!result.success) {
+
+    return result;
+  }
+
+  this.configuration =
+    nextConfiguration;
+
+  this.initialized =
+    true;
+
+  return {
+
+    success: true,
+  };
+}
 
 
   // ==========================================================
