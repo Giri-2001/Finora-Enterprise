@@ -1,101 +1,59 @@
 /* ===========================================================
-   FINORA ENTERPRISE V2
-   DOCUMENT UPLOADER
---------------------------------------------------------------
-Customer KYC Document Upload
+   FINORA ENTERPRISE OS™
+
+   CUSTOMER KYC DOCUMENT UPLOAD
+
+   RESPONSIBILITY:
+   - Document upload presentation state
+
+   STYLES:
+   DocumentUploader.styles.ts
 =========================================================== */
 
-import type { CSSProperties } from "react";
+import {
+  cardStyle,
+  titleStyle,
+  statusStyle,
+  textStyle,
+} from "./DocumentUploader.styles";
 
 /* ===========================================================
    TYPES
 =========================================================== */
 
 interface DocumentUploaderProps {
-
   documentName?: string;
-
   uploaded?: boolean;
-
 }
-
-/* ===========================================================
-   STYLES
-=========================================================== */
-
-const cardStyle: CSSProperties = {
-
-  padding: "24px",
-
-  border: "2px dashed #d1d5db",
-
-  borderRadius: "18px",
-
-  background: "#ffffff",
-
-  textAlign: "center",
-
-};
-
-const titleStyle: CSSProperties = {
-
-  margin: 0,
-
-  marginBottom: "12px",
-
-  fontSize: "20px",
-
-  fontWeight: 700,
-
-};
-
-const textStyle: CSSProperties = {
-
-  color: "#6b7280",
-
-  lineHeight: 1.6,
-
-};
 
 /* ===========================================================
    COMPONENT
 =========================================================== */
 
 export default function DocumentUploader({
-
   documentName,
-
   uploaded,
-
 }: DocumentUploaderProps) {
 
   return (
-
     <section style={cardStyle}>
 
       <h3 style={titleStyle}>
-
         Document Upload
-
       </h3>
 
-      <p style={textStyle}>
-
+      <div style={statusStyle}>
         {uploaded
           ? `Uploaded: ${documentName ?? "Document"}`
-          : "No document uploaded yet."}
-
-      </p>
+          : "⏳ No document uploaded yet"}
+      </div>
 
       <p style={textStyle}>
-
-        Future versions will support drag & drop,
-        camera capture, OCR and AI verification.
-
+        Drag & drop, camera capture, OCR and AI
+        verification can be connected to this workspace
+        in future releases.
       </p>
 
     </section>
-
   );
-
 }

@@ -1,27 +1,58 @@
 /* ===========================================================
-   FINORA ENTERPRISE V2
-   CUSTOMER WIZARD
-   -----------------------------------------------------------
-   Module      : Customer
-   Layer       : Wizard Controller
-   Version     : 2.0
-   Phase       : Phase 2
+   FINORA ENTERPRISE OS™
+
+   CUSTOMER WIZARD CONTROLLER™
+
+   Version : 2.0
+   Phase   : Phase 2
    Architecture: Enterprise
-   Status      : Production
 =========================================================== */
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
 
-import CustomerWizardLayout from "./layout/CustomerWizardLayout";
-import CustomerWizardNavigation from "./navigation/CustomerWizardNavigation";
-import CustomerWizardProgress from "./progress/CustomerWizardProgress";
+import CustomerWizardLayout
+  from "./layout/CustomerWizardLayout";
 
-import Step1Identity from "./steps/Step1Identity";
-import Step2Basic from "./steps/Step2Basic";
-import Step3Address from "./steps/Step3Address";
-import Step4KYC from "./steps/Step4KYC";
-import Step5Nominee from "./steps/Step5Nominee";
-import Step6Review from "./steps/Step6Review";
+import CustomerWizardNavigation
+  from "./navigation/CustomerWizardNavigation";
+
+import CustomerWizardProgress
+  from "./progress/CustomerWizardProgress";
+
+import Step1Identity
+  from "./steps/Step1Identity";
+
+import Step2Basic
+  from "./steps/Step2Basic";
+
+import Step3Address
+  from "./steps/Step3Address";
+
+import Step4KYC
+  from "./steps/Step4KYC";
+
+import Step5Nominee
+  from "./steps/Step5Nominee";
+
+import Step6Review
+  from "./steps/Step6Review";
+
+import {
+  getCustomer,
+} from "../../../store/customers/customer.store";
+
+import type {
+  OfficeCustomer,
+} from "../office/CustomerOffice/types";
+
+import type {
+  CustomerProfile,
+} from "../../../types/customers";
 
 /* ===========================================================
    TYPES
@@ -29,27 +60,90 @@ import Step6Review from "./steps/Step6Review";
 
 export interface CustomerWizardData {
 
-  customerId?: string;
+ /* =========================================================
+   STEP 1 — IDENTITY
+========================================================= */
 
-  photo?: string;
+customerId?: string;
 
-  fullName?: string;
+photo?: string;
+
+fullName?: string;
 
 mobileNumber?: string;
 
-  whatsapp?: string;
+whatsapp?: string;
 
-  email?: string;
+email?: string;
+
+dateOfBirth?: string;
+
+preferredLanguage?:
+  | "Telugu"
+  | "English"
+  | "Hindi"
+  | "Tamil"
+  | "Kannada"
+  | "Marathi"
+  | "Other";
+
+
+  /* =========================================================
+     STEP 2 — BASIC DETAILS
+  ========================================================= */
+
+  fatherOrSpouseName?: string;
+
+  occupation?: string;
+
+  monthlyIncome?: string;
+
+  education?: string;
+
+  maritalStatus?: string;
+
+  workPlace?: string;
+
+  experience?: string;
+
+  spouseName?: string;
+
+  numberOfFamilyMembers?: string;
+
+  emergencyContactName?: string;
+
+  emergencyContactMobile?: string;
+
+
+  /* =========================================================
+     STEP 3 — ADDRESS
+  ========================================================= */
 
   address?: string;
+
+
+  /* =========================================================
+     STEP 4 — KYC
+  ========================================================= */
 
   aadhaar?: string;
 
   pan?: string;
 
-  nominee?: string;
+
+  /* =========================================================
+     STEP 5 — NOMINEE
+  ========================================================= */
+  nomineeCustomerId?: string;
+
+  nomineeName?: string;
+
+  nomineeRelationship?: string;
+
+  nomineePhoneNumber?: string;
 
 }
+
 
 export interface WizardStep {
 
@@ -61,13 +155,27 @@ export interface WizardStep {
 
 }
 
+
+/* ===========================================================
+   CUSTOMER WIZARD PROPS
+=========================================================== */
+
+interface CustomerWizardProps {
+
+  editCustomer?: OfficeCustomer;
+
+  onBackToCustomersHub?: () => void;
+
+}
+
 /* ===========================================================
    CONSTANTS
 =========================================================== */
 
 const TOTAL_STEPS = 6;
 
-const STORAGE_KEY = "finora_customer_draft";
+const STORAGE_KEY =
+  "finora_customer_draft";
 
 const STEPS: WizardStep[] = [
 
@@ -110,21 +218,74 @@ const STEPS: WizardStep[] = [
 ];
 
 /* ===========================================================
+   EDIT PROFILE → WIZARD DATA
+=========================================================== */
+
+function buildEditWizardData(
+  customer: CustomerProfile,
+): CustomerWizardData {
+
+  return {
+
+    customerId:
+      customer.identity.customerId,
+
+    fullName:
+      customer.basic.fullName,
+
+    mobileNumber:
+      customer.basic.mobileNumber,
+
+    whatsapp:
+      customer.basic.whatsappNumber,
+
+    email:
+      customer.basic.email,
+
+  };
+
+}
+
+/* ===========================================================
    COMPONENT
 =========================================================== */
 
-export default function CustomerWizard() {
+export default function CustomerWizard({
+
+  editCustomer,
+
+  onBackToCustomersHub,
+
+}: CustomerWizardProps) {
+
+  const isEditMode =
+    Boolean(editCustomer);
 
   /* ===========================================================
      STATE
   =========================================================== */
 
-  const [currentStep, setCurrentStep] = useState(1);
+  const [
+    currentStep,
+    setCurrentStep,
+  ] = useState(1);
 
-  const [loadingDraft, setLoadingDraft] = useState(true);
+  const [
+    loadingDraft,
+    setLoadingDraft,
+  ] = useState(true);
 
-  const [wizardData, setWizardData] =
-    useState<CustomerWizardData>({});
+  const [
+    wizardData,
+    setWizardData,
+  ] = useState<CustomerWizardData>({});
+
+  const [
+    originalCustomerProfile,
+    setOriginalCustomerProfile,
+  ] = useState<CustomerProfile | undefined>(
+    undefined,
+  );
 
   /* ===========================================================
      CURRENT STEP
@@ -134,11 +295,14 @@ export default function CustomerWizard() {
 
     return (
       STEPS.find(
-        (step) => step.id === currentStep,
+        (step) =>
+          step.id === currentStep,
       ) ?? STEPS[0]
     );
 
-  }, [currentStep]);
+  }, [
+    currentStep,
+  ]);
 
   /* ===========================================================
      PROGRESS
@@ -150,14 +314,70 @@ export default function CustomerWizard() {
       (currentStep / TOTAL_STEPS) * 100,
     );
 
-  }, [currentStep]);
+  }, [
+    currentStep,
+  ]);
+
+  /* ===========================================================
+     LOAD EXISTING CUSTOMER FOR EDIT
+  =========================================================== */
+
+  useEffect(() => {
+
+    if (!editCustomer) {
+
+      return;
+
+    }
+
+    const existingCustomer =
+      getCustomer(
+        editCustomer.id,
+      );
+
+    if (!existingCustomer) {
+
+      console.error(
+        "FINORA EDIT CUSTOMER NOT FOUND:",
+        editCustomer.id,
+      );
+
+      setLoadingDraft(false);
+
+      return;
+
+    }
+
+    setOriginalCustomerProfile(
+      existingCustomer,
+    );
+
+    setWizardData(
+      buildEditWizardData(
+        existingCustomer,
+      ),
+    );
+
+    setCurrentStep(1);
+
+    setLoadingDraft(false);
+
+  }, [
+    editCustomer,
+  ]);
 
   /* ===========================================================
      AUTO DRAFT
-     (Phase 2 Foundation)
+     NEW CUSTOMER MODE ONLY
   =========================================================== */
 
   const saveDraft = useCallback(() => {
+
+    if (isEditMode) {
+
+      return;
+
+    }
 
     try {
 
@@ -179,14 +399,20 @@ export default function CustomerWizard() {
 
     }
 
-  }, [currentStep, wizardData]);
+  }, [
+    currentStep,
+    wizardData,
+    isEditMode,
+  ]);
 
   const loadDraft = useCallback(() => {
 
     try {
 
       const raw =
-        localStorage.getItem(STORAGE_KEY);
+        localStorage.getItem(
+          STORAGE_KEY,
+        );
 
       if (!raw) {
 
@@ -194,17 +420,25 @@ export default function CustomerWizard() {
 
       }
 
-      const draft = JSON.parse(raw);
+      const draft =
+        JSON.parse(raw) as {
+          currentStep?: number;
+          wizardData?: CustomerWizardData;
+        };
 
       if (draft.currentStep) {
 
-        setCurrentStep(draft.currentStep);
+        setCurrentStep(
+          draft.currentStep,
+        );
 
       }
 
       if (draft.wizardData) {
 
-        setWizardData(draft.wizardData);
+        setWizardData(
+          draft.wizardData,
+        );
 
       }
 
@@ -222,19 +456,38 @@ export default function CustomerWizard() {
 
   const clearDraft = useCallback(() => {
 
-    localStorage.removeItem(STORAGE_KEY);
+    try {
+
+      localStorage.removeItem(
+        STORAGE_KEY,
+      );
+
+    } catch {
+
+      // Ignore Draft Errors
+
+    }
 
   }, []);
 
-    /* ===========================================================
+  /* ===========================================================
      LIFECYCLE
   =========================================================== */
 
   useEffect(() => {
 
+    if (isEditMode) {
+
+      return;
+
+    }
+
     loadDraft();
 
-  }, [loadDraft]);
+  }, [
+    isEditMode,
+    loadDraft,
+  ]);
 
   useEffect(() => {
 
@@ -259,27 +512,29 @@ export default function CustomerWizard() {
 
   const updateWizardData = useCallback(
 
-  (
-    data: Partial<CustomerWizardData>,
-  ) => {
+    (
+      data: Partial<CustomerWizardData>,
+    ) => {
 
-    console.log(
-      "UPDATE WIZARD DATA:",
-      data
-    );
+      console.log(
+        "UPDATE WIZARD DATA:",
+        data,
+      );
 
-    setWizardData((previous) => ({
+      setWizardData(
+        (previous) => ({
 
-      ...previous,
+          ...previous,
 
-      ...data,
+          ...data,
 
-    }));
+        }),
+      );
 
-  },
+    },
 
-  [],
-);
+    [],
+  );
 
   /* ===========================================================
      NAVIGATION
@@ -287,22 +542,24 @@ export default function CustomerWizard() {
 
   const nextStep = useCallback(() => {
 
-    setCurrentStep((previous) =>
-
-      Math.min(
-        previous + 1,
-
-        TOTAL_STEPS,
-      ),
+    setCurrentStep(
+      (previous) =>
+        Math.min(
+          previous + 1,
+          TOTAL_STEPS,
+        ),
     );
 
   }, []);
 
   const previousStep = useCallback(() => {
 
-    setCurrentStep((previous) =>
-
-      Math.max(previous - 1, 1),
+    setCurrentStep(
+      (previous) =>
+        Math.max(
+          previous - 1,
+          1,
+        ),
     );
 
   }, []);
@@ -323,7 +580,9 @@ export default function CustomerWizard() {
 
       }
 
-      setCurrentStep(step);
+      setCurrentStep(
+        step,
+      );
 
     },
 
@@ -342,7 +601,13 @@ export default function CustomerWizard() {
 
     setWizardData({});
 
-  }, [clearDraft]);
+    setOriginalCustomerProfile(
+      undefined,
+    );
+
+  }, [
+    clearDraft,
+  ]);
 
   /* ===========================================================
      CURRENT STEP COMPONENT
@@ -354,9 +619,71 @@ export default function CustomerWizard() {
 
       case 1:
 
+        return (
+
+          <Step1Identity
+
+  initialData={
+    wizardData
+  }
+
+  updateWizardData={
+    updateWizardData
+  }
+
+/>
+
+        );
+
+      case 2:
+
+        return (
+
+          <Step2Basic
+
+            updateWizardData={
+              updateWizardData
+            }
+
+          />
+
+        );
+
+      case 3:
+
+        return (
+
+          <Step3Address
+
+            updateWizardData={
+              updateWizardData
+            }
+
+            wizardData={
+              wizardData
+            }
+
+          />
+
+        );
+
+        case 4:
+  return (
+    <Step4KYC
+      wizardData={wizardData}
+      updateWizardData={updateWizardData}
+    />
+  );
+
+     case 5:
+
   return (
 
-    <Step1Identity
+    <Step5Nominee
+
+      wizardData={
+        wizardData
+      }
 
       updateWizardData={
         updateWizardData
@@ -366,63 +693,44 @@ export default function CustomerWizard() {
 
   );
 
-      case 2:
-
-return (
-
-  <Step2Basic
-
-    updateWizardData={
-      updateWizardData
-    }
-
-  />
-
-);
-
-      case 3:
-
-        return (
-
-          <Step3Address />
-
-        );
-
-      case 4:
-
-        return (
-
-          <Step4KYC />
-
-        );
-
-      case 5:
-
-        return (
-
-          <Step5Nominee />
-
-        );
-
       default:
 
-return (
+        return (
 
-  <Step6Review
+          <Step6Review
 
-    wizardData={wizardData}
+            wizardData={
+              wizardData
+            }
 
-    resetWizard={resetWizard}
+            resetWizard={
+              resetWizard
+            }
 
-  />
+            originalCustomerProfile={
+              originalCustomerProfile
+            }
 
-);
+            isEditMode={
+              isEditMode
+            }
+
+          />
+
+        );
 
     }
 
-  }, [currentStep]);
+  }, [
+    currentStep,
+    updateWizardData,
+    wizardData,
+    resetWizard,
+    originalCustomerProfile,
+    isEditMode,
+  ]);
 
-    /* ===========================================================
+  /* ===========================================================
      LOADING
   =========================================================== */
 
@@ -436,7 +744,9 @@ return (
           textAlign: "center",
         }}
       >
+
         Loading Customer Wizard...
+
       </div>
 
     );
@@ -452,25 +762,58 @@ return (
     <CustomerWizardLayout>
 
       <CustomerWizardProgress
-        currentStep={currentStep}
-        totalSteps={TOTAL_STEPS}
-        progress={progress}
-        title={currentStepInfo.title}
-        subtitle={currentStepInfo.subtitle}
+
+        currentStep={
+          currentStep
+        }
+
+        totalSteps={
+          TOTAL_STEPS
+        }
+
+        progress={
+          progress
+        }
+
+        title={
+          currentStepInfo.title
+        }
+
+        subtitle={
+          currentStepInfo.subtitle
+        }
+
       />
 
       {currentStepComponent}
 
       <CustomerWizardNavigation
-        currentStep={currentStep}
-        totalSteps={TOTAL_STEPS}
-        onPrevious={previousStep}
-        onNext={nextStep}
-      />
+
+  currentStep={
+    currentStep
+  }
+
+  totalSteps={
+    TOTAL_STEPS
+  }
+
+  onPrevious={
+    previousStep
+  }
+
+  onNext={
+    nextStep
+  }
+
+  onBackToCustomers={
+    onBackToCustomersHub
+  }
+
+/>
 
       {/* =======================================================
           FUTURE MODULES
-          -------------------------------------------------------
+
           Phase 2
           ✓ Draft Banner
           ✓ Validation Summary

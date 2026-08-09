@@ -1,6 +1,7 @@
 /* ===========================================================
    FINORA ENTERPRISE OS™
-   CUSTOMER ID CARD
+
+   CUSTOMER ID CARD™
 
    TYPES
 =========================================================== */
@@ -20,5 +21,17 @@ export interface CustomerIdCardProps {
   kycVerified?: boolean;
 
   active?: boolean;
+
+  /* =========================================================
+     PRESENTATION MODE
+
+     false / undefined
+       → Standard 350px identity card
+
+     true
+       → Compact Customer Hub presentation
+  ========================================================= */
+
+  compact?: boolean;
 
 }

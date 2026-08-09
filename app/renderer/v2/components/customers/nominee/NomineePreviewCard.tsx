@@ -1,11 +1,37 @@
 /* ===========================================================
    FINORA ENTERPRISE V2
-   NOMINEE PREVIEW CARD
---------------------------------------------------------------
-Customer Nominee Preview
+   CUSTOMER NOMINEE PREVIEW
+
+   RESPONSIBILITY:
+   - Live nominee information preview
+   - Existing FINORA customer link presentation
+   - Read-only customer relationship summary
+
+   BUSINESS LOGIC:
+   - NONE
+
+   STYLES:
+   NomineePreviewCard.styles.ts
+
+   IMPORTANT:
+   Customer-link status is supplied explicitly by the
+   Customer Wizard. This component does not decide whether
+   a FINORA Customer ID is valid.
 =========================================================== */
 
-import type { CSSProperties } from "react";
+import {
+  cardStyle,
+  headerStyle,
+  titleStyle,
+  subtitleStyle,
+  dividerStyle,
+  rowStyle,
+  labelStyle,
+  valueStyle,
+  emptyValueStyle,
+  linkedBadgeStyle,
+  footerStyle,
+} from "./NomineePreviewCard.styles";
 
 /* ===========================================================
    TYPES
@@ -22,50 +48,59 @@ export interface NomineePreviewData {
   relationship?: string;
 
   phoneNumber?: string;
-
 }
 
 interface NomineePreviewCardProps {
 
   value: NomineePreviewData;
 
+  /**
+   * True only when the entered FINORA Customer ID
+   * resolves to an existing registered customer.
+   */
+  isCustomerLinked?: boolean;
 }
 
 /* ===========================================================
-   STYLES
+   ROW
 =========================================================== */
 
-const cardStyle: CSSProperties = {
+function PreviewRow({
+  label,
+  value,
+}: {
+  label: string;
 
-  padding: "24px",
+  value?: string;
+}) {
 
-  borderRadius: "18px",
+  const hasValue =
+    Boolean(value?.trim());
 
-  border: "1px solid #e5e7eb",
+  return (
 
-  background: "#ffffff",
+    <div style={rowStyle}>
 
-};
+      <span style={labelStyle}>
+        {label}
+      </span>
 
-const titleStyle: CSSProperties = {
+      <span
+        style={
+          hasValue
+            ? valueStyle
+            : emptyValueStyle
+        }
+      >
+        {hasValue
+          ? value
+          : "--"}
+      </span>
 
-  margin: 0,
+    </div>
 
-  marginBottom: "18px",
-
-  fontSize: "20px",
-
-  fontWeight: 700,
-
-};
-
-const rowStyle: CSSProperties = {
-
-  marginBottom: "12px",
-
-  color: "#374151",
-
-};
+  );
+}
 
 /* ===========================================================
    COMPONENT
@@ -75,50 +110,104 @@ export default function NomineePreviewCard({
 
   value,
 
+  isCustomerLinked = false,
+
 }: NomineePreviewCardProps) {
 
   return (
 
     <section style={cardStyle}>
 
-      <h3 style={titleStyle}>
+      {/* =====================================================
+         HEADER
+      ===================================================== */}
 
-        Nominee Preview
+      <div style={headerStyle}>
 
-      </h3>
+        <div>
 
-      <div style={rowStyle}>
+          <h3 style={titleStyle}>
+            Nominee Preview
+          </h3>
 
-        <strong>Customer :</strong> {value.customerName || "--"}
+          <p style={subtitleStyle}>
+            Live relationship and nominee information.
+          </p>
 
-      </div>
+        </div>
 
-      <div style={rowStyle}>
+        {isCustomerLinked && (
 
-        <strong>FINORA ID :</strong> {value.nomineeCustomerId || "--"}
+          <div style={linkedBadgeStyle}>
+            ✓ Linked
+          </div>
 
-      </div>
-
-      <div style={rowStyle}>
-
-        <strong>Nominee :</strong> {value.nomineeName || "--"}
-
-      </div>
-
-      <div style={rowStyle}>
-
-        <strong>Relationship :</strong> {value.relationship || "--"}
+        )}
 
       </div>
 
-      <div style={rowStyle}>
+      {/* =====================================================
+         DIVIDER
+      ===================================================== */}
 
-        <strong>Phone :</strong> {value.phoneNumber || "--"}
+      <div style={dividerStyle} />
+
+      {/* =====================================================
+         PREVIEW DATA
+      ===================================================== */}
+
+      <div>
+
+        <PreviewRow
+          label="Customer"
+          value={
+            value.customerName
+          }
+        />
+
+        <PreviewRow
+          label="FINORA ID"
+          value={
+            value.nomineeCustomerId
+          }
+        />
+
+        <PreviewRow
+          label="Nominee"
+          value={
+            value.nomineeName
+          }
+        />
+
+        <PreviewRow
+          label="Relationship"
+          value={
+            value.relationship
+          }
+        />
+
+        <PreviewRow
+          label="Phone"
+          value={
+            value.phoneNumber
+          }
+        />
+
+      </div>
+
+      {/* =====================================================
+         FOOTER
+      ===================================================== */}
+
+      <div style={footerStyle}>
+
+        {isCustomerLinked
+          ? "Existing FINORA customer linked successfully."
+          : "Enter a FINORA Customer ID to link an existing customer."}
 
       </div>
 
     </section>
 
   );
-
 }

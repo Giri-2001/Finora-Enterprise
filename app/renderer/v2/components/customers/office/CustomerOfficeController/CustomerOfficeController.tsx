@@ -6,281 +6,257 @@
    RECEPTION / WORKSPACE ASSEMBLY
 =========================================================== */
 
-
 import {
   useState,
 } from "react";
 
-
 import SmartWallPanel
-from "./components/SmartWallPanel";
-
+  from "./components/SmartWallPanel";
 
 import WorkDeskPanel
-from "./components/WorkDeskPanel";
-
+  from "./components/WorkDeskPanel";
 
 import useCustomerOfficeController
-from "./hooks/useCustomerOfficeController";
-
+  from "./hooks/useCustomerOfficeController";
 
 import type {
   CustomerRailItem,
 } from "../../hub/sections/CustomerHangerRail/types";
 
-
 import type {
   CustomerOfficeControllerProps,
 } from "./types";
-
-
 
 /* ===========================================================
    VIEW MODE
 =========================================================== */
 
-
 type CustomerOfficeView =
   | "wall"
   | "workspace";
-
-
 
 /* ===========================================================
    COMPONENT
 =========================================================== */
 
-
 export default function CustomerOfficeController({
 
-customers,
+  customers,
+
+  onOpenCustomerWizard,
+
+  onEditCustomer,
 
 }: CustomerOfficeControllerProps) {
 
+  const controller =
+    useCustomerOfficeController(
+      customers,
+    );
 
-const controller =
-useCustomerOfficeController(
-  customers,
-);
+  const [
+    view,
+    setView,
+  ] = useState(
+    "wall",
+  );
 
+  return (
 
+    <div
+      style={{
+        width: "100%",
+        height: "100%",
+        flex: 1,
 
-const [
-view,
-setView,
-] = useState<CustomerOfficeView>(
-  "wall",
-);
+        display: "flex",
+        flexDirection: "column",
 
+        overflow: "hidden",
+        minHeight: 0,
+      }}
+        onMouseDownCapture={(event) => {
 
+  const target =
+    event.target as HTMLElement;
 
-return (
+  /*
+   * =========================================================
+   * PROTECTED INTERACTIVE AREA
+   *
+   * Do NOT clear customer selection when the user interacts
+   * with buttons, inputs, links, or customer cards.
+   *
+   * This is important for:
+   *
+   * - Edit Customer
+   * - Add Customer
+   * - Search
+   * - Pagination
+   * - Future navigation controls
+   * =========================================================
+   */
 
+  const protectedElement =
+    target.closest(
+      [
+        '[data-finora-customer-card="true"]',
+        '[data-finora-interactive="true"]',
+        'button',
+        'input',
+        'textarea',
+        'select',
+        'a',
+      ].join(","),
+    );
 
-<div
+  if (protectedElement) {
 
-style={{
+    return;
 
-width:"100%",
+  }
 
-height:"100%",
+  /*
+   * =========================================================
+   * EMPTY HUB AREA
+   *
+   * Any genuinely empty area of the Customer Hub clears
+   * the current customer selection.
+   * =========================================================
+   */
 
-flex:1,
-
-display:"flex",
-
-flexDirection:"column",
-
-overflow:"hidden",
-
-minHeight:0,
+  controller.clearSelection();
 
 }}
 
->
+    >
 
+      {
+        view === "wall"
 
-{
+          ?
 
-view === "wall"
+          /* =====================================================
+             CUSTOMER RECEPTION WALL
+          ===================================================== */
 
+          <div
+            style={{
+              flex: 1,
+              minHeight: 0,
+              overflow: "hidden",
+            }}
+          >
 
-?
+            <SmartWallPanel
 
+              title="FINORA Smart Customers Hub™"
 
-/* =====================================================
-   CUSTOMER RECEPTION WALL
-===================================================== */
+              smartWallCustomers={
+                controller.smartWallCustomers
+              }
 
+              railCustomers={
+                controller.paginatedCustomers
+              }
 
-<div
+              selectedCustomerId={
+                controller.selectedCustomer?.id
+              }
 
-style={{
+              selectedCustomer={
+                controller.selectedCustomer
+              }
 
-flex:1,
+             onCustomerSelect={
+  (customer: CustomerRailItem) => {
 
-minHeight:0,
+    controller.selectCustomer({
+      ...customer,
+      phone: "",
+    });
 
-overflow:"hidden",
-
-}}
-
->
-
-
-<SmartWallPanel
-
-
-title="FINORA Smart Customers Hub™"
-
-
-
-smartWallCustomers={
-
-controller.smartWallCustomers
-
+  }
 }
+              currentPage={
+                controller.currentPage
+              }
 
+              totalCustomers={
+                controller.filteredCustomers.length
+              }
 
+              customersPerPage={
+                controller.customersPerPage
+              }
 
-railCustomers={
+              onPrevious={
+                controller.previousPage
+              }
 
-controller.paginatedCustomers
+              onNext={
+                controller.nextPage
+              }
 
-}
+              onOpenCustomerWizard={
+                onOpenCustomerWizard
+              }
 
+              onEditCustomer={
 
+                controller.selectedCustomer
 
-selectedCustomerId={
+                  ?
 
-controller.selectedCustomer?.id
+                  () => {
 
-}
+                    onEditCustomer?.(
+                      controller.selectedCustomer!,
+                    );
 
+                  }
 
+                  :
 
-selectedCustomer={
+                  undefined
 
-controller.selectedCustomer
+              }
 
-}
+              onClearSelection={
+                controller.clearSelection
+              }
 
+            />
 
+          </div>
 
-onCustomerSelect={
+          :
 
-(customer: CustomerRailItem)=>{
+          /* =====================================================
+             CUSTOMER WORKSPACE
+          ===================================================== */
 
+          <div
+            style={{
+              flex: 1,
+              minHeight: 0,
+              overflow: "hidden",
+            }}
+          >
 
-controller.selectCustomer({
+            <WorkDeskPanel
 
-...customer,
+              selectedCustomer={
+                controller.selectedCustomer
+              }
 
-phone:"",
+            />
 
-});
+          </div>
+      }
 
+    </div>
 
-setView(
-  "workspace",
-);
-
-
-}
-
-}
-
-
-
-currentPage={
-
-controller.currentPage
-
-}
-
-
-
-totalCustomers={
-
-controller.filteredCustomers.length
-
-}
-
-
-
-customersPerPage={
-
-controller.customersPerPage
-
-}
-
-
-
-onPrevious={
-
-controller.previousPage
-
-}
-
-
-
-onNext={
-
-controller.nextPage
-
-}
-
-
-/>
-
-
-</div>
-
-
-
-:
-
-
-/* =====================================================
-   CUSTOMER WORKSPACE
-===================================================== */
-
-
-<div
-
-style={{
-
-flex:1,
-
-minHeight:0,
-
-overflow:"hidden",
-
-}}
-
->
-
-
-<WorkDeskPanel
-
-selectedCustomer={
-
-controller.selectedCustomer
-
-}
-
-/>
-
-
-</div>
-
-
-}
-
-
-</div>
-
-
-);
+  );
 
 }

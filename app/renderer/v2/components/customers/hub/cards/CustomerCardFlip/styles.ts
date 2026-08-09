@@ -1,14 +1,14 @@
 /* ===========================================================
    FINORA ENTERPRISE OS™
-   CUSTOMER CARD FLIP
-   -----------------------------------------------------------
-   Module  : Customer Hub
-   Layer   : Cards
-   Version : 2.0
-   Status  : Production
+
+   CUSTOMER CARD FLIP™
+
+   PREMIUM CARD FLIP PRESENTATION
 =========================================================== */
 
-import type { CSSProperties } from "react";
+import type {
+  CSSProperties,
+} from "react";
 
 import {
   CARD_HEIGHT,
@@ -17,21 +17,23 @@ import {
 } from "./constants";
 
 /* ===========================================================
-   ROOT
+   ROOT CONTAINER
 =========================================================== */
 
 export const containerStyle: CSSProperties = {
 
   position: "relative",
 
-  width: "180px",
+  width: `${CARD_WIDTH}px`,
 
-  height: "290px",
+  height: `${CARD_HEIGHT}px`,
+
+  flexShrink: 0,
 
 };
 
 /* ===========================================================
-   INNER
+   INNER FLIP SURFACE
 =========================================================== */
 
 export const innerStyle: CSSProperties = {
@@ -44,15 +46,13 @@ export const innerStyle: CSSProperties = {
 
   transformStyle: "preserve-3d",
 
-  WebkitTransformStyle: "preserve-3d",
-
-  transition:
-  "transform .45s cubic-bezier(.22,.61,.36,1)",
+  WebkitTransformStyle:
+    "preserve-3d",
 
 };
 
 /* ===========================================================
-   SHARED FACE
+   SHARED CARD FACE
 =========================================================== */
 
 export const faceStyle: CSSProperties = {
@@ -61,23 +61,31 @@ export const faceStyle: CSSProperties = {
 
   inset: 0,
 
+  width: `${CARD_WIDTH}px`,
+
+  height: `${CARD_HEIGHT}px`,
+
+  borderRadius:
+    `${CARD_RADIUS}px`,
+
+  overflow: "hidden",
+
   backfaceVisibility:
     "hidden",
 
   WebkitBackfaceVisibility:
     "hidden",
 
-  width: "100%",
+  transformStyle:
+    "preserve-3d",
 
-  height: "100%",
+  WebkitTransformStyle:
+    "preserve-3d",
 
-  borderRadius: `${CARD_RADIUS}px`,
-
-  overflow: "hidden",
+  boxSizing: "border-box",
 
   boxShadow:
-  "0 18px 42px rgba(0,0,0,.18)",
-
+    "0 18px 42px rgba(0,0,0,.18)",
 
 };
 
@@ -100,6 +108,6 @@ export const backStyle: CSSProperties = {
   ...faceStyle,
 
   transform:
-"rotateY(180deg)",
+    "rotateY(180deg)",
 
 };

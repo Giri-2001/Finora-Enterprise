@@ -1,11 +1,24 @@
 /* ===========================================================
-   FINORA ENTERPRISE V2
-   OCCUPATION CARD
---------------------------------------------------------------
-Customer Occupation Profile
+   FINORA ENTERPRISE OS™
+
+   CUSTOMER OCCUPATION PROFILE™
+
+   Version     : 2.0
+   Phase       : Phase 2
+   Architecture: Enterprise
+   Status      : Production
+
+   Responsibility:
+
+   - Occupation
+   - Workplace / Business
+   - Monthly Income
+   - Work Experience
 =========================================================== */
 
-import type { CSSProperties } from "react";
+import type {
+  CSSProperties,
+} from "react";
 
 /* ===========================================================
    TYPES
@@ -25,68 +38,171 @@ export interface OccupationData {
 
 interface OccupationCardProps {
 
-  value: OccupationData;
+  value:
+    OccupationData;
 
   onChange: (
-    field: keyof OccupationData,
-    value: string,
+    field:
+      keyof OccupationData,
+    value:
+      string,
   ) => void;
 
 }
 
 /* ===========================================================
-   STYLES
+   FULL-WIDTH FIELD GRID
 =========================================================== */
 
-const cardStyle: CSSProperties = {
+const gridStyle: CSSProperties = {
 
-  padding: "24px",
+  width:
+    "100%",
 
-  borderRadius: "18px",
+  minWidth:
+    0,
 
-  border: "1px solid #e5e7eb",
+  boxSizing:
+    "border-box",
 
-  background: "#ffffff",
+  display:
+    "grid",
+
+  gridTemplateColumns:
+    "repeat(4, minmax(0, 1fr))",
+
+  gap:
+    "14px",
+
+  alignItems:
+    "end",
+
+  justifyContent:
+    "stretch",
+
+  alignSelf:
+    "stretch",
 
 };
 
-const headingStyle: CSSProperties = {
+/* ===========================================================
+   FIELD
+=========================================================== */
 
-  margin: 0,
+const fieldStyle: CSSProperties = {
 
-  marginBottom: "24px",
+  width:
+    "100%",
 
-  fontSize: "22px",
+  minWidth:
+    0,
 
-  fontWeight: 700,
+  boxSizing:
+    "border-box",
+
+  display:
+    "flex",
+
+  flexDirection:
+    "column",
+
+  gap:
+    "5px",
 
 };
+
+/* ===========================================================
+   LABEL
+=========================================================== */
 
 const labelStyle: CSSProperties = {
 
-  display: "block",
+  display:
+    "block",
 
-  marginBottom: "8px",
+  width:
+    "100%",
 
-  fontWeight: 600,
+  boxSizing:
+    "border-box",
+
+  color:
+    "rgba(255,255,255,.66)",
+
+  fontSize:
+    "10px",
+
+  fontWeight:
+    600,
+
+  letterSpacing:
+    ".45px",
+
+  lineHeight:
+    1.2,
+
+  textTransform:
+    "uppercase",
 
 };
 
+/* ===========================================================
+   INPUT
+=========================================================== */
+
 const inputStyle: CSSProperties = {
 
-  width: "100%",
+  display:
+    "block",
 
-  padding: "14px",
+  width:
+    "100%",
 
-  borderRadius: "12px",
+  minWidth:
+    0,
 
-  border: "1px solid #d1d5db",
+  height:
+    "38px",
 
-  marginBottom: "20px",
+  padding:
+    "0 10px",
 
-  boxSizing: "border-box",
+  boxSizing:
+    "border-box",
 
-  fontSize: "15px",
+  borderRadius:
+    "8px",
+
+  border:
+    "1px solid rgba(214,176,106,.28)",
+
+  outline:
+    "none",
+
+  background:
+    "rgba(255,255,255,.055)",
+
+  color:
+    "#F8FAFC",
+
+  fontSize:
+    "11px",
+
+  fontWeight:
+    500,
+
+};
+
+/* ===========================================================
+   NUMBER INPUT
+=========================================================== */
+
+const numberInputStyle: CSSProperties = {
+
+  ...inputStyle,
+
+  fontVariantNumeric:
+    "tabular-nums",
 
 };
 
@@ -104,75 +220,223 @@ export default function OccupationCard({
 
   return (
 
-    <section style={cardStyle}>
+    <section
+      style={{
+        width: "100%",
+        minWidth: 0,
+        boxSizing: "border-box",
+        display: "block",
+      }}
+    >
 
-      <h3 style={headingStyle}>
-        Occupation Profile
-      </h3>
+      <div
+        style={gridStyle}
+      >
 
-      <label style={labelStyle}>
-        Occupation
-      </label>
+        {/* =================================================
+            OCCUPATION
+        ================================================= */}
 
-      <input
-        style={inputStyle}
-        value={value.occupation}
-        placeholder="Enter occupation"
-        onChange={(event) =>
-          onChange(
-            "occupation",
-            event.target.value,
-          )
-        }
-      />
+        <div
+          style={fieldStyle}
+        >
 
-      <label style={labelStyle}>
-        Workplace / Business Name
-      </label>
+          <label
+            style={labelStyle}
+          >
 
-      <input
-        style={inputStyle}
-        value={value.workPlace}
-        placeholder="Enter workplace or business"
-        onChange={(event) =>
-          onChange(
-            "workPlace",
-            event.target.value,
-          )
-        }
-      />
+            Occupation
 
-      <label style={labelStyle}>
-        Monthly Income
-      </label>
+          </label>
 
-      <input
-        style={inputStyle}
-        value={value.monthlyIncome}
-        placeholder="Enter monthly income"
-        onChange={(event) =>
-          onChange(
-            "monthlyIncome",
-            event.target.value,
-          )
-        }
-      />
+          <input
 
-      <label style={labelStyle}>
-        Work Experience
-      </label>
+            style={
+              inputStyle
+            }
 
-      <input
-        style={inputStyle}
-        value={value.experience}
-        placeholder="Years of experience"
-        onChange={(event) =>
-          onChange(
-            "experience",
-            event.target.value,
-          )
-        }
-      />
+            value={
+              value.occupation
+            }
+
+            placeholder=
+              "Enter occupation"
+
+            onChange={(
+              event,
+            ) =>
+
+              onChange(
+
+                "occupation",
+
+                event.target.value,
+
+              )
+
+            }
+
+            aria-label="Occupation"
+
+          />
+
+        </div>
+
+        {/* =================================================
+            WORKPLACE / BUSINESS
+        ================================================= */}
+
+        <div
+          style={fieldStyle}
+        >
+
+          <label
+            style={labelStyle}
+          >
+
+            Workplace / Business
+
+          </label>
+
+          <input
+
+            style={
+              inputStyle
+            }
+
+            value={
+              value.workPlace
+            }
+
+            placeholder=
+              "Enter workplace or business"
+
+            onChange={(
+              event,
+            ) =>
+
+              onChange(
+
+                "workPlace",
+
+                event.target.value,
+
+              )
+
+            }
+
+            aria-label=
+              "Workplace or Business"
+
+          />
+
+        </div>
+
+        {/* =================================================
+            MONTHLY INCOME
+        ================================================= */}
+
+        <div
+          style={fieldStyle}
+        >
+
+          <label
+            style={labelStyle}
+          >
+
+            Monthly Income
+
+          </label>
+
+          <input
+
+            style={
+              numberInputStyle
+            }
+
+            value={
+              value.monthlyIncome
+            }
+
+            placeholder=
+              "Enter monthly income"
+
+            inputMode="numeric"
+
+            onChange={(
+              event,
+            ) =>
+
+              onChange(
+
+                "monthlyIncome",
+
+                event.target.value,
+
+              )
+
+            }
+
+            aria-label=
+              "Monthly Income"
+
+          />
+
+        </div>
+
+        {/* =================================================
+            WORK EXPERIENCE
+        ================================================= */}
+
+        <div
+          style={fieldStyle}
+        >
+
+          <label
+            style={labelStyle}
+          >
+
+            Work Experience
+
+          </label>
+
+          <input
+
+            style={
+              numberInputStyle
+            }
+
+            value={
+              value.experience
+            }
+
+            placeholder=
+              "Years of experience"
+
+            inputMode="decimal"
+
+            onChange={(
+              event,
+            ) =>
+
+              onChange(
+
+                "experience",
+
+                event.target.value,
+
+              )
+
+            }
+
+            aria-label=
+              "Work Experience"
+
+          />
+
+        </div>
+
+      </div>
 
     </section>
 

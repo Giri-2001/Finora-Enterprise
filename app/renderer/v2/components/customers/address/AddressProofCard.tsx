@@ -1,22 +1,32 @@
 /* ===========================================================
-   FINORA ENTERPRISE V2
-   ADDRESS PROOF CARD
---------------------------------------------------------------
-Customer Address Proof Information
+   FINORA ENTERPRISE OS™
+
+   CUSTOMER ADDRESS PROOF™
+
+   Version     : 2.0
+   Phase       : Phase 2
+   Architecture: Enterprise
+   Status      : Production
+
+   Responsibility:
+
+   - Address proof document status
+   - Verification status
+   - Future OCR integration indicator
 =========================================================== */
 
-import type { CSSProperties } from "react";
+import type {
+  CSSProperties,
+} from "react";
 
 /* ===========================================================
    TYPES
 =========================================================== */
 
 interface AddressProofCardProps {
-
   documentType?: string;
 
   verified?: boolean;
-
 }
 
 /* ===========================================================
@@ -24,35 +34,248 @@ interface AddressProofCardProps {
 =========================================================== */
 
 const cardStyle: CSSProperties = {
+  width: "100%",
 
-  padding: "24px",
+  minWidth: 0,
 
-  borderRadius: "18px",
+  minHeight: 0,
 
-  border: "1px solid #e5e7eb",
+  boxSizing: "border-box",
 
-  background: "#ffffff",
+  padding:
+    "12px 14px",
 
+  borderRadius:
+    "13px",
+
+  border:
+    "1.5px solid rgba(214,176,106,.28)",
+
+  background:
+    "rgba(255,255,255,.035)",
+
+  boxShadow:
+    "0 8px 20px rgba(0,0,0,.10)",
+
+  overflow:
+    "hidden",
 };
+
+/* ===========================================================
+   HEADER
+=========================================================== */
+
+const headerStyle: CSSProperties = {
+  display: "flex",
+
+  alignItems: "center",
+
+  justifyContent: "space-between",
+
+  gap: "10px",
+
+  marginBottom:
+    "10px",
+};
+
+/* ===========================================================
+   TITLE
+=========================================================== */
 
 const headingStyle: CSSProperties = {
-
   margin: 0,
 
-  fontSize: "20px",
+  color:
+    "#F3E4C2",
 
-  fontWeight: 700,
+  fontSize:
+    "13px",
 
+  fontWeight:
+    800,
+
+  letterSpacing:
+    ".15px",
 };
 
-const textStyle: CSSProperties = {
+/* ===========================================================
+   ICON
+=========================================================== */
 
-  marginTop: "14px",
+const iconStyle: CSSProperties = {
+  width:
+    "30px",
 
-  color: "#6b7280",
+  height:
+    "30px",
 
-  lineHeight: 1.6,
+  flexShrink:
+    0,
 
+  display:
+    "flex",
+
+  alignItems:
+    "center",
+
+  justifyContent:
+    "center",
+
+  borderRadius:
+    "50%",
+
+  border:
+    "1.5px solid rgba(214,176,106,.52)",
+
+  background:
+    "rgba(214,176,106,.07)",
+
+  fontSize:
+    "13px",
+};
+
+/* ===========================================================
+   INFORMATION GRID
+=========================================================== */
+
+const infoGridStyle: CSSProperties = {
+  display:
+    "grid",
+
+  gridTemplateColumns:
+    "repeat(2,minmax(0,1fr))",
+
+  gap:
+    "8px 12px",
+
+  width:
+    "100%",
+};
+
+/* ===========================================================
+   INFO ITEM
+=========================================================== */
+
+const infoItemStyle: CSSProperties = {
+  minWidth:
+    0,
+
+  padding:
+    "8px 9px",
+
+  borderRadius:
+    "8px",
+
+  border:
+    "1px solid rgba(255,255,255,.08)",
+
+  background:
+    "rgba(255,255,255,.035)",
+};
+
+/* ===========================================================
+   LABEL
+=========================================================== */
+
+const labelStyle: CSSProperties = {
+  color:
+    "rgba(255,255,255,.48)",
+
+  fontSize:
+    "8px",
+
+  fontWeight:
+    700,
+
+  letterSpacing:
+    ".4px",
+
+  textTransform:
+    "uppercase",
+};
+
+/* ===========================================================
+   VALUE
+=========================================================== */
+
+const valueStyle: CSSProperties = {
+  marginTop:
+    "3px",
+
+  color:
+    "#F8FAFC",
+
+  fontSize:
+    "10px",
+
+  fontWeight:
+    600,
+
+  whiteSpace:
+    "nowrap",
+
+  overflow:
+    "hidden",
+
+  textOverflow:
+    "ellipsis",
+};
+
+/* ===========================================================
+   STATUS
+=========================================================== */
+
+const statusStyle: CSSProperties = {
+  display:
+    "inline-flex",
+
+  alignItems:
+    "center",
+
+  gap:
+    "5px",
+
+  padding:
+    "4px 8px",
+
+  borderRadius:
+    "999px",
+
+  border:
+    "1px solid rgba(214,176,106,.24)",
+
+  background:
+    "rgba(214,176,106,.07)",
+
+  color:
+    "#F3E4C2",
+
+  fontSize:
+    "8px",
+
+  fontWeight:
+    800,
+
+  whiteSpace:
+    "nowrap",
+};
+
+/* ===========================================================
+   FUTURE NOTE
+=========================================================== */
+
+const noteStyle: CSSProperties = {
+  marginTop:
+    "9px",
+
+  color:
+    "rgba(255,255,255,.40)",
+
+  fontSize:
+    "8px",
+
+  lineHeight:
+    1.4,
 };
 
 /* ===========================================================
@@ -60,52 +283,116 @@ const textStyle: CSSProperties = {
 =========================================================== */
 
 export default function AddressProofCard({
-
   documentType,
-
   verified,
-
 }: AddressProofCardProps) {
 
   return (
+    <section
+      style={cardStyle}
+    >
 
-    <section style={cardStyle}>
+      {/* =================================================
+          HEADER
+      ================================================= */}
 
-      <h3 style={headingStyle}>
+      <header
+        style={headerStyle}
+      >
 
-        Address Proof
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "9px",
+          }}
+        >
 
-      </h3>
+          <div
+            style={iconStyle}
+            aria-hidden="true"
+          >
+            📄
+          </div>
 
-      <div style={textStyle}>
+          <h3
+            style={headingStyle}
+          >
+            Address Proof
+          </h3>
 
-        Document :
+        </div>
 
-        {" "}
+        <div
+          style={statusStyle}
+        >
+          {verified
+            ? "✓ Verified"
+            : "● Pending"}
+        </div>
 
-        {documentType || "--"}
+      </header>
+
+      {/* =================================================
+          INFORMATION
+      ================================================= */}
+
+      <div
+        style={infoGridStyle}
+      >
+
+        <div
+          style={infoItemStyle}
+        >
+
+          <div
+            style={labelStyle}
+          >
+            Document
+          </div>
+
+          <div
+            style={valueStyle}
+          >
+            {documentType || "--"}
+          </div>
+
+        </div>
+
+        <div
+          style={infoItemStyle}
+        >
+
+          <div
+            style={labelStyle}
+          >
+            Verification
+          </div>
+
+          <div
+            style={valueStyle}
+          >
+            {verified
+              ? "Verified"
+              : "Pending Verification"}
+          </div>
+
+        </div>
 
       </div>
 
-      <div style={textStyle}>
+      {/* =================================================
+          FUTURE OCR NOTE
+      ================================================= */}
 
-        Verification :
-
-        {" "}
-
-        {verified ? "Verified ✅" : "Pending"}
-
-      </div>
-
-      <div style={textStyle}>
-
-        Future versions will support automatic
-        document verification and OCR integration.
-
+      <div
+        style={noteStyle}
+      >
+        Automatic document verification and OCR
+        integration will be available in a future
+        FINORA version.
       </div>
 
     </section>
-
   );
-
 }

@@ -1,11 +1,32 @@
 /* ===========================================================
    FINORA ENTERPRISE V2
-   CUSTOMER SUMMARY
---------------------------------------------------------------
-Customer Review Summary
+   CUSTOMER REVIEW SUMMARY
+
+   RESPONSIBILITY:
+   - Customer summary presentation
+   - Customer identity preview
+   - Customer contact preview
+   - KYC status presentation
+
+   BUSINESS LOGIC:
+   - NONE
+
+   STYLES:
+   CustomerSummary.styles.ts
 =========================================================== */
 
-import type { CSSProperties } from "react";
+import {
+  cardStyle,
+  headerStyle,
+  titleStyle,
+  subtitleStyle,
+  dividerStyle,
+  rowStyle,
+  labelStyle,
+  valueStyle,
+  emptyValueStyle,
+  statusStyle,
+} from "./CustomerSummary.styles";
 
 /* ===========================================================
    TYPES
@@ -20,44 +41,56 @@ interface CustomerSummaryProps {
   phoneNumber?: string;
 
   kycVerified?: boolean;
-
 }
 
 /* ===========================================================
-   STYLES
+   SUMMARY ROW
 =========================================================== */
 
-const cardStyle: CSSProperties = {
+function SummaryRow({
 
-  padding: "24px",
+  label,
 
-  borderRadius: "18px",
+  value,
 
-  border: "1px solid #e5e7eb",
+}: {
 
-  background: "#ffffff",
+  label: string;
 
-};
+  value?: string;
 
-const titleStyle: CSSProperties = {
+}) {
 
-  margin: 0,
+  const hasValue =
+    Boolean(
+      value?.trim(),
+    );
 
-  marginBottom: "18px",
+  return (
 
-  fontSize: "20px",
+    <div style={rowStyle}>
 
-  fontWeight: 700,
+      <span style={labelStyle}>
+        {label}
+      </span>
 
-};
+      <span
+        style={
+          hasValue
+            ? valueStyle
+            : emptyValueStyle
+        }
+      >
+        {hasValue
+          ? value
+          : "--"}
+      </span>
 
-const rowStyle: CSSProperties = {
+    </div>
 
-  marginBottom: "12px",
+  );
 
-  color: "#374151",
-
-};
+}
 
 /* ===========================================================
    COMPONENT
@@ -79,35 +112,69 @@ export default function CustomerSummary({
 
     <section style={cardStyle}>
 
-      <h3 style={titleStyle}>
+      {/* =====================================================
+         HEADER
+      ===================================================== */}
 
-        Customer Summary
+      <div style={headerStyle}>
 
-      </h3>
+        <div>
 
-      <div style={rowStyle}>
+          <h3 style={titleStyle}>
+            Customer Summary
+          </h3>
 
-        <strong>Customer ID :</strong> {customerId || "--"}
+          <p style={subtitleStyle}>
+            Review the primary customer information before confirmation.
+          </p>
+
+        </div>
+
+        <div style={statusStyle}>
+
+          {kycVerified
+            ? "✓ KYC Ready"
+            : "● KYC Pending"}
+
+        </div>
 
       </div>
 
-      <div style={rowStyle}>
+      {/* =====================================================
+         DIVIDER
+      ===================================================== */}
 
-        <strong>Name :</strong> {customerName || "--"}
+      <div style={dividerStyle} />
 
-      </div>
+      {/* =====================================================
+         CUSTOMER DATA
+      ===================================================== */}
 
-      <div style={rowStyle}>
+      <div>
 
-        <strong>Phone :</strong> {phoneNumber || "--"}
+        <SummaryRow
+          label="Customer ID"
+          value={customerId}
+        />
 
-      </div>
+        <SummaryRow
+          label="Customer Name"
+          value={customerName}
+        />
 
-      <div style={rowStyle}>
+        <SummaryRow
+          label="Phone Number"
+          value={phoneNumber}
+        />
 
-        <strong>KYC :</strong>{" "}
-
-        {kycVerified ? "Verified ✅" : "Pending"}
+        <SummaryRow
+          label="KYC Status"
+          value={
+            kycVerified
+              ? "Verified"
+              : "Pending Verification"
+          }
+        />
 
       </div>
 

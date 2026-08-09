@@ -1,11 +1,27 @@
 /* ===========================================================
    FINORA ENTERPRISE V2
-   REVIEW DRAFT STATUS
---------------------------------------------------------------
-Customer Review Draft Status
+   CUSTOMER REVIEW DRAFT STATUS
+
+   RESPONSIBILITY:
+   - Draft status presentation
+   - Saved / pending state
+   - Last saved information
+
+   BUSINESS LOGIC:
+   - NONE
+
+   STYLES:
+   ReviewDraftStatus.styles.ts
 =========================================================== */
 
-import type { CSSProperties } from "react";
+import {
+  wrapperStyle,
+  badgeStyle,
+  savedBadgeStyle,
+  pendingBadgeStyle,
+  infoStyle,
+  lastSavedStyle,
+} from "./ReviewDraftStatus.styles";
 
 /* ===========================================================
    TYPES
@@ -16,54 +32,7 @@ interface ReviewDraftStatusProps {
   isDraftSaved: boolean;
 
   lastSaved?: string;
-
 }
-
-/* ===========================================================
-   STYLES
-=========================================================== */
-
-const wrapperStyle: CSSProperties = {
-
-  marginTop: "24px",
-
-  padding: "18px",
-
-  borderRadius: "14px",
-
-  border: "1px solid #d1d5db",
-
-  background: "#f9fafb",
-
-};
-
-const badgeStyle: CSSProperties = {
-
-  display: "inline-flex",
-
-  alignItems: "center",
-
-  padding: "8px 14px",
-
-  borderRadius: "999px",
-
-  background: "#ecfeff",
-
-  color: "#0f766e",
-
-  fontWeight: 600,
-
-};
-
-const infoStyle: CSSProperties = {
-
-  marginTop: "12px",
-
-  color: "#6b7280",
-
-  fontSize: "13px",
-
-};
 
 /* ===========================================================
    COMPONENT
@@ -81,41 +50,43 @@ export default function ReviewDraftStatus({
 
     <section style={wrapperStyle}>
 
-      <div style={badgeStyle}>
+      {/* =====================================================
+         STATUS BADGE
+      ===================================================== */}
 
+      <div
+        style={{
+          ...badgeStyle,
+
+          ...(isDraftSaved
+            ? savedBadgeStyle
+            : pendingBadgeStyle),
+        }}
+      >
         {isDraftSaved
-
           ? "✓ Review Saved"
-
           : "● Draft Pending"}
-
       </div>
+
+      {/* =====================================================
+         STATUS INFORMATION
+      ===================================================== */}
 
       <div style={infoStyle}>
 
         {isDraftSaved
-
           ? "Customer review has been saved successfully."
-
           : "Customer review is waiting to be saved."}
 
       </div>
 
+      {/* =====================================================
+         LAST SAVED
+      ===================================================== */}
+
       {lastSaved && (
 
-        <div
-
-          style={{
-
-            marginTop: "10px",
-
-            fontSize: "12px",
-
-            color: "#9ca3af",
-
-          }}
-
-        >
+        <div style={lastSavedStyle}>
 
           Last Saved : {lastSaved}
 

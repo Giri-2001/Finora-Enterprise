@@ -1,19 +1,29 @@
 /* ===========================================================
-   FINORA ENTERPRISE V2
-   FAMILY DETAILS
---------------------------------------------------------------
-Customer Family Information
+   FINORA ENTERPRISE OS™
+
+   CUSTOMER FAMILY & EMERGENCY™
+
+   Version     : 2.0
+   Phase       : Phase 2
+   Architecture: Enterprise
+   Status      : Production
+
+   Responsibility:
+
+   - Family member count
+   - Emergency contact name
+   - Emergency contact mobile
 =========================================================== */
 
-import type { CSSProperties } from "react";
+import type {
+  CSSProperties,
+} from "react";
 
 /* ===========================================================
    TYPES
 =========================================================== */
 
 export interface FamilyDetailsData {
-
-  spouseName: string;
 
   numberOfFamilyMembers: string;
 
@@ -25,68 +35,171 @@ export interface FamilyDetailsData {
 
 interface FamilyDetailsProps {
 
-  value: FamilyDetailsData;
+  value:
+    FamilyDetailsData;
 
   onChange: (
-    field: keyof FamilyDetailsData,
-    value: string,
+    field:
+      keyof FamilyDetailsData,
+    value:
+      string,
   ) => void;
 
 }
 
 /* ===========================================================
-   STYLES
+   FULL-WIDTH FAMILY GRID
 =========================================================== */
 
-const cardStyle: CSSProperties = {
+const gridStyle: CSSProperties = {
 
-  padding: "24px",
+  width:
+    "100%",
 
-  borderRadius: "18px",
+  minWidth:
+    0,
 
-  border: "1px solid #e5e7eb",
+  boxSizing:
+    "border-box",
 
-  background: "#ffffff",
+  display:
+    "grid",
+
+  gridTemplateColumns:
+    "repeat(3, minmax(0, 1fr))",
+
+  gap:
+    "14px",
+
+  alignItems:
+    "end",
+
+  justifyContent:
+    "stretch",
+
+  alignSelf:
+    "stretch",
 
 };
 
-const headingStyle: CSSProperties = {
+/* ===========================================================
+   FIELD
+=========================================================== */
 
-  margin: 0,
+const fieldStyle: CSSProperties = {
 
-  marginBottom: "24px",
+  width:
+    "100%",
 
-  fontSize: "22px",
+  minWidth:
+    0,
 
-  fontWeight: 700,
+  boxSizing:
+    "border-box",
+
+  display:
+    "flex",
+
+  flexDirection:
+    "column",
+
+  gap:
+    "5px",
 
 };
+
+/* ===========================================================
+   LABEL
+=========================================================== */
 
 const labelStyle: CSSProperties = {
 
-  display: "block",
+  display:
+    "block",
 
-  marginBottom: "8px",
+  width:
+    "100%",
 
-  fontWeight: 600,
+  boxSizing:
+    "border-box",
+
+  color:
+    "rgba(255,255,255,.66)",
+
+  fontSize:
+    "10px",
+
+  fontWeight:
+    600,
+
+  letterSpacing:
+    ".45px",
+
+  lineHeight:
+    1.2,
+
+  textTransform:
+    "uppercase",
 
 };
 
+/* ===========================================================
+   INPUT
+=========================================================== */
+
 const inputStyle: CSSProperties = {
 
-  width: "100%",
+  display:
+    "block",
 
-  padding: "14px",
+  width:
+    "100%",
 
-  borderRadius: "12px",
+  minWidth:
+    0,
 
-  border: "1px solid #d1d5db",
+  height:
+    "38px",
 
-  marginBottom: "20px",
+  padding:
+    "0 10px",
 
-  boxSizing: "border-box",
+  boxSizing:
+    "border-box",
 
-  fontSize: "15px",
+  borderRadius:
+    "8px",
+
+  border:
+    "1px solid rgba(214,176,106,.28)",
+
+  outline:
+    "none",
+
+  background:
+    "rgba(255,255,255,.055)",
+
+  color:
+    "#F8FAFC",
+
+  fontSize:
+    "11px",
+
+  fontWeight:
+    500,
+
+};
+
+/* ===========================================================
+   NUMBER / MOBILE INPUT
+=========================================================== */
+
+const numberInputStyle: CSSProperties = {
+
+  ...inputStyle,
+
+  fontVariantNumeric:
+    "tabular-nums",
 
 };
 
@@ -104,75 +217,174 @@ export default function FamilyDetails({
 
   return (
 
-    <section style={cardStyle}>
+    <section
+      style={{
+        width: "100%",
+        minWidth: 0,
+        boxSizing: "border-box",
+        display: "block",
+      }}
+    >
 
-      <h3 style={headingStyle}>
-        Family Details
-      </h3>
+      <div
+        style={gridStyle}
+      >
 
-      <label style={labelStyle}>
-        Spouse Name
-      </label>
+        {/* =================================================
+            NUMBER OF FAMILY MEMBERS
+        ================================================= */}
 
-      <input
-        style={inputStyle}
-        value={value.spouseName}
-        placeholder="Enter spouse name"
-        onChange={(event) =>
-          onChange(
-            "spouseName",
-            event.target.value,
-          )
-        }
-      />
+        <div
+          style={fieldStyle}
+        >
 
-      <label style={labelStyle}>
-        Number of Family Members
-      </label>
+          <label
+            style={labelStyle}
+          >
 
-      <input
-        style={inputStyle}
-        value={value.numberOfFamilyMembers}
-        placeholder="Enter family members"
-        onChange={(event) =>
-          onChange(
-            "numberOfFamilyMembers",
-            event.target.value,
-          )
-        }
-      />
+            Number of Family Members
 
-      <label style={labelStyle}>
-        Emergency Contact Name
-      </label>
+          </label>
 
-      <input
-        style={inputStyle}
-        value={value.emergencyContactName}
-        placeholder="Enter emergency contact"
-        onChange={(event) =>
-          onChange(
-            "emergencyContactName",
-            event.target.value,
-          )
-        }
-      />
+          <input
 
-      <label style={labelStyle}>
-        Emergency Contact Mobile
-      </label>
+            style={
+              numberInputStyle
+            }
 
-      <input
-        style={inputStyle}
-        value={value.emergencyContactMobile}
-        placeholder="Enter mobile number"
-        onChange={(event) =>
-          onChange(
-            "emergencyContactMobile",
-            event.target.value,
-          )
-        }
-      />
+            value={
+              value.numberOfFamilyMembers
+            }
+
+            placeholder=
+              "Enter family members"
+
+            inputMode="numeric"
+
+            onChange={(
+              event,
+            ) =>
+
+              onChange(
+
+                "numberOfFamilyMembers",
+
+                event.target.value,
+
+              )
+
+            }
+
+            aria-label=
+              "Number of Family Members"
+
+          />
+
+        </div>
+
+        {/* =================================================
+            EMERGENCY CONTACT NAME
+        ================================================= */}
+
+        <div
+          style={fieldStyle}
+        >
+
+          <label
+            style={labelStyle}
+          >
+
+            Emergency Contact Name
+
+          </label>
+
+          <input
+
+            style={
+              inputStyle
+            }
+
+            value={
+              value.emergencyContactName
+            }
+
+            placeholder=
+              "Enter emergency contact"
+
+            onChange={(
+              event,
+            ) =>
+
+              onChange(
+
+                "emergencyContactName",
+
+                event.target.value,
+
+              )
+
+            }
+
+            aria-label=
+              "Emergency Contact Name"
+
+          />
+
+        </div>
+
+        {/* =================================================
+            EMERGENCY CONTACT MOBILE
+        ================================================= */}
+
+        <div
+          style={fieldStyle}
+        >
+
+          <label
+            style={labelStyle}
+          >
+
+            Emergency Contact Mobile
+
+          </label>
+
+          <input
+
+            style={
+              numberInputStyle
+            }
+
+            value={
+              value.emergencyContactMobile
+            }
+
+            placeholder=
+              "Enter mobile number"
+
+            inputMode="tel"
+
+            onChange={(
+              event,
+            ) =>
+
+              onChange(
+
+                "emergencyContactMobile",
+
+                event.target.value,
+
+              )
+
+            }
+
+            aria-label=
+              "Emergency Contact Mobile"
+
+          />
+
+        </div>
+
+      </div>
 
     </section>
 

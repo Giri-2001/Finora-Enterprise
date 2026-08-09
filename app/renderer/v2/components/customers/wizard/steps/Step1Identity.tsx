@@ -1,175 +1,110 @@
 /* ===========================================================
-   FINORA ENTERPRISE V2
-   CUSTOMER IDENTITY STUDIO
---------------------------------------------------------------
-Phase 2
+   FINORA ENTERPRISE OS™
 
-Step 1
+   CUSTOMER WIZARD
+   PHASE 2 — STEP 1
 
-Identity
+   IDENTITY STUDIO™
 
-Creates the customer's digital identity.
+   Responsibility:
+
+   - Step 1 identity state
+   - Customer identity updates
+   - Customer photo updates
+   - Customer contact updates
+   - Customer personal identity updates
+   - Front ID card live preview
+   - Branch identity preview
+
+   Version : 2.0
+   Status  : Production
 =========================================================== */
 
-import IdentityHeader from "../../identity/IdentityHeader";
+import {
+  useEffect,
+  useState,
+} from "react";
+
 import IdentityForm, {
   type IdentityFormData,
 } from "../../identity/IdentityForm";
-import CustomerPhotoUploader from "../../identity/CustomerPhotoUploader";
-import CustomerIdPreview from "../../identity/CustomerIdPreview";
-import IdentityPreviewCard from "../../identity/IdentityPreviewCard";
-import IdentityDraftStatus from "../../identity/IdentityDraftStatus";
 
-import { useMemo, useState } from "react";
-import type { CSSProperties } from "react";
+import CustomerPhotoUploader
+  from "../../identity/CustomerPhotoUploader";
+
+import IdentityPreviewCard
+  from "../../identity/IdentityPreviewCard";
+
+import CustomerIdentityHanger
+  from "../components/CustomerIdentityHanger";
+
+import {
+  pageStyle,
+  leftPanelStyle,
+  idCardHolderStyle,
+  formPanelStyle,
+  formHeaderStyle,
+  formTitleStyle,
+  formSubtitleStyle,
+  photoSectionStyle,
+  formBodyStyle,
+  rightPanelStyle,
+  previewHolderStyle,
+} from "./Step1Identity.styles";
 
 /* ===========================================================
    TYPES
 =========================================================== */
 
-interface IdentityState extends IdentityFormData {
+type PreferredLanguage =
+  | "Telugu"
+  | "English"
+  | "Hindi"
+  | "Tamil"
+  | "Kannada"
+  | "Marathi"
+  | "Other";
+
+interface IdentityState
+  extends IdentityFormData {
+
+  email: string;
+
+  whatsappNumber: string;
+
+  dateOfBirth: string;
+
+  preferredLanguage:
+    PreferredLanguage;
+
   photoUrl: string;
+
 }
-
-/* ===========================================================
-   DEFAULT STATE
-=========================================================== */
-
-const DEFAULT_STATE: IdentityState = {
-  customerName: "",
-  mobileNumber: "",
-  whatsappSame: true,
-  businessName: "Sri Giri Finance",
-  branchName: "Hyderabad",
-  customerId: "FIN-CUS-SGF-HYD-900001",
-  photoUrl: "",
-};
-
-/* ===========================================================
-   STYLES
-=========================================================== */
-
-const pageStyle: CSSProperties = {
-  display: "grid",
-  gridTemplateColumns: "2fr 1fr",
-  gap: "32px",
-  alignItems: "start",
-};
-
-const formCardStyle: CSSProperties = {
-
-  background: "#ffffff",
-
-  border: "1px solid #e5e7eb",
-
-  borderRadius: "18px",
-
-  padding: "28px",
-
-};
-
-const previewCardStyle: CSSProperties = {
-
-  background: "#0f172a",
-
-  color: "#ffffff",
-
-  borderRadius: "20px",
-
-  padding: "24px",
-
-  minHeight: "520px",
-
-};
-
-const sectionTitleStyle: CSSProperties = {
-
-  marginTop: 0,
-
-  marginBottom: "24px",
-
-  fontSize: "24px",
-
-  fontWeight: 700,
-
-};
-
-const labelStyle: CSSProperties = {
-
-  display: "block",
-
-  marginBottom: "8px",
-
-  fontWeight: 600,
-
-};
-
-const inputStyle: CSSProperties = {
-
-  width: "100%",
-
-  padding: "14px",
-
-  borderRadius: "12px",
-
-  border: "1px solid #d1d5db",
-
-  marginBottom: "22px",
-
-  boxSizing: "border-box",
-
-  fontSize: "15px",
-
-};
-
-const photoStyle: CSSProperties = {
-
-  width: "130px",
-
-  height: "130px",
-
-  borderRadius: "18px",
-
-  border: "2px dashed #cbd5e1",
-
-  display: "flex",
-
-  alignItems: "center",
-
-  justifyContent: "center",
-
-  marginBottom: "20px",
-
-  overflow: "hidden",
-
-  background: "#f8fafc",
-
-};
-
-const cardPhotoStyle: CSSProperties = {
-
-  width: "110px",
-
-  height: "110px",
-
-  borderRadius: "16px",
-
-  background: "#334155",
-
-  display: "flex",
-
-  alignItems: "center",
-
-  justifyContent: "center",
-
-  marginBottom: "24px",
-
-};
 
 interface Step1IdentityProps {
 
-  updateWizardData: (
+  initialData?: {
 
+    customerId?: string;
+
+    photo?: string;
+
+    fullName?: string;
+
+    mobileNumber?: string;
+
+    whatsapp?: string;
+
+    email?: string;
+
+    dateOfBirth?: string;
+
+    preferredLanguage?:
+      PreferredLanguage;
+
+  };
+
+  updateWizardData: (
     data: {
 
       fullName?: string;
@@ -178,144 +113,516 @@ interface Step1IdentityProps {
 
       customerId?: string;
 
-    },
+      photo?: string;
 
+      whatsapp?: string;
+
+      email?: string;
+
+      dateOfBirth?: string;
+
+      preferredLanguage?:
+        PreferredLanguage;
+
+    },
   ) => void;
 
 }
 
+/* ===========================================================
+   DEFAULT STATE
+=========================================================== */
+
+const DEFAULT_STATE:
+  IdentityState = {
+
+  customerName: "",
+
+  mobileNumber: "",
+
+  whatsappSame: true,
+
+  whatsappNumber: "",
+
+  email: "",
+
+  dateOfBirth: "",
+
+  preferredLanguage:
+    "English",
+
+  businessName:
+    "Sri Giri Finance",
+
+  branchName:
+    "Hyderabad",
+
+  customerId:
+    "FIN-CUS-SGF-HYD-900001",
+
+  photoUrl: "",
+
+};
+
+/* ===========================================================
+   COMPONENT
+=========================================================== */
+
 export default function Step1Identity({
+
+  initialData,
 
   updateWizardData,
 
 }: Step1IdentityProps) {
 
-  const [state, setState] =
-    useState(DEFAULT_STATE);
+  /* =========================================================
+     LOCAL STATE
+  ========================================================= */
 
-  const customerName =
-    useMemo(() => {
+  const [
+    state,
+    setState,
+  ] = useState<IdentityState>(
+    DEFAULT_STATE,
+  );
 
-      if (
-        state.customerName.trim() === ""
-      ) {
+  /* =========================================================
+     EDIT MODE / INITIAL DATA SYNC
+  ========================================================= */
 
-        return "Customer Name";
+  useEffect(() => {
 
-      }
+    if (!initialData) {
 
-      return state.customerName;
+      return;
 
-    }, [state.customerName]);
+    }
 
-      /* ===========================================================
-     UPDATE HELPERS
-  =========================================================== */
+    setState(
+      (previous) => ({
+
+        ...previous,
+
+        customerName:
+          initialData.fullName ??
+          previous.customerName,
+
+        mobileNumber:
+          initialData.mobileNumber ??
+          previous.mobileNumber,
+
+        customerId:
+          initialData.customerId ??
+          previous.customerId,
+
+        photoUrl:
+          initialData.photo ??
+          previous.photoUrl,
+
+        whatsappNumber:
+          initialData.whatsapp ??
+          previous.whatsappNumber,
+
+        email:
+          initialData.email ??
+          previous.email,
+
+        dateOfBirth:
+          initialData.dateOfBirth ??
+          previous.dateOfBirth,
+
+        preferredLanguage:
+          initialData.preferredLanguage ??
+          previous.preferredLanguage,
+
+      }),
+    );
+
+  }, [
+    initialData,
+  ]);
+
+  /* =========================================================
+     FIELD UPDATE
+  ========================================================= */
 
   function updateField(
-  field: keyof IdentityState,
-  value: string | boolean,
-): void {
 
-  setState((previous) => ({
+    field:
+      keyof IdentityState,
 
-    ...previous,
+    value:
+      string | boolean,
 
-    [field]: value,
+  ): void {
 
-  }));
+    setState(
+      (previous) => ({
 
-  if (field === "customerName") {
+        ...previous,
 
-    updateWizardData({
+        [field]: value,
 
-      fullName: String(value),
+      }),
+    );
 
-    });
+    /* =======================================================
+       CUSTOMER NAME
+    ======================================================= */
 
-  }
+    if (
+      field === "customerName"
+    ) {
 
-  if (field === "mobileNumber") {
+      updateWizardData({
 
-    updateWizardData({
+        fullName:
+          String(value),
 
-      mobileNumber: String(value),
+      });
 
-    });
+    }
 
-  }
+    /* =======================================================
+       MOBILE NUMBER
+    ======================================================= */
 
-  if (field === "customerId") {
+    if (
+      field === "mobileNumber"
+    ) {
 
-    updateWizardData({
+      const mobileNumber =
+        String(value);
 
-      customerId: String(value),
+      updateWizardData({
 
-    });
+        mobileNumber,
 
-  }
+        ...(state.whatsappSame
+          ? {
+              whatsapp:
+                mobileNumber,
+            }
+          : {}),
+
+      });
+
+    }
+
+    /* =======================================================
+       WHATSAPP SAME NUMBER
+    ======================================================= */
+
+    if (
+      field === "whatsappSame"
+    ) {
+
+      const sameNumber =
+        Boolean(value);
+
+      updateWizardData({
+
+        whatsapp:
+          sameNumber
+            ? state.mobileNumber
+            : state.whatsappNumber,
+
+      });
+
+      return;
+
+    }
+
+    /* =======================================================
+       WHATSAPP NUMBER
+    ======================================================= */
+
+    if (
+      field === "whatsappNumber"
+    ) {
+
+      const whatsappNumber =
+        String(value);
+
+      updateWizardData({
+
+        whatsapp:
+          state.whatsappSame
+            ? state.mobileNumber
+            : whatsappNumber,
+
+      });
+
+    }
+
+    /* =======================================================
+       EMAIL ADDRESS
+    ======================================================= */
+
+    if (
+      field === "email"
+    ) {
+
+      updateWizardData({
+
+        email:
+          String(value),
+
+      });
+
+    }
+
+    /* =======================================================
+       DATE OF BIRTH
+    ======================================================= */
+
+    if (
+      field === "dateOfBirth"
+    ) {
+
+      updateWizardData({
+
+        dateOfBirth:
+          String(value),
+
+      });
+
+    }
+
+   /* =======================================================
+   PREFERRED LANGUAGE
+======================================================= */
+
+if (
+  field === "preferredLanguage"
+) {
+
+  const preferredLanguage =
+    String(value) as PreferredLanguage;
+
+  updateWizardData({
+
+    preferredLanguage,
+
+  });
 
 }
-  /* ===========================================================
+    /* =======================================================
+       CUSTOMER ID
+    ======================================================= */
+
+    if (
+      field === "customerId"
+    ) {
+
+      updateWizardData({
+
+        customerId:
+          String(value),
+
+      });
+
+    }
+
+    /* =======================================================
+       CUSTOMER PHOTO
+    ======================================================= */
+
+    if (
+      field === "photoUrl"
+    ) {
+
+      updateWizardData({
+
+        photo:
+          String(value),
+
+      });
+
+    }
+
+  }
+
+  /* =========================================================
+     CUSTOMER CARD NAME
+  ========================================================= */
+
+  const displayCustomerName =
+    state.customerName.trim()
+      ? state.customerName
+      : "Customer Name";
+
+  /* =========================================================
      UI
-  =========================================================== */
+  ========================================================= */
 
   return (
 
-    <section style={pageStyle}>
+    <section
+      style={pageStyle}
+    >
 
-      {/* ==========================================
-          LEFT SIDE
-      ========================================== */}
+      {/* =================================================
+          LEFT — REAL FINORA CUSTOMER ID CARD
+      ================================================= */}
 
-      <div style={formCardStyle}>
+      <aside
+        style={leftPanelStyle}
+      >
 
-        <IdentityHeader
-  title="Customer Identity Studio™"
-  subtitle="Create the customer's permanent FINORA digital identity."
-/>
+        <div
+          style={idCardHolderStyle}
+        >
 
-        <CustomerPhotoUploader
-  imageUrl={state.photoUrl}
-  onImageChange={(image) =>
-    updateField(
-      "photoUrl",
-      image,
-    )
-  }
-/>
+          <CustomerIdentityHanger
 
-        <IdentityForm
-  value={state}
-  onChange={updateField}
-/>
+            customerId={
+              state.customerId
+            }
 
-<CustomerIdPreview
-  customerId={state.customerId}
-/>
+            customerName={
+              displayCustomerName
+            }
 
-<IdentityDraftStatus
-  isDraftSaved={true}
-  lastSaved="Just now"
-/>
+            phoneNumber={
+              state.mobileNumber
+            }
 
-      </div>
+            profilePhoto={
+              state.photoUrl
+            }
 
-      {/* ==========================================
-          LIVE PREVIEW
-      ========================================== */}
+            kycVerified={
+              false
+            }
 
-     <aside>
+          />
 
-  <IdentityPreviewCard
-    customerName={state.customerName}
-    customerId={state.customerId}
-    businessName={state.businessName}
-    branchName={state.branchName}
-    imageUrl={state.photoUrl}
-  />
+        </div>
 
-</aside>
+      </aside>
+
+      {/* =================================================
+          CENTER — IDENTITY FORM
+      ================================================= */}
+
+      <main
+        style={formPanelStyle}
+      >
+
+        <header
+          style={formHeaderStyle}
+        >
+
+          <h1
+            style={formTitleStyle}
+          >
+
+            Customer Identity
+
+          </h1>
+
+          <p
+            style={formSubtitleStyle}
+          >
+
+            Create the customer's permanent
+            FINORA digital identity.
+
+          </p>
+
+        </header>
+
+        {/* ===============================================
+            PHOTO
+        =============================================== */}
+
+        <div
+          style={photoSectionStyle}
+        >
+
+          <CustomerPhotoUploader
+
+            imageUrl={
+              state.photoUrl
+            }
+
+            onImageChange={
+              (image) =>
+                updateField(
+                  "photoUrl",
+                  image,
+                )
+            }
+
+          />
+
+        </div>
+
+        {/* ===============================================
+            FORM
+        =============================================== */}
+
+        <div
+          style={formBodyStyle}
+        >
+
+          <IdentityForm
+
+            value={
+              state
+            }
+
+            onChange={
+              updateField
+            }
+
+          />
+
+        </div>
+
+      </main>
+
+      {/* =================================================
+          RIGHT — LIVE BRANCH PREVIEW
+      ================================================= */}
+
+      <aside
+        style={rightPanelStyle}
+      >
+
+        <div
+          style={previewHolderStyle}
+        >
+
+          <IdentityPreviewCard
+
+            customerName={
+              displayCustomerName
+            }
+
+            customerId={
+              state.customerId
+            }
+
+            businessName={
+              state.businessName
+            }
+
+            branchName={
+              state.branchName
+            }
+
+            imageUrl={
+              state.photoUrl
+            }
+
+          />
+
+        </div>
+
+      </aside>
 
     </section>
 

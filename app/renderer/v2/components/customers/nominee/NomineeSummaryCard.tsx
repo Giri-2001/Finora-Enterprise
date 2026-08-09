@@ -1,108 +1,139 @@
 /* ===========================================================
    FINORA ENTERPRISE V2
-   NOMINEE SUMMARY CARD
---------------------------------------------------------------
-Customer Nominee Summary
+   CUSTOMER NOMINEE SUMMARY
+
+   RESPONSIBILITY:
+   - Nominee summary presentation
+   - Linked customer count presentation
+   - Verification status presentation
+
+   STYLES:
+   NomineeSummaryCard.styles.ts
 =========================================================== */
 
 import type { CSSProperties } from "react";
+
+import {
+  cardStyle,
+  headerStyle,
+  titleStyle,
+  subtitleStyle,
+  dividerStyle,
+  statsGridStyle,
+  statStyle,
+  statLabelStyle,
+  statValueStyle,
+  footerStyle,
+} from "./NomineeSummaryCard.styles";
 
 /* ===========================================================
    TYPES
 =========================================================== */
 
 interface NomineeSummaryCardProps {
-
   totalNominees?: number;
 
   linkedCustomers?: number;
 
   pendingVerification?: number;
-
 }
 
 /* ===========================================================
-   STYLES
+   STAT
 =========================================================== */
 
-const cardStyle: CSSProperties = {
+function SummaryStat({
+  label,
+  value,
+}: {
+  label: string;
+  value: number;
+}) {
+  return (
+    <div style={statStyle}>
 
-  padding: "24px",
+      <span style={statLabelStyle}>
+        {label}
+      </span>
 
-  borderRadius: "18px",
+      <span style={statValueStyle}>
+        {value}
+      </span>
 
-  border: "1px solid #e5e7eb",
-
-  background: "#ffffff",
-
-};
-
-const titleStyle: CSSProperties = {
-
-  margin: 0,
-
-  marginBottom: "18px",
-
-  fontSize: "20px",
-
-  fontWeight: 700,
-
-};
-
-const statStyle: CSSProperties = {
-
-  marginBottom: "12px",
-
-  fontSize: "15px",
-
-  color: "#374151",
-
-};
+    </div>
+  );
+}
 
 /* ===========================================================
    COMPONENT
 =========================================================== */
 
 export default function NomineeSummaryCard({
-
   totalNominees = 0,
-
   linkedCustomers = 0,
-
   pendingVerification = 0,
-
 }: NomineeSummaryCardProps) {
 
   return (
-
     <section style={cardStyle}>
 
-      <h3 style={titleStyle}>
+      {/* =====================================================
+         HEADER
+      ===================================================== */}
 
-        Nominee Summary
+      <div style={headerStyle}>
 
-      </h3>
+        <div>
 
-      <div style={statStyle}>
+          <h3 style={titleStyle}>
+            Nominee Summary
+          </h3>
 
-        <strong>Total Nominees:</strong> {totalNominees}
+          <p style={subtitleStyle}>
+            Nominee relationship status at a glance.
+          </p>
+
+        </div>
 
       </div>
 
-      <div style={statStyle}>
+      {/* =====================================================
+         DIVIDER
+      ===================================================== */}
 
-        <strong>Linked FINORA Customers:</strong> {linkedCustomers}
+      <div style={dividerStyle} />
+
+      {/* =====================================================
+         SUMMARY STATS
+      ===================================================== */}
+
+      <div style={statsGridStyle}>
+
+        <SummaryStat
+          label="Total Nominees"
+          value={totalNominees}
+        />
+
+        <SummaryStat
+          label="Linked Customers"
+          value={linkedCustomers}
+        />
+
+        <SummaryStat
+          label="Pending Verification"
+          value={pendingVerification}
+        />
 
       </div>
 
-      <div style={statStyle}>
+      {/* =====================================================
+         FOOTER
+      ===================================================== */}
 
-        <strong>Pending Verification:</strong> {pendingVerification}
-
+      <div style={footerStyle}>
+        Verification and nominee analytics can be expanded in future releases.
       </div>
 
     </section>
-
   );
-
 }

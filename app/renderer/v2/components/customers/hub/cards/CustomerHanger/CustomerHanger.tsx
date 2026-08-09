@@ -1,17 +1,29 @@
 /* ===========================================================
    FINORA ENTERPRISE OS™
+
    CUSTOMER HANGER™
 
-   PREMIUM HANGING ANIMATION
+   PREMIUM FRONT IDENTITY PRESENTATION
+
+   Module  : Customer Hub
+   Layer   : Cards
+   Version : 2.0
+   Status  : Production
+
+   Responsibility:
+   - Customer selection
+   - Premium hanging presentation
+   - Front Customer ID Card only
+
+   Intentionally removed:
+   - Card flip
+   - Back card
+   - Loan summary
+   - Back-side customer details
 =========================================================== */
 
-import {
-  useState,
-} from "react";
-
-
-import CustomerCardFlip from "../CustomerCardFlip";
-import CustomerIdCard from "../CustomerIdCard";
+import CustomerIdCard
+  from "../CustomerIdCard";
 
 import type {
   CustomerHangerProps,
@@ -22,12 +34,12 @@ import {
 } from "./helpers";
 
 import {
-containerStyle,
-pinStyle,
-ropeStyle,
-hangerStyle,
-cardContainerStyle,
-bottomRailStyle,
+  containerStyle,
+  pinStyle,
+  ropeStyle,
+  hangerStyle,
+  cardContainerStyle,
+  bottomRailStyle,
 } from "./styles";
 
 /* ===========================================================
@@ -40,619 +52,204 @@ export default function CustomerHanger({
 
   onClick,
 
-  flipped = false,
-
-  onFlip,
-
 }: CustomerHangerProps) {
 
-const {
+  const {
 
-id,
+    id,
 
-name,
+    name,
 
-phone,
+    phone,
 
-profilePhoto,
+    profilePhoto,
 
-branch,
+    branch,
 
-  active,
+    active,
 
-  kycVerified,
+    kycVerified,
 
-  outstandingAmount,
+  } = customer;
 
-  totalLoans,
+  /* =========================================================
+     CUSTOMER SELECTION
+  ========================================================= */
 
-activeLoans,
+  function handleCardClick(
+    event:
+      React.MouseEvent<HTMLDivElement>,
+  ): void {
 
-closedLoans,
+    const target =
+      event.target as HTMLElement;
 
+    const clickedCustomerCard =
+      target.closest(
+        '[data-finora-customer-card="true"]',
+      );
 
-  /* ==========================================
-     BACK SIDE DETAILS
-  ========================================== */
+    /*
+      Customer Hanger contains:
+      PIN / ROPE / HANGER / CARD.
 
-  fatherName,
+      Only the actual customer card
+      should select the customer.
+    */
 
-  village,
+    if (!clickedCustomerCard) {
 
-  mandal,
+      return;
 
-  district,
+    }
 
-  customerSince,
+    if (
+      !canOpen(active)
+    ) {
 
+      return;
 
-} = customer;
+    }
 
-  /* ===========================================================
-     ANIMATION STATE
-  =========================================================== */
+    onClick?.(
+      customer,
+    );
 
-  const [isFlipped, setIsFlipped] =
-  useState(false);
+  }
 
-
-  /* ===========================================================
-     HANGING PHYSICS
-  =========================================================== */
-
-  /* ===========================================================
+  /* =========================================================
      UI
-  =========================================================== */
+  ========================================================= */
 
   return (
 
     <div
-
-     style={{
-
-  ...containerStyle,
-
-}}
-
-      onClick={() => {
-
-        if (
-
-          !canOpen(active)
-
-        ) {
-
-          return;
-
-        }
-
-        setIsFlipped(
-  !isFlipped,
-);
-
-onFlip?.();
-
-onClick?.(
-  customer,
-);
-
-      }}
-
+      style={containerStyle}
+      onClick={handleCardClick}
     >
 
-      {/* ==========================================
+      {/* =================================================
           PIN
-      ========================================== */}
-
-      <div style={pinStyle} />
-
-      {/* ==========================================
-          ROPE
-      ========================================== */}
-
-      <div style={ropeStyle} />
-
+      ================================================= */}
 
       <div
-  style={{
-    width: "8px",
-    height: "8px",
-    borderRadius: "50%",
-    background:
-      "linear-gradient(180deg,#D6B06A,#8A612B)",
-    border: "1px solid #6B4B1D",
-    marginTop: "-5px",
-    marginBottom: "4px",
-    zIndex: 4,
-    boxShadow:
-      "0 1px 2px rgba(0,0,0,.25)",
-  }}
-/>
+        style={pinStyle}
+      />
 
-{/* ==========================================
-    METAL CLIP
-========================================== */}
+      {/* =================================================
+          ROPE
+      ================================================= */}
 
-<div
-  style={{
-    width: "34px",
-    height: "12px",
-    borderRadius: "4px",
-    background:
-      "linear-gradient(180deg,#F8FAFC,#CBD5E1,#94A3B8)",
-    border: "1px solid #94A3B8",
-    boxShadow:
-      "0 2px 4px rgba(15,23,42,.18)",
-    marginTop: "-2px",
-    zIndex: 3,
-  }}
-/>
+      <div
+        style={ropeStyle}
+      />
 
-      {/* ==========================================
+      {/* =================================================
+          METAL CONNECTOR
+      ================================================= */}
+
+      <div
+        style={{
+
+          width: "8px",
+
+          height: "8px",
+
+          borderRadius: "50%",
+
+          background:
+            "linear-gradient(180deg,#D6B06A,#8A612B)",
+
+          border:
+            "1px solid #6B4B1D",
+
+          marginTop: "-5px",
+
+          marginBottom: "4px",
+
+          zIndex: 4,
+
+          boxShadow:
+            "0 1px 2px rgba(0,0,0,.25)",
+
+        }}
+      />
+
+      {/* =================================================
           HANGER
-      ========================================== */}
+      ================================================= */}
 
-      <div style={hangerStyle} />
+      <div
+        style={hangerStyle}
+      />
 
-      {/* ==========================================
-          CARD
-      ========================================== */}
+      {/* =================================================
+          FRONT CUSTOMER ID CARD
+      ================================================= */}
 
-<div
+      <div
+        style={{
+          ...cardContainerStyle,
 
-style={{
+          width: "180px",
 
-...cardContainerStyle,
+          maxWidth: "180px",
 
-width: "190px",
+          height: "290px",
 
-maxWidth: "190px",
+          maxHeight: "290px",
 
-transform: "translateX(3px)",
+          transform:
+            "translateX(0)",
 
-}}
+        }}
+      >
 
->
+        <div
+          data-finora-customer-card="true"
+        >
 
-        <CustomerCardFlip
+          <CustomerIdCard
 
-          front={
+            customerId={
+              id
+            }
 
- <CustomerIdCard
+            customerName={
+              name
+            }
 
- customerId={id}
+            profilePhoto={
+              profilePhoto
+            }
 
- customerName={name}
+            phoneNumber={
+              phone
+            }
 
- profilePhoto={customer.profilePhoto}
+            branchName={
+              branch
+            }
 
- phoneNumber={customer.phone}
+            kycVerified={
+              kycVerified
+            }
 
- branchName={branch}
+              compact={true}
 
- kycVerified={kycVerified}
+          />
 
-/>
-
-          }
-
-         back={
-
-<div
-
-style={{
-
-width:175,
-
-height:285,
-
-maxHeight:"285px",
-
-overflow:"hidden",
-
-borderRadius:18,
-
-background:
-"linear-gradient(180deg,#FFFFFF,#F8FAFC)",
-
-color:"#1F2937",
-
-padding:"16px",
-
-display:"flex",
-
-justifyContent:"flex-start",
-
-flexDirection:"column",
-
-boxSizing:"border-box",
-
-border:"1px solid rgba(180,145,82,.35)",
-
-boxShadow:
-"0 12px 25px rgba(0,0,0,.18)",
-
-}}
-
->
-
-
-{/* HEADER */}
-
-<div
-
-style={{
-
-marginTop:"-8px",
-
-fontSize:"11px",
-
-fontWeight:600,
-
-whiteSpace:"nowrap",
-
-color:"#111827",
-
-}}
-
->
-
-{id}
-
-</div>
-
-
-
-{/* DETAILS */}
-
-<div
-style={{
-  marginTop:"8px",
-  fontSize:"10px",
-  lineHeight:"1.8",
-  color:"#374151",
-}}
->
-
-<div style={{display:"flex"}}>
-
-  <span
-    style={{
-      width:"55px",
-      fontWeight:700,
-      textTransform:"uppercase",
-    }}
-  >
-    Family
-  </span>
-
-  <span>
-    :
-  </span>
-
-  <span
-    style={{
-      marginLeft:"6px",
-    }}
-  >
-    {fatherName || "—"}
-  </span>
-
-</div>
-
-
-<div style={{display:"flex"}}>
-  <span style={{width:"55px", fontWeight:700, textTransform:"uppercase"}}>
-    Village
-  </span>
-
-  <span>
-    :
-  </span>
-
-  <span style={{marginLeft:"6px"}}>
-    {village || "—"}
-  </span>
-
-</div>
-
-
-<div style={{display:"flex"}}>
-  <span style={{width:"55px", fontWeight:700, textTransform:"uppercase"}}>
-    Mandal
-  </span>
-
-  <span>
-    :
-  </span>
-
-  <span style={{marginLeft:"6px"}}>
-    {mandal || "—"}
-  </span>
-
-</div>
-
-
-<div style={{display:"flex"}}>
-  <span style={{width:"55px", fontWeight:700, textTransform:"uppercase"}}>
-    District
-  </span>
-
-  <span>
-    :
-  </span>
-
-  <span style={{marginLeft:"6px"}}>
-    {district || "—"}
-  </span>
-
-</div>
-
-
-<div
-style={{
-  display:"flex",
-  marginTop:"4px",
-}}
->
-
-  <span style={{width:"55px", fontWeight:700, textTransform:"uppercase"}}>
-    Since
-  </span>
-
-  <span>
-    :
-  </span>
-
-  <span style={{marginLeft:"6px"}}>
-    {
-      customerSince
-      ? new Date(customerSince)
-          .toLocaleDateString()
-      : "—"
-    }
-  </span>
-
-</div>
-
-</div>
-
-
-{/* LINE */}
-
-<div
-
-style={{
-
-marginTop:"8px",
-
-borderTop:
-"1px solid #E5E7EB",
-
-}}
-
-/>
-
-
-
-{/* LOAN */}
-
-<div
-
-style={{
-
-marginTop:"8px",
-
-fontSize:"10px",
-
-fontWeight:700,
-
-}}
-
->
-
-LOAN SUMMARY
-
-</div>
-
-
-
-<div
-
-style={{
-
-marginTop:"8px",
-
-fontSize:"11px",
-
-}}
-
->
-
-<div
-style={{
-display:"flex",
-}}
->
-
-<span
-style={{
-width:"70px",
-fontWeight:700,
-}}
->
-Total Loans
-</span>
-
-
-<span>
-:
-</span>
-
-
-<span
-style={{
-marginLeft:"6px",
-}}
->
-{totalLoans ?? 0}
-</span>
-
-</div>
-
-<div
-style={{
-display:"flex",
-fontSize:"11px",
-marginTop:"6px",
-}}
->
-
-<span
-style={{
-width:"70px",
-fontWeight:700,
-}}
->
-Active
-</span>
-
-<span>
-:
-</span>
-
-<span
-style={{
-marginLeft:"6px",
-}}
->
-{activeLoans ?? 0}
-</span>
-
-</div>
-
-
-<div
-style={{
-display:"flex",
-fontSize:"11px",
-marginTop:"6px",
-}}
->
-
-<span
-style={{
-width:"70px",
-fontWeight:700,
-}}
->
-Closed
-</span>
-
-<span>
-:
-</span>
-
-<span
-style={{
-marginLeft:"6px",
-}}
->
-{closedLoans ?? 0}
-</span>
-
-</div>
-
-</div>
-
-<div
-
-style={{
-
-marginTop:"6px",
-
-fontSize:"11px",
-
-fontWeight:700,
-
-}}
-
->
-
-<div
-style={{
-display:"flex",
-marginTop:"2px",
-fontWeight:700,
-}}
->
-
-<span
-style={{
-width:"70px",
-}}
->
-Outstanding
-</span>
-
-
-<span>
-:
-</span>
-
-
-<span
-style={{
-marginLeft:"6px",
-}}
->
-₹ {outstandingAmount ?? 0}
-</span>
-
-
-</div>
-
-</div>
-
-
-<button
-
-style={{
-
-marginTop:"10px",
-
-height:"30px",
-
-borderRadius:"8px",
-
-border:"1px solid #C9A45C",
-
-background:"#8A612B",
-
-color:"#FFFFFF",
-
-fontSize:"10px",
-
-fontWeight:700,
-
-}}
-
->
-
-VIEW FULL DETAILS
-
-</button>
-
-</div>
-
-}
-          flipped={flipped}
-
-        />
-
-        <div style={bottomRailStyle}/>
+        </div>
 
       </div>
+
+      {/* =================================================
+          FINISHING RAIL
+      ================================================= */}
+
+      <div
+        style={bottomRailStyle}
+      />
 
     </div>
 

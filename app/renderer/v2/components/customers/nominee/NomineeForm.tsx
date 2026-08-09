@@ -1,11 +1,43 @@
 /* ===========================================================
    FINORA ENTERPRISE V2
-   NOMINEE FORM
---------------------------------------------------------------
-Customer Nominee Information
+   CUSTOMER NOMINEE INFORMATION
+
+   RESPONSIBILITY:
+   - Existing FINORA customer ID input
+   - Nominee name presentation
+   - Nominee phone presentation
+   - Nominee form change events
+   - Linked customer readonly presentation
+
+   BUSINESS LOGIC:
+   - NONE
+
+   STYLES:
+   NomineeForm.styles.ts
+
+   IMPORTANT:
+   The component does not decide whether a customer exists.
+   Step5Nominee owns customer lookup and passes the
+   isCustomerLinked state explicitly.
 =========================================================== */
 
-import type { CSSProperties } from "react";
+import type {
+  CSSProperties,
+} from "react";
+
+import {
+  wrapperStyle,
+  headerStyle,
+  titleStyle,
+  subtitleStyle,
+  gridStyle,
+  fieldStyle,
+  labelStyle,
+  inputStyle,
+  readonlyInputStyle,
+  helperStyle,
+  sectionDividerStyle,
+} from "./NomineeForm.styles";
 
 /* ===========================================================
    TYPES
@@ -20,7 +52,6 @@ export interface NomineeFormData {
   relationship: string;
 
   phoneNumber: string;
-
 }
 
 interface NomineeFormProps {
@@ -28,93 +59,92 @@ interface NomineeFormProps {
   value: NomineeFormData;
 
   onChange: (
-
     field: keyof NomineeFormData,
-
     value: string,
-
   ) => void;
 
+  /**
+   * True only when the entered FINORA Customer ID
+   * successfully resolves to an existing customer.
+   *
+   * Business lookup is handled by Step5Nominee.
+   */
+  isCustomerLinked?: boolean;
 }
-
-/* ===========================================================
-   STYLES
-=========================================================== */
-
-const wrapperStyle: CSSProperties = {
-
-  display: "grid",
-
-  gap: "18px",
-
-};
-
-const labelStyle: CSSProperties = {
-
-  marginBottom: "6px",
-
-  fontWeight: 600,
-
-};
-
-const inputStyle: CSSProperties = {
-
-  width: "100%",
-
-  padding: "12px",
-
-  border: "1px solid #d1d5db",
-
-  borderRadius: "12px",
-
-  fontSize: "15px",
-
-  boxSizing: "border-box",
-
-};
 
 /* ===========================================================
    FIELD
 =========================================================== */
 
 function Field({
-
   label,
-
   value,
-
   onChange,
-
+  readOnly = false,
+  placeholder,
+  helper,
+  type = "text",
 }: {
-
   label: string;
 
   value: string;
 
-  onChange: (value: string) => void;
+  onChange: (
+    value: string,
+  ) => void;
 
+  readOnly?: boolean;
+
+  placeholder?: string;
+
+  helper?: string;
+
+  type?: string;
 }) {
 
   return (
 
-    <div>
+    <div style={fieldStyle}>
 
-      <div style={labelStyle}>{label}</div>
+      <label style={labelStyle}>
+        {label}
+      </label>
 
       <input
-
-        style={inputStyle}
-
+        type={type}
         value={value}
+        readOnly={readOnly}
+        placeholder={placeholder}
+        autoComplete="off"
+        style={
+          readOnly
+            ? readonlyInputStyle
+            : inputStyle
+        }
+        onChange={(event) => {
 
-        onChange={(e) => onChange(e.target.value)}
+          if (readOnly) {
+            return;
+          }
 
+          onChange(
+            event.target.value,
+          );
+
+        }}
       />
+
+      {helper && (
+
+        <div style={helperStyle}>
+          {helper}
+        </div>
+
+      )}
 
     </div>
 
   );
-
 }
 
 /* ===========================================================
@@ -127,54 +157,121 @@ export default function NomineeForm({
 
   onChange,
 
+  isCustomerLinked = false,
+
 }: NomineeFormProps) {
 
   return (
 
-    <div style={wrapperStyle}>
+    <section style={wrapperStyle}>
 
-      <Field
+      {/* =====================================================
+         HEADER
+      ===================================================== */}
 
-        label="FINORA Customer ID"
+      <div style={headerStyle}>
 
-        value={value.nomineeCustomerId}
+        <div>
 
-        onChange={(v) => onChange("nomineeCustomerId", v)}
+          <h2 style={titleStyle}>
+            Nominee Information
+          </h2>
 
-      />
+          <p style={subtitleStyle}>
+            Link an existing FINORA customer or enter nominee details.
+          </p>
 
-      <Field
+        </div>
 
-        label="Nominee Name"
+      </div>
 
-        value={value.nomineeName}
+      <div style={sectionDividerStyle} />
 
-        onChange={(v) => onChange("nomineeName", v)}
+      {/* =====================================================
+         FORM
+      ===================================================== */}
 
-      />
+      <div style={gridStyle}>
 
-      <Field
+        {/* ===================================================
+           FINORA CUSTOMER ID
+        =================================================== */}
 
-        label="Relationship"
+        <Field
+          label="FINORA Customer ID"
+          value={
+            value.nomineeCustomerId
+          }
+          onChange={(nextValue) =>
+            onChange(
+              "nomineeCustomerId",
+              nextValue,
+            )
+          }
+          placeholder="FIN-CUS-000001"
+          helper={
+            isCustomerLinked
+              ? "Registered FINORA customer linked successfully."
+              : "Enter a registered FINORA Customer ID to link the nominee."
+          }
+        />
 
-        value={value.relationship}
+        {/* ===================================================
+           NOMINEE NAME
+        =================================================== */}
 
-        onChange={(v) => onChange("relationship", v)}
+        <Field
+          label="Nominee Name"
+          value={
+            value.nomineeName
+          }
+          onChange={(nextValue) =>
+            onChange(
+              "nomineeName",
+              nextValue,
+            )
+          }
+          readOnly={
+            isCustomerLinked
+          }
+          placeholder="Nominee full name"
+          helper={
+            isCustomerLinked
+              ? "Automatically linked from the registered customer profile."
+              : "Enter nominee full name."
+          }
+        />
 
-      />
+        {/* ===================================================
+           PHONE NUMBER
+        =================================================== */}
 
-      <Field
+        <Field
+          label="Phone Number"
+          value={
+            value.phoneNumber
+          }
+          onChange={(nextValue) =>
+            onChange(
+              "phoneNumber",
+              nextValue,
+            )
+          }
+          readOnly={
+            isCustomerLinked
+          }
+          placeholder="Nominee mobile number"
+          helper={
+            isCustomerLinked
+              ? "Automatically linked from the registered customer profile."
+              : "Enter nominee mobile number."
+          }
+          type="tel"
+        />
 
-        label="Phone Number"
+      </div>
 
-        value={value.phoneNumber}
-
-        onChange={(v) => onChange("phoneNumber", v)}
-
-      />
-
-    </div>
+    </section>
 
   );
-
 }

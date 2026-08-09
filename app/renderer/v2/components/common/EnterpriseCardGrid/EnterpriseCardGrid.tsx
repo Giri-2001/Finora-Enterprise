@@ -1,5 +1,6 @@
 /* ===========================================================
    FINORA ENTERPRISE OS™
+
    ENTERPRISE CARD GRID™
 
    COMPONENT
@@ -52,7 +53,8 @@ export default function EnterpriseCardGrid({
         gridTemplateColumns:
           `repeat(${resolvedColumns}, minmax(0,1fr))`,
 
-        gap: `${resolvedGap}px`,
+        gap:
+          `${resolvedGap}px`,
 
         ...style,
 
@@ -70,6 +72,20 @@ export default function EnterpriseCardGrid({
 
               style={itemStyle}
 
+              onClick={(event) => {
+
+                /*
+                 * CUSTOMER CARD EVENT ISOLATION
+                 *
+                 * Prevent the parent empty-area
+                 * click handler from clearing selection
+                 * when a customer card is clicked.
+                 */
+
+                event.stopPropagation();
+
+              }}
+
             >
 
               {child}
@@ -80,7 +96,17 @@ export default function EnterpriseCardGrid({
 
         : (
 
-          <div style={itemStyle}>
+          <div
+
+            style={itemStyle}
+
+            onClick={(event) => {
+
+              event.stopPropagation();
+
+            }}
+
+          >
 
             {children}
 

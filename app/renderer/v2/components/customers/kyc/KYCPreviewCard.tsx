@@ -1,118 +1,117 @@
 /* ===========================================================
-   FINORA ENTERPRISE V2
-   KYC PREVIEW CARD
---------------------------------------------------------------
-Customer KYC Preview
+   FINORA ENTERPRISE OS™
+
+   CUSTOMER KYC PREVIEW
+
+   RESPONSIBILITY:
+   - Live KYC preview presentation
+
+   STYLES:
+   KYCPreviewCard.styles.ts
 =========================================================== */
 
-import type { CSSProperties } from "react";
+import {
+  cardStyle,
+  titleStyle,
+  subtitleStyle,
+  rowStyle,
+  labelStyle,
+  valueStyle,
+  statusStyle,
+} from "./KYCPreviewCard.styles";
 
 /* ===========================================================
    TYPES
 =========================================================== */
 
 export interface KYCPreviewData {
-
   customerName?: string;
-
   aadhaarNumber?: string;
-
   panNumber?: string;
-
   verified?: boolean;
-
 }
 
 interface KYCPreviewCardProps {
-
   value: KYCPreviewData;
-
 }
-
-/* ===========================================================
-   STYLES
-=========================================================== */
-
-const cardStyle: CSSProperties = {
-
-  padding: "24px",
-
-  borderRadius: "18px",
-
-  border: "1px solid #e5e7eb",
-
-  background: "#ffffff",
-
-};
-
-const titleStyle: CSSProperties = {
-
-  margin: 0,
-
-  marginBottom: "18px",
-
-  fontSize: "20px",
-
-  fontWeight: 700,
-
-};
-
-const rowStyle: CSSProperties = {
-
-  marginBottom: "12px",
-
-  color: "#374151",
-
-};
 
 /* ===========================================================
    COMPONENT
 =========================================================== */
 
 export default function KYCPreviewCard({
-
   value,
-
 }: KYCPreviewCardProps) {
 
   return (
-
     <section style={cardStyle}>
 
-      <h3 style={titleStyle}>
+      <header>
 
-        KYC Preview
+        <h3 style={titleStyle}>
+          KYC Preview
+        </h3>
 
-      </h3>
+        <p style={subtitleStyle}>
+          Live identity verification view
+        </p>
+
+      </header>
 
       <div style={rowStyle}>
 
-        <strong>Customer :</strong> {value.customerName || "--"}
+        <span style={labelStyle}>
+          Customer
+        </span>
+
+        <strong style={valueStyle}>
+          {value.customerName || "--"}
+        </strong>
 
       </div>
 
       <div style={rowStyle}>
 
-        <strong>Aadhaar :</strong> {value.aadhaarNumber || "--"}
+        <span style={labelStyle}>
+          Aadhaar
+        </span>
+
+        <strong style={valueStyle}>
+          {value.aadhaarNumber || "--"}
+        </strong>
 
       </div>
 
       <div style={rowStyle}>
 
-        <strong>PAN :</strong> {value.panNumber || "--"}
+        <span style={labelStyle}>
+          PAN
+        </span>
+
+        <strong style={valueStyle}>
+          {value.panNumber || "--"}
+        </strong>
 
       </div>
 
       <div style={rowStyle}>
 
-        <strong>Status :</strong>{" "}
+        <span style={labelStyle}>
+          Status
+        </span>
 
-        {value.verified ? "Verified ✅" : "Pending"}
+        <strong
+          style={statusStyle(
+            value.verified,
+          )}
+        >
+          {value.verified
+            ? "✓ Verified"
+            : "⏳ Pending"}
+        </strong>
 
       </div>
 
     </section>
-
   );
-
 }

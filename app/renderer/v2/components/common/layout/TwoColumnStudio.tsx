@@ -1,92 +1,68 @@
 /* ===========================================================
-   FINORA ENTERPRISE V2
-   TWO COLUMN STUDIO
---------------------------------------------------------------
-Reusable Studio Layout
+   FINORA ENTERPRISE OS™
+
+   REUSABLE TWO COLUMN STUDIO LAYOUT
+
+   RESPONSIBILITY:
+   - Reusable two-column presentation layout
+   - Left workspace presentation
+   - Right preview / intelligence presentation
+
+   IMPORTANT:
+   - No business logic
+   - No module-specific styling
+   - No scrolling inside columns
+   - Parent decides the overall page height
 =========================================================== */
 
 import type {
-  CSSProperties,
   ReactNode,
 } from "react";
+
+import {
+  containerStyle,
+  leftStyle,
+  rightStyle,
+} from "./TwoColumnStudio.styles";
 
 /* ===========================================================
    TYPES
 =========================================================== */
 
 interface TwoColumnStudioProps {
-
   left: ReactNode;
 
   right: ReactNode;
-
 }
-
-/* ===========================================================
-   STYLES
-=========================================================== */
-
-const containerStyle: CSSProperties = {
-
-  display:"flex",
-
-  flexDirection:"column",
-
-  height:"calc(100vh - 80px)",
-
-  overflow:"hidden",
-
-  width:"100%",
-
-};
-
-const leftStyle: CSSProperties = {
-
- height:"40%",
-
- overflow:"hidden",
-
-};
-
-
-const rightStyle: CSSProperties = {
-
- height:"60%",
-
- overflow:"auto",
-
-};
 
 /* ===========================================================
    COMPONENT
 =========================================================== */
 
 export default function TwoColumnStudio({
-
   left,
-
   right,
-
 }: TwoColumnStudioProps) {
 
   return (
-
     <div style={containerStyle}>
 
+      {/* =====================================================
+         LEFT WORKSPACE
+      ===================================================== */}
+
       <section style={leftStyle}>
-
         {left}
-
       </section>
 
+      {/* =====================================================
+         RIGHT INTELLIGENCE PANEL
+      ===================================================== */}
+
       <aside style={rightStyle}>
-
         {right}
-
       </aside>
 
     </div>
-
   );
-
 }

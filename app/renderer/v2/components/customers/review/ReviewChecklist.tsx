@@ -1,87 +1,88 @@
 /* ===========================================================
    FINORA ENTERPRISE V2
-   REVIEW CHECKLIST
---------------------------------------------------------------
-Customer Review Checklist
+   CUSTOMER REVIEW CHECKLIST
+
+   RESPONSIBILITY:
+   - Review checklist presentation
+   - Completion status presentation
+
+   BUSINESS LOGIC:
+   - NONE
+
+   IMPORTANT:
+   Completion values are supplied by Step6Review.
+   This component must never assume that every step
+   is completed.
+
+   STYLES:
+   ReviewChecklist.styles.ts
 =========================================================== */
 
-import type { CSSProperties } from "react";
+import {
+  cardStyle,
+  headerStyle,
+  titleStyle,
+  subtitleStyle,
+  dividerStyle,
+  itemStyle,
+  itemLabelStyle,
+  completeStyle,
+  pendingStyle,
+} from "./ReviewChecklist.styles";
 
 /* ===========================================================
    TYPES
 =========================================================== */
 
+export interface ReviewChecklistItem {
+
+  label: string;
+
+  completed: boolean;
+}
+
 interface ReviewChecklistProps {
 
-  items?: {
-
-    label: string;
-
-    completed: boolean;
-
-  }[];
-
+  items?: ReviewChecklistItem[];
 }
 
 /* ===========================================================
-   STYLES
+   CHECKLIST ITEM
 =========================================================== */
 
-const cardStyle: CSSProperties = {
+function ChecklistItem({
 
-  padding: "24px",
+  label,
 
-  borderRadius: "18px",
+  completed,
 
-  border: "1px solid #e5e7eb",
+}: ReviewChecklistItem) {
 
-  background: "#ffffff",
+  return (
 
-};
+    <div style={itemStyle}>
 
-const titleStyle: CSSProperties = {
+      <span style={itemLabelStyle}>
+        {label}
+      </span>
 
-  margin: 0,
+      <strong
+        style={
+          completed
+            ? completeStyle
+            : pendingStyle
+        }
+      >
+        {completed
+          ? "✓ Complete"
+          : "● Pending"}
+      </strong>
 
-  marginBottom: "18px",
+    </div>
 
-  fontSize: "20px",
+  );
 
-  fontWeight: 700,
-
-};
-
-const itemStyle: CSSProperties = {
-
-  display: "flex",
-
-  justifyContent: "space-between",
-
-  alignItems: "center",
-
-  padding: "10px 0",
-
-  borderBottom: "1px solid #f3f4f6",
-
-};
-
-/* ===========================================================
-   DEFAULT CHECKLIST
-=========================================================== */
-
-const defaultItems = [
-
-  { label: "Identity Completed", completed: true },
-
-  { label: "Basic Details Completed", completed: true },
-
-  { label: "Address Completed", completed: true },
-
-  { label: "KYC Verified", completed: true },
-
-  { label: "Nominee Added", completed: true },
-
-];
+}
 
 /* ===========================================================
    COMPONENT
@@ -89,7 +90,7 @@ const defaultItems = [
 
 export default function ReviewChecklist({
 
-  items = defaultItems,
+  items = [],
 
 }: ReviewChecklistProps) {
 
@@ -97,33 +98,49 @@ export default function ReviewChecklist({
 
     <section style={cardStyle}>
 
-      <h3 style={titleStyle}>
+      {/* =====================================================
+         HEADER
+      ===================================================== */}
 
-        Review Checklist
+      <div style={headerStyle}>
 
-      </h3>
+        <div>
 
-      {items.map((item) => (
+          <h3 style={titleStyle}>
+            Review Checklist
+          </h3>
 
-        <div
-
-          key={item.label}
-
-          style={itemStyle}
-
-        >
-
-          <span>{item.label}</span>
-
-          <strong>
-
-            {item.completed ? "✅" : "⚠"}
-
-          </strong>
+          <p style={subtitleStyle}>
+            Final readiness checklist before customer creation.
+          </p>
 
         </div>
 
-      ))}
+      </div>
+
+      {/* =====================================================
+         DIVIDER
+      ===================================================== */}
+
+      <div style={dividerStyle} />
+
+      {/* =====================================================
+         CHECKLIST
+      ===================================================== */}
+
+      <div>
+
+        {items.map((item) => (
+
+          <ChecklistItem
+            key={item.label}
+            label={item.label}
+            completed={item.completed}
+          />
+
+        ))}
+
+      </div>
 
     </section>
 

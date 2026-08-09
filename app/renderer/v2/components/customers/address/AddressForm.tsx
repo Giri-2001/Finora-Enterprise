@@ -1,18 +1,42 @@
 /* ===========================================================
-   FINORA ENTERPRISE V2
-   ADDRESS FORM
---------------------------------------------------------------
-Customer Address Information
+   FINORA ENTERPRISE OS™
+
+   CUSTOMER ADDRESS INFORMATION™
+
+   Version     : 2.0
+   Phase       : Phase 2
+   Architecture: Enterprise
+   Status      : Production
+
+   Responsibility:
+
+   - Current address
+   - Permanent address
+   - City / Village
+   - District
+   - State
+   - PIN Code
 =========================================================== */
 
-import type { CSSProperties } from "react";
+import type {
+  CSSProperties,
+} from "react";
+
+import {
+  addressGridStyle,
+  fullAddressFieldStyle,
+  fieldStyle,
+  labelStyle,
+  addressInputStyle,
+  inputStyle,
+  numberInputStyle,
+} from "../wizard/steps/Step3Address.styles";
 
 /* ===========================================================
    TYPES
 =========================================================== */
 
 export interface AddressFormData {
-
   currentAddress: string;
 
   permanentAddress: string;
@@ -24,98 +48,85 @@ export interface AddressFormData {
   state: string;
 
   pinCode: string;
-
 }
 
 interface AddressFormProps {
-
   value: AddressFormData;
 
   onChange: (
     field: keyof AddressFormData,
     value: string,
   ) => void;
-
 }
-
-/* ===========================================================
-   STYLES
-=========================================================== */
-
-const wrapperStyle: CSSProperties = {
-
-  display: "grid",
-
-  gap: "18px",
-
-};
-
-const inputStyle: CSSProperties = {
-
-  width: "100%",
-
-  padding: "12px",
-
-  border: "1px solid #d1d5db",
-
-  borderRadius: "12px",
-
-  fontSize: "15px",
-
-  boxSizing: "border-box",
-
-};
-
-const labelStyle: CSSProperties = {
-
-  marginBottom: "6px",
-
-  fontWeight: 600,
-
-};
 
 /* ===========================================================
    HELPER
 =========================================================== */
 
 function Field({
-
   label,
-
   value,
-
   onChange,
-
+  inputStyleOverride,
+  inputMode,
+  maxLength,
+  placeholder,
 }: {
-
   label: string;
 
   value: string;
 
-  onChange: (value: string) => void;
+  onChange: (
+    value: string,
+  ) => void;
 
+  inputStyleOverride?: CSSProperties;
+
+  inputMode?:
+    | "text"
+    | "numeric"
+    | "tel";
+
+  maxLength?: number;
+
+  placeholder: string;
 }) {
-
   return (
+    <div
+      style={fieldStyle}
+    >
 
-    <div>
-
-      <div style={labelStyle}>{label}</div>
+      <label
+        style={labelStyle}
+      >
+        {label}
+      </label>
 
       <input
-
-        style={inputStyle}
+        style={
+          inputStyleOverride ??
+          inputStyle
+        }
 
         value={value}
 
-        onChange={(e) => onChange(e.target.value)}
+        placeholder={placeholder}
 
+        inputMode={inputMode}
+
+        maxLength={maxLength}
+
+        onChange={(event) =>
+          onChange(
+            event.target.value,
+          )
+        }
+
+        aria-label={label}
       />
 
     </div>
-
   );
-
 }
 
 /* ===========================================================
@@ -123,79 +134,180 @@ function Field({
 =========================================================== */
 
 export default function AddressForm({
-
   value,
-
   onChange,
-
 }: AddressFormProps) {
 
   return (
+    <div
+      style={addressGridStyle}
+    >
 
-    <div style={wrapperStyle}>
+      {/* =================================================
+          CURRENT ADDRESS
+      ================================================= */}
+
+      <div
+        style={fullAddressFieldStyle}
+      >
+
+        <label
+          style={labelStyle}
+        >
+          Current Address
+        </label>
+
+        <input
+          style={addressInputStyle}
+
+          value={
+            value.currentAddress
+          }
+
+          placeholder="Enter current residential address"
+
+          onChange={(event) =>
+            onChange(
+              "currentAddress",
+              event.target.value,
+            )
+          }
+
+          aria-label="Current Address"
+        />
+
+      </div>
+
+      {/* =================================================
+          PERMANENT ADDRESS
+      ================================================= */}
+
+      <div
+        style={fullAddressFieldStyle}
+      >
+
+        <label
+          style={labelStyle}
+        >
+          Permanent Address
+        </label>
+
+        <input
+          style={addressInputStyle}
+
+          value={
+            value.permanentAddress
+          }
+
+          placeholder="Enter permanent residential address"
+
+          onChange={(event) =>
+            onChange(
+              "permanentAddress",
+              event.target.value,
+            )
+          }
+
+          aria-label="Permanent Address"
+        />
+
+      </div>
+
+      {/* =================================================
+          CITY / VILLAGE
+      ================================================= */}
 
       <Field
-
-        label="Current Address"
-
-        value={value.currentAddress}
-
-        onChange={(v) => onChange("currentAddress", v)}
-
-      />
-
-      <Field
-
-        label="Permanent Address"
-
-        value={value.permanentAddress}
-
-        onChange={(v) => onChange("permanentAddress", v)}
-
-      />
-
-      <Field
-
         label="City / Village"
 
-        value={value.city}
+        value={
+          value.city
+        }
 
-        onChange={(v) => onChange("city", v)}
+        placeholder="Enter city or village"
 
+        onChange={(nextValue) =>
+          onChange(
+            "city",
+            nextValue,
+          )
+        }
       />
 
-      <Field
+      {/* =================================================
+          DISTRICT
+      ================================================= */}
 
+      <Field
         label="District"
 
-        value={value.district}
+        value={
+          value.district
+        }
 
-        onChange={(v) => onChange("district", v)}
+        placeholder="Enter district"
 
+        onChange={(nextValue) =>
+          onChange(
+            "district",
+            nextValue,
+          )
+        }
       />
 
-      <Field
+      {/* =================================================
+          STATE
+      ================================================= */}
 
+      <Field
         label="State"
 
-        value={value.state}
+        value={
+          value.state
+        }
 
-        onChange={(v) => onChange("state", v)}
+        placeholder="Enter state"
 
+        onChange={(nextValue) =>
+          onChange(
+            "state",
+            nextValue,
+          )
+        }
       />
 
-      <Field
+      {/* =================================================
+          PIN CODE
+      ================================================= */}
 
+      <Field
         label="PIN Code"
 
-        value={value.pinCode}
+        value={
+          value.pinCode
+        }
 
-        onChange={(v) => onChange("pinCode", v)}
+        placeholder="Enter 6-digit PIN code"
 
+        inputMode="numeric"
+
+        maxLength={6}
+
+        inputStyleOverride={
+          numberInputStyle
+        }
+
+        onChange={(nextValue) =>
+          onChange(
+            "pinCode",
+            nextValue.replace(
+              /\D/g,
+              "",
+            ),
+          )
+        }
       />
 
     </div>
-
   );
-
 }

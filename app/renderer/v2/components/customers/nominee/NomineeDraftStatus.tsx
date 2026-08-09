@@ -1,33 +1,65 @@
 /* ===========================================================
-   FINORA ENTERPRISE V2
-   NOMINEE DRAFT STATUS
---------------------------------------------------------------
-Reusable Nominee Draft Status
+   FINORA ENTERPRISE OS™
+
+   REUSABLE NOMINEE DRAFT STATUS
+
+   RESPONSIBILITY:
+   - Nominee draft state presentation
+   - Saved / pending status
+   - Last saved information
+
+   PRESENTATION:
+   - FINORA Enterprise brown / gold theme
+   - Compact studio card
+   - No module layout logic
 =========================================================== */
 
-import type { CSSProperties } from "react";
+import type {
+  CSSProperties,
+} from "react";
+
+/* ===========================================================
+   TYPES
+=========================================================== */
 
 interface NomineeDraftStatusProps {
 
   isDraftSaved: boolean;
 
   lastSaved?: string;
-
 }
+
+/* ===========================================================
+   WRAPPER
+=========================================================== */
 
 const wrapperStyle: CSSProperties = {
 
-  marginTop: "24px",
+  width: "100%",
 
-  padding: "18px",
+  minWidth: 0,
+
+  boxSizing: "border-box",
+
+  padding: "14px 16px",
 
   borderRadius: "14px",
 
-  border: "1px solid #d1d5db",
+  border:
+    "1px solid rgba(214,176,106,.42)",
 
-  background: "#f9fafb",
+  background:
+    "linear-gradient(145deg,rgba(255,255,255,.045),rgba(255,255,255,.015))",
 
+  boxShadow:
+    "0 7px 18px rgba(0,0,0,.12)",
+
+  overflow: "hidden",
 };
+
+/* ===========================================================
+   BADGE
+=========================================================== */
 
 const badgeStyle: CSSProperties = {
 
@@ -35,27 +67,70 @@ const badgeStyle: CSSProperties = {
 
   alignItems: "center",
 
-  padding: "8px 14px",
+  gap: "6px",
+
+  padding: "6px 11px",
 
   borderRadius: "999px",
 
-  background: "#f3e8ff",
+  border:
+    "1px solid rgba(214,176,106,.48)",
 
-  color: "#7e22ce",
+  background:
+    "rgba(214,176,106,.10)",
 
-  fontWeight: 600,
+  color: "#F0C75E",
 
+  fontSize: "11px",
+
+  lineHeight: 1.2,
+
+  fontWeight: 800,
+
+  letterSpacing: ".15px",
+
+  whiteSpace: "nowrap",
 };
+
+/* ===========================================================
+   INFO
+=========================================================== */
 
 const infoStyle: CSSProperties = {
 
-  marginTop: "12px",
+  margin:
+    "9px 0 0",
 
-  color: "#6b7280",
+  color:
+    "rgba(255,255,255,.55)",
 
-  fontSize: "13px",
+  fontSize: "10px",
 
+  lineHeight: 1.4,
+
+  fontWeight: 500,
 };
+
+/* ===========================================================
+   LAST SAVED
+=========================================================== */
+
+const lastSavedStyle: CSSProperties = {
+
+  margin:
+    "7px 0 0",
+
+  color:
+    "rgba(255,255,255,.38)",
+
+  fontSize: "9px",
+
+  lineHeight: 1.35,
+};
+
+/* ===========================================================
+   COMPONENT
+=========================================================== */
 
 export default function NomineeDraftStatus({
 
@@ -69,41 +144,37 @@ export default function NomineeDraftStatus({
 
     <section style={wrapperStyle}>
 
+      {/* =====================================================
+         STATUS BADGE
+      ===================================================== */}
+
       <div style={badgeStyle}>
 
         {isDraftSaved
-
           ? "✓ Nominee Saved"
-
-          : "● Draft Pending"}
+          : "• Draft Pending"}
 
       </div>
+
+      {/* =====================================================
+         STATUS INFORMATION
+      ===================================================== */}
 
       <div style={infoStyle}>
 
         {isDraftSaved
-
           ? "Nominee details have been saved."
-
           : "Nominee details are waiting to be saved."}
 
       </div>
 
+      {/* =====================================================
+         LAST SAVED
+      ===================================================== */}
+
       {lastSaved && (
 
-        <div
-
-          style={{
-
-            marginTop: "10px",
-
-            fontSize: "12px",
-
-            color: "#9ca3af",
-
-          }}
-
-        >
+        <div style={lastSavedStyle}>
 
           Last Saved : {lastSaved}
 
@@ -112,7 +183,5 @@ export default function NomineeDraftStatus({
       )}
 
     </section>
-
   );
-
 }

@@ -1,11 +1,32 @@
 /* ===========================================================
    FINORA ENTERPRISE V2
-   VALIDATION STATUS
---------------------------------------------------------------
-Customer Validation Status
+   CUSTOMER VALIDATION STATUS
+
+   RESPONSIBILITY:
+   - Customer validation status presentation
+   - Identity status
+   - Address status
+   - KYC status
+   - Nominee status
+
+   BUSINESS LOGIC:
+   - NONE
+
+   STYLES:
+   ValidationStatus.styles.ts
 =========================================================== */
 
-import type { CSSProperties } from "react";
+import {
+  cardStyle,
+  headerStyle,
+  titleStyle,
+  subtitleStyle,
+  dividerStyle,
+  rowStyle,
+  labelStyle,
+  statusCompleteStyle,
+  statusPendingStyle,
+} from "./ValidationStatus.styles";
 
 /* ===========================================================
    TYPES
@@ -20,48 +41,11 @@ interface ValidationStatusProps {
   kycVerified?: boolean;
 
   nomineeAdded?: boolean;
-
 }
 
 /* ===========================================================
-   STYLES
+   STATUS ROW
 =========================================================== */
-
-const cardStyle: CSSProperties = {
-
-  padding: "24px",
-
-  borderRadius: "18px",
-
-  border: "1px solid #e5e7eb",
-
-  background: "#ffffff",
-
-};
-
-const titleStyle: CSSProperties = {
-
-  margin: 0,
-
-  marginBottom: "18px",
-
-  fontSize: "20px",
-
-  fontWeight: 700,
-
-};
-
-const rowStyle: CSSProperties = {
-
-  display: "flex",
-
-  justifyContent: "space-between",
-
-  marginBottom: "12px",
-
-  color: "#374151",
-
-};
 
 function StatusRow({
 
@@ -81,12 +65,20 @@ function StatusRow({
 
     <div style={rowStyle}>
 
-      <span>{label}</span>
+      <span style={labelStyle}>
+        {label}
+      </span>
 
-      <strong>
-
-        {ok ? "✅ Complete" : "⚠ Pending"}
-
+      <strong
+        style={
+          ok
+            ? statusCompleteStyle
+            : statusPendingStyle
+        }
+      >
+        {ok
+          ? "✓ Complete"
+          : "● Pending"}
       </strong>
 
     </div>
@@ -115,42 +107,54 @@ export default function ValidationStatus({
 
     <section style={cardStyle}>
 
-      <h3 style={titleStyle}>
+      {/* =====================================================
+         HEADER
+      ===================================================== */}
 
-        Validation Status
+      <div style={headerStyle}>
 
-      </h3>
+        <div>
+
+          <h3 style={titleStyle}>
+            Validation Status
+          </h3>
+
+          <p style={subtitleStyle}>
+            Customer profile readiness before final confirmation.
+          </p>
+
+        </div>
+
+      </div>
+
+      {/* =====================================================
+         DIVIDER
+      ===================================================== */}
+
+      <div style={dividerStyle} />
+
+      {/* =====================================================
+         VALIDATION ROWS
+      ===================================================== */}
 
       <StatusRow
-
         label="Identity"
-
         ok={identityComplete}
-
       />
 
       <StatusRow
-
         label="Address"
-
         ok={addressComplete}
-
       />
 
       <StatusRow
-
         label="KYC"
-
         ok={kycVerified}
-
       />
 
       <StatusRow
-
         label="Nominee"
-
         ok={nomineeAdded}
-
       />
 
     </section>

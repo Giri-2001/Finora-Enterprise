@@ -1,101 +1,348 @@
 /* ===========================================================
-   FINORA ENTERPRISE V2
+   FINORA ENTERPRISE OS™
+
    CUSTOMER WIZARD
-   STEP 3 - ADDRESS STUDIO
+   STEP 3 — ADDRESS STUDIO™
+
+   Version     : 2.0
+   Phase       : Phase 2
+   Architecture: Enterprise
+   Status      : Production
+
+   Responsibility:
+
+   - Customer address state
+   - Current address
+   - Permanent address
+   - Location details
+   - Live address preview
+   - Address verification
+   - Future GIS status
+   - Live wizard synchronization
 =========================================================== */
 
-import StudioLayout from "../../../common/layout/StudioLayout";
-import TwoColumnStudio from "../../../common/layout/TwoColumnStudio";
+import {
+  useState,
+} from "react";
 
-import AddressHeader from "../../address/AddressHeader";
-import AddressForm, { type AddressFormData } from "../../address/AddressForm";
-import AddressMapCard from "../../address/AddressMapCard";
-import AddressProofCard from "../../address/AddressProofCard";
-import AddressPreviewCard from "../../address/AddressPreviewCard";
-import AddressDraftStatus from "../../address/AddressDraftStatus";
+import AddressForm, {
+  type AddressFormData,
+} from "../../address/AddressForm";
 
-export default function Step3Address() {
+import AddressMapCard
+  from "../../address/AddressMapCard";
 
-  const address: AddressFormData = {
+import AddressProofCard
+  from "../../address/AddressProofCard";
 
-    currentAddress: "",
+import AddressPreviewCard
+  from "../../address/AddressPreviewCard";
 
-    permanentAddress: "",
+import type {
+  CustomerWizardData,
+} from "../CustomerWizard";
 
-    city: "",
+import {
+  pageStyle,
+  contentStyle,
+  sectionStyle,
+  sectionHeaderStyle,
+  sectionIconStyle,
+  sectionTitleStyle,
+  sectionSubtitleStyle,
+  fieldAreaStyle,
+  secondaryGridStyle,
+  secondaryCardStyle,
+} from "./Step3Address.styles";
 
-    district: "",
+/* ===========================================================
+   TYPES
+=========================================================== */
 
-    state: "",
+interface Step3AddressProps {
+  updateWizardData: (
+    data: Partial<CustomerWizardData>,
+  ) => void;
 
-    pinCode: "",
+  wizardData?: CustomerWizardData;
+}
 
-  };
+/* ===========================================================
+   DEFAULT STATE
+=========================================================== */
+
+const DEFAULT_ADDRESS: AddressFormData = {
+  currentAddress: "",
+
+  permanentAddress: "",
+
+  city: "",
+
+  district: "",
+
+  state: "",
+
+  pinCode: "",
+};
+
+/* ===========================================================
+   COMPONENT
+=========================================================== */
+
+export default function Step3Address({
+  updateWizardData,
+  wizardData,
+}: Step3AddressProps) {
+
+  /* =========================================================
+     ADDRESS STATE
+  ========================================================= */
+
+  const [
+    address,
+    setAddress,
+  ] = useState<AddressFormData>(
+    DEFAULT_ADDRESS,
+  );
+
+  /* =========================================================
+     ADDRESS FIELD UPDATE
+  ========================================================= */
+
+  function updateAddressField(
+    field: keyof AddressFormData,
+    value: string,
+  ): void {
+
+    setAddress(
+      (previous) => ({
+        ...previous,
+
+        [field]: value,
+      }),
+    );
+
+    updateWizardData({
+      [field]: value,
+    } as Partial<CustomerWizardData>);
+  }
+
+  /* =========================================================
+     UI
+  ========================================================= */
 
   return (
+    <section
+      style={pageStyle}
+    >
 
-    <StudioLayout>
+      {/* =================================================
+          MAIN STEP CONTENT
+      ================================================= */}
 
-      <AddressHeader />
+      <div
+        style={contentStyle}
+      >
 
-      <TwoColumnStudio
+        {/* =================================================
+            SECTION 1 — ADDRESS INFORMATION
+        ================================================= */}
 
-        left={
+        <section
+          style={sectionStyle}
+        >
 
-          <>
+          {/* ===============================================
+              SECTION HEADER
+          =============================================== */}
+
+          <header
+            style={sectionHeaderStyle}
+          >
+
+            <div
+              style={sectionIconStyle}
+              aria-hidden="true"
+            >
+              📍
+            </div>
+
+            <div>
+
+              <h2
+                style={sectionTitleStyle}
+              >
+                1. Address Information
+              </h2>
+
+              <p
+                style={sectionSubtitleStyle}
+              >
+                Capture the customer's residential and permanent address.
+              </p>
+
+            </div>
+
+          </header>
+
+          {/* ===============================================
+              ADDRESS FORM
+          =============================================== */}
+
+          <div
+            style={fieldAreaStyle}
+          >
 
             <AddressForm
 
-              value={address}
+              value={
+                address
+              }
 
-              onChange={() => {}}
+              onChange={
+                updateAddressField
+              }
 
             />
 
-            <AddressMapCard />
+          </div>
 
-            <AddressProofCard />
+        </section>
 
-          </>
+        {/* =================================================
+            SECTION 2 — ADDRESS VERIFICATION & PREVIEW
+        ================================================= */}
 
-        }
+        <section
+          style={sectionStyle}
+        >
 
-        right={
+          {/* ===============================================
+              SECTION HEADER
+          =============================================== */}
 
-          <>
+          <header
+            style={sectionHeaderStyle}
+          >
 
-            <AddressPreviewCard
+            <div
+              style={sectionIconStyle}
+              aria-hidden="true"
+            >
+              ✓
+            </div>
 
-              value={{
+            <div>
 
-                customerName: "",
+              <h2
+                style={sectionTitleStyle}
+              >
+                2. Address Verification
+              </h2>
 
-                currentAddress: address.currentAddress,
+              <p
+                style={sectionSubtitleStyle}
+              >
+                Verification status, location readiness and live address preview.
+              </p>
 
-                city: address.city,
+            </div>
 
-                state: address.state,
+          </header>
 
-                pinCode: address.pinCode,
+          {/* ===============================================
+              VERIFICATION CARDS
+          =============================================== */}
 
+          <div
+            style={{
+              ...fieldAreaStyle,
+              justifyContent: "center",
+            }}
+          >
+
+            <div
+              style={{
+                ...secondaryGridStyle,
+
+                gridTemplateColumns:
+                  "repeat(3,minmax(0,1fr))",
+
+                alignItems:
+                  "stretch",
               }}
+            >
 
-            />
+              {/* =========================================
+                  ADDRESS PROOF
+              ========================================= */}
 
-            <AddressDraftStatus
+              <div
+                style={secondaryCardStyle}
+              >
 
-              isDraftSaved={false}
+                <AddressProofCard
 
-            />
+                  documentType="Not Provided"
 
-          </>
+                  verified={false}
 
-        }
+                />
 
-      />
+              </div>
 
-    </StudioLayout>
+              {/* =========================================
+                  GIS / LOCATION
+              ========================================= */}
 
+              <div
+                style={secondaryCardStyle}
+              >
+
+                <AddressMapCard />
+
+              </div>
+
+              {/* =========================================
+                  LIVE PREVIEW
+              ========================================= */}
+
+              <div
+                style={secondaryCardStyle}
+              >
+
+                <AddressPreviewCard
+
+                  value={{
+                    customerName:
+                      wizardData?.fullName ||
+                      "--",
+
+                    currentAddress:
+                      address.currentAddress,
+
+                    city:
+                      address.city,
+
+                    state:
+                      address.state,
+
+                    pinCode:
+                      address.pinCode,
+                  }}
+
+                />
+
+              </div>
+
+            </div>
+
+          </div>
+
+        </section>
+
+      </div>
+
+    </section>
   );
-
 }

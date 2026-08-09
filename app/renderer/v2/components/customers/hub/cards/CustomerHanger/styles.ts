@@ -26,6 +26,10 @@ export const containerStyle: CSSProperties = {
 
   alignItems: "center",
 
+  alignSelf: "start",
+
+  height: "auto",
+
   cursor: "pointer",
 
   userSelect: "none",
@@ -152,7 +156,7 @@ export const bottomRailStyle: CSSProperties = {
 
   height:"3px",
 
-  marginTop:"20px",
+  marginTop:"25px",
 
   borderRadius:"999px",
 

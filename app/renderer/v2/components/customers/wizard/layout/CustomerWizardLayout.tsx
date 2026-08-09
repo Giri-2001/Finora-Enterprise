@@ -1,21 +1,26 @@
 /* ===========================================================
-   FINORA ENTERPRISE V2
+FINORA ENTERPRISE OS™
 
-   CUSTOMER WIZARD LAYOUT
---------------------------------------------------------------
-   Reusable transparent layout.
+CUSTOMER WIZARD LAYOUT™
 
-   Updated:
-   - Removed internal page header
-   - Removed extra white container
-   - Removed registration title spacing
-   - Allows Smart Wall to touch main header
+Responsive bounded workspace shell for all FINORA
+Customer Wizard flows.
+
+Rules:
+- No page scrolling
+- Full viewport usage
+- Existing FINORA GlobalHeader remains outside
+- Children control their own presentation
+- Add / Edit use the same shell
 =========================================================== */
 
 import type {
   ReactNode,
 } from "react";
 
+/* ===========================================================
+TYPES
+=========================================================== */
 
 interface CustomerWizardLayoutProps {
 
@@ -23,9 +28,8 @@ interface CustomerWizardLayoutProps {
 
 }
 
-
 /* ===========================================================
-   COMPONENT
+COMPONENT
 =========================================================== */
 
 export default function CustomerWizardLayout({
@@ -34,14 +38,27 @@ export default function CustomerWizardLayout({
 
 }: CustomerWizardLayoutProps) {
 
-
   return (
 
-    <>
+    <main
+      style={{
+        width: "100%",
+        height: "100%",
+        minHeight: 0,
+        minWidth: 0,
+
+        display: "flex",
+        flexDirection: "column",
+
+        overflow: "hidden",
+
+        boxSizing: "border-box",
+      }}
+    >
 
       {children}
 
-    </>
+    </main>
 
   );
 

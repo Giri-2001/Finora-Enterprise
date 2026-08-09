@@ -1,30 +1,31 @@
 /* ===========================================================
-FINORA ENTERPRISE OS™
+   FINORA ENTERPRISE OS™
 
-STUDIO LAYOUT™
+   STUDIO LAYOUT™
 
-GLOBAL RESPONSIVE SHELL
+   GLOBAL RESPONSIVE SHELL
+
+   RESPONSIBILITY:
+   - Studio workspace shell
+   - Optional studio-level GlobalHeader
+   - Content height management
+   - Scroll behavior
+
+   NOTE:
+   Customer Wizard can disable the studio-level header
+   because the Customer Workspace already owns the global header.
 =========================================================== */
-
 
 import type {
-
   CSSProperties,
-
   ReactNode,
-
 } from "react";
 
-
-import GlobalHeader
-from "../header/GlobalHeader";
-
-
+import GlobalHeader from "../header/GlobalHeader";
 
 /* ===========================================================
-TYPES
+   TYPES
 =========================================================== */
-
 
 interface StudioLayoutProps {
 
@@ -34,166 +35,126 @@ interface StudioLayoutProps {
 
   allowScroll?: boolean;
 
+  /*
+   * Allows individual workflows to prevent a duplicate
+   * GlobalHeader when their parent workspace already owns it.
+   */
+  showHeader?: boolean;
 }
 
-
-
 /* ===========================================================
-ROOT
+   ROOT
 =========================================================== */
-
 
 const layoutStyle: CSSProperties = {
 
-
   width: "100%",
-
 
   height: "100vh",
 
-
   minHeight: 0,
-
 
   minWidth: 0,
 
-
   maxWidth: "100%",
-
 
   margin: 0,
 
+  background: "#321B12",
 
-  background:"#321B12",
+  display: "flex",
 
+  flexDirection: "column",
 
-  display:"flex",
-
-
-  flexDirection:"column",
-
-
-  overflow:"hidden",
-
-
+  overflow: "hidden",
 };
-
-
-
 
 /* ===========================================================
    CONTENT BUILDER
 =========================================================== */
 
 function buildContentStyle(
-  allowScroll:boolean,
-):CSSProperties {
+  allowScroll: boolean,
+): CSSProperties {
 
-return {
+  return {
 
-flex:1,
+    flex: 1,
 
-width:"100%",
+    width: "100%",
 
-padding:
+    padding:
+      allowScroll
+        ? "16px"
+        : "0",
 
-allowScroll
+    boxSizing: "border-box",
 
-  ? "16px"
+    overflowX: "hidden",
 
-  : "0",
+    overflowY:
+      allowScroll
+        ? "auto"
+        : "hidden",
 
-boxSizing:"border-box",
+    display: "flex",
 
-overflowX:"hidden",
+    flexDirection: "column",
 
-overflowY:
-allowScroll
-  ? "auto"
-  : "hidden",
+    gap:
+      allowScroll
+        ? "16px"
+        : "0px",
 
-display:"flex",
-
-flexDirection:"column",
-
-gap:
-
-allowScroll
-
-  ? "16px"
-
-  : "0px",
-
-minHeight:0,
-
-};
-
+    minHeight: 0,
+  };
 }
 
-
-
-
 /* ===========================================================
-COMPONENT
+   COMPONENT
 =========================================================== */
-
 
 export default function StudioLayout({
 
-
   children,
 
+  department = "Reception",
 
-  department="Reception",
+  allowScroll = true,
 
+  showHeader = true,
 
-  allowScroll=true,
+}: StudioLayoutProps) {
 
+  return (
 
-}:StudioLayoutProps){
+    <div style={layoutStyle}>
 
+      {/* =====================================================
+         OPTIONAL STUDIO HEADER
 
+         Disabled by Customer Wizard when the parent workspace
+         already provides the global header.
+      ===================================================== */}
 
-return (
+      {showHeader && (
+        <GlobalHeader
+          department={department}
+        />
+      )}
 
+      {/* =====================================================
+         CONTENT
+      ===================================================== */}
 
-<main
+      <main
+        style={buildContentStyle(
+          allowScroll,
+        )}
+      >
+        {children}
+      </main>
 
-style={layoutStyle}
-
->
-
-
-  <GlobalHeader
-
-    department={department}
-
-  />
-
-
-
-  <section
-
-    style={buildContentStyle(
-
-      allowScroll,
-
-    )}
-
-  >
-
-
-    {children}
-
-
-  </section>
-
-
-
-</main>
-
-
-);
-
-
+    </div>
+  );
 }

@@ -1,26 +1,28 @@
 /* ===========================================================
    FINORA ENTERPRISE V2
-   RELATIONSHIP SELECTOR
---------------------------------------------------------------
-Customer Relationship Selector
+   CUSTOMER RELATIONSHIP SELECTOR
+
+   RESPONSIBILITY:
+   - Nominee relationship selection
+   - Relationship change events
+
+   STYLES:
+   RelationshipSelector.styles.ts
 =========================================================== */
 
-import type { CSSProperties } from "react";
+import {
+  wrapperStyle,
+  labelStyle,
+  selectStyle,
+  optionStyle,
+  helperStyle,
+} from "./RelationshipSelector.styles";
 
 /* ===========================================================
-   TYPES
+   RELATIONSHIPS
 =========================================================== */
 
-interface RelationshipSelectorProps {
-
-  value: string;
-
-  onChange: (value: string) => void;
-
-}
-
 const relationships = [
-
   "Father",
   "Mother",
   "Brother",
@@ -32,97 +34,84 @@ const relationships = [
   "Friend",
   "Guardian",
   "Other",
-
 ];
 
 /* ===========================================================
-   STYLES
+   TYPES
 =========================================================== */
 
-const wrapperStyle: CSSProperties = {
+interface RelationshipSelectorProps {
+  value: string;
 
-  display: "grid",
-
-  gap: "8px",
-
-};
-
-const labelStyle: CSSProperties = {
-
-  fontWeight: 600,
-
-};
-
-const selectStyle: CSSProperties = {
-
-  padding: "12px",
-
-  borderRadius: "12px",
-
-  border: "1px solid #d1d5db",
-
-  fontSize: "15px",
-
-};
+  onChange: (
+    value: string,
+  ) => void;
+}
 
 /* ===========================================================
    COMPONENT
 =========================================================== */
 
 export default function RelationshipSelector({
-
   value,
-
   onChange,
-
 }: RelationshipSelectorProps) {
-
   return (
-
     <div style={wrapperStyle}>
 
-      <label style={labelStyle}>
+      {/* =====================================================
+         LABEL
+      ===================================================== */}
 
+      <label
+        htmlFor="nominee-relationship"
+        style={labelStyle}
+      >
         Relationship
-
       </label>
 
+      {/* =====================================================
+         SELECT
+      ===================================================== */}
+
       <select
-
-        style={selectStyle}
-
+        id="nominee-relationship"
         value={value}
-
-        onChange={(e) => onChange(e.target.value)}
-
+        style={selectStyle}
+        onChange={(event) =>
+          onChange(
+            event.target.value,
+          )
+        }
       >
-
-        <option value="">
-
+        <option
+          value=""
+          style={optionStyle}
+        >
           Select Relationship
-
         </option>
 
-        {relationships.map((relationship) => (
-
-          <option
-
-            key={relationship}
-
-            value={relationship}
-
-          >
-
-            {relationship}
-
-          </option>
-
-        ))}
-
+        {relationships.map(
+          (relationship) => (
+            <option
+              key={relationship}
+              value={relationship}
+              style={optionStyle}
+            >
+              {relationship}
+            </option>
+          ),
+        )}
       </select>
 
+      {/* =====================================================
+         HELPER
+      ===================================================== */}
+
+      <div style={helperStyle}>
+        Select the nominee's relationship with the customer.
+      </div>
+
     </div>
-
   );
-
 }

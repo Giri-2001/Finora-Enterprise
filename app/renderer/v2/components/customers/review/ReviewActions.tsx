@@ -1,11 +1,29 @@
 /* ===========================================================
    FINORA ENTERPRISE V2
-   REVIEW ACTIONS
---------------------------------------------------------------
-Customer Review Actions
+   CUSTOMER REVIEW ACTIONS
+
+   RESPONSIBILITY:
+   - Review action presentation
+   - Save customer action
+   - Edit details action
+   - Cancel action
+
+   BUSINESS LOGIC:
+   - NONE
+
+   IMPORTANT:
+   Action handlers are supplied by Step6Review.
+
+   STYLES:
+   ReviewActions.styles.ts
 =========================================================== */
 
-import type { CSSProperties } from "react";
+import {
+  wrapperStyle,
+  primaryButtonStyle,
+  secondaryButtonStyle,
+  dangerButtonStyle,
+} from "./ReviewActions.styles";
 
 /* ===========================================================
    TYPES
@@ -19,39 +37,10 @@ interface ReviewActionsProps {
 
   onCancel?: () => void;
 
+  isSaving?: boolean;
+
+  disabled?: boolean;
 }
-
-/* ===========================================================
-   STYLES
-=========================================================== */
-
-const wrapperStyle: CSSProperties = {
-
-  display: "flex",
-
-  gap: "12px",
-
-  flexWrap: "wrap",
-
-  marginTop: "24px",
-
-};
-
-const buttonStyle: CSSProperties = {
-
-  padding: "12px 18px",
-
-  borderRadius: "12px",
-
-  border: "1px solid #d1d5db",
-
-  background: "#ffffff",
-
-  cursor: "pointer",
-
-  fontWeight: 600,
-
-};
 
 /* ===========================================================
    COMPONENT
@@ -65,51 +54,75 @@ export default function ReviewActions({
 
   onCancel,
 
+  isSaving = false,
+
+  disabled = false,
+
 }: ReviewActionsProps) {
+
+  const actionsDisabled =
+    disabled || isSaving;
 
   return (
 
     <div style={wrapperStyle}>
 
+      {/* =====================================================
+         SAVE
+      ===================================================== */}
+
       <button
 
-        style={buttonStyle}
-
         type="button"
+
+        style={primaryButtonStyle}
 
         onClick={onSave}
 
-      >
+        disabled={actionsDisabled}
 
-        💾 Save Customer
+      >
+        {isSaving
+          ? "Saving Customer..."
+          : "Save Customer"}
 
       </button>
 
+      {/* =====================================================
+         EDIT
+      ===================================================== */}
+
       <button
 
-        style={buttonStyle}
-
         type="button"
+
+        style={secondaryButtonStyle}
 
         onClick={onEdit}
 
-      >
+        disabled={actionsDisabled}
 
-        ✏ Edit Details
+      >
+        Edit Details
 
       </button>
 
-      <button
+      {/* =====================================================
+         CANCEL
+      ===================================================== */}
 
-        style={buttonStyle}
+      <button
 
         type="button"
 
+        style={dangerButtonStyle}
+
         onClick={onCancel}
 
-      >
+        disabled={actionsDisabled}
 
-        ❌ Cancel
+      >
+        Cancel
 
       </button>
 
