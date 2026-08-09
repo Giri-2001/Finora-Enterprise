@@ -6,7 +6,28 @@
    Version : 2.0
    Phase   : Phase 2
    Architecture: Enterprise
+
+   RESPONSIBILITY:
+
+   - Control the six-step Customer Wizard
+   - Manage wizard state
+   - Manage temporary wizard draft
+   - Load existing CustomerProfile through CustomerService
+   - Pass CustomerProfile to Step 6 Review
+   - Preserve existing Customer Add / Edit flow
+
+   IMPORTANT:
+
+   - No direct Customer repository access.
+   - No direct Customer storage access.
+   - Customer master reads go through CustomerService.
+   - Temporary wizard draft remains isolated.
 =========================================================== */
+
+
+// ===========================================================
+// IMPORTS
+// ===========================================================
 
 import {
   useCallback,
@@ -15,77 +36,91 @@ import {
   useState,
 } from "react";
 
+
 import CustomerWizardLayout
   from "./layout/CustomerWizardLayout";
+
 
 import CustomerWizardNavigation
   from "./navigation/CustomerWizardNavigation";
 
+
 import CustomerWizardProgress
   from "./progress/CustomerWizardProgress";
+
 
 import Step1Identity
   from "./steps/Step1Identity";
 
+
 import Step2Basic
   from "./steps/Step2Basic";
+
 
 import Step3Address
   from "./steps/Step3Address";
 
+
 import Step4KYC
   from "./steps/Step4KYC";
+
 
 import Step5Nominee
   from "./steps/Step5Nominee";
 
+
 import Step6Review
   from "./steps/Step6Review";
 
+
 import {
-  getCustomer,
-} from "../../../store/customers/customer.store";
+  customerService,
+} from "../../../services/customer/customerService";
+
 
 import type {
   OfficeCustomer,
 } from "../office/CustomerOffice/types";
 
+
 import type {
   CustomerProfile,
 } from "../../../types/customers";
 
-/* ===========================================================
-   TYPES
-=========================================================== */
+
+// ===========================================================
+// TYPES
+// ===========================================================
 
 export interface CustomerWizardData {
 
- /* =========================================================
-   STEP 1 — IDENTITY
-========================================================= */
 
-customerId?: string;
+  /* =========================================================
+     STEP 1 — IDENTITY
+  ========================================================= */
 
-photo?: string;
+  customerId?: string;
 
-fullName?: string;
+  photo?: string;
 
-mobileNumber?: string;
+  fullName?: string;
 
-whatsapp?: string;
+  mobileNumber?: string;
 
-email?: string;
+  whatsapp?: string;
 
-dateOfBirth?: string;
+  email?: string;
 
-preferredLanguage?:
-  | "Telugu"
-  | "English"
-  | "Hindi"
-  | "Tamil"
-  | "Kannada"
-  | "Marathi"
-  | "Other";
+  dateOfBirth?: string;
+
+  preferredLanguage?:
+    | "Telugu"
+    | "English"
+    | "Hindi"
+    | "Tamil"
+    | "Kannada"
+    | "Marathi"
+    | "Other";
 
 
   /* =========================================================
@@ -134,6 +169,7 @@ preferredLanguage?:
   /* =========================================================
      STEP 5 — NOMINEE
   ========================================================= */
+
   nomineeCustomerId?: string;
 
   nomineeName?: string;
@@ -144,6 +180,10 @@ preferredLanguage?:
 
 }
 
+
+// ===========================================================
+// WIZARD STEP
+// ===========================================================
 
 export interface WizardStep {
 
@@ -156,9 +196,9 @@ export interface WizardStep {
 }
 
 
-/* ===========================================================
-   CUSTOMER WIZARD PROPS
-=========================================================== */
+// ===========================================================
+// CUSTOMER WIZARD PROPS
+// ===========================================================
 
 interface CustomerWizardProps {
 
@@ -168,58 +208,92 @@ interface CustomerWizardProps {
 
 }
 
-/* ===========================================================
-   CONSTANTS
-=========================================================== */
 
-const TOTAL_STEPS = 6;
+// ===========================================================
+// CONSTANTS
+// ===========================================================
+
+const TOTAL_STEPS =
+  6;
+
 
 const STORAGE_KEY =
   "finora_customer_draft";
+
 
 const STEPS: WizardStep[] = [
 
   {
     id: 1,
-    title: "Identity",
-    subtitle: "Customer ID & Photo",
+
+    title:
+      "Identity",
+
+    subtitle:
+      "Customer ID & Photo",
   },
+
 
   {
     id: 2,
-    title: "Basic Details",
-    subtitle: "Personal Information",
+
+    title:
+      "Basic Details",
+
+    subtitle:
+      "Personal Information",
   },
+
 
   {
     id: 3,
-    title: "Address",
-    subtitle: "Customer Address",
+
+    title:
+      "Address",
+
+    subtitle:
+      "Customer Address",
   },
+
 
   {
     id: 4,
-    title: "KYC",
-    subtitle: "Identity Verification",
+
+    title:
+      "KYC",
+
+    subtitle:
+      "Identity Verification",
   },
+
 
   {
     id: 5,
-    title: "Nominee",
-    subtitle: "Family Information",
+
+    title:
+      "Nominee",
+
+    subtitle:
+      "Family Information",
   },
+
 
   {
     id: 6,
-    title: "Review",
-    subtitle: "Verify Everything",
+
+    title:
+      "Review",
+
+    subtitle:
+      "Verify Everything",
   },
 
 ];
 
-/* ===========================================================
-   EDIT PROFILE → WIZARD DATA
-=========================================================== */
+
+// ===========================================================
+// EDIT PROFILE → WIZARD DATA
+// ===========================================================
 
 function buildEditWizardData(
   customer: CustomerProfile,
@@ -246,9 +320,10 @@ function buildEditWizardData(
 
 }
 
-/* ===========================================================
-   COMPONENT
-=========================================================== */
+
+// ===========================================================
+// COMPONENT
+// ===========================================================
 
 export default function CustomerWizard({
 
@@ -258,221 +333,445 @@ export default function CustomerWizard({
 
 }: CustomerWizardProps) {
 
+
+  // =========================================================
+  // MODE
+  // =========================================================
+
   const isEditMode =
     Boolean(editCustomer);
 
-  /* ===========================================================
-     STATE
-  =========================================================== */
+
+  // =========================================================
+  // STATE
+  // =========================================================
 
   const [
     currentStep,
     setCurrentStep,
   ] = useState(1);
 
+
   const [
     loadingDraft,
     setLoadingDraft,
   ] = useState(true);
+
 
   const [
     wizardData,
     setWizardData,
   ] = useState<CustomerWizardData>({});
 
+
   const [
     originalCustomerProfile,
     setOriginalCustomerProfile,
-  ] = useState<CustomerProfile | undefined>(
+  ] = useState<
+    CustomerProfile | undefined
+  >(
     undefined,
   );
 
-  /* ===========================================================
-     CURRENT STEP
-  =========================================================== */
 
-  const currentStepInfo = useMemo(() => {
+  // =========================================================
+  // CURRENT STEP INFORMATION
+  // =========================================================
 
-    return (
-      STEPS.find(
-        (step) =>
-          step.id === currentStep,
-      ) ?? STEPS[0]
-    );
+  const currentStepInfo =
+    useMemo(() => {
 
-  }, [
-    currentStep,
-  ]);
+      return (
 
-  /* ===========================================================
-     PROGRESS
-  =========================================================== */
+        STEPS.find(
+          (step) =>
+            step.id === currentStep,
+        )
 
-  const progress = useMemo(() => {
+        ??
 
-    return Math.round(
-      (currentStep / TOTAL_STEPS) * 100,
-    );
+        STEPS[0]
 
-  }, [
-    currentStep,
-  ]);
+      );
 
-  /* ===========================================================
-     LOAD EXISTING CUSTOMER FOR EDIT
-  =========================================================== */
+    }, [
+      currentStep,
+    ]);
+
+
+  // =========================================================
+  // PROGRESS
+  // =========================================================
+
+  const progress =
+    useMemo(() => {
+
+      return Math.round(
+        (
+          currentStep /
+          TOTAL_STEPS
+        ) *
+        100,
+      );
+
+    }, [
+      currentStep,
+    ]);
+
+
+  // =========================================================
+  // LOAD EXISTING CUSTOMER FOR EDIT
+  //
+  // IMPORTANT:
+  //
+  // Customer master data is loaded through CustomerService.
+  //
+  // This prevents the UI from knowing about:
+  //
+  // Repository
+  // StorageManager
+  // localStorage
+  // USB
+  // Cloud
+  //
+  // =========================================================
 
   useEffect(() => {
 
-    if (!editCustomer) {
+    const customerId: string =
+  editCustomer?.id ?? "";
 
-      return;
+
+    // -------------------------------------------------------
+    // NEW CUSTOMER MODE
+    // -------------------------------------------------------
+
+    if (!customerId) {
+  return;
+}
+
+
+    let cancelled =
+      false;
+
+
+    async function loadExistingCustomer():
+      Promise<void> {
+
+      setLoadingDraft(
+        true,
+      );
+
+
+      try {
+
+        const result =
+          await customerService.getById(
+            customerId,
+          );
+
+
+        // ---------------------------------------------------
+        // COMPONENT UNMOUNT / EFFECT CHANGE
+        // ---------------------------------------------------
+
+        if (cancelled) {
+
+          return;
+
+        }
+
+
+        // ---------------------------------------------------
+        // SERVICE FAILURE
+        // ---------------------------------------------------
+
+        if (!result.success) {
+
+          console.error(
+            "FINORA EDIT CUSTOMER LOAD FAILED:",
+            result.error,
+          );
+
+
+          setOriginalCustomerProfile(
+            undefined,
+          );
+
+
+          return;
+
+        }
+
+
+        // ---------------------------------------------------
+        // CUSTOMER NOT FOUND
+        // ---------------------------------------------------
+
+        const existingCustomer =
+          result.data;
+
+
+        if (!existingCustomer) {
+
+          console.error(
+            "FINORA EDIT CUSTOMER NOT FOUND:",
+            customerId,
+          );
+
+
+          setOriginalCustomerProfile(
+            undefined,
+          );
+
+
+          return;
+
+        }
+
+
+        // ---------------------------------------------------
+        // STORE ORIGINAL PROFILE
+        // ---------------------------------------------------
+
+        setOriginalCustomerProfile(
+          existingCustomer,
+        );
+
+
+        // ---------------------------------------------------
+        // POPULATE WIZARD
+        // ---------------------------------------------------
+
+        setWizardData(
+          buildEditWizardData(
+            existingCustomer,
+          ),
+        );
+
+
+        // ---------------------------------------------------
+        // EDIT ALWAYS STARTS FROM STEP 1
+        // ---------------------------------------------------
+
+        setCurrentStep(
+          1,
+        );
+
+      } catch (error) {
+
+        if (cancelled) {
+
+          return;
+
+        }
+
+
+        console.error(
+          "FINORA EDIT CUSTOMER LOAD ERROR:",
+          error,
+        );
+
+
+        setOriginalCustomerProfile(
+          undefined,
+        );
+
+      } finally {
+
+        if (!cancelled) {
+
+          setLoadingDraft(
+            false,
+          );
+
+        }
+
+      }
 
     }
 
-    const existingCustomer =
-      getCustomer(
-        editCustomer.id,
-      );
 
-    if (!existingCustomer) {
+    void loadExistingCustomer();
 
-      console.error(
-        "FINORA EDIT CUSTOMER NOT FOUND:",
-        editCustomer.id,
-      );
 
-      setLoadingDraft(false);
+    return () => {
 
-      return;
+      cancelled = true;
 
-    }
-
-    setOriginalCustomerProfile(
-      existingCustomer,
-    );
-
-    setWizardData(
-      buildEditWizardData(
-        existingCustomer,
-      ),
-    );
-
-    setCurrentStep(1);
-
-    setLoadingDraft(false);
+    };
 
   }, [
     editCustomer,
   ]);
 
-  /* ===========================================================
-     AUTO DRAFT
-     NEW CUSTOMER MODE ONLY
-  =========================================================== */
 
-  const saveDraft = useCallback(() => {
+  // =========================================================
+  // AUTO DRAFT
+  //
+  // NEW CUSTOMER MODE ONLY
+  //
+  // This is temporary wizard state.
+  // It is NOT Customer master persistence.
+  // =========================================================
 
-    if (isEditMode) {
+  const saveDraft =
+    useCallback(() => {
 
-      return;
-
-    }
-
-    try {
-
-      localStorage.setItem(
-        STORAGE_KEY,
-
-        JSON.stringify({
-
-          currentStep,
-
-          wizardData,
-
-        }),
-      );
-
-    } catch {
-
-      // Ignore Draft Errors
-
-    }
-
-  }, [
-    currentStep,
-    wizardData,
-    isEditMode,
-  ]);
-
-  const loadDraft = useCallback(() => {
-
-    try {
-
-      const raw =
-        localStorage.getItem(
-          STORAGE_KEY,
-        );
-
-      if (!raw) {
+      if (isEditMode) {
 
         return;
 
       }
 
-      const draft =
-        JSON.parse(raw) as {
-          currentStep?: number;
-          wizardData?: CustomerWizardData;
-        };
 
-      if (draft.currentStep) {
+      try {
 
-        setCurrentStep(
-          draft.currentStep,
+        localStorage.setItem(
+
+          STORAGE_KEY,
+
+          JSON.stringify({
+
+            currentStep,
+
+            wizardData,
+
+          }),
+
+        );
+
+      } catch {
+
+        // Ignore Draft Errors.
+
+      }
+
+    }, [
+      currentStep,
+      wizardData,
+      isEditMode,
+    ]);
+
+
+  // =========================================================
+  // LOAD DRAFT
+  // =========================================================
+
+  const loadDraft =
+    useCallback(() => {
+
+      try {
+
+        const raw =
+          localStorage.getItem(
+            STORAGE_KEY,
+          );
+
+
+        if (!raw) {
+
+          return;
+
+        }
+
+
+        const draft =
+          JSON.parse(raw) as {
+
+            currentStep?:
+              number;
+
+            wizardData?:
+              CustomerWizardData;
+
+          };
+
+
+        // ---------------------------------------------------
+        // RESTORE STEP
+        // ---------------------------------------------------
+
+        if (
+          typeof draft.currentStep ===
+          "number"
+        ) {
+
+          if (
+            draft.currentStep >= 1 &&
+            draft.currentStep <=
+              TOTAL_STEPS
+          ) {
+
+            setCurrentStep(
+              draft.currentStep,
+            );
+
+          }
+
+        }
+
+
+        // ---------------------------------------------------
+        // RESTORE DATA
+        // ---------------------------------------------------
+
+        if (
+          draft.wizardData
+        ) {
+
+          setWizardData(
+            draft.wizardData,
+          );
+
+        }
+
+      } catch {
+
+        // Ignore malformed draft data.
+
+      } finally {
+
+        setLoadingDraft(
+          false,
         );
 
       }
 
-      if (draft.wizardData) {
+    }, []);
 
-        setWizardData(
-          draft.wizardData,
+
+  // =========================================================
+  // CLEAR DRAFT
+  // =========================================================
+
+  const clearDraft =
+    useCallback(() => {
+
+      try {
+
+        localStorage.removeItem(
+          STORAGE_KEY,
         );
+
+      } catch {
+
+        // Ignore Draft Errors.
 
       }
 
-    } catch {
+    }, []);
 
-      // Ignore Draft Errors
 
-    } finally {
-
-      setLoadingDraft(false);
-
-    }
-
-  }, []);
-
-  const clearDraft = useCallback(() => {
-
-    try {
-
-      localStorage.removeItem(
-        STORAGE_KEY,
-      );
-
-    } catch {
-
-      // Ignore Draft Errors
-
-    }
-
-  }, []);
-
-  /* ===========================================================
-     LIFECYCLE
-  =========================================================== */
+  // =========================================================
+  // LIFECYCLE
+  //
+  // NEW CUSTOMER MODE:
+  // Load temporary draft.
+  //
+  // EDIT MODE:
+  // Load CustomerService profile instead.
+  // =========================================================
 
   useEffect(() => {
 
@@ -481,6 +780,7 @@ export default function CustomerWizard({
       return;
 
     }
+
 
     loadDraft();
 
@@ -489,6 +789,11 @@ export default function CustomerWizard({
     loadDraft,
   ]);
 
+
+  // =========================================================
+  // AUTO SAVE TEMPORARY DRAFT
+  // =========================================================
+
   useEffect(() => {
 
     if (loadingDraft) {
@@ -496,6 +801,7 @@ export default function CustomerWizard({
       return;
 
     }
+
 
     saveDraft();
 
@@ -506,233 +812,319 @@ export default function CustomerWizard({
     saveDraft,
   ]);
 
-  /* ===========================================================
-     UPDATE DATA
-  =========================================================== */
 
-  const updateWizardData = useCallback(
+  // =========================================================
+  // UPDATE WIZARD DATA
+  // =========================================================
 
-    (
-      data: Partial<CustomerWizardData>,
-    ) => {
+  const updateWizardData =
+    useCallback(
 
-      console.log(
-        "UPDATE WIZARD DATA:",
-        data,
-      );
+      (
+        data:
+          Partial<CustomerWizardData>,
+      ) => {
 
-      setWizardData(
-        (previous) => ({
+        console.log(
+          "UPDATE WIZARD DATA:",
+          data,
+        );
 
-          ...previous,
 
-          ...data,
+        setWizardData(
+          (previous) => ({
 
-        }),
-      );
+            ...previous,
 
-    },
+            ...data,
 
-    [],
-  );
+          }),
+        );
 
-  /* ===========================================================
-     NAVIGATION
-  =========================================================== */
+      },
 
-  const nextStep = useCallback(() => {
-
-    setCurrentStep(
-      (previous) =>
-        Math.min(
-          previous + 1,
-          TOTAL_STEPS,
-        ),
+      [],
     );
 
-  }, []);
 
-  const previousStep = useCallback(() => {
+  // =========================================================
+  // NAVIGATION — NEXT
+  // =========================================================
 
-    setCurrentStep(
-      (previous) =>
-        Math.max(
-          previous - 1,
-          1,
-        ),
-    );
-
-  }, []);
-
-  const goToStep = useCallback(
-
-    (step: number) => {
-
-      if (step < 1) {
-
-        return;
-
-      }
-
-      if (step > TOTAL_STEPS) {
-
-        return;
-
-      }
+  const nextStep =
+    useCallback(() => {
 
       setCurrentStep(
-        step,
+        (previous) =>
+          Math.min(
+            previous + 1,
+            TOTAL_STEPS,
+          ),
       );
 
-    },
+    }, []);
 
-    [],
-  );
 
-  /* ===========================================================
-     RESET
-  =========================================================== */
+  // =========================================================
+  // NAVIGATION — PREVIOUS
+  // =========================================================
 
-  const resetWizard = useCallback(() => {
+  const previousStep =
+    useCallback(() => {
 
-    clearDraft();
+      setCurrentStep(
+        (previous) =>
+          Math.max(
+            previous - 1,
+            1,
+          ),
+      );
 
-    setCurrentStep(1);
+    }, []);
 
-    setWizardData({});
 
-    setOriginalCustomerProfile(
-      undefined,
+  // =========================================================
+  // NAVIGATION — DIRECT STEP
+  // =========================================================
+
+  const goToStep =
+    useCallback(
+
+      (
+        step: number,
+      ) => {
+
+        if (
+          step < 1
+        ) {
+
+          return;
+
+        }
+
+
+        if (
+          step > TOTAL_STEPS
+        ) {
+
+          return;
+
+        }
+
+
+        setCurrentStep(
+          step,
+        );
+
+      },
+
+      [],
     );
 
-  }, [
-    clearDraft,
-  ]);
 
-  /* ===========================================================
-     CURRENT STEP COMPONENT
-  =========================================================== */
+  // =========================================================
+  // RESET WIZARD
+  // =========================================================
 
-  const currentStepComponent = useMemo(() => {
+  const resetWizard =
+    useCallback(() => {
 
-    switch (currentStep) {
+      clearDraft();
 
-      case 1:
 
-        return (
+      setCurrentStep(
+        1,
+      );
 
-          <Step1Identity
 
-  initialData={
-    wizardData
-  }
+      setWizardData(
+        {},
+      );
 
-  updateWizardData={
-    updateWizardData
-  }
 
-/>
+      setOriginalCustomerProfile(
+        undefined,
+      );
 
-        );
+    }, [
+      clearDraft,
+    ]);
 
-      case 2:
 
-        return (
+  // =========================================================
+  // CURRENT STEP COMPONENT
+  // =========================================================
 
-          <Step2Basic
+  const currentStepComponent =
+    useMemo(() => {
 
-            updateWizardData={
-              updateWizardData
-            }
+      switch (currentStep) {
 
-          />
+        // ---------------------------------------------------
+        // STEP 1
+        // ---------------------------------------------------
 
-        );
+        case 1:
 
-      case 3:
+          return (
 
-        return (
+            <Step1Identity
 
-          <Step3Address
+              initialData={
+                wizardData
+              }
 
-            updateWizardData={
-              updateWizardData
-            }
+              updateWizardData={
+                updateWizardData
+              }
 
-            wizardData={
-              wizardData
-            }
+            />
 
-          />
+          );
 
-        );
+
+        // ---------------------------------------------------
+        // STEP 2
+        // ---------------------------------------------------
+
+        case 2:
+
+          return (
+
+            <Step2Basic
+
+              updateWizardData={
+                updateWizardData
+              }
+
+            />
+
+          );
+
+
+        // ---------------------------------------------------
+        // STEP 3
+        // ---------------------------------------------------
+
+        case 3:
+
+          return (
+
+            <Step3Address
+
+              updateWizardData={
+                updateWizardData
+              }
+
+              wizardData={
+                wizardData
+              }
+
+            />
+
+          );
+
+
+        // ---------------------------------------------------
+        // STEP 4
+        // ---------------------------------------------------
 
         case 4:
-  return (
-    <Step4KYC
-      wizardData={wizardData}
-      updateWizardData={updateWizardData}
-    />
-  );
 
-     case 5:
+          return (
 
-  return (
+            <Step4KYC
 
-    <Step5Nominee
+              wizardData={
+                wizardData
+              }
 
-      wizardData={
-        wizardData
+              updateWizardData={
+                updateWizardData
+              }
+
+            />
+
+          );
+
+
+        // ---------------------------------------------------
+        // STEP 5
+        // ---------------------------------------------------
+
+        case 5:
+
+          return (
+
+            <Step5Nominee
+
+              wizardData={
+                wizardData
+              }
+
+              updateWizardData={
+                updateWizardData
+              }
+
+            />
+
+          );
+
+
+        // ---------------------------------------------------
+        // STEP 6
+        // ---------------------------------------------------
+
+        case 6:
+
+          return (
+
+            <Step6Review
+
+              wizardData={
+                wizardData
+              }
+
+              resetWizard={
+                resetWizard
+              }
+
+              originalCustomerProfile={
+                originalCustomerProfile
+              }
+
+              isEditMode={
+                isEditMode
+              }
+
+            />
+
+          );
+
+
+        // ---------------------------------------------------
+        // FALLBACK
+        // ---------------------------------------------------
+
+        default:
+
+          return null;
+
       }
 
-      updateWizardData={
-        updateWizardData
-      }
+    }, [
+      currentStep,
+      updateWizardData,
+      wizardData,
+      resetWizard,
+      originalCustomerProfile,
+      isEditMode,
+    ]);
 
-    />
 
-  );
-
-      default:
-
-        return (
-
-          <Step6Review
-
-            wizardData={
-              wizardData
-            }
-
-            resetWizard={
-              resetWizard
-            }
-
-            originalCustomerProfile={
-              originalCustomerProfile
-            }
-
-            isEditMode={
-              isEditMode
-            }
-
-          />
-
-        );
-
-    }
-
-  }, [
-    currentStep,
-    updateWizardData,
-    wizardData,
-    resetWizard,
-    originalCustomerProfile,
-    isEditMode,
-  ]);
-
-  /* ===========================================================
-     LOADING
-  =========================================================== */
+  // =========================================================
+  // LOADING
+  // =========================================================
 
   if (loadingDraft) {
 
@@ -753,13 +1145,19 @@ export default function CustomerWizard({
 
   }
 
-  /* ===========================================================
-     UI
-  =========================================================== */
+
+  // =========================================================
+  // UI
+  // =========================================================
 
   return (
 
     <CustomerWizardLayout>
+
+
+      {/* ===================================================
+          PROGRESS
+      =================================================== */}
 
       <CustomerWizardProgress
 
@@ -785,33 +1183,44 @@ export default function CustomerWizard({
 
       />
 
+
+      {/* ===================================================
+          CURRENT STEP
+      =================================================== */}
+
       {currentStepComponent}
+
+
+      {/* ===================================================
+          NAVIGATION
+      =================================================== */}
 
       <CustomerWizardNavigation
 
-  currentStep={
-    currentStep
-  }
+        currentStep={
+          currentStep
+        }
 
-  totalSteps={
-    TOTAL_STEPS
-  }
+        totalSteps={
+          TOTAL_STEPS
+        }
 
-  onPrevious={
-    previousStep
-  }
+        onPrevious={
+          previousStep
+        }
 
-  onNext={
-    nextStep
-  }
+        onNext={
+          nextStep
+        }
 
-  onBackToCustomers={
-    onBackToCustomersHub
-  }
+        onBackToCustomers={
+          onBackToCustomersHub
+        }
 
-/>
+      />
 
-      {/* =======================================================
+
+      {/* ===================================================
           FUTURE MODULES
 
           Phase 2
@@ -830,10 +1239,15 @@ export default function CustomerWizard({
           ✓ Loan Creation Flow
           ✓ Digital Locker
           ✓ Reports
-      ======================================================= */}
+      =================================================== */}
 
     </CustomerWizardLayout>
 
   );
 
 }
+
+
+// ===========================================================
+// END
+// ===========================================================

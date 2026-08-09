@@ -5,6 +5,7 @@
    STEP 5 — NOMINEE STUDIO
 
    RESPONSIBILITY:
+
    - Nominee workflow orchestration
    - Existing FINORA customer lookup
    - Nominee form state
@@ -13,55 +14,85 @@
    - Preview / summary / draft presentation
 
    BUSINESS RULE:
+
    If a registered FINORA Customer ID is entered,
    the existing customer's name and mobile number are
    automatically linked to the nominee information.
 
    IMPORTANT:
-   - customer.store.ts is the single lookup source.
+
+   - Customer lookup goes through CustomerService.
    - Presentation components remain business-logic free.
    - Step 5 local state is synchronized with CustomerWizard.
    - Global FINORA header remains the workspace header.
+
+   ARCHITECTURE:
+
+   Step 5
+      ↓
+   CustomerService
+      ↓
+   CustomerRepository
+      ↓
+   StorageManager
+      ↓
+   Storage Adapter
+
 =========================================================== */
+
+
+// ===========================================================
+// IMPORTS
+// ===========================================================
 
 import {
   useEffect,
   useState,
 } from "react";
 
+
 import StudioLayout
   from "../../../common/layout/StudioLayout";
+
 
 import TwoColumnStudio
   from "../../../common/layout/TwoColumnStudio";
 
+
 import {
-  getCustomer,
-} from "../../../../store/customers/customer.store";
+  customerService,
+} from "../../../../services/customer/customerService";
+
 
 import NomineeForm, {
   type NomineeFormData,
 } from "../../nominee/NomineeForm";
 
+
 import RelationshipSelector
   from "../../nominee/RelationshipSelector";
+
 
 import NomineePreviewCard
   from "../../nominee/NomineePreviewCard";
 
+
 import NomineeSummaryCard
   from "../../nominee/NomineeSummaryCard";
 
+
 import NomineeDraftStatus
   from "../../nominee/NomineeDraftStatus";
+
 
 import type {
   CustomerWizardData,
 } from "../CustomerWizard";
 
-/* ===========================================================
-   PROPS
-=========================================================== */
+
+// ===========================================================
+// PROPS
+// ===========================================================
 
 interface Step5NomineeProps {
 
@@ -71,11 +102,13 @@ interface Step5NomineeProps {
   updateWizardData: (
     data: Partial<CustomerWizardData>,
   ) => void;
+
 }
 
-/* ===========================================================
-   COMPONENT
-=========================================================== */
+
+// ===========================================================
+// COMPONENT
+// ===========================================================
 
 export default function Step5Nominee({
 
@@ -85,14 +118,15 @@ export default function Step5Nominee({
 
 }: Step5NomineeProps) {
 
-  /* =========================================================
-     NOMINEE STATE
-  ========================================================= */
+
+  // =========================================================
+  // NOMINEE STATE
+  // =========================================================
 
   const [
     nominee,
     setNominee,
-  ] = useState<NomineeFormData>(() => ({
+  ] = useState(() => ({
 
     nomineeCustomerId:
       wizardData.nomineeCustomerId ??
@@ -112,36 +146,43 @@ export default function Step5Nominee({
 
   }));
 
-  /* =========================================================
-     LINKED CUSTOMER STATE
-  ========================================================= */
+
+  // =========================================================
+  // LINKED CUSTOMER STATE
+  // =========================================================
 
   const [
     linkedCustomerName,
     setLinkedCustomerName,
   ] = useState("");
 
-  /* =========================================================
-     CUSTOMER LINK STATUS
-  ========================================================= */
+
+  // =========================================================
+  // CUSTOMER LINK STATUS
+  // =========================================================
 
   const [
     isCustomerLinked,
     setIsCustomerLinked,
   ] = useState(false);
 
-  /* =========================================================
-     CUSTOMER LOOKUP
-  ========================================================= */
+
+  // =========================================================
+  // CUSTOMER LOOKUP
+  //
+  // Customer master lookup is asynchronous because it now
+  // passes through CustomerService → Repository → Storage.
+  // =========================================================
 
   useEffect(() => {
 
     const customerId =
       nominee.nomineeCustomerId.trim();
 
-    /* =======================================================
-       EMPTY CUSTOMER ID
-    ======================================================= */
+
+    // =======================================================
+    // EMPTY CUSTOMER ID
+    // =======================================================
 
     if (!customerId) {
 
@@ -149,84 +190,204 @@ export default function Step5Nominee({
 
       setIsCustomerLinked(false);
 
-      setNominee((previous) => ({
+      setNominee(
+        (previous) => ({
 
-        ...previous,
+          ...previous,
 
-        nomineeName: "",
+          nomineeName:
+            "",
 
-        phoneNumber: "",
+          phoneNumber:
+            "",
 
-      }));
-
-      return;
-    }
-
-    /* =======================================================
-       FIND EXISTING CUSTOMER
-    ======================================================= */
-
-    const customer =
-      getCustomer(customerId);
-
-    /* =======================================================
-       CUSTOMER NOT FOUND
-    ======================================================= */
-
-    if (!customer) {
-
-      setLinkedCustomerName("");
-
-      setIsCustomerLinked(false);
-
-      setNominee((previous) => ({
-
-        ...previous,
-
-        nomineeName: "",
-
-        phoneNumber: "",
-
-      }));
+        }),
+      );
 
       return;
+
     }
 
-    /* =======================================================
-       CUSTOMER FOUND
-    ======================================================= */
 
-    const customerName =
-      customer.basic.fullName || "";
+    let cancelled =
+      false;
 
-    const customerPhone =
-      customer.basic.mobileNumber || "";
 
-    setLinkedCustomerName(
-      customerName,
-    );
+    async function findExistingCustomer():
+      Promise<void> {
 
-    setIsCustomerLinked(true);
+      try {
 
-    setNominee((previous) => ({
+        const result =
+          await customerService.getById(
+            customerId,
+          );
 
-      ...previous,
 
-      nomineeName:
-        customerName,
+        // ---------------------------------------------------
+        // EFFECT WAS CANCELLED
+        // ---------------------------------------------------
 
-      phoneNumber:
-        customerPhone,
+        if (cancelled) {
 
-    }));
+          return;
+
+        }
+
+
+        // ===================================================
+        // CUSTOMER LOOKUP FAILED
+        // ===================================================
+
+        if (!result.success) {
+
+          setLinkedCustomerName("");
+
+          setIsCustomerLinked(false);
+
+          setNominee(
+            (previous) => ({
+
+              ...previous,
+
+              nomineeName:
+                "",
+
+              phoneNumber:
+                "",
+
+            }),
+          );
+
+          return;
+
+        }
+
+
+        // ===================================================
+        // CUSTOMER NOT FOUND
+        // ===================================================
+
+        const customer =
+          result.data;
+
+
+        if (!customer) {
+
+          setLinkedCustomerName("");
+
+          setIsCustomerLinked(false);
+
+          setNominee(
+            (previous) => ({
+
+              ...previous,
+
+              nomineeName:
+                "",
+
+              phoneNumber:
+                "",
+
+            }),
+          );
+
+          return;
+
+        }
+
+
+        // ===================================================
+        // CUSTOMER FOUND
+        // ===================================================
+
+        const customerName =
+          customer.basic.fullName || "";
+
+
+        const customerPhone =
+          customer.basic.mobileNumber || "";
+
+
+        setLinkedCustomerName(
+          customerName,
+        );
+
+
+        setIsCustomerLinked(
+          true,
+        );
+
+
+        setNominee(
+          (previous) => ({
+
+            ...previous,
+
+            nomineeName:
+              customerName,
+
+            phoneNumber:
+              customerPhone,
+
+          }),
+        );
+
+      } catch (error) {
+
+        if (cancelled) {
+
+          return;
+
+        }
+
+
+        console.error(
+          "FINORA NOMINEE CUSTOMER LOOKUP ERROR:",
+          error,
+        );
+
+
+        setLinkedCustomerName("");
+
+        setIsCustomerLinked(false);
+
+        setNominee(
+          (previous) => ({
+
+            ...previous,
+
+            nomineeName:
+              "",
+
+            phoneNumber:
+              "",
+
+          }),
+        );
+
+      }
+
+    }
+
+
+    void findExistingCustomer();
+
+
+    return () => {
+
+      cancelled = true;
+
+    };
 
   }, [
     nominee.nomineeCustomerId,
   ]);
 
-  /* =========================================================
-     WIZARD DATA SYNC
-  ========================================================= */
+
+  // =========================================================
+  // WIZARD DATA SYNC
+  // =========================================================
 
   useEffect(() => {
 
@@ -251,9 +412,10 @@ export default function Step5Nominee({
     updateWizardData,
   ]);
 
-  /* =========================================================
-     FIELD CHANGE
-  ========================================================= */
+
+  // =========================================================
+  // FIELD CHANGE
+  // =========================================================
 
   const handleChange = (
 
@@ -265,39 +427,45 @@ export default function Step5Nominee({
 
   ): void => {
 
-    setNominee((previous) => ({
+    setNominee(
+      (previous) => ({
 
-      ...previous,
+        ...previous,
 
-      [field]:
-        value,
+        [field]:
+          value,
 
-    }));
+      }),
+    );
 
   };
 
-  /* =========================================================
-     RELATIONSHIP CHANGE
-  ========================================================= */
+
+  // =========================================================
+  // RELATIONSHIP CHANGE
+  // =========================================================
 
   const handleRelationshipChange = (
     value: string,
   ): void => {
 
-    setNominee((previous) => ({
+    setNominee(
+      (previous) => ({
 
-      ...previous,
+        ...previous,
 
-      relationship:
-        value,
+        relationship:
+          value,
 
-    }));
+      }),
+    );
 
   };
 
-  /* =========================================================
-     VIEW
-  ========================================================= */
+
+  // =========================================================
+  // VIEW
+  // =========================================================
 
   return (
 
@@ -310,8 +478,9 @@ export default function Step5Nominee({
 
       showHeader={false}
 
+
       /*
-       * Keep the existing Step 4
+       * Keep the existing Step 5
        * viewport behavior.
        */
 
@@ -345,6 +514,7 @@ export default function Step5Nominee({
 
             />
 
+
             <RelationshipSelector
 
               value={
@@ -360,6 +530,7 @@ export default function Step5Nominee({
           </>
 
         }
+
 
         /* ===================================================
            RIGHT INTELLIGENCE PANEL
@@ -392,7 +563,9 @@ export default function Step5Nominee({
 
             />
 
+
             <NomineeSummaryCard />
+
 
             <NomineeDraftStatus
 
@@ -413,3 +586,8 @@ export default function Step5Nominee({
   );
 
 }
+
+
+// ===========================================================
+// END
+// ===========================================================

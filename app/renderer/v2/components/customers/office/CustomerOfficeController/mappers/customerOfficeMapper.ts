@@ -1,9 +1,33 @@
-/* ===========================================================
-   FINORA ENTERPRISE OS™
-   CUSTOMER OFFICE CONTROLLER™
+// ============================================================
+// FINORA ENTERPRISE OS™
+//
+// CUSTOMER OFFICE CONTROLLER™
+//
+// CUSTOMER OFFICE MAPPER
+//
+// RESPONSIBILITY:
+//
+// - Convert CustomerProfile records into OfficeCustomer records
+// - Attach related Loan information
+// - Attach related Collection information
+// - Keep presentation mapping separate from persistence
+// - Provide an asynchronous mapping boundary for
+//   StorageManager-backed Loan / Collection access
+//
+// IMPORTANT:
+//
+// - Customer data is supplied by CustomerService / Store.
+// - Loan data is accessed through LoanService.
+// - Collection data is accessed through CollectionRepository.
+// - No direct LoanRepository access.
+// - No localStorage access.
+// - Existing mapping behavior is preserved.
+//
+// ============================================================
 
-   CUSTOMER OFFICE MAPPER
-=========================================================== */
+// ============================================================
+// IMPORTS
+// ============================================================
 
 import type {
   CustomerProfile,
@@ -14,30 +38,55 @@ import type {
 } from "../../CustomerOffice/types";
 
 import {
-  getLoans,
-} from "../../../../../repositories/loan/loanRepository";
+  fetchLoans,
+} from "../../../../../services/loan/loanService";
 
 import {
   collectionRepository,
 } from "../../../../../repositories/collection/collectionRepository";
 
-/* ===========================================================
-   MAPPER
-=========================================================== */
 
-export default function customerOfficeMapper(
+// ============================================================
+// MAPPER
+// ============================================================
 
+export default async function customerOfficeMapper(
   customers: CustomerProfile[],
+):
+  Promise<OfficeCustomer[]> {
 
-): OfficeCustomer[] {
+  // ==========================================================
+  // LOANS
+  //
+  // Loan access goes through LoanService.
+  // ==========================================================
 
-    const loans =
-    getLoans();
+  const loans =
+    await fetchLoans();
 
-    const collections =
-  collectionRepository.getAll();
+
+  // ==========================================================
+  // COLLECTIONS
+  //
+  // CollectionRepository is now treated as an asynchronous
+  // persistence boundary.
+  //
+  // Physical storage remains below the repository.
+  // ==========================================================
+
+  const collections =
+    await collectionRepository.getAll();
+
+
+  // ==========================================================
+  // CUSTOMER → OFFICE CUSTOMER
+  // ==========================================================
 
   return customers
+
+    // ========================================================
+    // ACTIVE CUSTOMERS ONLY
+    // ========================================================
 
     .filter(
       (customer) =>
@@ -45,109 +94,154 @@ export default function customerOfficeMapper(
         !customer.internal.isArchived,
     )
 
+
+    // ========================================================
+    // OFFICE CUSTOMER MAPPING
+    // ========================================================
+
     .map(
-
       (customer) => ({
-                loans:
 
+        // ====================================================
+        // RELATED LOANS
+        // ====================================================
+
+        loans:
           loans.filter(
             (loan) =>
               loan.customerId ===
               customer.identity.customerId,
           ),
 
+
+        // ====================================================
+        // BASIC IDENTITY
+        // ====================================================
+
         id:
           customer.identity.customerId,
 
+
         name:
-  customer.basic.displayName ||
-  customer.basic.fullName ||
-  "Unknown",
+          customer.basic.displayName ||
+          customer.basic.fullName ||
+          "Unknown",
+
 
         phone:
           customer.basic.mobileNumber,
 
+
         branch:
           customer.identity.businessName,
 
-        /* ==========================================
-           BACK SIDE ID CARD DETAILS
-        ========================================== */
+
+        // ====================================================
+        // BACK SIDE ID CARD DETAILS
+        // ====================================================
 
         fatherName:
-          customer.basic.fatherName ?? "",
+          customer.basic.fatherName ??
+          "",
+
 
         village:
-          customer.address.currentAddress.village ?? "",
+          customer.address.currentAddress.village ??
+          "",
+
 
         mandal:
-          customer.address.currentAddress.mandal ?? "",
+          customer.address.currentAddress.mandal ??
+          "",
+
 
         district:
-          customer.address.currentAddress.district ?? "",
+          customer.address.currentAddress.district ??
+          "",
+
 
         customerSince:
           customer.timeline?.events?.find(
             (event) =>
-              event.type === "CUSTOMER_CREATED",
-          )?.occurredAt ?? "",
+              event.type ===
+              "CUSTOMER_CREATED",
+          )?.occurredAt ??
+          "",
+
 
         kycVerified:
           true,
 
+
         active:
           customer.identity.isActive,
+
+
+        // ====================================================
+        // CUSTOMER STATISTICS
+        // ====================================================
 
         outstandingAmount:
           customer.statistics.outstandingAmount,
 
+
         totalLoans:
           customer.statistics.totalLoans,
+
 
         activeLoans:
           customer.statistics.activeLoans,
 
+
         closedLoans:
           customer.statistics.closedLoans,
 
+
         nextCollectionDate:
-          customer.internal.lastCollectionAt ?? "",
+          customer.internal.lastCollectionAt ??
+          "",
+
+
+        // ====================================================
+        // COLLECTION HISTORY
+        // ====================================================
 
         collections:
+          collections
 
-  collections
+            .filter(
+              (collection) =>
+                collection.customerId ===
+                customer.identity.customerId,
+            )
 
-    .filter(
+            .map(
+              (collection) => ({
 
-      (collection) =>
+                id:
+                  collection.loanId,
 
-        collection.customerId ===
-        customer.identity.customerId,
 
-    )
+                amount:
+                  collection.paymentAmount,
 
-    .map(
 
-      (collection) => ({
+                paymentDate:
+                  collection.receiptDate,
 
-        id:
-          collection.loanId,
 
-        amount:
-          collection.paymentAmount,
+                receiptNumber:
+                  collection.receiptNumber,
 
-        paymentDate:
-          collection.receiptDate,
-
-        receiptNumber:
-          collection.receiptNumber,
-
-      }),
-
-    ),
+              }),
+            ),
 
       }),
-
     );
 
 }
+
+
+// ============================================================
+// END
+// ============================================================

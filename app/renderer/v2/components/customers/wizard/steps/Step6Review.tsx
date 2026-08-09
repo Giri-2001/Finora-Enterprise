@@ -1,30 +1,40 @@
-/* ===========================================================
-   FINORA ENTERPRISE OS™
+// ============================================================
+// FINORA ENTERPRISE OS™
+//
+// CUSTOMER WIZARD
+// STEP 6 — REVIEW
+//
+// MODULE  : Customer
+// LAYER   : UI / Review
+// VERSION : 2.0
+// STATUS  : Production
+//
+// RESPONSIBILITY:
+//
+// - Final customer review orchestration
+// - Validation state calculation
+// - Customer profile creation
+// - Existing customer update
+// - Customer Service write
+// - Review action coordination
+//
+// IMPORTANT:
+//
+// - Review components contain presentation only.
+// - Persistence goes through CustomerService.
+// - No direct localStorage access.
+// - No direct repository access.
+// - KYC document entry is NOT treated as verified.
+// - Nominee data follows CustomerNomineeInformation.
+// - Global FINORA header remains the workspace header.
+// - ReviewHeader is intentionally not rendered here.
+//
+// ============================================================
 
-   CUSTOMER WIZARD
-   STEP 6 — REVIEW
 
-   Version     : 2.0
-   Phase       : Phase 2
-   Architecture: Enterprise
-   Status      : Production
-
-   RESPONSIBILITY:
-   - Final customer review orchestration
-   - Validation state calculation
-   - Customer profile creation
-   - Existing customer update
-   - Repository write
-   - Review action coordination
-
-   IMPORTANT:
-   - Review components contain presentation only.
-   - customer.store.ts remains the business repository.
-   - KYC document entry is NOT treated as verified.
-   - Nominee data follows CustomerNomineeInformation.
-   - Global FINORA header remains the workspace header.
-   - ReviewHeader is intentionally not rendered here.
-=========================================================== */
+// ============================================================
+// IMPORTS
+// ============================================================
 
 import {
   useState,
@@ -49,9 +59,8 @@ import ReviewDraftStatus
   from "../../review/ReviewDraftStatus";
 
 import {
-  addCustomer,
-  updateCustomer,
-} from "../../../../store/customers/customer.store";
+  customerService,
+} from "../../../../services/customer/customerService";
 
 import type {
   CustomerProfile,
@@ -89,9 +98,10 @@ import {
   draftAreaStyle,
 } from "./Step6Review.styles";
 
-/* ===========================================================
-   PROPS
-=========================================================== */
+
+// ============================================================
+// PROPS
+// ============================================================
 
 interface Step6ReviewProps {
 
@@ -108,9 +118,10 @@ interface Step6ReviewProps {
     boolean;
 }
 
-/* ===========================================================
-   HELPERS
-=========================================================== */
+
+// ============================================================
+// HELPERS
+// ============================================================
 
 function generateCustomerId(): string {
 
@@ -120,9 +131,10 @@ function generateCustomerId(): string {
 
 }
 
-/* ===========================================================
-   SAFE STRING
-=========================================================== */
+
+// ============================================================
+// SAFE STRING
+// ============================================================
 
 function valueOrEmpty(
   value?: string,
@@ -132,9 +144,10 @@ function valueOrEmpty(
 
 }
 
-/* ===========================================================
-   ENUM HELPERS
-=========================================================== */
+
+// ============================================================
+// ENUM HELPERS
+// ============================================================
 
 function toGender(
   value?: string,
@@ -162,12 +175,12 @@ function toGender(
   }
 
   return CustomerGender.OTHER;
-
 }
 
-/* ===========================================================
-   MARITAL STATUS
-=========================================================== */
+
+// ============================================================
+// MARITAL STATUS
+// ============================================================
 
 function toMaritalStatus(
   value?: string,
@@ -204,12 +217,12 @@ function toMaritalStatus(
   }
 
   return MaritalStatus.SINGLE;
-
 }
 
-/* ===========================================================
-   OCCUPATION
-=========================================================== */
+
+// ============================================================
+// OCCUPATION
+// ============================================================
 
 function toOccupation(
   value?: string,
@@ -246,14 +259,13 @@ function toOccupation(
 
     default:
       return Occupation.OTHER;
-
   }
-
 }
 
-/* ===========================================================
-   EDUCATION
-=========================================================== */
+
+// ============================================================
+// EDUCATION
+// ============================================================
 
 function toEducation(
   value?: string,
@@ -263,6 +275,7 @@ function toEducation(
     value?.trim();
 
   if (!normalized) {
+
     return undefined;
   }
 
@@ -293,12 +306,12 @@ function toEducation(
       item.toLowerCase() ===
       normalized.toLowerCase(),
   );
-
 }
 
-/* ===========================================================
-   NOMINEE RELATION
-=========================================================== */
+
+// ============================================================
+// NOMINEE RELATION
+// ============================================================
 
 function toNomineeRelation(
   value?: string,
@@ -344,14 +357,13 @@ function toNomineeRelation(
 
     default:
       return NomineeRelation.OTHER;
-
   }
-
 }
 
-/* ===========================================================
-   COMPONENT
-=========================================================== */
+
+// ============================================================
+// COMPONENT
+// ============================================================
 
 export default function Step6Review({
 
@@ -365,18 +377,20 @@ export default function Step6Review({
 
 }: Step6ReviewProps) {
 
-  /* =========================================================
-     SAVE STATE
-  ========================================================= */
+
+  // ==========================================================
+  // SAVE STATE
+  // ==========================================================
 
   const [
     isSaving,
     setIsSaving,
   ] = useState(false);
 
-  /* =========================================================
-     REVIEW VALUES
-  ========================================================= */
+
+  // ==========================================================
+  // REVIEW VALUES
+  // ==========================================================
 
   const customerId =
     valueOrEmpty(
@@ -428,9 +442,10 @@ export default function Step6Review({
       wizardData.pan,
     );
 
-  /* =========================================================
-     VALIDATION STATE
-  ========================================================= */
+
+  // ==========================================================
+  // VALIDATION STATE
+  // ==========================================================
 
   const identityComplete =
     Boolean(
@@ -450,8 +465,9 @@ export default function Step6Review({
       pan,
     );
 
+
   /*
-   * Entered KYC documents are not automatically verified.
+   * Entered KYC documents are never automatically verified.
    */
 
   const kycVerified =
@@ -463,9 +479,10 @@ export default function Step6Review({
       nomineeCustomerId,
     );
 
-  /* =========================================================
-     CHECKLIST
-  ========================================================= */
+
+  // ==========================================================
+  // CHECKLIST
+  // ==========================================================
 
   const checklistItems = [
 
@@ -516,633 +533,687 @@ export default function Step6Review({
 
   ];
 
-  /* =========================================================
-     SAVE / UPDATE CUSTOMER
-  ========================================================= */
 
-  const handleSave = (): void => {
+  // ==========================================================
+  // SAVE / UPDATE CUSTOMER
+  // ==========================================================
 
-    if (isSaving) {
-      return;
-    }
+  const handleSave =
+    async (): Promise<void> => {
 
-    if (!identityComplete) {
+      if (isSaving) {
 
-      console.warn(
-        "FINORA REVIEW: Identity information is incomplete.",
-      );
+        return;
+      }
 
-      return;
-    }
 
-    if (!addressComplete) {
+      if (!identityComplete) {
 
-      console.warn(
-        "FINORA REVIEW: Address information is incomplete.",
-      );
-
-      return;
-    }
-
-    if (!nomineeAdded) {
-
-      console.warn(
-        "FINORA REVIEW: Nominee information is incomplete.",
-      );
-
-      return;
-    }
-
-    setIsSaving(true);
-
-    try {
-
-      /* =====================================================
-         EDIT MODE
-      ===================================================== */
-
-      if (isEditMode) {
-
-        if (!originalCustomerProfile) {
-
-          console.error(
-            "FINORA EDIT ERROR: Original customer profile not found.",
-          );
-
-          return;
-        }
-
-        const existingCustomer =
-          originalCustomerProfile;
-
-        const now =
-          new Date().toISOString();
-
-        const updatedCustomer:
-          CustomerProfile = {
-
-          ...existingCustomer,
-
-          identity: {
-
-            ...existingCustomer.identity,
-
-            updatedAt:
-              now,
-
-          },
-
-          basic: {
-
-            ...existingCustomer.basic,
-
-            fullName:
-              customerName ||
-              existingCustomer.basic.fullName,
-
-            mobileNumber:
-              mobileNumber ||
-              existingCustomer.basic.mobileNumber,
-
-            displayName:
-              customerName ||
-              existingCustomer.basic.displayName,
-
-            whatsappNumber:
-              valueOrEmpty(
-                wizardData.whatsapp,
-              ) ||
-              existingCustomer.basic.whatsappNumber,
-
-            email:
-              valueOrEmpty(
-                wizardData.email,
-              ) ||
-              existingCustomer.basic.email,
-
-            fatherName:
-              valueOrEmpty(
-                wizardData.fatherOrSpouseName,
-              ) ||
-              existingCustomer.basic.fatherName,
-
-            spouseName:
-              valueOrEmpty(
-                wizardData.spouseName,
-              ) ||
-              existingCustomer.basic.spouseName,
-
-            emergencyContactName:
-              valueOrEmpty(
-                wizardData.emergencyContactName,
-              ) ||
-              existingCustomer.basic.emergencyContactName,
-
-            emergencyContactNumber:
-              valueOrEmpty(
-                wizardData.emergencyContactMobile,
-              ) ||
-              existingCustomer.basic.emergencyContactNumber,
-
-          },
-
-        };
-
-        updateCustomer(
-          updatedCustomer,
+        console.warn(
+          "FINORA REVIEW: Identity information is incomplete.",
         );
 
         return;
       }
 
-      /* =====================================================
-         NEW CUSTOMER REGISTRATION
-      ===================================================== */
 
-      const now =
-        new Date().toISOString();
+      if (!addressComplete) {
 
-      const finalCustomerId =
-        customerId ||
-        generateCustomerId();
+        console.warn(
+          "FINORA REVIEW: Address information is incomplete.",
+        );
 
-      /* =====================================================
-         DIGITAL LOCKER
-      ===================================================== */
+        return;
+      }
 
-      const documents = {
 
-        folderName:
-          `Customer Documents - ${finalCustomerId}`,
+      if (!nomineeAdded) {
 
-        documents:
-          [],
+        console.warn(
+          "FINORA REVIEW: Nominee information is incomplete.",
+        );
 
-        totalDocuments:
-          0,
+        return;
+      }
 
-        updatedAt:
-          now,
 
-      };
+      setIsSaving(true);
 
-      /* =====================================================
-         CUSTOMER TIMELINE
-      ===================================================== */
 
-      const timeline = {
+      try {
 
-        events: [
+        // ====================================================
+        // EDIT MODE
+        // ====================================================
 
-          {
+        if (isEditMode) {
 
-            id:
-              `TIMELINE-${Date.now()}`,
+          if (!originalCustomerProfile) {
 
-            type:
-              CustomerTimelineEventType.CUSTOMER_CREATED,
+            console.error(
+              "FINORA EDIT ERROR: Original customer profile not found.",
+            );
 
-            title:
-              "Customer Created",
+            return;
+          }
 
-            description:
-              "Customer profile created through FINORA Customer Wizard.",
 
-            priority:
-              CustomerTimelinePriority.MEDIUM,
+          const existingCustomer =
+            originalCustomerProfile;
 
-            occurredAt:
-              now,
+          const now =
+            new Date().toISOString();
 
-            performedBy:
-              "Girish",
 
-            referenceId:
-              finalCustomerId,
+          const updatedCustomer:
+            CustomerProfile = {
 
-          },
+            ...existingCustomer,
 
-        ],
+            identity: {
 
-        updatedAt:
-          now,
+              ...existingCustomer.identity,
 
-      };
+              updatedAt:
+                now,
 
-      /* =====================================================
-         NOMINEE
-      ===================================================== */
+            },
 
-      const nominees =
-        nomineeName ||
-        nomineeCustomerId
-          ? [
+            basic: {
 
-              {
+              ...existingCustomer.basic,
 
-                nomineeId:
-                  nomineeCustomerId ||
-                  `NOM-${Date.now()}`,
+              fullName:
+                customerName ||
+                existingCustomer.basic.fullName,
 
-                fullName:
-                  nomineeName ||
-                  "Unknown",
+              mobileNumber:
+                mobileNumber ||
+                existingCustomer.basic.mobileNumber,
 
-                relation:
-                  toNomineeRelation(
-                    nomineeRelationship,
-                  ),
+              displayName:
+                customerName ||
+                existingCustomer.basic.displayName,
 
-                mobileNumber:
-                  nomineePhoneNumber,
+              whatsappNumber:
+                valueOrEmpty(
+                  wizardData.whatsapp,
+                ) ||
+                existingCustomer.basic.whatsappNumber,
 
-                sharePercentage:
-                  100,
+              email:
+                valueOrEmpty(
+                  wizardData.email,
+                ) ||
+                existingCustomer.basic.email,
 
-                isPrimary:
-                  true,
+              fatherName:
+                valueOrEmpty(
+                  wizardData.fatherOrSpouseName,
+                ) ||
+                existingCustomer.basic.fatherName,
 
-                isVerified:
-                  false,
+              spouseName:
+                valueOrEmpty(
+                  wizardData.spouseName,
+                ) ||
+                existingCustomer.basic.spouseName,
 
-              },
+              emergencyContactName:
+                valueOrEmpty(
+                  wizardData.emergencyContactName,
+                ) ||
+                existingCustomer.basic.emergencyContactName,
 
-            ]
-          : [];
+              emergencyContactNumber:
+                valueOrEmpty(
+                  wizardData.emergencyContactMobile,
+                ) ||
+                existingCustomer.basic.emergencyContactNumber,
 
-      /* =====================================================
-         CUSTOMER PROFILE
-      ===================================================== */
+            },
 
-      const newCustomer:
-        CustomerProfile = {
+          };
 
-        identity: {
 
-          id:
-            Date.now(),
+          const result =
+            await customerService.update(
+              updatedCustomer,
+            );
 
-          customerId:
-            finalCustomerId,
 
-          branchId:
-            "BR-001",
+          if (!result.success) {
 
-          businessId:
-            "FINORA-HYD-01",
+            console.error(
+              "FINORA CUSTOMER UPDATE FAILED:",
+              result.error,
+            );
 
-          businessName:
-            "FINORA Enterprise",
+            return;
+          }
 
-          createdAt:
-            now,
 
-          updatedAt:
-            now,
+          console.info(
+            "FINORA CUSTOMER UPDATED:",
+            updatedCustomer.identity.customerId,
+          );
 
-          createdBy:
-            "Girish",
 
-          isActive:
-            true,
+          resetWizard();
 
-          isDeleted:
-            false,
+          return;
+        }
 
-        },
 
-        basic: {
+        // ====================================================
+        // NEW CUSTOMER REGISTRATION
+        // ====================================================
 
-          fullName:
-            customerName ||
-            "Unknown",
+        const now =
+          new Date().toISOString();
 
-          mobileNumber:
-            mobileNumber,
+        const finalCustomerId =
+          customerId ||
+          generateCustomerId();
 
-          displayName:
-            customerName ||
-            "Unknown",
 
-          fatherName:
-            valueOrEmpty(
-              wizardData.fatherOrSpouseName,
-            ),
+        // ====================================================
+        // DIGITAL LOCKER
+        // ====================================================
 
-          motherName:
-            "",
+        const documents = {
 
-          spouseName:
-            valueOrEmpty(
-              wizardData.spouseName,
-            ),
+          folderName:
+            `Customer Documents - ${finalCustomerId}`,
 
-          whatsappNumber:
-            valueOrEmpty(
-              wizardData.whatsapp,
-            ) ||
-            mobileNumber,
-
-          email:
-            valueOrEmpty(
-              wizardData.email,
-            ),
-
-          preferredLanguage:
-            wizardData.preferredLanguage ??
-            "English",
-
-          emergencyContactName:
-            valueOrEmpty(
-              wizardData.emergencyContactName,
-            ),
-
-          emergencyContactNumber:
-            valueOrEmpty(
-              wizardData.emergencyContactMobile,
-            ),
-
-        },
-
-        personal: {
-
-          gender:
-            toGender(
-              undefined,
-            ),
-
-          dateOfBirth:
-            valueOrEmpty(
-              wizardData.dateOfBirth,
-            ),
-
-          maritalStatus:
-            toMaritalStatus(
-              wizardData.maritalStatus,
-            ),
-
-          education:
-            toEducation(
-              wizardData.education,
-            ),
-
-          occupation:
-            toOccupation(
-              wizardData.occupation,
-            ),
-
-          monthlyIncome:
-            Number(
-              wizardData.monthlyIncome ??
-              0,
-            ),
-
-          annualIncome:
-            Number(
-              wizardData.monthlyIncome ??
-              0,
-            ) * 12,
-
-          isDifferentlyAbled:
-            false,
-
-        },
-
-        address: {
-
-          currentAddress: {
-
-            street:
-              address,
-
-            village:
-              "",
-
-            district:
-              "",
-
-            state:
-              "",
-
-            country:
-              "India",
-
-          },
-
-          permanentAddress: {
-
-            street:
-              address,
-
-            village:
-              "",
-
-            district:
-              "",
-
-            state:
-              "",
-
-            country:
-              "India",
-
-          },
-
-          isPermanentAddressSame:
-            true,
-
-        },
-
-        kyc: {
-
-          ...(aadhaar
-            ? {
-
-                aadhaar: {
-
-                  documentNumber:
-                    aadhaar,
-
-                  status:
-                    KYCStatus.PENDING,
-
-                },
-
-              }
-            : {}),
-
-          ...(pan
-            ? {
-
-                pan: {
-
-                  documentNumber:
-                    pan,
-
-                  status:
-                    KYCStatus.PENDING,
-
-                },
-
-              }
-            : {}),
-
-          overallStatus:
-            KYCStatus.PENDING,
-
-        },
-
-        nominee: {
-
-          nominees,
-
-        },
-
-        documents,
-
-        internal: {
-
-          status:
-            CustomerStatus.ACTIVE,
-
-          risk:
-            CustomerRisk.LOW,
-
-          tags:
+          documents:
             [],
-
-          rating:
-            5,
-
-          branchId:
-            "BR-001",
-
-          customerSince:
-            now,
-
-          totalLoans:
-            0,
-
-          activeLoans:
-            0,
-
-          closedLoans:
-            0,
-
-          totalCollections:
-            0,
-
-          outstandingAmount:
-            0,
-
-          isDeleted:
-            false,
-
-          isArchived:
-            false,
-
-        },
-
-        timeline,
-
-        statistics: {
-
-          totalLoans:
-            0,
-
-          activeLoans:
-            0,
-
-          closedLoans:
-            0,
-
-          rejectedLoans:
-            0,
-
-          totalBorrowedAmount:
-            0,
-
-          totalInterestPaid:
-            0,
-
-          totalCollections:
-            0,
-
-          outstandingAmount:
-            0,
-
-          averagePaymentDelayDays:
-            0,
-
-          largestLoanAmount:
-            0,
-
-          smallestLoanAmount:
-            0,
-
-          lastLoanAmount:
-            0,
-
-          totalGoldWeight:
-            0,
-
-          estimatedGoldValue:
-            0,
 
           totalDocuments:
             0,
 
-          totalTimelineEvents:
-            1,
+          updatedAt:
+            now,
 
-          profileCompletion:
-            100,
+        };
 
-          customerScore:
-            100,
 
-        },
+        // ====================================================
+        // CUSTOMER TIMELINE
+        // ====================================================
 
-      };
+        const timeline = {
 
-      /* =====================================================
-         REPOSITORY WRITE
-      ===================================================== */
+          events: [
 
-      addCustomer(
-        newCustomer,
-      );
+            {
 
-      console.info(
-        "FINORA CUSTOMER CREATED:",
-        finalCustomerId,
-      );
+              id:
+                `TIMELINE-${Date.now()}`,
 
-      resetWizard();
+              type:
+                CustomerTimelineEventType.CUSTOMER_CREATED,
 
-    } finally {
+              title:
+                "Customer Created",
 
-      setIsSaving(false);
+              description:
+                "Customer profile created through FINORA Customer Wizard.",
 
-    }
+              priority:
+                CustomerTimelinePriority.MEDIUM,
 
-  };
+              occurredAt:
+                now,
 
-  /* =========================================================
-     EDIT
-  ========================================================= */
+              performedBy:
+                "Girish",
+
+              referenceId:
+                finalCustomerId,
+
+            },
+
+          ],
+
+          updatedAt:
+            now,
+
+        };
+
+
+        // ====================================================
+        // NOMINEE
+        // ====================================================
+
+        const nominees =
+          nomineeName ||
+          nomineeCustomerId
+            ? [
+
+                {
+
+                  nomineeId:
+                    nomineeCustomerId ||
+                    `NOM-${Date.now()}`,
+
+                  fullName:
+                    nomineeName ||
+                    "Unknown",
+
+                  relation:
+                    toNomineeRelation(
+                      nomineeRelationship,
+                    ),
+
+                  mobileNumber:
+                    nomineePhoneNumber,
+
+                  sharePercentage:
+                    100,
+
+                  isPrimary:
+                    true,
+
+                  isVerified:
+                    false,
+
+                },
+
+              ]
+            : [];
+
+
+        // ====================================================
+        // CUSTOMER PROFILE
+        // ====================================================
+
+        const newCustomer:
+          CustomerProfile = {
+
+          identity: {
+
+            id:
+              Date.now(),
+
+            customerId:
+              finalCustomerId,
+
+            branchId:
+              "BR-001",
+
+            businessId:
+              "FINORA-HYD-01",
+
+            businessName:
+              "FINORA Enterprise",
+
+            createdAt:
+              now,
+
+            updatedAt:
+              now,
+
+            createdBy:
+              "Girish",
+
+            isActive:
+              true,
+
+            isDeleted:
+              false,
+
+          },
+
+          basic: {
+
+            fullName:
+              customerName ||
+              "Unknown",
+
+            mobileNumber:
+              mobileNumber,
+
+            displayName:
+              customerName ||
+              "Unknown",
+
+            fatherName:
+              valueOrEmpty(
+                wizardData.fatherOrSpouseName,
+              ),
+
+            motherName:
+              "",
+
+            spouseName:
+              valueOrEmpty(
+                wizardData.spouseName,
+              ),
+
+            whatsappNumber:
+              valueOrEmpty(
+                wizardData.whatsapp,
+              ) ||
+              mobileNumber,
+
+            email:
+              valueOrEmpty(
+                wizardData.email,
+              ),
+
+            preferredLanguage:
+              wizardData.preferredLanguage ??
+              "English",
+
+            emergencyContactName:
+              valueOrEmpty(
+                wizardData.emergencyContactName,
+              ),
+
+            emergencyContactNumber:
+              valueOrEmpty(
+                wizardData.emergencyContactMobile,
+              ),
+
+          },
+
+          personal: {
+
+            gender:
+              toGender(
+                undefined,
+              ),
+
+            dateOfBirth:
+              valueOrEmpty(
+                wizardData.dateOfBirth,
+              ),
+
+            maritalStatus:
+              toMaritalStatus(
+                wizardData.maritalStatus,
+              ),
+
+            education:
+              toEducation(
+                wizardData.education,
+              ),
+
+            occupation:
+              toOccupation(
+                wizardData.occupation,
+              ),
+
+            monthlyIncome:
+              Number(
+                wizardData.monthlyIncome ??
+                0,
+              ),
+
+            annualIncome:
+              Number(
+                wizardData.monthlyIncome ??
+                0,
+              ) * 12,
+
+            isDifferentlyAbled:
+              false,
+
+          },
+
+          address: {
+
+            currentAddress: {
+
+              street:
+                address,
+
+              village:
+                "",
+
+              district:
+                "",
+
+              state:
+                "",
+
+              country:
+                "India",
+
+            },
+
+            permanentAddress: {
+
+              street:
+                address,
+
+              village:
+                "",
+
+              district:
+                "",
+
+              state:
+                "",
+
+              country:
+                "India",
+
+            },
+
+            isPermanentAddressSame:
+              true,
+
+          },
+
+          kyc: {
+
+            ...(aadhaar
+              ? {
+
+                  aadhaar: {
+
+                    documentNumber:
+                      aadhaar,
+
+                    status:
+                      KYCStatus.PENDING,
+
+                  },
+
+                }
+              : {}),
+
+            ...(pan
+              ? {
+
+                  pan: {
+
+                    documentNumber:
+                      pan,
+
+                    status:
+                      KYCStatus.PENDING,
+
+                  },
+
+                }
+              : {}),
+
+            overallStatus:
+              KYCStatus.PENDING,
+
+          },
+
+          nominee: {
+
+            nominees,
+
+          },
+
+          documents,
+
+          internal: {
+
+            status:
+              CustomerStatus.ACTIVE,
+
+            risk:
+              CustomerRisk.LOW,
+
+            tags:
+              [],
+
+            rating:
+              5,
+
+            branchId:
+              "BR-001",
+
+            customerSince:
+              now,
+
+            totalLoans:
+              0,
+
+            activeLoans:
+              0,
+
+            closedLoans:
+              0,
+
+            totalCollections:
+              0,
+
+            outstandingAmount:
+              0,
+
+            isDeleted:
+              false,
+
+            isArchived:
+              false,
+
+          },
+
+          timeline,
+
+          statistics: {
+
+            totalLoans:
+              0,
+
+            activeLoans:
+              0,
+
+            closedLoans:
+              0,
+
+            rejectedLoans:
+              0,
+
+            totalBorrowedAmount:
+              0,
+
+            totalInterestPaid:
+              0,
+
+            totalCollections:
+              0,
+
+            outstandingAmount:
+              0,
+
+            averagePaymentDelayDays:
+              0,
+
+            largestLoanAmount:
+              0,
+
+            smallestLoanAmount:
+              0,
+
+            lastLoanAmount:
+              0,
+
+            totalGoldWeight:
+              0,
+
+            estimatedGoldValue:
+              0,
+
+            totalDocuments:
+              0,
+
+            totalTimelineEvents:
+              1,
+
+            profileCompletion:
+              100,
+
+            customerScore:
+              100,
+
+          },
+
+        };
+
+
+        // ====================================================
+        // CUSTOMER SERVICE WRITE
+        // ====================================================
+
+        const result =
+          await customerService.create(
+            newCustomer,
+          );
+
+
+        if (!result.success) {
+
+          console.error(
+            "FINORA CUSTOMER CREATION FAILED:",
+            result.error,
+          );
+
+          return;
+        }
+
+
+        console.info(
+          "FINORA CUSTOMER CREATED:",
+          finalCustomerId,
+        );
+
+
+        resetWizard();
+
+      } finally {
+
+        setIsSaving(false);
+
+      }
+
+    };
+
+
+  // ==========================================================
+  // EDIT
+  // ==========================================================
 
   const handleEdit = (): void => {
 
     console.info(
       "FINORA REVIEW: Edit requested. Parent wizard navigation is required.",
-  );
+    );
 
   };
 
-  /* =========================================================
-     CANCEL
-  ========================================================= */
+
+  // ==========================================================
+  // CANCEL
+  // ==========================================================
 
   const handleCancel = (): void => {
 
@@ -1150,9 +1221,10 @@ export default function Step6Review({
 
   };
 
-  /* =========================================================
-     VIEW
-  ========================================================= */
+
+  // ==========================================================
+  // VIEW
+  // ==========================================================
 
   return (
 
@@ -1164,25 +1236,21 @@ export default function Step6Review({
 
     >
 
-      {/* ===================================================
+      {/* ====================================================
          STEP 6 REVIEW WORKSPACE
-
-         IMPORTANT:
-         The workspace itself owns the 2 x 2 layout.
 
          Row 1:
          Summary | Validation
 
          Row 2:
          Checklist | Actions
-      =================================================== */}
+      ==================================================== */}
 
       <div style={workspaceStyle}>
 
-        {/* =================================================
-           TOP-LEFT
-           CUSTOMER SUMMARY
-        ================================================= */}
+        {/* ==================================================
+           LEFT COLUMN
+        ================================================== */}
 
         <div style={leftColumnStyle}>
 
@@ -1209,10 +1277,6 @@ export default function Step6Review({
 
           />
 
-          {/* ===============================================
-             BOTTOM-LEFT
-             REVIEW CHECKLIST
-          =============================================== */}
 
           <ReviewChecklist
 
@@ -1224,16 +1288,12 @@ export default function Step6Review({
 
         </div>
 
-        {/* =================================================
-           RIGHT SIDE
-        ================================================= */}
+
+        {/* ==================================================
+           RIGHT COLUMN
+        ================================================== */}
 
         <div style={rightColumnStyle}>
-
-          {/* ===============================================
-             TOP-RIGHT
-             VALIDATION STATUS
-          =============================================== */}
 
           <ValidationStatus
 
@@ -1255,10 +1315,6 @@ export default function Step6Review({
 
           />
 
-          {/* ===============================================
-             BOTTOM-RIGHT
-             DRAFT + ACTIONS
-          =============================================== */}
 
           <div style={actionPanelStyle}>
 
@@ -1273,6 +1329,7 @@ export default function Step6Review({
               />
 
             </div>
+
 
             <div style={actionAreaStyle}>
 
@@ -1303,5 +1360,9 @@ export default function Step6Review({
     </StudioLayout>
 
   );
-
 }
+
+
+// ============================================================
+// END
+// ============================================================
