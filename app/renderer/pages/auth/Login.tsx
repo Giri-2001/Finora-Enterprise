@@ -5,23 +5,28 @@
 //
 // MODULE  : Authentication
 // LAYER   : Renderer / Login
-// VERSION : 2.8
-// STATUS  : Production Foundation
+// VERSION : 3.0
+// STATUS  : Production
 //
 // RESPONSIBILITY:
 //
-// - Detect FINORA USB storage
-// - Provide two-step USB login experience
-// - Require User ID + Password before authentication
+// - Provide two completely separate login paths
+// - USB Login requires a detected FINORA Pendrive
+// - Normal Login does not require a USB
+// - Select the correct V2 storage mode before opening the app
+// - Require User ID + Password in both paths
 // - Preserve existing authStore authentication
 // - Monitor USB connection state
 //
 // SECURITY:
 //
 // - USB presence alone NEVER authenticates a user.
-// - USB detection only enables the USB login path.
-// - Username + Password remain mandatory.
-// - Existing login security remains inside authStore.
+// - USB Login requires USB + User ID + Password.
+// - Normal Login does not require USB.
+// - USB Login selects StorageMode.USB.
+// - Normal Login selects StorageMode.LOCAL.
+// - USB data is not intentionally exposed through Normal Login.
+// - Normal/local data is not intentionally exposed through USB Login.
 // - No direct filesystem access.
 // - No direct Electron IPC access.
 //
@@ -44,6 +49,18 @@ import {
   login,
 } from "../../store/authStore";
 
+import {
+  storageManager,
+} from "../../v2/storage/storageManager";
+
+import {
+  StorageMode,
+} from "../../v2/storage/storage.types";
+
+import {
+  clearCustomerCache,
+} from "../../v2/store/customers/customer.store";
+
 // ============================================================
 // TYPES
 // ============================================================
@@ -51,6 +68,11 @@ import {
 type LoginProps = {
   onLogin: () => void;
 };
+
+type LoginMode =
+  | "chooser"
+  | "usb"
+  | "normal";
 
 type UsbStatus = {
   availability?: string;
@@ -60,7 +82,6 @@ type UsbStatus = {
 
 type UsbBridge = {
   isAvailable?: () => Promise<boolean>;
-
   getStatus?: () => Promise<UsbStatus>;
 };
 
@@ -74,18 +95,59 @@ type FinoraWindow = {
 // CONSTANTS
 // ============================================================
 
-const USB_STATUS_POLL_INTERVAL_MS = 2000;
+const USB_STATUS_POLL_INTERVAL_MS =
+  2000;
 
 // ============================================================
 // USB BRIDGE
 // ============================================================
 
-function getUsbBridge(): UsbBridge | undefined {
+function getUsbBridge():
+  UsbBridge | undefined {
 
   const runtimeWindow =
     window as unknown as FinoraWindow;
 
   return runtimeWindow.finora?.usb;
+}
+
+// ============================================================
+// STORAGE MODE ACTIVATION
+// ============================================================
+
+async function activateStorageMode(
+  mode: StorageMode,
+):
+  Promise<boolean> {
+
+  try {
+
+    const result =
+      await storageManager.selectStorageMode(
+        mode,
+      );
+
+    if (!result.success) {
+
+      console.error(
+        "FINORA STORAGE MODE ACTIVATION FAILED:",
+        result.error,
+      );
+
+      return false;
+    }
+
+    return true;
+
+  } catch (storageError) {
+
+    console.error(
+      "FINORA STORAGE MODE ACTIVATION ERROR:",
+      storageError,
+    );
+
+    return false;
+  }
 }
 
 // ============================================================
@@ -116,6 +178,26 @@ export default function Login({
   ] = useState("");
 
   // ==========================================================
+  // LOGIN MODE
+  // ==========================================================
+
+  const [
+    loginMode,
+    setLoginMode,
+  ] = useState<LoginMode>(
+    "chooser",
+  );
+
+  // ==========================================================
+  // LOGIN BUSY STATE
+  // ==========================================================
+
+  const [
+    loginBusy,
+    setLoginBusy,
+  ] = useState(false);
+
+  // ==========================================================
   // USB STATE
   // ==========================================================
 
@@ -135,21 +217,6 @@ export default function Login({
   ] = useState(
     "Checking FINORA USB...",
   );
-
-  // ==========================================================
-  // USB LOGIN STEP
-  //
-  // false:
-  // USB detected screen
-  //
-  // true:
-  // User ID + Password screen
-  // ==========================================================
-
-  const [
-    showUsbCredentials,
-    setShowUsbCredentials,
-  ] = useState(false);
 
   // ==========================================================
   // USB STATUS MONITOR
@@ -191,9 +258,7 @@ export default function Login({
             );
 
             if (initialCheck) {
-
               setUsbChecking(false);
-
             }
 
           }
@@ -234,9 +299,7 @@ export default function Login({
           );
 
           if (initialCheck) {
-
             setUsbChecking(false);
-
           }
 
           return;
@@ -266,9 +329,7 @@ export default function Login({
           );
 
           if (initialCheck) {
-
             setUsbChecking(false);
-
           }
 
           return;
@@ -287,9 +348,7 @@ export default function Login({
           );
 
           if (initialCheck) {
-
             setUsbChecking(false);
-
           }
 
         }
@@ -310,9 +369,7 @@ export default function Login({
           );
 
           if (initialCheck) {
-
             setUsbChecking(false);
-
           }
 
         }
@@ -334,17 +391,13 @@ export default function Login({
     // ========================================================
     // BACKGROUND USB MONITOR
     //
-    // IMPORTANT:
-    //
-    // This does NOT set usbChecking back to true.
+    // This does not restart the visible checking state.
     // ========================================================
 
     const intervalId =
       window.setInterval(
         () => {
-
           void checkUsb(false);
-
         },
         USB_STATUS_POLL_INTERVAL_MS,
       );
@@ -368,31 +421,112 @@ export default function Login({
   // ==========================================================
   // USB DISCONNECT SAFETY
   //
-  // If USB disappears while the USB credential screen is
-  // open, return to the normal login state.
+  // If USB disappears while the USB login form is open,
+  // immediately return to the login chooser.
   // ==========================================================
 
   useEffect(() => {
 
     if (
-      !usbAvailable
+      !usbAvailable &&
+      loginMode === "usb"
     ) {
 
-      setShowUsbCredentials(
-        false,
+      setLoginMode(
+        "chooser",
       );
+
+      setUsername("");
+
+      setPassword("");
+
+      setError("");
 
     }
 
   }, [
     usbAvailable,
+    loginMode,
   ]);
 
   // ==========================================================
-  // ACCOUNT LOGIN
+  // RESET LOGIN FORM
   // ==========================================================
 
-  function handleLogin(): void {
+  function resetCredentials(): void {
+
+    setUsername("");
+
+    setPassword("");
+
+    setError("");
+
+    setLoginBusy(false);
+
+  }
+
+  // ==========================================================
+  // OPEN USB LOGIN
+  // ==========================================================
+
+  function handleOpenUsbLogin(): void {
+
+    setError("");
+
+    if (!usbAvailable) {
+
+      setError(
+        "FINORA USB is not connected.",
+      );
+
+      return;
+    }
+
+    resetCredentials();
+
+    setLoginMode(
+      "usb",
+    );
+
+  }
+
+  // ==========================================================
+  // OPEN NORMAL LOGIN
+  // ==========================================================
+
+  function handleOpenNormalLogin(): void {
+
+    setError("");
+
+    resetCredentials();
+
+    setLoginMode(
+      "normal",
+    );
+
+  }
+
+  // ==========================================================
+  // BACK TO LOGIN CHOOSER
+  // ==========================================================
+
+  function handleBackToChooser(): void {
+
+    resetCredentials();
+
+    setLoginMode(
+      "chooser",
+    );
+
+  }
+
+  // ==========================================================
+  // COMMON AUTHENTICATION
+  // ==========================================================
+
+  async function authenticate(
+    mode: "USB" | "LOCAL",
+  ): Promise<void> {
 
     setError("");
 
@@ -417,97 +551,163 @@ export default function Login({
       return;
     }
 
-    const session =
-      login({
-        username:
-          trimmedUsername,
+    // --------------------------------------------------------
+    // USB SECURITY CHECK
+    // --------------------------------------------------------
 
-        password,
-      });
-
-    if (!session) {
-
-      setError(
-        "Invalid username or password",
-      );
-
-      return;
-    }
-
-    setError("");
-
-    onLogin();
-  }
-
-  // ==========================================================
-  // CONTINUE WITH USB
-  // ==========================================================
-
-  function handleContinueWithUsb(): void {
-
-    setError("");
-
-    if (!usbAvailable) {
+    if (
+      mode === "USB" &&
+      !usbAvailable
+    ) {
 
       setError(
         "FINORA USB is not connected.",
       );
 
+      setLoginMode(
+        "chooser",
+      );
+
       return;
     }
 
-    setUsername("");
+    setLoginBusy(true);
 
-    setPassword("");
+    try {
 
-    setShowUsbCredentials(
-      true,
-    );
-  }
+      // ------------------------------------------------------
+      // AUTHENTICATE FIRST
+      //
+      // Storage mode is selected only after credentials pass.
+      // ------------------------------------------------------
 
-  // ==========================================================
-  // BACK FROM USB CREDENTIALS
-  // ==========================================================
+      const session =
+        login({
+          username:
+            trimmedUsername,
 
-  function handleBackFromUsbLogin(): void {
+          password,
+        });
 
-    setError("");
+      if (!session) {
 
-    setUsername("");
+        setError(
+          "Invalid username or password",
+        );
 
-    setPassword("");
+        return;
+      }
 
-    setShowUsbCredentials(
-      false,
-    );
+      // ------------------------------------------------------
+      // SELECT PHYSICAL STORAGE MODE
+      //
+      // USB LOGIN  -> USB
+      // NORMAL     -> LOCAL
+      // ------------------------------------------------------
+
+      const storageMode =
+        mode === "USB"
+          ? StorageMode.USB
+          : StorageMode.LOCAL;
+
+      const storageActivated =
+        await activateStorageMode(
+          storageMode,
+        );
+
+      if (!storageActivated) {
+
+        setError(
+          mode === "USB"
+            ? "Unable to activate FINORA USB storage."
+            : "Unable to activate local FINORA storage.",
+        );
+
+        return;
+      }
+
+      // ------------------------------------------------------
+      // PERSIST AUTHENTICATED STORAGE MODE
+      //
+      // sessionStorage survives renderer reloads such as
+      // Ctrl + R, but does not become permanent application
+      // data. The authenticated login selects the authoritative
+      // storage source for the current renderer session.
+      //
+      // USB  -> FINORA_STORAGE_MODE = "USB"
+      // LOCAL -> FINORA_STORAGE_MODE = "LOCAL"
+      // ------------------------------------------------------
+
+      try {
+
+        window.sessionStorage.setItem(
+          "FINORA_STORAGE_MODE",
+          storageMode,
+        );
+
+      } catch (sessionError) {
+
+        console.error(
+          "FINORA STORAGE MODE SESSION PERSISTENCE FAILED:",
+          sessionError,
+        );
+
+        setError(
+          "Unable to preserve FINORA storage mode for this session.",
+        );
+
+        return;
+      }
+
+      // ------------------------------------------------------
+      // CLEAR PREVIOUS CUSTOMER RAM CACHE
+      //
+      // This does NOT delete persistent customer records.
+      // It only prevents the previous login's in-memory
+      // Customer data from appearing after switching between
+      // LOCAL and USB sessions.
+      // ------------------------------------------------------
+
+      clearCustomerCache();
+
+      // ------------------------------------------------------
+      // COMPLETE LOGIN
+      // ------------------------------------------------------
+
+      setError("");
+
+      onLogin();
+
+    } finally {
+
+      setLoginBusy(false);
+
+    }
+
   }
 
   // ==========================================================
   // USB LOGIN SUBMIT
-  //
-  // IMPORTANT:
-  //
-  // This deliberately uses the same secure authStore login.
-  //
-  // USB does not bypass password authentication.
   // ==========================================================
 
   function handleUsbLogin(): void {
 
-    if (!usbAvailable) {
+    void authenticate(
+      "USB",
+    );
 
-      setError(
-        "FINORA USB has been disconnected.",
-      );
+  }
 
-      setShowUsbCredentials(
-        false,
-      );
+  // ==========================================================
+  // NORMAL LOGIN SUBMIT
+  // ==========================================================
 
-      return;
-    }
+  function handleNormalLogin(): void {
 
-    handleLogin();
+    void authenticate(
+      "LOCAL",
+    );
+
   }
 
   // ==========================================================
@@ -545,7 +745,7 @@ export default function Login({
 
       <div
         style={{
-          width: 390,
+          width: 410,
 
           maxWidth:
             "calc(100vw - 32px)",
@@ -656,13 +856,11 @@ export default function Login({
             />
 
             <span>
-
               {usbChecking
                 ? "Checking FINORA USB"
                 : usbAvailable
                   ? "FINORA USB Detected"
                   : "FINORA USB Not Detected"}
-
             </span>
 
           </div>
@@ -684,73 +882,229 @@ export default function Login({
         </div>
 
         {/* ==================================================
-            USB DETECTED → CONTINUE
+            INITIAL USB CHECK
             ================================================== */}
 
-        {usbAvailable &&
-          !showUsbCredentials && (
+        {usbChecking && (
 
-          <button
-            type="button"
-
-            onClick={
-              handleContinueWithUsb
-            }
-
-            disabled={
-              usbChecking
-            }
-
+          <div
             style={{
-              width: "100%",
+              fontSize: 12,
 
-              padding: "12px",
+              color: "#64748b",
 
-              borderRadius: 9,
+              textAlign: "center",
 
-              border:
-                "1px solid #475569",
-
-              background:
-                "#1e293b",
-
-              color:
-                "#ffffff",
-
-              cursor:
-                "pointer",
-
-              fontWeight: 700,
-
-              marginBottom: 18,
+              paddingTop: 4,
             }}
           >
-            Continue with FINORA USB
-          </button>
+            FINORA login services are starting...
+          </div>
 
         )}
 
         {/* ==================================================
-            USB CREDENTIAL SCREEN
+            LOGIN CHOOSER
             ================================================== */}
 
-        {usbAvailable &&
-          showUsbCredentials && (
+        {!usbChecking &&
+          loginMode === "chooser" && (
+
+          <>
+
+            {/* ==============================================
+                USB LOGIN
+                ============================================== */}
+
+            <button
+              type="button"
+
+              onClick={
+                handleOpenUsbLogin
+              }
+
+              disabled={
+                !usbAvailable ||
+                loginBusy
+              }
+
+              style={{
+                width: "100%",
+
+                padding: "13px 14px",
+
+                borderRadius: 10,
+
+                border:
+                  usbAvailable
+                    ? "1px solid rgba(34,197,94,.55)"
+                    : "1px solid #334155",
+
+                background:
+                  usbAvailable
+                    ? "#14532d"
+                    : "#1e293b",
+
+                color:
+                  "#ffffff",
+
+                cursor:
+                  usbAvailable
+                    ? "pointer"
+                    : "not-allowed",
+
+                fontWeight: 800,
+
+                marginBottom: 12,
+
+                opacity:
+                  usbAvailable
+                    ? 1
+                    : 0.65,
+              }}
+            >
+              🔐 Continue with FINORA USB
+            </button>
+
+            <div
+              style={{
+                textAlign: "center",
+
+                fontSize: 11,
+
+                color: "#64748b",
+
+                marginBottom: 14,
+              }}
+            >
+              USB required • Owner authentication
+            </div>
+
+            {/* ==============================================
+                NORMAL LOGIN
+                ============================================== */}
+
+            <button
+              type="button"
+
+              onClick={
+                handleOpenNormalLogin
+              }
+
+              disabled={
+                loginBusy
+              }
+
+              style={{
+                width: "100%",
+
+                padding: "13px 14px",
+
+                borderRadius: 10,
+
+                border:
+                  "1px solid #475569",
+
+                background:
+                  "#1e293b",
+
+                color:
+                  "#ffffff",
+
+                cursor:
+                  "pointer",
+
+                fontWeight: 800,
+
+                marginBottom: 12,
+              }}
+            >
+              👤 Continue with Normal Login
+            </button>
+
+            <div
+              style={{
+                textAlign: "center",
+
+                fontSize: 11,
+
+                color: "#64748b",
+              }}
+            >
+              USB not required • Local storage
+            </div>
+
+            {error && (
+
+              <p
+                role="alert"
+
+                style={{
+                  color:
+                    "#f87171",
+
+                  fontSize: 13,
+
+                  lineHeight: 1.5,
+
+                  marginTop: 14,
+
+                  marginBottom: 0,
+
+                  textAlign: "center",
+                }}
+              >
+                {error}
+              </p>
+
+            )}
+
+          </>
+
+        )}
+
+        {/* ==================================================
+            USB LOGIN FORM
+            ================================================== */}
+
+        {!usbChecking &&
+          loginMode === "usb" && (
 
           <>
 
             <div
               style={{
-                marginBottom: 16,
+                padding: 12,
 
-                fontSize: 13,
+                marginBottom: 14,
 
-                color: "#cbd5e1",
+                borderRadius: 10,
 
-                fontWeight: 600,
+                background:
+                  "rgba(22,101,52,.18)",
+
+                border:
+                  "1px solid rgba(34,197,94,.35)",
+
+                fontSize: 12,
+
+                color: "#bbf7d0",
+
+                fontWeight: 700,
               }}
             >
-              FINORA USB Owner Authentication
+              FINORA USB Owner Login
+              <div
+                style={{
+                  marginTop: 4,
+
+                  color: "#94a3b8",
+
+                  fontWeight: 500,
+                }}
+              >
+                Storage Mode: USB • FINORA Pendrive
+              </div>
             </div>
 
             <input
@@ -770,11 +1124,15 @@ export default function Login({
 
               }}
 
-              placeholder="User ID"
+              placeholder="USB Owner ID"
 
               autoComplete="username"
 
               autoFocus
+
+              disabled={
+                loginBusy
+              }
 
               style={
                 inputStyle
@@ -798,11 +1156,15 @@ export default function Login({
 
               }}
 
-              placeholder="Password"
+              placeholder="USB Owner Password"
 
               type="password"
 
               autoComplete="current-password"
+
+              disabled={
+                loginBusy
+              }
 
               onKeyDown={(
                 event,
@@ -829,18 +1191,9 @@ export default function Login({
               <p
                 role="alert"
 
-                style={{
-                  color:
-                    "#f87171",
-
-                  fontSize: 13,
-
-                  lineHeight: 1.5,
-
-                  marginTop: 12,
-
-                  marginBottom: 0,
-                }}
+                style={
+                  errorStyle
+                }
               >
                 {error}
               </p>
@@ -854,64 +1207,35 @@ export default function Login({
                 handleUsbLogin
               }
 
-              style={{
-                width: "100%",
+              disabled={
+                loginBusy
+              }
 
-                padding: "12px",
-
-                marginTop: 16,
-
-                borderRadius: 9,
-
-                border: "none",
-
-                background:
-                  "#2563eb",
-
-                color:
-                  "#ffffff",
-
-                cursor:
-                  "pointer",
-
-                fontWeight: 700,
-              }}
+              style={
+                primaryButtonStyle
+              }
             >
-              Login
+              {loginBusy
+                ? "Authenticating..."
+                : "Login to FINORA USB"}
             </button>
 
             <button
               type="button"
 
               onClick={
-                handleBackFromUsbLogin
+                handleBackToChooser
               }
 
-              style={{
-                width: "100%",
+              disabled={
+                loginBusy
+              }
 
-                padding: "10px",
-
-                marginTop: 10,
-
-                borderRadius: 9,
-
-                border:
-                  "1px solid #334155",
-
-                background:
-                  "transparent",
-
-                color:
-                  "#94a3b8",
-
-                cursor:
-                  "pointer",
-
-                fontWeight: 600,
-              }}
+              style={
+                secondaryButtonStyle
+              }
             >
-              ← Back
+              ← Back to Login Options
             </button>
 
           </>
@@ -919,57 +1243,47 @@ export default function Login({
         )}
 
         {/* ==================================================
-            NORMAL ACCOUNT LOGIN
+            NORMAL LOGIN FORM
             ================================================== */}
 
-        {!usbAvailable && !usbChecking && (
+        {!usbChecking &&
+          loginMode === "normal" && (
 
           <>
 
             <div
               style={{
-                display: "flex",
+                padding: 12,
 
-                alignItems: "center",
+                marginBottom: 14,
 
-                gap: 10,
+                borderRadius: 10,
 
-                marginBottom: 18,
+                background:
+                  "#0f172a",
 
-                color: "#64748b",
+                border:
+                  "1px solid #334155",
 
-                fontSize: 11,
+                fontSize: 12,
+
+                color: "#cbd5e1",
 
                 fontWeight: 700,
               }}
             >
-
+              Normal Account Login
               <div
                 style={{
-                  flex: 1,
+                  marginTop: 4,
 
-                  height: 1,
+                  color: "#64748b",
 
-                  background:
-                    "#334155",
+                  fontWeight: 500,
                 }}
-              />
-
-              <span>
-                ACCOUNT LOGIN
-              </span>
-
-              <div
-                style={{
-                  flex: 1,
-
-                  height: 1,
-
-                  background:
-                    "#334155",
-                }}
-              />
-
+              >
+                Storage Mode: LOCAL • USB not required
+              </div>
             </div>
 
             <input
@@ -992,6 +1306,12 @@ export default function Login({
               placeholder="User ID"
 
               autoComplete="username"
+
+              autoFocus
+
+              disabled={
+                loginBusy
+              }
 
               style={
                 inputStyle
@@ -1021,6 +1341,10 @@ export default function Login({
 
               autoComplete="current-password"
 
+              disabled={
+                loginBusy
+              }
+
               onKeyDown={(
                 event,
               ) => {
@@ -1030,7 +1354,7 @@ export default function Login({
                   "Enter"
                 ) {
 
-                  handleLogin();
+                  handleNormalLogin();
 
                 }
 
@@ -1046,18 +1370,9 @@ export default function Login({
               <p
                 role="alert"
 
-                style={{
-                  color:
-                    "#f87171",
-
-                  fontSize: 13,
-
-                  lineHeight: 1.5,
-
-                  marginTop: 12,
-
-                  marginBottom: 0,
-                }}
+                style={
+                  errorStyle
+                }
               >
                 {error}
               </p>
@@ -1068,33 +1383,38 @@ export default function Login({
               type="button"
 
               onClick={
-                handleLogin
+                handleNormalLogin
               }
 
-              style={{
-                width: "100%",
+              disabled={
+                loginBusy
+              }
 
-                padding: "12px",
-
-                marginTop: 16,
-
-                borderRadius: 9,
-
-                border: "none",
-
-                background:
-                  "#2563eb",
-
-                color:
-                  "#ffffff",
-
-                cursor:
-                  "pointer",
-
-                fontWeight: 700,
-              }}
+              style={
+                primaryButtonStyle
+              }
             >
-              Login
+              {loginBusy
+                ? "Authenticating..."
+                : "Login"}
+            </button>
+
+            <button
+              type="button"
+
+              onClick={
+                handleBackToChooser
+              }
+
+              disabled={
+                loginBusy
+              }
+
+              style={
+                secondaryButtonStyle
+              }
+            >
+              ← Back to Login Options
             </button>
 
           </>
@@ -1102,33 +1422,11 @@ export default function Login({
         )}
 
         {/* ==================================================
-            INITIAL CHECK STATE
+            DEVELOPMENT ACCOUNT
             ================================================== */}
 
-        {usbChecking && (
-
-          <div
-            style={{
-              fontSize: 12,
-
-              color: "#64748b",
-
-              textAlign: "center",
-
-              paddingTop: 4,
-            }}
-          >
-            FINORA login services are starting...
-          </div>
-
-        )}
-
-        {/* ==================================================
-            DEFAULT DEVELOPMENT ACCOUNT
-            ================================================== */}
-
-        {!usbAvailable &&
-          !usbChecking && (
+        {!usbChecking &&
+          loginMode !== "usb" && (
 
           <p
             style={{
@@ -1141,6 +1439,8 @@ export default function Login({
               opacity: 0.6,
 
               lineHeight: 1.5,
+
+              textAlign: "center",
             }}
           >
             Default:
@@ -1158,7 +1458,7 @@ export default function Login({
 }
 
 // ============================================================
-// INPUT STYLE
+// SHARED INPUT STYLE
 // ============================================================
 
 const inputStyle:
@@ -1186,6 +1486,84 @@ const inputStyle:
 
   outline:
     "none",
+};
+
+// ============================================================
+// SHARED ERROR STYLE
+// ============================================================
+
+const errorStyle:
+  CSSProperties = {
+
+  color:
+    "#f87171",
+
+  fontSize: 13,
+
+  lineHeight: 1.5,
+
+  marginTop: 12,
+
+  marginBottom: 0,
+};
+
+// ============================================================
+// PRIMARY BUTTON STYLE
+// ============================================================
+
+const primaryButtonStyle:
+  CSSProperties = {
+
+  width: "100%",
+
+  padding: "12px",
+
+  marginTop: 16,
+
+  borderRadius: 9,
+
+  border: "none",
+
+  background:
+    "#2563eb",
+
+  color:
+    "#ffffff",
+
+  cursor:
+    "pointer",
+
+  fontWeight: 700,
+};
+
+// ============================================================
+// SECONDARY BUTTON STYLE
+// ============================================================
+
+const secondaryButtonStyle:
+  CSSProperties = {
+
+  width: "100%",
+
+  padding: "10px",
+
+  marginTop: 10,
+
+  borderRadius: 9,
+
+  border:
+    "1px solid #334155",
+
+  background:
+    "transparent",
+
+  color:
+    "#94a3b8",
+
+  cursor:
+    "pointer",
+
+  fontWeight: 600,
 };
 
 // ============================================================

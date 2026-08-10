@@ -309,6 +309,109 @@ export class StorageManager {
     }
 
 
+    // --------------------------------------------------------
+    // USB READINESS GATE
+    //
+    // USBStorageAdapter.initialize() intentionally performs
+    // its first status refresh in the background so application
+    // startup is not blocked.
+    //
+    // CustomerDepartment, however, may immediately hydrate
+    // Customer data after selectStorageMode() completes.
+    //
+    // Without this readiness gate:
+    //
+    //   USB initialize()
+    //        ↓
+    //   Customer getAll()
+    //        ↓
+    //   USB root detection still running
+    //        ↓
+    //   "FINORA Pendrive is disconnected"
+    //
+    // Therefore USB selection waits briefly for the adapter to
+    // report READY before exposing the selected mode to the
+    // rest of the application.
+    //
+    // This does NOT introduce a LOCAL fallback.
+    // If USB is genuinely disconnected, the selection fails.
+    // --------------------------------------------------------
+
+    if (
+      storageMode ===
+      StorageMode.USB
+    ) {
+
+      const maxAttempts =
+        5;
+
+      const retryDelayMs =
+        150;
+
+      let lastStatus:
+        StorageStatus | undefined;
+
+
+      for (
+        let attempt = 0;
+        attempt < maxAttempts;
+        attempt += 1
+      ) {
+
+        lastStatus =
+          await adapter.getStatus();
+
+
+        if (
+          lastStatus.availability ===
+          StorageAvailability.READY
+        ) {
+
+          break;
+        }
+
+
+        if (
+          attempt <
+          maxAttempts - 1
+        ) {
+
+          await new Promise<void>(
+            (resolve) => {
+
+              window.setTimeout(
+                resolve,
+                retryDelayMs,
+              );
+
+            },
+          );
+
+        }
+
+      }
+
+
+      if (
+        !lastStatus ||
+        lastStatus.availability !==
+        StorageAvailability.READY
+      ) {
+
+        return {
+
+          success:
+            false,
+
+          error:
+            lastStatus?.message ??
+            "FINORA Pendrive is not ready.",
+        };
+      }
+
+    }
+
+
     this.configuration =
       nextConfiguration;
 
