@@ -8,6 +8,7 @@
 // - Persist CustomerProfile records through StorageManager
 // - Keep CustomerProfile model unchanged
 // - Use FINORA customerId as persistent storage identity
+// - Explicitly persist CUSTOMER entity identity
 // - Keep storage implementation outside Customer domain logic
 // - Prepare Customer persistence for LOCAL / USB / CLOUD
 //
@@ -20,10 +21,9 @@
 // - No Customer business calculations.
 // - Storage access goes only through StorageManager.
 //
-// VERSION : 2.0
+// VERSION : 2.1
 // STATUS  : Production Foundation
 // ============================================================
-
 
 // ============================================================
 // IMPORTS
@@ -47,7 +47,6 @@ import type {
   RepositoryWriteOptions,
 } from "../repository.types";
 
-
 // ============================================================
 // CONSTANTS
 // ============================================================
@@ -55,25 +54,42 @@ import type {
 const CUSTOMER_ENTITY =
   "CUSTOMER";
 
+// ============================================================
+// CUSTOMER REPOSITORY QUERY
+//
+// The Customer Repository owns the entity value.
+//
+// Callers only provide Customer-specific query fields.
+// ============================================================
+
+type CustomerRepositoryQuery =
+  Omit<
+    RepositoryQuery,
+    "entity"
+  >;
 
 // ============================================================
 // STORAGE RECORD
 //
-// StorageManager requires a stable top-level string ID.
-//
-// Customer business/UI code continues using:
+// Customer domain/UI code continues using:
 //
 // customer.identity.customerId
 //
-// The top-level `id` exists only inside the storage layer.
+// StorageManager additionally requires:
+//
+// id
+// entity
+//
+// These are storage-layer fields.
 // ============================================================
 
 interface CustomerStorageRecord
   extends CustomerProfile {
 
   id: string;
-}
 
+  entity: string;
+}
 
 // ============================================================
 // STORAGE RECORD BUILDER
@@ -86,18 +102,33 @@ function toStorageRecord(
   const customerId =
     customer.identity.customerId;
 
-
   return {
+
     ...customer,
+
+    // --------------------------------------------------------
+    // STORAGE ID
+    // --------------------------------------------------------
 
     id:
       customerId,
+
+    // --------------------------------------------------------
+    // STORAGE ENTITY
+    //
+    // Required by the FINORA StorageManager / USB storage
+    // contract.
+    // --------------------------------------------------------
+
+    entity:
+      CUSTOMER_ENTITY,
   };
 }
 
-
 // ============================================================
 // CUSTOMER RECORD MAPPER
+//
+// Remove storage-only fields before returning CustomerProfile.
 // ============================================================
 
 function fromStorageRecord(
@@ -106,23 +137,29 @@ function fromStorageRecord(
 
   const {
     id: _storageId,
+    entity: _storageEntity,
     ...customer
   } = record;
-
 
   return customer;
 }
 
-
 // ============================================================
 // QUERY BUILDER
+//
+// CustomerRepository automatically applies:
+//
+// entity: "CUSTOMER"
+//
+// Callers do not need to provide the entity.
 // ============================================================
 
 function buildCustomerQuery(
-  query?: Partial<RepositoryQuery>,
+  query?: CustomerRepositoryQuery,
 ): StorageQuery {
 
   return {
+
     entity:
       CUSTOMER_ENTITY,
 
@@ -143,35 +180,37 @@ function buildCustomerQuery(
   };
 }
 
-
 // ============================================================
 // REPOSITORY
 // ============================================================
 
 export class CustomerRepository {
 
-  // ==========================================================
-  // GET ALL
-  // ==========================================================
+// ==========================================================
+// GET ALL
+// ==========================================================
 
   async getAll(
-    query?: Partial<RepositoryQuery>,
+    query?: CustomerRepositoryQuery,
   ): Promise<
     StorageResult<CustomerProfile[]>
   > {
 
     const result =
-      await storageManager.getAll<CustomerStorageRecord>(
+      await storageManager.getAll<
+        CustomerStorageRecord
+      >(
         buildCustomerQuery(
           query,
         ),
       );
 
-
     if (!result.success) {
 
       return {
-        success: false,
+
+        success:
+          false,
 
         error:
           result.error ??
@@ -179,13 +218,13 @@ export class CustomerRepository {
       };
     }
 
-
     const records =
       result.data ?? [];
 
-
     return {
-      success: true,
+
+      success:
+        true,
 
       data:
         records.map(
@@ -194,44 +233,48 @@ export class CustomerRepository {
     };
   }
 
-
-  // ==========================================================
-  // FIND BY ID
-  // ==========================================================
+// ==========================================================
+// FIND BY ID
+// ==========================================================
 
   async findById(
     customerId: string,
   ): Promise<
-    StorageResult<CustomerProfile | undefined>
+    StorageResult<
+      CustomerProfile | undefined
+    >
   > {
 
     if (!customerId) {
 
       return {
-        success: false,
+
+        success:
+          false,
 
         error:
           "Customer ID is required.",
       };
     }
 
-
     const result =
-      await storageManager.get<CustomerStorageRecord>(
-        {
-          entity:
-            CUSTOMER_ENTITY,
+      await storageManager.get<
+        CustomerStorageRecord
+      >({
 
-          id:
-            customerId,
-        },
-      );
+        entity:
+          CUSTOMER_ENTITY,
 
+        id:
+          customerId,
+      });
 
     if (!result.success) {
 
       return {
-        success: false,
+
+        success:
+          false,
 
         error:
           result.error ??
@@ -239,20 +282,22 @@ export class CustomerRepository {
       };
     }
 
-
     if (!result.data) {
 
       return {
-        success: true,
+
+        success:
+          true,
 
         data:
           undefined,
       };
     }
 
-
     return {
-      success: true,
+
+      success:
+        true,
 
       data:
         fromStorageRecord(
@@ -261,10 +306,9 @@ export class CustomerRepository {
     };
   }
 
-
-  // ==========================================================
-  // SAVE
-  // ==========================================================
+// ==========================================================
+// SAVE
+// ==========================================================
 
   async save(
     customer: CustomerProfile,
@@ -276,35 +320,37 @@ export class CustomerRepository {
     const customerId =
       customer.identity.customerId;
 
-
     if (!customerId) {
 
       return {
-        success: false,
+
+        success:
+          false,
 
         error:
           "Customer ID is required before saving a customer.",
       };
     }
 
-
     const storageRecord =
       toStorageRecord(
         customer,
       );
 
-
     const result =
-      await storageManager.save<CustomerStorageRecord>(
+      await storageManager.save<
+        CustomerStorageRecord
+      >(
         storageRecord,
         options,
       );
 
-
     if (!result.success) {
 
       return {
-        success: false,
+
+        success:
+          false,
 
         error:
           result.error ??
@@ -312,19 +358,19 @@ export class CustomerRepository {
       };
     }
 
-
     return {
-      success: true,
+
+      success:
+        true,
 
       data:
         customer,
     };
   }
 
-
-  // ==========================================================
-  // UPDATE
-  // ==========================================================
+// ==========================================================
+// UPDATE
+// ==========================================================
 
   async update(
     customer: CustomerProfile,
@@ -336,35 +382,37 @@ export class CustomerRepository {
     const customerId =
       customer.identity.customerId;
 
-
     if (!customerId) {
 
       return {
-        success: false,
+
+        success:
+          false,
 
         error:
           "Customer ID is required before updating a customer.",
       };
     }
 
-
     const storageRecord =
       toStorageRecord(
         customer,
       );
 
-
     const result =
-      await storageManager.update<CustomerStorageRecord>(
+      await storageManager.update<
+        CustomerStorageRecord
+      >(
         storageRecord,
         options,
       );
 
-
     if (!result.success) {
 
       return {
-        success: false,
+
+        success:
+          false,
 
         error:
           result.error ??
@@ -372,19 +420,19 @@ export class CustomerRepository {
       };
     }
 
-
     return {
-      success: true,
+
+      success:
+        true,
 
       data:
         customer,
     };
   }
 
-
-  // ==========================================================
-  // DELETE
-  // ==========================================================
+// ==========================================================
+// DELETE
+// ==========================================================
 
   async delete(
     customerId: string,
@@ -395,30 +443,31 @@ export class CustomerRepository {
     if (!customerId) {
 
       return {
-        success: false,
+
+        success:
+          false,
 
         error:
           "Customer ID is required before deleting a customer.",
       };
     }
 
-
     const result =
-      await storageManager.delete(
-        {
-          entity:
-            CUSTOMER_ENTITY,
+      await storageManager.delete({
 
-          id:
-            customerId,
-        },
-      );
+        entity:
+          CUSTOMER_ENTITY,
 
+        id:
+          customerId,
+      });
 
     if (!result.success) {
 
       return {
-        success: false,
+
+        success:
+          false,
 
         error:
           result.error ??
@@ -426,22 +475,21 @@ export class CustomerRepository {
       };
     }
 
-
     return {
-      success: true,
+
+      success:
+        true,
     };
   }
 
-
-  // ==========================================================
-  // REPLACE ALL
-  //
-  // Empty arrays are valid.
-  //
-  // This deliberately calls StorageManager even when the
-  // supplied Customer list is empty so the storage state is
-  // truly replaced by an empty collection.
-  // ==========================================================
+// ==========================================================
+// REPLACE ALL
+//
+// Empty arrays are valid.
+//
+// This intentionally calls StorageManager even when the
+// Customer collection is empty.
+// ==========================================================
 
   async replaceAll(
     customers: CustomerProfile[],
@@ -455,18 +503,20 @@ export class CustomerRepository {
         toStorageRecord,
       );
 
-
     const result =
-      await storageManager.replaceAll(
+      await storageManager.replaceAll<
+        CustomerStorageRecord
+      >(
         records,
         options,
       );
 
-
     if (!result.success) {
 
       return {
-        success: false,
+
+        success:
+          false,
 
         error:
           result.error ??
@@ -474,16 +524,16 @@ export class CustomerRepository {
       };
     }
 
-
     return {
-      success: true,
+
+      success:
+        true,
     };
   }
 
-
-  // ==========================================================
-  // EXISTS
-  // ==========================================================
+// ==========================================================
+// EXISTS
+// ==========================================================
 
   async exists(
     customerId: string,
@@ -494,12 +544,10 @@ export class CustomerRepository {
       return false;
     }
 
-
     const result =
       await this.findById(
         customerId,
       );
-
 
     return (
       result.success &&
@@ -508,14 +556,12 @@ export class CustomerRepository {
   }
 }
 
-
 // ============================================================
 // SINGLETON
 // ============================================================
 
 export const customerRepository =
   new CustomerRepository();
-
 
 // ============================================================
 // END

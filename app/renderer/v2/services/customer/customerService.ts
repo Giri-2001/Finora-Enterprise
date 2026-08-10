@@ -5,7 +5,7 @@
 //
 // MODULE  : Customer
 // LAYER   : Service
-// VERSION : 2.0
+// VERSION : 2.1
 // STATUS  : Production
 //
 // RESPONSIBILITY:
@@ -25,7 +25,6 @@
 // - No Loan / Collection / Payment logic.
 //
 // ============================================================
-
 
 // ============================================================
 // IMPORTS
@@ -48,6 +47,31 @@ import type {
   StorageResult,
 } from "../../storage/storage.types";
 
+// ============================================================
+// CUSTOMER SERVICE QUERY
+//
+// CustomerRepository owns:
+//
+// entity: "CUSTOMER"
+//
+// Therefore the service does not require callers to provide
+// the entity field.
+//
+// The remaining RepositoryQuery fields remain available for:
+//
+// - id
+// - ownerId
+// - demoId
+// - limit
+// - offset
+//
+// ============================================================
+
+export type CustomerServiceQuery =
+  Omit<
+    RepositoryQuery,
+    "entity"
+  >;
 
 // ============================================================
 // CUSTOMER SERVICE
@@ -55,12 +79,12 @@ import type {
 
 export class CustomerService {
 
-  // ==========================================================
-  // GET ALL CUSTOMERS
-  // ==========================================================
+// ==========================================================
+// GET ALL CUSTOMERS
+// ==========================================================
 
   async getAll(
-    query?: Partial<RepositoryQuery>,
+    query?: CustomerServiceQuery,
   ): Promise<
     StorageResult<CustomerProfile[]>
   > {
@@ -70,15 +94,16 @@ export class CustomerService {
     );
   }
 
-
-  // ==========================================================
-  // GET CUSTOMER BY ID
-  // ==========================================================
+// ==========================================================
+// GET CUSTOMER BY ID
+// ==========================================================
 
   async getById(
     customerId: string,
   ): Promise<
-    StorageResult<CustomerProfile | undefined>
+    StorageResult<
+      CustomerProfile | undefined
+    >
   > {
 
     return customerRepository.findById(
@@ -86,10 +111,9 @@ export class CustomerService {
     );
   }
 
-
-  // ==========================================================
-  // CREATE CUSTOMER
-  // ==========================================================
+// ==========================================================
+// CREATE CUSTOMER
+// ==========================================================
 
   async create(
     customer: CustomerProfile,
@@ -104,10 +128,9 @@ export class CustomerService {
     );
   }
 
-
-  // ==========================================================
-  // UPDATE CUSTOMER
-  // ==========================================================
+// ==========================================================
+// UPDATE CUSTOMER
+// ==========================================================
 
   async update(
     customer: CustomerProfile,
@@ -122,10 +145,9 @@ export class CustomerService {
     );
   }
 
-
-  // ==========================================================
-  // DELETE CUSTOMER
-  // ==========================================================
+// ==========================================================
+// DELETE CUSTOMER
+// ==========================================================
 
   async delete(
     customerId: string,
@@ -138,10 +160,9 @@ export class CustomerService {
     );
   }
 
-
-  // ==========================================================
-  // REPLACE ALL CUSTOMERS
-  // ==========================================================
+// ==========================================================
+// REPLACE ALL CUSTOMERS
+// ==========================================================
 
   async replaceAll(
     customers: CustomerProfile[],
@@ -156,10 +177,9 @@ export class CustomerService {
     );
   }
 
-
-  // ==========================================================
-  // CUSTOMER EXISTS
-  // ==========================================================
+// ==========================================================
+// CUSTOMER EXISTS
+// ==========================================================
 
   async exists(
     customerId: string,
@@ -171,14 +191,12 @@ export class CustomerService {
   }
 }
 
-
 // ============================================================
 // SINGLETON
 // ============================================================
 
 export const customerService =
   new CustomerService();
-
 
 // ============================================================
 // END

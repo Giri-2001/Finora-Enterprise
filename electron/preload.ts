@@ -9,17 +9,21 @@
 // - Keep contextIsolation enabled
 // - Keep Node.js APIs away from the renderer
 // - Bridge V2 USB storage operations through IPC
+// - Expose the dedicated FINORA data reset operation
 //
 // IMPORTANT:
 //
 // - No arbitrary filesystem API is exposed.
 // - Renderer receives only FINORA-specific operations.
 // - Actual filesystem access remains inside Electron main.
-// - This bridge is for FINORA V2 storage only.
+// - RESET FINORA DATA does NOT format the USB device.
+// - RESET FINORA DATA does NOT delete unrelated USB files.
+// - The actual reset implementation remains inside Electron main.
 //
 // VERSION : 2.0
 // STATUS  : Production Foundation
 // ============================================================
+
 
 // ============================================================
 // IMPORTS
@@ -36,60 +40,186 @@ import {
 // ============================================================
 
 interface StorageQuery {
+
   entity: string;
+
   id?: string;
+
   ownerId?: string;
+
   demoId?: string;
+
   limit?: number;
+
   offset?: number;
 }
 
+
 interface StorageWriteOptions {
+
   ownerId?: string;
+
   demoId?: string;
 }
 
+
+interface StorageResult<T = unknown> {
+
+  success: boolean;
+
+  data?: T;
+
+  error?: string;
+}
+
+
 interface UsbStorageStatus {
+
   availability: string;
+
   storageId?: string;
+
   message?: string;
 }
 
+
 interface UsbStorageBridge {
-  isAvailable: () => Promise<boolean>;
 
-  getStatus: () => Promise<UsbStorageStatus>;
+  // ----------------------------------------------------------
+  // AVAILABILITY
+  // ----------------------------------------------------------
 
-  get: (
-    query: StorageQuery,
-  ) => Promise<unknown>;
+  isAvailable:
+    () => Promise<boolean>;
 
-  getAll: (
-    query: StorageQuery,
-  ) => Promise<unknown>;
 
-  save: (
-    record: unknown,
-    options?: StorageWriteOptions,
-  ) => Promise<unknown>;
+  // ----------------------------------------------------------
+  // STATUS
+  // ----------------------------------------------------------
 
-  update: (
-    record: unknown,
-    options?: StorageWriteOptions,
-  ) => Promise<unknown>;
+  getStatus:
+    () => Promise<UsbStorageStatus>;
 
-  delete: (
-    query: StorageQuery,
-  ) => Promise<unknown>;
 
-  replaceAll: (
-    records: unknown[],
-    options?: StorageWriteOptions,
-  ) => Promise<unknown>;
+  // ----------------------------------------------------------
+  // GET
+  // ----------------------------------------------------------
 
-  clear: (
-    query: StorageQuery,
-  ) => Promise<unknown>;
+  get:
+    <T = unknown>(
+      query: StorageQuery,
+    ) =>
+      Promise<
+        StorageResult<
+          T | undefined
+        >
+      >;
+
+
+  // ----------------------------------------------------------
+  // GET ALL
+  // ----------------------------------------------------------
+
+  getAll:
+    <T = unknown>(
+      query: StorageQuery,
+    ) =>
+      Promise<
+        StorageResult<T[]>
+      >;
+
+
+  // ----------------------------------------------------------
+  // SAVE
+  // ----------------------------------------------------------
+
+  save:
+    <T = unknown>(
+      record: unknown,
+
+      options?:
+        StorageWriteOptions,
+    ) =>
+      Promise<
+        StorageResult<T>
+      >;
+
+
+  // ----------------------------------------------------------
+  // UPDATE
+  // ----------------------------------------------------------
+
+  update:
+    <T = unknown>(
+      record: unknown,
+
+      options?:
+        StorageWriteOptions,
+    ) =>
+      Promise<
+        StorageResult<T>
+      >;
+
+
+  // ----------------------------------------------------------
+  // DELETE
+  // ----------------------------------------------------------
+
+  delete:
+    (
+      query: StorageQuery,
+    ) =>
+      Promise<
+        StorageResult<void>
+      >;
+
+
+  // ----------------------------------------------------------
+  // REPLACE ALL
+  // ----------------------------------------------------------
+
+  replaceAll:
+    (
+      records: unknown[],
+
+      options?:
+        StorageWriteOptions,
+    ) =>
+      Promise<
+        StorageResult<void>
+      >;
+
+
+  // ----------------------------------------------------------
+  // CLEAR
+  // ----------------------------------------------------------
+
+  clear:
+    (
+      query: StorageQuery,
+    ) =>
+      Promise<
+        StorageResult<void>
+      >;
+
+
+  // ----------------------------------------------------------
+  // RESET FINORA DATA
+  //
+  // IMPORTANT:
+  //
+  // This invokes ONLY the dedicated FINORA reset IPC channel.
+  //
+  // No filesystem path is accepted from the renderer.
+  // No drive letter is accepted from the renderer.
+  // No arbitrary delete operation is exposed.
+  // ----------------------------------------------------------
+
+  resetFinoraData:
+    () =>
+      Promise<
+        StorageResult<void>
+      >;
 }
 
 
@@ -98,23 +228,37 @@ interface UsbStorageBridge {
 // ============================================================
 
 const USB_CHANNELS = {
-  IS_AVAILABLE: "finora:usb:is-available",
 
-  GET_STATUS: "finora:usb:get-status",
+  IS_AVAILABLE:
+    "finora:usb:is-available",
 
-  GET: "finora:usb:get",
+  GET_STATUS:
+    "finora:usb:get-status",
 
-  GET_ALL: "finora:usb:get-all",
+  GET:
+    "finora:usb:get",
 
-  SAVE: "finora:usb:save",
+  GET_ALL:
+    "finora:usb:get-all",
 
-  UPDATE: "finora:usb:update",
+  SAVE:
+    "finora:usb:save",
 
-  DELETE: "finora:usb:delete",
+  UPDATE:
+    "finora:usb:update",
 
-  REPLACE_ALL: "finora:usb:replace-all",
+  DELETE:
+    "finora:usb:delete",
 
-  CLEAR: "finora:usb:clear",
+  REPLACE_ALL:
+    "finora:usb:replace-all",
+
+  CLEAR:
+    "finora:usb:clear",
+
+  RESET_FINORA_DATA:
+    "finora:usb:reset-finora-data",
+
 } as const;
 
 
@@ -122,123 +266,185 @@ const USB_CHANNELS = {
 // SECURE USB BRIDGE
 // ============================================================
 
-const usbBridge: UsbStorageBridge = {
+const usbBridge:
+  UsbStorageBridge = {
 
-  // ----------------------------------------------------------
+  // ==========================================================
   // AVAILABILITY
-  // ----------------------------------------------------------
+  // ==========================================================
 
-  isAvailable: () =>
-    ipcRenderer.invoke(
-      USB_CHANNELS.IS_AVAILABLE,
-    ),
+  isAvailable:
+    () =>
+      ipcRenderer.invoke(
+        USB_CHANNELS.IS_AVAILABLE,
+      ),
 
 
-  // ----------------------------------------------------------
+  // ==========================================================
   // STATUS
-  // ----------------------------------------------------------
+  // ==========================================================
 
-  getStatus: () =>
-    ipcRenderer.invoke(
-      USB_CHANNELS.GET_STATUS,
-    ),
+  getStatus:
+    () =>
+      ipcRenderer.invoke(
+        USB_CHANNELS.GET_STATUS,
+      ),
 
 
-  // ----------------------------------------------------------
+  // ==========================================================
   // GET
-  // ----------------------------------------------------------
+  // ==========================================================
 
-  get: (
-    query: StorageQuery,
-  ) =>
-    ipcRenderer.invoke(
-      USB_CHANNELS.GET,
-      query,
-    ),
+  get:
+    <T = unknown>(
+      query:
+        StorageQuery,
+    ) =>
+      ipcRenderer.invoke(
+        USB_CHANNELS.GET,
+        query,
+      ) as Promise<
+        StorageResult<
+          T | undefined
+        >
+      >,
 
 
-  // ----------------------------------------------------------
+  // ==========================================================
   // GET ALL
-  // ----------------------------------------------------------
+  // ==========================================================
 
-  getAll: (
-    query: StorageQuery,
-  ) =>
-    ipcRenderer.invoke(
-      USB_CHANNELS.GET_ALL,
-      query,
-    ),
+  getAll:
+    <T = unknown>(
+      query:
+        StorageQuery,
+    ) =>
+      ipcRenderer.invoke(
+        USB_CHANNELS.GET_ALL,
+        query,
+      ) as Promise<
+        StorageResult<T[]>
+      >,
 
 
-  // ----------------------------------------------------------
+  // ==========================================================
   // SAVE
-  // ----------------------------------------------------------
+  // ==========================================================
 
-  save: (
-    record: unknown,
-    options?: StorageWriteOptions,
-  ) =>
-    ipcRenderer.invoke(
-      USB_CHANNELS.SAVE,
-      record,
-      options,
-    ),
+  save:
+    <T = unknown>(
+      record:
+        unknown,
+
+      options?:
+        StorageWriteOptions,
+    ) =>
+      ipcRenderer.invoke(
+        USB_CHANNELS.SAVE,
+        record,
+        options,
+      ) as Promise<
+        StorageResult<T>
+      >,
 
 
-  // ----------------------------------------------------------
+  // ==========================================================
   // UPDATE
-  // ----------------------------------------------------------
+  // ==========================================================
 
-  update: (
-    record: unknown,
-    options?: StorageWriteOptions,
-  ) =>
-    ipcRenderer.invoke(
-      USB_CHANNELS.UPDATE,
-      record,
-      options,
-    ),
+  update:
+    <T = unknown>(
+      record:
+        unknown,
+
+      options?:
+        StorageWriteOptions,
+    ) =>
+      ipcRenderer.invoke(
+        USB_CHANNELS.UPDATE,
+        record,
+        options,
+      ) as Promise<
+        StorageResult<T>
+      >,
 
 
-  // ----------------------------------------------------------
+  // ==========================================================
   // DELETE
-  // ----------------------------------------------------------
+  // ==========================================================
 
-  delete: (
-    query: StorageQuery,
-  ) =>
-    ipcRenderer.invoke(
-      USB_CHANNELS.DELETE,
-      query,
-    ),
+  delete:
+    (
+      query:
+        StorageQuery,
+    ) =>
+      ipcRenderer.invoke(
+        USB_CHANNELS.DELETE,
+        query,
+      ) as Promise<
+        StorageResult<void>
+      >,
 
 
-  // ----------------------------------------------------------
+  // ==========================================================
   // REPLACE ALL
-  // ----------------------------------------------------------
+  // ==========================================================
 
-  replaceAll: (
-    records: unknown[],
-    options?: StorageWriteOptions,
-  ) =>
-    ipcRenderer.invoke(
-      USB_CHANNELS.REPLACE_ALL,
-      records,
-      options,
-    ),
+  replaceAll:
+    (
+      records:
+        unknown[],
+
+      options?:
+        StorageWriteOptions,
+    ) =>
+      ipcRenderer.invoke(
+        USB_CHANNELS.REPLACE_ALL,
+        records,
+        options,
+      ) as Promise<
+        StorageResult<void>
+      >,
 
 
-  // ----------------------------------------------------------
+  // ==========================================================
   // CLEAR
-  // ----------------------------------------------------------
+  // ==========================================================
 
-  clear: (
-    query: StorageQuery,
-  ) =>
-    ipcRenderer.invoke(
-      USB_CHANNELS.CLEAR,
-      query,
-    ),
+  clear:
+    (
+      query:
+        StorageQuery,
+    ) =>
+      ipcRenderer.invoke(
+        USB_CHANNELS.CLEAR,
+        query,
+      ) as Promise<
+        StorageResult<void>
+      >,
+
+
+  // ==========================================================
+  // RESET FINORA DATA
+  //
+  // The renderer only requests a FINORA reset.
+  //
+  // Electron main decides:
+  //
+  // - Which removable device is valid
+  // - Which FINORA storage namespace is valid
+  // - Which file is allowed to change
+  //
+  // The renderer cannot provide a filesystem path.
+  // ==========================================================
+
+  resetFinoraData:
+    () =>
+      ipcRenderer.invoke(
+        USB_CHANNELS.RESET_FINORA_DATA,
+      ) as Promise<
+        StorageResult<void>
+      >,
 };
 
 
@@ -249,9 +455,13 @@ const usbBridge: UsbStorageBridge = {
 contextBridge.exposeInMainWorld(
   "finora",
   {
-    version: "2.0.0",
 
-    usb: usbBridge,
+    version:
+      "2.0.0",
+
+    usb:
+      usbBridge,
+
   },
 );
 

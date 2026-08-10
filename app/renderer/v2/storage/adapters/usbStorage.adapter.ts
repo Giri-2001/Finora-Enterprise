@@ -1,5 +1,6 @@
 // ============================================================
 // FINORA ENTERPRISE OS™
+//
 // V2 USB / PENDRIVE STORAGE ADAPTER
 //
 // RESPONSIBILITY:
@@ -9,6 +10,7 @@
 // - Represent connected/disconnected USB storage safely
 // - Keep Demo/Real context separate from storage mode
 // - Prepare the renderer side for secure Electron IPC
+// - Provide the FINORA-only data reset boundary
 //
 // IMPORTANT:
 //
@@ -18,6 +20,17 @@
 // - NO arbitrary path access from renderer.
 // - Actual filesystem operations are provided through the
 //   secure Electron preload bridge.
+// - FINORA reset MUST be implemented by the secure main-process
+//   bridge.
+// - Reset MUST NOT format the USB device.
+// - Reset MUST NOT delete files outside FINORA storage.
+//
+// STARTUP BEHAVIOUR:
+//
+// - USB status checking MUST NOT block application startup.
+// - initialize() establishes the adapter configuration first.
+// - Initial USB status is refreshed asynchronously.
+// - Later getStatus() / isAvailable() calls perform a fresh check.
 //
 // VERSION : 2.0
 // STATUS  : Production Foundation
@@ -45,66 +58,119 @@ import {
 // ELECTRON USB BRIDGE CONTRACT
 // ============================================================
 
-/**
- * Narrow renderer-side contract for the Electron USB bridge.
- *
- * Actual implementation:
- *
- * Renderer
- *    ↓
- * window.finora
- *    ↓
- * preload.ts
- *    ↓
- * Electron IPC
- *    ↓
- * main.ts
- *    ↓
- * USB filesystem
- *
- * This adapter does not access the filesystem directly.
- */
-
 interface FinoraUsbBridge {
 
-  isAvailable?: () => Promise<boolean>;
+  // ----------------------------------------------------------
+  // AVAILABILITY
+  // ----------------------------------------------------------
 
-  getStatus?: () => Promise<{
-    availability: StorageAvailability;
-    storageId?: string;
-    message?: string;
-  }>;
+  isAvailable?: () =>
+    Promise<boolean>;
+
+
+  // ----------------------------------------------------------
+  // STATUS
+  // ----------------------------------------------------------
+
+  getStatus?: () =>
+    Promise<{
+      availability: StorageAvailability;
+      storageId?: string;
+      message?: string;
+    }>;
+
+
+  // ----------------------------------------------------------
+  // GET
+  // ----------------------------------------------------------
 
   get?: (
     query: StorageQuery,
-  ) => Promise<StorageResult>;
+  ) =>
+    Promise<StorageResult>;
+
+
+  // ----------------------------------------------------------
+  // GET ALL
+  // ----------------------------------------------------------
 
   getAll?: (
     query: StorageQuery,
-  ) => Promise<StorageResult>;
+  ) =>
+    Promise<StorageResult>;
+
+
+  // ----------------------------------------------------------
+  // SAVE
+  // ----------------------------------------------------------
 
   save?: (
     record: unknown,
     options?: StorageWriteOptions,
-  ) => Promise<StorageResult<unknown>>;
+  ) =>
+    Promise<
+      StorageResult<unknown>
+    >;
+
+
+  // ----------------------------------------------------------
+  // UPDATE
+  // ----------------------------------------------------------
 
   update?: (
     record: unknown,
     options?: StorageWriteOptions,
-  ) => Promise<StorageResult<unknown>>;
+  ) =>
+    Promise<
+      StorageResult<unknown>
+    >;
+
+
+  // ----------------------------------------------------------
+  // DELETE
+  // ----------------------------------------------------------
 
   delete?: (
     query: StorageQuery,
-  ) => Promise<StorageResult<void>>;
+  ) =>
+    Promise<
+      StorageResult<void>
+    >;
+
+
+  // ----------------------------------------------------------
+  // REPLACE ALL
+  // ----------------------------------------------------------
 
   replaceAll?: (
     records: unknown[],
     options?: StorageWriteOptions,
-  ) => Promise<StorageResult<void>>;
+  ) =>
+    Promise<
+      StorageResult<void>
+    >;
+
+
+  // ----------------------------------------------------------
+  // CLEAR
+  // ----------------------------------------------------------
 
   clear?: (
     query: StorageQuery,
-  ) => Promise<StorageResult<void>>;
+  ) =>
+    Promise<
+      StorageResult<void>
+    >;
+
+
+  // ----------------------------------------------------------
+  // RESET FINORA DATA
+  // ----------------------------------------------------------
+
+  resetFinoraData?: () =>
+    Promise<
+      StorageResult<void>
+    >;
 }
 
 
@@ -112,7 +178,8 @@ interface FinoraUsbBridge {
 // GLOBAL BRIDGE LOOKUP
 // ============================================================
 
-function getUsbBridge(): FinoraUsbBridge | undefined {
+function getUsbBridge():
+  FinoraUsbBridge | undefined {
 
   const runtime =
     globalThis as typeof globalThis & {
@@ -136,7 +203,8 @@ export class USBStorageAdapter
   // STORAGE MODE
   // ----------------------------------------------------------
 
-  readonly mode = StorageMode.USB;
+  readonly mode =
+    StorageMode.USB;
 
 
   // ----------------------------------------------------------
@@ -144,20 +212,25 @@ export class USBStorageAdapter
   // ----------------------------------------------------------
 
   private configuration:
-    StorageConfiguration | null = null;
+    StorageConfiguration | null =
+      null;
 
 
   // ----------------------------------------------------------
   // CURRENT STATUS
   // ----------------------------------------------------------
 
-  private status: StorageStatus = {
-    mode: StorageMode.USB,
+  private status:
+    StorageStatus = {
+
+    mode:
+      StorageMode.USB,
 
     availability:
       StorageAvailability.NOT_CONFIGURED,
 
-    dataContext: DataContext.REAL,
+    dataContext:
+      DataContext.REAL,
 
     checkedAt:
       new Date().toISOString(),
@@ -167,17 +240,34 @@ export class USBStorageAdapter
   // ==========================================================
   // INITIALIZE
   // ==========================================================
+  //
+  // IMPORTANT:
+  //
+  // This method MUST NOT block application startup while waiting
+  // for USB status IPC.
+  //
+  // The configuration becomes active immediately.
+  //
+  // The initial USB status refresh runs asynchronously.
+  // ==========================================================
 
   async initialize(
-    configuration: StorageConfiguration,
-  ): Promise<StorageResult<void>> {
+    configuration:
+      StorageConfiguration,
+  ):
+    Promise<
+      StorageResult
+    > {
 
     if (
       configuration.storageMode !==
       StorageMode.USB
     ) {
+
       return {
-        success: false,
+
+        success:
+          false,
 
         error:
           "USB storage adapter requires StorageMode.USB.",
@@ -185,13 +275,26 @@ export class USBStorageAdapter
     }
 
 
+    // --------------------------------------------------------
+    // Store configuration immediately.
+    // --------------------------------------------------------
+
     this.configuration = {
       ...configuration,
     };
 
 
+    // --------------------------------------------------------
+    // Set a deterministic initial state.
+    //
+    // We do NOT claim READY until the bridge confirms that
+    // the USB storage is actually available.
+    // --------------------------------------------------------
+
     this.status = {
-      mode: StorageMode.USB,
+
+      mode:
+        StorageMode.USB,
 
       availability:
         StorageAvailability.NOT_CONFIGURED,
@@ -213,11 +316,24 @@ export class USBStorageAdapter
     };
 
 
-    await this.refreshStatus();
+    // --------------------------------------------------------
+    // NON-BLOCKING INITIAL STATUS CHECK
+    //
+    // Critical:
+    //
+    // Do NOT await this call.
+    //
+    // The application is allowed to continue mounting while
+    // USB availability is being determined.
+    // --------------------------------------------------------
+
+    void this.refreshStatus();
 
 
     return {
-      success: true,
+
+      success:
+        true,
     };
   }
 
@@ -226,13 +342,29 @@ export class USBStorageAdapter
   // AVAILABILITY
   // ==========================================================
 
-  async isAvailable(): Promise<boolean> {
+  async isAvailable():
+    Promise<boolean> {
 
     const bridge =
       getUsbBridge();
 
 
     if (!bridge?.isAvailable) {
+
+      this.status = {
+
+        ...this.status,
+
+        availability:
+          StorageAvailability.NOT_CONFIGURED,
+
+        message:
+          "FINORA USB storage bridge is not configured.",
+
+        checkedAt:
+          new Date().toISOString(),
+      };
+
       return false;
     }
 
@@ -246,10 +378,14 @@ export class USBStorageAdapter
       if (!available) {
 
         this.status = {
+
           ...this.status,
 
           availability:
             StorageAvailability.DISCONNECTED,
+
+          message:
+            "FINORA USB storage is disconnected.",
 
           checkedAt:
             new Date().toISOString(),
@@ -260,10 +396,14 @@ export class USBStorageAdapter
 
 
       this.status = {
+
         ...this.status,
 
         availability:
           StorageAvailability.READY,
+
+        message:
+          undefined,
 
         checkedAt:
           new Date().toISOString(),
@@ -272,13 +412,19 @@ export class USBStorageAdapter
 
       return true;
 
-    } catch {
+    } catch (error) {
 
       this.status = {
+
         ...this.status,
 
         availability:
           StorageAvailability.ERROR,
+
+        message:
+          error instanceof Error
+            ? error.message
+            : "Unable to determine USB storage availability.",
 
         checkedAt:
           new Date().toISOString(),
@@ -294,9 +440,11 @@ export class USBStorageAdapter
   // STATUS
   // ==========================================================
 
-  async getStatus(): Promise<StorageStatus> {
+  async getStatus():
+    Promise<StorageStatus> {
 
     await this.refreshStatus();
+
 
     return {
       ...this.status,
@@ -308,7 +456,8 @@ export class USBStorageAdapter
   // REFRESH STATUS
   // ==========================================================
 
-  private async refreshStatus(): Promise<void> {
+  private async refreshStatus():
+    Promise<void> {
 
     const bridge =
       getUsbBridge();
@@ -317,6 +466,7 @@ export class USBStorageAdapter
     if (!bridge) {
 
       this.status = {
+
         ...this.status,
 
         availability:
@@ -333,69 +483,90 @@ export class USBStorageAdapter
     }
 
 
-    if (!bridge.getStatus) {
+    // --------------------------------------------------------
+    // Preferred status API
+    // --------------------------------------------------------
 
-      const available =
-        await this.isAvailable();
+    if (bridge.getStatus) {
 
+      try {
 
-      if (!available) {
+        const result =
+          await bridge.getStatus();
+
 
         this.status = {
+
           ...this.status,
 
           availability:
-            StorageAvailability.DISCONNECTED,
+            result.availability,
+
+          storageId:
+            result.storageId ??
+            this.status.storageId,
+
+          message:
+            result.message,
 
           checkedAt:
             new Date().toISOString(),
         };
+
+        return;
+
+      } catch (error) {
+
+        this.status = {
+
+          ...this.status,
+
+          availability:
+            StorageAvailability.ERROR,
+
+          message:
+            error instanceof Error
+              ? error.message
+              : "Unable to determine USB storage status.",
+
+          checkedAt:
+            new Date().toISOString(),
+        };
+
+        return;
       }
+    }
+
+
+    // --------------------------------------------------------
+    // Fallback availability API
+    // --------------------------------------------------------
+
+    if (bridge.isAvailable) {
+
+      await this.isAvailable();
 
       return;
     }
 
 
-    try {
+    // --------------------------------------------------------
+    // No usable status API
+    // --------------------------------------------------------
 
-      const result =
-        await bridge.getStatus();
+    this.status = {
 
+      ...this.status,
 
-      this.status = {
-        ...this.status,
+      availability:
+        StorageAvailability.NOT_CONFIGURED,
 
-        availability:
-          result.availability,
+      message:
+        "FINORA USB storage status bridge is unavailable.",
 
-        storageId:
-          result.storageId ??
-          this.status.storageId,
-
-        message:
-          result.message,
-
-        checkedAt:
-          new Date().toISOString(),
-      };
-
-    } catch (error) {
-
-      this.status = {
-        ...this.status,
-
-        availability:
-          StorageAvailability.ERROR,
-
-        message:
-          error instanceof Error
-            ? error.message
-            : "Unable to determine USB storage status.",
-
-        checkedAt:
-          new Date().toISOString(),
-      };
-    }
+      checkedAt:
+        new Date().toISOString(),
+    };
   }
 
 
@@ -404,8 +575,12 @@ export class USBStorageAdapter
   // ==========================================================
 
   async get<T = unknown>(
-    query: StorageQuery,
-  ): Promise<StorageResult<T | undefined>> {
+    query:
+      StorageQuery,
+  ):
+    Promise<
+      StorageResult<T | undefined>
+    > {
 
     const bridge =
       getUsbBridge();
@@ -414,7 +589,9 @@ export class USBStorageAdapter
     if (!bridge?.get) {
 
       return {
-        success: false,
+
+        success:
+          false,
 
         error:
           "USB storage is not connected or the secure USB bridge is unavailable.",
@@ -425,17 +602,20 @@ export class USBStorageAdapter
     try {
 
       const result =
-        await bridge.get(query);
+        await bridge.get(
+          query,
+        );
 
 
-      return result as StorageResult<
-        T | undefined
-      >;
+      return result as
+        StorageResult<T | undefined>;
 
     } catch (error) {
 
       return {
-        success: false,
+
+        success:
+          false,
 
         error:
           error instanceof Error
@@ -451,8 +631,12 @@ export class USBStorageAdapter
   // ==========================================================
 
   async getAll<T = unknown>(
-    query: StorageQuery,
-  ): Promise<StorageResult<T[]>> {
+    query:
+      StorageQuery,
+  ):
+    Promise<
+      StorageResult<T[]>
+    > {
 
     const bridge =
       getUsbBridge();
@@ -461,7 +645,9 @@ export class USBStorageAdapter
     if (!bridge?.getAll) {
 
       return {
-        success: false,
+
+        success:
+          false,
 
         error:
           "USB storage is not connected or the secure USB bridge is unavailable.",
@@ -472,15 +658,20 @@ export class USBStorageAdapter
     try {
 
       const result =
-        await bridge.getAll(query);
+        await bridge.getAll(
+          query,
+        );
 
 
-      return result as StorageResult<T[]>;
+      return result as
+        StorageResult<T[]>;
 
     } catch (error) {
 
       return {
-        success: false,
+
+        success:
+          false,
 
         error:
           error instanceof Error
@@ -496,9 +687,15 @@ export class USBStorageAdapter
   // ==========================================================
 
   async save<T = unknown>(
-    record: T,
-    options?: StorageWriteOptions,
-  ): Promise<StorageResult<T>> {
+    record:
+      T,
+
+    options?:
+      StorageWriteOptions,
+  ):
+    Promise<
+      StorageResult
+    > {
 
     const bridge =
       getUsbBridge();
@@ -507,7 +704,9 @@ export class USBStorageAdapter
     if (!bridge?.save) {
 
       return {
-        success: false,
+
+        success:
+          false,
 
         error:
           "USB storage is not connected or the secure USB bridge is unavailable.",
@@ -524,12 +723,14 @@ export class USBStorageAdapter
         );
 
 
-      return result as StorageResult<T>;
+      return result;
 
     } catch (error) {
 
       return {
-        success: false,
+
+        success:
+          false,
 
         error:
           error instanceof Error
@@ -545,9 +746,15 @@ export class USBStorageAdapter
   // ==========================================================
 
   async update<T = unknown>(
-    record: T,
-    options?: StorageWriteOptions,
-  ): Promise<StorageResult<T>> {
+    record:
+      T,
+
+    options?:
+      StorageWriteOptions,
+  ):
+    Promise<
+      StorageResult
+    > {
 
     const bridge =
       getUsbBridge();
@@ -556,7 +763,9 @@ export class USBStorageAdapter
     if (!bridge?.update) {
 
       return {
-        success: false,
+
+        success:
+          false,
 
         error:
           "USB storage is not connected or the secure USB bridge is unavailable.",
@@ -573,12 +782,14 @@ export class USBStorageAdapter
         );
 
 
-      return result as StorageResult<T>;
+      return result;
 
     } catch (error) {
 
       return {
-        success: false,
+
+        success:
+          false,
 
         error:
           error instanceof Error
@@ -594,8 +805,12 @@ export class USBStorageAdapter
   // ==========================================================
 
   async delete(
-    query: StorageQuery,
-  ): Promise<StorageResult<void>> {
+    query:
+      StorageQuery,
+  ):
+    Promise<
+      StorageResult
+    > {
 
     const bridge =
       getUsbBridge();
@@ -604,7 +819,9 @@ export class USBStorageAdapter
     if (!bridge?.delete) {
 
       return {
-        success: false,
+
+        success:
+          false,
 
         error:
           "USB storage is not connected or the secure USB bridge is unavailable.",
@@ -615,15 +832,19 @@ export class USBStorageAdapter
     try {
 
       const result =
-        await bridge.delete(query);
+        await bridge.delete(
+          query,
+        );
 
 
-      return result as StorageResult<void>;
+      return result;
 
     } catch (error) {
 
       return {
-        success: false,
+
+        success:
+          false,
 
         error:
           error instanceof Error
@@ -639,9 +860,15 @@ export class USBStorageAdapter
   // ==========================================================
 
   async replaceAll<T = unknown>(
-    records: T[],
-    options?: StorageWriteOptions,
-  ): Promise<StorageResult<void>> {
+    records:
+      T[],
+
+    options?:
+      StorageWriteOptions,
+  ):
+    Promise<
+      StorageResult
+    > {
 
     const bridge =
       getUsbBridge();
@@ -650,7 +877,9 @@ export class USBStorageAdapter
     if (!bridge?.replaceAll) {
 
       return {
-        success: false,
+
+        success:
+          false,
 
         error:
           "USB storage is not connected or the secure USB bridge is unavailable.",
@@ -667,12 +896,14 @@ export class USBStorageAdapter
         );
 
 
-      return result as StorageResult<void>;
+      return result;
 
     } catch (error) {
 
       return {
-        success: false,
+
+        success:
+          false,
 
         error:
           error instanceof Error
@@ -688,8 +919,12 @@ export class USBStorageAdapter
   // ==========================================================
 
   async clear(
-    query: StorageQuery,
-  ): Promise<StorageResult<void>> {
+    query:
+      StorageQuery,
+  ):
+    Promise<
+      StorageResult
+    > {
 
     const bridge =
       getUsbBridge();
@@ -698,7 +933,9 @@ export class USBStorageAdapter
     if (!bridge?.clear) {
 
       return {
-        success: false,
+
+        success:
+          false,
 
         error:
           "USB storage is not connected or the secure USB bridge is unavailable.",
@@ -709,20 +946,74 @@ export class USBStorageAdapter
     try {
 
       const result =
-        await bridge.clear(query);
+        await bridge.clear(
+          query,
+        );
 
 
-      return result as StorageResult<void>;
+      return result;
 
     } catch (error) {
 
       return {
-        success: false,
+
+        success:
+          false,
 
         error:
           error instanceof Error
             ? error.message
             : "Unable to clear USB storage.",
+      };
+    }
+  }
+
+
+  // ==========================================================
+  // RESET FINORA DATA
+  // ==========================================================
+
+  async resetFinoraData():
+    Promise<
+      StorageResult<void>
+    > {
+
+    const bridge =
+      getUsbBridge();
+
+
+    if (!bridge?.resetFinoraData) {
+
+      return {
+
+        success:
+          false,
+
+        error:
+          "FINORA USB reset bridge is not configured yet.",
+      };
+    }
+
+
+    try {
+
+      const result =
+        await bridge.resetFinoraData();
+
+
+      return result;
+
+    } catch (error) {
+
+      return {
+
+        success:
+          false,
+
+        error:
+          error instanceof Error
+            ? error.message
+            : "Unable to reset FINORA data on USB storage.",
       };
     }
   }
@@ -735,3 +1026,8 @@ export class USBStorageAdapter
 
 export const usbStorageAdapter =
   new USBStorageAdapter();
+
+
+// ============================================================
+// END
+// ============================================================

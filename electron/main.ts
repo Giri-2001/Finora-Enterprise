@@ -11,6 +11,8 @@
 // - Provide narrow V2 USB storage IPC
 // - Keep filesystem access inside Electron main process
 // - Persist the FINORA USB storage package safely
+// - Reset FINORA-owned USB data without touching unrelated
+//   files on the user's removable storage
 //
 // IMPORTANT:
 //
@@ -20,6 +22,8 @@
 // - USB operations are limited to detected removable storage.
 // - Only the FINORA storage directory is accessed.
 // - V1 storage is never touched.
+// - RESET FINORA DATA never formats the USB drive.
+// - RESET FINORA DATA never deletes unrelated USB files.
 //
 // VERSION : 2.0
 // STATUS  : Production Foundation
@@ -74,10 +78,12 @@ interface StorageQuery {
   offset?: number;
 }
 
+
 interface StorageWriteOptions {
   ownerId?: string;
   demoId?: string;
 }
+
 
 interface PersistedStorageRecord {
   id: string;
@@ -88,6 +94,7 @@ interface PersistedStorageRecord {
   ownerId?: string;
   demoId?: string;
 }
+
 
 interface UsbStoragePackage {
   version: "2.0";
@@ -103,13 +110,17 @@ interface UsbStoragePackage {
 const FINORA_DIRECTORY =
   "FINORA";
 
+
 const FINORA_STORAGE_DIRECTORY =
   "storage";
+
 
 const FINORA_STORAGE_FILE =
   "finora-storage.json";
 
+
 const IPC_CHANNELS = {
+
   IS_AVAILABLE:
     "finora:usb:is-available",
 
@@ -136,6 +147,10 @@ const IPC_CHANNELS = {
 
   CLEAR:
     "finora:usb:clear",
+
+  RESET_FINORA_DATA:
+    "finora:usb:reset-finora-data",
+
 } as const;
 
 
@@ -146,7 +161,9 @@ const IPC_CHANNELS = {
 let mainWindow:
   BrowserWindow | null = null;
 
-let handlersRegistered = false;
+
+let handlersRegistered =
+  false;
 
 
 // ============================================================
@@ -154,7 +171,8 @@ let handlersRegistered = false;
 // ============================================================
 
 function isTrustedRenderer(
-  senderFrame: Electron.WebFrameMain | null,
+  senderFrame:
+    Electron.WebFrameMain | null,
 ): boolean {
 
   // ----------------------------------------------------------
@@ -186,6 +204,7 @@ function isTrustedRenderer(
 
       const url =
         new URL(frameUrl);
+
 
       return (
         url.protocol === "http:" &&
@@ -249,14 +268,13 @@ function failure(
 /**
  * Detect Windows removable drives.
  *
- * The renderer does not provide a drive path.
+ * IMPORTANT PERFORMANCE RULE:
  *
- * This prevents arbitrary filesystem access through IPC.
+ * PowerShell process startup is relatively expensive.
+ * Therefore this function is called only when the in-memory
+ * USB root cache has expired or been invalidated.
  *
- * A removable drive is selected using this order:
- *
- * 1. A removable drive containing FINORA\storage
- * 2. Otherwise the first removable drive
+ * The renderer never provides a drive path.
  */
 async function detectWindowsUsbRoots():
   Promise<string[]> {
@@ -316,54 +334,218 @@ async function detectWindowsUsbRoots():
 
 
 // ============================================================
-// FINORA USB ROOT
+// USB ROOT CACHE
+// ============================================================
+//
+// The old implementation executed PowerShell for every:
+// - status check
+// - availability check
+// - GET
+// - GET_ALL
+// - SAVE
+// - UPDATE
+// - DELETE
+// - REPLACE_ALL
+// - CLEAR
+// - RESET
+//
+// That created the visible USB loading delay.
+//
+// The cache below keeps the already-detected removable root
+// in memory and shares an in-flight detection request.
+//
+// SECURITY:
+// - We still detect only Windows removable drives.
+// - Renderer still cannot provide a path.
+// - Cache is invalidated when USB filesystem access fails.
+// - There is NO USB -> LOCAL fallback.
 // ============================================================
 
-async function findFinoraUsbRoot():
+const USB_ROOT_CACHE_TTL_MS =
+  30_000;
+
+
+let cachedUsbRoot:
+  string | null =
+  null;
+
+
+let cachedUsbRootAt =
+  0;
+
+
+let usbRootDetectionPromise:
+  Promise<string | null> | null =
+  null;
+
+
+function invalidateUsbRootCache(): void {
+
+  cachedUsbRoot =
+    null;
+
+  cachedUsbRootAt =
+    0;
+}
+
+
+async function detectAndCacheUsbRoot():
   Promise<string | null> {
 
-  const roots =
-    await detectWindowsUsbRoots();
+  if (
+    usbRootDetectionPromise
+  ) {
+
+    return usbRootDetectionPromise;
+  }
 
 
-  if (roots.length === 0) {
-    return null;
+  usbRootDetectionPromise =
+    (async () => {
+
+      try {
+
+        const roots =
+          await detectWindowsUsbRoots();
+
+
+        if (
+          roots.length === 0
+        ) {
+
+          cachedUsbRoot =
+            null;
+
+          cachedUsbRootAt =
+            Date.now();
+
+          return null;
+        }
+
+
+        // ----------------------------------------------------
+        // PREFER A DRIVE THAT ALREADY CONTAINS FINORA STORAGE
+        // ----------------------------------------------------
+
+        for (const root of roots) {
+
+          const storageDirectory =
+            path.join(
+              root,
+              FINORA_DIRECTORY,
+              FINORA_STORAGE_DIRECTORY,
+            );
+
+
+          try {
+
+            await fs.access(
+              storageDirectory,
+            );
+
+
+            cachedUsbRoot =
+              root;
+
+            cachedUsbRootAt =
+              Date.now();
+
+            return root;
+
+          } catch {
+            // Continue searching.
+          }
+        }
+
+
+        // ----------------------------------------------------
+        // OTHERWISE USE FIRST REMOVABLE DRIVE
+        // ----------------------------------------------------
+
+        const root =
+          roots[0] ?? null;
+
+
+        cachedUsbRoot =
+          root;
+
+        cachedUsbRootAt =
+          Date.now();
+
+
+        return root;
+
+      } catch {
+
+        cachedUsbRoot =
+          null;
+
+        cachedUsbRootAt =
+          Date.now();
+
+
+        return null;
+
+      } finally {
+
+        usbRootDetectionPromise =
+          null;
+      }
+
+    })();
+
+
+  return usbRootDetectionPromise;
+}
+
+
+async function findFinoraUsbRoot(
+  forceRefresh = false,
+):
+  Promise<string | null> {
+
+  const now =
+    Date.now();
+
+
+  // ----------------------------------------------------------
+  // FAST PATH
+  //
+  // No PowerShell process is created here.
+  // ----------------------------------------------------------
+
+  if (
+    !forceRefresh &&
+    cachedUsbRoot &&
+    now - cachedUsbRootAt <
+      USB_ROOT_CACHE_TTL_MS
+  ) {
+
+    return cachedUsbRoot;
   }
 
 
   // ----------------------------------------------------------
-  // PREFER A DRIVE THAT ALREADY CONTAINS FINORA STORAGE
+  // CACHE MISS / EXPIRED CACHE
   // ----------------------------------------------------------
 
-  for (const root of roots) {
-
-    const storageDirectory =
-      path.join(
-        root,
-        FINORA_DIRECTORY,
-        FINORA_STORAGE_DIRECTORY,
-      );
+  return detectAndCacheUsbRoot();
+}
 
 
-    try {
+// ============================================================
+// USB ROOT CACHE WARM-UP
+// ============================================================
+//
+// Runs in the Electron main process without blocking window
+// creation. By the time the renderer requests Customer data,
+// the removable-drive detection is normally already complete.
+//
+// ============================================================
 
-      await fs.access(
-        storageDirectory,
-      );
+function warmUsbRootCache(): void {
 
-      return root;
-
-    } catch {
-      // Continue searching.
-    }
-  }
-
-
-  // ----------------------------------------------------------
-  // OTHERWISE USE FIRST REMOVABLE DRIVE
-  // ----------------------------------------------------------
-
-  return roots[0] ?? null;
+  void detectAndCacheUsbRoot();
 }
 
 
@@ -372,7 +554,8 @@ async function findFinoraUsbRoot():
 // ============================================================
 
 function getFinoraStorageDirectory(
-  usbRoot: string,
+  usbRoot:
+    string,
 ): string {
 
   return path.join(
@@ -384,7 +567,8 @@ function getFinoraStorageDirectory(
 
 
 function getFinoraStorageFile(
-  usbRoot: string,
+  usbRoot:
+    string,
 ): string {
 
   return path.join(
@@ -404,9 +588,12 @@ function createEmptyStoragePackage():
   UsbStoragePackage {
 
   return {
-    version: "2.0",
 
-    records: [],
+    version:
+      "2.0",
+
+    records:
+      [],
 
     updatedAt:
       new Date().toISOString(),
@@ -419,13 +606,16 @@ function createEmptyStoragePackage():
 // ============================================================
 
 async function readStoragePackage(
-  usbRoot: string,
-): Promise<UsbStoragePackage> {
+  usbRoot:
+    string,
+):
+  Promise<UsbStoragePackage> {
 
   const storageDirectory =
     getFinoraStorageDirectory(
       usbRoot,
     );
+
 
   const storageFile =
     getFinoraStorageFile(
@@ -459,6 +649,7 @@ async function readStoragePackage(
       !parsed ||
       typeof parsed !== "object"
     ) {
+
       throw new Error(
         "Invalid FINORA USB storage package.",
       );
@@ -475,6 +666,7 @@ async function readStoragePackage(
         candidate.records,
       )
     ) {
+
       throw new Error(
         "Unsupported FINORA USB storage package.",
       );
@@ -482,10 +674,13 @@ async function readStoragePackage(
 
 
     return {
-      version: "2.0",
+
+      version:
+        "2.0",
 
       records:
-        candidate.records as PersistedStorageRecord[],
+        candidate.records as
+          PersistedStorageRecord[],
 
       updatedAt:
         typeof candidate.updatedAt === "string"
@@ -526,22 +721,28 @@ async function readStoragePackage(
 // ============================================================
 
 async function writeStoragePackage(
-  usbRoot: string,
-  storagePackage: UsbStoragePackage,
-): Promise<void> {
+  usbRoot:
+    string,
+
+  storagePackage:
+    UsbStoragePackage,
+):
+  Promise<void> {
 
   const storageDirectory =
     getFinoraStorageDirectory(
       usbRoot,
     );
 
+
   const storageFile =
     getFinoraStorageFile(
       usbRoot,
     );
 
+
   const temporaryFile =
-    `${storageFile}.tmp`;
+    String(storageFile) + ".tmp";
 
 
   await fs.mkdir(
@@ -584,13 +785,16 @@ async function writeStoragePackage(
 // ============================================================
 
 function validateQuery(
-  query: StorageQuery,
-): string | null {
+  query:
+    StorageQuery,
+):
+  string | null {
 
   if (
     !query ||
     typeof query !== "object"
   ) {
+
     return "Storage query is required.";
   }
 
@@ -599,6 +803,7 @@ function validateQuery(
     typeof query.entity !== "string" ||
     query.entity.trim().length === 0
   ) {
+
     return "Storage entity is required.";
   }
 
@@ -608,8 +813,10 @@ function validateQuery(
 
 
 function validateRecord(
-  record: unknown,
-): record is Record<string, unknown> {
+  record:
+    unknown,
+):
+  record is Record<string, unknown> {
 
   return (
     typeof record === "object" &&
@@ -624,14 +831,19 @@ function validateRecord(
 // ============================================================
 
 function recordMatchesQuery(
-  record: PersistedStorageRecord,
-  query: StorageQuery,
-): boolean {
+  record:
+    PersistedStorageRecord,
+
+  query:
+    StorageQuery,
+):
+  boolean {
 
   if (
     record.entity !==
     query.entity
   ) {
+
     return false;
   }
 
@@ -640,6 +852,7 @@ function recordMatchesQuery(
     query.id !== undefined &&
     record.id !== query.id
   ) {
+
     return false;
   }
 
@@ -648,6 +861,7 @@ function recordMatchesQuery(
     query.ownerId !== undefined &&
     record.ownerId !== query.ownerId
   ) {
+
     return false;
   }
 
@@ -656,6 +870,7 @@ function recordMatchesQuery(
     query.demoId !== undefined &&
     record.demoId !== query.demoId
   ) {
+
     return false;
   }
 
@@ -669,8 +884,10 @@ function recordMatchesQuery(
 // ============================================================
 
 function getRecordData(
-  record: PersistedStorageRecord,
-): unknown {
+  record:
+    PersistedStorageRecord,
+):
+  unknown {
 
   return record.data;
 }
@@ -689,6 +906,7 @@ async function getUsbStatus() {
   if (!usbRoot) {
 
     return {
+
       availability:
         "DISCONNECTED",
 
@@ -715,6 +933,7 @@ async function getUsbStatus() {
 
 
     return {
+
       availability:
         "READY",
 
@@ -729,7 +948,12 @@ async function getUsbStatus() {
 
   } catch (error) {
 
+    // A failed filesystem access can mean the removable drive
+    // was removed or became unavailable.
+    invalidateUsbRootCache();
+
     return {
+
       availability:
         "ERROR",
 
@@ -765,11 +989,14 @@ async function isUsbAvailable():
 // ============================================================
 
 async function handleUsbGet(
-  query: StorageQuery,
+  query:
+    StorageQuery,
 ) {
 
   const queryError =
-    validateQuery(query);
+    validateQuery(
+      query,
+    );
 
 
   if (queryError) {
@@ -782,6 +1009,7 @@ async function handleUsbGet(
 
 
   if (!usbRoot) {
+
     return failure(
       "FINORA Pendrive is disconnected.",
     );
@@ -814,6 +1042,10 @@ async function handleUsbGet(
 
   } catch (error) {
 
+    // USB may have been removed between detection and access.
+    // Invalidate the cached root so the next operation re-detects it.
+    invalidateUsbRootCache();
+
     return failure(
       error instanceof Error
         ? error.message
@@ -828,11 +1060,14 @@ async function handleUsbGet(
 // ============================================================
 
 async function handleUsbGetAll(
-  query: StorageQuery,
+  query:
+    StorageQuery,
 ) {
 
   const queryError =
-    validateQuery(query);
+    validateQuery(
+      query,
+    );
 
 
   if (queryError) {
@@ -845,6 +1080,7 @@ async function handleUsbGetAll(
 
 
   if (!usbRoot) {
+
     return failure(
       "FINORA Pendrive is disconnected.",
     );
@@ -888,7 +1124,9 @@ async function handleUsbGetAll(
 
     records =
       limit === undefined
-        ? records.slice(offset)
+        ? records.slice(
+            offset,
+          )
         : records.slice(
             offset,
             offset + limit,
@@ -902,6 +1140,10 @@ async function handleUsbGetAll(
     );
 
   } catch (error) {
+
+    // USB may have been removed between detection and access.
+    // Invalidate the cached root so the next operation re-detects it.
+    invalidateUsbRootCache();
 
     return failure(
       error instanceof Error
@@ -917,13 +1159,19 @@ async function handleUsbGetAll(
 // ============================================================
 
 async function handleUsbSave(
-  record: unknown,
-  options?: StorageWriteOptions,
+  record:
+    unknown,
+
+  options?:
+    StorageWriteOptions,
 ) {
 
   if (
-    !validateRecord(record)
+    !validateRecord(
+      record,
+    )
   ) {
+
     return failure(
       "A valid storage record is required.",
     );
@@ -937,6 +1185,7 @@ async function handleUsbSave(
 
 
   if (!entity) {
+
     return failure(
       "Storage record entity is required.",
     );
@@ -948,6 +1197,7 @@ async function handleUsbSave(
 
 
   if (!usbRoot) {
+
     return failure(
       "FINORA Pendrive is disconnected.",
     );
@@ -1013,6 +1263,7 @@ async function handleUsbSave(
     if (
       duplicateIndex >= 0
     ) {
+
       return failure(
         "A storage record with the same ID already exists.",
       );
@@ -1036,6 +1287,10 @@ async function handleUsbSave(
 
   } catch (error) {
 
+    // USB may have been removed between detection and access.
+    // Invalidate the cached root so the next operation re-detects it.
+    invalidateUsbRootCache();
+
     return failure(
       error instanceof Error
         ? error.message
@@ -1050,13 +1305,19 @@ async function handleUsbSave(
 // ============================================================
 
 async function handleUsbUpdate(
-  record: unknown,
-  options?: StorageWriteOptions,
+  record:
+    unknown,
+
+  options?:
+    StorageWriteOptions,
 ) {
 
   if (
-    !validateRecord(record)
+    !validateRecord(
+      record,
+    )
   ) {
+
     return failure(
       "A valid storage record is required.",
     );
@@ -1076,6 +1337,7 @@ async function handleUsbUpdate(
 
 
   if (!entity) {
+
     return failure(
       "Storage record entity is required.",
     );
@@ -1083,6 +1345,7 @@ async function handleUsbUpdate(
 
 
   if (!id) {
+
     return failure(
       "Storage record ID is required for update.",
     );
@@ -1094,6 +1357,7 @@ async function handleUsbUpdate(
 
 
   if (!usbRoot) {
+
     return failure(
       "FINORA Pendrive is disconnected.",
     );
@@ -1119,6 +1383,7 @@ async function handleUsbUpdate(
 
 
     if (index < 0) {
+
       return failure(
         "FINORA storage record was not found.",
       );
@@ -1130,6 +1395,7 @@ async function handleUsbUpdate(
 
 
     if (!existing) {
+
       return failure(
         "FINORA storage record was not found.",
       );
@@ -1166,6 +1432,10 @@ async function handleUsbUpdate(
 
   } catch (error) {
 
+    // USB may have been removed between detection and access.
+    // Invalidate the cached root so the next operation re-detects it.
+    invalidateUsbRootCache();
+
     return failure(
       error instanceof Error
         ? error.message
@@ -1180,11 +1450,14 @@ async function handleUsbUpdate(
 // ============================================================
 
 async function handleUsbDelete(
-  query: StorageQuery,
+  query:
+    StorageQuery,
 ) {
 
   const queryError =
-    validateQuery(query);
+    validateQuery(
+      query,
+    );
 
 
   if (queryError) {
@@ -1197,6 +1470,7 @@ async function handleUsbDelete(
 
 
   if (!usbRoot) {
+
     return failure(
       "FINORA Pendrive is disconnected.",
     );
@@ -1243,6 +1517,10 @@ async function handleUsbDelete(
 
   } catch (error) {
 
+    // USB may have been removed between detection and access.
+    // Invalidate the cached root so the next operation re-detects it.
+    invalidateUsbRootCache();
+
     return failure(
       error instanceof Error
         ? error.message
@@ -1257,11 +1535,15 @@ async function handleUsbDelete(
 // ============================================================
 
 async function handleUsbReplaceAll(
-  records: unknown[],
-  options?: StorageWriteOptions,
+  records:
+    unknown[],
+
+  options?:
+    StorageWriteOptions,
 ) {
 
   if (!Array.isArray(records)) {
+
     return failure(
       "Storage records must be an array.",
     );
@@ -1273,6 +1555,7 @@ async function handleUsbReplaceAll(
 
 
   if (!usbRoot) {
+
     return failure(
       "FINORA Pendrive is disconnected.",
     );
@@ -1284,12 +1567,15 @@ async function handleUsbReplaceAll(
     const invalidRecord =
       records.find(
         (record) =>
-          !validateRecord(record) ||
+          !validateRecord(
+            record,
+          ) ||
           typeof record.entity !== "string",
       );
 
 
     if (invalidRecord) {
+
       return failure(
         "Every storage record must contain an entity.",
       );
@@ -1316,6 +1602,7 @@ async function handleUsbReplaceAll(
 
 
           return {
+
             id:
               typeof source.id === "string" &&
               source.id.length > 0
@@ -1380,6 +1667,10 @@ async function handleUsbReplaceAll(
 
   } catch (error) {
 
+    // USB may have been removed between detection and access.
+    // Invalidate the cached root so the next operation re-detects it.
+    invalidateUsbRootCache();
+
     return failure(
       error instanceof Error
         ? error.message
@@ -1394,11 +1685,14 @@ async function handleUsbReplaceAll(
 // ============================================================
 
 async function handleUsbClear(
-  query: StorageQuery,
+  query:
+    StorageQuery,
 ) {
 
   const queryError =
-    validateQuery(query);
+    validateQuery(
+      query,
+    );
 
 
   if (queryError) {
@@ -1411,6 +1705,7 @@ async function handleUsbClear(
 
 
   if (!usbRoot) {
+
     return failure(
       "FINORA Pendrive is disconnected.",
     );
@@ -1445,10 +1740,78 @@ async function handleUsbClear(
 
   } catch (error) {
 
+    // USB may have been removed between detection and access.
+    // Invalidate the cached root so the next operation re-detects it.
+    invalidateUsbRootCache();
+
     return failure(
       error instanceof Error
         ? error.message
         : "Unable to clear FINORA USB records.",
+    );
+  }
+}
+
+
+// ============================================================
+// IPC: RESET FINORA DATA
+//
+// IMPORTANT:
+//
+// - Clears ONLY FINORA-owned persisted records.
+// - Does NOT format the USB drive.
+// - Does NOT delete unrelated USB files.
+// - Does NOT delete unrelated USB folders.
+// - Does NOT touch the user's other USB data.
+//
+// Only this FINORA file is rewritten:
+//
+// FINORA\storage\finora-storage.json
+//
+// Result:
+//
+// records -> []
+//
+// ============================================================
+
+async function handleUsbResetFinoraData() {
+
+  const usbRoot =
+    await findFinoraUsbRoot();
+
+
+  if (!usbRoot) {
+
+    return failure(
+      "FINORA Pendrive is disconnected.",
+    );
+  }
+
+
+  try {
+
+    const emptyPackage =
+      createEmptyStoragePackage();
+
+
+    await writeStoragePackage(
+      usbRoot,
+      emptyPackage,
+    );
+
+
+    return success();
+
+  } catch (error) {
+
+    // USB may have been removed between detection and access.
+    // Invalidate the cached root so the next operation re-detects it.
+    invalidateUsbRootCache();
+
+    return failure(
+      error instanceof Error
+        ? error.message
+        : "Unable to reset FINORA USB data.",
     );
   }
 }
@@ -1465,7 +1828,8 @@ function registerUsbStorageHandlers(): void {
   }
 
 
-  handlersRegistered = true;
+  handlersRegistered =
+    true;
 
 
   // ----------------------------------------------------------
@@ -1481,6 +1845,7 @@ function registerUsbStorageHandlers(): void {
           event.senderFrame,
         )
       ) {
+
         return false;
       }
 
@@ -1503,7 +1868,9 @@ function registerUsbStorageHandlers(): void {
           event.senderFrame,
         )
       ) {
+
         return {
+
           availability:
             "ERROR",
 
@@ -1526,7 +1893,8 @@ function registerUsbStorageHandlers(): void {
     IPC_CHANNELS.GET,
     async (
       event,
-      query: StorageQuery,
+      query:
+        StorageQuery,
     ) => {
 
       if (
@@ -1534,6 +1902,7 @@ function registerUsbStorageHandlers(): void {
           event.senderFrame,
         )
       ) {
+
         return failure(
           "Untrusted renderer.",
         );
@@ -1555,7 +1924,8 @@ function registerUsbStorageHandlers(): void {
     IPC_CHANNELS.GET_ALL,
     async (
       event,
-      query: StorageQuery,
+      query:
+        StorageQuery,
     ) => {
 
       if (
@@ -1563,6 +1933,7 @@ function registerUsbStorageHandlers(): void {
           event.senderFrame,
         )
       ) {
+
         return failure(
           "Untrusted renderer.",
         );
@@ -1584,8 +1955,10 @@ function registerUsbStorageHandlers(): void {
     IPC_CHANNELS.SAVE,
     async (
       event,
-      record: unknown,
-      options?: StorageWriteOptions,
+      record:
+        unknown,
+      options?:
+        StorageWriteOptions,
     ) => {
 
       if (
@@ -1593,6 +1966,7 @@ function registerUsbStorageHandlers(): void {
           event.senderFrame,
         )
       ) {
+
         return failure(
           "Untrusted renderer.",
         );
@@ -1615,8 +1989,10 @@ function registerUsbStorageHandlers(): void {
     IPC_CHANNELS.UPDATE,
     async (
       event,
-      record: unknown,
-      options?: StorageWriteOptions,
+      record:
+        unknown,
+      options?:
+        StorageWriteOptions,
     ) => {
 
       if (
@@ -1624,6 +2000,7 @@ function registerUsbStorageHandlers(): void {
           event.senderFrame,
         )
       ) {
+
         return failure(
           "Untrusted renderer.",
         );
@@ -1646,7 +2023,8 @@ function registerUsbStorageHandlers(): void {
     IPC_CHANNELS.DELETE,
     async (
       event,
-      query: StorageQuery,
+      query:
+        StorageQuery,
     ) => {
 
       if (
@@ -1654,6 +2032,7 @@ function registerUsbStorageHandlers(): void {
           event.senderFrame,
         )
       ) {
+
         return failure(
           "Untrusted renderer.",
         );
@@ -1675,8 +2054,10 @@ function registerUsbStorageHandlers(): void {
     IPC_CHANNELS.REPLACE_ALL,
     async (
       event,
-      records: unknown[],
-      options?: StorageWriteOptions,
+      records:
+        unknown[],
+      options?:
+        StorageWriteOptions,
     ) => {
 
       if (
@@ -1684,6 +2065,7 @@ function registerUsbStorageHandlers(): void {
           event.senderFrame,
         )
       ) {
+
         return failure(
           "Untrusted renderer.",
         );
@@ -1706,7 +2088,8 @@ function registerUsbStorageHandlers(): void {
     IPC_CHANNELS.CLEAR,
     async (
       event,
-      query: StorageQuery,
+      query:
+        StorageQuery,
     ) => {
 
       if (
@@ -1714,6 +2097,7 @@ function registerUsbStorageHandlers(): void {
           event.senderFrame,
         )
       ) {
+
         return failure(
           "Untrusted renderer.",
         );
@@ -1723,6 +2107,31 @@ function registerUsbStorageHandlers(): void {
       return handleUsbClear(
         query,
       );
+    },
+  );
+
+
+  // ----------------------------------------------------------
+  // RESET FINORA DATA
+  // ----------------------------------------------------------
+
+  ipcMain.handle(
+    IPC_CHANNELS.RESET_FINORA_DATA,
+    async (event) => {
+
+      if (
+        !isTrustedRenderer(
+          event.senderFrame,
+        )
+      ) {
+
+        return failure(
+          "Untrusted renderer.",
+        );
+      }
+
+
+      return handleUsbResetFinoraData();
     },
   );
 }
@@ -1737,13 +2146,17 @@ function createMainWindow(): void {
   mainWindow =
     new BrowserWindow({
 
-      width: 1400,
+      width:
+        1400,
 
-      height: 900,
+      height:
+        900,
 
-      minWidth: 1200,
+      minWidth:
+        1200,
 
-      minHeight: 700,
+      minHeight:
+        700,
 
       title:
         "FINORA Enterprise",
@@ -1783,6 +2196,7 @@ function createMainWindow(): void {
     void mainWindow.loadURL(
       "http://localhost:5173",
     );
+
 
     mainWindow.webContents.openDevTools();
 
@@ -1832,7 +2246,9 @@ function createMainWindow(): void {
   mainWindow.on(
     "closed",
     () => {
-      mainWindow = null;
+
+      mainWindow =
+        null;
     },
   );
 }
@@ -1847,6 +2263,16 @@ app.whenReady().then(() => {
   registerUsbStorageHandlers();
 
   createMainWindow();
+
+  // ----------------------------------------------------------
+  // WARM USB DETECTION
+  //
+  // Runs in the background and does not block Electron window
+  // creation. Customer/Storage requests share this in-flight
+  // detection promise if they arrive before it completes.
+  // ----------------------------------------------------------
+
+  warmUsbRootCache();
 
 
   // ----------------------------------------------------------
@@ -1886,3 +2312,8 @@ app.on(
     }
   },
 );
+
+
+// ============================================================
+// END
+// ============================================================

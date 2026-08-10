@@ -12,23 +12,39 @@
 //
 // - Maintain the synchronous Customer UI state contract
 // - Keep CustomerProfile objects in memory for immediate UI access
-// - Delegate persistence through CustomerService
+// - Delegate ALL persistence through CustomerService
 // - Keep existing Customer Hub / Wizard callers compatible
 // - Support asynchronous hydration from V2 storage
-// - Preserve legacy Customer records during migration
+// - Keep the active FINORA storage context authoritative
 //
 // IMPORTANT:
 //
 // - Existing UI-facing functions remain synchronous.
 // - Persistent storage is asynchronous internally.
 // - No direct repository access.
+// - No localStorage access.
 // - No filesystem access.
 // - No Electron IPC.
 // - V2 persistence goes through CustomerService.
-// - Legacy storage is used only as compatibility fallback/migration.
-// - Customer IDs are used to prevent duplicate records.
+// - LOCAL legacy Customer storage is NOT used as a fallback.
+// - Customer IDs remain the canonical identity.
 //
+// STORAGE RULE:
+//
+// Customer Store does NOT decide whether data is stored in:
+//
+// - LOCAL
+// - USB
+// - CLOUD
+//
+// StorageManager decides that.
+//
+// This Store only consumes CustomerService.
+//
+// VERSION : 2.0
+// STATUS  : Production
 // ============================================================
+
 
 // ============================================================
 // IMPORTS
@@ -38,23 +54,28 @@ import type {
   CustomerProfile,
 } from "../../types/customers";
 
+
 import {
   customerService,
 } from "../../services/customer/customerService";
 
-// ============================================================
-// CONSTANTS
-// ============================================================
-
-const LEGACY_STORAGE_KEY =
-  "FINORA_CUSTOMERS_V2";
 
 // ============================================================
 // LOCAL MEMORY CACHE
+//
+// IMPORTANT:
+//
+// This is RAM only.
+//
+// It is NOT persistent storage.
+//
+// The cache is populated from CustomerService during
+// hydrateCustomersFromStorage().
 // ============================================================
 
 let customerCache:
   CustomerProfile[] = [];
+
 
 // ============================================================
 // CACHE STATE
@@ -63,191 +84,36 @@ let customerCache:
 let cacheHydrated =
   false;
 
-// ============================================================
-// LEGACY LOAD
-//
-// Compatibility fallback only.
-//
-// New Customer persistence goes through CustomerService.
-//
-// This function is intentionally synchronous because the
-// existing Customer Store contract is synchronous.
-// ============================================================
-
-function loadLegacy():
-  CustomerProfile[] {
-
-  try {
-
-    if (
-      typeof localStorage ===
-      "undefined"
-    ) {
-
-      customerCache = [];
-
-      cacheHydrated = true;
-
-      return [];
-
-    }
-
-    const value =
-      localStorage.getItem(
-        LEGACY_STORAGE_KEY,
-      );
-
-    if (!value) {
-
-      customerCache = [];
-
-      cacheHydrated = true;
-
-      return [];
-
-    }
-
-    const parsed =
-      JSON.parse(
-        value,
-      );
-
-    if (
-      !Array.isArray(parsed)
-    ) {
-
-      customerCache = [];
-
-      cacheHydrated = true;
-
-      return [];
-
-    }
-
-    customerCache =
-      parsed as CustomerProfile[];
-
-    cacheHydrated = true;
-
-    return [
-      ...customerCache,
-    ];
-
-  } catch {
-
-    customerCache = [];
-
-    cacheHydrated = true;
-
-    return [];
-
-  }
-}
-
-// ============================================================
-// MERGE CUSTOMERS
-//
-// Customer ID is the canonical identity.
-//
-// Existing records are preserved.
-// V2 records override legacy records with the same ID.
-//
-// This allows a gradual migration from the old localStorage
-// customer collection into the V2 StorageManager boundary.
-// ============================================================
-
-function mergeCustomers(
-  legacyCustomers: CustomerProfile[],
-  v2Customers: CustomerProfile[],
-):
-  CustomerProfile[] {
-
-  const merged =
-    new Map<
-      string,
-      CustomerProfile
-    >();
-
-  // ----------------------------------------------------------
-  // LEGACY FIRST
-  // ----------------------------------------------------------
-
-  for (
-    const customer of
-    legacyCustomers
-  ) {
-
-    const customerId =
-      customer?.identity?.customerId;
-
-    if (!customerId) {
-
-      continue;
-
-    }
-
-    merged.set(
-      customerId,
-      customer,
-    );
-
-  }
-
-  // ----------------------------------------------------------
-  // V2 SECOND
-  //
-  // V2 is authoritative when the same customer exists
-  // in both sources.
-  // ----------------------------------------------------------
-
-  for (
-    const customer of
-    v2Customers
-  ) {
-
-    const customerId =
-      customer?.identity?.customerId;
-
-    if (!customerId) {
-
-      continue;
-
-    }
-
-    merged.set(
-      customerId,
-      customer,
-    );
-
-  }
-
-  return Array.from(
-    merged.values(),
-  );
-}
 
 // ============================================================
 // HYDRATE FROM V2 STORAGE
 //
-// This is the important V2 startup/read boundary.
+// This is the ONLY startup/read hydration boundary.
 //
-// CustomerDepartment calls this before rendering the
-// Customer Office.
+// Flow:
 //
-// The function:
+// CustomerDepartment
+//        ↓
+// hydrateCustomersFromStorage()
+//        ↓
+// CustomerService
+//        ↓
+// CustomerRepository
+//        ↓
+// StorageManager
+//        ↓
+// ACTIVE FINORA STORAGE
 //
-// 1. Reads V2 Customer storage.
-// 2. Reads legacy customers for compatibility.
-// 3. Merges both collections by customerId.
-// 4. Updates the in-memory Customer Store cache.
-// 5. Migrates the merged collection back into V2 storage.
+// IMPORTANT:
 //
-// This prevents:
+// - No localStorage.
+// - No legacy fallback.
+// - No merge with browser cache.
+// - No silent LOCAL fallback.
+// - If active storage is unavailable, the cache becomes empty.
 //
-// - stale 10-customer cache
-// - restart data loss appearance
-// - duplicate customers
-// - legacy/V2 split-brain state
+// This guarantees that the active FINORA storage boundary is
+// authoritative.
 // ============================================================
 
 export async function hydrateCustomersFromStorage():
@@ -256,177 +122,64 @@ export async function hydrateCustomersFromStorage():
   try {
 
     // --------------------------------------------------------
-    // LOAD LEGACY DATA FIRST
-    // --------------------------------------------------------
-
-    let legacyCustomers:
-      CustomerProfile[] = [];
-
-    try {
-
-      if (
-        typeof localStorage !==
-        "undefined"
-      ) {
-
-        const raw =
-          localStorage.getItem(
-            LEGACY_STORAGE_KEY,
-          );
-
-        if (raw) {
-
-          const parsed =
-            JSON.parse(
-              raw,
-            );
-
-          if (
-            Array.isArray(parsed)
-          ) {
-
-            legacyCustomers =
-              parsed as CustomerProfile[];
-
-          }
-
-        }
-
-      }
-
-    } catch {
-
-      legacyCustomers = [];
-
-    }
-
-    // --------------------------------------------------------
-    // LOAD V2 DATA
+    // READ FROM V2 CUSTOMER SERVICE
     // --------------------------------------------------------
 
     const result =
       await customerService.getAll();
 
+
     // --------------------------------------------------------
-    // V2 READ FAILED
+    // STORAGE READ FAILED
     //
-    // Preserve legacy data instead of replacing it with
-    // an empty cache.
+    // IMPORTANT:
+    //
+    // Do NOT resurrect old localStorage data.
+    //
+    // The active storage context is authoritative.
     // --------------------------------------------------------
 
     if (!result.success) {
 
-      if (
-        legacyCustomers.length > 0
-      ) {
+      customerCache =
+        [];
 
-        customerCache = [
-          ...legacyCustomers,
-        ];
+      cacheHydrated =
+        true;
 
-      } else {
-
-        customerCache = [];
-
-      }
-
-      cacheHydrated = true;
 
       console.error(
         "FINORA CUSTOMER V2 HYDRATION FAILED:",
         result.error,
       );
 
+
       return [
         ...customerCache,
       ];
-
     }
 
-    const v2Customers =
+
+    // --------------------------------------------------------
+    // READ SUCCESSFUL
+    // --------------------------------------------------------
+
+    const customers =
       result.data ?? [];
 
-    // --------------------------------------------------------
-    // MERGE LEGACY + V2
-    // --------------------------------------------------------
-
-    const mergedCustomers =
-      mergeCustomers(
-        legacyCustomers,
-        v2Customers,
-      );
 
     // --------------------------------------------------------
     // UPDATE MEMORY CACHE
     // --------------------------------------------------------
 
     customerCache = [
-      ...mergedCustomers,
+      ...customers,
     ];
 
-    cacheHydrated = true;
 
-    // --------------------------------------------------------
-    // MIGRATE / SYNCHRONIZE V2 STORAGE
-    //
-    // If legacy customers existed, or if the merged result
-    // differs from the current V2 collection, persist the
-    // complete merged collection through CustomerService.
-    //
-    // This makes the V2 collection authoritative after the
-    // first successful hydration.
-    // --------------------------------------------------------
+    cacheHydrated =
+      true;
 
-    if (
-      mergedCustomers.length > 0
-    ) {
-
-      const currentV2Ids =
-        v2Customers.map(
-          (customer) =>
-            customer.identity.customerId,
-        );
-
-      const mergedIds =
-        mergedCustomers.map(
-          (customer) =>
-            customer.identity.customerId,
-        );
-
-      const currentIdsKey =
-        [...currentV2Ids]
-          .sort()
-          .join("|");
-
-      const mergedIdsKey =
-        [...mergedIds]
-          .sort()
-          .join("|");
-
-      if (
-        currentIdsKey !==
-        mergedIdsKey
-      ) {
-
-        const persistResult =
-          await customerService.replaceAll(
-            mergedCustomers,
-          );
-
-        if (
-          !persistResult.success
-        ) {
-
-          console.error(
-            "FINORA CUSTOMER V2 MIGRATION FAILED:",
-            persistResult.error,
-          );
-
-        }
-
-      }
-
-    }
 
     return [
       ...customerCache,
@@ -434,86 +187,106 @@ export async function hydrateCustomersFromStorage():
 
   } catch (error) {
 
+    // --------------------------------------------------------
+    // SAFE FAILURE
+    //
+    // Never fall back to old local storage.
+    // --------------------------------------------------------
+
     console.error(
       "FINORA CUSTOMER HYDRATION ERROR:",
       error,
     );
 
-    // --------------------------------------------------------
-    // FINAL LEGACY FALLBACK
-    // --------------------------------------------------------
 
-    const legacy =
-      loadLegacy();
+    customerCache =
+      [];
 
-    customerCache = [
-      ...legacy,
-    ];
 
-    cacheHydrated = true;
+    cacheHydrated =
+      true;
+
 
     return [
       ...customerCache,
     ];
-
   }
-
 }
+
 
 // ============================================================
 // PERSIST
 //
-// The UI remains synchronous while persistence is delegated
-// through the Customer Service layer.
+// UI remains synchronous.
+//
+// Persistence is delegated asynchronously through
+// CustomerService.
+//
+// IMPORTANT:
+//
+// The Store does not know whether CustomerService is using:
+//
+// LOCAL
+// USB
+// CLOUD
+//
+// That decision belongs to StorageManager.
 // ============================================================
 
 function persistCustomers(
-  customers: CustomerProfile[],
+  customers:
+    CustomerProfile[],
 ): void {
 
   void customerService
     .replaceAll(
       customers,
     )
-    .catch(() => {
+    .catch(
+      (error) => {
 
-      // ------------------------------------------------------
-      // Persistence failures do not break synchronous UI
-      // operations.
-      //
-      // Future application-level notification handling can
-      // surface these failures without changing this API.
-      // ------------------------------------------------------
-
-    });
-
+        console.error(
+          "FINORA CUSTOMER PERSISTENCE FAILED:",
+          error,
+        );
+      },
+    );
 }
+
 
 // ============================================================
 // GET ALL
+// ============================================================
+//
+// Synchronous UI contract.
+//
+// IMPORTANT:
+//
+// This function NEVER loads localStorage.
+//
+// If hydration has not happened yet, it returns the current
+// memory cache, which is initially empty.
+//
+// CustomerDepartment is responsible for awaiting
+// hydrateCustomersFromStorage() before rendering the office.
 // ============================================================
 
 export function getCustomers():
   CustomerProfile[] {
 
-  if (!cacheHydrated) {
-
-    loadLegacy();
-
-  }
-
   return [
     ...customerCache,
   ];
-
 }
+
 
 // ============================================================
 // GET ONE
 // ============================================================
 
 export function getCustomer(
-  customerId: string,
+  customerId:
+    string,
 ):
   CustomerProfile | undefined {
 
@@ -522,43 +295,79 @@ export function getCustomer(
       customer.identity.customerId ===
       customerId,
   );
-
 }
+
 
 // ============================================================
 // ADD
 // ============================================================
 
 export function addCustomer(
-  customer: CustomerProfile,
+  customer:
+    CustomerProfile,
 ): void {
 
   const customers =
     getCustomers();
 
-  customerCache = [
-    ...customers,
-    customer,
-  ];
 
-  cacheHydrated = true;
+  // ----------------------------------------------------------
+  // CUSTOMER ID PROTECTION
+  //
+  // Do not create duplicate records inside the memory cache.
+  // ----------------------------------------------------------
+
+  const existingIndex =
+    customers.findIndex(
+      (item) =>
+        item.identity.customerId ===
+        customer.identity.customerId,
+    );
+
+
+  if (
+    existingIndex >= 0
+  ) {
+
+    customerCache =
+      customers.map(
+        (item, index) =>
+          index === existingIndex
+            ? customer
+            : item,
+      );
+
+  } else {
+
+    customerCache = [
+      ...customers,
+      customer,
+    ];
+  }
+
+
+  cacheHydrated =
+    true;
+
 
   persistCustomers(
     customerCache,
   );
-
 }
+
 
 // ============================================================
 // UPDATE
 // ============================================================
 
 export function updateCustomer(
-  updated: CustomerProfile,
+  updated:
+    CustomerProfile,
 ): void {
 
   const customers =
     getCustomers();
+
 
   customerCache =
     customers.map(
@@ -571,24 +380,29 @@ export function updateCustomer(
           : customer,
     );
 
-  cacheHydrated = true;
+
+  cacheHydrated =
+    true;
+
 
   persistCustomers(
     customerCache,
   );
-
 }
+
 
 // ============================================================
 // ARCHIVE
 // ============================================================
 
 export function archiveCustomer(
-  customerId: string,
+  customerId:
+    string,
 ): void {
 
   const customers =
     getCustomers();
+
 
   customerCache =
     customers.map(
@@ -610,24 +424,29 @@ export function archiveCustomer(
           : customer,
     );
 
-  cacheHydrated = true;
+
+  cacheHydrated =
+    true;
+
 
   persistCustomers(
     customerCache,
   );
-
 }
+
 
 // ============================================================
 // RESTORE
 // ============================================================
 
 export function restoreCustomer(
-  customerId: string,
+  customerId:
+    string,
 ): void {
 
   const customers =
     getCustomers();
+
 
   customerCache =
     customers.map(
@@ -649,24 +468,29 @@ export function restoreCustomer(
           : customer,
     );
 
-  cacheHydrated = true;
+
+  cacheHydrated =
+    true;
+
 
   persistCustomers(
     customerCache,
   );
-
 }
+
 
 // ============================================================
 // SOFT DELETE
 // ============================================================
 
 export function deleteCustomer(
-  customerId: string,
+  customerId:
+    string,
 ): void {
 
   const customers =
     getCustomers();
+
 
   customerCache =
     customers.map(
@@ -688,69 +512,88 @@ export function deleteCustomer(
           : customer,
     );
 
-  cacheHydrated = true;
+
+  cacheHydrated =
+    true;
+
 
   persistCustomers(
     customerCache,
   );
-
 }
+
 
 // ============================================================
 // REPLACE
 // ============================================================
 
 export function replaceCustomers(
-  customers: CustomerProfile[],
+  customers:
+    CustomerProfile[],
 ): void {
 
   customerCache = [
     ...customers,
   ];
 
-  cacheHydrated = true;
+
+  cacheHydrated =
+    true;
+
 
   persistCustomers(
     customerCache,
   );
-
 }
 
+
 // ============================================================
-// HYDRATE
+// HYDRATE MEMORY ONLY
 //
-// Used by startup migration layers.
+// This function intentionally does NOT persist.
 //
-// This updates memory only.
-// It does NOT write data again.
+// Used by callers that already possess authoritative V2 data.
 // ============================================================
 
 export function hydrateCustomers(
-  customers: CustomerProfile[],
+  customers:
+    CustomerProfile[],
 ): void {
 
   customerCache = [
     ...customers,
   ];
 
-  cacheHydrated = true;
 
+  cacheHydrated =
+    true;
 }
+
 
 // ============================================================
 // CLEAR CACHE
 //
-// Does NOT delete persisted Customer records.
+// IMPORTANT:
+//
+// This clears ONLY the in-memory Customer Store cache.
+//
+// It does NOT delete persisted FINORA data.
+//
+// Use StorageManager.resetFinoraData() for an explicit
+// FINORA data reset.
 // ============================================================
 
 export function clearCustomerCache():
   void {
 
-  customerCache = [];
+  customerCache =
+    [];
 
-  cacheHydrated = false;
 
+  cacheHydrated =
+    false;
 }
+
 
 // ============================================================
 // CACHE STATUS
@@ -760,8 +603,8 @@ export function isCustomerCacheHydrated():
   boolean {
 
   return cacheHydrated;
-
 }
+
 
 // ============================================================
 // END
