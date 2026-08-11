@@ -1,14 +1,34 @@
-/* ===========================================================
-   FINORA ENTERPRISE V2
-   DESIGN SYSTEM
-   FORM FIELD
-=========================================================== */
+// ============================================================
+// FINORA ENTERPRISE V2
+// DESIGN SYSTEM
+// FORM FIELD
+//
+// RESPONSIBILITY:
+// - Shared form field presentation
+// - Premium FINORA dark-navy labels
+// - Required / help / error messaging
+// - Preserve existing FormField API
+//
+// IMPORTANT:
+// - No business logic
+// - No state
+// - No persistence
+// - Existing props and behavior preserved
+//
+// ============================================================
 
-import type { CSSProperties, ReactNode } from "react";
+// ============================================================
+// IMPORTS
+// ============================================================
 
-/* ===========================================================
-   TYPES
-=========================================================== */
+import type {
+  CSSProperties,
+  ReactNode,
+} from "react";
+
+// ============================================================
+// TYPES
+// ============================================================
 
 export interface FormFieldProps {
 
@@ -24,9 +44,25 @@ export interface FormFieldProps {
 
 }
 
-/* ===========================================================
-   STYLES
-=========================================================== */
+// ============================================================
+// COLOR TOKENS
+// ============================================================
+
+const COLORS = {
+
+  text: "#E2E8F0",
+
+  required: "#60A5FA",
+
+  help: "#94A3B8",
+
+  error: "#FCA5A5",
+
+};
+
+// ============================================================
+// STYLES
+// ============================================================
 
 const wrapperStyle: CSSProperties = {
 
@@ -38,23 +74,37 @@ const wrapperStyle: CSSProperties = {
 
   marginBottom: "20px",
 
+  minWidth: 0,
+
 };
 
 const labelStyle: CSSProperties = {
 
+  display: "flex",
+
+  alignItems: "center",
+
+  minWidth: 0,
+
   fontWeight: 600,
 
-  color: "#111827",
+  color: COLORS.text,
 
   fontSize: "14px",
+
+  lineHeight: 1.25,
 
 };
 
 const requiredStyle: CSSProperties = {
 
-  color: "#dc2626",
+  color: COLORS.required,
 
   marginLeft: "4px",
+
+  fontSize: "14px",
+
+  fontWeight: 700,
 
 };
 
@@ -62,7 +112,11 @@ const helpStyle: CSSProperties = {
 
   fontSize: "12px",
 
-  color: "#6b7280",
+  fontWeight: 500,
+
+  color: COLORS.help,
+
+  lineHeight: 1.3,
 
 };
 
@@ -70,15 +124,17 @@ const errorStyle: CSSProperties = {
 
   fontSize: "12px",
 
-  color: "#dc2626",
+  color: COLORS.error,
 
-  fontWeight: 500,
+  fontWeight: 600,
+
+  lineHeight: 1.3,
 
 };
 
-/* ===========================================================
-   COMPONENT
-=========================================================== */
+// ============================================================
+// COMPONENT
+// ============================================================
 
 export default function FormField({
 
@@ -96,15 +152,21 @@ export default function FormField({
 
   return (
 
-    <div style={wrapperStyle}>
+    <div
+      style={wrapperStyle}
+    >
 
-      <label style={labelStyle}>
+      <label
+        style={labelStyle}
+      >
 
         {label}
 
         {required && (
 
-          <span style={requiredStyle}>
+          <span
+            style={requiredStyle}
+          >
 
             *
 
@@ -118,7 +180,9 @@ export default function FormField({
 
       {helpText && (
 
-        <div style={helpStyle}>
+        <div
+          style={helpStyle}
+        >
 
           {helpText}
 
@@ -128,7 +192,9 @@ export default function FormField({
 
       {error && (
 
-        <div style={errorStyle}>
+        <div
+          style={errorStyle}
+        >
 
           {error}
 
@@ -141,3 +207,7 @@ export default function FormField({
   );
 
 }
+
+// ============================================================
+// END
+// ============================================================

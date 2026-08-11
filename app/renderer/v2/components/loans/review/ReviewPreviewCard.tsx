@@ -1,17 +1,33 @@
 /* ===========================================================
-   FINORA ENTERPRISE V2
-   REVIEW STUDIO
-   REVIEW PREVIEW CARD
+FINORA ENTERPRISE V2
+REVIEW STUDIO
+REVIEW PREVIEW CARD
 =========================================================== */
 
-import SummaryCard from "../../common/cards/SummaryCard";
+/* ===========================================================
+IMPORTS
+=========================================================== */
+
+import SummaryCard
+  from "../../common/cards/SummaryCard";
 
 import type {
   LoanReviewData,
 } from "./types";
 
+import {
+  cardStyle,
+  fullWidthRowStyle,
+  highlightRowStyle,
+  labelStyle,
+  previewGridStyle,
+  primaryValueStyle,
+  rowStyle,
+  valueStyle,
+} from "./ReviewPreviewCard.styles";
+
 /* ===========================================================
-   TYPES
+TYPES
 =========================================================== */
 
 interface ReviewPreviewCardProps {
@@ -21,7 +37,7 @@ interface ReviewPreviewCardProps {
 }
 
 /* ===========================================================
-   COMPONENT
+COMPONENT
 =========================================================== */
 
 export default function ReviewPreviewCard({
@@ -32,52 +48,153 @@ export default function ReviewPreviewCard({
 
   return (
 
-    <SummaryCard title="Final Loan Preview">
+    <div
+      style={cardStyle}
+    >
 
-      <span>
+      <SummaryCard
+        title="Final Loan Preview"
+      >
 
-        Customer :
-        <strong> {review.customerName}</strong>
+        <div
+          style={previewGridStyle}
+        >
 
-      </span>
+          {/* CUSTOMER */}
 
-      <span>
+          <div
+            style={highlightRowStyle}
+          >
 
-        Loan Amount :
-        <strong> ₹ {review.loanAmount}</strong>
+            <span
+              style={labelStyle}
+            >
+              Customer
+            </span>
 
-      </span>
+            <strong
+              style={primaryValueStyle}
+            >
+              {review.customerName}
+            </strong>
 
-      <span>
+          </div>
 
-        Interest :
-        <strong> {review.interestRate}%</strong>
 
-      </span>
+          {/* LOAN AMOUNT */}
 
-      <span>
+          <div
+            style={rowStyle}
+          >
 
-        Repayment :
-        <strong> {review.repaymentType}</strong>
+            <span
+              style={labelStyle}
+            >
+              Loan Amount
+            </span>
 
-      </span>
+            <strong
+              style={valueStyle}
+            >
+              ₹ {review.loanAmount}
+            </strong>
 
-      <span>
+          </div>
 
-        Payment Mode :
-        <strong> Pending</strong>
 
-      </span>
+          {/* INTEREST */}
 
-      <span>
+          <div
+            style={rowStyle}
+          >
 
-        Guarantor :
-        <strong> {review.guarantorName}</strong>
+            <span
+              style={labelStyle}
+            >
+              Interest
+            </span>
 
-      </span>
+            <strong
+              style={valueStyle}
+            >
+              {review.interestRate}%
+            </strong>
 
-    </SummaryCard>
+          </div>
+
+
+          {/* REPAYMENT */}
+
+          <div
+            style={rowStyle}
+          >
+
+            <span
+              style={labelStyle}
+            >
+              Repayment
+            </span>
+
+            <strong
+              style={valueStyle}
+            >
+              {review.repaymentType}
+            </strong>
+
+          </div>
+
+
+          {/* PAYMENT MODE */}
+
+          <div
+            style={rowStyle}
+          >
+
+            <span
+              style={labelStyle}
+            >
+              Payment Mode
+            </span>
+
+            <strong
+              style={valueStyle}
+            >
+              {review.paymentMode}
+            </strong>
+
+          </div>
+
+
+          {/* GUARANTOR */}
+
+          <div
+            style={fullWidthRowStyle}
+          >
+
+            <span
+              style={labelStyle}
+            >
+              Guarantor
+            </span>
+
+            <strong
+              style={valueStyle}
+            >
+              {review.guarantorName}
+            </strong>
+
+          </div>
+
+        </div>
+
+      </SummaryCard>
+
+    </div>
 
   );
 
 }
+
+/* ===========================================================
+END
+=========================================================== */

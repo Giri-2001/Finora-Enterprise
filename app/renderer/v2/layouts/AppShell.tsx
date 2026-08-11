@@ -8,7 +8,8 @@
 // - Provide the global authenticated application shell
 // - Provide global logout access
 // - Host the active V2 page
-// - Keep page-specific business logic outside the shell
+// - Establish the exact viewport height
+// - Allow child Studio layouts to consume remaining height
 //
 // IMPORTANT:
 //
@@ -19,7 +20,7 @@
 // - Does NOT use Electron IPC.
 // - Logout is delegated to the authenticated application.
 //
-// VERSION : 2.1
+// VERSION : 2.2
 // STATUS  : Production
 // ============================================================
 
@@ -81,18 +82,49 @@ export default function AppShell({
 
     <main
       style={{
+        // ----------------------------------------------------
+        // EXACT VIEWPORT
+        // ----------------------------------------------------
+
         width: "100vw",
-        minHeight: "100vh",
-        overflowY: "auto",
-        overflowX: "hidden",
-        background: "#F8FAFC",
+
+        height: "100vh",
+
+        minHeight: 0,
+
+        minWidth: 0,
+
+        boxSizing: "border-box",
+
+        // ----------------------------------------------------
+        // LAYOUT
+        // ----------------------------------------------------
+
+        display: "flex",
+
+        flexDirection: "column",
+
+        // ----------------------------------------------------
+        // OVERFLOW
+        // ----------------------------------------------------
+
+        overflow: "hidden",
+
+        // ----------------------------------------------------
+        // GLOBAL BACKGROUND
+        // ----------------------------------------------------
+
+        background: "#321B12",
+
         position: "relative",
       }}
     >
 
       {/* =====================================================
           GLOBAL LOGOUT CONTROL
-          ===================================================== */}
+
+          Kept as the application-level fallback control.
+      ===================================================== */}
 
       <button
         type="button"
@@ -100,28 +132,38 @@ export default function AppShell({
         aria-label="Logout from FINORA Enterprise"
         style={{
           position: "fixed",
+
           top: 18,
+
           right: 18,
+
           zIndex: 1000,
 
-          padding: "9px 16px",
+          padding:
+            "9px 16px",
 
           borderRadius: 8,
 
-          border: "1px solid rgba(255,255,255,0.18)",
+          border:
+            "1px solid rgba(255,255,255,0.18)",
 
           background:
             "rgba(15,23,42,0.92)",
 
-          color: "#ffffff",
+          color:
+            "#ffffff",
 
-          cursor: "pointer",
+          cursor:
+            "pointer",
 
-          fontSize: 13,
+          fontSize:
+            13,
 
-          fontWeight: 600,
+          fontWeight:
+            600,
 
-          letterSpacing: 0.2,
+          letterSpacing:
+            0.2,
 
           boxShadow:
             "0 6px 20px rgba(15,23,42,0.18)",
@@ -135,9 +177,35 @@ export default function AppShell({
 
       {/* =====================================================
           ACTIVE V2 PAGE
-          ===================================================== */}
 
-      {children}
+          Child pages now receive the exact remaining
+          viewport height because AppShell is a definite
+          100vh flex container.
+      ===================================================== */}
+
+      <div
+        style={{
+          width: "100%",
+
+          flex: "1 1 auto",
+
+          minWidth: 0,
+
+          minHeight: 0,
+
+          boxSizing: "border-box",
+
+          overflow: "hidden",
+
+          display: "flex",
+
+          flexDirection: "column",
+        }}
+      >
+
+        {children}
+
+      </div>
 
     </main>
   );

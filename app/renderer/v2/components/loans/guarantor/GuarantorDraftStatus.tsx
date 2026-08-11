@@ -1,47 +1,50 @@
 /* ===========================================================
-   FINORA ENTERPRISE V2
-   GUARANTOR STUDIO
-   GUARANTOR DRAFT STATUS
+FINORA ENTERPRISE V2
+GUARANTOR STUDIO
+GUARANTOR DRAFT STATUS
+=========================================================== */
+
+/* ===========================================================
+IMPORTS
 =========================================================== */
 
 import StudioDraftStatus from "../../common/studio/StudioDraftStatus";
 
+import {
+  cardStyle,
+  statusStyle,
+} from "./GuarantorDraftStatus.styles";
+
 /* ===========================================================
-   TYPES
+TYPES
 =========================================================== */
 
 interface GuarantorDraftStatusProps {
-
   savedAt?: string;
-
   status?: "Draft" | "Completed";
-
 }
 
 /* ===========================================================
-   COMPONENT
+COMPONENT
 =========================================================== */
 
 export default function GuarantorDraftStatus({
-
   savedAt = "Not Saved",
-
   status = "Draft",
-
 }: GuarantorDraftStatusProps) {
-
   return (
-
-    <StudioDraftStatus
-
-      title="Guarantor Draft"
-
-      status={status}
-
-      updatedAt={savedAt}
-
-    />
-
+    <div style={cardStyle}>
+      <div style={statusStyle}>
+        <StudioDraftStatus
+          title="Guarantor Draft"
+          status={status}
+          updatedAt={savedAt}
+        />
+      </div>
+    </div>
   );
-
 }
+
+/* ===========================================================
+END
+=========================================================== */

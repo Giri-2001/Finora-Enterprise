@@ -1,75 +1,108 @@
 /* ===========================================================
-   FINORA ENTERPRISE V2
-   GUARANTOR STUDIO
-   GUARANTOR VERIFICATION
+FINORA ENTERPRISE V2
+GUARANTOR STUDIO
+GUARANTOR VERIFICATION
 =========================================================== */
 
-import SummaryCard from "../../common/cards/SummaryCard";
+/* ===========================================================
+IMPORTS
+=========================================================== */
 
 import {
   FormField,
   SelectInput,
 } from "../../common";
 
+import {
+  accentStyle,
+  contentStyle,
+  fieldContentStyle,
+  fieldStyle,
+  headerStyle,
+  wrapperStyle,
+} from "./GuarantorVerification.styles";
+
 /* ===========================================================
-   COMPONENT
+COMPONENT
 =========================================================== */
 
 export default function GuarantorVerification() {
-
   return (
+    <div style={wrapperStyle}>
 
-    <SummaryCard title="Guarantor Verification">
+      {/* HEADER */}
+      <div style={headerStyle}>
+        <span style={accentStyle} />
 
-      <FormField
-        label="Verification Status"
-        required
-      >
-        <SelectInput
-          options={[
-            {
-              label: "Pending",
-              value: "pending",
-            },
-            {
-              label: "Verified",
-              value: "verified",
-            },
-            {
-              label: "Rejected",
-              value: "rejected",
-            },
-          ]}
-        />
-      </FormField>
+        <span>
+          Guarantor Verification
+        </span>
+      </div>
 
-      <FormField
-        label="Identity Verification"
-      >
-        <SelectInput
-          options={[
-            {
-              label: "Aadhaar",
-              value: "aadhaar",
-            },
-            {
-              label: "PAN",
-              value: "pan",
-            },
-            {
-              label: "Driving Licence",
-              value: "dl",
-            },
-            {
-              label: "Voter ID",
-              value: "voter",
-            },
-          ]}
-        />
-      </FormField>
+      <div style={contentStyle}>
 
-    </SummaryCard>
+        {/* VERIFICATION STATUS */}
+        <div style={fieldStyle}>
+          <div style={fieldContentStyle}>
+            <FormField
+              label="Verification Status"
+              required
+            >
+              <SelectInput
+                options={[
+                  {
+                    label: "Pending",
+                    value: "pending",
+                  },
+                  {
+                    label: "Verified",
+                    value: "verified",
+                  },
+                  {
+                    label: "Rejected",
+                    value: "rejected",
+                  },
+                ]}
+              />
+            </FormField>
+          </div>
+        </div>
 
+        {/* IDENTITY VERIFICATION */}
+        <div style={fieldStyle}>
+          <div style={fieldContentStyle}>
+            <FormField
+              label="Identity Verification"
+            >
+              <SelectInput
+                options={[
+                  {
+                    label: "Aadhaar",
+                    value: "aadhaar",
+                  },
+                  {
+                    label: "PAN",
+                    value: "pan",
+                  },
+                  {
+                    label: "Driving Licence",
+                    value: "dl",
+                  },
+                  {
+                    label: "Voter ID",
+                    value: "voter",
+                  },
+                ]}
+              />
+            </FormField>
+          </div>
+        </div>
+
+      </div>
+    </div>
   );
-
 }
+
+/* ===========================================================
+END
+=========================================================== */

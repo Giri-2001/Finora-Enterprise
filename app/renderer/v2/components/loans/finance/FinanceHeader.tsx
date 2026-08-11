@@ -1,27 +1,46 @@
 /* ===========================================================
-   FINORA ENTERPRISE V2
-   FINANCE STUDIO
-   HEADER
+FINORA ENTERPRISE V2
+FINANCE STUDIO
+HEADER
 =========================================================== */
 
-import StudioHeader from "../../common/studio/StudioHeader";
+/* ===========================================================
+IMPORTS
+=========================================================== */
+
+import {
+  accentStyle,
+  contentStyle,
+  headerStyle,
+  subtitleStyle,
+  textWrapperStyle,
+  titleStyle,
+} from "./FinanceHeader.styles";
 
 /* ===========================================================
-   COMPONENT
+COMPONENT
 =========================================================== */
 
 export default function FinanceHeader() {
-
   return (
+    <header style={headerStyle}>
+      <div style={contentStyle}>
+        <div style={accentStyle} />
 
-    <StudioHeader
+        <div style={textWrapperStyle}>
+          <h1 style={titleStyle}>
+            Finance Studio™
+          </h1>
 
-      title="Finance Studio™"
-
-      subtitle="Configure loan interest, processing fees and financial rules."
-
-    />
-
+          <p style={subtitleStyle}>
+            Configure loan interest, processing fees and financial rules.
+          </p>
+        </div>
+      </div>
+    </header>
   );
-
 }
+
+/* ===========================================================
+END
+=========================================================== */

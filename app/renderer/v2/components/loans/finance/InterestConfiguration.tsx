@@ -1,10 +1,28 @@
-/* ===========================================================
-   FINORA ENTERPRISE V2
-   FINANCE STUDIO
-   INTEREST CONFIGURATION
-=========================================================== */
+// ============================================================
+// FINORA ENTERPRISE V2
+//
+// FINANCE STUDIO
+// INTEREST CONFIGURATION
+//
+// RESPONSIBILITY:
+// - Configure interest type
+// - Display controlled interest rate
+// - Keep interest basis aligned with LoanStudio
+// - No calculation logic
+// - No persistence
+// - No service access
+//
+// BUSINESS RULE:
+// - Step 1 interest rate remains the source value.
+// - Step 2 displays the same controlled rate.
+// - Current FINORA flat-interest loan calculation uses
+//   monthly basis.
+// ============================================================
 
-import type { CSSProperties } from "react";
+
+// ============================================================
+// IMPORTS
+// ============================================================
 
 import {
   FormField,
@@ -12,29 +30,27 @@ import {
   TextInput,
 } from "../../common";
 
-/* ===========================================================
-   STYLES
-=========================================================== */
 
-const wrapperStyle: CSSProperties = {
+import {
+  accentStyle,
+  fieldContentStyle,
+  fieldStyle,
+  headerStyle,
+  wrapperStyle,
+} from "./InterestConfiguration.styles";
 
-  display: "flex",
 
-  flexDirection: "column",
-
-  gap: "20px",
-
-};
-
-/* ===========================================================
-   TYPES
-=========================================================== */
+// ============================================================
+// TYPES
+// ============================================================
 
 interface InterestConfigurationProps {
 
   interestType: string;
 
   interestRate: string;
+
+  interestCalculation?: string;
 
   onInterestTypeChange: (
     value: string,
@@ -46,15 +62,18 @@ interface InterestConfigurationProps {
 
 }
 
-/* ===========================================================
-   COMPONENT
-=========================================================== */
+
+// ============================================================
+// COMPONENT
+// ============================================================
 
 export default function InterestConfiguration({
 
   interestType,
 
   interestRate,
+
+  interestCalculation = "monthly",
 
   onInterestTypeChange,
 
@@ -64,71 +83,200 @@ export default function InterestConfiguration({
 
   return (
 
-    <div style={wrapperStyle}>
+    <div
+      style={
+        wrapperStyle
+      }
+    >
 
-      <FormField
-        label="Interest Type"
-        required
-      >
-        <SelectInput
-  value={interestType}
-  onChange={(event) =>
-    onInterestTypeChange(
-      event.target.value,
-    )
-  }
-  options={[
-    {
-      label: "Flat Interest",
-      value: "Flat Interest",
-    },
-    {
-      label: "Reducing Balance",
-      value: "Reducing Balance",
-    },
-  ]}
-/>
-      </FormField>
 
-      <FormField
-        label="Interest Rate (%)"
-        required
-      >
-        <TextInput
-  type="number"
-  value={interestRate}
-  onChange={(event) =>
-    onInterestRateChange(
-      event.target.value,
-    )
-  }
-  placeholder="Enter interest rate"
-/>
-      </FormField>
+      {/* ==================================================
+          HEADER
+      ================================================== */}
 
-      <FormField
-        label="Interest Calculation"
+      <div
+        style={
+          headerStyle
+        }
       >
-        <SelectInput
-          options={[
-            {
-              label: "Daily",
-              value: "daily",
-            },
-            {
-              label: "Weekly",
-              value: "weekly",
-            },
-            {
-              label: "Monthly",
-              value: "monthly",
-            },
-          ]}
+
+        <span
+          style={
+            accentStyle
+          }
         />
-      </FormField>
+
+
+        <span>
+          Interest Configuration
+        </span>
+
+      </div>
+
+
+      {/* ==================================================
+          INTEREST TYPE
+      ================================================== */}
+
+      <div
+        style={
+          fieldStyle
+        }
+      >
+
+        <div
+          style={
+            fieldContentStyle
+          }
+        >
+
+          <FormField
+            label="Interest Type"
+            required
+          >
+
+            <SelectInput
+
+              value={
+                interestType
+              }
+
+              onChange={(
+                event,
+              ) =>
+                onInterestTypeChange(
+                  event.target.value,
+                )
+              }
+
+              options={[
+                {
+                  label:
+                    "Flat Interest",
+
+                  value:
+                    "Flat Interest",
+                },
+
+                {
+                  label:
+                    "Reducing Balance",
+
+                  value:
+                    "Reducing Balance",
+                },
+              ]}
+
+            />
+
+          </FormField>
+
+        </div>
+
+      </div>
+
+
+      {/* ==================================================
+          INTEREST RATE
+      ================================================== */}
+
+      <div
+        style={
+          fieldStyle
+        }
+      >
+
+        <div
+          style={
+            fieldContentStyle
+          }
+        >
+
+          <FormField
+            label="Interest Rate (%)"
+            required
+          >
+
+            <TextInput
+
+              type="number"
+
+              value={
+                interestRate
+              }
+
+              onChange={(
+                event,
+              ) =>
+                onInterestRateChange(
+                  event.target.value,
+                )
+              }
+
+              placeholder="Enter interest rate"
+
+            />
+
+          </FormField>
+
+        </div>
+
+      </div>
+
+
+      {/* ==================================================
+          INTEREST BASIS
+      ================================================== */}
+
+      <div
+        style={
+          fieldStyle
+        }
+      >
+
+        <div
+          style={
+            fieldContentStyle
+          }
+        >
+
+          <FormField
+            label="Interest Basis"
+            required
+          >
+
+            <SelectInput
+
+              value={
+                interestCalculation
+              }
+
+              disabled
+
+              options={[
+                {
+                  label:
+                    "Monthly",
+
+                  value:
+                    "monthly",
+                },
+              ]}
+
+            />
+
+          </FormField>
+
+        </div>
+
+      </div>
+
 
     </div>
-
   );
-
 }
+
+
+// ============================================================
+// END
+// ============================================================

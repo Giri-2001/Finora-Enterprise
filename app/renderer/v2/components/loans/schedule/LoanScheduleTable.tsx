@@ -1,9 +1,35 @@
-/* ===========================================================
-   FINORA ENTERPRISE OS™
-   PAYMENT SCHEDULE ENGINE™
+// ============================================================
+// FINORA ENTERPRISE OS™
+//
+// PAYMENT SCHEDULE ENGINE™
+//
+// LOAN SCHEDULE TABLE
+//
+// RESPONSIBILITY:
+// - Render generated repayment schedule
+// - Display EMI number, due date, amount and status
+// - Premium FINORA Enterprise presentation
+//
+// IMPORTANT:
+// - Does NOT generate schedule.
+// - Does NOT modify installments.
+// - Does NOT access persistence.
+// - Receives LoanInstallment[] from parent.
+// - Existing schedule contract remains unchanged.
+//
+// DESIGN:
+// - Deep Navy
+// - FINORA Primary Blue
+// - White / Slate typography
+// - No brown
+// - No gold
+// - Compact enterprise table
+//
+// ============================================================
 
-   LOAN SCHEDULE TABLE
-=========================================================== */
+// ============================================================
+// IMPORTS
+// ============================================================
 
 import type {
   LoanInstallment,
@@ -12,19 +38,20 @@ import type {
 import LoanScheduleRow
   from "./LoanScheduleRow";
 
-/* ===========================================================
-   TYPES
-=========================================================== */
+// ============================================================
+// TYPES
+// ============================================================
 
 interface LoanScheduleTableProps {
 
-  schedule: LoanInstallment[];
+  schedule:
+    LoanInstallment[];
 
 }
 
-/* ===========================================================
-   COMPONENT
-=========================================================== */
+// ============================================================
+// COMPONENT
+// ============================================================
 
 export default function LoanScheduleTable({
 
@@ -32,99 +59,357 @@ export default function LoanScheduleTable({
 
 }: LoanScheduleTableProps) {
 
-  return (
+  // ==========================================================
+  // EMPTY STATE
+  // ==========================================================
 
-    <div
-      style={{
-        marginTop: "24px",
-        border: "1px solid #E2E8F0",
-        borderRadius: "16px",
-        overflow: "hidden",
-        background: "#FFFFFF",
-      }}
-    >
+  if (
+    schedule.length === 0
+  ) {
 
-      <table
+    return (
+
+      <section
         style={{
           width: "100%",
-          borderCollapse: "collapse",
+          boxSizing: "border-box",
+
+          border:
+            "1px solid rgba(148, 163, 184, 0.16)",
+
+          borderRadius: "10px",
+
+          background: "#111C2E",
+
+          padding: "18px",
+
+          color: "#94A3B8",
+
+          fontSize: "12px",
+
+          fontWeight: 500,
+
+          textAlign: "center",
         }}
       >
 
-        <thead>
+        No repayment schedule available.
 
-          <tr
+      </section>
+
+    );
+
+  }
+
+  // ==========================================================
+  // RENDER
+  // ==========================================================
+
+  return (
+
+    <section
+      style={{
+        width: "100%",
+        minWidth: 0,
+
+        boxSizing: "border-box",
+
+        border:
+          "1px solid rgba(148, 163, 184, 0.16)",
+
+        borderRadius: "10px",
+
+        overflow: "hidden",
+
+        background: "#0F172A",
+
+        boxShadow:
+          "0 8px 24px rgba(0, 0, 0, 0.18)",
+      }}
+    >
+
+      {/* ====================================================
+          TABLE HEADER
+      ==================================================== */}
+
+      <div
+        style={{
+          display: "flex",
+
+          alignItems: "center",
+
+          justifyContent:
+            "space-between",
+
+          gap: "12px",
+
+          padding:
+            "10px 12px",
+
+          borderBottom:
+            "1px solid rgba(148, 163, 184, 0.16)",
+
+          background:
+            "linear-gradient(90deg,#142238,#111C2E)",
+        }}
+      >
+
+        <div
+          style={{
+            display: "flex",
+
+            alignItems: "center",
+
+            gap: "8px",
+
+            minWidth: 0,
+          }}
+        >
+
+          <span
             style={{
-              background:
-                "linear-gradient(180deg,#A67C38,#7A5625)",
+              width: "3px",
+              height: "16px",
+
+              flexShrink: 0,
+
+              borderRadius: "3px",
+
+              background: "#2563EB",
+
+              boxShadow:
+                "0 0 10px rgba(37,99,235,0.22)",
+            }}
+          />
+
+          <span
+            style={{
               color: "#FFFFFF",
+
+              fontSize: "13px",
+
+              fontWeight: 750,
+
+              lineHeight: 1.2,
             }}
           >
+            EMI Schedule
+          </span>
 
-            <th
+        </div>
+
+
+        <span
+          style={{
+            flexShrink: 0,
+
+            padding:
+              "4px 8px",
+
+            border:
+              "1px solid rgba(37, 99, 235, 0.35)",
+
+            borderRadius: "999px",
+
+            background:
+              "rgba(37, 99, 235, 0.10)",
+
+            color: "#93C5FD",
+
+            fontSize: "12px",
+
+            fontWeight: 650,
+          }}
+        >
+          {schedule.length} Installments
+        </span>
+
+      </div>
+
+
+      {/* ====================================================
+          TABLE
+      ==================================================== */}
+
+      <div
+        style={{
+          width: "100%",
+
+          minWidth: 0,
+
+          overflowX: "auto",
+
+          overflowY: "hidden",
+        }}
+      >
+
+        <table
+          style={{
+            width: "100%",
+
+            minWidth: "560px",
+
+            borderCollapse:
+              "collapse",
+
+            tableLayout:
+              "fixed",
+          }}
+        >
+
+          {/* ==================================================
+              TABLE HEAD
+          ================================================== */}
+
+          <thead>
+
+            <tr
               style={{
-                padding: "12px",
-                textAlign: "left",
+                background: "#111C2E",
+
+                borderBottom:
+                  "1px solid rgba(148, 163, 184, 0.16)",
               }}
             >
-              EMI
-            </th>
 
-            <th
-              style={{
-                padding: "12px",
-                textAlign: "left",
-              }}
-            >
-              Due Date
-            </th>
+              <th
+                style={{
+                  width: "14%",
 
-            <th
-              style={{
-                padding: "12px",
-                textAlign: "right",
-              }}
-            >
-              Amount
-            </th>
+                  padding:
+                    "8px 10px",
 
-            <th
-              style={{
-                padding: "12px",
-                textAlign: "center",
-              }}
-            >
-              Status
-            </th>
+                  textAlign:
+                    "left",
 
-          </tr>
+                  color:
+                    "#94A3B8",
 
-        </thead>
+                  fontSize: "12px",
 
-        <tbody>
+                  fontWeight: 650,
 
-          {schedule.map((installment) => (
+                  lineHeight: 1.2,
+                }}
+              >
+                EMI
+              </th>
 
-            <LoanScheduleRow
 
-              key={
-                installment.installmentNumber
-              }
+              <th
+                style={{
+                  width: "28%",
 
-              installment={
-                installment
-              }
+                  padding:
+                    "8px 10px",
 
-            />
+                  textAlign:
+                    "left",
 
-          ))}
+                  color:
+                    "#94A3B8",
 
-        </tbody>
+                  fontSize: "12px",
 
-      </table>
+                  fontWeight: 650,
 
-    </div>
+                  lineHeight: 1.2,
+                }}
+              >
+                Due Date
+              </th>
+
+
+              <th
+                style={{
+                  width: "28%",
+
+                  padding:
+                    "8px 10px",
+
+                  textAlign:
+                    "right",
+
+                  color:
+                    "#94A3B8",
+
+                  fontSize: "12px",
+
+                  fontWeight: 650,
+
+                  lineHeight: 1.2,
+                }}
+              >
+                Amount
+              </th>
+
+
+              <th
+                style={{
+                  width: "30%",
+
+                  padding:
+                    "8px 10px",
+
+                  textAlign:
+                    "center",
+
+                  color:
+                    "#94A3B8",
+
+                  fontSize: "12px",
+
+                  fontWeight: 650,
+
+                  lineHeight: 1.2,
+                }}
+              >
+                Status
+              </th>
+
+            </tr>
+
+          </thead>
+
+
+          {/* ==================================================
+              TABLE BODY
+          ================================================== */}
+
+          <tbody>
+
+            {schedule.map(
+              (
+                installment,
+              ) => (
+
+                <LoanScheduleRow
+
+                  key={
+                    installment.installmentNumber
+                  }
+
+                  installment={
+                    installment
+                  }
+
+                />
+
+              ),
+            )}
+
+          </tbody>
+
+        </table>
+
+      </div>
+
+    </section>
 
   );
 
 }
+
+// ============================================================
+// END
+// ============================================================

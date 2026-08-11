@@ -1,17 +1,34 @@
-/* ===========================================================
-   FINORA ENTERPRISE V2
-   DESIGN SYSTEM
-   SUMMARY CARD
-=========================================================== */
+// ============================================================
+// FINORA ENTERPRISE V2
+// DESIGN SYSTEM
+// SUMMARY CARD
+//
+// RESPONSIBILITY:
+// - Shared premium summary/card container
+// - FINORA dark-navy presentation
+// - Preserve existing title / children / footer API
+// - Presentation only
+//
+// IMPORTANT:
+// - No business logic
+// - No state
+// - No persistence
+// - Existing consumers remain compatible
+//
+// ============================================================
+
+// ============================================================
+// IMPORTS
+// ============================================================
 
 import type {
   CSSProperties,
   ReactNode,
 } from "react";
 
-/* ===========================================================
-   TYPES
-=========================================================== */
+// ============================================================
+// TYPES
+// ============================================================
 
 export interface SummaryCardProps {
 
@@ -23,19 +40,56 @@ export interface SummaryCardProps {
 
 }
 
-/* ===========================================================
-   STYLES
-=========================================================== */
+// ============================================================
+// COLOR TOKENS
+// ============================================================
+
+const COLORS = {
+
+  panel: "#111C2E",
+
+  panelSoft: "#142238",
+
+  border: "rgba(148, 163, 184, 0.20)",
+
+  borderStrong: "rgba(37, 99, 235, 0.42)",
+
+  primary: "#2563EB",
+
+  text: "#FFFFFF",
+
+  textSoft: "#CBD5E1",
+
+  divider: "rgba(148, 163, 184, 0.18)",
+
+};
+
+// ============================================================
+// STYLES
+// ============================================================
 
 const cardStyle: CSSProperties = {
 
-  background: "#ffffff",
+  width: "100%",
 
-  border: "1px solid #e5e7eb",
+  minWidth: 0,
+
+  boxSizing: "border-box",
+
+  background:
+    `linear-gradient(180deg, ${COLORS.panel}, ${COLORS.panelSoft})`,
+
+  border:
+    `1px solid ${COLORS.border}`,
 
   borderRadius: "16px",
 
   padding: "20px",
+
+  color: COLORS.text,
+
+  boxShadow:
+    "0 8px 24px rgba(0, 0, 0, 0.16)",
 
 };
 
@@ -45,11 +99,18 @@ const titleStyle: CSSProperties = {
 
   marginBottom: "16px",
 
+  paddingLeft: "10px",
+
+  borderLeft:
+    `3px solid ${COLORS.primary}`,
+
   fontSize: "18px",
 
   fontWeight: 700,
 
-  color: "#111827",
+  lineHeight: 1.25,
+
+  color: COLORS.text,
 
 };
 
@@ -61,6 +122,12 @@ const contentStyle: CSSProperties = {
 
   gap: "12px",
 
+  width: "100%",
+
+  minWidth: 0,
+
+  color: COLORS.text,
+
 };
 
 const footerStyle: CSSProperties = {
@@ -69,13 +136,16 @@ const footerStyle: CSSProperties = {
 
   paddingTop: "16px",
 
-  borderTop: "1px solid #e5e7eb",
+  borderTop:
+    `1px solid ${COLORS.divider}`,
+
+  color: COLORS.textSoft,
 
 };
 
-/* ===========================================================
-   COMPONENT
-=========================================================== */
+// ============================================================
+// COMPONENT
+// ============================================================
 
 export default function SummaryCard({
 
@@ -89,15 +159,21 @@ export default function SummaryCard({
 
   return (
 
-    <section style={cardStyle}>
+    <section
+      style={cardStyle}
+    >
 
-      <h3 style={titleStyle}>
+      <h3
+        style={titleStyle}
+      >
 
         {title}
 
       </h3>
 
-      <div style={contentStyle}>
+      <div
+        style={contentStyle}
+      >
 
         {children}
 
@@ -105,7 +181,9 @@ export default function SummaryCard({
 
       {footer && (
 
-        <div style={footerStyle}>
+        <div
+          style={footerStyle}
+        >
 
           {footer}
 
@@ -118,3 +196,7 @@ export default function SummaryCard({
   );
 
 }
+
+// ============================================================
+// END
+// ============================================================

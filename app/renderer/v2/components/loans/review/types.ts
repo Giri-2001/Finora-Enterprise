@@ -5,6 +5,10 @@
    TYPES
 =========================================================== */
 
+/* ===========================================================
+   REVIEW DATA
+=========================================================== */
+
 export interface LoanReviewData {
 
   /* ==========================================
@@ -16,6 +20,7 @@ export interface LoanReviewData {
   customerName: string;
 
   phoneNumber?: string;
+
 
   /* ==========================================
      LOAN
@@ -33,6 +38,7 @@ export interface LoanReviewData {
 
   duration: string;
 
+
   /* ==========================================
      FINANCE
   ========================================== */
@@ -47,6 +53,7 @@ export interface LoanReviewData {
 
   penaltyValue: number;
 
+
   /* ==========================================
      GUARANTOR
   ========================================== */
@@ -57,11 +64,20 @@ export interface LoanReviewData {
 
   guarantorOccupation?: string;
 
+
   /* ==========================================
      SCHEDULE
   ========================================== */
 
   totalInstallments: number;
+
+
+  /* ==========================================
+     DISBURSEMENT
+  ========================================== */
+
+  paymentMode: string;
+
 
   /* ==========================================
      STATUS

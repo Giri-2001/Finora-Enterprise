@@ -1,7 +1,11 @@
 /* ===========================================================
-   FINORA ENTERPRISE V2
-   REVIEW STUDIO
-   VALIDATION CHECKLIST
+FINORA ENTERPRISE V2
+REVIEW STUDIO
+VALIDATION CHECKLIST
+=========================================================== */
+
+/* ===========================================================
+IMPORTS
 =========================================================== */
 
 import SummaryCard from "../../common/cards/SummaryCard";
@@ -10,79 +14,44 @@ import type {
   LoanReviewData,
 } from "./types";
 
+import {
+  cardStyle,
+  checklistStyle,
+  emptyStateStyle,
+} from "./ValidationChecklist.styles";
 
 /* ===========================================================
-   TYPES
+TYPES
 =========================================================== */
 
 interface ValidationChecklistProps {
-
   review: LoanReviewData;
-
 }
 
 /* ===========================================================
-   COMPONENT
+COMPONENT
 =========================================================== */
 
 export default function ValidationChecklist({
-
   review,
-
 }: ValidationChecklistProps) {
-
   return (
+    <div style={cardStyle}>
+      <SummaryCard title="Validation Checklist">
+        <ul style={checklistStyle}>
 
-    <SummaryCard title="Validation Checklist">
+          {/* VALIDATION RULES WILL BE RENDERED HERE */}
 
-      <ul
-  style={{
-    margin: 0,
-    paddingLeft: "20px",
-    display: "flex",
-    flexDirection: "column",
-    gap: "10px",
-  }}
->
-  <li>
-    {review.customerName
-      ? "✅ Customer information completed"
-      : "❌ Customer information missing"}
-  </li>
+          <li style={emptyStateStyle}>
+            Validation checklist is pending configuration.
+          </li>
 
-  <li>
-    {review.interestRate > 0
-      ? "✅ Finance configuration verified"
-      : "❌ Finance configuration incomplete"}
-  </li>
-
-  <li>
-    {review.totalInstallments > 0
-      ? "✅ Repayment schedule generated"
-      : "❌ Repayment schedule not generated"}
-  </li>
-
-  <li>
-    {review.guarantorName
-      ? "✅ Guarantor details verified"
-      : "❌ Guarantor details missing"}
-  </li>
-
-  <li>
-    {review.netDisbursement > 0
-      ? "✅ Disbursement details confirmed"
-      : "❌ Disbursement not configured"}
-  </li>
-
-  <li>
-    {review.loanStatus === "Pending Approval"
-      ? "✅ Loan ready for approval"
-      : "ℹ️ Loan status updated"}
-  </li>
-</ul>
-
-    </SummaryCard>
-
+        </ul>
+      </SummaryCard>
+    </div>
   );
-
 }
+
+/* ===========================================================
+END
+=========================================================== */

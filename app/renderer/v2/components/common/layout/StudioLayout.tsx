@@ -1,20 +1,18 @@
-/* ===========================================================
-   FINORA ENTERPRISE OS™
-
-   STUDIO LAYOUT™
-
-   GLOBAL RESPONSIVE SHELL
-
-   RESPONSIBILITY:
-   - Studio workspace shell
-   - Optional studio-level GlobalHeader
-   - Content height management
-   - Scroll behavior
-
-   NOTE:
-   Customer Wizard can disable the studio-level header
-   because the Customer Workspace already owns the global header.
-=========================================================== */
+// ============================================================
+// FINORA ENTERPRISE OS™
+//
+// STUDIO LAYOUT™
+//
+// GLOBAL RESPONSIVE SHELL
+//
+// RESPONSIBILITY:
+// - Global studio header
+// - Exact remaining viewport height
+// - Full-width studio workspace
+// - No unwanted outer spacing
+// - Studio owns the complete area below header
+//
+// ============================================================
 
 import type {
   CSSProperties,
@@ -23,9 +21,9 @@ import type {
 
 import GlobalHeader from "../header/GlobalHeader";
 
-/* ===========================================================
-   TYPES
-=========================================================== */
+// ============================================================
+// TYPES
+// ============================================================
 
 interface StudioLayoutProps {
 
@@ -35,22 +33,18 @@ interface StudioLayoutProps {
 
   allowScroll?: boolean;
 
-  /*
-   * Allows individual workflows to prevent a duplicate
-   * GlobalHeader when their parent workspace already owns it.
-   */
   showHeader?: boolean;
 }
 
-/* ===========================================================
-   ROOT
-=========================================================== */
+// ============================================================
+// ROOT
+// ============================================================
 
 const layoutStyle: CSSProperties = {
 
   width: "100%",
 
-  height: "100vh",
+  height: "100%",
 
   minHeight: 0,
 
@@ -59,6 +53,8 @@ const layoutStyle: CSSProperties = {
   maxWidth: "100%",
 
   margin: 0,
+
+  padding: 0,
 
   background: "#321B12",
 
@@ -69,9 +65,18 @@ const layoutStyle: CSSProperties = {
   overflow: "hidden",
 };
 
-/* ===========================================================
-   CONTENT BUILDER
-=========================================================== */
+// ============================================================
+// CONTENT
+// ============================================================
+//
+// IMPORTANT:
+//
+// NO padding here.
+//
+// The Studio must touch the GlobalHeader directly.
+// The LoanStudio itself occupies the complete area.
+//
+// ============================================================
 
 function buildContentStyle(
   allowScroll: boolean,
@@ -79,14 +84,21 @@ function buildContentStyle(
 
   return {
 
-    flex: 1,
+    flex: "1 1 auto",
 
     width: "100%",
 
-    padding:
-      allowScroll
-        ? "16px"
-        : "0",
+    height: "100%",
+
+    minWidth: 0,
+
+    minHeight: 0,
+
+    maxWidth: "100%",
+
+    margin: 0,
+
+    padding: 0,
 
     boxSizing: "border-box",
 
@@ -101,18 +113,13 @@ function buildContentStyle(
 
     flexDirection: "column",
 
-    gap:
-      allowScroll
-        ? "16px"
-        : "0px",
-
-    minHeight: 0,
+    gap: 0,
   };
 }
 
-/* ===========================================================
-   COMPONENT
-=========================================================== */
+// ============================================================
+// COMPONENT
+// ============================================================
 
 export default function StudioLayout({
 
@@ -131,20 +138,19 @@ export default function StudioLayout({
     <div style={layoutStyle}>
 
       {/* =====================================================
-         OPTIONAL STUDIO HEADER
-
-         Disabled by Customer Wizard when the parent workspace
-         already provides the global header.
+          GLOBAL HEADER
       ===================================================== */}
 
       {showHeader && (
+
         <GlobalHeader
           department={department}
         />
+
       )}
 
       {/* =====================================================
-         CONTENT
+          FULL WORKSPACE
       ===================================================== */}
 
       <main
@@ -152,9 +158,15 @@ export default function StudioLayout({
           allowScroll,
         )}
       >
+
         {children}
+
       </main>
 
     </div>
   );
 }
+
+// ============================================================
+// END
+// ============================================================

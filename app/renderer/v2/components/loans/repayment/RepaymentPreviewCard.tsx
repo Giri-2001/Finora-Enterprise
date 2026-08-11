@@ -1,77 +1,102 @@
 /* ===========================================================
-   FINORA ENTERPRISE V2
-   REPAYMENT STUDIO
-   REPAYMENT PREVIEW CARD
+FINORA ENTERPRISE V2
+REPAYMENT STUDIO
+REPAYMENT PREVIEW CARD
+=========================================================== */
+
+/* ===========================================================
+IMPORTS
 =========================================================== */
 
 import SummaryCard from "../../common/cards/SummaryCard";
 
+import {
+  cardStyle,
+  fullWidthRowStyle,
+  highlightRowStyle,
+  labelStyle,
+  previewGridStyle,
+  primaryValueStyle,
+  rowStyle,
+  valueStyle,
+} from "./RepaymentPreviewCard.styles";
+
 /* ===========================================================
-   TYPES
+TYPES
 =========================================================== */
 
 interface RepaymentPreviewCardProps {
-
   frequency?: string;
-
   installmentAmount?: number;
-
   totalInstallments?: number;
-
   firstInstallmentDate?: string;
-
 }
 
 /* ===========================================================
-   COMPONENT
+COMPONENT
 =========================================================== */
 
 export default function RepaymentPreviewCard({
-
   frequency = "--",
-
   installmentAmount = 0,
-
   totalInstallments = 0,
-
   firstInstallmentDate = "--",
-
 }: RepaymentPreviewCardProps) {
-
   return (
+    <div style={cardStyle}>
+      <SummaryCard title="Repayment Preview">
+        <div style={previewGridStyle}>
 
-    <SummaryCard title="Repayment Preview">
+          {/* FREQUENCY */}
+          <div style={highlightRowStyle}>
+            <span style={labelStyle}>
+              Frequency
+            </span>
 
-      <span>
+            <strong style={primaryValueStyle}>
+              {frequency}
+            </strong>
+          </div>
 
-        Frequency :
-        <strong> {frequency}</strong>
+          {/* INSTALLMENT */}
+          <div style={rowStyle}>
+            <span style={labelStyle}>
+              Installment
+            </span>
 
-      </span>
+            <strong style={valueStyle}>
+              ₹ {installmentAmount}
+            </strong>
+          </div>
 
-      <span>
+          {/* TOTAL INSTALLMENTS */}
+          <div style={rowStyle}>
+            <span style={labelStyle}>
+              Total Installments
+            </span>
 
-        Installment :
-        <strong> ₹ {installmentAmount}</strong>
+            <strong style={valueStyle}>
+              {totalInstallments}
+            </strong>
+          </div>
 
-      </span>
+          {/* FIRST INSTALLMENT */}
+          <div style={fullWidthRowStyle}>
+            <span style={labelStyle}>
+              First Installment
+            </span>
 
-      <span>
+            <strong style={valueStyle}>
+              {firstInstallmentDate}
+            </strong>
+          </div>
 
-        Total Installments :
-        <strong> {totalInstallments}</strong>
-
-      </span>
-
-      <span>
-
-        First Installment :
-        <strong> {firstInstallmentDate}</strong>
-
-      </span>
-
-    </SummaryCard>
-
+        </div>
+      </SummaryCard>
+    </div>
   );
-
 }
+
+/* ===========================================================
+END
+=========================================================== */

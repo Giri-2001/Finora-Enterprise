@@ -1,8 +1,15 @@
-/* ===========================================================
-   FINORA ENTERPRISE V2
-   DISBURSEMENT STUDIO
-   PAYMENT MODE CARD
-=========================================================== */
+// ============================================================
+// FINORA ENTERPRISE V2
+//
+// DISBURSEMENT STUDIO
+// PAYMENT MODE CARD
+//
+// RESPONSIBILITY:
+// - Configure primary payment mode
+// - Configure transaction status
+// - Controlled by LoanStudio
+//
+// ============================================================
 
 import SummaryCard from "../../common/cards/SummaryCard";
 
@@ -11,21 +18,65 @@ import {
   SelectInput,
 } from "../../common";
 
-/* ===========================================================
-   COMPONENT
-=========================================================== */
+// ============================================================
+// TYPES
+// ============================================================
 
-export default function PaymentModeCard() {
+interface PaymentModeCardProps {
+
+  paymentMode?: string;
+
+  transactionStatus?: string;
+
+  onPaymentModeChange?: (
+    value: string,
+  ) => void;
+
+  onTransactionStatusChange?: (
+    value: string,
+  ) => void;
+}
+
+// ============================================================
+// COMPONENT
+// ============================================================
+
+export default function PaymentModeCard({
+
+  paymentMode = "cash",
+
+  transactionStatus = "pending",
+
+  onPaymentModeChange,
+
+  onTransactionStatusChange,
+
+}: PaymentModeCardProps) {
 
   return (
 
-    <SummaryCard title="Payment Mode">
+    <SummaryCard
+      title="Payment Mode"
+    >
 
       <FormField
         label="Primary Payment Mode"
         required
       >
+
         <SelectInput
+          value={
+            paymentMode
+          }
+          onChange={(
+            event,
+          ) => {
+
+            onPaymentModeChange?.(
+              event.target.value,
+            );
+
+          }}
           options={[
             {
               label: "Cash",
@@ -45,12 +96,27 @@ export default function PaymentModeCard() {
             },
           ]}
         />
+
       </FormField>
+
 
       <FormField
         label="Transaction Status"
       >
+
         <SelectInput
+          value={
+            transactionStatus
+          }
+          onChange={(
+            event,
+          ) => {
+
+            onTransactionStatusChange?.(
+              event.target.value,
+            );
+
+          }}
           options={[
             {
               label: "Pending",
@@ -66,10 +132,14 @@ export default function PaymentModeCard() {
             },
           ]}
         />
+
       </FormField>
 
     </SummaryCard>
 
   );
-
 }
+
+// ============================================================
+// END
+// ============================================================

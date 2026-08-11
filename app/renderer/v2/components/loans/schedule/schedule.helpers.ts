@@ -1,110 +1,168 @@
-/* ===========================================================
-   FINORA ENTERPRISE OS™
-   PAYMENT SCHEDULE ENGINE™
+  /* ===========================================================
+    FINORA ENTERPRISE OS™
+    PAYMENT SCHEDULE ENGINE™
 
-   HELPERS
-=========================================================== */
+    HELPERS
+  =========================================================== */
 
-import type {
-  LoanInstallment,
-} from "./types";
-
-
-/* ===========================================================
-   BUILD EMPTY SCHEDULE
-=========================================================== */
-
-export function buildEmptySchedule():
-LoanInstallment[] {
-
-  return [];
-
-}
+  import type {
+    LoanInstallment,
+  } from "./types";
 
 
-/* ===========================================================
-   GENERATE SCHEDULE
-=========================================================== */
+  /* ===========================================================
+    BUILD EMPTY SCHEDULE
+  =========================================================== */
 
-export function generateSchedule(
+  export function buildEmptySchedule():
+  LoanInstallment[] {
 
-  installments: number,
+    return [];
 
-  startDate: Date,
-
-  frequency:
-
-    | "daily"
-
-    | "weekly"
-
-    | "monthly",
-
-  totalPayable: number,
-
-  totalInterest: number,
-
-): LoanInstallment[] {
+  }
 
 
-  const roundedTotalPayable =
+  /* ===========================================================
+    GENERATE SCHEDULE
+  =========================================================== */
 
-    Math.round(
-      totalPayable,
-    );
+  export function generateSchedule(
 
+    installments: number,
 
-  const roundedTotalInterest =
+    startDate: Date,
 
-    Math.round(
-      totalInterest,
-    );
+    frequency:
 
+      | "daily"
 
-  const rawInstallmentAmount =
+      | "weekly"
 
-    installments > 0
+      | "monthly",
 
-      ? roundedTotalPayable / installments
+    totalPayable: number,
 
-      : 0;
+    totalInterest: number,
 
-
-  const installmentAmount =
-
-    Math.round(
-      rawInstallmentAmount,
-    );
+  ): LoanInstallment[] {
 
 
-  return Array.from(
+    const roundedTotalPayable =
 
-    {
-      length: installments,
-    },
-
-
-    (_, index): LoanInstallment => {
+      Math.round(
+        totalPayable,
+      );
 
 
-      const dueDate =
+    const roundedTotalInterest =
 
-        new Date(startDate);
-
-
-
-      /* ===========================================================
-         EMI CALCULATIONS
-      =========================================================== */
+      Math.round(
+        totalInterest,
+      );
 
 
-      const finalInstallmentAmount =
+    const rawInstallmentAmount =
 
-        index === installments - 1
+      installments > 0
 
-          ? Math.max(
+        ? roundedTotalPayable / installments
 
-              0,
+        : 0;
+
+
+    const installmentAmount =
+
+      Math.round(
+        rawInstallmentAmount,
+      );
+
+
+    return Array.from(
+
+      {
+        length: installments,
+      },
+
+
+      (_, index): LoanInstallment => {
+
+
+        const dueDate =
+
+          new Date(startDate);
+
+
+
+        /* ===========================================================
+          EMI CALCULATIONS
+        =========================================================== */
+
+
+        const finalInstallmentAmount =
+
+          index === installments - 1
+
+            ? Math.max(
+
+                0,
+
+                roundedTotalPayable -
+
+                (
+
+                  installmentAmount *
+
+                  index
+
+                ),
+
+              )
+
+            :
+
+              installmentAmount;
+
+
+
+        const interestAmount =
+
+          installments > 0
+
+            ?
+
+              Math.round(
+
+                roundedTotalInterest /
+
+                installments
+
+              )
+
+            :
+
+              0;
+
+
+
+        const principalAmount =
+
+          Math.round(
+
+            finalInstallmentAmount -
+
+            interestAmount
+
+          );
+
+
+
+        const outstandingBalance =
+
+          Math.max(
+
+            0,
+
+            Math.round(
 
               roundedTotalPayable -
 
@@ -112,205 +170,147 @@ export function generateSchedule(
 
                 installmentAmount *
 
-                index
+                (index + 1)
 
-              ),
-
-            )
-
-          :
-
-            installmentAmount;
-
-
-
-      const interestAmount =
-
-        installments > 0
-
-          ?
-
-            Math.round(
-
-              roundedTotalInterest /
-
-              installments
-
-            )
-
-          :
-
-            0;
-
-
-
-      const principalAmount =
-
-        Math.round(
-
-          finalInstallmentAmount -
-
-          interestAmount
-
-        );
-
-
-
-      const outstandingBalance =
-
-        Math.max(
-
-          0,
-
-          Math.round(
-
-            roundedTotalPayable -
-
-            (
-
-              installmentAmount *
-
-              (index + 1)
-
-            )
-
-          ),
-
-        );
-
-
-
-      /* ===========================================================
-         DUE DATE ENGINE
-      =========================================================== */
-
-
-      switch (frequency) {
-
-
-        case "daily":
-
-          dueDate.setDate(
-
-            dueDate.getDate() +
-
-            (index + 1),
-
-          );
-
-          break;
-
-
-
-        case "weekly":
-
-          dueDate.setDate(
-
-            dueDate.getDate() +
-
-            (
-
-              (index + 1) * 7
+              )
 
             ),
 
           );
 
-          break;
+
+
+        /* ===========================================================
+          DUE DATE ENGINE
+        =========================================================== */
+
+
+        switch (frequency) {
+
+
+          case "daily":
+
+            dueDate.setDate(
+
+              dueDate.getDate() +
+
+              (index + 1),
+
+            );
+
+            break;
 
 
 
-        case "monthly":
+          case "weekly":
 
-          dueDate.setMonth(
+            dueDate.setDate(
 
-            dueDate.getMonth() +
+              dueDate.getDate() +
 
-            (index + 1),
+              (
 
-          );
+                (index + 1) * 7
 
-          break;
+              ),
 
+            );
 
-      }
-
-
-
-      return {
-
-
-        installmentNumber:
-
-          index + 1,
-
-
-        dueDate:
-
-          dueDate.toISOString(),
+            break;
 
 
 
-        installmentAmount:
+          case "monthly":
 
-          finalInstallmentAmount,
+            dueDate.setMonth(
 
+              dueDate.getMonth() +
 
+              (index + 1),
 
-        principalAmount:
+            );
 
-          principalAmount,
-
-
-
-        interestAmount:
-
-          interestAmount,
+            break;
 
 
-
-        outstandingBalance:
-
-          outstandingBalance,
+        }
 
 
 
-        paidAmount:
-
-          0,
+        return {
 
 
+          installmentNumber:
 
-        penaltyAmount:
-
-          0,
-
+            index + 1,
 
 
-        receiptNumber:
+          dueDate:
 
-          "",
+            dueDate.toISOString(),
 
 
 
-        paidDate:
+          installmentAmount:
 
-          "",
-
-
-
-        status:
-
-          "Pending",
+            finalInstallmentAmount,
 
 
-      };
+
+          principalAmount:
+
+            principalAmount,
 
 
-    },
+
+          interestAmount:
+
+            interestAmount,
 
 
-  );
+
+          outstandingBalance:
+
+            outstandingBalance,
 
 
-}
+
+          paidAmount:
+
+            0,
+
+
+
+          penaltyAmount:
+
+            0,
+
+
+
+          receiptNumber:
+
+            "",
+
+
+
+          paidDate:
+
+            "",
+
+
+
+          status:
+
+            "Pending",
+
+
+        };
+
+
+      },
+
+
+    );
+
+
+  }

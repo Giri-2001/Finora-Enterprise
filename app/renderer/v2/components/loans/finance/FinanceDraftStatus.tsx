@@ -1,47 +1,50 @@
 /* ===========================================================
-   FINORA ENTERPRISE V2
-   FINANCE STUDIO
-   FINANCE DRAFT STATUS
+FINORA ENTERPRISE V2
+FINANCE STUDIO
+FINANCE DRAFT STATUS
+=========================================================== */
+
+/* ===========================================================
+IMPORTS
 =========================================================== */
 
 import StudioDraftStatus from "../../common/studio/StudioDraftStatus";
 
+import {
+  cardStyle,
+  statusStyle,
+} from "./FinanceDraftStatus.styles";
+
 /* ===========================================================
-   TYPES
+TYPES
 =========================================================== */
 
 interface FinanceDraftStatusProps {
-
   savedAt?: string;
-
   status?: "Draft" | "Completed";
-
 }
 
 /* ===========================================================
-   COMPONENT
+COMPONENT
 =========================================================== */
 
 export default function FinanceDraftStatus({
-
   savedAt = "Not Saved",
-
   status = "Draft",
-
 }: FinanceDraftStatusProps) {
-
   return (
-
-    <StudioDraftStatus
-
-      title="Finance Draft"
-
-      status={status}
-
-      updatedAt={savedAt}
-
-    />
-
+    <div style={cardStyle}>
+      <div style={statusStyle}>
+        <StudioDraftStatus
+          title="Finance Draft"
+          status={status}
+          updatedAt={savedAt}
+        />
+      </div>
+    </div>
   );
-
 }
+
+/* ===========================================================
+END
+=========================================================== */

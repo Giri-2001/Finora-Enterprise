@@ -1,14 +1,20 @@
-/* ===========================================================
-   FINORA ENTERPRISE V2
-   DISBURSEMENT STUDIO
-   DISBURSEMENT PREVIEW CARD
-=========================================================== */
+// ============================================================
+// FINORA ENTERPRISE V2
+//
+// DISBURSEMENT STUDIO
+// DISBURSEMENT PREVIEW CARD
+//
+// RESPONSIBILITY:
+// - Present live disbursement preview
+// - Presentation only
+//
+// ============================================================
 
 import SummaryCard from "../../common/cards/SummaryCard";
 
-/* ===========================================================
-   TYPES
-=========================================================== */
+// ============================================================
+// TYPES
+// ============================================================
 
 interface DisbursementPreviewCardProps {
 
@@ -22,9 +28,9 @@ interface DisbursementPreviewCardProps {
 
 }
 
-/* ===========================================================
-   COMPONENT
-=========================================================== */
+// ============================================================
+// COMPONENT
+// ============================================================
 
 export default function DisbursementPreviewCard({
 
@@ -40,38 +46,47 @@ export default function DisbursementPreviewCard({
 
   return (
 
-    <SummaryCard title="Disbursement Preview">
+    <SummaryCard
+      title="Disbursement Preview"
+    >
 
       <span>
-
         Date :
-        <strong> {disbursementDate}</strong>
-
+        <strong>
+          {" "}
+          {disbursementDate}
+        </strong>
       </span>
 
       <span>
-
         Amount :
-        <strong> ₹ {amount}</strong>
-
+        <strong>
+          {" "}
+          ₹ {amount}
+        </strong>
       </span>
 
       <span>
-
         Payment Mode :
-        <strong> {paymentMode}</strong>
-
+        <strong>
+          {" "}
+          {paymentMode}
+        </strong>
       </span>
 
       <span>
-
         Status :
-        <strong> {transactionStatus}</strong>
-
+        <strong>
+          {" "}
+          {transactionStatus}
+        </strong>
       </span>
 
     </SummaryCard>
 
   );
-
 }
+
+// ============================================================
+// END
+// ============================================================

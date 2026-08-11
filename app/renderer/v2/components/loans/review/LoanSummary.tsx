@@ -1,7 +1,11 @@
 /* ===========================================================
-   FINORA ENTERPRISE V2
-   REVIEW STUDIO
-   LOAN SUMMARY
+FINORA ENTERPRISE V2
+REVIEW STUDIO
+LOAN SUMMARY
+=========================================================== */
+
+/* ===========================================================
+IMPORTS
 =========================================================== */
 
 import SummaryCard from "../../common/cards/SummaryCard";
@@ -10,67 +14,97 @@ import type {
   LoanReviewData,
 } from "./types";
 
+import {
+  cardStyle,
+  highlightRowStyle,
+  labelStyle,
+  primaryValueStyle,
+  rowStyle,
+  summaryGridStyle,
+  valueStyle,
+} from "./LoanSummary.styles";
+
 /* ===========================================================
-   TYPES
+TYPES
 =========================================================== */
 
 interface LoanSummaryProps {
-
   review: LoanReviewData;
-
 }
 
 /* ===========================================================
-   COMPONENT
+COMPONENT
 =========================================================== */
 
 export default function LoanSummary({
-
   review,
-
 }: LoanSummaryProps) {
-
   return (
+    <div style={cardStyle}>
+      <SummaryCard title="Loan Summary">
+        <div style={summaryGridStyle}>
 
-    <SummaryCard title="Loan Summary">
+          {/* CUSTOMER */}
+          <div style={highlightRowStyle}>
+            <span style={labelStyle}>
+              Customer
+            </span>
 
-      <span>
+            <strong style={primaryValueStyle}>
+              {review.customerName}
+            </strong>
+          </div>
 
-        Customer :
-        <strong> {review.customerName}</strong>
+          {/* LOAN AMOUNT */}
+          <div style={rowStyle}>
+            <span style={labelStyle}>
+              Loan Amount
+            </span>
 
-      </span>
+            <strong style={valueStyle}>
+              ₹ {review.loanAmount}
+            </strong>
+          </div>
 
-      <span>
+          {/* INTEREST */}
+          <div style={rowStyle}>
+            <span style={labelStyle}>
+              Interest
+            </span>
 
-        Loan Amount :
-        <strong> ₹ {review.loanAmount}</strong>
+            <strong style={valueStyle}>
+              {review.interestRate}%
+            </strong>
+          </div>
 
-      </span>
+          {/* REPAYMENT */}
+          <div style={rowStyle}>
+            <span style={labelStyle}>
+              Repayment
+            </span>
 
-      <span>
+            <strong style={valueStyle}>
+              {review.repaymentType}
+            </strong>
+          </div>
 
-        Interest :
-        <strong> {review.interestRate}%</strong>
+          {/* GUARANTOR */}
+          <div style={highlightRowStyle}>
+            <span style={labelStyle}>
+              Guarantor
+            </span>
 
-      </span>
+            <strong style={valueStyle}>
+              {review.guarantorName}
+            </strong>
+          </div>
 
-      <span>
-
-        Repayment :
-        <strong>{review.repaymentType}</strong>
-
-      </span>
-
-      <span>
-
-        Guarantor :
-        <strong> {review.guarantorName}</strong>
-
-      </span>
-
-    </SummaryCard>
-
+        </div>
+      </SummaryCard>
+    </div>
   );
-
 }
+
+/* ===========================================================
+END
+=========================================================== */

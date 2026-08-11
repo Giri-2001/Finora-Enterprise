@@ -1,66 +1,87 @@
 /* ===========================================================
-   FINORA ENTERPRISE V2
-   REPAYMENT STUDIO
-   REPAYMENT SUMMARY
+FINORA ENTERPRISE V2
+REPAYMENT STUDIO
+REPAYMENT SUMMARY
+=========================================================== */
+
+/* ===========================================================
+IMPORTS
 =========================================================== */
 
 import SummaryCard from "../../common/cards/SummaryCard";
 
+import {
+  cardStyle,
+  highlightRowStyle,
+  labelStyle,
+  rowStyle,
+  summaryGridStyle,
+  valueStyle,
+} from "./RepaymentSummary.styles";
+
 /* ===========================================================
-   TYPES
+TYPES
 =========================================================== */
 
 interface RepaymentSummaryProps {
-
   installmentAmount?: number;
-
   totalInstallments?: number;
-
   totalRepayable?: number;
-
 }
 
 /* ===========================================================
-   COMPONENT
+COMPONENT
 =========================================================== */
 
 export default function RepaymentSummary({
-
   installmentAmount = 0,
-
   totalInstallments = 0,
-
   totalRepayable = 0,
-
 }: RepaymentSummaryProps) {
-
   return (
+    <div style={cardStyle}>
+      <SummaryCard title="Repayment Summary">
+        <div style={summaryGridStyle}>
 
-    <SummaryCard title="Repayment Summary">
+          {/* INSTALLMENT AMOUNT */}
+          <div style={rowStyle}>
+            <span style={labelStyle}>
+              Installment Amount
+            </span>
 
-      <span>
+            <strong style={valueStyle}>
+              ₹ {installmentAmount}
+            </strong>
+          </div>
 
-        Installment Amount :
-        <strong> ₹ {installmentAmount}</strong>
+          {/* TOTAL INSTALLMENTS */}
+          <div style={rowStyle}>
+            <span style={labelStyle}>
+              Total Installments
+            </span>
 
-      </span>
+            <strong style={valueStyle}>
+              {totalInstallments}
+            </strong>
+          </div>
 
-      <span>
+          {/* TOTAL REPAYABLE */}
+          <div style={highlightRowStyle}>
+            <span style={labelStyle}>
+              Total Repayable
+            </span>
 
-        Total Installments :
-        <strong> {totalInstallments}</strong>
+            <strong style={valueStyle}>
+              ₹ {totalRepayable}
+            </strong>
+          </div>
 
-      </span>
-
-      <span>
-
-        Total Repayable :
-        <strong> ₹ {totalRepayable}</strong>
-
-      </span>
-
-    </SummaryCard>
-
+        </div>
+      </SummaryCard>
+    </div>
   );
-
 }
+
+/* ===========================================================
+END
+=========================================================== */

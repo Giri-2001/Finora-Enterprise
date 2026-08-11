@@ -1,27 +1,46 @@
 /* ===========================================================
-   FINORA ENTERPRISE V2
-   REVIEW STUDIO
-   HEADER
+FINORA ENTERPRISE V2
+REVIEW STUDIO
+HEADER
 =========================================================== */
 
-import StudioHeader from "../../common/studio/StudioHeader";
+/* ===========================================================
+IMPORTS
+=========================================================== */
+
+import {
+  accentStyle,
+  contentStyle,
+  headerStyle,
+  subtitleStyle,
+  textWrapperStyle,
+  titleStyle,
+} from "./ReviewHeader.styles";
 
 /* ===========================================================
-   COMPONENT
+COMPONENT
 =========================================================== */
 
 export default function ReviewHeader() {
-
   return (
+    <header style={headerStyle}>
+      <div style={contentStyle}>
+        <div style={accentStyle} />
 
-    <StudioHeader
+        <div style={textWrapperStyle}>
+          <h1 style={titleStyle}>
+            Review Studio™
+          </h1>
 
-      title="Review Studio™"
-
-      subtitle="Review all loan information before approval and disbursement."
-
-    />
-
+          <p style={subtitleStyle}>
+            Review all loan information before approval and disbursement.
+          </p>
+        </div>
+      </div>
+    </header>
   );
-
 }
+
+/* ===========================================================
+END
+=========================================================== */

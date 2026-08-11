@@ -1,180 +1,117 @@
 /* ===========================================================
-   FINORA ENTERPRISE V2
-   REVIEW STUDIO
+FINORA ENTERPRISE V2
+REVIEW STUDIO
+APPROVAL ACTIONS
+=========================================================== */
 
-   APPROVAL ACTIONS
+/* ===========================================================
+IMPORTS
 =========================================================== */
 
 import {
   useState,
 } from "react";
 
+import Button from "../../common/buttons/Button";
 
-import Button
-  from "../../common/buttons/Button";
-
-
-import SummaryCard
-  from "../../common/cards/SummaryCard";
-
-
+import {
+  accentStyle,
+  actionButtonStyle,
+  actionRowStyle,
+  headerStyle,
+  wrapperStyle,
+} from "./ApprovalActions.styles";
 
 /* ===========================================================
-   TYPES
+TYPES
 =========================================================== */
 
 interface ApprovalActionsProps {
-
   onSaveDraft: () => void;
-
-  onApproveLoan: () => void | Promise<void>;
-
+  onApproveLoan: () => void | Promise<any>;
   onRejectLoan: () => void;
-
 }
 
-
-
 /* ===========================================================
-   COMPONENT
+COMPONENT
 =========================================================== */
 
 export default function ApprovalActions({
-
   onSaveDraft,
-
   onApproveLoan,
-
   onRejectLoan,
-
 }: ApprovalActionsProps) {
-
-
   const [
     isApproving,
     setIsApproving,
   ] = useState(false);
 
-
-
-  /* ===========================================================
-     APPROVE LOCK
-  =========================================================== */
+  /* =========================================================
+  APPROVE LOCK
+  ========================================================= */
 
   const handleApproveLoan = async () => {
-
-
     if (isApproving) {
-
       return;
-
     }
-
 
     setIsApproving(true);
 
-
-
     try {
-
-
       await onApproveLoan();
-
-
-
     } finally {
-
-
       setIsApproving(false);
-
-
     }
-
-
   };
 
-
-
   return (
+    <section style={wrapperStyle}>
 
-    <SummaryCard
-      title="Approval Actions"
-    >
+      {/* HEADER */}
+      <div style={headerStyle}>
+        <span style={accentStyle} />
 
-
-      <div
-
-        style={{
-
-          display: "flex",
-
-          gap: "12px",
-
-          flexWrap: "wrap",
-
-        }}
-
-      >
-
-
-
-        <Button
-
-          onClick={onSaveDraft}
-
-        >
-
-          Save Draft
-
-        </Button>
-
-
-
-
-
-        <Button
-
-          onClick={handleApproveLoan}
-
-          disabled={isApproving}
-
-        >
-
-          {isApproving
-
-            ? "Approving..."
-
-            : "Approve Loan"
-
-          }
-
-
-        </Button>
-
-
-
-
-
-        <Button
-
-          onClick={onRejectLoan}
-
-          disabled={isApproving}
-
-        >
-
-          Reject Loan
-
-
-        </Button>
-
-
-
+        <span>
+          Approval Actions
+        </span>
       </div>
 
+      {/* ACTIONS */}
+      <div style={actionRowStyle}>
 
-    </SummaryCard>
+        <div style={actionButtonStyle}>
+          <Button
+            onClick={onSaveDraft}
+          >
+            Save Draft
+          </Button>
+        </div>
 
+        <div style={actionButtonStyle}>
+          <Button
+            onClick={handleApproveLoan}
+            disabled={isApproving}
+          >
+            {isApproving
+              ? "Approving..."
+              : "Approve Loan"}
+          </Button>
+        </div>
+
+        <div style={actionButtonStyle}>
+          <Button
+            onClick={onRejectLoan}
+            disabled={isApproving}
+          >
+            Reject Loan
+          </Button>
+        </div>
+
+      </div>
+    </section>
   );
-
 }
+
+/* ===========================================================
+END
+=========================================================== */

@@ -1,14 +1,28 @@
-/* ===========================================================
-   FINORA ENTERPRISE V2
-   DISBURSEMENT STUDIO
-   DISBURSEMENT DRAFT STATUS
-=========================================================== */
+// ============================================================
+// FINORA ENTERPRISE V2
+//
+// DISBURSEMENT STUDIO
+// DISBURSEMENT DRAFT STATUS
+//
+// RESPONSIBILITY:
+// - Display Disbursement draft state
+// - Display last saved / updated timestamp
+// - Presentation only
+// - No persistence
+// - No storage access
+//
+// ============================================================
 
-import StudioDraftStatus from "../../common/studio/StudioDraftStatus";
+// ============================================================
+// IMPORTS
+// ============================================================
 
-/* ===========================================================
-   TYPES
-=========================================================== */
+import StudioDraftStatus
+  from "../../common/studio/StudioDraftStatus";
+
+// ============================================================
+// TYPES
+// ============================================================
 
 interface DisbursementDraftStatusProps {
 
@@ -18,9 +32,9 @@ interface DisbursementDraftStatusProps {
 
 }
 
-/* ===========================================================
-   COMPONENT
-=========================================================== */
+// ============================================================
+// COMPONENT
+// ============================================================
 
 export default function DisbursementDraftStatus({
 
@@ -45,3 +59,7 @@ export default function DisbursementDraftStatus({
   );
 
 }
+
+// ============================================================
+// END
+// ============================================================

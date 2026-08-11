@@ -1,89 +1,115 @@
 /* ===========================================================
-   FINORA ENTERPRISE V2
-   GUARANTOR STUDIO
-   GUARANTOR PREVIEW CARD
+FINORA ENTERPRISE V2
+GUARANTOR STUDIO
+GUARANTOR PREVIEW CARD
+=========================================================== */
+
+/* ===========================================================
+IMPORTS
 =========================================================== */
 
 import SummaryCard from "../../common/cards/SummaryCard";
 
+import {
+  cardStyle,
+  fullWidthRowStyle,
+  highlightRowStyle,
+  labelStyle,
+  previewGridStyle,
+  primaryValueStyle,
+  rowStyle,
+  valueStyle,
+} from "./GuarantorPreviewCard.styles";
+
 /* ===========================================================
-   TYPES
+TYPES
 =========================================================== */
 
 interface GuarantorPreviewCardProps {
-
   guarantorName?: string;
-
   relationship?: string;
-
   mobileNumber?: string;
-
   occupation?: string;
-
   address?: string;
-
 }
 
 /* ===========================================================
-   COMPONENT
+COMPONENT
 =========================================================== */
 
 export default function GuarantorPreviewCard({
-
   guarantorName = "--",
-
   relationship = "--",
-
   mobileNumber = "--",
-
   occupation = "--",
-
-address = "--",
-
+  address = "--",
 }: GuarantorPreviewCardProps) {
-
   return (
+    <div style={cardStyle}>
+      <SummaryCard title="Guarantor Preview">
+        <div style={previewGridStyle}>
 
-    <SummaryCard title="Guarantor Preview">
+          {/* GUARANTOR */}
+          <div style={highlightRowStyle}>
+            <span style={labelStyle}>
+              Guarantor
+            </span>
 
-      <span>
+            <strong style={primaryValueStyle}>
+              {guarantorName}
+            </strong>
+          </div>
 
-        Guarantor :
-        <strong> {guarantorName}</strong>
+          {/* RELATIONSHIP */}
+          <div style={rowStyle}>
+            <span style={labelStyle}>
+              Relationship
+            </span>
 
-      </span>
+            <strong style={valueStyle}>
+              {relationship}
+            </strong>
+          </div>
 
-      <span>
+          {/* MOBILE */}
+          <div style={rowStyle}>
+            <span style={labelStyle}>
+              Mobile
+            </span>
 
-        Relationship :
-        <strong> {relationship}</strong>
+            <strong style={valueStyle}>
+              {mobileNumber}
+            </strong>
+          </div>
 
-      </span>
+          {/* OCCUPATION */}
+          <div style={rowStyle}>
+            <span style={labelStyle}>
+              Occupation
+            </span>
 
-      <span>
+            <strong style={valueStyle}>
+              {occupation}
+            </strong>
+          </div>
 
-        Mobile :
-        <strong> {mobileNumber}</strong>
+          {/* ADDRESS */}
+          <div style={fullWidthRowStyle}>
+            <span style={labelStyle}>
+              Address
+            </span>
 
-      </span>
+            <strong style={valueStyle}>
+              {address}
+            </strong>
+          </div>
 
-      <span>
-
-  Address :
-
-  <strong> {address}</strong>
-
-</span>
-
-      <span>
-
-        Occupation :
-        <strong> {occupation}</strong>
-
-      </span>
-
-    </SummaryCard>
-
+        </div>
+      </SummaryCard>
+    </div>
   );
-
 }
+
+/* ===========================================================
+END
+=========================================================== */

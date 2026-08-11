@@ -1,14 +1,20 @@
-/* ===========================================================
-   FINORA ENTERPRISE V2
-   DISBURSEMENT STUDIO
-   DISBURSEMENT RECEIPT
-=========================================================== */
+// ============================================================
+// FINORA ENTERPRISE V2
+//
+// DISBURSEMENT STUDIO
+// DISBURSEMENT RECEIPT
+//
+// RESPONSIBILITY:
+// - Present disbursement receipt information
+// - Presentation only
+//
+// ============================================================
 
 import SummaryCard from "../../common/cards/SummaryCard";
 
-/* ===========================================================
-   TYPES
-=========================================================== */
+// ============================================================
+// TYPES
+// ============================================================
 
 interface DisbursementReceiptProps {
 
@@ -22,9 +28,9 @@ interface DisbursementReceiptProps {
 
 }
 
-/* ===========================================================
-   COMPONENT
-=========================================================== */
+// ============================================================
+// COMPONENT
+// ============================================================
 
 export default function DisbursementReceipt({
 
@@ -40,38 +46,47 @@ export default function DisbursementReceipt({
 
   return (
 
-    <SummaryCard title="Disbursement Receipt">
+    <SummaryCard
+      title="Disbursement Receipt"
+    >
 
       <span>
-
         Receipt No :
-        <strong> {receiptNumber}</strong>
-
+        <strong>
+          {" "}
+          {receiptNumber}
+        </strong>
       </span>
 
       <span>
-
         Customer :
-        <strong> {customerName}</strong>
-
+        <strong>
+          {" "}
+          {customerName}
+        </strong>
       </span>
 
       <span>
-
         Amount :
-        <strong> ₹ {amount}</strong>
-
+        <strong>
+          {" "}
+          ₹ {amount}
+        </strong>
       </span>
 
       <span>
-
         Payment Mode :
-        <strong> {paymentMode}</strong>
-
+        <strong>
+          {" "}
+          {paymentMode}
+        </strong>
       </span>
 
     </SummaryCard>
 
   );
-
 }
+
+// ============================================================
+// END
+// ============================================================

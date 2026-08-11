@@ -1,28 +1,35 @@
 /* ===========================================================
-   FINORA ENTERPRISE V2
-   GUARANTOR STUDIO
-   GUARANTOR FORM
+FINORA ENTERPRISE V2
+GUARANTOR STUDIO
+GUARANTOR FORM
 =========================================================== */
 
-import type { CSSProperties } from "react";
+/* ===========================================================
+IMPORTS
+=========================================================== */
 
 import {
   FormField,
   TextInput,
 } from "../../common";
 
+import {
+  accentStyle,
+  fieldContentStyle,
+  fieldStyle,
+  fullWidthFieldStyle,
+  headerStyle,
+  wrapperStyle,
+} from "./GuarantorForm.styles";
+
 /* ===========================================================
-   TYPES
+TYPES
 =========================================================== */
 
 interface GuarantorFormProps {
-
   guarantorName: string;
-
   guarantorPhone: string;
-
   occupation: string;
-
   address: string;
 
   onGuarantorNameChange: (
@@ -40,111 +47,116 @@ interface GuarantorFormProps {
   onAddressChange: (
     value: string,
   ) => void;
-
 }
 
 /* ===========================================================
-   STYLES
-=========================================================== */
-
-const wrapperStyle: CSSProperties = {
-
-  display: "flex",
-
-  flexDirection: "column",
-
-  gap: "20px",
-
-};
-
-/* ===========================================================
-   COMPONENT
+COMPONENT
 =========================================================== */
 
 export default function GuarantorForm({
-
   guarantorName,
-
   guarantorPhone,
-
   occupation,
-
   address,
-
   onGuarantorNameChange,
-
   onGuarantorPhoneChange,
-
   onOccupationChange,
-
   onAddressChange,
-
 }: GuarantorFormProps) {
-
   return (
-
     <div style={wrapperStyle}>
 
-      <FormField
-        label="Guarantor Name"
-        required
-      >
-        <TextInput
-  value={guarantorName}
-  onChange={(event) =>
-    onGuarantorNameChange(
-      event.target.value,
-    )
-  }
-  placeholder="Enter guarantor name"
-/>
-      </FormField>
+      {/* FORM HEADER */}
+      <div style={headerStyle}>
+        <span style={accentStyle} />
 
-      <FormField
-        label="Mobile Number"
-        required
-      >
-        <TextInput
-  value={guarantorPhone}
-  onChange={(event) =>
-    onGuarantorPhoneChange(
-      event.target.value,
-    )
-  }
-  placeholder="Enter mobile number"
-/>
-      </FormField>
+        <span>
+          Guarantor Information
+        </span>
+      </div>
 
-      <FormField
-        label="Occupation"
-      >
-        <TextInput
-  value={occupation}
-  onChange={(event) =>
-    onOccupationChange(
-      event.target.value,
-    )
-  }
-  placeholder="Enter occupation"
-/>
-      </FormField>
+      {/* GUARANTOR NAME */}
+      <div style={fieldStyle}>
+        <div style={fieldContentStyle}>
+          <FormField
+            label="Guarantor Name"
+            required
+          >
+            <TextInput
+              value={guarantorName}
+              onChange={(event) =>
+                onGuarantorNameChange(
+                  event.target.value,
+                )
+              }
+              placeholder="Enter guarantor name"
+            />
+          </FormField>
+        </div>
+      </div>
 
-      <FormField
-        label="Address"
-      >
-        <TextInput
-  value={address}
-  onChange={(event) =>
-    onAddressChange(
-      event.target.value,
-    )
-  }
-  placeholder="Enter address"
-/>
-      </FormField>
+      {/* MOBILE NUMBER */}
+      <div style={fieldStyle}>
+        <div style={fieldContentStyle}>
+          <FormField
+            label="Mobile Number"
+            required
+          >
+            <TextInput
+              value={guarantorPhone}
+              onChange={(event) =>
+                onGuarantorPhoneChange(
+                  event.target.value,
+                )
+              }
+              placeholder="Enter mobile number"
+            />
+          </FormField>
+        </div>
+      </div>
+
+      {/* OCCUPATION */}
+      <div style={fieldStyle}>
+        <div style={fieldContentStyle}>
+          <FormField
+            label="Occupation"
+          >
+            <TextInput
+              value={occupation}
+              onChange={(event) =>
+                onOccupationChange(
+                  event.target.value,
+                )
+              }
+              placeholder="Enter occupation"
+            />
+          </FormField>
+        </div>
+      </div>
+
+      {/* ADDRESS */}
+      <div style={fullWidthFieldStyle}>
+        <div style={fieldContentStyle}>
+          <FormField
+            label="Address"
+          >
+            <TextInput
+              value={address}
+              onChange={(event) =>
+                onAddressChange(
+                  event.target.value,
+                )
+              }
+              placeholder="Enter address"
+            />
+          </FormField>
+        </div>
+      </div>
 
     </div>
-
   );
-
 }
+
+/* ===========================================================
+END
+=========================================================== */

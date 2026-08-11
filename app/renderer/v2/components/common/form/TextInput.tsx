@@ -4,7 +4,10 @@
    TEXT INPUT
 =========================================================== */
 
-import type { CSSProperties, InputHTMLAttributes } from "react";
+import type {
+  CSSProperties,
+  InputHTMLAttributes,
+} from "react";
 
 /* ===========================================================
    TYPES
@@ -18,7 +21,6 @@ export interface TextInputProps
 =========================================================== */
 
 const inputStyle: CSSProperties = {
-
   width: "100%",
 
   padding: "12px 14px",
@@ -33,12 +35,18 @@ const inputStyle: CSSProperties = {
 
   fontSize: "14px",
 
+  fontWeight: 500,
+
   outline: "none",
 
   boxSizing: "border-box",
 
   transition: "all 0.2s ease",
 
+  /* Remove browser number spinner arrows */
+  WebkitAppearance: "none",
+
+  MozAppearance: "textfield",
 };
 
 /* ===========================================================
@@ -46,29 +54,28 @@ const inputStyle: CSSProperties = {
 =========================================================== */
 
 export default function TextInput({
-
+  type,
   style,
-
   ...props
-
 }: TextInputProps) {
-
   return (
-
     <input
-
       {...props}
-
+      type={type}
       style={{
-
         ...inputStyle,
-
+        ...(type === "number"
+          ? {
+              WebkitAppearance: "none",
+              MozAppearance: "textfield",
+            }
+          : {}),
         ...style,
-
       }}
-
     />
-
   );
-
 }
+
+/* ===========================================================
+   END
+=========================================================== */

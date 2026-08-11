@@ -1,10 +1,34 @@
-/* ===========================================================
-   FINORA ENTERPRISE V2
-   REPAYMENT STUDIO
-   SCHEDULE CONFIGURATION
-=========================================================== */
+// ============================================================
+// FINORA ENTERPRISE V2
+//
+// REPAYMENT STUDIO
+// SCHEDULE CONFIGURATION
+//
+// RESPONSIBILITY:
+// - Configure repayment frequency
+// - Configure loan duration
+// - Configure duration unit
+// - Keep repayment configuration controlled by LoanStudio
+// - Presentation only
+//
+// IMPORTANT:
+// - No calculation logic.
+// - No schedule generation.
+// - No persistence.
+// - No LoanService access.
+// - Schedule generation remains in LoanStudio / schedule engine.
+//
+// DESIGN:
+// - FINORA Enterprise dark navy
+// - Compact premium layout
+// - No brown
+// - No gold
+//
+// ============================================================
 
-import type { CSSProperties } from "react";
+// ============================================================
+// IMPORTS
+// ============================================================
 
 import {
   FormField,
@@ -12,86 +36,263 @@ import {
   TextInput,
 } from "../../common";
 
-/* ===========================================================
-   STYLES
-=========================================================== */
+import {
+  accentStyle,
+  contentStyle,
+  fieldContentStyle,
+  fieldStyle,
+  headerStyle,
+  wrapperStyle,
+} from "./ScheduleConfiguration.styles";
 
-const wrapperStyle: CSSProperties = {
+// ============================================================
+// TYPES
+// ============================================================
 
-  display: "flex",
+interface ScheduleConfigurationProps {
 
-  flexDirection: "column",
+  repaymentType?: string;
 
-  gap: "20px",
+  duration?: string;
 
-};
+  durationType?: string;
 
-/* ===========================================================
-   COMPONENT
-=========================================================== */
+  onRepaymentTypeChange?: (
+    value: string,
+  ) => void;
 
-export default function ScheduleConfiguration() {
+  onDurationChange?: (
+    value: string,
+  ) => void;
+
+  onDurationTypeChange?: (
+    value: string,
+  ) => void;
+}
+
+// ============================================================
+// COMPONENT
+// ============================================================
+
+export default function ScheduleConfiguration({
+
+  repaymentType = "daily",
+
+  duration = "",
+
+  durationType = "days",
+
+  onRepaymentTypeChange,
+
+  onDurationChange,
+
+  onDurationTypeChange,
+
+}: ScheduleConfigurationProps) {
+
+  // ==========================================================
+  // RENDER
+  // ==========================================================
 
   return (
 
-    <div style={wrapperStyle}>
+    <section
+      style={wrapperStyle}
+    >
 
-      <FormField
-        label="Repayment Frequency"
-        required
+      {/* ====================================================
+          HEADER
+      ==================================================== */}
+
+      <div
+        style={headerStyle}
       >
-        <SelectInput
-          options={[
-            {
-              label: "Daily",
-              value: "daily",
-            },
-            {
-              label: "Weekly",
-              value: "weekly",
-            },
-            {
-              label: "Monthly",
-              value: "monthly",
-            },
-          ]}
-        />
-      </FormField>
 
-      <FormField
-        label="Loan Duration"
-        required
+        <span
+          style={accentStyle}
+        />
+
+        <span>
+          Schedule Configuration
+        </span>
+
+      </div>
+
+
+      {/* ====================================================
+          CONFIGURATION CONTENT
+      ==================================================== */}
+
+      <div
+        style={contentStyle}
       >
-        <TextInput
-          type="number"
-          placeholder="Enter duration"
-        />
-      </FormField>
 
-      <FormField
-        label="Duration Unit"
-        required
-      >
-        <SelectInput
-          options={[
-            {
-              label: "Days",
-              value: "days",
-            },
-            {
-              label: "Weeks",
-              value: "weeks",
-            },
-            {
-              label: "Months",
-              value: "months",
-            },
-          ]}
-        />
-      </FormField>
+        {/* ==================================================
+            REPAYMENT FREQUENCY
+        ================================================== */}
 
-    </div>
+        <div
+          style={fieldStyle}
+        >
+
+          <div
+            style={fieldContentStyle}
+          >
+
+            <FormField
+              label="Repayment Frequency"
+              required
+            >
+
+              <SelectInput
+
+                value={
+                  repaymentType
+                }
+
+                onChange={(
+                  event,
+                ) => {
+
+                  onRepaymentTypeChange?.(
+                    event.target.value,
+                  );
+
+                }}
+
+                options={[
+                  {
+                    label: "Daily",
+                    value: "daily",
+                  },
+                  {
+                    label: "Weekly",
+                    value: "weekly",
+                  },
+                  {
+                    label: "Monthly",
+                    value: "monthly",
+                  },
+                ]}
+
+              />
+
+            </FormField>
+
+          </div>
+
+        </div>
+
+
+        {/* ==================================================
+            LOAN DURATION
+        ================================================== */}
+
+        <div
+          style={fieldStyle}
+        >
+
+          <div
+            style={fieldContentStyle}
+          >
+
+            <FormField
+              label="Loan Duration"
+              required
+            >
+
+              <TextInput
+
+                type="number"
+
+                value={
+                  duration
+                }
+
+                onChange={(
+                  event,
+                ) => {
+
+                  onDurationChange?.(
+                    event.target.value,
+                  );
+
+                }}
+
+                placeholder="Enter duration"
+
+              />
+
+            </FormField>
+
+          </div>
+
+        </div>
+
+
+        {/* ==================================================
+            DURATION UNIT
+        ================================================== */}
+
+        <div
+          style={fieldStyle}
+        >
+
+          <div
+            style={fieldContentStyle}
+          >
+
+            <FormField
+              label="Duration Unit"
+              required
+            >
+
+              <SelectInput
+
+                value={
+                  durationType
+                }
+
+                onChange={(
+                  event,
+                ) => {
+
+                  onDurationTypeChange?.(
+                    event.target.value,
+                  );
+
+                }}
+
+                options={[
+                  {
+                    label: "Days",
+                    value: "days",
+                  },
+                  {
+                    label: "Weeks",
+                    value: "weeks",
+                  },
+                  {
+                    label: "Months",
+                    value: "months",
+                  },
+                ]}
+
+              />
+
+            </FormField>
+
+          </div>
+
+        </div>
+
+      </div>
+
+    </section>
 
   );
-
 }
+
+// ============================================================
+// END
+// ============================================================

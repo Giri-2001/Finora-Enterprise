@@ -1,27 +1,46 @@
 /* ===========================================================
-   FINORA ENTERPRISE V2
-   REPAYMENT STUDIO
-   HEADER
+FINORA ENTERPRISE V2
+REPAYMENT STUDIO
+HEADER
 =========================================================== */
 
-import StudioHeader from "../../common/studio/StudioHeader";
+/* ===========================================================
+IMPORTS
+=========================================================== */
+
+import {
+  accentStyle,
+  contentStyle,
+  headerStyle,
+  subtitleStyle,
+  textWrapperStyle,
+  titleStyle,
+} from "./RepaymentHeader.styles";
 
 /* ===========================================================
-   COMPONENT
+COMPONENT
 =========================================================== */
 
 export default function RepaymentHeader() {
-
   return (
+    <header style={headerStyle}>
+      <div style={contentStyle}>
+        <div style={accentStyle} />
 
-    <StudioHeader
+        <div style={textWrapperStyle}>
+          <h1 style={titleStyle}>
+            Repayment Studio™
+          </h1>
 
-      title="Repayment Studio™"
-
-      subtitle="Configure repayment schedule, EMI options and collection frequency."
-
-    />
-
+          <p style={subtitleStyle}>
+            Configure repayment schedule, EMI options and collection frequency.
+          </p>
+        </div>
+      </div>
+    </header>
   );
-
 }
+
+/* ===========================================================
+END
+=========================================================== */

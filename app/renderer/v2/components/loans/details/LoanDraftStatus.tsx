@@ -1,47 +1,50 @@
 /* ===========================================================
-   FINORA ENTERPRISE V2
-   LOAN DETAILS STUDIO
-   LOAN DRAFT STATUS
+FINORA ENTERPRISE V2
+LOAN DETAILS STUDIO
+LOAN DRAFT STATUS
+=========================================================== */
+
+/* ===========================================================
+IMPORTS
 =========================================================== */
 
 import StudioDraftStatus from "../../common/studio/StudioDraftStatus";
 
+import {
+  cardStyle,
+  statusStyle,
+} from "./LoanDraftStatus.styles";
+
 /* ===========================================================
-   TYPES
+TYPES
 =========================================================== */
 
 interface LoanDraftStatusProps {
-
   savedAt?: string;
-
   status?: "Draft" | "Completed";
-
 }
 
 /* ===========================================================
-   COMPONENT
+COMPONENT
 =========================================================== */
 
 export default function LoanDraftStatus({
-
   savedAt = "Not Saved",
-
   status = "Draft",
-
 }: LoanDraftStatusProps) {
-
   return (
-
-    <StudioDraftStatus
-
-      title="Loan Draft"
-
-      status={status}
-
-      updatedAt={savedAt}
-
-    />
-
+    <div style={cardStyle}>
+      <div style={statusStyle}>
+        <StudioDraftStatus
+          title="Loan Draft"
+          status={status}
+          updatedAt={savedAt}
+        />
+      </div>
+    </div>
   );
-
 }
+
+/* ===========================================================
+END
+=========================================================== */
