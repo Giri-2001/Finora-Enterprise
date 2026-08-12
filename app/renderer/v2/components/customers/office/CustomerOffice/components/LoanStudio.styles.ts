@@ -279,16 +279,15 @@ export const primaryNavigationButtonStyle: CSSProperties = {
 
 export const step1WorkspaceStyle: CSSProperties = {
   width: "100%",
-  height: "100%",
+  height: "auto",
   minWidth: 0,
   minHeight: 0,
   display: "grid",
 
-  // FIX:
-  // Do not reserve 25% height for the top section.
-  // Header should use only its actual height.
-  // Bottom content should move up immediately.
-  gridTemplateRows: "auto minmax(0, 1fr)",
+  // Header uses only its natural height.
+  // Workspace content is allowed to grow naturally so the
+  // parent content container can provide the page scroll.
+  gridTemplateRows: "auto auto",
 
   gap: "8px",
   boxSizing: "border-box",

@@ -38,6 +38,8 @@ export interface LoanReviewData {
 
   duration: string;
 
+  installmentAmount: number;
+
 
   /* ==========================================
      FINANCE

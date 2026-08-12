@@ -143,27 +143,43 @@ export default function ReviewPreviewCard({
 
           </div>
 
+          {/* TENURE */}
 
-          {/* PAYMENT MODE */}
+<div
+  style={rowStyle}
+>
+  <span
+    style={labelStyle}
+  >
+    Tenure
+  </span>
 
-          <div
-            style={rowStyle}
-          >
+  <strong
+    style={valueStyle}
+  >
+    {review.duration || "--"}
+  </strong>
+</div>
 
-            <span
-              style={labelStyle}
-            >
-              Payment Mode
-            </span>
+{/* INSTALLMENT */}
 
-            <strong
-              style={valueStyle}
-            >
-              {review.paymentMode}
-            </strong>
+<div
+  style={rowStyle}
+>
+  <span
+    style={labelStyle}
+  >
+    Installment
+  </span>
 
-          </div>
-
+  <strong
+    style={valueStyle}
+  >
+    {review.installmentAmount > 0
+      ? `₹ ${review.installmentAmount.toLocaleString("en-IN")}`
+      : "--"}
+  </strong>
+</div>
 
           {/* GUARANTOR */}
 

@@ -110,9 +110,6 @@ import DisbursementDraftStatus
 import ReviewHeader
   from "../../../../loans/review/ReviewHeader";
 
-import LoanSummary
-  from "../../../../loans/review/LoanSummary";
-
 import ValidationChecklist
   from "../../../../loans/review/ValidationChecklist";
 
@@ -932,6 +929,8 @@ export default function LoanStudio({
       durationType
         ? `${duration} ${durationType}`
         : "",
+        installmentAmount:
+  installmentAmount,
 
     processingFee:
       parseNumericValue(
@@ -1813,67 +1812,52 @@ export default function LoanStudio({
                   }}
                 >
 
-                  <LoanSummary
+                
+
+                  <ValidationChecklist
                     review={
                       reviewData
                     }
                   />
-
-
-                  <div
-                    style={{
-                      width: "100%",
-                      minWidth: 0,
-                      display: "flex",
-                      flexDirection: "column",
-                      gap: "8px",
-                    }}
-                  >
-
-                    <ValidationChecklist
-                    review={
-                      reviewData
-                    }
-                  />
-
-                  <ApprovalActions
-                  onSaveDraft={
-                    handleSaveDraft
-                  }
-                  onApproveLoan={
-                    handleApproveLoan
-                  }
-                  onRejectLoan={
-                    handleRejectLoan
-                  }
-                />
-                  </div>
 
                 </div>
-
 
 
               </div>
 
               <div
-                style={{
-                  ...step1PreviewStyle,
-                  display: "flex",
-                  flexDirection: "column",
-                  gap: "8px",
-                  width: "100%",
-                  minWidth: 0,
-                  boxSizing: "border-box",
-                }}
+                style={step1PreviewStyle}
               >
 
-                <ReviewPreviewCard
-                  review={
-                    reviewData
-                  }
-                />
+                {/* =================================================
+                    STEP 5 — REVIEW PREVIEW COLUMN
 
-                <ReviewDraftStatus />
+                    Layout rule:
+                    - Final Loan Preview remains the first card.
+                    - Review Draft sits below it with a visible gap.
+                    - The two cards must never visually touch.
+                    - Review Draft owns exactly one visible border.
+                ================================================= */}
+                <div
+                  style={{
+                    width: "100%",
+                    minWidth: 0,
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: "12px",
+                    boxSizing: "border-box",
+                  }}
+                >
+
+                  <ReviewPreviewCard
+                    review={
+                      reviewData
+                    }
+                  />
+
+                  <ReviewDraftStatus />
+
+                </div>
 
               </div>
 
@@ -1960,6 +1944,18 @@ export default function LoanStudio({
                   }
                   paymentMode={
                     paymentMode
+                  }
+                />
+
+                <ApprovalActions
+                  onSaveDraft={
+                    handleSaveDraft
+                  }
+                  onApproveLoan={
+                    handleApproveLoan
+                  }
+                  onRejectLoan={
+                    handleRejectLoan
                   }
                 />
 
@@ -2161,17 +2157,6 @@ export default function LoanStudio({
               if (
                 step < 6
               ) {
-                if (
-                  step === 5 &&
-                  !loanApproved
-                ) {
-                  alert(
-                    "Please Approve Loan before continuing to Disbursement",
-                  );
-
-                  return;
-                }
-
                 setStep(
                   step + 1,
                 );
