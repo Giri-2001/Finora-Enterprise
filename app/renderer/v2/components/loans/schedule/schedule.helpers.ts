@@ -6,36 +6,30 @@
 
    RESPONSIBILITY:
    - Generate whole-rupee repayment schedules
-   - Preserve Fixed / Variable repayment behavior
+   - Support Fixed EMI
+   - Support Reducing EMI
    - Support Interest Only repayment mode
-   - Treat Advance Deduction as a separately collected amount
    - Apply Advance Deduction ONLY to the final installment
-   - Keep schedule totals mathematically reconciled
+   - Keep schedule values mathematically consistent
 
-   IMPORTANT BUSINESS RULE:
-   - Advance Deduction does NOT reduce the EMI base.
-   - EMI is calculated from the full Total Payable.
-   - Advance Deduction is already collected at disbursement.
-   - Therefore it is deducted only from the final scheduled EMI.
-   - Example:
-       Total Payable = ₹14,800
-       Installments = 24
-       Advance Deduction = ₹500
+   REDUCING EMI BUSINESS RULE:
+   - Principal is divided across the planned installments.
+   - Interest is calculated on the outstanding principal before
+     each installment.
+   - Therefore installment amounts naturally reduce as the
+     outstanding principal reduces.
+   - Monthly interest rate is the FINORA input basis.
+   - Daily rate = monthly rate / 30.
+   - Weekly rate = monthly rate / 4.33.
+   - Monthly rate = entered monthly rate.
 
-       Regular EMI = round(14,800 / 24) = ₹617
-       First 23 EMIs = ₹617
-       Final EMI before deduction = ₹609
-       Final EMI after deduction = ₹109
-
-       Scheduled EMI collection = ₹14,300
-       Advance Deduction = ₹500
-       Total = ₹14,800
-
-   IMPORTANT ARCHITECTURE:
+   IMPORTANT:
    - No repository access
    - No persistence
    - No UI responsibility
-   - Existing callers using the original five arguments remain valid
+   - Existing callers using the original arguments remain valid.
+   - Reducing EMI also accepts legacy/missing calculation inputs
+     safely so the schedule never silently becomes ₹0.
 =========================================================== */
 
 import type {
@@ -48,7 +42,7 @@ import type {
 
 export type ScheduleRepaymentMode =
   | "fixed"
-  | "variable"
+  | "reducing"
   | "interestOnly";
 
 /* ===========================================================
@@ -85,6 +79,10 @@ export function generateSchedule(
 
   advanceDeduction: number = 0,
 
+  principalAmount: number = 0,
+
+  monthlyInterestRate: number = 0,
+
 ): LoanInstallment[] {
 
   /* =========================================================
@@ -109,7 +107,9 @@ export function generateSchedule(
     Math.max(
       0,
       Math.round(
-        totalPayable,
+        Number(
+          totalPayable,
+        ) || 0,
       ),
     );
 
@@ -117,7 +117,9 @@ export function generateSchedule(
     Math.max(
       0,
       Math.round(
-        totalInterest,
+        Number(
+          totalInterest,
+        ) || 0,
       ),
     );
 
@@ -127,29 +129,12 @@ export function generateSchedule(
       Math.max(
         0,
         Math.round(
-          advanceDeduction,
+          Number(
+            advanceDeduction,
+          ) || 0,
         ),
       ),
     );
-
-  /* =========================================================
-     IMPORTANT — ADVANCE DEDUCTION RULE
-
-     DO NOT subtract Advance Deduction here.
-
-     The complete Total Payable remains the EMI calculation
-     base. Advance Deduction is collected separately at
-     disbursement and is applied only to the final installment.
-
-     Therefore:
-
-       scheduledPayable = totalPayable
-
-     and the final installment receives the deduction later.
-  ========================================================= */
-
-  const scheduledPayable =
-    roundedTotalPayable;
 
   /* =========================================================
      DUE DATE HELPER
@@ -248,13 +233,11 @@ export function generateSchedule(
 
         const interestAmount =
           isFinalInstallment
-
             ? Math.max(
                 0,
                 roundedTotalInterest -
                 interestAlreadyAllocated,
               )
-
             : regularInterest;
 
         const principalBeforeAdvance =
@@ -264,13 +247,11 @@ export function generateSchedule(
 
         const principalAmount =
           isFinalInstallment
-
             ? Math.max(
                 0,
                 principalBeforeAdvance -
                 roundedAdvanceDeduction,
               )
-
             : 0;
 
         const installmentAmount =
@@ -282,13 +263,10 @@ export function generateSchedule(
 
         const outstandingBalance =
           isFinalInstallment
-
             ? 0
-
             : principalAmountBeforeAdvance;
 
         return {
-
           installmentNumber:
             index + 1,
 
@@ -305,142 +283,313 @@ export function generateSchedule(
 
           outstandingBalance,
 
-          paidAmount:
-            0,
+          paidAmount: 0,
 
-          penaltyAmount:
-            0,
+          penaltyAmount: 0,
 
-          receiptNumber:
-            "",
+          receiptNumber: "",
 
-          paidDate:
-            "",
+          paidDate: "",
 
-          status:
-            "Pending",
-
+          status: "Pending",
         };
       },
     );
   }
 
   /* =========================================================
-     FIXED / VARIABLE
+     REDUCING EMI
 
      BUSINESS RULE:
+     - Principal is divided across the planned installments.
+     - The final row receives the exact principal remainder.
+     - Interest is calculated on the outstanding principal before
+       each installment.
+     - EMI naturally reduces as outstanding principal reduces.
+     - Advance Deduction is applied ONLY to the final row.
+     - Advance Deduction does NOT change the principal split.
+     - The first installment amount is the first real reducing EMI.
 
-     1. EMI is calculated from FULL Total Payable.
-     2. Advance Deduction is NOT removed from the EMI base.
-     3. Every regular installment uses the rounded base EMI.
-     4. Final installment first absorbs the normal rounding
-        remainder.
-     5. Advance Deduction is then subtracted from that final
-        installment only.
-     6. Schedule collection + Advance Deduction = Total Payable.
+     IMPORTANT FALLBACK:
+     The current Loan Studio passes principalAmount and
+     monthlyInterestRate. Older callers may not pass them.
 
-     Example:
+     If principalAmount is missing, derive principal from:
+       totalPayable - totalInterest
 
-       ₹14,800 / 24
-       = ₹616.67
-       = ₹617 regular EMI
+     If monthlyInterestRate is missing, derive the monthly rate
+     from the flat-interest baseline supplied by the caller.
 
-       23 × ₹617
-       = ₹14,191
-
-       Remaining final amount:
-       ₹14,800 - ₹14,191
-       = ₹609
-
-       Advance Deduction:
-       ₹500
-
-       Final EMI:
-       ₹609 - ₹500
-       = ₹109
+     This prevents a reducing schedule from silently becoming
+     ₹0 when an older caller is still using the original arguments.
   ========================================================= */
 
-  const baseInstallmentAmount =
+  if (
+    repaymentMode === "reducing"
+  ) {
+
+    /* =======================================================
+       PRINCIPAL SOURCE OF TRUTH
+    ======================================================= */
+
+    const passedPrincipal =
+      Math.max(
+        0,
+        Math.round(
+          Number(
+            principalAmount,
+          ) || 0,
+        ),
+      );
+
+    const derivedPrincipal =
+      Math.max(
+        0,
+        Math.round(
+          roundedTotalPayable -
+          roundedTotalInterest,
+        ),
+      );
+
+    const safePrincipal =
+      passedPrincipal > 0
+        ? passedPrincipal
+        : derivedPrincipal;
+
+    /* =======================================================
+       MONTHLY RATE SOURCE OF TRUTH
+
+       Normal path:
+         monthlyInterestRate = Step 1 entered interest %
+
+       Fallback path:
+         derive the monthly rate from the existing flat-interest
+         baseline so legacy callers still produce a real schedule.
+    ======================================================= */
+
+    const passedMonthlyRate =
+      Math.max(
+        0,
+        Number(
+          monthlyInterestRate,
+        ) || 0,
+      );
+
+    let safeMonthlyRate =
+      passedMonthlyRate;
+
+    if (
+      safeMonthlyRate === 0 &&
+      safePrincipal > 0 &&
+      roundedTotalInterest > 0
+    ) {
+
+      const estimatedMonthlyPeriods =
+        frequency === "daily"
+          ? safeInstallments / 30
+          : frequency === "weekly"
+            ? safeInstallments / 4.33
+            : safeInstallments;
+
+      if (
+        estimatedMonthlyPeriods > 0
+      ) {
+
+        safeMonthlyRate =
+          (
+            roundedTotalInterest /
+            (
+              safePrincipal *
+              estimatedMonthlyPeriods
+            )
+          ) *
+          100;
+      }
+    }
+
+    /* =======================================================
+       PERIODIC RATE
+    ======================================================= */
+
+    const periodicRate =
+      frequency === "daily"
+        ? safeMonthlyRate / 30
+        : frequency === "weekly"
+          ? safeMonthlyRate / 4.33
+          : safeMonthlyRate;
+
+    const periodicRateDecimal =
+      periodicRate / 100;
+
+    /* =======================================================
+       PRINCIPAL DISTRIBUTION
+
+       Example:
+         ₹10,000 / 24
+
+       First 23 rows:
+         ₹417 principal
+
+       Final row:
+         ₹409 principal
+
+       This guarantees:
+         sum(principal components) = ₹10,000
+    ======================================================= */
+
+    const basePrincipal =
+      Math.floor(
+        safePrincipal /
+        safeInstallments,
+      );
+
+    const principalRemainder =
+      safePrincipal -
+      (
+        basePrincipal *
+        safeInstallments
+      );
+
+    const principalComponents =
+      Array.from(
+        {
+          length:
+            safeInstallments,
+        },
+        (_, index) =>
+          basePrincipal +
+          (
+            index <
+            principalRemainder
+              ? 1
+              : 0
+          ),
+      );
+
+    let outstandingPrincipal =
+      safePrincipal;
+
+    return principalComponents.map(
+      (
+        principalComponent,
+        index,
+      ): LoanInstallment => {
+
+        const isFinalInstallment =
+          index ===
+          safeInstallments - 1;
+
+        const principalBeforeInstallment =
+          outstandingPrincipal;
+
+        const interestAmount =
+          Math.max(
+            0,
+            Math.round(
+              principalBeforeInstallment *
+              periodicRateDecimal,
+            ),
+          );
+
+        const normalInstallmentAmount =
+          Math.max(
+            0,
+            principalComponent +
+            interestAmount,
+          );
+
+        /* =====================================================
+           ADVANCE DEDUCTION
+
+           The advance is already collected at disbursement.
+
+           Therefore:
+             - never touch rows 1..N-1
+             - deduct only from final EMI
+             - never allow a negative customer payment
+
+           If the advance is larger than the final EMI, the
+           payable final EMI becomes ₹0. The excess advance is
+           still retained as an already-collected amount outside
+           the installment row.
+        ===================================================== */
+
+        const installmentAmount =
+          isFinalInstallment
+            ? Math.max(
+                0,
+                normalInstallmentAmount -
+                roundedAdvanceDeduction,
+              )
+            : normalInstallmentAmount;
+
+        outstandingPrincipal =
+          Math.max(
+            0,
+            principalBeforeInstallment -
+            principalComponent,
+          );
+
+        return {
+          installmentNumber:
+            index + 1,
+
+          dueDate:
+            getDueDate(
+              index,
+            ).toISOString(),
+
+          installmentAmount,
+
+          principalAmount:
+            principalComponent,
+
+          interestAmount,
+
+          outstandingBalance:
+            isFinalInstallment
+              ? 0
+              : outstandingPrincipal,
+
+          paidAmount: 0,
+
+          penaltyAmount: 0,
+
+          receiptNumber: "",
+
+          paidDate: "",
+
+          status: "Pending",
+        };
+      },
+    );
+  }
+
+  /* =========================================================
+     FIXED EMI
+
+     BUSINESS RULE:
+     - EMI is calculated from FULL Total Payable.
+     - Advance Deduction does NOT reduce the EMI base.
+     - Every regular installment uses the rounded base EMI.
+     - Final installment absorbs the rounding remainder.
+     - Advance Deduction is applied ONLY to the final row.
+  ========================================================= */
+
+  const scheduledPayable =
+    roundedTotalPayable;
+
+  const installmentAmount =
     Math.round(
       scheduledPayable /
       safeInstallments,
     );
 
-  /*
-    The amount remaining before Advance Deduction on the final
-    installment. This is calculated from the FULL payable value,
-    not from payable minus advance.
-  */
-  const finalAmountBeforeAdvance =
-    Math.max(
-      0,
-      scheduledPayable -
-      (
-        baseInstallmentAmount *
-        (
-          safeInstallments -
-          1
-        )
-      ),
+  const regularInterest =
+    Math.floor(
+      roundedTotalInterest /
+      safeInstallments,
     );
-
-  /*
-    Advance Deduction is applied ONLY to the final installment.
-
-    If the deduction is larger than the final installment,
-    the final installment is safely clamped to zero instead
-    of becoming negative.
-  */
-  const finalInstallmentAmount =
-    Math.max(
-      0,
-      finalAmountBeforeAdvance -
-      roundedAdvanceDeduction,
-    );
-
-  /*
-    The actual amount collected through the EMI schedule after
-    the separate Advance Deduction has already been collected.
-  */
-  const scheduledCollection =
-    Math.max(
-      0,
-      (
-        baseInstallmentAmount *
-        (
-          safeInstallments -
-          1
-        )
-      ) +
-      finalInstallmentAmount,
-    );
-
-  /* =========================================================
-     INTEREST ALLOCATION
-
-     The schedule UI currently displays installment amount only,
-     but LoanInstallment also carries principal / interest
-     fields. Keep those fields mathematically consistent.
-
-     Because Advance Deduction changes only the final amount,
-     interest is allocated proportionally across the actual
-     scheduled collection. This preserves:
-
-       Sum(interestAmount) = totalInterest
-       Sum(principalAmount) + advanceDeduction = loan principal
-
-     without producing negative principal/interest values in
-     the final row.
-  ========================================================= */
-
-  const interestAllocatedToSchedule =
-    Math.min(
-      roundedTotalInterest,
-      scheduledCollection,
-    );
-
-  let interestAllocatedBefore =
-    0;
 
   return Array.from(
 
@@ -456,43 +605,41 @@ export function generateSchedule(
         index ===
         safeInstallments - 1;
 
-      const installmentAmountForRow =
+      const amountBeforeAdvance =
         isFinalInstallment
-          ? finalInstallmentAmount
-          : baseInstallmentAmount;
+          ? Math.max(
+              0,
+              scheduledPayable -
+              (
+                installmentAmount *
+                index
+              ),
+            )
+          : installmentAmount;
 
-      /* ======================================================
-         INTEREST FOR CURRENT ROW
+      const installmentAmountForRow =
+        Math.max(
+          0,
+          amountBeforeAdvance -
+          (
+            isFinalInstallment
+              ? roundedAdvanceDeduction
+              : 0
+          ),
+        );
 
-         Allocate whole rupees progressively so the final row
-         absorbs the exact remaining interest.
-      ====================================================== */
+      const interestAlreadyAllocated =
+        regularInterest *
+        index;
 
       const interestAmount =
         isFinalInstallment
-
           ? Math.max(
               0,
-              interestAllocatedToSchedule -
-              interestAllocatedBefore,
+              roundedTotalInterest -
+              interestAlreadyAllocated,
             )
-
-          : Math.min(
-              installmentAmountForRow,
-              Math.floor(
-                (
-                  interestAllocatedToSchedule *
-                  installmentAmountForRow
-                ) /
-                Math.max(
-                  1,
-                  scheduledCollection,
-                ),
-              ),
-            );
-
-      interestAllocatedBefore +=
-        interestAmount;
+          : regularInterest;
 
       const principalAmount =
         Math.max(
@@ -501,24 +648,13 @@ export function generateSchedule(
           interestAmount,
         );
 
-      /*
-        Remaining scheduled payable after this installment.
-
-        This represents the repayment schedule balance and does
-        not include the Advance Deduction because that amount was
-        already collected separately at disbursement.
-      */
       const paidBeforeCurrent =
-        (
-          baseInstallmentAmount *
-          index
-        );
+        installmentAmount *
+        index;
 
       const outstandingBalance =
         isFinalInstallment
-
           ? 0
-
           : Math.max(
               0,
               Math.round(
@@ -531,7 +667,6 @@ export function generateSchedule(
             );
 
       return {
-
         installmentNumber:
           index + 1,
 
@@ -549,21 +684,15 @@ export function generateSchedule(
 
         outstandingBalance,
 
-        paidAmount:
-          0,
+        paidAmount: 0,
 
-        penaltyAmount:
-          0,
+        penaltyAmount: 0,
 
-        receiptNumber:
-          "",
+        receiptNumber: "",
 
-        paidDate:
-          "",
+        paidDate: "",
 
-        status:
-          "Pending",
-
+        status: "Pending",
       };
     },
   );

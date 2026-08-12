@@ -1,12 +1,7 @@
 /* ===========================================================
-FINORA ENTERPRISE V2
-REPAYMENT STUDIO
-REPAYMENT PREVIEW CARD
-=========================================================== */
-
-
-/* ===========================================================
-IMPORTS
+   FINORA ENTERPRISE V2
+   REPAYMENT STUDIO
+   REPAYMENT PREVIEW CARD
 =========================================================== */
 
 import SummaryCard from "../../common/cards/SummaryCard";
@@ -22,57 +17,41 @@ import {
   valueStyle,
 } from "./RepaymentPreviewCard.styles";
 
-
 /* ===========================================================
-TYPES
+   TYPES
 =========================================================== */
 
 interface RepaymentPreviewCardProps {
-
   frequency?: string;
-
   repaymentMethod?: string;
-
   installmentAmount?: number;
-
   totalInstallments?: number;
-
   totalRepayable?: number;
-
   firstInstallmentDate?: string;
-
   lastInstallmentDate?: string;
-
 }
 
-
 /* ===========================================================
-HELPERS
+   HELPERS
 =========================================================== */
 
 function formatAmount(
   value: number,
 ): string {
-
-  return Math.round(
-    value,
-  ).toLocaleString(
+  return Math.round(value).toLocaleString(
     "en-IN",
   );
-
 }
 
 function formatRepaymentMethod(
   value?: string,
 ): string {
-
   switch (value) {
-
     case "fixed":
       return "Fixed EMI";
 
-    case "variable":
-      return "Variable EMI";
+    case "reducing":
+      return "Reducing EMI";
 
     case "interestOnly":
       return "Interest Only";
@@ -80,16 +59,14 @@ function formatRepaymentMethod(
     default:
       return "--";
   }
-
 }
-
 
 function formatFrequency(
   value?: string,
 ): string {
-
-  switch (value?.toLowerCase()) {
-
+  switch (
+    value?.toLowerCase()
+  ) {
     case "daily":
       return "Daily";
 
@@ -102,218 +79,105 @@ function formatFrequency(
     default:
       return "--";
   }
-
 }
 
-
 /* ===========================================================
-COMPONENT
+   COMPONENT
 =========================================================== */
 
 export default function RepaymentPreviewCard({
 
   frequency = "--",
-
   repaymentMethod,
-
   installmentAmount = 0,
-
   totalInstallments = 0,
-
   totalRepayable = 0,
-
   firstInstallmentDate = "--",
-
   lastInstallmentDate = "--",
 
 }: RepaymentPreviewCardProps) {
 
   return (
 
-    <div
-      style={cardStyle}
-    >
+    <div style={cardStyle}>
 
       <SummaryCard
         title="Repayment Preview"
       >
 
-        <div
-          style={previewGridStyle}
-        >
+        <div style={previewGridStyle}>
 
-          {/* =================================================
-              REPAYMENT METHOD
-          ================================================= */}
-
-          <div
-            style={highlightRowStyle}
-          >
-
-            <span
-              style={labelStyle}
-            >
+          <div style={highlightRowStyle}>
+            <span style={labelStyle}>
               EMI Calculation
             </span>
-
-            <strong
-              style={primaryValueStyle}
-            >
+            <strong style={primaryValueStyle}>
               {formatRepaymentMethod(
                 repaymentMethod,
               )}
             </strong>
-
           </div>
 
-
-          {/* =================================================
-              FREQUENCY
-          ================================================= */}
-
-          <div
-            style={rowStyle}
-          >
-
-            <span
-              style={labelStyle}
-            >
+          <div style={rowStyle}>
+            <span style={labelStyle}>
               Repayment Frequency
             </span>
-
-            <strong
-              style={valueStyle}
-            >
-              {formatFrequency(
-                frequency,
-              )}
+            <strong style={valueStyle}>
+              {formatFrequency(frequency)}
             </strong>
-
           </div>
 
-
-          {/* =================================================
-              INSTALLMENT
-          ================================================= */}
-
-          <div
-            style={rowStyle}
-          >
-
-            <span
-              style={labelStyle}
-            >
+          <div style={rowStyle}>
+            <span style={labelStyle}>
               Installment
             </span>
-
-            <strong
-              style={valueStyle}
-            >
+            <strong style={valueStyle}>
               {installmentAmount > 0
                 ? `₹ ${formatAmount(
                     installmentAmount,
                   )}`
                 : "--"}
             </strong>
-
           </div>
 
-
-          {/* =================================================
-              TOTAL INSTALLMENTS
-          ================================================= */}
-
-          <div
-            style={rowStyle}
-          >
-
-            <span
-              style={labelStyle}
-            >
+          <div style={rowStyle}>
+            <span style={labelStyle}>
               Total Installments
             </span>
-
-            <strong
-              style={valueStyle}
-            >
+            <strong style={valueStyle}>
               {totalInstallments > 0
                 ? Math.round(
                     totalInstallments,
                   )
                 : "--"}
             </strong>
-
           </div>
 
-
-          {/* =================================================
-              TOTAL REPAYABLE
-          ================================================= */}
-
-          <div
-            style={highlightRowStyle}
-          >
-
-            <span
-              style={labelStyle}
-            >
+          <div style={highlightRowStyle}>
+            <span style={labelStyle}>
               Total Repayable
             </span>
-
-            <strong
-              style={primaryValueStyle}
-            >
-              ₹ {formatAmount(
-                totalRepayable,
-              )}
+            <strong style={primaryValueStyle}>
+              ₹ {formatAmount(totalRepayable)}
             </strong>
-
           </div>
 
-
-          {/* =================================================
-              FIRST INSTALLMENT
-          ================================================= */}
-
-          <div
-            style={rowStyle}
-          >
-
-            <span
-              style={labelStyle}
-            >
+          <div style={rowStyle}>
+            <span style={labelStyle}>
               First Installment
             </span>
-
-            <strong
-              style={valueStyle}
-            >
+            <strong style={valueStyle}>
               {firstInstallmentDate}
             </strong>
-
           </div>
 
-
-          {/* =================================================
-              LAST INSTALLMENT
-          ================================================= */}
-
-          <div
-            style={fullWidthRowStyle}
-          >
-
-            <span
-              style={labelStyle}
-            >
+          <div style={fullWidthRowStyle}>
+            <span style={labelStyle}>
               Last Installment
             </span>
-
-            <strong
-              style={valueStyle}
-            >
+            <strong style={valueStyle}>
               {lastInstallmentDate}
             </strong>
-
           </div>
 
         </div>
@@ -321,12 +185,9 @@ export default function RepaymentPreviewCard({
       </SummaryCard>
 
     </div>
-
   );
-
 }
 
-
 /* ===========================================================
-END
+   END
 =========================================================== */

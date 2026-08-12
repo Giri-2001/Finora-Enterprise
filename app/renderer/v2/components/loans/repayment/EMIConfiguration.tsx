@@ -1,24 +1,9 @@
-// ============================================================
+// ===========================================================
 // FINORA ENTERPRISE V2
-//
-// REPAYMENT STUDIO
-// EMI CONFIGURATION
-//
-// RESPONSIBILITY:
-// - Configure EMI calculation mode
-// - Configure installment date
-// - Presentation/input responsibility only
-//
-// IMPORTANT:
-// - No business calculations here
-// - No repository access
-// - No service access
-// - No localStorage access
-// ============================================================
+// REPAYMENT STUDIO — EMI CONFIGURATION
+// ===========================================================
 
-import {
-  useState,
-} from "react";
+import { useState } from "react";
 
 import {
   FormField,
@@ -27,135 +12,138 @@ import {
 } from "../../common";
 
 import {
+  accentStyle,
   contentStyle,
   fieldContentStyle,
   fieldStyle,
-  inputStyle,
+  headerStyle,
+  wrapperStyle,
 } from "./EMIConfiguration.styles";
-
-// ============================================================
-// TYPES
-// ============================================================
 
 export type EMICalculationMode =
   | "fixed"
-  | "variable"
+  | "reducing"
   | "interestOnly";
 
 interface EMIConfigurationProps {
   emiCalculation?: EMICalculationMode;
-
+  installmentAmount?: string;
   firstInstallmentDate?: string;
-
-  onEMICalculationChange?: (
-    value: EMICalculationMode,
-  ) => void;
-
-  onFirstInstallmentDateChange?: (
-    value: string,
-  ) => void;
+  onEMICalculationChange?: (value: EMICalculationMode) => void;
+  onInstallmentAmountChange?: (value: string) => void;
+  onFirstInstallmentDateChange?: (value: string) => void;
 }
 
-// ============================================================
-// COMPONENT
-// ============================================================
-
 export default function EMIConfiguration({
-  emiCalculation:
-    controlledEMICalculation,
-
-  firstInstallmentDate:
-    controlledFirstInstallmentDate,
-
+  emiCalculation: controlledEMICalculation,
+  installmentAmount: controlledInstallmentAmount,
+  firstInstallmentDate: controlledFirstInstallmentDate,
   onEMICalculationChange,
-
+  onInstallmentAmountChange,
   onFirstInstallmentDateChange,
-
 }: EMIConfigurationProps) {
 
-  // ==========================================================
-  // LOCAL FALLBACK STATE
-  // ==========================================================
-
-  const [
-    localEMICalculation,
-    setLocalEMICalculation,
-  ] = useState<EMICalculationMode>(
-    "fixed",
-  );
-
-  const [
-    localFirstInstallmentDate,
-    setLocalFirstInstallmentDate,
-  ] = useState("");
-
-  // ==========================================================
-  // RESOLVED VALUES
-  // ==========================================================
+  const [localEMICalculation, setLocalEMICalculation] =
+    useState<EMICalculationMode>("fixed");
+  const [localInstallmentAmount, setLocalInstallmentAmount] =
+    useState("");
+  const [localFirstInstallmentDate, setLocalFirstInstallmentDate] =
+    useState("");
 
   const emiCalculation =
-    controlledEMICalculation ??
-    localEMICalculation;
-
+    controlledEMICalculation ?? localEMICalculation;
+  const installmentAmount =
+    controlledInstallmentAmount ?? localInstallmentAmount;
   const firstInstallmentDate =
-    controlledFirstInstallmentDate ??
-    localFirstInstallmentDate;
+    controlledFirstInstallmentDate ?? localFirstInstallmentDate;
 
-  // ==========================================================
-  // EMI CALCULATION CHANGE
-  // ==========================================================
-
-  function handleEMICalculationChange(
-    value: string,
-  ): void {
-
-    const normalizedValue:
-      EMICalculationMode =
-      value === "variable"
-        ? "variable"
+  function handleEMICalculationChange(value: string): void {
+    const normalizedValue: EMICalculationMode =
+      value === "reducing"
+        ? "reducing"
         : value === "interestOnly"
           ? "interestOnly"
           : "fixed";
 
-    setLocalEMICalculation(
-      normalizedValue,
-    );
-
-    onEMICalculationChange?.(
-      normalizedValue,
-    );
+    setLocalEMICalculation(normalizedValue);
+    onEMICalculationChange?.(normalizedValue);
   }
 
-  // ==========================================================
-  // INSTALLMENT DATE CHANGE
-  // ==========================================================
-
-  function handleFirstInstallmentDateChange(
-    value: string,
-  ): void {
-
-    setLocalFirstInstallmentDate(
-      value,
-    );
-
-    onFirstInstallmentDateChange?.(
-      value,
-    );
+  function handleInstallmentAmountChange(value: string): void {
+    setLocalInstallmentAmount(value);
+    onInstallmentAmountChange?.(value);
   }
 
-  // ==========================================================
-  // RENDER
-  // ==========================================================
+  function handleFirstInstallmentDateChange(value: string): void {
+    setLocalFirstInstallmentDate(value);
+    onFirstInstallmentDateChange?.(value);
+  }
 
   return (
-    <div
-      style={contentStyle}
-    >
+    <div style={wrapperStyle}>
+      <div style={headerStyle}>
+        <span style={accentStyle} />
+        <span>EMI Configuration</span>
+      </div>
 
+      <div style={contentStyle}>
+        <div style={fieldStyle}>
+          <div style={fieldContentStyle}>
+            <FormField label="EMI Calculation" required>
+              <SelectInput
+                value={emiCalculation}
+                onChange={(event) =>
+                  handleEMICalculationChange(
+                    event.target.value,
+                  )
+                }
+                options={[
+                  { label: "Fixed EMI", value: "fixed" },
+                  { label: "Reducing EMI", value: "reducing" },
+                  { label: "Interest Only", value: "interestOnly" },
+                ]}
+              />
+            </FormField>
+          </div>
+        </div>
+
+        <div style={fieldStyle}>
+          <div style={fieldContentStyle}>
+            <FormField label="Installment Amount (₹)">
+              <TextInput
+                type="number"
+                value={installmentAmount}
+                onChange={(event) =>
+                  handleInstallmentAmountChange(
+                    event.target.value,
+                  )
+                }
+                placeholder="Auto or Manual"
+              />
+            </FormField>
+          </div>
+        </div>
+
+        <div style={fieldStyle}>
+          <div style={fieldContentStyle}>
+            <FormField label="First Installment Date">
+              <TextInput
+                type="date"
+                value={firstInstallmentDate}
+                onChange={(event) =>
+                  handleFirstInstallmentDateChange(
+                    event.target.value,
+                  )
+                }
+              />
+            </FormField>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
 
-// ============================================================
+// ===========================================================
 // END
-// ============================================================
+// ===========================================================

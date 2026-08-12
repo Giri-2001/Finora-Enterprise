@@ -72,9 +72,6 @@ import GuarantorPreviewCard
 import GuarantorDraftStatus
   from "../../../../loans/guarantor/GuarantorDraftStatus";
 
-import EMIConfiguration
-  from "../../../../loans/repayment/EMIConfiguration";
-
 import type {
   EMICalculationMode,
 } from "../../../../loans/repayment/EMIConfiguration";
@@ -516,13 +513,6 @@ export default function LoanStudio({
   ] = useState("");
 
   const [
-    interestType,
-    setInterestType,
-  ] = useState(
-    "Flat Interest",
-  );
-
-  const [
     processingFee,
     setProcessingFee,
   ] = useState("");
@@ -726,16 +716,24 @@ export default function LoanStudio({
       ? durationValue / 4.33
       : durationValue / 30;
 
-  const totalInterest =
+  /* ==========================================================
+     FLAT INTEREST BASELINE
+
+     Fixed EMI and Interest Only continue to use the existing
+     FINORA flat-interest calculation. Reducing EMI is calculated
+     separately from the generated reducing-balance schedule.
+  ========================================================== */
+
+  const flatTotalInterest =
     Math.round(
       monthlyInterestAmount *
       interestMonths,
     );
 
-  const totalPayable =
+  const flatTotalPayable =
     Math.round(
       principal +
-      totalInterest,
+      flatTotalInterest,
     );
 
   const durationDays =
@@ -871,14 +869,40 @@ export default function LoanStudio({
             | "daily"
             | "weekly"
             | "monthly",
-          totalPayable,
-          totalInterest,
+          flatTotalPayable,
+          flatTotalInterest,
           emiCalculation,
           parseNumericValue(
             advanceDeduction,
           ),
+
         )
       : [];
+
+  /* ==========================================================
+     FINAL INTEREST / PAYABLE VALUES
+
+     Reducing EMI derives total interest from the generated
+     declining-balance schedule itself. This keeps the summary,
+     preview, schedule and review data on the same source of truth.
+  ========================================================== */
+
+  const totalInterest =
+    emiCalculation ===
+    "reducing"
+      ? schedule.reduce(
+          (sum, installment) =>
+            sum +
+            installment.interestAmount,
+          0,
+        )
+      : flatTotalInterest;
+
+  const totalPayable =
+    Math.round(
+      principal +
+      totalInterest,
+    );
 
   // ==========================================================
   // INSTALLMENT AMOUNT
@@ -932,7 +956,8 @@ export default function LoanStudio({
     loanType:
       normalizedLoanType,
 
-    interestType,
+    interestType:
+      emiCalculation,
 
     interestRate:
       parseNumericValue(

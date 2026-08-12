@@ -1,18 +1,7 @@
 /* ===========================================================
-FINORA ENTERPRISE V2
-REPAYMENT STUDIO
-REPAYMENT SUMMARY
-
-RESPONSIBILITY:
-- Display repayment values
-- Keep presentation separate from calculation logic
-- Support Step 2 shared LoanStudio state
-- Whole-rupee financial presentation
-=========================================================== */
-
-
-/* ===========================================================
-IMPORTS
+   FINORA ENTERPRISE V2
+   REPAYMENT STUDIO
+   REPAYMENT SUMMARY
 =========================================================== */
 
 import SummaryCard from "../../common/cards/SummaryCard";
@@ -26,9 +15,8 @@ import {
   valueStyle,
 } from "./RepaymentSummary.styles";
 
-
 /* ===========================================================
-TYPES
+   TYPES
 =========================================================== */
 
 interface RepaymentSummaryProps {
@@ -41,9 +29,8 @@ interface RepaymentSummaryProps {
   repaymentFrequency?: string;
 }
 
-
 /* ===========================================================
-HELPERS
+   HELPERS
 =========================================================== */
 
 function formatAmount(
@@ -61,8 +48,8 @@ function formatMethod(
     case "fixed":
       return "Fixed EMI";
 
-    case "variable":
-      return "Variable EMI";
+    case "reducing":
+      return "Reducing EMI";
 
     case "interestOnly":
       return "Interest Only";
@@ -90,25 +77,18 @@ function formatFrequency(
   }
 }
 
-
 /* ===========================================================
-COMPONENT
+   COMPONENT
 =========================================================== */
 
 export default function RepaymentSummary({
 
   loanAmount = 0,
-
   totalInterest = 0,
-
   installmentAmount = 0,
-
   totalInstallments = 0,
-
   totalRepayable = 0,
-
   repaymentMethod,
-
   repaymentFrequency,
 
 }: RepaymentSummaryProps) {
@@ -127,174 +107,71 @@ export default function RepaymentSummary({
           style={summaryGridStyle}
         >
 
-          {/* =================================================
-              LOAN AMOUNT
-          ================================================= */}
-
-          <div
-            style={rowStyle}
-          >
-
-            <span
-              style={labelStyle}
-            >
+          <div style={rowStyle}>
+            <span style={labelStyle}>
               Loan Amount
             </span>
-
-            <strong
-              style={valueStyle}
-            >
+            <strong style={valueStyle}>
               ₹ {formatAmount(loanAmount)}
             </strong>
-
           </div>
 
-
-          {/* =================================================
-              REPAYMENT METHOD
-          ================================================= */}
-
-          <div
-            style={rowStyle}
-          >
-
-            <span
-              style={labelStyle}
-            >
+          <div style={rowStyle}>
+            <span style={labelStyle}>
               Repayment Method
             </span>
-
-            <strong
-              style={valueStyle}
-            >
+            <strong style={valueStyle}>
               {formatMethod(
                 repaymentMethod,
               )}
             </strong>
-
           </div>
 
-
-          {/* =================================================
-              REPAYMENT FREQUENCY
-          ================================================= */}
-
-          <div
-            style={rowStyle}
-          >
-
-            <span
-              style={labelStyle}
-            >
+          <div style={rowStyle}>
+            <span style={labelStyle}>
               Repayment Frequency
             </span>
-
-            <strong
-              style={valueStyle}
-            >
+            <strong style={valueStyle}>
               {formatFrequency(
                 repaymentFrequency,
               )}
             </strong>
-
           </div>
 
-
-          {/* =================================================
-              TOTAL INTEREST
-          ================================================= */}
-
-          <div
-            style={rowStyle}
-          >
-
-            <span
-              style={labelStyle}
-            >
+          <div style={rowStyle}>
+            <span style={labelStyle}>
               Total Interest
             </span>
-
-            <strong
-              style={valueStyle}
-            >
+            <strong style={valueStyle}>
               ₹ {formatAmount(totalInterest)}
             </strong>
-
           </div>
 
-
-          {/* =================================================
-              INSTALLMENT AMOUNT
-          ================================================= */}
-
-          <div
-            style={rowStyle}
-          >
-
-            <span
-              style={labelStyle}
-            >
+          <div style={rowStyle}>
+            <span style={labelStyle}>
               Installment Amount
             </span>
-
-            <strong
-              style={valueStyle}
-            >
-              ₹ {formatAmount(
-                installmentAmount,
-              )}
+            <strong style={valueStyle}>
+              ₹ {formatAmount(installmentAmount)}
             </strong>
-
           </div>
 
-
-          {/* =================================================
-              TOTAL INSTALLMENTS
-          ================================================= */}
-
-          <div
-            style={rowStyle}
-          >
-
-            <span
-              style={labelStyle}
-            >
+          <div style={rowStyle}>
+            <span style={labelStyle}>
               Total Installments
             </span>
-
-            <strong
-              style={valueStyle}
-            >
-              {Math.round(
-                totalInstallments,
-              )}
+            <strong style={valueStyle}>
+              {Math.round(totalInstallments)}
             </strong>
-
           </div>
 
-
-          {/* =================================================
-              TOTAL REPAYABLE
-          ================================================= */}
-
-          <div
-            style={highlightRowStyle}
-          >
-
-            <span
-              style={labelStyle}
-            >
+          <div style={highlightRowStyle}>
+            <span style={labelStyle}>
               Total Repayable
             </span>
-
-            <strong
-              style={valueStyle}
-            >
-              ₹ {formatAmount(
-                totalRepayable,
-              )}
+            <strong style={valueStyle}>
+              ₹ {formatAmount(totalRepayable)}
             </strong>
-
           </div>
 
         </div>
@@ -302,11 +179,9 @@ export default function RepaymentSummary({
       </SummaryCard>
 
     </div>
-
   );
 }
 
-
 /* ===========================================================
-END
+   END
 =========================================================== */
