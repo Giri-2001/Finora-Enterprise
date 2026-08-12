@@ -43,7 +43,7 @@ export const headerStyle: CSSProperties = {
   minWidth: 0,
   boxSizing: "border-box",
   padding: "13px 16px",
-  marginBottom: "10px",
+  marginBottom: "0px",
   border: `1px solid ${COLORS.border}`,
   borderRadius: "10px",
   background: `linear-gradient(

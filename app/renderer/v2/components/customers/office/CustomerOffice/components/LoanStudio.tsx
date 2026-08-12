@@ -1802,19 +1802,41 @@ export default function LoanStudio({
                 style={step1FormStyle}
               >
 
-                <LoanSummary
-                  review={
-                    reviewData
-                  }
-                />
+                <div
+                  style={{
+                    width: "100%",
+                    minWidth: 0,
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: "8px",
+                    boxSizing: "border-box",
+                  }}
+                >
 
-                <ValidationChecklist
-                  review={
-                    reviewData
-                  }
-                />
+                  <LoanSummary
+                    review={
+                      reviewData
+                    }
+                  />
 
-                <ApprovalActions
+
+                  <div
+                    style={{
+                      width: "100%",
+                      minWidth: 0,
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: "8px",
+                    }}
+                  >
+
+                    <ValidationChecklist
+                    review={
+                      reviewData
+                    }
+                  />
+
+                  <ApprovalActions
                   onSaveDraft={
                     handleSaveDraft
                   }
@@ -1825,11 +1847,24 @@ export default function LoanStudio({
                     handleRejectLoan
                   }
                 />
+                  </div>
+
+                </div>
+
+
 
               </div>
 
               <div
-                style={step1PreviewStyle}
+                style={{
+                  ...step1PreviewStyle,
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "8px",
+                  width: "100%",
+                  minWidth: 0,
+                  boxSizing: "border-box",
+                }}
               >
 
                 <ReviewPreviewCard
