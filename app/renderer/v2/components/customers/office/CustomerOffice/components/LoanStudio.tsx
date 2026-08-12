@@ -7,10 +7,6 @@ import {
   useState,
 } from "react";
 
-import type {
-  ChangeEvent,
-} from "react";
-
 import LoanForm
   from "../../../../loans/details/LoanForm";
 
@@ -26,6 +22,13 @@ import LoanPreviewCard
 
 import LoanStatistics
   from "../../../../loans/details/LoanStatistics";
+
+import DocumentsStudio
+  from "../../../../loans/documents/DocumentsStudio";
+
+import type {
+  DocumentsStudioItem,
+} from "../../../../loans/documents/DocumentsStudio";
 
 import {
   shellStyle,
@@ -403,60 +406,13 @@ export default function LoanStudio({
     customers,
   ]);
 
-  const [documentPhoto, setDocumentPhoto] = useState<string | undefined>(
-    selectedCustomer?.photo,
-  );
-
-  const [documentFiles, setDocumentFiles] = useState<
-    Array<{
-      name: string;
-      type: string;
-    }>
-  >([]);
+  // Step 3 document evidence belongs to the active customer / loan workspace.
+  // Changing the customer must never carry another customer's evidence forward.
+  const [documents, setDocuments] = useState<DocumentsStudioItem[]>([]);
 
   useEffect(() => {
-    setDocumentPhoto(selectedCustomer?.photo);
-  }, [selectedCustomer?.photo]);
-
-  function handleCustomerPhotoUpload(
-    event: ChangeEvent<HTMLInputElement>,
-  ): void {
-    const file = event.target.files?.[0];
-
-    if (!file) {
-      return;
-    }
-
-    const photoUrl = URL.createObjectURL(file);
-    setDocumentPhoto(photoUrl);
-
-    setSelectedCustomer((current) =>
-      current
-        ? {
-            ...current,
-            photo: photoUrl,
-          }
-        : current,
-    );
-  }
-
-  function handleDocumentUpload(
-    event: ChangeEvent<HTMLInputElement>,
-  ): void {
-    const file = event.target.files?.[0];
-
-    if (!file) {
-      return;
-    }
-
-    setDocumentFiles((current) => [
-      ...current,
-      {
-        name: file.name,
-        type: file.type || "Document",
-      },
-    ]);
-  }
+    setDocuments([]);
+  }, [selectedCustomer?.customerId]);
 
   const loanCustomerOptions =
     useMemo<LoanCustomerOption[]>(
@@ -1717,239 +1673,21 @@ export default function LoanStudio({
           <section
             style={step1WorkspaceStyle}
           >
-
-            <section
-              style={{
-                width: "100%",
-                height: "100%",
-                minWidth: 0,
-                minHeight: 0,
-                boxSizing: "border-box",
-                padding: "18px",
-                border: "1px solid rgba(148, 163, 184, 0.16)",
-                borderRadius: "13px",
-                background: "#111C2E",
-                color: "#FFFFFF",
-                overflow: "auto",
-              }}
-            >
-
-              <div
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "10px",
-                  marginBottom: "18px",
-                }}
-              >
-                <div
-                  style={{
-                    width: "4px",
-                    height: "34px",
-                    borderRadius: "4px",
-                    background: "#2563EB",
-                  }}
-                />
-
-                <div>
-                  <h2
-                    style={{
-                      margin: 0,
-                      fontSize: "18px",
-                      fontWeight: 750,
-                    }}
-                  >
-                    Documents Studio™
-                  </h2>
-
-                  <p
-                    style={{
-                      margin: "4px 0 0",
-                      color: "#94A3B8",
-                      fontSize: "12px",
-                      fontWeight: 500,
-                    }}
-                  >
-                    Upload customer photo and loan verification documents.
-                  </p>
-                </div>
-              </div>
-
-              <div
-                style={{
-                  display: "grid",
-                  gridTemplateColumns:
-                    "minmax(220px, 280px) minmax(0, 1fr)",
-                  gap: "14px",
-                  alignItems: "start",
-                }}
-              >
-
-                <div
-                  style={{
-                    minWidth: 0,
-                    padding: "14px",
-                    border:
-                      "1px solid rgba(37, 99, 235, 0.42)",
-                    borderRadius: "10px",
-                    background: "#0F172A",
-                  }}
-                >
-
-                  <div
-                    style={{
-                      marginBottom: "8px",
-                      color: "#CBD5E1",
-                      fontSize: "12px",
-                      fontWeight: 700,
-                    }}
-                  >
-                    CUSTOMER PHOTO
-                  </div>
-
-                  <div
-                    style={{
-                      width: "100%",
-                      height: "190px",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      overflow: "hidden",
-                      borderRadius: "9px",
-                      border:
-                        "1px solid rgba(148, 163, 184, 0.16)",
-                      background: "#0A1425",
-                    }}
-                  >
-                    {documentPhoto ? (
-                      <img
-                        src={documentPhoto}
-                        alt="Customer"
-                        style={{
-                          width: "100%",
-                          height: "100%",
-                          objectFit: "contain",
-                        }}
-                      />
-                    ) : (
-                      <div
-                        style={{
-                          color: "#94A3B8",
-                          fontSize: "12px",
-                          fontWeight: 600,
-                        }}
-                      >
-                        No Photo
-                      </div>
-                    )}
-                  </div>
-
-                  <label
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      minHeight: "34px",
-                      marginTop: "10px",
-                      borderRadius: "7px",
-                      border:
-                        "1px solid rgba(37, 99, 235, 0.42)",
-                      background:
-                        "rgba(37, 99, 235, 0.14)",
-                      color: "#FFFFFF",
-                      fontSize: "12px",
-                      fontWeight: 650,
-                      cursor: "pointer",
-                    }}
-                  >
-                    Upload / Replace Photo
-
-                    <input
-                      type="file"
-                      accept="image/*"
-                      onChange={
-                        handleCustomerPhotoUpload
-                      }
-                      style={{
-                        display: "none",
-                      }}
-                    />
-                  </label>
-
-                </div>
-
-                <div
-                  style={{
-                    minWidth: 0,
-                    display: "grid",
-                    gridTemplateColumns:
-                      "repeat(2, minmax(0, 1fr))",
-                    gap: "10px",
-                  }}
-                >
-
-                  {[
-                    "Identity Proof",
-                    "Address Proof",
-                    "Income / Business Proof",
-                    "Other Document",
-                  ].map((label) => (
-                    <label
-                      key={label}
-                      style={{
-                        minWidth: 0,
-                        minHeight: "92px",
-                        display: "flex",
-                        flexDirection: "column",
-                        justifyContent: "center",
-                        gap: "6px",
-                        padding: "12px",
-                        boxSizing: "border-box",
-                        border:
-                          "1px solid rgba(148, 163, 184, 0.16)",
-                        borderRadius: "9px",
-                        background: "#0F172A",
-                        color: "#CBD5E1",
-                        fontSize: "12px",
-                        fontWeight: 650,
-                        cursor: "pointer",
-                      }}
-                    >
-                      <span>{label}</span>
-
-                      <span
-                        style={{
-                          color: "#94A3B8",
-                          fontSize: "11px",
-                          fontWeight: 500,
-                          overflow: "hidden",
-                          textOverflow: "ellipsis",
-                          whiteSpace: "nowrap",
-                        }}
-                      >
-                        {documentFiles[0]?.name ??
-                          "Choose document"}
-                      </span>
-
-                      <input
-                        type="file"
-                        accept="image/*,.pdf"
-                        onChange={
-                          handleDocumentUpload
-                        }
-                        style={{
-                          display: "none",
-                        }}
-                      />
-                    </label>
-                  ))}
-
-                </div>
-
-              </div>
-
-            </section>
-
+            <DocumentsStudio
+              customerName={
+                activeCustomerName ||
+                selectedCustomer?.customerName ||
+                customerName ||
+                "Customer"
+              }
+              customerPhoto={
+                selectedCustomer?.photo
+              }
+              items={documents}
+              onDocumentsChange={
+                setDocuments
+              }
+            />
           </section>
         )}
 
