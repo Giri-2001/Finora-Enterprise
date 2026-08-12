@@ -45,15 +45,13 @@ import {
   collectionRepository,
 } from "../../../../../repositories/collection/collectionRepository";
 
-
 // ============================================================
 // MAPPER
 // ============================================================
 
 export default async function customerOfficeMapper(
   customers: CustomerProfile[],
-):
-  Promise<OfficeCustomer[]> {
+): Promise<OfficeCustomer[]> {
 
   // ==========================================================
   // LOANS
@@ -64,19 +62,15 @@ export default async function customerOfficeMapper(
   const loans =
     await fetchLoans();
 
-
   // ==========================================================
   // COLLECTIONS
   //
-  // CollectionRepository is now treated as an asynchronous
+  // CollectionRepository is treated as an asynchronous
   // persistence boundary.
-  //
-  // Physical storage remains below the repository.
   // ==========================================================
 
   const collections =
     await collectionRepository.getAll();
-
 
   // ==========================================================
   // CUSTOMER → OFFICE CUSTOMER
@@ -93,7 +87,6 @@ export default async function customerOfficeMapper(
         !customer.internal.isDeleted &&
         !customer.internal.isArchived,
     )
-
 
     // ========================================================
     // OFFICE CUSTOMER MAPPING
@@ -113,7 +106,6 @@ export default async function customerOfficeMapper(
               customer.identity.customerId,
           ),
 
-
         // ====================================================
         // BASIC IDENTITY
         // ====================================================
@@ -121,20 +113,26 @@ export default async function customerOfficeMapper(
         id:
           customer.identity.customerId,
 
-
         name:
           customer.basic.displayName ||
           customer.basic.fullName ||
           "Unknown",
 
-
         phone:
           customer.basic.mobileNumber,
 
+        // ====================================================
+        // CUSTOMER PROFILE PHOTO
+        //
+        // Canonical photo comes from CustomerProfile.
+        // No upload or storage logic belongs in this mapper.
+        // ====================================================
+
+        photo:
+          customer.photo,
 
         branch:
           customer.identity.businessName,
-
 
         // ====================================================
         // BACK SIDE ID CARD DETAILS
@@ -144,21 +142,17 @@ export default async function customerOfficeMapper(
           customer.basic.fatherName ??
           "",
 
-
         village:
           customer.address.currentAddress.village ??
           "",
-
 
         mandal:
           customer.address.currentAddress.mandal ??
           "",
 
-
         district:
           customer.address.currentAddress.district ??
           "",
-
 
         customerSince:
           customer.timeline?.events?.find(
@@ -168,14 +162,11 @@ export default async function customerOfficeMapper(
           )?.occurredAt ??
           "",
 
-
         kycVerified:
           true,
 
-
         active:
           customer.identity.isActive,
-
 
         // ====================================================
         // CUSTOMER STATISTICS
@@ -184,23 +175,18 @@ export default async function customerOfficeMapper(
         outstandingAmount:
           customer.statistics.outstandingAmount,
 
-
         totalLoans:
           customer.statistics.totalLoans,
-
 
         activeLoans:
           customer.statistics.activeLoans,
 
-
         closedLoans:
           customer.statistics.closedLoans,
-
 
         nextCollectionDate:
           customer.internal.lastCollectionAt ??
           "",
-
 
         // ====================================================
         // COLLECTION HISTORY
@@ -208,27 +194,22 @@ export default async function customerOfficeMapper(
 
         collections:
           collections
-
             .filter(
               (collection) =>
                 collection.customerId ===
                 customer.identity.customerId,
             )
-
             .map(
               (collection) => ({
 
                 id:
                   collection.loanId,
 
-
                 amount:
                   collection.paymentAmount,
 
-
                 paymentDate:
                   collection.receiptDate,
-
 
                 receiptNumber:
                   collection.receiptNumber,
@@ -238,9 +219,7 @@ export default async function customerOfficeMapper(
 
       }),
     );
-
 }
-
 
 // ============================================================
 // END

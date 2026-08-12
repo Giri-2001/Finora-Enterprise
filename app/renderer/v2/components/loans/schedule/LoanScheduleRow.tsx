@@ -59,7 +59,9 @@ function getStatusStyle(
     LoanInstallment["status"],
 ) {
 
-  switch (status) {
+  switch (
+    status
+  ) {
 
     case "Paid":
 
@@ -100,6 +102,19 @@ function getStatusStyle(
           "#FCA5A5",
       };
 
+    case "Preclosed":
+
+      return {
+        background:
+          "rgba(37, 99, 235, 0.14)",
+
+        border:
+          "1px solid rgba(37, 99, 235, 0.34)",
+
+        color:
+          "#93C5FD",
+      };
+
     case "Pending":
 
     default:
@@ -114,9 +129,37 @@ function getStatusStyle(
         color:
           "#93C5FD",
       };
+  }
+}
 
+// ============================================================
+// DATE FORMATTER
+// ============================================================
+// FINORA standard: DD/MM/YYYY
+// Avoid browser locale differences such as MM/DD/YYYY.
+// ============================================================
+
+function formatIndianDate(
+  value: string,
+): string {
+
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return "--";
   }
 
+  const day = String(
+    date.getDate(),
+  ).padStart(2, "0");
+
+  const month = String(
+    date.getMonth() + 1,
+  ).padStart(2, "0");
+
+  const year = date.getFullYear();
+
+  return `${day}/${month}/${year}`;
 }
 
 // ============================================================
@@ -216,7 +259,6 @@ export default function LoanScheduleRow({
 
       </td>
 
-
       {/* ====================================================
           DUE DATE
       ==================================================== */}
@@ -243,12 +285,11 @@ export default function LoanScheduleRow({
         }}
       >
 
-        {new Date(
+        {formatIndianDate(
           installment.dueDate,
-        ).toLocaleDateString()}
+        )}
 
       </td>
-
 
       {/* ====================================================
           INSTALLMENT AMOUNT
@@ -287,7 +328,6 @@ export default function LoanScheduleRow({
 
       </td>
 
-
       {/* ====================================================
           STATUS
       ==================================================== */}
@@ -314,7 +354,7 @@ export default function LoanScheduleRow({
               "center",
 
             minWidth:
-              "66px",
+              "76px",
 
             padding:
               "4px 9px",
@@ -354,7 +394,6 @@ export default function LoanScheduleRow({
     </tr>
 
   );
-
 }
 
 // ============================================================

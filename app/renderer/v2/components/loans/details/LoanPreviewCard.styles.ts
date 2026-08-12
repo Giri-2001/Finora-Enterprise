@@ -80,7 +80,7 @@ export const cardStyle:
     "border-box",
 
   padding:
-    "17px 18px 18px",
+    "10px 18px 18px",
 
   border:
     `1px solid ${COLORS.border}`,

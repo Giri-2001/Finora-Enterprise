@@ -1,27 +1,20 @@
-/* ===========================================================
-   FINORA ENTERPRISE V2
-
-   REPAYMENT STUDIO
-   EMI CONFIGURATION
-
-   RESPONSIBILITY:
-   - Configure EMI calculation mode
-   - Configure installment amount
-   - Configure first installment date
-   - Keep the component ready for LoanStudio state wiring
-
-   IMPORTANT:
-   - No business calculations here
-   - No repository access
-   - No service access
-   - No localStorage access
-   - Presentation/input responsibility only
-=========================================================== */
-
-
-/* ===========================================================
-   IMPORTS
-=========================================================== */
+// ============================================================
+// FINORA ENTERPRISE V2
+//
+// REPAYMENT STUDIO
+// EMI CONFIGURATION
+//
+// RESPONSIBILITY:
+// - Configure EMI calculation mode
+// - Configure installment date
+// - Presentation/input responsibility only
+//
+// IMPORTANT:
+// - No business calculations here
+// - No repository access
+// - No service access
+// - No localStorage access
+// ============================================================
 
 import {
   useState,
@@ -34,29 +27,23 @@ import {
 } from "../../common";
 
 import {
-  accentStyle,
   contentStyle,
   fieldContentStyle,
   fieldStyle,
-  headerStyle,
-  wrapperStyle,
+  inputStyle,
 } from "./EMIConfiguration.styles";
 
-
-/* ===========================================================
-   TYPES
-=========================================================== */
+// ============================================================
+// TYPES
+// ============================================================
 
 export type EMICalculationMode =
   | "fixed"
-  | "variable";
-
+  | "variable"
+  | "interestOnly";
 
 interface EMIConfigurationProps {
-
   emiCalculation?: EMICalculationMode;
-
-  installmentAmount?: string;
 
   firstInstallmentDate?: string;
 
@@ -64,53 +51,31 @@ interface EMIConfigurationProps {
     value: EMICalculationMode,
   ) => void;
 
-  onInstallmentAmountChange?: (
-    value: string,
-  ) => void;
-
   onFirstInstallmentDateChange?: (
     value: string,
   ) => void;
 }
 
-
-/* ===========================================================
-   COMPONENT
-=========================================================== */
+// ============================================================
+// COMPONENT
+// ============================================================
 
 export default function EMIConfiguration({
-
   emiCalculation:
     controlledEMICalculation,
-
-  installmentAmount:
-    controlledInstallmentAmount,
 
   firstInstallmentDate:
     controlledFirstInstallmentDate,
 
   onEMICalculationChange,
 
-  onInstallmentAmountChange,
-
   onFirstInstallmentDateChange,
 
 }: EMIConfigurationProps) {
 
-
-  /* ==========================================================
-     LOCAL FALLBACK STATE
-
-     The current LoanStudio still renders:
-
-       <EMIConfiguration />
-
-     Therefore these fallback states keep the existing screen
-     working until LoanStudio is wired to the repayment state.
-
-     Once LoanStudio passes values and callbacks, the component
-     automatically becomes controlled.
-  ========================================================== */
+  // ==========================================================
+  // LOCAL FALLBACK STATE
+  // ==========================================================
 
   const [
     localEMICalculation,
@@ -119,45 +84,26 @@ export default function EMIConfiguration({
     "fixed",
   );
 
-
-  const [
-    localInstallmentAmount,
-    setLocalInstallmentAmount,
-  ] = useState(
-    "",
-  );
-
-
   const [
     localFirstInstallmentDate,
     setLocalFirstInstallmentDate,
-  ] = useState(
-    "",
-  );
+  ] = useState("");
 
-
-  /* ==========================================================
-     RESOLVED VALUES
-  ========================================================== */
+  // ==========================================================
+  // RESOLVED VALUES
+  // ==========================================================
 
   const emiCalculation =
     controlledEMICalculation ??
     localEMICalculation;
 
-
-  const installmentAmount =
-    controlledInstallmentAmount ??
-    localInstallmentAmount;
-
-
   const firstInstallmentDate =
     controlledFirstInstallmentDate ??
     localFirstInstallmentDate;
 
-
-  /* ==========================================================
-     EMI CALCULATION CHANGE
-  ========================================================== */
+  // ==========================================================
+  // EMI CALCULATION CHANGE
+  // ==========================================================
 
   function handleEMICalculationChange(
     value: string,
@@ -167,44 +113,22 @@ export default function EMIConfiguration({
       EMICalculationMode =
       value === "variable"
         ? "variable"
-        : "fixed";
-
+        : value === "interestOnly"
+          ? "interestOnly"
+          : "fixed";
 
     setLocalEMICalculation(
       normalizedValue,
     );
 
-
     onEMICalculationChange?.(
       normalizedValue,
     );
-
   }
 
-
-  /* ==========================================================
-     INSTALLMENT AMOUNT CHANGE
-  ========================================================== */
-
-  function handleInstallmentAmountChange(
-    value: string,
-  ): void {
-
-    setLocalInstallmentAmount(
-      value,
-    );
-
-
-    onInstallmentAmountChange?.(
-      value,
-    );
-
-  }
-
-
-  /* ==========================================================
-     FIRST INSTALLMENT DATE CHANGE
-  ========================================================== */
+  // ==========================================================
+  // INSTALLMENT DATE CHANGE
+  // ==========================================================
 
   function handleFirstInstallmentDateChange(
     value: string,
@@ -214,220 +138,24 @@ export default function EMIConfiguration({
       value,
     );
 
-
     onFirstInstallmentDateChange?.(
       value,
     );
-
   }
 
-
-  /* ==========================================================
-     RENDER
-  ========================================================== */
+  // ==========================================================
+  // RENDER
+  // ==========================================================
 
   return (
-
     <div
-      style={
-        wrapperStyle
-      }
+      style={contentStyle}
     >
 
-      {/* ==================================================
-          HEADER
-      ================================================== */}
-
-      <div
-        style={
-          headerStyle
-        }
-      >
-
-        <span
-          style={
-            accentStyle
-          }
-        />
-
-        <span>
-          EMI Configuration
-        </span>
-
-      </div>
-
-
-      {/* ==================================================
-          CONTENT
-      ================================================== */}
-
-      <div
-        style={
-          contentStyle
-        }
-      >
-
-        {/* ================================================
-            EMI CALCULATION
-        ================================================ */}
-
-        <div
-          style={
-            fieldStyle
-          }
-        >
-
-          <div
-            style={
-              fieldContentStyle
-            }
-          >
-
-            <FormField
-              label="EMI Calculation"
-              required
-            >
-
-              <SelectInput
-                value={
-                  emiCalculation
-                }
-
-                onChange={(
-                  event,
-                ) => {
-
-                  handleEMICalculationChange(
-                    event.target.value,
-                  );
-
-                }}
-
-                options={[
-                  {
-                    label:
-                      "Fixed EMI",
-
-                    value:
-                      "fixed",
-                  },
-
-                  {
-                    label:
-                      "Variable EMI",
-
-                    value:
-                      "variable",
-                  },
-                ]}
-              />
-
-            </FormField>
-
-          </div>
-
-        </div>
-
-
-        {/* ================================================
-            INSTALLMENT AMOUNT
-        ================================================ */}
-
-        <div
-          style={
-            fieldStyle
-          }
-        >
-
-          <div
-            style={
-              fieldContentStyle
-            }
-          >
-
-            <FormField
-              label="Installment Amount (₹)"
-            >
-
-              <TextInput
-                type="number"
-
-                value={
-                  installmentAmount
-                }
-
-                onChange={(
-                  event,
-                ) => {
-
-                  handleInstallmentAmountChange(
-                    event.target.value,
-                  );
-
-                }}
-
-                placeholder="Auto or Manual"
-              />
-
-            </FormField>
-
-          </div>
-
-        </div>
-
-
-        {/* ================================================
-            FIRST INSTALLMENT DATE
-        ================================================ */}
-
-        <div
-          style={
-            fieldStyle
-          }
-        >
-
-          <div
-            style={
-              fieldContentStyle
-            }
-          >
-
-            <FormField
-              label="First Installment Date"
-            >
-
-              <TextInput
-                type="date"
-
-                value={
-                  firstInstallmentDate
-                }
-
-                onChange={(
-                  event,
-                ) => {
-
-                  handleFirstInstallmentDateChange(
-                    event.target.value,
-                  );
-
-                }}
-              />
-
-            </FormField>
-
-          </div>
-
-        </div>
-
-      </div>
-
     </div>
-
   );
 }
 
-
-/* ===========================================================
-   END
-=========================================================== */
+// ============================================================
+// END
+// ============================================================

@@ -1,635 +1,288 @@
-// ============================================================
-// FINORA ENTERPRISE OS™
-//
-// V2 LOAN STUDIO
-// PREMIUM LUXURY SHELL STYLES
-//
-// RESPONSIBILITY:
-//
-// - Loan Studio shell presentation
-// - Fill the complete remaining application viewport
-// - Premium dark finance workspace
-// - Six-step wizard footer
-// - Zero unnecessary outer whitespace
-// - Stable top-to-bottom layout
-//
-// DESIGN:
-//
-// - Deep Navy
-// - FINORA Primary Blue
-// - White / Slate typography
-// - No brown
-// - No gold
-// - No unnecessary gradients
-// - Enterprise / Luxury Finance aesthetic
-//
-// IMPORTANT:
-//
-// AppShell owns the 100vh viewport.
-// StudioLayout owns the remaining height after GlobalHeader.
-// LoanStudio must therefore fill its parent exactly.
-//
-// ============================================================
-
-import type {
-  CSSProperties,
-} from "react";
-
-// ============================================================
-// COLOR TOKENS
-// ============================================================
+import type { CSSProperties } from "react";
 
 const COLORS = {
-
-  background:
-    "#0B1220",
-
-  shell:
-    "#0F172A",
-
-  panel:
-    "#111C2E",
-
-  panelSoft:
-    "#142238",
-
-  input:
-    "#0A1425",
-
-  border:
-    "rgba(148, 163, 184, 0.16)",
-
-  borderStrong:
-    "rgba(37, 99, 235, 0.42)",
-
-  primary:
-    "#2563EB",
-
-  primaryHover:
-    "#3B82F6",
-
-  primarySoft:
-    "rgba(37, 99, 235, 0.14)",
-
-  primaryGlow:
-    "rgba(37, 99, 235, 0.22)",
-
-  text:
-    "#FFFFFF",
-
-  textSecondary:
-    "#CBD5E1",
-
-  textMuted:
-    "#94A3B8",
-
-  disabled:
-    "#64748B",
-
-  whiteSoft:
-    "rgba(255,255,255,0.04)",
+  background: "#0B1220",
+  shell: "#0F172A",
+  panel: "#111C2E",
+  input: "#0A1425",
+  border: "rgba(148, 163, 184, 0.16)",
+  borderStrong: "rgba(37, 99, 235, 0.42)",
+  primary: "#2563EB",
+  primaryHover: "#3B82F6",
+  primarySoft: "rgba(37, 99, 235, 0.14)",
+  primaryGlow: "rgba(37, 99, 235, 0.22)",
+  text: "#FFFFFF",
+  textSecondary: "#CBD5E1",
+  textMuted: "#94A3B8",
+  whiteSoft: "rgba(255,255,255,0.04)",
 };
-
-// ============================================================
-// LOAN STUDIO SHELL
-//
-// IMPORTANT:
-//
-// Do NOT use calc(100vh - ...).
-//
-// The parent layout already gives LoanStudio the exact
-// remaining viewport height.
-//
-// Therefore:
-// - width 100%
-// - height 100%
-// - minHeight 0
-// - flex 1
-//
-// This removes the unwanted brown area below the Studio.
-// ============================================================
 
 export const shellStyle: CSSProperties = {
-
-  width:
-    "100%",
-
-  height:
-    "100%",
-
-  minHeight:
-    0,
-
-  minWidth:
-    0,
-
-  maxWidth:
-    "100%",
-
-  flex:
-    "1 1 auto",
-
-  boxSizing:
-    "border-box",
-
-  padding:
-    "14px 16px 10px",
-
-  border:
-    `1px solid ${COLORS.border}`,
-
-  borderRadius:
-    "14px",
-
-  background:
-    COLORS.background,
-
-  color:
-    COLORS.text,
-
-  boxShadow:
-    "0 14px 40px rgba(0, 0, 0, 0.28)",
-
-  display:
-    "flex",
-
-  flexDirection:
-    "column",
-
-  gap:
-    "12px",
-
-  overflow:
-    "hidden",
+  width: "100%",
+  height: "100%",
+  minWidth: 0,
+  minHeight: 0,
+  maxWidth: "100%",
+  flex: "1 1 auto",
+  boxSizing: "border-box",
+  padding: "10px 12px 8px",
+  border: `1px solid ${COLORS.border}`,
+  borderRadius: "12px",
+  background: COLORS.background,
+  color: COLORS.text,
+  boxShadow: "0 12px 34px rgba(0, 0, 0, 0.24)",
+  display: "flex",
+  flexDirection: "column",
+  gap: "5px",
+  overflow: "hidden",
 };
-
-// ============================================================
-// CONTENT AREA
-//
-// Content occupies all available space above the wizard
-// footer without creating an additional page-level gap.
-// ============================================================
 
 export const contentStyle: CSSProperties = {
-
-  width:
-    "100%",
-
-  minWidth:
-    0,
-
-  minHeight:
-    0,
-
-  flex:
-    "1 1 auto",
-
-  boxSizing:
-    "border-box",
-
-  overflow:
-    "hidden",
+  width: "100%",
+  minWidth: 0,
+  minHeight: 0,
+  flex: "1 1 auto",
+  boxSizing: "border-box",
+  overflow: "auto",
 };
-
-// ============================================================
-// WIZARD FOOTER
-//
-// Footer remains inside the Loan Studio shell and is pushed
-// to the bottom by the shell flex layout.
-//
-// No sticky positioning is required here because the shell
-// itself is the viewport-height workspace.
-// ============================================================
 
 export const footerStyle: CSSProperties = {
-
-  position:
-    "relative",
-
-  zIndex:
-    50,
-
-  width:
-    "100%",
-
-  minWidth:
-    0,
-
-  flexShrink:
-    0,
-
-  boxSizing:
-    "border-box",
-
-  display:
-    "flex",
-
-  alignItems:
-    "center",
-
-  gap:
-    "18px",
-
-  padding:
-    "10px 12px",
-
-  border:
-    `1px solid ${COLORS.borderStrong}`,
-
-  borderRadius:
-    "12px",
-
-  background:
-    "rgba(15, 23, 42, 0.98)",
-
-  boxShadow:
-    "0 10px 28px rgba(0, 0, 0, 0.30)",
-
-  backdropFilter:
-    "blur(14px)",
+  position: "relative",
+  zIndex: 50,
+  width: "100%",
+  minWidth: 0,
+  flexShrink: 0,
+  boxSizing: "border-box",
+  display: "flex",
+  alignItems: "center",
+  gap: "14px",
+  padding: "8px 10px",
+  border: `1px solid ${COLORS.borderStrong}`,
+  borderRadius: "10px",
+  background: "rgba(15, 23, 42, 0.98)",
+  boxShadow: "0 8px 24px rgba(0, 0, 0, 0.26)",
 };
-
-// ============================================================
-// STEP LIST
-// ============================================================
 
 export const stepListStyle: CSSProperties = {
-
-  flex:
-    "1 1 auto",
-
-  minWidth:
-    0,
-
-  display:
-    "grid",
-
-  gridTemplateColumns:
-    "repeat(6, minmax(0, 1fr))",
-
-  gap:
-    "4px",
-
-  alignItems:
-    "center",
+  flex: "1 1 auto",
+  minWidth: 0,
+  display: "grid",
+  gridTemplateColumns: "repeat(6, minmax(0, 1fr))",
+  gap: "3px",
+  alignItems: "center",
 };
-
-// ============================================================
-// STEP ITEM
-// ============================================================
 
 export const stepItemStyle: CSSProperties = {
-
-  minWidth:
-    0,
-
-  display:
-    "flex",
-
-  alignItems:
-    "center",
-
-  gap:
-    "8px",
-
-  padding:
-    "6px 5px",
-
-  borderRadius:
-    "8px",
-
-  boxSizing:
-    "border-box",
-
-  cursor:
-    "pointer",
-
-  transition:
-    "background 0.16s ease, transform 0.16s ease",
+  minWidth: 0,
+  display: "flex",
+  alignItems: "center",
+  gap: "7px",
+  padding: "5px 4px",
+  borderRadius: "7px",
+  boxSizing: "border-box",
+  cursor: "pointer",
+  transition: "background 0.16s ease",
 };
-
-// ============================================================
-// STEP NUMBER
-// ============================================================
 
 export const stepNumberStyle: CSSProperties = {
-
-  width:
-    "30px",
-
-  height:
-    "30px",
-
-  flexShrink:
-    0,
-
-  borderRadius:
-    "50%",
-
-  display:
-    "flex",
-
-  alignItems:
-    "center",
-
-  justifyContent:
-    "center",
-
-  boxSizing:
-    "border-box",
-
-  fontSize:
-    "12px",
-
-  fontWeight:
-    700,
-
-  lineHeight:
-    1,
-
-  transition:
-    "all 0.16s ease",
+  width: "29px",
+  height: "29px",
+  flexShrink: 0,
+  borderRadius: "50%",
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  boxSizing: "border-box",
+  fontSize: "12px",
+  fontWeight: 700,
 };
-
-// ============================================================
-// STEP TEXT
-// ============================================================
 
 export const stepTextStyle: CSSProperties = {
-
-  minWidth:
-    0,
-
-  display:
-    "flex",
-
-  flexDirection:
-    "column",
-
-  gap:
-    "2px",
+  minWidth: 0,
+  display: "flex",
+  flexDirection: "column",
+  gap: "2px",
 };
-
-// ============================================================
-// STEP TITLE
-// ============================================================
 
 export const stepTitleStyle: CSSProperties = {
-
-  overflow:
-    "hidden",
-
-  textOverflow:
-    "ellipsis",
-
-  whiteSpace:
-    "nowrap",
-
-  fontSize:
-    "12px",
-
-  fontWeight:
-    700,
-
-  lineHeight:
-    1.2,
-
-  letterSpacing:
-    "0.01em",
+  overflow: "hidden",
+  textOverflow: "ellipsis",
+  whiteSpace: "nowrap",
+  fontSize: "12px",
+  fontWeight: 700,
+  lineHeight: 1.2,
 };
-
-// ============================================================
-// STEP SUBTITLE
-// ============================================================
 
 export const stepSubtitleStyle: CSSProperties = {
-
-  overflow:
-    "hidden",
-
-  textOverflow:
-    "ellipsis",
-
-  whiteSpace:
-    "nowrap",
-
-  fontSize:
-    "12px",
-
-  fontWeight:
-    500,
-
-  lineHeight:
-    1.2,
-
-  color:
-    COLORS.textMuted,
+  overflow: "hidden",
+  textOverflow: "ellipsis",
+  whiteSpace: "nowrap",
+  fontSize: "11px",
+  fontWeight: 500,
+  lineHeight: 1.2,
+  color: COLORS.textMuted,
 };
 
-// ============================================================
-// ACTIVE STEP NUMBER
-// ============================================================
-
-export const activeStepNumberStyle:
-  CSSProperties = {
-
+export const activeStepNumberStyle: CSSProperties = {
   ...stepNumberStyle,
-
-  background:
-    COLORS.primary,
-
-  color:
-    COLORS.text,
-
-  border:
-    `1px solid ${COLORS.primaryHover}`,
-
-  boxShadow:
-    `0 0 18px ${COLORS.primaryGlow}`,
+  background: COLORS.primary,
+  color: COLORS.text,
+  border: `1px solid ${COLORS.primaryHover}`,
+  boxShadow: `0 0 16px ${COLORS.primaryGlow}`,
 };
 
-// ============================================================
-// ACTIVE STEP TITLE
-// ============================================================
-
-export const activeStepTitleStyle:
-  CSSProperties = {
-
+export const activeStepTitleStyle: CSSProperties = {
   ...stepTitleStyle,
-
-  color:
-    COLORS.text,
+  color: COLORS.text,
 };
 
-// ============================================================
-// COMPLETED STEP NUMBER
-// ============================================================
-
-export const completedStepNumberStyle:
-  CSSProperties = {
-
+export const completedStepNumberStyle: CSSProperties = {
   ...stepNumberStyle,
-
-  background:
-    COLORS.primarySoft,
-
-  border:
-    `1px solid ${COLORS.borderStrong}`,
-
-  color:
-    "#93C5FD",
+  background: COLORS.primarySoft,
+  border: `1px solid ${COLORS.borderStrong}`,
+  color: "#93C5FD",
 };
 
-// ============================================================
-// COMPLETED STEP TITLE
-// ============================================================
-
-export const completedStepTitleStyle:
-  CSSProperties = {
-
+export const completedStepTitleStyle: CSSProperties = {
   ...stepTitleStyle,
-
-  color:
-    "#BFDBFE",
+  color: "#BFDBFE",
 };
 
-// ============================================================
-// PENDING STEP NUMBER
-// ============================================================
-
-export const pendingStepNumberStyle:
-  CSSProperties = {
-
+export const pendingStepNumberStyle: CSSProperties = {
   ...stepNumberStyle,
-
-  background:
-    COLORS.whiteSoft,
-
-  border:
-    `1px solid ${COLORS.border}`,
-
-  color:
-    COLORS.textMuted,
+  background: COLORS.whiteSoft,
+  border: `1px solid ${COLORS.border}`,
+  color: COLORS.textMuted,
 };
 
-// ============================================================
-// PENDING STEP TITLE
-// ============================================================
-
-export const pendingStepTitleStyle:
-  CSSProperties = {
-
+export const pendingStepTitleStyle: CSSProperties = {
   ...stepTitleStyle,
-
-  color:
-    COLORS.textSecondary,
+  color: COLORS.textSecondary,
 };
 
-// ============================================================
-// NAVIGATION GROUP
-// ============================================================
-
-export const navigationStyle:
-  CSSProperties = {
-
-  display:
-    "flex",
-
-  alignItems:
-    "center",
-
-  gap:
-    "8px",
-
-  flexShrink:
-    0,
+export const navigationStyle: CSSProperties = {
+  display: "flex",
+  alignItems: "center",
+  gap: "7px",
+  flexShrink: 0,
 };
 
-// ============================================================
-// NAVIGATION BUTTON
-// ============================================================
-
-export const navigationButtonStyle:
-  CSSProperties = {
-
-  minWidth:
-    "94px",
-
-  height:
-    "36px",
-
-  padding:
-    "0 13px",
-
-  boxSizing:
-    "border-box",
-
-  borderRadius:
-    "8px",
-
-  border:
-    `1px solid ${COLORS.border}`,
-
-  background:
-    COLORS.input,
-
-  color:
-    COLORS.textSecondary,
-
-  fontSize:
-    "12px",
-
-  fontWeight:
-    600,
-
-  cursor:
-    "pointer",
-
-  transition:
-    "all 0.16s ease",
+export const navigationButtonStyle: CSSProperties = {
+  minWidth: "92px",
+  height: "35px",
+  padding: "0 12px",
+  boxSizing: "border-box",
+  borderRadius: "7px",
+  border: `1px solid ${COLORS.border}`,
+  background: COLORS.input,
+  color: COLORS.textSecondary,
+  fontSize: "12px",
+  fontWeight: 600,
+  cursor: "pointer",
 };
 
-// ============================================================
-// DISABLED NAVIGATION
-// ============================================================
-
-export const disabledNavigationButtonStyle:
-  CSSProperties = {
-
+export const disabledNavigationButtonStyle: CSSProperties = {
   ...navigationButtonStyle,
-
-  opacity:
-    0.38,
-
-  cursor:
-    "not-allowed",
+  opacity: 0.38,
+  cursor: "not-allowed",
 };
 
-// ============================================================
-// PRIMARY NAVIGATION
-// ============================================================
-
-export const primaryNavigationButtonStyle:
-  CSSProperties = {
-
+export const primaryNavigationButtonStyle: CSSProperties = {
   ...navigationButtonStyle,
-
-  minWidth:
-    "104px",
-
-  borderColor:
-    COLORS.primary,
-
-  background:
-    COLORS.primary,
-
-  color:
-    COLORS.text,
-
-  boxShadow:
-    "0 7px 18px rgba(37, 99, 235, 0.25)",
+  minWidth: "102px",
+  borderColor: COLORS.primary,
+  background: COLORS.primary,
+  color: COLORS.text,
+  boxShadow: "0 6px 16px rgba(37, 99, 235, 0.24)",
 };
 
-// ============================================================
-// END
-// ============================================================
+export const step1WorkspaceStyle: CSSProperties = {
+  width: "100%",
+  height: "100%",
+  minWidth: 0,
+  minHeight: 0,
+  display: "grid",
+  gridTemplateRows: "25% minmax(0, 75%)",
+  gap: "8px",
+  boxSizing: "border-box",
+};
+
+export const step1TopStyle: CSSProperties = {
+  width: "100%",
+  height: "100%",
+  minWidth: 0,
+  minHeight: 0,
+  display: "grid",
+  gridTemplateColumns:
+    "minmax(260px, 30%) minmax(0, 70%)",
+  gridTemplateRows: "minmax(0, 1fr)",
+  gap: "8px",
+  alignItems: "stretch",
+  boxSizing: "border-box",
+  overflow: "visible",
+};
+
+export const step1BottomStyle: CSSProperties = {
+  width: "100%",
+  height: "100%",
+  minWidth: 0,
+  minHeight: 0,
+  display: "grid",
+  gridTemplateColumns:
+    "minmax(0, 70%) minmax(260px, 30%)",
+  gridTemplateRows: "minmax(0, 1fr)",
+  gap: "8px",
+  alignItems: "stretch",
+  boxSizing: "border-box",
+  overflow: "hidden",
+};
+
+export const step1CustomerStyle: CSSProperties = {
+  width: "100%",
+  height: "100%",
+  minWidth: 0,
+  minHeight: 0,
+  alignSelf: "stretch",
+  justifySelf: "stretch",
+  display: "flex",
+  flexDirection: "column",
+  boxSizing: "border-box",
+  overflow: "visible",
+};
+
+export const step1OverviewStyle: CSSProperties = {
+  width: "100%",
+  height: "100%",
+  minWidth: 0,
+  minHeight: 0,
+  alignSelf: "stretch",
+  justifySelf: "stretch",
+  display: "flex",
+  flexDirection: "column",
+  boxSizing: "border-box",
+  overflow: "visible",
+};
+
+export const step1FormStyle: CSSProperties = {
+  width: "100%",
+  height: "100%",
+  minWidth: 0,
+  minHeight: 0,
+  alignSelf: "stretch",
+  justifySelf: "stretch",
+  boxSizing: "border-box",
+  overflow: "hidden",
+  scrollbarWidth: "thin",
+};
+
+export const step1PreviewStyle: CSSProperties = {
+  width: "100%",
+  height: "100%",
+  minWidth: 0,
+  minHeight: 0,
+  alignSelf: "stretch",
+  justifySelf: "stretch",
+  boxSizing: "border-box",
+  overflow: "hidden",
+  scrollbarWidth: "thin",
+};

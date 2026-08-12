@@ -1,40 +1,15 @@
-// ============================================================
-// FINORA ENTERPRISE OS™
-//
-// LOAN STUDIO™
-//
-// CUSTOMER WORKSPACE
-//
-// MODULE  : Loan
-// LAYER   : UI / Customer Office
-// VERSION : 2.0
-// STATUS  : Production
-//
-// RESPONSIBILITY:
-//
-// - Render the complete Loan Studio workflow
-// - Collect Loan configuration
-// - Calculate finance values
-// - Generate repayment schedule
-// - Build Loan domain record
-// - Delegate Loan persistence to LoanService
-// - Prevent duplicate Loan creation through LoanService
-//
-// IMPORTANT:
-//
-// - No direct localStorage access.
-// - No filesystem access.
-// - No Electron IPC.
-// - No direct LoanRepository access.
-// - Loan persistence remains below the Service layer.
-// - Existing Loan workflow and calculations are preserved.
-//
-// ============================================================
+// FINORA ENTERPRISE OS
+// Loan Studio customer workspace.
 
+import {
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
 
-// ============================================================
-// LOAN DETAILS
-// ============================================================
+import type {
+  ChangeEvent,
+} from "react";
 
 import LoanForm
   from "../../../../loans/details/LoanForm";
@@ -54,6 +29,7 @@ import LoanStatistics
 
 import {
   shellStyle,
+  contentStyle,
   footerStyle,
   stepListStyle,
   stepItemStyle,
@@ -69,35 +45,14 @@ import {
   navigationButtonStyle,
   disabledNavigationButtonStyle,
   primaryNavigationButtonStyle,
+  step1WorkspaceStyle,
+  step1TopStyle,
+  step1BottomStyle,
+  step1CustomerStyle,
+  step1OverviewStyle,
+  step1FormStyle,
+  step1PreviewStyle,
 } from "./LoanStudio.styles";
-
-
-// ============================================================
-// FINANCE
-// ============================================================
-
-import FinanceHeader
-  from "../../../../loans/finance/FinanceHeader";
-
-import InterestConfiguration
-  from "../../../../loans/finance/InterestConfiguration";
-
-import ProcessingFeeCard
-  from "../../../../loans/finance/ProcessingFeeCard";
-
-import PenaltyConfiguration
-  from "../../../../loans/finance/PenaltyConfiguration";
-
-import FinancePreviewCard
-  from "../../../../loans/finance/FinancePreviewCard";
-
-import FinanceDraftStatus
-  from "../../../../loans/finance/FinanceDraftStatus";
-
-
-// ============================================================
-// GUARANTOR
-// ============================================================
 
 import GuarantorHeader
   from "../../../../loans/guarantor/GuarantorHeader";
@@ -117,19 +72,13 @@ import GuarantorPreviewCard
 import GuarantorDraftStatus
   from "../../../../loans/guarantor/GuarantorDraftStatus";
 
-
-// ============================================================
-// REPAYMENT
-// ============================================================
-
-import RepaymentHeader
-  from "../../../../loans/repayment/RepaymentHeader";
-
 import EMIConfiguration
   from "../../../../loans/repayment/EMIConfiguration";
 
-import ScheduleConfiguration
-  from "../../../../loans/repayment/ScheduleConfiguration";
+import type {
+  EMICalculationMode,
+} from "../../../../loans/repayment/EMIConfiguration";
+
 
 import RepaymentSummary
   from "../../../../loans/repayment/RepaymentSummary";
@@ -137,21 +86,8 @@ import RepaymentSummary
 import RepaymentPreviewCard
   from "../../../../loans/repayment/RepaymentPreviewCard";
 
-import RepaymentDraftStatus
-  from "../../../../loans/repayment/RepaymentDraftStatus";
-
-
-// ============================================================
-// SCHEDULE
-// ============================================================
-
 import LoanScheduleTable
   from "../../../../loans/schedule/LoanScheduleTable";
-
-
-// ============================================================
-// DISBURSEMENT
-// ============================================================
 
 import DisbursementHeader
   from "../../../../loans/disbursement/DisbursementHeader";
@@ -171,11 +107,6 @@ import DisbursementPreviewCard
 import DisbursementDraftStatus
   from "../../../../loans/disbursement/DisbursementDraftStatus";
 
-
-// ============================================================
-// REVIEW
-// ============================================================
-
 import ReviewHeader
   from "../../../../loans/review/ReviewHeader";
 
@@ -194,19 +125,9 @@ import ReviewPreviewCard
 import ReviewDraftStatus
   from "../../../../loans/review/ReviewDraftStatus";
 
-
-// ============================================================
-// SCHEDULE ENGINE
-// ============================================================
-
 import {
   generateSchedule,
 } from "../../../../loans/schedule/schedule.helpers";
-
-
-// ============================================================
-// LOAN SERVICES
-// ============================================================
 
 import {
   buildLoan,
@@ -231,132 +152,16 @@ import {
   StorageMode,
 } from "../../../../../storage/storage.types";
 
-
-// ============================================================
-// TYPES
-// ============================================================
-
 import type {
   LoanReviewData,
 } from "../../../../loans/review/types";
 
-
-// ============================================================
-// REACT
-// ============================================================
-
-import {
-  useEffect,
-  useMemo,
-  useState,
-} from "react";
-
-import type {
-  CSSProperties,
-} from "react";
-
-
-// ============================================================
-// PREMIUM WORKSPACE LAYOUT
-//
-// RESPONSIBILITY:
-// - Keep Loan Studio inside the application viewport
-// - Prevent outer page scrolling
-// - Keep wizard footer anchored inside the shell
-// - Compact all six workflow stages consistently
-//
-// ============================================================
-
-const studioShellStyle: CSSProperties = {
-  ...shellStyle,
-
-  width: "100%",
-  height: "calc(100vh - 112px)",
-  minHeight: 0,
-
-  boxSizing: "border-box",
-
-  padding: "14px",
-
-  gap: "10px",
-
-  overflow: "hidden",
-};
-
-
-const studioContentStyle: CSSProperties = {
-  width: "100%",
-  minWidth: 0,
-  minHeight: 0,
-
-  flex: 1,
-
-  boxSizing: "border-box",
-
-  overflow: "auto",
-
-  scrollbarWidth: "none",
-};
-
-
-const studioStepStyle: CSSProperties = {
-  width: "100%",
-  minWidth: 0,
-  minHeight: 0,
-
-  boxSizing: "border-box",
-
-  display: "flex",
-  flexDirection: "column",
-
-  gap: "10px",
-
-  overflow: "visible",
-};
-
-
-const studioGridStyle: CSSProperties = {
-  width: "100%",
-  minWidth: 0,
-
-  display: "grid",
-
-  gridTemplateColumns:
-    "minmax(0, 2fr) minmax(270px, 1fr)",
-
-  gap: "12px",
-
-  alignItems: "start",
-
-  boxSizing: "border-box",
-};
-
-
-const studioColumnStyle: CSSProperties = {
-  minWidth: 0,
-
-  display: "flex",
-  flexDirection: "column",
-
-  gap: "10px",
-
-  boxSizing: "border-box",
-};
-
-
 const STORAGE_MODE_SESSION_KEY =
   "FINORA_STORAGE_MODE";
 
-
-// ============================================================
-// AUTHENTICATED STORAGE MODE
-// ============================================================
-
 function getAuthenticatedStorageMode():
   StorageMode {
-
   try {
-
     const storedMode =
       window.sessionStorage.getItem(
         STORAGE_MODE_SESSION_KEY,
@@ -366,7 +171,6 @@ function getAuthenticatedStorageMode():
       storedMode ===
       StorageMode.USB
     ) {
-
       return StorageMode.USB;
     }
 
@@ -374,47 +178,18 @@ function getAuthenticatedStorageMode():
       storedMode ===
       StorageMode.CLOUD
     ) {
-
       return StorageMode.CLOUD;
     }
 
     return StorageMode.LOCAL;
-
   } catch {
-
     return StorageMode.LOCAL;
-
   }
 }
-
-
-const studioFooterStyle: CSSProperties = {
-  ...footerStyle,
-
-  position: "relative",
-
-  bottom: "auto",
-
-  flexShrink: 0,
-
-  width: "100%",
-
-  padding: "9px 11px",
-
-  gap: "12px",
-
-  borderRadius: "12px",
-};
-
-
-// ============================================================
-// DISPLAY / INPUT HELPERS
-// ============================================================
 
 const parseNumericValue = (
   value: string,
 ): number => {
-
   const normalized =
     value
       .replace(/,/g, "")
@@ -432,30 +207,9 @@ const parseNumericValue = (
     : 0;
 };
 
-
-// ============================================================
-// LOAN TYPE NORMALIZATION
-//
-// LoanForm may return values such as:
-// - DAILY
-// - Daily Loan
-// - daily
-// - WEEKLY
-// - Weekly Loan
-// - weekly
-// - MONTHLY
-// - Monthly Loan
-// - monthly
-//
-// Loan Studio keeps one canonical internal representation so
-// the Preview, Review, duplicate check and LoanService payload
-// all receive the same Loan Type.
-// ============================================================
-
 const normalizeLoanType = (
   value: string,
 ): "DAILY" | "WEEKLY" | "MONTHLY" | "" => {
-
   const normalized =
     value
       .trim()
@@ -463,19 +217,22 @@ const normalizeLoanType = (
       .replace(/\s+LOAN$/, "");
 
   if (
-    normalized === "DAILY"
+    normalized ===
+    "DAILY"
   ) {
     return "DAILY";
   }
 
   if (
-    normalized === "WEEKLY"
+    normalized ===
+    "WEEKLY"
   ) {
     return "WEEKLY";
   }
 
   if (
-    normalized === "MONTHLY"
+    normalized ===
+    "MONTHLY"
   ) {
     return "MONTHLY";
   }
@@ -483,16 +240,15 @@ const normalizeLoanType = (
   return "";
 };
 
-
 const getLoanTypeLabel = (
   value: string,
 ): string => {
-
   const normalized =
-    normalizeLoanType(value);
+    normalizeLoanType(
+      value,
+    );
 
   switch (normalized) {
-
     case "DAILY":
       return "Daily Loan";
 
@@ -504,34 +260,12 @@ const getLoanTypeLabel = (
 
     default:
       return "--";
-
   }
 };
-
-
-const formatIndianNumber = (
-  value: number,
-): string => {
-
-  if (
-    !Number.isFinite(value)
-  ) {
-    return "0";
-  }
-
-  return new Intl.NumberFormat(
-    "en-IN",
-    {
-      maximumFractionDigits: 0,
-    },
-  ).format(value);
-};
-
 
 const formatIndianDate = (
   value: Date | null,
 ): string => {
-
   if (!value) {
     return "--";
   }
@@ -552,69 +286,20 @@ const formatIndianDate = (
       "0",
     );
 
-  const year =
-    value.getFullYear();
-
-  return `${day}/${month}/${year}`;
+  return `${day}/${month}/${value.getFullYear()}`;
 };
 
-
-// ============================================================
-// PROPS
-// ============================================================
-
 interface LoanStudioProps {
-
   customerName?: string;
-
   customerId?: string;
-
   phoneNumber?: string;
-
 }
 
-
-// ============================================================
-// COMPONENT
-// ============================================================
-
 export default function LoanStudio({
-
   customerName,
-
   customerId,
-
   phoneNumber,
-
 }: LoanStudioProps) {
-
-
-  // ==========================================================
-  // CUSTOMER DATA
-  //
-  // Customer Department already hydrates the authoritative
-  // Customer Store before Loan Studio is opened.
-  //
-  // Loan Studio therefore reads the SAME hydrated in-memory
-  // Customer Store instead of starting a second independent
-  // CustomerService load.
-  //
-  // This preserves:
-  // UI
-  //   ↓
-  // Customer Store
-  //   ↓
-  // CustomerService
-  //   ↓
-  // CustomerRepository
-  //   ↓
-  // StorageManager
-  //
-  // No hard-coded customers.
-  // No localStorage access.
-  // No direct repository access.
-  // ==========================================================
-
   const [
     customers,
     setCustomers,
@@ -622,44 +307,11 @@ export default function LoanStudio({
     ReturnType<typeof getCustomers>
   >([]);
 
-
-  // ==========================================================
-  // CUSTOMER DATA HYDRATION
-  //
-  // CustomerDepartment owns the main Customer Office load,
-  // but Loan Studio is a nested wizard and can mount before
-  // the synchronous Customer Store snapshot is available.
-  //
-  // Therefore Loan Studio performs an authoritative Store
-  // hydration check on mount. This does NOT bypass the FINORA
-  // architecture: hydration still flows through:
-  //
-  // Customer Store
-  //      ↓
-  // CustomerService
-  //      ↓
-  // CustomerRepository
-  //      ↓
-  // StorageManager
-  //      ↓
-  // Active FINORA Storage
-  //
-  // No localStorage. No hard-coded customers.
-  // ==========================================================
-
   useEffect(() => {
-
     let cancelled = false;
 
     async function loadLoanCustomers(): Promise<void> {
-
       try {
-
-        // ------------------------------------------------------
-        // RESTORE THE SAME AUTHENTICATED STORAGE CONTEXT
-        // USED BY CUSTOMER OFFICE.
-        // ------------------------------------------------------
-
         const storageMode =
           getAuthenticatedStorageMode();
 
@@ -668,8 +320,9 @@ export default function LoanStudio({
             storageMode,
           );
 
-        if (!storageActivated.success) {
-
+        if (
+          !storageActivated.success
+        ) {
           throw new Error(
             storageActivated.error ??
             `Unable to restore FINORA ${storageMode} storage.`,
@@ -677,71 +330,39 @@ export default function LoanStudio({
         }
 
         if (cancelled) {
-
           return;
-
         }
 
-        // ------------------------------------------------------
-        // CLEAR ONLY THE IN-MEMORY CUSTOMER CACHE.
-        // PERSISTED CUSTOMER RECORDS ARE NOT DELETED.
-        // ------------------------------------------------------
-
         clearCustomerCache();
-
-        // ------------------------------------------------------
-        // HYDRATE FROM THE ACTIVE FINORA STORAGE.
-        // ------------------------------------------------------
 
         const hydratedCustomers =
           await hydrateCustomersFromStorage();
 
         if (cancelled) {
-
           return;
-
         }
 
         setCustomers(
           hydratedCustomers,
         );
-
-        console.log(
-          "FINORA LOAN CUSTOMER COUNT:",
-          hydratedCustomers.length,
-        );
-
       } catch (error) {
-
         console.error(
           "FINORA LOAN CUSTOMER HYDRATION ERROR:",
           error,
         );
 
         if (!cancelled) {
-
           setCustomers([]);
-
         }
-
       }
-
     }
 
     void loadLoanCustomers();
 
     return () => {
-
       cancelled = true;
-
     };
-
   }, []);
-
-
-  // ==========================================================
-  // SELECTED LOAN CUSTOMER
-  // ==========================================================
 
   const [
     selectedCustomer,
@@ -758,48 +379,92 @@ export default function LoanStudio({
       : undefined,
   );
 
-
-  // ==========================================================
-  // SYNC EXTERNALLY PROVIDED CUSTOMER
-  //
-  // If Customer Office opens Loan Studio with a customer
-  // already selected, keep that customer as the active
-  // Loan Studio customer.
-  // ==========================================================
-
   useEffect(() => {
-
     if (
       customerId &&
       customerName
     ) {
+      const matchingCustomer =
+        customers.find(
+          (customer) =>
+            customer.identity.customerId ===
+            customerId,
+        );
 
       setSelectedCustomer({
         customerId,
         customerName,
         phoneNumber,
+        photo:
+          matchingCustomer?.photo,
       });
-
     }
-
   }, [
     customerId,
     customerName,
     phoneNumber,
+    customers,
   ]);
 
+  const [documentPhoto, setDocumentPhoto] = useState<string | undefined>(
+    selectedCustomer?.photo,
+  );
 
-  // ==========================================================
-  // LOAN CUSTOMER OPTIONS
-  //
-  // Only active / non-deleted customers can receive a new loan.
-  // ==========================================================
+  const [documentFiles, setDocumentFiles] = useState<
+    Array<{
+      name: string;
+      type: string;
+    }>
+  >([]);
+
+  useEffect(() => {
+    setDocumentPhoto(selectedCustomer?.photo);
+  }, [selectedCustomer?.photo]);
+
+  function handleCustomerPhotoUpload(
+    event: ChangeEvent<HTMLInputElement>,
+  ): void {
+    const file = event.target.files?.[0];
+
+    if (!file) {
+      return;
+    }
+
+    const photoUrl = URL.createObjectURL(file);
+    setDocumentPhoto(photoUrl);
+
+    setSelectedCustomer((current) =>
+      current
+        ? {
+            ...current,
+            photo: photoUrl,
+          }
+        : current,
+    );
+  }
+
+  function handleDocumentUpload(
+    event: ChangeEvent<HTMLInputElement>,
+  ): void {
+    const file = event.target.files?.[0];
+
+    if (!file) {
+      return;
+    }
+
+    setDocumentFiles((current) => [
+      ...current,
+      {
+        name: file.name,
+        type: file.type || "Document",
+      },
+    ]);
+  }
 
   const loanCustomerOptions =
     useMemo<LoanCustomerOption[]>(
-      () => {
-
-        return customers
+      () =>
+        customers
           .filter(
             (customer) =>
               customer.identity.isDeleted !== true &&
@@ -807,32 +472,18 @@ export default function LoanStudio({
           )
           .map(
             (customer) => ({
-
               customerId:
                 customer.identity.customerId,
-
               customerName:
                 customer.basic.fullName,
-
               phoneNumber:
                 customer.basic.mobileNumber,
-
+              photo:
+                customer.photo,
             }),
-          );
-
-      },
-      [
-        customers,
-      ],
+          ),
+      [customers],
     );
-
-
-  // ==========================================================
-  // ACTIVE CUSTOMER VALUES
-  //
-  // These values become the single customer source for all
-  // Loan Studio steps and final Loan persistence.
-  // ==========================================================
 
   const activeCustomerId =
     selectedCustomer?.customerId ??
@@ -849,29 +500,15 @@ export default function LoanStudio({
     phoneNumber ??
     "";
 
-
-  // ==========================================================
-  // WIZARD
-  // ==========================================================
-
   const [
     step,
     setStep,
   ] = useState(1);
 
-
-  // ==========================================================
-  // LOAN
-  // ==========================================================
-
   const [
     loanAmount,
     setLoanAmount,
   ] = useState("");
-
-  // ==========================================================
-  // FINANCE
-  // ==========================================================
 
   const [
     interest,
@@ -881,7 +518,9 @@ export default function LoanStudio({
   const [
     interestType,
     setInterestType,
-  ] = useState("Flat Interest");
+  ] = useState(
+    "Flat Interest",
+  );
 
   const [
     processingFee,
@@ -893,15 +532,12 @@ export default function LoanStudio({
     setAdvanceDeduction,
   ] = useState("");
 
-
-  // ==========================================================
-  // PENALTY
-  // ==========================================================
-
   const [
     penaltyType,
     setPenaltyType,
-  ] = useState("Fixed Amount");
+  ] = useState(
+    "Fixed Amount",
+  );
 
   const [
     penaltyValue,
@@ -913,17 +549,12 @@ export default function LoanStudio({
     setLateFee,
   ] = useState("");
 
-
-  // ==========================================================
-  // REPAYMENT
-  // ==========================================================
-
   const [
     emiCalculation,
     setEMICalculation,
-  ] = useState<"fixed" | "variable">(
-    "fixed",
-  );
+  ] = useState<
+    EMICalculationMode
+  >("fixed");
 
   const [
     firstInstallmentDate,
@@ -945,10 +576,40 @@ export default function LoanStudio({
     setDurationType,
   ] = useState("");
 
+  // ==========================================================
+  // STEP 1 → STEP 2 REPAYMENT SYNC
+  //
+  // Step 1 is the source of truth for repayment frequency.
+  // Duration Unit drives the EMI schedule automatically:
+  //
+  // days   → DAILY
+  // weeks  → WEEKLY
+  // months → MONTHLY
+  // years  → MONTHLY
+  //
+  // Years use MONTHLY repayment because the existing schedule
+  // engine supports daily, weekly and monthly frequencies.
+  // A year duration is converted to 12 monthly installments per year.
+  // ==========================================================
 
-  // ==========================================================
-  // GUARANTOR
-  // ==========================================================
+  const syncedRepaymentType =
+    durationType === "days"
+      ? "DAILY"
+      : durationType === "weeks"
+      ? "WEEKLY"
+      : durationType === "months"
+      ? "MONTHLY"
+      : durationType === "years"
+      ? "MONTHLY"
+      : "";
+
+  useEffect(() => {
+    setRepaymentType(
+      syncedRepaymentType,
+    );
+  }, [
+    syncedRepaymentType,
+  ]);
 
   const [
     guarantorName,
@@ -970,11 +631,6 @@ export default function LoanStudio({
     setGuarantorAddress,
   ] = useState("");
 
-
-  // ==========================================================
-  // NOTES
-  // ==========================================================
-
   const [
     purpose,
     setPurpose,
@@ -985,33 +641,15 @@ export default function LoanStudio({
     setRemarks,
   ] = useState("");
 
-
-  // ==========================================================
-  // APPROVAL
-  // ==========================================================
-
   const [
     loanApproved,
     setLoanApproved,
   ] = useState(false);
 
-
-  // ==========================================================
-  // LOAN WORKFLOW STATUS
-  //
-  // Status is controlled by the workflow.
-  // It is not selected manually in Step 1.
-  // ==========================================================
-
   const loanStatus =
     loanApproved
       ? "Approved"
       : "Pending Approval";
-
-
-  // ==========================================================
-  // DISBURSEMENT
-  // ==========================================================
 
   const [
     disbursementDate,
@@ -1041,9 +679,9 @@ export default function LoanStudio({
   const [
     disbursementDraftStatus,
     setDisbursementDraftStatus,
-  ] = useState<"Draft" | "Completed">(
-    "Draft",
-  );
+  ] = useState<
+    "Draft" | "Completed"
+  >("Draft");
 
   const [
     disbursementReceiptNumber,
@@ -1052,41 +690,23 @@ export default function LoanStudio({
       `DIS-${Date.now()}`,
   );
 
-
-  // ==========================================================
-  // FINANCE CALCULATIONS
-  // ==========================================================
-
   const principal =
-    parseNumericValue(loanAmount);
+    parseNumericValue(
+      loanAmount,
+    );
 
   const interestRate =
-    parseNumericValue(interest);
+    parseNumericValue(
+      interest,
+    );
 
   const durationValue =
     Math.max(
       0,
-      parseNumericValue(duration),
+      parseNumericValue(
+        duration,
+      ),
     );
-
-
-  // ==========================================================
-  // INTEREST ENGINE
-  //
-  // FINORA RULE:
-  //
-  // Interest rate is monthly-basis flat interest.
-  // Therefore the interest period is derived from the
-  // configured loan duration unit, not repayment frequency.
-  //
-  // Examples:
-  // - 12 months  -> 12 interest months
-  // - 12 weeks   -> 12 / 4.33 interest months
-  // - 12 days    -> 12 / 30 interest months
-  //
-  // Repayment frequency controls installment COUNT only.
-  //
-  // ==========================================================
 
   const monthlyInterestAmount =
     (
@@ -1094,22 +714,17 @@ export default function LoanStudio({
       interestRate
     ) / 100;
 
-
   const interestMonths =
-    durationType === "years"
-
+    durationType ===
+    "years"
       ? durationValue * 12
-
-      : durationType === "months"
-
+      : durationType ===
+        "months"
       ? durationValue
-
-      : durationType === "weeks"
-
+      : durationType ===
+        "weeks"
       ? durationValue / 4.33
-
       : durationValue / 30;
-
 
   const totalInterest =
     Math.round(
@@ -1117,265 +732,188 @@ export default function LoanStudio({
       interestMonths,
     );
 
-
   const totalPayable =
     Math.round(
       principal +
       totalInterest,
     );
 
-
-  // ==========================================================
-  // INSTALLMENT COUNT
-  //
-  // Duration and repayment frequency are separate concepts.
-  //
-  // Example:
-  // 12 Months + Daily   -> approximately 360 installments
-  // 12 Months + Weekly  -> approximately 53 installments
-  // 12 Months + Monthly -> 12 installments
-  //
-  // ==========================================================
-
   const durationDays =
-    durationType === "years"
-
+    durationType ===
+    "years"
       ? durationValue * 365
-
-      : durationType === "months"
-
+      : durationType ===
+        "months"
       ? durationValue * 30
-
-      : durationType === "weeks"
-
+      : durationType ===
+        "weeks"
       ? durationValue * 7
-
       : durationValue;
 
+  // ==========================================================
+  // REPAYMENT FREQUENCY
+  //
+  // Step 1 owns repayment frequency through Duration Unit.
+  // Until a valid Duration Unit exists, there is NO repayment
+  // schedule and NO installment count.
+  // This prevents an empty frequency from silently becoming
+  // Daily and producing an incorrect schedule.
+  // ==========================================================
+
+  const normalizedRepaymentType =
+    syncedRepaymentType;
+
+  // ==========================================================
+  // INSTALLMENT COUNT — DURATION UNIT SOURCE OF TRUTH
+  //
+  // Years + Monthly must be exact: 1 year = 12 installments.
+  // Do not convert years through 365 / 30 because that produces
+  // 24.33 for 2 years and incorrectly rounds it up to 25.
+  // ==========================================================
 
   const totalInstallments =
-    durationValue <= 0
-
+    durationValue <= 0 ||
+    !normalizedRepaymentType
       ? 0
-
-      : repaymentType.toUpperCase() ===
+      : normalizedRepaymentType ===
         "MONTHLY"
-
-      ? Math.max(
-          1,
-          Math.ceil(
-            durationDays / 30,
-          ),
-        )
-
-      : repaymentType.toUpperCase() ===
+      ? durationType ===
+        "years"
+        ? durationValue * 12
+        : Math.max(
+            1,
+            Math.ceil(
+              durationDays / 30,
+            ),
+          )
+      : normalizedRepaymentType ===
         "WEEKLY"
-
       ? Math.max(
           1,
           Math.ceil(
             durationDays / 7,
           ),
         )
-
-      : Math.max(
+      : normalizedRepaymentType ===
+        "DAILY"
+      ? Math.max(
           1,
           Math.ceil(
             durationDays,
           ),
-        );
-
-
-  // ==========================================================
-  // STEP 1 INSTALLMENT PREVIEW
-  //
-  // Repayment frequency belongs to Step 4 — Repayment Studio.
-  // Step 1 must therefore NOT assume Daily repayment merely
-  // because a duration was entered.
-  //
-  // This prevents the old incorrect case:
-  // ₹10,600 / 90 daily installments = ₹118
-  //
-  // Until Step 4 selects Daily / Weekly / Monthly, the
-  // installment remains unavailable.
-  // ==========================================================
-
-  const installmentAmount =
-    repaymentType &&
-    totalInstallments > 0
-
-      ? Math.round(
-          totalPayable /
-          totalInstallments,
         )
-
       : 0;
-
-
-  // ==========================================================
-  // DATES
-  // ==========================================================
 
   const loanDate =
     new Date();
 
-
   const scheduleStartDate =
     firstInstallmentDate
-
       ? new Date(
           `${firstInstallmentDate}T00:00:00`,
         )
-
       : new Date(
           loanDate,
         );
 
-
   const maturityDate =
     durationValue > 0 &&
     durationType
-
       ? new Date(
           loanDate,
         )
-
       : null;
 
-
-  // ==========================================================
-  // REPAYMENT SCHEDULE
-  //
-  // Schedule remains part of the Loan domain calculation.
-  // It is consumed by Review / persistence.
-  //
-  // IMPORTANT:
-  // - Step 4 owns the visible schedule.
-  // - Installment count is derived from duration + frequency.
-  // - First installment date is respected when supplied.
-  //
-  // ==========================================================
-
-  const schedule =
-    totalInstallments > 0 &&
-    repaymentType
-
-      ? generateSchedule(
-
-          totalInstallments,
-
-          scheduleStartDate,
-
-          repaymentType.toLowerCase() as
-            | "daily"
-            | "weekly"
-            | "monthly",
-
-          totalPayable,
-
-          totalInterest,
-
-        )
-
-      : [];
-
-
-  // ==========================================================
-  // MATURITY DATE
-  // ==========================================================
-
-  if (
-    maturityDate
-  ) {
-
+  if (maturityDate) {
     switch (
       durationType
     ) {
-
       case "days":
-
         maturityDate.setDate(
-
           maturityDate.getDate() +
           durationValue,
-
         );
-
         break;
-
 
       case "weeks":
-
         maturityDate.setDate(
-
           maturityDate.getDate() +
-          (
-            durationValue *
-            7
-          ),
-
+          durationValue * 7,
         );
-
         break;
-
 
       case "months":
-
         maturityDate.setMonth(
-
           maturityDate.getMonth() +
           durationValue,
-
         );
-
         break;
-
 
       case "years":
-
         maturityDate.setFullYear(
-
           maturityDate.getFullYear() +
           durationValue,
-
         );
-
         break;
-
     }
-
   }
 
 
+  const schedule =
+    totalInstallments > 0 &&
+    (normalizedRepaymentType === "DAILY" ||
+      normalizedRepaymentType === "WEEKLY" ||
+      normalizedRepaymentType === "MONTHLY")
+      ? generateSchedule(
+          totalInstallments,
+          scheduleStartDate,
+          normalizedRepaymentType.toLowerCase() as
+            | "daily"
+            | "weekly"
+            | "monthly",
+          totalPayable,
+          totalInterest,
+          emiCalculation,
+          parseNumericValue(
+            advanceDeduction,
+          ),
+        )
+      : [];
+
   // ==========================================================
-  // NET DISBURSEMENT
+  // INSTALLMENT AMOUNT
+  //
+  // The schedule engine remains the single source of truth.
+  // This keeps rounding and the final adjusted installment
+  // consistent with the generated schedule.
   // ==========================================================
+
+  const installmentAmount =
+    schedule.length > 0
+      ? schedule[0].installmentAmount
+      : 0;
 
   const netDisbursement =
     principal -
-    parseNumericValue(processingFee) -
-    parseNumericValue(advanceDeduction);
-
-
-  // ==========================================================
-  // REVIEW DATA
-  // ==========================================================
+    parseNumericValue(
+      processingFee,
+    ) -
+    parseNumericValue(
+      advanceDeduction,
+    );
 
   const normalizedLoanType =
     normalizeLoanType(
       repaymentType,
     );
 
-
   const loanTypeLabel =
     getLoanTypeLabel(
       repaymentType,
     );
 
-
   const reviewData:
     LoanReviewData = {
-
     customerId:
       activeCustomerId,
 
@@ -1387,7 +925,9 @@ export default function LoanStudio({
       activeCustomerPhone,
 
     loanAmount:
-      parseNumericValue(loanAmount),
+      parseNumericValue(
+        loanAmount,
+      ),
 
     loanType:
       normalizedLoanType,
@@ -1395,27 +935,36 @@ export default function LoanStudio({
     interestType,
 
     interestRate:
-      parseNumericValue(interest),
+      parseNumericValue(
+        interest,
+      ),
 
     repaymentType,
 
     duration:
-      duration && durationType
+      duration &&
+      durationType
         ? `${duration} ${durationType}`
         : "",
 
     processingFee:
-      parseNumericValue(processingFee),
+      parseNumericValue(
+        processingFee,
+      ),
 
     advanceDeduction:
-      parseNumericValue(advanceDeduction),
+      parseNumericValue(
+        advanceDeduction,
+      ),
 
     netDisbursement,
 
     penaltyType,
 
     penaltyValue:
-      parseNumericValue(penaltyValue),
+      parseNumericValue(
+        penaltyValue,
+      ),
 
     guarantorName,
 
@@ -1423,120 +972,63 @@ export default function LoanStudio({
 
     guarantorOccupation,
 
-    totalInstallments:
-      totalInstallments,
+    totalInstallments,
 
     paymentMode,
 
     loanStatus,
-
   };
 
-
-  // ==========================================================
-  // APPROVAL WORKFLOW
-  // ==========================================================
-
   function handleSaveDraft(): void {
-
     console.log(
       "Save Draft",
     );
-
   }
 
-
   function handleRejectLoan(): void {
-
     console.log(
       "Reject Loan",
     );
-
   }
 
-
-  // ==========================================================
-  // APPROVE LOAN
-  // ==========================================================
-
   async function handleApproveLoan(): Promise<void> {
-
-    // --------------------------------------------------------
-    // ALREADY APPROVED
-    // --------------------------------------------------------
-
-    if (
-      loanApproved
-    ) {
-
+    if (loanApproved) {
       alert(
         "Loan already created",
       );
-
       return;
-
     }
 
-
-    // --------------------------------------------------------
-    // NORMALIZE LOAN VALUES
-    //
-    // Loan Type is now derived from Repayment Studio.
-    // Step 1 no longer asks for Daily / Weekly / Monthly.
-    // --------------------------------------------------------
-
     const normalizedRepaymentType =
-      repaymentType.trim().toUpperCase();
+      syncedRepaymentType;
 
-
-    const normalizedLoanType =
+    const normalizedLoanTypeValue =
       normalizeLoanType(
         repaymentType,
       );
 
-
     if (
-      !normalizedLoanType
+      !normalizedLoanTypeValue
     ) {
-
       alert(
         "Please select a valid Loan Type",
       );
-
       return;
-
     }
-
 
     if (
       !normalizedRepaymentType
     ) {
-
       alert(
-        "Please configure Repayment Type in Step 4",
+        "Please select Duration Unit in Step 1",
       );
-
       return;
-
     }
-
-
-    // --------------------------------------------------------
-    // BUILD PERSISTENT LOAN TITLE
-    // --------------------------------------------------------
 
     const loanTitle =
       getLoanTypeLabel(
-        normalizedLoanType,
+        normalizedLoanTypeValue,
       );
-
-
-    // --------------------------------------------------------
-    // DUPLICATE LOAN CHECK
-    //
-    // Persistence lookup is delegated to LoanService.
-    // No direct localStorage access is allowed here.
-    // --------------------------------------------------------
 
     const alreadyExists =
       await hasExistingLoan(
@@ -1545,11 +1037,7 @@ export default function LoanStudio({
         principal,
       );
 
-
-    if (
-      alreadyExists
-    ) {
-
+    if (alreadyExists) {
       alert(
         "Loan already created",
       );
@@ -1559,34 +1047,10 @@ export default function LoanStudio({
       );
 
       return;
-
     }
-
-
-    // --------------------------------------------------------
-    // DEBUG VALUES
-    // --------------------------------------------------------
-
-    console.log(
-      "APPROVE LOAN VALUES",
-      {
-        principal,
-        totalPayable,
-        interestRate,
-        durationValue,
-        loanType: normalizedLoanType,
-        schedule,
-      },
-    );
-
-
-    // --------------------------------------------------------
-    // BUILD LOAN
-    // --------------------------------------------------------
 
     const loan =
       buildLoan({
-
         id:
           crypto.randomUUID(),
 
@@ -1603,10 +1067,14 @@ export default function LoanStudio({
           interestRate,
 
         processingFee:
-          parseNumericValue(processingFee),
+          parseNumericValue(
+            processingFee,
+          ),
 
         lateFee:
-          parseNumericValue(lateFee),
+          parseNumericValue(
+            lateFee,
+          ),
 
         loanDate:
           loanDate.toISOString(),
@@ -1629,7 +1097,7 @@ export default function LoanStudio({
           activeCustomerPhone,
 
         loanType:
-          normalizedLoanType,
+          normalizedLoanTypeValue,
 
         repaymentType:
           normalizedRepaymentType,
@@ -1640,7 +1108,9 @@ export default function LoanStudio({
         durationType,
 
         advanceDeduction:
-          parseNumericValue(advanceDeduction),
+          parseNumericValue(
+            advanceDeduction,
+          ),
 
         netDisbursement,
 
@@ -1649,30 +1119,16 @@ export default function LoanStudio({
         remarks,
 
         schedule,
-
       });
-
-
-    // --------------------------------------------------------
-    // CREATE LOAN
-    //
-    // Loan persistence remains behind LoanService.
-    // --------------------------------------------------------
 
     const createResult =
       await createLoan(
         loan,
       );
 
-
-    // --------------------------------------------------------
-    // PERSISTENCE RESULT
-    // --------------------------------------------------------
-
     if (
       !createResult.success
     ) {
-
       console.error(
         "LOAN CREATE ERROR:",
         createResult.error,
@@ -1684,298 +1140,235 @@ export default function LoanStudio({
       );
 
       return;
-
     }
-
-
-    // --------------------------------------------------------
-    // APPROVAL STATE
-    // --------------------------------------------------------
 
     setLoanApproved(
       true,
     );
 
-
     alert(
       "Loan Created Successfully",
     );
-
   }
 
-
-  // ==========================================================
-  // RENDER
-  // ==========================================================
-
   return (
+    <section style={shellStyle}>
 
-    <section style={studioShellStyle}>
-
-      <div style={studioContentStyle}>
-
-
-        {/* =====================================================
-            STEP 1 — LOAN DETAILS
-            =====================================================
-            Loan Overview starts the workflow.
-            Interest Type is configured in Step 1.
-            Repayment frequency is configured in Step 4.
-            ===================================================== */}
+      <div style={contentStyle}>
 
         {step === 1 && (
-
           <section
-            style={studioStepStyle}
+            style={step1WorkspaceStyle}
           >
 
-            <LoanStatistics
-
-              totalLoans={
-                0
-              }
-
-              activeLoans={
-                0
-              }
-
-              totalDisbursed={
-                0
-              }
-
-            />
-
-
             <div
-              style={studioGridStyle}
+              style={step1TopStyle}
             >
 
-              <LoanForm
-
-                loanAmount={
-                  loanAmount
-                }
-
-                interestType={
-                  interestType
-                }
-
-                interest={
-                  interest
-                }
-
-                processingFee={
-                  processingFee
-                }
-
-                advanceDeduction={
-                  advanceDeduction
-                }
-
-                lateFee={
-                  lateFee
-                }
-
-                repaymentType={
-                  repaymentType
-                }
-
-                duration={
-                  duration
-                }
-
-                durationType={
-                  durationType
-                }
-
-                purpose={
-                  purpose
-                }
-
-                remarks={
-                  remarks
-                }
-
-                onLoanAmountChange={
-                  setLoanAmount
-                }
-
-                onInterestTypeChange={
-                  setInterestType
-                }
-
-                onInterestChange={
-                  setInterest
-                }
-
-                onProcessingFeeChange={
-                  setProcessingFee
-                }
-
-                onAdvanceDeductionChange={
-                  setAdvanceDeduction
-                }
-
-                onLateFeeChange={
-                  setLateFee
-                }
-
-                onRepaymentTypeChange={
-                  setRepaymentType
-                }
-
-                onDurationChange={
-                  setDuration
-                }
-
-                onDurationTypeChange={
-                  setDurationType
-                }
-
-                onPurposeChange={
-                  setPurpose
-                }
-
-                onRemarksChange={
-                  setRemarks
-                }
-
-              />
-
-
               <div
-                style={studioColumnStyle}
+                style={step1CustomerStyle}
               >
 
                 <LoanCustomerCard
-
                   customerName={
                     activeCustomerName
                   }
-
                   customerId={
                     activeCustomerId
                   }
-
                   phoneNumber={
                     activeCustomerPhone
                   }
-
+                  photo={
+                    selectedCustomer?.photo
+                  }
                   customers={
                     loanCustomerOptions
                   }
-
                   onCustomerSelect={
                     (customer) => {
-
                       setSelectedCustomer(
                         customer,
                       );
-
                     }
                   }
-
                 />
 
+              </div>
+
+              <div
+                style={step1OverviewStyle}
+              >
+
+                <LoanStatistics
+                  totalLoans={0}
+                  activeLoans={0}
+                  totalDisbursed={0}
+                />
+
+              </div>
+
+            </div>
+
+            <div
+              style={step1BottomStyle}
+            >
+
+              <div
+                style={step1FormStyle}
+              >
+
+                <LoanForm
+                  loanAmount={
+                    loanAmount
+                  }
+                  emiCalculation={
+                    emiCalculation
+                  }
+                  interest={
+                    interest
+                  }
+                  processingFee={
+                    processingFee
+                  }
+                  advanceDeduction={
+                    advanceDeduction
+                  }
+                  lateFee={
+                    lateFee
+                  }
+                  repaymentType={
+                    repaymentType
+                  }
+                  duration={
+                    duration
+                  }
+                  durationType={
+                    durationType
+                  }
+                  purpose={
+                    purpose
+                  }
+                  remarks={
+                    remarks
+                  }
+                  onLoanAmountChange={
+                    setLoanAmount
+                  }
+                  onEMICalculationChange={
+                    setEMICalculation
+                  }
+                  onInterestChange={
+                    setInterest
+                  }
+                  onProcessingFeeChange={
+                    setProcessingFee
+                  }
+                  onAdvanceDeductionChange={
+                    setAdvanceDeduction
+                  }
+                  onLateFeeChange={
+                    setLateFee
+                  }
+                  onRepaymentTypeChange={
+                    setRepaymentType
+                  }
+                  onDurationChange={
+                    setDuration
+                  }
+                  onDurationTypeChange={
+                    setDurationType
+                  }
+                  onPurposeChange={
+                    setPurpose
+                  }
+                  onRemarksChange={
+                    setRemarks
+                  }
+                />
+
+              </div>
+
+              <div
+                style={step1PreviewStyle}
+              >
 
                 <LoanPreviewCard
-
                   customerName={
                     activeCustomerName
                   }
-
                   loanAmount={
                     Number(
                       loanAmount ||
                       0,
                     )
                   }
-
                   loanType={
                     loanTypeLabel
                   }
-
-                  loanStatus={
-                    "--"
-                  }
-
+                  loanStatus="--"
                   interest={
                     Number(
                       interest ||
                       0,
                     )
                   }
-
                   totalInterest={
                     totalInterest
                   }
-
                   totalPayable={
                     totalPayable
                   }
-
                   installmentAmount={
                     installmentAmount
                   }
-
                   loanDate={
                     formatIndianDate(
                       loanDate,
                     )
                   }
-
                   maturityDate={
                     formatIndianDate(
                       maturityDate,
                     )
                   }
-
                   processingFee={
                     Number(
                       processingFee ||
                       0,
                     )
                   }
-
                   advanceDeduction={
                     Number(
                       advanceDeduction ||
                       0,
                     )
                   }
-
                   netDisbursement={
-
                     Number(
                       loanAmount ||
                       0,
                     ) -
-
                     Number(
                       processingFee ||
                       0,
                     ) -
-
                     Number(
                       advanceDeduction ||
                       0,
                     )
-
                   }
-
                   lateFee={
                     Number(
                       lateFee ||
                       0,
                     )
                   }
-
                   repaymentType={
                     repaymentType
                       ? repaymentType.toUpperCase()
                       : "--"
                   }
-
                 />
 
               </div>
@@ -1983,251 +1376,625 @@ export default function LoanStudio({
             </div>
 
           </section>
-
         )}
 
+        {step === 2 && (
+          <section
+            style={{
+              width: "100%",
+              minWidth: 0,
+              minHeight: 0,
+              boxSizing: "border-box",
+              overflow: "auto",
+              paddingRight: "2px",
+              paddingBottom: "4px",
+            }}
+          >
 
-        {/* =====================================================
-    STEP 2 — FINANCE STUDIO
-    ===================================================== */}
+            {/* =================================================
+                STEP 2 — REPAYMENT STUDIO WORKSPACE
 
-{step === 2 && (
+                FINAL LAYOUT:
+                - LEFT 55%:
+                  - Repayment Summary on top
+                  - Repayment Preview + Draft side-by-side below
+                - RIGHT 45%:
+                  - EMI Schedule from top to bottom
 
-  <section
-    style={studioStepStyle}
-  >
+                IMPORTANT:
+                - Step 1 already owns EMI Calculation input.
+                - Step 2 uses the generated schedule as the
+                  single source of truth for preview values.
+                - No artificial EMI row limit.
+                - Schedule grows naturally.
+            ================================================= */}
 
-    <FinanceHeader />
+            <div
+              style={{
+                width: "100%",
+                minWidth: 0,
+                display: "grid",
+                gridTemplateColumns:
+                  "minmax(0, 55%) minmax(0, 45%)",
+                gap: "8px",
+                alignItems: "start",
+                boxSizing: "border-box",
+              }}
+            >
 
+              {/* =================================================
+                  LEFT WORKSPACE — 55%
+              ================================================= */}
 
-    <div
-      style={studioGridStyle}
-    >
+              <div
+                style={{
+                  minWidth: 0,
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "8px",
+                }}
+              >
 
-      {/* ==================================================
-          FINANCE CONFIGURATION
-      ================================================== */}
+                {/* =================================================
+                    REPAYMENT SUMMARY — TOP
+                ================================================= */}
 
-      <div
-        style={studioColumnStyle}
-      >
+                <div
+                  style={{
+                    width: "100%",
+                    minWidth: 0,
+                  }}
+                >
 
-        <InterestConfiguration
+                  <RepaymentSummary
+                    loanAmount={
+                      principal
+                    }
+                    totalInterest={
+                      totalInterest
+                    }
+                    installmentAmount={
+                      installmentAmount
+                    }
+                    totalInstallments={
+                      totalInstallments
+                    }
+                    totalRepayable={
+                      totalPayable
+                    }
+                    repaymentMethod={
+                      emiCalculation
+                    }
+                    repaymentFrequency={
+                      repaymentType.toLowerCase()
+                    }
+                  />
 
-          interestType={
-            interestType
-          }
+                </div>
 
-          interestRate={
-            interest
-          }
+                {/* =================================================
+                    REPAYMENT PREVIEW + DRAFT
 
-          interestCalculation={
-            "monthly"
-          }
+                    FINAL LEFT-WORKSPACE ARRANGEMENT:
+                    - Repayment Preview uses the complete 55% width.
+                    - Repayment Draft moves underneath the Preview.
+                    - The available lower-left whitespace is used naturally.
+                    - Draft is intentionally compact so it does not
+                      dominate the workspace.
+                ================================================= */}
 
-          onInterestTypeChange={
-            setInterestType
-          }
+                <div
+                  style={{
+                    width: "100%",
+                    minWidth: 0,
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: "8px",
+                    alignItems: "stretch",
+                    boxSizing: "border-box",
+                  }}
+                >
 
-          onInterestRateChange={
-            setInterest
-          }
+                  {/* =============================================
+                      REPAYMENT PREVIEW — FULL WIDTH
+                  ============================================= */}
 
-        />
+                  <div
+                    style={{
+                      minWidth: 0,
+                      width: "100%",
+                      boxSizing: "border-box",
+                    }}
+                  >
 
+                    <RepaymentPreviewCard
+                      frequency={
+                        repaymentType
+                          ? repaymentType.toUpperCase()
+                          : "--"
+                      }
+                      repaymentMethod={
+                        emiCalculation
+                      }
+                      installmentAmount={
+                        installmentAmount
+                      }
+                      totalInstallments={
+                        totalInstallments
+                      }
+                      totalRepayable={
+                        totalPayable
+                      }
+                      // First installment is derived from the generated
+                      // schedule. Step 2 is display-only.
+                      firstInstallmentDate={
+                        schedule.length > 0
+                          ? formatIndianDate(
+                              new Date(
+                                schedule[0].dueDate,
+                              ),
+                            )
+                          : "--"
+                      }
+                      lastInstallmentDate={
+                        schedule.length > 0
+                          ? formatIndianDate(
+                              new Date(
+                                schedule[
+                                  schedule.length - 1
+                                ].dueDate,
+                              ),
+                            )
+                          : "--"
+                      }
+                    />
 
-        <ProcessingFeeCard
+                  </div>
 
-          processingFee={
-            processingFee
-          }
+                  {/* =============================================
+                      REPAYMENT DRAFT — FINAL COMPACT CONTAINER
 
-          onProcessingFeeChange={
-            setProcessingFee
-          }
+                      FINAL UI RULES:
+                      - Single border only.
+                      - Compact height to use the empty lower-left space.
+                      - "Repayment Draft" remains on the left.
+                      - "Draft" badge moves to the top-right.
+                      - Last Updated stays below the header.
+                      - No other Step 2 UI is changed.
+                  ============================================= */}
 
-        />
+                  <section
+                    aria-label="Repayment Draft"
+                    style={{
+                      width: "100%",
+                      minWidth: 0,
+                      height: "92px",
+                      minHeight: "92px",
+                      boxSizing: "border-box",
+                      padding: "12px 14px",
+                      border:
+                        "1px solid rgba(148, 163, 184, 0.20)",
+                      borderRadius: "16px",
+                      background:
+                        "linear-gradient(180deg, #111C2E, #142238)",
+                      color: "#FFFFFF",
+                      boxShadow:
+                        "0 8px 24px rgba(0, 0, 0, 0.14)",
+                      display: "flex",
+                      flexDirection: "column",
+                      justifyContent: "space-between",
+                      overflow: "hidden",
+                    }}
+                  >
 
+                    <div
+                      style={{
+                        width: "100%",
+                        minWidth: 0,
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                        gap: "10px",
+                      }}
+                    >
 
-        <PenaltyConfiguration
+                      <div
+                        style={{
+                          minWidth: 0,
+                          paddingLeft: "10px",
+                          borderLeft:
+                            "3px solid #2563EB",
+                          fontSize: "16px",
+                          fontWeight: 700,
+                          lineHeight: 1.25,
+                          color: "#FFFFFF",
+                          whiteSpace: "nowrap",
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                        }}
+                      >
+                        Repayment Draft
+                      </div>
 
-          penaltyType={
-            penaltyType
-          }
+                      <span
+                        style={{
+                          display: "inline-flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          flexShrink: 0,
+                          padding: "5px 11px",
+                          borderRadius: "999px",
+                          fontSize: "12px",
+                          fontWeight: 700,
+                          lineHeight: 1,
+                          background:
+                            "rgba(245, 158, 11, 0.14)",
+                          color: "#FCD34D",
+                          border:
+                            "1px solid rgba(245, 158, 11, 0.30)",
+                        }}
+                      >
+                        Draft
+                      </span>
 
-          penaltyValue={
-            penaltyValue
-          }
+                    </div>
 
-          onPenaltyTypeChange={
-            setPenaltyType
-          }
+                    <div
+                      style={{
+                        paddingLeft: "13px",
+                        color: "#CBD5E1",
+                        fontSize: "12px",
+                        fontWeight: 500,
+                        lineHeight: 1.3,
+                        whiteSpace: "nowrap",
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                      }}
+                    >
+                      Last Updated: Not Saved
+                    </div>
 
-          onPenaltyValueChange={
-            setPenaltyValue
-          }
+                  </section>
 
-        />
+                </div>
 
-      </div>
+              </div>
 
+              {/* =================================================
+                  RIGHT WORKSPACE — 45%
 
-      {/* ==================================================
-          FINANCE PREVIEW
-      ================================================== */}
+                  EMI Schedule starts from the top and grows
+                  naturally. No fixed 15-row limit.
+              ================================================= */}
 
-      <div
-        style={studioColumnStyle}
-      >
+              <div
+                style={{
+                  minWidth: 0,
+                  width: "100%",
+                  boxSizing: "border-box",
+                }}
+              >
 
-        <FinancePreviewCard
+                <LoanScheduleTable
+                  schedule={
+                    schedule
+                  }
+                />
 
-          interestType={
-            interestType
-          }
+              </div>
 
-          interestRate={
-            Number(
-              interest ||
-              0,
-            )
-          }
+            </div>
 
-          interestCalculation={
-            "Monthly"
-          }
-
-          totalInterest={
-            totalInterest
-          }
-
-          totalPayable={
-            totalPayable
-          }
-
-          processingFee={
-            Number(
-              processingFee ||
-              0,
-            )
-          }
-
-          penaltyValue={
-            Number(
-              penaltyValue ||
-              0,
-            )
-          }
-
-        />
-
-
-        <FinanceDraftStatus />
-
-      </div>
-
-    </div>
-
-  </section>
-
-)}
-
-
-        {/* =====================================================
-            STEP 3 — GUARANTOR STUDIO
-            ===================================================== */}
+          </section>
+        )}
 
         {step === 3 && (
-
           <section
-            style={studioStepStyle}
+            style={step1WorkspaceStyle}
+          >
+
+            <section
+              style={{
+                width: "100%",
+                height: "100%",
+                minWidth: 0,
+                minHeight: 0,
+                boxSizing: "border-box",
+                padding: "18px",
+                border: "1px solid rgba(148, 163, 184, 0.16)",
+                borderRadius: "13px",
+                background: "#111C2E",
+                color: "#FFFFFF",
+                overflow: "auto",
+              }}
+            >
+
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "10px",
+                  marginBottom: "18px",
+                }}
+              >
+                <div
+                  style={{
+                    width: "4px",
+                    height: "34px",
+                    borderRadius: "4px",
+                    background: "#2563EB",
+                  }}
+                />
+
+                <div>
+                  <h2
+                    style={{
+                      margin: 0,
+                      fontSize: "18px",
+                      fontWeight: 750,
+                    }}
+                  >
+                    Documents Studio™
+                  </h2>
+
+                  <p
+                    style={{
+                      margin: "4px 0 0",
+                      color: "#94A3B8",
+                      fontSize: "12px",
+                      fontWeight: 500,
+                    }}
+                  >
+                    Upload customer photo and loan verification documents.
+                  </p>
+                </div>
+              </div>
+
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns:
+                    "minmax(220px, 280px) minmax(0, 1fr)",
+                  gap: "14px",
+                  alignItems: "start",
+                }}
+              >
+
+                <div
+                  style={{
+                    minWidth: 0,
+                    padding: "14px",
+                    border:
+                      "1px solid rgba(37, 99, 235, 0.42)",
+                    borderRadius: "10px",
+                    background: "#0F172A",
+                  }}
+                >
+
+                  <div
+                    style={{
+                      marginBottom: "8px",
+                      color: "#CBD5E1",
+                      fontSize: "12px",
+                      fontWeight: 700,
+                    }}
+                  >
+                    CUSTOMER PHOTO
+                  </div>
+
+                  <div
+                    style={{
+                      width: "100%",
+                      height: "190px",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      overflow: "hidden",
+                      borderRadius: "9px",
+                      border:
+                        "1px solid rgba(148, 163, 184, 0.16)",
+                      background: "#0A1425",
+                    }}
+                  >
+                    {documentPhoto ? (
+                      <img
+                        src={documentPhoto}
+                        alt="Customer"
+                        style={{
+                          width: "100%",
+                          height: "100%",
+                          objectFit: "contain",
+                        }}
+                      />
+                    ) : (
+                      <div
+                        style={{
+                          color: "#94A3B8",
+                          fontSize: "12px",
+                          fontWeight: 600,
+                        }}
+                      >
+                        No Photo
+                      </div>
+                    )}
+                  </div>
+
+                  <label
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      minHeight: "34px",
+                      marginTop: "10px",
+                      borderRadius: "7px",
+                      border:
+                        "1px solid rgba(37, 99, 235, 0.42)",
+                      background:
+                        "rgba(37, 99, 235, 0.14)",
+                      color: "#FFFFFF",
+                      fontSize: "12px",
+                      fontWeight: 650,
+                      cursor: "pointer",
+                    }}
+                  >
+                    Upload / Replace Photo
+
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={
+                        handleCustomerPhotoUpload
+                      }
+                      style={{
+                        display: "none",
+                      }}
+                    />
+                  </label>
+
+                </div>
+
+                <div
+                  style={{
+                    minWidth: 0,
+                    display: "grid",
+                    gridTemplateColumns:
+                      "repeat(2, minmax(0, 1fr))",
+                    gap: "10px",
+                  }}
+                >
+
+                  {[
+                    "Identity Proof",
+                    "Address Proof",
+                    "Income / Business Proof",
+                    "Other Document",
+                  ].map((label) => (
+                    <label
+                      key={label}
+                      style={{
+                        minWidth: 0,
+                        minHeight: "92px",
+                        display: "flex",
+                        flexDirection: "column",
+                        justifyContent: "center",
+                        gap: "6px",
+                        padding: "12px",
+                        boxSizing: "border-box",
+                        border:
+                          "1px solid rgba(148, 163, 184, 0.16)",
+                        borderRadius: "9px",
+                        background: "#0F172A",
+                        color: "#CBD5E1",
+                        fontSize: "12px",
+                        fontWeight: 650,
+                        cursor: "pointer",
+                      }}
+                    >
+                      <span>{label}</span>
+
+                      <span
+                        style={{
+                          color: "#94A3B8",
+                          fontSize: "11px",
+                          fontWeight: 500,
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                          whiteSpace: "nowrap",
+                        }}
+                      >
+                        {documentFiles[0]?.name ??
+                          "Choose document"}
+                      </span>
+
+                      <input
+                        type="file"
+                        accept="image/*,.pdf"
+                        onChange={
+                          handleDocumentUpload
+                        }
+                        style={{
+                          display: "none",
+                        }}
+                      />
+                    </label>
+                  ))}
+
+                </div>
+
+              </div>
+
+            </section>
+
+          </section>
+        )}
+
+        {step === 4 && (
+          <section
+            style={step1WorkspaceStyle}
           >
 
             <GuarantorHeader />
 
-
             <div
-              style={studioGridStyle}
+              style={step1BottomStyle}
             >
 
               <div
-                style={studioColumnStyle}
+                style={step1FormStyle}
               >
 
                 <GuarantorForm
-
                   guarantorName={
                     guarantorName
                   }
-
                   guarantorPhone={
                     guarantorPhone
                   }
-
                   occupation={
                     guarantorOccupation
                   }
-
                   address={
                     guarantorAddress
                   }
-
                   onGuarantorNameChange={
                     setGuarantorName
                   }
-
                   onGuarantorPhoneChange={
                     setGuarantorPhone
                   }
-
                   onOccupationChange={
                     setGuarantorOccupation
                   }
-
                   onAddressChange={
                     setGuarantorAddress
                   }
-
                 />
 
-
                 <RelationshipCard />
-
 
                 <GuarantorVerification />
 
               </div>
 
-
               <div
-                style={studioColumnStyle}
+                style={step1PreviewStyle}
               >
 
                 <GuarantorPreviewCard
-
                   guarantorName={
                     guarantorName
                   }
-
-                  relationship={
-                    "--"
-                  }
-
+                  relationship="--"
                   mobileNumber={
                     guarantorPhone
                   }
-
                   occupation={
                     guarantorOccupation
                   }
-
                   address={
                     guarantorAddress
                   }
-
                 />
-
 
                 <GuarantorDraftStatus />
 
@@ -2236,406 +2003,58 @@ export default function LoanStudio({
             </div>
 
           </section>
-
         )}
-
-
-        {/* =====================================================
-            STEP 4 — REPAYMENT STUDIO
-            ===================================================== */}
-
-        {step === 4 && (
-
-          <section
-            style={studioStepStyle}
-          >
-
-            <RepaymentHeader />
-
-
-            <div
-              style={studioGridStyle}
-            >
-
-              <div
-                style={studioColumnStyle}
-              >
-
-                <EMIConfiguration
-
-                  emiCalculation={
-                    emiCalculation
-                  }
-
-                  installmentAmount={
-                    String(
-                      installmentAmount,
-                    )
-                  }
-
-                  firstInstallmentDate={
-                    firstInstallmentDate
-                  }
-
-                  onEMICalculationChange={
-                    setEMICalculation
-                  }
-
-                  onFirstInstallmentDateChange={
-                    setFirstInstallmentDate
-                  }
-
-                />
-
-                <ScheduleConfiguration
-
-                  repaymentType={
-                    repaymentType.toLowerCase()
-                  }
-
-                  duration={
-                    duration
-                  }
-
-                  durationType={
-                    durationType
-                  }
-
-                  onRepaymentTypeChange={
-                    (value) =>
-                      setRepaymentType(
-                        value.toUpperCase(),
-                      )
-                  }
-
-                  onDurationChange={
-                    setDuration
-                  }
-
-                  onDurationTypeChange={
-                    setDurationType
-                  }
-
-                />
-
-                {/* ==================================================
-                    GENERATED EMI SCHEDULE
-                    Existing schedule engine output is rendered here.
-                    ================================================== */}
-
-                <LoanScheduleTable
-                  schedule={
-                    schedule
-                  }
-                />
-
-                <RepaymentSummary
-
-                  installmentAmount={
-                    installmentAmount
-                  }
-
-                  totalInstallments={
-                    totalInstallments
-                  }
-
-                  totalRepayable={
-                    totalPayable
-                  }
-
-                />
-
-              </div>
-
-
-              <div
-                style={studioColumnStyle}
-              >
-
-                <RepaymentPreviewCard
-
-                  frequency={
-                    repaymentType
-                  }
-
-                  installmentAmount={
-                    installmentAmount
-                  }
-
-                  totalInstallments={
-                    totalInstallments
-                  }
-
-                  firstInstallmentDate={
-
-                    firstInstallmentDate
-                      ? formatIndianDate(
-                          new Date(
-                            `${firstInstallmentDate}T00:00:00`,
-                          ),
-                        )
-                      : "--"
-
-                  }
-
-                />
-
-                <RepaymentDraftStatus />
-
-              </div>
-
-            </div>
-
-          </section>
-
-        )}
-
-
-        {/* =====================================================
-            STEP 5 — DISBURSEMENT STUDIO
-            ===================================================== */}
 
         {step === 5 && (
-
           <section
-            style={studioStepStyle}
-          >
-
-            <DisbursementHeader />
-
-
-            <div
-              style={studioGridStyle}
-            >
-
-              <div
-                style={studioColumnStyle}
-              >
-
-                <DisbursementForm
-
-                  disbursementDate={
-                    disbursementDate
-                  }
-
-                  disbursementAmount={
-                    disbursementAmount
-                  }
-
-                  paymentMode={
-                    paymentMode
-                  }
-
-                  onDisbursementDateChange={
-                    setDisbursementDate
-                  }
-
-                  onDisbursementAmountChange={
-                    setDisbursementAmount
-                  }
-
-                  onPaymentModeChange={
-                    setPaymentMode
-                  }
-
-                />
-
-                <PaymentModeCard
-
-                  paymentMode={
-                    paymentMode
-                  }
-
-                  transactionStatus={
-                    transactionStatus
-                  }
-
-                  onPaymentModeChange={
-                    setPaymentMode
-                  }
-
-                  onTransactionStatusChange={
-                    (value) => {
-
-                      setTransactionStatus(
-                        value,
-                      );
-
-                      if (
-                        value ===
-                        "completed"
-                      ) {
-
-                        setDisbursementDraftStatus(
-                          "Completed",
-                        );
-
-                      } else {
-
-                        setDisbursementDraftStatus(
-                          "Draft",
-                        );
-
-                      }
-
-                    }
-                  }
-
-                />
-
-                <DisbursementReceipt
-
-                  receiptNumber={
-                    disbursementReceiptNumber
-                  }
-
-                  customerName={
-                    activeCustomerName ||
-                    "--"
-                  }
-
-                  amount={
-                    Number(
-                      disbursementAmount ||
-                      0,
-                    )
-                  }
-
-                  paymentMode={
-                    paymentMode
-                  }
-
-                />
-
-              </div>
-
-
-              <div
-                style={studioColumnStyle}
-              >
-
-                <DisbursementPreviewCard
-
-                  disbursementDate={
-
-                    disbursementDate
-                      ? formatIndianDate(
-                          new Date(
-                            `${disbursementDate}T00:00:00`,
-                          ),
-                        )
-                      : "--"
-
-                  }
-
-                  amount={
-                    Number(
-                      disbursementAmount ||
-                      0,
-                    )
-                  }
-
-                  paymentMode={
-                    paymentMode
-                  }
-
-                  transactionStatus={
-                    transactionStatus
-                  }
-
-                />
-
-                <DisbursementDraftStatus
-
-                  savedAt={
-                    disbursementSavedAt
-                  }
-
-                  status={
-                    disbursementDraftStatus
-                  }
-
-                />
-
-              </div>
-
-            </div>
-
-          </section>
-
-        )}
-
-
-        {/* =====================================================
-            STEP 6 — REVIEW STUDIO
-            ===================================================== */}
-
-        {step === 6 && (
-
-          <section
-            style={studioStepStyle}
+            style={step1WorkspaceStyle}
           >
 
             <ReviewHeader />
 
-
             <div
-              style={studioGridStyle}
+              style={step1BottomStyle}
             >
 
               <div
-                style={studioColumnStyle}
+                style={step1FormStyle}
               >
 
                 <LoanSummary
-
                   review={
                     reviewData
                   }
-
                 />
-
 
                 <ValidationChecklist
-
                   review={
                     reviewData
                   }
-
                 />
 
-
                 <ApprovalActions
-
                   onSaveDraft={
                     handleSaveDraft
                   }
-
                   onApproveLoan={
                     handleApproveLoan
                   }
-
                   onRejectLoan={
                     handleRejectLoan
                   }
-
                 />
 
               </div>
 
-
               <div
-                style={studioColumnStyle}
+                style={step1PreviewStyle}
               >
 
                 <ReviewPreviewCard
-
                   review={
                     reviewData
                   }
-
                 />
-
 
                 <ReviewDraftStatus />
 
@@ -2644,23 +2063,140 @@ export default function LoanStudio({
             </div>
 
           </section>
+        )}
 
+        {step === 6 && (
+          <section
+            style={step1WorkspaceStyle}
+          >
+
+            <DisbursementHeader />
+
+            <div
+              style={step1BottomStyle}
+            >
+
+              <div
+                style={step1FormStyle}
+              >
+
+                <DisbursementForm
+                  disbursementDate={
+                    disbursementDate
+                  }
+                  disbursementAmount={
+                    disbursementAmount
+                  }
+                  paymentMode={
+                    paymentMode
+                  }
+                  onDisbursementDateChange={
+                    setDisbursementDate
+                  }
+                  onDisbursementAmountChange={
+                    setDisbursementAmount
+                  }
+                  onPaymentModeChange={
+                    setPaymentMode
+                  }
+                />
+
+                <PaymentModeCard
+                  paymentMode={
+                    paymentMode
+                  }
+                  transactionStatus={
+                    transactionStatus
+                  }
+                  onPaymentModeChange={
+                    setPaymentMode
+                  }
+                  onTransactionStatusChange={
+                    (value) => {
+                      setTransactionStatus(
+                        value,
+                      );
+
+                      setDisbursementDraftStatus(
+                        value ===
+                          "completed"
+                          ? "Completed"
+                          : "Draft",
+                      );
+                    }
+                  }
+                />
+
+                <DisbursementReceipt
+                  receiptNumber={
+                    disbursementReceiptNumber
+                  }
+                  customerName={
+                    activeCustomerName ||
+                    "--"
+                  }
+                  amount={
+                    Number(
+                      disbursementAmount ||
+                      0,
+                    )
+                  }
+                  paymentMode={
+                    paymentMode
+                  }
+                />
+
+              </div>
+
+              <div
+                style={step1PreviewStyle}
+              >
+
+                <DisbursementPreviewCard
+                  disbursementDate={
+                    disbursementDate
+                      ? formatIndianDate(
+                          new Date(
+                            `${disbursementDate}T00:00:00`,
+                          ),
+                        )
+                      : "--"
+                  }
+                  amount={
+                    Number(
+                      disbursementAmount ||
+                      0,
+                    )
+                  }
+                  paymentMode={
+                    paymentMode
+                  }
+                  transactionStatus={
+                    transactionStatus
+                  }
+                />
+
+                <DisbursementDraftStatus
+                  savedAt={
+                    disbursementSavedAt
+                  }
+                  status={
+                    disbursementDraftStatus
+                  }
+                />
+
+              </div>
+
+            </div>
+
+          </section>
         )}
 
       </div>
 
-
-      {/* =====================================================
-          WIZARD NAVIGATION
-          ===================================================== */}
-
       <footer
-        style={studioFooterStyle}
+        style={footerStyle}
       >
-
-        {/* ===================================================
-            SIX STEP LIST
-            =================================================== */}
 
         <div
           style={stepListStyle}
@@ -2672,24 +2208,24 @@ export default function LoanStudio({
               subtitle: "Basic Information",
             },
             {
-              title: "Finance",
-              subtitle: "Fees & Charges",
+              title: "Repayment",
+              subtitle: "Repayment Setup",
+            },
+            {
+              title: "Documents",
+              subtitle: "Upload & Verify",
             },
             {
               title: "Guarantor",
               subtitle: "Guarantor Details",
             },
             {
-              title: "Repayment",
-              subtitle: "Repayment Setup",
+              title: "Review",
+              subtitle: "Review & Approve",
             },
             {
               title: "Disbursement",
               subtitle: "Disburse Loan",
-            },
-            {
-              title: "Review",
-              subtitle: "Review & Approve",
             },
           ].map(
             (
@@ -2707,12 +2243,17 @@ export default function LoanStudio({
                 current < step;
 
               return (
-
                 <div
-                  key={item.title}
-                  style={stepItemStyle}
+                  key={
+                    item.title
+                  }
+                  style={
+                    stepItemStyle
+                  }
                   onClick={() =>
-                    setStep(current)
+                    setStep(
+                      current,
+                    )
                   }
                 >
 
@@ -2728,9 +2269,10 @@ export default function LoanStudio({
                     {current}
                   </div>
 
-
                   <div
-                    style={stepTextStyle}
+                    style={
+                      stepTextStyle
+                    }
                   >
 
                     <span
@@ -2742,34 +2284,34 @@ export default function LoanStudio({
                             : pendingStepTitleStyle
                       }
                     >
-                      {item.title}
+                      {
+                        item.title
+                      }
                     </span>
 
-
                     <span
-                      style={stepSubtitleStyle}
+                      style={
+                        stepSubtitleStyle
+                      }
                     >
-                      {item.subtitle}
+                      {
+                        item.subtitle
+                      }
                     </span>
 
                   </div>
 
                 </div>
-
               );
-
             },
           )}
 
         </div>
 
-
-        {/* ===================================================
-            NAVIGATION
-            =================================================== */}
-
         <div
-          style={navigationStyle}
+          style={
+            navigationStyle
+          }
         >
 
           <button
@@ -2778,17 +2320,13 @@ export default function LoanStudio({
               step === 1
             }
             onClick={() => {
-
               if (
                 step > 1
               ) {
-
                 setStep(
                   step - 1,
                 );
-
               }
-
             }}
             style={
               step === 1
@@ -2799,7 +2337,6 @@ export default function LoanStudio({
             ← Previous
           </button>
 
-
           <button
             type="button"
             onClick={() => {
@@ -2807,38 +2344,41 @@ export default function LoanStudio({
               if (
                 step < 6
               ) {
+                if (
+                  step === 5 &&
+                  !loanApproved
+                ) {
+                  alert(
+                    "Please Approve Loan before continuing to Disbursement",
+                  );
+
+                  return;
+                }
 
                 setStep(
                   step + 1,
                 );
 
                 return;
-
               }
-
 
               if (
                 !loanApproved
               ) {
-
                 alert(
-                  "Please Approve Loan before finishing review",
+                  "Please Approve Loan before completing Disbursement",
                 );
 
                 return;
-
               }
 
-
               alert(
-                "Loan Review Completed Successfully",
+                "Loan Disbursement Workflow Completed Successfully",
               );
-
 
               setStep(
                 1,
               );
-
             }}
             style={
               primaryNavigationButtonStyle
@@ -2856,12 +2396,5 @@ export default function LoanStudio({
       </footer>
 
     </section>
-
   );
-
 }
-
-
-// ============================================================
-// END
-// ============================================================

@@ -23,12 +23,9 @@
 // - White / Slate typography
 // - No brown
 // - No gold
-// - Compact enterprise table
+// - Natural table height
+// - Parent workspace controls scrolling
 //
-// ============================================================
-
-// ============================================================
-// IMPORTS
 // ============================================================
 
 import type {
@@ -43,85 +40,53 @@ import LoanScheduleRow
 // ============================================================
 
 interface LoanScheduleTableProps {
-
-  schedule:
-    LoanInstallment[];
-
+  schedule: LoanInstallment[];
 }
+
+// ============================================================
+// CONSTANTS
+// ============================================================
+
+const COLORS = {
+  background: "#0F172A",
+  panel: "#111C2E",
+  panelSoft: "#142238",
+  border: "rgba(148, 163, 184, 0.16)",
+  borderStrong: "rgba(37, 99, 235, 0.35)",
+  primary: "#2563EB",
+  primarySoft: "rgba(37, 99, 235, 0.10)",
+  text: "#FFFFFF",
+  textSecondary: "#CBD5E1",
+  textMuted: "#94A3B8",
+};
 
 // ============================================================
 // COMPONENT
 // ============================================================
 
 export default function LoanScheduleTable({
-
   schedule,
-
 }: LoanScheduleTableProps) {
 
-  // ==========================================================
-  // EMPTY STATE
-  // ==========================================================
-
-  if (
-    schedule.length === 0
-  ) {
-
-    return (
-
-      <section
-        style={{
-          width: "100%",
-          boxSizing: "border-box",
-
-          border:
-            "1px solid rgba(148, 163, 184, 0.16)",
-
-          borderRadius: "10px",
-
-          background: "#111C2E",
-
-          padding: "18px",
-
-          color: "#94A3B8",
-
-          fontSize: "12px",
-
-          fontWeight: 500,
-
-          textAlign: "center",
-        }}
-      >
-
-        No repayment schedule available.
-
-      </section>
-
-    );
-
-  }
-
-  // ==========================================================
-  // RENDER
-  // ==========================================================
+  const hasSchedule =
+    schedule.length > 0;
 
   return (
-
     <section
       style={{
         width: "100%",
         minWidth: 0,
-
         boxSizing: "border-box",
 
         border:
-          "1px solid rgba(148, 163, 184, 0.16)",
+          `1px solid ${COLORS.border}`,
 
         borderRadius: "10px",
 
         overflow: "hidden",
 
-        background: "#0F172A",
+        background:
+          COLORS.background,
 
         boxShadow:
           "0 8px 24px rgba(0, 0, 0, 0.18)",
@@ -147,10 +112,14 @@ export default function LoanScheduleTable({
             "10px 12px",
 
           borderBottom:
-            "1px solid rgba(148, 163, 184, 0.16)",
+            `1px solid ${COLORS.border}`,
 
           background:
-            "linear-gradient(90deg,#142238,#111C2E)",
+            `linear-gradient(
+              90deg,
+              ${COLORS.panelSoft},
+              ${COLORS.panel}
+            )`,
         }}
       >
 
@@ -169,13 +138,15 @@ export default function LoanScheduleTable({
           <span
             style={{
               width: "3px",
+
               height: "16px",
 
               flexShrink: 0,
 
               borderRadius: "3px",
 
-              background: "#2563EB",
+              background:
+                COLORS.primary,
 
               boxShadow:
                 "0 0 10px rgba(37,99,235,0.22)",
@@ -184,7 +155,8 @@ export default function LoanScheduleTable({
 
           <span
             style={{
-              color: "#FFFFFF",
+              color:
+                COLORS.text,
 
               fontSize: "13px",
 
@@ -198,7 +170,6 @@ export default function LoanScheduleTable({
 
         </div>
 
-
         <span
           style={{
             flexShrink: 0,
@@ -207,28 +178,47 @@ export default function LoanScheduleTable({
               "4px 8px",
 
             border:
-              "1px solid rgba(37, 99, 235, 0.35)",
+              `1px solid ${
+                hasSchedule
+                  ? COLORS.borderStrong
+                  : COLORS.border
+              }`,
 
             borderRadius: "999px",
 
             background:
-              "rgba(37, 99, 235, 0.10)",
+              hasSchedule
+                ? COLORS.primarySoft
+                : "rgba(255,255,255,0.03)",
 
-            color: "#93C5FD",
+            color:
+              hasSchedule
+                ? "#93C5FD"
+                : COLORS.textMuted,
 
             fontSize: "12px",
 
             fontWeight: 650,
+
+            lineHeight: 1.2,
           }}
         >
-          {schedule.length} Installments
+          {schedule.length}{" "}
+          {schedule.length === 1
+            ? "Installment"
+            : "Installments"}
         </span>
 
       </div>
 
-
       {/* ====================================================
           TABLE
+
+          IMPORTANT:
+          - No fixed height.
+          - No max-height.
+          - No vertical scrollbar here.
+          - The parent Step-2 workspace controls overflow.
       ==================================================== */}
 
       <div
@@ -239,7 +229,9 @@ export default function LoanScheduleTable({
 
           overflowX: "auto",
 
-          overflowY: "hidden",
+          overflowY: "visible",
+
+          boxSizing: "border-box",
         }}
       >
 
@@ -265,10 +257,11 @@ export default function LoanScheduleTable({
 
             <tr
               style={{
-                background: "#111C2E",
+                background:
+                  COLORS.panel,
 
                 borderBottom:
-                  "1px solid rgba(148, 163, 184, 0.16)",
+                  `1px solid ${COLORS.border}`,
               }}
             >
 
@@ -283,7 +276,7 @@ export default function LoanScheduleTable({
                     "left",
 
                   color:
-                    "#94A3B8",
+                    COLORS.textMuted,
 
                   fontSize: "12px",
 
@@ -294,7 +287,6 @@ export default function LoanScheduleTable({
               >
                 EMI
               </th>
-
 
               <th
                 style={{
@@ -307,7 +299,7 @@ export default function LoanScheduleTable({
                     "left",
 
                   color:
-                    "#94A3B8",
+                    COLORS.textMuted,
 
                   fontSize: "12px",
 
@@ -318,7 +310,6 @@ export default function LoanScheduleTable({
               >
                 Due Date
               </th>
-
 
               <th
                 style={{
@@ -331,7 +322,7 @@ export default function LoanScheduleTable({
                     "right",
 
                   color:
-                    "#94A3B8",
+                    COLORS.textMuted,
 
                   fontSize: "12px",
 
@@ -342,7 +333,6 @@ export default function LoanScheduleTable({
               >
                 Amount
               </th>
-
 
               <th
                 style={{
@@ -355,7 +345,7 @@ export default function LoanScheduleTable({
                     "center",
 
                   color:
-                    "#94A3B8",
+                    COLORS.textMuted,
 
                   fontSize: "12px",
 
@@ -371,31 +361,64 @@ export default function LoanScheduleTable({
 
           </thead>
 
-
           {/* ==================================================
               TABLE BODY
           ================================================== */}
 
           <tbody>
 
-            {schedule.map(
-              (
-                installment,
-              ) => (
+            {hasSchedule ? (
 
-                <LoanScheduleRow
+              schedule.map(
+                (
+                  installment,
+                ) => (
 
-                  key={
-                    installment.installmentNumber
-                  }
+                  <LoanScheduleRow
+                    key={
+                      installment
+                        .installmentNumber
+                    }
+                    installment={
+                      installment
+                    }
+                  />
 
-                  installment={
-                    installment
-                  }
+                ),
+              )
 
-                />
+            ) : (
 
-              ),
+              <tr>
+
+                <td
+                  colSpan={4}
+                  style={{
+                    padding:
+                      "18px 12px",
+
+                    textAlign:
+                      "center",
+
+                    color:
+                      COLORS.textMuted,
+
+                    fontSize: "12px",
+
+                    fontWeight: 500,
+
+                    lineHeight: 1.4,
+
+                    background:
+                      COLORS.background,
+                  }}
+                >
+                  Select a repayment frequency
+                  to generate the EMI schedule.
+                </td>
+
+              </tr>
+
             )}
 
           </tbody>
@@ -405,9 +428,7 @@ export default function LoanScheduleTable({
       </div>
 
     </section>
-
   );
-
 }
 
 // ============================================================

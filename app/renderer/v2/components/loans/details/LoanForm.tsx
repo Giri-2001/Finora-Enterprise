@@ -17,10 +17,10 @@
 // - No global design-system changes.
 // - Money inputs use raw numeric state + Indian display formatting.
 // - Number inputs intentionally use type="text" to remove browser arrows.
-// - Interest Type is configured in Step 1.
-// - Repayment frequency is configured separately in Repayment Studio.
-//
+// - EMI Calculation is configured in Step 1.
+// - Repayment frequency is handled by LoanStudio state.
 // ============================================================
+
 
 // ============================================================
 // IMPORTS
@@ -29,6 +29,7 @@
 import type {
   ChangeEvent,
 } from "react";
+
 
 import {
   formGridStyle,
@@ -43,15 +44,23 @@ import {
   sectionTitleStyle,
 } from "./LoanForm.styles";
 
+
 // ============================================================
 // TYPES
 // ============================================================
+
+export type EMICalculationMode =
+  | "fixed"
+  | "variable"
+  | "interestOnly";
+
 
 interface LoanFormProps {
 
   loanAmount: string;
 
-  interestType: string;
+  emiCalculation:
+    EMICalculationMode;
 
   interest: string;
 
@@ -69,55 +78,65 @@ interface LoanFormProps {
 
   remarks: string;
 
+
   onLoanAmountChange: (
     value: string,
   ) => void;
 
-  onInterestTypeChange: (
-    value: string,
+
+  onEMICalculationChange: (
+    value: EMICalculationMode,
   ) => void;
+
 
   onInterestChange: (
     value: string,
   ) => void;
 
+
   onProcessingFeeChange: (
     value: string,
   ) => void;
+
 
   onAdvanceDeductionChange: (
     value: string,
   ) => void;
 
+
   onLateFeeChange: (
     value: string,
   ) => void;
+
 
   onDurationChange: (
     value: string,
   ) => void;
 
+
   onDurationTypeChange: (
     value: string,
   ) => void;
+
 
   onPurposeChange: (
     value: string,
   ) => void;
 
+
   onRemarksChange: (
     value: string,
   ) => void;
+
 
   /*
    * ----------------------------------------------------------
    * LEGACY COMPATIBILITY
    *
-   * LoanStudio is being cleaned in the next replacement.
-   * These optional props are intentionally accepted temporarily
-   * so the current parent does not break during this step.
+   * These remain optional temporarily so existing LoanStudio
+   * callers do not break while the parent wiring is updated.
    *
-   * They are NOT rendered or used by this component.
+   * They are not rendered by this component.
    * ----------------------------------------------------------
    */
 
@@ -133,6 +152,7 @@ interface LoanFormProps {
     value: string,
   ) => void;
 }
+
 
 // ============================================================
 // HELPERS
@@ -154,9 +174,11 @@ const formatIndianInteger = (
   const digits =
     onlyDigits(value);
 
+
   if (!digits) {
     return "";
   }
+
 
   return new Intl.NumberFormat(
     "en-IN",
@@ -168,6 +190,7 @@ const formatIndianInteger = (
   );
 };
 
+
 // ============================================================
 // COMPONENT
 // ============================================================
@@ -176,7 +199,7 @@ export default function LoanForm({
 
   loanAmount,
 
-  interestType,
+  emiCalculation,
 
   interest,
 
@@ -196,7 +219,7 @@ export default function LoanForm({
 
   onLoanAmountChange,
 
-  onInterestTypeChange,
+  onEMICalculationChange,
 
   onInterestChange,
 
@@ -216,16 +239,9 @@ export default function LoanForm({
 
 }: LoanFormProps) {
 
+
   // ==========================================================
   // MONEY INPUT HANDLER
-  //
-  // Parent receives raw digits.
-  // Input displays Indian comma formatting immediately.
-  //
-  // Example:
-  // 10000   -> 10,000
-  // 100000  -> 1,00,000
-  //
   // ==========================================================
 
   const handleMoneyChange = (
@@ -238,7 +254,9 @@ export default function LoanForm({
     callback(
       onlyDigits(value),
     );
+
   };
+
 
   // ==========================================================
   // LOAN AMOUNT
@@ -252,7 +270,9 @@ export default function LoanForm({
       event.target.value,
       onLoanAmountChange,
     );
+
   };
+
 
   // ==========================================================
   // PROCESSING FEE
@@ -266,7 +286,9 @@ export default function LoanForm({
       event.target.value,
       onProcessingFeeChange,
     );
+
   };
+
 
   // ==========================================================
   // ADVANCE DEDUCTION
@@ -280,7 +302,9 @@ export default function LoanForm({
       event.target.value,
       onAdvanceDeductionChange,
     );
+
   };
+
 
   // ==========================================================
   // LATE FEE
@@ -294,7 +318,9 @@ export default function LoanForm({
       event.target.value,
       onLateFeeChange,
     );
+
   };
+
 
   // ==========================================================
   // INTEREST
@@ -310,7 +336,9 @@ export default function LoanForm({
         "",
       ),
     );
+
   };
+
 
   // ==========================================================
   // DURATION
@@ -325,7 +353,9 @@ export default function LoanForm({
         event.target.value,
       ),
     );
+
   };
+
 
   // ==========================================================
   // PURPOSE
@@ -338,7 +368,9 @@ export default function LoanForm({
     onPurposeChange(
       event.target.value,
     );
+
   };
+
 
   // ==========================================================
   // REMARKS
@@ -351,7 +383,9 @@ export default function LoanForm({
     onRemarksChange(
       event.target.value,
     );
+
   };
+
 
   // ==========================================================
   // LABEL HELPER
@@ -362,22 +396,33 @@ export default function LoanForm({
     required = false,
   ) => (
 
-    <div style={fieldLabelStyle}>
+    <div
+      style={
+        fieldLabelStyle
+      }
+    >
 
       <span>
         {label}
       </span>
 
+
       {required && (
 
-        <span style={requiredMarkStyle}>
+        <span
+          style={
+            requiredMarkStyle
+          }
+        >
           *
         </span>
 
       )}
 
     </div>
+
   );
+
 
   // ==========================================================
   // RENDER
@@ -387,26 +432,48 @@ export default function LoanForm({
 
     <div>
 
+
       {/* ====================================================
           BASIC LOAN DETAILS
       ==================================================== */}
 
-      <section style={sectionStyle}>
+      <section
+        style={
+          sectionStyle
+        }
+      >
 
-        <div style={sectionTitleStyle}>
+        <div
+          style={
+            sectionTitleStyle
+          }
+        >
           Loan Basic Details
         </div>
 
-        <div style={formGridStyle}>
 
-          {/* LOAN NUMBER */}
+        <div
+          style={
+            formGridStyle
+          }
+        >
 
-          <div style={fieldGroupStyle}>
+
+          {/* ==================================================
+              LOAN NUMBER
+          ================================================== */}
+
+          <div
+            style={
+              fieldGroupStyle
+            }
+          >
 
             {renderLabel(
               "Loan Number",
               true,
             )}
+
 
             <input
               type="text"
@@ -422,14 +489,22 @@ export default function LoanForm({
 
           </div>
 
-          {/* LOAN AMOUNT */}
 
-          <div style={fieldGroupStyle}>
+          {/* ==================================================
+              LOAN AMOUNT
+          ================================================== */}
+
+          <div
+            style={
+              fieldGroupStyle
+            }
+          >
 
             {renderLabel(
               "Loan Amount",
               true,
             )}
+
 
             <input
               type="text"
@@ -444,63 +519,115 @@ export default function LoanForm({
               }
               placeholder="Enter loan amount"
               autoComplete="off"
-              style={inputStyle}
+              style={
+                inputStyle
+              }
             />
 
           </div>
 
-          {/* INTEREST TYPE */}
 
-          <div style={fieldGroupStyle}>
+          {/* ==================================================
+              EMI CALCULATION
+
+              IMPORTANT:
+              - Replaces old Interest Type field.
+              - Controlled directly by LoanStudio.
+              - No local state here.
+              ================================================== */}
+
+          <div
+            style={
+              fieldGroupStyle
+            }
+          >
 
             {renderLabel(
-              "Interest Type",
+              "EMI Calculation",
               true,
             )}
 
+
             <select
-              value={interestType}
+              value={
+                emiCalculation
+              }
               onChange={(
                 event,
-              ) =>
-                onInterestTypeChange(
-                  event.target.value,
-                )
+              ) => {
+
+                const value =
+                  event.target.value;
+
+                const normalizedValue:
+                  EMICalculationMode =
+                  value === "variable"
+                    ? "variable"
+                    : value ===
+                      "interestOnly"
+                      ? "interestOnly"
+                      : "fixed";
+
+
+                onEMICalculationChange(
+                  normalizedValue,
+                );
+
+              }}
+              style={
+                selectStyle
               }
-              style={selectStyle}
             >
 
-              <option value="Flat Interest">
-                Flat Interest
+              <option value="fixed">
+                Fixed EMI
               </option>
 
-              <option value="Reducing Balance">
-                Reducing Balance
+
+              <option value="variable">
+                Variable EMI
+              </option>
+
+
+              <option value="interestOnly">
+                Interest Only
               </option>
 
             </select>
 
           </div>
 
-          {/* INTEREST */}
 
-          <div style={fieldGroupStyle}>
+          {/* ==================================================
+              INTEREST
+          ================================================== */}
+
+          <div
+            style={
+              fieldGroupStyle
+            }
+          >
 
             {renderLabel(
               "Interest (%)",
               true,
             )}
 
+
             <input
               type="text"
               inputMode="decimal"
-              value={interest}
+              value={
+                interest
+              }
               onChange={
                 handleInterestChange
               }
               placeholder="Enter interest percentage"
               autoComplete="off"
-              style={inputStyle}
+              style={
+                inputStyle
+              }
             />
 
           </div>
@@ -509,25 +636,47 @@ export default function LoanForm({
 
       </section>
 
+
       {/* ====================================================
           FINANCIAL TERMS
       ==================================================== */}
 
-      <section style={sectionStyle}>
+      <section
+        style={
+          sectionStyle
+        }
+      >
 
-        <div style={sectionTitleStyle}>
+        <div
+          style={
+            sectionTitleStyle
+          }
+        >
           Financial Terms
         </div>
 
-        <div style={formGridStyle}>
 
-          {/* PROCESSING FEE */}
+        <div
+          style={
+            formGridStyle
+          }
+        >
 
-          <div style={fieldGroupStyle}>
+
+          {/* ==================================================
+              PROCESSING FEE
+          ================================================== */}
+
+          <div
+            style={
+              fieldGroupStyle
+            }
+          >
 
             {renderLabel(
               "Processing Fee",
             )}
+
 
             <input
               type="text"
@@ -542,18 +691,28 @@ export default function LoanForm({
               }
               placeholder="Enter processing fee"
               autoComplete="off"
-              style={inputStyle}
+              style={
+                inputStyle
+              }
             />
 
           </div>
 
-          {/* ADVANCE DEDUCTION */}
 
-          <div style={fieldGroupStyle}>
+          {/* ==================================================
+              ADVANCE DEDUCTION
+          ================================================== */}
+
+          <div
+            style={
+              fieldGroupStyle
+            }
+          >
 
             {renderLabel(
               "Advance Deduction",
             )}
+
 
             <input
               type="text"
@@ -568,18 +727,28 @@ export default function LoanForm({
               }
               placeholder="Enter deduction amount"
               autoComplete="off"
-              style={inputStyle}
+              style={
+                inputStyle
+              }
             />
 
           </div>
 
-          {/* LATE FEE */}
 
-          <div style={fieldGroupStyle}>
+          {/* ==================================================
+              LATE FEE
+          ================================================== */}
+
+          <div
+            style={
+              fieldGroupStyle
+            }
+          >
 
             {renderLabel(
               "Late Fee",
             )}
+
 
             <input
               type="text"
@@ -594,7 +763,9 @@ export default function LoanForm({
               }
               placeholder="Enter late fee"
               autoComplete="off"
-              style={inputStyle}
+              style={
+                inputStyle
+              }
             />
 
           </div>
@@ -603,43 +774,71 @@ export default function LoanForm({
 
       </section>
 
+
       {/* ====================================================
           LOAN DURATION
       ==================================================== */}
 
-      <section style={sectionStyle}>
+      <section
+        style={
+          sectionStyle
+        }
+      >
 
-        <div style={sectionTitleStyle}>
+        <div
+          style={
+            sectionTitleStyle
+          }
+        >
           Loan Duration
         </div>
 
-        <div style={formGridStyle}>
 
-          {/* LOAN DURATION */}
+        <div
+          style={
+            formGridStyle
+          }
+        >
 
-          <div style={fieldGroupStyle}>
+          <div
+            style={
+              fieldGroupStyle
+            }
+          >
 
             {renderLabel(
               "Loan Duration",
               true,
             )}
 
-            <div style={durationGroupStyle}>
+
+            <div
+              style={
+                durationGroupStyle
+              }
+            >
 
               <input
                 type="text"
                 inputMode="numeric"
-                value={duration}
+                value={
+                  duration
+                }
                 onChange={
                   handleDurationChange
                 }
                 placeholder="Duration"
                 autoComplete="off"
-                style={inputStyle}
+                style={
+                  inputStyle
+                }
               />
 
+
               <select
-                value={durationType}
+                value={
+                  durationType
+                }
                 onChange={(
                   event,
                 ) =>
@@ -647,24 +846,30 @@ export default function LoanForm({
                     event.target.value,
                   )
                 }
-                style={selectStyle}
+                style={
+                  selectStyle
+                }
               >
 
                 <option value="">
                   Unit
                 </option>
 
+
                 <option value="days">
                   Days
                 </option>
+
 
                 <option value="weeks">
                   Weeks
                 </option>
 
+
                 <option value="months">
                   Months
                 </option>
+
 
                 <option value="years">
                   Years
@@ -680,68 +885,92 @@ export default function LoanForm({
 
       </section>
 
+
       {/* ====================================================
           ADDITIONAL INFORMATION
       ==================================================== */}
 
-      <section style={sectionStyle}>
+      <section
+        style={
+          sectionStyle
+        }
+      >
 
-        <div style={sectionTitleStyle}>
+        <div
+          style={
+            sectionTitleStyle
+          }
+        >
           Additional Information
         </div>
 
-        <div style={formGridStyle}>
 
-          {/* PURPOSE */}
+        <div
+          style={
+            formGridStyle
+          }
+        >
 
-          <div style={fieldGroupStyle}>
+          {/* ==================================================
+              PURPOSE
+          ================================================== */}
+
+          <div
+            style={
+              fieldGroupStyle
+            }
+          >
 
             {renderLabel(
               "Purpose",
             )}
 
+
             <input
               type="text"
-              value={purpose}
+              value={
+                purpose
+              }
               onChange={
                 handlePurposeChange
               }
               placeholder="Enter loan purpose"
               autoComplete="off"
-              style={{
-                ...inputStyle,
-                width: "100%",
-                minWidth: 0,
-                boxSizing: "border-box",
-              }}
+              style={
+                inputStyle
+              }
             />
 
           </div>
 
-          {/* REMARKS */}
 
-          <div style={fieldGroupStyle}>
+          {/* ==================================================
+              REMARKS
+          ================================================== */}
+
+          <div
+            style={
+              fieldGroupStyle
+            }
+          >
 
             {renderLabel(
               "Remarks",
             )}
 
+
             <textarea
-              value={remarks}
+              value={
+                remarks
+              }
               onChange={
                 handleRemarksChange
               }
               placeholder="Enter remarks"
-              rows={1}
-              style={{
-                ...textareaStyle,
-                width: "100%",
-                minWidth: 0,
-                height: "32px",
-                minHeight: "32px",
-                boxSizing: "border-box",
-                resize: "none",
-              }}
+              rows={3}
+              style={
+                textareaStyle
+              }
             />
 
           </div>
@@ -754,6 +983,7 @@ export default function LoanForm({
 
   );
 }
+
 
 // ============================================================
 // END

@@ -1,9 +1,16 @@
 /* ===========================================================
    FINORA ENTERPRISE OS™
-   CUSTOMER HANGER
+
+   CUSTOMER HANGER™
 
    TYPES
+
+   Module  : Customer Hub
+   Section : Customer Hanger
+   Version : 2.0
+   Status  : Production
 =========================================================== */
+
 
 /* ===========================================================
    CUSTOMER MODEL
@@ -11,60 +18,108 @@
 
 export interface CustomerModel {
 
-  id: string;
+  /* =========================================================
+     CUSTOMER ID
+  ========================================================= */
 
-  name: string;
-
-  phone?: string;
-
-  branch: string;
-
-  profilePhoto?: string;
+  id:
+    string;
 
 
-  /* ==========================================
+  /* =========================================================
+     CUSTOMER NAME
+  ========================================================= */
+
+  name:
+    string;
+
+
+  /* =========================================================
+     PHONE
+  ========================================================= */
+
+  phone?:
+    string;
+
+
+  /* =========================================================
+     BRANCH
+  ========================================================= */
+
+  branch:
+    string;
+
+
+  /* =========================================================
+     CUSTOMER PROFILE PHOTO
+
+     Canonical customer photo field.
+
+     Original image data is passed through unchanged.
+
+     No resize.
+     No compression.
+     No transformation.
+  ========================================================= */
+
+  photo?:
+    string;
+
+
+  /* =========================================================
      ID CARD BACK DETAILS
-  ========================================== */
+  ========================================================= */
 
-  fatherName?: string;
+  fatherName?:
+    string;
 
-  village?: string;
+  village?:
+    string;
 
-  mandal?: string;
+  mandal?:
+    string;
 
-  district?: string;
+  district?:
+    string;
 
-  customerSince?: string;
+  customerSince?:
+    string;
 
 
-  /* ==========================================
+  /* =========================================================
      STATUS
-  ========================================== */
+  ========================================================= */
 
-  kycVerified: boolean;
+  kycVerified:
+    boolean;
 
-  active: boolean;
+  active:
+    boolean;
 
 
-  /* ==========================================
+  /* =========================================================
      FINANCE
-  ========================================== */
+  ========================================================= */
 
-  outstandingAmount: number;
+  outstandingAmount:
+    number;
 
-  nextCollectionDate: string;
+  nextCollectionDate:
+    string;
 
 
-    /* ==========================================
+  /* =========================================================
      LOAN SUMMARY
-  ========================================== */
+  ========================================================= */
 
-  totalLoans?: number;
+  totalLoans?:
+    number;
 
-  activeLoans?: number;
+  activeLoans?:
+    number;
 
-  closedLoans?: number;
-
+  closedLoans?:
+    number;
 }
 
 
@@ -74,14 +129,21 @@ export interface CustomerModel {
 
 export interface CustomerHangerProps {
 
-  customer: CustomerModel;
+  customer:
+    CustomerModel;
 
   onClick?: (
-    customer: CustomerModel,
+    customer:
+      CustomerModel,
   ) => void;
 
-    flipped?: boolean;
+  flipped?:
+    boolean;
 
   onFlip?: () => void;
-
 }
+
+
+/* ===========================================================
+   END
+=========================================================== */

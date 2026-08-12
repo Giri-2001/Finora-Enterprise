@@ -388,6 +388,9 @@ function buildEditWizardData(
     customerId:
       customer.identity.customerId,
 
+    photo:
+     customer.photo,
+
     fullName:
       customer.basic.fullName,
 

@@ -62,7 +62,7 @@ export const sectionStyle: CSSProperties = {
 
   boxSizing: "border-box",
 
-  padding: "8px 10px",
+  padding: "10px 10px",
 
   marginBottom: "5px",
 
@@ -94,13 +94,13 @@ CSSProperties = {
 
   fontSize: "12px",
 
-  fontWeight: 750,
+  fontWeight: 650,
 
-  lineHeight: 1.2,
+  lineHeight: 1.3,
 
   letterSpacing: "0.01em",
 
-  minHeight: "15px",
+  minHeight: "16px",
 };
 
 // ============================================================
@@ -119,7 +119,7 @@ CSSProperties = {
   gridTemplateColumns:
     "repeat(4, minmax(0, 1fr))",
 
-  gap: "6px 8px",
+  gap: "7px 8px",
 
   width: "100%",
 
@@ -140,7 +140,7 @@ CSSProperties = {
 
   flexDirection: "column",
 
-  gap: "3px",
+  gap: "6px",
 
   minWidth: 0,
 

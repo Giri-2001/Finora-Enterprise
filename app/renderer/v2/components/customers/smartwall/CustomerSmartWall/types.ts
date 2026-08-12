@@ -1,11 +1,25 @@
 /* ===========================================================
    FINORA ENTERPRISE OS™
+
    CUSTOMER SMART WALL™
 
    TYPES
+
+   Module  : Customer
+   Section : Smart Wall
+   Version : 2.0
+   Status  : Production
 =========================================================== */
 
-import type { ReactNode } from "react";
+
+/* ===========================================================
+   IMPORTS
+=========================================================== */
+
+import type {
+  ReactNode,
+} from "react";
+
 
 /* ===========================================================
    SMART WALL ITEM
@@ -13,13 +27,44 @@ import type { ReactNode } from "react";
 
 export interface SmartWallItem {
 
-  id: string;
+  /* =========================================================
+     CUSTOMER ID
+  ========================================================= */
 
-  customerName: string;
+  id:
+    string;
 
-  active: boolean;
 
+  /* =========================================================
+     CUSTOMER NAME
+  ========================================================= */
+
+  customerName:
+    string;
+
+
+  /* =========================================================
+     CUSTOMER PROFILE PHOTO
+
+     Original customer photo is passed through unchanged.
+
+     No resize.
+     No compression.
+     No transformation.
+  ========================================================= */
+
+  photo?:
+    string;
+
+
+  /* =========================================================
+     CUSTOMER STATUS
+  ========================================================= */
+
+  active:
+    boolean;
 }
+
 
 /* ===========================================================
    COMPONENT PROPS
@@ -27,10 +72,17 @@ export interface SmartWallItem {
 
 export interface CustomerSmartWallProps {
 
-  title?: string;
+  title?:
+    string;
 
-  customers?: SmartWallItem[];
+  customers?:
+    SmartWallItem[];
 
-  children?: ReactNode;
-
+  children?:
+    ReactNode;
 }
+
+
+/* ===========================================================
+   END
+=========================================================== */

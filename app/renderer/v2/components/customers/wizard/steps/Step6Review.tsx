@@ -769,6 +769,21 @@ const drivingLicence =
 
             ...existingCustomer,
 
+            /* ================================================
+               CUSTOMER PHOTO
+
+               Preserve the existing photo when the wizard did
+               not change it. An explicitly empty photo clears
+               the existing photo.
+            ================================================= */
+
+            photo:
+              wizardData.photo !== undefined
+                ? valueOrEmpty(
+                    wizardData.photo,
+                  )
+                : existingCustomer.photo,
+
 
             /* ================================================
                IDENTITY
@@ -1336,6 +1351,22 @@ const drivingLicence =
 
         const newCustomer:
           CustomerProfile = {
+
+          /* ==================================================
+             CUSTOMER PHOTO
+
+             CustomerPhotoUploader stores the selected image as
+             a Base64 data URL in CustomerWizardData.photo.
+             Persist it at the CustomerProfile root so the same
+             canonical photo can be reused by Customer Office,
+             Loan Studio, and other customer-facing modules.
+          ================================================== */
+
+          photo:
+            valueOrEmpty(
+              wizardData.photo,
+            ),
+
 
           identity: {
 

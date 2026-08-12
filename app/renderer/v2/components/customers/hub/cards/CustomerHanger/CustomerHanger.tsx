@@ -42,6 +42,7 @@ import {
   bottomRailStyle,
 } from "./styles";
 
+
 /* ===========================================================
    COMPONENT
 =========================================================== */
@@ -54,6 +55,7 @@ export default function CustomerHanger({
 
 }: CustomerHangerProps) {
 
+
   const {
 
     id,
@@ -62,7 +64,18 @@ export default function CustomerHanger({
 
     phone,
 
-    profilePhoto,
+    /* =======================================================
+       CUSTOMER PHOTO
+
+       CustomerRailItem uses the canonical `photo` field.
+
+       Do not use `profilePhoto` here because that creates
+       a presentation-layer field mismatch.
+
+       Original photo data is passed through unchanged.
+    ======================================================= */
+
+    photo,
 
     branch,
 
@@ -71,6 +84,7 @@ export default function CustomerHanger({
     kycVerified,
 
   } = customer;
+
 
   /* =========================================================
      CUSTOMER SELECTION
@@ -81,13 +95,16 @@ export default function CustomerHanger({
       React.MouseEvent<HTMLDivElement>,
   ): void {
 
+
     const target =
       event.target as HTMLElement;
+
 
     const clickedCustomerCard =
       target.closest(
         '[data-finora-customer-card="true"]',
       );
+
 
     /*
       Customer Hanger contains:
@@ -103,6 +120,7 @@ export default function CustomerHanger({
 
     }
 
+
     if (
       !canOpen(active)
     ) {
@@ -111,11 +129,13 @@ export default function CustomerHanger({
 
     }
 
+
     onClick?.(
       customer,
     );
 
   }
+
 
   /* =========================================================
      UI
@@ -136,6 +156,7 @@ export default function CustomerHanger({
         style={pinStyle}
       />
 
+
       {/* =================================================
           ROPE
       ================================================= */}
@@ -143,6 +164,7 @@ export default function CustomerHanger({
       <div
         style={ropeStyle}
       />
+
 
       {/* =================================================
           METAL CONNECTOR
@@ -175,6 +197,7 @@ export default function CustomerHanger({
         }}
       />
 
+
       {/* =================================================
           HANGER
       ================================================= */}
@@ -183,12 +206,14 @@ export default function CustomerHanger({
         style={hangerStyle}
       />
 
+
       {/* =================================================
           FRONT CUSTOMER ID CARD
       ================================================= */}
 
       <div
         style={{
+
           ...cardContainerStyle,
 
           width: "180px",
@@ -220,7 +245,7 @@ export default function CustomerHanger({
             }
 
             profilePhoto={
-              profilePhoto
+              photo
             }
 
             phoneNumber={
@@ -235,13 +260,16 @@ export default function CustomerHanger({
               kycVerified
             }
 
-              compact={true}
+            compact={
+              true
+            }
 
           />
 
         </div>
 
       </div>
+
 
       {/* =================================================
           FINISHING RAIL
@@ -256,3 +284,8 @@ export default function CustomerHanger({
   );
 
 }
+
+
+/* ===========================================================
+   END
+=========================================================== */

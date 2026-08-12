@@ -1,9 +1,16 @@
 /* ===========================================================
    FINORA ENTERPRISE OS™
+
    CUSTOMER HANGER RAIL™
 
    TYPES
+
+   Module  : Customer
+   Section : Customer Hanger Rail
+   Version : 2.0
+   Status  : Production
 =========================================================== */
+
 
 /* ===========================================================
    CUSTOMER MODEL
@@ -11,21 +18,76 @@
 
 export interface CustomerRailItem {
 
-  id: string;
+  /* =========================================================
+     CUSTOMER ID
+  ========================================================= */
 
-  name: string;
+  id:
+    string;
 
-  branch: string;
 
-  active: boolean;
+  /* =========================================================
+     CUSTOMER NAME
+  ========================================================= */
 
-  kycVerified: boolean;
+  name:
+    string;
 
-  outstandingAmount: number;
 
-  nextCollectionDate: string;
+  /* =========================================================
+     CUSTOMER PROFILE PHOTO
 
+     Original customer photo is passed through unchanged.
+
+     No resize.
+     No compression.
+     No transformation.
+  ========================================================= */
+
+  photo?:
+    string;
+
+
+  /* =========================================================
+     BRANCH
+  ========================================================= */
+
+  branch:
+    string;
+
+
+  /* =========================================================
+     STATUS
+  ========================================================= */
+
+  active:
+    boolean;
+
+
+  /* =========================================================
+     KYC
+  ========================================================= */
+
+  kycVerified:
+    boolean;
+
+
+  /* =========================================================
+     FINANCIAL SUMMARY
+  ========================================================= */
+
+  outstandingAmount:
+    number;
+
+
+  /* =========================================================
+     NEXT COLLECTION
+  ========================================================= */
+
+  nextCollectionDate:
+    string;
 }
+
 
 /* ===========================================================
    COMPONENT PROPS
@@ -33,18 +95,25 @@ export interface CustomerRailItem {
 
 export interface CustomerHangerRailProps {
 
-  title?: string;
+  title?:
+    string;
 
-  totalCustomers?: number;
+  totalCustomers?:
+    number;
 
-  customers: CustomerRailItem[];
+  customers:
+    CustomerRailItem[];
 
-  selectedCustomerId?: string;
+  selectedCustomerId?:
+    string;
 
   onCustomerSelect?: (
-
-    customer: CustomerRailItem,
-
+    customer:
+      CustomerRailItem,
   ) => void;
-
 }
+
+
+/* ===========================================================
+   END
+=========================================================== */
