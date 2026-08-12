@@ -4,6 +4,7 @@ GUARANTOR STUDIO
 GUARANTOR FORM
 =========================================================== */
 
+
 /* ===========================================================
 IMPORTS
 =========================================================== */
@@ -13,14 +14,15 @@ import {
   TextInput,
 } from "../../common";
 
+
 import {
   accentStyle,
   fieldContentStyle,
   fieldStyle,
-  fullWidthFieldStyle,
   headerStyle,
   wrapperStyle,
 } from "./GuarantorForm.styles";
+
 
 /* ===========================================================
 TYPES
@@ -49,6 +51,7 @@ interface GuarantorFormProps {
   ) => void;
 }
 
+
 /* ===========================================================
 COMPONENT
 =========================================================== */
@@ -66,7 +69,10 @@ export default function GuarantorForm({
   return (
     <div style={wrapperStyle}>
 
-      {/* FORM HEADER */}
+      {/* =====================================================
+          FORM HEADER
+      ===================================================== */}
+
       <div style={headerStyle}>
         <span style={accentStyle} />
 
@@ -75,7 +81,11 @@ export default function GuarantorForm({
         </span>
       </div>
 
-      {/* GUARANTOR NAME */}
+
+      {/* =====================================================
+          GUARANTOR NAME
+      ===================================================== */}
+
       <div style={fieldStyle}>
         <div style={fieldContentStyle}>
           <FormField
@@ -95,7 +105,11 @@ export default function GuarantorForm({
         </div>
       </div>
 
-      {/* MOBILE NUMBER */}
+
+      {/* =====================================================
+          MOBILE NUMBER
+      ===================================================== */}
+
       <div style={fieldStyle}>
         <div style={fieldContentStyle}>
           <FormField
@@ -115,7 +129,11 @@ export default function GuarantorForm({
         </div>
       </div>
 
-      {/* OCCUPATION */}
+
+      {/* =====================================================
+          OCCUPATION
+      ===================================================== */}
+
       <div style={fieldStyle}>
         <div style={fieldContentStyle}>
           <FormField
@@ -134,8 +152,15 @@ export default function GuarantorForm({
         </div>
       </div>
 
-      {/* ADDRESS */}
-      <div style={fullWidthFieldStyle}>
+
+      {/* =====================================================
+          ADDRESS
+          IMPORTANT:
+          Normal fieldStyle intentionally used here.
+          This keeps Address in the 4th column.
+      ===================================================== */}
+
+      <div style={fieldStyle}>
         <div style={fieldContentStyle}>
           <FormField
             label="Address"
@@ -156,6 +181,7 @@ export default function GuarantorForm({
     </div>
   );
 }
+
 
 /* ===========================================================
 END

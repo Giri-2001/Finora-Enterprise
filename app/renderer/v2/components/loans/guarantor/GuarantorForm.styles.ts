@@ -6,15 +6,13 @@
 //
 // RESPONSIBILITY:
 // - GuarantorForm presentation only
-// - Compact guarantor information layout
-// - FINORA Login-inspired dark navy theme
+// - Compact 4-column guarantor information layout
+// - Equal-width fields
+// - Proper FINORA Enterprise spacing
+// - Single-viewport Step 4 compatibility
 //
-// DESIGN:
-// - Primary Blue: #2563EB
-// - No brown
-// - No gold
-// - Minimum font-size: 12px
-// - Font weights: 500–750
+// LAYOUT:
+// Guarantor Name | Mobile Number | Occupation | Address
 //
 // ============================================================
 
@@ -27,32 +25,59 @@ import type { CSSProperties } from "react";
 const COLORS = {
   panel: "#111C2E",
   panelSoft: "#142238",
-  border: "rgba(148, 163, 184, 0.20)",
+
+  border: "rgba(148, 163, 184, 0.18)",
+
   primary: "#2563EB",
-  primarySoft: "rgba(37, 99, 235, 0.14)",
+  primaryGlow: "rgba(37, 99, 235, 0.18)",
+
   text: "#FFFFFF",
 };
 
 // ============================================================
 // WRAPPER
+//
+// Four fields always remain in ONE ROW.
+//
+// Guarantor Name | Mobile Number | Occupation | Address
+//
+// Equal columns + controlled spacing.
 // ============================================================
 
 export const wrapperStyle: CSSProperties = {
   display: "grid",
-  gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
-  gap: "8px 10px",
+
+  gridTemplateColumns:
+    "repeat(4, minmax(0, 1fr))",
+
+  columnGap: "9px",
+  rowGap: "0px",
+
   width: "100%",
   minWidth: 0,
+
+  marginBottom: "10px",
+
   boxSizing: "border-box",
-  padding: "11px 14px",
-  border: `1px solid ${COLORS.border}`,
-  borderRadius: "10px",
-  background: `linear-gradient(
-    180deg,
-    ${COLORS.panel},
-    ${COLORS.panelSoft}
-  )`,
-  boxShadow: "0 6px 18px rgba(0, 0, 0, 0.14)",
+
+  padding: "8px 10px 4px 10px",
+
+  border:
+    `1px solid ${COLORS.border}`,
+
+  borderRadius: "9px",
+
+  background:
+    `linear-gradient(
+      180deg,
+      ${COLORS.panel},
+      ${COLORS.panelSoft}
+    )`,
+
+  boxShadow:
+    "0 4px 14px rgba(0, 0, 0, 0.12)",
+
+  overflow: "hidden",
 };
 
 // ============================================================
@@ -61,15 +86,28 @@ export const wrapperStyle: CSSProperties = {
 
 export const headerStyle: CSSProperties = {
   gridColumn: "1 / -1",
+
   display: "flex",
+
   alignItems: "center",
-  gap: "8px",
-  minHeight: "18px",
-  marginBottom: "1px",
+
+  gap: "6px",
+
+  minHeight: "17px",
+
+  margin: "0 0 10px 0",
+
+  padding: 0,
+
   color: COLORS.text,
-  fontSize: "14px",
+
+  fontSize: "13px",
+
   fontWeight: 750,
-  lineHeight: 1.2,
+
+  lineHeight: 1.15,
+
+  boxSizing: "border-box",
 };
 
 // ============================================================
@@ -78,21 +116,44 @@ export const headerStyle: CSSProperties = {
 
 export const accentStyle: CSSProperties = {
   width: "3px",
-  height: "16px",
+
+  height: "15px",
+
   flexShrink: 0,
+
   borderRadius: "3px",
+
   background: COLORS.primary,
-  boxShadow: `0 0 10px ${COLORS.primarySoft}`,
+
+  boxShadow:
+    `0 0 8px ${COLORS.primaryGlow}`,
 };
 
 // ============================================================
 // FIELD
+//
+// Important:
+// FormField has its own marginBottom.
+// We neutralize it here so the four fields
+// stay visually aligned in one row.
 // ============================================================
 
 export const fieldStyle: CSSProperties = {
   minWidth: 0,
+
   width: "100%",
+
   boxSizing: "border-box",
+
+  display: "flex",
+
+  flexDirection: "column",
+
+  overflow: "hidden",
+
+  margin: 0,
+
+  padding: 0,
 };
 
 // ============================================================
@@ -100,18 +161,35 @@ export const fieldStyle: CSSProperties = {
 // ============================================================
 
 export const fieldContentStyle: CSSProperties = {
-  width: "82%",
-  minWidth: "150px",
+  width: "100%",
+
+  minWidth: 0,
+
   boxSizing: "border-box",
+
+  display: "flex",
+
+  flexDirection: "column",
+
+  margin: 0,
+
+  padding: 0,
+
+  overflow: "hidden",
 };
 
 // ============================================================
 // FULL WIDTH FIELD
+//
+// Preserved for API compatibility.
 // ============================================================
 
 export const fullWidthFieldStyle: CSSProperties = {
   ...fieldStyle,
+
   gridColumn: "1 / -1",
+
+  width: "100%",
 };
 
 // ============================================================

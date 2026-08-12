@@ -1,57 +1,73 @@
-/* ===========================================================
-   FINORA ENTERPRISE V2
-   DESIGN SYSTEM
-   TEXT INPUT
-=========================================================== */
+// ============================================================
+// FINORA ENTERPRISE V2
+// DESIGN SYSTEM
+// TEXT INPUT
+//
+// RESPONSIBILITY:
+// - Shared enterprise text input
+// - FINORA dark navy visual language
+// - Compact Step 4 compatible sizing
+// - Preserve native input API
+//
+// ============================================================
+
+// ============================================================
+// IMPORTS
+// ============================================================
 
 import type {
   CSSProperties,
   InputHTMLAttributes,
 } from "react";
 
-/* ===========================================================
-   TYPES
-=========================================================== */
+// ============================================================
+// TYPES
+// ============================================================
 
 export interface TextInputProps
   extends InputHTMLAttributes<HTMLInputElement> {}
 
-/* ===========================================================
-   STYLES
-=========================================================== */
+// ============================================================
+// STYLES
+// ============================================================
 
 const inputStyle: CSSProperties = {
   width: "100%",
+  minWidth: 0,
 
-  padding: "12px 14px",
+  height: "38px",
 
-  borderRadius: "12px",
+  padding: "8px 11px",
 
-  border: "1px solid #d1d5db",
+  borderRadius: "8px",
 
-  background: "#ffffff",
+  border: "1px solid rgba(148, 163, 184, 0.18)",
 
-  color: "#111827",
+  background: "#0A1425",
 
-  fontSize: "14px",
+  color: "#FFFFFF",
+
+  fontSize: "12px",
 
   fontWeight: 500,
+
+  lineHeight: 1.2,
 
   outline: "none",
 
   boxSizing: "border-box",
 
-  transition: "all 0.2s ease",
+  transition:
+    "border-color 0.15s ease, box-shadow 0.15s ease, background 0.15s ease",
 
-  /* Remove browser number spinner arrows */
   WebkitAppearance: "none",
 
   MozAppearance: "textfield",
 };
 
-/* ===========================================================
-   COMPONENT
-=========================================================== */
+// ============================================================
+// COMPONENT
+// ============================================================
 
 export default function TextInput({
   type,
@@ -64,18 +80,20 @@ export default function TextInput({
       type={type}
       style={{
         ...inputStyle,
+
         ...(type === "number"
           ? {
               WebkitAppearance: "none",
               MozAppearance: "textfield",
             }
           : {}),
+
         ...style,
       }}
     />
   );
 }
 
-/* ===========================================================
-   END
-=========================================================== */
+// ============================================================
+// END
+// ============================================================

@@ -578,6 +578,11 @@ export default function LoanStudio({
   ] = useState("");
 
   const [
+  guarantorRelationship,
+  setGuarantorRelationship,
+] = useState("");
+
+  const [
     purpose,
     setPurpose,
   ] = useState("");
@@ -1733,7 +1738,14 @@ export default function LoanStudio({
                   }
                 />
 
-                <RelationshipCard />
+                <RelationshipCard
+                  relationship={
+                    guarantorRelationship
+                  }
+                  onRelationshipChange={
+                    setGuarantorRelationship
+                }
+                />
 
                 <GuarantorVerification />
 
@@ -1747,7 +1759,14 @@ export default function LoanStudio({
                   guarantorName={
                     guarantorName
                   }
-                  relationship="--"
+                  relationship={
+                    guarantorRelationship
+                      ? guarantorRelationship
+                          .charAt(0)
+                          .toUpperCase() +
+                        guarantorRelationship.slice(1)
+                      : "--"
+                  }
                   mobileNumber={
                     guarantorPhone
                   }

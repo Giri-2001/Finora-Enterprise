@@ -36,24 +36,32 @@ const COLORS = {
 
 // ============================================================
 // HEADER WRAPPER
+//
+// Compact Guarantor Studio header.
+// Reduced vertical padding and bottom margin so the
+// Step 4 content starts closer to the header.
 // ============================================================
 
 export const headerStyle: CSSProperties = {
   width: "100%",
-  minWidth: 0,
+  height: "74px",
+  minHeight: "74px",
   boxSizing: "border-box",
+
   padding: "13px 16px",
-  marginBottom: "10px",
+  marginBottom: "3px",
+
   border: `1px solid ${COLORS.border}`,
   borderRadius: "10px",
+
   background: `linear-gradient(
     135deg,
     ${COLORS.panel},
     ${COLORS.panelSoft}
   )`,
+
   boxShadow: "0 6px 18px rgba(0, 0, 0, 0.16)",
 };
-
 // ============================================================
 // HEADER CONTENT
 // ============================================================
@@ -71,7 +79,7 @@ export const contentStyle: CSSProperties = {
 
 export const accentStyle: CSSProperties = {
   width: "4px",
-  minHeight: "38px",
+  minHeight: "30px",
   flexShrink: 0,
   borderRadius: "4px",
   background: COLORS.primary,
@@ -95,6 +103,7 @@ export const textWrapperStyle: CSSProperties = {
 
 export const titleStyle: CSSProperties = {
   margin: 0,
+
   color: COLORS.text,
   fontSize: "21px",
   fontWeight: 750,
@@ -108,6 +117,7 @@ export const titleStyle: CSSProperties = {
 
 export const subtitleStyle: CSSProperties = {
   margin: 0,
+
   color: COLORS.textSecondary,
   fontSize: "12px",
   fontWeight: 500,

@@ -6,8 +6,9 @@
 //
 // RESPONSIBILITY:
 // - RelationshipCard presentation only
-// - Compact customer relationship configuration
-// - FINORA Login-inspired dark navy theme
+// - Premium compact customer relationship configuration
+// - Single-viewport Step 4 compatibility
+// - FINORA Enterprise dark navy theme
 //
 // DESIGN:
 // - Primary Blue: #2563EB
@@ -27,29 +28,41 @@ import type { CSSProperties } from "react";
 const COLORS = {
   panel: "#111C2E",
   panelSoft: "#142238",
-  border: "rgba(148, 163, 184, 0.20)",
+  border: "rgba(148, 163, 184, 0.18)",
   primary: "#2563EB",
   primarySoft: "rgba(37, 99, 235, 0.14)",
+  primaryGlow: "rgba(37, 99, 235, 0.18)",
   text: "#FFFFFF",
 };
 
 // ============================================================
 // WRAPPER
+//
+// Compact relationship section.
+// No unnecessary internal spacing.
 // ============================================================
 
 export const wrapperStyle: CSSProperties = {
   width: "100%",
   minWidth: 0,
   boxSizing: "border-box",
-  padding: "11px 14px",
+
+  padding: "7px 10px",
+
+  marginBottom: "10px",
+
   border: `1px solid ${COLORS.border}`,
-  borderRadius: "10px",
+  borderRadius: "9px",
+
   background: `linear-gradient(
     180deg,
     ${COLORS.panel},
     ${COLORS.panelSoft}
   )`,
-  boxShadow: "0 6px 18px rgba(0, 0, 0, 0.14)",
+
+  boxShadow: "0 4px 14px rgba(0, 0, 0, 0.12)",
+
+  overflow: "hidden",
 };
 
 // ============================================================
@@ -59,13 +72,24 @@ export const wrapperStyle: CSSProperties = {
 export const headerStyle: CSSProperties = {
   display: "flex",
   alignItems: "center",
-  gap: "8px",
-  minHeight: "18px",
-  marginBottom: "8px",
+
+  gap: "6px",
+
+  minHeight: "17px",
+
+  margin: 0,
+  marginBottom: "10px",
+
+  padding: 0,
+
   color: COLORS.text,
-  fontSize: "14px",
+
+  fontSize: "13px",
   fontWeight: 750,
-  lineHeight: 1.2,
+
+  lineHeight: 1.15,
+
+  boxSizing: "border-box",
 };
 
 // ============================================================
@@ -74,11 +98,15 @@ export const headerStyle: CSSProperties = {
 
 export const accentStyle: CSSProperties = {
   width: "3px",
-  height: "16px",
+  height: "15px",
+
   flexShrink: 0,
+
   borderRadius: "3px",
+
   background: COLORS.primary,
-  boxShadow: `0 0 10px ${COLORS.primarySoft}`,
+
+  boxShadow: `0 0 8px ${COLORS.primaryGlow}`,
 };
 
 // ============================================================
@@ -88,7 +116,16 @@ export const accentStyle: CSSProperties = {
 export const fieldStyle: CSSProperties = {
   width: "100%",
   minWidth: 0,
+
   boxSizing: "border-box",
+
+  display: "flex",
+  flexDirection: "column",
+
+  margin: 0,
+  padding: 0,
+
+  overflow: "hidden",
 };
 
 // ============================================================
@@ -96,9 +133,16 @@ export const fieldStyle: CSSProperties = {
 // ============================================================
 
 export const fieldContentStyle: CSSProperties = {
-  width: "82%",
-  minWidth: "150px",
+  width: "100%",
+  minWidth: 0,
+
   boxSizing: "border-box",
+
+  display: "flex",
+  flexDirection: "column",
+
+  margin: 0,
+  padding: 0,
 };
 
 // ============================================================

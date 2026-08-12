@@ -4,6 +4,7 @@ GUARANTOR STUDIO
 GUARANTOR VERIFICATION
 =========================================================== */
 
+
 /* ===========================================================
 IMPORTS
 =========================================================== */
@@ -13,14 +14,17 @@ import {
   SelectInput,
 } from "../../common";
 
+
 import {
   accentStyle,
   contentStyle,
   fieldContentStyle,
   fieldStyle,
   headerStyle,
+  selectStyle,
   wrapperStyle,
 } from "./GuarantorVerification.styles";
+
 
 /* ===========================================================
 COMPONENT
@@ -39,6 +43,8 @@ export default function GuarantorVerification() {
         </span>
       </div>
 
+
+      {/* CONTENT */}
       <div style={contentStyle}>
 
         {/* VERIFICATION STATUS */}
@@ -49,6 +55,7 @@ export default function GuarantorVerification() {
               required
             >
               <SelectInput
+                style={selectStyle}
                 options={[
                   {
                     label: "Pending",
@@ -68,6 +75,7 @@ export default function GuarantorVerification() {
           </div>
         </div>
 
+
         {/* IDENTITY VERIFICATION */}
         <div style={fieldStyle}>
           <div style={fieldContentStyle}>
@@ -75,6 +83,7 @@ export default function GuarantorVerification() {
               label="Identity Verification"
             >
               <SelectInput
+                style={selectStyle}
                 options={[
                   {
                     label: "Aadhaar",
@@ -102,6 +111,7 @@ export default function GuarantorVerification() {
     </div>
   );
 }
+
 
 /* ===========================================================
 END

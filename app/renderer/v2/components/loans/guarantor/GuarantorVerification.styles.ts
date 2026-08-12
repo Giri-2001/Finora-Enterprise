@@ -6,8 +6,10 @@
 //
 // RESPONSIBILITY:
 // - GuarantorVerification presentation only
-// - Compact verification configuration layout
-// - FINORA Login-inspired dark navy theme
+// - Premium compact verification configuration layout
+// - FINORA Enterprise dark navy theme
+// - Native input/select controls visually normalized
+// - Single-viewport Step 4 compatibility
 //
 // DESIGN:
 // - Primary Blue: #2563EB
@@ -27,10 +29,23 @@ import type { CSSProperties } from "react";
 const COLORS = {
   panel: "#111C2E",
   panelSoft: "#142238",
-  border: "rgba(148, 163, 184, 0.20)",
+
+  input: "#0A1425",
+  inputHover: "#0D192D",
+  inputFocus: "#0A1425",
+
+  border: "rgba(148, 163, 184, 0.18)",
+  borderStrong: "rgba(37, 99, 235, 0.38)",
+
   primary: "#2563EB",
+  primaryHover: "#3B82F6",
+
   primarySoft: "rgba(37, 99, 235, 0.14)",
+  primaryGlow: "rgba(37, 99, 235, 0.20)",
+
   text: "#FFFFFF",
+  textSecondary: "#CBD5E1",
+  textMuted: "#94A3B8",
 };
 
 // ============================================================
@@ -41,15 +56,23 @@ export const wrapperStyle: CSSProperties = {
   width: "100%",
   minWidth: 0,
   boxSizing: "border-box",
-  padding: "11px 14px",
+
+  padding: "9px 12px",
+
+  marginBottom: "10px",
+
   border: `1px solid ${COLORS.border}`,
   borderRadius: "10px",
+
   background: `linear-gradient(
     180deg,
     ${COLORS.panel},
     ${COLORS.panelSoft}
   )`,
+
   boxShadow: "0 6px 18px rgba(0, 0, 0, 0.14)",
+
+  overflow: "hidden",
 };
 
 // ============================================================
@@ -59,13 +82,21 @@ export const wrapperStyle: CSSProperties = {
 export const headerStyle: CSSProperties = {
   display: "flex",
   alignItems: "center",
-  gap: "8px",
+
+  gap: "7px",
+
   minHeight: "18px",
-  marginBottom: "8px",
+
+  marginBottom: "9px",
+
   color: COLORS.text,
+
   fontSize: "14px",
   fontWeight: 750,
+
   lineHeight: 1.2,
+
+  boxSizing: "border-box",
 };
 
 // ============================================================
@@ -75,10 +106,14 @@ export const headerStyle: CSSProperties = {
 export const accentStyle: CSSProperties = {
   width: "3px",
   height: "16px",
+
   flexShrink: 0,
+
   borderRadius: "3px",
+
   background: COLORS.primary,
-  boxShadow: `0 0 10px ${COLORS.primarySoft}`,
+
+  boxShadow: `0 0 10px ${COLORS.primaryGlow}`,
 };
 
 // ============================================================
@@ -87,11 +122,18 @@ export const accentStyle: CSSProperties = {
 
 export const contentStyle: CSSProperties = {
   display: "grid",
-  gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
-  gap: "8px 10px",
+
+  gridTemplateColumns:
+    "repeat(2, minmax(0, 1fr))",
+
+  gap: "7px 10px",
+
   width: "100%",
   minWidth: 0,
+
   boxSizing: "border-box",
+
+  overflow: "hidden",
 };
 
 // ============================================================
@@ -101,7 +143,13 @@ export const contentStyle: CSSProperties = {
 export const fieldStyle: CSSProperties = {
   minWidth: 0,
   width: "100%",
+
   boxSizing: "border-box",
+
+  display: "flex",
+  flexDirection: "column",
+
+  overflow: "hidden",
 };
 
 // ============================================================
@@ -109,9 +157,123 @@ export const fieldStyle: CSSProperties = {
 // ============================================================
 
 export const fieldContentStyle: CSSProperties = {
-  width: "82%",
-  minWidth: "150px",
+  width: "100%",
+  minWidth: 0,
+
   boxSizing: "border-box",
+
+  display: "flex",
+  flexDirection: "column",
+};
+
+// ============================================================
+// FINORA INPUT
+// ============================================================
+
+export const inputStyle: CSSProperties = {
+  width: "100%",
+
+  minWidth: 0,
+
+  boxSizing: "border-box",
+
+  height: "38px",
+
+  padding: "8px 11px",
+
+  borderRadius: "8px",
+
+  border: `1px solid ${COLORS.border}`,
+
+  background: COLORS.input,
+
+  color: COLORS.text,
+
+  fontSize: "12px",
+
+  fontWeight: 550,
+
+  lineHeight: 1.2,
+
+  outline: "none",
+
+  appearance: "none",
+
+  WebkitAppearance: "none",
+
+  transition:
+    "border-color 0.18s ease, box-shadow 0.18s ease, background 0.18s ease",
+
+  boxShadow: "none",
+};
+
+// ============================================================
+// FINORA SELECT
+// ============================================================
+
+export const selectStyle: CSSProperties = {
+  width: "100%",
+
+  minWidth: 0,
+
+  boxSizing: "border-box",
+
+  height: "38px",
+
+  padding: "8px 34px 8px 11px",
+
+  borderRadius: "8px",
+
+  border: `1px solid ${COLORS.border}`,
+
+  backgroundColor: COLORS.input,
+
+  color: COLORS.text,
+
+  fontSize: "12px",
+
+  fontWeight: 550,
+
+  lineHeight: 1.2,
+
+  outline: "none",
+
+  appearance: "none",
+
+  WebkitAppearance: "none",
+
+  cursor: "pointer",
+
+  transition:
+    "border-color 0.18s ease, box-shadow 0.18s ease, background 0.18s ease",
+
+  boxShadow: "none",
+};
+
+// ============================================================
+// INPUT FOCUS
+// ============================================================
+
+export const inputFocusStyle: CSSProperties = {
+  borderColor: COLORS.primary,
+
+  boxShadow: `0 0 0 1px ${COLORS.primary},
+    0 0 10px ${COLORS.primaryGlow}`,
+
+  background: COLORS.inputFocus,
+};
+
+// ============================================================
+// SELECT FOCUS
+// ============================================================
+
+export const selectFocusStyle: CSSProperties = {
+  borderColor: COLORS.primary,
+
+  boxShadow: `0 0 0 1px ${COLORS.primary},
+    0 0 10px ${COLORS.primaryGlow}`,
+
+  backgroundColor: COLORS.inputFocus,
 };
 
 // ============================================================

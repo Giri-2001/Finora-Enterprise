@@ -6,8 +6,10 @@
 //
 // RESPONSIBILITY:
 // - GuarantorPreviewCard presentation only
-// - Compact guarantor summary presentation
-// - FINORA Login-inspired dark navy theme
+// - Premium compact guarantor summary presentation
+// - Five clean individual preview rows
+// - Single-viewport Step 4 compatibility
+// - FINORA Enterprise dark navy theme
 //
 // DESIGN:
 // - Primary Blue: #2563EB
@@ -15,6 +17,13 @@
 // - No gold
 // - Minimum font-size: 12px
 // - Font weights: 500–750
+//
+// LAYOUT:
+// Guarantor
+// Mobile
+// Occupation
+// Address
+// Relationship
 //
 // ============================================================
 
@@ -27,9 +36,16 @@ import type { CSSProperties } from "react";
 const COLORS = {
   panel: "#111C2E",
   panelSoft: "#142238",
-  border: "rgba(148, 163, 184, 0.20)",
+
+  input: "#0A1425",
+
+  border: "rgba(148, 163, 184, 0.18)",
+  borderStrong: "rgba(37, 99, 235, 0.38)",
+
   primary: "#2563EB",
   primarySoft: "rgba(37, 99, 235, 0.14)",
+  primaryGlow: "rgba(37, 99, 235, 0.18)",
+
   text: "#FFFFFF",
   textSecondary: "#CBD5E1",
   textMuted: "#94A3B8",
@@ -43,19 +59,43 @@ export const cardStyle: CSSProperties = {
   width: "100%",
   minWidth: 0,
   boxSizing: "border-box",
+
+  marginBottom: "10px",
+
+  overflow: "hidden",
 };
 
 // ============================================================
 // PREVIEW GRID
+//
+// IMPORTANT:
+// One item = one complete row.
+//
+// Guarantor
+// Mobile
+// Occupation
+// Address
+// Relationship
+//
 // ============================================================
 
 export const previewGridStyle: CSSProperties = {
   display: "grid",
-  gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
-  gap: "6px 8px",
+
+  // FIVE ITEMS = FIVE ROWS
+  gridTemplateColumns: "minmax(0, 1fr)",
+
+  gap: "6px",
+
   width: "100%",
   minWidth: 0,
+
+  margin: 0,
+  padding: 0,
+
   boxSizing: "border-box",
+
+  overflow: "hidden",
 };
 
 // ============================================================
@@ -64,20 +104,36 @@ export const previewGridStyle: CSSProperties = {
 
 export const rowStyle: CSSProperties = {
   display: "flex",
+
   alignItems: "center",
   justifyContent: "space-between",
-  gap: "8px",
+
+  width: "100%",
   minWidth: 0,
-  minHeight: "31px",
-  padding: "6px 8px",
+
+  // Increased height for proper text visibility
+  minHeight: "36px",
+
+  padding: "8px 10px",
+  margin: 0,
+
   boxSizing: "border-box",
+
   border: `1px solid ${COLORS.border}`,
   borderRadius: "6px",
+
   background: COLORS.panel,
+
   color: COLORS.textSecondary,
+
   fontSize: "12px",
   fontWeight: 500,
-  lineHeight: 1.25,
+
+  lineHeight: "16px",
+
+  gap: "10px",
+
+  overflow: "hidden",
 };
 
 // ============================================================
@@ -86,11 +142,24 @@ export const rowStyle: CSSProperties = {
 
 export const labelStyle: CSSProperties = {
   minWidth: 0,
+
+  flex: "0 0 auto",
+
   color: COLORS.textMuted,
+
   fontSize: "12px",
   fontWeight: 500,
-  lineHeight: 1.25,
+
+  lineHeight: 1.2,
+
+  overflow: "hidden",
+  textOverflow: "ellipsis",
+  whiteSpace: "nowrap",
 };
+
+// ============================================================
+// VALUE
+// ============================================================
 
 // ============================================================
 // VALUE
@@ -98,11 +167,18 @@ export const labelStyle: CSSProperties = {
 
 export const valueStyle: CSSProperties = {
   minWidth: 0,
+
+  flex: "1 1 auto",
+
   color: COLORS.text,
+
   fontSize: "12px",
   fontWeight: 650,
-  lineHeight: 1.25,
+
+  lineHeight: "16px",
+
   textAlign: "right",
+
   overflow: "hidden",
   textOverflow: "ellipsis",
   whiteSpace: "nowrap",
@@ -114,6 +190,7 @@ export const valueStyle: CSSProperties = {
 
 export const primaryValueStyle: CSSProperties = {
   ...valueStyle,
+
   fontSize: "13px",
   fontWeight: 700,
 };
@@ -124,21 +201,31 @@ export const primaryValueStyle: CSSProperties = {
 
 export const highlightRowStyle: CSSProperties = {
   ...rowStyle,
-  borderColor: "rgba(37, 99, 235, 0.38)",
+
+  borderColor: COLORS.borderStrong,
+
   background: `linear-gradient(
     90deg,
     ${COLORS.primarySoft},
     ${COLORS.panel}
   )`,
+
+  boxShadow: `0 0 10px ${COLORS.primaryGlow}`,
 };
 
 // ============================================================
 // FULL WIDTH ROW
+//
+// Kept for component compatibility.
+// Every preview row is already full width.
 // ============================================================
 
 export const fullWidthRowStyle: CSSProperties = {
   ...rowStyle,
+
   gridColumn: "1 / -1",
+
+  width: "100%",
 };
 
 // ============================================================

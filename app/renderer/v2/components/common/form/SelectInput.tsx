@@ -1,107 +1,112 @@
-/* ===========================================================
-   FINORA ENTERPRISE V2
-   DESIGN SYSTEM
-   SELECT INPUT
-=========================================================== */
+// ============================================================
+// FINORA ENTERPRISE V2
+// DESIGN SYSTEM
+// SELECT INPUT
+//
+// RESPONSIBILITY:
+// - Shared enterprise select input
+// - FINORA dark navy visual language
+// - Compact Step 4 compatible sizing
+// - Preserve existing SelectInput API
+//
+// ============================================================
+
+// ============================================================
+// IMPORTS
+// ============================================================
 
 import type {
   CSSProperties,
   SelectHTMLAttributes,
 } from "react";
 
-/* ===========================================================
-   TYPES
-=========================================================== */
+// ============================================================
+// TYPES
+// ============================================================
 
 export interface SelectOption {
-
   label: string;
-
   value: string;
-
 }
 
 export interface SelectInputProps
   extends SelectHTMLAttributes<HTMLSelectElement> {
-
   options: SelectOption[];
-
 }
 
-/* ===========================================================
-   STYLES
-=========================================================== */
+// ============================================================
+// STYLES
+// ============================================================
 
 const selectStyle: CSSProperties = {
-
   width: "100%",
+  minWidth: 0,
 
-  padding: "12px 14px",
+  height: "38px",
 
-  borderRadius: "12px",
+  padding: "8px 11px",
 
-  border: "1px solid #d1d5db",
+  borderRadius: "8px",
 
-  background: "#ffffff",
+  border: "1px solid rgba(148, 163, 184, 0.18)",
 
-  color: "#111827",
+  background: "#0A1425",
 
-  fontSize: "14px",
+  color: "#FFFFFF",
+
+  fontSize: "12px",
+
+  fontWeight: 500,
+
+  lineHeight: 1.2,
 
   outline: "none",
 
   boxSizing: "border-box",
 
+  cursor: "pointer",
+
+  transition:
+    "border-color 0.15s ease, box-shadow 0.15s ease, background 0.15s ease",
+
+  WebkitAppearance: "none",
+
+  MozAppearance: "none",
 };
 
-/* ===========================================================
-   COMPONENT
-=========================================================== */
+// ============================================================
+// COMPONENT
+// ============================================================
 
 export default function SelectInput({
-
   options,
-
   style,
-
   ...props
-
 }: SelectInputProps) {
-
   return (
-
     <select
-
       {...props}
-
       style={{
-
         ...selectStyle,
-
         ...style,
-
       }}
-
     >
-
       {options.map((option) => (
-
         <option
-
           key={option.value}
-
           value={option.value}
-
+          style={{
+            background: "#0A1425",
+            color: "#FFFFFF",
+          }}
         >
-
           {option.label}
-
         </option>
-
       ))}
-
     </select>
-
   );
-
 }
+
+// ============================================================
+// END
+// ============================================================

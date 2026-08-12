@@ -7,7 +7,7 @@
 // RESPONSIBILITY:
 // - GuarantorDraftStatus presentation wrapper only
 // - Guarantor-specific spacing and layout
-// - FINORA Login-inspired dark navy compatibility
+// - FINORA Enterprise dark navy compatibility
 //
 // DESIGN:
 // - Primary Blue: #2563EB
@@ -28,8 +28,8 @@ const COLORS = {
   background: "#0F172A",
   panel: "#111C2E",
   panelSoft: "#142238",
-  border: "rgba(148, 163, 184, 0.20)",
-  primarySoft: "rgba(37, 99, 235, 0.12)",
+
+  primarySoft: "rgba(37, 99, 235, 0.08)",
 };
 
 // ============================================================
@@ -39,27 +39,41 @@ const COLORS = {
 export const cardStyle: CSSProperties = {
   width: "100%",
   minWidth: 0,
+
   boxSizing: "border-box",
+
+  overflow: "hidden",
 };
 
 // ============================================================
 // STATUS WRAPPER
+//
+// IMPORTANT:
+// - No border
+// - No radius
+// - No shadow
+//
+// The inner Draft Status card already provides the visual
+// card surface. Keeping this wrapper neutral prevents the
+// appearance of two nested cards.
 // ============================================================
 
 export const statusStyle: CSSProperties = {
   width: "100%",
   minWidth: 0,
+
   boxSizing: "border-box",
-  padding: "1px",
-  border: `1px solid ${COLORS.border}`,
-  borderRadius: "8px",
-  background: `linear-gradient(
-    135deg,
-    ${COLORS.primarySoft},
-    ${COLORS.panel},
-    ${COLORS.panelSoft}
-  )`,
-  boxShadow: "0 4px 14px rgba(0, 0, 0, 0.12)",
+
+  padding: 0,
+
+  border: "none",
+  borderRadius: 0,
+
+  background: "transparent",
+
+  boxShadow: "none",
+
+  overflow: "hidden",
 };
 
 // ============================================================
