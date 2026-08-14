@@ -1,31 +1,121 @@
-/* ===========================================================
-FINORA ENTERPRISE OS™
+// ============================================================
+// FINORA ENTERPRISE OS™
+//
+// V2 LOANS OFFICE™
+//
+// ROUTE ENTRY
+//
+// RESPONSIBILITY:
+// - Open the V2 Loans Office
+// - Listen for the V2 Loan Studio open event
+// - Render Loan Studio without using V1 Loans
+// - Keep Loans Office and Loan Studio as separate screens
+//
+// IMPORTANT:
+// - NEVER import ../../../pages/loans/Loans
+// - NEVER use the V1 Loans page
+// - Loans.tsx owns the Loans Office UI
+// - LoanStudio owns the Loan creation workflow
+//
+// VERSION : 2.0
+// STATUS  : Production
+// ============================================================
 
-LOANS PAGE
 
-RESPONSIBILITY:
-- Entry point for Loan Office
-- Hosts the complete Loan Studio workflow
-=========================================================== */
+// ============================================================
+// IMPORTS
+// ============================================================
 
-import StudioLayout
-  from "../../components/common/layout/StudioLayout";
+import {
+  useEffect,
+  useState,
+} from "react";
+
+import Loans
+  from "./Loans";
 
 import LoanStudio
   from "../../components/customers/office/CustomerOffice/components/LoanStudio";
 
-/* ===========================================================
-COMPONENT
-=========================================================== */
+
+// ============================================================
+// COMPONENT
+// ============================================================
 
 export default function LoansPage() {
-  return (
-    <StudioLayout>
+
+  // ==========================================================
+  // LOAN STUDIO VISIBILITY
+  // ==========================================================
+
+  const [
+    showLoanStudio,
+    setShowLoanStudio,
+  ] = useState(false);
+
+
+  // ==========================================================
+  // OPEN LOAN STUDIO
+  //
+  // Loans.tsx dispatches:
+  //
+  // FINORA_V2_OPEN_LOAN_STUDIO
+  //
+  // This route boundary receives that event and switches from
+  // Loans Office → Loan Studio.
+  // ==========================================================
+
+  useEffect(() => {
+
+    function handleOpenLoanStudio(): void {
+
+      setShowLoanStudio(true);
+
+    }
+
+
+    window.addEventListener(
+      "FINORA_V2_OPEN_LOAN_STUDIO",
+      handleOpenLoanStudio,
+    );
+
+
+    return () => {
+
+      window.removeEventListener(
+        "FINORA_V2_OPEN_LOAN_STUDIO",
+        handleOpenLoanStudio,
+      );
+
+    };
+
+  }, []);
+
+
+  // ==========================================================
+  // LOAN STUDIO
+  // ==========================================================
+
+  if (showLoanStudio) {
+
+    return (
       <LoanStudio />
-    </StudioLayout>
+    );
+
+  }
+
+
+  // ==========================================================
+  // LOANS OFFICE
+  // ==========================================================
+
+  return (
+    <Loans />
   );
+
 }
 
-/* ===========================================================
-END
-=========================================================== */
+
+// ============================================================
+// END
+// ============================================================

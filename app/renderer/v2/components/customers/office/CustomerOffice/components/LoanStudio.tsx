@@ -606,6 +606,53 @@ export default function LoanStudio({
     setDisbursementDate,
   ] = useState("");
 
+  // ==========================================================
+// STEP 6 — DEFAULT DISBURSEMENT DATE
+//
+// When Step 6 opens, today's date is selected automatically.
+// User can still change it manually.
+// ==========================================================
+
+useEffect(() => {
+
+  if (
+    step === 6 &&
+    !disbursementDate
+  ) {
+
+    const today =
+      new Date();
+
+    const year =
+      today.getFullYear();
+
+    const month =
+      String(
+        today.getMonth() + 1,
+      ).padStart(
+        2,
+        "0",
+      );
+
+    const day =
+      String(
+        today.getDate(),
+      ).padStart(
+        2,
+        "0",
+      );
+
+    setDisbursementDate(
+      `${year}-${month}-${day}`,
+    );
+
+  }
+
+}, [
+  step,
+  disbursementDate,
+]);
+
 
   const [
     paymentMode,
@@ -2456,11 +2503,55 @@ export default function LoanStudio({
                   style={
                     stepItemStyle
                   }
-                  onClick={() =>
-                    setStep(
-                      current,
-                    )
+                  onClick={() => {
+
+                  if (
+                    current === 6
+                  ) {
+
+                    if (
+                      !disbursementDate
+                    ) {
+
+                      const today =
+                        new Date();
+
+                      const year =
+                        today.getFullYear();
+
+                      const month =
+                        String(
+                          today.getMonth() + 1,
+                        ).padStart(
+                          2,
+                          "0",
+                        );
+
+                      const day =
+                        String(
+                          today.getDate(),
+                        ).padStart(
+                          2,
+                          "0",
+                        );
+
+                      setDisbursementDate(
+                        `${year}-${month}-${day}`,
+                      );
+
+                    }
+
+                    setStep(6);
+
+                    return;
+
                   }
+
+                  setStep(
+                    current,
+                  );
+
+                }}
                 >
 
                   <div
@@ -2550,17 +2641,6 @@ export default function LoanStudio({
               if (
                 step < 6
               ) {
-                if (
-                  step === 5 &&
-                  !loanApproved
-                ) {
-                  alert(
-                    "Please Approve Loan before continuing to Disbursement",
-                  );
-
-                  return;
-                }
-
                 setStep(
                   step + 1,
                 );

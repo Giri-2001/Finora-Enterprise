@@ -14,6 +14,7 @@
 // - Maintain FINORA navigation history
 // - Preserve current page across browser/app refresh
 // - Route Reception departments to their V2 pages
+// - Open / close Loan Studio from Loans Office
 // - Enforce authenticated session inactivity protection
 //
 // IMPORTANT:
@@ -36,9 +37,10 @@
 // - Browser History API is used only to survive refresh.
 // - Domain repositories and storage remain untouched.
 //
-// VERSION : 2.3
+// VERSION : 2.4
 // STATUS  : Production
 // ============================================================
+
 
 // ============================================================
 // IMPORTS
@@ -73,6 +75,9 @@ import CollectionsPage
 import ReportsPage
   from "../pages/reports/ReportsPage";
 
+import LoanStudio
+  from "../components/customers/office/CustomerOffice/components/LoanStudio";
+
 import Login
   from "../../pages/auth/Login";
 
@@ -97,6 +102,7 @@ import type {
 import SessionGuard
   from "../../components/auth/SessionGuard";
 
+
 // ============================================================
 // TYPES
 // ============================================================
@@ -110,6 +116,7 @@ type Page =
   | "collections"
   | "reports";
 
+
 // ============================================================
 // CONSTANTS
 // ============================================================
@@ -122,6 +129,7 @@ const NAVIGATION_STATE_KEY =
 
 const NAVIGATION_EVENT =
   "finora-navigation-change";
+
 
 // ============================================================
 // CUSTOMER WIZARD NAVIGATION EVENTS
@@ -153,6 +161,34 @@ const CUSTOMER_WIZARD_CLOSE_EVENT =
 const CUSTOMER_WIZARD_GLOBAL_BACK_EVENT =
   "FINORA_CUSTOMER_WIZARD_GLOBAL_BACK";
 
+
+// ============================================================
+// LOAN STUDIO NAVIGATION EVENTS
+// ============================================================
+//
+// Loans Office owns the Create New Loan button.
+//
+// Loans Office intentionally does NOT own Loan Studio state.
+//
+// The bridge is:
+//
+// Loans Office
+//     ↓
+// FINORA_V2_OPEN_LOAN_STUDIO
+//     ↓
+// App.tsx
+//     ↓
+// Loan Studio
+//
+// This keeps Loan Studio as the single existing workflow and
+// avoids creating a second Loan Studio implementation.
+//
+// ============================================================
+
+const LOAN_STUDIO_OPEN_EVENT =
+  "FINORA_V2_OPEN_LOAN_STUDIO";
+
+
 // ============================================================
 // NAVIGATION STATE
 // ============================================================
@@ -179,6 +215,7 @@ interface NavigationState {
 
 }
 
+
 // ============================================================
 // PAGE VALIDATION
 // ============================================================
@@ -199,6 +236,7 @@ function isValidPage(
 
 }
 
+
 // ============================================================
 // DEFAULT NAVIGATION STATE
 // ============================================================
@@ -216,6 +254,7 @@ function createDefaultNavigationState():
   };
 
 }
+
 
 // ============================================================
 // READ BROWSER NAVIGATION STATE
@@ -270,6 +309,7 @@ function readNavigationState():
 
 }
 
+
 // ============================================================
 // WRITE BROWSER NAVIGATION STATE
 // ============================================================
@@ -307,6 +347,7 @@ function writeNavigationState(
   );
 
 }
+
 
 // ============================================================
 // LOADING SCREEN
@@ -369,6 +410,7 @@ function ContextLoadingScreen() {
   );
 }
 
+
 // ============================================================
 // AUTHENTICATED APPLICATION
 // ============================================================
@@ -401,6 +443,7 @@ function AuthenticatedApplication() {
   ] = useState<string | null>(
     null,
   );
+
 
   // ==========================================================
   // ESTABLISH BUSINESS CONTEXT
@@ -538,6 +581,7 @@ function AuthenticatedApplication() {
     clearContext,
   ]);
 
+
   // ==========================================================
   // LOGIN
   // ==========================================================
@@ -553,21 +597,9 @@ function AuthenticatedApplication() {
 
   }
 
+
   // ==========================================================
   // LOGOUT
-  // ==========================================================
-  //
-  // IMPORTANT:
-  //
-  // customerWizardOpen belongs to
-  // AuthenticatedV2Application().
-  //
-  // It must NOT be accessed here.
-  //
-  // When logout occurs, AuthenticatedV2Application unmounts
-  // automatically because session becomes null, so its local
-  // Customer Wizard state is naturally destroyed.
-  //
   // ==========================================================
 
   function handleLogout(): void {
@@ -582,10 +614,6 @@ function AuthenticatedApplication() {
 
     setContextError(null);
 
-    // --------------------------------------------------------
-    // Clear FINORA navigation history.
-    // --------------------------------------------------------
-
     const navigation =
       createDefaultNavigationState();
 
@@ -595,6 +623,7 @@ function AuthenticatedApplication() {
     );
 
   }
+
 
   // ==========================================================
   // AUTHENTICATION GATE
@@ -613,6 +642,7 @@ function AuthenticatedApplication() {
     );
 
   }
+
 
   // ==========================================================
   // BUSINESS CONTEXT ERROR
@@ -694,6 +724,7 @@ function AuthenticatedApplication() {
 
   }
 
+
   // ==========================================================
   // CONTEXT INITIALIZATION
   // ==========================================================
@@ -708,6 +739,7 @@ function AuthenticatedApplication() {
     );
 
   }
+
 
   // ==========================================================
   // AUTHENTICATED APPLICATION
@@ -724,6 +756,7 @@ function AuthenticatedApplication() {
 
 }
 
+
 // ============================================================
 // AUTHENTICATED V2 APPLICATION
 // ============================================================
@@ -738,10 +771,12 @@ interface AuthenticatedV2ApplicationProps {
 
 }
 
+
 function AuthenticatedV2Application({
   session: _session,
   onLogout,
 }: AuthenticatedV2ApplicationProps) {
+
 
   // ==========================================================
   // INITIAL NAVIGATION
@@ -769,25 +804,51 @@ function AuthenticatedV2Application({
   const page =
     navigation.page;
 
+
   // ==========================================================
   // CUSTOMER WIZARD NAVIGATION STATE
   // ==========================================================
-  //
-  // Customer Wizard remains a nested Customer Department
-  // workflow.
-  //
-  // It is intentionally NOT promoted to a top-level Page.
-  //
-  // This state allows the centralized GlobalHeader Back
-  // operation to close the Wizard before popping the
-  // top-level navigation history.
-  //
+
   const [
     customerWizardOpen,
     setCustomerWizardOpen,
   ] = useState<boolean>(
     false,
   );
+
+
+  // ==========================================================
+  // LOAN STUDIO NAVIGATION STATE
+  // ==========================================================
+  //
+  // Loan Studio is a nested workflow launched from Loans
+  // Office.
+  //
+  // It is intentionally NOT added to the top-level Page type.
+  //
+  // This means:
+  //
+  // Loans Office
+  //      ↓
+  // Create New Loan
+  //      ↓
+  // Loan Studio
+  //      ↓
+  // Back
+  //      ↓
+  // Loans Office
+  //
+  // The existing LoanStudio component remains the single
+  // implementation of the Loan creation workflow.
+  // ==========================================================
+
+  const [
+    loanStudioOpen,
+    setLoanStudioOpen,
+  ] = useState<boolean>(
+    false,
+  );
+
 
   // ==========================================================
   // CUSTOMER WIZARD NAVIGATION BRIDGE
@@ -837,15 +898,52 @@ function AuthenticatedV2Application({
 
   }, []);
 
+
+  // ==========================================================
+  // LOAN STUDIO NAVIGATION BRIDGE
+  // ==========================================================
+  //
+  // Loans.tsx dispatches:
+  //
+  // FINORA_V2_OPEN_LOAN_STUDIO
+  //
+  // App.tsx receives it and opens the existing LoanStudio.
+  //
+  // No duplicate Loan Studio.
+  // No legacy V1 navigation.
+  // No direct repository access.
+  //
+  // ==========================================================
+
+  useEffect(() => {
+
+    function handleLoanStudioOpen(): void {
+
+      setLoanStudioOpen(
+        true,
+      );
+
+    }
+
+    window.addEventListener(
+      LOAN_STUDIO_OPEN_EVENT,
+      handleLoanStudioOpen,
+    );
+
+    return () => {
+
+      window.removeEventListener(
+        LOAN_STUDIO_OPEN_EVENT,
+        handleLoanStudioOpen,
+      );
+
+    };
+
+  }, []);
+
+
   // ==========================================================
   // NAVIGATION CHANGE EVENT
-  // ==========================================================
-  //
-  // GlobalHeader / other shell-level controls can trigger
-  // browser history navigation.
-  //
-  // The React page state follows browser history.
-  //
   // ==========================================================
 
   useEffect(() => {
@@ -857,6 +955,15 @@ function AuthenticatedV2Application({
 
       setNavigation(
         next,
+      );
+
+      // ------------------------------------------------------
+      // Browser navigation should never leave nested Loan
+      // Studio open against another top-level page.
+      // ------------------------------------------------------
+
+      setLoanStudioOpen(
+        false,
       );
 
       window.dispatchEvent(
@@ -883,6 +990,7 @@ function AuthenticatedV2Application({
 
   }, []);
 
+
   // ==========================================================
   // TOP-LEVEL NAVIGATION
   // ==========================================================
@@ -901,6 +1009,16 @@ function AuthenticatedV2Application({
 
     }
 
+
+    // --------------------------------------------------------
+    // Leaving Loan Studio must first close the nested workflow.
+    // --------------------------------------------------------
+
+    setLoanStudioOpen(
+      false,
+    );
+
+
     if (
       nextPage ===
       navigation.page
@@ -909,6 +1027,7 @@ function AuthenticatedV2Application({
       return;
 
     }
+
 
     const nextNavigation:
       NavigationState = {
@@ -923,6 +1042,7 @@ function AuthenticatedV2Application({
 
     };
 
+
     writeNavigationState(
       nextNavigation,
     );
@@ -930,6 +1050,7 @@ function AuthenticatedV2Application({
     setNavigation(
       nextNavigation,
     );
+
 
     window.dispatchEvent(
       new CustomEvent(
@@ -939,37 +1060,61 @@ function AuthenticatedV2Application({
 
   }
 
+
   // ==========================================================
   // BACK NAVIGATION
   // ==========================================================
   //
-  // This is the single top-level FINORA Back operation.
+  // Priority:
   //
-  // Customer Wizard is checked first because it is a nested
-  // workflow inside Customer Department.
+  // 1. Loan Studio
+  // 2. Customer Wizard
+  // 3. Top-level FINORA navigation
+  //
+  // This gives the Global Back button predictable behavior.
   //
   // Example:
   //
   // Reception
-  //   ↓
-  // Customer Department
-  //   ↓
-  // Customer Wizard
+  //    ↓
+  // Loans
+  //    ↓
+  // Create New Loan
+  //    ↓
+  // Loan Studio
   //
-  // Global Back:
+  // Back:
   //
-  // Customer Wizard → Customer Department
+  // Loan Studio → Loans Office
   //
-  // Global Back:
+  // Back:
   //
-  // Customer Department → Reception
+  // Loans Office → Reception
   //
   // ==========================================================
 
   function handleBack(): void {
 
+
     // ========================================================
-    // CUSTOMER WIZARD FIRST
+    // LOAN STUDIO FIRST
+    // ========================================================
+
+    if (
+      loanStudioOpen
+    ) {
+
+      setLoanStudioOpen(
+        false,
+      );
+
+      return;
+
+    }
+
+
+    // ========================================================
+    // CUSTOMER WIZARD SECOND
     // ========================================================
 
     if (
@@ -986,6 +1131,7 @@ function AuthenticatedV2Application({
 
     }
 
+
     // ========================================================
     // NORMAL TOP-LEVEL BACK
     // ========================================================
@@ -998,16 +1144,19 @@ function AuthenticatedV2Application({
 
     }
 
+
     const previousPage =
       navigation.stack[
         navigation.stack.length - 1
       ];
+
 
     const remainingStack =
       navigation.stack.slice(
         0,
         -1,
       );
+
 
     const nextNavigation:
       NavigationState = {
@@ -1020,14 +1169,17 @@ function AuthenticatedV2Application({
 
     };
 
+
     writeNavigationState(
       nextNavigation,
       true,
     );
 
+
     setNavigation(
       nextNavigation,
     );
+
 
     window.dispatchEvent(
       new CustomEvent(
@@ -1036,6 +1188,7 @@ function AuthenticatedV2Application({
     );
 
   }
+
 
   // ==========================================================
   // RECEPTION NAVIGATION
@@ -1055,6 +1208,7 @@ function AuthenticatedV2Application({
 
         break;
 
+
       case "loans":
 
         handleNavigate(
@@ -1062,6 +1216,7 @@ function AuthenticatedV2Application({
         );
 
         break;
+
 
       case "collections":
 
@@ -1071,6 +1226,7 @@ function AuthenticatedV2Application({
 
         break;
 
+
       case "reports":
 
         handleNavigate(
@@ -1078,6 +1234,7 @@ function AuthenticatedV2Application({
         );
 
         break;
+
 
       case "accounts":
 
@@ -1087,6 +1244,7 @@ function AuthenticatedV2Application({
 
         break;
 
+
       case "settings":
 
         // ----------------------------------------------------
@@ -1095,6 +1253,7 @@ function AuthenticatedV2Application({
 
         break;
 
+
       default:
 
         break;
@@ -1102,6 +1261,7 @@ function AuthenticatedV2Application({
     }
 
   }
+
 
   // ==========================================================
   // RENDER
@@ -1120,6 +1280,7 @@ function AuthenticatedV2Application({
           handleBack
         }
         canGoBack={
+          loanStudioOpen ||
           customerWizardOpen ||
           navigation.stack.length > 0
         }
@@ -1127,6 +1288,10 @@ function AuthenticatedV2Application({
           onLogout
         }
       >
+
+        {/* ==================================================
+            RECEPTION
+        ================================================== */}
 
         {page === "reception" && (
 
@@ -1138,11 +1303,21 @@ function AuthenticatedV2Application({
 
         )}
 
+
+        {/* ==================================================
+            DASHBOARD
+        ================================================== */}
+
         {page === "dashboard" && (
 
           <DashboardPage />
 
         )}
+
+
+        {/* ==================================================
+            CUSTOMERS
+        ================================================== */}
 
         {page === "customers" && (
 
@@ -1150,23 +1325,50 @@ function AuthenticatedV2Application({
 
         )}
 
+
+        {/* ==================================================
+            CUSTOMER DEPARTMENT
+        ================================================== */}
+
         {page === "customerDepartment" && (
 
           <CustomerDepartmentPage />
 
         )}
 
-        {page === "loans" && (
+
+        {/* ==================================================
+            LOANS
+        ================================================== */}
+        
+        {page === "loans" && !loanStudioOpen && (
 
           <LoansPage />
 
         )}
+
+
+        {page === "loans" && loanStudioOpen && (
+
+          <LoanStudio />
+
+        )}
+
+
+        {/* ==================================================
+            COLLECTIONS
+        ================================================== */}
 
         {page === "collections" && (
 
           <CollectionsPage />
 
         )}
+
+
+        {/* ==================================================
+            REPORTS
+        ================================================== */}
 
         {page === "reports" && (
 
@@ -1181,6 +1383,7 @@ function AuthenticatedV2Application({
   );
 
 }
+
 
 // ============================================================
 // ROOT V2 APPLICATION
@@ -1199,6 +1402,7 @@ export default function App() {
   );
 
 }
+
 
 // ============================================================
 // END
