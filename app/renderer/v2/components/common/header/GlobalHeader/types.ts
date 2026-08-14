@@ -9,4 +9,8 @@ export interface GlobalHeaderProps {
 
   department: string;
 
+  onBack: () => void;
+
+  canGoBack: boolean;
+
 }

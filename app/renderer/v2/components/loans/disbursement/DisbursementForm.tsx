@@ -6,51 +6,58 @@
 //
 // RESPONSIBILITY:
 // - Collect disbursement date
-// - Collect disbursement amount
-// - Select primary payment mode
+// - Display calculated net disbursement amount
+// - Disbursement amount is NOT manually editable
 // - Controlled by LoanStudio
+//
+// IMPORTANT:
+// - Net Disbursement is calculated by LoanStudio.
+// - Processing Fee is already deducted before reaching here.
+// - Advance Deduction is already deducted before reaching here.
+// - Step 6 must never allow manual amount override.
 //
 // ============================================================
 
-import type { CSSProperties } from "react";
+import SummaryCard from "../../common/cards/SummaryCard";
 
 import {
   FormField,
-  SelectInput,
   TextInput,
 } from "../../common";
 
-// ============================================================
-// STYLES
-// ============================================================
-
-const wrapperStyle: CSSProperties = {
-  display: "flex",
-  flexDirection: "column",
-  gap: "20px",
-};
+import {
+  disbursementFormStyle,
+  fieldsGridStyle,
+  fieldStyle,
+  inputWrapperStyle,
+  dateInputStyle,
+  amountInputStyle,
+} from "./DisbursementForm.styles";
 
 // ============================================================
 // TYPES
 // ============================================================
 
 interface DisbursementFormProps {
-
   disbursementDate?: string;
 
-  disbursementAmount?: string;
-
-  paymentMode?: string;
+  /**
+   * Calculated Net Disbursement.
+   *
+   * This value comes from LoanStudio.
+   *
+   * Formula:
+   *
+   * Principal
+   * - Processing Fee
+   * - Advance Deduction
+   * = Net Disbursement
+   *
+   * User must NOT manually edit this amount.
+   */
+  netDisbursement?: number;
 
   onDisbursementDateChange?: (
-    value: string,
-  ) => void;
-
-  onDisbursementAmountChange?: (
-    value: string,
-  ) => void;
-
-  onPaymentModeChange?: (
     value: string,
   ) => void;
 }
@@ -60,118 +67,140 @@ interface DisbursementFormProps {
 // ============================================================
 
 export default function DisbursementForm({
-
   disbursementDate = "",
 
-  disbursementAmount = "0",
-
-  paymentMode = "cash",
+  netDisbursement = 0,
 
   onDisbursementDateChange,
 
-  onDisbursementAmountChange,
-
-  onPaymentModeChange,
-
 }: DisbursementFormProps) {
 
-  return (
+  // ==========================================================
+  // SAFE DISPLAY VALUE
+  // ==========================================================
 
+  const calculatedDisbursement =
+    Number.isFinite(
+      netDisbursement,
+    )
+      ? Math.max(
+          0,
+          netDisbursement,
+        )
+      : 0;
+
+  // ==========================================================
+  // RENDER
+  // ==========================================================
+
+  return (
     <div
-      style={wrapperStyle}
+      style={
+        disbursementFormStyle
+      }
     >
 
-      <FormField
-        label="Disbursement Date"
-        required
+      <SummaryCard
+        title="Disbursement Mode"
       >
 
-        <TextInput
-          type="date"
-          value={
-            disbursementDate
+        <div
+          style={
+            fieldsGridStyle
           }
-          onChange={(
-            event,
-          ) => {
+        >
 
-            onDisbursementDateChange?.(
-              event.target.value,
-            );
+          {/* =================================================
+              DISBURSEMENT DATE
+          ================================================= */}
 
-          }}
-        />
+          <div
+            style={
+              fieldStyle
+            }
+          >
 
-      </FormField>
+            <FormField
+              label="Disbursement Date"
+              required
+            >
+
+              <div
+                style={
+                  inputWrapperStyle
+                }
+              >
+
+                <TextInput
+                  type="date"
+                  value={
+                    disbursementDate
+                  }
+                  style={
+                    dateInputStyle
+                  }
+                  onChange={(
+                    event,
+                  ) => {
+
+                    onDisbursementDateChange?.(
+                      event.target.value,
+                    );
+
+                  }}
+                />
+
+              </div>
+
+            </FormField>
+
+          </div>
 
 
-      <FormField
-        label="Disbursement Amount"
-        required
-      >
+          {/* =================================================
+              NET DISBURSEMENT
+          ================================================= */}
 
-        <TextInput
-          type="number"
-          value={
-            disbursementAmount
-          }
-          onChange={(
-            event,
-          ) => {
+          <div
+            style={
+              fieldStyle
+            }
+          >
 
-            onDisbursementAmountChange?.(
-              event.target.value,
-            );
+            <FormField
+              label="Disbursement Amount"
+              required
+            >
 
-          }}
-          placeholder="Enter amount"
-        />
+              <div
+                style={
+                  inputWrapperStyle
+                }
+              >
 
-      </FormField>
+                <TextInput
+                  type="number"
+                  value={
+                    calculatedDisbursement
+                  }
+                  readOnly
+                  disabled
+                  style={
+                    amountInputStyle
+                  }
+                />
 
+              </div>
 
-      <FormField
-        label="Payment Mode"
-        required
-      >
+            </FormField>
 
-        <SelectInput
-          value={
-            paymentMode
-          }
-          onChange={(
-            event,
-          ) => {
+          </div>
 
-            onPaymentModeChange?.(
-              event.target.value,
-            );
+        </div>
 
-          }}
-          options={[
-            {
-              label: "Cash",
-              value: "cash",
-            },
-            {
-              label: "Bank Transfer",
-              value: "bank",
-            },
-            {
-              label: "UPI",
-              value: "upi",
-            },
-            {
-              label: "Cheque",
-              value: "cheque",
-            },
-          ]}
-        />
-
-      </FormField>
+      </SummaryCard>
 
     </div>
-
   );
 }
 

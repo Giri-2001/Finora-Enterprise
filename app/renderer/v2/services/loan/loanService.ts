@@ -24,6 +24,16 @@
 // - Repository owns persistence implementation.
 // - Service owns application-level Loan operations.
 //
+// DUPLICATE LOAN RULE:
+//
+// - An ACTIVE / RUNNING / PENDING / APPROVED / DISBURSED
+//   loan blocks creation of another matching active loan.
+//
+// - CLOSED / REJECTED loans do NOT block a new loan.
+//
+// - Customer + Loan Type + Amount alone must NEVER make
+//   a historical loan permanently unique.
+//
 // VERSION : 2.0
 // STATUS  : Production
 // ============================================================
@@ -80,16 +90,107 @@ export async function fetchLoan(
 
 
 // ============================================================
-// CHECK EXISTING LOAN
+// LOAN STATUS HELPERS
 // ============================================================
 //
-// Existing LoanStudio duplicate protection:
+// Only an unresolved / active loan should block creation
+// of another matching loan.
 //
-// - Customer ID
-// - Loan title
-// - Principal amount
+// Historical loans such as CLOSED or REJECTED must not
+// permanently prevent future borrowing.
 //
-// The UI must not inspect persisted Loan records directly.
+// ============================================================
+
+function normalizeLoanStatus(
+  status:
+    | Loan["status"]
+    | string
+    | undefined,
+):
+  string {
+
+  return String(
+    status ?? "",
+  )
+    .trim()
+    .toUpperCase();
+
+}
+
+
+function isBlockingLoanStatus(
+  status:
+    | Loan["status"]
+    | string
+    | undefined,
+):
+  boolean {
+
+  const normalizedStatus =
+    normalizeLoanStatus(
+      status,
+    );
+
+
+  // ==========================================================
+  // ACTIVE / UNRESOLVED LOAN STATUSES
+  // ==========================================================
+  //
+  // These statuses represent a loan that is still active,
+  // being processed, approved, or already disbursed.
+  //
+  // Such a loan should block another matching active loan.
+  //
+  // ==========================================================
+
+  return (
+
+    normalizedStatus ===
+      "ACTIVE"
+
+    ||
+
+    normalizedStatus ===
+      "RUNNING"
+
+    ||
+
+    normalizedStatus ===
+      "PENDING"
+
+    ||
+
+    normalizedStatus ===
+      "PENDING APPROVAL"
+
+    ||
+
+    normalizedStatus ===
+      "APPROVED"
+
+    ||
+
+    normalizedStatus ===
+      "DISBURSED"
+
+  );
+
+}
+
+
+// ============================================================
+// CHECK EXISTING ACTIVE LOAN
+// ============================================================
+//
+// BUSINESS RULE:
+//
+// Customer + Loan Title + Principal Amount is checked only
+// against an ACTIVE / UNRESOLVED loan.
+//
+// CLOSED / REJECTED historical loans are ignored.
+//
+// This prevents duplicate active loans without preventing
+// legitimate future loans after an old loan is completed.
 //
 // ============================================================
 
@@ -100,27 +201,143 @@ export async function hasExistingLoan(
 ):
   Promise<boolean> {
 
-  if (!customerId) {
+  // ==========================================================
+  // CUSTOMER VALIDATION
+  // ==========================================================
+
+  if (
+    !customerId
+  ) {
 
     return false;
 
   }
 
 
+  // ==========================================================
+  // AMOUNT VALIDATION
+  // ==========================================================
+
+  if (
+    !Number.isFinite(
+      amount,
+    )
+  ) {
+
+    return false;
+
+  }
+
+
+  // ==========================================================
+  // LOAD LOANS THROUGH REPOSITORY
+  // ==========================================================
+
   const loans =
     await getLoans();
 
 
+  // ==========================================================
+  // NORMALIZE SEARCH VALUES
+  // ==========================================================
+
+  const normalizedCustomerId =
+    customerId
+      .trim();
+
+
+  const normalizedLoanTitle =
+    loanTitle
+      .trim()
+      .toLowerCase();
+
+
+  // ==========================================================
+  // ACTIVE DUPLICATE CHECK
+  // ==========================================================
+
   return loans.some(
-    (loan: Loan) =>
-      loan.customerId ===
-        customerId &&
+    (
+      loan: Loan,
+    ) => {
 
-      loan.title ===
-        loanTitle &&
+      // ========================================================
+      // CUSTOMER MATCH
+      // ========================================================
 
-      loan.amount ===
-        amount,
+      const sameCustomer =
+        String(
+          loan.customerId ?? "",
+        )
+          .trim() ===
+        normalizedCustomerId;
+
+
+      if (
+        !sameCustomer
+      ) {
+
+        return false;
+
+      }
+
+
+      // ========================================================
+      // LOAN TITLE MATCH
+      // ========================================================
+
+      const sameLoanTitle =
+        String(
+          loan.title ?? "",
+        )
+          .trim()
+          .toLowerCase() ===
+        normalizedLoanTitle;
+
+
+      if (
+        !sameLoanTitle
+      ) {
+
+        return false;
+
+      }
+
+
+      // ========================================================
+      // PRINCIPAL AMOUNT MATCH
+      // ========================================================
+
+      const sameAmount =
+        Number(
+          loan.amount ?? 0,
+        ) ===
+        amount;
+
+
+      if (
+        !sameAmount
+      ) {
+
+        return false;
+
+      }
+
+
+      // ========================================================
+      // ACTIVE STATUS CHECK
+      // ========================================================
+      //
+      // CLOSED / REJECTED historical loans are intentionally
+      // ignored.
+      //
+      // ========================================================
+
+      return isBlockingLoanStatus(
+        loan.status,
+      );
+
+    },
   );
 
 }

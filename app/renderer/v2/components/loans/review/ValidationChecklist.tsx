@@ -18,7 +18,6 @@ import type {
 import {
   cardStyle,
   checklistStyle,
-  emptyStateStyle,
 } from "./ValidationChecklist.styles";
 
 
@@ -64,6 +63,7 @@ export default function ValidationChecklist({
   review,
 }: ValidationChecklistProps) {
 
+
   /* ---------------------------------------------------------
   VALIDATION RULES
   --------------------------------------------------------- */
@@ -73,22 +73,19 @@ export default function ValidationChecklist({
     hasText(review.customerName) &&
     hasText(review.phoneNumber);
 
+
   const loanAmountComplete =
     hasPositiveNumber(review.loanAmount);
+
 
   const repaymentComplete =
     hasText(review.repaymentType) &&
     hasText(review.duration);
 
-  const interestComplete =
-    Number.isFinite(review.interestRate) &&
-    review.interestRate >= 0;
 
   const guarantorComplete =
     hasText(review.guarantorName);
 
-  const paymentModeComplete =
-    hasText(review.paymentMode);
 
   const finalReviewComplete =
     hasText(review.customerName) &&
@@ -114,16 +111,8 @@ export default function ValidationChecklist({
       complete: repaymentComplete,
     },
     {
-      label: "Interest Configuration",
-      complete: interestComplete,
-    },
-    {
       label: "Guarantor Details",
       complete: guarantorComplete,
-    },
-    {
-      label: "Payment Mode",
-      complete: paymentModeComplete,
     },
     {
       label: "Final Review Data",
@@ -197,11 +186,13 @@ export default function ValidationChecklist({
                   {item.complete ? "✓" : "!"}
                 </span>
 
+
                 <span>
                   {item.label}
                 </span>
 
               </span>
+
 
               <span
                 style={{

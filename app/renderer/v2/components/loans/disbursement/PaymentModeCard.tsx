@@ -11,6 +11,8 @@
 //
 // ============================================================
 
+import type { CSSProperties } from "react";
+
 import SummaryCard from "../../common/cards/SummaryCard";
 
 import {
@@ -19,11 +21,30 @@ import {
 } from "../../common";
 
 // ============================================================
+// STYLES
+// ============================================================
+
+const fieldsStyle: CSSProperties = {
+  width: "100%",
+  minWidth: 0,
+
+  display: "grid",
+
+  gridTemplateColumns:
+    "minmax(0, 1fr) minmax(0, 1fr)",
+
+  gap: "10px",
+
+  alignItems: "start",
+
+  boxSizing: "border-box",
+};
+
+// ============================================================
 // TYPES
 // ============================================================
 
 interface PaymentModeCardProps {
-
   paymentMode?: string;
 
   transactionStatus?: string;
@@ -42,7 +63,6 @@ interface PaymentModeCardProps {
 // ============================================================
 
 export default function PaymentModeCard({
-
   paymentMode = "cash",
 
   transactionStatus = "pending",
@@ -50,93 +70,95 @@ export default function PaymentModeCard({
   onPaymentModeChange,
 
   onTransactionStatusChange,
-
 }: PaymentModeCardProps) {
-
   return (
-
     <SummaryCard
       title="Payment Mode"
     >
 
-      <FormField
-        label="Primary Payment Mode"
-        required
+      <div
+        style={fieldsStyle}
       >
 
-        <SelectInput
-          value={
-            paymentMode
-          }
-          onChange={(
-            event,
-          ) => {
+        {/* ==================================================
+            PRIMARY PAYMENT MODE
+        ================================================== */}
 
-            onPaymentModeChange?.(
-              event.target.value,
-            );
+        <FormField
+          label="Primary Payment Mode"
+          required
+        >
+          <SelectInput
+            value={
+              paymentMode
+            }
+            onChange={(
+              event,
+            ) => {
+              onPaymentModeChange?.(
+                event.target.value,
+              );
+            }}
+            options={[
+              {
+                label: "Cash",
+                value: "cash",
+              },
+              {
+                label: "Bank Transfer",
+                value: "bank",
+              },
+              {
+                label: "UPI",
+                value: "upi",
+              },
+              {
+                label: "Cheque",
+                value: "cheque",
+              },
+            ]}
+          />
+        </FormField>
 
-          }}
-          options={[
-            {
-              label: "Cash",
-              value: "cash",
-            },
-            {
-              label: "Bank Transfer",
-              value: "bank",
-            },
-            {
-              label: "UPI",
-              value: "upi",
-            },
-            {
-              label: "Cheque",
-              value: "cheque",
-            },
-          ]}
-        />
 
-      </FormField>
+        {/* ==================================================
+            TRANSACTION STATUS
+        ================================================== */}
 
+        <FormField
+          label="Transaction Status"
+        >
+          <SelectInput
+            value={
+              transactionStatus
+            }
+            onChange={(
+              event,
+            ) => {
+              onTransactionStatusChange?.(
+                event.target.value,
+              );
+            }}
+            options={[
+              {
+                label: "Pending",
+                value: "pending",
+              },
+              {
+                label: "Completed",
+                value: "completed",
+              },
+              {
+                label: "Failed",
+                value: "failed",
+              },
+            ]}
+          />
+        </FormField>
 
-      <FormField
-        label="Transaction Status"
-      >
-
-        <SelectInput
-          value={
-            transactionStatus
-          }
-          onChange={(
-            event,
-          ) => {
-
-            onTransactionStatusChange?.(
-              event.target.value,
-            );
-
-          }}
-          options={[
-            {
-              label: "Pending",
-              value: "pending",
-            },
-            {
-              label: "Completed",
-              value: "completed",
-            },
-            {
-              label: "Failed",
-              value: "failed",
-            },
-          ]}
-        />
-
-      </FormField>
+      </div>
 
     </SummaryCard>
-
   );
 }
 

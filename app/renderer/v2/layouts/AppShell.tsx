@@ -1,11 +1,13 @@
 // ============================================================
 // FINORA ENTERPRISE OS™
 //
-// V2 APPLICATION SHELL
+// V2 APPLICATION SHELL™
 //
 // RESPONSIBILITY:
 //
 // - Provide the global authenticated application shell
+// - Provide centralized application navigation
+// - Provide global Back navigation
 // - Provide global logout access
 // - Host the active V2 page
 // - Establish the exact viewport height
@@ -18,9 +20,9 @@
 // - Does NOT initialize storage.
 // - Does NOT access filesystem.
 // - Does NOT use Electron IPC.
-// - Logout is delegated to the authenticated application.
+// - Navigation is delegated to the authenticated application.
 //
-// VERSION : 2.2
+// VERSION : 2.3
 // STATUS  : Production
 // ============================================================
 
@@ -31,6 +33,8 @@
 import type {
   ReactNode,
 } from "react";
+
+import GlobalHeader from "../components/common/header/GlobalHeader";
 
 // ============================================================
 // PAGE TYPE
@@ -62,6 +66,12 @@ interface AppShellProps {
       AppPage,
   ) => void;
 
+  onBack:
+    () => void;
+
+  canGoBack:
+    boolean;
+
   onLogout:
     () => void;
 }
@@ -74,7 +84,15 @@ export default function AppShell({
 
   children,
 
-  onLogout,
+  page,
+
+  onNavigate: _onNavigate,
+
+  onBack,
+
+  canGoBack,
+
+  onLogout: _onLogout,
 
 }: AppShellProps) {
 
@@ -121,66 +139,49 @@ export default function AppShell({
     >
 
       {/* =====================================================
-          GLOBAL LOGOUT CONTROL
+          GLOBAL HEADER
 
-          Kept as the application-level fallback control.
+          AppShell owns the single global header.
+
+          This prevents StudioLayout from creating duplicate
+          headers and keeps Back navigation centralized.
       ===================================================== */}
 
-      <button
-        type="button"
-        onClick={onLogout}
-        aria-label="Logout from FINORA Enterprise"
-        style={{
-          position: "fixed",
+      <GlobalHeader
 
-          top: 18,
+        department={
+          page === "reception"
+            ? "Reception"
+            : page === "dashboard"
+              ? "Dashboard"
+              : page === "customers"
+                ? "Customers"
+                : page === "customerDepartment"
+                  ? "Customer Department"
+                  : page === "loans"
+                    ? "Loans"
+                    : page === "collections"
+                      ? "Collections"
+                      : page === "reports"
+                        ? "Reports"
+                        : "Reception"
+        }
 
-          right: 18,
+        onBack={
+          onBack
+        }
 
-          zIndex: 1000,
+        canGoBack={
+          canGoBack
+        }
 
-          padding:
-            "9px 16px",
-
-          borderRadius: 8,
-
-          border:
-            "1px solid rgba(255,255,255,0.18)",
-
-          background:
-            "rgba(15,23,42,0.92)",
-
-          color:
-            "#ffffff",
-
-          cursor:
-            "pointer",
-
-          fontSize:
-            13,
-
-          fontWeight:
-            600,
-
-          letterSpacing:
-            0.2,
-
-          boxShadow:
-            "0 6px 20px rgba(15,23,42,0.18)",
-
-          backdropFilter:
-            "blur(8px)",
-        }}
-      >
-        Logout
-      </button>
+      />
 
       {/* =====================================================
           ACTIVE V2 PAGE
 
-          Child pages now receive the exact remaining
-          viewport height because AppShell is a definite
-          100vh flex container.
+          Child pages receive the exact remaining viewport
+          height below the GlobalHeader.
       ===================================================== */}
 
       <div

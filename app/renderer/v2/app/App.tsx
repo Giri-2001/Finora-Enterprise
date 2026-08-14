@@ -11,6 +11,8 @@
 // - Establish REAL / DEMO data context after authentication
 // - Clear Business Context during logout
 // - Manage top-level page navigation
+// - Maintain FINORA navigation history
+// - Preserve current page across browser/app refresh
 // - Route Reception departments to their V2 pages
 // - Enforce authenticated session inactivity protection
 //
@@ -19,44 +21,22 @@
 // - Storage initialization is handled by
 //   app/renderer/main.tsx before React mounts.
 // - This file does NOT initialize storage.
-// - This file does NOT access localStorage directly.
+// - This file does NOT access localStorage.
 // - This file does NOT access filesystem.
 // - This file does NOT use Electron IPC.
 // - Authentication implementation remains inside authStore.
 // - Business Context is established explicitly after authentication.
 // - BusinessContextProvider remains independent from authStore.
 //
-// ARCHITECTURE:
+// NAVIGATION:
 //
-// main.tsx
-//      ↓
-// storageBootstrap
-//      ↓
-// V2 App
-//      ↓
-// BusinessContextProvider
-//      ↓
-// AuthenticatedApplication
-//      ↓
-// SessionGuard
-//      ↓
-// Authenticated V2 Application
+// - Top-level FINORA pages are owned here.
+// - Navigation history is maintained separately from
+//   React page rendering.
+// - Browser History API is used only to survive refresh.
+// - Domain repositories and storage remain untouched.
 //
-// AUTHENTICATED DATA CONTEXT:
-//
-// REAL
-//      ↓
-// ownerId
-//      ↓
-// production owner storage
-//
-// DEMO
-//      ↓
-// demoId
-//      ↓
-// isolated demonstration storage
-//
-// VERSION : 2.2
+// VERSION : 2.3
 // STATUS  : Production
 // ============================================================
 
@@ -137,6 +117,197 @@ type Page =
 const DEFAULT_PAGE: Page =
   "reception";
 
+const NAVIGATION_STATE_KEY =
+  "finora-navigation";
+
+const NAVIGATION_EVENT =
+  "finora-navigation-change";
+
+// ============================================================
+// CUSTOMER WIZARD NAVIGATION EVENTS
+// ============================================================
+//
+// Customer Wizard remains a nested workflow inside
+// Customer Department.
+//
+// It is intentionally NOT added to the top-level Page type.
+//
+// These events create a small navigation bridge between:
+//
+// App.tsx
+//     ↓
+// CustomerDepartment
+//     ↓
+// CustomerWizard
+//
+// This allows the single GlobalHeader Back button to close
+// the Wizard before popping the top-level navigation history.
+// ============================================================
+
+const CUSTOMER_WIZARD_OPEN_EVENT =
+  "FINORA_CUSTOMER_WIZARD_OPEN";
+
+const CUSTOMER_WIZARD_CLOSE_EVENT =
+  "FINORA_CUSTOMER_WIZARD_CLOSE";
+
+const CUSTOMER_WIZARD_GLOBAL_BACK_EVENT =
+  "FINORA_CUSTOMER_WIZARD_GLOBAL_BACK";
+
+// ============================================================
+// NAVIGATION STATE
+// ============================================================
+//
+// This state is intentionally stored in the browser history
+// rather than localStorage.
+//
+// Reason:
+//
+// - Ctrl + R must preserve the active page.
+// - FINORA should not create another application storage
+//   responsibility just for UI navigation.
+// - Browser refresh naturally restores history.state.
+//
+// ============================================================
+
+interface NavigationState {
+
+  page:
+    Page;
+
+  stack:
+    Page[];
+
+}
+
+// ============================================================
+// PAGE VALIDATION
+// ============================================================
+
+function isValidPage(
+  value: unknown,
+): value is Page {
+
+  return (
+    value === "reception" ||
+    value === "dashboard" ||
+    value === "customers" ||
+    value === "customerDepartment" ||
+    value === "loans" ||
+    value === "collections" ||
+    value === "reports"
+  );
+
+}
+
+// ============================================================
+// DEFAULT NAVIGATION STATE
+// ============================================================
+
+function createDefaultNavigationState():
+  NavigationState {
+
+  return {
+
+    page:
+      DEFAULT_PAGE,
+
+    stack: [],
+
+  };
+
+}
+
+// ============================================================
+// READ BROWSER NAVIGATION STATE
+// ============================================================
+
+function readNavigationState():
+  NavigationState {
+
+  const state =
+    window.history.state;
+
+  if (
+    !state ||
+    state[NAVIGATION_STATE_KEY] === undefined
+  ) {
+
+    return createDefaultNavigationState();
+
+  }
+
+  const navigation =
+    state[NAVIGATION_STATE_KEY] as
+      Partial<NavigationState>;
+
+  if (
+    !isValidPage(
+      navigation.page,
+    )
+  ) {
+
+    return createDefaultNavigationState();
+
+  }
+
+  const stack =
+    Array.isArray(
+      navigation.stack,
+    )
+      ? navigation.stack.filter(
+          isValidPage,
+        )
+      : [];
+
+  return {
+
+    page:
+      navigation.page,
+
+    stack,
+
+  };
+
+}
+
+// ============================================================
+// WRITE BROWSER NAVIGATION STATE
+// ============================================================
+
+function writeNavigationState(
+  navigation: NavigationState,
+  replace = false,
+): void {
+
+  const state = {
+
+    ...window.history.state,
+
+    [NAVIGATION_STATE_KEY]:
+      navigation,
+
+  };
+
+  if (replace) {
+
+    window.history.replaceState(
+      state,
+      "",
+      window.location.href,
+    );
+
+    return;
+
+  }
+
+  window.history.pushState(
+    state,
+    "",
+    window.location.href,
+  );
+
+}
+
 // ============================================================
 // LOADING SCREEN
 // ============================================================
@@ -194,18 +365,13 @@ function ContextLoadingScreen() {
       </div>
 
     </div>
+
   );
 }
 
 // ============================================================
 // AUTHENTICATED APPLICATION
 // ============================================================
-//
-// This component is deliberately separated from the provider.
-//
-// It can safely use useBusinessContext() because the parent
-// BusinessContextProvider has already been mounted.
-//
 
 function AuthenticatedApplication() {
 
@@ -246,10 +412,6 @@ function AuthenticatedApplication() {
 
     async function establishContext(): Promise<void> {
 
-      // ------------------------------------------------------
-      // NO SESSION
-      // ------------------------------------------------------
-
       if (!session) {
 
         if (active) {
@@ -259,14 +421,12 @@ function AuthenticatedApplication() {
           setContextReady(true);
 
           setContextError(null);
+
         }
 
         return;
-      }
 
-      // ------------------------------------------------------
-      // SESSION REQUIRES COMPLETE BUSINESS CONTEXT
-      // ------------------------------------------------------
+      }
 
       if (
         !session.ownerId ||
@@ -283,19 +443,12 @@ function AuthenticatedApplication() {
           setContextError(
             "The authenticated user does not have a complete FINORA business context.",
           );
+
         }
 
         return;
-      }
 
-      // ------------------------------------------------------
-      // DEMO SESSION SAFETY
-      //
-      // DEMO sessions must carry a demoId.
-      //
-      // A DEMO session without demoId must never be allowed
-      // to establish a business/storage context.
-      // ------------------------------------------------------
+      }
 
       if (
         session.dataContext === "DEMO" &&
@@ -311,34 +464,20 @@ function AuthenticatedApplication() {
           setContextError(
             "The authenticated DEMO session does not contain a valid Demo ID.",
           );
+
         }
 
         return;
-      }
 
-      // ------------------------------------------------------
-      // BEGIN CONTEXT INITIALIZATION
-      // ------------------------------------------------------
+      }
 
       if (active) {
 
         setContextReady(false);
 
         setContextError(null);
-      }
 
-      // ------------------------------------------------------
-      // ESTABLISH BUSINESS + DATA CONTEXT
-      //
-      // REAL:
-      // - ownerId is used by StorageManager.
-      //
-      // DEMO:
-      // - demoId is used by StorageManager.
-      //
-      // BusinessId and BranchId remain application/business
-      // boundary identifiers.
-      // ------------------------------------------------------
+      }
 
       const result =
         await setContext({
@@ -361,7 +500,9 @@ function AuthenticatedApplication() {
         });
 
       if (!active) {
+
         return;
+
       }
 
       if (!result.success) {
@@ -374,11 +515,13 @@ function AuthenticatedApplication() {
         );
 
         return;
+
       }
 
       setContextReady(true);
 
       setContextError(null);
+
     }
 
     void establishContext();
@@ -386,6 +529,7 @@ function AuthenticatedApplication() {
     return () => {
 
       active = false;
+
     };
 
   }, [
@@ -406,10 +550,24 @@ function AuthenticatedApplication() {
     setSession(
       nextSession,
     );
+
   }
 
   // ==========================================================
   // LOGOUT
+  // ==========================================================
+  //
+  // IMPORTANT:
+  //
+  // customerWizardOpen belongs to
+  // AuthenticatedV2Application().
+  //
+  // It must NOT be accessed here.
+  //
+  // When logout occurs, AuthenticatedV2Application unmounts
+  // automatically because session becomes null, so its local
+  // Customer Wizard state is naturally destroyed.
+  //
   // ==========================================================
 
   function handleLogout(): void {
@@ -423,6 +581,19 @@ function AuthenticatedApplication() {
     setContextReady(true);
 
     setContextError(null);
+
+    // --------------------------------------------------------
+    // Clear FINORA navigation history.
+    // --------------------------------------------------------
+
+    const navigation =
+      createDefaultNavigationState();
+
+    writeNavigationState(
+      navigation,
+      true,
+    );
+
   }
 
   // ==========================================================
@@ -440,6 +611,7 @@ function AuthenticatedApplication() {
       />
 
     );
+
   }
 
   // ==========================================================
@@ -517,7 +689,9 @@ function AuthenticatedApplication() {
         </div>
 
       </div>
+
     );
+
   }
 
   // ==========================================================
@@ -532,29 +706,27 @@ function AuthenticatedApplication() {
     return (
       <ContextLoadingScreen />
     );
+
   }
 
   // ==========================================================
-  // PAGE STATE
+  // AUTHENTICATED APPLICATION
   // ==========================================================
 
   return (
+
     <AuthenticatedV2Application
       session={session}
       onLogout={handleLogout}
     />
+
   );
+
 }
 
 // ============================================================
-// AUTHENTICATED V2 APPLICATION SHELL
+// AUTHENTICATED V2 APPLICATION
 // ============================================================
-//
-// SessionGuard is intentionally mounted only around the
-// authenticated application.
-//
-// Login page is therefore outside SessionGuard.
-//
 
 interface AuthenticatedV2ApplicationProps {
 
@@ -563,19 +735,307 @@ interface AuthenticatedV2ApplicationProps {
 
   onLogout():
     void;
+
 }
 
 function AuthenticatedV2Application({
-  session,
+  session: _session,
   onLogout,
 }: AuthenticatedV2ApplicationProps) {
 
+  // ==========================================================
+  // INITIAL NAVIGATION
+  // ==========================================================
+
   const [
-    page,
-    setPage,
-  ] = useState<Page>(
-    DEFAULT_PAGE,
+    navigation,
+    setNavigation,
+  ] = useState<NavigationState>(
+    () => {
+
+      const current =
+        readNavigationState();
+
+      writeNavigationState(
+        current,
+        true,
+      );
+
+      return current;
+
+    },
   );
+
+  const page =
+    navigation.page;
+
+  // ==========================================================
+  // CUSTOMER WIZARD NAVIGATION STATE
+  // ==========================================================
+  //
+  // Customer Wizard remains a nested Customer Department
+  // workflow.
+  //
+  // It is intentionally NOT promoted to a top-level Page.
+  //
+  // This state allows the centralized GlobalHeader Back
+  // operation to close the Wizard before popping the
+  // top-level navigation history.
+  //
+  const [
+    customerWizardOpen,
+    setCustomerWizardOpen,
+  ] = useState<boolean>(
+    false,
+  );
+
+  // ==========================================================
+  // CUSTOMER WIZARD NAVIGATION BRIDGE
+  // ==========================================================
+
+  useEffect(() => {
+
+    function handleWizardOpen(): void {
+
+      setCustomerWizardOpen(
+        true,
+      );
+
+    }
+
+    function handleWizardClose(): void {
+
+      setCustomerWizardOpen(
+        false,
+      );
+
+    }
+
+    window.addEventListener(
+      CUSTOMER_WIZARD_OPEN_EVENT,
+      handleWizardOpen,
+    );
+
+    window.addEventListener(
+      CUSTOMER_WIZARD_CLOSE_EVENT,
+      handleWizardClose,
+    );
+
+    return () => {
+
+      window.removeEventListener(
+        CUSTOMER_WIZARD_OPEN_EVENT,
+        handleWizardOpen,
+      );
+
+      window.removeEventListener(
+        CUSTOMER_WIZARD_CLOSE_EVENT,
+        handleWizardClose,
+      );
+
+    };
+
+  }, []);
+
+  // ==========================================================
+  // NAVIGATION CHANGE EVENT
+  // ==========================================================
+  //
+  // GlobalHeader / other shell-level controls can trigger
+  // browser history navigation.
+  //
+  // The React page state follows browser history.
+  //
+  // ==========================================================
+
+  useEffect(() => {
+
+    function handlePopState(): void {
+
+      const next =
+        readNavigationState();
+
+      setNavigation(
+        next,
+      );
+
+      window.dispatchEvent(
+        new CustomEvent(
+          NAVIGATION_EVENT,
+        ),
+      );
+
+    }
+
+    window.addEventListener(
+      "popstate",
+      handlePopState,
+    );
+
+    return () => {
+
+      window.removeEventListener(
+        "popstate",
+        handlePopState,
+      );
+
+    };
+
+  }, []);
+
+  // ==========================================================
+  // TOP-LEVEL NAVIGATION
+  // ==========================================================
+
+  function handleNavigate(
+    nextPage: Page,
+  ): void {
+
+    if (
+      !isValidPage(
+        nextPage,
+      )
+    ) {
+
+      return;
+
+    }
+
+    if (
+      nextPage ===
+      navigation.page
+    ) {
+
+      return;
+
+    }
+
+    const nextNavigation:
+      NavigationState = {
+
+      page:
+        nextPage,
+
+      stack: [
+        ...navigation.stack,
+        navigation.page,
+      ],
+
+    };
+
+    writeNavigationState(
+      nextNavigation,
+    );
+
+    setNavigation(
+      nextNavigation,
+    );
+
+    window.dispatchEvent(
+      new CustomEvent(
+        NAVIGATION_EVENT,
+      ),
+    );
+
+  }
+
+  // ==========================================================
+  // BACK NAVIGATION
+  // ==========================================================
+  //
+  // This is the single top-level FINORA Back operation.
+  //
+  // Customer Wizard is checked first because it is a nested
+  // workflow inside Customer Department.
+  //
+  // Example:
+  //
+  // Reception
+  //   ↓
+  // Customer Department
+  //   ↓
+  // Customer Wizard
+  //
+  // Global Back:
+  //
+  // Customer Wizard → Customer Department
+  //
+  // Global Back:
+  //
+  // Customer Department → Reception
+  //
+  // ==========================================================
+
+  function handleBack(): void {
+
+    // ========================================================
+    // CUSTOMER WIZARD FIRST
+    // ========================================================
+
+    if (
+      customerWizardOpen
+    ) {
+
+      window.dispatchEvent(
+        new CustomEvent(
+          CUSTOMER_WIZARD_GLOBAL_BACK_EVENT,
+        ),
+      );
+
+      return;
+
+    }
+
+    // ========================================================
+    // NORMAL TOP-LEVEL BACK
+    // ========================================================
+
+    if (
+      navigation.stack.length === 0
+    ) {
+
+      return;
+
+    }
+
+    const previousPage =
+      navigation.stack[
+        navigation.stack.length - 1
+      ];
+
+    const remainingStack =
+      navigation.stack.slice(
+        0,
+        -1,
+      );
+
+    const nextNavigation:
+      NavigationState = {
+
+      page:
+        previousPage,
+
+      stack:
+        remainingStack,
+
+    };
+
+    writeNavigationState(
+      nextNavigation,
+      true,
+    );
+
+    setNavigation(
+      nextNavigation,
+    );
+
+    window.dispatchEvent(
+      new CustomEvent(
+        NAVIGATION_EVENT,
+      ),
+    );
+
+  }
 
   // ==========================================================
   // RECEPTION NAVIGATION
@@ -589,7 +1049,7 @@ function AuthenticatedV2Application({
 
       case "customers":
 
-        setPage(
+        handleNavigate(
           "customerDepartment",
         );
 
@@ -597,7 +1057,7 @@ function AuthenticatedV2Application({
 
       case "loans":
 
-        setPage(
+        handleNavigate(
           "loans",
         );
 
@@ -605,7 +1065,7 @@ function AuthenticatedV2Application({
 
       case "collections":
 
-        setPage(
+        handleNavigate(
           "collections",
         );
 
@@ -613,7 +1073,7 @@ function AuthenticatedV2Application({
 
       case "reports":
 
-        setPage(
+        handleNavigate(
           "reports",
         );
 
@@ -638,7 +1098,9 @@ function AuthenticatedV2Application({
       default:
 
         break;
+
     }
+
   }
 
   // ==========================================================
@@ -651,8 +1113,19 @@ function AuthenticatedV2Application({
 
       <AppShell
         page={page}
-        onNavigate={setPage}
-        onLogout={onLogout}
+        onNavigate={
+          handleNavigate
+        }
+        onBack={
+          handleBack
+        }
+        canGoBack={
+          customerWizardOpen ||
+          navigation.stack.length > 0
+        }
+        onLogout={
+          onLogout
+        }
       >
 
         {page === "reception" && (
@@ -704,7 +1177,9 @@ function AuthenticatedV2Application({
       </AppShell>
 
     </SessionGuard>
+
   );
+
 }
 
 // ============================================================
@@ -720,7 +1195,9 @@ export default function App() {
       <AuthenticatedApplication />
 
     </BusinessContextProvider>
+
   );
+
 }
 
 // ============================================================

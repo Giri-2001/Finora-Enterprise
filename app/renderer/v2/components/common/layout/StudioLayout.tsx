@@ -3,23 +3,30 @@
 //
 // STUDIO LAYOUT™
 //
-// GLOBAL RESPONSIVE SHELL
+// GLOBAL RESPONSIVE WORKSPACE
 //
 // RESPONSIBILITY:
-// - Global studio header
+// - Provide the studio workspace below GlobalHeader
 // - Exact remaining viewport height
 // - Full-width studio workspace
 // - No unwanted outer spacing
-// - Studio owns the complete area below header
+// - Preserve child studio dimensions
 //
+// IMPORTANT:
+//
+// GlobalHeader is owned by AppShell.
+// StudioLayout MUST NOT render another GlobalHeader.
+//
+// ============================================================
+
+// ============================================================
+// IMPORTS
 // ============================================================
 
 import type {
   CSSProperties,
   ReactNode,
 } from "react";
-
-import GlobalHeader from "../header/GlobalHeader";
 
 // ============================================================
 // TYPES
@@ -71,10 +78,10 @@ const layoutStyle: CSSProperties = {
 //
 // IMPORTANT:
 //
-// NO padding here.
+// No padding here.
 //
-// The Studio must touch the GlobalHeader directly.
-// The LoanStudio itself occupies the complete area.
+// The Studio workspace occupies the complete area provided
+// by AppShell below the single GlobalHeader.
 //
 // ============================================================
 
@@ -125,29 +132,22 @@ export default function StudioLayout({
 
   children,
 
-  department = "Reception",
+  // ----------------------------------------------------------
+  // Kept for backward compatibility with existing callers.
+  // StudioLayout no longer owns the GlobalHeader.
+  // ----------------------------------------------------------
+
+  department: _department = "Reception",
 
   allowScroll = true,
 
-  showHeader = true,
+  showHeader: _showHeader = false,
 
 }: StudioLayoutProps) {
 
   return (
 
     <div style={layoutStyle}>
-
-      {/* =====================================================
-          GLOBAL HEADER
-      ===================================================== */}
-
-      {showHeader && (
-
-        <GlobalHeader
-          department={department}
-        />
-
-      )}
 
       {/* =====================================================
           FULL WORKSPACE

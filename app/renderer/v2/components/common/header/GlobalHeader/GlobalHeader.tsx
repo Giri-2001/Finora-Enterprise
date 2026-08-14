@@ -3,6 +3,14 @@
    GLOBAL HEADER™
 
    COMPONENT
+
+   RESPONSIBILITY:
+   - Render the single application-wide header
+   - Provide centralized Back navigation
+   - Preserve Reception navigation entry
+   - Display department title
+   - Display notifications
+   - Display admin profile
 =========================================================== */
 
 import type {
@@ -38,6 +46,10 @@ export default function GlobalHeader({
 
   department,
 
+  onBack,
+
+  canGoBack,
+
 }: GlobalHeaderProps) {
 
   return (
@@ -48,7 +60,119 @@ export default function GlobalHeader({
           LEFT
       ========================================== */}
 
-      <div style={leftStyle}>
+      <div
+        style={{
+          ...leftStyle,
+
+          display: "flex",
+
+          alignItems: "center",
+
+          gap: 12,
+        }}
+      >
+
+        {/* ==========================================
+            GLOBAL BACK BUTTON
+
+            IMPORTANT:
+
+            - This is the ONE application-wide Back
+              button.
+            - Navigation is handled by AppShell.
+            - No page-specific navigation logic exists
+              here.
+            - Disabled automatically when there is no
+              navigation history.
+        ========================================== */}
+
+        <button
+
+          type="button"
+
+          aria-label="Go back"
+
+          title={
+            canGoBack
+              ? "Back"
+              : "No previous page"
+          }
+
+          disabled={!canGoBack}
+
+          onClick={onBack}
+
+          style={{
+            width: 40,
+
+            height: 40,
+
+            minWidth: 40,
+
+            borderRadius: 10,
+
+            border:
+              "1px solid rgba(212, 175, 55, 0.45)",
+
+            background:
+              canGoBack
+                ? "rgba(255, 255, 255, 0.08)"
+                : "rgba(255, 255, 255, 0.03)",
+
+            color:
+              canGoBack
+                ? "#F4D27A"
+                : "rgba(244, 210, 122, 0.30)",
+
+            display: "flex",
+
+            alignItems: "center",
+
+            justifyContent: "center",
+
+            cursor:
+              canGoBack
+                ? "pointer"
+                : "default",
+
+            opacity:
+              canGoBack
+                ? 1
+                : 0.55,
+
+            transition:
+              "all 160ms ease",
+
+            padding: 0,
+
+            flexShrink: 0,
+
+            boxSizing: "border-box",
+          }}
+
+        >
+
+          <span
+            aria-hidden="true"
+            style={{
+              fontSize: 22,
+
+              lineHeight: 1,
+
+              fontWeight: 700,
+
+              transform:
+                "translateY(-1px)",
+            }}
+          >
+            ←
+          </span>
+
+        </button>
+
+        {/* ==========================================
+            RECEPTION LOGO
+        ========================================== */}
 
         <ReceptionLogo
 
@@ -56,6 +180,9 @@ export default function GlobalHeader({
 
             /* TODO:
                Navigate to Reception
+
+               Reception navigation remains controlled
+               by the authenticated application.
             */
 
           }}

@@ -553,5 +553,185 @@ export const step4CompactWorkspaceStyle: CSSProperties = {
 };
 
 // ============================================================
+// STEP 6 — DISBURSEMENT STUDIO
+//
+// Layout:
+// ┌──────────────────────────────────────┬───────────────────┐
+// │ Disbursement Form                    │ Preview           │
+// │ Payment Mode                         │ Draft             │
+// │ Receipt                              │                   │
+// │ Approval Actions                     │                   │
+// └──────────────────────────────────────┴───────────────────┘
+//
+// Goal:
+// - Compact enterprise layout
+// - Reduce unnecessary vertical whitespace
+// - Keep preview column visible
+// - Keep cards tightly grouped
+// - Step 1–5 completely untouched
+// ============================================================
+
+
+// ============================================================
+// STEP 6 WORKSPACE
+// ============================================================
+
+export const step6WorkspaceStyle: CSSProperties = {
+  width: "100%",
+  minWidth: 0,
+  minHeight: 0,
+
+  display: "grid",
+
+  gridTemplateRows: "auto minmax(0, auto)",
+
+  gap: "4px",
+
+  boxSizing: "border-box",
+
+  overflow: "visible",
+};
+
+
+// ============================================================
+// STEP 6 MAIN CONTENT
+// ============================================================
+
+// ============================================================
+// STEP 6 MAIN CONTENT
+// ============================================================
+
+export const step6BottomStyle: CSSProperties = {
+  width: "100%",
+  minWidth: 0,
+  minHeight: 0,
+
+  display: "grid",
+
+  gridTemplateColumns:
+    "minmax(0, 70%) minmax(260px, 30%)",
+
+  gap: "10px",
+
+  alignItems: "start",
+  alignContent: "start",
+
+  boxSizing: "border-box",
+  overflow: "visible",
+};
+
+// ============================================================
+// STEP 6 FORM COLUMN
+// ============================================================
+
+export const step6FormStyle: CSSProperties = {
+  width: "100%",
+  minWidth: 0,
+
+  height: "fit-content",
+  minHeight: 0,
+
+  display: "flex",
+  flexDirection: "column",
+
+  gap: "8px",
+
+  alignItems: "stretch",
+  alignSelf: "start",
+
+  boxSizing: "border-box",
+
+  overflow: "visible",
+};
+
+// ============================================================
+// STEP 6 PREVIEW COLUMN
+// ============================================================
+
+export const step6PreviewStyle: CSSProperties = {
+  width: "100%",
+  minWidth: 0,
+  minHeight: 0,
+
+  display: "flex",
+  flexDirection: "column",
+
+  gap: "7px",
+
+  alignItems: "stretch",
+
+  boxSizing: "border-box",
+
+  overflow: "visible",
+};
+
+
+// ============================================================
+// STEP 6 — DISBURSEMENT STUDIO HEADER
+// ============================================================
+
+export const step6HeaderStyle: CSSProperties = {
+  width: "100%",
+  minWidth: 0,
+
+  padding: "12px 16px",
+
+  display: "flex",
+  flexDirection: "column",
+  justifyContent: "center",
+
+  boxSizing: "border-box",
+
+  background:
+    "linear-gradient(135deg, #111d31 0%, #16243a 100%)",
+
+  border: "1px solid #2b3d57",
+
+  borderRadius: "10px",
+
+  boxShadow:
+    "0 4px 12px rgba(0, 0, 0, 0.18)",
+
+  gap: "3px",
+};
+
+
+// ============================================================
+// STEP 6 — TITLE
+// ============================================================
+
+export const step6HeaderTitleStyle: CSSProperties = {
+  margin: 0,
+
+  color: "#f5c96a",
+
+  fontSize: "20px",
+
+  fontWeight: 800,
+
+  lineHeight: 1.2,
+
+  letterSpacing: "0.2px",
+};
+
+
+// ============================================================
+// STEP 6 — SUBTITLE
+// ============================================================
+
+export const step6HeaderSubtitleStyle: CSSProperties = {
+  margin: 0,
+
+  color: "#b8c5d8",
+
+  fontSize: "12px",
+
+  fontWeight: 500,
+
+  lineHeight: 1.4,
+};
+
+
+// ============================================================
 // END
 // ============================================================

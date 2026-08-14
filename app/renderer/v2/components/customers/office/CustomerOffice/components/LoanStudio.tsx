@@ -55,6 +55,7 @@ import {
   step1OverviewStyle,
   step1FormStyle,
   step1PreviewStyle,
+  step6FormStyle,
 } from "./LoanStudio.styles";
 
 import GuarantorHeader
@@ -132,6 +133,7 @@ import {
 
 import {
   createLoan,
+  fetchLoans,
   hasExistingLoan,
 } from "../../../../../services/loan/loanService";
 
@@ -604,10 +606,6 @@ export default function LoanStudio({
     setDisbursementDate,
   ] = useState("");
 
-  const [
-    disbursementAmount,
-    setDisbursementAmount,
-  ] = useState("0");
 
   const [
     paymentMode,
@@ -633,10 +631,191 @@ export default function LoanStudio({
 
   const [
     disbursementReceiptNumber,
+    setDisbursementReceiptNumber,
   ] = useState(
     () =>
       `DIS-${Date.now()}`,
   );
+
+  // ==========================================================
+  // LIVE LOAN STATISTICS
+  //
+  // The previous Loan Studio rendered these values as hard-coded
+  // zeroes. The statistics must come from persisted Loan records.
+  //
+  // Total Disbursed intentionally uses netDisbursement when it is
+  // available because FINORA disburses the amount after processing
+  // fee and advance deduction.
+  // ==========================================================
+
+  const [
+    loanStatistics,
+    setLoanStatistics,
+  ] = useState({
+    totalLoans: 0,
+    activeLoans: 0,
+    totalDisbursed: 0,
+  });
+
+  async function refreshLoanStatistics(): Promise<void> {
+
+    try {
+
+      const loans =
+        await fetchLoans();
+
+      const totalLoans =
+        loans.length;
+
+      const activeLoans =
+        loans.filter(
+          (loan) => {
+
+            const record =
+              loan as unknown as Record<
+                string,
+                unknown
+              >;
+
+            const status =
+              String(
+                record.status ??
+                "",
+              )
+                .trim()
+                .toUpperCase();
+
+            const outstanding =
+              Number(
+                record.outstanding ??
+                0,
+              );
+
+            return (
+              (
+                status === "ACTIVE" ||
+                status === "RUNNING"
+              ) &&
+              outstanding > 0
+            );
+
+          },
+        ).length;
+
+      const totalDisbursed =
+        loans.reduce(
+          (
+            total,
+            loan,
+          ) => {
+
+            const record =
+              loan as unknown as Record<
+                string,
+                unknown
+              >;
+
+            const netValue =
+              Number(
+                record.netDisbursement ??
+                NaN,
+              );
+
+            const amountValue =
+              Number(
+                record.amount ??
+                0,
+              );
+
+            const disbursedValue =
+              Number.isFinite(
+                netValue,
+              )
+                ? netValue
+                : amountValue;
+
+            return (
+              total +
+              (
+                Number.isFinite(
+                  disbursedValue,
+                )
+                  ? disbursedValue
+                  : 0
+              )
+            );
+
+          },
+          0,
+        );
+
+      setLoanStatistics({
+        totalLoans,
+        activeLoans,
+        totalDisbursed,
+      });
+
+    } catch (error) {
+
+      console.error(
+        "FINORA LOAN STATISTICS REFRESH ERROR:",
+        error,
+      );
+
+    }
+
+  }
+
+  // ==========================================================
+  // INITIAL / STORAGE-READY STATISTICS LOAD
+  // ==========================================================
+
+  useEffect(() => {
+
+    let cancelled = false;
+
+    async function loadInitialLoanStatistics(): Promise<void> {
+
+      try {
+
+        const storageMode =
+          getAuthenticatedStorageMode();
+
+        const storageActivated =
+          await storageManager.selectStorageMode(
+            storageMode,
+          );
+
+        if (
+          !storageActivated.success
+        ) {
+          return;
+        }
+
+        if (cancelled) {
+          return;
+        }
+
+        await refreshLoanStatistics();
+
+      } catch (error) {
+
+        console.error(
+          "FINORA INITIAL LOAN STATISTICS ERROR:",
+          error,
+        );
+
+      }
+
+    }
+
+    void loadInitialLoanStatistics();
+
+    return () => {
+      cancelled = true;
+    };
+
+  }, []);
 
   const principal =
     parseNumericValue(
@@ -929,8 +1108,6 @@ export default function LoanStudio({
       durationType
         ? `${duration} ${durationType}`
         : "",
-        installmentAmount:
-  installmentAmount,
 
     processingFee:
       parseNumericValue(
@@ -958,6 +1135,8 @@ export default function LoanStudio({
     guarantorOccupation,
 
     totalInstallments,
+
+    installmentAmount,
 
     paymentMode,
 
@@ -1023,12 +1202,15 @@ export default function LoanStudio({
       );
 
     if (alreadyExists) {
-      alert(
-        "Loan already created",
-      );
 
       setLoanApproved(
         true,
+      );
+
+      await refreshLoanStatistics();
+
+      alert(
+        "Loan already created",
       );
 
       return;
@@ -1131,9 +1313,95 @@ export default function LoanStudio({
       true,
     );
 
+    await refreshLoanStatistics();
+
     alert(
       "Loan Created Successfully",
     );
+  }
+
+  // ==========================================================
+  // RESET COMPLETED LOAN WORKSPACE
+  //
+  // Finish Review is the boundary between one completed loan
+  // workflow and the next new-loan workflow.
+  //
+  // The persisted Loan is NOT deleted here.
+  // Only transient wizard/UI state is cleared.
+  // ==========================================================
+
+  function resetLoanWorkspace(): void {
+
+    setStep(1);
+
+    setSelectedCustomer(
+      undefined,
+    );
+
+    setDocuments([]);
+
+    setLoanAmount("");
+
+    setInterest("");
+
+    setProcessingFee("");
+
+    setAdvanceDeduction("");
+
+    setPenaltyType(
+      "Fixed Amount",
+    );
+
+    setPenaltyValue("");
+
+    setLateFee("");
+
+    setEMICalculation(
+      "fixed",
+    );
+
+    setFirstInstallmentDate("");
+
+    setRepaymentType("");
+
+    setDuration("");
+
+    setDurationType("");
+
+    setGuarantorName("");
+
+    setGuarantorPhone("");
+
+    setGuarantorOccupation("");
+
+    setGuarantorAddress("");
+
+    setGuarantorRelationship("");
+
+    setPurpose("");
+
+    setRemarks("");
+
+    setLoanApproved(false);
+
+    setDisbursementDate("");
+
+    setPaymentMode("cash");
+
+    setTransactionStatus("pending");
+
+    setDisbursementSavedAt(
+      "Not Saved",
+    );
+
+    setDisbursementDraftStatus(
+      "Draft",
+    );
+
+    setDisbursementReceiptNumber(
+      `DIS-${Date.now()}`,
+    );
+
   }
 
   return (
@@ -1186,9 +1454,15 @@ export default function LoanStudio({
               >
 
                 <LoanStatistics
-                  totalLoans={0}
-                  activeLoans={0}
-                  totalDisbursed={0}
+                  totalLoans={
+                    loanStatistics.totalLoans
+                  }
+                  activeLoans={
+                    loanStatistics.activeLoans
+                  }
+                  totalDisbursed={
+                    loanStatistics.totalDisbursed
+                  }
                 />
 
               </div>
@@ -1786,78 +2060,83 @@ export default function LoanStudio({
           </section>
         )}
 
+                {/* =====================================================
+            STEP 5 — REVIEW STUDIO
+
+            RESPONSIBILITY:
+            - Review loan information only
+            - No Loan Summary card
+            - No Approval Actions
+            - Approval happens only in Step 6
+        ===================================================== */}
+
         {step === 5 && (
           <section
-            style={step1WorkspaceStyle}
+            style={{
+              ...step1WorkspaceStyle,
+              overflow: "visible",
+            }}
           >
 
             <ReviewHeader />
 
             <div
-              style={step1BottomStyle}
+              style={{
+                ...step1BottomStyle,
+                height: "auto",
+                overflow: "visible",
+                alignItems: "start",
+              }}
             >
 
+              {/* =================================================
+                  STEP 5 — VALIDATION CHECKLIST
+              ================================================= */}
+
               <div
-                style={step1FormStyle}
+                style={{
+                  ...step1FormStyle,
+                  height: "auto",
+                  minHeight: 0,
+                  overflow: "visible",
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "8px",
+                }}
               >
 
-                <div
-                  style={{
-                    width: "100%",
-                    minWidth: 0,
-                    display: "flex",
-                    flexDirection: "column",
-                    gap: "8px",
-                    boxSizing: "border-box",
-                  }}
-                >
-
-                
-
-                  <ValidationChecklist
-                    review={
-                      reviewData
-                    }
-                  />
-
-                </div>
-
+                <ValidationChecklist
+                  review={
+                    reviewData
+                  }
+                />
 
               </div>
 
+
+              {/* =================================================
+                  STEP 5 — REVIEW PREVIEW
+              ================================================= */}
+
               <div
-                style={step1PreviewStyle}
+                style={{
+                  ...step1PreviewStyle,
+                  height: "auto",
+                  minHeight: 0,
+                  overflow: "visible",
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "12px",
+                }}
               >
 
-                {/* =================================================
-                    STEP 5 — REVIEW PREVIEW COLUMN
+                <ReviewPreviewCard
+                  review={
+                    reviewData
+                  }
+                />
 
-                    Layout rule:
-                    - Final Loan Preview remains the first card.
-                    - Review Draft sits below it with a visible gap.
-                    - The two cards must never visually touch.
-                    - Review Draft owns exactly one visible border.
-                ================================================= */}
-                <div
-                  style={{
-                    width: "100%",
-                    minWidth: 0,
-                    display: "flex",
-                    flexDirection: "column",
-                    gap: "12px",
-                    boxSizing: "border-box",
-                  }}
-                >
-
-                  <ReviewPreviewCard
-                    review={
-                      reviewData
-                    }
-                  />
-
-                  <ReviewDraftStatus />
-
-                </div>
+                <ReviewDraftStatus />
 
               </div>
 
@@ -1866,94 +2145,148 @@ export default function LoanStudio({
           </section>
         )}
 
+
+        {/* =====================================================
+            STEP 6 — DISBURSEMENT STUDIO
+
+            FINAL ORDER:
+
+            LEFT:
+            1. Disbursement Mode
+            2. Payment Mode
+            3. Approval Actions
+
+            RIGHT:
+            1. Disbursement Receipt
+            2. Disbursement Preview
+            3. Draft Status
+        ===================================================== */}
+
         {step === 6 && (
           <section
-            style={step1WorkspaceStyle}
+            style={{
+              ...step1WorkspaceStyle,
+              overflow: "visible",
+            }}
           >
 
             <DisbursementHeader />
 
+            {/* =================================================
+                STEP 6 FINANCIAL SOURCE OF TRUTH
+
+                Net Disbursement is calculated by LoanStudio:
+                Principal - Processing Fee - Advance Deduction.
+
+                Step 6 must never create or edit a second
+                disbursement amount. DisbursementForm,
+                Receipt and Preview all consume this value.
+            ================================================= */}
+
             <div
-              style={step1BottomStyle}
+              style={{
+                ...step1BottomStyle,
+                height: "auto",
+                minHeight: 0,
+                overflow: "visible",
+                alignItems: "start",
+                alignContent: "start",
+              }}
             >
 
+              {/* =================================================
+                  STEP 6 — LEFT WORKSPACE
+              ================================================= */}
+
               <div
-                style={step1FormStyle}
+                style={step6FormStyle}
               >
+
+                {/* =================================================
+                    1. DISBURSEMENT MODE
+                ================================================= */}
 
                 <DisbursementForm
                   disbursementDate={
                     disbursementDate
                   }
-                  disbursementAmount={
-                    disbursementAmount
+
+                  netDisbursement={
+                    netDisbursement
                   }
-                  paymentMode={
-                    paymentMode
-                  }
+
                   onDisbursementDateChange={
                     setDisbursementDate
                   }
-                  onDisbursementAmountChange={
-                    setDisbursementAmount
-                  }
-                  onPaymentModeChange={
-                    setPaymentMode
-                  }
                 />
 
-                <PaymentModeCard
-                  paymentMode={
-                    paymentMode
-                  }
-                  transactionStatus={
-                    transactionStatus
-                  }
-                  onPaymentModeChange={
-                    setPaymentMode
-                  }
-                  onTransactionStatusChange={
-                    (value) => {
-                      setTransactionStatus(
-                        value,
-                      );
+                {/* =================================================
+    2. PAYMENT MODE
 
-                      setDisbursementDraftStatus(
-                        value ===
-                          "completed"
-                          ? "Completed"
-                          : "Draft",
-                      );
-                    }
-                  }
-                />
+    RESPONSIBILITY:
+    - PaymentModeCard owns payment fields
+    - LoanStudio owns only placement/layout
+    - Do NOT modify PaymentModeCard.tsx
+================================================= */}
 
-                <DisbursementReceipt
-                  receiptNumber={
-                    disbursementReceiptNumber
-                  }
-                  customerName={
-                    activeCustomerName ||
-                    "--"
-                  }
-                  amount={
-                    Number(
-                      disbursementAmount ||
-                      0,
-                    )
-                  }
-                  paymentMode={
-                    paymentMode
-                  }
-                />
+<div
+  style={{
+    width: "100%",
+    minWidth: 0,
+    margin: 0,
+    padding: 0,
+    boxSizing: "border-box",
+  }}
+>
+  <PaymentModeCard
+    paymentMode={
+      paymentMode
+    }
+
+    transactionStatus={
+      transactionStatus
+    }
+
+    onPaymentModeChange={
+      setPaymentMode
+    }
+
+    onTransactionStatusChange={
+      (value) => {
+
+        setTransactionStatus(
+          value,
+        );
+
+        setDisbursementDraftStatus(
+          value ===
+            "completed"
+            ? "Completed"
+            : "Draft",
+        );
+
+      }
+    }
+  />
+</div>
+
+                {/* =================================================
+                    3. APPROVAL ACTIONS
+
+                    IMPORTANT:
+                    These buttons belong ONLY to Step 6.
+                    They are BELOW Disbursement + Payment Mode.
+                ================================================= */}
 
                 <ApprovalActions
                   onSaveDraft={
                     handleSaveDraft
                   }
+
                   onApproveLoan={
                     handleApproveLoan
                   }
+
                   onRejectLoan={
                     handleRejectLoan
                   }
@@ -1961,9 +2294,57 @@ export default function LoanStudio({
 
               </div>
 
+
+              {/* =================================================
+                  STEP 6 — RIGHT PREVIEW
+              ================================================= */}
+
               <div
-                style={step1PreviewStyle}
+                style={{
+                  ...step1PreviewStyle,
+                  height: "auto",
+                  minHeight: 0,
+                  overflow: "visible",
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "10px",
+                }}
               >
+
+                {/* =================================================
+                    DISBURSEMENT RECEIPT
+                ================================================= */}
+
+                <DisbursementReceipt
+                  receiptNumber={
+                    disbursementReceiptNumber
+                  }
+
+                  customerName={
+                    activeCustomerName ||
+                    "--"
+                  }
+
+                  amount={
+                    Math.max(
+                      0,
+                      Number.isFinite(
+                        netDisbursement,
+                      )
+                        ? netDisbursement
+                        : 0,
+                    )
+                  }
+
+                  paymentMode={
+                    paymentMode
+                  }
+                />
+
+
+                {/* =================================================
+                    DISBURSEMENT PREVIEW
+                ================================================= */}
 
                 <DisbursementPreviewCard
                   disbursementDate={
@@ -1975,24 +2356,37 @@ export default function LoanStudio({
                         )
                       : "--"
                   }
+
                   amount={
-                    Number(
-                      disbursementAmount ||
+                    Math.max(
                       0,
+                      Number.isFinite(
+                        netDisbursement,
+                      )
+                        ? netDisbursement
+                        : 0,
                     )
                   }
+
                   paymentMode={
                     paymentMode
                   }
+
                   transactionStatus={
                     transactionStatus
                   }
                 />
 
+
+                {/* =================================================
+                    DISBURSEMENT DRAFT STATUS
+                ================================================= */}
+
                 <DisbursementDraftStatus
                   savedAt={
                     disbursementSavedAt
                   }
+
                   status={
                     disbursementDraftStatus
                   }
@@ -2004,7 +2398,6 @@ export default function LoanStudio({
 
           </section>
         )}
-
       </div>
 
       <footer
@@ -2152,11 +2545,22 @@ export default function LoanStudio({
 
           <button
             type="button"
-            onClick={() => {
+            onClick={async () => {
 
               if (
                 step < 6
               ) {
+                if (
+                  step === 5 &&
+                  !loanApproved
+                ) {
+                  alert(
+                    "Please Approve Loan before continuing to Disbursement",
+                  );
+
+                  return;
+                }
+
                 setStep(
                   step + 1,
                 );
@@ -2174,13 +2578,13 @@ export default function LoanStudio({
                 return;
               }
 
+              await refreshLoanStatistics();
+
               alert(
                 "Loan Disbursement Workflow Completed Successfully",
               );
 
-              setStep(
-                1,
-              );
+              resetLoanWorkspace();
             }}
             style={
               primaryNavigationButtonStyle

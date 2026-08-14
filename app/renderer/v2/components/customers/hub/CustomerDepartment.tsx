@@ -24,6 +24,8 @@
 //   changes
 // - Load related Office data asynchronously
 // - Refresh Customer Office when related FINORA data changes
+// - Bridge nested Customer Wizard navigation to the global
+//   FINORA application header
 //
 // IMPORTANT:
 //
@@ -86,6 +88,42 @@ import {
 
 const STORAGE_MODE_SESSION_KEY =
   "FINORA_STORAGE_MODE";
+
+// ============================================================
+// CUSTOMER WIZARD NAVIGATION EVENTS
+// ============================================================
+//
+// Customer Wizard is a nested workflow inside Customer
+// Department.
+//
+// App.tsx owns the GlobalHeader Back button.
+//
+// CustomerDepartment owns the actual Wizard state.
+//
+// These events create the controlled bridge between the two.
+//
+// Flow:
+//
+// Customer Department
+//        ↓
+// Customer Wizard
+//        ↓
+// Global Header Back
+//        ↓
+// CustomerDepartment closes Wizard
+//        ↓
+// Customer Department
+//
+// ============================================================
+
+const CUSTOMER_WIZARD_OPEN_EVENT =
+  "FINORA_CUSTOMER_WIZARD_OPEN";
+
+const CUSTOMER_WIZARD_CLOSE_EVENT =
+  "FINORA_CUSTOMER_WIZARD_CLOSE";
+
+const CUSTOMER_WIZARD_GLOBAL_BACK_EVENT =
+  "FINORA_CUSTOMER_WIZARD_GLOBAL_BACK";
 
 // ============================================================
 // STORAGE MODE RESOLVER
@@ -234,6 +272,88 @@ export default function CustomerDepartment() {
     };
 
   }, []);
+
+  // ==========================================================
+  // GLOBAL CUSTOMER WIZARD BACK
+  // ==========================================================
+  //
+  // App.tsx owns the single GlobalHeader Back button.
+  //
+  // When the Customer Wizard is open, App.tsx sends:
+  //
+  // FINORA_CUSTOMER_WIZARD_GLOBAL_BACK
+  //
+  // This component closes the nested Wizard and returns to
+  // Customer Office.
+  //
+  // IMPORTANT:
+  //
+  // - Does NOT touch Wizard Step state directly.
+  // - Does NOT modify CustomerWizard internals.
+  // - Does NOT modify Customer persistence.
+  // - Does NOT modify top-level App navigation.
+  //
+  // ==========================================================
+
+  useEffect(() => {
+
+    function handleGlobalWizardBack(): void {
+
+      if (
+        !showCustomerWizard
+      ) {
+
+        return;
+
+      }
+
+      setEditingCustomer(
+        undefined,
+      );
+
+      setShowCustomerWizard(
+        false,
+      );
+
+      // ------------------------------------------------------
+      // Force Customer Office to reload after returning from
+      // Customer Wizard.
+      // ------------------------------------------------------
+
+      setCustomerDataVersion(
+        (previous) =>
+          previous + 1,
+      );
+
+      // ------------------------------------------------------
+      // Tell App.tsx that the nested Wizard is now closed.
+      // ------------------------------------------------------
+
+      window.dispatchEvent(
+        new CustomEvent(
+          CUSTOMER_WIZARD_CLOSE_EVENT,
+        ),
+      );
+
+    }
+
+    window.addEventListener(
+      CUSTOMER_WIZARD_GLOBAL_BACK_EVENT,
+      handleGlobalWizardBack,
+    );
+
+    return () => {
+
+      window.removeEventListener(
+        CUSTOMER_WIZARD_GLOBAL_BACK_EVENT,
+        handleGlobalWizardBack,
+      );
+
+    };
+
+  }, [
+    showCustomerWizard,
+  ]);
 
   // ==========================================================
   // LOAD CUSTOMER OFFICE DATA
@@ -417,6 +537,16 @@ export default function CustomerDepartment() {
         true,
       );
 
+      // ------------------------------------------------------
+      // Tell App.tsx that the nested Customer Wizard is open.
+      // ------------------------------------------------------
+
+      window.dispatchEvent(
+        new CustomEvent(
+          CUSTOMER_WIZARD_OPEN_EVENT,
+        ),
+      );
+
     }, []);
 
   // ==========================================================
@@ -437,12 +567,28 @@ export default function CustomerDepartment() {
           true,
         );
 
+        // ----------------------------------------------------
+        // Tell App.tsx that the nested Customer Wizard is open.
+        // ----------------------------------------------------
+
+        window.dispatchEvent(
+          new CustomEvent(
+            CUSTOMER_WIZARD_OPEN_EVENT,
+          ),
+        );
+
       },
       [],
     );
 
   // ==========================================================
   // BACK TO CUSTOMERS HUB
+  // ==========================================================
+  //
+  // This is the existing Customer Wizard footer navigation.
+  //
+  // It remains independent from the GlobalHeader Back button.
+  //
   // ==========================================================
 
   const handleBackToCustomersHub =
@@ -464,6 +610,16 @@ export default function CustomerDepartment() {
       setCustomerDataVersion(
         (previous) =>
           previous + 1,
+      );
+
+      // ------------------------------------------------------
+      // Tell App.tsx that the nested Wizard is now closed.
+      // ------------------------------------------------------
+
+      window.dispatchEvent(
+        new CustomEvent(
+          CUSTOMER_WIZARD_CLOSE_EVENT,
+        ),
       );
 
     }, []);
