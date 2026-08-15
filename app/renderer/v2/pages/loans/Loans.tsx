@@ -13,6 +13,7 @@
 // - Provide status and date filters
 // - Refresh portfolio
 // - Open Loan Studio
+// - Open View Loan Details
 //
 // IMPORTANT:
 // - No V1 Loans.tsx usage.
@@ -50,6 +51,9 @@ import {
 
 import StudioLayout
   from "../../components/common/layout/StudioLayout";
+
+import ViewLoanDetails
+  from "../../components/loans/details/ViewLoanDetails";
 
 import {
   pageStyle,
@@ -133,6 +137,7 @@ function safeNumber(
   )
     ? value
     : 0;
+
 }
 
 
@@ -468,6 +473,26 @@ export default function Loans() {
 
 
   // ==========================================================
+  // VIEW LOAN STATE
+  //
+  // When a loan is selected from the portfolio, Loans Office
+  // temporarily switches to the read-only View Loan Details
+  // workspace.
+  //
+  // This does NOT modify the persisted loan.
+  // ==========================================================
+
+  const [
+    viewingLoan,
+    setViewingLoan,
+  ] = useState<
+    Loan | null
+  >(
+    null,
+  );
+
+
+  // ==========================================================
   // LOADING
   // ==========================================================
 
@@ -493,17 +518,6 @@ export default function Loans() {
 
   // ==========================================================
   // FILTER STATE
-  //
-  // IMPORTANT:
-  // These are now the ACTIVE filters directly.
-  //
-  // Previous implementation had:
-  // filterStatus -> appliedStatus
-  //
-  // That caused the UI select to change while the table
-  // continued using the old applied value until Apply.
-  //
-  // The portfolio now reacts immediately to every filter change.
   // ==========================================================
 
   const [
@@ -709,10 +723,6 @@ export default function Loans() {
 
   // ==========================================================
   // FILTER VALIDATION
-  //
-  // Apply button remains available for enterprise UX.
-  // Since filters are already live, Apply simply validates
-  // the selected date range and keeps the current filters.
   // ==========================================================
 
   const handleApplyFilters =
@@ -732,9 +742,6 @@ export default function Loans() {
         return;
 
       }
-
-      // Filters are already active.
-      // No second "applied" state is required.
 
     };
 
@@ -763,14 +770,6 @@ export default function Loans() {
 
   // ==========================================================
   // FILTERED LOANS
-  //
-  // IMPORTANT:
-  // Uses filterStatus / filterFromDate / filterToDate directly.
-  //
-  // Therefore:
-  // - Status changes immediately
-  // - From Date changes immediately
-  // - To Date changes immediately
   // ==========================================================
 
   const filteredLoans =
@@ -783,7 +782,7 @@ export default function Loans() {
           ) => {
 
             // ------------------------------------------------
-            // STATUS FILTER
+            // STATUS
             // ------------------------------------------------
 
             if (
@@ -813,7 +812,7 @@ export default function Loans() {
 
 
             // ------------------------------------------------
-            // DATE FILTER
+            // DATE
             // ------------------------------------------------
 
             const loanDate =
@@ -885,7 +884,80 @@ export default function Loans() {
 
 
   // ==========================================================
-  // RENDER
+  // VIEW LOAN
+  // ==========================================================
+
+  const handleViewLoan =
+    useCallback(
+      (
+        loan: Loan,
+      ): void => {
+
+        setViewingLoan(
+          loan,
+        );
+
+      },
+      [],
+    );
+
+
+  // ==========================================================
+  // CLOSE VIEW
+  // ==========================================================
+
+  const handleCloseLoanDetails =
+    useCallback(
+      (): void => {
+
+        setViewingLoan(
+          null,
+        );
+
+      },
+      [],
+    );
+
+
+  // ==========================================================
+  // VIEW LOAN DETAILS
+  //
+  // This is intentionally before the portfolio JSX.
+  //
+  // The Loans Office remains the route owner.
+  // We simply switch the workspace content.
+  // ==========================================================
+
+  if (
+    viewingLoan
+  ) {
+
+    return (
+
+      <StudioLayout
+        department="Loans"
+        allowScroll={true}
+        showHeader={false}
+      >
+
+        <ViewLoanDetails
+          loan={
+            viewingLoan
+          }
+          onBack={
+            handleCloseLoanDetails
+          }
+        />
+
+      </StudioLayout>
+
+    );
+
+  }
+
+
+  // ==========================================================
+  // RENDER LOANS OFFICE
   // ==========================================================
 
   return (
@@ -897,7 +969,9 @@ export default function Loans() {
     >
 
       <main
-        style={pageStyle}
+        style={
+          pageStyle
+        }
       >
 
         {/* ==================================================
@@ -905,22 +979,30 @@ export default function Loans() {
         ================================================== */}
 
         <section
-          style={topBarStyle}
+          style={
+            topBarStyle
+          }
         >
 
           <div
-            style={headingGroupStyle}
+            style={
+              headingGroupStyle
+            }
           >
 
             <h1
-              style={pageTitleStyle}
+              style={
+                pageTitleStyle
+              }
             >
               Loans Office
             </h1>
 
 
             <p
-              style={pageSubtitleStyle}
+              style={
+                pageSubtitleStyle
+              }
             >
               Manage, review and create customer loans.
             </p>
@@ -1051,9 +1133,11 @@ export default function Loans() {
                 statisticValueStyle
               }
             >
-              {formatCurrency(
-                statistics.outstanding,
-              )}
+              {
+                formatCurrency(
+                  statistics.outstanding,
+                )
+              }
             </strong>
 
           </article>
@@ -1063,7 +1147,6 @@ export default function Loans() {
 
         {/* ==================================================
             LOAN PORTFOLIO
-            FILTERS EMBEDDED IN HEADER
         ================================================== */}
 
         <section
@@ -1078,10 +1161,6 @@ export default function Loans() {
             }
           >
 
-            {/* ==============================================
-                PORTFOLIO TITLE
-            ============================================== */}
-
             <div
               style={
                 portfolioTitleStyle
@@ -1090,11 +1169,21 @@ export default function Loans() {
 
               <span
                 style={{
-                  width: "3px",
-                  height: "16px",
-                  flexShrink: 0,
-                  borderRadius: "3px",
-                  background: "#2563EB",
+                  width:
+                    "3px",
+
+                  height:
+                    "16px",
+
+                  flexShrink:
+                    0,
+
+                  borderRadius:
+                    "3px",
+
+                  background:
+                    "#2563EB",
+
                   boxShadow:
                     "0 0 10px rgba(37,99,235,0.25)",
                 }}
@@ -1105,19 +1194,15 @@ export default function Loans() {
             </div>
 
 
-            {/* ==============================================
-                PORTFOLIO CONTROLS
-            ============================================== */}
-
             <div
               style={
                 portfolioActionsStyle
               }
             >
 
-              {/* ============================================
+              {/* ==========================================
                   FILTERS
-              ============================================ */}
+              ========================================== */}
 
               <div
                 style={
@@ -1130,10 +1215,6 @@ export default function Loans() {
                     filtersGridStyle
                   }
                 >
-
-                  {/* ========================================
-                      STATUS
-                  ======================================== */}
 
                   <div
                     style={
@@ -1188,10 +1269,6 @@ export default function Loans() {
                   </div>
 
 
-                  {/* ========================================
-                      FROM DATE
-                  ======================================== */}
-
                   <div
                     style={
                       filterFieldStyle
@@ -1230,10 +1307,6 @@ export default function Loans() {
 
                   </div>
 
-
-                  {/* ========================================
-                      TO DATE
-                  ======================================== */}
 
                   <div
                     style={
@@ -1274,10 +1347,6 @@ export default function Loans() {
                   </div>
 
 
-                  {/* ========================================
-                      FILTER ACTIONS
-                  ======================================== */}
-
                   <div
                     style={
                       filterActionsStyle
@@ -1316,16 +1385,18 @@ export default function Loans() {
               </div>
 
 
-              {/* ============================================
+              {/* ==========================================
                   REFRESH
-              ============================================ */}
+              ========================================== */}
 
               <button
                 type="button"
                 onClick={() => {
+
                   void loadLoans(
                     true,
                   );
+
                 }}
                 disabled={
                   refreshing
@@ -1334,24 +1405,26 @@ export default function Loans() {
                   refreshButtonStyle
                 }
               >
-                {refreshing
-                  ? "Refreshing..."
-                  : "Refresh"}
+                {
+                  refreshing
+                    ? "Refreshing..."
+                    : "Refresh"
+                }
               </button>
 
-
-              {/* ============================================
-                  COUNT
-              ============================================ */}
 
               <span
                 style={
                   loanCountStyle
                 }
               >
-                {filteredLoans.length}{" "}
                 {
-                  filteredLoans.length === 1
+                  filteredLoans.length
+                }{" "}
+
+                {
+                  filteredLoans.length ===
+                  1
                     ? "Loan"
                     : "Loans"
                 }
@@ -1393,7 +1466,8 @@ export default function Loans() {
 
             </div>
 
-          ) : filteredLoans.length === 0 ? (
+          ) : filteredLoans.length ===
+            0 ? (
 
             <div
               style={
@@ -1406,9 +1480,12 @@ export default function Loans() {
                   emptyTitleStyle
                 }
               >
-                {loans.length === 0
-                  ? "No V2 Loans Found"
-                  : "No Loans Match Filters"}
+                {
+                  loans.length ===
+                  0
+                    ? "No V2 Loans Found"
+                    : "No Loans Match Filters"
+                }
               </div>
 
 
@@ -1417,27 +1494,33 @@ export default function Loans() {
                   emptyDescriptionStyle
                 }
               >
-                {loans.length === 0
-                  ? "No V2 loan records are currently available. Create a new loan to begin the portfolio."
-                  : "Change the status or date filters to view matching loan records."}
+                {
+                  loans.length ===
+                  0
+                    ? "No V2 loan records are currently available. Create a new loan to begin the portfolio."
+                    : "Change the status or date filters to view matching loan records."
+                }
               </div>
 
 
-              {loans.length === 0 ? (
+              {
+                loans.length ===
+                0 ? (
 
-                <button
-                  type="button"
-                  onClick={
-                    handleCreateLoan
-                  }
-                  style={
-                    emptyCreateButtonStyle
-                  }
-                >
-                  + Create New Loan
-                </button>
+                  <button
+                    type="button"
+                    onClick={
+                      handleCreateLoan
+                    }
+                    style={
+                      emptyCreateButtonStyle
+                    }
+                  >
+                    + Create New Loan
+                  </button>
 
-              ) : null}
+                ) : null
+              }
 
             </div>
 
@@ -1445,9 +1528,9 @@ export default function Loans() {
 
             <>
 
-              {/* ============================================
+              {/* ==========================================
                   PORTFOLIO TABLE
-              ============================================ */}
+              ========================================== */}
 
               <div
                 style={
@@ -1535,6 +1618,16 @@ export default function Loans() {
                     Status
                   </div>
 
+
+                  {/* VIEW */}
+
+                  <div
+                    style={
+                      tableHeaderCenterStyle
+                    }
+                  >
+                  </div>
+
                 </div>
 
 
@@ -1547,207 +1640,268 @@ export default function Loans() {
                   role="rowgroup"
                 >
 
-                  {filteredLoans.map(
-                    (
-                      loan,
-                      index,
-                    ) => (
-
-                      <div
-                        key={
-                          loan.id
-                        }
-                        style={
-                          tableRowStyle
-                        }
-                        role="row"
-                      >
-
-                        {/* S.NO. */}
+                  {
+                    filteredLoans.map(
+                      (
+                        loan,
+                        index,
+                      ) => (
 
                         <div
-                          style={
-                            serialCellStyle
+                          key={
+                            loan.id
                           }
+                          style={{
+                            ...tableRowStyle,
+
+                            gridTemplateColumns:
+                              "56px minmax(120px,1.2fr) minmax(130px,1.25fr) minmax(80px,0.8fr) minmax(100px,0.9fr) minmax(110px,1fr) minmax(95px,0.8fr) minmax(80px,0.7fr) 72px",
+                          }}
+                          role="row"
                         >
-                          {index + 1}
-                        </div>
 
-
-                        {/* LOAN */}
-
-                        <div
-                          style={
-                            loanIdentityStyle
-                          }
-                        >
+                          {/* S.NO. */}
 
                           <div
                             style={
-                              loanNumberStyle
+                              serialCellStyle
                             }
                           >
                             {
-                              loan.loanNumber ||
-                              loan.id ||
-                              "--"
+                              index +
+                              1
                             }
                           </div>
 
 
+                          {/* LOAN */}
+
                           <div
                             style={
-                              loanTitleStyle
+                              loanIdentityStyle
+                            }
+                          >
+
+                            <div
+                              style={
+                                loanNumberStyle
+                              }
+                            >
+                              {
+                                loan.loanNumber ||
+                                loan.id ||
+                                "--"
+                              }
+                            </div>
+
+
+                            <div
+                              style={
+                                loanTitleStyle
+                              }
+                            >
+                              {
+                                formatLoanTitle(
+                                  loan,
+                                )
+                              }
+                            </div>
+
+                          </div>
+
+
+                          {/* CUSTOMER */}
+
+                          <div
+                            style={
+                              tableCellStyle
+                            }
+                          >
+
+                            <div
+                              style={
+                                customerNameStyle
+                              }
+                            >
+                              {
+                                loan.customerName ||
+                                "--"
+                              }
+                            </div>
+
+
+                            <div
+                              style={
+                                customerPhoneStyle
+                              }
+                            >
+                              {
+                                loan.phoneNumber ||
+                                "--"
+                              }
+                            </div>
+
+                          </div>
+
+
+                          {/* TYPE */}
+
+                          <div
+                            style={
+                              tableCellSecondaryStyle
                             }
                           >
                             {
-                              formatLoanTitle(
+                              formatLoanType(
                                 loan,
                               )
                             }
                           </div>
 
-                        </div>
 
-
-                        {/* CUSTOMER */}
-
-                        <div
-                          style={
-                            tableCellStyle
-                          }
-                        >
+                          {/* PRINCIPAL */}
 
                           <div
                             style={
-                              customerNameStyle
+                              tableCellRightStyle
+                            }
+                          >
+
+                            <span
+                              style={
+                                amountStyle
+                              }
+                            >
+                              {
+                                formatCurrency(
+                                  loan.amount,
+                                )
+                              }
+                            </span>
+
+                          </div>
+
+
+                          {/* OUTSTANDING */}
+
+                          <div
+                            style={
+                              tableCellRightStyle
+                            }
+                          >
+
+                            <span
+                              style={
+                                outstandingStyle
+                              }
+                            >
+                              {
+                                formatCurrency(
+                                  loan.outstanding,
+                                )
+                              }
+                            </span>
+
+                          </div>
+
+
+                          {/* LOAN DATE */}
+
+                          <div
+                            style={
+                              tableCellCenterStyle
                             }
                           >
                             {
-                              loan.customerName ||
-                              "--"
+                              formatDate(
+                                loan.loanDate,
+                              )
                             }
                           </div>
 
 
+                          {/* STATUS */}
+
                           <div
                             style={
-                              customerPhoneStyle
+                              tableCellCenterStyle
                             }
                           >
-                            {
-                              loan.phoneNumber ||
-                              "--"
+
+                            <span
+                              style={
+                                statusBadgeStyle(
+                                  loan.status,
+                                )
+                              }
+                            >
+                              {
+                                formatStatus(
+                                  loan,
+                                )
+                              }
+                            </span>
+
+                          </div>
+
+
+                          {/* VIEW ACTION */}
+
+                          <div
+                            style={
+                              tableCellCenterStyle
                             }
+                          >
+
+                            <button
+                              type="button"
+                              onClick={() =>
+                                handleViewLoan(
+                                  loan,
+                                )
+                              }
+                              style={{
+                                minHeight:
+                                  "28px",
+
+                                padding:
+                                  "0 9px",
+
+                                border:
+                                  "1px solid rgba(37,99,235,0.35)",
+
+                                borderRadius:
+                                  "6px",
+
+                                background:
+                                  "rgba(37,99,235,0.10)",
+
+                                color:
+                                  "#93C5FD",
+
+                                fontSize:
+                                  "10px",
+
+                                fontWeight:
+                                  750,
+
+                                cursor:
+                                  "pointer",
+
+                                whiteSpace:
+                                  "nowrap",
+                              }}
+                            >
+                              View
+                            </button>
+
                           </div>
 
                         </div>
 
-
-                        {/* TYPE */}
-
-                        <div
-                          style={
-                            tableCellSecondaryStyle
-                          }
-                        >
-                          {
-                            formatLoanType(
-                              loan,
-                            )
-                          }
-                        </div>
-
-
-                        {/* PRINCIPAL */}
-
-                        <div
-                          style={
-                            tableCellRightStyle
-                          }
-                        >
-
-                          <span
-                            style={
-                              amountStyle
-                            }
-                          >
-                            {
-                              formatCurrency(
-                                loan.amount,
-                              )
-                            }
-                          </span>
-
-                        </div>
-
-
-                        {/* OUTSTANDING */}
-
-                        <div
-                          style={
-                            tableCellRightStyle
-                          }
-                        >
-
-                          <span
-                            style={
-                              outstandingStyle
-                            }
-                          >
-                            {
-                              formatCurrency(
-                                loan.outstanding,
-                              )
-                            }
-                          </span>
-
-                        </div>
-
-
-                        {/* LOAN DATE */}
-
-                        <div
-                          style={
-                            tableCellCenterStyle
-                          }
-                        >
-                          {
-                            formatDate(
-                              loan.loanDate,
-                            )
-                          }
-                        </div>
-
-
-                        {/* STATUS */}
-
-                        <div
-                          style={
-                            tableCellCenterStyle
-                          }
-                        >
-
-                          <span
-                            style={
-                              statusBadgeStyle(
-                                loan.status,
-                              )
-                            }
-                          >
-                            {
-                              formatStatus(
-                                loan,
-                              )
-                            }
-                          </span>
-
-                        </div>
-
-                      </div>
-
-                    ),
-                  )}
+                      ),
+                    )
+                  }
 
                 </div>
 
@@ -1770,9 +1924,14 @@ export default function Loans() {
                   }
                 >
                   Showing 1 to{" "}
-                  {filteredLoans.length}{" "}
+                  {
+                    filteredLoans.length
+                  }{" "}
                   of{" "}
-                  {filteredLoans.length} loans
+                  {
+                    filteredLoans.length
+                  }{" "}
+                  loans
                 </span>
 
               </div>

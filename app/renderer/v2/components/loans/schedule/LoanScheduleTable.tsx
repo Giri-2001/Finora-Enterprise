@@ -8,6 +8,7 @@
 // RESPONSIBILITY:
 // - Render generated repayment schedule
 // - Display EMI number, due date, amount and status
+// - Automatically calculate total scheduled EMI collection
 // - Premium FINORA Enterprise presentation
 //
 // IMPORTANT:
@@ -15,17 +16,18 @@
 // - Does NOT modify installments.
 // - Does NOT access persistence.
 // - Receives LoanInstallment[] from parent.
-// - Existing schedule contract remains unchanged.
+// - Total is calculated directly from schedule rows.
+// - No manual calculator is required by the owner.
 //
-// DESIGN:
-// - Deep Navy
-// - FINORA Primary Blue
-// - White / Slate typography
-// - No brown
-// - No gold
-// - Natural table height
-// - Parent workspace controls scrolling
-//
+// BUSINESS DISPLAY RULE:
+// - "Total EMI Collection" = SUM(all scheduled installment amounts)
+// - This is the actual amount the customer will pay through EMI rows.
+// - Advance Deduction is not silently added to this figure.
+// - Total Loan Payable / Total Repayable remains the domain summary.
+// ============================================================
+
+// ============================================================
+// IMPORTS
 // ============================================================
 
 import type {
@@ -61,6 +63,24 @@ const COLORS = {
 };
 
 // ============================================================
+// CURRENCY FORMATTER
+// ============================================================
+
+function formatIndianCurrency(
+  value: number,
+): string {
+
+  const safeValue =
+    Number.isFinite(value)
+      ? Math.max(0, Math.round(value))
+      : 0;
+
+  return safeValue.toLocaleString(
+    "en-IN",
+  );
+}
+
+// ============================================================
 // COMPONENT
 // ============================================================
 
@@ -71,7 +91,46 @@ export default function LoanScheduleTable({
   const hasSchedule =
     schedule.length > 0;
 
+  // ==========================================================
+  // AUTOMATIC TOTAL EMI COLLECTION
+  //
+  // Source of truth:
+  // every visible schedule row's installmentAmount.
+  //
+  // Example:
+  // ₹450 + ₹450 + ₹450 + ₹450 + ₹450 + ₹14,550
+  // = ₹16,800
+  //
+  // No manual calculator required.
+  // ==========================================================
+
+  const totalScheduledEMI =
+    schedule.reduce(
+      (
+        total,
+        installment,
+      ) => {
+
+        const amount =
+          Number(
+            installment.installmentAmount,
+          );
+
+        return (
+          total +
+          (
+            Number.isFinite(amount)
+              ? Math.max(0, amount)
+              : 0
+          )
+        );
+
+      },
+      0,
+    );
+
   return (
+
     <section
       style={{
         width: "100%",
@@ -213,12 +272,6 @@ export default function LoanScheduleTable({
 
       {/* ====================================================
           TABLE
-
-          IMPORTANT:
-          - No fixed height.
-          - No max-height.
-          - No vertical scrollbar here.
-          - The parent Step-2 workspace controls overflow.
       ==================================================== */}
 
       <div
@@ -422,6 +475,109 @@ export default function LoanScheduleTable({
             )}
 
           </tbody>
+
+          {/* ==================================================
+              AUTOMATIC TOTAL FOOTER
+          ==================================================
+
+              This is intentionally inside the schedule table
+              so the owner sees the result immediately after
+              the final EMI row.
+
+              Example:
+              5 × ₹450 + ₹14,550
+              = ₹16,800
+          ================================================== */}
+
+          {hasSchedule && (
+
+            <tfoot>
+
+              <tr
+                style={{
+                  background:
+                    "linear-gradient(90deg,#142238,#111C2E)",
+
+                  borderTop:
+                    `1px solid ${COLORS.borderStrong}`,
+                }}
+              >
+
+                <td
+                  colSpan={2}
+                  style={{
+                    padding:
+                      "11px 10px",
+
+                    textAlign:
+                      "left",
+
+                    color:
+                      COLORS.textSecondary,
+
+                    fontSize: "12px",
+
+                    fontWeight: 750,
+
+                    lineHeight: 1.2,
+                  }}
+                >
+                  TOTAL EMI COLLECTION
+                </td>
+
+                <td
+                  style={{
+                    padding:
+                      "11px 10px",
+
+                    textAlign:
+                      "right",
+
+                    color:
+                      "#FFFFFF",
+
+                    fontSize: "15px",
+
+                    fontWeight: 600,
+
+                    lineHeight: 1.2,
+
+                    whiteSpace:
+                      "nowrap",
+                  }}
+                >
+                  ₹{" "}
+                  {formatIndianCurrency(
+                    totalScheduledEMI,
+                  )}
+                </td>
+
+                <td
+                  style={{
+                    padding:
+                      "11px 10px",
+
+                    textAlign:
+                      "center",
+
+                    color:
+                      "#93C5FD",
+
+                    fontSize: "11px",
+
+                    fontWeight: 550,
+
+                    lineHeight: 1.2,
+                  }}
+                >
+                  AUTO CALCULATED
+                </td>
+
+              </tr>
+
+            </tfoot>
+
+          )}
 
         </table>
 

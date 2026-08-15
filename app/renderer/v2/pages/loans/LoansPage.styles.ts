@@ -132,11 +132,17 @@ export const pageStyle:
   minWidth:
     0,
 
+  minHeight:
+    "100%",
+
   boxSizing:
     "border-box",
 
   padding:
-    "8px 24px 40px",
+    "28px 24px 40px",
+
+  background:
+    COLORS.background,
 
   color:
     COLORS.text,
@@ -382,7 +388,7 @@ export const statisticValueStyle:
     "20px",
 
   fontWeight:
-    800,
+    600,
 
   lineHeight:
     1.1,

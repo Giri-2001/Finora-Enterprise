@@ -1,0 +1,1991 @@
+// ============================================================
+// FINORA ENTERPRISE OS™
+//
+// V2 LOANS OFFICE™
+//
+// VIEW LOAN DETAILS
+//
+// RESPONSIBILITY:
+// - Display persisted Loan record
+// - Read-only loan information
+// - Customer information
+// - Financial summary
+// - Repayment information
+// - Guarantor information
+// - Purpose / remarks
+// - Repayment schedule
+//
+// IMPORTANT:
+// - No business calculations
+// - No persistence
+// - No repository access
+// - No Loan Studio dependency
+// - No duplicate loan calculation
+// - Read-only presentation only
+//
+// VERSION : 2.0
+// STATUS  : Production
+// ============================================================
+
+
+// ============================================================
+// IMPORTS
+// ============================================================
+
+import type {
+  CSSProperties,
+} from "react";
+
+import type {
+  LoanInstallment,
+} from "../schedule/types";
+
+import {
+  responsiveMediaQuery,
+} from "./ViewLoanDetails.styles";
+
+import type {
+  Loan,
+} from "../../customers/office/CustomerOffice/types";
+
+import {
+  pageStyle,
+
+  headerStyle,
+  headerLeftStyle,
+  backButtonStyle,
+  headerAccentStyle,
+  titleGroupStyle,
+  titleStyle,
+  subtitleStyle,
+  headerMetaStyle,
+  loanNumberBadgeStyle,
+
+  contentGridStyle,
+  sectionStyle,
+  fullWidthSectionStyle,
+  sectionHeaderStyle,
+  sectionTitleStyle,
+  sectionSubtitleStyle,
+
+  infoGridStyle,
+  infoItemStyle,
+  infoLabelStyle,
+  infoValueStyle,
+  customerNameValueStyle,
+
+  financialGridStyle,
+  financialCardStyle,
+  primaryFinancialCardStyle,
+  outstandingFinancialCardStyle,
+  financialLabelStyle,
+  financialValueStyle,
+
+  textBlockStyle,
+
+  scheduleWrapperStyle,
+  scheduleHeaderStyle,
+  scheduleHeaderCellStyle,
+  scheduleRowStyle,
+  scheduleCellStyle,
+  scheduleEmptyStyle,
+
+  footerStyle,
+  footerBackButtonStyle,
+
+  statusBadgeStyle,
+} from "./ViewLoanDetails.styles";
+
+
+// ============================================================
+// TYPES
+// ============================================================
+
+interface ViewLoanDetailsProps {
+
+  loan: Loan;
+
+  onBack: () => void;
+
+}
+
+
+// ============================================================
+// HELPERS
+// ============================================================
+
+function safeNumber(
+  value:
+    | number
+    | undefined,
+): number {
+
+  return (
+    typeof value ===
+      "number" &&
+    Number.isFinite(
+      value,
+    )
+  )
+    ? value
+    : 0;
+
+}
+
+
+// ============================================================
+// CURRENCY
+// ============================================================
+
+function formatCurrency(
+  value:
+    | number
+    | undefined,
+): string {
+
+  return new Intl.NumberFormat(
+    "en-IN",
+    {
+      style:
+        "currency",
+
+      currency:
+        "INR",
+
+      maximumFractionDigits:
+        0,
+    },
+  ).format(
+    safeNumber(
+      value,
+    ),
+  );
+
+}
+
+
+// ============================================================
+// DATE
+// ============================================================
+
+function formatDate(
+  value:
+    | string
+    | undefined,
+): string {
+
+  if (
+    !value
+  ) {
+
+    return "--";
+
+  }
+
+
+  const date =
+    new Date(
+      value,
+    );
+
+
+  if (
+    Number.isNaN(
+      date.getTime(),
+    )
+  ) {
+
+    return "--";
+
+  }
+
+
+  const day =
+    String(
+      date.getDate(),
+    ).padStart(
+      2,
+      "0",
+    );
+
+
+  const month =
+    String(
+      date.getMonth() + 1,
+    ).padStart(
+      2,
+      "0",
+    );
+
+
+  return (
+    `${day}/${month}/${date.getFullYear()}`
+  );
+
+}
+
+
+// ============================================================
+// LOAN TYPE
+// ============================================================
+
+function formatLoanType(
+  loan: Loan,
+): string {
+
+  const value =
+    (
+      loan.loanType ||
+      loan.repaymentType ||
+      ""
+    )
+      .trim()
+      .toUpperCase();
+
+
+  switch (
+    value
+  ) {
+
+    case "DAILY":
+      return "Daily Loan";
+
+    case "WEEKLY":
+      return "Weekly Loan";
+
+    case "MONTHLY":
+      return "Monthly Loan";
+
+    default:
+      return value ||
+        "--";
+
+  }
+
+}
+
+
+// ============================================================
+// STATUS
+// ============================================================
+
+function formatStatus(
+  status:
+    | string
+    | undefined,
+): string {
+
+  const normalized =
+    (
+      status ||
+      ""
+    )
+      .trim()
+      .toUpperCase();
+
+
+  switch (
+    normalized
+  ) {
+
+    case "ACTIVE":
+    case "RUNNING":
+      return "Running";
+
+    case "CLOSED":
+      return "Closed";
+
+    default:
+      return status ||
+        "Pending";
+
+  }
+
+}
+
+
+// ============================================================
+// SAFE TEXT
+// ============================================================
+
+function safeText(
+  value:
+    | string
+    | number
+    | undefined,
+): string {
+
+  if (
+    value ===
+      undefined ||
+    value ===
+      null ||
+    String(
+      value,
+    ).trim() ===
+      ""
+  ) {
+
+    return "--";
+
+  }
+
+
+  return String(
+    value,
+  );
+
+}
+
+
+// ============================================================
+// SCHEDULE VALUE HELPER
+//
+// The existing LoanInstallment type may evolve.
+// ViewLoanDetails intentionally reads schedule values
+// defensively without performing calculations.
+// ============================================================
+
+function getScheduleValue(
+  installment: unknown,
+  keys: string[],
+): unknown {
+
+  if (
+    !installment ||
+    typeof installment !==
+      "object"
+  ) {
+
+    return undefined;
+
+  }
+
+
+  const record =
+    installment as Record<
+      string,
+      unknown
+    >;
+
+
+  for (
+    const key of keys
+  ) {
+
+    if (
+      record[key] !==
+      undefined &&
+      record[key] !==
+      null
+    ) {
+
+      return record[key];
+
+    }
+
+  }
+
+
+  return undefined;
+
+}
+
+
+// ============================================================
+// SCHEDULE TEXT
+// ============================================================
+
+function formatScheduleDate(
+  value: unknown,
+): string {
+
+  if (
+    typeof value !==
+      "string"
+  ) {
+
+    return safeText(
+      value as
+        | string
+        | number
+        | undefined,
+    );
+
+  }
+
+
+  return formatDate(
+    value,
+  );
+
+}
+
+
+// ============================================================
+// COMPONENT
+// ============================================================
+
+export default function ViewLoanDetails({
+
+  loan,
+
+  onBack,
+
+}: ViewLoanDetailsProps) {
+
+
+  // ==========================================================
+  // DERIVED DISPLAY VALUES
+  //
+  // These are presentation values only.
+  // No loan calculation is performed here.
+  // ==========================================================
+
+  const loanNumber =
+    loan.loanNumber ||
+    loan.id ||
+    "--";
+
+
+  const status =
+    formatStatus(
+      loan.status,
+    );
+
+
+  const loanType =
+    formatLoanType(
+      loan,
+    );
+
+
+  const schedule =
+    Array.isArray(
+      loan.schedule,
+    )
+      ? loan.schedule
+      : [];
+
+
+  // ==========================================================
+  // RENDER
+  // ==========================================================
+
+  return (
+
+    <div
+      style={
+        pageStyle
+      }
+    >
+
+      {/* ====================================================
+          HEADER
+      ==================================================== */}
+
+      <header
+        style={
+          headerStyle
+        }
+      >
+
+        <div
+          style={
+            headerLeftStyle
+          }
+        >
+
+          <button
+            type="button"
+            onClick={
+              onBack
+            }
+            style={
+              backButtonStyle
+            }
+          >
+            ← Back
+          </button>
+
+
+          <div
+            style={
+              headerAccentStyle
+            }
+            aria-hidden="true"
+          />
+
+
+          <div
+            style={
+              titleGroupStyle
+            }
+          >
+
+            <h1
+              style={
+                titleStyle
+              }
+            >
+              View Loan Details
+            </h1>
+
+
+            <p
+              style={
+                subtitleStyle
+              }
+            >
+              Read-only loan information and repayment overview.
+            </p>
+
+          </div>
+
+        </div>
+
+
+        <div
+          className={
+            "finora-view-loan-header-meta"
+          }
+          style={
+            headerMetaStyle
+          }
+        >
+
+          <span
+            style={
+              loanNumberBadgeStyle
+            }
+          >
+            {loanNumber}
+          </span>
+
+
+          <span
+            style={
+              statusBadgeStyle(
+                loan.status,
+              )
+            }
+          >
+            {status}
+          </span>
+
+        </div>
+
+      </header>
+
+
+      {/* ====================================================
+          MAIN CONTENT
+      ==================================================== */}
+
+      <div
+        className={
+          "finora-view-loan-content-grid"
+        }
+        style={
+          contentGridStyle
+        }
+      >
+
+        {/* ==================================================
+            LEFT COLUMN
+        ================================================== */}
+
+        <div
+          style={{
+            display:
+              "flex",
+
+            flexDirection:
+              "column",
+
+            gap:
+              "16px",
+
+            minWidth:
+              0,
+          }}
+        >
+
+          {/* ================================================
+              CUSTOMER
+          ================================================ */}
+
+          <section
+            style={
+              sectionStyle
+            }
+          >
+
+            <div
+              style={
+                sectionHeaderStyle
+              }
+            >
+
+              <div>
+
+                <h2
+                  style={
+                    sectionTitleStyle
+                  }
+                >
+                  Customer Information
+                </h2>
+
+                <p
+                  style={
+                    sectionSubtitleStyle
+                  }
+                >
+                  Customer identity linked to this loan.
+                </p>
+
+              </div>
+
+            </div>
+
+
+            <div
+              className={
+                "finora-view-loan-info-grid"
+              }
+              style={
+                infoGridStyle
+              }
+            >
+
+              <div
+                style={
+                  infoItemStyle
+                }
+              >
+
+                <span
+                  style={
+                    infoLabelStyle
+                  }
+                >
+                  Customer Name
+                </span>
+
+                <strong
+                  style={
+                    customerNameValueStyle
+                  }
+                >
+                  {
+                    safeText(
+                      loan.customerName,
+                    )
+                  }
+                </strong>
+
+              </div>
+
+
+              <div
+                style={
+                  infoItemStyle
+                }
+              >
+
+                <span
+                  style={
+                    infoLabelStyle
+                  }
+                >
+                  Customer ID
+                </span>
+
+                <span
+                  style={
+                    infoValueStyle
+                  }
+                >
+                  {
+                    safeText(
+                      loan.customerId,
+                    )
+                  }
+                </span>
+
+              </div>
+
+
+              <div
+                style={
+                  infoItemStyle
+                }
+              >
+
+                <span
+                  style={
+                    infoLabelStyle
+                  }
+                >
+                  Phone Number
+                </span>
+
+                <span
+                  style={
+                    infoValueStyle
+                  }
+                >
+                  {
+                    safeText(
+                      loan.phoneNumber,
+                    )
+                  }
+                </span>
+
+              </div>
+
+
+              <div
+                style={
+                  infoItemStyle
+                }
+              >
+
+                <span
+                  style={
+                    infoLabelStyle
+                  }
+                >
+                  Loan Number
+                </span>
+
+                <span
+                  style={
+                    infoValueStyle
+                  }
+                >
+                  {loanNumber}
+                </span>
+
+              </div>
+
+            </div>
+
+          </section>
+
+
+          {/* ================================================
+              LOAN INFORMATION
+          ================================================ */}
+
+          <section
+            style={
+              sectionStyle
+            }
+          >
+
+            <div
+              style={
+                sectionHeaderStyle
+              }
+            >
+
+              <div>
+
+                <h2
+                  style={
+                    sectionTitleStyle
+                  }
+                >
+                  Loan Information
+                </h2>
+
+                <p
+                  style={
+                    sectionSubtitleStyle
+                  }
+                >
+                  Core configuration saved with the loan.
+                </p>
+
+              </div>
+
+            </div>
+
+
+            <div
+              className={
+                "finora-view-loan-info-grid"
+              }
+              style={
+                infoGridStyle
+              }
+            >
+
+              <div
+                style={
+                  infoItemStyle
+                }
+              >
+
+                <span
+                  style={
+                    infoLabelStyle
+                  }
+                >
+                  Loan Type
+                </span>
+
+                <span
+                  style={
+                    infoValueStyle
+                  }
+                >
+                  {loanType}
+                </span>
+
+              </div>
+
+
+              <div
+                style={
+                  infoItemStyle
+                }
+              >
+
+                <span
+                  style={
+                    infoLabelStyle
+                  }
+                >
+                  Status
+                </span>
+
+                <span
+                  style={
+                    infoValueStyle
+                  }
+                >
+                  {status}
+                </span>
+
+              </div>
+
+
+              <div
+                style={
+                  infoItemStyle
+                }
+              >
+
+                <span
+                  style={
+                    infoLabelStyle
+                  }
+                >
+                  Interest
+                </span>
+
+                <span
+                  style={
+                    infoValueStyle
+                  }
+                >
+                  {safeNumber(
+                    loan.interest,
+                  )}%
+                </span>
+
+              </div>
+
+
+              <div
+                style={
+                  infoItemStyle
+                }
+              >
+
+                <span
+                  style={
+                    infoLabelStyle
+                  }
+                >
+                  Repayment Type
+                </span>
+
+                <span
+                  style={
+                    infoValueStyle
+                  }
+                >
+                  {
+                    safeText(
+                      loan.repaymentType,
+                    )
+                  }
+                </span>
+
+              </div>
+
+
+              <div
+                style={
+                  infoItemStyle
+                }
+              >
+
+                <span
+                  style={
+                    infoLabelStyle
+                  }
+                >
+                  Duration
+                </span>
+
+                <span
+                  style={
+                    infoValueStyle
+                  }
+                >
+                  {
+                    loan.duration !==
+                    undefined
+                      ? `${loan.duration} ${
+                          loan.durationType ||
+                          ""
+                        }`.trim()
+                      : "--"
+                  }
+                </span>
+
+              </div>
+
+
+              <div
+                style={
+                  infoItemStyle
+                }
+              >
+
+                <span
+                  style={
+                    infoLabelStyle
+                  }
+                >
+                  Loan Date
+                </span>
+
+                <span
+                  style={
+                    infoValueStyle
+                  }
+                >
+                  {
+                    formatDate(
+                      loan.loanDate,
+                    )
+                  }
+                </span>
+
+              </div>
+
+
+              <div
+                style={
+                  infoItemStyle
+                }
+              >
+
+                <span
+                  style={
+                    infoLabelStyle
+                  }
+                >
+                  Due / Maturity Date
+                </span>
+
+                <span
+                  style={
+                    infoValueStyle
+                  }
+                >
+                  {
+                    formatDate(
+                      loan.dueDate,
+                    )
+                  }
+                </span>
+
+              </div>
+
+
+              <div
+                style={
+                  infoItemStyle
+                }
+              >
+
+                <span
+                  style={
+                    infoLabelStyle
+                  }
+                >
+                  Loan Title
+                </span>
+
+                <span
+                  style={
+                    infoValueStyle
+                  }
+                >
+                  {
+                    safeText(
+                      loan.title,
+                    )
+                  }
+                </span>
+
+              </div>
+
+            </div>
+
+          </section>
+
+
+          {/* ================================================
+              PURPOSE / REMARKS
+          ================================================ */}
+
+          <section
+            style={
+              sectionStyle
+            }
+          >
+
+            <div
+              style={
+                sectionHeaderStyle
+              }
+            >
+
+              <div>
+
+                <h2
+                  style={
+                    sectionTitleStyle
+                  }
+                >
+                  Purpose & Remarks
+                </h2>
+
+              </div>
+
+            </div>
+
+
+            <div
+              style={{
+                display:
+                  "grid",
+
+                gridTemplateColumns:
+                  "repeat(2, minmax(0, 1fr))",
+
+                gap:
+                  "8px",
+              }}
+            >
+
+              <div>
+
+                <span
+                  style={
+                    infoLabelStyle
+                  }
+                >
+                  Purpose
+                </span>
+
+                <div
+                  style={
+                    textBlockStyle
+                  }
+                >
+                  {
+                    safeText(
+                      loan.purpose,
+                    )
+                  }
+                </div>
+
+              </div>
+
+
+              <div>
+
+                <span
+                  style={
+                    infoLabelStyle
+                  }
+                >
+                  Remarks
+                </span>
+
+                <div
+                  style={
+                    textBlockStyle
+                  }
+                >
+                  {
+                    safeText(
+                      loan.remarks,
+                    )
+                  }
+                </div>
+
+              </div>
+
+            </div>
+
+          </section>
+
+        </div>
+
+
+        {/* ==================================================
+            RIGHT COLUMN
+        ================================================== */}
+
+        <div
+          style={{
+            display:
+              "flex",
+
+            flexDirection:
+              "column",
+
+            gap:
+              "16px",
+
+            minWidth:
+              0,
+          }}
+        >
+
+          {/* ================================================
+              FINANCIAL SUMMARY
+          ================================================ */}
+
+          <section
+            style={
+              sectionStyle
+            }
+          >
+
+            <div
+              style={
+                sectionHeaderStyle
+              }
+            >
+
+              <div>
+
+                <h2
+                  style={
+                    sectionTitleStyle
+                  }
+                >
+                  Financial Summary
+                </h2>
+
+                <p
+                  style={
+                    sectionSubtitleStyle
+                  }
+                >
+                  Persisted loan financial values.
+                </p>
+
+              </div>
+
+            </div>
+
+
+            <div
+              className={
+                "finora-view-loan-financial-grid"
+              }
+              style={
+                financialGridStyle
+              }
+            >
+
+              <div
+                style={
+                  primaryFinancialCardStyle
+                }
+              >
+
+                <span
+                  style={
+                    financialLabelStyle
+                  }
+                >
+                  Principal
+                </span>
+
+                <strong
+                  style={
+                    financialValueStyle
+                  }
+                >
+                  {
+                    formatCurrency(
+                      loan.amount,
+                    )
+                  }
+                </strong>
+
+              </div>
+
+
+              <div
+                style={
+                  outstandingFinancialCardStyle
+                }
+              >
+
+                <span
+                  style={
+                    financialLabelStyle
+                  }
+                >
+                  Outstanding
+                </span>
+
+                <strong
+                  style={
+                    financialValueStyle
+                  }
+                >
+                  {
+                    formatCurrency(
+                      loan.outstanding,
+                    )
+                  }
+                </strong>
+
+              </div>
+
+
+              <div
+                style={
+                  financialCardStyle
+                }
+              >
+
+                <span
+                  style={
+                    financialLabelStyle
+                  }
+                >
+                  Processing Fee
+                </span>
+
+                <strong
+                  style={
+                    financialValueStyle
+                  }
+                >
+                  {
+                    formatCurrency(
+                      loan.processingFee,
+                    )
+                  }
+                </strong>
+
+              </div>
+
+
+              <div
+                style={
+                  financialCardStyle
+                }
+              >
+
+                <span
+                  style={
+                    financialLabelStyle
+                  }
+                >
+                  Advance Deduction
+                </span>
+
+                <strong
+                  style={
+                    financialValueStyle
+                  }
+                >
+                  {
+                    formatCurrency(
+                      loan.advanceDeduction,
+                    )
+                  }
+                </strong>
+
+              </div>
+
+
+              <div
+                style={
+                  primaryFinancialCardStyle
+                }
+              >
+
+                <span
+                  style={
+                    financialLabelStyle
+                  }
+                >
+                  Net Disbursement
+                </span>
+
+                <strong
+                  style={
+                    financialValueStyle
+                  }
+                >
+                  {
+                    formatCurrency(
+                      loan.netDisbursement,
+                    )
+                  }
+                </strong>
+
+              </div>
+
+
+              <div
+                style={
+                  financialCardStyle
+                }
+              >
+
+                <span
+                  style={
+                    financialLabelStyle
+                  }
+                >
+                  Late Fee
+                </span>
+
+                <strong
+                  style={
+                    financialValueStyle
+                  }
+                >
+                  {
+                    formatCurrency(
+                      loan.lateFee,
+                    )
+                  }
+                </strong>
+
+              </div>
+
+            </div>
+
+          </section>
+
+
+          {/* ================================================
+              GUARANTOR
+          ================================================ */}
+
+          <section
+            style={
+              sectionStyle
+            }
+          >
+
+            <div
+              style={
+                sectionHeaderStyle
+              }
+            >
+
+              <div>
+
+                <h2
+                  style={
+                    sectionTitleStyle
+                  }
+                >
+                  Guarantor
+                </h2>
+
+                <p
+                  style={
+                    sectionSubtitleStyle
+                  }
+                >
+                  Guarantor information recorded for this loan.
+                </p>
+
+              </div>
+
+            </div>
+
+
+            <div
+              style={
+                infoGridStyle
+              }
+            >
+
+              <div
+                style={
+                  infoItemStyle
+                }
+              >
+
+                <span
+                  style={
+                    infoLabelStyle
+                  }
+                >
+                  Guarantor Name
+                </span>
+
+                <span
+                  style={
+                    infoValueStyle
+                  }
+                >
+                  {
+                    safeText(
+                      loan.guarantor,
+                    )
+                  }
+                </span>
+
+              </div>
+
+
+              <div
+                style={
+                  infoItemStyle
+                }
+              >
+
+                <span
+                  style={
+                    infoLabelStyle
+                  }
+                >
+                  Guarantor
+                </span>
+
+                <span
+                  style={
+                    infoValueStyle
+                  }
+                >
+                  {
+                    safeText(
+                      loan.guarantor,
+                    )
+                  }
+                </span>
+
+              </div>
+
+            </div>
+
+          </section>
+
+
+          {/* ================================================
+              REPAYMENT
+          ================================================ */}
+
+          <section
+            style={
+              sectionStyle
+            }
+          >
+
+            <div
+              style={
+                sectionHeaderStyle
+              }
+            >
+
+              <div>
+
+                <h2
+                  style={
+                    sectionTitleStyle
+                  }
+                >
+                  Repayment
+                </h2>
+
+                <p
+                  style={
+                    sectionSubtitleStyle
+                  }
+                >
+                  Current repayment configuration.
+                </p>
+
+              </div>
+
+            </div>
+
+
+            <div
+              style={
+                infoGridStyle
+              }
+            >
+
+              <div
+                style={
+                  infoItemStyle
+                }
+              >
+
+                <span
+                  style={
+                    infoLabelStyle
+                  }
+                >
+                  Repayment Type
+                </span>
+
+                <span
+                  style={
+                    infoValueStyle
+                  }
+                >
+                  {
+                    safeText(
+                      loan.repaymentType,
+                    )
+                  }
+                </span>
+
+              </div>
+
+
+              <div
+                style={
+                  infoItemStyle
+                }
+              >
+
+                <span
+                  style={
+                    infoLabelStyle
+                  }
+                >
+                  Schedule Entries
+                </span>
+
+                <span
+                  style={
+                    infoValueStyle
+                  }
+                >
+                  {schedule.length}
+                </span>
+
+              </div>
+
+            </div>
+
+          </section>
+
+        </div>
+
+      </div>
+
+
+      {/* ====================================================
+          REPAYMENT SCHEDULE
+      ==================================================== */}
+
+      <section
+        style={
+          fullWidthSectionStyle
+        }
+      >
+
+        <div
+          style={
+            sectionHeaderStyle
+          }
+        >
+
+          <div>
+
+            <h2
+              style={
+                sectionTitleStyle
+              }
+            >
+              Repayment Schedule
+            </h2>
+
+            <p
+              style={
+                sectionSubtitleStyle
+              }
+            >
+              Persisted installment schedule for this loan.
+            </p>
+
+          </div>
+
+        </div>
+
+
+        {schedule.length ===
+        0 ? (
+
+          <div
+            style={
+              scheduleEmptyStyle
+            }
+          >
+            No repayment schedule is currently stored for this loan.
+          </div>
+
+        ) : (
+
+          <div
+            style={
+              scheduleWrapperStyle
+            }
+          >
+
+            <div
+              style={
+                scheduleHeaderStyle
+              }
+            >
+
+              <div
+                style={
+                  scheduleHeaderCellStyle
+                }
+              >
+                #
+              </div>
+
+              <div
+                style={
+                  scheduleHeaderCellStyle
+                }
+              >
+                Due Date
+              </div>
+
+              <div
+                style={
+                  scheduleHeaderCellStyle
+                }
+              >
+                Principal
+              </div>
+
+              <div
+                style={
+                  scheduleHeaderCellStyle
+                }
+              >
+                Interest
+              </div>
+
+              <div
+                style={
+                  scheduleHeaderCellStyle
+                }
+              >
+                Installment
+              </div>
+
+              <div
+                style={
+                  scheduleHeaderCellStyle
+                }
+              >
+                Balance
+              </div>
+
+            </div>
+
+
+            {schedule.map(
+              (
+                installment,
+                index,
+              ) => {
+
+                const installmentNumber =
+                  getScheduleValue(
+                    installment,
+                    [
+                      "installmentNumber",
+                      "installment",
+                      "number",
+                      "sequence",
+                    ],
+                  );
+
+
+                const dueDate =
+                  getScheduleValue(
+                    installment,
+                    [
+                      "dueDate",
+                      "date",
+                      "installmentDate",
+                    ],
+                  );
+
+
+                const principal =
+                  getScheduleValue(
+                    installment,
+                    [
+                      "principal",
+                      "principalAmount",
+                    ],
+                  );
+
+
+                const interest =
+                  getScheduleValue(
+                    installment,
+                    [
+                      "interest",
+                      "interestAmount",
+                    ],
+                  );
+
+
+                const installmentAmount =
+                  getScheduleValue(
+                    installment,
+                    [
+                      "installmentAmount",
+                      "emi",
+                      "amount",
+                      "total",
+                    ],
+                  );
+
+
+                const balance =
+                  getScheduleValue(
+                    installment,
+                    [
+                      "balance",
+                      "outstanding",
+                      "remainingBalance",
+                    ],
+                  );
+
+
+                return (
+
+                  <div
+                    key={
+                      String(
+                        installmentNumber ??
+                        index,
+                      )
+                    }
+                    style={
+                      scheduleRowStyle
+                    }
+                  >
+
+                    <div
+                      style={
+                        scheduleCellStyle
+                      }
+                    >
+                      {
+                        safeText(
+                          (
+                            installmentNumber ??
+                            index + 1
+                          ) as
+                            | string
+                            | number,
+                        )
+                      }
+                    </div>
+
+
+                    <div
+                      style={
+                        scheduleCellStyle
+                      }
+                    >
+                      {
+                        formatScheduleDate(
+                          dueDate,
+                        )
+                      }
+                    </div>
+
+
+                    <div
+                      style={
+                        scheduleCellStyle
+                      }
+                    >
+                      {
+                        typeof principal ===
+                        "number"
+                          ? formatCurrency(
+                              principal,
+                            )
+                          : safeText(
+                              principal as
+                                | string
+                                | number
+                                | undefined,
+                            )
+                      }
+                    </div>
+
+
+                    <div
+                      style={
+                        scheduleCellStyle
+                      }
+                    >
+                      {
+                        typeof interest ===
+                        "number"
+                          ? formatCurrency(
+                              interest,
+                            )
+                          : safeText(
+                              interest as
+                                | string
+                                | number
+                                | undefined,
+                            )
+                      }
+                    </div>
+
+
+                    <div
+                      style={
+                        scheduleCellStyle
+                      }
+                    >
+                      {
+                        typeof installmentAmount ===
+                        "number"
+                          ? formatCurrency(
+                              installmentAmount,
+                            )
+                          : safeText(
+                              installmentAmount as
+                                | string
+                                | number
+                                | undefined,
+                            )
+                      }
+                    </div>
+
+
+                    <div
+                      style={
+                        scheduleCellStyle
+                      }
+                    >
+                      {
+                        typeof balance ===
+                        "number"
+                          ? formatCurrency(
+                              balance,
+                            )
+                          : safeText(
+                              balance as
+                                | string
+                                | number
+                                | undefined,
+                            )
+                      }
+                    </div>
+
+                  </div>
+
+                );
+
+              },
+            )}
+
+          </div>
+
+        )}
+
+      </section>
+
+
+      {/* ====================================================
+          FOOTER
+      ==================================================== */}
+
+      <footer
+        style={
+          footerStyle
+        }
+      >
+
+        <button
+          type="button"
+          onClick={
+            onBack
+          }
+          style={
+            footerBackButtonStyle
+          }
+        >
+          ← Back to Loans Office
+        </button>
+
+      </footer>
+
+
+      {/* ====================================================
+          RESPONSIVE CSS
+      ==================================================== */}
+
+      <style>
+        {
+          `
+          ${responsiveMediaQuery}
+          `
+        }
+      </style>
+
+    </div>
+
+  );
+
+}
+
+
+// ============================================================
+// END
+// ============================================================

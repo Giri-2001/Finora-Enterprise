@@ -74,6 +74,7 @@ export default function LoanForm({
   onProcessingFeeChange,
   onAdvanceDeductionChange,
   onLateFeeChange,
+  onRepaymentTypeChange,
   onDurationChange,
   onDurationTypeChange,
   onPurposeChange,
@@ -216,10 +217,15 @@ export default function LoanForm({
             <input
               type="text"
               inputMode="numeric"
-              value={formatIndianInteger(advanceDeduction)}
+              value={
+                emiCalculation === "reducing"
+                  ? "0"
+                  : formatIndianInteger(advanceDeduction)
+              }
               onChange={handleAdvanceDeductionChange}
               placeholder="Enter deduction amount"
               autoComplete="off"
+              disabled={emiCalculation === "reducing"}
               style={inputStyle}
             />
           </div>
