@@ -25,8 +25,6 @@ import App from "./v2/app/App";
 
 import "./index.css";
 
-import { NotificationProvider } from "./context/NotificationContext";
-
 import {
   initializeV2Storage,
 } from "./v2/storage/storageBootstrap";
@@ -49,17 +47,13 @@ async function startApplication(): Promise<void> {
   // REACT MOUNT
   // ----------------------------------------------------------
 
-  ReactDOM.createRoot(
+     ReactDOM.createRoot(
     document.getElementById("root") as HTMLElement,
   ).render(
 
     <React.StrictMode>
 
-      <NotificationProvider>
-
-        <App />
-
-      </NotificationProvider>
+      <App />
 
     </React.StrictMode>,
 
