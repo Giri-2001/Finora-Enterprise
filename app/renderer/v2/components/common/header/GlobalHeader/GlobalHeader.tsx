@@ -50,6 +50,8 @@ export default function GlobalHeader({
 
   canGoBack,
 
+  onLogout,
+
 }: GlobalHeaderProps) {
 
   return (
@@ -86,89 +88,94 @@ export default function GlobalHeader({
               navigation history.
         ========================================== */}
 
-        <button
+       <button
 
-          type="button"
+  type="button"
 
-          aria-label="Go back"
+  aria-label="Go back"
 
-          title={
-            canGoBack
-              ? "Back"
-              : "No previous page"
-          }
+  title={
+    canGoBack
+      ? "Back"
+      : "No previous page"
+  }
 
-          disabled={!canGoBack}
+  disabled={!canGoBack}
 
-          onClick={onBack}
+  onClick={onBack}
 
-          style={{
-            width: 40,
+  style={{
+    width: 40,
 
-            height: 40,
+    height: 40,
 
-            minWidth: 40,
+    minWidth: 40,
 
-            borderRadius: 10,
+    borderRadius: 10,
 
-            border:
-              "1px solid rgba(212, 175, 55, 0.45)",
+    border:
+      "1px solid rgba(212, 175, 55, 0.45)",
 
-            background:
-              canGoBack
-                ? "rgba(255, 255, 255, 0.08)"
-                : "rgba(255, 255, 255, 0.03)",
+    background:
+      canGoBack
+        ? "rgba(255, 255, 255, 0.08)"
+        : "rgba(255, 255, 255, 0.03)",
 
-            color:
-              canGoBack
-                ? "#F4D27A"
-                : "rgba(244, 210, 122, 0.30)",
+    color:
+      canGoBack
+        ? "#F4D27A"
+        : "rgba(244, 210, 122, 0.30)",
 
-            display: "flex",
+    display: "flex",
 
-            alignItems: "center",
+    alignItems: "center",
 
-            justifyContent: "center",
+    justifyContent: "center",
 
-            cursor:
-              canGoBack
-                ? "pointer"
-                : "default",
+    cursor:
+      canGoBack
+        ? "pointer"
+        : "default",
 
-            opacity:
-              canGoBack
-                ? 1
-                : 0.55,
+    opacity:
+      canGoBack
+        ? 1
+        : 0.55,
 
-            transition:
-              "all 160ms ease",
+    transition:
+      "all 160ms ease",
 
-            padding: 0,
+    padding: 0,
 
-            flexShrink: 0,
+    flexShrink: 0,
 
-            boxSizing: "border-box",
-          }}
+    boxSizing: "border-box",
+  }}
 
-        >
+>
 
-          <span
-            aria-hidden="true"
-            style={{
-              fontSize: 22,
+  <span
 
-              lineHeight: 1,
+    aria-hidden="true"
 
-              fontWeight: 700,
+    style={{
+      fontSize: 22,
 
-              transform:
-                "translateY(-1px)",
-            }}
-          >
-            ←
-          </span>
+      lineHeight: 1,
 
-        </button>
+      fontWeight: 700,
+
+      transform:
+        "translateY(-1px)",
+    }}
+
+  >
+
+    ←
+
+  </span>
+
+</button>
 
         {/* ==========================================
             RECEPTION LOGO
@@ -242,6 +249,51 @@ export default function GlobalHeader({
           }}
 
         />
+
+        <button
+
+  type="button"
+
+  onClick={onLogout}
+
+  title="Logout"
+
+  aria-label="Logout"
+
+  style={{
+    height: 40,
+
+    padding: "0 16px",
+
+    borderRadius: 10,
+
+    border:
+      "1px solid rgba(212, 175, 55, 0.45)",
+
+    background:
+      "rgba(255, 255, 255, 0.08)",
+
+    color:
+      "#F4D27A",
+
+    cursor:
+      "pointer",
+
+    fontWeight: 700,
+
+    fontSize: 13,
+
+    transition:
+      "all 160ms ease",
+
+    flexShrink: 0,
+  }}
+
+>
+
+  Logout
+
+</button>
 
       </div>
 

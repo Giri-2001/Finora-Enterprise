@@ -13,4 +13,6 @@ export interface GlobalHeaderProps {
 
   canGoBack: boolean;
 
+  onLogout: () => void;
+
 }

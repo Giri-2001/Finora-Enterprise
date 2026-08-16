@@ -92,7 +92,7 @@ export default function AppShell({
 
   canGoBack,
 
-  onLogout: _onLogout,
+  onLogout,
 
 }: AppShellProps) {
 
@@ -149,33 +149,37 @@ export default function AppShell({
 
       <GlobalHeader
 
-        department={
-          page === "reception"
-            ? "Reception"
-            : page === "dashboard"
-              ? "Dashboard"
-              : page === "customers"
-                ? "Customers"
-                : page === "customerDepartment"
-                  ? "Customer Department"
-                  : page === "loans"
-                    ? "Loans"
-                    : page === "collections"
-                      ? "Collections"
-                      : page === "reports"
-                        ? "Reports"
-                        : "Reception"
-        }
+  department={
+    page === "reception"
+      ? "Reception"
+      : page === "dashboard"
+        ? "Dashboard"
+        : page === "customers"
+          ? "Customers"
+          : page === "customerDepartment"
+            ? "Customer Department"
+            : page === "loans"
+              ? "Loans"
+              : page === "collections"
+                ? "Collections"
+                : page === "reports"
+                  ? "Reports"
+                  : "Reception"
+  }
 
-        onBack={
-          onBack
-        }
+  onBack={
+    onBack
+  }
 
-        canGoBack={
-          canGoBack
-        }
+  canGoBack={
+    canGoBack
+  }
 
-      />
+  onLogout={
+    onLogout
+  }
+
+/>
 
       {/* =====================================================
           ACTIVE V2 PAGE
