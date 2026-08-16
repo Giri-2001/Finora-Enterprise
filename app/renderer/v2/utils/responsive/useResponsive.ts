@@ -11,61 +11,124 @@ import {
 } from "react";
 
 import {
+  getDeviceType,
   isDesktop,
   isTablet,
   isMobile,
+  getSafeWidth,
+  getSafeHeight,
 } from "./helpers";
 
+import type {
+  DeviceType,
+} from "./types";
+
+
 /* ===========================================================
-   TYPES
+   RESPONSIVE STATE
 =========================================================== */
 
 export interface ResponsiveState {
 
-  width: number;
+  width:
+    number;
 
-  height: number;
+  height:
+    number;
 
-  isDesktop: boolean;
+  device:
+    DeviceType;
 
-  isTablet: boolean;
+  isDesktop:
+    boolean;
 
-  isMobile: boolean;
+  isTablet:
+    boolean;
+
+  isMobile:
+    boolean;
 
 }
+
+
+/* ===========================================================
+   VIEWPORT READER
+=========================================================== */
+
+function getViewportSize(): {
+  width: number;
+  height: number;
+} {
+
+  if (
+    typeof window === "undefined"
+  ) {
+
+    return {
+
+      width: 0,
+
+      height: 0,
+
+    };
+
+  }
+
+  return {
+
+    width:
+      getSafeWidth(
+        window.innerWidth,
+      ),
+
+    height:
+      getSafeHeight(
+        window.innerHeight,
+      ),
+
+  };
+
+}
+
 
 /* ===========================================================
    HOOK
 =========================================================== */
 
-export default function useResponsive(): ResponsiveState {
+export default function useResponsive():
+  ResponsiveState {
 
-  const [size, setSize] = useState({
+  const [
+    size,
+    setSize,
+  ] = useState(
+    getViewportSize,
+  );
 
-    width: window.innerWidth,
 
-    height: window.innerHeight,
-
-  });
+  /* ==========================================================
+     VIEWPORT MONITOR
+  ========================================================== */
 
   useEffect(() => {
 
-    function handleResize() {
+    function handleResize(): void {
 
-      setSize({
+      const next =
+        getViewportSize();
 
-        width: window.innerWidth,
-
-        height: window.innerHeight,
-
-      });
+      setSize(
+        next,
+      );
 
     }
+
 
     window.addEventListener(
       "resize",
       handleResize,
     );
+
 
     return () => {
 
@@ -78,18 +141,51 @@ export default function useResponsive(): ResponsiveState {
 
   }, []);
 
+
+  /* ==========================================================
+     DEVICE
+  ========================================================== */
+
+  const device =
+    getDeviceType(
+      size.width,
+    );
+
+
+  /* ==========================================================
+     STATE
+  ========================================================== */
+
   return {
 
-    width: size.width,
+    width:
+      size.width,
 
-    height: size.height,
+    height:
+      size.height,
 
-    isDesktop: isDesktop(size.width),
+    device,
 
-    isTablet: isTablet(size.width),
+    isDesktop:
+      isDesktop(
+        size.width,
+      ),
 
-    isMobile: isMobile(size.width),
+    isTablet:
+      isTablet(
+        size.width,
+      ),
+
+    isMobile:
+      isMobile(
+        size.width,
+      ),
 
   };
 
 }
+
+
+/* ===========================================================
+   END
+=========================================================== */
