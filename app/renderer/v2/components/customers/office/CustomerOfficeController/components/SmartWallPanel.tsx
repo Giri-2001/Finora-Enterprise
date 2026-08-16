@@ -22,7 +22,7 @@ import CustomerHangerRail
   from "../../../hub/sections/CustomerHangerRail";
 
 import CustomerSearchBar
-  from "../../../topbar/components/CustomerSearchBar/CustomerSearchBar";
+  from "../../../hub/topbar/components/CustomerSearchBar/CustomerSearchBar";
 
 import type {
   SmartWallPanelProps,
