@@ -3,9 +3,22 @@
    RECEPTION LOGO™
 
    COMPONENT
+
+   RESPONSIBILITY:
+   - Render Reception logo
+   - Render Reception brand title when responsive token allows
+   - Consume Responsive Engine
+   - Keep responsive visibility out of static styles
 =========================================================== */
 
-import type { ReceptionLogoProps } from "./types";
+
+/* ===========================================================
+   IMPORTS
+=========================================================== */
+
+import type {
+  ReceptionLogoProps,
+} from "./types";
 
 import {
   LOGO_IMAGE,
@@ -18,24 +31,84 @@ import {
   titleStyle,
 } from "./styles";
 
+import {
+  useResponsive,
+} from "../../../../utils/responsive";
+
+
+/* ===========================================================
+   COMPONENT
+=========================================================== */
+
 export default function ReceptionLogo({
+
   onClick,
+
 }: ReceptionLogoProps) {
+
+
+  /* =========================================================
+     RESPONSIVE ENGINE
+  ========================================================= */
+
+  const {
+    tokens,
+  } = useResponsive();
+
+
+  /* =========================================================
+     HEADER BRAND VISIBILITY
+  ========================================================= */
+
+  const {
+    brandVisible,
+  } = tokens.header;
+
+
+  /* =========================================================
+     RENDER
+  ========================================================= */
+
   return (
+
     <div
       style={containerStyle}
       onClick={onClick}
       title="Go to Reception"
     >
+
+      {/* ==========================================
+          RECEPTION LOGO
+      ========================================== */}
+
       <img
         src={LOGO_IMAGE}
         alt={LOGO_TITLE}
         style={logoStyle}
       />
 
-      <span style={titleStyle}>
-        {LOGO_TITLE}
-      </span>
+
+      {/* ==========================================
+          RECEPTION BRAND TITLE
+
+          Responsive Engine controls visibility.
+      ========================================== */}
+
+      {brandVisible && (
+
+        <span style={titleStyle}>
+          {LOGO_TITLE}
+        </span>
+
+      )}
+
     </div>
+
   );
+
 }
+
+
+/* ===========================================================
+   END
+=========================================================== */

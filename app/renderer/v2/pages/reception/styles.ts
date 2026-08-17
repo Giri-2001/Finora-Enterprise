@@ -1,138 +1,97 @@
-/* ===========================================================
+﻿/* ===========================================================
    FINORA ENTERPRISE OS™
    RECEPTION™
+   
+   PAGE STYLES
+=========================================================== */
 
-   STYLES
+
+/* ===========================================================
+   IMPORTS
 =========================================================== */
 
 import type {
   CSSProperties,
 } from "react";
 
+
 /* ===========================================================
-   ROOT
+   PAGE BACKGROUND
 =========================================================== */
 
-export const containerStyle: CSSProperties = {
+/*
+  Reception owns ONE continuous visual surface.
 
-  minHeight: "100vh",
+  Header
+      ↓
+  Reception Page
+      ↓
+  Reception Hall
+      ↓
+  Reception Footer
 
-  width: "100%",
+  The Hall and Footer must never expose the application/body
+  background between them.
 
-  display: "flex",
+  The Reception page therefore owns the same base background
+  used by the Reception Hall.
+*/
 
-  flexDirection: "column",
+const RECEPTION_PAGE_BACKGROUND =
+  "radial-gradient(circle at top, rgba(212,175,55,.18), transparent 35%), linear-gradient(180deg,#1B0E05,#5A3418)";
 
-  justifyContent: "space-between",
 
-  alignItems: "center",
+/* ===========================================================
+   PAGE
+=========================================================== */
 
-  padding: "48px",
+/*
+  Reception page owns the vertical layout.
+
+  IMPORTANT:
+  - width stays inside the application viewport.
+  - overflow-x is hidden so no right-side visual strip can
+    appear from horizontal overflow.
+  - background is continuous across Hall + Footer.
+  - no artificial viewport height is introduced.
+*/
+
+export const pageStyle:
+  CSSProperties = {
+
+  width:
+    "100%",
+
+  minWidth:
+    0,
+
+  minHeight:
+    0,
+
+  display:
+    "flex",
+
+  flex:
+    "1 1 auto",
+
+  flexDirection:
+    "column",
+
+  boxSizing:
+    "border-box",
+
+  overflowX:
+    "hidden",
+
+  overflowY:
+    "visible",
 
   background:
-    "linear-gradient(180deg,#F8FAFC 0%,#EEF2F7 100%)",
-
-  boxSizing: "border-box",
+    RECEPTION_PAGE_BACKGROUND,
 
 };
+
 
 /* ===========================================================
-   HEADER
+   END
 =========================================================== */
-
-export const headerStyle: CSSProperties = {
-
-  display: "flex",
-
-  flexDirection: "column",
-
-  alignItems: "center",
-
-  gap: "10px",
-
-};
-
-/* ===========================================================
-   TITLE
-=========================================================== */
-
-export const titleStyle: CSSProperties = {
-
-  margin: 0,
-
-  fontSize: "38px",
-
-  fontWeight: 800,
-
-  color: "#111827",
-
-  letterSpacing: "1px",
-
-};
-
-/* ===========================================================
-   SUBTITLE
-=========================================================== */
-
-export const subtitleStyle: CSSProperties = {
-
-  margin: 0,
-
-  fontSize: "18px",
-
-  color: "#6B7280",
-
-};
-
-/* ===========================================================
-   DESCRIPTION
-=========================================================== */
-
-export const descriptionStyle: CSSProperties = {
-
-  marginTop: "6px",
-
-  fontSize: "14px",
-
-  color: "#94A3B8",
-
-  textAlign: "center",
-
-};
-
-/* ===========================================================
-   DOOR GRID
-=========================================================== */
-
-export const doorGridStyle: CSSProperties = {
-
-  width: "100%",
-
-  maxWidth: "1200px",
-
-  display: "grid",
-
-  gridTemplateColumns:
-    "repeat(3,minmax(280px,1fr))",
-
-  gap: "32px",
-
-  marginTop: "60px",
-
-  marginBottom: "60px",
-
-};
-
-/* ===========================================================
-   FOOTER
-=========================================================== */
-
-export const footerStyle: CSSProperties = {
-
-  fontSize: "13px",
-
-  color: "#94A3B8",
-
-  textAlign: "center",
-
-};

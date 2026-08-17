@@ -3,17 +3,91 @@
    RESPONSIVE ENGINE™
 
    TYPES
+
+   RESPONSIBILITY:
+   - Responsive type contracts ONLY
+   - No visual values
+   - No breakpoint values
+   - No device detection logic
+   - No layout calculations
+
+   RESPONSIVE ENGINE:
+   types.ts      → contracts
+   breakpoints.ts → viewport boundaries
+   helpers.ts    → device detection
+   tokens.ts     → visual tokens
+   layout.ts     → layout calculations
+   useResponsive.ts → live viewport state
+   index.ts      → central exports
 =========================================================== */
 
 
 /* ===========================================================
-   DEVICE TYPE
+   HIGH-LEVEL DEVICE TYPE
 =========================================================== */
 
 export type DeviceType =
-  | "desktop"
+  | "mobile"
   | "tablet"
-  | "mobile";
+  | "laptop"
+  | "desktop"
+  | "wideDesktop"
+  | "ultraWide"
+  | "tv";
+
+
+/* ===========================================================
+   RESPONSIVE DEVICE
+=========================================================== */
+
+export type ResponsiveDevice =
+  DeviceType;
+
+
+/* ===========================================================
+   DEVICE INDEX
+=========================================================== */
+
+export type ResponsiveDeviceIndex =
+  | 0
+  | 1
+  | 2
+  | 3
+  | 4
+  | 5
+  | 6;
+
+
+/* ===========================================================
+   DETAILED VIEWPORT PROFILE
+=========================================================== */
+
+export type ResponsiveViewport =
+  | "verySmallMobile"
+  | "mobile"
+  | "largeMobile"
+  | "tablet"
+  | "smallLaptop"
+  | "laptop"
+  | "desktop"
+  | "wideDesktop"
+  | "ultraWide"
+  | "projector";
+
+
+/* ===========================================================
+   VIEWPORT SIZE
+=========================================================== */
+
+export interface ViewportSize {
+
+  width:
+    number;
+
+  height:
+    number;
+
+}
 
 
 /* ===========================================================
@@ -25,29 +99,116 @@ export interface ResponsiveBreakpoint {
   minWidth:
     number;
 
-  maxWidth?:
+  maxWidth:
+    number | null;
+
+}
+
+
+/* ===========================================================
+   RESPONSIVE BREAKPOINT MAP
+=========================================================== */
+
+export type ResponsiveBreakpointMap = {
+
+  [device in DeviceType]:
+    ResponsiveBreakpoint;
+
+};
+
+
+/* ===========================================================
+   RESPONSIVE META
+=========================================================== */
+
+export interface ResponsiveTokenMeta {
+
+  name:
+    string;
+
+  viewport:
+    ResponsiveViewport;
+
+  minWidth:
+    number;
+
+  maxWidth:
+    number | null;
+
+}
+
+
+/* ===========================================================
+   TYPOGRAPHY
+=========================================================== */
+
+export interface ResponsiveTypography {
+
+  display:
+    number;
+
+  title:
+    number;
+
+  heading:
+    number;
+
+  subheading:
+    number;
+
+  body:
+    number;
+
+  label:
+    number;
+
+  small:
+    number;
+
+  caption:
+    number;
+
+  button:
+    number;
+
+  input:
+    number;
+
+  table:
+    number;
+
+  navigation:
     number;
 
 }
 
 
 /* ===========================================================
-   RESPONSIVE SIZE
+   LINE HEIGHT
 =========================================================== */
 
-export interface ResponsiveSize {
+export interface ResponsiveLineHeight {
 
-  width:
-    number | string;
+  display:
+    number;
 
-  height?:
-    number | string;
+  title:
+    number;
+
+  heading:
+    number;
+
+  body:
+    number;
+
+  compact:
+    number;
 
 }
 
 
 /* ===========================================================
-   RESPONSIVE SPACING
+   SPACING
 =========================================================== */
 
 export interface ResponsiveSpacing {
@@ -67,35 +228,125 @@ export interface ResponsiveSpacing {
   inline:
     number;
 
-}
-
-
-/* ===========================================================
-   RESPONSIVE TYPOGRAPHY
-=========================================================== */
-
-export interface ResponsiveTypography {
-
-  title:
-    number;
-
-  heading:
-    number;
-
-  body:
-    number;
-
   small:
     number;
 
-  label:
+  medium:
+    number;
+
+  large:
+    number;
+
+  xlarge:
+    number;
+
+  xxlarge:
     number;
 
 }
 
 
 /* ===========================================================
-   RESPONSIVE BORDER
+   CARD
+=========================================================== */
+
+export interface ResponsiveCard {
+
+  width:
+    number | string;
+
+  minWidth:
+    number;
+
+  maxWidth:
+    number;
+
+  minHeight:
+    number;
+
+  padding:
+    number;
+
+  radius:
+    number;
+
+  gap:
+    number;
+
+}
+
+
+/* ===========================================================
+   DEPARTMENT DOOR
+=========================================================== */
+
+export interface ResponsiveDoor {
+
+  width:
+    number | string;
+
+  height:
+    number;
+
+  padding:
+    number;
+
+  radius:
+    number;
+
+  gap:
+    number;
+
+  iconSize:
+    number;
+
+  iconRadius:
+    number;
+
+  titleSize:
+    number;
+
+  subtitleSize:
+    number;
+
+  statusSize:
+    number;
+
+  statusPaddingX:
+    number;
+
+  statusPaddingY:
+    number;
+
+  statusMinHeight:
+    number;
+
+}
+
+
+/* ===========================================================
+   PANEL
+=========================================================== */
+
+export interface ResponsivePanel {
+
+  padding:
+    number;
+
+  radius:
+    number;
+
+  gap:
+    number;
+
+  minHeight:
+    number;
+
+}
+
+
+/* ===========================================================
+   BORDER
 =========================================================== */
 
 export interface ResponsiveBorder {
@@ -106,11 +357,14 @@ export interface ResponsiveBorder {
   radius:
     number;
 
+  strongWidth:
+    number;
+
 }
 
 
 /* ===========================================================
-   RESPONSIVE CONTROL
+   CONTROL
 =========================================================== */
 
 export interface ResponsiveControl {
@@ -124,25 +378,717 @@ export interface ResponsiveControl {
   radius:
     number;
 
+  paddingX:
+    number;
+
+  paddingY:
+    number;
+
+  gap:
+    number;
+
 }
 
 
 /* ===========================================================
-   RESPONSIVE CONTAINER
+   INPUT
 =========================================================== */
 
-export interface ResponsiveContainer {
+export interface ResponsiveInput {
+
+  height:
+    number;
+
+  minHeight:
+    number;
+
+  radius:
+    number;
+
+  paddingX:
+    number;
+
+  paddingY:
+    number;
+
+  fontSize:
+    number;
+
+  iconSize:
+    number;
+
+}
+
+
+/* ===========================================================
+   BUTTON
+=========================================================== */
+
+export interface ResponsiveButton {
+
+  height:
+    number;
+
+  minHeight:
+    number;
+
+  radius:
+    number;
+
+  paddingX:
+    number;
+
+  paddingY:
+    number;
+
+  fontSize:
+    number;
+
+  iconSize:
+    number;
+
+}
+
+
+/* ===========================================================
+   ICON
+=========================================================== */
+
+export interface ResponsiveIcon {
+
+  xs:
+    number;
+
+  sm:
+    number;
+
+  md:
+    number;
+
+  lg:
+    number;
+
+  xl:
+    number;
+
+}
+
+
+/* ===========================================================
+   LOGIN
+=========================================================== */
+
+export interface ResponsiveLogin {
+
+  pagePadding:
+    number;
+
+  cardWidth:
+    number | string;
+
+  cardMaxWidth:
+    number;
+
+  cardPadding:
+    number;
+
+  cardRadius:
+    number;
+
+  titleSize:
+    number;
+
+  subtitleSize:
+    number;
+
+  inputHeight:
+    number;
+
+  buttonHeight:
+    number;
+
+  sectionGap:
+    number;
+
+}
+
+
+/* ===========================================================
+   HEADER
+=========================================================== */
+
+export interface ResponsiveHeader {
+
+  visible:
+    boolean;
+
+  height:
+    number;
+
+  paddingX:
+    number;
+
+  logoHeight:
+    number;
+
+  titleSize:
+    number;
+
+  iconSize:
+    number;
+
+  brandVisible:
+    boolean;
+
+}
+
+
+/* ===========================================================
+   RECEPTION
+=========================================================== */
+
+export interface ResponsiveReception {
+
+  titleSize:
+    number;
+
+  wallLogoSize:
+    number;
+
+  wallPadding:
+    number;
+
+  wallGap:
+    number;
+
+}
+
+
+/* ===========================================================
+   SIDEBAR
+=========================================================== */
+
+export interface ResponsiveSidebar {
 
   width:
-    number | string;
+    number;
 
-  maxWidth:
-    number | string;
+  collapsedWidth:
+    number;
 
   padding:
     number;
 
+  itemHeight:
+    number;
+
+  itemGap:
+    number;
+
+  iconSize:
+    number;
+
+  labelSize:
+    number;
+
 }
+
+
+/* ===========================================================
+   NAVIGATION
+=========================================================== */
+
+export interface ResponsiveNavigation {
+
+  height:
+    number;
+
+  itemHeight:
+    number;
+
+  gap:
+    number;
+
+  iconSize:
+    number;
+
+  labelSize:
+    number;
+
+}
+
+
+/* ===========================================================
+   LAYOUT
+=========================================================== */
+
+export interface ResponsiveLayout {
+
+  pageGutter:
+    number;
+
+  contentGap:
+    number;
+
+  cardGap:
+    number;
+
+  sectionGap:
+    number;
+
+  maxContentWidth:
+    number;
+
+  headerHeight:
+    number;
+
+  sidebarWidth:
+    number;
+
+}
+
+
+/* ===========================================================
+   GRID
+=========================================================== */
+
+export interface ResponsiveGrid {
+
+  columns:
+    number;
+
+  minCardWidth:
+    number;
+
+  gap:
+    number;
+
+}
+
+
+/* ===========================================================
+   CUSTOMER CARDS
+=========================================================== */
+
+export interface ResponsiveCustomerCards {
+
+  columns:
+    number;
+
+  width:
+    number;
+
+  minHeight:
+    number;
+
+  gap:
+    number;
+
+  padding:
+    number;
+
+  radius:
+    number;
+
+}
+
+
+/* ===========================================================
+   TABLE
+=========================================================== */
+
+export interface ResponsiveTable {
+
+  rowHeight:
+    number;
+
+  compactRowHeight:
+    number;
+
+  headerHeight:
+    number;
+
+  cellPaddingX:
+    number;
+
+  cellPaddingY:
+    number;
+
+  fontSize:
+    number;
+
+}
+
+
+/* ===========================================================
+   FORM
+=========================================================== */
+
+export interface ResponsiveForm {
+
+  fieldGap:
+    number;
+
+  rowGap:
+    number;
+
+  sectionGap:
+    number;
+
+  labelSize:
+    number;
+
+  labelGap:
+    number;
+
+  inputGap:
+    number;
+
+}
+
+
+/* ===========================================================
+   WIZARD
+=========================================================== */
+
+export interface ResponsiveWizard {
+
+  maxWidth:
+    number;
+
+  padding:
+    number;
+
+  headerHeight:
+    number;
+
+  progressHeight:
+    number;
+
+  contentGap:
+    number;
+
+  navigationHeight:
+    number;
+
+  stepGap:
+    number;
+
+  stepIndicator:
+    number;
+
+}
+
+
+/* ===========================================================
+   MODAL
+=========================================================== */
+
+export interface ResponsiveModal {
+
+  width:
+    number;
+
+  maxWidth:
+    number;
+
+  padding:
+    number;
+
+  radius:
+    number;
+
+  gap:
+    number;
+
+}
+
+
+/* ===========================================================
+   DASHBOARD
+=========================================================== */
+
+export interface ResponsiveDashboard {
+
+  maxWidth:
+    number;
+
+  padding:
+    number;
+
+  cardGap:
+    number;
+
+  columns:
+    number;
+
+}
+
+
+/* ===========================================================
+   PROJECTOR
+=========================================================== */
+
+export interface ResponsiveProjector {
+
+  scale:
+    number;
+
+  pagePadding:
+    number;
+
+  cardGap:
+    number;
+
+  titleSize:
+    number;
+
+  bodySize:
+    number;
+
+  statusSize:
+    number;
+
+}
+
+
+/* ===========================================================
+   COMPLETE RESPONSIVE TOKENS
+=========================================================== */
+
+export interface ResponsiveTokens {
+
+  meta:
+    ResponsiveTokenMeta;
+
+  typography:
+    ResponsiveTypography;
+
+  lineHeight:
+    ResponsiveLineHeight;
+
+  spacing:
+    ResponsiveSpacing;
+
+  card:
+    ResponsiveCard;
+
+  door:
+    ResponsiveDoor;
+
+  panel:
+    ResponsivePanel;
+
+  border:
+    ResponsiveBorder;
+
+  control:
+    ResponsiveControl;
+
+  input:
+    ResponsiveInput;
+
+  button:
+    ResponsiveButton;
+
+  icon:
+    ResponsiveIcon;
+
+  login:
+    ResponsiveLogin;
+
+  header:
+    ResponsiveHeader;
+
+  reception:
+    ResponsiveReception;
+
+  sidebar:
+    ResponsiveSidebar;
+
+  navigation:
+    ResponsiveNavigation;
+
+  layout:
+    ResponsiveLayout;
+
+  grid:
+    ResponsiveGrid;
+
+  customerCards:
+    ResponsiveCustomerCards;
+
+  table:
+    ResponsiveTable;
+
+  form:
+    ResponsiveForm;
+
+  wizard:
+    ResponsiveWizard;
+
+  modal:
+    ResponsiveModal;
+
+  dashboard:
+    ResponsiveDashboard;
+
+  projector:
+    ResponsiveProjector;
+
+}
+
+
+/* ===========================================================
+   TOKEN MAP
+=========================================================== */
+
+export type ResponsiveTokenMap = {
+
+  [viewport in ResponsiveViewport]:
+    ResponsiveTokens;
+
+};
+
+
+/* ===========================================================
+   TOKEN RESOLVER
+=========================================================== */
+
+export type ResponsiveTokenResolver =
+  (
+    device: ResponsiveDevice,
+  ) => ResponsiveTokens;
+
+
+/* ===========================================================
+   VIEWPORT TOKEN RESOLVER
+=========================================================== */
+
+export type ResponsiveViewportTokenResolver =
+  (
+    width: number,
+  ) => ResponsiveTokens;
+
+
+/* ===========================================================
+   DEVICE FLAGS
+=========================================================== */
+
+export interface ResponsiveDeviceFlags {
+
+  isMobile:
+    boolean;
+
+  isTablet:
+    boolean;
+
+  isLaptop:
+    boolean;
+
+  isDesktop:
+    boolean;
+
+  isWideDesktop:
+    boolean;
+
+  isUltraWide:
+    boolean;
+
+  isTv:
+    boolean;
+
+}
+
+
+/* ===========================================================
+   RESPONSIVE STATE
+=========================================================== */
+
+export interface ResponsiveState
+  extends ResponsiveDeviceFlags {
+
+  width:
+    number;
+
+  height:
+    number;
+
+  device:
+    DeviceType;
+
+  viewport:
+    ResponsiveViewport;
+
+  tokens:
+    ResponsiveTokens;
+
+}
+
+
+/* ===========================================================
+   RESPONSIVE VALUE
+=========================================================== */
+
+export type ResponsiveValue<T> =
+  T
+  | {
+      mobile: T;
+      tablet: T;
+      laptop: T;
+      desktop: T;
+      wideDesktop: T;
+      ultraWide: T;
+      tv: T;
+    };
+
+
+/* ===========================================================
+   RESPONSIVE NUMBER
+=========================================================== */
+
+export type ResponsiveNumber =
+  ResponsiveValue<number>;
+
+
+/* ===========================================================
+   RESPONSIVE STRING
+=========================================================== */
+
+export type ResponsiveString =
+  ResponsiveValue<string>;
+
+
+/* ===========================================================
+   RESPONSIVE DIMENSION
+=========================================================== */
+
+export type ResponsiveDimension =
+  ResponsiveValue<number | string>;
+
+
+/* ===========================================================
+   RESPONSIVE BOOLEAN
+=========================================================== */
+
+export type ResponsiveBoolean =
+  ResponsiveValue<boolean>;
+
+
+/* ===========================================================
+   CSS VALUE
+=========================================================== */
+
+export type ResponsiveCssValue =
+  number | string;
+
+
+/* ===========================================================
+   RESPONSIVE STYLE VALUE
+=========================================================== */
+
+export type ResponsiveStyleValue =
+  ResponsiveValue<ResponsiveCssValue>;
 
 
 /* ===========================================================

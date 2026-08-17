@@ -1,164 +1,280 @@
 /* ===========================================================
    FINORA ENTERPRISE OS™
    RECEPTION™
-
+   
    DEPARTMENT DOOR™
-
+   
    STYLES
+=========================================================== */
+
+
+/* ===========================================================
+   IMPORTS
 =========================================================== */
 
 import type {
   CSSProperties,
 } from "react";
 
-import {
-
-  DOOR_WIDTH,
-  DOOR_HEIGHT,
-  DOOR_RADIUS,
-  DOOR_BACKGROUND,
-  DOOR_BORDER,
-  DOOR_SHADOW,
-
-} from "./constants";
+import type {
+  ResponsiveTokens,
+} from "../../../../utils/responsive";
 
 
 /* ===========================================================
-   ROOT
+   RESPONSIVE STYLE FACTORY
+   -----------------------------------------------------------
+   IMPORTANT
+   -----------------------------------------------------------
+   All responsive dimensions are consumed from the
+   CENTRAL RESPONSIVE ENGINE.
+
+   Department Door uses ONLY the dedicated
+   tokens.door.* responsive token group for
+   door-specific visual dimensions.
 =========================================================== */
 
-export const containerStyle: CSSProperties = {
+export function createDepartmentDoorStyles(
+  tokens: ResponsiveTokens,
+) {
 
-  width: DOOR_WIDTH,
 
-  height: DOOR_HEIGHT,
+  /* =========================================================
+     ROOT
+     ---------------------------------------------------------
+     Department Door geometry comes exclusively from
+     the dedicated Responsive Engine door tokens.
+  ========================================================= */
 
-  borderRadius: DOOR_RADIUS,
+  const containerStyle: CSSProperties = {
 
-  background: DOOR_BACKGROUND,
+    width:
+      tokens.door.width,
 
-  border: `2px solid ${DOOR_BORDER}`,
+    height:
+      `${tokens.door.height}px`,
 
-  boxShadow: DOOR_SHADOW,
+    minHeight:
+      `${tokens.door.height}px`,
 
-  animation:
-"doorBreath 4s ease-in-out infinite",
+    borderRadius:
+      `${tokens.door.radius}px`,
 
-  display: "flex",
+    padding:
+      `${tokens.door.padding}px`,
 
-  flexDirection: "column",
+    display:
+      "flex",
 
-  justifyContent: "space-between",
+    flexDirection:
+      "column",
 
-  alignItems: "center",
+    justifyContent:
+      "space-between",
 
-  padding: "28px",
+    alignItems:
+      "center",
 
-  cursor: "pointer",
+    boxSizing:
+      "border-box",
 
-  transition:
-"all .45s cubic-bezier(.22,1,.36,1)",
+    cursor:
+      "pointer",
 
-  userSelect: "none",
+    userSelect:
+      "none",
 
-};
+    transition:
+      "all 220ms ease",
+
+  };
+
+
+  /* =========================================================
+     ICON
+     ---------------------------------------------------------
+     All Department Door icon dimensions come from
+     the dedicated door token group.
+  ========================================================= */
+
+  const iconStyle: CSSProperties = {
+
+    width:
+      `${tokens.door.iconSize}px`,
+
+    height:
+      `${tokens.door.iconSize}px`,
+
+    borderRadius:
+      `${tokens.door.iconRadius}px`,
+
+    display:
+      "flex",
+
+    alignItems:
+      "center",
+
+    justifyContent:
+      "center",
+
+    fontSize:
+      `${tokens.door.iconSize}px`,
+
+    flexShrink:
+      0,
+
+  };
+
+
+  /* =========================================================
+     CONTENT
+  ========================================================= */
+
+  const contentStyle: CSSProperties = {
+
+    display:
+      "flex",
+
+    flexDirection:
+      "column",
+
+    alignItems:
+      "center",
+
+    gap:
+      `${tokens.door.gap}px`,
+
+    textAlign:
+      "center",
+
+    width:
+      "100%",
+
+  };
+
+
+  /* =========================================================
+     TITLE
+  ========================================================= */
+
+  const titleStyle: CSSProperties = {
+
+    margin:
+      0,
+
+    fontSize:
+      `${tokens.door.titleSize}px`,
+
+    lineHeight:
+      tokens.lineHeight.heading,
+
+    fontWeight:
+      700,
+
+    textAlign:
+      "center",
+
+    color:
+      "#F3E4C2",
+
+  };
+
+
+  /* =========================================================
+     SUBTITLE
+  ========================================================= */
+
+  const subtitleStyle: CSSProperties = {
+
+    margin:
+      0,
+
+    fontSize:
+      `${tokens.door.subtitleSize}px`,
+
+    lineHeight:
+      tokens.lineHeight.compact,
+
+    textAlign:
+      "center",
+
+    color:
+     "rgba(255,255,255,.72)",  
+
+  };
+
+
+  /* =========================================================
+     STATUS
+     ---------------------------------------------------------
+     Status dimensions are Department Door dimensions.
+     They must NOT borrow generic control tokens.
+  ========================================================= */
+
+  const statusStyle: CSSProperties = {
+
+    padding:
+      `${tokens.door.statusPaddingY}px ${tokens.door.statusPaddingX}px`,
+
+    borderRadius:
+      "999px",
+
+    background:
+      "#FFFFFF",
+
+    fontSize:
+      `${tokens.door.statusSize}px`,
+
+    fontWeight:
+      700,
+
+    lineHeight:
+      tokens.lineHeight.compact,
+
+    whiteSpace:
+      "nowrap",
+
+    display:
+      "inline-flex",
+
+    alignItems:
+      "center",
+
+    justifyContent:
+      "center",
+
+    minHeight:
+      `${tokens.door.statusMinHeight}px`,
+
+    boxSizing:
+      "border-box",
+
+  };
+
+
+  /* =========================================================
+     RETURN
+  ========================================================= */
+
+  return {
+
+    containerStyle,
+
+    iconStyle,
+
+    contentStyle,
+
+    titleStyle,
+
+    subtitleStyle,
+
+    statusStyle,
+
+  };
+
+}
+
 
 /* ===========================================================
-   ICON
+   END
 =========================================================== */
-
-export const iconStyle: CSSProperties = {
-
-  width: "46px",
-
-  height: "46px",
-
-  borderRadius: "14px",
-
-  display: "flex",
-
-  alignItems: "center",
-
-  justifyContent: "center",
-
-  fontSize: "34px",
-
-  background:
-    "rgba(255,255,255,.12)",
-
-  border:
-    "1px solid rgba(212,175,55,.6)",
-
-};
-
-/* ===========================================================
-   CONTENT
-=========================================================== */
-
-export const contentStyle: CSSProperties = {
-
-  display: "flex",
-
-  flexDirection: "column",
-
-  alignItems: "center",
-
-  gap: "4px",
-
-};
-
-/* ===========================================================
-   TITLE
-=========================================================== */
-
-export const titleStyle: CSSProperties = {
-
-  margin: 0,
-
-  color: "#FFFFFF",
-
-  fontSize: "17px",
-
-  letterSpacing: "0.5px",
-
-  fontWeight: 700,
-
-  textAlign: "center",
-
-};
-
-/* ===========================================================
-   SUBTITLE
-=========================================================== */
-
-export const subtitleStyle: CSSProperties = {
-
-  margin: 0,
-
-  color: "#F8FAFC",
-
-  fontSize: "11px",
-
-  lineHeight: "14px",
-
-  textAlign: "center",
-
-};
-
-/* ===========================================================
-   STATUS
-=========================================================== */
-
-export const statusStyle: CSSProperties = {
-
-  padding: "4px 12px",
-
-  borderRadius: "999px",
-
-  background: "#FFFFFF",
-
-  fontSize: "11px",
-
-  fontWeight: 700,
-
-};

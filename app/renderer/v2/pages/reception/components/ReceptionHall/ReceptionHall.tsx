@@ -5,38 +5,37 @@
    RECEPTION HALL™
 =========================================================== */
 
+
+/* ===========================================================
+   IMPORTS
+=========================================================== */
+
 import finoraLogo
   from "../../../../app/assets/finoraenterprise.png";
+
+import {
+  useResponsive,
+} from "../../../../utils/responsive";
 
 import DepartmentDoor
   from "../DepartmentDoor";
 
 import {
-
   getReceptionDoors,
-
 } from "./helpers";
 
 import type {
-
   DepartmentDoor as DepartmentDoorModel,
-
 } from "../../types";
 
 import type {
-
   ReceptionHallProps,
-
 } from "./types";
 
 import {
-
-  containerStyle,
-  doorGridStyle,
-  wallStyle,
-  floorStyle,
-
+  createReceptionHallStyles,
 } from "./styles";
+
 
 /* ===========================================================
    COMPONENT
@@ -48,16 +47,53 @@ export default function ReceptionHall({
 
 }: Partial<ReceptionHallProps>) {
 
+
+  /* =========================================================
+     RESPONSIVE ENGINE
+  ========================================================= */
+
+  const {
+    tokens,
+  } = useResponsive();
+
+
+  /* =========================================================
+     DEPARTMENT DOORS
+  ========================================================= */
+
   const doors: DepartmentDoorModel[] =
     getReceptionDoors();
+
+
+  /* =========================================================
+     RESPONSIVE STYLES
+  ========================================================= */
+
+  const {
+    containerStyle,
+    doorGridStyle,
+    wallStyle,
+    floorStyle,
+    wallLogoStyle,
+    wallTitleStyle,
+    wallDividerStyle,
+    wallSubtitleStyle,
+  } =
+    createReceptionHallStyles(tokens);
+
+
+  /* =========================================================
+     RENDER
+  ========================================================= */
 
   return (
 
     <section style={containerStyle}>
 
-      {/* ======================================
+
+      {/* =====================================================
           FEATURE WALL
-      ====================================== */}
+      ===================================================== */}
 
       <section style={wallStyle}>
 
@@ -67,68 +103,22 @@ export default function ReceptionHall({
 
           alt="FINORA"
 
-          style={{
-
-            width: 56,
-
-            marginBottom: 8,
-
-          }}
+          style={wallLogoStyle}
 
         />
 
-        <h1
 
-          style={{
-
-            color: "#F8FAFC",
-
-            fontSize: 24,
-
-            margin: 0,
-
-            fontWeight: 800,
-
-            letterSpacing: 1,
-
-          }}
-
-        >
+        <h1 style={wallTitleStyle}>
 
           FINORA ENTERPRISE™
 
         </h1>
 
-        <div
 
-          style={{
+        <div style={wallDividerStyle} />
 
-            width: "260px",
 
-            height: "2px",
-
-            background:
-              "linear-gradient(90deg,transparent,#D4AF37,transparent)",
-
-            marginTop: "10px",
-
-          }}
-
-        />
-
-        <p
-
-          style={{
-
-            color: "#E5E7EB",
-
-            marginTop: 4,
-
-            fontSize: 12,
-
-          }}
-
-        >
+        <p style={wallSubtitleStyle}>
 
           Enterprise Reception Headquarters
 
@@ -136,9 +126,10 @@ export default function ReceptionHall({
 
       </section>
 
-      {/* ======================================
+
+      {/* =====================================================
           DEPARTMENT DOORS
-      ====================================== */}
+      ===================================================== */}
 
       <section style={doorGridStyle}>
 
@@ -158,9 +149,10 @@ export default function ReceptionHall({
 
       </section>
 
-      {/* ======================================
+
+      {/* =====================================================
           FLOOR LIGHT
-      ====================================== */}
+      ===================================================== */}
 
       <section style={floorStyle} />
 
@@ -169,3 +161,8 @@ export default function ReceptionHall({
   );
 
 }
+
+
+/* ===========================================================
+   END
+=========================================================== */

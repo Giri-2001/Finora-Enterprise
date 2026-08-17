@@ -24,7 +24,6 @@ export const DOOR_RADIUS =
   "18px";
 
 
-
 /* ===========================================================
    COLORS
 =========================================================== */
@@ -45,7 +44,6 @@ export const DOOR_BACKGROUND =
   "linear-gradient(180deg,#8A6135 0%,#4A260F 100%)";
 
 
-
 /* ===========================================================
    SHADOW SYSTEM
 =========================================================== */
@@ -58,7 +56,6 @@ export const DOOR_HOVER_SHADOW =
   "0 25px 60px rgba(212,175,55,.45), inset 0 0 25px rgba(212,175,55,.18)";
 
 
-
 /* ===========================================================
    ANIMATION
 =========================================================== */
@@ -67,15 +64,12 @@ export const DOOR_TRANSITION =
   "all .35s cubic-bezier(.22,1,.36,1)";
 
 
-
 export const DOOR_HOVER_TRANSFORM =
   "translateY(-8px) scale(1.02)";
 
 
-
 export const DOOR_NORMAL_TRANSFORM =
   "translateY(0) scale(1)";
-
 
 
 /* ===========================================================
@@ -86,10 +80,8 @@ export const ICON_HOVER_TRANSFORM =
   "translateY(-6px) scale(1.12)";
 
 
-
 export const ICON_NORMAL_TRANSFORM =
   "translateY(0) scale(1)";
-
 
 
 /* ===========================================================

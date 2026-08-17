@@ -5,44 +5,40 @@
    DEPARTMENT DOOR™
 =========================================================== */
 
+
+/* ===========================================================
+   IMPORTS
+=========================================================== */
+
 import {
   useState,
 } from "react";
 
+import {
+  useResponsive,
+} from "../../../../utils/responsive";
 
 import {
-
   buildDoorStatus,
-
 } from "./helpers";
 
-
 import type {
-
   DepartmentDoorProps,
-
 } from "./types";
 
-
 import {
-
-  containerStyle,
-  iconStyle,
-  contentStyle,
-  titleStyle,
-  subtitleStyle,
-  statusStyle,
-
+  createDepartmentDoorStyles,
 } from "./styles";
 
 import {
- DOOR_HOVER_SHADOW,
- DOOR_HOVER_TRANSFORM,
- DOOR_NORMAL_TRANSFORM,
- DOOR_TRANSITION,
- ICON_HOVER_TRANSFORM,
- ICON_NORMAL_TRANSFORM,
- STATUS_HOVER_GLOW,
+  DOOR_BORDER,
+  DOOR_HOVER_SHADOW,
+  DOOR_HOVER_TRANSFORM,
+  DOOR_NORMAL_TRANSFORM,
+  DOOR_TRANSITION,
+  ICON_HOVER_TRANSFORM,
+  ICON_NORMAL_TRANSFORM,
+  STATUS_HOVER_GLOW,
 } from "./constants";
 
 import "./DepartmentDoor.css";
@@ -61,12 +57,29 @@ export default function DepartmentDoor({
 }: DepartmentDoorProps) {
 
 
-  const [hovered,setHovered] =
+  /* =========================================================
+     RESPONSIVE ENGINE
+  ========================================================= */
+
+  const {
+    tokens,
+  } = useResponsive();
+
+
+  /* =========================================================
+     LOCAL INTERACTION STATE
+  ========================================================= */
+
+  const [hovered, setHovered] =
     useState(false);
 
-    const [opening,setOpening] =
-useState(false);
+  const [opening, setOpening] =
+    useState(false);
 
+
+  /* =========================================================
+     DOOR STATUS
+  ========================================================= */
 
   const status =
     buildDoorStatus(
@@ -74,72 +87,92 @@ useState(false);
     );
 
 
+  /* =========================================================
+     RESPONSIVE STYLES
+  ========================================================= */
+
+  const {
+
+    containerStyle,
+
+    iconStyle,
+
+    contentStyle,
+
+    titleStyle,
+
+    subtitleStyle,
+
+    statusStyle,
+
+  } =
+    createDepartmentDoorStyles(
+      tokens,
+    );
+
+
+  /* =========================================================
+     ROOT STATE STYLES
+  ========================================================= */
+
+  const rootStyle = {
+
+    ...containerStyle,
+
+    transform:
+      opening
+        ? DOOR_HOVER_TRANSFORM
+        : hovered
+          ? DOOR_HOVER_TRANSFORM
+          : DOOR_NORMAL_TRANSFORM,
+
+    boxShadow:
+      opening
+        ? "0 0 0 rgba(0,0,0,0)"
+        : hovered
+          ? DOOR_HOVER_SHADOW
+          : containerStyle.boxShadow,
+
+    border:
+      `${tokens.border.strongWidth}px solid ${DOOR_BORDER}`,
+
+    transition:
+      DOOR_TRANSITION,
+
+  };
+
+
+  /* =========================================================
+     ICON STATE
+  ========================================================= */
+
+  const currentIconTransform =
+    opening
+      ? ICON_HOVER_TRANSFORM
+      : hovered
+        ? ICON_HOVER_TRANSFORM
+        : ICON_NORMAL_TRANSFORM;
+
+
+  /* =========================================================
+     STATUS STATE
+  ========================================================= */
+
+  const currentStatusShadow =
+    hovered
+      ? STATUS_HOVER_GLOW
+      : "none";
+
+
+  /* =========================================================
+     RENDER
+  ========================================================= */
+
   return (
 
     <section
 
-
-      style={{
-
-        ...containerStyle,
-
-
-        transform:
-
-opening
-
-?
-
-"translateY(-12px) scale(1.08)"
-
-:
-
-hovered
-
-?
-
-"translateY(-8px) scale(1.02)"
-
-:
-
-"translateY(0) scale(1)",
-
-
-boxShadow:
-
-opening
-
-?
-
-"0 0 0 rgba(0,0,0,0)"
-
-:
-
-hovered
-
-?
-
-"0 12px 25px rgba(0,0,0,.25)"
-
-:
-
-containerStyle.boxShadow,
-
-border:
-
-hovered
-
-?
-
-"2px solid #D4AF37"
-
-:
-
-"2px solid rgba(212,175,55,.75)",
-
-
-      }}
-
+      style={rootStyle}
 
       onMouseEnter={() => {
 
@@ -147,155 +180,119 @@ hovered
 
       }}
 
-
       onMouseLeave={() => {
 
         setHovered(false);
 
       }}
 
-
       onClick={() => {
 
+        if (
+
+          !status.enabled ||
+
+          !onClick
+
+        ) {
+
+          return;
+
+        }
 
 
-
-  if (
-
-    status.enabled &&
-
-    onClick
-
-  )
-
-  {
+        setOpening(true);
 
 
-    setOpening(true);
+        setTimeout(() => {
 
+          onClick(
+            door,
+          );
 
-    setTimeout(() => {
+        }, 450);
 
-
-      onClick(
-
-        door,
-
-      );
-
-
-    },450);
-
-
-  }
-
-
-}}
-
+      }}
 
     >
 
 
-<div
+      {/* =====================================================
+         ICON
+      ===================================================== */}
 
-style={{
+      <div
 
-  ...iconStyle,
+        style={{
 
+          ...iconStyle,
 
- transform:
+          transform:
+            currentIconTransform,
 
-opening
+          transition:
+            DOOR_TRANSITION,
 
-?
+        }}
 
-"translateY(-8px) scale(1.18)"
+      >
 
-:
+        {door.icon}
 
-hovered
-
-?
-
-"translateY(-4px) scale(1.10)"
-
-:
-
-"translateY(0) scale(1)",
+      </div>
 
 
-  transition:
+      {/* =====================================================
+         CONTENT
+      ===================================================== */}
 
-    "transform .35s cubic-bezier(.22,1,.36,1)",
+      <div
+        style={contentStyle}
+      >
 
-
-}}
-
->
-  {door.icon}
-
-</div>
-
-
-
-      <div style={contentStyle}>
-
-
-        <h3 style={titleStyle}>
-
+        <h3
+          style={titleStyle}
+        >
 
           {door.title}
-
 
         </h3>
 
 
-
-        <p style={subtitleStyle}>
-
+        <p
+          style={subtitleStyle}
+        >
 
           {door.subtitle}
 
-
         </p>
-
 
       </div>
 
 
+      {/* =====================================================
+         STATUS
+      ===================================================== */}
 
       <div
 
-
         style={{
 
- ...statusStyle,
+          ...statusStyle,
 
- color:
- status.color,
+          color:
+            status.color,
 
- boxShadow:
+          boxShadow:
+            currentStatusShadow,
 
-hovered
-
-?
-"0 0 18px rgba(34,197,94,.45)"
-
-:
-
-"none",
-
-}}
-
+        }}
 
       >
 
-
         🔒 {status.label}
 
-
       </div>
-
 
 
     </section>
@@ -303,3 +300,8 @@ hovered
   );
 
 }
+
+
+/* ===========================================================
+   END
+=========================================================== */

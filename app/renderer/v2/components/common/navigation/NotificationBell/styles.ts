@@ -38,8 +38,8 @@ export const badgeStyle: CSSProperties = {
   top: "2px",
   right: "1px",
 
-  minWidth: "18px",
-  height: "18px",
+  minWidth: "12px",
+  height: "15px",
 
   borderRadius: "999px",
 
@@ -48,7 +48,7 @@ export const badgeStyle: CSSProperties = {
   color: "#FFFFFF",
 
   fontSize: "11px",
-  fontWeight: 700,
+  fontWeight: 600,
 
   display: "flex",
   alignItems: "center",

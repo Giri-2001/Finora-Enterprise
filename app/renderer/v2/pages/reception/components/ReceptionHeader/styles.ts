@@ -11,118 +11,166 @@ import type {
   CSSProperties,
 } from "react";
 
-/* ===========================================================
-   ROOT
-=========================================================== */
-
-export const containerStyle: CSSProperties = {
-
-  display: "flex",
-
-  flexDirection: "column",
-
-  alignItems: "center",
-
-  justifyContent: "center",
-
-  gap: "12px",
-
-  padding: "48px 24px 24px",
-
-};
+import type {
+  ResponsiveTokens,
+} from "../../../../utils/responsive/tokens";
 
 /* ===========================================================
-   LOGO
+   STYLE FACTORY
 =========================================================== */
 
-export const logoStyle: CSSProperties = {
+export function createReceptionHeaderStyles(
+  tokens: ResponsiveTokens,
+) {
 
-  width: "120px",
+  /* =========================================================
+     ROOT
+  ========================================================= */
 
-  height: "120px",
+  const containerStyle: CSSProperties = {
 
-  objectFit: "contain",
+    width: "100%",
 
-};
+    display: "flex",
+
+    flexDirection: "column",
+
+    alignItems: "center",
+
+    justifyContent: "center",
+
+    gap: tokens.spacing.medium,
+
+    padding: `${tokens.spacing.large}px ${tokens.layout.pageGutter}px`,
+
+    boxSizing: "border-box",
+
+  };
+
+
+  /* =========================================================
+     LOGO
+  ========================================================= */
+
+  const logoStyle: CSSProperties = {
+
+    width: tokens.header.logoHeight,
+
+    height: tokens.header.logoHeight,
+
+    objectFit: "contain",
+
+  };
+
+
+  /* =========================================================
+     TITLE
+  ========================================================= */
+
+  const titleStyle: CSSProperties = {
+
+    margin: 0,
+
+    fontSize: tokens.reception.titleSize,
+
+    fontWeight: 800,
+
+    color: "#F8FAFC",
+
+    letterSpacing: "1px",
+
+    textAlign: "center",
+
+    lineHeight: tokens.lineHeight.title,
+
+  };
+
+
+  /* =========================================================
+     SUBTITLE
+  ========================================================= */
+
+  const subtitleStyle: CSSProperties = {
+
+    margin: 0,
+
+    fontSize: tokens.typography.subheading,
+
+    fontWeight: 600,
+
+    color: "#E5E7EB",
+
+    textAlign: "center",
+
+    lineHeight: tokens.lineHeight.heading,
+
+  };
+
+
+  /* =========================================================
+     DESCRIPTION
+  ========================================================= */
+
+  const descriptionStyle: CSSProperties = {
+
+    maxWidth: tokens.layout.maxContentWidth,
+
+    margin: 0,
+
+    fontSize: tokens.typography.body,
+
+    lineHeight: tokens.lineHeight.body,
+
+    color: "#CBD5E1",
+
+    textAlign: "center",
+
+  };
+
+
+  /* =========================================================
+     VERSION
+  ========================================================= */
+
+  const versionStyle: CSSProperties = {
+
+    marginTop: tokens.spacing.small,
+
+    padding: `${tokens.spacing.small}px ${tokens.spacing.medium}px`,
+
+    borderRadius: tokens.border.radius,
+
+    background: "rgba(255,255,255,.08)",
+
+    border: "1px solid rgba(212,175,55,.45)",
+
+    fontSize: tokens.typography.caption,
+
+    fontWeight: 700,
+
+    color: "#D4AF37",
+
+  };
+
+
+  return {
+
+    containerStyle,
+
+    logoStyle,
+
+    titleStyle,
+
+    subtitleStyle,
+
+    descriptionStyle,
+
+    versionStyle,
+
+  };  
+
+}
 
 /* ===========================================================
-   TITLE
+   END
 =========================================================== */
-
-export const titleStyle: CSSProperties = {
-
-  margin: 0,
-
-  fontSize: "42px",
-
-  fontWeight: 800,
-
-  color: "#111827",
-
-  letterSpacing: "1px",
-
-  textAlign: "center",
-
-};
-
-/* ===========================================================
-   SUBTITLE
-=========================================================== */
-
-export const subtitleStyle: CSSProperties = {
-
-  margin: 0,
-
-  fontSize: "20px",
-
-  fontWeight: 600,
-
-  color: "#6B7280",
-
-  textAlign: "center",
-
-};
-
-/* ===========================================================
-   DESCRIPTION
-=========================================================== */
-
-export const descriptionStyle: CSSProperties = {
-
-  maxWidth: "700px",
-
-  margin: 0,
-
-  fontSize: "15px",
-
-  lineHeight: 1.7,
-
-  color: "#94A3B8",
-
-  textAlign: "center",
-
-};
-
-/* ===========================================================
-   VERSION
-=========================================================== */
-
-export const versionStyle: CSSProperties = {
-
-  marginTop: "8px",
-
-  padding: "6px 14px",
-
-  borderRadius: "999px",
-
-  background: "#FFFFFF",
-
-  border: "1px solid #E2E8F0",
-
-  fontSize: "12px",
-
-  fontWeight: 700,
-
-  color: "#6F4A23",
-
-};

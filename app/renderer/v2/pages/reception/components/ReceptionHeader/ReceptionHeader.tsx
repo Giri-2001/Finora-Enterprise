@@ -9,20 +9,15 @@ import finoraLogo
   from "../../../../app/assets/finoraenterprise.png";
 
 import {
+  useResponsive,
+} from "../../../../utils/responsive";
 
+import {
   buildReceptionHeader,
-
 } from "./helpers";
 
 import {
-
-  containerStyle,
-  logoStyle,
-  titleStyle,
-  subtitleStyle,
-  descriptionStyle,
-  versionStyle,
-
+  createReceptionHeaderStyles,
 } from "./styles";
 
 /* ===========================================================
@@ -31,8 +26,22 @@ import {
 
 export default function ReceptionHeader() {
 
+  const {
+    tokens,
+  } = useResponsive();
+
   const header =
     buildReceptionHeader();
+
+  const {
+    containerStyle,
+    logoStyle,
+    titleStyle,
+    subtitleStyle,
+    descriptionStyle,
+    versionStyle,
+  } =
+    createReceptionHeaderStyles(tokens);
 
   return (
 
@@ -77,3 +86,7 @@ export default function ReceptionHeader() {
   );
 
 }
+
+/* ===========================================================
+   END
+=========================================================== */

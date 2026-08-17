@@ -5,20 +5,23 @@
    RECEPTION FOOTER™
 =========================================================== */
 
+
+/* ===========================================================
+   IMPORTS
+=========================================================== */
+
 import {
+  useResponsive,
+} from "../../../../utils/responsive";
 
+import {
   buildReceptionFooter,
-
 } from "./helpers";
 
 import {
-
-  containerStyle,
-  copyrightStyle,
-  versionStyle,
-  statusStyle,
-
+  createReceptionFooterStyles,
 } from "./styles";
+
 
 /* ===========================================================
    COMPONENT
@@ -26,28 +29,64 @@ import {
 
 export default function ReceptionFooter() {
 
+  /* =========================================================
+     RESPONSIVE ENGINE
+  ========================================================= */
+
+  const {
+    tokens,
+  } = useResponsive();
+
+
+  /* =========================================================
+     FOOTER DATA
+  ========================================================= */
+
   const footer =
     buildReceptionFooter();
+
+
+  /* =========================================================
+     RESPONSIVE STYLES
+  ========================================================= */
+
+  const {
+
+    containerStyle,
+
+    contentStyle,
+
+    copyrightStyle,
+
+    versionStyle,
+
+  } =
+    createReceptionFooterStyles(
+      tokens,
+    );
+
+
+  /* =========================================================
+     RENDER
+  ========================================================= */
 
   return (
 
     <footer style={containerStyle}>
 
-      <div style={copyrightStyle}>
+      <div style={contentStyle}>
 
-        {footer.copyright}
+        <div style={copyrightStyle}>
 
-      </div>
+          {footer.copyright}
 
-      <div style={versionStyle}>
+        </div>
 
-        {footer.version}
+        <div style={versionStyle}>
 
-      </div>
+          {footer.version}
 
-      <div style={statusStyle}>
-
-        🟢 {footer.status}
+        </div>
 
       </div>
 
@@ -56,3 +95,8 @@ export default function ReceptionFooter() {
   );
 
 }
+
+
+/* ===========================================================
+   END
+=========================================================== */

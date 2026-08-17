@@ -3,6 +3,28 @@
    RESPONSIVE ENGINE™
 
    RESPONSIVE HOOK
+
+   RESPONSIBILITY:
+   - Read live viewport dimensions
+   - Track viewport changes
+   - Resolve current FINORA device tier
+   - Resolve current detailed viewport profile
+   - Resolve current responsive tokens
+   - Expose responsive device flags
+   - Provide safe viewport values
+
+   IMPORTANT:
+   - No visual values belong here.
+   - Breakpoint boundaries belong to breakpoints.ts.
+   - Device classification belongs to helpers.ts.
+   - Visual tokens belong to tokens.ts.
+   - Layout calculations belong to layout.ts.
+   - Shared contracts belong to types.ts.
+=========================================================== */
+
+
+/* ===========================================================
+   IMPORTS
 =========================================================== */
 
 import {
@@ -12,41 +34,31 @@ import {
 
 import {
   getDeviceType,
-  isDesktop,
-  isTablet,
-  isMobile,
-  getSafeWidth,
-  getSafeHeight,
+  getDeviceFlags,
+  getSafeViewport,
 } from "./helpers";
 
+import {
+  getResponsiveViewportTokens,
+} from "./tokens";
+
 import type {
-  DeviceType,
+  ResponsiveState,
+  ResponsiveViewport,
 } from "./types";
 
 
 /* ===========================================================
-   RESPONSIVE STATE
+   VIEWPORT SIZE
 =========================================================== */
 
-export interface ResponsiveState {
+interface ViewportSize {
 
   width:
     number;
 
   height:
     number;
-
-  device:
-    DeviceType;
-
-  isDesktop:
-    boolean;
-
-  isTablet:
-    boolean;
-
-  isMobile:
-    boolean;
 
 }
 
@@ -55,10 +67,7 @@ export interface ResponsiveState {
    VIEWPORT READER
 =========================================================== */
 
-function getViewportSize(): {
-  width: number;
-  height: number;
-} {
+function getViewportSize(): ViewportSize {
 
   if (
     typeof window === "undefined"
@@ -66,27 +75,20 @@ function getViewportSize(): {
 
     return {
 
-      width: 0,
+      width:
+        0,
 
-      height: 0,
+      height:
+        0,
 
     };
 
   }
 
-  return {
-
-    width:
-      getSafeWidth(
-        window.innerWidth,
-      ),
-
-    height:
-      getSafeHeight(
-        window.innerHeight,
-      ),
-
-  };
+  return getSafeViewport(
+    window.innerWidth,
+    window.innerHeight,
+  );
 
 }
 
@@ -99,29 +101,60 @@ export default function useResponsive():
   ResponsiveState {
 
   const [
-    size,
-    setSize,
-  ] = useState(
+    viewportSize,
+    setViewportSize,
+  ] = useState<ViewportSize>(
     getViewportSize,
   );
 
 
-  /* ==========================================================
-     VIEWPORT MONITOR
-  ========================================================== */
+  /* =========================================================
+     VIEWPORT LISTENER
+  ========================================================= */
 
   useEffect(() => {
 
-    function handleResize(): void {
+    if (
+      typeof window === "undefined"
+    ) {
 
-      const next =
-        getViewportSize();
-
-      setSize(
-        next,
-      );
+      return undefined;
 
     }
+
+
+    const handleResize = (): void => {
+
+      const nextViewport =
+        getViewportSize();
+
+      setViewportSize(
+        previous => {
+
+          if (
+            previous.width ===
+              nextViewport.width &&
+            previous.height ===
+              nextViewport.height
+          ) {
+
+            return previous;
+
+          }
+
+          return nextViewport;
+
+        },
+      );
+
+    };
+
+
+    /*
+      Synchronize immediately after mount.
+    */
+
+    handleResize();
 
 
     window.addEventListener(
@@ -142,48 +175,118 @@ export default function useResponsive():
   }, []);
 
 
-  /* ==========================================================
+  /* ===========================================================
      DEVICE
-  ========================================================== */
+  =========================================================== */
 
   const device =
     getDeviceType(
-      size.width,
+      viewportSize.width,
     );
 
 
-  /* ==========================================================
-     STATE
-  ========================================================== */
+  /* ===========================================================
+     DEVICE FLAGS
+  =========================================================== */
 
-  return {
+  const flags =
+    getDeviceFlags(
+      viewportSize.width,
+    );
+
+
+  /* ===========================================================
+     RESPONSIVE TOKENS
+  =========================================================== */
+
+  const tokens =
+    getResponsiveViewportTokens(
+      viewportSize.width,
+    );
+
+
+  /* ===========================================================
+     DETAILED VIEWPORT PROFILE
+     
+     ResponsiveViewport is the detailed 10-profile system:
+     
+     - verySmallMobile
+     - mobile
+     - largeMobile
+     - tablet
+     - smallLaptop
+     - laptop
+     - desktop
+     - wideDesktop
+     - ultraWide
+     - projector
+     
+     The token resolver already determines this profile.
+     Therefore the hook consumes the authoritative token
+     metadata instead of duplicating breakpoint logic here.
+  =========================================================== */
+
+  const responsiveViewport:
+    ResponsiveViewport =
+    tokens.meta.viewport;
+
+
+  /* ===========================================================
+     RESPONSIVE STATE
+  =========================================================== */
+
+  const state: ResponsiveState = {
+
+    viewport:
+      responsiveViewport,
+
+    tokens:
+      tokens,
 
     width:
-      size.width,
+      viewportSize.width,
 
     height:
-      size.height,
+      viewportSize.height,
 
     device,
 
-    isDesktop:
-      isDesktop(
-        size.width,
-      ),
+    isMobile:
+      flags.isMobile,
 
     isTablet:
-      isTablet(
-        size.width,
-      ),
+      flags.isTablet,
 
-    isMobile:
-      isMobile(
-        size.width,
-      ),
+    isLaptop:
+      flags.isLaptop,
+
+    isDesktop:
+      flags.isDesktop,
+
+    isWideDesktop:
+      flags.isWideDesktop,
+
+    isUltraWide:
+      flags.isUltraWide,
+
+    isTv:
+      flags.isTv,
 
   };
 
+
+  return state;
+
 }
+
+
+/* ===========================================================
+   NAMED HOOK EXPORT
+=========================================================== */
+
+export {
+  useResponsive,
+};
 
 
 /* ===========================================================

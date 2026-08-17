@@ -11,6 +11,13 @@
    - Display department title
    - Display notifications
    - Display admin profile
+   - Consume Responsive Engine
+   - Keep responsive values out of inline styles
+=========================================================== */
+
+
+/* ===========================================================
+   IMPORTS
 =========================================================== */
 
 import type {
@@ -31,12 +38,13 @@ import AdminProfile
   from "../../navigation/AdminProfile";
 
 import {
-  containerStyle,
-  leftStyle,
-  centerStyle,
-  departmentStyle,
-  rightStyle,
+  useResponsive,
+} from "../../../../utils/responsive";
+
+import {
+  createGlobalHeaderStyles,
 } from "./styles";
+
 
 /* ===========================================================
    COMPONENT
@@ -54,25 +62,60 @@ export default function GlobalHeader({
 
 }: GlobalHeaderProps) {
 
+
+  /* =========================================================
+     RESPONSIVE ENGINE
+  ========================================================= */
+
+  const {
+    tokens,
+  } = useResponsive();
+
+
+  /* =========================================================
+     RESPONSIVE STYLES
+  ========================================================= */
+
+  const {
+
+    containerStyle,
+
+    leftStyle,
+
+    centerStyle,
+
+    departmentStyle,
+
+    rightStyle,
+
+    backButtonStyle,
+
+    backIconStyle,
+
+    logoutButtonStyle,
+
+  } =
+    createGlobalHeaderStyles(
+      tokens,
+      canGoBack,
+    );
+
+
+  /* =========================================================
+     RENDER
+  ========================================================= */
+
   return (
 
     <header style={containerStyle}>
+
 
       {/* ==========================================
           LEFT
       ========================================== */}
 
-      <div
-        style={{
-          ...leftStyle,
+      <div style={leftStyle}>
 
-          display: "flex",
-
-          alignItems: "center",
-
-          gap: 12,
-        }}
-      >
 
         {/* ==========================================
             GLOBAL BACK BUTTON
@@ -88,94 +131,44 @@ export default function GlobalHeader({
               navigation history.
         ========================================== */}
 
-       <button
+        <button
 
-  type="button"
+          type="button"
 
-  aria-label="Go back"
+          aria-label="Go back"
 
-  title={
-    canGoBack
-      ? "Back"
-      : "No previous page"
-  }
+          title={
 
-  disabled={!canGoBack}
+            canGoBack
 
-  onClick={onBack}
+              ? "Back"
 
-  style={{
-    width: 40,
+              : "No previous page"
 
-    height: 40,
+          }
 
-    minWidth: 40,
+          disabled={!canGoBack}
 
-    borderRadius: 10,
+          onClick={onBack}
 
-    border:
-      "1px solid rgba(212, 175, 55, 0.45)",
+          style={backButtonStyle}
 
-    background:
-      canGoBack
-        ? "rgba(255, 255, 255, 0.08)"
-        : "rgba(255, 255, 255, 0.03)",
+        >
 
-    color:
-      canGoBack
-        ? "#F4D27A"
-        : "rgba(244, 210, 122, 0.30)",
+          <span
 
-    display: "flex",
+            aria-hidden="true"
 
-    alignItems: "center",
+            style={backIconStyle}
 
-    justifyContent: "center",
+          >
 
-    cursor:
-      canGoBack
-        ? "pointer"
-        : "default",
+            ←
 
-    opacity:
-      canGoBack
-        ? 1
-        : 0.55,
+          </span>
 
-    transition:
-      "all 160ms ease",
+        </button>
 
-    padding: 0,
-
-    flexShrink: 0,
-
-    boxSizing: "border-box",
-  }}
-
->
-
-  <span
-
-    aria-hidden="true"
-
-    style={{
-      fontSize: 22,
-
-      lineHeight: 1,
-
-      fontWeight: 700,
-
-      transform:
-        "translateY(-1px)",
-    }}
-
-  >
-
-    ←
-
-  </span>
-
-</button>
 
         {/* ==========================================
             RECEPTION LOGO
@@ -198,6 +191,7 @@ export default function GlobalHeader({
 
       </div>
 
+
       {/* ==========================================
           CENTER
       ========================================== */}
@@ -216,11 +210,17 @@ export default function GlobalHeader({
 
       </div>
 
+
       {/* ==========================================
           RIGHT
       ========================================== */}
 
       <div style={rightStyle}>
+
+
+        {/* ==========================================
+            NOTIFICATIONS
+        ========================================== */}
 
         <NotificationBell
 
@@ -236,6 +236,11 @@ export default function GlobalHeader({
 
         />
 
+
+        {/* ==========================================
+            ADMIN PROFILE
+        ========================================== */}
+
         <AdminProfile
 
           adminName="Girish"
@@ -250,50 +255,29 @@ export default function GlobalHeader({
 
         />
 
+
+        {/* ==========================================
+            LOGOUT
+        ========================================== */}
+
         <button
 
-  type="button"
+          type="button"
 
-  onClick={onLogout}
+          onClick={onLogout}
 
-  title="Logout"
+          title="Logout"
 
-  aria-label="Logout"
+          aria-label="Logout"
 
-  style={{
-    height: 40,
+          style={logoutButtonStyle}
 
-    padding: "0 16px",
+        >
 
-    borderRadius: 10,
+          Logout
 
-    border:
-      "1px solid rgba(212, 175, 55, 0.45)",
+        </button>
 
-    background:
-      "rgba(255, 255, 255, 0.08)",
-
-    color:
-      "#F4D27A",
-
-    cursor:
-      "pointer",
-
-    fontWeight: 700,
-
-    fontSize: 13,
-
-    transition:
-      "all 160ms ease",
-
-    flexShrink: 0,
-  }}
-
->
-
-  Logout
-
-</button>
 
       </div>
 
@@ -302,3 +286,8 @@ export default function GlobalHeader({
   );
 
 }
+
+
+/* ===========================================================
+   END
+=========================================================== */

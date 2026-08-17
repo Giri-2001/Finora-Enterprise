@@ -12,6 +12,7 @@
 // - Host the active V2 page
 // - Establish the exact viewport height
 // - Allow child Studio layouts to consume remaining height
+// - Provide the global page scrolling boundary
 //
 // IMPORTANT:
 //
@@ -21,10 +22,12 @@
 // - Does NOT access filesystem.
 // - Does NOT use Electron IPC.
 // - Navigation is delegated to the authenticated application.
+// - Responsive dimensions remain owned by the Responsive Engine.
 //
-// VERSION : 2.3
+// VERSION : 2.6
 // STATUS  : Production
 // ============================================================
+
 
 // ============================================================
 // IMPORTS
@@ -34,7 +37,9 @@ import type {
   ReactNode,
 } from "react";
 
-import GlobalHeader from "../components/common/header/GlobalHeader";
+import GlobalHeader
+  from "../components/common/header/GlobalHeader";
+
 
 // ============================================================
 // PAGE TYPE
@@ -48,6 +53,7 @@ export type AppPage =
   | "loans"
   | "collections"
   | "reports";
+
 
 // ============================================================
 // PROPS
@@ -76,6 +82,7 @@ interface AppShellProps {
     () => void;
 }
 
+
 // ============================================================
 // COMPONENT
 // ============================================================
@@ -96,60 +103,12 @@ export default function AppShell({
 
 }: AppShellProps) {
 
-  return (
 
-    <main
-      style={{
-        // ----------------------------------------------------
-        // EXACT VIEWPORT
-        // ----------------------------------------------------
+  // ==========================================================
+  // DEPARTMENT TITLE
+  // ==========================================================
 
-        width: "100vw",
-
-        height: "100vh",
-
-        minHeight: 0,
-
-        minWidth: 0,
-
-        boxSizing: "border-box",
-
-        // ----------------------------------------------------
-        // LAYOUT
-        // ----------------------------------------------------
-
-        display: "flex",
-
-        flexDirection: "column",
-
-        // ----------------------------------------------------
-        // OVERFLOW
-        // ----------------------------------------------------
-
-        overflow: "hidden",
-
-        // ----------------------------------------------------
-        // GLOBAL BACKGROUND
-        // ----------------------------------------------------
-
-        background: "#321B12",
-
-        position: "relative",
-      }}
-    >
-
-      {/* =====================================================
-          GLOBAL HEADER
-
-          AppShell owns the single global header.
-
-          This prevents StudioLayout from creating duplicate
-          headers and keeps Back navigation centralized.
-      ===================================================== */}
-
-      <GlobalHeader
-
-  department={
+  const department =
     page === "reception"
       ? "Reception"
       : page === "dashboard"
@@ -164,57 +123,220 @@ export default function AppShell({
                 ? "Collections"
                 : page === "reports"
                   ? "Reports"
-                  : "Reception"
-  }
+                  : "Reception";
 
-  onBack={
-    onBack
-  }
 
-  canGoBack={
-    canGoBack
-  }
+  // ==========================================================
+  // RENDER
+  // ==========================================================
 
-  onLogout={
-    onLogout
-  }
+  return (
 
-/>
+    <main
+      style={{
+        // ----------------------------------------------------
+        // VIEWPORT
+        // ----------------------------------------------------
+
+        width:
+          "100%",
+
+        height:
+          "100%",
+
+        minWidth:
+          0,
+
+        minHeight:
+          0,
+
+        boxSizing:
+          "border-box",
+
+        // ----------------------------------------------------
+        // APPLICATION LAYOUT
+        // ----------------------------------------------------
+
+        display:
+          "flex",
+
+        flexDirection:
+          "column",
+
+        // ----------------------------------------------------
+        // IMPORTANT
+        //
+        // AppShell remains the viewport shell.
+        //
+        // The page area below the header owns the single
+        // scrolling boundary.
+        // ----------------------------------------------------
+
+        overflow:
+          "hidden",
+
+        // ----------------------------------------------------
+        // GLOBAL BACKGROUND
+        // ----------------------------------------------------
+
+        background:
+          "#321B12",
+
+        position:
+          "relative",
+      }}
+    >
 
       {/* =====================================================
-          ACTIVE V2 PAGE
+          GLOBAL HEADER
 
-          Child pages receive the exact remaining viewport
-          height below the GlobalHeader.
+          AppShell owns the single global header.
+
+          This prevents StudioLayout from creating duplicate
+          headers and keeps Back navigation centralized.
+      ===================================================== */}
+
+      <GlobalHeader
+
+        department={
+          department
+        }
+
+        onBack={
+          onBack
+        }
+
+        canGoBack={
+          canGoBack
+        }
+
+        onLogout={
+          onLogout
+        }
+
+      />
+
+
+      {/* =====================================================
+          ACTIVE V2 PAGE SCROLL AREA
+
+          IMPORTANT:
+
+          - Header remains outside this scrolling boundary.
+          - This is the ONLY outer page scrolling boundary.
+          - Short pages receive the remaining viewport height.
+          - Long pages are allowed to grow naturally.
       ===================================================== */}
 
       <div
         style={{
-          width: "100%",
+          width:
+            "100%",
 
-          flex: "1 1 auto",
+          minWidth:
+            0,
 
-          minWidth: 0,
+          minHeight:
+            0,
 
-          minHeight: 0,
+          flex:
+            "1 1 auto",
 
-          boxSizing: "border-box",
+          boxSizing:
+            "border-box",
 
-          overflow: "hidden",
+          display:
+            "flex",
 
-          display: "flex",
+          flexDirection:
+            "column",
 
-          flexDirection: "column",
+          overflowX:
+            "hidden",
+
+          overflowY:
+            "auto",
+
+          WebkitOverflowScrolling:
+            "touch",
         }}
       >
 
-        {children}
+        {/* =================================================
+            PAGE CONTENT HOST
+
+            RESPONSIBILITY:
+
+            - Host the active V2 page.
+            - Consume remaining viewport height when the
+              page content is shorter than the viewport.
+            - Grow naturally when page content becomes taller
+              than the available viewport.
+            - Never create an artificial minHeight: "100%".
+            - Never introduce another scrolling boundary.
+
+            IMPORTANT:
+
+            flex: "1 0 auto"
+
+            means:
+
+            flex-grow  = 1
+            flex-shrink = 0
+            flex-basis = auto
+
+            Therefore:
+
+            SHORT PAGE
+              → consumes remaining available height
+
+            LONG PAGE
+              → retains its natural content height
+              → outer page area scrolls
+
+            This is required for ReceptionFooter to remain
+            at the bottom of a short Reception page while
+            staying after all Reception content on a long
+            mobile page.
+        ================================================= */}
+
+        <div
+          style={{
+            width:
+              "100%",
+
+            minWidth:
+              0,
+
+            minHeight:
+              0,
+
+            boxSizing:
+              "border-box",
+
+            display:
+              "flex",
+
+            flexDirection:
+              "column",
+
+            flex:
+              "1 0 auto",
+          }}
+        >
+
+          {children}
+
+        </div>
 
       </div>
 
     </main>
+
   );
+
 }
+
 
 // ============================================================
 // END

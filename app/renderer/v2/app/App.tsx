@@ -20,7 +20,7 @@
 // IMPORTANT:
 //
 // - Storage initialization is handled by
-//   app/renderer/main.tsx before React mounts.
+//   app/renderer/v2/main.tsx before React mounts.
 // - This file does NOT initialize storage.
 // - This file does NOT access localStorage.
 // - This file does NOT access filesystem.
@@ -79,12 +79,12 @@ import LoanStudio
   from "../components/customers/office/CustomerOffice/components/LoanStudio";
 
 import Login
-  from "../../pages/auth/Login";
+  from "../pages/auth/Login";
 
 import {
   getSession,
   logout,
-} from "../../store/authStore";
+} from "../store/authStore";
 
 import {
   BusinessContextProvider,
@@ -93,14 +93,14 @@ import {
 
 import type {
   AuthSession,
-} from "../../components/auth/types";
+} from "../components/auth/types";
 
 import type {
   DepartmentId,
 } from "../pages/reception/types";
 
 import SessionGuard
-  from "../../components/auth/SessionGuard";
+  from "../components/auth/SessionGuard";
 
 
 // ============================================================

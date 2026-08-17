@@ -40,11 +40,11 @@ import {
   getSession,
   logout,
   updateSessionActivity,
-} from "../../../store/authStore";
+} from "../../store/authStore";
 
 import {
   isSessionExpired,
-} from "../../../utils/security";
+} from "../../utils/security";
 
 // ============================================================
 // TYPES

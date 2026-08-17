@@ -11,6 +11,10 @@ import ReceptionHall
 import ReceptionFooter
   from "./components/ReceptionFooter";
 
+import {
+  pageStyle,
+} from "./styles";
+
 import type {
 
   DepartmentDoor,
@@ -30,31 +34,6 @@ export interface ReceptionPageProps {
   ) => void;
 
 }
-
-/* ===========================================================
-   STYLES
-=========================================================== */
-
-const pageStyle = {
-
-  width: "100%",
-
-  minHeight: "100vh",
-
-  height: "100vh",
-
-  display: "flex",
-
-  flexDirection: "column" as const,
-
-  alignItems: "center",
-
-  overflow: "hidden",
-
-  background:
-    "linear-gradient(180deg,#1E130C 0%,#5B3A22 45%,#8A6135 100%)",
-
-};
 
 /* ===========================================================
    COMPONENT
@@ -113,3 +92,7 @@ export default function ReceptionPage({
   );
 
 }
+
+/* ===========================================================
+   END
+=========================================================== */

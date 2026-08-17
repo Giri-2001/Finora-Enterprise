@@ -60,7 +60,7 @@
 
 import type {
   BusinessAccessContext,
-} from "../../../components/auth/types";
+} from "../../components/auth/types";
 
 import {
   DataContext,
