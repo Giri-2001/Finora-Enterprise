@@ -7,16 +7,22 @@
    Layer   : Cards
    Version : 2.0
    Status  : Production
+
+   NOTE:
+   -----------------------------------------------------------
+   Responsive UI dimensions such as:
+
+   - Card width
+   - Card height
+   - Card radius
+
+   MUST NOT be defined in this file.
+
+   They are controlled centrally by:
+
+   app/renderer/v2/utils/responsive/
+
 =========================================================== */
-
-
-/* ===========================================================
-   CARD DIMENSIONS
-=========================================================== */
-
-export const CARD_WIDTH = 180;
-
-export const CARD_HEIGHT = 350;
 
 
 /* ===========================================================
@@ -36,7 +42,5 @@ export const DEFAULT_DURATION = 550;
 
 
 /* ===========================================================
-   BORDER
+   END
 =========================================================== */
-
-export const CARD_RADIUS = 22;

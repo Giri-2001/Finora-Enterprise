@@ -21,10 +21,13 @@
 =========================================================== */
 
 import type {
-  ResponsiveTokens,
   ResponsiveLayout,
   ResponsiveCard,
 } from "./types";
+
+import type {
+  ResponsiveTokens,
+} from "./tokens";
 
 import {
   getResponsiveViewportTokens,

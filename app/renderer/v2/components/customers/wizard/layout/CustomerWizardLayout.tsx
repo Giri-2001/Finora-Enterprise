@@ -1,25 +1,40 @@
 /* ===========================================================
-FINORA ENTERPRISE OS™
+   FINORA ENTERPRISE OS™
 
-CUSTOMER WIZARD LAYOUT™
+   CUSTOMER WIZARD LAYOUT™
 
-Responsive bounded workspace shell for all FINORA
-Customer Wizard flows.
+   Responsive bounded workspace shell for all FINORA
+   Customer Wizard flows.
 
-Rules:
-- No page scrolling
-- Full viewport usage
-- Existing FINORA GlobalHeader remains outside
-- Children control their own presentation
-- Add / Edit use the same shell
+   Rules:
+   - No page scrolling
+   - Full viewport usage
+   - Existing FINORA GlobalHeader remains outside
+   - Children control their own presentation
+   - Add / Edit use the same shell
+
+   Architecture:
+   - No inline styles
+   - Visual styles owned by CustomerWizardLayout.styles.ts
+   - Responsive values owned by FINORA Responsive Engine
 =========================================================== */
 
 import type {
   ReactNode,
 } from "react";
 
+
 /* ===========================================================
-TYPES
+   STYLES
+=========================================================== */
+
+import {
+  useCustomerWizardLayoutStyles,
+} from "./CustomerWizardLayout.styles";
+
+
+/* ===========================================================
+   TYPES
 =========================================================== */
 
 interface CustomerWizardLayoutProps {
@@ -28,8 +43,9 @@ interface CustomerWizardLayoutProps {
 
 }
 
+
 /* ===========================================================
-COMPONENT
+   COMPONENT
 =========================================================== */
 
 export default function CustomerWizardLayout({
@@ -38,22 +54,16 @@ export default function CustomerWizardLayout({
 
 }: CustomerWizardLayoutProps) {
 
+  const styles =
+    useCustomerWizardLayoutStyles();
+
+
   return (
 
     <main
-      style={{
-        width: "100%",
-        height: "100%",
-        minHeight: 0,
-        minWidth: 0,
-
-        display: "flex",
-        flexDirection: "column",
-
-        overflow: "hidden",
-
-        boxSizing: "border-box",
-      }}
+      style={
+        styles.shell
+      }
     >
 
       {children}
@@ -63,3 +73,8 @@ export default function CustomerWizardLayout({
   );
 
 }
+
+
+/* ===========================================================
+   END
+=========================================================== */

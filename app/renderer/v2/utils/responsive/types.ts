@@ -21,6 +21,7 @@
    index.ts      → central exports
 =========================================================== */
 
+import type { ResponsiveTokens } from "./tokens";
 
 /* ===========================================================
    HIGH-LEVEL DEVICE TYPE
@@ -848,93 +849,6 @@ export interface ResponsiveProjector {
 
   statusSize:
     number;
-
-}
-
-
-/* ===========================================================
-   COMPLETE RESPONSIVE TOKENS
-=========================================================== */
-
-export interface ResponsiveTokens {
-
-  meta:
-    ResponsiveTokenMeta;
-
-  typography:
-    ResponsiveTypography;
-
-  lineHeight:
-    ResponsiveLineHeight;
-
-  spacing:
-    ResponsiveSpacing;
-
-  card:
-    ResponsiveCard;
-
-  door:
-    ResponsiveDoor;
-
-  panel:
-    ResponsivePanel;
-
-  border:
-    ResponsiveBorder;
-
-  control:
-    ResponsiveControl;
-
-  input:
-    ResponsiveInput;
-
-  button:
-    ResponsiveButton;
-
-  icon:
-    ResponsiveIcon;
-
-  login:
-    ResponsiveLogin;
-
-  header:
-    ResponsiveHeader;
-
-  reception:
-    ResponsiveReception;
-
-  sidebar:
-    ResponsiveSidebar;
-
-  navigation:
-    ResponsiveNavigation;
-
-  layout:
-    ResponsiveLayout;
-
-  grid:
-    ResponsiveGrid;
-
-  customerCards:
-    ResponsiveCustomerCards;
-
-  table:
-    ResponsiveTable;
-
-  form:
-    ResponsiveForm;
-
-  wizard:
-    ResponsiveWizard;
-
-  modal:
-    ResponsiveModal;
-
-  dashboard:
-    ResponsiveDashboard;
-
-  projector:
-    ResponsiveProjector;
 
 }
 

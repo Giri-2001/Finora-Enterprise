@@ -5,24 +5,45 @@
    COMPONENT
 =========================================================== */
 
-import type { CustomerTopBarProps } from "./types";
+/* ===========================================================
+   RESPONSIVE ENGINE
+=========================================================== */
+
+import {
+  useResponsive,
+} from "../../../../../utils/responsive/useResponsive";
+
+/* ===========================================================
+   COMPONENT CONTRACT
+=========================================================== */
+
+import type {
+  CustomerTopBarProps,
+} from "./types";
+
+/* ===========================================================
+   CONSTANTS
+=========================================================== */
 
 import {
   DEFAULT_SUBTITLE,
   DEFAULT_TITLE,
 } from "./constants";
 
+/* ===========================================================
+   HELPERS
+=========================================================== */
+
 import {
   buildSubtitle,
 } from "./helpers";
 
+/* ===========================================================
+   RESPONSIVE STYLES
+=========================================================== */
+
 import {
-  containerStyle,
-  leftSectionStyle,
-  centerSectionStyle,
-  rightSectionStyle,
-  titleStyle,
-  subtitleStyle,
+  createCustomerTopBarStyles,
 } from "./styles";
 
 /* ===========================================================
@@ -36,6 +57,43 @@ export default function CustomerTopBar({
   subtitle = DEFAULT_SUBTITLE,
 
 }: CustomerTopBarProps) {
+
+  /* =========================================================
+     RESPONSIVE ENGINE
+  ========================================================= */
+
+  const {
+    tokens,
+  } = useResponsive();
+
+
+  /* =========================================================
+     RESPONSIVE STYLES
+  ========================================================= */
+
+  const {
+
+    containerStyle,
+
+    leftSectionStyle,
+
+    centerSectionStyle,
+
+    rightSectionStyle,
+
+    titleStyle,
+
+    subtitleStyle,
+
+  } =
+    createCustomerTopBarStyles(
+      tokens,
+    );
+
+
+  /* =========================================================
+     RENDER
+  ========================================================= */
 
   return (
 
@@ -61,6 +119,7 @@ export default function CustomerTopBar({
 
       </div>
 
+
       {/* ==========================================
           CENTER
       ========================================== */}
@@ -70,6 +129,7 @@ export default function CustomerTopBar({
         {/* Universal Search Component */}
 
       </div>
+
 
       {/* ==========================================
           RIGHT
@@ -90,3 +150,7 @@ export default function CustomerTopBar({
   );
 
 }
+
+/* ===========================================================
+   END
+=========================================================== */

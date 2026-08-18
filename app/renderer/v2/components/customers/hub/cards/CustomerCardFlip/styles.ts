@@ -1,36 +1,59 @@
 /* ===========================================================
    FINORA ENTERPRISE OS™
-
    CUSTOMER CARD FLIP™
 
-   PREMIUM CARD FLIP PRESENTATION
+   PREMIUM CARD FLIP PRESENTATION STYLES
+
+   RESPONSIVE:
+   -----------------------------------------------------------
+   All visual dimensions are supplied by the
+   FINORA Responsive Engine.
 =========================================================== */
 
 import type {
   CSSProperties,
 } from "react";
 
-import {
-  CARD_HEIGHT,
-  CARD_RADIUS,
-  CARD_WIDTH,
-} from "./constants";
+/* ===========================================================
+   RESPONSIVE DIMENSIONS
+   -----------------------------------------------------------
+   These values are supplied by the component from
+   utils/responsive/.
+=========================================================== */
+
+export interface CustomerCardFlipResponsiveDimensions {
+  width: number | string;
+  height: number | string;
+  radius: number;
+}
 
 /* ===========================================================
    ROOT CONTAINER
 =========================================================== */
 
-export const containerStyle: CSSProperties = {
+export function createContainerStyle(
+  responsive: CustomerCardFlipResponsiveDimensions,
+): CSSProperties {
 
-  position: "relative",
+  return {
 
-  width: `${CARD_WIDTH}px`,
+    position: "relative",
 
-  height: `${CARD_HEIGHT}px`,
+    width:
+      typeof responsive.width === "number"
+        ? `${responsive.width}px`
+        : responsive.width,
 
-  flexShrink: 0,
+    height:
+      typeof responsive.height === "number"
+        ? `${responsive.height}px`
+        : responsive.height,
 
-};
+    flexShrink: 0,
+
+  };
+
+}
 
 /* ===========================================================
    INNER FLIP SURFACE
@@ -55,59 +78,91 @@ export const innerStyle: CSSProperties = {
    SHARED CARD FACE
 =========================================================== */
 
-export const faceStyle: CSSProperties = {
+export function createFaceStyle(
+  responsive: CustomerCardFlipResponsiveDimensions,
+): CSSProperties {
 
-  position: "absolute",
+  const width =
+    typeof responsive.width === "number"
+      ? `${responsive.width}px`
+      : responsive.width;
 
-  inset: 0,
+  const height =
+    typeof responsive.height === "number"
+      ? `${responsive.height}px`
+      : responsive.height;
 
-  width: `${CARD_WIDTH}px`,
+  return {
 
-  height: `${CARD_HEIGHT}px`,
+    position: "absolute",
 
-  borderRadius:
-    `${CARD_RADIUS}px`,
+    inset: 0,
 
-  overflow: "hidden",
+    width,
 
-  backfaceVisibility:
-    "hidden",
+    height,
 
-  WebkitBackfaceVisibility:
-    "hidden",
+    borderRadius:
+      `${responsive.radius}px`,
 
-  transformStyle:
-    "preserve-3d",
+    overflow: "hidden",
 
-  WebkitTransformStyle:
-    "preserve-3d",
+    backfaceVisibility:
+      "hidden",
 
-  boxSizing: "border-box",
+    WebkitBackfaceVisibility:
+      "hidden",
 
-  boxShadow:
-    "0 18px 42px rgba(0,0,0,.18)",
+    transformStyle:
+      "preserve-3d",
 
-};
+    WebkitTransformStyle:
+      "preserve-3d",
+
+    boxSizing: "border-box",
+
+    boxShadow:
+      "0 18px 42px rgba(0,0,0,.18)",
+
+  };
+
+}
 
 /* ===========================================================
    FRONT
 =========================================================== */
 
-export const frontStyle: CSSProperties = {
+export function createFrontStyle(
+  responsive: CustomerCardFlipResponsiveDimensions,
+): CSSProperties {
 
-  ...faceStyle,
+  return {
 
-};
+    ...createFaceStyle(responsive),
+
+  };
+
+}
 
 /* ===========================================================
    BACK
 =========================================================== */
 
-export const backStyle: CSSProperties = {
+export function createBackStyle(
+  responsive: CustomerCardFlipResponsiveDimensions,
+): CSSProperties {
 
-  ...faceStyle,
+  return {
 
-  transform:
-    "rotateY(180deg)",
+    ...createFaceStyle(responsive),
 
-};
+    transform:
+      "rotateY(180deg)",
+
+  };
+
+}
+
+/* ===========================================================
+   END
+=========================================================== */

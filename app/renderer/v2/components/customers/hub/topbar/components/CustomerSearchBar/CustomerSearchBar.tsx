@@ -25,7 +25,6 @@ import {
   containerStyle,
   iconStyle,
   inputStyle,
-  shortcutStyle,
 } from "./styles";
 
 /* ===========================================================
@@ -94,12 +93,6 @@ export default function CustomerSearchBar({
         onKeyDown={handleKeyDown}
         style={inputStyle}
       />
-
-      <span style={shortcutStyle}>
-
-        Ctrl + K
-
-      </span>
 
     </div>
 

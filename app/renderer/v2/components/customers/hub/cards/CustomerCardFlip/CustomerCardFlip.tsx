@@ -1,16 +1,24 @@
 /* ===========================================================
    FINORA ENTERPRISE OS™
-   CUSTOMER CARD FLIP
-   -----------------------------------------------------------
-   Module  : Customer Hub
-   Layer   : Cards
-   Version : 2.0
-   Status  : Production
+
+   CUSTOMER CARD FLIP™
+
+   PREMIUM CARD FLIP COMPONENT
+
+   RESPONSIVE ENGINE CONSUMER
+=========================================================== */
+
+/* ===========================================================
+   IMPORTS
 =========================================================== */
 
 import type {
   CSSProperties,
 } from "react";
+
+import {
+  useResponsive,
+} from "../../../../../utils/responsive";
 
 import type {
   CustomerCardFlipProps,
@@ -27,10 +35,10 @@ import {
 } from "./helpers";
 
 import {
-  containerStyle,
+  createContainerStyle,
   innerStyle,
-  frontStyle,
-  backStyle,
+  createFrontStyle,
+  createBackStyle,
 } from "./styles";
 
 /* ===========================================================
@@ -53,38 +61,131 @@ export default function CustomerCardFlip({
 
 }: CustomerCardFlipProps) {
 
+  /* =========================================================
+     RESPONSIVE ENGINE
+  ========================================================= */
+
+  const {
+    tokens,
+  } = useResponsive();
+
+
+  /* =========================================================
+     RESPONSIVE CARD DIMENSIONS
+  ========================================================= */
+
+  const responsiveCard = {
+
+    /*
+      Customer card radius comes from the centralized
+      customerCards responsive token group.
+
+      Width / height are intentionally resolved by the
+      CustomerCardFlip style factory so the component itself
+      does not contain viewport-specific sizing decisions.
+    */
+
+    width:
+      tokens.customerCards.width ||
+      "100%",
+
+    height:
+      tokens.card.minHeight > 0
+        ? tokens.card.minHeight
+        : "100%",
+
+    radius:
+      tokens.customerCards.radius,
+
+  };
+
+
+  /* =========================================================
+     ANIMATION
+  ========================================================= */
+
   const duration =
     buildDuration(
       animationDuration,
     );
+
+
+  /* =========================================================
+     PERSPECTIVE
+  ========================================================= */
 
   const depth =
     buildPerspective(
       perspective,
     );
 
+
+  /* =========================================================
+     ROTATION
+  ========================================================= */
+
   const rotation =
     isFlipped(flipped)
       ? DEFAULT_ROTATION
       : 0;
 
+
+  /* =========================================================
+     RESPONSIVE STYLES
+  ========================================================= */
+
+  const containerStyle =
+    createContainerStyle(
+      responsiveCard,
+    );
+
+
+  const frontStyle =
+    createFrontStyle(
+      responsiveCard,
+    );
+
+
+  const backStyle =
+    createBackStyle(
+      responsiveCard,
+    );
+
+
+  /* =========================================================
+     ROOT STYLE
+  ========================================================= */
+
   const rootStyle: CSSProperties = {
 
     ...containerStyle,
 
-    perspective: `${depth}px`,
+    perspective:
+      `${depth}px`,
 
   };
+
+
+  /* =========================================================
+     FLIP STYLE
+  ========================================================= */
 
   const flipStyle: CSSProperties = {
 
     ...innerStyle,
 
-    transition: `transform ${duration}ms ease`,
+    transition:
+      `transform ${duration}ms ease`,
 
-    transform: `rotateY(${rotation}deg)`,
+    transform:
+      `rotateY(${rotation}deg)`,
 
   };
+
+
+  /* =========================================================
+     RENDER
+  ========================================================= */
 
   return (
 
@@ -93,15 +194,30 @@ export default function CustomerCardFlip({
       onClick={onFlip}
     >
 
-      <div style={flipStyle}>
+      <div
+        style={flipStyle}
+      >
 
-        <div style={frontStyle}>
+        {/* ================================================
+            FRONT FACE
+        ================================================ */}
+
+        <div
+          style={frontStyle}
+        >
 
           {front}
 
         </div>
 
-        <div style={backStyle}>
+
+        {/* ================================================
+            BACK FACE
+        ================================================ */}
+
+        <div
+          style={backStyle}
+        >
 
           {back}
 
@@ -114,3 +230,8 @@ export default function CustomerCardFlip({
   );
 
 }
+
+
+/* ===========================================================
+   END
+=========================================================== */

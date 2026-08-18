@@ -4,6 +4,16 @@
    SMART WALL PANEL™
 
    CUSTOMER HUB PRESENTATION
+
+   RESPONSIVE MIGRATION:
+   - All responsive sizing comes from Customers Responsive Engine
+   - No viewport calculations in component
+   - No breakpoint logic in component
+   - Existing behavior preserved
+=========================================================== */
+
+/* ===========================================================
+   IMPORTS
 =========================================================== */
 
 import {
@@ -24,12 +34,16 @@ import CustomerHangerRail
 import CustomerSearchBar
   from "../../../hub/topbar/components/CustomerSearchBar/CustomerSearchBar";
 
+import CustomerHubSummaryCards
+  from "./CustomerHubSummaryCards/CustomerHubSummaryCards";
+
 import type {
   SmartWallPanelProps,
 } from "./SmartWallPanel.types";
 
-import CustomerHubSummaryCards
-  from "./CustomerHubSummaryCards/CustomerHubSummaryCards";
+import {
+  useCustomerResponsive,
+} from "../../../../../utils/responsive/customers/customers.useResponsive";
 
 /* ===========================================================
    COMPONENT
@@ -67,6 +81,18 @@ export default function SmartWallPanel({
 
 }: SmartWallPanelProps) {
 
+
+  /* =========================================================
+     RESPONSIVE ENGINE
+  ========================================================= */
+
+  const {
+    tokens,
+    layout,
+  } =
+    useCustomerResponsive();
+
+
   /* =========================================================
      SELECTION STATE
   ========================================================= */
@@ -76,10 +102,124 @@ export default function SmartWallPanel({
       selectedCustomer,
     );
 
-    const [
-  showEditHint,
-  setShowEditHint,
-] = useState(false);
+
+  const [
+    showEditHint,
+    setShowEditHint,
+  ] =
+    useState(false);
+
+
+  /* =========================================================
+     RESPONSIVE VALUES
+  ========================================================= */
+
+  const toolbarGridTemplateColumns =
+    `minmax(160px, 260px) minmax(0, 1fr) minmax(160px, 260px)`;
+
+
+  const actionButtonWidth =
+    Math.min(
+      160,
+      Math.max(
+        120,
+        layout.grid.minCardWidth,
+      ),
+    );
+
+
+  const actionButtonHeight =
+    tokens.button.height;
+
+
+  const actionButtonRadius =
+    tokens.button.radius;
+
+
+  const actionButtonFontSize =
+    tokens.button.fontSize;
+
+
+  const actionButtonIconSize =
+    tokens.button.iconSize;
+
+
+  const toolbarGap =
+    tokens.card.gap;
+
+
+  const toolbarMarginBottom =
+    tokens.spacing.inline +
+    tokens.spacing.small;
+
+
+  const wallSummaryMarginTop =
+    tokens.spacing.small +
+    tokens.spacing.inline;
+
+
+  /* =========================================================
+     ACTION BUTTON STYLE
+  ========================================================= */
+
+  const actionButtonStyle = {
+
+    width:
+      actionButtonWidth,
+
+    height:
+      actionButtonHeight,
+
+    minHeight:
+      actionButtonHeight,
+
+    padding:
+      `0 ${tokens.button.paddingX}px`,
+
+    display:
+      "flex",
+
+    alignItems:
+      "center",
+
+    justifyContent:
+      "center",
+
+    gap:
+      tokens.control.gap,
+
+    borderRadius:
+      actionButtonRadius,
+
+    border:
+      "none",
+
+    cursor:
+      "pointer",
+
+    fontWeight:
+      800,
+
+    fontSize:
+      actionButtonFontSize,
+
+    color:
+      "#FFFFFF",
+
+    background:
+      "linear-gradient(180deg,#C99A55,#8A612B)",
+
+    boxShadow:
+      "0 8px 20px rgba(0,0,0,.25)",
+
+    transition:
+      "transform .2s ease, box-shadow .2s ease",
+
+    boxSizing:
+      "border-box" as const,
+
+  };
+
 
   /* =========================================================
      RENDER
@@ -89,7 +229,9 @@ export default function SmartWallPanel({
 
     <CustomerSmartWall
 
-      title={title}
+      title={
+        title
+      }
 
       customers={
         smartWallCustomers
@@ -103,24 +245,34 @@ export default function SmartWallPanel({
 
       <div
         style={{
-          display: "grid",
+
+          display:
+            "grid",
 
           gridTemplateColumns:
-            "260px minmax(420px,1fr) 260px",
+            toolbarGridTemplateColumns,
 
-          alignItems: "center",
+          alignItems:
+            "center",
 
-          width: "100%",
+          width:
+            "100%",
 
-          marginBottom: "14px",
+          marginBottom:
+            toolbarMarginBottom,
 
-          gap: "20px",
+          gap:
+            toolbarGap,
+
+          boxSizing:
+            "border-box",
+
         }}
       >
 
-        {/* ======================================
+        {/* ===================================================
             LEFT — ADD CUSTOMER
-        ====================================== */}
+        =================================================== */}
 
         <div>
 
@@ -136,47 +288,24 @@ export default function SmartWallPanel({
 
             title="Add Customer"
 
-            style={{
-              width: "160px",
-
-              height: "42px",
-
-              padding: "0",
-
-              display: "flex",
-
-              alignItems: "center",
-
-              justifyContent: "center",
-
-              gap: "8px",
-
-              borderRadius: "14px",
-
-              border: "none",
-
-              cursor: "pointer",
-
-              fontWeight: 800,
-
-              color: "#FFFFFF",
-
-              background:
-                "linear-gradient(180deg,#C99A55,#8A612B)",
-
-              boxShadow:
-                "0 8px 20px rgba(0,0,0,.25)",
-
-              transition:
-                "transform .2s ease, box-shadow .2s ease",
-            }}
+            style={
+              actionButtonStyle
+            }
 
           >
 
             <UserPlus
-              size={18}
-              strokeWidth={2.2}
+
+              size={
+                actionButtonIconSize
+              }
+
+              strokeWidth={
+                2.2
+              }
+
               aria-hidden="true"
+
             />
 
             <span>
@@ -187,15 +316,26 @@ export default function SmartWallPanel({
 
         </div>
 
-        {/* ======================================
+
+        {/* ===================================================
             CENTER — SEARCH
-        ====================================== */}
+        =================================================== */}
 
         <div
           style={{
-            display: "flex",
 
-            justifyContent: "center",
+            display:
+              "flex",
+
+            justifyContent:
+              "center",
+
+            minWidth:
+              0,
+
+            width:
+              "100%",
+
           }}
         >
 
@@ -203,253 +343,308 @@ export default function SmartWallPanel({
 
         </div>
 
-       {/* ======================================
-    RIGHT — EDIT CUSTOMER
-====================================== */}
 
-<div
-  style={{
-    position: "relative",
+        {/* ===================================================
+            RIGHT — EDIT CUSTOMER
+        =================================================== */}
 
-    display: "flex",
+        <div
 
-    justifyContent: "flex-end",
-  }}
+          style={{
 
-  onMouseEnter={() => {
-    setShowEditHint(true);
-  }}
+            position:
+              "relative",
 
-  onMouseLeave={() => {
-    setShowEditHint(false);
-  }}
->
+            display:
+              "flex",
 
-  <button
+            justifyContent:
+              "flex-end",
 
-    type="button"
+            minWidth:
+              0,
 
-    onClick={() => {
+          }}
 
-      /* =================================
-         NO CUSTOMER SELECTED
-      ================================= */
+          onMouseEnter={() => {
 
-      if (!selectedCustomer) {
+            setShowEditHint(
+              true,
+            );
 
-        return;
+          }}
 
-      }
+          onMouseLeave={() => {
 
-      /* =================================
-         EDIT SELECTED CUSTOMER
-      ================================= */
+            setShowEditHint(
+              false,
+            );
 
-      if (onEditCustomer) {
+          }}
 
-        onEditCustomer(
-          selectedCustomer,
-        );
+        >
 
-      }
+          <button
 
-    }}
+            type="button"
 
-    aria-label="Edit Customer"
+            onClick={() => {
 
-    style={{
-      width: "160px",
+              /* =============================================
+                 NO CUSTOMER SELECTED
+              ============================================= */
 
-      height: "42px",
+              if (
+                !selectedCustomer
+              ) {
 
-      padding: "0",
+                return;
 
-      display: "flex",
+              }
 
-      alignItems: "center",
 
-      justifyContent: "center",
+              /* =============================================
+                 EDIT SELECTED CUSTOMER
+              ============================================= */
 
-      gap: "8px",
+              if (
+                onEditCustomer
+              ) {
 
-      borderRadius: "14px",
+                onEditCustomer(
+                  selectedCustomer,
+                );
 
-      border: "none",
+              }
 
-      cursor: "pointer",
+            }}
 
-      fontWeight: 800,
+            aria-label="Edit Customer"
 
-      color: "#FFFFFF",
+            style={
+              actionButtonStyle
+            }
 
-      background:
-        "linear-gradient(180deg,#C99A55,#8A612B)",
+          >
 
-      boxShadow:
-        "0 8px 20px rgba(0,0,0,.25)",
+            <SquarePen
 
-      transition:
-        "transform .2s ease, box-shadow .2s ease",
-    }}
+              size={
+                actionButtonIconSize
+              }
 
-  >
+              strokeWidth={
+                2.2
+              }
 
-    <SquarePen
-      size={18}
-      strokeWidth={2.2}
-      aria-hidden="true"
-    />
+              aria-hidden="true"
 
-    <span>
-      Edit Customer
-    </span>
+            />
 
-  </button>
+            <span>
+              Edit Customer
+            </span>
 
-  {/* ======================================
-      PREMIUM EDIT HINT
-  ====================================== */}
+          </button>
 
-  {showEditHint && (
 
-    <div
-      style={{
-        position: "absolute",
+          {/* ================================================
+              PREMIUM EDIT HINT
+          ================================================= */}
 
-        top: "calc(100% + 10px)",
+          {showEditHint && (
 
-        right: "0",
+            <div
+              style={{
 
-        zIndex: 1000,
+                position:
+                  "absolute",
 
-        padding: "9px 14px",
+                top:
+                  `calc(100% + ${tokens.spacing.inline}px)`,
 
-        borderRadius: "10px",
+                right:
+                  "0",
 
-        background:
-          "rgba(15,23,42,0.96)",
+                zIndex:
+                  1000,
 
-        color: "#FFFFFF",
+                padding:
+                  `${tokens.spacing.small + 3}px ${tokens.spacing.medium + 2}px`,
 
-        fontSize: "12px",
+                borderRadius:
+                  tokens.panel.radius,
 
-        fontWeight: 700,
+                background:
+                  "rgba(15,23,42,0.96)",
 
-        whiteSpace: "nowrap",
+                color:
+                  "#FFFFFF",
 
-        border:
-          "1px solid rgba(201,154,85,0.45)",
+                fontSize:
+                  tokens.typography.small,
 
-        boxShadow:
-          "0 8px 24px rgba(0,0,0,0.28)",
+                fontWeight:
+                  700,
 
-        pointerEvents: "none",
-      }}
-    >
+                whiteSpace:
+                  "nowrap",
 
-      <div
-  style={{
-    color: hasSelectedCustomer
-      ? "#86EFAC"
-      : "#FCA5A5",
+                border:
+                  "1px solid rgba(201,154,85,0.45)",
 
-    fontWeight: 500,
+                boxShadow:
+                  "0 8px 24px rgba(0,0,0,0.28)",
 
-    textShadow: hasSelectedCustomer
-      ? "0 0 10px rgba(34,197,94,0.35)"
-      : "0 0 10px rgba(239,68,68,0.35)",
-  }}
->
-  {hasSelectedCustomer
-    ? "Edit Selected Customer"
-    : "Select a Customer to Continue"}
-</div>
+                pointerEvents:
+                  "none",
 
-    </div>
+              }}
+            >
 
-  )}
+              <div
+                style={{
 
-</div>
+                  color:
+                    hasSelectedCustomer
+                      ? "#86EFAC"
+                      : "#FCA5A5",
+
+                  fontWeight:
+                    500,
+
+                  textShadow:
+                    hasSelectedCustomer
+
+                      ? "0 0 10px rgba(34,197,94,0.35)"
+
+                      : "0 0 10px rgba(239,68,68,0.35)",
+
+                }}
+              >
+
+                {
+                  hasSelectedCustomer
+
+                    ? "Edit Selected Customer"
+
+                    : "Select a Customer to Continue"
+                }
+
+              </div>
+
+            </div>
+
+          )}
+
+        </div>
 
       </div>
+
 
       {/* =====================================================
           CUSTOMER ID WALL
       ===================================================== */}
 
-          <div
+      <div
 
-  style={{
-    flex: 1,
-    minHeight: 0,
-    overflow: "hidden",
-    position: "relative",
-  }}
+        style={{
 
-  onMouseDownCapture={(event) => {
+          flex:
+            1,
 
-  const target =
-    event.target as HTMLElement;
+          minHeight:
+            0,
 
-  /*
-   * =========================================================
-   * PROTECTED INTERACTIVE AREA
-   *
-   * Never clear the selected customer while interacting with
-   * a real control.
-   * =========================================================
-   */
+          overflow:
+            "hidden",
 
-  const protectedElement =
-    target.closest(
-      [
-        '[data-finora-customer-card="true"]',
-        '[data-finora-interactive="true"]',
-        'button',
-        'input',
-        'textarea',
-        'select',
-        'a',
-      ].join(","),
-    );
+          position:
+            "relative",
 
-  if (protectedElement) {
+        }}
 
-    return;
+        onMouseDownCapture={(event) => {
 
-  }
+          const target =
+            event.target as HTMLElement;
 
-  /*
-   * =========================================================
-   * EMPTY SMART WALL AREA
-   *
-   * Clicking genuinely empty wall space clears selection.
-   * =========================================================
-   */
 
-  onClearSelection?.();
+          /*
+           * =================================================
+           * PROTECTED INTERACTIVE AREA
+           *
+           * Never clear selected customer while interacting
+           * with a real interactive element.
+           * =================================================
+           */
 
-}}
+          const protectedElement =
+            target.closest(
 
->
+              [
 
-  <CustomerHangerRail
+                '[data-finora-customer-card="true"]',
 
-    customers={
-      railCustomers
-    }
+                '[data-finora-interactive="true"]',
 
-    selectedCustomerId={
-      selectedCustomerId
-    }
+                "button",
 
-    onCustomerSelect={
-      onCustomerSelect
-    }
+                "input",
 
-  />
+                "textarea",
 
-</div>
+                "select",
+
+                "a",
+
+              ].join(","),
+
+            );
+
+
+          if (
+            protectedElement
+          ) {
+
+            return;
+
+          }
+
+
+          /*
+           * =================================================
+           * EMPTY SMART WALL AREA
+           *
+           * Clicking genuinely empty wall space clears
+           * selection.
+           * =================================================
+           */
+
+          onClearSelection?.();
+
+        }}
+
+      >
+
+        <CustomerHangerRail
+
+          customers={
+            railCustomers
+          }
+
+          selectedCustomerId={
+            selectedCustomerId
+          }
+
+          onCustomerSelect={
+            onCustomerSelect
+          }
+
+        />
+
+      </div>
+
 
       {/* =====================================================
           CUSTOMER HUB SUMMARY
@@ -457,9 +652,13 @@ export default function SmartWallPanel({
 
       <div
         style={{
-          width: "100%",
 
-          marginTop: "12px",
+          width:
+            "100%",
+
+          marginTop:
+            wallSummaryMarginTop,
+
         }}
       >
 
@@ -501,3 +700,8 @@ export default function SmartWallPanel({
   );
 
 }
+
+
+/* ===========================================================
+   END
+=========================================================== */

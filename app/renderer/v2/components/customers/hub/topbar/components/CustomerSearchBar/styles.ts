@@ -1,11 +1,16 @@
 /* ===========================================================
+
    FINORA ENTERPRISE OS™
+
    CUSTOMER SEARCH BAR
 
    STYLES
+
 =========================================================== */
 
-import type { CSSProperties } from "react";
+import type {
+  CSSProperties,
+} from "react";
 
 /* ===========================================================
    ROOT
@@ -39,6 +44,7 @@ export const containerStyle: CSSProperties = {
   boxSizing: "border-box",
 
 };
+
 /* ===========================================================
    ICON
 =========================================================== */
@@ -61,6 +67,8 @@ export const inputStyle: CSSProperties = {
 
   flex: 1,
 
+  minWidth: 0,
+
   border: "none",
 
   outline: "none",
@@ -73,26 +81,10 @@ export const inputStyle: CSSProperties = {
 
   color: "#0F172A",
 
+  boxSizing: "border-box",
+
 };
 
 /* ===========================================================
-   SHORTCUT BADGE
+   END
 =========================================================== */
-
-export const shortcutStyle: CSSProperties = {
-
-  padding: "4px 8px",
-
-  borderRadius: "8px",
-
-  background: "#F1F5F9",
-
-  color: "#64748B",
-
-  fontSize: "11px",
-
-  fontWeight: 700,
-
-  letterSpacing: "0.5px",
-
-};
