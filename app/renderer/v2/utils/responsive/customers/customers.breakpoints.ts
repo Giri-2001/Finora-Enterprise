@@ -15,6 +15,12 @@
 
    SOURCE OF TRUTH:
    ../breakpoints.ts
+
+   DEVICE SYSTEM:
+   01. MOBILE
+   02. TABLET
+   03. LAPTOP
+   04. DESKTOP
 =========================================================== */
 
 
@@ -27,14 +33,12 @@ import type {
   ResponsiveBreakpointMap,
 } from "../types";
 
+
 import {
   MOBILE,
   TABLET,
   LAPTOP,
   DESKTOP,
-  WIDE_DESKTOP,
-  ULTRA_WIDE,
-  TV,
 
   MOBILE_MIN_WIDTH,
   MOBILE_MAX_WIDTH,
@@ -46,23 +50,12 @@ import {
   LAPTOP_MAX_WIDTH,
 
   DESKTOP_MIN_WIDTH,
-  DESKTOP_MAX_WIDTH,
-
-  WIDE_DESKTOP_MIN_WIDTH,
-  WIDE_DESKTOP_MAX_WIDTH,
-
-  ULTRA_WIDE_MIN_WIDTH,
-  ULTRA_WIDE_MAX_WIDTH,
-
-  TV_MIN_WIDTH,
 
   isMobileWidth,
   isTabletWidth,
   isLaptopWidth,
   isDesktopWidth,
-  isWideDesktopWidth,
-  isUltraWideWidth,
-  isTvWidth,
+
   isValidViewportWidth,
 
 } from "../breakpoints";
@@ -80,10 +73,10 @@ export type CustomersBreakpoint =
    MOBILE
 =========================================================== */
 
-export const CUSTOMERS_MOBILE_MIN_WIDTH =
+export const CUSTOMERS_MOBILE_MIN_WIDTH: number =
   MOBILE_MIN_WIDTH;
 
-export const CUSTOMERS_MOBILE_MAX_WIDTH =
+export const CUSTOMERS_MOBILE_MAX_WIDTH: number =
   MOBILE_MAX_WIDTH;
 
 
@@ -91,10 +84,10 @@ export const CUSTOMERS_MOBILE_MAX_WIDTH =
    TABLET
 =========================================================== */
 
-export const CUSTOMERS_TABLET_MIN_WIDTH =
+export const CUSTOMERS_TABLET_MIN_WIDTH: number =
   TABLET_MIN_WIDTH;
 
-export const CUSTOMERS_TABLET_MAX_WIDTH =
+export const CUSTOMERS_TABLET_MAX_WIDTH: number =
   TABLET_MAX_WIDTH;
 
 
@@ -102,10 +95,10 @@ export const CUSTOMERS_TABLET_MAX_WIDTH =
    LAPTOP
 =========================================================== */
 
-export const CUSTOMERS_LAPTOP_MIN_WIDTH =
+export const CUSTOMERS_LAPTOP_MIN_WIDTH: number =
   LAPTOP_MIN_WIDTH;
 
-export const CUSTOMERS_LAPTOP_MAX_WIDTH =
+export const CUSTOMERS_LAPTOP_MAX_WIDTH: number =
   LAPTOP_MAX_WIDTH;
 
 
@@ -113,41 +106,8 @@ export const CUSTOMERS_LAPTOP_MAX_WIDTH =
    DESKTOP
 =========================================================== */
 
-export const CUSTOMERS_DESKTOP_MIN_WIDTH =
+export const CUSTOMERS_DESKTOP_MIN_WIDTH: number =
   DESKTOP_MIN_WIDTH;
-
-export const CUSTOMERS_DESKTOP_MAX_WIDTH =
-  DESKTOP_MAX_WIDTH;
-
-
-/* ===========================================================
-   WIDE DESKTOP
-=========================================================== */
-
-export const CUSTOMERS_WIDE_DESKTOP_MIN_WIDTH =
-  WIDE_DESKTOP_MIN_WIDTH;
-
-export const CUSTOMERS_WIDE_DESKTOP_MAX_WIDTH =
-  WIDE_DESKTOP_MAX_WIDTH;
-
-
-/* ===========================================================
-   ULTRA WIDE
-=========================================================== */
-
-export const CUSTOMERS_ULTRA_WIDE_MIN_WIDTH =
-  ULTRA_WIDE_MIN_WIDTH;
-
-export const CUSTOMERS_ULTRA_WIDE_MAX_WIDTH =
-  ULTRA_WIDE_MAX_WIDTH;
-
-
-/* ===========================================================
-   TV
-=========================================================== */
-
-export const CUSTOMERS_TV_MIN_WIDTH =
-  TV_MIN_WIDTH;
 
 
 /* ===========================================================
@@ -155,32 +115,51 @@ export const CUSTOMERS_TV_MIN_WIDTH =
 =========================================================== */
 
 export const CUSTOMERS_MOBILE:
-  CustomersBreakpoint =
-  MOBILE;
+  CustomersBreakpoint = {
+
+  minWidth:
+    CUSTOMERS_MOBILE_MIN_WIDTH,
+
+  maxWidth:
+    CUSTOMERS_MOBILE_MAX_WIDTH,
+
+};
+
 
 export const CUSTOMERS_TABLET:
-  CustomersBreakpoint =
-  TABLET;
+  CustomersBreakpoint = {
+
+  minWidth:
+    CUSTOMERS_TABLET_MIN_WIDTH,
+
+  maxWidth:
+    CUSTOMERS_TABLET_MAX_WIDTH,
+
+};
+
 
 export const CUSTOMERS_LAPTOP:
-  CustomersBreakpoint =
-  LAPTOP;
+  CustomersBreakpoint = {
+
+  minWidth:
+    CUSTOMERS_LAPTOP_MIN_WIDTH,
+
+  maxWidth:
+    CUSTOMERS_LAPTOP_MAX_WIDTH,
+
+};
+
 
 export const CUSTOMERS_DESKTOP:
-  CustomersBreakpoint =
-  DESKTOP;
+  CustomersBreakpoint = {
 
-export const CUSTOMERS_WIDE_DESKTOP:
-  CustomersBreakpoint =
-  WIDE_DESKTOP;
+  minWidth:
+    CUSTOMERS_DESKTOP_MIN_WIDTH,
 
-export const CUSTOMERS_ULTRA_WIDE:
-  CustomersBreakpoint =
-  ULTRA_WIDE;
+  maxWidth:
+    null,
 
-export const CUSTOMERS_TV:
-  CustomersBreakpoint =
-  TV;
+};
 
 
 /* ===========================================================
@@ -201,15 +180,6 @@ export const CUSTOMERS_BREAKPOINTS:
 
   desktop:
     CUSTOMERS_DESKTOP,
-
-  wideDesktop:
-    CUSTOMERS_WIDE_DESKTOP,
-
-  ultraWide:
-    CUSTOMERS_ULTRA_WIDE,
-
-  tv:
-    CUSTOMERS_TV,
 
 };
 
@@ -275,51 +245,6 @@ export function isCustomersDesktopWidth(
 
 
 /* ===========================================================
-   WIDE DESKTOP WIDTH
-=========================================================== */
-
-export function isCustomersWideDesktopWidth(
-  width: number,
-): boolean {
-
-  return isWideDesktopWidth(
-    width,
-  );
-
-}
-
-
-/* ===========================================================
-   ULTRA WIDE WIDTH
-=========================================================== */
-
-export function isCustomersUltraWideWidth(
-  width: number,
-): boolean {
-
-  return isUltraWideWidth(
-    width,
-  );
-
-}
-
-
-/* ===========================================================
-   TV WIDTH
-=========================================================== */
-
-export function isCustomersTvWidth(
-  width: number,
-): boolean {
-
-  return isTvWidth(
-    width,
-  );
-
-}
-
-
-/* ===========================================================
    VALID VIEWPORT WIDTH
 =========================================================== */
 
@@ -337,4 +262,3 @@ export function isValidCustomersViewportWidth(
 /* ===========================================================
    END
 =========================================================== */
-

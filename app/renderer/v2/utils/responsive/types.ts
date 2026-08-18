@@ -11,17 +11,23 @@
    - No device detection logic
    - No layout calculations
 
-   RESPONSIVE ENGINE:
-   types.ts      → contracts
-   breakpoints.ts → viewport boundaries
-   helpers.ts    → device detection
-   tokens.ts     → visual tokens
-   layout.ts     → layout calculations
-   useResponsive.ts → live viewport state
-   index.ts      → central exports
+   DEVICE SYSTEM:
+
+   01. MOBILE
+   02. TABLET
+   03. LAPTOP
+   04. DESKTOP
+
+   IMPORTANT:
+   - ResponsiveViewport uses the same 4-device system.
+   - No wideDesktop.
+   - No ultraWide.
+   - No tv.
+   - No extra viewport classifications.
 =========================================================== */
 
 import type { ResponsiveTokens } from "./tokens";
+
 
 /* ===========================================================
    HIGH-LEVEL DEVICE TYPE
@@ -31,10 +37,7 @@ export type DeviceType =
   | "mobile"
   | "tablet"
   | "laptop"
-  | "desktop"
-  | "wideDesktop"
-  | "ultraWide"
-  | "tv";
+  | "desktop";
 
 
 /* ===========================================================
@@ -53,27 +56,20 @@ export type ResponsiveDeviceIndex =
   | 0
   | 1
   | 2
-  | 3
-  | 4
-  | 5
-  | 6;
+  | 3;
 
 
 /* ===========================================================
-   DETAILED VIEWPORT PROFILE
+   RESPONSIVE VIEWPORT
+
+   Same 4-device classification.
 =========================================================== */
 
 export type ResponsiveViewport =
-  | "verySmallMobile"
   | "mobile"
-  | "largeMobile"
   | "tablet"
-  | "smallLaptop"
   | "laptop"
-  | "desktop"
-  | "wideDesktop"
-  | "ultraWide"
-  | "projector";
+  | "desktop";
 
 
 /* ===========================================================
@@ -903,15 +899,6 @@ export interface ResponsiveDeviceFlags {
   isDesktop:
     boolean;
 
-  isWideDesktop:
-    boolean;
-
-  isUltraWide:
-    boolean;
-
-  isTv:
-    boolean;
-
 }
 
 
@@ -951,9 +938,6 @@ export type ResponsiveValue<T> =
       tablet: T;
       laptop: T;
       desktop: T;
-      wideDesktop: T;
-      ultraWide: T;
-      tv: T;
     };
 
 

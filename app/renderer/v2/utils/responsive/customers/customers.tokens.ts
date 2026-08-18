@@ -22,6 +22,12 @@
    - No viewport calculations outside token selection
    - Breakpoint boundaries come from customers.breakpoints.ts
    - Global token contracts come from ../types
+
+   DEVICE SYSTEM:
+   01. MOBILE
+   02. TABLET
+   03. LAPTOP
+   04. DESKTOP
 =========================================================== */
 
 
@@ -50,16 +56,6 @@ import {
   CUSTOMERS_LAPTOP_MAX_WIDTH,
 
   CUSTOMERS_DESKTOP_MIN_WIDTH,
-  CUSTOMERS_DESKTOP_MAX_WIDTH,
-
-  CUSTOMERS_WIDE_DESKTOP_MIN_WIDTH,
-  CUSTOMERS_WIDE_DESKTOP_MAX_WIDTH,
-
-  CUSTOMERS_ULTRA_WIDE_MIN_WIDTH,
-  CUSTOMERS_ULTRA_WIDE_MAX_WIDTH,
-
-  CUSTOMERS_TV_MIN_WIDTH,
-
 } from "./customers.breakpoints";
 
 
@@ -819,6 +815,7 @@ function createCustomerTokens(
 
     /* =======================================================
        PROJECTOR
+       Contract compatibility only.
     ======================================================= */
 
     projector: {
@@ -942,54 +939,6 @@ function createCustomerTokens(
 
 
 /* ===========================================================
-   VERY SMALL MOBILE
-=========================================================== */
-
-export const CUSTOMER_VERY_SMALL_MOBILE =
-  createCustomerTokens(
-    "verySmallMobile",
-    0,
-    CUSTOMERS_MOBILE_MIN_WIDTH - 1,
-    {
-
-      pageGutter: 12,
-      sectionGap: 16,
-      cardGap: 10,
-      cardPadding: 12,
-
-      titleSize: 22,
-      headingSize: 18,
-      bodySize: 14,
-      labelSize: 13,
-      smallSize: 11,
-
-      controlHeight: 40,
-      inputHeight: 42,
-      buttonHeight: 42,
-
-      cardRadius: 10,
-      panelRadius: 12,
-
-      customerCardWidth: 0,
-      customerCardHeight: 150,
-
-      columns: 1,
-
-      tableRowHeight: 44,
-      tableHeaderHeight: 44,
-
-      sidebarWidth: 0,
-      navigationHeight: 60,
-
-      modalWidth: 320,
-
-      wizardWidth: 360,
-
-    },
-  );
-
-
-/* ===========================================================
    MOBILE
 =========================================================== */
 
@@ -1032,54 +981,6 @@ export const CUSTOMER_MOBILE =
       modalWidth: 360,
 
       wizardWidth: 600,
-
-    },
-  );
-
-
-/* ===========================================================
-   LARGE MOBILE
-=========================================================== */
-
-export const CUSTOMER_LARGE_MOBILE =
-  createCustomerTokens(
-    "largeMobile",
-    CUSTOMERS_MOBILE_MAX_WIDTH + 1,
-    CUSTOMERS_TABLET_MIN_WIDTH - 1,
-    {
-
-      pageGutter: 20,
-      sectionGap: 22,
-      cardGap: 14,
-      cardPadding: 18,
-
-      titleSize: 26,
-      headingSize: 21,
-      bodySize: 15,
-      labelSize: 14,
-      smallSize: 12,
-
-      controlHeight: 44,
-      inputHeight: 46,
-      buttonHeight: 46,
-
-      cardRadius: 13,
-      panelRadius: 15,
-
-      customerCardWidth: 0,
-      customerCardHeight: 172,
-
-      columns: 2,
-
-      tableRowHeight: 48,
-      tableHeaderHeight: 48,
-
-      sidebarWidth: 0,
-      navigationHeight: 64,
-
-      modalWidth: 420,
-
-      wizardWidth: 720,
 
     },
   );
@@ -1134,69 +1035,13 @@ export const CUSTOMER_TABLET =
 
 
 /* ===========================================================
-   SMALL LAPTOP
-=========================================================== */
-
-export const CUSTOMER_SMALL_LAPTOP =
-  createCustomerTokens(
-    "smallLaptop",
-    CUSTOMERS_LAPTOP_MIN_WIDTH,
-    CUSTOMERS_LAPTOP_MIN_WIDTH +
-      (
-        CUSTOMERS_LAPTOP_MAX_WIDTH -
-        CUSTOMERS_LAPTOP_MIN_WIDTH
-      ) / 2,
-    {
-
-      pageGutter: 24,
-      sectionGap: 24,
-      cardGap: 16,
-      cardPadding: 20,
-
-      titleSize: 28,
-      headingSize: 22,
-      bodySize: 15,
-      labelSize: 14,
-      smallSize: 12,
-
-      controlHeight: 44,
-      inputHeight: 46,
-      buttonHeight: 44,
-
-      cardRadius: 14,
-      panelRadius: 16,
-
-      customerCardWidth: 260,
-      customerCardHeight: 180,
-
-      columns: 3,
-
-      tableRowHeight: 48,
-      tableHeaderHeight: 48,
-
-      sidebarWidth: 220,
-      navigationHeight: 64,
-
-      modalWidth: 560,
-
-      wizardWidth: 1000,
-
-    },
-  );
-
-
-/* ===========================================================
    LAPTOP
 =========================================================== */
 
 export const CUSTOMER_LAPTOP =
   createCustomerTokens(
     "laptop",
-    CUSTOMERS_LAPTOP_MIN_WIDTH +
-      (
-        CUSTOMERS_LAPTOP_MAX_WIDTH -
-        CUSTOMERS_LAPTOP_MIN_WIDTH
-      ) / 2 + 1,
+    CUSTOMERS_LAPTOP_MIN_WIDTH,
     CUSTOMERS_LAPTOP_MAX_WIDTH,
     {
 
@@ -1245,7 +1090,7 @@ export const CUSTOMER_DESKTOP =
   createCustomerTokens(
     "desktop",
     CUSTOMERS_DESKTOP_MIN_WIDTH,
-    CUSTOMERS_DESKTOP_MAX_WIDTH,
+    null,
     {
 
       pageGutter: 32,
@@ -1286,185 +1131,23 @@ export const CUSTOMER_DESKTOP =
 
 
 /* ===========================================================
-   WIDE DESKTOP
-=========================================================== */
-
-export const CUSTOMER_WIDE_DESKTOP =
-  createCustomerTokens(
-    "wideDesktop",
-    CUSTOMERS_WIDE_DESKTOP_MIN_WIDTH,
-    CUSTOMERS_WIDE_DESKTOP_MAX_WIDTH,
-    {
-
-      pageGutter: 40,
-      sectionGap: 34,
-      cardGap: 22,
-      cardPadding: 28,
-
-      titleSize: 34,
-      headingSize: 28,
-      bodySize: 17,
-      labelSize: 15,
-      smallSize: 13,
-
-      controlHeight: 50,
-      inputHeight: 52,
-      buttonHeight: 50,
-
-      cardRadius: 17,
-      panelRadius: 19,
-
-      customerCardWidth: 320,
-      customerCardHeight: 210,
-
-      columns: 5,
-
-      tableRowHeight: 54,
-      tableHeaderHeight: 54,
-
-      sidebarWidth: 260,
-      navigationHeight: 68,
-
-      modalWidth: 700,
-
-      wizardWidth: 1400,
-
-    },
-  );
-
-
-/* ===========================================================
-   ULTRA WIDE
-=========================================================== */
-
-export const CUSTOMER_ULTRA_WIDE =
-  createCustomerTokens(
-    "ultraWide",
-    CUSTOMERS_ULTRA_WIDE_MIN_WIDTH,
-    CUSTOMERS_ULTRA_WIDE_MAX_WIDTH,
-    {
-
-      pageGutter: 48,
-      sectionGap: 38,
-      cardGap: 24,
-      cardPadding: 32,
-
-      titleSize: 38,
-      headingSize: 30,
-      bodySize: 18,
-      labelSize: 16,
-      smallSize: 14,
-
-      controlHeight: 52,
-      inputHeight: 54,
-      buttonHeight: 52,
-
-      cardRadius: 18,
-      panelRadius: 20,
-
-      customerCardWidth: 340,
-      customerCardHeight: 220,
-
-      columns: 6,
-
-      tableRowHeight: 56,
-      tableHeaderHeight: 56,
-
-      sidebarWidth: 280,
-      navigationHeight: 70,
-
-      modalWidth: 760,
-
-      wizardWidth: 1600,
-
-    },
-  );
-
-
-/* ===========================================================
-   PROJECTOR / TV
-=========================================================== */
-
-export const CUSTOMER_PROJECTOR =
-  createCustomerTokens(
-    "projector",
-    CUSTOMERS_TV_MIN_WIDTH,
-    null,
-    {
-
-      pageGutter: 64,
-      sectionGap: 48,
-      cardGap: 30,
-      cardPadding: 40,
-
-      titleSize: 46,
-      headingSize: 36,
-      bodySize: 22,
-      labelSize: 20,
-      smallSize: 17,
-
-      controlHeight: 60,
-      inputHeight: 62,
-      buttonHeight: 60,
-
-      cardRadius: 22,
-      panelRadius: 24,
-
-      customerCardWidth: 400,
-      customerCardHeight: 260,
-
-      columns: 6,
-
-      tableRowHeight: 64,
-      tableHeaderHeight: 64,
-
-      sidebarWidth: 320,
-      navigationHeight: 78,
-
-      modalWidth: 900,
-
-      wizardWidth: 1900,
-
-    },
-  );
-
-
-/* ===========================================================
    CUSTOMER TOKEN MAP
 =========================================================== */
 
 export const CUSTOMER_RESPONSIVE_TOKENS:
   ResponsiveTokenMap = {
 
-  verySmallMobile:
-    CUSTOMER_VERY_SMALL_MOBILE,
-
   mobile:
     CUSTOMER_MOBILE,
 
-  largeMobile:
-    CUSTOMER_LARGE_MOBILE,
-
   tablet:
     CUSTOMER_TABLET,
-
-  smallLaptop:
-    CUSTOMER_SMALL_LAPTOP,
 
   laptop:
     CUSTOMER_LAPTOP,
 
   desktop:
     CUSTOMER_DESKTOP,
-
-  wideDesktop:
-    CUSTOMER_WIDE_DESKTOP,
-
-  ultraWide:
-    CUSTOMER_ULTRA_WIDE,
-
-  projector:
-    CUSTOMER_PROJECTOR,
 
 };
 
@@ -1499,31 +1182,11 @@ export function getCustomerTokens(
 
 
   if (
-    safeWidth <
-    CUSTOMERS_MOBILE_MIN_WIDTH
-  ) {
-
-    return CUSTOMER_VERY_SMALL_MOBILE;
-
-  }
-
-
-  if (
     safeWidth <=
     CUSTOMERS_MOBILE_MAX_WIDTH
   ) {
 
     return CUSTOMER_MOBILE;
-
-  }
-
-
-  if (
-    safeWidth <
-    CUSTOMERS_TABLET_MIN_WIDTH
-  ) {
-
-    return CUSTOMER_LARGE_MOBILE;
 
   }
 
@@ -1538,34 +1201,6 @@ export function getCustomerTokens(
   }
 
 
-  const laptopMidpoint =
-    CUSTOMERS_LAPTOP_MIN_WIDTH +
-    (
-      CUSTOMERS_LAPTOP_MAX_WIDTH -
-      CUSTOMERS_LAPTOP_MIN_WIDTH
-    ) / 2;
-
-
-  if (
-    safeWidth <
-    CUSTOMERS_LAPTOP_MIN_WIDTH
-  ) {
-
-    return CUSTOMER_SMALL_LAPTOP;
-
-  }
-
-
-  if (
-    safeWidth <=
-    laptopMidpoint
-  ) {
-
-    return CUSTOMER_SMALL_LAPTOP;
-
-  }
-
-
   if (
     safeWidth <=
     CUSTOMERS_LAPTOP_MAX_WIDTH
@@ -1576,37 +1211,7 @@ export function getCustomerTokens(
   }
 
 
-  if (
-    safeWidth <=
-    CUSTOMERS_DESKTOP_MAX_WIDTH
-  ) {
-
-    return CUSTOMER_DESKTOP;
-
-  }
-
-
-  if (
-    safeWidth <=
-    CUSTOMERS_WIDE_DESKTOP_MAX_WIDTH
-  ) {
-
-    return CUSTOMER_WIDE_DESKTOP;
-
-  }
-
-
-  if (
-    safeWidth <=
-    CUSTOMERS_ULTRA_WIDE_MAX_WIDTH
-  ) {
-
-    return CUSTOMER_ULTRA_WIDE;
-
-  }
-
-
-  return CUSTOMER_PROJECTOR;
+  return CUSTOMER_DESKTOP;
 
 }
 

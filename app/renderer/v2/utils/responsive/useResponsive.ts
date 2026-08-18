@@ -32,15 +32,19 @@ import {
   useState,
 } from "react";
 
+
 import {
   getDeviceType,
   getDeviceFlags,
   getSafeViewport,
+  getResponsiveViewport,
 } from "./helpers";
+
 
 import {
   getResponsiveViewportTokens,
 } from "./tokens";
+
 
 import type {
   ResponsiveState,
@@ -85,6 +89,7 @@ function getViewportSize(): ViewportSize {
 
   }
 
+
   return getSafeViewport(
     window.innerWidth,
     window.innerHeight,
@@ -128,6 +133,7 @@ export default function useResponsive():
       const nextViewport =
         getViewportSize();
 
+
       setViewportSize(
         previous => {
 
@@ -141,6 +147,7 @@ export default function useResponsive():
             return previous;
 
           }
+
 
           return nextViewport;
 
@@ -206,33 +213,38 @@ export default function useResponsive():
 
 
   /* ===========================================================
-     DETAILED VIEWPORT PROFILE
+     RESPONSIVE VIEWPORT
      
-     ResponsiveViewport is the detailed 10-profile system:
-     
-     - verySmallMobile
-     - mobile
-     - largeMobile
-     - tablet
-     - smallLaptop
-     - laptop
-     - desktop
-     - wideDesktop
-     - ultraWide
-     - projector
-     
-     The token resolver already determines this profile.
-     Therefore the hook consumes the authoritative token
-     metadata instead of duplicating breakpoint logic here.
+     The shared ResponsiveViewport contract is resolved by
+     the global Responsive Engine.
+
+     This keeps viewport classification owned by helpers.ts
+     instead of leaking the detailed token-profile type into
+     the global ResponsiveState contract.
   =========================================================== */
 
   const responsiveViewport:
     ResponsiveViewport =
-    tokens.meta.viewport;
+    getResponsiveViewport(
+      viewportSize.width,
+    );
 
 
   /* ===========================================================
      RESPONSIVE STATE
+     
+     IMPORTANT:
+     ResponsiveState is the canonical global contract.
+
+     Do not add customer-specific / legacy viewport flags
+     such as:
+
+     - isWideDesktop
+     - isUltraWide
+     - isTv
+
+     unless those fields are explicitly part of the shared
+     types.ts contract.
   =========================================================== */
 
   const state: ResponsiveState = {
@@ -262,15 +274,6 @@ export default function useResponsive():
 
     isDesktop:
       flags.isDesktop,
-
-    isWideDesktop:
-      flags.isWideDesktop,
-
-    isUltraWide:
-      flags.isUltraWide,
-
-    isTv:
-      flags.isTv,
 
   };
 

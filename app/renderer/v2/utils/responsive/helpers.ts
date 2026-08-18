@@ -27,16 +27,16 @@
    1024px → 1599px
 
    DESKTOP
-   1600px → 1919px
+   1600px+
 
-   WIDE DESKTOP
-   1920px → 2559px
-
-   ULTRA WIDE
-   2560px → 3839px
-
-   TV
-   3840px+
+   IMPORTANT:
+   - Only 4 devices are supported.
+   - No wideDesktop.
+   - No ultraWide.
+   - No tv.
+   - No projector.
+   - No smallLaptop.
+   - No verySmallMobile.
 =========================================================== */
 
 
@@ -55,21 +55,13 @@ import {
   LAPTOP_MAX_WIDTH,
 
   DESKTOP_MIN_WIDTH,
-  DESKTOP_MAX_WIDTH,
-
-  WIDE_DESKTOP_MIN_WIDTH,
-  WIDE_DESKTOP_MAX_WIDTH,
-
-  ULTRA_WIDE_MIN_WIDTH,
-  ULTRA_WIDE_MAX_WIDTH,
-
-  TV_MIN_WIDTH,
 
   isValidViewportWidth,
 } from "./breakpoints";
 
 import type {
   DeviceType,
+  ResponsiveDeviceFlags,
 } from "./types";
 
 
@@ -90,6 +82,7 @@ export function getSafeWidth(
   }
 
   return width;
+
 }
 
 
@@ -110,6 +103,7 @@ export function getSafeHeight(
   }
 
   return height;
+
 }
 
 
@@ -126,8 +120,13 @@ export function getSafeViewport(
 } {
 
   return {
-    width: getSafeWidth(width),
-    height: getSafeHeight(height),
+
+    width:
+      getSafeWidth(width),
+
+    height:
+      getSafeHeight(height),
+
   };
 
 }
@@ -146,47 +145,11 @@ export function getDeviceType(
 
 
   /* =========================================================
-     TV
-  ========================================================= */
-
-  if (
-    safeWidth >= TV_MIN_WIDTH
-  ) {
-    return "tv";
-  }
-
-
-  /* =========================================================
-     ULTRA WIDE
-  ========================================================= */
-
-  if (
-    safeWidth >= ULTRA_WIDE_MIN_WIDTH &&
-    safeWidth <= ULTRA_WIDE_MAX_WIDTH
-  ) {
-    return "ultraWide";
-  }
-
-
-  /* =========================================================
-     WIDE DESKTOP
-  ========================================================= */
-
-  if (
-    safeWidth >= WIDE_DESKTOP_MIN_WIDTH &&
-    safeWidth <= WIDE_DESKTOP_MAX_WIDTH
-  ) {
-    return "wideDesktop";
-  }
-
-
-  /* =========================================================
      DESKTOP
   ========================================================= */
 
   if (
-    safeWidth >= DESKTOP_MIN_WIDTH &&
-    safeWidth <= DESKTOP_MAX_WIDTH
+    safeWidth >= DESKTOP_MIN_WIDTH
   ) {
     return "desktop";
   }
@@ -294,64 +257,7 @@ export function isDesktop(
     getSafeWidth(width);
 
   return (
-    safeWidth >= DESKTOP_MIN_WIDTH &&
-    safeWidth <= DESKTOP_MAX_WIDTH
-  );
-
-}
-
-
-/* ===========================================================
-   WIDE DESKTOP
-=========================================================== */
-
-export function isWideDesktop(
-  width: number,
-): boolean {
-
-  const safeWidth =
-    getSafeWidth(width);
-
-  return (
-    safeWidth >= WIDE_DESKTOP_MIN_WIDTH &&
-    safeWidth <= WIDE_DESKTOP_MAX_WIDTH
-  );
-
-}
-
-
-/* ===========================================================
-   ULTRA WIDE
-=========================================================== */
-
-export function isUltraWide(
-  width: number,
-): boolean {
-
-  const safeWidth =
-    getSafeWidth(width);
-
-  return (
-    safeWidth >= ULTRA_WIDE_MIN_WIDTH &&
-    safeWidth <= ULTRA_WIDE_MAX_WIDTH
-  );
-
-}
-
-
-/* ===========================================================
-   TV
-=========================================================== */
-
-export function isTv(
-  width: number,
-): boolean {
-
-  const safeWidth =
-    getSafeWidth(width);
-
-  return (
-    safeWidth >= TV_MIN_WIDTH
+    safeWidth >= DESKTOP_MIN_WIDTH
   );
 
 }
@@ -379,25 +285,12 @@ export function isDevice(
 
 export function getDeviceFlags(
   width: number,
-): {
-  device: DeviceType;
-
-  isMobile: boolean;
-  isTablet: boolean;
-  isLaptop: boolean;
-  isDesktop: boolean;
-
-  isWideDesktop: boolean;
-  isUltraWide: boolean;
-  isTv: boolean;
-} {
+): ResponsiveDeviceFlags {
 
   const device =
     getDeviceType(width);
 
   return {
-
-    device,
 
     isMobile:
       device === "mobile",
@@ -411,16 +304,50 @@ export function getDeviceFlags(
     isDesktop:
       device === "desktop",
 
-    isWideDesktop:
-      device === "wideDesktop",
-
-    isUltraWide:
-      device === "ultraWide",
-
-    isTv:
-      device === "tv",
-
   };
+
+}
+
+
+/* ===========================================================
+   DEVICE INDEX
+=========================================================== */
+
+export function getDeviceIndex(
+  device: DeviceType,
+): 0 | 1 | 2 | 3 {
+
+  switch (device) {
+
+    case "mobile":
+      return 0;
+
+    case "tablet":
+      return 1;
+
+    case "laptop":
+      return 2;
+
+    case "desktop":
+      return 3;
+
+    default:
+      return 0;
+
+  }
+
+}
+
+
+/* ===========================================================
+   VIEWPORT TYPE
+=========================================================== */
+
+export function getResponsiveViewport(
+  width: number,
+): DeviceType {
+
+  return getDeviceType(width);
 
 }
 
@@ -434,6 +361,19 @@ export function isValidWidth(
 ): boolean {
 
   return isValidViewportWidth(width);
+
+}
+
+
+/* ===========================================================
+   RESPONSIVE DEVICE FLAGS
+=========================================================== */
+
+export function getResponsiveDeviceFlags(
+  width: number,
+): ResponsiveDeviceFlags {
+
+  return getDeviceFlags(width);
 
 }
 

@@ -5,280 +5,178 @@
    BREAKPOINTS
 
    RESPONSIBILITY:
-   - Define viewport boundaries ONLY
-   - Define 7-device classification boundaries
-   - Keep viewport range logic centralized
-   - Do NOT define visual dimensions
-   - Do NOT define typography
-   - Do NOT define spacing
-   - Do NOT define component sizes
-
-   VISUAL VALUES BELONG TO:
-   ./tokens.ts
+   - Responsive breakpoint constants
+   - Device classification
+   - Width validation
+   - Breakpoint map
+   - Device helper functions
 
    DEVICE SYSTEM:
 
    01. MOBILE
-       0px → 767px
-
    02. TABLET
-       768px → 1023px
-
    03. LAPTOP
-       1024px → 1599px
-
    04. DESKTOP
-       1600px → 1919px
 
-   05. WIDE DESKTOP
-       1920px → 2559px
-
-   06. ULTRA WIDE
-       2560px → 3839px
-
-   07. TV
-       3840px+
-
-=========================================================== */
-
-
-/* ===========================================================
-   BREAKPOINT TYPE
+   IMPORTANT:
+   - This is the single source of truth for device breakpoints.
+   - No wideDesktop.
+   - No ultraWide.
+   - No tv.
+   - No projector.
+   - No visual styling values.
+   - No token values.
 =========================================================== */
 
 import type {
+  DeviceType,
   ResponsiveBreakpoint,
   ResponsiveBreakpointMap,
+  ResponsiveDeviceIndex,
 } from "./types";
 
 
 /* ===========================================================
-   MOBILE
-   0px → 767px
+   DEVICE NAMES
+
+   These constants are intentionally kept as strings so every
+   responsive module uses the same canonical device names.
+=========================================================== */
+
+export const MOBILE: DeviceType =
+  "mobile";
+
+export const TABLET: DeviceType =
+  "tablet";
+
+export const LAPTOP: DeviceType =
+  "laptop";
+
+export const DESKTOP: DeviceType =
+  "desktop";
+
+
+/* ===========================================================
+   DEVICE MINIMUM WIDTHS
+
+   These values define where each device class begins.
+
+   Mobile:
+   0px+
+
+   Tablet:
+   768px+
+
+   Laptop:
+   1024px+
+
+   Desktop:
+   1440px+
 =========================================================== */
 
 export const MOBILE_MIN_WIDTH =
   0;
 
-export const MOBILE_MAX_WIDTH =
-  767;
-
-
-/* ===========================================================
-   TABLET
-   768px → 1023px
-=========================================================== */
-
 export const TABLET_MIN_WIDTH =
   768;
-
-export const TABLET_MAX_WIDTH =
-  1023;
-
-
-/* ===========================================================
-   LAPTOP
-   1024px → 1599px
-=========================================================== */
 
 export const LAPTOP_MIN_WIDTH =
   1024;
 
-export const LAPTOP_MAX_WIDTH =
-  1599;
-
-
-/* ===========================================================
-   DESKTOP
-   1600px → 1919px
-=========================================================== */
-
 export const DESKTOP_MIN_WIDTH =
-  1600;
-
-export const DESKTOP_MAX_WIDTH =
-  1919;
+  1440;
 
 
 /* ===========================================================
-   WIDE DESKTOP
-   1920px → 2559px
+   DEVICE MAXIMUM WIDTHS
+
+   The maximum width is derived from the next device boundary.
+
+   Desktop has no upper limit.
 =========================================================== */
 
-export const WIDE_DESKTOP_MIN_WIDTH =
-  1920;
+export const MOBILE_MAX_WIDTH =
+  TABLET_MIN_WIDTH - 1;
 
-export const WIDE_DESKTOP_MAX_WIDTH =
-  2559;
+export const TABLET_MAX_WIDTH =
+  LAPTOP_MIN_WIDTH - 1;
 
-
-/* ===========================================================
-   ULTRA WIDE
-   2560px → 3839px
-=========================================================== */
-
-export const ULTRA_WIDE_MIN_WIDTH =
-  2560;
-
-export const ULTRA_WIDE_MAX_WIDTH =
-  3839;
+export const LAPTOP_MAX_WIDTH =
+  DESKTOP_MIN_WIDTH - 1;
 
 
 /* ===========================================================
-   TV
-   3840px+
-=========================================================== */
+   BREAKPOINT MAP
 
-export const TV_MIN_WIDTH =
-  3840;
+   Single canonical 4-device breakpoint map.
 
-
-/* ===========================================================
-   MOBILE BREAKPOINT
-=========================================================== */
-
-export const MOBILE:
-  ResponsiveBreakpoint = {
-
-  minWidth:
-    MOBILE_MIN_WIDTH,
-
-  maxWidth:
-    MOBILE_MAX_WIDTH,
-
-};
-
-
-/* ===========================================================
-   TABLET BREAKPOINT
-=========================================================== */
-
-export const TABLET:
-  ResponsiveBreakpoint = {
-
-  minWidth:
-    TABLET_MIN_WIDTH,
-
-  maxWidth:
-    TABLET_MAX_WIDTH,
-
-};
-
-
-/* ===========================================================
-   LAPTOP BREAKPOINT
-=========================================================== */
-
-export const LAPTOP:
-  ResponsiveBreakpoint = {
-
-  minWidth:
-    LAPTOP_MIN_WIDTH,
-
-  maxWidth:
-    LAPTOP_MAX_WIDTH,
-
-};
-
-
-/* ===========================================================
-   DESKTOP BREAKPOINT
-=========================================================== */
-
-export const DESKTOP:
-  ResponsiveBreakpoint = {
-
-  minWidth:
-    DESKTOP_MIN_WIDTH,
-
-  maxWidth:
-    DESKTOP_MAX_WIDTH,
-
-};
-
-
-/* ===========================================================
-   WIDE DESKTOP BREAKPOINT
-=========================================================== */
-
-export const WIDE_DESKTOP:
-  ResponsiveBreakpoint = {
-
-  minWidth:
-    WIDE_DESKTOP_MIN_WIDTH,
-
-  maxWidth:
-    WIDE_DESKTOP_MAX_WIDTH,
-
-};
-
-
-/* ===========================================================
-   ULTRA WIDE BREAKPOINT
-=========================================================== */
-
-export const ULTRA_WIDE:
-  ResponsiveBreakpoint = {
-
-  minWidth:
-    ULTRA_WIDE_MIN_WIDTH,
-
-  maxWidth:
-    ULTRA_WIDE_MAX_WIDTH,
-
-};
-
-
-/* ===========================================================
-   TV BREAKPOINT
-=========================================================== */
-
-export const TV:
-  ResponsiveBreakpoint = {
-
-  minWidth:
-    TV_MIN_WIDTH,
-
-  maxWidth:
-    null,
-
-};
-
-
-/* ===========================================================
-   CENTRAL BREAKPOINT MAP
+   No additional device classifications are permitted.
 =========================================================== */
 
 export const RESPONSIVE_BREAKPOINTS:
   ResponsiveBreakpointMap = {
 
-  mobile:
-    MOBILE,
+  mobile: {
+    minWidth:
+      MOBILE_MIN_WIDTH,
 
-  tablet:
-    TABLET,
+    maxWidth:
+      MOBILE_MAX_WIDTH,
+  },
 
-  laptop:
-    LAPTOP,
+  tablet: {
+    minWidth:
+      TABLET_MIN_WIDTH,
 
-  desktop:
-    DESKTOP,
+    maxWidth:
+      TABLET_MAX_WIDTH,
+  },
 
-  wideDesktop:
-    WIDE_DESKTOP,
+  laptop: {
+    minWidth:
+      LAPTOP_MIN_WIDTH,
 
-  ultraWide:
-    ULTRA_WIDE,
+    maxWidth:
+      LAPTOP_MAX_WIDTH,
+  },
 
-  tv:
-    TV,
+  desktop: {
+    minWidth:
+      DESKTOP_MIN_WIDTH,
+
+    maxWidth:
+      null,
+  },
 
 };
 
 
 /* ===========================================================
-   RANGE HELPERS
+   ALIAS
+
+   Kept as a semantic export for consumers that refer to the
+   breakpoint configuration as a map.
 =========================================================== */
+
+export const BREAKPOINTS:
+  ResponsiveBreakpointMap =
+  RESPONSIVE_BREAKPOINTS;
+
+
+/* ===========================================================
+   WIDTH VALIDATION
+=========================================================== */
+
+export function isValidViewportWidth(
+  width: number,
+): boolean {
+
+  return (
+    Number.isFinite(width) &&
+    width >= 0
+  );
+
+}
 
 
 /* ===========================================================
@@ -290,7 +188,7 @@ export function isMobileWidth(
 ): boolean {
 
   return (
-    Number.isFinite(width) &&
+    isValidViewportWidth(width) &&
     width >= MOBILE_MIN_WIDTH &&
     width <= MOBILE_MAX_WIDTH
   );
@@ -307,7 +205,7 @@ export function isTabletWidth(
 ): boolean {
 
   return (
-    Number.isFinite(width) &&
+    isValidViewportWidth(width) &&
     width >= TABLET_MIN_WIDTH &&
     width <= TABLET_MAX_WIDTH
   );
@@ -324,7 +222,7 @@ export function isLaptopWidth(
 ): boolean {
 
   return (
-    Number.isFinite(width) &&
+    isValidViewportWidth(width) &&
     width >= LAPTOP_MIN_WIDTH &&
     width <= LAPTOP_MAX_WIDTH
   );
@@ -341,76 +239,212 @@ export function isDesktopWidth(
 ): boolean {
 
   return (
-    Number.isFinite(width) &&
-    width >= DESKTOP_MIN_WIDTH &&
-    width <= DESKTOP_MAX_WIDTH
+    isValidViewportWidth(width) &&
+    width >= DESKTOP_MIN_WIDTH
   );
 
 }
 
 
 /* ===========================================================
-   WIDE DESKTOP WIDTH
+   DEVICE CLASSIFICATION
+
+   This is the single authoritative width -> device resolver.
 =========================================================== */
 
-export function isWideDesktopWidth(
+export function getDeviceType(
   width: number,
+): DeviceType {
+
+  if (
+    width < TABLET_MIN_WIDTH
+  ) {
+    return MOBILE;
+  }
+
+  if (
+    width < LAPTOP_MIN_WIDTH
+  ) {
+    return TABLET;
+  }
+
+  if (
+    width < DESKTOP_MIN_WIDTH
+  ) {
+    return LAPTOP;
+  }
+
+  return DESKTOP;
+
+}
+
+
+/* ===========================================================
+   DEVICE INDEX
+
+   0 = Mobile
+   1 = Tablet
+   2 = Laptop
+   3 = Desktop
+=========================================================== */
+
+export function getDeviceIndex(
+  device: DeviceType,
+): ResponsiveDeviceIndex {
+
+  switch (device) {
+
+    case MOBILE:
+      return 0;
+
+    case TABLET:
+      return 1;
+
+    case LAPTOP:
+      return 2;
+
+    case DESKTOP:
+      return 3;
+
+    default:
+      return 0;
+
+  }
+
+}
+
+
+/* ===========================================================
+   DEVICE BREAKPOINT
+
+   Returns the canonical breakpoint definition for a device.
+=========================================================== */
+
+export function getBreakpoint(
+  device: DeviceType,
+): ResponsiveBreakpoint {
+
+  return RESPONSIVE_BREAKPOINTS[device];
+
+}
+
+
+/* ===========================================================
+   DEVICE MINIMUM WIDTH
+=========================================================== */
+
+export function getMinWidth(
+  device: DeviceType,
+): number {
+
+  return RESPONSIVE_BREAKPOINTS[device].minWidth;
+
+}
+
+
+/* ===========================================================
+   DEVICE MAXIMUM WIDTH
+=========================================================== */
+
+export function getMaxWidth(
+  device: DeviceType,
+): number | null {
+
+  return RESPONSIVE_BREAKPOINTS[device].maxWidth;
+
+}
+
+
+/* ===========================================================
+   WIDTH -> BREAKPOINT MATCH
+=========================================================== */
+
+export function isWidthInBreakpoint(
+  width: number,
+  breakpoint: ResponsiveBreakpoint,
 ): boolean {
 
-  return (
-    Number.isFinite(width) &&
-    width >= WIDE_DESKTOP_MIN_WIDTH &&
-    width <= WIDE_DESKTOP_MAX_WIDTH
+  if (
+    !isValidViewportWidth(width)
+  ) {
+    return false;
+  }
+
+  if (
+    width < breakpoint.minWidth
+  ) {
+    return false;
+  }
+
+  if (
+    breakpoint.maxWidth !== null &&
+    width > breakpoint.maxWidth
+  ) {
+    return false;
+  }
+
+  return true;
+
+}
+
+
+/* ===========================================================
+   DEVICE CHECK
+
+   Generic helper for consumers that already know the device.
+=========================================================== */
+
+export function isDeviceWidth(
+  width: number,
+  device: DeviceType,
+): boolean {
+
+  return isWidthInBreakpoint(
+    width,
+    RESPONSIVE_BREAKPOINTS[device],
   );
 
 }
 
 
 /* ===========================================================
-   ULTRA WIDE WIDTH
+   DEVICE ORDER
+
+   Useful for responsive comparisons without introducing
+   additional device classifications.
 =========================================================== */
 
-export function isUltraWideWidth(
-  width: number,
-): boolean {
-
-  return (
-    Number.isFinite(width) &&
-    width >= ULTRA_WIDE_MIN_WIDTH &&
-    width <= ULTRA_WIDE_MAX_WIDTH
-  );
-
-}
+export const DEVICE_ORDER:
+  readonly DeviceType[] = [
+    MOBILE,
+    TABLET,
+    LAPTOP,
+    DESKTOP,
+];
 
 
 /* ===========================================================
-   TV WIDTH
+   DEVICE COUNT
 =========================================================== */
 
-export function isTvWidth(
-  width: number,
-): boolean {
-
-  return (
-    Number.isFinite(width) &&
-    width >= TV_MIN_WIDTH
-  );
-
-}
+export const RESPONSIVE_DEVICE_COUNT =
+  DEVICE_ORDER.length;
 
 
 /* ===========================================================
-   VALID VIEWPORT WIDTH
+   BREAKPOINT RESOLUTION
+
+   Returns the breakpoint matching the supplied viewport width.
 =========================================================== */
 
-export function isValidViewportWidth(
+export function getBreakpointForWidth(
   width: number,
-): boolean {
+): ResponsiveBreakpoint {
 
-  return (
-    Number.isFinite(width) &&
-    width >= 0
-  );
+  const device =
+    getDeviceType(width);
+
+  return RESPONSIVE_BREAKPOINTS[device];
 
 }
 

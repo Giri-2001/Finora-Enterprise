@@ -19,6 +19,12 @@
    - Breakpoint values come ONLY from customers.breakpoints.ts
    - Global responsive contracts come ONLY from ../types
    - This file contains logic only
+
+   DEVICE SYSTEM:
+   01. MOBILE
+   02. TABLET
+   03. LAPTOP
+   04. DESKTOP
 =========================================================== */
 
 
@@ -46,23 +52,11 @@ import {
   CUSTOMERS_LAPTOP_MAX_WIDTH,
 
   CUSTOMERS_DESKTOP_MIN_WIDTH,
-  CUSTOMERS_DESKTOP_MAX_WIDTH,
-
-  CUSTOMERS_WIDE_DESKTOP_MIN_WIDTH,
-  CUSTOMERS_WIDE_DESKTOP_MAX_WIDTH,
-
-  CUSTOMERS_ULTRA_WIDE_MIN_WIDTH,
-  CUSTOMERS_ULTRA_WIDE_MAX_WIDTH,
-
-  CUSTOMERS_TV_MIN_WIDTH,
 
   isCustomersMobileWidth,
   isCustomersTabletWidth,
   isCustomersLaptopWidth,
   isCustomersDesktopWidth,
-  isCustomersWideDesktopWidth,
-  isCustomersUltraWideWidth,
-  isCustomersTvWidth,
 
   isValidCustomersViewportWidth,
 
@@ -144,6 +138,11 @@ export function normalizeCustomerViewport(
 
 /* ===========================================================
    DEVICE RESOLUTION
+
+   Customers uses the same canonical device classification
+   as the global Responsive Engine.
+
+   No customer-specific device classes are introduced here.
 =========================================================== */
 
 export function getCustomerDevice(
@@ -189,51 +188,7 @@ export function getCustomerDevice(
   }
 
 
-  if (
-    isCustomersDesktopWidth(
-      normalizedWidth,
-    )
-  ) {
-
-    return "desktop";
-
-  }
-
-
-  if (
-    isCustomersWideDesktopWidth(
-      normalizedWidth,
-    )
-  ) {
-
-    return "wideDesktop";
-
-  }
-
-
-  if (
-    isCustomersUltraWideWidth(
-      normalizedWidth,
-    )
-  ) {
-
-    return "ultraWide";
-
-  }
-
-
-  if (
-    isCustomersTvWidth(
-      normalizedWidth,
-    )
-  ) {
-
-    return "tv";
-
-  }
-
-
-  return "mobile";
+  return "desktop";
 
 }
 
@@ -255,6 +210,11 @@ export function resolveCustomerDevice(
 
 /* ===========================================================
    DEVICE INDEX
+
+   0 = Mobile
+   1 = Tablet
+   2 = Laptop
+   3 = Desktop
 =========================================================== */
 
 export function getCustomerDeviceIndex(
@@ -275,15 +235,6 @@ export function getCustomerDeviceIndex(
     case "desktop":
       return 3;
 
-    case "wideDesktop":
-      return 4;
-
-    case "ultraWide":
-      return 5;
-
-    case "tv":
-      return 6;
-
     default:
       return 0;
 
@@ -294,6 +245,23 @@ export function getCustomerDeviceIndex(
 
 /* ===========================================================
    VIEWPORT RESOLUTION
+
+   Customer viewport classification intentionally follows
+   the canonical four-device responsive system.
+
+   No secondary viewport classifications are introduced.
+
+   MOBILE
+   0px → 767px
+
+   TABLET
+   768px → 1023px
+
+   LAPTOP
+   1024px → 1439px
+
+   DESKTOP
+   1440px+
 =========================================================== */
 
 export function getCustomerViewport(
@@ -304,24 +272,6 @@ export function getCustomerViewport(
     normalizeCustomerWidth(
       width,
     );
-
-
-  /*
-   * Customer viewport classification uses only the
-   * breakpoint boundaries exposed by customers.breakpoints.ts.
-   *
-   * No independent numeric breakpoint values are defined here.
-   */
-
-
-  if (
-    normalizedWidth <
-    CUSTOMERS_MOBILE_MIN_WIDTH
-  ) {
-
-    return "verySmallMobile";
-
-  }
 
 
   if (
@@ -344,26 +294,6 @@ export function getCustomerViewport(
   }
 
 
-  /*
-   * The laptop device range can contain a more detailed
-   * smallLaptop viewport profile.
-   *
-   * The boundary itself comes from the central breakpoint
-   * engine.
-   */
-
-  if (
-    normalizedWidth >=
-    CUSTOMERS_LAPTOP_MIN_WIDTH &&
-    normalizedWidth <
-    CUSTOMERS_LAPTOP_MAX_WIDTH
-  ) {
-
-    return "smallLaptop";
-
-  }
-
-
   if (
     normalizedWidth <=
     CUSTOMERS_LAPTOP_MAX_WIDTH
@@ -374,41 +304,7 @@ export function getCustomerViewport(
   }
 
 
-  if (
-    normalizedWidth <=
-    CUSTOMERS_DESKTOP_MAX_WIDTH
-  ) {
-
-    return "desktop";
-
-  }
-
-
-  if (
-    normalizedWidth <=
-    CUSTOMERS_WIDE_DESKTOP_MAX_WIDTH
-  ) {
-
-    return "wideDesktop";
-
-  }
-
-
-  if (
-    normalizedWidth <=
-    CUSTOMERS_ULTRA_WIDE_MAX_WIDTH
-  ) {
-
-    return "ultraWide";
-
-  }
-
-
-  /*
-   * TV / projector-sized viewport.
-   */
-
-  return "projector";
+  return "desktop";
 
 }
 
@@ -489,51 +385,6 @@ export function isCustomerDesktop(
 
 
 /* ===========================================================
-   WIDE DESKTOP CHECK
-=========================================================== */
-
-export function isCustomerWideDesktop(
-  width: number,
-): boolean {
-
-  return isCustomersWideDesktopWidth(
-    width,
-  );
-
-}
-
-
-/* ===========================================================
-   ULTRA WIDE CHECK
-=========================================================== */
-
-export function isCustomerUltraWide(
-  width: number,
-): boolean {
-
-  return isCustomersUltraWideWidth(
-    width,
-  );
-
-}
-
-
-/* ===========================================================
-   TV CHECK
-=========================================================== */
-
-export function isCustomerTv(
-  width: number,
-): boolean {
-
-  return isCustomersTvWidth(
-    width,
-  );
-
-}
-
-
-/* ===========================================================
    VALID VIEWPORT CHECK
 =========================================================== */
 
@@ -594,12 +445,6 @@ export function getCustomerDeviceFlags(
 
   isDesktop: boolean;
 
-  isWideDesktop: boolean;
-
-  isUltraWide: boolean;
-
-  isTv: boolean;
-
 } {
 
   return {
@@ -621,21 +466,6 @@ export function getCustomerDeviceFlags(
 
     isDesktop:
       isCustomerDesktop(
-        width,
-      ),
-
-    isWideDesktop:
-      isCustomerWideDesktop(
-        width,
-      ),
-
-    isUltraWide:
-      isCustomerUltraWide(
-        width,
-      ),
-
-    isTv:
-      isCustomerTv(
         width,
       ),
 
@@ -678,15 +508,6 @@ export function isCustomerLaptopOrAbove(
     ) ||
     isCustomerDesktop(
       width,
-    ) ||
-    isCustomerWideDesktop(
-      width,
-    ) ||
-    isCustomerUltraWide(
-      width,
-    ) ||
-    isCustomerTv(
-      width,
     )
   );
 
@@ -701,19 +522,8 @@ export function isCustomerDesktopOrAbove(
   width: number,
 ): boolean {
 
-  return (
-    isCustomerDesktop(
-      width,
-    ) ||
-    isCustomerWideDesktop(
-      width,
-    ) ||
-    isCustomerUltraWide(
-      width,
-    ) ||
-    isCustomerTv(
-      width,
-    )
+  return isCustomerDesktop(
+    width,
   );
 
 }
@@ -727,34 +537,8 @@ export function isCustomerLargeDisplay(
   width: number,
 ): boolean {
 
-  return (
-    isCustomerWideDesktop(
-      width,
-    ) ||
-    isCustomerUltraWide(
-      width,
-    ) ||
-    isCustomerTv(
-      width,
-    )
-  );
-
-}
-
-
-/* ===========================================================
-   PROJECTOR / TV CHECK
-=========================================================== */
-
-export function isCustomerProjectorViewport(
-  width: number,
-): boolean {
-
-  return (
-    normalizeCustomerWidth(
-      width,
-    ) >=
-    CUSTOMERS_TV_MIN_WIDTH
+  return isCustomerDesktop(
+    width,
   );
 
 }
@@ -887,16 +671,7 @@ export function isCustomerBreakpointBoundary(
     width === CUSTOMERS_LAPTOP_MIN_WIDTH ||
     width === CUSTOMERS_LAPTOP_MAX_WIDTH ||
 
-    width === CUSTOMERS_DESKTOP_MIN_WIDTH ||
-    width === CUSTOMERS_DESKTOP_MAX_WIDTH ||
-
-    width === CUSTOMERS_WIDE_DESKTOP_MIN_WIDTH ||
-    width === CUSTOMERS_WIDE_DESKTOP_MAX_WIDTH ||
-
-    width === CUSTOMERS_ULTRA_WIDE_MIN_WIDTH ||
-    width === CUSTOMERS_ULTRA_WIDE_MAX_WIDTH ||
-
-    width === CUSTOMERS_TV_MIN_WIDTH
+    width === CUSTOMERS_DESKTOP_MIN_WIDTH
   );
 
 }

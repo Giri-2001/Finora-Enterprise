@@ -30,6 +30,11 @@
      customers.types.ts
    - Customer layout contracts are owned by customers.layout.ts
    - This file exports ONLY members that actually exist
+   - Device system contains ONLY:
+       01. MOBILE
+       02. TABLET
+       03. LAPTOP
+       04. DESKTOP
 =========================================================== */
 
 
@@ -79,13 +84,16 @@ export type {
 =========================================================== */
 
 /*
- * IMPORTANT:
- * Export only breakpoint members that are actually declared
- * by customers.breakpoints.ts.
+ * Customers uses the canonical four-device responsive system.
  *
- * CUSTOMERS_RESPONSIVE_BREAKPOINTS is intentionally NOT
- * exported because it is not part of the current breakpoint
- * module public API.
+ * Device classes:
+ *
+ *   Mobile
+ *   Tablet
+ *   Laptop
+ *   Desktop
+ *
+ * No additional device classifications are exported here.
  */
 
 export {
@@ -99,31 +107,17 @@ export {
   CUSTOMERS_LAPTOP_MAX_WIDTH,
 
   CUSTOMERS_DESKTOP_MIN_WIDTH,
-  CUSTOMERS_DESKTOP_MAX_WIDTH,
-
-  CUSTOMERS_WIDE_DESKTOP_MIN_WIDTH,
-  CUSTOMERS_WIDE_DESKTOP_MAX_WIDTH,
-
-  CUSTOMERS_ULTRA_WIDE_MIN_WIDTH,
-  CUSTOMERS_ULTRA_WIDE_MAX_WIDTH,
-
-  CUSTOMERS_TV_MIN_WIDTH,
 
   CUSTOMERS_MOBILE,
   CUSTOMERS_TABLET,
   CUSTOMERS_LAPTOP,
   CUSTOMERS_DESKTOP,
-  CUSTOMERS_WIDE_DESKTOP,
-  CUSTOMERS_ULTRA_WIDE,
-  CUSTOMERS_TV,
 
   isCustomersMobileWidth,
   isCustomersTabletWidth,
   isCustomersLaptopWidth,
   isCustomersDesktopWidth,
-  isCustomersWideDesktopWidth,
-  isCustomersUltraWideWidth,
-  isCustomersTvWidth,
+
   isValidCustomersViewportWidth,
 } from "./customers.breakpoints";
 
@@ -133,16 +127,40 @@ export {
 =========================================================== */
 
 export {
-  getCustomerResponsiveProfile,
-  getCustomerDeviceFlags,
+  normalizeCustomerWidth,
+  normalizeCustomerHeight,
+  normalizeCustomerViewport,
+
+  getCustomerDevice,
+  resolveCustomerDevice,
+
+  getCustomerDeviceIndex,
+
+  getCustomerViewport,
+  resolveCustomerViewport,
 
   isCustomerMobile,
   isCustomerTablet,
   isCustomerLaptop,
   isCustomerDesktop,
-  isCustomerWideDesktop,
-  isCustomerUltraWide,
-  isCustomerTv,
+
+  isValidCustomerViewportWidth,
+  isValidCustomerViewport,
+
+  getCustomerDeviceFlags,
+
+  isCustomerMobileOrTablet,
+  isCustomerLaptopOrAbove,
+  isCustomerDesktopOrAbove,
+
+  isCustomerLargeDisplay,
+
+  getCustomerBreakpointName,
+
+  getCustomerResponsiveProfile,
+
+  isCustomerWidthBetween,
+  isCustomerBreakpointBoundary,
 } from "./customers.helpers";
 
 
@@ -155,6 +173,7 @@ export {
  * as the public token resolver.
  *
  * Do not export non-existing compatibility names such as:
+ *
  * - resolveCustomerTokens
  * - CUSTOMER_TOKENS
  */
