@@ -89,6 +89,10 @@ export default function SmartWallPanel({
 
   onNext,
 
+  searchText,
+
+  onSearchChange,
+
 }: SmartWallPanelProps) {
 
 
@@ -533,7 +537,17 @@ export default function SmartWallPanel({
             }
           >
 
-            <CustomerSearchBar />
+            <CustomerSearchBar
+
+              value={
+                searchText
+              }
+
+              onChange={
+                onSearchChange
+              }
+
+            />
 
           </div>
 

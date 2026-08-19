@@ -33,18 +33,27 @@ export default function useCustomerSearch(
      FILTERED CUSTOMERS
   ========================================== */
 
-  const filteredCustomers =
-    useMemo(() => {
+ const filteredCustomers =
+  useMemo(() => {
 
-      return filterCustomers(
+    const result =
+      filterCustomers(
         customers,
         searchText,
       );
 
-    }, [
-      customers,
+    console.log(
+      "FINORA CUSTOMER SEARCH:",
       searchText,
-    ]);
+      result.length,
+    );
+
+    return result;
+
+  }, [
+    customers,
+    searchText,
+  ]);
 
   /* ==========================================
      EXPORT

@@ -35,53 +35,53 @@ export interface Loan {
 
   dueDate: string;
 
-guarantor: string;
+  guarantor: string;
 
-/* ==========================================
-   CUSTOMER
-========================================== */
+  /* ==========================================
+     CUSTOMER
+  ========================================== */
 
-customerId?: string;
+  customerId?: string;
 
-customerName?: string;
+  customerName?: string;
 
-phoneNumber?: string;
+  phoneNumber?: string;
 
-/* ==========================================
-   LOAN
-========================================== */
+  /* ==========================================
+     LOAN
+  ========================================== */
 
-loanType?: string;
+  loanType?: string;
 
-repaymentType?: string;
+  repaymentType?: string;
 
-duration?: number;
+  duration?: number;
 
-durationType?: string;
+  durationType?: string;
 
-/* ==========================================
-   FINANCE
-========================================== */
+  /* ==========================================
+     FINANCE
+  ========================================== */
 
-advanceDeduction?: number;
+  advanceDeduction?: number;
 
-netDisbursement?: number;
+  netDisbursement?: number;
 
-/* ==========================================
-   NOTES
-========================================== */
+  /* ==========================================
+     NOTES
+  ========================================== */
 
-purpose?: string;
+  purpose?: string;
 
-remarks?: string;
+  remarks?: string;
 
-/* ==========================================
-   STATUS
-========================================== */
+  /* ==========================================
+     STATUS
+  ========================================== */
 
-status: "ACTIVE" | "RUNNING" | "CLOSED";
+  status: "ACTIVE" | "RUNNING" | "CLOSED";
 
-schedule?: LoanInstallment[];
+  schedule?: LoanInstallment[];
 
 }
 
@@ -107,11 +107,52 @@ export interface Collection {
 
 export interface OfficeCustomer {
 
+  /* ==========================================
+     CUSTOMER IDENTITY
+  ========================================== */
+
   id: string;
 
   name: string;
 
   phone: string;
+
+    /*
+   * Aadhaar search values.
+   *
+   * IMPORTANT:
+   *
+   * Only the first 6 digits and final 6 digits are exposed
+   * to the Customer Office search layer.
+   *
+   * The complete Aadhaar number must never be exposed here.
+   *
+   * SEARCH CONTRACT:
+   *
+   * First 6 → exact 6-digit match
+   * Last 6  → exact 6-digit match
+   */
+
+  aadhaarFirst6: string;
+
+  aadhaarLast6: string;
+  /*
+   * ID CARD search value.
+   *
+   * IMPORTANT:
+   *
+   * Only the final 6 digits are exposed to the
+   * Customer Office search layer.
+   *
+   * The full ID card number must never be required
+   * by the search selector.
+   */
+
+  idCardLast6: string;
+
+  /* ==========================================
+     PROFILE
+  ========================================== */
 
   photo?: string;
 
@@ -121,9 +162,17 @@ export interface OfficeCustomer {
 
   kycVerified: boolean;
 
+  /* ==========================================
+     CUSTOMER FINANCE
+  ========================================== */
+
   outstandingAmount: number;
 
   nextCollectionDate: string;
+
+  /* ==========================================
+     RELATED DATA
+  ========================================== */
 
   loans?: Loan[];
 

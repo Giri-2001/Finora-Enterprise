@@ -54,16 +54,62 @@ export default function CustomerOfficeController({
       customers,
     );
 
+
+  /* =========================================================
+     VIEW STATE
+  ========================================================= */
+
   const [
     view,
     setView,
-  ] = useState(
+  ] = useState<CustomerOfficeView>(
     "wall",
   );
+
+
+  /* =========================================================
+     CUSTOMER RAIL SELECTION
+     
+     CustomerRailItem is only a presentation item.
+     
+     Customer Office selection must always resolve back
+     to the canonical OfficeCustomer record.
+  ========================================================= */
+
+  function handleCustomerSelect(
+    customer: CustomerRailItem,
+  ) {
+
+    const officeCustomer =
+      controller.filteredCustomers.find(
+        (officeCustomer) =>
+          officeCustomer.id ===
+          customer.id,
+      );
+
+
+    if (!officeCustomer) {
+
+      return;
+
+    }
+
+
+    controller.selectCustomer(
+      officeCustomer,
+    );
+
+  }
+
+
+  /* =========================================================
+     RENDER
+  ========================================================= */
 
   return (
 
     <div
+
       style={{
         width: "100%",
         height: "100%",
@@ -75,59 +121,45 @@ export default function CustomerOfficeController({
         overflow: "hidden",
         minHeight: 0,
       }}
-        onMouseDownCapture={(event) => {
 
-  const target =
-    event.target as HTMLElement;
+      onMouseDownCapture={(event) => {
 
-  /*
-   * =========================================================
-   * PROTECTED INTERACTIVE AREA
-   *
-   * Do NOT clear customer selection when the user interacts
-   * with buttons, inputs, links, or customer cards.
-   *
-   * This is important for:
-   *
-   * - Edit Customer
-   * - Add Customer
-   * - Search
-   * - Pagination
-   * - Future navigation controls
-   * =========================================================
-   */
+        const target =
+          event.target as HTMLElement;
 
-  const protectedElement =
-    target.closest(
-      [
-        '[data-finora-customer-card="true"]',
-        '[data-finora-interactive="true"]',
-        'button',
-        'input',
-        'textarea',
-        'select',
-        'a',
-      ].join(","),
-    );
 
-  if (protectedElement) {
+        /* =====================================================
+           PROTECTED INTERACTIVE AREA
+        ===================================================== */
 
-    return;
+        const protectedElement =
+          target.closest(
+            [
+              '[data-finora-customer-card="true"]',
+              '[data-finora-interactive="true"]',
+              "button",
+              "input",
+              "textarea",
+              "select",
+              "a",
+            ].join(","),
+          );
 
-  }
 
-  /*
-   * =========================================================
-   * EMPTY HUB AREA
-   *
-   * Any genuinely empty area of the Customer Hub clears
-   * the current customer selection.
-   * =========================================================
-   */
+        if (protectedElement) {
 
-  controller.clearSelection();
+          return;
 
-}}
+        }
+
+
+        /* =====================================================
+           EMPTY HUB AREA
+        ===================================================== */
+
+        controller.clearSelection();
+
+      }}
 
     >
 
@@ -136,29 +168,46 @@ export default function CustomerOfficeController({
 
           ?
 
-          /* =====================================================
+          /* ===================================================
              CUSTOMER RECEPTION WALL
-          ===================================================== */
+          =================================================== */
 
           <div
+
             style={{
               flex: 1,
               minHeight: 0,
               overflow: "hidden",
             }}
+
           >
 
             <SmartWallPanel
 
               title="FINORA Smart Customers Hub™"
 
+
+              /* =================================================
+                 SMART WALL
+              ================================================= */
+
               smartWallCustomers={
                 controller.smartWallCustomers
               }
 
+
+              /* =================================================
+                 CUSTOMER RAIL
+              ================================================= */
+
               railCustomers={
                 controller.paginatedCustomers
               }
+
+
+              /* =================================================
+                 SELECTION
+              ================================================= */
 
               selectedCustomerId={
                 controller.selectedCustomer?.id
@@ -168,39 +217,36 @@ export default function CustomerOfficeController({
                 controller.selectedCustomer
               }
 
-             onCustomerSelect={
-  (customer: CustomerRailItem) => {
-
-    controller.selectCustomer({
-      ...customer,
-      phone: "",
-    });
-
-  }
-}
-              currentPage={
-                controller.currentPage
+              onCustomerSelect={
+                handleCustomerSelect
               }
 
-              totalCustomers={
-                controller.filteredCustomers.length
+
+              /* =================================================
+                 CUSTOMER OFFICE SEARCH
+              ================================================= */
+
+              searchText={
+                controller.searchText
               }
 
-              customersPerPage={
-                controller.customersPerPage
+              onSearchChange={
+                controller.setSearchText
               }
 
-              onPrevious={
-                controller.previousPage
-              }
 
-              onNext={
-                controller.nextPage
-              }
+              /* =================================================
+                 CUSTOMER WIZARD
+              ================================================= */
 
               onOpenCustomerWizard={
                 onOpenCustomerWizard
               }
+
+
+              /* =================================================
+                 EDIT CUSTOMER
+              ================================================= */
 
               onEditCustomer={
 
@@ -222,26 +268,60 @@ export default function CustomerOfficeController({
 
               }
 
+
+              /* =================================================
+                 CLEAR SELECTION
+              ================================================= */
+
               onClearSelection={
                 controller.clearSelection
+              }
+
+
+              /* =================================================
+                 PAGINATION
+              ================================================= */
+
+              currentPage={
+                controller.currentPage
+              }
+
+              totalCustomers={
+                controller.filteredCustomers.length
+              }
+
+              customersPerPage={
+                controller.customersPerPage
+              }
+
+              onPrevious={
+                controller.previousPage
+              }
+
+              onNext={
+                controller.nextPage
               }
 
             />
 
           </div>
 
+
           :
 
-          /* =====================================================
+
+          /* ===================================================
              CUSTOMER WORKSPACE
-          ===================================================== */
+          =================================================== */
 
           <div
+
             style={{
               flex: 1,
               minHeight: 0,
               overflow: "hidden",
             }}
+
           >
 
             <WorkDeskPanel
@@ -253,6 +333,7 @@ export default function CustomerOfficeController({
             />
 
           </div>
+
       }
 
     </div>
@@ -260,3 +341,8 @@ export default function CustomerOfficeController({
   );
 
 }
+
+
+/* ===========================================================
+   END
+=========================================================== */

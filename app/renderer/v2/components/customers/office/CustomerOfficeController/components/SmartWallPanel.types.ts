@@ -39,6 +39,21 @@ export interface SmartWallPanelProps {
   ) => void;
 
   /**
+   * Customer Office search text.
+   *
+   * Search is restricted by the Customer Office
+   * filter selector to approved customer identifiers.
+   */
+  searchText: string;
+
+  /**
+   * Updates Customer Office search text.
+   */
+  onSearchChange: (
+    value: string,
+  ) => void;
+
+  /**
    * Opens the Customer Wizard.
    */
   onOpenCustomerWizard?: () => void;

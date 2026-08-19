@@ -1,5 +1,6 @@
 /* ===========================================================
    FINORA ENTERPRISE OS™
+
    CUSTOMER SEARCH BAR
 
    HELPERS
@@ -18,12 +19,15 @@ export function buildPlaceholder(
   placeholder?: string,
 ): string {
 
-  const value = placeholder?.trim();
+  const value =
+    placeholder?.trim();
 
-  return value && value.length > 0
+  return (
+    value &&
+    value.length > 0
+  )
     ? value
     : DEFAULT_PLACEHOLDER;
-
 }
 
 /* ===========================================================
@@ -36,6 +40,12 @@ export function sanitizeSearch(
 
   return value
     .trimStart()
-    .slice(0, MAX_SEARCH_LENGTH);
-
+    .slice(
+      0,
+      MAX_SEARCH_LENGTH,
+    );
 }
+
+/* ===========================================================
+   END
+=========================================================== */
