@@ -542,10 +542,10 @@ export const MOBILE_TOKENS: ResponsiveTokens = {
 
 customerCards: {
   columns: 1,
-  width: 200,
-  minHeight: 330,
+  width: 210,
+  minHeight: 0,
   gap: 12,
-  padding: 16,
+  padding: 20,
   radius: 14,
   photoSize: 80,
 
@@ -837,7 +837,7 @@ export const TABLET_TOKENS: ResponsiveTokens = {
 
 customerCards: {
   columns: 3,
-  width: 220,
+  width: 210,
   minHeight: 0,
   gap: 16,
   padding: 20,
@@ -1136,10 +1136,10 @@ export const LAPTOP_TOKENS: ResponsiveTokens = {
 
 customerCards: {
   columns: 6,
-  width: 200,
-  minHeight: 300,
+  width: 210,
+  minHeight: 0,
   gap: 20,
-  padding: 24,
+  padding: 20,
   radius: 16,
   photoSize: 104,
 
@@ -1438,7 +1438,7 @@ customerCards: {
   width: 210,
   minHeight: 0,
   gap: 20,
-  padding: 24,
+  padding: 20,
   radius: 16,
   photoSize: 104,
 
@@ -1920,12 +1920,15 @@ export function getCustomerTokens(
 
 
   const gap =
-    columns > 1
-      ? Math.max(
+  columns > 1
+    ? Math.min(
+        50,
+        Math.max(
           MIN_GRID_GAP,
           calculatedGap,
-        )
-      : 0;
+        ),
+      )
+    : 0;
 
 
   /* =========================================================

@@ -542,10 +542,10 @@ export const MOBILE_TOKENS: ResponsiveTokens = {
 
 customerCards: {
   columns: 1,
-  width: 280,
+  width: 220,
   minHeight: 0,
   gap: 12,
-  padding: 16,
+  padding: 20,
   radius: 14,
   photoSize: 80,
 
@@ -1137,7 +1137,7 @@ export const LAPTOP_TOKENS: ResponsiveTokens = {
 customerCards: {
   columns: 6,
   width: 220,
-  minHeight: 300,
+  minHeight: 0,
   gap: 20,
   padding: 24,
   radius: 16,

@@ -296,8 +296,6 @@ export default function CustomerHanger({
      * because that would destroy the mobile real-card
      * height contract.
      */
-    minHeight:
-      customerCardMinHeight,
 
   };
 

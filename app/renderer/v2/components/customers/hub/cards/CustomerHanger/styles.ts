@@ -213,11 +213,17 @@ export const cardContainerStyle:
   paddingBottom:
     "4px",
 
-  filter:
-    "drop-shadow(0 14px 26px rgba(0,0,0,.18))",
 
 };
 
+
+/* ===========================================================
+   CARD FINISHING RAIL
+=========================================================== */
+
+/* ===========================================================
+   CARD FINISHING RAIL
+=========================================================== */
 
 /* ===========================================================
    CARD FINISHING RAIL
@@ -233,7 +239,7 @@ export const bottomRailStyle:
     "3px",
 
   marginTop:
-    "25px",
+    "12px",
 
   borderRadius:
     "999px",
@@ -243,6 +249,15 @@ export const bottomRailStyle:
 
   boxShadow:
     "0 4px 12px rgba(212,175,55,.35)",
+
+  position:
+    "relative",
+
+  zIndex:
+    1,
+
+  flexShrink:
+    0,
 
 };
 

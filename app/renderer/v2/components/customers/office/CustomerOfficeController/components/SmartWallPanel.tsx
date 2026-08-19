@@ -9,8 +9,13 @@
    - All responsive sizing comes from Customers Responsive Engine
    - No viewport calculations in component
    - No breakpoint logic in component
-   - Existing behavior preserved
+   - Toolbar geometry comes from Customer Toolbar Engine
+   - Buttons remain controlled by toolbar responsive tokens
+   - Search uses the available center space
+   - Existing customer-card behavior preserved
+   - Customer ID Card code remains untouched
 =========================================================== */
+
 
 /* ===========================================================
    IMPORTS
@@ -44,6 +49,11 @@ import type {
 import {
   useCustomerResponsive,
 } from "../../../../../utils/responsive/customers/customers.useResponsive";
+
+import {
+  getCustomerToolbarTokens,
+} from "../../../../../utils/responsive/customers/customerToolbar.tokens";
+
 
 /* ===========================================================
    COMPONENT
@@ -88,9 +98,18 @@ export default function SmartWallPanel({
 
   const {
     tokens,
-    layout,
   } =
     useCustomerResponsive();
+
+
+  /* =========================================================
+     CUSTOMER TOOLBAR RESPONSIVE ENGINE
+  ========================================================= */
+
+  const toolbar =
+    getCustomerToolbarTokens(
+      tokens.meta.viewport,
+    );
 
 
   /* =========================================================
@@ -111,41 +130,76 @@ export default function SmartWallPanel({
 
 
   /* =========================================================
-     RESPONSIVE VALUES
+     TOOLBAR RESPONSIVE CONTRACT
   ========================================================= */
 
+  /*
+   * IMPORTANT
+   *
+   * Toolbar geometry belongs exclusively to the
+   * Customer Toolbar Responsive Engine.
+   *
+   * SmartWallPanel does NOT calculate:
+   *
+   * - viewport width
+   * - breakpoints
+   * - responsive widths
+   * - responsive gaps
+   * - responsive heights
+   *
+   * It only consumes the resolved toolbar tokens.
+   */
+
   const toolbarGridTemplateColumns =
-    `minmax(160px, 260px) minmax(0, 1fr) minmax(160px, 260px)`;
+    toolbar.gridTemplateColumns;
 
 
-  const actionButtonWidth =
-    Math.min(
-      160,
-      Math.max(
-        120,
-        layout.grid.minCardWidth,
-      ),
-    );
-
-
-  const actionButtonHeight =
-    tokens.button.height;
-
-
-  const actionButtonRadius =
-    tokens.button.radius;
-
-
-  const actionButtonFontSize =
-    tokens.button.fontSize;
-
-
-  const actionButtonIconSize =
-    tokens.button.iconSize;
+  const toolbarGridTemplateAreas =
+    toolbar.gridTemplateAreas;
 
 
   const toolbarGap =
-    tokens.card.gap;
+    toolbar.gap;
+
+
+  const actionButtonWidth =
+    toolbar.button.width;
+
+
+  const actionButtonMaxWidth =
+    toolbar.button.maxWidth;
+
+
+  const actionButtonHeight =
+    toolbar.button.height;
+
+
+  const actionButtonMinHeight =
+    toolbar.button.minHeight;
+
+
+  const actionButtonFontSize =
+    toolbar.button.fontSize;
+
+
+  const actionButtonIconSize =
+    toolbar.button.iconSize;
+
+
+  const actionButtonPaddingX =
+    toolbar.button.paddingX;
+
+
+  const actionButtonGap =
+    toolbar.button.gap;
+
+
+  const actionButtonRadius =
+    toolbar.button.radius;
+
+
+  const searchMaxWidth =
+    toolbar.search.maxWidth;
 
 
   const toolbarMarginBottom =
@@ -167,14 +221,20 @@ export default function SmartWallPanel({
     width:
       actionButtonWidth,
 
+    maxWidth:
+      actionButtonMaxWidth,
+
+    minWidth:
+      0,
+
     height:
       actionButtonHeight,
 
     minHeight:
-      actionButtonHeight,
+      actionButtonMinHeight,
 
     padding:
-      `0 ${tokens.button.paddingX}px`,
+      `0 ${actionButtonPaddingX}px`,
 
     display:
       "flex",
@@ -186,7 +246,7 @@ export default function SmartWallPanel({
       "center",
 
     gap:
-      tokens.control.gap,
+      actionButtonGap,
 
     borderRadius:
       actionButtonRadius,
@@ -203,6 +263,9 @@ export default function SmartWallPanel({
     fontSize:
       actionButtonFontSize,
 
+    lineHeight:
+      1.1,
+
     color:
       "#FFFFFF",
 
@@ -217,6 +280,120 @@ export default function SmartWallPanel({
 
     boxSizing:
       "border-box" as const,
+
+    whiteSpace:
+      "nowrap" as const,
+
+    overflow:
+      "hidden",
+
+  };
+
+
+  /* =========================================================
+     TOOLBAR CELL STYLE
+  ========================================================= */
+
+  const toolbarCellStyle = {
+
+    minWidth:
+      0,
+
+    display:
+      "flex",
+
+    alignItems:
+      "center",
+
+    boxSizing:
+      "border-box" as const,
+
+  };
+
+
+  /* =========================================================
+     ADD CUSTOMER CELL
+  ========================================================= */
+
+  const addCustomerCellStyle = {
+
+    ...toolbarCellStyle,
+
+    gridArea:
+      "add",
+
+    justifyContent:
+      "flex-start",
+
+  };
+
+
+  /* =========================================================
+     SEARCH CELL STYLE
+  ========================================================= */
+
+  const searchCellStyle = {
+
+    ...toolbarCellStyle,
+
+    gridArea:
+      "search",
+
+    width:
+      "100%",
+
+    justifyContent:
+      "center",
+
+  };
+
+
+  /* =========================================================
+     SEARCH WRAPPER STYLE
+  ========================================================= */
+
+  const searchWrapperStyle = {
+
+    width:
+      "100%",
+
+    maxWidth:
+      searchMaxWidth,
+
+    minWidth:
+      0,
+
+    display:
+      "flex",
+
+    alignItems:
+      "center",
+
+    justifyContent:
+      "center",
+
+    boxSizing:
+      "border-box" as const,
+
+  };
+
+
+  /* =========================================================
+     EDIT CUSTOMER CELL STYLE
+  ========================================================= */
+
+  const editCellStyle = {
+
+    ...toolbarCellStyle,
+
+    gridArea:
+      "edit",
+
+    position:
+      "relative" as const,
+
+    justifyContent:
+      "flex-end",
 
   };
 
@@ -252,11 +429,17 @@ export default function SmartWallPanel({
           gridTemplateColumns:
             toolbarGridTemplateColumns,
 
+          gridTemplateAreas:
+            toolbarGridTemplateAreas,
+
           alignItems:
             "center",
 
           width:
             "100%",
+
+          minWidth:
+            0,
 
           marginBottom:
             toolbarMarginBottom,
@@ -274,7 +457,11 @@ export default function SmartWallPanel({
             LEFT — ADD CUSTOMER
         =================================================== */}
 
-        <div>
+        <div
+          style={
+            addCustomerCellStyle
+          }
+        >
 
           <button
 
@@ -308,7 +495,20 @@ export default function SmartWallPanel({
 
             />
 
-            <span>
+            <span
+              style={{
+
+                minWidth:
+                  0,
+
+                overflow:
+                  "hidden",
+
+                textOverflow:
+                  "ellipsis",
+
+              }}
+            >
               Add Customer
             </span>
 
@@ -322,24 +522,20 @@ export default function SmartWallPanel({
         =================================================== */}
 
         <div
-          style={{
-
-            display:
-              "flex",
-
-            justifyContent:
-              "center",
-
-            minWidth:
-              0,
-
-            width:
-              "100%",
-
-          }}
+          style={
+            searchCellStyle
+          }
         >
 
-          <CustomerSearchBar />
+          <div
+            style={
+              searchWrapperStyle
+            }
+          >
+
+            <CustomerSearchBar />
+
+          </div>
 
         </div>
 
@@ -350,21 +546,9 @@ export default function SmartWallPanel({
 
         <div
 
-          style={{
-
-            position:
-              "relative",
-
-            display:
-              "flex",
-
-            justifyContent:
-              "flex-end",
-
-            minWidth:
-              0,
-
-          }}
+          style={
+            editCellStyle
+          }
 
           onMouseEnter={() => {
 
@@ -421,6 +605,8 @@ export default function SmartWallPanel({
 
             aria-label="Edit Customer"
 
+            title="Edit Customer"
+
             style={
               actionButtonStyle
             }
@@ -441,7 +627,20 @@ export default function SmartWallPanel({
 
             />
 
-            <span>
+            <span
+              style={{
+
+                minWidth:
+                  0,
+
+                overflow:
+                  "hidden",
+
+                textOverflow:
+                  "ellipsis",
+
+              }}
+            >
               Edit Customer
             </span>
 
@@ -461,7 +660,10 @@ export default function SmartWallPanel({
                   "absolute",
 
                 top:
-                  `calc(100% + ${tokens.spacing.inline}px)`,
+                  `calc(
+                    100% +
+                    ${tokens.spacing.inline}px
+                  )`,
 
                 right:
                   "0",
@@ -469,8 +671,13 @@ export default function SmartWallPanel({
                 zIndex:
                   1000,
 
+                maxWidth:
+                  "min(320px, 100%)",
+
                 padding:
-                  `${tokens.spacing.small + 3}px ${tokens.spacing.medium + 2}px`,
+                  `${tokens.spacing.small + 3}px ${
+                    tokens.spacing.medium + 2
+                  }px`,
 
                 borderRadius:
                   tokens.panel.radius,
@@ -488,7 +695,10 @@ export default function SmartWallPanel({
                   700,
 
                 whiteSpace:
-                  "nowrap",
+                  "normal",
+
+                textAlign:
+                  "center",
 
                 border:
                   "1px solid rgba(201,154,85,0.45)",
@@ -498,6 +708,9 @@ export default function SmartWallPanel({
 
                 pointerEvents:
                   "none",
+
+                boxSizing:
+                  "border-box" as const,
 
               }}
             >

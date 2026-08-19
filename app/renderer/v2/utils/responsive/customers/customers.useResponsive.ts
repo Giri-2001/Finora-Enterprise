@@ -1,5 +1,6 @@
 ﻿/* ===========================================================
    FINORA ENTERPRISE OS™
+
    RESPONSIVE ENGINE™
 
    CUSTOMERS RESPONSIVE HOOK
@@ -8,7 +9,7 @@
    - Provide live viewport state for Customers module
    - Connect React viewport state to Customers Engine
    - Recalculate only when viewport changes
-   - Expose Customers tokens and layout
+   - Expose Customers tokens, layout and toolbar tokens
    - Keep responsive logic outside page/components
 
    ARCHITECTURE:
@@ -20,6 +21,8 @@
    customers.helpers.ts
         ↓
    customers.tokens.ts
+        ↓
+   customerToolbar.tokens.ts
         ↓
    customers.layout.ts
         ↓
@@ -51,6 +54,7 @@ import type {
   ResponsiveState,
 } from "../types";
 
+
 import type {
   ResponsiveTokens,
 } from "../tokens";
@@ -65,6 +69,16 @@ import {
 import {
   getCustomerTokens,
 } from "./customers.tokens";
+
+
+import {
+  getCustomerToolbarTokens,
+} from "./customerToolbar.tokens";
+
+
+import type {
+  CustomerToolbarTokens,
+} from "./customerToolbar.tokens";
 
 
 import {
@@ -115,6 +129,9 @@ export interface CustomerResponsiveResult {
 
   layout:
     CustomerLayout;
+
+  toolbar:
+    CustomerToolbarTokens;
 
 }
 
@@ -390,6 +407,22 @@ export function useCustomerResponsive():
 
 
   /* =========================================================
+     CUSTOMER TOOLBAR TOKENS
+  ========================================================= */
+
+  const toolbar =
+    useMemo(
+      () =>
+        getCustomerToolbarTokens(
+          profile.device,
+        ),
+      [
+        profile.device,
+      ],
+    );
+
+
+  /* =========================================================
      RESPONSIVE STATE
   ========================================================= */
 
@@ -472,6 +505,8 @@ export function useCustomerResponsive():
 
       layout,
 
+      toolbar,
+
     }),
     [
       viewport.width,
@@ -479,6 +514,7 @@ export function useCustomerResponsive():
       state,
       tokens,
       layout,
+      toolbar,
     ],
   );
 

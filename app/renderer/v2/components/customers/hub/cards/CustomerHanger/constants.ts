@@ -12,14 +12,14 @@
 
 export const HANGER_WIDTH = 55;
 
-export const HANGER_HEIGHT = 35;
+export const HANGER_HEIGHT = 28;
 
 
 /* ===========================================================
    ROPE
 =========================================================== */
 
-export const ROPE_HEIGHT = 32;
+export const ROPE_HEIGHT = 24;
 
 
 /* ===========================================================
