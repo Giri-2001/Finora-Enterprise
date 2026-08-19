@@ -492,10 +492,10 @@ export default function CustomerIdCard({
                 "center",
 
               fontSize:
-                 `${responsiveTokens.customerCards.phoneSize}px`,
+  `${responsiveTokens.customerCards.phoneSize + 4}px`,
 
               fontWeight:
-                600,
+                550,
 
               color:
                 "#374151",

@@ -442,10 +442,10 @@ export function createCustomerIdStyle(
       "block",
 
     width:
-      "fit-content",
+      "calc(100% - 32px)",
 
     maxWidth:
-      "100%",
+      "calc(100% - 32px)",
 
     boxSizing:
       "border-box",
@@ -470,7 +470,7 @@ export function createCustomerIdStyle(
       `${tokens.border.width}px solid rgba(180,145,82,.45)`,
 
     fontSize:
-      `${tokens.customerCards.idSize}px`,
+  `${tokens.customerCards.idSize + 2}px`,
 
     fontWeight:
       700,
@@ -496,7 +496,6 @@ export function createCustomerIdStyle(
   };
 
 }
-
 
 /* ===========================================================
    KYC
@@ -543,7 +542,7 @@ export function createKycStyle(
       COLORS.statusText,
 
     fontSize:
-      `${tokens.customerCards.kycSize}px`,
+  `${tokens.customerCards.kycSize + 2}px`,
 
     fontWeight:
       700,
@@ -593,7 +592,7 @@ export function createBranchStyle(
       tokens.spacing.small,
 
     fontSize:
-      `${tokens.customerCards.phoneSize}px`,
+      `${tokens.customerCards.phoneSize + 2}px`,
 
     lineHeight:
       tokens.lineHeight.compact,
@@ -616,7 +615,6 @@ export function createBranchStyle(
   };
 
 }
-
 
 /* ===========================================================
    QR

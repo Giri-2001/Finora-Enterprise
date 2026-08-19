@@ -7,14 +7,16 @@
 
    Module  : Customer Hub
    Layer   : Cards
-   Version : 2.5
+   Version : 3.0
    Status  : Production
 
    RESPONSIBILITY:
    - Customer selection
    - Premium hanging presentation
-   - Front Customer ID Card only
+   - Customer ID card presentation
    - Customer Responsive Engine integration
+   - Card geometry propagation to CustomerCardFlip
+   - Controlled single-card flip presentation
 
    RESPONSIVE CONTRACT:
    - Mobile  → 1 card
@@ -22,16 +24,27 @@
    - Laptop  → 5 cards
    - Desktop → 6 cards
 
+   FLIP CONTRACT:
+   - CustomerHanger does NOT own flip state.
+   - Parent Customer Hub owns the active flipped customer.
+   - flipped is received as a controlled prop.
+   - onFlip is forwarded to the parent.
+   - Parent is responsible for allowing only ONE
+     customer card to remain flipped at a time.
+
    IMPORTANT:
    - Responsive visual values come from the Customer
      Responsive Engine.
    - This component does NOT decide breakpoint values.
-   - This component does NOT contain independent responsive
-     width / height decisions.
+   - This component does NOT calculate responsive dimensions.
    - Customer card width comes only from
      customerTokens.customerCards.width.
+   - Customer card height comes only from
+     customerTokens.customerCards.height.
    - Customer card minimum height comes only from
      customerTokens.customerCards.minHeight.
+   - CustomerCardFlip inherits the resolved card geometry
+     through this component.
    - Mobile card remains a real fixed-width ID card.
    - Mobile card does NOT expand to fill available width.
    - Mobile card is centered so equal side gaps remain.
@@ -52,6 +65,14 @@ import type {
 
 import CustomerIdCard
   from "../CustomerIdCard";
+
+
+import CustomerCardFlip
+  from "../CustomerCardFlip";
+
+
+import CustomerIdCardBack
+  from "../CustomerIdCardBack";
 
 
 import type {
@@ -89,6 +110,10 @@ export default function CustomerHanger({
 
   onClick,
 
+  flipped = false,
+
+  onFlip,
+
 }: CustomerHangerProps) {
 
 
@@ -111,6 +136,28 @@ export default function CustomerHanger({
     active,
 
     kycVerified,
+
+    fatherName,
+
+    village,
+
+    mandal,
+
+    district,
+
+    customerSince,
+
+    outstandingAmount,
+
+    lastPaymentDate,
+
+    lastPaymentAmount,
+
+    totalLoans,
+
+    activeLoans,
+
+    closedLoans,
 
   } = customer;
 
@@ -136,7 +183,7 @@ export default function CustomerHanger({
 
 
   /* =========================================================
-     CUSTOMER CARD GEOMETRY
+     CUSTOMER CARD WIDTH
 
      SINGLE SOURCE OF TRUTH:
 
@@ -144,11 +191,10 @@ export default function CustomerHanger({
 
      IMPORTANT:
 
-     - No width calculation here.
-     - No viewport-based width calculation here.
-     - No percentage width here.
-     - No "100%" width here.
-     - Mobile therefore remains a real ID-card width.
+     - No local width calculation.
+     - No viewport-based width calculation.
+     - No percentage width.
+     - No "100%" as the resolved card width.
   ========================================================= */
 
   const customerCardWidth =
@@ -156,18 +202,38 @@ export default function CustomerHanger({
 
 
   /* =========================================================
-     CUSTOMER CARD HEIGHT CONTRACT
+     CUSTOMER CARD HEIGHT
 
-     The Responsive Engine owns the minimum card height.
+     SINGLE SOURCE OF TRUTH:
 
-     When minHeight is greater than zero, preserve it.
-
-     When the Responsive Engine intentionally exposes zero,
-     the CustomerIdCard remains content-driven.
+       customerTokens.customerCards.height
 
      IMPORTANT:
 
-     Never force minHeight to zero here.
+     CustomerCardFlip uses height: 100%.
+
+     Therefore this resolved height MUST reach the
+     CustomerHanger card container so that the percentage
+     height inside CustomerCardFlip has a definite parent
+     height.
+  ========================================================= */
+
+  const customerCardHeight =
+    customerTokens.customerCards.height;
+
+
+  /* =========================================================
+     CUSTOMER CARD MINIMUM HEIGHT
+
+     SINGLE SOURCE OF TRUTH:
+
+       customerTokens.customerCards.minHeight
+
+     IMPORTANT:
+
+     Preserve the Responsive Engine contract.
+
+     Never independently calculate or replace this value.
   ========================================================= */
 
   const customerCardMinHeight =
@@ -179,27 +245,15 @@ export default function CustomerHanger({
 
      IMPORTANT:
 
-     The hanger root must have exactly the same width as
-     the resolved Customer ID Card.
+     The hanger root must have exactly the same resolved
+     width as the Customer ID Card.
 
-     This gives the parent grid a real packing width.
+     The root height remains content-driven because the
+     decorative hanger elements are part of this presentation
+     layer.
 
-     marginInline: auto is intentionally used only for
-     horizontal centering.
-
-     It does NOT change the card width.
-
-     Therefore on mobile:
-
-       viewport
-          ↓
-       side gap
-          ↓
-       fixed ID card
-          ↓
-       side gap
-
-     The card never fills the remaining space.
+     Card geometry itself is controlled by the dedicated
+     card container below.
   ========================================================= */
 
   const resolvedContainerStyle:
@@ -243,15 +297,42 @@ export default function CustomerHanger({
   /* =========================================================
      CUSTOMER CARD CONTAINER
 
+     RESPONSIVE GEOMETRY CONTRACT:
+
+       width
+         ↓
+       Customer Responsive Engine
+
+       height
+         ↓
+       Customer Responsive Engine
+
+       minHeight
+         ↓
+       Customer Responsive Engine
+
      IMPORTANT:
 
-     This wrapper must preserve the exact resolved card
-     width.
+     This wrapper MUST expose an explicit height because
+     CustomerCardFlip intentionally consumes:
 
-     It must NEVER stretch to the parent width.
+       width: 100%
+       height: 100%
 
-     The minimum height is forwarded from the Responsive
-     Engine instead of being reset to zero.
+     Without this explicit parent height, the flip surface
+     cannot reliably resolve its vertical geometry.
+
+     No breakpoint values are calculated here.
+
+     IMPORTANT FLEX FIX:
+
+     flex-basis must use CARD WIDTH, not CARD HEIGHT.
+
+       CORRECT:
+       flex: 0 0 ${customerCardWidth}px
+
+       NOT:
+       flex: 0 0 ${customerCardHeight}px
   ========================================================= */
 
   const resolvedCardContainerStyle:
@@ -267,6 +348,15 @@ export default function CustomerHanger({
 
     maxWidth:
       `${customerCardWidth}px`,
+
+    height:
+      `${customerCardHeight}px`,
+
+    minHeight:
+      `${customerCardMinHeight}px`,
+
+    maxHeight:
+      `${customerCardHeight}px`,
 
     boxSizing:
       "border-box",
@@ -285,17 +375,6 @@ export default function CustomerHanger({
 
     overflow:
       "visible",
-
-    /*
-     * Preserve the Responsive Engine's minimum card height.
-     *
-     * Do NOT write:
-     *
-     *   minHeight: 0
-     *
-     * because that would destroy the mobile real-card
-     * height contract.
-     */
 
   };
 
@@ -349,6 +428,38 @@ export default function CustomerHanger({
     onClick?.(
       customer,
     );
+
+  }
+
+
+  /* =========================================================
+     CONTROLLED FLIP HANDLER
+
+     IMPORTANT:
+
+     CustomerHanger no longer owns flip state.
+
+     The parent Customer Hub decides which customer is
+     currently flipped.
+
+     Therefore this component simply forwards the flip
+     request to the parent.
+
+     Inactive customers are prevented from flipping here
+     as an additional safety boundary.
+  ========================================================= */
+
+  function handleFlip(): void {
+
+    if (
+      !canOpen(active)
+    ) {
+
+      return;
+
+    }
+
+    onFlip?.();
 
   }
 
@@ -449,29 +560,13 @@ export default function CustomerHanger({
 
 
       {/* =====================================================
-          FRONT CUSTOMER ID CARD
+          CUSTOMER CARD CONTAINER
 
-          IMPORTANT:
+          The Responsive Engine owns the actual card
+          geometry.
 
-          CustomerIdCard receives the SAME resolved
-          Responsive Engine token set.
-
-          Therefore:
-
-          Mobile:
-            width  = mobile token
-            height = mobile token minimum
-
-          Tablet:
-            width  = tablet token
-
-          Laptop:
-            width  = laptop token
-
-          Desktop:
-            width  = desktop token
-
-          No local breakpoint logic exists here.
+          CustomerCardFlip receives this geometry through
+          the parent's definite width and height.
       ===================================================== */}
 
       <div
@@ -489,7 +584,13 @@ export default function CustomerHanger({
             width:
               "100%",
 
+            height:
+              "100%",
+
             minWidth:
+              0,
+
+            minHeight:
               0,
 
             boxSizing:
@@ -502,38 +603,120 @@ export default function CustomerHanger({
 
         >
 
-          <CustomerIdCard
+          {/* =================================================
+              CUSTOMER CARD FLIP
 
-            customerId={
-              id
+              FLIP STATE IS CONTROLLED BY PARENT
+          ================================================= */}
+
+          <CustomerCardFlip
+
+            flipped={
+              flipped
             }
 
-            customerName={
-              name
+            onFlip={
+              handleFlip
             }
 
-            profilePhoto={
-              photo
+            front={
+
+              <CustomerIdCard
+
+                customerId={
+                  id
+                }
+
+                customerName={
+                  name
+                }
+
+                profilePhoto={
+                  photo
+                }
+
+                phoneNumber={
+                  phone
+                }
+
+                branchName={
+                  branch
+                }
+
+                kycVerified={
+                  kycVerified
+                }
+
+                responsiveTokens={
+                  customerTokens
+                }
+
+                compact={
+                  true
+                }
+
+              />
+
             }
 
-            phoneNumber={
-              phone
-            }
+            back={
 
-            branchName={
-              branch
-            }
+              <CustomerIdCardBack
 
-            kycVerified={
-              kycVerified
-            }
+                customerId={
+                  id
+                }
 
-            responsiveTokens={
-              customerTokens
-            }
+                fatherName={
+                  fatherName
+                }
 
-            compact={
-              true
+                village={
+                  village
+                }
+
+                mandal={
+                  mandal
+                }
+
+                district={
+                  district
+                }
+
+                customerSince={
+                  customerSince
+                }
+
+                totalLoans={
+                  totalLoans
+                }
+
+                activeLoans={
+                  activeLoans
+                }
+
+                closedLoans={
+                  closedLoans
+                }
+
+                outstandingAmount={
+                  outstandingAmount
+                }
+
+                lastPaymentDate={
+                  lastPaymentDate
+                }
+
+                lastPaymentAmount={
+                  lastPaymentAmount
+                }
+
+                  responsiveTokens={
+                    customerTokens
+                  }
+
+              />
+
             }
 
           />

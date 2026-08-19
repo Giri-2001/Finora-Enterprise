@@ -1,14 +1,70 @@
 /* ===========================================================
    FINORA ENTERPRISE OS™
-   CUSTOMER CARD FLIP
-   -----------------------------------------------------------
-   Module  : Customer Hub
-   Layer   : Cards
-   Version : 2.0
-   Status  : Production
+
+   CUSTOMER CARD FLIP™
+
+   MODULE:
+   Customer Hub / Cards
+
+   VERSION:
+   2.1
+
+   STATUS:
+   Production
+
+   RESPONSIBILITY:
+   - Customer card flip contract
+   - Accept resolved card geometry
+   - No breakpoint logic
+   - No responsive calculations
 =========================================================== */
 
-import type { ReactNode } from "react";
+
+/* ===========================================================
+   IMPORTS
+=========================================================== */
+
+import type {
+  ReactNode,
+} from "react";
+
+
+/* ===========================================================
+   RESPONSIVE CARD GEOMETRY
+=========================================================== */
+
+/*
+ * IMPORTANT:
+ *
+ * These dimensions are already resolved by the
+ * Customer Responsive Engine.
+ *
+ * CustomerCardFlip does NOT calculate:
+ *
+ * - breakpoints
+ * - device widths
+ * - card widths
+ * - card heights
+ * - responsive scaling
+ *
+ * It only consumes the resolved geometry.
+ */
+
+export interface CustomerCardFlipDimensions {
+
+  width:
+    number |
+    string;
+
+  height:
+    number |
+    string;
+
+  radius:
+    number;
+
+}
+
 
 /* ===========================================================
    CUSTOMER CARD FLIP PROPS
@@ -16,16 +72,54 @@ import type { ReactNode } from "react";
 
 export interface CustomerCardFlipProps {
 
-  front: ReactNode;
+  /* ---------------------------------------------------------
+     CARD FACES
+  --------------------------------------------------------- */
 
-  back: ReactNode;
+  front:
+    ReactNode;
 
-  flipped?: boolean;
+  back:
+    ReactNode;
 
-  animationDuration?: number;
 
-  perspective?: number;
+  /* ---------------------------------------------------------
+     RESOLVED RESPONSIVE GEOMETRY
+  --------------------------------------------------------- */
 
-  onFlip?: () => void;
+  dimensions?:
+    CustomerCardFlipDimensions;
+
+
+  /* ---------------------------------------------------------
+     FLIP STATE
+  --------------------------------------------------------- */
+
+  flipped?:
+    boolean;
+
+
+  /* ---------------------------------------------------------
+     ANIMATION
+  --------------------------------------------------------- */
+
+  animationDuration?:
+    number;
+
+  perspective?:
+    number;
+
+
+  /* ---------------------------------------------------------
+     CALLBACK
+  --------------------------------------------------------- */
+
+  onFlip?:
+    () => void;
 
 }
+
+
+/* ===========================================================
+   END
+=========================================================== */

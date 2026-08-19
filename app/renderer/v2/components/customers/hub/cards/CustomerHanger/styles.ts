@@ -80,7 +80,7 @@ export const containerStyle:
     "transform .35s cubic-bezier(.22,.61,.36,1)",
 
   paddingBottom:
-    "10px",
+    "0px",
 
 };
 
@@ -211,7 +211,7 @@ export const cardContainerStyle:
     1,
 
   paddingBottom:
-    "4px",
+    "0px",
 
 
 };

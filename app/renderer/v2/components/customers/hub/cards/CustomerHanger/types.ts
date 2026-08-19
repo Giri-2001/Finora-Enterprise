@@ -7,13 +7,20 @@
 
    Module  : Customer Hub
    Layer   : Cards
-   Version : 2.1
+   Version : 3.0
    Status  : Production
 
    RESPONSIBILITY:
    - Customer Hanger data contract
    - Customer Hanger component props
    - Single canonical customer model for this component
+   - Controlled card-flip contract
+
+   FLIP ARCHITECTURE:
+   - Flip state is controlled by the Customer Hub parent.
+   - CustomerHanger does NOT own independent flip state.
+   - Parent decides which customer is currently flipped.
+   - At most ONE customer card should be flipped at a time.
 
    IMPORTANT:
    - No imports from this same types.ts file
@@ -107,6 +114,16 @@ export interface CustomerModel {
   outstandingAmount:
     number;
 
+      /* =========================================================
+     LAST PAYMENT
+  ========================================================= */
+
+  lastPaymentDate?:
+    string;
+
+  lastPaymentAmount?:
+    number;
+
   nextCollectionDate:
     string;
 
@@ -152,11 +169,40 @@ export interface CustomerHangerProps {
 
 
   /* =========================================================
-     CARD FLIP COMPATIBILITY
+     CONTROLLED CARD FLIP
+     ---------------------------------------------------------
+     IMPORTANT:
+
+     Flip state is intentionally NOT owned by
+     CustomerHanger.
+
+     The parent Customer Hub owns the active
+     flipped customer identity.
+
+     Therefore:
+
+       flipped = true
+           ↓
+       this card shows BACK
+
+       flipped = false
+           ↓
+       this card shows FRONT
   ========================================================= */
 
   flipped?:
     boolean;
+
+
+  /* =========================================================
+     FLIP ACTION
+     ---------------------------------------------------------
+     Parent receives this event and decides whether
+     this customer becomes the single active flipped card.
+
+     This allows the parent to automatically close
+     any previously flipped customer card.
+  ========================================================= */
 
   onFlip?: () => void;
 

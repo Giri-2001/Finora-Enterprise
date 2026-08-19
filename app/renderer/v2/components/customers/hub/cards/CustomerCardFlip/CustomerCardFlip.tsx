@@ -16,10 +16,6 @@ import type {
   CSSProperties,
 } from "react";
 
-import {
-  useResponsive,
-} from "../../../../../utils/responsive";
-
 import type {
   CustomerCardFlipProps,
 } from "./types";
@@ -61,44 +57,28 @@ export default function CustomerCardFlip({
 
 }: CustomerCardFlipProps) {
 
-  /* =========================================================
-     RESPONSIVE ENGINE
-  ========================================================= */
+    /* =========================================================
+     CARD SURFACE
+     ---------------------------------------------------------
+     CustomerHanger already owns the resolved customer-card
+     geometry.
 
-  const {
-    tokens,
-  } = useResponsive();
-
-
-  /* =========================================================
-     RESPONSIVE CARD DIMENSIONS
+     CustomerCardFlip must inherit that geometry from its
+     parent and must NOT resolve responsive dimensions again.
   ========================================================= */
 
   const responsiveCard = {
 
-    /*
-      Customer card radius comes from the centralized
-      customerCards responsive token group.
-
-      Width / height are intentionally resolved by the
-      CustomerCardFlip style factory so the component itself
-      does not contain viewport-specific sizing decisions.
-    */
-
     width:
-      tokens.customerCards.width ||
       "100%",
 
     height:
-      tokens.card.minHeight > 0
-        ? tokens.card.minHeight
-        : "100%",
+      "100%",
 
     radius:
-      tokens.customerCards.radius,
+      0,
 
   };
-
 
   /* =========================================================
      ANIMATION

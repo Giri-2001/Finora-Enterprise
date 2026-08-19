@@ -1,213 +1,1140 @@
 /* ===========================================================
-FINORA ENTERPRISE OS™
+   FINORA ENTERPRISE OS™
 
-CUSTOMER ID CARD BACK™
+   CUSTOMER ID CARD BACK™
 
-PREMIUM BACK PRESENTATION STYLES
+   PREMIUM PRESENTATION STYLES
+
+   RESPONSIBILITY:
+   - Customer ID back-card presentation only
+   - Responsive dimensions come from Customer Responsive Engine
+   - No breakpoint logic
+   - No viewport detection
+   - No independent responsive sizing decisions
+
+   FINAL CONTENT CONTRACT:
+   - Customer ID
+   - Village
+   - Mandal
+   - District
+   - Since
+   - Loan Summary
+   - All Loans
+   - Active
+   - Closed
+   - Outstanding
+
+   IMPORTANT:
+   - FAMILY is intentionally not rendered.
+   - TOTAL LOANS is displayed as ALL LOANS.
+   - No bottom marker is provided.
+=========================================================== */
+
+
+/* ===========================================================
+   IMPORTS
 =========================================================== */
 
 import type {
   CSSProperties,
 } from "react";
 
-/* ===========================================================
-ROOT
-=========================================================== */
+import type {
+  ResponsiveTokens,
+} from "../../../../../utils/responsive/customers/customers.tokens";
 
-export const cardStyle: CSSProperties = {
-  width: "175px",
+import "@fontsource/cinzel/600.css";
+import "@fontsource/cinzel/700.css";
 
-  height: "285px",
-
-  maxHeight: "285px",
-
-  overflow: "hidden",
-
-  borderRadius: "18px",
-
-  background:
-    "linear-gradient(180deg,#FFFFFF,#F8FAFC)",
-
-  color: "#1F2937",
-
-  padding: "16px",
-
-  display: "flex",
-
-  flexDirection: "column",
-
-  justifyContent: "flex-start",
-
-  boxSizing: "border-box",
-
-  border:
-    "1px solid rgba(180,145,82,.35)",
-
-  boxShadow:
-    "0 12px 25px rgba(0,0,0,.18)",
-};
 
 /* ===========================================================
-HEADER
+   COLORS
 =========================================================== */
 
-export const headerStyle: CSSProperties = {
-  marginTop: "-8px",
+const COLORS = {
 
-  fontSize: "11px",
+  card:
+    "#FCFAF4",
 
-  fontWeight: 600,
+  cardSoft:
+    "#F7F1E4",
 
-  whiteSpace: "nowrap",
+  text:
+    "#273246",
 
-  color: "#111827",
-};
+  muted:
+    "#6B7280",
+
+  label:
+    "#334155",
+
+  gold:
+    "#A87524",
+
+  goldDark:
+    "#76501B",
+
+  goldLine:
+    "rgba(168,117,36,.34)",
+
+  shadow:
+    "rgba(46,33,20,.18)",
+
+} as const;
+
 
 /* ===========================================================
-DETAILS
+   PREMIUM NUMBER FONT
+   -----------------------------------------------------------
+   Cinzel is intentionally limited to identity / numerical
+   presentation so normal card labels remain clean.
 =========================================================== */
 
-export const detailRowStyle: CSSProperties = {
-  display: "flex",
+const PREMIUM_NUMBER_FONT =
+  '"Cinzel", serif';
 
-  alignItems: "center",
-
-  width: "100%",
-
-  marginTop: "5px",
-
-  fontSize: "10px",
-
-  lineHeight: 1.25,
-};
-
-export const detailLabelStyle: CSSProperties = {
-  width: "55px",
-
-  flexShrink: 0,
-
-  fontWeight: 700,
-
-  textTransform: "uppercase",
-};
-
-export const detailValueStyle: CSSProperties = {
-  marginLeft: "6px",
-
-  minWidth: 0,
-
-  overflow: "hidden",
-
-  textOverflow: "ellipsis",
-
-  whiteSpace: "nowrap",
-
-  color: "#374151",
-};
 
 /* ===========================================================
-DIVIDER
+   CARD
 =========================================================== */
 
-export const dividerStyle: CSSProperties = {
-  marginTop: "8px",
+export function createCardStyle(
+  tokens:
+    ResponsiveTokens,
+): CSSProperties {
 
-  borderTop:
-    "1px solid #E5E7EB",
+  return {
 
-  width: "100%",
-};
+    width:
+      "100%",
+
+    height:
+      "100%",
+
+    minWidth:
+      0,
+
+    minHeight:
+      `${tokens.customerCards.minHeight}px`,
+
+    boxSizing:
+      "border-box",
+
+    display:
+      "flex",
+
+    flexDirection:
+      "column",
+
+    overflow:
+      "hidden",
+
+    borderRadius:
+      `${tokens.customerCards.radius}px`,
+
+    background:
+      `
+      linear-gradient(
+        180deg,
+        ${COLORS.card} 0%,
+        ${COLORS.card} 72%,
+        ${COLORS.cardSoft} 100%
+      )
+      `,
+
+    border:
+  `${tokens.border.width}px solid rgba(180,145,82,.34)`,
+
+borderTop:
+  "5px solid #16A34A",
+
+    boxShadow:
+  `
+  0 14px 30px ${COLORS.shadow},
+  inset 0 0 0 1px rgba(255,255,255,.55)
+  `,
+
+    color:
+      COLORS.text,
+
+  };
+
+}
+
 
 /* ===========================================================
-LOAN SECTION
+   CONTENT
 =========================================================== */
 
-export const loanTitleStyle: CSSProperties = {
-  marginTop: "8px",
+export function createContentStyle(
+  tokens:
+    ResponsiveTokens,
+): CSSProperties {
 
-  fontSize: "10px",
+  return {
 
-  fontWeight: 700,
+    width:
+      "100%",
 
-  color: "#111827",
-};
+    minWidth:
+      0,
 
-export const loanRowStyle: CSSProperties = {
-  display: "flex",
+    boxSizing:
+      "border-box",
 
-  alignItems: "center",
+    display:
+      "flex",
 
-  width: "100%",
+    flexDirection:
+      "column",
 
-  marginTop: "5px",
+    flex:
+      "1 1 auto",
 
-  fontSize: "10px",
+    height:
+      "100%",
 
-  lineHeight: 1.2,
-};
+    minHeight:
+      0,
 
-export const loanLabelStyle: CSSProperties = {
-  width: "70px",
+    gap:
+      "5px",
 
-  flexShrink: 0,
+    justifyContent:
+      "flex-start",
 
-  fontWeight: 700,
+    padding:
+      `
+      ${Math.max(
+        tokens.spacing.small,
+        6,
+      )}px
 
-  color: "#374151",
-};
+      ${Math.max(
+        tokens.spacing.small,
+        7,
+      )}px
 
-export const loanValueStyle: CSSProperties = {
-  marginLeft: "6px",
+      ${Math.max(
+        tokens.spacing.small,
+        1,
+      )}px
+      `,
 
-  fontWeight: 600,
+    overflow:
+      "hidden",
 
-  color: "#111827",
-};
+  };
+
+}
+
 
 /* ===========================================================
-OUTSTANDING
+   CUSTOMER ID
 =========================================================== */
 
-export const outstandingStyle: CSSProperties = {
-  display: "flex",
+export function createCustomerIdStyle(
+  tokens:
+    ResponsiveTokens,
+): CSSProperties {
 
-  alignItems: "center",
+  return {
 
-  width: "100%",
+    width:
+      "100%",
 
-  marginTop: "6px",
+    minWidth:
+      0,
 
-  fontSize: "11px",
+    boxSizing:
+      "border-box",
 
-  fontWeight: 700,
-};
+    textAlign:
+      "center",
+
+    fontSize:
+      `${Math.max(
+        tokens.customerCards.idSize + 1,
+        13,
+      )}px`,
+
+    fontFamily:
+      PREMIUM_NUMBER_FONT,
+
+    fontWeight:
+      700,
+
+    letterSpacing:
+      ".8px",
+
+    lineHeight:
+      1.2,
+
+    fontVariantNumeric:
+      "tabular-nums",
+
+    fontFeatureSettings:
+      '"tnum" 1',
+
+    color:
+      COLORS.text,
+
+    whiteSpace:
+      "nowrap",
+
+    overflow:
+      "hidden",
+
+    textOverflow:
+      "ellipsis",
+
+  };
+
+}
+
 
 /* ===========================================================
-FULL DETAILS BUTTON
+   TOP DIVIDER
 =========================================================== */
 
-export const detailsButtonStyle: CSSProperties = {
-  marginTop: "10px",
+export function createTopDividerStyle(
+  tokens:
+    ResponsiveTokens,
+): CSSProperties {
 
-  height: "30px",
+  return {
 
-  borderRadius: "8px",
+    position:
+      "relative",
 
-  border:
-    "1px solid #C9A45C",
+    width:
+      "100%",
 
-  background: "#8A612B",
+    height:
+      "4px",
 
-  color: "#FFFFFF",
+    flexShrink:
+      0,
 
-  fontSize: "10px",
+    marginTop:
+      "3px",
 
-  fontWeight: 700,
+    marginBottom:
+      "3px",
 
-  cursor: "pointer",
+    borderTop:
+      `3px solid ${COLORS.goldLine}`,
 
-  letterSpacing: ".2px",
+  };
 
-  boxShadow:
-    "0 4px 10px rgba(138,97,43,.20)",
-};
+}
+
+
+/* ===========================================================
+   FIELD LIST
+=========================================================== */
+
+export function createFieldListStyle(
+  tokens:
+    ResponsiveTokens,
+): CSSProperties {
+
+  return {
+
+    width:
+      "100%",
+
+    minWidth:
+      0,
+
+    display:
+      "flex",
+
+    flexDirection:
+      "column",
+
+    gap:
+      "2px",
+
+  };
+
+}
+
+
+/* ===========================================================
+   FIELD ROW
+=========================================================== */
+
+export function createFieldRowStyle(
+  tokens:
+    ResponsiveTokens,
+): CSSProperties {
+
+  return {
+
+    width:
+      "100%",
+
+    minWidth:
+      0,
+
+    display:
+      "grid",
+
+    gridTemplateColumns:
+  `
+  ${Math.max(
+    tokens.icon.xs,
+    13,
+  )}px
+
+  56px
+
+  8px
+
+  minmax(
+    0,
+    1fr
+  )
+  `,
+
+    columnGap:
+      "5px",
+
+    alignItems:
+      "center",
+
+    minHeight:
+      "21px",
+
+    boxSizing:
+      "border-box",
+
+  };
+
+}
+
+
+/* ===========================================================
+   ICON
+=========================================================== */
+
+export function createIconStyle(
+  tokens:
+    ResponsiveTokens,
+): CSSProperties {
+
+  return {
+
+    width:
+      `${Math.max(
+        tokens.icon.xs,
+        13,
+      )}px`,
+
+    height:
+      `${Math.max(
+        tokens.icon.xs,
+        13,
+      )}px`,
+
+    color:
+      COLORS.gold,
+
+    flexShrink:
+      0,
+
+  };
+
+}
+
+
+/* ===========================================================
+   FIELD LABEL
+=========================================================== */
+
+export function createLabelStyle(
+  tokens:
+    ResponsiveTokens,
+): CSSProperties {
+
+  return {
+
+    minWidth:
+      0,
+
+    fontSize:
+      `${Math.max(
+        tokens.customerCards.idSize,
+        11,
+      )}px`,
+
+    fontWeight:
+      800,
+
+    letterSpacing:
+      ".35px",
+
+    lineHeight:
+      tokens.lineHeight.compact,
+
+    color:
+      COLORS.label,
+
+    whiteSpace:
+      "nowrap",
+
+  };
+
+}
+
+
+/* ===========================================================
+   FIELD VALUE
+=========================================================== */
+
+export function createValueStyle(
+  tokens:
+    ResponsiveTokens,
+): CSSProperties {
+
+  return {
+
+    minWidth:
+      0,
+
+    fontSize:
+      `${Math.max(
+        tokens.customerCards.phoneSize,
+        13,
+      )}px`,
+
+    fontWeight:
+      650,
+
+      letterSpacing:
+      ".25px",
+      
+
+    lineHeight:
+      tokens.lineHeight.compact,
+
+    color:
+      COLORS.text,
+
+    overflow:
+      "hidden",
+
+    textOverflow:
+      "ellipsis",
+
+    whiteSpace:
+      "nowrap",
+
+  };
+
+}
+
+
+/* ===========================================================
+   SECTION DIVIDER
+=========================================================== */
+
+export function createSectionDividerStyle(
+  tokens:
+    ResponsiveTokens,
+): CSSProperties {
+
+  return {
+
+    width:
+      "100%",
+
+    height:
+      "2px",
+
+    margin:
+      "3px 0",
+
+    background:
+      COLORS.goldLine,
+
+    flexShrink:
+      0,
+
+  };
+
+}
+
+
+/* ===========================================================
+   LOAN SUMMARY TITLE
+=========================================================== */
+
+export function createSectionTitleStyle(
+  tokens:
+    ResponsiveTokens,
+): CSSProperties {
+
+  return {
+
+    display:
+      "flex",
+
+    alignItems:
+      "center",
+
+    gap:
+      "5px",
+
+    width:
+      "100%",
+
+    fontSize:
+      `${Math.max(
+        tokens.customerCards.phoneSize,
+        10,
+      )}px`,
+
+    fontWeight:
+      800,
+
+    letterSpacing:
+      ".35px",
+
+    lineHeight:
+      tokens.lineHeight.compact,
+
+    color:
+      COLORS.text,
+
+    textTransform:
+      "uppercase",
+
+  };
+
+}
+
+
+/* ===========================================================
+   LOAN SUMMARY GRID
+=========================================================== */
+
+export function createLoanSummaryStyle(
+  tokens:
+    ResponsiveTokens,
+): CSSProperties {
+
+  return {
+
+    width:
+      "100%",
+
+    minWidth:
+      0,
+
+    boxSizing:
+      "border-box",
+
+    display:
+      "grid",
+
+    gridTemplateColumns:
+      "repeat(3,minmax(0,1fr))",
+
+    gap:
+      "6px",
+
+    marginTop:
+      "3px",
+
+  };
+
+}
+
+
+/* ===========================================================
+   LOAN METRIC BOX
+=========================================================== */
+
+export function createLoanMetricStyle(
+  tokens:
+    ResponsiveTokens,
+): CSSProperties {
+
+  return {
+
+    minWidth:
+      0,
+
+    boxSizing:
+      "border-box",
+
+    minHeight:
+      "58px",
+
+    padding:
+      "6px 3px",
+
+    textAlign:
+      "center",
+
+    display:
+      "flex",
+
+    flexDirection:
+      "column",
+
+    alignItems:
+      "center",
+
+    justifyContent:
+      "center",
+
+    gap:
+      "1px",
+
+    border:
+      `2px solid ${COLORS.goldLine}`,
+
+    borderRadius:
+      "7px",
+
+    background:
+      "rgba(255,255,255,.58)",
+
+  };
+
+}
+
+
+/* ===========================================================
+   LOAN METRIC LABEL
+=========================================================== */
+
+export function createLoanMetricLabelStyle(
+  tokens:
+    ResponsiveTokens,
+): CSSProperties {
+
+  return {
+
+    minWidth:
+      0,
+
+    fontSize:
+      `${Math.max(
+        tokens.customerCards.idSize - 1,
+        12,
+      )}px`,
+
+    fontWeight:
+      700,
+
+    lineHeight:
+      1.95,
+
+    letterSpacing:
+      ".25",
+
+    color:
+      COLORS.muted,
+
+    whiteSpace:
+      "nowrap",
+
+    textAlign:
+      "center",
+
+  };
+
+}
+
+
+/* ===========================================================
+   LOAN METRIC VALUE
+   -----------------------------------------------------------
+   Premium Cinzel numerical presentation.
+=========================================================== */
+
+export function createLoanMetricValueStyle(
+  tokens:
+    ResponsiveTokens,
+): CSSProperties {
+
+  return {
+
+    fontFamily:
+      PREMIUM_NUMBER_FONT,
+
+    fontSize:
+      `${Math.max(
+        tokens.customerCards.idSize,
+        14,
+      )}px`,
+
+    fontWeight:
+      700,
+
+    lineHeight:
+      1.05,
+
+    letterSpacing:
+      ".2px",
+
+    fontVariantNumeric:
+      "tabular-nums",
+
+    fontFeatureSettings:
+      '"tnum" 1',
+
+    color:
+      COLORS.text,
+
+  };
+
+}
+
+
+/* ===========================================================
+   OUTSTANDING
+=========================================================== */
+
+export function createOutstandingStyle(
+  tokens:
+    ResponsiveTokens,
+): CSSProperties {
+
+  return {
+
+    width:
+      "100%",
+
+    minWidth:
+      0,
+
+    boxSizing:
+      "border-box",
+
+    display:
+      "grid",
+
+    gridTemplateColumns:
+      `
+      ${Math.max(
+        tokens.icon.xs,
+        18,
+      )}px
+
+      minmax(
+        0,
+        1fr
+      )
+
+      auto
+      `,
+
+    alignItems:
+      "center",
+
+    columnGap:
+      "5px",
+
+    marginTop:
+      "4px",
+
+    padding:
+      "8px 6px",
+
+    borderRadius:
+      "7px",
+
+    background:
+      "rgba(248,232,197,.52)",
+
+    border:
+      "2px solid rgba(180,145,82,.24)",
+
+  };
+
+}
+
+
+/* ===========================================================
+   OUTSTANDING LABEL
+=========================================================== */
+
+export function createOutstandingLabelStyle(
+  tokens:
+    ResponsiveTokens,
+): CSSProperties {
+
+  return {
+
+    minWidth:
+      0,
+
+    fontSize:
+      `${Math.max(
+        tokens.customerCards.idSize,
+        11,
+      )}px`,
+
+    fontWeight:
+      800,
+
+    lineHeight:
+      1.05,
+
+    color:
+      COLORS.label,
+
+    whiteSpace:
+      "nowrap",
+
+  };
+
+}
+
+
+/* ===========================================================
+   OUTSTANDING VALUE
+   -----------------------------------------------------------
+   Premium Cinzel numerical presentation.
+=========================================================== */
+
+export function createOutstandingValueStyle(
+  tokens:
+    ResponsiveTokens,
+): CSSProperties {
+
+  return {
+
+    minWidth:
+      0,
+
+    paddingLeft:
+      "6px",
+
+    fontFamily:
+      PREMIUM_NUMBER_FONT,
+
+    fontSize:
+      `${Math.max(
+        tokens.customerCards.idSize + 1,
+        12,
+      )}px`,
+
+    fontWeight:
+      700,
+
+    lineHeight:
+      1.05,
+
+    letterSpacing:
+      ".25px",
+
+    fontVariantNumeric:
+      "tabular-nums",
+
+    fontFeatureSettings:
+      '"tnum" 1',
+
+    color:
+      COLORS.goldDark,
+
+    whiteSpace:
+      "nowrap",
+
+    textAlign:
+      "right",
+
+  };
+
+}
+
+
+/* ===========================================================
+   LAST PAYMENT
+   -----------------------------------------------------------
+   Premium compact payment presentation.
+   Uses the existing Responsive Engine tokens.
+=========================================================== */
+
+/* ===========================================================
+   LAST PAYMENT ICON
+=========================================================== */
+
+export function createLastPaymentIconStyle(
+  tokens:
+    ResponsiveTokens,
+): CSSProperties {
+
+  return {
+
+    width:
+      `${Math.max(
+        tokens.icon.xs - 2,
+        16,
+      )}px`,
+
+    height:
+      `${Math.max(
+        tokens.icon.xs - 2,
+        16,
+      )}px`,
+
+    color:
+      COLORS.gold,
+
+    flexShrink:
+      0,
+
+  };
+
+}
+
+export function createLastPaymentStyle(
+  tokens:
+    ResponsiveTokens,
+): CSSProperties {
+
+  return {
+
+    width:
+      "100%",
+
+    minWidth:
+      0,
+
+    boxSizing:
+      "border-box",
+
+    display:
+      "grid",
+
+    gridTemplateColumns:
+      `
+      ${Math.max(
+        tokens.icon.xs,
+        18,
+      )}px
+
+      minmax(
+        0,
+        1fr
+      )
+
+      auto
+      `,
+
+    alignItems:
+      "center",
+
+    columnGap:
+      "6px",
+
+    marginTop:
+      "4px",
+
+    padding:
+      "6px 6px",
+
+    borderRadius:
+      "7px",
+
+    background:
+      "rgba(255,255,255,.58)",
+
+    border:
+      "3px solid rgba(180,145,82,.24)",
+
+  };
+
+}
+
+
+/* ===========================================================
+   LAST PAYMENT LABEL
+=========================================================== */
+
+export function createLastPaymentLabelStyle(
+  tokens:
+    ResponsiveTokens,
+): CSSProperties {
+
+  return {
+
+    minWidth:
+      0,
+
+    fontSize:
+      `${Math.max(
+        tokens.customerCards.idSize,
+        10,
+      )}px`,
+
+    fontWeight:
+      800,
+
+    lineHeight:
+      1.25,
+
+    letterSpacing:
+      ".3px",
+
+    color:
+      COLORS.label,
+
+    whiteSpace:
+      "nowrap",
+
+  };
+
+}
+
+/* ===========================================================
+   LAST PAYMENT VALUE
+   -----------------------------------------------------------
+   Premium Cinzel numerical presentation.
+=========================================================== */
+
+export function createLastPaymentValueStyle(
+  tokens:
+    ResponsiveTokens,
+): CSSProperties {
+
+  return {
+
+    minWidth:
+      0,
+
+    fontSize:
+      `${Math.max(
+        tokens.customerCards.idSize - 1,
+        13,
+      )}px`,
+
+    fontWeight:
+      600,
+
+    lineHeight:
+      1.05,
+
+    letterSpacing:
+      ".2px",
+
+    color:
+      COLORS.goldDark,
+
+    whiteSpace:
+      "nowrap",
+
+  };
+
+}
+
+
+/* ===========================================================
+   END
+=========================================================== */
