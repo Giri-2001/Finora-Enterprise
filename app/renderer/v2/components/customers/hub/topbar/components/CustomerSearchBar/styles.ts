@@ -75,8 +75,6 @@ export const inputStyle: CSSProperties = {
 
   background: "transparent",
 
-  fontSize: "15px",
-
   fontWeight: 500,
 
   color: "#0F172A",

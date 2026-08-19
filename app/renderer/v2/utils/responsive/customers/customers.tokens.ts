@@ -258,6 +258,7 @@ export interface ResponsiveTokens {
   customerCards: {
   columns: number;
   width: number;
+  height: number;
   minHeight: number;
   gap: number;
   padding: number;
@@ -838,7 +839,8 @@ export const TABLET_TOKENS: ResponsiveTokens = {
 customerCards: {
   columns: 3,
   width: 210,
-  minHeight: 0,
+  height: 360,
+  minHeight: 360,
   gap: 16,
   padding: 20,
   radius: 16,
@@ -1137,7 +1139,8 @@ export const LAPTOP_TOKENS: ResponsiveTokens = {
 customerCards: {
   columns: 6,
   width: 210,
-  minHeight: 0,
+  height: 360,
+  minHeight: 360,
   gap: 20,
   padding: 20,
   radius: 16,
@@ -1436,7 +1439,8 @@ export const DESKTOP_TOKENS: ResponsiveTokens = {
 customerCards: {
   columns: 6,
   width: 210,
-  minHeight: 0,
+  height: 360,
+  minHeight: 360,
   gap: 20,
   padding: 20,
   radius: 16,

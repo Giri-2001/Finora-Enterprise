@@ -4,29 +4,6 @@
    CUSTOMER ID CARD™
 
    PREMIUM PRESENTATION STYLES
-
-   RESPONSIBILITY:
-   - Customer ID card presentation only
-   - Responsive dimensions come from Customer Responsive Engine
-   - No breakpoint logic
-   - No viewport detection
-   - No independent responsive sizing decisions
-
-   IMPORTANT:
-   - Customer Responsive Engine is the single source of truth
-     for responsive customer-card dimensions and typography.
-   - Customer-card geometry comes from tokens.customerCards.
-   - The generic tokens.card group does NOT control the
-     Customer ID Card.
-   - This file provides style contracts only.
-   - Responsive token selection is performed by the consumer.
-
-   MOBILE FIX:
-   - Customer card width remains controlled by customerCards.width.
-   - Card height remains content-driven.
-   - Customer-specific typography uses customerCards.*Size.
-   - Photo area uses customerCards.photoSize.
-   - No fixed card height is introduced.
 =========================================================== */
 
 
@@ -94,17 +71,6 @@ export function createCardStyle(
 
         /* -------------------------------------------------------
        CUSTOMER RESPONSIVE ENGINE GEOMETRY
-
-       IMPORTANT:
-       customerCards.width may be either:
-
-       - number  → fixed pixel token
-       - string  → responsive CSS value such as clamp()
-
-       The Responsive Engine owns the actual value.
-       This style layer only consumes it.
-
-       DO NOT append "px" blindly.
     ------------------------------------------------------- */
 
     width:
@@ -122,27 +88,14 @@ export function createCardStyle(
         ? `${tokens.customerCards.width}px`
         : tokens.customerCards.width,
 
-    /*
-     * IMPORTANT:
-     *
-     * Customer card height must remain content-driven.
-     *
-     * The Responsive Engine does not provide a forced
-     * customer-card height.
-     *
-     * Therefore:
-     *
-     * height     = auto
-     * minHeight  = token value
-     *
-     * Never convert minHeight into height.
-     */
-
     height:
-      "auto",
+  `${tokens.customerCards.height}px`,
 
-    minHeight:
-      tokens.customerCards.minHeight,
+minHeight:
+  `${tokens.customerCards.height}px`,
+
+maxHeight:
+  `${tokens.customerCards.height}px`,
 
     boxSizing:
       "border-box",
@@ -162,15 +115,6 @@ export function createCardStyle(
       )
       `,
 
-    /*
-     * IMPORTANT:
-     *
-     * Horizontal padding is intentionally removed from the
-     * card shell. The green status strip and company banner
-     * must span the complete ID-card width.
-     *
-     * Inner content remains centered by its own contracts.
-     */
     padding:
       `0 0 ${tokens.customerCards.padding}px`,
 
@@ -622,7 +566,6 @@ export function createKycStyle(
   };
 
 }
-
 
 /* ===========================================================
    BRANCH

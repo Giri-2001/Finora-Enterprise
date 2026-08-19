@@ -1,9 +1,21 @@
 /* ===========================================================
-FINORA ENTERPRISE OS™
+   FINORA ENTERPRISE OS™
 
-CUSTOMER HUB SUMMARY CARDS™
+   CUSTOMER HUB SUMMARY CARDS™
 
-PREMIUM PRESENTATION STYLES
+   PREMIUM PRESENTATION STYLES
+
+   RESPONSIVE MIGRATION
+   -----------------------------------------------------------
+   Visual/responsive dimensions are consumed from the
+   Customer Hub Summary Cards Responsive Engine.
+
+   No breakpoint logic exists in this file.
+=========================================================== */
+
+
+/* ===========================================================
+   IMPORTS
 =========================================================== */
 
 import type {
@@ -11,77 +23,152 @@ import type {
 } from "react";
 
 
+import {
+  getCustomerSummaryCardsTokens,
+} from "../../../../../../utils/responsive/customers/customerSummaryCards.tokens";
+
+import type {
+  ResponsiveViewport,
+} from "../../../../../../utils/responsive/customers/customers.tokens";
+
+
+/* ===========================================================
+   TOKEN RESOLVER TYPE
+=========================================================== */
+
+type SummaryCardsStyles =
+  ReturnType<
+    typeof getCustomerSummaryCardsTokens
+  >;
+
+
+/* ===========================================================
+   RESPONSIVE TOKEN RESOLVER
+=========================================================== */
+
+export function getCustomerHubSummaryCardsStyles(
+
+  viewport:
+    ResponsiveViewport,
+
+):
+  SummaryCardsStyles {
+
+  return getCustomerSummaryCardsTokens(
+    viewport,
+  );
+
+}
+
 
 /* ===========================================================
    CONTAINER
 =========================================================== */
 
-export const containerStyle: CSSProperties = {
+export function containerStyle(
 
-  width:"100%",
+  tokens:
+    SummaryCardsStyles,
 
-  display:"grid",
+):
+  CSSProperties {
 
-  gridTemplateColumns:
-    "repeat(5,160px)",
+  return {
 
-  justifyContent:"space-between",
+    width:
+      "100%",
 
-  alignItems:"center",
+    display:
+      "grid",
 
-  gap:"14px",
+    gridTemplateColumns:
+      `repeat(${tokens.columns}, minmax(0, ${tokens.cardWidth}px))`,
 
-  padding:"0 34px",
+        justifyContent: 
+      tokens.containerJustifyContent,
 
-  boxSizing:"border-box",
+    alignItems:
+      "center",
 
-  transform:"translateY(-10px)",
+    gap:
+      `${tokens.gap}px`,
 
-};
+    padding:
+      `0 ${tokens.containerPaddingX}px`,
 
+    boxSizing:
+      "border-box",
+
+    transform:
+      `translateY(${tokens.containerTransformY}px)`,
+
+  };
+
+}
 
 
 /* ===========================================================
    NORMAL SUMMARY CARD
 =========================================================== */
 
-export const cardStyle: CSSProperties = {
+export function cardStyle(
 
-  width:"150px",
+  tokens:
+    SummaryCardsStyles,
 
-  height:"100px",
+):
+  CSSProperties {
 
-  borderRadius:"18px",
+  return {
 
-  padding:"12px",
+    width:
+      `${tokens.cardWidth}px`,
 
-  display:"flex",
+    height:
+      `${tokens.cardHeight}px`,
 
-  flexDirection:"column",
+    borderRadius:
+      `${tokens.cardRadius}px`,
 
-  justifyContent:"center",
+    padding:
+      `${tokens.cardPadding}px`,
 
-  alignItems:"center",
+    display:
+      "flex",
 
-  cursor:"pointer",
+    flexDirection:
+      "column",
 
-  background:"transparent",
+    justifyContent:
+      "center",
 
-  border:
-    "1px solid rgba(212,175,55,.55)",
+    alignItems:
+      "center",
 
+    cursor:
+      "pointer",
 
-  boxShadow:"none",
+    background:
+      "transparent",
 
+    border:
+      "1px solid rgba(212,175,55,.55)",
 
-  transition:
-    "transform .25s ease",
+    boxShadow:
+      "none",
 
+    transition:
+      "transform .25s ease",
 
-  overflow:"hidden",
+    overflow:
+      "hidden",
 
-};
+    boxSizing:
+      "border-box",
 
+  };
+
+}
 
 
 /* ===========================================================
@@ -90,182 +177,308 @@ export const cardStyle: CSSProperties = {
 
 export const iconStyle: CSSProperties = {
 
-  display:"none",
+  display:
+    "none",
 
 };
-
 
 
 /* ===========================================================
    TITLE
 =========================================================== */
 
-export const titleStyle: CSSProperties = {
+export function titleStyle(
 
-  fontSize:"11px",
+  tokens:
+    SummaryCardsStyles,
 
-  fontWeight:500,
+):
+  CSSProperties {
 
-  letterSpacing:"1px",
+  return {
 
-  textTransform:"uppercase",
+    fontSize:
+      `${tokens.titleSize}px`,
 
-  color:"#D4AF37",
+    fontWeight:
+      500,
 
-  textAlign:"center",
+    letterSpacing:
+      "1px",
 
-};
+    textTransform:
+      "uppercase",
 
+    color:
+      "#D4AF37",
+
+    textAlign:
+      "center",
+
+  };
+
+}
 
 
 /* ===========================================================
    VALUE
 =========================================================== */
 
-export const valueStyle: CSSProperties = {
+export function valueStyle(
 
-  marginTop:"6px",
+  tokens:
+    SummaryCardsStyles,
 
-  fontSize:"17px",
+):
+  CSSProperties {
 
-  fontWeight:500,
+  return {
 
-  color:"#FFFFFF",
+    marginTop:
+      `${tokens.valueMarginTop}px`,
 
-  textAlign:"center",
+    fontSize:
+      `${tokens.valueSize}px`,
 
-};
+    fontWeight:
+      500,
 
+    color:
+      "#FFFFFF",
+
+    textAlign:
+      "center",
+
+  };
+
+}
 
 
 /* ===========================================================
    DESCRIPTION
 =========================================================== */
 
-export const descriptionStyle: CSSProperties = {
+export function descriptionStyle(
 
-  display:"none",
+  _tokens:
+    SummaryCardsStyles,
 
-};
+):
+  CSSProperties {
+
+  return {
+
+    display:
+      "none",
+
+  };
+
+}
 
 
 /* ===========================================================
    PAGINATION CARD
 =========================================================== */
 
-export const paginationCardStyle: CSSProperties = {
+export function paginationCardStyle(
 
-  width:"150px",
+  tokens:
+    SummaryCardsStyles,
 
-  height:"100px",
+):
+  CSSProperties {
 
-  borderRadius:"18px",
+  return {
 
-  display:"flex",
+    width:
+      `${tokens.cardWidth}px`,
 
-  justifyContent:"center",
+    height:
+      `${tokens.cardHeight}px`,
 
-  alignItems:"center",
+    borderRadius:
+      `${tokens.cardRadius}px`,
 
-  gap:"14px",
+    display:
+      "flex",
 
-  background:"transparent",
+    justifyContent:
+      "center",
 
-  border:
-    "1px solid rgba(212,175,55,.65)",
+    alignItems:
+      "center",
 
-  boxShadow:
-    "0 8px 20px rgba(0,0,0,.12)",
+    gap:
+      `${tokens.paginationGap}px`,
 
-};
+    background:
+      "transparent",
 
+    border:
+      "1px solid rgba(212,175,55,.65)",
+
+    boxShadow:
+      "0 8px 20px rgba(0,0,0,.12)",
+
+    boxSizing:
+      "border-box",
+
+  };
+
+}
 
 
 /* ===========================================================
    PAGINATION BUTTON
 =========================================================== */
 
-export const paginationButtonStyle: CSSProperties = {
+export function paginationButtonStyle(
 
-  width:"34px",
+  tokens:
+    SummaryCardsStyles,
 
-  height:"34px",
+):
+  CSSProperties {
 
-  borderRadius:"50%",
+  return {
 
-  border:
-    "1px solid rgba(212,175,55,.85)",
+    width:
+      `${tokens.paginationButtonSize}px`,
 
-  background:"transparent",
+    height:
+      `${tokens.paginationButtonSize}px`,
 
-  color:"#FFFFFF",
+    borderRadius:
+      "50%",
 
-  cursor:"pointer",
+    border:
+      "1px solid rgba(212,175,55,.85)",
 
-  fontSize:"20px",
+    background:
+      "transparent",
 
-  fontWeight:300,
+    color:
+      "#FFFFFF",
 
-  display:"flex",
+    cursor:
+      "pointer",
 
-  justifyContent:"center",
+    fontSize:
+      `${tokens.paginationFontSize}px`,
 
-  alignItems:"center",
+    fontWeight:
+      300,
 
-  lineHeight:1,
+    display:
+      "flex",
 
-};
+    justifyContent:
+      "center",
 
+    alignItems:
+      "center",
+
+    lineHeight:
+      1,
+
+  };
+
+}
 
 
 /* ===========================================================
    ACTIVE DOT
 =========================================================== */
 
-export const paginationActiveDotStyle: CSSProperties = {
+export function paginationActiveDotStyle(
 
-  width:"5px",
+  tokens:
+    SummaryCardsStyles,
 
-  height:"5px",
+):
+  CSSProperties {
 
-  borderRadius:"50%",
+  return {
 
-  background:"#D4AF37",
+    width:
+      `${tokens.paginationDotSize}px`,
 
-};
+    height:
+      `${tokens.paginationDotSize}px`,
 
+    borderRadius:
+      "50%",
+
+    background:
+      "#D4AF37",
+
+  };
+
+}
 
 
 /* ===========================================================
    NORMAL DOT
 =========================================================== */
 
-export const paginationDotStyle: CSSProperties = {
+export function paginationDotStyle(
 
-  width:"5px",
+  tokens:
+    SummaryCardsStyles,
 
-  height:"5px",
+):
+  CSSProperties {
 
-  borderRadius:"50%",
+  return {
 
-  background:"#FFFFFF",
+    width:
+      `${tokens.paginationDotSize}px`,
 
-};
+    height:
+      `${tokens.paginationDotSize}px`,
 
+    borderRadius:
+      "50%",
+
+    background:
+      "#FFFFFF",
+
+  };
+
+}
 
 
 /* ===========================================================
    PAGINATION WRAPPER
 =========================================================== */
 
-export const paginationCenterStyle: CSSProperties = {
+export function paginationCenterStyle(
 
-  display:"flex",
+  tokens:
+    SummaryCardsStyles,
 
-  alignItems:"center",
+):
+  CSSProperties {
 
-  justifyContent:"center",
+  return {
 
-  gap:"6px",
+    display:
+      "flex",
 
-};
+    alignItems:
+      "center",
+
+    justifyContent:
+      "center",
+
+    gap:
+      `${tokens.paginationDotGap}px`,
+
+  };
+
+}
+
+
+/* ===========================================================
+   END
+=========================================================== */

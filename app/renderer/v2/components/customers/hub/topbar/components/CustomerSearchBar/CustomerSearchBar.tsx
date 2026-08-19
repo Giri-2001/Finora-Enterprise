@@ -13,7 +13,6 @@ import type {
 
 import {
   DEFAULT_PLACEHOLDER,
-  SEARCH_ICON,
 } from "./constants";
 
 import {
@@ -74,12 +73,6 @@ export default function CustomerSearchBar({
   return (
 
     <div style={containerStyle}>
-
-      <span style={iconStyle}>
-
-        {SEARCH_ICON}
-
-      </span>
 
       <input
         type="text"
