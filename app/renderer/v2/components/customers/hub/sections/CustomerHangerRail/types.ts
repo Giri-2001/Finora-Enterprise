@@ -5,87 +5,40 @@
 
    TYPES
 
-   Module  : Customer
-   Section : Customer Hanger Rail
-   Version : 2.0
-   Status  : Production
+   RESPONSIBILITY:
+   - Customer Hanger Rail type contract
+   - Customer collection input
+   - Customer selection callback
+   - No responsive logic
+   - No viewport detection
+   - No presentation logic
 =========================================================== */
 
 
 /* ===========================================================
-   CUSTOMER MODEL
+   CUSTOMER ITEM
 =========================================================== */
 
 export interface CustomerRailItem {
 
-  /* =========================================================
-     CUSTOMER ID
-  ========================================================= */
+  id: string;
 
-  id:
-    string;
+  name: string;
 
+  phone?: string;
 
-  /* =========================================================
-     CUSTOMER NAME
-  ========================================================= */
+  branch: string;
 
-  name:
-    string;
+  active: boolean;
 
+  kycVerified: boolean;
 
-  /* =========================================================
-     CUSTOMER PROFILE PHOTO
+  outstandingAmount: number;
 
-     Original customer photo is passed through unchanged.
+  nextCollectionDate: string;
 
-     No resize.
-     No compression.
-     No transformation.
-  ========================================================= */
+  photo?: string;
 
-  photo?:
-    string;
-
-
-  /* =========================================================
-     BRANCH
-  ========================================================= */
-
-  branch:
-    string;
-
-
-  /* =========================================================
-     STATUS
-  ========================================================= */
-
-  active:
-    boolean;
-
-
-  /* =========================================================
-     KYC
-  ========================================================= */
-
-  kycVerified:
-    boolean;
-
-
-  /* =========================================================
-     FINANCIAL SUMMARY
-  ========================================================= */
-
-  outstandingAmount:
-    number;
-
-
-  /* =========================================================
-     NEXT COLLECTION
-  ========================================================= */
-
-  nextCollectionDate:
-    string;
 }
 
 
@@ -95,22 +48,14 @@ export interface CustomerRailItem {
 
 export interface CustomerHangerRailProps {
 
-  title?:
-    string;
+  customers: CustomerRailItem[];
 
-  totalCustomers?:
-    number;
-
-  customers:
-    CustomerRailItem[];
-
-  selectedCustomerId?:
-    string;
+  selectedCustomerId?: string;
 
   onCustomerSelect?: (
-    customer:
-      CustomerRailItem,
+    customer: CustomerRailItem,
   ) => void;
+
 }
 
 

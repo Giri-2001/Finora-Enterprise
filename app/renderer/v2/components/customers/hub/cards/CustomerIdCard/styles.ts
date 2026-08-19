@@ -1,281 +1,768 @@
 /* ===========================================================
    FINORA ENTERPRISE OS™
+
    CUSTOMER ID CARD™
 
    PREMIUM PRESENTATION STYLES
+
+   RESPONSIBILITY:
+   - Customer ID card presentation only
+   - Responsive dimensions come from Customer Responsive Engine
+   - No breakpoint logic
+   - No viewport detection
+   - No independent responsive sizing decisions
+
+   IMPORTANT:
+   - Customer Responsive Engine is the single source of truth
+     for responsive customer-card dimensions and typography.
+   - Customer-card geometry comes from tokens.customerCards.
+   - The generic tokens.card group does NOT control the
+     Customer ID Card.
+   - This file provides style contracts only.
+   - Responsive token selection is performed by the consumer.
+
+   MOBILE FIX:
+   - Customer card width remains controlled by customerCards.width.
+   - Card height remains content-driven.
+   - Customer-specific typography uses customerCards.*Size.
+   - Photo area uses customerCards.photoSize.
+   - No fixed card height is introduced.
 =========================================================== */
 
+
+/* ===========================================================
+   IMPORTS
+=========================================================== */
 
 import type {
   CSSProperties,
 } from "react";
 
 
+import type {
+  ResponsiveTokens,
+} from "../../../../../utils/responsive/customers/customers.tokens";
+
+
+import {
+  DEFAULT_CUSTOMER_TOKENS,
+} from "../../../../../utils/responsive/customers/customers.tokens";
+
 
 /* ===========================================================
-   ROOT
+   COLORS
 =========================================================== */
 
-export const cardStyle: CSSProperties = {
+const COLORS = {
 
-  width: "180px",
+  cardTop:
+    "#FFFDF9",
 
-  height: "350px",
+  cardMiddle:
+    "#FEFBF5",
 
-  background:
-  `
-  linear-gradient(
-    135deg,
-    rgba(255,255,255,.65),
-    transparent 35%
-  ),
-  linear-gradient(
-    180deg,
-    #FFFDF9 0%,
-    #FEFBF5 60%,
-    #FCF5E8 100%
-  )
-  `,
+  cardBottom:
+    "#FCF5E8",
 
-  paddingBottom:"8px",
+  gold:
+    "#8A612B",
 
+  goldDark:
+    "#5A3B16",
 
-  borderRadius: "22px",
+  text:
+    "#1E293B",
 
+  muted:
+    "#7C7C7C",
 
-  overflow:"hidden",
+  statusText:
+    "#166534",
 
-
-  border:
-"1px solid rgba(180,145,82,.35)",
+} as const;
 
 
- boxShadow:
-`
-0 25px 55px rgba(0,0,0,.30),
-0 8px 20px rgba(180,145,82,.25)
-`,
+/* ===========================================================
+   CARD STYLE BUILDER
+=========================================================== */
 
+export function createCardStyle(
+  tokens: ResponsiveTokens,
+): CSSProperties {
 
-  position:"relative",
+  return {
 
+        /* -------------------------------------------------------
+       CUSTOMER RESPONSIVE ENGINE GEOMETRY
 
-  display:"flex",
+       IMPORTANT:
+       customerCards.width may be either:
 
-  flexDirection:"column",
+       - number  → fixed pixel token
+       - string  → responsive CSS value such as clamp()
 
-};
+       The Responsive Engine owns the actual value.
+       This style layer only consumes it.
+
+       DO NOT append "px" blindly.
+    ------------------------------------------------------- */
+
+    width:
+      typeof tokens.customerCards.width === "number"
+        ? `${tokens.customerCards.width}px`
+        : tokens.customerCards.width,
+
+    minWidth:
+      typeof tokens.customerCards.width === "number"
+        ? `${tokens.customerCards.width}px`
+        : tokens.customerCards.width,
+
+    maxWidth:
+      typeof tokens.customerCards.width === "number"
+        ? `${tokens.customerCards.width}px`
+        : tokens.customerCards.width,
+
+    /*
+     * IMPORTANT:
+     *
+     * Customer card height must remain content-driven.
+     *
+     * The Responsive Engine does not provide a forced
+     * customer-card height.
+     *
+     * Therefore:
+     *
+     * height     = auto
+     * minHeight  = token value
+     *
+     * Never convert minHeight into height.
+     */
+
+    height:
+      "auto",
+
+    minHeight:
+      tokens.customerCards.minHeight,
+
+    boxSizing:
+      "border-box",
+
+    background:
+      `
+      linear-gradient(
+        135deg,
+        rgba(255,255,255,.65),
+        transparent 35%
+      ),
+      linear-gradient(
+        180deg,
+        ${COLORS.cardTop} 0%,
+        ${COLORS.cardMiddle} 60%,
+        ${COLORS.cardBottom} 100%
+      )
+      `,
+
+    /*
+     * IMPORTANT:
+     *
+     * Horizontal padding is intentionally removed from the
+     * card shell. The green status strip and company banner
+     * must span the complete ID-card width.
+     *
+     * Inner content remains centered by its own contracts.
+     */
+    padding:
+      `0 0 ${tokens.customerCards.padding}px`,
+
+    borderRadius:
+      `${tokens.customerCards.radius}px`,
+
+    overflow:
+      "hidden",
+
+    border:
+      `${tokens.border.width}px solid rgba(180,145,82,.35)`,
+
+    boxShadow:
+      `
+      0 25px 55px rgba(0,0,0,.30),
+      0 8px 20px rgba(180,145,82,.25)
+      `,
+
+    position:
+      "relative",
+
+    display:
+      "flex",
+
+    flexDirection:
+      "column",
+
+    flexShrink:
+      0,
+
+  };
+
+}
 
 
 /* ===========================================================
    STATUS HEADER
 =========================================================== */
 
-export const statusHeaderStyle: CSSProperties = {
+export function createStatusHeaderStyle(
+  tokens: ResponsiveTokens,
+): CSSProperties {
 
-  height: "5px",
+  return {
 
-};
+    height:
+      Math.max(
+        tokens.border.width,
+        tokens.border.width * 5,
+      ),
 
+    flexShrink:
+      0,
+
+    width:
+      "100%",
+
+  };
+
+}
 
 
 /* ===========================================================
    COMPANY BRAND
 =========================================================== */
 
-export const companyStyle: CSSProperties = {
+export function createCompanyStyle(
+  tokens: ResponsiveTokens,
+): CSSProperties {
 
-textAlign:"center",
+  return {
 
-marginTop:"8px",
+    width:
+      "100%",
 
-fontSize:"13px",
+    minWidth:
+      0,
 
-fontWeight:700,
+    boxSizing:
+      "border-box",
 
-letterSpacing:"1.2px",
+    textAlign:
+      "center",
 
-lineHeight:1.1,
+    whiteSpace:
+      "nowrap",
 
-color:"#8A612B",
+    overflow:
+      "visible",
 
-textTransform:"uppercase",
+    textOverflow:
+      "clip",
 
-};
+    marginTop:
+      tokens.spacing.small,
+
+    fontSize:
+      `${tokens.customerCards.brandSize}px`,
+
+    fontWeight:
+      700,
+
+    letterSpacing:
+      "1.2px",
+
+    lineHeight:
+      1.1,
+
+    color:
+      COLORS.gold,
+
+    textTransform:
+      "uppercase",
+
+    flexShrink:
+      0,
+
+  };
+
+}
 
 
 /* ===========================================================
    CARD TITLE
 =========================================================== */
 
-export const titleStyle: CSSProperties = {
+export function createTitleStyle(
+  tokens: ResponsiveTokens,
+): CSSProperties {
 
-  textAlign: "center",
+  return {
 
-  fontSize: "12px",
+    width:
+      "100%",
 
-  fontWeight: 600,
+    minWidth:
+      0,
 
-  color:"#7C7C7C",
+    boxSizing:
+      "border-box",
 
-  letterSpacing:"2px",
+    textAlign:
+      "center",
 
-  marginTop:"2px",
+    fontSize:
+      `${tokens.customerCards.nameSize}px`,
 
-  textTransform:"uppercase",
+    fontWeight:
+      600,
 
-};
+    color:
+      COLORS.muted,
 
+    letterSpacing:
+      "2px",
+
+    marginTop:
+      tokens.spacing.small,
+
+    lineHeight:
+      tokens.lineHeight.compact,
+
+    overflow:
+      "hidden",
+
+    textOverflow:
+      "ellipsis",
+
+    whiteSpace:
+      "nowrap",
+
+    flexShrink:
+      0,
+
+  };
+
+}
 
 
 /* ===========================================================
    PHOTO
 =========================================================== */
 
-export const photoStyle: CSSProperties = {
+export function createPhotoStyle(
+  tokens: ResponsiveTokens,
+): CSSProperties {
 
-width:"82px",
+  const photoSize =
+    Math.max(
+      0,
+      tokens.customerCards.photoSize,
+    );
 
-height:"82px",
 
-margin:"14px auto 10px",
+  return {
 
-borderRadius:"50%",
+    width:
+      `${photoSize}px`,
 
-background:
-`
-linear-gradient(
-180deg,
-#FFFFFF,
-#E8EEF7
-)
-`,
+    height:
+      `${photoSize}px`,
 
-border:
-"4px solid rgba(255,255,255,.9)",
+    minWidth:
+      `${photoSize}px`,
 
-boxShadow:
-`
-0 12px 35px rgba(0,0,0,.25),
-inset 0 0 10px rgba(255,255,255,.8)
-`,
+    minHeight:
+      `${photoSize}px`,
 
-display:"flex",
+    margin:
+      `${tokens.spacing.medium}px auto ${tokens.spacing.small}px`,
 
-alignItems:"center",
+    borderRadius:
+      "50%",
 
-justifyContent:"center",
+    background:
+      `
+      linear-gradient(
+        180deg,
+        #FFFFFF,
+        #E8EEF7
+      )
+      `,
 
-overflow:"hidden",
+    border:
+      `${Math.max(
+        tokens.border.width,
+        tokens.border.width +
+        tokens.border.width * 3,
+      )}px solid rgba(255,255,255,.9)`,
 
-};
+    boxShadow:
+      `
+      0 12px 35px rgba(0,0,0,.25),
+      inset 0 0 10px rgba(255,255,255,.8)
+      `,
+
+    display:
+      "flex",
+
+    alignItems:
+      "center",
+
+    justifyContent:
+      "center",
+
+    overflow:
+      "hidden",
+
+    flexShrink:
+      0,
+
+  };
+
+}
+
 
 /* ===========================================================
    NAME
 =========================================================== */
 
-export const nameStyle: CSSProperties = {
+export function createNameStyle(
+  tokens: ResponsiveTokens,
+): CSSProperties {
 
-  textAlign:"center",
+  return {
 
-  fontSize:"16px",
+    width:
+      "100%",
 
-  fontWeight:700,
+    minWidth:
+      0,
 
-  color:"#1E293B",
+    boxSizing:
+      "border-box",
 
-  marginTop:"2px",
+    textAlign:
+      "center",
 
-};
+    fontSize:
+      `${tokens.customerCards.nameSize}px`,
+
+    fontWeight:
+      700,
+
+    lineHeight:
+      tokens.lineHeight.compact,
+
+    color:
+      COLORS.text,
+
+    marginTop:
+      tokens.spacing.small,
+
+    padding:
+      `0 ${tokens.spacing.small}px`,
+
+    overflow:
+      "hidden",
+
+    textOverflow:
+      "ellipsis",
+
+    whiteSpace:
+      "nowrap",
+
+    flexShrink:
+      0,
+
+  };
+
+}
 
 
 /* ===========================================================
    CUSTOMER ID
 =========================================================== */
 
-export const customerIdStyle: CSSProperties = {
+export function createCustomerIdStyle(
+  tokens: ResponsiveTokens,
+): CSSProperties {
 
-  textAlign:"center",
+  return {
 
-  margin:"12px auto 0",
+    display:
+      "block",
 
-  padding:"5px 12px",
+    width:
+      "fit-content",
 
-  borderRadius:"999px",
+    maxWidth:
+      "100%",
 
-  background:
-  "linear-gradient(180deg,#F8E8C5,#EACB8B)",
+    boxSizing:
+      "border-box",
 
+    textAlign:
+      "center",
 
-  border:
-  "1px solid rgba(180,145,82,.45)",
+    margin:
+      `${tokens.spacing.medium}px auto 0`,
 
+    padding:
+      `${tokens.spacing.small}px
+       ${tokens.button.paddingX}px`,
 
-  fontSize:"11px",
+    borderRadius:
+      "999px",
 
-  fontWeight:700,
+    background:
+      "linear-gradient(180deg,#F8E8C5,#EACB8B)",
 
-  color:"#5A3B16",
+    border:
+      `${tokens.border.width}px solid rgba(180,145,82,.45)`,
 
-  width:"fit-content",
+    fontSize:
+      `${tokens.customerCards.idSize}px`,
 
-};
+    fontWeight:
+      700,
+
+    lineHeight:
+      tokens.lineHeight.compact,
+
+    color:
+      COLORS.goldDark,
+
+    overflow:
+      "hidden",
+
+    textOverflow:
+      "ellipsis",
+
+    whiteSpace:
+      "nowrap",
+
+    flexShrink:
+      0,
+
+  };
+
+}
 
 
 /* ===========================================================
    KYC
 =========================================================== */
 
-export const kycStyle: CSSProperties = {
+export function createKycStyle(
+  tokens: ResponsiveTokens,
+): CSSProperties {
 
-  display:"inline-flex",
+  return {
 
-  alignItems:"center",
+    display:
+      "inline-flex",
 
-  justifyContent:"center",
+    alignItems:
+      "center",
 
-  margin:"8px auto 0",
+    justifyContent:
+      "center",
 
-  padding:"4px 12px",
+    width:
+      "fit-content",
 
-  borderRadius:"999px",
+    maxWidth:
+      "100%",
 
-  background:"#ECFDF3",
+    boxSizing:
+      "border-box",
 
-  fontSize:"10px",
+    margin:
+      `${tokens.spacing.small}px auto 0`,
 
-  fontWeight:700,
+    padding:
+      `${tokens.spacing.small}px
+       ${tokens.button.paddingX}px`,
 
-};
+    borderRadius:
+      "999px",
 
+    background:
+      "#ECFDF3",
+
+    color:
+      COLORS.statusText,
+
+    fontSize:
+      `${tokens.customerCards.kycSize}px`,
+
+    fontWeight:
+      700,
+
+    lineHeight:
+      tokens.lineHeight.compact,
+
+    overflow:
+      "hidden",
+
+    textOverflow:
+      "ellipsis",
+
+    whiteSpace:
+      "nowrap",
+
+    flexShrink:
+      0,
+
+  };
+
+}
 
 
 /* ===========================================================
    BRANCH
 =========================================================== */
 
-export const branchStyle: CSSProperties = {
+export function createBranchStyle(
+  tokens: ResponsiveTokens,
+): CSSProperties {
 
-  textAlign:"center",
+  return {
 
-  marginTop:"8px",
+    width:
+      "100%",
 
-  fontSize:"11px",
+    minWidth:
+      0,
 
-  color:"#6B7280",
+    boxSizing:
+      "border-box",
 
-};
+    textAlign:
+      "center",
 
+    marginTop:
+      tokens.spacing.small,
+
+    fontSize:
+      `${tokens.customerCards.phoneSize}px`,
+
+    lineHeight:
+      tokens.lineHeight.compact,
+
+    color:
+      "#6B7280",
+
+    overflow:
+      "hidden",
+
+    textOverflow:
+      "ellipsis",
+
+    whiteSpace:
+      "nowrap",
+
+    flexShrink:
+      0,
+
+  };
+
+}
 
 
 /* ===========================================================
-   QR REMOVED FROM FRONT FACE
-
-   BACK SIDE / DIGITAL VIEW LO USE CHEYYALI
+   QR
 =========================================================== */
 
-export const qrStyle: CSSProperties = {
+export function createQrStyle(): CSSProperties {
 
-  display:"none",
+  return {
 
-};
+    display:
+      "none",
+
+  };
+
+}
+
+
+/* ===========================================================
+   DEFAULT STYLE CONTRACTS
+=========================================================== */
+
+export const cardStyle:
+  CSSProperties =
+    createCardStyle(
+      DEFAULT_CUSTOMER_TOKENS,
+    );
+
+
+export const statusHeaderStyle:
+  CSSProperties =
+    createStatusHeaderStyle(
+      DEFAULT_CUSTOMER_TOKENS,
+    );
+
+
+export const companyStyle:
+  CSSProperties =
+    createCompanyStyle(
+      DEFAULT_CUSTOMER_TOKENS,
+    );
+
+
+export const titleStyle:
+  CSSProperties =
+    createTitleStyle(
+      DEFAULT_CUSTOMER_TOKENS,
+    );
+
+
+export const photoStyle:
+  CSSProperties =
+    createPhotoStyle(
+      DEFAULT_CUSTOMER_TOKENS,
+    );
+
+
+export const nameStyle:
+  CSSProperties =
+    createNameStyle(
+      DEFAULT_CUSTOMER_TOKENS,
+    );
+
+
+export const customerIdStyle:
+  CSSProperties =
+    createCustomerIdStyle(
+      DEFAULT_CUSTOMER_TOKENS,
+    );
+
+
+export const kycStyle:
+  CSSProperties =
+    createKycStyle(
+      DEFAULT_CUSTOMER_TOKENS,
+    );
+
+
+export const branchStyle:
+  CSSProperties =
+    createBranchStyle(
+      DEFAULT_CUSTOMER_TOKENS,
+    );
+
+
+export const qrStyle:
+  CSSProperties =
+    createQrStyle();
+
+
+/* ===========================================================
+   END
+=========================================================== */

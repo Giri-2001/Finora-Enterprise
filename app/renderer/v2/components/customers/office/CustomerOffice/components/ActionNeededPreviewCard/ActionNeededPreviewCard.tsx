@@ -5,6 +5,11 @@
    COMPONENT
 =========================================================== */
 
+
+/* ===========================================================
+   IMPORTS
+=========================================================== */
+
 import type {
   ActionNeededPreviewCardProps,
 } from "./types";
@@ -28,19 +33,13 @@ import {
 } from "./helpers";
 
 import {
-  containerStyle,
-  headerStyle,
-  titleStyle,
-  bodyStyle,
-  sectionStyle,
-  outstandingLabelStyle,
-  statusLabelStyle,
-  collectionLabelStyle,
-  valueStyle,
-  footerStyle,
-  footerLabelStyle,
-  footerArrowStyle,
+  useResponsive,
+} from "../../../../../../utils/responsive";
+
+import {
+  createActionNeededPreviewCardStyles,
 } from "./styles";
+
 
 /* ===========================================================
    COMPONENT
@@ -52,97 +51,243 @@ export default function ActionNeededPreviewCard({
 
 }: ActionNeededPreviewCardProps) {
 
+
+  /* =========================================================
+     RESPONSIVE TOKENS
+  ========================================================= */
+
+  const {
+    tokens,
+  } = useResponsive();
+
+
+  /* =========================================================
+     RESPONSIVE STYLES
+  ========================================================= */
+
+  const styles =
+    createActionNeededPreviewCardStyles(
+      tokens,
+    );
+
+
+  /* =========================================================
+     RENDER
+  ========================================================= */
+
   return (
 
-    <section style={containerStyle}>
+    <section
+      style={
+        styles.containerStyle
+      }
+    >
 
       {/* ======================================
           HEADER
       ====================================== */}
 
-      <header style={headerStyle}>
+      <header
+        style={
+          styles.headerStyle
+        }
+      >
 
-        <div style={titleStyle}>
+        <div
+          style={
+            styles.titleStyle
+          }
+        >
 
-          {CARD_TITLE}
+          {
+            CARD_TITLE
+          }
 
         </div>
 
       </header>
 
+
       {/* ======================================
           BODY
       ====================================== */}
 
-      <div style={bodyStyle}>
+      <div
+        style={
+          styles.bodyStyle
+        }
+      >
 
-        {/* Outstanding */}
+        {/* ====================================
+            OUTSTANDING
+        ==================================== */}
 
-        <div style={sectionStyle}>
+        <div
+          style={
+            styles.sectionStyle
+          }
+        >
 
-          <div style={outstandingLabelStyle}>
+          <div
+            style={
+              styles.outstandingLabelStyle
+            }
+          >
 
-            {OUTSTANDING_ICON} {OUTSTANDING_LABEL}
+            {
+              OUTSTANDING_ICON
+            }
 
-          </div>
+            {" "}
 
-          <div style={valueStyle}>
-
-            {getOutstandingMessage(customer)}
-
-          </div>
-
-        </div>
-
-        {/* Customer Status */}
-
-        <div style={sectionStyle}>
-
-          <div style={statusLabelStyle}>
-
-            {STATUS_ICON} {CUSTOMER_STATUS_LABEL}
-
-          </div>
-
-          <div style={valueStyle}>
-
-            {getCustomerStatus(customer)}
+            {
+              OUTSTANDING_LABEL
+            }
 
           </div>
 
-        </div>
 
-                {/* Next Collection */}
+          <div
+            style={
+              styles.valueStyle
+            }
+          >
 
-        <div style={sectionStyle}>
-
-          <div style={collectionLabelStyle}>
-
-            {COLLECTION_ICON} {NEXT_COLLECTION_LABEL}
-
-          </div>
-
-          <div style={valueStyle}>
-
-            {getNextCollectionDate(customer)}
+            {
+              getOutstandingMessage(
+                customer,
+              )
+            }
 
           </div>
 
         </div>
 
-        {/* Footer */}
 
-        <div style={footerStyle}>
+        {/* ====================================
+            CUSTOMER STATUS
+        ==================================== */}
 
-          <span style={footerLabelStyle}>
+        <div
+          style={
+            styles.sectionStyle
+          }
+        >
 
-            {FOOTER_LABEL}
+          <div
+            style={
+              styles.statusLabelStyle
+            }
+          >
+
+            {
+              STATUS_ICON
+            }
+
+            {" "}
+
+            {
+              CUSTOMER_STATUS_LABEL
+            }
+
+          </div>
+
+
+          <div
+            style={
+              styles.valueStyle
+            }
+          >
+
+            {
+              getCustomerStatus(
+                customer,
+              )
+            }
+
+          </div>
+
+        </div>
+
+
+        {/* ====================================
+            NEXT COLLECTION
+        ==================================== */}
+
+        <div
+          style={
+            styles.sectionStyle
+          }
+        >
+
+          <div
+            style={
+              styles.collectionLabelStyle
+            }
+          >
+
+            {
+              COLLECTION_ICON
+            }
+
+            {" "}
+
+            {
+              NEXT_COLLECTION_LABEL
+            }
+
+          </div>
+
+
+          <div
+            style={
+              styles.valueStyle
+            }
+          >
+
+            {
+              getNextCollectionDate(
+                customer,
+              )
+            }
+
+          </div>
+
+        </div>
+
+
+        {/* ====================================
+            FOOTER
+        ==================================== */}
+
+        <div
+          style={
+            styles.footerStyle
+          }
+        >
+
+          <span
+            style={
+              styles.footerLabelStyle
+            }
+          >
+
+            {
+              FOOTER_LABEL
+            }
 
           </span>
 
-          <span style={footerArrowStyle}>
 
-            {FOOTER_ARROW}
+          <span
+            style={
+              styles.footerArrowStyle
+            }
+          >
+
+            {
+              FOOTER_ARROW
+            }
 
           </span>
 
@@ -155,3 +300,8 @@ export default function ActionNeededPreviewCard({
   );
 
 }
+
+
+/* ===========================================================
+   END
+=========================================================== */

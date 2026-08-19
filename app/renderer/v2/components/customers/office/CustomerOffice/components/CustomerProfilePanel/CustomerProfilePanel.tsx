@@ -5,6 +5,11 @@
    COMPONENT
 =========================================================== */
 
+
+/* ===========================================================
+   IMPORTS
+=========================================================== */
+
 import type {
   CustomerProfilePanelProps,
 } from "./types";
@@ -23,16 +28,13 @@ import {
 } from "./helpers";
 
 import {
-  containerStyle,
-  headerStyle,
-  companyStyle,
-  subtitleStyle,
-  bodyStyle,
-  imageStyle,
-  nameStyle,
-  idStyle,
-  statusStyle,
+  useResponsive,
+} from "../../../../../../utils/responsive";
+
+import {
+  createCustomerProfilePanelStyles,
 } from "./styles";
+
 
 /* ===========================================================
    COMPONENT
@@ -44,26 +46,72 @@ export default function CustomerProfilePanel({
 
 }: CustomerProfilePanelProps) {
 
+
+  /* =========================================================
+     RESPONSIVE TOKENS
+  ========================================================= */
+
+  const {
+    tokens,
+  } = useResponsive();
+
+
+  /* =========================================================
+     RESPONSIVE STYLES
+  ========================================================= */
+
+  const styles =
+    createCustomerProfilePanelStyles(
+      tokens,
+    );
+
+
+  /* =========================================================
+     CUSTOMER STATUS
+  ========================================================= */
+
   const statusColors =
     getStatusColors(customer);
 
+
+  /* =========================================================
+     RENDER
+  ========================================================= */
+
   return (
 
-    <section style={containerStyle}>
+    <section
+      style={
+        styles.containerStyle
+      }
+    >
 
       {/* ======================================
           HEADER
       ====================================== */}
 
-      <header style={headerStyle}>
+      <header
+        style={
+          styles.headerStyle
+        }
+      >
 
-        <div style={companyStyle}>
+        <div
+          style={
+            styles.companyStyle
+          }
+        >
 
           {COMPANY_NAME}
 
         </div>
 
-        <div style={subtitleStyle}>
+
+        <div
+          style={
+            styles.subtitleStyle
+          }
+        >
 
           {COMPANY_SUBTITLE}
 
@@ -71,49 +119,87 @@ export default function CustomerProfilePanel({
 
       </header>
 
+
       {/* ======================================
           BODY
       ====================================== */}
 
-      <div style={bodyStyle}>
+      <div
+        style={
+          styles.bodyStyle
+        }
+      >
 
         <img
 
-          src={getProfileImage(customer)}
+          src={
+            getProfileImage(
+              customer,
+            )
+          }
 
-          alt={customer.name}
+          alt={
+            customer.name
+          }
 
           style={{
 
-            ...imageStyle,
+            ...styles.imageStyle,
 
             objectFit:
-              getImageFit(customer),
+              getImageFit(
+                customer,
+              ),
 
             padding:
-              getImagePadding(customer),
+              getImagePadding(
+                customer,
+              ),
 
           }}
 
         />
 
-                <div style={nameStyle}>
+
+        {/* ====================================
+            CUSTOMER NAME
+        ==================================== */}
+
+        <div
+          style={
+            styles.nameStyle
+          }
+        >
 
           {customer.name}
 
         </div>
 
-        <div style={idStyle}>
+
+        {/* ====================================
+            CUSTOMER ID
+        ==================================== */}
+
+        <div
+          style={
+            styles.idStyle
+          }
+        >
 
           {customer.id}
 
         </div>
 
+
+        {/* ====================================
+            CUSTOMER STATUS
+        ==================================== */}
+
         <div
 
           style={{
 
-            ...statusStyle,
+            ...styles.statusStyle,
 
             background:
               statusColors.background,
@@ -125,7 +211,11 @@ export default function CustomerProfilePanel({
 
         >
 
-          {getCustomerStatus(customer)}
+          {
+            getCustomerStatus(
+              customer,
+            )
+          }
 
         </div>
 
@@ -136,3 +226,8 @@ export default function CustomerProfilePanel({
   );
 
 }
+
+
+/* ===========================================================
+   END
+=========================================================== */

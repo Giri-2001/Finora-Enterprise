@@ -5,6 +5,11 @@
    COMPONENT
 =========================================================== */
 
+
+/* ===========================================================
+   IMPORTS
+=========================================================== */
+
 import type {
   CustomerLoanPreviewCardProps,
 } from "./types";
@@ -26,24 +31,13 @@ import {
 } from "./helpers";
 
 import {
-  containerStyle,
-  headerStyle,
-  titleStyle,
-  bodyStyle,
-  gridStyle,
-  runningCardStyle,
-  closedCardStyle,
-  outstandingCardStyle,
-  emiCardStyle,
-  statLabelStyle,
-  runningValueStyle,
-  closedValueStyle,
-  moneyValueStyle,
-  emiValueStyle,
-  footerStyle,
-  footerLabelStyle,
-  footerArrowStyle,
+  useResponsive,
+} from "../../../../../../utils/responsive";
+
+import {
+  createCustomerLoanPreviewCardStyles,
 } from "./styles";
+
 
 /* ===========================================================
    COMPONENT
@@ -55,108 +49,247 @@ export default function CustomerLoanPreviewCard({
 
 }: CustomerLoanPreviewCardProps) {
 
+
+  /* =========================================================
+     RESPONSIVE TOKENS
+  ========================================================= */
+
+  const {
+    tokens,
+  } = useResponsive();
+
+
+  /* =========================================================
+     RESPONSIVE STYLES
+  ========================================================= */
+
+  const styles =
+    createCustomerLoanPreviewCardStyles(
+      tokens,
+    );
+
+
+  /* =========================================================
+     LOAN DATA
+  ========================================================= */
+
   const runningLoans =
-    getRunningLoans(customer);
+    getRunningLoans(
+      customer,
+    );
 
   const closedLoans =
-    getClosedLoans(customer);
+    getClosedLoans(
+      customer,
+    );
 
   const outstandingAmount =
-    getOutstandingAmount(customer);
+    getOutstandingAmount(
+      customer,
+    );
+
+
+  /* =========================================================
+     RENDER
+  ========================================================= */
 
   return (
 
-    <section style={containerStyle}>
+    <section
+      style={
+        styles.containerStyle
+      }
+    >
 
       {/* ======================================
           HEADER
       ====================================== */}
 
-      <header style={headerStyle}>
+      <header
+        style={
+          styles.headerStyle
+        }
+      >
 
-        <div style={titleStyle}>
+        <div
+          style={
+            styles.titleStyle
+          }
+        >
 
-          {CARD_TITLE}
+          {
+            CARD_TITLE
+          }
 
         </div>
 
       </header>
 
+
       {/* ======================================
           BODY
       ====================================== */}
 
-      <div style={bodyStyle}>
+      <div
+        style={
+          styles.bodyStyle
+        }
+      >
 
-        <div style={gridStyle}>
+        <div
+          style={
+            styles.gridStyle
+          }
+        >
 
-          {/* Running */}
+          {/* ==================================
+              RUNNING
+          ================================== */}
 
-          <div style={runningCardStyle}>
+          <div
+            style={
+              styles.runningCardStyle
+            }
+          >
 
-            <div style={statLabelStyle}>
+            <div
+              style={
+                styles.statLabelStyle
+              }
+            >
 
-              {RUNNING_LABEL}
-
-            </div>
-
-            <div style={runningValueStyle}>
-
-              {runningLoans.length}
-
-            </div>
-
-          </div>
-
-          {/* Closed */}
-
-          <div style={closedCardStyle}>
-
-            <div style={statLabelStyle}>
-
-              {CLOSED_LABEL}
-
-            </div>
-
-            <div style={closedValueStyle}>
-
-              {closedLoans.length}
+              {
+                RUNNING_LABEL
+              }
 
             </div>
 
-          </div>
 
-                      {/* Outstanding */}
+            <div
+              style={
+                styles.runningValueStyle
+              }
+            >
 
-          <div style={outstandingCardStyle}>
-
-            <div style={statLabelStyle}>
-
-              {OUTSTANDING_LABEL}
-
-            </div>
-
-            <div style={moneyValueStyle}>
-
-              ₹ {outstandingAmount}
+              {
+                runningLoans.length
+              }
 
             </div>
 
           </div>
 
-          {/* EMI Today */}
 
-          <div style={emiCardStyle}>
+          {/* ==================================
+              CLOSED
+          ================================== */}
 
-            <div style={statLabelStyle}>
+          <div
+            style={
+              styles.closedCardStyle
+            }
+          >
 
-              {EMI_TODAY_LABEL}
+            <div
+              style={
+                styles.statLabelStyle
+              }
+            >
+
+              {
+                CLOSED_LABEL
+              }
 
             </div>
 
-            <div style={emiValueStyle}>
 
-              {DEFAULT_EMI_COUNT}
+            <div
+              style={
+                styles.closedValueStyle
+              }
+            >
+
+              {
+                closedLoans.length
+              }
+
+            </div>
+
+          </div>
+
+
+          {/* ==================================
+              OUTSTANDING
+          ================================== */}
+
+          <div
+            style={
+              styles.outstandingCardStyle
+            }
+          >
+
+            <div
+              style={
+                styles.statLabelStyle
+              }
+            >
+
+              {
+                OUTSTANDING_LABEL
+              }
+
+            </div>
+
+
+            <div
+              style={
+                styles.moneyValueStyle
+              }
+            >
+
+              ₹{" "}
+
+              {
+                outstandingAmount
+              }
+
+            </div>
+
+          </div>
+
+
+          {/* ==================================
+              EMI TODAY
+          ================================== */}
+
+          <div
+            style={
+              styles.emiCardStyle
+            }
+          >
+
+            <div
+              style={
+                styles.statLabelStyle
+              }
+            >
+
+              {
+                EMI_TODAY_LABEL
+              }
+
+            </div>
+
+
+            <div
+              style={
+                styles.emiValueStyle
+              }
+            >
+
+              {
+                DEFAULT_EMI_COUNT
+              }
 
             </div>
 
@@ -166,19 +299,35 @@ export default function CustomerLoanPreviewCard({
 
       </div>
 
+
       {/* ======================================
           FOOTER
       ====================================== */}
 
-      <footer style={footerStyle}>
+      <footer
+        style={
+          styles.footerStyle
+        }
+      >
 
-        <div style={footerLabelStyle}>
+        <div
+          style={
+            styles.footerLabelStyle
+          }
+        >
 
-          {FOOTER_LABEL}
+          {
+            FOOTER_LABEL
+          }
 
         </div>
 
-        <div style={footerArrowStyle}>
+
+        <div
+          style={
+            styles.footerArrowStyle
+          }
+        >
 
           →
 
@@ -191,3 +340,8 @@ export default function CustomerLoanPreviewCard({
   );
 
 }
+
+
+/* ===========================================================
+   END
+=========================================================== */

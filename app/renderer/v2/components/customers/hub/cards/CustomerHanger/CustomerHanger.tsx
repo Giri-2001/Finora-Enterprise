@@ -7,31 +7,67 @@
 
    Module  : Customer Hub
    Layer   : Cards
-   Version : 2.0
+   Version : 2.5
    Status  : Production
 
-   Responsibility:
+   RESPONSIBILITY:
    - Customer selection
    - Premium hanging presentation
    - Front Customer ID Card only
+   - Customer Responsive Engine integration
 
-   Intentionally removed:
-   - Card flip
-   - Back card
-   - Loan summary
-   - Back-side customer details
+   RESPONSIVE CONTRACT:
+   - Mobile  → 1 card
+   - Tablet  → 3 cards
+   - Laptop  → 5 cards
+   - Desktop → 6 cards
+
+   IMPORTANT:
+   - Responsive visual values come from the Customer
+     Responsive Engine.
+   - This component does NOT decide breakpoint values.
+   - This component does NOT contain independent responsive
+     width / height decisions.
+   - Customer card width comes only from
+     customerTokens.customerCards.width.
+   - Customer card minimum height comes only from
+     customerTokens.customerCards.minHeight.
+   - Mobile card remains a real fixed-width ID card.
+   - Mobile card does NOT expand to fill available width.
+   - Mobile card is centered so equal side gaps remain.
+   - Parent layout remains responsible for column count
+     and inter-card spacing.
 =========================================================== */
+
+
+/* ===========================================================
+   IMPORTS
+=========================================================== */
+
+import type {
+  CSSProperties,
+  MouseEvent,
+} from "react";
+
 
 import CustomerIdCard
   from "../CustomerIdCard";
+
 
 import type {
   CustomerHangerProps,
 } from "./types";
 
+
 import {
   canOpen,
 } from "./helpers";
+
+
+import {
+  getCustomerTokens,
+} from "../../../../../utils/responsive/customers/customers.tokens";
+
 
 import {
   containerStyle,
@@ -56,6 +92,10 @@ export default function CustomerHanger({
 }: CustomerHangerProps) {
 
 
+  /* =========================================================
+     CUSTOMER DATA
+  ========================================================= */
+
   const {
 
     id,
@@ -63,17 +103,6 @@ export default function CustomerHanger({
     name,
 
     phone,
-
-    /* =======================================================
-       CUSTOMER PHOTO
-
-       CustomerRailItem uses the canonical `photo` field.
-
-       Do not use `profilePhoto` here because that creates
-       a presentation-layer field mismatch.
-
-       Original photo data is passed through unchanged.
-    ======================================================= */
 
     photo,
 
@@ -87,12 +116,199 @@ export default function CustomerHanger({
 
 
   /* =========================================================
+     CUSTOMER RESPONSIVE ENGINE
+
+     IMPORTANT:
+
+     This component does NOT calculate breakpoints.
+
+     The Responsive Engine resolves the correct token set.
+
+     CustomerHanger only consumes the resolved values.
+  ========================================================= */
+
+  const customerTokens =
+    getCustomerTokens(
+      typeof window !== "undefined"
+        ? window.innerWidth
+        : 0,
+    );
+
+
+  /* =========================================================
+     CUSTOMER CARD GEOMETRY
+
+     SINGLE SOURCE OF TRUTH:
+
+       customerTokens.customerCards.width
+
+     IMPORTANT:
+
+     - No width calculation here.
+     - No viewport-based width calculation here.
+     - No percentage width here.
+     - No "100%" width here.
+     - Mobile therefore remains a real ID-card width.
+  ========================================================= */
+
+  const customerCardWidth =
+    customerTokens.customerCards.width;
+
+
+  /* =========================================================
+     CUSTOMER CARD HEIGHT CONTRACT
+
+     The Responsive Engine owns the minimum card height.
+
+     When minHeight is greater than zero, preserve it.
+
+     When the Responsive Engine intentionally exposes zero,
+     the CustomerIdCard remains content-driven.
+
+     IMPORTANT:
+
+     Never force minHeight to zero here.
+  ========================================================= */
+
+  const customerCardMinHeight =
+    customerTokens.customerCards.minHeight;
+
+
+  /* =========================================================
+     HANGER ROOT
+
+     IMPORTANT:
+
+     The hanger root must have exactly the same width as
+     the resolved Customer ID Card.
+
+     This gives the parent grid a real packing width.
+
+     marginInline: auto is intentionally used only for
+     horizontal centering.
+
+     It does NOT change the card width.
+
+     Therefore on mobile:
+
+       viewport
+          ↓
+       side gap
+          ↓
+       fixed ID card
+          ↓
+       side gap
+
+     The card never fills the remaining space.
+  ========================================================= */
+
+  const resolvedContainerStyle:
+    CSSProperties = {
+
+    ...containerStyle,
+
+    width:
+      `${customerCardWidth}px`,
+
+    minWidth:
+      `${customerCardWidth}px`,
+
+    maxWidth:
+      `${customerCardWidth}px`,
+
+    flex:
+      `0 0 ${customerCardWidth}px`,
+
+    flexShrink:
+      0,
+
+    boxSizing:
+      "border-box",
+
+    alignItems:
+      "center",
+
+    alignSelf:
+      "center",
+
+    marginInline:
+      "auto",
+
+    overflow:
+      "visible",
+
+  };
+
+
+  /* =========================================================
+     CUSTOMER CARD CONTAINER
+
+     IMPORTANT:
+
+     This wrapper must preserve the exact resolved card
+     width.
+
+     It must NEVER stretch to the parent width.
+
+     The minimum height is forwarded from the Responsive
+     Engine instead of being reset to zero.
+  ========================================================= */
+
+  const resolvedCardContainerStyle:
+    CSSProperties = {
+
+    ...cardContainerStyle,
+
+    width:
+      `${customerCardWidth}px`,
+
+    minWidth:
+      `${customerCardWidth}px`,
+
+    maxWidth:
+      `${customerCardWidth}px`,
+
+    boxSizing:
+      "border-box",
+
+    flex:
+      `0 0 ${customerCardWidth}px`,
+
+    flexShrink:
+      0,
+
+    alignSelf:
+      "center",
+
+    marginInline:
+      "auto",
+
+    overflow:
+      "visible",
+
+    /*
+     * Preserve the Responsive Engine's minimum card height.
+     *
+     * Do NOT write:
+     *
+     *   minHeight: 0
+     *
+     * because that would destroy the mobile real-card
+     * height contract.
+     */
+    minHeight:
+      customerCardMinHeight,
+
+  };
+
+
+  /* =========================================================
      CUSTOMER SELECTION
   ========================================================= */
 
   function handleCardClick(
     event:
-      React.MouseEvent<HTMLDivElement>,
+      MouseEvent<HTMLDivElement>,
   ): void {
 
 
@@ -106,20 +322,22 @@ export default function CustomerHanger({
       );
 
 
-    /*
-      Customer Hanger contains:
-      PIN / ROPE / HANGER / CARD.
+    /* -------------------------------------------------------
+       Only the actual Customer ID Card is selectable.
+    ------------------------------------------------------- */
 
-      Only the actual customer card
-      should select the customer.
-    */
-
-    if (!clickedCustomerCard) {
+    if (
+      !clickedCustomerCard
+    ) {
 
       return;
 
     }
 
+
+    /* -------------------------------------------------------
+       Inactive customers cannot be opened.
+    ------------------------------------------------------- */
 
     if (
       !canOpen(active)
@@ -144,40 +362,60 @@ export default function CustomerHanger({
   return (
 
     <div
-      style={containerStyle}
-      onClick={handleCardClick}
+
+      style={
+        resolvedContainerStyle
+      }
+
+      onClick={
+        handleCardClick
+      }
+
     >
 
-      {/* =================================================
+      {/* =====================================================
           PIN
-      ================================================= */}
+      ===================================================== */}
 
       <div
-        style={pinStyle}
+        style={
+          pinStyle
+        }
       />
 
 
-      {/* =================================================
+      {/* =====================================================
           ROPE
-      ================================================= */}
+      ===================================================== */}
 
       <div
-        style={ropeStyle}
+        style={
+          ropeStyle
+        }
       />
 
 
-      {/* =================================================
+      {/* =====================================================
           METAL CONNECTOR
-      ================================================= */}
+      ===================================================== */}
 
       <div
         style={{
 
-          width: "8px",
+          width:
+            "8px",
 
-          height: "8px",
+          height:
+            "8px",
 
-          borderRadius: "50%",
+          minWidth:
+            "8px",
+
+          minHeight:
+            "8px",
+
+          borderRadius:
+            "50%",
 
           background:
             "linear-gradient(180deg,#D6B06A,#8A612B)",
@@ -185,53 +423,85 @@ export default function CustomerHanger({
           border:
             "1px solid #6B4B1D",
 
-          marginTop: "-5px",
+          marginTop:
+            "-5px",
 
-          marginBottom: "4px",
+          marginBottom:
+            "4px",
 
-          zIndex: 4,
+          zIndex:
+            4,
 
-          boxShadow:
-            "0 1px 2px rgba(0,0,0,.25)",
+          flexShrink:
+            0,
 
         }}
       />
 
 
-      {/* =================================================
+      {/* =====================================================
           HANGER
-      ================================================= */}
+      ===================================================== */}
 
       <div
-        style={hangerStyle}
+        style={
+          hangerStyle
+        }
       />
 
 
-      {/* =================================================
+      {/* =====================================================
           FRONT CUSTOMER ID CARD
-      ================================================= */}
+
+          IMPORTANT:
+
+          CustomerIdCard receives the SAME resolved
+          Responsive Engine token set.
+
+          Therefore:
+
+          Mobile:
+            width  = mobile token
+            height = mobile token minimum
+
+          Tablet:
+            width  = tablet token
+
+          Laptop:
+            width  = laptop token
+
+          Desktop:
+            width  = desktop token
+
+          No local breakpoint logic exists here.
+      ===================================================== */}
 
       <div
-        style={{
-
-          ...cardContainerStyle,
-
-          width: "180px",
-
-          maxWidth: "180px",
-
-          height: "290px",
-
-          maxHeight: "290px",
-
-          transform:
-            "translateX(0)",
-
-        }}
+        style={
+          resolvedCardContainerStyle
+        }
       >
 
         <div
+
           data-finora-customer-card="true"
+
+          style={{
+
+            width:
+              "100%",
+
+            minWidth:
+              0,
+
+            boxSizing:
+              "border-box",
+
+            overflow:
+              "visible",
+
+          }}
+
         >
 
           <CustomerIdCard
@@ -260,6 +530,10 @@ export default function CustomerHanger({
               kycVerified
             }
 
+            responsiveTokens={
+              customerTokens
+            }
+
             compact={
               true
             }
@@ -271,12 +545,14 @@ export default function CustomerHanger({
       </div>
 
 
-      {/* =================================================
+      {/* =====================================================
           FINISHING RAIL
-      ================================================= */}
+      ===================================================== */}
 
       <div
-        style={bottomRailStyle}
+        style={
+          bottomRailStyle
+        }
       />
 
     </div>

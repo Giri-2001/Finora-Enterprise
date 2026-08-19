@@ -5,6 +5,11 @@
    COMPONENT
 =========================================================== */
 
+
+/* ===========================================================
+   IMPORTS
+=========================================================== */
+
 import type {
   TodayCollectionsPreviewCardProps,
 } from "./types";
@@ -26,24 +31,13 @@ import {
 } from "./helpers";
 
 import {
-  containerStyle,
-  headerStyle,
-  titleStyle,
-  bodyStyle,
-  gridStyle,
-  dueCardStyle,
-  collectedCardStyle,
-  pendingCardStyle,
-  targetCardStyle,
-  statLabelStyle,
-  dueValueStyle,
-  collectedValueStyle,
-  pendingValueStyle,
-  targetValueStyle,
-  footerStyle,
-  footerLabelStyle,
-  footerArrowStyle,
+  useResponsive,
+} from "../../../../../../utils/responsive";
+
+import {
+  createTodayCollectionsPreviewCardStyles,
 } from "./styles";
+
 
 /* ===========================================================
    COMPONENT
@@ -55,52 +49,127 @@ export default function TodayCollectionsPreviewCard({
 
 }: TodayCollectionsPreviewCardProps) {
 
+
+  /* =========================================================
+     RESPONSIVE TOKENS
+  ========================================================= */
+
+  const {
+    tokens,
+  } = useResponsive();
+
+
+  /* =========================================================
+     RESPONSIVE STYLES
+  ========================================================= */
+
+  const styles =
+    createTodayCollectionsPreviewCardStyles(
+      tokens,
+    );
+
+
+  /* =========================================================
+     BUSINESS DATA
+  ========================================================= */
+
   const dueAmount =
-    getTodayDueAmount(customer);
+    getTodayDueAmount(
+      customer,
+    );
 
   const collectedAmount =
-    getTodayCollectedAmount(customer);
+    getTodayCollectedAmount(
+      customer,
+    );
 
   const pendingAmount =
-    getTodayPendingAmount(customer);
+    getTodayPendingAmount(
+      customer,
+    );
+
+
+  /* =========================================================
+     RENDER
+  ========================================================= */
 
   return (
 
-    <section style={containerStyle}>
+    <section
+      style={
+        styles.containerStyle
+      }
+    >
 
       {/* ======================================
           HEADER
       ====================================== */}
 
-      <header style={headerStyle}>
+      <header
+        style={
+          styles.headerStyle
+        }
+      >
 
-        <div style={titleStyle}>
+        <div
+          style={
+            styles.titleStyle
+          }
+        >
 
-          {CARD_TITLE}
+          {
+            CARD_TITLE
+          }
 
         </div>
 
       </header>
 
+
       {/* ======================================
           BODY
       ====================================== */}
 
-      <div style={bodyStyle}>
+      <div
+        style={
+          styles.bodyStyle
+        }
+      >
 
-        <div style={gridStyle}>
+        <div
+          style={
+            styles.gridStyle
+          }
+        >
 
-          {/* Due Today */}
+          {/* ==================================
+              DUE TODAY
+          ================================== */}
 
-          <div style={dueCardStyle}>
+          <div
+            style={
+              styles.dueCardStyle
+            }
+          >
 
-            <div style={statLabelStyle}>
+            <div
+              style={
+                styles.statLabelStyle
+              }
+            >
 
-              {DUE_LABEL}
+              {
+                DUE_LABEL
+              }
 
             </div>
 
-            <div style={dueValueStyle}>
+
+            <div
+              style={
+                styles.dueValueStyle
+              }
+            >
 
               ₹ {dueAmount}
 
@@ -108,17 +177,35 @@ export default function TodayCollectionsPreviewCard({
 
           </div>
 
-          {/* Collected */}
 
-          <div style={collectedCardStyle}>
+          {/* ==================================
+              COLLECTED
+          ================================== */}
 
-            <div style={statLabelStyle}>
+          <div
+            style={
+              styles.collectedCardStyle
+            }
+          >
 
-              {COLLECTED_LABEL}
+            <div
+              style={
+                styles.statLabelStyle
+              }
+            >
+
+              {
+                COLLECTED_LABEL
+              }
 
             </div>
 
-            <div style={collectedValueStyle}>
+
+            <div
+              style={
+                styles.collectedValueStyle
+              }
+            >
 
               ₹ {collectedAmount}
 
@@ -126,17 +213,35 @@ export default function TodayCollectionsPreviewCard({
 
           </div>
 
-                    {/* Pending */}
 
-          <div style={pendingCardStyle}>
+          {/* ==================================
+              PENDING
+          ================================== */}
 
-            <div style={statLabelStyle}>
+          <div
+            style={
+              styles.pendingCardStyle
+            }
+          >
 
-              {PENDING_LABEL}
+            <div
+              style={
+                styles.statLabelStyle
+              }
+            >
+
+              {
+                PENDING_LABEL
+              }
 
             </div>
 
-            <div style={pendingValueStyle}>
+
+            <div
+              style={
+                styles.pendingValueStyle
+              }
+            >
 
               ₹ {pendingAmount}
 
@@ -144,17 +249,35 @@ export default function TodayCollectionsPreviewCard({
 
           </div>
 
-          {/* Target */}
 
-          <div style={targetCardStyle}>
+          {/* ==================================
+              TARGET
+          ================================== */}
 
-            <div style={statLabelStyle}>
+          <div
+            style={
+              styles.targetCardStyle
+            }
+          >
 
-              {TARGET_LABEL}
+            <div
+              style={
+                styles.statLabelStyle
+              }
+            >
+
+              {
+                TARGET_LABEL
+              }
 
             </div>
 
-            <div style={targetValueStyle}>
+
+            <div
+              style={
+                styles.targetValueStyle
+              }
+            >
 
               ₹ {DEFAULT_AMOUNT}
 
@@ -166,19 +289,35 @@ export default function TodayCollectionsPreviewCard({
 
       </div>
 
+
       {/* ======================================
           FOOTER
       ====================================== */}
 
-      <footer style={footerStyle}>
+      <footer
+        style={
+          styles.footerStyle
+        }
+      >
 
-        <div style={footerLabelStyle}>
+        <div
+          style={
+            styles.footerLabelStyle
+          }
+        >
 
-          {FOOTER_LABEL}
+          {
+            FOOTER_LABEL
+          }
 
         </div>
 
-        <div style={footerArrowStyle}>
+
+        <div
+          style={
+            styles.footerArrowStyle
+          }
+        >
 
           →
 
@@ -191,3 +330,8 @@ export default function TodayCollectionsPreviewCard({
   );
 
 }
+
+
+/* ===========================================================
+   END
+=========================================================== */

@@ -5,158 +5,268 @@
    STYLES
 =========================================================== */
 
+
+/* ===========================================================
+   IMPORTS
+=========================================================== */
+
 import type { CSSProperties } from "react";
 
-/* ===========================================================
-   ROOT
-=========================================================== */
+import type {
+  ResponsiveTokens,
+} from "../../../../../../utils/responsive/tokens";
 
-export const containerStyle: CSSProperties = {
-
-  width: "100%",
-
-  height: "350px",
-
-  background: "#FFFDF9",
-
-  border: "1px solid #D8C7A4",
-
-  borderRadius: "22px",
-
-  overflow: "hidden",
-
-  display: "flex",
-
-  flexDirection: "column",
-
-  boxShadow:
-    "0 12px 28px rgba(15,23,42,.08)",
-
-};
 
 /* ===========================================================
-   HEADER
+   STYLE FACTORY
 =========================================================== */
 
-export const headerStyle: CSSProperties = {
+export function createCustomerProfilePanelStyles(
+  tokens: ResponsiveTokens,
+) {
 
-  background:
-    "linear-gradient(180deg,#6F4A23,#8A6135)",
+  /* =========================================================
+     ROOT
+  ========================================================= */
 
-  padding: "12px",
+  const containerStyle: CSSProperties = {
 
-  textAlign: "center",
+    width:
+      "100%",
 
-};
+    height:
+      tokens.panel.minHeight * 2 +
+      tokens.spacing.large,
 
-export const companyStyle: CSSProperties = {
+    background:
+      "#FFFDF9",
 
-  color: "#F8E7B2",
+    border:
+      `${tokens.border.width}px solid #D8C7A4`,
 
-  fontWeight: 700,
+    borderRadius:
+      tokens.panel.radius,
 
-  fontSize: "20px",
+    overflow:
+      "hidden",
 
-  letterSpacing: "1px",
+    display:
+      "flex",
 
-};
+    flexDirection:
+      "column",
 
-export const subtitleStyle: CSSProperties = {
+    boxShadow:
+      "0 12px 28px rgba(15,23,42,.08)",
 
-  marginTop: "4px",
+  };
 
-  color: "#FFF7E3",
 
-  fontSize: "10px",
+  /* =========================================================
+     HEADER
+  ========================================================= */
 
-  letterSpacing: ".8px",
+  const headerStyle: CSSProperties = {
 
-};
+    background:
+      "linear-gradient(180deg,#6F4A23,#8A6135)",
+
+    padding:
+      tokens.spacing.control,
+
+    textAlign:
+      "center",
+
+  };
+
+
+  const companyStyle: CSSProperties = {
+
+    color:
+      "#F8E7B2",
+
+    fontWeight:
+      700,
+
+    fontSize:
+      tokens.typography.heading,
+
+    letterSpacing:
+      "1px",
+
+  };
+
+
+  const subtitleStyle: CSSProperties = {
+
+    marginTop:
+      tokens.spacing.small,
+
+    color:
+      "#FFF7E3",
+
+    fontSize:
+      tokens.typography.small,
+
+    letterSpacing:
+      ".8px",
+
+  };
+
+
+  /* =========================================================
+     BODY
+  ========================================================= */
+
+  const bodyStyle: CSSProperties = {
+
+    flex:
+      1,
+
+    display:
+      "flex",
+
+    flexDirection:
+      "column",
+
+    justifyContent:
+      "space-evenly",
+
+    alignItems:
+      "center",
+
+    padding:
+      tokens.panel.padding,
+
+    gap:
+      tokens.panel.gap,
+
+  };
+
+
+  /* =========================================================
+     IMAGE
+  ========================================================= */
+
+  const profileImageSize =
+    tokens.customerCards.minHeight -
+    tokens.card.padding * 4;
+
+
+  const imageStyle: CSSProperties = {
+
+    width:
+      profileImageSize,
+
+    height:
+      profileImageSize,
+
+    borderRadius:
+      tokens.card.radius +
+
+      tokens.spacing.small,
+
+    border:
+      `${tokens.border.strongWidth}px solid #D4AF37`,
+
+    background:
+      "#FFFFFF",
+
+  };
+
+
+  /* =========================================================
+     NAME
+  ========================================================= */
+
+  const nameStyle: CSSProperties = {
+
+    fontSize:
+      tokens.typography.title,
+
+    fontWeight:
+      700,
+
+    lineHeight:
+      tokens.lineHeight.title,
+
+    color:
+      "#1E293B",
+
+    textAlign:
+      "center",
+
+  };
+
+
+  /* =========================================================
+     CUSTOMER ID
+  ========================================================= */
+
+  const idStyle: CSSProperties = {
+
+    color:
+      "#64748B",
+
+    fontSize:
+      tokens.typography.label,
+
+    fontWeight:
+      600,
+
+  };
+
+
+  /* =========================================================
+     STATUS
+  ========================================================= */
+
+  const statusStyle: CSSProperties = {
+
+    padding:
+      `${tokens.spacing.small}px ${tokens.control.paddingX}px`,
+
+    borderRadius:
+      "999px",
+
+    fontSize:
+      tokens.typography.small,
+
+    fontWeight:
+      700,
+
+  };
+
+
+  /* =========================================================
+     RETURN STYLES
+  ========================================================= */
+
+  return {
+
+    containerStyle,
+
+    headerStyle,
+
+    companyStyle,
+
+    subtitleStyle,
+
+    bodyStyle,
+
+    imageStyle,
+
+    nameStyle,
+
+    idStyle,
+
+    statusStyle,
+
+  };
+
+}
+
 
 /* ===========================================================
-   BODY
+   END
 =========================================================== */
-
-export const bodyStyle: CSSProperties = {
-
-  flex: 1,
-
-  display: "flex",
-
-  flexDirection: "column",
-
-  justifyContent: "space-evenly",
-
-  alignItems: "center",
-
-  padding: "18px",
-
-  gap: "14px",
-
-};
-
-/* ===========================================================
-   IMAGE
-=========================================================== */
-
-export const imageStyle: CSSProperties = {
-
-  width: "105px",
-
-  height: "105px",
-
-  borderRadius: "18px",
-
-  border: "3px solid #D4AF37",
-
-  background: "#FFFFFF",
-
-};
-
-/* ===========================================================
-   NAME
-=========================================================== */
-
-export const nameStyle: CSSProperties = {
-
-  fontSize: "24px",
-
-  fontWeight: 700,
-
-  lineHeight: "30px",
-
-  color: "#1E293B",
-
-  textAlign: "center",
-
-};
-
-/* ===========================================================
-   CUSTOMER ID
-=========================================================== */
-
-export const idStyle: CSSProperties = {
-
-  color: "#64748B",
-
-  fontSize: "14px",
-
-  fontWeight: 600,
-
-};
-
-/* ===========================================================
-   STATUS
-=========================================================== */
-
-export const statusStyle: CSSProperties = {
-
-  padding: "6px 16px",
-
-  borderRadius: "999px",
-
-  fontSize: "13px",
-
-  fontWeight: 700,
-
-};

@@ -5,7 +5,14 @@
    COMPONENT
 =========================================================== */
 
-import type { CustomerLoanPanelProps } from "./types";
+
+/* ===========================================================
+   IMPORTS
+=========================================================== */
+
+import type {
+  CustomerLoanPanelProps,
+} from "./types";
 
 import {
   LOAN_PANEL_TITLE,
@@ -19,21 +26,15 @@ import {
 } from "./helpers";
 
 import {
-  amountValueStyle,
-  closedValueStyle,
-  containerStyle,
-  loansSectionStyle,
-    sectionTitleStyle,
-  emptyStateStyle,
-  runningValueStyle,
-  statisticCardStyle,
-  statisticLabelStyle,
-  statisticsGridStyle,
-  subtitleStyle,
-  titleStyle,
+  useResponsive,
+} from "../../../../../../utils/responsive";
+
+import {
+  createCustomerLoanPanelStyles,
 } from "./styles";
 
 import LoanCard from "../LoanCard";
+
 
 /* ===========================================================
    COMPONENT
@@ -42,97 +43,338 @@ import LoanCard from "../LoanCard";
 export default function CustomerLoanPanel({
   customer,
 }: CustomerLoanPanelProps) {
-  const loans = getCustomerLoans(customer);
+
+
+  /* =========================================================
+     RESPONSIVE TOKENS
+  ========================================================= */
+
+  const {
+    tokens,
+  } = useResponsive();
+
+
+  /* =========================================================
+     RESPONSIVE STYLES
+  ========================================================= */
+
+  const styles =
+    createCustomerLoanPanelStyles(
+      tokens,
+    );
+
+
+  /* =========================================================
+     LOAN DATA
+  ========================================================= */
+
+  const loans =
+    getCustomerLoans(
+      customer,
+    );
+
 
   const {
     runningLoans,
     closedLoans,
     totalAmount,
     outstandingAmount,
-  } = buildLoanStatistics(customer);
+  } =
+    buildLoanStatistics(
+      customer,
+    );
+
+
+  /* =========================================================
+     RENDER
+  ========================================================= */
 
   return (
-    <section style={containerStyle}>
+
+    <section
+      style={
+        styles.containerStyle
+      }
+    >
+
+      {/* ======================================
+          HEADER
+      ====================================== */}
+
       <div>
-        <h2 style={titleStyle}>
-          {LOAN_PANEL_TITLE}
+
+        <h2
+          style={
+            styles.titleStyle
+          }
+        >
+
+          {
+            LOAN_PANEL_TITLE
+          }
+
         </h2>
 
-        <p style={subtitleStyle}>
-          {LOAN_PANEL_SUBTITLE_PREFIX} {customer.name}
+
+        <p
+          style={
+            styles.subtitleStyle
+          }
+        >
+
+          {
+            LOAN_PANEL_SUBTITLE_PREFIX
+          }
+
+          {" "}
+
+          {
+            customer.name
+          }
+
         </p>
+
       </div>
 
-      <section style={statisticsGridStyle}>
-        <div style={statisticCardStyle}>
-          <div style={statisticLabelStyle}>
-            {LOAN_STATISTICS.RUNNING}
+
+      {/* ======================================
+          STATISTICS
+      ====================================== */}
+
+      <section
+        style={
+          styles.statisticsGridStyle
+        }
+      >
+
+        {/* ====================================
+            RUNNING LOANS
+        ==================================== */}
+
+        <div
+          style={
+            styles.statisticCardStyle
+          }
+        >
+
+          <div
+            style={
+              styles.statisticLabelStyle
+            }
+          >
+
+            {
+              LOAN_STATISTICS.RUNNING
+            }
+
           </div>
 
-          <div style={runningValueStyle}>
-            {runningLoans}
+
+          <div
+            style={
+              styles.runningValueStyle
+            }
+          >
+
+            {
+              runningLoans
+            }
+
           </div>
+
         </div>
 
-        <div style={statisticCardStyle}>
-          <div style={statisticLabelStyle}>
-            {LOAN_STATISTICS.CLOSED}
+
+        {/* ====================================
+            CLOSED LOANS
+        ==================================== */}
+
+        <div
+          style={
+            styles.statisticCardStyle
+          }
+        >
+
+          <div
+            style={
+              styles.statisticLabelStyle
+            }
+          >
+
+            {
+              LOAN_STATISTICS.CLOSED
+            }
+
           </div>
 
-          <div style={closedValueStyle}>
-            {closedLoans}
+
+          <div
+            style={
+              styles.closedValueStyle
+            }
+          >
+
+            {
+              closedLoans
+            }
+
           </div>
+
         </div>
 
-        <div style={statisticCardStyle}>
-          <div style={statisticLabelStyle}>
-            {LOAN_STATISTICS.TOTAL}
+
+        {/* ====================================
+            TOTAL LOAN AMOUNT
+        ==================================== */}
+
+        <div
+          style={
+            styles.statisticCardStyle
+          }
+        >
+
+          <div
+            style={
+              styles.statisticLabelStyle
+            }
+          >
+
+            {
+              LOAN_STATISTICS.TOTAL
+            }
+
           </div>
 
-          <div style={amountValueStyle}>
-            ₹{totalAmount.toLocaleString()}
+
+          <div
+            style={
+              styles.amountValueStyle
+            }
+          >
+
+            ₹
+            {
+              totalAmount.toLocaleString()
+            }
+
           </div>
+
         </div>
 
-        <div style={statisticCardStyle}>
-          <div style={statisticLabelStyle}>
-            {LOAN_STATISTICS.PENDING}
+
+        {/* ====================================
+            OUTSTANDING AMOUNT
+        ==================================== */}
+
+        <div
+          style={
+            styles.statisticCardStyle
+          }
+        >
+
+          <div
+            style={
+              styles.statisticLabelStyle
+            }
+          >
+
+            {
+              LOAN_STATISTICS.PENDING
+            }
+
           </div>
 
-          <div style={amountValueStyle}>
-            ₹{outstandingAmount.toLocaleString()}
+
+          <div
+            style={
+              styles.amountValueStyle
+            }
+          >
+
+            ₹
+            {
+              outstandingAmount.toLocaleString()
+            }
+
           </div>
+
         </div>
+
       </section>
 
-      <h3 style={sectionTitleStyle}>
-  Recent Loans
-</h3>
 
-<section style={loansSectionStyle}>
+      {/* ======================================
+          RECENT LOANS TITLE
+      ====================================== */}
 
-{
-  loans.length > 0
+      <h3
+        style={
+          styles.sectionTitleStyle
+        }
+      >
 
-  ?
+        Recent Loans
 
-  loans.map((loan) => (
-    <LoanCard
-      key={loan.id}
-      loan={loan}
-    />
-  ))
+      </h3>
 
-  :
 
-  (
-    <div style={emptyStateStyle}>
-      No loans available
-    </div>
-  )
-}
+      {/* ======================================
+          LOANS
+      ====================================== */}
 
-</section>
+      <section
+        style={
+          styles.loansSectionStyle
+        }
+      >
+
+        {
+          loans.length > 0
+
+            ?
+
+            loans.map(
+              (loan) => (
+
+                <LoanCard
+                  key={
+                    loan.id
+                  }
+
+                  loan={
+                    loan
+                  }
+                />
+
+              ),
+            )
+
+            :
+
+            (
+
+              <div
+                style={
+                  styles.emptyStateStyle
+                }
+              >
+
+                No loans available
+
+              </div>
+
+            )
+        }
+
+      </section>
+
     </section>
+
   );
+
 }
+
+
+/* ===========================================================
+   END
+=========================================================== */

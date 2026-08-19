@@ -1,61 +1,152 @@
 /* ===========================================================
    FINORA ENTERPRISE OS™
+
    CUSTOMER WORKSPACE™
 
    STYLES
+
+   RESPONSIBILITY:
+   - Provide Customer Workspace styles
+   - Consume Responsive Engine tokens
+   - Keep responsive dimensions centralized
+   - No breakpoint logic
+   - No viewport calculations
+   - No hard-coded responsive sizing
+=========================================================== */
+
+
+/* ===========================================================
+   IMPORTS
 =========================================================== */
 
 import type {
   CSSProperties,
 } from "react";
 
-/* ===========================================================
-   ROOT
-=========================================================== */
 
-export const containerStyle: CSSProperties = {
+import type {
+  ResponsiveTokens,
+} from "../../../../utils/responsive";
 
-  display: "grid",
-
-  gridTemplateColumns: "340px minmax(0,1fr)",
-
-  gap: "16px",
-
-  width: "100%",
-
-  height: "fit-content",
-
-  minHeight: 0,
-
-};
-/* ===========================================================
-   SIDEBAR
-=========================================================== */
-
-export const sidebarStyle: CSSProperties = {
-
-  display: "flex",
-
-  flexDirection: "column",
-
-  gap: "18px",
-
-};
 
 /* ===========================================================
-   CONTENT
+   STYLE FACTORY
 =========================================================== */
 
-export const contentStyle: CSSProperties = {
+export function createCustomerWorkspaceStyles(
 
-  display: "flex",
+  tokens: ResponsiveTokens,
 
-  flexDirection: "column",
+) {
 
-  minWidth: 0,
 
-  gap: "20px",
+  /* =========================================================
+     ROOT
+  ========================================================= */
 
-  height: "fit-content",
+  const containerStyle: CSSProperties = {
 
-};
+    display: "grid",
+
+    gridTemplateColumns:
+
+      tokens.sidebar.width > 0
+
+        ? `${tokens.sidebar.width}px minmax(0, 1fr)`
+
+        : "minmax(0, 1fr)",
+
+    gap:
+      tokens.card.gap,
+
+    width: "100%",
+
+    height: "100%",
+
+    minHeight: 0,
+
+    minWidth: 0,
+
+    boxSizing: "border-box",
+
+    overflow: "hidden",
+
+  };
+
+
+  /* =========================================================
+     SIDEBAR
+  ========================================================= */
+
+  const sidebarStyle: CSSProperties = {
+
+    display: "flex",
+
+    flexDirection: "column",
+
+    gap:
+      tokens.card.gap,
+
+    width: "100%",
+
+    minWidth: 0,
+
+    minHeight: 0,
+
+    height: "100%",
+
+    boxSizing: "border-box",
+
+    overflow: "hidden",
+
+  };
+
+
+  /* =========================================================
+     CONTENT
+  ========================================================= */
+
+  const contentStyle: CSSProperties = {
+
+    display: "flex",
+
+    flexDirection: "column",
+
+    gap:
+      tokens.card.gap,
+
+    width: "100%",
+
+    minWidth: 0,
+
+    minHeight: 0,
+
+    height: "100%",
+
+    boxSizing: "border-box",
+
+    overflow: "hidden",
+
+  };
+
+
+  /* =========================================================
+     RETURN
+  ========================================================= */
+
+  return {
+
+    containerStyle,
+
+    sidebarStyle,
+
+    contentStyle,
+
+  };
+
+}
+
+
+/* ===========================================================
+   END
+=========================================================== */

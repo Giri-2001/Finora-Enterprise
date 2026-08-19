@@ -33,6 +33,10 @@ import {
   getResponsiveViewportTokens,
 } from "./tokens";
 
+import {
+  getCustomerTokens,
+} from "./customers/customers.tokens";
+
 
 /* ===========================================================
    SAFE NUMBER
@@ -134,7 +138,7 @@ export function getCustomerCardsPerPage(
     safeNumber(viewportWidth);
 
   const tokens =
-    getResponsiveViewportTokens(
+    getCustomerTokens(
       width,
     );
 

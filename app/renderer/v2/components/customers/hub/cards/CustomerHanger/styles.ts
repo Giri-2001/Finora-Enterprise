@@ -1,92 +1,139 @@
 /* ===========================================================
    FINORA ENTERPRISE OS™
+
    CUSTOMER HANGER™
 
    PRESENTATION STYLES
+
+   RESPONSIBILITY:
+   - Customer Hanger presentation only
+   - Decorative hanger geometry
+   - Card wrapper presentation
+   - No responsive card dimensions
+
+   IMPORTANT:
+   - Customer card width / height are resolved by the
+     Customer Responsive Engine in CustomerHanger.tsx.
+   - This file must NOT independently decide responsive
+     customer-card dimensions.
+   - Decorative hanger dimensions continue to use the
+     Customer Hanger constants.
 =========================================================== */
 
-import type { CSSProperties } from "react";
+
+/* ===========================================================
+   IMPORTS
+=========================================================== */
+
+import type {
+  CSSProperties,
+} from "react";
 
 import {
-  HANGER_COLOR,
   HANGER_HEIGHT,
   HANGER_WIDTH,
-  ROPE_COLOR,
+  ROPE_HEIGHT,
 } from "./constants";
+
 
 /* ===========================================================
    ROOT
 =========================================================== */
 
-export const containerStyle: CSSProperties = {
+export const containerStyle:
+  CSSProperties = {
 
-  display: "flex",
+  display:
+    "flex",
 
-  flexDirection: "column",
+  flexDirection:
+    "column",
 
-  alignItems: "center",
+  alignItems:
+    "center",
 
-  alignSelf: "start",
+  alignSelf:
+    "start",
 
-  height: "auto",
+  height:
+    "auto",
 
-  cursor: "pointer",
+  cursor:
+    "pointer",
 
-  userSelect: "none",
+  userSelect:
+    "none",
 
-  position: "relative",
+  position:
+    "relative",
 
-  overflow: "visible",
+  overflow:
+    "visible",
 
-  transformOrigin: "top center",
+  transformOrigin:
+    "top center",
 
-  willChange: "transform",
+  willChange:
+    "transform",
 
   transition:
-  "transform .35s cubic-bezier(.22,.61,.36,1)",
+    "transform .35s cubic-bezier(.22,.61,.36,1)",
 
-paddingBottom: "10px",
+  paddingBottom:
+    "10px",
 
 };
+
 
 /* ===========================================================
    PIN
 =========================================================== */
 
-export const pinStyle: CSSProperties = {
+export const pinStyle:
+  CSSProperties = {
 
-  width: "10px",
+  width:
+    "10px",
 
-  height: "10px",
+  height:
+    "10px",
 
-  borderRadius: "50%",
+  borderRadius:
+    "50%",
 
   background:
     "linear-gradient(180deg,#D6B06A,#8A612B)",
 
-  border: "1px solid #6B4B1D",
+  border:
+    "1px solid #6B4B1D",
 
-  marginBottom: "0px",
+  marginBottom:
+    "0px",
 
   boxShadow:
     "0 2px 4px rgba(0,0,0,.25)",
 
 };
 
+
 /* ===========================================================
    ROPE
 =========================================================== */
 
-export const ropeStyle: CSSProperties = {
+export const ropeStyle:
+  CSSProperties = {
 
-  width: "2px",
+  width:
+    "2px",
 
-  height: "12px",
+  height:
+    `${ROPE_HEIGHT}px`,
 
   background:
     "linear-gradient(180deg,#D5D9E0,#7B8798,#475569)",
 
-  marginTop: "0px",
+  marginTop:
+    "0px",
 
 };
 
@@ -95,16 +142,20 @@ export const ropeStyle: CSSProperties = {
    HANGER
 =========================================================== */
 
-export const hangerStyle: CSSProperties = {
+export const hangerStyle:
+  CSSProperties = {
 
-  width:"52px",
+  width:
+    `${HANGER_WIDTH}px`,
 
-  height:"22px",
+  height:
+    `${HANGER_HEIGHT}px`,
 
   border:
-  "3px solid #7C8798",
+    "3px solid #7C8798",
 
-  borderTop:"0",
+  borderTop:
+    "0",
 
   borderRadius:
     "0 0 36px 36px",
@@ -116,13 +167,33 @@ export const hangerStyle: CSSProperties = {
    CARD WRAPPER
 =========================================================== */
 
-export const cardContainerStyle: CSSProperties = {
+/*
+ * IMPORTANT:
+ *
+ * Do NOT place a customer-card width or height here.
+ *
+ * CustomerHanger.tsx resolves:
+ *
+ *   Customer Responsive Engine
+ *          ↓
+ *   customerTokens.customerCards
+ *          ↓
+ *   resolvedCardContainerStyle
+ *
+ * This wrapper only owns presentation behavior.
+ */
 
-  width: "220px",
+export const cardContainerStyle:
+  CSSProperties = {
 
-  maxWidth: "220px",
+  width:
+    "100%",
 
-  marginTop: "2px",
+  maxWidth:
+    "100%",
+
+  marginTop:
+    "2px",
 
   transformOrigin:
     "top center",
@@ -136,7 +207,8 @@ export const cardContainerStyle: CSSProperties = {
   position:
     "relative",
 
-  zIndex: 1,
+  zIndex:
+    1,
 
   paddingBottom:
     "4px",
@@ -146,24 +218,35 @@ export const cardContainerStyle: CSSProperties = {
 
 };
 
+
 /* ===========================================================
    CARD FINISHING RAIL
 =========================================================== */
 
-export const bottomRailStyle: CSSProperties = {
+export const bottomRailStyle:
+  CSSProperties = {
 
-  width:"100%",
+  width:
+    "100%",
 
-  height:"3px",
+  height:
+    "3px",
 
-  marginTop:"25px",
+  marginTop:
+    "25px",
 
-  borderRadius:"999px",
+  borderRadius:
+    "999px",
 
   background:
-  "linear-gradient(90deg,transparent,#D4AF37,transparent)",
+    "linear-gradient(90deg,transparent,#D4AF37,transparent)",
 
   boxShadow:
-  "0 4px 12px rgba(212,175,55,.35)",
+    "0 4px 12px rgba(212,175,55,.35)",
 
 };
+
+
+/* ===========================================================
+   END
+=========================================================== */

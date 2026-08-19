@@ -1,11 +1,21 @@
 /* ===========================================================
-FINORA ENTERPRISE OS™
+   FINORA ENTERPRISE OS™
 
-CUSTOMER OFFICE™
+   CUSTOMER OFFICE™
 
-COMPONENT
+   COMPONENT
+
+   RESPONSIBILITY:
+   - Render Customer Office
+   - Consume Customer Responsive Engine
+   - Keep responsive dimensions centralized
+   - Preserve customer refresh behavior
 =========================================================== */
 
+
+/* ===========================================================
+   IMPORTS
+=========================================================== */
 
 import {
   useEffect,
@@ -21,37 +31,29 @@ from "../CustomerWorkspace";
 
 
 import {
-
   hasCustomer,
-
   buildEmptyDesk,
-
 } from "./helpers";
 
 
 import type {
-
   CustomerOfficeProps,
-
 } from "./types";
 
 
 import {
+  useResponsive,
+} from "../../../../utils/responsive";
 
-  containerStyle,
 
-  workspaceStyle,
-
-  panelStyle,
-
+import {
+  createCustomerOfficeStyles,
 } from "./styles";
 
 
-
 /* ===========================================================
-COMPONENT
+   COMPONENT
 =========================================================== */
-
 
 export default function CustomerOffice({
 
@@ -60,15 +62,44 @@ export default function CustomerOffice({
 }: CustomerOfficeProps) {
 
 
+  /* =========================================================
+     RESPONSIVE ENGINE
+  ========================================================= */
+
+  const {
+    tokens,
+  } = useResponsive();
+
+
+  /* =========================================================
+     RESPONSIVE STYLES
+  ========================================================= */
+
+  const {
+
+    containerStyle,
+
+    workspaceStyle,
+
+    panelStyle,
+
+  } =
+    createCustomerOfficeStyles(
+      tokens,
+    );
+
+
+  /* =========================================================
+     EMPTY DESK
+  ========================================================= */
+
   const emptyDesk =
     buildEmptyDesk();
 
 
-
-  /* ==========================================
+  /* =========================================================
      CUSTOMER LOAN REFRESH LISTENER
-  ========================================== */
-
+  ========================================================= */
 
   useEffect(() => {
 
@@ -91,7 +122,6 @@ export default function CustomerOffice({
     }
 
 
-
     window.addEventListener(
 
       "FINORA_LOAN_UPDATED",
@@ -99,7 +129,6 @@ export default function CustomerOffice({
       refreshCustomerLoans,
 
     );
-
 
 
     return () => {
@@ -120,143 +149,103 @@ export default function CustomerOffice({
   }, []);
 
 
-
+  /* =========================================================
+     RENDER
+  ========================================================= */
 
   return (
 
-
     <section
-
       style={containerStyle}
-
     >
 
 
-
       {/* ==========================================
-          WORKSPACE ONLY
-
-          HEADER REMOVED
-          FULL RECEPTION VIEW
+          CUSTOMER WORKSPACE
       ========================================== */}
-
-
 
       {
 
-
         hasCustomer(
-
           selectedCustomer,
-
         )
 
+          ? (
 
-        ?
-
-
-        (
-
-
-          <section
-
-            style={workspaceStyle}
-
-          >
-
-
-
-            <div
-
-              style={panelStyle}
-
+            <section
+              style={workspaceStyle}
             >
 
+              <div
+                style={panelStyle}
+              >
 
-              <CustomerWorkspace
+                <CustomerWorkspace
+                  selectedCustomer={
+                    selectedCustomer
+                  }
+                />
 
-                selectedCustomer={
-                  selectedCustomer
-                }
+              </div>
 
-              />
+            </section>
 
+          )
 
-            </div>
+          : (
 
-
-
-          </section>
-
-
-        )
-
-
-        :
-
-
-        (
-
-
-          <section
-
-            style={{
-
-              padding:"24px",
-
-            }}
-
-          >
-
-
-
-            <div
-
+            <section
               style={{
+                padding:
+                  tokens.spacing.page,
 
-                maxWidth:"520px",
+                boxSizing:
+                  "border-box",
 
-                margin:"0 auto",
-
+                width:
+                  "100%",
               }}
-
             >
 
+              <div
+                style={{
+                  width:
+                    "100%",
 
-              <EmptyState
+                  maxWidth:
+                    tokens.modal.width,
 
+                  margin:
+                    "0 auto",
+                }}
+              >
 
-                title={
-                  emptyDesk.title
-                }
+                <EmptyState
+                  title={
+                    emptyDesk.title
+                  }
 
+                  description={
+                    emptyDesk.description
+                  }
+                />
 
-                description={
-                  emptyDesk.description
-                }
+              </div>
 
+            </section>
 
-              />
-
-
-            </div>
-
-
-
-          </section>
-
-
-        )
-
+          )
 
       }
 
 
-
     </section>
-
 
   );
 
-
 }
+
+
+/* ===========================================================
+   END
+=========================================================== */

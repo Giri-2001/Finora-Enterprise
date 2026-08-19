@@ -19,6 +19,7 @@ import type {
   ResponsiveTokens,
 } from "../../../../../utils/responsive/tokens";
 
+
 /* ===========================================================
    COLORS
 =========================================================== */
@@ -51,14 +52,28 @@ export function createCustomerTopBarStyles(
   tokens: ResponsiveTokens,
 ) {
 
+
+  /* =========================================================
+     VIEWPORT CONTRACT
+     
+     Responsive Engine supported values:
+       mobile
+       tablet
+       laptop
+       desktop
+
+     This component consumes the resolved viewport only.
+     It does not define breakpoint values.
+  ========================================================= */
+
   const isMobile =
-    tokens.meta.viewport === "verySmallMobile" ||
-    tokens.meta.viewport === "mobile" ||
-    tokens.meta.viewport === "largeMobile";
+    tokens.meta.viewport ===
+      "mobile";
 
 
   const isTablet =
-    tokens.meta.viewport === "tablet";
+    tokens.meta.viewport ===
+      "tablet";
 
 
   /* =========================================================
@@ -239,7 +254,7 @@ export function createCustomerTopBarStyles(
 
   /* =========================================================
      TITLE
-  ============================================================ */
+  ========================================================= */
 
   const titleStyle:
     CSSProperties = {
@@ -281,7 +296,7 @@ export function createCustomerTopBarStyles(
 
   /* =========================================================
      SUBTITLE
-  ============================================================ */
+  ========================================================= */
 
   const subtitleStyle:
     CSSProperties = {
@@ -320,7 +335,7 @@ export function createCustomerTopBarStyles(
 
   /* =========================================================
      RETURN
-  ============================================================ */
+  ========================================================= */
 
   return {
 

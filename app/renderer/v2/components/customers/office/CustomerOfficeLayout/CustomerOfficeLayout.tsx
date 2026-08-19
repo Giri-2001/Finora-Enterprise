@@ -1,8 +1,20 @@
 /* ===========================================================
    FINORA ENTERPRISE OS™
+
    CUSTOMER OFFICE LAYOUT™
 
    COMPONENT
+
+   RESPONSIBILITY:
+   - Render Customer Office layout
+   - Consume Responsive Engine
+   - Keep responsive dimensions centralized
+   - Provide responsive header and body structure
+=========================================================== */
+
+
+/* ===========================================================
+   IMPORTS
 =========================================================== */
 
 import type {
@@ -10,18 +22,13 @@ import type {
 } from "./types";
 
 import {
+  useResponsive,
+} from "../../../../utils/responsive";
 
-  containerStyle,
-
-  headerStyle,
-
-  titleStyle,
-
-  subtitleStyle,
-
-  bodyStyle,
-
+import {
+  createCustomerOfficeLayoutStyles,
 } from "./styles";
+
 
 /* ===========================================================
    COMPONENT
@@ -33,9 +40,46 @@ export default function CustomerOfficeLayout({
 
 }: CustomerOfficeLayoutProps) {
 
+
+  /* =========================================================
+     RESPONSIVE ENGINE
+  ========================================================= */
+
+  const {
+    tokens,
+  } = useResponsive();
+
+
+  /* =========================================================
+     RESPONSIVE STYLES
+  ========================================================= */
+
+  const {
+
+    containerStyle,
+
+    headerStyle,
+
+    titleStyle,
+
+    subtitleStyle,
+
+    bodyStyle,
+
+  } =
+    createCustomerOfficeLayoutStyles(
+      tokens,
+    );
+
+
+  /* =========================================================
+     RENDER
+  ========================================================= */
+
   return (
 
     <section style={containerStyle}>
+
 
       {/* ==========================================
           HEADER
@@ -49,6 +93,7 @@ export default function CustomerOfficeLayout({
 
         </h1>
 
+
         <p style={subtitleStyle}>
 
           Enterprise Customer Management Center
@@ -56,6 +101,7 @@ export default function CustomerOfficeLayout({
         </p>
 
       </header>
+
 
       {/* ==========================================
           BODY
@@ -67,8 +113,14 @@ export default function CustomerOfficeLayout({
 
       </section>
 
+
     </section>
 
   );
 
 }
+
+
+/* ===========================================================
+   END
+=========================================================== */

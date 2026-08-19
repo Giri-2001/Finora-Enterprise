@@ -1,8 +1,8 @@
 ﻿/* ===========================================================
-   FINORA ENTERPRISE OSâ„¢
-   RECEPTIONâ„¢
+   FINORA ENTERPRISE OS™
+   RECEPTION™
 
-   RECEPTION HALLâ„¢
+   RECEPTION HALL™
 
    STYLES
 =========================================================== */
@@ -66,13 +66,15 @@ export function createReceptionHallStyles(
   /* =========================================================
      ROOT
 
-     IMPORTANT:
-     - Hall must consume ONLY the remaining vertical space.
-     - Footer belongs below the Hall.
-     - Do NOT use minHeight: 100%.
-     - flex: 1 allows the Hall to fill available height
-       while still leaving the footer at the bottom.
-     - Content can grow naturally when required.
+     IMPORTANT
+     ---------------------------------------------------------
+     Hall consumes the remaining vertical space.
+
+     Footer remains below the Hall.
+
+     No responsive width is decided here manually.
+     All visual dimensions continue to come from the
+     CENTRAL RESPONSIVE ENGINE.
   ========================================================= */
 
   const containerStyle: CSSProperties = {
@@ -104,7 +106,8 @@ export function createReceptionHallStyles(
     boxSizing:
       "border-box",
 
-    background: "transparent",
+    background:
+      "transparent",
 
     position:
       "relative",
@@ -115,7 +118,8 @@ export function createReceptionHallStyles(
     borderBottom:
       `${tokens.border.width}px solid rgba(212,175,55,.45)`,
 
-    boxShadow: "none",
+    boxShadow:
+      "none",
 
   };
 
@@ -170,17 +174,34 @@ export function createReceptionHallStyles(
 
   /* =========================================================
      DEPARTMENT DOOR GRID
+     
+     IMPORTANT FIX
+     ---------------------------------------------------------
+     Previous implementation forced the number of columns
+     directly from tokens.grid.columns.
 
-     Column count comes ONLY from Responsive Engine tokens.
+     That created a problem because Department Doors have
+     their own fixed responsive width.
 
-     Mobile:
-       1 column
+     Example:
+       Tablet  = 300px door
+       Laptop  = 320px door
+       Desktop = 340px door
 
-     Tablet:
-       2 columns
+     When the forced column count could not physically fit,
+     cards overflowed / disappeared outside the visible area.
 
-     Laptop/Desktop:
-       Engine-controlled columns
+     NEW BEHAVIOUR
+     ---------------------------------------------------------
+     - Grid calculates how many Door tracks physically fit.
+     - Minimum track width is the Department Door width.
+     - Cards remain centered inside their tracks.
+     - Gap comes from the CENTRAL RESPONSIVE ENGINE.
+     - No horizontal overflow.
+     - No uneven "3 visible + 2 pushed" behaviour.
+
+     Reception uses the Department Door geometry as the
+     minimum packing requirement.
   ========================================================= */
 
   const doorGridStyle: CSSProperties = {
@@ -198,7 +219,7 @@ export function createReceptionHallStyles(
       "grid",
 
     gridTemplateColumns:
-      `repeat(${tokens.grid.columns}, minmax(0, 1fr))`,
+      `repeat(auto-fit, minmax(${tokens.door.width}px, 1fr))`,
 
     justifyItems:
       "center",
@@ -210,7 +231,7 @@ export function createReceptionHallStyles(
       "start",
 
     columnGap:
-      `${tokens.grid.gap}px`,
+      `${tokens.door.gap}px`,
 
     rowGap:
       `${tokens.spacing.large}px`,

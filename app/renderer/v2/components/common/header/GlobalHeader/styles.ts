@@ -89,153 +89,167 @@ export function createGlobalHeaderStyles(
 
   const header =
     tokens.header;
-    
+
   const button =
     tokens.button;
 
+
+  /* =========================================================
+     VIEWPORT
+     
+     ResponsiveViewport is defined by the Responsive Engine.
+     
+     Supported viewport contract:
+       mobile
+       tablet
+       laptop
+       desktop
+  ========================================================= */
+
+  const viewport =
+    tokens.meta.viewport;
+
+
   const isMobile =
-    tokens.meta.viewport ===
-      "mobile" ||
-    tokens.meta.viewport ===
-      "largeMobile";
+    viewport ===
+      "mobile";
 
-  const isVerySmall =
-    tokens.meta.viewport ===
-      "verySmallMobile";
 
-/* =========================================================
-   ROOT
-========================================================= */
+  /* =========================================================
+     ROOT
+  ========================================================= */
 
-const containerStyle: CSSProperties = {
+  const containerStyle: CSSProperties = {
 
-  position:
-    "sticky",
+    position:
+      "sticky",
 
-  top:
-    0,
+    top:
+      0,
 
-  zIndex:
-    1000,
+    zIndex:
+      1000,
 
-  width:
-    "100%",
+    width:
+      "100%",
 
-  minWidth:
-    0,
+    minWidth:
+      0,
 
-  maxWidth:
-    "100%",
+    maxWidth:
+      "100%",
 
-  height:
-    `${header.height}px`,
+    height:
+      `${header.height}px`,
 
-  minHeight:
-    `${header.height}px`,
+    minHeight:
+      `${header.height}px`,
 
-  display:
-    "grid",
+    display:
+      "grid",
 
-  gridTemplateColumns:
-    isMobile || isVerySmall
+    gridTemplateColumns:
+      isMobile
 
-      ? "minmax(0, 1fr) auto"
+        ? "minmax(0, 1fr) auto"
 
-      : "minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr)",
+        : "minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr)",
 
-  gridTemplateRows:
-    isMobile || isVerySmall
+    gridTemplateRows:
+      isMobile
 
-      ? "auto auto"
+        ? "auto auto"
 
-      : "1fr",
+        : "1fr",
 
-  alignItems:
-    "center",
+    alignItems:
+      "center",
 
-  padding:
-    `0 ${header.paddingX}px`,
+    padding:
+      `0 ${header.paddingX}px`,
 
-  gap:
-    `${tokens.spacing.small}px`,
+    gap:
+      `${tokens.spacing.small}px`,
 
-  boxSizing:
-    "border-box",
+    boxSizing:
+      "border-box",
 
-  background:
-    `
-      linear-gradient(
-        180deg,
-        #3B2418 0%,
-        #2B1810 100%
-      )
-    `,
+    background:
+      `
+        linear-gradient(
+          180deg,
+          #3B2418 0%,
+          #2B1810 100%
+        )
+      `,
 
-  borderBottom:
-    "1px solid rgba(212,175,55,.45)",
+    borderBottom:
+      "1px solid rgba(212,175,55,.45)",
 
-  boxShadow:
-    `
-      0 10px 30px rgba(0,0,0,.45),
-      0 1px 0 rgba(212,175,55,.25)
-    `,
+    boxShadow:
+      `
+        0 10px 30px rgba(0,0,0,.45),
+        0 1px 0 rgba(212,175,55,.25)
+      `,
 
-  overflow:
-    "hidden",
+    overflow:
+      "hidden",
 
-};
+  };
+
 
   /* =========================================================
      LEFT
   ========================================================= */
 
-const leftStyle: CSSProperties = {
+  const leftStyle: CSSProperties = {
 
-  minWidth:
-    0,
+    minWidth:
+      0,
 
-  width:
-    "100%",
+    width:
+      "100%",
 
-  maxWidth:
-    "100%",
+    maxWidth:
+      "100%",
 
-  display:
-    "flex",
+    display:
+      "flex",
 
-  alignItems:
-    "center",
+    alignItems:
+      "center",
 
-  justifyContent:
-    "flex-start",
+    justifyContent:
+      "flex-start",
 
-  gap:
-    `${tokens.spacing.small}px`,
+    gap:
+      `${tokens.spacing.small}px`,
 
-  boxSizing:
-    "border-box",
+    boxSizing:
+      "border-box",
 
-  overflow:
-    "hidden",
+    overflow:
+      "hidden",
 
-  flexShrink:
-    1,
+    flexShrink:
+      1,
 
-  gridColumn:
-    isMobile || isVerySmall
+    gridColumn:
+      isMobile
 
-      ? "1"
+        ? "1"
 
-      : undefined,
+        : undefined,
 
-  gridRow:
-    isMobile || isVerySmall
+    gridRow:
+      isMobile
 
-      ? "1"
+        ? "1"
 
-      : undefined,
+        : undefined,
 
-};
+  };
+
 
   /* =========================================================
      LOGO
@@ -244,9 +258,9 @@ const leftStyle: CSSProperties = {
   const logoStyle: CSSProperties = {
 
     display:
-  header.brandVisible
-    ? "block"
-    : "none",
+      header.brandVisible
+        ? "block"
+        : "none",
 
     minWidth:
       0,
@@ -288,50 +302,50 @@ const leftStyle: CSSProperties = {
      CENTER
   ========================================================= */
 
-const centerStyle: CSSProperties = {
+  const centerStyle: CSSProperties = {
 
-  minWidth:
-    0,
+    minWidth:
+      0,
 
-  width:
-    "100%",
+    width:
+      "100%",
 
-  maxWidth:
-    "100%",
+    maxWidth:
+      "100%",
 
-  display:
-    "flex",
+    display:
+      "flex",
 
-  justifyContent:
-    "center",
+    justifyContent:
+      "center",
 
-  alignItems:
-    "center",
+    alignItems:
+      "center",
 
-  boxSizing:
-    "border-box",
+    boxSizing:
+      "border-box",
 
-  overflow:
-    "hidden",
+    overflow:
+      "hidden",
 
-  flexShrink:
-    1,
+    flexShrink:
+      1,
 
-  gridColumn:
-    isMobile || isVerySmall
+    gridColumn:
+      isMobile
 
-      ? "1 / -1"
+        ? "1 / -1"
 
-      : undefined,
+        : undefined,
 
-  gridRow:
-    isMobile || isVerySmall
+    gridRow:
+      isMobile
 
-      ? "2"
+        ? "2"
 
-      : undefined,
+        : undefined,
 
-};
+  };
 
 
   /* =========================================================
@@ -359,7 +373,7 @@ const centerStyle: CSSProperties = {
       ".5px",
 
     marginBottom:
-    "6px",
+      "6px",
 
     whiteSpace:
       "nowrap",
@@ -383,53 +397,53 @@ const centerStyle: CSSProperties = {
      RIGHT
   ========================================================= */
 
-const rightStyle: CSSProperties = {
+  const rightStyle: CSSProperties = {
 
-  minWidth:
-    0,
+    minWidth:
+      0,
 
-  width:
-    "auto",
+    width:
+      "auto",
 
-  maxWidth:
-    "100%",
+    maxWidth:
+      "100%",
 
-  display:
-    "flex",
+    display:
+      "flex",
 
-  justifyContent:
-    "flex-end",
+    justifyContent:
+      "flex-end",
 
-  alignItems:
-    "center",
+    alignItems:
+      "center",
 
-  gap:
-    `${tokens.spacing.small}px`,
+    gap:
+      `${tokens.spacing.small}px`,
 
-  boxSizing:
-    "border-box",
+    boxSizing:
+      "border-box",
 
-  overflow:
-    "hidden",
+    overflow:
+      "hidden",
 
-  flexShrink:
-    1,
+    flexShrink:
+      1,
 
-  gridColumn:
-    isMobile || isVerySmall
+    gridColumn:
+      isMobile
 
-      ? "2"
+        ? "2"
 
-      : undefined,
+        : undefined,
 
-  gridRow:
-    isMobile || isVerySmall
+    gridRow:
+      isMobile
 
-      ? "1"
+        ? "1"
 
-      : undefined,
+        : undefined,
 
-};
+  };
 
 
   /* =========================================================

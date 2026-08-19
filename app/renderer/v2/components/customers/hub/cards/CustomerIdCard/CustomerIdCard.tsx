@@ -7,12 +7,28 @@
 
    Module  : Customer Hub
    Layer   : Cards
-   Version : 2.0
+   Version : 2.2
    Status  : Production
 
-   Presentation:
-   - Standard Identity Card → 350px
-   - Customer Hub Compact   → 315px
+   RESPONSIBILITY:
+   - Customer identity presentation
+   - Consume resolved Customer Responsive Engine tokens
+   - Premium customer card presentation
+   - Customer photo presentation
+   - Customer status presentation
+
+   IMPORTANT:
+   - No viewport detection inside this component
+   - No independent responsive dimensions
+   - No breakpoint resolution inside this component
+   - Responsive values come from the parent responsive layer
+   - Standard / compact presentation remains supported
+   - Parent responsive layer owns viewport resolution
+=========================================================== */
+
+
+/* ===========================================================
+   IMPORTS
 =========================================================== */
 
 import finoraLogo
@@ -28,13 +44,15 @@ import {
 } from "./constants";
 
 import {
-  cardStyle,
-  statusHeaderStyle,
-  companyStyle,
-  photoStyle,
-  nameStyle,
-  customerIdStyle,
+  createCardStyle,
+  createStatusHeaderStyle,
+  createCompanyStyle,
+  createPhotoStyle,
+  createNameStyle,
+  createCustomerIdStyle,
+  createKycStyle,
 } from "./styles";
+
 
 /* ===========================================================
    COMPONENT
@@ -52,12 +70,127 @@ export default function CustomerIdCard({
 
   kycVerified = false,
 
+  responsiveTokens,
+
   compact = false,
 
 }: CustomerIdCardProps) {
 
+
   /* =========================================================
-     STATUS
+     COMPATIBILITY
+
+     The compact prop remains part of the public component API.
+
+     Customer Hanger currently uses compact presentation.
+
+     Responsive geometry itself is NOT decided by this flag.
+     Geometry comes exclusively from the resolved
+     Customer Responsive Engine token set.
+  ========================================================= */
+
+  void compact;
+
+
+  /* =========================================================
+     RESPONSIVE TOKEN CONTRACT
+
+     IMPORTANT:
+
+     CustomerIdCard does NOT:
+
+     - inspect window.innerWidth
+     - resolve breakpoints
+     - select mobile tokens
+     - select tablet tokens
+     - select laptop tokens
+     - select desktop tokens
+
+     The parent responsive layer resolves the correct token
+     set and passes it through responsiveTokens.
+
+     This keeps the Customer Responsive Engine as the single
+     source of truth.
+  ========================================================= */
+
+  if (!responsiveTokens) {
+
+    return null;
+
+  }
+
+
+  /* =========================================================
+     RESPONSIVE STYLE CONTRACTS
+  ========================================================= */
+
+  const resolvedCardStyle =
+    createCardStyle(
+      responsiveTokens,
+    );
+
+
+  const resolvedStatusHeaderStyle =
+    createStatusHeaderStyle(
+      responsiveTokens,
+    );
+
+
+  const resolvedCompanyStyle =
+    createCompanyStyle(
+      responsiveTokens,
+    );
+
+
+  const resolvedPhotoStyle =
+    createPhotoStyle(
+      responsiveTokens,
+    );
+
+
+  const resolvedNameStyle =
+    createNameStyle(
+      responsiveTokens,
+    );
+
+
+  const resolvedCustomerIdStyle =
+    createCustomerIdStyle(
+      responsiveTokens,
+    );
+
+
+  const resolvedKycStyle =
+    createKycStyle(
+      responsiveTokens,
+    );
+
+
+  /* =========================================================
+     CARD PRESENTATION
+
+     The responsive width / height contract is owned by
+     CustomerHanger.
+
+     CustomerIdCard only consumes the resolved token set
+     for its internal presentation geometry.
+  ========================================================= */
+
+  const presentationCardStyle = {
+
+    ...resolvedCardStyle,
+
+    boxSizing:
+      "border-box" as const,
+
+    position:
+      "relative" as const,
+
+  };
+
+
+  /* =========================================================
+     STATUS COLOR
   ========================================================= */
 
   const statusColor =
@@ -65,30 +198,6 @@ export default function CustomerIdCard({
       ? "#16A34A"
       : "#DC2626";
 
-  /* =========================================================
-     CARD HEIGHT
-
-     Standard:
-       350px
-
-     Customer Hub:
-       315px
-
-     We keep the default card height untouched so
-     Identity Studio and other future usages remain
-     independent from Customer Hub presentation.
-  ========================================================= */
-
-  const presentationCardStyle = {
-
-    ...cardStyle,
-
-    height:
-      compact
-        ? "290px"
-        : "350px",
-
-  };
 
   /* =========================================================
      UI
@@ -97,14 +206,13 @@ export default function CustomerIdCard({
   return (
 
     <article
+
       data-finora-customer-card="true"
-      style={{
 
-        ...presentationCardStyle,
+      style={
+        presentationCardStyle
+      }
 
-        position: "relative",
-
-      }}
     >
 
       {/* =====================================================
@@ -112,21 +220,35 @@ export default function CustomerIdCard({
       ===================================================== */}
 
       <div
+
         style={{
 
-          position: "relative",
+          position:
+            "relative",
 
-          zIndex: 2,
+          zIndex:
+            2,
 
-          display: "flex",
+          display:
+            "flex",
 
-          flexDirection: "column",
+          flexDirection:
+            "column",
 
-          height: "100%",
+          width:
+            "100%",
 
-          boxSizing: "border-box",
+          height:
+            "100%",
+
+          minWidth:
+            0,
+
+          boxSizing:
+            "border-box",
 
         }}
+
       >
 
         {/* =================================================
@@ -134,36 +256,49 @@ export default function CustomerIdCard({
         ================================================= */}
 
         <div
+
           style={{
 
-            ...statusHeaderStyle,
+            ...resolvedStatusHeaderStyle,
 
             background:
               statusColor,
 
+            flexShrink:
+              0,
+
           }}
+
         />
+
 
         {/* =================================================
             FINORA BRAND
         ================================================= */}
 
         <div
-          style={companyStyle}
+
+          style={
+            resolvedCompanyStyle
+          }
+
         >
 
           {BRAND_NAME}
 
         </div>
 
+
         {/* =================================================
             COMPANY NAME
         ================================================= */}
 
         <div
+
           style={{
 
-            marginTop: "8px",
+            marginTop:
+              responsiveTokens.spacing.small,
 
             background:
               `
@@ -178,105 +313,210 @@ export default function CustomerIdCard({
             boxShadow:
               "inset 0 1px 3px rgba(255,255,255,.5)",
 
-            color: "#FFFFFF",
+            color:
+              "#FFFFFF",
 
-            fontSize: "10px",
+            fontSize:
+  `${responsiveTokens.customerCards.companySize}px`,
 
-            fontWeight: 700,
+            fontWeight:
+              700,
 
-            letterSpacing: ".8px",
+            letterSpacing:
+              ".8px",
 
-            textTransform: "uppercase",
+            textTransform:
+              "uppercase",
 
-            padding: "5px 8px",
+            padding:
+              `${responsiveTokens.spacing.small}px ${responsiveTokens.spacing.inline}px`,
 
-            textAlign: "center",
+            textAlign:
+              "center",
+
+            boxSizing:
+              "border-box",
+
+            width:
+              "100%",
+
+            minWidth:
+              0,
+
+            whiteSpace:
+              "nowrap",
+
+            overflow:
+              "visible",
+
+            textOverflow:
+              "clip",
+
+            flexShrink:
+              0,
 
           }}
+
         >
 
           {COMPANY_NAME}
 
         </div>
 
+
         {/* =================================================
             PROFILE PHOTO
         ================================================= */}
 
         <div
-          style={photoStyle}
+
+          style={{
+
+            ...resolvedPhotoStyle,
+
+            flexShrink:
+              0,
+
+          }}
+
         >
 
           {profilePhoto ? (
 
             <img
-              src={profilePhoto}
-              alt={customerName}
+
+              src={
+                profilePhoto
+              }
+
+              alt={
+                customerName || "Customer"
+              }
+
               style={{
 
-                width: "100%",
+                width:
+                  "100%",
 
-                height: "100%",
+                height:
+                  "100%",
 
-                objectFit: "cover",
+                objectFit:
+                  "cover",
 
-                objectPosition: "center",
+                objectPosition:
+                  "center",
 
-                borderRadius: "50%",
+                borderRadius:
+                  "50%",
 
-                display: "block",
+                display:
+                  "block",
 
               }}
+
             />
 
           ) : (
 
             <img
-              src={finoraLogo}
+
+              src={
+                finoraLogo
+              }
+
               alt="FINORA"
+
               style={{
 
-                width: "72%",
+                width:
+                  "72%",
 
-                height: "72%",
+                height:
+                  "72%",
 
-                objectFit: "contain",
+                objectFit:
+                  "contain",
 
-                objectPosition: "center",
+                objectPosition:
+                  "center",
 
-                display: "block",
+                display:
+                  "block",
 
               }}
+
             />
 
           )}
 
         </div>
 
+
         {/* =================================================
             CUSTOMER NAME + PHONE
         ================================================= */}
 
         <div
-          style={nameStyle}
+
+          style={
+            resolvedNameStyle
+          }
+
         >
 
           {customerName || "Unknown"}
 
+
+          {/* ===============================================
+              PHONE
+          =============================================== */}
+
           <div
+
             style={{
 
-              textAlign: "center",
+              width:
+                "100%",
 
-              fontSize: "12px",
+              minWidth:
+                0,
 
-              fontWeight: 600,
+              boxSizing:
+                "border-box",
 
-              color: "#374151",
+              display:
+                "block",
 
-              marginTop: "6px",
+              textAlign:
+                "center",
+
+              fontSize:
+                 `${responsiveTokens.customerCards.phoneSize}px`,
+
+              fontWeight:
+                600,
+
+              color:
+                "#374151",
+
+              marginTop:
+                responsiveTokens.spacing.small,
+
+              lineHeight:
+                responsiveTokens.lineHeight.compact,
+
+              overflow:
+                "hidden",
+
+              textOverflow:
+                "ellipsis",
+
+              whiteSpace:
+                "nowrap",
 
             }}
+
           >
 
             📞 {phoneNumber || "—"}
@@ -285,43 +525,39 @@ export default function CustomerIdCard({
 
         </div>
 
+
         {/* =================================================
             CUSTOMER ID
         ================================================= */}
 
         <div
-          style={customerIdStyle}
+
+          style={
+            resolvedCustomerIdStyle
+          }
+
         >
 
           {customerId}
 
         </div>
 
+
         {/* =================================================
             CUSTOMER STATUS
         ================================================= */}
 
         <div
-          style={{
 
-            margin: "10px auto 0",
+          style={
+            resolvedKycStyle
+          }
 
-            padding: "4px 12px",
-
-            borderRadius: "999px",
-
-            background: "#DCFCE7",
-
-            color: "#166534",
-
-            fontSize: "10px",
-
-            fontWeight: 700,
-
-          }}
         >
 
-          ● Active Customer
+          ● {kycVerified
+            ? "KYC Verified"
+            : "KYC Pending"}
 
         </div>
 
@@ -332,3 +568,8 @@ export default function CustomerIdCard({
   );
 
 }
+
+
+/* ===========================================================
+   END
+=========================================================== */

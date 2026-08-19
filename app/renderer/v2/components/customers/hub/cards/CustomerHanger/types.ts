@@ -6,9 +6,20 @@
    TYPES
 
    Module  : Customer Hub
-   Section : Customer Hanger
-   Version : 2.0
+   Layer   : Cards
+   Version : 2.1
    Status  : Production
+
+   RESPONSIBILITY:
+   - Customer Hanger data contract
+   - Customer Hanger component props
+   - Single canonical customer model for this component
+
+   IMPORTANT:
+   - No imports from this same types.ts file
+   - No circular type aliases
+   - CustomerHangerProps is exported directly
+   - CustomerModel is owned by this module
 =========================================================== */
 
 
@@ -52,14 +63,6 @@ export interface CustomerModel {
 
   /* =========================================================
      CUSTOMER PROFILE PHOTO
-
-     Canonical customer photo field.
-
-     Original image data is passed through unchanged.
-
-     No resize.
-     No compression.
-     No transformation.
   ========================================================= */
 
   photo?:
@@ -67,7 +70,7 @@ export interface CustomerModel {
 
 
   /* =========================================================
-     ID CARD BACK DETAILS
+     IDENTITY / BACK CARD DETAILS
   ========================================================= */
 
   fatherName?:
@@ -120,27 +123,43 @@ export interface CustomerModel {
 
   closedLoans?:
     number;
+
 }
 
 
 /* ===========================================================
-   COMPONENT PROPS
+   CUSTOMER HANGER PROPS
 =========================================================== */
 
 export interface CustomerHangerProps {
 
+  /* =========================================================
+     CUSTOMER
+  ========================================================= */
+
   customer:
     CustomerModel;
+
+
+  /* =========================================================
+     SELECTION
+  ========================================================= */
 
   onClick?: (
     customer:
       CustomerModel,
   ) => void;
 
+
+  /* =========================================================
+     CARD FLIP COMPATIBILITY
+  ========================================================= */
+
   flipped?:
     boolean;
 
   onFlip?: () => void;
+
 }
 
 

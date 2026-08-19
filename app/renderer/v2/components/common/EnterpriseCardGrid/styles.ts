@@ -1,8 +1,27 @@
 /* ===========================================================
    FINORA ENTERPRISE OS™
+
    ENTERPRISE CARD GRID™
 
    STYLES
+
+   RESPONSIBILITY:
+   - Shared card-grid presentation
+   - Responsive grid geometry
+   - No device detection
+   - No hard-coded responsive column count
+
+   IMPORTANT:
+   - Responsive column count comes from the caller.
+   - Customer responsive values are resolved by the
+     Customer Responsive Engine before reaching this grid.
+   - This shared component remains reusable for other
+     Enterprise card-grid consumers.
+=========================================================== */
+
+
+/* ===========================================================
+   IMPORTS
 =========================================================== */
 
 import type {
@@ -14,30 +33,74 @@ import {
   GRID_ALIGNMENT,
 } from "./constants";
 
+
 /* ===========================================================
    ROOT
 =========================================================== */
 
 export const containerStyle: CSSProperties = {
 
-  display: "grid",
+  display:
+    "grid",
 
-  width: GRID_WIDTH,
+  width:
+    GRID_WIDTH,
 
-  gridTemplateColumns:
-    "repeat(5, minmax(180px, 220px))",
+  /*
+   * IMPORTANT:
+   *
+   * EnterpriseCardGrid.tsx injects:
+   *
+   *   gridTemplateColumns
+   *
+   *   gap
+   *
+   * at render time.
+   *
+   * The grid must consume the COMPLETE available width.
+   *
+   * DO NOT use:
+   *
+   *   justifyContent: "center"
+   *
+   * because that leaves unnecessary permanent space on the
+   * left and right when the resolved card columns do not
+   * naturally fill the parent.
+   *
+   * "stretch" allows the resolved grid to occupy the complete
+   * available width.
+   */
 
-  justifyContent: "center",
+  justifyContent:
+  "space-between",
 
-  alignItems: GRID_ALIGNMENT,
+  alignItems:
+    GRID_ALIGNMENT,
 
-  justifyItems: "center",
+  /*
+   * Each grid item owns its complete grid track.
+   *
+   * This keeps every customer card aligned consistently
+   * without changing the actual Customer ID Card geometry.
+   */
 
-  columnGap: "32px",
+  justifyItems:
+    "stretch",
 
-  boxSizing: "border-box",
+  boxSizing:
+    "border-box",
+
+  /*
+   * The final responsive:
+   *
+   * - column count
+   * - gap
+   *
+   * are injected by EnterpriseCardGrid.tsx.
+   */
 
 };
+
 
 /* ===========================================================
    ITEM
@@ -45,8 +108,25 @@ export const containerStyle: CSSProperties = {
 
 export const itemStyle: CSSProperties = {
 
-  width: "100%",
+  /*
+   * Fill the complete grid track.
+   *
+   * CustomerHanger itself keeps the actual Customer ID Card
+   * width fixed through Customer Responsive Engine tokens.
+   */
 
-  minWidth: 0,
+  width:
+    "100%",
+
+  minWidth:
+    0,
+
+  boxSizing:
+    "border-box",
 
 };
+
+
+/* ===========================================================
+   END
+=========================================================== */

@@ -18,9 +18,11 @@ import {
 } from "./helpers";
 
 import {
-  containerStyle,
-  sidebarStyle,
-  contentStyle,
+  useResponsive,
+} from "../../../../utils/responsive";
+
+import {
+  createCustomerWorkspaceStyles,
 } from "./styles";
 
 import CustomerProfilePanel
@@ -51,31 +53,55 @@ export default function CustomerWorkspace({
   selectedCustomer,
 
 }: CustomerWorkspaceProps) {
-    const [
 
-  workspace,
 
-  setWorkspace,
+  const [
 
-] = useState<
+    workspace,
 
-  | "overview"
+    setWorkspace,
 
-  | "loan"
+  ] = useState<
 
-  | "collection"
+    | "overview"
+    | "loan"
+    | "collection"
+    | "documents"
+    | "timeline"
+    | "reports"
 
-  | "documents"
+  >(
 
-  | "timeline"
+    "overview",
 
-  | "reports"
+  );
 
->(
 
-  "overview",
+  /* =========================================================
+     RESPONSIVE ENGINE
+  ========================================================= */
 
-);
+  const {
+    tokens,
+  } = useResponsive();
+
+
+  /* =========================================================
+     RESPONSIVE STYLES
+  ========================================================= */
+
+  const {
+
+    containerStyle,
+
+    sidebarStyle,
+
+    contentStyle,
+
+  } = createCustomerWorkspaceStyles(
+    tokens,
+  );
+
 
   if (
 

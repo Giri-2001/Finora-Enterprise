@@ -5,6 +5,11 @@
    COMPONENT
 =========================================================== */
 
+
+/* ===========================================================
+   IMPORTS
+=========================================================== */
+
 import {
   CUSTOMER_ACTIONS_TITLE,
 } from "./constants";
@@ -14,15 +19,17 @@ import {
 } from "./helpers";
 
 import {
-  buttonStyle,
-  containerStyle,
-  gridStyle,
-  headerStyle,
+  useResponsive,
+} from "../../../../../../utils/responsive";
+
+import {
+  createCustomerActionsPanelStyles,
 } from "./styles";
 
 import type {
   CustomerActionsPanelProps,
 } from "./types";
+
 
 /* ===========================================================
    COMPONENT
@@ -31,27 +38,119 @@ import type {
 export default function CustomerActionsPanel(
   props: CustomerActionsPanelProps,
 ) {
-  const actions = buildCustomerActions(props);
+
+
+  /* =========================================================
+     RESPONSIVE TOKENS
+  ========================================================= */
+
+  const {
+    tokens,
+  } = useResponsive();
+
+
+  /* =========================================================
+     RESPONSIVE STYLES
+  ========================================================= */
+
+  const styles =
+    createCustomerActionsPanelStyles(
+      tokens,
+    );
+
+
+  /* =========================================================
+     ACTIONS
+  ========================================================= */
+
+  const actions =
+    buildCustomerActions(
+      props,
+    );
+
+
+  /* =========================================================
+     RENDER
+  ========================================================= */
 
   return (
-    <section style={containerStyle}>
-      <div style={headerStyle}>
-        {CUSTOMER_ACTIONS_TITLE}
+
+    <section
+      style={
+        styles.containerStyle
+      }
+    >
+
+      {/* ======================================
+          HEADER
+      ====================================== */}
+
+      <div
+        style={
+          styles.headerStyle
+        }
+      >
+
+        {
+          CUSTOMER_ACTIONS_TITLE
+        }
+
       </div>
 
-      <div style={gridStyle}>
-        {actions.map((action) => (
-          <button
-            key={action.title}
-            onClick={action.onClick}
-            style={buttonStyle}
-          >
-            <span>{action.icon}</span>
 
-            <span>{action.title}</span>
-          </button>
-        ))}
+      {/* ======================================
+          ACTION GRID
+      ====================================== */}
+
+      <div
+        style={
+          styles.gridStyle
+        }
+      >
+
+        {
+          actions.map(
+            (action) => (
+
+              <button
+
+                key={
+                  action.title
+                }
+
+                onClick={
+                  action.onClick
+                }
+
+                style={
+                  styles.buttonStyle
+                }
+
+              >
+
+                <span>
+                  {action.icon}
+                </span>
+
+                <span>
+                  {action.title}
+                </span>
+
+              </button>
+
+            ),
+          )
+        }
+
       </div>
+
     </section>
+
   );
+
 }
+
+
+/* ===========================================================
+   END
+=========================================================== */

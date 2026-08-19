@@ -1,12 +1,49 @@
 /* ===========================================================
    FINORA ENTERPRISE OS™
+
    CUSTOMER HANGER RAIL™
 
-   COMPONENT
+   RESPONSIVE CUSTOMER PRESENTATION
+
+   Module  : Customer Hub
+   Layer   : Sections
+   Version : 2.3.1
+   Status  : Production
+
+   RESPONSIBILITY:
+   - Render the customer hanger rail
+   - Resolve Customer Responsive Engine tokens
+   - Supply responsive grid geometry to EnterpriseCardGrid
+   - Preserve customer selection behavior
+   - Preserve premium hanger presentation
+
+   CUSTOMER GRID CONTRACT:
+   MOBILE   → 1
+   TABLET   → 3
+   LAPTOP   → 5
+   DESKTOP  → 6
+
+   IMPORTANT:
+   - No hard-coded responsive breakpoints
+   - No hard-coded responsive column counts
+   - No hard-coded responsive gaps
+   - Responsive values come from customers.tokens.ts
+   - The rail provides the complete resolved content width
+     to EnterpriseCardGrid.
+=========================================================== */
+
+
+/* ===========================================================
+   IMPORTS
 =========================================================== */
 
 import {
+  useEffect,
   useState,
+} from "react";
+
+import type {
+  CSSProperties,
 } from "react";
 
 import EnterpriseCardGrid
@@ -23,7 +60,13 @@ import {
   containerStyle,
   railWrapperStyle,
   railStyle,
+  getHangerAreaStyle,
 } from "./styles";
+
+import {
+  getCustomerTokens,
+} from "../../../../../utils/responsive/customers/customers.tokens";
+
 
 /* ===========================================================
    COMPONENT
@@ -39,66 +82,208 @@ export default function CustomerHangerRail({
 
 }: CustomerHangerRailProps) {
 
+
+  /* =========================================================
+     CUSTOMER RESPONSIVE TOKENS
+  ========================================================= */
+
   const [
-    activeCardId,
-    setActiveCardId,
-  ] = useState<string | null>(null);
+    customerTokens,
+    setCustomerTokens,
+  ] = useState(() =>
+    getCustomerTokens(
+      typeof window !== "undefined"
+        ? window.innerWidth
+        : 1280,
+    ),
+  );
+
+
+  /* =========================================================
+     RESPONSIVE VIEWPORT UPDATE
+  ========================================================= */
+
+  useEffect(() => {
+
+    if (
+      typeof window ===
+      "undefined"
+    ) {
+
+      return;
+
+    }
+
+
+    function handleViewportChange():
+      void {
+
+      setCustomerTokens(
+        getCustomerTokens(
+          window.innerWidth,
+        ),
+      );
+
+    }
+
+
+    window.addEventListener(
+      "resize",
+      handleViewportChange,
+    );
+
+
+    handleViewportChange();
+
+
+    return () => {
+
+      window.removeEventListener(
+        "resize",
+        handleViewportChange,
+      );
+
+    };
+
+  }, []);
+
+
+  /* =========================================================
+     HANGER AREA
+  ========================================================= */
+
+  const hangerAreaStyle =
+    getHangerAreaStyle(
+      customerTokens,
+    );
+
+
+  /* =========================================================
+     GRID WIDTH CONTRACT
+  ========================================================= */
+
+  const resolvedGridStyle:
+    CSSProperties = {
+
+    width:
+      "100%",
+
+    minWidth:
+      0,
+
+    maxWidth:
+      "100%",
+
+    boxSizing:
+      "border-box",
+
+  };
+
+
+  /* =========================================================
+     SELECTED CUSTOMER
+
+     Selection remains controlled by the parent.
+
+     The value is intentionally consumed here so the rail
+     remains compatible with controlled selection state.
+  ========================================================= */
+
+  void selectedCustomerId;
+
+
+  /* =========================================================
+     UI
+  ========================================================= */
 
   return (
 
-    <section style={containerStyle}>
+    <section
+      style={
+        containerStyle
+      }
+    >
 
-      {/* ==========================================
-          RAIL
-      ========================================== */}
+      {/* =====================================================
+          PREMIUM RAIL
+      ===================================================== */}
 
-      <div style={railWrapperStyle}>
+      <div
+        style={
+          railWrapperStyle
+        }
+      >
 
-        <div style={railStyle} />
+        <div
+          style={
+            railStyle
+          }
+        />
 
-        <EnterpriseCardGrid>
 
-          {customers.map((customer) => (
+        {/* ===================================================
+            RESPONSIVE HANGER AREA
+        =================================================== */}
 
-            <CustomerHanger
+        <div
+          style={
+            hangerAreaStyle
+          }
+        >
 
-              key={customer.id}
+          <div
+            style={
+              resolvedGridStyle
+            }
+          >
 
-              customer={customer}
+            <EnterpriseCardGrid
 
-              flipped={
-                activeCardId === customer.id
+              columns={
+                customerTokens.grid.columns
               }
 
-              onFlip={() => {
+              gap={
+                customerTokens.grid.gap
+              }
 
-                setActiveCardId(
+            >
 
-                  activeCardId === customer.id
+              {customers.map(
+                (
+                  customer,
+                ) => (
 
-                    ? null
+                  <CustomerHanger
 
-                    : customer.id,
+                    key={
+                      customer.id
+                    }
 
-                );
+                    customer={
+                      customer
+                    }
 
-              }}
+                    onClick={(
+                      selected,
+                    ) => {
 
-              onClick={(selected) => {
+                      onCustomerSelect?.(
+                        selected,
+                      );
 
-                onCustomerSelect?.(
+                    }}
 
-                  selected,
+                  />
 
-                );
+                ),
+              )}
 
-              }}
+            </EnterpriseCardGrid>
 
-            />
+          </div>
 
-          ))}
-
-        </EnterpriseCardGrid>
+        </div>
 
       </div>
 
@@ -107,3 +292,8 @@ export default function CustomerHangerRail({
   );
 
 }
+
+
+/* ===========================================================
+   END
+=========================================================== */

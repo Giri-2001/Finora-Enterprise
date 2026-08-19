@@ -1,53 +1,61 @@
 /* ===========================================================
    FINORA ENTERPRISE OS™
-   CUSTOMER HANGER RAIL
+
+   CUSTOMER HANGER RAIL™
 
    HELPERS
+
+   RESPONSIBILITY:
+   - Pure Customer Hanger Rail helper functions
+   - Text normalization only
+   - No responsive logic
+   - No viewport detection
+   - No UI styling
 =========================================================== */
 
-import {
-
-  DEFAULT_TITLE,
-
-  DEFAULT_TOTAL_CUSTOMERS,
-
-} from "./constants";
 
 /* ===========================================================
    BUILD TITLE
 =========================================================== */
 
 export function buildTitle(
-  title?: string,
+  title: string,
 ): string {
 
-  const value = title?.trim();
-
-  return value && value.length > 0
-    ? value
-    : DEFAULT_TITLE;
+  return title.trim();
 
 }
+
 
 /* ===========================================================
    BUILD TOTAL CUSTOMERS
 =========================================================== */
 
 export function buildTotalCustomers(
-  totalCustomers?: number,
+  totalCustomers: number,
 ): number {
 
   if (
-    typeof totalCustomers !== "number"
+    !Number.isFinite(
+      totalCustomers,
+    )
   ) {
 
-    return DEFAULT_TOTAL_CUSTOMERS;
+    return 0;
 
   }
 
+
   return Math.max(
     0,
-    totalCustomers,
+    Math.floor(
+      totalCustomers,
+    ),
   );
 
 }
+
+
+/* ===========================================================
+   END
+=========================================================== */

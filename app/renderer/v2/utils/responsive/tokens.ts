@@ -1,6 +1,6 @@
 /* ===========================================================
-   FINORA ENTERPRISE OS™
-   RESPONSIVE ENGINE™
+   FINORA ENTERPRISE OSï¿½
+   RESPONSIVE ENGINEï¿½
 
    CENTRAL RESPONSIVE TOKENS
 
@@ -8,9 +8,28 @@
    -----------------------------------------------------------
    SINGLE SOURCE OF TRUTH for responsive visual dimensions.
 
-   Components/pages must consume these values instead of
-   independently deciding responsive dimensions.
+   FINORA RESPONSIVE DEVICES
+   -----------------------------------------------------------
+   1. Mobile
+   2. Tablet
+   3. Laptop
+   4. Desktop
+
+   CUSTOMER CARD CONTRACT
+   -----------------------------------------------------------
+   Mobile   ? 1 card
+   Tablet   ? 3 cards
+   Laptop   ? 5 cards
+   Desktop  ? 6 cards
+
+   IMPORTANT
+   -----------------------------------------------------------
+   Customer responsive geometry is controlled here.
+
+   Components must consume these values and must NOT
+   independently decide responsive dimensions.
 =========================================================== */
+
 
 /* ===========================================================
    RESPONSIVE DEVICE PROFILE
@@ -19,29 +38,27 @@
 export type ResponsiveDevice =
   | "mobile"
   | "tablet"
+  | "laptop"
   | "desktop";
+
 
 /* ===========================================================
    RESPONSIVE VIEWPORT PROFILE
 =========================================================== */
 
 export type ResponsiveViewport =
-  | "verySmallMobile"
   | "mobile"
-  | "largeMobile"
   | "tablet"
-  | "smallLaptop"
   | "laptop"
-  | "desktop"
-  | "wideDesktop"
-  | "ultraWide"
-  | "projector";
+  | "desktop";
+
 
 /* ===========================================================
    RESPONSIVE TOKEN GROUP
 =========================================================== */
 
 export interface ResponsiveTokens {
+
   meta: {
     name: string;
     viewport: ResponsiveViewport;
@@ -100,20 +117,20 @@ export interface ResponsiveTokens {
   ========================================================= */
 
   door: {
-  width: number | string;
-  height: number;
-  padding: number;
-  radius: number;
-  gap: number;
-  iconSize: number;
-  iconRadius: number;
-  titleSize: number;
-  subtitleSize: number;
-  statusSize: number;
-  statusPaddingX: number;
-  statusPaddingY: number;
-  statusMinHeight: number;
-};
+    width: number | string;
+    height: number;
+    padding: number;
+    radius: number;
+    gap: number;
+    iconSize: number;
+    iconRadius: number;
+    titleSize: number;
+    subtitleSize: number;
+    statusSize: number;
+    statusPaddingX: number;
+    statusPaddingY: number;
+    statusMinHeight: number;
+  };
 
   panel: {
     padding: number;
@@ -178,7 +195,7 @@ export interface ResponsiveTokens {
     sectionGap: number;
   };
 
-    header: {
+  header: {
     height: number;
     paddingX: number;
     logoHeight: number;
@@ -187,7 +204,7 @@ export interface ResponsiveTokens {
     brandVisible: boolean;
   };
 
-    footer: {
+  footer: {
     height: number;
     minHeight: number;
     paddingX: number;
@@ -198,11 +215,11 @@ export interface ResponsiveTokens {
   };
 
   reception: {
-  titleSize: number;
-  wallLogoSize: number;
-  wallPadding: number;
-  wallGap: number;
-};
+    titleSize: number;
+    wallLogoSize: number;
+    wallPadding: number;
+    wallGap: number;
+  };
 
   sidebar: {
     width: number;
@@ -239,13 +256,21 @@ export interface ResponsiveTokens {
   };
 
   customerCards: {
-    columns: number;
-    width: number;
-    minHeight: number;
-    gap: number;
-    padding: number;
-    radius: number;
-  };
+  columns: number;
+  width: number;
+  minHeight: number;
+  gap: number;
+  padding: number;
+  radius: number;
+  photoSize: number;
+
+  brandSize: number;
+  companySize: number;
+  nameSize: number;
+  phoneSize: number;
+  idSize: number;
+  kycSize: number;
+};
 
   table: {
     rowHeight: number;
@@ -265,7 +290,7 @@ export interface ResponsiveTokens {
     inputGap: number;
   };
 
-    identityForm: {
+  identityForm: {
     wrapperGap: number;
     columnGap: number;
     rowGap: number;
@@ -311,311 +336,21 @@ export interface ResponsiveTokens {
     cardGap: number;
     columns: number;
   };
-
-  projector: {
-    scale: number;
-    pagePadding: number;
-    cardGap: number;
-    titleSize: number;
-    bodySize: number;
-    statusSize: number;
-  };
 }
 
-/* ===========================================================
-   VERY SMALL MOBILE
-   0px - 359px
-=========================================================== */
-
-export const VERY_SMALL_MOBILE_TOKENS: ResponsiveTokens = {
-  meta: {
-    name: "Very Small Mobile",
-    viewport: "verySmallMobile",
-    minWidth: 0,
-    maxWidth: 359,
-    
-  },
-
-  typography: {
-    display: 24,
-    title: 22,
-    heading: 19,
-    subheading: 16,
-    body: 13,
-    label: 12,
-    small: 11,
-    caption: 10,
-    button: 13,
-    input: 13,
-    table: 11,
-    navigation: 12,
-  },
-
-  reception: {
-  titleSize: 14,
-  wallLogoSize: 42,
-  wallPadding: 8,
-  wallGap: 6,
-},
-
-  lineHeight: {
-    display: 1.15,
-    title: 1.2,
-    heading: 1.2,
-    body: 1.45,
-    compact: 1.25,
-  },
-
-  spacing: {
-    page: 10,
-    section: 14,
-    card: 12,
-    control: 8,
-    inline: 6,
-    small: 4,
-    medium: 8,
-    large: 14,
-    xlarge: 18,
-    xxlarge: 24,
-  },
-
-  card: {
-    width: "100%",
-    minWidth: 0,
-    maxWidth: 360,
-    minHeight: 0,
-    padding: 12,
-    radius: 12,
-    gap: 8,
-  },
-
-  door: {
-    width: "100%",
-    height: 150,
-    padding: 16,
-    radius: 12,
-    gap: 8,
-    iconSize: 40,
-    iconRadius: 12,
-    titleSize: 16,
-    subtitleSize: 11,
-    statusSize: 10,
-    statusPaddingX: 10,
-    statusPaddingY: 4,
-    statusMinHeight: 22,
-  },
-
-  panel: {
-    padding: 12,
-    radius: 12,
-    gap: 8,
-    minHeight: 0,
-  },
-
-  border: {
-    width: 1,
-    radius: 12,
-    strongWidth: 1,
-  },
-
-  control: {
-    height: 42,
-    minHeight: 40,
-    radius: 8,
-    paddingX: 10,
-    paddingY: 9,
-    gap: 6,
-  },
-
-  input: {
-    height: 42,
-    minHeight: 40,
-    radius: 8,
-    paddingX: 10,
-    paddingY: 9,
-    fontSize: 13,
-    iconSize: 15,
-  },
-
-  button: {
-    height: 44,
-    minHeight: 42,
-    radius: 8,
-    paddingX: 12,
-    paddingY: 10,
-    fontSize: 13,
-    iconSize: 16,
-  },
-
-  icon: {
-    xs: 12,
-    sm: 14,
-    md: 16,
-    lg: 20,
-    xl: 24,
-  },
-
-  login: {
-    pagePadding: 10,
-    cardWidth: "100%",
-    cardMaxWidth: 340,
-    cardPadding: 16,
-    cardRadius: 12,
-    titleSize: 22,
-    subtitleSize: 13,
-    inputHeight: 42,
-    buttonHeight: 44,
-    sectionGap: 12,
-  },
-
-  header: {
-    height: 82,
-    paddingX: 8,
-    logoHeight: 24,
-    titleSize: 13,
-    iconSize: 16,
-    brandVisible: false,
-  },
-
-    footer: {
-    height: 58,
-    minHeight: 58,
-    paddingX: 10,
-    paddingY: 10,
-    radius: 12,
-    gap: 8,
-    fontSize: 10,
-  },
-
-  sidebar: {
-    width: 0,
-    collapsedWidth: 0,
-    padding: 0,
-    itemHeight: 42,
-    itemGap: 4,
-    iconSize: 18,
-    labelSize: 12,
-  },
-
-  navigation: {
-    height: 52,
-    itemHeight: 42,
-    gap: 4,
-    iconSize: 18,
-    labelSize: 11,
-  },
-
-  layout: {
-    pageGutter: 10,
-    contentGap: 12,
-    cardGap: 8,
-    sectionGap: 14,
-    maxContentWidth: 360,
-    headerHeight: 52,
-    sidebarWidth: 0,
-  },
-
-  grid: {
-    columns: 1,
-    minCardWidth: 0,
-    gap: 8,
-  },
-
-  customerCards: {
-    columns: 1,
-    width: 0,
-    minHeight: 0,
-    gap: 8,
-    padding: 12,
-    radius: 12,
-  },
-
-  table: {
-    rowHeight: 42,
-    compactRowHeight: 36,
-    headerHeight: 40,
-    cellPaddingX: 8,
-    cellPaddingY: 6,
-    fontSize: 11,
-  },
-
-  form: {
-    fieldGap: 4,
-    rowGap: 10,
-    sectionGap: 16,
-    labelSize: 12,
-    labelGap: 4,
-    inputGap: 6,
-  },
-
-    identityForm: {
-    wrapperGap: 10,
-    columnGap: 12,
-    rowGap: 8,
-    fieldGap: 5,
-    labelHeight: 15,
-    labelSize: 9,
-    requiredSize: 10,
-    inputHeight: 38,
-    inputRadius: 10,
-    inputPaddingX: 12,
-    inputFontSize: 11,
-    checkboxSize: 15,
-    checkboxGap: 8,
-    iconSize: 16,
-    iconLeft: 11,
-    iconInputPaddingLeft: 34,
-    noteSize: 8,
-    noteMarginTop: 2,
-  },
-
-  wizard: {
-    maxWidth: 360,
-    padding: 10,
-    headerHeight: 52,
-    progressHeight: 44,
-    contentGap: 12,
-    navigationHeight: 56,
-    stepGap: 4,
-    stepIndicator: 28,
-  },
-
-  modal: {
-    width: 0,
-    maxWidth: 340,
-    padding: 16,
-    radius: 12,
-    gap: 10,
-  },
-
-  dashboard: {
-    maxWidth: 360,
-    padding: 10,
-    cardGap: 8,
-    columns: 1,
-  },
-
-  projector: {
-    scale: 1,
-    pagePadding: 16,
-    cardGap: 12,
-    titleSize: 24,
-    bodySize: 14,
-    statusSize: 12,
-  },
-};
 
 /* ===========================================================
    MOBILE
-   360px - 599px
+   0px - 767px
 =========================================================== */
 
 export const MOBILE_TOKENS: ResponsiveTokens = {
+
   meta: {
     name: "Mobile",
     viewport: "mobile",
-    minWidth: 360,
-    maxWidth: 599,
+    minWidth: 0,
+    maxWidth: 767,
   },
 
   typography: {
@@ -632,13 +367,6 @@ export const MOBILE_TOKENS: ResponsiveTokens = {
     table: 12,
     navigation: 12,
   },
-
-  reception: {
-  titleSize: 18,
-  wallLogoSize: 46,
-  wallPadding: 10,
-  wallGap: 7,
-},
 
   lineHeight: {
     display: 1.15,
@@ -751,13 +479,13 @@ export const MOBILE_TOKENS: ResponsiveTokens = {
   },
 
   header: {
-  height: 82,
-  paddingX: 10,
-  logoHeight: 26,
-  titleSize: 18,
-  iconSize: 17,
-  brandVisible: false,
-},
+    height: 82,
+    paddingX: 10,
+    logoHeight: 26,
+    titleSize: 18,
+    iconSize: 17,
+    brandVisible: false,
+  },
 
   footer: {
     height: 60,
@@ -767,6 +495,13 @@ export const MOBILE_TOKENS: ResponsiveTokens = {
     radius: 14,
     gap: 8,
     fontSize: 11,
+  },
+
+  reception: {
+    titleSize: 18,
+    wallLogoSize: 46,
+    wallPadding: 10,
+    wallGap: 7,
   },
 
   sidebar: {
@@ -803,14 +538,24 @@ export const MOBILE_TOKENS: ResponsiveTokens = {
     gap: 12,
   },
 
-  customerCards: {
-    columns: 1,
-    width: 0,
-    minHeight: 0,
-    gap: 12,
-    padding: 16,
-    radius: 14,
-  },
+  /* MOBILE */
+
+customerCards: {
+  columns: 1,
+  width: 280,
+  minHeight: 0,
+  gap: 12,
+  padding: 16,
+  radius: 14,
+  photoSize: 80,
+
+  brandSize: 12,
+  companySize: 11,
+  nameSize: 16,
+  phoneSize: 11,
+  idSize: 10,
+  kycSize: 10,
+},
 
   table: {
     rowHeight: 48,
@@ -830,7 +575,7 @@ export const MOBILE_TOKENS: ResponsiveTokens = {
     inputGap: 8,
   },
 
-    identityForm: {
+  identityForm: {
     wrapperGap: 10,
     columnGap: 12,
     rowGap: 8,
@@ -876,47 +621,8 @@ export const MOBILE_TOKENS: ResponsiveTokens = {
     cardGap: 12,
     columns: 1,
   },
-
-  projector: {
-    scale: 1,
-    pagePadding: 20,
-    cardGap: 16,
-    titleSize: 28,
-    bodySize: 15,
-    statusSize: 13,
-  },
 };
 
-/* ===========================================================
-   LARGE MOBILE
-   600px - 767px
-=========================================================== */
-
-export const LARGE_MOBILE_TOKENS: ResponsiveTokens = {
-  ...MOBILE_TOKENS,
-
-  meta: {
-    name: "Large Mobile",
-    viewport: "largeMobile",
-    minWidth: 600,
-    maxWidth: 767,
-  },
-
-  card: {
-    ...MOBILE_TOKENS.card,
-    maxWidth: 560,
-  },
-
-  login: {
-    ...MOBILE_TOKENS.login,
-    cardMaxWidth: 560,
-  },
-
-  layout: {
-    ...MOBILE_TOKENS.layout,
-    maxContentWidth: 560,
-  },
-};
 
 /* ===========================================================
    TABLET
@@ -924,6 +630,7 @@ export const LARGE_MOBILE_TOKENS: ResponsiveTokens = {
 =========================================================== */
 
 export const TABLET_TOKENS: ResponsiveTokens = {
+
   meta: {
     name: "Tablet",
     viewport: "tablet",
@@ -945,13 +652,6 @@ export const TABLET_TOKENS: ResponsiveTokens = {
     table: 12,
     navigation: 13,
   },
-
-  reception: {
-  titleSize: 18,
-  wallLogoSize: 48,
-  wallPadding: 10,
-  wallGap: 7,
-},
 
   lineHeight: {
     display: 1.15,
@@ -1069,10 +769,10 @@ export const TABLET_TOKENS: ResponsiveTokens = {
     logoHeight: 32,
     titleSize: 18,
     iconSize: 21,
-    brandVisible: true,
+    brandVisible: false,
   },
 
-    footer: {
+  footer: {
     height: 54,
     minHeight: 54,
     paddingX: 18,
@@ -1080,6 +780,13 @@ export const TABLET_TOKENS: ResponsiveTokens = {
     radius: 14,
     gap: 10,
     fontSize: 13,
+  },
+
+  reception: {
+    titleSize: 18,
+    wallLogoSize: 48,
+    wallPadding: 10,
+    wallGap: 7,
   },
 
   sidebar: {
@@ -1110,20 +817,40 @@ export const TABLET_TOKENS: ResponsiveTokens = {
     sidebarWidth: 0,
   },
 
+  /* =========================================================
+     CUSTOMER GRID
+     TABLET ? 3 CARDS
+  ========================================================= */
+
   grid: {
-    columns: 2,
-    minCardWidth: 260,
-    gap: 16,
+    columns: 3,
+    minCardWidth: 200,
+    gap: 24,
   },
 
-  customerCards: {
-    columns: 2,
-    width: 0,
-    minHeight: 0,
-    gap: 16,
-    padding: 20,
-    radius: 16,
-  },
+  /* =========================================================
+     CUSTOMER CARDS
+     TABLET ? 3 CARDS
+  ========================================================= */
+
+  /* TABLET */
+
+customerCards: {
+  columns: 3,
+  width: 220,
+  minHeight: 0,
+  gap: 16,
+  padding: 20,
+  radius: 16,
+  photoSize: 88,
+
+  brandSize: 13,
+  companySize: 12,
+  nameSize: 17,
+  phoneSize: 11,
+  idSize: 10,
+  kycSize: 10,
+},
 
   table: {
     rowHeight: 50,
@@ -1143,7 +870,7 @@ export const TABLET_TOKENS: ResponsiveTokens = {
     inputGap: 8,
   },
 
-    identityForm: {
+  identityForm: {
     wrapperGap: 12,
     columnGap: 14,
     rowGap: 10,
@@ -1189,28 +916,21 @@ export const TABLET_TOKENS: ResponsiveTokens = {
     cardGap: 16,
     columns: 2,
   },
-
-  projector: {
-    scale: 1.05,
-    pagePadding: 24,
-    cardGap: 20,
-    titleSize: 30,
-    bodySize: 16,
-    statusSize: 14,
-  },
 };
 
+
 /* ===========================================================
-   SMALL LAPTOP
-   1024px - 1279px
+   LAPTOP
+   1024px - 1599px
 =========================================================== */
 
-export const SMALL_LAPTOP_TOKENS: ResponsiveTokens = {
+export const LAPTOP_TOKENS: ResponsiveTokens = {
+
   meta: {
-    name: "Small Laptop",
-    viewport: "smallLaptop",
+    name: "Laptop",
+    viewport: "laptop",
     minWidth: 1024,
-    maxWidth: 1279,
+    maxWidth: 1599,
   },
 
   typography: {
@@ -1228,13 +948,6 @@ export const SMALL_LAPTOP_TOKENS: ResponsiveTokens = {
     navigation: 13,
   },
 
-  reception: {
-  titleSize: 26,
-  wallLogoSize: 52,
-  wallPadding: 12,
-  wallGap: 8,
-},
-
   lineHeight: {
     display: 1.15,
     title: 1.2,
@@ -1244,32 +957,32 @@ export const SMALL_LAPTOP_TOKENS: ResponsiveTokens = {
   },
 
   spacing: {
-    page: 24,
-    section: 24,
-    card: 20,
+    page: 28,
+    section: 26,
+    card: 22,
     control: 14,
     inline: 10,
     small: 8,
     medium: 16,
-    large: 24,
-    xlarge: 32,
-    xxlarge: 44,
+    large: 26,
+    xlarge: 34,
+    xxlarge: 46,
   },
 
   card: {
-    width: 420,
+    width: 440,
     minWidth: 0,
-    maxWidth: 620,
+    maxWidth: 660,
     minHeight: 0,
-    padding: 24,
+    padding: 26,
     radius: 16,
-    gap: 16,
+    gap: 18,
   },
 
   door: {
     width: 300,
-    height: 175,
-    padding: 22,
+    height: 180,
+    padding: 24,
     radius: 15,
     gap: 10,
     iconSize: 46,
@@ -1333,10 +1046,10 @@ export const SMALL_LAPTOP_TOKENS: ResponsiveTokens = {
   },
 
   login: {
-    pagePadding: 24,
-    cardWidth: 420,
-    cardMaxWidth: 620,
-    cardPadding: 26,
+    pagePadding: 28,
+    cardWidth: 440,
+    cardMaxWidth: 660,
+    cardPadding: 28,
     cardRadius: 16,
     titleSize: 30,
     subtitleSize: 15,
@@ -1346,15 +1059,15 @@ export const SMALL_LAPTOP_TOKENS: ResponsiveTokens = {
   },
 
   header: {
-    height: 60,
-    paddingX: 24,
+    height: 62,
+    paddingX: 28,
     logoHeight: 34,
-    titleSize: 18,
+    titleSize: 19,
     iconSize: 22,
     brandVisible: true,
   },
 
-    footer: {
+  footer: {
     height: 58,
     minHeight: 58,
     paddingX: 20,
@@ -1362,6 +1075,13 @@ export const SMALL_LAPTOP_TOKENS: ResponsiveTokens = {
     radius: 14,
     gap: 10,
     fontSize: 13,
+  },
+
+  reception: {
+    titleSize: 26,
+    wallLogoSize: 52,
+    wallPadding: 12,
+    wallGap: 8,
   },
 
   sidebar: {
@@ -1383,29 +1103,53 @@ export const SMALL_LAPTOP_TOKENS: ResponsiveTokens = {
   },
 
   layout: {
-    pageGutter: 24,
-    contentGap: 20,
-    cardGap: 16,
-    sectionGap: 24,
-    maxContentWidth: 1180,
-    headerHeight: 60,
+    pageGutter: 28,
+    contentGap: 22,
+    cardGap: 18,
+    sectionGap: 26,
+    maxContentWidth: 1280,
+    headerHeight: 62,
     sidebarWidth: 220,
   },
 
+  /* =========================================================
+     CUSTOMER GRID
+     LAPTOP ? 5 CARDS
+  ========================================================= */
+
   grid: {
-    columns: 3,
-    minCardWidth: 280,
-    gap: 16,
+    columns: 5,
+    minCardWidth: 200,
+    gap: 24,
   },
 
-  customerCards: {
-    columns: 3,
-    width: 0,
-    minHeight: 0,
-    gap: 16,
-    padding: 20,
-    radius: 16,
-  },
+  /* =========================================================
+     CUSTOMER CARDS
+     LAPTOP ? 5 CARDS
+
+     220px gives the hanger root a real packing width.
+     This prevents the previous zero-width hanger from
+     collapsing the grid layout.
+  ========================================================= */
+
+  /* LAPTOP */
+
+customerCards: {
+  columns: 6,
+  width: 220,
+  minHeight: 300,
+  gap: 20,
+  padding: 24,
+  radius: 16,
+  photoSize: 104,
+
+  brandSize: 13,
+  companySize: 12,
+  nameSize: 18,
+  phoneSize: 11,
+  idSize: 10,
+  kycSize: 10,
+},
 
   table: {
     rowHeight: 50,
@@ -1425,7 +1169,7 @@ export const SMALL_LAPTOP_TOKENS: ResponsiveTokens = {
     inputGap: 8,
   },
 
-    identityForm: {
+  identityForm: {
     wrapperGap: 12,
     columnGap: 14,
     rowGap: 10,
@@ -1447,14 +1191,14 @@ export const SMALL_LAPTOP_TOKENS: ResponsiveTokens = {
   },
 
   wizard: {
-    maxWidth: 1180,
-    padding: 24,
-    headerHeight: 60,
-    progressHeight: 56,
-    contentGap: 20,
-    navigationHeight: 64,
+    maxWidth: 1280,
+    padding: 28,
+    headerHeight: 62,
+    progressHeight: 58,
+    contentGap: 22,
+    navigationHeight: 66,
     stepGap: 10,
-    stepIndicator: 32,
+    stepIndicator: 33,
   },
 
   modal: {
@@ -1466,84 +1210,6 @@ export const SMALL_LAPTOP_TOKENS: ResponsiveTokens = {
   },
 
   dashboard: {
-    maxWidth: 1240,
-    padding: 24,
-    cardGap: 16,
-    columns: 3,
-  },
-
-  projector: {
-    scale: 1.1,
-    pagePadding: 28,
-    cardGap: 20,
-    titleSize: 32,
-    bodySize: 16,
-    statusSize: 14,
-  },
-};
-
-/* ===========================================================
-   LAPTOP
-   1280px - 1599px
-=========================================================== */
-
-export const LAPTOP_TOKENS: ResponsiveTokens = {
-  ...SMALL_LAPTOP_TOKENS,
-
-  meta: {
-    name: "Laptop",
-    viewport: "laptop",
-    minWidth: 1280,
-    maxWidth: 1599,
-  },
-
-  card: {
-    ...SMALL_LAPTOP_TOKENS.card,
-    width: 440,
-    maxWidth: 660,
-    padding: 26,
-  },
-
-  door: {
-    ...SMALL_LAPTOP_TOKENS.door,
-    width: 320,
-    height: 180,
-    padding: 24,
-  },
-
-  login: {
-    ...SMALL_LAPTOP_TOKENS.login,
-    pagePadding: 28,
-    cardWidth: 440,
-    cardMaxWidth: 660,
-    cardPadding: 28,
-  },
-
-  layout: {
-    ...SMALL_LAPTOP_TOKENS.layout,
-    pageGutter: 28,
-    contentGap: 22,
-    cardGap: 18,
-    sectionGap: 26,
-    maxContentWidth: 1280,
-  },
-
-  grid: {
-    columns: 4,
-    minCardWidth: 280,
-    gap: 18,
-  },
-
-  customerCards: {
-    columns: 4,
-    width: 0,
-    minHeight: 0,
-    gap: 18,
-    padding: 22,
-    radius: 16,
-  },
-
-  dashboard: {
     maxWidth: 1360,
     padding: 28,
     cardGap: 18,
@@ -1551,17 +1217,19 @@ export const LAPTOP_TOKENS: ResponsiveTokens = {
   },
 };
 
+
 /* ===========================================================
    DESKTOP
-   1600px - 1919px
+   1600px+
 =========================================================== */
 
 export const DESKTOP_TOKENS: ResponsiveTokens = {
+
   meta: {
     name: "Desktop",
     viewport: "desktop",
     minWidth: 1600,
-    maxWidth: 1919,
+    maxWidth: null,
   },
 
   typography: {
@@ -1578,13 +1246,6 @@ export const DESKTOP_TOKENS: ResponsiveTokens = {
     table: 13,
     navigation: 14,
   },
-
-  reception: {
-  titleSize: 28,
-  wallLogoSize: 56,
-  wallPadding: 14,
-  wallGap: 8,
-},
 
   lineHeight: {
     display: 1.15,
@@ -1705,7 +1366,7 @@ export const DESKTOP_TOKENS: ResponsiveTokens = {
     brandVisible: true,
   },
 
-    footer: {
+  footer: {
     height: 60,
     minHeight: 60,
     paddingX: 24,
@@ -1713,6 +1374,13 @@ export const DESKTOP_TOKENS: ResponsiveTokens = {
     radius: 16,
     gap: 10,
     fontSize: 14,
+  },
+
+  reception: {
+    titleSize: 28,
+    wallLogoSize: 56,
+    wallPadding: 14,
+    wallGap: 8,
   },
 
   sidebar: {
@@ -1743,20 +1411,44 @@ export const DESKTOP_TOKENS: ResponsiveTokens = {
     sidebarWidth: 250,
   },
 
+  /* =========================================================
+     CUSTOMER GRID
+     DESKTOP ? 6 CARDS
+  ========================================================= */
+
   grid: {
-    columns: 5,
-    minCardWidth: 260,
+    columns: 6,
+    minCardWidth: 200,
     gap: 20,
   },
 
-  customerCards: {
-    columns: 5,
-    width: 0,
-    minHeight: 0,
-    gap: 20,
-    padding: 24,
-    radius: 16,
-  },
+  /* =========================================================
+     CUSTOMER CARDS
+     DESKTOP ? 6 CARDS
+
+     210px allows six hanger columns to fit inside the
+     resolved desktop content area together with the
+     responsive 20px grid gap and page padding.
+  ========================================================= */
+
+  /* DESKTOP */
+
+customerCards: {
+  columns: 6,
+  width: 210,
+  minHeight: 0,
+  gap: 20,
+  padding: 24,
+  radius: 16,
+  photoSize: 104,
+
+  brandSize: 13,
+  companySize: 12,
+  nameSize: 19,
+  phoneSize: 12,
+  idSize: 11,
+  kycSize: 11,
+},
 
   table: {
     rowHeight: 52,
@@ -1776,7 +1468,7 @@ export const DESKTOP_TOKENS: ResponsiveTokens = {
     inputGap: 10,
   },
 
-    identityForm: {
+  identityForm: {
     wrapperGap: 14,
     columnGap: 16,
     rowGap: 11,
@@ -1822,422 +1514,6 @@ export const DESKTOP_TOKENS: ResponsiveTokens = {
     cardGap: 20,
     columns: 5,
   },
-
-  projector: {
-    scale: 1.15,
-    pagePadding: 32,
-    cardGap: 24,
-    titleSize: 36,
-    bodySize: 18,
-    statusSize: 15,
-  },
-};
-
-/* ===========================================================
-   WIDE DESKTOP
-   1920px - 2559px
-=========================================================== */
-
-export const WIDE_DESKTOP_TOKENS: ResponsiveTokens = {
-  ...DESKTOP_TOKENS,
-
-  meta: {
-    name: "Wide Desktop",
-    viewport: "wideDesktop",
-    minWidth: 1920,
-    maxWidth: 2559,
-  },
-
-  typography: {
-    ...DESKTOP_TOKENS.typography,
-    display: 40,
-    title: 34,
-    heading: 28,
-    subheading: 22,
-  },
-
-  layout: {
-    ...DESKTOP_TOKENS.layout,
-    pageGutter: 40,
-    contentGap: 28,
-    cardGap: 24,
-    sectionGap: 32,
-    maxContentWidth: 1760,
-  },
-
-  grid: {
-    columns: 6,
-    minCardWidth: 260,
-    gap: 24,
-  },
-
-  customerCards: {
-    columns: 6,
-    width: 0,
-    minHeight: 0,
-    gap: 24,
-    padding: 26,
-    radius: 18,
-  },
-
-  dashboard: {
-    maxWidth: 1840,
-    padding: 40,
-    cardGap: 24,
-    columns: 6,
-  },
-
-  projector: {
-    scale: 1.25,
-    pagePadding: 40,
-    cardGap: 28,
-    titleSize: 40,
-    bodySize: 20,
-    statusSize: 16,
-  },
-};
-
-/* ===========================================================
-   ULTRA WIDE
-   2560px - 3839px
-=========================================================== */
-
-export const ULTRA_WIDE_TOKENS: ResponsiveTokens = {
-  ...WIDE_DESKTOP_TOKENS,
-
-  meta: {
-    name: "Ultra Wide",
-    viewport: "ultraWide",
-    minWidth: 2560,
-    maxWidth: 3839,
-  },
-
-  typography: {
-    ...WIDE_DESKTOP_TOKENS.typography,
-    display: 46,
-    title: 38,
-    heading: 30,
-    subheading: 24,
-    body: 17,
-  },
-
-  layout: {
-    ...WIDE_DESKTOP_TOKENS.layout,
-    pageGutter: 48,
-    contentGap: 32,
-    cardGap: 28,
-    sectionGap: 36,
-    maxContentWidth: 2200,
-  },
-
-  grid: {
-    columns: 7,
-    minCardWidth: 270,
-    gap: 28,
-  },
-
-  customerCards: {
-    columns: 7,
-    width: 0,
-    minHeight: 0,
-    gap: 28,
-    padding: 28,
-    radius: 18,
-  },
-
-  dashboard: {
-    maxWidth: 2280,
-    padding: 48,
-    cardGap: 28,
-    columns: 7,
-  },
-
-  projector: {
-    scale: 1.4,
-    pagePadding: 48,
-    cardGap: 32,
-    titleSize: 46,
-    bodySize: 22,
-    statusSize: 18,
-  },
-};
-
-/* ===========================================================
-   PROJECTOR / TV
-   3840px+
-=========================================================== */
-
-export const PROJECTOR_TV_TOKENS: ResponsiveTokens = {
-  ...ULTRA_WIDE_TOKENS,
-
-  meta: {
-    name: "Projector / TV",
-    viewport: "projector",
-    minWidth: 3840,
-    maxWidth: null,
-  },
-
-  typography: {
-    ...ULTRA_WIDE_TOKENS.typography,
-    display: 56,
-    title: 44,
-    heading: 34,
-    subheading: 26,
-    body: 19,
-    label: 16,
-    small: 14,
-    caption: 13,
-    button: 16,
-    input: 16,
-    table: 15,
-    navigation: 16,
-  },
-
-  lineHeight: {
-    display: 1.15,
-    title: 1.2,
-    heading: 1.2,
-    body: 1.55,
-    compact: 1.3,
-  },
-
-  spacing: {
-    page: 64,
-    section: 48,
-    card: 36,
-    control: 24,
-    inline: 16,
-    small: 12,
-    medium: 24,
-    large: 40,
-    xlarge: 56,
-    xxlarge: 72,
-  },
-
-  card: {
-    width: 520,
-    minWidth: 0,
-    maxWidth: 900,
-    minHeight: 0,
-    padding: 36,
-    radius: 22,
-    gap: 28,
-  },
-
-  door: {
-    ...ULTRA_WIDE_TOKENS.door,
-    width: 620,
-    height: 220,
-    padding: 36,
-    radius: 22,
-    gap: 16,
-    iconSize: 56,
-    iconRadius: 18,
-    titleSize: 24,
-    subtitleSize: 15,
-    statusSize: 14,
-    statusPaddingX: 16,
-    statusPaddingY: 6,
-  },
-
-  panel: {
-    padding: 36,
-    radius: 22,
-    gap: 28,
-    minHeight: 0,
-  },
-
-  border: {
-    width: 1,
-    radius: 22,
-    strongWidth: 2,
-  },
-
-  control: {
-    height: 54,
-    minHeight: 50,
-    radius: 12,
-    paddingX: 20,
-    paddingY: 14,
-    gap: 14,
-  },
-
-  input: {
-    height: 52,
-    minHeight: 50,
-    radius: 11,
-    paddingX: 16,
-    paddingY: 13,
-    fontSize: 16,
-    iconSize: 21,
-  },
-
-  button: {
-    height: 54,
-    minHeight: 50,
-    radius: 12,
-    paddingX: 20,
-    paddingY: 14,
-    fontSize: 16,
-    iconSize: 22,
-  },
-
-  icon: {
-    xs: 16,
-    sm: 20,
-    md: 24,
-    lg: 30,
-    xl: 38,
-  },
-
-  login: {
-    pagePadding: 64,
-    cardWidth: 560,
-    cardMaxWidth: 900,
-    cardPadding: 40,
-    cardRadius: 22,
-    titleSize: 44,
-    subtitleSize: 19,
-    inputHeight: 52,
-    buttonHeight: 54,
-    sectionGap: 28,
-  },
-
-  header: {
-    height: 80,
-    paddingX: 64,
-    logoHeight: 46,
-    titleSize: 26,
-    iconSize: 30,
-    brandVisible: true,
-  },
-
-    footer: {
-    height: 72,
-    minHeight: 72,
-    paddingX: 36,
-    paddingY: 14,
-    radius: 20,
-    gap: 14,
-    fontSize: 16,
-  },
-
-  sidebar: {
-    width: 320,
-    collapsedWidth: 84,
-    padding: 20,
-    itemHeight: 56,
-    itemGap: 10,
-    iconSize: 26,
-    labelSize: 16,
-  },
-
-  navigation: {
-    height: 80,
-    itemHeight: 56,
-    gap: 12,
-    iconSize: 26,
-    labelSize: 16,
-  },
-
-  layout: {
-    pageGutter: 64,
-    contentGap: 36,
-    cardGap: 32,
-    sectionGap: 48,
-    maxContentWidth: 3200,
-    headerHeight: 80,
-    sidebarWidth: 320,
-  },
-
-  grid: {
-    columns: 8,
-    minCardWidth: 300,
-    gap: 32,
-  },
-
-  customerCards: {
-    columns: 8,
-    width: 0,
-    minHeight: 0,
-    gap: 32,
-    padding: 36,
-    radius: 22,
-  },
-
-  table: {
-    rowHeight: 64,
-    compactRowHeight: 56,
-    headerHeight: 60,
-    cellPaddingX: 18,
-    cellPaddingY: 12,
-    fontSize: 15,
-  },
-
-  form: {
-    fieldGap: 10,
-    rowGap: 24,
-    sectionGap: 36,
-    labelSize: 16,
-    labelGap: 8,
-    inputGap: 12,
-  },
-
-    identityForm: {
-    wrapperGap: 18,
-    columnGap: 20,
-    rowGap: 14,
-    fieldGap: 9,
-    labelHeight: 20,
-    labelSize: 14,
-    requiredSize: 15,
-    inputHeight: 52,
-    inputRadius: 12,
-    inputPaddingX: 17,
-    inputFontSize: 16,
-    checkboxSize: 21,
-    checkboxGap: 12,
-    iconSize: 21,
-    iconLeft: 15,
-    iconInputPaddingLeft: 43,
-    noteSize: 12,
-    noteMarginTop: 4,
-  },
-
-  wizard: {
-    maxWidth: 3200,
-    padding: 48,
-    headerHeight: 80,
-    progressHeight: 72,
-    contentGap: 32,
-    navigationHeight: 84,
-    stepGap: 16,
-    stepIndicator: 42,
-  },
-
-  modal: {
-    width: 760,
-    maxWidth: 1100,
-    padding: 36,
-    radius: 22,
-    gap: 24,
-  },
-
-  dashboard: {
-    maxWidth: 3200,
-    padding: 64,
-    cardGap: 32,
-    columns: 8,
-  },
-
-  projector: {
-    scale: 1.6,
-    pagePadding: 64,
-    cardGap: 36,
-    titleSize: 56,
-    bodySize: 22,
-    statusSize: 19,
-  },
 };
 
 /* ===========================================================
@@ -2247,66 +1523,118 @@ export const PROJECTOR_TV_TOKENS: ResponsiveTokens = {
 export function getResponsiveTokens(
   device: ResponsiveDevice,
 ): ResponsiveTokens {
-  if (device === "mobile") {
+
+  if (
+    device === "mobile"
+  ) {
+
     return MOBILE_TOKENS;
+
   }
 
-  if (device === "tablet") {
+  if (
+    device === "tablet"
+  ) {
+
     return TABLET_TOKENS;
+
+  }
+
+  if (
+    device === "laptop"
+  ) {
+
+    return LAPTOP_TOKENS;
+
   }
 
   return DESKTOP_TOKENS;
+
 }
+
 
 /* ===========================================================
    VIEWPORT TOKEN RESOLVER
+
+   FINORA OFFICIAL BREAKPOINTS
+   -----------------------------------------------------------
+   Mobile   : 0 - 767
+   Tablet   : 768 - 1023
+   Laptop   : 1024 - 1599
+   Desktop  : 1600+
 =========================================================== */
 
 export function getResponsiveViewportTokens(
   width: number,
 ): ResponsiveTokens {
+
   if (
     !Number.isFinite(width) ||
-    width < 360
+    width < 768
   ) {
-    return VERY_SMALL_MOBILE_TOKENS;
-  }
 
-  if (width < 600) {
     return MOBILE_TOKENS;
+
   }
 
-  if (width < 768) {
-    return LARGE_MOBILE_TOKENS;
-  }
+  if (
+    width < 1024
+  ) {
 
-  if (width < 1024) {
     return TABLET_TOKENS;
+
   }
 
-  if (width < 1280) {
-    return SMALL_LAPTOP_TOKENS;
-  }
+  if (
+    width < 1600
+  ) {
 
-  if (width < 1600) {
     return LAPTOP_TOKENS;
+
   }
 
-  if (width < 1920) {
-    return DESKTOP_TOKENS;
-  }
+  return DESKTOP_TOKENS;
 
-  if (width < 2560) {
-    return WIDE_DESKTOP_TOKENS;
-  }
-
-  if (width < 3840) {
-    return ULTRA_WIDE_TOKENS;
-  }
-
-  return PROJECTOR_TV_TOKENS;
 }
+
+
+/* ===========================================================
+   CUSTOMER RESPONSIVE TOKEN RESOLVER
+
+   CUSTOMER CARD CONTRACT
+   -----------------------------------------------------------
+   Mobile   ? 1
+   Tablet   ? 3
+   Laptop   ? 5
+   Desktop  ? 6
+
+   This is the public resolver consumed by:
+
+   CustomerHanger.tsx
+   CustomerHangerRail.tsx
+
+   It delegates completely to the central viewport
+   responsive engine.
+=========================================================== */
+
+export function getCustomerTokens(
+  width: number,
+): ResponsiveTokens {
+
+  return getResponsiveViewportTokens(
+    width,
+  );
+
+}
+
 
 /* ===========================================================
    END
 =========================================================== */
+/* ===========================================================
+   DEFAULT CUSTOMER TOKENS
+=========================================================== */
+
+export const DEFAULT_CUSTOMER_TOKENS:
+  ResponsiveTokens =
+    LAPTOP_TOKENS;

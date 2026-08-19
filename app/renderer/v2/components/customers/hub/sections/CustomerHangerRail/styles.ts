@@ -1,118 +1,222 @@
 /* ===========================================================
    FINORA ENTERPRISE OS™
+
    CUSTOMER HANGER RAIL™
 
    PREMIUM ENTERPRISE STYLES
+
+   RESPONSIBILITY:
+   - Hanger rail presentation only
+   - Structural layout only
+   - Responsive values are supplied by the
+     Customer Responsive Engine
+   - No device detection
+   - No hard-coded responsive sizing decisions
+
+   IMPORTANT:
+   - Customer responsive spacing comes from
+     customers.tokens.ts
+   - Customer Responsive Engine resolves the
+     correct viewport values before presentation
+   - This style module must not decide mobile,
+     tablet, laptop or desktop values independently
 =========================================================== */
 
-import type { CSSProperties } from "react";
+
+/* ===========================================================
+   IMPORTS
+=========================================================== */
+
+import type {
+  CSSProperties,
+} from "react";
+
+import type {
+  ResponsiveTokens,
+} from "../../../../../utils/responsive/tokens";
 
 import {
   RAIL_HEIGHT,
 } from "./constants";
 
+
 /* ===========================================================
    ROOT
 =========================================================== */
 
-export const containerStyle: CSSProperties = {
+export const containerStyle:
+  CSSProperties = {
 
-  display: "flex",
+  display:
+    "flex",
 
-  flexDirection: "column",
+  flexDirection:
+    "column",
 
-  width: "100%",
+  width:
+    "100%",
 
-  gap: "8px",
+  margin:
+    0,
 
-  margin: 0,
+  overflow:
+    "visible",
 
-  overflow: "visible",
+  boxSizing:
+    "border-box",
 
 };
+
 
 /* ===========================================================
-   UNUSED (Compatibility)
+   UNUSED
+   Compatibility exports
 =========================================================== */
 
-export const headerStyle: CSSProperties = {
+export const headerStyle:
+  CSSProperties = {
 
-  display: "none",
-
-};
-
-export const titleStyle: CSSProperties = {
-
-  display: "none",
+  display:
+    "none",
 
 };
 
-export const countStyle: CSSProperties = {
 
-  display: "none",
+export const titleStyle:
+  CSSProperties = {
+
+  display:
+    "none",
 
 };
+
+
+export const countStyle:
+  CSSProperties = {
+
+  display:
+    "none",
+
+};
+
 
 /* ===========================================================
-   TOP RAIL
+   TOP RAIL WRAPPER
 =========================================================== */
 
-export const railWrapperStyle: CSSProperties = {
+export const railWrapperStyle:
+  CSSProperties = {
 
-  width: "100%",
+  width:
+    "100%",
 
-  display: "flex",
+  display:
+    "flex",
 
-  flexDirection: "column",
+  flexDirection:
+    "column",
 
-  gap: "4px",
+  gap:
+    4,
+
+  boxSizing:
+    "border-box",
 
 };
+
 
 /* ===========================================================
    STEEL RAIL
 =========================================================== */
 
-export const railStyle: CSSProperties = {
+export const railStyle:
+  CSSProperties = {
 
-  width: "100%",
+  width:
+    "100%",
 
-  height: "3px",
+  height:
+    RAIL_HEIGHT,
 
-  borderRadius: "999px",
+  flexShrink:
+    0,
+
+  borderRadius:
+    "999px",
 
   background:
-"linear-gradient(90deg, transparent, rgba(246,213,138,.95), transparent)",
+    "linear-gradient(90deg, transparent, rgba(246,213,138,.95), transparent)",
 
   boxShadow:
-"0 4px 14px rgba(212,175,55,.35)",
+    "0 4px 14px rgba(212,175,55,.35)",
 
 };
+
 
 /* ===========================================================
    HANGER AREA
 =========================================================== */
 
-export const hangerAreaStyle: CSSProperties = {
+/*
+ * IMPORTANT:
+ *
+ * Do not place values such as:
+ *
+ *   gap: "clamp(...)"
+ *   maxWidth: "1400px"
+ *   padding: "0 16px"
+ *
+ * here.
+ *
+ * Those are responsive presentation decisions.
+ *
+ * CustomerHangerRail receives the resolved
+ * Customer Responsive Engine tokens and applies
+ * them through getHangerAreaStyle().
+ */
 
-  display: "flex",
+export function getHangerAreaStyle(
+  tokens:
+    ResponsiveTokens,
+): CSSProperties {
 
-  justifyContent: "center",
+  return {
 
-  alignItems: "flex-start",
+    display:
+      "flex",
 
-  gap: "clamp(24px,4vw,70px)",
+    justifyContent:
+      "center",
 
-  width: "100%",
+    alignItems:
+      "flex-start",
 
-  maxWidth: "1400px",
+    gap:
+      tokens.card.gap,
 
-  margin: "0 auto",
+       width:
+      "100%",
 
-  overflow: "visible",
+    maxWidth:
+      "none",
 
-  padding: "0 16px",
+    margin:
+      0,
 
-  boxSizing: "border-box",
+    overflow:
+      "visible",
 
-};
+    padding:
+      0,
+
+    boxSizing:
+      "border-box",
+
+  };
+
+}
+
+
+/* ===========================================================
+   END
+=========================================================== */

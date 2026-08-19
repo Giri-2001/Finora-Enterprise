@@ -7,15 +7,48 @@
    -----------------------------------------------------------
    Responsibility:
    - Present the reusable FINORA Customer ID Card
+   - Resolve the central Customer Responsive Engine tokens
+   - Pass resolved tokens to CustomerIdCard
    - Add premium hanger presentation
    - No flip
    - No back card
    - No customer navigation
    - No business logic
+
+   RESPONSIVE CONTRACT
+   -----------------------------------------------------------
+   - Customer Responsive Engine remains the single source
+     of truth for responsive dimensions.
+   - This component resolves viewport tokens through the
+     central getCustomerTokens() resolver.
+   - CustomerIdCard receives the resolved token set.
+   - No responsive dimensions are defined here.
 =========================================================== */
+
+
+/* ===========================================================
+   IMPORTS
+=========================================================== */
+
+import {
+  useEffect,
+  useState,
+} from "react";
+
 
 import CustomerIdCard
   from "../../../hub/cards/CustomerIdCard/CustomerIdCard";
+
+
+import {
+  getCustomerTokens,
+} from "../../../../../utils/responsive/customers/customers.tokens";
+
+
+import type {
+  ResponsiveTokens,
+} from "../../../../../utils/responsive/customers/customers.tokens";
+
 
 import {
   containerStyle,
@@ -26,6 +59,7 @@ import {
   cardHolderStyle,
   bottomRailStyle,
 } from "./styles";
+
 
 /* ===========================================================
    TYPES
@@ -45,6 +79,31 @@ export interface CustomerIdentityHangerProps {
 
 }
 
+
+/* ===========================================================
+   RESPONSIVE TOKEN RESOLUTION
+=========================================================== */
+
+function resolveCustomerTokens(): ResponsiveTokens {
+
+  if (
+    typeof window === "undefined"
+  ) {
+
+    return getCustomerTokens(
+      1024,
+    );
+
+  }
+
+
+  return getCustomerTokens(
+    window.innerWidth,
+  );
+
+}
+
+
 /* ===========================================================
    COMPONENT
 =========================================================== */
@@ -63,6 +122,75 @@ export default function CustomerIdentityHanger({
 
 }: CustomerIdentityHangerProps) {
 
+
+  /* =========================================================
+     RESPONSIVE ENGINE
+
+     The viewport is resolved through the central customer
+     Responsive Engine.
+
+     No breakpoint values are defined here.
+
+     This component only consumes the public resolver.
+  ========================================================= */
+
+  const [
+    responsiveTokens,
+    setResponsiveTokens,
+  ] = useState<ResponsiveTokens>(
+    resolveCustomerTokens,
+  );
+
+
+  /* =========================================================
+     VIEWPORT CHANGE HANDLING
+
+     Re-resolve the central token set whenever the Electron
+     window changes size.
+
+     IMPORTANT:
+     - No responsive dimensions are calculated here.
+     - Breakpoint rules remain exclusively inside
+       customers.tokens.ts.
+  ========================================================= */
+
+  useEffect(
+    () => {
+
+      const handleResize =
+        () => {
+
+          setResponsiveTokens(
+            resolveCustomerTokens(),
+          );
+
+        };
+
+
+      window.addEventListener(
+        "resize",
+        handleResize,
+      );
+
+
+      return () => {
+
+        window.removeEventListener(
+          "resize",
+          handleResize,
+        );
+
+      };
+
+    },
+    [],
+  );
+
+
+  /* =========================================================
+     UI
+  ========================================================= */
+
   return (
 
     <div
@@ -77,6 +205,7 @@ export default function CustomerIdentityHanger({
         style={pinStyle}
       />
 
+
       {/* ===================================================
           ROPE
       =================================================== */}
@@ -84,6 +213,7 @@ export default function CustomerIdentityHanger({
       <div
         style={ropeStyle}
       />
+
 
       {/* ===================================================
           METAL CONNECTOR
@@ -93,6 +223,7 @@ export default function CustomerIdentityHanger({
         style={connectorStyle}
       />
 
+
       {/* ===================================================
           HANGER
       =================================================== */}
@@ -100,6 +231,7 @@ export default function CustomerIdentityHanger({
       <div
         style={hangerStyle}
       />
+
 
       {/* ===================================================
           FRONT ID CARD
@@ -131,9 +263,14 @@ export default function CustomerIdentityHanger({
             kycVerified
           }
 
+          responsiveTokens={
+            responsiveTokens
+          }
+
         />
 
       </div>
+
 
       {/* ===================================================
           FINISHING RAIL
