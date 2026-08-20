@@ -1114,11 +1114,11 @@ export const LAPTOP_TOKENS: ResponsiveTokens = {
 
   /* =========================================================
      CUSTOMER GRID
-     LAPTOP ? 5 CARDS
+     LAPTOP ? 6 CARDS
   ========================================================= */
 
   grid: {
-    columns: 5,
+    columns: 6,
     minCardWidth: 200,
     gap: 24,
   },

@@ -10,23 +10,35 @@
 //
 // RESPONSIBILITY:
 //
-// - Provide two completely separate login paths
+// - Provide one clean login surface for Owner and Customer
+// - Owner selects Local / USB / Cloud storage
+// - Customer selects Customer ID / Mobile OTP login
 // - USB Login requires a detected FINORA Pendrive
-// - Normal Login does not require a USB
-// - Select the correct V2 storage mode before opening the app
-// - Require User ID + Password in both paths
-// - Preserve existing authStore authentication
-// - Monitor USB connection state
+// - Local Owner Login uses the existing authStore authentication
+// - Cloud / Customer flows are prepared as non-editable placeholders
+// - Forgot Password entry points are prepared for every login path
+// - Preserve existing storage mode activation and USB monitoring
 // - Consume the FINORA Responsive Engine
+// - Use the installed Lucide icon system
+// - Provide five compact premium login theme selectors
+// - Keep theme switching local to the Login surface for now
+//
+// SECURITY:
+//
+// - USB presence alone NEVER authenticates a user.
+// - USB Owner Login requires USB + User ID + Password.
+// - Local Owner Login does not require USB.
+// - Cloud Owner Login is UI-ready only until cloud wiring is enabled.
+// - Customer Login is UI-ready only until customer authentication is enabled.
+// - USB Login selects StorageMode.USB.
+// - Local Login selects StorageMode.LOCAL.
 //
 // RESPONSIVE RULE:
 //
 // - No responsive dimensions live in this component.
 // - No inline responsive CSS is allowed.
-// - All responsive presentation is supplied by Login.styles.ts.
-// - Login.styles.ts consumes the central Responsive Engine.
-// - Future responsive changes belong inside:
-//   app/renderer/v2/utils/responsive/
+// - All presentation comes from Login.styles.ts.
+// - Responsive values come from the central Responsive Engine.
 //
 // ============================================================
 
@@ -35,10 +47,32 @@
 // IMPORTS
 // ============================================================
 
+import type {
+  KeyboardEvent as ReactKeyboardEvent,
+} from "react";
+
 import {
   useEffect,
+  useRef,
   useState,
 } from "react";
+
+import {
+  ChevronDown,
+  Eye,
+  EyeOff,
+  Info,
+  KeyRound,
+  LockKeyhole,
+  MessageCircle,
+  ShieldCheck,
+  Smartphone,
+  UserRound,
+  UsersRound,
+  Usb,
+  Cloud,
+  HardDrive,
+} from "lucide-react";
 
 import {
   login,
@@ -62,7 +96,14 @@ import {
   getLoginStyles,
   getUsbStatusStyle,
   getUsbStatusIndicatorStyle,
+  getLoginTheme,
+  LOGIN_THEME_OPTIONS,
+  type LoginThemeId,
+  getLoginThemeSwatchStyle,
 } from "./Login.styles";
+
+import finoraLogo
+  from "../../app/assets/finoraenterprise.png";
 
 
 // ============================================================
@@ -77,10 +118,20 @@ type LoginProps = {
 };
 
 
-type LoginMode =
-  | "chooser"
+type LoginRole =
+  | "owner"
+  | "customer";
+
+
+type OwnerStorage =
+  | "local"
   | "usb"
-  | "normal";
+  | "cloud";
+
+
+type CustomerLoginMethod =
+  | "customerId"
+  | "mobile";
 
 
 type UsbStatus = {
@@ -205,10 +256,81 @@ export default function Login({
   const responsive =
     useResponsive();
 
+
+  // ==========================================================
+  // LOGIN THEME STATE
+  // ==========================================================
+
+  const [
+    loginThemeId,
+    setLoginThemeId,
+  ] = useState<LoginThemeId>(
+    "imperial-gold",
+  );
+
+
+  const activeLoginTheme =
+    getLoginTheme(
+      loginThemeId,
+    );
+
+
   const loginStyles =
     getLoginStyles(
       responsive,
+      activeLoginTheme,
     );
+
+
+  // ==========================================================
+  // ROLE STATE
+  // ==========================================================
+
+  const [
+    loginRole,
+    setLoginRole,
+  ] = useState<LoginRole>(
+    "owner",
+  );
+
+
+  // ==========================================================
+  // OWNER STORAGE STATE
+  // ==========================================================
+
+  const [
+    ownerStorage,
+    setOwnerStorage,
+  ] = useState<OwnerStorage>(
+    "local",
+  );
+
+
+  // ==========================================================
+  // CUSTOMER LOGIN METHOD
+  // ==========================================================
+
+  const [
+    customerLoginMethod,
+    setCustomerLoginMethod,
+  ] = useState<CustomerLoginMethod>(
+    "customerId",
+  );
+
+
+  // ==========================================================
+  // DROPDOWN STATE
+  // ==========================================================
+
+  const [
+    openDropdown,
+    setOpenDropdown,
+  ] = useState<
+    "role" | "storage" | "customerMethod" | null
+  >(null);
+
+  const dropdownRef =
+    useRef<HTMLDivElement>(null);
 
 
   // ==========================================================
@@ -226,22 +348,29 @@ export default function Login({
   ] = useState("");
 
   const [
+    mobileNumber,
+    setMobileNumber,
+  ] = useState("");
+
+  const [
+    otp,
+    setOtp,
+  ] = useState("");
+
+  const [
     error,
     setError,
   ] = useState("");
 
 
   // ==========================================================
-  // LOGIN MODE
+  // PASSWORD VISIBILITY
   // ==========================================================
 
   const [
-    loginMode,
-    setLoginMode,
-  ] =
-    useState<LoginMode>(
-      "chooser",
-    );
+    showPassword,
+    setShowPassword,
+  ] = useState(false);
 
 
   // ==========================================================
@@ -313,20 +442,15 @@ export default function Login({
 
           if (active) {
 
-            setUsbAvailable(
-              false,
-            );
+            setUsbAvailable(false);
 
             setUsbMessage(
               "FINORA USB bridge is unavailable.",
             );
 
-
             if (initialCheck) {
 
-              setUsbChecking(
-                false,
-              );
+              setUsbChecking(false);
 
             }
 
@@ -342,23 +466,18 @@ export default function Login({
           const status =
             await bridge.getStatus();
 
-
           if (!active) {
 
             return;
 
           }
 
-
           const available =
-            status.availability ===
-            "READY";
-
+            status.availability === "READY";
 
           setUsbAvailable(
             available,
           );
-
 
           setUsbMessage(
             available
@@ -368,16 +487,13 @@ export default function Login({
               )
               : (
                 status.message ??
-                "FINORA USB is not connected."
+                "FINORA Pendrive is not connected."
               ),
           );
 
-
           if (initialCheck) {
 
-            setUsbChecking(
-              false,
-            );
+            setUsbChecking(false);
 
           }
 
@@ -391,31 +507,25 @@ export default function Login({
           const available =
             await bridge.isAvailable();
 
-
           if (!active) {
 
             return;
 
           }
 
-
           setUsbAvailable(
             available,
           );
 
-
           setUsbMessage(
             available
               ? "FINORA USB detected."
-              : "FINORA USB is not connected.",
+              : "FINORA Pendrive is not connected.",
           );
-
 
           if (initialCheck) {
 
-            setUsbChecking(
-              false,
-            );
+            setUsbChecking(false);
 
           }
 
@@ -426,20 +536,15 @@ export default function Login({
 
         if (active) {
 
-          setUsbAvailable(
-            false,
-          );
+          setUsbAvailable(false);
 
           setUsbMessage(
             "FINORA USB status service is unavailable.",
           );
 
-
           if (initialCheck) {
 
-            setUsbChecking(
-              false,
-            );
+            setUsbChecking(false);
 
           }
 
@@ -454,22 +559,15 @@ export default function Login({
             usbError,
           );
 
-
-          setUsbAvailable(
-            false,
-          );
-
+          setUsbAvailable(false);
 
           setUsbMessage(
             "Unable to determine FINORA USB status.",
           );
 
-
           if (initialCheck) {
 
-            setUsbChecking(
-              false,
-            );
+            setUsbChecking(false);
 
           }
 
@@ -485,18 +583,14 @@ export default function Login({
     }
 
 
-    void checkUsb(
-      true,
-    );
+    void checkUsb(true);
 
 
     const intervalId =
       window.setInterval(
         () => {
 
-          void checkUsb(
-            false,
-          );
+          void checkUsb(false);
 
         },
         USB_STATUS_POLL_INTERVAL_MS,
@@ -518,148 +612,207 @@ export default function Login({
 
 
   // ==========================================================
+  // CLOSE DROPDOWNS ON OUTSIDE CLICK / ESCAPE
+  // ==========================================================
+
+  useEffect(() => {
+
+    function handlePointerDown(
+      event: MouseEvent,
+    ): void {
+
+      if (
+        dropdownRef.current &&
+        !dropdownRef.current.contains(
+          event.target as Node,
+        )
+      ) {
+
+        setOpenDropdown(null);
+
+      }
+
+    }
+
+
+    function handleKeyDown(
+      event: globalThis.KeyboardEvent,
+    ): void {
+
+      if (event.key === "Escape") {
+
+        setOpenDropdown(null);
+
+      }
+
+    }
+
+
+    document.addEventListener(
+      "mousedown",
+      handlePointerDown,
+    );
+
+    document.addEventListener(
+      "keydown",
+      handleKeyDown,
+    );
+
+
+    return () => {
+
+      document.removeEventListener(
+        "mousedown",
+        handlePointerDown,
+      );
+
+      document.removeEventListener(
+        "keydown",
+        handleKeyDown,
+      );
+
+    };
+
+  }, []);
+
+
+  // ==========================================================
+  // RESET CREDENTIALS
+  // ==========================================================
+
+  function resetCredentials(): void {
+
+    setUsername("");
+
+    setPassword("");
+
+    setMobileNumber("");
+
+    setOtp("");
+
+    setShowPassword(false);
+
+    setError("");
+
+    setLoginBusy(false);
+
+  }
+
+
+  // ==========================================================
+  // ROLE CHANGE
+  // ==========================================================
+
+  function handleRoleChange(
+    role: LoginRole,
+  ): void {
+
+    setLoginRole(role);
+
+    setOpenDropdown(null);
+
+    resetCredentials();
+
+    if (role === "customer") {
+
+      setCustomerLoginMethod("customerId");
+
+    }
+
+  }
+
+
+  // ==========================================================
+  // STORAGE CHANGE
+  // ==========================================================
+
+  function handleStorageChange(
+    storage: OwnerStorage,
+  ): void {
+
+    setOwnerStorage(storage);
+
+    setOpenDropdown(null);
+
+    resetCredentials();
+
+  }
+
+
+  // ==========================================================
+  // CUSTOMER METHOD CHANGE
+  // ==========================================================
+
+  function handleCustomerMethodChange(
+    method: CustomerLoginMethod,
+  ): void {
+
+    setCustomerLoginMethod(method);
+
+    setOpenDropdown(null);
+
+    resetCredentials();
+
+  }
+
+
+  // ==========================================================
   // USB DISCONNECT SAFETY
   // ==========================================================
 
   useEffect(() => {
 
     if (
+      ownerStorage === "usb" &&
       !usbAvailable &&
-      loginMode === "usb"
+      !usbChecking
     ) {
 
-      setLoginMode(
-        "chooser",
-      );
-
-      setUsername(
-        "",
-      );
-
-      setPassword(
-        "",
-      );
-
-      setError(
-        "",
-      );
+      setError("");
 
     }
 
   }, [
     usbAvailable,
-    loginMode,
+    usbChecking,
+    ownerStorage,
   ]);
 
 
   // ==========================================================
-  // RESET LOGIN FORM
+  // COMMON COMING SOON MESSAGE
   // ==========================================================
 
-  function resetCredentials(): void {
+  function showComingSoon(
+    message: string,
+  ): void {
 
-    setUsername(
-      "",
-    );
-
-    setPassword(
-      "",
-    );
-
-    setError(
-      "",
-    );
-
-    setLoginBusy(
-      false,
-    );
+    setError(message);
 
   }
 
 
   // ==========================================================
-  // OPEN USB LOGIN
+  // OWNER AUTHENTICATION
   // ==========================================================
 
-  function handleOpenUsbLogin(): void {
+  async function authenticateOwner(): Promise<void> {
 
-    setError(
-      "",
-    );
+    setError("");
+
+    const trimmedUsername =
+      username.trim();
 
 
-    if (!usbAvailable) {
+    if (ownerStorage === "cloud") {
 
-      setError(
-        "FINORA USB is not connected.",
+      showComingSoon(
+        "Cloud Login is coming soon. Cloud backup and authentication wiring will be enabled here.",
       );
 
       return;
 
     }
-
-
-    resetCredentials();
-
-
-    setLoginMode(
-      "usb",
-    );
-
-  }
-
-
-  // ==========================================================
-  // OPEN NORMAL LOGIN
-  // ==========================================================
-
-  function handleOpenNormalLogin(): void {
-
-    setError(
-      "",
-    );
-
-    resetCredentials();
-
-    setLoginMode(
-      "normal",
-    );
-
-  }
-
-
-  // ==========================================================
-  // BACK TO LOGIN CHOOSER
-  // ==========================================================
-
-  function handleBackToChooser(): void {
-
-    resetCredentials();
-
-    setLoginMode(
-      "chooser",
-    );
-
-  }
-
-
-  // ==========================================================
-  // COMMON AUTHENTICATION
-  // ==========================================================
-
-  async function authenticate(
-    mode:
-      | "USB"
-      | "LOCAL",
-  ): Promise<void> {
-
-    setError(
-      "",
-    );
-
-
-    const trimmedUsername =
-      username.trim();
 
 
     if (!trimmedUsername) {
@@ -685,7 +838,7 @@ export default function Login({
 
 
     if (
-      mode === "USB" &&
+      ownerStorage === "usb" &&
       !usbAvailable
     ) {
 
@@ -693,18 +846,12 @@ export default function Login({
         "FINORA USB is not connected.",
       );
 
-      setLoginMode(
-        "chooser",
-      );
-
       return;
 
     }
 
 
-    setLoginBusy(
-      true,
-    );
+    setLoginBusy(true);
 
 
     try {
@@ -713,7 +860,6 @@ export default function Login({
         login({
           username:
             trimmedUsername,
-
           password,
         });
 
@@ -730,7 +876,7 @@ export default function Login({
 
 
       const storageMode =
-        mode === "USB"
+        ownerStorage === "usb"
           ? StorageMode.USB
           : StorageMode.LOCAL;
 
@@ -744,7 +890,7 @@ export default function Login({
       if (!storageActivated) {
 
         setError(
-          mode === "USB"
+          ownerStorage === "usb"
             ? "Unable to activate FINORA USB storage."
             : "Unable to activate local FINORA storage.",
         );
@@ -768,7 +914,6 @@ export default function Login({
           sessionError,
         );
 
-
         setError(
           "Unable to preserve FINORA storage mode for this session.",
         );
@@ -780,19 +925,13 @@ export default function Login({
 
       clearCustomerCache();
 
-
-      setError(
-        "",
-      );
-
+      setError("");
 
       onLogin();
 
     } finally {
 
-      setLoginBusy(
-        false,
-      );
+      setLoginBusy(false);
 
     }
 
@@ -800,26 +939,148 @@ export default function Login({
 
 
   // ==========================================================
-  // USB LOGIN SUBMIT
+  // LOGIN CLICK
   // ==========================================================
 
-  function handleUsbLogin(): void {
+  function handleLogin(): void {
 
-    void authenticate(
-      "USB",
+    if (loginRole === "customer") {
+
+      showComingSoon(
+        "Customer Login is coming soon. Customer authentication wiring will be enabled here.",
+      );
+
+      return;
+
+    }
+
+
+    void authenticateOwner();
+
+  }
+
+
+  // ==========================================================
+  // FORGOT PASSWORD
+  // ==========================================================
+
+  function handleForgotPassword(): void {
+
+    if (loginRole === "customer") {
+
+      showComingSoon(
+        "Customer password recovery is coming soon.",
+      );
+
+      return;
+
+    }
+
+
+    if (ownerStorage === "usb") {
+
+      showComingSoon(
+        "USB Owner password recovery is coming soon.",
+      );
+
+      return;
+
+    }
+
+
+    if (ownerStorage === "cloud") {
+
+      showComingSoon(
+        "Cloud password recovery is coming soon.",
+      );
+
+      return;
+
+    }
+
+
+    showComingSoon(
+      "Owner password recovery is coming soon.",
     );
 
   }
 
 
   // ==========================================================
-  // NORMAL LOGIN SUBMIT
+  // INPUT KEY HANDLING
   // ==========================================================
 
-  function handleNormalLogin(): void {
+  function handlePasswordKeyDown(
+    event: ReactKeyboardEvent<HTMLInputElement>,
+  ): void {
 
-    void authenticate(
-      "LOCAL",
+    if (event.key === "Enter") {
+
+      handleLogin();
+
+    }
+
+  }
+
+
+  // ==========================================================
+  // DROPDOWN HELPERS
+  // ==========================================================
+
+  const roleLabel =
+    loginRole === "owner"
+      ? "Owner"
+      : "Customer";
+
+  const roleIcon =
+    loginRole === "owner"
+      ? <ShieldCheck />
+      : <UsersRound />;
+
+  const storageLabel =
+    ownerStorage === "local"
+      ? "Local Storage"
+      : ownerStorage === "usb"
+        ? "USB Storage"
+        : "Cloud Storage";
+
+  const storageIcon =
+    ownerStorage === "local"
+      ? <HardDrive />
+      : ownerStorage === "usb"
+        ? <Usb />
+        : <Cloud />;
+
+  const customerMethodLabel =
+    customerLoginMethod === "customerId"
+      ? "Customer ID"
+      : "Mobile Number";
+
+  const customerMethodIcon =
+    customerLoginMethod === "customerId"
+      ? <UserRound />
+      : <Smartphone />;
+
+
+  // ==========================================================
+  // LOGIN THEME SELECTION
+  // ==========================================================
+
+  function handleLoginThemeChange(
+    themeId:
+      LoginThemeId,
+  ): void {
+
+    setLoginThemeId(
+      themeId,
+    );
+
+    setOpenDropdown(
+      null,
+    );
+
+    setError(
+      "",
     );
 
   }
@@ -845,279 +1106,651 @@ export default function Login({
         style={
           loginStyles.card
         }
+        ref={dropdownRef}
       >
 
         {/* ==================================================
             HEADER
         ================================================== */}
 
-        <h1
+        <div
           style={
-            loginStyles.title
+            loginStyles.header
           }
         >
-          FINORA
-        </h1>
 
-
-        <p
-          style={
-            loginStyles.subtitle
-          }
-        >
-          Enterprise Login
-        </p>
-
-
-        {/* ==================================================
-            USB STATUS
+           {/* ==================================================
+            FINORA LOGIN THEME PICKER
         ================================================== */}
 
         <div
           style={
-            getUsbStatusStyle(
-              usbAvailable,
-            )
+            loginStyles.themePicker
+          }
+          aria-label="FINORA login themes"
+        >
+
+          {LOGIN_THEME_OPTIONS.map(
+            option => {
+
+              const isActive =
+                loginThemeId ===
+                option.id;
+
+              return (
+
+                <button
+                  key={
+                    option.id
+                  }
+
+                  type="button"
+
+                  aria-label={
+                    `Use ${option.name} theme`
+                  }
+
+                  aria-pressed={
+                    isActive
+                  }
+
+                  title={
+                    option.name
+                  }
+
+                  onClick={() => {
+                    handleLoginThemeChange(
+                      option.id,
+                    );
+                  }}
+
+                  style={
+                    isActive
+                      ? loginStyles.themeOptionActive
+                      : loginStyles.themeOption
+                  }
+                >
+
+                  <span
+                    style={
+                      getLoginThemeSwatchStyle(
+                        option.swatch,
+                        isActive,
+                        activeLoginTheme,
+                      )
+                    }
+                  />
+
+                  <span
+                    style={
+                      loginStyles.themeOptionLabel
+                    }
+                  >
+                    {option.name}
+                  </span>
+
+                </button>
+
+              );
+
+            },
+          )}
+
+        </div>
+
+          <div
+            style={
+              loginStyles.logo
+            }
+          >
+
+            <img
+              src={
+                finoraLogo
+              }
+              alt="FINORA Enterprise"
+              style={
+                loginStyles.logoImage
+              }
+            />
+
+          </div>
+
+        </div>
+
+
+       
+
+
+        {/* ==================================================
+            LOGIN ROLE
+        ================================================== */}
+
+        <div
+          style={
+            loginStyles.fieldSection
           }
         >
 
           <div
             style={
-              loginStyles.usbStatusRow
+              loginStyles.fieldLabel
             }
           >
-
-            <span
-              style={
-                getUsbStatusIndicatorStyle(
-                  usbChecking,
-                  usbAvailable,
-                )
-              }
-            />
-
-
-            <span>
-              {
-                usbChecking
-                  ? "Checking FINORA USB"
-                  : usbAvailable
-                    ? "FINORA USB Detected"
-                    : "FINORA USB Not Detected"
-              }
-            </span>
-
+            Login As
           </div>
 
 
           <div
             style={
-              loginStyles.usbMessage
+              loginStyles.customSelect
             }
           >
-            {usbMessage}
+
+            <button
+              type="button"
+              aria-haspopup="listbox"
+              aria-expanded={
+                openDropdown === "role"
+              }
+              onClick={() => {
+                setOpenDropdown(
+                  current =>
+                    current === "role"
+                      ? null
+                      : "role",
+                );
+              }}
+              style={
+                loginStyles.customSelectButton
+              }
+            >
+
+              <span
+                style={
+                  loginStyles.customSelectValue
+                }
+              >
+
+                <span
+                  style={
+                    loginStyles.customSelectIcon
+                  }
+                >
+                  {roleIcon}
+                </span>
+
+                <span>
+                  {roleLabel}
+                </span>
+
+              </span>
+
+              <span
+                style={
+                  loginStyles.customSelectChevron
+                }
+              >
+                <ChevronDown />
+              </span>
+
+            </button>
+
+
+            {openDropdown === "role" && (
+
+              <div
+                role="listbox"
+                style={
+                  loginStyles.customSelectMenu
+                }
+              >
+
+                <button
+                  type="button"
+                  role="option"
+                  aria-selected={
+                    loginRole === "owner"
+                  }
+                  onClick={() => {
+                    handleRoleChange("owner");
+                  }}
+                  style={
+                    loginRole === "owner"
+                      ? loginStyles.customSelectOptionActive
+                      : loginStyles.customSelectOption
+                  }
+                >
+                  <ShieldCheck />
+                  <span>Owner</span>
+                </button>
+
+
+                <button
+                  type="button"
+                  role="option"
+                  aria-selected={
+                    loginRole === "customer"
+                  }
+                  onClick={() => {
+                    handleRoleChange("customer");
+                  }}
+                  style={
+                    loginRole === "customer"
+                      ? loginStyles.customSelectOptionActive
+                      : loginStyles.customSelectOption
+                  }
+                >
+                  <UsersRound />
+                  <span>Customer</span>
+                </button>
+
+              </div>
+
+            )}
+
           </div>
 
         </div>
 
 
         {/* ==================================================
-            INITIAL USB CHECK
+            OWNER LOGIN
         ================================================== */}
 
-        {usbChecking && (
-
-          <div
-            style={
-              loginStyles.startupMessage
-            }
-          >
-            FINORA login services are starting...
-          </div>
-
-        )}
-
-
-        {/* ==================================================
-            LOGIN CHOOSER
-        ================================================== */}
-
-        {!usbChecking &&
-          loginMode === "chooser" && (
+        {loginRole === "owner" && (
 
           <>
 
-            <button
-              type="button"
-              onClick={
-                handleOpenUsbLogin
-              }
-              disabled={
-                !usbAvailable ||
-                loginBusy
-              }
-              style={
-                usbAvailable
-                  ? loginStyles.usbLoginButton
-                  : loginStyles.usbLoginButtonDisabled
-              }
-            >
-              🔐 Continue with FINORA USB
-            </button>
-
-
             <div
               style={
-                loginStyles.helperTextWithMargin
+                loginStyles.fieldSection
               }
             >
-              USB required • Owner authentication
-            </div>
 
-
-            <button
-              type="button"
-              onClick={
-                handleOpenNormalLogin
-              }
-              disabled={
-                loginBusy
-              }
-              style={
-                loginStyles.normalLoginButton
-              }
-            >
-              👤 Continue with Normal Login
-            </button>
-
-
-            <div
-              style={
-                loginStyles.helperText
-              }
-            >
-              USB not required • Local storage
-            </div>
-
-
-            {error && (
-
-              <p
-                role="alert"
+              <div
                 style={
-                  loginStyles.chooserError
+                  loginStyles.fieldLabel
                 }
               >
-                {error}
-              </p>
+                Storage
+              </div>
+
+
+              <div
+                style={
+                  loginStyles.customSelect
+                }
+              >
+
+                <button
+                  type="button"
+                  aria-haspopup="listbox"
+                  aria-expanded={
+                    openDropdown === "storage"
+                  }
+                  onClick={() => {
+                    setOpenDropdown(
+                      current =>
+                        current === "storage"
+                          ? null
+                          : "storage",
+                    );
+                  }}
+                  style={
+                    loginStyles.customSelectButton
+                  }
+                >
+
+                  <span
+                    style={
+                      loginStyles.customSelectValue
+                    }
+                  >
+                    <span
+                      style={
+                        loginStyles.customSelectIcon
+                      }
+                    >
+                      {storageIcon}
+                    </span>
+                    <span>
+                      {storageLabel}
+                    </span>
+                  </span>
+
+                  <span
+                    style={
+                      loginStyles.customSelectChevron
+                    }
+                  >
+                    <ChevronDown />
+                  </span>
+
+                </button>
+
+
+                {openDropdown === "storage" && (
+
+                  <div
+                    role="listbox"
+                    style={
+                      loginStyles.customSelectMenu
+                    }
+                  >
+
+                    <button
+                      type="button"
+                      role="option"
+                      aria-selected={
+                        ownerStorage === "local"
+                      }
+                      onClick={() => {
+                        handleStorageChange("local");
+                      }}
+                      style={
+                        ownerStorage === "local"
+                          ? loginStyles.customSelectOptionActive
+                          : loginStyles.customSelectOption
+                      }
+                    >
+                      <HardDrive />
+                      <span>Local Storage</span>
+                    </button>
+
+
+                    <button
+                      type="button"
+                      role="option"
+                      aria-selected={
+                        ownerStorage === "usb"
+                      }
+                      onClick={() => {
+                        handleStorageChange("usb");
+                      }}
+                      style={
+                        ownerStorage === "usb"
+                          ? loginStyles.customSelectOptionActive
+                          : loginStyles.customSelectOption
+                      }
+                    >
+                      <Usb />
+                      <span>USB Storage</span>
+                    </button>
+
+
+                    <button
+                      type="button"
+                      role="option"
+                      aria-selected={
+                        ownerStorage === "cloud"
+                      }
+                      onClick={() => {
+                        handleStorageChange("cloud");
+                      }}
+                      style={
+                        ownerStorage === "cloud"
+                          ? loginStyles.customSelectOptionActive
+                          : loginStyles.customSelectOption
+                      }
+                    >
+                      <Cloud />
+                      <span>Cloud Storage</span>
+                    </button>
+
+                  </div>
+
+                )}
+
+              </div>
+
+            </div>
+
+
+            {/* ==============================================
+                USB STATUS — ONLY FOR USB OWNER LOGIN
+            ============================================== */}
+
+            {!usbChecking &&
+              ownerStorage === "usb" && (
+
+              <div
+                style={
+                  {
+                    ...loginStyles.usbStatus,
+                    ...getUsbStatusStyle(
+                      usbAvailable,
+                      activeLoginTheme,
+                    ),
+                  }
+                }
+              >
+
+                <div
+                  style={
+                    loginStyles.usbStatusRow
+                  }
+                >
+
+                  <span
+                    style={
+                      getUsbStatusIndicatorStyle(
+                        usbChecking,
+                        usbAvailable,
+                        activeLoginTheme,
+                      )
+                    }
+                  />
+
+                  <span
+                    style={
+                      loginStyles.usbStatusText
+                    }
+                  >
+                    {usbAvailable
+                      ? "FINORA USB Detected"
+                      : "FINORA USB Not Detected"}
+                  </span>
+
+                </div>
+
+                <div
+                  style={
+                    loginStyles.usbMessage
+                  }
+                >
+                  {usbMessage}
+                </div>
+
+              </div>
 
             )}
 
-          </>
 
-        )}
-
-
-        {/* ==================================================
-            USB LOGIN FORM
-        ================================================== */}
-
-        {!usbChecking &&
-          loginMode === "usb" && (
-
-          <>
+            {/* ==============================================
+                OWNER MODE NOTICE
+            ============================================== */}
 
             <div
               style={
-                loginStyles.modeNoticeUsb
+                ownerStorage === "usb"
+                  ? loginStyles.modeNoticeUsb
+                  : ownerStorage === "cloud"
+                    ? loginStyles.modeNoticeCloud
+                    : loginStyles.modeNoticeNormal
               }
             >
 
-              <div>
-                FINORA USB Owner Login
+              <div
+                style={
+                  loginStyles.modeNoticeHeader
+                }
+              >
+                {ownerStorage === "usb"
+                  ? <Usb />
+                  : ownerStorage === "cloud"
+                    ? <Cloud />
+                    : <HardDrive />}
+
+                <span>
+                  {ownerStorage === "usb"
+                    ? "USB Owner Login"
+                    : ownerStorage === "cloud"
+                      ? "Cloud Owner Login"
+                      : "Local Owner Login"}
+                </span>
               </div>
+
 
               <div
                 style={
                   loginStyles.modeNoticeSubtext
                 }
               >
-                Storage Mode: USB • FINORA Pendrive
+                {ownerStorage === "usb"
+                  ? "Owner authentication • FINORA Pendrive"
+                  : ownerStorage === "cloud"
+                    ? "Owner authentication • Cloud storage ready"
+                    : "Owner authentication • Local storage"}
               </div>
 
             </div>
 
 
-            <input
-              value={
-                username
-              }
-              onChange={
-                event => {
+            {/* ==============================================
+                OWNER CREDENTIALS
+            ============================================== */}
 
-                  setUsername(
-                    event.target.value,
-                  );
-
-                  setError(
-                    "",
-                  );
-
-                }
-              }
-              placeholder="USB Owner ID"
-              autoComplete="username"
-              autoFocus
-              disabled={
-                loginBusy
-              }
+            <div
               style={
-                loginStyles.input
+                loginStyles.inputGroup
               }
-            />
+            >
 
-
-            <input
-              value={
-                password
-              }
-              onChange={
-                event => {
-
-                  setPassword(
-                    event.target.value,
-                  );
-
-                  setError(
-                    "",
-                  );
-
+              <div
+                style={
+                  loginStyles.inputWrapper
                 }
-              }
-              placeholder="USB Owner Password"
-              type="password"
-              autoComplete="current-password"
-              disabled={
-                loginBusy
-              }
-              onKeyDown={
-                event => {
+              >
 
-                  if (
-                    event.key ===
-                    "Enter"
-                  ) {
-
-                    handleUsbLogin();
-
+                <span
+                  style={
+                    loginStyles.inputIcon
                   }
+                >
+                  <UserRound />
+                </span>
 
+                <input
+                  value={
+                    username
+                  }
+                  onChange={(
+                    event,
+                  ) => {
+                    setUsername(
+                      event.target.value,
+                    );
+                    setError("");
+                  }}
+                  placeholder="User ID"
+                  aria-label="User ID"
+                  autoComplete="username"
+                  autoFocus={
+                    ownerStorage !== "cloud"
+                  }
+                  disabled={
+                    loginBusy ||
+                    ownerStorage === "cloud"
+                  }
+                  style={
+                    loginStyles.input
+                  }
+                />
+
+              </div>
+
+
+              <div
+                style={
+                  loginStyles.inputWrapper
                 }
-              }
-              style={
-                loginStyles.input
-              }
-            />
+              >
+
+                <span
+                  style={
+                    loginStyles.inputIcon
+                  }
+                >
+                  <LockKeyhole />
+                </span>
+
+                <input
+                  value={
+                    password
+                  }
+                  onChange={(
+                    event,
+                  ) => {
+                    setPassword(
+                      event.target.value,
+                    );
+                    setError("");
+                  }}
+                  placeholder="Password"
+                  aria-label="Password"
+                  type={
+                    showPassword
+                      ? "text"
+                      : "password"
+                  }
+                  autoComplete="current-password"
+                  disabled={
+                    loginBusy ||
+                    ownerStorage === "cloud"
+                  }
+                  onKeyDown={
+                    handlePasswordKeyDown
+                  }
+                  style={
+                    loginStyles.input
+                  }
+                />
+
+
+                <button
+                  type="button"
+                  aria-label={
+                    showPassword
+                      ? "Hide password"
+                      : "Show password"
+                  }
+                  onClick={() => {
+                    setShowPassword(
+                      current =>
+                        !current,
+                    );
+                  }}
+                  onMouseDown={(
+                    event,
+                  ) => {
+                    event.preventDefault();
+                  }}
+                  disabled={
+                    ownerStorage === "cloud"
+                  }
+                  style={
+                    loginStyles.passwordToggle
+                  }
+                >
+                  {showPassword
+                    ? <EyeOff />
+                    : <Eye />}
+                </button>
+
+              </div>
+
+            </div>
 
 
             {error && (
@@ -1137,7 +1770,7 @@ export default function Login({
             <button
               type="button"
               onClick={
-                handleUsbLogin
+                handleLogin
               }
               disabled={
                 loginBusy
@@ -1146,27 +1779,36 @@ export default function Login({
                 loginStyles.primaryButton
               }
             >
-              {
-                loginBusy
-                  ? "Authenticating..."
-                  : "Login to FINORA USB"
-              }
+
+              <span
+                style={
+                  loginStyles.primaryButtonContent
+                }
+              >
+                <KeyRound />
+                <span>
+                  {loginBusy
+                    ? "Authenticating..."
+                    : "Login"}
+                </span>
+              </span>
+
             </button>
 
 
             <button
               type="button"
               onClick={
-                handleBackToChooser
+                handleForgotPassword
               }
               disabled={
                 loginBusy
               }
               style={
-                loginStyles.secondaryButton
+                loginStyles.forgotPassword
               }
             >
-              ← Back to Login Options
+              Forgot Password?
             </button>
 
           </>
@@ -1175,11 +1817,10 @@ export default function Login({
 
 
         {/* ==================================================
-            NORMAL LOGIN FORM
+            CUSTOMER LOGIN
         ================================================== */}
 
-        {!usbChecking &&
-          loginMode === "normal" && (
+        {loginRole === "customer" && (
 
           <>
 
@@ -1189,8 +1830,15 @@ export default function Login({
               }
             >
 
-              <div>
-                Normal Account Login
+              <div
+                style={
+                  loginStyles.modeNoticeHeader
+                }
+              >
+                <UsersRound />
+                <span>
+                  Customer Login
+                </span>
               </div>
 
               <div
@@ -1198,82 +1846,296 @@ export default function Login({
                   loginStyles.modeNoticeSubtext
                 }
               >
-                Storage Mode: LOCAL • USB not required
+                Secure customer access • Authentication ready
               </div>
 
             </div>
 
 
-            <input
-              value={
-                username
-              }
-              onChange={
-                event => {
+            {/* ==============================================
+                CUSTOMER LOGIN METHOD
+            ============================================== */}
 
-                  setUsername(
-                    event.target.value,
-                  );
-
-                  setError(
-                    "",
-                  );
-
-                }
-              }
-              placeholder="User ID"
-              autoComplete="username"
-              autoFocus
-              disabled={
-                loginBusy
-              }
+            <div
               style={
-                loginStyles.input
+                loginStyles.fieldSectionCompact
               }
-            />
+            >
 
-
-            <input
-              value={
-                password
-              }
-              onChange={
-                event => {
-
-                  setPassword(
-                    event.target.value,
-                  );
-
-                  setError(
-                    "",
-                  );
-
+              <div
+                style={
+                  loginStyles.fieldLabel
                 }
-              }
-              placeholder="Password"
-              type="password"
-              autoComplete="current-password"
-              disabled={
-                loginBusy
-              }
-              onKeyDown={
-                event => {
+              >
+                Login Method
+              </div>
 
-                  if (
-                    event.key ===
-                    "Enter"
-                  ) {
 
-                    handleNormalLogin();
+              <div
+                style={
+                  loginStyles.customSelect
+                }
+              >
 
+                <button
+                  type="button"
+                  aria-haspopup="listbox"
+                  aria-expanded={
+                    openDropdown === "customerMethod"
                   }
+                  onClick={() => {
+                    setOpenDropdown(
+                      current =>
+                        current === "customerMethod"
+                          ? null
+                          : "customerMethod",
+                    );
+                  }}
+                  style={
+                    loginStyles.customSelectButton
+                  }
+                >
 
+                  <span
+                    style={
+                      loginStyles.customSelectValue
+                    }
+                  >
+                    <span
+                      style={
+                        loginStyles.customSelectIcon
+                      }
+                    >
+                      {customerMethodIcon}
+                    </span>
+                    <span>
+                      {customerMethodLabel}
+                    </span>
+                  </span>
+
+                  <span
+                    style={
+                      loginStyles.customSelectChevron
+                    }
+                  >
+                    <ChevronDown />
+                  </span>
+
+                </button>
+
+
+                {openDropdown === "customerMethod" && (
+
+                  <div
+                    role="listbox"
+                    style={
+                      loginStyles.customSelectMenu
+                    }
+                  >
+
+                    <button
+                      type="button"
+                      role="option"
+                      aria-selected={
+                        customerLoginMethod === "customerId"
+                      }
+                      onClick={() => {
+                        handleCustomerMethodChange("customerId");
+                      }}
+                      style={
+                        customerLoginMethod === "customerId"
+                          ? loginStyles.customSelectOptionActive
+                          : loginStyles.customSelectOption
+                      }
+                    >
+                      <UserRound />
+                      <span>Customer ID</span>
+                    </button>
+
+
+                    <button
+                      type="button"
+                      role="option"
+                      aria-selected={
+                        customerLoginMethod === "mobile"
+                      }
+                      onClick={() => {
+                        handleCustomerMethodChange("mobile");
+                      }}
+                      style={
+                        customerLoginMethod === "mobile"
+                          ? loginStyles.customSelectOptionActive
+                          : loginStyles.customSelectOption
+                      }
+                    >
+                      <Smartphone />
+                      <span>Mobile Number</span>
+                    </button>
+
+                  </div>
+
+                )}
+
+              </div>
+
+            </div>
+
+
+            {/* ==============================================
+                CUSTOMER ID LOGIN
+            ============================================== */}
+
+            {customerLoginMethod === "customerId" && (
+
+              <div
+                style={
+                  loginStyles.inputGroup
                 }
-              }
-              style={
-                loginStyles.input
-              }
-            />
+              >
+
+                <div
+                  style={
+                    loginStyles.inputWrapper
+                  }
+                >
+                  <span
+                    style={
+                      loginStyles.inputIcon
+                    }
+                  >
+                    <UserRound />
+                  </span>
+
+                  <input
+                    value=""
+                    placeholder="Customer ID"
+                    aria-label="Customer ID"
+                    disabled
+                    style={
+                      loginStyles.inputDisabled
+                    }
+                  />
+                </div>
+
+
+                <div
+                  style={
+                    loginStyles.inputWrapper
+                  }
+                >
+                  <span
+                    style={
+                      loginStyles.inputIcon
+                    }
+                  >
+                    <LockKeyhole />
+                  </span>
+
+                  <input
+                    value=""
+                    placeholder="Password"
+                    aria-label="Password"
+                    type="password"
+                    disabled
+                    style={
+                      loginStyles.inputDisabled
+                    }
+                  />
+
+                  <Eye
+                    style={
+                      loginStyles.disabledPasswordIcon
+                    }
+                  />
+                </div>
+
+              </div>
+
+            )}
+
+
+            {/* ==============================================
+                CUSTOMER MOBILE OTP LOGIN
+            ============================================== */}
+
+            {customerLoginMethod === "mobile" && (
+
+              <div
+                style={
+                  loginStyles.inputGroup
+                }
+              >
+
+                <div
+                  style={
+                    loginStyles.inputWrapper
+                  }
+                >
+                  <span
+                    style={
+                      loginStyles.inputIcon
+                    }
+                  >
+                    <Smartphone />
+                  </span>
+
+                  <input
+                    value={mobileNumber}
+                    onChange={(
+                      event,
+                    ) => {
+                      setMobileNumber(
+                        event.target.value,
+                      );
+                      setError("");
+                    }}
+                    placeholder="Mobile Number"
+                    aria-label="Mobile Number"
+                    inputMode="numeric"
+                    disabled
+                    style={
+                      loginStyles.inputDisabled
+                    }
+                  />
+                </div>
+
+
+                <div
+                  style={
+                    loginStyles.inputWrapper
+                  }
+                >
+                  <span
+                    style={
+                      loginStyles.inputIcon
+                    }
+                  >
+                    <MessageCircle />
+                  </span>
+
+                  <input
+                    value={otp}
+                    onChange={(
+                      event,
+                    ) => {
+                      setOtp(
+                        event.target.value,
+                      );
+                      setError("");
+                    }}
+                    placeholder="OTP"
+                    aria-label="OTP"
+                    inputMode="numeric"
+                    disabled
+                    style={
+                      loginStyles.inputDisabled
+                    }
+                  />
+                </div>
+
+              </div>
+
+            )}
 
 
             {error && (
@@ -1293,7 +2155,7 @@ export default function Login({
             <button
               type="button"
               onClick={
-                handleNormalLogin
+                handleLogin
               }
               disabled={
                 loginBusy
@@ -1302,52 +2164,37 @@ export default function Login({
                 loginStyles.primaryButton
               }
             >
-              {
-                loginBusy
-                  ? "Authenticating..."
-                  : "Login"
-              }
+
+              <span
+                style={
+                  loginStyles.primaryButtonContent
+                }
+              >
+                <KeyRound />
+                <span>
+                  Login
+                </span>
+              </span>
+
             </button>
 
 
             <button
               type="button"
               onClick={
-                handleBackToChooser
-              }
-              disabled={
-                loginBusy
+                handleForgotPassword
               }
               style={
-                loginStyles.secondaryButton
+                loginStyles.forgotPassword
               }
             >
-              ← Back to Login Options
+              Forgot Password?
             </button>
 
           </>
 
         )}
 
-
-        {/* ==================================================
-            DEVELOPMENT ACCOUNT
-        ================================================== */}
-
-        {!usbChecking &&
-          loginMode !== "usb" && (
-
-          <p
-            style={
-              loginStyles.developmentAccount
-            }
-          >
-            Default:
-            <br />
-            admin / admin123
-          </p>
-
-        )}
 
       </div>
 

@@ -26,8 +26,6 @@
    - No extra viewport classifications.
 =========================================================== */
 
-import type { ResponsiveTokens } from "./tokens";
-
 
 /* ===========================================================
    HIGH-LEVEL DEVICE TYPE
@@ -115,7 +113,7 @@ export type ResponsiveBreakpointMap = {
 
 
 /* ===========================================================
-   RESPONSIVE META
+   RESPONSIVE TOKEN META
 =========================================================== */
 
 export interface ResponsiveTokenMeta {
@@ -516,9 +514,6 @@ export interface ResponsiveLogin {
 
 export interface ResponsiveHeader {
 
-  visible:
-    boolean;
-
   height:
     number;
 
@@ -536,6 +531,36 @@ export interface ResponsiveHeader {
 
   brandVisible:
     boolean;
+
+}
+
+
+/* ===========================================================
+   FOOTER
+=========================================================== */
+
+export interface ResponsiveFooter {
+
+  height:
+    number;
+
+  minHeight:
+    number;
+
+  paddingX:
+    number;
+
+  paddingY:
+    number;
+
+  radius:
+    number;
+
+  gap:
+    number;
+
+  fontSize:
+    number;
 
 }
 
@@ -687,6 +712,27 @@ export interface ResponsiveCustomerCards {
   radius:
     number;
 
+  photoSize:
+    number;
+
+  brandSize:
+    number;
+
+  companySize:
+    number;
+
+  nameSize:
+    number;
+
+  phoneSize:
+    number;
+
+  idSize:
+    number;
+
+  kycSize:
+    number;
+
 }
 
 
@@ -739,6 +785,69 @@ export interface ResponsiveForm {
     number;
 
   inputGap:
+    number;
+
+}
+
+
+/* ===========================================================
+   IDENTITY FORM
+=========================================================== */
+
+export interface ResponsiveIdentityForm {
+
+  wrapperGap:
+    number;
+
+  columnGap:
+    number;
+
+  rowGap:
+    number;
+
+  fieldGap:
+    number;
+
+  labelHeight:
+    number;
+
+  labelSize:
+    number;
+
+  requiredSize:
+    number;
+
+  inputHeight:
+    number;
+
+  inputRadius:
+    number;
+
+  inputPaddingX:
+    number;
+
+  inputFontSize:
+    number;
+
+  checkboxSize:
+    number;
+
+  checkboxGap:
+    number;
+
+  iconSize:
+    number;
+
+  iconLeft:
+    number;
+
+  iconInputPaddingLeft:
+    number;
+
+  noteSize:
+    number;
+
+  noteMarginTop:
     number;
 
 }
@@ -845,6 +954,96 @@ export interface ResponsiveProjector {
 
   statusSize:
     number;
+
+}
+
+
+/* ===========================================================
+   RESPONSIVE TOKEN CONTRACT
+=========================================================== */
+
+export interface ResponsiveTokens {
+
+  meta:
+    ResponsiveTokenMeta;
+
+  typography:
+    ResponsiveTypography;
+
+  lineHeight:
+    ResponsiveLineHeight;
+
+  spacing:
+    ResponsiveSpacing;
+
+  card:
+    ResponsiveCard;
+
+  door:
+    ResponsiveDoor;
+
+  panel:
+    ResponsivePanel;
+
+  border:
+    ResponsiveBorder;
+
+  control:
+    ResponsiveControl;
+
+  input:
+    ResponsiveInput;
+
+  button:
+    ResponsiveButton;
+
+  icon:
+    ResponsiveIcon;
+
+  login:
+    ResponsiveLogin;
+
+  header:
+    ResponsiveHeader;
+
+  footer:
+    ResponsiveFooter;
+
+  reception:
+    ResponsiveReception;
+
+  sidebar:
+    ResponsiveSidebar;
+
+  navigation:
+    ResponsiveNavigation;
+
+  layout:
+    ResponsiveLayout;
+
+  grid:
+    ResponsiveGrid;
+
+  customerCards:
+    ResponsiveCustomerCards;
+
+  table:
+    ResponsiveTable;
+
+  form:
+    ResponsiveForm;
+
+  identityForm:
+    ResponsiveIdentityForm;
+
+  wizard:
+    ResponsiveWizard;
+
+  modal:
+    ResponsiveModal;
+
+  dashboard:
+    ResponsiveDashboard;
 
 }
 

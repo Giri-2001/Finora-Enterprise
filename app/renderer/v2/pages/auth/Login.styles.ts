@@ -1,4 +1,4 @@
-// ============================================================
+﻿// ============================================================
 // FINORA ENTERPRISE OS™
 //
 // RESPONSIVE LOGIN STYLES
@@ -10,17 +10,18 @@
 //
 // RESPONSIBILITY:
 //
-// - Login presentation only
+// - Premium FINORA Enterprise Login presentation
 // - Consume the central FINORA Responsive Engine
+// - Consume loginDefaultTheme as the visual source of truth
 // - Provide complete Login style API
-// - Preserve existing Login.tsx style contracts
+// - Support Lucide icon based login controls
 //
 // IMPORTANT:
 //
-// - No responsive breakpoint logic here.
-// - No device-specific responsive numbers here.
-// - No responsive magic numbers here.
-// - Responsive dimensions come only from:
+// - No breakpoint logic here.
+// - No viewport detection here.
+// - No independent responsive dimensions.
+// - Responsive dimensions come from:
 //   app/renderer/v2/utils/responsive/
 //
 // ============================================================
@@ -38,91 +39,196 @@ import type {
   ResponsiveState,
 } from "../../utils/responsive/types";
 
-
-// ============================================================
-// STATIC PRESENTATION COLORS
-//
-// These values are visual identity values.
-// Responsive dimensions are NOT defined here.
-// ============================================================
-
-const COLORS = {
-
-  background:
-    "#0F172A",
-
-  surface:
-    "#111827",
-
-  surfaceSoft:
-    "#1E293B",
-
-  border:
-    "#334155",
-
-  borderStrong:
-    "#475569",
-
-  text:
-    "#FFFFFF",
-
-  textMuted:
-    "#CBD5E1",
-
-  textSoft:
-    "#94A3B8",
-
-  textFaint:
-    "#64748B",
-
-  primary:
-    "#2563EB",
-
-  primaryHover:
-    "#3B82F6",
-
-  success:
-    "#22C55E",
-
-  successBackground:
-    "rgba(22,101,52,0.18)",
-
-  successBorder:
-    "rgba(34,197,94,0.45)",
-
-  successBorderStrong:
-    "rgba(34,197,94,0.55)",
-
-  successText:
-    "#BBF7D0",
-
-  warning:
-    "#F59E0B",
-
-  warningBackground:
-    "rgba(245,158,11,0.12)",
-
-  warningBorder:
-    "rgba(245,158,11,0.35)",
-
-  danger:
-    "#F87171",
-
-  dangerBackground:
-    "rgba(239,68,68,0.12)",
-
-  shadow:
-    "rgba(0,0,0,0.35)",
-
-} as const;
+import {
+  loginDefaultTheme,
+} from "../../themes/login/default";
 
 
 // ============================================================
-// FONT FAMILY
+// LOGIN THEME OPTIONS
 // ============================================================
 
-const FONT_FAMILY =
-  "Segoe UI, Inter, system-ui, -apple-system, BlinkMacSystemFont, sans-serif";
+export type LoginThemeId =
+  | "imperial-gold"
+  | "royal-navy"
+  | "amethyst"
+  | "emerald"
+  | "obsidian";
+
+
+export interface LoginThemeOption {
+
+  id:
+    LoginThemeId;
+
+  name:
+    string;
+
+  swatch:
+    string;
+
+}
+
+
+// IMPORTANT:
+// loginDefaultTheme is intentionally exported as a readonly / literal
+// theme object.  The Login theme switcher needs a widened, mutable view
+// of those same theme keys so alternate theme values can be supplied
+// without changing the central theme contract.
+type LoginTheme = {
+
+  -readonly [Key in keyof typeof loginDefaultTheme]:
+    string;
+
+};
+
+
+type LoginThemeOverrides =
+  Partial<LoginTheme>;
+
+
+const LOGIN_THEME_OVERRIDES:
+  Record<
+    LoginThemeId,
+    LoginThemeOverrides
+  > = {
+
+  "imperial-gold": {},
+
+  "royal-navy": {
+    background: "#0D1728",
+    surface: "#15233A",
+    surfaceSoft: "#1B2D49",
+    text: "#F4F7FC",
+    textSoft: "#AEBBD0",
+    textFaint: "#71819A",
+    primary: "#4D82E6",
+    border: "#2C4262",
+    borderStrong: "#405B80",
+    shadow: "rgba(3, 10, 22, 0.48)",
+    warning: "#D8A83E",
+    warningBorder: "#6D5727",
+    warningBackground: "#211C12",
+    success: "#4DBB89",
+    successBorder: "#2E6D52",
+    successBackground: "#11251C",
+    successText: "#8BD6B1",
+    danger: "#E06A76",
+  },
+
+  amethyst: {
+    background: "#171022",
+    surface: "#241834",
+    surfaceSoft: "#302044",
+    text: "#F8F3FF",
+    textSoft: "#C0B3D2",
+    textFaint: "#827397",
+    primary: "#A46BE5",
+    border: "#44305B",
+    borderStrong: "#5B4275",
+    shadow: "rgba(8, 3, 16, 0.50)",
+    warning: "#D7A13D",
+    warningBorder: "#6B5427",
+    warningBackground: "#241D12",
+    success: "#55C18D",
+    successBorder: "#327154",
+    successBackground: "#12271D",
+    successText: "#91DAB7",
+    danger: "#E37483",
+  },
+
+  emerald: {
+    background: "#0C1B17",
+    surface: "#142822",
+    surfaceSoft: "#1B342C",
+    text: "#F1FAF6",
+    textSoft: "#A9C2B8",
+    textFaint: "#6F8A80",
+    primary: "#35A878",
+    border: "#29493D",
+    borderStrong: "#396452",
+    shadow: "rgba(2, 13, 9, 0.50)",
+    warning: "#D5A03B",
+    warningBorder: "#6C5427",
+    warningBackground: "#211B11",
+    success: "#59C895",
+    successBorder: "#34785A",
+    successBackground: "#12281E",
+    successText: "#92DEBA",
+    danger: "#E46F7D",
+  },
+
+  obsidian: {
+    background: "#0B0D12",
+    surface: "#151820",
+    surfaceSoft: "#1D212B",
+    text: "#F5F2EA",
+    textSoft: "#B9B5AC",
+    textFaint: "#77756F",
+    primary: "#D7B56A",
+    border: "#30343E",
+    borderStrong: "#474C58",
+    shadow: "rgba(0, 0, 0, 0.48)",
+    warning: "#D7A33D",
+    warningBorder: "#725A2A",
+    warningBackground: "#211C12",
+    success: "#4EBB88",
+    successBorder: "#2F6E52",
+    successBackground: "#11251C",
+    successText: "#8BD6B1",
+    danger: "#E06A76",
+  },
+
+};
+
+
+export const LOGIN_THEME_OPTIONS:
+  LoginThemeOption[] = [
+
+  {
+    id: "imperial-gold",
+    name: "Imperial Gold",
+    swatch: "#C58A08",
+  },
+
+  {
+    id: "royal-navy",
+    name: "Royal Navy",
+    swatch: "#4D82E6",
+  },
+
+  {
+    id: "amethyst",
+    name: "Amethyst",
+    swatch: "#A46BE5",
+  },
+
+  {
+    id: "emerald",
+    name: "Emerald",
+    swatch: "#35A878",
+  },
+
+  {
+    id: "obsidian",
+    name: "Obsidian",
+    swatch: "#161922",
+  },
+
+];
+
+
+export function getLoginTheme(
+  themeId:
+    LoginThemeId,
+): LoginTheme {
+
+  return {
+    ...loginDefaultTheme,
+    ...LOGIN_THEME_OVERRIDES[themeId],
+  };
+
+}
 
 
 // ============================================================
@@ -137,13 +243,46 @@ export interface LoginStyles {
   card:
     CSSProperties;
 
+  header:
+    CSSProperties;
+
+  logo:
+    CSSProperties;
+
+  logoImage:
+    CSSProperties;
+
   title:
     CSSProperties;
 
   subtitle:
     CSSProperties;
 
+  titleAccent:
+    CSSProperties;
+
+  themePicker:
+    CSSProperties;
+
+  themeOption:
+    CSSProperties;
+
+  themeOptionActive:
+    CSSProperties;
+
+  themeSwatch:
+    CSSProperties;
+
+  themeOptionLabel:
+    CSSProperties;
+
+  usbStatus:
+    CSSProperties;
+
   usbStatusRow:
+    CSSProperties;
+
+  usbStatusText:
     CSSProperties;
 
   usbMessage:
@@ -152,13 +291,61 @@ export interface LoginStyles {
   startupMessage:
     CSSProperties;
 
-  usbLoginButton:
+  chooserOption:
     CSSProperties;
 
-  usbLoginButtonDisabled:
+  chooserOptionDisabled:
     CSSProperties;
 
-  normalLoginButton:
+  chooserOptionContent:
+    CSSProperties;
+
+  chooserOptionIcon:
+    CSSProperties;
+
+  chooserOptionText:
+    CSSProperties;
+
+  chooserOptionTitle:
+    CSSProperties;
+
+  chooserOptionSubtitle:
+    CSSProperties;
+
+  chooserOptionChevron:
+    CSSProperties;
+
+  fieldSection:
+    CSSProperties;
+
+  fieldSectionCompact:
+    CSSProperties;
+
+  fieldLabel:
+    CSSProperties;
+
+  customSelect:
+    CSSProperties;
+
+  customSelectButton:
+    CSSProperties;
+
+  customSelectValue:
+    CSSProperties;
+
+  customSelectIcon:
+    CSSProperties;
+
+  customSelectChevron:
+    CSSProperties;
+
+  customSelectMenu:
+    CSSProperties;
+
+  customSelectOption:
+    CSSProperties;
+
+  customSelectOptionActive:
     CSSProperties;
 
   helperText:
@@ -173,13 +360,40 @@ export interface LoginStyles {
   modeNoticeUsb:
     CSSProperties;
 
+  modeNoticeCloud:
+    CSSProperties;
+
   modeNoticeNormal:
+    CSSProperties;
+
+  modeNoticeHeader:
     CSSProperties;
 
   modeNoticeSubtext:
     CSSProperties;
 
+  inputGroup:
+    CSSProperties;
+
+  inputWrapper:
+    CSSProperties;
+
+  inputIcon:
+    CSSProperties;
+
   input:
+    CSSProperties;
+
+  inputDisabled:
+    CSSProperties;
+
+  passwordToggle:
+    CSSProperties;
+
+  disabledPasswordIcon:
+    CSSProperties;
+
+  forgotPassword:
     CSSProperties;
 
   error:
@@ -188,17 +402,93 @@ export interface LoginStyles {
   primaryButton:
     CSSProperties;
 
+  primaryButtonContent:
+    CSSProperties;
+
   secondaryButton:
     CSSProperties;
 
-  developmentAccount:
+  secondaryButtonContent:
+    CSSProperties;
+
+  defaultAccount:
+    CSSProperties;
+
+  defaultAccountIcon:
+    CSSProperties;
+
+  defaultAccountTitle:
+    CSSProperties;
+
+  defaultAccountCredentials:
     CSSProperties;
 
 }
 
 
 // ============================================================
-// COMMON BOX FOUNDATION
+// LOGIN THEME SWATCH STYLE
+// ============================================================
+
+export function getLoginThemeSwatchStyle(
+  swatch:
+    string,
+  active:
+    boolean,
+  theme:
+    LoginTheme =
+    loginDefaultTheme,
+): CSSProperties {
+
+  return {
+
+    ...getBoxSizing(),
+
+    width:
+      "1.55em",
+
+    height:
+      "1.55em",
+
+    minWidth:
+      "1.55em",
+
+    minHeight:
+      "1.55em",
+
+    borderRadius:
+      "50%",
+
+    border:
+      `2px solid ${
+        active
+          ? theme.primary
+          : theme.border
+      }`,
+
+    background:
+      swatch,
+
+    boxShadow:
+  active
+    ? `0 0 0 2px ${theme.surface}, 0 0 0 3px ${theme.primary}`
+    : "0 4px 12px rgba(0, 0, 0, 0.10)",
+
+    transform:
+      active
+        ? "translateY(-1px)"
+        : "none",
+
+    transition:
+      "transform 120ms ease, box-shadow 120ms ease, border-color 120ms ease",
+
+  };
+
+}
+
+
+// ============================================================
+// BOX SIZING
 // ============================================================
 
 function getBoxSizing():
@@ -220,11 +510,13 @@ function getBoxSizing():
 
 export function getLoginStyles(
   responsive: ResponsiveState,
+  theme:
+    LoginTheme =
+    loginDefaultTheme,
 ): LoginStyles {
 
-  // ==========================================================
-  // CENTRAL RESPONSIVE ENGINE
-  // ==========================================================
+  const COLORS =
+    theme;
 
   const tokens =
     responsive.tokens;
@@ -293,7 +585,7 @@ export function getLoginStyles(
       COLORS.text,
 
     fontFamily:
-      FONT_FAMILY,
+      "Segoe UI, Inter, system-ui, -apple-system, BlinkMacSystemFont, sans-serif",
 
     overflow:
       "auto",
@@ -302,7 +594,7 @@ export function getLoginStyles(
 
 
   // ==========================================================
-  // CARD
+  // LOGIN CARD
   // ==========================================================
 
   const card:
@@ -322,6 +614,9 @@ export function getLoginStyles(
     padding:
       loginTokens.cardPadding,
 
+    paddingTop:
+  spacingTokens.small,
+
     background:
       COLORS.surface,
 
@@ -338,6 +633,80 @@ export function getLoginStyles(
 
 
   // ==========================================================
+  // HEADER
+  // ==========================================================
+
+  const header:
+    CSSProperties = {
+
+    display:
+      "flex",
+
+    flexDirection:
+      "column",
+
+    alignItems:
+      "center",
+
+    justifyContent:
+      "center",
+
+    textAlign:
+      "center",
+
+  };
+
+
+  // ==========================================================
+  // LOGO
+  //
+  // Relative sizing keeps the presentation tied to the
+  // responsive typography scale rather than introducing a
+  // separate viewport-specific dimension.
+  // ==========================================================
+
+  const logo:
+    CSSProperties = {
+
+    display:
+      "flex",
+
+    alignItems:
+      "center",
+
+    justifyContent:
+      "center",
+
+    marginBottom:
+      0,
+
+    fontSize:
+      loginTokens.titleSize,
+
+  };
+
+
+  const logoImage:
+  CSSProperties = {
+
+  display:
+    "block",
+
+  width:
+    "4em",
+
+  height:
+    "4em",
+
+  maxWidth:
+    "100%",
+
+  objectFit:
+    "contain",
+
+};
+
+  // ==========================================================
   // TITLE
   // ==========================================================
 
@@ -347,17 +716,14 @@ export function getLoginStyles(
     margin:
       0,
 
-    textAlign:
-      "center",
-
     color:
       COLORS.text,
 
     fontFamily:
-      FONT_FAMILY,
+      "Segoe UI, Inter, system-ui, -apple-system, BlinkMacSystemFont, sans-serif",
 
     fontSize:
-      loginTokens.titleSize,
+  loginTokens.titleSize * 0.72,
 
     fontWeight:
       800,
@@ -367,6 +733,9 @@ export function getLoginStyles(
 
     letterSpacing:
       "1px",
+
+    textAlign:
+      "center",
 
   };
 
@@ -379,19 +748,16 @@ export function getLoginStyles(
     CSSProperties = {
 
     marginTop:
-      spacingTokens.inline,
+      spacingTokens.small,
 
     marginBottom:
-      loginTokens.sectionGap,
-
-    textAlign:
-      "center",
+      0,
 
     color:
       COLORS.textSoft,
 
     fontFamily:
-      FONT_FAMILY,
+      "Segoe UI, Inter, system-ui, -apple-system, BlinkMacSystemFont, sans-serif",
 
     fontSize:
       loginTokens.subtitleSize,
@@ -401,6 +767,210 @@ export function getLoginStyles(
 
     lineHeight:
       lineHeightTokens.body,
+
+    textAlign:
+      "center",
+
+  };
+
+
+  // ==========================================================
+  // GOLD HEADER ACCENT
+  // ==========================================================
+
+  const titleAccent:
+    CSSProperties = {
+
+    width:
+      "5em",
+
+    maxWidth:
+      "100%",
+
+    height:
+      borderTokens.width,
+
+    marginTop:
+      spacingTokens.small,
+
+    marginBottom:
+      spacingTokens.small,
+
+    borderRadius:
+      borderTokens.width,
+
+    background:
+      COLORS.primary,
+
+  };
+
+
+  // ==========================================================
+  // LOGIN THEME PICKER
+  //
+  // Five small circular selectors.
+  // The control itself is compact and flex-wraps so it remains
+  // safe on narrow responsive viewports.
+  // ==========================================================
+
+  const themePicker:
+    CSSProperties = {
+
+    display:
+      "flex",
+
+    alignItems:
+      "flex-start",
+
+    justifyContent:
+      "center",
+
+    gap:
+  spacingTokens.small,
+
+width:
+  "100%",
+
+flexWrap:
+  "wrap",
+
+marginBottom:
+  spacingTokens.small,
+
+  };
+
+
+  const themeOption:
+    CSSProperties = {
+
+    ...getBoxSizing(),
+
+    display:
+      "flex",
+
+    flexDirection:
+      "column",
+
+    alignItems:
+      "center",
+
+    justifyContent:
+      "flex-start",
+
+    gap:
+      spacingTokens.small,
+
+    padding:
+      0,
+
+    border:
+      "none",
+
+    background:
+      "transparent",
+
+    color:
+      COLORS.textSoft,
+
+    cursor:
+      "pointer",
+
+    fontFamily:
+      "Segoe UI, Inter, system-ui, -apple-system, BlinkMacSystemFont, sans-serif",
+
+    fontSize:
+      typographyTokens.small,
+
+    fontWeight:
+      600,
+
+    lineHeight:
+      lineHeightTokens.compact,
+
+  };
+
+
+  const themeOptionActive:
+    CSSProperties = {
+
+    ...themeOption,
+
+    color:
+      COLORS.text,
+
+    fontWeight:
+      800,
+
+  };
+
+
+  const themeSwatch:
+    CSSProperties = {
+
+    ...getBoxSizing(),
+
+    width:
+      "1.55em",
+
+    height:
+      "1.55em",
+
+    minWidth:
+      "1.55em",
+
+    minHeight:
+      "1.55em",
+
+    borderRadius:
+      "50%",
+
+    border:
+      `2px solid ${COLORS.border}`,
+
+    boxShadow:
+      "0 4px 12px rgba(0, 0, 0, 0.10)",
+
+    transition:
+      "transform 120ms ease, box-shadow 120ms ease, border-color 120ms ease",
+
+  };
+
+
+  const themeOptionLabel:
+  CSSProperties = {
+
+  display:
+    "none",
+
+};
+
+
+  // ==========================================================
+  // USB STATUS
+  // ==========================================================
+
+  const usbStatus:
+    CSSProperties = {
+
+    ...getBoxSizing(),
+
+    width:
+      "100%",
+
+    padding:
+      spacingTokens.control,
+
+    marginBottom:
+      spacingTokens.medium,
+
+    border:
+      `${borderTokens.width}px solid ${COLORS.warningBorder}`,
+
+    borderRadius:
+      controlTokens.radius,
+
+    background:
+      COLORS.warningBackground,
 
   };
 
@@ -425,7 +995,7 @@ export function getLoginStyles(
       0,
 
     color:
-      COLORS.textMuted,
+      COLORS.text,
 
     fontSize:
       typographyTokens.label,
@@ -435,6 +1005,28 @@ export function getLoginStyles(
 
     lineHeight:
       lineHeightTokens.compact,
+
+  };
+
+
+  // ==========================================================
+  // USB STATUS TEXT
+  // ==========================================================
+
+  const usbStatusText:
+    CSSProperties = {
+
+    minWidth:
+      0,
+
+    overflow:
+      "hidden",
+
+    textOverflow:
+      "ellipsis",
+
+    whiteSpace:
+      "nowrap",
 
   };
 
@@ -471,11 +1063,23 @@ export function getLoginStyles(
   const startupMessage:
     CSSProperties = {
 
+    display:
+      "flex",
+
+    alignItems:
+      "center",
+
+    justifyContent:
+      "center",
+
+    gap:
+      controlTokens.gap,
+
     paddingTop:
       spacingTokens.small,
 
     color:
-      COLORS.textFaint,
+      COLORS.textSoft,
 
     textAlign:
       "center",
@@ -493,10 +1097,10 @@ export function getLoginStyles(
 
 
   // ==========================================================
-  // USB LOGIN BUTTON
+  // CHOOSER OPTION
   // ==========================================================
 
-  const usbLoginButton:
+  const chooserOption:
     CSSProperties = {
 
     ...getBoxSizing(),
@@ -514,13 +1118,13 @@ export function getLoginStyles(
       spacingTokens.medium,
 
     border:
-      `${borderTokens.width}px solid ${COLORS.successBorderStrong}`,
+      `${borderTokens.width}px solid ${COLORS.border}`,
 
     borderRadius:
       buttonTokens.radius,
 
     background:
-      COLORS.successBackground,
+      COLORS.surface,
 
     color:
       COLORS.text,
@@ -529,28 +1133,25 @@ export function getLoginStyles(
       "pointer",
 
     fontFamily:
-      FONT_FAMILY,
+      "Segoe UI, Inter, system-ui, -apple-system, BlinkMacSystemFont, sans-serif",
 
-    fontSize:
-      buttonTokens.fontSize,
+    textAlign:
+      "left",
 
-    fontWeight:
-      800,
-
-    lineHeight:
-      lineHeightTokens.compact,
+    transition:
+      "border-color 120ms ease, background 120ms ease, box-shadow 120ms ease",
 
   };
 
 
   // ==========================================================
-  // USB LOGIN BUTTON — DISABLED
+  // CHOOSER OPTION DISABLED
   // ==========================================================
 
-  const usbLoginButtonDisabled:
+  const chooserOptionDisabled:
     CSSProperties = {
 
-    ...usbLoginButton,
+    ...chooserOption,
 
     borderColor:
       COLORS.border,
@@ -558,41 +1159,279 @@ export function getLoginStyles(
     background:
       COLORS.surfaceSoft,
 
+    color:
+      COLORS.textSoft,
+
     cursor:
       "not-allowed",
 
     opacity:
-      0.65,
+      0.72,
 
   };
 
 
   // ==========================================================
-  // NORMAL LOGIN BUTTON
+  // CHOOSER OPTION CONTENT
   // ==========================================================
 
-  const normalLoginButton:
+  const chooserOptionContent:
+    CSSProperties = {
+
+    display:
+      "flex",
+
+    alignItems:
+      "center",
+
+    gap:
+      controlTokens.gap,
+
+    minWidth:
+      0,
+
+  };
+
+
+  // ==========================================================
+  // CHOOSER OPTION ICON
+  // ==========================================================
+
+  const chooserOptionIcon:
+    CSSProperties = {
+
+    display:
+      "flex",
+
+    alignItems:
+      "center",
+
+    justifyContent:
+      "center",
+
+    flexShrink:
+      0,
+
+    fontSize:
+      typographyTokens.button,
+
+    color:
+      COLORS.primary,
+
+  };
+
+
+  // ==========================================================
+  // CHOOSER OPTION TEXT
+  // ==========================================================
+
+  const chooserOptionText:
+    CSSProperties = {
+
+    display:
+      "flex",
+
+    flexDirection:
+      "column",
+
+    minWidth:
+      0,
+
+    flex:
+      1,
+
+  };
+
+
+  // ==========================================================
+  // CHOOSER OPTION TITLE
+  // ==========================================================
+
+  const chooserOptionTitle:
+    CSSProperties = {
+
+    color:
+      COLORS.text,
+
+    fontSize:
+      typographyTokens.button,
+
+    fontWeight:
+      800,
+
+    lineHeight:
+      lineHeightTokens.compact,
+
+  };
+
+
+  // ==========================================================
+  // CHOOSER OPTION SUBTITLE
+  // ==========================================================
+
+  const chooserOptionSubtitle:
+    CSSProperties = {
+
+    marginTop:
+      spacingTokens.small,
+
+    color:
+      COLORS.textSoft,
+
+    fontSize:
+      typographyTokens.small,
+
+    fontWeight:
+      500,
+
+    lineHeight:
+      lineHeightTokens.body,
+
+  };
+
+
+  // ==========================================================
+  // CHOOSER OPTION CHEVRON
+  // ==========================================================
+
+  const chooserOptionChevron:
+    CSSProperties = {
+
+    display:
+      "flex",
+
+    alignItems:
+      "center",
+
+    justifyContent:
+      "center",
+
+    flexShrink:
+      0,
+
+    color:
+      COLORS.textSoft,
+
+    fontSize:
+      typographyTokens.button,
+
+  };
+
+
+  // ==========================================================
+  // FIELD SECTION
+  // ==========================================================
+
+  const fieldSection:
     CSSProperties = {
 
     ...getBoxSizing(),
+
+    position:
+      "relative",
+
+    width:
+      "100%",
+
+    marginTop:
+      spacingTokens.small,
+
+  };
+
+
+  // ==========================================================
+  // FIELD SECTION — COMPACT
+  // ==========================================================
+
+  const fieldSectionCompact:
+    CSSProperties = {
+
+    ...fieldSection,
+
+    marginTop:
+      spacingTokens.small,
+
+  };
+
+
+  // ==========================================================
+  // FIELD LABEL
+  // ==========================================================
+
+  const fieldLabel:
+    CSSProperties = {
+
+    marginBottom:
+      spacingTokens.small,
+
+    color:
+      COLORS.textSoft,
+
+    fontSize:
+      typographyTokens.small,
+
+    fontWeight:
+      700,
+
+    lineHeight:
+      lineHeightTokens.compact,
+
+  };
+
+
+  // ==========================================================
+  // CUSTOM SELECT
+  // ==========================================================
+
+  const customSelect:
+    CSSProperties = {
+
+    ...getBoxSizing(),
+
+    position:
+      "relative",
+
+    width:
+      "100%",
+
+  };
+
+
+  // ==========================================================
+  // CUSTOM SELECT BUTTON
+  // ==========================================================
+
+  const customSelectButton:
+    CSSProperties = {
+
+    ...getBoxSizing(),
+
+    display:
+      "flex",
+
+    alignItems:
+      "center",
+
+    justifyContent:
+      "space-between",
+
+    gap:
+      controlTokens.gap,
 
     width:
       "100%",
 
     minHeight:
-      buttonTokens.height,
+      controlTokens.height,
 
     padding:
-      `${buttonTokens.paddingY}px ${buttonTokens.paddingX}px`,
-
-    marginTop:
-      spacingTokens.medium,
+      `${controlTokens.paddingY}px ${controlTokens.paddingX}px`,
 
     border:
-      `${borderTokens.width}px solid ${COLORS.borderStrong}`,
+      `${borderTokens.width}px solid ${COLORS.border}`,
 
     borderRadius:
-      buttonTokens.radius,
+      controlTokens.radius,
 
     background:
       COLORS.surfaceSoft,
@@ -604,16 +1443,226 @@ export function getLoginStyles(
       "pointer",
 
     fontFamily:
-      FONT_FAMILY,
+      "Segoe UI, Inter, system-ui, -apple-system, BlinkMacSystemFont, sans-serif",
 
     fontSize:
-      buttonTokens.fontSize,
+      typographyTokens.button,
+
+    fontWeight:
+      600,
+
+    lineHeight:
+      lineHeightTokens.compact,
+
+    textAlign:
+      "left",
+
+    outline:
+      "none",
+
+    transition:
+      "border-color 120ms ease, background 120ms ease, box-shadow 120ms ease",
+
+  };
+
+
+  // ==========================================================
+  // CUSTOM SELECT VALUE
+  // ==========================================================
+
+  const customSelectValue:
+    CSSProperties = {
+
+    display:
+      "flex",
+
+    alignItems:
+      "center",
+
+    gap:
+      controlTokens.gap,
+
+    minWidth:
+      0,
+
+    flex:
+      1,
+
+  };
+
+
+  // ==========================================================
+  // CUSTOM SELECT ICON
+  // ==========================================================
+
+  const customSelectIcon:
+    CSSProperties = {
+
+    display:
+      "flex",
+
+    alignItems:
+      "center",
+
+    justifyContent:
+      "center",
+
+    flexShrink:
+      0,
+
+    color:
+      COLORS.primary,
+
+  };
+
+
+  // ==========================================================
+  // CUSTOM SELECT CHEVRON
+  // ==========================================================
+
+  const customSelectChevron:
+    CSSProperties = {
+
+    display:
+      "flex",
+
+    alignItems:
+      "center",
+
+    justifyContent:
+      "center",
+
+    flexShrink:
+      0,
+
+    color:
+      COLORS.textSoft,
+
+  };
+
+
+  // ==========================================================
+  // CUSTOM SELECT MENU
+  // ==========================================================
+
+  const customSelectMenu:
+    CSSProperties = {
+
+    ...getBoxSizing(),
+
+    position:
+      "absolute",
+
+    top:
+      "calc(100% + 6px)",
+
+    left:
+      0,
+
+    right:
+      0,
+
+    zIndex:
+      100,
+
+    padding:
+      spacingTokens.small,
+
+    border:
+      `${borderTokens.width}px solid ${COLORS.border}`,
+
+    borderRadius:
+      controlTokens.radius,
+
+    background:
+      COLORS.surface,
+
+    boxShadow:
+      `0 14px 34px ${COLORS.shadow}`,
+
+  };
+
+
+  // ==========================================================
+  // CUSTOM SELECT OPTION
+  // ==========================================================
+
+  const customSelectOption:
+    CSSProperties = {
+
+    ...getBoxSizing(),
+
+    display:
+      "flex",
+
+    alignItems:
+      "center",
+
+    gap:
+      controlTokens.gap,
+
+    width:
+      "100%",
+
+    minHeight:
+      controlTokens.height,
+
+    padding:
+      `${controlTokens.paddingY}px ${controlTokens.paddingX}px`,
+
+    border:
+      "none",
+
+    borderRadius:
+      controlTokens.radius,
+
+    background:
+      "transparent",
+
+    color:
+      COLORS.text,
+
+    cursor:
+      "pointer",
+
+    fontFamily:
+      "Segoe UI, Inter, system-ui, -apple-system, BlinkMacSystemFont, sans-serif",
+
+    fontSize:
+      typographyTokens.button,
+
+    fontWeight:
+      600,
+
+    lineHeight:
+      lineHeightTokens.compact,
+
+    textAlign:
+      "left",
+
+  };
+
+
+  // ==========================================================
+  // CUSTOM SELECT OPTION — ACTIVE
+  // ==========================================================
+
+  const customSelectOptionActive:
+    CSSProperties = {
+
+    ...customSelectOption,
+
+    background:
+      COLORS.surfaceSoft,
+
+    color:
+      COLORS.text,
 
     fontWeight:
       800,
 
-    lineHeight:
-      lineHeightTokens.compact,
+    boxShadow:
+      `inset 3px 0 0 ${COLORS.primary}`,
 
   };
 
@@ -629,7 +1678,7 @@ export function getLoginStyles(
       "center",
 
     color:
-      COLORS.textFaint,
+      COLORS.textSoft,
 
     fontSize:
       typographyTokens.small,
@@ -735,6 +1784,48 @@ export function getLoginStyles(
 
 
   // ==========================================================
+  // MODE NOTICE — CLOUD
+  // ==========================================================
+
+  const modeNoticeCloud:
+    CSSProperties = {
+
+    ...getBoxSizing(),
+
+    width:
+      "100%",
+
+    padding:
+      spacingTokens.control,
+
+    marginBottom:
+      spacingTokens.control,
+
+    border:
+      `${borderTokens.width}px solid ${COLORS.border}`,
+
+    borderRadius:
+      controlTokens.radius,
+
+    background:
+      COLORS.surfaceSoft,
+
+    color:
+      COLORS.text,
+
+    fontSize:
+      typographyTokens.small,
+
+    fontWeight:
+      700,
+
+    lineHeight:
+      lineHeightTokens.compact,
+
+  };
+
+
+  // ==========================================================
   // MODE NOTICE — NORMAL
   // ==========================================================
 
@@ -759,10 +1850,10 @@ export function getLoginStyles(
       controlTokens.radius,
 
     background:
-      COLORS.background,
+      COLORS.surfaceSoft,
 
     color:
-      COLORS.textMuted,
+      COLORS.text,
 
     fontSize:
       typographyTokens.small,
@@ -772,6 +1863,34 @@ export function getLoginStyles(
 
     lineHeight:
       lineHeightTokens.compact,
+
+  };
+
+
+  // ==========================================================
+  // MODE NOTICE HEADER
+  // ==========================================================
+
+  const modeNoticeHeader:
+    CSSProperties = {
+
+    display:
+      "flex",
+
+    alignItems:
+      "center",
+
+    gap:
+      controlTokens.gap,
+
+    color:
+      COLORS.text,
+
+    fontSize:
+      typographyTokens.button,
+
+    fontWeight:
+      800,
 
   };
 
@@ -802,6 +1921,83 @@ export function getLoginStyles(
 
 
   // ==========================================================
+  // INPUT GROUP
+  // ==========================================================
+
+  const inputGroup:
+    CSSProperties = {
+
+    display:
+      "flex",
+
+    flexDirection:
+      "column",
+
+    gap:
+      spacingTokens.control,
+
+  };
+
+
+  // ==========================================================
+  // INPUT WRAPPER
+  // ==========================================================
+
+  const inputWrapper:
+    CSSProperties = {
+
+    ...getBoxSizing(),
+
+    position:
+      "relative",
+
+    width:
+      "100%",
+
+  };
+
+
+  // ==========================================================
+  // INPUT ICON
+  // ==========================================================
+
+  const inputIcon:
+    CSSProperties = {
+
+    position:
+      "absolute",
+
+    left:
+      inputTokens.paddingX,
+
+    top:
+      "50%",
+
+    transform:
+      "translateY(-50%)",
+
+    display:
+      "flex",
+
+    alignItems:
+      "center",
+
+    justifyContent:
+      "center",
+
+    color:
+      COLORS.textSoft,
+
+    pointerEvents:
+      "none",
+
+    fontSize:
+      typographyTokens.button,
+
+  };
+
+
+  // ==========================================================
   // INPUT
   // ==========================================================
 
@@ -825,11 +2021,17 @@ export function getLoginStyles(
     height:
       inputTokens.height,
 
-    padding:
-      `${inputTokens.paddingY}px ${inputTokens.paddingX}px`,
+    paddingTop:
+      `${inputTokens.paddingY}px`,
 
-    marginTop:
-      spacingTokens.control,
+    paddingBottom:
+      `${inputTokens.paddingY}px`,
+
+    paddingLeft:
+  `${inputTokens.paddingX + inputTokens.iconSize + controlTokens.gap}px`,
+
+paddingRight:
+  `${inputTokens.paddingX + inputTokens.iconSize + controlTokens.gap}px`,
 
     border:
       `${borderTokens.width}px solid ${COLORS.border}`,
@@ -847,7 +2049,7 @@ export function getLoginStyles(
       COLORS.text,
 
     fontFamily:
-      FONT_FAMILY,
+      "Segoe UI, Inter, system-ui, -apple-system, BlinkMacSystemFont, sans-serif",
 
     fontSize:
       inputTokens.fontSize,
@@ -857,6 +2059,153 @@ export function getLoginStyles(
 
     lineHeight:
       lineHeightTokens.body,
+
+  };
+
+
+  // ==========================================================
+  // PASSWORD TOGGLE
+  // ==========================================================
+
+  const passwordToggle:
+    CSSProperties = {
+
+    position:
+      "absolute",
+
+    right:
+      inputTokens.paddingX,
+
+    top:
+      "50%",
+
+    transform:
+      "translateY(-50%)",
+
+    display:
+      "flex",
+
+    alignItems:
+      "center",
+
+    justifyContent:
+      "center",
+
+    padding:
+      0,
+
+    border:
+      "none",
+
+    background:
+      "transparent",
+
+    color:
+      COLORS.textSoft,
+
+    cursor:
+      "pointer",
+
+  };
+
+
+  // ==========================================================
+  // DISABLED / PLACEHOLDER INPUT
+  // ==========================================================
+
+  const inputDisabled:
+    CSSProperties = {
+
+    ...input,
+
+    background:
+      COLORS.surfaceSoft,
+
+    color:
+      COLORS.textSoft,
+
+    cursor:
+      "not-allowed",
+
+    opacity:
+      0.82,
+
+  };
+
+
+  // ==========================================================
+  // DISABLED PASSWORD ICON
+  // ==========================================================
+
+  const disabledPasswordIcon:
+    CSSProperties = {
+
+    position:
+      "absolute",
+
+    right:
+      inputTokens.paddingX,
+
+    top:
+      "50%",
+
+    transform:
+      "translateY(-50%)",
+
+    color:
+      COLORS.textSoft,
+
+    pointerEvents:
+      "none",
+
+  };
+
+
+  // ==========================================================
+  // FORGOT PASSWORD
+  // ==========================================================
+
+  const forgotPassword:
+    CSSProperties = {
+
+    display:
+      "block",
+
+    width:
+      "100%",
+
+    marginTop:
+      spacingTokens.small,
+
+    padding:
+      0,
+
+    border:
+      "none",
+
+    background:
+      "transparent",
+
+    color:
+      COLORS.textSoft,
+
+    cursor:
+      "pointer",
+
+    fontFamily:
+      "Segoe UI, Inter, system-ui, -apple-system, BlinkMacSystemFont, sans-serif",
+
+    fontSize:
+      typographyTokens.small,
+
+    fontWeight:
+      600,
+
+    lineHeight:
+      lineHeightTokens.compact,
+
+    textAlign:
+      "center",
 
   };
 
@@ -885,6 +2234,9 @@ export function getLoginStyles(
 
     lineHeight:
       lineHeightTokens.body,
+
+    textAlign:
+      "center",
 
   };
 
@@ -920,22 +2272,47 @@ export function getLoginStyles(
       COLORS.primary,
 
     color:
-      COLORS.text,
+      "#FFFFFF",
 
     cursor:
       "pointer",
 
     fontFamily:
-      FONT_FAMILY,
+      "Segoe UI, Inter, system-ui, -apple-system, BlinkMacSystemFont, sans-serif",
 
     fontSize:
       buttonTokens.fontSize,
 
     fontWeight:
-      700,
+      800,
 
     lineHeight:
       lineHeightTokens.compact,
+
+    boxShadow:
+      "none",
+
+  };
+
+
+  // ==========================================================
+  // PRIMARY BUTTON CONTENT
+  // ==========================================================
+
+  const primaryButtonContent:
+    CSSProperties = {
+
+    display:
+      "flex",
+
+    alignItems:
+      "center",
+
+    justifyContent:
+      "center",
+
+    gap:
+      controlTokens.gap,
 
   };
 
@@ -968,7 +2345,7 @@ export function getLoginStyles(
       controlTokens.radius,
 
     background:
-      "transparent",
+      COLORS.surface,
 
     color:
       COLORS.textSoft,
@@ -977,7 +2354,7 @@ export function getLoginStyles(
       "pointer",
 
     fontFamily:
-      FONT_FAMILY,
+      "Segoe UI, Inter, system-ui, -apple-system, BlinkMacSystemFont, sans-serif",
 
     fontSize:
       typographyTokens.button,
@@ -992,35 +2369,137 @@ export function getLoginStyles(
 
 
   // ==========================================================
-  // DEVELOPMENT ACCOUNT
+  // SECONDARY BUTTON CONTENT
   // ==========================================================
 
-  const developmentAccount:
+  const secondaryButtonContent:
     CSSProperties = {
 
-    marginTop:
-      spacingTokens.large,
+    display:
+      "flex",
 
-    marginBottom:
+    alignItems:
+      "center",
+
+    justifyContent:
+      "center",
+
+    gap:
+      controlTokens.gap,
+
+  };
+
+
+  // ==========================================================
+  // DEFAULT ACCOUNT
+  // ==========================================================
+
+  const defaultAccount:
+    CSSProperties = {
+
+    ...getBoxSizing(),
+
+    display:
+      "flex",
+
+    alignItems:
+      "center",
+
+    gap:
+      controlTokens.gap,
+
+    width:
+      "100%",
+
+    marginTop:
+      loginTokens.sectionGap,
+
+    padding:
+      spacingTokens.control,
+
+    border:
+      `${borderTokens.width}px solid ${COLORS.border}`,
+
+    borderRadius:
+      controlTokens.radius,
+
+    background:
+      COLORS.surfaceSoft,
+
+  };
+
+
+  // ==========================================================
+  // DEFAULT ACCOUNT ICON
+  // ==========================================================
+
+  const defaultAccountIcon:
+    CSSProperties = {
+
+    display:
+      "flex",
+
+    alignItems:
+      "center",
+
+    justifyContent:
+      "center",
+
+    flexShrink:
       0,
 
     color:
-      COLORS.textFaint,
+      COLORS.primary,
 
-    textAlign:
-      "center",
+    fontSize:
+      typographyTokens.button,
+
+  };
+
+
+  // ==========================================================
+  // DEFAULT ACCOUNT TITLE
+  // ==========================================================
+
+  const defaultAccountTitle:
+    CSSProperties = {
+
+    color:
+      COLORS.textSoft,
 
     fontSize:
       typographyTokens.small,
 
     fontWeight:
-      500,
+      600,
 
     lineHeight:
-      lineHeightTokens.body,
+      lineHeightTokens.compact,
 
-    opacity:
-      0.75,
+  };
+
+
+  // ==========================================================
+  // DEFAULT ACCOUNT CREDENTIALS
+  // ==========================================================
+
+  const defaultAccountCredentials:
+    CSSProperties = {
+
+    marginTop:
+      spacingTokens.small,
+
+    color:
+      COLORS.text,
+
+    fontSize:
+      typographyTokens.small,
+
+    fontWeight:
+      700,
+
+    lineHeight:
+      lineHeightTokens.compact,
 
   };
 
@@ -1035,21 +2514,75 @@ export function getLoginStyles(
 
     card,
 
+    header,
+
+    logo,
+
+    logoImage,
+
     title,
 
     subtitle,
 
+    titleAccent,
+
+    themePicker,
+
+    themeOption,
+
+    themeOptionActive,
+
+    themeSwatch,
+
+    themeOptionLabel,
+
+    usbStatus,
+
     usbStatusRow,
+
+    usbStatusText,
 
     usbMessage,
 
     startupMessage,
 
-    usbLoginButton,
+    chooserOption,
 
-    usbLoginButtonDisabled,
+    chooserOptionDisabled,
 
-    normalLoginButton,
+    chooserOptionContent,
+
+    chooserOptionIcon,
+
+    chooserOptionText,
+
+    chooserOptionTitle,
+
+    chooserOptionSubtitle,
+
+    chooserOptionChevron,
+
+    fieldSection,
+
+    fieldSectionCompact,
+
+    fieldLabel,
+
+    customSelect,
+
+    customSelectButton,
+
+    customSelectValue,
+
+    customSelectIcon,
+
+    customSelectChevron,
+
+    customSelectMenu,
+
+    customSelectOption,
+
+    customSelectOptionActive,
 
     helperText,
 
@@ -1059,19 +2592,47 @@ export function getLoginStyles(
 
     modeNoticeUsb,
 
+    modeNoticeCloud,
+
     modeNoticeNormal,
+
+    modeNoticeHeader,
 
     modeNoticeSubtext,
 
+    inputGroup,
+
+    inputWrapper,
+
+    inputIcon,
+
     input,
+
+    inputDisabled,
+
+    passwordToggle,
+
+    disabledPasswordIcon,
+
+    forgotPassword,
 
     error,
 
     primaryButton,
 
+    primaryButtonContent,
+
     secondaryButton,
 
-    developmentAccount,
+    secondaryButtonContent,
+
+    defaultAccount,
+
+    defaultAccountIcon,
+
+    defaultAccountTitle,
+
+    defaultAccountCredentials,
 
   };
 
@@ -1081,11 +2642,20 @@ export function getLoginStyles(
 // ============================================================
 // USB STATUS CONTAINER
 //
-// State-dependent styling only.
+// IMPORTANT:
+//
+// This function previously used a hard-coded dark navy
+// background. That was why the Login screenshot still showed
+// the old dark USB panel after the theme change.
+//
+// It now consumes the FINORA Login theme.
 // ============================================================
 
 export function getUsbStatusStyle(
   usbAvailable: boolean,
+  theme:
+    LoginTheme =
+    loginDefaultTheme,
 ): CSSProperties {
 
   return {
@@ -1096,17 +2666,11 @@ export function getUsbStatusStyle(
     boxSizing:
       "border-box",
 
-    marginBottom:
-      0,
-
-    padding:
-      "inherit",
-
     border:
       `1px solid ${
         usbAvailable
-          ? COLORS.successBorder
-          : COLORS.border
+          ? theme.successBorder
+          : theme.warningBorder
       }`,
 
     borderRadius:
@@ -1114,8 +2678,8 @@ export function getUsbStatusStyle(
 
     background:
       usbAvailable
-        ? COLORS.successBackground
-        : COLORS.background,
+        ? theme.successBackground
+        : theme.warningBackground,
 
   };
 
@@ -1124,13 +2688,14 @@ export function getUsbStatusStyle(
 
 // ============================================================
 // USB STATUS INDICATOR
-//
-// State-dependent visual styling only.
 // ============================================================
 
 export function getUsbStatusIndicatorStyle(
   usbChecking: boolean,
   usbAvailable: boolean,
+  theme:
+    LoginTheme =
+    loginDefaultTheme,
 ): CSSProperties {
 
   return {
@@ -1155,10 +2720,10 @@ export function getUsbStatusIndicatorStyle(
 
     background:
       usbChecking
-        ? COLORS.warning
+        ? theme.warning
         : usbAvailable
-          ? COLORS.success
-          : COLORS.textFaint,
+          ? theme.success
+          : theme.textFaint,
 
   };
 
