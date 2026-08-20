@@ -1,12 +1,13 @@
 /* ===========================================================
    FINORA ENTERPRISE OS
+
    THEME ENGINE
 
-   IMPERIAL GOLD THEME
+   OBSIDIAN THEME
 
    PURPOSE
    -----------------------------------------------------------
-   Official FINORA Imperial Gold visual theme.
+   Official FINORA Obsidian visual theme.
 
    IMPORTANT
    -----------------------------------------------------------
@@ -34,24 +35,39 @@ import type {
 
 
 /* ===========================================================
-   IMPERIAL GOLD THEME
+   OBSIDIAN THEME
 =========================================================== */
 
-export const IMPERIAL_GOLD_THEME:
+export const OBSIDIAN_THEME:
   FinoraTheme = {
 
   /* ---------------------------------------------------------
      IDENTITY
   --------------------------------------------------------- */
 
-  id: "imperial-gold",
+  id: "obsidian",
 
-  name: "Imperial Gold",
+  name: "Obsidian",
 
-  mode: "light",
+  mode: "dark",
 
   description:
-    "FINORA's signature premium light theme built around imperial gold, refined neutral surfaces, and enterprise-grade contrast.",
+    "FINORA's premium obsidian theme combining near-black surfaces, refined graphite structure, subtle silver accents, and high-contrast enterprise presentation.",
+
+
+  /* =========================================================
+     THEME SELECTOR SWATCH
+     
+     IMPORTANT
+     ---------------------------------------------------------
+     This matches the Obsidian selector identity used by
+     the FINORA Login theme selector.
+
+     Do NOT change brand.primary to this value.
+  ========================================================= */
+
+  selectorSwatch:
+    "#161922",
 
 
   /* =========================================================
@@ -65,10 +81,10 @@ export const IMPERIAL_GOLD_THEME:
     ------------------------------------------------------- */
 
     brand: {
-      primary: "#B8860B",
-      secondary: "#8C6A00",
-      accent: "#D4AF37",
-      accentSoft: "#F5E7B2",
+      primary: "#D4D7DC",
+      secondary: "#A7ADB7",
+      accent: "#E5E7EB",
+      accentSoft: "#30343A",
     },
 
 
@@ -77,11 +93,11 @@ export const IMPERIAL_GOLD_THEME:
     ------------------------------------------------------- */
 
     background: {
-      page: "#F7F8FA",
-      surface: "#FFFFFF",
-      surfaceElevated: "#FFFFFF",
-      surfaceMuted: "#F1F3F6",
-      surfaceStrong: "#E7EAF0",
+      page: "#090A0C",
+      surface: "#111315",
+      surfaceElevated: "#17191D",
+      surfaceMuted: "#1D2025",
+      surfaceStrong: "#272B31",
     },
 
 
@@ -90,12 +106,12 @@ export const IMPERIAL_GOLD_THEME:
     ------------------------------------------------------- */
 
     text: {
-      primary: "#171A21",
-      secondary: "#4B5563",
-      muted: "#7A8494",
-      inverse: "#FFFFFF",
-      disabled: "#A5ACB8",
-      link: "#8C6A00",
+      primary: "#F4F5F7",
+      secondary: "#C1C5CC",
+      muted: "#858B95",
+      inverse: "#0A0B0D",
+      disabled: "#5E646E",
+      link: "#D4D7DC",
     },
 
 
@@ -104,10 +120,10 @@ export const IMPERIAL_GOLD_THEME:
     ------------------------------------------------------- */
 
     border: {
-      default: "#D9DEE7",
-      subtle: "#E8EBF0",
-      strong: "#B8C0CC",
-      focus: "#B8860B",
+      default: "#343840",
+      subtle: "#24272D",
+      strong: "#4A4F58",
+      focus: "#D4D7DC",
     },
 
 
@@ -117,17 +133,17 @@ export const IMPERIAL_GOLD_THEME:
 
     status: {
 
-      success: "#16845B",
-      successSoft: "#E7F6EF",
+      success: "#35B77A",
+      successSoft: "#173B31",
 
-      warning: "#B7791F",
-      warningSoft: "#FFF4D8",
+      warning: "#D6A33A",
+      warningSoft: "#40351D",
 
-      danger: "#C0392B",
-      dangerSoft: "#FCEBE8",
+      danger: "#E05A50",
+      dangerSoft: "#422522",
 
-      info: "#2563A8",
-      infoSoft: "#EAF3FC",
+      info: "#5D9BD3",
+      infoSoft: "#1B3042",
     },
 
 
@@ -136,11 +152,11 @@ export const IMPERIAL_GOLD_THEME:
     ------------------------------------------------------- */
 
     interactive: {
-      hover: "#F3F5F8",
-      active: "#E8EBF0",
-      selected: "#F5E7B2",
-      focus: "#B8860B",
-      disabled: "#EEF0F3",
+      hover: "#1B1E23",
+      active: "#25282E",
+      selected: "#30343A",
+      focus: "#D4D7DC",
+      disabled: "#17191D",
     },
 
 
@@ -149,8 +165,8 @@ export const IMPERIAL_GOLD_THEME:
     ------------------------------------------------------- */
 
     overlay: {
-      backdrop: "rgba(15, 23, 42, 0.48)",
-      shadow: "rgba(15, 23, 42, 0.14)",
+      backdrop: "rgba(0, 0, 0, 0.72)",
+      shadow: "rgba(0, 0, 0, 0.38)",
     },
   },
 
@@ -161,13 +177,13 @@ export const IMPERIAL_GOLD_THEME:
 
   typography: {
 
-    heading: "#171A21",
-    body: "#4B5563",
-    label: "#374151",
-    caption: "#7A8494",
-    placeholder: "#9AA3B2",
-    link: "#8C6A00",
-    inverse: "#FFFFFF",
+    heading: "#F4F5F7",
+    body: "#C1C5CC",
+    label: "#D5D8DE",
+    caption: "#858B95",
+    placeholder: "#707680",
+    link: "#D4D7DC",
+    inverse: "#0A0B0D",
   },
 
 
@@ -182,15 +198,10 @@ export const IMPERIAL_GOLD_THEME:
     ------------------------------------------------------- */
 
     card: {
-  background: "#FFFFFF",
-  border: "#D9DEE7",
-
-  shadow:
-    `
-      0 40px 90px rgba(15, 23, 42, 0.14),
-      0 10px 30px rgba(15, 23, 42, 0.14)
-    `,
-},
+      background: "#111315",
+      border: "#343840",
+      shadow: "rgba(0, 0, 0, 0.28)",
+    },
 
 
     /* -------------------------------------------------------
@@ -198,13 +209,13 @@ export const IMPERIAL_GOLD_THEME:
     ------------------------------------------------------- */
 
     input: {
-      background: "#FFFFFF",
-      border: "#D9DEE7",
-      text: "#171A21",
-      placeholder: "#9AA3B2",
-      focusBorder: "#B8860B",
-      focusBackground: "#FFFFFF",
-      disabledBackground: "#EEF0F3",
+      background: "#0F1113",
+      border: "#343840",
+      text: "#F4F5F7",
+      placeholder: "#707680",
+      focusBorder: "#D4D7DC",
+      focusBackground: "#15171A",
+      disabledBackground: "#17191D",
     },
 
 
@@ -214,18 +225,18 @@ export const IMPERIAL_GOLD_THEME:
 
     button: {
 
-      primaryBackground: "#B8860B",
-      primaryText: "#FFFFFF",
-      primaryHover: "#8C6A00",
+      primaryBackground: "#D4D7DC",
+      primaryText: "#0A0B0D",
+      primaryHover: "#F0F1F3",
 
-      secondaryBackground: "#FFFFFF",
-      secondaryText: "#374151",
-      secondaryBorder: "#D9DEE7",
-      secondaryHover: "#F3F5F8",
+      secondaryBackground: "#17191D",
+      secondaryText: "#D5D8DE",
+      secondaryBorder: "#4A4F58",
+      secondaryHover: "#22252A",
 
-      dangerBackground: "#C0392B",
+      dangerBackground: "#B9423B",
       dangerText: "#FFFFFF",
-      dangerHover: "#A93226",
+      dangerHover: "#D14F47",
     },
 
 
@@ -234,11 +245,11 @@ export const IMPERIAL_GOLD_THEME:
     ------------------------------------------------------- */
 
     navigation: {
-      background: "#FFFFFF",
-      text: "#4B5563",
-      activeBackground: "#F5E7B2",
-      activeText: "#8C6A00",
-      hoverBackground: "#F3F5F8",
+      background: "#0F1113",
+      text: "#AEB4BE",
+      activeBackground: "#30343A",
+      activeText: "#F4F5F7",
+      hoverBackground: "#1B1E23",
     },
 
 
@@ -247,9 +258,9 @@ export const IMPERIAL_GOLD_THEME:
     ------------------------------------------------------- */
 
     header: {
-      background: "#FFFFFF",
-      text: "#171A21",
-      border: "#E8EBF0",
+      background: "#0F1113",
+      text: "#F4F5F7",
+      border: "#24272D",
     },
 
 
@@ -258,9 +269,9 @@ export const IMPERIAL_GOLD_THEME:
     ------------------------------------------------------- */
 
     panel: {
-      background: "#FFFFFF",
-      border: "#D9DEE7",
-      shadow: "rgba(15, 23, 42, 0.06)",
+      background: "#111315",
+      border: "#343840",
+      shadow: "rgba(0, 0, 0, 0.24)",
     },
 
 
@@ -269,12 +280,12 @@ export const IMPERIAL_GOLD_THEME:
     ------------------------------------------------------- */
 
     table: {
-      headerBackground: "#F1F3F6",
-      headerText: "#374151",
-      rowBackground: "#FFFFFF",
-      rowAlternateBackground: "#FAFBFC",
-      rowHoverBackground: "#F3F5F8",
-      border: "#E8EBF0",
+      headerBackground: "#1D2025",
+      headerText: "#D5D8DE",
+      rowBackground: "#111315",
+      rowAlternateBackground: "#0F1113",
+      rowHoverBackground: "#1B1E23",
+      border: "#24272D",
     },
 
 
@@ -283,10 +294,10 @@ export const IMPERIAL_GOLD_THEME:
     ------------------------------------------------------- */
 
     modal: {
-      background: "#FFFFFF",
-      border: "#D9DEE7",
-      backdrop: "rgba(15, 23, 42, 0.48)",
-      shadow: "rgba(15, 23, 42, 0.18)",
+      background: "#111315",
+      border: "#343840",
+      backdrop: "rgba(0, 0, 0, 0.72)",
+      shadow: "rgba(0, 0, 0, 0.40)",
     },
   },
 };

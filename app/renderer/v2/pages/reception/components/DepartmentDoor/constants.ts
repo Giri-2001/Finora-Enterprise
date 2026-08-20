@@ -1,71 +1,42 @@
 /* ===========================================================
    FINORA ENTERPRISE OS™
+
    RECEPTION™
 
    DEPARTMENT DOOR™
 
    CONSTANTS
+
+   IMPORTANT
+   -----------------------------------------------------------
+   - Responsive geometry belongs to Responsive Engine.
+   - Theme colors belong to Theme Engine.
+   - This file contains ONLY interaction constants.
+   - No local door dimensions.
+   - No local theme colors.
+   - No colored hover glow.
 =========================================================== */
-
-
-/* ===========================================================
-   SIZE
-=========================================================== */
-
-export const DOOR_WIDTH =
-  "170px";
-
-
-export const DOOR_HEIGHT =
-  "175px";
-
-
-export const DOOR_RADIUS =
-  "18px";
-
-
-/* ===========================================================
-   COLORS
-=========================================================== */
-
-export const DOOR_TITLE =
-  "#FFFFFF";
-
-
-export const DOOR_SUBTITLE =
-  "#F8FAFC";
-
-
-export const DOOR_BORDER =
-  "#D4AF37";
-
-
-export const DOOR_BACKGROUND =
-  "linear-gradient(180deg,#8A6135 0%,#4A260F 100%)";
-
-
-/* ===========================================================
-   SHADOW SYSTEM
-=========================================================== */
-
-export const DOOR_SHADOW =
-  "0 20px 40px rgba(15,23,42,.18)";
-
-
-export const DOOR_HOVER_SHADOW =
-  "0 25px 60px rgba(212,175,55,.45), inset 0 0 25px rgba(212,175,55,.18)";
 
 
 /* ===========================================================
    ANIMATION
 =========================================================== */
 
+/*
+ * Smooth, premium interaction timing.
+ */
 export const DOOR_TRANSITION =
   "all .35s cubic-bezier(.22,1,.36,1)";
 
 
+/*
+ * Subtle elevation on hover.
+ *
+ * The card's actual shadow remains controlled by the
+ * FINORA Theme Engine.
+ */
 export const DOOR_HOVER_TRANSFORM =
-  "translateY(-8px) scale(1.02)";
+  "translateY(-4px) scale(1.01)";
 
 
 export const DOOR_NORMAL_TRANSFORM =
@@ -76,8 +47,11 @@ export const DOOR_NORMAL_TRANSFORM =
    ICON
 =========================================================== */
 
+/*
+ * Keep the icon movement noticeable but restrained.
+ */
 export const ICON_HOVER_TRANSFORM =
-  "translateY(-6px) scale(1.12)";
+  "translateY(-3px) scale(1.06)";
 
 
 export const ICON_NORMAL_TRANSFORM =
@@ -85,8 +59,31 @@ export const ICON_NORMAL_TRANSFORM =
 
 
 /* ===========================================================
-   STATUS GLOW
+   STATUS INTERACTION
 =========================================================== */
 
+/*
+ * IMPORTANT
+ * -----------------------------------------------------------
+ * The previous implementation used a hard-coded green glow:
+ *
+ *   rgba(34,197,94,.45)
+ *
+ * That caused the Ready badge to become green-glowing on
+ * hover regardless of the active FINORA theme.
+ *
+ * For the enterprise 5-theme system, status badges do not
+ * receive an independent hover glow.
+ *
+ * The status appearance itself remains theme-driven.
+ *
+ * This compatibility constant is retained temporarily because
+ * DepartmentDoor.tsx currently consumes it.
+ */
 export const STATUS_HOVER_GLOW =
-  "0 0 18px rgba(34,197,94,.45)";
+  "none";
+
+
+/* ===========================================================
+   END
+=========================================================== */

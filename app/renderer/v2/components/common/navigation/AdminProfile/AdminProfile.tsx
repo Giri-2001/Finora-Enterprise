@@ -3,6 +3,18 @@
    ADMIN PROFILE™
 
    COMPONENT
+
+   IMPORTANT
+   -----------------------------------------------------------
+   - Theme comes from the central FINORA Theme Engine.
+   - No local theme definitions.
+   - No hard-coded theme colors.
+   - Responsive geometry remains outside this component.
+=========================================================== */
+
+
+/* ===========================================================
+   IMPORTS
 =========================================================== */
 
 import {
@@ -10,20 +22,30 @@ import {
   CircleUserRound,
 } from "lucide-react";
 
+
 import type {
   AdminProfileProps,
 } from "./types";
+
 
 import {
   buildAdminName,
 } from "./helpers";
 
+
 import {
-  containerStyle,
-  iconStyle,
-  nameStyle,
-  arrowStyle,
+  useTheme,
+} from "../../../../themes/provider";
+
+
+import {
+  createAdminProfileStyles,
 } from "./styles";
+
+
+/* ===========================================================
+   COMPONENT
+=========================================================== */
 
 export default function AdminProfile({
 
@@ -33,28 +55,95 @@ export default function AdminProfile({
 
 }: AdminProfileProps) {
 
+
+  /* =========================================================
+     FINORA THEME ENGINE
+  ========================================================= */
+
+  const {
+    theme,
+  } =
+    useTheme();
+
+
+  /* =========================================================
+     THEMED STYLES
+  ========================================================= */
+
+  const {
+
+    containerStyle,
+
+    iconStyle,
+
+    nameStyle,
+
+    arrowStyle,
+
+  } =
+    createAdminProfileStyles(
+      theme,
+    );
+
+
+  /* =========================================================
+     RENDER
+  ========================================================= */
+
   return (
 
     <div
-      style={containerStyle}
-      onClick={onClick}
+
+      style={
+        containerStyle
+      }
+
+      onClick={
+        onClick
+      }
+
       title="Admin Menu"
+
     >
 
       <CircleUserRound
-        size={22}
-        style={iconStyle}
+
+        size={
+          22
+        }
+
+        style={
+          iconStyle
+        }
+
       />
 
-      <span style={nameStyle}>
 
-        {buildAdminName(adminName)}
+      <span
+        style={
+          nameStyle
+        }
+      >
+
+        {
+          buildAdminName(
+            adminName,
+          )
+        }
 
       </span>
 
+
       <ChevronDown
-        size={16}
-        style={arrowStyle}
+
+        size={
+          16
+        }
+
+        style={
+          arrowStyle
+        }
+
       />
 
     </div>
@@ -62,3 +151,8 @@ export default function AdminProfile({
   );
 
 }
+
+
+/* ===========================================================
+   END
+=========================================================== */

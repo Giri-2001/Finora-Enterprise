@@ -1,9 +1,29 @@
 import React from "react";
 import { createRoot } from "react-dom/client";
+
 import App from "./app/App";
 
-createRoot(document.getElementById("root")!).render(
+import {
+  ThemeProvider,
+} from "./themes/provider";
+
+
+/* ===========================================================
+   FINORA ENTERPRISE V2 ROOT
+=========================================================== */
+
+createRoot(
+  document.getElementById("root")!,
+).render(
+
   <React.StrictMode>
-    <App />
+
+    <ThemeProvider>
+
+      <App />
+
+    </ThemeProvider>
+
   </React.StrictMode>,
+
 );

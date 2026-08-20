@@ -1,30 +1,52 @@
 /* ===========================================================
    FINORA ENTERPRISE OS™
+
    RECEPTION™
 
    TYPES
 =========================================================== */
+
+
+/* ===========================================================
+   IMPORTS
+=========================================================== */
+
+import type {
+  ReactNode,
+} from "react";
+
 
 /* ===========================================================
    DEPARTMENT
 =========================================================== */
 
 export type DepartmentId =
+
   | "customers"
+
   | "loans"
+
   | "collections"
+
   | "accounts"
+
   | "reports"
+
   | "settings";
+
 
 /* ===========================================================
    DEPARTMENT STATUS
 =========================================================== */
 
 export type DepartmentStatus =
+
   | "ready"
+
   | "comingSoon"
+
   | "locked";
+
 
 /* ===========================================================
    DOOR
@@ -32,21 +54,36 @@ export type DepartmentStatus =
 
 export interface DepartmentDoor {
 
-  id: DepartmentId;
+  id:
+    DepartmentId;
 
-  title: string;
+  title:
+    string;
 
-  subtitle: string;
+  subtitle:
+    string;
 
-  icon: string;
+  /*
+   * Premium department icons are rendered as React nodes.
+   *
+   * This allows the Reception department configuration
+   * to use the existing Lucide icon package instead of
+   * plain Unicode / emoji characters.
+   */
+  icon:
+    ReactNode;
 
-  path: string;
+  path:
+    string;
 
-  enabled: boolean;
+  enabled:
+    boolean;
 
-  status: DepartmentStatus;
+  status:
+    DepartmentStatus;
 
 }
+
 
 /* ===========================================================
    RECEPTION
@@ -55,7 +92,15 @@ export interface DepartmentDoor {
 export interface ReceptionProps {
 
   onNavigate?: (
-    department: DepartmentId,
+
+    department:
+      DepartmentId,
+
   ) => void;
 
 }
+
+
+/* ===========================================================
+   END
+=========================================================== */

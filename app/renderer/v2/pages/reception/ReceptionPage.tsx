@@ -1,9 +1,23 @@
 /* ===========================================================
    FINORA ENTERPRISE OS™
+
    RECEPTION™
 
    PAGE
 =========================================================== */
+
+
+/* ===========================================================
+   IMPORTS
+=========================================================== */
+
+import {
+  useResponsive,
+} from "../../utils/responsive";
+
+import {
+  useTheme,
+} from "../../themes/hooks";
 
 import ReceptionHall
   from "./components/ReceptionHall";
@@ -12,16 +26,14 @@ import ReceptionFooter
   from "./components/ReceptionFooter";
 
 import {
-  pageStyle,
+  createReceptionPageStyles,
 } from "./styles";
 
 import type {
-
   DepartmentDoor,
-
   DepartmentId,
-
 } from "./types";
+
 
 /* ===========================================================
    TYPES
@@ -35,6 +47,7 @@ export interface ReceptionPageProps {
 
 }
 
+
 /* ===========================================================
    COMPONENT
 =========================================================== */
@@ -45,13 +58,46 @@ export default function ReceptionPage({
 
 }: ReceptionPageProps) {
 
-  /* ==========================================
+
+  /* =========================================================
+     RESPONSIVE ENGINE
+  ========================================================= */
+
+  const {
+    tokens,
+  } = useResponsive();
+
+
+  /* =========================================================
+     THEME ENGINE
+  ========================================================= */
+
+  const {
+    theme,
+  } = useTheme();
+
+
+  /* =========================================================
+     PAGE STYLES
+  ========================================================= */
+
+  const {
+    pageStyle,
+  } =
+    createReceptionPageStyles(
+      tokens,
+      theme,
+    );
+
+
+  /* =========================================================
      DOOR CLICK
-  ========================================== */
+  ========================================================= */
 
   function handleDoorClick(
 
-    door: DepartmentDoor,
+    door:
+      DepartmentDoor,
 
   ) {
 
@@ -68,12 +114,15 @@ export default function ReceptionPage({
     }
 
     onNavigate(
-
       door.id,
-
     );
 
   }
+
+
+  /* =========================================================
+     RENDER
+  ========================================================= */
 
   return (
 
@@ -81,7 +130,9 @@ export default function ReceptionPage({
 
       <ReceptionHall
 
-        onDoorClick={handleDoorClick}
+        onDoorClick={
+          handleDoorClick
+        }
 
       />
 
@@ -92,6 +143,7 @@ export default function ReceptionPage({
   );
 
 }
+
 
 /* ===========================================================
    END

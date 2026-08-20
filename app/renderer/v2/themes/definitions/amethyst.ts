@@ -1,12 +1,12 @@
 /* ===========================================================
-   FINORA ENTERPRISE OS
+   FINORA ENTERPRISE OS™
    THEME ENGINE
 
    AMETHYST THEME
 
    PURPOSE
    -----------------------------------------------------------
-   Official FINORA Amethyst visual theme.
+   Official FINORA Amethyst premium visual theme.
 
    IMPORTANT
    -----------------------------------------------------------
@@ -28,6 +28,10 @@
    inside this theme definition.
 =========================================================== */
 
+/* ===========================================================
+   IMPORTS
+=========================================================== */
+
 import type {
   FinoraTheme,
 } from "../core/types";
@@ -44,14 +48,17 @@ export const AMETHYST_THEME:
      IDENTITY
   --------------------------------------------------------- */
 
-  id: "amethyst",
+  id:
+    "amethyst",
 
-  name: "Amethyst",
+  name:
+    "Amethyst",
 
-  mode: "light",
+  mode:
+    "dark",
 
   description:
-    "FINORA's premium amethyst theme combining refined violet branding, elegant neutral surfaces, and enterprise-grade contrast.",
+    "FINORA's premium Amethyst theme with deep violet surfaces, refined lavender accents, and enterprise-grade contrast.",
 
 
   /* =========================================================
@@ -60,85 +67,205 @@ export const AMETHYST_THEME:
 
   colors: {
 
+    /* -------------------------------------------------------
+       BRAND
+    ------------------------------------------------------- */
+
     brand: {
-      primary: "#6D3FB3",
-      secondary: "#512A8A",
-      accent: "#9B6DDA",
-      accentSoft: "#EDE3FA",
+
+      primary:
+        "#8B5CC7",
+
+      secondary:
+        "#633A98",
+
+      accent:
+        "#B58AE8",
+
+      accentSoft:
+        "#35244D",
+
     },
+
+
+    /* -------------------------------------------------------
+       BACKGROUND / SURFACE
+    ------------------------------------------------------- */
 
     background: {
-      page: "#F8F7FB",
-      surface: "#FFFFFF",
-      surfaceElevated: "#FFFFFF",
-      surfaceMuted: "#F1EEF7",
-      surfaceStrong: "#E5DFEF",
+
+      page:
+        "#120D1A",
+
+      surface:
+        "#1B1426",
+
+      surfaceElevated:
+        "#241936",
+
+      surfaceMuted:
+        "#2C2040",
+
+      surfaceStrong:
+        "#3A2A52",
+
     },
+
+
+    /* -------------------------------------------------------
+       TEXT
+    ------------------------------------------------------- */
 
     text: {
-      primary: "#211A2B",
-      secondary: "#51485E",
-      muted: "#81758F",
-      inverse: "#FFFFFF",
-      disabled: "#AAA2B5",
-      link: "#6D3FB3",
+
+      primary:
+        "#F8F3FF",
+
+      secondary:
+        "#C7BAD8",
+
+      muted:
+        "#9385A7",
+
+      inverse:
+        "#17101F",
+
+      disabled:
+        "#675B75",
+
+      link:
+        "#C29AF0",
+
     },
 
+
+    /* -------------------------------------------------------
+       BORDER
+    ------------------------------------------------------- */
+
     border: {
-      default: "#DCD5E5",
-      subtle: "#EBE7F0",
-      strong: "#BEB3CC",
-      focus: "#7B4FC1",
+
+      default:
+        "#463457",
+
+      subtle:
+        "#32243F",
+
+      strong:
+        "#644A7D",
+
+      focus:
+        "#A46BE5",
+
     },
+
+
+    /* -------------------------------------------------------
+       STATUS
+    ------------------------------------------------------- */
 
     status: {
 
-      success: "#16845B",
-      successSoft: "#E6F5EE",
+      success:
+        "#55C18D",
 
-      warning: "#B7791F",
-      warningSoft: "#FFF3D8",
+      successSoft:
+        "#153126",
 
-      danger: "#C0392B",
-      dangerSoft: "#FBEAE7",
+      warning:
+        "#D7A13D",
 
-      info: "#4267A8",
-      infoSoft: "#EAF0FA",
+      warningSoft:
+        "#332714",
+
+      danger:
+        "#E37483",
+
+      dangerSoft:
+        "#351B24",
+
+      info:
+        "#8EB7F5",
+
+      infoSoft:
+        "#19263B",
+
     },
+
+
+    /* -------------------------------------------------------
+       INTERACTIVE
+    ------------------------------------------------------- */
 
     interactive: {
-      hover: "#F3F0F7",
-      active: "#E8E1F0",
-      selected: "#EDE3FA",
-      focus: "#7B4FC1",
-      disabled: "#EEEAF2",
+
+      hover:
+        "#2B1E3D",
+
+      active:
+        "#38264F",
+
+      selected:
+        "#493263",
+
+      focus:
+        "#A46BE5",
+
+      disabled:
+        "#29212F",
+
     },
 
+
+    /* -------------------------------------------------------
+       OVERLAY
+    ------------------------------------------------------- */
+
     overlay: {
-      backdrop: "rgba(35, 20, 55, 0.48)",
-      shadow: "rgba(35, 20, 55, 0.14)",
+
+      backdrop:
+        "rgba(8, 4, 14, 0.62)",
+
+      shadow:
+        "rgba(8, 3, 16, 0.52)",
+
     },
+
   },
 
 
   /* =========================================================
-     TYPOGRAPHY COLORS
+     TYPOGRAPHY
   ========================================================= */
 
   typography: {
 
-    heading: "#211A2B",
-    body: "#51485E",
-    label: "#403748",
-    caption: "#81758F",
-    placeholder: "#9B92A5",
-    link: "#6D3FB3",
-    inverse: "#FFFFFF",
+    heading:
+      "#F8F3FF",
+
+    body:
+      "#D7CDE2",
+
+    label:
+      "#C7BAD8",
+
+    caption:
+      "#9385A7",
+
+    placeholder:
+      "#766987",
+
+    link:
+      "#C29AF0",
+
+    inverse:
+      "#17101F",
+
   },
 
 
   /* =========================================================
-     COMPONENT COLORS
+     COMPONENTS
   ========================================================= */
 
   components: {
@@ -148,9 +275,16 @@ export const AMETHYST_THEME:
     ------------------------------------------------------- */
 
     card: {
-      background: "#FFFFFF",
-      border: "#DCD5E5",
-      shadow: "rgba(35, 20, 55, 0.08)",
+
+      background:
+        "#1B1426",
+
+      border:
+        "#463457",
+
+      shadow:
+        "0 10px 30px rgba(8, 3, 16, 0.42)",
+
     },
 
 
@@ -159,13 +293,28 @@ export const AMETHYST_THEME:
     ------------------------------------------------------- */
 
     input: {
-      background: "#FFFFFF",
-      border: "#DCD5E5",
-      text: "#211A2B",
-      placeholder: "#9B92A5",
-      focusBorder: "#7B4FC1",
-      focusBackground: "#FFFFFF",
-      disabledBackground: "#EEEAF2",
+
+      background:
+        "#17111F",
+
+      border:
+        "#463457",
+
+      text:
+        "#F8F3FF",
+
+      placeholder:
+        "#766987",
+
+      focusBorder:
+        "#A46BE5",
+
+      focusBackground:
+        "#1D142A",
+
+      disabledBackground:
+        "#241D2B",
+
     },
 
 
@@ -175,18 +324,36 @@ export const AMETHYST_THEME:
 
     button: {
 
-      primaryBackground: "#6D3FB3",
-      primaryText: "#FFFFFF",
-      primaryHover: "#512A8A",
+      primaryBackground:
+        "#8B5CC7",
 
-      secondaryBackground: "#FFFFFF",
-      secondaryText: "#403748",
-      secondaryBorder: "#DCD5E5",
-      secondaryHover: "#F3F0F7",
+      primaryText:
+        "#FFFFFF",
 
-      dangerBackground: "#C0392B",
-      dangerText: "#FFFFFF",
-      dangerHover: "#A93226",
+      primaryHover:
+        "#9B6DDA",
+
+      secondaryBackground:
+        "#241936",
+
+      secondaryText:
+        "#E9DFF5",
+
+      secondaryBorder:
+        "#644A7D",
+
+      secondaryHover:
+        "#302143",
+
+      dangerBackground:
+        "#6F2F40",
+
+      dangerText:
+        "#FFE8ED",
+
+      dangerHover:
+        "#82384B",
+
     },
 
 
@@ -195,11 +362,22 @@ export const AMETHYST_THEME:
     ------------------------------------------------------- */
 
     navigation: {
-      background: "#FFFFFF",
-      text: "#51485E",
-      activeBackground: "#EDE3FA",
-      activeText: "#6D3FB3",
-      hoverBackground: "#F3F0F7",
+
+      background:
+        "#17111F",
+
+      text:
+        "#C7BAD8",
+
+      activeBackground:
+        "#38264F",
+
+      activeText:
+        "#F8F3FF",
+
+      hoverBackground:
+        "#2B1E3D",
+
     },
 
 
@@ -208,9 +386,16 @@ export const AMETHYST_THEME:
     ------------------------------------------------------- */
 
     header: {
-      background: "#FFFFFF",
-      text: "#211A2B",
-      border: "#EBE7F0",
+
+      background:
+        "#17111F",
+
+      text:
+        "#F8F3FF",
+
+      border:
+        "#463457",
+
     },
 
 
@@ -219,9 +404,16 @@ export const AMETHYST_THEME:
     ------------------------------------------------------- */
 
     panel: {
-      background: "#FFFFFF",
-      border: "#DCD5E5",
-      shadow: "rgba(35, 20, 55, 0.06)",
+
+      background:
+        "#1B1426",
+
+      border:
+        "#463457",
+
+      shadow:
+        "0 12px 32px rgba(8, 3, 16, 0.42)",
+
     },
 
 
@@ -230,12 +422,25 @@ export const AMETHYST_THEME:
     ------------------------------------------------------- */
 
     table: {
-      headerBackground: "#F1EEF7",
-      headerText: "#403748",
-      rowBackground: "#FFFFFF",
-      rowAlternateBackground: "#FAF9FC",
-      rowHoverBackground: "#F3F0F7",
-      border: "#EBE7F0",
+
+      headerBackground:
+        "#241936",
+
+      headerText:
+        "#E9DFF5",
+
+      rowBackground:
+        "#1B1426",
+
+      rowAlternateBackground:
+        "#21172F",
+
+      rowHoverBackground:
+        "#2B1E3D",
+
+      border:
+        "#3B2B4C",
+
     },
 
 
@@ -244,12 +449,23 @@ export const AMETHYST_THEME:
     ------------------------------------------------------- */
 
     modal: {
-      background: "#FFFFFF",
-      border: "#DCD5E5",
-      backdrop: "rgba(35, 20, 55, 0.48)",
-      shadow: "rgba(35, 20, 55, 0.18)",
+
+      background:
+        "#1B1426",
+
+      border:
+        "#644A7D",
+
+      backdrop:
+        "rgba(8, 3, 16, 0.62)",
+
+      shadow:
+        "0 24px 60px rgba(8, 3, 16, 0.58)",
+
     },
+
   },
+
 };
 
 

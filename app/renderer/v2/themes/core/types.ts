@@ -1,5 +1,6 @@
 /* ===========================================================
-   FINORA ENTERPRISE OS
+   FINORA ENTERPRISE OS™
+
    THEME ENGINE
 
    CORE THEME TYPES
@@ -303,6 +304,33 @@ export interface FinoraTheme {
   --------------------------------------------------------- */
 
   description: string;
+
+
+  /* ---------------------------------------------------------
+     THEME SELECTOR SWATCH
+     
+     PURPOSE
+     -------------------------------------------------------
+     Defines the small color shown in the global theme
+     selector.
+
+     This is intentionally separate from brand.primary.
+
+     Example:
+     Obsidian may use a silver/gold brand accent throughout
+     the application while its selector identity remains
+     a near-black swatch.
+
+     This prevents the theme selector from changing the
+     semantic meaning of brand.primary.
+     
+     OPTIONAL
+     -------------------------------------------------------
+     Existing themes that do not define a dedicated selector
+     swatch may safely fall back to brand.primary.
+  --------------------------------------------------------- */
+
+  selectorSwatch?: string;
 
 
   /* ---------------------------------------------------------

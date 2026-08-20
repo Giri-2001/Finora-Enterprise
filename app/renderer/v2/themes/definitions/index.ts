@@ -51,6 +51,10 @@ import {
   EMERALD_THEME,
 } from "./emerald";
 
+import {
+  OBSIDIAN_THEME,
+} from "./obsidian";
+
 
 /* ===========================================================
    AVAILABLE THEME DEFINITIONS
@@ -70,6 +74,9 @@ export const FINORA_THEMES:
 
   "emerald":
     EMERALD_THEME,
+
+  "obsidian":
+    OBSIDIAN_THEME,
 
 };
 

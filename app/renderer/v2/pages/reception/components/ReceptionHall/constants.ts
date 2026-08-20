@@ -1,10 +1,24 @@
 /* ===========================================================
+
    FINORA ENTERPRISE OS™
+
    RECEPTION™
 
    RECEPTION HALL™
 
    CONSTANTS
+
+   IMPORTANT
+   -----------------------------------------------------------
+   - Responsive geometry comes ONLY from Responsive Engine.
+   - Theme colors come ONLY from FINORA Theme Engine.
+   - No local theme colors.
+   - No obsolete visual constants.
+=========================================================== */
+
+
+/* ===========================================================
+   HALL GEOMETRY CONSTANTS
 =========================================================== */
 
 export const HALL_MAX_WIDTH =
@@ -19,8 +33,7 @@ export const HALL_GAP =
 export const DOOR_GRID_COLUMNS =
   "repeat(3, minmax(280px, 1fr))";
 
-export const HALL_BACKGROUND =
-  "linear-gradient(180deg,#F8FAFC 0%,#EEF2F7 100%)";
 
-export const HALL_FLOOR =
-  "#E5E7EB";
+/* ===========================================================
+   END
+=========================================================== */

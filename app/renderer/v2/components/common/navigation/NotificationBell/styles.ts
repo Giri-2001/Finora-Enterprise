@@ -1,62 +1,297 @@
 /* ===========================================================
    FINORA ENTERPRISE OS™
+
    NOTIFICATION BELL™
 
-   STYLES
+   RESPONSIVE + THEME-AWARE STYLES
+
+   RESPONSIBILITY:
+   - Render notification bell presentation
+   - Consume central FINORA Theme Engine
+   - Consume central FINORA Responsive Engine
+   - Preserve notification visual hierarchy
+
+   IMPORTANT:
+   - No local theme definitions.
+   - No custom theme contract.
+   - No hardcoded theme colors.
+   - No hardcoded responsive geometry.
+   - Theme values come directly from FinoraTheme.
+   - Responsive geometry comes only from ResponsiveTokens.
 =========================================================== */
 
-import type { CSSProperties } from "react";
 
-export const containerStyle: CSSProperties = {
-  position: "relative",
+/* ===========================================================
+   IMPORTS
+=========================================================== */
 
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "center",
+import type {
+  CSSProperties,
+} from "react";
 
-  width: "42px",
-  height: "42px",
 
-  borderRadius: "50%",
+import type {
+  ResponsiveTokens,
+} from "../../../../utils/responsive";
 
-  cursor: "pointer",
 
-  transition: "all .25s ease",
-};
+import type {
+  FinoraTheme,
+} from "../../../../themes/core/types";
 
-export const bellStyle: CSSProperties = {
-  color: "#FFFFFF",
 
-  filter: "drop-shadow(0 0 4px rgba(212,175,55,.18))",
+/* ===========================================================
+   STYLE CONTRACT
+=========================================================== */
 
-  transition: "all .25s ease",
-};
+export interface NotificationBellStyles {
 
-export const badgeStyle: CSSProperties = {
-  position: "absolute",
+  containerStyle:
+    CSSProperties;
 
-  top: "2px",
-  right: "1px",
+  bellStyle:
+    CSSProperties;
 
-  minWidth: "12px",
-  height: "15px",
+  badgeStyle:
+    CSSProperties;
 
-  borderRadius: "999px",
+}
 
-  background: "#DC2626",
 
-  color: "#FFFFFF",
+/* ===========================================================
+   STYLE FACTORY
+=========================================================== */
 
-  fontSize: "11px",
-  fontWeight: 600,
+export function createNotificationBellStyles(
 
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "center",
+  tokens:
+    ResponsiveTokens,
 
-  padding: "0 4px",
+  theme:
+    FinoraTheme,
 
-  border: "2px solid #2B1810",
+): NotificationBellStyles {
 
-  boxShadow: "0 0 8px rgba(220,38,38,.35)",
-};
+
+  /* =========================================================
+     RESPONSIVE TOKENS
+  ========================================================= */
+
+  const button =
+    tokens.button;
+
+  const icon =
+    tokens.icon;
+
+
+  /* =========================================================
+     CENTRAL THEME TOKENS
+  ========================================================= */
+
+  const headerText =
+    theme.components.header.text;
+
+  const headerBackground =
+    theme.components.header.background;
+
+  const headerBorder =
+    theme.components.header.border;
+
+  const danger =
+    theme.colors.status.danger;
+
+  const inverseText =
+    theme.colors.text.inverse;
+
+  const shadow =
+    theme.colors.overlay.shadow;
+
+
+  /* =========================================================
+     CONTAINER
+  ========================================================= */
+
+  const containerStyle:
+    CSSProperties = {
+
+    position:
+      "relative",
+
+    display:
+      "flex",
+
+    alignItems:
+      "center",
+
+    justifyContent:
+      "center",
+
+    width:
+      `${button.height}px`,
+
+    height:
+      `${button.height}px`,
+
+    minWidth:
+      `${button.height}px`,
+
+    minHeight:
+      `${button.height}px`,
+
+    padding:
+      0,
+
+    margin:
+      0,
+
+    border:
+      "0",
+
+    borderRadius:
+      "50%",
+
+    background:
+      "transparent",
+
+    color:
+      headerText,
+
+    cursor:
+      "pointer",
+
+    userSelect:
+      "none",
+
+    flexShrink:
+      0,
+
+    boxSizing:
+      "border-box",
+
+    transition:
+      "background 160ms ease, color 160ms ease",
+
+  };
+
+
+  /* =========================================================
+     BELL ICON
+  ========================================================= */
+
+  const bellStyle:
+    CSSProperties = {
+
+    width:
+      `${icon.sm}px`,
+
+    height:
+      `${icon.sm}px`,
+
+    color:
+      headerText,
+
+    flexShrink:
+      0,
+
+    filter:
+      `drop-shadow(0 0 4px ${shadow})`,
+
+    transition:
+      "color 160ms ease, filter 160ms ease",
+
+  };
+
+
+  /* =========================================================
+     UNREAD BADGE
+  ========================================================= */
+
+  const badgeStyle:
+    CSSProperties = {
+
+    position:
+      "absolute",
+
+    top:
+      0,
+
+    right:
+      0,
+
+    minWidth:
+      `${icon.xs}px`,
+
+    height:
+      `${icon.xs}px`,
+
+    padding:
+      `0 ${tokens.spacing.small}px`,
+
+    borderRadius:
+      "999px",
+
+    background:
+      danger,
+
+    color:
+      inverseText,
+
+    border:
+      `${tokens.border.width}px solid ${
+        headerBackground ||
+        headerBorder
+      }`,
+
+    boxShadow:
+      `0 0 8px ${shadow}`,
+
+    fontSize:
+      `${tokens.typography.caption}px`,
+
+    fontWeight:
+      700,
+
+    lineHeight:
+      1,
+
+    display:
+      "flex",
+
+    alignItems:
+      "center",
+
+    justifyContent:
+      "center",
+
+    boxSizing:
+      "border-box",
+
+    pointerEvents:
+      "none",
+
+    whiteSpace:
+      "nowrap",
+
+  };
+
+
+  /* =========================================================
+     RETURN
+  ========================================================= */
+
+  return {
+
+    containerStyle,
+
+    bellStyle,
+
+    badgeStyle,
+
+  };
+
+}
+
+
+/* ===========================================================
+   END
+=========================================================== */

@@ -37,6 +37,10 @@ import type {
   ReactNode,
 } from "react";
 
+import {
+  useTheme,
+} from "../themes/provider";
+
 import GlobalHeader
   from "../components/common/header/GlobalHeader";
 
@@ -107,6 +111,10 @@ export default function AppShell({
   // ==========================================================
   // DEPARTMENT TITLE
   // ==========================================================
+
+  const {
+  theme,
+} = useTheme();
 
   const department =
     page === "reception"
@@ -180,7 +188,7 @@ export default function AppShell({
         // ----------------------------------------------------
 
         background:
-          "#321B12",
+  theme.colors.background.page,
 
         position:
           "relative",

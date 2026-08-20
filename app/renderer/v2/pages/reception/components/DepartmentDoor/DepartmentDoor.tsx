@@ -1,8 +1,19 @@
 /* ===========================================================
    FINORA ENTERPRISE OS™
+
    RECEPTION™
 
    DEPARTMENT DOOR™
+
+   IMPORTANT
+   -----------------------------------------------------------
+   - Responsive geometry comes ONLY from Responsive Engine.
+   - Theme appearance comes ONLY from FINORA Theme Engine.
+   - Premium module icons come from the installed Lucide system.
+   - Reception cards intentionally show only:
+       1. Premium icon
+       2. Department title
+   - Subtitle and status presentation are removed from the card.
 =========================================================== */
 
 
@@ -15,12 +26,21 @@ import {
 } from "react";
 
 import {
+  UsersRound,
+  Banknote,
+  CreditCard,
+  NotebookTabs,
+  ChartNoAxesCombined,
+  Settings,
+} from "lucide-react";
+
+import {
   useResponsive,
 } from "../../../../utils/responsive";
 
 import {
-  buildDoorStatus,
-} from "./helpers";
+  useTheme,
+} from "../../../../themes/hooks";
 
 import type {
   DepartmentDoorProps,
@@ -31,17 +51,96 @@ import {
 } from "./styles";
 
 import {
-  DOOR_BORDER,
-  DOOR_HOVER_SHADOW,
   DOOR_HOVER_TRANSFORM,
   DOOR_NORMAL_TRANSFORM,
   DOOR_TRANSITION,
   ICON_HOVER_TRANSFORM,
   ICON_NORMAL_TRANSFORM,
-  STATUS_HOVER_GLOW,
 } from "./constants";
 
-import "./DepartmentDoor.css";
+
+/* ===========================================================
+   PREMIUM RECEPTION ICON
+=========================================================== */
+
+function getReceptionIcon(
+  doorId:
+    string,
+) {
+
+  switch (
+    doorId
+      .trim()
+      .toLowerCase()
+  ) {
+
+    case "customers":
+
+      return (
+        <UsersRound
+          aria-hidden="true"
+          strokeWidth={1.9}
+        />
+      );
+
+
+    case "loans":
+
+      return (
+        <Banknote
+          aria-hidden="true"
+          strokeWidth={1.9}
+        />
+      );
+
+
+    case "collections":
+
+      return (
+        <CreditCard
+          aria-hidden="true"
+          strokeWidth={1.9}
+        />
+      );
+
+
+    case "accounts":
+
+      return (
+        <NotebookTabs
+          aria-hidden="true"
+          strokeWidth={1.9}
+        />
+      );
+
+
+    case "reports":
+
+      return (
+        <ChartNoAxesCombined
+          aria-hidden="true"
+          strokeWidth={1.9}
+        />
+      );
+
+
+    case "settings":
+
+      return (
+        <Settings
+          aria-hidden="true"
+          strokeWidth={1.9}
+        />
+      );
+
+
+    default:
+
+      return null;
+
+  }
+
+}
 
 
 /* ===========================================================
@@ -67,28 +166,32 @@ export default function DepartmentDoor({
 
 
   /* =========================================================
+     THEME ENGINE
+  ========================================================= */
+
+  const {
+    theme,
+  } = useTheme();
+
+
+  /* =========================================================
      LOCAL INTERACTION STATE
   ========================================================= */
 
-  const [hovered, setHovered] =
-    useState(false);
+  const [
+    hovered,
+    setHovered,
+  ] = useState(false);
 
-  const [opening, setOpening] =
-    useState(false);
 
-
-  /* =========================================================
-     DOOR STATUS
-  ========================================================= */
-
-  const status =
-    buildDoorStatus(
-      door,
-    );
+  const [
+    opening,
+    setOpening,
+  ] = useState(false);
 
 
   /* =========================================================
-     RESPONSIVE STYLES
+     RESPONSIVE + THEME STYLES
   ========================================================= */
 
   const {
@@ -101,18 +204,15 @@ export default function DepartmentDoor({
 
     titleStyle,
 
-    subtitleStyle,
-
-    statusStyle,
-
   } =
     createDepartmentDoorStyles(
       tokens,
+      theme,
     );
 
 
   /* =========================================================
-     ROOT STATE STYLES
+     ROOT STATE
   ========================================================= */
 
   const rootStyle = {
@@ -125,16 +225,6 @@ export default function DepartmentDoor({
         : hovered
           ? DOOR_HOVER_TRANSFORM
           : DOOR_NORMAL_TRANSFORM,
-
-    boxShadow:
-      opening
-        ? "0 0 0 rgba(0,0,0,0)"
-        : hovered
-          ? DOOR_HOVER_SHADOW
-          : containerStyle.boxShadow,
-
-    border:
-      `${tokens.border.strongWidth}px solid ${DOOR_BORDER}`,
 
     transition:
       DOOR_TRANSITION,
@@ -155,13 +245,13 @@ export default function DepartmentDoor({
 
 
   /* =========================================================
-     STATUS STATE
+     PREMIUM ICON
   ========================================================= */
 
-  const currentStatusShadow =
-    hovered
-      ? STATUS_HOVER_GLOW
-      : "none";
+  const receptionIcon =
+    getReceptionIcon(
+      door.id,
+    );
 
 
   /* =========================================================
@@ -189,11 +279,7 @@ export default function DepartmentDoor({
       onClick={() => {
 
         if (
-
-          !status.enabled ||
-
           !onClick
-
         ) {
 
           return;
@@ -218,7 +304,7 @@ export default function DepartmentDoor({
 
 
       {/* =====================================================
-         ICON
+         PREMIUM MODULE ICON
       ===================================================== */}
 
       <div
@@ -237,13 +323,13 @@ export default function DepartmentDoor({
 
       >
 
-        {door.icon}
+        {receptionIcon}
 
       </div>
 
 
       {/* =====================================================
-         CONTENT
+         DEPARTMENT TITLE
       ===================================================== */}
 
       <div
@@ -257,40 +343,6 @@ export default function DepartmentDoor({
           {door.title}
 
         </h3>
-
-
-        <p
-          style={subtitleStyle}
-        >
-
-          {door.subtitle}
-
-        </p>
-
-      </div>
-
-
-      {/* =====================================================
-         STATUS
-      ===================================================== */}
-
-      <div
-
-        style={{
-
-          ...statusStyle,
-
-          color:
-            status.color,
-
-          boxShadow:
-            currentStatusShadow,
-
-        }}
-
-      >
-
-        🔒 {status.label}
 
       </div>
 

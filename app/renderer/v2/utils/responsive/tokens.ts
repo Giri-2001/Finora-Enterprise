@@ -204,6 +204,11 @@ export interface ResponsiveTokens {
     brandVisible: boolean;
   };
 
+    themeSelector: {
+    buttonSize: number;
+    gap: number;
+  };
+
   footer: {
     height: number;
     minHeight: number;
@@ -481,10 +486,15 @@ export const MOBILE_TOKENS: ResponsiveTokens = {
   header: {
     height: 82,
     paddingX: 10,
-    logoHeight: 26,
+    logoHeight: 36,
     titleSize: 18,
-    iconSize: 17,
+    iconSize: 21,
     brandVisible: false,
+  },
+
+    themeSelector: {
+    buttonSize: 14,
+    gap: 6,
   },
 
   footer: {
@@ -766,10 +776,15 @@ export const TABLET_TOKENS: ResponsiveTokens = {
   header: {
     height: 60,
     paddingX: 24,
-    logoHeight: 32,
+    logoHeight: 36,
     titleSize: 18,
     iconSize: 21,
     brandVisible: false,
+  },
+
+    themeSelector: {
+    buttonSize: 16,
+    gap: 7,
   },
 
   footer: {
@@ -1061,10 +1076,15 @@ export const LAPTOP_TOKENS: ResponsiveTokens = {
   header: {
     height: 62,
     paddingX: 28,
-    logoHeight: 34,
+    logoHeight: 36,
     titleSize: 19,
     iconSize: 22,
     brandVisible: true,
+  },
+
+    themeSelector: {
+    buttonSize: 16,
+    gap: 8,
   },
 
   footer: {
@@ -1364,6 +1384,11 @@ export const DESKTOP_TOKENS: ResponsiveTokens = {
     titleSize: 20,
     iconSize: 22,
     brandVisible: true,
+  },
+
+    themeSelector: {
+    buttonSize: 16,
+    gap: 8,
   },
 
   footer: {

@@ -1,47 +1,194 @@
 /* ===========================================================
    FINORA ENTERPRISE OS™
+
    RECEPTION LOGO™
 
-   STYLES
+   RESPONSIVE + THEME-AWARE STYLES
+
+   RESPONSIBILITY:
+   - Render FINORA Reception brand presentation
+   - Consume central FINORA Theme Engine
+   - Consume central FINORA Responsive Engine
+   - Keep responsive geometry outside static styles
+
+   IMPORTANT:
+   - No hardcoded theme colors.
+   - No hardcoded responsive geometry.
+   - Theme values come directly from FinoraTheme.
+   - Responsive geometry comes only from ResponsiveTokens.
 =========================================================== */
 
-import type { CSSProperties } from "react";
 
-export const containerStyle: CSSProperties = {
-  display: "flex",
-  alignItems: "center",
-  gap: "14px",
+/* ===========================================================
+   IMPORTS
+=========================================================== */
 
-  cursor: "pointer",
-  userSelect: "none",
+import type {
+  CSSProperties,
+} from "react";
 
-  transition: "all .25s ease",
-};
+import type {
+  ResponsiveTokens,
+} from "../../../../utils/responsive";
 
-export const logoStyle: CSSProperties = {
-  width: "52px",
-  height: "52px",
+import type {
+  FinoraTheme,
+} from "../../../../themes/core/types";
 
-  objectFit: "contain",
 
-  flexShrink: 0,
+/* ===========================================================
+   STYLE CONTRACT
+=========================================================== */
 
-  filter: "drop-shadow(0 0 6px rgba(212,175,55,.20))",
-};
+export interface ReceptionLogoStyles {
 
-export const titleStyle: CSSProperties = {
-  color: "#FFFFFF",
+  containerStyle:
+    CSSProperties;
 
-  fontSize: "20px",
+  logoStyle:
+    CSSProperties;
 
-  fontWeight: 800,
+  titleStyle:
+    CSSProperties;
 
-  letterSpacing: ".8px",
+}
 
-  whiteSpace: "nowrap",
 
-  textShadow: "0 1px 8px rgba(0,0,0,.35)",
+/* ===========================================================
+   STYLE FACTORY
+=========================================================== */
 
-  fontFamily:
-    '"Segoe UI", Inter, system-ui, sans-serif',
-};
+export function createReceptionLogoStyles(
+
+  tokens:
+    ResponsiveTokens,
+
+  theme:
+    FinoraTheme,
+
+): ReceptionLogoStyles {
+
+
+  /* =========================================================
+     RESPONSIVE TOKENS
+  ========================================================= */
+
+  const header =
+    tokens.header;
+
+
+  /* =========================================================
+     CENTRAL THEME TOKENS
+  ========================================================= */
+
+  const headerText =
+    theme.components.header.text;
+
+  const headerShadow =
+    theme.colors.overlay.shadow;
+
+
+  /* =========================================================
+     CONTAINER
+  ========================================================= */
+
+  const containerStyle:
+    CSSProperties = {
+
+    display:
+      "flex",
+
+    alignItems:
+      "center",
+
+    gap:
+      `${header.paddingX / 2}px`,
+
+    cursor:
+      "pointer",
+
+    userSelect:
+      "none",
+
+    transition:
+      "opacity 160ms ease",
+
+  };
+
+
+  /* =========================================================
+     LOGO
+  ========================================================= */
+
+  const logoStyle:
+    CSSProperties = {
+
+    width:
+      `${header.logoHeight}px`,
+
+    height:
+      `${header.logoHeight}px`,
+
+    objectFit:
+      "contain",
+
+    flexShrink:
+      0,
+
+    filter:
+      `drop-shadow(0 0 6px ${headerShadow})`,
+
+  };
+
+
+  /* =========================================================
+     TITLE
+  ========================================================= */
+
+  const titleStyle:
+    CSSProperties = {
+
+    color:
+      headerText,
+
+    fontSize:
+      `${header.titleSize}px`,
+
+    fontWeight:
+      800,
+
+    letterSpacing:
+      ".8px",
+
+    whiteSpace:
+      "nowrap",
+
+    textShadow:
+      `0 1px 8px ${headerShadow}`,
+
+    fontFamily:
+      '"Segoe UI", Inter, system-ui, sans-serif',
+
+  };
+
+
+  /* =========================================================
+     RETURN
+  ========================================================= */
+
+  return {
+
+    containerStyle,
+
+    logoStyle,
+
+    titleStyle,
+
+  };
+
+}
+
+
+/* ===========================================================
+   END
+=========================================================== */

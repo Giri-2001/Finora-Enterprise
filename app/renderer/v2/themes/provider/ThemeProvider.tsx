@@ -15,6 +15,7 @@
    3. Expose setTheme().
    4. Expose available theme options.
    5. Expose theme readiness state.
+   6. Preserve the selected theme during provider remounts.
 
    IMPORTANT
    -----------------------------------------------------------
@@ -34,6 +35,18 @@
    app/renderer/v2/utils/responsive/
 
    This provider must NOT become a Responsive Engine.
+
+   THEME STATE RULE
+   -----------------------------------------------------------
+   The active theme is retained for the lifetime of the
+   renderer session.
+
+   This prevents an accidental ThemeProvider remount from
+   silently returning the application to DEFAULT_THEME_ID.
+
+   No localStorage.
+   No sessionStorage.
+   No duplicate theme system.
 =========================================================== */
 
 
@@ -49,12 +62,14 @@ import {
   type PropsWithChildren,
 } from "react";
 
+
 import type {
   FinoraTheme,
   ThemeContextValue,
   ThemeId,
   ThemeOption,
 } from "../core/types";
+
 
 import {
   DEFAULT_THEME_ID,
@@ -63,11 +78,32 @@ import {
 
 
 /* ===========================================================
+   SESSION THEME STATE
+   -----------------------------------------------------------
+   This module-level value survives a React provider remount
+   during the same renderer session.
+
+   IMPORTANT:
+   -----------------------------------------------------------
+   This is NOT persistent storage.
+
+   Application restart / renderer reload will correctly return
+   to DEFAULT_THEME_ID.
+=========================================================== */
+
+let rendererThemeId:
+  ThemeId =
+    DEFAULT_THEME_ID;
+
+
+/* ===========================================================
    THEME CONTEXT
 =========================================================== */
 
 const ThemeContext =
-  createContext<ThemeContextValue | undefined>(
+  createContext<
+    ThemeContextValue | undefined
+  >(
     undefined,
   );
 
@@ -77,24 +113,42 @@ const ThemeContext =
 =========================================================== */
 
 function resolveTheme(
-  themeId: ThemeId,
+  themeId:
+    ThemeId,
 ): FinoraTheme {
 
   const theme =
-    FINORA_THEMES[themeId];
+    FINORA_THEMES[
+      themeId
+    ];
 
-  if (theme) {
+  if (
+    theme
+  ) {
 
     return theme;
 
   }
 
-  return FINORA_THEMES[DEFAULT_THEME_ID]
-    ?? (() => {
-      throw new Error(
-        "FINORA Theme Engine: Default theme is not registered.",
-      );
-    })();
+
+  const defaultTheme =
+    FINORA_THEMES[
+      DEFAULT_THEME_ID
+    ];
+
+
+  if (
+    defaultTheme
+  ) {
+
+    return defaultTheme;
+
+  }
+
+
+  throw new Error(
+    "FINORA Theme Engine: Default theme is not registered.",
+  );
 
 }
 
@@ -103,25 +157,38 @@ function resolveTheme(
    THEME OPTIONS BUILDER
 =========================================================== */
 
-function buildThemeOptions(): ThemeOption[] {
+function buildThemeOptions():
+  ThemeOption[] {
 
-  return Object.values(
-    FINORA_THEMES,
-  )
+  return Object
+    .values(
+      FINORA_THEMES,
+    )
     .filter(
       (
         theme,
       ): theme is FinoraTheme =>
-        Boolean(theme),
+        Boolean(
+          theme,
+        ),
     )
     .map(
       (
         theme,
       ): ThemeOption => ({
-        id: theme.id,
-        name: theme.name,
-        mode: theme.mode,
-        description: theme.description,
+
+        id:
+          theme.id,
+
+        name:
+          theme.name,
+
+        mode:
+          theme.mode,
+
+        description:
+          theme.description,
+
       }),
     );
 
@@ -135,24 +202,35 @@ function buildThemeOptions(): ThemeOption[] {
 export function ThemeProvider(
   {
     children,
-  }: PropsWithChildren,
+  }:
+    PropsWithChildren,
 ) {
 
-  /* ---------------------------------------------------------
+
+  /* =========================================================
      ACTIVE THEME STATE
-  --------------------------------------------------------- */
+     ---------------------------------------------------------
+     IMPORTANT:
+     ---------------------------------------------------------
+     Initialize from rendererThemeId instead of always using
+     DEFAULT_THEME_ID.
+
+     Therefore, if ThemeProvider is remounted after the user
+     selected another theme, the selected theme is restored.
+  ========================================================= */
 
   const [
     themeId,
     setThemeId,
   ] = useState<ThemeId>(
-    DEFAULT_THEME_ID,
+    () =>
+      rendererThemeId,
   );
 
 
-  /* ---------------------------------------------------------
+  /* =========================================================
      RESOLVE ACTIVE THEME
-  --------------------------------------------------------- */
+  ========================================================= */
 
   const theme =
     useMemo(
@@ -166,9 +244,9 @@ export function ThemeProvider(
     );
 
 
-  /* ---------------------------------------------------------
+  /* =========================================================
      AVAILABLE THEMES
-  --------------------------------------------------------- */
+  ========================================================= */
 
   const themes =
     useMemo(
@@ -178,16 +256,28 @@ export function ThemeProvider(
     );
 
 
-  /* ---------------------------------------------------------
+  /* =========================================================
      THEME CHANGE HANDLER
-  --------------------------------------------------------- */
+  ========================================================= */
 
   const setTheme = (
-    nextThemeId: ThemeId,
+    nextThemeId:
+      ThemeId,
   ): void => {
 
+
+    /* -------------------------------------------------------
+       VALIDATE THEME
+    ------------------------------------------------------- */
+
+    const nextTheme =
+      FINORA_THEMES[
+        nextThemeId
+      ];
+
+
     if (
-      !FINORA_THEMES[nextThemeId]
+      !nextTheme
     ) {
 
       console.warn(
@@ -198,6 +288,48 @@ export function ThemeProvider(
 
     }
 
+
+    /* -------------------------------------------------------
+       SAME THEME
+       -------------------------------------------------------
+       Clicking the already-active swatch must NOT reset
+       anything.
+    ------------------------------------------------------- */
+
+    if (
+      rendererThemeId ===
+      nextThemeId
+    ) {
+
+      return;
+
+    }
+
+
+    /* -------------------------------------------------------
+       UPDATE RENDERER SESSION THEME
+       ------------------------------------------------------- */
+
+    console.log(
+      "[FINORA THEME] CHANGE REQUEST",
+      {
+        from:
+          rendererThemeId,
+
+        to:
+          nextThemeId,
+      },
+    );
+
+
+    rendererThemeId =
+      nextThemeId;
+
+
+    /* -------------------------------------------------------
+       UPDATE REACT STATE
+    ------------------------------------------------------- */
+
     setThemeId(
       nextThemeId,
     );
@@ -205,9 +337,9 @@ export function ThemeProvider(
   };
 
 
-  /* ---------------------------------------------------------
+  /* =========================================================
      CONTEXT VALUE
-  --------------------------------------------------------- */
+  ========================================================= */
 
   const contextValue:
     ThemeContextValue = {
@@ -220,32 +352,35 @@ export function ThemeProvider(
 
     themes,
 
-    isThemeReady: true,
+    isThemeReady:
+      true,
 
   };
 
 
-  /* ---------------------------------------------------------
+  /* =========================================================
      PROVIDER
-  --------------------------------------------------------- */
+  ========================================================= */
 
   return (
+
     <ThemeContext.Provider
       value={
         contextValue
       }
     >
-      {
-        children
-      }
+
+      {children}
+
     </ThemeContext.Provider>
+
   );
 
 }
 
 
 /* ===========================================================
-   THEME HOOK
+   USE THEME HOOK
 =========================================================== */
 
 export function useTheme():
@@ -255,6 +390,7 @@ export function useTheme():
     useContext(
       ThemeContext,
     );
+
 
   if (
     !context
@@ -266,11 +402,12 @@ export function useTheme():
 
   }
 
+
   return context;
 
 }
 
 
 /* ===========================================================
-   END
+   END OF FILE
 =========================================================== */

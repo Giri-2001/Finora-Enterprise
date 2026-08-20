@@ -119,12 +119,20 @@ export const DEFAULT_THEME_COMPONENTS:
 
   /* ---------------------------------------------------------
      CARD
+     ---------------------------------------------------------
+     Premium enterprise elevation.
+
+     The shadow is intentionally stored as a complete
+     CSS shadow value so card depth remains controlled
+     entirely by the Theme Engine.
   --------------------------------------------------------- */
 
   card: {
     background: "#FFFFFF",
     border: "#D9DEE7",
-    shadow: "rgba(15, 23, 42, 0.08)",
+
+    shadow:
+      "0 10px 24px rgba(15, 23, 42, 0.16)",
   },
 
 

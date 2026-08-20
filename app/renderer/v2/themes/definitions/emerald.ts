@@ -1,12 +1,12 @@
 /* ===========================================================
-   FINORA ENTERPRISE OS
+   FINORA ENTERPRISE OS™
    THEME ENGINE
 
    EMERALD THEME
 
    PURPOSE
    -----------------------------------------------------------
-   Official FINORA Emerald visual theme.
+   Official FINORA Emerald premium visual theme.
 
    IMPORTANT
    -----------------------------------------------------------
@@ -28,6 +28,10 @@
    inside this theme definition.
 =========================================================== */
 
+/* ===========================================================
+   IMPORTS
+=========================================================== */
+
 import type {
   FinoraTheme,
 } from "../core/types";
@@ -44,14 +48,17 @@ export const EMERALD_THEME:
      IDENTITY
   --------------------------------------------------------- */
 
-  id: "emerald",
+  id:
+    "emerald",
 
-  name: "Emerald",
+  name:
+    "Emerald",
 
-  mode: "light",
+  mode:
+    "dark",
 
   description:
-    "FINORA's premium emerald theme combining deep financial green, refined neutral surfaces, and enterprise-grade clarity.",
+    "FINORA's premium Emerald theme with deep green surfaces, refined emerald accents, and enterprise-grade contrast.",
 
 
   /* =========================================================
@@ -60,85 +67,205 @@ export const EMERALD_THEME:
 
   colors: {
 
+    /* -------------------------------------------------------
+       BRAND
+    ------------------------------------------------------- */
+
     brand: {
-      primary: "#087F5B",
-      secondary: "#056044",
-      accent: "#20A77A",
-      accentSoft: "#DDF5EC",
+
+      primary:
+        "#35A878",
+
+      secondary:
+        "#167A59",
+
+      accent:
+        "#59C895",
+
+      accentSoft:
+        "#1D4637",
+
     },
+
+
+    /* -------------------------------------------------------
+       BACKGROUND / SURFACE
+    ------------------------------------------------------- */
 
     background: {
-      page: "#F6F9F8",
-      surface: "#FFFFFF",
-      surfaceElevated: "#FFFFFF",
-      surfaceMuted: "#EEF5F2",
-      surfaceStrong: "#DFEBE6",
+
+      page:
+        "#09130F",
+
+      surface:
+        "#101D18",
+
+      surfaceElevated:
+        "#162821",
+
+      surfaceMuted:
+        "#1C342A",
+
+      surfaceStrong:
+        "#27483A",
+
     },
+
+
+    /* -------------------------------------------------------
+       TEXT
+    ------------------------------------------------------- */
 
     text: {
-      primary: "#17221E",
-      secondary: "#45554E",
-      muted: "#77867F",
-      inverse: "#FFFFFF",
-      disabled: "#A4B0AA",
-      link: "#087F5B",
+
+      primary:
+        "#F1FAF6",
+
+      secondary:
+        "#BFD0C8",
+
+      muted:
+        "#81968C",
+
+      inverse:
+        "#102018",
+
+      disabled:
+        "#5E7068",
+
+      link:
+        "#69D6A5",
+
     },
 
+
+    /* -------------------------------------------------------
+       BORDER
+    ------------------------------------------------------- */
+
     border: {
-      default: "#D5E1DC",
-      subtle: "#E5ECE9",
-      strong: "#AEBFB7",
-      focus: "#087F5B",
+
+      default:
+        "#29493D",
+
+      subtle:
+        "#203A31",
+
+      strong:
+        "#396452",
+
+      focus:
+        "#35A878",
+
     },
+
+
+    /* -------------------------------------------------------
+       STATUS
+    ------------------------------------------------------- */
 
     status: {
 
-      success: "#16845B",
-      successSoft: "#E4F5EE",
+      success:
+        "#59C895",
 
-      warning: "#B7791F",
-      warningSoft: "#FFF3D8",
+      successSoft:
+        "#123025",
 
-      danger: "#C0392B",
-      dangerSoft: "#FBEAE7",
+      warning:
+        "#D5A03B",
 
-      info: "#2867A5",
-      infoSoft: "#EAF2FA",
+      warningSoft:
+        "#332814",
+
+      danger:
+        "#E46F7D",
+
+      dangerSoft:
+        "#351C24",
+
+      info:
+        "#7DB6E8",
+
+      infoSoft:
+        "#182A3A",
+
     },
+
+
+    /* -------------------------------------------------------
+       INTERACTIVE
+    ------------------------------------------------------- */
 
     interactive: {
-      hover: "#F0F6F3",
-      active: "#E3EEE9",
-      selected: "#DDF5EC",
-      focus: "#087F5B",
-      disabled: "#EDF1EF",
+
+      hover:
+        "#193027",
+
+      active:
+        "#234236",
+
+      selected:
+        "#2D5344",
+
+      focus:
+        "#35A878",
+
+      disabled:
+        "#202B27",
+
     },
 
+
+    /* -------------------------------------------------------
+       OVERLAY
+    ------------------------------------------------------- */
+
     overlay: {
-      backdrop: "rgba(8, 31, 23, 0.48)",
-      shadow: "rgba(8, 31, 23, 0.14)",
+
+      backdrop:
+        "rgba(2, 13, 9, 0.64)",
+
+      shadow:
+        "rgba(2, 13, 9, 0.54)",
+
     },
+
   },
 
 
   /* =========================================================
-     TYPOGRAPHY COLORS
+     TYPOGRAPHY
   ========================================================= */
 
   typography: {
 
-    heading: "#17221E",
-    body: "#45554E",
-    label: "#35443E",
-    caption: "#77867F",
-    placeholder: "#98A59F",
-    link: "#087F5B",
-    inverse: "#FFFFFF",
+    heading:
+      "#F1FAF6",
+
+    body:
+      "#D1DED8",
+
+    label:
+      "#BFD0C8",
+
+    caption:
+      "#81968C",
+
+    placeholder:
+      "#687B72",
+
+    link:
+      "#69D6A5",
+
+    inverse:
+      "#102018",
+
   },
 
 
   /* =========================================================
-     COMPONENT COLORS
+     COMPONENTS
   ========================================================= */
 
   components: {
@@ -148,9 +275,16 @@ export const EMERALD_THEME:
     ------------------------------------------------------- */
 
     card: {
-      background: "#FFFFFF",
-      border: "#D5E1DC",
-      shadow: "rgba(8, 31, 23, 0.08)",
+
+      background:
+        "#101D18",
+
+      border:
+        "#29493D",
+
+      shadow:
+        "0 10px 30px rgba(2, 13, 9, 0.44)",
+
     },
 
 
@@ -159,13 +293,28 @@ export const EMERALD_THEME:
     ------------------------------------------------------- */
 
     input: {
-      background: "#FFFFFF",
-      border: "#D5E1DC",
-      text: "#17221E",
-      placeholder: "#98A59F",
-      focusBorder: "#087F5B",
-      focusBackground: "#FFFFFF",
-      disabledBackground: "#EDF1EF",
+
+      background:
+        "#0D1814",
+
+      border:
+        "#29493D",
+
+      text:
+        "#F1FAF6",
+
+      placeholder:
+        "#687B72",
+
+      focusBorder:
+        "#35A878",
+
+      focusBackground:
+        "#12231C",
+
+      disabledBackground:
+        "#1C2823",
+
     },
 
 
@@ -175,18 +324,36 @@ export const EMERALD_THEME:
 
     button: {
 
-      primaryBackground: "#087F5B",
-      primaryText: "#FFFFFF",
-      primaryHover: "#056044",
+      primaryBackground:
+        "#19835F",
 
-      secondaryBackground: "#FFFFFF",
-      secondaryText: "#35443E",
-      secondaryBorder: "#D5E1DC",
-      secondaryHover: "#F0F6F3",
+      primaryText:
+        "#FFFFFF",
 
-      dangerBackground: "#C0392B",
-      dangerText: "#FFFFFF",
-      dangerHover: "#A93226",
+      primaryHover:
+        "#229B70",
+
+      secondaryBackground:
+        "#162821",
+
+      secondaryText:
+        "#DDEBE5",
+
+      secondaryBorder:
+        "#396452",
+
+      secondaryHover:
+        "#20382D",
+
+      dangerBackground:
+        "#713341",
+
+      dangerText:
+        "#FFE9ED",
+
+      dangerHover:
+        "#843B4C",
+
     },
 
 
@@ -195,11 +362,22 @@ export const EMERALD_THEME:
     ------------------------------------------------------- */
 
     navigation: {
-      background: "#FFFFFF",
-      text: "#45554E",
-      activeBackground: "#DDF5EC",
-      activeText: "#087F5B",
-      hoverBackground: "#F0F6F3",
+
+      background:
+        "#0D1814",
+
+      text:
+        "#BFD0C8",
+
+      activeBackground:
+        "#234236",
+
+      activeText:
+        "#F1FAF6",
+
+      hoverBackground:
+        "#193027",
+
     },
 
 
@@ -208,9 +386,16 @@ export const EMERALD_THEME:
     ------------------------------------------------------- */
 
     header: {
-      background: "#FFFFFF",
-      text: "#17221E",
-      border: "#E5ECE9",
+
+      background:
+        "#0D1814",
+
+      text:
+        "#F1FAF6",
+
+      border:
+        "#29493D",
+
     },
 
 
@@ -219,9 +404,16 @@ export const EMERALD_THEME:
     ------------------------------------------------------- */
 
     panel: {
-      background: "#FFFFFF",
-      border: "#D5E1DC",
-      shadow: "rgba(8, 31, 23, 0.06)",
+
+      background:
+        "#101D18",
+
+      border:
+        "#29493D",
+
+      shadow:
+        "0 12px 32px rgba(2, 13, 9, 0.44)",
+
     },
 
 
@@ -230,12 +422,25 @@ export const EMERALD_THEME:
     ------------------------------------------------------- */
 
     table: {
-      headerBackground: "#EEF5F2",
-      headerText: "#35443E",
-      rowBackground: "#FFFFFF",
-      rowAlternateBackground: "#FAFCFB",
-      rowHoverBackground: "#F0F6F3",
-      border: "#E5ECE9",
+
+      headerBackground:
+        "#162821",
+
+      headerText:
+        "#DDEBE5",
+
+      rowBackground:
+        "#101D18",
+
+      rowAlternateBackground:
+        "#14231D",
+
+      rowHoverBackground:
+        "#193027",
+
+      border:
+        "#253F34",
+
     },
 
 
@@ -244,12 +449,23 @@ export const EMERALD_THEME:
     ------------------------------------------------------- */
 
     modal: {
-      background: "#FFFFFF",
-      border: "#D5E1DC",
-      backdrop: "rgba(8, 31, 23, 0.48)",
-      shadow: "rgba(8, 31, 23, 0.18)",
+
+      background:
+        "#101D18",
+
+      border:
+        "#396452",
+
+      backdrop:
+        "rgba(2, 13, 9, 0.64)",
+
+      shadow:
+        "0 24px 60px rgba(2, 13, 9, 0.58)",
+
     },
+
   },
+
 };
 
 

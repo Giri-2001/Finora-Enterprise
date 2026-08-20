@@ -1,8 +1,16 @@
 ﻿/* ===========================================================
    FINORA ENTERPRISE OS™
+
    RECEPTION™
-   
+
    PAGE STYLES
+
+   IMPORTANT
+   -----------------------------------------------------------
+   - Responsive geometry comes ONLY from Responsive Engine.
+   - Theme colors come ONLY from FINORA Theme Engine.
+   - No local theme definitions.
+   - No hard-coded theme colors.
 =========================================================== */
 
 
@@ -14,82 +22,106 @@ import type {
   CSSProperties,
 } from "react";
 
+import type {
+  ResponsiveTokens,
+} from "../../utils/responsive";
 
-/* ===========================================================
-   PAGE BACKGROUND
-=========================================================== */
-
-/*
-  Reception owns ONE continuous visual surface.
-
-  Header
-      ↓
-  Reception Page
-      ↓
-  Reception Hall
-      ↓
-  Reception Footer
-
-  The Hall and Footer must never expose the application/body
-  background between them.
-
-  The Reception page therefore owns the same base background
-  used by the Reception Hall.
-*/
-
-const RECEPTION_PAGE_BACKGROUND =
-  "radial-gradient(circle at top, rgba(212,175,55,.18), transparent 35%), linear-gradient(180deg,#1B0E05,#5A3418)";
+import type {
+  FinoraTheme,
+} from "../../themes/core/types";
 
 
 /* ===========================================================
-   PAGE
+   TYPES
 =========================================================== */
 
-/*
-  Reception page owns the vertical layout.
+export interface ReceptionPageStyles {
 
-  IMPORTANT:
-  - width stays inside the application viewport.
-  - overflow-x is hidden so no right-side visual strip can
-    appear from horizontal overflow.
-  - background is continuous across Hall + Footer.
-  - no artificial viewport height is introduced.
-*/
+  pageStyle:
+    CSSProperties;
 
-export const pageStyle:
-  CSSProperties = {
+}
 
-  width:
-    "100%",
 
-  minWidth:
-    0,
+/* ===========================================================
+   STYLE FACTORY
+=========================================================== */
 
-  minHeight:
-    0,
+export function createReceptionPageStyles(
 
-  display:
-    "flex",
+  tokens:
+    ResponsiveTokens,
 
-  flex:
-    "1 1 auto",
+  theme:
+    FinoraTheme,
 
-  flexDirection:
-    "column",
+): ReceptionPageStyles {
 
-  boxSizing:
-    "border-box",
 
-  overflowX:
-    "hidden",
+  /* =========================================================
+     PAGE BACKGROUND
 
-  overflowY:
-    "visible",
+     Theme owns the visual surface.
 
-  background:
-    RECEPTION_PAGE_BACKGROUND,
+     Responsive Engine owns only geometry.
+  ========================================================= */
 
-};
+  const pageStyle:
+    CSSProperties = {
+
+    width:
+      "100%",
+
+    minWidth:
+      0,
+
+    minHeight:
+      0,
+
+    display:
+      "flex",
+
+    flex:
+      "1 1 auto",
+
+    flexDirection:
+      "column",
+
+    boxSizing:
+      "border-box",
+
+    overflowX:
+      "hidden",
+
+    overflowY:
+      "visible",
+
+    background:
+      `
+        linear-gradient(
+          180deg,
+          ${theme.colors.background.page} 0%,
+          ${theme.colors.background.surface} 100%
+        )
+      `,
+
+    color:
+      theme.colors.text.primary,
+
+  };
+
+
+  /* =========================================================
+     RETURN
+  ========================================================= */
+
+  return {
+
+    pageStyle,
+
+  };
+
+}
 
 
 /* ===========================================================

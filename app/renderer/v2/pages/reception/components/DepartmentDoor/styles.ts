@@ -1,10 +1,23 @@
 /* ===========================================================
    FINORA ENTERPRISE OS™
+
    RECEPTION™
-   
+
    DEPARTMENT DOOR™
-   
+
    STYLES
+
+   IMPORTANT
+   -----------------------------------------------------------
+   - Responsive geometry comes ONLY from Responsive Engine.
+   - Theme appearance comes ONLY from FINORA Theme Engine.
+   - Card depth comes ONLY from Theme Engine.
+   - Department cards contain only:
+       1. Premium icon
+       2. Department title
+   - No subtitle/status presentation.
+   - No hard-coded theme colors.
+   - No hard-coded responsive geometry.
 =========================================================== */
 
 
@@ -20,33 +33,38 @@ import type {
   ResponsiveTokens,
 } from "../../../../utils/responsive";
 
+import type {
+  FinoraTheme,
+} from "../../../../themes/core/types";
+
 
 /* ===========================================================
-   RESPONSIVE STYLE FACTORY
-   -----------------------------------------------------------
-   IMPORTANT
-   -----------------------------------------------------------
-   All responsive dimensions are consumed from the
-   CENTRAL RESPONSIVE ENGINE.
-
-   Department Door uses ONLY the dedicated
-   tokens.door.* responsive token group for
-   door-specific visual dimensions.
+   RESPONSIVE + THEME STYLE FACTORY
 =========================================================== */
 
 export function createDepartmentDoorStyles(
-  tokens: ResponsiveTokens,
+
+  tokens:
+    ResponsiveTokens,
+
+  theme:
+    FinoraTheme,
+
 ) {
 
 
   /* =========================================================
-     ROOT
+     ROOT / DEPARTMENT CARD
+
+     ENTERPRISE ELEVATED CARD
      ---------------------------------------------------------
-     Department Door geometry comes exclusively from
-     the dedicated Responsive Engine door tokens.
+     Card depth is controlled entirely by the Theme Engine.
+
+     No local shadow geometry is defined here.
   ========================================================= */
 
-  const containerStyle: CSSProperties = {
+  const containerStyle:
+    CSSProperties = {
 
     width:
       tokens.door.width,
@@ -70,7 +88,7 @@ export function createDepartmentDoorStyles(
       "column",
 
     justifyContent:
-      "space-between",
+      "center",
 
     alignItems:
       "center",
@@ -84,6 +102,83 @@ export function createDepartmentDoorStyles(
     userSelect:
       "none",
 
+
+    /* =======================================================
+       ELEVATED SURFACE
+    ======================================================= */
+
+    background:
+      `
+        linear-gradient(
+          180deg,
+          ${
+            theme
+              .colors
+              .background
+              .surfaceElevated
+          } 0%,
+          ${
+            theme
+              .colors
+              .background
+              .surface
+          } 100%
+        )
+      `,
+
+
+    /* =======================================================
+       BORDER
+    ======================================================= */
+
+    border:
+      `${tokens.border.width}px solid ${
+        theme
+          .colors
+          .border
+          .default
+      }`,
+
+
+    /* =======================================================
+       THEME ENGINE CARD DEPTH
+
+       The complete shadow definition is owned by:
+
+       theme.components.card.shadow
+
+       Therefore Reception does not define its own
+       shadow geometry or shadow color.
+    ======================================================= */
+
+    boxShadow:
+  `
+    ${theme
+      .components
+      .card
+      .shadow},
+
+    0 10px 30px ${theme
+      .colors
+      .overlay
+      .shadow}
+  `,
+
+    /* =======================================================
+       TEXT
+    ======================================================= */
+
+    color:
+      theme
+        .colors
+        .text
+        .primary,
+
+
+    /* =======================================================
+       TRANSITION
+    ======================================================= */
+
     transition:
       "all 220ms ease",
 
@@ -91,22 +186,17 @@ export function createDepartmentDoorStyles(
 
 
   /* =========================================================
-     ICON
-     ---------------------------------------------------------
-     All Department Door icon dimensions come from
-     the dedicated door token group.
+     PREMIUM MODULE ICON
   ========================================================= */
 
-  const iconStyle: CSSProperties = {
+  const iconStyle:
+    CSSProperties = {
 
     width:
       `${tokens.door.iconSize}px`,
 
     height:
       `${tokens.door.iconSize}px`,
-
-    borderRadius:
-      `${tokens.door.iconRadius}px`,
 
     display:
       "flex",
@@ -117,11 +207,14 @@ export function createDepartmentDoorStyles(
     justifyContent:
       "center",
 
-    fontSize:
-      `${tokens.door.iconSize}px`,
-
     flexShrink:
       0,
+
+    color:
+      theme
+        .colors
+        .text
+        .primary,
 
   };
 
@@ -130,7 +223,8 @@ export function createDepartmentDoorStyles(
      CONTENT
   ========================================================= */
 
-  const contentStyle: CSSProperties = {
+  const contentStyle:
+    CSSProperties = {
 
     display:
       "flex",
@@ -139,6 +233,9 @@ export function createDepartmentDoorStyles(
       "column",
 
     alignItems:
+      "center",
+
+    justifyContent:
       "center",
 
     gap:
@@ -157,7 +254,8 @@ export function createDepartmentDoorStyles(
      TITLE
   ========================================================= */
 
-  const titleStyle: CSSProperties = {
+  const titleStyle:
+    CSSProperties = {
 
     margin:
       0,
@@ -175,79 +273,10 @@ export function createDepartmentDoorStyles(
       "center",
 
     color:
-      "#F3E4C2",
-
-  };
-
-
-  /* =========================================================
-     SUBTITLE
-  ========================================================= */
-
-  const subtitleStyle: CSSProperties = {
-
-    margin:
-      0,
-
-    fontSize:
-      `${tokens.door.subtitleSize}px`,
-
-    lineHeight:
-      tokens.lineHeight.compact,
-
-    textAlign:
-      "center",
-
-    color:
-     "rgba(255,255,255,.72)",  
-
-  };
-
-
-  /* =========================================================
-     STATUS
-     ---------------------------------------------------------
-     Status dimensions are Department Door dimensions.
-     They must NOT borrow generic control tokens.
-  ========================================================= */
-
-  const statusStyle: CSSProperties = {
-
-    padding:
-      `${tokens.door.statusPaddingY}px ${tokens.door.statusPaddingX}px`,
-
-    borderRadius:
-      "999px",
-
-    background:
-      "#FFFFFF",
-
-    fontSize:
-      `${tokens.door.statusSize}px`,
-
-    fontWeight:
-      700,
-
-    lineHeight:
-      tokens.lineHeight.compact,
-
-    whiteSpace:
-      "nowrap",
-
-    display:
-      "inline-flex",
-
-    alignItems:
-      "center",
-
-    justifyContent:
-      "center",
-
-    minHeight:
-      `${tokens.door.statusMinHeight}px`,
-
-    boxSizing:
-      "border-box",
+      theme
+        .colors
+        .text
+        .primary,
 
   };
 
@@ -265,10 +294,6 @@ export function createDepartmentDoorStyles(
     contentStyle,
 
     titleStyle,
-
-    subtitleStyle,
-
-    statusStyle,
 
   };
 

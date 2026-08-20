@@ -1,10 +1,18 @@
 ﻿/* ===========================================================
-   FINORA ENTERPRISE OSâ„¢
-   RECEPTIONâ„¢
+   FINORA ENTERPRISE OS™
 
-   RECEPTION FOOTERâ„¢
+   RECEPTION™
+   RECEPTION FOOTER™
 
-   RESPONSIVE ENGINE CONSUMER
+   THEME + RESPONSIVE ENGINE CONSUMER
+
+   IMPORTANT
+   -----------------------------------------------------------
+   Responsive geometry comes only from ResponsiveTokens.
+
+   Theme colors come only from FinoraTheme.
+
+   No local theme color definitions.
 =========================================================== */
 
 
@@ -19,6 +27,10 @@ import type {
 import type {
   ResponsiveTokens,
 } from "../../../../utils/responsive";
+
+import type {
+  FinoraTheme,
+} from "../../../../themes/core/types";
 
 
 /* ===========================================================
@@ -51,21 +63,35 @@ export function createReceptionFooterStyles(
   tokens:
     ResponsiveTokens,
 
+  theme:
+    FinoraTheme,
+
 ): ReceptionFooterStyles {
 
 
   /* =========================================================
-     ROOT
-
-     IMPORTANT:
-     - Footer belongs to the Reception viewport.
-     - marginTop:auto pushes the footer to the bottom.
-     - alignSelf:center centers the footer horizontally.
-     - No fixed viewport height is introduced here.
-     - All responsive sizing continues to come from tokens.
+     SEMANTIC THEME COLORS
   ========================================================= */
 
-  const containerStyle: CSSProperties = {
+  const primaryText =
+    theme
+      .colors
+      .text
+      .primary;
+
+  const secondaryText =
+    theme
+      .colors
+      .text
+      .secondary;
+
+
+  /* =========================================================
+     ROOT
+  ========================================================= */
+
+  const containerStyle:
+    CSSProperties = {
 
     width:
       `calc(100% - ${tokens.layout.pageGutter * 2}px)`,
@@ -109,12 +135,19 @@ export function createReceptionFooterStyles(
     borderRadius:
       `${tokens.border.radius}px`,
 
-    background: "transparent",
+    background:
+      "transparent",
 
     border:
-      `${tokens.border.width}px solid rgba(212,175,55,.55)`,
+      `${tokens.border.width}px solid ${
+        theme
+          .colors
+          .border
+          .strong
+      }`,
 
-    boxShadow: "none",
+    boxShadow:
+      "none",
 
     letterSpacing:
       "0.3px",
@@ -126,7 +159,8 @@ export function createReceptionFooterStyles(
      CONTENT
   ========================================================= */
 
-  const contentStyle: CSSProperties = {
+  const contentStyle:
+    CSSProperties = {
 
     width:
       "100%",
@@ -159,7 +193,8 @@ export function createReceptionFooterStyles(
      COPYRIGHT
   ========================================================= */
 
-  const copyrightStyle: CSSProperties = {
+  const copyrightStyle:
+    CSSProperties = {
 
     minWidth:
       0,
@@ -168,7 +203,7 @@ export function createReceptionFooterStyles(
       "1 1 auto",
 
     color:
-      "#F8FAFC",
+      primaryText,
 
     fontSize:
       `${tokens.footer.fontSize}px`,
@@ -190,9 +225,13 @@ export function createReceptionFooterStyles(
 
   /* =========================================================
      VERSION
+     
+     Uses semantic secondary text so the right-side
+     footer content follows the active theme naturally.
   ========================================================= */
 
-  const versionStyle: CSSProperties = {
+  const versionStyle:
+    CSSProperties = {
 
     minWidth:
       0,
@@ -201,7 +240,7 @@ export function createReceptionFooterStyles(
       "0 1 auto",
 
     color:
-      "#D4AF37",
+      secondaryText,
 
     fontSize:
       `${tokens.footer.fontSize}px`,

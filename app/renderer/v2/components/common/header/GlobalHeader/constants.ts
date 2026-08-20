@@ -1,5 +1,6 @@
 /* ===========================================================
    FINORA ENTERPRISE OS™
+
    GLOBAL HEADER™
 
    CONSTANTS

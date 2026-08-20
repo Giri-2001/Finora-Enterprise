@@ -8,7 +8,8 @@
    - Render Reception logo
    - Render Reception brand title when responsive token allows
    - Consume Responsive Engine
-   - Keep responsive visibility out of static styles
+   - Consume Theme Engine
+   - Keep responsive visibility and geometry centralized
 =========================================================== */
 
 
@@ -26,14 +27,16 @@ import {
 } from "./constants";
 
 import {
-  containerStyle,
-  logoStyle,
-  titleStyle,
-} from "./styles";
-
-import {
   useResponsive,
 } from "../../../../utils/responsive";
+
+import {
+  useTheme,
+} from "../../../../themes/provider";
+
+import {
+  createReceptionLogoStyles,
+} from "./styles";
 
 
 /* ===========================================================
@@ -53,7 +56,18 @@ export default function ReceptionLogo({
 
   const {
     tokens,
-  } = useResponsive();
+  } =
+    useResponsive();
+
+
+  /* =========================================================
+     THEME ENGINE
+  ========================================================= */
+
+  const {
+    theme,
+  } =
+    useTheme();
 
 
   /* =========================================================
@@ -62,7 +76,30 @@ export default function ReceptionLogo({
 
   const {
     brandVisible,
-  } = tokens.header;
+  } =
+    tokens.header;
+
+
+  /* =========================================================
+     RESOLVED STYLES
+  ========================================================= */
+
+  const {
+
+    containerStyle,
+
+    logoStyle,
+
+    titleStyle,
+
+  } =
+    createReceptionLogoStyles(
+
+      tokens,
+
+      theme,
+
+    );
 
 
   /* =========================================================
@@ -72,8 +109,14 @@ export default function ReceptionLogo({
   return (
 
     <div
-      style={containerStyle}
-      onClick={onClick}
+      style={
+        containerStyle
+      }
+
+      onClick={
+        onClick
+      }
+
       title="Go to Reception"
     >
 
@@ -82,9 +125,17 @@ export default function ReceptionLogo({
       ========================================== */}
 
       <img
-        src={LOGO_IMAGE}
-        alt={LOGO_TITLE}
-        style={logoStyle}
+        src={
+          LOGO_IMAGE
+        }
+
+        alt={
+          LOGO_TITLE
+        }
+
+        style={
+          logoStyle
+        }
       />
 
 
@@ -94,13 +145,21 @@ export default function ReceptionLogo({
           Responsive Engine controls visibility.
       ========================================== */}
 
-      {brandVisible && (
+      {
+        brandVisible && (
 
-        <span style={titleStyle}>
-          {LOGO_TITLE}
-        </span>
+          <span
+            style={
+              titleStyle
+            }
+          >
+            {
+              LOGO_TITLE
+            }
+          </span>
 
-      )}
+        )
+      }
 
     </div>
 

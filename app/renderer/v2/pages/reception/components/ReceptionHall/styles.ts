@@ -1,10 +1,20 @@
 ﻿/* ===========================================================
    FINORA ENTERPRISE OS™
+
    RECEPTION™
 
    RECEPTION HALL™
 
    STYLES
+
+   IMPORTANT
+   -----------------------------------------------------------
+   - Responsive geometry comes ONLY from Responsive Engine.
+   - Theme colors come ONLY from FINORA Theme Engine.
+   - No local theme definitions.
+   - No hard-coded theme colors.
+   - Reception surfaces intentionally use multiple semantic
+     theme layers so every theme has visible depth.
 =========================================================== */
 
 
@@ -20,6 +30,10 @@ import type {
   ResponsiveTokens,
 } from "../../../../utils/responsive";
 
+import type {
+  FinoraTheme,
+} from "../../../../themes/core/types";
+
 
 /* ===========================================================
    TYPES
@@ -34,9 +48,6 @@ export interface ReceptionHallStyles {
     CSSProperties;
 
   doorGridStyle:
-    CSSProperties;
-
-  floorStyle:
     CSSProperties;
 
   wallLogoStyle:
@@ -59,25 +70,38 @@ export interface ReceptionHallStyles {
 =========================================================== */
 
 export function createReceptionHallStyles(
-  tokens: ResponsiveTokens,
+
+  tokens:
+    ResponsiveTokens,
+
+  theme:
+    FinoraTheme,
+
 ): ReceptionHallStyles {
 
 
   /* =========================================================
-     ROOT
+     ROOT RECEPTION SURFACE
 
-     IMPORTANT
-     ---------------------------------------------------------
-     Hall consumes the remaining vertical space.
+     The page itself must visibly belong to the selected theme.
 
-     Footer remains below the Hall.
+     We deliberately use:
+       background.page
 
-     No responsive width is decided here manually.
-     All visual dimensions continue to come from the
-     CENTRAL RESPONSIVE ENGINE.
+     instead of transparent.
+
+     This gives:
+       - Imperial Gold → soft professional light page
+       - Royal Navy   → navy/dark page when supplied
+       - Amethyst     → purple-tinted page
+       - Emerald      → green-tinted page
+       - Obsidian     → deep black page
+
+     No local theme mapping exists here.
   ========================================================= */
 
-  const containerStyle: CSSProperties = {
+  const containerStyle:
+    CSSProperties = {
 
     width:
       "100%",
@@ -107,7 +131,7 @@ export function createReceptionHallStyles(
       "border-box",
 
     background:
-      "transparent",
+      theme.colors.background.page,
 
     position:
       "relative",
@@ -116,19 +140,37 @@ export function createReceptionHallStyles(
       "visible",
 
     borderBottom:
-      `${tokens.border.width}px solid rgba(212,175,55,.45)`,
+      "none",
 
     boxShadow:
       "none",
+
+    transition:
+      "background-color 180ms ease",
 
   };
 
 
   /* =========================================================
      FEATURE WALL
+
+     The wall intentionally uses a DIFFERENT visual layer from
+     the page.
+
+     Page:
+       background.page
+
+     Wall:
+       surfaceElevated
+       surface
+       surfaceMuted
+
+     This creates the required visual depth, especially for
+     Imperial Gold / Amethyst / Emerald light themes.
   ========================================================= */
 
-  const wallStyle: CSSProperties = {
+  const wallStyle:
+    CSSProperties = {
 
     width:
       "100%",
@@ -149,16 +191,26 @@ export function createReceptionHallStyles(
       `${tokens.reception.wallPadding}px ${tokens.spacing.medium}px ${tokens.spacing.large}px`,
 
     background:
-      "linear-gradient(180deg,#4A260F 0%,#6B3F1F 50%,#2A1408 100%)",
+      `
+        linear-gradient(
+          180deg,
+          ${theme.colors.background.surfaceElevated} 0%,
+          ${theme.colors.background.surface} 52%,
+          ${theme.colors.background.surfaceMuted} 100%
+        )
+      `,
 
     border:
-      `${tokens.border.width}px solid rgba(212,175,55,.45)`,
+      `${tokens.border.width}px solid ${theme.colors.border.default}`,
 
     borderBottom:
-      `${tokens.border.strongWidth}px solid rgba(212,175,55,.55)`,
+      `${tokens.border.strongWidth}px solid ${theme.colors.border.strong}`,
 
     boxShadow:
-      "0 40px 90px rgba(0,0,0,.35), 0 10px 30px rgba(0,0,0,.35)",
+      `
+        0 40px 90px ${theme.colors.overlay.shadow},
+        0 10px 30px ${theme.colors.overlay.shadow}
+      `,
 
     display:
       "flex",
@@ -169,42 +221,18 @@ export function createReceptionHallStyles(
     alignItems:
       "center",
 
+    transition:
+      "background 180ms ease, border-color 180ms ease, box-shadow 180ms ease",
+
   };
 
 
   /* =========================================================
      DEPARTMENT DOOR GRID
-     
-     IMPORTANT FIX
-     ---------------------------------------------------------
-     Previous implementation forced the number of columns
-     directly from tokens.grid.columns.
-
-     That created a problem because Department Doors have
-     their own fixed responsive width.
-
-     Example:
-       Tablet  = 300px door
-       Laptop  = 320px door
-       Desktop = 340px door
-
-     When the forced column count could not physically fit,
-     cards overflowed / disappeared outside the visible area.
-
-     NEW BEHAVIOUR
-     ---------------------------------------------------------
-     - Grid calculates how many Door tracks physically fit.
-     - Minimum track width is the Department Door width.
-     - Cards remain centered inside their tracks.
-     - Gap comes from the CENTRAL RESPONSIVE ENGINE.
-     - No horizontal overflow.
-     - No uneven "3 visible + 2 pushed" behaviour.
-
-     Reception uses the Department Door geometry as the
-     minimum packing requirement.
   ========================================================= */
 
-  const doorGridStyle: CSSProperties = {
+  const doorGridStyle:
+    CSSProperties = {
 
     width:
       "100%",
@@ -243,46 +271,11 @@ export function createReceptionHallStyles(
 
 
   /* =========================================================
-     FLOOR
-  ========================================================= */
-
-  const floorStyle: CSSProperties = {
-
-    width:
-      "95%",
-
-    maxWidth:
-      `${tokens.layout.maxContentWidth}px`,
-
-    height:
-      `${tokens.spacing.xlarge}px`,
-
-    flexShrink:
-      0,
-
-    marginTop:
-      `-${tokens.spacing.large}px`,
-
-    borderRadius:
-      `${tokens.border.radius}px`,
-
-    background:
-      "radial-gradient(circle,#E8E8E8 0%,#CFCFCF 45%,transparent 85%)",
-
-    backgroundImage:
-      "linear-gradient(180deg, transparent 65%, rgba(255,220,150,.12))",
-
-    opacity:
-      0.45,
-
-  };
-
-
-  /* =========================================================
      WALL LOGO
   ========================================================= */
 
-  const wallLogoStyle: CSSProperties = {
+  const wallLogoStyle:
+    CSSProperties = {
 
     width:
       `${tokens.reception.wallLogoSize}px`,
@@ -300,10 +293,11 @@ export function createReceptionHallStyles(
      WALL TITLE
   ========================================================= */
 
-  const wallTitleStyle: CSSProperties = {
+  const wallTitleStyle:
+    CSSProperties = {
 
     color:
-      "#F8FAFC",
+      theme.colors.text.primary,
 
     fontSize:
       `${tokens.reception.titleSize}px`,
@@ -323,6 +317,9 @@ export function createReceptionHallStyles(
     textAlign:
       "center",
 
+    transition:
+      "color 180ms ease",
+
   };
 
 
@@ -330,7 +327,8 @@ export function createReceptionHallStyles(
      WALL DIVIDER
   ========================================================= */
 
-  const wallDividerStyle: CSSProperties = {
+  const wallDividerStyle:
+    CSSProperties = {
 
     width:
       `${tokens.spacing.xxlarge * 10}px`,
@@ -342,10 +340,20 @@ export function createReceptionHallStyles(
       `${tokens.border.strongWidth}px`,
 
     background:
-      "linear-gradient(90deg,transparent,#D4AF37,transparent)",
+      `
+        linear-gradient(
+          90deg,
+          transparent,
+          ${theme.colors.brand.primary},
+          transparent
+        )
+      `,
 
     marginTop:
       `${tokens.spacing.small}px`,
+
+    transition:
+      "background 180ms ease",
 
   };
 
@@ -354,10 +362,11 @@ export function createReceptionHallStyles(
      WALL SUBTITLE
   ========================================================= */
 
-  const wallSubtitleStyle: CSSProperties = {
+  const wallSubtitleStyle:
+    CSSProperties = {
 
     color:
-      "#E5E7EB",
+      theme.colors.text.secondary,
 
     margin:
       0,
@@ -374,6 +383,9 @@ export function createReceptionHallStyles(
     textAlign:
       "center",
 
+    transition:
+      "color 180ms ease",
+
   };
 
 
@@ -388,8 +400,6 @@ export function createReceptionHallStyles(
     wallStyle,
 
     doorGridStyle,
-
-    floorStyle,
 
     wallLogoStyle,
 

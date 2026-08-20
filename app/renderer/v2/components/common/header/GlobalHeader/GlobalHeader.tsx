@@ -1,18 +1,22 @@
 /* ===========================================================
    FINORA ENTERPRISE OS™
-   GLOBAL HEADER™
 
-   COMPONENT
+   FILE: GlobalHeader.tsx
 
    RESPONSIBILITY:
-   - Render the single application-wide header
-   - Provide centralized Back navigation
-   - Preserve Reception navigation entry
-   - Display department title
-   - Display notifications
-   - Display admin profile
-   - Consume Responsive Engine
-   - Keep responsive values out of inline styles
+   - Render the FINORA global header
+   - Use the central FINORA Theme Engine
+   - Use the central Responsive Engine
+   - Provide global theme switching
+   - Preserve existing navigation / notification /
+     profile / logout behavior
+
+   IMPORTANT:
+   - Theme values come ONLY from ThemeProvider / Theme Registry.
+   - Responsive geometry comes ONLY from Responsive Engine.
+   - No local theme definitions.
+   - No local theme storage.
+   - Theme selector resolves each swatch from FINORA_THEMES.
 =========================================================== */
 
 
@@ -24,22 +28,38 @@ import type {
   GlobalHeaderProps,
 } from "./types";
 
+
 import {
   buildDepartmentTitle,
 } from "./helpers";
 
+
 import ReceptionLogo
   from "../../navigation/ReceptionLogo";
+
 
 import NotificationBell
   from "../../navigation/NotificationBell";
 
+
 import AdminProfile
   from "../../navigation/AdminProfile";
+
 
 import {
   useResponsive,
 } from "../../../../utils/responsive";
+
+
+import {
+  useTheme,
+} from "../../../../themes/provider";
+
+
+import {
+  FINORA_THEMES,
+} from "../../../../themes/definitions";
+
 
 import {
   createGlobalHeaderStyles,
@@ -73,7 +93,42 @@ export default function GlobalHeader({
 
 
   /* =========================================================
-     RESPONSIVE STYLES
+     FINORA THEME ENGINE
+  =========================================================
+
+  The GlobalHeader does NOT own a separate theme system.
+
+  Active application theme:
+
+    ThemeProvider
+        ↓
+    FINORA Theme Registry
+        ↓
+    useTheme()
+        ↓
+    GlobalHeader
+
+  The theme selector uses the same central registry so every
+  swatch represents its actual FINORA theme.
+
+  No local theme definitions are created here.
+  ========================================================= */
+
+  const {
+
+    theme,
+
+    themeId,
+
+    setTheme,
+
+    themes,
+
+  } = useTheme();
+
+
+  /* =========================================================
+     STYLES
   ========================================================= */
 
   const {
@@ -94,10 +149,19 @@ export default function GlobalHeader({
 
     logoutButtonStyle,
 
+    themePickerStyle,
+
+    themeButtonStyle,
+
   } =
     createGlobalHeaderStyles(
+
       tokens,
+
       canGoBack,
+
+      theme,
+
     );
 
 
@@ -107,29 +171,22 @@ export default function GlobalHeader({
 
   return (
 
-    <header style={containerStyle}>
+    <header
+      style={
+        containerStyle
+      }
+    >
 
 
-      {/* ==========================================
-          LEFT
-      ========================================== */}
+      {/* =====================================================
+         LEFT
+      ===================================================== */}
 
-      <div style={leftStyle}>
-
-
-        {/* ==========================================
-            GLOBAL BACK BUTTON
-
-            IMPORTANT:
-
-            - This is the ONE application-wide Back
-              button.
-            - Navigation is handled by AppShell.
-            - No page-specific navigation logic exists
-              here.
-            - Disabled automatically when there is no
-              navigation history.
-        ========================================== */}
+      <div
+        style={
+          leftStyle
+        }
+      >
 
         <button
 
@@ -138,20 +195,22 @@ export default function GlobalHeader({
           aria-label="Go back"
 
           title={
-
             canGoBack
-
               ? "Back"
-
               : "No previous page"
-
           }
 
-          disabled={!canGoBack}
+          disabled={
+            !canGoBack
+          }
 
-          onClick={onBack}
+          onClick={
+            onBack
+          }
 
-          style={backButtonStyle}
+          style={
+            backButtonStyle
+          }
 
         >
 
@@ -159,32 +218,21 @@ export default function GlobalHeader({
 
             aria-hidden="true"
 
-            style={backIconStyle}
+            style={
+              backIconStyle
+            }
 
           >
-
             ←
-
           </span>
 
         </button>
 
 
-        {/* ==========================================
-            RECEPTION LOGO
-        ========================================== */}
-
         <ReceptionLogo
 
           onClick={() => {
-
-            /* TODO:
-               Navigate to Reception
-
-               Reception navigation remains controlled
-               by the authenticated application.
-            */
-
+            /* Reception navigation */
           }}
 
         />
@@ -192,92 +240,209 @@ export default function GlobalHeader({
       </div>
 
 
-      {/* ==========================================
-          CENTER
-      ========================================== */}
+      {/* =====================================================
+         CENTER
+      ===================================================== */}
 
-      <div style={centerStyle}>
+      <div
+        style={
+          centerStyle
+        }
+      >
 
-        <div style={departmentStyle}>
+        <div
+          style={
+            departmentStyle
+          }
+        >
 
-          {buildDepartmentTitle(
-
-            department,
-
-          )}
+          {
+            buildDepartmentTitle(
+              department,
+            )
+          }
 
         </div>
 
       </div>
 
 
-      {/* ==========================================
-          RIGHT
-      ========================================== */}
+      {/* =====================================================
+         RIGHT
+      ===================================================== */}
 
-      <div style={rightStyle}>
+      <div
+        style={
+          rightStyle
+        }
+      >
 
 
-        {/* ==========================================
-            NOTIFICATIONS
-        ========================================== */}
+        {/* ===================================================
+           FINORA THEME SELECTOR
+        ===================================================
+
+        Theme order comes directly from the central registry.
+
+          Imperial Gold
+          Royal Navy
+          Amethyst
+          Emerald
+          Obsidian
+
+        IMPORTANT:
+
+        `option` is only a ThemeOption.
+
+        The style engine requires the complete FinoraTheme.
+
+        Therefore:
+
+          FINORA_THEMES[option.id]
+
+        is passed to themeButtonStyle().
+
+        This prevents all five swatches from incorrectly using
+        the currently active theme.
+
+        =================================================== */}
+
+        <div
+
+          style={
+            themePickerStyle
+          }
+
+          role="group"
+
+          aria-label="Theme selector"
+
+        >
+
+          {
+            themes.map(
+              (
+                option,
+              ) => {
+
+                const active =
+                  option.id ===
+                  themeId;
+
+
+                /* =================================================
+                   RESOLVE FULL THEME FROM CENTRAL REGISTRY
+                ================================================= */
+
+                const optionTheme =
+                  FINORA_THEMES[
+                    option.id
+                  ] ??
+                  theme;
+
+
+                return (
+
+                  <button
+
+                    key={
+                      option.id
+                    }
+
+                    type="button"
+
+                    title={
+                      option.name
+                    }
+
+                    aria-label={
+                      `Use ${option.name} theme`
+                    }
+
+                    aria-pressed={
+                      active
+                    }
+
+                    onClick={() => {
+
+                      setTheme(
+                        option.id,
+                      );
+
+                    }}
+
+                    style={
+                      themeButtonStyle(
+
+                        optionTheme,
+
+                        active,
+
+                      )
+                    }
+
+                  />
+
+                );
+
+              },
+            )
+          }
+
+        </div>
+
+
+        {/* ===================================================
+           NOTIFICATIONS
+        =================================================== */}
 
         <NotificationBell
 
-          unreadCount={5}
-
           onClick={() => {
-
-            /* TODO:
-               Open Notifications
-            */
-
+            /* Notifications */
           }}
 
         />
 
 
-        {/* ==========================================
-            ADMIN PROFILE
-        ========================================== */}
+        {/* ===================================================
+           ADMIN PROFILE
+        =================================================== */}
 
         <AdminProfile
 
           adminName="Girish"
 
           onClick={() => {
-
-            /* TODO:
-               Open Admin Menu
-            */
-
+            /* Admin menu */
           }}
 
         />
 
 
-        {/* ==========================================
-            LOGOUT
-        ========================================== */}
+        {/* ===================================================
+           LOGOUT
+        =================================================== */}
 
         <button
 
           type="button"
 
-          onClick={onLogout}
+          onClick={
+            onLogout
+          }
 
           title="Logout"
 
           aria-label="Logout"
 
-          style={logoutButtonStyle}
+          style={
+            logoutButtonStyle
+          }
 
         >
-
           Logout
-
         </button>
-
 
       </div>
 

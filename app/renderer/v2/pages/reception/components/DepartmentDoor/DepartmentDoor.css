@@ -1,50 +1,25 @@
 /* ===========================================================
    FINORA ENTERPRISE OS™
+
    RECEPTION™
 
    DEPARTMENT DOOR™
 
    ANIMATION STYLES
+
+   IMPORTANT
+   -----------------------------------------------------------
+   DepartmentDoor visual interaction is controlled directly
+   by DepartmentDoor.tsx.
+
+   No breathing shadow animation is used.
+
+   No gold glow animation is used.
+
+   No theme colors are defined here.
 =========================================================== */
-
-
-/* ===========================================================
-   DOOR BREATH ANIMATION
-=========================================================== */
-
-@keyframes doorBreath {
-
-  0% {
-
-    box-shadow:
-      0 15px 35px rgba(212,175,55,.10);
-
-  }
-
-  50% {
-
-    box-shadow:
-      0 18px 45px rgba(212,175,55,.28);
-
-  }
-
-  100% {
-
-    box-shadow:
-      0 15px 35px rgba(212,175,55,.10);
-
-  }
-
-}
 
 
 /* ===========================================================
    END
-
-   IMPORTANT
-   -----------------------------------------------------------
-   This file intentionally contains ONLY DepartmentDoor
-   animation CSS.
-
-   Global html/body/#root viewport rules do NOT belong here.
 =========================================================== */

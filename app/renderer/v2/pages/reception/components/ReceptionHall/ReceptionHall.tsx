@@ -1,5 +1,6 @@
 /* ===========================================================
    FINORA ENTERPRISE OS™
+
    RECEPTION™
 
    RECEPTION HALL™
@@ -16,6 +17,10 @@ import finoraLogo
 import {
   useResponsive,
 } from "../../../../utils/responsive";
+
+import {
+  useTheme,
+} from "../../../../themes/provider";
 
 import DepartmentDoor
   from "../DepartmentDoor";
@@ -58,28 +63,48 @@ export default function ReceptionHall({
 
 
   /* =========================================================
+     FINORA THEME ENGINE
+  ========================================================= */
+
+  const {
+    theme,
+  } = useTheme();
+
+
+  /* =========================================================
      DEPARTMENT DOORS
   ========================================================= */
 
-  const doors: DepartmentDoorModel[] =
+  const doors:
+    DepartmentDoorModel[] =
     getReceptionDoors();
 
 
   /* =========================================================
-     RESPONSIVE STYLES
+     RESPONSIVE + THEME STYLES
   ========================================================= */
 
   const {
+
     containerStyle,
+
     doorGridStyle,
+
     wallStyle,
-    floorStyle,
+
     wallLogoStyle,
+
     wallTitleStyle,
+
     wallDividerStyle,
+
     wallSubtitleStyle,
+
   } =
-    createReceptionHallStyles(tokens);
+    createReceptionHallStyles(
+      tokens,
+      theme,
+    );
 
 
   /* =========================================================
@@ -150,11 +175,6 @@ export default function ReceptionHall({
       </section>
 
 
-      {/* =====================================================
-          FLOOR LIGHT
-      ===================================================== */}
-
-      <section style={floorStyle} />
 
     </section>
 

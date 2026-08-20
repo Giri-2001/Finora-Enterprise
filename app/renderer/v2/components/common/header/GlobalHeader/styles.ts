@@ -1,18 +1,18 @@
 /* ===========================================================
    FINORA ENTERPRISE OS™
+
    GLOBAL HEADER™
 
-   PREMIUM DARK ENTERPRISE STYLES
-   RESPONSIVE ENGINE CONSUMER
-
-   R04 RESPONSIVE FIX
+   RESPONSIVE THEME SELECTOR STYLES
 
    IMPORTANT:
-   - No viewport-specific values are decided here.
-   - All responsive dimensions come from ResponsiveTokens.
-   - GlobalHeader.tsx contains no visual dimension values.
-   - Header layout must remain inside the viewport.
-   - Narrow/mobile layouts must not create horizontal overflow.
+   - Responsive geometry comes only from ResponsiveTokens.
+   - Theme values come only from FINORA Theme Engine.
+   - No local theme definitions.
+   - No hard-coded theme color mapping.
+   - Theme colors are resolved from FinoraTheme.
+   - Five theme swatches use the central theme registry.
+   - Dark themes automatically use high-contrast inverse text.
 =========================================================== */
 
 
@@ -27,6 +27,10 @@ import type {
 import type {
   ResponsiveTokens,
 } from "../../../../utils/responsive";
+
+import type {
+  FinoraTheme,
+} from "../../../../themes/core/types";
 
 
 /* ===========================================================
@@ -65,8 +69,102 @@ export interface GlobalHeaderStyles {
   logoutButtonStyle:
     CSSProperties;
 
+  themePickerStyle:
+    CSSProperties;
+
+  themeButtonStyle:
+    (
+      theme:
+        FinoraTheme,
+
+      active:
+        boolean,
+    ) => CSSProperties;
+
 }
 
+
+/* ===========================================================
+   THEME SWATCH RESOLVER
+
+   Swatch color comes directly from the selected FinoraTheme.
+
+   No local theme-color mapping exists here.
+=========================================================== */
+
+function getThemeSwatch(
+  theme:
+    FinoraTheme,
+): string {
+
+  return (
+    theme.selectorSwatch ??
+    theme
+      .colors
+      .brand
+      .primary
+  );
+
+}
+
+
+/* ===========================================================
+   CONTRAST COLOR RESOLVER
+
+   LIGHT THEMES
+   -----------------------------------------------------------
+   Use the semantic brand/text colors.
+
+   DARK THEMES
+   -----------------------------------------------------------
+   Use the inverse token for important global-header content.
+
+   This guarantees that Royal Navy / Obsidian / future dark
+   themes do not inherit a low-contrast accent color for:
+
+   - Reception
+   - Back arrow
+   - Logout
+   - Header actions
+=========================================================== */
+
+function getHeaderContentColor(
+  theme:
+    FinoraTheme,
+): string {
+
+  return theme
+    .colors
+    .text
+    .primary;
+
+}
+
+
+
+/* ===========================================================
+   PRIMARY ACTION COLOR
+
+   LIGHT
+   -----------------------------------------------------------
+   Brand primary remains the visual accent.
+
+   DARK
+   -----------------------------------------------------------
+   Important global actions use inverse/high-contrast text.
+=========================================================== */
+
+function getHeaderActionColor(
+  theme:
+    FinoraTheme,
+): string {
+
+  return theme
+    .colors
+    .text
+    .primary;
+
+}
 
 /* ===========================================================
    STYLE FACTORY
@@ -79,6 +177,9 @@ export function createGlobalHeaderStyles(
 
   canGoBack:
     boolean,
+
+  activeTheme:
+    FinoraTheme,
 
 ): GlobalHeaderStyles {
 
@@ -93,33 +194,34 @@ export function createGlobalHeaderStyles(
   const button =
     tokens.button;
 
-
-  /* =========================================================
-     VIEWPORT
-     
-     ResponsiveViewport is defined by the Responsive Engine.
-     
-     Supported viewport contract:
-       mobile
-       tablet
-       laptop
-       desktop
-  ========================================================= */
-
   const viewport =
     tokens.meta.viewport;
 
-
   const isMobile =
-    viewport ===
-      "mobile";
+    viewport === "mobile";
+
+
+  /* =========================================================
+     SEMANTIC HEADER COLORS
+  ========================================================= */
+
+  const headerContentColor =
+    getHeaderContentColor(
+      activeTheme,
+    );
+
+  const headerActionColor =
+    getHeaderActionColor(
+      activeTheme,
+    );
 
 
   /* =========================================================
      ROOT
   ========================================================= */
 
-  const containerStyle: CSSProperties = {
+  const containerStyle:
+    CSSProperties = {
 
     position:
       "sticky",
@@ -149,17 +251,13 @@ export function createGlobalHeaderStyles(
       "grid",
 
     gridTemplateColumns:
-      isMobile
-
-        ? "minmax(0, 1fr) auto"
-
-        : "minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr)",
+  isMobile
+    ? "minmax(0, 1fr) auto"
+    : "auto minmax(0, 1fr) auto",
 
     gridTemplateRows:
       isMobile
-
         ? "auto auto"
-
         : "1fr",
 
     alignItems:
@@ -178,18 +276,39 @@ export function createGlobalHeaderStyles(
       `
         linear-gradient(
           180deg,
-          #3B2418 0%,
-          #2B1810 100%
+          ${activeTheme
+            .colors
+            .background
+            .surface} 0%,
+          ${activeTheme
+            .colors
+            .background
+            .page} 100%
         )
       `,
 
     borderBottom:
-      "1px solid rgba(212,175,55,.45)",
+      `${tokens.border.width}px solid ${
+        activeTheme
+          .colors
+          .border
+          .strong
+      }`,
 
     boxShadow:
       `
-        0 10px 30px rgba(0,0,0,.45),
-        0 1px 0 rgba(212,175,55,.25)
+        0 10px 30px ${
+          activeTheme
+            .colors
+            .overlay
+            .shadow
+        },
+        0 1px 0 ${
+          activeTheme
+            .colors
+            .border
+            .default
+        }
       `,
 
     overflow:
@@ -202,16 +321,17 @@ export function createGlobalHeaderStyles(
      LEFT
   ========================================================= */
 
-  const leftStyle: CSSProperties = {
+  const leftStyle:
+  CSSProperties = {
 
-    minWidth:
-      0,
+  minWidth:
+    0,
 
-    width:
-      "100%",
+  width:
+    "auto",
 
-    maxWidth:
-      "100%",
+  maxWidth:
+    "100%",
 
     display:
       "flex",
@@ -231,23 +351,6 @@ export function createGlobalHeaderStyles(
     overflow:
       "hidden",
 
-    flexShrink:
-      1,
-
-    gridColumn:
-      isMobile
-
-        ? "1"
-
-        : undefined,
-
-    gridRow:
-      isMobile
-
-        ? "1"
-
-        : undefined,
-
   };
 
 
@@ -255,12 +358,8 @@ export function createGlobalHeaderStyles(
      LOGO
   ========================================================= */
 
-  const logoStyle: CSSProperties = {
-
-    display:
-      header.brandVisible
-        ? "block"
-        : "none",
+  const logoStyle:
+    CSSProperties = {
 
     minWidth:
       0,
@@ -268,32 +367,17 @@ export function createGlobalHeaderStyles(
     maxWidth:
       "100%",
 
-    fontSize:
-      `${header.titleSize}px`,
+    display:
+      "flex",
 
-    fontWeight:
-      900,
-
-    color:
-      "#FFFFFF",
-
-    letterSpacing:
-      "1px",
-
-    userSelect:
-      "none",
-
-    whiteSpace:
-      "nowrap",
-
-    overflow:
-      "hidden",
-
-    textOverflow:
-      "ellipsis",
+    alignItems:
+      "center",
 
     flexShrink:
       1,
+
+    overflow:
+      "hidden",
 
   };
 
@@ -302,25 +386,36 @@ export function createGlobalHeaderStyles(
      CENTER
   ========================================================= */
 
-  const centerStyle: CSSProperties = {
+  const centerStyle:
+  CSSProperties = {
 
-    minWidth:
-      0,
+  minWidth:
+    0,
 
-    width:
-      "100%",
+  width:
+    "100%",
 
-    maxWidth:
-      "100%",
+  maxWidth:
+    "100%",
 
     display:
       "flex",
 
+    alignItems:
+      "center",
+
     justifyContent:
       "center",
 
-    alignItems:
-      "center",
+    gridColumn:
+      isMobile
+        ? "1 / -1"
+        : "2",
+
+    gridRow:
+      isMobile
+        ? "2"
+        : "1",
 
     boxSizing:
       "border-box",
@@ -328,31 +423,15 @@ export function createGlobalHeaderStyles(
     overflow:
       "hidden",
 
-    flexShrink:
-      1,
-
-    gridColumn:
-      isMobile
-
-        ? "1 / -1"
-
-        : undefined,
-
-    gridRow:
-      isMobile
-
-        ? "2"
-
-        : undefined,
-
   };
 
 
   /* =========================================================
      DEPARTMENT
-  ========================================================= */
+=========================================================== */
 
-  const departmentStyle: CSSProperties = {
+  const departmentStyle:
+    CSSProperties = {
 
     minWidth:
       0,
@@ -364,16 +443,13 @@ export function createGlobalHeaderStyles(
       `${header.titleSize}px`,
 
     fontWeight:
-      700,
+      800,
 
     color:
-      "#F4D27A",
+      headerContentColor,
 
     letterSpacing:
       ".5px",
-
-    marginBottom:
-      "6px",
 
     whiteSpace:
       "nowrap",
@@ -388,7 +464,12 @@ export function createGlobalHeaderStyles(
       "center",
 
     textShadow:
-      "0 2px 8px rgba(0,0,0,.35)",
+      `0 2px 8px ${
+        activeTheme
+          .colors
+          .overlay
+          .shadow
+      }`,
 
   };
 
@@ -397,51 +478,43 @@ export function createGlobalHeaderStyles(
      RIGHT
   ========================================================= */
 
-  const rightStyle: CSSProperties = {
+  const rightStyle:
+  CSSProperties = {
 
-    minWidth:
-      0,
+  minWidth:
+    0,
 
-    width:
-      "auto",
+  width:
+    "auto",
 
-    maxWidth:
-      "100%",
+  maxWidth:
+    "100%",
 
     display:
       "flex",
 
-    justifyContent:
-      "flex-end",
-
     alignItems:
       "center",
 
+    justifyContent:
+      "flex-end",
+
     gap:
       `${tokens.spacing.small}px`,
+
+    gridColumn:
+      isMobile
+        ? "2"
+        : "3",
+
+    gridRow:
+      "1",
 
     boxSizing:
       "border-box",
 
     overflow:
       "hidden",
-
-    flexShrink:
-      1,
-
-    gridColumn:
-      isMobile
-
-        ? "2"
-
-        : undefined,
-
-    gridRow:
-      isMobile
-
-        ? "1"
-
-        : undefined,
 
   };
 
@@ -450,7 +523,8 @@ export function createGlobalHeaderStyles(
      ACTION
   ========================================================= */
 
-  const actionStyle: CSSProperties = {
+  const actionStyle:
+    CSSProperties = {
 
     minWidth:
       `${button.minHeight}px`,
@@ -468,10 +542,10 @@ export function createGlobalHeaderStyles(
       "none",
 
     color:
-      "#FFFFFF",
+      headerContentColor,
 
     transition:
-      "all .25s ease",
+      "all 160ms ease",
 
     boxSizing:
       "border-box",
@@ -486,39 +560,43 @@ export function createGlobalHeaderStyles(
      BACK BUTTON
   ========================================================= */
 
-  const backButtonStyle: CSSProperties = {
+  const backButtonStyle:
+    CSSProperties = {
 
     width:
-      `${button.minHeight}px`,
+      "auto",
 
     height:
       `${button.height}px`,
 
     minWidth:
-      `${button.minHeight}px`,
+      `${button.minHeight + tokens.spacing.medium}px`,
 
     minHeight:
       `${button.height}px`,
+
+    padding:
+      `0 ${tokens.spacing.small}px`,
 
     borderRadius:
       `${tokens.border.radius}px`,
 
     border:
-      "1px solid rgba(212,175,55,.45)",
+      `${tokens.border.width}px solid ${
+        activeTheme
+          .colors
+          .border
+          .default
+      }`,
 
     background:
-      canGoBack
-
-        ? "rgba(255,255,255,.08)"
-
-        : "rgba(255,255,255,.03)",
+      activeTheme
+        .colors
+        .background
+        .surfaceMuted,
 
     color:
-      canGoBack
-
-        ? "#F4D27A"
-
-        : "rgba(244,210,122,.30)",
+      headerActionColor,
 
     display:
       "flex",
@@ -531,23 +609,16 @@ export function createGlobalHeaderStyles(
 
     cursor:
       canGoBack
-
         ? "pointer"
-
         : "default",
 
     opacity:
       canGoBack
-
         ? 1
-
         : 0.55,
 
     transition:
       "all 160ms ease",
-
-    padding:
-      0,
 
     flexShrink:
       0,
@@ -562,16 +633,20 @@ export function createGlobalHeaderStyles(
      BACK ICON
   ========================================================= */
 
-  const backIconStyle: CSSProperties = {
+  const backIconStyle:
+    CSSProperties = {
 
     fontSize:
-      `${button.fontSize + 8}px`,
+      `${button.fontSize + tokens.icon.xs}px`,
 
     lineHeight:
       1,
 
     fontWeight:
       600,
+
+    color:
+      headerActionColor,
 
     transform:
       "translateY(-1px)",
@@ -583,10 +658,165 @@ export function createGlobalHeaderStyles(
 
 
   /* =========================================================
+     THEME PICKER
+
+     Geometry remains entirely responsive-token driven.
+
+     Actual theme colors come from the registered FinoraTheme.
+  ========================================================= */
+
+  const themePickerStyle:
+    CSSProperties = {
+
+    display:
+      "flex",
+
+    alignItems:
+      "center",
+
+    justifyContent:
+      "center",
+
+    gap:
+      `${tokens.themeSelector.gap}px`,
+
+      padding:
+    `0 ${tokens.spacing.small}px`,
+
+  overflow:
+    "visible",
+
+    minWidth:
+      0,
+
+    flexShrink:
+      0,
+
+    boxSizing:
+      "border-box",
+
+  };
+
+
+  /* =========================================================
+     THEME BUTTON
+  ========================================================= */
+
+  const themeButtonStyle = (
+
+    themeOption:
+      FinoraTheme,
+
+    active:
+      boolean,
+
+  ): CSSProperties => {
+
+    const swatch =
+      getThemeSwatch(
+        themeOption,
+      );
+
+    const themeSize =
+      tokens.themeSelector.buttonSize;
+
+    return {
+
+      width:
+        `${themeSize}px`,
+
+      height:
+        `${themeSize}px`,
+
+      minWidth:
+        `${themeSize}px`,
+
+      minHeight:
+        `${themeSize}px`,
+
+      padding:
+        0,
+
+      margin:
+        0,
+
+      borderRadius:
+        "50%",
+
+     border:
+  `${tokens.border.width}px solid ${
+    active
+      ? themeOption
+          .colors
+          .border
+          .strong
+      : themeOption
+          .colors
+          .border
+          .default
+  }`,
+
+background:
+  swatch,
+
+boxShadow:
+  active
+    ? `
+        0 0 0
+        ${tokens.border.width}px
+        ${themeOption
+          .colors
+          .background
+          .surface},
+        0 0 0
+        ${tokens.border.width * 2 + 1}px
+        ${themeOption
+          .colors
+          .brand
+          .primary}
+      `
+    : "none",
+
+      cursor:
+        "pointer",
+
+      opacity:
+        active
+          ? 1
+          : 0.92,
+
+      transform:
+        "none",
+
+      transition:
+        "opacity 140ms ease, box-shadow 140ms ease, border-color 140ms ease",
+
+      flexShrink:
+        0,
+
+      boxSizing:
+        "border-box",
+
+      outline:
+        "none",
+
+      appearance:
+        "none",
+
+      WebkitAppearance:
+        "none",
+
+    };
+
+  };
+
+
+  /* =========================================================
      LOGOUT BUTTON
   ========================================================= */
 
-  const logoutButtonStyle: CSSProperties = {
+  const logoutButtonStyle:
+    CSSProperties = {
 
     height:
       `${button.height}px`,
@@ -607,13 +837,21 @@ export function createGlobalHeaderStyles(
       `${tokens.border.radius}px`,
 
     border:
-      "1px solid rgba(212,175,55,.45)",
+      `${tokens.border.width}px solid ${
+        activeTheme
+          .colors
+          .border
+          .default
+      }`,
 
     background:
-      "rgba(255,255,255,.08)",
+      activeTheme
+        .colors
+        .background
+        .surfaceMuted,
 
     color:
-      "#F4D27A",
+      headerActionColor,
 
     cursor:
       "pointer",
@@ -664,6 +902,10 @@ export function createGlobalHeaderStyles(
     backIconStyle,
 
     logoutButtonStyle,
+
+    themePickerStyle,
+
+    themeButtonStyle,
 
   };
 

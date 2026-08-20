@@ -1,10 +1,24 @@
 /* ===========================================================
    FINORA ENTERPRISE OS™
+
    RECEPTION™
 
    RECEPTION HEADER™
 
    STYLES
+
+   IMPORTANT
+   -----------------------------------------------------------
+   Responsive geometry comes only from ResponsiveTokens.
+
+   Theme colors come only from FinoraTheme.
+
+   No local theme color definitions.
+=========================================================== */
+
+
+/* ===========================================================
+   IMPORTS
 =========================================================== */
 
 import type {
@@ -15,35 +29,56 @@ import type {
   ResponsiveTokens,
 } from "../../../../utils/responsive/tokens";
 
+import type {
+  FinoraTheme,
+} from "../../../../themes/core/types";
+
+
 /* ===========================================================
    STYLE FACTORY
 =========================================================== */
 
 export function createReceptionHeaderStyles(
-  tokens: ResponsiveTokens,
+
+  tokens:
+    ResponsiveTokens,
+
+  theme:
+    FinoraTheme,
+
 ) {
+
 
   /* =========================================================
      ROOT
   ========================================================= */
 
-  const containerStyle: CSSProperties = {
+  const containerStyle:
+    CSSProperties = {
 
-    width: "100%",
+    width:
+      "100%",
 
-    display: "flex",
+    display:
+      "flex",
 
-    flexDirection: "column",
+    flexDirection:
+      "column",
 
-    alignItems: "center",
+    alignItems:
+      "center",
 
-    justifyContent: "center",
+    justifyContent:
+      "center",
 
-    gap: tokens.spacing.medium,
+    gap:
+      `${tokens.spacing.medium}px`,
 
-    padding: `${tokens.spacing.large}px ${tokens.layout.pageGutter}px`,
+    padding:
+      `${tokens.spacing.large}px ${tokens.layout.pageGutter}px`,
 
-    boxSizing: "border-box",
+    boxSizing:
+      "border-box",
 
   };
 
@@ -52,13 +87,17 @@ export function createReceptionHeaderStyles(
      LOGO
   ========================================================= */
 
-  const logoStyle: CSSProperties = {
+  const logoStyle:
+    CSSProperties = {
 
-    width: tokens.header.logoHeight,
+    width:
+      `${tokens.header.logoHeight}px`,
 
-    height: tokens.header.logoHeight,
+    height:
+      `${tokens.header.logoHeight}px`,
 
-    objectFit: "contain",
+    objectFit:
+      "contain",
 
   };
 
@@ -67,21 +106,32 @@ export function createReceptionHeaderStyles(
      TITLE
   ========================================================= */
 
-  const titleStyle: CSSProperties = {
+  const titleStyle:
+    CSSProperties = {
 
-    margin: 0,
+    margin:
+      0,
 
-    fontSize: tokens.reception.titleSize,
+    fontSize:
+      `${tokens.reception.titleSize}px`,
 
-    fontWeight: 800,
+    fontWeight:
+      800,
 
-    color: "#F8FAFC",
+    color:
+      theme
+        .colors
+        .text
+        .primary,
 
-    letterSpacing: "1px",
+    letterSpacing:
+      "1px",
 
-    textAlign: "center",
+    textAlign:
+      "center",
 
-    lineHeight: tokens.lineHeight.title,
+    lineHeight:
+      tokens.lineHeight.title,
 
   };
 
@@ -90,19 +140,29 @@ export function createReceptionHeaderStyles(
      SUBTITLE
   ========================================================= */
 
-  const subtitleStyle: CSSProperties = {
+  const subtitleStyle:
+    CSSProperties = {
 
-    margin: 0,
+    margin:
+      0,
 
-    fontSize: tokens.typography.subheading,
+    fontSize:
+      `${tokens.typography.subheading}px`,
 
-    fontWeight: 600,
+    fontWeight:
+      600,
 
-    color: "#E5E7EB",
+    color:
+      theme
+        .colors
+        .text
+        .secondary,
 
-    textAlign: "center",
+    textAlign:
+      "center",
 
-    lineHeight: tokens.lineHeight.heading,
+    lineHeight:
+      tokens.lineHeight.heading,
 
   };
 
@@ -111,19 +171,29 @@ export function createReceptionHeaderStyles(
      DESCRIPTION
   ========================================================= */
 
-  const descriptionStyle: CSSProperties = {
+  const descriptionStyle:
+    CSSProperties = {
 
-    maxWidth: tokens.layout.maxContentWidth,
+    maxWidth:
+      `${tokens.layout.maxContentWidth}px`,
 
-    margin: 0,
+    margin:
+      0,
 
-    fontSize: tokens.typography.body,
+    fontSize:
+      `${tokens.typography.body}px`,
 
-    lineHeight: tokens.lineHeight.body,
+    lineHeight:
+      tokens.lineHeight.body,
 
-    color: "#CBD5E1",
+    color:
+      theme
+        .colors
+        .text
+        .muted,
 
-    textAlign: "center",
+    textAlign:
+      "center",
 
   };
 
@@ -132,26 +202,50 @@ export function createReceptionHeaderStyles(
      VERSION
   ========================================================= */
 
-  const versionStyle: CSSProperties = {
+  const versionStyle:
+    CSSProperties = {
 
-    marginTop: tokens.spacing.small,
+    marginTop:
+      `${tokens.spacing.small}px`,
 
-    padding: `${tokens.spacing.small}px ${tokens.spacing.medium}px`,
+    padding:
+      `${tokens.spacing.small}px ${tokens.spacing.medium}px`,
 
-    borderRadius: tokens.border.radius,
+    borderRadius:
+      `${tokens.border.radius}px`,
 
-    background: "rgba(255,255,255,.08)",
+    background:
+      theme
+        .colors
+        .background
+        .surfaceMuted,
 
-    border: "1px solid rgba(212,175,55,.45)",
+    border:
+      `${tokens.border.width}px solid ${
+        theme
+          .colors
+          .border
+          .strong
+      }`,
 
-    fontSize: tokens.typography.caption,
+    fontSize:
+      `${tokens.typography.caption}px`,
 
-    fontWeight: 700,
+    fontWeight:
+      700,
 
-    color: "#D4AF37",
+    color:
+      theme
+        .colors
+        .brand
+        .primary,
 
   };
 
+
+  /* =========================================================
+     RETURN
+  ========================================================= */
 
   return {
 
@@ -167,9 +261,10 @@ export function createReceptionHeaderStyles(
 
     versionStyle,
 
-  };  
+  };
 
 }
+
 
 /* ===========================================================
    END

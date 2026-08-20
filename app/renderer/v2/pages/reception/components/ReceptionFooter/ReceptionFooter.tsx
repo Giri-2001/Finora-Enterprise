@@ -1,5 +1,6 @@
 /* ===========================================================
    FINORA ENTERPRISE OS™
+
    RECEPTION™
 
    RECEPTION FOOTER™
@@ -13,6 +14,10 @@
 import {
   useResponsive,
 } from "../../../../utils/responsive";
+
+import {
+  useTheme,
+} from "../../../../themes/hooks";
 
 import {
   buildReceptionFooter,
@@ -29,6 +34,7 @@ import {
 
 export default function ReceptionFooter() {
 
+
   /* =========================================================
      RESPONSIVE ENGINE
   ========================================================= */
@@ -36,6 +42,15 @@ export default function ReceptionFooter() {
   const {
     tokens,
   } = useResponsive();
+
+
+  /* =========================================================
+     THEME ENGINE
+  ========================================================= */
+
+  const {
+    theme,
+  } = useTheme();
 
 
   /* =========================================================
@@ -47,7 +62,7 @@ export default function ReceptionFooter() {
 
 
   /* =========================================================
-     RESPONSIVE STYLES
+     STYLES
   ========================================================= */
 
   const {
@@ -63,6 +78,7 @@ export default function ReceptionFooter() {
   } =
     createReceptionFooterStyles(
       tokens,
+      theme,
     );
 
 
