@@ -8,8 +8,10 @@
    RESPONSIBILITY:
    - Provide Customer Office styles
    - Consume Customer Responsive Engine tokens
+   - Consume FINORA Theme Engine visual tokens
    - Keep responsive dimensions centralized
    - No hardcoded responsive sizing
+   - No business logic
 =========================================================== */
 
 
@@ -21,9 +23,40 @@ import type {
   CSSProperties,
 } from "react";
 
+
 import type {
   ResponsiveTokens,
 } from "../../../../utils/responsive";
+
+
+import type {
+  FinoraTheme,
+} from "../../../../themes/core/types";
+
+
+/* ===========================================================
+   RESPONSIVE CONTRACT
+   -----------------------------------------------------------
+   IMPORTANT:
+
+   Customer Office does NOT need the complete ResponsiveTokens
+   contract.
+
+   Only the responsive groups actually consumed by this file
+   are accepted here.
+
+   This prevents a Theme Engine / Responsive Engine contract
+   change such as `themeSelector` from breaking this component.
+
+   Responsive values still come exclusively from the
+   Responsive Engine.
+=========================================================== */
+
+type CustomerOfficeResponsiveTokens =
+  Pick<
+    ResponsiveTokens,
+    "border" | "panel"
+  >;
 
 
 /* ===========================================================
@@ -31,7 +64,13 @@ import type {
 =========================================================== */
 
 export function createCustomerOfficeStyles(
-  tokens: ResponsiveTokens,
+
+  tokens:
+    CustomerOfficeResponsiveTokens,
+
+  theme:
+    FinoraTheme,
+
 ) {
 
 
@@ -100,6 +139,21 @@ export function createCustomerOfficeStyles(
 
   /* =========================================================
      PANEL
+     ---------------------------------------------------------
+     RESPONSIVE:
+     - radius
+     - padding
+     - gap
+     - border width
+
+     remain controlled by Responsive Engine.
+
+     THEME:
+     - background
+     - border color
+     - shadow
+
+     come from Theme Engine.
   ========================================================= */
 
   const panelStyle: CSSProperties = {
@@ -126,10 +180,10 @@ export function createCustomerOfficeStyles(
       "border-box",
 
     background:
-      "#FFFFFF",
+      theme.components.panel.background,
 
     border:
-      `${tokens.border.width}px solid #E5E7EB`,
+      `${tokens.border.width}px solid ${theme.components.panel.border}`,
 
     borderRadius:
       tokens.panel.radius,
@@ -141,7 +195,7 @@ export function createCustomerOfficeStyles(
       tokens.panel.gap,
 
     boxShadow:
-      "0 16px 40px rgba(15,23,42,.08)",
+      theme.components.panel.shadow,
 
   };
 

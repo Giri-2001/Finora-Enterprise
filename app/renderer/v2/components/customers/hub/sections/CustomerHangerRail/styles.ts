@@ -33,7 +33,7 @@ import type {
 
 import type {
   ResponsiveTokens,
-} from "../../../../../utils/responsive/tokens";
+} from "../../../../../utils/responsive/customers/customers.tokens";
 
 import {
   RAIL_HEIGHT,

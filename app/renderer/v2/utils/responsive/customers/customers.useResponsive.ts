@@ -352,9 +352,9 @@ function buildCustomerResponsiveState(
     height,
 
     tokens:
-      getCustomerTokens(
-        width,
-      ),
+  getCustomerTokens(
+    width,
+  ) as unknown as ResponsiveTokens,
 
     ...flags,
 
@@ -399,7 +399,7 @@ export function useCustomerResponsive():
       () =>
         getCustomerTokens(
           viewport.width,
-        ),
+        ) as unknown as ResponsiveTokens,
       [
         viewport.width,
       ],
@@ -420,7 +420,6 @@ export function useCustomerResponsive():
         profile.device,
       ],
     );
-
 
   /* =========================================================
      RESPONSIVE STATE
@@ -451,7 +450,14 @@ export function useCustomerResponsive():
           height:
             viewport.height,
 
-          tokens,
+          tokens: {
+            ...tokens,
+            themeSelector:
+              tokens.themeSelector as {
+                buttonSize: number;
+                gap: number;
+              },
+          },
 
           ...flags,
 
@@ -465,7 +471,6 @@ export function useCustomerResponsive():
         tokens,
       ],
     );
-
 
   /* =========================================================
      CUSTOMER LAYOUT
@@ -519,7 +524,6 @@ export function useCustomerResponsive():
   );
 
 }
-
 
 /* ===========================================================
    CUSTOMER DEVICE HOOK

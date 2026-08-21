@@ -8,6 +8,7 @@
    RESPONSIBILITY:
    - Render Customer Office
    - Consume Customer Responsive Engine
+   - Consume FINORA Theme Engine
    - Keep responsive dimensions centralized
    - Preserve customer refresh behavior
 =========================================================== */
@@ -47,6 +48,11 @@ import {
 
 
 import {
+  useTheme,
+} from "../../../../themes/provider/ThemeProvider";
+
+
+import {
   createCustomerOfficeStyles,
 } from "./styles";
 
@@ -64,6 +70,11 @@ export default function CustomerOffice({
 
   /* =========================================================
      RESPONSIVE ENGINE
+     ---------------------------------------------------------
+     All responsive dimensions continue to come from the
+     FINORA Responsive Engine.
+
+     DO NOT move responsive geometry into Theme Engine.
   ========================================================= */
 
   const {
@@ -72,7 +83,21 @@ export default function CustomerOffice({
 
 
   /* =========================================================
-     RESPONSIVE STYLES
+     THEME ENGINE
+     ---------------------------------------------------------
+     Theme controls visual appearance only.
+
+     No width / height / padding / gap / radius decisions
+     are made here.
+  ========================================================= */
+
+  const {
+    theme,
+  } = useTheme();
+
+
+  /* =========================================================
+     RESPONSIVE + THEME STYLES
   ========================================================= */
 
   const {
@@ -86,6 +111,7 @@ export default function CustomerOffice({
   } =
     createCustomerOfficeStyles(
       tokens,
+      theme,
     );
 
 

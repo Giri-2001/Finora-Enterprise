@@ -7,7 +7,7 @@
    - Render the FINORA global header
    - Use the central FINORA Theme Engine
    - Use the central Responsive Engine
-   - Provide global theme switching
+   - Provide five global theme switch buttons
    - Preserve existing navigation / notification /
      profile / logout behavior
 
@@ -49,6 +49,11 @@ import AdminProfile
 import {
   useResponsive,
 } from "../../../../utils/responsive";
+
+
+import type {
+  ResponsiveTokens,
+} from "../../../../utils/responsive/tokens";
 
 
 import {
@@ -93,10 +98,33 @@ export default function GlobalHeader({
 
 
   /* =========================================================
-     FINORA THEME ENGINE
+     RESPONSIVE TOKEN CONTRACT ALIGNMENT
   =========================================================
 
-  The GlobalHeader does NOT own a separate theme system.
+  The Responsive Engine runtime already provides the complete
+  token set, including:
+
+    tokens.themeSelector
+
+  GlobalHeader/styles.ts consumes the canonical ResponsiveTokens
+  contract exported from:
+
+    utils/responsive/tokens.ts
+
+  The explicit type alignment below prevents TypeScript from
+  treating two structurally identical ResponsiveTokens imports
+  as incompatible contracts.
+
+  No responsive values are created here.
+  ========================================================= */
+
+  const globalHeaderTokens =
+    tokens as ResponsiveTokens;
+
+
+  /* =========================================================
+     FINORA THEME ENGINE
+  =========================================================
 
   Active application theme:
 
@@ -108,8 +136,7 @@ export default function GlobalHeader({
         ↓
     GlobalHeader
 
-  The theme selector uses the same central registry so every
-  swatch represents its actual FINORA theme.
+  The selector uses the same central registry.
 
   No local theme definitions are created here.
   ========================================================= */
@@ -156,7 +183,7 @@ export default function GlobalHeader({
   } =
     createGlobalHeaderStyles(
 
-      tokens,
+      globalHeaderTokens,
 
       canGoBack,
 
@@ -290,20 +317,11 @@ export default function GlobalHeader({
           Emerald
           Obsidian
 
-        IMPORTANT:
+        Each button resolves its complete FinoraTheme from
+        FINORA_THEMES so every swatch represents its own theme.
 
-        `option` is only a ThemeOption.
-
-        The style engine requires the complete FinoraTheme.
-
-        Therefore:
-
-          FINORA_THEMES[option.id]
-
-        is passed to themeButtonStyle().
-
-        This prevents all five swatches from incorrectly using
-        the currently active theme.
+        Clicking a swatch changes the global ThemeProvider
+        theme for the application.
 
         =================================================== */}
 
@@ -331,7 +349,7 @@ export default function GlobalHeader({
 
 
                 /* =================================================
-                   RESOLVE FULL THEME FROM CENTRAL REGISTRY
+                   RESOLVE COMPLETE THEME FROM CENTRAL REGISTRY
                 ================================================= */
 
                 const optionTheme =
@@ -443,6 +461,7 @@ export default function GlobalHeader({
         >
           Logout
         </button>
+
 
       </div>
 

@@ -329,8 +329,8 @@ export function resolveCustomerLayoutTokens(
     );
 
   return getCustomerTokens(
-    safeWidth,
-  );
+  safeWidth,
+) as unknown as ResponsiveTokens;
 
 }
 

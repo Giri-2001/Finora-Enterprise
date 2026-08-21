@@ -536,6 +536,21 @@ export interface ResponsiveHeader {
 
 
 /* ===========================================================
+   THEME SELECTOR
+=========================================================== */
+
+export interface ResponsiveThemeSelector {
+
+  buttonSize:
+    number;
+
+  gap:
+    number;
+
+}
+
+
+/* ===========================================================
    FOOTER
 =========================================================== */
 
@@ -1005,6 +1020,9 @@ export interface ResponsiveTokens {
 
   header:
     ResponsiveHeader;
+
+  themeSelector:
+    ResponsiveThemeSelector;
 
   footer:
     ResponsiveFooter;

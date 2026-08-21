@@ -204,6 +204,11 @@ export interface ResponsiveTokens {
     brandVisible: boolean;
   };
 
+  themeSelector?: {
+  buttonSize: number;
+  gap: number;
+};
+
   footer: {
     height: number;
     minHeight: number;
