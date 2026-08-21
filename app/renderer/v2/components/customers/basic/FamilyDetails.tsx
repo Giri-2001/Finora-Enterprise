@@ -3,21 +3,52 @@
 
    CUSTOMER FAMILY & EMERGENCY™
 
-   Version     : 2.0
+   Version     : 3.0
    Phase       : Phase 2
    Architecture: Enterprise
    Status      : Production
 
-   Responsibility:
+   RESPONSIBILITY:
 
    - Family member count
    - Emergency contact name
    - Emergency contact mobile
+
+   ARCHITECTURE:
+
+   - Responsive geometry from FINORA Responsive Engine
+   - Theme presentation through FINORA theme CSS variables
+   - Lucide icons
+   - No local breakpoints
+   - No viewport detection
+   - No hardcoded responsive dimensions
+   - No business logic
+=========================================================== */
+
+
+/* ===========================================================
+   IMPORTS
 =========================================================== */
 
 import type {
   CSSProperties,
 } from "react";
+
+import {
+  UsersRound,
+  UserRound,
+  Phone,
+} from "lucide-react";
+
+
+/* ===========================================================
+   RESPONSIVE ENGINE
+=========================================================== */
+
+import {
+  useResponsive,
+} from "../../../utils/responsive";
+
 
 /* ===========================================================
    TYPES
@@ -25,13 +56,17 @@ import type {
 
 export interface FamilyDetailsData {
 
-  numberOfFamilyMembers: string;
+  numberOfFamilyMembers:
+    string;
 
-  emergencyContactName: string;
+  emergencyContactName:
+    string;
 
-  emergencyContactMobile: string;
+  emergencyContactMobile:
+    string;
 
 }
+
 
 interface FamilyDetailsProps {
 
@@ -47,161 +82,6 @@ interface FamilyDetailsProps {
 
 }
 
-/* ===========================================================
-   FULL-WIDTH FAMILY GRID
-=========================================================== */
-
-const gridStyle: CSSProperties = {
-
-  width:
-    "100%",
-
-  minWidth:
-    0,
-
-  boxSizing:
-    "border-box",
-
-  display:
-    "grid",
-
-  gridTemplateColumns:
-    "repeat(3, minmax(0, 1fr))",
-
-  gap:
-    "14px",
-
-  alignItems:
-    "end",
-
-  justifyContent:
-    "stretch",
-
-  alignSelf:
-    "stretch",
-
-};
-
-/* ===========================================================
-   FIELD
-=========================================================== */
-
-const fieldStyle: CSSProperties = {
-
-  width:
-    "100%",
-
-  minWidth:
-    0,
-
-  boxSizing:
-    "border-box",
-
-  display:
-    "flex",
-
-  flexDirection:
-    "column",
-
-  gap:
-    "5px",
-
-};
-
-/* ===========================================================
-   LABEL
-=========================================================== */
-
-const labelStyle: CSSProperties = {
-
-  display:
-    "block",
-
-  width:
-    "100%",
-
-  boxSizing:
-    "border-box",
-
-  color:
-    "rgba(255,255,255,.66)",
-
-  fontSize:
-    "10px",
-
-  fontWeight:
-    600,
-
-  letterSpacing:
-    ".45px",
-
-  lineHeight:
-    1.2,
-
-  textTransform:
-    "uppercase",
-
-};
-
-/* ===========================================================
-   INPUT
-=========================================================== */
-
-const inputStyle: CSSProperties = {
-
-  display:
-    "block",
-
-  width:
-    "100%",
-
-  minWidth:
-    0,
-
-  height:
-    "38px",
-
-  padding:
-    "0 10px",
-
-  boxSizing:
-    "border-box",
-
-  borderRadius:
-    "8px",
-
-  border:
-    "1px solid rgba(214,176,106,.28)",
-
-  outline:
-    "none",
-
-  background:
-    "rgba(255,255,255,.055)",
-
-  color:
-    "#F8FAFC",
-
-  fontSize:
-    "11px",
-
-  fontWeight:
-    500,
-
-};
-
-/* ===========================================================
-   NUMBER / MOBILE INPUT
-=========================================================== */
-
-const numberInputStyle: CSSProperties = {
-
-  ...inputStyle,
-
-  fontVariantNumeric:
-    "tabular-nums",
-
-};
 
 /* ===========================================================
    COMPONENT
@@ -215,19 +95,283 @@ export default function FamilyDetails({
 
 }: FamilyDetailsProps) {
 
+
+  /* =========================================================
+     RESPONSIVE ENGINE
+  ========================================================= */
+
+  const {
+    tokens,
+  } =
+    useResponsive();
+
+
+  /* =========================================================
+     ROOT STYLE
+  ========================================================= */
+
+  const rootStyle:
+    CSSProperties = {
+
+    width:
+      "100%",
+
+    minWidth:
+      0,
+
+    boxSizing:
+      "border-box",
+
+    display:
+      "block",
+
+  };
+
+
+  /* =========================================================
+     FIELD GRID
+  ========================================================= */
+
+  const gridStyle:
+    CSSProperties = {
+
+    width:
+      "100%",
+
+    minWidth:
+      0,
+
+    boxSizing:
+      "border-box",
+
+    display:
+      "grid",
+
+    gridTemplateColumns:
+      "repeat(3, minmax(0, 1fr))",
+
+    columnGap:
+      `${tokens.form.inputGap}px`,
+
+    rowGap:
+      `${tokens.form.rowGap}px`,
+
+    alignItems:
+      "end",
+
+    justifyContent:
+      "stretch",
+
+    alignSelf:
+      "stretch",
+
+  };
+
+
+  /* =========================================================
+     FIELD STYLE
+  ========================================================= */
+
+  const fieldStyle:
+    CSSProperties = {
+
+    width:
+      "100%",
+
+    minWidth:
+      0,
+
+    boxSizing:
+      "border-box",
+
+    display:
+      "flex",
+
+    flexDirection:
+      "column",
+
+    gap:
+      `${tokens.form.labelGap}px`,
+
+  };
+
+
+  /* =========================================================
+     LABEL STYLE
+  ========================================================= */
+
+  const labelStyle:
+    CSSProperties = {
+
+    display:
+      "block",
+
+    width:
+      "100%",
+
+    minWidth:
+      0,
+
+    boxSizing:
+      "border-box",
+
+    color:
+      "var(--finora-theme-text-secondary, rgba(255,255,255,.66))",
+
+    fontSize:
+      `${tokens.form.labelSize}px`,
+
+    fontWeight:
+      600,
+
+    lineHeight:
+      tokens.lineHeight.compact,
+
+    letterSpacing:
+      ".45px",
+
+    textTransform:
+      "uppercase",
+
+  };
+
+
+  /* =========================================================
+     INPUT WRAPPER
+  ========================================================= */
+
+  const inputWrapperStyle:
+    CSSProperties = {
+
+    position:
+      "relative",
+
+    width:
+      "100%",
+
+    minWidth:
+      0,
+
+    boxSizing:
+      "border-box",
+
+    display:
+      "block",
+
+  };
+
+
+  /* =========================================================
+     INPUT STYLE
+  ========================================================= */
+
+  const inputStyle:
+    CSSProperties = {
+
+    display:
+      "block",
+
+    width:
+      "100%",
+
+    minWidth:
+      0,
+
+    height:
+      `${tokens.input.height}px`,
+
+    padding:
+      `
+      0
+      ${tokens.input.paddingX}px
+      0
+      ${
+        tokens.input.paddingX +
+        tokens.input.iconSize +
+        tokens.spacing.small
+      }px
+      `,
+
+    boxSizing:
+      "border-box",
+
+    borderRadius:
+      `${tokens.input.radius}px`,
+
+    border:
+      `${tokens.border.width}px solid var(--finora-theme-border-default, rgba(214,176,106,.28))`,
+
+    outline:
+      "none",
+
+    background:
+      "var(--finora-theme-surface-muted, rgba(255,255,255,.055))",
+
+    color:
+      "var(--finora-theme-text-primary, #F8FAFC)",
+
+    fontSize:
+      `${tokens.input.fontSize}px`,
+
+    fontWeight:
+      500,
+
+    fontVariantNumeric:
+      "tabular-nums",
+
+  };
+
+
+  /* =========================================================
+     ICON STYLE
+  ========================================================= */
+
+  const iconStyle:
+    CSSProperties = {
+
+    position:
+      "absolute",
+
+    left:
+      `${tokens.input.paddingX}px`,
+
+    top:
+      "50%",
+
+    width:
+      `${tokens.input.iconSize}px`,
+
+    height:
+      `${tokens.input.iconSize}px`,
+
+    transform:
+      "translateY(-50%)",
+
+    color:
+      "var(--finora-theme-brand-accent, var(--finora-theme-brand-primary, #D4AF37))",
+
+    pointerEvents:
+      "none",
+
+  };
+
+
+  /* =========================================================
+     UI
+  ========================================================= */
+
   return (
 
     <section
-      style={{
-        width: "100%",
-        minWidth: 0,
-        boxSizing: "border-box",
-        display: "block",
-      }}
+      style={
+        rootStyle
+      }
     >
 
       <div
-        style={gridStyle}
+        style={
+          gridStyle
+        }
       >
 
         {/* =================================================
@@ -235,152 +379,196 @@ export default function FamilyDetails({
         ================================================= */}
 
         <div
-          style={fieldStyle}
+          style={
+            fieldStyle
+          }
         >
 
           <label
-            style={labelStyle}
+            style={
+              labelStyle
+            }
           >
-
             Number of Family Members
-
           </label>
 
-          <input
 
+          <div
             style={
-              numberInputStyle
+              inputWrapperStyle
             }
+          >
 
-            value={
-              value.numberOfFamilyMembers
-            }
+            <UsersRound
+              style={
+                iconStyle
+              }
+              aria-hidden="true"
+            />
 
-            placeholder=
-              "Enter family members"
 
-            inputMode="numeric"
+            <input
+              type="text"
 
-            onChange={(
-              event,
-            ) =>
+              style={
+                inputStyle
+              }
 
-              onChange(
+              value={
+                value.numberOfFamilyMembers
+              }
 
-                "numberOfFamilyMembers",
+              placeholder=
+                "Enter family members"
 
-                event.target.value,
+              inputMode="numeric"
 
-              )
+              onChange={
+                (event) =>
+                  onChange(
+                    "numberOfFamilyMembers",
+                    event.target.value,
+                  )
+              }
 
-            }
+              aria-label=
+                "Number of Family Members"
 
-            aria-label=
-              "Number of Family Members"
+            />
 
-          />
+          </div>
 
         </div>
+
 
         {/* =================================================
             EMERGENCY CONTACT NAME
         ================================================= */}
 
         <div
-          style={fieldStyle}
+          style={
+            fieldStyle
+          }
         >
 
           <label
-            style={labelStyle}
+            style={
+              labelStyle
+            }
           >
-
             Emergency Contact Name
-
           </label>
 
-          <input
 
+          <div
             style={
-              inputStyle
+              inputWrapperStyle
             }
+          >
 
-            value={
-              value.emergencyContactName
-            }
+            <UserRound
+              style={
+                iconStyle
+              }
+              aria-hidden="true"
+            />
 
-            placeholder=
-              "Enter emergency contact"
 
-            onChange={(
-              event,
-            ) =>
+            <input
+              type="text"
 
-              onChange(
+              style={
+                inputStyle
+              }
 
-                "emergencyContactName",
+              value={
+                value.emergencyContactName
+              }
 
-                event.target.value,
+              placeholder=
+                "Enter emergency contact"
 
-              )
+              onChange={
+                (event) =>
+                  onChange(
+                    "emergencyContactName",
+                    event.target.value,
+                  )
+              }
 
-            }
+              aria-label=
+                "Emergency Contact Name"
 
-            aria-label=
-              "Emergency Contact Name"
+            />
 
-          />
+          </div>
 
         </div>
+
 
         {/* =================================================
             EMERGENCY CONTACT MOBILE
         ================================================= */}
 
         <div
-          style={fieldStyle}
+          style={
+            fieldStyle
+          }
         >
 
           <label
-            style={labelStyle}
+            style={
+              labelStyle
+            }
           >
-
             Emergency Contact Mobile
-
           </label>
 
-          <input
 
+          <div
             style={
-              numberInputStyle
+              inputWrapperStyle
             }
+          >
 
-            value={
-              value.emergencyContactMobile
-            }
+            <Phone
+              style={
+                iconStyle
+              }
+              aria-hidden="true"
+            />
 
-            placeholder=
-              "Enter mobile number"
 
-            inputMode="tel"
+            <input
+              type="text"
 
-            onChange={(
-              event,
-            ) =>
+              style={
+                inputStyle
+              }
 
-              onChange(
+              value={
+                value.emergencyContactMobile
+              }
 
-                "emergencyContactMobile",
+              placeholder=
+                "Enter mobile number"
 
-                event.target.value,
+              inputMode="tel"
 
-              )
+              onChange={
+                (event) =>
+                  onChange(
+                    "emergencyContactMobile",
+                    event.target.value,
+                  )
+              }
 
-            }
+              aria-label=
+                "Emergency Contact Mobile"
 
-            aria-label=
-              "Emergency Contact Mobile"
+            />
 
-          />
+          </div>
 
         </div>
 
@@ -391,3 +579,8 @@ export default function FamilyDetails({
   );
 
 }
+
+
+/* ===========================================================
+   END
+=========================================================== */

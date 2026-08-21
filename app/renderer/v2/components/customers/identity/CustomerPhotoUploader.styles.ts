@@ -11,229 +11,348 @@
    - Upload / remove controls
    - No state
    - No file handling
+
+   THEME CONTRACT:
+   - All visual colours come from FINORA Theme Engine.
+   - No hard-coded yellow/gold theme colours.
+   - Existing layout/design is preserved.
 =========================================================== */
 
 import type {
   CSSProperties,
 } from "react";
 
+
 /* ===========================================================
    ROOT
 =========================================================== */
 
 export const wrapperStyle: CSSProperties = {
-  width: "100%",
-  minWidth: 0,
 
-  display: "flex",
-  alignItems: "center",
+  width:
+    "100%",
 
-  gap: "16px",
+  minWidth:
+    0,
 
-  boxSizing: "border-box",
+  display:
+    "flex",
+
+  alignItems:
+    "center",
+
+  gap:
+    "16px",
+
+  boxSizing:
+    "border-box",
+
 };
+
 
 /* ===========================================================
    PHOTO PREVIEW
 =========================================================== */
 
 export const previewStyle: CSSProperties = {
-  width: "68px",
-  height: "68px",
 
-  flexShrink: 0,
+  width:
+    "72px",
 
-  borderRadius: "14px",
+  height:
+    "72px",
+
+  flexShrink:
+    0,
+
+  borderRadius:
+    "14px",
 
   border:
-    "1px dashed rgba(232,199,120,.65)",
+    "1px dashed var(--finora-theme-brand-accent, var(--finora-theme-brand-primary, #D4AF37))",
 
   background:
-    "linear-gradient(145deg,rgba(255,255,255,.10),rgba(255,255,255,.035))",
+    "linear-gradient(145deg, var(--finora-theme-surface-muted, rgba(255,255,255,.10)), var(--finora-theme-surface, rgba(255,255,255,.035)))",
 
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "center",
+  display:
+    "flex",
 
-  overflow: "hidden",
+  alignItems:
+    "center",
 
-  boxSizing: "border-box",
+  justifyContent:
+    "center",
+
+  overflow:
+    "hidden",
+
+  boxSizing:
+    "border-box",
 
   boxShadow:
     "inset 0 1px 0 rgba(255,255,255,.06), 0 6px 16px rgba(0,0,0,.12)",
 
   color:
-    "rgba(255,255,255,.48)",
+  "var(--finora-theme-text-muted, var(--finora-theme-text-secondary))",
 
-  fontSize: "9px",
-  fontWeight: 700,
+  fontSize:
+    "10px",
 
-  textTransform: "uppercase",
-  letterSpacing: ".6px",
+  fontWeight:
+    700,
+
+  textTransform:
+    "uppercase",
+
+  letterSpacing:
+    ".6px",
+
 };
+
 
 /* ===========================================================
    IMAGE
 =========================================================== */
 
 export const imageStyle: CSSProperties = {
-  width: "100%",
-  height: "100%",
 
-  objectFit: "cover",
-  objectPosition: "center",
+  width:
+    "100%",
 
-  display: "block",
+  height:
+    "100%",
+
+  objectFit:
+    "cover",
+
+  objectPosition:
+    "center",
+
+  display:
+    "block",
+
 };
+
 
 /* ===========================================================
    PHOTO INFORMATION AREA
 =========================================================== */
 
 export const infoStyle: CSSProperties = {
-  minWidth: 0,
 
-  display: "flex",
-  flexDirection: "column",
+  minWidth:
+    0,
 
-  gap: "4px",
+  display:
+    "flex",
 
-  flex: 1,
+  flexDirection:
+    "column",
+
+  gap:
+    "4px",
+
+  flex:
+    1,
+
 };
+
 
 /* ===========================================================
    TITLE
 =========================================================== */
 
 export const titleStyle: CSSProperties = {
-  margin: 0,
 
-  color: "#F3E4C2",
+  margin:
+    0,
 
-  fontSize: "10px",
-  fontWeight: 800,
+  color:
+  "var(--finora-theme-brand-accent)",
 
-  letterSpacing: ".65px",
+fontSize:
+  "12px",
 
-  textTransform: "uppercase",
+  fontWeight:
+    800,
+
+  letterSpacing:
+    ".65px",
+
+  textTransform:
+    "uppercase",
+
 };
+
 
 /* ===========================================================
    DESCRIPTION
 =========================================================== */
 
 export const descriptionStyle: CSSProperties = {
-  margin: 0,
 
-  color:
-    "rgba(255,255,255,.48)",
+  margin:
+    0,
 
-  fontSize: "8px",
+ color:
+  "var(--finora-theme-text-muted, var(--finora-theme-text-secondary))",
 
-  lineHeight: 1.45,
+  fontSize:
+    "11px",
+
+  lineHeight:
+    1.45,
+
 };
+
 
 /* ===========================================================
    BUTTON ROW
 =========================================================== */
 
 export const buttonRowStyle: CSSProperties = {
-  display: "flex",
 
-  alignItems: "center",
+  display:
+    "flex",
 
-  gap: "7px",
+  alignItems:
+    "center",
 
-  flexWrap: "wrap",
+  gap:
+    "7px",
 
-  marginTop: "3px",
+  flexWrap:
+    "wrap",
+
+  marginTop:
+    "3px",
+
 };
+
 
 /* ===========================================================
    BASE BUTTON
 =========================================================== */
 
 export const buttonStyle: CSSProperties = {
-  minHeight: "27px",
+
+  minHeight:
+    "29px",
 
   padding:
     "0 11px",
 
-  borderRadius: "8px",
+  borderRadius:
+    "8px",
 
   border:
-    "1px solid rgba(214,176,106,.55)",
+  "1px solid color-mix(in srgb, var(--finora-theme-brand-accent) 55%, transparent)",
 
-  background:
-    "linear-gradient(180deg,rgba(214,176,106,.18),rgba(138,97,43,.12))",
+background:
+  "color-mix(in srgb, var(--finora-theme-brand-accent-soft) 8%, transparent)",
 
-  color: "#E8C778",
+color:
+  "var(--finora-theme-brand-accent)",
 
-  cursor: "pointer",
+  cursor:
+    "pointer",
 
-  display: "inline-flex",
+  display:
+    "inline-flex",
 
-  alignItems: "center",
-  justifyContent: "center",
+  alignItems:
+    "center",
 
-  boxSizing: "border-box",
+  justifyContent:
+    "center",
 
-  fontSize: "9px",
-  fontWeight: 700,
+  boxSizing:
+    "border-box",
 
-  letterSpacing: ".2px",
+  fontSize:
+    "10px",
+
+  fontWeight:
+    700,
+
+  letterSpacing:
+    ".2px",
 
   transition:
     "all .2s ease",
 
-  whiteSpace: "nowrap",
+  whiteSpace:
+    "nowrap",
+
 };
+
 
 /* ===========================================================
    REMOVE BUTTON
 =========================================================== */
 
 export const removeButtonStyle: CSSProperties = {
+
   ...buttonStyle,
 
   border:
-    "1px solid rgba(220,38,38,.38)",
+    "1px solid color-mix(in srgb, var(--finora-theme-danger, #DC2626) 38%, transparent)",
 
   background:
-    "rgba(220,38,38,.08)",
+    "color-mix(in srgb, var(--finora-theme-danger-soft, #FDECEC) 45%, transparent)",
 
   color:
-    "#FCA5A5",
+    "var(--finora-theme-danger, #DC2626)",
+
 };
+
 
 /* ===========================================================
    HIDDEN FILE INPUT
 =========================================================== */
 
 export const hiddenInputStyle: CSSProperties = {
-  display: "none",
+
+  display:
+    "none",
+
 };
+
 
 /* ===========================================================
    EMPTY PHOTO MARK
 =========================================================== */
 
 export const emptyPhotoStyle: CSSProperties = {
-  display: "flex",
 
-  alignItems: "center",
-  justifyContent: "center",
+  display:
+    "flex",
 
-  width: "100%",
-  height: "100%",
+  alignItems:
+    "center",
+
+  justifyContent:
+    "center",
+
+  width:
+    "100%",
+
+  height:
+    "100%",
 
   color:
-    "rgba(232,199,120,.75)",
+    "var(--finora-theme-brand-accent, var(--finora-theme-brand-primary, #D4AF37))",
 
-  fontSize: "9px",
-  fontWeight: 800,
+  fontSize:
+    "10px",
 
-  letterSpacing: ".5px",
+  fontWeight:
+    800,
 
-  textTransform: "uppercase",
+  letterSpacing:
+    ".5px",
+
+  textTransform:
+    "uppercase",
+
 };

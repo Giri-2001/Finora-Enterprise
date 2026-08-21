@@ -4,17 +4,32 @@
    CUSTOMER WIZARD
    STEP 2 — BASIC DETAILS
 
-   Version     : 2.0
+   Version     : 3.0
    Phase       : Phase 2
    Architecture: Enterprise
    Status      : Production
 
-   Responsibility:
+   RESPONSIBILITY:
 
    - Personal information
    - Occupation profile
    - Family & emergency information
    - Live wizard synchronization
+
+   ARCHITECTURE:
+
+   - Presentation orchestration only
+   - Existing business state preserved
+   - Existing wizard synchronization preserved
+   - Responsive geometry owned by child components
+   - No local breakpoints
+   - No viewport detection
+   - No business logic
+=========================================================== */
+
+
+/* ===========================================================
+   IMPORTS
 =========================================================== */
 
 import {
@@ -22,21 +37,33 @@ import {
   useState,
 } from "react";
 
+
+import {
+  UserRound,
+  BriefcaseBusiness,
+  UsersRound,
+} from "lucide-react";
+
+
 import BasicForm, {
   type BasicFormData,
 } from "../../basic/BasicForm";
+
 
 import OccupationCard, {
   type OccupationData,
 } from "../../basic/OccupationCard";
 
+
 import FamilyDetails, {
   type FamilyDetailsData,
 } from "../../basic/FamilyDetails";
 
+
 import type {
   CustomerWizardData,
 } from "../CustomerWizard";
+
 
 import {
   pageStyle,
@@ -53,6 +80,7 @@ import {
   sectionAccentStyle,
 } from "./Step2Basic.styles";
 
+
 /* ===========================================================
    TYPES
 =========================================================== */
@@ -62,35 +90,49 @@ interface BasicState
     OccupationData,
     FamilyDetailsData {}
 
+
 /* ===========================================================
    DEFAULT STATE
 =========================================================== */
 
-const DEFAULT_STATE: BasicState = {
+const DEFAULT_STATE:
+  BasicState = {
 
-  fatherOrSpouseName: "",
+  fatherOrSpouseName:
+    "",
 
-  education: "",
+  education:
+    "",
 
-  maritalStatus: "",
+  maritalStatus:
+    "",
 
-  spouseName: "",
+  spouseName:
+    "",
 
-  occupation: "",
+  occupation:
+    "",
 
-  workPlace: "",
+  workPlace:
+    "",
 
-  monthlyIncome: "",
+  monthlyIncome:
+    "",
 
-  experience: "",
+  experience:
+    "",
 
-  numberOfFamilyMembers: "",
+  numberOfFamilyMembers:
+    "",
 
-  emergencyContactName: "",
+  emergencyContactName:
+    "",
 
-  emergencyContactMobile: "",
+  emergencyContactMobile:
+    "",
 
 };
+
 
 /* ===========================================================
    PROPS
@@ -98,13 +140,16 @@ const DEFAULT_STATE: BasicState = {
 
 interface Step2BasicProps {
 
-  wizardData?: CustomerWizardData;
+  wizardData?:
+    CustomerWizardData;
 
   updateWizardData: (
-    data: Partial<CustomerWizardData>,
+    data:
+      Partial<CustomerWizardData>,
   ) => void;
 
 }
+
 
 /* ===========================================================
    COMPONENT
@@ -118,6 +163,7 @@ export default function Step2Basic({
 
 }: Step2BasicProps) {
 
+
   /* =========================================================
      STATE
   ========================================================= */
@@ -129,69 +175,74 @@ export default function Step2Basic({
     DEFAULT_STATE,
   );
 
+
   /* =========================================================
-   RESTORE WIZARD DATA
-========================================================= */
+     RESTORE WIZARD DATA
+  ========================================================= */
 
-useEffect(() => {
+  useEffect(() => {
 
-  if (!wizardData) {
-    return;
-  }
+    if (!wizardData) {
+      return;
+    }
 
-  setState(
-    (previous) => ({
-      ...previous,
 
-      fatherOrSpouseName:
-        wizardData.fatherOrSpouseName ??
-        previous.fatherOrSpouseName,
+    setState(
+      (previous) => ({
 
-      education:
-        wizardData.education ??
-        previous.education,
+        ...previous,
 
-      maritalStatus:
-        wizardData.maritalStatus ??
-        previous.maritalStatus,
+        fatherOrSpouseName:
+          wizardData.fatherOrSpouseName ??
+          previous.fatherOrSpouseName,
 
-      spouseName:
-        wizardData.spouseName ??
-        previous.spouseName,
+        education:
+          wizardData.education ??
+          previous.education,
 
-      occupation:
-        wizardData.occupation ??
-        previous.occupation,
+        maritalStatus:
+          wizardData.maritalStatus ??
+          previous.maritalStatus,
 
-      workPlace:
-        wizardData.workPlace ??
-        previous.workPlace,
+        spouseName:
+          wizardData.spouseName ??
+          previous.spouseName,
 
-      monthlyIncome:
-        wizardData.monthlyIncome ??
-        previous.monthlyIncome,
+        occupation:
+          wizardData.occupation ??
+          previous.occupation,
 
-      experience:
-        wizardData.experience ??
-        previous.experience,
+        workPlace:
+          wizardData.workPlace ??
+          previous.workPlace,
 
-      numberOfFamilyMembers:
-        wizardData.numberOfFamilyMembers ??
-        previous.numberOfFamilyMembers,
+        monthlyIncome:
+          wizardData.monthlyIncome ??
+          previous.monthlyIncome,
 
-      emergencyContactName:
-        wizardData.emergencyContactName ??
-        previous.emergencyContactName,
+        experience:
+          wizardData.experience ??
+          previous.experience,
 
-      emergencyContactMobile:
-        wizardData.emergencyContactMobile ??
-        previous.emergencyContactMobile,
-    }),
-  );
+        numberOfFamilyMembers:
+          wizardData.numberOfFamilyMembers ??
+          previous.numberOfFamilyMembers,
 
-}, [
-  wizardData,
-]);
+        emergencyContactName:
+          wizardData.emergencyContactName ??
+          previous.emergencyContactName,
+
+        emergencyContactMobile:
+          wizardData.emergencyContactMobile ??
+          previous.emergencyContactMobile,
+
+      }),
+    );
+
+  }, [
+    wizardData,
+  ]);
+
 
   /* =========================================================
      UPDATE FIELD
@@ -199,9 +250,11 @@ useEffect(() => {
 
   function updateField(
 
-    field: keyof BasicState,
+    field:
+      keyof BasicState,
 
-    value: string,
+    value:
+      string,
 
   ): void {
 
@@ -210,10 +263,12 @@ useEffect(() => {
 
         ...previous,
 
-        [field]: value,
+        [field]:
+          value,
 
       }),
     );
+
 
     /* =======================================================
        LIVE WIZARD SYNC
@@ -221,11 +276,13 @@ useEffect(() => {
 
     updateWizardData({
 
-      [field]: value,
+      [field]:
+        value,
 
     } as Partial<CustomerWizardData>);
 
   }
+
 
   /* =========================================================
      UI
@@ -234,7 +291,9 @@ useEffect(() => {
   return (
 
     <section
-      style={pageStyle}
+      style={
+        pageStyle
+      }
     >
 
       {/* =================================================
@@ -242,34 +301,40 @@ useEffect(() => {
       ================================================= */}
 
       <header
-        style={pageHeaderStyle}
+        style={
+          pageHeaderStyle
+        }
       >
 
         <h1
-          style={pageTitleStyle}
+          style={
+            pageTitleStyle
+          }
         >
-
           Customer Basic Details
-
         </h1>
 
-        <p
-          style={pageSubtitleStyle}
-        >
 
+        <p
+          style={
+            pageSubtitleStyle
+          }
+        >
           Capture personal, occupation and family
           information for the customer's permanent profile.
-
         </p>
 
       </header>
+
 
       {/* =================================================
           THREE PREMIUM SECTIONS
       ================================================= */}
 
       <div
-        style={contentStyle}
+        style={
+          contentStyle
+        }
       >
 
         {/* =================================================
@@ -277,57 +342,64 @@ useEffect(() => {
         ================================================= */}
 
         <section
-          style={sectionStyle}
+          style={
+            sectionStyle
+          }
         >
 
           <header
-            style={sectionHeaderStyle}
+            style={
+              sectionHeaderStyle
+            }
           >
 
             <div
-              style={sectionIconStyle}
+              style={
+                sectionIconStyle
+              }
               aria-hidden="true"
             >
 
-              👤
+              <UserRound />
 
             </div>
+
 
             <div>
 
               <h2
-                style={sectionTitleStyle}
+                style={
+                  sectionTitleStyle
+                }
               >
-
                 1. Personal Information
-
               </h2>
 
+
               <p
-                style={sectionSubtitleStyle}
+                style={
+                  sectionSubtitleStyle
+                }
               >
-
                 Basic personal and marital information.
-
               </p>
 
             </div>
 
           </header>
 
-          {/* =================================================
-              IMPORTANT:
-              NO EXTRA GRID WRAPPER HERE.
-              BasicForm owns its 4-column layout.
-          ================================================= */}
 
           <div
-            style={fieldAreaStyle}
+            style={
+              fieldAreaStyle
+            }
           >
 
             <BasicForm
 
-              value={state}
+              value={
+                state
+              }
 
               onChange={
                 updateField
@@ -337,66 +409,79 @@ useEffect(() => {
 
           </div>
 
+
           <div
-            style={sectionAccentStyle}
+            style={
+              sectionAccentStyle
+            }
           />
 
         </section>
+
 
         {/* =================================================
             SECTION 2 — OCCUPATION PROFILE
         ================================================= */}
 
         <section
-          style={sectionStyle}
+          style={
+            sectionStyle
+          }
         >
 
           <header
-            style={sectionHeaderStyle}
+            style={
+              sectionHeaderStyle
+            }
           >
 
             <div
-              style={sectionIconStyle}
+              style={
+                sectionIconStyle
+              }
               aria-hidden="true"
             >
 
-              💼
+              <BriefcaseBusiness />
 
             </div>
+
 
             <div>
 
               <h2
-                style={sectionTitleStyle}
+                style={
+                  sectionTitleStyle
+                }
               >
-
                 2. Occupation Profile
-
               </h2>
 
+
               <p
-                style={sectionSubtitleStyle}
+                style={
+                  sectionSubtitleStyle
+                }
               >
-
                 Professional and income information.
-
               </p>
 
             </div>
 
           </header>
 
-          {/* =================================================
-              OccupationCard owns its 4-column layout.
-          ================================================= */}
 
           <div
-            style={fieldAreaStyle}
+            style={
+              fieldAreaStyle
+            }
           >
 
             <OccupationCard
 
-              value={state}
+              value={
+                state
+              }
 
               onChange={
                 updateField
@@ -406,66 +491,79 @@ useEffect(() => {
 
           </div>
 
+
           <div
-            style={sectionAccentStyle}
+            style={
+              sectionAccentStyle
+            }
           />
 
         </section>
+
 
         {/* =================================================
             SECTION 3 — FAMILY & EMERGENCY
         ================================================= */}
 
         <section
-          style={sectionStyle}
+          style={
+            sectionStyle
+          }
         >
 
           <header
-            style={sectionHeaderStyle}
+            style={
+              sectionHeaderStyle
+            }
           >
 
             <div
-              style={sectionIconStyle}
+              style={
+                sectionIconStyle
+              }
               aria-hidden="true"
             >
 
-              👥
+              <UsersRound />
 
             </div>
+
 
             <div>
 
               <h2
-                style={sectionTitleStyle}
+                style={
+                  sectionTitleStyle
+                }
               >
-
                 3. Family & Emergency
-
               </h2>
 
+
               <p
-                style={sectionSubtitleStyle}
+                style={
+                  sectionSubtitleStyle
+                }
               >
-
                 Family size and emergency contact information.
-
               </p>
 
             </div>
 
           </header>
 
-          {/* =================================================
-              FamilyDetails owns its 3-column layout.
-          ================================================= */}
 
           <div
-            style={fieldAreaStyle}
+            style={
+              fieldAreaStyle
+            }
           >
 
             <FamilyDetails
 
-              value={state}
+              value={
+                state
+              }
 
               onChange={
                 updateField
@@ -475,8 +573,11 @@ useEffect(() => {
 
           </div>
 
+
           <div
-            style={sectionAccentStyle}
+            style={
+              sectionAccentStyle
+            }
           />
 
         </section>
@@ -488,3 +589,8 @@ useEffect(() => {
   );
 
 }
+
+
+/* ===========================================================
+   END
+=========================================================== */

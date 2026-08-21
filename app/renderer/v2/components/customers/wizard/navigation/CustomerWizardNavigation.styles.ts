@@ -7,7 +7,7 @@
 
    RESPONSIBILITY:
    - Customer Wizard navigation presentation
-   - Navigation layout
+   - Fixed bottom navigation
    - Navigation button presentation
    - Responsive sizing through Customer Responsive Engine
 
@@ -18,6 +18,7 @@
    - No viewport calculations
    - No inline CSS dependency
    - Responsive dimensions come from customers tokens
+   - Navigation is OUT OF DOCUMENT FLOW
 =========================================================== */
 
 
@@ -41,7 +42,10 @@ import type {
 const COLORS = {
 
   border:
-    "rgba(255,255,255,.24)",
+    "rgba(255,255,255,.20)",
+
+  footerBackground:
+    "rgba(8,8,10,.98)",
 
   secondaryBackground:
     "#ffffff",
@@ -113,11 +117,33 @@ export function getCustomerWizardNavigationStyles(
 
 
   /* =========================================================
-     WRAPPER
+     FIXED BOTTOM FOOTER
+
+     IMPORTANT:
+     This navigation is intentionally removed from the
+     document flow.
+
+     Therefore:
+     - Step 1 height will not change
+     - Step 2 height will not change
+     - Step 3 height will not change
+     - Footer always stays at viewport bottom
   ========================================================= */
 
   const wrapper:
     CSSProperties = {
+
+    position:
+      "fixed",
+
+    left:
+      0,
+
+    right:
+      0,
+
+    bottom:
+      0,
 
     width:
       "100%",
@@ -125,17 +151,19 @@ export function getCustomerWizardNavigationStyles(
     boxSizing:
       "border-box",
 
-    marginTop:
-      0,
+    height:
+      tokens.button.minHeight +
+      26,
+
+    minHeight:
+      tokens.button.minHeight +
+      26,
 
     padding:
-      `${Math.max(
-        5,
-        tokens.spacing.small,
-      )}px 0 ${Math.max(
-        4,
-        tokens.spacing.small - 1,
-      )}px`,
+      "7px 0",
+
+    margin:
+      0,
 
     borderTop:
       `1px solid ${COLORS.border}`,
@@ -152,15 +180,14 @@ export function getCustomerWizardNavigationStyles(
     columnGap:
       tokens.spacing.medium,
 
+    background:
+      COLORS.footerBackground,
+
+    zIndex:
+      1000,
+
     flexShrink:
       0,
-
-    minHeight:
-      tokens.wizard.navigationHeight +
-      tokens.spacing.medium,
-
-    background:
-      "transparent",
 
   };
 
@@ -182,12 +209,12 @@ export function getCustomerWizardNavigationStyles(
       "flex-start",
 
     gap:
-      tokens.spacing.medium,
+      0,
 
     minWidth:
       0,
 
-    paddingLeft:
+    padding:
       0,
 
   };
@@ -210,12 +237,12 @@ export function getCustomerWizardNavigationStyles(
       "flex-end",
 
     gap:
-      tokens.spacing.medium,
+      0,
 
     minWidth:
       0,
 
-    paddingRight:
+    padding:
       0,
 
   };

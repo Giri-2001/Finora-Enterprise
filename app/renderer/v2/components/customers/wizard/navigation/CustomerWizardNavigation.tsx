@@ -3,12 +3,6 @@
 
    CUSTOMER WIZARD NAVIGATION™
 
-   Navigation:
-   ← Customers Hub
-   ← Previous
-   Step X of 6
-   Continue →
-   
    RESPONSIBILITY:
    - Wizard navigation behavior only
    - No visual styling
@@ -50,9 +44,6 @@ interface CustomerWizardNavigationProps {
   onNext:
     () => void;
 
-  onBackToCustomers?:
-    () => void;
-
 }
 
 
@@ -65,8 +56,6 @@ export default function CustomerWizardNavigation({
   currentStep,
 
   totalSteps,
-
-  onBackToCustomers,
 
   onPrevious,
 
@@ -125,21 +114,6 @@ export default function CustomerWizardNavigation({
           styles.left
         }
       >
-
-        <button
-          type="button"
-          style={
-            styles.secondaryButton
-          }
-          onClick={
-            onBackToCustomers
-          }
-        >
-
-          ← Customers Hub
-
-        </button>
-
 
         <button
           type="button"

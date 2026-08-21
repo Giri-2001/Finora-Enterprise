@@ -1,256 +1,692 @@
 /* ===========================================================
    FINORA ENTERPRISE OS™
 
-   CUSTOMER IDENTITY PREVIEW CARD™
+   IDENTITY PREVIEW CARD™
 
-   PRESENTATION STYLES
+   RESPONSIVE PRESENTATION STYLES
 =========================================================== */
 
 import type {
   CSSProperties,
 } from "react";
 
-/* ===========================================================
-   ROOT CARD
-=========================================================== */
+import type {
+  ResponsiveTokens,
+} from "../../../utils/responsive";
 
-export const cardStyle:
-  CSSProperties = {
-
-  width: "100%",
-
-  maxWidth: "250px",
-
-  height: "100%",
-
-  maxHeight: "480px",
-
-  borderRadius: "22px",
-
-  background:
-    "linear-gradient(135deg,#0f172a,#1e293b)",
-
-  color: "#ffffff",
-
-  padding: "20px",
-
-  boxSizing: "border-box",
-
-  boxShadow:
-    "0 18px 40px rgba(15,23,42,.35)",
-
-  overflow: "hidden",
-
-};
+import type {
+  FinoraTheme,
+} from "../../../themes/core/types";
 
 /* ===========================================================
-   BRAND
+   TYPES
 =========================================================== */
 
-export const logoStyle:
-  CSSProperties = {
+export interface IdentityPreviewCardStyles {
 
-  fontSize: "11px",
+  cardStyle:
+    CSSProperties;
 
-  letterSpacing: "2px",
+  headerStyle:
+    CSSProperties;
 
-  opacity: 0.8,
+  photoStyle:
+    CSSProperties;
 
-  marginBottom: "14px",
-};
+  imageStyle:
+    CSSProperties;
+
+  photoTextStyle:
+    CSSProperties;
+
+  nameStyle:
+    CSSProperties;
+
+  idStyle:
+    CSSProperties;
+
+  infoGroupStyle:
+    CSSProperties;
+
+  infoLabelStyle:
+    CSSProperties;
+
+  infoValueStyle:
+    CSSProperties;
+
+  verificationStyle:
+    CSSProperties;
+
+  verificationTitleStyle:
+    CSSProperties;
+
+  verificationTextStyle:
+    CSSProperties;
+
+  statusStyle:
+    CSSProperties;
+
+  statusTextStyle:
+    CSSProperties;
+
+  footerStyle:
+    CSSProperties;
+
+}
 
 /* ===========================================================
-   PHOTO
+   STYLE FACTORY
 =========================================================== */
 
-export const photoStyle:
-  CSSProperties = {
+export function createIdentityPreviewCardStyles(
 
-  width: "92px",
+  tokens:
+    ResponsiveTokens,
 
-  height: "92px",
+  theme:
+    FinoraTheme,
 
-  borderRadius: "18px",
+): IdentityPreviewCardStyles {
 
-  background: "#334155",
+  const cardWidth =
+    Math.max(
+      tokens.customerCards.width +
+      tokens.spacing.large,
+      250,
+    );
 
-  display: "flex",
+  const photoSize =
+    Math.min(
+      tokens.customerCards.photoSize,
+      96,
+    );
 
-  justifyContent: "center",
+  const borderRadius =
+    Math.max(
+      tokens.customerCards.radius,
+      14,
+    );
 
-  alignItems: "center",
+  const textPrimary =
+    theme.colors.text.primary;
 
-  overflow: "hidden",
+  const textSecondary =
+    theme.colors.text.secondary;
 
-  marginBottom: "16px",
-};
+  const textMuted =
+    theme.colors.text.muted;
+
+  const surface =
+    theme.colors.background.surface;
+
+  const surfaceMuted =
+    theme.colors.background.surfaceMuted;
+
+  const surfaceStrong =
+    theme.colors.background.surfaceStrong;
+
+  const border =
+    theme.colors.border.default;
+
+  const borderStrong =
+    theme.colors.border.strong;
+
+  const brandPrimary =
+    theme.colors.brand.primary;
+
+  const brandAccent =
+    theme.colors.brand.accent;
+
+  const brandAccentSoft =
+    theme.colors.brand.accentSoft;
+
+  const success =
+    theme.colors.status.success;
+
+  const successSoft =
+    theme.colors.status.successSoft;
+
+  const successBorder =
+  theme.colors.border.default;
+
+  const shadow =
+    theme.colors.overlay.shadow;
+
+  return {
+
+    cardStyle: {
+
+      width:
+        "100%",
+
+      maxWidth:
+        `${cardWidth}px`,
+
+      minWidth:
+        0,
+
+      boxSizing:
+        "border-box",
+
+      display:
+        "flex",
+
+      flexDirection:
+        "column",
+
+      gap:
+        `${tokens.spacing.small}px`,
+
+      padding:
+        `${tokens.customerCards.padding}px`,
+
+      border:
+        `${tokens.border.width}px solid ${border}`,
+
+      borderRadius:
+        `${borderRadius}px`,
+
+      background:
+        `
+        linear-gradient(
+          145deg,
+          ${surface},
+          ${surfaceMuted}
+        )
+        `,
+
+      color:
+        textPrimary,
+
+      boxShadow:
+        `0 ${tokens.spacing.medium}px ${tokens.spacing.xlarge}px ${shadow}`,
+
+      overflow:
+        "hidden",
+
+      alignSelf:
+        "flex-start",
+
+    },
+
+    headerStyle: {
+
+      width:
+        "100%",
+
+      minWidth:
+        0,
+
+      boxSizing:
+        "border-box",
+
+      color:
+        textPrimary,
+
+      fontSize:
+        `${Math.max(
+          tokens.customerCards.brandSize,
+          12,
+        )}px`,
+
+      fontWeight:
+        800,
+
+      letterSpacing:
+        "1.4px",
+
+      lineHeight:
+        tokens.lineHeight.compact,
+
+      textTransform:
+        "uppercase",
+
+    },
+
+    photoStyle: {
+
+      width:
+        `${photoSize}px`,
+
+      height:
+        `${photoSize}px`,
+
+      minWidth:
+        `${photoSize}px`,
+
+      minHeight:
+        `${photoSize}px`,
+
+      display:
+        "flex",
+
+      alignItems:
+        "center",
+
+      justifyContent:
+        "center",
+
+      boxSizing:
+        "border-box",
+
+      marginTop:
+        `${tokens.spacing.small}px`,
+
+      marginBottom:
+        `${tokens.spacing.small}px`,
+
+      border:
+        `${tokens.border.width}px solid ${borderStrong}`,
+
+      borderRadius:
+        `${Math.max(
+          borderRadius - 4,
+          10,
+        )}px`,
+
+      background:
+        surfaceStrong,
+
+      overflow:
+        "hidden",
+
+      flexShrink:
+        0,
+
+    },
+
+    imageStyle: {
+
+      width:
+        "100%",
+
+      height:
+        "100%",
+
+      objectFit:
+        "cover",
+
+      objectPosition:
+        "center",
+
+      display:
+        "block",
+
+    },
+
+    photoTextStyle: {
+
+      color:
+        textPrimary,
+
+      fontSize:
+        `${Math.max(
+          tokens.customerCards.companySize,
+          11,
+        )}px`,
+
+      fontWeight:
+        800,
+
+      lineHeight:
+        tokens.lineHeight.compact,
+
+      textTransform:
+        "uppercase",
+
+    },
+
+    nameStyle: {
+
+      margin:
+        0,
+
+      minWidth:
+        0,
+
+      color:
+        textPrimary,
+
+      fontSize:
+        `${Math.max(
+          tokens.customerCards.nameSize,
+          18,
+        )}px`,
+
+      fontWeight:
+        800,
+
+      lineHeight:
+        tokens.lineHeight.compact,
+
+      overflow:
+        "hidden",
+
+      textOverflow:
+        "ellipsis",
+
+      whiteSpace:
+        "nowrap",
+
+    },
+
+    idStyle: {
+
+      margin:
+        0,
+
+      minWidth:
+        0,
+
+      color:
+        brandPrimary,
+
+      fontSize:
+        `${Math.max(
+          tokens.customerCards.idSize,
+          10,
+        )}px`,
+
+      fontWeight:
+        700,
+
+      lineHeight:
+        tokens.lineHeight.compact,
+
+      overflow:
+        "hidden",
+
+      textOverflow:
+        "ellipsis",
+
+      whiteSpace:
+        "nowrap",
+
+    },
+
+    infoGroupStyle: {
+
+      display:
+        "flex",
+
+      flexDirection:
+        "column",
+
+      gap:
+        `${tokens.spacing.small}px`,
+
+      width:
+        "100%",
+
+      minWidth:
+        0,
+
+      marginTop:
+        `${tokens.spacing.small}px`,
+
+    },
+
+    infoLabelStyle: {
+
+      margin:
+        0,
+
+      color:
+        textMuted,
+
+      fontSize:
+        `${Math.max(
+          tokens.customerCards.idSize,
+          10,
+        )}px`,
+
+      fontWeight:
+        800,
+
+      lineHeight:
+        tokens.lineHeight.compact,
+
+      letterSpacing:
+        ".6px",
+
+      textTransform:
+        "uppercase",
+
+    },
+
+    infoValueStyle: {
+
+      margin:
+        0,
+
+      color:
+        textPrimary,
+
+      fontSize:
+        `${Math.max(
+          tokens.customerCards.companySize,
+          12,
+        )}px`,
+
+      fontWeight:
+        700,
+
+      lineHeight:
+        tokens.lineHeight.compact,
+
+      overflow:
+        "hidden",
+
+      textOverflow:
+        "ellipsis",
+
+      whiteSpace:
+        "nowrap",
+
+    },
+
+    verificationStyle: {
+
+      width:
+        "100%",
+
+      minWidth:
+        0,
+
+      boxSizing:
+        "border-box",
+
+      display:
+        "flex",
+
+      flexDirection:
+        "column",
+
+      gap:
+        `${tokens.spacing.small}px`,
+
+      marginTop:
+        `${tokens.spacing.small}px`,
+
+      padding:
+        `${tokens.spacing.medium}px`,
+
+      border:
+        `${tokens.border.width}px solid ${border}`,
+
+      borderRadius:
+        `${Math.max(
+          tokens.customerCards.radius - 4,
+          10,
+        )}px`,
+
+      background:
+        `
+        color-mix(
+          in srgb,
+          ${brandAccent} 8%,
+          ${surface}
+        )
+        `,
+
+    },
+
+    verificationTitleStyle: {
+
+      margin:
+        0,
+
+      color:
+        textPrimary,
+
+      fontSize:
+        `${Math.max(
+          tokens.customerCards.companySize,
+          12,
+        )}px`,
+
+      fontWeight:
+        800,
+
+      lineHeight:
+        tokens.lineHeight.compact,
+
+    },
+
+    verificationTextStyle: {
+
+      margin:
+        0,
+
+      color:
+        textSecondary,
+
+      fontSize:
+        `${Math.max(
+          tokens.customerCards.idSize,
+          10,
+        )}px`,
+
+      fontWeight:
+        500,
+
+      lineHeight:
+        tokens.lineHeight.body,
+
+    },
+
+    statusStyle: {
+
+      display:
+        "inline-flex",
+
+      alignItems:
+        "center",
+
+      alignSelf:
+        "flex-start",
+
+      width:
+        "fit-content",
+
+      maxWidth:
+        "100%",
+
+      boxSizing:
+        "border-box",
+
+      padding:
+        `${tokens.spacing.small}px ${tokens.button.paddingX}px`,
+
+      border:
+        `${tokens.border.width}px solid ${successBorder}`,
+
+      borderRadius:
+        "999px",
+
+      background:
+        successSoft,
+
+      color:
+        success,
+
+      overflow:
+        "hidden",
+
+    },
+
+    statusTextStyle: {
+
+      minWidth:
+        0,
+
+      color:
+        success,
+
+      fontSize:
+        `${Math.max(
+          tokens.customerCards.kycSize,
+          10,
+        )}px`,
+
+      fontWeight:
+        800,
+
+      lineHeight:
+        tokens.lineHeight.compact,
+
+      overflow:
+        "hidden",
+
+      textOverflow:
+        "ellipsis",
+
+      whiteSpace:
+        "nowrap",
+
+    },
+
+    footerStyle: {
+
+      width:
+        "100%",
+
+      minWidth:
+        0,
+
+      boxSizing:
+        "border-box",
+
+      marginTop:
+        `${tokens.spacing.small}px`,
+
+      paddingTop:
+        `${tokens.spacing.small}px`,
+
+      borderTop:
+        `${tokens.border.width}px solid ${border}`,
+
+      color:
+        textMuted,
+
+      fontSize:
+        `${Math.max(
+          tokens.customerCards.idSize - 1,
+          9,
+        )}px`,
+
+      fontWeight:
+        500,
+
+      lineHeight:
+        tokens.lineHeight.compact,
+
+    },
+
+  };
+
+}
 
 /* ===========================================================
-   PHOTO IMAGE
+   END
 =========================================================== */
-
-export const imageStyle:
-  CSSProperties = {
-
-  width: "100%",
-
-  height: "100%",
-
-  objectFit: "cover",
-};
-
-/* ===========================================================
-   CUSTOMER NAME
-=========================================================== */
-
-export const nameStyle:
-  CSSProperties = {
-
-  margin: 0,
-
-  fontSize: "20px",
-
-  fontWeight: 700,
-
-};
-
-/* ===========================================================
-   CUSTOMER ID
-=========================================================== */
-
-export const idStyle:
-  CSSProperties = {
-
-  marginTop: "8px",
-
-  color: "#cbd5e1",
-
-  fontSize: "12px",
-
-  wordBreak: "break-word",
-};
-
-/* ===========================================================
-   INFORMATION LABEL
-=========================================================== */
-
-export const infoLabelStyle:
-  CSSProperties = {
-
-  marginTop: "16px",
-
-  fontSize: "10px",
-
-  textTransform: "uppercase",
-
-  opacity: 0.75,
-};
-
-/* ===========================================================
-   INFORMATION VALUE
-=========================================================== */
-
-export const infoValueStyle:
-  CSSProperties = {
-
-  marginTop: "3px",
-
-  fontSize: "14px",
-
-  fontWeight: 600,
-};
-
-/* ===========================================================
-   QR SECTION
-=========================================================== */
-
-export const qrSectionStyle:
-  CSSProperties = {
-
-  marginTop: "18px",
-
-  padding: "13px",
-
-  borderRadius: "14px",
-
-  background:
-    "rgba(255,255,255,0.08)",
-};
-
-/* ===========================================================
-   QR TITLE
-=========================================================== */
-
-export const qrTitleStyle:
-  CSSProperties = {
-
-  fontWeight: 700,
-
-  fontSize: "13px",
-
-  marginBottom: "7px",
-};
-
-/* ===========================================================
-   QR DESCRIPTION
-=========================================================== */
-
-export const qrDescriptionStyle:
-  CSSProperties = {
-
-  fontSize: "11px",
-
-  opacity: 0.75,
-
-  lineHeight: 1.5,
-};
-
-/* ===========================================================
-   STATUS
-=========================================================== */
-
-export const statusStyle:
-  CSSProperties = {
-
-  marginTop: "18px",
-
-  display: "inline-flex",
-
-  alignItems: "center",
-
-  gap: "7px",
-
-  padding: "7px 12px",
-
-  borderRadius: "999px",
-
-  background:
-    "rgba(34,197,94,.15)",
-
-  color: "#86efac",
-
-  fontSize: "12px",
-
-  fontWeight: 600,
-};
-
-/* ===========================================================
-   FOOTER NOTE
-=========================================================== */
-
-export const footerStyle:
-  CSSProperties = {
-
-  marginTop: "16px",
-
-  paddingTop: "12px",
-
-  borderTop:
-    "1px solid rgba(255,255,255,.12)",
-
-  fontSize: "9px",
-
-  opacity: 0.6,
-
-  lineHeight: 1.6,
-};

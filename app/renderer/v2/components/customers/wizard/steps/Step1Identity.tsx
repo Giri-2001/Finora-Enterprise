@@ -6,18 +6,13 @@
 
    IDENTITY STUDIO™
 
-   Responsibility:
-
-   - Step 1 identity state
-   - Customer identity updates
-   - Customer photo updates
-   - Customer contact updates
-   - Customer personal identity updates
-   - Front ID card live preview
-   - Branch identity preview
-
-   Version : 2.0
+   Version : 3.0
    Status  : Production
+=========================================================== */
+
+
+/* ===========================================================
+   IMPORTS
 =========================================================== */
 
 import {
@@ -25,32 +20,46 @@ import {
   useState,
 } from "react";
 
+
+/* ===========================================================
+   IDENTITY COMPONENTS
+=========================================================== */
+
 import IdentityForm, {
   type IdentityFormData,
 } from "../../identity/IdentityForm";
 
+
 import CustomerPhotoUploader
   from "../../identity/CustomerPhotoUploader";
 
-import IdentityPreviewCard
-  from "../../identity/IdentityPreviewCard";
 
-import CustomerIdentityHanger
-  from "../components/CustomerIdentityHanger";
+/* ===========================================================
+   RESPONSIVE ENGINE
+=========================================================== */
 
 import {
-  pageStyle,
-  leftPanelStyle,
-  idCardHolderStyle,
-  formPanelStyle,
-  formHeaderStyle,
-  formTitleStyle,
-  formSubtitleStyle,
-  photoSectionStyle,
-  formBodyStyle,
-  rightPanelStyle,
-  previewHolderStyle,
+  useResponsive,
+} from "../../../../utils/responsive";
+
+
+/* ===========================================================
+   THEME ENGINE
+=========================================================== */
+
+import {
+  useTheme,
+} from "../../../../themes/provider";
+
+
+/* ===========================================================
+   PRESENTATION STYLES
+=========================================================== */
+
+import {
+  createStep1IdentityStyles,
 } from "./Step1Identity.styles";
+
 
 /* ===========================================================
    TYPES
@@ -64,6 +73,7 @@ type PreferredLanguage =
   | "Kannada"
   | "Marathi"
   | "Other";
+
 
 interface IdentityState
   extends IdentityFormData {
@@ -80,6 +90,7 @@ interface IdentityState
   photoUrl: string;
 
 }
+
 
 interface Step1IdentityProps {
 
@@ -129,6 +140,7 @@ interface Step1IdentityProps {
 
 }
 
+
 /* ===========================================================
    DEFAULT STATE
 =========================================================== */
@@ -136,17 +148,23 @@ interface Step1IdentityProps {
 const DEFAULT_STATE:
   IdentityState = {
 
-  customerName: "",
+  customerName:
+    "",
 
-  mobileNumber: "",
+  mobileNumber:
+    "",
 
-  whatsappSame: true,
+  whatsappSame:
+    true,
 
-  whatsappNumber: "",
+  whatsappNumber:
+    "",
 
-  email: "",
+  email:
+    "",
 
-  dateOfBirth: "",
+  dateOfBirth:
+    "",
 
   preferredLanguage:
     "English",
@@ -160,9 +178,11 @@ const DEFAULT_STATE:
   customerId:
     "FIN-CUS-SGF-HYD-900001",
 
-  photoUrl: "",
+  photoUrl:
+    "",
 
 };
+
 
 /* ===========================================================
    COMPONENT
@@ -176,6 +196,55 @@ export default function Step1Identity({
 
 }: Step1IdentityProps) {
 
+
+  /* =========================================================
+     RESPONSIVE ENGINE
+  ========================================================= */
+
+  const {
+    tokens,
+  } = useResponsive();
+
+
+  /* =========================================================
+     THEME ENGINE
+  ========================================================= */
+
+  const {
+    theme,
+  } = useTheme();
+
+
+  /* =========================================================
+     PRESENTATION STYLES
+  ========================================================= */
+
+  const {
+
+    pageStyle,
+
+    formPanelStyle,
+
+    formHeaderStyle,
+
+    formTitleStyle,
+
+    formSubtitleStyle,
+
+    photoSectionStyle,
+
+    formBodyStyle,
+
+  } =
+    createStep1IdentityStyles(
+
+      tokens,
+
+      theme,
+
+    );
+
+
   /* =========================================================
      LOCAL STATE
   ========================================================= */
@@ -187,8 +256,9 @@ export default function Step1Identity({
     DEFAULT_STATE,
   );
 
+
   /* =========================================================
-     EDIT MODE / INITIAL DATA SYNC
+     INITIAL DATA SYNC
   ========================================================= */
 
   useEffect(() => {
@@ -243,6 +313,7 @@ export default function Step1Identity({
     initialData,
   ]);
 
+
   /* =========================================================
      FIELD UPDATE
   ========================================================= */
@@ -267,6 +338,7 @@ export default function Step1Identity({
       }),
     );
 
+
     /* =======================================================
        CUSTOMER NAME
     ======================================================= */
@@ -283,6 +355,7 @@ export default function Step1Identity({
       });
 
     }
+
 
     /* =======================================================
        MOBILE NUMBER
@@ -310,6 +383,7 @@ export default function Step1Identity({
 
     }
 
+
     /* =======================================================
        WHATSAPP SAME NUMBER
     ======================================================= */
@@ -334,6 +408,7 @@ export default function Step1Identity({
 
     }
 
+
     /* =======================================================
        WHATSAPP NUMBER
     ======================================================= */
@@ -356,8 +431,9 @@ export default function Step1Identity({
 
     }
 
+
     /* =======================================================
-       EMAIL ADDRESS
+       EMAIL
     ======================================================= */
 
     if (
@@ -372,6 +448,7 @@ export default function Step1Identity({
       });
 
     }
+
 
     /* =======================================================
        DATE OF BIRTH
@@ -390,24 +467,27 @@ export default function Step1Identity({
 
     }
 
-   /* =======================================================
-   PREFERRED LANGUAGE
-======================================================= */
 
-if (
-  field === "preferredLanguage"
-) {
+    /* =======================================================
+       PREFERRED LANGUAGE
+    ======================================================= */
 
-  const preferredLanguage =
-    String(value) as PreferredLanguage;
+    if (
+      field === "preferredLanguage"
+    ) {
 
-  updateWizardData({
+      const preferredLanguage =
+        String(value) as PreferredLanguage;
 
-    preferredLanguage,
+      updateWizardData({
 
-  });
+        preferredLanguage,
 
-}
+      });
+
+    }
+
+
     /* =======================================================
        CUSTOMER ID
     ======================================================= */
@@ -424,6 +504,7 @@ if (
       });
 
     }
+
 
     /* =======================================================
        CUSTOMER PHOTO
@@ -444,14 +525,6 @@ if (
 
   }
 
-  /* =========================================================
-     CUSTOMER CARD NAME
-  ========================================================= */
-
-  const displayCustomerName =
-    state.customerName.trim()
-      ? state.customerName
-      : "Customer Name";
 
   /* =========================================================
      UI
@@ -460,87 +533,55 @@ if (
   return (
 
     <section
-      style={pageStyle}
+      style={
+        pageStyle
+      }
     >
 
-      {/* =================================================
-          LEFT — REAL FINORA CUSTOMER ID CARD
-      ================================================= */}
-
-      <aside
-        style={leftPanelStyle}
-      >
-
-        <div
-          style={idCardHolderStyle}
-        >
-
-          <CustomerIdentityHanger
-
-            customerId={
-              state.customerId
-            }
-
-            customerName={
-              displayCustomerName
-            }
-
-            phoneNumber={
-              state.mobileNumber
-            }
-
-            profilePhoto={
-              state.photoUrl
-            }
-
-            kycVerified={
-              false
-            }
-
-          />
-
-        </div>
-
-      </aside>
-
-      {/* =================================================
-          CENTER — IDENTITY FORM
-      ================================================= */}
-
       <main
-        style={formPanelStyle}
+        style={
+          formPanelStyle
+        }
       >
 
         <header
-          style={formHeaderStyle}
+          style={
+            formHeaderStyle
+          }
         >
 
           <h1
-            style={formTitleStyle}
+            style={
+              formTitleStyle
+            }
           >
-
             Customer Identity
-
           </h1>
 
-          <p
-            style={formSubtitleStyle}
-          >
 
+          <p
+            style={
+              formSubtitleStyle
+            }
+          >
             Create the customer's permanent
             FINORA digital identity.
-
           </p>
 
         </header>
 
-        {/* ===============================================
-            PHOTO
-        =============================================== */}
 
         <div
-          style={photoSectionStyle}
-        >
+  style={{
+    ...photoSectionStyle,
+
+    "--finora-theme-brand-accent":
+      theme.colors.brand.accent,
+
+    "--finora-theme-brand-accent-soft":
+      theme.colors.brand.accentSoft,
+  } as React.CSSProperties}
+>
 
           <CustomerPhotoUploader
 
@@ -560,12 +601,11 @@ if (
 
         </div>
 
-        {/* ===============================================
-            FORM
-        =============================================== */}
 
         <div
-          style={formBodyStyle}
+          style={
+            formBodyStyle
+          }
         >
 
           <IdentityForm
@@ -584,48 +624,13 @@ if (
 
       </main>
 
-      {/* =================================================
-          RIGHT — LIVE BRANCH PREVIEW
-      ================================================= */}
-
-      <aside
-        style={rightPanelStyle}
-      >
-
-        <div
-          style={previewHolderStyle}
-        >
-
-          <IdentityPreviewCard
-
-            customerName={
-              displayCustomerName
-            }
-
-            customerId={
-              state.customerId
-            }
-
-            businessName={
-              state.businessName
-            }
-
-            branchName={
-              state.branchName
-            }
-
-            imageUrl={
-              state.photoUrl
-            }
-
-          />
-
-        </div>
-
-      </aside>
-
     </section>
 
   );
 
 }
+
+
+/* ===========================================================
+   END
+=========================================================== */

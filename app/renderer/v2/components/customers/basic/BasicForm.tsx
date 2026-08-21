@@ -1,354 +1,836 @@
 /* ===========================================================
-FINORA ENTERPRISE OS™
+   FINORA ENTERPRISE OS™
 
-CUSTOMER BASIC INFORMATION™
+   CUSTOMER BASIC INFORMATION™
 
-STEP 2 — PERSONAL INFORMATION
+   STEP 2 — PERSONAL INFORMATION
 
-Version     : 2.0
-Phase       : Phase 2
-Architecture: Enterprise
-Status      : Production
+   Version     : 3.0
+   Phase       : Phase 2
+   Architecture: Enterprise
+   Status      : Production
+
+   RESPONSIBILITY:
+   - Controlled customer personal information fields
+   - Education
+   - Marital status
+   - Father / Spouse name
+   - Spouse name
+
+   ARCHITECTURE:
+   - Responsive engine owns responsive token resolution
+   - Presentation styles own visual presentation
+   - Lucide owns field icons
+   - No emojis
+   - No viewport detection
+   - No business logic
+=========================================================== */
+
+
+/* ===========================================================
+   IMPORTS
 =========================================================== */
 
 import type {
   CSSProperties,
 } from "react";
 
+
+import {
+  GraduationCap,
+  HeartHandshake,
+  UserRound,
+  UsersRound,
+} from "lucide-react";
+
+
 /* ===========================================================
-TYPES
+   RESPONSIVE ENGINE
+=========================================================== */
+
+import {
+  useBasicFormResponsive,
+  createBasicFormPageStyle,
+} from "../../../utils/responsive/customers/basicform";
+
+
+/* ===========================================================
+   PRESENTATION STYLES
+=========================================================== */
+
+import {
+  createBasicFormRootStyle,
+  createBasicFormLabelStyle,
+  createBasicFormRequiredStyle,
+  createBasicFormInputStyle,
+  createBasicFormSelectStyle,
+  createBasicFormOptionStyle,
+  createBasicFormIconStyle,
+  createBasicFormInputWrapperStyle,
+  createBasicFormIconInputStyle,
+} from "./BasicForm.styles";
+
+
+/* ===========================================================
+   TYPES
 =========================================================== */
 
 export interface BasicFormData {
-  fatherOrSpouseName: string;
-  education: string;
-  maritalStatus: string;
-  spouseName: string;
+
+  fatherOrSpouseName:
+    string;
+
+  education:
+    string;
+
+  maritalStatus:
+    string;
+
+  spouseName:
+    string;
+
 }
+
 
 interface BasicFormProps {
-  value: BasicFormData;
+
+  value:
+    BasicFormData;
 
   onChange: (
-    field: keyof BasicFormData,
-    value: string,
+    field:
+      keyof BasicFormData,
+    value:
+      string,
   ) => void;
+
 }
 
-/* ===========================================================
-STYLES
-=========================================================== */
-
-const gridStyle: CSSProperties = {
-  width: "100%",
-  display: "grid",
-  gridTemplateColumns: "repeat(4,minmax(0,1fr))",
-  gap: "14px",
-};
-
-const fieldStyle: CSSProperties = {
-  minWidth: 0,
-  display: "flex",
-  flexDirection: "column",
-  gap: "5px",
-};
-
-const labelStyle: CSSProperties = {
-  color: "rgba(255,255,255,.68)",
-  fontSize: "10px",
-  fontWeight: 600,
-  letterSpacing: ".45px",
-  textTransform: "uppercase",
-};
-
-const requiredStyle: CSSProperties = {
-  color: "#D4AF37",
-  marginLeft: "2px",
-};
-
-const inputStyle: CSSProperties = {
-  width: "100%",
-  height: "38px",
-  padding: "0 10px",
-  boxSizing: "border-box",
-  borderRadius: "8px",
-  border: "1px solid rgba(214,176,106,.22)",
-  outline: "none",
-  background: "rgba(255,255,255,.055)",
-  color: "#F8FAFC",
-  fontSize: "11px",
-  fontWeight: 500,
-};
-
-const selectStyle: CSSProperties = {
-  ...inputStyle,
-  cursor: "pointer",
-};
 
 /* ===========================================================
-DROPDOWN OPTION STYLE
-
-Same visual language as RelationshipSelector.
-This prevents the native white option panel from
-breaking the FINORA Enterprise dark theme.
-=========================================================== */
-
-const optionStyle: CSSProperties = {
-  background: "#43291D",
-  color: "#F8FAFC",
-  fontSize: "11px",
-  fontWeight: 500,
-};
-
-/* ===========================================================
-LABEL
+   LABEL
 =========================================================== */
 
 function FieldLabel({
+
   children,
+
   required = false,
+
 }: {
-  children: string;
-  required?: boolean;
+
+  children:
+    string;
+
+  required?:
+    boolean;
+
 }) {
+
+  const {
+    basicFormTokens,
+  } =
+    useBasicFormResponsive();
+
+
+  const labelStyle =
+    createBasicFormLabelStyle(
+      basicFormTokens,
+    );
+
+
+  const requiredStyle =
+    createBasicFormRequiredStyle();
+
+
   return (
-    <label style={labelStyle}>
+
+    <span
+      style={
+        labelStyle
+      }
+    >
+
       {children}
 
       {required && (
-        <span style={requiredStyle}>
+
+        <span
+          style={
+            requiredStyle
+          }
+        >
           *
         </span>
+
       )}
-    </label>
+
+    </span>
+
   );
+
 }
 
+
 /* ===========================================================
-COMPONENT
+   COMPONENT
 =========================================================== */
 
 export default function BasicForm({
+
   value,
+
   onChange,
+
 }: BasicFormProps) {
+
+
+  /* =========================================================
+     RESPONSIVE ENGINE
+  ========================================================= */
+
+  const {
+    basicFormTokens,
+  } =
+    useBasicFormResponsive();
+
+
+  /* =========================================================
+     ROOT STYLE
+  ========================================================= */
+
+  const rootStyle:
+    CSSProperties =
+    createBasicFormRootStyle(
+      basicFormTokens,
+    );
+
+
+  /* =========================================================
+     PAGE STYLE
+  ========================================================= */
+
+  const pageStyle:
+    CSSProperties =
+    createBasicFormPageStyle(
+      basicFormTokens,
+    );
+
+
+  /* =========================================================
+     FIELD GRID
+  ========================================================= */
+
+  const fieldGridStyle:
+    CSSProperties = {
+
+    width:
+      "100%",
+
+    minWidth:
+      0,
+
+    display:
+      "grid",
+
+    gridTemplateColumns:
+      "repeat(4, minmax(0, 1fr))",
+
+    columnGap:
+      `${basicFormTokens.columnGap}px`,
+
+    boxSizing:
+      "border-box",
+
+  };
+
+
+  /* =========================================================
+     FIELD STYLE
+  ========================================================= */
+
+  const fieldStyle:
+    CSSProperties = {
+
+    width:
+      "100%",
+
+    minWidth:
+      0,
+
+    display:
+      "flex",
+
+    flexDirection:
+      "column",
+
+    gap:
+      `${basicFormTokens.fieldGap}px`,
+
+    boxSizing:
+      "border-box",
+
+  };
+
+
+  /* =========================================================
+     INPUT STYLE
+  ========================================================= */
+
+  const inputStyle:
+    CSSProperties =
+    createBasicFormInputStyle(
+      basicFormTokens,
+    );
+
+
+  /* =========================================================
+     SELECT STYLE
+  ========================================================= */
+
+  const selectStyle:
+    CSSProperties =
+    createBasicFormSelectStyle(
+      basicFormTokens,
+    );
+
+
+  /* =========================================================
+     OPTION STYLE
+  ========================================================= */
+
+  const optionStyle:
+    CSSProperties =
+    createBasicFormOptionStyle(
+      basicFormTokens,
+    );
+
+
+  /* =========================================================
+     ICON STYLE
+  ========================================================= */
+
+  const iconStyle:
+    CSSProperties =
+    createBasicFormIconStyle(
+      basicFormTokens,
+    );
+
+
+  /* =========================================================
+     INPUT WRAPPER
+  ========================================================= */
+
+  const inputWrapperStyle:
+    CSSProperties =
+    createBasicFormInputWrapperStyle();
+
+
+  /* =========================================================
+     ICON INPUT
+  ========================================================= */
+
+  const iconInputStyle:
+    CSSProperties =
+    createBasicFormIconInputStyle(
+      basicFormTokens,
+    );
+
+
+  /* =========================================================
+     UI
+  ========================================================= */
+
   return (
-    <div style={gridStyle}>
 
-      {/* =================================================
-          FATHER / SPOUSE
-      ================================================= */}
+    <section
+      style={
+        rootStyle
+      }
+    >
 
-      <div style={fieldStyle}>
+      <div
+        style={
+          pageStyle
+        }
+      >
 
-        <FieldLabel required>
-          Father / Spouse Name
-        </FieldLabel>
-
-        <input
-          style={inputStyle}
-          value={value.fatherOrSpouseName}
-          placeholder="Enter father or spouse name"
-          onChange={(event) =>
-            onChange(
-              "fatherOrSpouseName",
-              event.target.value,
-            )
+        <div
+          style={
+            fieldGridStyle
           }
-          aria-label="Father or Spouse Name"
-        />
-
-      </div>
-
-      {/* =================================================
-          EDUCATION
-      ================================================= */}
-
-      <div style={fieldStyle}>
-
-        <FieldLabel>
-          Education
-        </FieldLabel>
-
-        <select
-          style={selectStyle}
-          value={value.education}
-          onChange={(event) =>
-            onChange(
-              "education",
-              event.target.value,
-            )
-          }
-          aria-label="Education"
         >
 
-          <option
-            value=""
-            style={optionStyle}
-          >
-            Select education
-          </option>
+          {/* =================================================
+              FATHER / SPOUSE
+          ================================================= */}
 
-          <option
-            value="No Formal Education"
-            style={optionStyle}
+          <div
+            style={
+              fieldStyle
+            }
           >
-            No Formal Education
-          </option>
 
-          <option
-            value="Primary"
-            style={optionStyle}
+            <FieldLabel
+              required
+            >
+              Father / Spouse Name
+            </FieldLabel>
+
+
+            <div
+              style={
+                inputWrapperStyle
+              }
+            >
+
+              <UsersRound
+                style={{
+                  ...iconStyle,
+
+                  position:
+                    "absolute",
+
+                  left:
+                    `${basicFormTokens.inputPaddingX}px`,
+
+                  top:
+                    "50%",
+
+                  transform:
+                    "translateY(-50%)",
+
+                  pointerEvents:
+                    "none",
+                }}
+                aria-hidden="true"
+              />
+
+
+              <input
+                style={
+                  iconInputStyle
+                }
+
+                value={
+                  value.fatherOrSpouseName
+                }
+
+                placeholder=
+                  "Enter father or spouse name"
+
+                onChange={(
+                  event,
+                ) =>
+                  onChange(
+                    "fatherOrSpouseName",
+                    event.target.value,
+                  )
+                }
+
+                aria-label=
+                  "Father or Spouse Name"
+              />
+
+            </div>
+
+          </div>
+
+
+          {/* =================================================
+              EDUCATION
+          ================================================= */}
+
+          <div
+            style={
+              fieldStyle
+            }
           >
-            Primary
-          </option>
 
-          <option
-            value="Secondary"
-            style={optionStyle}
+            <FieldLabel>
+              Education
+            </FieldLabel>
+
+
+            <div
+              style={
+                inputWrapperStyle
+              }
+            >
+
+              <GraduationCap
+                style={{
+                  ...iconStyle,
+
+                  position:
+                    "absolute",
+
+                  left:
+                    `${basicFormTokens.inputPaddingX}px`,
+
+                  top:
+                    "50%",
+
+                  transform:
+                    "translateY(-50%)",
+
+                  pointerEvents:
+                    "none",
+                }}
+                aria-hidden="true"
+              />
+
+
+              <select
+                style={{
+                  ...selectStyle,
+
+                  paddingLeft:
+                    `${basicFormTokens.inputPaddingX + basicFormTokens.iconSize + basicFormTokens.iconOffset}px`,
+                }}
+
+                value={
+                  value.education
+                }
+
+                onChange={(
+                  event,
+                ) =>
+                  onChange(
+                    "education",
+                    event.target.value,
+                  )
+                }
+
+                aria-label=
+                  "Education"
+              >
+
+                <option
+                  value=""
+                  style={
+                    optionStyle
+                  }
+                >
+                  Select education
+                </option>
+
+
+                <option
+                  value="No Formal Education"
+                  style={
+                    optionStyle
+                  }
+                >
+                  No Formal Education
+                </option>
+
+
+                <option
+                  value="Primary"
+                  style={
+                    optionStyle
+                  }
+                >
+                  Primary
+                </option>
+
+
+                <option
+                  value="Secondary"
+                  style={
+                    optionStyle
+                  }
+                >
+                  Secondary
+                </option>
+
+
+                <option
+                  value="Intermediate"
+                  style={
+                    optionStyle
+                  }
+                >
+                  Intermediate
+                </option>
+
+
+                <option
+                  value="Diploma"
+                  style={
+                    optionStyle
+                  }
+                >
+                  Diploma
+                </option>
+
+
+                <option
+                  value="Graduate"
+                  style={
+                    optionStyle
+                  }
+                >
+                  Graduate
+                </option>
+
+
+                <option
+                  value="Post Graduate"
+                  style={
+                    optionStyle
+                  }
+                >
+                  Post Graduate
+                </option>
+
+
+                <option
+                  value="Doctorate"
+                  style={
+                    optionStyle
+                  }
+                >
+                  Doctorate
+                </option>
+
+
+                <option
+                  value="Other"
+                  style={
+                    optionStyle
+                  }
+                >
+                  Other
+                </option>
+
+              </select>
+
+            </div>
+
+          </div>
+
+
+          {/* =================================================
+              MARITAL STATUS
+          ================================================= */}
+
+          <div
+            style={
+              fieldStyle
+            }
           >
-            Secondary
-          </option>
 
-          <option
-            value="Intermediate"
-            style={optionStyle}
+            <FieldLabel>
+              Marital Status
+            </FieldLabel>
+
+
+            <div
+              style={
+                inputWrapperStyle
+              }
+            >
+
+              <HeartHandshake
+                style={{
+                  ...iconStyle,
+
+                  position:
+                    "absolute",
+
+                  left:
+                    `${basicFormTokens.inputPaddingX}px`,
+
+                  top:
+                    "50%",
+
+                  transform:
+                    "translateY(-50%)",
+
+                  pointerEvents:
+                    "none",
+                }}
+                aria-hidden="true"
+              />
+
+
+              <select
+                style={{
+                  ...selectStyle,
+
+                  paddingLeft:
+                    `${basicFormTokens.inputPaddingX + basicFormTokens.iconSize + basicFormTokens.iconOffset}px`,
+                }}
+
+                value={
+                  value.maritalStatus
+                }
+
+                onChange={(
+                  event,
+                ) =>
+                  onChange(
+                    "maritalStatus",
+                    event.target.value,
+                  )
+                }
+
+                aria-label=
+                  "Marital Status"
+              >
+
+                <option
+                  value=""
+                  style={
+                    optionStyle
+                  }
+                >
+                  Select marital status
+                </option>
+
+
+                <option
+                  value="Single"
+                  style={
+                    optionStyle
+                  }
+                >
+                  Single
+                </option>
+
+
+                <option
+                  value="Married"
+                  style={
+                    optionStyle
+                  }
+                >
+                  Married
+                </option>
+
+
+                <option
+                  value="Widowed"
+                  style={
+                    optionStyle
+                  }
+                >
+                  Widowed
+                </option>
+
+
+                <option
+                  value="Divorced"
+                  style={
+                    optionStyle
+                  }
+                >
+                  Divorced
+                </option>
+
+
+                <option
+                  value="Separated"
+                  style={
+                    optionStyle
+                  }
+                >
+                  Separated
+                </option>
+
+              </select>
+
+            </div>
+
+          </div>
+
+
+          {/* =================================================
+              SPOUSE NAME
+          ================================================= */}
+
+          <div
+            style={
+              fieldStyle
+            }
           >
-            Intermediate
-          </option>
 
-          <option
-            value="Diploma"
-            style={optionStyle}
-          >
-            Diploma
-          </option>
+            <FieldLabel>
+              Spouse Name
+            </FieldLabel>
 
-          <option
-            value="Graduate"
-            style={optionStyle}
-          >
-            Graduate
-          </option>
 
-          <option
-            value="Post Graduate"
-            style={optionStyle}
-          >
-            Post Graduate
-          </option>
+            <div
+              style={
+                inputWrapperStyle
+              }
+            >
 
-          <option
-            value="Doctorate"
-            style={optionStyle}
-          >
-            Doctorate
-          </option>
+              <UserRound
+                style={{
+                  ...iconStyle,
 
-          <option
-            value="Other"
-            style={optionStyle}
-          >
-            Other
-          </option>
+                  position:
+                    "absolute",
 
-        </select>
+                  left:
+                    `${basicFormTokens.inputPaddingX}px`,
+
+                  top:
+                    "50%",
+
+                  transform:
+                    "translateY(-50%)",
+
+                  pointerEvents:
+                    "none",
+                }}
+                aria-hidden="true"
+              />
+
+
+              <input
+                style={
+                  iconInputStyle
+                }
+
+                value={
+                  value.spouseName
+                }
+
+                placeholder=
+                  "Enter spouse name"
+
+                onChange={(
+                  event,
+                ) =>
+                  onChange(
+                    "spouseName",
+                    event.target.value,
+                  )
+                }
+
+                aria-label=
+                  "Spouse Name"
+              />
+
+            </div>
+
+          </div>
+
+        </div>
 
       </div>
 
-      {/* =================================================
-          MARITAL STATUS
-      ================================================= */}
+    </section>
 
-      <div style={fieldStyle}>
-
-        <FieldLabel>
-          Marital Status
-        </FieldLabel>
-
-        <select
-          style={selectStyle}
-          value={value.maritalStatus}
-          onChange={(event) =>
-            onChange(
-              "maritalStatus",
-              event.target.value,
-            )
-          }
-          aria-label="Marital Status"
-        >
-
-          <option
-            value=""
-            style={optionStyle}
-          >
-            Select marital status
-          </option>
-
-          <option
-            value="Single"
-            style={optionStyle}
-          >
-            Single
-          </option>
-
-          <option
-            value="Married"
-            style={optionStyle}
-          >
-            Married
-          </option>
-
-          <option
-            value="Widowed"
-            style={optionStyle}
-          >
-            Widowed
-          </option>
-
-          <option
-            value="Divorced"
-            style={optionStyle}
-          >
-            Divorced
-          </option>
-
-          <option
-            value="Separated"
-            style={optionStyle}
-          >
-            Separated
-          </option>
-
-        </select>
-
-      </div>
-
-      {/* =================================================
-          SPOUSE NAME
-      ================================================= */}
-
-      <div style={fieldStyle}>
-
-        <FieldLabel>
-          Spouse Name
-        </FieldLabel>
-
-        <input
-          style={inputStyle}
-          value={value.spouseName}
-          placeholder="Enter spouse name"
-          onChange={(event) =>
-            onChange(
-              "spouseName",
-              event.target.value,
-            )
-          }
-          aria-label="Spouse Name"
-        />
-
-      </div>
-
-    </div>
   );
+
 }
+
+
+/* ===========================================================
+   END
+=========================================================== */

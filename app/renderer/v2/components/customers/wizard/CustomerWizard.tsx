@@ -48,6 +48,9 @@ import CustomerWizardNavigation
 import CustomerWizardProgress
   from "./progress/CustomerWizardProgress";
 
+import Step1IdentityAndBasic
+  from "./steps/Step1IdentityAndBasic";
+
 import Step1Identity
   from "./steps/Step1Identity";
 
@@ -1197,22 +1200,21 @@ export default function CustomerWizard({
 
         case 1:
 
-          return (
+  return (
 
-            <Step1Identity
+    <Step1IdentityAndBasic
 
-              initialData={
-                wizardData
-              }
+      wizardData={
+        wizardData
+      }
 
-              updateWizardData={
-                updateWizardData
-              }
+      updateWizardData={
+        updateWizardData
+      }
 
-            />
+    />
 
-          );
-
+  );
 
         /* ---------------------------------------------------
            STEP 2

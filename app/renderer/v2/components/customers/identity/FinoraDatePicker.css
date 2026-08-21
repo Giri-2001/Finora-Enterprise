@@ -1,0 +1,697 @@
+/* ===========================================================
+   FINORA ENTERPRISE OS™
+
+   FINORA DATE PICKER™
+
+   THEME:
+   - Visual colours come only from FINORA Theme Engine
+   - No local colour palette
+   - No hard-coded theme colours
+   - Theme changes automatically with Global Theme Selector
+
+   RESPONSIVE:
+   - Geometry remains controlled by existing component/
+     Responsive Engine
+=========================================================== */
+
+
+/* ===========================================================
+   ROOT
+=========================================================== */
+
+.finora-date-picker-root {
+  position: relative;
+  width: 100%;
+  min-width: 0;
+  overflow: visible;
+}
+
+
+/* ===========================================================
+   INPUT
+=========================================================== */
+
+.finora-date-picker-input-wrap {
+  position: relative;
+  width: 100%;
+  min-width: 0;
+}
+
+.finora-date-picker-input {
+  width: 100%;
+  height: 38px;
+  box-sizing: border-box;
+  padding: 0 72px 0 12px;
+
+  border:
+    1px solid
+    var(--finora-theme-border-default);
+
+  border-radius: 8px;
+
+  outline: none;
+
+  background:
+    var(--finora-theme-surface-muted);
+
+  color:
+    var(--finora-theme-text-primary);
+
+  font:
+    600 13px/1.2
+    var(--finora-theme-font-family, Inter, system-ui, sans-serif);
+
+  cursor: pointer;
+}
+
+.finora-date-picker-input:focus {
+  border-color:
+    var(--finora-theme-brand-accent);
+
+  box-shadow:
+    0 0 0 1px
+    var(--finora-theme-brand-accent);
+}
+
+.finora-date-picker-input::placeholder {
+  color:
+    var(--finora-theme-text-muted);
+}
+
+
+/* ===========================================================
+   AGE
+=========================================================== */
+
+.finora-date-picker-age {
+  position: absolute;
+  right: 34px;
+  top: 50%;
+
+  transform:
+    translateY(-50%);
+
+  color:
+    var(--finora-theme-brand-accent);
+
+  font:
+    800 11px/1
+    var(--finora-theme-font-family, Inter, system-ui, sans-serif);
+
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+
+/* ===========================================================
+   CALENDAR ICON
+=========================================================== */
+
+.finora-date-picker-icon {
+  position: absolute;
+
+  right: 10px;
+  top: 50%;
+
+  width: 18px;
+  height: 18px;
+
+  transform:
+    translateY(-50%);
+
+  color:
+    var(--finora-theme-brand-accent);
+
+  pointer-events: none;
+}
+
+
+/* ===========================================================
+   POPUP
+=========================================================== */
+
+.finora-date-picker-popup {
+  position: absolute;
+
+  top:
+    calc(100% + 4px);
+
+  left: 0;
+
+  width: 100%;
+  max-width: 100%;
+
+  box-sizing: border-box;
+
+  padding: 7px;
+
+  border:
+    1px solid
+    var(--finora-theme-border-strong);
+
+  border-radius: 9px;
+
+  background:
+    var(--finora-theme-surface);
+
+  color:
+    var(--finora-theme-text-primary);
+
+  box-shadow:
+    0 10px 28px
+    var(--finora-theme-overlay-shadow);
+
+  z-index: 1000;
+
+  font-family:
+    var(--finora-theme-font-family, Inter, system-ui, sans-serif);
+}
+
+
+/* ===========================================================
+   CHROMIUM / ELECTRON ANCHOR POSITIONING
+=========================================================== */
+
+@supports (anchor-name: --finora-date-input) {
+
+  .finora-date-picker-input {
+    anchor-name: --finora-date-input;
+  }
+
+  .finora-date-picker-popup {
+    position: fixed;
+
+    top:
+      anchor(bottom);
+
+    left:
+      anchor(left);
+
+    width:
+      anchor-size(width);
+
+    margin-top: 4px;
+  }
+
+}
+
+
+/* ===========================================================
+   HEADER
+=========================================================== */
+
+.finora-date-picker-header {
+  display: grid;
+
+  grid-template-columns:
+    28px minmax(0, 1fr) 72px 28px;
+
+  align-items: center;
+
+  gap: 4px;
+}
+
+
+/* ===========================================================
+   NAVIGATION + SELECT BUTTONS
+=========================================================== */
+
+.finora-date-picker-nav,
+.finora-date-picker-select {
+  height: 28px;
+
+  box-sizing: border-box;
+
+  border:
+    1px solid
+    var(--finora-theme-border-default);
+
+  border-radius: 7px;
+
+  background:
+    var(--finora-theme-surface-muted);
+
+  color:
+    var(--finora-theme-text-primary);
+
+  font:
+    800 12px/1
+    var(--finora-theme-font-family, Inter, system-ui, sans-serif);
+}
+
+
+/* ===========================================================
+   NAVIGATION BUTTON
+=========================================================== */
+
+.finora-date-picker-nav {
+  display: inline-flex;
+
+  align-items: center;
+  justify-content: center;
+
+  padding: 0;
+
+  color:
+    var(--finora-theme-brand-accent);
+
+  cursor: pointer;
+}
+
+
+/* ===========================================================
+   HOVER
+=========================================================== */
+
+.finora-date-picker-nav:hover,
+.finora-date-picker-select:hover {
+
+  border-color:
+    var(--finora-theme-brand-accent);
+
+  background:
+    var(--finora-theme-brand-accent-soft);
+
+}
+
+
+/* ===========================================================
+   DROPDOWN WRAPPER
+=========================================================== */
+
+.finora-date-picker-dropdown-wrap {
+  position: relative;
+  min-width: 0;
+}
+
+
+/* ===========================================================
+   SELECT
+=========================================================== */
+
+.finora-date-picker-select {
+  width: 100%;
+
+  display: flex;
+
+  align-items: center;
+  justify-content: space-between;
+
+  gap: 3px;
+
+  padding: 0 7px;
+
+  cursor: pointer;
+
+  text-align: left;
+}
+
+
+/* ===========================================================
+   YEAR SELECT
+=========================================================== */
+
+.finora-date-picker-year-select {
+  width: 72px;
+}
+
+
+/* ===========================================================
+   DROPDOWN
+=========================================================== */
+
+.finora-date-picker-dropdown {
+  position: absolute;
+
+  top:
+    calc(100% + 3px);
+
+  left: 0;
+
+  width: 100%;
+
+  max-height: 150px;
+
+  box-sizing: border-box;
+
+  overflow-x: hidden;
+  overflow-y: auto;
+
+  padding: 3px;
+
+  border:
+    1px solid
+    var(--finora-theme-border-strong);
+
+  border-radius: 7px;
+
+  background:
+    var(--finora-theme-surface-muted);
+
+  box-shadow:
+    0 10px 24px
+    var(--finora-theme-overlay-shadow);
+
+  z-index: 1100;
+
+  scrollbar-width: none;
+}
+
+
+/* ===========================================================
+   HIDE DROPDOWN SCROLLBAR
+=========================================================== */
+
+.finora-date-picker-dropdown::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+}
+
+
+/* ===========================================================
+   MONTH LIST
+=========================================================== */
+
+.finora-date-picker-month-list {
+  max-height: 210px;
+}
+
+
+/* ===========================================================
+   DROPDOWN OPTION
+=========================================================== */
+
+.finora-date-picker-option {
+  width: 100%;
+  height: 25px;
+
+  display: flex;
+
+  align-items: center;
+  justify-content: flex-start;
+
+  box-sizing: border-box;
+
+  padding: 0 8px;
+
+  border: 0;
+  border-radius: 5px;
+
+  background: transparent;
+
+  color:
+    var(--finora-theme-text-primary);
+
+  font:
+    650 12px/1
+    var(--finora-theme-font-family, Inter, system-ui, sans-serif);
+
+  cursor: pointer;
+
+  text-align: left;
+}
+
+
+/* ===========================================================
+   OPTION HOVER
+=========================================================== */
+
+.finora-date-picker-option:hover {
+
+  background:
+    var(--finora-theme-brand-accent-soft);
+
+  color:
+    var(--finora-theme-text-primary);
+
+}
+
+
+/* ===========================================================
+   SELECTED OPTION
+=========================================================== */
+
+.finora-date-picker-option.is-selected {
+
+  background:
+    var(--finora-theme-brand-accent);
+
+  color:
+    var(--finora-theme-text-inverse);
+
+  font-weight: 700;
+}
+
+
+/* ===========================================================
+   SELECTED OPTION HOVER
+=========================================================== */
+
+.finora-date-picker-option.is-selected:hover {
+
+  background:
+    var(--finora-theme-brand-accent);
+
+  color:
+    var(--finora-theme-text-inverse);
+
+}
+
+
+/* ===========================================================
+   WEEKDAYS + DAYS GRID
+=========================================================== */
+
+.finora-date-picker-weekdays,
+.finora-date-picker-days {
+
+  display: grid;
+
+  grid-template-columns:
+    repeat(7, minmax(0, 1fr));
+
+  gap: 2px;
+}
+
+
+/* ===========================================================
+   WEEKDAYS
+=========================================================== */
+
+.finora-date-picker-weekdays {
+
+  margin-top: 7px;
+  margin-bottom: 2px;
+}
+
+.finora-date-picker-weekdays span {
+
+  height: 17px;
+
+  display: flex;
+
+  align-items: center;
+  justify-content: center;
+
+  color:
+    var(--finora-theme-text-primary);
+
+  font:
+    900 9px/1
+    var(--finora-theme-font-family, Inter, system-ui, sans-serif);
+}
+
+
+/* ===========================================================
+   DAY BUTTON
+=========================================================== */
+
+.finora-date-picker-day {
+
+  width: 100%;
+  height: 26px;
+
+  min-width: 0;
+
+  box-sizing: border-box;
+
+  border:
+    1px solid transparent;
+
+  border-radius: 5px;
+
+  background: transparent;
+
+  color:
+    var(--finora-theme-text-primary);
+
+  font:
+    650 11px/1
+    var(--finora-theme-font-family, Inter, system-ui, sans-serif);
+
+  cursor: pointer;
+}
+
+
+/* ===========================================================
+   DAY HOVER
+=========================================================== */
+
+.finora-date-picker-day:hover:not(:disabled) {
+
+  background:
+    var(--finora-theme-brand-accent-soft);
+
+}
+
+
+/* ===========================================================
+   SELECTED DAY
+=========================================================== */
+
+.finora-date-picker-day.is-selected {
+
+  border-color:
+    var(--finora-theme-brand-accent);
+
+  background:
+    var(--finora-theme-brand-accent-soft);
+
+  color:
+    var(--finora-theme-text-primary);
+
+  font-weight: 900;
+}
+
+
+/* ===========================================================
+   SELECTED DAY HOVER
+=========================================================== */
+
+.finora-date-picker-day.is-selected:hover {
+
+  background:
+    var(--finora-theme-brand-accent-soft);
+
+  color:
+    var(--finora-theme-text-primary);
+
+}
+
+
+/* ===========================================================
+   TODAY
+=========================================================== */
+
+.finora-date-picker-day.is-today:not(.is-selected) {
+
+  border-color:
+    var(--finora-theme-brand-accent);
+
+}
+
+
+/* ===========================================================
+   OUTSIDE MONTH
+=========================================================== */
+
+.finora-date-picker-day.is-outside {
+
+  color:
+    var(--finora-theme-text-muted);
+
+}
+
+
+/* ===========================================================
+   FUTURE DATE
+=========================================================== */
+
+.finora-date-picker-day.is-future {
+
+  opacity: .38;
+
+  cursor: not-allowed;
+}
+
+
+/* ===========================================================
+   FOOTER
+=========================================================== */
+
+.finora-date-picker-footer {
+
+  display: flex;
+
+  align-items: center;
+  justify-content: space-between;
+
+  margin-top: 6px;
+
+  padding-top: 6px;
+
+  border-top:
+    1px solid
+    var(--finora-theme-border-default);
+}
+
+
+/* ===========================================================
+   FOOTER BUTTON
+=========================================================== */
+
+.finora-date-picker-footer-btn {
+
+  border: 0;
+
+  background: transparent;
+
+  color:
+    var(--finora-theme-text-primary);
+
+  font:
+    800 10px/1
+    var(--finora-theme-font-family, Inter, system-ui, sans-serif);
+
+  cursor: pointer;
+
+  padding: 2px 0;
+}
+
+
+/* ===========================================================
+   FOOTER HOVER
+=========================================================== */
+
+.finora-date-picker-footer-btn:hover {
+
+  color:
+    var(--finora-theme-brand-accent);
+
+}
+
+
+/* ===========================================================
+   TODAY ACTION
+=========================================================== */
+
+.finora-date-picker-footer-btn.is-today-action {
+
+  color:
+    var(--finora-theme-brand-accent);
+
+}
+
+.finora-date-picker-title {
+  text-align: center;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1;
+  margin-bottom: 7px;
+  color: var(--finora-datepicker-text);
+}
+
+
+/* ===========================================================
+   END
+=========================================================== */

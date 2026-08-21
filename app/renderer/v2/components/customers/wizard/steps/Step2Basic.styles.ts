@@ -4,318 +4,453 @@
    CUSTOMER WIZARD
    STEP 2 — BASIC DETAILS
 
-   PRESENTATION STYLES
+   Version     : 3.0
+   Phase       : Phase 2
+   Architecture: Enterprise
+   Status      : Production
+
+   RESPONSIBILITY:
+
+   - Presentation styling for Step 2 sections
+   - Theme-driven visual presentation
+   - No local breakpoints
+   - No viewport detection
+   - No emoji styling
+   - No business logic
+   - No responsive geometry decisions
+=========================================================== */
+
+
+/* ===========================================================
+   IMPORTS
 =========================================================== */
 
 import type {
   CSSProperties,
 } from "react";
 
+
 /* ===========================================================
    PAGE
 =========================================================== */
 
-export const pageStyle: CSSProperties = {
-  width: "100%",
-  height: "100%",
+export const pageStyle:
+  CSSProperties = {
 
-  display: "flex",
-  flexDirection: "column",
+  width:
+    "100%",
 
-  boxSizing: "border-box",
+  height:
+    "100%",
 
-  /*
-   * No top page heading here.
-   * Step 2 directly presents the three premium sections.
-   */
+  display:
+    "flex",
+
+  flexDirection:
+    "column",
+
+  boxSizing:
+    "border-box",
 
   padding:
-    "10px 18px 4px",
+    "var(--finora-step2-page-padding, 10px 18px 4px)",
 
-  overflow: "hidden",
+  overflow:
+    "hidden",
 
-  color: "#F8FAFC",
-
-  /* =========================================================
-     FINORA MASTER SMART WALL BACKGROUND
-
-     Exact background from CustomerSmartWall.
-     Shared FINORA enterprise background.
-  ========================================================= */
+  color:
+    "var(--finora-theme-text-primary, #F8FAFC)",
 
   background:
-    `
-    linear-gradient(
-      rgba(18,12,8,.35),
-      rgba(18,12,8,.35)
-    ),
+    "var(--finora-theme-page-background)",
 
-    linear-gradient(
-      90deg,
-      #3A2115 0%,
-      #5B3420 25%,
-      #402417 50%,
-      #5B3420 75%,
-      #321B12 100%
-    )
-    `,
 };
+
 
 /* ===========================================================
    PAGE HEADER
+
    Kept for compatibility.
-   Step2Basic no longer renders this header.
+   Step2Basic currently does not render this header.
 =========================================================== */
 
-export const pageHeaderStyle: CSSProperties = {
-  display: "none",
+export const pageHeaderStyle:
+  CSSProperties = {
+
+  display:
+    "none",
+
 };
+
 
 /* ===========================================================
    PAGE TITLE
 =========================================================== */
 
-export const pageTitleStyle: CSSProperties = {
-  margin: 0,
+export const pageTitleStyle:
+  CSSProperties = {
 
-  color: "#F3E4C2",
+  margin:
+    0,
 
-  fontSize: "18px",
+  color:
+    "var(--finora-theme-text-heading, #F3E4C2)",
 
-  lineHeight: 1.2,
+  fontSize:
+    "var(--finora-step2-page-title-size, 18px)",
 
-  fontWeight: 600,
+  lineHeight:
+    "var(--finora-theme-line-height-tight, 1.2)",
+
+  fontWeight:
+    600,
+
 };
+
 
 /* ===========================================================
    PAGE SUBTITLE
 =========================================================== */
 
-export const pageSubtitleStyle: CSSProperties = {
+export const pageSubtitleStyle:
+  CSSProperties = {
+
   margin:
-    "4px 0 0",
+    "var(--finora-step2-page-subtitle-margin, 4px 0 0)",
 
   color:
-    "rgba(255,255,255,.48)",
+    "var(--finora-theme-text-muted, rgba(255,255,255,.48))",
 
-  fontSize: "9px",
+  fontSize:
+    "var(--finora-step2-page-subtitle-size, 9px)",
 
-  lineHeight: 1.4,
+  lineHeight:
+    "var(--finora-theme-line-height-normal, 1.4)",
+
 };
+
 
 /* ===========================================================
    CONTENT
 =========================================================== */
 
-export const contentStyle: CSSProperties = {
-  flex: 1,
+export const contentStyle:
+  CSSProperties = {
 
-  minHeight: 0,
+  flex:
+    1,
 
-  width: "100%",
+  minHeight:
+    0,
 
-  display: "grid",
+  width:
+    "100%",
+
+  display:
+    "grid",
 
   gridTemplateRows:
-    "repeat(3,minmax(0,1fr))",
+    "repeat(3, minmax(0, 1fr))",
 
-  gap: "14px",
+  gap:
+    "var(--finora-step2-section-gap, 14px)",
 
-  padding: "0 0 0",
+  padding:
+    0,
 
-  margin: 0,
+  margin:
+    0,
 
-  boxSizing: "border-box",
+  boxSizing:
+    "border-box",
 
-  overflow: "hidden",
+  overflow:
+    "hidden",
+
 };
+
 
 /* ===========================================================
    PREMIUM SECTION
 =========================================================== */
 
-export const sectionStyle: CSSProperties = {
-  minHeight: 0,
+export const sectionStyle:
+  CSSProperties = {
 
-  width: "100%",
+  minHeight:
+    0,
 
-  display: "flex",
+    height:
+  "100%",
 
-  flexDirection: "column",
+alignSelf:
+  "stretch",
 
-  boxSizing: "border-box",
+  width:
+    "100%",
+
+  display:
+    "flex",
+
+  flexDirection:
+    "column",
+
+  boxSizing:
+    "border-box",
 
   padding:
-    "13px 14px 12px",
+    "var(--finora-step2-section-padding, 13px 14px 12px)",
 
-  borderRadius: "17px",
+  borderRadius:
+    "var(--finora-theme-radius-card, 17px)",
 
   border:
-    "1.5px solid rgba(214,176,106,.34)",
+    "var(--finora-theme-border-width, 1.5px) solid var(--finora-theme-border-default, rgba(214,176,106,.34))",
 
   background:
-    "linear-gradient(145deg,rgba(255,255,255,.045),rgba(255,255,255,.018))",
+    "var(--finora-theme-surface-card, linear-gradient(145deg,rgba(255,255,255,.045),rgba(255,255,255,.018)))",
 
   boxShadow:
-    "0 10px 28px rgba(0,0,0,.12)",
+    "var(--finora-theme-shadow-card, 0 10px 28px rgba(0,0,0,.12))",
 
-  overflow: "hidden",
+  overflow:
+    "hidden",
+
 };
+
 
 /* ===========================================================
    SECTION HEADER
 =========================================================== */
 
-export const sectionHeaderStyle: CSSProperties = {
-  flexShrink: 0,
+export const sectionHeaderStyle:
+  CSSProperties = {
 
-  minHeight: "45px",
+  flexShrink:
+    0,
 
-  display: "flex",
+  minHeight:
+    "var(--finora-step2-header-min-height, 45px)",
 
-  alignItems: "center",
+  display:
+    "flex",
 
-  gap: "12px",
+  alignItems:
+    "center",
 
-  paddingBottom: "10px",
+  gap:
+    "var(--finora-step2-header-gap, 12px)",
 
-  marginBottom: "11px",
+  paddingBottom:
+    "var(--finora-step2-header-padding-bottom, 10px)",
+
+  marginBottom:
+    "var(--finora-step2-header-margin-bottom, 11px)",
 
   borderBottom:
-    "1px solid rgba(214,176,106,.20)",
+    "var(--finora-theme-border-width, 1px) solid var(--finora-theme-border-subtle, rgba(214,176,106,.20))",
 
-  boxSizing: "border-box",
+  boxSizing:
+    "border-box",
+
 };
+
 
 /* ===========================================================
    SECTION ICON
 =========================================================== */
 
-export const sectionIconStyle: CSSProperties = {
-  width: "38px",
+export const sectionIconStyle:
+  CSSProperties = {
 
-  height: "38px",
+  width:
+    "var(--finora-step2-section-icon-size, 38px)",
 
-  flexShrink: 0,
+  height:
+    "var(--finora-step2-section-icon-size, 38px)",
 
-  display: "flex",
+  flexShrink:
+    0,
 
-  alignItems: "center",
+  display:
+    "flex",
 
-  justifyContent: "center",
+  alignItems:
+    "center",
 
-  borderRadius: "50%",
+  justifyContent:
+    "center",
+
+  borderRadius:
+    "50%",
 
   border:
-    "1.5px solid rgba(214,176,106,.72)",
+    "var(--finora-theme-border-width, 1.5px) solid var(--finora-theme-brand-accent, #D4AF37)",
 
   background:
-    "rgba(0,0,0,.20)",
+    "var(--finora-theme-surface-icon, rgba(0,0,0,.20))",
 
   boxShadow:
-    "0 4px 12px rgba(0,0,0,.18)",
+    "var(--finora-theme-shadow-icon, 0 4px 12px rgba(0,0,0,.18))",
 
-  fontSize: "17px",
+  color:
+    "var(--finora-theme-brand-accent, #D4AF37)",
 
-  lineHeight: 1,
+  lineHeight:
+    1,
+
 };
+
 
 /* ===========================================================
    SECTION TITLE
 =========================================================== */
 
-export const sectionTitleStyle: CSSProperties = {
-  margin: 0,
+export const sectionTitleStyle:
+  CSSProperties = {
 
-  color: "#F3E4C2",
+  margin:
+    0,
 
-  fontSize: "18px",
+  color:
+    "var(--finora-theme-text-heading, #F3E4C2)",
 
-  lineHeight: 1.2,
+  fontSize:
+    "var(--finora-step2-section-title-size, 18px)",
 
-  fontWeight: 700,
+  lineHeight:
+    "var(--finora-theme-line-height-tight, 1.2)",
 
-  letterSpacing: ".25px",
+  fontWeight:
+    700,
+
+  letterSpacing:
+    "var(--finora-step2-section-title-spacing, .25px)",
+
 };
+
 
 /* ===========================================================
    SECTION SUBTITLE
 =========================================================== */
 
-export const sectionSubtitleStyle: CSSProperties = {
+export const sectionSubtitleStyle:
+  CSSProperties = {
+
   margin:
-    "3px 0 0",
+    "var(--finora-step2-section-subtitle-margin, 3px 0 0)",
 
   color:
-    "rgba(255,255,255,.48)",
+    "var(--finora-theme-text-muted, rgba(255,255,255,.48))",
 
-  fontSize: "12px",
+  fontSize:
+    "var(--finora-step2-section-subtitle-size, 12px)",
 
-  lineHeight: 1.35,
+  lineHeight:
+    "var(--finora-theme-line-height-normal, 1.35)",
+
 };
+
 
 /* ===========================================================
    FIELD AREA
 =========================================================== */
 
-export const fieldAreaStyle: CSSProperties = {
-  flex: 1,
+export const fieldAreaStyle:
+  CSSProperties = {
 
-  minHeight: 0,
+  flex:
+    1,
 
-  width: "100%",
+  minHeight:
+    0,
 
-  display: "flex",
+  width:
+    "100%",
 
-  alignItems: "center",
+  display:
+    "flex",
 
-  boxSizing: "border-box",
+  alignItems:
+    "center",
 
-  overflow: "hidden",
+  boxSizing:
+    "border-box",
+
+  overflow:
+    "hidden",
+
 };
+
 
 /* ===========================================================
    FOUR COLUMN GRID
 
-   Personal Information
-   Occupation Profile
+   Compatibility export only.
+
+   Actual field geometry is owned by:
+   - BasicForm
+   - OccupationCard
+
+   Those components consume the Responsive Engine.
 =========================================================== */
 
-export const fourColumnGridStyle: CSSProperties = {
-  width: "100%",
+export const fourColumnGridStyle:
+  CSSProperties = {
 
-  display: "grid",
+  width:
+    "100%",
+
+  display:
+    "grid",
 
   gridTemplateColumns:
-    "repeat(4,minmax(0,1fr))",
+    "repeat(4, minmax(0, 1fr))",
 
-  gap: "14px",
+  gap:
+    "var(--finora-form-gap)",
 
-  alignItems: "center",
+  alignItems:
+    "center",
 
-  boxSizing: "border-box",
+  boxSizing:
+    "border-box",
+
 };
+
 
 /* ===========================================================
    THREE COLUMN GRID
 
-   Family & Emergency
+   Compatibility export only.
+
+   Actual FamilyDetails geometry is owned by
+   FamilyDetails Responsive Engine.
 =========================================================== */
 
-export const threeColumnGridStyle: CSSProperties = {
-  width: "100%",
+export const threeColumnGridStyle:
+  CSSProperties = {
 
-  display: "grid",
+  width:
+    "100%",
+
+  display:
+    "grid",
 
   gridTemplateColumns:
-    "repeat(3,minmax(0,1fr))",
+    "repeat(3, minmax(0, 1fr))",
 
-  gap: "14px",
+  gap:
+    "var(--finora-form-gap)",
 
-  alignItems: "center",
+  alignItems:
+    "center",
 
-  boxSizing: "border-box",
+  boxSizing:
+    "border-box",
+
 };
+
 
 /* ===========================================================
    GOLD ACCENT
@@ -323,6 +458,15 @@ export const threeColumnGridStyle: CSSProperties = {
    Intentionally disabled.
 =========================================================== */
 
-export const sectionAccentStyle: CSSProperties = {
-  display: "none",
+export const sectionAccentStyle:
+  CSSProperties = {
+
+  display:
+    "none",
+
 };
+
+
+/* ===========================================================
+   END
+=========================================================== */

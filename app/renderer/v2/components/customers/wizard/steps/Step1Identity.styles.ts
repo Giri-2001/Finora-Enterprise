@@ -5,268 +5,514 @@
    STEP 1 — IDENTITY STUDIO™
 
    PRESENTATION STYLES
+
+   Version : 3.0
+   Status  : Production
+=========================================================== */
+
+/* ===========================================================
+   IMPORTS
 =========================================================== */
 
 import type {
   CSSProperties,
 } from "react";
 
+import type {
+  ResponsiveTokens,
+} from "../../../../utils/responsive";
+
+import type {
+  FinoraTheme,
+} from "../../../../themes/core/types";
+
 /* ===========================================================
-   PAGE
+   TYPES
 =========================================================== */
 
-export const pageStyle: CSSProperties = {
-  width: "100%",
-  height: "100%",
+export interface Step1IdentityStyles {
 
-  display: "grid",
+  pageStyle:
+    CSSProperties;
 
-  gridTemplateColumns:
-    "minmax(180px, 20%) minmax(0, 60%) minmax(180px, 20%)",
+  formPanelStyle:
+    CSSProperties;
 
-  gap: "18px",
+  formHeaderStyle:
+    CSSProperties;
 
-  alignItems: "stretch",
+  formTitleStyle:
+    CSSProperties;
 
-  boxSizing: "border-box",
+  formSubtitleStyle:
+    CSSProperties;
 
-  overflow: "hidden",
+  photoSectionStyle:
+    CSSProperties;
 
-  padding:
-    "14px 10px 0px",
+  formBodyStyle:
+    CSSProperties;
+}
+
+/* ===========================================================
+   STYLE FACTORY
+=========================================================== */
+
+export function createStep1IdentityStyles(
+
+  tokens:
+    ResponsiveTokens,
+
+  theme:
+    FinoraTheme,
+
+): Step1IdentityStyles {
 
   /* =========================================================
-     FINORA MASTER SMART WALL BACKGROUND
-
-     Exact background from CustomerSmartWall.
-     This is now the locked FINORA page background.
+     TOKEN GROUPS
   ========================================================= */
 
-  background:
-    `
-    linear-gradient(
-      rgba(18,12,8,.35),
-      rgba(18,12,8,.35)
-    ),
+  const spacing =
+    tokens.spacing;
 
-    linear-gradient(
-      90deg,
-      #3A2115 0%,
-      #5B3420 25%,
-      #402417 50%,
-      #5B3420 75%,
-      #321B12 100%
-    )
-    `,
-};
+  const border =
+    tokens.border;
+
+  const input =
+    tokens.input;
+
+  const wizard =
+    tokens.wizard;
+
+  const layout =
+    tokens.layout;
+
+  /* =========================================================
+     THEME
+  ========================================================= */
+
+  const pageBackground =
+    theme
+      .colors
+      .background
+      .page;
+
+  const surface =
+    theme
+      .colors
+      .background
+      .surface;
+
+  const surfaceMuted =
+    theme
+      .colors
+      .background
+      .surfaceMuted;
+
+  const borderSubtle =
+    theme
+      .colors
+      .border
+      .subtle;
+
+  const textPrimary =
+    theme
+      .colors
+      .text
+      .primary;
+
+  const textSecondary =
+    theme
+      .colors
+      .text
+      .secondary;
+
+  const shadow =
+    theme
+      .colors
+      .overlay
+      .shadow;
+
+  /* =========================================================
+     PAGE
+  ========================================================= */
+
+  const pageStyle:
+    CSSProperties = {
+
+    width:
+      "100%",
+
+    minWidth:
+      0,
+
+    minHeight:
+      0,
+
+    height:
+      "100%",
+
+    display:
+      "flex",
+
+    flexDirection:
+      "column",
+
+    alignItems:
+      "center",
+
+    boxSizing:
+      "border-box",
+
+    overflow:
+      "auto",
+
+    padding:
+      `${wizard.padding}px ${layout.pageGutter}px ${spacing.large}px`,
+
+    background:
+      pageBackground,
+
+    color:
+      textPrimary,
+  };
 
 /* ===========================================================
-   LEFT — CUSTOMER IDENTITY CARD
+   IDENTITY CARD / FORM PANEL
 =========================================================== */
 
-export const leftPanelStyle: CSSProperties = {
-  minWidth: 0,
+const formPanelStyle: CSSProperties = {
 
-  display: "flex",
+  width:
+    "100%",
 
-  alignItems: "flex-start",
+  height:
+    "100%",
 
-  justifyContent: "center",
+  minWidth:
+    0,
 
-  paddingTop: "12px",
+  maxWidth:
+    "100%",
 
-  boxSizing: "border-box",
+  boxSizing:
+    "border-box",
 
-  overflow: "visible",
-};
+  display:
+    "flex",
 
-/* ===========================================================
-   ID CARD HOLDER
-=========================================================== */
+  flexDirection:
+    "column",
 
-export const idCardHolderStyle: CSSProperties = {
-  width: "180px",
+  alignSelf:
+    "stretch",
 
-  height: "350px",
+minHeight:
+  0,
 
-  flexShrink: 0,
+  flex:
+  1,
 
-  display: "flex",
-
-  alignItems: "flex-start",
-
-  justifyContent: "center",
-
-  position: "relative",
-
-  overflow: "visible",
-};
-
-/* ===========================================================
-   CENTER — FORM PANEL
-=========================================================== */
-
-export const formPanelStyle: CSSProperties = {
-  minWidth: 0,
-
-  minHeight: 0,
-
-  height: "100%",
-
-  display: "flex",
-
-  flexDirection: "column",
-
-  boxSizing: "border-box",
+  /* =========================================================
+     FINORA CUSTOMER IDENTITY CARD
+  ========================================================= */
 
   padding:
     "18px 20px",
 
-  borderRadius: "18px",
-
   border:
-    "1px solid rgba(214,176,106,.24)",
+  `${border.width + 1}px solid ${borderSubtle}`,
+
+  borderRadius:
+    "16px",
 
   background:
-    "linear-gradient(145deg,rgba(255,255,255,.055),rgba(255,255,255,.018))",
+  `linear-gradient(145deg, ${surfaceMuted}, ${surface})`,
 
   boxShadow:
-    "0 16px 40px rgba(0,0,0,.16)",
+    "0 10px 28px rgba(0,0,0,.12)",
 
-  overflow: "hidden",
 };
 
+  /* =========================================================
+     FORM HEADER
+  ========================================================= */
+
+  const formHeaderStyle:
+    CSSProperties = {
+
+    width:
+      "100%",
+
+    minWidth:
+      0,
+
+    flexShrink:
+      0,
+
+    margin:
+      0,
+
+    marginBottom:
+      spacing.medium,
+
+    paddingBottom:
+      spacing.medium,
+
+    borderBottom:
+      `${border.width}px solid ${borderSubtle}`,
+
+    boxSizing:
+      "border-box",
+  };
+
+  /* =========================================================
+     FORM TITLE
+  ========================================================= */
+
+  const formTitleStyle:
+    CSSProperties = {
+
+    margin:
+      0,
+
+    color:
+      textPrimary,
+
+    fontSize:
+      `${tokens.typography.heading}px`,
+
+    fontWeight:
+      800,
+
+    lineHeight:
+      tokens.lineHeight.heading,
+
+    letterSpacing:
+      ".1px",
+  };
+
+  /* =========================================================
+     FORM SUBTITLE
+  ========================================================= */
+
+  const formSubtitleStyle:
+    CSSProperties = {
+
+    margin:
+      `${spacing.small}px 0 0`,
+
+    color:
+      textSecondary,
+
+    fontSize:
+      `${tokens.typography.body}px`,
+
+    lineHeight:
+      tokens.lineHeight.body,
+
+    fontWeight:
+      500,
+  };
+
+  /* =========================================================
+     PHOTO SECTION
+  ========================================================= */
+
+  const photoSectionStyle:
+    CSSProperties = {
+
+    width:
+      "100%",
+
+    minWidth:
+      0,
+
+    minHeight:
+      `${input.height + spacing.large + spacing.small}px`,
+
+    flexShrink:
+      0,
+
+    marginBottom:
+      spacing.medium,
+
+    padding:
+      `${spacing.small}px`,
+
+    boxSizing:
+      "border-box",
+
+    display:
+      "flex",
+
+    alignItems:
+      "stretch",
+
+    overflow:
+      "visible",
+  };
+
+  /* =========================================================
+     FORM BODY
+  ========================================================= */
+
+  const formBodyStyle:
+    CSSProperties = {
+
+    width:
+      "100%",
+
+    minWidth:
+      0,
+
+    minHeight:
+      0,
+
+    display:
+      "flex",
+
+    flexDirection:
+      "column",
+
+    boxSizing:
+      "border-box",
+
+    overflow:
+      "visible",
+  };
+
+  return {
+
+    pageStyle,
+
+    formPanelStyle,
+
+    formHeaderStyle,
+
+    formTitleStyle,
+
+    formSubtitleStyle,
+
+    photoSectionStyle,
+
+    formBodyStyle,
+
+  };
+
+}
+
 /* ===========================================================
-   FORM HEADER
+   DEFAULT STYLES
 =========================================================== */
 
-export const formHeaderStyle: CSSProperties = {
-  flexShrink: 0,
+export const pageStyle:
+  CSSProperties = {
 
-  marginBottom: "12px",
+  width:
+    "100%",
 
-  paddingBottom: "10px",
+  minWidth:
+    0,
 
-  borderBottom:
-    "1px solid rgba(214,176,106,.16)",
+  minHeight:
+    0,
+
+  display:
+    "flex",
+
+  flexDirection:
+    "column",
+
+  alignItems:
+    "center",
+
+    padding:
+  "10px 18px 4px",
+
 };
 
-/* ===========================================================
-   FORM TITLE
-=========================================================== */
+export const formPanelStyle:
+  CSSProperties = {
 
-export const formTitleStyle: CSSProperties = {
-  margin: 0,
+  width:
+    "100%",
 
-  color: "#F3E4C2",
+  minWidth:
+    0,
 
-  fontSize: "18px",
+  display:
+    "flex",
 
-  fontWeight: 800,
+  flexDirection:
+    "column",
 
-  letterSpacing: ".2px",
+  boxSizing:
+    "border-box",
+
 };
 
-/* ===========================================================
-   FORM SUBTITLE
-=========================================================== */
+export const formHeaderStyle:
+  CSSProperties = {
 
-export const formSubtitleStyle: CSSProperties = {
+  width:
+    "100%",
+
+  flexShrink:
+    0,
+
+};
+
+export const formTitleStyle:
+  CSSProperties = {
+
   margin:
-    "4px 0 0",
+    0,
 
-  color:
-    "rgba(255,255,255,.48)",
+};
 
-  fontSize: "9px",
+export const formSubtitleStyle:
+  CSSProperties = {
 
-  lineHeight: 1.45,
+  margin:
+    0,
+
+};
+
+export const photoSectionStyle:
+  CSSProperties = {
+
+  width:
+    "100%",
+
+  minWidth:
+    0,
+
+  boxSizing:
+    "border-box",
+
+};
+
+export const formBodyStyle:
+  CSSProperties = {
+
+  width:
+    "100%",
+
+  minWidth:
+    0,
+
+  display:
+    "flex",
+
+  flexDirection:
+    "column",
+
+  boxSizing:
+    "border-box",
+
 };
 
 /* ===========================================================
-   PHOTO AREA
+   END
 =========================================================== */
-
-export const photoSectionStyle: CSSProperties = {
-  flexShrink: 0,
-
-  marginBottom: "12px",
-};
-
-/* ===========================================================
-   FORM BODY
-=========================================================== */
-
-export const formBodyStyle: CSSProperties = {
-  minHeight: 0,
-
-  flex: 1,
-
-  overflow: "hidden",
-
-  display: "flex",
-
-  flexDirection: "column",
-};
-
-/* ===========================================================
-   RIGHT — LIVE PREVIEW
-=========================================================== */
-
-export const rightPanelStyle: CSSProperties = {
-  minWidth: 0,
-
-  display: "flex",
-
-  alignItems: "flex-start",
-
-  justifyContent: "center",
-
-  paddingTop: "12px",
-
-  boxSizing: "border-box",
-
-  overflow: "hidden",
-};
-
-/* ===========================================================
-   RIGHT PREVIEW HOLDER
-=========================================================== */
-
-export const previewHolderStyle: CSSProperties = {
-  width: "100%",
-
-  maxWidth: "250px",
-
-  display: "flex",
-
-  justifyContent: "center",
-
-  boxSizing: "border-box",
-};
-
-/* ===========================================================
-   DESKTOP SAFETY
-=========================================================== */
-
-export const desktopCardStyle: CSSProperties = {
-  flexShrink: 0,
-
-  width: "180px",
-
-  height: "350px",
-
-  overflow: "visible",
-};
-
-/* ===========================================================
-   RESPONSIVE NOTE
-=========================================================== */
-
-/*
-  The global FINORA shell controls viewport responsiveness.
-
-  We intentionally do not introduce page scrolling here.
-  Narrow layouts should compress the presentation rather
-  than create an independent page scroll.
-*/

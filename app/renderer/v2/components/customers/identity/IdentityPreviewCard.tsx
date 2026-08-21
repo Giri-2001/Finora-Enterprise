@@ -1,29 +1,25 @@
 /* ===========================================================
    FINORA ENTERPRISE OS™
 
-   CUSTOMER IDENTITY PREVIEW CARD™
+   IDENTITY PREVIEW CARD™
 
-   LIVE CUSTOMER PREVIEW
+   LIVE CUSTOMER IDENTITY PREVIEW
 =========================================================== */
 
-import type {
-  CSSProperties,
-} from "react";
+/* ===========================================================
+   IMPORTS
+=========================================================== */
 
 import {
-  cardStyle,
-  logoStyle,
-  photoStyle,
-  imageStyle,
-  nameStyle,
-  idStyle,
-  infoLabelStyle,
-  infoValueStyle,
-  qrSectionStyle,
-  qrTitleStyle,
-  qrDescriptionStyle,
-  statusStyle,
-  footerStyle,
+  useResponsive,
+} from "../../../utils/responsive";
+
+import {
+  useTheme,
+} from "../../../themes/provider";
+
+import {
+  createIdentityPreviewCardStyles,
 } from "./IdentityPreviewCard.styles";
 
 /* ===========================================================
@@ -32,15 +28,20 @@ import {
 
 export interface IdentityPreviewCardProps {
 
-  customerName: string;
+  customerName:
+    string;
 
-  customerId: string;
+  customerId:
+    string;
 
-  businessName: string;
+  businessName:
+    string;
 
-  branchName: string;
+  branchName:
+    string;
 
-  imageUrl: string;
+  imageUrl:
+    string;
 
 }
 
@@ -62,47 +63,81 @@ export default function IdentityPreviewCard({
 
 }: IdentityPreviewCardProps) {
 
+  const {
+    tokens,
+  } =
+    useResponsive();
+
+  const {
+    theme,
+  } =
+    useTheme();
+
+  const styles =
+    createIdentityPreviewCardStyles(
+      tokens,
+      theme,
+    );
+
   const displayName =
     customerName.trim() ||
     "Customer Name";
 
+  const displayBusiness =
+    businessName.trim() ||
+    "Sri Giri Finance";
+
+  const displayBranch =
+    branchName.trim() ||
+    "Hyderabad";
+
+  const displayCustomerId =
+    customerId.trim() ||
+    "FIN-CUS-SGF-HYD-900001";
+
   return (
 
     <section
-      style={cardStyle}
+      style={
+        styles.cardStyle
+      }
+      data-finora-identity-preview="true"
     >
 
-      {/* =================================================
-          FINORA BRAND
-      ================================================= */}
-
       <div
-        style={logoStyle}
+        style={
+          styles.headerStyle
+        }
       >
-
         FINORA ENTERPRISE
-
       </div>
 
-      {/* =================================================
-          CUSTOMER PHOTO
-      ================================================= */}
 
       <div
-        style={photoStyle}
+        style={
+          styles.photoStyle
+        }
       >
 
         {imageUrl ? (
 
           <img
-            src={imageUrl}
+            src={
+              imageUrl
+            }
             alt="Customer"
-            style={imageStyle}
+            style={
+              styles.imageStyle
+            }
           />
 
         ) : (
 
-          <span>
+          <span
+            style={
+              styles.photoTextStyle
+            }
+          >
             PHOTO
           </span>
 
@@ -110,121 +145,135 @@ export default function IdentityPreviewCard({
 
       </div>
 
-      {/* =================================================
-          CUSTOMER NAME
-      ================================================= */}
 
       <h2
-        style={nameStyle}
+        style={
+          styles.nameStyle
+        }
+        title={
+          displayName
+        }
       >
-
         {displayName}
-
       </h2>
 
-      {/* =================================================
-          CUSTOMER ID
-      ================================================= */}
 
       <div
-        style={idStyle}
+        style={
+          styles.idStyle
+        }
+        title={
+          displayCustomerId
+        }
+      >
+        {displayCustomerId}
+      </div>
+
+
+      <div
+        style={
+          styles.infoGroupStyle
+        }
       >
 
-        {customerId}
+        <div>
+
+          <p
+            style={
+              styles.infoLabelStyle
+            }
+          >
+            BUSINESS
+          </p>
+
+          <p
+            style={
+              styles.infoValueStyle
+            }
+            title={
+              displayBusiness
+            }
+          >
+            {displayBusiness}
+          </p>
+
+        </div>
+
+
+        <div>
+
+          <p
+            style={
+              styles.infoLabelStyle
+            }
+          >
+            BRANCH
+          </p>
+
+          <p
+            style={
+              styles.infoValueStyle
+            }
+            title={
+              displayBranch
+            }
+          >
+            {displayBranch}
+          </p>
+
+        </div>
 
       </div>
 
-      {/* =================================================
-          BUSINESS
-      ================================================= */}
 
       <div
-        style={infoLabelStyle}
+        style={
+          styles.verificationStyle
+        }
       >
 
-        Business
-
-      </div>
-
-      <div
-        style={infoValueStyle}
-      >
-
-        {businessName}
-
-      </div>
-
-      {/* =================================================
-          BRANCH
-      ================================================= */}
-
-      <div
-        style={infoLabelStyle}
-      >
-
-        Branch
-
-      </div>
-
-      <div
-        style={infoValueStyle}
-      >
-
-        {branchName}
-
-      </div>
-
-      {/* =================================================
-          QR VERIFICATION
-      ================================================= */}
-
-      <div
-        style={qrSectionStyle}
-      >
-
-        <div
-          style={qrTitleStyle}
+        <p
+          style={
+            styles.verificationTitleStyle
+          }
         >
-
           QR Verification
+        </p>
 
-        </div>
-
-        <div
-          style={qrDescriptionStyle}
+        <p
+          style={
+            styles.verificationTextStyle
+          }
         >
-
-          QR Code will be generated
-          automatically after customer
-          registration.
-
-        </div>
+          QR Code will be generated automatically after customer registration.
+        </p>
 
       </div>
 
-      {/* =================================================
-          STATUS
-      ================================================= */}
 
       <div
-        style={statusStyle}
+        style={
+          styles.statusStyle
+        }
       >
 
-        ● New Customer
+        <span
+          style={
+            styles.statusTextStyle
+          }
+        >
+          • New Customer
+        </span>
 
       </div>
 
-      {/* =================================================
-          FOOTER
-      ================================================= */}
 
       <div
-        style={footerStyle}
+        style={
+          styles.footerStyle
+        }
       >
-
-        Live FINORA Customer Identity
-        Preview
-
+        Live FINORA Customer Identity Preview
       </div>
 
     </section>
@@ -232,3 +281,7 @@ export default function IdentityPreviewCard({
   );
 
 }
+
+/* ===========================================================
+   END
+=========================================================== */
