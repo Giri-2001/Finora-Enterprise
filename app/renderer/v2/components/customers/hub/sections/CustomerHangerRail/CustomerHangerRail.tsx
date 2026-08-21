@@ -17,6 +17,7 @@
    - Preserve customer selection behavior
    - Preserve premium hanger presentation
    - Control the active customer card flip
+   - Connect the active FINORA Theme Engine to the rail
 
    CUSTOMER GRID CONTRACT:
    MOBILE   → 1
@@ -36,8 +37,8 @@
    - No hard-coded responsive column counts
    - No hard-coded responsive gaps
    - Responsive values come from customers.tokens.ts
-   - The rail provides the complete resolved content width
-     to EnterpriseCardGrid.
+   - Theme values come from ThemeProvider
+   - The rail style module does NOT define theme colors
 =========================================================== */
 
 
@@ -54,15 +55,44 @@ import type {
   CSSProperties,
 } from "react";
 
+
+/* ===========================================================
+   THEME ENGINE
+=========================================================== */
+
+import {
+  useTheme,
+} from "../../../../../themes/provider/ThemeProvider";
+
+
+/* ===========================================================
+   ENTERPRISE GRID
+=========================================================== */
+
 import EnterpriseCardGrid
   from "../../../../common/EnterpriseCardGrid";
+
+
+/* ===========================================================
+   CUSTOMER HANGER
+=========================================================== */
 
 import CustomerHanger
   from "../../cards/CustomerHanger";
 
+
+/* ===========================================================
+   TYPES
+=========================================================== */
+
 import type {
   CustomerHangerRailProps,
 } from "./types";
+
+
+/* ===========================================================
+   PRESENTATION STYLES
+=========================================================== */
 
 import {
   containerStyle,
@@ -71,9 +101,26 @@ import {
   getHangerAreaStyle,
 } from "./styles";
 
+
+/* ===========================================================
+   CUSTOMER RESPONSIVE ENGINE
+=========================================================== */
+
 import {
   getCustomerTokens,
 } from "../../../../../utils/responsive/customers/customers.tokens";
+
+
+/* ===========================================================
+   THEME STYLE TYPE
+=========================================================== */
+
+type ThemeStyle =
+  CSSProperties &
+  Record<
+    `--${string}`,
+    string
+  >;
 
 
 /* ===========================================================
@@ -89,6 +136,25 @@ export default function CustomerHangerRail({
   onCustomerSelect,
 
 }: CustomerHangerRailProps) {
+
+
+  /* =========================================================
+     FINORA THEME ENGINE
+
+     ThemeProvider
+          ↓
+     useTheme()
+          ↓
+     active FINORA theme
+          ↓
+     CSS variables
+          ↓
+     Customer Hanger Rail styles
+  ========================================================= */
+
+  const {
+    theme,
+  } = useTheme();
 
 
   /* =========================================================
@@ -131,7 +197,7 @@ export default function CustomerHangerRail({
 
   /* =========================================================
      RESPONSIVE VIEWPORT UPDATE
-=========================================================== */
+  ========================================================= */
 
   useEffect(() => {
 
@@ -222,6 +288,88 @@ export default function CustomerHangerRail({
 
 
   /* =========================================================
+     THEME CSS VARIABLES
+
+     IMPORTANT:
+
+     No hard-coded rail theme color is kept in styles.ts.
+
+     The active FINORA theme is injected here.
+
+     ThemeProvider
+          ↓
+     theme.colors
+          ↓
+     CSS variables
+          ↓
+     railStyle
+  ========================================================= */
+
+  const themeVariables:
+    ThemeStyle = {
+
+    "--finora-theme-brand-primary":
+      theme.colors.brand.primary,
+
+    "--finora-theme-brand-secondary":
+      theme.colors.brand.secondary,
+
+    "--finora-theme-brand-accent":
+      theme.colors.brand.accent,
+
+    "--finora-theme-brand-accent-soft":
+      theme.colors.brand.accentSoft,
+
+    "--finora-theme-border-default":
+      theme.colors.border.default,
+
+    "--finora-theme-border-strong":
+      theme.colors.border.strong,
+
+    "--finora-theme-border-subtle":
+      theme.colors.border.subtle,
+
+    "--finora-theme-overlay-shadow":
+      theme.colors.overlay.shadow,
+
+  };
+
+
+  /* =========================================================
+     THEMED ROOT
+
+     Theme variables are applied at the rail root so all
+     descendant presentation styles can consume them.
+  ========================================================= */
+
+  const resolvedContainerStyle:
+    ThemeStyle = {
+
+    ...containerStyle,
+
+    ...themeVariables,
+
+  };
+
+
+  /* =========================================================
+     THEMED RAIL
+
+     The actual visual gradient remains owned by railStyle.
+
+     CustomerHangerRail.tsx only supplies the active theme
+     variables.
+  ========================================================= */
+
+  const resolvedRailStyle:
+    CSSProperties = {
+
+    ...railStyle,
+
+  };
+
+
+  /* =========================================================
      HANGER AREA
   ========================================================= */
 
@@ -305,13 +453,13 @@ export default function CustomerHangerRail({
 
   /* =========================================================
      UI
-=========================================================== */
+  ========================================================= */
 
   return (
 
     <section
       style={
-        containerStyle
+        resolvedContainerStyle
       }
     >
 
@@ -327,7 +475,7 @@ export default function CustomerHangerRail({
 
         <div
           style={
-            railStyle
+            resolvedRailStyle
           }
         />
 
@@ -378,7 +526,7 @@ export default function CustomerHangerRail({
 
                     /* =========================================
                        CONTROLLED FLIP STATE
-                       ========================================= */
+                    ========================================= */
 
                     flipped={
                       flippedCustomerId ===
@@ -388,7 +536,7 @@ export default function CustomerHangerRail({
 
                     /* =========================================
                        CONTROLLED FLIP ACTION
-                       ========================================= */
+                    ========================================= */
 
                     onFlip={() => {
 
@@ -401,7 +549,7 @@ export default function CustomerHangerRail({
 
                     /* =========================================
                        CUSTOMER SELECTION
-                       ========================================= */
+                    ========================================= */
 
                     onClick={(
                       selected,

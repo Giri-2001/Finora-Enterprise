@@ -2,11 +2,12 @@
    FINORA ENTERPRISE V2
    CUSTOMER TOP BAR
 
-   RESPONSIVE STYLES
+   RESPONSIVE + THEME STYLES
 
    RESPONSIBILITY:
    - Customer Top Bar presentation only
    - Responsive Engine token consumption
+   - FINORA Theme Engine visual token consumption
    - No breakpoint pixel values
    - No business logic
 =========================================================== */
@@ -19,29 +20,9 @@ import type {
   ResponsiveTokens,
 } from "../../../../../utils/responsive/tokens";
 
-
-/* ===========================================================
-   COLORS
-=========================================================== */
-
-const COLORS = {
-
-  background:
-    "#FFFFFF",
-
-  border:
-    "#E5E7EB",
-
-  text:
-    "#0F172A",
-
-  muted:
-    "#64748B",
-
-  shadow:
-    "rgba(15,23,42,0.06)",
-
-} as const;
+import type {
+  FinoraTheme,
+} from "../../../../../themes/core/types";
 
 
 /* ===========================================================
@@ -50,6 +31,7 @@ const COLORS = {
 
 export function createCustomerTopBarStyles(
   tokens: ResponsiveTokens,
+  theme: FinoraTheme,
 ) {
 
 
@@ -117,16 +99,16 @@ export function createCustomerTopBarStyles(
       `${tokens.spacing.section}px ${tokens.spacing.page}px`,
 
     background:
-      COLORS.background,
+      theme.components.header.background,
 
     border:
-      `${tokens.border.width}px solid ${COLORS.border}`,
+      `${tokens.border.width}px solid ${theme.components.header.border}`,
 
     borderRadius:
       `${tokens.border.radius}px`,
 
     boxShadow:
-      `0 10px 30px ${COLORS.shadow}`,
+      `0 10px 30px ${theme.colors.overlay.shadow}`,
 
     marginBottom:
       tokens.spacing.section,
@@ -275,7 +257,7 @@ export function createCustomerTopBarStyles(
       tokens.lineHeight.title,
 
     color:
-      COLORS.text,
+      theme.components.header.text,
 
     overflow:
       "hidden",
@@ -314,7 +296,7 @@ export function createCustomerTopBarStyles(
       tokens.lineHeight.body,
 
     color:
-      COLORS.muted,
+      theme.colors.text.muted,
 
     overflow:
       "hidden",

@@ -133,10 +133,9 @@ function getHeaderContentColor(
     FinoraTheme,
 ): string {
 
-  return theme
-    .colors
-    .text
-    .primary;
+  return theme.mode === "dark"
+    ? theme.colors.text.secondary
+    : theme.colors.text.primary;
 
 }
 
@@ -162,7 +161,7 @@ function getHeaderActionColor(
   return theme
     .colors
     .text
-    .primary;
+    .secondary;
 
 }
 
@@ -646,7 +645,7 @@ export function createGlobalHeaderStyles(
       600,
 
     color:
-      headerActionColor,
+  activeTheme.colors.text.secondary,
 
     transform:
       "translateY(-1px)",

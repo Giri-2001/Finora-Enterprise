@@ -12,6 +12,7 @@
 // - Allow Add Customer when no customers exist
 // - Preserve empty-state messaging
 // - Preserve customer rail and pagination rendering
+// - Consume the active FINORA Theme Engine
 //
 // IMPORTANT:
 //
@@ -22,9 +23,28 @@
 // - Existing children remain responsible for toolbar,
 //   customer rail, search, edit and summary presentation.
 //
-// VERSION : 2.1
+// THEME CONTRACT:
+//
+// ThemeProvider
+//      ↓
+// useTheme()
+//      ↓
+// active FINORA theme
+//      ↓
+// theme.colors.background.page
+//      ↓
+// buildContainerStyle()
+//      ↓
+// Smart Wall workspace background
+//
+// - No Smart Wall background color is hard-coded here.
+// - No local theme definition is created here.
+// - Theme selection remains owned by ThemeProvider.
+//
+// VERSION : 2.2
 // STATUS  : Production
 // ===========================================================
+
 
 // ===========================================================
 // IMPORTS
@@ -34,36 +54,112 @@ import type {
   CustomerSmartWallProps,
 } from "./types";
 
+
 import {
   hasCustomers,
   buildEmptyLabel,
 } from "./helpers";
 
+
 import {
-  containerStyle,
+  buildContainerStyle,
   railWrapperStyle,
   railStyle,
   hangerAreaStyle,
 } from "./styles";
+
+
+import {
+  useTheme,
+} from "../../../../themes/provider/ThemeProvider";
+
 
 // ===========================================================
 // COMPONENT
 // ===========================================================
 
 export default function CustomerSmartWall({
+
   customers = [],
+
   children,
+
 }: CustomerSmartWallProps) {
+
+
+  // =========================================================
+  // FINORA THEME ENGINE
+  //
+  // ThemeProvider
+  //      ↓
+  // useTheme()
+  //      ↓
+  // active theme
+  //
+  // The Smart Wall receives its workspace background from
+  // the currently active FINORA theme.
+  // =========================================================
+
+  const {
+    theme,
+  } =
+    useTheme();
+
+
+  // =========================================================
+  // THEME SURFACE
+  // =========================================================
+  //
+  // Smart Wall must not own its own background color.
+  //
+  // The active FINORA theme controls the page/workspace
+  // background.
+  //
+  // =========================================================
+
+  const smartWallBackground =
+    theme
+      .colors
+      .background
+      .page;
+
+
+  // =========================================================
+  // ROOT STYLE
+  // =========================================================
+  //
+  // buildContainerStyle() owns Smart Wall presentation
+  // geometry while the Theme Engine supplies the visual
+  // background.
+  //
+  // =========================================================
+
+  const smartWallContainerStyle =
+    buildContainerStyle(
+      smartWallBackground,
+    );
+
+
+  // =========================================================
+  // CUSTOMER STATE
+  // =========================================================
 
   const hasCustomerRecords =
     hasCustomers(
       customers.length,
     );
 
+
+  // =========================================================
+  // RENDER
+  // =========================================================
+
   return (
 
     <section
-      style={containerStyle}
+      style={
+        smartWallContainerStyle
+      }
     >
 
       {/* =====================================================
@@ -71,14 +167,19 @@ export default function CustomerSmartWall({
       ===================================================== */}
 
       <div
-        style={railWrapperStyle}
+        style={
+          railWrapperStyle
+        }
       >
 
         <div
-          style={railStyle}
+          style={
+            railStyle
+          }
         />
 
       </div>
+
 
       {/* =====================================================
           SMART WALL CONTENT
@@ -87,7 +188,9 @@ export default function CustomerSmartWall({
       <div
         style={{
           ...hangerAreaStyle,
-          position: "relative",
+
+          position:
+            "relative",
         }}
       >
 
@@ -113,6 +216,7 @@ export default function CustomerSmartWall({
 
         {children}
 
+
         {/* ===================================================
             EMPTY CUSTOMER STATE
 
@@ -125,12 +229,25 @@ export default function CustomerSmartWall({
 
           <div
             style={{
-              width: "100%",
-              display: "flex",
-              justifyContent: "center",
-              alignItems: "center",
-              pointerEvents: "none",
-              marginTop: "14px",
+
+              width:
+                "100%",
+
+              display:
+                "flex",
+
+              justifyContent:
+                "center",
+
+              alignItems:
+                "center",
+
+              pointerEvents:
+                "none",
+
+              marginTop:
+                "14px",
+
             }}
           >
 
@@ -145,7 +262,9 @@ export default function CustomerSmartWall({
     </section>
 
   );
+
 }
+
 
 // ===========================================================
 // END

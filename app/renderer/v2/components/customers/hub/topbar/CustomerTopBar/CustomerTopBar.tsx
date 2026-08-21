@@ -5,6 +5,7 @@
    COMPONENT
 =========================================================== */
 
+
 /* ===========================================================
    RESPONSIVE ENGINE
 =========================================================== */
@@ -13,6 +14,16 @@ import {
   useResponsive,
 } from "../../../../../utils/responsive/useResponsive";
 
+
+/* ===========================================================
+   THEME ENGINE
+=========================================================== */
+
+import {
+  useTheme,
+} from "../../../../../themes/provider/ThemeProvider";
+
+
 /* ===========================================================
    COMPONENT CONTRACT
 =========================================================== */
@@ -20,6 +31,7 @@ import {
 import type {
   CustomerTopBarProps,
 } from "./types";
+
 
 /* ===========================================================
    CONSTANTS
@@ -30,6 +42,7 @@ import {
   DEFAULT_TITLE,
 } from "./constants";
 
+
 /* ===========================================================
    HELPERS
 =========================================================== */
@@ -38,13 +51,15 @@ import {
   buildSubtitle,
 } from "./helpers";
 
+
 /* ===========================================================
-   RESPONSIVE STYLES
+   RESPONSIVE + THEME STYLES
 =========================================================== */
 
 import {
   createCustomerTopBarStyles,
 } from "./styles";
+
 
 /* ===========================================================
    COMPONENT
@@ -52,11 +67,14 @@ import {
 
 export default function CustomerTopBar({
 
-  title = DEFAULT_TITLE,
+  title =
+    DEFAULT_TITLE,
 
-  subtitle = DEFAULT_SUBTITLE,
+  subtitle =
+    DEFAULT_SUBTITLE,
 
 }: CustomerTopBarProps) {
+
 
   /* =========================================================
      RESPONSIVE ENGINE
@@ -64,11 +82,26 @@ export default function CustomerTopBar({
 
   const {
     tokens,
-  } = useResponsive();
+  } =
+    useResponsive();
 
 
   /* =========================================================
-     RESPONSIVE STYLES
+     THEME ENGINE
+     ---------------------------------------------------------
+     Theme controls visual appearance only.
+
+     No responsive dimensions are controlled here.
+  ========================================================= */
+
+  const {
+    theme,
+  } =
+    useTheme();
+
+
+  /* =========================================================
+     RESPONSIVE + THEME STYLES
   ========================================================= */
 
   const {
@@ -88,6 +121,7 @@ export default function CustomerTopBar({
   } =
     createCustomerTopBarStyles(
       tokens,
+      theme,
     );
 
 
@@ -97,23 +131,42 @@ export default function CustomerTopBar({
 
   return (
 
-    <header style={containerStyle}>
+    <header
+      style={
+        containerStyle
+      }
+    >
 
       {/* ==========================================
           LEFT
       ========================================== */}
 
-      <div style={leftSectionStyle}>
+      <div
+        style={
+          leftSectionStyle
+        }
+      >
 
-        <h1 style={titleStyle}>
+        <h1
+          style={
+            titleStyle
+          }
+        >
 
           {title}
 
         </h1>
 
-        <p style={subtitleStyle}>
 
-          {buildSubtitle(subtitle)}
+        <p
+          style={
+            subtitleStyle
+          }
+        >
+
+          {buildSubtitle(
+            subtitle,
+          )}
 
         </p>
 
@@ -124,7 +177,11 @@ export default function CustomerTopBar({
           CENTER
       ========================================== */}
 
-      <div style={centerSectionStyle}>
+      <div
+        style={
+          centerSectionStyle
+        }
+      >
 
         {/* Universal Search Component */}
 
@@ -135,7 +192,11 @@ export default function CustomerTopBar({
           RIGHT
       ========================================== */}
 
-      <div style={rightSectionStyle}>
+      <div
+        style={
+          rightSectionStyle
+        }
+      >
 
         {/* Add Customer */}
 
@@ -150,6 +211,7 @@ export default function CustomerTopBar({
   );
 
 }
+
 
 /* ===========================================================
    END

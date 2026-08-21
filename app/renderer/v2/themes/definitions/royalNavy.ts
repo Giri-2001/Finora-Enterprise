@@ -117,8 +117,8 @@ export const ROYAL_NAVY_THEME:
 
     status: {
 
-      success: "#35B77A",
-      successSoft: "#173B31",
+  success: "#6EA8FF",
+  successSoft: "#182F4F",
 
       warning: "#D6A33A",
       warningSoft: "#40351D",

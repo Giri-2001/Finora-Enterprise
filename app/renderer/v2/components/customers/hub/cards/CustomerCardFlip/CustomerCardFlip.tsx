@@ -8,6 +8,7 @@
    RESPONSIVE ENGINE CONSUMER
 =========================================================== */
 
+
 /* ===========================================================
    IMPORTS
 =========================================================== */
@@ -16,13 +17,16 @@ import type {
   CSSProperties,
 } from "react";
 
+
 import type {
   CustomerCardFlipProps,
 } from "./types";
 
+
 import {
   DEFAULT_ROTATION,
 } from "./constants";
+
 
 import {
   buildDuration,
@@ -30,12 +34,19 @@ import {
   isFlipped,
 } from "./helpers";
 
+
 import {
   createContainerStyle,
   innerStyle,
   createFrontStyle,
   createBackStyle,
 } from "./styles";
+
+
+import type {
+  CustomerCardFlipResponsiveDimensions,
+} from "./styles";
+
 
 /* ===========================================================
    COMPONENT
@@ -57,17 +68,24 @@ export default function CustomerCardFlip({
 
 }: CustomerCardFlipProps) {
 
-    /* =========================================================
+
+  /* =========================================================
      CARD SURFACE
      ---------------------------------------------------------
      CustomerHanger already owns the resolved customer-card
      geometry.
 
-     CustomerCardFlip must inherit that geometry from its
-     parent and must NOT resolve responsive dimensions again.
+     CustomerCardFlip only acts as the flip mechanism.
+
+     IMPORTANT:
+     - No independent card sizing
+     - No independent radius
+     - No responsive breakpoint logic
+     - No outer card layout ownership
   ========================================================= */
 
-  const responsiveCard = {
+  const responsiveCard:
+    CustomerCardFlipResponsiveDimensions = {
 
     width:
       "100%",
@@ -79,6 +97,7 @@ export default function CustomerCardFlip({
       0,
 
   };
+
 
   /* =========================================================
      ANIMATION
@@ -111,7 +130,7 @@ export default function CustomerCardFlip({
 
 
   /* =========================================================
-     RESPONSIVE STYLES
+     FLIP STYLES
   ========================================================= */
 
   const containerStyle =
@@ -134,9 +153,13 @@ export default function CustomerCardFlip({
 
   /* =========================================================
      ROOT STYLE
+     ---------------------------------------------------------
+     Only the flip mechanism owns perspective.
+     Customer card geometry remains with the parent.
   ========================================================= */
 
-  const rootStyle: CSSProperties = {
+  const rootStyle:
+    CSSProperties = {
 
     ...containerStyle,
 
@@ -150,7 +173,8 @@ export default function CustomerCardFlip({
      FLIP STYLE
   ========================================================= */
 
-  const flipStyle: CSSProperties = {
+  const flipStyle:
+    CSSProperties = {
 
     ...innerStyle,
 
@@ -170,12 +194,23 @@ export default function CustomerCardFlip({
   return (
 
     <div
-      style={rootStyle}
-      onClick={onFlip}
+
+      style={
+        rootStyle
+      }
+
+      onClick={
+        onFlip
+      }
+
     >
 
       <div
-        style={flipStyle}
+
+        style={
+          flipStyle
+        }
+
       >
 
         {/* ================================================
@@ -183,7 +218,11 @@ export default function CustomerCardFlip({
         ================================================ */}
 
         <div
-          style={frontStyle}
+
+          style={
+            frontStyle
+          }
+
         >
 
           {front}
@@ -196,7 +235,11 @@ export default function CustomerCardFlip({
         ================================================ */}
 
         <div
-          style={backStyle}
+
+          style={
+            backStyle
+          }
+
         >
 
           {back}

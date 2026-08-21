@@ -59,20 +59,13 @@ export const containerStyle: CSSProperties = {
    *
    * The grid must consume the COMPLETE available width.
    *
-   * DO NOT use:
-   *
-   *   justifyContent: "center"
-   *
-   * because that leaves unnecessary permanent space on the
-   * left and right when the resolved card columns do not
-   * naturally fill the parent.
-   *
-   * "stretch" allows the resolved grid to occupy the complete
-   * available width.
+   * "stretch" allows the resolved grid to occupy the
+   * complete available width without introducing additional
+   * distribution behavior.
    */
 
   justifyContent:
-  "space-between",
+    "stretch",
 
   alignItems:
     GRID_ALIGNMENT,

@@ -12,6 +12,12 @@
    - No viewport detection
    - No independent responsive sizing decisions
 
+   THEME CONTRACT:
+   - Visual colours come only from FINORA Theme CSS variables
+   - No local theme palette
+   - Defensive CSS fallback chains are used
+   - color-mix() always receives valid colour fallbacks
+
    FINAL CONTENT CONTRACT:
    - Customer ID
    - Village
@@ -39,55 +45,115 @@ import type {
   CSSProperties,
 } from "react";
 
+
 import type {
   ResponsiveTokens,
 } from "../../../../../utils/responsive/customers/customers.tokens";
+
 
 import "@fontsource/cinzel/600.css";
 import "@fontsource/cinzel/700.css";
 
 
 /* ===========================================================
-   COLORS
+   THEME VARIABLES
+   -----------------------------------------------------------
+   ThemeProvider
+        ↓
+   CustomerHanger
+        ↓
+   FINORA Theme CSS Variables
+        ↓
+   CustomerIdCardBack
 =========================================================== */
 
-const COLORS = {
+const THEME = {
+
+  /* ---------------------------------------------------------
+     SURFACES
+  --------------------------------------------------------- */
 
   card:
-    "#FCFAF4",
+    "var(--finora-theme-card-surface, var(--finora-theme-surface, var(--finora-theme-background-surface, #FFFFFF)))",
 
   cardSoft:
-    "#F7F1E4",
+    "var(--finora-theme-surface-muted, var(--finora-theme-background-surface-muted, #F1F3F6))",
 
-  text:
-    "#273246",
+  cardStrong:
+    "var(--finora-theme-surface-strong, var(--finora-theme-surface-muted, #E7EAF0))",
 
-  muted:
-    "#6B7280",
 
-  label:
-    "#334155",
+  /* ---------------------------------------------------------
+     BRAND
+  --------------------------------------------------------- */
 
-  gold:
-    "#A87524",
+  brand:
+    "var(--finora-theme-brand-accent, var(--finora-theme-brand-primary, #D4AF37))",
 
-  goldDark:
-    "#76501B",
+  brandPrimary:
+    "var(--finora-theme-brand-primary, var(--finora-theme-brand-accent, #B8860B))",
 
-  goldLine:
-    "rgba(168,117,36,.34)",
+  brandSecondary:
+    "var(--finora-theme-brand-secondary, var(--finora-theme-brand-primary, #8C6A00))",
 
-  shadow:
-    "rgba(46,33,20,.18)",
+  brandSoft:
+    "var(--finora-theme-brand-accent-soft, var(--finora-theme-brand-primary, #D4AF37))",
+
+
+  /* ---------------------------------------------------------
+     TEXT
+  --------------------------------------------------------- */
+
+  textPrimary:
+    "var(--finora-theme-text-primary, var(--finora-theme-brand-primary, #171A21))",
+
+  textSecondary:
+    "var(--finora-theme-text-secondary, var(--finora-theme-text-primary, #4B5563))",
+
+  textMuted:
+    "var(--finora-theme-text-muted, var(--finora-theme-text-secondary, #7A8494))",
+
+
+  /* ---------------------------------------------------------
+     BORDERS
+  --------------------------------------------------------- */
+
+  border:
+    "var(--finora-theme-border-default, #D9DEE7)",
+
+  borderStrong:
+    "var(--finora-theme-border-strong, var(--finora-theme-border-default, #B8C0CC))",
+
+  borderSubtle:
+    "var(--finora-theme-border-subtle, var(--finora-theme-border-default, #E8EBF0))",
+
+
+  /* ---------------------------------------------------------
+     STATUS
+  --------------------------------------------------------- */
+
+  success:
+    "var(--finora-theme-success, #16A34A)",
+
+  successSoft:
+    "var(--finora-theme-success-soft, var(--finora-theme-brand-accent-soft, #E7F6EF))",
+
+  successBorder:
+    "var(--finora-theme-success-border, var(--finora-theme-border-strong, #B8C0CC))",
+
+
+  /* ---------------------------------------------------------
+     OVERLAY
+  --------------------------------------------------------- */
+
+  overlay:
+    "var(--finora-theme-overlay-shadow, rgba(0,0,0,.18))",
 
 } as const;
 
 
 /* ===========================================================
    PREMIUM NUMBER FONT
-   -----------------------------------------------------------
-   Cinzel is intentionally limited to identity / numerical
-   presentation so normal card labels remain clean.
 =========================================================== */
 
 const PREMIUM_NUMBER_FONT =
@@ -133,29 +199,30 @@ export function createCardStyle(
       `${tokens.customerCards.radius}px`,
 
     background:
+  THEME.card,
+
+    border:
+      `${tokens.border.width}px solid color-mix(
+        in srgb,
+        ${THEME.border} 70%,
+        transparent
+      )`,
+
+    borderTop:
+      `5px solid ${THEME.brand}`,
+
+    boxShadow:
       `
-      linear-gradient(
-        180deg,
-        ${COLORS.card} 0%,
-        ${COLORS.card} 72%,
-        ${COLORS.cardSoft} 100%
+      0 14px 30px ${THEME.overlay},
+      inset 0 0 0 1px color-mix(
+        in srgb,
+        ${THEME.card} 55%,
+        transparent
       )
       `,
 
-    border:
-  `${tokens.border.width}px solid rgba(180,145,82,.34)`,
-
-borderTop:
-  "5px solid #16A34A",
-
-    boxShadow:
-  `
-  0 14px 30px ${COLORS.shadow},
-  inset 0 0 0 1px rgba(255,255,255,.55)
-  `,
-
     color:
-      COLORS.text,
+      THEME.textPrimary,
 
   };
 
@@ -277,7 +344,7 @@ export function createCustomerIdStyle(
       '"tnum" 1',
 
     color:
-      COLORS.text,
+      THEME.textPrimary,
 
     whiteSpace:
       "nowrap",
@@ -323,7 +390,11 @@ export function createTopDividerStyle(
       "3px",
 
     borderTop:
-      `3px solid ${COLORS.goldLine}`,
+      `3px solid color-mix(
+        in srgb,
+        ${THEME.brand} 45%,
+        transparent
+      )`,
 
   };
 
@@ -382,21 +453,21 @@ export function createFieldRowStyle(
       "grid",
 
     gridTemplateColumns:
-  `
-  ${Math.max(
-    tokens.icon.xs,
-    13,
-  )}px
+      `
+      ${Math.max(
+        tokens.icon.xs,
+        13,
+      )}px
 
-  56px
+      56px
 
-  8px
+      8px
 
-  minmax(
-    0,
-    1fr
-  )
-  `,
+      minmax(
+        0,
+        1fr
+      )
+      `,
 
     columnGap:
       "5px",
@@ -439,7 +510,7 @@ export function createIconStyle(
       )}px`,
 
     color:
-      COLORS.gold,
+      THEME.brand,
 
     flexShrink:
       0,
@@ -479,7 +550,7 @@ export function createLabelStyle(
       tokens.lineHeight.compact,
 
     color:
-      COLORS.label,
+      THEME.textSecondary,
 
     whiteSpace:
       "nowrap",
@@ -512,15 +583,14 @@ export function createValueStyle(
     fontWeight:
       650,
 
-      letterSpacing:
+    letterSpacing:
       ".25px",
-      
 
     lineHeight:
       tokens.lineHeight.compact,
 
     color:
-      COLORS.text,
+      THEME.textPrimary,
 
     overflow:
       "hidden",
@@ -557,7 +627,11 @@ export function createSectionDividerStyle(
       "3px 0",
 
     background:
-      COLORS.goldLine,
+      `color-mix(
+        in srgb,
+        ${THEME.brand} 35%,
+        transparent
+      )`,
 
     flexShrink:
       0,
@@ -606,7 +680,7 @@ export function createSectionTitleStyle(
       tokens.lineHeight.compact,
 
     color:
-      COLORS.text,
+      THEME.textPrimary,
 
     textTransform:
       "uppercase",
@@ -695,13 +769,21 @@ export function createLoanMetricStyle(
       "1px",
 
     border:
-      `2px solid ${COLORS.goldLine}`,
+      `2px solid color-mix(
+        in srgb,
+        ${THEME.brand} 30%,
+        ${THEME.borderSubtle}
+      )`,
 
     borderRadius:
       "7px",
 
     background:
-      "rgba(255,255,255,.58)",
+      `color-mix(
+        in srgb,
+        ${THEME.brand} 5%,
+        ${THEME.card}
+      )`,
 
   };
 
@@ -735,10 +817,10 @@ export function createLoanMetricLabelStyle(
       1.95,
 
     letterSpacing:
-      ".25",
+      ".25px",
 
     color:
-      COLORS.muted,
+      THEME.textMuted,
 
     whiteSpace:
       "nowrap",
@@ -753,8 +835,6 @@ export function createLoanMetricLabelStyle(
 
 /* ===========================================================
    LOAN METRIC VALUE
-   -----------------------------------------------------------
-   Premium Cinzel numerical presentation.
 =========================================================== */
 
 export function createLoanMetricValueStyle(
@@ -789,7 +869,7 @@ export function createLoanMetricValueStyle(
       '"tnum" 1',
 
     color:
-      COLORS.text,
+      THEME.textPrimary,
 
   };
 
@@ -850,10 +930,14 @@ export function createOutstandingStyle(
       "7px",
 
     background:
-      "rgba(248,232,197,.52)",
+  "var(--finora-theme-card-surface, var(--finora-theme-surface, #FFFFFF))",
 
     border:
-      "2px solid rgba(180,145,82,.24)",
+      `2px solid color-mix(
+        in srgb,
+        ${THEME.brand} 22%,
+        ${THEME.borderSubtle}
+      )`,
 
   };
 
@@ -887,7 +971,7 @@ export function createOutstandingLabelStyle(
       1.05,
 
     color:
-      COLORS.label,
+      THEME.textSecondary,
 
     whiteSpace:
       "nowrap",
@@ -899,8 +983,6 @@ export function createOutstandingLabelStyle(
 
 /* ===========================================================
    OUTSTANDING VALUE
-   -----------------------------------------------------------
-   Premium Cinzel numerical presentation.
 =========================================================== */
 
 export function createOutstandingValueStyle(
@@ -941,7 +1023,7 @@ export function createOutstandingValueStyle(
       '"tnum" 1',
 
     color:
-      COLORS.goldDark,
+      THEME.textPrimary,
 
     whiteSpace:
       "nowrap",
@@ -953,13 +1035,6 @@ export function createOutstandingValueStyle(
 
 }
 
-
-/* ===========================================================
-   LAST PAYMENT
-   -----------------------------------------------------------
-   Premium compact payment presentation.
-   Uses the existing Responsive Engine tokens.
-=========================================================== */
 
 /* ===========================================================
    LAST PAYMENT ICON
@@ -985,7 +1060,7 @@ export function createLastPaymentIconStyle(
       )}px`,
 
     color:
-      COLORS.gold,
+      THEME.brand,
 
     flexShrink:
       0,
@@ -993,6 +1068,11 @@ export function createLastPaymentIconStyle(
   };
 
 }
+
+
+/* ===========================================================
+   LAST PAYMENT
+=========================================================== */
 
 export function createLastPaymentStyle(
   tokens:
@@ -1044,10 +1124,18 @@ export function createLastPaymentStyle(
       "7px",
 
     background:
-      "rgba(255,255,255,.58)",
+      `color-mix(
+        in srgb,
+        ${THEME.brand} 5%,
+        ${THEME.card}
+      )`,
 
     border:
-      "3px solid rgba(180,145,82,.24)",
+  `2px solid color-mix(
+    in srgb,
+    ${THEME.brand} 22%,
+    ${THEME.borderSubtle}
+  )`,
 
   };
 
@@ -1084,7 +1172,7 @@ export function createLastPaymentLabelStyle(
       ".3px",
 
     color:
-      COLORS.label,
+      THEME.textSecondary,
 
     whiteSpace:
       "nowrap",
@@ -1093,10 +1181,9 @@ export function createLastPaymentLabelStyle(
 
 }
 
+
 /* ===========================================================
    LAST PAYMENT VALUE
-   -----------------------------------------------------------
-   Premium Cinzel numerical presentation.
 =========================================================== */
 
 export function createLastPaymentValueStyle(
@@ -1108,6 +1195,9 @@ export function createLastPaymentValueStyle(
 
     minWidth:
       0,
+
+    fontFamily:
+      PREMIUM_NUMBER_FONT,
 
     fontSize:
       `${Math.max(
@@ -1125,7 +1215,7 @@ export function createLastPaymentValueStyle(
       ".2px",
 
     color:
-      COLORS.goldDark,
+      THEME.textPrimary,
 
     whiteSpace:
       "nowrap",

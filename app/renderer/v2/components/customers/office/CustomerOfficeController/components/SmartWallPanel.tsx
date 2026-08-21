@@ -5,6 +5,8 @@
 
    CUSTOMER HUB PRESENTATION
 
+   RESPONSIVE + THEME ENGINE INTEGRATION
+
    RESPONSIVE MIGRATION:
    - All responsive sizing comes from Customers Responsive Engine
    - No viewport calculations in component
@@ -14,6 +16,13 @@
    - Search uses the available center space
    - Existing customer-card behavior preserved
    - Customer ID Card code remains untouched
+
+   THEME MIGRATION:
+   - All visual theme values come from FINORA Theme Engine
+   - No local theme color definitions
+   - No hard-coded page background
+   - No hard-coded theme-specific color mapping
+   - Theme switching affects toolbar / hints / presentation
 =========================================================== */
 
 
@@ -25,34 +34,63 @@ import {
   useState,
 } from "react";
 
+
 import {
   UserPlus,
   SquarePen,
 } from "lucide-react";
 
+
+/* ===========================================================
+   CUSTOMER COMPONENTS
+=========================================================== */
+
 import CustomerSmartWall
   from "../../../smartwall/CustomerSmartWall";
+
 
 import CustomerHangerRail
   from "../../../hub/sections/CustomerHangerRail";
 
+
 import CustomerSearchBar
   from "../../../hub/topbar/components/CustomerSearchBar/CustomerSearchBar";
 
+
 import CustomerHubSummaryCards
   from "./CustomerHubSummaryCards/CustomerHubSummaryCards";
+
+
+/* ===========================================================
+   TYPES
+=========================================================== */
 
 import type {
   SmartWallPanelProps,
 } from "./SmartWallPanel.types";
 
+
+/* ===========================================================
+   RESPONSIVE ENGINE
+=========================================================== */
+
 import {
   useCustomerResponsive,
 } from "../../../../../utils/responsive/customers/customers.useResponsive";
 
+
 import {
   getCustomerToolbarTokens,
 } from "../../../../../utils/responsive/customers/customerToolbar.tokens";
+
+
+/* ===========================================================
+   THEME ENGINE
+=========================================================== */
+
+import {
+  useTheme,
+} from "../../../../../themes/provider/ThemeProvider";
 
 
 /* ===========================================================
@@ -97,7 +135,28 @@ export default function SmartWallPanel({
 
 
   /* =========================================================
-     RESPONSIVE ENGINE
+     FINORA THEME ENGINE
+     =========================================================
+     
+     ThemeProvider
+          ↓
+     FINORA Theme Registry
+          ↓
+     useTheme()
+          ↓
+     SmartWallPanel
+     
+     Theme controls visual appearance only.
+     Responsive geometry remains in Responsive Engine.
+  ========================================================= */
+
+  const {
+    theme,
+  } = useTheme();
+
+
+  /* =========================================================
+     CUSTOMER RESPONSIVE ENGINE
   ========================================================= */
 
   const {
@@ -136,23 +195,6 @@ export default function SmartWallPanel({
   /* =========================================================
      TOOLBAR RESPONSIVE CONTRACT
   ========================================================= */
-
-  /*
-   * IMPORTANT
-   *
-   * Toolbar geometry belongs exclusively to the
-   * Customer Toolbar Responsive Engine.
-   *
-   * SmartWallPanel does NOT calculate:
-   *
-   * - viewport width
-   * - breakpoints
-   * - responsive widths
-   * - responsive gaps
-   * - responsive heights
-   *
-   * It only consumes the resolved toolbar tokens.
-   */
 
   const toolbarGridTemplateColumns =
     toolbar.gridTemplateColumns;
@@ -217,6 +259,87 @@ export default function SmartWallPanel({
 
 
   /* =========================================================
+     THEME VISUAL TOKENS
+     
+     IMPORTANT:
+     
+     These are visual-only references to the central
+     FINORA Theme Engine.
+     
+     No theme values are created here.
+  ========================================================= */
+
+  const themePrimary =
+    theme
+      .colors
+      .brand
+      .primary;
+
+
+  const themeAccent =
+    theme
+      .colors
+      .brand
+      .accent;
+
+
+  const themeSurface =
+    theme
+      .colors
+      .background
+      .surface;
+
+
+  const themeSurfaceMuted =
+    theme
+      .colors
+      .background
+      .surfaceMuted;
+
+
+  const themePageBackground =
+    theme
+      .colors
+      .background
+      .page;
+
+
+  const themeBorder =
+    theme
+      .colors
+      .border
+      .default;
+
+
+  const themeStrongBorder =
+    theme
+      .colors
+      .border
+      .strong;
+
+
+  const themeText =
+    theme
+      .colors
+      .text
+      .primary;
+
+
+  const themeTextMuted =
+    theme
+      .colors
+      .text
+      .secondary;
+
+
+  const themeShadow =
+    theme
+      .colors
+      .overlay
+      .shadow;
+
+
+  /* =========================================================
      ACTION BUTTON STYLE
   ========================================================= */
 
@@ -256,7 +379,7 @@ export default function SmartWallPanel({
       actionButtonRadius,
 
     border:
-      "none",
+      `1px solid ${themeStrongBorder}`,
 
     cursor:
       "pointer",
@@ -271,16 +394,16 @@ export default function SmartWallPanel({
       1.1,
 
     color:
-      "#FFFFFF",
+      themeText,
 
     background:
-      "linear-gradient(180deg,#C99A55,#8A612B)",
+      themeSurface,
 
     boxShadow:
-      "0 8px 20px rgba(0,0,0,.25)",
+      `0 8px 20px ${themeShadow}`,
 
     transition:
-      "transform .2s ease, box-shadow .2s ease",
+      "transform .2s ease, box-shadow .2s ease, background .2s ease, border-color .2s ease",
 
     boxSizing:
       "border-box" as const,
@@ -400,6 +523,45 @@ export default function SmartWallPanel({
       "flex-end",
 
   };
+
+
+  /* =========================================================
+     EDIT HINT THEME COLORS
+     
+     No semantic token is used because ThemeColors does not
+     expose a "semantic" property.
+     
+     The hint therefore uses the active theme's own:
+     - brand primary
+     - accent
+     - surface
+     - border
+     - text
+     - shadow
+     
+     This keeps the hint fully theme-owned.
+  ========================================================= */
+
+  const editHintBorder =
+    themeStrongBorder;
+
+
+  const editHintBackground =
+    themeSurface;
+
+
+  const editHintText =
+    themeText;
+
+
+  const editHintActiveColor =
+    themeAccent ||
+    themePrimary;
+
+
+  const editHintInactiveColor =
+    themeTextMuted ||
+    themePrimary;
 
 
   /* =========================================================
@@ -697,10 +859,10 @@ export default function SmartWallPanel({
                   tokens.panel.radius,
 
                 background:
-                  "rgba(15,23,42,0.96)",
+                  editHintBackground,
 
                 color:
-                  "#FFFFFF",
+                  editHintText,
 
                 fontSize:
                   tokens.typography.small,
@@ -715,10 +877,10 @@ export default function SmartWallPanel({
                   "center",
 
                 border:
-                  "1px solid rgba(201,154,85,0.45)",
+                  `1px solid ${editHintBorder}`,
 
                 boxShadow:
-                  "0 8px 24px rgba(0,0,0,0.28)",
+                  `0 8px 24px ${themeShadow}`,
 
                 pointerEvents:
                   "none",
@@ -734,18 +896,14 @@ export default function SmartWallPanel({
 
                   color:
                     hasSelectedCustomer
-                      ? "#86EFAC"
-                      : "#FCA5A5",
+                      ? editHintActiveColor
+                      : editHintInactiveColor,
 
                   fontWeight:
                     500,
 
                   textShadow:
-                    hasSelectedCustomer
-
-                      ? "0 0 10px rgba(34,197,94,0.35)"
-
-                      : "0 0 10px rgba(239,68,68,0.35)",
+                    `0 0 10px ${themeShadow}`,
 
                 }}
               >
@@ -788,6 +946,17 @@ export default function SmartWallPanel({
 
           position:
             "relative",
+
+          /*
+           * Theme surface is intentionally applied here only
+           * as a visual fallback for the Customer wall area.
+           *
+           * CustomerSmartWall remains responsible for its own
+           * internal presentation.
+           */
+
+          background:
+            themePageBackground,
 
         }}
 
@@ -885,6 +1054,9 @@ export default function SmartWallPanel({
 
           marginTop:
             wallSummaryMarginTop,
+
+          background:
+            themePageBackground,
 
         }}
       >

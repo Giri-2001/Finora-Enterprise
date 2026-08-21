@@ -67,7 +67,7 @@ export const OBSIDIAN_THEME:
   ========================================================= */
 
   selectorSwatch:
-    "#161922",
+  "#6B7078",
 
 
   /* =========================================================
@@ -132,9 +132,8 @@ export const OBSIDIAN_THEME:
     ------------------------------------------------------- */
 
     status: {
-
-      success: "#35B77A",
-      successSoft: "#173B31",
+  success: "#B8C0C8",
+  successSoft: "#252B31",
 
       warning: "#D6A33A",
       warningSoft: "#40351D",

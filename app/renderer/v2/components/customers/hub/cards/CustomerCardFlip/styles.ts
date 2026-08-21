@@ -103,9 +103,10 @@ export function createFaceStyle(
     height,
 
     borderRadius:
-      `${responsive.radius}px`,
+  "inherit",
 
-    overflow: "hidden",
+overflow:
+  "visible",
 
     backfaceVisibility:
       "hidden",

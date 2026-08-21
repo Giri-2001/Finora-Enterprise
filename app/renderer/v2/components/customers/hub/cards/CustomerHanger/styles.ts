@@ -5,11 +5,13 @@
 
    PRESENTATION STYLES
 
+   RESPONSIVE MIGRATION
+   -----------------------------------------------------------
    RESPONSIBILITY:
    - Customer Hanger presentation only
    - Decorative hanger geometry
    - Card wrapper presentation
-   - No responsive card dimensions
+   - Bottom finishing rail presentation
 
    IMPORTANT:
    - Customer card width / height are resolved by the
@@ -18,6 +20,8 @@
      customer-card dimensions.
    - Decorative hanger dimensions continue to use the
      Customer Hanger constants.
+   - Theme visual values are supplied by CustomerHanger.tsx.
+   - No breakpoint logic exists in this file.
 =========================================================== */
 
 
@@ -28,6 +32,7 @@
 import type {
   CSSProperties,
 } from "react";
+
 
 import {
   HANGER_HEIGHT,
@@ -101,17 +106,24 @@ export const pinStyle:
   borderRadius:
     "50%",
 
+  /*
+   * Theme visual fallback.
+   *
+   * Final theme values are supplied by
+   * CustomerHanger.tsx through the FINORA Theme Engine.
+   */
+
   background:
-    "linear-gradient(180deg,#D6B06A,#8A612B)",
+    "var(--finora-theme-brand-primary, #D6B06A)",
 
   border:
-    "1px solid #6B4B1D",
+    "1px solid var(--finora-theme-border-strong, #6B4B1D)",
 
   marginBottom:
     "0px",
 
   boxShadow:
-    "0 2px 4px rgba(0,0,0,.25)",
+    "0 2px 4px var(--finora-theme-overlay-shadow, rgba(0,0,0,.25))",
 
 };
 
@@ -129,8 +141,15 @@ export const ropeStyle:
   height:
     `${ROPE_HEIGHT}px`,
 
+  /*
+   * Theme visual fallback.
+   *
+   * Final theme value is supplied by
+   * CustomerHanger.tsx.
+   */
+
   background:
-    "linear-gradient(180deg,#D5D9E0,#7B8798,#475569)",
+    "var(--finora-theme-border-strong, #7B8798)",
 
   marginTop:
     "0px",
@@ -152,10 +171,10 @@ export const hangerStyle:
     `${HANGER_HEIGHT}px`,
 
   border:
-    "3px solid #7C8798",
+    "3px solid var(--finora-theme-border-strong, #7C8798)",
 
   borderTop:
-    "0",
+    "0px solid transparent",
 
   borderRadius:
     "0 0 36px 36px",
@@ -170,7 +189,7 @@ export const hangerStyle:
 /*
  * IMPORTANT:
  *
- * Do NOT place a customer-card width or height here.
+ * Do NOT place customer-card width or height here.
  *
  * CustomerHanger.tsx resolves:
  *
@@ -180,7 +199,7 @@ export const hangerStyle:
  *          ↓
  *   resolvedCardContainerStyle
  *
- * This wrapper only owns presentation behavior.
+ * This wrapper owns presentation behavior only.
  */
 
 export const cardContainerStyle:
@@ -213,7 +232,6 @@ export const cardContainerStyle:
   paddingBottom:
     "0px",
 
-
 };
 
 
@@ -221,13 +239,20 @@ export const cardContainerStyle:
    CARD FINISHING RAIL
 =========================================================== */
 
-/* ===========================================================
-   CARD FINISHING RAIL
-=========================================================== */
-
-/* ===========================================================
-   CARD FINISHING RAIL
-=========================================================== */
+/*
+ * IMPORTANT:
+ *
+ * This rail belongs directly beneath the customer card.
+ *
+ * Responsive card geometry remains owned by
+ * CustomerHanger.tsx.
+ *
+ * The rail itself intentionally uses relative presentation
+ * geometry only.
+ *
+ * 8px margin keeps the finishing line visually close to the
+ * card and prevents the previous excessive outer gap.
+ */
 
 export const bottomRailStyle:
   CSSProperties = {
@@ -236,7 +261,7 @@ export const bottomRailStyle:
     "100%",
 
   height:
-    "3px",
+    "4px",
 
   marginTop:
     "12px",
@@ -244,11 +269,18 @@ export const bottomRailStyle:
   borderRadius:
     "999px",
 
+  /*
+   * Theme fallback.
+   *
+   * CustomerHanger.tsx replaces this background using the
+   * active FINORA Theme Engine.
+   */
+
   background:
-    "linear-gradient(90deg,transparent,#D4AF37,transparent)",
+    "linear-gradient(90deg, transparent, #FFD86B, #D4AF37, #FFD86B, transparent)",
 
   boxShadow:
-    "0 4px 12px rgba(212,175,55,.35)",
+    "0 6px 16px var(--finora-theme-overlay-shadow, rgba(212,175,55,.45))",
 
   position:
     "relative",

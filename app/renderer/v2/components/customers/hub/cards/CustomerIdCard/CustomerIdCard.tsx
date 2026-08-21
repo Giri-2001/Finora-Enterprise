@@ -7,23 +7,24 @@
 
    Module  : Customer Hub
    Layer   : Cards
-   Version : 2.2
+   Version : 2.5
    Status  : Production
 
-   RESPONSIBILITY:
-   - Customer identity presentation
-   - Consume resolved Customer Responsive Engine tokens
-   - Premium customer card presentation
-   - Customer photo presentation
-   - Customer status presentation
+   FINAL THEME / FONT CONTRACT
+   -----------------------------------------------------------
 
-   IMPORTANT:
-   - No viewport detection inside this component
-   - No independent responsive dimensions
-   - No breakpoint resolution inside this component
-   - Responsive values come from the parent responsive layer
-   - Standard / compact presentation remains supported
-   - Parent responsive layer owns viewport resolution
+   - Customer Responsive Engine owns geometry.
+   - FINORA Theme Engine owns visual colours.
+   - FINORA ENTERPRISE and GIRI FINANCE COMPANY use the
+     SAME TYPOGRAPHY FAMILY as the customer-name typography.
+   - Brand/company text uses THEME.textPrimary so it never
+     becomes a low-contrast purple/green/gold accent.
+   - Customer name, phone and customer ID use the same
+     high-contrast primary text colour.
+   - KYC badge remains fully theme-linked.
+   - No viewport detection.
+   - No independent responsive sizing.
+   - No layout / spacing changes are introduced by this fix.
 =========================================================== */
 
 
@@ -34,21 +35,29 @@
 import finoraLogo
   from "../../../../../app/assets/finoraenterprise.png";
 
+
 import type {
   CustomerIdCardProps,
 } from "./types";
+
 
 import {
   BRAND_NAME,
   COMPANY_NAME,
 } from "./constants";
 
+
 import {
   createCardStyle,
+  createCardInnerStyle,
   createStatusHeaderStyle,
+  createBrandStyle,
   createCompanyStyle,
   createPhotoStyle,
+  createPhotoImageStyle,
+  createLogoImageStyle,
   createNameStyle,
+  createPhoneStyle,
   createCustomerIdStyle,
   createKycStyle,
 } from "./styles";
@@ -79,14 +88,6 @@ export default function CustomerIdCard({
 
   /* =========================================================
      COMPATIBILITY
-
-     The compact prop remains part of the public component API.
-
-     Customer Hanger currently uses compact presentation.
-
-     Responsive geometry itself is NOT decided by this flag.
-     Geometry comes exclusively from the resolved
-     Customer Responsive Engine token set.
   ========================================================= */
 
   void compact;
@@ -95,22 +96,9 @@ export default function CustomerIdCard({
   /* =========================================================
      RESPONSIVE TOKEN CONTRACT
 
-     IMPORTANT:
+     CustomerIdCard never resolves breakpoints itself.
 
-     CustomerIdCard does NOT:
-
-     - inspect window.innerWidth
-     - resolve breakpoints
-     - select mobile tokens
-     - select tablet tokens
-     - select laptop tokens
-     - select desktop tokens
-
-     The parent responsive layer resolves the correct token
-     set and passes it through responsiveTokens.
-
-     This keeps the Customer Responsive Engine as the single
-     source of truth.
+     Parent responsive layer supplies the resolved token set.
   ========================================================= */
 
   if (!responsiveTokens) {
@@ -130,8 +118,18 @@ export default function CustomerIdCard({
     );
 
 
+  const resolvedCardInnerStyle =
+    createCardInnerStyle();
+
+
   const resolvedStatusHeaderStyle =
     createStatusHeaderStyle(
+      responsiveTokens,
+    );
+
+
+  const resolvedBrandStyle =
+    createBrandStyle(
       responsiveTokens,
     );
 
@@ -154,6 +152,12 @@ export default function CustomerIdCard({
     );
 
 
+  const resolvedPhoneStyle =
+    createPhoneStyle(
+      responsiveTokens,
+    );
+
+
   const resolvedCustomerIdStyle =
     createCustomerIdStyle(
       responsiveTokens,
@@ -163,17 +167,15 @@ export default function CustomerIdCard({
   const resolvedKycStyle =
     createKycStyle(
       responsiveTokens,
+      kycVerified,
     );
 
 
   /* =========================================================
      CARD PRESENTATION
-
-     The responsive width / height contract is owned by
-     CustomerHanger.
-
-     CustomerIdCard only consumes the resolved token set
-     for its internal presentation geometry.
+     ---------------------------------------------------------
+     Geometry continues to come entirely from the responsive
+     style factory.
   ========================================================= */
 
   const presentationCardStyle = {
@@ -186,17 +188,10 @@ export default function CustomerIdCard({
     position:
       "relative" as const,
 
+    overflow:
+      "hidden" as const,
+
   };
-
-
-  /* =========================================================
-     STATUS COLOR
-  ========================================================= */
-
-  const statusColor =
-    kycVerified
-      ? "#16A34A"
-      : "#DC2626";
 
 
   /* =========================================================
@@ -221,65 +216,39 @@ export default function CustomerIdCard({
 
       <div
 
-        style={{
-
-          position:
-            "relative",
-
-          zIndex:
-            2,
-
-          display:
-            "flex",
-
-          flexDirection:
-            "column",
-
-          width:
-            "100%",
-
-          height:
-            "100%",
-
-          minWidth:
-            0,
-
-          boxSizing:
-            "border-box",
-
-        }}
+        style={
+          resolvedCardInnerStyle
+        }
 
       >
 
         {/* =================================================
             STATUS STRIP
+
+            Theme-aware through the existing style factory.
         ================================================= */}
 
         <div
 
-          style={{
-
-            ...resolvedStatusHeaderStyle,
-
-            background:
-              statusColor,
-
-            flexShrink:
-              0,
-
-          }}
+          style={
+            resolvedStatusHeaderStyle
+          }
 
         />
 
 
         {/* =================================================
             FINORA BRAND
+
+            IMPORTANT:
+            Same font family / weight as customer name.
+            Colour follows semantic primary text.
         ================================================= */}
 
         <div
 
           style={
-            resolvedCompanyStyle
+            resolvedBrandStyle
           }
 
         >
@@ -290,72 +259,14 @@ export default function CustomerIdCard({
 
 
         {/* =================================================
-            COMPANY NAME
+            COMPANY NAME BAND
         ================================================= */}
 
         <div
 
-          style={{
-
-            marginTop:
-              responsiveTokens.spacing.small,
-
-            background:
-              `
-              linear-gradient(
-                180deg,
-                #E8C778 0%,
-                #B88938 45%,
-                #8A612B 100%
-              )
-              `,
-
-            boxShadow:
-              "inset 0 1px 3px rgba(255,255,255,.5)",
-
-            color:
-              "#FFFFFF",
-
-            fontSize:
-  `${responsiveTokens.customerCards.companySize}px`,
-
-            fontWeight:
-              700,
-
-            letterSpacing:
-              ".8px",
-
-            textTransform:
-              "uppercase",
-
-            padding:
-              `${responsiveTokens.spacing.small}px ${responsiveTokens.spacing.inline}px`,
-
-            textAlign:
-              "center",
-
-            boxSizing:
-              "border-box",
-
-            width:
-              "100%",
-
-            minWidth:
-              0,
-
-            whiteSpace:
-              "nowrap",
-
-            overflow:
-              "visible",
-
-            textOverflow:
-              "clip",
-
-            flexShrink:
-              0,
-
-          }}
+          style={
+            resolvedCompanyStyle
+          }
 
         >
 
@@ -370,14 +281,9 @@ export default function CustomerIdCard({
 
         <div
 
-          style={{
-
-            ...resolvedPhotoStyle,
-
-            flexShrink:
-              0,
-
-          }}
+          style={
+            resolvedPhotoStyle
+          }
 
         >
 
@@ -393,27 +299,9 @@ export default function CustomerIdCard({
                 customerName || "Customer"
               }
 
-              style={{
-
-                width:
-                  "100%",
-
-                height:
-                  "100%",
-
-                objectFit:
-                  "cover",
-
-                objectPosition:
-                  "center",
-
-                borderRadius:
-                  "50%",
-
-                display:
-                  "block",
-
-              }}
+              style={
+                createPhotoImageStyle()
+              }
 
             />
 
@@ -427,24 +315,9 @@ export default function CustomerIdCard({
 
               alt="FINORA"
 
-              style={{
-
-                width:
-                  "72%",
-
-                height:
-                  "72%",
-
-                objectFit:
-                  "contain",
-
-                objectPosition:
-                  "center",
-
-                display:
-                  "block",
-
-              }}
+              style={
+                createLogoImageStyle()
+              }
 
             />
 
@@ -470,52 +343,16 @@ export default function CustomerIdCard({
 
           {/* ===============================================
               PHONE
+
+              Same primary text colour as the customer name.
+              Existing responsive phone sizing is preserved.
           =============================================== */}
 
           <div
 
-            style={{
-
-              width:
-                "100%",
-
-              minWidth:
-                0,
-
-              boxSizing:
-                "border-box",
-
-              display:
-                "block",
-
-              textAlign:
-                "center",
-
-              fontSize:
-  `${responsiveTokens.customerCards.phoneSize + 4}px`,
-
-              fontWeight:
-                550,
-
-              color:
-                "#374151",
-
-              marginTop:
-                responsiveTokens.spacing.small,
-
-              lineHeight:
-                responsiveTokens.lineHeight.compact,
-
-              overflow:
-                "hidden",
-
-              textOverflow:
-                "ellipsis",
-
-              whiteSpace:
-                "nowrap",
-
-            }}
+            style={
+              resolvedPhoneStyle
+            }
 
           >
 
@@ -528,6 +365,9 @@ export default function CustomerIdCard({
 
         {/* =================================================
             CUSTOMER ID
+
+            Same semantic primary text colour as the
+            customer name. No theme accent colour.
         ================================================= */}
 
         <div
@@ -544,7 +384,9 @@ export default function CustomerIdCard({
 
 
         {/* =================================================
-            CUSTOMER STATUS
+            CUSTOMER STATUS / KYC
+
+            Fully linked to the FINORA theme.
         ================================================= */}
 
         <div
@@ -555,7 +397,15 @@ export default function CustomerIdCard({
 
         >
 
-          ● {kycVerified
+          <span
+            aria-hidden="true"
+          >
+            ●
+          </span>
+
+          {" "}
+
+          {kycVerified
             ? "KYC Verified"
             : "KYC Pending"}
 

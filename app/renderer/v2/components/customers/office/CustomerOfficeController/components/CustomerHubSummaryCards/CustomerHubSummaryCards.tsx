@@ -3,15 +3,16 @@
 
    CUSTOMER HUB SUMMARY CARDS™
 
-   RESPONSIVE PRESENTATION
+   THEME + RESPONSIVE PRESENTATION
    -----------------------------------------------------------
-   Responsive geometry is supplied exclusively by the
-   Customer Hub Summary Cards Responsive Engine.
+   RESPONSIVE:
+   - Geometry comes exclusively from Customer Responsive Engine.
 
-   Component contains:
-   - no viewport calculations
-   - no breakpoint logic
-   - no responsive dimensions
+   THEME:
+   - Visual colours come exclusively from FINORA Theme Engine.
+   - Active theme is resolved through useTheme().
+   - Theme CSS variables are exposed on the Summary Cards root.
+   - No local theme palette exists here.
 =========================================================== */
 
 
@@ -20,40 +21,50 @@
 =========================================================== */
 
 import type {
+  CSSProperties,
+} from "react";
+
+
+import type {
   CustomerHubSummaryCardsProps,
 } from "./types";
 
 
 import {
-
   containerStyle,
-
   cardStyle,
-
   titleStyle,
-
   valueStyle,
-
   descriptionStyle,
-
   paginationCardStyle,
-
   paginationButtonStyle,
-
   paginationCenterStyle,
-
   paginationDotStyle,
-
   paginationActiveDotStyle,
-
   getCustomerHubSummaryCardsStyles,
-
 } from "./styles";
 
 
 import {
   useCustomerResponsive,
 } from "../../../../../../utils/responsive/customers/customers.useResponsive";
+
+
+import {
+  useTheme,
+} from "../../../../../../themes/provider";
+
+
+/* ===========================================================
+   THEME STYLE TYPE
+=========================================================== */
+
+type ThemeStyle =
+  CSSProperties &
+  Record<
+    `--${string}`,
+    string
+  >;
 
 
 /* ===========================================================
@@ -78,8 +89,6 @@ export default function CustomerHubSummaryCards({
 
   onOpenCustomerData,
 
-  
-
 }: CustomerHubSummaryCardsProps) {
 
 
@@ -94,14 +103,99 @@ export default function CustomerHubSummaryCards({
 
 
   /* =========================================================
+     FINORA THEME ENGINE
+  ========================================================= */
+
+  const {
+    theme,
+  } =
+    useTheme();
+
+
+  /* =========================================================
      SUMMARY CARDS RESPONSIVE TOKENS
   ========================================================= */
 
   const summaryStyles =
     getCustomerHubSummaryCardsStyles(
       tokens.meta.viewport,
-      
     );
+
+
+  /* =========================================================
+     THEME CSS VARIABLES
+
+     These variables are attached to the Summary Cards root.
+
+     This is important because the Summary Cards live outside
+     the CustomerHanger root where the same theme variables are
+     normally exposed.
+
+     Therefore all five bottom cards now receive the exact same
+     active FINORA Theme Engine values.
+  ========================================================= */
+
+  const themeVariables:
+    ThemeStyle = {
+
+    "--finora-theme-brand-primary":
+      theme.colors.brand.primary,
+
+    "--finora-theme-brand-secondary":
+      theme.colors.brand.secondary,
+
+    "--finora-theme-brand-accent":
+      theme.colors.brand.accent,
+
+    "--finora-theme-brand-accent-soft":
+      theme.colors.brand.accentSoft,
+
+    "--finora-theme-border-default":
+      theme.colors.border.default,
+
+    "--finora-theme-border-strong":
+      theme.colors.border.strong,
+
+    "--finora-theme-border-subtle":
+      theme.colors.border.subtle,
+
+    "--finora-theme-overlay-shadow":
+      theme.colors.overlay.shadow,
+
+    "--finora-theme-surface":
+      theme.colors.background.surface,
+
+    "--finora-theme-background-surface":
+      theme.colors.background.surface,
+
+    "--finora-theme-surface-muted":
+      theme.colors.background.surfaceMuted,
+
+    "--finora-theme-background-surface-muted":
+      theme.colors.background.surfaceMuted,
+
+    "--finora-theme-text-primary":
+      theme.colors.text.primary,
+
+    "--finora-theme-text-secondary":
+      theme.colors.text.secondary,
+
+    "--finora-theme-text-body":
+      theme.colors.text.secondary,
+
+    "--finora-theme-text-muted":
+      theme.colors.text.muted,
+
+    "--finora-theme-success":
+      theme.colors.status.success,
+
+    "--finora-theme-success-soft":
+      theme.colors.status.successSoft,
+
+    "--finora-theme-success-border":
+      theme.colors.border.strong,
+
+  };
 
 
   /* =========================================================
@@ -111,11 +205,13 @@ export default function CustomerHubSummaryCards({
   return (
 
     <div
-      style={
-        containerStyle(
+      style={{
+        ...themeVariables,
+
+        ...containerStyle(
           summaryStyles,
-        )
-      }
+        ),
+      }}
     >
 
 
@@ -125,11 +221,13 @@ export default function CustomerHubSummaryCards({
 
       <div
         style={{
-  ...cardStyle(
-    summaryStyles,
-  ),
-  order: summaryStyles.totalCustomersOrder,
-}}
+          ...cardStyle(
+            summaryStyles,
+          ),
+
+          order:
+            summaryStyles.totalCustomersOrder,
+        }}
       >
 
         <div
@@ -173,11 +271,13 @@ export default function CustomerHubSummaryCards({
 
       <div
         style={{
-  ...cardStyle(
-    summaryStyles,
-  ),
-  order: summaryStyles.activeCustomersOrder,
-}}
+          ...cardStyle(
+            summaryStyles,
+          ),
+
+          order:
+            summaryStyles.activeCustomersOrder,
+        }}
       >
 
         <div
@@ -221,11 +321,13 @@ export default function CustomerHubSummaryCards({
 
       <div
         style={{
-  ...paginationCardStyle(
-    summaryStyles,
-  ),
-  order: summaryStyles.paginationOrder,
-}}
+          ...paginationCardStyle(
+            summaryStyles,
+          ),
+
+          order:
+            summaryStyles.paginationOrder,
+        }}
       >
 
         <button
@@ -257,6 +359,7 @@ export default function CustomerHubSummaryCards({
             }
           />
 
+
           <span
             style={
               paginationDotStyle(
@@ -264,6 +367,7 @@ export default function CustomerHubSummaryCards({
               )
             }
           />
+
 
           <span
             style={
@@ -297,11 +401,13 @@ export default function CustomerHubSummaryCards({
 
       <div
         style={{
-  ...cardStyle(
-    summaryStyles,
-  ),
-  order: summaryStyles.workDeskOrder,
-}}
+          ...cardStyle(
+            summaryStyles,
+          ),
+
+          order:
+            summaryStyles.workDeskOrder,
+        }}
 
         onClick={
           onOpenWorkspace
@@ -349,11 +455,13 @@ export default function CustomerHubSummaryCards({
 
       <div
         style={{
-  ...cardStyle(
-    summaryStyles,
-  ),
-  order: summaryStyles.customerDataOrder,
-}}
+          ...cardStyle(
+            summaryStyles,
+          ),
+
+          order:
+            summaryStyles.customerDataOrder,
+        }}
 
         onClick={
           onOpenCustomerData

@@ -10,8 +10,8 @@
    - Structural layout only
    - Responsive values are supplied by the
      Customer Responsive Engine
-   - No device detection
-   - No hard-coded responsive sizing decisions
+   - Theme values remain owned by the
+     FINORA Theme Engine
 
    IMPORTANT:
    - Customer responsive spacing comes from
@@ -20,6 +20,9 @@
      correct viewport values before presentation
    - This style module must not decide mobile,
      tablet, laptop or desktop values independently
+   - No device detection
+   - No local responsive sizing decisions
+   - No hard-coded theme colors
 =========================================================== */
 
 
@@ -31,9 +34,11 @@ import type {
   CSSProperties,
 } from "react";
 
+
 import type {
   ResponsiveTokens,
 } from "../../../../../utils/responsive/customers/customers.tokens";
+
 
 import {
   RAIL_HEIGHT,
@@ -129,6 +134,32 @@ export const railWrapperStyle:
    STEEL RAIL
 =========================================================== */
 
+/*
+ * IMPORTANT:
+ *
+ * This file does NOT own theme colors.
+ *
+ * CustomerHangerRail.tsx will inject the active
+ * FINORA Theme Engine colors.
+ *
+ * CSS variables:
+ *
+ * --finora-theme-brand-accent
+ * --finora-theme-border-subtle
+ *
+ * Therefore:
+ *
+ * ThemeProvider
+ *      ↓
+ * useTheme()
+ *      ↓
+ * CustomerHangerRail.tsx
+ *      ↓
+ * CSS variables
+ *      ↓
+ * railStyle
+ */
+
 export const railStyle:
   CSSProperties = {
 
@@ -145,10 +176,12 @@ export const railStyle:
     "999px",
 
   background:
-    "linear-gradient(90deg, transparent, rgba(246,213,138,.95), transparent)",
-
-  boxShadow:
-    "0 4px 14px rgba(212,175,55,.35)",
+    "linear-gradient(" +
+    "90deg," +
+    "transparent," +
+    "var(--finora-theme-brand-accent, currentColor)," +
+    "transparent" +
+    ")",
 
 };
 
@@ -160,19 +193,22 @@ export const railStyle:
 /*
  * IMPORTANT:
  *
- * Do not place values such as:
- *
- *   gap: "clamp(...)"
- *   maxWidth: "1400px"
- *   padding: "0 16px"
- *
- * here.
- *
- * Those are responsive presentation decisions.
+ * Responsive geometry is NOT decided here.
  *
  * CustomerHangerRail receives the resolved
  * Customer Responsive Engine tokens and applies
- * them through getHangerAreaStyle().
+ * the resolved card gap through this function.
+ *
+ * Therefore:
+ *
+ * Customer Responsive Engine
+ *          ↓
+ * customerTokens.card.gap
+ *          ↓
+ * getHangerAreaStyle()
+ *
+ * Theme Engine remains completely separate from
+ * responsive geometry.
  */
 
 export function getHangerAreaStyle(
@@ -194,7 +230,7 @@ export function getHangerAreaStyle(
     gap:
       tokens.card.gap,
 
-       width:
+    width:
       "100%",
 
     maxWidth:

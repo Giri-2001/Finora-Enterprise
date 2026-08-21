@@ -167,11 +167,11 @@ export const AMETHYST_THEME:
     status: {
 
       success:
-        "#55C18D",
+  "#C084FC",
 
-      successSoft:
-        "#153126",
-
+successSoft:
+  "#30204A",
+  
       warning:
         "#D7A13D",
 

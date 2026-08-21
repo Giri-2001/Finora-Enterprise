@@ -77,7 +77,7 @@ export const IMPERIAL_GOLD_THEME:
     ------------------------------------------------------- */
 
     background: {
-      page: "#F7F8FA",
+      page: "#E5E7EB",
       surface: "#FFFFFF",
       surfaceElevated: "#FFFFFF",
       surfaceMuted: "#F1F3F6",
@@ -117,8 +117,8 @@ export const IMPERIAL_GOLD_THEME:
 
     status: {
 
-      success: "#16845B",
-      successSoft: "#E7F6EF",
+      success: "#3A2A08",
+successSoft: "#C9A227",
 
       warning: "#B7791F",
       warningSoft: "#FFF4D8",

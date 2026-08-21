@@ -7,10 +7,17 @@
 
    RESPONSIVE MIGRATION
    -----------------------------------------------------------
-   Visual/responsive dimensions are consumed from the
+   Visual / responsive dimensions are consumed from the
    Customer Hub Summary Cards Responsive Engine.
 
-   No breakpoint logic exists in this file.
+   Theme colors are consumed from the active FINORA
+   Theme Engine through CSS variables.
+
+   IMPORTANT:
+   - No breakpoint logic exists here.
+   - No local theme palette exists here.
+   - Theme CSS variables use defensive fallback chains.
+   - color-mix() NEVER receives an undefined CSS variable.
 =========================================================== */
 
 
@@ -26,6 +33,7 @@ import type {
 import {
   getCustomerSummaryCardsTokens,
 } from "../../../../../../utils/responsive/customers/customerSummaryCards.tokens";
+
 
 import type {
   ResponsiveViewport,
@@ -62,6 +70,54 @@ export function getCustomerHubSummaryCardsStyles(
 
 
 /* ===========================================================
+   THEME CSS VARIABLES
+   -----------------------------------------------------------
+   IMPORTANT:
+
+   These are NOT a second theme definition.
+
+   They are only defensive CSS-variable resolution chains.
+
+   Resolution order:
+
+     active theme accent
+          ↓
+     active theme primary
+          ↓
+     FINORA defensive fallback
+
+   This prevents invalid color-mix() declarations when
+   the summary-card parent does not directly expose one of
+   the optional theme variables.
+=========================================================== */
+
+const THEME = {
+
+  brand:
+    "var(--finora-theme-brand-accent, var(--finora-theme-brand-primary, #D4AF37))",
+
+  brandPrimary:
+    "var(--finora-theme-brand-primary, var(--finora-theme-brand-accent, #D4AF37))",
+
+  border:
+    "var(--finora-theme-border-default, var(--finora-theme-brand-accent, var(--finora-theme-brand-primary, #D4AF37)))",
+
+  borderStrong:
+    "var(--finora-theme-border-strong, var(--finora-theme-border-default, var(--finora-theme-brand-accent, var(--finora-theme-brand-primary, #D4AF37))))",
+
+  textPrimary:
+    "var(--finora-theme-text-primary, #FFFFFF)",
+
+  textSecondary:
+    "var(--finora-theme-text-secondary, var(--finora-theme-text-primary, #FFFFFF))",
+
+  overlay:
+    "var(--finora-theme-overlay-shadow, rgba(0,0,0,.12))",
+
+} as const;
+
+
+/* ===========================================================
    CONTAINER
 =========================================================== */
 
@@ -84,7 +140,7 @@ export function containerStyle(
     gridTemplateColumns:
       `repeat(${tokens.columns}, minmax(0, ${tokens.cardWidth}px))`,
 
-        justifyContent: 
+    justifyContent:
       tokens.containerJustifyContent,
 
     alignItems:
@@ -149,10 +205,33 @@ export function cardStyle(
       "pointer",
 
     background:
-      "transparent",
+  "var(--finora-theme-card-surface, var(--finora-theme-surface, #FFFFFF))",
+
+
+    /* -------------------------------------------------------
+       THEME BORDER
+
+       IMPORTANT:
+
+       The previous implementation used:
+
+         var(--finora-theme-brand-accent)
+
+       without a fallback.
+
+       If that variable was unavailable, color-mix()
+       became invalid and the entire border disappeared.
+
+       This version always resolves to a valid colour.
+    ------------------------------------------------------- */
 
     border:
-      "1px solid rgba(212,175,55,.55)",
+      `1px solid color-mix(
+        in srgb,
+        ${THEME.brand} 60%,
+        transparent
+      )`,
+
 
     boxShadow:
       "none",
@@ -175,7 +254,8 @@ export function cardStyle(
    ICON
 =========================================================== */
 
-export const iconStyle: CSSProperties = {
+export const iconStyle:
+  CSSProperties = {
 
   display:
     "none",
@@ -198,10 +278,10 @@ export function titleStyle(
   return {
 
     fontSize:
-      `${tokens.titleSize}px`,
+      `${tokens.titleSize + 2}px`,
 
     fontWeight:
-      500,
+      600,
 
     letterSpacing:
       "1px",
@@ -210,7 +290,7 @@ export function titleStyle(
       "uppercase",
 
     color:
-      "#D4AF37",
+      THEME.brand,
 
     textAlign:
       "center",
@@ -244,7 +324,7 @@ export function valueStyle(
       500,
 
     color:
-      "#FFFFFF",
+      THEME.textPrimary,
 
     textAlign:
       "center",
@@ -312,13 +392,23 @@ export function paginationCardStyle(
       `${tokens.paginationGap}px`,
 
     background:
-      "transparent",
+  "var(--finora-theme-card-surface, var(--finora-theme-surface, #FFFFFF))",
+
+
+    /* -------------------------------------------------------
+       THEME BORDER
+    ------------------------------------------------------- */
 
     border:
-      "1px solid rgba(212,175,55,.65)",
+      `1px solid color-mix(
+        in srgb,
+        ${THEME.borderStrong} 70%,
+        transparent
+      )`,
+
 
     boxShadow:
-      "0 8px 20px rgba(0,0,0,.12)",
+      `0 8px 20px ${THEME.overlay}`,
 
     boxSizing:
       "border-box",
@@ -351,14 +441,24 @@ export function paginationButtonStyle(
     borderRadius:
       "50%",
 
+
+    /* -------------------------------------------------------
+       THEME BORDER
+    ------------------------------------------------------- */
+
     border:
-      "1px solid rgba(212,175,55,.85)",
+      `1px solid color-mix(
+        in srgb,
+        ${THEME.brand} 80%,
+        transparent
+      )`,
+
 
     background:
       "transparent",
 
     color:
-      "#FFFFFF",
+      THEME.textPrimary,
 
     cursor:
       "pointer",
@@ -367,7 +467,7 @@ export function paginationButtonStyle(
       `${tokens.paginationFontSize}px`,
 
     fontWeight:
-      300,
+      400,
 
     display:
       "flex",
@@ -410,7 +510,7 @@ export function paginationActiveDotStyle(
       "50%",
 
     background:
-      "#D4AF37",
+      THEME.brand,
 
   };
 
@@ -441,7 +541,7 @@ export function paginationDotStyle(
       "50%",
 
     background:
-      "#FFFFFF",
+      THEME.textSecondary,
 
   };
 

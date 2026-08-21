@@ -1,10 +1,31 @@
 /* ===========================================================
    FINORA ENTERPRISE OS™
+
    CUSTOMER SMART WALL™
 
    PRESENTATION STYLES
+
+   THEME CONTRACT:
+   - No hard-coded Smart Wall background colors
+   - Active theme surface is supplied by the component
+   - ThemeProvider ownership remains outside this styles file
+
+   RESPONSIBILITY:
+   - Smart Wall presentation geometry
+   - Smart Wall spacing
+   - Rail presentation
+   - Content layout
+
+   NOT RESPONSIBLE FOR:
+   - Theme selection
+   - Viewport detection
+   - Responsive breakpoint logic
 =========================================================== */
 
+
+/* ===========================================================
+   IMPORTS
+=========================================================== */
 
 import type {
   CSSProperties,
@@ -16,51 +37,76 @@ import {
 } from "./constants";
 
 
-
 /* ===========================================================
    ROOT
 =========================================================== */
 
-export const containerStyle: CSSProperties = {
+/*
+ * IMPORTANT:
+ *
+ * The Smart Wall background is now supplied by the
+ * FINORA Theme Engine.
+ *
+ * CustomerSmartWall.tsx will resolve the active theme through
+ * ThemeProvider and pass the resolved page/surface background
+ * into this style builder.
+ *
+ * This prevents the Smart Wall from overriding the global
+ * application theme with a local hard-coded gradient.
+ */
 
-  display: "flex",
+export function buildContainerStyle(
+  background: string,
+): CSSProperties {
 
-  flexDirection: "column",
+  return {
 
-  width: "100%",
+    display:
+      "flex",
 
-  height: "100%",
+    flexDirection:
+      "column",
 
-  flex: 1,
+    width:
+      "100%",
 
-  flexShrink: 1,
+    height:
+      "100%",
 
-  minHeight: 0,
+    flex:
+      1,
 
-  gap: "8px",
+    flexShrink:
+      1,
 
-  overflow: "hidden",
+    minHeight:
+      0,
 
-  padding:"16px 28px",
+    gap:
+      "8px",
 
-  background:
-  `
-  linear-gradient(
-    rgba(18,12,8,.35),
-    rgba(18,12,8,.35)
-  ),
+    overflow:
+      "hidden",
 
-  linear-gradient(
-    90deg,
-    #3A2115 0%,
-    #5B3420 25%,
-    #402417 50%,
-    #5B3420 75%,
-    #321B12 100%
-  )
-  `,
+    padding:
+      "16px 28px",
 
-};
+    /*
+     * FINORA THEME ENGINE
+     *
+     * No local Smart Wall color.
+     */
+
+    background:
+  background,
+
+  color:
+    "var(--finora-theme-text-primary, inherit)",
+
+  };
+
+}
+
 
 /* ===========================================================
    UNUSED
@@ -68,24 +114,26 @@ export const containerStyle: CSSProperties = {
 
 export const headerStyle: CSSProperties = {
 
-  display: "none",
+  display:
+    "none",
 
 };
 
 
 export const titleStyle: CSSProperties = {
 
-  display: "none",
+  display:
+    "none",
 
 };
 
 
 export const subtitleStyle: CSSProperties = {
 
-  display: "none",
+  display:
+    "none",
 
 };
-
 
 
 /* ===========================================================
@@ -94,14 +142,16 @@ export const subtitleStyle: CSSProperties = {
 
 export const railWrapperStyle: CSSProperties = {
 
-  width: "100%",
+  width:
+    "100%",
 
-  marginTop: "0px",
+  marginTop:
+    "0px",
 
-  marginBottom: "6px",
+  marginBottom:
+    "6px",
 
 };
-
 
 
 /* ===========================================================
@@ -110,9 +160,11 @@ export const railWrapperStyle: CSSProperties = {
 
 export const railStyle: CSSProperties = {
 
-  width: "100%",
+  width:
+    "100%",
 
-  height: "2px",
+  height:
+    "2px",
 
   borderRadius:
     RAIL_RADIUS,
@@ -129,27 +181,39 @@ export const railStyle: CSSProperties = {
 };
 
 
-
 /* ===========================================================
    CONTENT
 =========================================================== */
 
 export const hangerAreaStyle: CSSProperties = {
 
-display:"flex",
+  display:
+    "flex",
 
-flexDirection:"column",
+  flexDirection:
+    "column",
 
-width:"100%",
+  width:
+    "100%",
 
-flex:1,
+  flex:
+    1,
 
-minHeight:0,
+  minHeight:
+    0,
 
-gap:"8px",
+  gap:
+    "8px",
 
-overflow:"hidden",
+  overflow:
+    "hidden",
 
-paddingBottom:"0",
+  paddingBottom:
+    "0",
 
 };
+
+
+/* ===========================================================
+   END
+=========================================================== */

@@ -167,10 +167,10 @@ export const EMERALD_THEME:
     status: {
 
       success:
-        "#59C895",
+  "#39D98A",
 
-      successSoft:
-        "#123025",
+successSoft:
+  "#103A2A",
 
       warning:
         "#D5A03B",

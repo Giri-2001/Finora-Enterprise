@@ -15,6 +15,7 @@
    - Premium hanging presentation
    - Customer ID card presentation
    - Customer Responsive Engine integration
+   - FINORA Theme Engine visual integration
    - Card geometry propagation to CustomerCardFlip
    - Controlled single-card flip presentation
 
@@ -35,6 +36,7 @@
    IMPORTANT:
    - Responsive visual values come from the Customer
      Responsive Engine.
+   - Theme visual values come from the FINORA Theme Engine.
    - This component does NOT decide breakpoint values.
    - This component does NOT calculate responsive dimensions.
    - Customer card width comes only from
@@ -63,32 +65,59 @@ import type {
 } from "react";
 
 
+/* ===========================================================
+   THEME ENGINE
+=========================================================== */
+
+import {
+  useTheme,
+} from "../../../../../themes/provider/ThemeProvider";
+
+
+/* ===========================================================
+   CUSTOMER CARD COMPONENTS
+=========================================================== */
+
 import CustomerIdCard
   from "../CustomerIdCard";
-
 
 import CustomerCardFlip
   from "../CustomerCardFlip";
 
-
 import CustomerIdCardBack
   from "../CustomerIdCardBack";
 
+
+/* ===========================================================
+   COMPONENT CONTRACT
+=========================================================== */
 
 import type {
   CustomerHangerProps,
 } from "./types";
 
 
+/* ===========================================================
+   HELPERS
+=========================================================== */
+
 import {
   canOpen,
 } from "./helpers";
 
 
+/* ===========================================================
+   CUSTOMER RESPONSIVE ENGINE
+=========================================================== */
+
 import {
   getCustomerTokens,
 } from "../../../../../utils/responsive/customers/customers.tokens";
 
+
+/* ===========================================================
+   PRESENTATION STYLES
+=========================================================== */
 
 import {
   containerStyle,
@@ -98,6 +127,18 @@ import {
   cardContainerStyle,
   bottomRailStyle,
 } from "./styles";
+
+
+/* ===========================================================
+   THEME STYLE TYPE
+=========================================================== */
+
+type ThemeStyle =
+  CSSProperties &
+  Record<
+    `--${string}`,
+    string
+  >;
 
 
 /* ===========================================================
@@ -115,6 +156,19 @@ export default function CustomerHanger({
   onFlip,
 
 }: CustomerHangerProps) {
+
+
+  /* =========================================================
+     THEME ENGINE
+
+     Theme controls visual appearance only.
+
+     Responsive geometry is never derived from theme values.
+  ========================================================= */
+
+  const {
+    theme,
+  } = useTheme();
 
 
   /* =========================================================
@@ -167,11 +221,10 @@ export default function CustomerHanger({
 
      IMPORTANT:
 
-     This component does NOT calculate breakpoints.
+     CustomerHanger does not calculate breakpoints.
 
-     The Responsive Engine resolves the correct token set.
-
-     CustomerHanger only consumes the resolved values.
+     getCustomerTokens() is the single source of truth
+     for customer responsive geometry.
   ========================================================= */
 
   const customerTokens =
@@ -188,13 +241,6 @@ export default function CustomerHanger({
      SINGLE SOURCE OF TRUTH:
 
        customerTokens.customerCards.width
-
-     IMPORTANT:
-
-     - No local width calculation.
-     - No viewport-based width calculation.
-     - No percentage width.
-     - No "100%" as the resolved card width.
   ========================================================= */
 
   const customerCardWidth =
@@ -207,15 +253,6 @@ export default function CustomerHanger({
      SINGLE SOURCE OF TRUTH:
 
        customerTokens.customerCards.height
-
-     IMPORTANT:
-
-     CustomerCardFlip uses height: 100%.
-
-     Therefore this resolved height MUST reach the
-     CustomerHanger card container so that the percentage
-     height inside CustomerCardFlip has a definite parent
-     height.
   ========================================================= */
 
   const customerCardHeight =
@@ -228,12 +265,6 @@ export default function CustomerHanger({
      SINGLE SOURCE OF TRUTH:
 
        customerTokens.customerCards.minHeight
-
-     IMPORTANT:
-
-     Preserve the Responsive Engine contract.
-
-     Never independently calculate or replace this value.
   ========================================================= */
 
   const customerCardMinHeight =
@@ -241,25 +272,122 @@ export default function CustomerHanger({
 
 
   /* =========================================================
+     THEME CSS VARIABLES
+  ========================================================= */
+
+  const themeVariables: ThemeStyle = {
+
+    "--finora-theme-brand-primary":
+      theme.colors.brand.primary,
+
+    "--finora-theme-brand-secondary":
+      theme.colors.brand.secondary,
+
+    "--finora-theme-brand-accent":
+      theme.colors.brand.accent,
+
+    "--finora-theme-brand-accent-soft":
+      theme.colors.brand.accentSoft,
+
+    "--finora-theme-border-default":
+      theme.colors.border.default,
+
+    "--finora-theme-border-strong":
+      theme.colors.border.strong,
+
+    "--finora-theme-border-subtle":
+      theme.colors.border.subtle,
+
+    "--finora-theme-overlay-shadow":
+      theme.colors.overlay.shadow,
+
+          /* -------------------------------------------------------
+       IMPERIAL GOLD / WHITE THEME SURFACE CONTRACT
+
+       PAGE:
+       - intentionally softened to a light grey
+       - prevents the entire page from becoming pure white
+
+       CARD:
+       - remains 100% solid white
+       - creates clear separation between card and page
+
+       OTHER FOUR THEMES:
+       - completely unchanged
+    ------------------------------------------------------- */
+
+    "--finora-theme-card-surface":
+      theme.id === "imperial-gold"
+        ? "#FFFFFF"
+        : theme.colors.background.surface,
+
+    "--finora-theme-surface":
+      theme.id === "imperial-gold"
+        ? "color-mix(in srgb, #FFFFFF 30%, #DDE2E8 70%)"
+        : theme.colors.background.surface,
+
+    "--finora-theme-background-surface":
+      theme.id === "imperial-gold"
+        ? "color-mix(in srgb, #FFFFFF 30%, #DDE2E8 70%)"
+        : theme.colors.background.surface,
+
+    "--finora-theme-surface-muted":
+      theme.id === "imperial-gold"
+        ? "color-mix(in srgb, #FFFFFF 30%, #D4D9E0 70%)"
+        : theme.colors.background.surfaceMuted,
+
+    "--finora-theme-background-surface-muted":
+      theme.id === "imperial-gold"
+        ? "color-mix(in srgb, #FFFFFF 30%, #D4D9E0 70%)"
+        : theme.colors.background.surfaceMuted,
+
+    "--finora-theme-text-primary":
+      theme.colors.text.primary,
+
+    "--finora-theme-text-secondary":
+      theme.colors.text.secondary,
+
+    "--finora-theme-text-body":
+     theme.colors.text.secondary,
+
+    "--finora-theme-text-muted":
+      theme.colors.text.muted,
+
+        "--finora-theme-success-soft":
+      `color-mix(
+        in srgb,
+        ${theme.colors.status.successSoft} 55%,
+        ${theme.colors.background.surface}
+      )`,
+
+    "--finora-theme-success":
+      theme.colors.status.success,
+
+      "--finora-theme-success-border":
+      theme.colors.border.strong,
+
+        ...(theme.id === "obsidian"
+  ? {
+      "--finora-company-band-background":
+        "color-mix(in srgb, var(--finora-theme-brand-accent) 10%, var(--finora-theme-surface))",
+    }
+  : {}),
+
+  };
+
+
+  /* =========================================================
      HANGER ROOT
 
-     IMPORTANT:
-
-     The hanger root must have exactly the same resolved
-     width as the Customer ID Card.
-
-     The root height remains content-driven because the
-     decorative hanger elements are part of this presentation
-     layer.
-
-     Card geometry itself is controlled by the dedicated
-     card container below.
+     Root width is exactly the resolved Customer ID Card width.
   ========================================================= */
 
   const resolvedContainerStyle:
-    CSSProperties = {
+    ThemeStyle = {
 
     ...containerStyle,
+
+    ...themeVariables,
 
     width:
       `${customerCardWidth}px`,
@@ -288,6 +416,21 @@ export default function CustomerHanger({
     marginInline:
       "auto",
 
+    /* -------------------------------------------------------
+       RESPONSIVE CARD SHAPE LOCK
+
+       The container carries the same radius as the actual
+       Customer ID Card. This prevents the fixed responsive
+       width/height layer from exposing square corners on
+       light themes.
+    ------------------------------------------------------- */
+
+    position:
+      "relative",
+
+    borderRadius:
+      `${customerTokens.customerCards.radius}px`,
+
     overflow:
       "visible",
 
@@ -295,44 +438,139 @@ export default function CustomerHanger({
 
 
   /* =========================================================
+     THEMED PIN
+  ========================================================= */
+
+  const resolvedPinStyle:
+    CSSProperties = {
+
+    ...pinStyle,
+
+    background:
+      `linear-gradient(
+        180deg,
+        ${theme.colors.brand.accent},
+        ${theme.colors.brand.primary}
+      )`,
+
+    border:
+      `1px solid ${theme.colors.border.strong}`,
+
+    boxShadow:
+      `0 2px 4px ${theme.colors.overlay.shadow}`,
+
+  };
+
+
+  /* =========================================================
+     THEMED ROPE
+
+     VISUAL CORRECTION:
+
+     Previous rope thickness:
+       2px
+
+     Required premium thickness:
+       3px
+
+     This affects only the decorative vertical rope.
+     It does NOT affect responsive card geometry.
+  ========================================================= */
+
+  const resolvedRopeStyle:
+    CSSProperties = {
+
+    ...ropeStyle,
+
+    width:
+      "3px",
+
+    minWidth:
+      "3px",
+
+    maxWidth:
+      "3px",
+
+    background:
+      `linear-gradient(
+        180deg,
+        ${theme.colors.border.subtle},
+        ${theme.colors.border.default},
+        ${theme.colors.border.strong}
+      )`,
+
+  };
+
+
+  /* =========================================================
+     THEMED HANGER
+
+     CRITICAL GEOMETRY LOCK:
+
+     The hanger MUST remain an OPEN-TOP U shape.
+
+     Top border:
+       0px
+
+     Left:
+       3px
+
+     Right:
+       3px
+
+     Bottom:
+       3px
+
+     We intentionally use borderWidth instead of the
+     border shorthand so no later borderColor/theme merge
+     can visually recreate a top border.
+
+     Result:
+
+           │
+           │
+         ╭   ╮
+        ╱     ╲
+        ╲     ╱
+         ╰───╯
+
+     There must be NOTHING connecting the two top ends.
+  ========================================================= */
+
+  const resolvedHangerStyle:
+    CSSProperties = {
+
+    ...hangerStyle,
+
+    borderStyle:
+      "solid",
+
+    borderWidth:
+      "0 3px 3px 3px",
+
+    borderTopWidth:
+      "0px",
+
+    borderLeftColor:
+      theme.colors.border.strong,
+
+    borderRightColor:
+      theme.colors.border.strong,
+
+    borderBottomColor:
+      theme.colors.border.strong,
+
+    borderTopColor:
+      "transparent",
+
+    borderTopStyle:
+      "none",
+
+  };
+
+
+  /* =========================================================
      CUSTOMER CARD CONTAINER
-
-     RESPONSIVE GEOMETRY CONTRACT:
-
-       width
-         ↓
-       Customer Responsive Engine
-
-       height
-         ↓
-       Customer Responsive Engine
-
-       minHeight
-         ↓
-       Customer Responsive Engine
-
-     IMPORTANT:
-
-     This wrapper MUST expose an explicit height because
-     CustomerCardFlip intentionally consumes:
-
-       width: 100%
-       height: 100%
-
-     Without this explicit parent height, the flip surface
-     cannot reliably resolve its vertical geometry.
-
-     No breakpoint values are calculated here.
-
-     IMPORTANT FLEX FIX:
-
-     flex-basis must use CARD WIDTH, not CARD HEIGHT.
-
-       CORRECT:
-       flex: 0 0 ${customerCardWidth}px
-
-       NOT:
-       flex: 0 0 ${customerCardHeight}px
   ========================================================= */
 
   const resolvedCardContainerStyle:
@@ -399,10 +637,6 @@ export default function CustomerHanger({
       );
 
 
-    /* -------------------------------------------------------
-       Only the actual Customer ID Card is selectable.
-    ------------------------------------------------------- */
-
     if (
       !clickedCustomerCard
     ) {
@@ -411,10 +645,6 @@ export default function CustomerHanger({
 
     }
 
-
-    /* -------------------------------------------------------
-       Inactive customers cannot be opened.
-    ------------------------------------------------------- */
 
     if (
       !canOpen(active)
@@ -434,19 +664,6 @@ export default function CustomerHanger({
 
   /* =========================================================
      CONTROLLED FLIP HANDLER
-
-     IMPORTANT:
-
-     CustomerHanger no longer owns flip state.
-
-     The parent Customer Hub decides which customer is
-     currently flipped.
-
-     Therefore this component simply forwards the flip
-     request to the parent.
-
-     Inactive customers are prevented from flipping here
-     as an additional safety boundary.
   ========================================================= */
 
   function handleFlip(): void {
@@ -458,6 +675,7 @@ export default function CustomerHanger({
       return;
 
     }
+
 
     onFlip?.();
 
@@ -488,18 +706,20 @@ export default function CustomerHanger({
 
       <div
         style={
-          pinStyle
+          resolvedPinStyle
         }
       />
 
 
       {/* =====================================================
           ROPE
+
+          3px premium thickness.
       ===================================================== */}
 
       <div
         style={
-          ropeStyle
+          resolvedRopeStyle
         }
       />
 
@@ -509,6 +729,7 @@ export default function CustomerHanger({
       ===================================================== */}
 
       <div
+
         style={{
 
           width:
@@ -527,10 +748,14 @@ export default function CustomerHanger({
             "50%",
 
           background:
-            "linear-gradient(180deg,#D6B06A,#8A612B)",
+            `linear-gradient(
+              180deg,
+              ${theme.colors.brand.accent},
+              ${theme.colors.brand.primary}
+            )`,
 
           border:
-            "1px solid #6B4B1D",
+            `1px solid ${theme.colors.border.strong}`,
 
           marginTop:
             "-5px",
@@ -545,16 +770,21 @@ export default function CustomerHanger({
             0,
 
         }}
+
       />
 
 
       {/* =====================================================
           HANGER
+
+          OPEN-TOP U SHAPE
+
+          NO TOP BORDER.
       ===================================================== */}
 
       <div
         style={
-          hangerStyle
+          resolvedHangerStyle
         }
       />
 
@@ -562,11 +792,7 @@ export default function CustomerHanger({
       {/* =====================================================
           CUSTOMER CARD CONTAINER
 
-          The Responsive Engine owns the actual card
-          geometry.
-
-          CustomerCardFlip receives this geometry through
-          the parent's definite width and height.
+          Responsive Engine owns card geometry.
       ===================================================== */}
 
       <div
@@ -596,8 +822,77 @@ export default function CustomerHanger({
             boxSizing:
               "border-box",
 
+            /* -------------------------------------------------
+               FINAL CARD CLIPPING BOUNDARY
+
+               CustomerCardFlip may expose its own square
+               width/height layer. That is almost invisible
+               on dark themes but becomes clearly visible on
+               the white theme.
+
+               This wrapper is therefore the parent visual
+               boundary for the resolved responsive radius.
+               The card itself remains responsible for its
+               own internal theme surface/border.
+            ------------------------------------------------- */
+
+            position:
+              "relative",
+
+            borderRadius:
+              `${customerTokens.customerCards.radius}px`,
+
+            /* -------------------------------------------------
+               ROUNDED CARD CLIPPING
+
+               clipPath is the visual clipping boundary.
+               overflow MUST remain visible so the card elevation
+               shadow can extend outside the card on light themes.
+               This removes the square/flat white-theme appearance
+               without exposing the internal flip layer corners.
+            ------------------------------------------------- */
+
             overflow:
               "visible",
+
+            clipPath:
+              `inset(0 round ${customerTokens.customerCards.radius}px)`,
+
+            isolation:
+              "isolate",
+
+            background:
+              "transparent",
+
+            /* -------------------------------------------------
+               PREMIUM CARD ELEVATION
+
+               The shadow is deliberately stronger than the
+               previous 18px / 32px value so a white card remains
+               visually separated from the white theme surface.
+
+               No outer border is introduced.
+            ------------------------------------------------- */
+
+            filter:
+              `
+              drop-shadow(
+                0 20px 34px
+                color-mix(
+                  in srgb,
+                  ${theme.colors.overlay.shadow} 82%,
+                  transparent
+                )
+              )
+              drop-shadow(
+                0 6px 12px
+                color-mix(
+                  in srgb,
+                  ${theme.colors.overlay.shadow} 62%,
+                  transparent
+                )
+              )
+              `,
 
           }}
 
@@ -605,8 +900,6 @@ export default function CustomerHanger({
 
           {/* =================================================
               CUSTOMER CARD FLIP
-
-              FLIP STATE IS CONTROLLED BY PARENT
           ================================================= */}
 
           <CustomerCardFlip
@@ -711,9 +1004,9 @@ export default function CustomerHanger({
                   lastPaymentAmount
                 }
 
-                  responsiveTokens={
-                    customerTokens
-                  }
+                responsiveTokens={
+                  customerTokens
+                }
 
               />
 
@@ -732,7 +1025,17 @@ export default function CustomerHanger({
 
       <div
         style={
-          bottomRailStyle
+          {
+            ...bottomRailStyle,
+
+            background:
+              `linear-gradient(
+                90deg,
+                transparent,
+                ${theme.colors.brand.accent},
+                transparent
+              )`,
+          }
         }
       />
 
