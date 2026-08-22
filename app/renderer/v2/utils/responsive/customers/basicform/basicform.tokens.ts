@@ -398,7 +398,7 @@ export const TABLET_BASICFORM_TOKENS:
     16,
 
   columnGap:
-    8,
+    16,
 
   fieldGap:
     5,
@@ -407,7 +407,7 @@ export const TABLET_BASICFORM_TOKENS:
     10,
 
   formColumns:
-    2,
+    1,
 
   fieldColumns:
     2,
@@ -567,7 +567,7 @@ export const LAPTOP_BASICFORM_TOKENS:
     16,
 
   columnGap:
-    14,
+    5,
 
   fieldGap:
     6,
@@ -736,7 +736,7 @@ export const DESKTOP_BASICFORM_TOKENS:
     20,
 
   columnGap:
-    8,
+    5,
 
   fieldGap:
     5,

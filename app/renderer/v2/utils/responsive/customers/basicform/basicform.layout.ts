@@ -8,14 +8,15 @@
    - Combined Step 1 + Step 2 page geometry
    - Responsive form columns
    - Responsive field geometry
-   - Header-to-form vertical separation
-   - Responsive field spacing
+   - Equal-height desktop/laptop form rows
+   - Tablet vertical form stacking
+   - Mobile single-field stacking
 
    IMPORTANT:
    - Geometry comes only from BasicFormResponsiveTokens
    - No viewport detection
    - No media queries
-   - No hard-coded responsive dimensions
+   - No component-level responsive dimensions
 =========================================================== */
 
 
@@ -71,6 +72,9 @@ export function createBasicFormPageStyle(
       "border-box",
 
     alignItems:
+      "stretch",
+
+    justifyItems:
       "start",
 
   };
@@ -90,28 +94,37 @@ export function createBasicFormColumnStyle(
 
   return {
 
-    width:
-      "100%",
+  width:
+    "100%",
 
-    minWidth:
-      tokens.minWidth,
+  minWidth:
+    tokens.minWidth,
 
-    minHeight:
-      0,
+  minHeight:
+    "0",
 
-    boxSizing:
-      "border-box",
+  boxSizing:
+    "border-box",
 
-    overflow:
-      "hidden",
+  display:
+    "flex",
 
-  };
+  flexDirection:
+    "column",
+
+  alignSelf:
+    "stretch",
+
+  justifyContent:
+    "flex-start",
+
+};
 
 }
 
 
 /* ===========================================================
-   MOBILE FORM COLUMN
+   MOBILE / STACKED FORM COLUMN
 =========================================================== */
 
 export function createMobileFormColumnStyle(
@@ -128,8 +141,17 @@ export function createMobileFormColumnStyle(
     minWidth:
       tokens.minWidth,
 
+    minHeight:
+      0,
+
     boxSizing:
       "border-box",
+
+    display:
+      "flex",
+
+    flexDirection:
+      "column",
 
   };
 
@@ -169,7 +191,7 @@ export function createBasicFormFieldGridStyle(
       `${tokens.fieldGap}px`,
 
     alignItems:
-      "start",
+      "stretch",
 
   };
 

@@ -14,11 +14,8 @@
    - Display existing Step 1 Identity
    - Display existing Step 2 Basic
    - Keep both forms on the same page
-   - Desktop composition:
-       LEFT  = 40%
-       GAP   = 10px
-       RIGHT = 60%
-   - Keep both forms at equal height
+   - Desktop composition controlled by Responsive Engine
+   - Keep both forms at equal available height
    - Preserve Responsive Engine behavior
    - Stack columns through Responsive Engine on smaller widths
 
@@ -31,6 +28,7 @@
    - Existing Step 1 remains untouched
    - Existing Step 2 remains untouched
    - Responsive geometry comes from Responsive Engine
+   - NO hard-coded responsive grid geometry
 =========================================================== */
 
 
@@ -128,6 +126,14 @@ export default function Step1IdentityAndBasic({
 
   /* =========================================================
      RESPONSIVE PAGE LAYOUT
+
+     All grid geometry and spacing are owned by the
+     Responsive Engine.
+
+     This component intentionally does NOT define:
+     - gridTemplateColumns
+     - columnGap
+     - viewport-specific dimensions
   ========================================================= */
 
   const responsivePageStyle =
@@ -145,6 +151,16 @@ export default function Step1IdentityAndBasic({
       basicFormTokens,
     );
 
+
+  /* =========================================================
+     COMBINED PAGE STYLE
+
+     Width / positioning belongs to the composition shell.
+
+     Responsive grid geometry remains inside the
+     Responsive Engine.
+  ========================================================= */
+
 const combinedPageStyle:
   CSSProperties = {
 
@@ -157,25 +173,19 @@ const combinedPageStyle:
     0,
 
   minHeight:
-    0,
+    "fit-content",
 
   margin:
-  "10px auto 0",
+    "10px auto 0",
 
   boxSizing:
     "border-box",
 
-  display:
-    "grid",
-
-  gridTemplateColumns:
-    "40% 40%",
-
-  columnGap:
-    "4%",
-
   alignItems:
     "start",
+
+  columnGap:
+    "3px",
 
 };
 
@@ -240,7 +250,6 @@ const combinedPageStyle:
 
         {/* =================================================
             LEFT — STEP 1 IDENTITY
-            40%
         ================================================= */}
 
         <section
@@ -266,7 +275,6 @@ const combinedPageStyle:
 
         {/* =================================================
             RIGHT — STEP 2 BASIC
-            60%
         ================================================= */}
 
         <section

@@ -35,6 +35,9 @@ export const wrapperStyle: CSSProperties = {
   minWidth:
     0,
 
+  minHeight:
+    "72px",
+
   display:
     "flex",
 
@@ -201,7 +204,7 @@ export const descriptionStyle: CSSProperties = {
   "var(--finora-theme-text-muted, var(--finora-theme-text-secondary))",
 
   fontSize:
-    "10.8px",
+    "11px",
 
   lineHeight:
     1.55,

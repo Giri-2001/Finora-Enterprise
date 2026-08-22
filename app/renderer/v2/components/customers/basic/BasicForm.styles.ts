@@ -200,7 +200,7 @@ export function createBasicFormFieldGridStyle(
       "grid",
 
     gridTemplateColumns:
-      "repeat(2, minmax(0, 1fr))",
+  `repeat(${tokens.fieldColumns}, minmax(0, 1fr))`,
 
     columnGap:
       `${tokens.columnGap}px`,
@@ -308,7 +308,7 @@ export function createBasicFormLabelStyle(
       0,
 
     color:
-      THEME.textSecondary,
+  THEME.textPrimary,
 
     fontFamily:
       "var(--finora-theme-font-family, Segoe UI, Inter, system-ui, -apple-system, BlinkMacSystemFont, sans-serif)",

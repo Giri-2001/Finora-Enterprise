@@ -162,9 +162,7 @@ export default function CustomerPhotoUploader({
           style={descriptionStyle}
         >
 
-          Add the customer's photo.
-          It will appear automatically
-          on the FINORA identity card.
+          Add a customer photo for the FINORA identity card.
 
         </p>
 
