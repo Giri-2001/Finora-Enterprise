@@ -962,6 +962,16 @@ export default function IdentityForm({
       "--finora-theme-surface":
         theme.colors.background.surface,
 
+      "--finora-theme-form-surface":
+  theme.id === "imperial-gold"
+    ? "#FFFFFF"
+    : theme.colors.background.surface,
+
+"--finora-theme-form-shadow":
+  theme.id === "imperial-gold"
+    ? "none"
+    : "var(--finora-theme-shadow-card, 0 10px 28px rgba(0,0,0,.12))",
+
       "--finora-theme-background-surface":
         theme.colors.background.surface,
 
@@ -1483,7 +1493,7 @@ export default function IdentityForm({
                   : value.whatsappNumber
               }
 
-              placeholder="Enter WhatsApp number"
+              placeholder="Enter whatsapp number"
 
               inputMode="tel"
 
@@ -1772,16 +1782,36 @@ export default function IdentityForm({
 
           <select
 
-            style={{
-              ...resolvedInputStyle,
+  style={{
+    ...resolvedInputStyle,
 
-              cursor:
-                "pointer",
+    cursor:
+      "pointer",
 
-              paddingRight:
-                `${basicFormTokens.inputPaddingX + 20}px`,
+    paddingRight:
+      `${basicFormTokens.inputPaddingX + 20}px`,
 
-            }}
+    background:
+      "var(--finora-theme-surface-muted, var(--finora-theme-background-surface-muted, #F1F3F6))",
+
+    color:
+      "var(--finora-theme-text-primary, #171A21)",
+
+    border:
+      "1px solid var(--finora-theme-border-default, #C9D0DA)",
+
+    accentColor:
+      "var(--finora-theme-brand-accent, #D4AF37)",
+
+    colorScheme:
+      theme.id === "imperial-gold"
+        ? "light"
+        : "dark",
+
+    appearance:
+      "auto",
+
+  }}
 
             value={
               value.preferredLanguage

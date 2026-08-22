@@ -804,6 +804,20 @@ export interface ResponsiveForm {
 
 }
 
+/* ===========================================================
+   OCCUPATION FORM
+=========================================================== */
+
+export interface ResponsiveOccupation {
+
+  labelSize:
+    number;
+
+  inputFontSize:
+    number;
+
+}
+
 
 /* ===========================================================
    IDENTITY FORM
@@ -1053,6 +1067,9 @@ export interface ResponsiveTokens {
 
   identityForm:
     ResponsiveIdentityForm;
+
+    occupation:
+    ResponsiveOccupation;
 
   wizard:
     ResponsiveWizard;

@@ -168,7 +168,7 @@ export function createStep1IdentityStyles(
       "auto",
 
     padding:
-      `${wizard.padding}px ${layout.pageGutter}px ${spacing.large}px`,
+  `0 0 ${spacing.large}px`,
 
     background:
       pageBackground,
@@ -227,10 +227,11 @@ minHeight:
     "16px",
 
   background:
-  `linear-gradient(145deg, ${surfaceMuted}, ${surface})`,
+  theme.id === "imperial-gold"
+    ? "#FFFFFF"
+    : `linear-gradient(145deg, ${surfaceMuted}, ${surface})`,
 
-  boxShadow:
-    "0 10px 28px rgba(0,0,0,.12)",
+  
 
 };
 
@@ -426,9 +427,6 @@ export const pageStyle:
 
   alignItems:
     "center",
-
-    padding:
-  "10px 18px 4px",
 
 };
 

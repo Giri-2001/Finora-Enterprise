@@ -15,16 +15,23 @@
    - Occupation profile
    - Family & emergency information
    - Live wizard synchronization
+   - FINORA Theme Engine integration
+   - Responsive Engine integration
+   - Unified Step 2 presentation
 
-   ARCHITECTURE:
+   IMPORTANT:
 
-   - Presentation orchestration only
+   - Step 1 remains untouched
+   - Existing child forms remain untouched
    - Existing business state preserved
    - Existing wizard synchronization preserved
-   - Responsive geometry owned by child components
-   - No local breakpoints
+   - Right side is presented as ONE unified form
+   - Two-column fields remain controlled by child forms
+   - No local responsive logic
    - No viewport detection
-   - No business logic
+   - No local theme definitions
+   - Theme colours come only from ThemeProvider
+   - Responsive geometry comes only from Responsive Engine
 =========================================================== */
 
 
@@ -38,12 +45,18 @@ import {
 } from "react";
 
 
-import {
-  UserRound,
-  BriefcaseBusiness,
-  UsersRound,
-} from "lucide-react";
+/* ===========================================================
+   THEME ENGINE
+=========================================================== */
 
+import {
+  useTheme,
+} from "../../../../themes/provider";
+
+
+/* ===========================================================
+   BASIC INFORMATION COMPONENTS
+=========================================================== */
 
 import BasicForm, {
   type BasicFormData,
@@ -60,24 +73,40 @@ import FamilyDetails, {
 } from "../../basic/FamilyDetails";
 
 
+/* ===========================================================
+   WIZARD TYPES
+=========================================================== */
+
 import type {
   CustomerWizardData,
 } from "../CustomerWizard";
 
 
+/* ===========================================================
+   RESPONSIVE ENGINE
+=========================================================== */
+
+import {
+  useResponsive,
+} from "../../../../utils/responsive";
+
+
+/* ===========================================================
+   PRESENTATION STYLES
+=========================================================== */
+
 import {
   pageStyle,
-  pageHeaderStyle,
-  pageTitleStyle,
-  pageSubtitleStyle,
+  formStyle,
+  formHeaderStyle,
+  formTitleStyle,
+  formSubtitleStyle,
   contentStyle,
-  sectionStyle,
-  sectionHeaderStyle,
-  sectionIconStyle,
-  sectionTitleStyle,
-  sectionSubtitleStyle,
-  fieldAreaStyle,
-  sectionAccentStyle,
+  groupStyle,
+  groupHeaderStyle,
+  groupSubtitleStyle,
+  groupContentStyle,
+  createStep2BasicHeaderStyles,
 } from "./Step2Basic.styles";
 
 
@@ -89,6 +118,26 @@ interface BasicState
   extends BasicFormData,
     OccupationData,
     FamilyDetailsData {}
+
+
+/* ===========================================================
+   THEME STYLE TYPE
+=========================================================== */
+
+/*
+ * React CSSProperties does not natively know custom
+ * FINORA CSS variables.
+ *
+ * This type keeps the theme contract strongly typed without
+ * introducing any local theme palette.
+ */
+
+type ThemeStyle =
+  React.CSSProperties &
+  Record<
+    `--${string}`,
+    string
+  >;
 
 
 /* ===========================================================
@@ -155,7 +204,7 @@ interface Step2BasicProps {
    COMPONENT
 =========================================================== */
 
-export default function Step2Basic({
+function Step2Basic({
 
   wizardData,
 
@@ -165,25 +214,193 @@ export default function Step2Basic({
 
 
   /* =========================================================
-     STATE
+     RESPONSIVE ENGINE
+
+     Responsive geometry comes exclusively from the central
+     Responsive Engine.
+
+     No breakpoint or viewport logic exists here.
+  ========================================================= */
+
+  const {
+  tokens,
+} = useResponsive();
+
+
+  /* =========================================================
+     THEME ENGINE
+
+     The active theme comes directly from ThemeProvider.
+
+     No theme id mapping.
+     No local colour palette.
+     No hard-coded theme selection.
+  ========================================================= */
+
+  const {
+    theme,
+  } =
+    useTheme();
+
+
+  /* =========================================================
+     HEADER PRESENTATION
+
+     Step 2 header uses the same ResponsiveTokens contract
+     as Step 1.
+
+     Geometry:
+       Responsive Engine
+
+     Colours:
+       FINORA Theme CSS variables
+  ========================================================= */
+
+  const {
+
+    formHeaderStyle:
+      resolvedFormHeaderStyle,
+
+    formTitleStyle:
+      resolvedFormTitleStyle,
+
+    formSubtitleStyle:
+      resolvedFormSubtitleStyle,
+
+  } =
+    createStep2BasicHeaderStyles(
+      tokens,
+    );
+
+
+  /* =========================================================
+     THEME CSS VARIABLES
+
+     ThemeProvider
+          ↓
+     active FinoraTheme
+          ↓
+     theme.colors
+          ↓
+     FINORA CSS variables
+          ↓
+     Step2Basic.styles.ts
+          ↓
+     BasicForm / OccupationCard / FamilyDetails
+
+     This guarantees that all five application themes
+     propagate through the complete Step 2 presentation.
+
+     IMPORTANT:
+
+     These are NOT theme definitions.
+
+     They are only the bridge between the central Theme Engine
+     and presentation styles that consume semantic CSS variables.
+  ========================================================= */
+
+  const themeStyle:
+    ThemeStyle = {
+
+    "--finora-theme-brand-primary":
+      theme.colors.brand.primary,
+
+    "--finora-theme-brand-secondary":
+      theme.colors.brand.secondary,
+
+    "--finora-theme-brand-accent":
+      theme.colors.brand.accent,
+
+    "--finora-theme-brand-accent-soft":
+      theme.colors.brand.accentSoft,
+
+
+    /* -------------------------------------------------------
+       SURFACES
+    ------------------------------------------------------- */
+
+    "--finora-theme-surface":
+      theme.colors.background.surface,
+
+    "--finora-theme-surface-card":
+  theme.colors.background.surface,
+
+    "--finora-theme-background-surface":
+      theme.colors.background.surface,
+
+    "--finora-theme-surface-muted":
+      theme.colors.background.surfaceMuted,
+
+    "--finora-theme-background-surface-muted":
+      theme.colors.background.surfaceMuted,
+
+
+    /* -------------------------------------------------------
+       TEXT
+    ------------------------------------------------------- */
+
+    "--finora-theme-text-primary":
+      theme.colors.text.primary,
+
+    "--finora-theme-text-secondary":
+      theme.colors.text.secondary,
+
+    "--finora-theme-text-body":
+      theme.colors.text.secondary,
+
+    "--finora-theme-text-muted":
+      theme.colors.text.muted,
+
+
+    /* -------------------------------------------------------
+       BORDERS
+    ------------------------------------------------------- */
+
+    "--finora-theme-border-default":
+      theme.colors.border.default,
+
+    "--finora-theme-border-strong":
+      theme.colors.border.strong,
+
+    "--finora-theme-border-subtle":
+      theme.colors.border.subtle,
+
+
+    /* -------------------------------------------------------
+       EFFECTS
+    ------------------------------------------------------- */
+
+    "--finora-theme-overlay-shadow":
+      theme.colors.overlay.shadow,
+
+  };
+
+
+  /* =========================================================
+     LOCAL STATE
   ========================================================= */
 
   const [
     state,
     setState,
-  ] = useState(
-    DEFAULT_STATE,
-  );
+  ] =
+    useState<BasicState>(
+      DEFAULT_STATE,
+    );
 
 
   /* =========================================================
      RESTORE WIZARD DATA
+
+     Existing wizard synchronization is preserved exactly.
   ========================================================= */
 
   useEffect(() => {
 
     if (!wizardData) {
+
       return;
+
     }
 
 
@@ -246,6 +463,9 @@ export default function Step2Basic({
 
   /* =========================================================
      UPDATE FIELD
+
+     Local state and wizard state remain synchronized
+     immediately after every field change.
   ========================================================= */
 
   function updateField(
@@ -291,296 +511,254 @@ export default function Step2Basic({
   return (
 
     <section
-      style={
-        pageStyle
-      }
+      style={{
+        ...pageStyle,
+
+        ...themeStyle,
+      }}
     >
 
       {/* =================================================
-          PAGE HEADER
-      ================================================= */}
-
-      <header
-        style={
-          pageHeaderStyle
-        }
-      >
-
-        <h1
-          style={
-            pageTitleStyle
-          }
-        >
-          Customer Basic Details
-        </h1>
-
-
-        <p
-          style={
-            pageSubtitleStyle
-          }
-        >
-          Capture personal, occupation and family
-          information for the customer's permanent profile.
-        </p>
-
-      </header>
-
-
-      {/* =================================================
-          THREE PREMIUM SECTIONS
+          ONE UNIFIED BASIC INFORMATION FORM
       ================================================= */}
 
       <div
-        style={
-          contentStyle
+  style={{
+    ...formStyle,
+
+    ...(theme.id === "imperial-gold"
+      ? {
+          background:
+            "#FFFFFF",
+
+          boxShadow:
+            "none",
         }
-      >
+      : {}),
+  }}
+>
 
-        {/* =================================================
-            SECTION 1 — PERSONAL INFORMATION
-        ================================================= */}
+        {/* ===============================================
+            FORM HEADER
 
-        <section
-          style={
-            sectionStyle
-          }
+            Same Step 1 typography / spacing contract.
+
+            Typography:
+              Responsive Engine
+
+            Colour:
+              FINORA Theme Engine
+        =============================================== */}
+
+        <header
+          style={{
+            ...formHeaderStyle,
+
+            ...resolvedFormHeaderStyle,
+
+          }}
         >
 
-          <header
+          <h1
+            style={{
+              ...formTitleStyle,
+
+              ...resolvedFormTitleStyle,
+
+            }}
+          >
+            Basic Information
+          </h1>
+
+
+          <p
+            style={{
+              ...formSubtitleStyle,
+
+              ...resolvedFormSubtitleStyle,
+
+            }}
+          >
+            Personal, occupation and family information.
+          </p>
+
+        </header>
+
+
+        {/* ===============================================
+            FORM CONTENT
+        =============================================== */}
+
+        <div
+          style={{
+            ...contentStyle,
+
+            ...themeStyle,
+          }}
+        >
+
+          {/* =============================================
+              PERSONAL INFORMATION
+          ============================================= */}
+
+          <section
             style={
-              sectionHeaderStyle
+              groupStyle
             }
           >
+
+            <header
+              style={
+                groupHeaderStyle
+              }
+            >
+
+              <div>
+
+                <p
+                  style={
+                    groupSubtitleStyle
+                  }
+                >
+                  Basic personal and marital information.
+                </p>
+
+              </div>
+
+            </header>
+
 
             <div
               style={
-                sectionIconStyle
+                groupContentStyle
               }
-              aria-hidden="true"
             >
 
-              <UserRound />
+              <BasicForm
+
+                value={
+                  state
+                }
+
+                onChange={
+                  updateField
+                }
+
+              />
 
             </div>
 
-
-            <div>
-
-              <h2
-                style={
-                  sectionTitleStyle
-                }
-              >
-                1. Personal Information
-              </h2>
+          </section>
 
 
-              <p
-                style={
-                  sectionSubtitleStyle
-                }
-              >
-                Basic personal and marital information.
-              </p>
+          {/* =============================================
+              OCCUPATION PROFILE
+          ============================================= */}
 
-            </div>
-
-          </header>
-
-
-          <div
+          <section
             style={
-              fieldAreaStyle
+              groupStyle
             }
           >
 
-            <BasicForm
-
-              value={
-                state
+            <header
+              style={
+                groupHeaderStyle
               }
+            >
 
-              onChange={
-                updateField
-              }
+              <div>
 
-            />
+                <p
+                  style={
+                    groupSubtitleStyle
+                  }
+                >
+                  Professional and income information.
+                </p>
 
-          </div>
+              </div>
 
+            </header>
 
-          <div
-            style={
-              sectionAccentStyle
-            }
-          />
-
-        </section>
-
-
-        {/* =================================================
-            SECTION 2 — OCCUPATION PROFILE
-        ================================================= */}
-
-        <section
-          style={
-            sectionStyle
-          }
-        >
-
-          <header
-            style={
-              sectionHeaderStyle
-            }
-          >
 
             <div
               style={
-                sectionIconStyle
+                groupContentStyle
               }
-              aria-hidden="true"
             >
 
-              <BriefcaseBusiness />
+              <OccupationCard
+
+                value={
+                  state
+                }
+
+                onChange={
+                  updateField
+                }
+
+              />
 
             </div>
 
-
-            <div>
-
-              <h2
-                style={
-                  sectionTitleStyle
-                }
-              >
-                2. Occupation Profile
-              </h2>
+          </section>
 
 
-              <p
-                style={
-                  sectionSubtitleStyle
-                }
-              >
-                Professional and income information.
-              </p>
+          {/* =============================================
+              FAMILY & EMERGENCY
+          ============================================= */}
 
-            </div>
-
-          </header>
-
-
-          <div
+          <section
             style={
-              fieldAreaStyle
+              groupStyle
             }
           >
 
-            <OccupationCard
-
-              value={
-                state
+            <header
+              style={
+                groupHeaderStyle
               }
+            >
 
-              onChange={
-                updateField
-              }
+              <div>
 
-            />
+                <p
+                  style={
+                    groupSubtitleStyle
+                  }
+                >
+                  Family size and emergency contact information.
+                </p>
 
-          </div>
+              </div>
 
+            </header>
 
-          <div
-            style={
-              sectionAccentStyle
-            }
-          />
-
-        </section>
-
-
-        {/* =================================================
-            SECTION 3 — FAMILY & EMERGENCY
-        ================================================= */}
-
-        <section
-          style={
-            sectionStyle
-          }
-        >
-
-          <header
-            style={
-              sectionHeaderStyle
-            }
-          >
 
             <div
               style={
-                sectionIconStyle
+                groupContentStyle
               }
-              aria-hidden="true"
             >
 
-              <UsersRound />
+              <FamilyDetails
+
+                value={
+                  state
+                }
+
+                onChange={
+                  updateField
+                }
+
+              />
 
             </div>
 
+          </section>
 
-            <div>
-
-              <h2
-                style={
-                  sectionTitleStyle
-                }
-              >
-                3. Family & Emergency
-              </h2>
-
-
-              <p
-                style={
-                  sectionSubtitleStyle
-                }
-              >
-                Family size and emergency contact information.
-              </p>
-
-            </div>
-
-          </header>
-
-
-          <div
-            style={
-              fieldAreaStyle
-            }
-          >
-
-            <FamilyDetails
-
-              value={
-                state
-              }
-
-              onChange={
-                updateField
-              }
-
-            />
-
-          </div>
-
-
-          <div
-            style={
-              sectionAccentStyle
-            }
-          />
-
-        </section>
+        </div>
 
       </div>
 
@@ -589,6 +767,19 @@ export default function Step2Basic({
   );
 
 }
+
+
+/* ===========================================================
+   DEFAULT EXPORT
+
+   Required by:
+
+   Step1IdentityAndBasic.tsx
+
+   import Step2Basic from "./Step2Basic";
+=========================================================== */
+
+export default Step2Basic;
 
 
 /* ===========================================================

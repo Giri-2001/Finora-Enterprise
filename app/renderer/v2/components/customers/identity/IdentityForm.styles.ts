@@ -63,6 +63,12 @@ const THEME = {
   surface:
     "var(--finora-theme-surface, var(--finora-theme-background-surface, #151820))",
 
+  formSurface:
+  "var(--finora-theme-form-surface, var(--finora-theme-surface, #151820))",
+
+formShadow:
+  "var(--finora-theme-form-shadow, none)",
+
   surfaceMuted:
     "var(--finora-theme-surface-muted, var(--finora-theme-background-surface-muted, #1D212B))",
 

@@ -316,6 +316,11 @@ export interface ResponsiveTokens {
     noteMarginTop: number;
   };
 
+  occupation: {
+  labelSize: number;
+  inputFontSize: number;
+};
+
   wizard: {
     maxWidth: number;
     padding: number;
@@ -605,6 +610,11 @@ customerCards: {
     noteSize: 8,
     noteMarginTop: 2,
   },
+
+  occupation: {
+  labelSize: 11,
+  inputFontSize: 11,
+},
 
   wizard: {
     maxWidth: 480,
@@ -905,6 +915,11 @@ customerCards: {
     noteSize: 9,
     noteMarginTop: 2,
   },
+
+  occupation: {
+  labelSize: 11,
+  inputFontSize: 12,
+},
 
   wizard: {
     maxWidth: 960,
@@ -1210,6 +1225,11 @@ customerCards: {
     noteMarginTop: 2,
   },
 
+  occupation: {
+  labelSize: 11,
+  inputFontSize: 12,
+},
+
   wizard: {
     maxWidth: 1280,
     padding: 28,
@@ -1513,6 +1533,11 @@ customerCards: {
     noteSize: 10,
     noteMarginTop: 3,
   },
+
+  occupation: {
+  labelSize: 12,
+  inputFontSize: 12,
+},
 
   wizard: {
     maxWidth: 1440,

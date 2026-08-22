@@ -8,12 +8,19 @@
    - Combined Step 1 + Step 2 page geometry
    - Responsive form columns
    - Responsive field geometry
+   - Header-to-form vertical separation
+   - Responsive field spacing
 
    IMPORTANT:
    - Geometry comes only from BasicFormResponsiveTokens
    - No viewport detection
    - No media queries
    - No hard-coded responsive dimensions
+=========================================================== */
+
+
+/* ===========================================================
+   IMPORTS
 =========================================================== */
 
 import type {

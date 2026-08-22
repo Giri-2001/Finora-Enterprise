@@ -56,6 +56,9 @@ export interface BasicFormResponsiveTokens {
   fieldGap:
     number;
 
+  basicFieldGap:
+    number;
+
   formColumns:
     number;
 
@@ -103,6 +106,15 @@ export interface BasicFormResponsiveTokens {
     number;
 
   optionFontSize:
+    number;
+
+  basicLabelFontSize:
+    number;
+
+  basicInputFontSize:
+    number;
+
+  basicOptionFontSize:
     number;
 
   optionFontWeight:
@@ -222,6 +234,9 @@ export const MOBILE_BASICFORM_TOKENS:
   fieldGap:
     5,
 
+  basicFieldGap:
+    10,
+
   formColumns:
     1,
 
@@ -265,6 +280,8 @@ export const MOBILE_BASICFORM_TOKENS:
   inputFontSize:
     11,
 
+    
+
   inputFontWeight:
     500,
 
@@ -278,7 +295,14 @@ export const MOBILE_BASICFORM_TOKENS:
   /* ---------------------------------------------------------
      GENERAL ICON
   --------------------------------------------------------- */
+  basicLabelFontSize:
+    9,
 
+  basicInputFontSize:
+    10,
+
+  basicOptionFontSize:
+    10,
   iconSize:
     16,
 
@@ -379,6 +403,9 @@ export const TABLET_BASICFORM_TOKENS:
   fieldGap:
     5,
 
+  basicFieldGap:
+    10,
+
   formColumns:
     2,
 
@@ -421,6 +448,15 @@ export const TABLET_BASICFORM_TOKENS:
 
   inputFontSize:
     11,
+
+  basicLabelFontSize:
+    9,
+
+  basicInputFontSize:
+    10,
+
+  basicOptionFontSize:
+    10,
 
   inputFontWeight:
     500,
@@ -531,10 +567,13 @@ export const LAPTOP_BASICFORM_TOKENS:
     16,
 
   columnGap:
-    8,
+    14,
 
   fieldGap:
-    5,
+    6,
+
+  basicFieldGap:
+    10,
 
   formColumns:
     2,
@@ -548,13 +587,13 @@ export const LAPTOP_BASICFORM_TOKENS:
   --------------------------------------------------------- */
 
   inputHeight:
-    38,
+    40,
 
   inputPaddingX:
-    10,
+    13,
 
   inputRadius:
-    8,
+    10,
 
   labelMinHeight:
     16,
@@ -577,7 +616,16 @@ export const LAPTOP_BASICFORM_TOKENS:
     0.45,
 
   inputFontSize:
-    11,
+    12,
+
+  basicLabelFontSize:
+    9,
+
+  basicInputFontSize:
+    10,
+
+  basicOptionFontSize:
+    10,
 
   inputFontWeight:
     500,
@@ -693,6 +741,9 @@ export const DESKTOP_BASICFORM_TOKENS:
   fieldGap:
     5,
 
+  basicFieldGap:
+    10,
+
   formColumns:
     2,
 
@@ -735,6 +786,15 @@ export const DESKTOP_BASICFORM_TOKENS:
 
   inputFontSize:
     11,
+
+  basicLabelFontSize:
+    9,
+
+  basicInputFontSize:
+    10,
+
+  basicOptionFontSize:
+    10,
 
   inputFontWeight:
     500,

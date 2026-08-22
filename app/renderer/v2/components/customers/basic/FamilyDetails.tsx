@@ -10,19 +10,14 @@
 
    RESPONSIBILITY:
 
-   - Family member count
-   - Emergency contact name
-   - Emergency contact mobile
-
-   ARCHITECTURE:
-
-   - Responsive geometry from FINORA Responsive Engine
-   - Theme presentation through FINORA theme CSS variables
-   - Lucide icons
-   - No local breakpoints
-   - No viewport detection
-   - No hardcoded responsive dimensions
-   - No business logic
+   - Match Step 1 / BasicForm field presentation
+   - Two-column family layout
+   - Same label sizing
+   - Same input sizing
+   - Same placeholder/value sizing
+   - Same field spacing
+   - Same icon sizing
+   - Responsive values consumed from BasicForm Responsive Engine
 =========================================================== */
 
 
@@ -33,6 +28,7 @@
 import type {
   CSSProperties,
 } from "react";
+
 
 import {
   UsersRound,
@@ -46,8 +42,25 @@ import {
 =========================================================== */
 
 import {
-  useResponsive,
-} from "../../../utils/responsive";
+  useBasicFormResponsive,
+} from "../../../utils/responsive/customers/basicform";
+
+
+
+
+/* ===========================================================
+   PRESENTATION STYLES
+=========================================================== */
+
+import {
+  createFamilyDetailsRootStyle,
+  createFamilyDetailsGridStyle,
+  createFamilyDetailsFieldStyle,
+  createFamilyDetailsLabelStyle,
+  createFamilyDetailsInputWrapperStyle,
+  createFamilyDetailsInputStyle,
+  createFamilyDetailsIconStyle,
+} from "./FamilyDetails.styles";
 
 
 /* ===========================================================
@@ -98,262 +111,74 @@ export default function FamilyDetails({
 
   /* =========================================================
      RESPONSIVE ENGINE
+
+     IMPORTANT:
+
+     Family fields intentionally consume the SAME
+     BasicFormResponsiveTokens used by Step 1.
+
+     This guarantees:
+
+     - exact label size
+     - exact input size
+     - exact spacing
+     - exact responsive scaling
+     - exact typography consistency
   ========================================================= */
 
   const {
-    tokens,
+    basicFormTokens,
   } =
-    useResponsive();
+    useBasicFormResponsive();
 
 
   /* =========================================================
-     ROOT STYLE
+     STYLES
   ========================================================= */
 
   const rootStyle:
-    CSSProperties = {
+    CSSProperties =
+    createFamilyDetailsRootStyle();
 
-    width:
-      "100%",
-
-    minWidth:
-      0,
-
-    boxSizing:
-      "border-box",
-
-    display:
-      "block",
-
-  };
-
-
-  /* =========================================================
-     FIELD GRID
-  ========================================================= */
 
   const gridStyle:
-    CSSProperties = {
+    CSSProperties =
+    createFamilyDetailsGridStyle(
+      basicFormTokens,
+    );
 
-    width:
-      "100%",
-
-    minWidth:
-      0,
-
-    boxSizing:
-      "border-box",
-
-    display:
-      "grid",
-
-    gridTemplateColumns:
-      "repeat(3, minmax(0, 1fr))",
-
-    columnGap:
-      `${tokens.form.inputGap}px`,
-
-    rowGap:
-      `${tokens.form.rowGap}px`,
-
-    alignItems:
-      "end",
-
-    justifyContent:
-      "stretch",
-
-    alignSelf:
-      "stretch",
-
-  };
-
-
-  /* =========================================================
-     FIELD STYLE
-  ========================================================= */
 
   const fieldStyle:
-    CSSProperties = {
+    CSSProperties =
+    createFamilyDetailsFieldStyle(
+      basicFormTokens,
+    );
 
-    width:
-      "100%",
-
-    minWidth:
-      0,
-
-    boxSizing:
-      "border-box",
-
-    display:
-      "flex",
-
-    flexDirection:
-      "column",
-
-    gap:
-      `${tokens.form.labelGap}px`,
-
-  };
-
-
-  /* =========================================================
-     LABEL STYLE
-  ========================================================= */
 
   const labelStyle:
-    CSSProperties = {
+    CSSProperties =
+    createFamilyDetailsLabelStyle(
+      basicFormTokens,
+    );
 
-    display:
-      "block",
-
-    width:
-      "100%",
-
-    minWidth:
-      0,
-
-    boxSizing:
-      "border-box",
-
-    color:
-      "var(--finora-theme-text-secondary, rgba(255,255,255,.66))",
-
-    fontSize:
-      `${tokens.form.labelSize}px`,
-
-    fontWeight:
-      600,
-
-    lineHeight:
-      tokens.lineHeight.compact,
-
-    letterSpacing:
-      ".45px",
-
-    textTransform:
-      "uppercase",
-
-  };
-
-
-  /* =========================================================
-     INPUT WRAPPER
-  ========================================================= */
 
   const inputWrapperStyle:
-    CSSProperties = {
+    CSSProperties =
+    createFamilyDetailsInputWrapperStyle();
 
-    position:
-      "relative",
-
-    width:
-      "100%",
-
-    minWidth:
-      0,
-
-    boxSizing:
-      "border-box",
-
-    display:
-      "block",
-
-  };
-
-
-  /* =========================================================
-     INPUT STYLE
-  ========================================================= */
 
   const inputStyle:
-    CSSProperties = {
+    CSSProperties =
+    createFamilyDetailsInputStyle(
+      basicFormTokens,
+    );
 
-    display:
-      "block",
-
-    width:
-      "100%",
-
-    minWidth:
-      0,
-
-    height:
-      `${tokens.input.height}px`,
-
-    padding:
-      `
-      0
-      ${tokens.input.paddingX}px
-      0
-      ${
-        tokens.input.paddingX +
-        tokens.input.iconSize +
-        tokens.spacing.small
-      }px
-      `,
-
-    boxSizing:
-      "border-box",
-
-    borderRadius:
-      `${tokens.input.radius}px`,
-
-    border:
-      `${tokens.border.width}px solid var(--finora-theme-border-default, rgba(214,176,106,.28))`,
-
-    outline:
-      "none",
-
-    background:
-      "var(--finora-theme-surface-muted, rgba(255,255,255,.055))",
-
-    color:
-      "var(--finora-theme-text-primary, #F8FAFC)",
-
-    fontSize:
-      `${tokens.input.fontSize}px`,
-
-    fontWeight:
-      500,
-
-    fontVariantNumeric:
-      "tabular-nums",
-
-  };
-
-
-  /* =========================================================
-     ICON STYLE
-  ========================================================= */
 
   const iconStyle:
-    CSSProperties = {
-
-    position:
-      "absolute",
-
-    left:
-      `${tokens.input.paddingX}px`,
-
-    top:
-      "50%",
-
-    width:
-      `${tokens.input.iconSize}px`,
-
-    height:
-      `${tokens.input.iconSize}px`,
-
-    transform:
-      "translateY(-50%)",
-
-    color:
-      "var(--finora-theme-brand-accent, var(--finora-theme-brand-primary, #D4AF37))",
-
-    pointerEvents:
-      "none",
-
-  };
+    CSSProperties =
+    createFamilyDetailsIconStyle(
+      basicFormTokens,
+    );
 
 
   /* =========================================================
@@ -374,8 +199,9 @@ export default function FamilyDetails({
         }
       >
 
+
         {/* =================================================
-            NUMBER OF FAMILY MEMBERS
+           NUMBER OF FAMILY MEMBERS
         ================================================= */}
 
         <div
@@ -418,8 +244,7 @@ export default function FamilyDetails({
                 value.numberOfFamilyMembers
               }
 
-              placeholder=
-                "Enter family members"
+              placeholder="Enter family members"
 
               inputMode="numeric"
 
@@ -431,8 +256,7 @@ export default function FamilyDetails({
                   )
               }
 
-              aria-label=
-                "Number of Family Members"
+              aria-label="Number of Family Members"
 
             />
 
@@ -442,7 +266,7 @@ export default function FamilyDetails({
 
 
         {/* =================================================
-            EMERGENCY CONTACT NAME
+           EMERGENCY CONTACT NAME
         ================================================= */}
 
         <div
@@ -485,8 +309,7 @@ export default function FamilyDetails({
                 value.emergencyContactName
               }
 
-              placeholder=
-                "Enter emergency contact"
+              placeholder="Enter emergency contact"
 
               onChange={
                 (event) =>
@@ -496,8 +319,7 @@ export default function FamilyDetails({
                   )
               }
 
-              aria-label=
-                "Emergency Contact Name"
+              aria-label="Emergency Contact Name"
 
             />
 
@@ -507,7 +329,7 @@ export default function FamilyDetails({
 
 
         {/* =================================================
-            EMERGENCY CONTACT MOBILE
+           EMERGENCY CONTACT MOBILE
         ================================================= */}
 
         <div
@@ -550,8 +372,7 @@ export default function FamilyDetails({
                 value.emergencyContactMobile
               }
 
-              placeholder=
-                "Enter mobile number"
+              placeholder="Enter mobile number"
 
               inputMode="tel"
 
@@ -563,14 +384,14 @@ export default function FamilyDetails({
                   )
               }
 
-              aria-label=
-                "Emergency Contact Mobile"
+              aria-label="Emergency Contact Mobile"
 
             />
 
           </div>
 
         </div>
+
 
       </div>
 

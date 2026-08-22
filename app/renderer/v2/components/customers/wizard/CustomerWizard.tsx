@@ -1449,10 +1449,6 @@ export default function CustomerWizard({
           nextStep
         }
 
-        onBackToCustomers={
-          onBackToCustomersHub
-        }
-
       />
 
 

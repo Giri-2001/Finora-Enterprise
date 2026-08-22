@@ -11,13 +11,29 @@
 
    RESPONSIBILITY:
 
-   - Presentation styling for Step 2 sections
-   - Theme-driven visual presentation
+   - Unified Basic Information presentation
+   - Left Identity form visual-density matching
+   - Personal / Occupation / Family field orchestration
    - No local breakpoints
    - No viewport detection
-   - No emoji styling
    - No business logic
-   - No responsive geometry decisions
+   - Fill the complete available Step 2 height
+   - Keep the final field aligned with the bottom of the form
+   - Match Step 1 Identity header typography and spacing
+   - Consume typography and spacing from Responsive Engine
+   - Consume ALL visual colours from FINORA Theme Engine
+
+   THEME CONTRACT:
+
+   ThemeProvider
+        ↓
+   FinoraTheme
+        ↓
+   Step2Basic theme CSS variables
+        ↓
+   Step2Basic styles
+        ↓
+   BasicForm / OccupationCard / FamilyDetails
 =========================================================== */
 
 
@@ -30,6 +46,201 @@ import type {
 } from "react";
 
 
+import type {
+  ResponsiveTokens,
+} from "../../../../utils/responsive";
+
+
+import type {
+  FinoraTheme,
+} from "../../../../themes/core/types";
+
+
+/* ===========================================================
+   THEME VARIABLES
+=========================================================== */
+
+/*
+ * IMPORTANT:
+ *
+ * Step2Basic does NOT own a local colour palette.
+ *
+ * These are semantic CSS-variable references only.
+ *
+ * The actual values are injected by Step2Basic.tsx from the
+ * central FINORA ThemeProvider.
+ */
+
+const THEME = {
+
+  /* ---------------------------------------------------------
+     SURFACES
+  --------------------------------------------------------- */
+
+  surface:
+    "var(--finora-theme-surface, #FFFFFF)",
+
+  surfaceMuted:
+    "var(--finora-theme-surface-muted, #F1F3F6)",
+
+  surfaceStrong:
+    "var(--finora-theme-surface-strong, #E7EAF0)",
+
+
+  /* ---------------------------------------------------------
+     BRAND
+  --------------------------------------------------------- */
+
+  brandPrimary:
+    "var(--finora-theme-brand-primary, #B8860B)",
+
+  brandSecondary:
+    "var(--finora-theme-brand-secondary, #8C6A00)",
+
+  brandAccent:
+    "var(--finora-theme-brand-accent, #D4AF37)",
+
+  brandAccentSoft:
+    "var(--finora-theme-brand-accent-soft, #D4AF37)",
+
+
+  /* ---------------------------------------------------------
+     TEXT
+  --------------------------------------------------------- */
+
+  textPrimary:
+    "var(--finora-theme-text-primary, #171A21)",
+
+  textSecondary:
+    "var(--finora-theme-text-secondary, #4B5563)",
+
+  textMuted:
+    "var(--finora-theme-text-muted, #7A8494)",
+
+  textInverse:
+    "var(--finora-theme-text-inverse, #FFFFFF)",
+
+
+  /* ---------------------------------------------------------
+     BORDERS
+  --------------------------------------------------------- */
+
+  border:
+    "var(--finora-theme-border-default, #D9DEE7)",
+
+  borderStrong:
+    "var(--finora-theme-border-strong, #B8C0CC)",
+
+  borderSubtle:
+    "var(--finora-theme-border-subtle, #E8EBF0)",
+
+
+  /* ---------------------------------------------------------
+     EFFECTS
+  --------------------------------------------------------- */
+
+  shadow:
+    "var(--finora-theme-overlay-shadow, rgba(15,23,42,.14))",
+
+} as const;
+
+
+/* ===========================================================
+   THEME VARIABLE TYPE
+=========================================================== */
+
+export type Step2ThemeStyle =
+  CSSProperties &
+  Record<
+    `--${string}`,
+    string
+  >;
+
+
+/* ===========================================================
+   THEME VARIABLE FACTORY
+=========================================================== */
+
+/*
+ * IMPORTANT:
+ *
+ * This function contains NO theme palette.
+ *
+ * It only maps the selected FinoraTheme semantic values into
+ * the CSS-variable contract consumed by Step2Basic and its
+ * child forms.
+ *
+ * Visual appearance remains owned by ThemeProvider.
+ */
+
+export function createStep2ThemeVariables(
+  theme:
+    FinoraTheme,
+):
+  Step2ThemeStyle {
+
+  return {
+
+    "--finora-theme-brand-primary":
+      theme.colors.brand.primary,
+
+    "--finora-theme-brand-secondary":
+      theme.colors.brand.secondary,
+
+    "--finora-theme-brand-accent":
+      theme.colors.brand.accent,
+
+    "--finora-theme-brand-accent-soft":
+      theme.colors.brand.accentSoft,
+
+
+    "--finora-theme-surface":
+      theme.colors.background.surface,
+
+    "--finora-theme-background-surface":
+      theme.colors.background.surface,
+
+    "--finora-theme-surface-muted":
+      theme.colors.background.surfaceMuted,
+
+    "--finora-theme-background-surface-muted":
+      theme.colors.background.surfaceMuted,
+
+
+    "--finora-theme-text-primary":
+      theme.colors.text.primary,
+
+    "--finora-theme-text-secondary":
+      theme.colors.text.secondary,
+
+    "--finora-theme-text-body":
+      theme.colors.text.secondary,
+
+    "--finora-theme-text-muted":
+      theme.colors.text.muted,
+
+    "--finora-theme-text-inverse":
+      theme.colors.text.inverse,
+
+
+    "--finora-theme-border-default":
+      theme.colors.border.default,
+
+    "--finora-theme-border-strong":
+      theme.colors.border.strong,
+
+    "--finora-theme-border-subtle":
+      theme.colors.border.subtle,
+
+
+    "--finora-theme-overlay-shadow":
+      theme.colors.overlay.shadow,
+
+  };
+
+}
+
+
 /* ===========================================================
    PAGE
 =========================================================== */
@@ -40,8 +251,39 @@ export const pageStyle:
   width:
     "100%",
 
+  minWidth:
+    0,
+
+  minHeight:
+    0,
+
+  boxSizing:
+    "border-box",
+
+  padding:
+    "0",
+
+};
+
+
+/* ===========================================================
+   UNIFIED FORM
+=========================================================== */
+
+export const formStyle:
+  CSSProperties = {
+
+  width:
+    "100%",
+
   height:
     "100%",
+
+  minWidth:
+    0,
+
+  minHeight:
+    0,
 
   display:
     "flex",
@@ -53,79 +295,383 @@ export const pageStyle:
     "border-box",
 
   padding:
-    "var(--finora-step2-page-padding, 10px 18px 4px)",
+    "18px 20px",
 
-  overflow:
-    "hidden",
+  margin:
+    0,
 
-  color:
-    "var(--finora-theme-text-primary, #F8FAFC)",
+  borderRadius:
+    "16px",
+
+  border:
+    "var(--finora-theme-border-width, 1.5px) solid var(--finora-theme-border-default)",
 
   background:
-    "var(--finora-theme-page-background)",
+  `linear-gradient(
+    145deg,
+    ${THEME.surfaceMuted},
+    ${THEME.surface}
+  )`,
 
+  boxShadow:
+  "0 10px 28px rgba(0,0,0,.12)",
+
+  overflow:
+  "hidden",
+
+clipPath:
+  "inset(0 round var(--finora-theme-radius-card, 17px))",
 };
 
 
 /* ===========================================================
-   PAGE HEADER
+   FORM HEADER
+===========================================================
 
-   Kept for compatibility.
-   Step2Basic currently does not render this header.
+   IMPORTANT:
+
+   Step 1 Identity header uses:
+
+     marginBottom = spacing.medium
+     paddingBottom = spacing.medium
+     borderBottom = border.width
+
+   Step 2 uses the same geometry.
+
 =========================================================== */
 
-export const pageHeaderStyle:
+export function createStep2BasicHeaderStyles(
+  tokens:
+    ResponsiveTokens,
+): {
+
+  formHeaderStyle:
+    CSSProperties;
+
+  formTitleStyle:
+    CSSProperties;
+
+  formSubtitleStyle:
+    CSSProperties;
+
+  formDividerStyle:
+    CSSProperties;
+
+} {
+
+  const spacing =
+    tokens.spacing;
+
+  const border =
+    tokens.border;
+
+
+  /* =========================================================
+     FORM HEADER
+  ========================================================= */
+
+  const formHeaderStyle:
+    CSSProperties = {
+
+    width:
+      "100%",
+
+    minWidth:
+      0,
+
+    flexShrink:
+      0,
+
+    margin:
+      0,
+
+    marginBottom:
+      spacing.medium,
+
+    paddingBottom:
+      spacing.medium,
+
+    borderBottom:
+      `${border.width}px solid ${THEME.borderSubtle}`,
+
+    boxSizing:
+      "border-box",
+
+  };
+
+
+  /* =========================================================
+     FORM TITLE
+  ========================================================= */
+
+  const formTitleStyle:
+    CSSProperties = {
+
+    margin:
+      0,
+
+    padding:
+      0,
+
+    color:
+      THEME.textPrimary,
+
+    fontSize:
+      `${tokens.typography.heading - 3}px`,
+
+    fontWeight:
+      600,
+
+    lineHeight:
+      tokens.lineHeight.heading,
+
+    letterSpacing:
+      ".1px",
+
+    fontFamily:
+      "Georgia, 'Times New Roman', serif",
+
+  };
+
+
+  /* =========================================================
+     FORM SUBTITLE
+  ========================================================= */
+
+  const formSubtitleStyle:
+    CSSProperties = {
+
+    margin:
+      `${spacing.small}px 0 0`,
+
+    padding:
+      0,
+
+    color:
+      THEME.textSecondary,
+
+    fontSize:
+      `${tokens.typography.body - 1}px`,
+
+    lineHeight:
+      tokens.lineHeight.body,
+
+    fontWeight:
+      500,
+
+    fontFamily:
+      "Georgia, 'Times New Roman', serif",
+
+  };
+
+
+  /* =========================================================
+     FORM DIVIDER
+  ========================================================= */
+
+  const formDividerStyle:
+    CSSProperties = {
+
+    flexShrink:
+      0,
+
+    width:
+      "100%",
+
+    height:
+      "0",
+
+    boxSizing:
+      "border-box",
+
+    margin:
+      0,
+
+    padding:
+      0,
+
+    background:
+      "transparent",
+
+    border:
+      "none",
+
+  };
+
+
+  return {
+
+    formHeaderStyle,
+
+    formTitleStyle,
+
+    formSubtitleStyle,
+
+    formDividerStyle,
+
+  };
+
+}
+
+
+/* ===========================================================
+   DEFAULT HEADER STYLES
+=========================================================== */
+
+export const formHeaderStyle:
   CSSProperties = {
 
-  display:
-    "none",
+  width:
+    "100%",
+
+  minWidth:
+    0,
+
+  flexShrink:
+    0,
+
+  margin:
+    0,
+
+  boxSizing:
+    "border-box",
 
 };
 
 
-/* ===========================================================
-   PAGE TITLE
-=========================================================== */
-
-export const pageTitleStyle:
+export const formTitleStyle:
   CSSProperties = {
 
   margin:
     0,
 
-  color:
-    "var(--finora-theme-text-heading, #F3E4C2)",
+  padding:
+    0,
 
-  fontSize:
-    "var(--finora-step2-page-title-size, 18px)",
+};
 
-  lineHeight:
-    "var(--finora-theme-line-height-tight, 1.2)",
 
-  fontWeight:
-    600,
+export const formSubtitleStyle:
+  CSSProperties = {
+
+  margin:
+    0,
+
+  padding:
+    0,
+
+};
+
+
+export const formDividerStyle:
+  CSSProperties = {
+
+  width:
+    "100%",
+
+  height:
+    "0",
+
+  margin:
+    0,
+
+  padding:
+    0,
+
+  border:
+    "none",
+
+  background:
+    "transparent",
 
 };
 
 
 /* ===========================================================
-   PAGE SUBTITLE
+   FORM HEADER ICON
 =========================================================== */
 
-export const pageSubtitleStyle:
+export const formHeaderIconStyle:
   CSSProperties = {
 
-  margin:
-    "var(--finora-step2-page-subtitle-margin, 4px 0 0)",
+  width:
+    "38px",
+
+  height:
+    "38px",
+
+  minWidth:
+    "38px",
+
+  display:
+    "flex",
+
+  alignItems:
+    "center",
+
+  justifyContent:
+    "center",
+
+  flexShrink:
+    0,
+
+  boxSizing:
+    "border-box",
+
+  borderRadius:
+    "50%",
+
+  border:
+    `1px solid ${THEME.brandAccent}`,
+
+  background:
+    THEME.surfaceMuted,
 
   color:
-    "var(--finora-theme-text-muted, rgba(255,255,255,.48))",
+    THEME.brandAccent,
 
   fontSize:
-    "var(--finora-step2-page-subtitle-size, 9px)",
+    "14px",
+
+  fontWeight:
+    600,
 
   lineHeight:
-    "var(--finora-theme-line-height-normal, 1.4)",
+    1,
+
+};
+
+
+/* ===========================================================
+   FORM HEADER CONTENT
+=========================================================== */
+
+export const formHeaderContentStyle:
+  CSSProperties = {
+
+  flex:
+    "none",
+
+  minWidth:
+    0,
+
+  display:
+    "flex",
+
+  flexDirection:
+    "column",
+
+  justifyContent:
+    "center",
+
+  boxSizing:
+    "border-box",
+
+  padding:
+    0,
+
+  margin:
+    0,
 
 };
 
@@ -137,57 +683,17 @@ export const pageSubtitleStyle:
 export const contentStyle:
   CSSProperties = {
 
+  width:
+    "100%",
+
+  minWidth:
+    0,
+
+  minHeight:
+    0,
+
   flex:
     1,
-
-  minHeight:
-    0,
-
-  width:
-    "100%",
-
-  display:
-    "grid",
-
-  gridTemplateRows:
-    "repeat(3, minmax(0, 1fr))",
-
-  gap:
-    "var(--finora-step2-section-gap, 14px)",
-
-  padding:
-    0,
-
-  margin:
-    0,
-
-  boxSizing:
-    "border-box",
-
-  overflow:
-    "hidden",
-
-};
-
-
-/* ===========================================================
-   PREMIUM SECTION
-=========================================================== */
-
-export const sectionStyle:
-  CSSProperties = {
-
-  minHeight:
-    0,
-
-    height:
-  "100%",
-
-alignSelf:
-  "stretch",
-
-  width:
-    "100%",
 
   display:
     "flex",
@@ -199,270 +705,132 @@ alignSelf:
     "border-box",
 
   padding:
-    "var(--finora-step2-section-padding, 13px 14px 12px)",
-
-  borderRadius:
-    "var(--finora-theme-radius-card, 17px)",
-
-  border:
-    "var(--finora-theme-border-width, 1.5px) solid var(--finora-theme-border-default, rgba(214,176,106,.34))",
-
-  background:
-    "var(--finora-theme-surface-card, linear-gradient(145deg,rgba(255,255,255,.045),rgba(255,255,255,.018)))",
-
-  boxShadow:
-    "var(--finora-theme-shadow-card, 0 10px 28px rgba(0,0,0,.12))",
-
-  overflow:
-    "hidden",
-
-};
-
-
-/* ===========================================================
-   SECTION HEADER
-=========================================================== */
-
-export const sectionHeaderStyle:
-  CSSProperties = {
-
-  flexShrink:
     0,
 
-  minHeight:
-    "var(--finora-step2-header-min-height, 45px)",
-
-  display:
-    "flex",
-
-  alignItems:
-    "center",
+  margin:
+    0,
 
   gap:
-    "var(--finora-step2-header-gap, 12px)",
+    "8px",
 
-  paddingBottom:
-    "var(--finora-step2-header-padding-bottom, 10px)",
-
-  marginBottom:
-    "var(--finora-step2-header-margin-bottom, 11px)",
-
-  borderBottom:
-    "var(--finora-theme-border-width, 1px) solid var(--finora-theme-border-subtle, rgba(214,176,106,.20))",
-
-  boxSizing:
-    "border-box",
+  overflow:
+    "visible",
 
 };
 
 
 /* ===========================================================
-   SECTION ICON
+   GROUP
 =========================================================== */
 
-export const sectionIconStyle:
+export const groupStyle:
   CSSProperties = {
 
   width:
-    "var(--finora-step2-section-icon-size, 38px)",
+    "100%",
 
-  height:
-    "var(--finora-step2-section-icon-size, 38px)",
+  minWidth:
+    0,
+
+  minHeight:
+    0,
 
   flexShrink:
     0,
 
   display:
-    "flex",
+    "block",
 
-  alignItems:
-    "center",
+  boxSizing:
+    "border-box",
 
-  justifyContent:
-    "center",
+  padding:
+    0,
 
-  borderRadius:
-    "50%",
+  margin:
+    0,
 
   border:
-    "var(--finora-theme-border-width, 1.5px) solid var(--finora-theme-brand-accent, #D4AF37)",
+    "none",
 
   background:
-    "var(--finora-theme-surface-icon, rgba(0,0,0,.20))",
+    "transparent",
 
   boxShadow:
-    "var(--finora-theme-shadow-icon, 0 4px 12px rgba(0,0,0,.18))",
-
-  color:
-    "var(--finora-theme-brand-accent, #D4AF37)",
-
-  lineHeight:
-    1,
+    "none",
 
 };
 
 
 /* ===========================================================
-   SECTION TITLE
+   GROUP HEADER
 =========================================================== */
 
-export const sectionTitleStyle:
-  CSSProperties = {
-
-  margin:
-    0,
-
-  color:
-    "var(--finora-theme-text-heading, #F3E4C2)",
-
-  fontSize:
-    "var(--finora-step2-section-title-size, 18px)",
-
-  lineHeight:
-    "var(--finora-theme-line-height-tight, 1.2)",
-
-  fontWeight:
-    700,
-
-  letterSpacing:
-    "var(--finora-step2-section-title-spacing, .25px)",
-
-};
-
-
-/* ===========================================================
-   SECTION SUBTITLE
-=========================================================== */
-
-export const sectionSubtitleStyle:
-  CSSProperties = {
-
-  margin:
-    "var(--finora-step2-section-subtitle-margin, 3px 0 0)",
-
-  color:
-    "var(--finora-theme-text-muted, rgba(255,255,255,.48))",
-
-  fontSize:
-    "var(--finora-step2-section-subtitle-size, 12px)",
-
-  lineHeight:
-    "var(--finora-theme-line-height-normal, 1.35)",
-
-};
-
-
-/* ===========================================================
-   FIELD AREA
-=========================================================== */
-
-export const fieldAreaStyle:
-  CSSProperties = {
-
-  flex:
-    1,
-
-  minHeight:
-    0,
-
-  width:
-    "100%",
-
-  display:
-    "flex",
-
-  alignItems:
-    "center",
-
-  boxSizing:
-    "border-box",
-
-  overflow:
-    "hidden",
-
-};
-
-
-/* ===========================================================
-   FOUR COLUMN GRID
-
-   Compatibility export only.
-
-   Actual field geometry is owned by:
-   - BasicForm
-   - OccupationCard
-
-   Those components consume the Responsive Engine.
-=========================================================== */
-
-export const fourColumnGridStyle:
-  CSSProperties = {
-
-  width:
-    "100%",
-
-  display:
-    "grid",
-
-  gridTemplateColumns:
-    "repeat(4, minmax(0, 1fr))",
-
-  gap:
-    "var(--finora-form-gap)",
-
-  alignItems:
-    "center",
-
-  boxSizing:
-    "border-box",
-
-};
-
-
-/* ===========================================================
-   THREE COLUMN GRID
-
-   Compatibility export only.
-
-   Actual FamilyDetails geometry is owned by
-   FamilyDetails Responsive Engine.
-=========================================================== */
-
-export const threeColumnGridStyle:
-  CSSProperties = {
-
-  width:
-    "100%",
-
-  display:
-    "grid",
-
-  gridTemplateColumns:
-    "repeat(3, minmax(0, 1fr))",
-
-  gap:
-    "var(--finora-form-gap)",
-
-  alignItems:
-    "center",
-
-  boxSizing:
-    "border-box",
-
-};
-
-
-/* ===========================================================
-   GOLD ACCENT
-
-   Intentionally disabled.
-=========================================================== */
-
-export const sectionAccentStyle:
+export const groupHeaderStyle:
   CSSProperties = {
 
   display:
     "none",
+
+};
+
+
+/* ===========================================================
+   GROUP TITLE
+=========================================================== */
+
+export const groupTitleStyle:
+  CSSProperties = {
+
+  display:
+    "none",
+
+};
+
+
+/* ===========================================================
+   GROUP SUBTITLE
+=========================================================== */
+
+export const groupSubtitleStyle:
+  CSSProperties = {
+
+  display:
+    "none",
+
+};
+
+
+/* ===========================================================
+   GROUP CONTENT
+=========================================================== */
+
+export const groupContentStyle:
+  CSSProperties = {
+
+  width:
+    "100%",
+
+  minWidth:
+    0,
+
+  minHeight:
+    0,
+
+  display:
+    "block",
+
+  boxSizing:
+    "border-box",
+
+  padding:
+    0,
+
+  margin:
+    0,
+
+  overflow:
+    "visible",
 
 };
 

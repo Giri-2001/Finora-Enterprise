@@ -145,67 +145,39 @@ export default function Step1IdentityAndBasic({
       basicFormTokens,
     );
 
+const combinedPageStyle:
+  CSSProperties = {
 
-  /* =========================================================
-     COMBINED PAGE LAYOUT
+  ...responsivePageStyle,
 
-     DESKTOP:
+  width:
+    "84%",
 
-       LEFT  = 40%
-       GAP   = 10px
-       RIGHT = 60%
+  minWidth:
+    0,
 
-     IMPORTANT:
+  minHeight:
+    0,
 
-     40% + 60% + 10px would exceed 100%.
+  margin:
+  "10px auto 0",
 
-     Therefore each side gives 5px to the
-     center gap:
+  boxSizing:
+    "border-box",
 
-       calc(40% - 5px)
-       calc(60% - 5px)
+  display:
+    "grid",
 
-     Total:
+  gridTemplateColumns:
+    "40% 40%",
 
-       40% - 5px
-       + 10px
-       + 60% - 5px
-       = 100%
+  columnGap:
+    "4%",
 
-     Both columns stretch to the same row height.
-  ========================================================= */
+  alignItems:
+    "start",
 
-  const combinedPageStyle:
-    CSSProperties = {
-
-    ...responsivePageStyle,
-
-    width:
-      "100%",
-
-    minWidth:
-      0,
-
-    minHeight:
-      0,
-
-    boxSizing:
-      "border-box",
-
-    display:
-      "grid",
-
-    gridTemplateColumns:
-      "calc(40% - 5px) calc(60% - 5px)",
-
-    columnGap:
-      "10px",
-
-    alignItems:
-      "stretch",
-
-  };
-
+};
 
   /* =========================================================
      COLUMN STYLE
@@ -243,7 +215,7 @@ export default function Step1IdentityAndBasic({
       "column",
 
     alignSelf:
-      "stretch",
+      "start",
 
   };
 

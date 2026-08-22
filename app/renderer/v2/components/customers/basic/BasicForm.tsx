@@ -1,40 +1,12 @@
 /* ===========================================================
    FINORA ENTERPRISE OS™
 
-   CUSTOMER BASIC INFORMATION™
-
+   CUSTOMER BASIC INFORMATION
    STEP 2 — PERSONAL INFORMATION
 
-   Version     : 3.0
-   Phase       : Phase 2
-   Architecture: Enterprise
-   Status      : Production
-
-   RESPONSIBILITY:
-   - Controlled customer personal information fields
-   - Education
-   - Marital status
-   - Father / Spouse name
-   - Spouse name
-
-   ARCHITECTURE:
-   - Responsive engine owns responsive token resolution
-   - Presentation styles own visual presentation
-   - Lucide owns field icons
-   - No emojis
-   - No viewport detection
-   - No business logic
+   Version : 3.0
+   Status  : Production
 =========================================================== */
-
-
-/* ===========================================================
-   IMPORTS
-=========================================================== */
-
-import type {
-  CSSProperties,
-} from "react";
-
 
 import {
   GraduationCap,
@@ -43,20 +15,9 @@ import {
   UsersRound,
 } from "lucide-react";
 
-
-/* ===========================================================
-   RESPONSIVE ENGINE
-=========================================================== */
-
 import {
   useBasicFormResponsive,
-  createBasicFormPageStyle,
 } from "../../../utils/responsive/customers/basicform";
-
-
-/* ===========================================================
-   PRESENTATION STYLES
-=========================================================== */
 
 import {
   createBasicFormRootStyle,
@@ -68,12 +29,12 @@ import {
   createBasicFormIconStyle,
   createBasicFormInputWrapperStyle,
   createBasicFormIconInputStyle,
+  createBasicFormIconPositionStyle,
+  createBasicFormIconSelectStyle,
+  createBasicFormFieldGridStyle,
+  createBasicFormFieldStyle,
 } from "./BasicForm.styles";
 
-
-/* ===========================================================
-   TYPES
-=========================================================== */
 
 export interface BasicFormData {
 
@@ -107,10 +68,6 @@ interface BasicFormProps {
 }
 
 
-/* ===========================================================
-   LABEL
-=========================================================== */
-
 function FieldLabel({
 
   children,
@@ -132,16 +89,13 @@ function FieldLabel({
   } =
     useBasicFormResponsive();
 
-
   const labelStyle =
     createBasicFormLabelStyle(
       basicFormTokens,
     );
 
-
   const requiredStyle =
     createBasicFormRequiredStyle();
-
 
   return (
 
@@ -172,10 +126,6 @@ function FieldLabel({
 }
 
 
-/* ===========================================================
-   COMPONENT
-=========================================================== */
-
 export default function BasicForm({
 
   value,
@@ -184,162 +134,65 @@ export default function BasicForm({
 
 }: BasicFormProps) {
 
-
-  /* =========================================================
-     RESPONSIVE ENGINE
-  ========================================================= */
-
   const {
     basicFormTokens,
   } =
     useBasicFormResponsive();
 
-
-  /* =========================================================
-     ROOT STYLE
-  ========================================================= */
-
-  const rootStyle:
-    CSSProperties =
+  const rootStyle =
     createBasicFormRootStyle(
       basicFormTokens,
     );
 
 
-  /* =========================================================
-     PAGE STYLE
-  ========================================================= */
 
-  const pageStyle:
-    CSSProperties =
-    createBasicFormPageStyle(
+  const fieldGridStyle =
+    createBasicFormFieldGridStyle(
       basicFormTokens,
     );
 
+  const fieldStyle =
+    createBasicFormFieldStyle(
+      basicFormTokens,
+    );
 
-  /* =========================================================
-     FIELD GRID
-  ========================================================= */
-
-  const fieldGridStyle:
-    CSSProperties = {
-
-    width:
-      "100%",
-
-    minWidth:
-      0,
-
-    display:
-      "grid",
-
-    gridTemplateColumns:
-      "repeat(4, minmax(0, 1fr))",
-
-    columnGap:
-      `${basicFormTokens.columnGap}px`,
-
-    boxSizing:
-      "border-box",
-
-  };
-
-
-  /* =========================================================
-     FIELD STYLE
-  ========================================================= */
-
-  const fieldStyle:
-    CSSProperties = {
-
-    width:
-      "100%",
-
-    minWidth:
-      0,
-
-    display:
-      "flex",
-
-    flexDirection:
-      "column",
-
-    gap:
-      `${basicFormTokens.fieldGap}px`,
-
-    boxSizing:
-      "border-box",
-
-  };
-
-
-  /* =========================================================
-     INPUT STYLE
-  ========================================================= */
-
-  const inputStyle:
-    CSSProperties =
+  const inputStyle =
     createBasicFormInputStyle(
       basicFormTokens,
     );
 
-
-  /* =========================================================
-     SELECT STYLE
-  ========================================================= */
-
-  const selectStyle:
-    CSSProperties =
+  const selectStyle =
     createBasicFormSelectStyle(
       basicFormTokens,
     );
 
-
-  /* =========================================================
-     OPTION STYLE
-  ========================================================= */
-
-  const optionStyle:
-    CSSProperties =
+  const optionStyle =
     createBasicFormOptionStyle(
       basicFormTokens,
     );
 
-
-  /* =========================================================
-     ICON STYLE
-  ========================================================= */
-
-  const iconStyle:
-    CSSProperties =
+  const iconStyle =
     createBasicFormIconStyle(
       basicFormTokens,
     );
 
-
-  /* =========================================================
-     INPUT WRAPPER
-  ========================================================= */
-
-  const inputWrapperStyle:
-    CSSProperties =
+  const inputWrapperStyle =
     createBasicFormInputWrapperStyle();
 
-
-  /* =========================================================
-     ICON INPUT
-  ========================================================= */
-
-  const iconInputStyle:
-    CSSProperties =
+  const iconInputStyle =
     createBasicFormIconInputStyle(
       basicFormTokens,
     );
 
+  const iconPositionStyle =
+    createBasicFormIconPositionStyle(
+      basicFormTokens,
+    );
 
-  /* =========================================================
-     UI
-  ========================================================= */
+  const iconSelectStyle =
+    createBasicFormIconSelectStyle(
+      basicFormTokens,
+    );
 
   return (
 
@@ -349,21 +202,13 @@ export default function BasicForm({
       }
     >
 
-      <div
-        style={
-          pageStyle
-        }
-      >
+     
 
         <div
           style={
             fieldGridStyle
           }
         >
-
-          {/* =================================================
-              FATHER / SPOUSE
-          ================================================= */}
 
           <div
             style={
@@ -377,7 +222,6 @@ export default function BasicForm({
               Father / Spouse Name
             </FieldLabel>
 
-
             <div
               style={
                 inputWrapperStyle
@@ -387,25 +231,10 @@ export default function BasicForm({
               <UsersRound
                 style={{
                   ...iconStyle,
-
-                  position:
-                    "absolute",
-
-                  left:
-                    `${basicFormTokens.inputPaddingX}px`,
-
-                  top:
-                    "50%",
-
-                  transform:
-                    "translateY(-50%)",
-
-                  pointerEvents:
-                    "none",
+                  ...iconPositionStyle,
                 }}
                 aria-hidden="true"
               />
-
 
               <input
                 style={
@@ -416,8 +245,7 @@ export default function BasicForm({
                   value.fatherOrSpouseName
                 }
 
-                placeholder=
-                  "Enter father or spouse name"
+                placeholder="Enter father or spouse name"
 
                 onChange={(
                   event,
@@ -428,18 +256,13 @@ export default function BasicForm({
                   )
                 }
 
-                aria-label=
-                  "Father or Spouse Name"
+                aria-label="Father or Spouse Name"
               />
 
             </div>
 
           </div>
 
-
-          {/* =================================================
-              EDUCATION
-          ================================================= */}
 
           <div
             style={
@@ -451,7 +274,6 @@ export default function BasicForm({
               Education
             </FieldLabel>
 
-
             <div
               style={
                 inputWrapperStyle
@@ -461,32 +283,15 @@ export default function BasicForm({
               <GraduationCap
                 style={{
                   ...iconStyle,
-
-                  position:
-                    "absolute",
-
-                  left:
-                    `${basicFormTokens.inputPaddingX}px`,
-
-                  top:
-                    "50%",
-
-                  transform:
-                    "translateY(-50%)",
-
-                  pointerEvents:
-                    "none",
+                  ...iconPositionStyle,
                 }}
                 aria-hidden="true"
               />
 
-
               <select
                 style={{
                   ...selectStyle,
-
-                  paddingLeft:
-                    `${basicFormTokens.inputPaddingX + basicFormTokens.iconSize + basicFormTokens.iconOffset}px`,
+                  ...iconSelectStyle,
                 }}
 
                 value={
@@ -502,8 +307,7 @@ export default function BasicForm({
                   )
                 }
 
-                aria-label=
-                  "Education"
+                aria-label="Education"
               >
 
                 <option
@@ -515,7 +319,6 @@ export default function BasicForm({
                   Select education
                 </option>
 
-
                 <option
                   value="No Formal Education"
                   style={
@@ -524,7 +327,6 @@ export default function BasicForm({
                 >
                   No Formal Education
                 </option>
-
 
                 <option
                   value="Primary"
@@ -535,7 +337,6 @@ export default function BasicForm({
                   Primary
                 </option>
 
-
                 <option
                   value="Secondary"
                   style={
@@ -544,7 +345,6 @@ export default function BasicForm({
                 >
                   Secondary
                 </option>
-
 
                 <option
                   value="Intermediate"
@@ -555,7 +355,6 @@ export default function BasicForm({
                   Intermediate
                 </option>
 
-
                 <option
                   value="Diploma"
                   style={
@@ -564,7 +363,6 @@ export default function BasicForm({
                 >
                   Diploma
                 </option>
-
 
                 <option
                   value="Graduate"
@@ -575,7 +373,6 @@ export default function BasicForm({
                   Graduate
                 </option>
 
-
                 <option
                   value="Post Graduate"
                   style={
@@ -585,7 +382,6 @@ export default function BasicForm({
                   Post Graduate
                 </option>
 
-
                 <option
                   value="Doctorate"
                   style={
@@ -594,7 +390,6 @@ export default function BasicForm({
                 >
                   Doctorate
                 </option>
-
 
                 <option
                   value="Other"
@@ -612,10 +407,6 @@ export default function BasicForm({
           </div>
 
 
-          {/* =================================================
-              MARITAL STATUS
-          ================================================= */}
-
           <div
             style={
               fieldStyle
@@ -626,7 +417,6 @@ export default function BasicForm({
               Marital Status
             </FieldLabel>
 
-
             <div
               style={
                 inputWrapperStyle
@@ -636,32 +426,15 @@ export default function BasicForm({
               <HeartHandshake
                 style={{
                   ...iconStyle,
-
-                  position:
-                    "absolute",
-
-                  left:
-                    `${basicFormTokens.inputPaddingX}px`,
-
-                  top:
-                    "50%",
-
-                  transform:
-                    "translateY(-50%)",
-
-                  pointerEvents:
-                    "none",
+                  ...iconPositionStyle,
                 }}
                 aria-hidden="true"
               />
 
-
               <select
                 style={{
                   ...selectStyle,
-
-                  paddingLeft:
-                    `${basicFormTokens.inputPaddingX + basicFormTokens.iconSize + basicFormTokens.iconOffset}px`,
+                  ...iconSelectStyle,
                 }}
 
                 value={
@@ -677,8 +450,7 @@ export default function BasicForm({
                   )
                 }
 
-                aria-label=
-                  "Marital Status"
+                aria-label="Marital Status"
               >
 
                 <option
@@ -690,7 +462,6 @@ export default function BasicForm({
                   Select marital status
                 </option>
 
-
                 <option
                   value="Single"
                   style={
@@ -699,7 +470,6 @@ export default function BasicForm({
                 >
                   Single
                 </option>
-
 
                 <option
                   value="Married"
@@ -710,7 +480,6 @@ export default function BasicForm({
                   Married
                 </option>
 
-
                 <option
                   value="Widowed"
                   style={
@@ -720,7 +489,6 @@ export default function BasicForm({
                   Widowed
                 </option>
 
-
                 <option
                   value="Divorced"
                   style={
@@ -729,7 +497,6 @@ export default function BasicForm({
                 >
                   Divorced
                 </option>
-
 
                 <option
                   value="Separated"
@@ -747,10 +514,6 @@ export default function BasicForm({
           </div>
 
 
-          {/* =================================================
-              SPOUSE NAME
-          ================================================= */}
-
           <div
             style={
               fieldStyle
@@ -761,7 +524,6 @@ export default function BasicForm({
               Spouse Name
             </FieldLabel>
 
-
             <div
               style={
                 inputWrapperStyle
@@ -771,25 +533,10 @@ export default function BasicForm({
               <UserRound
                 style={{
                   ...iconStyle,
-
-                  position:
-                    "absolute",
-
-                  left:
-                    `${basicFormTokens.inputPaddingX}px`,
-
-                  top:
-                    "50%",
-
-                  transform:
-                    "translateY(-50%)",
-
-                  pointerEvents:
-                    "none",
+                  ...iconPositionStyle,
                 }}
                 aria-hidden="true"
               />
-
 
               <input
                 style={
@@ -800,8 +547,7 @@ export default function BasicForm({
                   value.spouseName
                 }
 
-                placeholder=
-                  "Enter spouse name"
+                placeholder="Enter spouse name"
 
                 onChange={(
                   event,
@@ -812,8 +558,7 @@ export default function BasicForm({
                   )
                 }
 
-                aria-label=
-                  "Spouse Name"
+                aria-label="Spouse Name"
               />
 
             </div>
@@ -822,15 +567,9 @@ export default function BasicForm({
 
         </div>
 
-      </div>
 
     </section>
 
   );
 
 }
-
-
-/* ===========================================================
-   END
-=========================================================== */

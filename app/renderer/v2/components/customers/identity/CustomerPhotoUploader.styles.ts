@@ -47,6 +47,9 @@ export const wrapperStyle: CSSProperties = {
   boxSizing:
     "border-box",
 
+  background:
+  "var(--finora-theme-form-surface, var(--finora-theme-surface))",
+
 };
 
 
@@ -72,7 +75,7 @@ export const previewStyle: CSSProperties = {
     "1px dashed var(--finora-theme-brand-accent, var(--finora-theme-brand-primary, #D4AF37))",
 
   background:
-    "linear-gradient(145deg, var(--finora-theme-surface-muted, rgba(255,255,255,.10)), var(--finora-theme-surface, rgba(255,255,255,.035)))",
+  "var(--finora-theme-form-surface, var(--finora-theme-surface))",
 
   display:
     "flex",
@@ -198,10 +201,10 @@ export const descriptionStyle: CSSProperties = {
   "var(--finora-theme-text-muted, var(--finora-theme-text-secondary))",
 
   fontSize:
-    "11px",
+    "10.8px",
 
   lineHeight:
-    1.45,
+    1.55,
 
 };
 
