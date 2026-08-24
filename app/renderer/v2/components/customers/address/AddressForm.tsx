@@ -1,313 +1,775 @@
 /* ===========================================================
    FINORA ENTERPRISE OS™
 
-   CUSTOMER ADDRESS INFORMATION™
+   CUSTOMER ADDRESS FORM
 
-   Version     : 2.0
+   Version     : 3.0
    Phase       : Phase 2
    Architecture: Enterprise
    Status      : Production
 
-   Responsibility:
+   RESPONSIBILITY:
 
-   - Current address
-   - Permanent address
-   - City / Village
-   - District
-   - State
-   - PIN Code
+   - Render the six customer address fields
+   - Consume Address Responsive Engine geometry
+   - Consume FINORA Theme Engine colours
+   - Use Lucide icons only
+   - Preserve the existing controlled AddressForm contract
+
+   REMOVED:
+
+   - Address Proof
+   - Address Map / GIS
+   - Location Verification
+   - Verification badges
+   - Emoji-based field icons
+
+   IMPORTANT:
+
+   - No local breakpoints
+   - No viewport detection
+   - No media queries
+   - No local responsive calculations
+   - Responsive geometry comes from Address Responsive Engine
+=========================================================== */
+
+
+/* ===========================================================
+   IMPORTS
 =========================================================== */
 
 import type {
   CSSProperties,
 } from "react";
 
+
 import {
-  addressGridStyle,
-  fullAddressFieldStyle,
-  fieldStyle,
-  labelStyle,
-  addressInputStyle,
-  inputStyle,
-  numberInputStyle,
-} from "../wizard/steps/Step3Address.styles";
+  Building2,
+  Hash,
+  House,
+  Map,
+  MapPin,
+} from "lucide-react";
+
+
+import {
+  useResponsive,
+} from "../../../utils/responsive";
+
+
+import {
+  useTheme,
+} from "../../../themes/provider";
+
+
+import {
+  getAddressTokens,
+} from "../../../utils/responsive/customers/address/address.tokens";
+
+
+import {
+  createAddressGridStyle,
+  createAddressFieldStyle,
+  createAddressFieldIconStyle,
+  createAddressInputStyle,
+  createAddressInputWrapperStyle,
+  createAddressLabelStyle,
+  createAddressLongInputStyle,
+  createFullAddressFieldStyle,
+  createAddressSelectChevronStyle,
+} from "../../../utils/responsive/customers/address/address.layout";
+
 
 /* ===========================================================
    TYPES
 =========================================================== */
 
 export interface AddressFormData {
-  currentAddress: string;
 
-  permanentAddress: string;
+  currentAddress:
+    string;
 
-  city: string;
+  permanentAddress:
+    string;
 
-  district: string;
+  city:
+    string;
 
-  state: string;
+  district:
+    string;
 
-  pinCode: string;
+  state:
+    string;
+
+  pinCode:
+    string;
+
 }
+
 
 interface AddressFormProps {
-  value: AddressFormData;
+
+  value:
+    AddressFormData;
 
   onChange: (
-    field: keyof AddressFormData,
-    value: string,
+    field:
+      keyof AddressFormData,
+    value:
+      string,
   ) => void;
+
 }
 
+
 /* ===========================================================
-   HELPER
+   THEME STYLE TYPE
+=========================================================== */
+
+type AddressThemeStyle =
+  CSSProperties &
+  Record<
+    `--${string}`,
+    string
+  >;
+
+
+/* ===========================================================
+   FIELD
 =========================================================== */
 
 function Field({
+
   label,
+
   value,
-  onChange,
-  inputStyleOverride,
-  inputMode,
-  maxLength,
+
   placeholder,
+
+  icon:
+
+  Icon,
+
+  onChange,
+
+  long = false,
+
+  inputMode,
+
 }: {
-  label: string;
 
-  value: string;
+  label:
+    string;
 
-  onChange: (
-    value: string,
-  ) => void;
+  value:
+    string;
 
-  inputStyleOverride?: CSSProperties;
+  placeholder:
+    string;
+
+  icon:
+    typeof House;
+
+  onChange:
+    (
+      value:
+        string,
+    ) => void;
+
+  long?:
+    boolean;
 
   inputMode?:
-    | "text"
+    "text"
     | "numeric"
     | "tel";
 
-  maxLength?: number;
-
-  placeholder: string;
 }) {
+
+  const {
+    tokens,
+  } =
+    useResponsive();
+
+
+  const addressTokens =
+    getAddressTokens(
+      tokens.meta.viewport,
+    );
+
+
+  const fieldStyle =
+    createAddressFieldStyle(
+      addressTokens,
+    );
+
+
+  const labelStyle =
+    createAddressLabelStyle(
+      addressTokens,
+    );
+
+
+  const inputWrapperStyle =
+    createAddressInputWrapperStyle(
+      addressTokens,
+    );
+
+
+  const iconStyle =
+    createAddressFieldIconStyle(
+      addressTokens,
+    );
+
+
+  const inputStyle =
+    long
+      ? createAddressLongInputStyle(
+          addressTokens,
+        )
+      : createAddressInputStyle(
+          addressTokens,
+        );
+
+
   return (
+
     <div
-      style={fieldStyle}
+      style={
+        fieldStyle
+      }
     >
 
       <label
-        style={labelStyle}
+        style={
+          labelStyle
+        }
       >
         {label}
       </label>
 
-      <input
+
+      <div
         style={
-          inputStyleOverride ??
-          inputStyle
+          inputWrapperStyle
         }
+      >
 
-        value={value}
+        <Icon
+          style={
+            iconStyle
+          }
 
-        placeholder={placeholder}
+          strokeWidth={
+            1.9
+          }
 
-        inputMode={inputMode}
+          aria-hidden="true"
+        />
 
-        maxLength={maxLength}
 
-        onChange={(event) =>
-          onChange(
-            event.target.value,
-          )
-        }
+        <input
 
-        aria-label={label}
-      />
+          style={
+            inputStyle
+          }
+
+          value={
+            value
+          }
+
+          placeholder={
+            placeholder
+          }
+
+          inputMode={
+            inputMode
+          }
+
+          onChange={(
+            event,
+          ) =>
+            onChange(
+              event.target.value,
+            )
+          }
+
+          aria-label={
+            label
+          }
+
+          className="finora-address-input"
+
+        />
+
+      </div>
 
     </div>
+
   );
+
 }
+
+
+/* ===========================================================
+   STATE FIELD
+=========================================================== */
+
+function StateField({
+
+  value,
+
+  onChange,
+
+}: {
+
+  value:
+    string;
+
+  onChange:
+    (
+      value:
+        string,
+    ) => void;
+
+}) {
+
+  const {
+    tokens,
+  } =
+    useResponsive();
+
+
+  const addressTokens =
+    getAddressTokens(
+      tokens.meta.viewport,
+    );
+
+
+  const fieldStyle =
+    createAddressFieldStyle(
+      addressTokens,
+    );
+
+
+  const labelStyle =
+    createAddressLabelStyle(
+      addressTokens,
+    );
+
+
+  const inputWrapperStyle =
+    createAddressInputWrapperStyle(
+      addressTokens,
+    );
+
+
+  const iconStyle =
+    createAddressFieldIconStyle(
+      addressTokens,
+    );
+
+
+  const inputStyle =
+    createAddressInputStyle(
+      addressTokens,
+    );
+
+
+  const chevronStyle =
+    createAddressSelectChevronStyle(
+      addressTokens,
+    );
+
+
+  return (
+
+    <div
+      style={
+        fieldStyle
+      }
+    >
+
+      <label
+        style={
+          labelStyle
+        }
+      >
+        State
+      </label>
+
+
+      <div
+        style={
+          inputWrapperStyle
+        }
+      >
+
+        <Map
+          style={
+            iconStyle
+          }
+
+          strokeWidth={
+            1.9
+          }
+
+          aria-hidden="true"
+        />
+
+
+        <input
+
+          style={
+            {
+              ...inputStyle,
+
+              paddingRight:
+                `${addressTokens.inputPaddingX + addressTokens.selectChevronSize + addressTokens.fieldIconOffset}px`,
+            }
+          }
+
+          value={
+            value
+          }
+
+          placeholder="Enter state"
+
+          onChange={(
+            event,
+          ) =>
+            onChange(
+              event.target.value,
+            )
+          }
+
+          aria-label="State"
+
+          className="finora-address-input"
+
+        />
+
+
+        <span
+          style={
+            chevronStyle
+          }
+
+          aria-hidden="true"
+        >
+          <svg
+            viewBox="0 0 24 24"
+            width="100%"
+            height="100%"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <path d="m6 9 6 6 6-6" />
+          </svg>
+        </span>
+
+      </div>
+
+    </div>
+
+  );
+
+}
+
 
 /* ===========================================================
    COMPONENT
 =========================================================== */
 
 export default function AddressForm({
+
   value,
+
   onChange,
+
 }: AddressFormProps) {
 
+  const {
+    tokens,
+  } =
+    useResponsive();
+
+
+  const {
+    theme,
+  } =
+    useTheme();
+
+
+  const addressTokens =
+    getAddressTokens(
+      tokens.meta.viewport,
+    );
+
+
+  const gridStyle =
+    createAddressGridStyle(
+      addressTokens,
+    );
+
+
+  const themeVariables:
+    AddressThemeStyle = {
+
+    "--finora-theme-brand-primary":
+      theme.colors.brand.primary,
+
+    "--finora-theme-brand-secondary":
+      theme.colors.brand.secondary,
+
+    "--finora-theme-brand-accent":
+      theme.colors.brand.accent,
+
+    "--finora-theme-brand-accent-soft":
+      theme.colors.brand.accentSoft,
+
+    "--finora-theme-surface":
+      theme.colors.background.surface,
+
+    "--finora-theme-surface-muted":
+      theme.colors.background.surfaceMuted,
+
+    "--finora-theme-text-primary":
+      theme.colors.text.primary,
+
+    "--finora-theme-text-secondary":
+      theme.colors.text.secondary,
+
+    "--finora-theme-text-muted":
+      theme.colors.text.muted,
+
+    "--finora-theme-text-inverse":
+      theme.colors.text.inverse,
+
+    "--finora-theme-border-default":
+      theme.colors.border.default,
+
+    "--finora-theme-border-strong":
+      theme.colors.border.strong,
+
+    "--finora-theme-border-subtle":
+      theme.colors.border.subtle,
+
+    "--finora-theme-overlay-shadow":
+      theme.colors.overlay.shadow,
+
+  };
+
+
   return (
+
     <div
-      style={addressGridStyle}
+      style={{
+        ...themeVariables,
+
+        width:
+          "100%",
+
+        minWidth:
+          addressTokens.minWidth,
+
+        boxSizing:
+          "border-box",
+
+      }}
     >
 
-      {/* =================================================
-          CURRENT ADDRESS
-      ================================================= */}
-
       <div
-        style={fullAddressFieldStyle}
+        style={
+          gridStyle
+        }
       >
 
-        <label
-          style={labelStyle}
+        <div
+          style={
+            createFullAddressFieldStyle(
+              addressTokens,
+            )
+          }
         >
-          Current Address
-        </label>
 
-        <input
-          style={addressInputStyle}
+          <Field
+
+            label="Current Address"
+
+            value={
+              value.currentAddress
+            }
+
+            placeholder="Enter current residential address"
+
+            icon={
+              House
+            }
+
+            long
+
+            onChange={(
+              nextValue,
+            ) =>
+              onChange(
+                "currentAddress",
+                nextValue,
+              )
+            }
+
+          />
+
+        </div>
+
+
+        <div
+          style={
+            createFullAddressFieldStyle(
+              addressTokens,
+            )
+          }
+        >
+
+          <Field
+
+            label="Permanent Address"
+
+            value={
+              value.permanentAddress
+            }
+
+            placeholder="Enter permanent residential address"
+
+            icon={
+              House
+            }
+
+            long
+
+            onChange={(
+              nextValue,
+            ) =>
+              onChange(
+                "permanentAddress",
+                nextValue,
+              )
+            }
+
+          />
+
+        </div>
+
+
+        <Field
+
+          label="City / Village"
 
           value={
-            value.currentAddress
+            value.city
           }
 
-          placeholder="Enter current residential address"
+          placeholder="Enter city or village"
 
-          onChange={(event) =>
+          icon={
+            MapPin
+          }
+
+          onChange={(
+            nextValue,
+          ) =>
             onChange(
-              "currentAddress",
-              event.target.value,
+              "city",
+              nextValue,
             )
           }
 
-          aria-label="Current Address"
         />
 
-      </div>
 
-      {/* =================================================
-          PERMANENT ADDRESS
-      ================================================= */}
+        <Field
 
-      <div
-        style={fullAddressFieldStyle}
-      >
-
-        <label
-          style={labelStyle}
-        >
-          Permanent Address
-        </label>
-
-        <input
-          style={addressInputStyle}
+          label="District"
 
           value={
-            value.permanentAddress
+            value.district
           }
 
-          placeholder="Enter permanent residential address"
+          placeholder="Enter district"
 
-          onChange={(event) =>
+          icon={
+            Building2
+          }
+
+          onChange={(
+            nextValue,
+          ) =>
             onChange(
-              "permanentAddress",
-              event.target.value,
+              "district",
+              nextValue,
             )
           }
 
-          aria-label="Permanent Address"
+        />
+
+
+        <StateField
+
+          value={
+            value.state
+          }
+
+          onChange={(
+            nextValue,
+          ) =>
+            onChange(
+              "state",
+              nextValue,
+            )
+          }
+
+        />
+
+
+        <Field
+
+          label="PIN Code"
+
+          value={
+            value.pinCode
+          }
+
+          placeholder="Enter 6-digit PIN code"
+
+          icon={
+            Hash
+          }
+
+          inputMode="numeric"
+
+          onChange={(
+            nextValue,
+          ) =>
+            onChange(
+              "pinCode",
+              nextValue,
+            )
+          }
+
         />
 
       </div>
-
-      {/* =================================================
-          CITY / VILLAGE
-      ================================================= */}
-
-      <Field
-        label="City / Village"
-
-        value={
-          value.city
-        }
-
-        placeholder="Enter city or village"
-
-        onChange={(nextValue) =>
-          onChange(
-            "city",
-            nextValue,
-          )
-        }
-      />
-
-      {/* =================================================
-          DISTRICT
-      ================================================= */}
-
-      <Field
-        label="District"
-
-        value={
-          value.district
-        }
-
-        placeholder="Enter district"
-
-        onChange={(nextValue) =>
-          onChange(
-            "district",
-            nextValue,
-          )
-        }
-      />
-
-      {/* =================================================
-          STATE
-      ================================================= */}
-
-      <Field
-        label="State"
-
-        value={
-          value.state
-        }
-
-        placeholder="Enter state"
-
-        onChange={(nextValue) =>
-          onChange(
-            "state",
-            nextValue,
-          )
-        }
-      />
-
-      {/* =================================================
-          PIN CODE
-      ================================================= */}
-
-      <Field
-        label="PIN Code"
-
-        value={
-          value.pinCode
-        }
-
-        placeholder="Enter 6-digit PIN code"
-
-        inputMode="numeric"
-
-        maxLength={6}
-
-        inputStyleOverride={
-          numberInputStyle
-        }
-
-        onChange={(nextValue) =>
-          onChange(
-            "pinCode",
-            nextValue.replace(
-              /\D/g,
-              "",
-            ),
-          )
-        }
-      />
 
     </div>
+
   );
+
 }
+
+
+/* ===========================================================
+   END
+=========================================================== */

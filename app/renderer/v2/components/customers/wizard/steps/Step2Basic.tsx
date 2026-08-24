@@ -90,6 +90,14 @@ import {
   useResponsive,
 } from "../../../../utils/responsive";
 
+/* ===========================================================
+   ICONS
+=========================================================== */
+
+import {
+  ContactRound,
+} from "lucide-react";
+
 
 /* ===========================================================
    PRESENTATION STYLES
@@ -99,6 +107,8 @@ import {
   pageStyle,
   formStyle,
   formHeaderStyle,
+  formHeaderIconStyle,
+  formHeaderContentStyle,
   formTitleStyle,
   formSubtitleStyle,
   contentStyle,
@@ -551,38 +561,66 @@ function Step2Basic({
         =============================================== */}
 
         <header
-          style={{
-            ...formHeaderStyle,
+  style={{
+    ...formHeaderStyle,
 
-            ...resolvedFormHeaderStyle,
+    ...resolvedFormHeaderStyle,
 
-          }}
-        >
+  }}
+>
 
-          <h1
-            style={{
-              ...formTitleStyle,
+  {/* =======================================================
+      BASIC INFORMATION HEADER ICON
+  ======================================================= */}
 
-              ...resolvedFormTitleStyle,
+  <div
+  style={
+    formHeaderIconStyle
+  }
+>
+  <ContactRound
+    size={20}
+    strokeWidth={2}
+  />
+</div>
 
-            }}
-          >
-            Basic Information
-          </h1>
+
+  {/* =======================================================
+      BASIC INFORMATION HEADER CONTENT
+  ======================================================= */}
+
+  <div
+    style={
+      formHeaderContentStyle
+    }
+  >
+
+    <h1
+      style={{
+        ...formTitleStyle,
+
+        ...resolvedFormTitleStyle,
+
+      }}
+    >
+      Basic Information
+    </h1>
 
 
-          <p
-            style={{
-              ...formSubtitleStyle,
+    <p
+      style={{
+        ...formSubtitleStyle,
 
-              ...resolvedFormSubtitleStyle,
+        ...resolvedFormSubtitleStyle,
 
-            }}
-          >
-            Personal, occupation and family information.
-          </p>
+      }}
+    >
+      Personal, occupation and family information.
+    </p>
 
-        </header>
+  </div>
+
+</header>
 
 
         {/* ===============================================

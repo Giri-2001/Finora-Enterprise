@@ -185,7 +185,7 @@ const combinedPageStyle:
     "start",
 
   columnGap:
-    "3px",
+    "5px",
 
 };
 

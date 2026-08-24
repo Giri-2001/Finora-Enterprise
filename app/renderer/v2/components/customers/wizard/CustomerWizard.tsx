@@ -25,6 +25,10 @@
    - No direct Customer storage access.
    - Customer master reads go through CustomerService.
    - Temporary wizard draft remains isolated.
+   - Step 1 contains Identity + Basic Details presentation.
+   - Step 2 presents the EXISTING Address + KYC screens
+     together in one 50 / 50 workspace.
+   - No new Address or KYC form logic is introduced here.
 =========================================================== */
 
 
@@ -39,47 +43,53 @@ import {
   useState,
 } from "react";
 
+
 import CustomerWizardLayout
   from "./layout/CustomerWizardLayout";
+
 
 import CustomerWizardNavigation
   from "./navigation/CustomerWizardNavigation";
 
+
 import CustomerWizardProgress
   from "./progress/CustomerWizardProgress";
+
 
 import Step1IdentityAndBasic
   from "./steps/Step1IdentityAndBasic";
 
-import Step1Identity
-  from "./steps/Step1Identity";
-
-import Step2Basic
-  from "./steps/Step2Basic";
 
 import Step3Address
   from "./steps/Step3Address";
 
+
 import Step4KYC
   from "./steps/Step4KYC";
+
 
 import Step5Nominee
   from "./steps/Step5Nominee";
 
+
 import Step6Review
   from "./steps/Step6Review";
+
 
 import {
   customerService,
 } from "../../../services/customer/customerService";
 
+
 import type {
   OfficeCustomer,
 } from "../office/CustomerOffice/types";
 
+
 import type {
   CustomerProfile,
 } from "../../../types/customers";
+
 
 import {
   MaritalStatus,
@@ -123,16 +133,16 @@ export interface CustomerWizardData {
 
   /* =========================================================
      STEP 2 — BASIC DETAILS
+
+     These fields remain part of wizard data because
+     Basic Details is already presented together with
+     Identity on Step 1.
   ========================================================= */
 
   fatherOrSpouseName?: string;
 
   occupation?: string;
 
-  /*
-   * Preserves custom occupation text when the domain
-   * occupation is OTHER.
-   */
   occupationOther?: string;
 
   monthlyIncome?: string;
@@ -233,8 +243,32 @@ interface CustomerWizardProps {
 const TOTAL_STEPS =
   6;
 
+
 const STORAGE_KEY =
   "finora_customer_draft";
+
+
+/*
+ * Wizard progress contract remains six steps.
+ *
+ * Step 1:
+ *   Identity + Basic Details
+ *
+ * Step 2:
+ *   Address + KYC
+ *
+ * Step 3:
+ *   Nominee
+ *
+ * Step 4:
+ *   Review
+ *
+ * Step 5:
+ *   Completion
+ *
+ * Existing step IDs are preserved so draft state,
+ * progress, navigation and persisted workflow remain stable.
+ */
 
 const STEPS: WizardStep[] = [
 
@@ -246,32 +280,32 @@ const STEPS: WizardStep[] = [
 
   {
     id: 2,
-    title: "Basic Details",
-    subtitle: "Personal Information",
+    title: "Address & KYC",
+    subtitle: "Customer Address & Identity Verification",
   },
 
   {
     id: 3,
-    title: "Address",
-    subtitle: "Customer Address",
-  },
-
-  {
-    id: 4,
     title: "KYC",
     subtitle: "Identity Verification",
   },
 
   {
-    id: 5,
+    id: 4,
     title: "Nominee",
     subtitle: "Family Information",
   },
 
   {
-    id: 6,
+    id: 5,
     title: "Review",
     subtitle: "Verify Everything",
+  },
+
+  {
+    id: 6,
+    title: "Completion",
+    subtitle: "Customer Confirmation",
   },
 
 ];
@@ -284,14 +318,7 @@ const STEPS: WizardStep[] = [
 /*
  * Persisted CustomerProfile values use domain enum values.
  *
- * Step 2 UI uses human-readable values.
- *
- * Example:
- *
- * SINGLE   -> Single
- * MARRIED  -> Married
- * WIDOW    -> Widowed
- * DIVORCED -> Divorced
+ * Step UI uses human-readable values.
  */
 
 function maritalStatusToWizardValue(
@@ -318,20 +345,12 @@ function maritalStatusToWizardValue(
     default:
       return "";
   }
+
 }
 
 
 /*
- * Domain occupation values are restored to the
- * human-readable value expected by the Step 2 UI.
- *
- * For OTHER:
- *
- * occupation      = OTHER
- * occupationOther = "Finora Occupation"
- *
- * The custom text is restored instead of showing
- * "OTHER" to the user.
+ * Restore occupation values for the UI.
  */
 
 function occupationToWizardValue(
@@ -355,24 +374,16 @@ function occupationToWizardValue(
 
   }
 
-  return occupation ??
-    "";
+  return (
+    occupation ??
+    ""
+  );
+
 }
 
 
 /* ===========================================================
    EDIT PROFILE → WIZARD DATA
-
-   Converts persisted CustomerProfile data into the
-   temporary wizard representation.
-
-   IMPORTANT:
-
-   This mapper MUST restore every Customer field that
-   Step 2 can display.
-
-   The mapper also converts domain enum values back into
-   UI-friendly values.
 =========================================================== */
 
 function buildEditWizardData(
@@ -381,6 +392,7 @@ function buildEditWizardData(
 
   const nominee =
     customer.nominee.nominees?.[0];
+
 
   return {
 
@@ -392,7 +404,7 @@ function buildEditWizardData(
       customer.identity.customerId,
 
     photo:
-     customer.photo,
+      customer.photo,
 
     fullName:
       customer.basic.fullName,
@@ -414,7 +426,7 @@ function buildEditWizardData(
 
 
     /* =======================================================
-       STEP 2 — BASIC INFORMATION
+       BASIC INFORMATION
     ======================================================= */
 
     fatherOrSpouseName:
@@ -426,31 +438,17 @@ function buildEditWizardData(
     education:
       customer.personal.education,
 
-    /*
-     * Convert domain enum to Step 2 UI value.
-     */
     maritalStatus:
       maritalStatusToWizardValue(
         customer.personal.maritalStatus,
       ),
 
-    /*
-     * Restore normal occupation values.
-     *
-     * If occupation is OTHER, restore the exact custom
-     * occupation text when available.
-     */
     occupation:
       occupationToWizardValue(
         customer.personal.occupation,
         customer.personal.occupationOther,
       ),
 
-    /*
-     * Preserve the custom occupation independently.
-     *
-     * Step 6 can use this when rebuilding the CustomerProfile.
-     */
     occupationOther:
       customer.personal.occupationOther,
 
@@ -462,10 +460,6 @@ function buildEditWizardData(
           )
         : "",
 
-    /*
-     * These three fields already exist in the current
-     * CustomerPersonalInformation domain model.
-     */
     workPlace:
       customer.personal.workPlace,
 
@@ -482,7 +476,7 @@ function buildEditWizardData(
 
 
     /* =======================================================
-       STEP 2 — EMERGENCY
+       BASIC — EMERGENCY
     ======================================================= */
 
     emergencyContactName:
@@ -493,7 +487,7 @@ function buildEditWizardData(
 
 
     /* =======================================================
-       STEP 3 — ADDRESS
+       ADDRESS
     ======================================================= */
 
     address:
@@ -526,7 +520,7 @@ function buildEditWizardData(
 
 
     /* =======================================================
-       STEP 4 — KYC
+       KYC
     ======================================================= */
 
     aadhaar:
@@ -543,7 +537,7 @@ function buildEditWizardData(
 
 
     /* =======================================================
-       STEP 5 — NOMINEE
+       NOMINEE
     ======================================================= */
 
     nomineeCustomerId:
@@ -559,6 +553,7 @@ function buildEditWizardData(
       nominee?.mobileNumber,
 
   };
+
 }
 
 
@@ -594,10 +589,12 @@ export default function CustomerWizard({
     setCurrentStep,
   ] = useState(1);
 
+
   const [
     loadingDraft,
     setLoadingDraft,
   ] = useState(true);
+
 
   const [
     wizardData,
@@ -605,6 +602,7 @@ export default function CustomerWizard({
   ] = useState<CustomerWizardData>(
     {},
   );
+
 
   const [
     originalCustomerProfile,
@@ -660,10 +658,6 @@ export default function CustomerWizard({
 
   /* =========================================================
      LOAD EXISTING CUSTOMER FOR EDIT
-
-     Customer master reads go through CustomerService.
-
-     No repository or storage access is performed here.
   ========================================================= */
 
   useEffect(() => {
@@ -672,9 +666,6 @@ export default function CustomerWizard({
       editCustomer?.id ??
       "";
 
-    /* -------------------------------------------------------
-       NEW CUSTOMER MODE
-    ------------------------------------------------------- */
 
     if (!customerId) {
 
@@ -703,20 +694,12 @@ export default function CustomerWizard({
           );
 
 
-        /* ---------------------------------------------------
-           COMPONENT UNMOUNT / EFFECT CHANGE
-        --------------------------------------------------- */
-
         if (cancelled) {
 
           return;
 
         }
 
-
-        /* ---------------------------------------------------
-           SERVICE FAILURE
-        --------------------------------------------------- */
 
         if (!result.success) {
 
@@ -735,10 +718,6 @@ export default function CustomerWizard({
 
         }
 
-
-        /* ---------------------------------------------------
-           CUSTOMER NOT FOUND
-        --------------------------------------------------- */
 
         const existingCustomer =
           result.data;
@@ -762,18 +741,10 @@ export default function CustomerWizard({
         }
 
 
-        /* ---------------------------------------------------
-           STORE ORIGINAL PROFILE
-        --------------------------------------------------- */
-
         setOriginalCustomerProfile(
           existingCustomer,
         );
 
-
-        /* ---------------------------------------------------
-           POPULATE WIZARD
-        --------------------------------------------------- */
 
         setWizardData(
           buildEditWizardData(
@@ -781,10 +752,6 @@ export default function CustomerWizard({
           ),
         );
 
-
-        /* ---------------------------------------------------
-           EDIT ALWAYS STARTS FROM STEP 1
-        --------------------------------------------------- */
 
         setCurrentStep(
           1,
@@ -840,11 +807,6 @@ export default function CustomerWizard({
 
   /* =========================================================
      AUTO DRAFT
-
-     NEW CUSTOMER MODE ONLY.
-
-     This is temporary wizard state.
-     It is NOT Customer master persistence.
   ========================================================= */
 
   const saveDraft =
@@ -920,21 +882,14 @@ export default function CustomerWizard({
           };
 
 
-        /* ---------------------------------------------------
-           RESTORE STEP
-        --------------------------------------------------- */
-
         if (
           typeof draft.currentStep ===
           "number"
         ) {
 
           if (
-            draft.currentStep >=
-              1
-            &&
-            draft.currentStep <=
-              TOTAL_STEPS
+            draft.currentStep >= 1 &&
+            draft.currentStep <= TOTAL_STEPS
           ) {
 
             setCurrentStep(
@@ -945,10 +900,6 @@ export default function CustomerWizard({
 
         }
 
-
-        /* ---------------------------------------------------
-           RESTORE DATA
-        --------------------------------------------------- */
 
         if (
           draft.wizardData
@@ -999,12 +950,6 @@ export default function CustomerWizard({
 
   /* =========================================================
      LIFECYCLE
-
-     NEW CUSTOMER MODE:
-     Load temporary draft.
-
-     EDIT MODE:
-     Load CustomerService profile instead.
   ========================================================= */
 
   useEffect(() => {
@@ -1196,77 +1141,213 @@ export default function CustomerWizard({
 
         /* ---------------------------------------------------
            STEP 1
+
+           Existing Identity + Basic Details presentation.
         --------------------------------------------------- */
 
         case 1:
 
-  return (
+          return (
 
-    <Step1IdentityAndBasic
+            <Step1IdentityAndBasic
 
-      wizardData={
-        wizardData
-      }
+              wizardData={
+                wizardData
+              }
 
-      updateWizardData={
-        updateWizardData
-      }
+              updateWizardData={
+                updateWizardData
+              }
 
-    />
+            />
 
-  );
+          );
 
         /* ---------------------------------------------------
            STEP 2
+
+           ADDRESS + KYC
+
+           IMPORTANT:
+
+           Both existing production components are rendered
+           together here.
+
+           Desktop / Laptop:
+             Address + KYC side-by-side.
+
+           Narrow viewport:
+             Address
+             KYC
+
+           No duplicate form logic is created.
+
+           The two components remain responsible for their
+           own forms, state, styles, responsive engine and
+           theme connections.
+
+           This controller only creates the presentation
+           workspace.
         --------------------------------------------------- */
 
         case 2:
 
           return (
 
-            <Step2Basic
+            <div
+              style={{
+                width: "100%",
+                minWidth: 0,
+                minHeight: 0,
 
-              wizardData={
-                wizardData
-              }
+                height: "100%",
 
-              updateWizardData={
-                updateWizardData
-              }
+                display: "grid",
 
-            />
+                /*
+                 * Automatically use two equal columns when
+                 * there is enough workspace.
+                 *
+                 * On narrow/mobile workspace the columns
+                 * collapse to a single column.
+                 */
+                gridTemplateColumns:
+                  "repeat(auto-fit, minmax(min(100%, 480px), 1fr))",
+
+                columnGap:
+                  "5px",
+
+                rowGap:
+                  "5px",
+
+                alignItems:
+                  "stretch",
+
+                justifyContent:
+                  "stretch",
+
+                boxSizing:
+                  "border-box",
+
+                overflow:
+                  "auto",
+
+                borderRadius:
+                  0,
+
+                clipPath:
+                  "none",
+
+                boxShadow:
+                  "none",
+
+                background:
+                  "transparent",
+              }}
+            >
+
+              {/* =========================================
+                  LEFT — EXISTING ADDRESS STUDIO
+              ========================================= */}
+
+              <div
+                style={{
+                  width: "100%",
+                  minWidth: 0,
+                  minHeight: 0,
+
+                  height: "100%",
+
+                  overflow: "visible",
+
+                  boxSizing:
+                    "border-box",
+
+                  borderRadius:
+                    0,
+
+                  clipPath:
+                    "none",
+
+                  boxShadow:
+                    "none",
+
+                  background:
+                    "transparent",
+                }}
+              >
+
+                <Step3Address
+
+                  updateWizardData={
+                    updateWizardData
+                  }
+
+                  wizardData={
+                    wizardData
+                  }
+
+                />
+
+              </div>
+
+
+              {/* =========================================
+                  RIGHT — EXISTING KYC STUDIO
+              ========================================= */}
+
+              <div
+                style={{
+                  width: "100%",
+                  minWidth: 0,
+                  minHeight: 0,
+
+                  height: "100%",
+
+                  overflow: "visible",
+
+                  boxSizing:
+                    "border-box",
+
+                  borderRadius:
+                    0,
+
+                  clipPath:
+                    "none",
+
+                  boxShadow:
+                    "none",
+
+                  background:
+                    "transparent",
+                }}
+              >
+
+                <Step4KYC
+
+                  wizardData={
+                    wizardData
+                  }
+
+                  updateWizardData={
+                    updateWizardData
+                  }
+
+                />
+
+              </div>
+
+            </div>
 
           );
-
 
         /* ---------------------------------------------------
            STEP 3
+
+           Existing KYC continuation.
         --------------------------------------------------- */
 
         case 3:
-
-          return (
-
-            <Step3Address
-
-              updateWizardData={
-                updateWizardData
-              }
-
-              wizardData={
-                wizardData
-              }
-
-            />
-
-          );
-
-
-        /* ---------------------------------------------------
-           STEP 4
-        --------------------------------------------------- */
-
-        case 4:
 
           return (
 
@@ -1286,10 +1367,12 @@ export default function CustomerWizard({
 
 
         /* ---------------------------------------------------
-           STEP 5
+           STEP 4
+
+           NOMINEE
         --------------------------------------------------- */
 
-        case 5:
+        case 4:
 
           return (
 
@@ -1309,7 +1392,42 @@ export default function CustomerWizard({
 
 
         /* ---------------------------------------------------
+           STEP 5
+
+           REVIEW
+        --------------------------------------------------- */
+
+        case 5:
+
+          return (
+
+            <Step6Review
+
+              wizardData={
+                wizardData
+              }
+
+              resetWizard={
+                resetWizard
+              }
+
+              originalCustomerProfile={
+                originalCustomerProfile
+              }
+
+              isEditMode={
+                isEditMode
+              }
+
+            />
+
+          );
+
+
+        /* ---------------------------------------------------
            STEP 6
+
+           Existing final workflow continuation.
         --------------------------------------------------- */
 
         case 6:
@@ -1389,93 +1507,69 @@ export default function CustomerWizard({
 
   return (
 
-    <CustomerWizardLayout>
+    <CustomerWizardLayout
 
-      {/* ===================================================
-          PROGRESS
-      =================================================== */}
+  progress={
 
-      <CustomerWizardProgress
+    <CustomerWizardProgress
 
-        currentStep={
-          currentStep
-        }
+      currentStep={
+        currentStep
+      }
 
-        totalSteps={
-          TOTAL_STEPS
-        }
+      totalSteps={
+        TOTAL_STEPS
+      }
 
-        progress={
-          progress
-        }
+      progress={
+        progress
+      }
 
-        title={
-          currentStepInfo.title
-        }
+      title={
+        currentStepInfo.title
+      }
 
-        subtitle={
-          currentStepInfo.subtitle
-        }
+      subtitle={
+        currentStepInfo.subtitle
+      }
 
-      />
+    />
 
-
-      {/* ===================================================
-          CURRENT STEP
-      =================================================== */}
-
-      {currentStepComponent}
+  }
 
 
-      {/* ===================================================
-          NAVIGATION
-      =================================================== */}
+  navigation={
 
-      <CustomerWizardNavigation
+    <CustomerWizardNavigation
 
-        currentStep={
-          currentStep
-        }
+      currentStep={
+        currentStep
+      }
 
-        totalSteps={
-          TOTAL_STEPS
-        }
+      totalSteps={
+        TOTAL_STEPS
+      }
 
-        onPrevious={
-          previousStep
-        }
+      onPrevious={
+        previousStep
+      }
 
-        onNext={
-          nextStep
-        }
+      onNext={
+        nextStep
+      }
 
-      />
+    />
 
+  }
 
-      {/* ===================================================
-          FUTURE MODULES
+>
 
-          Phase 2
-          ✓ Draft Banner
-          ✓ Validation Summary
-          ✓ Estimate Preview
-          ✓ Customer ID Preview
-          ✓ Save Confirmation
+  {currentStepComponent}
 
-          Phase 3
-          ✓ 3D Animations
-          ✓ Hanger Cards
-          ✓ Profile Launcher
-
-          Phase 4
-          ✓ Loan Creation Flow
-          ✓ Digital Locker
-          ✓ Reports
-      =================================================== */}
-
-    </CustomerWizardLayout>
+</CustomerWizardLayout>
 
   );
+
 }
 
 

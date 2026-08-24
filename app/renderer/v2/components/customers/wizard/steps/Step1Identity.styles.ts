@@ -41,6 +41,9 @@ export interface Step1IdentityStyles {
   formHeaderStyle:
     CSSProperties;
 
+    formHeaderIconStyle:
+    CSSProperties;
+
   formTitleStyle:
     CSSProperties;
 
@@ -267,6 +270,30 @@ minHeight:
       "border-box",
   };
 
+    /* =========================================================
+     FORM HEADER ICON
+
+     Theme colour comes from FINORA Theme Engine.
+     Background remains transparent.
+  ========================================================= */
+
+  const formHeaderIconStyle:
+    CSSProperties = {
+
+    background:
+      "transparent",
+
+    color:
+      "var(--finora-theme-brand-accent, #4D82E6)",
+
+    border:
+      "1px solid var(--finora-theme-brand-accent, #4D82E6)",
+
+    boxSizing:
+      "border-box",
+
+  };
+
   /* =========================================================
      FORM TITLE
   ========================================================= */
@@ -390,6 +417,8 @@ minHeight:
     formPanelStyle,
 
     formHeaderStyle,
+
+      formHeaderIconStyle,
 
     formTitleStyle,
 

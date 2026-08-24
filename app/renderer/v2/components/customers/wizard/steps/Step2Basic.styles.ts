@@ -266,6 +266,7 @@ export const pageStyle:
 };
 
 
+
 /* ===========================================================
    UNIFIED FORM
 =========================================================== */
@@ -365,7 +366,6 @@ export function createStep2BasicHeaderStyles(
   const border =
     tokens.border;
 
-
   /* =========================================================
      FORM HEADER
   ========================================================= */
@@ -397,8 +397,26 @@ export function createStep2BasicHeaderStyles(
     boxSizing:
       "border-box",
 
-  };
+    /* =======================================================
+       HEADER LAYOUT
+    ======================================================= */
 
+    display:
+      "flex",
+
+    flexDirection:
+      "row",
+
+    alignItems:
+      "center",
+
+    justifyContent:
+      "flex-start",
+
+    gap:
+      spacing.small,
+
+  };
 
   /* =========================================================
      FORM TITLE
@@ -442,7 +460,7 @@ export function createStep2BasicHeaderStyles(
     CSSProperties = {
 
     margin:
-      `${spacing.small}px 0 0`,
+  "4px 0 0",
 
     padding:
       0,
@@ -588,20 +606,23 @@ export const formDividerStyle:
 
 
 /* ===========================================================
-   FORM HEADER ICON
+   HEADER ICON
 =========================================================== */
 
 export const formHeaderIconStyle:
   CSSProperties = {
 
   width:
-    "38px",
+    "42px",
 
   height:
-    "38px",
+    "42px",
 
   minWidth:
-    "38px",
+    "42px",
+
+  flexShrink:
+    0,
 
   display:
     "flex",
@@ -612,29 +633,29 @@ export const formHeaderIconStyle:
   justifyContent:
     "center",
 
-  flexShrink:
-    0,
-
   boxSizing:
     "border-box",
 
   borderRadius:
-    "50%",
+    "9px",
 
   border:
-    `1px solid ${THEME.brandAccent}`,
+    "var(--finora-theme-border-width, 1.5px) solid var(--finora-theme-brand-accent, #D4AF37)",
 
   background:
-    THEME.surfaceMuted,
+    "transparent",
 
   color:
-    THEME.brandAccent,
+    "var(--finora-theme-brand-accent, #D4AF37)",
+
+  boxShadow:
+    "none",
 
   fontSize:
-    "14px",
+    "16px",
 
   fontWeight:
-    600,
+    700,
 
   lineHeight:
     1,

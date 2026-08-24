@@ -1,498 +1,661 @@
 /* ===========================================================
    FINORA ENTERPRISE OS™
 
-   CUSTOMER ADDRESS PREVIEW™
+   ADDRESS PREVIEW CARD
 
-   Version     : 2.0
+   Version     : 3.0
    Phase       : Phase 2
    Architecture: Enterprise
    Status      : Production
 
-   Responsibility:
+   RESPONSIBILITY:
 
-   - Live customer address preview
-   - Customer identity reference
-   - Address summary
-   - Location summary
+   - Live presentation of captured address data
+   - Theme-aware preview surface
+   - Responsive preview geometry
+   - Lucide icon presentation
+
+   IMPORTANT:
+
+   - No local breakpoints
+   - No media queries
+   - No local responsive calculations
+   - No local colour palette
+   - No emoji icons
+=========================================================== */
+
+
+/* ===========================================================
+   IMPORTS
 =========================================================== */
 
 import type {
   CSSProperties,
 } from "react";
 
+
+import {
+  Building2,
+  Hash,
+  House,
+  Map,
+  MapPin,
+} from "lucide-react";
+
+
+import {
+  useResponsive,
+} from "../../../utils/responsive";
+
+
+import {
+  useTheme,
+} from "../../../themes/provider";
+
+
+import {
+  getAddressTokens,
+} from "../../../utils/responsive/customers/address/address.tokens";
+
+
+import {
+  createAddressPreviewHeaderStyle,
+  createAddressPreviewIconStyle,
+  createAddressPreviewLabelStyle,
+  createAddressPreviewMetaGridStyle,
+  createAddressPreviewMetaItemStyle,
+  createAddressPreviewRowStyle,
+  createAddressPreviewRowsStyle,
+  createAddressPreviewStyle,
+  createAddressPreviewSubtitleStyle,
+  createAddressPreviewTitleStyle,
+} from "../../../utils/responsive/customers/address/address.layout";
+
+
 /* ===========================================================
    TYPES
 =========================================================== */
 
 export interface AddressPreviewData {
-  customerName?: string;
 
-  currentAddress?: string;
+  customerName?:
+    string;
 
-  city?: string;
+  currentAddress?:
+    string;
 
-  state?: string;
+  city?:
+    string;
 
-  pinCode?: string;
+  state?:
+    string;
+
+  pinCode?:
+    string;
+
 }
+
 
 interface AddressPreviewCardProps {
-  value: AddressPreviewData;
+
+  value:
+    AddressPreviewData;
+
 }
 
-/* ===========================================================
-   STYLES
-=========================================================== */
 
-const cardStyle: CSSProperties = {
-  width: "100%",
+type AddressThemeStyle =
+  CSSProperties &
+  Record<
+    `--${string}`,
+    string
+  >;
 
-  minWidth: 0,
-
-  minHeight: 0,
-
-  boxSizing: "border-box",
-
-  padding:
-    "12px 14px",
-
-  borderRadius:
-    "13px",
-
-  border:
-    "1.5px solid rgba(214,176,106,.30)",
-
-  background:
-    "rgba(255,255,255,.035)",
-
-  boxShadow:
-    "0 8px 20px rgba(0,0,0,.10)",
-
-  overflow:
-    "hidden",
-};
 
 /* ===========================================================
-   HEADER
+   SAFE TEXT
 =========================================================== */
 
-const headerStyle: CSSProperties = {
-  display: "flex",
+function safeText(
+  value:
+    | string
+    | undefined,
+):
+  string {
+
+  const normalized =
+    value?.trim() ??
+    "";
+
+  return normalized
+    ? normalized
+    : "--";
+
+}
 
-  alignItems: "center",
-
-  gap: "9px",
-
-  marginBottom:
-    "10px",
-};
-
-/* ===========================================================
-   ICON
-=========================================================== */
-
-const iconStyle: CSSProperties = {
-  width:
-    "30px",
-
-  height:
-    "30px",
-
-  minWidth:
-    "30px",
-
-  flexShrink:
-    0,
-
-  display:
-    "flex",
-
-  alignItems:
-    "center",
-
-  justifyContent:
-    "center",
-
-  borderRadius:
-    "50%",
-
-  border:
-    "1.5px solid rgba(214,176,106,.52)",
-
-  background:
-    "rgba(214,176,106,.07)",
-
-  fontSize:
-    "13px",
-};
-
-/* ===========================================================
-   TITLE
-=========================================================== */
-
-const titleStyle: CSSProperties = {
-  margin: 0,
-
-  color:
-    "#F3E4C2",
-
-  fontSize:
-    "13px",
-
-  fontWeight:
-    800,
-
-  letterSpacing:
-    ".15px",
-};
-
-/* ===========================================================
-   CUSTOMER
-=========================================================== */
-
-const customerStyle: CSSProperties = {
-  marginBottom:
-    "9px",
-
-  padding:
-    "8px 10px",
-
-  borderRadius:
-    "8px",
-
-  border:
-    "1px solid rgba(214,176,106,.18)",
-
-  background:
-    "rgba(214,176,106,.045)",
-};
-
-const customerLabelStyle: CSSProperties = {
-  color:
-    "rgba(255,255,255,.44)",
-
-  fontSize:
-    "8px",
-
-  fontWeight:
-    700,
-
-  letterSpacing:
-    ".4px",
-
-  textTransform:
-    "uppercase",
-};
-
-const customerValueStyle: CSSProperties = {
-  marginTop:
-    "3px",
-
-  color:
-    "#F8FAFC",
-
-  fontSize:
-    "11px",
-
-  fontWeight:
-    700,
-};
-
-/* ===========================================================
-   ADDRESS
-=========================================================== */
-
-const addressStyle: CSSProperties = {
-  marginBottom:
-    "9px",
-
-  padding:
-    "8px 10px",
-
-  borderRadius:
-    "8px",
-
-  border:
-    "1px solid rgba(255,255,255,.08)",
-
-  background:
-    "rgba(255,255,255,.035)",
-};
-
-const addressLabelStyle: CSSProperties = {
-  color:
-    "rgba(255,255,255,.44)",
-
-  fontSize:
-    "8px",
-
-  fontWeight:
-    700,
-
-  letterSpacing:
-    ".4px",
-
-  textTransform:
-    "uppercase",
-};
-
-const addressValueStyle: CSSProperties = {
-  marginTop:
-    "4px",
-
-  color:
-    "#F8FAFC",
-
-  fontSize:
-    "10px",
-
-  fontWeight:
-    500,
-
-  lineHeight:
-    1.4,
-
-  display:
-    "-webkit-box",
-
-  WebkitLineClamp:
-    2,
-
-  WebkitBoxOrient:
-    "vertical",
-
-  overflow:
-    "hidden",
-
-  wordBreak:
-    "break-word",
-};
-
-/* ===========================================================
-   LOCATION GRID
-=========================================================== */
-
-const locationGridStyle: CSSProperties = {
-  display:
-    "grid",
-
-  gridTemplateColumns:
-    "1fr 1fr 1fr",
-
-  gap:
-    "8px",
-
-  width:
-    "100%",
-};
-
-/* ===========================================================
-   LOCATION ITEM
-=========================================================== */
-
-const locationItemStyle: CSSProperties = {
-  minWidth:
-    0,
-
-  padding:
-    "7px 8px",
-
-  borderRadius:
-    "8px",
-
-  border:
-    "1px solid rgba(255,255,255,.08)",
-
-  background:
-    "rgba(255,255,255,.035)",
-};
-
-/* ===========================================================
-   LOCATION LABEL
-=========================================================== */
-
-const locationLabelStyle: CSSProperties = {
-  color:
-    "rgba(255,255,255,.42)",
-
-  fontSize:
-    "7px",
-
-  fontWeight:
-    700,
-
-  letterSpacing:
-    ".35px",
-
-  textTransform:
-    "uppercase",
-};
-
-/* ===========================================================
-   LOCATION VALUE
-=========================================================== */
-
-const locationValueStyle: CSSProperties = {
-  marginTop:
-    "3px",
-
-  color:
-    "#F8FAFC",
-
-  fontSize:
-    "9px",
-
-  fontWeight:
-    650,
-
-  whiteSpace:
-    "nowrap",
-
-  overflow:
-    "hidden",
-
-  textOverflow:
-    "ellipsis",
-};
 
 /* ===========================================================
    COMPONENT
 =========================================================== */
 
 export default function AddressPreviewCard({
+
   value,
+
 }: AddressPreviewCardProps) {
 
+  const {
+    tokens,
+  } =
+    useResponsive();
+
+
+  const {
+    theme,
+  } =
+    useTheme();
+
+
+  const addressTokens =
+    getAddressTokens(
+      tokens.meta.viewport,
+    );
+
+
+  const themeVariables:
+    AddressThemeStyle = {
+
+    "--finora-theme-brand-primary":
+      theme.colors.brand.primary,
+
+    "--finora-theme-brand-secondary":
+      theme.colors.brand.secondary,
+
+    "--finora-theme-brand-accent":
+      theme.colors.brand.accent,
+
+    "--finora-theme-brand-accent-soft":
+      theme.colors.brand.accentSoft,
+
+    "--finora-theme-surface":
+      theme.colors.background.surface,
+
+    "--finora-theme-surface-muted":
+      theme.colors.background.surfaceMuted,
+
+    "--finora-theme-text-primary":
+      theme.colors.text.primary,
+
+    "--finora-theme-text-secondary":
+      theme.colors.text.secondary,
+
+    "--finora-theme-text-muted":
+      theme.colors.text.muted,
+
+    "--finora-theme-text-inverse":
+      theme.colors.text.inverse,
+
+    "--finora-theme-border-default":
+      theme.colors.border.default,
+
+    "--finora-theme-border-strong":
+      theme.colors.border.strong,
+
+    "--finora-theme-border-subtle":
+      theme.colors.border.subtle,
+
+    "--finora-theme-overlay-shadow":
+      theme.colors.overlay.shadow,
+
+  };
+
+
+  const previewStyle =
+    createAddressPreviewStyle(
+      addressTokens,
+    );
+
+
+  const previewHeaderStyle =
+    createAddressPreviewHeaderStyle(
+      addressTokens,
+    );
+
+
+  const previewIconStyle =
+    createAddressPreviewIconStyle(
+      addressTokens,
+    );
+
+
+  const previewTitleStyle =
+    createAddressPreviewTitleStyle(
+      addressTokens,
+    );
+
+
+  const previewSubtitleStyle =
+    createAddressPreviewSubtitleStyle(
+      addressTokens,
+    );
+
+
+  const previewRowsStyle =
+    createAddressPreviewRowsStyle(
+      addressTokens,
+    );
+
+
+  const previewRowStyle =
+    createAddressPreviewRowStyle(
+      addressTokens,
+    );
+
+
+  const previewLabelStyle =
+    createAddressPreviewLabelStyle(
+      addressTokens,
+    );
+
+
+  const previewValueStyle =
+    {
+      ...createAddressPreviewTitleStyle(
+        addressTokens,
+      ),
+
+      fontSize:
+        `${addressTokens.previewValueSize}px`,
+
+      fontWeight:
+        650,
+    };
+
+
+  const previewMetaGridStyle =
+    createAddressPreviewMetaGridStyle(
+      addressTokens,
+    );
+
+
+  const previewMetaItemStyle =
+    createAddressPreviewMetaItemStyle(
+      addressTokens,
+    );
+
+
   return (
+
     <section
-      style={cardStyle}
+      style={{
+        ...themeVariables,
+
+        ...previewStyle,
+
+      }}
     >
 
-      {/* =================================================
-          HEADER
-      ================================================= */}
-
       <header
-        style={headerStyle}
+        style={
+          previewHeaderStyle
+        }
       >
 
         <div
-          style={iconStyle}
-          aria-hidden="true"
+          style={
+            previewIconStyle
+          }
         >
-          🏠
+
+          <House
+            size={
+              addressTokens.previewIconSize *
+              0.58
+            }
+
+            strokeWidth={
+              1.8
+          }
+
+            aria-hidden="true"
+          />
+
         </div>
 
-        <h3
-          style={titleStyle}
+
+        <div
+          style={{
+            minWidth:
+              0,
+          }}
         >
-          Address Preview
-        </h3>
+
+          <h3
+            style={
+              previewTitleStyle
+            }
+          >
+            Address Preview
+          </h3>
+
+
+          <p
+            style={
+              previewSubtitleStyle
+            }
+          >
+            Live preview of the customer's address.
+          </p>
+
+        </div>
 
       </header>
 
-      {/* =================================================
-          CUSTOMER
-      ================================================= */}
 
       <div
-        style={customerStyle}
+        style={
+          previewRowsStyle
+        }
       >
 
         <div
-          style={customerLabelStyle}
-        >
-          Customer
-        </div>
-
-        <div
-          style={customerValueStyle}
-        >
-          {value.customerName || "--"}
-        </div>
-
-      </div>
-
-      {/* =================================================
-          ADDRESS
-      ================================================= */}
-
-      <div
-        style={addressStyle}
-      >
-
-        <div
-          style={addressLabelStyle}
-        >
-          Current Address
-        </div>
-
-        <div
-          style={addressValueStyle}
-        >
-          {value.currentAddress || "--"}
-        </div>
-
-      </div>
-
-      {/* =================================================
-          LOCATION
-      ================================================= */}
-
-      <div
-        style={locationGridStyle}
-      >
-
-        <div
-          style={locationItemStyle}
+          style={
+            previewRowStyle
+          }
         >
 
           <div
-            style={locationLabelStyle}
+            style={
+              previewLabelStyle
+            }
           >
-            City
+            Customer
           </div>
 
+
           <div
-            style={locationValueStyle}
+            style={
+              {
+                ...previewValueStyle,
+
+                fontSize:
+                  `${addressTokens.previewValueSize}px`,
+
+                fontWeight:
+                  650,
+
+              }
+            }
           >
-            {value.city || "--"}
+            {safeText(
+              value.customerName,
+            )}
           </div>
 
         </div>
 
+
         <div
-          style={locationItemStyle}
+          style={
+            previewRowStyle
+          }
         >
 
           <div
-            style={locationLabelStyle}
+            style={{
+              display:
+                "flex",
+
+              alignItems:
+                "center",
+
+              gap:
+                `${Math.max(
+                  4,
+                  addressTokens.labelGap,
+                )}px`,
+
+              color:
+                "var(--finora-theme-text-muted, #7A8494)",
+
+              fontSize:
+                `${addressTokens.previewLabelSize}px`,
+
+              fontWeight:
+                800,
+
+              letterSpacing:
+                `${addressTokens.labelLetterSpacing}px`,
+
+              textTransform:
+                "uppercase",
+
+            }}
           >
-            State
+
+            <MapPin
+              size={
+                addressTokens.previewLabelSize + 4
+              }
+
+              strokeWidth={
+                1.8
+              }
+
+              aria-hidden="true"
+            />
+
+            Current Address
+
           </div>
 
+
           <div
-            style={locationValueStyle}
+            style={{
+              ...previewValueStyle,
+
+              fontSize:
+                `${addressTokens.previewValueSize}px`,
+
+              fontWeight:
+                650,
+
+              whiteSpace:
+                "normal",
+
+              overflowWrap:
+                "anywhere",
+
+            }}
           >
-            {value.state || "--"}
+            {safeText(
+              value.currentAddress,
+            )}
           </div>
 
         </div>
 
+
         <div
-          style={locationItemStyle}
+          style={
+            previewMetaGridStyle
+          }
         >
 
           <div
-            style={locationLabelStyle}
+            style={
+              previewMetaItemStyle
+            }
           >
-            PIN
+
+            <div
+              style={{
+                ...previewLabelStyle,
+
+                display:
+                  "flex",
+
+                alignItems:
+                  "center",
+
+                gap:
+                  `${Math.max(
+                    3,
+                    addressTokens.labelGap - 1,
+                  )}px`,
+
+              }}
+            >
+
+              <Building2
+                size={
+                  addressTokens.previewLabelSize + 4
+                }
+
+                strokeWidth={
+                  1.8
+                }
+
+                aria-hidden="true"
+              />
+
+              City
+
+            </div>
+
+
+            <div
+              style={{
+                ...previewValueStyle,
+
+                fontSize:
+                  `${addressTokens.previewValueSize}px`,
+
+              }}
+            >
+              {safeText(
+                value.city,
+              )}
+            </div>
+
           </div>
 
+
           <div
-            style={locationValueStyle}
+            style={
+              previewMetaItemStyle
+            }
           >
-            {value.pinCode || "--"}
+
+            <div
+              style={{
+                ...previewLabelStyle,
+
+                display:
+                  "flex",
+
+                alignItems:
+                  "center",
+
+                gap:
+                  `${Math.max(
+                    3,
+                    addressTokens.labelGap - 1,
+                  )}px`,
+
+              }}
+            >
+
+              <Map
+                size={
+                  addressTokens.previewLabelSize + 4
+                }
+
+                strokeWidth={
+                  1.8
+                }
+
+                aria-hidden="true"
+              />
+
+              State
+
+            </div>
+
+
+            <div
+              style={{
+                ...previewValueStyle,
+
+                fontSize:
+                  `${addressTokens.previewValueSize}px`,
+
+              }}
+            >
+              {safeText(
+                value.state,
+              )}
+            </div>
+
+          </div>
+
+
+          <div
+            style={
+              previewMetaItemStyle
+            }
+          >
+
+            <div
+              style={{
+                ...previewLabelStyle,
+
+                display:
+                  "flex",
+
+                alignItems:
+                  "center",
+
+                gap:
+                  `${Math.max(
+                    3,
+                    addressTokens.labelGap - 1,
+                  )}px`,
+
+              }}
+            >
+
+              <Hash
+                size={
+                  addressTokens.previewLabelSize + 4
+                }
+
+                strokeWidth={
+                  1.8
+                }
+
+                aria-hidden="true"
+              />
+
+              PIN
+
+            </div>
+
+
+            <div
+              style={{
+                ...previewValueStyle,
+
+                fontSize:
+                  `${addressTokens.previewValueSize}px`,
+
+              }}
+            >
+              {safeText(
+                value.pinCode,
+              )}
+            </div>
+
           </div>
 
         </div>
@@ -500,5 +663,12 @@ export default function AddressPreviewCard({
       </div>
 
     </section>
+
   );
+
 }
+
+
+/* ===========================================================
+   END
+=========================================================== */

@@ -4,71 +4,68 @@
    CUSTOMER WIZARD
    STEP 4 — KYC STUDIO™
 
+   Version     : 3.0
+   Phase       : Phase 2
+   Architecture: Enterprise
+   Status      : Production
+
    RESPONSIBILITY:
-   - Compose the complete Customer KYC workspace
-   - Connect KYC child components
-   - Maintain KYC form state
-   - Sync supported KYC data with Customer Wizard
-   - Present KYC preview, verification and draft status
+   - Customer KYC state
+   - Aadhaar / PAN / Voter ID / Driving Licence
+   - Live KYC preview
+   - Wizard synchronization
+
+   REMOVED:
+   - Document Upload
+   - Verification Status
+   - Verification Overview
+   - Draft Pending
 
    IMPORTANT:
-   - Global Customer Wizard header is already provided by
-     CustomerWizardLayout.
-   - Step 4 does NOT render another page header.
-   - The previous Step 4 internal header is intentionally hidden
-     for the current compact enterprise layout.
-   - It can be restored in a future design revision if required.
-   - No StudioLayout
-   - No TwoColumnStudio
-   - No inline styles
-   - Uses dedicated Step4KYC.styles.ts
+   - Entered KYC data is never treated as verified.
+   - Responsive geometry comes from the KYC Responsive Engine.
+   - Global wizard header/footer remain owned by CustomerWizardLayout.
+=========================================================== */
+
+/* ===========================================================
+   IMPORTS
 =========================================================== */
 
 import {
   useEffect,
+  useMemo,
   useState,
+  type CSSProperties,
 } from "react";
 
-import KYCForm from "../../kyc/KYCForm";
-
-import type {
-  KYCFormData,
-} from "../../kyc/KYCForm";
-
-import DocumentUploader
-  from "../../kyc/DocumentUploader";
-
-import VerificationStatus
-  from "../../kyc/VerificationStatus";
-
-import KYCPreviewCard
-  from "../../kyc/KYCPreviewCard";
-
-import type {
-  KYCPreviewData,
-} from "../../kyc/KYCPreviewCard";
-
-import KYCDraftStatus
-  from "../../kyc/KYCDraftStatus";
+import {
+  BadgeCheck,
+  CarFront,
+  CreditCard,
+  IdCard,
+  ShieldCheck,
+  type LucideIcon,
+} from "lucide-react";
 
 import type {
   CustomerWizardData,
 } from "../CustomerWizard";
 
 import {
-  pageStyle,
-  contentStyle,
-  leftColumnStyle,
-  rightColumnStyle,
-  panelStyle,
-  panelHeaderStyle,
-  panelTitleStyle,
-  panelSubtitleStyle,
-  statusRowStyle,
-  statusItemStyle,
-  statusLabelStyle,
-  statusValueStyle,
-  footerNoteStyle,
+  useResponsive,
+} from "../../../../utils/responsive";
+
+import {
+  useTheme,
+} from "../../../../themes/provider";
+
+import {
+  getKycTokens,
+} from "../../../../utils/responsive/customers/kyc/kyc.tokens";
+
+import {
+  createStep4KycStyles,
+  createStep4ThemeVariables,
 } from "./Step4KYC.styles";
 
 /* ===========================================================
@@ -83,16 +80,137 @@ interface Step4KYCProps {
   ) => void;
 }
 
+type KycField =
+  | "aadhaarNumber"
+  | "panNumber"
+  | "voterId"
+  | "drivingLicense";
+
+interface KycFormData {
+  aadhaarNumber: string;
+  panNumber: string;
+  voterId: string;
+  drivingLicense: string;
+}
+
+interface KycFieldProps {
+  label: string;
+  field: KycField;
+  value: string;
+  placeholder: string;
+  required?: boolean;
+  icon: LucideIcon;
+  styles: ReturnType<typeof createStep4KycStyles>;
+  onChange: (
+    field: KycField,
+    value: string,
+  ) => void;
+}
+
 /* ===========================================================
-   DEFAULT KYC DATA
+   DEFAULT STATE
 =========================================================== */
 
-const EMPTY_KYC_DATA: KYCFormData = {
+const EMPTY_KYC_DATA: KycFormData = {
   aadhaarNumber: "",
   panNumber: "",
   voterId: "",
   drivingLicense: "",
 };
+
+/* ===========================================================
+   HELPERS
+=========================================================== */
+
+function normalizeAadhaar(
+  value: string,
+): string {
+  return value
+    .replace(/\D/g, "")
+    .slice(0, 12);
+}
+
+function normalizePan(
+  value: string,
+): string {
+  return value
+    .toUpperCase()
+    .replace(/[^A-Z0-9]/g, "")
+    .slice(0, 10);
+}
+
+function normalizeId(
+  value: string,
+): string {
+  return value
+    .toUpperCase()
+    .replace(/[^A-Z0-9-]/g, "")
+    .slice(0, 20);
+}
+
+function displayValue(
+  value: string,
+): string {
+  return value.trim() || "--";
+}
+
+/* ===========================================================
+   FIELD COMPONENT
+=========================================================== */
+
+function KycFieldView({
+  label,
+  field,
+  value,
+  placeholder,
+  required = false,
+  icon: Icon,
+  styles,
+  onChange,
+}: KycFieldProps) {
+  return (
+    <div style={styles.fieldStyle}>
+      <label
+        htmlFor={`finora-kyc-${field}`}
+        style={styles.labelStyle}
+      >
+        {label}
+
+        {required ? (
+          <span
+            style={styles.requiredStyle}
+            aria-hidden="true"
+          >
+            *
+          </span>
+        ) : null}
+      </label>
+
+      <div style={styles.inputWrapperStyle}>
+        <Icon
+          style={styles.inputIconStyle}
+          strokeWidth={1.9}
+          aria-hidden="true"
+        />
+
+        <input
+          id={`finora-kyc-${field}`}
+          type="text"
+          value={value}
+          placeholder={placeholder}
+          autoComplete="off"
+          style={styles.inputStyle}
+          onChange={(event) =>
+            onChange(
+              field,
+              event.target.value,
+            )
+          }
+        />
+      </div>
+    </div>
+  );
+}
 
 /* ===========================================================
    COMPONENT
@@ -102,406 +220,334 @@ export default function Step4KYC({
   wizardData,
   updateWizardData,
 }: Step4KYCProps) {
+  const {
+    tokens,
+  } = useResponsive();
 
-  /* =========================================================
-     KYC STATE
-  ========================================================= */
+  const {
+    theme,
+  } = useTheme();
 
-const [
-  kycData,
-  setKycData,
-] = useState<KYCFormData>({
-  ...EMPTY_KYC_DATA,
-
-  aadhaarNumber:
-    wizardData.aadhaar ?? "",
-
-  panNumber:
-    wizardData.pan ?? "",
-
-  voterId:
-    wizardData.voterId ?? "",
-
-  drivingLicense:
-    wizardData.drivingLicence ?? "",
-});
-
-
-  /* =========================================================
-     SYNC WIZARD DATA
-  ========================================================= */
-
-  useEffect(() => {
-
-  setKycData({
-
-    ...EMPTY_KYC_DATA,
-
-    aadhaarNumber:
-      wizardData.aadhaar ?? "",
-
-    panNumber:
-      wizardData.pan ?? "",
-
-    voterId:
-      wizardData.voterId ?? "",
-
-    drivingLicense:
-      wizardData.drivingLicence ?? "",
-
-  });
-
-}, [
-  wizardData.aadhaar,
-  wizardData.pan,
-  wizardData.voterId,
-  wizardData.drivingLicence,
-]);
-
-  /* =========================================================
-     KYC FIELD CHANGE
-  ========================================================= */
-
- const handleKYCChange = (
-  field: keyof KYCFormData,
-  value: string,
-) => {
-
-  setKycData(
-    (previous: KYCFormData) => ({
-      ...previous,
-      [field]: value,
-    }),
+  const kycTokens = useMemo(
+    () =>
+      getKycTokens(
+        tokens.meta.viewport,
+      ),
+    [
+      tokens.meta.viewport,
+    ],
   );
 
-  /* =======================================================
-     SYNC SUPPORTED WIZARD FIELDS
-  ======================================================= */
+  const styles = useMemo(
+    () =>
+      createStep4KycStyles(
+        kycTokens,
+      ),
+    [
+      kycTokens,
+    ],
+  );
 
-  if (field === "aadhaarNumber") {
+  const themeVariables = useMemo(
+    () =>
+      createStep4ThemeVariables(
+        theme,
+      ),
+    [
+      theme,
+    ],
+  );
 
-    updateWizardData({
-      aadhaar: value,
+  const [
+    kycData,
+    setKycData,
+  ] = useState<KycFormData>({
+    ...EMPTY_KYC_DATA,
+    aadhaarNumber:
+      wizardData.aadhaar ?? "",
+    panNumber:
+      wizardData.pan ?? "",
+    voterId:
+      wizardData.voterId ?? "",
+    drivingLicense:
+      wizardData.drivingLicence ?? "",
+  });
+
+  useEffect(() => {
+    setKycData({
+      ...EMPTY_KYC_DATA,
+      aadhaarNumber:
+        wizardData.aadhaar ?? "",
+      panNumber:
+        wizardData.pan ?? "",
+      voterId:
+        wizardData.voterId ?? "",
+      drivingLicense:
+        wizardData.drivingLicence ?? "",
     });
+  }, [
+    wizardData.aadhaar,
+    wizardData.pan,
+    wizardData.voterId,
+    wizardData.drivingLicence,
+  ]);
 
-    return;
-  }
+  function handleFieldChange(
+    field: KycField,
+    rawValue: string,
+  ): void {
+    const value =
+      field === "aadhaarNumber"
+        ? normalizeAadhaar(rawValue)
+        : field === "panNumber"
+          ? normalizePan(rawValue)
+          : normalizeId(rawValue);
 
-  if (field === "panNumber") {
+    setKycData((previous) => ({
+      ...previous,
+      [field]: value,
+    }));
 
-    updateWizardData({
-      pan: value,
-    });
+    if (field === "aadhaarNumber") {
+      updateWizardData({
+        aadhaar: value,
+      });
+      return;
+    }
 
-    return;
-  }
+    if (field === "panNumber") {
+      updateWizardData({
+        pan: value,
+      });
+      return;
+    }
 
-  if (field === "voterId") {
-
-    updateWizardData({
-      voterId: value,
-    });
-
-    return;
-  }
-
-  if (field === "drivingLicense") {
+    if (field === "voterId") {
+      updateWizardData({
+        voterId: value,
+      });
+      return;
+    }
 
     updateWizardData({
       drivingLicence: value,
     });
-
-    return;
   }
-};
 
-  /* =========================================================
-     PREVIEW DATA
-  ========================================================= */
+  const hasAnyKycData = Boolean(
+    kycData.aadhaarNumber ||
+    kycData.panNumber ||
+    kycData.voterId ||
+    kycData.drivingLicense,
+  );
 
-  const previewData: KYCPreviewData = {
-
-    customerName:
-      wizardData.fullName ||
-      "New Customer",
-
-    aadhaarNumber:
-      kycData.aadhaarNumber,
-
-    panNumber:
-      kycData.panNumber,
-
-    verified: false,
-  };
-
-  /* =========================================================
-     CURRENT VERIFICATION STATE
-
-     Do not fake successful verification.
-  ========================================================= */
-
-  const isVerified = false;
-
-  /* =========================================================
-     CURRENT DOCUMENT STATE
-
-     DocumentUploader is currently presentation-only.
-  ========================================================= */
-
-  const documentUploaded = false;
-
-  /* =========================================================
-     PAGE
-
-     The page itself fills the available wizard content area.
-     Header and footer are owned by CustomerWizardLayout.
-  ========================================================= */
+  const themeStyle = {
+    ...styles.pageStyle,
+    ...themeVariables,
+  } as CSSProperties &
+    Record<`--${string}`, string>;
 
   return (
+    <section style={themeStyle}>
+      <main style={styles.contentStyle}>
 
-    <section style={pageStyle}>
+        <section
+          style={styles.panelStyle}
+          aria-labelledby="finora-kyc-identity-title"
+        >
+<header style={styles.panelHeaderStyle}>
+  <div
+    style={{
+      display: "flex",
+      alignItems: "center",
+      gap: "10px",
+    }}
+  >
+    <div
+      style={{
+        width: "40px",
+        height: "40px",
+        minWidth: "40px",
+        borderRadius: "10px",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        background:
+  "transparent",
+  color:
+  "var(--finora-theme-brand-accent, #4D82E6)",
+        border:
+  "1px solid var(--finora-theme-brand-accent, #4D82E6)",
+      }}
+    >
+      <IdCard
+        size={kycTokens.inputIconSize * 1.5}
+        strokeWidth={1.9}
+      />
+    </div>
 
-      {/* =====================================================
-          FUTURE OPTIONAL STEP HEADER
+    <div>
+      <h2
+        id="finora-kyc-identity-title"
+        style={styles.panelTitleStyle}
+      >
+        Identity Information
+      </h2>
 
-          Intentionally not rendered in the current design.
-
-          Future:
-          Customer KYC Studio™
-          Verify customer identity documents and
-          compliance information.
-
-          The global FINORA / Customers Hub header already
-          provides the required navigation context.
-      ===================================================== */}
-
-      {/* =====================================================
-          MAIN KYC WORKSPACE
-      ===================================================== */}
-
-      <main style={contentStyle}>
-
-        {/* ===================================================
-            LEFT COLUMN
-        =================================================== */}
-
-        <div style={leftColumnStyle}>
-
-          {/* =================================================
-              IDENTITY INFORMATION
-          ================================================= */}
-
-          <section style={panelStyle}>
-
-            <div style={panelHeaderStyle}>
-
-              <div>
-
-                <h2 style={panelTitleStyle}>
-                  Identity Information
-                </h2>
-
-                <p style={panelSubtitleStyle}>
-                  Capture customer identity documents
-                  required for KYC verification.
-                </p>
-
-              </div>
-
-            </div>
-
-            <KYCForm
-              value={kycData}
-              onChange={handleKYCChange}
+      <p style={styles.panelSubtitleStyle}>
+        Capture customer identity documents required for KYC verification.
+      </p>
+    </div>
+  </div>
+</header>
+          <div style={styles.fieldGridStyle}>
+            <KycFieldView
+              label="Aadhaar Number"
+              field="aadhaarNumber"
+              value={kycData.aadhaarNumber}
+              placeholder="Enter 12-digit Aadhaar number"
+              required
+              icon={IdCard}
+              styles={styles}
+              onChange={handleFieldChange}
             />
 
-          </section>
-
-          {/* =================================================
-              DOCUMENT UPLOAD
-          ================================================= */}
-
-          <section style={panelStyle}>
-
-            <div style={panelHeaderStyle}>
-
-              <div>
-
-                <h2 style={panelTitleStyle}>
-                  Document Upload
-                </h2>
-
-                <p style={panelSubtitleStyle}>
-                  Attach the supporting KYC document.
-                </p>
-
-              </div>
-
-            </div>
-
-            <DocumentUploader
-              documentName="KYC Identity Document"
-              uploaded={documentUploaded}
+            <KycFieldView
+              label="PAN Number"
+              field="panNumber"
+              value={kycData.panNumber}
+              placeholder="Enter 10-digit PAN number"
+              required
+              icon={CreditCard}
+              styles={styles}
+              onChange={handleFieldChange}
             />
 
-          </section>
-
-          {/* =================================================
-              VERIFICATION STATUS
-          ================================================= */}
-
-          <section style={panelStyle}>
-
-            <div style={panelHeaderStyle}>
-
-              <div>
-
-                <h2 style={panelTitleStyle}>
-                  Verification Status
-                </h2>
-
-                <p style={panelSubtitleStyle}>
-                  Current identity verification state.
-                </p>
-
-              </div>
-
-            </div>
-
-            <VerificationStatus
-              verified={isVerified}
+            <KycFieldView
+              label="Voter ID"
+              field="voterId"
+              value={kycData.voterId}
+              placeholder="Enter Voter ID number"
+              icon={BadgeCheck}
+              styles={styles}
+              onChange={handleFieldChange}
             />
 
-            <p style={footerNoteStyle}>
-              Verification will remain pending until
-              the required KYC information is verified.
-            </p>
+            <KycFieldView
+              label="Driving Licence"
+              field="drivingLicense"
+              value={kycData.drivingLicense}
+              placeholder="Enter Driving Licence number"
+              icon={CarFront}
+              styles={styles}
+              onChange={handleFieldChange}
+            />
+          </div>
+        </section>
 
-          </section>
+        <section
+          style={styles.panelStyle}
+          aria-labelledby="finora-kyc-preview-title"
+        >
+          
+          <article style={styles.previewCardStyle}>
+            <div style={styles.previewHeaderStyle}>
+              <div
+                style={styles.previewIconStyle}
+                aria-hidden="true"
+              >
+                <ShieldCheck
+                  size={kycTokens.previewIconSize}
+                  strokeWidth={1.8}
+                />
+              </div>
 
-        </div>
-
-        {/* ===================================================
-            RIGHT COLUMN
-        =================================================== */}
-
-        <div style={rightColumnStyle}>
-
-          {/* =================================================
-              KYC PREVIEW
-          ================================================= */}
-
-          <section style={panelStyle}>
-
-            <div style={panelHeaderStyle}>
-
-              <div>
-
-                <h2 style={panelTitleStyle}>
+              <div style={{ minWidth: 0 }}>
+                <h3 style={styles.previewTitleStyle}>
                   KYC Preview
-                </h2>
+                </h3>
 
-                <p style={panelSubtitleStyle}>
-                  Live summary of the customer KYC data.
+                <p style={styles.previewSubtitleStyle}>
+                  Live preview of the customer's identity details.
                 </p>
-
               </div>
-
             </div>
 
-            <KYCPreviewCard
-              value={previewData}
-            />
-
-          </section>
-
-          {/* =================================================
-              VERIFICATION OVERVIEW
-          ================================================= */}
-
-          <section style={panelStyle}>
-
-            <div style={panelHeaderStyle}>
-
-              <div>
-
-                <h2 style={panelTitleStyle}>
-                  Verification Overview
-                </h2>
-
-                <p style={panelSubtitleStyle}>
-                  Compliance readiness at a glance.
-                </p>
-
+            <div style={styles.previewRowsStyle}>
+              <div style={styles.previewRowStyle}>
+                <span style={styles.previewLabelStyle}>
+                  CUSTOMER
+                </span>
+                <span style={styles.previewValueStyle}>
+                  {displayValue(
+                    wizardData.fullName ?? "",
+                  )}
+                </span>
               </div>
 
+              <div style={styles.previewRowStyle}>
+                <span style={styles.previewLabelStyle}>
+                  AADHAAR
+                </span>
+                <span style={styles.previewValueStyle}>
+                  {displayValue(
+                    kycData.aadhaarNumber,
+                  )}
+                </span>
+              </div>
+
+              <div style={styles.previewRowStyle}>
+                <span style={styles.previewLabelStyle}>
+                  PAN
+                </span>
+                <span style={styles.previewValueStyle}>
+                  {displayValue(
+                    kycData.panNumber,
+                  )}
+                </span>
+              </div>
+
+              <div style={styles.previewRowStyle}>
+                <span style={styles.previewLabelStyle}>
+                  VOTER ID
+                </span>
+                <span style={styles.previewValueStyle}>
+                  {displayValue(
+                    kycData.voterId,
+                  )}
+                </span>
+              </div>
+
+              <div style={styles.previewRowStyle}>
+                <span style={styles.previewLabelStyle}>
+                  DRIVING LICENCE
+                </span>
+                <span style={styles.previewValueStyle}>
+                  {displayValue(
+                    kycData.drivingLicense,
+                  )}
+                </span>
+              </div>
             </div>
 
-            <div style={statusRowStyle}>
+            <div style={styles.previewStatusStyle}>
+              <ShieldCheck
+                size={kycTokens.previewStatusSize + 4}
+                strokeWidth={1.9}
+                aria-hidden="true"
+              />
 
-              <div style={statusItemStyle}>
-
-                <span style={statusLabelStyle}>
-                  Identity
-                </span>
-
-                <span style={statusValueStyle}>
-                  {isVerified
-                    ? "Verified"
-                    : "Pending"}
-                </span>
-
-              </div>
-
-              <div style={statusItemStyle}>
-
-                <span style={statusLabelStyle}>
-                  Documents
-                </span>
-
-                <span style={statusValueStyle}>
-                  {documentUploaded
-                    ? "Ready"
-                    : "Pending"}
-                </span>
-
-              </div>
-
-              <div style={statusItemStyle}>
-
-                <span style={statusLabelStyle}>
-                  KYC
-                </span>
-
-                <span style={statusValueStyle}>
-                  {isVerified
-                    ? "Complete"
-                    : "Pending"}
-                </span>
-
-              </div>
-
+              {hasAnyKycData
+                ? "Verification Pending"
+                : "KYC Pending"}
             </div>
-
-            {/*  <p style={footerNoteStyle}>
-              Automated OCR and verification can be
-              connected in a future FINORA release.
-            </p>  */}
-
-          </section>
-
-          {/* =================================================
-              DRAFT STATUS
-          ================================================= */}
-
-          <KYCDraftStatus
-            isDraftSaved={false}
-          />
-
-        </div>
-
+          </article>
+        </section>
       </main>
-
     </section>
   );
 }
+
+/* ===========================================================
+   END
+=========================================================== */

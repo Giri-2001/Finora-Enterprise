@@ -326,7 +326,7 @@ export const inputStyle:
     "var(--finora-theme-font-family, Inter, system-ui, sans-serif)",
 
   fontWeight:
-    600,
+    800,
 
   lineHeight:
     1.35,
@@ -401,7 +401,7 @@ export const readOnlyInputStyle:
     THEME.textPrimary,
 
   fontWeight:
-    700,
+    800,
 
   cursor:
     "default",

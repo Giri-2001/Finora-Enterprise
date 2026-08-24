@@ -51,6 +51,10 @@ import {
   useTheme,
 } from "../../../../themes/provider";
 
+import {
+  UserRound,
+} from "lucide-react";
+
 
 /* ===========================================================
    PRESENTATION STYLES
@@ -226,6 +230,8 @@ export default function Step1Identity({
     formPanelStyle,
 
     formHeaderStyle,
+
+     formHeaderIconStyle,
 
     formTitleStyle,
 
@@ -533,10 +539,16 @@ export default function Step1Identity({
   return (
 
     <section
-      style={
-        pageStyle
-      }
-    >
+  style={{
+    ...pageStyle,
+
+    "--finora-theme-brand-accent":
+      theme.colors.brand.accent,
+
+    "--finora-theme-brand-accent-soft":
+      theme.colors.brand.accentSoft,
+  } as React.CSSProperties}
+>
 
       <main
         style={
@@ -544,31 +556,106 @@ export default function Step1Identity({
         }
       >
 
-        <header
-          style={
-            formHeaderStyle
-          }
-        >
+  <header
+  style={
+    formHeaderStyle
+  }
+>
 
-          <h1
-            style={
-              formTitleStyle
-            }
-          >
-            Customer Identity
-          </h1>
+  <div
+    style={{
+      display: "flex",
+      alignItems: "center",
+      gap: "12px",
+    }}
+  >
+
+    {/* =====================================================
+        IDENTITY ICON
+    ===================================================== */}
+
+    <div
+      style={{
+        width: "42px",
+        height: "42px",
+        minWidth: "42px",
+
+        borderRadius: "6px",
+
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+
+        background:
+          "transparent",
+
+        color:
+          "var(--finora-theme-brand-accent, #4D82E6)",
+
+        border:
+          "1px solid var(--finora-theme-brand-accent, #4D82E6)",
+
+        boxSizing: "border-box",
+
+        transform:
+          "translateY(2px)",
+      }}
+    >
+
+      <UserRound
+        size={20}
+        strokeWidth={2.2}
+      />
+
+    </div>
 
 
-          <p
-            style={
-              formSubtitleStyle
-            }
-          >
-            Create the customer's permanent
-            FINORA digital identity.
-          </p>
+    {/* =====================================================
+        TITLE + SUBTITLE
+    ===================================================== */}
 
-        </header>
+    <div
+      style={{
+        display: "flex",
+
+        flexDirection: "column",
+
+        justifyContent: "center",
+
+        minWidth: 0,
+
+        flex: 1,
+      }}
+    >
+
+      <h1
+        style={{
+          ...formTitleStyle,
+
+          margin: 0,
+        }}
+      >
+        Customer Identity
+      </h1>
+
+
+      <p
+        style={{
+          ...formSubtitleStyle,
+
+          margin:
+            "3px 0 0",
+        }}
+      >
+        Create the customer's permanent
+        FINORA digital identity.
+      </p>
+
+    </div>
+
+  </div>
+
+</header>
 
 
         <div

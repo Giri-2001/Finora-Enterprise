@@ -1,6 +1,8 @@
 /* ===========================================================
    FINORA ENTERPRISE OS™
+
    KYC PREVIEW PRESENTATION STYLES
+
 =========================================================== */
 
 import type {
@@ -12,11 +14,13 @@ import type {
 =========================================================== */
 
 export const cardStyle: CSSProperties = {
+
   minHeight: 0,
 
   boxSizing: "border-box",
 
   display: "flex",
+
   flexDirection: "column",
 
   padding: "14px 15px",
@@ -24,15 +28,16 @@ export const cardStyle: CSSProperties = {
   borderRadius: "16px",
 
   border:
-    "1.5px solid rgba(214,176,106,.38)",
+    "1px solid var(--finora-theme-border-default, #D9DEE7)",
 
   background:
-    "linear-gradient(145deg,rgba(255,255,255,.06),rgba(255,255,255,.018))",
+    "var(--finora-theme-surface-elevated, #111C2E)",
 
   boxShadow:
-    "0 10px 26px rgba(0,0,0,.16)",
+    "none",
 
   overflow: "hidden",
+
 };
 
 /* ===========================================================
@@ -40,13 +45,16 @@ export const cardStyle: CSSProperties = {
 =========================================================== */
 
 export const titleStyle: CSSProperties = {
+
   margin: 0,
 
-  color: "#F3E4C2",
+  color:
+    "var(--finora-theme-text-primary, #FFFFFF)",
 
   fontSize: "17px",
 
   fontWeight: 850,
+
 };
 
 /* ===========================================================
@@ -54,14 +62,16 @@ export const titleStyle: CSSProperties = {
 =========================================================== */
 
 export const subtitleStyle: CSSProperties = {
+
   margin: "3px 0 9px",
 
   color:
-    "rgba(255,255,255,.48)",
+    "var(--finora-theme-text-secondary, #AAB7C8)",
 
   fontSize: "9px",
 
   fontWeight: 600,
+
 };
 
 /* ===========================================================
@@ -69,6 +79,7 @@ export const subtitleStyle: CSSProperties = {
 =========================================================== */
 
 export const rowStyle: CSSProperties = {
+
   display: "grid",
 
   gridTemplateColumns:
@@ -81,7 +92,8 @@ export const rowStyle: CSSProperties = {
   padding: "8px 0",
 
   borderBottom:
-    "1px solid rgba(214,176,106,.10)",
+    "1px solid var(--finora-theme-border-default, #D9DEE7)",
+
 };
 
 /* ===========================================================
@@ -89,8 +101,9 @@ export const rowStyle: CSSProperties = {
 =========================================================== */
 
 export const labelStyle: CSSProperties = {
+
   color:
-    "rgba(255,255,255,.48)",
+    "var(--finora-theme-text-secondary, #AAB7C8)",
 
   fontSize: "9px",
 
@@ -99,6 +112,7 @@ export const labelStyle: CSSProperties = {
   textTransform: "uppercase",
 
   letterSpacing: ".35px",
+
 };
 
 /* ===========================================================
@@ -106,7 +120,29 @@ export const labelStyle: CSSProperties = {
 =========================================================== */
 
 export const valueStyle: CSSProperties = {
-  color: "#FFFFFF",
+
+  boxSizing: "border-box",
+
+  width: "100%",
+
+  minHeight: "45px",
+
+  display: "flex",
+
+  alignItems: "center",
+
+  padding: "0 14px",
+
+  borderRadius: "10px",
+
+  border:
+    "1px solid var(--finora-theme-border-default, #D9DEE7)",
+
+  background:
+    "var(--finora-theme-surface-input, #1B2B43)",
+
+  color:
+    "var(--finora-theme-text-primary, #FFFFFF)",
 
   fontSize: "11px",
 
@@ -117,6 +153,7 @@ export const valueStyle: CSSProperties = {
   textOverflow: "ellipsis",
 
   whiteSpace: "nowrap",
+
 };
 
 /* ===========================================================
@@ -124,14 +161,19 @@ export const valueStyle: CSSProperties = {
 =========================================================== */
 
 export const statusStyle = (
+
   verified?: boolean,
+
 ): CSSProperties => ({
+
   color:
     verified
-      ? "#86EFAC"
-      : "#F0C75E",
+      ? "var(--finora-theme-status-success, #86EFAC)"
+      : "var(--finora-theme-brand-accent, #4D82E6)",
 
   fontSize: "11px",
 
   fontWeight: 850,
+  
+
 });
