@@ -30,8 +30,6 @@ import {
   MapPin,
   FileCheck2,
   UserPlus,
-  CheckCircle2,
-  Circle,
 } from "lucide-react";
 
 
@@ -126,7 +124,7 @@ function StatusRow({
       >
 
         <Icon
-          size={13}
+          size={18}
           strokeWidth={1.9}
         />
 
@@ -148,38 +146,26 @@ function StatusRow({
       </span>
 
 
-      {/* =====================================================
-         STATUS ICON
-      ===================================================== */}
+     {/* =====================================================
+   STATUS INDICATOR
+===================================================== */}
 
-      <span
-        style={
-          ok
-            ? styles.statusIconCompleteStyle
-            : styles.statusIconPendingStyle
-        }
-        aria-hidden="true"
-      >
+<span
+  style={
+    ok
+      ? styles.statusIconCompleteStyle
+      : styles.statusIconPendingStyle
+  }
+  aria-hidden="true"
+>
 
-        {
-          ok
-            ? (
-                <CheckCircle2
-                  size={13}
-                  strokeWidth={1.9}
-                />
-              )
-            : (
-                <Circle
-                  size={13}
-                  strokeWidth={1.9}
-                />
-              )
-        }
+  {
+    ok
+      ? "✓"
+      : "•"
+  }
 
-      </span>
-
-
+</span>
       {/* =====================================================
          STATUS TEXT
       ===================================================== */}
@@ -277,7 +263,7 @@ export default function ValidationStatus({
         >
 
           <ShieldCheck
-            size={15}
+            size={25}
             strokeWidth={1.8}
           />
 

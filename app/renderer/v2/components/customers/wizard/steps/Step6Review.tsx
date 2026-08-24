@@ -6,7 +6,7 @@
 
    MODULE  : Customer
    LAYER   : UI / Review
-   VERSION : 2.0
+   VERSION : 4.0
    STATUS  : Production
 
    RESPONSIBILITY:
@@ -31,7 +31,10 @@
    - KYC document entry is NOT treated as verified.
    - Nominee data follows CustomerNomineeInformation.
    - Global FINORA header remains the workspace header.
-   - ReviewHeader is intentionally not rendered here.
+   - Step 6 now represents the RIGHT review workspace:
+       Nominee Preview
+       Review Checklist
+       Customer Review Actions
 ========================================================== */
 
 
@@ -43,32 +46,37 @@ import {
   useState,
 } from "react";
 
+
 import StudioLayout
   from "../../../common/layout/StudioLayout";
 
-import CustomerSummary
-  from "../../review/CustomerSummary";
 
-import ValidationStatus
-  from "../../review/ValidationStatus";
+import NomineePreviewCard
+  from "../../nominee/NomineePreviewCard";
+
 
 import ReviewChecklist
   from "../../review/ReviewChecklist";
 
+
 import ReviewActions
   from "../../review/ReviewActions";
+
 
 import {
   customerService,
 } from "../../../../services/customer/customerService";
 
+
 import type {
   CustomerProfile,
 } from "../../../../types/customers";
 
+
 import type {
   CustomerWizardData,
 } from "../CustomerWizard";
+
 
 import {
   CustomerStatus,
@@ -80,18 +88,20 @@ import {
   NomineeRelation,
 } from "../../../../types/customers/customer.enums";
 
+
 import type {
   Education,
 } from "../../../../types/customers/customer.personal.types";
+
 
 import {
   CustomerTimelineEventType,
   CustomerTimelinePriority,
 } from "../../../../types/customers/customer.timeline.types";
 
+
 import {
   workspaceStyle,
-  leftColumnStyle,
   rightColumnStyle,
   actionPanelStyle,
   actionAreaStyle,
@@ -115,6 +125,7 @@ interface Step6ReviewProps {
 
   isEditMode?:
     boolean;
+
 }
 
 
@@ -131,10 +142,6 @@ function generateCustomerId(): string {
 }
 
 
-/* ==========================================================
-   SAFE STRING
-========================================================== */
-
 function valueOrEmpty(
   value?: string,
 ): string {
@@ -144,10 +151,6 @@ function valueOrEmpty(
 }
 
 
-/* ==========================================================
-   NUMBER HELPER
-========================================================== */
-
 function toNumber(
   value?: string,
 ): number | undefined {
@@ -155,30 +158,33 @@ function toNumber(
   const normalized =
     value?.trim() ?? "";
 
+
   if (!normalized) {
 
     return undefined;
+
   }
+
 
   const parsed =
     Number(
       normalized,
     );
 
+
   if (
     !Number.isFinite(parsed)
   ) {
 
     return undefined;
+
   }
 
+
   return parsed;
+
 }
 
-
-/* ==========================================================
-   GENDER
-========================================================== */
 
 function toGender(
   value?: string,
@@ -187,13 +193,16 @@ function toGender(
   const normalized =
     value?.trim().toUpperCase();
 
+
   if (
     normalized ===
     CustomerGender.MALE
   ) {
 
     return CustomerGender.MALE;
+
   }
+
 
   if (
     normalized ===
@@ -201,15 +210,14 @@ function toGender(
   ) {
 
     return CustomerGender.FEMALE;
+
   }
 
+
   return CustomerGender.OTHER;
+
 }
 
-
-/* ==========================================================
-   MARITAL STATUS
-========================================================== */
 
 function toMaritalStatus(
   value?: string,
@@ -218,13 +226,16 @@ function toMaritalStatus(
   const normalized =
     value?.trim().toUpperCase();
 
+
   if (
     normalized ===
     MaritalStatus.MARRIED
   ) {
 
     return MaritalStatus.MARRIED;
+
   }
+
 
   if (
     normalized ===
@@ -232,7 +243,9 @@ function toMaritalStatus(
   ) {
 
     return MaritalStatus.WIDOW;
+
   }
+
 
   if (
     normalized ===
@@ -240,15 +253,14 @@ function toMaritalStatus(
   ) {
 
     return MaritalStatus.DIVORCED;
+
   }
 
+
   return MaritalStatus.SINGLE;
+
 }
 
-
-/* ==========================================================
-   OCCUPATION
-========================================================== */
 
 function toOccupation(
   value?: string,
@@ -256,6 +268,7 @@ function toOccupation(
 
   const normalized =
     value?.trim().toUpperCase();
+
 
   switch (normalized) {
 
@@ -285,13 +298,11 @@ function toOccupation(
 
     default:
       return Occupation.OTHER;
+
   }
+
 }
 
-
-/* ==========================================================
-   EDUCATION
-========================================================== */
 
 function toEducation(
   value?: string,
@@ -300,44 +311,37 @@ function toEducation(
   const normalized =
     value?.trim();
 
+
   if (!normalized) {
 
     return undefined;
+
   }
+
 
   const validValues: Education[] = [
 
     "No Formal Education",
-
     "Primary",
-
     "Secondary",
-
     "Intermediate",
-
     "Diploma",
-
     "Graduate",
-
     "Post Graduate",
-
     "Doctorate",
-
     "Other",
 
   ];
+
 
   return validValues.find(
     (item) =>
       item.toLowerCase() ===
       normalized.toLowerCase(),
   );
+
 }
 
-
-/* ==========================================================
-   NOMINEE RELATION
-========================================================== */
 
 function toNomineeRelation(
   value?: string,
@@ -345,6 +349,7 @@ function toNomineeRelation(
 
   const normalized =
     value?.trim().toUpperCase();
+
 
   switch (normalized) {
 
@@ -383,7 +388,9 @@ function toNomineeRelation(
 
     default:
       return NomineeRelation.OTHER;
+
   }
+
 }
 
 
@@ -423,60 +430,65 @@ export default function Step6Review({
       wizardData.customerId,
     );
 
+
   const customerName =
     valueOrEmpty(
       wizardData.fullName,
     );
+
 
   const mobileNumber =
     valueOrEmpty(
       wizardData.mobileNumber,
     );
 
-  const address =
-    valueOrEmpty(
-      wizardData.address,
-    );
 
   const nomineeCustomerId =
     valueOrEmpty(
       wizardData.nomineeCustomerId,
     );
 
+
   const nomineeName =
     valueOrEmpty(
       wizardData.nomineeName,
     );
+
 
   const nomineeRelationship =
     valueOrEmpty(
       wizardData.nomineeRelationship,
     );
 
+
   const nomineePhoneNumber =
     valueOrEmpty(
       wizardData.nomineePhoneNumber,
     );
+
 
   const aadhaar =
     valueOrEmpty(
       wizardData.aadhaar,
     );
 
+
   const pan =
     valueOrEmpty(
       wizardData.pan,
     );
 
-  const voterId =
-  valueOrEmpty(
-    wizardData.voterId,
-  );
 
-const drivingLicence =
-  valueOrEmpty(
-    wizardData.drivingLicence,
-  );
+  const voterId =
+    valueOrEmpty(
+      wizardData.voterId,
+    );
+
+
+  const drivingLicence =
+    valueOrEmpty(
+      wizardData.drivingLicence,
+    );
 
 
   /* ========================================================
@@ -489,25 +501,26 @@ const drivingLicence =
       mobileNumber,
     );
 
+
   const addressComplete =
     Boolean(
-      address,
+      wizardData.address?.trim() ||
+      wizardData.currentAddress?.trim(),
     );
 
-  const kycDocumentsProvided =
-  Boolean(
-    aadhaar ||
-    pan ||
-    voterId ||
-    drivingLicence,
-  );
 
-  /*
-   * Entered KYC documents are never automatically verified.
-   */
+  const kycDocumentsProvided =
+    Boolean(
+      aadhaar ||
+      pan ||
+      voterId ||
+      drivingLicence,
+    );
+
 
   const kycVerified =
     false;
+
 
   const nomineeAdded =
     Boolean(
@@ -580,6 +593,7 @@ const drivingLicence =
       if (isSaving) {
 
         return;
+
       }
 
 
@@ -590,6 +604,7 @@ const drivingLicence =
         );
 
         return;
+
       }
 
 
@@ -600,6 +615,7 @@ const drivingLicence =
         );
 
         return;
+
       }
 
 
@@ -610,6 +626,7 @@ const drivingLicence =
         );
 
         return;
+
       }
 
 
@@ -618,14 +635,11 @@ const drivingLicence =
 
       try {
 
-        /* ==================================================
-           NORMALIZED STEP 2 VALUES
-        ================================================== */
-
         const monthlyIncome =
           toNumber(
             wizardData.monthlyIncome,
           );
+
 
         const numberOfFamilyMembers =
           toNumber(
@@ -646,25 +660,21 @@ const drivingLicence =
             );
 
             return;
+
           }
 
 
           const existingCustomer =
             originalCustomerProfile;
 
+
           const now =
             new Date().toISOString();
 
 
-          /* ==================================================
-             PRESERVE EXISTING NOMINEES
-
-             If Step 5 contains nominee data, update the
-             primary nominee. Otherwise preserve existing data.
-          ================================================== */
-
           const existingNominees =
             existingCustomer.nominee.nominees ?? [];
+
 
           const shouldUpdateNominee =
             Boolean(
@@ -681,6 +691,7 @@ const drivingLicence =
 
                   nomineeName ||
                   nomineeCustomerId
+
                     ? [
 
                         {
@@ -750,28 +761,18 @@ const drivingLicence =
                         ...existingNominees.slice(1),
 
                       ]
+
                     : existingNominees
 
                 )
+
               : existingNominees;
 
-
-          /* ==================================================
-             UPDATED CUSTOMER PROFILE
-          ================================================== */
 
           const updatedCustomer:
             CustomerProfile = {
 
             ...existingCustomer,
-
-            /* ================================================
-               CUSTOMER PHOTO
-
-               Preserve the existing photo when the wizard did
-               not change it. An explicitly empty photo clears
-               the existing photo.
-            ================================================= */
 
             photo:
               wizardData.photo !== undefined
@@ -779,11 +780,6 @@ const drivingLicence =
                     wizardData.photo,
                   )
                 : existingCustomer.photo,
-
-
-            /* ================================================
-               IDENTITY
-            ================================================= */
 
             identity: {
 
@@ -793,11 +789,6 @@ const drivingLicence =
                 now,
 
             },
-
-
-            /* ================================================
-               BASIC INFORMATION
-            ================================================= */
 
             basic: {
 
@@ -857,18 +848,6 @@ const drivingLicence =
 
             },
 
-
-            /* ================================================
-               PERSONAL INFORMATION
-
-               THIS IS THE IMPORTANT STEP 2 FIX.
-
-               Previously Edit Mode did not update `personal`
-               at all.
-
-               Now all Step 2 persisted fields are updated.
-            ================================================= */
-
             personal: {
 
               ...existingCustomer.personal,
@@ -893,15 +872,6 @@ const drivingLicence =
                     )
                   : existingCustomer.personal.occupation,
 
-              /*
-               * Preserve the exact custom occupation entered by
-               * the user when the domain occupation is OTHER.
-               *
-               * Example:
-               *   UI value        = "Finora Occupation"
-               *   occupation      = OTHER
-               *   occupationOther = "Finora Occupation"
-               */
               occupationOther:
                 toOccupation(
                   wizardData.occupation,
@@ -942,29 +912,6 @@ const drivingLicence =
                 existingCustomer.personal.numberOfFamilyMembers,
 
             },
-
-
-            /* ================================================
-               ADDRESS
-
-               STEP 3 PERSISTENCE
-
-               The Step 3 UI uses a flat wizard representation:
-
-               - currentAddress
-               - permanentAddress
-               - city
-               - district
-               - state
-               - pinCode
-
-               CustomerProfile uses the canonical nested Address
-               model, so every Step 3 value must be mapped into
-               both currentAddress and permanentAddress.
-
-               Existing address fields not represented by the
-               wizard are preserved.
-            ================================================= */
 
             address: {
 
@@ -1081,15 +1028,6 @@ const drivingLicence =
 
             },
 
-
-            /* ================================================
-               KYC
-
-               Preserve existing documents.
-
-               New entered values remain PENDING.
-            ================================================= */
-
             kyc: {
 
               ...existingCustomer.kyc,
@@ -1111,6 +1049,7 @@ const drivingLicence =
                     },
 
                   }
+
                 : {}),
 
               ...(pan
@@ -1130,52 +1069,50 @@ const drivingLicence =
                     },
 
                   }
+
                 : {}),
 
-                ...(voterId
-  ? {
+              ...(voterId
+                ? {
 
-      voterId: {
+                    voterId: {
 
-        ...(existingCustomer.kyc.voterId ?? {}),
+                      ...(existingCustomer.kyc.voterId ?? {}),
 
-        documentNumber:
-          voterId,
+                      documentNumber:
+                        voterId,
 
-        status:
-          existingCustomer.kyc.voterId?.status ??
-          KYCStatus.PENDING,
+                      status:
+                        existingCustomer.kyc.voterId?.status ??
+                        KYCStatus.PENDING,
 
-      },
+                    },
 
-    }
-  : {}),
+                  }
 
-...(drivingLicence
-  ? {
+                : {}),
 
-      drivingLicense: {
+              ...(drivingLicence
+                ? {
 
-        ...(existingCustomer.kyc.drivingLicense ?? {}),
+                    drivingLicense: {
 
-        documentNumber:
-          drivingLicence,
+                      ...(existingCustomer.kyc.drivingLicense ?? {}),
 
-        status:
-          existingCustomer.kyc.drivingLicense?.status ??
-          KYCStatus.PENDING,
+                      documentNumber:
+                        drivingLicence,
 
-      },
+                      status:
+                        existingCustomer.kyc.drivingLicense?.status ??
+                        KYCStatus.PENDING,
 
-    }
-  : {}),
+                    },
+
+                  }
+
+                : {}),
 
             },
-
-
-            /* ================================================
-               NOMINEE
-            ================================================= */
 
             nominee: {
 
@@ -1188,10 +1125,6 @@ const drivingLicence =
 
           };
 
-
-          /* ==================================================
-             CUSTOMER SERVICE UPDATE
-          ================================================== */
 
           const result =
             await customerService.update(
@@ -1207,6 +1140,7 @@ const drivingLicence =
             );
 
             return;
+
           }
 
 
@@ -1219,24 +1153,22 @@ const drivingLicence =
           resetWizard();
 
           return;
+
         }
 
 
         /* ==================================================
-           NEW CUSTOMER REGISTRATION
+           NEW CUSTOMER
         ================================================== */
 
         const now =
           new Date().toISOString();
 
+
         const finalCustomerId =
           customerId ||
           generateCustomerId();
 
-
-        /* ==================================================
-           DIGITAL LOCKER
-        ================================================== */
 
         const documents = {
 
@@ -1254,10 +1186,6 @@ const drivingLicence =
 
         };
 
-
-        /* ==================================================
-           CUSTOMER TIMELINE
-        ================================================== */
 
         const timeline = {
 
@@ -1299,10 +1227,6 @@ const drivingLicence =
         };
 
 
-        /* ==================================================
-           NOMINEE
-        ================================================== */
-
         const nominees =
           nomineeName ||
           nomineeCustomerId
@@ -1338,31 +1262,17 @@ const drivingLicence =
                 },
 
               ]
+
             : [];
 
 
-        /* ==================================================
-           CUSTOMER PROFILE
-        ================================================== */
-
         const newCustomer:
           CustomerProfile = {
-
-          /* ==================================================
-             CUSTOMER PHOTO
-
-             CustomerPhotoUploader stores the selected image as
-             a Base64 data URL in CustomerWizardData.photo.
-             Persist it at the CustomerProfile root so the same
-             canonical photo can be reused by Customer Office,
-             Loan Studio, and other customer-facing modules.
-          ================================================== */
 
           photo:
             valueOrEmpty(
               wizardData.photo,
             ),
-
 
           identity: {
 
@@ -1397,11 +1307,6 @@ const drivingLicence =
               false,
 
           },
-
-
-          /* ==================================================
-             BASIC INFORMATION
-          ================================================== */
 
           basic: {
 
@@ -1456,13 +1361,6 @@ const drivingLicence =
 
           },
 
-
-          /* ==================================================
-             PERSONAL INFORMATION
-
-             STEP 2 PERSISTENCE
-          ================================================== */
-
           personal: {
 
             gender:
@@ -1490,13 +1388,6 @@ const drivingLicence =
                 wizardData.occupation,
               ),
 
-            /*
-             * Preserve custom occupation text separately when
-             * the selected occupation is OTHER.
-             *
-             * This prevents Edit mode from collapsing the user's
-             * entered value back to the generic "Other" label.
-             */
             occupationOther:
               toOccupation(
                 wizardData.occupation,
@@ -1533,28 +1424,6 @@ const drivingLicence =
               false,
 
           },
-
-
-          /* ==================================================
-             ADDRESS
-
-             STEP 3 PERSISTENCE
-
-             Persist every value collected by AddressForm into
-             the canonical CustomerAddressInformation model.
-
-             UI:
-               currentAddress
-               permanentAddress
-               city
-               district
-               state
-               pinCode
-
-             Domain:
-               currentAddress: Address
-               permanentAddress: Address
-          ================================================== */
 
           address: {
 
@@ -1645,11 +1514,6 @@ const drivingLicence =
 
           },
 
-
-          /* ==================================================
-             KYC
-          ================================================== */
-
           kyc: {
 
             ...(aadhaar
@@ -1666,6 +1530,7 @@ const drivingLicence =
                   },
 
                 }
+
               : {}),
 
             ...(pan
@@ -1682,49 +1547,47 @@ const drivingLicence =
                   },
 
                 }
+
               : {}),
 
-              ...(voterId
-  ? {
+            ...(voterId
+              ? {
 
-      voterId: {
+                  voterId: {
 
-        documentNumber:
-          voterId,
+                    documentNumber:
+                      voterId,
 
-        status:
-          KYCStatus.PENDING,
+                    status:
+                      KYCStatus.PENDING,
 
-      },
+                  },
 
-    }
-  : {}),
+                }
 
-...(drivingLicence
-  ? {
+              : {}),
 
-      drivingLicense: {
+            ...(drivingLicence
+              ? {
 
-        documentNumber:
-          drivingLicence,
+                  drivingLicense: {
 
-        status:
-          KYCStatus.PENDING,
+                    documentNumber:
+                      drivingLicence,
 
-      },
+                    status:
+                      KYCStatus.PENDING,
 
-    }
-  : {}),
+                  },
+
+                }
+
+              : {}),
 
             overallStatus:
               KYCStatus.PENDING,
 
           },
-
-
-          /* ==================================================
-             NOMINEE
-          ================================================== */
 
           nominee: {
 
@@ -1732,17 +1595,7 @@ const drivingLicence =
 
           },
 
-
-          /* ==================================================
-             DOCUMENTS
-          ================================================== */
-
           documents,
-
-
-          /* ==================================================
-             INTERNAL
-          ================================================== */
 
           internal: {
 
@@ -1787,17 +1640,7 @@ const drivingLicence =
 
           },
 
-
-          /* ==================================================
-             TIMELINE
-          ================================================== */
-
           timeline,
-
-
-          /* ==================================================
-             STATISTICS
-          ================================================== */
 
           statistics: {
 
@@ -1860,10 +1703,6 @@ const drivingLicence =
         };
 
 
-        /* ==================================================
-           CUSTOMER SERVICE WRITE
-        ================================================== */
-
         const result =
           await customerService.create(
             newCustomer,
@@ -1878,6 +1717,7 @@ const drivingLicence =
           );
 
           return;
+
         }
 
 
@@ -1923,7 +1763,45 @@ const drivingLicence =
 
 
   /* ========================================================
+     NOMINEE PREVIEW
+  ======================================================== */
+
+  const nomineePreview = {
+
+    customerName:
+      customerName,
+
+    nomineeCustomerId:
+      nomineeCustomerId,
+
+    nomineeName:
+      nomineeName,
+
+    relationship:
+      nomineeRelationship,
+
+    phoneNumber:
+      nomineePhoneNumber,
+
+  };
+
+
+  /* ========================================================
      VIEW
+
+     IMPORTANT:
+
+     Step6Review is intentionally a RIGHT-SIDE review
+     workspace.
+
+     CustomerSummary + ValidationStatus are rendered by
+     Step5Nominee on the LEFT.
+
+     Step6 renders:
+
+       1. Nominee Preview
+       2. Review Checklist
+       3. Review Actions
   ======================================================== */
 
   return (
@@ -1936,90 +1814,80 @@ const drivingLicence =
 
     >
 
-      <div style={workspaceStyle}>
+      <div
+        style={{
+          ...workspaceStyle,
+          width: "100%",
+          minWidth: 0,
+          minHeight: 0,
+          display: "flex",
+          flexDirection: "column",
+          gap: "10px",
+          overflow: "visible",
+          boxSizing: "border-box",
+        }}
+      >
 
-        <div style={leftColumnStyle}>
+        {/* =================================================
+            NOMINEE PREVIEW
+        ================================================= */}
 
-          <CustomerSummary
+        <NomineePreviewCard
 
-            customerId={
-              customerId ||
-              "AUTO-GENERATED ON SAVE"
+          value={
+            nomineePreview
+          }
+
+        />
+
+
+        {/* =================================================
+            REVIEW CHECKLIST
+        ================================================= */}
+
+        <ReviewChecklist
+
+          items={
+            checklistItems
+          }
+
+        />
+
+
+        {/* =================================================
+            REVIEW ACTIONS
+        ================================================= */}
+
+        <div
+          style={{
+            ...actionPanelStyle,
+            width: "100%",
+            minWidth: 0,
+            boxSizing: "border-box",
+          }}
+        >
+
+          <div
+            style={
+              actionAreaStyle
             }
+          >
 
-            customerName={
-              customerName ||
-              "--"
-            }
+            <ReviewActions
 
-            phoneNumber={
-              mobileNumber ||
-              "--"
-            }
+              onSave={
+                handleSave
+              }
 
-            kycVerified={
-              kycVerified
-            }
+              onEdit={
+                handleEdit
+              }
 
-          />
+              onCancel={
+                handleCancel
+              }
 
-
-          <ReviewChecklist
-
-            items={
-              checklistItems
-            }
-
-          />
-
-        </div>
-
-
-        <div style={rightColumnStyle}>
-
-          <ValidationStatus
-
-            identityComplete={
-              identityComplete
-            }
-
-            addressComplete={
-              addressComplete
-            }
-
-            kycVerified={
-              kycVerified
-            }
-
-            nomineeAdded={
-              nomineeAdded
-            }
-
-          />
-
-
-          <div style={actionPanelStyle}>
-
-
-            <div style={actionAreaStyle}>
-
-              <ReviewActions
-
-                onSave={
-                  handleSave
-                }
-
-                onEdit={
-                  handleEdit
-                }
-
-                onCancel={
-                  handleCancel
-                }
-
-              />
-
-            </div>
+            />
 
           </div>
 
@@ -2030,6 +1898,7 @@ const drivingLicence =
     </StudioLayout>
 
   );
+
 }
 
 

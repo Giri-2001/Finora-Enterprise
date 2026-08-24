@@ -229,9 +229,6 @@ export function createReviewActionsStyles(
     background:
       surface,
 
-    boxShadow:
-      `0 8px 22px ${shadow}`,
-
     overflow:
       "hidden",
 
@@ -268,10 +265,10 @@ export function createReviewActionsStyles(
     CSSProperties = {
 
     width:
-      `${Math.max(tokens.icon.md, 20)}px`,
+    "36px",
 
     height:
-      `${Math.max(tokens.icon.md, 20)}px`,
+    "36px",
 
     flexShrink:
       0,
@@ -336,7 +333,7 @@ export function createReviewActionsStyles(
       textPrimary,
 
     fontSize:
-      `${tokens.typography.heading - 10}px`,
+      `${tokens.typography.heading - 7}px`,
 
     lineHeight:
       tokens.lineHeight.compact,
@@ -358,13 +355,13 @@ export function createReviewActionsStyles(
     CSSProperties = {
 
     margin:
-      `${Math.max(tokens.spacing.small - 5, 2)}px 0 0`,
+      `${Math.max(tokens.spacing.small - 3, 2)}px 0 0`,
 
     color:
       textSecondary,
 
     fontSize:
-      `${Math.max(tokens.typography.caption, 9)}px`,
+      `${Math.max(tokens.typography.caption, 13)}px`,
 
     lineHeight:
       tokens.lineHeight.compact,
@@ -405,24 +402,27 @@ export function createReviewActionsStyles(
   ========================================================= */
 
   const actionListStyle:
-    CSSProperties = {
+  CSSProperties = {
 
-    width:
-      "100%",
+  width:
+    "100%",
 
-    minWidth:
-      0,
+  minWidth:
+    0,
 
-    display:
-      "flex",
+  display:
+    "grid",
 
-    flexDirection:
-      "column",
+  gridTemplateColumns:
+    "repeat(3, minmax(0, 1fr))",
 
-    gap:
-      `${Math.max(tokens.spacing.small, 6)}px`,
+  gap:
+    `${Math.max(tokens.spacing.small, 6)}px`,
 
-  };
+  alignItems:
+    "stretch",
+
+};
 
 
   /* =========================================================
@@ -485,9 +485,6 @@ export function createReviewActionsStyles(
 
     cursor:
       "pointer",
-
-    boxShadow:
-      `0 8px 18px ${shadow}`,
 
     transition:
       "opacity 160ms ease, transform 160ms ease, box-shadow 160ms ease",

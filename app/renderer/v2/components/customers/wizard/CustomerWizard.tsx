@@ -1333,47 +1333,68 @@ export default function CustomerWizard({
 
            Existing KYC continuation.
         --------------------------------------------------- */
-
 case 3:
 
   return (
 
     <div
       style={{
-        width: "100%",
-        minWidth: 0,
-        minHeight: 0,
+        width:
+          "100%",
 
-        display: "grid",
+        minWidth:
+          0,
+
+        minHeight:
+          0,
+
+        display:
+          "grid",
 
         gridTemplateColumns:
           "repeat(auto-fit, minmax(min(100%, 480px), 1fr))",
 
-        gap: "5px",
+        columnGap:
+          "5px",
 
-        boxSizing: "border-box",
+        rowGap:
+          "8px",
 
-        overflow: "auto",
+        alignItems:
+          "start",
 
-        background: "transparent",
+        justifyItems:
+          "stretch",
+
+        padding: "10px 0 10px 15px",
+
+        boxSizing:
+          "border-box",
+
+        overflow:
+          "auto",
+
+        background:
+          "transparent",
       }}
     >
 
-      {/* =========================================
-          LEFT — NOMINEE STUDIO
-      ========================================= */}
-
       <div
         style={{
-          width: "100%",
-          minWidth: 0,
-          minHeight: 0,
+          width:
+            "100%",
 
-          boxSizing: "border-box",
+          minWidth:
+            0,
 
-          overflow: "visible",
+          minHeight:
+            0,
 
-          background: "transparent",
+          boxSizing:
+            "border-box",
+
+          overflow:
+            "visible",
         }}
       >
 
@@ -1392,21 +1413,22 @@ case 3:
       </div>
 
 
-      {/* =========================================
-          RIGHT — FINAL REVIEW STUDIO
-      ========================================= */}
-
       <div
         style={{
-          width: "100%",
-          minWidth: 0,
-          minHeight: 0,
+          width:
+            "100%",
 
-          boxSizing: "border-box",
+          minWidth:
+            0,
 
-          overflow: "visible",
+          minHeight:
+            0,
 
-          background: "transparent",
+          boxSizing:
+            "border-box",
+
+          overflow:
+            "visible",
         }}
       >
 

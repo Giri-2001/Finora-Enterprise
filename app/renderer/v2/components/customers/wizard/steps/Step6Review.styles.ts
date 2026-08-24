@@ -2,206 +2,131 @@
    FINORA ENTERPRISE OS™
 
    CUSTOMER WIZARD
-   STEP 6 — REVIEW STUDIO
+   STEP 6 — REVIEW
    PRESENTATION STYLES
-
-   RESPONSIBILITY:
-
-   - Step 6 viewport layout
-   - Final 2 × 2 review workspace
-   - Customer Summary + Validation Status
-   - Review Checklist + Action Panel
-   - Full viewport height usage
-   - Header / footer breathing space
-   - No bottom wasted space
 
    IMPORTANT:
 
-   - Step 6 only
-   - Do NOT modify shared StudioLayout
-   - Do NOT modify shared TwoColumnStudio
+   - Responsive geometry is owned by the Step 6 Review
+     Responsive Engine.
+   - This file contains only presentation adapters and
+     compatibility exports.
+   - No local breakpoints.
+   - No media queries.
+   - No viewport detection.
 =========================================================== */
 
 import type {
   CSSProperties,
 } from "react";
 
-/* ===========================================================
-   WORKSPACE
+import type {
+  ReviewResponsiveTokens,
+} from "../../../../utils/responsive/customers/review/review.tokens";
 
-   FINAL GRID:
+import {
+  DEFAULT_REVIEW_TOKENS,
+} from "../../../../utils/responsive/customers/review/review.tokens";
 
-   ┌──────────────────────┬──────────────────────┐
-   │ Customer Summary     │ Validation Status    │
-   ├──────────────────────┼──────────────────────┤
-   │ Review Checklist     │ Draft + Actions      │
-   └──────────────────────┴──────────────────────┘
+import {
+  createStep6ReviewWorkspaceStyle,
+  createStep6ReviewColumnStyle,
+  createStep6ReviewActionPanelStyle,
+  createStep6ReviewDraftAreaStyle,
+  createStep6ReviewActionAreaStyle,
+  createStep6ReviewResponsiveStyle,
+} from "../../../../utils/responsive/customers/review/review.layout";
 
-   The workspace occupies the complete available
-   Step 6 content area between header and footer.
-=========================================================== */
-export const workspaceStyle: CSSProperties = {
-
-  width: "100%",
-
-  height: "100%",
-
-  minWidth: 0,
-
-  minHeight: 0,
-
-  flex: "1 1 auto",
-
-  display: "grid",
-
-  gridTemplateColumns:
-    "minmax(0,1.25fr) minmax(0,.95fr)",
-
-  gridTemplateRows:
-    "minmax(0,1fr) minmax(0,1fr)",
-
-  columnGap: "10px",
-
-  rowGap: "10px",
-
-  boxSizing: "border-box",
-
-  padding:
-    "10px 18px",
-
-  overflowY: "auto",
-
-  overflowX: "hidden",
-
-  alignItems: "stretch",
-
-  justifyItems: "stretch",
-
-  alignSelf: "stretch",
-
-};
 
 /* ===========================================================
-   LEFT COLUMN
-
-   IMPORTANT:
-
-   This wrapper must NOT consume a grid cell.
-
-   Its children participate directly in the
-   parent workspace grid.
-
-   Child 1:
-   Customer Summary
-
-   Child 2:
-   Review Checklist
+   RESOLVED STYLE FACTORY
 =========================================================== */
 
-export const leftColumnStyle: CSSProperties = {
+export function createStep6ReviewStyles(
+  tokens:
+    ReviewResponsiveTokens,
+) {
 
-  display: "contents",
-};
+  return {
+
+    workspaceStyle:
+      createStep6ReviewWorkspaceStyle(
+        tokens,
+      ),
+
+    leftColumnStyle:
+      createStep6ReviewColumnStyle(),
+
+    rightColumnStyle:
+      createStep6ReviewColumnStyle(),
+
+    actionPanelStyle:
+      createStep6ReviewActionPanelStyle(
+        tokens,
+      ),
+
+    draftAreaStyle:
+      createStep6ReviewDraftAreaStyle(),
+
+    actionAreaStyle:
+      createStep6ReviewActionAreaStyle(),
+
+    responsiveStyle:
+      createStep6ReviewResponsiveStyle(),
+
+  };
+
+}
+
 
 /* ===========================================================
-   RIGHT COLUMN
+   DEFAULT COMPATIBILITY EXPORTS
 
-   IMPORTANT:
-
-   This wrapper must NOT consume a grid cell.
-
-   Its children participate directly in the
-   parent workspace grid.
-
-   Child 1:
-   Validation Status
-
-   Child 2:
-   Action Panel
+   These keep older imports working. Runtime responsive
+   presentation must use createStep6ReviewStyles().
 =========================================================== */
 
-export const rightColumnStyle: CSSProperties = {
+const DEFAULT_STYLES =
+  createStep6ReviewStyles(
+    DEFAULT_REVIEW_TOKENS,
+  );
 
-  display: "contents",
-};
+
+export const workspaceStyle:
+  CSSProperties =
+    DEFAULT_STYLES.workspaceStyle;
+
+
+export const leftColumnStyle:
+  CSSProperties =
+    DEFAULT_STYLES.leftColumnStyle;
+
+
+export const rightColumnStyle:
+  CSSProperties =
+    DEFAULT_STYLES.rightColumnStyle;
+
+
+export const actionPanelStyle:
+  CSSProperties =
+    DEFAULT_STYLES.actionPanelStyle;
+
+
+export const draftAreaStyle:
+  CSSProperties =
+    DEFAULT_STYLES.draftAreaStyle;
+
+
+export const actionAreaStyle:
+  CSSProperties =
+    DEFAULT_STYLES.actionAreaStyle;
+
+
+export const responsiveStyle:
+  CSSProperties =
+    DEFAULT_STYLES.responsiveStyle;
+
 
 /* ===========================================================
-   ACTION PANEL
-
-   Bottom-right area:
-
-   Save Customer
-   ↓
-   Edit Details
-   ↓
-   Cancel
+   END
 =========================================================== */
-
-export const actionPanelStyle: CSSProperties = {
-
-  minWidth: 0,
-
-  minHeight: 0,
-
-  width: "100%",
-
-  height: "100%",
-
-  display: "flex",
-
-  flexDirection: "column",
-
-  gap: "8px",
-
-  boxSizing: "border-box",
-
-  overflow: "hidden",
-
-  alignSelf: "stretch",
-
-  justifySelf: "stretch",
-};
-
-/* ===========================================================
-   ACTION AREA
-
-   The three buttons are handled vertically by
-   ReviewActions.styles.ts.
-
-   This area fills the remaining bottom-right
-   available space.
-=========================================================== */
-
-export const actionAreaStyle: CSSProperties = {
-
-  width: "100%",
-
-  minWidth: 0,
-
-  flex: "1 1 auto",
-
-  display: "flex",
-
-  flexDirection: "column",
-
-  boxSizing: "border-box",
-
-  overflow: "hidden",
-};
-
-/* ===========================================================
-   RESPONSIVE
-=========================================================== */
-
-export const responsiveStyle: CSSProperties = {
-
-  width: "100%",
-
-  height: "100%",
-
-  minWidth: 0,
-
-  minHeight: 0,
-
-  boxSizing: "border-box",
-};

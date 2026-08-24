@@ -113,13 +113,13 @@ function ChecklistItem({
           completed
             ? (
                 <CheckCircle2
-                  size={13}
+                  size={15}
                   strokeWidth={1.9}
                 />
               )
             : (
                 <Circle
-                  size={13}
+                  size={15}
                   strokeWidth={1.9}
                 />
               )
@@ -148,20 +148,42 @@ function ChecklistItem({
       ===================================================== */}
 
       <strong
-        style={
-          completed
-            ? styles.completeStyle
-            : styles.pendingStyle
-        }
-      >
+  style={
+    {
+      ...styles.statusStyle,
+      ...(completed
+        ? styles.completeStyle
+        : styles.pendingStyle),
+    }
+  }
+>
 
-        {
-          completed
-            ? "✓ Complete"
-            : "● Pending"
-        }
+  <span
+    style={
+      styles.statusIndicatorStyle
+    }
+    aria-hidden="true"
+  >
 
-      </strong>
+    {
+      completed
+        ? "✓"
+        : "●"
+    }
+
+  </span>
+
+  <span>
+
+    {
+      completed
+        ? "Complete"
+        : "Pending"
+    }
+
+  </span>
+
+</strong>
 
     </div>
 
@@ -234,7 +256,7 @@ export default function ReviewChecklist({
         >
 
           <ClipboardCheck
-            size={15}
+            size={25}
             strokeWidth={1.8}
           />
 

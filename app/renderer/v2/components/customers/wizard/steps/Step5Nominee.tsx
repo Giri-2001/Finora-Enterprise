@@ -1,8 +1,13 @@
 /* ===========================================================
-   FINORA ENTERPRISE V2
+   FINORA ENTERPRISE OS™
 
    CUSTOMER WIZARD
-   STEP 5 — NOMINEE STUDIO
+   STEP 5 — NOMINEE STUDIO™
+
+   Version     : 4.0
+   Phase       : Phase 2
+   Architecture: Enterprise
+   Status      : Production
 
    RESPONSIBILITY:
 
@@ -10,70 +15,101 @@
    - Existing FINORA customer lookup
    - Nominee form state
    - Wizard data synchronization
-   - Relationship selection
-   - Preview / summary / draft presentation
-
-   BUSINESS RULE:
-
-   If a registered FINORA Customer ID is entered,
-   the existing customer's name and mobile number are
-   automatically linked to the nominee information.
+   - Customer information presentation
+   - Validation status presentation
+   - Step 5 left/right workspace presentation
 
    IMPORTANT:
 
    - Customer lookup goes through CustomerService.
    - Presentation components remain business-logic free.
-   - Step 5 local state is synchronized explicitly.
-   - No bidirectional state synchronization effect is used.
-   - Failed / unavailable customer lookup must NOT destroy
-     existing wizard draft values.
-
-   ARCHITECTURE:
-
-   Step 5
-      ↓
-   CustomerService
-      ↓
-   CustomerRepository
-      ↓
-   StorageManager
-      ↓
-   Storage Adapter
-
+   - No local breakpoint logic.
+   - No window.innerWidth.
+   - No media queries.
+   - Responsive geometry comes from Responsive Engine.
+   - Step 6 save/update business logic remains in Step6Review.
 =========================================================== */
 
 
-// ===========================================================
-// IMPORTS
-// ===========================================================
+/* ===========================================================
+   IMPORTS
+=========================================================== */
 
 import {
   useEffect,
   useState,
 } from "react";
 
-import TwoColumnStudio
-  from "../../../common/layout/TwoColumnStudio";
+
+/* ===========================================================
+   CUSTOMER SERVICE
+=========================================================== */
 
 import {
   customerService,
 } from "../../../../services/customer/customerService";
 
+
+/* ===========================================================
+   NOMINEE PRESENTATION
+=========================================================== */
+
 import NomineeForm, {
   type NomineeFormData,
 } from "../../nominee/NomineeForm";
 
+
 import NomineePreviewCard
   from "../../nominee/NomineePreviewCard";
+
+
+/* ===========================================================
+   REVIEW PRESENTATION
+=========================================================== */
+
+import CustomerSummary
+  from "../../review/CustomerSummary";
+
+
+import ValidationStatus
+  from "../../review/ValidationStatus";
+
+
+import ReviewChecklist
+  from "../../review/ReviewChecklist";
+
+
+/* ===========================================================
+   WIZARD TYPES
+=========================================================== */
 
 import type {
   CustomerWizardData,
 } from "../CustomerWizard";
 
 
-// ===========================================================
-// PROPS
-// ===========================================================
+/* ===========================================================
+   RESPONSIVE ENGINE
+=========================================================== */
+
+import {
+  useResponsive,
+} from "../../../../utils/responsive";
+
+
+import {
+  getNomineeResponsiveTokens,
+} from "../../../../utils/responsive/customers/nominee/nominee.tokens";
+
+
+import {
+  createStep5NomineeStyles,
+} from "../../../../utils/responsive/customers/nominee/nominee.layout";
+
+
+/* ===========================================================
+   PROPS
+=========================================================== */
 
 interface Step5NomineeProps {
 
@@ -81,15 +117,16 @@ interface Step5NomineeProps {
     CustomerWizardData;
 
   updateWizardData: (
-    data: Partial<CustomerWizardData>,
+    data:
+      Partial<CustomerWizardData>,
   ) => void;
 
 }
 
 
-// ===========================================================
-// COMPONENT
-// ===========================================================
+/* ===========================================================
+   COMPONENT
+=========================================================== */
 
 export default function Step5Nominee({
 
@@ -100,15 +137,35 @@ export default function Step5Nominee({
 }: Step5NomineeProps) {
 
 
-  // =========================================================
-  // NOMINEE STATE
-  //
-  // CustomerWizardData is the central wizard source of truth
-  // while the customer is being created or edited.
-  //
-  // Step 5 local state is initialized from that central data.
-  // No continuous reverse synchronization effect is used.
-  // =========================================================
+  /* =========================================================
+     RESPONSIVE ENGINE
+  ========================================================= */
+
+  const {
+    tokens,
+  } =
+    useResponsive();
+
+
+  const nomineeTokens =
+    getNomineeResponsiveTokens(
+      tokens.meta.viewport,
+    );
+
+
+  const {
+    containerStyle,
+    leftStyle,
+    rightStyle,
+  } =
+    createStep5NomineeStyles(
+      nomineeTokens,
+    );
+
+
+  /* =========================================================
+     NOMINEE STATE
+  ========================================================= */
 
   const [
     nominee,
@@ -134,11 +191,9 @@ export default function Step5Nominee({
   }));
 
 
-  // =========================================================
-  // LINKED CUSTOMER STATE
-  //
-  // Existing saved nominee name is preserved immediately.
-  // =========================================================
+  /* =========================================================
+     LINKED CUSTOMER
+  ========================================================= */
 
   const [
     linkedCustomerName,
@@ -150,40 +205,21 @@ export default function Step5Nominee({
   );
 
 
-  // =========================================================
-  // CUSTOMER LINK STATUS
-  // =========================================================
-
   const [
     isCustomerLinked,
     setIsCustomerLinked,
   ] = useState(false);
 
 
-  // =========================================================
-  // CUSTOMER LOOKUP
-  //
-  // Lookup runs only when the FINORA Customer ID changes.
-  //
-  // IMPORTANT:
-  //
-  // Lookup success updates both:
-  //
-  // 1. Local Step 5 state
-  // 2. Central CustomerWizardData
-  //
-  // Lookup failure NEVER clears existing draft values.
-  // =========================================================
+  /* =========================================================
+     CUSTOMER LOOKUP
+  ========================================================= */
 
   useEffect(() => {
 
     const customerId =
       nominee.nomineeCustomerId.trim();
 
-
-    // =======================================================
-    // EMPTY CUSTOMER ID
-    // =======================================================
 
     if (!customerId) {
 
@@ -215,22 +251,12 @@ export default function Step5Nominee({
           );
 
 
-        // ---------------------------------------------------
-        // EFFECT WAS CANCELLED
-        // ---------------------------------------------------
-
         if (cancelled) {
 
           return;
 
         }
 
-
-        // ===================================================
-        // LOOKUP FAILED
-        //
-        // Preserve current draft values.
-        // ===================================================
 
         if (!result.success) {
 
@@ -246,10 +272,6 @@ export default function Step5Nominee({
 
         }
 
-
-        // ===================================================
-        // CUSTOMER NOT FOUND
-        // ===================================================
 
         const customer =
           result.data;
@@ -270,35 +292,25 @@ export default function Step5Nominee({
         }
 
 
-        // ===================================================
-        // CUSTOMER FOUND
-        // ===================================================
-
         const customerName =
           customer.basic.fullName ||
           "";
+
 
         const customerPhone =
           customer.basic.mobileNumber ||
           "";
 
 
-        // ---------------------------------------------------
-        // Update presentation state.
-        // ---------------------------------------------------
-
         setLinkedCustomerName(
           customerName,
         );
+
 
         setIsCustomerLinked(
           true,
         );
 
-
-        // ---------------------------------------------------
-        // Registered customer is authoritative.
-        // ---------------------------------------------------
 
         setNominee(
           (previous) => ({
@@ -314,15 +326,6 @@ export default function Step5Nominee({
           }),
         );
 
-
-        // ---------------------------------------------------
-        // Explicitly synchronize authoritative customer
-        // values with the central wizard state.
-        //
-        // IMPORTANT:
-        // This is NOT inside a nominee synchronization effect.
-        // Therefore it cannot create a render loop.
-        // ---------------------------------------------------
 
         updateWizardData({
 
@@ -352,13 +355,10 @@ export default function Step5Nominee({
         );
 
 
-        // ---------------------------------------------------
-        // Never destroy existing draft values on lookup error.
-        // ---------------------------------------------------
-
         setLinkedCustomerName(
           nominee.nomineeName,
         );
+
 
         setIsCustomerLinked(
           false,
@@ -383,14 +383,9 @@ export default function Step5Nominee({
   ]);
 
 
-  // =========================================================
-  // FIELD CHANGE
-  //
-  // Local state and central wizard state are updated together.
-  //
-  // This replaces the old bidirectional synchronization
-  // useEffect that caused the infinite render loop.
-  // =========================================================
+  /* =========================================================
+     FIELD CHANGE
+  ========================================================= */
 
   const handleChange = (
 
@@ -413,10 +408,6 @@ export default function Step5Nominee({
       }),
     );
 
-
-    // =======================================================
-    // EXPLICIT WIZARD SYNCHRONIZATION
-    // =======================================================
 
     if (
       field ===
@@ -447,13 +438,16 @@ export default function Step5Nominee({
 
       });
 
+
       setLinkedCustomerName(
         value,
       );
 
+
       setIsCustomerLinked(
         false,
       );
+
 
       return;
 
@@ -494,53 +488,112 @@ export default function Step5Nominee({
   };
 
 
-  // =========================================================
-  // RELATIONSHIP CHANGE
-  //
-  // RelationshipSelector persists the FINORA enum value.
-  // =========================================================
+  /* =========================================================
+     REVIEW STATE
+  ========================================================= */
 
-  const handleRelationshipChange = (
-    value: string,
-  ): void => {
-
-    setNominee(
-      (previous) => ({
-
-        ...previous,
-
-        relationship:
-          value,
-
-      }),
+  const identityComplete =
+    Boolean(
+      wizardData.fullName?.trim() &&
+      wizardData.mobileNumber?.trim(),
     );
 
 
-    updateWizardData({
-
-      nomineeRelationship:
-        value,
-
-    });
-
-  };
+  const addressComplete =
+    Boolean(
+      wizardData.currentAddress?.trim() ||
+      wizardData.address?.trim(),
+    );
 
 
-  // =========================================================
-// VIEW
-// =========================================================
+  const kycVerified =
+    false;
 
-return (
 
-  <TwoColumnStudio
+  const nomineeAdded =
+    Boolean(
+      nominee.nomineeName.trim() ||
+      nominee.nomineeCustomerId.trim(),
+    );
 
-    /* ===================================================
-       LEFT WORKSPACE
-    =================================================== */
 
-    left={
+  /* =========================================================
+     CHECKLIST
+  ========================================================= */
 
-      <>
+  const checklistItems = [
+
+    {
+      label:
+        "Identity Completed",
+
+      completed:
+        identityComplete,
+    },
+
+    {
+      label:
+        "Basic Details Completed",
+
+      completed:
+        Boolean(
+          wizardData.fullName?.trim() &&
+          wizardData.mobileNumber?.trim(),
+        ),
+    },
+
+    {
+      label:
+        "Address Completed",
+
+      completed:
+        addressComplete,
+    },
+
+    {
+      label:
+        "KYC Submitted — Verification Pending",
+
+      completed:
+        kycVerified,
+    },
+
+    {
+      label:
+        "Nominee Added",
+
+      completed:
+        nomineeAdded,
+    },
+
+  ];
+
+
+  /* =========================================================
+     UI
+  ========================================================= */
+
+  return (
+
+    <div
+      style={
+        containerStyle
+      }
+    >
+
+      {/* =====================================================
+          LEFT 50%
+
+          1. Nominee Information
+          2. Customer Information
+          3. Validation Status
+      ===================================================== */}
+
+      <div
+        style={
+          leftStyle
+        }
+      >
 
         <NomineeForm
 
@@ -558,53 +611,60 @@ return (
 
         />
 
-      </>
 
-    }
+        <CustomerSummary
 
+          customerId={
+            wizardData.customerId ||
+            "AUTO-GENERATED"
+          }
 
-    /* ===================================================
-       RIGHT INTELLIGENCE PANEL
-    =================================================== */
+          customerName={
+            wizardData.fullName ||
+            "--"
+          }
 
-    right={
+          phoneNumber={
+            wizardData.mobileNumber ||
+            "--"
+          }
 
-      <>
-
-        <NomineePreviewCard
-
-          value={{
-
-            customerName:
-              linkedCustomerName,
-
-            nomineeCustomerId:
-              nominee.nomineeCustomerId,
-
-            nomineeName:
-              nominee.nomineeName,
-
-            relationship:
-              nominee.relationship,
-
-            phoneNumber:
-              nominee.phoneNumber,
-
-          }}
+          kycVerified={
+            kycVerified
+          }
 
         />
 
-      </>
 
-    }
+        <ValidationStatus
 
-  />
+          identityComplete={
+            identityComplete
+          }
 
-);
+          addressComplete={
+            addressComplete
+          }
+
+          kycVerified={
+            kycVerified
+          }
+
+          nomineeAdded={
+            nomineeAdded
+          }
+
+        />
+
+      </div>
+
+    </div>
+
+  );
 
 }
 
 
-// ===========================================================
-// END
-// ===========================================================
+/* ===========================================================
+   END
+=========================================================== */

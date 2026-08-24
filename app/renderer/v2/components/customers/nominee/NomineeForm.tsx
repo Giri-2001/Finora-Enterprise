@@ -19,8 +19,16 @@ import {
 } from "../../../themes/hooks/useTheme";
 
 import {
+  useResponsive,
+} from "../../../utils/responsive";
+
+import {
   createNomineeFormStyles,
 } from "./NomineeForm.styles";
+
+import {
+  getNomineeResponsiveTokens,
+} from "../../../utils/responsive/customers/nominee/nominee.tokens";
 
 
 /* ===========================================================
@@ -155,15 +163,26 @@ export default function NomineeForm({
      FINORA THEME ENGINE
   ========================================================= */
 
+const {
+  tokens,
+  viewport,
+} = useResponsive();
+
+const nomineeTokens =
+  getNomineeResponsiveTokens(
+    viewport,
+  );
+
   const {
     theme,
   } = useTheme();
 
-
   const styles =
-    createNomineeFormStyles(
-      theme,
-    );
+  createNomineeFormStyles(
+    tokens,
+    nomineeTokens,
+    theme,
+  );
 
 
   /* =========================================================
@@ -181,7 +200,7 @@ export default function NomineeForm({
       <div style={styles.headerStyle}>
 
         <div style={styles.headerIconStyle}>
-          <UserRound size={18} />
+          <UserRound size={22} />
         </div>
 
         <div>

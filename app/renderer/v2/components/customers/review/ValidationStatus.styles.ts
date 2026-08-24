@@ -124,9 +124,6 @@ export function createValidationStatusStyles(
       background:
         theme.components.card.background,
 
-      boxShadow:
-        theme.components.card.shadow,
-
       overflow:
         "hidden",
     },
@@ -156,10 +153,10 @@ export function createValidationStatusStyles(
     headerIconStyle: {
 
       width:
-        "30px",
+        "36px",
 
       height:
-        "30px",
+        "36px",
 
       flexShrink:
         0,
@@ -217,7 +214,7 @@ export function createValidationStatusStyles(
         theme.typography.heading,
 
       fontSize:
-        "15px",
+        "18px",
 
       lineHeight:
         1.2,
@@ -237,13 +234,13 @@ export function createValidationStatusStyles(
     subtitleStyle: {
 
       margin:
-        "3px 0 0",
+        "4px 0 0",
 
       color:
         theme.typography.caption,
 
       fontSize:
-        "11px",
+        "13px",
 
       lineHeight:
         1.3,
@@ -286,7 +283,7 @@ export function createValidationStatusStyles(
         0,
 
       minHeight:
-        "43px",
+        "40px",
 
       display:
         "grid",
@@ -298,7 +295,7 @@ export function createValidationStatusStyles(
         "center",
 
       columnGap:
-        "7px",
+        "10px",
 
       borderBottom:
         `1px solid ${theme.colors.border.subtle}`,
@@ -312,10 +309,10 @@ export function createValidationStatusStyles(
     rowIconStyle: {
 
       width:
-        "22px",
+        "24px",
 
       height:
-        "22px",
+        "24px",
 
       flexShrink:
         0,
@@ -338,11 +335,9 @@ export function createValidationStatusStyles(
       color:
         theme.colors.brand.accent,
 
-      border:
-        `1px solid ${theme.colors.border.default}`,
+      border: "none",
 
-      background:
-        theme.colors.background.surfaceMuted,
+      background: "transparent",
     },
 
 
@@ -359,7 +354,7 @@ export function createValidationStatusStyles(
         theme.typography.label,
 
       fontSize:
-        "12px",
+        "14px",
 
       lineHeight:
         1.2,
@@ -434,7 +429,7 @@ export function createValidationStatusStyles(
         theme.colors.brand.accent,
 
       fontSize:
-        "10px",
+        "13px",
 
       lineHeight:
         1,
@@ -463,7 +458,7 @@ export function createValidationStatusStyles(
         theme.colors.brand.accent,
 
       fontSize:
-        "10px",
+        "13px",
 
       lineHeight:
         1,

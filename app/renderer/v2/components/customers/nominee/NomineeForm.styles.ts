@@ -18,6 +18,14 @@ import type {
   FinoraTheme,
 } from "../../../themes/core/types";
 
+import type {
+  ResponsiveTokens,
+} from "../../../utils/responsive";
+
+import type {
+  NomineeResponsiveTokens,
+} from "../../../utils/responsive/customers/nominee/nominee.tokens";
+
 
 /* ===========================================================
    STYLE CONTRACT
@@ -56,18 +64,40 @@ export interface NomineeFormStyles {
   helperStyle: CSSProperties;
 }
 
-
 /* ===========================================================
    STYLE FACTORY
 =========================================================== */
 
 export function createNomineeFormStyles(
 
+  tokens:
+    ResponsiveTokens,
+
+  nomineeTokens:
+    NomineeResponsiveTokens,
+
   theme:
     FinoraTheme,
 
 ):
+
   NomineeFormStyles {
+
+      /* =======================================================
+     RESPONSIVE TOKEN GROUPS
+  ======================================================= */
+
+  const typography =
+    tokens.typography;
+
+  const lineHeight =
+    tokens.lineHeight;
+
+  const input =
+    tokens.input;
+
+  const spacing =
+    tokens.spacing;
 
 
   return {
@@ -101,9 +131,6 @@ export function createNomineeFormStyles(
       background:
         theme.components.card.background,
 
-      boxShadow:
-        theme.components.card.shadow,
-
       overflow: "hidden",
     },
 
@@ -132,9 +159,9 @@ export function createNomineeFormStyles(
 
     headerIconStyle: {
 
-      width: "30px",
+      width: "38px",
 
-      height: "30px",
+      height: "38px",
 
       flexShrink: 0,
 
@@ -161,40 +188,47 @@ export function createNomineeFormStyles(
        TITLE
     ======================================================= */
 
-    titleStyle: {
+titleStyle: {
 
-      margin: 0,
+  margin: 0,
 
-      color:
-        theme.typography.heading,
+  color:
+    theme.typography.heading,
 
-      fontSize: "15px",
+  fontSize:
+    `${typography.heading - 5}px`,
 
-      lineHeight: 1.2,
+  lineHeight:
+    lineHeight.heading,
 
-      fontWeight: 850,
+  fontWeight:
+    800,
 
-      letterSpacing: ".1px",
-    },
-
+  letterSpacing:
+    ".1px",
+},
 
     /* =======================================================
        SUBTITLE
     ======================================================= */
 
-    subtitleStyle: {
+subtitleStyle: {
 
-      margin: "3px 0 0",
+  margin:
+    `${spacing.small - 5}px 0 0`,
 
-      color:
-        theme.typography.caption,
+  color:
+      theme.colors.text.secondary,
 
-      fontSize: "9px",
+  fontSize:
+    `${typography.body - 2.5}px`,
 
-      lineHeight: 1.3,
+  lineHeight:
+    lineHeight.body,
 
-      fontWeight: 550,
-    },
+  fontWeight:
+    600,
+},
 
 
     /* =======================================================
@@ -210,7 +244,7 @@ export function createNomineeFormStyles(
       flexShrink: 0,
 
       margin:
-        "7px 0 10px",
+        "10px 0 20px",
 
       background:
         theme.colors.border.subtle,
@@ -231,12 +265,14 @@ export function createNomineeFormStyles(
 
       display: "grid",
 
-      gridTemplateColumns:
-        "repeat(2,minmax(0,1fr))",
+     gridTemplateColumns:
+  nomineeTokens.form.gridTemplateColumns,
 
-      columnGap: "12px",
+columnGap:
+  `${nomineeTokens.form.columnGap}px`,
 
-      rowGap: "9px",
+rowGap:
+  `${nomineeTokens.form.rowGap}px`,
 
       alignContent: "start",
     },
@@ -262,21 +298,29 @@ export function createNomineeFormStyles(
        LABEL
     ======================================================= */
 
-    labelStyle: {
+labelStyle: {
 
-      color:
-        theme.typography.label,
+  color:
+    theme.typography.label,
 
-      fontSize: "9.5px",
+  fontSize:
+    "10px",
 
-      lineHeight: 1.1,
+  lineHeight:
+    1.1,
 
-      fontWeight: 850,
+  fontWeight:
+    700,
 
-      letterSpacing: ".35px",
+  letterSpacing:
+    ".35px",
 
-      textTransform: "uppercase",
-    },
+  textTransform:
+    "uppercase",
+
+    fontFamily:
+  "var(--finora-theme-font-family, Inter, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif)",
+},
 
 
     /* =======================================================
@@ -327,37 +371,37 @@ export function createNomineeFormStyles(
        INPUT
     ======================================================= */
 
-    inputStyle: {
+inputStyle: {
 
-      width: "100%",
+  width: "100%",
 
-      height: "39px",
+  height: "39px",
 
-      boxSizing: "border-box",
+  boxSizing: "border-box",
 
-      padding:
-        "0 12px 0 34px",
+  padding:
+    "0 12px 0 34px",
 
-      borderRadius: "10px",
+  borderRadius: "10px",
 
-      border:
-        `1.5px solid ${theme.components.input.border}`,
+  border:
+    `1.5px solid ${theme.components.input.border}`,
 
-      outline: "none",
+  outline: "none",
 
-      background:
-        theme.components.input.background,
+  background:
+    theme.components.input.background,
 
-      color:
-        theme.components.input.text,
+  color:
+    theme.components.input.text,
 
-      fontSize: "12px",
+  fontSize: "12px",
 
-      fontWeight: 650,
+  fontFamily:
+  "var(--finora-theme-font-family, Inter, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif)",
 
-      boxShadow:
-        theme.components.card.shadow,
-    },
+  fontWeight: 650,
+},
 
 
     /* =======================================================

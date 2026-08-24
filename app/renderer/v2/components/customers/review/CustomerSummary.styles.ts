@@ -159,9 +159,6 @@ export function createCustomerSummaryStyles(
     background:
       theme.components.card.background,
 
-    boxShadow:
-      theme.components.card.shadow,
-
     overflow: "hidden",
   };
 
@@ -178,7 +175,7 @@ export function createCustomerSummaryStyles(
 
     alignItems: "flex-start",
 
-    gap: "7px",
+    gap: "10px",
   };
 
 
@@ -190,9 +187,9 @@ export function createCustomerSummaryStyles(
 
     flexShrink: 0,
 
-    width: "32px",
+    width: "36px",
 
-    height: "32px",
+    height: "36px",
 
     boxSizing: "border-box",
 
@@ -231,7 +228,7 @@ export function createCustomerSummaryStyles(
 
     flexDirection: "column",
 
-    gap: "2px",
+    gap: "4px",
   };
 
 
@@ -248,9 +245,9 @@ export function createCustomerSummaryStyles(
     color:
       textPrimary,
 
-    fontSize: "16px",
+    fontSize: "18px",
 
-    lineHeight: 1.2,
+    lineHeight: 1.3,
 
     fontWeight: 800,
 
@@ -271,7 +268,7 @@ export function createCustomerSummaryStyles(
     color:
       textSecondary,
 
-    fontSize: "9px",
+    fontSize: "12px",
 
     lineHeight: 1.3,
 
@@ -295,7 +292,7 @@ export function createCustomerSummaryStyles(
 
     gap: "4px",
 
-    minHeight: "22px",
+    minHeight: "27px",
 
     padding: "0 9px",
 
@@ -307,12 +304,12 @@ export function createCustomerSummaryStyles(
       `1px solid ${statusColor}`,
 
     background:
-      statusBackground,
+        theme.colors.background.surfaceMuted,
 
     color:
-      statusColor,
+      textPrimary,
 
-    fontSize: "10px",
+    fontSize: "12px",
 
     lineHeight: 1,
 
@@ -336,7 +333,7 @@ export function createCustomerSummaryStyles(
 
     flexShrink: 0,
 
-    margin: "9px 0 4px",
+    margin: "9px 0 8px",
 
     background:
       borderSubtle,
@@ -358,12 +355,13 @@ export function createCustomerSummaryStyles(
 
     alignItems: "center",
 
-    gap: "7px",
+    gap: "12px",
 
-    minHeight: "43px",
+    minHeight: "40px",
 
     borderBottom:
       `1px solid ${borderSubtle}`,
+
   };
 
 
@@ -373,9 +371,9 @@ export function createCustomerSummaryStyles(
 
   const rowIconStyle: CSSProperties = {
 
-    width: "28px",
+    width: "36px",
 
-    height: "28px",
+    height: "36px",
 
     boxSizing: "border-box",
 
@@ -387,11 +385,9 @@ export function createCustomerSummaryStyles(
 
     borderRadius: "7px",
 
-    border:
-      `1px solid ${borderSubtle}`,
+    border: "none",
 
-    background:
-      surfaceMuted,
+    background: "transparent",
 
     color:
         theme.colors.brand.accent,
@@ -409,7 +405,7 @@ export function createCustomerSummaryStyles(
     color:
       textPrimary,
 
-    fontSize: "10px",
+    fontSize: "11px",
 
     lineHeight: 1.2,
 
@@ -432,7 +428,7 @@ export function createCustomerSummaryStyles(
     color:
       textPrimary,
 
-    fontSize: "11px",
+    fontSize: "13px",
 
     lineHeight: 1.25,
 

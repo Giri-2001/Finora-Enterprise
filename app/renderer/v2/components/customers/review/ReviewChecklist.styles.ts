@@ -71,6 +71,12 @@ export interface ReviewChecklistStyles {
   pendingStyle:
     CSSProperties;
 
+  statusStyle:
+  CSSProperties;
+
+statusIndicatorStyle:
+  CSSProperties;
+
 }
 
 
@@ -87,6 +93,44 @@ export function createReviewChecklistStyles(
   ReviewChecklistStyles {
 
   return {
+
+    statusStyle: {
+
+  display:
+    "inline-flex",
+
+  alignItems:
+    "center",
+
+  justifyContent:
+    "flex-end",
+
+  gap:
+    "9px",
+
+  flexShrink:
+    0,
+
+  whiteSpace:
+    "nowrap",
+
+},
+
+statusIndicatorStyle: {
+
+  display:
+    "inline-flex",
+
+  alignItems:
+    "center",
+
+  justifyContent:
+    "center",
+
+  flexShrink:
+    0,
+
+},
 
     /* =======================================================
        CARD
@@ -118,9 +162,6 @@ export function createReviewChecklistStyles(
       background:
         theme.components.card.background,
 
-      boxShadow:
-        theme.components.card.shadow,
-
       overflow: "hidden",
     },
 
@@ -147,9 +188,9 @@ export function createReviewChecklistStyles(
 
     headerIconStyle: {
 
-      width: "30px",
+      width: "36px",
 
-      height: "30px",
+      height: "36px",
 
       flexShrink: 0,
 
@@ -199,10 +240,10 @@ export function createReviewChecklistStyles(
         theme.typography.heading,
 
       fontSize:
-        "15px",
+        "18px",
 
       lineHeight:
-        1.2,
+        1.3,
 
       fontWeight:
         750,
@@ -219,13 +260,13 @@ export function createReviewChecklistStyles(
     subtitleStyle: {
 
       margin:
-        "3px 0 0",
+        "4px 0 0",
 
       color:
         theme.typography.caption,
 
       fontSize:
-        "11px",
+        "13px",
 
       lineHeight:
         1.3,
@@ -248,7 +289,7 @@ export function createReviewChecklistStyles(
       flexShrink: 0,
 
       margin:
-        "8px 0 3px",
+        "10px 0 5px",
 
       background:
         theme.colors.border.subtle,
@@ -264,7 +305,7 @@ export function createReviewChecklistStyles(
       minWidth: 0,
 
       minHeight:
-        "42px",
+        "40px",
 
       display: "grid",
 
@@ -274,7 +315,7 @@ export function createReviewChecklistStyles(
       alignItems: "center",
 
       columnGap:
-        "7px",
+        "10px",
 
       borderBottom:
         `1px solid ${theme.colors.border.subtle}`,
@@ -287,9 +328,9 @@ export function createReviewChecklistStyles(
 
     itemIconStyle: {
 
-      width: "22px",
+      width: "30px",
 
-      height: "22px",
+      height: "30px",
 
       flexShrink: 0,
 
@@ -307,11 +348,10 @@ export function createReviewChecklistStyles(
       color:
         theme.colors.brand.accent,
 
-      border:
-        `1px solid ${theme.colors.border.default}`,
+      border: "none",
 
-      background:
-        theme.colors.background.surfaceMuted,
+      background: "transparent",
+
     },
 
 
@@ -327,16 +367,16 @@ export function createReviewChecklistStyles(
         theme.typography.label,
 
       fontSize:
-        "12px",
+        "14px",
 
       lineHeight:
         1.2,
 
       fontWeight:
-        700,
+        600,
 
       letterSpacing:
-        ".12px",
+        ".15px",
 
       whiteSpace:
         "nowrap",
@@ -361,7 +401,7 @@ export function createReviewChecklistStyles(
         theme.colors.brand.accent,
 
       fontSize:
-        "10px",
+        "13px",
 
       lineHeight:
         1,
@@ -389,7 +429,7 @@ export function createReviewChecklistStyles(
         theme.colors.brand.accent,
 
       fontSize:
-        "10px",
+        "13px",
 
       lineHeight:
         1,

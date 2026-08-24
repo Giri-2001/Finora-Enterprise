@@ -131,7 +131,7 @@ function SummaryRow({
       >
 
         <Icon
-          size={13}
+          size={18}
           strokeWidth={1.8}
         />
 
@@ -253,7 +253,7 @@ export default function CustomerSummary({
         >
 
           <ClipboardList
-            size={15}
+            size={25}
             strokeWidth={1.8}
           />
 
@@ -305,7 +305,7 @@ export default function CustomerSummary({
         >
 
           <ShieldCheck
-            size={12}
+            size={15}
             strokeWidth={1.9}
           />
 

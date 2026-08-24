@@ -183,7 +183,7 @@ export default function ReviewActions({
 
           <ClipboardCheck
             size={
-              tokens.icon.sm
+              tokens.icon.lg
             }
             strokeWidth={1.8}
           />

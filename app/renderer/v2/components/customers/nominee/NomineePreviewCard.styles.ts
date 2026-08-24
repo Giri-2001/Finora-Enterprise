@@ -71,9 +71,6 @@ export function createNomineePreviewCardStyles(
     background:
       theme.components.card.background,
 
-    boxShadow:
-      theme.components.card.shadow,
-
     overflow: "hidden",
   };
 
@@ -110,7 +107,7 @@ export function createNomineePreviewCardStyles(
 
     alignItems: "flex-start",
 
-    gap: "8px",
+    gap: "10px",
   };
 
 
@@ -129,9 +126,9 @@ export function createNomineePreviewCardStyles(
 
     justifyContent: "center",
 
-    width: "24px",
+    width: "36px",
 
-    height: "24px",
+    height: "36px",
 
     borderRadius: "8px",
 
@@ -153,9 +150,9 @@ export function createNomineePreviewCardStyles(
   const headerIconStyle:
     CSSProperties = {
 
-    width: "15px",
+    width: "24px",
 
-    height: "15px",
+    height: "24px",
 
     strokeWidth: 1.9,
 
@@ -176,9 +173,9 @@ export function createNomineePreviewCardStyles(
     color:
       theme.colors.text.primary,
 
-    fontSize: "15px",
+    fontSize: "19px",
 
-    lineHeight: 1.2,
+    lineHeight: 1.3,
 
     fontWeight: 850,
   };
@@ -191,12 +188,12 @@ export function createNomineePreviewCardStyles(
   const subtitleStyle:
     CSSProperties = {
 
-    margin: "3px 0 0",
+    margin: "5px 0 0",
 
     color:
       theme.colors.text.secondary,
 
-    fontSize: "9px",
+    fontSize: "13px",
 
     lineHeight: 1.3,
 
@@ -251,7 +248,7 @@ export function createNomineePreviewCardStyles(
 
     flexShrink: 0,
 
-    margin: "9px 0 4px",
+    margin: "10px 0 10px",
 
     background:
       theme.colors.border.subtle,
@@ -274,9 +271,9 @@ export function createNomineePreviewCardStyles(
 
     alignItems: "center",
 
-    gap: "6px",
+    gap: "10px",
 
-    minHeight: "30px",
+    minHeight: "38px",
 
     borderBottom:
       `1px solid ${theme.colors.border.subtle}`,
@@ -312,9 +309,9 @@ export function createNomineePreviewCardStyles(
   const rowIconStyle:
     CSSProperties = {
 
-    width: "14px",
+    width: "18px",
 
-    height: "14px",
+    height: "18px",
 
     flexShrink: 0,
 
@@ -333,9 +330,9 @@ export function createNomineePreviewCardStyles(
     CSSProperties = {
 
     color:
-      theme.colors.text.muted,
+      theme.colors.text.primary,
 
-    fontSize: "8px",
+    fontSize: "11px",
 
     lineHeight: 1.2,
 
@@ -396,12 +393,12 @@ export function createNomineePreviewCardStyles(
   const footerStyle:
     CSSProperties = {
 
-    marginTop: "8px",
+    marginTop: "12px",
 
     color:
       theme.colors.text.muted,
 
-    fontSize: "8px",
+    fontSize: "12px",
 
     lineHeight: 1.35,
 
