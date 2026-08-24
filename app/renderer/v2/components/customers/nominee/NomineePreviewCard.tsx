@@ -1,14 +1,21 @@
 /* ===========================================================
    FINORA ENTERPRISE V2
+
    CUSTOMER NOMINEE PREVIEW
 
    RESPONSIBILITY:
    - Live nominee information preview
    - Existing FINORA customer link presentation
    - Read-only customer relationship summary
+   - Semantic Lucide icons for preview rows
 
    BUSINESS LOGIC:
    - NONE
+
+   THEME:
+   - Consumes the central FINORA Theme Engine
+   - No local colour palette
+   - No hard-coded theme colours
 
    STYLES:
    NomineePreviewCard.styles.ts
@@ -19,19 +26,36 @@
    a FINORA Customer ID is valid.
 =========================================================== */
 
+
+/* ===========================================================
+   IMPORTS
+=========================================================== */
+
 import {
-  cardStyle,
-  headerStyle,
-  titleStyle,
-  subtitleStyle,
-  dividerStyle,
-  rowStyle,
-  labelStyle,
-  valueStyle,
-  emptyValueStyle,
-  linkedBadgeStyle,
-  footerStyle,
+  UserRound,
+  IdCard,
+  UsersRound,
+  Phone,
+} from "lucide-react";
+
+
+/* ===========================================================
+   THEME ENGINE
+=========================================================== */
+
+import {
+  useTheme,
+} from "../../../themes/provider/ThemeProvider";
+
+
+/* ===========================================================
+   STYLES
+=========================================================== */
+
+import {
+  createNomineePreviewCardStyles,
 } from "./NomineePreviewCard.styles";
+
 
 /* ===========================================================
    TYPES
@@ -50,6 +74,7 @@ export interface NomineePreviewData {
   phoneNumber?: string;
 }
 
+
 interface NomineePreviewCardProps {
 
   value: NomineePreviewData;
@@ -61,46 +86,85 @@ interface NomineePreviewCardProps {
   isCustomerLinked?: boolean;
 }
 
+
 /* ===========================================================
    ROW
 =========================================================== */
 
 function PreviewRow({
+  icon: Icon,
   label,
   value,
+  styles,
 }: {
+  icon: typeof UserRound;
   label: string;
-
   value?: string;
+  styles: ReturnType<
+    typeof createNomineePreviewCardStyles
+  >;
 }) {
 
   const hasValue =
-    Boolean(value?.trim());
+    Boolean(
+      value?.trim(),
+    );
+
 
   return (
 
-    <div style={rowStyle}>
+    <div
+      style={
+        styles.rowStyle
+      }
+    >
 
-      <span style={labelStyle}>
+      <div
+        style={
+          styles.rowIconWrapperStyle
+        }
+        aria-hidden="true"
+      >
+
+        <Icon
+          style={
+            styles.rowIconStyle
+          }
+        />
+
+      </div>
+
+
+      <span
+        style={
+          styles.labelStyle
+        }
+      >
         {label}
       </span>
+
 
       <span
         style={
           hasValue
-            ? valueStyle
-            : emptyValueStyle
+            ? styles.valueStyle
+            : styles.emptyValueStyle
         }
       >
-        {hasValue
-          ? value
-          : "--"}
+
+        {
+          hasValue
+            ? value
+            : "--"
+        }
+
       </span>
 
     </div>
 
   );
 }
+
 
 /* ===========================================================
    COMPONENT
@@ -114,43 +178,132 @@ export default function NomineePreviewCard({
 
 }: NomineePreviewCardProps) {
 
+
+  /* =========================================================
+     THEME ENGINE
+
+     The active FINORA theme is resolved centrally through
+     ThemeProvider.
+
+     This component does not own a theme palette.
+  ========================================================= */
+
+  const {
+    theme,
+  } = useTheme();
+
+
+  /* =========================================================
+     STYLES
+
+     All visual colours are resolved from the active theme.
+     Layout values remain presentation styles and are not
+     part of the theme system.
+  ========================================================= */
+
+  const styles =
+    createNomineePreviewCardStyles(
+      theme,
+    );
+
+
+  /* =========================================================
+     RENDER
+  ========================================================= */
+
   return (
 
-    <section style={cardStyle}>
+    <section
+      style={
+        styles.cardStyle
+      }
+    >
 
       {/* =====================================================
          HEADER
       ===================================================== */}
 
-      <div style={headerStyle}>
+      <div
+        style={
+          styles.headerStyle
+        }
+      >
 
-        <div>
+        <div
+          style={
+            styles.headerContentStyle
+          }
+        >
 
-          <h3 style={titleStyle}>
-            Nominee Preview
-          </h3>
+          <div
+            style={
+              styles.headerIconWrapperStyle
+            }
+            aria-hidden="true"
+          >
 
-          <p style={subtitleStyle}>
-            Live relationship and nominee information.
-          </p>
+            <UserRound
+              style={
+                styles.headerIconStyle
+              }
+            />
+
+          </div>
+
+
+          <div>
+
+            <h3
+              style={
+                styles.titleStyle
+              }
+            >
+              Nominee Preview
+            </h3>
+
+
+            <p
+              style={
+                styles.subtitleStyle
+              }
+            >
+              Live relationship and nominee information.
+            </p>
+
+          </div>
 
         </div>
 
-        {isCustomerLinked && (
 
-          <div style={linkedBadgeStyle}>
-            ✓ Linked
-          </div>
+        {
+          isCustomerLinked && (
 
-        )}
+            <div
+              style={
+                styles.linkedBadgeStyle
+              }
+            >
+
+              ✓ Linked
+
+            </div>
+
+          )
+        }
 
       </div>
+
 
       {/* =====================================================
          DIVIDER
       ===================================================== */}
 
-      <div style={dividerStyle} />
+      <div
+        style={
+          styles.dividerStyle
+        }
+      />
+
 
       {/* =====================================================
          PREVIEW DATA
@@ -159,55 +312,102 @@ export default function NomineePreviewCard({
       <div>
 
         <PreviewRow
+          icon={
+            UserRound
+          }
           label="Customer"
           value={
             value.customerName
           }
+          styles={
+            styles
+          }
         />
 
+
         <PreviewRow
+          icon={
+            IdCard
+          }
           label="FINORA ID"
           value={
             value.nomineeCustomerId
           }
+          styles={
+            styles
+          }
         />
 
+
         <PreviewRow
+          icon={
+            UserRound
+          }
           label="Nominee"
           value={
             value.nomineeName
           }
+          styles={
+            styles
+          }
         />
 
+
         <PreviewRow
+          icon={
+            UsersRound
+          }
           label="Relationship"
           value={
             value.relationship
           }
+          styles={
+            styles
+          }
         />
 
+
         <PreviewRow
+          icon={
+            Phone
+          }
           label="Phone"
           value={
             value.phoneNumber
+          }
+          styles={
+            styles
           }
         />
 
       </div>
 
+
       {/* =====================================================
          FOOTER
       ===================================================== */}
 
-      <div style={footerStyle}>
+      <div
+        style={
+          styles.footerStyle
+        }
+      >
 
-        {isCustomerLinked
-          ? "Existing FINORA customer linked successfully."
-          : "Enter a FINORA Customer ID to link an existing customer."}
+        {
+          isCustomerLinked
+            ? "Existing FINORA customer linked successfully."
+            : "Enter a FINORA Customer ID to link an existing customer."
+        }
 
       </div>
 
     </section>
 
   );
+
 }
+
+
+/* ===========================================================
+   END OF FILE
+=========================================================== */

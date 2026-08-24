@@ -52,9 +52,6 @@ import {
   useState,
 } from "react";
 
-import StudioLayout
-  from "../../../common/layout/StudioLayout";
-
 import TwoColumnStudio
   from "../../../common/layout/TwoColumnStudio";
 
@@ -66,17 +63,8 @@ import NomineeForm, {
   type NomineeFormData,
 } from "../../nominee/NomineeForm";
 
-import RelationshipSelector
-  from "../../nominee/RelationshipSelector";
-
 import NomineePreviewCard
   from "../../nominee/NomineePreviewCard";
-
-import NomineeSummaryCard
-  from "../../nominee/NomineeSummaryCard";
-
-import NomineeDraftStatus
-  from "../../nominee/NomineeDraftStatus";
 
 import type {
   CustomerWizardData,
@@ -539,130 +527,80 @@ export default function Step5Nominee({
 
 
   // =========================================================
-  // VIEW
-  // =========================================================
+// VIEW
+// =========================================================
 
-  return (
+return (
 
-    <StudioLayout
+  <TwoColumnStudio
 
-      /*
-       * Customer Workspace already owns
-       * the global FINORA header.
-       */
+    /* ===================================================
+       LEFT WORKSPACE
+    =================================================== */
 
-      showHeader={false}
+    left={
 
+      <>
 
-      /*
-       * Keep the existing Step 5
-       * viewport behavior.
-       */
+        <NomineeForm
 
-      allowScroll={true}
+          value={
+            nominee
+          }
 
-    >
+          onChange={
+            handleChange
+          }
 
-      {/* =====================================================
-         TWO COLUMN WORKSPACE
-      ===================================================== */}
+          isCustomerLinked={
+            isCustomerLinked
+          }
 
-      <TwoColumnStudio
+        />
 
-        /* ===================================================
-           LEFT WORKSPACE
-        =================================================== */
+      </>
 
-        left={
-
-          <>
-
-            <NomineeForm
-
-              value={
-                nominee
-              }
-
-              onChange={
-                handleChange
-              }
-
-              isCustomerLinked={
-                isCustomerLinked
-              }
-
-            />
+    }
 
 
-            <RelationshipSelector
+    /* ===================================================
+       RIGHT INTELLIGENCE PANEL
+    =================================================== */
 
-              value={
-                nominee.relationship
-              }
+    right={
 
-              onChange={
-                handleRelationshipChange
-              }
+      <>
 
-            />
+        <NomineePreviewCard
 
-          </>
+          value={{
 
-        }
+            customerName:
+              linkedCustomerName,
 
+            nomineeCustomerId:
+              nominee.nomineeCustomerId,
 
-        /* ===================================================
-           RIGHT INTELLIGENCE PANEL
-        =================================================== */
+            nomineeName:
+              nominee.nomineeName,
 
-        right={
+            relationship:
+              nominee.relationship,
 
-          <>
+            phoneNumber:
+              nominee.phoneNumber,
 
-            <NomineePreviewCard
+          }}
 
-              value={{
+        />
 
-                customerName:
-                  linkedCustomerName,
+      </>
 
-                nomineeCustomerId:
-                  nominee.nomineeCustomerId,
+    }
 
-                nomineeName:
-                  nominee.nomineeName,
+  />
 
-                relationship:
-                  nominee.relationship,
-
-                phoneNumber:
-                  nominee.phoneNumber,
-
-              }}
-
-            />
-
-
-            <NomineeSummaryCard />
-
-
-            <NomineeDraftStatus
-
-              isDraftSaved={
-                false
-              }
-
-            />
-
-          </>
-
-        }
-
-      />
-
-    </StudioLayout>
-
-  );
+);
 
 }
 

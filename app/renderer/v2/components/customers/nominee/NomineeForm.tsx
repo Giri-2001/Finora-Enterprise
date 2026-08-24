@@ -1,43 +1,27 @@
 /* ===========================================================
    FINORA ENTERPRISE V2
    CUSTOMER NOMINEE INFORMATION
-
-   RESPONSIBILITY:
-   - Existing FINORA customer ID input
-   - Nominee name presentation
-   - Nominee phone presentation
-   - Nominee form change events
-   - Linked customer readonly presentation
-
-   BUSINESS LOGIC:
-   - NONE
-
-   STYLES:
-   NomineeForm.styles.ts
-
-   IMPORTANT:
-   The component does not decide whether a customer exists.
-   Step5Nominee owns customer lookup and passes the
-   isCustomerLinked state explicitly.
 =========================================================== */
 
 import type {
-  CSSProperties,
+  ReactNode,
 } from "react";
 
 import {
-  wrapperStyle,
-  headerStyle,
-  titleStyle,
-  subtitleStyle,
-  gridStyle,
-  fieldStyle,
-  labelStyle,
-  inputStyle,
-  readonlyInputStyle,
-  helperStyle,
-  sectionDividerStyle,
+  UserRound,
+  User,
+  Phone,
+  UsersRound,
+} from "lucide-react";
+
+import {
+  useTheme,
+} from "../../../themes/hooks/useTheme";
+
+import {
+  createNomineeFormStyles,
 } from "./NomineeForm.styles";
+
 
 /* ===========================================================
    TYPES
@@ -54,6 +38,7 @@ export interface NomineeFormData {
   phoneNumber: string;
 }
 
+
 interface NomineeFormProps {
 
   value: NomineeFormData;
@@ -63,14 +48,9 @@ interface NomineeFormProps {
     value: string,
   ) => void;
 
-  /**
-   * True only when the entered FINORA Customer ID
-   * successfully resolves to an existing customer.
-   *
-   * Business lookup is handled by Step5Nominee.
-   */
   isCustomerLinked?: boolean;
 }
+
 
 /* ===========================================================
    FIELD
@@ -80,10 +60,12 @@ function Field({
   label,
   value,
   onChange,
+  icon,
   readOnly = false,
   placeholder,
   helper,
   type = "text",
+  styles,
 }: {
   label: string;
 
@@ -93,6 +75,8 @@ function Field({
     value: string,
   ) => void;
 
+  icon: ReactNode;
+
   readOnly?: boolean;
 
   placeholder?: string;
@@ -100,52 +84,57 @@ function Field({
   helper?: string;
 
   type?: string;
+
+  styles: ReturnType<
+    typeof createNomineeFormStyles
+  >;
 }) {
 
   return (
 
-    <div style={fieldStyle}>
+    <div style={styles.fieldStyle}>
 
-      <label style={labelStyle}>
+      <label style={styles.labelStyle}>
         {label}
       </label>
 
-      <input
-        type={type}
-        value={value}
-        readOnly={readOnly}
-        placeholder={placeholder}
-        autoComplete="off"
-        style={
-          readOnly
-            ? readonlyInputStyle
-            : inputStyle
-        }
-        onChange={(event) => {
+      <div style={styles.inputWrapperStyle}>
 
-          if (readOnly) {
-            return;
+        <span style={styles.inputIconStyle}>
+          {icon}
+        </span>
+
+        <input
+          type={type}
+          value={value}
+          readOnly={readOnly}
+          placeholder={placeholder}
+          autoComplete="off"
+          style={
+            readOnly
+              ? styles.readonlyInputStyle
+              : styles.inputStyle
           }
+          onChange={(event) => {
 
-          onChange(
-            event.target.value,
-          );
+            if (readOnly) {
+              return;
+            }
 
-        }}
-      />
+            onChange(
+              event.target.value,
+            );
 
-      {helper && (
+          }}
+        />
 
-        <div style={helperStyle}>
-          {helper}
-        </div>
-
-      )}
+      </div>
 
     </div>
 
   );
 }
+
 
 /* ===========================================================
    COMPONENT
@@ -161,23 +150,47 @@ export default function NomineeForm({
 
 }: NomineeFormProps) {
 
+
+  /* =========================================================
+     FINORA THEME ENGINE
+  ========================================================= */
+
+  const {
+    theme,
+  } = useTheme();
+
+
+  const styles =
+    createNomineeFormStyles(
+      theme,
+    );
+
+
+  /* =========================================================
+     RENDER
+  ========================================================= */
+
   return (
 
-    <section style={wrapperStyle}>
+    <section style={styles.wrapperStyle}>
 
       {/* =====================================================
          HEADER
       ===================================================== */}
 
-      <div style={headerStyle}>
+      <div style={styles.headerStyle}>
+
+        <div style={styles.headerIconStyle}>
+          <UserRound size={18} />
+        </div>
 
         <div>
 
-          <h2 style={titleStyle}>
+          <h2 style={styles.titleStyle}>
             Nominee Information
           </h2>
 
-          <p style={subtitleStyle}>
+          <p style={styles.subtitleStyle}>
             Link an existing FINORA customer or enter nominee details.
           </p>
 
@@ -185,17 +198,15 @@ export default function NomineeForm({
 
       </div>
 
-      <div style={sectionDividerStyle} />
+
+      <div style={styles.sectionDividerStyle} />
+
 
       {/* =====================================================
-         FORM
+         FOUR INPUTS
       ===================================================== */}
 
-      <div style={gridStyle}>
-
-        {/* ===================================================
-           FINORA CUSTOMER ID
-        =================================================== */}
+      <div style={styles.gridStyle}>
 
         <Field
           label="FINORA Customer ID"
@@ -208,17 +219,18 @@ export default function NomineeForm({
               nextValue,
             )
           }
+          icon={
+            <User size={15} />
+          }
           placeholder="FIN-CUS-000001"
           helper={
             isCustomerLinked
               ? "Registered FINORA customer linked successfully."
-              : "Enter a registered FINORA Customer ID to link the nominee."
+              : "Enter a registered FINORA Customer ID."
           }
+          styles={styles}
         />
 
-        {/* ===================================================
-           NOMINEE NAME
-        =================================================== */}
 
         <Field
           label="Nominee Name"
@@ -231,20 +243,21 @@ export default function NomineeForm({
               nextValue,
             )
           }
+          icon={
+            <UserRound size={15} />
+          }
           readOnly={
             isCustomerLinked
           }
           placeholder="Nominee full name"
           helper={
             isCustomerLinked
-              ? "Automatically linked from the registered customer profile."
+              ? "Automatically linked from customer profile."
               : "Enter nominee full name."
           }
+          styles={styles}
         />
 
-        {/* ===================================================
-           PHONE NUMBER
-        =================================================== */}
 
         <Field
           label="Phone Number"
@@ -257,17 +270,109 @@ export default function NomineeForm({
               nextValue,
             )
           }
+          icon={
+            <Phone size={15} />
+          }
           readOnly={
             isCustomerLinked
           }
           placeholder="Nominee mobile number"
           helper={
             isCustomerLinked
-              ? "Automatically linked from the registered customer profile."
+              ? "Automatically linked from customer profile."
               : "Enter nominee mobile number."
           }
           type="tel"
+          styles={styles}
         />
+
+
+        {/* =================================================
+           RELATIONSHIP
+        ================================================= */}
+
+        <div style={styles.fieldStyle}>
+
+          <label style={styles.labelStyle}>
+            Relationship
+          </label>
+
+          <div style={styles.inputWrapperStyle}>
+
+            <span style={styles.inputIconStyle}>
+              <UsersRound size={15} />
+            </span>
+
+            <select
+              value={
+                value.relationship
+              }
+              style={styles.selectStyle}
+              onChange={(event) =>
+                onChange(
+                  "relationship",
+                  event.target.value,
+                )
+              }
+            >
+
+              <option value="">
+                Select Relationship
+              </option>
+
+              <option value="Father">
+                Father
+              </option>
+
+              <option value="Mother">
+                Mother
+              </option>
+
+              <option value="Husband">
+                Husband
+              </option>
+
+              <option value="Wife">
+                Wife
+              </option>
+
+              <option value="Son">
+                Son
+              </option>
+
+              <option value="Daughter">
+                Daughter
+              </option>
+
+              <option value="Brother">
+                Brother
+              </option>
+
+              <option value="Sister">
+                Sister
+              </option>
+
+              <option value="Uncle">
+                Uncle
+              </option>
+
+              <option value="Aunt">
+                Aunt
+              </option>
+
+              <option value="Friend">
+                Friend
+              </option>
+
+              <option value="Other">
+                Other
+              </option>
+
+            </select>
+
+          </div>
+
+        </div>
 
       </div>
 
@@ -275,3 +380,8 @@ export default function NomineeForm({
 
   );
 }
+
+
+/* ===========================================================
+   END
+=========================================================== */

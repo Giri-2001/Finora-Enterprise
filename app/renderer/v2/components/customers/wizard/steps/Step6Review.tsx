@@ -58,9 +58,6 @@ import ReviewChecklist
 import ReviewActions
   from "../../review/ReviewActions";
 
-import ReviewDraftStatus
-  from "../../review/ReviewDraftStatus";
-
 import {
   customerService,
 } from "../../../../services/customer/customerService";
@@ -98,7 +95,6 @@ import {
   rightColumnStyle,
   actionPanelStyle,
   actionAreaStyle,
-  draftAreaStyle,
 } from "./Step6Review.styles";
 
 
@@ -2003,18 +1999,6 @@ const drivingLicence =
 
 
           <div style={actionPanelStyle}>
-
-            <div style={draftAreaStyle}>
-
-              <ReviewDraftStatus
-
-                isDraftSaved={
-                  false
-                }
-
-              />
-
-            </div>
 
 
             <div style={actionAreaStyle}>

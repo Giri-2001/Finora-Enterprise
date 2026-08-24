@@ -40,7 +40,6 @@ import type {
    The workspace occupies the complete available
    Step 6 content area between header and footer.
 =========================================================== */
-
 export const workspaceStyle: CSSProperties = {
 
   width: "100%",
@@ -51,7 +50,7 @@ export const workspaceStyle: CSSProperties = {
 
   minHeight: 0,
 
-  flex: "1 1 0",
+  flex: "1 1 auto",
 
   display: "grid",
 
@@ -67,18 +66,19 @@ export const workspaceStyle: CSSProperties = {
 
   boxSizing: "border-box",
 
-  /*
-   * Same breathing-space language as Step 4.
-   * Prevents cards touching the screen edges.
-   */
   padding:
     "10px 18px",
 
-  overflow: "hidden",
+  overflowY: "auto",
+
+  overflowX: "hidden",
 
   alignItems: "stretch",
 
   justifyItems: "stretch",
+
+  alignSelf: "stretch",
+
 };
 
 /* ===========================================================
@@ -130,8 +130,6 @@ export const rightColumnStyle: CSSProperties = {
 
    Bottom-right area:
 
-   Draft Status
-   ↓
    Save Customer
    ↓
    Edit Details
@@ -162,23 +160,6 @@ export const actionPanelStyle: CSSProperties = {
   alignSelf: "stretch",
 
   justifySelf: "stretch",
-};
-
-/* ===========================================================
-   DRAFT AREA
-
-   Draft status gets enough space to remain readable.
-=========================================================== */
-
-export const draftAreaStyle: CSSProperties = {
-
-  width: "100%",
-
-  minWidth: 0,
-
-  flexShrink: 0,
-
-  boxSizing: "border-box",
 };
 
 /* ===========================================================

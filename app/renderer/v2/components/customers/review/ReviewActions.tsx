@@ -1,5 +1,6 @@
 /* ===========================================================
    FINORA ENTERPRISE V2
+
    CUSTOMER REVIEW ACTIONS
 
    RESPONSIBILITY:
@@ -7,23 +8,61 @@
    - Save customer action
    - Edit details action
    - Cancel action
+   - Premium review-action header presentation
 
    BUSINESS LOGIC:
    - NONE
 
    IMPORTANT:
-   Action handlers are supplied by Step6Review.
+   - Action handlers are supplied by Step6Review.
+   - Existing save/edit/cancel flow is preserved.
+   - Theme colours come only from FINORA Theme Engine.
+   - Responsive geometry comes only from Responsive Engine.
 
    STYLES:
    ReviewActions.styles.ts
 =========================================================== */
 
+
+/* ===========================================================
+   IMPORTS
+=========================================================== */
+
 import {
-  wrapperStyle,
-  primaryButtonStyle,
-  secondaryButtonStyle,
-  dangerButtonStyle,
+  ClipboardCheck,
+  Pencil,
+  Save,
+  XCircle,
+  LoaderCircle,
+} from "lucide-react";
+
+
+/* ===========================================================
+   RESPONSIVE ENGINE
+=========================================================== */
+
+import {
+  useResponsive,
+} from "../../../utils/responsive";
+
+
+/* ===========================================================
+   THEME ENGINE
+=========================================================== */
+
+import {
+  useTheme,
+} from "../../../themes/provider";
+
+
+/* ===========================================================
+   PRESENTATION STYLES
+=========================================================== */
+
+import {
+  createReviewActionsStyles,
 } from "./ReviewActions.styles";
+
 
 /* ===========================================================
    TYPES
@@ -31,16 +70,22 @@ import {
 
 interface ReviewActionsProps {
 
-  onSave?: () => void;
+  onSave?:
+    () => void;
 
-  onEdit?: () => void;
+  onEdit?:
+    () => void;
 
-  onCancel?: () => void;
+  onCancel?:
+    () => void;
 
-  isSaving?: boolean;
+  isSaving?:
+    boolean;
 
-  disabled?: boolean;
+  disabled?:
+    boolean;
 }
+
 
 /* ===========================================================
    COMPONENT
@@ -54,80 +99,275 @@ export default function ReviewActions({
 
   onCancel,
 
-  isSaving = false,
+  isSaving =
+    false,
 
-  disabled = false,
+  disabled =
+    false,
 
 }: ReviewActionsProps) {
 
+
+  /* =========================================================
+     RESPONSIVE ENGINE
+  ========================================================= */
+
+  const {
+    tokens,
+  } =
+    useResponsive();
+
+
+  /* =========================================================
+     THEME ENGINE
+  ========================================================= */
+
+  const {
+    theme,
+  } =
+    useTheme();
+
+
+  /* =========================================================
+     THEME + RESPONSIVE STYLES
+  ========================================================= */
+
+  const styles =
+    createReviewActionsStyles(
+      tokens,
+      theme,
+    );
+
+
+  /* =========================================================
+     ACTION STATE
+  ========================================================= */
+
   const actionsDisabled =
-    disabled || isSaving;
+    disabled ||
+    isSaving;
+
+
+  /* =========================================================
+     RENDER
+  ========================================================= */
 
   return (
 
-    <div style={wrapperStyle}>
+    <section
+      style={
+        styles.cardStyle
+      }
+    >
 
       {/* =====================================================
-         SAVE
+         HEADER
       ===================================================== */}
 
-      <button
-
-        type="button"
-
-        style={primaryButtonStyle}
-
-        onClick={onSave}
-
-        disabled={actionsDisabled}
-
+      <div
+        style={
+          styles.headerStyle
+        }
       >
-        {isSaving
-          ? "Saving Customer..."
-          : "Save Customer"}
 
-      </button>
+        {/* ===================================================
+           HEADER ICON
+        =================================================== */}
+
+        <span
+          style={
+            styles.headerIconStyle
+          }
+          aria-hidden="true"
+        >
+
+          <ClipboardCheck
+            size={
+              tokens.icon.sm
+            }
+            strokeWidth={1.8}
+          />
+
+        </span>
+
+
+        {/* ===================================================
+           HEADER TEXT
+        =================================================== */}
+
+        <div
+          style={
+            styles.headerTextStyle
+          }
+        >
+
+          <h3
+            style={
+              styles.titleStyle
+            }
+          >
+
+            Customer Review Actions
+
+          </h3>
+
+
+          <p
+            style={
+              styles.subtitleStyle
+            }
+          >
+
+            Choose the next action for this customer profile.
+
+          </p>
+
+        </div>
+
+      </div>
+
 
       {/* =====================================================
-         EDIT
+         DIVIDER
       ===================================================== */}
 
-      <button
+      <div
+        style={
+          styles.dividerStyle
+        }
+      />
 
-        type="button"
-
-        style={secondaryButtonStyle}
-
-        onClick={onEdit}
-
-        disabled={actionsDisabled}
-
-      >
-        Edit Details
-
-      </button>
 
       {/* =====================================================
-         CANCEL
+         ACTION BUTTONS
       ===================================================== */}
 
-      <button
-
-        type="button"
-
-        style={dangerButtonStyle}
-
-        onClick={onCancel}
-
-        disabled={actionsDisabled}
-
+      <div
+        style={
+          styles.actionListStyle
+        }
       >
-        Cancel
 
-      </button>
+        {/* ===================================================
+           SAVE CUSTOMER
+        =================================================== */}
 
-    </div>
+        <button
+          type="button"
+          style={
+            styles.primaryButtonStyle
+          }
+          onClick={
+            onSave
+          }
+          disabled={
+            actionsDisabled
+          }
+        >
+
+          {
+            isSaving
+              ? (
+                <LoaderCircle
+                  size={
+                    tokens.icon.sm
+                  }
+                  strokeWidth={2}
+                />
+              )
+              : (
+                <Save
+                  size={
+                    tokens.icon.sm
+                  }
+                  strokeWidth={1.9}
+                />
+              )
+          }
+
+          <span>
+
+            {
+              isSaving
+                ? "Saving Customer..."
+                : "Save Customer"
+            }
+
+          </span>
+
+        </button>
+
+
+        {/* ===================================================
+           EDIT DETAILS
+        =================================================== */}
+
+        <button
+          type="button"
+          style={
+            styles.secondaryButtonStyle
+          }
+          onClick={
+            onEdit
+          }
+          disabled={
+            actionsDisabled
+          }
+        >
+
+          <Pencil
+            size={
+              tokens.icon.sm
+            }
+            strokeWidth={1.9}
+          />
+
+          <span>
+            Edit Details
+          </span>
+
+        </button>
+
+
+        {/* ===================================================
+           CANCEL
+        =================================================== */}
+
+        <button
+          type="button"
+          style={
+            styles.dangerButtonStyle
+          }
+          onClick={
+            onCancel
+          }
+          disabled={
+            actionsDisabled
+          }
+        >
+
+          <XCircle
+            size={
+              tokens.icon.sm
+            }
+            strokeWidth={1.9}
+          />
+
+          <span>
+            Cancel
+          </span>
+
+        </button>
+
+      </div>
+
+    </section>
 
   );
 
 }
+
+
+/* ===========================================================
+   END
+=========================================================== */

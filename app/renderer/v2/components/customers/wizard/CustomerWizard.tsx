@@ -241,7 +241,7 @@ interface CustomerWizardProps {
 =========================================================== */
 
 const TOTAL_STEPS =
-  6;
+  4;
 
 
 const STORAGE_KEY =
@@ -269,13 +269,12 @@ const STORAGE_KEY =
  * Existing step IDs are preserved so draft state,
  * progress, navigation and persisted workflow remain stable.
  */
-
 const STEPS: WizardStep[] = [
 
   {
     id: 1,
     title: "Identity",
-    subtitle: "Customer ID & Photo",
+    subtitle: "Customer ID & Basic Details",
   },
 
   {
@@ -286,26 +285,14 @@ const STEPS: WizardStep[] = [
 
   {
     id: 3,
-    title: "KYC",
-    subtitle: "Identity Verification",
-  },
-
-  {
-    id: 4,
     title: "Nominee",
     subtitle: "Family Information",
   },
 
   {
-    id: 5,
+    id: 4,
     title: "Review",
     subtitle: "Verify Everything",
-  },
-
-  {
-    id: 6,
-    title: "Completion",
-    subtitle: "Customer Confirmation",
   },
 
 ];
@@ -1347,115 +1334,107 @@ export default function CustomerWizard({
            Existing KYC continuation.
         --------------------------------------------------- */
 
-        case 3:
+case 3:
 
-          return (
+  return (
 
-            <Step4KYC
+    <div
+      style={{
+        width: "100%",
+        minWidth: 0,
+        minHeight: 0,
 
-              wizardData={
-                wizardData
-              }
+        display: "grid",
 
-              updateWizardData={
-                updateWizardData
-              }
+        gridTemplateColumns:
+          "repeat(auto-fit, minmax(min(100%, 480px), 1fr))",
 
-            />
+        gap: "5px",
 
-          );
+        boxSizing: "border-box",
 
+        overflow: "auto",
 
-        /* ---------------------------------------------------
-           STEP 4
+        background: "transparent",
+      }}
+    >
 
-           NOMINEE
-        --------------------------------------------------- */
+      {/* =========================================
+          LEFT — NOMINEE STUDIO
+      ========================================= */}
 
-        case 4:
+      <div
+        style={{
+          width: "100%",
+          minWidth: 0,
+          minHeight: 0,
 
-          return (
+          boxSizing: "border-box",
 
-            <Step5Nominee
+          overflow: "visible",
 
-              wizardData={
-                wizardData
-              }
+          background: "transparent",
+        }}
+      >
 
-              updateWizardData={
-                updateWizardData
-              }
+        <Step5Nominee
 
-            />
+          wizardData={
+            wizardData
+          }
 
-          );
+          updateWizardData={
+            updateWizardData
+          }
 
+        />
 
-        /* ---------------------------------------------------
-           STEP 5
-
-           REVIEW
-        --------------------------------------------------- */
-
-        case 5:
-
-          return (
-
-            <Step6Review
-
-              wizardData={
-                wizardData
-              }
-
-              resetWizard={
-                resetWizard
-              }
-
-              originalCustomerProfile={
-                originalCustomerProfile
-              }
-
-              isEditMode={
-                isEditMode
-              }
-
-            />
-
-          );
+      </div>
 
 
-        /* ---------------------------------------------------
-           STEP 6
+      {/* =========================================
+          RIGHT — FINAL REVIEW STUDIO
+      ========================================= */}
 
-           Existing final workflow continuation.
-        --------------------------------------------------- */
+      <div
+        style={{
+          width: "100%",
+          minWidth: 0,
+          minHeight: 0,
 
-        case 6:
+          boxSizing: "border-box",
 
-          return (
+          overflow: "visible",
 
-            <Step6Review
+          background: "transparent",
+        }}
+      >
 
-              wizardData={
-                wizardData
-              }
+        <Step6Review
 
-              resetWizard={
-                resetWizard
-              }
+          wizardData={
+            wizardData
+          }
 
-              originalCustomerProfile={
-                originalCustomerProfile
-              }
+          resetWizard={
+            resetWizard
+          }
 
-              isEditMode={
-                isEditMode
-              }
+          originalCustomerProfile={
+            originalCustomerProfile
+          }
 
-            />
+          isEditMode={
+            isEditMode
+          }
 
-          );
+        />
 
+      </div>
+
+    </div>
+
+  );
 
         /* ---------------------------------------------------
            FALLBACK

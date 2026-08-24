@@ -1,5 +1,6 @@
 /* ===========================================================
-   FINORA ENTERPRISE V2
+   FINORA ENTERPRISE OS™
+
    CUSTOMER REVIEW SUMMARY
 
    RESPONSIBILITY:
@@ -7,26 +8,49 @@
    - Customer identity preview
    - Customer contact preview
    - KYC status presentation
+   - Theme-aware visual presentation
 
    BUSINESS LOGIC:
    - NONE
 
-   STYLES:
-   CustomerSummary.styles.ts
+   IMPORTANT:
+   - Existing customer/KYC data flow is preserved.
+   - No business logic is changed.
+   - No inline CSS is used.
+   - Visual colours come from the central FINORA Theme Engine.
+=========================================================== */
+
+
+/* ===========================================================
+   IMPORTS
 =========================================================== */
 
 import {
-  cardStyle,
-  headerStyle,
-  titleStyle,
-  subtitleStyle,
-  dividerStyle,
-  rowStyle,
-  labelStyle,
-  valueStyle,
-  emptyValueStyle,
-  statusStyle,
+  ClipboardList,
+  Hash,
+  Phone,
+  ShieldCheck,
+  UserRound,
+} from "lucide-react";
+
+
+/* ===========================================================
+   THEME ENGINE
+=========================================================== */
+
+import {
+  useTheme,
+} from "../../../themes/provider";
+
+
+/* ===========================================================
+   PRESENTATION STYLES
+=========================================================== */
+
+import {
+  createCustomerSummaryStyles,
 } from "./CustomerSummary.styles";
+
 
 /* ===========================================================
    TYPES
@@ -34,14 +58,20 @@ import {
 
 interface CustomerSummaryProps {
 
-  customerId?: string;
+  customerId?:
+    string;
 
-  customerName?: string;
+  customerName?:
+    string;
 
-  phoneNumber?: string;
+  phoneNumber?:
+    string;
 
-  kycVerified?: boolean;
+  kycVerified?:
+    boolean;
+
 }
+
 
 /* ===========================================================
    SUMMARY ROW
@@ -49,15 +79,29 @@ interface CustomerSummaryProps {
 
 function SummaryRow({
 
+  icon: Icon,
+
   label,
 
   value,
 
+  styles,
+
 }: {
 
-  label: string;
+  icon:
+    typeof Hash;
 
-  value?: string;
+  label:
+    string;
+
+  value?:
+    string;
+
+  styles:
+    ReturnType<
+      typeof createCustomerSummaryStyles
+    >;
 
 }) {
 
@@ -66,24 +110,67 @@ function SummaryRow({
       value?.trim(),
     );
 
+
   return (
 
-    <div style={rowStyle}>
+    <div
+      style={
+        styles.rowStyle
+      }
+    >
 
-      <span style={labelStyle}>
-        {label}
+      {/* =====================================================
+         ROW ICON
+      ===================================================== */}
+
+      <span
+        style={
+          styles.rowIconStyle
+        }
+        aria-hidden="true"
+      >
+
+        <Icon
+          size={13}
+          strokeWidth={1.8}
+        />
+
       </span>
+
+
+      {/* =====================================================
+         ROW LABEL
+      ===================================================== */}
+
+      <span
+        style={
+          styles.labelStyle
+        }
+      >
+
+        {label}
+
+      </span>
+
+
+      {/* =====================================================
+         ROW VALUE
+      ===================================================== */}
 
       <span
         style={
           hasValue
-            ? valueStyle
-            : emptyValueStyle
+            ? styles.valueStyle
+            : styles.emptyValueStyle
         }
       >
-        {hasValue
-          ? value
-          : "--"}
+
+        {
+          hasValue
+            ? value
+            : "--"
+        }
+
       </span>
 
     </div>
@@ -91,6 +178,7 @@ function SummaryRow({
   );
 
 }
+
 
 /* ===========================================================
    COMPONENT
@@ -108,43 +196,144 @@ export default function CustomerSummary({
 
 }: CustomerSummaryProps) {
 
+
+  /* =========================================================
+     THEME ENGINE
+  ========================================================= */
+
+  const {
+    theme,
+  } = useTheme();
+
+
+  /* =========================================================
+     THEME-AWARE STYLES
+  ========================================================= */
+
+  const styles =
+    createCustomerSummaryStyles(
+      theme,
+      Boolean(
+        kycVerified,
+      ),
+    );
+
+
+  /* =========================================================
+     RENDER
+  ========================================================= */
+
   return (
 
-    <section style={cardStyle}>
+    <section
+      style={
+        styles.cardStyle
+      }
+    >
 
       {/* =====================================================
          HEADER
       ===================================================== */}
 
-      <div style={headerStyle}>
+      <div
+        style={
+          styles.headerStyle
+        }
+      >
 
-        <div>
+        {/* ===================================================
+           HEADER ICON
+        =================================================== */}
 
-          <h3 style={titleStyle}>
+        <span
+          style={
+            styles.headerIconStyle
+          }
+          aria-hidden="true"
+        >
+
+          <ClipboardList
+            size={15}
+            strokeWidth={1.8}
+          />
+
+        </span>
+
+
+        {/* ===================================================
+           HEADER TEXT
+        =================================================== */}
+
+        <div
+          style={
+            styles.headerTextStyle
+          }
+        >
+
+          <h3
+            style={
+              styles.titleStyle
+            }
+          >
+
             Customer Summary
+
           </h3>
 
-          <p style={subtitleStyle}>
+
+          <p
+            style={
+              styles.subtitleStyle
+            }
+          >
+
             Review the primary customer information before confirmation.
+
           </p>
 
         </div>
 
-        <div style={statusStyle}>
 
-          {kycVerified
-            ? "✓ KYC Ready"
-            : "● KYC Pending"}
+        {/* ===================================================
+           KYC STATUS
+        =================================================== */}
+
+        <div
+          style={
+            styles.statusStyle
+          }
+        >
+
+          <ShieldCheck
+            size={12}
+            strokeWidth={1.9}
+          />
+
+          <span>
+
+            {
+              kycVerified
+                ? "KYC Ready"
+                : "KYC Pending"
+            }
+
+          </span>
 
         </div>
 
       </div>
 
+
       {/* =====================================================
          DIVIDER
       ===================================================== */}
 
-      <div style={dividerStyle} />
+      <div
+        style={
+          styles.dividerStyle
+        }
+      />
+
 
       {/* =====================================================
          CUSTOMER DATA
@@ -153,26 +342,59 @@ export default function CustomerSummary({
       <div>
 
         <SummaryRow
+          icon={
+            Hash
+          }
           label="Customer ID"
-          value={customerId}
+          value={
+            customerId
+          }
+          styles={
+            styles
+          }
         />
 
+
         <SummaryRow
+          icon={
+            UserRound
+          }
           label="Customer Name"
-          value={customerName}
+          value={
+            customerName
+          }
+          styles={
+            styles
+          }
         />
 
+
         <SummaryRow
+          icon={
+            Phone
+          }
           label="Phone Number"
-          value={phoneNumber}
+          value={
+            phoneNumber
+          }
+          styles={
+            styles
+          }
         />
 
+
         <SummaryRow
+          icon={
+            ShieldCheck
+          }
           label="KYC Status"
           value={
             kycVerified
               ? "Verified"
               : "Pending Verification"
+          }
+          styles={
+            styles
           }
         />
 
@@ -183,3 +405,8 @@ export default function CustomerSummary({
   );
 
 }
+
+
+/* ===========================================================
+   END
+=========================================================== */

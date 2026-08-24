@@ -7,237 +7,507 @@
    RESPONSIBILITY:
    - Summary card layout
    - Customer information rows
+   - Specific semantic icons
    - KYC status presentation
-   - FINORA enterprise visual language
+   - Central FINORA Theme Engine integration
+
+   IMPORTANT:
+   - NO local theme palette
+   - NO hard-coded theme colours
+   - NO inline CSS
+   - Theme colours come directly from FinoraTheme
+   - Responsive geometry remains outside this file
+=========================================================== */
+
+
+/* ===========================================================
+   IMPORTS
 =========================================================== */
 
 import type {
   CSSProperties,
 } from "react";
 
-/* ===========================================================
-   CARD
-=========================================================== */
+import type {
+  FinoraTheme,
+} from "../../../themes/core/types";
 
-export const cardStyle: CSSProperties = {
-
-  minWidth: 0,
-
-  minHeight: 0,
-
-  width: "100%",
-
-  boxSizing: "border-box",
-
-  display: "flex",
-
-  flexDirection: "column",
-
-  padding: "14px 15px",
-
-  borderRadius: "16px",
-
-  border:
-    "1.5px solid rgba(214,176,106,.34)",
-
-  background:
-    "linear-gradient(145deg,rgba(255,255,255,.055),rgba(255,255,255,.018))",
-
-  boxShadow:
-    "0 10px 28px rgba(0,0,0,.14)",
-
-  overflow: "hidden",
-};
 
 /* ===========================================================
-   HEADER
+   TYPES
 =========================================================== */
 
-export const headerStyle: CSSProperties = {
+export interface CustomerSummaryStyles {
 
-  minWidth: 0,
+  cardStyle: CSSProperties;
 
-  display: "flex",
+  headerStyle: CSSProperties;
 
-  alignItems: "flex-start",
+  headerIconStyle: CSSProperties;
 
-  justifyContent: "space-between",
+  headerTextStyle: CSSProperties;
 
-  gap: "10px",
-};
+  titleStyle: CSSProperties;
+
+  subtitleStyle: CSSProperties;
+
+  statusStyle: CSSProperties;
+
+  dividerStyle: CSSProperties;
+
+  rowStyle: CSSProperties;
+
+  rowIconStyle: CSSProperties;
+
+  labelStyle: CSSProperties;
+
+  valueStyle: CSSProperties;
+
+  emptyValueStyle: CSSProperties;
+
+}
+
 
 /* ===========================================================
-   TITLE
+   STYLE FACTORY
 =========================================================== */
 
-export const titleStyle: CSSProperties = {
+export function createCustomerSummaryStyles(
 
-  margin: 0,
+  theme: FinoraTheme,
 
-  color: "#F3E4C2",
+  kycVerified: boolean,
 
-  fontSize: "16px",
+): CustomerSummaryStyles {
 
-  lineHeight: 1.2,
 
-  fontWeight: 750,
+  /* =========================================================
+     CENTRAL THEME TOKENS
+  ========================================================= */
 
-  letterSpacing: ".1px",
-};
+  const textPrimary =
+    theme.colors.text.primary;
+
+  const textSecondary =
+    theme.colors.text.secondary;
+
+  const textMuted =
+    theme.colors.text.muted;
+
+  const brandAccent =
+    theme.colors.brand.accent;
+
+  const brandAccentSoft =
+    theme.colors.brand.accentSoft;
+
+  const brandPrimary =
+    theme.colors.brand.primary;
+
+  const borderDefault =
+    theme.colors.border.default;
+
+  const borderSubtle =
+    theme.colors.border.subtle;
+
+  const surfaceMuted =
+    theme.colors.background.surfaceMuted;
+
+  const success =
+    theme.colors.status.success;
+
+  const successSoft =
+    theme.colors.status.successSoft;
+
+  const statusColor =
+    kycVerified
+      ? success
+      : brandAccent;
+
+  const statusBackground =
+    kycVerified
+      ? successSoft
+      : brandAccentSoft;
+
+
+  /* =========================================================
+     CARD
+
+     SAME THEME SOURCE AS NOMINEE FORM
+  ========================================================= */
+
+  const cardStyle: CSSProperties = {
+
+    minWidth: 0,
+
+    minHeight: 0,
+
+    width: "100%",
+
+    boxSizing: "border-box",
+
+    display: "flex",
+
+    flexDirection: "column",
+
+    padding: "14px 15px",
+
+    borderRadius: "16px",
+
+    border:
+      `1.5px solid ${borderDefault}`,
+
+    background:
+      theme.components.card.background,
+
+    boxShadow:
+      theme.components.card.shadow,
+
+    overflow: "hidden",
+  };
+
+
+  /* =========================================================
+     HEADER
+  ========================================================= */
+
+  const headerStyle: CSSProperties = {
+
+    minWidth: 0,
+
+    display: "flex",
+
+    alignItems: "flex-start",
+
+    gap: "7px",
+  };
+
+
+  /* =========================================================
+     HEADER ICON
+  ========================================================= */
+
+  const headerIconStyle: CSSProperties = {
+
+    flexShrink: 0,
+
+    width: "32px",
+
+    height: "32px",
+
+    boxSizing: "border-box",
+
+    display: "inline-flex",
+
+    alignItems: "center",
+
+    justifyContent: "center",
+
+    borderRadius: "8px",
+
+    border:
+      `1px solid ${borderDefault}`,
+
+    background:
+      surfaceMuted,
+
+    color:
+        theme.colors.brand.accent,
+
+    marginTop: "1px",
+  };
+
+
+  /* =========================================================
+     HEADER TEXT
+  ========================================================= */
+
+  const headerTextStyle: CSSProperties = {
+
+    minWidth: 0,
+
+    flex: 1,
+
+    display: "flex",
+
+    flexDirection: "column",
+
+    gap: "2px",
+  };
+
+
+  /* =========================================================
+     TITLE
+  ========================================================= */
+
+  const titleStyle: CSSProperties = {
+
+    margin: 0,
+
+    padding: 0,
+
+    color:
+      textPrimary,
+
+    fontSize: "16px",
+
+    lineHeight: 1.2,
+
+    fontWeight: 800,
+
+    letterSpacing: ".1px",
+  };
+
+
+  /* =========================================================
+     SUBTITLE
+  ========================================================= */
+
+  const subtitleStyle: CSSProperties = {
+
+    margin: 0,
+
+    padding: 0,
+
+    color:
+      textSecondary,
+
+    fontSize: "9px",
+
+    lineHeight: 1.3,
+
+    fontWeight: 550,
+  };
+
+
+  /* =========================================================
+     STATUS
+  ========================================================= */
+
+  const statusStyle: CSSProperties = {
+
+    flexShrink: 0,
+
+    display: "inline-flex",
+
+    alignItems: "center",
+
+    justifyContent: "center",
+
+    gap: "4px",
+
+    minHeight: "22px",
+
+    padding: "0 9px",
+
+    boxSizing: "border-box",
+
+    borderRadius: "999px",
+
+    border:
+      `1px solid ${statusColor}`,
+
+    background:
+      statusBackground,
+
+    color:
+      statusColor,
+
+    fontSize: "10px",
+
+    lineHeight: 1,
+
+    fontWeight: 800,
+
+    letterSpacing: ".15px",
+
+    whiteSpace: "nowrap",
+  };
+
+
+  /* =========================================================
+     DIVIDER
+  ========================================================= */
+
+  const dividerStyle: CSSProperties = {
+
+    width: "100%",
+
+    height: "1px",
+
+    flexShrink: 0,
+
+    margin: "9px 0 4px",
+
+    background:
+      borderSubtle,
+  };
+
+
+  /* =========================================================
+     ROW
+  ========================================================= */
+
+  const rowStyle: CSSProperties = {
+
+    minWidth: 0,
+
+    display: "grid",
+
+    gridTemplateColumns:
+      "30px 112px minmax(0,1fr)",
+
+    alignItems: "center",
+
+    gap: "7px",
+
+    minHeight: "43px",
+
+    borderBottom:
+      `1px solid ${borderSubtle}`,
+  };
+
+
+  /* =========================================================
+     ROW ICON
+  ========================================================= */
+
+  const rowIconStyle: CSSProperties = {
+
+    width: "28px",
+
+    height: "28px",
+
+    boxSizing: "border-box",
+
+    display: "inline-flex",
+
+    alignItems: "center",
+
+    justifyContent: "center",
+
+    borderRadius: "7px",
+
+    border:
+      `1px solid ${borderSubtle}`,
+
+    background:
+      surfaceMuted,
+
+    color:
+        theme.colors.brand.accent,
+  };
+
+
+  /* =========================================================
+     LABEL
+  ========================================================= */
+
+  const labelStyle: CSSProperties = {
+
+    minWidth: 0,
+
+    color:
+      textPrimary,
+
+    fontSize: "10px",
+
+    lineHeight: 1.2,
+
+    fontWeight: 750,
+
+    textTransform: "uppercase",
+
+    letterSpacing: ".3px",
+  };
+
+
+  /* =========================================================
+     VALUE
+  ========================================================= */
+
+  const valueStyle: CSSProperties = {
+
+    minWidth: 0,
+
+    color:
+      textPrimary,
+
+    fontSize: "11px",
+
+    lineHeight: 1.25,
+
+    fontWeight: 750,
+
+    whiteSpace: "nowrap",
+
+    overflow: "hidden",
+
+    textOverflow: "ellipsis",
+  };
+
+
+  /* =========================================================
+     EMPTY VALUE
+  ========================================================= */
+
+  const emptyValueStyle: CSSProperties = {
+
+    minWidth: 0,
+
+    color:
+      textMuted,
+
+    fontSize: "11px",
+
+    lineHeight: 1.25,
+
+    fontWeight: 650,
+
+    whiteSpace: "nowrap",
+
+    overflow: "hidden",
+
+    textOverflow: "ellipsis",
+  };
+
+
+  /* =========================================================
+     RETURN
+  ========================================================= */
+
+  return {
+
+    cardStyle,
+
+    headerStyle,
+
+    headerIconStyle,
+
+    headerTextStyle,
+
+    titleStyle,
+
+    subtitleStyle,
+
+    statusStyle,
+
+    dividerStyle,
+
+    rowStyle,
+
+    rowIconStyle,
+
+    labelStyle,
+
+    valueStyle,
+
+    emptyValueStyle,
+
+  };
+
+}
+
 
 /* ===========================================================
-   SUBTITLE
+   END
 =========================================================== */
-
-export const subtitleStyle: CSSProperties = {
-
-  margin: "3px 0 0",
-
-  color:
-    "rgba(255,255,255,.48)",
-
-  fontSize: "12px",
-
-  lineHeight: 1.3,
-
-  fontWeight: 550,
-};
-
-/* ===========================================================
-   STATUS
-=========================================================== */
-
-export const statusStyle: CSSProperties = {
-
-  flexShrink: 0,
-
-  display: "inline-flex",
-
-  alignItems: "center",
-
-  justifyContent: "center",
-
-  minHeight: "22px",
-
-  padding: "0 9px",
-
-  boxSizing: "border-box",
-
-  borderRadius: "999px",
-
-  border:
-    "1px solid rgba(214,176,106,.28)",
-
-  background:
-    "rgba(214,176,106,.08)",
-
-  color: "#F3E4C2",
-
-  fontSize: "12px",
-
-  lineHeight: 1,
-
-  fontWeight: 750,
-
-  letterSpacing: ".15px",
-
-  whiteSpace: "nowrap",
-};
-
-/* ===========================================================
-   DIVIDER
-=========================================================== */
-
-export const dividerStyle: CSSProperties = {
-
-  width: "100%",
-
-  height: "1px",
-
-  flexShrink: 0,
-
-  margin:
-    "9px 0 4px",
-
-  background:
-    "rgba(214,176,106,.17)",
-};
-
-/* ===========================================================
-   ROW
-=========================================================== */
-
-export const rowStyle: CSSProperties = {
-
-  minWidth: 0,
-
-  display: "grid",
-
-  gridTemplateColumns:
-    "110px minmax(0,1fr)",
-
-  alignItems: "center",
-
-  gap: "10px",
-
-  minHeight: "43px",
-
-  borderBottom:
-    "1px solid rgba(255,255,255,.065)",
-};
-
-/* ===========================================================
-   LABEL
-=========================================================== */
-
-export const labelStyle: CSSProperties = {
-
-  color: "#FFFFFF",
-
-  fontSize: "11px",
-
-  lineHeight: 1.2,
-
-  fontWeight: 700,
-
-  textTransform: "uppercase",
-
-  letterSpacing: ".35px",
-};
-
-/* ===========================================================
-   VALUE
-=========================================================== */
-
-export const valueStyle: CSSProperties = {
-
-  minWidth: 0,
-
-  color: "#FFFFFF",
-
-  fontSize: "12px",
-
-  lineHeight: 1.25,
-
-  fontWeight: 700,
-
-  whiteSpace: "nowrap",
-
-  overflow: "hidden",
-
-  textOverflow: "ellipsis",
-};
-
-/* ===========================================================
-   EMPTY VALUE
-=========================================================== */
-
-export const emptyValueStyle: CSSProperties = {
-
-  color:
-    "rgba(255,255,255,.34)",
-
-  fontSize: "11px",
-
-  fontWeight: 700,
-};

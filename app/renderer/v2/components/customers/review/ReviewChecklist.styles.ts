@@ -8,203 +8,407 @@
    - Checklist card layout
    - Checklist item presentation
    - Complete / pending states
-   - FINORA enterprise visual language
+   - FINORA Theme Engine integration
+
+   IMPORTANT:
+   - No hardcoded theme colours.
+   - All visual colours come from FinoraTheme.
+=========================================================== */
+
+/* ===========================================================
+   IMPORTS
 =========================================================== */
 
 import type {
   CSSProperties,
 } from "react";
 
-/* ===========================================================
-   CARD
-=========================================================== */
 
-export const cardStyle: CSSProperties = {
+import type {
+  FinoraTheme,
+} from "../../../themes/core/types";
 
-  minWidth: 0,
-
-  minHeight: 0,
-
-  width: "100%",
-
-  boxSizing: "border-box",
-
-  display: "flex",
-
-  flexDirection: "column",
-
-  padding: "13px 14px",
-
-  borderRadius: "16px",
-
-  border:
-    "1.5px solid rgba(214,176,106,.30)",
-
-  background:
-    "linear-gradient(145deg,rgba(255,255,255,.045),rgba(255,255,255,.015))",
-
-  boxShadow:
-    "0 8px 22px rgba(0,0,0,.12)",
-
-  overflow: "hidden",
-};
 
 /* ===========================================================
-   HEADER
+   STYLE CONTRACT
 =========================================================== */
 
-export const headerStyle: CSSProperties = {
+export interface ReviewChecklistStyles {
 
-  minWidth: 0,
+  cardStyle:
+    CSSProperties;
 
-  display: "flex",
+  headerStyle:
+    CSSProperties;
 
-  alignItems: "center",
+  headerIconStyle:
+    CSSProperties;
 
-  justifyContent: "space-between",
-};
+  headerTextStyle:
+    CSSProperties;
+
+  titleStyle:
+    CSSProperties;
+
+  subtitleStyle:
+    CSSProperties;
+
+  dividerStyle:
+    CSSProperties;
+
+  itemStyle:
+    CSSProperties;
+
+  itemIconStyle:
+    CSSProperties;
+
+  itemLabelStyle:
+    CSSProperties;
+
+  completeStyle:
+    CSSProperties;
+
+  pendingStyle:
+    CSSProperties;
+
+}
+
 
 /* ===========================================================
-   TITLE
+   STYLE FACTORY
 =========================================================== */
 
-export const titleStyle: CSSProperties = {
+export function createReviewChecklistStyles(
 
-  margin: 0,
+  theme:
+    FinoraTheme,
 
-  color: "#F3E4C2",
+):
+  ReviewChecklistStyles {
 
-  fontSize: "15px",
+  return {
 
-  lineHeight: 1.2,
+    /* =======================================================
+       CARD
+    ======================================================= */
 
-  fontWeight: 750,
+    cardStyle: {
 
-  letterSpacing: ".1px",
-};
+      minWidth: 0,
+
+      minHeight: 0,
+
+      width: "100%",
+
+      boxSizing: "border-box",
+
+      display: "flex",
+
+      flexDirection: "column",
+
+      padding:
+        "13px 14px",
+
+      borderRadius:
+        "16px",
+
+      border:
+        `1.5px solid ${theme.colors.border.default}`,
+
+      background:
+        theme.components.card.background,
+
+      boxShadow:
+        theme.components.card.shadow,
+
+      overflow: "hidden",
+    },
+
+
+    /* =======================================================
+       HEADER
+    ======================================================= */
+
+    headerStyle: {
+
+      minWidth: 0,
+
+      display: "flex",
+
+      alignItems: "center",
+
+      gap: "9px",
+    },
+
+
+    /* =======================================================
+       HEADER ICON
+    ======================================================= */
+
+    headerIconStyle: {
+
+      width: "30px",
+
+      height: "30px",
+
+      flexShrink: 0,
+
+      display: "flex",
+
+      alignItems: "center",
+
+      justifyContent: "center",
+
+      boxSizing: "border-box",
+
+      borderRadius:
+        "9px",
+
+      color:
+        theme.colors.brand.accent,
+
+      border:
+        `1px solid ${theme.colors.border.default}`,
+
+      background:
+        theme.colors.background.surfaceMuted,
+    },
+
+
+    /* =======================================================
+       HEADER TEXT
+    ======================================================= */
+
+    headerTextStyle: {
+
+      minWidth: 0,
+
+      flex: 1,
+    },
+
+
+    /* =======================================================
+       TITLE
+    ======================================================= */
+
+    titleStyle: {
+
+      margin: 0,
+
+      color:
+        theme.typography.heading,
+
+      fontSize:
+        "15px",
+
+      lineHeight:
+        1.2,
+
+      fontWeight:
+        750,
+
+      letterSpacing:
+        ".1px",
+    },
+
+
+    /* =======================================================
+       SUBTITLE
+    ======================================================= */
+
+    subtitleStyle: {
+
+      margin:
+        "3px 0 0",
+
+      color:
+        theme.typography.caption,
+
+      fontSize:
+        "11px",
+
+      lineHeight:
+        1.3,
+
+      fontWeight:
+        550,
+    },
+
+
+    /* =======================================================
+       DIVIDER
+    ======================================================= */
+
+    dividerStyle: {
+
+      width: "100%",
+
+      height: "1px",
+
+      flexShrink: 0,
+
+      margin:
+        "8px 0 3px",
+
+      background:
+        theme.colors.border.subtle,
+    },
+
+
+    /* =======================================================
+       ITEM
+    ======================================================= */
+
+    itemStyle: {
+
+      minWidth: 0,
+
+      minHeight:
+        "42px",
+
+      display: "grid",
+
+      gridTemplateColumns:
+        "22px minmax(0,1fr) auto",
+
+      alignItems: "center",
+
+      columnGap:
+        "7px",
+
+      borderBottom:
+        `1px solid ${theme.colors.border.subtle}`,
+    },
+
+
+    /* =======================================================
+       ITEM ICON
+    ======================================================= */
+
+    itemIconStyle: {
+
+      width: "22px",
+
+      height: "22px",
+
+      flexShrink: 0,
+
+      display: "flex",
+
+      alignItems: "center",
+
+      justifyContent: "center",
+
+      boxSizing: "border-box",
+
+      borderRadius:
+        "7px",
+
+      color:
+        theme.colors.brand.accent,
+
+      border:
+        `1px solid ${theme.colors.border.default}`,
+
+      background:
+        theme.colors.background.surfaceMuted,
+    },
+
+
+    /* =======================================================
+       ITEM LABEL
+    ======================================================= */
+
+    itemLabelStyle: {
+
+      minWidth: 0,
+
+      color:
+        theme.typography.label,
+
+      fontSize:
+        "12px",
+
+      lineHeight:
+        1.2,
+
+      fontWeight:
+        700,
+
+      letterSpacing:
+        ".12px",
+
+      whiteSpace:
+        "nowrap",
+
+      overflow:
+        "hidden",
+
+      textOverflow:
+        "ellipsis",
+    },
+
+
+    /* =======================================================
+       COMPLETE
+    ======================================================= */
+
+    completeStyle: {
+
+      flexShrink: 0,
+
+      color:
+        theme.colors.brand.accent,
+
+      fontSize:
+        "10px",
+
+      lineHeight:
+        1,
+
+      fontWeight:
+        750,
+
+      letterSpacing:
+        ".15px",
+
+      whiteSpace:
+        "nowrap",
+    },
+
+
+    /* =======================================================
+       PENDING
+    ======================================================= */
+
+    pendingStyle: {
+
+      flexShrink: 0,
+
+      color:
+        theme.colors.brand.accent,
+
+      fontSize:
+        "10px",
+
+      lineHeight:
+        1,
+
+      fontWeight:
+        750,
+
+      letterSpacing:
+        ".15px",
+
+      whiteSpace:
+        "nowrap",
+    },
+
+  };
+
+}
+
 
 /* ===========================================================
-   SUBTITLE
+   END
 =========================================================== */
-
-export const subtitleStyle: CSSProperties = {
-
-  margin: "3px 0 0",
-
-  color:
-    "rgba(255,255,255,.46)",
-
-  fontSize: "11px",
-
-  lineHeight: 1.3,
-
-  fontWeight: 550,
-};
-
-/* ===========================================================
-   DIVIDER
-=========================================================== */
-
-export const dividerStyle: CSSProperties = {
-
-  width: "100%",
-
-  height: "1px",
-
-  flexShrink: 0,
-
-  margin:
-    "8px 0 3px",
-
-  background:
-    "rgba(214,176,106,.16)",
-};
-
-/* ===========================================================
-   ITEM
-=========================================================== */
-
-export const itemStyle: CSSProperties = {
-
-  minWidth: 0,
-
-  minHeight: "42px",
-
-  display: "flex",
-
-  alignItems: "center",
-
-  justifyContent: "space-between",
-
-  gap: "12px",
-
-  borderBottom:
-    "1px solid rgba(255,255,255,.065)",
-};
-
-/* ===========================================================
-   ITEM LABEL
-=========================================================== */
-
-export const itemLabelStyle: CSSProperties = {
-
-  minWidth: 0,
-
-  color: "#FFFFFF",
-
-  fontSize: "12px",
-
-  lineHeight: 1.2,
-
-  fontWeight: 700,
-
-  letterSpacing: ".12px",
-
-  whiteSpace: "nowrap",
-
-  overflow: "hidden",
-
-  textOverflow: "ellipsis",
-};
-
-/* ===========================================================
-   COMPLETE
-=========================================================== */
-
-export const completeStyle: CSSProperties = {
-
-  flexShrink: 0,
-
-  color: "#86EFAC",
-
-  fontSize: "10px",
-
-  lineHeight: 1,
-
-  fontWeight: 750,
-
-  letterSpacing: ".15px",
-
-  whiteSpace: "nowrap",
-};
-
-/* ===========================================================
-   PENDING
-=========================================================== */
-
-export const pendingStyle: CSSProperties = {
-
-  flexShrink: 0,
-
-  color: "#F0C75E",
-
-  fontSize: "10px",
-
-  lineHeight: 1,
-
-  fontWeight: 750,
-
-  letterSpacing: ".15px",
-
-  whiteSpace: "nowrap",
-};

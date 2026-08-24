@@ -1,5 +1,6 @@
 /* ===========================================================
-   FINORA ENTERPRISE V2
+   FINORA ENTERPRISE OS™
+
    CUSTOMER VALIDATION STATUS
 
    RESPONSIBILITY:
@@ -8,25 +9,49 @@
    - Address status
    - KYC status
    - Nominee status
+   - Theme-aware visual presentation
 
    BUSINESS LOGIC:
    - NONE
 
-   STYLES:
-   ValidationStatus.styles.ts
+   IMPORTANT:
+   - Validation values are supplied by Step6Review.
+   - Existing validation flow is preserved.
+   - No inline theme colours are used.
+=========================================================== */
+
+/* ===========================================================
+   IMPORTS
 =========================================================== */
 
 import {
-  cardStyle,
-  headerStyle,
-  titleStyle,
-  subtitleStyle,
-  dividerStyle,
-  rowStyle,
-  labelStyle,
-  statusCompleteStyle,
-  statusPendingStyle,
+  ShieldCheck,
+  UserRound,
+  MapPin,
+  FileCheck2,
+  UserPlus,
+  CheckCircle2,
+  Circle,
+} from "lucide-react";
+
+
+/* ===========================================================
+   THEME ENGINE
+=========================================================== */
+
+import {
+  useTheme,
+} from "../../../themes/provider";
+
+
+/* ===========================================================
+   PRESENTATION STYLES
+=========================================================== */
+
+import {
+  createValidationStatusStyles,
 } from "./ValidationStatus.styles";
+
 
 /* ===========================================================
    TYPES
@@ -34,14 +59,20 @@ import {
 
 interface ValidationStatusProps {
 
-  identityComplete?: boolean;
+  identityComplete?:
+    boolean;
 
-  addressComplete?: boolean;
+  addressComplete?:
+    boolean;
 
-  kycVerified?: boolean;
+  kycVerified?:
+    boolean;
 
-  nomineeAdded?: boolean;
+  nomineeAdded?:
+    boolean;
+
 }
+
 
 /* ===========================================================
    STATUS ROW
@@ -49,36 +80,124 @@ interface ValidationStatusProps {
 
 function StatusRow({
 
+  icon: Icon,
+
   label,
 
   ok,
 
+  styles,
+
 }: {
 
-  label: string;
+  icon:
+    typeof UserRound;
 
-  ok?: boolean;
+  label:
+    string;
+
+  ok?:
+    boolean;
+
+  styles:
+    ReturnType<
+      typeof createValidationStatusStyles
+    >;
 
 }) {
 
   return (
 
-    <div style={rowStyle}>
+    <div
+      style={
+        styles.rowStyle
+      }
+    >
 
-      <span style={labelStyle}>
-        {label}
+      {/* =====================================================
+         ROW ICON
+      ===================================================== */}
+
+      <span
+        style={
+          styles.rowIconStyle
+        }
+        aria-hidden="true"
+      >
+
+        <Icon
+          size={13}
+          strokeWidth={1.9}
+        />
+
       </span>
+
+
+      {/* =====================================================
+         ROW LABEL
+      ===================================================== */}
+
+      <span
+        style={
+          styles.labelStyle
+        }
+      >
+
+        {label}
+
+      </span>
+
+
+      {/* =====================================================
+         STATUS ICON
+      ===================================================== */}
+
+      <span
+        style={
+          ok
+            ? styles.statusIconCompleteStyle
+            : styles.statusIconPendingStyle
+        }
+        aria-hidden="true"
+      >
+
+        {
+          ok
+            ? (
+                <CheckCircle2
+                  size={13}
+                  strokeWidth={1.9}
+                />
+              )
+            : (
+                <Circle
+                  size={13}
+                  strokeWidth={1.9}
+                />
+              )
+        }
+
+      </span>
+
+
+      {/* =====================================================
+         STATUS TEXT
+      ===================================================== */}
 
       <strong
         style={
           ok
-            ? statusCompleteStyle
-            : statusPendingStyle
+            ? styles.statusCompleteStyle
+            : styles.statusPendingStyle
         }
       >
-        {ok
-          ? "✓ Complete"
-          : "● Pending"}
+
+        {
+          ok
+            ? "Complete"
+            : "Pending"
+        }
+
       </strong>
 
     </div>
@@ -86,6 +205,7 @@ function StatusRow({
   );
 
 }
+
 
 /* ===========================================================
    COMPONENT
@@ -103,58 +223,171 @@ export default function ValidationStatus({
 
 }: ValidationStatusProps) {
 
+
+  /* =========================================================
+     THEME ENGINE
+  ========================================================= */
+
+  const {
+    theme,
+  } = useTheme();
+
+
+  /* =========================================================
+     THEME-AWARE STYLES
+  ========================================================= */
+
+  const styles =
+    createValidationStatusStyles(
+      theme,
+    );
+
+
+  /* =========================================================
+     RENDER
+  ========================================================= */
+
   return (
 
-    <section style={cardStyle}>
+    <section
+      style={
+        styles.cardStyle
+      }
+    >
 
       {/* =====================================================
          HEADER
       ===================================================== */}
 
-      <div style={headerStyle}>
+      <div
+        style={
+          styles.headerStyle
+        }
+      >
 
-        <div>
+        {/* ===================================================
+           HEADER ICON
+        =================================================== */}
 
-          <h3 style={titleStyle}>
+        <span
+          style={
+            styles.headerIconStyle
+          }
+          aria-hidden="true"
+        >
+
+          <ShieldCheck
+            size={15}
+            strokeWidth={1.8}
+          />
+
+        </span>
+
+
+        {/* ===================================================
+           HEADER TEXT
+        =================================================== */}
+
+        <div
+          style={
+            styles.headerTextStyle
+          }
+        >
+
+          <h3
+            style={
+              styles.titleStyle
+            }
+          >
+
             Validation Status
+
           </h3>
 
-          <p style={subtitleStyle}>
+
+          <p
+            style={
+              styles.subtitleStyle
+            }
+          >
+
             Customer profile readiness before final confirmation.
+
           </p>
 
         </div>
 
       </div>
 
+
       {/* =====================================================
          DIVIDER
       ===================================================== */}
 
-      <div style={dividerStyle} />
+      <div
+        style={
+          styles.dividerStyle
+        }
+      />
+
 
       {/* =====================================================
          VALIDATION ROWS
       ===================================================== */}
 
       <StatusRow
+        icon={
+          UserRound
+        }
         label="Identity"
-        ok={identityComplete}
+        ok={
+          identityComplete
+        }
+        styles={
+          styles
+        }
       />
 
+
       <StatusRow
+        icon={
+          MapPin
+        }
         label="Address"
-        ok={addressComplete}
+        ok={
+          addressComplete
+        }
+        styles={
+          styles
+        }
       />
 
+
       <StatusRow
+        icon={
+          FileCheck2
+        }
         label="KYC"
-        ok={kycVerified}
+        ok={
+          kycVerified
+        }
+        styles={
+          styles
+        }
       />
 
+
       <StatusRow
+        icon={
+          UserPlus
+        }
         label="Nominee"
-        ok={nomineeAdded}
+        ok={
+          nomineeAdded
+        }
+        styles={
+          styles
+        }
       />
 
     </section>
@@ -162,3 +395,8 @@ export default function ValidationStatus({
   );
 
 }
+
+
+/* ===========================================================
+   END
+=========================================================== */

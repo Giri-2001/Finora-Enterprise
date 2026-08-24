@@ -1,185 +1,449 @@
 /* ===========================================================
    FINORA ENTERPRISE OS™
 
-   STEP 5 — NOMINEE STUDIO
-   PRESENTATION STYLES
+   CUSTOMER WIZARD
+   STEP 3 — NOMINEE + FINAL REVIEW WORKSPACE
+
+   VERSION     : 3.0
+   PHASE       : Phase 2
+   ARCHITECTURE: Enterprise
+   STATUS      : Production
 
    RESPONSIBILITY:
-   - Step 5 page sizing
-   - Two-column composition
-   - Nominee information container
-   - Relationship container
+
+   - Step 3 workspace geometry
+   - Three-row final review composition
+   - Responsive workspace spacing
+   - Theme-aware presentation
+   - Responsive typography
+   - No business logic
+   - No viewport detection
+   - No local breakpoints
+
+   RESPONSIVE CONTRACT:
+
+   Mobile:
+     1 form per row
+
+   Tablet:
+     2 forms per row
+
+   Laptop / Desktop:
+     2 forms per row
 
    IMPORTANT:
-   - No business logic
-   - No component logic
-   - No global header styles
+
+   - Responsive values come from FINORA Responsive Engine.
+   - Theme colours come from FINORA Theme Engine CSS variables.
+   - This file does NOT decide breakpoints.
+=========================================================== */
+
+
+/* ===========================================================
+   IMPORTS
 =========================================================== */
 
 import type {
   CSSProperties,
 } from "react";
 
-/* ===========================================================
-   PAGE
-=========================================================== */
 
-export const pageStyle: CSSProperties = {
-  width: "100%",
+import type {
+  ResponsiveTokens,
+} from "../../../../utils/responsive/tokens";
 
-  height: "100%",
-
-  minHeight: 0,
-
-  boxSizing: "border-box",
-
-  display: "flex",
-
-  flexDirection: "column",
-
-  overflow: "hidden",
-
-  background:
-    "linear-gradient(145deg,#321B12 0%,#402417 48%,#2A170F 100%)",
-
-  color: "#FFFFFF",
-};
 
 /* ===========================================================
-   LEFT COLUMN
+   THEME VARIABLES
 =========================================================== */
 
-export const leftColumnStyle: CSSProperties = {
-  minWidth: 0,
+export type Step3ThemeStyle =
+  CSSProperties &
+  Record<
+    `--${string}`,
+    string
+  >;
 
-  minHeight: 0,
-
-  height: "100%",
-
-  display: "grid",
-
-  gridTemplateRows:
-    "minmax(0,1fr) minmax(108px,auto)",
-
-  gap: "10px",
-
-  overflow: "hidden",
-};
 
 /* ===========================================================
-   RIGHT COLUMN
+   THEME VARIABLE FACTORY
 =========================================================== */
 
-export const rightColumnStyle: CSSProperties = {
-  minWidth: 0,
+export function createStep3ThemeVariables(): Step3ThemeStyle {
 
-  minHeight: 0,
+  return {
 
-  height: "100%",
+    "--finora-theme-page":
+      "var(--finora-theme-background-page, #0B1220)",
 
-  display: "grid",
+    "--finora-theme-surface":
+      "var(--finora-theme-background-surface, #111827)",
 
-  gridTemplateRows:
-    "minmax(0,1.65fr) minmax(105px,.65fr) minmax(74px,.42fr)",
+    "--finora-theme-surface-muted":
+      "var(--finora-theme-background-surface-muted, #172033)",
 
-  gap: "10px",
+    "--finora-theme-text-primary":
+      "var(--finora-theme-text-primary, #FFFFFF)",
 
-  overflow: "hidden",
-};
+    "--finora-theme-text-secondary":
+      "var(--finora-theme-text-secondary, #D1D5DB)",
+
+    "--finora-theme-text-muted":
+      "var(--finora-theme-text-muted, rgba(255,255,255,.55))",
+
+    "--finora-theme-border-default":
+      "var(--finora-theme-border-default, rgba(212,175,55,.30))",
+
+    "--finora-theme-border-subtle":
+      "var(--finora-theme-border-subtle, rgba(255,255,255,.10))",
+
+    "--finora-theme-brand-accent":
+      "var(--finora-theme-brand-accent, #D4AF37)",
+
+  };
+
+}
+
 
 /* ===========================================================
-   SECTION
+   ROOT PAGE
 =========================================================== */
 
-export const sectionStyle: CSSProperties = {
-  minWidth: 0,
+export function createPageStyle(
+  tokens:
+    ResponsiveTokens,
+): CSSProperties {
 
-  minHeight: 0,
+  return {
 
-  width: "100%",
+    width:
+      "100%",
 
-  boxSizing: "border-box",
+    height:
+      "100%",
 
-  display: "flex",
+    minWidth:
+      0,
 
-  flexDirection: "column",
+    minHeight:
+      0,
 
-  padding: "13px 14px",
+    display:
+      "flex",
 
-  borderRadius: "16px",
+    flexDirection:
+      "column",
 
-  border:
-    "1.5px solid rgba(214,176,106,.34)",
+    boxSizing:
+      "border-box",
 
-  background:
-    "linear-gradient(145deg,rgba(255,255,255,.045),rgba(255,255,255,.015))",
+    padding:
+      `${tokens.wizard.padding}px`,
 
-  boxShadow:
-    "0 9px 24px rgba(0,0,0,.14)",
+    gap:
+      `${tokens.wizard.contentGap}px`,
 
-  overflow: "hidden",
-};
+    overflow:
+      "hidden",
+
+    background:
+      "var(--finora-theme-page)",
+
+    color:
+      "var(--finora-theme-text-primary)",
+
+  };
+
+}
+
+
+/* ===========================================================
+   THREE-ROW WORKSPACE
+=========================================================== */
+
+export function createWorkspaceStyle(
+  tokens:
+    ResponsiveTokens,
+): CSSProperties {
+
+  return {
+
+    width:
+      "100%",
+
+    height:
+      "100%",
+
+    minWidth:
+      0,
+
+    minHeight:
+      0,
+
+    flex:
+      "1 1 0",
+
+    display:
+      "grid",
+
+    /*
+     * Each row contains the forms supplied by Step 3.
+     *
+     * The actual number of columns is controlled by the
+     * central Responsive Engine.
+     */
+
+    gridTemplateColumns:
+      `repeat(${tokens.grid.columns >= 2 ? 2 : 1}, minmax(0, 1fr))`,
+
+    columnGap:
+      `${tokens.spacing.small}px`,
+
+    rowGap:
+      `${tokens.spacing.small}px`,
+
+    boxSizing:
+      "border-box",
+
+    overflow:
+      "auto",
+
+    alignItems:
+      "stretch",
+
+  };
+
+}
+
+
+/* ===========================================================
+   FORM / CARD CONTAINER
+=========================================================== */
+
+export function createSectionStyle(
+  tokens:
+    ResponsiveTokens,
+): CSSProperties {
+
+  return {
+
+    width:
+      "100%",
+
+    minWidth:
+      0,
+
+    minHeight:
+      0,
+
+    boxSizing:
+      "border-box",
+
+    display:
+      "flex",
+
+    flexDirection:
+      "column",
+
+    padding:
+      `${tokens.card.padding}px`,
+
+    gap:
+      `${tokens.spacing.small}px`,
+
+    border:
+      "var(--finora-theme-border-default)",
+
+    borderRadius:
+      `${tokens.card.radius}px`,
+
+    background:
+      "var(--finora-theme-surface)",
+
+    color:
+      "var(--finora-theme-text-primary)",
+
+    overflow:
+      "hidden",
+
+  };
+
+}
+
 
 /* ===========================================================
    SECTION HEADER
 =========================================================== */
 
-export const sectionHeaderStyle: CSSProperties = {
-  flexShrink: 0,
+export function createSectionHeaderStyle(
+  tokens:
+    ResponsiveTokens,
+): CSSProperties {
 
-  minWidth: 0,
+  return {
 
-  display: "flex",
+    flexShrink:
+      0,
 
-  alignItems: "center",
+    minWidth:
+      0,
 
-  justifyContent: "space-between",
+    display:
+      "flex",
 
-  paddingBottom: "8px",
+    flexDirection:
+      "column",
 
-  marginBottom: "9px",
+    justifyContent:
+      "center",
 
-  borderBottom:
-    "1px solid rgba(214,176,106,.17)",
-};
+    gap:
+      `${tokens.spacing.small}px`,
+
+    paddingBottom:
+      `${tokens.spacing.small}px`,
+
+    borderBottom:
+      "1px solid var(--finora-theme-border-subtle)",
+
+    boxSizing:
+      "border-box",
+
+  };
+
+}
+
 
 /* ===========================================================
    SECTION TITLE
 =========================================================== */
 
-export const sectionTitleStyle: CSSProperties = {
-  margin: 0,
+export function createSectionTitleStyle(
+  tokens:
+    ResponsiveTokens,
+): CSSProperties {
 
-  color: "#F3E4C2",
+  return {
 
-  fontSize: "15px",
+    margin:
+      0,
 
-  lineHeight: 1.2,
+    color:
+      "var(--finora-theme-text-primary)",
 
-  fontWeight: 900,
-};
+    fontSize:
+      `${tokens.typography.heading}px`,
+
+    lineHeight:
+      tokens.lineHeight.heading,
+
+    fontWeight:
+      700,
+
+  };
+
+}
+
 
 /* ===========================================================
    SECTION SUBTITLE
 =========================================================== */
 
-export const sectionSubtitleStyle: CSSProperties = {
-  margin: "3px 0 0",
+export function createSectionSubtitleStyle(
+  tokens:
+    ResponsiveTokens,
+): CSSProperties {
 
-  color:
-    "rgba(255,255,255,.48)",
+  return {
 
-  fontSize: "8.5px",
+    margin:
+      0,
 
-  lineHeight: 1.3,
+    color:
+      "var(--finora-theme-text-muted)",
 
-  fontWeight: 550,
-};
+    fontSize:
+      `${tokens.typography.small}px`,
+
+    lineHeight:
+      tokens.lineHeight.compact,
+
+    fontWeight:
+      400,
+
+  };
+
+}
+
 
 /* ===========================================================
-   RELATIONSHIP SECTION
+   ACTION PANEL
 =========================================================== */
 
-export const relationshipSectionStyle: CSSProperties = {
-  justifyContent: "center",
-};
+export function createActionPanelStyle(
+  tokens:
+    ResponsiveTokens,
+): CSSProperties {
+
+  return {
+
+    width:
+      "100%",
+
+    minWidth:
+      0,
+
+    minHeight:
+      0,
+
+    display:
+      "flex",
+
+    flexDirection:
+      "column",
+
+    gap:
+      `${tokens.spacing.small}px`,
+
+    boxSizing:
+      "border-box",
+
+    overflow:
+      "hidden",
+
+  };
+
+}
+
+
+/* ===========================================================
+   RESPONSIVE CONTRACT
+=========================================================== */
+
+export function createResponsiveStyle(
+  tokens:
+    ResponsiveTokens,
+): CSSProperties {
+
+  return {
+
+    width:
+      "100%",
+
+    minWidth:
+      0,
+
+    minHeight:
+      0,
+
+    boxSizing:
+      "border-box",
+
+  };
+
+}
+
+
+/* ===========================================================
+   END
+=========================================================== */

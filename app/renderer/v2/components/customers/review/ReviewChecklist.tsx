@@ -1,34 +1,51 @@
 /* ===========================================================
-   FINORA ENTERPRISE V2
+   FINORA ENTERPRISE OS™
+
    CUSTOMER REVIEW CHECKLIST
 
    RESPONSIBILITY:
    - Review checklist presentation
    - Completion status presentation
+   - Theme-aware visual presentation
 
    BUSINESS LOGIC:
    - NONE
 
    IMPORTANT:
-   Completion values are supplied by Step6Review.
-   This component must never assume that every step
-   is completed.
+   - Completion values are supplied by Step6Review.
+   - This component never assumes that every step
+     is completed.
+   - No inline theme colours are used.
+=========================================================== */
 
-   STYLES:
-   ReviewChecklist.styles.ts
+/* ===========================================================
+   IMPORTS
 =========================================================== */
 
 import {
-  cardStyle,
-  headerStyle,
-  titleStyle,
-  subtitleStyle,
-  dividerStyle,
-  itemStyle,
-  itemLabelStyle,
-  completeStyle,
-  pendingStyle,
+  ClipboardCheck,
+  CheckCircle2,
+  Circle,
+} from "lucide-react";
+
+
+/* ===========================================================
+   THEME ENGINE
+=========================================================== */
+
+import {
+  useTheme,
+} from "../../../themes/provider";
+
+
+/* ===========================================================
+   PRESENTATION STYLES
+=========================================================== */
+
+import {
+  createReviewChecklistStyles,
 } from "./ReviewChecklist.styles";
+
 
 /* ===========================================================
    TYPES
@@ -36,15 +53,21 @@ import {
 
 export interface ReviewChecklistItem {
 
-  label: string;
+  label:
+    string;
 
-  completed: boolean;
+  completed:
+    boolean;
 }
+
 
 interface ReviewChecklistProps {
 
-  items?: ReviewChecklistItem[];
+  items?:
+    ReviewChecklistItem[];
+
 }
+
 
 /* ===========================================================
    CHECKLIST ITEM
@@ -56,26 +79,88 @@ function ChecklistItem({
 
   completed,
 
-}: ReviewChecklistItem) {
+  styles,
+
+}: ReviewChecklistItem & {
+
+  styles:
+    ReturnType<
+      typeof createReviewChecklistStyles
+    >;
+
+}) {
 
   return (
 
-    <div style={itemStyle}>
+    <div
+      style={
+        styles.itemStyle
+      }
+    >
 
-      <span style={itemLabelStyle}>
-        {label}
+      {/* =====================================================
+         STATUS ICON
+      ===================================================== */}
+
+      <span
+        style={
+          styles.itemIconStyle
+        }
+        aria-hidden="true"
+      >
+
+        {
+          completed
+            ? (
+                <CheckCircle2
+                  size={13}
+                  strokeWidth={1.9}
+                />
+              )
+            : (
+                <Circle
+                  size={13}
+                  strokeWidth={1.9}
+                />
+              )
+        }
+
       </span>
+
+
+      {/* =====================================================
+         ITEM LABEL
+      ===================================================== */}
+
+      <span
+        style={
+          styles.itemLabelStyle
+        }
+      >
+
+        {label}
+
+      </span>
+
+
+      {/* =====================================================
+         STATUS
+      ===================================================== */}
 
       <strong
         style={
           completed
-            ? completeStyle
-            : pendingStyle
+            ? styles.completeStyle
+            : styles.pendingStyle
         }
       >
-        {completed
-          ? "✓ Complete"
-          : "● Pending"}
+
+        {
+          completed
+            ? "✓ Complete"
+            : "● Pending"
+        }
+
       </strong>
 
     </div>
@@ -83,6 +168,7 @@ function ChecklistItem({
   );
 
 }
+
 
 /* ===========================================================
    COMPONENT
@@ -94,35 +180,113 @@ export default function ReviewChecklist({
 
 }: ReviewChecklistProps) {
 
+
+  /* =========================================================
+     THEME ENGINE
+  ========================================================= */
+
+  const {
+    theme,
+  } = useTheme();
+
+
+  /* =========================================================
+     THEME-AWARE STYLES
+  ========================================================= */
+
+  const styles =
+    createReviewChecklistStyles(
+      theme,
+    );
+
+
+  /* =========================================================
+     RENDER
+  ========================================================= */
+
   return (
 
-    <section style={cardStyle}>
+    <section
+      style={
+        styles.cardStyle
+      }
+    >
 
       {/* =====================================================
          HEADER
       ===================================================== */}
 
-      <div style={headerStyle}>
+      <div
+        style={
+          styles.headerStyle
+        }
+      >
 
-        <div>
+        {/* ===================================================
+           HEADER ICON
+        =================================================== */}
 
-          <h3 style={titleStyle}>
+        <span
+          style={
+            styles.headerIconStyle
+          }
+          aria-hidden="true"
+        >
+
+          <ClipboardCheck
+            size={15}
+            strokeWidth={1.8}
+          />
+
+        </span>
+
+
+        {/* ===================================================
+           HEADER TEXT
+        =================================================== */}
+
+        <div
+          style={
+            styles.headerTextStyle
+          }
+        >
+
+          <h3
+            style={
+              styles.titleStyle
+            }
+          >
+
             Review Checklist
+
           </h3>
 
-          <p style={subtitleStyle}>
+
+          <p
+            style={
+              styles.subtitleStyle
+            }
+          >
+
             Final readiness checklist before customer creation.
+
           </p>
 
         </div>
 
       </div>
 
+
       {/* =====================================================
          DIVIDER
       ===================================================== */}
 
-      <div style={dividerStyle} />
+      <div
+        style={
+          styles.dividerStyle
+        }
+      />
+
 
       {/* =====================================================
          CHECKLIST
@@ -130,15 +294,28 @@ export default function ReviewChecklist({
 
       <div>
 
-        {items.map((item) => (
+        {
+          items.map(
+            (item) => (
 
-          <ChecklistItem
-            key={item.label}
-            label={item.label}
-            completed={item.completed}
-          />
+              <ChecklistItem
+                key={
+                  item.label
+                }
+                label={
+                  item.label
+                }
+                completed={
+                  item.completed
+                }
+                styles={
+                  styles
+                }
+              />
 
-        ))}
+            ),
+          )
+        }
 
       </div>
 
@@ -147,3 +324,8 @@ export default function ReviewChecklist({
   );
 
 }
+
+
+/* ===========================================================
+   END
+=========================================================== */
