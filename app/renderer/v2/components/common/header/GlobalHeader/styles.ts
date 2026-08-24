@@ -223,13 +223,12 @@ export function createGlobalHeaderStyles(
     CSSProperties = {
 
     position:
-      "sticky",
+      "relative",
 
     top:
       0,
 
-    zIndex:
-      1000,
+    zIndex: 1000,
 
     width:
       "100%",
@@ -311,7 +310,7 @@ export function createGlobalHeaderStyles(
       `,
 
     overflow:
-      "hidden",
+  "visible",
 
   };
 
@@ -513,7 +512,7 @@ export function createGlobalHeaderStyles(
       "border-box",
 
     overflow:
-      "hidden",
+      "visible",
 
   };
 

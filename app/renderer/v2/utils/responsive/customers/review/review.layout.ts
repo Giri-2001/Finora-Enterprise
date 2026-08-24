@@ -64,7 +64,7 @@ export function createStep6ReviewWorkspaceStyle(
       "border-box",
 
     padding:
-        0,
+  tokens.workspace.padding,
 
     overflowY:
       tokens.workspace.overflowY,

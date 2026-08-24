@@ -2,39 +2,36 @@
    FINORA ENTERPRISE OS™
 
    CUSTOMER WIZARD
-   STEP 6 — REVIEW
+   STEP 6 — REVIEW ACTION WORKSPACE
 
-   MODULE  : Customer
-   LAYER   : UI / Review
-   VERSION : 4.0
+   VERSION : 4.2
    STATUS  : Production
 
    RESPONSIBILITY:
-
-   - Final customer review orchestration
-   - Validation state calculation
-   - Customer profile creation
+   - Review checklist presentation
+   - Customer review actions
+   - Existing CustomerService persistence
+   - New customer creation
    - Existing customer update
-   - Customer Service write
-   - Step 2 personal information persistence
-   - Step 3 address persistence
-   - Step 4 KYC persistence
-   - Step 5 nominee persistence
-   - Review action coordination
 
    IMPORTANT:
-
-   - Review components contain presentation only.
-   - Persistence goes through CustomerService.
-   - No direct localStorage access.
-   - No direct repository access.
-   - KYC document entry is NOT treated as verified.
-   - Nominee data follows CustomerNomineeInformation.
-   - Global FINORA header remains the workspace header.
-   - Step 6 now represents the RIGHT review workspace:
+   - Step 5 already owns:
+       Nominee Information
        Nominee Preview
+       Customer Summary
+       Validation Status
+   - Step 6 MUST NOT render:
+       Nominee Information
+       Nominee Preview
+       Customer Summary
+   - Step 6 owns the RIGHT 3 review cards:
+       Validation Status
        Review Checklist
        Customer Review Actions
+   - Persistence remains unchanged.
+   - No direct localStorage access.
+   - No direct repository access.
+   - No local breakpoint logic.
 ========================================================== */
 
 
@@ -47,12 +44,39 @@ import {
 } from "react";
 
 
+/* ==========================================================
+   RESPONSIVE ENGINE
+========================================================== */
+
+import {
+  useResponsive,
+} from "../../../../utils/responsive";
+
+
+import {
+  getReviewResponsiveTokens,
+} from "../../../../utils/responsive/customers/review/review.tokens";
+
+
+import {
+  createStep6ReviewStyles,
+} from "./Step6Review.styles";
+
+
+/* ==========================================================
+   LAYOUT
+========================================================== */
+
 import StudioLayout
   from "../../../common/layout/StudioLayout";
 
 
-import NomineePreviewCard
-  from "../../nominee/NomineePreviewCard";
+/* ==========================================================
+   REVIEW
+========================================================== */
+
+import ValidationStatus
+  from "../../review/ValidationStatus";
 
 
 import ReviewChecklist
@@ -63,10 +87,18 @@ import ReviewActions
   from "../../review/ReviewActions";
 
 
+/* ==========================================================
+   SERVICE
+========================================================== */
+
 import {
   customerService,
 } from "../../../../services/customer/customerService";
 
+
+/* ==========================================================
+   TYPES
+========================================================== */
 
 import type {
   CustomerProfile,
@@ -98,14 +130,6 @@ import {
   CustomerTimelineEventType,
   CustomerTimelinePriority,
 } from "../../../../types/customers/customer.timeline.types";
-
-
-import {
-  workspaceStyle,
-  rightColumnStyle,
-  actionPanelStyle,
-  actionAreaStyle,
-} from "./Step6Review.styles";
 
 
 /* ==========================================================
@@ -158,30 +182,20 @@ function toNumber(
   const normalized =
     value?.trim() ?? "";
 
-
   if (!normalized) {
 
     return undefined;
 
   }
 
-
   const parsed =
     Number(
       normalized,
     );
 
-
-  if (
-    !Number.isFinite(parsed)
-  ) {
-
-    return undefined;
-
-  }
-
-
-  return parsed;
+  return Number.isFinite(parsed)
+    ? parsed
+    : undefined;
 
 }
 
@@ -193,7 +207,6 @@ function toGender(
   const normalized =
     value?.trim().toUpperCase();
 
-
   if (
     normalized ===
     CustomerGender.MALE
@@ -203,7 +216,6 @@ function toGender(
 
   }
 
-
   if (
     normalized ===
     CustomerGender.FEMALE
@@ -212,7 +224,6 @@ function toGender(
     return CustomerGender.FEMALE;
 
   }
-
 
   return CustomerGender.OTHER;
 
@@ -226,7 +237,6 @@ function toMaritalStatus(
   const normalized =
     value?.trim().toUpperCase();
 
-
   if (
     normalized ===
     MaritalStatus.MARRIED
@@ -235,7 +245,6 @@ function toMaritalStatus(
     return MaritalStatus.MARRIED;
 
   }
-
 
   if (
     normalized ===
@@ -246,7 +255,6 @@ function toMaritalStatus(
 
   }
 
-
   if (
     normalized ===
     MaritalStatus.DIVORCED
@@ -255,7 +263,6 @@ function toMaritalStatus(
     return MaritalStatus.DIVORCED;
 
   }
-
 
   return MaritalStatus.SINGLE;
 
@@ -268,7 +275,6 @@ function toOccupation(
 
   const normalized =
     value?.trim().toUpperCase();
-
 
   switch (normalized) {
 
@@ -311,13 +317,11 @@ function toEducation(
   const normalized =
     value?.trim();
 
-
   if (!normalized) {
 
     return undefined;
 
   }
-
 
   const validValues: Education[] = [
 
@@ -332,7 +336,6 @@ function toEducation(
     "Other",
 
   ];
-
 
   return validValues.find(
     (item) =>
@@ -349,7 +352,6 @@ function toNomineeRelation(
 
   const normalized =
     value?.trim().toUpperCase();
-
 
   switch (normalized) {
 
@@ -412,6 +414,32 @@ export default function Step6Review({
 
 
   /* ========================================================
+     RESPONSIVE ENGINE
+  ======================================================== */
+
+  const {
+    tokens,
+  } =
+    useResponsive();
+
+
+  const reviewTokens =
+    getReviewResponsiveTokens(
+      tokens.meta.viewport,
+    );
+
+
+  const {
+    workspaceStyle,
+    actionPanelStyle,
+    actionAreaStyle,
+  } =
+    createStep6ReviewStyles(
+      reviewTokens,
+    );
+
+
+  /* ========================================================
      SAVE STATE
   ======================================================== */
 
@@ -443,27 +471,10 @@ export default function Step6Review({
     );
 
 
-  const nomineeCustomerId =
+  const address =
     valueOrEmpty(
-      wizardData.nomineeCustomerId,
-    );
-
-
-  const nomineeName =
-    valueOrEmpty(
-      wizardData.nomineeName,
-    );
-
-
-  const nomineeRelationship =
-    valueOrEmpty(
-      wizardData.nomineeRelationship,
-    );
-
-
-  const nomineePhoneNumber =
-    valueOrEmpty(
-      wizardData.nomineePhoneNumber,
+      wizardData.address ||
+      wizardData.currentAddress,
     );
 
 
@@ -492,6 +503,37 @@ export default function Step6Review({
 
 
   /* ========================================================
+     NOMINEE VALUES
+
+     Step 5 owns the editable nominee workspace.
+     Step 6 reads the synchronized wizard values only.
+  ======================================================== */
+
+  const nomineeCustomerId =
+    valueOrEmpty(
+      wizardData.nomineeCustomerId,
+    );
+
+
+  const nomineeName =
+    valueOrEmpty(
+      wizardData.nomineeName,
+    );
+
+
+  const nomineeRelationship =
+    valueOrEmpty(
+      wizardData.nomineeRelationship,
+    );
+
+
+  const nomineePhoneNumber =
+    valueOrEmpty(
+      wizardData.nomineePhoneNumber,
+    );
+
+
+  /* ========================================================
      VALIDATION
   ======================================================== */
 
@@ -504,8 +546,7 @@ export default function Step6Review({
 
   const addressComplete =
     Boolean(
-      wizardData.address?.trim() ||
-      wizardData.currentAddress?.trim(),
+      address,
     );
 
 
@@ -688,10 +729,8 @@ export default function Step6Review({
           const updatedNominees =
             shouldUpdateNominee
               ? (
-
                   nomineeName ||
                   nomineeCustomerId
-
                     ? [
 
                         {
@@ -761,11 +800,8 @@ export default function Step6Review({
                         ...existingNominees.slice(1),
 
                       ]
-
                     : existingNominees
-
                 )
-
               : existingNominees;
 
 
@@ -774,12 +810,14 @@ export default function Step6Review({
 
             ...existingCustomer,
 
+
             photo:
               wizardData.photo !== undefined
                 ? valueOrEmpty(
                     wizardData.photo,
                   )
                 : existingCustomer.photo,
+
 
             identity: {
 
@@ -789,6 +827,7 @@ export default function Step6Review({
                 now,
 
             },
+
 
             basic: {
 
@@ -847,6 +886,7 @@ export default function Step6Review({
                 existingCustomer.basic.emergencyContactNumber,
 
             },
+
 
             personal: {
 
@@ -913,6 +953,7 @@ export default function Step6Review({
 
             },
 
+
             address: {
 
               ...existingCustomer.address,
@@ -965,6 +1006,7 @@ export default function Step6Review({
 
               },
 
+
               permanentAddress: {
 
                 ...existingCustomer.address.permanentAddress,
@@ -1013,6 +1055,7 @@ export default function Step6Review({
 
               },
 
+
               isPermanentAddressSame:
                 wizardData.currentAddress !== undefined ||
                 wizardData.permanentAddress !== undefined
@@ -1027,6 +1070,7 @@ export default function Step6Review({
                   : existingCustomer.address.isPermanentAddressSame,
 
             },
+
 
             kyc: {
 
@@ -1049,7 +1093,6 @@ export default function Step6Review({
                     },
 
                   }
-
                 : {}),
 
               ...(pan
@@ -1069,7 +1112,6 @@ export default function Step6Review({
                     },
 
                   }
-
                 : {}),
 
               ...(voterId
@@ -1089,7 +1131,6 @@ export default function Step6Review({
                     },
 
                   }
-
                 : {}),
 
               ...(drivingLicence
@@ -1109,10 +1150,10 @@ export default function Step6Review({
                     },
 
                   }
-
                 : {}),
 
             },
+
 
             nominee: {
 
@@ -1262,7 +1303,6 @@ export default function Step6Review({
                 },
 
               ]
-
             : [];
 
 
@@ -1273,6 +1313,7 @@ export default function Step6Review({
             valueOrEmpty(
               wizardData.photo,
             ),
+
 
           identity: {
 
@@ -1307,6 +1348,7 @@ export default function Step6Review({
               false,
 
           },
+
 
           basic: {
 
@@ -1360,6 +1402,7 @@ export default function Step6Review({
               ),
 
           },
+
 
           personal: {
 
@@ -1425,6 +1468,7 @@ export default function Step6Review({
 
           },
 
+
           address: {
 
             currentAddress: {
@@ -1463,6 +1507,7 @@ export default function Step6Review({
                 ),
 
             },
+
 
             permanentAddress: {
 
@@ -1504,6 +1549,7 @@ export default function Step6Review({
 
             },
 
+
             isPermanentAddressSame:
               valueOrEmpty(
                 wizardData.permanentAddress,
@@ -1513,6 +1559,7 @@ export default function Step6Review({
               ),
 
           },
+
 
           kyc: {
 
@@ -1530,7 +1577,6 @@ export default function Step6Review({
                   },
 
                 }
-
               : {}),
 
             ...(pan
@@ -1547,7 +1593,6 @@ export default function Step6Review({
                   },
 
                 }
-
               : {}),
 
             ...(voterId
@@ -1564,7 +1609,6 @@ export default function Step6Review({
                   },
 
                 }
-
               : {}),
 
             ...(drivingLicence
@@ -1581,7 +1625,6 @@ export default function Step6Review({
                   },
 
                 }
-
               : {}),
 
             overallStatus:
@@ -1589,13 +1632,16 @@ export default function Step6Review({
 
           },
 
+
           nominee: {
 
             nominees,
 
           },
 
+
           documents,
+
 
           internal: {
 
@@ -1640,7 +1686,9 @@ export default function Step6Review({
 
           },
 
+
           timeline,
+
 
           statistics: {
 
@@ -1763,45 +1811,15 @@ export default function Step6Review({
 
 
   /* ========================================================
-     NOMINEE PREVIEW
-  ======================================================== */
-
-  const nomineePreview = {
-
-    customerName:
-      customerName,
-
-    nomineeCustomerId:
-      nomineeCustomerId,
-
-    nomineeName:
-      nomineeName,
-
-    relationship:
-      nomineeRelationship,
-
-    phoneNumber:
-      nomineePhoneNumber,
-
-  };
-
-
-  /* ========================================================
      VIEW
 
-     IMPORTANT:
+     Step 5 already renders the four customer/nominee cards.
+     Step 6 intentionally renders only the final review controls.
 
-     Step6Review is intentionally a RIGHT-SIDE review
-     workspace.
-
-     CustomerSummary + ValidationStatus are rendered by
-     Step5Nominee on the LEFT.
-
-     Step6 renders:
-
-       1. Nominee Preview
-       2. Review Checklist
-       3. Review Actions
+     RIGHT WORKSPACE:
+       Validation Status
+       Review Checklist
+       Customer Review Actions
   ======================================================== */
 
   return (
@@ -1815,56 +1833,65 @@ export default function Step6Review({
     >
 
       <div
-        style={{
-          ...workspaceStyle,
-          width: "100%",
-          minWidth: 0,
-          minHeight: 0,
-          display: "flex",
-          flexDirection: "column",
-          gap: "10px",
-          overflow: "visible",
-          boxSizing: "border-box",
-        }}
+        style={
+          workspaceStyle
+        }
       >
 
         {/* =================================================
-            NOMINEE PREVIEW
+            4 — VALIDATION STATUS
         ================================================= */}
 
-        <NomineePreviewCard
+        <div>
 
-          value={
-            nomineePreview
-          }
+          <ValidationStatus
 
-        />
+            identityComplete={
+              identityComplete
+            }
+
+            addressComplete={
+              addressComplete
+            }
+
+            kycVerified={
+              kycVerified
+            }
+
+            nomineeAdded={
+              nomineeAdded
+            }
+
+          />
+
+        </div>
 
 
         {/* =================================================
-            REVIEW CHECKLIST
+            5 — REVIEW CHECKLIST
         ================================================= */}
 
-        <ReviewChecklist
+        <div>
 
-          items={
-            checklistItems
-          }
+          <ReviewChecklist
 
-        />
+            items={
+              checklistItems
+            }
+
+          />
+
+        </div>
 
 
         {/* =================================================
-            REVIEW ACTIONS
+            6 — CUSTOMER REVIEW ACTIONS
         ================================================= */}
 
         <div
-          style={{
-            ...actionPanelStyle,
-            width: "100%",
-            minWidth: 0,
-            boxSizing: "border-box",
-          }}
+          style={
+            actionPanelStyle
+          }
         >
 
           <div

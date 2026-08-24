@@ -8,7 +8,8 @@
    IMPORTANT
    -----------------------------------------------------------
    - Theme colors come ONLY from FinoraTheme.
-   - No hard-coded theme colors.
+   - No local theme definitions.
+   - No inline visual styles.
    - Responsive geometry remains outside this file.
 =========================================================== */
 
@@ -32,6 +33,9 @@ import type {
 
 export interface AdminProfileStyles {
 
+  wrapperStyle:
+    CSSProperties;
+
   containerStyle:
     CSSProperties;
 
@@ -42,6 +46,12 @@ export interface AdminProfileStyles {
     CSSProperties;
 
   arrowStyle:
+    CSSProperties;
+
+  dropdownStyle:
+    CSSProperties;
+
+  logoutButtonStyle:
     CSSProperties;
 
 }
@@ -69,11 +79,48 @@ export function createAdminProfileStyles(
       .text
       .primary;
 
+  const headerBackground =
+    theme
+      .components
+      .header
+      .background;
+
+  const headerText =
+    theme
+      .components
+      .header
+      .text;
+
+  const border =
+    theme
+      .colors
+      .border
+      .default;
+
   const overlayShadow =
     theme
       .colors
       .overlay
       .shadow;
+
+
+  /* =========================================================
+     WRAPPER
+  ========================================================= */
+
+  const wrapperStyle:
+    CSSProperties = {
+
+    position:
+      "relative",
+
+     zIndex:
+    10000,
+
+    flexShrink:
+      0,
+
+  };
 
 
   /* =========================================================
@@ -164,6 +211,101 @@ export function createAdminProfileStyles(
     flexShrink:
       0,
 
+    transition:
+      "transform .2s ease",
+
+  };
+
+
+  /* =========================================================
+     DROPDOWN
+  ========================================================= */
+
+  const dropdownStyle:
+    CSSProperties = {
+
+    position:
+      "absolute",
+
+    top:
+      "calc(100% + 8px)",
+
+    right:
+      0,
+
+    zIndex:
+      10001,
+
+    minWidth:
+      110,
+
+    padding:
+      6,
+
+    boxSizing:
+      "border-box",
+
+    background:
+      headerBackground,
+
+    border:
+      `1px solid ${border}`,
+
+    borderRadius:
+      10,
+
+    boxShadow:
+      `0 8px 24px ${overlayShadow}`,
+
+  };
+
+
+  /* =========================================================
+     LOGOUT BUTTON
+  ========================================================= */
+
+  const logoutButtonStyle:
+    CSSProperties = {
+
+    width:
+      "100%",
+
+    minHeight:
+      36,
+
+    padding:
+      "0 12px",
+
+    border:
+      `1px solid ${border}`,
+
+    borderRadius:
+      8,
+
+    background:
+      headerBackground,
+
+    color:
+      headerText,
+
+    cursor:
+      "pointer",
+
+    fontWeight:
+      700,
+
+    fontSize:
+      13,
+
+    textAlign:
+      "center",
+
+    boxSizing:
+      "border-box",
+
+    transition:
+      "background .18s ease, opacity .18s ease",
+
   };
 
 
@@ -173,6 +315,8 @@ export function createAdminProfileStyles(
 
   return {
 
+    wrapperStyle,
+
     containerStyle,
 
     iconStyle,
@@ -180,6 +324,10 @@ export function createAdminProfileStyles(
     nameStyle,
 
     arrowStyle,
+
+    dropdownStyle,
+
+    logoutButtonStyle,
 
   };
 

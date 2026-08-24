@@ -16,8 +16,7 @@
    - Nominee form state
    - Wizard data synchronization
    - Customer information presentation
-   - Validation status presentation
-   - Step 5 left/right workspace presentation
+   - Step 5 LEFT workspace presentation
 
    IMPORTANT:
 
@@ -27,7 +26,14 @@
    - No window.innerWidth.
    - No media queries.
    - Responsive geometry comes from Responsive Engine.
-   - Step 6 save/update business logic remains in Step6Review.
+   - Step 6 owns the RIGHT review workspace:
+       Validation Status
+       Review Checklist
+       Customer Review Actions
+   - Step 5 intentionally renders ONLY 3 cards:
+       Nominee Information
+       Nominee Preview
+       Customer Summary
 =========================================================== */
 
 
@@ -69,14 +75,6 @@ import NomineePreviewCard
 
 import CustomerSummary
   from "../../review/CustomerSummary";
-
-
-import ValidationStatus
-  from "../../review/ValidationStatus";
-
-
-import ReviewChecklist
-  from "../../review/ReviewChecklist";
 
 
 /* ===========================================================
@@ -156,7 +154,9 @@ export default function Step5Nominee({
   const {
     containerStyle,
     leftStyle,
-    rightStyle,
+    nomineeFormStyle,
+    nomineePreviewStyle,
+    customerSummaryStyle,
   } =
     createStep5NomineeStyles(
       nomineeTokens,
@@ -489,88 +489,19 @@ export default function Step5Nominee({
 
 
   /* =========================================================
-     REVIEW STATE
-  ========================================================= */
-
-  const identityComplete =
-    Boolean(
-      wizardData.fullName?.trim() &&
-      wizardData.mobileNumber?.trim(),
-    );
-
-
-  const addressComplete =
-    Boolean(
-      wizardData.currentAddress?.trim() ||
-      wizardData.address?.trim(),
-    );
-
-
-  const kycVerified =
-    false;
-
-
-  const nomineeAdded =
-    Boolean(
-      nominee.nomineeName.trim() ||
-      nominee.nomineeCustomerId.trim(),
-    );
-
-
-  /* =========================================================
-     CHECKLIST
-  ========================================================= */
-
-  const checklistItems = [
-
-    {
-      label:
-        "Identity Completed",
-
-      completed:
-        identityComplete,
-    },
-
-    {
-      label:
-        "Basic Details Completed",
-
-      completed:
-        Boolean(
-          wizardData.fullName?.trim() &&
-          wizardData.mobileNumber?.trim(),
-        ),
-    },
-
-    {
-      label:
-        "Address Completed",
-
-      completed:
-        addressComplete,
-    },
-
-    {
-      label:
-        "KYC Submitted — Verification Pending",
-
-      completed:
-        kycVerified,
-    },
-
-    {
-      label:
-        "Nominee Added",
-
-      completed:
-        nomineeAdded,
-    },
-
-  ];
-
-
-  /* =========================================================
      UI
+
+     STEP 5 = LEFT 3 CARDS ONLY
+
+       1. Nominee Information
+       2. Nominee Preview
+       3. Customer Summary
+
+     STEP 6 = RIGHT 3 CARDS
+
+       4. Validation Status
+       5. Review Checklist
+       6. Customer Review Actions
   ========================================================= */
 
   return (
@@ -581,80 +512,115 @@ export default function Step5Nominee({
       }
     >
 
-      {/* =====================================================
-          LEFT 50%
-
-          1. Nominee Information
-          2. Customer Information
-          3. Validation Status
-      ===================================================== */}
-
       <div
         style={
           leftStyle
         }
       >
 
-        <NomineeForm
+        {/* =================================================
+            1 — NOMINEE INFORMATION
+        ================================================= */}
 
-          value={
-            nominee
+        <div
+          style={
+            nomineeFormStyle
           }
+        >
 
-          onChange={
-            handleChange
+          <NomineeForm
+
+            value={
+              nominee
+            }
+
+            onChange={
+              handleChange
+            }
+
+            isCustomerLinked={
+              isCustomerLinked
+            }
+
+          />
+
+        </div>
+
+
+        {/* =================================================
+            2 — NOMINEE PREVIEW
+        ================================================= */}
+
+        <div
+          style={
+            nomineePreviewStyle
           }
+        >
 
-          isCustomerLinked={
-            isCustomerLinked
+          <NomineePreviewCard
+
+            value={{
+
+              customerName:
+                wizardData.fullName,
+
+              nomineeCustomerId:
+                nominee.nomineeCustomerId,
+
+              nomineeName:
+                nominee.nomineeName,
+
+              relationship:
+                nominee.relationship,
+
+              phoneNumber:
+                nominee.phoneNumber,
+
+            }}
+
+            isCustomerLinked={
+              isCustomerLinked
+            }
+
+          />
+
+        </div>
+
+
+        {/* =================================================
+            3 — CUSTOMER SUMMARY
+        ================================================= */}
+
+        <div
+          style={
+            customerSummaryStyle
           }
+        >
 
-        />
+          <CustomerSummary
 
+            customerId={
+              wizardData.customerId ||
+              "AUTO-GENERATED"
+            }
 
-        <CustomerSummary
+            customerName={
+              wizardData.fullName ||
+              "--"
+            }
 
-          customerId={
-            wizardData.customerId ||
-            "AUTO-GENERATED"
-          }
+            phoneNumber={
+              wizardData.mobileNumber ||
+              "--"
+            }
 
-          customerName={
-            wizardData.fullName ||
-            "--"
-          }
+            kycVerified={
+              false
+            }
 
-          phoneNumber={
-            wizardData.mobileNumber ||
-            "--"
-          }
+          />
 
-          kycVerified={
-            kycVerified
-          }
-
-        />
-
-
-        <ValidationStatus
-
-          identityComplete={
-            identityComplete
-          }
-
-          addressComplete={
-            addressComplete
-          }
-
-          kycVerified={
-            kycVerified
-          }
-
-          nomineeAdded={
-            nomineeAdded
-          }
-
-        />
+        </div>
 
       </div>
 

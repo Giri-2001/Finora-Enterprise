@@ -356,7 +356,7 @@ export function createNomineePreviewCardStyles(
     color:
       theme.colors.text.primary,
 
-    fontSize: "10.5px",
+    fontSize: "15px",
 
     lineHeight: 1.2,
 

@@ -241,7 +241,7 @@ interface CustomerWizardProps {
 =========================================================== */
 
 const TOTAL_STEPS =
-  4;
+  3;
 
 
 const STORAGE_KEY =
@@ -258,16 +258,8 @@ const STORAGE_KEY =
  *   Address + KYC
  *
  * Step 3:
- *   Nominee
- *
- * Step 4:
- *   Review
- *
- * Step 5:
- *   Completion
- *
- * Existing step IDs are preserved so draft state,
- * progress, navigation and persisted workflow remain stable.
+ *   Nominee + Existing step IDs are preserved so draft state,
+ *   progress, navigation and persisted workflow remain stable.
  */
 const STEPS: WizardStep[] = [
 
@@ -289,14 +281,7 @@ const STEPS: WizardStep[] = [
     subtitle: "Family Information",
   },
 
-  {
-    id: 4,
-    title: "Review",
-    subtitle: "Verify Everything",
-  },
-
 ];
-
 
 /* ===========================================================
    UI VALUE MAPPERS

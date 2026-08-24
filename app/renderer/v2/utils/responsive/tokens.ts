@@ -491,7 +491,7 @@ export const MOBILE_TOKENS: ResponsiveTokens = {
   header: {
     height: 82,
     paddingX: 10,
-    logoHeight: 36,
+    logoHeight: 45,
     titleSize: 18,
     iconSize: 21,
     brandVisible: false,
@@ -786,7 +786,7 @@ export const TABLET_TOKENS: ResponsiveTokens = {
   header: {
     height: 60,
     paddingX: 24,
-    logoHeight: 36,
+    logoHeight: 50,
     titleSize: 18,
     iconSize: 21,
     brandVisible: false,
@@ -1091,7 +1091,7 @@ export const LAPTOP_TOKENS: ResponsiveTokens = {
   header: {
     height: 62,
     paddingX: 28,
-    logoHeight: 36,
+    logoHeight: 50,
     titleSize: 19,
     iconSize: 22,
     brandVisible: true,
@@ -1400,7 +1400,7 @@ export const DESKTOP_TOKENS: ResponsiveTokens = {
   header: {
     height: 64,
     paddingX: 32,
-    logoHeight: 36,
+    logoHeight: 55,
     titleSize: 20,
     iconSize: 22,
     brandVisible: true,

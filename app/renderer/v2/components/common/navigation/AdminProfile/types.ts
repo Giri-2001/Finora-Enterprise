@@ -1,14 +1,21 @@
 /* ===========================================================
    FINORA ENTERPRISE OS™
+
    ADMIN PROFILE™
 
    TYPES
 =========================================================== */
 
+
 export interface AdminProfileProps {
 
-  adminName?: string;
+  adminName?:
+    string;
 
-  onClick?: () => void;
+  onClick?:
+    () => void;
+
+  onLogout?:
+    () => void;
 
 }

@@ -65,6 +65,19 @@ export interface ReviewResponsiveTokens {
 
   };
 
+    stackOrder: {
+
+    nomineePreview:
+      number;
+
+    reviewChecklist:
+      number;
+
+    other:
+      number;
+
+  };
+
 }
 
 
@@ -100,6 +113,19 @@ export const MOBILE_REVIEW_TOKENS:
 
     actionPanelHeight:
       "auto",
+
+  },
+
+    stackOrder: {
+
+    nomineePreview:
+      1,
+
+    reviewChecklist:
+      2,
+
+    other:
+      3,
 
   },
 
@@ -141,6 +167,19 @@ export const TABLET_REVIEW_TOKENS:
 
   },
 
+    stackOrder: {
+
+    nomineePreview:
+      1,
+
+    reviewChecklist:
+      2,
+
+    other:
+      3,
+
+  },
+
 };
 
 
@@ -157,10 +196,10 @@ export const LAPTOP_REVIEW_TOKENS:
   workspace: {
 
     gridTemplateColumns:
-      "minmax(0, 1.25fr) minmax(0, .95fr)",
+  "minmax(0, 1fr)",
 
     gridTemplateRows:
-      "minmax(0, 1fr) minmax(0, 1fr)",
+  "auto auto",
 
     columnGap:
       10,
@@ -169,13 +208,26 @@ export const LAPTOP_REVIEW_TOKENS:
       10,
 
     padding:
-      "10px 0px",
+  "0",
 
     overflowY:
       "auto",
 
     actionPanelHeight:
       "100%",
+
+  },
+
+    stackOrder: {
+
+    nomineePreview:
+      1,
+
+    reviewChecklist:
+      2,
+
+    other:
+      3,
 
   },
 
@@ -211,10 +263,10 @@ export const DESKTOP_REVIEW_TOKENS:
   workspace: {
 
     gridTemplateColumns:
-      "minmax(0, 1.25fr) minmax(0, .95fr)",
+  "minmax(0, 1fr)",
 
     gridTemplateRows:
-      "minmax(0, 1fr) minmax(0, 1fr)",
+  "auto auto",
 
     columnGap:
       10,
@@ -223,13 +275,26 @@ export const DESKTOP_REVIEW_TOKENS:
       10,
 
     padding:
-      "10px 0px",
+  "0",
 
     overflowY:
       "auto",
 
     actionPanelHeight:
       "100%",
+
+  },
+
+    stackOrder: {
+
+    nomineePreview:
+      1,
+
+    reviewChecklist:
+      2,
+
+    other:
+      3,
 
   },
 

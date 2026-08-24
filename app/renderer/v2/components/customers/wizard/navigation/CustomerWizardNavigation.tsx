@@ -10,6 +10,7 @@
    - No inline CSS
    - Presentation styles delegated to
      CustomerWizardNavigation.styles.ts
+   - Consume active FINORA Theme Engine
 =========================================================== */
 
 
@@ -20,6 +21,12 @@
 import {
   useCustomerResponsiveTokens,
 } from "../../../../utils/responsive/customers/customers.index";
+
+
+import {
+  useTheme,
+} from "../../../../themes/provider";
+
 
 import {
   getCustomerWizardNavigationStyles,
@@ -66,6 +73,9 @@ export default function CustomerWizardNavigation({
 
   /* =========================================================
      RESPONSIVE TOKENS
+
+     Responsive geometry remains exclusively controlled by
+     the Customer Responsive Engine.
   ========================================================= */
 
   const tokens =
@@ -73,12 +83,35 @@ export default function CustomerWizardNavigation({
 
 
   /* =========================================================
-     RESPONSIVE STYLES
+     FINORA THEME ENGINE
+
+     Active application theme:
+
+       ThemeProvider
+           ↓
+       FINORA Theme Registry
+           ↓
+       useTheme()
+           ↓
+       Customer Wizard Navigation
+
+     Navigation does NOT own a local theme palette.
+  ========================================================= */
+
+  const {
+    theme,
+  } =
+    useTheme();
+
+
+  /* =========================================================
+     RESPONSIVE + THEME STYLES
   ========================================================= */
 
   const styles =
     getCustomerWizardNavigationStyles(
       tokens,
+      theme,
     );
 
 
@@ -88,6 +121,7 @@ export default function CustomerWizardNavigation({
 
   const isFirstStep =
     currentStep <= 1;
+
 
   const isLastStep =
     currentStep >= totalSteps;
@@ -106,7 +140,7 @@ export default function CustomerWizardNavigation({
     >
 
       {/* =====================================================
-          LEFT NAVIGATION
+          PREVIOUS NAVIGATION
       ===================================================== */}
 
       <div
@@ -117,14 +151,17 @@ export default function CustomerWizardNavigation({
 
         <button
           type="button"
+
           style={
             isFirstStep
               ? styles.secondaryButtonDisabled
               : styles.secondaryButton
           }
+
           disabled={
             isFirstStep
           }
+
           onClick={
             onPrevious
           }
@@ -138,7 +175,7 @@ export default function CustomerWizardNavigation({
 
 
       {/* =====================================================
-          CENTER
+          CENTER STEP INFORMATION
       ===================================================== */}
 
       <div
@@ -156,7 +193,7 @@ export default function CustomerWizardNavigation({
 
 
       {/* =====================================================
-          RIGHT NAVIGATION
+          NEXT / FINISH NAVIGATION
       ===================================================== */}
 
       <div
@@ -167,9 +204,11 @@ export default function CustomerWizardNavigation({
 
         <button
           type="button"
+
           style={
             styles.primaryButton
           }
+
           onClick={
             onNext
           }

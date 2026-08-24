@@ -81,7 +81,35 @@ export interface NomineeResponsiveTokens {
     minHeight:
       number;
 
+    leftOrder:
+    number;
+
+  rightOrder:
+    number;
+
   };
+
+stackOrder: {
+
+  nomineeForm:
+    number;
+
+  nomineePreview:
+    number;
+
+  customerSummary:
+    number;
+
+  validationStatus:
+    number;
+
+  reviewChecklist:
+    number;
+
+  other:
+    number;
+
+};
 
     form: {
 
@@ -127,7 +155,35 @@ export const MOBILE_NOMINEE_TOKENS:
     minHeight:
       0,
 
+      leftOrder:
+    1,
+
+  rightOrder:
+    2,
+
   },
+
+  stackOrder: {
+
+  nomineeForm:
+    1,
+
+  nomineePreview:
+    2,
+
+  customerSummary:
+    3,
+
+  validationStatus:
+    4,
+
+  reviewChecklist:
+    5,
+
+  other:
+    6,
+
+},
 
     form: {
 
@@ -173,7 +229,35 @@ export const TABLET_NOMINEE_TOKENS:
     minHeight:
       0,
 
+      leftOrder:
+    1,
+
+  rightOrder:
+    2,
+
   },
+
+  stackOrder: {
+
+  nomineeForm:
+    1,
+
+  nomineePreview:
+    2,
+
+  customerSummary:
+    3,
+
+  validationStatus:
+    4,
+
+  reviewChecklist:
+    5,
+
+  other:
+    6,
+
+},
 
     form: {
 
@@ -219,7 +303,35 @@ export const LAPTOP_NOMINEE_TOKENS:
     minHeight:
       0,
 
+      leftOrder:
+    1,
+
+  rightOrder:
+    2,
+
   },
+
+  stackOrder: {
+
+  nomineeForm:
+    1,
+
+  nomineePreview:
+    2,
+
+  customerSummary:
+    3,
+
+  validationStatus:
+    4,
+
+  reviewChecklist:
+    5,
+
+  other:
+    6,
+
+},
 
     form: {
 
@@ -266,7 +378,35 @@ export const DESKTOP_NOMINEE_TOKENS:
     minHeight:
       0,
 
+      leftOrder:
+    1,
+
+  rightOrder:
+    2,
+
   },
+
+  stackOrder: {
+
+  nomineeForm:
+    1,
+
+  nomineePreview:
+    2,
+
+  customerSummary:
+    3,
+
+  validationStatus:
+    4,
+
+  reviewChecklist:
+    5,
+
+  other:
+    6,
+
+},
 
     form: {
 

@@ -174,8 +174,6 @@ export default function GlobalHeader({
 
     backIconStyle,
 
-    logoutButtonStyle,
-
     themePickerStyle,
 
     themeButtonStyle,
@@ -427,42 +425,15 @@ export default function GlobalHeader({
            ADMIN PROFILE
         =================================================== */}
 
-        <AdminProfile
-
-          adminName="Girish"
-
-          onClick={() => {
-            /* Admin menu */
-          }}
-
-        />
-
-
-        {/* ===================================================
-           LOGOUT
-        =================================================== */}
-
-        <button
-
-          type="button"
-
-          onClick={
-            onLogout
-          }
-
-          title="Logout"
-
-          aria-label="Logout"
-
-          style={
-            logoutButtonStyle
-          }
-
-        >
-          Logout
-        </button>
-
-
+       <AdminProfile
+  adminName="Admin"
+  onClick={() => {
+    /* Admin menu */
+  }}
+  onLogout={
+    onLogout
+  }
+/>
       </div>
 
     </header>

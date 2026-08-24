@@ -1,15 +1,19 @@
 /* ===========================================================
    FINORA ENTERPRISE OS™
+
    ADMIN PROFILE™
 
    COMPONENT
 
-   IMPORTANT
-   -----------------------------------------------------------
-   - Theme comes from the central FINORA Theme Engine.
-   - No local theme definitions.
-   - No hard-coded theme colors.
-   - Responsive geometry remains outside this component.
+   RESPONSIBILITY:
+   - Render admin profile button
+   - Render admin dropdown menu
+   - Preserve existing profile presentation
+   - Provide Logout inside profile dropdown
+   - Consume central FINORA Theme Engine
+   - Consume Admin Profile styles
+   - No responsive geometry
+   - No inline CSS
 =========================================================== */
 
 
@@ -18,25 +22,25 @@
 =========================================================== */
 
 import {
+  useState,
+} from "react";
+
+import {
   ChevronDown,
   CircleUserRound,
 } from "lucide-react";
-
 
 import type {
   AdminProfileProps,
 } from "./types";
 
-
 import {
   buildAdminName,
 } from "./helpers";
 
-
 import {
   useTheme,
 } from "../../../../themes/provider";
-
 
 import {
   createAdminProfileStyles,
@@ -53,6 +57,8 @@ export default function AdminProfile({
 
   onClick,
 
+  onLogout,
+
 }: AdminProfileProps) {
 
 
@@ -67,10 +73,23 @@ export default function AdminProfile({
 
 
   /* =========================================================
+     DROPDOWN STATE
+  ========================================================= */
+
+  const [
+    isOpen,
+    setIsOpen,
+  ] =
+    useState(false);
+
+
+  /* =========================================================
      THEMED STYLES
   ========================================================= */
 
   const {
+
+    wrapperStyle,
 
     containerStyle,
 
@@ -80,10 +99,45 @@ export default function AdminProfile({
 
     arrowStyle,
 
+    dropdownStyle,
+
+    logoutButtonStyle,
+
   } =
     createAdminProfileStyles(
       theme,
     );
+
+
+  /* =========================================================
+     PROFILE CLICK
+  ========================================================= */
+
+  function handleProfileClick(): void {
+
+    setIsOpen(
+      (previous) =>
+        !previous,
+    );
+
+    onClick?.();
+
+  }
+
+
+  /* =========================================================
+     LOGOUT
+  ========================================================= */
+
+  function handleLogout(): void {
+
+    setIsOpen(
+      false,
+    );
+
+    onLogout?.();
+
+  }
 
 
   /* =========================================================
@@ -93,58 +147,133 @@ export default function AdminProfile({
   return (
 
     <div
-
       style={
-        containerStyle
+        wrapperStyle
       }
-
-      onClick={
-        onClick
-      }
-
-      title="Admin Menu"
-
     >
 
-      <CircleUserRound
+      {/* =====================================================
+          ADMIN PROFILE BUTTON
+      ===================================================== */}
 
-        size={
-          22
-        }
+      <div
 
         style={
-          iconStyle
+          containerStyle
         }
 
-      />
-
-
-      <span
-        style={
-          nameStyle
+        onClick={
+          handleProfileClick
         }
+
+        title="Admin Menu"
+
+        role="button"
+
+        tabIndex={0}
+
+        aria-haspopup="menu"
+
+        aria-expanded={
+          isOpen
+        }
+
       >
 
-        {
-          buildAdminName(
-            adminName,
-          )
-        }
+        <CircleUserRound
 
-      </span>
+          size={
+            22
+          }
+
+          style={
+            iconStyle
+          }
+
+        />
 
 
-      <ChevronDown
+        <span
+          style={
+            nameStyle
+          }
+        >
 
-        size={
-          16
-        }
+          {
+            buildAdminName(
+              adminName,
+            )
+          }
 
-        style={
-          arrowStyle
-        }
+        </span>
 
-      />
+
+        <ChevronDown
+
+          size={
+            16
+          }
+
+          style={
+            arrowStyle
+          }
+
+        />
+
+      </div>
+
+
+      {/* =====================================================
+          ADMIN DROPDOWN
+      ===================================================== */}
+
+      {
+        isOpen && (
+
+          <div
+
+            role="menu"
+
+            aria-label="Admin menu"
+
+            style={
+              dropdownStyle
+            }
+
+          >
+
+            {/* ===============================================
+                LOGOUT
+            =============================================== */}
+
+            <button
+
+              type="button"
+
+              role="menuitem"
+
+              onClick={
+                handleLogout
+              }
+
+              title="Logout"
+
+              aria-label="Logout"
+
+              style={
+                logoutButtonStyle
+              }
+
+            >
+
+              Logout
+
+            </button>
+
+          </div>
+
+        )
+      }
 
     </div>
 

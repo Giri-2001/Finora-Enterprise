@@ -10,6 +10,7 @@
    - Fixed bottom navigation
    - Navigation button presentation
    - Responsive sizing through Customer Responsive Engine
+   - Visual appearance through FINORA Theme Engine
 
    IMPORTANT:
    - No React logic
@@ -17,7 +18,9 @@
    - No breakpoint calculations
    - No viewport calculations
    - No inline CSS dependency
-   - Responsive dimensions come from customers tokens
+   - Responsive dimensions come from Customer Responsive Engine
+   - Theme colours come directly from active FinoraTheme
+   - No local theme palette
    - Navigation is OUT OF DOCUMENT FLOW
 =========================================================== */
 
@@ -30,48 +33,15 @@ import type {
   CSSProperties,
 } from "react";
 
+
 import type {
   ResponsiveTokens,
 } from "../../../../utils/responsive/tokens";
 
 
-/* ===========================================================
-   COLORS
-=========================================================== */
-
-const COLORS = {
-
-  border:
-    "rgba(255,255,255,.20)",
-
-  footerBackground:
-    "rgba(8,8,10,.98)",
-
-  secondaryBackground:
-    "#ffffff",
-
-  secondaryBorder:
-    "#d6d8dc",
-
-  secondaryText:
-    "#17130f",
-
-  secondaryShadow:
-    "0 3px 8px rgba(0,0,0,.14)",
-
-  primaryBorder:
-    "rgba(244,193,68,.95)",
-
-  primaryText:
-    "#ffffff",
-
-  primaryShadow:
-    "0 5px 14px rgba(132,84,10,.30), inset 0 1px 0 rgba(255,255,255,.35)",
-
-  infoText:
-    "rgba(255,255,255,.72)",
-
-} as const;
+import type {
+  FinoraTheme,
+} from "../../../../themes/core/types";
 
 
 /* ===========================================================
@@ -113,21 +83,113 @@ export function getCustomerWizardNavigationStyles(
   tokens:
     ResponsiveTokens,
 
+  theme:
+    FinoraTheme,
+
 ): CustomerWizardNavigationStyles {
+
+
+  /* =========================================================
+     ACTIVE THEME COLORS
+
+     IMPORTANT:
+
+     These values come directly from the central FINORA
+     Theme Engine.
+
+     No theme ID checks.
+     No local colour mapping.
+     No hard-coded theme palette.
+
+     Therefore every registered theme automatically flows
+     through this navigation component.
+  ========================================================= */
+
+  const footerBackground =
+  theme
+    .colors
+    .background
+    .page;
+
+
+  const secondaryBackground =
+    theme
+      .colors
+      .background
+      .surfaceMuted;
+
+
+  const secondaryBackgroundHover =
+    theme
+      .colors
+      .background
+      .surface;
+
+
+  const brandPrimary =
+    theme
+      .colors
+      .brand
+      .primary;
+
+
+  const brandAccent =
+    theme
+      .colors
+      .brand
+      .accent;
+
+
+  const textPrimary =
+    theme
+      .colors
+      .text
+      .primary;
+
+
+  const textInverse =
+    theme
+      .colors
+      .text
+      .inverse;
+
+
+  const borderDefault =
+    theme
+      .colors
+      .border
+      .default;
+
+
+  const borderStrong =
+    theme
+      .colors
+      .border
+      .strong;
+
+
+  const shadow =
+    theme
+      .colors
+      .overlay
+      .shadow;
 
 
   /* =========================================================
      FIXED BOTTOM FOOTER
 
      IMPORTANT:
-     This navigation is intentionally removed from the
-     document flow.
+
+     Navigation intentionally remains outside normal document
+     flow.
 
      Therefore:
-     - Step 1 height will not change
-     - Step 2 height will not change
-     - Step 3 height will not change
-     - Footer always stays at viewport bottom
+
+     - Step 1 height remains unchanged
+     - Step 2 height remains unchanged
+     - Step 3 height remains unchanged
+     - Footer stays fixed at viewport bottom
+     - Navigation geometry remains responsive-token driven
   ========================================================= */
 
   const wrapper:
@@ -153,11 +215,11 @@ export function getCustomerWizardNavigationStyles(
 
     height:
       tokens.button.minHeight +
-      26,
+      20,
 
     minHeight:
       tokens.button.minHeight +
-      26,
+      20,
 
     padding:
       "7px 0",
@@ -166,22 +228,22 @@ export function getCustomerWizardNavigationStyles(
       0,
 
     borderTop:
-      `1px solid ${COLORS.border}`,
+      `${tokens.border.width}px solid ${borderDefault}`,
 
     display:
-      "grid",
-
-    gridTemplateColumns:
-      "1fr auto 1fr",
+      "flex",
 
     alignItems:
       "center",
 
-    columnGap:
+    justifyContent:
+      "center",
+
+    gap:
       tokens.spacing.medium,
 
     background:
-      COLORS.footerBackground,
+      footerBackground,
 
     zIndex:
       1000,
@@ -189,11 +251,17 @@ export function getCustomerWizardNavigationStyles(
     flexShrink:
       0,
 
+    boxShadow:
+  `0 -2px 10px ${shadow}`,
+
   };
 
 
   /* =========================================================
-     LEFT
+     LEFT NAVIGATION AREA
+
+     Previous button remains part of the centered navigation
+     group rather than being pushed to the viewport edge.
   ========================================================= */
 
   const left:
@@ -206,10 +274,7 @@ export function getCustomerWizardNavigationStyles(
       "center",
 
     justifyContent:
-      "flex-start",
-
-    gap:
-      0,
+      "center",
 
     minWidth:
       0,
@@ -221,7 +286,10 @@ export function getCustomerWizardNavigationStyles(
 
 
   /* =========================================================
-     RIGHT
+     RIGHT NAVIGATION AREA
+
+     Continue / Finish remains part of the centered navigation
+     group rather than being pushed to the viewport edge.
   ========================================================= */
 
   const right:
@@ -234,10 +302,7 @@ export function getCustomerWizardNavigationStyles(
       "center",
 
     justifyContent:
-      "flex-end",
-
-    gap:
-      0,
+      "center",
 
     minWidth:
       0,
@@ -250,6 +315,13 @@ export function getCustomerWizardNavigationStyles(
 
   /* =========================================================
      SECONDARY BUTTON
+
+     Previous button:
+
+     - Theme-aware surface
+     - Theme-aware border
+     - Theme-aware text
+     - Responsive geometry
   ========================================================= */
 
   const secondaryButton:
@@ -265,13 +337,13 @@ export function getCustomerWizardNavigationStyles(
       tokens.button.radius,
 
     border:
-      `1px solid ${COLORS.secondaryBorder}`,
+      `1px solid ${borderStrong}`,
 
     background:
-      COLORS.secondaryBackground,
+      secondaryBackground,
 
     color:
-      COLORS.secondaryText,
+      textPrimary,
 
     cursor:
       "pointer",
@@ -289,7 +361,7 @@ export function getCustomerWizardNavigationStyles(
       "nowrap",
 
     boxShadow:
-      COLORS.secondaryShadow,
+      `0 3px 8px ${shadow}`,
 
     transition:
       "transform .18s ease, box-shadow .18s ease, background .18s ease",
@@ -299,6 +371,8 @@ export function getCustomerWizardNavigationStyles(
 
   /* =========================================================
      DISABLED SECONDARY BUTTON
+
+     Step 1 Previous button is intentionally disabled.
   ========================================================= */
 
   const secondaryButtonDisabled:
@@ -312,11 +386,21 @@ export function getCustomerWizardNavigationStyles(
     cursor:
       "not-allowed",
 
+    boxShadow:
+      "none",
+
   };
 
 
   /* =========================================================
      PRIMARY BUTTON
+
+     Continue / Finish:
+
+     - Active FINORA brand
+     - Theme-aware text contrast
+     - Theme-aware border
+     - Responsive geometry
   ========================================================= */
 
   const primaryButton:
@@ -332,13 +416,19 @@ export function getCustomerWizardNavigationStyles(
       tokens.button.radius,
 
     border:
-      `1px solid ${COLORS.primaryBorder}`,
+      `1px solid ${brandPrimary}`,
 
     background:
-      "linear-gradient(135deg, #f4c44e 0%, #da9b23 52%, #bd7810 100%)",
+      `
+        linear-gradient(
+          135deg,
+          ${brandAccent} 0%,
+          ${brandPrimary} 100%
+        )
+      `,
 
     color:
-      COLORS.primaryText,
+      textInverse,
 
     cursor:
       "pointer",
@@ -356,7 +446,7 @@ export function getCustomerWizardNavigationStyles(
       "nowrap",
 
     boxShadow:
-      COLORS.primaryShadow,
+      `0 5px 14px ${shadow}`,
 
     transition:
       "transform .18s ease, box-shadow .18s ease, filter .18s ease",
@@ -365,29 +455,35 @@ export function getCustomerWizardNavigationStyles(
 
 
   /* =========================================================
-     STEP INFO
+     STEP INFORMATION
+
+     "Step 1 of 3"
+
+     Typography remains responsive-token driven while the
+     actual text colour follows the active FINORA theme.
   ========================================================= */
 
   const info:
     CSSProperties = {
 
-    justifySelf:
-      "center",
-
     color:
-      COLORS.infoText,
+      textPrimary,
 
     fontSize:
-      tokens.typography.navigation,
+      tokens.typography.navigation +
+      3,
 
     fontWeight:
-      650,
+      750,
 
     whiteSpace:
       "nowrap",
 
     textAlign:
       "center",
+
+    padding:
+      `0 ${tokens.spacing.small}px`,
 
   };
 

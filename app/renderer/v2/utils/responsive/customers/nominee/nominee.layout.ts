@@ -15,7 +15,8 @@
    - Keep Step 5 workspace geometry responsive.
    - Keep left/right review areas separated.
    - Mobile / Tablet → single vertical workspace.
-   - Laptop / Desktop → exact 50 / 50 workspace.
+   - Laptop / Desktop → exact workspace geometry from tokens.
+   - Apply responsive stack ordering from the Responsive Engine.
 
    IMPORTANT:
 
@@ -24,6 +25,7 @@
    - No local breakpoints.
    - No media queries.
    - No local responsive calculations.
+   - Ordering comes only from NomineeResponsiveTokens.
 =========================================================== */
 
 
@@ -56,6 +58,21 @@ export interface Step5NomineeStyles {
   rightStyle:
     CSSProperties;
 
+    nomineeFormStyle:
+    CSSProperties;
+
+  nomineePreviewStyle:
+    CSSProperties;
+
+  customerSummaryStyle:
+    CSSProperties;
+
+  validationStatusStyle:
+    CSSProperties;
+
+  reviewChecklistStyle:
+    CSSProperties;
+
 }
 
 
@@ -71,6 +88,10 @@ export function createStep5NomineeStyles(
 ):
   Step5NomineeStyles {
 
+
+  /* =========================================================
+     STEP 5 WORKSPACE
+  ========================================================= */
 
   const containerStyle:
     CSSProperties = {
@@ -117,6 +138,13 @@ export function createStep5NomineeStyles(
   };
 
 
+  /* =========================================================
+     LEFT WORKSPACE
+
+     Ordering is controlled centrally by:
+       tokens.workspace.leftOrder
+  ========================================================= */
+
   const leftStyle:
     CSSProperties = {
 
@@ -147,8 +175,18 @@ export function createStep5NomineeStyles(
     overflow:
       "visible",
 
+    order:
+      tokens.workspace.leftOrder,
+
   };
 
+
+  /* =========================================================
+     RIGHT WORKSPACE
+
+     Ordering is controlled centrally by:
+       tokens.workspace.rightOrder
+  ========================================================= */
 
   const rightStyle:
     CSSProperties = {
@@ -180,16 +218,122 @@ export function createStep5NomineeStyles(
     overflow:
       "visible",
 
+    order:
+      tokens.workspace.rightOrder,
+
+  };
+
+    const nomineeFormStyle:
+    CSSProperties = {
+
+    width:
+      "100%",
+
+    minWidth:
+      0,
+
+    boxSizing:
+      "border-box",
+
+    order:
+      tokens.stackOrder.nomineeForm,
+
   };
 
 
-  return {
+  const nomineePreviewStyle:
+    CSSProperties = {
+
+    width:
+      "100%",
+
+    minWidth:
+      0,
+
+    boxSizing:
+      "border-box",
+
+    order:
+      tokens.stackOrder.nomineePreview,
+
+  };
+
+
+  const customerSummaryStyle:
+    CSSProperties = {
+
+    width:
+      "100%",
+
+    minWidth:
+      0,
+
+    boxSizing:
+      "border-box",
+
+    order:
+      tokens.stackOrder.customerSummary,
+
+  };
+
+
+  const validationStatusStyle:
+    CSSProperties = {
+
+    width:
+      "100%",
+
+    minWidth:
+      0,
+
+    boxSizing:
+      "border-box",
+
+    order:
+      tokens.stackOrder.validationStatus,
+
+  };
+
+
+  const reviewChecklistStyle:
+    CSSProperties = {
+
+    width:
+      "100%",
+
+    minWidth:
+      0,
+
+    boxSizing:
+      "border-box",
+
+    order:
+      tokens.stackOrder.reviewChecklist,
+
+  };
+
+
+  /* =========================================================
+     RETURN
+  ========================================================= */
+
+    return {
 
     containerStyle,
 
     leftStyle,
 
     rightStyle,
+
+    nomineeFormStyle,
+
+    nomineePreviewStyle,
+
+    customerSummaryStyle,
+
+    validationStatusStyle,
+
+    reviewChecklistStyle,
 
   };
 

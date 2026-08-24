@@ -607,30 +607,22 @@ export function createCompanyStyle(
     lineHeight:
       1.1,
       
-    background:
-      `
-      var(
-        --finora-company-band-background,
-        linear-gradient(
-          180deg,
-          color-mix(
-            in srgb,
-            ${THEME.brand} 88%,
-            ${THEME.cardBackgroundStrong}
-          ) 0%,
-          color-mix(
-            in srgb,
-            ${THEME.brandPrimary} 92%,
-            ${THEME.cardBackgroundStrong}
-          ) 52%,
-          color-mix(
-            in srgb,
-            ${THEME.brandSecondary} 94%,
-            ${THEME.cardBackgroundStrong}
-          ) 100%
-        )
-      )
-      `,
+  background:
+  `
+  linear-gradient(
+    180deg,
+    color-mix(
+      in srgb,
+      ${THEME.brand} 18%,
+      ${THEME.cardBackground}
+    ) 0%,
+    color-mix(
+      in srgb,
+      ${THEME.brandPrimary} 14%,
+      ${THEME.cardBackgroundSoft}
+    ) 100%
+  )
+  `,
 
     boxShadow:
       `
@@ -643,7 +635,7 @@ export function createCompanyStyle(
       `,
 
     color:
-      THEME.textInverse,
+  THEME.textPrimary,
 
     padding:
       `${tokens.spacing.small}px ${tokens.spacing.inline}px`,
@@ -1042,7 +1034,7 @@ export function createKycStyle(
       "border-box",
 
     margin:
-      `${tokens.spacing.small}px auto 0`,
+  `10px auto 0`,
 
     padding:
       `${tokens.spacing.small}px ${tokens.button.paddingX}px`,
@@ -1056,9 +1048,7 @@ export function createKycStyle(
     ------------------------------------------------------- */
 
     background:
-      verified
-        ? THEME.statusBackground
-        : THEME.cardBackgroundSoft,
+  "transparent",
 
 
     /* -------------------------------------------------------
