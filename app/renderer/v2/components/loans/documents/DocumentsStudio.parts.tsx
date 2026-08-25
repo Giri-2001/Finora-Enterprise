@@ -80,7 +80,6 @@ import {
   galleryHeaderLeftStyle,
   galleryHeaderStyle,
   galleryMetaStyle,
-  galleryOverflowNoteStyle,
   galleryTitleStyle,
   galleryTitleWrapStyle,
   galleryViewportStyle,
@@ -452,8 +451,7 @@ export function CategoryGallery({
               {category.title}
             </div>
             <div style={galleryMetaStyle}>
-              {formatCount(items.length)}
-              {" · "}
+            {formatCount(items.length)}
             </div>
           </div>
         </div>
@@ -487,13 +485,6 @@ export function CategoryGallery({
             </div>
           )}
         </div>
-        {items.length > 15 && (
-          <div style={galleryOverflowNoteStyle}>
-            Showing 15 items per viewport
-            (5 × 3). Scroll to continue
-            browsing the remaining uploads.
-          </div>
-        )}
       </div>
     </div>
   );
