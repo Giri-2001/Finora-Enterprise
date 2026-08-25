@@ -1,551 +1,414 @@
 /* ==========================================================
    FINORA ENTERPRISE OS™
-   DOCUMENTS STUDIO™ — STYLES
+   DOCUMENTS STUDIO™ — THEME CONNECTED STYLES
+   - Geometry remains in one presentation source.
+   - JSX contains no inline style objects.
+   - Colours consume the existing FINORA Theme Engine.
+   - Surface hierarchy is intentionally light/clean like Loans.
 ========================================================== */
 
-const panelBorder =
-  "1px solid rgba(148, 163, 184, 0.16)";
+const THEME = {
+  page: "var(--finora-theme-background-page, var(--finora-theme-page))",
+  surface: "var(--finora-theme-background-surface, var(--finora-theme-surface))",
+  surfaceMuted: "var(--finora-theme-background-surface-muted, var(--finora-theme-surface-muted))",
+  primary: "var(--finora-theme-brand-primary)",
+  primarySoft: "var(--finora-theme-brand-accent-soft)",
+  info: "var(--finora-theme-info)",
+  textPrimary: "var(--finora-theme-text-primary)",
+  textSecondary: "var(--finora-theme-text-secondary)",
+  textMuted: "var(--finora-theme-text-muted)",
+  textInverse: "var(--finora-theme-text-inverse)",
+  border: "var(--finora-theme-border-default)",
+  borderStrong: "var(--finora-theme-border-strong)",
+  borderSubtle: "var(--finora-theme-border-subtle)",
+  danger: "var(--finora-theme-danger)",
+  dangerSoft: "var(--finora-theme-danger-soft)",
+  overlayShadow: "var(--finora-theme-overlay-shadow)",
+  overlayBackdrop: "var(--finora-theme-overlay-backdrop)",
+} as const;
 
-const blueBorder =
-  "1px solid rgba(37, 99, 235, 0.38)";
+const panelBorder = `1px solid ${THEME.border}`;
+const strongBorder = `1px solid ${THEME.borderStrong}`;
+const subtleBorder = `1px solid ${THEME.borderSubtle}`;
 
-const navy =
-  "#111C2E";
-
-const deepNavy =
-  "#0F172A";
-
-const darkerNavy =
-  "#0A1425";
-
-const text =
-  "#F8FAFC";
-
-const muted =
-  "#94A3B8";
-
-const blue =
-  "#60A5FA";
+/* ==========================================================
+   OUTER / HEADER
+========================================================== */
 
 export const sectionStyle = {
-  width: "100%",
-  minWidth: 0,
-  minHeight: 0,
-  boxSizing: "border-box" as const,
-  padding: "18px",
-  border: panelBorder,
-  borderRadius: "13px",
-  background: navy,
-  color: "#FFFFFF",
-  overflow: "visible",
+  width: "100%", minWidth: 0, minHeight: 0, boxSizing: "border-box" as const,
+  padding: "18px", border: panelBorder, borderRadius: "13px",
+  background: THEME.surfaceMuted, color: THEME.textInverse, overflow: "visible",
 };
 
 export const headerStyle = {
-  display: "flex",
-  alignItems: "center",
-  gap: "10px",
-  marginBottom: "16px",
+  display: "flex", alignItems: "center", gap: "10px", marginBottom: "16px",
 };
 
 export const headerAccentStyle = {
-  width: "4px",
-  height: "34px",
-  flexShrink: 0,
-  borderRadius: "4px",
-  background: "#2563EB",
+  width: "4px", height: "34px", flexShrink: 0, borderRadius: "4px",
+  background: THEME.primary,
 };
 
-export const headerTextStyle = {
-  minWidth: 0,
-};
+export const headerTextStyle = { minWidth: 0 };
 
 export const headerTitleStyle = {
-  margin: 0,
-  fontSize: "18px",
-  fontWeight: 750,
-  color: text,
+  margin: 0, fontSize: "18px", fontWeight: 750, color: THEME.textPrimary,
 };
 
+export const headerDescriptionStyle = {
+  margin: 0, color: THEME.textMuted, fontSize: "12px", fontWeight: 500,
+};
+
+export const headerBadgeWrapStyle = {
+  marginLeft: "auto", display: "flex", alignItems: "center", gap: "8px",
+};
+
+/* ==========================================================
+   SECTION TITLES / COMMON CONTROLS
+========================================================== */
+
 export const categorySectionTitleStyle = {
-  marginBottom: "8px",
-  color: "#CBD5E1",
-  fontSize: "11px",
-  fontWeight: 800,
-  letterSpacing: "0.08em",
+  marginBottom: "8px", color: THEME.textSecondary, fontSize: "11px",
+  fontWeight: 800, letterSpacing: "0.08em",
 };
 
 export const sectionTitleRowStyle = {
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "space-between",
-  gap: "10px",
-  marginTop: "16px",
-  marginBottom: "8px",
+  display: "flex", alignItems: "center", justifyContent: "space-between",
+  gap: "10px", marginTop: "16px", marginBottom: "8px",
 };
 
 export const sectionTitleStyle = {
-  color: "#CBD5E1",
-  fontSize: "11px",
-  fontWeight: 800,
+  color: THEME.textSecondary, fontSize: "11px", fontWeight: 800,
   letterSpacing: "0.08em",
 };
 
-export const quickGridStyle = {
-  width: "100%",
-  display: "grid",
-  gridTemplateColumns:
-    "repeat(3, minmax(0, 1fr))",
-  gap: "10px",
-};
-
-export const quickCardStyle = {
-  minWidth: 0,
-  padding: "10px",
-  border: blueBorder,
-  borderRadius: "10px",
-  background: deepNavy,
-  boxSizing: "border-box" as const,
-};
-
-export const quickTitleStyle = {
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "space-between",
-  gap: "8px",
-  marginBottom: "8px",
-  color: "#CBD5E1",
-  fontSize: "11px",
-  fontWeight: 800,
-};
-
-export const quickMediaStyle = {
-  width: "100%",
-  height: "118px",
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "center",
-  overflow: "hidden",
-  borderRadius: "8px",
-  border: panelBorder,
-  background: darkerNavy,
-};
-
-export const quickMetaStyle = {
-  marginTop: "7px",
-  color: muted,
-  fontSize: "10px",
-};
-
-export const uploadLabelStyle = {
-  position: "relative" as const,
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "center",
-  minHeight: "31px",
-  marginTop: "8px",
-  borderRadius: "7px",
-  border: blueBorder,
-  background: "rgba(37, 99, 235, 0.12)",
-  color: "#FFFFFF",
-  fontSize: "11px",
-  fontWeight: 700,
-  cursor: "pointer",
-  overflow: "hidden",
-};
-
-export const uploadInputStyle = {
-  position: "absolute" as const,
-  inset: 0,
-  opacity: 0,
-  cursor: "pointer",
-};
-
-export const uploadPlaceholderStyle = {
-  display: "flex",
-  flexDirection: "column" as const,
-  alignItems: "center",
-  justifyContent: "center",
-  gap: "5px",
-  color: muted,
-  fontSize: "10px",
-  fontWeight: 600,
-  textAlign: "center" as const,
-  padding: "8px",
-};
-
-export const categoryGridStyle = {
-  display: "grid",
-  gridTemplateColumns:
-    "repeat(4, minmax(0, 1fr))",
-  gap: "10px",
-};
-
-export const categoryCardStyle = {
-  minWidth: 0,
-  padding: "11px",
-  border: panelBorder,
-  borderRadius: "10px",
-  background: deepNavy,
-  boxSizing: "border-box" as const,
-};
-
-/*
- * CATEGORY HEADER
- * ----------------------------------------------------------
- * Fixed minimum header height keeps every category card
- * vertically aligned even when a category title wraps to
- * two lines.
- *
- * Example:
- * - Identity Documents       → 1 line
- * - Loan Agreements /        → 2 lines
- *   Promissory Notes
- *
- * Both cards now reserve the same header space, so the
- * preview area and Add Document button stay aligned.
- */
-export const categoryHeaderStyle = {
-  display: "flex",
-  alignItems: "flex-start",
-  justifyContent: "space-between",
-  gap: "8px",
-  minWidth: 0,
-  minHeight: "42px",
-};
-
-export const categoryIconStyle = {
-  width: "30px",
-  height: "30px",
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "center",
-  flexShrink: 0,
-  borderRadius: "8px",
-  border: blueBorder,
-  background: "rgba(37, 99, 235, 0.10)",
-  color: blue,
-  fontSize: "10px",
-  fontWeight: 800,
-};
-
-export const categoryMetaStyle = {
-  marginTop: "2px",
-  color: muted,
-  fontSize: "10px",
-  fontWeight: 500,
-};
-
-export const categoryPreviewStyle = {
-  display: "flex",
-  alignItems: "center",
-  gap: "6px",
-  minHeight: "50px",
-  marginTop: "9px",
-  overflowX: "auto" as const,
-  paddingBottom: "2px",
-};
-
-export const categoryPreviewThumbStyle = {
-  width: "52px",
-  height: "42px",
-  flexShrink: 0,
-  display: "block",
-  objectFit: "cover" as const,
-  background: darkerNavy,
-};
-
-export const addButtonStyle = {
-  display: "inline-flex",
-  alignItems: "center",
-  justifyContent: "center",
-  minHeight: "30px",
-  padding: "0 10px",
-  marginTop: "8px",
-  borderRadius: "7px",
-  border: blueBorder,
-  background: "rgba(37, 99, 235, 0.12)",
-  color: "#93C5FD",
-  fontSize: "11px",
-  fontWeight: 750,
-  cursor: "pointer",
-};
-
-export const backButtonStyle = {
-  display: "inline-flex",
-  alignItems: "center",
-  justifyContent: "center",
-  minHeight: "30px",
-  padding: "0 10px",
-  borderRadius: "7px",
-  border: panelBorder,
-  background: "rgba(15, 23, 42, 0.82)",
-  color: "#CBD5E1",
-  fontSize: "11px",
-  fontWeight: 700,
-  cursor: "pointer",
-};
-
-/* View All button — category cards only. */
-export const viewAllButtonStyle = {
-  display: "inline-flex",
-  alignItems: "center",
-  justifyContent: "center",
-  width: "62px",
-  minWidth: "62px",
-  maxWidth: "62px",
-  flexShrink: 0,
-  minHeight: "30px",
-  padding: "0 8px",
-  boxSizing: "border-box" as const,
-  borderRadius: "7px",
-  border: panelBorder,
-  background: "rgba(15, 23, 42, 0.82)",
-  color: "#CBD5E1",
-  fontSize: "11px",
-  fontWeight: 700,
-  lineHeight: 1,
-  cursor: "pointer",
-  appearance: "none" as const,
-  WebkitAppearance: "none" as const,
+export const sectionHintStyle = {
+  color: THEME.textMuted, fontSize: "11px",
 };
 
 export const badgeStyle = {
-  display: "inline-flex",
+  display: "inline-flex", alignItems: "center", justifyContent: "center",
+  flexShrink: 0, minHeight: "25px", padding: "0 8px", borderRadius: "999px",
+  border: strongBorder, background: THEME.surface, color: THEME.textSecondary,
+  fontSize: "13px", fontWeight: 800,
+};
+
+export const addButtonStyle = {
+  display: "inline-flex", alignItems: "center", justifyContent: "center",
+  minHeight: "30px", padding: "0 10px", marginTop: "8px", borderRadius: "7px",
+  border: strongBorder, background: THEME.surface, color: THEME.textSecondary,
+  fontSize: "11px", fontWeight: 750, cursor: "pointer",
+};
+
+export const backButtonStyle = {
+  display: "inline-flex", alignItems: "center", justifyContent: "center",
+  minHeight: "35px", padding: "0 10px", borderRadius: "7px",
+  border: panelBorder, background: THEME.surface,
+  color: THEME.textSecondary, fontSize: "13px", fontWeight: 700,
+  cursor: "pointer",
+};
+
+export const viewAllButtonStyle = {
+  display: "inline-flex", alignItems: "center", justifyContent: "center",
+  width: "62px", minWidth: "62px", maxWidth: "62px", flexShrink: 0,
+  minHeight: "30px", padding: "0 8px", boxSizing: "border-box" as const,
+  borderRadius: "7px", border: panelBorder, background: THEME.surface,
+  color: THEME.textSecondary, fontSize: "11px", fontWeight: 700, lineHeight: 1,
+  cursor: "pointer", appearance: "none" as const,
+  WebkitAppearance: "none" as const,
+};
+
+/* ==========================================================
+   CATEGORY CARDS
+========================================================== */
+
+export const categoryGridStyle = {
+  display: "grid", gridTemplateColumns: "repeat(4, minmax(0, 1fr))", gap: "10px",
+};
+
+export const categoryCardStyle = {
+  minWidth: 0, padding: "11px", border: panelBorder, borderRadius: "10px",
+  background: THEME.surface, boxSizing: "border-box" as const,
+};
+
+export const categoryHeaderStyle = {
+  display: "flex", alignItems: "flex-start", justifyContent: "space-between",
+  gap: "8px", minWidth: 0, minHeight: "42px",
+};
+
+export const categoryHeaderLeftStyle = {
+  display: "flex", alignItems: "center", gap: "10px", minWidth: 0, flex: 1,
+};
+
+export const categoryIconStyle = {
+  width: "34px",
+  height: "34px",
+  display: "flex",
   alignItems: "center",
   justifyContent: "center",
   flexShrink: 0,
-  minHeight: "22px",
-  padding: "0 8px",
-  borderRadius: "999px",
-  border: "1px solid rgba(37, 99, 235, 0.32)",
-  background: "rgba(37, 99, 235, 0.10)",
-  color: "#93C5FD",
-  fontSize: "10px",
-  fontWeight: 800,
-};
 
-export const infoBarStyle = {
-  display: "flex",
-  alignItems: "flex-start",
-  gap: "8px",
-  marginTop: "10px",
-  padding: "9px 10px",
   borderRadius: "8px",
-  border: "1px solid rgba(37, 99, 235, 0.18)",
-  background: "rgba(15, 23, 42, 0.72)",
+
+  border: strongBorder,
+  background: THEME.surface,
+  color: THEME.textSecondary,
+
+  boxSizing: "border-box" as const,
 };
 
-export const infoTextStyle = {
-  color: muted,
-  fontSize: "10px",
-  lineHeight: 1.45,
+export const categoryTitleWrapStyle = {
+  minWidth: 0, flex: 1,
 };
+
+export const categoryTitleStyle = {
+  minWidth: 0, color: THEME.textPrimary, fontSize: "13px", fontWeight: 750,
+  overflow: "visible", textOverflow: "clip", whiteSpace: "normal" as const,
+  wordBreak: "break-word" as const,
+};
+
+export const categoryMetaStyle = {
+  marginTop: "2px", color: THEME.textMuted, fontSize: "10px", fontWeight: 500,
+};
+
+export const categoryPreviewStyle = {
+  display: "flex", alignItems: "center", gap: "6px", minHeight: "55px",
+  marginTop: "9px", overflowX: "auto" as const, paddingBottom: "2px",
+};
+
+export const categoryPreviewButtonStyle = {
+  flex: "0 0 64px", padding: 0, border: subtleBorder, borderRadius: "7px",
+  overflow: "hidden", background: THEME.surface, cursor: "pointer",
+};
+
+export const categoryPreviewThumbStyle = {
+  width: "52px", height: "42px", flexShrink: 0, display: "block",
+  objectFit: "cover" as const, background: THEME.surface,
+};
+
+/* ==========================================================
+   EVIDENCE PREVIEW
+========================================================== */
+
+export const evidencePreviewSectionStyle = {
+  marginTop: "10px", padding: "12px", border: strongBorder,
+  borderRadius: "10px", background: THEME.surface,
+};
+
+export const evidencePreviewHeaderStyle = {
+  display: "flex", alignItems: "center", justifyContent: "space-between",
+  gap: "10px",
+};
+
+export const evidencePreviewTextStyle = { minWidth: 0 };
+
+export const evidencePreviewTitleStyle = {
+  color: THEME.textPrimary, fontSize: "14px", fontWeight: 750,
+};
+
+export const evidencePreviewMetaStyle = {
+  marginTop: "5px", color: THEME.textSecondary, fontSize: "13px",
+};
+
+export const evidencePreviewStripStyle = {
+  display: "flex", gap: "7px", overflowX: "auto" as const,
+  paddingTop: "10px", paddingBottom: "2px",
+};
+
+export const evidencePreviewButtonStyle = {
+  flex: "0 0 70px", height: "52px", padding: 0, border: subtleBorder,
+  borderRadius: "7px", overflow: "hidden", background: THEME.surface,
+  cursor: "pointer",
+};
+
+/* ==========================================================
+   EMPTY / INFO / UPLOAD
+========================================================== */
 
 export const emptyStateStyle = {
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "center",
-  minHeight: "48px",
-  width: "100%",
-  color: muted,
-  fontSize: "10px",
-  fontWeight: 600,
-  textAlign: "center" as const,
+  display: "flex", alignItems: "center", justifyContent: "center",
+  minHeight: "55px", width: "100%", color: THEME.textMuted,
+  fontSize: "12px", fontWeight: 600, textAlign: "center" as const,
 };
 
-export const fullPageStyle = {
-  position: "fixed" as const,
-  inset: 0,
-  zIndex: 1000,
-  display: "flex",
-  flexDirection: "column" as const,
-  padding: "18px",
-  boxSizing: "border-box" as const,
-  background: "#07101E",
-  color: "#FFFFFF",
+export const uploadInputStyle = { display: "none" };
+
+export const uploadLabelStyle = {
+  position: "relative" as const, display: "flex", alignItems: "center",
+  justifyContent: "center", minHeight: "31px", marginTop: "8px",
+  borderRadius: "7px", border: strongBorder, background: THEME.primarySoft,
+  color: THEME.textInverse, fontSize: "11px", fontWeight: 700,
+  cursor: "pointer", overflow: "hidden",
+};
+
+/* ==========================================================
+   GALLERY
+========================================================== */
+
+export const categoryGalleryBackdropStyle = {
+  position: "fixed" as const, inset: 0, zIndex: 1000, display: "flex",
+  flexDirection: "column" as const, alignItems: "stretch",
+  justifyContent: "flex-start", padding: "18px", boxSizing: "border-box" as const,
+  background: THEME.page, color: THEME.textInverse,
 };
 
 export const galleryHeaderStyle = {
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "space-between",
-  gap: "12px",
-  paddingBottom: "10px",
-  borderBottom: panelBorder,
+  display: "flex", alignItems: "center", justifyContent: "space-between",
+  gap: "12px", paddingBottom: "10px", borderBottom: panelBorder,
 };
 
 export const galleryHeaderLeftStyle = {
-  display: "flex",
-  alignItems: "center",
-  gap: "10px",
-  minWidth: 0,
+  display: "flex", alignItems: "center", gap: "10px", minWidth: 0,
 };
 
+export const galleryTitleWrapStyle = { minWidth: 0 };
+
 export const galleryTitleStyle = {
-  color: text,
-  fontSize: "16px",
-  fontWeight: 800,
+  color: THEME.textPrimary, fontSize: "16px", fontWeight: 800,
+};
+
+export const galleryMetaStyle = {
+  color: THEME.textMuted, fontSize: "11px", marginTop: "3px",
 };
 
 export const galleryViewportStyle = {
-  height: "455px",
-  maxHeight: "calc(100vh - 110px)",
-  minHeight: 0,
-  overflowY: "auto" as const,
-  paddingTop: "12px",
-  paddingBottom: "20px",
+  height: "455px", maxHeight: "calc(100vh - 110px)", minHeight: 0,
+  overflowY: "auto" as const, paddingTop: "12px", paddingBottom: "20px",
   boxSizing: "border-box" as const,
 };
 
 export const galleryGridStyle = {
-  display: "grid",
-  gridTemplateColumns:
-    "repeat(5, minmax(0, 1fr))",
-  gap: "10px",
-  alignItems: "start",
+  display: "grid", gridTemplateColumns: "repeat(5, minmax(0, 1fr))",
+  gap: "10px", alignItems: "start",
 };
 
+export const galleryOverflowNoteStyle = {
+  marginTop: "10px", color: THEME.textMuted, fontSize: "11px",
+};
+
+/* ==========================================================
+   DOCUMENT TILE
+========================================================== */
+
 export const documentTileStyle = {
-  minWidth: 0,
-  overflow: "hidden",
-  border: panelBorder,
-  borderRadius: "9px",
-  background: deepNavy,
+  minWidth: 0, overflow: "hidden", border: panelBorder, borderRadius: "9px",
+  background: THEME.surface,
+};
+
+export const documentTileButtonStyle = {
+  border: 0, padding: 0, margin: 0, width: "100%",
+  background: "transparent", cursor: "pointer",
 };
 
 export const documentTileImageStyle = {
-  width: "100%",
-  height: "100%",
-  maxWidth: "100%",
-  maxHeight: "100%",
-  display: "block",
-  objectFit: "contain" as const,
-  objectPosition: "center" as const,
-  background: darkerNavy,
+  width: "100%", height: "100%", maxWidth: "100%", maxHeight: "100%",
+  display: "block", objectFit: "contain" as const,
+  objectPosition: "center" as const, background: THEME.surface,
 };
 
-export const documentTileFooterStyle = {
-  padding: "8px",
+export const pdfTileStyle = {
+  ...documentTileImageStyle,
+  display: "flex", alignItems: "center", justifyContent: "center",
+  color: THEME.info, fontWeight: 800, fontSize: "20px",
 };
+
+export const pdfCompactStyle = {
+  ...categoryPreviewThumbStyle,
+  display: "flex", alignItems: "center", justifyContent: "center",
+  color: THEME.info, fontWeight: 800, fontSize: "11px",
+};
+
+export const documentTileFooterStyle = { padding: "8px" };
 
 export const documentTileNameStyle = {
-  color: "#F8FAFC",
-  fontSize: "11px",
-  fontWeight: 750,
-  overflow: "hidden",
-  textOverflow: "ellipsis",
+  color: THEME.textPrimary, fontSize: "11px", fontWeight: 750,
+  overflow: "hidden", textOverflow: "ellipsis",
   whiteSpace: "nowrap" as const,
 };
 
 export const documentTileTypeStyle = {
-  marginTop: "2px",
-  color: muted,
-  fontSize: "9px",
-  fontWeight: 600,
+  marginTop: "2px", color: THEME.textMuted, fontSize: "9px", fontWeight: 600,
+};
+
+export const documentTileActionsStyle = {
+  display: "flex", gap: "6px", marginTop: "7px",
 };
 
 export const renameButtonStyle = {
-  flex: 1,
-  minHeight: "25px",
-  borderRadius: "6px",
-  border: "1px solid rgba(37, 99, 235, 0.25)",
-  background: "rgba(37, 99, 235, 0.08)",
-  color: "#93C5FD",
-  fontSize: "9px",
-  fontWeight: 700,
-  cursor: "pointer",
+  flex: 1, minHeight: "25px", borderRadius: "6px", border: strongBorder,
+  background: THEME.primarySoft, color: THEME.info,
+  fontSize: "9px", fontWeight: 700, cursor: "pointer",
 };
 
 export const itemMenuStyle = {
-  width: "25px",
-  height: "25px",
-  padding: 0,
-  borderRadius: "6px",
-  border: "1px solid rgba(239, 68, 68, 0.22)",
-  background: "rgba(239, 68, 68, 0.08)",
-  color: "#FCA5A5",
-  fontSize: "15px",
-  lineHeight: 1,
-  cursor: "pointer",
+  width: "25px", height: "25px", padding: 0, borderRadius: "6px",
+  border: `1px solid ${THEME.danger}`, background: THEME.dangerSoft,
+  color: THEME.danger, fontSize: "15px", lineHeight: 1, cursor: "pointer",
 };
 
+/* ==========================================================
+   RENAME DIALOG
+========================================================== */
+
+export const renameDialogStyle = {
+  width: "min(420px, 92vw)", padding: "18px", border: strongBorder,
+  borderRadius: "12px", background: THEME.surface,
+  boxShadow: `0 24px 80px ${THEME.overlayShadow}`,
+};
+
+export const renameDialogTitleStyle = {
+  color: THEME.textPrimary, fontSize: "15px", fontWeight: 800,
+  marginBottom: "10px",
+};
+
+export const renameInputStyle = {
+  width: "100%", boxSizing: "border-box" as const, padding: "10px 11px",
+  border: panelBorder, borderRadius: "8px", background: THEME.surface,
+  color: THEME.textPrimary, outline: "none",
+};
+
+export const renameActionsStyle = {
+  display: "flex", justifyContent: "flex-end", gap: "8px", marginTop: "12px",
+};
+
+/* ==========================================================
+   VIEWER
+========================================================== */
+
 export const viewerBackdropStyle = {
-  position: "fixed" as const,
-  inset: 0,
-  zIndex: 1100,
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "center",
-  padding: "24px",
-  boxSizing: "border-box" as const,
-  background: "rgba(2, 8, 23, 0.88)",
+  position: "fixed" as const, inset: 0, zIndex: 1100, display: "flex",
+  alignItems: "center", justifyContent: "center", padding: "24px",
+  boxSizing: "border-box" as const, background: THEME.overlayBackdrop,
   backdropFilter: "blur(4px)",
 };
 
 export const viewerContentStyle = {
-  width: "min(1180px, 94vw)",
-  height: "min(820px, 92vh)",
-  display: "flex",
-  flexDirection: "column" as const,
-  alignItems: "center",
-  justifyContent: "center",
-  gap: "10px",
-  padding: "12px",
-  boxSizing: "border-box" as const,
-  border: blueBorder,
-  borderRadius: "12px",
-  background: "#0A1425",
-  boxShadow: "0 30px 100px rgba(0,0,0,0.55)",
+  width: "min(1180px, 94vw)", height: "min(820px, 92vh)", display: "flex",
+  flexDirection: "column" as const, alignItems: "center",
+  justifyContent: "center", gap: "10px", padding: "12px",
+  boxSizing: "border-box" as const, border: strongBorder, borderRadius: "12px",
+  background: THEME.surface, boxShadow: `0 30px 100px ${THEME.overlayShadow}`,
 };
 
 export const viewerTitleStyle = {
-  alignSelf: "stretch",
-  color: "#F8FAFC",
-  fontSize: "13px",
-  fontWeight: 800,
-  textAlign: "center" as const,
+  alignSelf: "stretch", color: THEME.textPrimary, fontSize: "13px",
+  fontWeight: 800, textAlign: "center" as const,
 };
 
 export const viewerImageStyle = {
-  maxWidth: "100%",
-  maxHeight: "calc(100% - 28px)",
-  objectFit: "contain" as const,
-  borderRadius: "8px",
+  maxWidth: "100%", maxHeight: "calc(100% - 28px)",
+  objectFit: "contain" as const, borderRadius: "8px",
 };
 
 export const viewerFrameStyle = {
-  width: "100%",
-  flex: 1,
-  minHeight: 0,
-  border: 0,
-  borderRadius: "8px",
-  background: "#FFFFFF",
+  width: "100%", flex: 1, minHeight: 0, border: 0, borderRadius: "8px",
+  background: THEME.textInverse,
 };
 
 export const viewerCloseStyle = {
-  position: "fixed" as const,
-  top: "14px",
-  right: "16px",
-  zIndex: 1110,
-  width: "36px",
-  height: "36px",
-  padding: 0,
-  borderRadius: "999px",
-  border: "1px solid rgba(148, 163, 184, 0.22)",
-  background: "#111C2E",
-  color: "#FFFFFF",
-  fontSize: "22px",
-  lineHeight: 1,
-  cursor: "pointer",
+  position: "fixed" as const, top: "14px", right: "16px", zIndex: 1110,
+  width: "36px", height: "36px", padding: 0, borderRadius: "999px",
+  border: panelBorder, background: THEME.surface, color: THEME.textInverse,
+  fontSize: "22px", lineHeight: 1, cursor: "pointer",
 };
-
-export const uploadCardStyle = {
-  minWidth: 0,
-  border: "1px dashed rgba(37, 99, 235, 0.38)",
-  borderRadius: "10px",
-  background: "rgba(15, 23, 42, 0.55)",
-};
-
-export const uploadCardStyleUnused = uploadCardStyle;
-
-export const quickMetaStyleUnused = quickMetaStyle;

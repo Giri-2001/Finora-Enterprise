@@ -51,7 +51,7 @@ export const ROYAL_NAVY_THEME:
   mode: "dark",
 
   description:
-    "FINORA's premium royal navy theme combining deep navy surfaces, refined blue accents, and high-contrast enterprise presentation.",
+    "FINORA's premium royal navy theme combining deep navy surfaces, restrained blue-gray accents, and high-contrast enterprise presentation.",
 
 
   /* =========================================================
@@ -65,10 +65,10 @@ export const ROYAL_NAVY_THEME:
     ------------------------------------------------------- */
 
     brand: {
-      primary: "#1E3A5F",
-      secondary: "#142A45",
-      accent: "#4F8CC9",
-      accentSoft: "#DCEBFA",
+      primary: "#29415F",
+      secondary: "#1D3048",
+      accent: "#6F8EAE",
+      accentSoft: "#243447",
     },
 
 
@@ -95,7 +95,7 @@ export const ROYAL_NAVY_THEME:
       muted: "#8F9FB2",
       inverse: "#FFFFFF",
       disabled: "#65758A",
-      link: "#76A9D8",
+      link: "#A9BCD0",
     },
 
 
@@ -107,7 +107,7 @@ export const ROYAL_NAVY_THEME:
       default: "#30445E",
       subtle: "#24364D",
       strong: "#48617E",
-      focus: "#4F8CC9",
+      focus: "#6F8EAE",
     },
 
 
@@ -117,8 +117,8 @@ export const ROYAL_NAVY_THEME:
 
     status: {
 
-  success: "#6EA8FF",
-  successSoft: "#182F4F",
+      success: "#6EA8FF",
+      successSoft: "#182F4F",
 
       warning: "#D6A33A",
       warningSoft: "#40351D",
@@ -126,7 +126,7 @@ export const ROYAL_NAVY_THEME:
       danger: "#E05A50",
       dangerSoft: "#422522",
 
-      info: "#4F9BD8",
+      info: "#6F9FCA",
       infoSoft: "#18344D",
     },
 
@@ -139,7 +139,7 @@ export const ROYAL_NAVY_THEME:
       hover: "#1A2A40",
       active: "#223550",
       selected: "#263F5E",
-      focus: "#4F8CC9",
+      focus: "#6F8EAE",
       disabled: "#182435",
     },
 
@@ -166,7 +166,7 @@ export const ROYAL_NAVY_THEME:
     label: "#D7E0EA",
     caption: "#8F9FB2",
     placeholder: "#718198",
-    link: "#76A9D8",
+    link: "#A9BCD0",
     inverse: "#FFFFFF",
   },
 
@@ -197,7 +197,7 @@ export const ROYAL_NAVY_THEME:
       border: "#30445E",
       text: "#F5F8FC",
       placeholder: "#718198",
-      focusBorder: "#4F8CC9",
+      focusBorder: "#6F8EAE",
       focusBackground: "#111C2E",
       disabledBackground: "#182435",
     },
@@ -209,9 +209,9 @@ export const ROYAL_NAVY_THEME:
 
     button: {
 
-      primaryBackground: "#1E3A5F",
-      primaryText: "#FFFFFF",
-      primaryHover: "#28517F",
+      primaryBackground: "#29415F",
+      primaryText: "#F5F8FC",
+      primaryHover: "#365675",
 
       secondaryBackground: "#16243A",
       secondaryText: "#D7E0EA",
@@ -231,7 +231,7 @@ export const ROYAL_NAVY_THEME:
     navigation: {
       background: "#0F1929",
       text: "#AEBBCD",
-      activeBackground: "#1E3A5F",
+      activeBackground: "#29415F",
       activeText: "#FFFFFF",
       hoverBackground: "#1A2A40",
     },
