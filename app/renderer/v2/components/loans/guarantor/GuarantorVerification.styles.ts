@@ -7,14 +7,13 @@
 // RESPONSIBILITY:
 // - GuarantorVerification presentation only
 // - Premium compact verification configuration layout
-// - FINORA Enterprise dark navy theme
+// - FINORA Enterprise Theme Engine compatibility
 // - Native input/select controls visually normalized
 // - Single-viewport Step 4 compatibility
 //
 // DESIGN:
-// - Primary Blue: #2563EB
-// - No brown
-// - No gold
+// - Theme colours are supplied by the existing FINORA Theme Engine
+// - No local hard-coded application colours
 // - Minimum font-size: 12px
 // - Font weights: 500–750
 //
@@ -23,30 +22,60 @@
 import type { CSSProperties } from "react";
 
 // ============================================================
-// COLOR TOKENS
+// FINORA THEME TOKENS
+//
+// Values are resolved from the existing FINORA Theme Engine
+// CSS variable bridge.
+//
+// No new colours are introduced.
 // ============================================================
 
-const COLORS = {
-  panel: "#111C2E",
-  panelSoft: "#142238",
+const THEME = {
+  panel:
+    "var(--finora-theme-background-surface)",
 
-  input: "#0A1425",
-  inputHover: "#0D192D",
-  inputFocus: "#0A1425",
+  panelSoft:
+    "var(--finora-theme-background-surface-muted)",
 
-  border: "rgba(148, 163, 184, 0.18)",
-  borderStrong: "rgba(37, 99, 235, 0.38)",
+  input:
+    "var(--finora-theme-surface-strong)",
 
-  primary: "#2563EB",
-  primaryHover: "#3B82F6",
+  inputHover:
+    "var(--finora-theme-surface-strong)",
 
-  primarySoft: "rgba(37, 99, 235, 0.14)",
-  primaryGlow: "rgba(37, 99, 235, 0.20)",
+  inputFocus:
+    "var(--finora-theme-surface-strong)",
 
-  text: "#FFFFFF",
-  textSecondary: "#CBD5E1",
-  textMuted: "#94A3B8",
-};
+  border:
+    "var(--finora-theme-border-default)",
+
+  borderStrong:
+    "var(--finora-theme-border-strong)",
+
+  primary:
+    "var(--finora-theme-brand-primary)",
+
+  primaryHover:
+    "var(--finora-theme-brand-secondary)",
+
+  primarySoft:
+    "var(--finora-theme-brand-accent-soft)",
+
+  primaryGlow:
+    "var(--finora-theme-brand-accent-soft)",
+
+  text:
+    "var(--finora-theme-text-primary)",
+
+  textSecondary:
+    "var(--finora-theme-text-secondary)",
+
+  textMuted:
+    "var(--finora-theme-text-muted)",
+
+  overlayShadow:
+    "var(--finora-theme-overlay-shadow)",
+} as const;
 
 // ============================================================
 // WRAPPER
@@ -61,16 +90,16 @@ export const wrapperStyle: CSSProperties = {
 
   marginBottom: "10px",
 
-  border: `1px solid ${COLORS.border}`,
+  border: `1px solid ${THEME.border}`,
   borderRadius: "10px",
 
   background: `linear-gradient(
     180deg,
-    ${COLORS.panel},
-    ${COLORS.panelSoft}
+    ${THEME.panel},
+    ${THEME.panelSoft}
   )`,
 
-  boxShadow: "0 6px 18px rgba(0, 0, 0, 0.14)",
+  boxShadow: `0 6px 18px ${THEME.overlayShadow}`,
 
   overflow: "hidden",
 };
@@ -89,7 +118,7 @@ export const headerStyle: CSSProperties = {
 
   marginBottom: "9px",
 
-  color: COLORS.text,
+  color: THEME.text,
 
   fontSize: "14px",
   fontWeight: 750,
@@ -111,9 +140,9 @@ export const accentStyle: CSSProperties = {
 
   borderRadius: "3px",
 
-  background: COLORS.primary,
+  background: THEME.primary,
 
-  boxShadow: `0 0 10px ${COLORS.primaryGlow}`,
+  boxShadow: `0 0 10px ${THEME.primaryGlow}`,
 };
 
 // ============================================================
@@ -183,11 +212,11 @@ export const inputStyle: CSSProperties = {
 
   borderRadius: "8px",
 
-  border: `1px solid ${COLORS.border}`,
+  border: `1px solid ${THEME.border}`,
 
-  background: COLORS.input,
+  background: THEME.input,
 
-  color: COLORS.text,
+  color: THEME.text,
 
   fontSize: "12px",
 
@@ -224,11 +253,11 @@ export const selectStyle: CSSProperties = {
 
   borderRadius: "8px",
 
-  border: `1px solid ${COLORS.border}`,
+  border: `1px solid ${THEME.border}`,
 
-  backgroundColor: COLORS.input,
+  backgroundColor: THEME.input,
 
-  color: COLORS.text,
+  color: THEME.text,
 
   fontSize: "12px",
 
@@ -255,12 +284,12 @@ export const selectStyle: CSSProperties = {
 // ============================================================
 
 export const inputFocusStyle: CSSProperties = {
-  borderColor: COLORS.primary,
+  borderColor: THEME.primary,
 
-  boxShadow: `0 0 0 1px ${COLORS.primary},
-    0 0 10px ${COLORS.primaryGlow}`,
+  boxShadow: `0 0 0 1px ${THEME.primary},
+    0 0 10px ${THEME.primaryGlow}`,
 
-  background: COLORS.inputFocus,
+  background: THEME.inputFocus,
 };
 
 // ============================================================
@@ -268,12 +297,12 @@ export const inputFocusStyle: CSSProperties = {
 // ============================================================
 
 export const selectFocusStyle: CSSProperties = {
-  borderColor: COLORS.primary,
+  borderColor: THEME.primary,
 
-  boxShadow: `0 0 0 1px ${COLORS.primary},
-    0 0 10px ${COLORS.primaryGlow}`,
+  boxShadow: `0 0 0 1px ${THEME.primary},
+    0 0 10px ${THEME.primaryGlow}`,
 
-  backgroundColor: COLORS.inputFocus,
+  backgroundColor: THEME.inputFocus,
 };
 
 // ============================================================

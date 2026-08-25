@@ -5,11 +5,18 @@
 //
 // RESPONSIBILITY:
 // - Shared enterprise select input
-// - FINORA dark navy visual language
-// - Compact Step 4 / Step 6 compatible sizing
-// - Visible enterprise dropdown arrow
+// - FINORA Theme Engine compatibility
+// - Native browser dropdown
+// - Theme follows active FINORA theme
 // - Preserve existing SelectInput API
 //
+// IMPORTANT:
+// - Keep this component native.
+// - Do NOT create a custom dropdown menu.
+// - Do NOT add custom open/close state.
+// - Do NOT add dropdown height / scrollbar logic.
+// - Theme colours come only from FINORA CSS variables.
+// - Native popup receives explicit FINORA option styling.
 // ============================================================
 
 // ============================================================
@@ -36,7 +43,79 @@ export interface SelectInputProps
 }
 
 // ============================================================
-// STYLES
+// FINORA THEME TOKENS
+// ============================================================
+
+const THEME = {
+  background:
+    "var(--finora-theme-background-surface-deep)",
+
+  optionBackground:
+    "var(--finora-theme-background-surface-deep)",
+
+  border:
+    "var(--finora-theme-border-default)",
+
+  text:
+    "var(--finora-theme-text-primary)",
+
+  textSecondary:
+    "var(--finora-theme-text-secondary)",
+} as const;
+
+// ============================================================
+// NATIVE COLOR SCHEME
+// ============================================================
+//
+// FINORA root theme:
+//
+// data-theme="light" -> native light controls
+// everything else    -> native dark controls
+//
+// This helps the browser choose the correct native control
+// rendering mode.
+// ============================================================
+
+function getNativeColorScheme(): "light" | "dark" {
+  if (typeof document === "undefined") {
+    return "dark";
+  }
+
+  return document.documentElement.dataset.theme === "light"
+    ? "light"
+    : "dark";
+}
+
+// ============================================================
+// OPTION STYLE
+// ============================================================
+//
+// IMPORTANT:
+//
+// The previous SelectInput styled only the <select> element.
+// The native popup is rendered from <option> elements.
+//
+// Explicit option styling gives the browser a FINORA theme
+// background/text to use for the native popup wherever the
+// browser supports option styling.
+//
+// No custom dropdown implementation is introduced.
+// ============================================================
+
+const optionStyle: CSSProperties = {
+  backgroundColor:
+    THEME.optionBackground,
+
+  color:
+    THEME.text,
+
+  fontSize: "12px",
+
+  fontWeight: 500,
+};
+
+// ============================================================
+// WRAPPER
 // ============================================================
 
 const wrapperStyle: CSSProperties = {
@@ -48,8 +127,13 @@ const wrapperStyle: CSSProperties = {
   boxSizing: "border-box",
 };
 
+// ============================================================
+// SELECT
+// ============================================================
+
 const selectStyle: CSSProperties = {
   width: "100%",
+
   minWidth: 0,
 
   height: "38px",
@@ -60,11 +144,13 @@ const selectStyle: CSSProperties = {
   borderRadius: "8px",
 
   border:
-    "1px solid rgba(148, 163, 184, 0.18)",
+    `1px solid ${THEME.border}`,
 
-  background: "#0A1425",
+  background:
+    THEME.background,
 
-  color: "#FFFFFF",
+  color:
+    THEME.text,
 
   fontSize: "12px",
 
@@ -72,21 +158,34 @@ const selectStyle: CSSProperties = {
 
   lineHeight: 1.2,
 
+  fontFamily: "inherit",
+
   outline: "none",
 
   boxSizing: "border-box",
 
   cursor: "pointer",
 
-  transition:
-    "border-color 0.15s ease, box-shadow 0.15s ease, background 0.15s ease",
-
   WebkitAppearance: "none",
 
   MozAppearance: "none",
 
   appearance: "none",
+
+  /*
+   * Native browser popup follows the active
+   * FINORA light/dark theme where supported.
+   */
+  colorScheme:
+    getNativeColorScheme(),
+
+  transition:
+    "border-color 0.15s ease, box-shadow 0.15s ease, background 0.15s ease",
 };
+
+// ============================================================
+// ARROW
+// ============================================================
 
 const arrowStyle: CSSProperties = {
   position: "absolute",
@@ -94,8 +193,8 @@ const arrowStyle: CSSProperties = {
   top: "50%",
   right: "12px",
 
-  width: "0",
-  height: "0",
+  width: 0,
+  height: 0,
 
   transform:
     "translateY(-25%)",
@@ -107,7 +206,7 @@ const arrowStyle: CSSProperties = {
     "5px solid transparent",
 
   borderTop:
-    "6px solid #CBD5E1",
+    `6px solid ${THEME.textSecondary}`,
 
   pointerEvents: "none",
 
@@ -123,57 +222,46 @@ export default function SelectInput({
   style,
   ...props
 }: SelectInputProps) {
+
   return (
     <div
-      style={
-        wrapperStyle
-      }
+      style={wrapperStyle}
     >
 
       <select
         {...props}
+
         style={{
           ...selectStyle,
+
           ...style,
+
+          /*
+           * Preserve FINORA native popup behaviour even
+           * when the parent passes additional inline styles.
+           */
+          colorScheme:
+            getNativeColorScheme(),
         }}
       >
+
         {options.map(
           (option) => (
             <option
-              key={
-                option.value
-              }
-              value={
-                option.value
-              }
-              style={{
-                background:
-                  "#0A1425",
-
-                color:
-                  "#FFFFFF",
-              }}
+              key={option.value}
+              value={option.value}
+              style={optionStyle}
             >
-              {
-                option.label
-              }
+              {option.label}
             </option>
           ),
         )}
+
       </select>
-
-      {/* =====================================================
-          ENTERPRISE DROPDOWN ARROW
-
-          Native arrow is disabled intentionally so that
-          FINORA theme remains consistent across browsers.
-      ===================================================== */}
 
       <span
         aria-hidden="true"
-        style={
-          arrowStyle
-        }
+        style={arrowStyle}
       />
 
     </div>

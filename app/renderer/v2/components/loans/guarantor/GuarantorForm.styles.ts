@@ -8,40 +8,65 @@
 // - GuarantorForm presentation only
 // - Compact 4-column guarantor information layout
 // - Equal-width fields
-// - Proper FINORA Enterprise spacing
+// - FINORA Enterprise Theme Engine compatibility
+// - Theme-connected guarantor inputs
 // - Single-viewport Step 4 compatibility
 //
 // LAYOUT:
 // Guarantor Name | Mobile Number | Occupation | Address
+//
+// THEME:
+// - Visual colours come only from FINORA Theme Engine
+// - No local application colour palette
+// - No hard-coded application colours
 //
 // ============================================================
 
 import type { CSSProperties } from "react";
 
 // ============================================================
-// COLOR TOKENS
+// FINORA THEME TOKENS
 // ============================================================
 
-const COLORS = {
-  panel: "#111C2E",
-  panelSoft: "#142238",
+const THEME = {
+  panel:
+    "var(--finora-theme-background-surface)",
 
-  border: "rgba(148, 163, 184, 0.18)",
+  panelSoft:
+    "var(--finora-theme-background-surface-muted)",
 
-  primary: "#2563EB",
-  primaryGlow: "rgba(37, 99, 235, 0.18)",
+  input:
+    "var(--finora-theme-background-surface-deep)",
 
-  text: "#FFFFFF",
-};
+  border:
+    "var(--finora-theme-border-default)",
+
+  primary:
+    "var(--finora-theme-brand-primary)",
+
+  primarySoft:
+    "var(--finora-theme-brand-accent-soft)",
+
+  text:
+    "var(--finora-theme-text-primary)",
+
+  textMuted:
+    "var(--finora-theme-text-muted)",
+
+  shadow:
+    "var(--finora-theme-overlay-shadow)",
+  
+  textSecondary: "var(--finora-theme-text-secondary)",
+
+  
+} as const;
 
 // ============================================================
 // WRAPPER
 //
-// Four fields always remain in ONE ROW.
+// Four fields remain in ONE ROW.
 //
 // Guarantor Name | Mobile Number | Occupation | Address
-//
-// Equal columns + controlled spacing.
 // ============================================================
 
 export const wrapperStyle: CSSProperties = {
@@ -63,19 +88,19 @@ export const wrapperStyle: CSSProperties = {
   padding: "8px 10px 4px 10px",
 
   border:
-    `1px solid ${COLORS.border}`,
+    `1px solid ${THEME.border}`,
 
   borderRadius: "9px",
 
   background:
     `linear-gradient(
       180deg,
-      ${COLORS.panel},
-      ${COLORS.panelSoft}
+      ${THEME.panel},
+      ${THEME.panelSoft}
     )`,
 
   boxShadow:
-    "0 4px 14px rgba(0, 0, 0, 0.12)",
+    `0 4px 14px ${THEME.shadow}`,
 
   overflow: "hidden",
 };
@@ -99,7 +124,7 @@ export const headerStyle: CSSProperties = {
 
   padding: 0,
 
-  color: COLORS.text,
+  color: THEME.text,
 
   fontSize: "13px",
 
@@ -123,19 +148,17 @@ export const accentStyle: CSSProperties = {
 
   borderRadius: "3px",
 
-  background: COLORS.primary,
+  background: THEME.primary,
 
   boxShadow:
-    `0 0 8px ${COLORS.primaryGlow}`,
+    `0 0 8px ${THEME.primarySoft}`,
 };
 
 // ============================================================
 // FIELD
 //
-// Important:
-// FormField has its own marginBottom.
-// We neutralize it here so the four fields
-// stay visually aligned in one row.
+// FormField internal spacing is neutralized so the four
+// guarantor fields remain aligned in one row.
 // ============================================================
 
 export const fieldStyle: CSSProperties = {
@@ -176,6 +199,55 @@ export const fieldContentStyle: CSSProperties = {
   padding: 0,
 
   overflow: "hidden",
+};
+
+// ============================================================
+// THEME-CONNECTED GUARANTOR INPUT
+//
+// This style is intentionally applied from GuarantorForm
+// instead of changing the shared TextInput component.
+//
+// Therefore:
+// - Other screens remain untouched.
+// - Guarantor inputs consume FINORA Theme Engine tokens.
+// - Existing TextInput API remains unchanged.
+// ============================================================
+
+export const inputStyle: CSSProperties = {
+  width: "100%",
+
+  minWidth: 0,
+
+  height: "38px",
+
+  padding: "8px 11px",
+
+  borderRadius: "8px",
+
+  border:
+    `1px solid ${THEME.border}`,
+
+  background:
+    THEME.input,
+
+  color: THEME.primary,
+
+  fontSize: "12px",
+
+  fontWeight: 500,
+
+  lineHeight: 1.2,
+
+  outline: "none",
+
+  boxSizing: "border-box",
+
+  transition:
+    "border-color 0.15s ease, box-shadow 0.15s ease, background 0.15s ease",
+
+  WebkitAppearance: "none",
+
+  MozAppearance: "textfield",
 };
 
 // ============================================================

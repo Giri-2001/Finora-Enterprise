@@ -9,12 +9,11 @@
 // - Premium compact guarantor summary presentation
 // - Five clean individual preview rows
 // - Single-viewport Step 4 compatibility
-// - FINORA Enterprise dark navy theme
+// - FINORA Enterprise Theme Engine compatibility
 //
 // DESIGN:
-// - Primary Blue: #2563EB
-// - No brown
-// - No gold
+// - Theme colours are supplied by the existing FINORA Theme Engine
+// - No local hard-coded application colours
 // - Minimum font-size: 12px
 // - Font weights: 500–750
 //
@@ -30,26 +29,42 @@
 import type { CSSProperties } from "react";
 
 // ============================================================
-// COLOR TOKENS
+// FINORA THEME TOKENS
+//
+// Values are resolved from the existing FINORA Theme Engine
+// CSS variable bridge.
+//
+// No new colours are introduced.
 // ============================================================
 
-const COLORS = {
-  panel: "#111C2E",
-  panelSoft: "#142238",
+const THEME = {
+  panel:
+    "var(--finora-theme-background-surface)",
 
-  input: "#0A1425",
+  border:
+    "var(--finora-theme-border-default)",
 
-  border: "rgba(148, 163, 184, 0.18)",
-  borderStrong: "rgba(37, 99, 235, 0.38)",
+  borderStrong:
+    "var(--finora-theme-brand-primary)",
 
-  primary: "#2563EB",
-  primarySoft: "rgba(37, 99, 235, 0.14)",
-  primaryGlow: "rgba(37, 99, 235, 0.18)",
+  primary:
+    "var(--finora-theme-brand-primary)",
 
-  text: "#FFFFFF",
-  textSecondary: "#CBD5E1",
-  textMuted: "#94A3B8",
-};
+  primarySoft:
+    "var(--finora-theme-brand-accent-soft)",
+
+  primaryGlow:
+    "var(--finora-theme-brand-accent-soft)",
+
+  text:
+    "var(--finora-theme-text-primary)",
+
+  textSecondary:
+    "var(--finora-theme-text-secondary)",
+
+  textMuted:
+    "var(--finora-theme-text-muted)",
+} as const;
 
 // ============================================================
 // CARD WRAPPER
@@ -119,12 +134,12 @@ export const rowStyle: CSSProperties = {
 
   boxSizing: "border-box",
 
-  border: `1px solid ${COLORS.border}`,
+  border: `1px solid ${THEME.border}`,
   borderRadius: "6px",
 
-  background: COLORS.panel,
+  background: THEME.panel,
 
-  color: COLORS.textSecondary,
+  color: THEME.textSecondary,
 
   fontSize: "12px",
   fontWeight: 500,
@@ -145,7 +160,7 @@ export const labelStyle: CSSProperties = {
 
   flex: "0 0 auto",
 
-  color: COLORS.textMuted,
+  color: THEME.textMuted,
 
   fontSize: "12px",
   fontWeight: 500,
@@ -161,16 +176,12 @@ export const labelStyle: CSSProperties = {
 // VALUE
 // ============================================================
 
-// ============================================================
-// VALUE
-// ============================================================
-
 export const valueStyle: CSSProperties = {
   minWidth: 0,
 
   flex: "1 1 auto",
 
-  color: COLORS.text,
+  color: THEME.text,
 
   fontSize: "12px",
   fontWeight: 650,
@@ -202,15 +213,15 @@ export const primaryValueStyle: CSSProperties = {
 export const highlightRowStyle: CSSProperties = {
   ...rowStyle,
 
-  borderColor: COLORS.borderStrong,
+  borderColor: THEME.borderStrong,
 
   background: `linear-gradient(
     90deg,
-    ${COLORS.primarySoft},
-    ${COLORS.panel}
+    ${THEME.primarySoft},
+    ${THEME.panel}
   )`,
 
-  boxShadow: `0 0 10px ${COLORS.primaryGlow}`,
+  boxShadow: `0 0 10px ${THEME.primaryGlow}`,
 };
 
 // ============================================================

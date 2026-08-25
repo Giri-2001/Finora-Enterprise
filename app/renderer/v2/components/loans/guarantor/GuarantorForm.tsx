@@ -4,7 +4,6 @@ GUARANTOR STUDIO
 GUARANTOR FORM
 =========================================================== */
 
-
 /* ===========================================================
 IMPORTS
 =========================================================== */
@@ -14,15 +13,14 @@ import {
   TextInput,
 } from "../../common";
 
-
 import {
   accentStyle,
   fieldContentStyle,
   fieldStyle,
   headerStyle,
+  inputStyle,
   wrapperStyle,
 } from "./GuarantorForm.styles";
-
 
 /* ===========================================================
 TYPES
@@ -51,7 +49,6 @@ interface GuarantorFormProps {
   ) => void;
 }
 
-
 /* ===========================================================
 COMPONENT
 =========================================================== */
@@ -61,6 +58,7 @@ export default function GuarantorForm({
   guarantorPhone,
   occupation,
   address,
+
   onGuarantorNameChange,
   onGuarantorPhoneChange,
   onOccupationChange,
@@ -81,7 +79,6 @@ export default function GuarantorForm({
         </span>
       </div>
 
-
       {/* =====================================================
           GUARANTOR NAME
       ===================================================== */}
@@ -100,11 +97,11 @@ export default function GuarantorForm({
                 )
               }
               placeholder="Enter guarantor name"
+              style={inputStyle}
             />
           </FormField>
         </div>
       </div>
-
 
       {/* =====================================================
           MOBILE NUMBER
@@ -124,11 +121,11 @@ export default function GuarantorForm({
                 )
               }
               placeholder="Enter mobile number"
+              style={inputStyle}
             />
           </FormField>
         </div>
       </div>
-
 
       {/* =====================================================
           OCCUPATION
@@ -147,17 +144,14 @@ export default function GuarantorForm({
                 )
               }
               placeholder="Enter occupation"
+              style={inputStyle}
             />
           </FormField>
         </div>
       </div>
 
-
       {/* =====================================================
           ADDRESS
-          IMPORTANT:
-          Normal fieldStyle intentionally used here.
-          This keeps Address in the 4th column.
       ===================================================== */}
 
       <div style={fieldStyle}>
@@ -173,6 +167,7 @@ export default function GuarantorForm({
                 )
               }
               placeholder="Enter address"
+              style={inputStyle}
             />
           </FormField>
         </div>
@@ -181,7 +176,6 @@ export default function GuarantorForm({
     </div>
   );
 }
-
 
 /* ===========================================================
 END

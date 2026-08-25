@@ -5,7 +5,7 @@
 //
 // RESPONSIBILITY:
 // - Shared form field presentation
-// - Premium FINORA dark-navy labels
+// - FINORA Enterprise Theme Engine labels
 // - Required / help / error messaging
 // - Preserve existing FormField API
 //
@@ -14,6 +14,7 @@
 // - No state
 // - No persistence
 // - Existing props and behavior preserved
+// - No local application colour palette
 //
 // ============================================================
 
@@ -45,20 +46,26 @@ export interface FormFieldProps {
 }
 
 // ============================================================
-// COLOR TOKENS
+// FINORA THEME TOKENS
+//
+// Values are resolved from the existing FINORA Theme Engine.
 // ============================================================
 
-const COLORS = {
+const THEME = {
 
-  text: "#E2E8F0",
+  textSecondary:
+    "var(--finora-theme-text-secondary)",
 
-  required: "#60A5FA",
+  required:
+    "var(--finora-theme-brand-primary)",
 
-  help: "#94A3B8",
+  help:
+    "var(--finora-theme-text-muted)",
 
-  error: "#FCA5A5",
+  error:
+    "var(--finora-theme-status-danger)",
 
-};
+} as const;
 
 // ============================================================
 // STYLES
@@ -88,7 +95,9 @@ const labelStyle: CSSProperties = {
 
   fontWeight: 600,
 
-  color: COLORS.text,
+  // FINORA Theme Engine
+  // Secondary text is used for form labels.
+  color: THEME.textSecondary,
 
   fontSize: "14px",
 
@@ -98,7 +107,7 @@ const labelStyle: CSSProperties = {
 
 const requiredStyle: CSSProperties = {
 
-  color: COLORS.required,
+  color: THEME.required,
 
   marginLeft: "4px",
 
@@ -114,7 +123,7 @@ const helpStyle: CSSProperties = {
 
   fontWeight: 500,
 
-  color: COLORS.help,
+  color: THEME.help,
 
   lineHeight: 1.3,
 
@@ -124,7 +133,7 @@ const errorStyle: CSSProperties = {
 
   fontSize: "12px",
 
-  color: COLORS.error,
+  color: THEME.error,
 
   fontWeight: 600,
 

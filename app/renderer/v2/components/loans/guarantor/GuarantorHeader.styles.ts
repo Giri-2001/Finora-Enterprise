@@ -7,12 +7,11 @@
 // RESPONSIBILITY:
 // - GuarantorHeader presentation only
 // - Guarantor-specific header presentation
-// - FINORA Login-inspired dark navy theme
+// - FINORA Enterprise Theme Engine compatibility
 //
 // DESIGN:
-// - Primary Blue: #2563EB
-// - No brown
-// - No gold
+// - Theme colours are supplied by the existing FINORA Theme Engine
+// - No local hard-coded application colours
 // - Minimum font-size: 12px
 // - Font weights: 500–750
 //
@@ -21,18 +20,39 @@
 import type { CSSProperties } from "react";
 
 // ============================================================
-// COLOR TOKENS
+// FINORA THEME TOKENS
+//
+// Values are resolved from the existing FINORA Theme Engine
+// CSS variable bridge.
+//
+// No new colours are introduced.
 // ============================================================
 
-const COLORS = {
-  panel: "#111C2E",
-  panelSoft: "#142238",
-  border: "rgba(148, 163, 184, 0.20)",
-  primary: "#2563EB",
-  primarySoft: "rgba(37, 99, 235, 0.14)",
-  text: "#FFFFFF",
-  textSecondary: "#CBD5E1",
-};
+const THEME = {
+  panel:
+    "var(--finora-theme-background-surface)",
+
+  panelSoft:
+    "var(--finora-theme-background-surface-muted)",
+
+  border:
+    "var(--finora-theme-border-default)",
+
+  primary:
+    "var(--finora-theme-brand-primary)",
+
+  primarySoft:
+    "var(--finora-theme-brand-accent-soft)",
+
+  text:
+    "var(--finora-theme-text-primary)",
+
+  textSecondary:
+    "var(--finora-theme-text-secondary)",
+
+  shadow:
+    "var(--finora-theme-overlay-shadow)",
+} as const;
 
 // ============================================================
 // HEADER WRAPPER
@@ -51,17 +71,18 @@ export const headerStyle: CSSProperties = {
   padding: "13px 16px",
   marginBottom: "3px",
 
-  border: `1px solid ${COLORS.border}`,
+  border: `1px solid ${THEME.border}`,
   borderRadius: "10px",
 
   background: `linear-gradient(
     135deg,
-    ${COLORS.panel},
-    ${COLORS.panelSoft}
+    ${THEME.panel},
+    ${THEME.panelSoft}
   )`,
 
-  boxShadow: "0 6px 18px rgba(0, 0, 0, 0.16)",
+  boxShadow: `0 6px 18px ${THEME.shadow}`,
 };
+
 // ============================================================
 // HEADER CONTENT
 // ============================================================
@@ -82,8 +103,8 @@ export const accentStyle: CSSProperties = {
   minHeight: "30px",
   flexShrink: 0,
   borderRadius: "4px",
-  background: COLORS.primary,
-  boxShadow: `0 0 12px ${COLORS.primarySoft}`,
+  background: THEME.primary,
+  boxShadow: `0 0 12px ${THEME.primarySoft}`,
 };
 
 // ============================================================
@@ -104,7 +125,7 @@ export const textWrapperStyle: CSSProperties = {
 export const titleStyle: CSSProperties = {
   margin: 0,
 
-  color: COLORS.text,
+  color: THEME.text,
   fontSize: "21px",
   fontWeight: 750,
   lineHeight: 1.2,
@@ -118,7 +139,7 @@ export const titleStyle: CSSProperties = {
 export const subtitleStyle: CSSProperties = {
   margin: 0,
 
-  color: COLORS.textSecondary,
+  color: THEME.textSecondary,
   fontSize: "12px",
   fontWeight: 500,
   lineHeight: 1.35,

@@ -27,7 +27,6 @@ TYPES
 
 interface GuarantorPreviewCardProps {
   guarantorName?: string;
-  relationship?: string;
   mobileNumber?: string;
   occupation?: string;
   address?: string;
@@ -39,7 +38,6 @@ COMPONENT
 
 export default function GuarantorPreviewCard({
   guarantorName = "--",
-  relationship = "--",
   mobileNumber = "--",
   occupation = "--",
   address = "--",
@@ -57,17 +55,6 @@ export default function GuarantorPreviewCard({
 
             <strong style={primaryValueStyle}>
               {guarantorName}
-            </strong>
-          </div>
-
-          {/* RELATIONSHIP */}
-          <div style={rowStyle}>
-            <span style={labelStyle}>
-              Relationship
-            </span>
-
-            <strong style={valueStyle}>
-              {relationship}
             </strong>
           </div>
 

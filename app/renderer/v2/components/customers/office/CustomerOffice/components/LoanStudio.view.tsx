@@ -81,17 +81,11 @@ import GuarantorHeader
 import GuarantorForm
   from "../../../../loans/guarantor/GuarantorForm";
 
-import RelationshipCard
-  from "../../../../loans/guarantor/RelationshipCard";
-
 import GuarantorVerification
   from "../../../../loans/guarantor/GuarantorVerification";
 
 import GuarantorPreviewCard
   from "../../../../loans/guarantor/GuarantorPreviewCard";
-
-import GuarantorDraftStatus
-  from "../../../../loans/guarantor/GuarantorDraftStatus";
 
 import RepaymentSummary
   from "../../../../loans/repayment/RepaymentSummary";
@@ -1013,20 +1007,6 @@ export default function LoanStudioView(
 
                 />
 
-
-                <RelationshipCard
-
-                  relationship={
-                    guarantorRelationship
-                  }
-
-                  onRelationshipChange={
-                    setGuarantorRelationship
-                  }
-
-                />
-
-
                 <GuarantorVerification />
 
               </div>
@@ -1044,20 +1024,6 @@ export default function LoanStudioView(
                     guarantorName
                   }
 
-                  relationship={
-
-                    guarantorRelationship
-
-                      ? guarantorRelationship
-                          .charAt(0)
-                          .toUpperCase() +
-
-                        guarantorRelationship.slice(1)
-
-                      : "--"
-
-                  }
-
                   mobileNumber={
                     guarantorPhone
                   }
@@ -1071,9 +1037,6 @@ export default function LoanStudioView(
                   }
 
                 />
-
-
-                <GuarantorDraftStatus />
 
               </div>
 
