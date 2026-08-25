@@ -38,7 +38,7 @@ export default function LoanStatistics({
             style={{
               fontSize: "11px",
               fontWeight: 500,
-              color: "#94A3B8",
+              color: "var(--finora-theme-text-muted, #94A3B8)",
               lineHeight: 1.1,
               overflow: "hidden",
               textOverflow: "ellipsis",
@@ -66,7 +66,7 @@ export default function LoanStatistics({
             style={{
               fontSize: "11px",
               fontWeight: 500,
-              color: "#94A3B8",
+              color: "var(--finora-theme-text-muted, #94A3B8)",
               lineHeight: 1.1,
               overflow: "hidden",
               textOverflow: "ellipsis",
@@ -94,7 +94,7 @@ export default function LoanStatistics({
             style={{
               fontSize: "11px",
               fontWeight: 500,
-              color: "#94A3B8",
+              color: "var(--finora-theme-text-muted, #94A3B8)",
               lineHeight: 1.1,
               overflow: "hidden",
               textOverflow: "ellipsis",

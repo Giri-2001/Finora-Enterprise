@@ -11,23 +11,11 @@
 // - Automatically calculate total scheduled EMI collection
 // - Premium FINORA Enterprise presentation
 //
-// IMPORTANT:
-// - Does NOT generate schedule.
-// - Does NOT modify installments.
-// - Does NOT access persistence.
-// - Receives LoanInstallment[] from parent.
-// - Total is calculated directly from schedule rows.
-// - No manual calculator is required by the owner.
-//
-// BUSINESS DISPLAY RULE:
-// - "Total EMI Collection" = SUM(all scheduled installment amounts)
-// - This is the actual amount the customer will pay through EMI rows.
-// - Advance Deduction is not silently added to this figure.
-// - Total Loan Payable / Total Repayable remains the domain summary.
-// ============================================================
-
-// ============================================================
-// IMPORTS
+// THEME:
+// - Visual colours come from FINORA Theme Engine CSS variables.
+// - No local colour palette.
+// - No hardcoded gradients.
+// - Layout / dimensions unchanged.
 // ============================================================
 
 import type {
@@ -46,20 +34,44 @@ interface LoanScheduleTableProps {
 }
 
 // ============================================================
-// CONSTANTS
+// FINORA THEME TOKENS
 // ============================================================
 
-const COLORS = {
-  background: "#0F172A",
-  panel: "#111C2E",
-  panelSoft: "#142238",
-  border: "rgba(148, 163, 184, 0.16)",
-  borderStrong: "rgba(37, 99, 235, 0.35)",
-  primary: "#2563EB",
-  primarySoft: "rgba(37, 99, 235, 0.10)",
-  text: "#FFFFFF",
-  textSecondary: "#CBD5E1",
-  textMuted: "#94A3B8",
+const THEME = {
+
+  background:
+    "var(--finora-theme-background-page, var(--finora-theme-background, #0F172A))",
+
+  panel:
+    "var(--finora-theme-surface, var(--finora-theme-background-surface, #111C2E))",
+
+  panelSoft:
+    "var(--finora-theme-surface-muted, var(--finora-theme-background-surface-muted, #142238))",
+
+  border:
+    "var(--finora-theme-border-default, rgba(148, 163, 184, 0.16))",
+
+  borderStrong:
+    "var(--finora-theme-border-strong, rgba(37, 99, 235, 0.35))",
+
+  primary:
+    "var(--finora-theme-brand-primary, #2563EB)",
+
+  primarySoft:
+    "var(--finora-theme-brand-accent-soft, rgba(37, 99, 235, 0.10))",
+
+  text:
+    "var(--finora-theme-text-primary, #FFFFFF)",
+
+  textSecondary:
+    "var(--finora-theme-text-secondary, #CBD5E1)",
+
+  textMuted:
+    "var(--finora-theme-text-muted, #94A3B8)",
+
+  shadow:
+    "var(--finora-theme-overlay-shadow, rgba(0, 0, 0, 0.18))",
+
 };
 
 // ============================================================
@@ -72,7 +84,10 @@ function formatIndianCurrency(
 
   const safeValue =
     Number.isFinite(value)
-      ? Math.max(0, Math.round(value))
+      ? Math.max(
+          0,
+          Math.round(value),
+        )
       : 0;
 
   return safeValue.toLocaleString(
@@ -96,12 +111,6 @@ export default function LoanScheduleTable({
   //
   // Source of truth:
   // every visible schedule row's installmentAmount.
-  //
-  // Example:
-  // ₹450 + ₹450 + ₹450 + ₹450 + ₹450 + ₹14,550
-  // = ₹16,800
-  //
-  // No manual calculator required.
   // ==========================================================
 
   const totalScheduledEMI =
@@ -138,17 +147,19 @@ export default function LoanScheduleTable({
         boxSizing: "border-box",
 
         border:
-          `1px solid ${COLORS.border}`,
+          `1px solid ${THEME.border}`,
 
-        borderRadius: "10px",
+        borderRadius:
+          "10px",
 
-        overflow: "hidden",
+        overflow:
+          "hidden",
 
         background:
-          COLORS.background,
+          THEME.background,
 
         boxShadow:
-          "0 8px 24px rgba(0, 0, 0, 0.18)",
+          `0 8px 24px ${THEME.shadow}`,
       }}
     >
 
@@ -171,13 +182,13 @@ export default function LoanScheduleTable({
             "10px 12px",
 
           borderBottom:
-            `1px solid ${COLORS.border}`,
+            `1px solid ${THEME.border}`,
 
           background:
             `linear-gradient(
               90deg,
-              ${COLORS.panelSoft},
-              ${COLORS.panel}
+              ${THEME.panelSoft},
+              ${THEME.panel}
             )`,
         }}
       >
@@ -204,24 +215,26 @@ export default function LoanScheduleTable({
 
               borderRadius: "3px",
 
-              background:
-                COLORS.primary,
+              background: "transparent",
 
               boxShadow:
-                "0 0 10px rgba(37,99,235,0.22)",
+                `0 0 10px ${THEME.primarySoft}`,
             }}
           />
 
           <span
             style={{
               color:
-                COLORS.text,
+                THEME.text,
 
-              fontSize: "13px",
+              fontSize:
+                "13px",
 
-              fontWeight: 750,
+              fontWeight:
+                750,
 
-              lineHeight: 1.2,
+              lineHeight:
+                1.2,
             }}
           >
             EMI Schedule
@@ -237,35 +250,24 @@ export default function LoanScheduleTable({
               "4px 8px",
 
             border:
-              `1px solid ${
-                hasSchedule
-                  ? COLORS.borderStrong
-                  : COLORS.border
-              }`,
+              `1px solid ${THEME.border}`,
 
-            borderRadius: "999px",
+            borderRadius:
+              "999px",
 
-            background:
-              hasSchedule
-                ? COLORS.primarySoft
-                : "rgba(255,255,255,0.03)",
+            background: "transparent",
 
             color:
-              hasSchedule
-                ? "#93C5FD"
-                : COLORS.textMuted,
+              THEME.text,
 
-            fontSize: "12px",
+            fontSize:
+              "12px",
 
-            fontWeight: 650,
-
-            lineHeight: 1.2,
+            fontWeight:
+              650,
           }}
         >
-          {schedule.length}{" "}
-          {schedule.length === 1
-            ? "Installment"
-            : "Installments"}
+          {schedule.length} Installments
         </span>
 
       </div>
@@ -292,7 +294,8 @@ export default function LoanScheduleTable({
           style={{
             width: "100%",
 
-            minWidth: "560px",
+            minWidth:
+              "560px",
 
             borderCollapse:
               "collapse",
@@ -311,10 +314,10 @@ export default function LoanScheduleTable({
             <tr
               style={{
                 background:
-                  COLORS.panel,
+                  THEME.panel,
 
                 borderBottom:
-                  `1px solid ${COLORS.border}`,
+                  `1px solid ${THEME.border}`,
               }}
             >
 
@@ -329,13 +332,16 @@ export default function LoanScheduleTable({
                     "left",
 
                   color:
-                    COLORS.textMuted,
+                    THEME.textMuted,
 
-                  fontSize: "12px",
+                  fontSize:
+                    "12px",
 
-                  fontWeight: 650,
+                  fontWeight:
+                    650,
 
-                  lineHeight: 1.2,
+                  lineHeight:
+                    1.2,
                 }}
               >
                 EMI
@@ -352,13 +358,16 @@ export default function LoanScheduleTable({
                     "left",
 
                   color:
-                    COLORS.textMuted,
+                    THEME.textMuted,
 
-                  fontSize: "12px",
+                  fontSize:
+                    "12px",
 
-                  fontWeight: 650,
+                  fontWeight:
+                    650,
 
-                  lineHeight: 1.2,
+                  lineHeight:
+                    1.2,
                 }}
               >
                 Due Date
@@ -375,13 +384,16 @@ export default function LoanScheduleTable({
                     "right",
 
                   color:
-                    COLORS.textMuted,
+                    THEME.textMuted,
 
-                  fontSize: "12px",
+                  fontSize:
+                    "12px",
 
-                  fontWeight: 650,
+                  fontWeight:
+                    650,
 
-                  lineHeight: 1.2,
+                  lineHeight:
+                    1.2,
                 }}
               >
                 Amount
@@ -398,13 +410,16 @@ export default function LoanScheduleTable({
                     "center",
 
                   color:
-                    COLORS.textMuted,
+                    THEME.textMuted,
 
-                  fontSize: "12px",
+                  fontSize:
+                    "12px",
 
-                  fontWeight: 650,
+                  fontWeight:
+                    650,
 
-                  lineHeight: 1.2,
+                  lineHeight:
+                    1.2,
                 }}
               >
                 Status
@@ -454,16 +469,19 @@ export default function LoanScheduleTable({
                       "center",
 
                     color:
-                      COLORS.textMuted,
+                      THEME.textMuted,
 
-                    fontSize: "12px",
+                    fontSize:
+                      "12px",
 
-                    fontWeight: 500,
+                    fontWeight:
+                      500,
 
-                    lineHeight: 1.4,
+                    lineHeight:
+                      1.4,
 
                     background:
-                      COLORS.background,
+                      THEME.background,
                   }}
                 >
                   Select a repayment frequency
@@ -478,15 +496,6 @@ export default function LoanScheduleTable({
 
           {/* ==================================================
               AUTOMATIC TOTAL FOOTER
-          ==================================================
-
-              This is intentionally inside the schedule table
-              so the owner sees the result immediately after
-              the final EMI row.
-
-              Example:
-              5 × ₹450 + ₹14,550
-              = ₹16,800
           ================================================== */}
 
           {hasSchedule && (
@@ -496,10 +505,10 @@ export default function LoanScheduleTable({
               <tr
                 style={{
                   background:
-                    "linear-gradient(90deg,#142238,#111C2E)",
+      THEME.panelSoft,
 
                   borderTop:
-                    `1px solid ${COLORS.borderStrong}`,
+                    `1px solid ${THEME.borderStrong}`,
                 }}
               >
 
@@ -513,13 +522,16 @@ export default function LoanScheduleTable({
                       "left",
 
                     color:
-                      COLORS.textSecondary,
+                      THEME.textSecondary,
 
-                    fontSize: "12px",
+                    fontSize:
+                      "12px",
 
-                    fontWeight: 750,
+                    fontWeight:
+                      750,
 
-                    lineHeight: 1.2,
+                    lineHeight:
+                      1.2,
                   }}
                 >
                   TOTAL EMI COLLECTION
@@ -534,13 +546,16 @@ export default function LoanScheduleTable({
                       "right",
 
                     color:
-                      "#FFFFFF",
+                      THEME.text,
 
-                    fontSize: "15px",
+                    fontSize:
+                      "14px",
 
-                    fontWeight: 600,
+                    fontWeight:
+                      800,
 
-                    lineHeight: 1.2,
+                    lineHeight:
+                      1.2,
 
                     whiteSpace:
                       "nowrap",
@@ -561,13 +576,16 @@ export default function LoanScheduleTable({
                       "center",
 
                     color:
-                      "#93C5FD",
+                      THEME.textMuted,
 
-                    fontSize: "11px",
+                    fontSize:
+                      "11px",
 
-                    fontWeight: 550,
+                    fontWeight:
+                      650,
 
-                    lineHeight: 1.2,
+                    lineHeight:
+                      1.2,
                   }}
                 >
                   AUTO CALCULATED
@@ -584,6 +602,7 @@ export default function LoanScheduleTable({
       </div>
 
     </section>
+
   );
 }
 

@@ -5,9 +5,16 @@
 // LOAN CUSTOMER CARD STYLES
 //
 // THEME:
-// - Visual colours come from FINORA Theme Engine CSS variables.
-// - No local theme palette.
+// - Visual colours come only from FINORA Theme Engine.
+// - No local colour palette.
+// - No hardcoded theme colours.
 // - Layout / dimensions unchanged.
+//
+// IMPORTANT:
+// - No business logic.
+// - No responsive logic.
+// - No behaviour changes.
+// - No selector/dropdown geometry changes.
 //
 // ============================================================
 
@@ -15,45 +22,44 @@ import type {
   CSSProperties,
 } from "react";
 
-
 // ============================================================
-// THEME TOKENS
+// FINORA THEME TOKENS
 // ============================================================
 
 const THEME = {
 
   primary:
-    "var(--finora-theme-brand-primary, #2563EB)",
+    "var(--finora-theme-brand-primary)",
 
   primarySoft:
-    "var(--finora-theme-brand-accent-soft, rgba(37, 99, 235, 0.14))",
+    "var(--finora-theme-brand-accent-soft)",
 
   input:
-    "var(--finora-theme-surface-strong, #0D192D)",
+    "var(--finora-theme-surface-strong)",
 
   dropdown:
-    "var(--finora-theme-surface, var(--finora-theme-background-surface, #0B1426))",
+    "var(--finora-theme-surface)",
 
   dropdownSoft:
-    "var(--finora-theme-surface-muted, var(--finora-theme-background-surface-muted, #111D33))",
+    "var(--finora-theme-surface-muted)",
 
   border:
-    "var(--finora-theme-border-default, #334155)",
+    "var(--finora-theme-border-default)",
 
   borderStrong:
-    "var(--finora-theme-border-strong, #2563EB)",
+    "var(--finora-theme-border-strong)",
 
   text:
-    "var(--finora-theme-text-primary, #F8FAFC)",
+    "var(--finora-theme-text-primary)",
 
   textSecondary:
-    "var(--finora-theme-text-secondary, #E2E8F0)",
+    "var(--finora-theme-text-secondary)",
 
   textMuted:
-    "var(--finora-theme-text-muted, #94A3B8)",
+    "var(--finora-theme-text-muted)",
 
   shadow:
-    "var(--finora-theme-overlay-shadow, rgba(0,0,0,0.48))",
+    "var(--finora-theme-overlay-shadow)",
 
 };
 
@@ -78,15 +84,15 @@ export const cardStyle: CSSProperties = {
     THEME.primarySoft,
 
   border:
-    "1px solid var(--finora-theme-border-default, rgba(148,163,184,0.20))",
+    `1px solid ${THEME.border}`,
 
   borderRadius: "16px",
 
   color:
-    "var(--finora-theme-text-primary, #FFFFFF)",
+    THEME.text,
 
   boxShadow:
-    "var(--finora-theme-overlay-shadow, 0 8px 24px rgba(0,0,0,0.16))",
+    `var(--finora-theme-overlay-shadow)`,
 
   overflow: "visible",
 
@@ -94,6 +100,7 @@ export const cardStyle: CSSProperties = {
 
   zIndex: 10,
 };
+
 
 // ============================================================
 // CONTENT
@@ -169,14 +176,14 @@ export const selectorButtonStyle: CSSProperties = {
 
   borderRadius: "7px",
 
- border:
-  "1px solid var(--finora-theme-border-strong, var(--finora-theme-border-default, #2563EB))",
+  border:
+    `1px solid ${THEME.borderStrong}`,
 
-background:
-  "var(--finora-theme-surface-muted, var(--finora-theme-background-surface-muted, #0F1B31))",
+  background:
+    THEME.dropdownSoft,
 
-color:
-  "var(--finora-theme-brand-accent, var(--finora-theme-brand-primary, #60A5FA))",
+  color:
+    THEME.primary,
 
   cursor: "pointer",
 
@@ -411,7 +418,7 @@ export const customerOptionMetaStyle: CSSProperties = {
   whiteSpace: "nowrap",
 
   color:
-    THEME.textMuted,
+    THEME.text,
 
   fontSize: "10px",
 
@@ -473,7 +480,7 @@ export const detailStyle: CSSProperties = {
   whiteSpace: "nowrap",
 
   color:
-    THEME.textSecondary,
+    THEME.text,
 
   fontSize: "14px",
 
@@ -501,7 +508,7 @@ export const emptyStateStyle: CSSProperties = {
   padding: "10px 8px",
 
   color:
-    THEME.textMuted,
+    THEME.text,
 
   fontSize: "11px",
 

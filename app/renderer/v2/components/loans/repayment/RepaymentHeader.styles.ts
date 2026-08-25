@@ -7,31 +7,46 @@
 // RESPONSIBILITY:
 // - RepaymentHeader presentation only
 // - Repayment-specific header presentation
-// - FINORA Login-inspired dark navy theme
+// - FINORA Theme Engine connected
 //
-// DESIGN:
-// - Primary Blue: #2563EB
-// - No brown
-// - No gold
-// - Minimum font-size: 12px
-// - Font weights: 500–750
+// IMPORTANT:
+// - No business logic.
+// - No calculations.
+// - No persistence.
+// - Layout / dimensions unchanged.
 //
 // ============================================================
 
 import type { CSSProperties } from "react";
 
 // ============================================================
-// COLOR TOKENS
+// THEME TOKENS
 // ============================================================
 
-const COLORS = {
-  panel: "#111C2E",
-  panelSoft: "#142238",
-  border: "rgba(148, 163, 184, 0.20)",
-  primary: "#2563EB",
-  primarySoft: "rgba(37, 99, 235, 0.14)",
-  text: "#FFFFFF",
-  textSecondary: "#CBD5E1",
+const THEME = {
+  panel:
+    "var(--finora-theme-surface, var(--finora-theme-background-surface, #111C2E))",
+
+  panelSoft:
+    "var(--finora-theme-surface-muted, var(--finora-theme-background-surface-muted, #142238))",
+
+  border:
+    "var(--finora-theme-border-default, rgba(148, 163, 184, 0.20))",
+
+  primary:
+    "var(--finora-theme-brand-primary, #2563EB)",
+
+  primarySoft:
+    "var(--finora-theme-brand-accent-soft, rgba(37, 99, 235, 0.14))",
+
+  text:
+    "var(--finora-theme-text-primary, #FFFFFF)",
+
+  textSecondary:
+    "var(--finora-theme-text-secondary, #CBD5E1)",
+
+  shadow:
+    "var(--finora-theme-overlay-shadow, rgba(0, 0, 0, 0.16))",
 };
 
 // ============================================================
@@ -44,14 +59,14 @@ export const headerStyle: CSSProperties = {
   boxSizing: "border-box",
   padding: "13px 16px",
   marginBottom: "10px",
-  border: `1px solid ${COLORS.border}`,
+  border: `1px solid ${THEME.border}`,
   borderRadius: "10px",
   background: `linear-gradient(
     135deg,
-    ${COLORS.panel},
-    ${COLORS.panelSoft}
+    ${THEME.panel},
+    ${THEME.panelSoft}
   )`,
-  boxShadow: "0 6px 18px rgba(0, 0, 0, 0.16)",
+  boxShadow: `0 6px 18px ${THEME.shadow}`,
 };
 
 // ============================================================
@@ -74,8 +89,8 @@ export const accentStyle: CSSProperties = {
   minHeight: "38px",
   flexShrink: 0,
   borderRadius: "4px",
-  background: COLORS.primary,
-  boxShadow: `0 0 12px ${COLORS.primarySoft}`,
+  background: THEME.primary,
+  boxShadow: `0 0 12px ${THEME.primarySoft}`,
 };
 
 // ============================================================
@@ -95,7 +110,7 @@ export const textWrapperStyle: CSSProperties = {
 
 export const titleStyle: CSSProperties = {
   margin: 0,
-  color: COLORS.text,
+  color: THEME.text,
   fontSize: "21px",
   fontWeight: 750,
   lineHeight: 1.2,
@@ -108,7 +123,7 @@ export const titleStyle: CSSProperties = {
 
 export const subtitleStyle: CSSProperties = {
   margin: 0,
-  color: COLORS.textSecondary,
+  color: THEME.textSecondary,
   fontSize: "12px",
   fontWeight: 500,
   lineHeight: 1.35,

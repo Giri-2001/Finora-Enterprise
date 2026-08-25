@@ -7,21 +7,14 @@
 // RESPONSIBILITY:
 // - ScheduleConfiguration presentation only
 // - Compact repayment schedule layout
-// - FINORA Enterprise dark navy theme
-//
-// DESIGN:
-// - Primary Blue: #2563EB
-// - No brown
-// - No gold
-// - Minimum font-size: 12px
-// - Font weights: 500–750
+// - FINORA Theme Engine connected
 //
 // IMPORTANT:
 // - No business logic.
 // - No calculations.
 // - No schedule generation.
 // - No persistence.
-//
+// - Layout / dimensions unchanged.
 // ============================================================
 
 import type {
@@ -29,34 +22,42 @@ import type {
 } from "react";
 
 // ============================================================
-// COLOR TOKENS
+// THEME TOKENS
 // ============================================================
 
-const COLORS = {
-  panel: "#111C2E",
+const THEME = {
+  panel:
+    "var(--finora-theme-surface, var(--finora-theme-background-surface, #111C2E))",
 
-  panelSoft: "#142238",
+  panelSoft:
+    "var(--finora-theme-surface-muted, var(--finora-theme-background-surface-muted, #142238))",
 
-  input: "#0A1425",
+  input:
+    "var(--finora-theme-surface-strong, #0A1425)",
 
   border:
-    "rgba(148, 163, 184, 0.20)",
+    "var(--finora-theme-border-default, rgba(148, 163, 184, 0.20))",
 
   inputBorder:
-    "rgba(148, 163, 184, 0.22)",
+    "var(--finora-theme-border-default, rgba(148, 163, 184, 0.22))",
 
-  primary: "#2563EB",
+  primary:
+    "var(--finora-theme-brand-primary, #2563EB)",
 
   primarySoft:
-    "rgba(37, 99, 235, 0.14)",
+    "var(--finora-theme-brand-accent-soft, rgba(37, 99, 235, 0.14))",
 
-  text: "#FFFFFF",
+  text:
+    "var(--finora-theme-text-primary, #FFFFFF)",
 
   textSecondary:
-    "#CBD5E1",
+    "var(--finora-theme-text-secondary, #CBD5E1)",
 
   textMuted:
-    "#94A3B8",
+    "var(--finora-theme-text-muted, #94A3B8)",
+
+  shadow:
+    "var(--finora-theme-overlay-shadow, rgba(0, 0, 0, 0.14))",
 };
 
 // ============================================================
@@ -73,19 +74,19 @@ export const wrapperStyle: CSSProperties = {
   padding: "11px 14px",
 
   border:
-    `1px solid ${COLORS.border}`,
+    `1px solid ${THEME.border}`,
 
   borderRadius: "10px",
 
   background:
     `linear-gradient(
       180deg,
-      ${COLORS.panel},
-      ${COLORS.panelSoft}
+      ${THEME.panel},
+      ${THEME.panelSoft}
     )`,
 
   boxShadow:
-    "0 6px 18px rgba(0, 0, 0, 0.14)",
+    `0 6px 18px ${THEME.shadow}`,
 
   overflow: "visible",
 };
@@ -106,7 +107,7 @@ export const headerStyle: CSSProperties = {
   marginBottom: "8px",
 
   color:
-    COLORS.text,
+    THEME.text,
 
   fontSize: "14px",
 
@@ -129,10 +130,10 @@ export const accentStyle: CSSProperties = {
   borderRadius: "3px",
 
   background:
-    COLORS.primary,
+    THEME.primary,
 
   boxShadow:
-    `0 0 10px ${COLORS.primarySoft}`,
+    `0 0 10px ${THEME.primarySoft}`,
 };
 
 // ============================================================
@@ -204,13 +205,13 @@ export const inputStyle: CSSProperties = {
   borderRadius: "8px",
 
   border:
-    `1px solid ${COLORS.inputBorder}`,
+    `1px solid ${THEME.inputBorder}`,
 
   background:
-    COLORS.input,
+    THEME.input,
 
   color:
-    COLORS.text,
+    THEME.text,
 
   fontSize: "12px",
 

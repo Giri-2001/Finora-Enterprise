@@ -7,31 +7,48 @@
 // RESPONSIBILITY:
 // - RepaymentPreviewCard presentation only
 // - Compact repayment summary presentation
-// - FINORA Login-inspired dark navy theme
+// - FINORA Theme Engine connected
 //
-// DESIGN:
-// - Primary Blue: #2563EB
-// - No brown
-// - No gold
-// - Minimum font-size: 12px
-// - Font weights: 500–750
+// IMPORTANT:
+// - No business logic.
+// - No calculations.
+// - No persistence.
+// - Layout / dimensions preserved.
+// - No local theme palette.
+// - Theme colors come from FINORA CSS variables.
 //
 // ============================================================
 
 import type { CSSProperties } from "react";
 
 // ============================================================
-// COLOR TOKENS
+// FINORA THEME TOKENS
 // ============================================================
 
-const COLORS = {
-  panel: "#111C2E",
-  panelSoft: "#142238",
-  border: "rgba(148, 163, 184, 0.20)",
-  primary: "#2563EB",
-  primarySoft: "rgba(37, 99, 235, 0.14)",
-  text: "#FFFFFF",
-  textMuted: "#94A3B8",
+const THEME = {
+  panel:
+    "var(--finora-theme-surface, var(--finora-theme-background-surface, #111C2E))",
+
+  panelSoft:
+    "var(--finora-theme-surface-muted, var(--finora-theme-background-surface-muted, #142238))",
+
+  border:
+    "var(--finora-theme-border-default, rgba(148, 163, 184, 0.20))",
+
+  borderStrong:
+    "var(--finora-theme-border-strong, rgba(37, 99, 235, 0.38))",
+
+  primary:
+    "var(--finora-theme-brand-primary, #2563EB)",
+
+  primarySoft:
+    "var(--finora-theme-brand-accent-soft, rgba(37, 99, 235, 0.14))",
+
+  text:
+    "var(--finora-theme-text-primary, #FFFFFF)",
+
+  textMuted:
+    "var(--finora-theme-text-muted, #94A3B8)",
 };
 
 // ============================================================
@@ -70,10 +87,18 @@ export const rowStyle: CSSProperties = {
   minHeight: "31px",
   padding: "6px 8px",
   boxSizing: "border-box",
-  border: `1px solid ${COLORS.border}`,
+
+  border:
+    `1px solid ${THEME.border}`,
+
   borderRadius: "6px",
-  background: COLORS.panel,
-  color: COLORS.textMuted,
+
+  background:
+    THEME.panel,
+
+  color:
+    THEME.textMuted,
+
   fontSize: "12px",
   fontWeight: 500,
   lineHeight: 1.25,
@@ -85,7 +110,10 @@ export const rowStyle: CSSProperties = {
 
 export const labelStyle: CSSProperties = {
   minWidth: 0,
-  color: COLORS.textMuted,
+
+  color:
+    THEME.textMuted,
+
   fontSize: "12px",
   fontWeight: 500,
   lineHeight: 1.25,
@@ -97,11 +125,16 @@ export const labelStyle: CSSProperties = {
 
 export const valueStyle: CSSProperties = {
   minWidth: 0,
-  color: COLORS.text,
+
+  color:
+    THEME.text,
+
   fontSize: "12px",
   fontWeight: 650,
   lineHeight: 1.25,
+
   textAlign: "right",
+
   overflow: "hidden",
   textOverflow: "ellipsis",
   whiteSpace: "nowrap",
@@ -113,6 +146,10 @@ export const valueStyle: CSSProperties = {
 
 export const primaryValueStyle: CSSProperties = {
   ...valueStyle,
+
+  color:
+    THEME.text,
+
   fontSize: "13px",
   fontWeight: 700,
 };
@@ -123,12 +160,12 @@ export const primaryValueStyle: CSSProperties = {
 
 export const highlightRowStyle: CSSProperties = {
   ...rowStyle,
-  borderColor: "rgba(37, 99, 235, 0.38)",
-  background: `linear-gradient(
-    90deg,
-    ${COLORS.primarySoft},
-    ${COLORS.panel}
-  )`,
+
+  borderColor:
+    THEME.borderStrong,
+
+  background:
+    THEME.panel,
 };
 
 // ============================================================
@@ -137,6 +174,7 @@ export const highlightRowStyle: CSSProperties = {
 
 export const fullWidthRowStyle: CSSProperties = {
   ...rowStyle,
+
   gridColumn: "1 / -1",
 };
 

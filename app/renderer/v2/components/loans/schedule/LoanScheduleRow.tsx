@@ -18,12 +18,11 @@
 // - No mutation.
 // - Existing LoanInstallment contract preserved.
 //
-// DESIGN:
-// - FINORA Enterprise dark navy
-// - Primary blue
-// - Slate typography
-// - No brown
-// - No gold
+// THEME CONTRACT:
+// - All visual colours come from FINORA Theme Engine.
+// - No local theme palette.
+// - No hard-coded theme colours.
+// - Defensive CSS fallbacks are used only for safety.
 //
 // ============================================================
 
@@ -51,6 +50,106 @@ interface LoanScheduleRowProps {
 }
 
 // ============================================================
+// THEME TOKENS
+// ============================================================
+//
+// ThemeProvider
+//      ↓
+// FINORA Theme Engine
+//      ↓
+// CSS Variables
+//      ↓
+// LoanScheduleRow
+//
+// These variables are already provided by Loan Studio's
+// central theme bridge.
+// ============================================================
+
+const THEME = {
+
+  // ----------------------------------------------------------
+  // SURFACES
+  // ----------------------------------------------------------
+
+  rowBackground:
+    "var(--finora-theme-background-page, var(--finora-theme-page, #0B1220))",
+
+  surface:
+    "var(--finora-theme-surface, var(--finora-theme-background-surface, #111C2E))",
+
+  surfaceMuted:
+    "var(--finora-theme-surface-muted, var(--finora-theme-background-surface-muted, #142238))",
+
+  // ----------------------------------------------------------
+  // BRAND
+  // ----------------------------------------------------------
+
+  primary:
+    "var(--finora-theme-brand-primary, #2563EB)",
+
+  primarySoft:
+    "var(--finora-theme-brand-accent-soft, rgba(37,99,235,.14))",
+
+  // ----------------------------------------------------------
+  // TEXT
+  // ----------------------------------------------------------
+
+  textPrimary:
+    "var(--finora-theme-text-primary, #FFFFFF)",
+
+  textSecondary:
+    "var(--finora-theme-text-secondary, #CBD5E1)",
+
+  textMuted:
+    "var(--finora-theme-text-muted, #94A3B8)",
+
+  // ----------------------------------------------------------
+  // BORDERS
+  // ----------------------------------------------------------
+
+  border:
+    "var(--finora-theme-border-default, rgba(148,163,184,.16))",
+
+  borderStrong:
+    "var(--finora-theme-border-strong, rgba(37,99,235,.42))",
+
+  borderSubtle:
+    "var(--finora-theme-border-subtle, rgba(148,163,184,.10))",
+
+  // ----------------------------------------------------------
+  // STATUS
+  // ----------------------------------------------------------
+
+  success:
+    "var(--finora-theme-success, #34D399)",
+
+  successSoft:
+    "var(--finora-theme-success-soft, rgba(16,185,129,.10))",
+
+  successBorder:
+    "var(--finora-theme-success-border, var(--finora-theme-border-strong, rgba(16,185,129,.35)))",
+
+  warning:
+    "var(--finora-theme-warning, #F59E0B)",
+
+  warningSoft:
+    "var(--finora-theme-warning-soft, rgba(245,158,11,.10))",
+
+  danger:
+    "var(--finora-theme-danger, #EF4444)",
+
+  dangerSoft:
+    "var(--finora-theme-danger-soft, rgba(239,68,68,.10))",
+
+  info:
+    "var(--finora-theme-info, #60A5FA)",
+
+  infoSoft:
+    "var(--finora-theme-info-soft, rgba(96,165,250,.10))",
+
+} as const;
+
+// ============================================================
 // STATUS STYLE HELPER
 // ============================================================
 
@@ -66,53 +165,61 @@ function getStatusStyle(
     case "Paid":
 
       return {
+
         background:
-          "rgba(34, 197, 94, 0.12)",
+          THEME.successSoft,
 
         border:
-          "1px solid rgba(34, 197, 94, 0.28)",
+          `1px solid ${THEME.successBorder}`,
 
         color:
-          "#86EFAC",
+          THEME.success,
+
       };
 
     case "Partial":
 
       return {
+
         background:
-          "rgba(245, 158, 11, 0.12)",
+          THEME.warningSoft,
 
         border:
-          "1px solid rgba(245, 158, 11, 0.28)",
+          `1px solid ${THEME.warning}`,
 
         color:
-          "#FCD34D",
+          THEME.warning,
+
       };
 
     case "Overdue":
 
       return {
+
         background:
-          "rgba(239, 68, 68, 0.12)",
+          THEME.dangerSoft,
 
         border:
-          "1px solid rgba(239, 68, 68, 0.28)",
+          `1px solid ${THEME.danger}`,
 
         color:
-          "#FCA5A5",
+          THEME.danger,
+
       };
 
     case "Preclosed":
 
       return {
+
         background:
-          "rgba(37, 99, 235, 0.14)",
+          THEME.primarySoft,
 
         border:
-          "1px solid rgba(37, 99, 235, 0.34)",
+          `1px solid ${THEME.borderStrong}`,
 
         color:
-          "#93C5FD",
+          THEME.info,
+
       };
 
     case "Pending":
@@ -120,14 +227,15 @@ function getStatusStyle(
     default:
 
       return {
-        background:
-          "rgba(37, 99, 235, 0.12)",
 
-        border:
-          "1px solid rgba(37, 99, 235, 0.28)",
+       background:
+      "transparent",
 
-        color:
-          "#93C5FD",
+    border:
+      `1px solid ${THEME.primary}`,
+
+    color:
+      THEME.primary,
       };
   }
 }
@@ -135,7 +243,9 @@ function getStatusStyle(
 // ============================================================
 // DATE FORMATTER
 // ============================================================
+//
 // FINORA standard: DD/MM/YYYY
+//
 // Avoid browser locale differences such as MM/DD/YYYY.
 // ============================================================
 
@@ -143,21 +253,36 @@ function formatIndianDate(
   value: string,
 ): string {
 
-  const date = new Date(value);
+  const date =
+    new Date(value);
 
-  if (Number.isNaN(date.getTime())) {
+  if (
+    Number.isNaN(
+      date.getTime(),
+    )
+  ) {
+
     return "--";
   }
 
-  const day = String(
-    date.getDate(),
-  ).padStart(2, "0");
+  const day =
+    String(
+      date.getDate(),
+    ).padStart(
+      2,
+      "0",
+    );
 
-  const month = String(
-    date.getMonth() + 1,
-  ).padStart(2, "0");
+  const month =
+    String(
+      date.getMonth() + 1,
+    ).padStart(
+      2,
+      "0",
+    );
 
-  const year = date.getFullYear();
+  const year =
+    date.getFullYear();
 
   return `${day}/${month}/${year}`;
 }
@@ -185,11 +310,13 @@ export default function LoanScheduleRow({
 
     <tr
       style={{
+
         borderBottom:
-          "1px solid rgba(148, 163, 184, 0.10)",
+          `1px solid ${THEME.borderSubtle}`,
 
         background:
-          "#0F172A",
+      THEME.surface,
+
       }}
     >
 
@@ -199,11 +326,14 @@ export default function LoanScheduleRow({
 
       <td
         style={{
+
           padding:
             "8px 10px",
 
+            background: "transparent",
+
           color:
-            "#FFFFFF",
+  THEME.textPrimary,
 
           fontSize:
             "12px",
@@ -213,11 +343,13 @@ export default function LoanScheduleRow({
 
           lineHeight:
             1.2,
+
         }}
       >
 
         <span
           style={{
+
             display:
               "inline-flex",
 
@@ -236,20 +368,19 @@ export default function LoanScheduleRow({
             borderRadius:
               "6px",
 
-            background:
-              "rgba(37, 99, 235, 0.10)",
+            background: "transparent",
+border:
+  "1px solid var(--finora-theme-brand-accent, rgba(37, 99, 235, 0.22))",
 
-            border:
-              "1px solid rgba(37, 99, 235, 0.22)",
-
-            color:
-              "#93C5FD",
+color:
+  THEME.textPrimary,
 
             fontSize:
               "12px",
 
             fontWeight:
               700,
+
           }}
         >
 
@@ -265,14 +396,15 @@ export default function LoanScheduleRow({
 
       <td
         style={{
+
           padding:
             "8px 10px",
 
           color:
-            "#CBD5E1",
+            THEME.textSecondary,
 
           fontSize:
-            "12px",
+            "14px",
 
           fontWeight:
             500,
@@ -282,6 +414,7 @@ export default function LoanScheduleRow({
 
           whiteSpace:
             "nowrap",
+
         }}
       >
 
@@ -297,6 +430,7 @@ export default function LoanScheduleRow({
 
       <td
         style={{
+
           padding:
             "8px 10px",
 
@@ -304,10 +438,10 @@ export default function LoanScheduleRow({
             "right",
 
           color:
-            "#FFFFFF",
+            THEME.textPrimary,
 
           fontSize:
-            "12px",
+            "14px",
 
           fontWeight:
             700,
@@ -317,6 +451,7 @@ export default function LoanScheduleRow({
 
           whiteSpace:
             "nowrap",
+
         }}
       >
 
@@ -334,16 +469,19 @@ export default function LoanScheduleRow({
 
       <td
         style={{
+
           padding:
             "8px 10px",
 
           textAlign:
             "center",
+
         }}
       >
 
         <span
           style={{
+
             display:
               "inline-flex",
 
@@ -366,13 +504,13 @@ export default function LoanScheduleRow({
               "999px",
 
             background:
-              statusStyle.background,
+  statusStyle.background,
 
-            border:
-              statusStyle.border,
+border:
+  statusStyle.border,
 
-            color:
-              statusStyle.color,
+color:
+  statusStyle.color,
 
             fontSize:
               "12px",
@@ -382,6 +520,7 @@ export default function LoanScheduleRow({
 
             lineHeight:
               1.2,
+
           }}
         >
 

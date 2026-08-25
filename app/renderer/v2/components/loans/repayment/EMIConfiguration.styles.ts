@@ -1,204 +1,189 @@
-// ============================================================
+// ===========================================================
 // FINORA ENTERPRISE V2
 //
-// REPAYMENT STUDIO
-// EMI CONFIGURATION STYLES
+// REPAYMENT STUDIO — EMI CONFIGURATION STYLES
 //
 // RESPONSIBILITY:
 // - EMIConfiguration presentation only
-// - Compact vertical repayment controls
-// - FINORA Enterprise dark navy theme
+// - Existing layout geometry preserved
+// - FINORA Theme Engine CSS variables only
 //
 // IMPORTANT:
-// - No business logic.
-// - No calculations.
-// - No schedule logic.
-// - No persistence.
-// - Global common input styles are NOT modified.
-//
-// ============================================================
+// - No local purple / green / brown / gold palette
+// - No responsive logic
+// - No business logic
+// - Form controls inherit FINORA theme
+// ===========================================================
 
 import type { CSSProperties } from "react";
 
-// ============================================================
-// COLOR TOKENS
-// ============================================================
+// ===========================================================
+// FINORA THEME TOKENS
+// ===========================================================
 
-const COLORS = {
-  panel: "#111C2E",
-  panelSoft: "#142238",
+const THEME = {
+  surface:
+    "var(--finora-theme-surface, var(--finora-theme-background-surface, #111C2E))",
 
-  input: "#0A1425",
+  surfaceMuted:
+    "var(--finora-theme-surface-muted, var(--finora-theme-background-surface-muted, #142238))",
 
-  border: "rgba(148, 163, 184, 0.20)",
-  inputBorder: "rgba(148, 163, 184, 0.22)",
+  surfaceStrong:
+    "var(--finora-theme-surface-strong, #0D192D)",
 
-  primary: "#2563EB",
-  primarySoft: "rgba(37, 99, 235, 0.14)",
-  primaryGlow: "rgba(37, 99, 235, 0.22)",
+  border:
+    "var(--finora-theme-border-default, rgba(148, 163, 184, 0.16))",
 
-  text: "#FFFFFF",
-  textSecondary: "#CBD5E1",
-  textMuted: "#94A3B8",
+  borderStrong:
+    "var(--finora-theme-border-strong, rgba(37, 99, 235, 0.42))",
+
+  primary:
+    "var(--finora-theme-brand-primary, #2563EB)",
+
+  primarySoft:
+    "var(--finora-theme-brand-accent-soft, rgba(37, 99, 235, 0.14))",
+
+  text:
+    "var(--finora-theme-text-primary, #FFFFFF)",
+
+  textSecondary:
+    "var(--finora-theme-text-secondary, #CBD5E1)",
+
+  textMuted:
+    "var(--finora-theme-text-muted, #94A3B8)",
+
+  shadow:
+    "var(--finora-theme-overlay-shadow, rgba(0, 0, 0, 0.14))",
 };
 
-// ============================================================
+// ===========================================================
 // WRAPPER
-// ============================================================
+// ===========================================================
 
 export const wrapperStyle: CSSProperties = {
   width: "100%",
   minWidth: 0,
-
   boxSizing: "border-box",
 
-  padding: "10px 14px",
+  padding: "10px",
 
-  border: `1px solid ${COLORS.border}`,
-  borderRadius: "10px",
+  border: `1px solid ${THEME.border}`,
+  borderRadius: "9px",
 
   background: `linear-gradient(
     180deg,
-    ${COLORS.panel},
-    ${COLORS.panelSoft}
+    ${THEME.surface},
+    ${THEME.surfaceMuted}
   )`,
 
-  boxShadow:
-    "0 6px 18px rgba(0, 0, 0, 0.14)",
+  boxShadow: `0 4px 12px ${THEME.shadow}`,
 
-  overflow: "visible",
+  color: THEME.text,
 };
 
-// ============================================================
-// CONTENT
-//
-// Two controls are intentionally stacked vertically.
-// ============================================================
+// ===========================================================
+// HEADER
+// ===========================================================
 
-export const contentStyle: CSSProperties = {
-  display: "grid",
-
-  gridTemplateColumns:
-    "minmax(0, 1fr)",
-
-  gridAutoRows: "auto",
-
-  gap: "0px",
-
+export const headerStyle: CSSProperties = {
   width: "100%",
   minWidth: 0,
 
-  boxSizing: "border-box",
-
-  overflow: "visible",
-};
-
-// ============================================================
-// HEADER
-// ============================================================
-
-export const headerStyle: CSSProperties = {
   display: "flex",
-
   alignItems: "center",
 
-  gap: "8px",
+  gap: "7px",
 
-  minHeight: "18px",
+  marginBottom: "7px",
 
-  marginBottom: "8px",
+  boxSizing: "border-box",
 
-  color: COLORS.text,
+  color: THEME.text,
 
-  fontSize: "14px",
-
-  fontWeight: 750,
-
-  lineHeight: 1.2,
+  fontSize: "12px",
+  fontWeight: 700,
+  lineHeight: 1.25,
 };
 
-// ============================================================
-// HEADER ACCENT
-// ============================================================
+// ===========================================================
+// PRIMARY ACCENT
+// ===========================================================
 
 export const accentStyle: CSSProperties = {
   width: "3px",
-  height: "16px",
+  minWidth: "3px",
+  height: "17px",
 
   flexShrink: 0,
 
-  borderRadius: "3px",
+  borderRadius: "999px",
 
-  background: COLORS.primary,
+  background: THEME.primary,
 
-  boxShadow:
-    `0 0 10px ${COLORS.primarySoft}`,
+  boxShadow: `0 0 8px ${THEME.primarySoft}`,
 };
 
-// ============================================================
-// FIELD
-// ============================================================
+// ===========================================================
+// CONTENT
+// ===========================================================
 
-export const fieldStyle: CSSProperties = {
+export const contentStyle: CSSProperties = {
+  width: "100%",
   minWidth: 0,
 
-  width: "100%",
+  display: "grid",
+
+  gridTemplateColumns:
+    "repeat(3, minmax(0, 1fr))",
+
+  gap: "8px",
 
   boxSizing: "border-box",
 
-  overflow: "visible",
+  alignItems: "start",
 };
 
-// ============================================================
+// ===========================================================
+// FIELD
+// ===========================================================
+
+export const fieldStyle: CSSProperties = {
+  width: "100%",
+  minWidth: 0,
+
+  boxSizing: "border-box",
+
+  display: "flex",
+  flexDirection: "column",
+
+  padding: "7px 8px",
+
+  border: `1px solid ${THEME.border}`,
+  borderRadius: "7px",
+
+  background: THEME.surfaceMuted,
+
+  color: THEME.text,
+};
+
+// ===========================================================
 // FIELD CONTENT
-// ============================================================
+// ===========================================================
 
 export const fieldContentStyle: CSSProperties = {
   width: "100%",
-
   minWidth: 0,
 
   boxSizing: "border-box",
+
+  display: "flex",
+  flexDirection: "column",
+
+  gap: "4px",
+
+  color: THEME.text,
 };
 
-// ============================================================
-// FINORA INPUT STYLE
-//
-// Applied ONLY to EMIConfiguration controls.
-// Does not modify global SelectInput/TextInput.
-// ============================================================
-
-export const inputStyle: CSSProperties = {
-  width: "100%",
-
-  minHeight: "42px",
-
-  padding: "10px 12px",
-
-  boxSizing: "border-box",
-
-  borderRadius: "8px",
-
-  border:
-    `1px solid ${COLORS.inputBorder}`,
-
-  background: COLORS.input,
-
-  color: COLORS.text,
-
-  fontSize: "12px",
-
-  fontWeight: 600,
-
-  outline: "none",
-
-  boxShadow:
-    "inset 0 1px 0 rgba(255,255,255,0.02)",
-
-  transition:
-    "border-color 0.16s ease, box-shadow 0.16s ease",
-};
-
-// ============================================================
+// ===========================================================
 // END
-// ============================================================
+// ===========================================================

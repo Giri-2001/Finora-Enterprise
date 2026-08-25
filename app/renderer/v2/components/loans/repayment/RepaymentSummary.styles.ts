@@ -7,31 +7,39 @@
 // RESPONSIBILITY:
 // - RepaymentSummary presentation only
 // - Compact repayment totals presentation
-// - FINORA Login-inspired dark navy theme
+// - FINORA Theme Engine connected
 //
-// DESIGN:
-// - Primary Blue: #2563EB
-// - No brown
-// - No gold
-// - Minimum font-size: 12px
-// - Font weights: 500–750
-//
+// IMPORTANT:
+// - No business logic.
+// - No calculations.
+// - No persistence.
+// - Layout / dimensions unchanged.
 // ============================================================
 
 import type { CSSProperties } from "react";
 
 // ============================================================
-// COLOR TOKENS
+// THEME TOKENS
 // ============================================================
 
-const COLORS = {
-  panel: "#111C2E",
-  panelSoft: "#142238",
-  border: "rgba(148, 163, 184, 0.20)",
-  primary: "#2563EB",
-  primarySoft: "rgba(37, 99, 235, 0.14)",
-  text: "#FFFFFF",
-  textMuted: "#94A3B8",
+const THEME = {
+  panel:
+    "var(--finora-theme-surface, var(--finora-theme-background-surface, #111C2E))",
+
+  border:
+    "var(--finora-theme-border-default, rgba(148, 163, 184, 0.20))",
+
+  borderStrong:
+    "var(--finora-theme-border-strong, rgba(37, 99, 235, 0.38))",
+
+  primarySoft:
+    "var(--finora-theme-brand-accent-soft, rgba(37, 99, 235, 0.14))",
+
+  text:
+    "var(--finora-theme-text-primary, #FFFFFF)",
+
+  textMuted:
+    "var(--finora-theme-text-muted, #94A3B8)",
 };
 
 // ============================================================
@@ -70,9 +78,9 @@ export const rowStyle: CSSProperties = {
   minHeight: "50px",
   padding: "7px 9px",
   boxSizing: "border-box",
-  border: `1px solid ${COLORS.border}`,
+  border: `1px solid ${THEME.border}`,
   borderRadius: "7px",
-  background: COLORS.panel,
+  background: THEME.panel,
 };
 
 // ============================================================
@@ -80,7 +88,7 @@ export const rowStyle: CSSProperties = {
 // ============================================================
 
 export const labelStyle: CSSProperties = {
-  color: COLORS.textMuted,
+  color: THEME.textMuted,
   fontSize: "12px",
   fontWeight: 500,
   lineHeight: 1.2,
@@ -92,7 +100,7 @@ export const labelStyle: CSSProperties = {
 
 export const valueStyle: CSSProperties = {
   minWidth: 0,
-  color: COLORS.text,
+  color: THEME.text,
   fontSize: "13px",
   fontWeight: 700,
   lineHeight: 1.2,
@@ -107,12 +115,9 @@ export const valueStyle: CSSProperties = {
 
 export const highlightRowStyle: CSSProperties = {
   ...rowStyle,
-  borderColor: "rgba(37, 99, 235, 0.38)",
-  background: `linear-gradient(
-    135deg,
-    ${COLORS.primarySoft},
-    ${COLORS.panel}
-  )`,
+  borderColor: THEME.borderStrong,
+  background:
+    THEME.panel,
 };
 
 // ============================================================

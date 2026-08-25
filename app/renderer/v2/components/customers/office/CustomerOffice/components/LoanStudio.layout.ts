@@ -35,6 +35,9 @@ const THEME = {
     "var(--finora-theme-border-default, rgba(148, 163, 184, 0.20))",
   shadow:
     "var(--finora-theme-overlay-shadow, rgba(0, 0, 0, 0.14))",
+
+    surface:
+  "var(--finora-theme-surface, var(--finora-theme-background-surface, #111C2E))",
 } as const;
 
 /* ============================================================
@@ -138,10 +141,9 @@ export const repaymentDraftStyle: CSSProperties = {
                         `1px solid ${THEME.border}`,
                       borderRadius: "16px",
                       background:
-                        `linear-gradient(180deg, ${THEME.surfaceStrong}, ${THEME.surfaceStrongAlt})`,
-                      color: THEME.textPrimary,
-                      boxShadow:
-                        THEME.shadow,
+                        `linear-gradient(180deg, ${THEME.surfaceStrong}, ${THEME.surfaceStrongAlt})`,               
+                     boxShadow:
+                      "none",
                       display: "flex",
                       flexDirection: "column",
                       justifyContent: "space-between",
@@ -177,7 +179,6 @@ export const repaymentDraftTitleStyle: CSSProperties = {
                           fontSize: "16px",
                           fontWeight: 700,
                           lineHeight: 1.25,
-                          color: THEME.textPrimary,
                           whiteSpace: "nowrap",
                           overflow: "hidden",
                           textOverflow: "ellipsis",
@@ -190,21 +191,38 @@ export const repaymentDraftTitleStyle: CSSProperties = {
 
 export const repaymentDraftBadgeStyle: CSSProperties = {
 
-                          display: "inline-flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          flexShrink: 0,
-                          padding: "5px 11px",
-                          borderRadius: "999px",
-                          fontSize: "12px",
-                          fontWeight: 700,
-                          lineHeight: 1,
-                          background:
-                            THEME.warningSoft,
-                          color: THEME.warning,
-                          border:
-                            `1px solid ${THEME.warningBorder}`,
-                        
+  display: "inline-flex",
+  alignItems: "center",
+  justifyContent: "center",
+  flexShrink: 0,
+
+  padding: "5px 11px",
+  borderRadius: "999px",
+
+  fontSize: "12px",
+  fontWeight: 700,
+  lineHeight: 1,
+
+  /* ============================================================
+     THEME BACKGROUND
+  ============================================================ */
+
+ background:
+  "var(--finora-theme-background-surface-muted, var(--finora-theme-surface-muted, #F8FAFC))",
+
+  /* ============================================================
+     THEME TEXT
+  ============================================================ */
+
+  color:
+    "var(--finora-theme-brand-accent, #2563EB)",
+
+  /* ============================================================
+     THEME BORDER
+  ============================================================ */
+
+  border:
+    "1px solid var(--finora-theme-border-strong, rgba(37, 99, 235, 0.38))",
 };
 
 /* ============================================================

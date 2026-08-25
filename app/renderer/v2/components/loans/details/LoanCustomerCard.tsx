@@ -565,7 +565,7 @@ export default function LoanCustomerCard({
 
               textTransform: "uppercase",
 
-              color: "#64748B",
+              color: "var(--finora-theme-text-muted)",
 
               whiteSpace: "nowrap",
             }}
@@ -586,7 +586,7 @@ export default function LoanCustomerCard({
 
               fontWeight: 600,
 
-              color: "#F8FAFC",
+              color: "var(--finora-theme-text-primary)",
 
               lineHeight: 1.3,
 
@@ -645,7 +645,7 @@ export default function LoanCustomerCard({
 
               textTransform: "uppercase",
 
-              color: "#64748B",
+              color: "var(--finora-theme-text-muted)",
 
               whiteSpace: "nowrap",
             }}
@@ -666,7 +666,7 @@ export default function LoanCustomerCard({
 
               fontWeight: 600,
 
-              color: "#F8FAFC",
+              color: "var(--finora-theme-text-primary)",
 
               lineHeight: 1.3,
 
