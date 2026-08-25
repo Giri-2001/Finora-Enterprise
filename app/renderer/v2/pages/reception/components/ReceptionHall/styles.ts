@@ -229,6 +229,14 @@ export function createReceptionHallStyles(
 
   /* =========================================================
      DEPARTMENT DOOR GRID
+
+     RESPONSIVE CONTRACT
+     ---------------------------------------------------------
+     - Mobile / one-column layout must use the full available
+       reception width.
+     - Door width comes from Responsive Engine.
+     - Never append "px" to a token that may be "100%".
+     - Grid tracks must not shrink to content width.
   ========================================================= */
 
   const doorGridStyle:
@@ -247,13 +255,23 @@ export function createReceptionHallStyles(
       "grid",
 
     gridTemplateColumns:
-      `repeat(auto-fit, minmax(${tokens.door.width}px, 1fr))`,
+      tokens.meta.viewport === "mobile"
+        ? "minmax(0, 1fr)"
+        : `repeat(
+            auto-fit,
+            minmax(
+              ${typeof tokens.door.width === "number"
+                ? `${tokens.door.width}px`
+                : tokens.door.width},
+              1fr
+            )
+          )`,
 
     justifyItems:
-      "center",
+      "stretch",
 
     justifyContent:
-      "center",
+      "stretch",
 
     alignItems:
       "start",
@@ -268,7 +286,6 @@ export function createReceptionHallStyles(
       `${tokens.spacing.large}px`,
 
   };
-
 
   /* =========================================================
      WALL LOGO
