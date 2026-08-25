@@ -10,10 +10,28 @@ import {
 
 /* ===========================================================
    FINORA ENTERPRISE V2 ROOT
-=========================================================== */
+   -----------------------------------------------------------
+   RESPONSIBILITY:
+   - Mount the renderer application.
+   - Provide the global FINORA Theme Engine.
+   - Keep ThemeProvider above the complete application tree.
+   =========================================================== */
+
+const rootElement =
+  document.getElementById("root");
+
+
+if (!rootElement) {
+
+  throw new Error(
+    "FINORA Enterprise: Root element #root was not found.",
+  );
+
+}
+
 
 createRoot(
-  document.getElementById("root")!,
+  rootElement,
 ).render(
 
   <React.StrictMode>

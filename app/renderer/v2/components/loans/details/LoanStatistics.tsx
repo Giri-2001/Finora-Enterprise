@@ -2,10 +2,8 @@ import {
   cardStyle,
   statisticsGridStyle,
   statisticItemStyle,
-  primaryStatisticItemStyle,
   statisticLabelStyle,
   statisticValueStyle,
-  primaryValueStyle,
 } from "./LoanStatistics.styles";
 
 interface LoanStatisticsProps {
@@ -22,12 +20,17 @@ export default function LoanStatistics({
   return (
     <section style={cardStyle}>
       <div style={statisticsGridStyle}>
-        <div style={primaryStatisticItemStyle}>
+
+        {/* ============================================================
+            TOTAL LOANS
+        ============================================================ */}
+
+        <div style={statisticItemStyle}>
           <span style={statisticLabelStyle}>
             Total Loans
           </span>
 
-          <strong style={primaryValueStyle}>
+          <strong style={statisticValueStyle}>
             {totalLoans}
           </strong>
 
@@ -45,6 +48,10 @@ export default function LoanStatistics({
             All loan records
           </span>
         </div>
+
+        {/* ============================================================
+            ACTIVE LOANS
+        ============================================================ */}
 
         <div style={statisticItemStyle}>
           <span style={statisticLabelStyle}>
@@ -70,6 +77,10 @@ export default function LoanStatistics({
           </span>
         </div>
 
+        {/* ============================================================
+            TOTAL DISBURSED
+        ============================================================ */}
+
         <div style={statisticItemStyle}>
           <span style={statisticLabelStyle}>
             Total Disbursed
@@ -93,6 +104,7 @@ export default function LoanStatistics({
             Disbursed amount
           </span>
         </div>
+
       </div>
     </section>
   );

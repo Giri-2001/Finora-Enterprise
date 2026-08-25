@@ -9,14 +9,12 @@
 // - Compact enterprise layout
 // - Maximum horizontal utilization
 // - Reduced vertical footprint
-// - FINORA Login-inspired dark navy theme
+// - Theme-driven visual appearance
 //
-// DESIGN:
-// - Primary Blue: #2563EB
-// - No brown
-// - No gold
-// - Minimum font-size: 12px
-// - Font weights: 500–750
+// RULE:
+// - Layout / sizing remains unchanged
+// - Responsive behavior remains unchanged
+// - Only theme colors are centralized through FINORA theme variables
 //
 // ============================================================
 
@@ -26,29 +24,40 @@ import type {
 
 // ============================================================
 // COLOR TOKENS
+//
+// FINORA THEME ENGINE
 // ============================================================
 
 const COLORS = {
-  background: "#0F172A",
+  background:
+    "var(--finora-theme-surface)",
 
-  panel: "#111C2E",
+  panel:
+    "var(--finora-theme-surface)",
 
-  panelSoft: "#142238",
+  panelSoft:
+    "var(--finora-theme-surface-muted)",
 
-  input: "#0B1424",
+  input:
+    "var(--finora-theme-surface-muted)",
 
   border:
-    "rgba(148, 163, 184, 0.18)",
+    "var(--finora-theme-border-default)",
 
-  primary: "#2563EB",
+  primary:
+    "var(--finora-theme-brand-primary)",
 
-  text: "#FFFFFF",
+  text:
+    "var(--finora-theme-text-primary)",
 
-  textSecondary: "#CBD5E1",
+  textSecondary:
+    "var(--finora-theme-text-secondary)",
 
-  textMuted: "#94A3B8",
+  textMuted:
+    "var(--finora-theme-text-muted)",
 
-  required: "#60A5FA",
+  required:
+    "var(--finora-theme-brand-accent)",
 };
 
 // ============================================================

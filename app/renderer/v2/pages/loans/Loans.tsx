@@ -670,7 +670,7 @@ export default function Loans() {
       themeColors.surface,
 
     boxShadow:
-      `0 6px 18px ${themeColors.shadow}`,
+  "none",
 
   };
 
@@ -709,7 +709,7 @@ export default function Loans() {
       themeColors.surface,
 
     boxShadow:
-      `0 10px 28px ${themeColors.shadow}`,
+  "none",
 
   };
 

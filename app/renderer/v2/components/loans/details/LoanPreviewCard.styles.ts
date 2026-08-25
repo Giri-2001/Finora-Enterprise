@@ -4,18 +4,10 @@
 // LOAN DETAILS STUDIO
 // LOAN PREVIEW CARD STYLES
 //
-// RESPONSIBILITY:
-// - LoanPreviewCard presentation only
-// - Clean enterprise financial summary
-// - Step 1 information hierarchy
-//
-// DESIGN:
-// - Primary Blue: #2563EB
-// - Dark Navy: #0F172A
-// - No brown
-// - No gold
-// - Minimum font-size: 12px
-// - Font weights: 500–750
+// THEME:
+// - Visual colours come from FINORA Theme Engine CSS variables.
+// - No local theme palette.
+// - Layout / dimensions unchanged.
 //
 // ============================================================
 
@@ -25,40 +17,43 @@ import type {
 
 
 // ============================================================
-// COLOR TOKENS
+// THEME TOKENS
 // ============================================================
 
-const COLORS = {
+const THEME = {
 
   background:
-    "#0F172A",
+    "var(--finora-theme-background-page, var(--finora-theme-surface, #0F172A))",
 
   panel:
-    "#111C2E",
+    "var(--finora-theme-surface, var(--finora-theme-background-surface, #111C2E))",
 
   panelSoft:
-    "#142238",
+    "var(--finora-theme-surface-muted, var(--finora-theme-background-surface-muted, #142238))",
 
   border:
-    "rgba(148, 163, 184, 0.16)",
+    "var(--finora-theme-border-default, rgba(148, 163, 184, 0.16))",
 
   borderStrong:
-    "rgba(37, 99, 235, 0.42)",
-
-  primary:
-    "#2563EB",
+    "var(--finora-theme-border-strong, rgba(37, 99, 235, 0.42))",
 
   primarySoft:
-    "rgba(37, 99, 235, 0.14)",
+    "var(--finora-theme-brand-accent-soft, rgba(37, 99, 235, 0.14))",
 
   text:
-    "#FFFFFF",
+    "var(--finora-theme-text-primary, #FFFFFF)",
 
   textSecondary:
-    "#CBD5E1",
+    "var(--finora-theme-text-secondary, #CBD5E1)",
 
   textMuted:
-    "#94A3B8",
+    "var(--finora-theme-text-muted, #94A3B8)",
+
+  shadow:
+    "var(--finora-theme-overlay-shadow, rgba(0, 0, 0, 0.18))",
+
+  primary:
+  "var(--finora-theme-brand-primary, #2563EB)",
 
 };
 
@@ -83,23 +78,20 @@ export const cardStyle:
     "10px 18px 18px",
 
   border:
-    `1px solid ${COLORS.border}`,
+    `1px solid ${THEME.border}`,
 
   borderRadius:
     "13px",
 
   background:
-    `linear-gradient(
-      180deg,
-      ${COLORS.panel},
-      ${COLORS.background}
-    )`,
+  THEME.panel,
 
   color:
-    COLORS.text,
+    THEME.text,
 
   boxShadow:
-    "0 10px 28px rgba(0, 0, 0, 0.18)",
+  "none",
+
 };
 
 
@@ -127,6 +119,7 @@ export const contentStyle:
 
   boxSizing:
     "border-box",
+
 };
 
 
@@ -154,6 +147,7 @@ export const groupStyle:
 
   boxSizing:
     "border-box",
+
 };
 
 
@@ -168,7 +162,7 @@ export const groupTitleStyle:
     "1px 2px",
 
   color:
-    COLORS.textSecondary,
+    THEME.textSecondary,
 
   fontSize:
     "11px",
@@ -184,6 +178,7 @@ export const groupTitleStyle:
 
   letterSpacing:
     "0.06em",
+
 };
 
 
@@ -219,16 +214,16 @@ export const rowStyle:
     "border-box",
 
   border:
-    `1px solid ${COLORS.border}`,
+    `1px solid ${THEME.border}`,
 
   borderRadius:
     "6px",
 
   background:
-    COLORS.panelSoft,
+    THEME.panelSoft,
 
   color:
-    COLORS.textSecondary,
+    THEME.textSecondary,
 
   fontSize:
     "12px",
@@ -238,6 +233,7 @@ export const rowStyle:
 
   lineHeight:
     1.25,
+
 };
 
 
@@ -252,7 +248,7 @@ export const labelStyle:
     0,
 
   color:
-    COLORS.textMuted,
+    THEME.textMuted,
 
   fontSize:
     "12px",
@@ -271,6 +267,7 @@ export const labelStyle:
 
   whiteSpace:
     "nowrap",
+
 };
 
 
@@ -285,7 +282,7 @@ export const valueStyle:
     0,
 
   color:
-    COLORS.text,
+    THEME.text,
 
   fontSize:
     "12px",
@@ -307,6 +304,7 @@ export const valueStyle:
 
   whiteSpace:
     "nowrap",
+
 };
 
 
@@ -320,10 +318,11 @@ export const customerValueStyle:
   ...valueStyle,
 
   color:
-    COLORS.text,
+    THEME.text,
 
   fontWeight:
     700,
+
 };
 
 
@@ -337,13 +336,14 @@ export const financialValueStyle:
   ...valueStyle,
 
   color:
-    COLORS.text,
+    THEME.text,
 
   fontSize:
     "13px",
 
   fontWeight:
     750,
+
 };
 
 
@@ -357,17 +357,14 @@ export const highlightRowStyle:
   ...rowStyle,
 
   borderColor:
-    COLORS.borderStrong,
+    THEME.borderStrong,
 
   background:
-    `linear-gradient(
-      90deg,
-      ${COLORS.primarySoft},
-      ${COLORS.panelSoft}
-    )`,
+  THEME.panel,
 
   boxShadow:
-    "inset 2px 0 0 rgba(37, 99, 235, 0.55)",
+  "none",
+
 };
 
 
@@ -386,15 +383,23 @@ export const fullWidthRowStyle:
   padding:
     "7px 9px",
 
-  background:
-    `linear-gradient(
-      90deg,
-      ${COLORS.primarySoft},
-      ${COLORS.panelSoft}
-    )`,
+   background:
+  THEME.panel,
 
   borderColor:
-    COLORS.borderStrong,
+    THEME.borderStrong,
+
+};
+
+export const previewBadgeStyle: CSSProperties = {
+  padding: "5px 9px",
+  borderRadius: "6px",
+  border: `1px solid ${THEME.borderStrong}`,
+  background: THEME.panelSoft,
+  color: THEME.textSecondary,
+  fontSize: "12px",
+  fontWeight: 650,
+  whiteSpace: "nowrap",
 };
 
 

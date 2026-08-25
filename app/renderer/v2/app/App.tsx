@@ -29,6 +29,16 @@
 // - Business Context is established explicitly after authentication.
 // - BusinessContextProvider remains independent from authStore.
 //
+// THEME CONTRACT:
+//
+// - All visual colours come from FINORA Theme Engine.
+// - No local colour palette is defined here.
+//
+// RESPONSIVE CONTRACT:
+//
+// - Responsive dimensions come from Responsive Engine.
+// - No local responsive dimensions are defined here.
+//
 // NAVIGATION:
 //
 // - Top-level FINORA pages are owned here.
@@ -51,56 +61,86 @@ import {
   useState,
 } from "react";
 
+
+import type {
+  CSSProperties,
+} from "react";
+
+
 import AppShell
   from "../layouts/AppShell";
+
 
 import ReceptionPage
   from "../pages/reception";
 
+
 import DashboardPage
   from "../pages/dashboard/DashboardPage";
+
 
 import CustomersPage
   from "../pages/customers/CustomersPage";
 
+
 import CustomerDepartmentPage
   from "../pages/customers/CustomerDepartmentPage";
+
 
 import LoansPage
   from "../pages/loans/LoansPage";
 
+
 import CollectionsPage
   from "../pages/collections/CollectionsPage";
+
 
 import ReportsPage
   from "../pages/reports/ReportsPage";
 
+
 import LoanStudio
   from "../components/customers/office/CustomerOffice/components/LoanStudio";
 
+
 import Login
   from "../pages/auth/Login";
+
 
 import {
   getSession,
   logout,
 } from "../store/authStore";
 
+
 import {
   BusinessContextProvider,
   useBusinessContext,
 } from "../context/BusinessContext";
 
+
 import type {
   AuthSession,
 } from "../components/auth/types";
+
 
 import type {
   DepartmentId,
 } from "../pages/reception/types";
 
+
 import SessionGuard
   from "../components/auth/SessionGuard";
+
+
+import {
+  useTheme,
+} from "../themes/provider";
+
+
+import {
+  useResponsive,
+} from "../utils/responsive";
 
 
 // ============================================================
@@ -121,11 +161,14 @@ type Page =
 // CONSTANTS
 // ============================================================
 
-const DEFAULT_PAGE: Page =
+const DEFAULT_PAGE:
+  Page =
   "reception";
+
 
 const NAVIGATION_STATE_KEY =
   "finora-navigation";
+
 
 const NAVIGATION_EVENT =
   "finora-navigation-change";
@@ -155,8 +198,10 @@ const NAVIGATION_EVENT =
 const CUSTOMER_WIZARD_OPEN_EVENT =
   "FINORA_CUSTOMER_WIZARD_OPEN";
 
+
 const CUSTOMER_WIZARD_CLOSE_EVENT =
   "FINORA_CUSTOMER_WIZARD_CLOSE";
+
 
 const CUSTOMER_WIZARD_GLOBAL_BACK_EVENT =
   "FINORA_CUSTOMER_WIZARD_GLOBAL_BACK";
@@ -182,7 +227,6 @@ const CUSTOMER_WIZARD_GLOBAL_BACK_EVENT =
 //
 // This keeps Loan Studio as the single existing workflow and
 // avoids creating a second Loan Studio implementation.
-//
 // ============================================================
 
 const LOAN_STUDIO_OPEN_EVENT =
@@ -193,7 +237,7 @@ const LOAN_STUDIO_OPEN_EVENT =
 // NAVIGATION STATE
 // ============================================================
 //
-// This state is intentionally stored in the browser history
+// This state is intentionally stored in browser history
 // rather than localStorage.
 //
 // Reason:
@@ -202,7 +246,6 @@ const LOAN_STUDIO_OPEN_EVENT =
 // - FINORA should not create another application storage
 //   responsibility just for UI navigation.
 // - Browser refresh naturally restores history.state.
-//
 // ============================================================
 
 interface NavigationState {
@@ -221,17 +264,46 @@ interface NavigationState {
 // ============================================================
 
 function isValidPage(
-  value: unknown,
-): value is Page {
+  value:
+    unknown,
+):
+  value is Page {
 
   return (
-    value === "reception" ||
-    value === "dashboard" ||
-    value === "customers" ||
-    value === "customerDepartment" ||
-    value === "loans" ||
-    value === "collections" ||
-    value === "reports"
+
+    value ===
+      "reception"
+
+    ||
+
+    value ===
+      "dashboard"
+
+    ||
+
+    value ===
+      "customers"
+
+    ||
+
+    value ===
+      "customerDepartment"
+
+    ||
+
+    value ===
+      "loans"
+
+    ||
+
+    value ===
+      "collections"
+
+    ||
+
+    value ===
+      "reports"
+
   );
 
 }
@@ -249,7 +321,8 @@ function createDefaultNavigationState():
     page:
       DEFAULT_PAGE,
 
-    stack: [],
+    stack:
+      [],
 
   };
 
@@ -266,37 +339,52 @@ function readNavigationState():
   const state =
     window.history.state;
 
+
   if (
+
     !state ||
-    state[NAVIGATION_STATE_KEY] === undefined
+
+    state[
+      NAVIGATION_STATE_KEY
+    ] === undefined
+
   ) {
 
     return createDefaultNavigationState();
 
   }
 
+
   const navigation =
-    state[NAVIGATION_STATE_KEY] as
-      Partial<NavigationState>;
+    state[
+      NAVIGATION_STATE_KEY
+    ] as Partial<NavigationState>;
+
 
   if (
+
     !isValidPage(
       navigation.page,
     )
+
   ) {
 
     return createDefaultNavigationState();
 
   }
+
 
   const stack =
     Array.isArray(
       navigation.stack,
     )
+
       ? navigation.stack.filter(
           isValidPage,
         )
+
       : [];
+
 
   return {
 
@@ -315,90 +403,225 @@ function readNavigationState():
 // ============================================================
 
 function writeNavigationState(
-  navigation: NavigationState,
-  replace = false,
-): void {
+  navigation:
+    NavigationState,
+
+  replace =
+    false,
+
+):
+  void {
 
   const state = {
 
     ...window.history.state,
 
-    [NAVIGATION_STATE_KEY]:
+    [
+      NAVIGATION_STATE_KEY
+    ]:
       navigation,
 
   };
 
+
   if (replace) {
 
     window.history.replaceState(
+
       state,
+
       "",
+
       window.location.href,
+
     );
 
     return;
 
   }
 
+
   window.history.pushState(
+
     state,
+
     "",
+
     window.location.href,
+
   );
 
 }
 
 
 // ============================================================
-// LOADING SCREEN
+// CONTEXT LOADING SCREEN
 // ============================================================
 //
-// Used while the authenticated session is being converted
-// into the active V2 Business Context.
+// IMPORTANT:
 //
-// V2 domain pages must not render before the business context
-// has been successfully established.
+// This screen does NOT own visual tokens.
 //
+// Theme:
+//   useTheme()
+//
+// Responsive:
+//   useResponsive()
+//
+// Therefore the loading screen remains fully compatible
+// with every FINORA registered theme and viewport profile.
+// ============================================================
 
 function ContextLoadingScreen() {
+
+  const {
+    theme,
+  } = useTheme();
+
+
+  const {
+    tokens,
+  } = useResponsive();
+
+
+  const loadingStyle:
+    CSSProperties = {
+
+    width:
+      "100%",
+
+    height:
+      "100%",
+
+    minWidth:
+      0,
+
+    minHeight:
+      0,
+
+    display:
+      "flex",
+
+    alignItems:
+      "center",
+
+    justifyContent:
+      "center",
+
+    padding:
+      `${tokens.spacing.page}px`,
+
+    boxSizing:
+      "border-box",
+
+    background:
+      theme
+        .colors
+        .background
+        .page,
+
+    color:
+      theme
+        .colors
+        .text
+        .primary,
+
+    fontFamily:
+      "Segoe UI, sans-serif",
+
+  };
+
+
+  const contentStyle:
+    CSSProperties = {
+
+    maxWidth:
+      "100%",
+
+    textAlign:
+      "center",
+
+  };
+
+
+  const titleStyle:
+    CSSProperties = {
+
+    margin:
+      0,
+
+    fontSize:
+      `${tokens.typography.heading}px`,
+
+    lineHeight:
+      tokens.lineHeight.heading,
+
+    fontWeight:
+      700,
+
+    letterSpacing:
+      ".5px",
+
+    color:
+      theme
+        .colors
+        .text
+        .primary,
+
+  };
+
+
+  const messageStyle:
+    CSSProperties = {
+
+    marginTop:
+      `${tokens.spacing.small}px`,
+
+    marginBottom:
+      0,
+
+    fontSize:
+      `${tokens.typography.body}px`,
+
+    lineHeight:
+      tokens.lineHeight.body,
+
+    color:
+      theme
+        .colors
+        .text
+        .secondary,
+
+  };
+
 
   return (
 
     <div
-      style={{
-        width: "100vw",
-        height: "100vh",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        background: "#0f172a",
-        color: "#ffffff",
-        fontFamily: "Segoe UI, sans-serif",
-      }}
+      style={
+        loadingStyle
+      }
     >
 
       <div
-        style={{
-          textAlign: "center",
-        }}
+        style={
+          contentStyle
+        }
       >
 
         <div
-          style={{
-            fontSize: 22,
-            fontWeight: 700,
-            letterSpacing: 1,
-          }}
+          style={
+            titleStyle
+          }
         >
           FINORA Enterprise
         </div>
 
+
         <div
-          style={{
-            marginTop: 10,
-            fontSize: 14,
-            opacity: 0.7,
-          }}
+          style={
+            messageStyle
+          }
         >
           Establishing secure business context...
         </div>
@@ -408,6 +631,288 @@ function ContextLoadingScreen() {
     </div>
 
   );
+
+}
+
+
+// ============================================================
+// BUSINESS CONTEXT ERROR SCREEN
+// ============================================================
+//
+// Theme and responsive geometry are resolved centrally.
+//
+// No hard-coded palette.
+// No local breakpoint values.
+// No local responsive dimensions.
+// ============================================================
+
+function BusinessContextErrorScreen({
+
+  message,
+
+  onReturn,
+
+}: {
+
+  message:
+    string;
+
+  onReturn():
+    void;
+
+}) {
+
+  const {
+    theme,
+  } = useTheme();
+
+
+  const {
+    tokens,
+  } = useResponsive();
+
+
+  const rootStyle:
+    CSSProperties = {
+
+    width:
+      "100%",
+
+    height:
+      "100%",
+
+    minWidth:
+      0,
+
+    minHeight:
+      0,
+
+    display:
+      "flex",
+
+    alignItems:
+      "center",
+
+    justifyContent:
+      "center",
+
+    padding:
+      `${tokens.spacing.page}px`,
+
+    boxSizing:
+      "border-box",
+
+    background:
+      theme
+        .colors
+        .background
+        .page,
+
+    color:
+      theme
+        .colors
+        .text
+        .primary,
+
+    fontFamily:
+      "Segoe UI, sans-serif",
+
+  };
+
+
+  const cardStyle:
+    CSSProperties = {
+
+    width:
+      "100%",
+
+    maxWidth:
+      `${tokens.card.maxWidth}px`,
+
+    padding:
+      `${tokens.card.padding}px`,
+
+    borderRadius:
+      `${tokens.card.radius}px`,
+
+    background:
+      theme
+        .components
+        .card
+        .background,
+
+    border:
+      `${tokens.border.width}px solid ${
+        theme
+          .components
+          .card
+          .border
+      }`,
+
+    boxShadow:
+      theme
+        .components
+        .card
+        .shadow,
+
+    boxSizing:
+      "border-box",
+
+    textAlign:
+      "center",
+
+  };
+
+
+  const titleStyle:
+    CSSProperties = {
+
+    margin:
+      0,
+
+    marginBottom:
+      `${tokens.spacing.small}px`,
+
+    fontSize:
+      `${tokens.typography.heading}px`,
+
+    lineHeight:
+      tokens.lineHeight.heading,
+
+    fontWeight:
+      700,
+
+    color:
+      theme
+        .typography
+        .heading,
+
+  };
+
+
+  const messageStyle:
+    CSSProperties = {
+
+    margin:
+      0,
+
+    marginBottom:
+      `${tokens.spacing.medium}px`,
+
+    fontSize:
+      `${tokens.typography.body}px`,
+
+    lineHeight:
+      tokens.lineHeight.body,
+
+    color:
+      theme
+        .typography
+        .body,
+
+  };
+
+
+  const buttonStyle:
+    CSSProperties = {
+
+    minWidth:
+      `${tokens.button.minHeight}px`,
+
+    height:
+      `${tokens.button.height}px`,
+
+    padding:
+      `0 ${tokens.button.paddingX}px`,
+
+    borderRadius:
+      `${tokens.button.radius}px`,
+
+    border:
+      `${tokens.border.width}px solid ${
+        theme
+          .components
+          .button
+          .primaryBackground
+      }`,
+
+    background:
+      theme
+        .components
+        .button
+        .primaryBackground,
+
+    color:
+      theme
+        .components
+        .button
+        .primaryText,
+
+    cursor:
+      "pointer",
+
+    fontSize:
+      `${tokens.button.fontSize}px`,
+
+    fontWeight:
+      600,
+
+    boxSizing:
+      "border-box",
+
+  };
+
+
+  return (
+
+    <div
+      style={
+        rootStyle
+      }
+    >
+
+      <div
+        style={
+          cardStyle
+        }
+      >
+
+        <h2
+          style={
+            titleStyle
+          }
+        >
+          FINORA Business Context Error
+        </h2>
+
+
+        <p
+          style={
+            messageStyle
+          }
+        >
+          {message}
+        </p>
+
+
+        <button
+          type="button"
+          onClick={
+            onReturn
+          }
+          style={
+            buttonStyle
+          }
+        >
+          Return to Login
+        </button>
+
+      </div>
+
+    </div>
+
+  );
+
 }
 
 
@@ -421,28 +926,36 @@ function AuthenticatedApplication() {
     context,
     setContext,
     clearContext,
-  } = useBusinessContext();
+  } =
+    useBusinessContext();
+
 
   const [
     session,
     setSession,
-  ] = useState<AuthSession | null>(
-    () => getSession(),
-  );
+  ] =
+    useState<AuthSession | null>(
+      () =>
+        getSession(),
+    );
+
 
   const [
     contextReady,
     setContextReady,
-  ] = useState<boolean>(
-    false,
-  );
+  ] =
+    useState<boolean>(
+      false,
+    );
+
 
   const [
     contextError,
     setContextError,
-  ] = useState<string | null>(
-    null,
-  );
+  ] =
+    useState<string | null>(
+      null,
+    );
 
 
   // ==========================================================
@@ -451,9 +964,12 @@ function AuthenticatedApplication() {
 
   useEffect(() => {
 
-    let active = true;
+    let active =
+      true;
 
-    async function establishContext(): Promise<void> {
+
+    async function establishContext():
+      Promise<void> {
 
       if (!session) {
 
@@ -461,9 +977,13 @@ function AuthenticatedApplication() {
 
           await clearContext();
 
-          setContextReady(true);
+          setContextReady(
+            true,
+          );
 
-          setContextError(null);
+          setContextError(
+            null,
+          );
 
         }
 
@@ -471,17 +991,24 @@ function AuthenticatedApplication() {
 
       }
 
+
       if (
+
         !session.ownerId ||
+
         !session.businessId ||
+
         !session.branchId
+
       ) {
 
         if (active) {
 
           await clearContext();
 
-          setContextReady(false);
+          setContextReady(
+            false,
+          );
 
           setContextError(
             "The authenticated user does not have a complete FINORA business context.",
@@ -493,16 +1020,23 @@ function AuthenticatedApplication() {
 
       }
 
+
       if (
-        session.dataContext === "DEMO" &&
+
+        session.dataContext ===
+          "DEMO" &&
+
         !session.demoId
+
       ) {
 
         if (active) {
 
           await clearContext();
 
-          setContextReady(false);
+          setContextReady(
+            false,
+          );
 
           setContextError(
             "The authenticated DEMO session does not contain a valid Demo ID.",
@@ -514,13 +1048,19 @@ function AuthenticatedApplication() {
 
       }
 
+
       if (active) {
 
-        setContextReady(false);
+        setContextReady(
+          false,
+        );
 
-        setContextError(null);
+        setContextError(
+          null,
+        );
 
       }
+
 
       const result =
         await setContext({
@@ -542,43 +1082,62 @@ function AuthenticatedApplication() {
 
         });
 
+
       if (!active) {
 
         return;
 
       }
 
+
       if (!result.success) {
 
-        setContextReady(false);
+        setContextReady(
+          false,
+        );
 
         setContextError(
+
           result.error ??
+
           "Unable to establish FINORA business context.",
+
         );
 
         return;
 
       }
 
-      setContextReady(true);
 
-      setContextError(null);
+      setContextReady(
+        true,
+      );
+
+      setContextError(
+        null,
+      );
 
     }
 
+
     void establishContext();
+
 
     return () => {
 
-      active = false;
+      active =
+        false;
 
     };
 
   }, [
+
     session,
+
     setContext,
+
     clearContext,
+
   ]);
 
 
@@ -586,10 +1145,12 @@ function AuthenticatedApplication() {
   // LOGIN
   // ==========================================================
 
-  function handleLogin(): void {
+  function handleLogin():
+    void {
 
     const nextSession =
       getSession();
+
 
     setSession(
       nextSession,
@@ -602,20 +1163,33 @@ function AuthenticatedApplication() {
   // LOGOUT
   // ==========================================================
 
-  function handleLogout(): void {
+  function handleLogout():
+    void {
 
     logout();
 
+
     void clearContext();
 
-    setSession(null);
 
-    setContextReady(true);
+    setSession(
+      null,
+    );
 
-    setContextError(null);
+
+    setContextReady(
+      true,
+    );
+
+
+    setContextError(
+      null,
+    );
+
 
     const navigation =
       createDefaultNavigationState();
+
 
     writeNavigationState(
       navigation,
@@ -652,73 +1226,17 @@ function AuthenticatedApplication() {
 
     return (
 
-      <div
-        style={{
-          width: "100vw",
-          height: "100vh",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          background: "#0f172a",
-          color: "#ffffff",
-          fontFamily: "Segoe UI, sans-serif",
-          padding: 24,
-          boxSizing: "border-box",
-        }}
-      >
+      <BusinessContextErrorScreen
 
-        <div
-          style={{
-            width: 480,
-            maxWidth: "100%",
-            padding: 28,
-            borderRadius: 14,
-            background: "#111827",
-            border: "1px solid #334155",
-            textAlign: "center",
-          }}
-        >
+        message={
+          contextError
+        }
 
-          <h2
-            style={{
-              marginTop: 0,
-              marginBottom: 12,
-            }}
-          >
-            FINORA Business Context Error
-          </h2>
+        onReturn={
+          handleLogout
+        }
 
-          <p
-            style={{
-              marginBottom: 24,
-              color: "#cbd5e1",
-              lineHeight: 1.6,
-            }}
-          >
-            {contextError}
-          </p>
-
-          <button
-            type="button"
-            onClick={
-              handleLogout
-            }
-            style={{
-              padding: "11px 22px",
-              borderRadius: 8,
-              border: "none",
-              background: "#2563eb",
-              color: "#ffffff",
-              cursor: "pointer",
-              fontWeight: 600,
-            }}
-          >
-            Return to Login
-          </button>
-
-        </div>
-
-      </div>
+      />
 
     );
 
@@ -730,8 +1248,11 @@ function AuthenticatedApplication() {
   // ==========================================================
 
   if (
+
     !contextReady ||
+
     !context
+
   ) {
 
     return (
@@ -748,8 +1269,15 @@ function AuthenticatedApplication() {
   return (
 
     <AuthenticatedV2Application
-      session={session}
-      onLogout={handleLogout}
+
+      session={
+        session
+      }
+
+      onLogout={
+        handleLogout
+      }
+
     />
 
   );
@@ -773,8 +1301,11 @@ interface AuthenticatedV2ApplicationProps {
 
 
 function AuthenticatedV2Application({
+
   session: _session,
+
   onLogout,
+
 }: AuthenticatedV2ApplicationProps) {
 
 
@@ -785,21 +1316,25 @@ function AuthenticatedV2Application({
   const [
     navigation,
     setNavigation,
-  ] = useState<NavigationState>(
-    () => {
+  ] =
+    useState<NavigationState>(
+      () => {
 
-      const current =
-        readNavigationState();
+        const current =
+          readNavigationState();
 
-      writeNavigationState(
-        current,
-        true,
-      );
 
-      return current;
+        writeNavigationState(
+          current,
+          true,
+        );
 
-    },
-  );
+
+        return current;
+
+      },
+    );
+
 
   const page =
     navigation.page;
@@ -812,42 +1347,23 @@ function AuthenticatedV2Application({
   const [
     customerWizardOpen,
     setCustomerWizardOpen,
-  ] = useState<boolean>(
-    false,
-  );
+  ] =
+    useState<boolean>(
+      false,
+    );
 
 
   // ==========================================================
   // LOAN STUDIO NAVIGATION STATE
   // ==========================================================
-  //
-  // Loan Studio is a nested workflow launched from Loans
-  // Office.
-  //
-  // It is intentionally NOT added to the top-level Page type.
-  //
-  // This means:
-  //
-  // Loans Office
-  //      ↓
-  // Create New Loan
-  //      ↓
-  // Loan Studio
-  //      ↓
-  // Back
-  //      ↓
-  // Loans Office
-  //
-  // The existing LoanStudio component remains the single
-  // implementation of the Loan creation workflow.
-  // ==========================================================
 
   const [
     loanStudioOpen,
     setLoanStudioOpen,
-  ] = useState<boolean>(
-    false,
-  );
+  ] =
+    useState<boolean>(
+      false,
+    );
 
 
   // ==========================================================
@@ -856,7 +1372,8 @@ function AuthenticatedV2Application({
 
   useEffect(() => {
 
-    function handleWizardOpen(): void {
+    function handleWizardOpen():
+      void {
 
       setCustomerWizardOpen(
         true,
@@ -864,7 +1381,9 @@ function AuthenticatedV2Application({
 
     }
 
-    function handleWizardClose(): void {
+
+    function handleWizardClose():
+      void {
 
       setCustomerWizardOpen(
         false,
@@ -872,26 +1391,42 @@ function AuthenticatedV2Application({
 
     }
 
-    window.addEventListener(
-      CUSTOMER_WIZARD_OPEN_EVENT,
-      handleWizardOpen,
-    );
 
     window.addEventListener(
-      CUSTOMER_WIZARD_CLOSE_EVENT,
-      handleWizardClose,
+
+      CUSTOMER_WIZARD_OPEN_EVENT,
+
+      handleWizardOpen,
+
     );
+
+
+    window.addEventListener(
+
+      CUSTOMER_WIZARD_CLOSE_EVENT,
+
+      handleWizardClose,
+
+    );
+
 
     return () => {
 
       window.removeEventListener(
+
         CUSTOMER_WIZARD_OPEN_EVENT,
+
         handleWizardOpen,
+
       );
 
+
       window.removeEventListener(
+
         CUSTOMER_WIZARD_CLOSE_EVENT,
+
         handleWizardClose,
+
       );
 
     };
@@ -902,22 +1437,11 @@ function AuthenticatedV2Application({
   // ==========================================================
   // LOAN STUDIO NAVIGATION BRIDGE
   // ==========================================================
-  //
-  // Loans.tsx dispatches:
-  //
-  // FINORA_V2_OPEN_LOAN_STUDIO
-  //
-  // App.tsx receives it and opens the existing LoanStudio.
-  //
-  // No duplicate Loan Studio.
-  // No legacy V1 navigation.
-  // No direct repository access.
-  //
-  // ==========================================================
 
   useEffect(() => {
 
-    function handleLoanStudioOpen(): void {
+    function handleLoanStudioOpen():
+      void {
 
       setLoanStudioOpen(
         true,
@@ -925,16 +1449,24 @@ function AuthenticatedV2Application({
 
     }
 
+
     window.addEventListener(
+
       LOAN_STUDIO_OPEN_EVENT,
+
       handleLoanStudioOpen,
+
     );
+
 
     return () => {
 
       window.removeEventListener(
+
         LOAN_STUDIO_OPEN_EVENT,
+
         handleLoanStudioOpen,
+
       );
 
     };
@@ -948,36 +1480,39 @@ function AuthenticatedV2Application({
 
   useEffect(() => {
 
-    function handlePopState(): void {
+    function handlePopState():
+      void {
 
       const next =
         readNavigationState();
+
 
       setNavigation(
         next,
       );
 
-      // ------------------------------------------------------
-      // Browser navigation should never leave nested Loan
-      // Studio open against another top-level page.
-      // ------------------------------------------------------
 
       setLoanStudioOpen(
         false,
       );
 
+
       window.dispatchEvent(
+
         new CustomEvent(
           NAVIGATION_EVENT,
         ),
+
       );
 
     }
+
 
     window.addEventListener(
       "popstate",
       handlePopState,
     );
+
 
     return () => {
 
@@ -996,13 +1531,17 @@ function AuthenticatedV2Application({
   // ==========================================================
 
   function handleNavigate(
-    nextPage: Page,
-  ): void {
+    nextPage:
+      Page,
+  ):
+    void {
 
     if (
+
       !isValidPage(
         nextPage,
       )
+
     ) {
 
       return;
@@ -1010,18 +1549,16 @@ function AuthenticatedV2Application({
     }
 
 
-    // --------------------------------------------------------
-    // Leaving Loan Studio must first close the nested workflow.
-    // --------------------------------------------------------
-
     setLoanStudioOpen(
       false,
     );
 
 
     if (
+
       nextPage ===
       navigation.page
+
     ) {
 
       return;
@@ -1036,8 +1573,11 @@ function AuthenticatedV2Application({
         nextPage,
 
       stack: [
+
         ...navigation.stack,
+
         navigation.page,
+
       ],
 
     };
@@ -1047,15 +1587,18 @@ function AuthenticatedV2Application({
       nextNavigation,
     );
 
+
     setNavigation(
       nextNavigation,
     );
 
 
     window.dispatchEvent(
+
       new CustomEvent(
         NAVIGATION_EVENT,
       ),
+
     );
 
   }
@@ -1064,36 +1607,9 @@ function AuthenticatedV2Application({
   // ==========================================================
   // BACK NAVIGATION
   // ==========================================================
-  //
-  // Priority:
-  //
-  // 1. Loan Studio
-  // 2. Customer Wizard
-  // 3. Top-level FINORA navigation
-  //
-  // This gives the Global Back button predictable behavior.
-  //
-  // Example:
-  //
-  // Reception
-  //    ↓
-  // Loans
-  //    ↓
-  // Create New Loan
-  //    ↓
-  // Loan Studio
-  //
-  // Back:
-  //
-  // Loan Studio → Loans Office
-  //
-  // Back:
-  //
-  // Loans Office → Reception
-  //
-  // ==========================================================
 
-  function handleBack(): void {
+  function handleBack():
+    void {
 
 
     // ========================================================
@@ -1122,9 +1638,11 @@ function AuthenticatedV2Application({
     ) {
 
       window.dispatchEvent(
+
         new CustomEvent(
           CUSTOMER_WIZARD_GLOBAL_BACK_EVENT,
         ),
+
       );
 
       return;
@@ -1171,8 +1689,11 @@ function AuthenticatedV2Application({
 
 
     writeNavigationState(
+
       nextNavigation,
+
       true,
+
     );
 
 
@@ -1182,9 +1703,11 @@ function AuthenticatedV2Application({
 
 
     window.dispatchEvent(
+
       new CustomEvent(
         NAVIGATION_EVENT,
       ),
+
     );
 
   }
@@ -1195,10 +1718,14 @@ function AuthenticatedV2Application({
   // ==========================================================
 
   function handleReceptionNavigation(
-    department: DepartmentId,
-  ): void {
+    department:
+      DepartmentId,
+  ):
+    void {
 
-    switch (department) {
+    switch (
+      department
+    ) {
 
       case "customers":
 
@@ -1272,21 +1799,33 @@ function AuthenticatedV2Application({
     <SessionGuard>
 
       <AppShell
-        page={page}
+
+        page={
+          page
+        }
+
         onNavigate={
           handleNavigate
         }
+
         onBack={
           handleBack
         }
+
         canGoBack={
+
           loanStudioOpen ||
+
           customerWizardOpen ||
+
           navigation.stack.length > 0
+
         }
+
         onLogout={
           onLogout
         }
+
       >
 
         {/* ==================================================
@@ -1340,7 +1879,7 @@ function AuthenticatedV2Application({
         {/* ==================================================
             LOANS
         ================================================== */}
-        
+
         {page === "loans" && !loanStudioOpen && (
 
           <LoansPage />

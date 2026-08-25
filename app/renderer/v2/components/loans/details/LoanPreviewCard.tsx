@@ -43,6 +43,7 @@ import {
   labelStyle,
   rowStyle,
   valueStyle,
+  previewBadgeStyle,
 } from "./LoanPreviewCard.styles";
 
 
@@ -187,21 +188,12 @@ export default function LoanPreviewCard({
 
 
         <span
-          style={{
-            padding: "5px 9px",
-            borderRadius: "6px",
-            border:
-              "1px solid rgba(37, 99, 235, 0.35)",
-            background:
-              "rgba(37, 99, 235, 0.10)",
-            color: "#93C5FD",
-            fontSize: "12px",
-            fontWeight: 650,
-            whiteSpace: "nowrap",
-          }}
-        >
-          Preview
-        </span>
+  style={
+    previewBadgeStyle
+  }
+>
+  Preview
+</span>
 
       </div>
 

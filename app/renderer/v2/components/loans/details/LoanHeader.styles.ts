@@ -4,17 +4,10 @@
 // LOAN DETAILS STUDIO
 // LOAN HEADER STYLES
 //
-// RESPONSIBILITY:
-// - LoanHeader presentation only
-// - Compact premium FINORA blue theme
-//
-// DESIGN:
-// - Login-inspired dark navy
-// - Primary Blue: #2563EB
-// - No brown.
-// - No gold.
-// - Minimum font-size: 12px.
-// - Font weights: 500–750.
+// THEME:
+// - Visual colours come from FINORA Theme Engine CSS variables.
+// - No local theme palette.
+// - Layout / dimensions unchanged.
 //
 // ============================================================
 
@@ -22,22 +15,27 @@ import type {
   CSSProperties,
 } from "react";
 
+
 // ============================================================
-// COLORS
+// FINORA THEME TOKENS
 // ============================================================
 
-const COLORS = {
+const THEME = {
 
   primary:
-    "#2563EB",
+    "var(--finora-theme-brand-primary, #2563EB)",
 
   text:
-    "#FFFFFF",
+    "var(--finora-theme-text-primary, #FFFFFF)",
 
   textMuted:
-    "#94A3B8",
+    "var(--finora-theme-text-muted, #94A3B8)",
+
+  shadow:
+    "var(--finora-theme-overlay-shadow, rgba(37, 99, 235, 0.55))",
 
 };
+
 
 // ============================================================
 // HEADER
@@ -69,8 +67,9 @@ export const headerStyle:
 
 };
 
+
 // ============================================================
-// BLUE ACCENT
+// BLUE / PRIMARY ACCENT
 // ============================================================
 
 export const accentStyle:
@@ -89,12 +88,13 @@ export const accentStyle:
     "999px",
 
   background:
-    COLORS.primary,
+    THEME.primary,
 
   boxShadow:
-    "0 0 9px rgba(37, 99, 235, 0.55)",
+    `0 0 9px ${THEME.shadow}`,
 
 };
+
 
 // ============================================================
 // TITLE
@@ -110,7 +110,7 @@ export const titleStyle:
     0,
 
   color:
-    COLORS.text,
+    THEME.text,
 
   fontSize:
     "21px",
@@ -126,6 +126,7 @@ export const titleStyle:
 
 };
 
+
 // ============================================================
 // SUBTITLE
 // ============================================================
@@ -140,7 +141,7 @@ export const subtitleStyle:
     0,
 
   color:
-    COLORS.textMuted,
+    THEME.textMuted,
 
   fontSize:
     "12px",
@@ -152,6 +153,7 @@ export const subtitleStyle:
     1.35,
 
 };
+
 
 // ============================================================
 // END

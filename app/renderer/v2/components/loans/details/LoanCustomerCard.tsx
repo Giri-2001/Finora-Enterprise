@@ -233,7 +233,7 @@ export default function LoanCustomerCard({
         padding: "16px 18px",
 
         background:
-          "linear-gradient(180deg,#111C2E,#142238)",
+  "linear-gradient(180deg, var(--finora-theme-surface, #111C2E), var(--finora-theme-surface-muted, #142238))",
 
         border:
           "1px solid rgba(148,163,184,0.20)",
@@ -720,9 +720,9 @@ export default function LoanCustomerCard({
         style={{
           position: "absolute",
 
-          top: "16px",
+          top: "11px",
 
-          right: "18px",
+          right: "15px",
 
           width: "52%",
 
@@ -807,24 +807,13 @@ export default function LoanCustomerCard({
               borderRadius: "6px",
 
               border:
-                "1px solid rgba(96,165,250,0.45)",
+              "1px solid var(--finora-theme-border-strong, var(--finora-theme-border-default, #334155))",
 
-              background:
-                `
-                linear-gradient(
-                  145deg,
-                  rgba(201,154,85,0.18),
-                  rgba(15,26,45,0.15)
-                ),
-                linear-gradient(
-                  180deg,
-                  #17243A 0%,
-                  #0F1A2D 100%
-                )
-                `,
+            background:
+              "linear-gradient(145deg, var(--finora-theme-surface-muted, #142238), var(--finora-theme-surface-strong, #0D192D))",
 
-              boxShadow:
-                "0 6px 18px rgba(0,0,0,0.22)",
+            boxShadow:
+              "0 6px 18px var(--finora-theme-overlay-shadow, rgba(0,0,0,0.22))",
 
               boxSizing: "border-box",
             }}

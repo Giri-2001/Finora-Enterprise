@@ -4,72 +4,132 @@
 // LOAN DETAILS STUDIO
 // LOAN CUSTOMER CARD STYLES
 //
-// RESPONSIBILITY:
-// - Customer selector presentation
-// - Selected customer details presentation
-// - Premium compact enterprise layout
-// - Dropdown visibility and scrolling
+// THEME:
+// - Visual colours come from FINORA Theme Engine CSS variables.
+// - No local theme palette.
+// - Layout / dimensions unchanged.
 //
-// ============================================================
-
-// ============================================================
-// IMPORTS
 // ============================================================
 
 import type {
   CSSProperties,
 } from "react";
 
+
+// ============================================================
+// THEME TOKENS
+// ============================================================
+
+const THEME = {
+
+  primary:
+    "var(--finora-theme-brand-primary, #2563EB)",
+
+  primarySoft:
+    "var(--finora-theme-brand-accent-soft, rgba(37, 99, 235, 0.14))",
+
+  input:
+    "var(--finora-theme-surface-strong, #0D192D)",
+
+  dropdown:
+    "var(--finora-theme-surface, var(--finora-theme-background-surface, #0B1426))",
+
+  dropdownSoft:
+    "var(--finora-theme-surface-muted, var(--finora-theme-background-surface-muted, #111D33))",
+
+  border:
+    "var(--finora-theme-border-default, #334155)",
+
+  borderStrong:
+    "var(--finora-theme-border-strong, #2563EB)",
+
+  text:
+    "var(--finora-theme-text-primary, #F8FAFC)",
+
+  textSecondary:
+    "var(--finora-theme-text-secondary, #E2E8F0)",
+
+  textMuted:
+    "var(--finora-theme-text-muted, #94A3B8)",
+
+  shadow:
+    "var(--finora-theme-overlay-shadow, rgba(0,0,0,0.48))",
+
+};
+
+
 // ============================================================
 // CARD
 // ============================================================
 
 export const cardStyle: CSSProperties = {
+
   width: "100%",
+
   height: "100%",
+
   minWidth: 0,
+
   minHeight: 0,
 
   boxSizing: "border-box",
 
-  alignSelf: "stretch",
+  background:
+    THEME.primarySoft,
+
+  border:
+    "1px solid var(--finora-theme-border-default, rgba(148,163,184,0.20))",
+
+  borderRadius: "16px",
+
+  color:
+    "var(--finora-theme-text-primary, #FFFFFF)",
+
+  boxShadow:
+    "var(--finora-theme-overlay-shadow, 0 8px 24px rgba(0,0,0,0.16))",
 
   overflow: "visible",
+
+  position: "relative",
+
+  zIndex: 10,
 };
 
 // ============================================================
 // CONTENT
-//
-// Layout:
-// 1. Customer selector
-// 2. Customer ID
-// 3. Phone number
-//
-// Everything stays left aligned.
 // ============================================================
 
 export const contentStyle: CSSProperties = {
+
   width: "100%",
+
   minWidth: 0,
+
   minHeight: 0,
 
   display: "flex",
+
   flexDirection: "column",
 
   gap: "10px",
 
   boxSizing: "border-box",
+
 };
+
 
 // ============================================================
 // CUSTOMER SELECTOR WRAPPER
 // ============================================================
 
 export const selectorWrapperStyle: CSSProperties = {
+
   position: "relative",
 
   width: "100%",
+
   minWidth: "100%",
+
   maxWidth: "100%",
 
   alignSelf: "stretch",
@@ -77,20 +137,28 @@ export const selectorWrapperStyle: CSSProperties = {
   boxSizing: "border-box",
 
   zIndex: 1000,
+
 };
+
 
 // ============================================================
 // CUSTOMER SELECTOR BUTTON
 // ============================================================
 
 export const selectorButtonStyle: CSSProperties = {
+
   width: "100%",
+
   minWidth: 0,
+
   height: "36px",
+
   minHeight: "36px",
 
   display: "flex",
+
   alignItems: "center",
+
   justifyContent: "space-between",
 
   gap: "8px",
@@ -100,25 +168,35 @@ export const selectorButtonStyle: CSSProperties = {
   boxSizing: "border-box",
 
   borderRadius: "7px",
-  border: "1px solid #2563EB",
 
-  background: "#0D192D",
-  color: "#F8FAFC",
+ border:
+  "1px solid var(--finora-theme-border-strong, var(--finora-theme-border-default, #2563EB))",
+
+background:
+  "var(--finora-theme-surface-muted, var(--finora-theme-background-surface-muted, #0F1B31))",
+
+color:
+  "var(--finora-theme-brand-accent, var(--finora-theme-brand-primary, #60A5FA))",
 
   cursor: "pointer",
+
   textAlign: "left",
 
   fontSize: "12px",
+
   fontWeight: 700,
 
   outline: "none",
+
 };
+
 
 // ============================================================
 // SELECTOR BUTTON TEXT
 // ============================================================
 
 export const selectorButtonTextStyle: CSSProperties = {
+
   minWidth: 0,
 
   overflow: "hidden",
@@ -127,45 +205,56 @@ export const selectorButtonTextStyle: CSSProperties = {
 
   whiteSpace: "nowrap",
 
-  color: "#F8FAFC",
+  color:
+    THEME.text,
 
   fontSize: "12px",
 
   fontWeight: 700,
 
   lineHeight: 1.2,
+
 };
+
 
 // ============================================================
 // SELECTOR ARROW
 // ============================================================
 
 export const selectorArrowStyle: CSSProperties = {
+
   flexShrink: 0,
 
-  color: "#60A5FA",
+  color:
+    THEME.primary,
 
   fontSize: "9px",
 
   lineHeight: 1,
+
 };
+
 
 // ============================================================
 // DROPDOWN
 // ============================================================
 
 export const dropdownStyle: CSSProperties = {
+
   position: "absolute",
 
   top: "calc(100% + 5px)",
+
   left: 0,
 
   width: "calc(100vw - 32px)",
+
   maxWidth: "380px",
 
   maxHeight: "280px",
 
   overflowY: "auto",
+
   overflowX: "hidden",
 
   boxSizing: "border-box",
@@ -174,25 +263,32 @@ export const dropdownStyle: CSSProperties = {
 
   borderRadius: "9px",
 
-  border: "1px solid #334155",
+  border:
+    `1px solid ${THEME.border}`,
 
-  background: "#0B1426",
+  background:
+    THEME.dropdown,
 
   boxShadow:
-    "0 18px 40px rgba(0,0,0,0.48)",
+    `0 18px 40px ${THEME.shadow}`,
 
   zIndex: 99999,
 
   scrollbarWidth: "none",
+
 };
+
+
 // ============================================================
 // SEARCH INPUT
 // ============================================================
 
 export const searchInputStyle: CSSProperties = {
+
   width: "100%",
 
   height: "34px",
+
   minHeight: "34px",
 
   boxSizing: "border-box",
@@ -203,25 +299,32 @@ export const searchInputStyle: CSSProperties = {
 
   borderRadius: "8px",
 
-  border: "1px solid #334155",
+  border:
+    `1px solid ${THEME.border}`,
 
-  background: "#111D33",
+  background:
+    THEME.dropdownSoft,
 
-  color: "#F8FAFC",
+  color:
+    THEME.text,
 
   fontSize: "12px",
 
   outline: "none",
+
 };
+
 
 // ============================================================
 // CUSTOMER OPTIONS
 // ============================================================
 
 export const customerOptionStyle: CSSProperties = {
+
   width: "100%",
 
   display: "flex",
+
   flexDirection: "column",
 
   alignItems: "flex-start",
@@ -240,32 +343,39 @@ export const customerOptionStyle: CSSProperties = {
 
   background: "transparent",
 
-  color: "#E2E8F0",
+  color:
+    THEME.textSecondary,
 
   cursor: "pointer",
 
   textAlign: "left",
+
 };
+
 
 // ============================================================
 // ACTIVE CUSTOMER OPTION
 // ============================================================
 
 export const customerOptionActiveStyle: CSSProperties = {
+
   ...customerOptionStyle,
 
   border:
-    "1px solid #2563EB",
+    `1px solid ${THEME.primary}`,
 
   background:
-    "#14264A",
+    THEME.primarySoft,
+
 };
+
 
 // ============================================================
 // CUSTOMER OPTION NAME
 // ============================================================
 
 export const customerOptionNameStyle: CSSProperties = {
+
   width: "100%",
 
   overflow: "hidden",
@@ -274,20 +384,24 @@ export const customerOptionNameStyle: CSSProperties = {
 
   whiteSpace: "nowrap",
 
-  color: "#F8FAFC",
+  color:
+    THEME.text,
 
   fontSize: "12px",
 
   fontWeight: 700,
 
   lineHeight: 1.2,
+
 };
+
 
 // ============================================================
 // CUSTOMER OPTION META
 // ============================================================
 
 export const customerOptionMetaStyle: CSSProperties = {
+
   width: "100%",
 
   overflow: "hidden",
@@ -296,23 +410,24 @@ export const customerOptionMetaStyle: CSSProperties = {
 
   whiteSpace: "nowrap",
 
-  color: "#94A3B8",
+  color:
+    THEME.textMuted,
 
   fontSize: "10px",
 
   fontWeight: 500,
 
   lineHeight: 1.2,
+
 };
+
 
 // ============================================================
 // SELECTED CUSTOMER NAME
-//
-// Kept for compatibility with existing imports.
-// Not rendered by the current customer card layout.
 // ============================================================
 
 export const customerNameStyle: CSSProperties = {
+
   width: "100%",
 
   minWidth: 0,
@@ -323,7 +438,8 @@ export const customerNameStyle: CSSProperties = {
 
   whiteSpace: "nowrap",
 
-  color: "#F8FAFC",
+  color:
+    THEME.text,
 
   fontSize: "13px",
 
@@ -332,19 +448,16 @@ export const customerNameStyle: CSSProperties = {
   lineHeight: 1.2,
 
   textAlign: "left",
+
 };
+
 
 // ============================================================
 // CUSTOMER DETAILS
-//
-// Used for:
-// - Customer ID
-// - Phone Number
-//
-// Both appear vertically below the selector.
 // ============================================================
 
 export const detailStyle: CSSProperties = {
+
   width: "100%",
 
   minWidth: 0,
@@ -359,7 +472,8 @@ export const detailStyle: CSSProperties = {
 
   whiteSpace: "nowrap",
 
-  color: "#CBD5E1",
+  color:
+    THEME.textSecondary,
 
   fontSize: "14px",
 
@@ -370,20 +484,24 @@ export const detailStyle: CSSProperties = {
   textAlign: "left",
 
   padding: "0 2px",
+
 };
+
 
 // ============================================================
 // EMPTY STATE
 // ============================================================
 
 export const emptyStateStyle: CSSProperties = {
+
   width: "100%",
 
   boxSizing: "border-box",
 
   padding: "10px 8px",
 
-  color: "#94A3B8",
+  color:
+    THEME.textMuted,
 
   fontSize: "11px",
 
@@ -392,7 +510,9 @@ export const emptyStateStyle: CSSProperties = {
   lineHeight: 1.3,
 
   textAlign: "center",
+
 };
+
 
 // ============================================================
 // END
