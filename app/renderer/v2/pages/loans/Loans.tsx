@@ -15,6 +15,13 @@
 // - Open Loan Studio
 // - Open View Loan Details
 //
+// THEME CONTRACT:
+// - Consume the central FINORA Theme Engine.
+// - All visual colours come from the active FinoraTheme.
+// - No second theme system.
+// - No local theme palette.
+// - Responsive / layout geometry remains untouched.
+//
 // IMPORTANT:
 // - No V1 Loans.tsx usage.
 // - No V1 loanStore.
@@ -23,7 +30,7 @@
 // - No Electron IPC.
 // - Persistence remains behind LoanRepository.
 // - UI logic preserved.
-// - Premium presentation only.
+// - Premium presentation preserved.
 //
 // VERSION : 2.0
 // STATUS  : Production
@@ -42,6 +49,10 @@ import {
 } from "react";
 
 import type {
+  CSSProperties,
+} from "react";
+
+import type {
   Loan,
 } from "../../components/customers/office/CustomerOffice/types";
 
@@ -54,6 +65,10 @@ import StudioLayout
 
 import ViewLoanDetails
   from "../../components/loans/details/ViewLoanDetails";
+
+import {
+  useTheme,
+} from "../../themes/provider";
 
 import {
   pageStyle,
@@ -455,10 +470,632 @@ function formatStatus(
 
 
 // ============================================================
+// THEME VISUAL CONTRACT
+// ============================================================
+//
+// IMPORTANT:
+//
+// This component does NOT create a second theme definition.
+//
+// It simply resolves semantic values from the central
+// FinoraTheme and applies them over the existing presentation
+// styles.
+//
+// Geometry remains owned by LoansPage.styles.ts.
+//
+// ============================================================
+
+function createThemeVisuals(
+  theme: ReturnType<typeof useTheme>["theme"],
+) {
+
+  const colors =
+    theme.colors;
+
+
+  return {
+
+    page:
+      colors.background.page,
+
+    surface:
+      colors.background.surface,
+
+    surfaceMuted:
+      colors.background.surfaceMuted,
+
+    brand:
+      colors.brand.primary,
+
+    brandSecondary:
+      colors.brand.secondary,
+
+    brandAccent:
+      colors.brand.accent,
+
+    brandAccentSoft:
+      colors.brand.accentSoft,
+
+    textPrimary:
+      colors.text.primary,
+
+    textSecondary:
+      colors.text.secondary,
+
+    textMuted:
+      colors.text.muted,
+
+    textInverse:
+      colors.text.inverse,
+
+    border:
+      colors.border.default,
+
+    borderStrong:
+      colors.border.strong,
+
+    borderSubtle:
+      colors.border.subtle,
+
+    shadow:
+      colors.overlay.shadow,
+
+    success:
+  colors.status.success,
+
+successSoft:
+  colors.status.successSoft,
+
+successBorder:
+  colors.border.strong,
+
+danger:
+  colors.status.danger,
+
+dangerSoft:
+  colors.status.dangerSoft,
+
+dangerBorder:
+  colors.border.strong,
+
+  };
+
+}
+
+
+// ============================================================
 // COMPONENT
 // ============================================================
 
 export default function Loans() {
+
+  // ==========================================================
+  // FINORA THEME ENGINE
+  // ==========================================================
+
+  const {
+    theme,
+  } =
+    useTheme();
+
+
+  const themeColors =
+    useMemo(
+      () =>
+        createThemeVisuals(
+          theme,
+        ),
+      [
+        theme,
+      ],
+    );
+
+
+  // ==========================================================
+  // THEME-AWARE VISUAL OVERRIDES
+  //
+  // IMPORTANT:
+  //
+  // Only colours/effects are overridden here.
+  //
+  // Existing dimensions, spacing, typography, grid geometry
+  // and responsive behaviour remain untouched.
+  // ==========================================================
+
+  const themedPageStyle:
+    CSSProperties = {
+
+    ...pageStyle,
+
+    background:
+      themeColors.page,
+
+    color:
+      themeColors.textPrimary,
+
+  };
+
+
+  const themedPageTitleStyle:
+    CSSProperties = {
+
+    ...pageTitleStyle,
+
+    color:
+      themeColors.textPrimary,
+
+  };
+
+
+  const themedPageSubtitleStyle:
+    CSSProperties = {
+
+    ...pageSubtitleStyle,
+
+    color:
+      themeColors.textMuted,
+
+  };
+
+
+  const themedCreateButtonStyle:
+    CSSProperties = {
+
+    ...createButtonStyle,
+
+    border:
+      `1px solid ${themeColors.brandAccent}`,
+
+    background:
+      themeColors.brand,
+
+    color:
+      themeColors.textInverse,
+
+    boxShadow:
+      `0 7px 18px ${themeColors.shadow}`,
+
+  };
+
+
+  const themedStatisticCardStyle:
+    CSSProperties = {
+
+    ...statisticCardStyle,
+
+    border:
+      `1px solid ${themeColors.border}`,
+
+    background:
+      themeColors.surface,
+
+    boxShadow:
+      `0 6px 18px ${themeColors.shadow}`,
+
+  };
+
+
+  const themedStatisticLabelStyle:
+    CSSProperties = {
+
+    ...statisticLabelStyle,
+
+    color:
+      themeColors.textMuted,
+
+  };
+
+
+  const themedStatisticValueStyle:
+    CSSProperties = {
+
+    ...statisticValueStyle,
+
+    color:
+      themeColors.textPrimary,
+
+  };
+
+
+  const themedPortfolioStyle:
+    CSSProperties = {
+
+    ...portfolioStyle,
+
+    border:
+      `1px solid ${themeColors.border}`,
+
+    background:
+      themeColors.surface,
+
+    boxShadow:
+      `0 10px 28px ${themeColors.shadow}`,
+
+  };
+
+
+  const themedPortfolioHeaderStyle:
+    CSSProperties = {
+
+    ...portfolioHeaderStyle,
+
+    borderBottom:
+      `1px solid ${themeColors.border}`,
+
+    background:
+      `linear-gradient(
+        90deg,
+        ${themeColors.surfaceMuted},
+        ${themeColors.surface}
+      )`,
+
+  };
+
+
+  const themedPortfolioTitleStyle:
+    CSSProperties = {
+
+    ...portfolioTitleStyle,
+
+    color:
+      themeColors.textPrimary,
+
+  };
+
+
+  const themedRefreshButtonStyle:
+    CSSProperties = {
+
+    ...refreshButtonStyle,
+
+    border:
+      `1px solid ${themeColors.border}`,
+
+    background:
+      themeColors.surfaceMuted,
+
+    color:
+      themeColors.textSecondary,
+
+  };
+
+
+  const themedLoanCountStyle:
+    CSSProperties = {
+
+    ...loanCountStyle,
+
+    border:
+      `1px solid ${themeColors.borderStrong}`,
+
+    background:
+      themeColors.brandAccentSoft,
+
+    color:
+      themeColors.brand,
+
+  };
+
+
+  const themedFilterLabelStyle:
+    CSSProperties = {
+
+    ...filterLabelStyle,
+
+    color:
+      themeColors.textMuted,
+
+  };
+
+
+  const themedFilterControlStyle:
+    CSSProperties = {
+
+    border:
+      `1px solid ${themeColors.border}`,
+
+    background:
+      themeColors.surface,
+
+    color:
+      themeColors.textPrimary,
+
+  };
+
+
+  const themedClearFilterButtonStyle:
+    CSSProperties = {
+
+    ...clearFilterButtonStyle,
+
+    border:
+      `1px solid ${themeColors.border}`,
+
+    background:
+      themeColors.surfaceMuted,
+
+    color:
+      themeColors.textSecondary,
+
+  };
+
+
+  const themedApplyFilterButtonStyle:
+    CSSProperties = {
+
+    ...applyFilterButtonStyle,
+
+    border:
+      `1px solid ${themeColors.brand}`,
+
+    background:
+      themeColors.brand,
+
+    color:
+      themeColors.textInverse,
+
+  };
+
+
+  const themedTableHeaderStyle:
+    CSSProperties = {
+
+    ...tableHeaderStyle,
+
+    borderBottom:
+      `1px solid ${themeColors.border}`,
+
+    background:
+      themeColors.surfaceMuted,
+
+  };
+
+
+  const themedTableHeaderCellStyle:
+    CSSProperties = {
+
+    ...tableHeaderCellStyle,
+
+    color:
+      themeColors.textMuted,
+
+  };
+
+
+  const themedTableHeaderRightStyle:
+    CSSProperties = {
+
+    ...tableHeaderRightStyle,
+
+    color:
+      themeColors.textMuted,
+
+  };
+
+
+  const themedTableHeaderCenterStyle:
+    CSSProperties = {
+
+    ...tableHeaderCenterStyle,
+
+    color:
+      themeColors.textMuted,
+
+  };
+
+
+  const themedTableRowStyle:
+    CSSProperties = {
+
+    ...tableRowStyle,
+
+    borderBottom:
+      `1px solid ${themeColors.border}`,
+
+    background:
+      themeColors.surface,
+
+  };
+
+
+  const themedSerialCellStyle:
+    CSSProperties = {
+
+    ...serialCellStyle,
+
+    color:
+      themeColors.textSecondary,
+
+  };
+
+
+  const themedTableCellStyle:
+    CSSProperties = {
+
+    ...tableCellStyle,
+
+    color:
+      themeColors.textSecondary,
+
+  };
+
+
+  const themedTableCellSecondaryStyle:
+    CSSProperties = {
+
+    ...tableCellSecondaryStyle,
+
+    color:
+      themeColors.brandSecondary,
+
+  };
+
+
+  const themedTableCellRightStyle:
+    CSSProperties = {
+
+    ...tableCellRightStyle,
+
+    color:
+      themeColors.textSecondary,
+
+  };
+
+
+  const themedTableCellCenterStyle:
+    CSSProperties = {
+
+    ...tableCellCenterStyle,
+
+    color:
+      themeColors.textSecondary,
+
+  };
+
+
+  const themedLoanNumberStyle:
+    CSSProperties = {
+
+    ...loanNumberStyle,
+
+    color:
+      themeColors.textPrimary,
+
+  };
+
+
+  const themedLoanTitleStyle:
+    CSSProperties = {
+
+    ...loanTitleStyle,
+
+    color:
+      themeColors.textMuted,
+
+  };
+
+
+  const themedCustomerNameStyle:
+    CSSProperties = {
+
+    ...customerNameStyle,
+
+    color:
+      themeColors.textPrimary,
+
+  };
+
+
+  const themedCustomerPhoneStyle:
+    CSSProperties = {
+
+    ...customerPhoneStyle,
+
+    color:
+      themeColors.textMuted,
+
+  };
+
+
+  const themedAmountStyle:
+    CSSProperties = {
+
+    ...amountStyle,
+
+    color:
+      themeColors.textPrimary,
+
+  };
+
+
+  const themedOutstandingStyle:
+    CSSProperties = {
+
+    ...outstandingStyle,
+
+    color:
+      themeColors.brand,
+
+  };
+
+
+  const themedEmptyStateStyle:
+    CSSProperties = {
+
+    ...emptyStateStyle,
+
+    background:
+      themeColors.surface,
+
+  };
+
+
+  const themedEmptyTitleStyle:
+    CSSProperties = {
+
+    ...emptyTitleStyle,
+
+    color:
+      themeColors.textPrimary,
+
+  };
+
+
+  const themedEmptyDescriptionStyle:
+    CSSProperties = {
+
+    ...emptyDescriptionStyle,
+
+    color:
+      themeColors.textMuted,
+
+  };
+
+
+  const themedEmptyCreateButtonStyle:
+    CSSProperties = {
+
+    ...emptyCreateButtonStyle,
+
+    border:
+      `1px solid ${themeColors.brandAccent}`,
+
+    background:
+      themeColors.brand,
+
+    color:
+      themeColors.textInverse,
+
+    boxShadow:
+      `0 7px 18px ${themeColors.shadow}`,
+
+  };
+
+
+  const themedTableFooterStyle:
+    CSSProperties = {
+
+    ...tableFooterStyle,
+
+    borderTop:
+      `1px solid ${themeColors.border}`,
+
+    background:
+      themeColors.surface,
+
+  };
+
+
+  const themedTableShowingStyle:
+    CSSProperties = {
+
+    ...tableShowingStyle,
+
+    color:
+      themeColors.textMuted,
+
+  };
+
 
   // ==========================================================
   // LOAN STATE
@@ -474,12 +1111,6 @@ export default function Loans() {
 
   // ==========================================================
   // VIEW LOAN STATE
-  //
-  // When a loan is selected from the portfolio, Loans Office
-  // temporarily switches to the read-only View Loan Details
-  // workspace.
-  //
-  // This does NOT modify the persisted loan.
   // ==========================================================
 
   const [
@@ -921,11 +1552,6 @@ export default function Loans() {
 
   // ==========================================================
   // VIEW LOAN DETAILS
-  //
-  // This is intentionally before the portfolio JSX.
-  //
-  // The Loans Office remains the route owner.
-  // We simply switch the workspace content.
   // ==========================================================
 
   if (
@@ -970,7 +1596,7 @@ export default function Loans() {
 
       <main
         style={
-          pageStyle
+          themedPageStyle
         }
       >
 
@@ -992,7 +1618,7 @@ export default function Loans() {
 
             <h1
               style={
-                pageTitleStyle
+                themedPageTitleStyle
               }
             >
               Loans Office
@@ -1001,7 +1627,7 @@ export default function Loans() {
 
             <p
               style={
-                pageSubtitleStyle
+                themedPageSubtitleStyle
               }
             >
               Manage, review and create customer loans.
@@ -1016,7 +1642,7 @@ export default function Loans() {
               handleCreateLoan
             }
             style={
-              createButtonStyle
+              themedCreateButtonStyle
             }
           >
             + Create New Loan
@@ -1037,13 +1663,13 @@ export default function Loans() {
 
           <article
             style={
-              statisticCardStyle
+              themedStatisticCardStyle
             }
           >
 
             <span
               style={
-                statisticLabelStyle
+                themedStatisticLabelStyle
               }
             >
               Total Loans
@@ -1052,7 +1678,7 @@ export default function Loans() {
 
             <strong
               style={
-                statisticValueStyle
+                themedStatisticValueStyle
               }
             >
               {statistics.total}
@@ -1063,13 +1689,13 @@ export default function Loans() {
 
           <article
             style={
-              statisticCardStyle
+              themedStatisticCardStyle
             }
           >
 
             <span
               style={
-                statisticLabelStyle
+                themedStatisticLabelStyle
               }
             >
               Active / Running
@@ -1078,7 +1704,7 @@ export default function Loans() {
 
             <strong
               style={
-                statisticValueStyle
+                themedStatisticValueStyle
               }
             >
               {statistics.active}
@@ -1089,13 +1715,13 @@ export default function Loans() {
 
           <article
             style={
-              statisticCardStyle
+              themedStatisticCardStyle
             }
           >
 
             <span
               style={
-                statisticLabelStyle
+                themedStatisticLabelStyle
               }
             >
               Closed
@@ -1104,7 +1730,7 @@ export default function Loans() {
 
             <strong
               style={
-                statisticValueStyle
+                themedStatisticValueStyle
               }
             >
               {statistics.closed}
@@ -1115,13 +1741,13 @@ export default function Loans() {
 
           <article
             style={
-              statisticCardStyle
+              themedStatisticCardStyle
             }
           >
 
             <span
               style={
-                statisticLabelStyle
+                themedStatisticLabelStyle
               }
             >
               Outstanding
@@ -1130,7 +1756,7 @@ export default function Loans() {
 
             <strong
               style={
-                statisticValueStyle
+                themedStatisticValueStyle
               }
             >
               {
@@ -1151,19 +1777,19 @@ export default function Loans() {
 
         <section
           style={
-            portfolioStyle
+            themedPortfolioStyle
           }
         >
 
           <header
             style={
-              portfolioHeaderStyle
+              themedPortfolioHeaderStyle
             }
           >
 
             <div
               style={
-                portfolioTitleStyle
+                themedPortfolioTitleStyle
               }
             >
 
@@ -1182,10 +1808,10 @@ export default function Loans() {
                     "3px",
 
                   background:
-                    "#2563EB",
+                    themeColors.brand,
 
                   boxShadow:
-                    "0 0 10px rgba(37,99,235,0.25)",
+                    `0 0 10px ${themeColors.shadow}`,
                 }}
               />
 
@@ -1224,7 +1850,7 @@ export default function Loans() {
 
                     <label
                       style={
-                        filterLabelStyle
+                        themedFilterLabelStyle
                       }
                     >
                       Status
@@ -1247,9 +1873,10 @@ export default function Loans() {
 
                         }
                       }
-                      style={
-                        filterSelectStyle
-                      }
+                      style={{
+                        ...filterSelectStyle,
+                        ...themedFilterControlStyle,
+                      }}
                     >
 
                       <option value="ALL">
@@ -1277,7 +1904,7 @@ export default function Loans() {
 
                     <label
                       style={
-                        filterLabelStyle
+                        themedFilterLabelStyle
                       }
                     >
                       From
@@ -1300,9 +1927,10 @@ export default function Loans() {
 
                         }
                       }
-                      style={
-                        filterDateInputStyle
-                      }
+                      style={{
+                        ...filterDateInputStyle,
+                        ...themedFilterControlStyle,
+                      }}
                     />
 
                   </div>
@@ -1316,7 +1944,7 @@ export default function Loans() {
 
                     <label
                       style={
-                        filterLabelStyle
+                        themedFilterLabelStyle
                       }
                     >
                       To
@@ -1339,9 +1967,10 @@ export default function Loans() {
 
                         }
                       }
-                      style={
-                        filterDateInputStyle
-                      }
+                      style={{
+                        ...filterDateInputStyle,
+                        ...themedFilterControlStyle,
+                      }}
                     />
 
                   </div>
@@ -1359,7 +1988,7 @@ export default function Loans() {
                         handleClearFilters
                       }
                       style={
-                        clearFilterButtonStyle
+                        themedClearFilterButtonStyle
                       }
                     >
                       Clear
@@ -1372,7 +2001,7 @@ export default function Loans() {
                         handleApplyFilters
                       }
                       style={
-                        applyFilterButtonStyle
+                        themedApplyFilterButtonStyle
                       }
                     >
                       Apply
@@ -1402,7 +2031,7 @@ export default function Loans() {
                   refreshing
                 }
                 style={
-                  refreshButtonStyle
+                  themedRefreshButtonStyle
                 }
               >
                 {
@@ -1415,7 +2044,7 @@ export default function Loans() {
 
               <span
                 style={
-                  loanCountStyle
+                  themedLoanCountStyle
                 }
               >
                 {
@@ -1443,13 +2072,13 @@ export default function Loans() {
 
             <div
               style={
-                emptyStateStyle
+                themedEmptyStateStyle
               }
             >
 
               <div
                 style={
-                  emptyTitleStyle
+                  themedEmptyTitleStyle
                 }
               >
                 Loading V2 Loans...
@@ -1458,7 +2087,7 @@ export default function Loans() {
 
               <div
                 style={
-                  emptyDescriptionStyle
+                  themedEmptyDescriptionStyle
                 }
               >
                 Reading loan records from FINORA V2 storage.
@@ -1471,13 +2100,13 @@ export default function Loans() {
 
             <div
               style={
-                emptyStateStyle
+                themedEmptyStateStyle
               }
             >
 
               <div
                 style={
-                  emptyTitleStyle
+                  themedEmptyTitleStyle
                 }
               >
                 {
@@ -1491,7 +2120,7 @@ export default function Loans() {
 
               <div
                 style={
-                  emptyDescriptionStyle
+                  themedEmptyDescriptionStyle
                 }
               >
                 {
@@ -1513,7 +2142,7 @@ export default function Loans() {
                       handleCreateLoan
                     }
                     style={
-                      emptyCreateButtonStyle
+                      themedEmptyCreateButtonStyle
                     }
                   >
                     + Create New Loan
@@ -1542,14 +2171,14 @@ export default function Loans() {
 
                 <div
                   style={
-                    tableHeaderStyle
+                    themedTableHeaderStyle
                   }
                   role="row"
                 >
 
                   <div
                     style={
-                      tableHeaderCenterStyle
+                      themedTableHeaderCenterStyle
                     }
                   >
                     S.No.
@@ -1558,7 +2187,7 @@ export default function Loans() {
 
                   <div
                     style={
-                      tableHeaderCellStyle
+                      themedTableHeaderCellStyle
                     }
                   >
                     Loan
@@ -1567,7 +2196,7 @@ export default function Loans() {
 
                   <div
                     style={
-                      tableHeaderCellStyle
+                      themedTableHeaderCellStyle
                     }
                   >
                     Customer
@@ -1576,7 +2205,7 @@ export default function Loans() {
 
                   <div
                     style={
-                      tableHeaderCellStyle
+                      themedTableHeaderCellStyle
                     }
                   >
                     Type
@@ -1585,7 +2214,7 @@ export default function Loans() {
 
                   <div
                     style={
-                      tableHeaderRightStyle
+                      themedTableHeaderRightStyle
                     }
                   >
                     Principal
@@ -1594,7 +2223,7 @@ export default function Loans() {
 
                   <div
                     style={
-                      tableHeaderRightStyle
+                      themedTableHeaderRightStyle
                     }
                   >
                     Outstanding
@@ -1603,7 +2232,7 @@ export default function Loans() {
 
                   <div
                     style={
-                      tableHeaderCenterStyle
+                      themedTableHeaderCenterStyle
                     }
                   >
                     Loan Date
@@ -1612,7 +2241,7 @@ export default function Loans() {
 
                   <div
                     style={
-                      tableHeaderCenterStyle
+                      themedTableHeaderCenterStyle
                     }
                   >
                     Status
@@ -1623,7 +2252,7 @@ export default function Loans() {
 
                   <div
                     style={
-                      tableHeaderCenterStyle
+                      themedTableHeaderCenterStyle
                     }
                   >
                   </div>
@@ -1652,7 +2281,7 @@ export default function Loans() {
                             loan.id
                           }
                           style={{
-                            ...tableRowStyle,
+                            ...themedTableRowStyle,
 
                             gridTemplateColumns:
                               "56px minmax(120px,1.2fr) minmax(130px,1.25fr) minmax(80px,0.8fr) minmax(100px,0.9fr) minmax(110px,1fr) minmax(95px,0.8fr) minmax(80px,0.7fr) 72px",
@@ -1664,7 +2293,7 @@ export default function Loans() {
 
                           <div
                             style={
-                              serialCellStyle
+                              themedSerialCellStyle
                             }
                           >
                             {
@@ -1684,7 +2313,7 @@ export default function Loans() {
 
                             <div
                               style={
-                                loanNumberStyle
+                                themedLoanNumberStyle
                               }
                             >
                               {
@@ -1697,7 +2326,7 @@ export default function Loans() {
 
                             <div
                               style={
-                                loanTitleStyle
+                                themedLoanTitleStyle
                               }
                             >
                               {
@@ -1714,13 +2343,13 @@ export default function Loans() {
 
                           <div
                             style={
-                              tableCellStyle
+                              themedTableCellStyle
                             }
                           >
 
                             <div
                               style={
-                                customerNameStyle
+                                themedCustomerNameStyle
                               }
                             >
                               {
@@ -1732,7 +2361,7 @@ export default function Loans() {
 
                             <div
                               style={
-                                customerPhoneStyle
+                                themedCustomerPhoneStyle
                               }
                             >
                               {
@@ -1748,7 +2377,7 @@ export default function Loans() {
 
                           <div
                             style={
-                              tableCellSecondaryStyle
+                              amountStyle
                             }
                           >
                             {
@@ -1763,13 +2392,13 @@ export default function Loans() {
 
                           <div
                             style={
-                              tableCellRightStyle
+                              themedTableCellRightStyle
                             }
                           >
 
                             <span
                               style={
-                                amountStyle
+                                themedAmountStyle
                               }
                             >
                               {
@@ -1786,13 +2415,13 @@ export default function Loans() {
 
                           <div
                             style={
-                              tableCellRightStyle
+                              themedTableCellRightStyle
                             }
                           >
 
                             <span
                               style={
-                                outstandingStyle
+                                amountStyle
                               }
                             >
                               {
@@ -1809,7 +2438,7 @@ export default function Loans() {
 
                           <div
                             style={
-                              tableCellCenterStyle
+                              themedTableCellCenterStyle
                             }
                           >
                             {
@@ -1824,16 +2453,40 @@ export default function Loans() {
 
                           <div
                             style={
-                              tableCellCenterStyle
+                              themedTableCellCenterStyle
                             }
                           >
 
                             <span
-                              style={
-                                statusBadgeStyle(
+                              style={{
+                                ...statusBadgeStyle(
                                   loan.status,
-                                )
-                              }
+                                ),
+
+                                border:
+                                  `1px solid ${
+                                    isClosedLoan(
+                                      loan,
+                                    )
+                                      ? themeColors.border
+                                      : themeColors.successBorder
+                                  }`,
+
+                                background:
+                                  isClosedLoan(
+                                    loan,
+                                  )
+                                    ? themeColors.surfaceMuted
+                                    : themeColors.successSoft,
+
+                                color:
+                                  isClosedLoan(
+                                    loan,
+                                  )
+                                    ? themeColors.textMuted
+                                    : themeColors.success,
+
+                              }}
                             >
                               {
                                 formatStatus(
@@ -1849,7 +2502,7 @@ export default function Loans() {
 
                           <div
                             style={
-                              tableCellCenterStyle
+                              themedTableCellCenterStyle
                             }
                           >
 
@@ -1868,16 +2521,16 @@ export default function Loans() {
                                   "0 9px",
 
                                 border:
-                                  "1px solid rgba(37,99,235,0.35)",
+                                  `1px solid ${themeColors.borderStrong}`,
 
                                 borderRadius:
                                   "6px",
 
                                 background:
-                                  "rgba(37,99,235,0.10)",
+                                  themeColors.brandAccentSoft,
 
                                 color:
-                                  "#93C5FD",
+                                  themeColors.brand,
 
                                 fontSize:
                                   "10px",
@@ -1914,13 +2567,13 @@ export default function Loans() {
 
               <div
                 style={
-                  tableFooterStyle
+                  themedTableFooterStyle
                 }
               >
 
                 <span
                   style={
-                    tableShowingStyle
+                    themedTableShowingStyle
                   }
                 >
                   Showing 1 to{" "}

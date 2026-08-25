@@ -9,7 +9,8 @@
 //
 // - Keep Loans Office presentation separate from logic
 // - Provide exact shared column geometry
-// - Maintain premium FINORA V2 dark workspace
+// - Maintain premium FINORA V2 workspace
+// - Consume the central FINORA Theme Engine
 //
 // IMPORTANT:
 //
@@ -17,8 +18,30 @@
 // - No persistence logic.
 // - No V1 styles.
 // - No inline CSS dependency.
+// - No local theme palette.
+// - Theme colours come from FINORA Theme CSS variables.
+// - Responsive / layout geometry remains unchanged.
+//
+// THEME CONTRACT:
+//
+// ThemeProvider
+//      ↓
+// FINORA Theme Engine
+//      ↓
+// FINORA Theme CSS variables
+//      ↓
+// Loans Office styles
+//
+// SUPPORTED APPLICATION THEMES:
+//
+// - Imperial Gold
+// - Royal Navy
+// - Amethyst
+// - Emerald
+// - Obsidian
 //
 // ============================================================
+
 
 // ============================================================
 // IMPORTS
@@ -28,66 +51,143 @@ import type {
   CSSProperties,
 } from "react";
 
+
 import type {
   Loan,
 } from "../../components/customers/office/CustomerOffice/types";
 
+
 // ============================================================
-// COLORS
+// THEME VARIABLES
+// ============================================================
+//
+// IMPORTANT:
+//
+// LoansPage.styles.ts does NOT define five independent themes.
+//
+// The five application themes are owned by the central
+// FINORA Theme Registry / ThemeProvider.
+//
+// These variables resolve automatically from the currently
+// selected FINORA theme.
+//
+// Defensive fallbacks exist only for temporary cases where
+// the theme CSS variable is unavailable.
+//
 // ============================================================
 
-const COLORS = {
+const THEME = {
+
+  // ----------------------------------------------------------
+  // PAGE / BACKGROUND
+  // ----------------------------------------------------------
+
+  page:
+    "var(--finora-theme-page, var(--finora-theme-background-page, var(--finora-theme-surface, #0B1220)))",
 
   background:
-    "#0B1220",
+    "var(--finora-theme-background-page, var(--finora-theme-page, var(--finora-theme-surface, #0B1220)))",
 
-  panel:
-    "#111C2E",
 
-  panelSoft:
-    "#142238",
+  // ----------------------------------------------------------
+  // SURFACES
+  // ----------------------------------------------------------
 
-  panelHover:
-    "#17263D",
+  surface:
+    "var(--finora-theme-surface, var(--finora-theme-background-surface, #111C2E))",
 
-  border:
-    "rgba(148, 163, 184, 0.16)",
+  surfaceMuted:
+    "var(--finora-theme-surface-muted, var(--finora-theme-background-surface-muted, #142238))",
 
-  borderStrong:
-    "rgba(37, 99, 235, 0.35)",
+  surfaceStrong:
+    "var(--finora-theme-surface-strong, var(--finora-theme-surface-muted, #17263D))",
 
-  primary:
-    "#2563EB",
 
-  primaryHover:
-    "#1D4ED8",
+  // ----------------------------------------------------------
+  // BRAND
+  // ----------------------------------------------------------
 
-  primarySoft:
-    "rgba(37, 99, 235, 0.12)",
+  brandPrimary:
+    "var(--finora-theme-brand-primary, #C9A227)",
 
-  text:
-    "#FFFFFF",
+  brandSecondary:
+    "var(--finora-theme-brand-secondary, var(--finora-theme-brand-primary, #B8860B))",
+
+  brandAccent:
+    "var(--finora-theme-brand-accent, var(--finora-theme-brand-primary, #D4AF37))",
+
+  brandAccentSoft:
+    "var(--finora-theme-brand-accent-soft, var(--finora-theme-brand-primary, #D4AF37))",
+
+
+  // ----------------------------------------------------------
+  // TEXT
+  // ----------------------------------------------------------
+
+  textPrimary:
+    "var(--finora-theme-text-primary, #FFFFFF)",
 
   textSecondary:
-    "#CBD5E1",
+    "var(--finora-theme-text-secondary, #CBD5E1)",
 
   textMuted:
-    "#94A3B8",
+    "var(--finora-theme-text-muted, #94A3B8)",
+
+  textInverse:
+    "var(--finora-theme-text-inverse, #FFFFFF)",
+
+
+  // ----------------------------------------------------------
+  // BORDERS
+  // ----------------------------------------------------------
+
+  border:
+    "var(--finora-theme-border-default, rgba(148, 163, 184, 0.16))",
+
+  borderStrong:
+    "var(--finora-theme-border-strong, rgba(37, 99, 235, 0.35))",
+
+  borderSubtle:
+    "var(--finora-theme-border-subtle, rgba(148, 163, 184, 0.10))",
+
+
+  // ----------------------------------------------------------
+  // PRIMARY ACTION
+  // ----------------------------------------------------------
+
+  primary:
+    "var(--finora-theme-brand-primary, #2563EB)",
+
+  primaryHover:
+    "var(--finora-theme-brand-secondary, #1D4ED8)",
+
+
+  // ----------------------------------------------------------
+  // STATUS
+  // ----------------------------------------------------------
 
   success:
-    "#34D399",
+    "var(--finora-theme-success, #34D399)",
 
   successSoft:
-    "rgba(16, 185, 129, 0.10)",
+    "var(--finora-theme-success-soft, rgba(16, 185, 129, 0.10))",
 
   successBorder:
-    "rgba(16, 185, 129, 0.35)",
+    "var(--finora-theme-success-border, var(--finora-theme-border-strong, rgba(16, 185, 129, 0.35)))",
 
   closed:
-    "#94A3B8",
+    "var(--finora-theme-text-muted, #94A3B8)",
 
   closedSoft:
-    "rgba(148, 163, 184, 0.10)",
+    "var(--finora-theme-surface-muted, rgba(148, 163, 184, 0.10))",
+
+
+  // ----------------------------------------------------------
+  // EFFECTS
+  // ----------------------------------------------------------
+
+  shadow:
+    "var(--finora-theme-overlay-shadow, rgba(0, 0, 0, 0.18))",
 
 } as const;
 
@@ -105,13 +205,14 @@ const COLORS = {
 //
 // Total = 100%
 //
-// Loan         15%
-// Customer     15%
-// Type         12%
+// #            5%
+// Loan         16%
+// Customer     16%
+// Type         11%
 // Principal    14%
 // Outstanding  14%
 // Loan Date    12%
-// Status       18%
+// Status       12%
 //
 // ============================================================
 
@@ -142,10 +243,10 @@ export const pageStyle:
     "28px 24px 40px",
 
   background:
-    COLORS.background,
+    THEME.background,
 
   color:
-    COLORS.text,
+    THEME.textPrimary,
 
 };
 
@@ -199,7 +300,7 @@ export const pageTitleStyle:
     0,
 
   color:
-    COLORS.text,
+    THEME.textPrimary,
 
   fontSize:
     "24px",
@@ -227,7 +328,7 @@ export const pageSubtitleStyle:
     "7px 0 0",
 
   color:
-    COLORS.textMuted,
+    THEME.textMuted,
 
   fontSize:
     "13px",
@@ -258,16 +359,16 @@ export const createButtonStyle:
     "0 18px",
 
   border:
-    "1px solid rgba(96, 165, 250, 0.35)",
+    `1px solid ${THEME.borderStrong}`,
 
   borderRadius:
     "9px",
 
   background:
-    COLORS.primary,
+    THEME.primary,
 
   color:
-    COLORS.text,
+    THEME.textInverse,
 
   fontSize:
     "13px",
@@ -279,7 +380,7 @@ export const createButtonStyle:
     "pointer",
 
   boxShadow:
-    "0 7px 18px rgba(37, 99, 235, 0.22)",
+    `0 7px 18px ${THEME.shadow}`,
 
 };
 
@@ -329,16 +430,16 @@ export const statisticCardStyle:
     "16px",
 
   border:
-    `1px solid ${COLORS.border}`,
+    `1px solid ${THEME.border}`,
 
   borderRadius:
     "10px",
 
   background:
-    COLORS.panel,
+    THEME.surface,
 
   boxShadow:
-    "0 6px 18px rgba(0, 0, 0, 0.12)",
+    `0 6px 18px ${THEME.shadow}`,
 
 };
 
@@ -357,7 +458,7 @@ export const statisticLabelStyle:
     "8px",
 
   color:
-    COLORS.textMuted,
+    THEME.textMuted,
 
   fontSize:
     "12px",
@@ -382,7 +483,7 @@ export const statisticValueStyle:
     "block",
 
   color:
-    COLORS.text,
+    THEME.textPrimary,
 
   fontSize:
     "20px",
@@ -416,16 +517,16 @@ export const portfolioStyle:
     "hidden",
 
   border:
-    `1px solid ${COLORS.border}`,
+    `1px solid ${THEME.border}`,
 
   borderRadius:
     "12px",
 
   background:
-    COLORS.panel,
+    THEME.surface,
 
   boxShadow:
-    "0 10px 28px rgba(0, 0, 0, 0.18)",
+    `0 10px 28px ${THEME.shadow}`,
 
 };
 
@@ -459,14 +560,16 @@ export const portfolioHeaderStyle:
     "0 14px",
 
   borderBottom:
-    `1px solid ${COLORS.border}`,
+    `1px solid ${THEME.border}`,
 
   background:
-    `linear-gradient(
-      90deg,
-      ${COLORS.panelSoft},
-      ${COLORS.panel}
-    )`,
+    `
+      linear-gradient(
+        90deg,
+        ${THEME.surfaceMuted},
+        ${THEME.surface}
+      )
+    `,
 
 };
 
@@ -479,7 +582,7 @@ export const portfolioTitleStyle:
   CSSProperties = {
 
   color:
-    COLORS.text,
+    THEME.textPrimary,
 
   fontSize:
     "13px",
@@ -535,16 +638,16 @@ export const refreshButtonStyle:
     "0 10px",
 
   border:
-    `1px solid ${COLORS.border}`,
+    `1px solid ${THEME.border}`,
 
   borderRadius:
     "7px",
 
   background:
-    "rgba(255, 255, 255, 0.025)",
+    "color-mix(in srgb, var(--finora-theme-text-primary, #FFFFFF) 2.5%, transparent)",
 
   color:
-    COLORS.textSecondary,
+    THEME.textSecondary,
 
   fontSize:
     "10px",
@@ -584,16 +687,22 @@ export const loanCountStyle:
     "0 9px",
 
   border:
-    `1px solid ${COLORS.borderStrong}`,
+    `1px solid ${THEME.borderStrong}`,
 
   borderRadius:
     "999px",
 
   background:
-    COLORS.primarySoft,
+    `
+      color-mix(
+        in srgb,
+        ${THEME.brandPrimary} 12%,
+        transparent
+      )
+    `,
 
   color:
-    "#93C5FD",
+    THEME.brandAccent,
 
   fontSize:
     "10px",
@@ -608,109 +717,261 @@ export const loanCountStyle:
 
 
 // ============================================================
- // FILTERS
- // ============================================================
- //
- // LOCKED V2 PREMIUM HEADER FILTER LAYOUT
- //
- // Filters are intentionally embedded inside the Loan Portfolio
- // header. There is NO separate filter card/section.
- //
- // Order:
- // Status → From → To → Clear → Apply → Refresh → Count
- //
- // ============================================================
+// FILTERS
+// ============================================================
+//
+// LOCKED V2 PREMIUM HEADER FILTER LAYOUT
+//
+// Filters are intentionally embedded inside the Loan Portfolio
+// header. There is NO separate filter card/section.
+//
+// Order:
+//
+// Status → From → To → Clear → Apply → Refresh → Count
+//
+// ============================================================
 
-export const filtersStyle: CSSProperties = {
-  width: "auto",
-  margin: 0,
-  padding: 0,
-  border: "none",
-  borderRadius: 0,
-  background: "transparent",
-  overflow: "visible",
-  boxSizing: "border-box",
+export const filtersStyle:
+  CSSProperties = {
+
+  width:
+    "auto",
+
+  margin:
+    0,
+
+  padding:
+    0,
+
+  border:
+    "none",
+
+  borderRadius:
+    0,
+
+  background:
+    "transparent",
+
+  overflow:
+    "visible",
+
+  boxSizing:
+    "border-box",
+
 };
 
-export const filtersGridStyle: CSSProperties = {
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "flex-end",
-  gap: "7px",
-  padding: 0,
-  flexWrap: "nowrap",
+
+export const filtersGridStyle:
+  CSSProperties = {
+
+  display:
+    "flex",
+
+  alignItems:
+    "center",
+
+  justifyContent:
+    "flex-end",
+
+  gap:
+    "7px",
+
+  padding:
+    0,
+
+  flexWrap:
+    "nowrap",
+
 };
 
-export const filterFieldStyle: CSSProperties = {
-  display: "flex",
-  flexDirection: "row",
-  alignItems: "center",
-  gap: "5px",
-  minWidth: 0,
+
+export const filterFieldStyle:
+  CSSProperties = {
+
+  display:
+    "flex",
+
+  flexDirection:
+    "row",
+
+  alignItems:
+    "center",
+
+  gap:
+    "5px",
+
+  minWidth:
+    0,
+
 };
 
-export const filterLabelStyle: CSSProperties = {
-  color: COLORS.textMuted,
-  fontSize: "10px",
-  fontWeight: 650,
-  whiteSpace: "nowrap",
+
+export const filterLabelStyle:
+  CSSProperties = {
+
+  color:
+    THEME.textMuted,
+
+  fontSize:
+    "10px",
+
+  fontWeight:
+    650,
+
+  whiteSpace:
+    "nowrap",
+
 };
 
-export const filterControlStyle: CSSProperties = {
-  height: "31px",
-  boxSizing: "border-box",
-  padding: "0 8px",
-  border: `1px solid ${COLORS.border}`,
-  borderRadius: "7px",
-  outline: "none",
-  background: COLORS.background,
-  color: COLORS.text,
-  fontSize: "11px",
-  fontWeight: 550,
+
+export const filterControlStyle:
+  CSSProperties = {
+
+  height:
+    "31px",
+
+  boxSizing:
+    "border-box",
+
+  padding:
+    "0 8px",
+
+  border:
+    `1px solid ${THEME.border}`,
+
+  borderRadius:
+    "7px",
+
+  outline:
+    "none",
+
+  background:
+    THEME.background,
+
+  color:
+    THEME.textPrimary,
+
+  fontSize:
+    "11px",
+
+  fontWeight:
+    550,
+
 };
 
-export const filterSelectStyle: CSSProperties = {
+
+export const filterSelectStyle:
+  CSSProperties = {
+
   ...filterControlStyle,
-  width: "86px",
-  cursor: "pointer",
+
+  width:
+    "86px",
+
+  cursor:
+    "pointer",
+
 };
 
-export const filterDateInputStyle: CSSProperties = {
+
+export const filterDateInputStyle:
+  CSSProperties = {
+
   ...filterControlStyle,
-  width: "126px",
+
+  width:
+    "126px",
+
 };
 
-export const filterActionsStyle: CSSProperties = {
-  display: "flex",
-  alignItems: "center",
-  gap: "6px",
-  marginLeft: "1px",
+
+export const filterActionsStyle:
+  CSSProperties = {
+
+  display:
+    "flex",
+
+  alignItems:
+    "center",
+
+  gap:
+    "6px",
+
+  marginLeft:
+    "1px",
+
 };
 
-export const clearFilterButtonStyle: CSSProperties = {
-  minHeight: "31px",
-  padding: "0 9px",
-  border: `1px solid ${COLORS.border}`,
-  borderRadius: "7px",
-  background: "rgba(255,255,255,0.025)",
-  color: COLORS.textSecondary,
-  fontSize: "10px",
-  fontWeight: 650,
-  cursor: "pointer",
-  whiteSpace: "nowrap",
+
+export const clearFilterButtonStyle:
+  CSSProperties = {
+
+  minHeight:
+    "31px",
+
+  padding:
+    "0 9px",
+
+  border:
+    `1px solid ${THEME.border}`,
+
+  borderRadius:
+    "7px",
+
+  background:
+    "color-mix(in srgb, var(--finora-theme-text-primary, #FFFFFF) 2.5%, transparent)",
+
+  color:
+    THEME.textSecondary,
+
+  fontSize:
+    "10px",
+
+  fontWeight:
+    650,
+
+  cursor:
+    "pointer",
+
+  whiteSpace:
+    "nowrap",
+
 };
 
-export const applyFilterButtonStyle: CSSProperties = {
-  minHeight: "31px",
-  padding: "0 11px",
-  border: `1px solid ${COLORS.primary}`,
-  borderRadius: "7px",
-  background: COLORS.primary,
-  color: COLORS.text,
-  fontSize: "10px",
-  fontWeight: 700,
-  cursor: "pointer",
-  whiteSpace: "nowrap",
+
+export const applyFilterButtonStyle:
+  CSSProperties = {
+
+  minHeight:
+    "31px",
+
+  padding:
+    "0 11px",
+
+  border:
+    `1px solid ${THEME.primary}`,
+
+  borderRadius:
+    "7px",
+
+  background:
+    THEME.primary,
+
+  color:
+    THEME.textInverse,
+
+  fontSize:
+    "10px",
+
+  fontWeight:
+    700,
+
+  cursor:
+    "pointer",
+
+  whiteSpace:
+    "nowrap",
+
 };
 
 
@@ -765,10 +1026,10 @@ export const tableHeaderStyle:
     "0 12px",
 
   borderBottom:
-    `1px solid ${COLORS.border}`,
+    `1px solid ${THEME.border}`,
 
   background:
-    COLORS.panelSoft,
+    THEME.surfaceMuted,
 
 };
 
@@ -790,7 +1051,7 @@ export const tableHeaderCellStyle:
     "border-box",
 
   color:
-    COLORS.textMuted,
+    THEME.textMuted,
 
   fontSize:
     "11px",
@@ -891,10 +1152,10 @@ export const tableRowStyle:
     "0 12px",
 
   borderBottom:
-    `1px solid ${COLORS.border}`,
+    `1px solid ${THEME.border}`,
 
   background:
-    COLORS.panel,
+    THEME.surface,
 
 };
 
@@ -916,7 +1177,7 @@ export const tableCellStyle:
     "border-box",
 
   color:
-    COLORS.textSecondary,
+    THEME.textSecondary,
 
   fontSize:
     "12px",
@@ -949,7 +1210,7 @@ export const tableCellSecondaryStyle:
   ...tableCellStyle,
 
   color:
-    "#BFDBFE",
+    THEME.textSecondary,
 
 };
 
@@ -989,6 +1250,7 @@ export const tableCellCenterStyle:
 
 };
 
+
 // ============================================================
 // SERIAL NUMBER CELL
 //
@@ -1003,7 +1265,7 @@ export const serialCellStyle:
   ...tableCellCenterStyle,
 
   color:
-    COLORS.textSecondary,
+    THEME.textSecondary,
 
   fontSize:
     "11px",
@@ -1050,7 +1312,7 @@ export const loanNumberStyle:
     "block",
 
   color:
-    COLORS.text,
+    THEME.textPrimary,
 
   fontSize:
     "11px",
@@ -1084,7 +1346,7 @@ export const loanTitleStyle:
     "block",
 
   color:
-    COLORS.textMuted,
+    THEME.textMuted,
 
   fontSize:
     "10px",
@@ -1115,7 +1377,7 @@ export const customerNameStyle:
   CSSProperties = {
 
   color:
-    COLORS.text,
+    THEME.textPrimary,
 
   fontSize:
     "12px",
@@ -1149,7 +1411,7 @@ export const customerPhoneStyle:
     "4px",
 
   color:
-    COLORS.textMuted,
+    THEME.textMuted,
 
   fontSize:
     "10px",
@@ -1174,7 +1436,7 @@ export const amountStyle:
   CSSProperties = {
 
   color:
-    COLORS.text,
+    THEME.textPrimary,
 
   fontSize:
     "12px",
@@ -1196,7 +1458,7 @@ export const outstandingStyle:
   CSSProperties = {
 
   color:
-    "#60A5FA",
+    THEME.textPrimary,
 
   fontSize:
     "12px",
@@ -1215,7 +1477,8 @@ export const outstandingStyle:
 // ============================================================
 
 export function statusBadgeStyle(
-  status: Loan["status"],
+  status:
+    Loan["status"],
 ):
   CSSProperties {
 
@@ -1246,8 +1509,8 @@ export function statusBadgeStyle(
     border:
       `1px solid ${
         isClosed
-          ? COLORS.border
-          : COLORS.successBorder
+          ? THEME.border
+          : THEME.successBorder
       }`,
 
     borderRadius:
@@ -1255,13 +1518,13 @@ export function statusBadgeStyle(
 
     background:
       isClosed
-        ? COLORS.closedSoft
-        : COLORS.successSoft,
+        ? THEME.closedSoft
+        : THEME.successSoft,
 
     color:
       isClosed
-        ? COLORS.closed
-        : COLORS.success,
+        ? THEME.closed
+        : THEME.success,
 
     fontSize:
       "10px",
@@ -1312,7 +1575,7 @@ export const emptyStateStyle:
     "center",
 
   background:
-    COLORS.panel,
+    THEME.surface,
 
 };
 
@@ -1325,7 +1588,7 @@ export const emptyTitleStyle:
   CSSProperties = {
 
   color:
-    COLORS.text,
+    THEME.textPrimary,
 
   fontSize:
     "15px",
@@ -1353,7 +1616,7 @@ export const emptyDescriptionStyle:
     "8px",
 
   color:
-    COLORS.textMuted,
+    THEME.textMuted,
 
   fontSize:
     "12px",
@@ -1384,16 +1647,16 @@ export const emptyCreateButtonStyle:
     "0 17px",
 
   border:
-    "1px solid rgba(96, 165, 250, 0.35)",
+    `1px solid ${THEME.borderStrong}`,
 
   borderRadius:
     "8px",
 
   background:
-    COLORS.primary,
+    THEME.primary,
 
   color:
-    COLORS.text,
+    THEME.textInverse,
 
   fontSize:
     "12px",
@@ -1405,32 +1668,59 @@ export const emptyCreateButtonStyle:
     "pointer",
 
   boxShadow:
-    "0 7px 18px rgba(37, 99, 235, 0.20)",
+    `0 7px 18px ${THEME.shadow}`,
 
 };
-
 
 
 // ============================================================
 // TABLE FOOTER
 // ============================================================
 
-export const tableFooterStyle: CSSProperties = {
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "flex-end",
-  minHeight: "36px",
-  padding: "0 14px",
-  borderTop: `1px solid ${COLORS.border}`,
-  background: COLORS.panel,
-  boxSizing: "border-box",
+export const tableFooterStyle:
+  CSSProperties = {
+
+  display:
+    "flex",
+
+  alignItems:
+    "center",
+
+  justifyContent:
+    "flex-end",
+
+  minHeight:
+    "36px",
+
+  padding:
+    "0 14px",
+
+  borderTop:
+    `1px solid ${THEME.border}`,
+
+  background:
+    THEME.surface,
+
+  boxSizing:
+    "border-box",
+
 };
 
-export const tableShowingStyle: CSSProperties = {
-  color: COLORS.textMuted,
-  fontSize: "11px",
-  fontWeight: 550,
+
+export const tableShowingStyle:
+  CSSProperties = {
+
+  color:
+    THEME.textMuted,
+
+  fontSize:
+    "11px",
+
+  fontWeight:
+    550,
+
 };
+
 
 // ============================================================
 // END
