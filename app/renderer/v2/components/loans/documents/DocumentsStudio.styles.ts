@@ -173,8 +173,15 @@ export const categoryMetaStyle = {
 };
 
 export const categoryPreviewStyle = {
-  display: "flex", alignItems: "center", gap: "6px", minHeight: "55px",
-  marginTop: "9px", overflowX: "auto" as const, paddingBottom: "2px",
+  display: "flex",
+  alignItems: "center",
+  gap: "6px",
+  minHeight: "55px",
+  marginTop: "9px",
+  overflowX: "auto" as const,
+  paddingBottom: "2px",
+  scrollbarWidth: "none" as const,
+  msOverflowStyle: "none" as const,
 };
 
 export const categoryPreviewButtonStyle = {
@@ -212,8 +219,13 @@ export const evidencePreviewMetaStyle = {
 };
 
 export const evidencePreviewStripStyle = {
-  display: "flex", gap: "7px", overflowX: "auto" as const,
-  paddingTop: "10px", paddingBottom: "2px",
+  display: "flex",
+  gap: "7px",
+  overflowX: "auto" as const,
+  paddingTop: "10px",
+  paddingBottom: "2px",
+  scrollbarWidth: "none" as const,
+  msOverflowStyle: "none" as const,
 };
 
 export const evidencePreviewButtonStyle = {
@@ -273,18 +285,18 @@ export const galleryMetaStyle = {
 };
 
 export const galleryViewportStyle = {
-  height: "455px", maxHeight: "calc(100vh - 110px)", minHeight: 0,
-  overflowY: "auto" as const, paddingTop: "12px", paddingBottom: "20px",
+  flex: "1 1 auto",
+  minHeight: 0,
+  overflowY: "auto" as const,
+  overflowX: "hidden" as const,
+  paddingTop: "12px",
+  paddingBottom: "20px",
   boxSizing: "border-box" as const,
 };
 
 export const galleryGridStyle = {
   display: "grid", gridTemplateColumns: "repeat(5, minmax(0, 1fr))",
   gap: "10px", alignItems: "start",
-};
-
-export const galleryOverflowNoteStyle = {
-  marginTop: "10px", color: THEME.textMuted, fontSize: "11px",
 };
 
 /* ==========================================================
