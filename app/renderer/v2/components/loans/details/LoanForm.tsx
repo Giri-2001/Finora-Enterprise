@@ -1,14 +1,56 @@
 // ============================================================
 // FINORA ENTERPRISE V2
-// LOAN DETAILS STUDIO — LOAN FORM
+//
+// LOAN DETAILS STUDIO
+// LOAN FORM
+//
+// RESPONSIBILITY:
+// - Render Loan Details input fields.
+// - Consume central FINORA Responsive Engine.
+// - Consume dedicated Step 1 responsive tokens.
+// - Forward field changes to LoanStudio.
+// - Keep Loan business logic outside this component.
+//
+// RESPONSIVE CONTRACT:
+// - Mobile  : 1 field per row.
+// - Tablet  : 2 fields per row.
+// - Laptop  : 4 fields per row.
+// - Desktop : 4 fields per row.
+//
+// IMPORTANT:
+// - No window.innerWidth.
+// - No local breakpoint logic.
+// - No business calculations.
+// - No persistence logic.
+// - Responsive geometry comes from Step 1 tokens.
+// - Theme colours remain owned by FINORA Theme Engine.
+//
 // ============================================================
 
-import type {
-  ChangeEvent,
-} from "react";
+/* ============================================================
+   IMPORTS
+============================================================ */
+
+import type { ChangeEvent } from "react";
+
+/* ============================================================
+   FINORA RESPONSIVE ENGINE
+============================================================ */
+
+import { useResponsive } from "../../../utils/responsive";
+
+/* ============================================================
+   STEP 1 RESPONSIVE TOKEN ENGINE
+============================================================ */
+
+import { getStep1DetailsTokens } from "../../../utils/responsive/step1Details/step1Details.tokens";
+
+/* ============================================================
+   LOAN FORM PRESENTATION STYLES
+============================================================ */
 
 import {
-  formGridStyle,
+  createLoanFormGridStyle,
   fieldGroupStyle,
   fieldLabelStyle,
   requiredMarkStyle,
@@ -20,83 +62,196 @@ import {
   sectionTitleStyle,
 } from "./LoanForm.styles";
 
+/* ============================================================
+   TYPES
+============================================================ */
+
 interface LoanFormProps {
   loanAmount: string;
+
   emiCalculation: "fixed" | "reducing" | "interestOnly";
+
   interest: string;
+
   processingFee: string;
+
   advanceDeduction: string;
+
   lateFee: string;
+
   repaymentType: string;
+
   duration: string;
+
   durationType: string;
+
   purpose: string;
+
   remarks: string;
 
   onLoanAmountChange: (value: string) => void;
-  onEMICalculationChange: (value: "fixed" | "reducing" | "interestOnly") => void;
+
+  onEMICalculationChange: (
+    value: "fixed" | "reducing" | "interestOnly",
+  ) => void;
+
   onInterestChange: (value: string) => void;
+
   onProcessingFeeChange: (value: string) => void;
+
   onAdvanceDeductionChange: (value: string) => void;
+
   onLateFeeChange: (value: string) => void;
+
   onRepaymentTypeChange: (value: string) => void;
+
   onDurationChange: (value: string) => void;
+
   onDurationTypeChange: (value: string) => void;
+
   onPurposeChange: (value: string) => void;
+
   onRemarksChange: (value: string) => void;
 }
 
-const onlyDigits = (value: string): string =>
-  value.replace(/\D/g, "");
+/* ============================================================
+   HELPERS
+============================================================ */
+
+const onlyDigits = (value: string): string => value.replace(/\D/g, "");
 
 const formatIndianInteger = (value: string): string => {
   const digits = onlyDigits(value);
-  if (!digits) return "";
+
+  if (!digits) {
+    return "";
+  }
+
   return new Intl.NumberFormat("en-IN", {
     maximumFractionDigits: 0,
   }).format(Number(digits));
 };
 
+/* ============================================================
+   COMPONENT
+============================================================ */
+
 export default function LoanForm({
   loanAmount,
+
   emiCalculation,
+
   interest,
+
   processingFee,
+
   advanceDeduction,
+
   lateFee,
+
   duration,
+
   durationType,
+
   purpose,
+
   remarks,
+
   onLoanAmountChange,
+
   onEMICalculationChange,
+
   onInterestChange,
+
   onProcessingFeeChange,
+
   onAdvanceDeductionChange,
+
   onLateFeeChange,
+
   onRepaymentTypeChange,
+
   onDurationChange,
+
   onDurationTypeChange,
+
   onPurposeChange,
+
   onRemarksChange,
 }: LoanFormProps) {
+  /* ==========================================================
+     CENTRAL RESPONSIVE ENGINE
+
+     Theme / application viewport is resolved centrally.
+
+     LoanForm does NOT inspect:
+       - window.innerWidth
+       - media queries
+       - local breakpoints
+
+     The dedicated Step 1 engine receives only the resolved
+     viewport identity.
+  ========================================================== */
+
+  const { tokens } = useResponsive();
+
+  /* ==========================================================
+     STEP 1 RESPONSIVE TOKENS
+
+     Central viewport:
+       tokens.meta.viewport
+
+     Dedicated Step 1 geometry:
+       getStep1DetailsTokens()
+  ========================================================== */
+
+  const step1Tokens = getStep1DetailsTokens(tokens.meta.viewport);
+
+  /* ==========================================================
+     RESPONSIVE FORM GRID
+
+     Mobile:
+       1 column
+
+     Tablet:
+       2 columns
+
+     Laptop:
+       4 columns
+
+     Desktop:
+       4 columns
+  ========================================================== */
+
+  const resolvedFormGridStyle = createLoanFormGridStyle(step1Tokens);
+
+  /* ==========================================================
+     HANDLERS
+  ========================================================== */
 
   const handleMoneyChange = (
     value: string,
+
     callback: (nextValue: string) => void,
   ): void => {
     callback(onlyDigits(value));
   };
 
-  const handleLoanAmountChange = (event: ChangeEvent<HTMLInputElement>): void => {
+  const handleLoanAmountChange = (
+    event: ChangeEvent<HTMLInputElement>,
+  ): void => {
     handleMoneyChange(event.target.value, onLoanAmountChange);
   };
 
-  const handleProcessingFeeChange = (event: ChangeEvent<HTMLInputElement>): void => {
+  const handleProcessingFeeChange = (
+    event: ChangeEvent<HTMLInputElement>,
+  ): void => {
     handleMoneyChange(event.target.value, onProcessingFeeChange);
   };
 
-  const handleAdvanceDeductionChange = (event: ChangeEvent<HTMLInputElement>): void => {
+  const handleAdvanceDeductionChange = (
+    event: ChangeEvent<HTMLInputElement>,
+  ): void => {
     handleMoneyChange(event.target.value, onAdvanceDeductionChange);
   };
 
@@ -116,36 +271,65 @@ export default function LoanForm({
     onPurposeChange(event.target.value);
   };
 
-  const handleRemarksChange = (event: ChangeEvent<HTMLTextAreaElement>): void => {
+  const handleRemarksChange = (
+    event: ChangeEvent<HTMLTextAreaElement>,
+  ): void => {
     onRemarksChange(event.target.value);
   };
 
-  const renderLabel = (label: string, required = false) => (
+  /* ==========================================================
+     LABEL
+  ========================================================== */
+
+  const renderLabel = (
+    label: string,
+
+    required = false,
+  ) => (
     <div style={fieldLabelStyle}>
       <span>{label}</span>
+
       {required && <span style={requiredMarkStyle}>*</span>}
     </div>
   );
 
+  /* ==========================================================
+     UI
+  ========================================================== */
+
   return (
     <div>
+      {/* ======================================================
+          LOAN BASIC DETAILS
+      ====================================================== */}
+
       <section style={sectionStyle}>
         <div style={sectionTitleStyle}>Loan Basic Details</div>
-        <div style={formGridStyle}>
+
+        <div style={resolvedFormGridStyle}>
+          {/* LOAN NUMBER */}
 
           <div style={fieldGroupStyle}>
             {renderLabel("Loan Number", true)}
+
             <input
               type="text"
               value="Auto Generated"
               readOnly
               aria-label="Loan Number"
-              style={{ ...inputStyle, opacity: 0.72, cursor: "default" }}
+              style={{
+                ...inputStyle,
+                opacity: 0.72,
+                cursor: "default",
+              }}
             />
           </div>
 
+          {/* LOAN AMOUNT */}
+
           <div style={fieldGroupStyle}>
             {renderLabel("Loan Amount", true)}
+
             <input
               type="text"
               inputMode="numeric"
@@ -157,30 +341,40 @@ export default function LoanForm({
             />
           </div>
 
+          {/* EMI CALCULATION */}
+
           <div style={fieldGroupStyle}>
             {renderLabel("EMI Calculation", true)}
+
             <select
               value={emiCalculation}
               onChange={(event) => {
                 const value = event.target.value;
+
                 const normalized: "fixed" | "reducing" | "interestOnly" =
                   value === "reducing"
                     ? "reducing"
                     : value === "interestOnly"
                       ? "interestOnly"
                       : "fixed";
+
                 onEMICalculationChange(normalized);
               }}
               style={selectStyle}
             >
               <option value="fixed">Fixed EMI</option>
+
               <option value="reducing">Reducing EMI</option>
+
               <option value="interestOnly">Interest Only</option>
             </select>
           </div>
 
+          {/* INTEREST */}
+
           <div style={fieldGroupStyle}>
             {renderLabel("Interest (%)", true)}
+
             <input
               type="text"
               inputMode="decimal"
@@ -191,16 +385,22 @@ export default function LoanForm({
               style={inputStyle}
             />
           </div>
-
         </div>
       </section>
 
+      {/* ======================================================
+          FINANCIAL TERMS
+      ====================================================== */}
+
       <section style={sectionStyle}>
         <div style={sectionTitleStyle}>Financial Terms</div>
-        <div style={formGridStyle}>
+
+        <div style={resolvedFormGridStyle}>
+          {/* PROCESSING FEE */}
 
           <div style={fieldGroupStyle}>
             {renderLabel("Processing Fee")}
+
             <input
               type="text"
               inputMode="numeric"
@@ -212,8 +412,11 @@ export default function LoanForm({
             />
           </div>
 
+          {/* ADVANCE DEDUCTION */}
+
           <div style={fieldGroupStyle}>
             {renderLabel("Advance Deduction")}
+
             <input
               type="text"
               inputMode="numeric"
@@ -230,8 +433,11 @@ export default function LoanForm({
             />
           </div>
 
+          {/* LATE FEE */}
+
           <div style={fieldGroupStyle}>
             {renderLabel("Late Fee")}
+
             <input
               type="text"
               inputMode="numeric"
@@ -242,15 +448,20 @@ export default function LoanForm({
               style={inputStyle}
             />
           </div>
-
         </div>
       </section>
 
+      {/* ======================================================
+          LOAN DURATION
+      ====================================================== */}
+
       <section style={sectionStyle}>
         <div style={sectionTitleStyle}>Loan Duration</div>
-        <div style={formGridStyle}>
+
+        <div style={resolvedFormGridStyle}>
           <div style={fieldGroupStyle}>
             {renderLabel("Loan Duration", true)}
+
             <div style={durationGroupStyle}>
               <input
                 type="text"
@@ -261,15 +472,20 @@ export default function LoanForm({
                 autoComplete="off"
                 style={inputStyle}
               />
+
               <select
                 value={durationType}
                 onChange={(event) => onDurationTypeChange(event.target.value)}
                 style={selectStyle}
               >
                 <option value="">Unit</option>
+
                 <option value="days">Days</option>
+
                 <option value="weeks">Weeks</option>
+
                 <option value="months">Months</option>
+
                 <option value="years">Years</option>
               </select>
             </div>
@@ -277,23 +493,34 @@ export default function LoanForm({
         </div>
       </section>
 
+      {/* ======================================================
+          ADDITIONAL INFORMATION
+      ====================================================== */}
+
       <section style={sectionStyle}>
         <div style={sectionTitleStyle}>Additional Information</div>
-        <div style={formGridStyle}>
+
+        <div style={resolvedFormGridStyle}>
+          {/* PURPOSE */}
+
           <div style={fieldGroupStyle}>
             {renderLabel("Purpose")}
+
             <input
               type="text"
               value={purpose}
               onChange={handlePurposeChange}
               placeholder="Enter loan purpose"
               autoComplete="off"
-              style={{ ...inputStyle, width: "100%", minWidth: 0, boxSizing: "border-box" }}
+              style={inputStyle}
             />
           </div>
 
+          {/* REMARKS */}
+
           <div style={fieldGroupStyle}>
             {renderLabel("Remarks")}
+
             <textarea
               value={remarks}
               onChange={handleRemarksChange}
@@ -301,11 +528,11 @@ export default function LoanForm({
               rows={1}
               style={{
                 ...textareaStyle,
-                width: "100%",
-                minWidth: 0,
+
                 height: "32px",
+
                 minHeight: "32px",
-                boxSizing: "border-box",
+
                 resize: "none",
               }}
             />

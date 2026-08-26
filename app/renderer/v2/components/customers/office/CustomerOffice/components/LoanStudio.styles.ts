@@ -9,25 +9,40 @@
    - Theme-aware visual presentation
    - Responsive-token compatibility adapter
 
-   THEME CONTRACT:
-   - Theme values come ONLY from the central FINORA Theme Engine.
+   RESPONSIVE FOOTER CONTRACT:
+   -----------------------------------------------------------
+   MOBILE  : 1 step per row
+   TABLET  : 2 steps per row
+   LAPTOP  : all 6 steps in one row
+   DESKTOP : all 6 steps in one row
+
+   NAVIGATION:
+   -----------------------------------------------------------
+   Mobile / Tablet:
+     Previous + Next stay together in ONE horizontal row.
+
+   Laptop / Desktop:
+     Step list + Previous + Next remain in ONE footer row.
+
+   IMPORTANT:
+   - Theme values come ONLY from FINORA Theme Engine.
    - Responsive geometry comes ONLY from ResponsiveTokens.
-   - No local theme definitions are created here.
-   - Theme CSS variables are propagated from the active
-     FinoraTheme so all nested Loan Studio modules resolve
-     the same selected application theme.
+   - No local theme definitions.
+   - No business logic.
+   - No viewport detection.
+   - No media queries.
+=========================================================== */
 
-   NOTE:
-   Step 1 geometry now lives in:
-   ./views/LoanStudioStep1.styles.ts
-
-   Existing imports are preserved through compatibility exports
-   so no feature is removed while the split is being completed.
+/* ===========================================================
+   IMPORTS
 =========================================================== */
 
 import type { CSSProperties } from "react";
+
 import type { ResponsiveTokens } from "../../../../../utils/responsive";
+
 import { LAPTOP_TOKENS } from "../../../../../utils/responsive/tokens";
+
 import type { FinoraTheme } from "../../../../../themes/core/types";
 
 /* ===========================================================
@@ -268,8 +283,13 @@ export interface LoanStudioStyles {
   step6FormStyle: CSSProperties;
 }
 
+/* ===========================================================
+   STYLE FACTORY
+=========================================================== */
+
 export function createLoanStudioStyles(
   tokens: ResponsiveTokens,
+
   theme?: FinoraTheme,
 ): LoanStudioStyles {
   const colors = getThemeVisuals(theme);
@@ -280,12 +300,26 @@ export function createLoanStudioStyles(
 
   const button = tokens.button;
 
+  const viewport = tokens.meta.viewport;
+
+  const isMobile = viewport === "mobile";
+
+  const isTablet = viewport === "tablet";
+
+  const isCompact = isMobile || isTablet;
+
   const themeVariables = theme ? createLoanStudioThemeVariables(theme) : {};
 
-  const stepNumberStyle: CSSProperties = {
-    width: "29px",
+  /* =========================================================
+     STEP NUMBER
+  ========================================================= */
 
-    height: "29px",
+  const stepNumberStyle: CSSProperties = {
+    width: isMobile ? "26px" : "29px",
+
+    height: isMobile ? "26px" : "29px",
+
+    minWidth: isMobile ? "26px" : "29px",
 
     flexShrink: 0,
 
@@ -304,17 +338,31 @@ export function createLoanStudioStyles(
     fontWeight: 700,
   };
 
+  /* =========================================================
+     STEP TEXT
+  ========================================================= */
+
   const stepTextStyle: CSSProperties = {
     minWidth: 0,
+
+    flex: "1 1 auto",
 
     display: "flex",
 
     flexDirection: "column",
 
     gap: "2px",
+
+    overflow: "hidden",
   };
 
+  /* =========================================================
+     STEP TITLE
+  ========================================================= */
+
   const stepTitleStyle: CSSProperties = {
+    minWidth: 0,
+
     overflow: "hidden",
 
     textOverflow: "ellipsis",
@@ -328,12 +376,18 @@ export function createLoanStudioStyles(
     lineHeight: tokens.lineHeight.compact,
   };
 
+  /* =========================================================
+     NAVIGATION BUTTON BASE
+  ========================================================= */
+
   const navigationButtonStyle: CSSProperties = {
-    minWidth: "92px",
+    minWidth: isCompact ? 0 : "92px",
 
     height: `${button.height}px`,
 
-    padding: `0 ${button.paddingX}px`,
+    padding: isMobile
+      ? `0 ${Math.max(10, button.paddingX)}px`
+      : `0 ${button.paddingX}px`,
 
     boxSizing: "border-box",
 
@@ -350,9 +404,15 @@ export function createLoanStudioStyles(
     fontWeight: 600,
 
     cursor: "pointer",
+
+    whiteSpace: "nowrap",
   };
 
   return {
+    /* =======================================================
+       SHELL
+    ======================================================= */
+
     shellStyle: {
       ...themeVariables,
 
@@ -391,6 +451,10 @@ export function createLoanStudioStyles(
       overflow: "hidden",
     },
 
+    /* =======================================================
+       CONTENT
+    ======================================================= */
+
     contentStyle: {
       width: "100%",
 
@@ -407,6 +471,10 @@ export function createLoanStudioStyles(
       scrollbarWidth: "thin",
     },
 
+    /* =======================================================
+       FOOTER
+    ======================================================= */
+
     footerStyle: {
       position: "relative",
 
@@ -422,11 +490,17 @@ export function createLoanStudioStyles(
 
       display: "flex",
 
-      alignItems: "center",
+      flexDirection: isCompact ? "column" : "row",
 
-      gap: `${spacing.medium}px`,
+      alignItems: isCompact ? "stretch" : "center",
 
-      padding: `${spacing.small}px ${spacing.medium}px`,
+      justifyContent: "space-between",
+
+      gap: isMobile ? `${spacing.small}px` : `${spacing.medium}px`,
+
+      padding: isMobile
+        ? `${spacing.small}px`
+        : `${spacing.small}px ${spacing.medium}px`,
 
       border: `${border.width}px solid ${colors.borderStrong}`,
 
@@ -437,32 +511,79 @@ export function createLoanStudioStyles(
       color: colors.textPrimary,
 
       boxShadow: `0 8px 24px ${colors.overlayShadow}`,
+
+      overflow: "hidden",
     },
 
+    /* =======================================================
+       SIX STEP RESPONSIVE GRID
+
+       MOBILE:
+         1 column
+
+       TABLET:
+         2 columns
+
+       LAPTOP / DESKTOP:
+         6 columns
+
+       This removes horizontal scrolling completely.
+    ======================================================= */
+
     stepListStyle: {
-      flex: "1 1 auto",
+      width: "100%",
+
+      flex: isCompact ? "0 0 auto" : "1 1 auto",
 
       minWidth: 0,
 
       display: "grid",
 
-      gridTemplateColumns: "repeat(6, minmax(0, 1fr))",
+      gridTemplateColumns: isMobile
+        ? "minmax(0, 1fr)"
+        : isTablet
+          ? "repeat(2, minmax(0, 1fr))"
+          : "repeat(6, minmax(0, 1fr))",
 
-      gap: `${spacing.small}px`,
+      gap: isMobile
+        ? `${Math.max(3, spacing.small - 2)}px`
+        : `${spacing.small}px`,
 
-      alignItems: "center",
+      alignItems: "stretch",
+
+      justifyContent: "stretch",
+
+      boxSizing: "border-box",
+
+      overflow: "hidden",
     },
 
+    /* =======================================================
+       STEP ITEM
+
+       Every item stays inside its grid cell.
+       No fixed width.
+       No horizontal overflow.
+    ======================================================= */
+
     stepItemStyle: {
+      width: "100%",
+
       minWidth: 0,
+
+      maxWidth: "100%",
 
       display: "flex",
 
       alignItems: "center",
 
-      gap: `${spacing.small}px`,
+      gap: isMobile
+        ? `${Math.max(6, spacing.small - 2)}px`
+        : `${spacing.small}px`,
 
-      padding: `${spacing.small}px`,
+      padding: isMobile
+        ? `${Math.max(5, spacing.small - 2)}px`
+        : `${spacing.small}px`,
 
       borderRadius: `${border.radius}px`,
 
@@ -471,7 +592,13 @@ export function createLoanStudioStyles(
       cursor: "pointer",
 
       transition: "background 0.16s ease",
+
+      overflow: "hidden",
     },
+
+    /* =======================================================
+       ACTIVE STEP NUMBER
+    ======================================================= */
 
     activeStepNumberStyle: {
       ...stepNumberStyle,
@@ -485,11 +612,19 @@ export function createLoanStudioStyles(
       boxShadow: `0 0 16px ${colors.primarySoft}`,
     },
 
+    /* =======================================================
+       ACTIVE STEP TITLE
+    ======================================================= */
+
     activeStepTitleStyle: {
       ...stepTitleStyle,
 
       color: colors.textPrimary,
     },
+
+    /* =======================================================
+       COMPLETED STEP NUMBER
+    ======================================================= */
 
     completedStepNumberStyle: {
       ...stepNumberStyle,
@@ -501,11 +636,19 @@ export function createLoanStudioStyles(
       color: colors.primary,
     },
 
+    /* =======================================================
+       COMPLETED STEP TITLE
+    ======================================================= */
+
     completedStepTitleStyle: {
       ...stepTitleStyle,
 
       color: colors.textPrimary,
     },
+
+    /* =======================================================
+       PENDING STEP NUMBER
+    ======================================================= */
 
     pendingStepNumberStyle: {
       ...stepNumberStyle,
@@ -517,13 +660,23 @@ export function createLoanStudioStyles(
       color: colors.textMuted,
     },
 
+    /* =======================================================
+       PENDING STEP TITLE
+    ======================================================= */
+
     pendingStepTitleStyle: {
       ...stepTitleStyle,
 
       color: colors.textSecondary,
     },
 
+    /* =======================================================
+       STEP SUBTITLE
+    ======================================================= */
+
     stepSubtitleStyle: {
+      minWidth: 0,
+
       overflow: "hidden",
 
       textOverflow: "ellipsis",
@@ -539,34 +692,86 @@ export function createLoanStudioStyles(
       color: colors.textMuted,
     },
 
+    /* =======================================================
+       STEP TEXT
+    ======================================================= */
+
     stepTextStyle,
 
+    /* =======================================================
+       NAVIGATION WRAPPER
+
+       MOBILE / TABLET:
+         Previous + Next = ONE ROW
+
+       LAPTOP / DESKTOP:
+         stays beside step list.
+    ======================================================= */
+
     navigationStyle: {
+      width: isCompact ? "100%" : "auto",
+
+      minWidth: 0,
+
       display: "flex",
+
+      flexDirection: "row",
 
       alignItems: "center",
 
-      justifyContent: "flex-end",
+      justifyContent: isCompact ? "stretch" : "flex-end",
 
       gap: `${spacing.small}px`,
 
       flexShrink: 0,
+
+      boxSizing: "border-box",
     },
 
-    navigationButtonStyle,
+    /* =======================================================
+       NORMAL NAVIGATION BUTTON
+    ======================================================= */
+
+    navigationButtonStyle: {
+      ...navigationButtonStyle,
+
+      flex: isCompact ? "1 1 0" : "0 0 auto",
+
+      width: isCompact ? "100%" : "auto",
+
+      minWidth: isCompact ? 0 : "92px",
+    },
+
+    /* =======================================================
+       DISABLED NAVIGATION BUTTON
+    ======================================================= */
 
     disabledNavigationButtonStyle: {
       ...navigationButtonStyle,
+
+      flex: isCompact ? "1 1 0" : "0 0 auto",
+
+      width: isCompact ? "100%" : "auto",
+
+      minWidth: isCompact ? 0 : "92px",
 
       opacity: 0.38,
 
       cursor: "not-allowed",
     },
 
+    /* =======================================================
+       PRIMARY NAVIGATION BUTTON
+    ======================================================= */
+
     primaryNavigationButtonStyle: {
       ...navigationButtonStyle,
 
-      minWidth: "102px",
+      flex: isCompact ? "1 1 0" : "0 0 auto",
+
+      width: isCompact ? "100%" : "auto",
+
+      minWidth: isCompact ? 0 : "102px",
 
       borderColor: colors.primary,
 
@@ -576,6 +781,10 @@ export function createLoanStudioStyles(
 
       boxShadow: `0 6px 16px ${colors.primarySoft}`,
     },
+
+    /* =======================================================
+       STEP 6 FORM
+    ======================================================= */
 
     step6FormStyle: {
       width: "100%",

@@ -1,16 +1,17 @@
 // ============================================================
-// FINORA ENTERPRISE OS
-// LOAN STUDIO PRESENTATION VIEW
+// FINORA ENTERPRISE OS™
+// LOAN STUDIO™
+// PRESENTATION VIEW
 //
 // RESPONSIBILITY:
 // - Render Loan Studio UI only.
 // - Consume state/business view-model from useLoanStudio.
 // - Consume the active FINORA Theme Engine theme.
-// - Resolve presentation styles from Responsive Engine + Theme.
+// - Resolve shared presentation styles from Responsive Engine + Theme.
+// - Step 1 geometry is resolved by step1Details Responsive Engine.
 // - No business calculations.
 // - No storage/service access.
-// - No inline styles.
-// - No responsive logic.
+// - No inline responsive logic.
 // ============================================================
 
 import { formatIndianDate } from "./LoanStudio.helpers";
@@ -44,15 +45,25 @@ import {
   step6PreviewColumnStyle,
 } from "./LoanStudio.layout";
 
+/* ============================================================
+   STEP 1 RESPONSIVE ENGINE
+============================================================ */
+
+import { getStep1DetailsTokens } from "../../../../../utils/responsive/step1Details/step1Details.tokens";
+
 import {
-  step1WorkspaceStyle,
-  step1TopStyle,
-  step1BottomStyle,
-  step1CustomerStyle,
-  step1OverviewStyle,
-  step1FormStyle,
-  step1PreviewStyle,
-} from "./LoanStudio.styles";
+  createStep1DetailsWorkspaceStyle,
+  createStep1DetailsTopStyle,
+  createStep1DetailsCustomerStyle,
+  createStep1DetailsOverviewStyle,
+  createStep1DetailsMainStyle,
+  createStep1DetailsFormStyle,
+  createStep1DetailsPreviewStyle,
+} from "../../../../../utils/responsive/step1Details/step1Details.layout";
+
+/* ============================================================
+   LOAN MODULES
+============================================================ */
 
 import LoanCustomerCard from "../../../../loans/details/LoanCustomerCard";
 
@@ -100,6 +111,10 @@ import { useLoanStudio } from "./useLoanStudio";
 
 type LoanStudioViewModel = ReturnType<typeof useLoanStudio>;
 
+/* ============================================================
+   WIZARD STEPS
+============================================================ */
+
 const STEP_ITEMS = [
   {
     title: "Details",
@@ -132,6 +147,10 @@ const STEP_ITEMS = [
   },
 ] as const;
 
+/* ============================================================
+   HELPERS
+============================================================ */
+
 function getTodayDate(): string {
   const today = new Date();
 
@@ -152,33 +171,26 @@ function getDisbursementAmount(value: number): number {
   );
 }
 
+/* ============================================================
+   VIEW
+============================================================ */
+
 export default function LoanStudioView(props: LoanStudioViewModel) {
-  /* =========================================================
+  /* ==========================================================
      FINORA RESPONSIVE ENGINE
-  ========================================================= */
+  ========================================================== */
 
   const { tokens } = useResponsive();
 
-  /* =========================================================
+  /* ==========================================================
      FINORA THEME ENGINE
-  =========================================================
-
-     ThemeProvider
-          ↓
-     useTheme()
-          ↓
-     active FinoraTheme
-          ↓
-     createLoanStudioStyles()
-          ↓
-     Loan Studio + nested loan modules
-  ========================================================= */
+  ========================================================== */
 
   const { theme } = useTheme();
 
-  /* =========================================================
-     THEME-AWARE PRESENTATION STYLES
-  ========================================================= */
+  /* ==========================================================
+     SHARED LOAN STUDIO PRESENTATION STYLES
+  ========================================================== */
 
   const {
     shellStyle,
@@ -201,9 +213,47 @@ export default function LoanStudioView(props: LoanStudioViewModel) {
     step6FormStyle,
   } = createLoanStudioStyles(tokens, theme);
 
+  /* ==========================================================
+     STEP 1 RESPONSIVE TOKENS
+     
+     Global Responsive Engine
+              ↓
+     tokens.meta.viewport
+              ↓
+     Step 1 token contract
+              ↓
+     Step 1 layout factory
+  ========================================================== */
+
+  const step1DetailsTokens = getStep1DetailsTokens(tokens.meta.viewport);
+
+  /* ==========================================================
+     STEP 1 RESPONSIVE STYLES
+  ========================================================== */
+
+  const step1WorkspaceStyle =
+    createStep1DetailsWorkspaceStyle(step1DetailsTokens);
+
+  const step1TopStyle = createStep1DetailsTopStyle(step1DetailsTokens);
+
+  const step1CustomerStyle =
+    createStep1DetailsCustomerStyle(step1DetailsTokens);
+
+  const step1OverviewStyle =
+    createStep1DetailsOverviewStyle(step1DetailsTokens);
+
+  const step1BottomStyle = createStep1DetailsMainStyle(step1DetailsTokens);
+
+  const step1FormStyle = createStep1DetailsFormStyle(step1DetailsTokens);
+
+  const step1PreviewStyle = createStep1DetailsPreviewStyle(step1DetailsTokens);
+
+  /* ==========================================================
+     BUSINESS / VIEW MODEL
+  ========================================================== */
+
   const {
     customerName,
-    customers,
     selectedCustomer,
     setSelectedCustomer,
     documents,
@@ -250,8 +300,6 @@ export default function LoanStudioView(props: LoanStudioViewModel) {
     setGuarantorOccupation,
     guarantorAddress,
     setGuarantorAddress,
-    guarantorRelationship,
-    setGuarantorRelationship,
 
     loanApproved,
 
@@ -287,15 +335,24 @@ export default function LoanStudioView(props: LoanStudioViewModel) {
 
   const safeDisbursementAmount = getDisbursementAmount(netDisbursement);
 
+  /* ==========================================================
+     RENDER
+  ========================================================== */
+
   return (
     <section style={shellStyle}>
       <div style={contentStyle}>
-        {/* ======================================================
+        {/* ====================================================
             STEP 1 — LOAN DETAILS
-        ====================================================== */}
+        ==================================================== */}
 
         {step === 1 && (
           <section style={step1WorkspaceStyle}>
+            {/* ==================================================
+                TOP AREA
+                Customer + Statistics
+            ================================================== */}
+
             <div style={step1TopStyle}>
               <div style={step1CustomerStyle}>
                 <LoanCustomerCard
@@ -316,6 +373,11 @@ export default function LoanStudioView(props: LoanStudioViewModel) {
                 />
               </div>
             </div>
+
+            {/* ==================================================
+                MAIN AREA
+                Loan Form + Preview
+            ================================================== */}
 
             <div style={step1BottomStyle}>
               <div style={step1FormStyle}>
@@ -374,9 +436,9 @@ export default function LoanStudioView(props: LoanStudioViewModel) {
           </section>
         )}
 
-        {/* ======================================================
+        {/* ====================================================
             STEP 2 — REPAYMENT
-        ====================================================== */}
+        ==================================================== */}
 
         {step === 2 && (
           <section style={step2WorkspaceStyle}>
@@ -445,9 +507,9 @@ export default function LoanStudioView(props: LoanStudioViewModel) {
           </section>
         )}
 
-        {/* ======================================================
+        {/* ====================================================
             STEP 3 — DOCUMENTS
-        ====================================================== */}
+        ==================================================== */}
 
         {step === 3 && (
           <section style={step1WorkspaceStyle}>
@@ -465,9 +527,9 @@ export default function LoanStudioView(props: LoanStudioViewModel) {
           </section>
         )}
 
-        {/* ======================================================
+        {/* ====================================================
             STEP 4 — GUARANTOR
-        ====================================================== */}
+        ==================================================== */}
 
         {step === 4 && (
           <section style={step1WorkspaceStyle}>
@@ -501,9 +563,9 @@ export default function LoanStudioView(props: LoanStudioViewModel) {
           </section>
         )}
 
-        {/* ======================================================
+        {/* ====================================================
             STEP 5 — REVIEW
-        ====================================================== */}
+        ==================================================== */}
 
         {step === 5 && (
           <section style={step5WorkspaceStyle}>
@@ -521,9 +583,9 @@ export default function LoanStudioView(props: LoanStudioViewModel) {
           </section>
         )}
 
-        {/* ======================================================
+        {/* ====================================================
             STEP 6 — DISBURSEMENT
-        ====================================================== */}
+        ==================================================== */}
 
         {step === 6 && (
           <section style={step6WorkspaceStyle}>

@@ -5,64 +5,60 @@
 // LOAN FORM STYLES
 //
 // RESPONSIBILITY:
-// - LoanForm presentation only
-// - Compact enterprise layout
-// - Maximum horizontal utilization
-// - Reduced vertical footprint
-// - Theme-driven visual appearance
+// - LoanForm presentation only.
+// - Theme-driven visual appearance.
+// - Responsive form geometry is supplied by
+//   Step 1 Responsive Tokens.
 //
-// RULE:
-// - Layout / sizing remains unchanged
-// - Responsive behavior remains unchanged
-// - Only theme colors are centralized through FINORA theme variables
-//
+// IMPORTANT:
+// - No viewport detection.
+// - No window.innerWidth.
+// - No media queries.
+// - No business logic.
+// - No local breakpoint definitions.
 // ============================================================
 
-import type {
-  CSSProperties,
-} from "react";
+/* ============================================================
+   IMPORTS
+============================================================ */
 
-// ============================================================
-// COLOR TOKENS
-//
-// FINORA THEME ENGINE
-// ============================================================
+import type { CSSProperties } from "react";
+
+/* ============================================================
+   STEP 1 RESPONSIVE TOKENS
+============================================================ */
+
+import type { Step1DetailsResponsiveTokens } from "../../../utils/responsive/step1Details/step1Details.types";
+
+/* ============================================================
+   THEME VARIABLES
+============================================================ */
 
 const COLORS = {
-  background:
-    "var(--finora-theme-surface)",
+  background: "var(--finora-theme-surface)",
 
-  panel:
-    "var(--finora-theme-surface)",
+  panel: "var(--finora-theme-surface)",
 
-  panelSoft:
-    "var(--finora-theme-surface-muted)",
+  panelSoft: "var(--finora-theme-surface-muted)",
 
-  input:
-    "var(--finora-theme-surface-muted)",
+  input: "var(--finora-theme-surface-muted)",
 
-  border:
-    "var(--finora-theme-border-default)",
+  border: "var(--finora-theme-border-default)",
 
-  primary:
-    "var(--finora-theme-brand-primary)",
+  primary: "var(--finora-theme-brand-primary)",
 
-  text:
-    "var(--finora-theme-text-primary)",
+  text: "var(--finora-theme-text-primary)",
 
-  textSecondary:
-    "var(--finora-theme-text-secondary)",
+  textSecondary: "var(--finora-theme-text-secondary)",
 
-  textMuted:
-    "var(--finora-theme-text-muted)",
+  textMuted: "var(--finora-theme-text-muted)",
 
-  required:
-    "var(--finora-theme-brand-accent)",
+  required: "var(--finora-theme-brand-accent)",
 };
 
-// ============================================================
-// SECTION
-// ============================================================
+/* ============================================================
+   SECTION
+============================================================ */
 
 export const sectionStyle: CSSProperties = {
   width: "100%",
@@ -75,28 +71,24 @@ export const sectionStyle: CSSProperties = {
 
   marginBottom: "5px",
 
-  border:
-    `1px solid ${COLORS.border}`,
+  border: `1px solid ${COLORS.border}`,
 
   borderRadius: "9px",
 
-  background:
-    `linear-gradient(
+  background: `linear-gradient(
       180deg,
       ${COLORS.panel},
       ${COLORS.panelSoft}
     )`,
 
-  boxShadow:
-    "0 4px 12px rgba(0, 0, 0, 0.12)",
+  boxShadow: "0 4px 12px rgba(0, 0, 0, 0.12)",
 };
 
-// ============================================================
-// SECTION TITLE
-// ============================================================
+/* ============================================================
+   SECTION TITLE
+============================================================ */
 
-export const sectionTitleStyle:
-CSSProperties = {
+export const sectionTitleStyle: CSSProperties = {
   marginBottom: "6px",
 
   color: COLORS.text,
@@ -112,21 +104,69 @@ CSSProperties = {
   minHeight: "16px",
 };
 
-// ============================================================
-// FORM GRID
-//
-// Four columns are intentional.
-//
-// This keeps the Loan Studio horizontally dense
-// and removes unnecessary vertical rows.
-// ============================================================
+/* ============================================================
+   RESPONSIVE FORM GRID
+============================================================ */
 
-export const formGridStyle:
-CSSProperties = {
+/*
+   Central contract:
+
+   Mobile
+     1 column
+
+   Tablet
+     2 columns
+
+   Laptop
+     4 columns
+
+   Desktop
+     4 columns
+
+   The number comes exclusively from
+   Step1DetailsResponsiveTokens.formColumns.
+*/
+
+export function createLoanFormGridStyle(
+  tokens: Step1DetailsResponsiveTokens,
+): CSSProperties {
+  return {
+    display: "grid",
+
+    gridTemplateColumns: `repeat(
+        ${tokens.formColumns},
+        minmax(0, 1fr)
+      )`,
+
+    columnGap: `${tokens.formColumnGap}px`,
+
+    rowGap: `${tokens.formRowGap}px`,
+
+    width: "100%",
+
+    minWidth: 0,
+
+    boxSizing: "border-box",
+
+    alignItems: "start",
+  };
+}
+
+/* ============================================================
+   LEGACY COMPATIBILITY GRID
+============================================================ */
+
+/*
+   Existing consumers that still import formGridStyle
+   remain supported.
+
+   Laptop is the legacy/default presentation.
+*/
+
+export const formGridStyle: CSSProperties = {
   display: "grid",
 
-  gridTemplateColumns:
-    "repeat(4, minmax(0, 1fr))",
+  gridTemplateColumns: "repeat(4, minmax(0, 1fr))",
 
   gap: "7px 8px",
 
@@ -139,12 +179,11 @@ CSSProperties = {
   alignItems: "start",
 };
 
-// ============================================================
-// FIELD GROUP
-// ============================================================
+/* ============================================================
+   FIELD GROUP
+============================================================ */
 
-export const fieldGroupStyle:
-CSSProperties = {
+export const fieldGroupStyle: CSSProperties = {
   display: "flex",
 
   flexDirection: "column",
@@ -158,12 +197,11 @@ CSSProperties = {
   boxSizing: "border-box",
 };
 
-// ============================================================
-// FIELD LABEL
-// ============================================================
+/* ============================================================
+   FIELD LABEL
+============================================================ */
 
-export const fieldLabelStyle:
-CSSProperties = {
+export const fieldLabelStyle: CSSProperties = {
   display: "flex",
 
   alignItems: "center",
@@ -172,8 +210,7 @@ CSSProperties = {
 
   minHeight: "14px",
 
-  color:
-    COLORS.textSecondary,
+  color: COLORS.textSecondary,
 
   fontSize: "12px",
 
@@ -188,12 +225,11 @@ CSSProperties = {
   textOverflow: "ellipsis",
 };
 
-// ============================================================
-// REQUIRED MARK
-// ============================================================
+/* ============================================================
+   REQUIRED MARK
+============================================================ */
 
-export const requiredMarkStyle:
-CSSProperties = {
+export const requiredMarkStyle: CSSProperties = {
   color: COLORS.required,
 
   fontSize: "12px",
@@ -201,12 +237,11 @@ CSSProperties = {
   fontWeight: 700,
 };
 
-// ============================================================
-// INPUT
-// ============================================================
+/* ============================================================
+   INPUT
+============================================================ */
 
-export const inputStyle:
-CSSProperties = {
+export const inputStyle: CSSProperties = {
   width: "100%",
 
   minWidth: 0,
@@ -217,18 +252,15 @@ CSSProperties = {
 
   boxSizing: "border-box",
 
-  border:
-    `1px solid ${COLORS.border}`,
+  border: `1px solid ${COLORS.border}`,
 
   borderRadius: "6px",
 
   outline: "none",
 
-  background:
-    COLORS.input,
+  background: COLORS.input,
 
-  color:
-    COLORS.text,
+  color: COLORS.text,
 
   fontSize: "12px",
 
@@ -236,16 +268,14 @@ CSSProperties = {
 
   lineHeight: "32px",
 
-  transition:
-    "border-color 0.16s ease, box-shadow 0.16s ease",
+  transition: "border-color 0.16s ease, box-shadow 0.16s ease",
 };
 
-// ============================================================
-// SELECT
-// ============================================================
+/* ============================================================
+   SELECT
+============================================================ */
 
-export const selectStyle:
-CSSProperties = {
+export const selectStyle: CSSProperties = {
   ...inputStyle,
 
   cursor: "pointer",
@@ -253,12 +283,11 @@ CSSProperties = {
   appearance: "auto",
 };
 
-// ============================================================
-// TEXTAREA
-// ============================================================
+/* ============================================================
+   TEXTAREA
+============================================================ */
 
-export const textareaStyle:
-CSSProperties = {
+export const textareaStyle: CSSProperties = {
   width: "100%",
 
   minWidth: 0,
@@ -273,18 +302,15 @@ CSSProperties = {
 
   resize: "none",
 
-  border:
-    `1px solid ${COLORS.border}`,
+  border: `1px solid ${COLORS.border}`,
 
   borderRadius: "6px",
 
   outline: "none",
 
-  background:
-    COLORS.input,
+  background: COLORS.input,
 
-  color:
-    COLORS.text,
+  color: COLORS.text,
 
   fontSize: "12px",
 
@@ -293,16 +319,14 @@ CSSProperties = {
   lineHeight: 1.25,
 };
 
-// ============================================================
-// DURATION GROUP
-// ============================================================
+/* ============================================================
+   DURATION GROUP
+============================================================ */
 
-export const durationGroupStyle:
-CSSProperties = {
+export const durationGroupStyle: CSSProperties = {
   display: "grid",
 
-  gridTemplateColumns:
-    "minmax(0, 1fr) minmax(0, 1fr)",
+  gridTemplateColumns: "minmax(0, 1fr) minmax(0, 1fr)",
 
   alignItems: "center",
 
@@ -315,6 +339,6 @@ CSSProperties = {
   boxSizing: "border-box",
 };
 
-// ============================================================
-// END
-// ============================================================
+/* ============================================================
+   END
+============================================================ */
