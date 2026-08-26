@@ -70,7 +70,7 @@ export default function PaymentModeCard({
             PRIMARY PAYMENT MODE
         ================================================== */}
 
-        <FormField label="Primary Payment Mode" required>
+        <FormField label="Payment Mode" required>
           <SelectInput
             value={paymentMode}
             onChange={(event) => {

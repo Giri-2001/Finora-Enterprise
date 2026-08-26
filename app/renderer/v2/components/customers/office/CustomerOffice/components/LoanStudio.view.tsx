@@ -10,6 +10,7 @@
 // - Resolve shared presentation styles from Responsive Engine + Theme.
 // - Step 1 geometry is resolved by step1Details Responsive Engine.
 // - Step 5 geometry is resolved by Loan Studio Responsive Engine.
+// - Step 6 geometry is resolved by Loan Studio Responsive Engine.
 // - No business calculations.
 // - No storage/service access.
 // - No inline responsive logic.
@@ -26,10 +27,7 @@ import { createLoanStudioStyles } from "./LoanStudio.styles";
 import {
   createLoanStudioStep2Layout,
   createLoanStudioStep5Layout,
-  step6WorkspaceStyle,
-  step6BottomStyle,
-  step6PaymentModeWrapperStyle,
-  step6PreviewColumnStyle,
+  createLoanStudioStep6Layout,
 } from "./LoanStudio.layout";
 
 /* ============================================================
@@ -177,12 +175,6 @@ export default function LoanStudioView(props: LoanStudioViewModel) {
 
   /* ==========================================================
      STEP 2 RESPONSIVE LAYOUT
-
-     Mobile / Tablet:
-       Summary -> Preview -> EMI Schedule
-
-     Laptop / Desktop:
-       Summary + Preview (left) | EMI Schedule (right)
   ========================================================== */
 
   const step2Layout = createLoanStudioStep2Layout(tokens);
@@ -199,14 +191,6 @@ export default function LoanStudioView(props: LoanStudioViewModel) {
 
   /* ==========================================================
      STEP 5 RESPONSIVE LAYOUT
-
-     Mobile:
-       Validation Checklist
-       ↓
-       Final Loan Preview
-
-     Tablet / Laptop / Desktop:
-       Validation Checklist | Final Loan Preview
   ========================================================== */
 
   const step5Layout = createLoanStudioStep5Layout(tokens);
@@ -217,6 +201,24 @@ export default function LoanStudioView(props: LoanStudioViewModel) {
     step5ChecklistColumnStyle,
     step5PreviewColumnStyle,
   } = step5Layout;
+
+  /* ==========================================================
+     STEP 6 RESPONSIVE LAYOUT
+  ========================================================== */
+
+  const step6Layout = createLoanStudioStep6Layout(tokens);
+
+  const {
+    step6WorkspaceStyle,
+    step6BottomStyle,
+    step6FormStyle,
+    step6DisbursementWrapperStyle,
+    step6PaymentModeWrapperStyle,
+    step6ApprovalActionsWrapperStyle,
+    step6PreviewColumnStyle,
+    step6ReceiptWrapperStyle,
+    step6PreviewCardWrapperStyle,
+  } = step6Layout;
 
   /* ==========================================================
      SHARED LOAN STUDIO PRESENTATION STYLES
@@ -240,22 +242,31 @@ export default function LoanStudioView(props: LoanStudioViewModel) {
     navigationButtonStyle,
     disabledNavigationButtonStyle,
     primaryNavigationButtonStyle,
-    step6FormStyle,
+    step6FormStyle: baseStep6FormStyle,
   } = createLoanStudioStyles(tokens, theme);
+
+  /*
+   * Step 6 uses CSS Grid Areas.
+   *
+   * The outer responsive grid must receive each card as a direct
+   * grid participant. Therefore the legacy form/preview wrappers
+   * are converted to display: contents by the responsive layout.
+   *
+   * Keep the shared style available, but let the responsive engine
+   * own the actual Step 6 geometry.
+   */
+  const resolvedStep6FormStyle = {
+    ...baseStep6FormStyle,
+    ...step6FormStyle,
+  };
 
   /* ==========================================================
      STEP 1 RESPONSIVE TOKENS
-
-     Global Responsive Engine
-              ↓
-     tokens.meta.viewport
-              ↓
-     Step 1 token contract
-              ↓
-     Step 1 layout factory
   ========================================================== */
 
-  const step1DetailsTokens = getStep1DetailsTokens(tokens.meta.viewport);
+  const step1DetailsTokens = getStep1DetailsTokens(
+    tokens.meta.viewport,
+  );
 
   /* ==========================================================
      STEP 1 RESPONSIVE STYLES
@@ -601,6 +612,22 @@ export default function LoanStudioView(props: LoanStudioViewModel) {
 
         {/* ====================================================
             STEP 6 — DISBURSEMENT
+           
+            MOBILE:
+              1. Disbursement Mode
+              2. Payment Mode
+              3. Receipt
+              4. Preview
+              5. Approval Actions
+           
+            TABLET / LAPTOP / DESKTOP:
+              Mode      | Receipt
+              Payment   | Preview
+              Approval Actions — full width
+           
+            IMPORTANT:
+            Approval Actions are intentionally rendered LAST
+            in the grid contract.
         ==================================================== */}
 
         {step === 6 && (
@@ -608,12 +635,30 @@ export default function LoanStudioView(props: LoanStudioViewModel) {
             <DisbursementHeader />
 
             <div style={step6BottomStyle}>
-              <div style={step6FormStyle}>
-                <DisbursementForm
-                  disbursementDate={disbursementDate}
-                  netDisbursement={netDisbursement}
-                  onDisbursementDateChange={setDisbursementDate}
-                />
+              {/* =================================================
+                  FORM GROUP
+                 
+                  Responsive Engine converts this wrapper to
+                  display: contents so each card participates
+                  directly in the Step 6 grid.
+              ================================================= */}
+
+              <div style={resolvedStep6FormStyle}>
+                {/* =================================================
+                    1. DISBURSEMENT MODE
+                ================================================= */}
+
+                <div style={step6DisbursementWrapperStyle}>
+                  <DisbursementForm
+                    disbursementDate={disbursementDate}
+                    netDisbursement={netDisbursement}
+                    onDisbursementDateChange={setDisbursementDate}
+                  />
+                </div>
+
+                {/* =================================================
+                    2. PAYMENT MODE
+                ================================================= */}
 
                 <div style={step6PaymentModeWrapperStyle}>
                   <PaymentModeCard
@@ -626,35 +671,60 @@ export default function LoanStudioView(props: LoanStudioViewModel) {
                   />
                 </div>
 
-                <ApprovalActions
-                  onSaveDraft={handleSaveDraft}
-                  onApproveLoan={handleApproveLoan}
-                  onRejectLoan={handleRejectLoan}
-                />
+                {/* =================================================
+                    5. APPROVAL ACTIONS — FINAL
+                ================================================= */}
+
+                <div style={step6ApprovalActionsWrapperStyle}>
+                  <ApprovalActions
+                    onSaveDraft={handleSaveDraft}
+                    onApproveLoan={handleApproveLoan}
+                    onRejectLoan={handleRejectLoan}
+                  />
+                </div>
               </div>
 
-              <div style={step6PreviewColumnStyle}>
-                <DisbursementReceipt
-                  receiptNumber={disbursementReceiptNumber}
-                  customerName={activeCustomerName || "--"}
-                  amount={safeDisbursementAmount}
-                  paymentMode={paymentMode}
-                />
+              {/* =================================================
+                  RECEIPT + PREVIEW GROUP
+                 
+                  Responsive Engine converts this wrapper to
+                  display: contents.
+              ================================================= */}
 
-                <DisbursementPreviewCard
-                  disbursementDate={
-                    disbursementDate
-                      ? formatIndianDate(
-                          new Date(
-                            `${disbursementDate}T00:00:00`,
-                          ),
-                        )
-                      : "--"
-                  }
-                  amount={safeDisbursementAmount}
-                  paymentMode={paymentMode}
-                  transactionStatus={transactionStatus}
-                />
+              <div style={step6PreviewColumnStyle}>
+                {/* =================================================
+                    3. DISBURSEMENT RECEIPT
+                ================================================= */}
+
+                <div style={step6ReceiptWrapperStyle}>
+                  <DisbursementReceipt
+                    receiptNumber={disbursementReceiptNumber}
+                    customerName={activeCustomerName || "--"}
+                    amount={safeDisbursementAmount}
+                    paymentMode={paymentMode}
+                  />
+                </div>
+
+                {/* =================================================
+                    4. DISBURSEMENT PREVIEW
+                ================================================= */}
+
+                <div style={step6PreviewCardWrapperStyle}>
+                  <DisbursementPreviewCard
+                    disbursementDate={
+                      disbursementDate
+                        ? formatIndianDate(
+                            new Date(
+                              `${disbursementDate}T00:00:00`,
+                            ),
+                          )
+                        : "--"
+                    }
+                    amount={safeDisbursementAmount}
+                    paymentMode={paymentMode}
+                    transactionStatus={transactionStatus}
+                  />
+                </div>
               </div>
             </div>
           </section>

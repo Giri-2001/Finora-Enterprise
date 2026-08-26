@@ -15,11 +15,25 @@
 // - Laptop  : Review Header -> Validation | Preview
 // - Desktop : Review Header -> Validation | Preview
 //
+// STEP 6 CONTRACT:
+// - Mobile:
+//     Disbursement Mode
+//     Payment Mode
+//     Disbursement Receipt
+//     Disbursement Preview
+//     Approval Actions
+//
+// - Tablet / Laptop / Desktop:
+//     Disbursement Mode | Disbursement Receipt
+//     Payment Mode      | Disbursement Preview
+//     Approval Actions  | Approval Actions
+//
 // IMPORTANT:
 // - Uses FINORA Responsive Engine tokens.
 // - No viewport media queries.
 // - No business logic.
-// - Repayment Draft is not rendered by LoanStudioView.
+// - Approval Actions are always the final Step 6 section.
+// - No duplicate Disbursement Preview.
 // ============================================================
 
 import type { CSSProperties } from "react";
@@ -55,7 +69,8 @@ export function createLoanStudioStep2Layout(
   tokens: ResponsiveTokens,
 ): LoanStudioStep2Layout {
   const compact =
-    tokens.meta.viewport === "mobile" || tokens.meta.viewport === "tablet";
+    tokens.meta.viewport === "mobile" ||
+    tokens.meta.viewport === "tablet";
 
   const gap = Math.max(8, tokens.spacing.small);
 
@@ -126,7 +141,6 @@ export function createLoanStudioStep2Layout(
 // LEGACY STATIC ALIASES
 //
 // Kept only for compatibility with existing imports.
-// LoanStudioView uses createLoanStudioStep2Layout().
 // ============================================================
 
 export const step2WorkspaceStyle: CSSProperties = {
@@ -198,15 +212,7 @@ export interface LoanStudioStep5Layout {
 }
 
 // ============================================================
-// STEP 5 RESPONSIVE STYLE FACTORY
-//
-// Mobile:
-//   Validation Checklist
-//   ↓
-//   Final Loan Preview
-//
-// Tablet / Laptop / Desktop:
-//   Validation Checklist | Final Loan Preview
+// STEP 5 STYLE FACTORY
 // ============================================================
 
 export function createLoanStudioStep5Layout(
@@ -275,9 +281,6 @@ export function createLoanStudioStep5Layout(
 
 // ============================================================
 // STEP 5 LEGACY STATIC ALIASES
-//
-// Kept only for compatibility with existing imports.
-// LoanStudioView uses createLoanStudioStep5Layout().
 // ============================================================
 
 export const step5WorkspaceStyle: CSSProperties = {
@@ -329,24 +332,258 @@ export const step5PreviewColumnStyle: CSSProperties = {
 };
 
 // ============================================================
-// STEP 6
+// STEP 6 RESPONSIVE CONTRACT
+// ============================================================
+
+export interface LoanStudioStep6Layout {
+  step6WorkspaceStyle: CSSProperties;
+  step6BottomStyle: CSSProperties;
+
+  step6FormStyle: CSSProperties;
+
+  step6DisbursementWrapperStyle: CSSProperties;
+  step6PaymentModeWrapperStyle: CSSProperties;
+  step6ApprovalActionsWrapperStyle: CSSProperties;
+
+  step6PreviewColumnStyle: CSSProperties;
+  step6ReceiptWrapperStyle: CSSProperties;
+  step6PreviewCardWrapperStyle: CSSProperties;
+}
+
+// ============================================================
+// STEP 6 RESPONSIVE STYLE FACTORY
+//
+// MOBILE:
+//
+//   Disbursement Mode
+//   Payment Mode
+//   Disbursement Receipt
+//   Disbursement Preview
+//   Approval Actions
+//
+// TABLET / LAPTOP / DESKTOP:
+//
+//   Disbursement Mode | Disbursement Receipt
+//   Payment Mode      | Disbursement Preview
+//   Approval Actions  | Approval Actions
+//
+// CSS Grid Areas are used instead of DOM-dependent row placement.
+// This prevents the large empty-space problem seen in narrow
+// tablet / laptop layouts.
+// ============================================================
+
+export function createLoanStudioStep6Layout(
+  tokens: ResponsiveTokens,
+): LoanStudioStep6Layout {
+  const mobile = tokens.meta.viewport === "mobile";
+
+  const gap = Math.max(8, tokens.spacing.small);
+
+  return {
+    // ========================================================
+    // STEP 6 WORKSPACE
+    // ========================================================
+
+    step6WorkspaceStyle: {
+      ...step1WorkspaceStyle,
+
+      width: "100%",
+      minWidth: 0,
+      minHeight: 0,
+
+      overflow: "visible",
+
+      boxSizing: "border-box",
+    },
+
+    // ========================================================
+    // STEP 6 MAIN GRID
+    // ========================================================
+
+    step6BottomStyle: {
+      ...step1BottomStyle,
+
+      width: "100%",
+      minWidth: 0,
+
+      height: "auto",
+      minHeight: 0,
+
+      overflow: "visible",
+
+      display: "grid",
+
+      gridTemplateColumns: mobile
+        ? "minmax(0, 1fr)"
+        : "minmax(0, 1fr) minmax(0, 1fr)",
+
+      gridTemplateAreas: mobile
+        ? `
+          "mode"
+          "payment"
+          "receipt"
+          "preview"
+          "approval"
+        `
+        : `
+          "mode receipt"
+          "payment preview"
+          "approval approval"
+        `,
+
+      gap: `${gap}px`,
+
+      alignItems: "stretch",
+      alignContent: "start",
+
+      boxSizing: "border-box",
+    },
+
+    // ========================================================
+    // FORM / PRESENTATION WRAPPERS
+    //
+    // display: contents allows the individual Step 6 cards
+    // to participate directly in the responsive grid.
+    // ========================================================
+
+    step6FormStyle: {
+      display: "contents",
+    },
+
+    // ========================================================
+    // DISBURSEMENT MODE
+    // ========================================================
+
+    step6DisbursementWrapperStyle: {
+      gridArea: "mode",
+
+      width: "100%",
+      minWidth: 0,
+
+      boxSizing: "border-box",
+
+      alignSelf: "stretch",
+    },
+
+    // ========================================================
+    // PAYMENT MODE
+    // ========================================================
+
+    step6PaymentModeWrapperStyle: {
+      gridArea: "payment",
+
+      width: "100%",
+      minWidth: 0,
+
+      margin: 0,
+      padding: 0,
+
+      boxSizing: "border-box",
+
+      alignSelf: "stretch",
+    },
+
+    // ========================================================
+    // APPROVAL ACTIONS
+    //
+    // Always the FINAL Step 6 section.
+    // ========================================================
+
+    step6ApprovalActionsWrapperStyle: {
+      gridArea: "approval",
+
+      width: "100%",
+      minWidth: 0,
+
+      margin: 0,
+      padding: 0,
+
+      boxSizing: "border-box",
+
+      alignSelf: "stretch",
+    },
+
+    // ========================================================
+    // RIGHT-SIDE PRESENTATION GROUP
+    //
+    // display: contents prevents this wrapper from creating
+    // an unwanted intermediate grid row.
+    // ========================================================
+
+    step6PreviewColumnStyle: {
+      display: "contents",
+    },
+
+    // ========================================================
+    // DISBURSEMENT RECEIPT
+    // ========================================================
+
+    step6ReceiptWrapperStyle: {
+      gridArea: "receipt",
+
+      width: "100%",
+      minWidth: 0,
+
+      boxSizing: "border-box",
+
+      alignSelf: "stretch",
+    },
+
+    // ========================================================
+    // DISBURSEMENT PREVIEW
+    // ========================================================
+
+    step6PreviewCardWrapperStyle: {
+      gridArea: "preview",
+
+      width: "100%",
+      minWidth: 0,
+
+      boxSizing: "border-box",
+
+      alignSelf: "stretch",
+    },
+  };
+}
+
+// ============================================================
+// STEP 6 LEGACY STATIC ALIASES
+//
+// Kept for compatibility with any existing imports.
+// LoanStudioView uses createLoanStudioStep6Layout().
 // ============================================================
 
 export const step6WorkspaceStyle: CSSProperties = {
   ...step1WorkspaceStyle,
+  width: "100%",
+  minWidth: 0,
+  minHeight: 0,
   overflow: "visible",
+  boxSizing: "border-box",
 };
 
 export const step6BottomStyle: CSSProperties = {
   ...step1BottomStyle,
+  width: "100%",
+  minWidth: 0,
   height: "auto",
   minHeight: 0,
   overflow: "visible",
-  alignItems: "start",
+  display: "grid",
+  gridTemplateColumns: "minmax(0, 1fr) minmax(0, 1fr)",
+  gridTemplateAreas: `
+    "mode receipt"
+    "payment preview"
+    "approval approval"
+  `,
+  gap: "8px",
+  alignItems: "stretch",
   alignContent: "start",
+  boxSizing: "border-box",
 };
 
 export const step6PaymentModeWrapperStyle: CSSProperties = {
+  gridArea: "payment",
   width: "100%",
   minWidth: 0,
   margin: 0,
@@ -355,13 +592,35 @@ export const step6PaymentModeWrapperStyle: CSSProperties = {
 };
 
 export const step6PreviewColumnStyle: CSSProperties = {
-  ...step1PreviewStyle,
-  height: "auto",
-  minHeight: 0,
-  overflow: "visible",
-  display: "flex",
-  flexDirection: "column",
-  gap: "10px",
+  display: "contents",
+};
+
+export const step6DisbursementWrapperStyle: CSSProperties = {
+  gridArea: "mode",
+  width: "100%",
+  minWidth: 0,
+  boxSizing: "border-box",
+};
+
+export const step6ApprovalActionsWrapperStyle: CSSProperties = {
+  gridArea: "approval",
+  width: "100%",
+  minWidth: 0,
+  boxSizing: "border-box",
+};
+
+export const step6ReceiptWrapperStyle: CSSProperties = {
+  gridArea: "receipt",
+  width: "100%",
+  minWidth: 0,
+  boxSizing: "border-box",
+};
+
+export const step6PreviewCardWrapperStyle: CSSProperties = {
+  gridArea: "preview",
+  width: "100%",
+  minWidth: 0,
+  boxSizing: "border-box",
 };
 
 // ============================================================
