@@ -1,12 +1,25 @@
 /* ===========================================================
-FINORA ENTERPRISE V2
-REVIEW STUDIO
-REVIEW PREVIEW CARD
+   FINORA ENTERPRISE V2
+
+   REVIEW STUDIO
+   REVIEW PREVIEW CARD
+
+   RESPONSIBILITY:
+   - Render final loan review preview only.
+   - Consume LoanReviewData.
+   - Consume FINORA Responsive Engine.
+   - Consume FINORA Theme Engine presentation styles.
+   - Mobile: one preview item per row.
+   - Tablet / Laptop / Desktop: two preview items per row.
+   - No business calculations.
+   - No inline responsive logic.
 =========================================================== */
 
 /* ===========================================================
-IMPORTS
+   IMPORTS
 =========================================================== */
+
+import { useResponsive } from "../../../utils/responsive";
 
 import SummaryCard from "../../common/cards/SummaryCard";
 
@@ -14,17 +27,17 @@ import type { LoanReviewData } from "./types";
 
 import {
   cardStyle,
+  createPreviewGridStyle,
   fullWidthRowStyle,
   highlightRowStyle,
   labelStyle,
-  previewGridStyle,
   primaryValueStyle,
   rowStyle,
   valueStyle,
 } from "./ReviewPreviewCard.styles";
 
 /* ===========================================================
-TYPES
+   TYPES
 =========================================================== */
 
 interface ReviewPreviewCardProps {
@@ -32,55 +45,110 @@ interface ReviewPreviewCardProps {
 }
 
 /* ===========================================================
-COMPONENT
+   COMPONENT
 =========================================================== */
 
-export default function ReviewPreviewCard({ review }: ReviewPreviewCardProps) {
+export default function ReviewPreviewCard({
+  review,
+}: ReviewPreviewCardProps) {
+  /* =========================================================
+     FINORA RESPONSIVE ENGINE
+  ========================================================= */
+
+  const { tokens } = useResponsive();
+
+  /* =========================================================
+     RESPONSIVE PREVIEW GRID
+
+     Mobile:
+       Customer
+       Loan Amount
+       Interest
+       Repayment
+       Tenure
+       Installment
+       Guarantor
+
+     Tablet / Laptop / Desktop:
+       Customer       | Loan Amount
+       Interest       | Repayment
+       Tenure         | Installment
+       Guarantor
+  ========================================================= */
+
+  const previewGridStyle = createPreviewGridStyle(tokens);
+
+  /* =========================================================
+     RENDER
+  ========================================================= */
+
   return (
     <div style={cardStyle}>
       <SummaryCard title="Final Loan Preview">
         <div style={previewGridStyle}>
-          {/* CUSTOMER */}
+          {/* =================================================
+              CUSTOMER
+          ================================================= */}
 
           <div style={highlightRowStyle}>
             <span style={labelStyle}>Customer</span>
 
-            <strong style={primaryValueStyle}>{review.customerName}</strong>
+            <strong style={primaryValueStyle}>
+              {review.customerName}
+            </strong>
           </div>
 
-          {/* LOAN AMOUNT */}
+          {/* =================================================
+              LOAN AMOUNT
+          ================================================= */}
 
           <div style={rowStyle}>
             <span style={labelStyle}>Loan Amount</span>
 
-            <strong style={valueStyle}>₹ {review.loanAmount}</strong>
+            <strong style={valueStyle}>
+              ₹ {review.loanAmount}
+            </strong>
           </div>
 
-          {/* INTEREST */}
+          {/* =================================================
+              INTEREST
+          ================================================= */}
 
           <div style={rowStyle}>
             <span style={labelStyle}>Interest</span>
 
-            <strong style={valueStyle}>{review.interestRate}%</strong>
+            <strong style={valueStyle}>
+              {review.interestRate}%
+            </strong>
           </div>
 
-          {/* REPAYMENT */}
+          {/* =================================================
+              REPAYMENT
+          ================================================= */}
 
           <div style={rowStyle}>
             <span style={labelStyle}>Repayment</span>
 
-            <strong style={valueStyle}>{review.repaymentType}</strong>
+            <strong style={valueStyle}>
+              {review.repaymentType}
+            </strong>
           </div>
 
-          {/* TENURE */}
+          {/* =================================================
+              TENURE
+          ================================================= */}
 
           <div style={rowStyle}>
             <span style={labelStyle}>Tenure</span>
 
-            <strong style={valueStyle}>{review.duration || "--"}</strong>
+            <strong style={valueStyle}>
+              {review.duration || "--"}
+            </strong>
           </div>
 
-          {/* INSTALLMENT */}
+          {/* =================================================
+              INSTALLMENT
+          ================================================= */}
 
           <div style={rowStyle}>
             <span style={labelStyle}>Installment</span>
@@ -92,12 +160,18 @@ export default function ReviewPreviewCard({ review }: ReviewPreviewCardProps) {
             </strong>
           </div>
 
-          {/* GUARANTOR */}
+          {/* =================================================
+              GUARANTOR
+
+              This remains full width on every viewport.
+          ================================================= */}
 
           <div style={fullWidthRowStyle}>
             <span style={labelStyle}>Guarantor</span>
 
-            <strong style={valueStyle}>{review.guarantorName}</strong>
+            <strong style={valueStyle}>
+              {review.guarantorName}
+            </strong>
           </div>
         </div>
       </SummaryCard>
@@ -106,5 +180,5 @@ export default function ReviewPreviewCard({ review }: ReviewPreviewCardProps) {
 }
 
 /* ===========================================================
-END
+   END
 =========================================================== */

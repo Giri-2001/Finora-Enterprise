@@ -8,22 +8,10 @@
    - Validation Checklist presentation only.
    - Consume FINORA Theme Engine CSS variables.
    - Preserve existing checklist geometry.
+   - Responsive mobile-safe checklist rows.
    - Preserve existing validation behaviour.
    - No local theme palette.
-   - No hardcoded theme colours.
-   - No inline-style dependency.
-
-   THEME FLOW:
-
-   ThemeProvider
-        ↓
-   FINORA Theme Engine
-        ↓
-   LoanStudio Theme Variable Bridge
-        ↓
-   ValidationChecklist styles
-        ↓
-   Active Theme Visuals
+   - No hardcoded application colours.
 =========================================================== */
 
 /* ===========================================================
@@ -31,6 +19,14 @@
 =========================================================== */
 
 import type { CSSProperties } from "react";
+
+/* ===========================================================
+   RESPONSIVE STYLE TYPE
+=========================================================== */
+
+type ResponsiveCSSProperties = CSSProperties & {
+  [key: `@media ${string}`]: CSSProperties;
+};
 
 /* ===========================================================
    FINORA THEME TOKENS
@@ -49,10 +45,6 @@ const THEME = {
 
   /* ---------------------------------------------------------
      BRAND
-     ---------------------------------------------------------
-     IMPORTANT:
-     Pending state intentionally follows the active
-     FINORA theme brand accent, NOT semantic warning colour.
   --------------------------------------------------------- */
 
   brandPrimary: "var(--finora-theme-brand-primary, #2563EB)",
@@ -132,9 +124,18 @@ export const checklistStyle: CSSProperties = {
 
 /* ===========================================================
    CHECKLIST ITEM
+   -----------------------------------------------------------
+   DEFAULT:
+   - One checklist item per row.
+   - Existing desktop/tablet geometry preserved.
+
+   MOBILE:
+   - Each checklist item remains a single full-width row.
+   - Content is allowed to shrink safely.
+   - Status remains visible without horizontal overflow.
 =========================================================== */
 
-export const itemStyle: CSSProperties = {
+export const itemStyle: ResponsiveCSSProperties = {
   display: "flex",
 
   alignItems: "center",
@@ -142,6 +143,10 @@ export const itemStyle: CSSProperties = {
   justifyContent: "space-between",
 
   gap: "12px",
+
+  width: "100%",
+
+  minWidth: 0,
 
   minHeight: "32px",
 
@@ -160,13 +165,33 @@ export const itemStyle: CSSProperties = {
   fontWeight: 600,
 
   lineHeight: 1.25,
+
+  /* ---------------------------------------------------------
+     MOBILE
+     ---------------------------------------------------------
+     Keep exactly one checklist item per row.
+  --------------------------------------------------------- */
+
+  "@media (max-width: 767px)": {
+    width: "100%",
+
+    minWidth: 0,
+
+    minHeight: "34px",
+
+    padding: "7px 6px",
+
+    gap: "8px",
+
+    alignItems: "center",
+  },
 };
 
 /* ===========================================================
    ITEM CONTENT
 =========================================================== */
 
-export const itemContentStyle: CSSProperties = {
+export const itemContentStyle: ResponsiveCSSProperties = {
   display: "flex",
 
   alignItems: "center",
@@ -174,6 +199,22 @@ export const itemContentStyle: CSSProperties = {
   gap: "8px",
 
   minWidth: 0,
+
+  flex: "1 1 auto",
+
+  overflow: "hidden",
+
+  /* ---------------------------------------------------------
+     MOBILE
+  --------------------------------------------------------- */
+
+  "@media (max-width: 767px)": {
+    minWidth: 0,
+
+    flex: "1 1 auto",
+
+    gap: "7px",
+  },
 };
 
 /* ===========================================================
@@ -210,10 +251,6 @@ export const statusMarkCompleteStyle: CSSProperties = {
 
 /* ===========================================================
    STATUS MARK — PENDING
-   -----------------------------------------------------------
-   IMPORTANT:
-   Pending follows ACTIVE THEME ACCENT.
-   It does NOT use warning colour.
 =========================================================== */
 
 export const statusMarkPendingStyle: CSSProperties = {
@@ -248,8 +285,10 @@ export const statusMarkPendingStyle: CSSProperties = {
    ITEM TEXT
 =========================================================== */
 
-export const itemTextStyle: CSSProperties = {
+export const itemTextStyle: ResponsiveCSSProperties = {
   minWidth: 0,
+
+  flex: "1 1 auto",
 
   color: THEME.textPrimary,
 
@@ -264,14 +303,26 @@ export const itemTextStyle: CSSProperties = {
   textOverflow: "ellipsis",
 
   whiteSpace: "nowrap",
+
+  /* ---------------------------------------------------------
+     MOBILE
+  --------------------------------------------------------- */
+
+  "@media (max-width: 767px)": {
+    minWidth: 0,
+
+    fontSize: "11.5px",
+  },
 };
 
 /* ===========================================================
    STATUS TEXT — COMPLETE
 =========================================================== */
 
-export const statusTextCompleteStyle: CSSProperties = {
+export const statusTextCompleteStyle: ResponsiveCSSProperties = {
   flexShrink: 0,
+
+  whiteSpace: "nowrap",
 
   color: THEME.success,
 
@@ -280,17 +331,26 @@ export const statusTextCompleteStyle: CSSProperties = {
   fontWeight: 700,
 
   lineHeight: 1.25,
+
+  /* ---------------------------------------------------------
+     MOBILE
+  --------------------------------------------------------- */
+
+  "@media (max-width: 767px)": {
+    flexShrink: 0,
+
+    fontSize: "11px",
+  },
 };
 
 /* ===========================================================
    STATUS TEXT — PENDING
-   -----------------------------------------------------------
-   IMPORTANT:
-   Pending follows ACTIVE THEME ACCENT.
 =========================================================== */
 
-export const statusTextPendingStyle: CSSProperties = {
+export const statusTextPendingStyle: ResponsiveCSSProperties = {
   flexShrink: 0,
+
+  whiteSpace: "nowrap",
 
   color: THEME.brandAccent,
 
@@ -299,22 +359,34 @@ export const statusTextPendingStyle: CSSProperties = {
   fontWeight: 700,
 
   lineHeight: 1.25,
+
+  /* ---------------------------------------------------------
+     MOBILE
+  --------------------------------------------------------- */
+
+  "@media (max-width: 767px)": {
+    flexShrink: 0,
+
+    fontSize: "11px",
+  },
 };
 
 /* ===========================================================
    EMPTY STATE
 =========================================================== */
 
-export const emptyStateStyle: CSSProperties = {
+export const emptyStateStyle: ResponsiveCSSProperties = {
   display: "flex",
 
   alignItems: "center",
 
   minHeight: "31px",
 
-  padding: "6px 8px",
+  width: "100%",
 
   boxSizing: "border-box",
+
+  padding: "6px 8px",
 
   border: `1px solid ${THEME.border}`,
 
@@ -329,6 +401,18 @@ export const emptyStateStyle: CSSProperties = {
   fontWeight: 500,
 
   lineHeight: 1.25,
+
+  /* ---------------------------------------------------------
+     MOBILE
+  --------------------------------------------------------- */
+
+  "@media (max-width: 767px)": {
+    minWidth: 0,
+
+    minHeight: "32px",
+
+    padding: "6px",
+  },
 };
 
 /* ===========================================================

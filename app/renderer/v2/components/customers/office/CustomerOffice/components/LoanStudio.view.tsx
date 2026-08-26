@@ -9,6 +9,7 @@
 // - Consume the active FINORA Theme Engine theme.
 // - Resolve shared presentation styles from Responsive Engine + Theme.
 // - Step 1 geometry is resolved by step1Details Responsive Engine.
+// - Step 5 geometry is resolved by Loan Studio Responsive Engine.
 // - No business calculations.
 // - No storage/service access.
 // - No inline responsive logic.
@@ -24,10 +25,7 @@ import { createLoanStudioStyles } from "./LoanStudio.styles";
 
 import {
   createLoanStudioStep2Layout,
-  step5WorkspaceStyle,
-  step5BottomStyle,
-  step5ChecklistColumnStyle,
-  step5PreviewColumnStyle,
+  createLoanStudioStep5Layout,
   step6WorkspaceStyle,
   step6BottomStyle,
   step6PaymentModeWrapperStyle,
@@ -179,9 +177,10 @@ export default function LoanStudioView(props: LoanStudioViewModel) {
 
   /* ==========================================================
      STEP 2 RESPONSIVE LAYOUT
-     
+
      Mobile / Tablet:
        Summary -> Preview -> EMI Schedule
+
      Laptop / Desktop:
        Summary + Preview (left) | EMI Schedule (right)
   ========================================================== */
@@ -197,6 +196,27 @@ export default function LoanStudioView(props: LoanStudioViewModel) {
     step2PreviewWrapperStyle,
     step2ScheduleWrapperStyle,
   } = step2Layout;
+
+  /* ==========================================================
+     STEP 5 RESPONSIVE LAYOUT
+
+     Mobile:
+       Validation Checklist
+       ↓
+       Final Loan Preview
+
+     Tablet / Laptop / Desktop:
+       Validation Checklist | Final Loan Preview
+  ========================================================== */
+
+  const step5Layout = createLoanStudioStep5Layout(tokens);
+
+  const {
+    step5WorkspaceStyle,
+    step5BottomStyle,
+    step5ChecklistColumnStyle,
+    step5PreviewColumnStyle,
+  } = step5Layout;
 
   /* ==========================================================
      SHARED LOAN STUDIO PRESENTATION STYLES
@@ -225,7 +245,7 @@ export default function LoanStudioView(props: LoanStudioViewModel) {
 
   /* ==========================================================
      STEP 1 RESPONSIVE TOKENS
-     
+
      Global Responsive Engine
               ↓
      tokens.meta.viewport
@@ -244,7 +264,8 @@ export default function LoanStudioView(props: LoanStudioViewModel) {
   const step1WorkspaceStyle =
     createStep1DetailsWorkspaceStyle(step1DetailsTokens);
 
-  const step1TopStyle = createStep1DetailsTopStyle(step1DetailsTokens);
+  const step1TopStyle =
+    createStep1DetailsTopStyle(step1DetailsTokens);
 
   const step1CustomerStyle =
     createStep1DetailsCustomerStyle(step1DetailsTokens);
@@ -252,11 +273,14 @@ export default function LoanStudioView(props: LoanStudioViewModel) {
   const step1OverviewStyle =
     createStep1DetailsOverviewStyle(step1DetailsTokens);
 
-  const step1BottomStyle = createStep1DetailsMainStyle(step1DetailsTokens);
+  const step1BottomStyle =
+    createStep1DetailsMainStyle(step1DetailsTokens);
 
-  const step1FormStyle = createStep1DetailsFormStyle(step1DetailsTokens);
+  const step1FormStyle =
+    createStep1DetailsFormStyle(step1DetailsTokens);
 
-  const step1PreviewStyle = createStep1DetailsPreviewStyle(step1DetailsTokens);
+  const step1PreviewStyle =
+    createStep1DetailsPreviewStyle(step1DetailsTokens);
 
   /* ==========================================================
      BUSINESS / VIEW MODEL
@@ -343,7 +367,8 @@ export default function LoanStudioView(props: LoanStudioViewModel) {
     resetLoanWorkspace,
   } = props;
 
-  const safeDisbursementAmount = getDisbursementAmount(netDisbursement);
+  const safeDisbursementAmount =
+    getDisbursementAmount(netDisbursement);
 
   /* ==========================================================
      RENDER
@@ -358,11 +383,6 @@ export default function LoanStudioView(props: LoanStudioViewModel) {
 
         {step === 1 && (
           <section style={step1WorkspaceStyle}>
-            {/* ==================================================
-                TOP AREA
-                Customer + Statistics
-            ================================================== */}
-
             <div style={step1TopStyle}>
               <div style={step1CustomerStyle}>
                 <LoanCustomerCard
@@ -383,11 +403,6 @@ export default function LoanStudioView(props: LoanStudioViewModel) {
                 />
               </div>
             </div>
-
-            {/* ==================================================
-                MAIN AREA
-                Loan Form + Preview
-            ================================================== */}
 
             <div style={step1BottomStyle}>
               <div style={step1FormStyle}>
@@ -438,7 +453,9 @@ export default function LoanStudioView(props: LoanStudioViewModel) {
                   }
                   lateFee={Number(lateFee || 0)}
                   repaymentType={
-                    repaymentType ? repaymentType.toUpperCase() : "--"
+                    repaymentType
+                      ? repaymentType.toUpperCase()
+                      : "--"
                   }
                 />
               </div>
@@ -470,7 +487,9 @@ export default function LoanStudioView(props: LoanStudioViewModel) {
                   <div style={step2PreviewWrapperStyle}>
                     <RepaymentPreviewCard
                       frequency={
-                        repaymentType ? repaymentType.toUpperCase() : "--"
+                        repaymentType
+                          ? repaymentType.toUpperCase()
+                          : "--"
                       }
                       repaymentMethod={emiCalculation}
                       installmentAmount={installmentAmount}
@@ -478,13 +497,17 @@ export default function LoanStudioView(props: LoanStudioViewModel) {
                       totalRepayable={totalPayable}
                       firstInstallmentDate={
                         schedule.length
-                          ? formatIndianDate(new Date(schedule[0].dueDate))
+                          ? formatIndianDate(
+                              new Date(schedule[0].dueDate),
+                            )
                           : "--"
                       }
                       lastInstallmentDate={
                         schedule.length
                           ? formatIndianDate(
-                              new Date(schedule[schedule.length - 1].dueDate),
+                              new Date(
+                                schedule[schedule.length - 1].dueDate,
+                              ),
                             )
                           : "--"
                       }
@@ -622,7 +645,9 @@ export default function LoanStudioView(props: LoanStudioViewModel) {
                   disbursementDate={
                     disbursementDate
                       ? formatIndianDate(
-                          new Date(`${disbursementDate}T00:00:00`),
+                          new Date(
+                            `${disbursementDate}T00:00:00`,
+                          ),
                         )
                       : "--"
                   }
@@ -692,7 +717,9 @@ export default function LoanStudioView(props: LoanStudioViewModel) {
                     {item.title}
                   </span>
 
-                  <span style={stepSubtitleStyle}>{item.subtitle}</span>
+                  <span style={stepSubtitleStyle}>
+                    {item.subtitle}
+                  </span>
                 </div>
               </div>
             );
@@ -709,7 +736,9 @@ export default function LoanStudioView(props: LoanStudioViewModel) {
               }
             }}
             style={
-              step === 1 ? disabledNavigationButtonStyle : navigationButtonStyle
+              step === 1
+                ? disabledNavigationButtonStyle
+                : navigationButtonStyle
             }
           >
             ← Previous
@@ -726,14 +755,18 @@ export default function LoanStudioView(props: LoanStudioViewModel) {
               }
 
               if (!loanApproved) {
-                alert("Please Approve Loan before completing Disbursement");
+                alert(
+                  "Please Approve Loan before completing Disbursement",
+                );
 
                 return;
               }
 
               await refreshLoanStatistics();
 
-              alert("Loan Disbursement Workflow Completed Successfully");
+              alert(
+                "Loan Disbursement Workflow Completed Successfully",
+              );
 
               resetLoanWorkspace();
             }}

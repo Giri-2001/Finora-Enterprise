@@ -8,6 +8,7 @@
    - Render validation checklist only.
    - Consume LoanReviewData.
    - Consume FINORA Theme Engine presentation styles.
+   - Responsive presentation handled by styles file.
    - No business calculations.
    - No inline styles.
    - No local colour palette.

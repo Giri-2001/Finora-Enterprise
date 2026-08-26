@@ -8,12 +8,17 @@
 // - ReviewPreviewCard presentation only
 // - Final loan review summary presentation
 // - Consume FINORA Theme Engine CSS variables
+// - Responsive preview geometry
+// - Mobile: one item per row
+// - Tablet / Laptop / Desktop: two items per row
 // - No local theme palette
-// - Layout / dimensions preserved
+// - No media queries
 //
 // ============================================================
 
 import type { CSSProperties } from "react";
+
+import type { ResponsiveTokens } from "../../../utils/responsive";
 
 // ============================================================
 // FINORA THEME TOKENS
@@ -28,13 +33,16 @@ const THEME = {
 
   border: "var(--finora-theme-border-default, rgba(148, 163, 184, 0.16))",
 
-  borderStrong: "var(--finora-theme-border-strong, rgba(37, 99, 235, 0.42))",
+  borderStrong:
+    "var(--finora-theme-border-strong, rgba(37, 99, 235, 0.42))",
 
   text: "var(--finora-theme-text-primary, #FFFFFF)",
 
-  textSecondary: "var(--finora-theme-text-secondary, #CBD5E1)",
+  textSecondary:
+    "var(--finora-theme-text-secondary, #CBD5E1)",
 
-  textMuted: "var(--finora-theme-text-muted, #94A3B8)",
+  textMuted:
+    "var(--finora-theme-text-muted, #94A3B8)",
 };
 
 // ============================================================
@@ -51,6 +59,49 @@ export const cardStyle: CSSProperties = {
 
 // ============================================================
 // PREVIEW GRID
+//
+// Responsive contract:
+//
+// Mobile:
+//   1 item per row
+//
+// Tablet:
+//   2 items per row
+//
+// Laptop:
+//   2 items per row
+//
+// Desktop:
+//   2 items per row
+// ============================================================
+
+export function createPreviewGridStyle(
+  tokens: ResponsiveTokens,
+): CSSProperties {
+  const mobile = tokens.meta.viewport === "mobile";
+
+  return {
+    display: "grid",
+
+    gridTemplateColumns: mobile
+      ? "minmax(0, 1fr)"
+      : "repeat(2, minmax(0, 1fr))",
+
+    gap: "6px 8px",
+
+    width: "100%",
+
+    minWidth: 0,
+
+    boxSizing: "border-box",
+  };
+}
+
+// ============================================================
+// LEGACY PREVIEW GRID
+//
+// Kept for compatibility with existing imports.
+// The responsive component uses createPreviewGridStyle().
 // ============================================================
 
 export const previewGridStyle: CSSProperties = {

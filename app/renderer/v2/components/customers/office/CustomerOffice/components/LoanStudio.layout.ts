@@ -1,3 +1,4 @@
+// ============================================================
 // FINORA ENTERPRISE OS™
 // LOAN STUDIO™
 // RESPONSIVE LAYOUT STYLES
@@ -7,6 +8,12 @@
 // - Tablet  : Summary -> Preview -> EMI Schedule
 // - Laptop  : Summary + Preview | EMI Schedule
 // - Desktop : Summary + Preview | EMI Schedule
+//
+// STEP 5 CONTRACT:
+// - Mobile  : Review Header -> Validation -> Preview
+// - Tablet  : Review Header -> Validation | Preview
+// - Laptop  : Review Header -> Validation | Preview
+// - Desktop : Review Header -> Validation | Preview
 //
 // IMPORTANT:
 // - Uses FINORA Responsive Engine tokens.
@@ -118,7 +125,7 @@ export function createLoanStudioStep2Layout(
 // ============================================================
 // LEGACY STATIC ALIASES
 //
-// Kept only for compatibility with any existing imports.
+// Kept only for compatibility with existing imports.
 // LoanStudioView uses createLoanStudioStep2Layout().
 // ============================================================
 
@@ -180,39 +187,145 @@ export const step2ScheduleWrapperStyle: CSSProperties = {
 };
 
 // ============================================================
-// STEP 5
+// STEP 5 RESPONSIVE CONTRACT
+// ============================================================
+
+export interface LoanStudioStep5Layout {
+  step5WorkspaceStyle: CSSProperties;
+  step5BottomStyle: CSSProperties;
+  step5ChecklistColumnStyle: CSSProperties;
+  step5PreviewColumnStyle: CSSProperties;
+}
+
+// ============================================================
+// STEP 5 RESPONSIVE STYLE FACTORY
+//
+// Mobile:
+//   Validation Checklist
+//   ↓
+//   Final Loan Preview
+//
+// Tablet / Laptop / Desktop:
+//   Validation Checklist | Final Loan Preview
+// ============================================================
+
+export function createLoanStudioStep5Layout(
+  tokens: ResponsiveTokens,
+): LoanStudioStep5Layout {
+  const mobile = tokens.meta.viewport === "mobile";
+
+  const gap = Math.max(8, tokens.spacing.small);
+
+  return {
+    step5WorkspaceStyle: {
+      ...step1WorkspaceStyle,
+      width: "100%",
+      minWidth: 0,
+      overflow: "visible",
+      boxSizing: "border-box",
+    },
+
+    step5BottomStyle: {
+      ...step1BottomStyle,
+      width: "100%",
+      minWidth: 0,
+      height: "auto",
+      minHeight: 0,
+      overflow: "visible",
+
+      display: "grid",
+
+      gridTemplateColumns: mobile
+        ? "minmax(0, 1fr)"
+        : "minmax(0, 1fr) minmax(0, 1fr)",
+
+      gap: `${gap}px`,
+
+      alignItems: "start",
+      boxSizing: "border-box",
+    },
+
+    step5ChecklistColumnStyle: {
+      ...step1FormStyle,
+      width: "100%",
+      minWidth: 0,
+      height: "auto",
+      minHeight: 0,
+      overflow: "visible",
+      display: "flex",
+      flexDirection: "column",
+      gap: `${gap}px`,
+      boxSizing: "border-box",
+    },
+
+    step5PreviewColumnStyle: {
+      ...step1PreviewStyle,
+      width: "100%",
+      minWidth: 0,
+      height: "auto",
+      minHeight: 0,
+      overflow: "visible",
+      display: "flex",
+      flexDirection: "column",
+      gap: `${gap}px`,
+      boxSizing: "border-box",
+    },
+  };
+}
+
+// ============================================================
+// STEP 5 LEGACY STATIC ALIASES
+//
+// Kept only for compatibility with existing imports.
+// LoanStudioView uses createLoanStudioStep5Layout().
 // ============================================================
 
 export const step5WorkspaceStyle: CSSProperties = {
   ...step1WorkspaceStyle,
+  width: "100%",
+  minWidth: 0,
   overflow: "visible",
+  boxSizing: "border-box",
 };
 
 export const step5BottomStyle: CSSProperties = {
   ...step1BottomStyle,
+  width: "100%",
+  minWidth: 0,
   height: "auto",
+  minHeight: 0,
   overflow: "visible",
+  display: "grid",
+  gridTemplateColumns: "minmax(0, 1fr) minmax(0, 1fr)",
+  gap: "8px",
   alignItems: "start",
+  boxSizing: "border-box",
 };
 
 export const step5ChecklistColumnStyle: CSSProperties = {
   ...step1FormStyle,
+  width: "100%",
+  minWidth: 0,
   height: "auto",
   minHeight: 0,
   overflow: "visible",
   display: "flex",
   flexDirection: "column",
   gap: "8px",
+  boxSizing: "border-box",
 };
 
 export const step5PreviewColumnStyle: CSSProperties = {
   ...step1PreviewStyle,
+  width: "100%",
+  minWidth: 0,
   height: "auto",
   minHeight: 0,
   overflow: "visible",
   display: "flex",
   flexDirection: "column",
   gap: "12px",
+  boxSizing: "border-box",
 };
 
 // ============================================================
