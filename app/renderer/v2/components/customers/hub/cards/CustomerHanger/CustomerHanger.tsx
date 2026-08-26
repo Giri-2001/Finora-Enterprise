@@ -54,66 +54,45 @@
      and inter-card spacing.
 =========================================================== */
 
-
 /* ===========================================================
    IMPORTS
 =========================================================== */
 
-import type {
-  CSSProperties,
-  MouseEvent,
-} from "react";
-
+import type { CSSProperties, MouseEvent } from "react";
 
 /* ===========================================================
    THEME ENGINE
 =========================================================== */
 
-import {
-  useTheme,
-} from "../../../../../themes/provider/ThemeProvider";
-
+import { useTheme } from "../../../../../themes/provider/ThemeProvider";
 
 /* ===========================================================
    CUSTOMER CARD COMPONENTS
 =========================================================== */
 
-import CustomerIdCard
-  from "../CustomerIdCard";
+import CustomerIdCard from "../CustomerIdCard";
 
-import CustomerCardFlip
-  from "../CustomerCardFlip";
+import CustomerCardFlip from "../CustomerCardFlip";
 
-import CustomerIdCardBack
-  from "../CustomerIdCardBack";
-
+import CustomerIdCardBack from "../CustomerIdCardBack";
 
 /* ===========================================================
    COMPONENT CONTRACT
 =========================================================== */
 
-import type {
-  CustomerHangerProps,
-} from "./types";
-
+import type { CustomerHangerProps } from "./types";
 
 /* ===========================================================
    HELPERS
 =========================================================== */
 
-import {
-  canOpen,
-} from "./helpers";
-
+import { canOpen } from "./helpers";
 
 /* ===========================================================
    CUSTOMER RESPONSIVE ENGINE
 =========================================================== */
 
-import {
-  getCustomerTokens,
-} from "../../../../../utils/responsive/customers/customers.tokens";
-
+import { getCustomerTokens } from "../../../../../utils/responsive/customers/customers.tokens";
 
 /* ===========================================================
    PRESENTATION STYLES
@@ -128,25 +107,17 @@ import {
   bottomRailStyle,
 } from "./styles";
 
-
 /* ===========================================================
    THEME STYLE TYPE
 =========================================================== */
 
-type ThemeStyle =
-  CSSProperties &
-  Record<
-    `--${string}`,
-    string
-  >;
-
+type ThemeStyle = CSSProperties & Record<`--${string}`, string>;
 
 /* ===========================================================
    COMPONENT
 =========================================================== */
 
 export default function CustomerHanger({
-
   customer,
 
   onClick,
@@ -154,10 +125,7 @@ export default function CustomerHanger({
   flipped = false,
 
   onFlip,
-
 }: CustomerHangerProps) {
-
-
   /* =========================================================
      THEME ENGINE
 
@@ -166,17 +134,13 @@ export default function CustomerHanger({
      Responsive geometry is never derived from theme values.
   ========================================================= */
 
-  const {
-    theme,
-  } = useTheme();
-
+  const { theme } = useTheme();
 
   /* =========================================================
      CUSTOMER DATA
   ========================================================= */
 
   const {
-
     id,
 
     name,
@@ -212,9 +176,7 @@ export default function CustomerHanger({
     activeLoans,
 
     closedLoans,
-
   } = customer;
-
 
   /* =========================================================
      CUSTOMER RESPONSIVE ENGINE
@@ -227,13 +189,9 @@ export default function CustomerHanger({
      for customer responsive geometry.
   ========================================================= */
 
-  const customerTokens =
-    getCustomerTokens(
-      typeof window !== "undefined"
-        ? window.innerWidth
-        : 0,
-    );
-
+  const customerTokens = getCustomerTokens(
+    typeof window !== "undefined" ? window.innerWidth : 0,
+  );
 
   /* =========================================================
      CUSTOMER CARD WIDTH
@@ -243,9 +201,7 @@ export default function CustomerHanger({
        customerTokens.customerCards.width
   ========================================================= */
 
-  const customerCardWidth =
-    customerTokens.customerCards.width;
-
+  const customerCardWidth = customerTokens.customerCards.width;
 
   /* =========================================================
      CUSTOMER CARD HEIGHT
@@ -255,9 +211,7 @@ export default function CustomerHanger({
        customerTokens.customerCards.height
   ========================================================= */
 
-  const customerCardHeight =
-    customerTokens.customerCards.height;
-
+  const customerCardHeight = customerTokens.customerCards.height;
 
   /* =========================================================
      CUSTOMER CARD MINIMUM HEIGHT
@@ -267,41 +221,30 @@ export default function CustomerHanger({
        customerTokens.customerCards.minHeight
   ========================================================= */
 
-  const customerCardMinHeight =
-    customerTokens.customerCards.minHeight;
-
+  const customerCardMinHeight = customerTokens.customerCards.minHeight;
 
   /* =========================================================
      THEME CSS VARIABLES
   ========================================================= */
 
   const themeVariables: ThemeStyle = {
+    "--finora-theme-brand-primary": theme.colors.brand.primary,
 
-    "--finora-theme-brand-primary":
-      theme.colors.brand.primary,
+    "--finora-theme-brand-secondary": theme.colors.brand.secondary,
 
-    "--finora-theme-brand-secondary":
-      theme.colors.brand.secondary,
+    "--finora-theme-brand-accent": theme.colors.brand.accent,
 
-    "--finora-theme-brand-accent":
-      theme.colors.brand.accent,
+    "--finora-theme-brand-accent-soft": theme.colors.brand.accentSoft,
 
-    "--finora-theme-brand-accent-soft":
-      theme.colors.brand.accentSoft,
+    "--finora-theme-border-default": theme.colors.border.default,
 
-    "--finora-theme-border-default":
-      theme.colors.border.default,
+    "--finora-theme-border-strong": theme.colors.border.strong,
 
-    "--finora-theme-border-strong":
-      theme.colors.border.strong,
+    "--finora-theme-border-subtle": theme.colors.border.subtle,
 
-    "--finora-theme-border-subtle":
-      theme.colors.border.subtle,
+    "--finora-theme-overlay-shadow": theme.colors.overlay.shadow,
 
-    "--finora-theme-overlay-shadow":
-      theme.colors.overlay.shadow,
-
-          /* -------------------------------------------------------
+    /* -------------------------------------------------------
        IMPERIAL GOLD / WHITE THEME SURFACE CONTRACT
 
        PAGE:
@@ -341,40 +284,31 @@ export default function CustomerHanger({
         ? "color-mix(in srgb, #FFFFFF 30%, #D4D9E0 70%)"
         : theme.colors.background.surfaceMuted,
 
-    "--finora-theme-text-primary":
-      theme.colors.text.primary,
+    "--finora-theme-text-primary": theme.colors.text.primary,
 
-    "--finora-theme-text-secondary":
-      theme.colors.text.secondary,
+    "--finora-theme-text-secondary": theme.colors.text.secondary,
 
-    "--finora-theme-text-body":
-     theme.colors.text.secondary,
+    "--finora-theme-text-body": theme.colors.text.secondary,
 
-    "--finora-theme-text-muted":
-      theme.colors.text.muted,
+    "--finora-theme-text-muted": theme.colors.text.muted,
 
-        "--finora-theme-success-soft":
-      `color-mix(
+    "--finora-theme-success-soft": `color-mix(
         in srgb,
         ${theme.colors.status.successSoft} 55%,
         ${theme.colors.background.surface}
       )`,
 
-    "--finora-theme-success":
-      theme.colors.status.success,
+    "--finora-theme-success": theme.colors.status.success,
 
-      "--finora-theme-success-border":
-      theme.colors.border.strong,
+    "--finora-theme-success-border": theme.colors.border.strong,
 
-        ...(theme.id === "obsidian"
-  ? {
-      "--finora-company-band-background":
-        "color-mix(in srgb, var(--finora-theme-brand-accent) 10%, var(--finora-theme-surface))",
-    }
-  : {}),
-
+    ...(theme.id === "obsidian"
+      ? {
+          "--finora-company-band-background":
+            "color-mix(in srgb, var(--finora-theme-brand-accent) 10%, var(--finora-theme-surface))",
+        }
+      : {}),
   };
-
 
   /* =========================================================
      HANGER ROOT
@@ -382,39 +316,28 @@ export default function CustomerHanger({
      Root width is exactly the resolved Customer ID Card width.
   ========================================================= */
 
-  const resolvedContainerStyle:
-    ThemeStyle = {
-
+  const resolvedContainerStyle: ThemeStyle = {
     ...containerStyle,
 
     ...themeVariables,
 
-    width:
-      `${customerCardWidth}px`,
+    width: `${customerCardWidth}px`,
 
-    minWidth:
-      `${customerCardWidth}px`,
+    minWidth: `${customerCardWidth}px`,
 
-    maxWidth:
-      `${customerCardWidth}px`,
+    maxWidth: `${customerCardWidth}px`,
 
-    flex:
-      `0 0 ${customerCardWidth}px`,
+    flex: `0 0 ${customerCardWidth}px`,
 
-    flexShrink:
-      0,
+    flexShrink: 0,
 
-    boxSizing:
-      "border-box",
+    boxSizing: "border-box",
 
-    alignItems:
-      "center",
+    alignItems: "center",
 
-    alignSelf:
-      "center",
+    alignSelf: "center",
 
-    marginInline:
-      "auto",
+    marginInline: "auto",
 
     /* -------------------------------------------------------
        RESPONSIVE CARD SHAPE LOCK
@@ -425,42 +348,30 @@ export default function CustomerHanger({
        light themes.
     ------------------------------------------------------- */
 
-    position:
-      "relative",
+    position: "relative",
 
-    borderRadius:
-      `${customerTokens.customerCards.radius}px`,
+    borderRadius: `${customerTokens.customerCards.radius}px`,
 
-    overflow:
-      "visible",
-
+    overflow: "visible",
   };
-
 
   /* =========================================================
      THEMED PIN
   ========================================================= */
 
-  const resolvedPinStyle:
-    CSSProperties = {
-
+  const resolvedPinStyle: CSSProperties = {
     ...pinStyle,
 
-    background:
-      `linear-gradient(
+    background: `linear-gradient(
         180deg,
         ${theme.colors.brand.accent},
         ${theme.colors.brand.primary}
       )`,
 
-    border:
-      `1px solid ${theme.colors.border.strong}`,
+    border: `1px solid ${theme.colors.border.strong}`,
 
-    boxShadow:
-      `0 2px 4px ${theme.colors.overlay.shadow}`,
-
+    boxShadow: `0 2px 4px ${theme.colors.overlay.shadow}`,
   };
-
 
   /* =========================================================
      THEMED ROPE
@@ -477,30 +388,22 @@ export default function CustomerHanger({
      It does NOT affect responsive card geometry.
   ========================================================= */
 
-  const resolvedRopeStyle:
-    CSSProperties = {
-
+  const resolvedRopeStyle: CSSProperties = {
     ...ropeStyle,
 
-    width:
-      "3px",
+    width: "3px",
 
-    minWidth:
-      "3px",
+    minWidth: "3px",
 
-    maxWidth:
-      "3px",
+    maxWidth: "3px",
 
-    background:
-      `linear-gradient(
+    background: `linear-gradient(
         180deg,
         ${theme.colors.border.subtle},
         ${theme.colors.border.default},
         ${theme.colors.border.strong}
       )`,
-
   };
-
 
   /* =========================================================
      THEMED HANGER
@@ -537,179 +440,103 @@ export default function CustomerHanger({
      There must be NOTHING connecting the two top ends.
   ========================================================= */
 
-  const resolvedHangerStyle:
-    CSSProperties = {
-
+  const resolvedHangerStyle: CSSProperties = {
     ...hangerStyle,
 
-    borderStyle:
-      "solid",
+    borderStyle: "solid",
 
-    borderWidth:
-      "0 3px 3px 3px",
+    borderWidth: "0 3px 3px 3px",
 
-    borderTopWidth:
-      "0px",
+    borderTopWidth: "0px",
 
-    borderLeftColor:
-      theme.colors.border.strong,
+    borderLeftColor: theme.colors.border.strong,
 
-    borderRightColor:
-      theme.colors.border.strong,
+    borderRightColor: theme.colors.border.strong,
 
-    borderBottomColor:
-      theme.colors.border.strong,
+    borderBottomColor: theme.colors.border.strong,
 
-    borderTopColor:
-      "transparent",
+    borderTopColor: "transparent",
 
-    borderTopStyle:
-      "none",
-
+    borderTopStyle: "none",
   };
-
 
   /* =========================================================
      CUSTOMER CARD CONTAINER
   ========================================================= */
 
-  const resolvedCardContainerStyle:
-    CSSProperties = {
-
+  const resolvedCardContainerStyle: CSSProperties = {
     ...cardContainerStyle,
 
-    width:
-      `${customerCardWidth}px`,
+    width: `${customerCardWidth}px`,
 
-    minWidth:
-      `${customerCardWidth}px`,
+    minWidth: `${customerCardWidth}px`,
 
-    maxWidth:
-      `${customerCardWidth}px`,
+    maxWidth: `${customerCardWidth}px`,
 
-    height:
-      `${customerCardHeight}px`,
+    height: `${customerCardHeight}px`,
 
-    minHeight:
-      `${customerCardMinHeight}px`,
+    minHeight: `${customerCardMinHeight}px`,
 
-    maxHeight:
-      `${customerCardHeight}px`,
+    maxHeight: `${customerCardHeight}px`,
 
-    boxSizing:
-      "border-box",
+    boxSizing: "border-box",
 
-    flex:
-      `0 0 ${customerCardWidth}px`,
+    flex: `0 0 ${customerCardWidth}px`,
 
-    flexShrink:
-      0,
+    flexShrink: 0,
 
-    alignSelf:
-      "center",
+    alignSelf: "center",
 
-    marginInline:
-      "auto",
+    marginInline: "auto",
 
-    overflow:
-      "visible",
-
+    overflow: "visible",
   };
-
 
   /* =========================================================
      CUSTOMER SELECTION
   ========================================================= */
 
-  function handleCardClick(
-    event:
-      MouseEvent<HTMLDivElement>,
-  ): void {
+  function handleCardClick(event: MouseEvent<HTMLDivElement>): void {
+    const target = event.target as HTMLElement;
 
-
-    const target =
-      event.target as HTMLElement;
-
-
-    const clickedCustomerCard =
-      target.closest(
-        '[data-finora-customer-card="true"]',
-      );
-
-
-    if (
-      !clickedCustomerCard
-    ) {
-
-      return;
-
-    }
-
-
-    if (
-      !canOpen(active)
-    ) {
-
-      return;
-
-    }
-
-
-    onClick?.(
-      customer,
+    const clickedCustomerCard = target.closest(
+      '[data-finora-customer-card="true"]',
     );
 
-  }
+    if (!clickedCustomerCard) {
+      return;
+    }
 
+    if (!canOpen(active)) {
+      return;
+    }
+
+    onClick?.(customer);
+  }
 
   /* =========================================================
      CONTROLLED FLIP HANDLER
   ========================================================= */
 
   function handleFlip(): void {
-
-    if (
-      !canOpen(active)
-    ) {
-
+    if (!canOpen(active)) {
       return;
-
     }
 
-
     onFlip?.();
-
   }
-
 
   /* =========================================================
      UI
   ========================================================= */
 
   return (
-
-    <div
-
-      style={
-        resolvedContainerStyle
-      }
-
-      onClick={
-        handleCardClick
-      }
-
-    >
-
+    <div style={resolvedContainerStyle} onClick={handleCardClick}>
       {/* =====================================================
           PIN
       ===================================================== */}
 
-      <div
-        style={
-          resolvedPinStyle
-        }
-      />
-
+      <div style={resolvedPinStyle} />
 
       {/* =====================================================
           ROPE
@@ -717,62 +544,41 @@ export default function CustomerHanger({
           3px premium thickness.
       ===================================================== */}
 
-      <div
-        style={
-          resolvedRopeStyle
-        }
-      />
-
+      <div style={resolvedRopeStyle} />
 
       {/* =====================================================
           METAL CONNECTOR
       ===================================================== */}
 
       <div
-
         style={{
+          width: "8px",
 
-          width:
-            "8px",
+          height: "8px",
 
-          height:
-            "8px",
+          minWidth: "8px",
 
-          minWidth:
-            "8px",
+          minHeight: "8px",
 
-          minHeight:
-            "8px",
+          borderRadius: "50%",
 
-          borderRadius:
-            "50%",
-
-          background:
-            `linear-gradient(
+          background: `linear-gradient(
               180deg,
               ${theme.colors.brand.accent},
               ${theme.colors.brand.primary}
             )`,
 
-          border:
-            `1px solid ${theme.colors.border.strong}`,
+          border: `1px solid ${theme.colors.border.strong}`,
 
-          marginTop:
-            "-5px",
+          marginTop: "-5px",
 
-          marginBottom:
-            "4px",
+          marginBottom: "4px",
 
-          zIndex:
-            4,
+          zIndex: 4,
 
-          flexShrink:
-            0,
-
+          flexShrink: 0,
         }}
-
       />
-
 
       {/* =====================================================
           HANGER
@@ -782,12 +588,7 @@ export default function CustomerHanger({
           NO TOP BORDER.
       ===================================================== */}
 
-      <div
-        style={
-          resolvedHangerStyle
-        }
-      />
-
+      <div style={resolvedHangerStyle} />
 
       {/* =====================================================
           CUSTOMER CARD CONTAINER
@@ -795,32 +596,19 @@ export default function CustomerHanger({
           Responsive Engine owns card geometry.
       ===================================================== */}
 
-      <div
-        style={
-          resolvedCardContainerStyle
-        }
-      >
-
+      <div style={resolvedCardContainerStyle}>
         <div
-
           data-finora-customer-card="true"
-
           style={{
+            width: "100%",
 
-            width:
-              "100%",
+            height: "100%",
 
-            height:
-              "100%",
+            minWidth: 0,
 
-            minWidth:
-              0,
+            minHeight: 0,
 
-            minHeight:
-              0,
-
-            boxSizing:
-              "border-box",
+            boxSizing: "border-box",
 
             /* -------------------------------------------------
                FINAL CARD CLIPPING BOUNDARY
@@ -836,11 +624,9 @@ export default function CustomerHanger({
                own internal theme surface/border.
             ------------------------------------------------- */
 
-            position:
-              "relative",
+            position: "relative",
 
-            borderRadius:
-              `${customerTokens.customerCards.radius}px`,
+            borderRadius: `${customerTokens.customerCards.radius}px`,
 
             /* -------------------------------------------------
                ROUNDED CARD CLIPPING
@@ -852,17 +638,13 @@ export default function CustomerHanger({
                without exposing the internal flip layer corners.
             ------------------------------------------------- */
 
-            overflow:
-              "visible",
+            overflow: "visible",
 
-            clipPath:
-              `inset(0 round ${customerTokens.customerCards.radius}px)`,
+            clipPath: `inset(0 round ${customerTokens.customerCards.radius}px)`,
 
-            isolation:
-              "isolate",
+            isolation: "isolate",
 
-            background:
-              "transparent",
+            background: "transparent",
 
             /* -------------------------------------------------
                PREMIUM CARD ELEVATION
@@ -874,8 +656,7 @@ export default function CustomerHanger({
                No outer border is introduced.
             ------------------------------------------------- */
 
-            filter:
-              `
+            filter: `
               drop-shadow(
                 0 20px 34px
                 color-mix(
@@ -893,158 +674,67 @@ export default function CustomerHanger({
                 )
               )
               `,
-
           }}
-
         >
-
           {/* =================================================
               CUSTOMER CARD FLIP
           ================================================= */}
 
           <CustomerCardFlip
-
-            flipped={
-              flipped
-            }
-
-            onFlip={
-              handleFlip
-            }
-
+            flipped={flipped}
+            onFlip={handleFlip}
             front={
-
               <CustomerIdCard
-
-                customerId={
-                  id
-                }
-
-                customerName={
-                  name
-                }
-
-                profilePhoto={
-                  photo
-                }
-
-                phoneNumber={
-                  phone
-                }
-
-                branchName={
-                  branch
-                }
-
-                kycVerified={
-                  kycVerified
-                }
-
-                responsiveTokens={
-                  customerTokens
-                }
-
-                compact={
-                  true
-                }
-
+                customerId={id}
+                customerName={name}
+                profilePhoto={photo}
+                phoneNumber={phone}
+                branchName={branch}
+                kycVerified={kycVerified}
+                responsiveTokens={customerTokens}
+                compact={true}
               />
-
             }
-
             back={
-
               <CustomerIdCardBack
-
-                customerId={
-                  id
-                }
-
-                fatherName={
-                  fatherName
-                }
-
-                village={
-                  village
-                }
-
-                pinCode={
-                  pinCode
-                }
-
-                district={
-                  district
-                }
-
-                customerSince={
-                  customerSince
-                }
-
-                totalLoans={
-                  totalLoans
-                }
-
-                activeLoans={
-                  activeLoans
-                }
-
-                closedLoans={
-                  closedLoans
-                }
-
-                outstandingAmount={
-                  outstandingAmount
-                }
-
-                lastPaymentDate={
-                  lastPaymentDate
-                }
-
-                lastPaymentAmount={
-                  lastPaymentAmount
-                }
-
-                responsiveTokens={
-                  customerTokens
-                }
-
+                customerId={id}
+                fatherName={fatherName}
+                village={village}
+                pinCode={pinCode}
+                district={district}
+                customerSince={customerSince}
+                totalLoans={totalLoans}
+                activeLoans={activeLoans}
+                closedLoans={closedLoans}
+                outstandingAmount={outstandingAmount}
+                lastPaymentDate={lastPaymentDate}
+                lastPaymentAmount={lastPaymentAmount}
+                responsiveTokens={customerTokens}
               />
-
             }
-
           />
-
         </div>
-
       </div>
-
 
       {/* =====================================================
           FINISHING RAIL
       ===================================================== */}
 
       <div
-        style={
-          {
-            ...bottomRailStyle,
+        style={{
+          ...bottomRailStyle,
 
-            background:
-              `linear-gradient(
+          background: `linear-gradient(
                 90deg,
                 transparent,
                 ${theme.colors.brand.accent},
                 transparent
               )`,
-          }
-        }
+        }}
       />
-
     </div>
-
   );
-
 }
-
 
 /* ===========================================================
    END

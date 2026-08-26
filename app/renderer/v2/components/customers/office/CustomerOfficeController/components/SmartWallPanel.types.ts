@@ -6,67 +6,108 @@
    TYPES
 =========================================================== */
 
-import type {
-  CustomerRailItem,
-} from "../../../hub/sections/CustomerHangerRail/types";
+/* ===========================================================
+   IMPORTS
+=========================================================== */
 
-import type {
-  SmartWallItem,
-} from "../../../smartwall/CustomerSmartWall/types";
+import type { CustomerRailItem } from "../../../hub/sections/CustomerHangerRail/types";
 
-import type {
-  OfficeCustomer,
-} from "../../CustomerOffice/types";
+import type { SmartWallItem } from "../../../smartwall/CustomerSmartWall/types";
+
+import type { OfficeCustomer } from "../../CustomerOffice/types";
 
 /* ===========================================================
    COMPONENT PROPS
 =========================================================== */
 
 export interface SmartWallPanelProps {
-
   title?: string;
+
+  /* =========================================================
+     SMART WALL
+  ========================================================= */
 
   smartWallCustomers: SmartWallItem[];
 
+  /* =========================================================
+     CUSTOMER RAIL
+  ========================================================= */
+
   railCustomers: CustomerRailItem[];
+
+  /* =========================================================
+     CUSTOMER SELECTION
+  ========================================================= */
 
   selectedCustomerId?: string;
 
   selectedCustomer?: OfficeCustomer;
 
-  onCustomerSelect?: (
-    customer: CustomerRailItem,
-  ) => void;
+  onCustomerSelect?: (customer: CustomerRailItem) => void;
 
-  /**
-   * Customer Office search text.
-   *
-   * Search is restricted by the Customer Office
-   * filter selector to approved customer identifiers.
-   */
+  /* =========================================================
+     CUSTOMER OFFICE SEARCH
+     
+     Search is restricted by the Customer Office
+     filter selector to approved customer identifiers.
+  ========================================================= */
+
   searchText: string;
 
-  /**
-   * Updates Customer Office search text.
-   */
-  onSearchChange: (
-    value: string,
-  ) => void;
+  /* =========================================================
+     SEARCH CHANGE
+  ========================================================= */
 
-  /**
-   * Opens the Customer Wizard.
-   */
+  onSearchChange: (value: string) => void;
+
+  /* =========================================================
+     CUSTOMER WIZARD
+     
+     Opens the Customer Wizard.
+  ========================================================= */
+
   onOpenCustomerWizard?: () => void;
 
-  /**
-   * Opens the Customer Wizard
-   * for the selected customer in Edit Mode.
-   */
-  onEditCustomer?: (
-    customer: OfficeCustomer,
-  ) => void;
+  /* =========================================================
+     EDIT CUSTOMER
+     
+     Opens the Customer Wizard for the selected customer
+     in Edit Mode.
+  ========================================================= */
+
+  onEditCustomer?: (customer: OfficeCustomer) => void;
+
+  /* =========================================================
+     WORK DESK
+     
+     Opens the existing Customer Work Desk.
+     
+     Navigation only.
+     No new page is created here.
+  ========================================================= */
+
+  onOpenWorkspace?: () => void;
+
+  /* =========================================================
+     CUSTOMER DATA
+     
+     Opens the existing Customer Data destination.
+     
+     Navigation only.
+     No new page is created here.
+  ========================================================= */
+
+  onOpenCustomerData?: () => void;
+
+  /* =========================================================
+     CLEAR SELECTION
+  ========================================================= */
 
   onClearSelection?: () => void;
+
+  /* =========================================================
+     PAGINATION
+  ========================================================= */
 
   currentPage: number;
 
@@ -77,5 +118,8 @@ export interface SmartWallPanelProps {
   onPrevious: () => void;
 
   onNext: () => void;
-
 }
+
+/* ===========================================================
+   END
+=========================================================== */

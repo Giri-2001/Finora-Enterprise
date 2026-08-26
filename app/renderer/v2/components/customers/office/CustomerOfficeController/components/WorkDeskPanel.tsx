@@ -5,33 +5,16 @@
    COMPONENT
 =========================================================== */
 
-import CustomerOffice
-  from "../../CustomerOffice";
+import CustomerOffice from "../../CustomerOffice";
 
-import type {
-  WorkDeskPanelProps,
-} from "./WorkDeskPanel.types";
+import type { WorkDeskPanelProps } from "./WorkDeskPanel.types";
 
 /* ===========================================================
    COMPONENT
 =========================================================== */
 
 export default function WorkDeskPanel({
-
   selectedCustomer,
-
 }: WorkDeskPanelProps) {
-
-  return (
-
-    <CustomerOffice
-
-      selectedCustomer={
-        selectedCustomer
-      }
-
-    />
-
-  );
-
+  return <CustomerOffice selectedCustomer={selectedCustomer} />;
 }

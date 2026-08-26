@@ -6,10 +6,7 @@
 =========================================================== */
 
 import { CUSTOMER_ACTIONS } from "./constants";
-import type {
-  CustomerActionItem,
-  CustomerActionsPanelProps,
-} from "./types";
+import type { CustomerActionItem, CustomerActionsPanelProps } from "./types";
 
 /* ===========================================================
    BUILD CUSTOMER ACTIONS

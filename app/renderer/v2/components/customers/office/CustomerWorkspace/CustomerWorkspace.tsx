@@ -5,182 +5,84 @@
    COMPONENT
 =========================================================== */
 
-import EmptyState
-  from "../../../common/feedback/EmptyState";
+import EmptyState from "../../../common/feedback/EmptyState";
 
-import type {
-  CustomerWorkspaceProps,
-} from "./types";
+import type { CustomerWorkspaceProps } from "./types";
 
-import {
-  hasCustomer,
-  buildEmptyWorkspace,
-} from "./helpers";
+import { hasCustomer, buildEmptyWorkspace } from "./helpers";
 
-import {
-  useResponsive,
-} from "../../../../utils/responsive";
+import { useResponsive } from "../../../../utils/responsive";
 
-import {
-  createCustomerWorkspaceStyles,
-} from "./styles";
+import { createCustomerWorkspaceStyles } from "./styles";
 
-import CustomerProfilePanel
-  from "../CustomerOffice/components/CustomerProfilePanel";
+import CustomerProfilePanel from "../CustomerOffice/components/CustomerProfilePanel";
 
-  import CustomerActionsPanel
-  from "../CustomerOffice/components/CustomerActionsPanel";
+import CustomerActionsPanel from "../CustomerOffice/components/CustomerActionsPanel";
 
-  import CustomerLoanPanel
-  from "../CustomerOffice/components/CustomerLoanPanel";
+import CustomerLoanPanel from "../CustomerOffice/components/CustomerLoanPanel";
 
-  import LoanStudio
-  from "../CustomerOffice/components/LoanStudio";
+import LoanStudio from "../CustomerOffice/components/LoanStudio";
 
-  import CollectionStudio
-  from "../CustomerOffice/components/CollectionStudio";
+import CollectionStudio from "../CustomerOffice/components/CollectionStudio";
 
-  import {
-  useState,
-} from "react";
+import { useState } from "react";
 
 /* ===========================================================
    COMPONENT
 =========================================================== */
 
 export default function CustomerWorkspace({
-
   selectedCustomer,
-
 }: CustomerWorkspaceProps) {
-
-
-  const [
-
-    workspace,
-
-    setWorkspace,
-
-  ] = useState<
-
-    | "overview"
-    | "loan"
-    | "collection"
-    | "documents"
-    | "timeline"
-    | "reports"
-
-  >(
-
-    "overview",
-
-  );
-
+  const [workspace, setWorkspace] = useState<
+    "overview" | "loan" | "collection" | "documents" | "timeline" | "reports"
+  >("overview");
 
   /* =========================================================
      RESPONSIVE ENGINE
   ========================================================= */
 
-  const {
-    tokens,
-  } = useResponsive();
-
+  const { tokens } = useResponsive();
 
   /* =========================================================
      RESPONSIVE STYLES
   ========================================================= */
 
   const {
-
     containerStyle,
 
     sidebarStyle,
 
     contentStyle,
+  } = createCustomerWorkspaceStyles(tokens);
 
-  } = createCustomerWorkspaceStyles(
-    tokens,
-  );
-
-
-  if (
-
-    !hasCustomer(
-      selectedCustomer,
-    )
-
-  ) {
-
-    const emptyWorkspace =
-      buildEmptyWorkspace();
+  if (!hasCustomer(selectedCustomer)) {
+    const emptyWorkspace = buildEmptyWorkspace();
 
     return (
-
       <EmptyState
-
-        title={
-          emptyWorkspace.title
-        }
-
-        description={
-          emptyWorkspace.description
-        }
-
+        title={emptyWorkspace.title}
+        description={emptyWorkspace.description}
       />
-
     );
-
   }
 
   return (
-
     <section style={containerStyle}>
-
       {/* ==========================================
           LEFT SIDEBAR
       ========================================== */}
 
       <aside style={sidebarStyle}>
-
-        <CustomerProfilePanel
-
-  customer={selectedCustomer!}
-
-/>
+        <CustomerProfilePanel customer={selectedCustomer!} />
 
         <CustomerActionsPanel
-
-  onApplyLoan={() =>
-
-  setWorkspace("loan")
-
-}
-
-  onCollectPayment={() =>
-
-  setWorkspace("collection")
-
-}
- onDocuments={() =>
-
-  setWorkspace("documents")
-
-}
-
-  onTimeline={() =>
-
-  setWorkspace("timeline")
-
-}
-
-  onReports={() =>
-
-  setWorkspace("reports")
-
-}
-
-/>
-
+          onApplyLoan={() => setWorkspace("loan")}
+          onCollectPayment={() => setWorkspace("collection")}
+          onDocuments={() => setWorkspace("documents")}
+          onTimeline={() => setWorkspace("timeline")}
+          onReports={() => setWorkspace("reports")}
+        />
       </aside>
 
       {/* ==========================================
@@ -188,69 +90,31 @@ export default function CustomerWorkspace({
       ========================================== */}
 
       <section style={contentStyle}>
-
         {workspace === "overview" && (
+          <CustomerLoanPanel customer={selectedCustomer!} />
+        )}
 
-  <CustomerLoanPanel
-
-    customer={selectedCustomer!}
-
-  />
-
-)}
-
-       {workspace === "loan" && (
-
-  <LoanStudio
-
-    customerName={
-      selectedCustomer!.name
-    }
-
-    customerId={
-      selectedCustomer!.id
-    }
-
-    phoneNumber={
-      selectedCustomer!.phone
-    }
-
-  />
-
-)}
+        {workspace === "loan" && (
+          <LoanStudio
+            customerName={selectedCustomer!.name}
+            customerId={selectedCustomer!.id}
+            phoneNumber={selectedCustomer!.phone}
+          />
+        )}
 
         {workspace === "collection" && (
-
-  <CollectionStudio
-
-    customerName={
-      selectedCustomer!.name
-    }
-
-    customerId={
-      selectedCustomer!.id
-    }
-
-    phoneNumber={
-      selectedCustomer!.phone
-    }
-
-    loans={
-      selectedCustomer!.loans ?? []
-    }
-
-  />
-
-)}
+          <CollectionStudio
+            customerName={selectedCustomer!.name}
+            customerId={selectedCustomer!.id}
+            phoneNumber={selectedCustomer!.phone}
+            loans={selectedCustomer!.loans ?? []}
+          />
+        )}
 
         {/* Timeline */}
 
         {/* Reports */}
-
       </section>
-
     </section>
-
   );
-
 }

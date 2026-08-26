@@ -6,16 +6,13 @@
    TYPES
 =========================================================== */
 
-import type {
-  OfficeCustomer,
-} from "../CustomerOffice/types";
+import type { OfficeCustomer } from "../CustomerOffice/types";
 
 /* ===========================================================
    PROPS
 =========================================================== */
 
 export interface CustomerOfficeControllerProps {
-
   customers: OfficeCustomer[];
 
   /**
@@ -27,8 +24,5 @@ export interface CustomerOfficeControllerProps {
    * Opens the Customer Wizard in Edit Mode
    * for the currently selected customer.
    */
-  onEditCustomer?: (
-    customer: OfficeCustomer,
-  ) => void;
-
+  onEditCustomer?: (customer: OfficeCustomer) => void;
 }

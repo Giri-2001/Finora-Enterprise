@@ -45,9 +45,7 @@ import type { DocumentsStudioItem } from "../documents/DocumentsStudio";
 // THEME ENGINE
 // ============================================================
 
-import {
-  useTheme,
-} from "../../../themes/provider/ThemeProvider";
+import { useTheme } from "../../../themes/provider/ThemeProvider";
 
 import {
   responsiveMediaQuery,
@@ -305,16 +303,10 @@ function getDocumentTypeLabel(document: DocumentsStudioItem): string {
 // COMPONENT
 // ============================================================
 
-type ThemeStyle =
-  CSSProperties &
-  Record<
-    `--${string}`,
-    string
-  >;
+type ThemeStyle = CSSProperties & Record<`--${string}`, string>;
 
 export default function ViewLoanDetails({
   loan,
-
   onBack,
 }: ViewLoanDetailsProps) {
   // ==========================================================
@@ -324,98 +316,67 @@ export default function ViewLoanDetails({
   // Existing page geometry and behaviour remain unchanged.
   // ==========================================================
 
-  const {
-    theme,
-  } = useTheme();
+  const { theme } = useTheme();
 
   const themeVariables: ThemeStyle = {
+    "--finora-theme-brand-primary": theme.colors.brand.primary,
 
-    "--finora-theme-brand-primary":
-      theme.colors.brand.primary,
+    "--finora-theme-brand-secondary": theme.colors.brand.secondary,
 
-    "--finora-theme-brand-secondary":
-      theme.colors.brand.secondary,
+    "--finora-theme-brand-accent": theme.colors.brand.accent,
 
-    "--finora-theme-brand-accent":
-      theme.colors.brand.accent,
+    "--finora-theme-brand-accent-soft": theme.colors.brand.accentSoft,
 
-    "--finora-theme-brand-accent-soft":
-      theme.colors.brand.accentSoft,
+    "--finora-theme-background-page": theme.colors.background.page,
 
-    "--finora-theme-background-page":
-      theme.colors.background.page,
+    "--finora-theme-page": theme.colors.background.page,
 
-    "--finora-theme-page":
-      theme.colors.background.page,
+    "--finora-theme-background-surface": theme.colors.background.surface,
 
-    "--finora-theme-background-surface":
-      theme.colors.background.surface,
-
-    "--finora-theme-surface":
-      theme.colors.background.surface,
+    "--finora-theme-surface": theme.colors.background.surface,
 
     "--finora-theme-background-surface-muted":
       theme.colors.background.surfaceMuted,
 
-    "--finora-theme-surface-muted":
-      theme.colors.background.surfaceMuted,
+    "--finora-theme-surface-muted": theme.colors.background.surfaceMuted,
 
-    "--finora-theme-surface-strong":
-      theme.colors.background.surfaceStrong,
+    "--finora-theme-surface-strong": theme.colors.background.surfaceStrong,
 
-    "--finora-theme-text-primary":
-      theme.colors.text.primary,
+    "--finora-theme-text-primary": theme.colors.text.primary,
 
-    "--finora-theme-text-secondary":
-      theme.colors.text.secondary,
+    "--finora-theme-text-secondary": theme.colors.text.secondary,
 
-    "--finora-theme-text-muted":
-      theme.colors.text.muted,
+    "--finora-theme-text-muted": theme.colors.text.muted,
 
-    "--finora-theme-text-inverse":
-      theme.colors.text.inverse,
+    "--finora-theme-text-inverse": theme.colors.text.inverse,
 
-    "--finora-theme-border-default":
-      theme.colors.border.default,
+    "--finora-theme-border-default": theme.colors.border.default,
 
-    "--finora-theme-border-strong":
-      theme.colors.border.strong,
+    "--finora-theme-border-strong": theme.colors.border.strong,
 
-    "--finora-theme-border-subtle":
-      theme.colors.border.subtle,
+    "--finora-theme-border-subtle": theme.colors.border.subtle,
 
-    "--finora-theme-focus":
-      theme.colors.border.focus,
+    "--finora-theme-focus": theme.colors.border.focus,
 
-    "--finora-theme-success":
-      theme.colors.status.success,
+    "--finora-theme-success": theme.colors.status.success,
 
-    "--finora-theme-success-soft":
-      theme.colors.status.successSoft,
+    "--finora-theme-success-soft": theme.colors.status.successSoft,
 
-    "--finora-theme-warning":
-      theme.colors.status.warning,
+    "--finora-theme-warning": theme.colors.status.warning,
 
-    "--finora-theme-warning-soft":
-      theme.colors.status.warningSoft,
+    "--finora-theme-warning-soft": theme.colors.status.warningSoft,
 
-    "--finora-theme-danger":
-      theme.colors.status.danger,
+    "--finora-theme-danger": theme.colors.status.danger,
 
-    "--finora-theme-danger-soft":
-      theme.colors.status.dangerSoft,
+    "--finora-theme-danger-soft": theme.colors.status.dangerSoft,
 
-    "--finora-theme-info":
-      theme.colors.status.info,
+    "--finora-theme-info": theme.colors.status.info,
 
-    "--finora-theme-info-soft":
-      theme.colors.status.infoSoft,
+    "--finora-theme-info-soft": theme.colors.status.infoSoft,
 
-    "--finora-theme-overlay-shadow":
-      theme.colors.overlay.shadow,
+    "--finora-theme-overlay-shadow": theme.colors.overlay.shadow,
 
-    "--finora-theme-overlay-backdrop":
-      theme.colors.overlay.backdrop,
+    "--finora-theme-overlay-backdrop": theme.colors.overlay.backdrop,
   };
 
   // ==========================================================
@@ -477,23 +438,31 @@ export default function ViewLoanDetails({
   // ==========================================================
 
   return (
-    <div style={{ ...pageStyle, ...themeVariables }}>
+    <div
+      className="finora-view-loan-page"
+      style={{
+        ...pageStyle,
+        ...themeVariables,
+      }}
+    >
       {/* ====================================================
           HEADER
       ==================================================== */}
 
-      <header style={headerStyle}>
-        <div style={headerLeftStyle}>
+      <header className="finora-view-loan-header" style={headerStyle}>
+        <div className="finora-view-loan-header-left" style={headerLeftStyle}>
           <button type="button" onClick={onBack} style={backButtonStyle}>
             ← Back
           </button>
 
           <div style={headerAccentStyle} aria-hidden="true" />
 
-          <div style={titleGroupStyle}>
-            <h1 style={titleStyle}>View Loan Details</h1>
+          <div className="finora-view-loan-title-group" style={titleGroupStyle}>
+            <h1 className="finora-view-loan-title" style={titleStyle}>
+              View Loan Details
+            </h1>
 
-            <p style={subtitleStyle}>
+            <p className="finora-view-loan-subtitle" style={subtitleStyle}>
               Read-only loan information and repayment overview.
             </p>
           </div>
@@ -521,7 +490,10 @@ export default function ViewLoanDetails({
           ================================================ */}
 
           <section style={sectionStyle}>
-            <div style={sectionHeaderStyle}>
+            <div
+              className="finora-view-loan-section-header"
+              style={sectionHeaderStyle}
+            >
               <div>
                 <h2 style={sectionTitleStyle}>Customer Information</h2>
 
@@ -565,7 +537,10 @@ export default function ViewLoanDetails({
           ================================================ */}
 
           <section style={sectionStyle}>
-            <div style={sectionHeaderStyle}>
+            <div
+              className="finora-view-loan-section-header"
+              style={sectionHeaderStyle}
+            >
               <div>
                 <h2 style={sectionTitleStyle}>Loan Information</h2>
 
@@ -637,7 +612,10 @@ export default function ViewLoanDetails({
           ================================================ */}
 
           <section style={sectionStyle}>
-            <div style={sectionHeaderStyle}>
+            <div
+              className="finora-view-loan-section-header"
+              style={sectionHeaderStyle}
+            >
               <div>
                 <h2 style={sectionTitleStyle}>Purpose & Remarks</h2>
               </div>
@@ -663,7 +641,10 @@ export default function ViewLoanDetails({
           ================================================ */}
 
           <section style={sectionStyle}>
-            <div style={sectionHeaderStyle}>
+            <div
+              className="finora-view-loan-section-header"
+              style={sectionHeaderStyle}
+            >
               <div>
                 <h2 style={sectionTitleStyle}>Loan Documents / Evidence</h2>
 
@@ -672,7 +653,10 @@ export default function ViewLoanDetails({
                 </p>
               </div>
 
-              <span style={documentCountBadgeStyle}>
+              <span
+                className="finora-view-loan-document-count"
+                style={documentCountBadgeStyle}
+              >
                 {documents.length}{" "}
                 {documents.length === 1 ? "document" : "documents"}
               </span>
@@ -752,7 +736,10 @@ export default function ViewLoanDetails({
           ================================================ */}
 
           <section style={sectionStyle}>
-            <div style={sectionHeaderStyle}>
+            <div
+              className="finora-view-loan-section-header"
+              style={sectionHeaderStyle}
+            >
               <div>
                 <h2 style={sectionTitleStyle}>Financial Summary</h2>
 
@@ -821,7 +808,10 @@ export default function ViewLoanDetails({
           ================================================ */}
 
           <section style={sectionStyle}>
-            <div style={sectionHeaderStyle}>
+            <div
+              className="finora-view-loan-section-header"
+              style={sectionHeaderStyle}
+            >
               <div>
                 <h2 style={sectionTitleStyle}>Guarantor</h2>
 
@@ -851,7 +841,10 @@ export default function ViewLoanDetails({
           ================================================ */}
 
           <section style={sectionStyle}>
-            <div style={sectionHeaderStyle}>
+            <div
+              className="finora-view-loan-section-header"
+              style={sectionHeaderStyle}
+            >
               <div>
                 <h2 style={sectionTitleStyle}>Repayment</h2>
 
@@ -885,7 +878,10 @@ export default function ViewLoanDetails({
       ==================================================== */}
 
       <section style={fullWidthSectionStyle}>
-        <div style={sectionHeaderStyle}>
+        <div
+          className="finora-view-loan-section-header"
+          style={sectionHeaderStyle}
+        >
           <div>
             <h2 style={sectionTitleStyle}>Repayment Schedule</h2>
 
@@ -1015,6 +1011,7 @@ export default function ViewLoanDetails({
 
       {viewerDocument && (
         <div
+          className="finora-view-loan-document-viewer-backdrop"
           style={documentViewerBackdropStyle}
           role="dialog"
           aria-modal="true"
@@ -1022,6 +1019,7 @@ export default function ViewLoanDetails({
           onClick={closeDocumentViewer}
         >
           <div
+            className="finora-view-loan-document-viewer"
             style={documentViewerStyle}
             onClick={(event) => event.stopPropagation()}
           >
@@ -1040,7 +1038,10 @@ export default function ViewLoanDetails({
               </button>
             </div>
 
-            <div style={documentViewerBodyStyle}>
+            <div
+              className="finora-view-loan-document-viewer-body"
+              style={documentViewerBodyStyle}
+            >
               {getDocumentSource(viewerDocument) ? (
                 <img
                   src={getDocumentSource(viewerDocument)}
@@ -1061,11 +1062,7 @@ export default function ViewLoanDetails({
           RESPONSIVE CSS
       ==================================================== */}
 
-      <style>
-        {`
-          ${responsiveMediaQuery}
-        `}
-      </style>
+      <style>{responsiveMediaQuery}</style>
     </div>
   );
 }

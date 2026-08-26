@@ -42,20 +42,13 @@
 //
 // ============================================================
 
-
 // ============================================================
 // IMPORTS
 // ============================================================
 
-import type {
-  CSSProperties,
-} from "react";
+import type { CSSProperties } from "react";
 
-
-import type {
-  Loan,
-} from "../../components/customers/office/CustomerOffice/types";
-
+import type { Loan } from "../../components/customers/office/CustomerOffice/types";
 
 // ============================================================
 // THEME VARIABLES
@@ -77,17 +70,14 @@ import type {
 // ============================================================
 
 const THEME = {
-
   // ----------------------------------------------------------
   // PAGE / BACKGROUND
   // ----------------------------------------------------------
 
-  page:
-    "var(--finora-theme-page, var(--finora-theme-background-page, var(--finora-theme-surface, #0B1220)))",
+  page: "var(--finora-theme-page, var(--finora-theme-background-page, var(--finora-theme-surface, #0B1220)))",
 
   background:
     "var(--finora-theme-background-page, var(--finora-theme-page, var(--finora-theme-surface, #0B1220)))",
-
 
   // ----------------------------------------------------------
   // SURFACES
@@ -102,13 +92,11 @@ const THEME = {
   surfaceStrong:
     "var(--finora-theme-surface-strong, var(--finora-theme-surface-muted, #17263D))",
 
-
   // ----------------------------------------------------------
   // BRAND
   // ----------------------------------------------------------
 
-  brandPrimary:
-    "var(--finora-theme-brand-primary, #C9A227)",
+  brandPrimary: "var(--finora-theme-brand-primary, #C9A227)",
 
   brandSecondary:
     "var(--finora-theme-brand-secondary, var(--finora-theme-brand-primary, #B8860B))",
@@ -119,78 +107,57 @@ const THEME = {
   brandAccentSoft:
     "var(--finora-theme-brand-accent-soft, var(--finora-theme-brand-primary, #D4AF37))",
 
-
   // ----------------------------------------------------------
   // TEXT
   // ----------------------------------------------------------
 
-  textPrimary:
-    "var(--finora-theme-text-primary, #FFFFFF)",
+  textPrimary: "var(--finora-theme-text-primary, #FFFFFF)",
 
-  textSecondary:
-    "var(--finora-theme-text-secondary, #CBD5E1)",
+  textSecondary: "var(--finora-theme-text-secondary, #CBD5E1)",
 
-  textMuted:
-    "var(--finora-theme-text-muted, #94A3B8)",
+  textMuted: "var(--finora-theme-text-muted, #94A3B8)",
 
-  textInverse:
-    "var(--finora-theme-text-inverse, #FFFFFF)",
-
+  textInverse: "var(--finora-theme-text-inverse, #FFFFFF)",
 
   // ----------------------------------------------------------
   // BORDERS
   // ----------------------------------------------------------
 
-  border:
-    "var(--finora-theme-border-default, rgba(148, 163, 184, 0.16))",
+  border: "var(--finora-theme-border-default, rgba(148, 163, 184, 0.16))",
 
-  borderStrong:
-    "var(--finora-theme-border-strong, rgba(37, 99, 235, 0.35))",
+  borderStrong: "var(--finora-theme-border-strong, rgba(37, 99, 235, 0.35))",
 
-  borderSubtle:
-    "var(--finora-theme-border-subtle, rgba(148, 163, 184, 0.10))",
-
+  borderSubtle: "var(--finora-theme-border-subtle, rgba(148, 163, 184, 0.10))",
 
   // ----------------------------------------------------------
   // PRIMARY ACTION
   // ----------------------------------------------------------
 
-  primary:
-    "var(--finora-theme-brand-primary, #2563EB)",
+  primary: "var(--finora-theme-brand-primary, #2563EB)",
 
-  primaryHover:
-    "var(--finora-theme-brand-secondary, #1D4ED8)",
-
+  primaryHover: "var(--finora-theme-brand-secondary, #1D4ED8)",
 
   // ----------------------------------------------------------
   // STATUS
   // ----------------------------------------------------------
 
-  success:
-    "var(--finora-theme-success, #34D399)",
+  success: "var(--finora-theme-success, #34D399)",
 
-  successSoft:
-    "var(--finora-theme-success-soft, rgba(16, 185, 129, 0.10))",
+  successSoft: "var(--finora-theme-success-soft, rgba(16, 185, 129, 0.10))",
 
   successBorder:
     "var(--finora-theme-success-border, var(--finora-theme-border-strong, rgba(16, 185, 129, 0.35)))",
 
-  closed:
-    "var(--finora-theme-text-muted, #94A3B8)",
+  closed: "var(--finora-theme-text-muted, #94A3B8)",
 
-  closedSoft:
-    "var(--finora-theme-surface-muted, rgba(148, 163, 184, 0.10))",
-
+  closedSoft: "var(--finora-theme-surface-muted, rgba(148, 163, 184, 0.10))",
 
   // ----------------------------------------------------------
   // EFFECTS
   // ----------------------------------------------------------
 
-  shadow:
-    "var(--finora-theme-overlay-shadow, rgba(0, 0, 0, 0.18))",
-
+  shadow: "var(--finora-theme-overlay-shadow, rgba(0, 0, 0, 0.18))",
 } as const;
-
 
 // ============================================================
 // EXACT PORTFOLIO COLUMN SYSTEM
@@ -216,499 +183,326 @@ const THEME = {
 //
 // ============================================================
 
-export const loanTableGridTemplate =
-  "5% 16% 16% 11% 14% 14% 12% 12%";
-
+export const loanTableGridTemplate = "5% 16% 16% 11% 14% 14% 12% 12%";
 
 // ============================================================
 // PAGE
 // ============================================================
 
-export const pageStyle:
-  CSSProperties = {
+export const pageStyle: CSSProperties = {
+  width: "100%",
 
-  width:
-    "100%",
+  minWidth: 0,
 
-  minWidth:
-    0,
+  minHeight: "100%",
 
-  minHeight:
-    "100%",
+  boxSizing: "border-box",
 
-  boxSizing:
-    "border-box",
+  padding: "28px 24px 40px",
 
-  padding:
-    "28px 24px 40px",
+  background: THEME.background,
 
-  background:
-    THEME.background,
-
-  color:
-    THEME.textPrimary,
-
+  color: THEME.textPrimary,
 };
-
 
 // ============================================================
 // TOP BAR
 // ============================================================
 
-export const topBarStyle:
-  CSSProperties = {
+export const topBarStyle: CSSProperties = {
+  display: "flex",
 
-  display:
-    "flex",
+  alignItems: "flex-start",
 
-  alignItems:
-    "flex-start",
+  justifyContent: "space-between",
 
-  justifyContent:
-    "space-between",
+  gap: "20px",
 
-  gap:
-    "20px",
-
-  marginBottom:
-    "18px",
-
+  marginBottom: "18px",
 };
-
 
 // ============================================================
 // HEADING GROUP
 // ============================================================
 
-export const headingGroupStyle:
-  CSSProperties = {
-
-  minWidth:
-    0,
-
+export const headingGroupStyle: CSSProperties = {
+  minWidth: 0,
 };
-
 
 // ============================================================
 // PAGE TITLE
 // ============================================================
 
-export const pageTitleStyle:
-  CSSProperties = {
+export const pageTitleStyle: CSSProperties = {
+  margin: 0,
 
-  margin:
-    0,
+  color: THEME.textPrimary,
 
-  color:
-    THEME.textPrimary,
+  fontSize: "24px",
 
-  fontSize:
-    "24px",
+  fontWeight: 800,
 
-  fontWeight:
-    800,
+  lineHeight: 1.15,
 
-  lineHeight:
-    1.15,
-
-  letterSpacing:
-    "-0.02em",
-
+  letterSpacing: "-0.02em",
 };
-
 
 // ============================================================
 // PAGE SUBTITLE
 // ============================================================
 
-export const pageSubtitleStyle:
-  CSSProperties = {
+export const pageSubtitleStyle: CSSProperties = {
+  margin: "7px 0 0",
 
-  margin:
-    "7px 0 0",
+  color: THEME.textMuted,
 
-  color:
-    THEME.textMuted,
+  fontSize: "13px",
 
-  fontSize:
-    "13px",
+  fontWeight: 450,
 
-  fontWeight:
-    450,
-
-  lineHeight:
-    1.4,
-
+  lineHeight: 1.4,
 };
-
 
 // ============================================================
 // CREATE BUTTON
 // ============================================================
 
-export const createButtonStyle:
-  CSSProperties = {
+export const createButtonStyle: CSSProperties = {
+  flexShrink: 0,
 
-  flexShrink:
-    0,
+  minHeight: "38px",
 
-  minHeight:
-    "38px",
+  padding: "0 18px",
 
-  padding:
-    "0 18px",
+  border: `1px solid ${THEME.borderStrong}`,
 
-  border:
-    `1px solid ${THEME.borderStrong}`,
+  borderRadius: "9px",
 
-  borderRadius:
-    "9px",
+  background: THEME.primary,
 
-  background:
-    THEME.primary,
+  color: THEME.textInverse,
 
-  color:
-    THEME.textInverse,
+  fontSize: "13px",
 
-  fontSize:
-    "13px",
+  fontWeight: 750,
 
-  fontWeight:
-    750,
+  cursor: "pointer",
 
-  cursor:
-    "pointer",
-
-  boxShadow:
-    `0 7px 18px ${THEME.shadow}`,
-
+  boxShadow: `0 7px 18px ${THEME.shadow}`,
 };
-
 
 // ============================================================
 // STATISTICS GRID
 // ============================================================
 
-export const statisticsGridStyle:
-  CSSProperties = {
+export const statisticsGridStyle: CSSProperties = {
+  display: "grid",
 
-  display:
-    "grid",
+  gridTemplateColumns: "repeat(4, minmax(0, 1fr))",
 
-  gridTemplateColumns:
-    "repeat(4, minmax(0, 1fr))",
+  gap: "14px",
 
-  gap:
-    "14px",
+  width: "100%",
 
-  width:
-    "100%",
-
-  marginBottom:
-    "20px",
-
+  marginBottom: "20px",
 };
-
 
 // ============================================================
 // STATISTIC CARD
 // ============================================================
 
-export const statisticCardStyle:
-  CSSProperties = {
+export const statisticCardStyle: CSSProperties = {
+  minWidth: 0,
 
-  minWidth:
-    0,
+  minHeight: "80px",
 
-  minHeight:
-    "80px",
+  boxSizing: "border-box",
 
-  boxSizing:
-    "border-box",
+  padding: "16px",
 
-  padding:
-    "16px",
+  border: `1px solid ${THEME.border}`,
 
-  border:
-    `1px solid ${THEME.border}`,
+  borderRadius: "10px",
 
-  borderRadius:
-    "10px",
+  background: THEME.surface,
 
-  background:
-    THEME.surface,
-
-  boxShadow:
-    `0 6px 18px ${THEME.shadow}`,
-
+  boxShadow: `0 6px 18px ${THEME.shadow}`,
 };
-
 
 // ============================================================
 // STATISTIC LABEL
 // ============================================================
 
-export const statisticLabelStyle:
-  CSSProperties = {
+export const statisticLabelStyle: CSSProperties = {
+  display: "block",
 
-  display:
-    "block",
+  marginBottom: "8px",
 
-  marginBottom:
-    "8px",
+  color: THEME.textMuted,
 
-  color:
-    THEME.textMuted,
+  fontSize: "12px",
 
-  fontSize:
-    "12px",
+  fontWeight: 550,
 
-  fontWeight:
-    550,
-
-  lineHeight:
-    1.2,
-
+  lineHeight: 1.2,
 };
-
 
 // ============================================================
 // STATISTIC VALUE
 // ============================================================
 
-export const statisticValueStyle:
-  CSSProperties = {
+export const statisticValueStyle: CSSProperties = {
+  display: "block",
 
-  display:
-    "block",
+  color: THEME.textPrimary,
 
-  color:
-    THEME.textPrimary,
+  fontSize: "20px",
 
-  fontSize:
-    "20px",
+  fontWeight: 600,
 
-  fontWeight:
-    600,
-
-  lineHeight:
-    1.1,
-
+  lineHeight: 1.1,
 };
-
 
 // ============================================================
 // PORTFOLIO
 // ============================================================
 
-export const portfolioStyle:
-  CSSProperties = {
+export const portfolioStyle: CSSProperties = {
+  width: "100%",
 
-  width:
-    "100%",
+  minWidth: 0,
 
-  minWidth:
-    0,
+  boxSizing: "border-box",
 
-  boxSizing:
-    "border-box",
+  overflow: "hidden",
 
-  overflow:
-    "hidden",
+  border: `1px solid ${THEME.border}`,
 
-  border:
-    `1px solid ${THEME.border}`,
+  borderRadius: "12px",
 
-  borderRadius:
-    "12px",
+  background: THEME.surface,
 
-  background:
-    THEME.surface,
-
-  boxShadow:
-    `0 10px 28px ${THEME.shadow}`,
-
+  boxShadow: `0 10px 28px ${THEME.shadow}`,
 };
-
 
 // ============================================================
 // PORTFOLIO HEADER
 // ============================================================
 
-export const portfolioHeaderStyle:
-  CSSProperties = {
+export const portfolioHeaderStyle: CSSProperties = {
+  display: "flex",
 
-  display:
-    "flex",
+  alignItems: "center",
 
-  alignItems:
-    "center",
+  justifyContent: "space-between",
 
-  justifyContent:
-    "space-between",
+  gap: "14px",
 
-  gap:
-    "14px",
+  minHeight: "58px",
 
-  minHeight:
-    "58px",
+  boxSizing: "border-box",
 
-  boxSizing:
-    "border-box",
+  padding: "0 14px",
 
-  padding:
-    "0 14px",
+  borderBottom: `1px solid ${THEME.border}`,
 
-  borderBottom:
-    `1px solid ${THEME.border}`,
-
-  background:
-    `
+  background: `
       linear-gradient(
         90deg,
         ${THEME.surfaceMuted},
         ${THEME.surface}
       )
     `,
-
 };
-
 
 // ============================================================
 // PORTFOLIO TITLE
 // ============================================================
 
-export const portfolioTitleStyle:
-  CSSProperties = {
+export const portfolioTitleStyle: CSSProperties = {
+  color: THEME.textPrimary,
 
-  color:
-    THEME.textPrimary,
+  fontSize: "13px",
 
-  fontSize:
-    "13px",
+  fontWeight: 750,
 
-  fontWeight:
-    750,
-
-  lineHeight:
-    1.2,
-
+  lineHeight: 1.2,
 };
-
 
 // ============================================================
 // PORTFOLIO ACTIONS
 // ============================================================
 
-export const portfolioActionsStyle:
-  CSSProperties = {
+export const portfolioActionsStyle: CSSProperties = {
+  display: "flex",
 
-  display:
-    "flex",
+  alignItems: "center",
 
-  alignItems:
-    "center",
+  justifyContent: "flex-end",
 
-  justifyContent:
-    "flex-end",
+  gap: "7px",
 
-  gap:
-    "7px",
+  minWidth: 0,
 
-  minWidth:
-    0,
-
-  flexWrap:
-    "nowrap",
-
+  flexWrap: "nowrap",
 };
-
 
 // ============================================================
 // REFRESH BUTTON
 // ============================================================
 
-export const refreshButtonStyle:
-  CSSProperties = {
+export const refreshButtonStyle: CSSProperties = {
+  minHeight: "31px",
 
-  minHeight:
-    "31px",
+  padding: "0 10px",
 
-  padding:
-    "0 10px",
+  border: `1px solid ${THEME.border}`,
 
-  border:
-    `1px solid ${THEME.border}`,
-
-  borderRadius:
-    "7px",
+  borderRadius: "7px",
 
   background:
     "color-mix(in srgb, var(--finora-theme-text-primary, #FFFFFF) 2.5%, transparent)",
 
-  color:
-    THEME.textSecondary,
+  color: THEME.textSecondary,
 
-  fontSize:
-    "10px",
+  fontSize: "10px",
 
-  fontWeight:
-    650,
+  fontWeight: 650,
 
-  cursor:
-    "pointer",
+  cursor: "pointer",
 
-  whiteSpace:
-    "nowrap",
-
+  whiteSpace: "nowrap",
 };
-
 
 // ============================================================
 // LOAN COUNT
 // ============================================================
 
-export const loanCountStyle:
-  CSSProperties = {
+export const loanCountStyle: CSSProperties = {
+  display: "inline-flex",
 
-  display:
-    "inline-flex",
+  alignItems: "center",
 
-  alignItems:
-    "center",
+  justifyContent: "center",
 
-  justifyContent:
-    "center",
+  minHeight: "31px",
 
-  minHeight:
-    "31px",
+  padding: "0 9px",
 
-  padding:
-    "0 9px",
+  border: `1px solid ${THEME.borderStrong}`,
 
-  border:
-    `1px solid ${THEME.borderStrong}`,
+  borderRadius: "999px",
 
-  borderRadius:
-    "999px",
+  background: THEME.successSoft,
 
-   background:
-  THEME.successSoft,
+  color: THEME.success,
 
-color:
-  THEME.success,
-  
-  fontSize:
-    "10px",
+  fontSize: "10px",
 
-  fontWeight:
-    700,
+  fontWeight: 700,
 
-  whiteSpace:
-    "nowrap",
-
+  whiteSpace: "nowrap",
 };
-
 
 // ============================================================
 // FILTERS
@@ -725,268 +519,162 @@ color:
 //
 // ============================================================
 
-export const filtersStyle:
-  CSSProperties = {
+export const filtersStyle: CSSProperties = {
+  width: "auto",
 
-  width:
-    "auto",
+  margin: 0,
 
-  margin:
-    0,
+  padding: 0,
 
-  padding:
-    0,
+  border: "none",
 
-  border:
-    "none",
+  borderRadius: 0,
 
-  borderRadius:
-    0,
+  background: "transparent",
 
-  background:
-    "transparent",
+  overflow: "visible",
 
-  overflow:
-    "visible",
-
-  boxSizing:
-    "border-box",
-
+  boxSizing: "border-box",
 };
 
+export const filtersGridStyle: CSSProperties = {
+  display: "flex",
 
-export const filtersGridStyle:
-  CSSProperties = {
+  alignItems: "center",
 
-  display:
-    "flex",
+  justifyContent: "flex-end",
 
-  alignItems:
-    "center",
+  gap: "7px",
 
-  justifyContent:
-    "flex-end",
+  padding: 0,
 
-  gap:
-    "7px",
-
-  padding:
-    0,
-
-  flexWrap:
-    "nowrap",
-
+  flexWrap: "nowrap",
 };
 
+export const filterFieldStyle: CSSProperties = {
+  display: "flex",
 
-export const filterFieldStyle:
-  CSSProperties = {
+  flexDirection: "row",
 
-  display:
-    "flex",
+  alignItems: "center",
 
-  flexDirection:
-    "row",
+  gap: "5px",
 
-  alignItems:
-    "center",
-
-  gap:
-    "5px",
-
-  minWidth:
-    0,
-
+  minWidth: 0,
 };
 
+export const filterLabelStyle: CSSProperties = {
+  color: THEME.textMuted,
 
-export const filterLabelStyle:
-  CSSProperties = {
+  fontSize: "10px",
 
-  color:
-    THEME.textMuted,
+  fontWeight: 650,
 
-  fontSize:
-    "10px",
-
-  fontWeight:
-    650,
-
-  whiteSpace:
-    "nowrap",
-
+  whiteSpace: "nowrap",
 };
 
+export const filterControlStyle: CSSProperties = {
+  height: "31px",
 
-export const filterControlStyle:
-  CSSProperties = {
+  boxSizing: "border-box",
 
-  height:
-    "31px",
+  padding: "0 8px",
 
-  boxSizing:
-    "border-box",
+  border: `1px solid ${THEME.border}`,
 
-  padding:
-    "0 8px",
+  borderRadius: "7px",
 
-  border:
-    `1px solid ${THEME.border}`,
+  outline: "none",
 
-  borderRadius:
-    "7px",
+  background: THEME.background,
 
-  outline:
-    "none",
+  color: THEME.textPrimary,
 
-  background:
-    THEME.background,
+  fontSize: "11px",
 
-  color:
-    THEME.textPrimary,
-
-  fontSize:
-    "11px",
-
-  fontWeight:
-    550,
-
+  fontWeight: 550,
 };
 
-
-export const filterSelectStyle:
-  CSSProperties = {
-
+export const filterSelectStyle: CSSProperties = {
   ...filterControlStyle,
 
-  width:
-    "86px",
+  width: "86px",
 
-  cursor:
-    "pointer",
-
+  cursor: "pointer",
 };
 
-
-export const filterDateInputStyle:
-  CSSProperties = {
-
+export const filterDateInputStyle: CSSProperties = {
   ...filterControlStyle,
 
-  width:
-    "126px",
-
+  width: "126px",
 };
 
+export const filterActionsStyle: CSSProperties = {
+  display: "flex",
 
-export const filterActionsStyle:
-  CSSProperties = {
+  alignItems: "center",
 
-  display:
-    "flex",
+  gap: "6px",
 
-  alignItems:
-    "center",
-
-  gap:
-    "6px",
-
-  marginLeft:
-    "1px",
-
+  marginLeft: "1px",
 };
 
+export const clearFilterButtonStyle: CSSProperties = {
+  minHeight: "31px",
 
-export const clearFilterButtonStyle:
-  CSSProperties = {
+  padding: "0 9px",
 
-  minHeight:
-    "31px",
+  border: `1px solid ${THEME.border}`,
 
-  padding:
-    "0 9px",
-
-  border:
-    `1px solid ${THEME.border}`,
-
-  borderRadius:
-    "7px",
+  borderRadius: "7px",
 
   background:
     "color-mix(in srgb, var(--finora-theme-text-primary, #FFFFFF) 2.5%, transparent)",
 
-  color:
-    THEME.textSecondary,
+  color: THEME.textSecondary,
 
-  fontSize:
-    "10px",
+  fontSize: "10px",
 
-  fontWeight:
-    650,
+  fontWeight: 650,
 
-  cursor:
-    "pointer",
+  cursor: "pointer",
 
-  whiteSpace:
-    "nowrap",
-
+  whiteSpace: "nowrap",
 };
 
+export const applyFilterButtonStyle: CSSProperties = {
+  minHeight: "31px",
 
-export const applyFilterButtonStyle:
-  CSSProperties = {
+  padding: "0 11px",
 
-  minHeight:
-    "31px",
+  border: `1px solid ${THEME.primary}`,
 
-  padding:
-    "0 11px",
+  borderRadius: "7px",
 
-  border:
-    `1px solid ${THEME.primary}`,
+  background: THEME.primary,
 
-  borderRadius:
-    "7px",
+  color: THEME.textInverse,
 
-  background:
-    THEME.primary,
+  fontSize: "10px",
 
-  color:
-    THEME.textInverse,
+  fontWeight: 700,
 
-  fontSize:
-    "10px",
+  cursor: "pointer",
 
-  fontWeight:
-    700,
-
-  cursor:
-    "pointer",
-
-  whiteSpace:
-    "nowrap",
-
+  whiteSpace: "nowrap",
 };
-
 
 // ============================================================
 // TABLE WRAPPER
 // ============================================================
 
-export const tableWrapperStyle:
-  CSSProperties = {
+export const tableWrapperStyle: CSSProperties = {
+  width: "100%",
 
-  width:
-    "100%",
+  minWidth: "900px",
 
-  minWidth:
-    "900px",
-
-  overflowX:
-    "auto",
-
+  overflowX: "auto",
 };
-
 
 // ============================================================
 // TABLE HEADER
@@ -995,124 +683,81 @@ export const tableWrapperStyle:
 // EXACT SAME GRID AS TABLE ROW.
 // ============================================================
 
-export const tableHeaderStyle:
-  CSSProperties = {
+export const tableHeaderStyle: CSSProperties = {
+  display: "grid",
 
-  display:
-    "grid",
+  gridTemplateColumns: loanTableGridTemplate,
 
-  gridTemplateColumns:
-    loanTableGridTemplate,
+  alignItems: "center",
 
-  alignItems:
-    "center",
+  width: "100%",
 
-  width:
-    "100%",
+  minHeight: "34px",
 
-  minHeight:
-    "34px",
+  boxSizing: "border-box",
 
-  boxSizing:
-    "border-box",
+  padding: "0 12px",
 
-  padding:
-    "0 12px",
+  borderBottom: `1px solid ${THEME.border}`,
 
-  borderBottom:
-    `1px solid ${THEME.border}`,
-
-  background:
-    THEME.surfaceMuted,
-
+  background: THEME.surfaceMuted,
 };
-
 
 // ============================================================
 // TABLE HEADER CELL
 // ============================================================
 
-export const tableHeaderCellStyle:
-  CSSProperties = {
+export const tableHeaderCellStyle: CSSProperties = {
+  minWidth: 0,
 
-  minWidth:
-    0,
+  padding: "0 8px",
 
-  padding:
-    "0 8px",
+  boxSizing: "border-box",
 
-  boxSizing:
-    "border-box",
+  color: THEME.textMuted,
 
-  color:
-    THEME.textMuted,
+  fontSize: "11px",
 
-  fontSize:
-    "11px",
+  fontWeight: 650,
 
-  fontWeight:
-    650,
+  lineHeight: 1.2,
 
-  lineHeight:
-    1.2,
+  textAlign: "left",
 
-  textAlign:
-    "left",
+  whiteSpace: "nowrap",
 
-  whiteSpace:
-    "nowrap",
+  overflow: "hidden",
 
-  overflow:
-    "hidden",
-
-  textOverflow:
-    "ellipsis",
-
+  textOverflow: "ellipsis",
 };
-
 
 // ============================================================
 // TABLE HEADER RIGHT
 // ============================================================
 
-export const tableHeaderRightStyle:
-  CSSProperties = {
-
+export const tableHeaderRightStyle: CSSProperties = {
   ...tableHeaderCellStyle,
 
-  textAlign:
-    "right",
-
+  textAlign: "right",
 };
-
 
 // ============================================================
 // TABLE HEADER CENTER
 // ============================================================
 
-export const tableHeaderCenterStyle:
-  CSSProperties = {
-
+export const tableHeaderCenterStyle: CSSProperties = {
   ...tableHeaderCellStyle,
 
-  textAlign:
-    "center",
-
+  textAlign: "center",
 };
-
 
 // ============================================================
 // TABLE BODY
 // ============================================================
 
-export const tableBodyStyle:
-  CSSProperties = {
-
-  width:
-    "100%",
-
+export const tableBodyStyle: CSSProperties = {
+  width: "100%",
 };
-
 
 // ============================================================
 // TABLE ROW
@@ -1121,129 +766,85 @@ export const tableBodyStyle:
 // EXACT SAME GRID AS HEADER.
 // ============================================================
 
-export const tableRowStyle:
-  CSSProperties = {
+export const tableRowStyle: CSSProperties = {
+  display: "grid",
 
-  display:
-    "grid",
+  gridTemplateColumns: loanTableGridTemplate,
 
-  gridTemplateColumns:
-    loanTableGridTemplate,
+  alignItems: "center",
 
-  alignItems:
-    "center",
+  width: "100%",
 
-  width:
-    "100%",
+  minHeight: "64px",
 
-  minHeight:
-    "64px",
+  boxSizing: "border-box",
 
-  boxSizing:
-    "border-box",
+  padding: "0 12px",
 
-  padding:
-    "0 12px",
+  borderBottom: `1px solid ${THEME.border}`,
 
-  borderBottom:
-    `1px solid ${THEME.border}`,
-
-  background:
-    THEME.surface,
-
+  background: THEME.surface,
 };
-
 
 // ============================================================
 // TABLE CELL
 // ============================================================
 
-export const tableCellStyle:
-  CSSProperties = {
+export const tableCellStyle: CSSProperties = {
+  minWidth: 0,
 
-  minWidth:
-    0,
+  padding: "7px 8px",
 
-  padding:
-    "7px 8px",
+  boxSizing: "border-box",
 
-  boxSizing:
-    "border-box",
+  color: THEME.textSecondary,
 
-  color:
-    THEME.textSecondary,
+  fontSize: "12px",
 
-  fontSize:
-    "12px",
+  fontWeight: 550,
 
-  fontWeight:
-    550,
+  lineHeight: 1.25,
 
-  lineHeight:
-    1.25,
+  textAlign: "left",
 
-  textAlign:
-    "left",
+  overflow: "hidden",
 
-  overflow:
-    "hidden",
-
-  textOverflow:
-    "ellipsis",
-
+  textOverflow: "ellipsis",
 };
-
 
 // ============================================================
 // TABLE CELL SECONDARY
 // ============================================================
 
-export const tableCellSecondaryStyle:
-  CSSProperties = {
-
+export const tableCellSecondaryStyle: CSSProperties = {
   ...tableCellStyle,
 
-  color:
-    THEME.textSecondary,
-
+  color: THEME.textSecondary,
 };
-
 
 // ============================================================
 // TABLE CELL RIGHT
 // ============================================================
 
-export const tableCellRightStyle:
-  CSSProperties = {
-
+export const tableCellRightStyle: CSSProperties = {
   ...tableCellStyle,
 
-  textAlign:
-    "right",
-
+  textAlign: "right",
 };
-
 
 // ============================================================
 // TABLE CELL CENTER
 // ============================================================
 
-export const tableCellCenterStyle:
-  CSSProperties = {
-
+export const tableCellCenterStyle: CSSProperties = {
   ...tableCellStyle,
 
-  display:
-    "flex",
+  display: "flex",
 
-  alignItems:
-    "center",
+  alignItems: "center",
 
-  justifyContent:
-    "center",
-
+  justifyContent: "center",
 };
-
 
 // ============================================================
 // SERIAL NUMBER CELL
@@ -1253,196 +854,127 @@ export const tableCellCenterStyle:
 // the portfolio header.
 // ============================================================
 
-export const serialCellStyle:
-  CSSProperties = {
-
+export const serialCellStyle: CSSProperties = {
   ...tableCellCenterStyle,
 
-  color:
-    THEME.textSecondary,
+  color: THEME.textSecondary,
 
-  fontSize:
-    "11px",
+  fontSize: "11px",
 
-  fontWeight:
-    700,
+  fontWeight: 700,
 
-  lineHeight:
-    1.2,
-
+  lineHeight: 1.2,
 };
-
 
 // ============================================================
 // LOAN IDENTITY
 // ============================================================
 
-export const loanIdentityStyle:
-  CSSProperties = {
+export const loanIdentityStyle: CSSProperties = {
+  display: "flex",
 
-  display:
-    "flex",
+  flexDirection: "column",
 
-  flexDirection:
-    "column",
+  minWidth: 0,
 
-  minWidth:
-    0,
-
-  gap:
-    "3px",
-
+  gap: "3px",
 };
-
 
 // ============================================================
 // LOAN NUMBER
 // ============================================================
 
-export const loanNumberStyle:
-  CSSProperties = {
+export const loanNumberStyle: CSSProperties = {
+  display: "block",
 
-  display:
-    "block",
+  color: THEME.textPrimary,
 
-  color:
-    THEME.textPrimary,
+  fontSize: "11px",
 
-  fontSize:
-    "11px",
+  fontWeight: 750,
 
-  fontWeight:
-    750,
+  lineHeight: 1.2,
 
-  lineHeight:
-    1.2,
+  whiteSpace: "nowrap",
 
-  whiteSpace:
-    "nowrap",
+  overflow: "hidden",
 
-  overflow:
-    "hidden",
-
-  textOverflow:
-    "ellipsis",
-
+  textOverflow: "ellipsis",
 };
-
 
 // ============================================================
 // LOAN TITLE
 // ============================================================
 
-export const loanTitleStyle:
-  CSSProperties = {
+export const loanTitleStyle: CSSProperties = {
+  display: "block",
 
-  display:
-    "block",
+  color: THEME.textMuted,
 
-  color:
-    THEME.textMuted,
+  fontSize: "10px",
 
-  fontSize:
-    "10px",
+  fontWeight: 500,
 
-  fontWeight:
-    500,
+  lineHeight: 1.2,
 
-  lineHeight:
-    1.2,
+  whiteSpace: "nowrap",
 
-  whiteSpace:
-    "nowrap",
+  overflow: "hidden",
 
-  overflow:
-    "hidden",
-
-  textOverflow:
-    "ellipsis",
-
+  textOverflow: "ellipsis",
 };
-
 
 // ============================================================
 // CUSTOMER NAME
 // ============================================================
 
-export const customerNameStyle:
-  CSSProperties = {
+export const customerNameStyle: CSSProperties = {
+  color: THEME.textPrimary,
 
-  color:
-    THEME.textPrimary,
+  fontSize: "12px",
 
-  fontSize:
-    "12px",
+  fontWeight: 700,
 
-  fontWeight:
-    700,
+  lineHeight: 1.2,
 
-  lineHeight:
-    1.2,
+  whiteSpace: "nowrap",
 
-  whiteSpace:
-    "nowrap",
+  overflow: "hidden",
 
-  overflow:
-    "hidden",
-
-  textOverflow:
-    "ellipsis",
-
+  textOverflow: "ellipsis",
 };
-
 
 // ============================================================
 // CUSTOMER PHONE
 // ============================================================
 
-export const customerPhoneStyle:
-  CSSProperties = {
+export const customerPhoneStyle: CSSProperties = {
+  marginTop: "4px",
 
-  marginTop:
-    "4px",
+  color: THEME.textMuted,
 
-  color:
-    THEME.textMuted,
+  fontSize: "10px",
 
-  fontSize:
-    "10px",
+  fontWeight: 500,
 
-  fontWeight:
-    500,
+  lineHeight: 1.1,
 
-  lineHeight:
-    1.1,
-
-  whiteSpace:
-    "nowrap",
-
+  whiteSpace: "nowrap",
 };
-
 
 // ============================================================
 // AMOUNT
 // ============================================================
 
-export const amountStyle:
-  CSSProperties = {
+export const amountStyle: CSSProperties = {
+  color: THEME.textPrimary,
 
-  color:
-    THEME.textPrimary,
+  fontSize: "12px",
 
-  fontSize:
-    "12px",
+  fontWeight: 700,
 
-  fontWeight:
-    700,
-
-  whiteSpace:
-    "nowrap",
-
+  whiteSpace: "nowrap",
 };
-
 
 // ============================================================
 // OUTSTANDING
@@ -1452,285 +984,175 @@ export const amountStyle:
 // OUTSTANDING
 // ============================================================
 
-export const outstandingStyle:
-  CSSProperties = {
+export const outstandingStyle: CSSProperties = {
+  display: "inline-block",
 
-  display:
-    "inline-block",
+  padding: "3px 7px",
 
-  padding:
-    "3px 7px",
+  borderRadius: "6px",
 
-  borderRadius:
-    "6px",
+  background: THEME.successSoft,
 
-  background:
-    THEME.successSoft,
+  color: THEME.success,
 
-  color:
-    THEME.success,
+  fontSize: "12px",
 
-  fontSize:
-    "12px",
+  fontWeight: 750,
 
-  fontWeight:
-    750,
-
-  whiteSpace:
-    "nowrap",
-
+  whiteSpace: "nowrap",
 };
-
 
 // ============================================================
 // STATUS BADGE
 // ============================================================
 
-export function statusBadgeStyle(
-  status:
-    Loan["status"],
-):
-  CSSProperties {
-
-  const isClosed =
-    status === "CLOSED";
-
+export function statusBadgeStyle(status: Loan["status"]): CSSProperties {
+  const isClosed = status === "CLOSED";
 
   return {
+    display: "inline-flex",
 
-    display:
-      "inline-flex",
+    alignItems: "center",
 
-    alignItems:
-      "center",
+    justifyContent: "center",
 
-    justifyContent:
-      "center",
+    minWidth: "58px",
 
-    minWidth:
-      "58px",
+    minHeight: "24px",
 
-    minHeight:
-      "24px",
+    padding: "0 10px",
 
-    padding:
-      "0 10px",
+    border: `1px solid ${isClosed ? THEME.border : THEME.successBorder}`,
 
-    border:
-      `1px solid ${
-        isClosed
-          ? THEME.border
-          : THEME.successBorder
-      }`,
+    borderRadius: "999px",
 
-    borderRadius:
-      "999px",
+    background: isClosed ? THEME.closedSoft : THEME.successSoft,
 
-    background:
-      isClosed
-        ? THEME.closedSoft
-        : THEME.successSoft,
+    color: isClosed ? THEME.closed : THEME.success,
 
-    color:
-      isClosed
-        ? THEME.closed
-        : THEME.success,
+    fontSize: "10px",
 
-    fontSize:
-      "10px",
+    fontWeight: 700,
 
-    fontWeight:
-      700,
+    lineHeight: 1.1,
 
-    lineHeight:
-      1.1,
-
-    whiteSpace:
-      "nowrap",
-
+    whiteSpace: "nowrap",
   };
-
 }
-
 
 // ============================================================
 // EMPTY STATE
 // ============================================================
 
-export const emptyStateStyle:
-  CSSProperties = {
+export const emptyStateStyle: CSSProperties = {
+  minHeight: "250px",
 
-  minHeight:
-    "250px",
+  display: "flex",
 
-  display:
-    "flex",
+  flexDirection: "column",
 
-  flexDirection:
-    "column",
+  alignItems: "center",
 
-  alignItems:
-    "center",
+  justifyContent: "center",
 
-  justifyContent:
-    "center",
+  padding: "36px 24px",
 
-  padding:
-    "36px 24px",
+  boxSizing: "border-box",
 
-  boxSizing:
-    "border-box",
+  textAlign: "center",
 
-  textAlign:
-    "center",
-
-  background:
-    THEME.surface,
-
+  background: THEME.surface,
 };
-
 
 // ============================================================
 // EMPTY TITLE
 // ============================================================
 
-export const emptyTitleStyle:
-  CSSProperties = {
+export const emptyTitleStyle: CSSProperties = {
+  color: THEME.textPrimary,
 
-  color:
-    THEME.textPrimary,
+  fontSize: "15px",
 
-  fontSize:
-    "15px",
+  fontWeight: 750,
 
-  fontWeight:
-    750,
-
-  lineHeight:
-    1.25,
-
+  lineHeight: 1.25,
 };
-
 
 // ============================================================
 // EMPTY DESCRIPTION
 // ============================================================
 
-export const emptyDescriptionStyle:
-  CSSProperties = {
+export const emptyDescriptionStyle: CSSProperties = {
+  maxWidth: "560px",
 
-  maxWidth:
-    "560px",
+  marginTop: "8px",
 
-  marginTop:
-    "8px",
+  color: THEME.textMuted,
 
-  color:
-    THEME.textMuted,
+  fontSize: "12px",
 
-  fontSize:
-    "12px",
+  fontWeight: 450,
 
-  fontWeight:
-    450,
-
-  lineHeight:
-    1.45,
-
+  lineHeight: 1.45,
 };
-
 
 // ============================================================
 // EMPTY CREATE BUTTON
 // ============================================================
 
-export const emptyCreateButtonStyle:
-  CSSProperties = {
+export const emptyCreateButtonStyle: CSSProperties = {
+  marginTop: "16px",
 
-  marginTop:
-    "16px",
+  minHeight: "38px",
 
-  minHeight:
-    "38px",
+  padding: "0 17px",
 
-  padding:
-    "0 17px",
+  border: `1px solid ${THEME.borderStrong}`,
 
-  border:
-    `1px solid ${THEME.borderStrong}`,
+  borderRadius: "8px",
 
-  borderRadius:
-    "8px",
+  background: THEME.primary,
 
-  background:
-    THEME.primary,
+  color: THEME.textInverse,
 
-  color:
-    THEME.textInverse,
+  fontSize: "12px",
 
-  fontSize:
-    "12px",
+  fontWeight: 750,
 
-  fontWeight:
-    750,
+  cursor: "pointer",
 
-  cursor:
-    "pointer",
-
-  boxShadow:
-    `0 7px 18px ${THEME.shadow}`,
-
+  boxShadow: `0 7px 18px ${THEME.shadow}`,
 };
-
 
 // ============================================================
 // TABLE FOOTER
 // ============================================================
 
-export const tableFooterStyle:
-  CSSProperties = {
+export const tableFooterStyle: CSSProperties = {
+  display: "flex",
 
-  display:
-    "flex",
+  alignItems: "center",
 
-  alignItems:
-    "center",
+  justifyContent: "flex-end",
 
-  justifyContent:
-    "flex-end",
+  minHeight: "36px",
 
-  minHeight:
-    "36px",
+  padding: "0 14px",
 
-  padding:
-    "0 14px",
+  borderTop: `1px solid ${THEME.border}`,
 
-  borderTop:
-    `1px solid ${THEME.border}`,
+  background: THEME.surface,
 
-  background:
-    THEME.surface,
-
-  boxSizing:
-    "border-box",
-
+  boxSizing: "border-box",
 };
 
+export const tableShowingStyle: CSSProperties = {
+  color: THEME.textMuted,
 
-export const tableShowingStyle:
-  CSSProperties = {
+  fontSize: "11px",
 
-  color:
-    THEME.textMuted,
-
-  fontSize:
-    "11px",
-
-  fontWeight:
-    550,
-
+  fontWeight: 550,
 };
-
 
 // ============================================================
 // END

@@ -51,97 +51,50 @@
 // STATUS  : Production
 // ============================================================
 
-
 // ============================================================
 // IMPORTS
 // ============================================================
 
-import {
-  useEffect,
-  useState,
-} from "react";
+import { useEffect, useState } from "react";
 
+import type { CSSProperties } from "react";
 
-import type {
-  CSSProperties,
-} from "react";
+import AppShell from "../layouts/AppShell";
 
+import ReceptionPage from "../pages/reception";
 
-import AppShell
-  from "../layouts/AppShell";
+import DashboardPage from "../pages/dashboard/DashboardPage";
 
+import CustomersPage from "../pages/customers/CustomersPage";
 
-import ReceptionPage
-  from "../pages/reception";
+import CustomerDepartmentPage from "../pages/customers/CustomerDepartmentPage";
 
+import LoansPage from "../pages/loans/LoansPage";
 
-import DashboardPage
-  from "../pages/dashboard/DashboardPage";
+import CollectionsPage from "../pages/collections/CollectionsPage";
 
+import ReportsPage from "../pages/reports/ReportsPage";
 
-import CustomersPage
-  from "../pages/customers/CustomersPage";
+import LoanStudio from "../components/customers/office/CustomerOffice/components/LoanStudio";
 
+import Login from "../pages/auth/Login";
 
-import CustomerDepartmentPage
-  from "../pages/customers/CustomerDepartmentPage";
-
-
-import LoansPage
-  from "../pages/loans/LoansPage";
-
-
-import CollectionsPage
-  from "../pages/collections/CollectionsPage";
-
-
-import ReportsPage
-  from "../pages/reports/ReportsPage";
-
-
-import LoanStudio
-  from "../components/customers/office/CustomerOffice/components/LoanStudio";
-
-
-import Login
-  from "../pages/auth/Login";
-
-
-import {
-  getSession,
-  logout,
-} from "../store/authStore";
-
+import { getSession, logout } from "../store/authStore";
 
 import {
   BusinessContextProvider,
   useBusinessContext,
 } from "../context/BusinessContext";
 
+import type { AuthSession } from "../components/auth/types";
 
-import type {
-  AuthSession,
-} from "../components/auth/types";
+import type { DepartmentId } from "../pages/reception/types";
 
+import SessionGuard from "../components/auth/SessionGuard";
 
-import type {
-  DepartmentId,
-} from "../pages/reception/types";
+import { useTheme } from "../themes/provider";
 
-
-import SessionGuard
-  from "../components/auth/SessionGuard";
-
-
-import {
-  useTheme,
-} from "../themes/provider";
-
-
-import {
-  useResponsive,
-} from "../utils/responsive";
-
+import { useResponsive } from "../utils/responsive";
 
 // ============================================================
 // TYPES
@@ -156,23 +109,15 @@ type Page =
   | "collections"
   | "reports";
 
-
 // ============================================================
 // CONSTANTS
 // ============================================================
 
-const DEFAULT_PAGE:
-  Page =
-  "reception";
+const DEFAULT_PAGE: Page = "reception";
 
+const NAVIGATION_STATE_KEY = "finora-navigation";
 
-const NAVIGATION_STATE_KEY =
-  "finora-navigation";
-
-
-const NAVIGATION_EVENT =
-  "finora-navigation-change";
-
+const NAVIGATION_EVENT = "finora-navigation-change";
 
 // ============================================================
 // CUSTOMER WIZARD NAVIGATION EVENTS
@@ -195,17 +140,11 @@ const NAVIGATION_EVENT =
 // the Wizard before popping the top-level navigation history.
 // ============================================================
 
-const CUSTOMER_WIZARD_OPEN_EVENT =
-  "FINORA_CUSTOMER_WIZARD_OPEN";
+const CUSTOMER_WIZARD_OPEN_EVENT = "FINORA_CUSTOMER_WIZARD_OPEN";
 
+const CUSTOMER_WIZARD_CLOSE_EVENT = "FINORA_CUSTOMER_WIZARD_CLOSE";
 
-const CUSTOMER_WIZARD_CLOSE_EVENT =
-  "FINORA_CUSTOMER_WIZARD_CLOSE";
-
-
-const CUSTOMER_WIZARD_GLOBAL_BACK_EVENT =
-  "FINORA_CUSTOMER_WIZARD_GLOBAL_BACK";
-
+const CUSTOMER_WIZARD_GLOBAL_BACK_EVENT = "FINORA_CUSTOMER_WIZARD_GLOBAL_BACK";
 
 // ============================================================
 // LOAN STUDIO NAVIGATION EVENTS
@@ -229,9 +168,7 @@ const CUSTOMER_WIZARD_GLOBAL_BACK_EVENT =
 // avoids creating a second Loan Studio implementation.
 // ============================================================
 
-const LOAN_STUDIO_OPEN_EVENT =
-  "FINORA_V2_OPEN_LOAN_STUDIO";
-
+const LOAN_STUDIO_OPEN_EVENT = "FINORA_V2_OPEN_LOAN_STUDIO";
 
 // ============================================================
 // NAVIGATION STATE
@@ -249,210 +186,102 @@ const LOAN_STUDIO_OPEN_EVENT =
 // ============================================================
 
 interface NavigationState {
+  page: Page;
 
-  page:
-    Page;
-
-  stack:
-    Page[];
-
+  stack: Page[];
 }
-
 
 // ============================================================
 // PAGE VALIDATION
 // ============================================================
 
-function isValidPage(
-  value:
-    unknown,
-):
-  value is Page {
-
+function isValidPage(value: unknown): value is Page {
   return (
-
-    value ===
-      "reception"
-
-    ||
-
-    value ===
-      "dashboard"
-
-    ||
-
-    value ===
-      "customers"
-
-    ||
-
-    value ===
-      "customerDepartment"
-
-    ||
-
-    value ===
-      "loans"
-
-    ||
-
-    value ===
-      "collections"
-
-    ||
-
-    value ===
-      "reports"
-
+    value === "reception" ||
+    value === "dashboard" ||
+    value === "customers" ||
+    value === "customerDepartment" ||
+    value === "loans" ||
+    value === "collections" ||
+    value === "reports"
   );
-
 }
-
 
 // ============================================================
 // DEFAULT NAVIGATION STATE
 // ============================================================
 
-function createDefaultNavigationState():
-  NavigationState {
-
+function createDefaultNavigationState(): NavigationState {
   return {
+    page: DEFAULT_PAGE,
 
-    page:
-      DEFAULT_PAGE,
-
-    stack:
-      [],
-
+    stack: [],
   };
-
 }
-
 
 // ============================================================
 // READ BROWSER NAVIGATION STATE
 // ============================================================
 
-function readNavigationState():
-  NavigationState {
+function readNavigationState(): NavigationState {
+  const state = window.history.state;
 
-  const state =
-    window.history.state;
-
-
-  if (
-
-    !state ||
-
-    state[
-      NAVIGATION_STATE_KEY
-    ] === undefined
-
-  ) {
-
+  if (!state || state[NAVIGATION_STATE_KEY] === undefined) {
     return createDefaultNavigationState();
-
   }
 
+  const navigation = state[NAVIGATION_STATE_KEY] as Partial<NavigationState>;
 
-  const navigation =
-    state[
-      NAVIGATION_STATE_KEY
-    ] as Partial<NavigationState>;
-
-
-  if (
-
-    !isValidPage(
-      navigation.page,
-    )
-
-  ) {
-
+  if (!isValidPage(navigation.page)) {
     return createDefaultNavigationState();
-
   }
 
-
-  const stack =
-    Array.isArray(
-      navigation.stack,
-    )
-
-      ? navigation.stack.filter(
-          isValidPage,
-        )
-
-      : [];
-
+  const stack = Array.isArray(navigation.stack)
+    ? navigation.stack.filter(isValidPage)
+    : [];
 
   return {
-
-    page:
-      navigation.page,
+    page: navigation.page,
 
     stack,
-
   };
-
 }
-
 
 // ============================================================
 // WRITE BROWSER NAVIGATION STATE
 // ============================================================
 
 function writeNavigationState(
-  navigation:
-    NavigationState,
+  navigation: NavigationState,
 
-  replace =
-    false,
-
-):
-  void {
-
+  replace = false,
+): void {
   const state = {
-
     ...window.history.state,
 
-    [
-      NAVIGATION_STATE_KEY
-    ]:
-      navigation,
-
+    [NAVIGATION_STATE_KEY]: navigation,
   };
 
-
   if (replace) {
-
     window.history.replaceState(
-
       state,
 
       "",
 
       window.location.href,
-
     );
 
     return;
-
   }
 
-
   window.history.pushState(
-
     state,
 
     "",
 
     window.location.href,
-
   );
-
 }
-
 
 // ============================================================
 // CONTEXT LOADING SCREEN
@@ -473,167 +302,78 @@ function writeNavigationState(
 // ============================================================
 
 function ContextLoadingScreen() {
+  const { theme } = useTheme();
 
-  const {
-    theme,
-  } = useTheme();
+  const { tokens } = useResponsive();
 
+  const loadingStyle: CSSProperties = {
+    width: "100%",
 
-  const {
-    tokens,
-  } = useResponsive();
+    height: "100%",
 
+    minWidth: 0,
 
-  const loadingStyle:
-    CSSProperties = {
+    minHeight: 0,
 
-    width:
-      "100%",
+    display: "flex",
 
-    height:
-      "100%",
+    alignItems: "center",
 
-    minWidth:
-      0,
+    justifyContent: "center",
 
-    minHeight:
-      0,
+    padding: `${tokens.spacing.page}px`,
 
-    display:
-      "flex",
+    boxSizing: "border-box",
 
-    alignItems:
-      "center",
+    background: theme.colors.background.page,
 
-    justifyContent:
-      "center",
+    color: theme.colors.text.primary,
 
-    padding:
-      `${tokens.spacing.page}px`,
-
-    boxSizing:
-      "border-box",
-
-    background:
-      theme
-        .colors
-        .background
-        .page,
-
-    color:
-      theme
-        .colors
-        .text
-        .primary,
-
-    fontFamily:
-      "Segoe UI, sans-serif",
-
+    fontFamily: "Segoe UI, sans-serif",
   };
 
+  const contentStyle: CSSProperties = {
+    maxWidth: "100%",
 
-  const contentStyle:
-    CSSProperties = {
-
-    maxWidth:
-      "100%",
-
-    textAlign:
-      "center",
-
+    textAlign: "center",
   };
 
+  const titleStyle: CSSProperties = {
+    margin: 0,
 
-  const titleStyle:
-    CSSProperties = {
+    fontSize: `${tokens.typography.heading}px`,
 
-    margin:
-      0,
+    lineHeight: tokens.lineHeight.heading,
 
-    fontSize:
-      `${tokens.typography.heading}px`,
+    fontWeight: 700,
 
-    lineHeight:
-      tokens.lineHeight.heading,
+    letterSpacing: ".5px",
 
-    fontWeight:
-      700,
-
-    letterSpacing:
-      ".5px",
-
-    color:
-      theme
-        .colors
-        .text
-        .primary,
-
+    color: theme.colors.text.primary,
   };
 
+  const messageStyle: CSSProperties = {
+    marginTop: `${tokens.spacing.small}px`,
 
-  const messageStyle:
-    CSSProperties = {
+    marginBottom: 0,
 
-    marginTop:
-      `${tokens.spacing.small}px`,
+    fontSize: `${tokens.typography.body}px`,
 
-    marginBottom:
-      0,
+    lineHeight: tokens.lineHeight.body,
 
-    fontSize:
-      `${tokens.typography.body}px`,
-
-    lineHeight:
-      tokens.lineHeight.body,
-
-    color:
-      theme
-        .colors
-        .text
-        .secondary,
-
+    color: theme.colors.text.secondary,
   };
-
 
   return (
+    <div style={loadingStyle}>
+      <div style={contentStyle}>
+        <div style={titleStyle}>FINORA Enterprise</div>
 
-    <div
-      style={
-        loadingStyle
-      }
-    >
-
-      <div
-        style={
-          contentStyle
-        }
-      >
-
-        <div
-          style={
-            titleStyle
-          }
-        >
-          FINORA Enterprise
-        </div>
-
-
-        <div
-          style={
-            messageStyle
-          }
-        >
-          Establishing secure business context...
-        </div>
-
+        <div style={messageStyle}>Establishing secure business context...</div>
       </div>
-
     </div>
-
   );
-
 }
-
 
 // ============================================================
 // BUSINESS CONTEXT ERROR SCREEN
@@ -647,1301 +387,636 @@ function ContextLoadingScreen() {
 // ============================================================
 
 function BusinessContextErrorScreen({
-
   message,
 
   onReturn,
-
 }: {
+  message: string;
 
-  message:
-    string;
-
-  onReturn():
-    void;
-
+  onReturn(): void;
 }) {
+  const { theme } = useTheme();
 
-  const {
-    theme,
-  } = useTheme();
+  const { tokens } = useResponsive();
 
+  const rootStyle: CSSProperties = {
+    width: "100%",
 
-  const {
-    tokens,
-  } = useResponsive();
+    height: "100%",
 
+    minWidth: 0,
 
-  const rootStyle:
-    CSSProperties = {
+    minHeight: 0,
 
-    width:
-      "100%",
+    display: "flex",
 
-    height:
-      "100%",
+    alignItems: "center",
 
-    minWidth:
-      0,
+    justifyContent: "center",
 
-    minHeight:
-      0,
+    padding: `${tokens.spacing.page}px`,
 
-    display:
-      "flex",
+    boxSizing: "border-box",
 
-    alignItems:
-      "center",
+    background: theme.colors.background.page,
 
-    justifyContent:
-      "center",
+    color: theme.colors.text.primary,
 
-    padding:
-      `${tokens.spacing.page}px`,
-
-    boxSizing:
-      "border-box",
-
-    background:
-      theme
-        .colors
-        .background
-        .page,
-
-    color:
-      theme
-        .colors
-        .text
-        .primary,
-
-    fontFamily:
-      "Segoe UI, sans-serif",
-
+    fontFamily: "Segoe UI, sans-serif",
   };
 
+  const cardStyle: CSSProperties = {
+    width: "100%",
 
-  const cardStyle:
-    CSSProperties = {
+    maxWidth: `${tokens.card.maxWidth}px`,
 
-    width:
-      "100%",
+    padding: `${tokens.card.padding}px`,
 
-    maxWidth:
-      `${tokens.card.maxWidth}px`,
+    borderRadius: `${tokens.card.radius}px`,
 
-    padding:
-      `${tokens.card.padding}px`,
+    background: theme.components.card.background,
 
-    borderRadius:
-      `${tokens.card.radius}px`,
+    border: `${tokens.border.width}px solid ${theme.components.card.border}`,
 
-    background:
-      theme
-        .components
-        .card
-        .background,
+    boxShadow: theme.components.card.shadow,
 
-    border:
-      `${tokens.border.width}px solid ${
-        theme
-          .components
-          .card
-          .border
-      }`,
+    boxSizing: "border-box",
 
-    boxShadow:
-      theme
-        .components
-        .card
-        .shadow,
-
-    boxSizing:
-      "border-box",
-
-    textAlign:
-      "center",
-
+    textAlign: "center",
   };
 
+  const titleStyle: CSSProperties = {
+    margin: 0,
 
-  const titleStyle:
-    CSSProperties = {
+    marginBottom: `${tokens.spacing.small}px`,
 
-    margin:
-      0,
+    fontSize: `${tokens.typography.heading}px`,
 
-    marginBottom:
-      `${tokens.spacing.small}px`,
+    lineHeight: tokens.lineHeight.heading,
 
-    fontSize:
-      `${tokens.typography.heading}px`,
+    fontWeight: 700,
 
-    lineHeight:
-      tokens.lineHeight.heading,
-
-    fontWeight:
-      700,
-
-    color:
-      theme
-        .typography
-        .heading,
-
+    color: theme.typography.heading,
   };
 
+  const messageStyle: CSSProperties = {
+    margin: 0,
 
-  const messageStyle:
-    CSSProperties = {
+    marginBottom: `${tokens.spacing.medium}px`,
 
-    margin:
-      0,
+    fontSize: `${tokens.typography.body}px`,
 
-    marginBottom:
-      `${tokens.spacing.medium}px`,
+    lineHeight: tokens.lineHeight.body,
 
-    fontSize:
-      `${tokens.typography.body}px`,
-
-    lineHeight:
-      tokens.lineHeight.body,
-
-    color:
-      theme
-        .typography
-        .body,
-
+    color: theme.typography.body,
   };
 
+  const buttonStyle: CSSProperties = {
+    minWidth: `${tokens.button.minHeight}px`,
 
-  const buttonStyle:
-    CSSProperties = {
+    height: `${tokens.button.height}px`,
 
-    minWidth:
-      `${tokens.button.minHeight}px`,
+    padding: `0 ${tokens.button.paddingX}px`,
 
-    height:
-      `${tokens.button.height}px`,
+    borderRadius: `${tokens.button.radius}px`,
 
-    padding:
-      `0 ${tokens.button.paddingX}px`,
+    border: `${tokens.border.width}px solid ${
+      theme.components.button.primaryBackground
+    }`,
 
-    borderRadius:
-      `${tokens.button.radius}px`,
+    background: theme.components.button.primaryBackground,
 
-    border:
-      `${tokens.border.width}px solid ${
-        theme
-          .components
-          .button
-          .primaryBackground
-      }`,
+    color: theme.components.button.primaryText,
 
-    background:
-      theme
-        .components
-        .button
-        .primaryBackground,
+    cursor: "pointer",
 
-    color:
-      theme
-        .components
-        .button
-        .primaryText,
+    fontSize: `${tokens.button.fontSize}px`,
 
-    cursor:
-      "pointer",
+    fontWeight: 600,
 
-    fontSize:
-      `${tokens.button.fontSize}px`,
-
-    fontWeight:
-      600,
-
-    boxSizing:
-      "border-box",
-
+    boxSizing: "border-box",
   };
-
 
   return (
+    <div style={rootStyle}>
+      <div style={cardStyle}>
+        <h2 style={titleStyle}>FINORA Business Context Error</h2>
 
-    <div
-      style={
-        rootStyle
-      }
-    >
+        <p style={messageStyle}>{message}</p>
 
-      <div
-        style={
-          cardStyle
-        }
-      >
-
-        <h2
-          style={
-            titleStyle
-          }
-        >
-          FINORA Business Context Error
-        </h2>
-
-
-        <p
-          style={
-            messageStyle
-          }
-        >
-          {message}
-        </p>
-
-
-        <button
-          type="button"
-          onClick={
-            onReturn
-          }
-          style={
-            buttonStyle
-          }
-        >
+        <button type="button" onClick={onReturn} style={buttonStyle}>
           Return to Login
         </button>
-
       </div>
-
     </div>
-
   );
-
 }
-
 
 // ============================================================
 // AUTHENTICATED APPLICATION
 // ============================================================
 
 function AuthenticatedApplication() {
+  const { context, setContext, clearContext } = useBusinessContext();
 
-  const {
-    context,
-    setContext,
-    clearContext,
-  } =
-    useBusinessContext();
+  const [session, setSession] = useState<AuthSession | null>(() =>
+    getSession(),
+  );
 
+  const [contextReady, setContextReady] = useState<boolean>(false);
 
-  const [
-    session,
-    setSession,
-  ] =
-    useState<AuthSession | null>(
-      () =>
-        getSession(),
-    );
-
-
-  const [
-    contextReady,
-    setContextReady,
-  ] =
-    useState<boolean>(
-      false,
-    );
-
-
-  const [
-    contextError,
-    setContextError,
-  ] =
-    useState<string | null>(
-      null,
-    );
-
+  const [contextError, setContextError] = useState<string | null>(null);
 
   // ==========================================================
   // ESTABLISH BUSINESS CONTEXT
   // ==========================================================
 
   useEffect(() => {
+    let active = true;
 
-    let active =
-      true;
-
-
-    async function establishContext():
-      Promise<void> {
-
+    async function establishContext(): Promise<void> {
       if (!session) {
-
         if (active) {
-
           await clearContext();
 
-          setContextReady(
-            true,
-          );
+          setContextReady(true);
 
-          setContextError(
-            null,
-          );
-
+          setContextError(null);
         }
 
         return;
-
       }
 
-
-      if (
-
-        !session.ownerId ||
-
-        !session.businessId ||
-
-        !session.branchId
-
-      ) {
-
+      if (!session.ownerId || !session.businessId || !session.branchId) {
         if (active) {
-
           await clearContext();
 
-          setContextReady(
-            false,
-          );
+          setContextReady(false);
 
           setContextError(
             "The authenticated user does not have a complete FINORA business context.",
           );
-
         }
 
         return;
-
       }
 
-
-      if (
-
-        session.dataContext ===
-          "DEMO" &&
-
-        !session.demoId
-
-      ) {
-
+      if (session.dataContext === "DEMO" && !session.demoId) {
         if (active) {
-
           await clearContext();
 
-          setContextReady(
-            false,
-          );
+          setContextReady(false);
 
           setContextError(
             "The authenticated DEMO session does not contain a valid Demo ID.",
           );
-
         }
 
         return;
-
       }
-
 
       if (active) {
+        setContextReady(false);
 
-        setContextReady(
-          false,
-        );
-
-        setContextError(
-          null,
-        );
-
+        setContextError(null);
       }
 
+      const result = await setContext({
+        ownerId: session.ownerId,
 
-      const result =
-        await setContext({
+        businessId: session.businessId,
 
-          ownerId:
-            session.ownerId,
+        branchId: session.branchId,
 
-          businessId:
-            session.businessId,
+        dataContext: session.dataContext,
 
-          branchId:
-            session.branchId,
-
-          dataContext:
-            session.dataContext,
-
-          demoId:
-            session.demoId,
-
-        });
-
+        demoId: session.demoId,
+      });
 
       if (!active) {
-
         return;
-
       }
-
 
       if (!result.success) {
-
-        setContextReady(
-          false,
-        );
+        setContextReady(false);
 
         setContextError(
-
-          result.error ??
-
-          "Unable to establish FINORA business context.",
-
+          result.error ?? "Unable to establish FINORA business context.",
         );
 
         return;
-
       }
 
+      setContextReady(true);
 
-      setContextReady(
-        true,
-      );
-
-      setContextError(
-        null,
-      );
-
+      setContextError(null);
     }
-
 
     void establishContext();
 
-
     return () => {
-
-      active =
-        false;
-
+      active = false;
     };
-
-  }, [
-
-    session,
-
-    setContext,
-
-    clearContext,
-
-  ]);
-
+  }, [session, setContext, clearContext]);
 
   // ==========================================================
   // LOGIN
   // ==========================================================
 
-  function handleLogin():
-    void {
+  function handleLogin(): void {
+    const nextSession = getSession();
 
-    const nextSession =
-      getSession();
-
-
-    setSession(
-      nextSession,
-    );
-
+    setSession(nextSession);
   }
-
 
   // ==========================================================
   // LOGOUT
   // ==========================================================
 
-  function handleLogout():
-    void {
-
+  function handleLogout(): void {
     logout();
-
 
     void clearContext();
 
+    setSession(null);
 
-    setSession(
-      null,
-    );
+    setContextReady(true);
 
+    setContextError(null);
 
-    setContextReady(
-      true,
-    );
+    const navigation = createDefaultNavigationState();
 
-
-    setContextError(
-      null,
-    );
-
-
-    const navigation =
-      createDefaultNavigationState();
-
-
-    writeNavigationState(
-      navigation,
-      true,
-    );
-
+    writeNavigationState(navigation, true);
   }
-
 
   // ==========================================================
   // AUTHENTICATION GATE
   // ==========================================================
 
   if (!session) {
-
-    return (
-
-      <Login
-        onLogin={
-          handleLogin
-        }
-      />
-
-    );
-
+    return <Login onLogin={handleLogin} />;
   }
-
 
   // ==========================================================
   // BUSINESS CONTEXT ERROR
   // ==========================================================
 
   if (contextError) {
-
     return (
-
       <BusinessContextErrorScreen
-
-        message={
-          contextError
-        }
-
-        onReturn={
-          handleLogout
-        }
-
+        message={contextError}
+        onReturn={handleLogout}
       />
-
     );
-
   }
-
 
   // ==========================================================
   // CONTEXT INITIALIZATION
   // ==========================================================
 
-  if (
-
-    !contextReady ||
-
-    !context
-
-  ) {
-
-    return (
-      <ContextLoadingScreen />
-    );
-
+  if (!contextReady || !context) {
+    return <ContextLoadingScreen />;
   }
-
 
   // ==========================================================
   // AUTHENTICATED APPLICATION
   // ==========================================================
 
   return (
-
-    <AuthenticatedV2Application
-
-      session={
-        session
-      }
-
-      onLogout={
-        handleLogout
-      }
-
-    />
-
+    <AuthenticatedV2Application session={session} onLogout={handleLogout} />
   );
-
 }
-
 
 // ============================================================
 // AUTHENTICATED V2 APPLICATION
 // ============================================================
 
 interface AuthenticatedV2ApplicationProps {
+  session: AuthSession;
 
-  session:
-    AuthSession;
-
-  onLogout():
-    void;
-
+  onLogout(): void;
 }
 
-
 function AuthenticatedV2Application({
-
   session: _session,
 
   onLogout,
-
 }: AuthenticatedV2ApplicationProps) {
-
-
   // ==========================================================
   // INITIAL NAVIGATION
   // ==========================================================
 
-  const [
-    navigation,
-    setNavigation,
-  ] =
-    useState<NavigationState>(
-      () => {
+  const [navigation, setNavigation] = useState<NavigationState>(() => {
+    const current = readNavigationState();
 
-        const current =
-          readNavigationState();
+    writeNavigationState(current, true);
 
+    return current;
+  });
 
-        writeNavigationState(
-          current,
-          true,
-        );
-
-
-        return current;
-
-      },
-    );
-
-
-  const page =
-    navigation.page;
-
+  const page = navigation.page;
 
   // ==========================================================
   // CUSTOMER WIZARD NAVIGATION STATE
   // ==========================================================
 
-  const [
-    customerWizardOpen,
-    setCustomerWizardOpen,
-  ] =
-    useState<boolean>(
-      false,
-    );
-
+  const [customerWizardOpen, setCustomerWizardOpen] = useState<boolean>(false);
 
   // ==========================================================
   // LOAN STUDIO NAVIGATION STATE
   // ==========================================================
 
-  const [
-    loanStudioOpen,
-    setLoanStudioOpen,
-  ] =
-    useState<boolean>(
-      false,
-    );
-
+  const [loanStudioOpen, setLoanStudioOpen] = useState<boolean>(false);
 
   // ==========================================================
   // CUSTOMER WIZARD NAVIGATION BRIDGE
   // ==========================================================
 
   useEffect(() => {
-
-    function handleWizardOpen():
-      void {
-
-      setCustomerWizardOpen(
-        true,
-      );
-
+    function handleWizardOpen(): void {
+      setCustomerWizardOpen(true);
     }
 
-
-    function handleWizardClose():
-      void {
-
-      setCustomerWizardOpen(
-        false,
-      );
-
+    function handleWizardClose(): void {
+      setCustomerWizardOpen(false);
     }
-
 
     window.addEventListener(
-
       CUSTOMER_WIZARD_OPEN_EVENT,
 
       handleWizardOpen,
-
     );
 
-
     window.addEventListener(
-
       CUSTOMER_WIZARD_CLOSE_EVENT,
 
       handleWizardClose,
-
     );
 
-
     return () => {
-
       window.removeEventListener(
-
         CUSTOMER_WIZARD_OPEN_EVENT,
 
         handleWizardOpen,
-
       );
 
-
       window.removeEventListener(
-
         CUSTOMER_WIZARD_CLOSE_EVENT,
 
         handleWizardClose,
-
       );
-
     };
-
   }, []);
-
 
   // ==========================================================
   // LOAN STUDIO NAVIGATION BRIDGE
   // ==========================================================
 
   useEffect(() => {
-
-    function handleLoanStudioOpen():
-      void {
-
-      setLoanStudioOpen(
-        true,
-      );
-
+    function handleLoanStudioOpen(): void {
+      setLoanStudioOpen(true);
     }
 
-
     window.addEventListener(
-
       LOAN_STUDIO_OPEN_EVENT,
 
       handleLoanStudioOpen,
-
     );
 
-
     return () => {
-
       window.removeEventListener(
-
         LOAN_STUDIO_OPEN_EVENT,
 
         handleLoanStudioOpen,
-
       );
-
     };
-
   }, []);
-
 
   // ==========================================================
   // NAVIGATION CHANGE EVENT
   // ==========================================================
 
   useEffect(() => {
+    function handlePopState(): void {
+      const next = readNavigationState();
 
-    function handlePopState():
-      void {
+      setNavigation(next);
 
-      const next =
-        readNavigationState();
+      setLoanStudioOpen(false);
 
-
-      setNavigation(
-        next,
-      );
-
-
-      setLoanStudioOpen(
-        false,
-      );
-
-
-      window.dispatchEvent(
-
-        new CustomEvent(
-          NAVIGATION_EVENT,
-        ),
-
-      );
-
+      window.dispatchEvent(new CustomEvent(NAVIGATION_EVENT));
     }
 
-
-    window.addEventListener(
-      "popstate",
-      handlePopState,
-    );
-
+    window.addEventListener("popstate", handlePopState);
 
     return () => {
-
-      window.removeEventListener(
-        "popstate",
-        handlePopState,
-      );
-
+      window.removeEventListener("popstate", handlePopState);
     };
-
   }, []);
-
 
   // ==========================================================
   // TOP-LEVEL NAVIGATION
   // ==========================================================
 
-  function handleNavigate(
-    nextPage:
-      Page,
-  ):
-    void {
-
-    if (
-
-      !isValidPage(
-        nextPage,
-      )
-
-    ) {
-
+  function handleNavigate(nextPage: Page): void {
+    if (!isValidPage(nextPage)) {
       return;
-
     }
 
+    setLoanStudioOpen(false);
 
-    setLoanStudioOpen(
-      false,
-    );
-
-
-    if (
-
-      nextPage ===
-      navigation.page
-
-    ) {
-
+    if (nextPage === navigation.page) {
       return;
-
     }
 
+    const nextNavigation: NavigationState = {
+      page: nextPage,
 
-    const nextNavigation:
-      NavigationState = {
-
-      page:
-        nextPage,
-
-      stack: [
-
-        ...navigation.stack,
-
-        navigation.page,
-
-      ],
-
+      stack: [...navigation.stack, navigation.page],
     };
 
+    writeNavigationState(nextNavigation);
 
-    writeNavigationState(
-      nextNavigation,
-    );
+    setNavigation(nextNavigation);
 
-
-    setNavigation(
-      nextNavigation,
-    );
-
-
-    window.dispatchEvent(
-
-      new CustomEvent(
-        NAVIGATION_EVENT,
-      ),
-
-    );
-
+    window.dispatchEvent(new CustomEvent(NAVIGATION_EVENT));
   }
-
 
   // ==========================================================
   // BACK NAVIGATION
   // ==========================================================
 
-  function handleBack():
-    void {
-
-
+  function handleBack(): void {
     // ========================================================
     // LOAN STUDIO FIRST
     // ========================================================
 
-    if (
-      loanStudioOpen
-    ) {
-
-      setLoanStudioOpen(
-        false,
-      );
+    if (loanStudioOpen) {
+      setLoanStudioOpen(false);
 
       return;
-
     }
-
 
     // ========================================================
     // CUSTOMER WIZARD SECOND
     // ========================================================
 
-    if (
-      customerWizardOpen
-    ) {
-
-      window.dispatchEvent(
-
-        new CustomEvent(
-          CUSTOMER_WIZARD_GLOBAL_BACK_EVENT,
-        ),
-
-      );
+    if (customerWizardOpen) {
+      window.dispatchEvent(new CustomEvent(CUSTOMER_WIZARD_GLOBAL_BACK_EVENT));
 
       return;
-
     }
-
 
     // ========================================================
     // NORMAL TOP-LEVEL BACK
     // ========================================================
 
-    if (
-      navigation.stack.length === 0
-    ) {
-
+    if (navigation.stack.length === 0) {
       return;
-
     }
 
+    const previousPage = navigation.stack[navigation.stack.length - 1];
 
-    const previousPage =
-      navigation.stack[
-        navigation.stack.length - 1
-      ];
+    const remainingStack = navigation.stack.slice(0, -1);
 
+    const nextNavigation: NavigationState = {
+      page: previousPage,
 
-    const remainingStack =
-      navigation.stack.slice(
-        0,
-        -1,
-      );
-
-
-    const nextNavigation:
-      NavigationState = {
-
-      page:
-        previousPage,
-
-      stack:
-        remainingStack,
-
+      stack: remainingStack,
     };
 
-
     writeNavigationState(
-
       nextNavigation,
 
       true,
-
     );
 
+    setNavigation(nextNavigation);
 
-    setNavigation(
-      nextNavigation,
-    );
-
-
-    window.dispatchEvent(
-
-      new CustomEvent(
-        NAVIGATION_EVENT,
-      ),
-
-    );
-
+    window.dispatchEvent(new CustomEvent(NAVIGATION_EVENT));
   }
-
 
   // ==========================================================
   // RECEPTION NAVIGATION
   // ==========================================================
 
-  function handleReceptionNavigation(
-    department:
-      DepartmentId,
-  ):
-    void {
-
-    switch (
-      department
-    ) {
-
+  function handleReceptionNavigation(department: DepartmentId): void {
+    switch (department) {
       case "customers":
-
-        handleNavigate(
-          "customerDepartment",
-        );
+        handleNavigate("customerDepartment");
 
         break;
-
 
       case "loans":
-
-        handleNavigate(
-          "loans",
-        );
+        handleNavigate("loans");
 
         break;
-
 
       case "collections":
-
-        handleNavigate(
-          "collections",
-        );
+        handleNavigate("collections");
 
         break;
-
 
       case "reports":
-
-        handleNavigate(
-          "reports",
-        );
+        handleNavigate("reports");
 
         break;
-
 
       case "accounts":
-
         // ----------------------------------------------------
         // Coming Soon
         // ----------------------------------------------------
 
         break;
-
 
       case "settings":
-
         // ----------------------------------------------------
         // Coming Soon
         // ----------------------------------------------------
 
         break;
 
-
       default:
-
         break;
-
     }
-
   }
-
 
   // ==========================================================
   // RENDER
   // ==========================================================
 
   return (
-
     <SessionGuard>
-
       <AppShell
-
-        page={
-          page
-        }
-
-        onNavigate={
-          handleNavigate
-        }
-
-        onBack={
-          handleBack
-        }
-
+        page={page}
+        onNavigate={handleNavigate}
+        onBack={handleBack}
         canGoBack={
-
-          loanStudioOpen ||
-
-          customerWizardOpen ||
-
-          navigation.stack.length > 0
-
+          loanStudioOpen || customerWizardOpen || navigation.stack.length > 0
         }
-
-        onLogout={
-          onLogout
-        }
-
+        onLogout={onLogout}
       >
-
         {/* ==================================================
             RECEPTION
         ================================================== */}
 
         {page === "reception" && (
-
-          <ReceptionPage
-            onNavigate={
-              handleReceptionNavigation
-            }
-          />
-
+          <ReceptionPage onNavigate={handleReceptionNavigation} />
         )}
-
 
         {/* ==================================================
             DASHBOARD
         ================================================== */}
 
-        {page === "dashboard" && (
-
-          <DashboardPage />
-
-        )}
-
+        {page === "dashboard" && <DashboardPage />}
 
         {/* ==================================================
             CUSTOMERS
         ================================================== */}
 
-        {page === "customers" && (
-
-          <CustomersPage />
-
-        )}
-
+        {page === "customers" && <CustomersPage />}
 
         {/* ==================================================
             CUSTOMER DEPARTMENT
         ================================================== */}
 
-        {page === "customerDepartment" && (
-
-          <CustomerDepartmentPage />
-
-        )}
-
+        {page === "customerDepartment" && <CustomerDepartmentPage />}
 
         {/* ==================================================
             LOANS
         ================================================== */}
 
-        {page === "loans" && !loanStudioOpen && (
+        {page === "loans" && !loanStudioOpen && <LoansPage />}
 
-          <LoansPage />
-
-        )}
-
-
-        {page === "loans" && loanStudioOpen && (
-
-          <LoanStudio />
-
-        )}
-
+        {page === "loans" && loanStudioOpen && <LoanStudio />}
 
         {/* ==================================================
             COLLECTIONS
         ================================================== */}
 
-        {page === "collections" && (
-
-          <CollectionsPage />
-
-        )}
-
+        {page === "collections" && <CollectionsPage />}
 
         {/* ==================================================
             REPORTS
         ================================================== */}
 
-        {page === "reports" && (
-
-          <ReportsPage />
-
-        )}
-
+        {page === "reports" && <ReportsPage />}
       </AppShell>
-
     </SessionGuard>
-
   );
-
 }
-
 
 // ============================================================
 // ROOT V2 APPLICATION
 // ============================================================
 
 export default function App() {
-
   return (
-
     <BusinessContextProvider>
-
       <AuthenticatedApplication />
-
     </BusinessContextProvider>
-
   );
-
 }
-
 
 // ============================================================
 // END

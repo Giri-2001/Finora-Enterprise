@@ -5,19 +5,12 @@
    PAGE
 =========================================================== */
 
-import CustomerDepartment
-  from "../../components/customers/hub/CustomerDepartment";
+import CustomerDepartment from "../../components/customers/hub/CustomerDepartment";
 
 /* ===========================================================
    COMPONENT
 =========================================================== */
 
 export default function CustomerDepartmentPage() {
-
-  return (
-
-    <CustomerDepartment />
-
-  );
-
+  return <CustomerDepartment />;
 }

@@ -46,20 +46,13 @@
 // IMPORTS
 // ============================================================
 
-import {
-  useCallback,
-  useEffect,
-  useState,
-} from "react";
+import { useCallback, useEffect, useState } from "react";
 
-import StudioLayout
-  from "../../common/layout/StudioLayout";
+import StudioLayout from "../../common/layout/StudioLayout";
 
-import CustomerOfficeController
-  from "../office/CustomerOfficeController";
+import CustomerOfficeController from "../office/CustomerOfficeController";
 
-import CustomerWizard
-  from "../wizard/CustomerWizard";
+import CustomerWizard from "../wizard/CustomerWizard";
 
 import {
   getCustomers,
@@ -67,27 +60,19 @@ import {
   clearCustomerCache,
 } from "../../../store/customers/customer.store";
 
-import customerOfficeMapper
-  from "../office/CustomerOfficeController/mappers/customerOfficeMapper";
+import customerOfficeMapper from "../office/CustomerOfficeController/mappers/customerOfficeMapper";
 
-import type {
-  OfficeCustomer,
-} from "../office/CustomerOffice/types";
+import type { OfficeCustomer } from "../office/CustomerOffice/types";
 
-import {
-  storageManager,
-} from "../../../storage/storageManager";
+import { storageManager } from "../../../storage/storageManager";
 
-import {
-  StorageMode,
-} from "../../../storage/storage.types";
+import { StorageMode } from "../../../storage/storage.types";
 
 // ============================================================
 // CONSTANTS
 // ============================================================
 
-const STORAGE_MODE_SESSION_KEY =
-  "FINORA_STORAGE_MODE";
+const STORAGE_MODE_SESSION_KEY = "FINORA_STORAGE_MODE";
 
 // ============================================================
 // CUSTOMER WIZARD NAVIGATION EVENTS
@@ -116,49 +101,30 @@ const STORAGE_MODE_SESSION_KEY =
 //
 // ============================================================
 
-const CUSTOMER_WIZARD_OPEN_EVENT =
-  "FINORA_CUSTOMER_WIZARD_OPEN";
+const CUSTOMER_WIZARD_OPEN_EVENT = "FINORA_CUSTOMER_WIZARD_OPEN";
 
-const CUSTOMER_WIZARD_CLOSE_EVENT =
-  "FINORA_CUSTOMER_WIZARD_CLOSE";
+const CUSTOMER_WIZARD_CLOSE_EVENT = "FINORA_CUSTOMER_WIZARD_CLOSE";
 
-const CUSTOMER_WIZARD_GLOBAL_BACK_EVENT =
-  "FINORA_CUSTOMER_WIZARD_GLOBAL_BACK";
+const CUSTOMER_WIZARD_GLOBAL_BACK_EVENT = "FINORA_CUSTOMER_WIZARD_GLOBAL_BACK";
 
 // ============================================================
 // STORAGE MODE RESOLVER
 // ============================================================
 
-function getAuthenticatedStorageMode():
-  StorageMode {
-
+function getAuthenticatedStorageMode(): StorageMode {
   try {
+    const storedMode = window.sessionStorage.getItem(STORAGE_MODE_SESSION_KEY);
 
-    const storedMode =
-      window.sessionStorage.getItem(
-        STORAGE_MODE_SESSION_KEY,
-      );
-
-    if (
-      storedMode ===
-      StorageMode.USB
-    ) {
-
+    if (storedMode === StorageMode.USB) {
       return StorageMode.USB;
     }
 
-    if (
-      storedMode ===
-      StorageMode.CLOUD
-    ) {
-
+    if (storedMode === StorageMode.CLOUD) {
       return StorageMode.CLOUD;
     }
 
     return StorageMode.LOCAL;
-
   } catch {
-
     // --------------------------------------------------------
     // A missing session mode means there is no persisted
     // renderer-session selection.
@@ -178,24 +144,17 @@ function getAuthenticatedStorageMode():
 // ============================================================
 
 export default function CustomerDepartment() {
-
   // ==========================================================
   // CUSTOMER WIZARD STATE
   // ==========================================================
 
-  const [
-    showCustomerWizard,
-    setShowCustomerWizard,
-  ] = useState(false);
+  const [showCustomerWizard, setShowCustomerWizard] = useState(false);
 
   // ==========================================================
   // EDITING CUSTOMER
   // ==========================================================
 
-  const [
-    editingCustomer,
-    setEditingCustomer,
-  ] = useState<
+  const [editingCustomer, setEditingCustomer] = useState<
     OfficeCustomer | undefined
   >(undefined);
 
@@ -203,30 +162,19 @@ export default function CustomerDepartment() {
   // CUSTOMER OFFICE DATA
   // ==========================================================
 
-  const [
-    customers,
-    setCustomers,
-  ] = useState<
-    OfficeCustomer[]
-  >([]);
+  const [customers, setCustomers] = useState<OfficeCustomer[]>([]);
 
   // ==========================================================
   // CUSTOMER OFFICE LOADING
   // ==========================================================
 
-  const [
-    customersLoading,
-    setCustomersLoading,
-  ] = useState(true);
+  const [customersLoading, setCustomersLoading] = useState(true);
 
   // ==========================================================
   // CUSTOMER OFFICE ERROR
   // ==========================================================
 
-  const [
-    customerLoadError,
-    setCustomerLoadError,
-  ] = useState<
+  const [customerLoadError, setCustomerLoadError] = useState<
     string | undefined
   >(undefined);
 
@@ -237,40 +185,22 @@ export default function CustomerDepartment() {
   // external FINORA data event is received.
   // ==========================================================
 
-  const [
-    customerDataVersion,
-    setCustomerDataVersion,
-  ] = useState(0);
+  const [customerDataVersion, setCustomerDataVersion] = useState(0);
 
   // ==========================================================
   // FINORA DATA UPDATE LISTENER
   // ==========================================================
 
   useEffect(() => {
-
     function handleLoanUpdate(): void {
-
-      setCustomerDataVersion(
-        (previous) =>
-          previous + 1,
-      );
-
+      setCustomerDataVersion((previous) => previous + 1);
     }
 
-    window.addEventListener(
-      "FINORA_LOAN_UPDATED",
-      handleLoanUpdate,
-    );
+    window.addEventListener("FINORA_LOAN_UPDATED", handleLoanUpdate);
 
     return () => {
-
-      window.removeEventListener(
-        "FINORA_LOAN_UPDATED",
-        handleLoanUpdate,
-      );
-
+      window.removeEventListener("FINORA_LOAN_UPDATED", handleLoanUpdate);
     };
-
   }, []);
 
   // ==========================================================
@@ -296,45 +226,27 @@ export default function CustomerDepartment() {
   // ==========================================================
 
   useEffect(() => {
-
     function handleGlobalWizardBack(): void {
-
-      if (
-        !showCustomerWizard
-      ) {
-
+      if (!showCustomerWizard) {
         return;
-
       }
 
-      setEditingCustomer(
-        undefined,
-      );
+      setEditingCustomer(undefined);
 
-      setShowCustomerWizard(
-        false,
-      );
+      setShowCustomerWizard(false);
 
       // ------------------------------------------------------
       // Force Customer Office to reload after returning from
       // Customer Wizard.
       // ------------------------------------------------------
 
-      setCustomerDataVersion(
-        (previous) =>
-          previous + 1,
-      );
+      setCustomerDataVersion((previous) => previous + 1);
 
       // ------------------------------------------------------
       // Tell App.tsx that the nested Wizard is now closed.
       // ------------------------------------------------------
 
-      window.dispatchEvent(
-        new CustomEvent(
-          CUSTOMER_WIZARD_CLOSE_EVENT,
-        ),
-      );
-
+      window.dispatchEvent(new CustomEvent(CUSTOMER_WIZARD_CLOSE_EVENT));
     }
 
     window.addEventListener(
@@ -343,17 +255,12 @@ export default function CustomerDepartment() {
     );
 
     return () => {
-
       window.removeEventListener(
         CUSTOMER_WIZARD_GLOBAL_BACK_EVENT,
         handleGlobalWizardBack,
       );
-
     };
-
-  }, [
-    showCustomerWizard,
-  ]);
+  }, [showCustomerWizard]);
 
   // ==========================================================
   // LOAD CUSTOMER OFFICE DATA
@@ -375,50 +282,31 @@ export default function CustomerDepartment() {
   // ==========================================================
 
   useEffect(() => {
+    let cancelled = false;
 
-    let cancelled =
-      false;
-
-    async function loadCustomerOffice():
-      Promise<void> {
-
+    async function loadCustomerOffice(): Promise<void> {
       try {
+        setCustomersLoading(true);
 
-        setCustomersLoading(
-          true,
-        );
-
-        setCustomerLoadError(
-          undefined,
-        );
+        setCustomerLoadError(undefined);
 
         // ----------------------------------------------------
         // RESTORE AUTHENTICATED STORAGE MODE
         // ----------------------------------------------------
 
-        const storageMode =
-          getAuthenticatedStorageMode();
+        const storageMode = getAuthenticatedStorageMode();
 
         const storageActivated =
-          await storageManager.selectStorageMode(
-            storageMode,
-          );
+          await storageManager.selectStorageMode(storageMode);
 
-        if (
-          !storageActivated.success
-        ) {
-
+        if (!storageActivated.success) {
           throw new Error(
             storageActivated.error ??
-            `Unable to restore FINORA ${storageMode} storage.`,
+              `Unable to restore FINORA ${storageMode} storage.`,
           );
-
         }
 
-        if (
-          cancelled
-        ) {
-
+        if (cancelled) {
           return;
         }
 
@@ -436,10 +324,7 @@ export default function CustomerDepartment() {
 
         await hydrateCustomersFromStorage();
 
-        if (
-          cancelled
-        ) {
-
+        if (cancelled) {
           return;
         }
 
@@ -447,139 +332,74 @@ export default function CustomerDepartment() {
         // READ FRESH STORE CACHE
         // ----------------------------------------------------
 
-        const customerProfiles =
-          getCustomers();
+        const customerProfiles = getCustomers();
 
         // ----------------------------------------------------
         // MAP CUSTOMER DOMAIN → CUSTOMER OFFICE
         // ----------------------------------------------------
 
-        const mappedCustomers =
-          await customerOfficeMapper(
-            customerProfiles,
-          );
+        const mappedCustomers = await customerOfficeMapper(customerProfiles);
 
-        if (
-          cancelled
-        ) {
-
+        if (cancelled) {
           return;
         }
 
-        setCustomers(
-          mappedCustomers,
-        );
-
-      } catch (
-        error
-      ) {
-
-        if (
-          cancelled
-        ) {
-
+        setCustomers(mappedCustomers);
+      } catch (error) {
+        if (cancelled) {
           return;
         }
 
-        console.error(
-          "FINORA CUSTOMER OFFICE LOAD ERROR:",
-          error,
-        );
+        console.error("FINORA CUSTOMER OFFICE LOAD ERROR:", error);
 
-        setCustomers(
-          [],
-        );
+        setCustomers([]);
 
-        setCustomerLoadError(
-          "Unable to load customer office data.",
-        );
-
+        setCustomerLoadError("Unable to load customer office data.");
       } finally {
-
-        if (
-          !cancelled
-        ) {
-
-          setCustomersLoading(
-            false,
-          );
-
+        if (!cancelled) {
+          setCustomersLoading(false);
         }
-
       }
-
     }
 
     void loadCustomerOffice();
 
     return () => {
-
       cancelled = true;
-
     };
-
-  }, [
-    customerDataVersion,
-  ]);
+  }, [customerDataVersion]);
 
   // ==========================================================
   // OPEN CUSTOMER WIZARD
   // ==========================================================
 
-  const handleOpenCustomerWizard =
-    useCallback(() => {
+  const handleOpenCustomerWizard = useCallback(() => {
+    setEditingCustomer(undefined);
 
-      setEditingCustomer(
-        undefined,
-      );
+    setShowCustomerWizard(true);
 
-      setShowCustomerWizard(
-        true,
-      );
+    // ------------------------------------------------------
+    // Tell App.tsx that the nested Customer Wizard is open.
+    // ------------------------------------------------------
 
-      // ------------------------------------------------------
-      // Tell App.tsx that the nested Customer Wizard is open.
-      // ------------------------------------------------------
-
-      window.dispatchEvent(
-        new CustomEvent(
-          CUSTOMER_WIZARD_OPEN_EVENT,
-        ),
-      );
-
-    }, []);
+    window.dispatchEvent(new CustomEvent(CUSTOMER_WIZARD_OPEN_EVENT));
+  }, []);
 
   // ==========================================================
   // OPEN CUSTOMER WIZARD — EDIT MODE
   // ==========================================================
 
-  const handleEditCustomer =
-    useCallback(
-      (
-        customer: OfficeCustomer,
-      ) => {
+  const handleEditCustomer = useCallback((customer: OfficeCustomer) => {
+    setEditingCustomer(customer);
 
-        setEditingCustomer(
-          customer,
-        );
+    setShowCustomerWizard(true);
 
-        setShowCustomerWizard(
-          true,
-        );
+    // ----------------------------------------------------
+    // Tell App.tsx that the nested Customer Wizard is open.
+    // ----------------------------------------------------
 
-        // ----------------------------------------------------
-        // Tell App.tsx that the nested Customer Wizard is open.
-        // ----------------------------------------------------
-
-        window.dispatchEvent(
-          new CustomEvent(
-            CUSTOMER_WIZARD_OPEN_EVENT,
-          ),
-        );
-
-      },
-      [],
-    );
+    window.dispatchEvent(new CustomEvent(CUSTOMER_WIZARD_OPEN_EVENT));
+  }, []);
 
   // ==========================================================
   // BACK TO CUSTOMERS HUB
@@ -591,96 +411,50 @@ export default function CustomerDepartment() {
   //
   // ==========================================================
 
-  const handleBackToCustomersHub =
-    useCallback(() => {
+  const handleBackToCustomersHub = useCallback(() => {
+    setEditingCustomer(undefined);
 
-      setEditingCustomer(
-        undefined,
-      );
+    setShowCustomerWizard(false);
 
-      setShowCustomerWizard(
-        false,
-      );
+    // ------------------------------------------------------
+    // Force Customer Office to reload after returning from
+    // Customer Wizard.
+    // ------------------------------------------------------
 
-      // ------------------------------------------------------
-      // Force Customer Office to reload after returning from
-      // Customer Wizard.
-      // ------------------------------------------------------
+    setCustomerDataVersion((previous) => previous + 1);
 
-      setCustomerDataVersion(
-        (previous) =>
-          previous + 1,
-      );
+    // ------------------------------------------------------
+    // Tell App.tsx that the nested Wizard is now closed.
+    // ------------------------------------------------------
 
-      // ------------------------------------------------------
-      // Tell App.tsx that the nested Wizard is now closed.
-      // ------------------------------------------------------
-
-      window.dispatchEvent(
-        new CustomEvent(
-          CUSTOMER_WIZARD_CLOSE_EVENT,
-        ),
-      );
-
-    }, []);
+    window.dispatchEvent(new CustomEvent(CUSTOMER_WIZARD_CLOSE_EVENT));
+  }, []);
 
   // ==========================================================
   // RENDER
   // ==========================================================
 
   return (
-
-    <StudioLayout
-      department="Customers Hub"
-      allowScroll={false}
-    >
-
+    <StudioLayout department="Customers Hub" allowScroll={false}>
       {/* ====================================================
           CUSTOMER OFFICE / CUSTOMER WIZARD
           ==================================================== */}
 
       {showCustomerWizard ? (
-
         <CustomerWizard
-
-          editCustomer={
-            editingCustomer
-          }
-
-          onBackToCustomersHub={
-            handleBackToCustomersHub
-          }
-
+          editCustomer={editingCustomer}
+          onBackToCustomersHub={handleBackToCustomersHub}
         />
-
       ) : (
-
         <>
-
           {customerLoadError ? (
-
-            <div>
-              {customerLoadError}
-            </div>
-
+            <div>{customerLoadError}</div>
           ) : (
-
             <CustomerOfficeController
-
-              customers={
-                customers
-              }
-
-              onOpenCustomerWizard={
-                handleOpenCustomerWizard
-              }
-
-              onEditCustomer={
-                handleEditCustomer
-              }
-
+              customers={customers}
+              onOpenCustomerWizard={handleOpenCustomerWizard}
+              onEditCustomer={handleEditCustomer}
             />
-
           )}
 
           {/* ==================================================
@@ -692,22 +466,16 @@ export default function CustomerDepartment() {
           ================================================== */}
 
           {customersLoading && (
-
             <div
               aria-hidden="true"
               style={{
                 display: "none",
               }}
             />
-
           )}
-
         </>
-
       )}
-
     </StudioLayout>
-
   );
 }
 

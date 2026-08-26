@@ -9,38 +9,24 @@
    User card click chesinappude selection create avvali.
 =========================================================== */
 
-import {
-  useEffect,
-  useState,
-} from "react";
+import { useEffect, useState } from "react";
 
-import type {
-  OfficeCustomer,
-} from "../../CustomerOffice/types";
+import type { OfficeCustomer } from "../../CustomerOffice/types";
 
 /* ===========================================================
    HOOK
 =========================================================== */
 
-export default function useCustomerSelection(
-
-  customers: OfficeCustomer[],
-
-) {
-
-/* ===========================================================
+export default function useCustomerSelection(customers: OfficeCustomer[]) {
+  /* ===========================================================
    STATE
 =========================================================== */
 
-const [
-  selectedCustomer,
-  setSelectedCustomer,
-] = useState<
-  OfficeCustomer | undefined
->(undefined);
+  const [selectedCustomer, setSelectedCustomer] = useState<
+    OfficeCustomer | undefined
+  >(undefined);
 
-
-/* ===========================================================
+  /* ===========================================================
    SYNC SELECTED CUSTOMER
    -----------------------------------------------------------
    Existing selected customer data update ayithe
@@ -50,103 +36,62 @@ const [
    Empty selection ni automatic ga create cheyyamu.
 =========================================================== */
 
-useEffect(() => {
+  useEffect(() => {
+    if (!selectedCustomer) {
+      return;
+    }
 
-  if (!selectedCustomer) {
-
-    return;
-
-  }
-
-  const updatedCustomer =
-    customers.find(
-
-      (customer) =>
-        customer.id ===
-        selectedCustomer.id,
-
+    const updatedCustomer = customers.find(
+      (customer) => customer.id === selectedCustomer.id,
     );
 
-  if (!updatedCustomer) {
+    if (!updatedCustomer) {
+      /*
+       * Selected customer current dataset lo
+       * lekapothe selection clear.
+       */
 
-    /*
-     * Selected customer current dataset lo
-     * lekapothe selection clear.
-     */
+      setSelectedCustomer(undefined);
 
-    setSelectedCustomer(
-      undefined,
-    );
+      return;
+    }
 
-    return;
+    if (updatedCustomer !== selectedCustomer) {
+      setSelectedCustomer(updatedCustomer);
+    }
+  }, [customers, selectedCustomer]);
 
-  }
-
-  if (
-    updatedCustomer !==
-    selectedCustomer
-  ) {
-
-    setSelectedCustomer(
-      updatedCustomer,
-    );
-
-  }
-
-}, [
-  customers,
-  selectedCustomer,
-]);
-
-
-/* ===========================================================
+  /* ===========================================================
    SELECT CUSTOMER
    -----------------------------------------------------------
    Only explicit customer card click valla
    selection create avutundi.
 =========================================================== */
 
-function selectCustomer(
+  function selectCustomer(customer: OfficeCustomer) {
+    setSelectedCustomer(customer);
+  }
 
-  customer: OfficeCustomer,
-
-) {
-
-  setSelectedCustomer(
-    customer,
-  );
-
-}
-
-
-/* ===========================================================
+  /* ===========================================================
    CLEAR SELECTION
    -----------------------------------------------------------
    Reception empty area click chesinappudu
    selected customer completely remove chestham.
 =========================================================== */
 
-function clearSelection() {
+  function clearSelection() {
+    setSelectedCustomer(undefined);
+  }
 
-  setSelectedCustomer(
-    undefined,
-  );
-
-}
-
-
-/* ===========================================================
+  /* ===========================================================
    EXPORT
 =========================================================== */
 
-return {
+  return {
+    selectedCustomer,
 
-  selectedCustomer,
+    selectCustomer,
 
-  selectCustomer,
-
-  clearSelection,
-
-};
-
+    clearSelection,
+  };
 }

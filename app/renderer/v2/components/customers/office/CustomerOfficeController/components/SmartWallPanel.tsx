@@ -23,82 +23,58 @@
    - No hard-coded page background
    - No hard-coded theme-specific color mapping
    - Theme switching affects toolbar / hints / presentation
-=========================================================== */
 
+   NAVIGATION:
+   - Work Desk uses the existing Customer Office / Workspace flow.
+   - Customer Data uses the existing Customer Data destination.
+   - No new page is created here.
+=========================================================== */
 
 /* ===========================================================
    IMPORTS
 =========================================================== */
 
-import {
-  useState,
-} from "react";
+import { useState } from "react";
 
-
-import {
-  UserPlus,
-  SquarePen,
-} from "lucide-react";
-
+import { UserPlus, SquarePen } from "lucide-react";
 
 /* ===========================================================
    CUSTOMER COMPONENTS
 =========================================================== */
 
-import CustomerSmartWall
-  from "../../../smartwall/CustomerSmartWall";
+import CustomerSmartWall from "../../../smartwall/CustomerSmartWall";
 
+import CustomerHangerRail from "../../../hub/sections/CustomerHangerRail";
 
-import CustomerHangerRail
-  from "../../../hub/sections/CustomerHangerRail";
+import CustomerSearchBar from "../../../hub/topbar/components/CustomerSearchBar/CustomerSearchBar";
 
-
-import CustomerSearchBar
-  from "../../../hub/topbar/components/CustomerSearchBar/CustomerSearchBar";
-
-
-import CustomerHubSummaryCards
-  from "./CustomerHubSummaryCards/CustomerHubSummaryCards";
-
+import CustomerHubSummaryCards from "./CustomerHubSummaryCards/CustomerHubSummaryCards";
 
 /* ===========================================================
    TYPES
 =========================================================== */
 
-import type {
-  SmartWallPanelProps,
-} from "./SmartWallPanel.types";
-
+import type { SmartWallPanelProps } from "./SmartWallPanel.types";
 
 /* ===========================================================
    RESPONSIVE ENGINE
 =========================================================== */
 
-import {
-  useCustomerResponsive,
-} from "../../../../../utils/responsive/customers/customers.useResponsive";
+import { useCustomerResponsive } from "../../../../../utils/responsive/customers/customers.useResponsive";
 
-
-import {
-  getCustomerToolbarTokens,
-} from "../../../../../utils/responsive/customers/customerToolbar.tokens";
-
+import { getCustomerToolbarTokens } from "../../../../../utils/responsive/customers/customerToolbar.tokens";
 
 /* ===========================================================
    THEME ENGINE
 =========================================================== */
 
-import {
-  useTheme,
-} from "../../../../../themes/provider/ThemeProvider";
-
+import { useTheme } from "../../../../../themes/provider/ThemeProvider";
 
 /* ===========================================================
    COMPONENT
 =========================================================== */
 
 export default function SmartWallPanel({
-
   title,
 
   smartWallCustomers,
@@ -115,6 +91,10 @@ export default function SmartWallPanel({
 
   onEditCustomer,
 
+  onOpenWorkspace,
+
+  onOpenCustomerData,
+
   onClearSelection,
 
   currentPage,
@@ -130,917 +110,469 @@ export default function SmartWallPanel({
   searchText,
 
   onSearchChange,
-
 }: SmartWallPanelProps) {
-
-
   /* =========================================================
      FINORA THEME ENGINE
-     =========================================================
-     
-     ThemeProvider
-          ↓
-     FINORA Theme Registry
-          ↓
-     useTheme()
-          ↓
-     SmartWallPanel
-     
-     Theme controls visual appearance only.
-     Responsive geometry remains in Responsive Engine.
   ========================================================= */
 
-  const {
-    theme,
-  } = useTheme();
-
+  const { theme } = useTheme();
 
   /* =========================================================
      CUSTOMER RESPONSIVE ENGINE
   ========================================================= */
 
-  const {
-    tokens,
-  } =
-    useCustomerResponsive();
-
+  const { tokens } = useCustomerResponsive();
 
   /* =========================================================
      CUSTOMER TOOLBAR RESPONSIVE ENGINE
   ========================================================= */
 
-  const toolbar =
-    getCustomerToolbarTokens(
-      tokens.meta.viewport,
-    );
-
+  const toolbar = getCustomerToolbarTokens(tokens.meta.viewport);
 
   /* =========================================================
      SELECTION STATE
   ========================================================= */
 
-  const hasSelectedCustomer =
-    Boolean(
-      selectedCustomer,
-    );
+  const hasSelectedCustomer = Boolean(selectedCustomer);
 
-
-  const [
-    showEditHint,
-    setShowEditHint,
-  ] =
-    useState(false);
-
+  const [showEditHint, setShowEditHint] = useState(false);
 
   /* =========================================================
      TOOLBAR RESPONSIVE CONTRACT
   ========================================================= */
 
-  const toolbarGridTemplateColumns =
-    toolbar.gridTemplateColumns;
+  const toolbarGridTemplateColumns = toolbar.gridTemplateColumns;
 
+  const toolbarGridTemplateAreas = toolbar.gridTemplateAreas;
 
-  const toolbarGridTemplateAreas =
-    toolbar.gridTemplateAreas;
+  const toolbarGap = toolbar.gap;
 
+  const actionButtonWidth = toolbar.button.width;
 
-  const toolbarGap =
-    toolbar.gap;
+  const actionButtonMaxWidth = toolbar.button.maxWidth;
 
+  const actionButtonHeight = toolbar.button.height;
 
-  const actionButtonWidth =
-    toolbar.button.width;
+  const actionButtonMinHeight = toolbar.button.minHeight;
 
+  const actionButtonFontSize = toolbar.button.fontSize;
 
-  const actionButtonMaxWidth =
-    toolbar.button.maxWidth;
+  const actionButtonIconSize = toolbar.button.iconSize;
 
+  const actionButtonPaddingX = toolbar.button.paddingX;
 
-  const actionButtonHeight =
-    toolbar.button.height;
+  const actionButtonGap = toolbar.button.gap;
 
+  const actionButtonRadius = toolbar.button.radius;
 
-  const actionButtonMinHeight =
-    toolbar.button.minHeight;
+  const searchMaxWidth = toolbar.search.maxWidth;
 
+  const toolbarMarginBottom = tokens.spacing.inline + tokens.spacing.small;
 
-  const actionButtonFontSize =
-    toolbar.button.fontSize;
-
-
-  const actionButtonIconSize =
-    toolbar.button.iconSize;
-
-
-  const actionButtonPaddingX =
-    toolbar.button.paddingX;
-
-
-  const actionButtonGap =
-    toolbar.button.gap;
-
-
-  const actionButtonRadius =
-    toolbar.button.radius;
-
-
-  const searchMaxWidth =
-    toolbar.search.maxWidth;
-
-
-  const toolbarMarginBottom =
-    tokens.spacing.inline +
-    tokens.spacing.small;
-
-
-  const wallSummaryMarginTop =
-    tokens.spacing.small +
-    tokens.spacing.inline;
-
+  const wallSummaryMarginTop = tokens.spacing.small + tokens.spacing.inline;
 
   /* =========================================================
      THEME VISUAL TOKENS
-     
-     IMPORTANT:
-     
-     These are visual-only references to the central
-     FINORA Theme Engine.
-     
-     No theme values are created here.
   ========================================================= */
 
-  const themePrimary =
-    theme
-      .colors
-      .brand
-      .primary;
+  const themePrimary = theme.colors.brand.primary;
 
+  const themeAccent = theme.colors.brand.accent;
 
-  const themeAccent =
-    theme
-      .colors
-      .brand
-      .accent;
+  const themeSurface = theme.colors.background.surface;
 
+  const themeSurfaceMuted = theme.colors.background.surfaceMuted;
 
-  const themeSurface =
-    theme
-      .colors
-      .background
-      .surface;
+  const themePageBackground = theme.colors.background.page;
 
+  const themeBorder = theme.colors.border.default;
 
-  const themeSurfaceMuted =
-    theme
-      .colors
-      .background
-      .surfaceMuted;
+  const themeStrongBorder = theme.colors.border.strong;
 
+  const themeText = theme.colors.text.primary;
 
-  const themePageBackground =
-    theme
-      .colors
-      .background
-      .page;
+  const themeTextMuted = theme.colors.text.secondary;
 
-
-  const themeBorder =
-    theme
-      .colors
-      .border
-      .default;
-
-
-  const themeStrongBorder =
-    theme
-      .colors
-      .border
-      .strong;
-
-
-  const themeText =
-    theme
-      .colors
-      .text
-      .primary;
-
-
-  const themeTextMuted =
-    theme
-      .colors
-      .text
-      .secondary;
-
-
-  const themeShadow =
-    theme
-      .colors
-      .overlay
-      .shadow;
-
+  const themeShadow = theme.colors.overlay.shadow;
 
   /* =========================================================
      ACTION BUTTON STYLE
   ========================================================= */
 
   const actionButtonStyle = {
+    width: actionButtonWidth,
 
-    width:
-      actionButtonWidth,
+    maxWidth: actionButtonMaxWidth,
 
-    maxWidth:
-      actionButtonMaxWidth,
+    minWidth: 0,
 
-    minWidth:
-      0,
+    height: actionButtonHeight,
 
-    height:
-      actionButtonHeight,
+    minHeight: actionButtonMinHeight,
 
-    minHeight:
-      actionButtonMinHeight,
+    padding: `0 ${actionButtonPaddingX}px`,
 
-    padding:
-      `0 ${actionButtonPaddingX}px`,
+    display: "flex",
 
-    display:
-      "flex",
+    alignItems: "center",
 
-    alignItems:
-      "center",
+    justifyContent: "center",
 
-    justifyContent:
-      "center",
+    gap: actionButtonGap,
 
-    gap:
-      actionButtonGap,
+    borderRadius: actionButtonRadius,
 
-    borderRadius:
-      actionButtonRadius,
+    border: `1px solid ${themeStrongBorder}`,
 
-    border:
-      `1px solid ${themeStrongBorder}`,
+    cursor: "pointer",
 
-    cursor:
-      "pointer",
+    fontWeight: 800,
 
-    fontWeight:
-      800,
+    fontSize: actionButtonFontSize,
 
-    fontSize:
-      actionButtonFontSize,
+    lineHeight: 1.1,
 
-    lineHeight:
-      1.1,
+    color: themeText,
 
-    color:
-      themeText,
+    background: themeSurface,
 
-    background:
-      themeSurface,
-
-    boxShadow:
-      `0 8px 20px ${themeShadow}`,
+    boxShadow: `0 8px 20px ${themeShadow}`,
 
     transition:
       "transform .2s ease, box-shadow .2s ease, background .2s ease, border-color .2s ease",
 
-    boxSizing:
-      "border-box" as const,
+    boxSizing: "border-box" as const,
 
-    whiteSpace:
-      "nowrap" as const,
+    whiteSpace: "nowrap" as const,
 
-    overflow:
-      "hidden",
-
+    overflow: "hidden",
   };
-
 
   /* =========================================================
      TOOLBAR CELL STYLE
   ========================================================= */
 
   const toolbarCellStyle = {
+    minWidth: 0,
 
-    minWidth:
-      0,
+    display: "flex",
 
-    display:
-      "flex",
+    alignItems: "center",
 
-    alignItems:
-      "center",
-
-    boxSizing:
-      "border-box" as const,
-
+    boxSizing: "border-box" as const,
   };
-
 
   /* =========================================================
      ADD CUSTOMER CELL
   ========================================================= */
 
   const addCustomerCellStyle = {
-
     ...toolbarCellStyle,
 
-    gridArea:
-      "add",
+    gridArea: "add",
 
-    justifyContent:
-      "flex-start",
-
+    justifyContent: "flex-start",
   };
-
 
   /* =========================================================
      SEARCH CELL STYLE
   ========================================================= */
 
   const searchCellStyle = {
-
     ...toolbarCellStyle,
 
-    gridArea:
-      "search",
+    gridArea: "search",
 
-    width:
-      "100%",
+    width: "100%",
 
-    justifyContent:
-      "center",
-
+    justifyContent: "center",
   };
-
 
   /* =========================================================
      SEARCH WRAPPER STYLE
   ========================================================= */
 
   const searchWrapperStyle = {
+    width: "100%",
 
-    width:
-      "100%",
+    maxWidth: searchMaxWidth,
 
-    maxWidth:
-      searchMaxWidth,
+    minWidth: 0,
 
-    minWidth:
-      0,
+    display: "flex",
 
-    display:
-      "flex",
+    alignItems: "center",
 
-    alignItems:
-      "center",
+    justifyContent: "center",
 
-    justifyContent:
-      "center",
-
-    boxSizing:
-      "border-box" as const,
-
+    boxSizing: "border-box" as const,
   };
-
 
   /* =========================================================
      EDIT CUSTOMER CELL STYLE
   ========================================================= */
 
   const editCellStyle = {
-
     ...toolbarCellStyle,
 
-    gridArea:
-      "edit",
+    gridArea: "edit",
 
-    position:
-      "relative" as const,
+    position: "relative" as const,
 
-    justifyContent:
-      "flex-end",
-
+    justifyContent: "flex-end",
   };
-
 
   /* =========================================================
      EDIT HINT THEME COLORS
-     
-     No semantic token is used because ThemeColors does not
-     expose a "semantic" property.
-     
-     The hint therefore uses the active theme's own:
-     - brand primary
-     - accent
-     - surface
-     - border
-     - text
-     - shadow
-     
-     This keeps the hint fully theme-owned.
   ========================================================= */
 
-  const editHintBorder =
-    themeStrongBorder;
+  const editHintBorder = themeStrongBorder;
 
+  const editHintBackground = themeSurface;
 
-  const editHintBackground =
-    themeSurface;
+  const editHintText = themeText;
 
+  const editHintActiveColor = themeAccent || themePrimary;
 
-  const editHintText =
-    themeText;
-
-
-  const editHintActiveColor =
-    themeAccent ||
-    themePrimary;
-
-
-  const editHintInactiveColor =
-    themeTextMuted ||
-    themePrimary;
-
+  const editHintInactiveColor = themeTextMuted || themePrimary;
 
   /* =========================================================
      RENDER
   ========================================================= */
 
   return (
-
-    <CustomerSmartWall
-
-      title={
-        title
-      }
-
-      customers={
-        smartWallCustomers
-      }
-
-    >
-
+    <CustomerSmartWall title={title} customers={smartWallCustomers}>
       {/* =====================================================
           TOP TOOLBAR
       ===================================================== */}
 
       <div
         style={{
+          display: "grid",
 
-          display:
-            "grid",
+          gridTemplateColumns: toolbarGridTemplateColumns,
 
-          gridTemplateColumns:
-            toolbarGridTemplateColumns,
+          gridTemplateAreas: toolbarGridTemplateAreas,
 
-          gridTemplateAreas:
-            toolbarGridTemplateAreas,
+          alignItems: "center",
 
-          alignItems:
-            "center",
+          width: "100%",
 
-          width:
-            "100%",
+          minWidth: 0,
 
-          minWidth:
-            0,
+          marginBottom: toolbarMarginBottom,
 
-          marginBottom:
-            toolbarMarginBottom,
+          gap: toolbarGap,
 
-          gap:
-            toolbarGap,
-
-          boxSizing:
-            "border-box",
-
+          boxSizing: "border-box",
         }}
       >
-
         {/* ===================================================
             LEFT — ADD CUSTOMER
         =================================================== */}
 
-        <div
-          style={
-            addCustomerCellStyle
-          }
-        >
-
+        <div style={addCustomerCellStyle}>
           <button
-
             type="button"
-
-            onClick={
-              onOpenCustomerWizard
-            }
-
+            onClick={onOpenCustomerWizard}
             aria-label="Add Customer"
-
             title="Add Customer"
-
-            style={
-              actionButtonStyle
-            }
-
+            style={actionButtonStyle}
           >
-
             <UserPlus
-
-              size={
-                actionButtonIconSize
-              }
-
-              strokeWidth={
-                2.2
-              }
-
+              size={actionButtonIconSize}
+              strokeWidth={2.2}
               aria-hidden="true"
-
             />
 
             <span
               style={{
+                minWidth: 0,
 
-                minWidth:
-                  0,
+                overflow: "hidden",
 
-                overflow:
-                  "hidden",
-
-                textOverflow:
-                  "ellipsis",
-
+                textOverflow: "ellipsis",
               }}
             >
               Add Customer
             </span>
-
           </button>
-
         </div>
-
 
         {/* ===================================================
             CENTER — SEARCH
         =================================================== */}
 
-        <div
-          style={
-            searchCellStyle
-          }
-        >
-
-          <div
-            style={
-              searchWrapperStyle
-            }
-          >
-
-            <CustomerSearchBar
-
-              value={
-                searchText
-              }
-
-              onChange={
-                onSearchChange
-              }
-
-            />
-
+        <div style={searchCellStyle}>
+          <div style={searchWrapperStyle}>
+            <CustomerSearchBar value={searchText} onChange={onSearchChange} />
           </div>
-
         </div>
-
 
         {/* ===================================================
             RIGHT — EDIT CUSTOMER
         =================================================== */}
 
         <div
-
-          style={
-            editCellStyle
-          }
-
+          style={editCellStyle}
           onMouseEnter={() => {
-
-            setShowEditHint(
-              true,
-            );
-
+            setShowEditHint(true);
           }}
-
           onMouseLeave={() => {
-
-            setShowEditHint(
-              false,
-            );
-
+            setShowEditHint(false);
           }}
-
         >
-
           <button
-
             type="button"
-
             onClick={() => {
-
-              /* =============================================
-                 NO CUSTOMER SELECTED
-              ============================================= */
-
-              if (
-                !selectedCustomer
-              ) {
-
+              if (!selectedCustomer) {
                 return;
-
               }
 
-
-              /* =============================================
-                 EDIT SELECTED CUSTOMER
-              ============================================= */
-
-              if (
-                onEditCustomer
-              ) {
-
-                onEditCustomer(
-                  selectedCustomer,
-                );
-
+              if (onEditCustomer) {
+                onEditCustomer(selectedCustomer);
               }
-
             }}
-
             aria-label="Edit Customer"
-
             title="Edit Customer"
-
-            style={
-              actionButtonStyle
-            }
-
+            style={actionButtonStyle}
           >
-
             <SquarePen
-
-              size={
-                actionButtonIconSize
-              }
-
-              strokeWidth={
-                2.2
-              }
-
+              size={actionButtonIconSize}
+              strokeWidth={2.2}
               aria-hidden="true"
-
             />
 
             <span
               style={{
+                minWidth: 0,
 
-                minWidth:
-                  0,
+                overflow: "hidden",
 
-                overflow:
-                  "hidden",
-
-                textOverflow:
-                  "ellipsis",
-
+                textOverflow: "ellipsis",
               }}
             >
               Edit Customer
             </span>
-
           </button>
 
-
-          {/* ================================================
+          {/* =================================================
               PREMIUM EDIT HINT
           ================================================= */}
 
           {showEditHint && (
-
             <div
               style={{
+                position: "absolute",
 
-                position:
-                  "absolute",
-
-                top:
-                  `calc(
+                top: `calc(
                     100% +
                     ${tokens.spacing.inline}px
                   )`,
 
-                right:
-                  "0",
+                right: "0",
 
-                zIndex:
-                  1000,
+                zIndex: 1000,
 
-                maxWidth:
-                  "min(320px, 100%)",
+                maxWidth: "min(320px, 100%)",
 
-                padding:
-                  `${tokens.spacing.small + 3}px ${
-                    tokens.spacing.medium + 2
-                  }px`,
+                padding: `${tokens.spacing.small + 3}px ${
+                  tokens.spacing.medium + 2
+                }px`,
 
-                borderRadius:
-                  tokens.panel.radius,
+                borderRadius: tokens.panel.radius,
 
-                background:
-                  editHintBackground,
+                background: editHintBackground,
 
-                color:
-                  editHintText,
+                color: editHintText,
 
-                fontSize:
-                  tokens.typography.small,
+                fontSize: tokens.typography.small,
 
-                fontWeight:
-                  700,
+                fontWeight: 700,
 
-                whiteSpace:
-                  "normal",
+                whiteSpace: "normal",
 
-                textAlign:
-                  "center",
+                textAlign: "center",
 
-                border:
-                  `1px solid ${editHintBorder}`,
+                border: `1px solid ${editHintBorder}`,
 
-                boxShadow:
-                  `0 8px 24px ${themeShadow}`,
+                boxShadow: `0 8px 24px ${themeShadow}`,
 
-                pointerEvents:
-                  "none",
+                pointerEvents: "none",
 
-                boxSizing:
-                  "border-box" as const,
-
+                boxSizing: "border-box" as const,
               }}
             >
-
               <div
                 style={{
+                  color: hasSelectedCustomer
+                    ? editHintActiveColor
+                    : editHintInactiveColor,
 
-                  color:
-                    hasSelectedCustomer
-                      ? editHintActiveColor
-                      : editHintInactiveColor,
+                  fontWeight: 500,
 
-                  fontWeight:
-                    500,
-
-                  textShadow:
-                    `0 0 10px ${themeShadow}`,
-
+                  textShadow: `0 0 10px ${themeShadow}`,
                 }}
               >
-
-                {
-                  hasSelectedCustomer
-
-                    ? "Edit Selected Customer"
-
-                    : "Select a Customer to Continue"
-                }
-
+                {hasSelectedCustomer
+                  ? "Edit Selected Customer"
+                  : "Select a Customer to Continue"}
               </div>
-
             </div>
-
           )}
-
         </div>
-
       </div>
-
 
       {/* =====================================================
           CUSTOMER ID WALL
       ===================================================== */}
 
       <div
-
         style={{
+          flex: 1,
 
-          flex:
-            1,
+          minHeight: 0,
 
-          minHeight:
-            0,
+          overflow: "hidden",
 
-          overflow:
-            "hidden",
+          position: "relative",
 
-          position:
-            "relative",
-
-          /*
-           * Theme surface is intentionally applied here only
-           * as a visual fallback for the Customer wall area.
-           *
-           * CustomerSmartWall remains responsible for its own
-           * internal presentation.
-           */
-
-          background:
-            themePageBackground,
-
+          background: themePageBackground,
         }}
-
         onMouseDownCapture={(event) => {
+          const target = event.target as HTMLElement;
 
-          const target =
-            event.target as HTMLElement;
+          const protectedElement = target.closest(
+            [
+              '[data-finora-customer-card="true"]',
 
+              '[data-finora-interactive="true"]',
 
-          /*
-           * =================================================
-           * PROTECTED INTERACTIVE AREA
-           *
-           * Never clear selected customer while interacting
-           * with a real interactive element.
-           * =================================================
-           */
+              "button",
 
-          const protectedElement =
-            target.closest(
+              "input",
 
-              [
+              "textarea",
 
-                '[data-finora-customer-card="true"]',
+              "select",
 
-                '[data-finora-interactive="true"]',
+              "a",
+            ].join(","),
+          );
 
-                "button",
-
-                "input",
-
-                "textarea",
-
-                "select",
-
-                "a",
-
-              ].join(","),
-
-            );
-
-
-          if (
-            protectedElement
-          ) {
-
+          if (protectedElement) {
             return;
-
           }
-
-
-          /*
-           * =================================================
-           * EMPTY SMART WALL AREA
-           *
-           * Clicking genuinely empty wall space clears
-           * selection.
-           * =================================================
-           */
 
           onClearSelection?.();
-
         }}
-
       >
-
         <CustomerHangerRail
-
-          customers={
-            railCustomers
-          }
-
-          selectedCustomerId={
-            selectedCustomerId
-          }
-
-          onCustomerSelect={
-            onCustomerSelect
-          }
-
+          customers={railCustomers}
+          selectedCustomerId={selectedCustomerId}
+          onCustomerSelect={onCustomerSelect}
         />
-
       </div>
-
 
       {/* =====================================================
           CUSTOMER HUB SUMMARY
@@ -1048,58 +580,35 @@ export default function SmartWallPanel({
 
       <div
         style={{
+          width: "100%",
 
-          width:
-            "100%",
+          marginTop: wallSummaryMarginTop,
 
-          marginTop:
-            wallSummaryMarginTop,
-
-          background:
-            themePageBackground,
-
+          background: themePageBackground,
         }}
       >
-
         <CustomerHubSummaryCards
+          totalCustomers={totalCustomers}
+          activeCustomers={totalCustomers}
+          currentPage={currentPage}
+          totalPages={Math.ceil(totalCustomers / customersPerPage)}
+          onPrevious={onPrevious}
+          onNext={onNext}
+          /* ===============================================
+             EXISTING WORK DESK DESTINATION
+          =============================================== */
 
-          totalCustomers={
-            totalCustomers
-          }
+          onOpenWorkspace={onOpenWorkspace}
+          /* ===============================================
+             EXISTING CUSTOMER DATA DESTINATION
+          =============================================== */
 
-          activeCustomers={
-            totalCustomers
-          }
-
-          currentPage={
-            currentPage
-          }
-
-          totalPages={
-            Math.ceil(
-              totalCustomers /
-              customersPerPage,
-            )
-          }
-
-          onPrevious={
-            onPrevious
-          }
-
-          onNext={
-            onNext
-          }
-
+          onOpenCustomerData={onOpenCustomerData}
         />
-
       </div>
-
     </CustomerSmartWall>
-
   );
-
 }
-
 
 /* ===========================================================
    END

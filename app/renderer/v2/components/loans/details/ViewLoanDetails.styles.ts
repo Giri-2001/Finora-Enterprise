@@ -11,6 +11,7 @@
 // - Read-only enterprise loan workspace
 // - Loan document evidence gallery
 // - Loan document viewer
+// - Mobile responsive presentation
 //
 // IMPORTANT:
 // - No business logic
@@ -18,6 +19,7 @@
 // - No persistence
 // - No repository access
 // - No Loan Studio styling modification
+// - Desktop / laptop / tablet geometry preserved
 //
 // VERSION : 2.0
 // STATUS  : Production
@@ -30,74 +32,51 @@ import type { CSSProperties } from "react";
 // ============================================================
 
 export const COLORS = {
-  background:
-    "var(--finora-theme-background-page, #0B1220)",
+  background: "var(--finora-theme-background-page, #0B1220)",
 
-  panel:
-    "var(--finora-theme-background-surface, #111C2E)",
+  panel: "var(--finora-theme-background-surface, #111C2E)",
 
-  panelSoft:
-    "var(--finora-theme-background-surface-muted, #142238)",
+  panelSoft: "var(--finora-theme-background-surface-muted, #142238)",
 
-  panelHover:
-    "var(--finora-theme-surface-strong, #182A43)",
+  panelHover: "var(--finora-theme-surface-strong, #182A43)",
 
-  border:
-    "var(--finora-theme-border-default, rgba(148,163,184,0.18))",
+  border: "var(--finora-theme-border-default, rgba(148,163,184,0.18))",
 
-  borderStrong:
-    "var(--finora-theme-border-strong, rgba(148,163,184,0.28))",
+  borderStrong: "var(--finora-theme-border-strong, rgba(148,163,184,0.28))",
 
-  primary:
-    "var(--finora-theme-brand-primary, #2563EB)",
+  primary: "var(--finora-theme-brand-primary, #2563EB)",
 
-  primarySoft:
-    "var(--finora-theme-brand-accent-soft, rgba(37,99,235,0.12))",
+  primarySoft: "var(--finora-theme-brand-accent-soft, rgba(37,99,235,0.12))",
 
-  primaryBorder:
-    "var(--finora-theme-border-strong, rgba(37,99,235,0.35))",
+  primaryBorder: "var(--finora-theme-border-strong, rgba(37,99,235,0.35))",
 
-  text:
-    "var(--finora-theme-text-primary, #FFFFFF)",
+  text: "var(--finora-theme-text-primary, #FFFFFF)",
 
-  textSecondary:
-    "var(--finora-theme-text-secondary, #CBD5E1)",
+  textSecondary: "var(--finora-theme-text-secondary, #CBD5E1)",
 
-  textMuted:
-    "var(--finora-theme-text-muted, #94A3B8)",
+  textMuted: "var(--finora-theme-text-muted, #94A3B8)",
 
-  textDim:
-    "var(--finora-theme-text-muted, #64748B)",
+  textDim: "var(--finora-theme-text-muted, #64748B)",
 
-  success:
-    "var(--finora-theme-success, #22C55E)",
+  success: "var(--finora-theme-success, #22C55E)",
 
-  successSoft:
-    "var(--finora-theme-success-soft, rgba(34,197,94,0.10))",
+  successSoft: "var(--finora-theme-success-soft, rgba(34,197,94,0.10))",
 
-  warning:
-    "var(--finora-theme-warning, #F59E0B)",
+  warning: "var(--finora-theme-warning, #F59E0B)",
 
-  warningSoft:
-    "var(--finora-theme-warning-soft, rgba(245,158,11,0.10))",
+  warningSoft: "var(--finora-theme-warning-soft, rgba(245,158,11,0.10))",
 
-  danger:
-    "var(--finora-theme-danger, #EF4444)",
+  danger: "var(--finora-theme-danger, #EF4444)",
 
-  dangerSoft:
-    "var(--finora-theme-danger-soft, rgba(239,68,68,0.10))",
+  dangerSoft: "var(--finora-theme-danger-soft, rgba(239,68,68,0.10))",
 
-  info:
-    "var(--finora-theme-info, #60A5FA)",
+  info: "var(--finora-theme-info, #60A5FA)",
 
-  infoSoft:
-    "var(--finora-theme-info-soft, rgba(96,165,250,0.10))",
+  infoSoft: "var(--finora-theme-info-soft, rgba(96,165,250,0.10))",
 
-  overlayShadow:
-    "var(--finora-theme-overlay-shadow, rgba(0,0,0,0.24))",
+  overlayShadow: "var(--finora-theme-overlay-shadow, rgba(0,0,0,0.24))",
 
-  overlayBackdrop:
-    "var(--finora-theme-overlay-backdrop, rgba(2,6,23,0.84))",
+  overlayBackdrop: "var(--finora-theme-overlay-backdrop, rgba(2,6,23,0.84))",
 } as const;
 
 // ============================================================
@@ -122,6 +101,8 @@ export const pageStyle: CSSProperties = {
   flexDirection: "column",
 
   gap: "16px",
+
+  minWidth: 0,
 };
 
 // ============================================================
@@ -152,10 +133,14 @@ export const headerStyle: CSSProperties = {
   background: `linear-gradient(180deg, ${COLORS.panel}, ${COLORS.panelSoft})`,
 
   boxShadow: `0 8px 24px ${COLORS.overlayShadow}`,
+
+  minWidth: 0,
 };
 
 export const headerLeftStyle: CSSProperties = {
   minWidth: 0,
+
+  flex: "1 1 auto",
 
   display: "flex",
 
@@ -184,6 +169,8 @@ export const backButtonStyle: CSSProperties = {
   fontWeight: 700,
 
   cursor: "pointer",
+
+  flexShrink: 0,
 };
 
 export const headerAccentStyle: CSSProperties = {
@@ -203,6 +190,8 @@ export const headerAccentStyle: CSSProperties = {
 export const titleGroupStyle: CSSProperties = {
   minWidth: 0,
 
+  flex: "1 1 auto",
+
   display: "flex",
 
   flexDirection: "column",
@@ -220,6 +209,8 @@ export const titleStyle: CSSProperties = {
   fontWeight: 800,
 
   lineHeight: 1.2,
+
+  minWidth: 0,
 };
 
 export const subtitleStyle: CSSProperties = {
@@ -232,6 +223,12 @@ export const subtitleStyle: CSSProperties = {
   fontWeight: 500,
 
   lineHeight: 1.3,
+
+  overflowWrap: "anywhere",
+
+  wordBreak: "normal",
+
+  minWidth: 0,
 };
 
 export const headerMetaStyle: CSSProperties = {
@@ -239,15 +236,19 @@ export const headerMetaStyle: CSSProperties = {
 
   alignItems: "center",
 
+  justifyContent: "flex-end",
+
   gap: "8px",
 
   flexShrink: 0,
+
+  minWidth: 0,
 };
 
 export const loanNumberBadgeStyle: CSSProperties = {
   padding: "7px 10px",
 
-  border: `1px solid var(--finora-theme-brand-primary)`,
+  border: "1px solid var(--finora-theme-brand-primary)",
 
   borderRadius: "7px",
 
@@ -260,14 +261,20 @@ export const loanNumberBadgeStyle: CSSProperties = {
   fontWeight: 750,
 
   whiteSpace: "nowrap",
+
+  maxWidth: "100%",
+
+  overflow: "hidden",
+
+  textOverflow: "ellipsis",
 };
 
 // ============================================================
 // STATUS
 // ============================================================
 
-export function statusBadgeStyle(status: string): CSSProperties {
-  const normalized = status.trim().toUpperCase();
+export function statusBadgeStyle(status: string | undefined): CSSProperties {
+  const normalized = (status || "").trim().toUpperCase();
 
   if (normalized === "CLOSED") {
     return {
@@ -279,13 +286,15 @@ export function statusBadgeStyle(status: string): CSSProperties {
 
       background: COLORS.panelSoft,
 
-  color: COLORS.textSecondary,
+      color: COLORS.textSecondary,
 
       fontSize: "11px",
 
       fontWeight: 750,
 
       whiteSpace: "nowrap",
+
+      flexShrink: 0,
     };
   }
 
@@ -299,13 +308,15 @@ export function statusBadgeStyle(status: string): CSSProperties {
 
       background: COLORS.panelSoft,
 
-  color: COLORS.textSecondary,
+      color: COLORS.textSecondary,
 
       fontSize: "11px",
 
       fontWeight: 750,
 
       whiteSpace: "nowrap",
+
+      flexShrink: 0,
     };
   }
 
@@ -325,8 +336,11 @@ export function statusBadgeStyle(status: string): CSSProperties {
     fontWeight: 750,
 
     whiteSpace: "nowrap",
+
+    flexShrink: 0,
   };
 }
+
 // ============================================================
 // GRID
 // ============================================================
@@ -334,9 +348,19 @@ export function statusBadgeStyle(status: string): CSSProperties {
 export const contentGridStyle: CSSProperties = {
   width: "100%",
 
+  minWidth: 0,
+
   display: "grid",
 
-  gridTemplateColumns: "minmax(0, 1.35fr) minmax(320px, 0.65fr)",
+  /*
+   * IMPORTANT:
+   * The previous 320px minimum on the right column could
+   * force the first column into an extremely narrow width
+   * when DevTools/mobile viewport becomes small.
+   *
+   * The responsive breakpoint controls the actual stacking.
+   */
+  gridTemplateColumns: "minmax(0, 1.35fr) minmax(0, 0.65fr)",
 
   gap: "16px",
 
@@ -367,6 +391,8 @@ export const fullWidthSectionStyle: CSSProperties = {
   ...sectionStyle,
 
   width: "100%",
+
+  minWidth: 0,
 };
 
 export const sectionHeaderStyle: CSSProperties = {
@@ -379,6 +405,8 @@ export const sectionHeaderStyle: CSSProperties = {
   gap: "12px",
 
   marginBottom: "12px",
+
+  minWidth: 0,
 };
 
 export const sectionTitleStyle: CSSProperties = {
@@ -389,6 +417,8 @@ export const sectionTitleStyle: CSSProperties = {
   fontSize: "13px",
 
   fontWeight: 750,
+
+  lineHeight: 1.3,
 };
 
 export const sectionSubtitleStyle: CSSProperties = {
@@ -399,6 +429,12 @@ export const sectionSubtitleStyle: CSSProperties = {
   fontSize: "10px",
 
   fontWeight: 500,
+
+  lineHeight: 1.35,
+
+  overflowWrap: "anywhere",
+
+  wordBreak: "normal",
 };
 
 // ============================================================
@@ -411,6 +447,8 @@ export const infoGridStyle: CSSProperties = {
   gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
 
   gap: "8px",
+
+  minWidth: 0,
 };
 
 export const infoItemStyle: CSSProperties = {
@@ -423,6 +461,10 @@ export const infoItemStyle: CSSProperties = {
   borderRadius: "9px",
 
   background: COLORS.panelSoft,
+
+  boxSizing: "border-box",
+
+  overflow: "hidden",
 };
 
 export const infoLabelStyle: CSSProperties = {
@@ -435,6 +477,8 @@ export const infoLabelStyle: CSSProperties = {
   fontSize: "10px",
 
   fontWeight: 550,
+
+  lineHeight: 1.3,
 };
 
 export const infoValueStyle: CSSProperties = {
@@ -451,6 +495,10 @@ export const infoValueStyle: CSSProperties = {
   textOverflow: "ellipsis",
 
   whiteSpace: "nowrap",
+
+  minWidth: 0,
+
+  lineHeight: 1.35,
 };
 
 export const customerNameValueStyle: CSSProperties = {
@@ -471,6 +519,8 @@ export const financialGridStyle: CSSProperties = {
   gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
 
   gap: "8px",
+
+  minWidth: 0,
 };
 
 export const financialCardStyle: CSSProperties = {
@@ -483,6 +533,10 @@ export const financialCardStyle: CSSProperties = {
   borderRadius: "9px",
 
   background: COLORS.panelSoft,
+
+  boxSizing: "border-box",
+
+  overflow: "hidden",
 };
 
 export const financialLabelStyle: CSSProperties = {
@@ -495,6 +549,8 @@ export const financialLabelStyle: CSSProperties = {
   fontSize: "10px",
 
   fontWeight: 550,
+
+  lineHeight: 1.3,
 };
 
 export const financialValueStyle: CSSProperties = {
@@ -505,6 +561,10 @@ export const financialValueStyle: CSSProperties = {
   fontSize: "14px",
 
   fontWeight: 800,
+
+  overflowWrap: "anywhere",
+
+  lineHeight: 1.3,
 };
 
 export const primaryFinancialCardStyle: CSSProperties = {
@@ -549,6 +609,8 @@ export const textBlockStyle: CSSProperties = {
   whiteSpace: "pre-wrap",
 
   overflowWrap: "anywhere",
+
+  boxSizing: "border-box",
 };
 
 // ============================================================
@@ -563,6 +625,8 @@ export const documentGalleryGridStyle: CSSProperties = {
   gap: "10px",
 
   width: "100%",
+
+  minWidth: 0,
 };
 
 export const documentCardStyle: CSSProperties = {
@@ -622,8 +686,7 @@ export const documentPdfPreviewStyle: CSSProperties = {
 
   justifyContent: "center",
 
-  background:
-    `linear-gradient(145deg, ${COLORS.primarySoft}, ${COLORS.panel})`,
+  background: `linear-gradient(145deg, ${COLORS.primarySoft}, ${COLORS.panel})`,
 };
 
 export const documentPdfIconStyle: CSSProperties = {
@@ -806,6 +869,8 @@ export const documentViewerStyle: CSSProperties = {
   background: COLORS.panel,
 
   boxShadow: `0 24px 70px ${COLORS.overlayShadow}`,
+
+  minWidth: 0,
 };
 
 export const documentViewerHeaderStyle: CSSProperties = {
@@ -824,6 +889,8 @@ export const documentViewerHeaderStyle: CSSProperties = {
   borderBottom: `1px solid ${COLORS.border}`,
 
   background: COLORS.panelSoft,
+
+  minWidth: 0,
 };
 
 export const documentViewerTitleStyle: CSSProperties = {
@@ -920,6 +987,8 @@ export const scheduleWrapperStyle: CSSProperties = {
   border: `1px solid ${COLORS.border}`,
 
   borderRadius: "9px",
+
+  minWidth: 0,
 };
 
 export const scheduleHeaderStyle: CSSProperties = {
@@ -1010,14 +1079,23 @@ export const footerBackButtonStyle: CSSProperties = {
   fontWeight: 750,
 
   cursor: "pointer",
-
 };
 
 // ============================================================
 // RESPONSIVE
+//
+// IMPORTANT:
+// Desktop / laptop / tablet base geometry remains unchanged.
+//
+// Responsive classes are explicitly connected to the JSX.
+// Mobile refinements are isolated below.
 // ============================================================
 
 export const responsiveMediaQuery = `
+  /* ========================================================
+     COLUMN SYSTEM
+     ======================================================== */
+
   .finora-view-loan-column {
     min-width: 0;
     display: flex;
@@ -1029,7 +1107,12 @@ export const responsiveMediaQuery = `
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 8px;
+    min-width: 0;
   }
+
+  /* ========================================================
+     TABLET / SMALL LAPTOP
+     ======================================================== */
 
   @media (max-width: 1100px) {
     .finora-view-loan-content-grid {
@@ -1041,13 +1124,128 @@ export const responsiveMediaQuery = `
     }
   }
 
+  /* ========================================================
+     MOBILE
+     ======================================================== */
+
   @media (max-width: 760px) {
+    /* ---------------------------------------------
+       PAGE
+       --------------------------------------------- */
+
+    .finora-view-loan-page {
+      width: 100%;
+      min-width: 0;
+      box-sizing: border-box;
+      overflow-x: hidden;
+    }
+
     .finora-view-loan-content-grid {
+      width: 100%;
+      min-width: 0;
+      grid-template-columns: 1fr !important;
       gap: 12px !important;
     }
 
+    /* ---------------------------------------------
+       HEADER
+       --------------------------------------------- */
+
+    .finora-view-loan-header {
+      width: 100% !important;
+      min-width: 0 !important;
+      box-sizing: border-box !important;
+
+      flex-direction: column !important;
+      align-items: stretch !important;
+      justify-content: flex-start !important;
+
+      gap: 12px !important;
+      padding: 12px !important;
+    }
+
+    .finora-view-loan-header-left {
+      width: 100% !important;
+      min-width: 0 !important;
+
+      flex: none !important;
+
+      align-items: flex-start !important;
+      gap: 9px !important;
+    }
+
+    .finora-view-loan-title-group {
+      width: auto !important;
+      min-width: 0 !important;
+
+      flex: 1 1 auto !important;
+
+      overflow: hidden !important;
+    }
+
+    .finora-view-loan-title {
+      min-width: 0 !important;
+
+      font-size: 16px !important;
+      line-height: 1.2 !important;
+
+      white-space: normal !important;
+      overflow-wrap: normal !important;
+      word-break: normal !important;
+    }
+
+    .finora-view-loan-subtitle {
+      display: block !important;
+
+      width: 100% !important;
+      max-width: 100% !important;
+      min-width: 0 !important;
+
+      margin-top: 4px !important;
+
+      font-size: 10px !important;
+      line-height: 1.45 !important;
+
+      white-space: normal !important;
+      overflow: visible !important;
+
+      overflow-wrap: anywhere !important;
+      word-break: normal !important;
+    }
+
+    .finora-view-loan-header-meta {
+      width: 100% !important;
+      min-width: 0 !important;
+
+      flex-wrap: wrap !important;
+
+      justify-content: flex-start !important;
+      align-items: center !important;
+
+      gap: 6px !important;
+    }
+
+    .finora-view-loan-header-meta > * {
+      max-width: 100% !important;
+    }
+
+    /* ---------------------------------------------
+       GENERAL SECTIONS
+       --------------------------------------------- */
+
+    .finora-view-loan-column {
+      width: 100% !important;
+      min-width: 0 !important;
+    }
+
+    .finora-view-loan-column > section {
+      width: 100% !important;
+      min-width: 0 !important;
+      box-sizing: border-box !important;
+    }
+
     .finora-view-loan-text-grid {
-      grid-template-columns: 1fr;
+      grid-template-columns: 1fr !important;
     }
 
     .finora-view-loan-info-grid {
@@ -1058,19 +1256,192 @@ export const responsiveMediaQuery = `
       grid-template-columns: 1fr !important;
     }
 
-    .finora-loan-document-gallery {
-      grid-template-columns: repeat(2, minmax(0, 1fr));
+    /* ---------------------------------------------
+       FIRST / CUSTOMER CARD
+       --------------------------------------------- */
+
+    .finora-view-loan-column > section:first-child {
+      padding: 13px !important;
     }
 
-    .finora-view-loan-header-meta {
-      flex-wrap: wrap;
-      justify-content: flex-end;
+    .finora-view-loan-column > section:first-child
+      .finora-view-loan-info-grid {
+      grid-template-columns: 1fr !important;
+      gap: 7px !important;
+    }
+
+    .finora-view-loan-column > section:first-child
+      .finora-view-loan-info-grid
+      > div {
+      width: 100% !important;
+      min-width: 0 !important;
+      padding: 9px 10px !important;
+      box-sizing: border-box !important;
+    }
+
+    .finora-view-loan-column > section:first-child
+      .finora-view-loan-info-grid
+      strong {
+      white-space: normal !important;
+      overflow: visible !important;
+      text-overflow: clip !important;
+      overflow-wrap: anywhere !important;
+      word-break: normal !important;
+      line-height: 1.35 !important;
+    }
+
+    /* ---------------------------------------------
+       SECTION HEADERS
+       --------------------------------------------- */
+
+    .finora-view-loan-section-header {
+      width: 100% !important;
+      min-width: 0 !important;
+
+      align-items: flex-start !important;
+      gap: 8px !important;
+    }
+
+    /* ---------------------------------------------
+       DOCUMENT COUNT
+       --------------------------------------------- */
+
+    .finora-view-loan-document-count {
+      flex-shrink: 0 !important;
+    }
+
+    /* ---------------------------------------------
+       DOCUMENTS
+       --------------------------------------------- */
+
+    .finora-loan-document-gallery {
+      width: 100% !important;
+      min-width: 0 !important;
+
+      grid-template-columns:
+        repeat(2, minmax(0, 1fr));
+    }
+
+    /* ---------------------------------------------
+       SCHEDULE
+       --------------------------------------------- */
+
+    .finora-view-loan-page
+      > section {
+      min-width: 0 !important;
     }
   }
 
+  /* ========================================================
+     SMALL MOBILE
+     ======================================================== */
+
   @media (max-width: 480px) {
+    /* ---------------------------------------------
+       PAGE
+       --------------------------------------------- */
+
+    .finora-view-loan-page {
+      padding: 12px !important;
+      gap: 12px !important;
+    }
+
+    /* ---------------------------------------------
+       HEADER
+       --------------------------------------------- */
+
+    .finora-view-loan-header {
+      padding: 11px !important;
+      border-radius: 12px !important;
+    }
+
+    .finora-view-loan-header-left {
+      width: 100% !important;
+      gap: 8px !important;
+    }
+
+    .finora-view-loan-header-left
+      button {
+      min-width: 68px !important;
+      height: 32px !important;
+      padding: 0 9px !important;
+      font-size: 11px !important;
+    }
+
+    .finora-view-loan-title {
+      font-size: 15px !important;
+      line-height: 1.2 !important;
+    }
+
+    .finora-view-loan-subtitle {
+      font-size: 9px !important;
+      line-height: 1.4 !important;
+    }
+
+    /* ---------------------------------------------
+       HEADER BADGES
+       --------------------------------------------- */
+
+    .finora-view-loan-header-meta {
+      width: 100% !important;
+      gap: 5px !important;
+    }
+
+    /* ---------------------------------------------
+       CUSTOMER FIRST CARD
+       --------------------------------------------- */
+
+    .finora-view-loan-column > section:first-child {
+      padding: 11px !important;
+      border-radius: 12px !important;
+    }
+
+    .finora-view-loan-column > section:first-child
+      .finora-view-loan-info-grid
+      > div {
+      padding: 9px !important;
+      border-radius: 8px !important;
+    }
+
+    /* ---------------------------------------------
+       OTHER SECTIONS
+       --------------------------------------------- */
+
+    .finora-view-loan-column > section {
+      padding: 12px !important;
+    }
+
+    .finora-view-loan-financial-grid {
+      gap: 7px !important;
+    }
+
+    /* ---------------------------------------------
+       DOCUMENTS
+       --------------------------------------------- */
+
     .finora-loan-document-gallery {
-      grid-template-columns: 1fr;
+      grid-template-columns: 1fr !important;
+    }
+
+    /* ---------------------------------------------
+       DOCUMENT VIEWER
+       --------------------------------------------- */
+
+    .finora-view-loan-document-viewer-backdrop {
+      padding: 10px !important;
+    }
+
+    .finora-view-loan-document-viewer {
+      width: 100% !important;
+      max-width: 100% !important;
+
+      height: min(760px, 94vh) !important;
+
+      border-radius: 12px !important;
+    }
+
+    .finora-view-loan-document-viewer-body {
+      padding: 10px !important;
     }
   }
 `;

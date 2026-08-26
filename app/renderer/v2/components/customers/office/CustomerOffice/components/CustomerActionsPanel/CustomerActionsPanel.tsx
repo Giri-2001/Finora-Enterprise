@@ -5,151 +5,75 @@
    COMPONENT
 =========================================================== */
 
-
 /* ===========================================================
    IMPORTS
 =========================================================== */
 
-import {
-  CUSTOMER_ACTIONS_TITLE,
-} from "./constants";
+import { CUSTOMER_ACTIONS_TITLE } from "./constants";
 
-import {
-  buildCustomerActions,
-} from "./helpers";
+import { buildCustomerActions } from "./helpers";
 
-import {
-  useResponsive,
-} from "../../../../../../utils/responsive";
+import { useResponsive } from "../../../../../../utils/responsive";
 
-import {
-  createCustomerActionsPanelStyles,
-} from "./styles";
+import { createCustomerActionsPanelStyles } from "./styles";
 
-import type {
-  CustomerActionsPanelProps,
-} from "./types";
-
+import type { CustomerActionsPanelProps } from "./types";
 
 /* ===========================================================
    COMPONENT
 =========================================================== */
 
-export default function CustomerActionsPanel(
-  props: CustomerActionsPanelProps,
-) {
-
-
+export default function CustomerActionsPanel(props: CustomerActionsPanelProps) {
   /* =========================================================
      RESPONSIVE TOKENS
   ========================================================= */
 
-  const {
-    tokens,
-  } = useResponsive();
-
+  const { tokens } = useResponsive();
 
   /* =========================================================
      RESPONSIVE STYLES
   ========================================================= */
 
-  const styles =
-    createCustomerActionsPanelStyles(
-      tokens,
-    );
-
+  const styles = createCustomerActionsPanelStyles(tokens);
 
   /* =========================================================
      ACTIONS
   ========================================================= */
 
-  const actions =
-    buildCustomerActions(
-      props,
-    );
-
+  const actions = buildCustomerActions(props);
 
   /* =========================================================
      RENDER
   ========================================================= */
 
   return (
-
-    <section
-      style={
-        styles.containerStyle
-      }
-    >
-
+    <section style={styles.containerStyle}>
       {/* ======================================
           HEADER
       ====================================== */}
 
-      <div
-        style={
-          styles.headerStyle
-        }
-      >
-
-        {
-          CUSTOMER_ACTIONS_TITLE
-        }
-
-      </div>
-
+      <div style={styles.headerStyle}>{CUSTOMER_ACTIONS_TITLE}</div>
 
       {/* ======================================
           ACTION GRID
       ====================================== */}
 
-      <div
-        style={
-          styles.gridStyle
-        }
-      >
+      <div style={styles.gridStyle}>
+        {actions.map((action) => (
+          <button
+            key={action.title}
+            onClick={action.onClick}
+            style={styles.buttonStyle}
+          >
+            <span>{action.icon}</span>
 
-        {
-          actions.map(
-            (action) => (
-
-              <button
-
-                key={
-                  action.title
-                }
-
-                onClick={
-                  action.onClick
-                }
-
-                style={
-                  styles.buttonStyle
-                }
-
-              >
-
-                <span>
-                  {action.icon}
-                </span>
-
-                <span>
-                  {action.title}
-                </span>
-
-              </button>
-
-            ),
-          )
-        }
-
+            <span>{action.title}</span>
+          </button>
+        ))}
       </div>
-
     </section>
-
   );
-
 }
-
 
 /* ===========================================================
    END

@@ -5,123 +5,86 @@
    ASSEMBLY HOOK
 =========================================================== */
 
-import type {
-  OfficeCustomer,
-} from "../../CustomerOffice/types";
+import type { OfficeCustomer } from "../../CustomerOffice/types";
 
-import useCustomerSelection
-  from "./useCustomerSelection";
+import useCustomerSelection from "./useCustomerSelection";
 
-import useCustomerSearch
-  from "./useCustomerSearch";
+import useCustomerSearch from "./useCustomerSearch";
 
-import useCustomerPagination
-  from "./useCustomerPagination";
+import useCustomerPagination from "./useCustomerPagination";
 
-import smartWallMapper
-  from "../mappers/smartWallMapper";
+import smartWallMapper from "../mappers/smartWallMapper";
 
 /* ===========================================================
    HOOK
 =========================================================== */
 
 export default function useCustomerOfficeController(
-
   customers: OfficeCustomer[],
-
 ) {
-
   /* ==========================================
      SEARCH
   ========================================== */
 
-  const search =
-    useCustomerSearch(
-      customers,
-    );
+  const search = useCustomerSearch(customers);
 
   /* ==========================================
      PAGINATION
   ========================================== */
 
-  const pagination =
-    useCustomerPagination(
-      search.filteredCustomers,
-    );
+  const pagination = useCustomerPagination(search.filteredCustomers);
 
   /* ==========================================
      SELECTION
   ========================================== */
 
-  const selection =
-    useCustomerSelection(
-      pagination.paginatedCustomers,
-    );
+  const selection = useCustomerSelection(pagination.paginatedCustomers);
 
   /* ==========================================
      SMART WALL
   ========================================== */
 
-  const smartWallCustomers =
-    smartWallMapper(
-      pagination.paginatedCustomers,
-    );
+  const smartWallCustomers = smartWallMapper(pagination.paginatedCustomers);
 
   /* ==========================================
      EXPORT
   ========================================== */
 
   return {
-
     /* Selection */
 
-    selectedCustomer:
-      selection.selectedCustomer,
+    selectedCustomer: selection.selectedCustomer,
 
-    selectCustomer:
-      selection.selectCustomer,
+    selectCustomer: selection.selectCustomer,
 
-    clearSelection:
-      selection.clearSelection,
+    clearSelection: selection.clearSelection,
 
     /* Search */
 
-    searchText:
-      search.searchText,
+    searchText: search.searchText,
 
-    setSearchText:
-      search.setSearchText,
+    setSearchText: search.setSearchText,
 
-    filteredCustomers:
-      search.filteredCustomers,
+    filteredCustomers: search.filteredCustomers,
 
     /* Pagination */
 
-    currentPage:
-      pagination.currentPage,
+    currentPage: pagination.currentPage,
 
-    totalPages:
-      pagination.totalPages,
+    totalPages: pagination.totalPages,
 
-    customersPerPage:
-      pagination.customersPerPage,
+    customersPerPage: pagination.customersPerPage,
 
-    paginatedCustomers:
-      pagination.paginatedCustomers,
+    paginatedCustomers: pagination.paginatedCustomers,
 
-    nextPage:
-      pagination.nextPage,
+    nextPage: pagination.nextPage,
 
-    previousPage:
-      pagination.previousPage,
+    previousPage: pagination.previousPage,
 
-    resetPage:
-      pagination.resetPage,
+    resetPage: pagination.resetPage,
 
     /* Smart Wall */
 
     smartWallCustomers,
-
   };
-
 }

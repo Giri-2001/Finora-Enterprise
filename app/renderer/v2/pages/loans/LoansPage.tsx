@@ -21,38 +21,26 @@
 // STATUS  : Production
 // ============================================================
 
-
 // ============================================================
 // IMPORTS
 // ============================================================
 
-import {
-  useEffect,
-  useState,
-} from "react";
+import { useEffect, useState } from "react";
 
-import Loans
-  from "./Loans";
+import Loans from "./Loans";
 
-import LoanStudio
-  from "../../components/customers/office/CustomerOffice/components/LoanStudio";
-
+import LoanStudio from "../../components/customers/office/CustomerOffice/components/LoanStudio";
 
 // ============================================================
 // COMPONENT
 // ============================================================
 
 export default function LoansPage() {
-
   // ==========================================================
   // LOAN STUDIO VISIBILITY
   // ==========================================================
 
-  const [
-    showLoanStudio,
-    setShowLoanStudio,
-  ] = useState(false);
-
+  const [showLoanStudio, setShowLoanStudio] = useState(false);
 
   // ==========================================================
   // OPEN LOAN STUDIO
@@ -66,55 +54,34 @@ export default function LoansPage() {
   // ==========================================================
 
   useEffect(() => {
-
     function handleOpenLoanStudio(): void {
-
       setShowLoanStudio(true);
-
     }
 
-
-    window.addEventListener(
-      "FINORA_V2_OPEN_LOAN_STUDIO",
-      handleOpenLoanStudio,
-    );
-
+    window.addEventListener("FINORA_V2_OPEN_LOAN_STUDIO", handleOpenLoanStudio);
 
     return () => {
-
       window.removeEventListener(
         "FINORA_V2_OPEN_LOAN_STUDIO",
         handleOpenLoanStudio,
       );
-
     };
-
   }, []);
-
 
   // ==========================================================
   // LOAN STUDIO
   // ==========================================================
 
   if (showLoanStudio) {
-
-    return (
-      <LoanStudio />
-    );
-
+    return <LoanStudio />;
   }
-
 
   // ==========================================================
   // LOANS OFFICE
   // ==========================================================
 
-  return (
-    <Loans />
-  );
-
+  return <Loans />;
 }
-
 
 // ============================================================
 // END

@@ -32,6 +32,11 @@
 // - UI logic preserved.
 // - Premium presentation preserved.
 //
+// RELOAD CONTRACT:
+// - Restore the authenticated storage mode from sessionStorage.
+// - Activate that storage mode BEFORE getLoans().
+// - This prevents persisted loans disappearing after Ctrl + R.
+//
 // VERSION : 2.0
 // STATUS  : Production
 // ============================================================
@@ -57,6 +62,20 @@ import StudioLayout from "../../components/common/layout/StudioLayout";
 import ViewLoanDetails from "../../components/loans/details/ViewLoanDetails";
 
 import { useTheme } from "../../themes/provider";
+
+import { useLoansOfficeResponsive } from "../../utils/responsive/loansOffice/loansOffice.useResponsive";
+
+import {
+  createLoansOfficePageStyle,
+  createLoansOfficeTopBarStyle,
+  createLoansOfficeStatisticsGridStyle,
+  createLoansOfficeStatisticCardStyle,
+  createLoansOfficeFiltersGridStyle,
+  createLoansOfficePortfolioHeaderStyle,
+  createLoansOfficePortfolioActionsStyle,
+} from "../../utils/responsive/loansOffice/loansOffice.layout";
+
+import LoanPortfolioResponsiveRecord from "./components/LoanPortfolioResponsiveRecord";
 
 import {
   pageStyle,
@@ -93,7 +112,6 @@ import {
   tableRowStyle,
   serialCellStyle,
   tableCellStyle,
-  tableCellSecondaryStyle,
   tableCellRightStyle,
   tableCellCenterStyle,
   loanIdentityStyle,
@@ -102,7 +120,6 @@ import {
   customerNameStyle,
   customerPhoneStyle,
   amountStyle,
-  outstandingStyle,
   statusBadgeStyle,
   emptyStateStyle,
   emptyTitleStyle,
@@ -125,14 +142,18 @@ const STORAGE_MODE_SESSION_KEY = "FINORA_STORAGE_MODE";
 // ============================================================
 // AUTHENTICATED STORAGE MODE
 //
-// The selected storage mode is persisted by Login in
-// sessionStorage. Loans Office must restore that same mode
-// before reading persisted Loan records.
+// Login persists the selected storage mode in sessionStorage.
 //
-// This is especially important after renderer reload because
-// StorageManager itself starts without the previous renderer
-// storage context.
+// After renderer reload:
+// - StorageManager creates a fresh runtime instance.
+// - Its previous storage context is not automatically restored.
+// - Loans Office therefore restores the authenticated mode
+//   before reading Loan records.
 //
+// IMPORTANT:
+// - No localStorage access.
+// - No filesystem access.
+// - No fallback from USB to LOCAL.
 // ============================================================
 
 function getAuthenticatedStorageMode(): StorageMode {
@@ -152,6 +173,10 @@ function getAuthenticatedStorageMode(): StorageMode {
     return StorageMode.LOCAL;
   }
 }
+
+// ============================================================
+// SAFE NUMBER
+// ============================================================
 
 function safeNumber(value: number | undefined): number {
   return typeof value === "number" && Number.isFinite(value) ? value : 0;
@@ -296,18 +321,6 @@ function formatStatus(loan: Loan): string {
 // ============================================================
 // THEME VISUAL CONTRACT
 // ============================================================
-//
-// IMPORTANT:
-//
-// This component does NOT create a second theme definition.
-//
-// It simply resolves semantic values from the central
-// FinoraTheme and applies them over the existing presentation
-// styles.
-//
-// Geometry remains owned by LoansPage.styles.ts.
-//
-// ============================================================
 
 function createThemeVisuals(theme: ReturnType<typeof useTheme>["theme"]) {
   const colors = theme.colors;
@@ -368,88 +381,69 @@ export default function Loans() {
 
   const { theme } = useTheme();
 
+  // ==========================================================
+  // LOANS OFFICE RESPONSIVE ENGINE
+  // ==========================================================
+
+  const { tokens: responsiveTokens } = useLoansOfficeResponsive();
+
   const themeColors = useMemo(() => createThemeVisuals(theme), [theme]);
 
   // ==========================================================
   // THEME-AWARE VISUAL OVERRIDES
-  //
-  // IMPORTANT:
-  //
-  // Only colours/effects are overridden here.
-  //
-  // Existing dimensions, spacing, typography, grid geometry
-  // and responsive behaviour remain untouched.
   // ==========================================================
 
   const themedPageStyle: CSSProperties = {
     ...pageStyle,
-
     background: themeColors.page,
-
     color: themeColors.textPrimary,
   };
 
   const themedPageTitleStyle: CSSProperties = {
     ...pageTitleStyle,
-
     color: themeColors.textPrimary,
   };
 
   const themedPageSubtitleStyle: CSSProperties = {
     ...pageSubtitleStyle,
-
     color: themeColors.textMuted,
   };
 
   const themedCreateButtonStyle: CSSProperties = {
     ...createButtonStyle,
-
     border: `1px solid ${themeColors.brandAccent}`,
-
     background: themeColors.brand,
-
     color: themeColors.textInverse,
-
     boxShadow: `0 7px 18px ${themeColors.shadow}`,
   };
 
   const themedStatisticCardStyle: CSSProperties = {
     ...statisticCardStyle,
-
     border: `1px solid ${themeColors.border}`,
-
     background: themeColors.surface,
-
     boxShadow: "none",
   };
 
   const themedStatisticLabelStyle: CSSProperties = {
     ...statisticLabelStyle,
-
     color: themeColors.textMuted,
   };
 
   const themedStatisticValueStyle: CSSProperties = {
     ...statisticValueStyle,
-
     color: themeColors.textPrimary,
   };
 
   const themedPortfolioStyle: CSSProperties = {
     ...portfolioStyle,
-
     border: `1px solid ${themeColors.border}`,
-
     background: themeColors.surface,
-
     boxShadow: "none",
   };
 
   const themedPortfolioHeaderStyle: CSSProperties = {
     ...portfolioHeaderStyle,
-
     borderBottom: `1px solid ${themeColors.border}`,
-
     background: `linear-gradient(
         90deg,
         ${themeColors.surfaceMuted},
@@ -459,206 +453,201 @@ export default function Loans() {
 
   const themedPortfolioTitleStyle: CSSProperties = {
     ...portfolioTitleStyle,
-
     color: themeColors.textPrimary,
   };
 
   const themedRefreshButtonStyle: CSSProperties = {
     ...refreshButtonStyle,
-
     border: `1px solid ${themeColors.border}`,
-
     background: themeColors.surfaceMuted,
-
     color: themeColors.textSecondary,
   };
 
   const themedLoanCountStyle: CSSProperties = {
     ...loanCountStyle,
-
     border: `1px solid ${themeColors.borderStrong}`,
-
     background: themeColors.brandAccentSoft,
-
     color: themeColors.brand,
   };
 
   const themedFilterLabelStyle: CSSProperties = {
     ...filterLabelStyle,
-
     color: themeColors.textMuted,
   };
 
   const themedFilterControlStyle: CSSProperties = {
     border: `1px solid ${themeColors.border}`,
-
     background: themeColors.surface,
-
     color: themeColors.textPrimary,
   };
 
   const themedClearFilterButtonStyle: CSSProperties = {
     ...clearFilterButtonStyle,
-
     border: `1px solid ${themeColors.border}`,
-
     background: themeColors.surfaceMuted,
-
     color: themeColors.textSecondary,
   };
 
   const themedApplyFilterButtonStyle: CSSProperties = {
     ...applyFilterButtonStyle,
-
     border: `1px solid ${themeColors.brand}`,
-
     background: themeColors.brand,
-
     color: themeColors.textInverse,
   };
 
   const themedTableHeaderStyle: CSSProperties = {
     ...tableHeaderStyle,
-
     borderBottom: `1px solid ${themeColors.border}`,
-
     background: themeColors.surfaceMuted,
   };
 
   const themedTableHeaderCellStyle: CSSProperties = {
     ...tableHeaderCellStyle,
-
     color: themeColors.textMuted,
   };
 
   const themedTableHeaderRightStyle: CSSProperties = {
     ...tableHeaderRightStyle,
-
     color: themeColors.textMuted,
   };
 
   const themedTableHeaderCenterStyle: CSSProperties = {
     ...tableHeaderCenterStyle,
-
     color: themeColors.textMuted,
   };
 
   const themedTableRowStyle: CSSProperties = {
     ...tableRowStyle,
-
     borderBottom: `1px solid ${themeColors.border}`,
-
     background: themeColors.surface,
   };
 
   const themedSerialCellStyle: CSSProperties = {
     ...serialCellStyle,
-
     color: themeColors.textSecondary,
   };
 
   const themedTableCellStyle: CSSProperties = {
     ...tableCellStyle,
-
     color: themeColors.textSecondary,
-  };
-
-  const themedTableCellSecondaryStyle: CSSProperties = {
-    ...tableCellSecondaryStyle,
-
-    color: themeColors.brandSecondary,
   };
 
   const themedTableCellRightStyle: CSSProperties = {
     ...tableCellRightStyle,
-
     color: themeColors.textSecondary,
   };
 
   const themedTableCellCenterStyle: CSSProperties = {
     ...tableCellCenterStyle,
-
     color: themeColors.textSecondary,
   };
 
   const themedLoanNumberStyle: CSSProperties = {
     ...loanNumberStyle,
-
     color: themeColors.textPrimary,
   };
 
   const themedLoanTitleStyle: CSSProperties = {
     ...loanTitleStyle,
-
     color: themeColors.textMuted,
   };
 
   const themedCustomerNameStyle: CSSProperties = {
     ...customerNameStyle,
-
     color: themeColors.textPrimary,
   };
 
   const themedCustomerPhoneStyle: CSSProperties = {
     ...customerPhoneStyle,
-
     color: themeColors.textMuted,
   };
 
   const themedAmountStyle: CSSProperties = {
     ...amountStyle,
-
     color: themeColors.textPrimary,
-  };
-
-  const themedOutstandingStyle: CSSProperties = {
-    ...outstandingStyle,
-
-    color: themeColors.brand,
   };
 
   const themedEmptyStateStyle: CSSProperties = {
     ...emptyStateStyle,
-
     background: themeColors.surface,
   };
 
   const themedEmptyTitleStyle: CSSProperties = {
     ...emptyTitleStyle,
-
     color: themeColors.textPrimary,
   };
 
   const themedEmptyDescriptionStyle: CSSProperties = {
     ...emptyDescriptionStyle,
-
     color: themeColors.textMuted,
   };
 
   const themedEmptyCreateButtonStyle: CSSProperties = {
     ...emptyCreateButtonStyle,
-
     border: `1px solid ${themeColors.brandAccent}`,
-
     background: themeColors.brand,
-
     color: themeColors.textInverse,
-
     boxShadow: `0 7px 18px ${themeColors.shadow}`,
   };
 
   const themedTableFooterStyle: CSSProperties = {
     ...tableFooterStyle,
-
     borderTop: `1px solid ${themeColors.border}`,
-
     background: themeColors.surface,
   };
 
   const themedTableShowingStyle: CSSProperties = {
     ...tableShowingStyle,
-
     color: themeColors.textMuted,
+  };
+
+  // ==========================================================
+  // RESPONSIVE PRESENTATION
+  // ==========================================================
+
+  const responsivePageStyle: CSSProperties = {
+    ...themedPageStyle,
+    ...createLoansOfficePageStyle(responsiveTokens),
+  };
+
+  const responsiveTopBarStyle: CSSProperties = {
+    ...topBarStyle,
+    ...createLoansOfficeTopBarStyle(responsiveTokens),
+  };
+
+  const responsiveCreateButtonStyle: CSSProperties = {
+    ...themedCreateButtonStyle,
+    width: responsiveTokens.viewport === "mobile" ? "100%" : undefined,
+  };
+
+  const responsiveStatisticsGridStyle: CSSProperties = {
+    ...statisticsGridStyle,
+    ...createLoansOfficeStatisticsGridStyle(responsiveTokens),
+  };
+
+  const responsiveStatisticCardStyle: CSSProperties = {
+    ...themedStatisticCardStyle,
+    ...createLoansOfficeStatisticCardStyle(responsiveTokens),
+  };
+
+  const responsiveFiltersGridStyle: CSSProperties = {
+    ...filtersGridStyle,
+    ...createLoansOfficeFiltersGridStyle(responsiveTokens),
+  };
+
+  const responsivePortfolioHeaderStyle: CSSProperties = {
+    ...themedPortfolioHeaderStyle,
+    ...createLoansOfficePortfolioHeaderStyle(responsiveTokens),
+  };
+
+  const responsivePortfolioActionsStyle: CSSProperties = {
+    ...portfolioActionsStyle,
+    ...createLoansOfficePortfolioActionsStyle(responsiveTokens),
+    width:
+      responsiveTokens.viewport === "mobile" ||
+      responsiveTokens.viewport === "tablet"
+        ? "100%"
+        : undefined,
   };
 
   // ==========================================================
@@ -687,6 +676,9 @@ export default function Loans() {
 
   // ==========================================================
   // FILTER STATE
+  //
+  // Draft state = current controls.
+  // Applied state = actual portfolio filter.
   // ==========================================================
 
   const [filterStatus, setFilterStatus] = useState<LoanFilterStatus>("ALL");
@@ -695,16 +687,32 @@ export default function Loans() {
 
   const [filterToDate, setFilterToDate] = useState("");
 
+  const [appliedFilterStatus, setAppliedFilterStatus] =
+    useState<LoanFilterStatus>("ALL");
+
+  const [appliedFilterFromDate, setAppliedFilterFromDate] = useState("");
+
+  const [appliedFilterToDate, setAppliedFilterToDate] = useState("");
+
   // ==========================================================
   // LOAD LOANS
   //
   // IMPORTANT:
   //
-  // Loans Office must restore the authenticated FINORA
-  // storage context before reading persisted Loan records.
+  // Restore authenticated storage mode FIRST.
   //
-  // This is required after renderer reload because
-  // StorageManager starts with a fresh runtime context.
+  // Only after storageManager.selectStorageMode()
+  // succeeds do we call getLoans().
+  //
+  // This fixes:
+  //
+  // Ctrl + R
+  //     ↓
+  // fresh StorageManager
+  //     ↓
+  // wrong/default runtime context
+  //     ↓
+  // empty Loans Office
   //
   // ==========================================================
 
@@ -716,11 +724,15 @@ export default function Loans() {
     }
 
     try {
-      // ----------------------------------------------------
+      // --------------------------------------------------
       // RESTORE AUTHENTICATED STORAGE MODE
-      // ----------------------------------------------------
+      // --------------------------------------------------
 
       const storageMode = getAuthenticatedStorageMode();
+
+      // --------------------------------------------------
+      // RESTORE SAME STORAGE CONTEXT
+      // --------------------------------------------------
 
       const storageActivated =
         await storageManager.selectStorageMode(storageMode);
@@ -732,9 +744,9 @@ export default function Loans() {
         );
       }
 
-      // ----------------------------------------------------
-      // READ LOANS FROM THE RESTORED STORAGE
-      // ----------------------------------------------------
+      // --------------------------------------------------
+      // READ LOANS ONLY AFTER STORAGE IS READY
+      // --------------------------------------------------
 
       const records = await getLoans();
 
@@ -800,7 +812,7 @@ export default function Loans() {
   }, [loans]);
 
   // ==========================================================
-  // FILTER VALIDATION
+  // APPLY FILTERS
   // ==========================================================
 
   const handleApplyFilters = (): void => {
@@ -809,6 +821,12 @@ export default function Loans() {
 
       return;
     }
+
+    setAppliedFilterStatus(filterStatus);
+
+    setAppliedFilterFromDate(filterFromDate);
+
+    setAppliedFilterToDate(filterToDate);
   };
 
   // ==========================================================
@@ -821,6 +839,12 @@ export default function Loans() {
     setFilterFromDate("");
 
     setFilterToDate("");
+
+    setAppliedFilterStatus("ALL");
+
+    setAppliedFilterFromDate("");
+
+    setAppliedFilterToDate("");
   };
 
   // ==========================================================
@@ -829,35 +853,41 @@ export default function Loans() {
 
   const filteredLoans = useMemo(() => {
     return loans.filter((loan) => {
-      // ------------------------------------------------
+      // ----------------------------------------------
       // STATUS
-      // ------------------------------------------------
+      // ----------------------------------------------
 
-      if (filterStatus === "RUNNING" && !isRunningLoan(loan)) {
+      if (appliedFilterStatus === "RUNNING" && !isRunningLoan(loan)) {
         return false;
       }
 
-      if (filterStatus === "CLOSED" && !isClosedLoan(loan)) {
+      if (appliedFilterStatus === "CLOSED" && !isClosedLoan(loan)) {
         return false;
       }
 
-      // ------------------------------------------------
+      // ----------------------------------------------
       // DATE
-      // ------------------------------------------------
+      // ----------------------------------------------
 
       const loanDate = getDateFilterKey(loan.loanDate);
 
-      if (filterFromDate && (!loanDate || loanDate < filterFromDate)) {
+      if (
+        appliedFilterFromDate &&
+        (!loanDate || loanDate < appliedFilterFromDate)
+      ) {
         return false;
       }
 
-      if (filterToDate && (!loanDate || loanDate > filterToDate)) {
+      if (
+        appliedFilterToDate &&
+        (!loanDate || loanDate > appliedFilterToDate)
+      ) {
         return false;
       }
 
       return true;
     });
-  }, [loans, filterStatus, filterFromDate, filterToDate]);
+  }, [loans, appliedFilterStatus, appliedFilterFromDate, appliedFilterToDate]);
 
   // ==========================================================
   // CREATE LOAN
@@ -876,7 +906,7 @@ export default function Loans() {
   }, []);
 
   // ==========================================================
-  // CLOSE VIEW
+  // CLOSE LOAN DETAILS
   // ==========================================================
 
   const handleCloseLoanDetails = useCallback((): void => {
@@ -901,12 +931,12 @@ export default function Loans() {
 
   return (
     <StudioLayout department="Loans" allowScroll={true} showHeader={false}>
-      <main style={themedPageStyle}>
+      <main style={responsivePageStyle}>
         {/* ==================================================
             PAGE HEADER
         ================================================== */}
 
-        <section style={topBarStyle}>
+        <section style={responsiveTopBarStyle}>
           <div style={headingGroupStyle}>
             <h1 style={themedPageTitleStyle}>Loans Office</h1>
 
@@ -918,7 +948,7 @@ export default function Loans() {
           <button
             type="button"
             onClick={handleCreateLoan}
-            style={themedCreateButtonStyle}
+            style={responsiveCreateButtonStyle}
           >
             + Create New Loan
           </button>
@@ -928,8 +958,8 @@ export default function Loans() {
             STATISTICS
         ================================================== */}
 
-        <section style={statisticsGridStyle}>
-          <article style={themedStatisticCardStyle}>
+        <section style={responsiveStatisticsGridStyle}>
+          <article style={responsiveStatisticCardStyle}>
             <span style={themedStatisticLabelStyle}>Total Loans</span>
 
             <strong style={themedStatisticValueStyle}>
@@ -937,7 +967,7 @@ export default function Loans() {
             </strong>
           </article>
 
-          <article style={themedStatisticCardStyle}>
+          <article style={responsiveStatisticCardStyle}>
             <span style={themedStatisticLabelStyle}>Active / Running</span>
 
             <strong style={themedStatisticValueStyle}>
@@ -945,7 +975,7 @@ export default function Loans() {
             </strong>
           </article>
 
-          <article style={themedStatisticCardStyle}>
+          <article style={responsiveStatisticCardStyle}>
             <span style={themedStatisticLabelStyle}>Closed</span>
 
             <strong style={themedStatisticValueStyle}>
@@ -953,7 +983,7 @@ export default function Loans() {
             </strong>
           </article>
 
-          <article style={themedStatisticCardStyle}>
+          <article style={responsiveStatisticCardStyle}>
             <span style={themedStatisticLabelStyle}>Outstanding</span>
 
             <strong style={themedStatisticValueStyle}>
@@ -967,33 +997,28 @@ export default function Loans() {
         ================================================== */}
 
         <section style={themedPortfolioStyle}>
-          <header style={themedPortfolioHeaderStyle}>
+          <header style={responsivePortfolioHeaderStyle}>
             <div style={themedPortfolioTitleStyle}>
               <span
                 style={{
                   width: "3px",
-
                   height: "16px",
-
                   flexShrink: 0,
-
                   borderRadius: "3px",
-
                   background: themeColors.brand,
-
                   boxShadow: `0 0 10px ${themeColors.shadow}`,
                 }}
               />
               Loan Portfolio
             </div>
 
-            <div style={portfolioActionsStyle}>
+            <div style={responsivePortfolioActionsStyle}>
               {/* ==========================================
                   FILTERS
               ========================================== */}
 
               <div style={filtersStyle}>
-                <div style={filtersGridStyle}>
+                <div style={responsiveFiltersGridStyle}>
                   <div style={filterFieldStyle}>
                     <label style={themedFilterLabelStyle}>Status</label>
 
@@ -1128,180 +1153,185 @@ export default function Loans() {
           ) : (
             <>
               {/* ==========================================
-                  PORTFOLIO TABLE
+                  RESPONSIVE PORTFOLIO
+                  
+                  LAPTOP / DESKTOP:
+                    Existing table.
+
+                  MOBILE:
+                    LoanPortfolioResponsiveRecord.
+                    One field per row.
+
+                  TABLET:
+                    LoanPortfolioResponsiveRecord.
+                    Two-column field layout.
               ========================================== */}
 
-              <div style={tableWrapperStyle}>
-                {/* TABLE HEADER */}
+              {responsiveTokens.layout.tableVisible ? (
+                <>
+                  <div style={tableWrapperStyle}>
+                    {/* TABLE HEADER */}
 
-                <div style={themedTableHeaderStyle} role="row">
-                  <div style={themedTableHeaderCenterStyle}>S.No.</div>
+                    <div style={themedTableHeaderStyle} role="row">
+                      <div style={themedTableHeaderCenterStyle}>S.No.</div>
 
-                  <div style={themedTableHeaderCellStyle}>Loan</div>
+                      <div style={themedTableHeaderCellStyle}>Loan</div>
 
-                  <div style={themedTableHeaderCellStyle}>Customer</div>
+                      <div style={themedTableHeaderCellStyle}>Customer</div>
 
-                  <div style={themedTableHeaderCellStyle}>Type</div>
+                      <div style={themedTableHeaderCellStyle}>Type</div>
 
-                  <div style={themedTableHeaderRightStyle}>Principal</div>
+                      <div style={themedTableHeaderRightStyle}>Principal</div>
 
-                  <div style={themedTableHeaderRightStyle}>Outstanding</div>
+                      <div style={themedTableHeaderRightStyle}>Outstanding</div>
 
-                  <div style={themedTableHeaderCenterStyle}>Loan Date</div>
+                      <div style={themedTableHeaderCenterStyle}>Loan Date</div>
 
-                  <div style={themedTableHeaderCenterStyle}>Status</div>
+                      <div style={themedTableHeaderCenterStyle}>Status</div>
 
-                  {/* VIEW */}
-
-                  <div style={themedTableHeaderCenterStyle}></div>
-                </div>
-
-                {/* TABLE BODY */}
-
-                <div style={tableBodyStyle} role="rowgroup">
-                  {filteredLoans.map((loan, index) => (
-                    <div
-                      key={loan.id}
-                      style={{
-                        ...themedTableRowStyle,
-
-                        gridTemplateColumns:
-                          "56px minmax(120px,1.2fr) minmax(130px,1.25fr) minmax(80px,0.8fr) minmax(100px,0.9fr) minmax(110px,1fr) minmax(95px,0.8fr) minmax(80px,0.7fr) 72px",
-                      }}
-                      role="row"
-                    >
-                      {/* S.NO. */}
-
-                      <div style={themedSerialCellStyle}>{index + 1}</div>
-
-                      {/* LOAN */}
-
-                      <div style={loanIdentityStyle}>
-                        <div style={themedLoanNumberStyle}>
-                          {loan.loanNumber || loan.id || "--"}
-                        </div>
-
-                        <div style={themedLoanTitleStyle}>
-                          {formatLoanTitle(loan)}
-                        </div>
-                      </div>
-
-                      {/* CUSTOMER */}
-
-                      <div style={themedTableCellStyle}>
-                        <div style={themedCustomerNameStyle}>
-                          {loan.customerName || "--"}
-                        </div>
-
-                        <div style={themedCustomerPhoneStyle}>
-                          {loan.phoneNumber || "--"}
-                        </div>
-                      </div>
-
-                      {/* TYPE */}
-
-                      {/* TYPE */}
-
-<div style={themedTableCellSecondaryStyle}>
-  {formatLoanType(loan)}
-</div>
-
-                      {/* PRINCIPAL */}
-
-                      <div style={themedTableCellRightStyle}>
-                        <span style={themedAmountStyle}>
-                          {formatCurrency(loan.amount)}
-                        </span>
-                      </div>
-
-                      {/* OUTSTANDING */}
-
-                      {/* OUTSTANDING */}
-
-<div style={themedTableCellRightStyle}>
-  <span style={themedOutstandingStyle}>
-    {formatCurrency(loan.outstanding)}
-  </span>
-</div>
-
-                      {/* LOAN DATE */}
-
-                      <div style={themedTableCellCenterStyle}>
-                        {formatDate(loan.loanDate)}
-                      </div>
-
-                      {/* STATUS */}
-
-                      <div style={themedTableCellCenterStyle}>
-                        <span
-                          style={{
-                            ...statusBadgeStyle(loan.status),
-
-                            border: `1px solid ${
-                              isClosedLoan(loan)
-                                ? themeColors.border
-                                : themeColors.successBorder
-                            }`,
-
-                            background: isClosedLoan(loan)
-                              ? themeColors.surfaceMuted
-                              : themeColors.successSoft,
-
-                            color: isClosedLoan(loan)
-                              ? themeColors.textMuted
-                              : themeColors.success,
-                          }}
-                        >
-                          {formatStatus(loan)}
-                        </span>
-                      </div>
-
-                      {/* VIEW ACTION */}
-
-                      <div style={themedTableCellCenterStyle}>
-                        <button
-                          type="button"
-                          onClick={() => handleViewLoan(loan)}
-                          style={{
-                            minHeight: "28px",
-
-                            padding: "0 9px",
-
-                            border: `1px solid ${themeColors.borderStrong}`,
-
-                            borderRadius: "6px",
-
-                            background: themeColors.brandAccentSoft,
-
-                            color: themeColors.brand,
-
-                            fontSize: "10px",
-
-                            fontWeight: 750,
-
-                            cursor: "pointer",
-
-                            whiteSpace: "nowrap",
-                          }}
-                        >
-                          View
-                        </button>
-                      </div>
+                      <div style={themedTableHeaderCenterStyle} />
                     </div>
+
+                    {/* TABLE BODY */}
+
+                    <div style={tableBodyStyle} role="rowgroup">
+                      {filteredLoans.map((loan, index) => (
+                        <div
+                          key={loan.id}
+                          style={{
+                            ...themedTableRowStyle,
+                            gridTemplateColumns:
+                              "56px minmax(120px,1.2fr) minmax(130px,1.25fr) minmax(80px,0.8fr) minmax(100px,0.9fr) minmax(110px,1fr) minmax(95px,0.8fr) minmax(80px,0.7fr) 72px",
+                          }}
+                          role="row"
+                        >
+                          <div style={themedSerialCellStyle}>{index + 1}</div>
+
+                          <div style={loanIdentityStyle}>
+                            <div style={themedLoanNumberStyle}>
+                              {loan.loanNumber || loan.id || "--"}
+                            </div>
+
+                            <div style={themedLoanTitleStyle}>
+                              {formatLoanTitle(loan)}
+                            </div>
+                          </div>
+
+                          <div style={themedTableCellStyle}>
+                            <div style={themedCustomerNameStyle}>
+                              {loan.customerName || "--"}
+                            </div>
+
+                            <div style={themedCustomerPhoneStyle}>
+                              {loan.phoneNumber || "--"}
+                            </div>
+                          </div>
+
+                          <div style={amountStyle}>{formatLoanType(loan)}</div>
+
+                          <div style={themedTableCellRightStyle}>
+                            <span style={themedAmountStyle}>
+                              {formatCurrency(loan.amount)}
+                            </span>
+                          </div>
+
+                          <div style={themedTableCellRightStyle}>
+                            <span style={themedAmountStyle}>
+                              {formatCurrency(loan.outstanding)}
+                            </span>
+                          </div>
+
+                          <div style={themedTableCellCenterStyle}>
+                            {formatDate(loan.loanDate)}
+                          </div>
+
+                          <div style={themedTableCellCenterStyle}>
+                            <span
+                              style={{
+                                ...statusBadgeStyle(loan.status),
+                                border: `1px solid ${
+                                  isClosedLoan(loan)
+                                    ? themeColors.border
+                                    : themeColors.successBorder
+                                }`,
+                                background: isClosedLoan(loan)
+                                  ? themeColors.surfaceMuted
+                                  : themeColors.successSoft,
+                                color: isClosedLoan(loan)
+                                  ? themeColors.textMuted
+                                  : themeColors.success,
+                              }}
+                            >
+                              {formatStatus(loan)}
+                            </span>
+                          </div>
+
+                          <div style={themedTableCellCenterStyle}>
+                            <button
+                              type="button"
+                              onClick={() => handleViewLoan(loan)}
+                              style={{
+                                minHeight: "28px",
+                                padding: "0 9px",
+                                border: `1px solid ${themeColors.borderStrong}`,
+                                borderRadius: "6px",
+                                background: themeColors.brandAccentSoft,
+                                color: themeColors.brand,
+                                fontSize: "10px",
+                                fontWeight: 750,
+                                cursor: "pointer",
+                                whiteSpace: "nowrap",
+                              }}
+                            >
+                              View
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div style={themedTableFooterStyle}>
+                    <span style={themedTableShowingStyle}>
+                      Showing 1 to {filteredLoans.length} of{" "}
+                      {filteredLoans.length} loans
+                    </span>
+                  </div>
+                </>
+              ) : (
+                <div
+                  style={{
+                    width: "100%",
+                    minWidth: 0,
+                    boxSizing: "border-box",
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: `${responsiveTokens.layout.mobileRecordGap}px`,
+                  }}
+                >
+                  {filteredLoans.map((loan, index) => (
+                    <LoanPortfolioResponsiveRecord
+                      key={loan.id}
+                      loan={loan}
+                      index={index}
+                      tokens={responsiveTokens}
+                      formatLoanTitle={formatLoanTitle}
+                      formatLoanType={formatLoanType}
+                      formatCurrency={(value) => formatCurrency(value ?? 0)}
+                      formatDate={formatDate}
+                      formatStatus={formatStatus}
+                      onView={handleViewLoan}
+                    />
                   ))}
+
+                  <div style={themedTableFooterStyle}>
+                    <span style={themedTableShowingStyle}>
+                      Showing 1 to {filteredLoans.length} of{" "}
+                      {filteredLoans.length} loans
+                    </span>
+                  </div>
                 </div>
-              </div>
-
-              {/* =================================================
-                  TABLE FOOTER
-              ================================================= */}
-
-              <div style={themedTableFooterStyle}>
-                <span style={themedTableShowingStyle}>
-                  Showing 1 to {filteredLoans.length} of {filteredLoans.length}{" "}
-                  loans
-                </span>
-              </div>
+              )}
             </>
           )}
         </section>
