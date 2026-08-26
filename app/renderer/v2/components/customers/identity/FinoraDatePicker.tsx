@@ -159,6 +159,7 @@ export default function FinoraDatePicker({
   ========================================================= */
 
   const rootRef = useRef<HTMLDivElement | null>(null);
+  const popupRef = useRef<HTMLDivElement | null>(null);
   const monthListRef = useRef<HTMLDivElement | null>(null);
   const yearListRef = useRef<HTMLDivElement | null>(null);
 
@@ -197,6 +198,79 @@ export default function FinoraDatePicker({
   const displayValue = selectedDate
     ? getDisplayDate(selectedDate)
     : "";
+
+      /* =========================================================
+     FIXED POPUP POSITIONING
+
+     Popup must visually remain attached to the input,
+     but must NOT participate in page/content height.
+
+     Therefore the popup is fixed to the viewport and its
+     position is resolved from the input wrapper.
+  ========================================================= */
+
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const updatePopupPosition = () => {
+      const inputWrap =
+        rootRef.current?.querySelector<HTMLDivElement>(
+          ".finora-date-picker-input-wrap",
+        );
+
+      const popup =
+        popupRef.current;
+
+      if (!inputWrap || !popup) return;
+
+      const rect =
+        inputWrap.getBoundingClientRect();
+
+      popup.style.top =
+        `${rect.bottom + 4}px`;
+
+      popup.style.left =
+        `${rect.left}px`;
+
+      popup.style.width =
+        `${rect.width}px`;
+    };
+
+    updatePopupPosition();
+
+    const handleScroll = () => {
+      updatePopupPosition();
+    };
+
+    const handleResize = () => {
+      updatePopupPosition();
+    };
+
+    window.addEventListener(
+      "scroll",
+      handleScroll,
+      true,
+    );
+
+    window.addEventListener(
+      "resize",
+      handleResize,
+    );
+
+    return () => {
+      window.removeEventListener(
+        "scroll",
+        handleScroll,
+        true,
+      );
+
+      window.removeEventListener(
+        "resize",
+        handleResize,
+      );
+    };
+
+  }, [isOpen]);
 
   /* =========================================================
      VALUE SYNC
@@ -374,10 +448,11 @@ function clearDate() {
 
       {isOpen && (
         <div
-          className="finora-date-picker-popup"
-          role="dialog"
-          aria-label="Date picker"
-        >
+  ref={popupRef}
+  className="finora-date-picker-popup"
+  role="dialog"
+  aria-label="Date picker"
+>
 
 <div className="finora-date-picker-title">
   FINORA DATE PICKER

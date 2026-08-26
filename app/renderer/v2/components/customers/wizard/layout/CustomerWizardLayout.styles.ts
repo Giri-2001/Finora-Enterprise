@@ -200,7 +200,7 @@ export function useCustomerWizardLayoutStyles(
       boxSizing:
         "border-box",
 
-      paddingBottom: 100,
+      paddingBottom: 80,
 
       scrollbarGutter:
         "stable",

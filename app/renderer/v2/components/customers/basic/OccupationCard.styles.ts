@@ -12,13 +12,21 @@
 
    - Match Step 1 / BasicForm field presentation
    - Match Family Details field presentation
-   - Two-column occupation layout
+   - Responsive two-column / single-column occupation layout
    - Same label sizing
    - Same input sizing
    - Same placeholder/value sizing
    - Same field spacing
-   - Same font family
-   - Responsive values consumed only from Responsive Engine
+   - Same icon sizing
+   - Responsive values consumed only from BasicForm Responsive Engine
+
+   IMPORTANT:
+
+   - Uses BasicFormResponsiveTokens only
+   - No ResponsiveTokens
+   - No identityForm.* references
+   - No local viewport detection
+   - No media queries
 =========================================================== */
 
 
@@ -32,8 +40,8 @@ import type {
 
 
 import type {
-  ResponsiveTokens,
-} from "../../../utils/responsive";
+  BasicFormResponsiveTokens,
+} from "../../../utils/responsive/customers/basicform/basicform.tokens";
 
 
 /* ===========================================================
@@ -55,7 +63,7 @@ const THEME = {
     "var(--finora-theme-surface, rgba(255,255,255,.055))",
 
   surfaceMuted:
-  "var(--finora-theme-surface-muted, var(--finora-theme-background-surface-muted, #1D212B))",
+    "var(--finora-theme-surface-muted, var(--finora-theme-background-surface-muted, #1D212B))",
 
   brand:
     "var(--finora-theme-brand-accent, #D4AF37)",
@@ -82,7 +90,7 @@ export function createOccupationCardRootStyle():
       0,
 
     padding:
-  "0 0 25px",
+      "0 0 25px",
 
     boxSizing:
       "border-box",
@@ -100,23 +108,36 @@ export function createOccupationCardRootStyle():
 
    OCCUPATION:
 
+       Desktop / Laptop:
+
        Occupation        | Workplace / Business
        Monthly Income    | Work Experience
 
+
+       Tablet:
+
+       Occupation        | Workplace / Business
+       Monthly Income    | Work Experience
+
+
+       Mobile:
+
+       Occupation
+       Workplace / Business
+       Monthly Income
+       Work Experience
+
+
    IMPORTANT:
 
-   - Full available width
-   - Exactly two equal columns
-   - No shrink-to-content
-   - Responsive spacing comes only from
-     the central Responsive Engine
-   - Grid geometry remains independent
-     from typography sizing
+   - Geometry comes only from BasicFormResponsiveTokens
+   - fieldColumns controls responsive column count
+   - No viewport detection here
 =========================================================== */
 
 export function createOccupationCardGridStyle(
   tokens:
-    ResponsiveTokens,
+    BasicFormResponsiveTokens,
 ):
   CSSProperties {
 
@@ -141,13 +162,15 @@ export function createOccupationCardGridStyle(
       "grid",
 
     gridTemplateColumns:
-      "repeat(2, minmax(0, 1fr))",
+      tokens.fieldColumns === 1
+        ? "minmax(0, 1fr)"
+        : `repeat(${tokens.fieldColumns}, minmax(0, 1fr))`,
 
     columnGap:
-      `${tokens.identityForm.columnGap}px`,
+      `${tokens.columnGap}px`,
 
     rowGap:
-      `${tokens.identityForm.rowGap}px`,
+      `${tokens.basicFieldGap}px`,
 
     boxSizing:
       "border-box",
@@ -174,7 +197,7 @@ export function createOccupationCardGridStyle(
 
 export function createOccupationCardFieldStyle(
   tokens:
-    ResponsiveTokens,
+    BasicFormResponsiveTokens,
 ):
   CSSProperties {
 
@@ -202,7 +225,7 @@ export function createOccupationCardFieldStyle(
       "column",
 
     gap:
-      `${tokens.identityForm.fieldGap}px`,
+      `${tokens.labelGap}px`,
 
     boxSizing:
       "border-box",
@@ -218,28 +241,22 @@ export function createOccupationCardFieldStyle(
 /* ===========================================================
    LABEL
 
-   MATCH FAMILY DETAILS
+   MATCH FAMILY DETAILS / BASIC FORM
 
-   IMPORTANT:
+   Uses:
 
-   Family Details uses the identityForm typography profile.
+   - labelMinHeight
+   - labelFontSize
+   - labelFontWeight
+   - labelLetterSpacing
 
-   Therefore Occupation uses:
-
-     tokens.identityForm.labelSize
-
-   This keeps:
-
-   - Same font size
-   - Same font weight
-   - Same line height
-   - Same uppercase treatment
-   - Same visual density
+   All values come directly from
+   BasicFormResponsiveTokens.
 =========================================================== */
 
 export function createOccupationCardLabelStyle(
   tokens:
-    ResponsiveTokens,
+    BasicFormResponsiveTokens,
 ):
   CSSProperties {
 
@@ -258,7 +275,7 @@ export function createOccupationCardLabelStyle(
       0,
 
     minHeight:
-      `${tokens.identityForm.labelHeight}px`,
+      `${tokens.labelMinHeight}px`,
 
     margin:
       0,
@@ -270,19 +287,19 @@ export function createOccupationCardLabelStyle(
       THEME.textSecondary,
 
     fontFamily:
-      "var(--finora-theme-font-family, Inter, system-ui, sans-serif)",
+      "Segoe UI, Inter, system-ui, -apple-system, BlinkMacSystemFont, sans-serif",
 
     fontSize:
-      `${tokens.identityForm.labelSize}px`,
+      `${tokens.labelFontSize}px`,
 
     fontWeight:
-      600,
+      tokens.labelFontWeight,
 
     letterSpacing:
-      ".45px",
+      `${tokens.labelLetterSpacing}px`,
 
     lineHeight:
-      tokens.lineHeight.compact,
+      1.2,
 
     textTransform:
       "uppercase",
@@ -333,27 +350,25 @@ export function createOccupationCardInputWrapperStyle():
 /* ===========================================================
    INPUT
 
-   MATCH FAMILY DETAILS
+   MATCH FAMILY DETAILS / BASIC FORM
 
-   IMPORTANT:
+   Uses:
 
-   Occupation uses the exact Family Details
-   Responsive Engine input profile.
+   - inputHeight
+   - inputPaddingX
+   - inputRadius
+   - inputFontSize
+   - inputFontWeight
+   - iconSize
+   - iconOffset
 
-   SOURCE:
-
-     tokens.identityForm.inputHeight
-     tokens.identityForm.inputRadius
-     tokens.identityForm.inputPaddingX
-     tokens.identityForm.inputFontSize
-
-   This keeps the input value and placeholder
-   at the same font size as Family Details.
+   Icon-aware left padding is applied directly here so
+   placeholder and value text never overlap the icon.
 =========================================================== */
 
 export function createOccupationCardInputStyle(
   tokens:
-    ResponsiveTokens,
+    BasicFormResponsiveTokens,
 ):
   CSSProperties {
 
@@ -369,67 +384,66 @@ export function createOccupationCardInputStyle(
       0,
 
     height:
-      `${tokens.identityForm.inputHeight}px`,
+      `${tokens.inputHeight}px`,
 
     minHeight:
-      `${tokens.identityForm.inputHeight}px`,
+      `${tokens.inputHeight}px`,
 
     margin:
       0,
 
     padding:
-      `0 ${tokens.identityForm.inputPaddingX}px`,
+      `0 ${
+        tokens.inputPaddingX
+      }px 0 ${
+        tokens.inputPaddingX +
+        tokens.iconSize +
+        tokens.iconOffset
+      }px`,
 
     boxSizing:
       "border-box",
 
     borderRadius:
-      `${tokens.identityForm.inputRadius}px`,
+      `${tokens.inputRadius}px`,
 
     border:
-      `${tokens.border.width}px solid ${THEME.border}`,
+      `1px solid ${THEME.border}`,
 
     outline:
       "none",
 
-   background:
-  `
-    linear-gradient(
-      180deg,
-      color-mix(
-        in srgb,
-        ${THEME.surfaceMuted} 82%,
-        transparent
-      ),
-      color-mix(
-        in srgb,
-        ${THEME.surface} 94%,
-        transparent
-      )
-    )
-  `,
+    background:
+      `
+        linear-gradient(
+          180deg,
+          color-mix(
+            in srgb,
+            ${THEME.surfaceMuted} 82%,
+            transparent
+          ),
+          color-mix(
+            in srgb,
+            ${THEME.surface} 94%,
+            transparent
+          )
+        )
+      `,
 
     boxShadow:
-  `
-    inset 0 1px 0
-    color-mix(
-      in srgb,
-      ${THEME.textPrimary} 4%,
-      transparent
-    )
-  `,
+      "inset 0 1px 3px rgba(0,0,0,.10)",
 
     color:
       THEME.textPrimary,
 
     fontFamily:
-      "var(--finora-theme-font-family, Inter, system-ui, sans-serif)",
+      "Segoe UI, Inter, system-ui, -apple-system, BlinkMacSystemFont, sans-serif",
 
     fontSize:
-      `${tokens.identityForm.inputFontSize}px`,
+      `${tokens.inputFontSize}px`,
 
     fontWeight:
-      500,
+      tokens.inputFontWeight,
 
     lineHeight:
       1.35,
@@ -449,11 +463,19 @@ export function createOccupationCardInputStyle(
    ICON
 
    MATCH FAMILY DETAILS ICON POSITION
+
+   Icon position is derived from:
+
+   tokens.inputPaddingX
+
+   Icon size is derived from:
+
+   tokens.iconSize
 =========================================================== */
 
 export function createOccupationCardIconStyle(
   tokens:
-    ResponsiveTokens,
+    BasicFormResponsiveTokens,
 ):
   CSSProperties {
 
@@ -463,16 +485,16 @@ export function createOccupationCardIconStyle(
       "absolute",
 
     left:
-      `${tokens.identityForm.iconLeft}px`,
+      `${tokens.inputPaddingX}px`,
 
     top:
       "50%",
 
     width:
-      `${tokens.identityForm.iconSize}px`,
+      `${tokens.iconSize}px`,
 
     height:
-      `${tokens.identityForm.iconSize}px`,
+      `${tokens.iconSize}px`,
 
     transform:
       "translateY(-50%)",
@@ -494,15 +516,18 @@ export function createOccupationCardIconStyle(
 /* ===========================================================
    ICON INPUT
 
-   MATCH FAMILY DETAILS LEFT PADDING
+   COMPATIBILITY HELPER
 
-   The padding is taken directly from the
-   Responsive Engine identityForm profile.
+   The main input style already contains the complete
+   icon-aware left padding.
+
+   This helper remains exported so OccupationCard.tsx
+   does not need to change.
 =========================================================== */
 
 export function createOccupationCardIconInputStyle(
   tokens:
-    ResponsiveTokens,
+    BasicFormResponsiveTokens,
 ):
   CSSProperties {
 
@@ -511,9 +536,6 @@ export function createOccupationCardIconInputStyle(
     ...createOccupationCardInputStyle(
       tokens,
     ),
-
-    paddingLeft:
-      `${tokens.identityForm.iconInputPaddingLeft}px`,
 
   };
 

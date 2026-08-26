@@ -130,7 +130,7 @@ export function createFamilyDetailsGridStyle(
       "grid",
 
     gridTemplateColumns:
-      "repeat(2, minmax(0, 1fr))",
+  `repeat(${tokens.fieldColumns}, minmax(0, 1fr))`,
 
     columnGap:
       `${tokens.columnGap}px`,
