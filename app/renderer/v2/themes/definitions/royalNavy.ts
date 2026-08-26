@@ -65,11 +65,12 @@ export const ROYAL_NAVY_THEME:
     ------------------------------------------------------- */
 
     brand: {
-      primary: "#29415F",
-      secondary: "#1D3048",
-      accent: "#6F8EAE",
-      accentSoft: "#243447",
-    },
+  primary: "#60A5FA",
+  secondary: "#A9C7E8",
+  accent: "#3B82F6",
+  accentSoft: "#18365C",
+},
+
 
 
     /* -------------------------------------------------------
@@ -90,14 +91,13 @@ export const ROYAL_NAVY_THEME:
     ------------------------------------------------------- */
 
     text: {
-      primary: "#F5F8FC",
-      secondary: "#C4D0DF",
-      muted: "#8F9FB2",
-      inverse: "#FFFFFF",
-      disabled: "#65758A",
-      link: "#A9BCD0",
-    },
-
+  primary: "#F8FAFC",
+  secondary: "#D6E2F0",
+  muted: "#A9BDD3",
+  inverse: "#08111F",
+  disabled: "#7189A3",
+  link: "#60A5FA",
+},
 
     /* -------------------------------------------------------
        BORDER

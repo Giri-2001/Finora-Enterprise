@@ -1200,7 +1200,11 @@ export default function Loans() {
 
                       {/* TYPE */}
 
-                      <div style={amountStyle}>{formatLoanType(loan)}</div>
+                      {/* TYPE */}
+
+<div style={themedTableCellSecondaryStyle}>
+  {formatLoanType(loan)}
+</div>
 
                       {/* PRINCIPAL */}
 
@@ -1212,11 +1216,13 @@ export default function Loans() {
 
                       {/* OUTSTANDING */}
 
-                      <div style={themedTableCellRightStyle}>
-                        <span style={amountStyle}>
-                          {formatCurrency(loan.outstanding)}
-                        </span>
-                      </div>
+                      {/* OUTSTANDING */}
+
+<div style={themedTableCellRightStyle}>
+  <span style={themedOutstandingStyle}>
+    {formatCurrency(loan.outstanding)}
+  </span>
+</div>
 
                       {/* LOAN DATE */}
 

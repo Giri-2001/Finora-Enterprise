@@ -692,18 +692,12 @@ export const loanCountStyle:
   borderRadius:
     "999px",
 
-  background:
-    `
-      color-mix(
-        in srgb,
-        ${THEME.brandPrimary} 12%,
-        transparent
-      )
-    `,
+   background:
+  THEME.successSoft,
 
-  color:
-    THEME.brandAccent,
-
+color:
+  THEME.success,
+  
   fontSize:
     "10px",
 
@@ -1454,11 +1448,27 @@ export const amountStyle:
 // OUTSTANDING
 // ============================================================
 
+// ============================================================
+// OUTSTANDING
+// ============================================================
+
 export const outstandingStyle:
   CSSProperties = {
 
+  display:
+    "inline-block",
+
+  padding:
+    "3px 7px",
+
+  borderRadius:
+    "6px",
+
+  background:
+    THEME.successSoft,
+
   color:
-    THEME.textPrimary,
+    THEME.success,
 
   fontSize:
     "12px",
