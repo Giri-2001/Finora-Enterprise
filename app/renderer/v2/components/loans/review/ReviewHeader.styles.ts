@@ -1,38 +1,79 @@
 // ============================================================
-// FINORA ENTERPRISE V2
+// FINORA ENTERPRISE OS™
 //
-// REVIEW STUDIO
+// REVIEW STUDIO™
 // REVIEW HEADER STYLES
 //
 // RESPONSIBILITY:
 // - ReviewHeader presentation only
-// - Review-specific header presentation
-// - FINORA Login-inspired dark navy theme
+// - FINORA Theme Engine integration
+// - Preserve existing header geometry
+// - Preserve existing typography
+// - No local theme palette
+// - No hardcoded theme colours
 //
-// DESIGN:
-// - Primary Blue: #2563EB
-// - No brown
-// - No gold
-// - Minimum font-size: 12px
-// - Font weights: 500–750
+// THEME FLOW:
+//
+// ThemeProvider
+//      ↓
+// FINORA Theme Engine
+//      ↓
+// Theme CSS Variables
+//      ↓
+// ReviewHeader styles
+//      ↓
+// Active FINORA Theme
 //
 // ============================================================
 
 import type { CSSProperties } from "react";
 
 // ============================================================
-// COLOR TOKENS
+// FINORA THEME TOKENS
 // ============================================================
 
-const COLORS = {
-  panel: "#111C2E",
-  panelSoft: "#142238",
-  border: "rgba(148, 163, 184, 0.20)",
-  primary: "#2563EB",
-  primarySoft: "rgba(37, 99, 235, 0.14)",
-  text: "#FFFFFF",
-  textSecondary: "#CBD5E1",
-};
+const THEME = {
+  /* ---------------------------------------------------------
+     SURFACES
+  --------------------------------------------------------- */
+
+  surface:
+    "var(--finora-theme-surface, var(--finora-theme-background-surface, #111C2E))",
+
+  surfaceMuted:
+    "var(--finora-theme-surface-muted, var(--finora-theme-background-surface-muted, #142238))",
+
+  /* ---------------------------------------------------------
+     BRAND
+  --------------------------------------------------------- */
+
+  brandPrimary: "var(--finora-theme-brand-primary, #2563EB)",
+
+  brandAccent:
+    "var(--finora-theme-brand-accent, var(--finora-theme-brand-primary, #2563EB))",
+
+  brandAccentSoft: "var(--finora-theme-brand-accent-soft, rgba(37,99,235,.14))",
+
+  /* ---------------------------------------------------------
+     TEXT
+  --------------------------------------------------------- */
+
+  textPrimary: "var(--finora-theme-text-primary, #FFFFFF)",
+
+  textSecondary: "var(--finora-theme-text-secondary, #CBD5E1)",
+
+  /* ---------------------------------------------------------
+     BORDERS
+  --------------------------------------------------------- */
+
+  border: "var(--finora-theme-border-default, rgba(148,163,184,.20))",
+
+  /* ---------------------------------------------------------
+     SHADOW
+  --------------------------------------------------------- */
+
+  shadow: "var(--finora-theme-overlay-shadow, rgba(0,0,0,.16))",
+} as const;
 
 // ============================================================
 // HEADER WRAPPER
@@ -40,18 +81,26 @@ const COLORS = {
 
 export const headerStyle: CSSProperties = {
   width: "100%",
+
   minWidth: 0,
+
   boxSizing: "border-box",
+
   padding: "13px 16px",
+
   marginBottom: "0px",
-  border: `1px solid ${COLORS.border}`,
+
+  border: `1px solid ${THEME.border}`,
+
   borderRadius: "10px",
+
   background: `linear-gradient(
-    135deg,
-    ${COLORS.panel},
-    ${COLORS.panelSoft}
-  )`,
-  boxShadow: "0 6px 18px rgba(0, 0, 0, 0.16)",
+      135deg,
+      ${THEME.surface},
+      ${THEME.surfaceMuted}
+    )`,
+
+  boxShadow: `0 6px 18px ${THEME.shadow}`,
 };
 
 // ============================================================
@@ -60,8 +109,11 @@ export const headerStyle: CSSProperties = {
 
 export const contentStyle: CSSProperties = {
   display: "flex",
+
   alignItems: "center",
+
   gap: "10px",
+
   minWidth: 0,
 };
 
@@ -71,11 +123,16 @@ export const contentStyle: CSSProperties = {
 
 export const accentStyle: CSSProperties = {
   width: "4px",
+
   minHeight: "38px",
+
   flexShrink: 0,
+
   borderRadius: "4px",
-  background: COLORS.primary,
-  boxShadow: `0 0 12px ${COLORS.primarySoft}`,
+
+  background: THEME.brandAccent,
+
+  boxShadow: `0 0 12px ${THEME.brandAccentSoft}`,
 };
 
 // ============================================================
@@ -84,8 +141,11 @@ export const accentStyle: CSSProperties = {
 
 export const textWrapperStyle: CSSProperties = {
   display: "flex",
+
   flexDirection: "column",
+
   gap: "3px",
+
   minWidth: 0,
 };
 
@@ -95,10 +155,15 @@ export const textWrapperStyle: CSSProperties = {
 
 export const titleStyle: CSSProperties = {
   margin: 0,
-  color: COLORS.text,
+
+  color: THEME.textPrimary,
+
   fontSize: "21px",
+
   fontWeight: 750,
+
   lineHeight: 1.2,
+
   letterSpacing: "0.01em",
 };
 
@@ -108,9 +173,13 @@ export const titleStyle: CSSProperties = {
 
 export const subtitleStyle: CSSProperties = {
   margin: 0,
-  color: COLORS.textSecondary,
+
+  color: THEME.textSecondary,
+
   fontSize: "12px",
+
   fontWeight: 500,
+
   lineHeight: 1.35,
 };
 

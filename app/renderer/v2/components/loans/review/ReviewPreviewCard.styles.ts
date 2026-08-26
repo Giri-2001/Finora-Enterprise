@@ -7,31 +7,34 @@
 // RESPONSIBILITY:
 // - ReviewPreviewCard presentation only
 // - Final loan review summary presentation
-// - FINORA Login-inspired dark navy theme
-//
-// DESIGN:
-// - Primary Blue: #2563EB
-// - No brown
-// - No gold
-// - Minimum font-size: 12px
-// - Font weights: 500–750
+// - Consume FINORA Theme Engine CSS variables
+// - No local theme palette
+// - Layout / dimensions preserved
 //
 // ============================================================
 
 import type { CSSProperties } from "react";
 
 // ============================================================
-// COLOR TOKENS
+// FINORA THEME TOKENS
 // ============================================================
 
-const COLORS = {
-  panel: "#111C2E",
-  panelSoft: "#142238",
-  border: "rgba(148, 163, 184, 0.20)",
-  primary: "#2563EB",
-  primarySoft: "rgba(37, 99, 235, 0.14)",
-  text: "#FFFFFF",
-  textMuted: "#94A3B8",
+const THEME = {
+  panel:
+    "var(--finora-theme-surface, var(--finora-theme-background-surface, #111C2E))",
+
+  panelSoft:
+    "var(--finora-theme-surface-muted, var(--finora-theme-background-surface-muted, #142238))",
+
+  border: "var(--finora-theme-border-default, rgba(148, 163, 184, 0.16))",
+
+  borderStrong: "var(--finora-theme-border-strong, rgba(37, 99, 235, 0.42))",
+
+  text: "var(--finora-theme-text-primary, #FFFFFF)",
+
+  textSecondary: "var(--finora-theme-text-secondary, #CBD5E1)",
+
+  textMuted: "var(--finora-theme-text-muted, #94A3B8)",
 };
 
 // ============================================================
@@ -40,7 +43,9 @@ const COLORS = {
 
 export const cardStyle: CSSProperties = {
   width: "100%",
+
   minWidth: 0,
+
   boxSizing: "border-box",
 };
 
@@ -50,10 +55,15 @@ export const cardStyle: CSSProperties = {
 
 export const previewGridStyle: CSSProperties = {
   display: "grid",
+
   gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
+
   gap: "6px 8px",
+
   width: "100%",
+
   minWidth: 0,
+
   boxSizing: "border-box",
 };
 
@@ -63,19 +73,33 @@ export const previewGridStyle: CSSProperties = {
 
 export const rowStyle: CSSProperties = {
   display: "flex",
+
   alignItems: "center",
+
   justifyContent: "space-between",
+
   gap: "8px",
+
   minWidth: 0,
+
   minHeight: "31px",
+
   padding: "6px 8px",
+
   boxSizing: "border-box",
-  border: `1px solid ${COLORS.border}`,
+
+  border: `1px solid ${THEME.border}`,
+
   borderRadius: "6px",
-  background: COLORS.panel,
-  color: COLORS.textMuted,
+
+  background: THEME.panelSoft,
+
+  color: THEME.textSecondary,
+
   fontSize: "12px",
+
   fontWeight: 500,
+
   lineHeight: 1.25,
 };
 
@@ -85,10 +109,20 @@ export const rowStyle: CSSProperties = {
 
 export const labelStyle: CSSProperties = {
   minWidth: 0,
-  color: COLORS.textMuted,
+
+  color: THEME.textMuted,
+
   fontSize: "12px",
-  fontWeight: 500,
+
+  fontWeight: 550,
+
   lineHeight: 1.25,
+
+  overflow: "hidden",
+
+  textOverflow: "ellipsis",
+
+  whiteSpace: "nowrap",
 };
 
 // ============================================================
@@ -97,13 +131,21 @@ export const labelStyle: CSSProperties = {
 
 export const valueStyle: CSSProperties = {
   minWidth: 0,
-  color: COLORS.text,
+
+  color: THEME.text,
+
   fontSize: "12px",
+
   fontWeight: 650,
+
   lineHeight: 1.25,
+
   textAlign: "right",
+
   overflow: "hidden",
+
   textOverflow: "ellipsis",
+
   whiteSpace: "nowrap",
 };
 
@@ -113,7 +155,11 @@ export const valueStyle: CSSProperties = {
 
 export const primaryValueStyle: CSSProperties = {
   ...valueStyle,
+
+  color: THEME.text,
+
   fontSize: "13px",
+
   fontWeight: 700,
 };
 
@@ -123,12 +169,12 @@ export const primaryValueStyle: CSSProperties = {
 
 export const highlightRowStyle: CSSProperties = {
   ...rowStyle,
-  borderColor: "rgba(37, 99, 235, 0.38)",
-  background: `linear-gradient(
-    90deg,
-    ${COLORS.primarySoft},
-    ${COLORS.panel}
-  )`,
+
+  borderColor: THEME.borderStrong,
+
+  background: THEME.panel,
+
+  boxShadow: "none",
 };
 
 // ============================================================
@@ -137,7 +183,14 @@ export const highlightRowStyle: CSSProperties = {
 
 export const fullWidthRowStyle: CSSProperties = {
   ...rowStyle,
-  gridColumn: "1 / -1",
+
+  minHeight: "34px",
+
+  padding: "7px 9px",
+
+  background: THEME.panel,
+
+  borderColor: THEME.borderStrong,
 };
 
 // ============================================================

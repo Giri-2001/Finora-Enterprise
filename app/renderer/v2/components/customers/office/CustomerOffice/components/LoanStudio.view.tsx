@@ -15,17 +15,11 @@
 
 import { formatIndianDate } from "./LoanStudio.helpers";
 
-import {
-  useResponsive,
-} from "../../../../../utils/responsive";
+import { useResponsive } from "../../../../../utils/responsive";
 
-import {
-  useTheme,
-} from "../../../../../themes/provider/ThemeProvider";
+import { useTheme } from "../../../../../themes/provider/ThemeProvider";
 
-import {
-  createLoanStudioStyles,
-} from "./LoanStudio.styles";
+import { createLoanStudioStyles } from "./LoanStudio.styles";
 
 import {
   step2WorkspaceStyle,
@@ -60,88 +54,55 @@ import {
   step1PreviewStyle,
 } from "./LoanStudio.styles";
 
-import LoanCustomerCard
-  from "../../../../loans/details/LoanCustomerCard";
+import LoanCustomerCard from "../../../../loans/details/LoanCustomerCard";
 
-import LoanPreviewCard
-  from "../../../../loans/details/LoanPreviewCard";
+import LoanPreviewCard from "../../../../loans/details/LoanPreviewCard";
 
-import LoanForm
-  from "../../../../loans/details/LoanForm";
+import LoanForm from "../../../../loans/details/LoanForm";
 
-import LoanStatistics
-  from "../../../../loans/details/LoanStatistics";
+import LoanStatistics from "../../../../loans/details/LoanStatistics";
 
-import DocumentsStudio
-  from "../../../../loans/documents/DocumentsStudio";
+import DocumentsStudio from "../../../../loans/documents/DocumentsStudio";
 
-import GuarantorHeader
-  from "../../../../loans/guarantor/GuarantorHeader";
+import GuarantorHeader from "../../../../loans/guarantor/GuarantorHeader";
 
-import GuarantorForm
-  from "../../../../loans/guarantor/GuarantorForm";
+import GuarantorForm from "../../../../loans/guarantor/GuarantorForm";
 
-import GuarantorVerification
-  from "../../../../loans/guarantor/GuarantorVerification";
+import GuarantorVerification from "../../../../loans/guarantor/GuarantorVerification";
 
-import GuarantorPreviewCard
-  from "../../../../loans/guarantor/GuarantorPreviewCard";
+import GuarantorPreviewCard from "../../../../loans/guarantor/GuarantorPreviewCard";
 
-import RepaymentSummary
-  from "../../../../loans/repayment/RepaymentSummary";
+import RepaymentSummary from "../../../../loans/repayment/RepaymentSummary";
 
-import RepaymentPreviewCard
-  from "../../../../loans/repayment/RepaymentPreviewCard";
+import RepaymentPreviewCard from "../../../../loans/repayment/RepaymentPreviewCard";
 
-import LoanScheduleTable
-  from "../../../../loans/schedule/LoanScheduleTable";
+import LoanScheduleTable from "../../../../loans/schedule/LoanScheduleTable";
 
-import DisbursementHeader
-  from "../../../../loans/disbursement/DisbursementHeader";
+import DisbursementHeader from "../../../../loans/disbursement/DisbursementHeader";
 
-import DisbursementForm
-  from "../../../../loans/disbursement/DisbursementForm";
+import DisbursementForm from "../../../../loans/disbursement/DisbursementForm";
 
-import PaymentModeCard
-  from "../../../../loans/disbursement/PaymentModeCard";
+import PaymentModeCard from "../../../../loans/disbursement/PaymentModeCard";
 
-import DisbursementReceipt
-  from "../../../../loans/disbursement/DisbursementReceipt";
+import DisbursementReceipt from "../../../../loans/disbursement/DisbursementReceipt";
 
-import DisbursementPreviewCard
-  from "../../../../loans/disbursement/DisbursementPreviewCard";
+import DisbursementPreviewCard from "../../../../loans/disbursement/DisbursementPreviewCard";
 
-import DisbursementDraftStatus
-  from "../../../../loans/disbursement/DisbursementDraftStatus";
+import DisbursementDraftStatus from "../../../../loans/disbursement/DisbursementDraftStatus";
 
-import ReviewHeader
-  from "../../../../loans/review/ReviewHeader";
+import ReviewHeader from "../../../../loans/review/ReviewHeader";
 
-import ValidationChecklist
-  from "../../../../loans/review/ValidationChecklist";
+import ValidationChecklist from "../../../../loans/review/ValidationChecklist";
 
-import ApprovalActions
-  from "../../../../loans/review/ApprovalActions";
+import ApprovalActions from "../../../../loans/review/ApprovalActions";
 
-import ReviewPreviewCard
-  from "../../../../loans/review/ReviewPreviewCard";
+import ReviewPreviewCard from "../../../../loans/review/ReviewPreviewCard";
 
-import ReviewDraftStatus
-  from "../../../../loans/review/ReviewDraftStatus";
+import { useLoanStudio } from "./useLoanStudio";
 
-import {
-  useLoanStudio,
-} from "./useLoanStudio";
-
-
-type LoanStudioViewModel =
-  ReturnType<
-    typeof useLoanStudio
-  >;
-
+type LoanStudioViewModel = ReturnType<typeof useLoanStudio>;
 
 const STEP_ITEMS = [
-
   {
     title: "Details",
     subtitle: "Basic Information",
@@ -171,68 +132,34 @@ const STEP_ITEMS = [
     title: "Disbursement",
     subtitle: "Disburse Loan",
   },
-
 ] as const;
 
-
 function getTodayDate(): string {
-
-  const today =
-    new Date();
+  const today = new Date();
 
   return [
-
     today.getFullYear(),
 
-    String(
-      today.getMonth() + 1,
-    ).padStart(
-      2,
-      "0",
-    ),
+    String(today.getMonth() + 1).padStart(2, "0"),
 
-    String(
-      today.getDate(),
-    ).padStart(
-      2,
-      "0",
-    ),
-
+    String(today.getDate()).padStart(2, "0"),
   ].join("-");
-
 }
 
-
-function getDisbursementAmount(
-  value: number,
-): number {
-
+function getDisbursementAmount(value: number): number {
   return Math.max(
-
     0,
 
-    Number.isFinite(value)
-      ? value
-      : 0,
-
+    Number.isFinite(value) ? value : 0,
   );
-
 }
 
-
-export default function LoanStudioView(
-  props: LoanStudioViewModel,
-) {
-
+export default function LoanStudioView(props: LoanStudioViewModel) {
   /* =========================================================
      FINORA RESPONSIVE ENGINE
   ========================================================= */
 
-  const {
-    tokens,
-  } =
-    useResponsive();
-
+  const { tokens } = useResponsive();
 
   /* =========================================================
      FINORA THEME ENGINE
@@ -249,18 +176,13 @@ export default function LoanStudioView(
      Loan Studio + nested loan modules
   ========================================================= */
 
-  const {
-    theme,
-  } =
-    useTheme();
-
+  const { theme } = useTheme();
 
   /* =========================================================
      THEME-AWARE PRESENTATION STYLES
   ========================================================= */
 
   const {
-
     shellStyle,
     contentStyle,
     footerStyle,
@@ -279,16 +201,9 @@ export default function LoanStudioView(
     disabledNavigationButtonStyle,
     primaryNavigationButtonStyle,
     step6FormStyle,
-
-  } =
-    createLoanStudioStyles(
-      tokens,
-      theme,
-    );
-
+  } = createLoanStudioStyles(tokens, theme);
 
   const {
-
     customerName,
     customers,
     selectedCustomer,
@@ -373,1176 +288,422 @@ export default function LoanStudioView(
     handleRejectLoan,
     handleApproveLoan,
     resetLoanWorkspace,
-
   } = props;
 
-
-  const safeDisbursementAmount =
-    getDisbursementAmount(
-      netDisbursement,
-    );
-
+  const safeDisbursementAmount = getDisbursementAmount(netDisbursement);
 
   return (
-
-    <section
-      style={
-        shellStyle
-      }
-    >
-
-      <div
-        style={
-          contentStyle
-        }
-      >
-
+    <section style={shellStyle}>
+      <div style={contentStyle}>
         {/* ======================================================
             STEP 1 — LOAN DETAILS
         ====================================================== */}
 
         {step === 1 && (
-
-          <section
-            style={
-              step1WorkspaceStyle
-            }
-          >
-
-            <div
-              style={
-                step1TopStyle
-              }
-            >
-
-              <div
-                style={
-                  step1CustomerStyle
-                }
-              >
-
+          <section style={step1WorkspaceStyle}>
+            <div style={step1TopStyle}>
+              <div style={step1CustomerStyle}>
                 <LoanCustomerCard
-                  customerName={
-                    activeCustomerName
-                  }
-
-                  customerId={
-                    activeCustomerId
-                  }
-
-                  phoneNumber={
-                    activeCustomerPhone
-                  }
-
-                  photo={
-                    selectedCustomer?.photo
-                  }
-
-                  customers={
-                    loanCustomerOptions
-                  }
-
-                  onCustomerSelect={
-                    setSelectedCustomer
-                  }
+                  customerName={activeCustomerName}
+                  customerId={activeCustomerId}
+                  phoneNumber={activeCustomerPhone}
+                  photo={selectedCustomer?.photo}
+                  customers={loanCustomerOptions}
+                  onCustomerSelect={setSelectedCustomer}
                 />
-
               </div>
 
-
-              <div
-                style={
-                  step1OverviewStyle
-                }
-              >
-
+              <div style={step1OverviewStyle}>
                 <LoanStatistics
-                  totalLoans={
-                    loanStatistics.totalLoans
-                  }
-
-                  activeLoans={
-                    loanStatistics.activeLoans
-                  }
-
-                  totalDisbursed={
-                    loanStatistics.totalDisbursed
-                  }
+                  totalLoans={loanStatistics.totalLoans}
+                  activeLoans={loanStatistics.activeLoans}
+                  totalDisbursed={loanStatistics.totalDisbursed}
                 />
-
               </div>
-
             </div>
 
-
-            <div
-              style={
-                step1BottomStyle
-              }
-            >
-
-              <div
-                style={
-                  step1FormStyle
-                }
-              >
-
+            <div style={step1BottomStyle}>
+              <div style={step1FormStyle}>
                 <LoanForm
-
-                  loanAmount={
-                    loanAmount
-                  }
-
-                  emiCalculation={
-                    emiCalculation
-                  }
-
-                  interest={
-                    interest
-                  }
-
-                  processingFee={
-                    processingFee
-                  }
-
-                  advanceDeduction={
-                    advanceDeduction
-                  }
-
-                  lateFee={
-                    lateFee
-                  }
-
-                  repaymentType={
-                    repaymentType
-                  }
-
-                  duration={
-                    duration
-                  }
-
-                  durationType={
-                    durationType
-                  }
-
-                  purpose={
-                    purpose
-                  }
-
-                  remarks={
-                    remarks
-                  }
-
-                  onLoanAmountChange={
-                    setLoanAmount
-                  }
-
-                  onEMICalculationChange={
-                    setEMICalculation
-                  }
-
-                  onInterestChange={
-                    setInterest
-                  }
-
-                  onProcessingFeeChange={
-                    setProcessingFee
-                  }
-
-                  onAdvanceDeductionChange={
-                    setAdvanceDeduction
-                  }
-
-                  onLateFeeChange={
-                    setLateFee
-                  }
-
-                  onRepaymentTypeChange={
-                    setRepaymentType
-                  }
-
-                  onDurationChange={
-                    setDuration
-                  }
-
-                  onDurationTypeChange={
-                    setDurationType
-                  }
-
-                  onPurposeChange={
-                    setPurpose
-                  }
-
-                  onRemarksChange={
-                    setRemarks
-                  }
-
+                  loanAmount={loanAmount}
+                  emiCalculation={emiCalculation}
+                  interest={interest}
+                  processingFee={processingFee}
+                  advanceDeduction={advanceDeduction}
+                  lateFee={lateFee}
+                  repaymentType={repaymentType}
+                  duration={duration}
+                  durationType={durationType}
+                  purpose={purpose}
+                  remarks={remarks}
+                  onLoanAmountChange={setLoanAmount}
+                  onEMICalculationChange={setEMICalculation}
+                  onInterestChange={setInterest}
+                  onProcessingFeeChange={setProcessingFee}
+                  onAdvanceDeductionChange={setAdvanceDeduction}
+                  onLateFeeChange={setLateFee}
+                  onRepaymentTypeChange={setRepaymentType}
+                  onDurationChange={setDuration}
+                  onDurationTypeChange={setDurationType}
+                  onPurposeChange={setPurpose}
+                  onRemarksChange={setRemarks}
                 />
-
               </div>
 
-
-              <div
-                style={
-                  step1PreviewStyle
-                }
-              >
-
+              <div style={step1PreviewStyle}>
                 <LoanPreviewCard
-
-                  customerName={
-                    activeCustomerName
-                  }
-
-                  loanAmount={
-                    Number(
-                      loanAmount || 0,
-                    )
-                  }
-
-                  loanType={
-                    loanTypeLabel
-                  }
-
+                  customerName={activeCustomerName}
+                  loanAmount={Number(loanAmount || 0)}
+                  loanType={loanTypeLabel}
                   loanStatus="--"
-
-                  interest={
-                    Number(
-                      interest || 0,
-                    )
-                  }
-
-                  totalInterest={
-                    totalInterest
-                  }
-
-                  totalPayable={
-                    totalPayable
-                  }
-
-                  installmentAmount={
-                    installmentAmount
-                  }
-
-                  loanDate={
-                    formatIndianDate(
-                      loanDate,
-                    )
-                  }
-
-                  maturityDate={
-                    formatIndianDate(
-                      maturityDate,
-                    )
-                  }
-
-                  processingFee={
-                    Number(
-                      processingFee || 0,
-                    )
-                  }
-
-                  advanceDeduction={
-                    Number(
-                      advanceDeduction || 0,
-                    )
-                  }
-
+                  interest={Number(interest || 0)}
+                  totalInterest={totalInterest}
+                  totalPayable={totalPayable}
+                  installmentAmount={installmentAmount}
+                  loanDate={formatIndianDate(loanDate)}
+                  maturityDate={formatIndianDate(maturityDate)}
+                  processingFee={Number(processingFee || 0)}
+                  advanceDeduction={Number(advanceDeduction || 0)}
                   netDisbursement={
-
-                    Number(
-                      loanAmount || 0,
-                    ) -
-
-                    Number(
-                      processingFee || 0,
-                    ) -
-
-                    Number(
-                      advanceDeduction || 0,
-                    )
-
+                    Number(loanAmount || 0) -
+                    Number(processingFee || 0) -
+                    Number(advanceDeduction || 0)
                   }
-
-                  lateFee={
-                    Number(
-                      lateFee || 0,
-                    )
-                  }
-
+                  lateFee={Number(lateFee || 0)}
                   repaymentType={
-
-                    repaymentType
-
-                      ? repaymentType.toUpperCase()
-
-                      : "--"
-
+                    repaymentType ? repaymentType.toUpperCase() : "--"
                   }
-
                 />
-
               </div>
-
             </div>
-
           </section>
-
         )}
-
 
         {/* ======================================================
             STEP 2 — REPAYMENT
         ====================================================== */}
 
         {step === 2 && (
-
-          <section
-            style={
-              step2WorkspaceStyle
-            }
-          >
-
-            <div
-              style={
-                step2GridStyle
-              }
-            >
-
-              <div
-                style={
-                  step2LeftColumnStyle
-                }
-              >
-
-                <div
-                  style={
-                    step2SummaryWrapperStyle
-                  }
-                >
-
+          <section style={step2WorkspaceStyle}>
+            <div style={step2GridStyle}>
+              <div style={step2LeftColumnStyle}>
+                <div style={step2SummaryWrapperStyle}>
                   <RepaymentSummary
-
-                    loanAmount={
-                      principal
-                    }
-
-                    totalInterest={
-                      totalInterest
-                    }
-
-                    installmentAmount={
-                      installmentAmount
-                    }
-
-                    totalInstallments={
-                      totalInstallments
-                    }
-
-                    totalRepayable={
-                      totalPayable
-                    }
-
-                    repaymentMethod={
-                      emiCalculation
-                    }
-
-                    repaymentFrequency={
-                      repaymentType.toLowerCase()
-                    }
-
+                    loanAmount={principal}
+                    totalInterest={totalInterest}
+                    installmentAmount={installmentAmount}
+                    totalInstallments={totalInstallments}
+                    totalRepayable={totalPayable}
+                    repaymentMethod={emiCalculation}
+                    repaymentFrequency={repaymentType.toLowerCase()}
                   />
-
                 </div>
 
-
-                <div
-                  style={
-                    step2PreviewDraftStackStyle
-                  }
-                >
-
-                  <div
-                    style={
-                      step2PreviewWrapperStyle
-                    }
-                  >
-
+                <div style={step2PreviewDraftStackStyle}>
+                  <div style={step2PreviewWrapperStyle}>
                     <RepaymentPreviewCard
-
                       frequency={
-
-                        repaymentType
-
-                          ? repaymentType.toUpperCase()
-
-                          : "--"
-
+                        repaymentType ? repaymentType.toUpperCase() : "--"
                       }
-
-                      repaymentMethod={
-                        emiCalculation
-                      }
-
-                      installmentAmount={
-                        installmentAmount
-                      }
-
-                      totalInstallments={
-                        totalInstallments
-                      }
-
-                      totalRepayable={
-                        totalPayable
-                      }
-
+                      repaymentMethod={emiCalculation}
+                      installmentAmount={installmentAmount}
+                      totalInstallments={totalInstallments}
+                      totalRepayable={totalPayable}
                       firstInstallmentDate={
-
                         schedule.length
-
-                          ? formatIndianDate(
-                              new Date(
-                                schedule[0].dueDate,
-                              ),
-                            )
-
+                          ? formatIndianDate(new Date(schedule[0].dueDate))
                           : "--"
-
                       }
-
                       lastInstallmentDate={
-
                         schedule.length
-
                           ? formatIndianDate(
-                              new Date(
-                                schedule[
-                                  schedule.length - 1
-                                ].dueDate,
-                              ),
+                              new Date(schedule[schedule.length - 1].dueDate),
                             )
-
                           : "--"
-
                       }
-
                     />
-
                   </div>
-
 
                   <section
                     aria-label="Repayment Draft"
-                    style={
-                      repaymentDraftStyle
-                    }
+                    style={repaymentDraftStyle}
                   >
-
-                    <div
-                      style={
-                        repaymentDraftHeaderStyle
-                      }
-                    >
-
-                      <div
-                        style={
-                          repaymentDraftTitleStyle
-                        }
-                      >
+                    <div style={repaymentDraftHeaderStyle}>
+                      <div style={repaymentDraftTitleStyle}>
                         Repayment Draft
                       </div>
 
-                      <span
-                        style={
-                          repaymentDraftBadgeStyle
-                        }
-                      >
-                        Draft
-                      </span>
-
+                      <span style={repaymentDraftBadgeStyle}>Draft</span>
                     </div>
 
-
-                    <div
-                      style={
-                        repaymentDraftUpdatedStyle
-                      }
-                    >
+                    <div style={repaymentDraftUpdatedStyle}>
                       Last Updated: Not Saved
                     </div>
-
                   </section>
-
                 </div>
-
               </div>
 
-
-              <div
-                style={
-                  step2ScheduleWrapperStyle
-                }
-              >
-
-                <LoanScheduleTable
-                  schedule={
-                    schedule
-                  }
-                />
-
+              <div style={step2ScheduleWrapperStyle}>
+                <LoanScheduleTable schedule={schedule} />
               </div>
-
             </div>
-
           </section>
-
         )}
-
 
         {/* ======================================================
             STEP 3 — DOCUMENTS
         ====================================================== */}
 
         {step === 3 && (
-
-          <section
-            style={
-              step1WorkspaceStyle
-            }
-          >
-
+          <section style={step1WorkspaceStyle}>
             <DocumentsStudio
-
               customerName={
-
                 activeCustomerName ||
-
                 selectedCustomer?.customerName ||
-
                 customerName ||
-
                 "Customer"
-
               }
-
-              customerPhoto={
-                selectedCustomer?.photo
-              }
-
-              items={
-                documents
-              }
-
-              onDocumentsChange={
-                setDocuments
-              }
-
+              customerPhoto={selectedCustomer?.photo}
+              items={documents}
+              onDocumentsChange={setDocuments}
             />
-
           </section>
-
         )}
-
 
         {/* ======================================================
             STEP 4 — GUARANTOR
         ====================================================== */}
 
         {step === 4 && (
-
-          <section
-            style={
-              step1WorkspaceStyle
-            }
-          >
-
+          <section style={step1WorkspaceStyle}>
             <GuarantorHeader />
 
-
-            <div
-              style={
-                step1BottomStyle
-              }
-            >
-
-              <div
-                style={
-                  step1FormStyle
-                }
-              >
-
+            <div style={step1BottomStyle}>
+              <div style={step1FormStyle}>
                 <GuarantorForm
-
-                  guarantorName={
-                    guarantorName
-                  }
-
-                  guarantorPhone={
-                    guarantorPhone
-                  }
-
-                  occupation={
-                    guarantorOccupation
-                  }
-
-                  address={
-                    guarantorAddress
-                  }
-
-                  onGuarantorNameChange={
-                    setGuarantorName
-                  }
-
-                  onGuarantorPhoneChange={
-                    setGuarantorPhone
-                  }
-
-                  onOccupationChange={
-                    setGuarantorOccupation
-                  }
-
-                  onAddressChange={
-                    setGuarantorAddress
-                  }
-
+                  guarantorName={guarantorName}
+                  guarantorPhone={guarantorPhone}
+                  occupation={guarantorOccupation}
+                  address={guarantorAddress}
+                  onGuarantorNameChange={setGuarantorName}
+                  onGuarantorPhoneChange={setGuarantorPhone}
+                  onOccupationChange={setGuarantorOccupation}
+                  onAddressChange={setGuarantorAddress}
                 />
 
                 <GuarantorVerification />
-
               </div>
 
-
-              <div
-                style={
-                  step1PreviewStyle
-                }
-              >
-
+              <div style={step1PreviewStyle}>
                 <GuarantorPreviewCard
-
-                  guarantorName={
-                    guarantorName
-                  }
-
-                  mobileNumber={
-                    guarantorPhone
-                  }
-
-                  occupation={
-                    guarantorOccupation
-                  }
-
-                  address={
-                    guarantorAddress
-                  }
-
+                  guarantorName={guarantorName}
+                  mobileNumber={guarantorPhone}
+                  occupation={guarantorOccupation}
+                  address={guarantorAddress}
                 />
-
               </div>
-
             </div>
-
           </section>
-
         )}
-
 
         {/* ======================================================
             STEP 5 — REVIEW
         ====================================================== */}
 
         {step === 5 && (
-
-          <section
-            style={
-              step5WorkspaceStyle
-            }
-          >
-
+          <section style={step5WorkspaceStyle}>
             <ReviewHeader />
 
-
-            <div
-              style={
-                step5BottomStyle
-              }
-            >
-
-              <div
-                style={
-                  step5ChecklistColumnStyle
-                }
-              >
-
-                <ValidationChecklist
-                  review={
-                    reviewData
-                  }
-                />
-
+            <div style={step5BottomStyle}>
+              <div style={step5ChecklistColumnStyle}>
+                <ValidationChecklist review={reviewData} />
               </div>
 
-
-              <div
-                style={
-                  step5PreviewColumnStyle
-                }
-              >
-
-                <ReviewPreviewCard
-                  review={
-                    reviewData
-                  }
-                />
-
-                <ReviewDraftStatus />
-
+              <div style={step5PreviewColumnStyle}>
+                <ReviewPreviewCard review={reviewData} />
               </div>
-
             </div>
-
           </section>
-
         )}
-
 
         {/* ======================================================
             STEP 6 — DISBURSEMENT
         ====================================================== */}
 
         {step === 6 && (
-
-          <section
-            style={
-              step6WorkspaceStyle
-            }
-          >
-
+          <section style={step6WorkspaceStyle}>
             <DisbursementHeader />
 
-
-            <div
-              style={
-                step6BottomStyle
-              }
-            >
-
-              <div
-                style={
-                  step6FormStyle
-                }
-              >
-
+            <div style={step6BottomStyle}>
+              <div style={step6FormStyle}>
                 <DisbursementForm
-
-                  disbursementDate={
-                    disbursementDate
-                  }
-
-                  netDisbursement={
-                    netDisbursement
-                  }
-
-                  onDisbursementDateChange={
-                    setDisbursementDate
-                  }
-
+                  disbursementDate={disbursementDate}
+                  netDisbursement={netDisbursement}
+                  onDisbursementDateChange={setDisbursementDate}
                 />
 
-
-                <div
-                  style={
-                    step6PaymentModeWrapperStyle
-                  }
-                >
-
+                <div style={step6PaymentModeWrapperStyle}>
                   <PaymentModeCard
+                    paymentMode={paymentMode}
+                    transactionStatus={transactionStatus}
+                    onPaymentModeChange={setPaymentMode}
+                    onTransactionStatusChange={(value) => {
+                      setTransactionStatus(value);
 
-                    paymentMode={
-                      paymentMode
-                    }
-
-                    transactionStatus={
-                      transactionStatus
-                    }
-
-                    onPaymentModeChange={
-                      setPaymentMode
-                    }
-
-                    onTransactionStatusChange={
-                      (value) => {
-
-                        setTransactionStatus(
-                          value,
-                        );
-
-                        setDisbursementDraftStatus(
-
-                          value === "completed"
-
-                            ? "Completed"
-
-                            : "Draft",
-
-                        );
-
-                      }
-                    }
-
+                      setDisbursementDraftStatus(
+                        value === "completed" ? "Completed" : "Draft",
+                      );
+                    }}
                   />
-
                 </div>
 
-
                 <ApprovalActions
-
-                  onSaveDraft={
-                    handleSaveDraft
-                  }
-
-                  onApproveLoan={
-                    handleApproveLoan
-                  }
-
-                  onRejectLoan={
-                    handleRejectLoan
-                  }
-
+                  onSaveDraft={handleSaveDraft}
+                  onApproveLoan={handleApproveLoan}
+                  onRejectLoan={handleRejectLoan}
                 />
-
               </div>
 
-
-              <div
-                style={
-                  step6PreviewColumnStyle
-                }
-              >
-
+              <div style={step6PreviewColumnStyle}>
                 <DisbursementReceipt
-
-                  receiptNumber={
-                    disbursementReceiptNumber
-                  }
-
-                  customerName={
-                    activeCustomerName || "--"
-                  }
-
-                  amount={
-                    safeDisbursementAmount
-                  }
-
-                  paymentMode={
-                    paymentMode
-                  }
-
+                  receiptNumber={disbursementReceiptNumber}
+                  customerName={activeCustomerName || "--"}
+                  amount={safeDisbursementAmount}
+                  paymentMode={paymentMode}
                 />
-
 
                 <DisbursementPreviewCard
-
                   disbursementDate={
-
                     disbursementDate
-
                       ? formatIndianDate(
-                          new Date(
-                            `${disbursementDate}T00:00:00`,
-                          ),
+                          new Date(`${disbursementDate}T00:00:00`),
                         )
-
                       : "--"
-
                   }
-
-                  amount={
-                    safeDisbursementAmount
-                  }
-
-                  paymentMode={
-                    paymentMode
-                  }
-
-                  transactionStatus={
-                    transactionStatus
-                  }
-
+                  amount={safeDisbursementAmount}
+                  paymentMode={paymentMode}
+                  transactionStatus={transactionStatus}
                 />
-
 
                 <DisbursementDraftStatus
-
-                  savedAt={
-                    disbursementSavedAt
-                  }
-
-                  status={
-                    disbursementDraftStatus
-                  }
-
+                  savedAt={disbursementSavedAt}
+                  status={disbursementDraftStatus}
                 />
-
               </div>
-
             </div>
-
           </section>
-
         )}
-
       </div>
-
 
       {/* ========================================================
           WIZARD FOOTER
       ======================================================== */}
 
-      <footer
-        style={
-          footerStyle
-        }
-      >
+      <footer style={footerStyle}>
+        <div style={stepListStyle}>
+          {STEP_ITEMS.map((item, index) => {
+            const current = index + 1;
 
-        <div
-          style={
-            stepListStyle
-          }
-        >
+            const active = current === step;
 
-          {STEP_ITEMS.map(
-            (
-              item,
-              index,
-            ) => {
+            const completed = current < step;
 
-              const current =
-                index + 1;
+            return (
+              <div
+                key={item.title}
+                style={stepItemStyle}
+                onClick={() => {
+                  if (current === 6) {
+                    if (!disbursementDate) {
+                      setDisbursementDate(getTodayDate());
+                    }
 
-              const active =
-                current === step;
+                    setStep(6);
 
-              const completed =
-                current < step;
+                    return;
+                  }
 
-
-              return (
-
+                  setStep(current);
+                }}
+              >
                 <div
-                  key={
-                    item.title
-                  }
-
                   style={
-                    stepItemStyle
+                    active
+                      ? activeStepNumberStyle
+                      : completed
+                        ? completedStepNumberStyle
+                        : pendingStepNumberStyle
                   }
-
-                  onClick={() => {
-
-                    if (current === 6) {
-
-                      if (!disbursementDate) {
-
-                        setDisbursementDate(
-                          getTodayDate(),
-                        );
-
-                      }
-
-                      setStep(
-                        6,
-                      );
-
-                      return;
-
-                    }
-
-                    setStep(
-                      current,
-                    );
-
-                  }}
-
                 >
-
-                  <div
-                    style={
-
-                      active
-
-                        ? activeStepNumberStyle
-
-                        : completed
-
-                          ? completedStepNumberStyle
-
-                          : pendingStepNumberStyle
-
-                    }
-                  >
-
-                    {current}
-
-                  </div>
-
-
-                  <div
-                    style={
-                      stepTextStyle
-                    }
-                  >
-
-                    <span
-                      style={
-
-                        active
-
-                          ? activeStepTitleStyle
-
-                          : completed
-
-                            ? completedStepTitleStyle
-
-                            : pendingStepTitleStyle
-
-                      }
-                    >
-
-                      {item.title}
-
-                    </span>
-
-
-                    <span
-                      style={
-                        stepSubtitleStyle
-                      }
-                    >
-
-                      {item.subtitle}
-
-                    </span>
-
-                  </div>
-
+                  {current}
                 </div>
 
-              );
+                <div style={stepTextStyle}>
+                  <span
+                    style={
+                      active
+                        ? activeStepTitleStyle
+                        : completed
+                          ? completedStepTitleStyle
+                          : pendingStepTitleStyle
+                    }
+                  >
+                    {item.title}
+                  </span>
 
-            },
-          )}
-
+                  <span style={stepSubtitleStyle}>{item.subtitle}</span>
+                </div>
+              </div>
+            );
+          })}
         </div>
 
-
-        <div
-          style={
-            navigationStyle
-          }
-        >
-
+        <div style={navigationStyle}>
           <button
-
             type="button"
-
-            disabled={
-              step === 1
-            }
-
+            disabled={step === 1}
             onClick={() => {
-
               if (step > 1) {
-
-                setStep(
-                  step - 1,
-                );
-
+                setStep(step - 1);
               }
-
             }}
-
             style={
-
-              step === 1
-
-                ? disabledNavigationButtonStyle
-
-                : navigationButtonStyle
-
+              step === 1 ? disabledNavigationButtonStyle : navigationButtonStyle
             }
-
           >
-
             ← Previous
-
           </button>
 
-
           <button
-
             type="button"
-
-            style={
-              primaryNavigationButtonStyle
-            }
-
+            style={primaryNavigationButtonStyle}
             onClick={async () => {
-
               if (step < 6) {
-
-                setStep(
-                  step + 1,
-                );
+                setStep(step + 1);
 
                 return;
-
               }
-
 
               if (!loanApproved) {
-
-                alert(
-                  "Please Approve Loan before completing Disbursement",
-                );
+                alert("Please Approve Loan before completing Disbursement");
 
                 return;
-
               }
-
 
               await refreshLoanStatistics();
 
-
-              alert(
-                "Loan Disbursement Workflow Completed Successfully",
-              );
-
+              alert("Loan Disbursement Workflow Completed Successfully");
 
               resetLoanWorkspace();
-
             }}
-
           >
-
-            {
-              step === 6
-                ? "Finish Review"
-                : "Next →"
-            }
-
+            {step === 6 ? "Finish Review" : "Next →"}
           </button>
-
         </div>
-
       </footer>
-
     </section>
-
   );
-
 }
-
 
 /* ============================================================
    END

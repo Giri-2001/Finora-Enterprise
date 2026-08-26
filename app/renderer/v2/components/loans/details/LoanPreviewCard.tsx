@@ -26,7 +26,6 @@
 // These belong to later Loan Studio stages.
 // ============================================================
 
-
 // ============================================================
 // IMPORTS
 // ============================================================
@@ -46,18 +45,13 @@ import {
   previewBadgeStyle,
 } from "./LoanPreviewCard.styles";
 
-
-import {
-  formatCurrency,
-} from "../../../utils/currency/formatCurrency";
-
+import { formatCurrency } from "../../../utils/currency/formatCurrency";
 
 // ============================================================
 // TYPES
 // ============================================================
 
 interface LoanPreviewCardProps {
-
   customerName?: string;
 
   loanAmount?: number;
@@ -105,13 +99,11 @@ interface LoanPreviewCardProps {
   repaymentType?: string;
 }
 
-
 // ============================================================
 // COMPONENT
 // ============================================================
 
 export default function LoanPreviewCard({
-
   customerName = "--",
 
   loanAmount = 0,
@@ -133,17 +125,9 @@ export default function LoanPreviewCard({
   advanceDeduction = 0,
 
   netDisbursement = 0,
-
 }: LoanPreviewCardProps) {
-
   return (
-
-    <section
-      style={
-        cardStyle
-      }
-    >
-
+    <section style={cardStyle}>
       {/* ==================================================
           HEADER
       ================================================== */}
@@ -157,9 +141,7 @@ export default function LoanPreviewCard({
           marginBottom: "14px",
         }}
       >
-
         <div>
-
           <div
             style={{
               fontSize: "14px",
@@ -170,7 +152,6 @@ export default function LoanPreviewCard({
           >
             Loan Preview
           </div>
-
 
           <div
             style={{
@@ -183,444 +164,169 @@ export default function LoanPreviewCard({
           >
             Live financial summary
           </div>
-
         </div>
 
-
-        <span
-  style={
-    previewBadgeStyle
-  }
->
-  Preview
-</span>
-
+        <span style={previewBadgeStyle}>Preview</span>
       </div>
-
 
       {/* ==================================================
           PREVIEW CONTENT
       ================================================== */}
 
-      <div
-        style={
-          contentStyle
-        }
-      >
-
-
+      <div style={contentStyle}>
         {/* ==================================================
             CUSTOMER
         ================================================== */}
 
-        <div
-          style={
-            fullWidthRowStyle
-          }
-        >
+        <div style={fullWidthRowStyle}>
+          <span style={labelStyle}>Customer</span>
 
-          <span
-            style={
-              labelStyle
-            }
-          >
-            Customer
-          </span>
-
-
-          <strong
-            style={
-              customerValueStyle
-            }
-          >
-            {customerName}
-          </strong>
-
+          <strong style={customerValueStyle}>{customerName}</strong>
         </div>
-
 
         {/* ==================================================
             LOAN DETAILS
         ================================================== */}
 
-        <div
-          style={
-            groupStyle
-          }
-        >
-
-          <div
-            style={
-              groupTitleStyle
-            }
-          >
-            Loan Details
-          </div>
-
+        <div style={groupStyle}>
+          <div style={groupTitleStyle}>Loan Details</div>
 
           <div
             style={{
               display: "grid",
-              gridTemplateColumns:
-                "repeat(2, minmax(0, 1fr))",
+              gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
               gap: "6px 8px",
             }}
           >
-
             {/* LOAN AMOUNT */}
 
-            <div
-              style={
-                highlightRowStyle
-              }
-            >
+            <div style={highlightRowStyle}>
+              <span style={labelStyle}>Loan Amount</span>
 
-              <span
-                style={
-                  labelStyle
-                }
-              >
-                Loan Amount
-              </span>
-
-
-              <strong
-                style={
-                  financialValueStyle
-                }
-              >
+              <strong style={financialValueStyle}>
                 ₹ {formatCurrency(loanAmount)}
               </strong>
-
             </div>
-
 
             {/* LOAN TYPE */}
 
-            <div
-              style={
-                rowStyle
-              }
-            >
+            <div style={rowStyle}>
+              <span style={labelStyle}>Loan Type</span>
 
-              <span
-                style={
-                  labelStyle
-                }
-              >
-                Loan Type
-              </span>
-
-
-              <strong
-                style={
-                  valueStyle
-                }
-              >
-                {loanType}
-              </strong>
-
+              <strong style={valueStyle}>{loanType}</strong>
             </div>
-
 
             {/* INTEREST */}
 
-            <div
-              style={
-                rowStyle
-              }
-            >
+            <div style={rowStyle}>
+              <span style={labelStyle}>Interest</span>
 
-              <span
-                style={
-                  labelStyle
-                }
-              >
-                Interest
-              </span>
-
-
-              <strong
-                style={
-                  valueStyle
-                }
-              >
-                {interest}%
-              </strong>
-
+              <strong style={valueStyle}>{interest}%</strong>
             </div>
-
 
             {/* TOTAL INTEREST */}
 
-            <div
-              style={
-                rowStyle
-              }
-            >
+            <div style={rowStyle}>
+              <span style={labelStyle}>Total Interest</span>
 
-              <span
-                style={
-                  labelStyle
-                }
-              >
-                Total Interest
-              </span>
-
-
-              <strong
-                style={
-                  financialValueStyle
-                }
-              >
+              <strong style={financialValueStyle}>
                 ₹ {formatCurrency(totalInterest)}
               </strong>
-
             </div>
-
 
             {/* TOTAL PAYABLE */}
 
-            <div
-              style={
-                highlightRowStyle
-              }
-            >
+            <div style={highlightRowStyle}>
+              <span style={labelStyle}>Total Payable</span>
 
-              <span
-                style={
-                  labelStyle
-                }
-              >
-                Total Payable
-              </span>
-
-
-              <strong
-                style={
-                  financialValueStyle
-                }
-              >
+              <strong style={financialValueStyle}>
                 ₹ {formatCurrency(totalPayable)}
               </strong>
-
             </div>
-
           </div>
-
         </div>
-
 
         {/* ==================================================
             SCHEDULE
         ================================================== */}
 
-        <div
-          style={
-            groupStyle
-          }
-        >
-
-          <div
-            style={
-              groupTitleStyle
-            }
-          >
-            Schedule
-          </div>
-
+        <div style={groupStyle}>
+          <div style={groupTitleStyle}>Schedule</div>
 
           <div
             style={{
               display: "grid",
-              gridTemplateColumns:
-                "repeat(2, minmax(0, 1fr))",
+              gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
               gap: "6px 8px",
             }}
           >
-
             {/* LOAN DATE */}
 
-            <div
-              style={
-                rowStyle
-              }
-            >
+            <div style={rowStyle}>
+              <span style={labelStyle}>Loan Date</span>
 
-              <span
-                style={
-                  labelStyle
-                }
-              >
-                Loan Date
-              </span>
-
-
-              <strong
-                style={
-                  valueStyle
-                }
-              >
-                {loanDate}
-              </strong>
-
+              <strong style={valueStyle}>{loanDate}</strong>
             </div>
-
 
             {/* MATURITY */}
 
-            <div
-              style={
-                rowStyle
-              }
-            >
+            <div style={rowStyle}>
+              <span style={labelStyle}>Maturity</span>
 
-              <span
-                style={
-                  labelStyle
-                }
-              >
-                Maturity
-              </span>
-
-
-              <strong
-                style={
-                  valueStyle
-                }
-              >
-                {maturityDate}
-              </strong>
-
+              <strong style={valueStyle}>{maturityDate}</strong>
             </div>
-
           </div>
-
         </div>
-
 
         {/* ==================================================
             DISBURSEMENT
         ================================================== */}
 
-        <div
-          style={
-            groupStyle
-          }
-        >
-
-          <div
-            style={
-              groupTitleStyle
-            }
-          >
-            Disbursement
-          </div>
-
+        <div style={groupStyle}>
+          <div style={groupTitleStyle}>Disbursement</div>
 
           <div
             style={{
               display: "grid",
-              gridTemplateColumns:
-                "repeat(2, minmax(0, 1fr))",
+              gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
               gap: "6px 8px",
             }}
           >
-
             {/* PROCESSING FEE */}
 
-            <div
-              style={
-                rowStyle
-              }
-            >
+            <div style={rowStyle}>
+              <span style={labelStyle}>Processing Fee</span>
 
-              <span
-                style={
-                  labelStyle
-                }
-              >
-                Processing Fee
-              </span>
-
-
-              <strong
-                style={
-                  valueStyle
-                }
-              >
+              <strong style={valueStyle}>
                 ₹ {formatCurrency(processingFee)}
               </strong>
-
             </div>
-
 
             {/* ADVANCE DEDUCTION */}
 
-            <div
-              style={
-                rowStyle
-              }
-            >
+            <div style={rowStyle}>
+              <span style={labelStyle}>Advance Deduction</span>
 
-              <span
-                style={
-                  labelStyle
-                }
-              >
-                Advance Deduction
-              </span>
-
-
-              <strong
-                style={
-                  financialValueStyle
-                }
-              >
+              <strong style={financialValueStyle}>
                 ₹ {formatCurrency(advanceDeduction)}
               </strong>
-
             </div>
-
 
             {/* NET DISBURSEMENT */}
 
-            <div
-              style={
-                highlightRowStyle
-              }
-            >
+            <div style={highlightRowStyle}>
+              <span style={labelStyle}>Net Disbursement</span>
 
-              <span
-                style={
-                  labelStyle
-                }
-              >
-                Net Disbursement
-              </span>
-
-
-              <strong
-                style={
-                  financialValueStyle
-                }
-              >
+              <strong style={financialValueStyle}>
                 ₹ {formatCurrency(netDisbursement)}
               </strong>
-
             </div>
-
           </div>
-
         </div>
-
-
       </div>
-
     </section>
   );
 }
-
 
 // ============================================================
 // END
