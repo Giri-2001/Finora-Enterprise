@@ -362,31 +362,41 @@ export default function FamilyDetails({
 
 
             <input
-              type="text"
+  type="tel"
 
-              style={
-                inputStyle
-              }
+  style={
+    inputStyle
+  }
 
-              value={
-                value.emergencyContactMobile
-              }
+  value={
+    value.emergencyContactMobile
+  }
 
-              placeholder="Enter mobile number"
+  placeholder="Enter mobile number"
 
-              inputMode="tel"
+  inputMode="numeric"
 
-              onChange={
-                (event) =>
-                  onChange(
-                    "emergencyContactMobile",
-                    event.target.value,
-                  )
-              }
+  maxLength={10}
 
-              aria-label="Emergency Contact Mobile"
+  pattern="[0-9]{10}"
 
-            />
+  onChange={(event) => {
+
+    const mobileNumber =
+      event.target.value
+        .replace(/\D/g, "")
+        .slice(0, 10);
+
+    onChange(
+      "emergencyContactMobile",
+      mobileNumber,
+    );
+
+  }}
+
+  aria-label="Emergency Contact Mobile"
+
+/>
 
           </div>
 

@@ -28,17 +28,11 @@
    Status  : Production
 =========================================================== */
 
-
 /* ===========================================================
    IMPORTS
 =========================================================== */
 
-import {
-  useRef,
-  type ReactNode,
-  type CSSProperties,
-} from "react";
-
+import { useRef, type ReactNode, type CSSProperties } from "react";
 
 /* ===========================================================
    ICON SYSTEM
@@ -52,20 +46,13 @@ import {
   CalendarDays,
 } from "lucide-react";
 
-
 /* ===========================================================
    RESPONSIVE ENGINE
 =========================================================== */
 
-import {
-  useResponsive,
-} from "../../../utils/responsive";
+import { useResponsive } from "../../../utils/responsive";
 
-
-import {
-  getBasicFormTokens,
-} from "../../../utils/responsive/customers/basicform/basicform.tokens";
-
+import { getBasicFormTokens } from "../../../utils/responsive/customers/basicform/basicform.tokens";
 
 /* ===========================================================
    PRESENTATION STYLES
@@ -88,15 +75,11 @@ import {
 
 import FinoraDatePicker from "./FinoraDatePicker";
 
-
 /* ===========================================================
    THEME ENGINE
 =========================================================== */
 
-import {
-  useTheme,
-} from "../../../themes/provider";
-
+import { useTheme } from "../../../themes/provider";
 
 /* ===========================================================
    TYPES
@@ -111,169 +94,83 @@ export type PreferredLanguage =
   | "Marathi"
   | "Other";
 
-
 export interface IdentityFormData {
+  customerName: string;
 
-  customerName:
-    string;
+  mobileNumber: string;
 
-  mobileNumber:
-    string;
+  whatsappSame: boolean;
 
-  whatsappSame:
-    boolean;
+  whatsappNumber: string;
 
-  whatsappNumber:
-    string;
+  email: string;
 
-  email:
-    string;
+  dateOfBirth: string;
 
-  dateOfBirth:
-    string;
+  preferredLanguage: PreferredLanguage;
 
-  preferredLanguage:
-    PreferredLanguage;
+  businessName: string;
 
-  businessName:
-    string;
+  branchName: string;
 
-  branchName:
-    string;
-
-  customerId:
-    string;
-
+  customerId: string;
 }
-
 
 interface IdentityFormProps {
+  value: IdentityFormData;
 
-  value:
-    IdentityFormData;
-
-  onChange: (
-    field:
-      keyof IdentityFormData,
-    value:
-      string | boolean,
-  ) => void;
-
+  onChange: (field: keyof IdentityFormData, value: string | boolean) => void;
 }
-
 
 /* ===========================================================
    HELPER — CALCULATE AGE
 =========================================================== */
 
-function calculateAge(
-  dateOfBirth:
-    string,
-):
-  number | null {
-
-  if (
-    !dateOfBirth
-  ) {
-
+function calculateAge(dateOfBirth: string): number | null {
+  if (!dateOfBirth) {
     return null;
-
   }
 
+  const birthDate = new Date(`${dateOfBirth}T00:00:00`);
 
-  const birthDate =
-    new Date(
-      `${dateOfBirth}T00:00:00`,
-    );
-
-
-  if (
-    Number.isNaN(
-      birthDate.getTime(),
-    )
-  ) {
-
+  if (Number.isNaN(birthDate.getTime())) {
     return null;
-
   }
 
+  const today = new Date();
 
-  const today =
-    new Date();
+  let age = today.getFullYear() - birthDate.getFullYear();
 
+  const monthDifference = today.getMonth() - birthDate.getMonth();
 
-  let age =
-    today.getFullYear()
-    -
-    birthDate.getFullYear();
+  const dayDifference = today.getDate() - birthDate.getDate();
 
-
-  const monthDifference =
-    today.getMonth()
-    -
-    birthDate.getMonth();
-
-
-  const dayDifference =
-    today.getDate()
-    -
-    birthDate.getDate();
-
-
-  if (
-    monthDifference < 0
-    ||
-    (
-      monthDifference === 0
-      &&
-      dayDifference < 0
-    )
-  ) {
-
+  if (monthDifference < 0 || (monthDifference === 0 && dayDifference < 0)) {
     age -= 1;
-
   }
 
-
-  if (
-    age < 0
-    ||
-    age > 150
-  ) {
-
+  if (age < 0 || age > 150) {
     return null;
-
   }
-
 
   return age;
-
 }
-
 
 /* ===========================================================
    LABEL COMPONENT
 =========================================================== */
 
 interface FieldLabelProps {
+  children: string;
 
-  children:
-    string;
+  required?: boolean;
 
-  required?:
-    boolean;
+  labelStyleOverride?: CSSProperties;
 
-  labelStyleOverride?:
-    CSSProperties;
-
-  requiredStyleOverride?:
-    CSSProperties;
-
+  requiredStyleOverride?: CSSProperties;
 }
 
-
 function FieldLabel({
-
   children,
 
   required = false,
@@ -281,74 +178,37 @@ function FieldLabel({
   labelStyleOverride,
 
   requiredStyleOverride,
-
 }: FieldLabelProps) {
-
   return (
-
-    <span
-      style={
-        labelStyleOverride
-          ??
-        labelStyle
-      }
-    >
-
+    <span style={labelStyleOverride ?? labelStyle}>
       {children}
 
-
       {required && (
-
-        <span
-          style={
-            requiredStyleOverride
-              ??
-            requiredStyle
-          }
-        >
-
-          *
-
-        </span>
-
+        <span style={requiredStyleOverride ?? requiredStyle}>*</span>
       )}
-
     </span>
-
   );
-
 }
-
 
 /* ===========================================================
    FIELD COMPONENT
 =========================================================== */
 
 interface FieldProps {
+  label: string;
 
-  label:
-    string;
+  required?: boolean;
 
-  required?:
-    boolean;
+  children: ReactNode;
 
-  children:
-    ReactNode;
+  fieldStyleOverride?: CSSProperties;
 
-  fieldStyleOverride?:
-    CSSProperties;
+  labelStyleOverride?: CSSProperties;
 
-  labelStyleOverride?:
-    CSSProperties;
-
-  requiredStyleOverride?:
-    CSSProperties;
-
+  requiredStyleOverride?: CSSProperties;
 }
 
-
 function Field({
-
   label,
 
   required = false,
@@ -360,62 +220,31 @@ function Field({
   labelStyleOverride,
 
   requiredStyleOverride,
-
 }: FieldProps) {
-
   return (
-
-    <div
-      style={
-        fieldStyleOverride
-          ??
-        fieldStyle
-      }
-    >
-
+    <div style={fieldStyleOverride ?? fieldStyle}>
       <FieldLabel
-
-        required={
-          required
-        }
-
-        labelStyleOverride={
-          labelStyleOverride
-        }
-
-        requiredStyleOverride={
-          requiredStyleOverride
-        }
-
+        required={required}
+        labelStyleOverride={labelStyleOverride}
+        requiredStyleOverride={requiredStyleOverride}
       >
-
         {label}
-
       </FieldLabel>
 
-
       {children}
-
     </div>
-
   );
-
 }
-
 
 /* ===========================================================
    COMPONENT
 =========================================================== */
 
 export default function IdentityForm({
-
   value,
 
   onChange,
-
 }: IdentityFormProps) {
-
-
   /* =========================================================
      CENTRAL RESPONSIVE ENGINE
 
@@ -424,11 +253,7 @@ export default function IdentityForm({
      Responsive geometry is resolved centrally.
   ========================================================= */
 
-  const {
-    tokens,
-  } =
-    useResponsive();
-
+  const { tokens } = useResponsive();
 
   /* =========================================================
      FINORA THEME ENGINE
@@ -436,21 +261,13 @@ export default function IdentityForm({
      Theme colours come only from the central ThemeProvider.
   ========================================================= */
 
-  const {
-    theme,
-  } =
-    useTheme();
-
+  const { theme } = useTheme();
 
   /* =========================================================
      BASIC FORM RESPONSIVE TOKENS
   ========================================================= */
 
-  const basicFormTokens =
-    getBasicFormTokens(
-      tokens.meta.viewport,
-    );
-
+  const basicFormTokens = getBasicFormTokens(tokens.meta.viewport);
 
   /* =========================================================
      DATE INPUT REF
@@ -462,67 +279,40 @@ export default function IdentityForm({
      is unavailable.
   ========================================================= */
 
-  const dateInputRef =
-    useRef<HTMLInputElement>(
-      null,
-    );
-
+  const dateInputRef = useRef<HTMLInputElement>(null);
 
   /* =========================================================
      OPEN DATE PICKER
   ========================================================= */
 
   function openDatePicker(): void {
-
-    const input =
-      dateInputRef.current;
-
+    const input = dateInputRef.current;
 
     if (!input) {
-
       return;
-
     }
 
+    const pickerInput = input as HTMLInputElement & {
+      showPicker?: () => void;
+    };
 
-    const pickerInput =
-      input as
-        HTMLInputElement
-        & {
-          showPicker?:
-            () => void;
-        };
-
-
-    if (
-      typeof pickerInput.showPicker ===
-      "function"
-    ) {
-
+    if (typeof pickerInput.showPicker === "function") {
       try {
-
         pickerInput.showPicker();
 
         return;
-
       } catch {
-
         /*
          * Browser may reject showPicker() when the
          * environment does not expose the picker.
          *
          * Focus remains the safe fallback.
          */
-
       }
-
     }
 
-
     input.focus();
-
   }
-
 
   /* =========================================================
      AGE
@@ -532,34 +322,23 @@ export default function IdentityForm({
      date-input style that depends on the age state.
   ========================================================= */
 
-  const calculatedAge =
-    calculateAge(
-      value.dateOfBirth,
-    );
-
+  const calculatedAge = calculateAge(value.dateOfBirth);
 
   /* =========================================================
      RESOLVED FIELD STYLE
   ========================================================= */
 
-  const resolvedFieldStyle:
-    CSSProperties = {
-
+  const resolvedFieldStyle: CSSProperties = {
     ...fieldStyle,
 
-    gap:
-      `${basicFormTokens.fieldGap}px`,
-
+    gap: `${basicFormTokens.fieldGap}px`,
   };
-
 
   /* =========================================================
      RESOLVED FIELD GRID
   ========================================================= */
 
-  const resolvedFieldGridStyle:
-    CSSProperties = {
-
+  const resolvedFieldGridStyle: CSSProperties = {
     ...fieldGridStyle,
 
     gridTemplateColumns:
@@ -567,183 +346,124 @@ export default function IdentityForm({
         ? "minmax(0, 1fr)"
         : "minmax(0, 1fr) minmax(0, 1fr)",
 
-    columnGap:
-      `${basicFormTokens.columnGap}px`,
+    columnGap: `${basicFormTokens.columnGap}px`,
 
-    rowGap:
-      `${basicFormTokens.fieldGap
-      +
-      basicFormTokens.labelGap
-      +
-      3}px`,
-
+    rowGap: `${basicFormTokens.fieldGap + basicFormTokens.labelGap + 3}px`,
   };
-
 
   /* =========================================================
      RESOLVED LABEL STYLE
   ========================================================= */
 
-  const resolvedLabelStyle:
-    CSSProperties = {
-
+  const resolvedLabelStyle: CSSProperties = {
     ...labelStyle,
 
-    minHeight:
-      `${basicFormTokens.labelMinHeight}px`,
+    minHeight: `${basicFormTokens.labelMinHeight}px`,
 
-    fontSize:
-      `${basicFormTokens.labelFontSize}px`,
+    fontSize: `${basicFormTokens.labelFontSize}px`,
 
-    fontWeight:
-      basicFormTokens.labelFontWeight,
+    fontWeight: basicFormTokens.labelFontWeight,
 
-    letterSpacing:
-      `${basicFormTokens.labelLetterSpacing}px`,
+    letterSpacing: `${basicFormTokens.labelLetterSpacing}px`,
 
-    lineHeight:
-      1.25,
-
+    lineHeight: 1.25,
   };
-
 
   /* =========================================================
      RESOLVED REQUIRED STYLE
   ========================================================= */
 
-  const resolvedRequiredStyle:
-    CSSProperties = {
-
+  const resolvedRequiredStyle: CSSProperties = {
     ...requiredStyle,
 
-    fontSize:
-      `${basicFormTokens.labelFontSize}px`,
-
+    fontSize: `${basicFormTokens.labelFontSize}px`,
   };
-
 
   /* =========================================================
      RESOLVED INPUT STYLE
   ========================================================= */
 
-  const resolvedInputStyle:
-    CSSProperties = {
-
+  const resolvedInputStyle: CSSProperties = {
     ...inputStyle,
 
-    height:
-      `${basicFormTokens.inputHeight}px`,
+    height: `${basicFormTokens.inputHeight}px`,
 
-    padding:
-      `0 ${basicFormTokens.inputPaddingX}px`,
+    padding: `0 ${basicFormTokens.inputPaddingX}px`,
 
-    borderRadius:
-      `${basicFormTokens.inputRadius}px`,
+    borderRadius: `${basicFormTokens.inputRadius}px`,
 
-    fontSize:
-      `${basicFormTokens.inputFontSize}px`,
+    fontSize: `${basicFormTokens.inputFontSize}px`,
 
-    fontWeight:
-      basicFormTokens.inputFontWeight,
-
+    fontWeight: basicFormTokens.inputFontWeight,
   };
-
 
   /* =========================================================
      RESOLVED ICON INPUT
   ========================================================= */
 
-  const resolvedIconInputStyle:
-    CSSProperties = {
-
+  const resolvedIconInputStyle: CSSProperties = {
     ...iconInputStyle,
 
     ...resolvedInputStyle,
 
-    paddingLeft:
-      `${basicFormTokens.inputPaddingX
-      +
-      basicFormTokens.iconOffset
-      +
-      basicFormTokens.iconSize}px`,
-
+    paddingLeft: `${
+      basicFormTokens.inputPaddingX +
+      basicFormTokens.iconOffset +
+      basicFormTokens.iconSize
+    }px`,
   };
-
 
   /* =========================================================
      RESOLVED READONLY ICON INPUT
   ========================================================= */
 
-  const resolvedIconReadOnlyInputStyle:
-    CSSProperties = {
-
+  const resolvedIconReadOnlyInputStyle: CSSProperties = {
     ...iconReadOnlyInputStyle,
 
     ...resolvedInputStyle,
 
-    paddingLeft:
-      `${basicFormTokens.inputPaddingX
-      +
-      basicFormTokens.iconOffset
-      +
-      basicFormTokens.iconSize}px`,
-
+    paddingLeft: `${
+      basicFormTokens.inputPaddingX +
+      basicFormTokens.iconOffset +
+      basicFormTokens.iconSize
+    }px`,
   };
-
 
   /* =========================================================
      RESOLVED INPUT WRAPPER
   ========================================================= */
 
-  const resolvedInputWrapperStyle:
-    CSSProperties = {
-
+  const resolvedInputWrapperStyle: CSSProperties = {
     ...inputWrapperStyle,
-
   };
-
 
   /* =========================================================
      RESOLVED ICON POSITION
   ========================================================= */
 
-  const resolvedLockIconStyle:
-    CSSProperties = {
-
+  const resolvedLockIconStyle: CSSProperties = {
     ...lockIconStyle,
 
-    left:
-      `${basicFormTokens.iconOffset}px`,
+    left: `${basicFormTokens.iconOffset}px`,
 
-    width:
-      `${basicFormTokens.iconSize}px`,
+    width: `${basicFormTokens.iconSize}px`,
 
-    height:
-      `${basicFormTokens.iconSize}px`,
+    height: `${basicFormTokens.iconSize}px`,
 
-    fontSize:
-      `${basicFormTokens.iconSize}px`,
-
+    fontSize: `${basicFormTokens.iconSize}px`,
   };
-
 
   /* =========================================================
      RESOLVED FIELD ICON
   ========================================================= */
 
-  const resolvedFieldIconStyle:
-    CSSProperties = {
-
+  const resolvedFieldIconStyle: CSSProperties = {
     ...fieldIconStyle,
 
-    width:
-      `${basicFormTokens.iconSize}px`,
+    width: `${basicFormTokens.iconSize}px`,
 
-    height:
-      `${basicFormTokens.iconSize}px`,
-
+    height: `${basicFormTokens.iconSize}px`,
   };
-
 
   /* =========================================================
      RESOLVED DATE CALENDAR ICON
@@ -753,29 +473,20 @@ export default function IdentityForm({
      Colour comes ONLY from the FINORA Theme Engine.
   ========================================================= */
 
-  const resolvedCalendarIconStyle:
-    CSSProperties = {
+  const resolvedCalendarIconStyle: CSSProperties = {
+    width: `${basicFormTokens.calendarIconSize}px`,
 
-    width:
-      `${basicFormTokens.calendarIconSize}px`,
-
-    height:
-      `${basicFormTokens.calendarIconSize}px`,
+    height: `${basicFormTokens.calendarIconSize}px`,
 
     color:
       "var(--finora-theme-brand-accent, var(--finora-theme-brand-primary, #D4AF37))",
 
-    strokeWidth:
-      2.2,
+    strokeWidth: 2.2,
 
-    flexShrink:
-      0,
+    flexShrink: 0,
 
-    display:
-      "block",
-
+    display: "block",
   };
-
 
   /* =========================================================
      RESOLVED CALENDAR BUTTON
@@ -783,86 +494,56 @@ export default function IdentityForm({
      This is the ONLY visible FINORA calendar control.
   ========================================================= */
 
-  const resolvedCalendarButtonStyle:
-    CSSProperties = {
+  const resolvedCalendarButtonStyle: CSSProperties = {
+    position: "absolute",
 
-    position:
-      "absolute",
+    right: `${basicFormTokens.calendarIconOffset}px`,
 
-    right:
-      `${basicFormTokens.calendarIconOffset}px`,
+    top: "50%",
 
-    top:
-      "50%",
+    transform: "translateY(-50%)",
 
-    transform:
-      "translateY(-50%)",
+    width: `${basicFormTokens.calendarIconSize + 8}px`,
 
-    width:
-      `${basicFormTokens.calendarIconSize + 8}px`,
+    height: `${basicFormTokens.calendarIconSize + 8}px`,
 
-    height:
-      `${basicFormTokens.calendarIconSize + 8}px`,
+    minWidth: `${basicFormTokens.calendarIconSize + 8}px`,
 
-    minWidth:
-      `${basicFormTokens.calendarIconSize + 8}px`,
+    minHeight: `${basicFormTokens.calendarIconSize + 8}px`,
 
-    minHeight:
-      `${basicFormTokens.calendarIconSize + 8}px`,
+    padding: 0,
 
-    padding:
-      0,
+    margin: 0,
 
-    margin:
-      0,
+    border: "none",
 
-    border:
-      "none",
+    borderRadius: `${Math.max(5, basicFormTokens.inputRadius - 2)}px`,
 
-    borderRadius:
-      `${Math.max(
-        5,
-        basicFormTokens.inputRadius - 2,
-      )}px`,
-
-    background:
-      "transparent",
+    background: "transparent",
 
     color:
       "var(--finora-theme-brand-accent, var(--finora-theme-brand-primary, #D4AF37))",
 
-    display:
-      "inline-flex",
+    display: "inline-flex",
 
-    alignItems:
-      "center",
+    alignItems: "center",
 
-    justifyContent:
-      "center",
+    justifyContent: "center",
 
-    cursor:
-      "pointer",
+    cursor: "pointer",
 
-    zIndex:
-      5,
+    zIndex: 5,
 
-    flexShrink:
-      0,
+    flexShrink: 0,
 
-    boxSizing:
-      "border-box",
+    boxSizing: "border-box",
 
-    outline:
-      "none",
+    outline: "none",
 
-    appearance:
-      "none",
+    appearance: "none",
 
-    WebkitAppearance:
-      "none",
-
+    WebkitAppearance: "none",
   };
-
 
   /* =========================================================
      DATE INPUT GEOMETRY
@@ -874,66 +555,44 @@ export default function IdentityForm({
      - Age receives its own space.
   ========================================================= */
 
-  const calculatedDatePadding =
-    calculatedDatePaddingValue(
-      basicFormTokens.inputPaddingX,
-      basicFormTokens.calendarIconSize,
-      calculatedAge !== null,
-      basicFormTokens.optionFontSize,
-    );
+  const calculatedDatePadding = calculatedDatePaddingValue(
+    basicFormTokens.inputPaddingX,
+    basicFormTokens.calendarIconSize,
+    calculatedAge !== null,
+    basicFormTokens.optionFontSize,
+  );
 
-
-  const resolvedDateInputStyle:
-    CSSProperties = {
-
+  const resolvedDateInputStyle: CSSProperties = {
     ...dateInputStyle,
 
     ...resolvedInputStyle,
 
-    paddingRight:
-      calculatedDatePadding,
+    paddingRight: calculatedDatePadding,
 
-    appearance:
-      "none",
+    appearance: "none",
 
-    WebkitAppearance:
-      "none",
+    WebkitAppearance: "none",
 
-    colorScheme:
-      "dark",
+    colorScheme: "dark",
 
-    accentColor:
-      theme.colors.brand.accent,
-
+    accentColor: theme.colors.brand.accent,
   };
-
 
   /* =========================================================
      CHECKBOX GEOMETRY
   ========================================================= */
 
-  const checkboxSize =
-    Math.max(
-      12,
-      basicFormTokens.iconSize,
-    );
-
+  const checkboxSize = Math.max(12, basicFormTokens.iconSize);
 
   /* =========================================================
      DROPDOWN OPTION STYLE
   ========================================================= */
 
-  const optionStyle:
-    CSSProperties = {
+  const optionStyle: CSSProperties = {
+    fontSize: `${basicFormTokens.optionFontSize}px`,
 
-    fontSize:
-      `${basicFormTokens.optionFontSize}px`,
-
-    fontWeight:
-      basicFormTokens.optionFontWeight,
-
+    fontWeight: basicFormTokens.optionFontWeight,
   };
-
 
   /* =========================================================
      THEME CSS VARIABLES
@@ -942,89 +601,59 @@ export default function IdentityForm({
      calendar control to consume the selected FINORA theme.
   ========================================================= */
 
-  const themeStyle =
-    {
+  const themeStyle = {
+    ...wrapperStyle,
 
-      ...wrapperStyle,
+    "--finora-theme-brand-primary": theme.colors.brand.primary,
 
-      "--finora-theme-brand-primary":
-        theme.colors.brand.primary,
+    "--finora-theme-brand-secondary": theme.colors.brand.secondary,
 
-      "--finora-theme-brand-secondary":
-        theme.colors.brand.secondary,
+    "--finora-theme-brand-accent": theme.colors.brand.accent,
 
-      "--finora-theme-brand-accent":
-        theme.colors.brand.accent,
+    "--finora-theme-brand-accent-soft": theme.colors.brand.accentSoft,
 
-      "--finora-theme-brand-accent-soft":
-        theme.colors.brand.accentSoft,
+    "--finora-theme-surface": theme.colors.background.surface,
 
-      "--finora-theme-surface":
-        theme.colors.background.surface,
+    "--finora-theme-form-surface":
+      theme.id === "imperial-gold"
+        ? "#FFFFFF"
+        : theme.colors.background.surface,
 
-      "--finora-theme-form-surface":
-  theme.id === "imperial-gold"
-    ? "#FFFFFF"
-    : theme.colors.background.surface,
+    "--finora-theme-form-shadow":
+      theme.id === "imperial-gold"
+        ? "none"
+        : "var(--finora-theme-shadow-card, 0 10px 28px rgba(0,0,0,.12))",
 
-"--finora-theme-form-shadow":
-  theme.id === "imperial-gold"
-    ? "none"
-    : "var(--finora-theme-shadow-card, 0 10px 28px rgba(0,0,0,.12))",
+    "--finora-theme-background-surface": theme.colors.background.surface,
 
-      "--finora-theme-background-surface":
-        theme.colors.background.surface,
+    "--finora-theme-surface-muted": theme.colors.background.surfaceMuted,
 
-      "--finora-theme-surface-muted":
-        theme.colors.background.surfaceMuted,
+    "--finora-theme-background-surface-muted":
+      theme.colors.background.surfaceMuted,
 
-      "--finora-theme-background-surface-muted":
-        theme.colors.background.surfaceMuted,
+    "--finora-theme-text-primary": theme.colors.text.primary,
 
-      "--finora-theme-text-primary":
-        theme.colors.text.primary,
+    "--finora-theme-text-secondary": theme.colors.text.secondary,
 
-      "--finora-theme-text-secondary":
-        theme.colors.text.secondary,
+    "--finora-theme-text-body": theme.colors.text.secondary,
 
-      "--finora-theme-text-body":
-        theme.colors.text.secondary,
+    "--finora-theme-text-muted": theme.colors.text.muted,
 
-      "--finora-theme-text-muted":
-        theme.colors.text.muted,
+    "--finora-theme-border-default": theme.colors.border.default,
 
-      "--finora-theme-border-default":
-        theme.colors.border.default,
+    "--finora-theme-border-strong": theme.colors.border.strong,
 
-      "--finora-theme-border-strong":
-        theme.colors.border.strong,
+    "--finora-theme-border-subtle": theme.colors.border.subtle,
 
-      "--finora-theme-border-subtle":
-        theme.colors.border.subtle,
-
-      "--finora-theme-overlay-shadow":
-        theme.colors.overlay.shadow,
-
-    } as CSSProperties &
-      Record<
-        `--${string}`,
-        string
-      >;
-
+    "--finora-theme-overlay-shadow": theme.colors.overlay.shadow,
+  } as CSSProperties & Record<`--${string}`, string>;
 
   /* =========================================================
      RENDER
   ========================================================= */
 
   return (
-
-    <section
-      style={
-        themeStyle
-      }
-    >
-
-
+    <section style={themeStyle}>
       {/* =====================================================
           NATIVE DATE PICKER ICON SUPPRESSION
 
@@ -1036,7 +665,6 @@ export default function IdentityForm({
       ===================================================== */}
 
       <style>
-
         {`
 
           .finora-identity-date-input::-webkit-calendar-picker-indicator {
@@ -1082,436 +710,176 @@ export default function IdentityForm({
           }
 
         `}
-
       </style>
 
-
-      <div
-        style={
-          resolvedFieldGridStyle
-        }
-      >
-
-
+      <div style={resolvedFieldGridStyle}>
         {/* =================================================
             CUSTOMER ID
         ================================================= */}
 
         <Field
-
           label="FINORA Customer ID"
-
-          fieldStyleOverride={
-            resolvedFieldStyle
-          }
-
-          labelStyleOverride={
-            resolvedLabelStyle
-          }
-
-          requiredStyleOverride={
-            resolvedRequiredStyle
-          }
-
+          fieldStyleOverride={resolvedFieldStyle}
+          labelStyleOverride={resolvedLabelStyle}
+          requiredStyleOverride={resolvedRequiredStyle}
         >
-
-          <div
-            style={
-              resolvedInputWrapperStyle
-            }
-          >
-
-            <span
-              style={
-                resolvedLockIconStyle
-              }
-
-              aria-hidden="true"
-            >
-
-              <LockKeyhole
-
-                style={
-                  resolvedFieldIconStyle
-                }
-
-                strokeWidth={
-                  2
-                }
-
-              />
-
+          <div style={resolvedInputWrapperStyle}>
+            <span style={resolvedLockIconStyle} aria-hidden="true">
+              <LockKeyhole style={resolvedFieldIconStyle} strokeWidth={2} />
             </span>
 
-
             <input
-
-              style={
-                resolvedIconReadOnlyInputStyle
-              }
-
-              value={
-                value.customerId
-              }
-
+              style={resolvedIconReadOnlyInputStyle}
+              value={value.customerId}
               readOnly
-
               aria-label="FINORA Customer ID"
-
             />
-
           </div>
-
         </Field>
-
 
         {/* =================================================
             CUSTOMER NAME
         ================================================= */}
 
         <Field
-
           label="Customer Name"
-
           required
-
-          fieldStyleOverride={
-            resolvedFieldStyle
-          }
-
-          labelStyleOverride={
-            resolvedLabelStyle
-          }
-
-          requiredStyleOverride={
-            resolvedRequiredStyle
-          }
-
+          fieldStyleOverride={resolvedFieldStyle}
+          labelStyleOverride={resolvedLabelStyle}
+          requiredStyleOverride={resolvedRequiredStyle}
         >
-
-          <div
-            style={
-              resolvedInputWrapperStyle
-            }
-          >
-
-            <span
-              style={
-                resolvedLockIconStyle
-              }
-
-              aria-hidden="true"
-            >
-
-              <UserRound
-
-                style={
-                  resolvedFieldIconStyle
-                }
-
-                strokeWidth={
-                  2
-                }
-
-              />
-
+          <div style={resolvedInputWrapperStyle}>
+            <span style={resolvedLockIconStyle} aria-hidden="true">
+              <UserRound style={resolvedFieldIconStyle} strokeWidth={2} />
             </span>
 
-
             <input
-
-              style={
-                resolvedIconInputStyle
-              }
-
-              value={
-                value.customerName
-              }
-
+              style={resolvedIconInputStyle}
+              value={value.customerName}
               placeholder="Enter customer full name"
-
-              onChange={(event) =>
-                onChange(
-                  "customerName",
-                  event.target.value,
-                )
-              }
-
+              onChange={(event) => onChange("customerName", event.target.value)}
               aria-label="Customer Name"
-
             />
-
           </div>
-
         </Field>
-
 
         {/* =================================================
             MOBILE NUMBER
         ================================================= */}
 
         <Field
-
           label="Mobile Number"
-
           required
-
-          fieldStyleOverride={
-            resolvedFieldStyle
-          }
-
-          labelStyleOverride={
-            resolvedLabelStyle
-          }
-
-          requiredStyleOverride={
-            resolvedRequiredStyle
-          }
-
+          fieldStyleOverride={resolvedFieldStyle}
+          labelStyleOverride={resolvedLabelStyle}
+          requiredStyleOverride={resolvedRequiredStyle}
         >
-
-          <div
-            style={
-              resolvedInputWrapperStyle
-            }
-          >
-
-            <span
-              style={
-                resolvedLockIconStyle
-              }
-
-              aria-hidden="true"
-            >
-
-              <Smartphone
-
-                style={
-                  resolvedFieldIconStyle
-                }
-
-                strokeWidth={
-                  2
-                }
-
-              />
-
+          <div style={resolvedInputWrapperStyle}>
+            <span style={resolvedLockIconStyle} aria-hidden="true">
+              <Smartphone style={resolvedFieldIconStyle} strokeWidth={2} />
             </span>
 
-
             <input
-
-              style={
-                resolvedIconInputStyle
-              }
-
-              value={
-                value.mobileNumber
-              }
-
+              style={resolvedIconInputStyle}
+              value={value.mobileNumber}
               placeholder="Enter mobile number"
+              inputMode="numeric"
+              type="tel"
+              maxLength={10}
+              pattern="[0-9]{10}"
+              onChange={(event) => {
+                const mobileNumber = event.target.value
+                  .replace(/\D/g, "")
+                  .slice(0, 10);
 
-              inputMode="tel"
-
-              onChange={(event) =>
-                onChange(
-                  "mobileNumber",
-                  event.target.value,
-                )
-              }
-
+                onChange("mobileNumber", mobileNumber);
+              }}
               aria-label="Mobile Number"
-
             />
-
           </div>
-
         </Field>
-
 
         {/* =================================================
             EMAIL ADDRESS
         ================================================= */}
 
         <Field
-
           label="Email Address"
-
-          fieldStyleOverride={
-            resolvedFieldStyle
-          }
-
-          labelStyleOverride={
-            resolvedLabelStyle
-          }
-
-          requiredStyleOverride={
-            resolvedRequiredStyle
-          }
-
+          fieldStyleOverride={resolvedFieldStyle}
+          labelStyleOverride={resolvedLabelStyle}
+          requiredStyleOverride={resolvedRequiredStyle}
         >
-
-          <div
-            style={
-              resolvedInputWrapperStyle
-            }
-          >
-
-            <span
-              style={
-                resolvedLockIconStyle
-              }
-
-              aria-hidden="true"
-            >
-
+          <div style={resolvedInputWrapperStyle}>
+            <span style={resolvedLockIconStyle} aria-hidden="true">
               <span
                 style={{
                   ...resolvedFieldIconStyle,
 
-                  display:
-                    "inline-flex",
+                  display: "inline-flex",
 
-                  alignItems:
-                    "center",
+                  alignItems: "center",
 
-                  justifyContent:
-                    "center",
+                  justifyContent: "center",
 
-                  fontSize:
-                    `${basicFormTokens.iconSize}px`,
+                  fontSize: `${basicFormTokens.iconSize}px`,
 
                   color:
                     "var(--finora-theme-brand-accent, var(--finora-theme-brand-primary, #D4AF37))",
-
                 }}
               >
-
                 @
-
               </span>
-
             </span>
 
-
             <input
-
-              style={
-                resolvedIconInputStyle
-              }
-
+              style={resolvedIconInputStyle}
               type="email"
-
-              value={
-                value.email
-              }
-
+              value={value.email}
               placeholder="Enter email address"
-
-              onChange={(event) =>
-                onChange(
-                  "email",
-                  event.target.value,
-                )
-              }
-
+              onChange={(event) => onChange("email", event.target.value)}
               aria-label="Email Address"
-
             />
-
           </div>
-
         </Field>
-
 
         {/* =================================================
             WHATSAPP NUMBER
         ================================================= */}
 
         <Field
-
           label="WhatsApp Number"
-
-          fieldStyleOverride={
-            resolvedFieldStyle
-          }
-
-          labelStyleOverride={
-            resolvedLabelStyle
-          }
-
-          requiredStyleOverride={
-            resolvedRequiredStyle
-          }
-
+          fieldStyleOverride={resolvedFieldStyle}
+          labelStyleOverride={resolvedLabelStyle}
+          requiredStyleOverride={resolvedRequiredStyle}
         >
-
           <div
             style={{
               ...resolvedInputWrapperStyle,
 
-              position:
-                "relative",
+              position: "relative",
             }}
           >
-
-            <span
-              style={
-                resolvedLockIconStyle
-              }
-
-              aria-hidden="true"
-            >
-
-              <MessageCircle
-
-                style={
-                  resolvedFieldIconStyle
-                }
-
-                strokeWidth={
-                  2
-                }
-
-              />
-
+            <span style={resolvedLockIconStyle} aria-hidden="true">
+              <MessageCircle style={resolvedFieldIconStyle} strokeWidth={2} />
             </span>
 
-
             <input
-
               style={{
                 ...resolvedIconInputStyle,
 
-                paddingRight:
-                  `${basicFormTokens.inputPaddingX + 54}px`,
+                paddingRight: `${basicFormTokens.inputPaddingX + 54}px`,
               }}
-
               value={
-                value.whatsappSame
-                  ? value.mobileNumber
-                  : value.whatsappNumber
+                value.whatsappSame ? value.mobileNumber : value.whatsappNumber
               }
-
               placeholder="Enter whatsapp number"
-
               inputMode="tel"
-
-              disabled={
-                value.whatsappSame
-              }
-
+              disabled={value.whatsappSame}
               onChange={(event) =>
-                onChange(
-                  "whatsappNumber",
-                  event.target.value,
-                )
+                onChange("whatsappNumber", event.target.value)
               }
-
               aria-label="WhatsApp Number"
-
             />
-
 
             {/* =============================================
                 SAME NUMBER CHECKBOX
@@ -1519,396 +887,201 @@ export default function IdentityForm({
 
             <label
               style={{
-                position:
-                  "absolute",
+                position: "absolute",
 
-                right:
-                  `${basicFormTokens.inputPaddingX}px`,
+                right: `${basicFormTokens.inputPaddingX}px`,
 
-                top:
-                  "50%",
+                top: "50%",
 
-                transform:
-                  "translateY(-50%)",
+                transform: "translateY(-50%)",
 
-                display:
-                  "flex",
+                display: "flex",
 
-                alignItems:
-                  "center",
+                alignItems: "center",
 
-                gap:
-                  `${Math.max(
-                    3,
-                    basicFormTokens.iconOffset - 4,
-                  )}px`,
+                gap: `${Math.max(3, basicFormTokens.iconOffset - 4)}px`,
 
-                cursor:
-                  "pointer",
+                cursor: "pointer",
 
-                userSelect:
-                  "none",
+                userSelect: "none",
 
-                zIndex:
-                  3,
-
+                zIndex: 3,
               }}
-
               title="WhatsApp uses same mobile number"
-
             >
-
               <input
-
                 type="checkbox"
-
-                checked={
-                  value.whatsappSame
-                }
-
+                checked={value.whatsappSame}
                 onChange={(event) =>
-                  onChange(
-                    "whatsappSame",
-                    event.target.checked,
-                  )
+                  onChange("whatsappSame", event.target.checked)
                 }
-
                 style={{
-                  width:
-                    `${checkboxSize}px`,
+                  width: `${checkboxSize}px`,
 
-                  height:
-                    `${checkboxSize}px`,
+                  height: `${checkboxSize}px`,
 
-                  margin:
-                    0,
+                  margin: 0,
 
                   accentColor:
                     "var(--finora-theme-brand-accent, var(--finora-theme-brand-primary, #D4AF37))",
 
-                  cursor:
-                    "pointer",
+                  cursor: "pointer",
 
-                  flexShrink:
-                    0,
-
+                  flexShrink: 0,
                 }}
-
                 aria-label="WhatsApp uses same number"
-
               />
-
 
               <span
                 style={{
-                  fontSize:
-                    `${Math.max(
-                      8,
-                      basicFormTokens.optionFontSize - 2,
-                    )}px`,
+                  fontSize: `${Math.max(
+                    8,
+                    basicFormTokens.optionFontSize - 2,
+                  )}px`,
 
-                  fontWeight:
-                    700,
+                  fontWeight: 700,
 
-                  color:
-                    "var(--finora-theme-text-secondary, #4B5563)",
+                  color: "var(--finora-theme-text-secondary, #4B5563)",
 
-                  whiteSpace:
-                    "nowrap",
-
+                  whiteSpace: "nowrap",
                 }}
               >
-
                 Same
-
               </span>
-
             </label>
-
           </div>
-
         </Field>
 
-
-       {/* =================================================
+        {/* =================================================
     DATE OF BIRTH
 
     FINORA custom themed date picker.
     No browser native calendar popup.
 ================================================= */}
 
-<Field
-
-  label="Date of Birth"
-
-  fieldStyleOverride={
-    resolvedFieldStyle
-  }
-
-  labelStyleOverride={
-    resolvedLabelStyle
-  }
-
-  requiredStyleOverride={
-    resolvedRequiredStyle
-  }
-
->
-
-  <FinoraDatePicker
-
-    value={
-      value.dateOfBirth
-    }
-
-    onChange={(date) =>
-      onChange(
-        "dateOfBirth",
-        date,
-      )
-    }
-
-    ariaLabel="Date of Birth"
-
-    placeholder="DD-MM-YYYY"
-
-  />
-
-</Field>
+        <Field
+          label="Date of Birth"
+          fieldStyleOverride={resolvedFieldStyle}
+          labelStyleOverride={resolvedLabelStyle}
+          requiredStyleOverride={resolvedRequiredStyle}
+        >
+          <FinoraDatePicker
+            value={value.dateOfBirth}
+            onChange={(date) => onChange("dateOfBirth", date)}
+            ariaLabel="Date of Birth"
+            placeholder="DD-MM-YYYY"
+          />
+        </Field>
 
         {/* =================================================
             BUSINESS
         ================================================= */}
 
         <Field
-
           label="Business"
-
-          fieldStyleOverride={
-            resolvedFieldStyle
-          }
-
-          labelStyleOverride={
-            resolvedLabelStyle
-          }
-
-          requiredStyleOverride={
-            resolvedRequiredStyle
-          }
-
+          fieldStyleOverride={resolvedFieldStyle}
+          labelStyleOverride={resolvedLabelStyle}
+          requiredStyleOverride={resolvedRequiredStyle}
         >
-
           <input
-
-            style={
-              resolvedInputStyle
-            }
-
-            value={
-              value.businessName
-            }
-
+            style={resolvedInputStyle}
+            value={value.businessName}
             readOnly
-
             aria-label="Business"
-
           />
-
         </Field>
-
 
         {/* =================================================
             BRANCH
         ================================================= */}
 
         <Field
-
           label="Branch"
-
-          fieldStyleOverride={
-            resolvedFieldStyle
-          }
-
-          labelStyleOverride={
-            resolvedLabelStyle
-          }
-
-          requiredStyleOverride={
-            resolvedRequiredStyle
-          }
-
+          fieldStyleOverride={resolvedFieldStyle}
+          labelStyleOverride={resolvedLabelStyle}
+          requiredStyleOverride={resolvedRequiredStyle}
         >
-
           <input
-
-            style={
-              resolvedInputStyle
-            }
-
-            value={
-              value.branchName
-            }
-
+            style={resolvedInputStyle}
+            value={value.branchName}
             readOnly
-
             aria-label="Branch"
-
           />
-
         </Field>
-
 
         {/* =================================================
             PREFERRED LANGUAGE
         ================================================= */}
 
         <Field
-
           label="Preferred Language"
-
-          fieldStyleOverride={
-            resolvedFieldStyle
-          }
-
-          labelStyleOverride={
-            resolvedLabelStyle
-          }
-
-          requiredStyleOverride={
-            resolvedRequiredStyle
-          }
-
+          fieldStyleOverride={resolvedFieldStyle}
+          labelStyleOverride={resolvedLabelStyle}
+          requiredStyleOverride={resolvedRequiredStyle}
         >
-
           <select
+            style={{
+              ...resolvedInputStyle,
 
-  style={{
-    ...resolvedInputStyle,
+              cursor: "pointer",
 
-    cursor:
-      "pointer",
+              paddingRight: `${basicFormTokens.inputPaddingX + 20}px`,
 
-    paddingRight:
-      `${basicFormTokens.inputPaddingX + 20}px`,
+              background:
+                "var(--finora-theme-surface-muted, var(--finora-theme-background-surface-muted, #F1F3F6))",
 
-    background:
-      "var(--finora-theme-surface-muted, var(--finora-theme-background-surface-muted, #F1F3F6))",
+              color: "var(--finora-theme-text-primary, #171A21)",
 
-    color:
-      "var(--finora-theme-text-primary, #171A21)",
+              border: "1px solid var(--finora-theme-border-default, #C9D0DA)",
 
-    border:
-      "1px solid var(--finora-theme-border-default, #C9D0DA)",
+              accentColor: "var(--finora-theme-brand-accent, #D4AF37)",
 
-    accentColor:
-      "var(--finora-theme-brand-accent, #D4AF37)",
+              colorScheme: theme.id === "imperial-gold" ? "light" : "dark",
 
-    colorScheme:
-      theme.id === "imperial-gold"
-        ? "light"
-        : "dark",
-
-    appearance:
-      "auto",
-
-  }}
-
-            value={
-              value.preferredLanguage
-            }
-
+              appearance: "auto",
+            }}
+            value={value.preferredLanguage}
             onChange={(event) =>
               onChange(
                 "preferredLanguage",
                 event.target.value as PreferredLanguage,
               )
             }
-
             aria-label="Preferred Language"
-
           >
-
-            <option
-              value="Telugu"
-              style={
-                optionStyle
-              }
-            >
+            <option value="Telugu" style={optionStyle}>
               Telugu
             </option>
 
-
-            <option
-              value="English"
-              style={
-                optionStyle
-              }
-            >
+            <option value="English" style={optionStyle}>
               English
             </option>
 
-
-            <option
-              value="Hindi"
-              style={
-                optionStyle
-              }
-            >
+            <option value="Hindi" style={optionStyle}>
               Hindi
             </option>
 
-
-            <option
-              value="Tamil"
-              style={
-                optionStyle
-              }
-            >
+            <option value="Tamil" style={optionStyle}>
               Tamil
             </option>
 
-
-            <option
-              value="Kannada"
-              style={
-                optionStyle
-              }
-            >
+            <option value="Kannada" style={optionStyle}>
               Kannada
             </option>
 
-
-            <option
-              value="Marathi"
-              style={
-                optionStyle
-              }
-            >
+            <option value="Marathi" style={optionStyle}>
               Marathi
             </option>
 
-
-            <option
-              value="Other"
-              style={
-                optionStyle
-              }
-            >
+            <option value="Other" style={optionStyle}>
               Other
             </option>
-
           </select>
-
         </Field>
-
       </div>
-
     </section>
-
   );
-
 }
-
 
 /* ===========================================================
    DATE PADDING HELPER
@@ -1920,49 +1093,20 @@ export default function IdentityForm({
 =========================================================== */
 
 function calculatedDatePaddingValue(
+  inputPaddingX: number,
 
-  inputPaddingX:
-    number,
+  calendarIconSize: number,
 
-  calendarIconSize:
-    number,
+  hasAge: boolean,
 
-  hasAge:
-    boolean,
+  optionFontSize: number,
+): string {
+  const calendarSpace = calendarIconSize + 18;
 
-  optionFontSize:
-    number,
+  const ageSpace = hasAge ? Math.max(32, optionFontSize * 3.8) + 18 : 0;
 
-):
-  string {
-
-  const calendarSpace =
-    calendarIconSize
-    +
-    18;
-
-
-  const ageSpace =
-    hasAge
-      ? Math.max(
-          32,
-          optionFontSize * 3.8,
-        )
-        +
-        18
-      : 0;
-
-
-  return `${
-    inputPaddingX
-    +
-    calendarSpace
-    +
-    ageSpace
-  }px`;
-
+  return `${inputPaddingX + calendarSpace + ageSpace}px`;
 }
-
 
 /* ===========================================================
    END

@@ -23,7 +23,7 @@
    FINAL CARD CONTENT:
    - Customer ID
    - Village
-   - Mandal
+   - PinCode
    - District
    - Since
    - Loan Summary
@@ -43,7 +43,6 @@
      ResponsiveTokens.
 =========================================================== */
 
-
 /* ===========================================================
    IMPORTS
 =========================================================== */
@@ -58,17 +57,11 @@ import {
   History,
 } from "lucide-react";
 
-import type {
-  CustomerIdCardBackProps,
-} from "./types";
+import type { CustomerIdCardBackProps } from "./types";
 
-import type {
-  ResponsiveTokens,
-} from "../../../../../utils/responsive/customers/customers.tokens";
+import type { ResponsiveTokens } from "../../../../../utils/responsive/customers/customers.tokens";
 
-import {
-  DEFAULT_CUSTOMER_TOKENS,
-} from "../../../../../utils/responsive/customers/customers.tokens";
+import { DEFAULT_CUSTOMER_TOKENS } from "../../../../../utils/responsive/customers/customers.tokens";
 
 import {
   createCardStyle,
@@ -95,179 +88,86 @@ import {
   createOutstandingValueStyle,
 } from "./styles";
 
-
 /* ===========================================================
    EXTENDED PROPS
 =========================================================== */
 
-type CustomerIdCardBackResolvedProps =
-  CustomerIdCardBackProps & {
-
-    responsiveTokens?:
-      ResponsiveTokens;
-
-  };
-
+type CustomerIdCardBackResolvedProps = CustomerIdCardBackProps & {
+  responsiveTokens?: ResponsiveTokens;
+};
 
 /* ===========================================================
    HELPERS
 =========================================================== */
 
-function safeText(
-  value:
-    | string
-    | number
-    | undefined,
-): string {
-
-  if (
-    value === undefined ||
-    value === null ||
-    String(value).trim() === ""
-  ) {
-
+function safeText(value: string | number | undefined): string {
+  if (value === undefined || value === null || String(value).trim() === "") {
     return "--";
-
   }
 
   return String(value);
-
 }
 
-
-function safeNumber(
-  value:
-    | number
-    | undefined,
-): number {
-
-  return (
-    typeof value === "number" &&
-    Number.isFinite(value)
-  )
-    ? value
-    : 0;
-
+function safeNumber(value: number | undefined): number {
+  return typeof value === "number" && Number.isFinite(value) ? value : 0;
 }
 
-
-function formatAmount(
-  value:
-    | number
-    | undefined,
-): string {
-
-  return new Intl.NumberFormat(
-    "en-IN",
-    {
-      maximumFractionDigits: 0,
-    },
-  ).format(
-    safeNumber(value),
-  );
-
+function formatAmount(value: number | undefined): string {
+  return new Intl.NumberFormat("en-IN", {
+    maximumFractionDigits: 0,
+  }).format(safeNumber(value));
 }
 
-
-function formatCustomerSince(
-  value:
-    | string
-    | undefined,
-): string {
-
+function formatCustomerSince(value: string | undefined): string {
   if (!value) {
-
     return "--";
-
   }
 
-  const date =
-    new Date(value);
+  const date = new Date(value);
 
-  if (
-    Number.isNaN(
-      date.getTime(),
-    )
-  ) {
-
+  if (Number.isNaN(date.getTime())) {
     return value;
-
   }
 
-  return new Intl.DateTimeFormat(
-    "en-GB",
-    {
-      day:
-        "2-digit",
+  return new Intl.DateTimeFormat("en-GB", {
+    day: "2-digit",
 
-      month:
-        "2-digit",
+    month: "2-digit",
 
-      year:
-        "numeric",
-    },
-  ).format(
-    date,
-  );
-
+    year: "numeric",
+  }).format(date);
 }
 
-
-function formatPaymentDate(
-  value:
-    | string
-    | undefined,
-): string {
-
+function formatPaymentDate(value: string | undefined): string {
   if (!value) {
-
     return "--";
-
   }
 
-  const date =
-    new Date(value);
+  const date = new Date(value);
 
-  if (
-    Number.isNaN(
-      date.getTime(),
-    )
-  ) {
-
+  if (Number.isNaN(date.getTime())) {
     return value;
-
   }
 
-  return new Intl.DateTimeFormat(
-    "en-GB",
-    {
-      day:
-        "2-digit",
+  return new Intl.DateTimeFormat("en-GB", {
+    day: "2-digit",
 
-      month:
-        "2-digit",
+    month: "2-digit",
 
-      year:
-        "numeric",
-    },
-  ).format(
-    date,
-  );
-
+    year: "numeric",
+  }).format(date);
 }
-
 
 /* ===========================================================
    COMPONENT
 =========================================================== */
 
 export default function CustomerIdCardBack({
-
   customerId,
 
   village,
 
-  mandal,
+  pinCode,
 
   district,
 
@@ -286,205 +186,85 @@ export default function CustomerIdCardBack({
   outstandingAmount,
 
   responsiveTokens,
-
 }: CustomerIdCardBackResolvedProps) {
-
-
   /* =========================================================
      RESPONSIVE ENGINE
   ========================================================= */
 
-  const tokens =
-    responsiveTokens ??
-    DEFAULT_CUSTOMER_TOKENS;
-
+  const tokens = responsiveTokens ?? DEFAULT_CUSTOMER_TOKENS;
 
   /* =========================================================
      RESOLVED STYLES
   ========================================================= */
 
-  const cardStyle =
-    createCardStyle(
-      tokens,
-    );
+  const cardStyle = createCardStyle(tokens);
 
+  const contentStyle = createContentStyle(tokens);
 
-  const contentStyle =
-    createContentStyle(
-      tokens,
-    );
+  const customerIdStyle = createCustomerIdStyle(tokens);
 
+  const topDividerStyle = createTopDividerStyle(tokens);
 
-  const customerIdStyle =
-    createCustomerIdStyle(
-      tokens,
-    );
+  const fieldListStyle = createFieldListStyle(tokens);
 
+  const fieldRowStyle = createFieldRowStyle(tokens);
 
-  const topDividerStyle =
-    createTopDividerStyle(
-      tokens,
-    );
+  const iconStyle = createIconStyle(tokens);
 
+  const labelStyle = createLabelStyle(tokens);
 
-  const fieldListStyle =
-    createFieldListStyle(
-      tokens,
-    );
+  const valueStyle = createValueStyle(tokens);
 
+  const sectionDividerStyle = createSectionDividerStyle(tokens);
 
-  const fieldRowStyle =
-    createFieldRowStyle(
-      tokens,
-    );
+  const sectionTitleStyle = createSectionTitleStyle(tokens);
 
+  const loanSummaryStyle = createLoanSummaryStyle(tokens);
 
-  const iconStyle =
-    createIconStyle(
-      tokens,
-    );
+  const loanMetricStyle = createLoanMetricStyle(tokens);
 
+  const loanMetricLabelStyle = createLoanMetricLabelStyle(tokens);
 
-  const labelStyle =
-    createLabelStyle(
-      tokens,
-    );
+  const loanMetricValueStyle = createLoanMetricValueStyle(tokens);
 
+  const lastPaymentStyle = createLastPaymentStyle(tokens);
 
-  const valueStyle =
-    createValueStyle(
-      tokens,
-    );
+  const lastPaymentIconStyle = createLastPaymentIconStyle(tokens);
 
+  const lastPaymentLabelStyle = createLastPaymentLabelStyle(tokens);
 
-  const sectionDividerStyle =
-    createSectionDividerStyle(
-      tokens,
-    );
+  const lastPaymentValueStyle = createLastPaymentValueStyle(tokens);
 
+  const outstandingStyle = createOutstandingStyle(tokens);
 
-  const sectionTitleStyle =
-    createSectionTitleStyle(
-      tokens,
-    );
+  const outstandingLabelStyle = createOutstandingLabelStyle(tokens);
 
-
-  const loanSummaryStyle =
-    createLoanSummaryStyle(
-      tokens,
-    );
-
-
-  const loanMetricStyle =
-    createLoanMetricStyle(
-      tokens,
-    );
-
-
-  const loanMetricLabelStyle =
-    createLoanMetricLabelStyle(
-      tokens,
-    );
-
-
-  const loanMetricValueStyle =
-    createLoanMetricValueStyle(
-      tokens,
-    );
-
-
-  const lastPaymentStyle =
-    createLastPaymentStyle(
-      tokens,
-    );
-
-  const lastPaymentIconStyle =
-  createLastPaymentIconStyle(
-    tokens,
-  );
-
-
-  const lastPaymentLabelStyle =
-    createLastPaymentLabelStyle(
-      tokens,
-    );
-
-
-  const lastPaymentValueStyle =
-    createLastPaymentValueStyle(
-      tokens,
-    );
-
-
-  const outstandingStyle =
-    createOutstandingStyle(
-      tokens,
-    );
-
-
-  const outstandingLabelStyle =
-    createOutstandingLabelStyle(
-      tokens,
-    );
-
-
-  const outstandingValueStyle =
-    createOutstandingValueStyle(
-      tokens,
-    );
-
+  const outstandingValueStyle = createOutstandingValueStyle(tokens);
 
   /* =========================================================
      UI
   ========================================================= */
 
   return (
-
-    <article
-      data-finora-customer-card-back="true"
-      style={
-        cardStyle
-      }
-    >
-
+    <article data-finora-customer-card-back="true" style={cardStyle}>
       {/* =====================================================
           INNER CONTENT
       ===================================================== */}
 
-      <div
-        style={
-          contentStyle
-        }
-      >
-
+      <div style={contentStyle}>
         {/* ===================================================
             CUSTOMER ID
         =================================================== */}
 
-        <div
-          style={
-            customerIdStyle
-          }
-          title={
-            customerId
-          }
-        >
-          {safeText(
-            customerId,
-          )}
+        <div style={customerIdStyle} title={customerId}>
+          {safeText(customerId)}
         </div>
-
 
         {/* ===================================================
             TOP ID DIVIDER
         =================================================== */}
 
-        <div
-          style={
-            topDividerStyle
-          }
-        />
-
+        <div style={topDividerStyle} />
 
         {/* ===================================================
             ADDRESS / CUSTOMER DETAILS
@@ -493,257 +273,118 @@ export default function CustomerIdCardBack({
 
             FINAL:
             - Village
-            - Mandal
+            - PinCode
             - District
             - Since
         =================================================== */}
 
-        <div
-          style={
-            fieldListStyle
-          }
-        >
-
+        <div style={fieldListStyle}>
           {/* =================================================
               VILLAGE
           ================================================= */}
 
-          <div
-            style={
-              fieldRowStyle
-            }
-          >
+          <div style={fieldRowStyle}>
+            <MapPin style={iconStyle} />
 
-            <MapPin
-              style={
-                iconStyle
-              }
-            />
-
-            <span
-              style={
-                labelStyle
-              }
-            >
-              VILLAGE
-            </span>
+            <span style={labelStyle}>VILLAGE</span>
 
             <span
               style={{
                 ...labelStyle,
-                textAlign:
-                  "center",
+                textAlign: "center",
               }}
             >
               :
             </span>
 
-            <span
-              style={
-                valueStyle
-              }
-              title={
-                safeText(
-                  village,
-                )
-              }
-            >
-              {safeText(
-                village,
-              )}
+            <span style={valueStyle} title={safeText(village)}>
+              {safeText(village)}
             </span>
-
           </div>
 
-
           {/* =================================================
-              MANDAL
-          ================================================= */}
+    PIN CODE
+================================================= */}
 
-          <div
-            style={
-              fieldRowStyle
-            }
-          >
+          <div style={fieldRowStyle}>
+            <MapPin style={iconStyle} />
 
-            <Navigation
-              style={
-                iconStyle
-              }
-            />
-
-            <span
-              style={
-                labelStyle
-              }
-            >
-              MANDAL
-            </span>
+            <span style={labelStyle}>PIN CODE</span>
 
             <span
               style={{
                 ...labelStyle,
-                textAlign:
-                  "center",
+                textAlign: "center",
               }}
             >
               :
             </span>
 
-            <span
-              style={
-                valueStyle
-              }
-              title={
-                safeText(
-                  mandal,
-                )
-              }
-            >
-              {safeText(
-                mandal,
-              )}
+            <span style={valueStyle} title={safeText(pinCode)}>
+              {safeText(pinCode)}
             </span>
-
           </div>
-
 
           {/* =================================================
               DISTRICT
           ================================================= */}
 
-          <div
-            style={
-              fieldRowStyle
-            }
-          >
+          <div style={fieldRowStyle}>
+            <Building2 style={iconStyle} />
 
-            <Building2
-              style={
-                iconStyle
-              }
-            />
-
-            <span
-              style={
-                labelStyle
-              }
-            >
-              DISTRICT
-            </span>
+            <span style={labelStyle}>DISTRICT</span>
 
             <span
               style={{
                 ...labelStyle,
-                textAlign:
-                  "center",
+                textAlign: "center",
               }}
             >
               :
             </span>
 
-            <span
-              style={
-                valueStyle
-              }
-              title={
-                safeText(
-                  district,
-                )
-              }
-            >
-              {safeText(
-                district,
-              )}
+            <span style={valueStyle} title={safeText(district)}>
+              {safeText(district)}
             </span>
-
           </div>
-
 
           {/* =================================================
               CUSTOMER SINCE
           ================================================= */}
 
-          <div
-            style={
-              fieldRowStyle
-            }
-          >
+          <div style={fieldRowStyle}>
+            <CalendarDays style={iconStyle} />
 
-            <CalendarDays
-              style={
-                iconStyle
-              }
-            />
-
-            <span
-              style={
-                labelStyle
-              }
-            >
-              SINCE
-            </span>
+            <span style={labelStyle}>SINCE</span>
 
             <span
               style={{
                 ...labelStyle,
-                textAlign:
-                  "center",
+                textAlign: "center",
               }}
             >
               :
             </span>
 
-            <span
-              style={
-                valueStyle
-              }
-            >
-              {
-                formatCustomerSince(
-                  customerSince,
-                )
-              }
-            </span>
-
+            <span style={valueStyle}>{formatCustomerSince(customerSince)}</span>
           </div>
-
         </div>
-
 
         {/* ===================================================
             SECTION DIVIDER
         =================================================== */}
 
-        <div
-          style={
-            sectionDividerStyle
-          }
-        />
-
+        <div style={sectionDividerStyle} />
 
         {/* ===================================================
             LOAN SUMMARY TITLE
         =================================================== */}
 
-        <div
-          style={
-            sectionTitleStyle
-          }
-        >
+        <div style={sectionTitleStyle}>
+          <WalletCards style={iconStyle} />
 
-          <WalletCards
-            style={
-              iconStyle
-            }
-          />
-
-          <span>
-            LOAN SUMMARY
-          </span>
-
+          <span>LOAN SUMMARY</span>
         </div>
-
 
         {/* ===================================================
             LOAN SUMMARY METRICS
@@ -756,129 +397,50 @@ export default function CustomerIdCardBack({
             Three equal boxes are preserved.
         =================================================== */}
 
-        <div
-          style={
-            loanSummaryStyle
-          }
-        >
-
+        <div style={loanSummaryStyle}>
           {/* =================================================
               ALL LOANS
           ================================================= */}
 
-          <div
-            style={
-              loanMetricStyle
-            }
-          >
+          <div style={loanMetricStyle}>
+            <span style={loanMetricLabelStyle}>ALL</span>
 
-            <span
-              style={
-                loanMetricLabelStyle
-              }
-            >
-              ALL
-            </span>
-
-            <strong
-              style={
-                loanMetricValueStyle
-              }
-            >
-              {
-                safeNumber(
-                  totalLoans,
-                )
-              }
+            <strong style={loanMetricValueStyle}>
+              {safeNumber(totalLoans)}
             </strong>
-
           </div>
-
 
           {/* =================================================
               ACTIVE
           ================================================= */}
 
-          <div
-            style={
-              loanMetricStyle
-            }
-          >
+          <div style={loanMetricStyle}>
+            <span style={loanMetricLabelStyle}>ACTIVE</span>
 
-            <span
-              style={
-                loanMetricLabelStyle
-              }
-            >
-              ACTIVE
-            </span>
-
-            <strong
-              style={
-                loanMetricValueStyle
-              }
-            >
-              {
-                safeNumber(
-                  activeLoans,
-                )
-              }
+            <strong style={loanMetricValueStyle}>
+              {safeNumber(activeLoans)}
             </strong>
-
           </div>
-
 
           {/* =================================================
               CLOSED
           ================================================= */}
 
-          <div
-            style={
-              loanMetricStyle
-            }
-          >
+          <div style={loanMetricStyle}>
+            <span style={loanMetricLabelStyle}>CLOSED</span>
 
-            <span
-              style={
-                loanMetricLabelStyle
-              }
-            >
-              CLOSED
-            </span>
-
-            <strong
-              style={
-                loanMetricValueStyle
-              }
-            >
-              {
-                safeNumber(
-                  closedLoans,
-                )
-              }
+            <strong style={loanMetricValueStyle}>
+              {safeNumber(closedLoans)}
             </strong>
-
           </div>
-
         </div>
 
-
-                  {/* ===================================================
+        {/* ===================================================
             LAST PAYMENT
         =================================================== */}
 
-        <div
-          style={
-            lastPaymentStyle
-          }
-        >
-
-          <History
-  style={
-    lastPaymentIconStyle
-  }
-/>
-
+        <div style={lastPaymentStyle}>
+          <History style={lastPaymentIconStyle} />
 
           <div
             style={{
@@ -889,31 +451,12 @@ export default function CustomerIdCardBack({
               gap: "2px",
             }}
           >
+            <span style={lastPaymentLabelStyle}>LAST PAYMENT</span>
 
-            <span
-              style={
-                lastPaymentLabelStyle
-              }
-            >
-              LAST PAYMENT
+            <span style={lastPaymentValueStyle}>
+              {lastPaymentDate ? formatCustomerSince(lastPaymentDate) : "--"}
             </span>
-
-            <span
-              style={
-                lastPaymentValueStyle
-              }
-            >
-              {
-                lastPaymentDate
-                  ? formatCustomerSince(
-                      lastPaymentDate,
-                    )
-                  : "--"
-              }
-            </span>
-
           </div>
-
 
           <strong
             style={{
@@ -927,99 +470,49 @@ export default function CustomerIdCardBack({
           >
             <span>₹</span>
 
-            <span>
-              {
-                formatAmount(
-                  lastPaymentAmount,
-                )
-              }
-            </span>
-
+            <span>{formatAmount(lastPaymentAmount)}</span>
           </strong>
-
         </div>
-
 
         {/* ===================================================
             OUTSTANDING
         =================================================== */}
 
-        <div
-          style={
-            outstandingStyle
-          }
-        >
-
+        <div style={outstandingStyle}>
           <CircleDollarSign
-            style={
-              {
-                ...iconStyle,
+            style={{
+              ...iconStyle,
 
-                width:
-                  `${Math.max(
-                    tokens.icon.md,
-                    18,
-                  )}px`,
+              width: `${Math.max(tokens.icon.md, 18)}px`,
 
-                height:
-                  `${Math.max(
-                    tokens.icon.md,
-                    18,
-                  )}px`,
-              }
-            }
+              height: `${Math.max(tokens.icon.md, 18)}px`,
+            }}
           />
 
-          <span
-            style={
-              outstandingLabelStyle
-            }
-          >
-            OUTSTANDING
-          </span>
+          <span style={outstandingLabelStyle}>OUTSTANDING</span>
 
           <strong
             style={{
               ...outstandingValueStyle,
 
-              display:
-                "flex",
+              display: "flex",
 
-              alignItems:
-                "center",
+              alignItems: "center",
 
-              justifyContent:
-                "flex-end",
+              justifyContent: "flex-end",
 
-              gap:
-                "6px",
+              gap: "6px",
             }}
           >
+            <span>₹</span>
 
-            <span>
-              ₹
-            </span>
-
-            <span>
-              {
-                formatAmount(
-                  outstandingAmount,
-                )
-              }
-            </span>
-
+            <span>{formatAmount(outstandingAmount)}</span>
           </strong>
-
         </div>
-
       </div>
-
     </article>
-
   );
-
 }
-
 
 /* ===========================================================
    END

@@ -37,8 +37,7 @@ export interface CustomerIdCardBackProps {
   village?:
     string;
 
-  mandal?:
-    string;
+  pinCode?: string;
 
   district?:
     string;

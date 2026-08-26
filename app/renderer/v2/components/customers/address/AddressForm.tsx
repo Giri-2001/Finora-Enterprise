@@ -23,6 +23,7 @@
    - Location Verification
    - Verification badges
    - Emoji-based field icons
+   - State dropdown chevron
 
    IMPORTANT:
 
@@ -76,7 +77,6 @@ import {
   createAddressLabelStyle,
   createAddressLongInputStyle,
   createFullAddressFieldStyle,
-  createAddressSelectChevronStyle,
 } from "../../../utils/responsive/customers/address/address.layout";
 
 
@@ -376,12 +376,6 @@ function StateField({
     );
 
 
-  const chevronStyle =
-    createAddressSelectChevronStyle(
-      addressTokens,
-    );
-
-
   return (
 
     <div
@@ -418,15 +412,18 @@ function StateField({
         />
 
 
+        {/* =================================================
+            STATE INPUT
+
+            Dropdown chevron intentionally removed.
+
+            State is now a normal controlled text field.
+        ================================================= */}
+
         <input
 
           style={
-            {
-              ...inputStyle,
-
-              paddingRight:
-                `${addressTokens.inputPaddingX + addressTokens.selectChevronSize + addressTokens.fieldIconOffset}px`,
-            }
+            inputStyle
           }
 
           value={
@@ -448,28 +445,6 @@ function StateField({
           className="finora-address-input"
 
         />
-
-
-        <span
-          style={
-            chevronStyle
-          }
-
-          aria-hidden="true"
-        >
-          <svg
-            viewBox="0 0 24 24"
-            width="100%"
-            height="100%"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          >
-            <path d="m6 9 6 6 6-6" />
-          </svg>
-        </span>
 
       </div>
 
@@ -588,6 +563,10 @@ export default function AddressForm({
         }
       >
 
+        {/* =================================================
+            CURRENT ADDRESS
+        ================================================= */}
+
         <div
           style={
             createFullAddressFieldStyle(
@@ -625,6 +604,10 @@ export default function AddressForm({
 
         </div>
 
+
+        {/* =================================================
+            PERMANENT ADDRESS
+        ================================================= */}
 
         <div
           style={
@@ -664,6 +647,10 @@ export default function AddressForm({
         </div>
 
 
+        {/* =================================================
+            CITY / VILLAGE
+        ================================================= */}
+
         <Field
 
           label="City / Village"
@@ -689,6 +676,10 @@ export default function AddressForm({
 
         />
 
+
+        {/* =================================================
+            DISTRICT
+        ================================================= */}
 
         <Field
 
@@ -716,6 +707,10 @@ export default function AddressForm({
         />
 
 
+        {/* =================================================
+            STATE
+        ================================================= */}
+
         <StateField
 
           value={
@@ -733,6 +728,10 @@ export default function AddressForm({
 
         />
 
+
+        {/* =================================================
+            PIN CODE
+        ================================================= */}
 
         <Field
 

@@ -86,8 +86,8 @@ export interface CustomerModel {
   village?:
     string;
 
-  mandal?:
-    string;
+  pinCode?:
+  string;
 
   district?:
     string;

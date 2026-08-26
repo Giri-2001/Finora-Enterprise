@@ -195,7 +195,7 @@ export default function CustomerHanger({
 
     village,
 
-    mandal,
+    pinCode,
 
     district,
 
@@ -968,8 +968,8 @@ export default function CustomerHanger({
                   village
                 }
 
-                mandal={
-                  mandal
+                pinCode={
+                  pinCode
                 }
 
                 district={

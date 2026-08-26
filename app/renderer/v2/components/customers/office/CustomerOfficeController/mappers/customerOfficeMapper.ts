@@ -34,92 +34,49 @@
 //
 // ============================================================
 
-
 // ============================================================
 // IMPORTS
 // ============================================================
 
-import type {
-  CustomerProfile,
-} from "../../../../../types/customers";
+import type { CustomerProfile } from "../../../../../types/customers";
 
+import type { OfficeCustomer } from "../../CustomerOffice/types";
 
-import type {
-  OfficeCustomer,
-} from "../../CustomerOffice/types";
+import { fetchLoans } from "../../../../../services/loan/loanService";
 
-
-import {
-  fetchLoans,
-} from "../../../../../services/loan/loanService";
-
-
-import {
-  collectionRepository,
-} from "../../../../../repositories/collection/collectionRepository";
-
+import { collectionRepository } from "../../../../../repositories/collection/collectionRepository";
 
 // ============================================================
 // HELPERS
 // ============================================================
 
-function getFirst6Digits(
-  value: unknown,
-): string {
-
-  if (
-    typeof value !== "string" &&
-    typeof value !== "number"
-  ) {
-
+function getFirst6Digits(value: unknown): string {
+  if (typeof value !== "string" && typeof value !== "number") {
     return "";
-
   }
 
-  const digits =
-    String(value)
-      .replace(/\D/g, "");
+  const digits = String(value).replace(/\D/g, "");
 
   if (digits.length < 6) {
-
     return "";
-
   }
 
   return digits.slice(0, 6);
-
 }
 
-function getLast6Digits(
-  value: unknown,
-): string {
-
-  if (
-    typeof value !== "string" &&
-    typeof value !== "number"
-  ) {
-
+function getLast6Digits(value: unknown): string {
+  if (typeof value !== "string" && typeof value !== "number") {
     return "";
-
   }
 
-
-  const digits =
-    String(value)
-      .replace(/\D/g, "");
-
+  const digits = String(value).replace(/\D/g, "");
 
   if (digits.length < 6) {
-
     return "";
-
   }
 
-
   return digits.slice(-6);
-
 }
-
 
 // ============================================================
 // MAPPER
@@ -128,8 +85,6 @@ function getLast6Digits(
 export default async function customerOfficeMapper(
   customers: CustomerProfile[],
 ): Promise<OfficeCustomer[]> {
-
-
   // ==========================================================
   // LOANS
   //
@@ -139,9 +94,7 @@ export default async function customerOfficeMapper(
   // Customer Office without exposing the repository directly.
   // ==========================================================
 
-  const loans =
-    await fetchLoans();
-
+  const loans = await fetchLoans();
 
   // ==========================================================
   // COLLECTIONS
@@ -150,43 +103,34 @@ export default async function customerOfficeMapper(
   // persistence boundary.
   // ==========================================================
 
-  const collections =
-    await collectionRepository.getAll();
-
+  const collections = await collectionRepository.getAll();
 
   // ==========================================================
   // CUSTOMER → OFFICE CUSTOMER
   // ==========================================================
 
-  return customers
+  return (
+    customers
 
+      // ========================================================
+      // ACTIVE CUSTOMERS ONLY
+      // ========================================================
 
-    // ========================================================
-    // ACTIVE CUSTOMERS ONLY
-    // ========================================================
+      .filter(
+        (customer) =>
+          !customer.internal.isDeleted && !customer.internal.isArchived,
+      )
 
-    .filter(
-      (customer) =>
-        !customer.internal.isDeleted &&
-        !customer.internal.isArchived,
-    )
+      // ========================================================
+      // OFFICE CUSTOMER MAPPING
+      // ========================================================
 
-
-    // ========================================================
-    // OFFICE CUSTOMER MAPPING
-    // ========================================================
-
-    .map(
-      (customer) => {
-
-
+      .map((customer) => {
         // ======================================================
         // CUSTOMER ID
         // ======================================================
 
-        const customerId =
-          customer.identity.customerId;
-
+        const customerId = customer.identity.customerId;
 
         // ======================================================
         // SEARCH-SAFE AADHAAR
@@ -199,19 +143,11 @@ export default async function customerOfficeMapper(
         // Customer Office receives ONLY the final 6 digits.
         // ======================================================
 
-        const aadhaarDocumentNumber =
-  customer.kyc?.aadhaar?.documentNumber;
+        const aadhaarDocumentNumber = customer.kyc?.aadhaar?.documentNumber;
 
-const aadhaarFirst6 =
-  getFirst6Digits(
-    aadhaarDocumentNumber,
-  );
+        const aadhaarFirst6 = getFirst6Digits(aadhaarDocumentNumber);
 
-const aadhaarLast6 =
-  getLast6Digits(
-    aadhaarDocumentNumber,
-  );
-
+        const aadhaarLast6 = getLast6Digits(aadhaarDocumentNumber);
 
         // ======================================================
         // SEARCH-SAFE ID CARD
@@ -226,23 +162,17 @@ const aadhaarLast6 =
         // alter the CustomerProfile persistence schema.
         // ======================================================
 
-        const idCardDocument =
-          (
-            customer.kyc as
-            {
-              idCard?: {
-                documentNumber?: string;
-              };
-            } |
-            undefined
-          )?.idCard?.documentNumber;
+        const idCardDocument = (
+          customer.kyc as
+            | {
+                idCard?: {
+                  documentNumber?: string;
+                };
+              }
+            | undefined
+        )?.idCard?.documentNumber;
 
-
-        const idCardLast6 =
-          getLast6Digits(
-            idCardDocument,
-          );
-
+        const idCardLast6 = getLast6Digits(idCardDocument);
 
         // ======================================================
         // RELATED LOANS
@@ -253,13 +183,9 @@ const aadhaarLast6 =
         // through LoanService.
         // ======================================================
 
-        const customerLoans =
-          loans.filter(
-            (loan) =>
-              loan.customerId ===
-              customerId,
-          );
-
+        const customerLoans = loans.filter(
+          (loan) => loan.customerId === customerId,
+        );
 
         // ======================================================
         // LIVE LOAN STATISTICS
@@ -268,75 +194,43 @@ const aadhaarLast6 =
         // state instead of a stale CustomerProfile snapshot.
         // ======================================================
 
-        const totalLoans =
-          customerLoans.length;
+        const totalLoans = customerLoans.length;
 
+        const activeLoans = customerLoans.filter(
+          (loan) => loan.status === "ACTIVE" || loan.status === "RUNNING",
+        ).length;
 
-        const activeLoans =
-          customerLoans.filter(
-            (loan) =>
-              loan.status === "ACTIVE" ||
-              loan.status === "RUNNING",
-          ).length;
+        const closedLoans = customerLoans.filter(
+          (loan) => loan.status === "CLOSED",
+        ).length;
 
-
-        const closedLoans =
-          customerLoans.filter(
-            (loan) =>
-              loan.status === "CLOSED",
-          ).length;
-
-
-        const outstandingAmount =
-          customerLoans.reduce(
-            (
-              total,
-              loan,
-            ) =>
-              total +
-              (
-                Number.isFinite(
-                  loan.outstanding,
-                )
-                  ? loan.outstanding
-                  : 0
-              ),
-            0,
-          );
-
+        const outstandingAmount = customerLoans.reduce(
+          (total, loan) =>
+            total + (Number.isFinite(loan.outstanding) ? loan.outstanding : 0),
+          0,
+        );
 
         // ======================================================
         // OFFICE CUSTOMER
         // ======================================================
 
         return {
-
-
           // ====================================================
           // RELATED LOANS
           // ====================================================
 
-          loans:
-            customerLoans,
-
+          loans: customerLoans,
 
           // ====================================================
           // BASIC IDENTITY
           // ====================================================
 
-          id:
-            customerId,
-
+          id: customerId,
 
           name:
-            customer.basic.displayName ||
-            customer.basic.fullName ||
-            "Unknown",
+            customer.basic.displayName || customer.basic.fullName || "Unknown",
 
-
-          phone:
-            customer.basic.mobileNumber,
-
+          phone: customer.basic.mobileNumber,
 
           // ====================================================
           // SEARCH IDENTITY
@@ -353,7 +247,6 @@ const aadhaarLast6 =
 
           idCardLast6,
 
-
           // ====================================================
           // CUSTOMER PROFILE PHOTO
           //
@@ -361,54 +254,30 @@ const aadhaarLast6 =
           // No upload or storage logic belongs in this mapper.
           // ====================================================
 
-          photo:
-            customer.photo,
+          photo: customer.photo,
 
-
-          branch:
-            customer.identity.businessName,
-
+          branch: customer.identity.businessName,
 
           // ====================================================
           // BACK SIDE ID CARD DETAILS
           // ====================================================
 
-          fatherName:
-            customer.basic.fatherName ??
-            "",
+          fatherName: customer.basic.fatherName ?? "",
 
+          village: customer.address.currentAddress.village ?? "",
 
-          village:
-            customer.address.currentAddress.village ??
-            "",
+          pinCode: customer.address.currentAddress.pinCode ?? "",
 
-
-          mandal:
-            customer.address.currentAddress.mandal ??
-            "",
-
-
-          district:
-            customer.address.currentAddress.district ??
-            "",
-
+          district: customer.address.currentAddress.district ?? "",
 
           customerSince:
             customer.timeline?.events?.find(
-              (event) =>
-                event.type ===
-                "CUSTOMER_CREATED",
-            )?.occurredAt ??
-            "",
+              (event) => event.type === "CUSTOMER_CREATED",
+            )?.occurredAt ?? "",
 
+          kycVerified: true,
 
-          kycVerified:
-            true,
-
-
-          active:
-            customer.identity.isActive,
-
+          active: customer.identity.isActive,
 
           // ====================================================
           // CUSTOMER STATISTICS
@@ -424,60 +293,33 @@ const aadhaarLast6 =
 
           outstandingAmount,
 
-
           totalLoans,
-
 
           activeLoans,
 
-
           closedLoans,
 
-
-          nextCollectionDate:
-            customer.internal.lastCollectionAt ??
-            "",
-
+          nextCollectionDate: customer.internal.lastCollectionAt ?? "",
 
           // ====================================================
           // COLLECTION HISTORY
           // ====================================================
 
-          collections:
-            collections
-              .filter(
-                (collection) =>
-                  collection.customerId ===
-                  customerId,
-              )
-              .map(
-                (collection) => ({
+          collections: collections
+            .filter((collection) => collection.customerId === customerId)
+            .map((collection) => ({
+              id: collection.loanId,
 
-                  id:
-                    collection.loanId,
+              amount: collection.paymentAmount,
 
+              paymentDate: collection.receiptDate,
 
-                  amount:
-                    collection.paymentAmount,
-
-
-                  paymentDate:
-                    collection.receiptDate,
-
-
-                  receiptNumber:
-                    collection.receiptNumber,
-
-                }),
-              ),
-
+              receiptNumber: collection.receiptNumber,
+            })),
         };
-
-
-      },
-    );
+      })
+  );
 }
-
 
 // ============================================================
 // END
