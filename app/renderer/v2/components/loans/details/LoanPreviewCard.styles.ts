@@ -7,7 +7,15 @@
 // THEME:
 // - Visual colours come from FINORA Theme Engine CSS variables.
 // - No local theme palette.
-// - Layout / dimensions unchanged.
+// - Responsive preview geometry is CSS-driven.
+// - No breakpoint detection.
+// - No window.innerWidth.
+//
+// RESPONSIVE PREVIEW GRID:
+// - Mobile       → 1 field / row
+// - Tablet       → 2 fields / row
+// - Laptop       → 2 fields / row
+// - Desktop      → 2 fields / row
 //
 // ============================================================
 
@@ -66,6 +74,8 @@ export const cardStyle: CSSProperties = {
   color: THEME.text,
 
   boxShadow: "none",
+
+  overflow: "hidden",
 };
 
 // ============================================================
@@ -84,6 +94,8 @@ export const contentStyle: CSSProperties = {
   minWidth: 0,
 
   boxSizing: "border-box",
+
+  overflow: "hidden",
 };
 
 // ============================================================
@@ -102,6 +114,8 @@ export const groupStyle: CSSProperties = {
   minWidth: 0,
 
   boxSizing: "border-box",
+
+  overflow: "hidden",
 };
 
 // ============================================================
@@ -122,6 +136,46 @@ export const groupTitleStyle: CSSProperties = {
   textTransform: "uppercase",
 
   letterSpacing: "0.06em",
+
+  minWidth: 0,
+};
+
+// ============================================================
+// PREVIEW GRID
+//
+// IMPORTANT
+// ------------------------------------------------------------
+// The preview component must consume this shared style.
+//
+// The grid intentionally uses a fluid minimum size:
+//
+//   repeat(auto-fit, minmax(200px, 1fr))
+//
+// This allows:
+// - narrow mobile preview → 1 column
+// - wider preview area    → 2 columns
+//
+// The Step 1 responsive layout determines the available
+// preview width. No viewport JavaScript is used here.
+//
+// ============================================================
+
+export const previewGridStyle: CSSProperties = {
+  display: "grid",
+
+  gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
+
+  gap: "6px 8px",
+
+  width: "100%",
+
+  minWidth: 0,
+
+  boxSizing: "border-box",
+
+  alignItems: "stretch",
+
+  overflow: "hidden",
 };
 
 // ============================================================
@@ -138,6 +192,8 @@ export const rowStyle: CSSProperties = {
   gap: "8px",
 
   minWidth: 0,
+
+  width: "100%",
 
   minHeight: "31px",
 
@@ -158,6 +214,8 @@ export const rowStyle: CSSProperties = {
   fontWeight: 500,
 
   lineHeight: 1.25,
+
+  overflow: "hidden",
 };
 
 // ============================================================
@@ -166,6 +224,8 @@ export const rowStyle: CSSProperties = {
 
 export const labelStyle: CSSProperties = {
   minWidth: 0,
+
+  flex: "1 1 auto",
 
   color: THEME.textMuted,
 
@@ -188,6 +248,10 @@ export const labelStyle: CSSProperties = {
 
 export const valueStyle: CSSProperties = {
   minWidth: 0,
+
+  maxWidth: "60%",
+
+  flex: "0 1 auto",
 
   color: THEME.text,
 
@@ -260,17 +324,32 @@ export const fullWidthRowStyle: CSSProperties = {
   background: THEME.panel,
 
   borderColor: THEME.borderStrong,
+
+  gridColumn: "1 / -1",
 };
+
+// ============================================================
+// PREVIEW BADGE
+// ============================================================
 
 export const previewBadgeStyle: CSSProperties = {
   padding: "5px 9px",
+
   borderRadius: "6px",
+
   border: `1px solid ${THEME.borderStrong}`,
+
   background: THEME.panelSoft,
+
   color: THEME.textSecondary,
+
   fontSize: "12px",
+
   fontWeight: 650,
+
   whiteSpace: "nowrap",
+
+  flexShrink: 0,
 };
 
 // ============================================================

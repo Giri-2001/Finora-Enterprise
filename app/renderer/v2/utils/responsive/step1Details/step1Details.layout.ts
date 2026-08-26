@@ -45,6 +45,17 @@ export function createStep1DetailsWorkspaceStyle(
     gap: `${tokens.pageGap}px`,
 
     boxSizing: "border-box",
+
+    /*
+     * Prevent accidental horizontal overflow from any
+     * nested presentation component.
+     *
+     * Actual column sizing is still controlled by the
+     * responsive layout below.
+     */
+    overflowX: "hidden",
+
+    overflowY: "visible",
   };
 }
 
@@ -56,6 +67,21 @@ export function createStep1DetailsTopStyle(
   tokens: Step1DetailsResponsiveTokens,
 ): CSSProperties {
   if (tokens.viewport === "laptop" || tokens.viewport === "desktop") {
+    /*
+     * IMPORTANT:
+     *
+     * The previous geometry was:
+     *
+     *   30% + 70% + gap
+     *
+     * which is greater than 100% because the grid gap is
+     * added on top of the percentage tracks.
+     *
+     * That can create the unwanted horizontal scrollbar.
+     *
+     * Subtract half of the gap from each percentage track so
+     * the two tracks + gap fit exactly inside the workspace.
+     */
     return {
       width: "100%",
 
@@ -63,13 +89,17 @@ export function createStep1DetailsTopStyle(
 
       display: "grid",
 
-      gridTemplateColumns: "minmax(240px, 30%) minmax(0, 70%)",
+      gridTemplateColumns:
+        `minmax(0, calc(30% - ${tokens.topGap / 2}px)) ` +
+        `minmax(0, calc(70% - ${tokens.topGap / 2}px))`,
 
       gap: `${tokens.topGap}px`,
 
       alignItems: "stretch",
 
       boxSizing: "border-box",
+
+      overflow: "hidden",
     };
   }
 
@@ -87,6 +117,8 @@ export function createStep1DetailsTopStyle(
     alignItems: "stretch",
 
     boxSizing: "border-box",
+
+    overflow: "hidden",
   };
 }
 
@@ -114,7 +146,7 @@ export function createStep1DetailsCustomerStyle(
 
     boxSizing: "border-box",
 
-    overflow: "visible",
+    overflow: "hidden",
   };
 }
 
@@ -142,7 +174,7 @@ export function createStep1DetailsOverviewStyle(
 
     boxSizing: "border-box",
 
-    overflow: "visible",
+    overflow: "hidden",
   };
 }
 
@@ -165,6 +197,8 @@ export function createStep1DetailsStatisticsGridStyle(
     gap: `${tokens.statisticsGap}px`,
 
     boxSizing: "border-box",
+
+    overflow: "hidden",
   };
 }
 
@@ -176,6 +210,22 @@ export function createStep1DetailsMainStyle(
   tokens: Step1DetailsResponsiveTokens,
 ): CSSProperties {
   if (tokens.viewport === "laptop" || tokens.viewport === "desktop") {
+    /*
+     * IMPORTANT:
+     *
+     * Same overflow correction as the Top Area.
+     *
+     * If formWidth + previewWidth already equals 100%,
+     * adding mainGap on top of those percentage tracks
+     * produces:
+     *
+     *   100% + gap
+     *
+     * and therefore a horizontal scrollbar.
+     *
+     * The gap is split between the two tracks so the complete
+     * grid remains exactly inside the available width.
+     */
     return {
       width: "100%",
 
@@ -185,13 +235,17 @@ export function createStep1DetailsMainStyle(
 
       display: "grid",
 
-      gridTemplateColumns: `${tokens.formWidth} ${tokens.previewWidth}`,
+      gridTemplateColumns:
+        `minmax(0, calc(${tokens.formWidth} - ${tokens.mainGap / 2}px)) ` +
+        `minmax(0, calc(${tokens.previewWidth} - ${tokens.mainGap / 2}px))`,
 
       gap: `${tokens.mainGap}px`,
 
       alignItems: "start",
 
       boxSizing: "border-box",
+
+      overflow: "hidden",
     };
   }
 
@@ -211,6 +265,8 @@ export function createStep1DetailsMainStyle(
     alignItems: "start",
 
     boxSizing: "border-box",
+
+    overflow: "hidden",
   };
 }
 
@@ -234,7 +290,7 @@ export function createStep1DetailsFormStyle(
 
     boxSizing: "border-box",
 
-    overflow: "visible",
+    overflow: "hidden",
   };
 }
 
@@ -261,6 +317,8 @@ export function createStep1DetailsFormGridStyle(
     boxSizing: "border-box",
 
     alignItems: "start",
+
+    overflow: "hidden",
   };
 }
 
@@ -284,7 +342,7 @@ export function createStep1DetailsPreviewStyle(
 
     boxSizing: "border-box",
 
-    overflow: "visible",
+    overflow: "hidden",
   };
 }
 
@@ -309,6 +367,8 @@ export function createStep1DetailsFooterStepGridStyle(
     boxSizing: "border-box",
 
     alignItems: "center",
+
+    overflow: "hidden",
   };
 }
 
@@ -345,6 +405,8 @@ export function createStep1DetailsFooterNavigationStyle(
     justifyContent: "end",
 
     boxSizing: "border-box",
+
+    overflow: "hidden",
   };
 }
 
@@ -371,6 +433,8 @@ export function createStep1DetailsFooterStyle(
     gap: `${tokens.footerStepGap}px`,
 
     boxSizing: "border-box",
+
+    overflow: "hidden",
   };
 }
 

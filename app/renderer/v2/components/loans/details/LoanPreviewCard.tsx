@@ -24,11 +24,27 @@
 // - Late Fee
 //
 // These belong to later Loan Studio stages.
+//
+// RESPONSIVE BEHAVIOUR:
+// - Mobile   → 1 preview field per row
+// - Tablet   → 2 preview fields per row
+// - Laptop   → 2 preview fields per row
+// - Desktop  → 2 preview fields per row
+//
+// IMPORTANT:
+// - Responsive viewport comes from FINORA Responsive Engine.
+// - No window.innerWidth.
+// - No local breakpoint detection.
+// - No media queries.
+// - No auto-fit column expansion.
+// - Tablet is explicitly locked to 2 fields per row.
 // ============================================================
 
 // ============================================================
 // IMPORTS
 // ============================================================
+
+import { useResponsive } from "../../../utils/responsive";
 
 import {
   cardStyle,
@@ -100,6 +116,59 @@ interface LoanPreviewCardProps {
 }
 
 // ============================================================
+// RESPONSIVE PREVIEW GRID
+//
+// FINAL RESPONSIVE CONTRACT:
+//
+// Mobile:
+//   1 field per row
+//
+// Tablet:
+//   2 fields per row
+//
+// Laptop:
+//   2 fields per row
+//
+// Desktop:
+//   2 fields per row
+//
+// The viewport itself is resolved by the FINORA Responsive
+// Engine through useResponsive().
+//
+// There is intentionally NO:
+// - window.innerWidth
+// - matchMedia()
+// - media query
+// - auto-fit
+// - auto-fill
+//
+// This prevents tablet from expanding into 3 / 4 columns.
+// ============================================================
+
+function createPreviewGridStyle(
+  viewport: "mobile" | "tablet" | "laptop" | "desktop",
+) {
+  return {
+    display: "grid",
+
+    gridTemplateColumns:
+      viewport === "mobile" ? "minmax(0, 1fr)" : "repeat(2, minmax(0, 1fr))",
+
+    gap: "6px 8px",
+
+    width: "100%",
+
+    minWidth: 0,
+
+    boxSizing: "border-box" as const,
+
+    alignItems: "stretch",
+
+    overflow: "hidden",
+  };
+}
+
+// ============================================================
 // COMPONENT
 // ============================================================
 
@@ -126,6 +195,22 @@ export default function LoanPreviewCard({
 
   netDisbursement = 0,
 }: LoanPreviewCardProps) {
+  // ==========================================================
+  // FINORA RESPONSIVE ENGINE
+  // ==========================================================
+
+  const { tokens } = useResponsive();
+
+  // ==========================================================
+  // RESPONSIVE PREVIEW GRID
+  // ==========================================================
+
+  const previewGridStyle = createPreviewGridStyle(tokens.meta.viewport);
+
+  // ==========================================================
+  // UI
+  // ==========================================================
+
   return (
     <section style={cardStyle}>
       {/* ==================================================
@@ -135,9 +220,13 @@ export default function LoanPreviewCard({
       <div
         style={{
           display: "flex",
+
           alignItems: "center",
+
           justifyContent: "space-between",
+
           gap: "12px",
+
           marginBottom: "14px",
         }}
       >
@@ -145,8 +234,11 @@ export default function LoanPreviewCard({
           <div
             style={{
               fontSize: "14px",
+
               fontWeight: 750,
+
               color: "#FFFFFF",
+
               lineHeight: 1.2,
             }}
           >
@@ -156,9 +248,13 @@ export default function LoanPreviewCard({
           <div
             style={{
               marginTop: "3px",
+
               fontSize: "12px",
+
               fontWeight: 500,
+
               color: "#94A3B8",
+
               lineHeight: 1.2,
             }}
           >
@@ -191,13 +287,7 @@ export default function LoanPreviewCard({
         <div style={groupStyle}>
           <div style={groupTitleStyle}>Loan Details</div>
 
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
-              gap: "6px 8px",
-            }}
-          >
+          <div style={previewGridStyle}>
             {/* LOAN AMOUNT */}
 
             <div style={highlightRowStyle}>
@@ -253,13 +343,7 @@ export default function LoanPreviewCard({
         <div style={groupStyle}>
           <div style={groupTitleStyle}>Schedule</div>
 
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
-              gap: "6px 8px",
-            }}
-          >
+          <div style={previewGridStyle}>
             {/* LOAN DATE */}
 
             <div style={rowStyle}>
@@ -285,13 +369,7 @@ export default function LoanPreviewCard({
         <div style={groupStyle}>
           <div style={groupTitleStyle}>Disbursement</div>
 
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
-              gap: "6px 8px",
-            }}
-          >
+          <div style={previewGridStyle}>
             {/* PROCESSING FEE */}
 
             <div style={rowStyle}>
