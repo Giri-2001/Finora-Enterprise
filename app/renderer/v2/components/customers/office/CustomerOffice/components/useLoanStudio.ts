@@ -1,5 +1,5 @@
 // ============================================================
-// FINORA ENTERPRISE OS
+// FINORA ENTERPRISE OS™
 // LOAN STUDIO STATE / BUSINESS ENGINE
 //
 // RESPONSIBILITY:
@@ -8,6 +8,8 @@
 // - Own financial calculations.
 // - Own repayment schedule generation.
 // - Own approval / persistence workflow.
+// - Own Step 3 document evidence state.
+// - Attach Step 3 documents to the final persisted Loan.
 // - Own reset workflow.
 //
 // IMPORTANT:
@@ -15,33 +17,22 @@
 // - No inline styles.
 // - No responsive layout logic.
 // - Existing service/store/schedule connections are preserved.
+// - Documents remain owned by Loan Studio until approval.
+// - On loan creation, document metadata is linked to the
+//   created loan + active customer.
 // ============================================================
 
-import {
-  useEffect,
-  useMemo,
-  useState,
-} from "react";
+import { useEffect, useMemo, useState } from "react";
 
-import type {
-  LoanCustomerOption,
-} from "../../../../loans/details/LoanCustomerCard";
+import type { LoanCustomerOption } from "../../../../loans/details/LoanCustomerCard";
 
-import type {
-  DocumentsStudioItem,
-} from "../../../../loans/documents/DocumentsStudio";
+import type { DocumentsStudioItem } from "../../../../loans/documents/DocumentsStudio";
 
-import type {
-  EMICalculationMode,
-} from "../../../../loans/repayment/EMIConfiguration";
+import type { EMICalculationMode } from "../../../../loans/repayment/EMIConfiguration";
 
-import {
-  generateSchedule,
-} from "../../../../loans/schedule/schedule.helpers";
+import { generateSchedule } from "../../../../loans/schedule/schedule.helpers";
 
-import {
-  buildLoan,
-} from "../../../../../services/loan/loanBuilder";
+import { buildLoan } from "../../../../../services/loan/loanBuilder";
 
 import {
   createLoan,
@@ -55,17 +46,11 @@ import {
   clearCustomerCache,
 } from "../../../../../store/customers/customer.store";
 
-import {
-  storageManager,
-} from "../../../../../storage/storageManager";
+import { storageManager } from "../../../../../storage/storageManager";
 
-import type {
-  LoanReviewData,
-} from "../../../../loans/review/types";
+import type { LoanReviewData } from "../../../../loans/review/types";
 
-import type {
-  LoanStudioProps,
-} from "./LoanStudio.types";
+import type { LoanStudioProps } from "./LoanStudio.types";
 
 import {
   getAuthenticatedStorageMode,
@@ -74,38 +59,154 @@ import {
   getLoanTypeLabel,
 } from "./LoanStudio.helpers";
 
+/* ============================================================
+   DOCUMENT HELPERS
+============================================================ */
+
+/**
+ * Converts the temporary browser object URL into a persistent
+ * data URL when possible.
+ *
+ * DocumentsStudio creates `URL.createObjectURL(file)` for the
+ * live preview. That URL is renderer/session specific and must
+ * not be treated as a permanent loan-office reference.
+ *
+ * If conversion is not possible, the original document metadata
+ * is still retained and the document remains linked to the loan.
+ */
+async function resolveDocumentDataUrl(
+  item: DocumentsStudioItem,
+): Promise<string | undefined> {
+  if (item.dataUrl) {
+    return item.dataUrl;
+  }
+
+  if (!item.url) {
+    return undefined;
+  }
+
+  try {
+    const response = await fetch(item.url);
+
+    if (!response.ok) {
+      return undefined;
+    }
+
+    const blob = await response.blob();
+
+    return await new Promise<string | undefined>((resolve) => {
+      const reader = new FileReader();
+
+      reader.onload = () => {
+        const result = reader.result;
+
+        resolve(typeof result === "string" ? result : undefined);
+      };
+
+      reader.onerror = () => {
+        resolve(undefined);
+      };
+
+      reader.readAsDataURL(blob);
+    });
+  } catch (error) {
+    console.error("FINORA DOCUMENT DATA URL RESOLUTION ERROR:", error);
+
+    return undefined;
+  }
+}
+
+/**
+ * Prepare Step 3 evidence for the persistent Loan record.
+ *
+ * The exact physical storage implementation remains behind
+ * FINORA's storage/service layer. This hook only establishes
+ * the stable logical relationship:
+ *
+ *   customerId
+ *   loanId
+ *   documentId
+ *   storageKey
+ *
+ * This matches the Documents Studio persistence contract.
+ *
+ * IMPORTANT:
+ *
+ * Once a document is approved into a Loan workspace, its
+ * persistent storage key must belong to that Loan.
+ *
+ * Therefore the Loan storage key is intentionally regenerated
+ * from the newly created loanId instead of preserving any
+ * previous customer-level or temporary storage key.
+ */
+async function prepareLoanDocuments(
+  documents: DocumentsStudioItem[],
+  customerId: string,
+  loanId: string,
+): Promise<DocumentsStudioItem[]> {
+  if (documents.length === 0) {
+    return [];
+  }
+
+  const storageMode = getAuthenticatedStorageMode();
+
+  const persistenceMode =
+    storageMode === "USB" ? "usb" : storageMode === "CLOUD" ? "cloud" : "local";
+
+  return Promise.all(
+    documents.map(async (document) => {
+      const dataUrl = await resolveDocumentDataUrl(document);
+
+      return {
+        ...document,
+
+        customerId,
+
+        loanId,
+
+        storageKey: `FINORA/loans/${loanId}/documents/${document.id}`,
+
+        dataUrl,
+
+        persistenceMode,
+
+        persisted: true,
+      };
+    }),
+  );
+}
+
+/* ============================================================
+   HOOK
+============================================================ */
+
 export function useLoanStudio({
   customerName,
   customerId,
   phoneNumber,
 }: LoanStudioProps) {
+  /* ==========================================================
+     CUSTOMER HYDRATION
+  ========================================================== */
 
-  const [
-    customers,
-    setCustomers,
-  ] = useState<
-    ReturnType<typeof getCustomers>
-  >([]);
+  const [customers, setCustomers] = useState<ReturnType<typeof getCustomers>>(
+    [],
+  );
 
   useEffect(() => {
     let cancelled = false;
 
     async function loadLoanCustomers(): Promise<void> {
       try {
-        const storageMode =
-          getAuthenticatedStorageMode();
+        const storageMode = getAuthenticatedStorageMode();
 
         const storageActivated =
-          await storageManager.selectStorageMode(
-            storageMode,
-          );
+          await storageManager.selectStorageMode(storageMode);
 
-        if (
-          !storageActivated.success
-        ) {
+        if (!storageActivated.success) {
           throw new Error(
             storageActivated.error ??
-            `Unable to restore FINORA ${storageMode} storage.`,
+              `Unable to restore FINORA ${storageMode} storage.`,
           );
         }
 
@@ -115,21 +216,15 @@ export function useLoanStudio({
 
         clearCustomerCache();
 
-        const hydratedCustomers =
-          await hydrateCustomersFromStorage();
+        const hydratedCustomers = await hydrateCustomersFromStorage();
 
         if (cancelled) {
           return;
         }
 
-        setCustomers(
-          hydratedCustomers,
-        );
+        setCustomers(hydratedCustomers);
       } catch (error) {
-        console.error(
-          "FINORA LOAN CUSTOMER HYDRATION ERROR:",
-          error,
-        );
+        console.error("FINORA LOAN CUSTOMER HYDRATION ERROR:", error);
 
         if (!cancelled) {
           setCustomers([]);
@@ -144,10 +239,11 @@ export function useLoanStudio({
     };
   }, []);
 
-  const [
-    selectedCustomer,
-    setSelectedCustomer,
-  ] = useState<
+  /* ==========================================================
+     CUSTOMER SELECTION
+  ========================================================== */
+
+  const [selectedCustomer, setSelectedCustomer] = useState<
     LoanCustomerOption | undefined
   >(
     customerId && customerName
@@ -160,463 +256,258 @@ export function useLoanStudio({
   );
 
   useEffect(() => {
-    if (
-      customerId &&
-      customerName
-    ) {
-      const matchingCustomer =
-        customers.find(
-          (customer) =>
-            customer.identity.customerId ===
-            customerId,
-        );
+    if (customerId && customerName) {
+      const matchingCustomer = customers.find(
+        (customer) => customer.identity.customerId === customerId,
+      );
 
       setSelectedCustomer({
         customerId,
         customerName,
         phoneNumber,
-        photo:
-          matchingCustomer?.photo,
+        photo: matchingCustomer?.photo,
       });
     }
-  }, [
-    customerId,
-    customerName,
-    phoneNumber,
-    customers,
-  ]);
+  }, [customerId, customerName, phoneNumber, customers]);
 
-  // Step 3 document evidence belongs to the active customer / loan workspace.
-  // Changing the customer must never carry another customer's evidence forward.
+  /* ==========================================================
+     STEP 3 — DOCUMENT EVIDENCE
+     ----------------------------------------------------------
+     Evidence belongs to the currently selected customer.
+
+     It is intentionally cleared when the customer changes so
+     evidence from Customer A can never leak into Customer B's
+     loan workspace.
+  ========================================================== */
+
   const [documents, setDocuments] = useState<DocumentsStudioItem[]>([]);
 
   useEffect(() => {
     setDocuments([]);
   }, [selectedCustomer?.customerId]);
 
-  const loanCustomerOptions =
-    useMemo<LoanCustomerOption[]>(
-      () =>
-        customers
-          .filter(
-            (customer) =>
-              customer.identity.isDeleted !== true &&
-              customer.internal.isArchived !== true,
-          )
-          .map(
-            (customer) => ({
-              customerId:
-                customer.identity.customerId,
-              customerName:
-                customer.basic.fullName,
-              phoneNumber:
-                customer.basic.mobileNumber,
-              photo:
-                customer.photo,
-            }),
-          ),
-      [customers],
-    );
+  /* ==========================================================
+     CUSTOMER OPTIONS
+  ========================================================== */
 
-  const activeCustomerId =
-    selectedCustomer?.customerId ??
-    customerId ??
-    "";
-
-  const activeCustomerName =
-    selectedCustomer?.customerName ??
-    customerName ??
-    "";
-
-  const activeCustomerPhone =
-    selectedCustomer?.phoneNumber ??
-    phoneNumber ??
-    "";
-
-  const [
-    step,
-    setStep,
-  ] = useState(1);
-
-  const [
-    loanAmount,
-    setLoanAmount,
-  ] = useState("");
-
-  const [
-    interest,
-    setInterest,
-  ] = useState("");
-
-  const [
-    processingFee,
-    setProcessingFee,
-  ] = useState("");
-
-  const [
-    advanceDeduction,
-    setAdvanceDeduction,
-  ] = useState("");
-
-  const [
-    penaltyType,
-    setPenaltyType,
-  ] = useState(
-    "Fixed Amount",
+  const loanCustomerOptions = useMemo<LoanCustomerOption[]>(
+    () =>
+      customers
+        .filter(
+          (customer) =>
+            customer.identity.isDeleted !== true &&
+            customer.internal.isArchived !== true,
+        )
+        .map((customer) => ({
+          customerId: customer.identity.customerId,
+          customerName: customer.basic.fullName,
+          phoneNumber: customer.basic.mobileNumber,
+          photo: customer.photo,
+        })),
+    [customers],
   );
 
-  const [
-    penaltyValue,
-    setPenaltyValue,
-  ] = useState("");
+  /* ==========================================================
+     ACTIVE CUSTOMER
+  ========================================================== */
 
-  const [
-    lateFee,
-    setLateFee,
-  ] = useState("");
+  const activeCustomerId = selectedCustomer?.customerId ?? customerId ?? "";
 
-  const [
-    emiCalculation,
-    setEMICalculation,
-  ] = useState<
-    EMICalculationMode
-  >("fixed");
+  const activeCustomerName =
+    selectedCustomer?.customerName ?? customerName ?? "";
 
-  const [
-    firstInstallmentDate,
-    setFirstInstallmentDate,
-  ] = useState("");
+  const activeCustomerPhone =
+    selectedCustomer?.phoneNumber ?? phoneNumber ?? "";
 
-  const [
-    repaymentType,
-    setRepaymentType,
-  ] = useState("");
+  /* ==========================================================
+     WIZARD
+  ========================================================== */
 
-  const [
-    duration,
-    setDuration,
-  ] = useState("");
+  const [step, setStep] = useState(1);
 
-  const [
-    durationType,
-    setDurationType,
-  ] = useState("");
+  /* ==========================================================
+     LOAN DETAILS
+  ========================================================== */
 
-  // ==========================================================
-  // STEP 1 → STEP 2 REPAYMENT SYNC
-  //
-  // Step 1 is the source of truth for repayment frequency.
-  // Duration Unit drives the EMI schedule automatically:
-  //
-  // days   → DAILY
-  // weeks  → WEEKLY
-  // months → MONTHLY
-  // years  → MONTHLY
-  //
-  // Years use MONTHLY repayment because the existing schedule
-  // engine supports daily, weekly and monthly frequencies.
-  // A year duration is converted to 12 monthly installments per year.
-  // ==========================================================
+  const [loanAmount, setLoanAmount] = useState("");
+
+  const [interest, setInterest] = useState("");
+
+  const [processingFee, setProcessingFee] = useState("");
+
+  const [advanceDeduction, setAdvanceDeduction] = useState("");
+
+  const [penaltyType, setPenaltyType] = useState("Fixed Amount");
+
+  const [penaltyValue, setPenaltyValue] = useState("");
+
+  const [lateFee, setLateFee] = useState("");
+
+  /* ==========================================================
+     REPAYMENT
+  ========================================================== */
+
+  const [emiCalculation, setEMICalculation] =
+    useState<EMICalculationMode>("fixed");
+
+  const [firstInstallmentDate, setFirstInstallmentDate] = useState("");
+
+  const [repaymentType, setRepaymentType] = useState("");
+
+  const [duration, setDuration] = useState("");
+
+  const [durationType, setDurationType] = useState("");
+
+  /* ==========================================================
+     STEP 1 → STEP 2 REPAYMENT SYNC
+  ========================================================== */
 
   const syncedRepaymentType =
     durationType === "days"
       ? "DAILY"
       : durationType === "weeks"
-      ? "WEEKLY"
-      : durationType === "months"
-      ? "MONTHLY"
-      : durationType === "years"
-      ? "MONTHLY"
-      : "";
+        ? "WEEKLY"
+        : durationType === "months"
+          ? "MONTHLY"
+          : durationType === "years"
+            ? "MONTHLY"
+            : "";
 
   useEffect(() => {
-    setRepaymentType(
-      syncedRepaymentType,
-    );
-  }, [
-    syncedRepaymentType,
-  ]);
+    setRepaymentType(syncedRepaymentType);
+  }, [syncedRepaymentType]);
 
-  const [
-    guarantorName,
-    setGuarantorName,
-  ] = useState("");
+  /* ==========================================================
+     GUARANTOR
+  ========================================================== */
 
-  const [
-    guarantorPhone,
-    setGuarantorPhone,
-  ] = useState("");
+  const [guarantorName, setGuarantorName] = useState("");
 
-  const [
-    guarantorOccupation,
-    setGuarantorOccupation,
-  ] = useState("");
+  const [guarantorPhone, setGuarantorPhone] = useState("");
 
-  const [
-    guarantorAddress,
-    setGuarantorAddress,
-  ] = useState("");
+  const [guarantorOccupation, setGuarantorOccupation] = useState("");
 
-  const [
-  guarantorRelationship,
-  setGuarantorRelationship,
-] = useState("");
+  const [guarantorAddress, setGuarantorAddress] = useState("");
 
-  const [
-    purpose,
-    setPurpose,
-  ] = useState("");
+  const [guarantorRelationship, setGuarantorRelationship] = useState("");
 
-  const [
-    remarks,
-    setRemarks,
-  ] = useState("");
+  /* ==========================================================
+     NOTES
+  ========================================================== */
 
-  const [
-    loanApproved,
-    setLoanApproved,
-  ] = useState(false);
+  const [purpose, setPurpose] = useState("");
 
-  const loanStatus =
-    loanApproved
-      ? "Approved"
-      : "Pending Approval";
+  const [remarks, setRemarks] = useState("");
 
-  const [
-    disbursementDate,
-    setDisbursementDate,
-  ] = useState("");
+  /* ==========================================================
+     APPROVAL
+  ========================================================== */
 
-  // ==========================================================
-// STEP 6 — DEFAULT DISBURSEMENT DATE
-//
-// When Step 6 opens, today's date is selected automatically.
-// User can still change it manually.
-// ==========================================================
+  const [loanApproved, setLoanApproved] = useState(false);
 
-useEffect(() => {
+  const loanStatus = loanApproved ? "Approved" : "Pending Approval";
 
-  if (
-    step === 6 &&
-    !disbursementDate
-  ) {
+  /* ==========================================================
+     DISBURSEMENT
+  ========================================================== */
 
-    const today =
-      new Date();
+  const [disbursementDate, setDisbursementDate] = useState("");
 
-    const year =
-      today.getFullYear();
+  useEffect(() => {
+    if (step === 6 && !disbursementDate) {
+      const today = new Date();
 
-    const month =
-      String(
-        today.getMonth() + 1,
-      ).padStart(
-        2,
-        "0",
-      );
+      const year = today.getFullYear();
 
-    const day =
-      String(
-        today.getDate(),
-      ).padStart(
-        2,
-        "0",
-      );
+      const month = String(today.getMonth() + 1).padStart(2, "0");
 
-    setDisbursementDate(
-      `${year}-${month}-${day}`,
-    );
+      const day = String(today.getDate()).padStart(2, "0");
 
-  }
+      setDisbursementDate(`${year}-${month}-${day}`);
+    }
+  }, [step, disbursementDate]);
 
-}, [
-  step,
-  disbursementDate,
-]);
+  const [paymentMode, setPaymentMode] = useState("cash");
 
+  const [transactionStatus, setTransactionStatus] = useState("pending");
 
-  const [
-    paymentMode,
-    setPaymentMode,
-  ] = useState("cash");
+  const [disbursementSavedAt, setDisbursementSavedAt] = useState("Not Saved");
 
-  const [
-    transactionStatus,
-    setTransactionStatus,
-  ] = useState("pending");
-
-  const [
-    disbursementSavedAt,
-    setDisbursementSavedAt,
-  ] = useState("Not Saved");
-
-  const [
-    disbursementDraftStatus,
-    setDisbursementDraftStatus,
-  ] = useState<
+  const [disbursementDraftStatus, setDisbursementDraftStatus] = useState<
     "Draft" | "Completed"
   >("Draft");
 
-  const [
-    disbursementReceiptNumber,
-    setDisbursementReceiptNumber,
-  ] = useState(
-    () =>
-      `DIS-${Date.now()}`,
+  const [disbursementReceiptNumber, setDisbursementReceiptNumber] = useState(
+    () => `DIS-${Date.now()}`,
   );
 
-  // ==========================================================
-  // LIVE LOAN STATISTICS
-  //
-  // The previous Loan Studio rendered these values as hard-coded
-  // zeroes. The statistics must come from persisted Loan records.
-  //
-  // Total Disbursed intentionally uses netDisbursement when it is
-  // available because FINORA disburses the amount after processing
-  // fee and advance deduction.
-  // ==========================================================
+  /* ==========================================================
+     LOAN STATISTICS
+  ========================================================== */
 
-  const [
-    loanStatistics,
-    setLoanStatistics,
-  ] = useState({
+  const [loanStatistics, setLoanStatistics] = useState({
     totalLoans: 0,
     activeLoans: 0,
     totalDisbursed: 0,
   });
 
   async function refreshLoanStatistics(): Promise<void> {
-
     try {
+      const loans = await fetchLoans();
 
-      const loans =
-        await fetchLoans();
+      const totalLoans = loans.length;
 
-      const totalLoans =
-        loans.length;
+      const activeLoans = loans.filter((loan) => {
+        const record = loan as unknown as Record<string, unknown>;
 
-      const activeLoans =
-        loans.filter(
-          (loan) => {
+        const status = String(record.status ?? "")
+          .trim()
+          .toUpperCase();
 
-            const record =
-              loan as unknown as Record<
-                string,
-                unknown
-              >;
+        const outstanding = Number(record.outstanding ?? 0);
 
-            const status =
-              String(
-                record.status ??
-                "",
-              )
-                .trim()
-                .toUpperCase();
+        return (status === "ACTIVE" || status === "RUNNING") && outstanding > 0;
+      }).length;
 
-            const outstanding =
-              Number(
-                record.outstanding ??
-                0,
-              );
+      const totalDisbursed = loans.reduce((total, loan) => {
+        const record = loan as unknown as Record<string, unknown>;
 
-            return (
-              (
-                status === "ACTIVE" ||
-                status === "RUNNING"
-              ) &&
-              outstanding > 0
-            );
+        const netValue = Number(record.netDisbursement ?? NaN);
 
-          },
-        ).length;
+        const amountValue = Number(record.amount ?? 0);
 
-      const totalDisbursed =
-        loans.reduce(
-          (
-            total,
-            loan,
-          ) => {
+        const disbursedValue = Number.isFinite(netValue)
+          ? netValue
+          : amountValue;
 
-            const record =
-              loan as unknown as Record<
-                string,
-                unknown
-              >;
-
-            const netValue =
-              Number(
-                record.netDisbursement ??
-                NaN,
-              );
-
-            const amountValue =
-              Number(
-                record.amount ??
-                0,
-              );
-
-            const disbursedValue =
-              Number.isFinite(
-                netValue,
-              )
-                ? netValue
-                : amountValue;
-
-            return (
-              total +
-              (
-                Number.isFinite(
-                  disbursedValue,
-                )
-                  ? disbursedValue
-                  : 0
-              )
-            );
-
-          },
-          0,
-        );
+        return total + (Number.isFinite(disbursedValue) ? disbursedValue : 0);
+      }, 0);
 
       setLoanStatistics({
         totalLoans,
         activeLoans,
         totalDisbursed,
       });
-
     } catch (error) {
-
-      console.error(
-        "FINORA LOAN STATISTICS REFRESH ERROR:",
-        error,
-      );
-
+      console.error("FINORA LOAN STATISTICS REFRESH ERROR:", error);
     }
-
   }
 
-  // ==========================================================
-  // INITIAL / STORAGE-READY STATISTICS LOAD
-  // ==========================================================
+  /* ==========================================================
+     INITIAL STATISTICS LOAD
+  ========================================================== */
 
   useEffect(() => {
-
     let cancelled = false;
 
     async function loadInitialLoanStatistics(): Promise<void> {
-
       try {
-
-        const storageMode =
-          getAuthenticatedStorageMode();
+        const storageMode = getAuthenticatedStorageMode();
 
         const storageActivated =
-          await storageManager.selectStorageMode(
-            storageMode,
-          );
+          await storageManager.selectStorageMode(storageMode);
 
-        if (
-          !storageActivated.success
-        ) {
+        if (!storageActivated.success) {
           return;
         }
 
@@ -625,16 +516,9 @@ useEffect(() => {
         }
 
         await refreshLoanStatistics();
-
       } catch (error) {
-
-        console.error(
-          "FINORA INITIAL LOAN STATISTICS ERROR:",
-          error,
-        );
-
+        console.error("FINORA INITIAL LOAN STATISTICS ERROR:", error);
       }
-
     }
 
     void loadInitialLoanStatistics();
@@ -642,185 +526,101 @@ useEffect(() => {
     return () => {
       cancelled = true;
     };
-
   }, []);
 
-  const principal =
-    parseNumericValue(
-      loanAmount,
-    );
-
-  const interestRate =
-    parseNumericValue(
-      interest,
-    );
-
-  const durationValue =
-    Math.max(
-      0,
-      parseNumericValue(
-        duration,
-      ),
-    );
-
-  const monthlyInterestAmount =
-    (
-      principal *
-      interestRate
-    ) / 100;
-
-  const interestMonths =
-    durationType ===
-    "years"
-      ? durationValue * 12
-      : durationType ===
-        "months"
-      ? durationValue
-      : durationType ===
-        "weeks"
-      ? durationValue / 4.33
-      : durationValue / 30;
-
   /* ==========================================================
-     FLAT INTEREST BASELINE
-
-     Fixed EMI and Interest Only continue to use the existing
-     FINORA flat-interest calculation. Reducing EMI is calculated
-     separately from the generated reducing-balance schedule.
+     FINANCIAL CALCULATIONS
   ========================================================== */
 
-  const flatTotalInterest =
-    Math.round(
-      monthlyInterestAmount *
-      interestMonths,
-    );
+  const principal = parseNumericValue(loanAmount);
 
-  const flatTotalPayable =
-    Math.round(
-      principal +
-      flatTotalInterest,
-    );
+  const interestRate = parseNumericValue(interest);
+
+  const durationValue = Math.max(0, parseNumericValue(duration));
+
+  const monthlyInterestAmount = (principal * interestRate) / 100;
+
+  const interestMonths =
+    durationType === "years"
+      ? durationValue * 12
+      : durationType === "months"
+        ? durationValue
+        : durationType === "weeks"
+          ? durationValue / 4.33
+          : durationValue / 30;
+
+  const flatTotalInterest = Math.round(monthlyInterestAmount * interestMonths);
+
+  const flatTotalPayable = Math.round(principal + flatTotalInterest);
 
   const durationDays =
-    durationType ===
-    "years"
+    durationType === "years"
       ? durationValue * 365
-      : durationType ===
-        "months"
-      ? durationValue * 30
-      : durationType ===
-        "weeks"
-      ? durationValue * 7
-      : durationValue;
+      : durationType === "months"
+        ? durationValue * 30
+        : durationType === "weeks"
+          ? durationValue * 7
+          : durationValue;
 
-  // ==========================================================
-  // REPAYMENT FREQUENCY
-  //
-  // Step 1 owns repayment frequency through Duration Unit.
-  // Until a valid Duration Unit exists, there is NO repayment
-  // schedule and NO installment count.
-  // This prevents an empty frequency from silently becoming
-  // Daily and producing an incorrect schedule.
-  // ==========================================================
+  /* ==========================================================
+     REPAYMENT FREQUENCY
+  ========================================================== */
 
-  const normalizedRepaymentType =
-    syncedRepaymentType;
+  const normalizedRepaymentType = syncedRepaymentType;
 
-  // ==========================================================
-  // INSTALLMENT COUNT — DURATION UNIT SOURCE OF TRUTH
-  //
-  // Years + Monthly must be exact: 1 year = 12 installments.
-  // Do not convert years through 365 / 30 because that produces
-  // 24.33 for 2 years and incorrectly rounds it up to 25.
-  // ==========================================================
+  /* ==========================================================
+     INSTALLMENT COUNT
+  ========================================================== */
 
   const totalInstallments =
-    durationValue <= 0 ||
-    !normalizedRepaymentType
+    durationValue <= 0 || !normalizedRepaymentType
       ? 0
-      : normalizedRepaymentType ===
-        "MONTHLY"
-      ? durationType ===
-        "years"
-        ? durationValue * 12
-        : Math.max(
-            1,
-            Math.ceil(
-              durationDays / 30,
-            ),
-          )
-      : normalizedRepaymentType ===
-        "WEEKLY"
-      ? Math.max(
-          1,
-          Math.ceil(
-            durationDays / 7,
-          ),
-        )
-      : normalizedRepaymentType ===
-        "DAILY"
-      ? Math.max(
-          1,
-          Math.ceil(
-            durationDays,
-          ),
-        )
-      : 0;
+      : normalizedRepaymentType === "MONTHLY"
+        ? durationType === "years"
+          ? durationValue * 12
+          : Math.max(1, Math.ceil(durationDays / 30))
+        : normalizedRepaymentType === "WEEKLY"
+          ? Math.max(1, Math.ceil(durationDays / 7))
+          : normalizedRepaymentType === "DAILY"
+            ? Math.max(1, Math.ceil(durationDays))
+            : 0;
 
-  const loanDate =
-    new Date();
+  /* ==========================================================
+     LOAN DATES
+  ========================================================== */
 
-  const scheduleStartDate =
-    firstInstallmentDate
-      ? new Date(
-          `${firstInstallmentDate}T00:00:00`,
-        )
-      : new Date(
-          loanDate,
-        );
+  const loanDate = new Date();
+
+  const scheduleStartDate = firstInstallmentDate
+    ? new Date(`${firstInstallmentDate}T00:00:00`)
+    : new Date(loanDate);
 
   const maturityDate =
-    durationValue > 0 &&
-    durationType
-      ? new Date(
-          loanDate,
-        )
-      : null;
+    durationValue > 0 && durationType ? new Date(loanDate) : null;
 
   if (maturityDate) {
-    switch (
-      durationType
-    ) {
+    switch (durationType) {
       case "days":
-        maturityDate.setDate(
-          maturityDate.getDate() +
-          durationValue,
-        );
+        maturityDate.setDate(maturityDate.getDate() + durationValue);
         break;
 
       case "weeks":
-        maturityDate.setDate(
-          maturityDate.getDate() +
-          durationValue * 7,
-        );
+        maturityDate.setDate(maturityDate.getDate() + durationValue * 7);
         break;
 
       case "months":
-        maturityDate.setMonth(
-          maturityDate.getMonth() +
-          durationValue,
-        );
+        maturityDate.setMonth(maturityDate.getMonth() + durationValue);
         break;
 
       case "years":
-        maturityDate.setFullYear(
-          maturityDate.getFullYear() +
-          durationValue,
-        );
+        maturityDate.setFullYear(maturityDate.getFullYear() + durationValue);
         break;
     }
   }
 
+  /* ==========================================================
+     REPAYMENT SCHEDULE
+  ========================================================== */
 
   const schedule =
     totalInstallments > 0 &&
@@ -837,124 +637,80 @@ useEffect(() => {
           flatTotalPayable,
           flatTotalInterest,
           emiCalculation,
-          parseNumericValue(
-            advanceDeduction,
-          ),
-
+          parseNumericValue(advanceDeduction),
         )
       : [];
 
   /* ==========================================================
-     FINAL INTEREST / PAYABLE VALUES
-
-     Reducing EMI derives total interest from the generated
-     declining-balance schedule itself. This keeps the summary,
-     preview, schedule and review data on the same source of truth.
+     FINAL INTEREST / PAYABLE
   ========================================================== */
 
   const totalInterest =
-    emiCalculation ===
-    "reducing"
+    emiCalculation === "reducing"
       ? schedule.reduce(
-          (sum, installment) =>
-            sum +
-            installment.interestAmount,
+          (sum, installment) => sum + installment.interestAmount,
           0,
         )
       : flatTotalInterest;
 
-  const totalPayable =
-    Math.round(
-      principal +
-      totalInterest,
-    );
+  const totalPayable = Math.round(principal + totalInterest);
 
-  // ==========================================================
-  // INSTALLMENT AMOUNT
-  //
-  // The schedule engine remains the single source of truth.
-  // This keeps rounding and the final adjusted installment
-  // consistent with the generated schedule.
-  // ==========================================================
+  /* ==========================================================
+     INSTALLMENT AMOUNT
+  ========================================================== */
 
   const installmentAmount =
-    schedule.length > 0
-      ? schedule[0].installmentAmount
-      : 0;
+    schedule.length > 0 ? schedule[0].installmentAmount : 0;
+
+  /* ==========================================================
+     NET DISBURSEMENT
+  ========================================================== */
 
   const netDisbursement =
     principal -
-    parseNumericValue(
-      processingFee,
-    ) -
-    parseNumericValue(
-      advanceDeduction,
-    );
+    parseNumericValue(processingFee) -
+    parseNumericValue(advanceDeduction);
 
-  const normalizedLoanType =
-    normalizeLoanType(
-      repaymentType,
-    );
+  /* ==========================================================
+     LOAN TYPE
+  ========================================================== */
 
-  const loanTypeLabel =
-    getLoanTypeLabel(
-      repaymentType,
-    );
+  const normalizedLoanType = normalizeLoanType(repaymentType);
 
-  const reviewData:
-    LoanReviewData = {
-    customerId:
-      activeCustomerId,
+  const loanTypeLabel = getLoanTypeLabel(repaymentType);
 
-    customerName:
-      activeCustomerName ||
-      "--",
+  /* ==========================================================
+     REVIEW DATA
+  ========================================================== */
 
-    phoneNumber:
-      activeCustomerPhone,
+  const reviewData: LoanReviewData = {
+    customerId: activeCustomerId,
 
-    loanAmount:
-      parseNumericValue(
-        loanAmount,
-      ),
+    customerName: activeCustomerName || "--",
 
-    loanType:
-      normalizedLoanType,
+    phoneNumber: activeCustomerPhone,
 
-    interestType:
-      emiCalculation,
+    loanAmount: parseNumericValue(loanAmount),
 
-    interestRate:
-      parseNumericValue(
-        interest,
-      ),
+    loanType: normalizedLoanType,
+
+    interestType: emiCalculation,
+
+    interestRate: parseNumericValue(interest),
 
     repaymentType,
 
-    duration:
-      duration &&
-      durationType
-        ? `${duration} ${durationType}`
-        : "",
+    duration: duration && durationType ? `${duration} ${durationType}` : "",
 
-    processingFee:
-      parseNumericValue(
-        processingFee,
-      ),
+    processingFee: parseNumericValue(processingFee),
 
-    advanceDeduction:
-      parseNumericValue(
-        advanceDeduction,
-      ),
+    advanceDeduction: parseNumericValue(advanceDeduction),
 
     netDisbursement,
 
     penaltyType,
 
-    penaltyValue:
-      parseNumericValue(
-        penaltyValue,
-      ),
+    penaltyValue: parseNumericValue(penaltyValue),
 
     guarantorName,
 
@@ -971,200 +727,235 @@ useEffect(() => {
     loanStatus,
   };
 
+  /* ==========================================================
+     DRAFT / REJECT
+  ========================================================== */
+
   function handleSaveDraft(): void {
-    console.log(
-      "Save Draft",
-    );
+    console.log("FINORA LOAN SAVE DRAFT", {
+      customerId: activeCustomerId,
+
+      documents: documents.length,
+    });
   }
 
   function handleRejectLoan(): void {
-    console.log(
-      "Reject Loan",
-    );
+    console.log("FINORA LOAN REJECT", {
+      customerId: activeCustomerId,
+
+      documents: documents.length,
+    });
   }
+
+  /* ==========================================================
+     APPROVE / CREATE LOAN
+  ========================================================== */
 
   async function handleApproveLoan(): Promise<void> {
     if (loanApproved) {
-      alert(
-        "Loan already created",
-      );
+      alert("Loan already created");
       return;
     }
 
-    const normalizedRepaymentType =
-      syncedRepaymentType;
+    const normalizedRepaymentTypeValue = syncedRepaymentType;
 
-    const normalizedLoanTypeValue =
-      normalizeLoanType(
-        repaymentType,
-      );
+    const normalizedLoanTypeValue = normalizeLoanType(repaymentType);
 
-    if (
-      !normalizedLoanTypeValue
-    ) {
-      alert(
-        "Please select a valid Loan Type",
-      );
+    if (!normalizedLoanTypeValue) {
+      alert("Please select a valid Loan Type");
+
       return;
     }
 
-    if (
-      !normalizedRepaymentType
-    ) {
-      alert(
-        "Please select Duration Unit in Step 1",
-      );
+    if (!normalizedRepaymentTypeValue) {
+      alert("Please select Duration Unit in Step 1");
+
       return;
     }
 
-    const loanTitle =
-      getLoanTypeLabel(
-        normalizedLoanTypeValue,
-      );
+    if (!activeCustomerId) {
+      alert("Please select a customer before approving the loan.");
 
-    const alreadyExists =
-      await hasExistingLoan(
-        activeCustomerId,
-        loanTitle,
-        principal,
-      );
+      return;
+    }
+
+    const loanTitle = getLoanTypeLabel(normalizedLoanTypeValue);
+
+    /* ========================================================
+       DUPLICATE LOAN CHECK
+    ======================================================== */
+
+    const alreadyExists = await hasExistingLoan(
+      activeCustomerId,
+      loanTitle,
+      principal,
+    );
 
     if (alreadyExists) {
-
-      setLoanApproved(
-        true,
-      );
+      setLoanApproved(true);
 
       await refreshLoanStatistics();
 
-      alert(
-        "Loan already created",
-      );
+      alert("Loan already created");
 
       return;
     }
 
-    const loan =
-      buildLoan({
-        id:
-          crypto.randomUUID(),
+    /* ========================================================
+       CREATE STABLE LOAN ID FIRST
+       --------------------------------------------------------
+       Documents need this ID to establish their permanent
+       logical relationship with the loan.
+    ======================================================== */
 
-        title:
-          loanTitle,
+    const loanId = crypto.randomUUID();
 
-        amount:
-          principal,
+    /* ========================================================
+       PREPARE DOCUMENT EVIDENCE
+       --------------------------------------------------------
+       Step 3 documents are now explicitly linked to:
+       - active customer
+       - newly created loan
+       - persistent logical storage key
+    ======================================================== */
 
-        outstanding:
-          totalPayable,
+    let persistedDocuments: DocumentsStudioItem[] = [];
 
-        interest:
-          interestRate,
-
-        processingFee:
-          parseNumericValue(
-            processingFee,
-          ),
-
-        lateFee:
-          parseNumericValue(
-            lateFee,
-          ),
-
-        loanDate:
-          loanDate.toISOString(),
-
-        dueDate:
-          maturityDate
-            ? maturityDate.toISOString()
-            : "",
-
-        guarantor:
-          guarantorName,
-
-        customerId:
-          activeCustomerId,
-
-        customerName:
-          activeCustomerName,
-
-        phoneNumber:
-          activeCustomerPhone,
-
-        loanType:
-          normalizedLoanTypeValue,
-
-        repaymentType:
-          normalizedRepaymentType,
-
-        duration:
-          durationValue,
-
-        durationType,
-
-        advanceDeduction:
-          parseNumericValue(
-            advanceDeduction,
-          ),
-
-        netDisbursement,
-
-        purpose,
-
-        remarks,
-
-        schedule,
-      });
-
-    const createResult =
-      await createLoan(
-        loan,
+    try {
+      persistedDocuments = await prepareLoanDocuments(
+        documents,
+        activeCustomerId,
+        loanId,
       );
+    } catch (error) {
+      console.error("FINORA LOAN DOCUMENT PREPARATION ERROR:", error);
 
-    if (
-      !createResult.success
-    ) {
-      console.error(
-        "LOAN CREATE ERROR:",
-        createResult.error,
-      );
-
-      alert(
-        createResult.error ??
-        "Unable to create loan.",
-      );
+      alert("Unable to prepare loan documents. Please try again.");
 
       return;
     }
 
-    setLoanApproved(
-      true,
-    );
+    /* ========================================================
+       BUILD LOAN
+    ======================================================== */
+
+    const loan = buildLoan({
+      id: loanId,
+
+      title: loanTitle,
+
+      amount: principal,
+
+      outstanding: totalPayable,
+
+      interest: interestRate,
+
+      processingFee: parseNumericValue(processingFee),
+
+      lateFee: parseNumericValue(lateFee),
+
+      loanDate: loanDate.toISOString(),
+
+      dueDate: maturityDate ? maturityDate.toISOString() : "",
+
+      guarantor: guarantorName,
+
+      customerId: activeCustomerId,
+
+      customerName: activeCustomerName,
+
+      phoneNumber: activeCustomerPhone,
+
+      loanType: normalizedLoanTypeValue,
+
+      repaymentType: normalizedRepaymentTypeValue,
+
+      duration: durationValue,
+
+      durationType,
+
+      advanceDeduction: parseNumericValue(advanceDeduction),
+
+      netDisbursement,
+
+      purpose,
+
+      remarks,
+
+      schedule,
+    });
+
+    /* ========================================================
+       DOCUMENT ATTACHMENT
+       --------------------------------------------------------
+       The current Loan Builder contract predates the Documents
+       Studio persistence fields.
+
+       Preserve the existing Loan Builder contract and attach
+       document metadata to the final Loan record through
+       object spread.
+
+       This keeps existing loan calculations and builder
+       behavior unchanged while allowing Step 3 evidence
+       to travel with the persisted loan.
+    ======================================================== */
+
+    const loanWithDocuments = {
+      ...loan,
+
+      documents: persistedDocuments,
+
+      documentCount: persistedDocuments.length,
+
+      documentsCustomerId: activeCustomerId,
+
+      documentsLinkedAt: new Date().toISOString(),
+    };
+
+    /* ========================================================
+       CREATE LOAN
+    ======================================================== */
+
+    const createResult = await createLoan(loanWithDocuments);
+
+    if (!createResult.success) {
+      console.error("LOAN CREATE ERROR:", createResult.error);
+
+      alert(createResult.error ?? "Unable to create loan.");
+
+      return;
+    }
+
+    /* ========================================================
+       FINALIZE DOCUMENT STATE
+       --------------------------------------------------------
+       Keep the same evidence visible in the current Loan
+       Studio, but now mark it as persisted and linked.
+    ======================================================== */
+
+    setDocuments(persistedDocuments);
+
+    setLoanApproved(true);
 
     await refreshLoanStatistics();
 
     alert(
-      "Loan Created Successfully",
+      persistedDocuments.length > 0
+        ? `Loan Created Successfully with ${persistedDocuments.length} document${
+            persistedDocuments.length === 1 ? "" : "s"
+          }`
+        : "Loan Created Successfully",
     );
   }
 
-  // ==========================================================
-  // RESET COMPLETED LOAN WORKSPACE
-  //
-  // Finish Review is the boundary between one completed loan
-  // workflow and the next new-loan workflow.
-  //
-  // The persisted Loan is NOT deleted here.
-  // Only transient wizard/UI state is cleared.
-  // ==========================================================
+  /* ==========================================================
+     RESET COMPLETED LOAN WORKSPACE
+  ========================================================== */
 
   function resetLoanWorkspace(): void {
-
     setStep(1);
 
-    setSelectedCustomer(
-      undefined,
-    );
+    setSelectedCustomer(undefined);
 
     setDocuments([]);
 
@@ -1176,17 +967,13 @@ useEffect(() => {
 
     setAdvanceDeduction("");
 
-    setPenaltyType(
-      "Fixed Amount",
-    );
+    setPenaltyType("Fixed Amount");
 
     setPenaltyValue("");
 
     setLateFee("");
 
-    setEMICalculation(
-      "fixed",
-    );
+    setEMICalculation("fixed");
 
     setFirstInstallmentDate("");
 
@@ -1218,19 +1005,16 @@ useEffect(() => {
 
     setTransactionStatus("pending");
 
-    setDisbursementSavedAt(
-      "Not Saved",
-    );
+    setDisbursementSavedAt("Not Saved");
 
-    setDisbursementDraftStatus(
-      "Draft",
-    );
+    setDisbursementDraftStatus("Draft");
 
-    setDisbursementReceiptNumber(
-      `DIS-${Date.now()}`,
-    );
-
+    setDisbursementReceiptNumber(`DIS-${Date.now()}`);
   }
+
+  /* ==========================================================
+     RETURN API
+  ========================================================== */
 
   return {
     customerName,
@@ -1238,10 +1022,13 @@ useEffect(() => {
     phoneNumber,
 
     customers,
+
     selectedCustomer,
     setSelectedCustomer,
+
     documents,
     setDocuments,
+
     loanCustomerOptions,
 
     activeCustomerId,
@@ -1253,58 +1040,81 @@ useEffect(() => {
 
     loanAmount,
     setLoanAmount,
+
     interest,
     setInterest,
+
     processingFee,
     setProcessingFee,
+
     advanceDeduction,
     setAdvanceDeduction,
+
     penaltyType,
     setPenaltyType,
+
     penaltyValue,
     setPenaltyValue,
+
     lateFee,
     setLateFee,
+
     emiCalculation,
     setEMICalculation,
+
     firstInstallmentDate,
     setFirstInstallmentDate,
+
     repaymentType,
     setRepaymentType,
+
     duration,
     setDuration,
+
     durationType,
     setDurationType,
 
     guarantorName,
     setGuarantorName,
+
     guarantorPhone,
     setGuarantorPhone,
+
     guarantorOccupation,
     setGuarantorOccupation,
+
     guarantorAddress,
     setGuarantorAddress,
+
     guarantorRelationship,
     setGuarantorRelationship,
+
     purpose,
     setPurpose,
+
     remarks,
     setRemarks,
 
     loanApproved,
     setLoanApproved,
+
     loanStatus,
 
     disbursementDate,
     setDisbursementDate,
+
     paymentMode,
     setPaymentMode,
+
     transactionStatus,
     setTransactionStatus,
+
     disbursementSavedAt,
     setDisbursementSavedAt,
+
     disbursementDraftStatus,
     setDisbursementDraftStatus,
+
     disbursementReceiptNumber,
     setDisbursementReceiptNumber,
 
@@ -1312,28 +1122,49 @@ useEffect(() => {
     refreshLoanStatistics,
 
     principal,
+
     interestRate,
+
     durationValue,
+
     syncedRepaymentType,
+
     normalizedRepaymentType,
+
     totalInstallments,
+
     loanDate,
+
     scheduleStartDate,
+
     maturityDate,
+
     schedule,
+
     flatTotalInterest,
+
     flatTotalPayable,
+
     totalInterest,
+
     totalPayable,
+
     installmentAmount,
+
     netDisbursement,
+
     normalizedLoanType,
+
     loanTypeLabel,
+
     reviewData,
 
     handleSaveDraft,
+
     handleRejectLoan,
+
     handleApproveLoan,
+
     resetLoanWorkspace,
   };
 }

@@ -8,10 +8,7 @@ GUARANTOR FORM
 IMPORTS
 =========================================================== */
 
-import {
-  FormField,
-  TextInput,
-} from "../../common";
+import { FormField, TextInput } from "../../common";
 
 import {
   accentStyle,
@@ -32,21 +29,13 @@ interface GuarantorFormProps {
   occupation: string;
   address: string;
 
-  onGuarantorNameChange: (
-    value: string,
-  ) => void;
+  onGuarantorNameChange: (value: string) => void;
 
-  onGuarantorPhoneChange: (
-    value: string,
-  ) => void;
+  onGuarantorPhoneChange: (value: string) => void;
 
-  onOccupationChange: (
-    value: string,
-  ) => void;
+  onOccupationChange: (value: string) => void;
 
-  onAddressChange: (
-    value: string,
-  ) => void;
+  onAddressChange: (value: string) => void;
 }
 
 /* ===========================================================
@@ -66,7 +55,6 @@ export default function GuarantorForm({
 }: GuarantorFormProps) {
   return (
     <div style={wrapperStyle}>
-
       {/* =====================================================
           FORM HEADER
       ===================================================== */}
@@ -74,9 +62,7 @@ export default function GuarantorForm({
       <div style={headerStyle}>
         <span style={accentStyle} />
 
-        <span>
-          Guarantor Information
-        </span>
+        <span>Guarantor Information</span>
       </div>
 
       {/* =====================================================
@@ -85,17 +71,10 @@ export default function GuarantorForm({
 
       <div style={fieldStyle}>
         <div style={fieldContentStyle}>
-          <FormField
-            label="Guarantor Name"
-            required
-          >
+          <FormField label="Guarantor Name" required>
             <TextInput
               value={guarantorName}
-              onChange={(event) =>
-                onGuarantorNameChange(
-                  event.target.value,
-                )
-              }
+              onChange={(event) => onGuarantorNameChange(event.target.value)}
               placeholder="Enter guarantor name"
               style={inputStyle}
             />
@@ -105,23 +84,26 @@ export default function GuarantorForm({
 
       {/* =====================================================
           MOBILE NUMBER
+          Exactly 10 numeric digits
       ===================================================== */}
 
       <div style={fieldStyle}>
         <div style={fieldContentStyle}>
-          <FormField
-            label="Mobile Number"
-            required
-          >
+          <FormField label="Mobile Number" required>
             <TextInput
               value={guarantorPhone}
-              onChange={(event) =>
-                onGuarantorPhoneChange(
-                  event.target.value,
-                )
-              }
-              placeholder="Enter mobile number"
+              onChange={(event) => {
+                const numericValue = event.target.value
+                  .replace(/\D/g, "")
+                  .slice(0, 10);
+
+                onGuarantorPhoneChange(numericValue);
+              }}
+              placeholder="Enter 10-digit mobile number"
               style={inputStyle}
+              maxLength={10}
+              inputMode="numeric"
+              pattern="[0-9]{10}"
             />
           </FormField>
         </div>
@@ -133,16 +115,10 @@ export default function GuarantorForm({
 
       <div style={fieldStyle}>
         <div style={fieldContentStyle}>
-          <FormField
-            label="Occupation"
-          >
+          <FormField label="Occupation">
             <TextInput
               value={occupation}
-              onChange={(event) =>
-                onOccupationChange(
-                  event.target.value,
-                )
-              }
+              onChange={(event) => onOccupationChange(event.target.value)}
               placeholder="Enter occupation"
               style={inputStyle}
             />
@@ -156,23 +132,16 @@ export default function GuarantorForm({
 
       <div style={fieldStyle}>
         <div style={fieldContentStyle}>
-          <FormField
-            label="Address"
-          >
+          <FormField label="Address">
             <TextInput
               value={address}
-              onChange={(event) =>
-                onAddressChange(
-                  event.target.value,
-                )
-              }
+              onChange={(event) => onAddressChange(event.target.value)}
               placeholder="Enter address"
               style={inputStyle}
             />
           </FormField>
         </div>
       </div>
-
     </div>
   );
 }

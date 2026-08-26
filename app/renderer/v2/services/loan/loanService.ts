@@ -38,15 +38,11 @@
 // STATUS  : Production
 // ============================================================
 
-
 // ============================================================
 // IMPORTS
 // ============================================================
 
-import type {
-  Loan,
-} from "../../components/customers/office/CustomerOffice/types";
-
+import type { Loan } from "../../components/customers/office/CustomerOffice/types";
 
 import {
   addLoan,
@@ -55,39 +51,23 @@ import {
   updateLoanOutstanding,
 } from "../../repositories/loan/loanRepository";
 
-
-import type {
-  StorageResult,
-} from "../../storage/storage.types";
-
+import type { StorageResult } from "../../storage/storage.types";
 
 // ============================================================
 // GET ALL LOANS
 // ============================================================
 
-export async function fetchLoans():
-  Promise<Loan[]> {
-
+export async function fetchLoans(): Promise<Loan[]> {
   return getLoans();
-
 }
-
 
 // ============================================================
 // GET LOAN
 // ============================================================
 
-export async function fetchLoan(
-  loanId: string,
-):
-  Promise<Loan | undefined> {
-
-  return getLoanById(
-    loanId,
-  );
-
+export async function fetchLoan(loanId: string): Promise<Loan | undefined> {
+  return getLoanById(loanId);
 }
-
 
 // ============================================================
 // LOAN STATUS HELPERS
@@ -102,35 +82,17 @@ export async function fetchLoan(
 // ============================================================
 
 function normalizeLoanStatus(
-  status:
-    | Loan["status"]
-    | string
-    | undefined,
-):
-  string {
-
-  return String(
-    status ?? "",
-  )
+  status: Loan["status"] | string | undefined,
+): string {
+  return String(status ?? "")
     .trim()
     .toUpperCase();
-
 }
 
-
 function isBlockingLoanStatus(
-  status:
-    | Loan["status"]
-    | string
-    | undefined,
-):
-  boolean {
-
-  const normalizedStatus =
-    normalizeLoanStatus(
-      status,
-    );
-
+  status: Loan["status"] | string | undefined,
+): boolean {
+  const normalizedStatus = normalizeLoanStatus(status);
 
   // ==========================================================
   // ACTIVE / UNRESOLVED LOAN STATUSES
@@ -144,39 +106,14 @@ function isBlockingLoanStatus(
   // ==========================================================
 
   return (
-
-    normalizedStatus ===
-      "ACTIVE"
-
-    ||
-
-    normalizedStatus ===
-      "RUNNING"
-
-    ||
-
-    normalizedStatus ===
-      "PENDING"
-
-    ||
-
-    normalizedStatus ===
-      "PENDING APPROVAL"
-
-    ||
-
-    normalizedStatus ===
-      "APPROVED"
-
-    ||
-
-    normalizedStatus ===
-      "DISBURSED"
-
+    normalizedStatus === "ACTIVE" ||
+    normalizedStatus === "RUNNING" ||
+    normalizedStatus === "PENDING" ||
+    normalizedStatus === "PENDING APPROVAL" ||
+    normalizedStatus === "APPROVED" ||
+    normalizedStatus === "DISBURSED"
   );
-
 }
-
 
 // ============================================================
 // CHECK EXISTING ACTIVE LOAN
@@ -198,166 +135,96 @@ export async function hasExistingLoan(
   customerId: string | undefined,
   loanTitle: string,
   amount: number,
-):
-  Promise<boolean> {
-
+): Promise<boolean> {
   // ==========================================================
   // CUSTOMER VALIDATION
   // ==========================================================
 
-  if (
-    !customerId
-  ) {
-
+  if (!customerId) {
     return false;
-
   }
-
 
   // ==========================================================
   // AMOUNT VALIDATION
   // ==========================================================
 
-  if (
-    !Number.isFinite(
-      amount,
-    )
-  ) {
-
+  if (!Number.isFinite(amount)) {
     return false;
-
   }
-
 
   // ==========================================================
   // LOAD LOANS THROUGH REPOSITORY
   // ==========================================================
 
-  const loans =
-    await getLoans();
-
+  const loans = await getLoans();
 
   // ==========================================================
   // NORMALIZE SEARCH VALUES
   // ==========================================================
 
-  const normalizedCustomerId =
-    customerId
-      .trim();
+  const normalizedCustomerId = customerId.trim();
 
-
-  const normalizedLoanTitle =
-    loanTitle
-      .trim()
-      .toLowerCase();
-
+  const normalizedLoanTitle = loanTitle.trim().toLowerCase();
 
   // ==========================================================
   // ACTIVE DUPLICATE CHECK
   // ==========================================================
 
-  return loans.some(
-    (
-      loan: Loan,
-    ) => {
+  return loans.some((loan: Loan) => {
+    // ========================================================
+    // CUSTOMER MATCH
+    // ========================================================
 
-      // ========================================================
-      // CUSTOMER MATCH
-      // ========================================================
+    const sameCustomer =
+      String(loan.customerId ?? "").trim() === normalizedCustomerId;
 
-      const sameCustomer =
-        String(
-          loan.customerId ?? "",
-        )
-          .trim() ===
-        normalizedCustomerId;
+    if (!sameCustomer) {
+      return false;
+    }
 
+    // ========================================================
+    // LOAN TITLE MATCH
+    // ========================================================
 
-      if (
-        !sameCustomer
-      ) {
+    const sameLoanTitle =
+      String(loan.title ?? "")
+        .trim()
+        .toLowerCase() === normalizedLoanTitle;
 
-        return false;
+    if (!sameLoanTitle) {
+      return false;
+    }
 
-      }
+    // ========================================================
+    // PRINCIPAL AMOUNT MATCH
+    // ========================================================
 
+    const sameAmount = Number(loan.amount ?? 0) === amount;
 
-      // ========================================================
-      // LOAN TITLE MATCH
-      // ========================================================
+    if (!sameAmount) {
+      return false;
+    }
 
-      const sameLoanTitle =
-        String(
-          loan.title ?? "",
-        )
-          .trim()
-          .toLowerCase() ===
-        normalizedLoanTitle;
+    // ========================================================
+    // ACTIVE STATUS CHECK
+    // ========================================================
+    //
+    // CLOSED / REJECTED historical loans are intentionally
+    // ignored.
+    //
+    // ========================================================
 
-
-      if (
-        !sameLoanTitle
-      ) {
-
-        return false;
-
-      }
-
-
-      // ========================================================
-      // PRINCIPAL AMOUNT MATCH
-      // ========================================================
-
-      const sameAmount =
-        Number(
-          loan.amount ?? 0,
-        ) ===
-        amount;
-
-
-      if (
-        !sameAmount
-      ) {
-
-        return false;
-
-      }
-
-
-      // ========================================================
-      // ACTIVE STATUS CHECK
-      // ========================================================
-      //
-      // CLOSED / REJECTED historical loans are intentionally
-      // ignored.
-      //
-      // ========================================================
-
-      return isBlockingLoanStatus(
-        loan.status,
-      );
-
-    },
-  );
-
+    return isBlockingLoanStatus(loan.status);
+  });
 }
-
 
 // ============================================================
 // CREATE LOAN
 // ============================================================
 
-export async function createLoan(
-  loan: Loan,
-):
-  Promise<StorageResult<Loan>> {
-
-  return addLoan(
-    loan,
-  );
-
+export async function createLoan(loan: Loan): Promise<StorageResult<Loan>> {
+  return addLoan(loan);
 }
-
 
 // ============================================================
 // UPDATE LOAN OUTSTANDING
@@ -373,23 +240,15 @@ export async function createLoan(
 export async function updateLoanOutstandingAmount(
   loanId: string,
   paymentAmount: number,
-):
-  Promise<Loan | undefined> {
-
-  return updateLoanOutstanding(
-    loanId,
-    paymentAmount,
-  );
-
+): Promise<Loan | undefined> {
+  return updateLoanOutstanding(loanId, paymentAmount);
 }
-
 
 // ============================================================
 // SINGLETON SERVICE
 // ============================================================
 
 export const loanService = {
-
   fetchLoans,
 
   fetchLoan,
@@ -398,11 +257,8 @@ export const loanService = {
 
   createLoan,
 
-  updateLoanOutstanding:
-    updateLoanOutstandingAmount,
-
+  updateLoanOutstanding: updateLoanOutstandingAmount,
 };
-
 
 // ============================================================
 // END

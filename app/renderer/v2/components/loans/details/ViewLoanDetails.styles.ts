@@ -9,6 +9,8 @@
 // RESPONSIBILITY:
 // - View Loan Details presentation styling
 // - Read-only enterprise loan workspace
+// - Loan document evidence gallery
+// - Loan document viewer
 //
 // IMPORTANT:
 // - No business logic
@@ -21,1032 +23,1028 @@
 // STATUS  : Production
 // ============================================================
 
-import type {
-  CSSProperties,
-} from "react";
-
+import type { CSSProperties } from "react";
 
 // ============================================================
 // COLORS
 // ============================================================
 
 export const COLORS = {
+  background: "#0B1220",
 
-  background:
-    "#0B1220",
+  panel: "#111C2E",
 
-  panel:
-    "#111C2E",
+  panelSoft: "#142238",
 
-  panelSoft:
-    "#142238",
+  panelHover: "#182A43",
 
-  panelHover:
-    "#182A43",
+  border: "rgba(148,163,184,0.18)",
 
-  border:
-    "rgba(148,163,184,0.18)",
+  borderStrong: "rgba(148,163,184,0.28)",
 
-  borderStrong:
-    "rgba(148,163,184,0.28)",
+  primary: "#2563EB",
 
-  primary:
-    "#2563EB",
+  primarySoft: "rgba(37,99,235,0.12)",
 
-  primarySoft:
-    "rgba(37,99,235,0.12)",
+  primaryBorder: "rgba(37,99,235,0.35)",
 
-  primaryBorder:
-    "rgba(37,99,235,0.35)",
+  text: "#FFFFFF",
 
-  text:
-    "#FFFFFF",
+  textSecondary: "#CBD5E1",
 
-  textSecondary:
-    "#CBD5E1",
+  textMuted: "#94A3B8",
 
-  textMuted:
-    "#94A3B8",
+  textDim: "#64748B",
 
-  textDim:
-    "#64748B",
+  success: "#22C55E",
 
-  success:
-    "#22C55E",
+  successSoft: "rgba(34,197,94,0.10)",
 
-  successSoft:
-    "rgba(34,197,94,0.10)",
+  warning: "#F59E0B",
 
-  warning:
-    "#F59E0B",
+  warningSoft: "rgba(245,158,11,0.10)",
 
-  warningSoft:
-    "rgba(245,158,11,0.10)",
+  danger: "#EF4444",
 
-  danger:
-    "#EF4444",
-
-  dangerSoft:
-    "rgba(239,68,68,0.10)",
-
+  dangerSoft: "rgba(239,68,68,0.10)",
 } as const;
-
 
 // ============================================================
 // PAGE
 // ============================================================
 
-export const pageStyle:
-  CSSProperties = {
+export const pageStyle: CSSProperties = {
+  width: "100%",
 
-  width:
-    "100%",
+  minHeight: "100%",
 
-  minHeight:
-    "100%",
+  boxSizing: "border-box",
 
-  boxSizing:
-    "border-box",
+  padding: "20px",
 
-  padding:
-    "20px",
+  background: COLORS.background,
 
-  background:
-    COLORS.background,
+  color: COLORS.text,
 
-  color:
-    COLORS.text,
+  display: "flex",
 
-  display:
-    "flex",
+  flexDirection: "column",
 
-  flexDirection:
-    "column",
-
-  gap:
-    "16px",
-
+  gap: "16px",
 };
-
 
 // ============================================================
 // HEADER
 // ============================================================
 
-export const headerStyle:
-  CSSProperties = {
+export const headerStyle: CSSProperties = {
+  width: "100%",
 
-  width:
-    "100%",
+  minHeight: "68px",
 
-  minHeight:
-    "68px",
+  boxSizing: "border-box",
 
-  boxSizing:
-    "border-box",
+  display: "flex",
 
-  display:
-    "flex",
+  alignItems: "center",
 
-  alignItems:
-    "center",
+  justifyContent: "space-between",
 
-  justifyContent:
-    "space-between",
+  gap: "16px",
 
-  gap:
-    "16px",
+  padding: "14px 18px",
 
-  padding:
-    "14px 18px",
+  border: `1px solid ${COLORS.border}`,
 
-  border:
-    `1px solid ${COLORS.border}`,
+  borderRadius: "14px",
 
-  borderRadius:
-    "14px",
+  background: `linear-gradient(180deg, ${COLORS.panel}, ${COLORS.panelSoft})`,
 
-  background:
-    `linear-gradient(180deg, ${COLORS.panel}, ${COLORS.panelSoft})`,
-
-  boxShadow:
-    "0 8px 24px rgba(0,0,0,0.16)",
-
+  boxShadow: "0 8px 24px rgba(0,0,0,0.16)",
 };
 
+export const headerLeftStyle: CSSProperties = {
+  minWidth: 0,
 
-export const headerLeftStyle:
-  CSSProperties = {
+  display: "flex",
 
-  minWidth:
-    0,
+  alignItems: "center",
 
-  display:
-    "flex",
-
-  alignItems:
-    "center",
-
-  gap:
-    "12px",
-
+  gap: "12px",
 };
 
+export const backButtonStyle: CSSProperties = {
+  minWidth: "78px",
 
-export const backButtonStyle:
-  CSSProperties = {
+  height: "34px",
 
-  minWidth:
-    "78px",
+  padding: "0 12px",
 
-  height:
-    "34px",
+  border: `1px solid ${COLORS.borderStrong}`,
 
-  padding:
-    "0 12px",
+  borderRadius: "8px",
 
-  border:
-    `1px solid ${COLORS.borderStrong}`,
+  background: "rgba(255,255,255,0.04)",
 
-  borderRadius:
-    "8px",
+  color: COLORS.textSecondary,
 
-  background:
-    "rgba(255,255,255,0.04)",
+  fontSize: "12px",
 
-  color:
-    COLORS.textSecondary,
+  fontWeight: 700,
 
-  fontSize:
-    "12px",
-
-  fontWeight:
-    700,
-
-  cursor:
-    "pointer",
-
+  cursor: "pointer",
 };
 
+export const headerAccentStyle: CSSProperties = {
+  width: "3px",
 
-export const headerAccentStyle:
-  CSSProperties = {
+  height: "38px",
 
-  width:
-    "3px",
+  flexShrink: 0,
 
-  height:
-    "38px",
+  borderRadius: "3px",
 
-  flexShrink:
-    0,
+  background: COLORS.primary,
 
-  borderRadius:
-    "3px",
-
-  background:
-    COLORS.primary,
-
-  boxShadow:
-    "0 0 12px rgba(37,99,235,0.35)",
-
+  boxShadow: "0 0 12px rgba(37,99,235,0.35)",
 };
 
+export const titleGroupStyle: CSSProperties = {
+  minWidth: 0,
 
-export const titleGroupStyle:
-  CSSProperties = {
+  display: "flex",
 
-  minWidth:
-    0,
+  flexDirection: "column",
 
-  display:
-    "flex",
-
-  flexDirection:
-    "column",
-
-  gap:
-    "3px",
-
+  gap: "3px",
 };
 
+export const titleStyle: CSSProperties = {
+  margin: 0,
 
-export const titleStyle:
-  CSSProperties = {
+  color: COLORS.text,
 
-  margin:
-    0,
+  fontSize: "18px",
 
-  color:
-    COLORS.text,
+  fontWeight: 800,
 
-  fontSize:
-    "18px",
-
-  fontWeight:
-    800,
-
-  lineHeight:
-    1.2,
-
+  lineHeight: 1.2,
 };
 
+export const subtitleStyle: CSSProperties = {
+  margin: 0,
 
-export const subtitleStyle:
-  CSSProperties = {
+  color: COLORS.textMuted,
 
-  margin:
-    0,
+  fontSize: "11px",
 
-  color:
-    COLORS.textMuted,
+  fontWeight: 500,
 
-  fontSize:
-    "11px",
-
-  fontWeight:
-    500,
-
-  lineHeight:
-    1.3,
-
+  lineHeight: 1.3,
 };
 
+export const headerMetaStyle: CSSProperties = {
+  display: "flex",
 
-export const headerMetaStyle:
-  CSSProperties = {
+  alignItems: "center",
 
-  display:
-    "flex",
+  gap: "8px",
 
-  alignItems:
-    "center",
-
-  gap:
-    "8px",
-
-  flexShrink:
-    0,
-
+  flexShrink: 0,
 };
 
+export const loanNumberBadgeStyle: CSSProperties = {
+  padding: "7px 10px",
 
-export const loanNumberBadgeStyle:
-  CSSProperties = {
+  border: `1px solid ${COLORS.primaryBorder}`,
 
-  padding:
-    "7px 10px",
+  borderRadius: "7px",
 
-  border:
-    `1px solid ${COLORS.primaryBorder}`,
+  background: COLORS.primarySoft,
 
-  borderRadius:
-    "7px",
+  color: "#93C5FD",
 
-  background:
-    COLORS.primarySoft,
+  fontSize: "11px",
 
-  color:
-    "#93C5FD",
+  fontWeight: 750,
 
-  fontSize:
-    "11px",
-
-  fontWeight:
-    750,
-
-  whiteSpace:
-    "nowrap",
-
+  whiteSpace: "nowrap",
 };
-
 
 // ============================================================
 // STATUS
 // ============================================================
 
-export function statusBadgeStyle(
-  status: string,
-): CSSProperties {
+export function statusBadgeStyle(status: string): CSSProperties {
+  const normalized = status.trim().toUpperCase();
 
-  const normalized =
-    status
-      .trim()
-      .toUpperCase();
-
-  if (
-    normalized ===
-    "CLOSED"
-  ) {
-
+  if (normalized === "CLOSED") {
     return {
+      padding: "6px 10px",
 
-      padding:
-        "6px 10px",
+      border: "1px solid rgba(34,197,94,0.28)",
 
-      border:
-        "1px solid rgba(34,197,94,0.28)",
+      borderRadius: "999px",
 
-      borderRadius:
-        "999px",
+      background: COLORS.successSoft,
 
-      background:
-        COLORS.successSoft,
+      color: "#86EFAC",
 
-      color:
-        "#86EFAC",
+      fontSize: "11px",
 
-      fontSize:
-        "11px",
+      fontWeight: 750,
 
-      fontWeight:
-        750,
-
-      whiteSpace:
-        "nowrap",
-
+      whiteSpace: "nowrap",
     };
-
   }
 
-  if (
-    normalized ===
-    "ACTIVE" ||
-    normalized ===
-    "RUNNING"
-  ) {
-
+  if (normalized === "ACTIVE" || normalized === "RUNNING") {
     return {
+      padding: "6px 10px",
 
-      padding:
-        "6px 10px",
+      border: "1px solid rgba(37,99,235,0.32)",
 
-      border:
-        "1px solid rgba(37,99,235,0.32)",
+      borderRadius: "999px",
 
-      borderRadius:
-        "999px",
+      background: COLORS.primarySoft,
 
-      background:
-        COLORS.primarySoft,
+      color: "#93C5FD",
 
-      color:
-        "#93C5FD",
+      fontSize: "11px",
 
-      fontSize:
-        "11px",
+      fontWeight: 750,
 
-      fontWeight:
-        750,
-
-      whiteSpace:
-        "nowrap",
-
+      whiteSpace: "nowrap",
     };
-
   }
 
   return {
+    padding: "6px 10px",
 
-    padding:
-      "6px 10px",
+    border: "1px solid rgba(245,158,11,0.28)",
 
-    border:
-      "1px solid rgba(245,158,11,0.28)",
+    borderRadius: "999px",
 
-    borderRadius:
-      "999px",
+    background: COLORS.warningSoft,
 
-    background:
-      COLORS.warningSoft,
+    color: "#FCD34D",
 
-    color:
-      "#FCD34D",
+    fontSize: "11px",
 
-    fontSize:
-      "11px",
+    fontWeight: 750,
 
-    fontWeight:
-      750,
-
-    whiteSpace:
-      "nowrap",
-
+    whiteSpace: "nowrap",
   };
-
 }
-
 
 // ============================================================
 // GRID
 // ============================================================
 
-export const contentGridStyle:
-  CSSProperties = {
+export const contentGridStyle: CSSProperties = {
+  width: "100%",
 
-  width:
-    "100%",
+  display: "grid",
 
-  display:
-    "grid",
+  gridTemplateColumns: "minmax(0, 1.35fr) minmax(320px, 0.65fr)",
 
-  gridTemplateColumns:
-    "minmax(0, 1.35fr) minmax(320px, 0.65fr)",
+  gap: "16px",
 
-  gap:
-    "16px",
-
-  alignItems:
-    "start",
-
+  alignItems: "start",
 };
 
+// ============================================================
+// SECTION
+// ============================================================
 
-export const sectionStyle:
-  CSSProperties = {
+export const sectionStyle: CSSProperties = {
+  minWidth: 0,
 
-  minWidth:
-    0,
+  boxSizing: "border-box",
 
-  boxSizing:
-    "border-box",
+  padding: "16px",
 
-  padding:
-    "16px",
+  border: `1px solid ${COLORS.border}`,
 
-  border:
-    `1px solid ${COLORS.border}`,
+  borderRadius: "14px",
 
-  borderRadius:
-    "14px",
+  background: `linear-gradient(180deg, ${COLORS.panel}, ${COLORS.panelSoft})`,
 
-  background:
-    `linear-gradient(180deg, ${COLORS.panel}, ${COLORS.panelSoft})`,
-
-  boxShadow:
-    "0 7px 20px rgba(0,0,0,0.12)",
-
+  boxShadow: "0 7px 20px rgba(0,0,0,0.12)",
 };
 
-
-export const fullWidthSectionStyle:
-  CSSProperties = {
-
+export const fullWidthSectionStyle: CSSProperties = {
   ...sectionStyle,
 
-  width:
-    "100%",
-
+  width: "100%",
 };
 
+export const sectionHeaderStyle: CSSProperties = {
+  display: "flex",
 
-export const sectionHeaderStyle:
-  CSSProperties = {
+  alignItems: "center",
 
-  display:
-    "flex",
+  justifyContent: "space-between",
 
-  alignItems:
-    "center",
+  gap: "12px",
 
-  justifyContent:
-    "space-between",
-
-  gap:
-    "12px",
-
-  marginBottom:
-    "12px",
-
+  marginBottom: "12px",
 };
 
+export const sectionTitleStyle: CSSProperties = {
+  margin: 0,
 
-export const sectionTitleStyle:
-  CSSProperties = {
+  color: COLORS.text,
 
-  margin:
-    0,
+  fontSize: "13px",
 
-  color:
-    COLORS.text,
-
-  fontSize:
-    "13px",
-
-  fontWeight:
-    750,
-
+  fontWeight: 750,
 };
 
+export const sectionSubtitleStyle: CSSProperties = {
+  margin: "3px 0 0",
 
-export const sectionSubtitleStyle:
-  CSSProperties = {
+  color: COLORS.textMuted,
 
-  margin:
-    "3px 0 0",
+  fontSize: "10px",
 
-  color:
-    COLORS.textMuted,
-
-  fontSize:
-    "10px",
-
-  fontWeight:
-    500,
-
+  fontWeight: 500,
 };
-
 
 // ============================================================
 // INFORMATION GRID
 // ============================================================
 
-export const infoGridStyle:
-  CSSProperties = {
+export const infoGridStyle: CSSProperties = {
+  display: "grid",
 
-  display:
-    "grid",
+  gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
 
-  gridTemplateColumns:
-    "repeat(2, minmax(0, 1fr))",
-
-  gap:
-    "8px",
-
+  gap: "8px",
 };
 
+export const infoItemStyle: CSSProperties = {
+  minWidth: 0,
 
-export const infoItemStyle:
-  CSSProperties = {
+  padding: "10px",
 
-  minWidth:
-    0,
+  border: "1px solid rgba(148,163,184,0.12)",
 
-  padding:
-    "10px",
+  borderRadius: "9px",
 
-  border:
-    "1px solid rgba(148,163,184,0.12)",
-
-  borderRadius:
-    "9px",
-
-  background:
-    "rgba(255,255,255,0.025)",
-
+  background: "rgba(255,255,255,0.025)",
 };
 
+export const infoLabelStyle: CSSProperties = {
+  display: "block",
 
-export const infoLabelStyle:
-  CSSProperties = {
+  marginBottom: "4px",
 
-  display:
-    "block",
+  color: COLORS.textMuted,
 
-  marginBottom:
-    "4px",
+  fontSize: "10px",
 
-  color:
-    COLORS.textMuted,
-
-  fontSize:
-    "10px",
-
-  fontWeight:
-    550,
-
+  fontWeight: 550,
 };
 
+export const infoValueStyle: CSSProperties = {
+  display: "block",
 
-export const infoValueStyle:
-  CSSProperties = {
+  color: COLORS.textSecondary,
 
-  display:
-    "block",
+  fontSize: "12px",
 
-  color:
-    COLORS.textSecondary,
+  fontWeight: 700,
 
-  fontSize:
-    "12px",
+  overflow: "hidden",
 
-  fontWeight:
-    700,
+  textOverflow: "ellipsis",
 
-  overflow:
-    "hidden",
-
-  textOverflow:
-    "ellipsis",
-
-  whiteSpace:
-    "nowrap",
-
+  whiteSpace: "nowrap",
 };
 
-
-export const customerNameValueStyle:
-  CSSProperties = {
-
+export const customerNameValueStyle: CSSProperties = {
   ...infoValueStyle,
 
-  color:
-    COLORS.text,
+  color: COLORS.text,
 
-  fontSize:
-    "13px",
-
+  fontSize: "13px",
 };
-
 
 // ============================================================
 // FINANCIAL
 // ============================================================
 
-export const financialGridStyle:
-  CSSProperties = {
+export const financialGridStyle: CSSProperties = {
+  display: "grid",
 
-  display:
-    "grid",
+  gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
 
-  gridTemplateColumns:
-    "repeat(2, minmax(0, 1fr))",
-
-  gap:
-    "8px",
-
+  gap: "8px",
 };
 
+export const financialCardStyle: CSSProperties = {
+  minWidth: 0,
 
-export const financialCardStyle:
-  CSSProperties = {
+  padding: "12px",
 
-  minWidth:
-    0,
+  border: "1px solid rgba(148,163,184,0.13)",
 
-  padding:
-    "12px",
+  borderRadius: "9px",
 
-  border:
-    "1px solid rgba(148,163,184,0.13)",
-
-  borderRadius:
-    "9px",
-
-  background:
-    "rgba(255,255,255,0.025)",
-
+  background: "rgba(255,255,255,0.025)",
 };
 
+export const financialLabelStyle: CSSProperties = {
+  display: "block",
 
-export const financialLabelStyle:
-  CSSProperties = {
+  marginBottom: "5px",
 
-  display:
-    "block",
+  color: COLORS.textMuted,
 
-  marginBottom:
-    "5px",
+  fontSize: "10px",
 
-  color:
-    COLORS.textMuted,
-
-  fontSize:
-    "10px",
-
-  fontWeight:
-    550,
-
+  fontWeight: 550,
 };
 
+export const financialValueStyle: CSSProperties = {
+  display: "block",
 
-export const financialValueStyle:
-  CSSProperties = {
+  color: COLORS.text,
 
-  display:
-    "block",
+  fontSize: "14px",
 
-  color:
-    COLORS.text,
-
-  fontSize:
-    "14px",
-
-  fontWeight:
-    800,
-
+  fontWeight: 800,
 };
 
-
-export const primaryFinancialCardStyle:
-  CSSProperties = {
-
+export const primaryFinancialCardStyle: CSSProperties = {
   ...financialCardStyle,
 
-  border:
-    `1px solid ${COLORS.primaryBorder}`,
+  border: `1px solid ${COLORS.primaryBorder}`,
 
-  background:
-    COLORS.primarySoft,
-
+  background: COLORS.primarySoft,
 };
 
-
-export const outstandingFinancialCardStyle:
-  CSSProperties = {
-
+export const outstandingFinancialCardStyle: CSSProperties = {
   ...financialCardStyle,
 
-  border:
-    "1px solid rgba(245,158,11,0.24)",
+  border: "1px solid rgba(245,158,11,0.24)",
 
-  background:
-    COLORS.warningSoft,
-
+  background: COLORS.warningSoft,
 };
-
 
 // ============================================================
 // TEXT BLOCKS
 // ============================================================
 
-export const textBlockStyle:
-  CSSProperties = {
+export const textBlockStyle: CSSProperties = {
+  minHeight: "54px",
 
-  minHeight:
-    "54px",
+  padding: "10px",
 
-  padding:
-    "10px",
+  border: "1px solid rgba(148,163,184,0.12)",
 
-  border:
-    "1px solid rgba(148,163,184,0.12)",
+  borderRadius: "9px",
 
-  borderRadius:
-    "9px",
+  background: "rgba(255,255,255,0.025)",
 
-  background:
-    "rgba(255,255,255,0.025)",
+  color: COLORS.textSecondary,
 
-  color:
-    COLORS.textSecondary,
+  fontSize: "11px",
 
-  fontSize:
-    "11px",
+  fontWeight: 500,
 
-  fontWeight:
-    500,
+  lineHeight: 1.5,
 
-  lineHeight:
-    1.5,
+  whiteSpace: "pre-wrap",
 
-  whiteSpace:
-    "pre-wrap",
-
-  overflowWrap:
-    "anywhere",
-
+  overflowWrap: "anywhere",
 };
 
+// ============================================================
+// DOCUMENT GALLERY
+// ============================================================
+
+export const documentGalleryGridStyle: CSSProperties = {
+  display: "grid",
+
+  gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
+
+  gap: "10px",
+
+  width: "100%",
+};
+
+export const documentCardStyle: CSSProperties = {
+  minWidth: 0,
+
+  overflow: "hidden",
+
+  border: "1px solid rgba(148,163,184,0.15)",
+
+  borderRadius: "10px",
+
+  background: "rgba(255,255,255,0.025)",
+
+  transition: "border-color 160ms ease, background 160ms ease",
+};
+
+export const documentPreviewStyle: CSSProperties = {
+  width: "100%",
+
+  height: "150px",
+
+  padding: 0,
+
+  display: "flex",
+
+  alignItems: "center",
+
+  justifyContent: "center",
+
+  border: "none",
+
+  background: "rgba(2,6,23,0.45)",
+
+  cursor: "pointer",
+
+  overflow: "hidden",
+};
+
+export const documentImageStyle: CSSProperties = {
+  width: "100%",
+
+  height: "100%",
+
+  display: "block",
+
+  objectFit: "cover",
+};
+
+export const documentPdfPreviewStyle: CSSProperties = {
+  width: "100%",
+
+  height: "100%",
+
+  display: "flex",
+
+  alignItems: "center",
+
+  justifyContent: "center",
+
+  background:
+    "linear-gradient(145deg, rgba(37,99,235,0.14), rgba(15,23,42,0.82))",
+};
+
+export const documentPdfIconStyle: CSSProperties = {
+  width: "54px",
+
+  height: "54px",
+
+  display: "flex",
+
+  alignItems: "center",
+
+  justifyContent: "center",
+
+  border: "1px solid rgba(147,197,253,0.30)",
+
+  borderRadius: "12px",
+
+  background: "rgba(37,99,235,0.14)",
+
+  color: "#93C5FD",
+
+  fontSize: "12px",
+
+  fontWeight: 800,
+
+  letterSpacing: "0.04em",
+};
+
+export const documentInfoStyle: CSSProperties = {
+  minWidth: 0,
+
+  padding: "9px",
+
+  display: "grid",
+
+  gridTemplateColumns: "minmax(0, 1fr) auto",
+
+  gap: "3px 8px",
+
+  alignItems: "center",
+};
+
+export const documentNameStyle: CSSProperties = {
+  minWidth: 0,
+
+  overflow: "hidden",
+
+  textOverflow: "ellipsis",
+
+  whiteSpace: "nowrap",
+
+  color: COLORS.text,
+
+  fontSize: "11px",
+
+  fontWeight: 700,
+};
+
+export const documentTypeStyle: CSSProperties = {
+  color: COLORS.textMuted,
+
+  fontSize: "9px",
+
+  fontWeight: 600,
+
+  textTransform: "uppercase",
+
+  letterSpacing: "0.04em",
+};
+
+export const documentEmptyStyle: CSSProperties = {
+  minHeight: "90px",
+
+  display: "flex",
+
+  alignItems: "center",
+
+  justifyContent: "center",
+
+  padding: "18px",
+
+  border: "1px dashed rgba(148,163,184,0.18)",
+
+  borderRadius: "10px",
+
+  background: "rgba(255,255,255,0.015)",
+
+  color: COLORS.textMuted,
+
+  fontSize: "11px",
+
+  textAlign: "center",
+};
+
+export const documentOpenButtonStyle: CSSProperties = {
+  gridColumn: "2",
+
+  gridRow: "1 / span 2",
+
+  minHeight: "28px",
+
+  padding: "0 9px",
+
+  border: `1px solid ${COLORS.primaryBorder}`,
+
+  borderRadius: "6px",
+
+  background: COLORS.primarySoft,
+
+  color: "#93C5FD",
+
+  fontSize: "9px",
+
+  fontWeight: 750,
+
+  cursor: "pointer",
+
+  whiteSpace: "nowrap",
+};
+
+export const documentCountBadgeStyle: CSSProperties = {
+  flexShrink: 0,
+
+  padding: "5px 8px",
+
+  border: `1px solid ${COLORS.primaryBorder}`,
+
+  borderRadius: "999px",
+
+  background: COLORS.primarySoft,
+
+  color: "#93C5FD",
+
+  fontSize: "9px",
+
+  fontWeight: 750,
+
+  whiteSpace: "nowrap",
+};
+
+// ============================================================
+// DOCUMENT VIEWER
+// ============================================================
+
+export const documentViewerBackdropStyle: CSSProperties = {
+  position: "fixed",
+
+  inset: 0,
+
+  zIndex: 9999,
+
+  display: "flex",
+
+  alignItems: "center",
+
+  justifyContent: "center",
+
+  padding: "24px",
+
+  background: "rgba(2,6,23,0.84)",
+
+  backdropFilter: "blur(6px)",
+};
+
+export const documentViewerStyle: CSSProperties = {
+  width: "min(1100px, 100%)",
+
+  height: "min(820px, 92vh)",
+
+  display: "flex",
+
+  flexDirection: "column",
+
+  overflow: "hidden",
+
+  border: `1px solid ${COLORS.borderStrong}`,
+
+  borderRadius: "14px",
+
+  background: COLORS.panel,
+
+  boxShadow: "0 24px 70px rgba(0,0,0,0.55)",
+};
+
+export const documentViewerHeaderStyle: CSSProperties = {
+  minHeight: "52px",
+
+  display: "flex",
+
+  alignItems: "center",
+
+  justifyContent: "space-between",
+
+  gap: "12px",
+
+  padding: "0 14px",
+
+  borderBottom: "1px solid rgba(148,163,184,0.14)",
+
+  background: COLORS.panelSoft,
+};
+
+export const documentViewerTitleStyle: CSSProperties = {
+  minWidth: 0,
+
+  overflow: "hidden",
+
+  textOverflow: "ellipsis",
+
+  whiteSpace: "nowrap",
+
+  color: COLORS.text,
+
+  fontSize: "12px",
+
+  fontWeight: 750,
+};
+
+export const documentViewerCloseStyle: CSSProperties = {
+  width: "32px",
+
+  height: "32px",
+
+  flexShrink: 0,
+
+  border: `1px solid ${COLORS.borderStrong}`,
+
+  borderRadius: "8px",
+
+  background: "rgba(255,255,255,0.04)",
+
+  color: COLORS.textSecondary,
+
+  fontSize: "22px",
+
+  lineHeight: 1,
+
+  cursor: "pointer",
+};
+
+export const documentViewerBodyStyle: CSSProperties = {
+  flex: 1,
+
+  minHeight: 0,
+
+  display: "flex",
+
+  alignItems: "center",
+
+  justifyContent: "center",
+
+  overflow: "auto",
+
+  padding: "18px",
+
+  background: "rgba(2,6,23,0.72)",
+};
+
+export const documentViewerImageStyle: CSSProperties = {
+  maxWidth: "100%",
+
+  maxHeight: "100%",
+
+  width: "auto",
+
+  height: "auto",
+
+  objectFit: "contain",
+
+  display: "block",
+
+  borderRadius: "6px",
+
+  boxShadow: "0 12px 40px rgba(0,0,0,0.35)",
+};
+
+export const documentViewerPdfStyle: CSSProperties = {
+  color: COLORS.textMuted,
+
+  fontSize: "12px",
+
+  textAlign: "center",
+};
 
 // ============================================================
 // SCHEDULE
 // ============================================================
 
-export const scheduleWrapperStyle:
-  CSSProperties = {
+export const scheduleWrapperStyle: CSSProperties = {
+  width: "100%",
 
-  width:
-    "100%",
+  overflowX: "auto",
 
-  overflowX:
-    "auto",
+  border: "1px solid rgba(148,163,184,0.12)",
 
-  border:
-    "1px solid rgba(148,163,184,0.12)",
-
-  borderRadius:
-    "9px",
-
+  borderRadius: "9px",
 };
 
+export const scheduleHeaderStyle: CSSProperties = {
+  display: "grid",
 
-export const scheduleHeaderStyle:
-  CSSProperties = {
+  gridTemplateColumns: "70px minmax(130px, 1fr) repeat(4, minmax(110px, 1fr))",
 
-  display:
-    "grid",
+  minWidth: "720px",
 
-  gridTemplateColumns:
-    "70px minmax(130px, 1fr) repeat(4, minmax(110px, 1fr))",
+  padding: "9px 10px",
 
-  minWidth:
-    "720px",
+  borderBottom: "1px solid rgba(148,163,184,0.14)",
 
-  padding:
-    "9px 10px",
-
-  borderBottom:
-    "1px solid rgba(148,163,184,0.14)",
-
-  background:
-    "rgba(255,255,255,0.035)",
-
+  background: "rgba(255,255,255,0.035)",
 };
 
+export const scheduleHeaderCellStyle: CSSProperties = {
+  color: COLORS.textMuted,
 
-export const scheduleHeaderCellStyle:
-  CSSProperties = {
+  fontSize: "9px",
 
-  color:
-    COLORS.textMuted,
+  fontWeight: 700,
 
-  fontSize:
-    "9px",
+  textTransform: "uppercase",
 
-  fontWeight:
-    700,
-
-  textTransform:
-    "uppercase",
-
-  letterSpacing:
-    "0.03em",
-
+  letterSpacing: "0.03em",
 };
 
+export const scheduleRowStyle: CSSProperties = {
+  display: "grid",
 
-export const scheduleRowStyle:
-  CSSProperties = {
+  gridTemplateColumns: "70px minmax(130px, 1fr) repeat(4, minmax(110px, 1fr))",
 
-  display:
-    "grid",
+  minWidth: "720px",
 
-  gridTemplateColumns:
-    "70px minmax(130px, 1fr) repeat(4, minmax(110px, 1fr))",
+  padding: "9px 10px",
 
-  minWidth:
-    "720px",
-
-  padding:
-    "9px 10px",
-
-  borderBottom:
-    "1px solid rgba(148,163,184,0.08)",
-
+  borderBottom: "1px solid rgba(148,163,184,0.08)",
 };
 
+export const scheduleCellStyle: CSSProperties = {
+  color: COLORS.textSecondary,
 
-export const scheduleCellStyle:
-  CSSProperties = {
+  fontSize: "10px",
 
-  color:
-    COLORS.textSecondary,
-
-  fontSize:
-    "10px",
-
-  fontWeight:
-    600,
-
+  fontWeight: 600,
 };
 
+export const scheduleEmptyStyle: CSSProperties = {
+  padding: "18px",
 
-export const scheduleEmptyStyle:
-  CSSProperties = {
+  textAlign: "center",
 
-  padding:
-    "18px",
+  color: COLORS.textMuted,
 
-  textAlign:
-    "center",
-
-  color:
-    COLORS.textMuted,
-
-  fontSize:
-    "11px",
-
+  fontSize: "11px",
 };
-
 
 // ============================================================
 // FOOTER
 // ============================================================
 
-export const footerStyle:
-  CSSProperties = {
+export const footerStyle: CSSProperties = {
+  display: "flex",
 
-  display:
-    "flex",
+  justifyContent: "flex-end",
 
-  justifyContent:
-    "flex-end",
+  alignItems: "center",
 
-  alignItems:
-    "center",
-
-  padding:
-    "4px 0",
-
+  padding: "4px 0",
 };
 
+export const footerBackButtonStyle: CSSProperties = {
+  minHeight: "36px",
 
-export const footerBackButtonStyle:
-  CSSProperties = {
+  padding: "0 16px",
 
-  minHeight:
-    "36px",
+  border: `1px solid ${COLORS.primaryBorder}`,
 
-  padding:
-    "0 16px",
+  borderRadius: "8px",
 
-  border:
-    `1px solid ${COLORS.primaryBorder}`,
+  background: COLORS.primary,
 
-  borderRadius:
-    "8px",
+  color: COLORS.text,
 
-  background:
-    COLORS.primary,
+  fontSize: "12px",
 
-  color:
-    COLORS.text,
+  fontWeight: 750,
 
-  fontSize:
-    "12px",
+  cursor: "pointer",
 
-  fontWeight:
-    750,
-
-  cursor:
-    "pointer",
-
-  boxShadow:
-    "0 7px 18px rgba(37,99,235,0.20)",
-
+  boxShadow: "0 7px 18px rgba(37,99,235,0.20)",
 };
-
 
 // ============================================================
 // RESPONSIVE
 // ============================================================
 
 export const responsiveMediaQuery = `
+  .finora-view-loan-column {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .finora-view-loan-text-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+
   @media (max-width: 1100px) {
-    .finora-view-loan-details-grid {
+    .finora-view-loan-content-grid {
       grid-template-columns: 1fr !important;
+    }
+
+    .finora-loan-document-gallery {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
     }
   }
 
   @media (max-width: 760px) {
-    .finora-view-loan-details-grid {
+    .finora-view-loan-content-grid {
       gap: 12px !important;
+    }
+
+    .finora-view-loan-text-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .finora-view-loan-info-grid {
+      grid-template-columns: 1fr !important;
+    }
+
+    .finora-view-loan-financial-grid {
+      grid-template-columns: 1fr !important;
+    }
+
+    .finora-loan-document-gallery {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .finora-view-loan-header-meta {
+      flex-wrap: wrap;
+      justify-content: flex-end;
+    }
+  }
+
+  @media (max-width: 480px) {
+    .finora-loan-document-gallery {
+      grid-template-columns: 1fr;
     }
   }
 `;
-
-
 
 // ============================================================
 // END

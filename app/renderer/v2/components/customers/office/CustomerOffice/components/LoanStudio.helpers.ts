@@ -3,32 +3,19 @@
    LOAN STUDIO HELPERS
    ============================================================ */
 
-import {
-  StorageMode,
-} from "../../../../../storage/storage.types";
+import { StorageMode } from "../../../../../storage/storage.types";
 
-const STORAGE_MODE_SESSION_KEY =
-  "FINORA_STORAGE_MODE";
+const STORAGE_MODE_SESSION_KEY = "FINORA_STORAGE_MODE";
 
-export function getAuthenticatedStorageMode():
-  StorageMode {
+export function getAuthenticatedStorageMode(): StorageMode {
   try {
-    const storedMode =
-      window.sessionStorage.getItem(
-        STORAGE_MODE_SESSION_KEY,
-      );
+    const storedMode = window.sessionStorage.getItem(STORAGE_MODE_SESSION_KEY);
 
-    if (
-      storedMode ===
-      StorageMode.USB
-    ) {
+    if (storedMode === StorageMode.USB) {
       return StorageMode.USB;
     }
 
-    if (
-      storedMode ===
-      StorageMode.CLOUD
-    ) {
+    if (storedMode === StorageMode.CLOUD) {
       return StorageMode.CLOUD;
     }
 
@@ -38,66 +25,43 @@ export function getAuthenticatedStorageMode():
   }
 }
 
-export const parseNumericValue = (
-  value: string,
-): number => {
-  const normalized =
-    value
-      .replace(/,/g, "")
-      .trim();
+export const parseNumericValue = (value: string): number => {
+  const normalized = value.replace(/,/g, "").trim();
 
   if (!normalized) {
     return 0;
   }
 
-  const parsed =
-    Number(normalized);
+  const parsed = Number(normalized);
 
-  return Number.isFinite(parsed)
-    ? parsed
-    : 0;
+  return Number.isFinite(parsed) ? parsed : 0;
 };
 
 export const normalizeLoanType = (
   value: string,
 ): "DAILY" | "WEEKLY" | "MONTHLY" | "" => {
-  const normalized =
-    value
-      .trim()
-      .toUpperCase()
-      .replace(/\s+LOAN$/, "");
+  const normalized = value
+    .trim()
+    .toUpperCase()
+    .replace(/\s+LOAN$/, "");
 
-  if (
-    normalized ===
-    "DAILY"
-  ) {
+  if (normalized === "DAILY") {
     return "DAILY";
   }
 
-  if (
-    normalized ===
-    "WEEKLY"
-  ) {
+  if (normalized === "WEEKLY") {
     return "WEEKLY";
   }
 
-  if (
-    normalized ===
-    "MONTHLY"
-  ) {
+  if (normalized === "MONTHLY") {
     return "MONTHLY";
   }
 
   return "";
 };
 
-export const getLoanTypeLabel = (
-  value: string,
-): string => {
-  const normalized =
-    normalizeLoanType(
-      value,
-    );
+export const getLoanTypeLabel = (value: string): string => {
+  const normalized = normalizeLoanType(value);
 
   switch (normalized) {
     case "DAILY":
@@ -114,32 +78,17 @@ export const getLoanTypeLabel = (
   }
 };
 
-export const formatIndianDate = (
-  value: Date | null,
-): string => {
+export const formatIndianDate = (value: Date | null): string => {
   if (!value) {
     return "--";
   }
 
-  const day =
-    String(
-      value.getDate(),
-    ).padStart(
-      2,
-      "0",
-    );
+  const day = String(value.getDate()).padStart(2, "0");
 
-  const month =
-    String(
-      value.getMonth() + 1,
-    ).padStart(
-      2,
-      "0",
-    );
+  const month = String(value.getMonth() + 1).padStart(2, "0");
 
   return `${day}/${month}/${value.getFullYear()}`;
 };
-
 
 /* ============================================================
    END

@@ -1,25 +1,22 @@
 /* ===========================================================
    FINORA ENTERPRISE OS™
+
    LOAN BUILDER™
 
    BUILDER
 =========================================================== */
 
-import type {
-  Loan,
-} from "../../components/customers/office/CustomerOffice/types";
+import type { Loan } from "../../components/customers/office/CustomerOffice/types";
 
-import type {
-  LoanInstallment,
-} from "../../components/loans/schedule/types";
+import type { LoanInstallment } from "../../components/loans/schedule/types";
 
+import type { DocumentsStudioItem } from "../../components/loans/documents/DocumentsStudio";
 
 /* ===========================================================
    TYPES
 =========================================================== */
 
 export interface BuildLoanOptions {
-
   id: string;
 
   title: string;
@@ -40,7 +37,6 @@ export interface BuildLoanOptions {
 
   guarantor: string;
 
-
   /* ==========================================
      CUSTOMER
   ========================================== */
@@ -50,7 +46,6 @@ export interface BuildLoanOptions {
   customerName?: string;
 
   phoneNumber?: string;
-
 
   /* ==========================================
      LOAN DETAILS
@@ -64,7 +59,6 @@ export interface BuildLoanOptions {
 
   durationType?: string;
 
-
   /* ==========================================
      FINANCE
   ========================================== */
@@ -72,7 +66,6 @@ export interface BuildLoanOptions {
   advanceDeduction?: number;
 
   netDisbursement?: number;
-
 
   /* ==========================================
      NOTES
@@ -82,6 +75,15 @@ export interface BuildLoanOptions {
 
   remarks?: string;
 
+  /* ==========================================
+     DOCUMENTS / EVIDENCE
+     
+     Documents uploaded in Loan Studio
+     Step 3 → Documents Studio belong to
+     this specific Loan.
+  ========================================== */
+
+  documents?: DocumentsStudioItem[];
 
   /* ==========================================
      STATUS
@@ -90,37 +92,23 @@ export interface BuildLoanOptions {
   outstanding: number;
 
   schedule: LoanInstallment[];
-
 }
-
 
 /* ===========================================================
    BUILD LOAN
 =========================================================== */
 
-
-
-export function buildLoan(
-
-  options: BuildLoanOptions,
-
-): Loan {
-
+export function buildLoan(options: BuildLoanOptions): Loan {
   return {
-
     id: options.id,
 
     title: options.title,
 
-    loanNumber:
-  options.loanNumber ??
-  `FIN-LOAN-${Date.now()}`,
-
+    loanNumber: options.loanNumber ?? `FIN-LOAN-${Date.now()}`,
 
     amount: options.amount,
 
     outstanding: options.outstanding,
-
 
     interest: options.interest,
 
@@ -128,14 +116,15 @@ export function buildLoan(
 
     lateFee: options.lateFee,
 
-
     loanDate: options.loanDate,
 
     dueDate: options.dueDate,
 
-
     guarantor: options.guarantor,
 
+    /* ==========================================
+       CUSTOMER
+    ========================================== */
 
     customerId: options.customerId,
 
@@ -143,6 +132,9 @@ export function buildLoan(
 
     phoneNumber: options.phoneNumber,
 
+    /* ==========================================
+       LOAN DETAILS
+    ========================================== */
 
     loanType: options.loanType,
 
@@ -152,21 +144,41 @@ export function buildLoan(
 
     durationType: options.durationType,
 
+    /* ==========================================
+       FINANCE
+    ========================================== */
 
     advanceDeduction: options.advanceDeduction,
 
     netDisbursement: options.netDisbursement,
 
+    /* ==========================================
+       NOTES
+    ========================================== */
 
     purpose: options.purpose,
 
     remarks: options.remarks,
 
+    /* ==========================================
+       DOCUMENTS / EVIDENCE
+
+       Keep the exact documents uploaded for
+       this Loan Studio workspace.
+    ========================================== */
+
+    documents: options.documents ?? [],
+
+    /* ==========================================
+       STATUS
+    ========================================== */
 
     status: "ACTIVE",
 
     schedule: options.schedule,
-
   };
-
 }
+
+/* ===========================================================
+   END
+=========================================================== */

@@ -15,10 +15,7 @@ import type { CSSProperties } from "react";
 
 import SummaryCard from "../../common/cards/SummaryCard";
 
-import {
-  FormField,
-  SelectInput,
-} from "../../common";
+import { FormField, SelectInput } from "../../common";
 
 // ============================================================
 // STYLES
@@ -30,8 +27,7 @@ const fieldsStyle: CSSProperties = {
 
   display: "grid",
 
-  gridTemplateColumns:
-    "minmax(0, 1fr) minmax(0, 1fr)",
+  gridTemplateColumns: "minmax(0, 1fr) minmax(0, 1fr)",
 
   gap: "10px",
 
@@ -49,13 +45,9 @@ interface PaymentModeCardProps {
 
   transactionStatus?: string;
 
-  onPaymentModeChange?: (
-    value: string,
-  ) => void;
+  onPaymentModeChange?: (value: string) => void;
 
-  onTransactionStatusChange?: (
-    value: string,
-  ) => void;
+  onTransactionStatusChange?: (value: string) => void;
 }
 
 // ============================================================
@@ -72,32 +64,17 @@ export default function PaymentModeCard({
   onTransactionStatusChange,
 }: PaymentModeCardProps) {
   return (
-    <SummaryCard
-      title="Payment Mode"
-    >
-
-      <div
-        style={fieldsStyle}
-      >
-
+    <SummaryCard title="Payment Mode">
+      <div style={fieldsStyle}>
         {/* ==================================================
             PRIMARY PAYMENT MODE
         ================================================== */}
 
-        <FormField
-          label="Primary Payment Mode"
-          required
-        >
+        <FormField label="Primary Payment Mode" required>
           <SelectInput
-            value={
-              paymentMode
-            }
-            onChange={(
-              event,
-            ) => {
-              onPaymentModeChange?.(
-                event.target.value,
-              );
+            value={paymentMode}
+            onChange={(event) => {
+              onPaymentModeChange?.(event.target.value);
             }}
             options={[
               {
@@ -120,24 +97,15 @@ export default function PaymentModeCard({
           />
         </FormField>
 
-
         {/* ==================================================
             TRANSACTION STATUS
         ================================================== */}
 
-        <FormField
-          label="Transaction Status"
-        >
+        <FormField label="Transaction Status">
           <SelectInput
-            value={
-              transactionStatus
-            }
-            onChange={(
-              event,
-            ) => {
-              onTransactionStatusChange?.(
-                event.target.value,
-              );
+            value={transactionStatus}
+            onChange={(event) => {
+              onTransactionStatusChange?.(event.target.value);
             }}
             options={[
               {
@@ -155,9 +123,7 @@ export default function PaymentModeCard({
             ]}
           />
         </FormField>
-
       </div>
-
     </SummaryCard>
   );
 }

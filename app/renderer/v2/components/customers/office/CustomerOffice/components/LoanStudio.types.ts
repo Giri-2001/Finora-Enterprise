@@ -16,43 +16,29 @@
    - No business calculations.
 =========================================================== */
 
-
 /* ===========================================================
    VIEW MODEL TYPE SOURCE
 =========================================================== */
 
-import type {
-  useLoanStudio,
-} from "./useLoanStudio";
-
+import type { useLoanStudio } from "./useLoanStudio";
 
 /* ===========================================================
    PUBLIC PROPS
 =========================================================== */
 
 export interface LoanStudioProps {
+  customerName?: string;
 
-  customerName?:
-    string;
+  customerId?: string;
 
-  customerId?:
-    string;
-
-  phoneNumber?:
-    string;
-
+  phoneNumber?: string;
 }
-
 
 /* ===========================================================
    VIEW MODEL
 =========================================================== */
 
-export type LoanStudioViewModel =
-  ReturnType<
-    typeof useLoanStudio
-  >;
-
+export type LoanStudioViewModel = ReturnType<typeof useLoanStudio>;
 
 /* ===========================================================
    END

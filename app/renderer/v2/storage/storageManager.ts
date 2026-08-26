@@ -33,7 +33,6 @@
 // STATUS  : Production Foundation
 // ============================================================
 
-
 // ============================================================
 // IMPORTS
 // ============================================================
@@ -50,91 +49,49 @@ import {
   StorageWriteOptions,
 } from "./storage.types";
 
+import { localStorageAdapter } from "./adapters/localStorage.adapter";
 
-import {
-  localStorageAdapter,
-} from "./adapters/localStorage.adapter";
+import { cloudStorageAdapter } from "./adapters/cloudStorage.adapter";
 
-
-import {
-  cloudStorageAdapter,
-} from "./adapters/cloudStorage.adapter";
-
-
-import {
-  usbStorageAdapter,
-} from "./adapters/usbStorage.adapter";
-
+import { usbStorageAdapter } from "./adapters/usbStorage.adapter";
 
 // ============================================================
 // STORAGE MANAGER
 // ============================================================
 
 export class StorageManager {
-
   // ==========================================================
   // REGISTERED ADAPTERS
   // ==========================================================
 
-  private readonly adapters:
-    Map<
-      StorageMode,
-      StorageAdapter
-    >;
-
+  private readonly adapters: Map<StorageMode, StorageAdapter>;
 
   // ==========================================================
   // CURRENT CONFIGURATION
   // ==========================================================
 
-  private configuration:
-    StorageConfiguration;
-
+  private configuration: StorageConfiguration;
 
   // ==========================================================
   // CURRENT INITIALIZATION STATE
   // ==========================================================
 
-  private initialized =
-    false;
-
+  private initialized = false;
 
   // ==========================================================
   // CONSTRUCTOR
   // ==========================================================
 
   constructor() {
+    const adapterEntries: Array<[StorageMode, StorageAdapter]> = [
+      [StorageMode.LOCAL, localStorageAdapter],
 
-    const adapterEntries:
-      Array<
-        [StorageMode, StorageAdapter]
-      > = [
+      [StorageMode.USB, usbStorageAdapter],
 
-      [
-        StorageMode.LOCAL,
-        localStorageAdapter,
-      ],
-
-      [
-        StorageMode.USB,
-        usbStorageAdapter,
-      ],
-
-      [
-        StorageMode.CLOUD,
-        cloudStorageAdapter,
-      ],
+      [StorageMode.CLOUD, cloudStorageAdapter],
     ];
 
-
-    this.adapters =
-      new Map<
-        StorageMode,
-        StorageAdapter
-      >(
-        adapterEntries,
-      );
-
+    this.adapters = new Map<StorageMode, StorageAdapter>(adapterEntries);
 
     // --------------------------------------------------------
     // IMPORTANT:
@@ -149,28 +106,19 @@ export class StorageManager {
     // --------------------------------------------------------
 
     this.configuration = {
+      storageMode: StorageMode.USB,
 
-      storageMode:
-        StorageMode.USB,
-
-      dataContext:
-        DataContext.REAL,
+      dataContext: DataContext.REAL,
     };
   }
-
 
   // ==========================================================
   // INITIALIZE
   // ==========================================================
 
   async initialize(
-    configuration?:
-      StorageConfiguration,
-  ):
-    Promise<
-      StorageResult<void>
-    > {
-
+    configuration?: StorageConfiguration,
+  ): Promise<StorageResult<void>> {
     // --------------------------------------------------------
     // EXPLICIT CONFIGURATION
     //
@@ -178,33 +126,22 @@ export class StorageManager {
     // --------------------------------------------------------
 
     if (configuration) {
-
       this.configuration = {
         ...configuration,
       };
     }
 
-
-    const adapter =
-      this.getActiveAdapter();
-
+    const adapter = this.getActiveAdapter();
 
     if (!adapter) {
-
-      this.initialized =
-        false;
-
+      this.initialized = false;
 
       return {
+        success: false,
 
-        success:
-          false,
-
-        error:
-          `No storage adapter is registered for ${this.configuration.storageMode}.`,
+        error: `No storage adapter is registered for ${this.configuration.storageMode}.`,
       };
     }
-
 
     // --------------------------------------------------------
     // INITIALIZE SELECTED ADAPTER
@@ -217,97 +154,55 @@ export class StorageManager {
     // We do NOT switch to LOCAL.
     // --------------------------------------------------------
 
-    const result =
-      await adapter.initialize(
-        this.configuration,
-      );
+    const result = await adapter.initialize(this.configuration);
 
-
-    this.initialized =
-      result.success;
-
+    this.initialized = result.success;
 
     if (!result.success) {
-
       return {
+        success: false,
 
-        success:
-          false,
-
-        error:
-          result.error ??
-          "Unable to initialize storage.",
+        error: result.error ?? "Unable to initialize storage.",
       };
     }
 
-
     return {
-
-      success:
-        true,
+      success: true,
     };
   }
-
 
   // ==========================================================
   // SELECT STORAGE MODE
   // ==========================================================
 
   async selectStorageMode(
-    storageMode:
-      StorageMode,
-  ):
-    Promise<
-      StorageResult<void>
-    > {
-
-    const nextConfiguration:
-      StorageConfiguration = {
-
+    storageMode: StorageMode,
+  ): Promise<StorageResult<void>> {
+    const nextConfiguration: StorageConfiguration = {
       ...this.configuration,
 
       storageMode,
     };
 
-
-    const adapter =
-      this.adapters.get(
-        storageMode,
-      );
-
+    const adapter = this.adapters.get(storageMode);
 
     if (!adapter) {
-
       return {
+        success: false,
 
-        success:
-          false,
-
-        error:
-          `Storage mode ${storageMode} is not registered.`,
+        error: `Storage mode ${storageMode} is not registered.`,
       };
     }
 
-
-    const result =
-      await adapter.initialize(
-        nextConfiguration,
-      );
-
+    const result = await adapter.initialize(nextConfiguration);
 
     if (!result.success) {
-
       return {
+        success: false,
 
-        success:
-          false,
-
-        error:
-          result.error ??
-          "Unable to initialize selected storage mode.",
+        error: result.error ?? "Unable to initialize selected storage mode.",
       };
     }
-
 
     // --------------------------------------------------------
     // USB READINESS GATE
@@ -337,107 +232,56 @@ export class StorageManager {
     // If USB is genuinely disconnected, the selection fails.
     // --------------------------------------------------------
 
-    if (
-      storageMode ===
-      StorageMode.USB
-    ) {
+    if (storageMode === StorageMode.USB) {
+      const maxAttempts = 5;
 
-      const maxAttempts =
-        5;
+      const retryDelayMs = 150;
 
-      const retryDelayMs =
-        150;
+      let lastStatus: StorageStatus | undefined;
 
-      let lastStatus:
-        StorageStatus | undefined;
+      for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
+        lastStatus = await adapter.getStatus();
 
-
-      for (
-        let attempt = 0;
-        attempt < maxAttempts;
-        attempt += 1
-      ) {
-
-        lastStatus =
-          await adapter.getStatus();
-
-
-        if (
-          lastStatus.availability ===
-          StorageAvailability.READY
-        ) {
-
+        if (lastStatus.availability === StorageAvailability.READY) {
           break;
         }
 
-
-        if (
-          attempt <
-          maxAttempts - 1
-        ) {
-
-          await new Promise<void>(
-            (resolve) => {
-
-              window.setTimeout(
-                resolve,
-                retryDelayMs,
-              );
-
-            },
-          );
-
+        if (attempt < maxAttempts - 1) {
+          await new Promise<void>((resolve) => {
+            window.setTimeout(resolve, retryDelayMs);
+          });
         }
-
       }
-
 
       if (
         !lastStatus ||
-        lastStatus.availability !==
-        StorageAvailability.READY
+        lastStatus.availability !== StorageAvailability.READY
       ) {
-
         return {
+          success: false,
 
-          success:
-            false,
-
-          error:
-            lastStatus?.message ??
-            "FINORA Pendrive is not ready.",
+          error: lastStatus?.message ?? "FINORA Pendrive is not ready.",
         };
       }
-
     }
 
+    this.configuration = nextConfiguration;
 
-    this.configuration =
-      nextConfiguration;
-
-
-    this.initialized =
-      true;
-
+    this.initialized = true;
 
     return {
-
-      success:
-        true,
+      success: true,
     };
   }
-
 
   // ==========================================================
   // SET DATA CONTEXT
   // ==========================================================
 
   async setDataContext(
-    dataContext:
-      DataContext,
+    dataContext: DataContext,
 
     identifiers?: {
-
       ownerId?: string;
 
       demoId?: string;
@@ -446,146 +290,81 @@ export class StorageManager {
 
       storageId?: string;
     },
-  ):
-    Promise<
-      StorageResult<void>
-    > {
-
-    const nextConfiguration:
-      StorageConfiguration = {
-
+  ): Promise<StorageResult<void>> {
+    const nextConfiguration: StorageConfiguration = {
       ...this.configuration,
 
       dataContext,
 
-      ownerId:
-        identifiers?.ownerId ??
-        this.configuration.ownerId,
+      ownerId: identifiers?.ownerId ?? this.configuration.ownerId,
 
-      demoId:
-        identifiers?.demoId ??
-        this.configuration.demoId,
+      demoId: identifiers?.demoId ?? this.configuration.demoId,
 
-      deviceId:
-        identifiers?.deviceId ??
-        this.configuration.deviceId,
+      deviceId: identifiers?.deviceId ?? this.configuration.deviceId,
 
-      storageId:
-        identifiers?.storageId ??
-        this.configuration.storageId,
+      storageId: identifiers?.storageId ?? this.configuration.storageId,
     };
-
 
     // --------------------------------------------------------
     // REAL CONTEXT
     // --------------------------------------------------------
 
-    if (
-      dataContext ===
-      DataContext.REAL
-    ) {
-
-      nextConfiguration.demoId =
-        undefined;
+    if (dataContext === DataContext.REAL) {
+      nextConfiguration.demoId = undefined;
     }
-
 
     // --------------------------------------------------------
     // DEMO CONTEXT REQUIRES DEMO ID
     // --------------------------------------------------------
 
-    if (
-      dataContext ===
-      DataContext.DEMO &&
-      !nextConfiguration.demoId
-    ) {
-
+    if (dataContext === DataContext.DEMO && !nextConfiguration.demoId) {
       return {
+        success: false,
 
-        success:
-          false,
-
-        error:
-          "A Demo ID is required for DEMO data context.",
+        error: "A Demo ID is required for DEMO data context.",
       };
     }
-
 
     // --------------------------------------------------------
     // REAL CONTEXT REQUIRES OWNER ID
     // --------------------------------------------------------
 
-    if (
-      dataContext ===
-      DataContext.REAL &&
-      !nextConfiguration.ownerId
-    ) {
-
+    if (dataContext === DataContext.REAL && !nextConfiguration.ownerId) {
       return {
+        success: false,
 
-        success:
-          false,
-
-        error:
-          "An Owner ID is required for REAL data context.",
+        error: "An Owner ID is required for REAL data context.",
       };
     }
 
-
-    const adapter =
-      this.getAdapter(
-        nextConfiguration.storageMode,
-      );
-
+    const adapter = this.getAdapter(nextConfiguration.storageMode);
 
     if (!adapter) {
-
       return {
+        success: false,
 
-        success:
-          false,
-
-        error:
-          `Storage mode ${nextConfiguration.storageMode} is not registered.`,
+        error: `Storage mode ${nextConfiguration.storageMode} is not registered.`,
       };
     }
 
-
-    const result =
-      await adapter.initialize(
-        nextConfiguration,
-      );
-
+    const result = await adapter.initialize(nextConfiguration);
 
     if (!result.success) {
-
       return {
+        success: false,
 
-        success:
-          false,
-
-        error:
-          result.error ??
-          "Unable to initialize data context.",
+        error: result.error ?? "Unable to initialize data context.",
       };
     }
 
+    this.configuration = nextConfiguration;
 
-    this.configuration =
-      nextConfiguration;
-
-
-    this.initialized =
-      true;
-
+    this.initialized = true;
 
     return {
-
-      success:
-        true,
+      success: true,
     };
   }
-
 
   // ==========================================================
   // RESET DATA CONTEXT
@@ -610,80 +389,43 @@ export class StorageManager {
   // which is the explicit FINORA data wipe boundary.
   // ==========================================================
 
-  async resetDataContext():
-    Promise<
-      StorageResult<void>
-    > {
+  async resetDataContext(): Promise<StorageResult<void>> {
+    const nextConfiguration: StorageConfiguration = {
+      storageMode: this.configuration.storageMode,
 
-    const nextConfiguration:
-      StorageConfiguration = {
-
-      storageMode:
-        this.configuration.storageMode,
-
-      dataContext:
-        DataContext.REAL,
+      dataContext: DataContext.REAL,
     };
 
-
-    const adapter =
-      this.getAdapter(
-        nextConfiguration.storageMode,
-      );
-
+    const adapter = this.getAdapter(nextConfiguration.storageMode);
 
     if (!adapter) {
-
-      this.initialized =
-        false;
-
+      this.initialized = false;
 
       return {
+        success: false,
 
-        success:
-          false,
-
-        error:
-          `Storage mode ${nextConfiguration.storageMode} is not registered.`,
+        error: `Storage mode ${nextConfiguration.storageMode} is not registered.`,
       };
     }
 
-
-    const result =
-      await adapter.initialize(
-        nextConfiguration,
-      );
-
+    const result = await adapter.initialize(nextConfiguration);
 
     if (!result.success) {
-
       return {
+        success: false,
 
-        success:
-          false,
-
-        error:
-          result.error ??
-          "Unable to reset storage context.",
+        error: result.error ?? "Unable to reset storage context.",
       };
     }
 
+    this.configuration = nextConfiguration;
 
-    this.configuration =
-      nextConfiguration;
-
-
-    this.initialized =
-      true;
-
+    this.initialized = true;
 
     return {
-
-      success:
-        true,
+      success: true,
     };
   }
-
 
   // ==========================================================
   // RESET FINORA DATA
@@ -712,719 +454,418 @@ export class StorageManager {
   // - wipe another Demo environment
   // ==========================================================
 
-  async resetFinoraData():
-    Promise<
-      StorageResult<void>
-    > {
-
-    const adapter =
-      this.getActiveAdapter();
-
+  async resetFinoraData(): Promise<StorageResult<void>> {
+    const adapter = this.getActiveAdapter();
 
     if (!adapter) {
-
       return {
+        success: false,
 
-        success:
-          false,
-
-        error:
-          "No active FINORA storage adapter.",
+        error: "No active FINORA storage adapter.",
       };
     }
 
-
-    const result =
-      await adapter.resetFinoraData();
-
+    const result = await adapter.resetFinoraData();
 
     if (!result.success) {
-
       return {
+        success: false,
 
-        success:
-          false,
-
-        error:
-          result.error ??
-          "Unable to reset FINORA data.",
+        error: result.error ?? "Unable to reset FINORA data.",
       };
     }
 
-
     return {
-
-      success:
-        true,
+      success: true,
     };
   }
-
 
   // ==========================================================
   // GET CURRENT CONFIGURATION
   // ==========================================================
 
-  getConfiguration():
-    StorageConfiguration {
-
+  getConfiguration(): StorageConfiguration {
     return {
       ...this.configuration,
     };
   }
 
-
   // ==========================================================
   // GET ACTIVE STORAGE MODE
   // ==========================================================
 
-  getStorageMode():
-    StorageMode {
-
+  getStorageMode(): StorageMode {
     return this.configuration.storageMode;
   }
-
 
   // ==========================================================
   // GET DATA CONTEXT
   // ==========================================================
 
-  getDataContext():
-    DataContext {
-
+  getDataContext(): DataContext {
     return this.configuration.dataContext;
   }
-
 
   // ==========================================================
   // GET ACTIVE ADAPTER
   // ==========================================================
 
-  getActiveAdapter():
-    StorageAdapter | undefined {
-
-    return this.adapters.get(
-      this.configuration.storageMode,
-    );
+  getActiveAdapter(): StorageAdapter | undefined {
+    return this.adapters.get(this.configuration.storageMode);
   }
-
 
   // ==========================================================
   // GET ADAPTER
   // ==========================================================
 
-  getAdapter(
-    storageMode:
-      StorageMode,
-  ):
-    StorageAdapter | undefined {
-
-    return this.adapters.get(
-      storageMode,
-    );
+  getAdapter(storageMode: StorageMode): StorageAdapter | undefined {
+    return this.adapters.get(storageMode);
   }
-
 
   // ==========================================================
   // IS INITIALIZED
   // ==========================================================
 
-  isInitialized():
-    boolean {
-
+  isInitialized(): boolean {
     return this.initialized;
   }
-
 
   // ==========================================================
   // IS AVAILABLE
   // ==========================================================
 
-  async isAvailable():
-    Promise<boolean> {
-
-    const adapter =
-      this.getActiveAdapter();
-
+  async isAvailable(): Promise<boolean> {
+    const adapter = this.getActiveAdapter();
 
     if (!adapter) {
-
       return false;
     }
 
-
     return adapter.isAvailable();
   }
-
 
   // ==========================================================
   // GET STATUS
   // ==========================================================
 
-  async getStatus():
-    Promise<StorageStatus> {
-
-    const adapter =
-      this.getActiveAdapter();
-
+  async getStatus(): Promise<StorageStatus> {
+    const adapter = this.getActiveAdapter();
 
     if (!adapter) {
-
       return {
+        mode: this.configuration.storageMode,
 
-        mode:
-          this.configuration.storageMode,
+        availability: StorageAvailability.ERROR,
 
-        availability:
-          StorageAvailability.ERROR,
+        dataContext: this.configuration.dataContext,
 
-        dataContext:
-          this.configuration.dataContext,
+        ownerId: this.configuration.ownerId,
 
-        ownerId:
-          this.configuration.ownerId,
+        demoId: this.configuration.demoId,
 
-        demoId:
-          this.configuration.demoId,
+        storageId: this.configuration.storageId,
 
-        storageId:
-          this.configuration.storageId,
+        message: "Active storage adapter is not registered.",
 
-        message:
-          "Active storage adapter is not registered.",
-
-        checkedAt:
-          new Date().toISOString(),
+        checkedAt: new Date().toISOString(),
       };
     }
 
-
-    const status =
-      await adapter.getStatus();
-
+    const status = await adapter.getStatus();
 
     return {
-
       ...status,
 
-      mode:
-        this.configuration.storageMode,
+      mode: this.configuration.storageMode,
 
-      dataContext:
-        this.configuration.dataContext,
+      dataContext: this.configuration.dataContext,
 
-      ownerId:
-        this.configuration.ownerId,
+      ownerId: this.configuration.ownerId,
 
-      demoId:
-        this.configuration.demoId,
+      demoId: this.configuration.demoId,
 
-      storageId:
-        status.storageId ??
-        this.configuration.storageId,
+      storageId: status.storageId ?? this.configuration.storageId,
     };
   }
-
 
   // ==========================================================
   // GET
   // ==========================================================
 
   async get<T = unknown>(
-    query:
-      StorageQuery,
-  ):
-    Promise<
-      StorageResult<T | undefined>
-    > {
-
-    const adapter =
-      this.getActiveAdapter();
-
+    query: StorageQuery,
+  ): Promise<StorageResult<T | undefined>> {
+    const adapter = this.getActiveAdapter();
 
     if (!adapter) {
-
       return {
+        success: false,
 
-        success:
-          false,
-
-        error:
-          "No active FINORA storage adapter.",
+        error: "No active FINORA storage adapter.",
       };
     }
 
-
-    const result =
-      await adapter.get<T>(
-        this.applyContextToQuery(
-          query,
-        ),
-      );
-
+    const result = await adapter.get<T>(this.applyContextToQuery(query));
 
     if (!result.success) {
-
       return {
+        success: false,
 
-        success:
-          false,
-
-        error:
-          result.error ??
-          "Unable to read FINORA storage.",
+        error: result.error ?? "Unable to read FINORA storage.",
       };
     }
 
-
     return {
+      success: true,
 
-      success:
-        true,
-
-      data:
-        result.data as
-          T | undefined,
+      data: result.data as T | undefined,
     };
   }
-
 
   // ==========================================================
   // GET ALL
   // ==========================================================
 
-  async getAll<T = unknown>(
-    query:
-      StorageQuery,
-  ):
-    Promise<
-      StorageResult<T[]>
-    > {
-
-    const adapter =
-      this.getActiveAdapter();
-
+  async getAll<T = unknown>(query: StorageQuery): Promise<StorageResult<T[]>> {
+    const adapter = this.getActiveAdapter();
 
     if (!adapter) {
-
       return {
+        success: false,
 
-        success:
-          false,
-
-        error:
-          "No active FINORA storage adapter.",
+        error: "No active FINORA storage adapter.",
       };
     }
 
-
-    const result =
-      await adapter.getAll<T>(
-        this.applyContextToQuery(
-          query,
-        ),
-      );
-
+    const result = await adapter.getAll<T>(this.applyContextToQuery(query));
 
     if (!result.success) {
-
       return {
+        success: false,
 
-        success:
-          false,
-
-        error:
-          result.error ??
-          "Unable to read FINORA storage records.",
+        error: result.error ?? "Unable to read FINORA storage records.",
       };
     }
 
-
     return {
+      success: true,
 
-      success:
-        true,
-
-      data:
-        (result.data ?? []) as
-          T[],
+      data: (result.data ?? []) as T[],
     };
   }
-
 
   // ==========================================================
   // SAVE
   // ==========================================================
 
   async save<T = unknown>(
-    record:
-      T,
+    record: T,
 
-    options?:
-      StorageWriteOptions,
-  ):
-    Promise<
-      StorageResult<T>
-    > {
-
-    const adapter =
-      this.getActiveAdapter();
-
+    options?: StorageWriteOptions,
+  ): Promise<StorageResult<T>> {
+    const adapter = this.getActiveAdapter();
 
     if (!adapter) {
-
       return {
+        success: false,
 
-        success:
-          false,
-
-        error:
-          "No active FINORA storage adapter.",
+        error: "No active FINORA storage adapter.",
       };
     }
 
+    const result = await adapter.save<T>(
+      record,
 
-    const result =
-      await adapter.save<T>(
-        record,
-
-        this.applyContextToWriteOptions(
-          options,
-        ),
-      );
-
+      this.applyContextToWriteOptions(options),
+    );
 
     if (!result.success) {
-
       return {
+        success: false,
 
-        success:
-          false,
-
-        error:
-          result.error ??
-          "Unable to save FINORA record.",
+        error: result.error ?? "Unable to save FINORA record.",
       };
     }
 
-
     return {
+      success: true,
 
-      success:
-        true,
-
-      data:
-        result.data as
-          T,
+      data: result.data as T,
     };
   }
-
 
   // ==========================================================
   // UPDATE
   // ==========================================================
 
   async update<T = unknown>(
-    record:
-      T,
+    record: T,
 
-    options?:
-      StorageWriteOptions,
-  ):
-    Promise<
-      StorageResult<T>
-    > {
-
-    const adapter =
-      this.getActiveAdapter();
-
+    options?: StorageWriteOptions,
+  ): Promise<StorageResult<T>> {
+    const adapter = this.getActiveAdapter();
 
     if (!adapter) {
-
       return {
+        success: false,
 
-        success:
-          false,
-
-        error:
-          "No active FINORA storage adapter.",
+        error: "No active FINORA storage adapter.",
       };
     }
 
+    const result = await adapter.update<T>(
+      record,
 
-    const result =
-      await adapter.update<T>(
-        record,
-
-        this.applyContextToWriteOptions(
-          options,
-        ),
-      );
-
+      this.applyContextToWriteOptions(options),
+    );
 
     if (!result.success) {
-
       return {
+        success: false,
 
-        success:
-          false,
-
-        error:
-          result.error ??
-          "Unable to update FINORA record.",
+        error: result.error ?? "Unable to update FINORA record.",
       };
     }
 
-
     return {
+      success: true,
 
-      success:
-        true,
-
-      data:
-        result.data as
-          T,
+      data: result.data as T,
     };
   }
-
 
   // ==========================================================
   // DELETE
   // ==========================================================
 
-  async delete(
-    query:
-      StorageQuery,
-  ):
-    Promise<
-      StorageResult<void>
-    > {
-
-    const adapter =
-      this.getActiveAdapter();
-
+  async delete(query: StorageQuery): Promise<StorageResult<void>> {
+    const adapter = this.getActiveAdapter();
 
     if (!adapter) {
-
       return {
+        success: false,
 
-        success:
-          false,
-
-        error:
-          "No active FINORA storage adapter.",
+        error: "No active FINORA storage adapter.",
       };
     }
 
-
-    const result =
-      await adapter.delete(
-        this.applyContextToQuery(
-          query,
-        ),
-      );
-
+    const result = await adapter.delete(this.applyContextToQuery(query));
 
     if (!result.success) {
-
       return {
+        success: false,
 
-        success:
-          false,
-
-        error:
-          result.error ??
-          "Unable to delete FINORA record.",
+        error: result.error ?? "Unable to delete FINORA record.",
       };
     }
 
-
     return {
-
-      success:
-        true,
+      success: true,
     };
   }
-
 
   // ==========================================================
   // REPLACE ALL
   // ==========================================================
 
   async replaceAll<T = unknown>(
-    records:
-      T[],
+    records: T[],
 
-    options?:
-      StorageWriteOptions,
-  ):
-    Promise<
-      StorageResult<void>
-    > {
-
-    const adapter =
-      this.getActiveAdapter();
-
+    options?: StorageWriteOptions,
+  ): Promise<StorageResult<void>> {
+    const adapter = this.getActiveAdapter();
 
     if (!adapter) {
-
       return {
+        success: false,
 
-        success:
-          false,
-
-        error:
-          "No active FINORA storage adapter.",
+        error: "No active FINORA storage adapter.",
       };
     }
 
+    const result = await adapter.replaceAll<T>(
+      records,
 
-    const result =
-      await adapter.replaceAll<T>(
-        records,
-
-        this.applyContextToWriteOptions(
-          options,
-        ),
-      );
-
+      this.applyContextToWriteOptions(options),
+    );
 
     if (!result.success) {
-
       return {
+        success: false,
 
-        success:
-          false,
-
-        error:
-          result.error ??
-          "Unable to replace FINORA records.",
+        error: result.error ?? "Unable to replace FINORA records.",
       };
     }
 
-
     return {
-
-      success:
-        true,
+      success: true,
     };
   }
-
 
   // ==========================================================
   // CLEAR
   // ==========================================================
 
-  async clear(
-    query:
-      StorageQuery,
-  ):
-    Promise<
-      StorageResult<void>
-    > {
-
-    const adapter =
-      this.getActiveAdapter();
-
+  async clear(query: StorageQuery): Promise<StorageResult<void>> {
+    const adapter = this.getActiveAdapter();
 
     if (!adapter) {
-
       return {
+        success: false,
 
-        success:
-          false,
-
-        error:
-          "No active FINORA storage adapter.",
+        error: "No active FINORA storage adapter.",
       };
     }
 
-
-    const result =
-      await adapter.clear(
-        this.applyContextToQuery(
-          query,
-        ),
-      );
-
+    const result = await adapter.clear(this.applyContextToQuery(query));
 
     if (!result.success) {
-
       return {
+        success: false,
 
-        success:
-          false,
-
-        error:
-          result.error ??
-          "Unable to clear FINORA storage.",
+        error: result.error ?? "Unable to clear FINORA storage.",
       };
     }
 
-
     return {
-
-      success:
-        true,
+      success: true,
     };
   }
-
 
   // ==========================================================
   // APPLY CONTEXT TO QUERY
   // ==========================================================
 
-  private applyContextToQuery(
-    query:
-      StorageQuery,
-  ):
-    StorageQuery {
-
+  private applyContextToQuery(query: StorageQuery): StorageQuery {
     return {
-
       ...query,
 
-      ownerId:
-        query.ownerId ??
-        this.configuration.ownerId,
+      ownerId: query.ownerId ?? this.configuration.ownerId,
 
-      demoId:
-        query.demoId ??
-        this.configuration.demoId,
+      demoId: query.demoId ?? this.configuration.demoId,
     };
   }
-
 
   // ==========================================================
   // APPLY CONTEXT TO WRITE OPTIONS
   // ==========================================================
 
   private applyContextToWriteOptions(
-    options?:
-      StorageWriteOptions,
-  ):
-    StorageWriteOptions {
-
+    options?: StorageWriteOptions,
+  ): StorageWriteOptions {
     return {
+      ownerId: options?.ownerId ?? this.configuration.ownerId,
 
-      ownerId:
-        options?.ownerId ??
-        this.configuration.ownerId,
-
-      demoId:
-        options?.demoId ??
-        this.configuration.demoId,
+      demoId: options?.demoId ?? this.configuration.demoId,
     };
   }
 }
-
 
 // ============================================================
 // SINGLETON
 // ============================================================
 
-export const storageManager =
-  new StorageManager();
-
+export const storageManager = new StorageManager();
 
 // ============================================================
 // END

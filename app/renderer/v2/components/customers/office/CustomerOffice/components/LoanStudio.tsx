@@ -21,33 +21,18 @@
 // - No responsive logic.
 // ============================================================
 
-import type {
-  LoanStudioProps,
-} from "./LoanStudio.types";
+import type { LoanStudioProps } from "./LoanStudio.types";
 
-import {
-  useLoanStudio,
-} from "./useLoanStudio";
+import { useLoanStudio } from "./useLoanStudio";
 
-import LoanStudioView
-  from "./LoanStudio.view";
+import LoanStudioView from "./LoanStudio.view";
 
 // ============================================================
 // COMPONENT
 // ============================================================
 
-export default function LoanStudio(
-  props: LoanStudioProps,
-) {
+export default function LoanStudio(props: LoanStudioProps) {
+  const viewModel = useLoanStudio(props);
 
-  const viewModel =
-    useLoanStudio(
-      props,
-    );
-
-  return (
-    <LoanStudioView
-      {...viewModel}
-    />
-  );
+  return <LoanStudioView {...viewModel} />;
 }

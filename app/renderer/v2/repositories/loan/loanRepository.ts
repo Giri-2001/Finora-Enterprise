@@ -28,34 +28,21 @@
 // STATUS  : Production Foundation
 // ============================================================
 
-
 // ============================================================
 // IMPORTS
 // ============================================================
 
-import type {
-  Loan,
-} from "../../components/customers/office/CustomerOffice/types";
+import type { Loan } from "../../components/customers/office/CustomerOffice/types";
 
+import { storageManager } from "../../storage/storageManager";
 
-import {
-  storageManager,
-} from "../../storage/storageManager";
-
-
-import type {
-  StorageQuery,
-  StorageResult,
-} from "../../storage/storage.types";
-
+import type { StorageQuery, StorageResult } from "../../storage/storage.types";
 
 // ============================================================
 // CONSTANTS
 // ============================================================
 
-const LOAN_ENTITY =
-  "LOAN";
-
+const LOAN_ENTITY = "LOAN";
 
 // ============================================================
 // LOAN DATA NORMALIZATION
@@ -75,94 +62,48 @@ const LOAN_ENTITY =
 //
 // ============================================================
 
-function normalizeLoan(
-  loan: Loan,
-):
-  Loan {
+function normalizeLoan(loan: Loan): Loan {
+  let loanType = loan.loanType;
 
-  let loanType =
-    loan.loanType;
+  let repaymentType = loan.repaymentType;
 
-
-  let repaymentType =
-    loan.repaymentType;
-
-
-  let title =
-    loan.title;
-
+  let title = loan.title;
 
   // ==========================================================
   // DAILY
   // ==========================================================
 
-  if (
-    title?.toLowerCase()
-      .includes("daily")
-  ) {
+  if (title?.toLowerCase().includes("daily")) {
+    title = "Daily Loan";
 
-    title =
-      "Daily Loan";
+    loanType = "DAILY";
 
-
-    loanType =
-      "DAILY";
-
-
-    repaymentType =
-      "DAILY";
-
+    repaymentType = "DAILY";
   }
-
 
   // ==========================================================
   // WEEKLY
   // ==========================================================
+  else if (title?.toLowerCase().includes("weekly")) {
+    title = "Weekly Loan";
 
-  else if (
-    title?.toLowerCase()
-      .includes("weekly")
-  ) {
+    loanType = "WEEKLY";
 
-    title =
-      "Weekly Loan";
-
-
-    loanType =
-      "WEEKLY";
-
-
-    repaymentType =
-      "WEEKLY";
-
+    repaymentType = "WEEKLY";
   }
-
 
   // ==========================================================
   // MONTHLY
   // ==========================================================
+  else if (title?.toLowerCase().includes("monthly")) {
+    title = "Monthly Loan";
 
-  else if (
-    title?.toLowerCase()
-      .includes("monthly")
-  ) {
+    loanType = "MONTHLY";
 
-    title =
-      "Monthly Loan";
-
-
-    loanType =
-      "MONTHLY";
-
-
-    repaymentType =
-      "MONTHLY";
-
+    repaymentType = "MONTHLY";
   }
 
-
   return {
-
     ...loan,
 
     title,
@@ -170,83 +111,46 @@ function normalizeLoan(
     loanType,
 
     repaymentType,
-
   };
-
 }
-
 
 // ============================================================
 // QUERY BUILDER
 // ============================================================
 
-function buildLoanQuery(
-  query?: Partial<StorageQuery>,
-):
-  StorageQuery {
-
+function buildLoanQuery(query?: Partial<StorageQuery>): StorageQuery {
   return {
+    entity: LOAN_ENTITY,
 
-    entity:
-      LOAN_ENTITY,
+    id: query?.id,
 
-    id:
-      query?.id,
+    ownerId: query?.ownerId,
 
-    ownerId:
-      query?.ownerId,
+    demoId: query?.demoId,
 
-    demoId:
-      query?.demoId,
+    limit: query?.limit,
 
-    limit:
-      query?.limit,
-
-    offset:
-      query?.offset,
-
+    offset: query?.offset,
   };
-
 }
-
 
 // ============================================================
 // GET ALL LOANS
 // ============================================================
 
-export async function getLoans():
-  Promise<Loan[]> {
-
+export async function getLoans(): Promise<Loan[]> {
   try {
+    const result = await storageManager.getAll<Loan>(buildLoanQuery());
 
-    const result =
-      await storageManager.getAll<Loan>(
-        buildLoanQuery(),
-      );
-
-
-    if (
-      !result.success ||
-      !result.data
-    ) {
-
+    if (!result.success || !result.data) {
       return [];
-
     }
 
-
-    return result.data.map(
-      normalizeLoan,
-    );
-
+    return result.data.map(normalizeLoan);
   } catch {
-
     return [];
-
   }
-
 }
-
 
 // ============================================================
 // SAVE ALL LOANS
@@ -259,181 +163,95 @@ export async function getLoans():
 //
 // ============================================================
 
-export async function saveLoans(
-  loans: Loan[],
-):
-  Promise<StorageResult<void>> {
+export async function saveLoans(loans: Loan[]): Promise<StorageResult<void>> {
+  const normalizedLoans = loans.map(normalizeLoan);
 
-  const normalizedLoans =
-    loans.map(
-      normalizeLoan,
-    );
-
-
-  return storageManager.replaceAll<Loan>(
-    normalizedLoans,
-  );
-
+  return storageManager.replaceAll<Loan>(normalizedLoans);
 }
-
 
 // ============================================================
 // ADD LOAN
 // ============================================================
 
-export async function addLoan(
-  loan: Loan,
-):
-  Promise<StorageResult<Loan>> {
-
+export async function addLoan(loan: Loan): Promise<StorageResult<Loan>> {
   // ==========================================================
   // VALIDATE ID
   // ==========================================================
 
-  if (
-    !loan.id
-  ) {
-
+  if (!loan.id) {
     return {
+      success: false,
 
-      success:
-        false,
-
-      error:
-        "Loan ID is required before saving a loan.",
-
+      error: "Loan ID is required before saving a loan.",
     };
-
   }
-
 
   // ==========================================================
   // NORMALIZE
   // ==========================================================
 
-  const normalizedLoan =
-    normalizeLoan(
-      loan,
-    );
-
+  const normalizedLoan = normalizeLoan(loan);
 
   // ==========================================================
   // DUPLICATE ID CHECK
   // ==========================================================
 
-  const existing =
-    await storageManager.get<Loan>({
-      entity:
-        LOAN_ENTITY,
+  const existing = await storageManager.get<Loan>({
+    entity: LOAN_ENTITY,
 
-      id:
-        normalizedLoan.id,
-    });
+    id: normalizedLoan.id,
+  });
 
-
-  if (
-    existing.success &&
-    existing.data
-  ) {
-
+  if (existing.success && existing.data) {
     return {
+      success: false,
 
-      success:
-        false,
-
-      error:
-        "Loan with this ID already exists.",
-
+      error: "Loan with this ID already exists.",
     };
-
   }
-
 
   // ==========================================================
   // SAVE
   // ==========================================================
 
-  const result =
-    await storageManager.save<Loan>(
-      normalizedLoan,
-    );
+  const result = await storageManager.save<Loan>(normalizedLoan);
 
-
-  if (
-    !result.success
-  ) {
-
+  if (!result.success) {
     return {
+      success: false,
 
-      success:
-        false,
-
-      error:
-        result.error ??
-        "Unable to save loan.",
-
+      error: result.error ?? "Unable to save loan.",
     };
-
   }
 
-
   return {
+    success: true,
 
-    success:
-      true,
-
-    data:
-      normalizedLoan,
-
+    data: normalizedLoan,
   };
-
 }
-
 
 // ============================================================
 // GET LOAN BY ID
 // ============================================================
 
-export async function getLoanById(
-  loanId: string,
-):
-  Promise<Loan | undefined> {
-
-  if (
-    !loanId
-  ) {
-
+export async function getLoanById(loanId: string): Promise<Loan | undefined> {
+  if (!loanId) {
     return undefined;
-
   }
 
+  const result = await storageManager.get<Loan>({
+    entity: LOAN_ENTITY,
 
-  const result =
-    await storageManager.get<Loan>({
-      entity:
-        LOAN_ENTITY,
+    id: loanId,
+  });
 
-      id:
-        loanId,
-    });
-
-
-  if (
-    !result.success ||
-    !result.data
-  ) {
-
+  if (!result.success || !result.data) {
     return undefined;
-
   }
 
-
-  return normalizeLoan(
-    result.data,
-  );
-
+  return normalizeLoan(result.data);
 }
-
 
 // ============================================================
 // UPDATE LOAN OUTSTANDING
@@ -456,122 +274,69 @@ export async function getLoanById(
 export async function updateLoanOutstanding(
   loanId: string,
   paymentAmount: number,
-):
-  Promise<Loan | undefined> {
-
+): Promise<Loan | undefined> {
   // ==========================================================
   // VALIDATION
   // ==========================================================
 
-  if (
-    !loanId
-  ) {
-
+  if (!loanId) {
     return undefined;
-
   }
 
-
-  if (
-    !Number.isFinite(
-      paymentAmount,
-    ) ||
-    paymentAmount <= 0
-  ) {
-
+  if (!Number.isFinite(paymentAmount) || paymentAmount <= 0) {
     return undefined;
-
   }
-
 
   // ==========================================================
   // LOAD LOAN
   // ==========================================================
 
-  const result =
-    await storageManager.get<Loan>({
-      entity:
-        LOAN_ENTITY,
+  const result = await storageManager.get<Loan>({
+    entity: LOAN_ENTITY,
 
-      id:
-        loanId,
-    });
+    id: loanId,
+  });
 
-
-  if (
-    !result.success ||
-    !result.data
-  ) {
-
+  if (!result.success || !result.data) {
     return undefined;
-
   }
 
-
-  const loan =
-    normalizeLoan(
-      result.data,
-    );
-
+  const loan = normalizeLoan(result.data);
 
   // ==========================================================
   // CALCULATE OUTSTANDING
   // ==========================================================
 
-  const newOutstanding =
-    Math.max(
+  const newOutstanding = Math.max(
+    0,
 
-      0,
-
-      loan.outstanding -
-        paymentAmount,
-
-    );
-
+    loan.outstanding - paymentAmount,
+  );
 
   // ==========================================================
   // BUILD UPDATED LOAN
   // ==========================================================
 
-  const updatedLoan:
-    Loan = {
-
+  const updatedLoan: Loan = {
     ...loan,
 
-    outstanding:
-      newOutstanding,
+    outstanding: newOutstanding,
 
-    status:
-      newOutstanding === 0
-        ? "CLOSED"
-        : "ACTIVE",
-
+    status: newOutstanding === 0 ? "CLOSED" : "ACTIVE",
   };
-
 
   // ==========================================================
   // PERSIST UPDATE
   // ==========================================================
 
-  const updateResult =
-    await storageManager.update<Loan>(
-      updatedLoan,
-    );
+  const updateResult = await storageManager.update<Loan>(updatedLoan);
 
-
-  if (
-    !updateResult.success
-  ) {
-
+  if (!updateResult.success) {
     return undefined;
-
   }
 
-
   return updatedLoan;
-
 }
-
 
 // ============================================================
 // END

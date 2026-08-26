@@ -1,20 +1,20 @@
 /* ===========================================================
    FINORA ENTERPRISE OS™
+
    CUSTOMER OFFICE™
 
    TYPES
 =========================================================== */
 
-import type {
-  LoanInstallment,
-} from "../../../loans/schedule/types";
+import type { LoanInstallment } from "../../../loans/schedule/types";
+
+import type { DocumentsStudioItem } from "../../../loans/documents/DocumentsStudio";
 
 /* ===========================================================
    LOAN
 =========================================================== */
 
 export interface Loan {
-
   id: string;
 
   title: string;
@@ -76,13 +76,61 @@ export interface Loan {
   remarks?: string;
 
   /* ==========================================
+     DOCUMENTS / EVIDENCE
+
+     Documents uploaded inside the Loan Studio
+     Documents Studio belong to this specific loan.
+
+     IMPORTANT:
+
+     - Customer documents are NOT mixed here.
+     - These are loan-workspace documents.
+     - Step 3 uploads are carried into the
+       persisted Loan record.
+     - Loan Details can read the same collection
+       from this field.
+  ========================================== */
+
+  documents?: DocumentsStudioItem[];
+
+  /*
+   * Number of documents persisted with this loan.
+   *
+   * This is stored as lightweight metadata so consumers
+   * such as Loan Details, reports and summaries can know
+   * the document count without calculating it separately.
+   */
+
+  documentCount?: number;
+
+  /*
+   * Customer ownership metadata for the persisted
+   * loan-document relationship.
+   *
+   * This must match the customerId associated with
+   * the loan at the time the documents are persisted.
+   */
+
+  documentsCustomerId?: string;
+
+  /*
+   * Timestamp indicating when the loan documents were
+   * linked to the persisted Loan record.
+   */
+
+  documentsLinkedAt?: string;
+
+  /* ==========================================
      STATUS
   ========================================== */
 
   status: "ACTIVE" | "RUNNING" | "CLOSED";
 
-  schedule?: LoanInstallment[];
+  /* ==========================================
+     REPAYMENT SCHEDULE
+  ========================================== */
 
+  schedule?: LoanInstallment[];
 }
 
 /* ===========================================================
@@ -90,7 +138,6 @@ export interface Loan {
 =========================================================== */
 
 export interface Collection {
-
   id: string;
 
   amount: number;
@@ -98,7 +145,6 @@ export interface Collection {
   paymentDate: string;
 
   receiptNumber: string;
-
 }
 
 /* ===========================================================
@@ -106,7 +152,6 @@ export interface Collection {
 =========================================================== */
 
 export interface OfficeCustomer {
-
   /* ==========================================
      CUSTOMER IDENTITY
   ========================================== */
@@ -117,7 +162,7 @@ export interface OfficeCustomer {
 
   phone: string;
 
-    /*
+  /*
    * Aadhaar search values.
    *
    * IMPORTANT:
@@ -136,6 +181,7 @@ export interface OfficeCustomer {
   aadhaarFirst6: string;
 
   aadhaarLast6: string;
+
   /*
    * ID CARD search value.
    *
@@ -177,7 +223,6 @@ export interface OfficeCustomer {
   loans?: Loan[];
 
   collections?: Collection[];
-
 }
 
 /* ===========================================================
@@ -185,7 +230,6 @@ export interface OfficeCustomer {
 =========================================================== */
 
 export interface CustomerOfficeProps {
-
   /* Current customer on desk */
 
   selectedCustomer?: OfficeCustomer;
@@ -194,10 +238,9 @@ export interface CustomerOfficeProps {
 
   customers?: OfficeCustomer[];
 
-  onCustomerSelect?: (
-
-    customer: OfficeCustomer,
-
-  ) => void;
-
+  onCustomerSelect?: (customer: OfficeCustomer) => void;
 }
+
+/* ===========================================================
+   END
+=========================================================== */
