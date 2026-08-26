@@ -1,5 +1,5 @@
 // ============================================================
-// FINORA ENTERPRISE V2
+// FINORA ENTERPRISE OS™
 //
 // REVIEW STUDIO
 // APPROVAL ACTIONS STYLES
@@ -7,31 +7,49 @@
 // RESPONSIBILITY:
 // - ApprovalActions presentation only
 // - Enterprise approval action layout
-// - FINORA Login-inspired dark navy theme
-//
-// DESIGN:
-// - Primary Blue: #2563EB
-// - No brown
-// - No gold
-// - Minimum font-size: 12px
-// - Font weights: 500–750
-//
+// - Consume FINORA Theme Engine CSS variables
+// - Preserve existing geometry
+// - No local theme palette
+// - No hardcoded theme colours
 // ============================================================
 
 import type { CSSProperties } from "react";
 
 // ============================================================
-// COLOR TOKENS
+// FINORA THEME TOKENS
 // ============================================================
 
-const COLORS = {
-  panel: "#111C2E",
-  panelSoft: "#142238",
-  border: "rgba(148, 163, 184, 0.20)",
-  primary: "#2563EB",
-  primarySoft: "rgba(37, 99, 235, 0.14)",
-  text: "#FFFFFF",
-};
+const THEME = {
+  // ----------------------------------------------------------
+  // SURFACES
+  // ----------------------------------------------------------
+
+  surface:
+    "var(--finora-theme-surface, var(--finora-theme-background-surface, #111C2E))",
+
+  surfaceMuted:
+    "var(--finora-theme-surface-muted, var(--finora-theme-background-surface-muted, #142238))",
+
+  // ----------------------------------------------------------
+  // TEXT
+  // ----------------------------------------------------------
+
+  textPrimary: "var(--finora-theme-text-primary, #FFFFFF)",
+
+  // ----------------------------------------------------------
+  // BORDER
+  // ----------------------------------------------------------
+
+  border: "var(--finora-theme-border-default, rgba(148,163,184,.20))",
+
+  // ----------------------------------------------------------
+  // BRAND
+  // ----------------------------------------------------------
+
+  primary: "var(--finora-theme-brand-primary, #2563EB)",
+
+  primarySoft: "var(--finora-theme-brand-accent-soft, rgba(37,99,235,.14))",
+} as const;
 
 // ============================================================
 // WRAPPER
@@ -39,17 +57,26 @@ const COLORS = {
 
 export const wrapperStyle: CSSProperties = {
   width: "100%",
+
   minWidth: 0,
+
   boxSizing: "border-box",
+
   padding: "11px 14px",
-  border: `1px solid ${COLORS.border}`,
+
+  border: `1px solid ${THEME.border}`,
+
   borderRadius: "10px",
-  background: `linear-gradient(
-    180deg,
-    ${COLORS.panel},
-    ${COLORS.panelSoft}
-  )`,
-  boxShadow: "0 6px 18px rgba(0, 0, 0, 0.14)",
+
+  background: `
+    linear-gradient(
+      180deg,
+      ${THEME.surface},
+      ${THEME.surfaceMuted}
+    )
+  `,
+
+  boxShadow: "var(--finora-theme-overlay-shadow, 0 6px 18px rgba(0,0,0,.14))",
 };
 
 // ============================================================
@@ -58,13 +85,21 @@ export const wrapperStyle: CSSProperties = {
 
 export const headerStyle: CSSProperties = {
   display: "flex",
+
   alignItems: "center",
+
   gap: "8px",
+
   minHeight: "18px",
+
   marginBottom: "9px",
-  color: COLORS.text,
+
+  color: THEME.textPrimary,
+
   fontSize: "14px",
+
   fontWeight: 750,
+
   lineHeight: 1.2,
 };
 
@@ -74,11 +109,16 @@ export const headerStyle: CSSProperties = {
 
 export const accentStyle: CSSProperties = {
   width: "3px",
+
   height: "16px",
+
   flexShrink: 0,
+
   borderRadius: "3px",
-  background: COLORS.primary,
-  boxShadow: `0 0 10px ${COLORS.primarySoft}`,
+
+  background: THEME.primary,
+
+  boxShadow: `0 0 10px ${THEME.primarySoft}`,
 };
 
 // ============================================================
@@ -87,10 +127,15 @@ export const accentStyle: CSSProperties = {
 
 export const actionRowStyle: CSSProperties = {
   display: "flex",
+
   alignItems: "center",
+
   gap: "8px",
+
   flexWrap: "wrap",
+
   width: "100%",
+
   minWidth: 0,
 };
 

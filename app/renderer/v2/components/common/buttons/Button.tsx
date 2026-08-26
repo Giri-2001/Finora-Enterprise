@@ -1,37 +1,75 @@
 /* ===========================================================
-   FINORA ENTERPRISE V2
+   FINORA ENTERPRISE OS™
    DESIGN SYSTEM
    BUTTON
+
+   RESPONSIBILITY:
+   - Shared FINORA button component
+   - Preserve existing button geometry
+   - Consume FINORA Theme Engine CSS variables
+   - Support primary / secondary / success / danger variants
+   - No local application colour palette
 =========================================================== */
 
-import type {
-  ButtonHTMLAttributes,
-  CSSProperties,
-} from "react";
+/* ===========================================================
+   IMPORTS
+=========================================================== */
+
+import type { ButtonHTMLAttributes, CSSProperties } from "react";
 
 /* ===========================================================
    TYPES
 =========================================================== */
 
-export type ButtonVariant =
-  | "primary"
-  | "secondary"
-  | "success"
-  | "danger";
+export type ButtonVariant = "primary" | "secondary" | "success" | "danger";
 
-export interface ButtonProps
-  extends ButtonHTMLAttributes<HTMLButtonElement> {
-
+export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: ButtonVariant;
-
 }
 
 /* ===========================================================
-   STYLES
+   FINORA THEME TOKENS
+=========================================================== */
+
+const THEME = {
+  /* ---------------------------------------------------------
+     BRAND
+  --------------------------------------------------------- */
+
+  primary: "var(--finora-theme-brand-primary, #2563EB)",
+
+  primaryHover:
+    "var(--finora-theme-brand-secondary, var(--finora-theme-brand-primary, #1D4ED8))",
+
+  /* ---------------------------------------------------------
+     SURFACE
+  --------------------------------------------------------- */
+
+  surfaceMuted:
+    "var(--finora-theme-surface-muted, var(--finora-theme-background-surface-muted, #E5E7EB))",
+
+  /* ---------------------------------------------------------
+     TEXT
+  --------------------------------------------------------- */
+
+  textPrimary: "var(--finora-theme-text-primary, #111827)",
+
+  textInverse: "var(--finora-theme-text-inverse, #FFFFFF)",
+
+  /* ---------------------------------------------------------
+     STATUS
+  --------------------------------------------------------- */
+
+  success: "var(--finora-theme-success, #16A34A)",
+
+  danger: "var(--finora-theme-danger, #DC2626)",
+} as const;
+
+/* ===========================================================
+   BASE STYLE
 =========================================================== */
 
 const baseStyle: CSSProperties = {
-
   padding: "12px 18px",
 
   borderRadius: "12px",
@@ -45,43 +83,52 @@ const baseStyle: CSSProperties = {
   fontSize: "14px",
 
   transition: "all 0.2s ease",
-
 };
 
+/* ===========================================================
+   THEME VARIANTS
+=========================================================== */
+
 const variants: Record<ButtonVariant, CSSProperties> = {
+  /* ---------------------------------------------------------
+     PRIMARY
+  --------------------------------------------------------- */
 
   primary: {
+    background: THEME.primary,
 
-    background: "#2563eb",
-
-    color: "#ffffff",
-
+    color: THEME.textInverse,
   },
+
+  /* ---------------------------------------------------------
+     SECONDARY
+  --------------------------------------------------------- */
 
   secondary: {
+    background: THEME.surfaceMuted,
 
-    background: "#e5e7eb",
-
-    color: "#111827",
-
+    color: THEME.textPrimary,
   },
+
+  /* ---------------------------------------------------------
+     SUCCESS
+  --------------------------------------------------------- */
 
   success: {
+    background: THEME.success,
 
-    background: "#16a34a",
-
-    color: "#ffffff",
-
+    color: THEME.textInverse,
   },
+
+  /* ---------------------------------------------------------
+     DANGER
+  --------------------------------------------------------- */
 
   danger: {
+    background: THEME.danger,
 
-    background: "#dc2626",
-
-    color: "#ffffff",
-
+    color: THEME.textInverse,
   },
-
 };
 
 /* ===========================================================
@@ -89,7 +136,6 @@ const variants: Record<ButtonVariant, CSSProperties> = {
 =========================================================== */
 
 export default function Button({
-
   variant = "primary",
 
   style,
@@ -97,31 +143,23 @@ export default function Button({
   children,
 
   ...props
-
 }: ButtonProps) {
-
   return (
-
     <button
-
       {...props}
-
       style={{
-
         ...baseStyle,
 
         ...variants[variant],
 
         ...style,
-
       }}
-
     >
-
       {children}
-
     </button>
-
   );
-
 }
+
+/* ===========================================================
+   END
+=========================================================== */

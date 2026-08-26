@@ -20,10 +20,7 @@
 
 import SummaryCard from "../../common/cards/SummaryCard";
 
-import {
-  FormField,
-  TextInput,
-} from "../../common";
+import { FormField, TextInput } from "../../common";
 
 import {
   disbursementFormStyle,
@@ -57,9 +54,7 @@ interface DisbursementFormProps {
    */
   netDisbursement?: number;
 
-  onDisbursementDateChange?: (
-    value: string,
-  ) => void;
+  onDisbursementDateChange?: (value: string) => void;
 }
 
 // ============================================================
@@ -72,134 +67,61 @@ export default function DisbursementForm({
   netDisbursement = 0,
 
   onDisbursementDateChange,
-
 }: DisbursementFormProps) {
-
   // ==========================================================
   // SAFE DISPLAY VALUE
   // ==========================================================
 
-  const calculatedDisbursement =
-    Number.isFinite(
-      netDisbursement,
-    )
-      ? Math.max(
-          0,
-          netDisbursement,
-        )
-      : 0;
+  const calculatedDisbursement = Number.isFinite(netDisbursement)
+    ? Math.max(0, netDisbursement)
+    : 0;
 
   // ==========================================================
   // RENDER
   // ==========================================================
 
   return (
-    <div
-      style={
-        disbursementFormStyle
-      }
-    >
-
-      <SummaryCard
-        title="Disbursement Mode"
-      >
-
-        <div
-          style={
-            fieldsGridStyle
-          }
-        >
-
+    <div style={disbursementFormStyle}>
+      <SummaryCard title="Disbursement Mode">
+        <div style={fieldsGridStyle}>
           {/* =================================================
               DISBURSEMENT DATE
           ================================================= */}
 
-          <div
-            style={
-              fieldStyle
-            }
-          >
-
-            <FormField
-              label="Disbursement Date"
-              required
-            >
-
-              <div
-                style={
-                  inputWrapperStyle
-                }
-              >
-
+          <div style={fieldStyle}>
+            <FormField label="Disbursement Date" required>
+              <div style={inputWrapperStyle}>
                 <TextInput
                   type="date"
-                  value={
-                    disbursementDate
-                  }
-                  style={
-                    dateInputStyle
-                  }
-                  onChange={(
-                    event,
-                  ) => {
-
-                    onDisbursementDateChange?.(
-                      event.target.value,
-                    );
-
+                  value={disbursementDate}
+                  style={dateInputStyle}
+                  onChange={(event) => {
+                    onDisbursementDateChange?.(event.target.value);
                   }}
                 />
-
               </div>
-
             </FormField>
-
           </div>
-
 
           {/* =================================================
               NET DISBURSEMENT
           ================================================= */}
 
-          <div
-            style={
-              fieldStyle
-            }
-          >
-
-            <FormField
-              label="Disbursement Amount"
-              required
-            >
-
-              <div
-                style={
-                  inputWrapperStyle
-                }
-              >
-
+          <div style={fieldStyle}>
+            <FormField label="Disbursement Amount" required>
+              <div style={inputWrapperStyle}>
                 <TextInput
                   type="number"
-                  value={
-                    calculatedDisbursement
-                  }
+                  value={calculatedDisbursement}
                   readOnly
                   disabled
-                  style={
-                    amountInputStyle
-                  }
+                  style={amountInputStyle}
                 />
-
               </div>
-
             </FormField>
-
           </div>
-
         </div>
-
       </SummaryCard>
-
     </div>
   );
 }

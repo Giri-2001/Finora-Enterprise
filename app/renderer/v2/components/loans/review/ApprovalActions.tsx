@@ -1,16 +1,16 @@
-/* ===========================================================
-FINORA ENTERPRISE V2
-REVIEW STUDIO
-APPROVAL ACTIONS
-=========================================================== */
+// ============================================================
+// FINORA ENTERPRISE V2
+//
+// REVIEW STUDIO
+// APPROVAL ACTIONS
+//
+// ============================================================
 
-/* ===========================================================
-IMPORTS
-=========================================================== */
+// ============================================================
+// IMPORTS
+// ============================================================
 
-import {
-  useState,
-} from "react";
+import { useState } from "react";
 
 import Button from "../../common/buttons/Button";
 
@@ -22,9 +22,9 @@ import {
   wrapperStyle,
 } from "./ApprovalActions.styles";
 
-/* ===========================================================
-TYPES
-=========================================================== */
+// ============================================================
+// TYPES
+// ============================================================
 
 interface ApprovalActionsProps {
   onSaveDraft: () => void;
@@ -32,23 +32,20 @@ interface ApprovalActionsProps {
   onRejectLoan: () => void;
 }
 
-/* ===========================================================
-COMPONENT
-=========================================================== */
+// ============================================================
+// COMPONENT
+// ============================================================
 
 export default function ApprovalActions({
   onSaveDraft,
   onApproveLoan,
   onRejectLoan,
 }: ApprovalActionsProps) {
-  const [
-    isApproving,
-    setIsApproving,
-  ] = useState(false);
+  const [isApproving, setIsApproving] = useState(false);
 
-  /* =========================================================
-  APPROVE LOCK
-  ========================================================= */
+  // ==========================================================
+  // APPROVE LOCK
+  // ==========================================================
 
   const handleApproveLoan = async () => {
     if (isApproving) {
@@ -64,54 +61,53 @@ export default function ApprovalActions({
     }
   };
 
+  // ==========================================================
+  // RENDER
+  // ==========================================================
+
   return (
     <section style={wrapperStyle}>
-
       {/* HEADER */}
+
       <div style={headerStyle}>
         <span style={accentStyle} />
 
-        <span>
-          Approval Actions
-        </span>
+        <span>Approval Actions</span>
       </div>
 
       {/* ACTIONS */}
+
       <div style={actionRowStyle}>
+        {/* SAVE DRAFT */}
 
         <div style={actionButtonStyle}>
-          <Button
-            onClick={onSaveDraft}
-          >
-            Save Draft
+          <Button onClick={onSaveDraft}>Save Draft</Button>
+        </div>
+
+        {/* APPROVE LOAN */}
+
+        <div style={actionButtonStyle}>
+          <Button onClick={handleApproveLoan} disabled={isApproving}>
+            {isApproving ? "Approving..." : "Approve Loan"}
           </Button>
         </div>
 
-        <div style={actionButtonStyle}>
-          <Button
-            onClick={handleApproveLoan}
-            disabled={isApproving}
-          >
-            {isApproving
-              ? "Approving..."
-              : "Approve Loan"}
-          </Button>
-        </div>
+        {/* REJECT LOAN */}
 
         <div style={actionButtonStyle}>
           <Button
+            variant="danger"
             onClick={onRejectLoan}
             disabled={isApproving}
           >
             Reject Loan
           </Button>
         </div>
-
       </div>
     </section>
   );
 }
 
-/* ===========================================================
-END
-=========================================================== */
+// ============================================================
+// END
+// ============================================================

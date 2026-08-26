@@ -17,19 +17,16 @@
 // IMPORTS
 // ============================================================
 
-import StudioDraftStatus
-  from "../../common/studio/StudioDraftStatus";
+import StudioDraftStatus from "../../common/studio/StudioDraftStatus";
 
 // ============================================================
 // TYPES
 // ============================================================
 
 interface DisbursementDraftStatusProps {
-
   savedAt?: string;
 
   status?: "Draft" | "Completed";
-
 }
 
 // ============================================================
@@ -37,27 +34,17 @@ interface DisbursementDraftStatusProps {
 // ============================================================
 
 export default function DisbursementDraftStatus({
-
   savedAt = "Not Saved",
 
   status = "Draft",
-
 }: DisbursementDraftStatusProps) {
-
   return (
-
     <StudioDraftStatus
-
       title="Disbursement Draft"
-
       status={status}
-
       updatedAt={savedAt}
-
     />
-
   );
-
 }
 
 // ============================================================

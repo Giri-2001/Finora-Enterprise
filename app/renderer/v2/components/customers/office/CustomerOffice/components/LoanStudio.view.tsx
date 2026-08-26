@@ -88,8 +88,6 @@ import DisbursementReceipt from "../../../../loans/disbursement/DisbursementRece
 
 import DisbursementPreviewCard from "../../../../loans/disbursement/DisbursementPreviewCard";
 
-import DisbursementDraftStatus from "../../../../loans/disbursement/DisbursementDraftStatus";
-
 import ReviewHeader from "../../../../loans/review/ReviewHeader";
 
 import ValidationChecklist from "../../../../loans/review/ValidationChecklist";
@@ -263,9 +261,6 @@ export default function LoanStudioView(props: LoanStudioViewModel) {
     setPaymentMode,
     transactionStatus,
     setTransactionStatus,
-    disbursementSavedAt,
-    disbursementDraftStatus,
-    setDisbursementDraftStatus,
     disbursementReceiptNumber,
 
     loanStatistics,
@@ -549,10 +544,6 @@ export default function LoanStudioView(props: LoanStudioViewModel) {
                     onPaymentModeChange={setPaymentMode}
                     onTransactionStatusChange={(value) => {
                       setTransactionStatus(value);
-
-                      setDisbursementDraftStatus(
-                        value === "completed" ? "Completed" : "Draft",
-                      );
                     }}
                   />
                 </div>
@@ -583,11 +574,6 @@ export default function LoanStudioView(props: LoanStudioViewModel) {
                   amount={safeDisbursementAmount}
                   paymentMode={paymentMode}
                   transactionStatus={transactionStatus}
-                />
-
-                <DisbursementDraftStatus
-                  savedAt={disbursementSavedAt}
-                  status={disbursementDraftStatus}
                 />
               </div>
             </div>

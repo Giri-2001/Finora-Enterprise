@@ -1,17 +1,36 @@
 /* ===========================================================
-FINORA ENTERPRISE V2
+FINORA ENTERPRISE OS™
 UNIVERSAL STUDIO HEADER
 
 RESPONSIBILITY:
 - Shared studio header
 - Preserve existing default appearance
-- Support enterprise dark workspace variant
+- Support enterprise FINORA theme-aware workspace variant
+- No local enterprise colour palette
+- Consume FINORA Theme Engine CSS variables
 =========================================================== */
 
-import type {
-  CSSProperties,
-  ReactNode,
-} from "react";
+import type { CSSProperties, ReactNode } from "react";
+
+/* ===========================================================
+THEME TOKENS
+=========================================================== */
+
+const THEME = {
+  surface:
+    "var(--finora-theme-surface, var(--finora-theme-background-surface, #111C2E))",
+
+  surfaceMuted:
+    "var(--finora-theme-surface-muted, var(--finora-theme-background-surface-muted, #16243A))",
+
+  border: "var(--finora-theme-border-default, rgba(148,163,184,.16))",
+
+  textPrimary: "var(--finora-theme-text-primary, #F8FAFC)",
+
+  textSecondary: "var(--finora-theme-text-secondary, #CBD5E1)",
+
+  overlayShadow: "var(--finora-theme-overlay-shadow, rgba(0,0,0,.18))",
+} as const;
 
 /* ===========================================================
 TYPES
@@ -27,7 +46,7 @@ interface StudioHeaderProps {
    * Existing Studio Header appearance.
    *
    * Enterprise:
-   * Dark FINORA workspace header with visible title,
+   * Theme-aware FINORA workspace header with visible title,
    * subtitle and bordered container.
    */
   variant?: "default" | "enterprise";
@@ -77,15 +96,17 @@ const enterpriseWrapperStyle: CSSProperties = {
 
   boxSizing: "border-box",
 
-  background:
-    "linear-gradient(135deg, #111d31 0%, #16243a 100%)",
+  background: `linear-gradient(
+    135deg,
+    ${THEME.surface},
+    ${THEME.surfaceMuted}
+  )`,
 
-  border: "1px solid #2b3d57",
+  border: `1px solid ${THEME.border}`,
 
   borderRadius: "10px",
 
-  boxShadow:
-    "0 4px 12px rgba(0, 0, 0, 0.18)",
+  boxShadow: `0 4px 12px ${THEME.overlayShadow}`,
 };
 
 const enterpriseTitleRowStyle: CSSProperties = {
@@ -102,7 +123,7 @@ const enterpriseTitleStyle: CSSProperties = {
 
   lineHeight: 1.2,
 
-  color: "#f8fafc",
+  color: THEME.textPrimary,
 
   letterSpacing: "0.2px",
 };
@@ -110,7 +131,7 @@ const enterpriseTitleStyle: CSSProperties = {
 const enterpriseSubtitleStyle: CSSProperties = {
   margin: "4px 0 0 0",
 
-  color: "#b8c5d8",
+  color: THEME.textSecondary,
 
   fontSize: "12px",
   fontWeight: 500,
@@ -128,44 +149,19 @@ export default function StudioHeader({
   icon,
   variant = "default",
 }: StudioHeaderProps) {
-  const isEnterprise =
-    variant === "enterprise";
+  const isEnterprise = variant === "enterprise";
 
   return (
-    <header
-      style={
-        isEnterprise
-          ? enterpriseWrapperStyle
-          : wrapperStyle
-      }
-    >
-      <div
-        style={
-          isEnterprise
-            ? enterpriseTitleRowStyle
-            : titleRowStyle
-        }
-      >
+    <header style={isEnterprise ? enterpriseWrapperStyle : wrapperStyle}>
+      <div style={isEnterprise ? enterpriseTitleRowStyle : titleRowStyle}>
         {icon}
 
-        <h2
-          style={
-            isEnterprise
-              ? enterpriseTitleStyle
-              : titleStyle
-          }
-        >
+        <h2 style={isEnterprise ? enterpriseTitleStyle : titleStyle}>
           {title}
         </h2>
       </div>
 
-      <p
-        style={
-          isEnterprise
-            ? enterpriseSubtitleStyle
-            : subtitleStyle
-        }
-      >
+      <p style={isEnterprise ? enterpriseSubtitleStyle : subtitleStyle}>
         {subtitle}
       </p>
     </header>

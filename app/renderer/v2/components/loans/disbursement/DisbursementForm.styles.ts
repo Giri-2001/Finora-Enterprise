@@ -1,57 +1,144 @@
+/* ===========================================================
+   FINORA ENTERPRISE OS™
+   LOAN STUDIO™
+   DISBURSEMENT STUDIO
+   DISBURSEMENT FORM STYLES
+
+   RESPONSIBILITY:
+   - Disbursement form presentation only.
+   - Consume FINORA Theme Engine CSS variables.
+   - Preserve existing form geometry.
+   - Preserve date / amount input behaviour.
+   - No local theme palette.
+   - No hardcoded theme colours.
+=========================================================== */
+
+/* ===========================================================
+   IMPORTS
+=========================================================== */
+
 import type { CSSProperties } from "react";
+
+/* ===========================================================
+   FINORA THEME TOKENS
+=========================================================== */
+
+const THEME = {
+  /* ---------------------------------------------------------
+     INPUT SURFACES
+  --------------------------------------------------------- */
+
+  inputBackground:
+    "var(--finora-theme-input-background, var(--finora-theme-surface, transparent))",
+
+  inputBackgroundMuted:
+    "var(--finora-theme-input-background-muted, var(--finora-theme-surface-muted, transparent))",
+
+  /* ---------------------------------------------------------
+     TEXT
+  --------------------------------------------------------- */
+
+  textPrimary: "var(--finora-theme-text-primary, #FFFFFF)",
+
+  /* ---------------------------------------------------------
+     BORDERS
+  --------------------------------------------------------- */
+
+  border: "var(--finora-theme-border-default, rgba(148,163,184,.16))",
+
+  borderStrong: "var(--finora-theme-border-strong, rgba(37,99,235,.42))",
+
+  /* ---------------------------------------------------------
+     BRAND
+  --------------------------------------------------------- */
+
+  primary: "var(--finora-theme-brand-primary, #2563EB)",
+} as const;
+
+/* ===========================================================
+   FORM WRAPPER
+=========================================================== */
 
 export const disbursementFormStyle: CSSProperties = {
   width: "100%",
+
   minWidth: 0,
+
   boxSizing: "border-box",
 };
 
+/* ===========================================================
+   FIELDS GRID
+=========================================================== */
+
 export const fieldsGridStyle: CSSProperties = {
   width: "100%",
+
   minWidth: 0,
 
   display: "grid",
-  gridTemplateColumns:
-    "minmax(0, 1fr) minmax(0, 1fr)",
+
+  gridTemplateColumns: "minmax(0, 1fr) minmax(0, 1fr)",
 
   gap: "10px",
+
   alignItems: "start",
 
   boxSizing: "border-box",
 };
 
+/* ===========================================================
+   FIELD
+=========================================================== */
+
 export const fieldStyle: CSSProperties = {
   width: "100%",
+
   minWidth: 0,
+
   boxSizing: "border-box",
 };
+
+/* ===========================================================
+   INPUT WRAPPER
+=========================================================== */
 
 export const inputWrapperStyle: CSSProperties = {
   width: "100%",
+
   minWidth: 0,
+
   boxSizing: "border-box",
 };
 
+/* ===========================================================
+   DATE INPUT
+=========================================================== */
+
 export const dateInputStyle: CSSProperties = {
   width: "100%",
+
   minWidth: 0,
+
   boxSizing: "border-box",
 
-  colorScheme: "dark",
+  /*
+    Allow the active FINORA theme to control
+    the native date input appearance.
+  */
+  colorScheme: "inherit",
 
-  fontFamily:
-    "Inter, Segoe UI, Roboto, Arial, sans-serif",
+  fontFamily: "Inter, Segoe UI, Roboto, Arial, sans-serif",
 
   fontSize: "13px",
+
   fontWeight: 500,
 
-  color: "#F4F7FF",
+  color: THEME.textPrimary,
 
-  background:
-    "linear-gradient(180deg, #0D1A2E 0%, #091426 100%)",
+  background: THEME.inputBackground,
 
-  border:
-    "1px solid #29466F",
+  border: `1px solid ${THEME.border}`,
 
   borderRadius: "7px",
 
@@ -59,27 +146,37 @@ export const dateInputStyle: CSSProperties = {
 
   minHeight: "36px",
 
-  padding:
-    "8px 36px 8px 12px",
+  padding: "8px 36px 8px 12px",
 
-  accentColor: "#2F6BFF",
+  accentColor: THEME.primary,
 
-  transition:
-    "border-color 140ms ease, box-shadow 140ms ease",
+  transition: "border-color 140ms ease, box-shadow 140ms ease",
 };
+
+/* ===========================================================
+   AMOUNT INPUT
+=========================================================== */
 
 export const amountInputStyle: CSSProperties = {
   ...dateInputStyle,
 
-  color: "#EAF2FF",
+  color: THEME.textPrimary,
 
-  background:
-    "linear-gradient(180deg, #122442 0%, #0E1B30 100%)",
+  background: THEME.inputBackgroundMuted,
 
-  border:
-    "1px solid #315B9E",
+  border: `1px solid ${THEME.borderStrong}`,
 
   fontWeight: 700,
 
   cursor: "default",
+
+  /*
+    Keep the calculated readonly amount visually stable
+    while allowing the active theme to control its colors.
+  */
+  opacity: 1,
 };
+
+/* ===========================================================
+   END
+=========================================================== */
