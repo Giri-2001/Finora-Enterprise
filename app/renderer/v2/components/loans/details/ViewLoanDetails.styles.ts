@@ -30,43 +30,74 @@ import type { CSSProperties } from "react";
 // ============================================================
 
 export const COLORS = {
-  background: "#0B1220",
+  background:
+    "var(--finora-theme-background-page, #0B1220)",
 
-  panel: "#111C2E",
+  panel:
+    "var(--finora-theme-background-surface, #111C2E)",
 
-  panelSoft: "#142238",
+  panelSoft:
+    "var(--finora-theme-background-surface-muted, #142238)",
 
-  panelHover: "#182A43",
+  panelHover:
+    "var(--finora-theme-surface-strong, #182A43)",
 
-  border: "rgba(148,163,184,0.18)",
+  border:
+    "var(--finora-theme-border-default, rgba(148,163,184,0.18))",
 
-  borderStrong: "rgba(148,163,184,0.28)",
+  borderStrong:
+    "var(--finora-theme-border-strong, rgba(148,163,184,0.28))",
 
-  primary: "#2563EB",
+  primary:
+    "var(--finora-theme-brand-primary, #2563EB)",
 
-  primarySoft: "rgba(37,99,235,0.12)",
+  primarySoft:
+    "var(--finora-theme-brand-accent-soft, rgba(37,99,235,0.12))",
 
-  primaryBorder: "rgba(37,99,235,0.35)",
+  primaryBorder:
+    "var(--finora-theme-border-strong, rgba(37,99,235,0.35))",
 
-  text: "#FFFFFF",
+  text:
+    "var(--finora-theme-text-primary, #FFFFFF)",
 
-  textSecondary: "#CBD5E1",
+  textSecondary:
+    "var(--finora-theme-text-secondary, #CBD5E1)",
 
-  textMuted: "#94A3B8",
+  textMuted:
+    "var(--finora-theme-text-muted, #94A3B8)",
 
-  textDim: "#64748B",
+  textDim:
+    "var(--finora-theme-text-muted, #64748B)",
 
-  success: "#22C55E",
+  success:
+    "var(--finora-theme-success, #22C55E)",
 
-  successSoft: "rgba(34,197,94,0.10)",
+  successSoft:
+    "var(--finora-theme-success-soft, rgba(34,197,94,0.10))",
 
-  warning: "#F59E0B",
+  warning:
+    "var(--finora-theme-warning, #F59E0B)",
 
-  warningSoft: "rgba(245,158,11,0.10)",
+  warningSoft:
+    "var(--finora-theme-warning-soft, rgba(245,158,11,0.10))",
 
-  danger: "#EF4444",
+  danger:
+    "var(--finora-theme-danger, #EF4444)",
 
-  dangerSoft: "rgba(239,68,68,0.10)",
+  dangerSoft:
+    "var(--finora-theme-danger-soft, rgba(239,68,68,0.10))",
+
+  info:
+    "var(--finora-theme-info, #60A5FA)",
+
+  infoSoft:
+    "var(--finora-theme-info-soft, rgba(96,165,250,0.10))",
+
+  overlayShadow:
+    "var(--finora-theme-overlay-shadow, rgba(0,0,0,0.24))",
+
+  overlayBackdrop:
+    "var(--finora-theme-overlay-backdrop, rgba(2,6,23,0.84))",
 } as const;
 
 // ============================================================
@@ -120,7 +151,7 @@ export const headerStyle: CSSProperties = {
 
   background: `linear-gradient(180deg, ${COLORS.panel}, ${COLORS.panelSoft})`,
 
-  boxShadow: "0 8px 24px rgba(0,0,0,0.16)",
+  boxShadow: `0 8px 24px ${COLORS.overlayShadow}`,
 };
 
 export const headerLeftStyle: CSSProperties = {
@@ -144,7 +175,7 @@ export const backButtonStyle: CSSProperties = {
 
   borderRadius: "8px",
 
-  background: "rgba(255,255,255,0.04)",
+  background: COLORS.panelSoft,
 
   color: COLORS.textSecondary,
 
@@ -166,7 +197,7 @@ export const headerAccentStyle: CSSProperties = {
 
   background: COLORS.primary,
 
-  boxShadow: "0 0 12px rgba(37,99,235,0.35)",
+  boxShadow: `0 0 12px ${COLORS.primary}`,
 };
 
 export const titleGroupStyle: CSSProperties = {
@@ -216,13 +247,13 @@ export const headerMetaStyle: CSSProperties = {
 export const loanNumberBadgeStyle: CSSProperties = {
   padding: "7px 10px",
 
-  border: `1px solid ${COLORS.primaryBorder}`,
+  border: `1px solid var(--finora-theme-brand-primary)`,
 
   borderRadius: "7px",
 
-  background: COLORS.primarySoft,
+  background: COLORS.panelSoft,
 
-  color: "#93C5FD",
+  color: COLORS.textSecondary,
 
   fontSize: "11px",
 
@@ -242,13 +273,13 @@ export function statusBadgeStyle(status: string): CSSProperties {
     return {
       padding: "6px 10px",
 
-      border: "1px solid rgba(34,197,94,0.28)",
+      border: "1px solid var(--finora-theme-success)",
 
       borderRadius: "999px",
 
-      background: COLORS.successSoft,
+      background: COLORS.panelSoft,
 
-      color: "#86EFAC",
+  color: COLORS.textSecondary,
 
       fontSize: "11px",
 
@@ -262,13 +293,13 @@ export function statusBadgeStyle(status: string): CSSProperties {
     return {
       padding: "6px 10px",
 
-      border: "1px solid rgba(37,99,235,0.32)",
+      border: "1px solid var(--finora-theme-brand-primary)",
 
       borderRadius: "999px",
 
-      background: COLORS.primarySoft,
+      background: COLORS.panelSoft,
 
-      color: "#93C5FD",
+  color: COLORS.textSecondary,
 
       fontSize: "11px",
 
@@ -281,13 +312,13 @@ export function statusBadgeStyle(status: string): CSSProperties {
   return {
     padding: "6px 10px",
 
-    border: "1px solid rgba(245,158,11,0.28)",
+    border: "1px solid var(--finora-theme-warning)",
 
     borderRadius: "999px",
 
-    background: COLORS.warningSoft,
+    background: "var(--finora-theme-warning-soft)",
 
-    color: "#FCD34D",
+    color: "var(--finora-theme-warning)",
 
     fontSize: "11px",
 
@@ -296,7 +327,6 @@ export function statusBadgeStyle(status: string): CSSProperties {
     whiteSpace: "nowrap",
   };
 }
-
 // ============================================================
 // GRID
 // ============================================================
@@ -330,7 +360,7 @@ export const sectionStyle: CSSProperties = {
 
   background: `linear-gradient(180deg, ${COLORS.panel}, ${COLORS.panelSoft})`,
 
-  boxShadow: "0 7px 20px rgba(0,0,0,0.12)",
+  boxShadow: `0 7px 20px ${COLORS.overlayShadow}`,
 };
 
 export const fullWidthSectionStyle: CSSProperties = {
@@ -388,11 +418,11 @@ export const infoItemStyle: CSSProperties = {
 
   padding: "10px",
 
-  border: "1px solid rgba(148,163,184,0.12)",
+  border: `1px solid ${COLORS.border}`,
 
   borderRadius: "9px",
 
-  background: "rgba(255,255,255,0.025)",
+  background: COLORS.panelSoft,
 };
 
 export const infoLabelStyle: CSSProperties = {
@@ -448,11 +478,11 @@ export const financialCardStyle: CSSProperties = {
 
   padding: "12px",
 
-  border: "1px solid rgba(148,163,184,0.13)",
+  border: `1px solid ${COLORS.border}`,
 
   borderRadius: "9px",
 
-  background: "rgba(255,255,255,0.025)",
+  background: COLORS.panelSoft,
 };
 
 export const financialLabelStyle: CSSProperties = {
@@ -488,9 +518,9 @@ export const primaryFinancialCardStyle: CSSProperties = {
 export const outstandingFinancialCardStyle: CSSProperties = {
   ...financialCardStyle,
 
-  border: "1px solid rgba(245,158,11,0.24)",
+  border: `1px solid ${COLORS.warning}`,
 
-  background: COLORS.warningSoft,
+  background: COLORS.panelSoft,
 };
 
 // ============================================================
@@ -502,11 +532,11 @@ export const textBlockStyle: CSSProperties = {
 
   padding: "10px",
 
-  border: "1px solid rgba(148,163,184,0.12)",
+  border: `1px solid ${COLORS.border}`,
 
   borderRadius: "9px",
 
-  background: "rgba(255,255,255,0.025)",
+  background: COLORS.panelSoft,
 
   color: COLORS.textSecondary,
 
@@ -540,11 +570,11 @@ export const documentCardStyle: CSSProperties = {
 
   overflow: "hidden",
 
-  border: "1px solid rgba(148,163,184,0.15)",
+  border: `1px solid ${COLORS.border}`,
 
   borderRadius: "10px",
 
-  background: "rgba(255,255,255,0.025)",
+  background: COLORS.panelSoft,
 
   transition: "border-color 160ms ease, background 160ms ease",
 };
@@ -564,7 +594,7 @@ export const documentPreviewStyle: CSSProperties = {
 
   border: "none",
 
-  background: "rgba(2,6,23,0.45)",
+  background: COLORS.panelSoft,
 
   cursor: "pointer",
 
@@ -593,7 +623,7 @@ export const documentPdfPreviewStyle: CSSProperties = {
   justifyContent: "center",
 
   background:
-    "linear-gradient(145deg, rgba(37,99,235,0.14), rgba(15,23,42,0.82))",
+    `linear-gradient(145deg, ${COLORS.primarySoft}, ${COLORS.panel})`,
 };
 
 export const documentPdfIconStyle: CSSProperties = {
@@ -607,13 +637,13 @@ export const documentPdfIconStyle: CSSProperties = {
 
   justifyContent: "center",
 
-  border: "1px solid rgba(147,197,253,0.30)",
+  border: `1px solid ${COLORS.info}`,
 
   borderRadius: "12px",
 
-  background: "rgba(37,99,235,0.14)",
+  background: COLORS.primarySoft,
 
-  color: "#93C5FD",
+  color: COLORS.info,
 
   fontSize: "12px",
 
@@ -675,11 +705,11 @@ export const documentEmptyStyle: CSSProperties = {
 
   padding: "18px",
 
-  border: "1px dashed rgba(148,163,184,0.18)",
+  border: `1px dashed ${COLORS.border}`,
 
   borderRadius: "10px",
 
-  background: "rgba(255,255,255,0.015)",
+  background: COLORS.panelSoft,
 
   color: COLORS.textMuted,
 
@@ -703,7 +733,7 @@ export const documentOpenButtonStyle: CSSProperties = {
 
   background: COLORS.primarySoft,
 
-  color: "#93C5FD",
+  color: COLORS.info,
 
   fontSize: "9px",
 
@@ -725,7 +755,7 @@ export const documentCountBadgeStyle: CSSProperties = {
 
   background: COLORS.primarySoft,
 
-  color: "#93C5FD",
+  color: COLORS.info,
 
   fontSize: "9px",
 
@@ -753,7 +783,7 @@ export const documentViewerBackdropStyle: CSSProperties = {
 
   padding: "24px",
 
-  background: "rgba(2,6,23,0.84)",
+  background: COLORS.overlayBackdrop,
 
   backdropFilter: "blur(6px)",
 };
@@ -775,7 +805,7 @@ export const documentViewerStyle: CSSProperties = {
 
   background: COLORS.panel,
 
-  boxShadow: "0 24px 70px rgba(0,0,0,0.55)",
+  boxShadow: `0 24px 70px ${COLORS.overlayShadow}`,
 };
 
 export const documentViewerHeaderStyle: CSSProperties = {
@@ -791,7 +821,7 @@ export const documentViewerHeaderStyle: CSSProperties = {
 
   padding: "0 14px",
 
-  borderBottom: "1px solid rgba(148,163,184,0.14)",
+  borderBottom: `1px solid ${COLORS.border}`,
 
   background: COLORS.panelSoft,
 };
@@ -823,7 +853,7 @@ export const documentViewerCloseStyle: CSSProperties = {
 
   borderRadius: "8px",
 
-  background: "rgba(255,255,255,0.04)",
+  background: COLORS.panelSoft,
 
   color: COLORS.textSecondary,
 
@@ -849,7 +879,7 @@ export const documentViewerBodyStyle: CSSProperties = {
 
   padding: "18px",
 
-  background: "rgba(2,6,23,0.72)",
+  background: COLORS.background,
 };
 
 export const documentViewerImageStyle: CSSProperties = {
@@ -867,7 +897,7 @@ export const documentViewerImageStyle: CSSProperties = {
 
   borderRadius: "6px",
 
-  boxShadow: "0 12px 40px rgba(0,0,0,0.35)",
+  boxShadow: `0 12px 40px ${COLORS.overlayShadow}`,
 };
 
 export const documentViewerPdfStyle: CSSProperties = {
@@ -887,7 +917,7 @@ export const scheduleWrapperStyle: CSSProperties = {
 
   overflowX: "auto",
 
-  border: "1px solid rgba(148,163,184,0.12)",
+  border: `1px solid ${COLORS.border}`,
 
   borderRadius: "9px",
 };
@@ -901,9 +931,9 @@ export const scheduleHeaderStyle: CSSProperties = {
 
   padding: "9px 10px",
 
-  borderBottom: "1px solid rgba(148,163,184,0.14)",
+  borderBottom: `1px solid ${COLORS.border}`,
 
-  background: "rgba(255,255,255,0.035)",
+  background: COLORS.panelSoft,
 };
 
 export const scheduleHeaderCellStyle: CSSProperties = {
@@ -927,7 +957,7 @@ export const scheduleRowStyle: CSSProperties = {
 
   padding: "9px 10px",
 
-  borderBottom: "1px solid rgba(148,163,184,0.08)",
+  borderBottom: `1px solid ${COLORS.border}`,
 };
 
 export const scheduleCellStyle: CSSProperties = {
@@ -971,9 +1001,9 @@ export const footerBackButtonStyle: CSSProperties = {
 
   borderRadius: "8px",
 
-  background: COLORS.primary,
+  background: COLORS.panelSoft,
 
-  color: COLORS.text,
+  color: COLORS.textSecondary,
 
   fontSize: "12px",
 
@@ -981,7 +1011,6 @@ export const footerBackButtonStyle: CSSProperties = {
 
   cursor: "pointer",
 
-  boxShadow: "0 7px 18px rgba(37,99,235,0.20)",
 };
 
 // ============================================================
