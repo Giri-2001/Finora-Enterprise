@@ -1,18 +1,15 @@
 /* ===========================================================
-   FINORA ENTERPRISE V2
-   REPAYMENT STUDIO
+   FINORA ENTERPRISE OS™
+   REPAYMENT STUDIO™
    REPAYMENT SUMMARY
 =========================================================== */
 
 import SummaryCard from "../../common/cards/SummaryCard";
 
+import { useResponsive } from "../../../utils/responsive";
+
 import {
-  cardStyle,
-  highlightRowStyle,
-  labelStyle,
-  rowStyle,
-  summaryGridStyle,
-  valueStyle,
+  createRepaymentSummaryStyles,
 } from "./RepaymentSummary.styles";
 
 /* ===========================================================
@@ -33,17 +30,11 @@ interface RepaymentSummaryProps {
    HELPERS
 =========================================================== */
 
-function formatAmount(
-  value: number,
-): string {
-  return Math.round(value).toLocaleString(
-    "en-IN",
-  );
+function formatAmount(value: number): string {
+  return Math.round(value).toLocaleString("en-IN");
 }
 
-function formatMethod(
-  value?: string,
-): string {
+function formatMethod(value?: string): string {
   switch (value) {
     case "fixed":
       return "Fixed EMI";
@@ -59,9 +50,7 @@ function formatMethod(
   }
 }
 
-function formatFrequency(
-  value?: string,
-): string {
+function formatFrequency(value?: string): string {
   switch (value) {
     case "daily":
       return "Daily";
@@ -82,7 +71,6 @@ function formatFrequency(
 =========================================================== */
 
 export default function RepaymentSummary({
-
   loanAmount = 0,
   totalInterest = 0,
   installmentAmount = 0,
@@ -90,94 +78,76 @@ export default function RepaymentSummary({
   totalRepayable = 0,
   repaymentMethod,
   repaymentFrequency,
-
 }: RepaymentSummaryProps) {
+  /* =========================================================
+     FINORA RESPONSIVE ENGINE
+  ========================================================= */
+
+  const { tokens } = useResponsive();
+
+  const {
+    cardStyle,
+    summaryGridStyle,
+    rowStyle,
+    highlightRowStyle,
+    labelStyle,
+    valueStyle,
+  } = createRepaymentSummaryStyles(tokens);
 
   return (
-
-    <div
-      style={cardStyle}
-    >
-
-      <SummaryCard
-        title="Repayment Summary"
-      >
-
-        <div
-          style={summaryGridStyle}
-        >
-
+    <div style={cardStyle}>
+      <SummaryCard title="Repayment Summary">
+        <div style={summaryGridStyle}>
           <div style={rowStyle}>
-            <span style={labelStyle}>
-              Loan Amount
-            </span>
+            <span style={labelStyle}>Loan Amount</span>
             <strong style={valueStyle}>
               ₹ {formatAmount(loanAmount)}
             </strong>
           </div>
 
           <div style={rowStyle}>
-            <span style={labelStyle}>
-              Repayment Method
-            </span>
+            <span style={labelStyle}>Repayment Method</span>
             <strong style={valueStyle}>
-              {formatMethod(
-                repaymentMethod,
-              )}
+              {formatMethod(repaymentMethod)}
             </strong>
           </div>
 
           <div style={rowStyle}>
-            <span style={labelStyle}>
-              Repayment Frequency
-            </span>
+            <span style={labelStyle}>Repayment Frequency</span>
             <strong style={valueStyle}>
-              {formatFrequency(
-                repaymentFrequency,
-              )}
+              {formatFrequency(repaymentFrequency)}
             </strong>
           </div>
 
           <div style={rowStyle}>
-            <span style={labelStyle}>
-              Total Interest
-            </span>
+            <span style={labelStyle}>Total Interest</span>
             <strong style={valueStyle}>
               ₹ {formatAmount(totalInterest)}
             </strong>
           </div>
 
           <div style={rowStyle}>
-            <span style={labelStyle}>
-              Installment Amount
-            </span>
+            <span style={labelStyle}>Installment Amount</span>
             <strong style={valueStyle}>
               ₹ {formatAmount(installmentAmount)}
             </strong>
           </div>
 
           <div style={rowStyle}>
-            <span style={labelStyle}>
-              Total Installments
-            </span>
+            <span style={labelStyle}>Total Installments</span>
             <strong style={valueStyle}>
               {Math.round(totalInstallments)}
             </strong>
           </div>
 
           <div style={highlightRowStyle}>
-            <span style={labelStyle}>
-              Total Repayable
-            </span>
+            <span style={labelStyle}>Total Repayable</span>
             <strong style={valueStyle}>
               ₹ {formatAmount(totalRepayable)}
             </strong>
           </div>
-
         </div>
-
       </SummaryCard>
-
     </div>
   );
 }

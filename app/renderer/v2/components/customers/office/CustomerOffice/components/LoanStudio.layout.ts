@@ -1,9 +1,23 @@
-/* ============================================================
-   FINORA ENTERPRISE OS
-   LOAN STUDIO EXTRACTED LAYOUT STYLES
-   ============================================================ */
+// FINORA ENTERPRISE OS™
+// LOAN STUDIO™
+// RESPONSIVE LAYOUT STYLES
+//
+// STEP 2 CONTRACT:
+// - Mobile  : Summary -> Preview -> EMI Schedule
+// - Tablet  : Summary -> Preview -> EMI Schedule
+// - Laptop  : Summary + Preview | EMI Schedule
+// - Desktop : Summary + Preview | EMI Schedule
+//
+// IMPORTANT:
+// - Uses FINORA Responsive Engine tokens.
+// - No viewport media queries.
+// - No business logic.
+// - Repayment Draft is not rendered by LoanStudioView.
+// ============================================================
 
 import type { CSSProperties } from "react";
+
+import type { ResponsiveTokens } from "../../../../../utils/responsive";
 
 import {
   step1WorkspaceStyle,
@@ -12,39 +26,111 @@ import {
   step1PreviewStyle,
 } from "./LoanStudio.styles";
 
-const THEME = {
-  surfaceStrong: "var(--finora-theme-surface-strong, #111C2E)",
-  surfaceStrongAlt: "var(--finora-theme-surface, #142238)",
-  textPrimary: "var(--finora-theme-text-inverse, #FFFFFF)",
-  textSecondary: "var(--finora-theme-text-secondary, #CBD5E1)",
-  brand: "var(--finora-theme-brand-primary, #2563EB)",
-  warningSoft: "var(--finora-theme-warning-soft, rgba(245, 158, 11, 0.14))",
-  warning: "var(--finora-theme-warning, #FCD34D)",
-  warningBorder: "var(--finora-theme-warning-border, rgba(245, 158, 11, 0.30))",
-  border: "var(--finora-theme-border-default, rgba(148, 163, 184, 0.20))",
-  shadow: "var(--finora-theme-overlay-shadow, rgba(0, 0, 0, 0.14))",
+// ============================================================
+// STEP 2 RESPONSIVE CONTRACT
+// ============================================================
 
-  surface:
-    "var(--finora-theme-surface, var(--finora-theme-background-surface, #111C2E))",
-} as const;
+export interface LoanStudioStep2Layout {
+  step2WorkspaceStyle: CSSProperties;
+  step2GridStyle: CSSProperties;
+  step2LeftColumnStyle: CSSProperties;
+  step2SummaryWrapperStyle: CSSProperties;
+  step2PreviewDraftStackStyle: CSSProperties;
+  step2PreviewWrapperStyle: CSSProperties;
+  step2ScheduleWrapperStyle: CSSProperties;
+}
 
-/* ============================================================
-   STEP2WORKSPACESTYLE
-============================================================ */
+// ============================================================
+// STEP 2 STYLE FACTORY
+// ============================================================
+
+export function createLoanStudioStep2Layout(
+  tokens: ResponsiveTokens,
+): LoanStudioStep2Layout {
+  const compact =
+    tokens.meta.viewport === "mobile" || tokens.meta.viewport === "tablet";
+
+  const gap = Math.max(8, tokens.spacing.small);
+
+  return {
+    step2WorkspaceStyle: {
+      width: "100%",
+      minWidth: 0,
+      minHeight: 0,
+      boxSizing: "border-box",
+      overflow: "visible",
+      paddingRight: 0,
+      paddingBottom: `${Math.max(4, gap / 2)}px`,
+    },
+
+    step2GridStyle: {
+      width: "100%",
+      minWidth: 0,
+      display: "grid",
+      gridTemplateColumns: compact
+        ? "minmax(0, 1fr)"
+        : "minmax(0, 55%) minmax(0, 45%)",
+      gap: `${gap}px`,
+      alignItems: "start",
+      boxSizing: "border-box",
+    },
+
+    step2LeftColumnStyle: {
+      width: "100%",
+      minWidth: 0,
+      display: "flex",
+      flexDirection: "column",
+      gap: `${gap}px`,
+      boxSizing: "border-box",
+    },
+
+    step2SummaryWrapperStyle: {
+      width: "100%",
+      minWidth: 0,
+      boxSizing: "border-box",
+    },
+
+    step2PreviewDraftStackStyle: {
+      width: "100%",
+      minWidth: 0,
+      display: "flex",
+      flexDirection: "column",
+      gap: `${gap}px`,
+      alignItems: "stretch",
+      boxSizing: "border-box",
+    },
+
+    step2PreviewWrapperStyle: {
+      width: "100%",
+      minWidth: 0,
+      boxSizing: "border-box",
+    },
+
+    step2ScheduleWrapperStyle: {
+      width: "100%",
+      minWidth: 0,
+      boxSizing: "border-box",
+      overflow: "visible",
+    },
+  };
+}
+
+// ============================================================
+// LEGACY STATIC ALIASES
+//
+// Kept only for compatibility with any existing imports.
+// LoanStudioView uses createLoanStudioStep2Layout().
+// ============================================================
 
 export const step2WorkspaceStyle: CSSProperties = {
   width: "100%",
   minWidth: 0,
   minHeight: 0,
   boxSizing: "border-box",
-  overflow: "auto",
-  paddingRight: "2px",
+  overflow: "visible",
+  paddingRight: 0,
   paddingBottom: "4px",
 };
-
-/* ============================================================
-   STEP2GRIDSTYLE
-============================================================ */
 
 export const step2GridStyle: CSSProperties = {
   width: "100%",
@@ -56,29 +142,20 @@ export const step2GridStyle: CSSProperties = {
   boxSizing: "border-box",
 };
 
-/* ============================================================
-   STEP2LEFTCOLUMNSTYLE
-============================================================ */
-
 export const step2LeftColumnStyle: CSSProperties = {
+  width: "100%",
   minWidth: 0,
   display: "flex",
   flexDirection: "column",
   gap: "8px",
+  boxSizing: "border-box",
 };
-
-/* ============================================================
-   STEP2SUMMARYWRAPPERSTYLE
-============================================================ */
 
 export const step2SummaryWrapperStyle: CSSProperties = {
   width: "100%",
   minWidth: 0,
+  boxSizing: "border-box",
 };
-
-/* ============================================================
-   STEP2PREVIEWDRAFTSTACKSTYLE
-============================================================ */
 
 export const step2PreviewDraftStackStyle: CSSProperties = {
   width: "100%",
@@ -90,141 +167,26 @@ export const step2PreviewDraftStackStyle: CSSProperties = {
   boxSizing: "border-box",
 };
 
-/* ============================================================
-   STEP2PREVIEWWRAPPERSTYLE
-============================================================ */
-
 export const step2PreviewWrapperStyle: CSSProperties = {
-  minWidth: 0,
   width: "100%",
+  minWidth: 0,
   boxSizing: "border-box",
 };
-
-/* ============================================================
-   REPAYMENTDRAFTSTYLE
-============================================================ */
-
-export const repaymentDraftStyle: CSSProperties = {
-  width: "100%",
-  minWidth: 0,
-  height: "92px",
-  minHeight: "92px",
-  boxSizing: "border-box",
-  padding: "12px 14px",
-  border: `1px solid ${THEME.border}`,
-  borderRadius: "16px",
-  background: `linear-gradient(180deg, ${THEME.surfaceStrong}, ${THEME.surfaceStrongAlt})`,
-  boxShadow: "none",
-  display: "flex",
-  flexDirection: "column",
-  justifyContent: "space-between",
-  overflow: "hidden",
-};
-
-/* ============================================================
-   REPAYMENTDRAFTHEADERSTYLE
-============================================================ */
-
-export const repaymentDraftHeaderStyle: CSSProperties = {
-  width: "100%",
-  minWidth: 0,
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "space-between",
-  gap: "10px",
-};
-
-/* ============================================================
-   REPAYMENTDRAFTTITLESTYLE
-============================================================ */
-
-export const repaymentDraftTitleStyle: CSSProperties = {
-  minWidth: 0,
-  paddingLeft: "10px",
-  borderLeft: "3px solid #2563EB",
-  fontSize: "16px",
-  fontWeight: 700,
-  lineHeight: 1.25,
-  whiteSpace: "nowrap",
-  overflow: "hidden",
-  textOverflow: "ellipsis",
-};
-
-/* ============================================================
-   REPAYMENTDRAFTBADGESTYLE
-============================================================ */
-
-export const repaymentDraftBadgeStyle: CSSProperties = {
-  display: "inline-flex",
-  alignItems: "center",
-  justifyContent: "center",
-  flexShrink: 0,
-
-  padding: "5px 11px",
-  borderRadius: "999px",
-
-  fontSize: "12px",
-  fontWeight: 700,
-  lineHeight: 1,
-
-  /* ============================================================
-     THEME BACKGROUND
-  ============================================================ */
-
-  background:
-    "var(--finora-theme-background-surface-muted, var(--finora-theme-surface-muted, #F8FAFC))",
-
-  /* ============================================================
-     THEME TEXT
-  ============================================================ */
-
-  color: "var(--finora-theme-brand-accent, #2563EB)",
-
-  /* ============================================================
-     THEME BORDER
-  ============================================================ */
-
-  border:
-    "1px solid var(--finora-theme-border-strong, rgba(37, 99, 235, 0.38))",
-};
-
-/* ============================================================
-   REPAYMENTDRAFTUPDATEDSTYLE
-============================================================ */
-
-export const repaymentDraftUpdatedStyle: CSSProperties = {
-  paddingLeft: "13px",
-  color: THEME.textSecondary,
-  fontSize: "12px",
-  fontWeight: 500,
-  lineHeight: 1.3,
-  whiteSpace: "nowrap",
-  overflow: "hidden",
-  textOverflow: "ellipsis",
-};
-
-/* ============================================================
-   STEP2SCHEDULEWRAPPERSTYLE
-============================================================ */
 
 export const step2ScheduleWrapperStyle: CSSProperties = {
-  minWidth: 0,
   width: "100%",
+  minWidth: 0,
   boxSizing: "border-box",
 };
 
-/* ============================================================
-   STEP5WORKSPACESTYLE
-============================================================ */
+// ============================================================
+// STEP 5
+// ============================================================
 
 export const step5WorkspaceStyle: CSSProperties = {
   ...step1WorkspaceStyle,
   overflow: "visible",
 };
-
-/* ============================================================
-   STEP5BOTTOMSTYLE
-============================================================ */
 
 export const step5BottomStyle: CSSProperties = {
   ...step1BottomStyle,
@@ -232,10 +194,6 @@ export const step5BottomStyle: CSSProperties = {
   overflow: "visible",
   alignItems: "start",
 };
-
-/* ============================================================
-   STEP5CHECKLISTCOLUMNSTYLE
-============================================================ */
 
 export const step5ChecklistColumnStyle: CSSProperties = {
   ...step1FormStyle,
@@ -247,10 +205,6 @@ export const step5ChecklistColumnStyle: CSSProperties = {
   gap: "8px",
 };
 
-/* ============================================================
-   STEP5PREVIEWCOLUMNSTYLE
-============================================================ */
-
 export const step5PreviewColumnStyle: CSSProperties = {
   ...step1PreviewStyle,
   height: "auto",
@@ -261,18 +215,14 @@ export const step5PreviewColumnStyle: CSSProperties = {
   gap: "12px",
 };
 
-/* ============================================================
-   STEP6WORKSPACESTYLE
-============================================================ */
+// ============================================================
+// STEP 6
+// ============================================================
 
 export const step6WorkspaceStyle: CSSProperties = {
   ...step1WorkspaceStyle,
   overflow: "visible",
 };
-
-/* ============================================================
-   STEP6BOTTOMSTYLE
-============================================================ */
 
 export const step6BottomStyle: CSSProperties = {
   ...step1BottomStyle,
@@ -283,10 +233,6 @@ export const step6BottomStyle: CSSProperties = {
   alignContent: "start",
 };
 
-/* ============================================================
-   STEP6PAYMENTMODEWRAPPERSTYLE
-============================================================ */
-
 export const step6PaymentModeWrapperStyle: CSSProperties = {
   width: "100%",
   minWidth: 0,
@@ -294,10 +240,6 @@ export const step6PaymentModeWrapperStyle: CSSProperties = {
   padding: 0,
   boxSizing: "border-box",
 };
-
-/* ============================================================
-   STEP6PREVIEWCOLUMNSTYLE
-============================================================ */
 
 export const step6PreviewColumnStyle: CSSProperties = {
   ...step1PreviewStyle,
@@ -309,6 +251,6 @@ export const step6PreviewColumnStyle: CSSProperties = {
   gap: "10px",
 };
 
-/* ============================================================
-   END
-============================================================ */
+// ============================================================
+// END
+// ============================================================

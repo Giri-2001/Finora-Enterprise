@@ -1,20 +1,15 @@
 /* ===========================================================
-   FINORA ENTERPRISE V2
-   REPAYMENT STUDIO
+   FINORA ENTERPRISE OS™
+   REPAYMENT STUDIO™
    REPAYMENT PREVIEW CARD
 =========================================================== */
 
 import SummaryCard from "../../common/cards/SummaryCard";
 
+import { useResponsive } from "../../../utils/responsive";
+
 import {
-  cardStyle,
-  fullWidthRowStyle,
-  highlightRowStyle,
-  labelStyle,
-  previewGridStyle,
-  primaryValueStyle,
-  rowStyle,
-  valueStyle,
+  createRepaymentPreviewCardStyles,
 } from "./RepaymentPreviewCard.styles";
 
 /* ===========================================================
@@ -35,17 +30,11 @@ interface RepaymentPreviewCardProps {
    HELPERS
 =========================================================== */
 
-function formatAmount(
-  value: number,
-): string {
-  return Math.round(value).toLocaleString(
-    "en-IN",
-  );
+function formatAmount(value: number): string {
+  return Math.round(value).toLocaleString("en-IN");
 }
 
-function formatRepaymentMethod(
-  value?: string,
-): string {
+function formatRepaymentMethod(value?: string): string {
   switch (value) {
     case "fixed":
       return "Fixed EMI";
@@ -61,12 +50,8 @@ function formatRepaymentMethod(
   }
 }
 
-function formatFrequency(
-  value?: string,
-): string {
-  switch (
-    value?.toLowerCase()
-  ) {
+function formatFrequency(value?: string): string {
+  switch (value?.toLowerCase()) {
     case "daily":
       return "Daily";
 
@@ -86,7 +71,6 @@ function formatFrequency(
 =========================================================== */
 
 export default function RepaymentPreviewCard({
-
   frequency = "--",
   repaymentMethod,
   installmentAmount = 0,
@@ -94,96 +78,82 @@ export default function RepaymentPreviewCard({
   totalRepayable = 0,
   firstInstallmentDate = "--",
   lastInstallmentDate = "--",
-
 }: RepaymentPreviewCardProps) {
+  /* =========================================================
+     FINORA RESPONSIVE ENGINE
+  ========================================================= */
+
+  const { tokens } = useResponsive();
+
+  const {
+    cardStyle,
+    previewGridStyle,
+    rowStyle,
+    highlightRowStyle,
+    labelStyle,
+    valueStyle,
+    primaryValueStyle,
+    fullWidthRowStyle,
+  } = createRepaymentPreviewCardStyles(tokens);
 
   return (
-
     <div style={cardStyle}>
-
-      <SummaryCard
-        title="Repayment Preview"
-      >
-
+      <SummaryCard title="Repayment Preview">
         <div style={previewGridStyle}>
-
           <div style={highlightRowStyle}>
-            <span style={labelStyle}>
-              EMI Calculation
-            </span>
+            <span style={labelStyle}>EMI Calculation</span>
             <strong style={primaryValueStyle}>
-              {formatRepaymentMethod(
-                repaymentMethod,
-              )}
+              {formatRepaymentMethod(repaymentMethod)}
             </strong>
           </div>
 
           <div style={rowStyle}>
-            <span style={labelStyle}>
-              Repayment Frequency
-            </span>
+            <span style={labelStyle}>Repayment Frequency</span>
             <strong style={valueStyle}>
               {formatFrequency(frequency)}
             </strong>
           </div>
 
           <div style={rowStyle}>
-            <span style={labelStyle}>
-              Installment
-            </span>
+            <span style={labelStyle}>Installment</span>
             <strong style={valueStyle}>
               {installmentAmount > 0
-                ? `₹ ${formatAmount(
-                    installmentAmount,
-                  )}`
+                ? `₹ ${formatAmount(installmentAmount)}`
                 : "--"}
             </strong>
           </div>
 
           <div style={rowStyle}>
-            <span style={labelStyle}>
-              Total Installments
-            </span>
+            <span style={labelStyle}>Total Installments</span>
             <strong style={valueStyle}>
               {totalInstallments > 0
-                ? Math.round(
-                    totalInstallments,
-                  )
+                ? Math.round(totalInstallments)
                 : "--"}
             </strong>
           </div>
 
           <div style={highlightRowStyle}>
-            <span style={labelStyle}>
-              Total Repayable
-            </span>
+            <span style={labelStyle}>Total Repayable</span>
             <strong style={primaryValueStyle}>
               ₹ {formatAmount(totalRepayable)}
             </strong>
           </div>
 
           <div style={rowStyle}>
-            <span style={labelStyle}>
-              First Installment
-            </span>
+            <span style={labelStyle}>First Installment</span>
             <strong style={valueStyle}>
               {firstInstallmentDate}
             </strong>
           </div>
 
           <div style={fullWidthRowStyle}>
-            <span style={labelStyle}>
-              Last Installment
-            </span>
+            <span style={labelStyle}>Last Installment</span>
             <strong style={valueStyle}>
               {lastInstallmentDate}
             </strong>
           </div>
-
         </div>
-
       </SummaryCard>
-
     </div>
   );
 }

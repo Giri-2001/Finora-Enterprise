@@ -1,45 +1,40 @@
 // ============================================================
-// FINORA ENTERPRISE V2
-//
-// REPAYMENT STUDIO
-// REPAYMENT PREVIEW CARD STYLES
+// FINORA ENTERPRISE OS™
+// REPAYMENT STUDIO™
+// REPAYMENT PREVIEW CARD RESPONSIVE STYLES
 //
 // RESPONSIBILITY:
-// - RepaymentPreviewCard presentation only
-// - Compact repayment summary presentation
-// - FINORA Theme Engine connected
+// - RepaymentPreviewCard presentation only.
+// - Consume FINORA Responsive Engine tokens.
+// - Compact two-column desktop/laptop presentation.
+// - Two-column tablet presentation.
+// - Single-column mobile presentation.
 //
 // IMPORTANT:
 // - No business logic.
 // - No calculations.
-// - No persistence.
-// - Layout / dimensions preserved.
-// - No local theme palette.
-// - Theme colors come from FINORA CSS variables.
-//
+// - No viewport detection.
+// - No local media queries.
+// - Theme appearance comes from FINORA Theme CSS variables.
 // ============================================================
 
 import type { CSSProperties } from "react";
 
+import type { ResponsiveTokens } from "../../../utils/responsive";
+
 // ============================================================
-// FINORA THEME TOKENS
+// THEME TOKENS
 // ============================================================
 
 const THEME = {
   panel:
     "var(--finora-theme-surface, var(--finora-theme-background-surface, #111C2E))",
 
-  panelSoft:
-    "var(--finora-theme-surface-muted, var(--finora-theme-background-surface-muted, #142238))",
-
   border:
     "var(--finora-theme-border-default, rgba(148, 163, 184, 0.20))",
 
   borderStrong:
     "var(--finora-theme-border-strong, rgba(37, 99, 235, 0.38))",
-
-  primary:
-    "var(--finora-theme-brand-primary, #2563EB)",
 
   primarySoft:
     "var(--finora-theme-brand-accent-soft, rgba(37, 99, 235, 0.14))",
@@ -49,134 +44,152 @@ const THEME = {
 
   textMuted:
     "var(--finora-theme-text-muted, #94A3B8)",
-};
+} as const;
 
 // ============================================================
-// CARD WRAPPER
+// RESPONSIVE STYLE CONTRACT
 // ============================================================
 
-export const cardStyle: CSSProperties = {
-  width: "100%",
-  minWidth: 0,
-  boxSizing: "border-box",
-};
+export interface RepaymentPreviewCardStyles {
+  cardStyle: CSSProperties;
+  previewGridStyle: CSSProperties;
+  rowStyle: CSSProperties;
+  highlightRowStyle: CSSProperties;
+  labelStyle: CSSProperties;
+  valueStyle: CSSProperties;
+  primaryValueStyle: CSSProperties;
+  fullWidthRowStyle: CSSProperties;
+}
 
 // ============================================================
-// PREVIEW GRID
+// STYLE FACTORY
 // ============================================================
 
-export const previewGridStyle: CSSProperties = {
-  display: "grid",
-  gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
-  gap: "6px 8px",
-  width: "100%",
-  minWidth: 0,
-  boxSizing: "border-box",
-};
+export function createRepaymentPreviewCardStyles(
+  tokens: ResponsiveTokens,
+): RepaymentPreviewCardStyles {
+  const mobile =
+    tokens.meta.viewport === "mobile";
 
-// ============================================================
-// PREVIEW ROW
-// ============================================================
+  const gridColumns =
+    mobile
+      ? "minmax(0, 1fr)"
+      : "repeat(2, minmax(0, 1fr))";
 
-export const rowStyle: CSSProperties = {
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "space-between",
-  gap: "8px",
-  minWidth: 0,
-  minHeight: "31px",
-  padding: "6px 8px",
-  boxSizing: "border-box",
+  const gap =
+    Math.max(6, tokens.spacing.small);
 
-  border:
-    `1px solid ${THEME.border}`,
+  return {
+    cardStyle: {
+      width: "100%",
+      minWidth: 0,
+      boxSizing: "border-box",
+    },
 
-  borderRadius: "6px",
+    previewGridStyle: {
+      display: "grid",
+      gridTemplateColumns: gridColumns,
+      gap: `${gap}px ${Math.max(8, gap)}px`,
+      width: "100%",
+      minWidth: 0,
+      boxSizing: "border-box",
+      alignItems: "stretch",
+    },
 
-  background:
-    THEME.panel,
+    rowStyle: {
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "space-between",
+      gap: "8px",
+      minWidth: 0,
+      minHeight: mobile ? "34px" : "31px",
+      padding: "6px 8px",
+      boxSizing: "border-box",
+      border: `1px solid ${THEME.border}`,
+      borderRadius: "6px",
+      background: THEME.panel,
+      color: THEME.textMuted,
+      fontSize: mobile ? "11px" : "12px",
+      fontWeight: 500,
+      lineHeight: 1.25,
+    },
 
-  color:
-    THEME.textMuted,
+    highlightRowStyle: {
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "space-between",
+      gap: "8px",
+      minWidth: 0,
+      minHeight: mobile ? "34px" : "31px",
+      padding: "6px 8px",
+      boxSizing: "border-box",
+      border: `1px solid ${THEME.borderStrong}`,
+      borderRadius: "6px",
+      background: `linear-gradient(90deg, ${THEME.primarySoft}, ${THEME.panel})`,
+      color: THEME.textMuted,
+      fontSize: mobile ? "11px" : "12px",
+      fontWeight: 500,
+      lineHeight: 1.25,
+    },
 
-  fontSize: "12px",
-  fontWeight: 500,
-  lineHeight: 1.25,
-};
+    labelStyle: {
+      minWidth: 0,
+      flex: "1 1 auto",
+      color: THEME.textMuted,
+      fontSize: mobile ? "11px" : "12px",
+      fontWeight: 500,
+      lineHeight: 1.25,
+      overflow: "hidden",
+      textOverflow: "ellipsis",
+      whiteSpace: mobile ? "normal" : "nowrap",
+    },
 
-// ============================================================
-// LABEL
-// ============================================================
+    valueStyle: {
+      minWidth: 0,
+      flex: "0 1 auto",
+      color: THEME.text,
+      fontSize: mobile ? "11px" : "12px",
+      fontWeight: 650,
+      lineHeight: 1.25,
+      textAlign: "right",
+      overflow: "hidden",
+      textOverflow: "ellipsis",
+      whiteSpace: "nowrap",
+    },
 
-export const labelStyle: CSSProperties = {
-  minWidth: 0,
+    primaryValueStyle: {
+      minWidth: 0,
+      flex: "0 1 auto",
+      color: THEME.text,
+      fontSize: mobile ? "12px" : "13px",
+      fontWeight: 700,
+      lineHeight: 1.25,
+      textAlign: "right",
+      overflow: "hidden",
+      textOverflow: "ellipsis",
+      whiteSpace: "nowrap",
+    },
 
-  color:
-    THEME.textMuted,
-
-  fontSize: "12px",
-  fontWeight: 500,
-  lineHeight: 1.25,
-};
-
-// ============================================================
-// VALUE
-// ============================================================
-
-export const valueStyle: CSSProperties = {
-  minWidth: 0,
-
-  color:
-    THEME.text,
-
-  fontSize: "12px",
-  fontWeight: 650,
-  lineHeight: 1.25,
-
-  textAlign: "right",
-
-  overflow: "hidden",
-  textOverflow: "ellipsis",
-  whiteSpace: "nowrap",
-};
-
-// ============================================================
-// PRIMARY VALUE
-// ============================================================
-
-export const primaryValueStyle: CSSProperties = {
-  ...valueStyle,
-
-  color:
-    THEME.text,
-
-  fontSize: "13px",
-  fontWeight: 700,
-};
-
-// ============================================================
-// HIGHLIGHT ROW
-// ============================================================
-
-export const highlightRowStyle: CSSProperties = {
-  ...rowStyle,
-
-  borderColor:
-    THEME.borderStrong,
-
-  background:
-    THEME.panel,
-};
-
-// ============================================================
-// FULL WIDTH ROW
-// ============================================================
-
-export const fullWidthRowStyle: CSSProperties = {
-  ...rowStyle,
-
-  gridColumn: "1 / -1",
-};
+    fullWidthRowStyle: {
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "space-between",
+      gap: "8px",
+      minWidth: 0,
+      minHeight: mobile ? "34px" : "31px",
+      padding: "6px 8px",
+      boxSizing: "border-box",
+      border: `1px solid ${THEME.border}`,
+      borderRadius: "6px",
+      background: THEME.panel,
+      color: THEME.textMuted,
+      fontSize: mobile ? "11px" : "12px",
+      fontWeight: 500,
+      lineHeight: 1.25,
+      gridColumn: "1 / -1",
+    },
+  };
+}
 
 // ============================================================
 // END

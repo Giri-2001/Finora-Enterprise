@@ -18,224 +18,128 @@
 // - No mutation.
 // - Existing LoanInstallment contract preserved.
 //
+// RESPONSIVE:
+// - Desktop / Laptop : normal table row
+// - Tablet / Mobile  : stacked label/value presentation
+//
 // THEME CONTRACT:
 // - All visual colours come from FINORA Theme Engine.
-// - No local theme palette.
-// - No hard-coded theme colours.
-// - Defensive CSS fallbacks are used only for safety.
-//
 // ============================================================
 
 // ============================================================
 // IMPORTS
 // ============================================================
 
-import type {
-  LoanInstallment,
-} from "./types";
+import type { LoanInstallment } from "./types";
 
-import {
-  formatCurrency,
-} from "../../../utils/currency/formatCurrency";
+import { formatCurrency } from "../../../utils/currency/formatCurrency";
 
 // ============================================================
 // TYPES
 // ============================================================
 
 interface LoanScheduleRowProps {
-
-  installment:
-    LoanInstallment;
-
+  installment: LoanInstallment;
 }
 
 // ============================================================
 // THEME TOKENS
 // ============================================================
-//
-// ThemeProvider
-//      ↓
-// FINORA Theme Engine
-//      ↓
-// CSS Variables
-//      ↓
-// LoanScheduleRow
-//
-// These variables are already provided by Loan Studio's
-// central theme bridge.
-// ============================================================
 
 const THEME = {
-
-  // ----------------------------------------------------------
-  // SURFACES
-  // ----------------------------------------------------------
-
   rowBackground:
     "var(--finora-theme-background-page, var(--finora-theme-page, #0B1220))",
 
   surface:
     "var(--finora-theme-surface, var(--finora-theme-background-surface, #111C2E))",
 
-  surfaceMuted:
-    "var(--finora-theme-surface-muted, var(--finora-theme-background-surface-muted, #142238))",
+  primary: "var(--finora-theme-brand-primary, #2563EB)",
 
-  // ----------------------------------------------------------
-  // BRAND
-  // ----------------------------------------------------------
+  primarySoft: "var(--finora-theme-brand-accent-soft, rgba(37,99,235,.14))",
 
-  primary:
-    "var(--finora-theme-brand-primary, #2563EB)",
+  textPrimary: "var(--finora-theme-text-primary, #FFFFFF)",
 
-  primarySoft:
-    "var(--finora-theme-brand-accent-soft, rgba(37,99,235,.14))",
+  textSecondary: "var(--finora-theme-text-secondary, #CBD5E1)",
 
-  // ----------------------------------------------------------
-  // TEXT
-  // ----------------------------------------------------------
+  textMuted: "var(--finora-theme-text-muted, #94A3B8)",
 
-  textPrimary:
-    "var(--finora-theme-text-primary, #FFFFFF)",
+  border: "var(--finora-theme-border-default, rgba(148,163,184,.16))",
 
-  textSecondary:
-    "var(--finora-theme-text-secondary, #CBD5E1)",
+  borderStrong: "var(--finora-theme-border-strong, rgba(37,99,235,.42))",
 
-  textMuted:
-    "var(--finora-theme-text-muted, #94A3B8)",
+  borderSubtle: "var(--finora-theme-border-subtle, rgba(148,163,184,.10))",
 
-  // ----------------------------------------------------------
-  // BORDERS
-  // ----------------------------------------------------------
+  success: "var(--finora-theme-success, #34D399)",
 
-  border:
-    "var(--finora-theme-border-default, rgba(148,163,184,.16))",
-
-  borderStrong:
-    "var(--finora-theme-border-strong, rgba(37,99,235,.42))",
-
-  borderSubtle:
-    "var(--finora-theme-border-subtle, rgba(148,163,184,.10))",
-
-  // ----------------------------------------------------------
-  // STATUS
-  // ----------------------------------------------------------
-
-  success:
-    "var(--finora-theme-success, #34D399)",
-
-  successSoft:
-    "var(--finora-theme-success-soft, rgba(16,185,129,.10))",
+  successSoft: "var(--finora-theme-success-soft, rgba(16,185,129,.10))",
 
   successBorder:
     "var(--finora-theme-success-border, var(--finora-theme-border-strong, rgba(16,185,129,.35)))",
 
-  warning:
-    "var(--finora-theme-warning, #F59E0B)",
+  warning: "var(--finora-theme-warning, #F59E0B)",
 
-  warningSoft:
-    "var(--finora-theme-warning-soft, rgba(245,158,11,.10))",
+  warningSoft: "var(--finora-theme-warning-soft, rgba(245,158,11,.10))",
 
-  danger:
-    "var(--finora-theme-danger, #EF4444)",
+  danger: "var(--finora-theme-danger, #EF4444)",
 
-  dangerSoft:
-    "var(--finora-theme-danger-soft, rgba(239,68,68,.10))",
+  dangerSoft: "var(--finora-theme-danger-soft, rgba(239,68,68,.10))",
 
-  info:
-    "var(--finora-theme-info, #60A5FA)",
+  info: "var(--finora-theme-info, #60A5FA)",
 
-  infoSoft:
-    "var(--finora-theme-info-soft, rgba(96,165,250,.10))",
-
+  infoSoft: "var(--finora-theme-info-soft, rgba(96,165,250,.10))",
 } as const;
 
 // ============================================================
 // STATUS STYLE HELPER
 // ============================================================
 
-function getStatusStyle(
-  status:
-    LoanInstallment["status"],
-) {
-
-  switch (
-    status
-  ) {
-
+function getStatusStyle(status: LoanInstallment["status"]) {
+  switch (status) {
     case "Paid":
-
       return {
+        background: THEME.successSoft,
 
-        background:
-          THEME.successSoft,
+        border: `1px solid ${THEME.successBorder}`,
 
-        border:
-          `1px solid ${THEME.successBorder}`,
-
-        color:
-          THEME.success,
-
+        color: THEME.success,
       };
 
     case "Partial":
-
       return {
+        background: THEME.warningSoft,
 
-        background:
-          THEME.warningSoft,
+        border: `1px solid ${THEME.warning}`,
 
-        border:
-          `1px solid ${THEME.warning}`,
-
-        color:
-          THEME.warning,
-
+        color: THEME.warning,
       };
 
     case "Overdue":
-
       return {
+        background: THEME.dangerSoft,
 
-        background:
-          THEME.dangerSoft,
+        border: `1px solid ${THEME.danger}`,
 
-        border:
-          `1px solid ${THEME.danger}`,
-
-        color:
-          THEME.danger,
-
+        color: THEME.danger,
       };
 
     case "Preclosed":
-
       return {
+        background: THEME.primarySoft,
 
-        background:
-          THEME.primarySoft,
+        border: `1px solid ${THEME.borderStrong}`,
 
-        border:
-          `1px solid ${THEME.borderStrong}`,
-
-        color:
-          THEME.info,
-
+        color: THEME.info,
       };
 
     case "Pending":
 
     default:
-
       return {
+        background: "transparent",
 
-       background:
-      "transparent",
+        border: `1px solid ${THEME.primary}`,
 
-    border:
-      `1px solid ${THEME.primary}`,
-
-    color:
-      THEME.primary,
+        color: THEME.primary,
       };
   }
 }
@@ -245,44 +149,20 @@ function getStatusStyle(
 // ============================================================
 //
 // FINORA standard: DD/MM/YYYY
-//
-// Avoid browser locale differences such as MM/DD/YYYY.
 // ============================================================
 
-function formatIndianDate(
-  value: string,
-): string {
+function formatIndianDate(value: string): string {
+  const date = new Date(value);
 
-  const date =
-    new Date(value);
-
-  if (
-    Number.isNaN(
-      date.getTime(),
-    )
-  ) {
-
+  if (Number.isNaN(date.getTime())) {
     return "--";
   }
 
-  const day =
-    String(
-      date.getDate(),
-    ).padStart(
-      2,
-      "0",
-    );
+  const day = String(date.getDate()).padStart(2, "0");
 
-  const month =
-    String(
-      date.getMonth() + 1,
-    ).padStart(
-      2,
-      "0",
-    );
+  const month = String(date.getMonth() + 1).padStart(2, "0");
 
-  const year =
-    date.getFullYear();
+  const year = date.getFullYear();
 
   return `${day}/${month}/${year}`;
 }
@@ -291,103 +171,71 @@ function formatIndianDate(
 // COMPONENT
 // ============================================================
 
-export default function LoanScheduleRow({
-
-  installment,
-
-}: LoanScheduleRowProps) {
-
-  const statusStyle =
-    getStatusStyle(
-      installment.status,
-    );
-
-  // ==========================================================
-  // RENDER
-  // ==========================================================
+export default function LoanScheduleRow({ installment }: LoanScheduleRowProps) {
+  const statusStyle = getStatusStyle(installment.status);
 
   return (
-
     <tr
+      className="finora-loan-schedule-row"
       style={{
+        borderBottom: `1px solid ${THEME.borderSubtle}`,
 
-        borderBottom:
-          `1px solid ${THEME.borderSubtle}`,
-
-        background:
-      THEME.surface,
-
+        background: THEME.surface,
       }}
     >
-
       {/* ====================================================
           EMI NUMBER
       ==================================================== */}
 
       <td
+        data-label="EMI"
         style={{
+          padding: "8px 10px",
 
-          padding:
-            "8px 10px",
+          background: "transparent",
 
-            background: "transparent",
+          color: THEME.textPrimary,
 
-          color:
-  THEME.textPrimary,
+          fontSize: "12px",
 
-          fontSize:
-            "12px",
+          fontWeight: 700,
 
-          fontWeight:
-            700,
+          lineHeight: 1.2,
 
-          lineHeight:
-            1.2,
-
+          boxSizing: "border-box",
         }}
       >
-
         <span
           style={{
+            display: "inline-flex",
 
-            display:
-              "inline-flex",
+            alignItems: "center",
 
-            alignItems:
-              "center",
+            justifyContent: "center",
 
-            justifyContent:
-              "center",
+            width: "24px",
 
-            width:
-              "24px",
+            height: "24px",
 
-            height:
-              "24px",
+            flexShrink: 0,
 
-            borderRadius:
-              "6px",
+            borderRadius: "6px",
 
             background: "transparent",
-border:
-  "1px solid var(--finora-theme-brand-accent, rgba(37, 99, 235, 0.22))",
 
-color:
-  THEME.textPrimary,
+            border: `1px solid ${THEME.borderStrong}`,
 
-            fontSize:
-              "12px",
+            color: THEME.textPrimary,
 
-            fontWeight:
-              700,
+            fontSize: "12px",
 
+            fontWeight: 700,
+
+            boxSizing: "border-box",
           }}
         >
-
           {installment.installmentNumber}
-
         </span>
-
       </td>
 
       {/* ====================================================
@@ -395,33 +243,24 @@ color:
       ==================================================== */}
 
       <td
+        data-label="Due Date"
         style={{
+          padding: "8px 10px",
 
-          padding:
-            "8px 10px",
+          color: THEME.textSecondary,
 
-          color:
-            THEME.textSecondary,
+          fontSize: "14px",
 
-          fontSize:
-            "14px",
+          fontWeight: 500,
 
-          fontWeight:
-            500,
+          lineHeight: 1.2,
 
-          lineHeight:
-            1.2,
+          whiteSpace: "nowrap",
 
-          whiteSpace:
-            "nowrap",
-
+          boxSizing: "border-box",
         }}
       >
-
-        {formatIndianDate(
-          installment.dueDate,
-        )}
-
+        {formatIndianDate(installment.dueDate)}
       </td>
 
       {/* ====================================================
@@ -429,38 +268,26 @@ color:
       ==================================================== */}
 
       <td
+        data-label="Amount"
         style={{
+          padding: "8px 10px",
 
-          padding:
-            "8px 10px",
+          textAlign: "right",
 
-          textAlign:
-            "right",
+          color: THEME.textPrimary,
 
-          color:
-            THEME.textPrimary,
+          fontSize: "14px",
 
-          fontSize:
-            "14px",
+          fontWeight: 700,
 
-          fontWeight:
-            700,
+          lineHeight: 1.2,
 
-          lineHeight:
-            1.2,
+          whiteSpace: "nowrap",
 
-          whiteSpace:
-            "nowrap",
-
+          boxSizing: "border-box",
         }}
       >
-
-        ₹{" "}
-
-        {formatCurrency(
-          installment.installmentAmount,
-        )}
-
+        ₹ {formatCurrency(installment.installmentAmount)}
       </td>
 
       {/* ====================================================
@@ -468,70 +295,48 @@ color:
       ==================================================== */}
 
       <td
+        data-label="Status"
         style={{
+          padding: "8px 10px",
 
-          padding:
-            "8px 10px",
+          textAlign: "center",
 
-          textAlign:
-            "center",
-
+          boxSizing: "border-box",
         }}
       >
-
         <span
           style={{
+            display: "inline-flex",
 
-            display:
-              "inline-flex",
+            alignItems: "center",
 
-            alignItems:
-              "center",
+            justifyContent: "center",
 
-            justifyContent:
-              "center",
+            minWidth: "76px",
 
-            minWidth:
-              "76px",
+            padding: "4px 9px",
 
-            padding:
-              "4px 9px",
+            boxSizing: "border-box",
 
-            boxSizing:
-              "border-box",
+            borderRadius: "999px",
 
-            borderRadius:
-              "999px",
+            background: statusStyle.background,
 
-            background:
-  statusStyle.background,
+            border: statusStyle.border,
 
-border:
-  statusStyle.border,
+            color: statusStyle.color,
 
-color:
-  statusStyle.color,
+            fontSize: "12px",
 
-            fontSize:
-              "12px",
+            fontWeight: 700,
 
-            fontWeight:
-              700,
-
-            lineHeight:
-              1.2,
-
+            lineHeight: 1.2,
           }}
         >
-
           {installment.status}
-
         </span>
-
       </td>
-
     </tr>
-
   );
 }
 

@@ -23,18 +23,7 @@ import { useTheme } from "../../../../../themes/provider/ThemeProvider";
 import { createLoanStudioStyles } from "./LoanStudio.styles";
 
 import {
-  step2WorkspaceStyle,
-  step2GridStyle,
-  step2LeftColumnStyle,
-  step2SummaryWrapperStyle,
-  step2PreviewDraftStackStyle,
-  step2PreviewWrapperStyle,
-  repaymentDraftStyle,
-  repaymentDraftHeaderStyle,
-  repaymentDraftTitleStyle,
-  repaymentDraftBadgeStyle,
-  repaymentDraftUpdatedStyle,
-  step2ScheduleWrapperStyle,
+  createLoanStudioStep2Layout,
   step5WorkspaceStyle,
   step5BottomStyle,
   step5ChecklistColumnStyle,
@@ -187,6 +176,27 @@ export default function LoanStudioView(props: LoanStudioViewModel) {
   ========================================================== */
 
   const { theme } = useTheme();
+
+  /* ==========================================================
+     STEP 2 RESPONSIVE LAYOUT
+     
+     Mobile / Tablet:
+       Summary -> Preview -> EMI Schedule
+     Laptop / Desktop:
+       Summary + Preview (left) | EMI Schedule (right)
+  ========================================================== */
+
+  const step2Layout = createLoanStudioStep2Layout(tokens);
+
+  const {
+    step2WorkspaceStyle,
+    step2GridStyle,
+    step2LeftColumnStyle,
+    step2SummaryWrapperStyle,
+    step2PreviewDraftStackStyle,
+    step2PreviewWrapperStyle,
+    step2ScheduleWrapperStyle,
+  } = step2Layout;
 
   /* ==========================================================
      SHARED LOAN STUDIO PRESENTATION STYLES
@@ -480,23 +490,6 @@ export default function LoanStudioView(props: LoanStudioViewModel) {
                       }
                     />
                   </div>
-
-                  <section
-                    aria-label="Repayment Draft"
-                    style={repaymentDraftStyle}
-                  >
-                    <div style={repaymentDraftHeaderStyle}>
-                      <div style={repaymentDraftTitleStyle}>
-                        Repayment Draft
-                      </div>
-
-                      <span style={repaymentDraftBadgeStyle}>Draft</span>
-                    </div>
-
-                    <div style={repaymentDraftUpdatedStyle}>
-                      Last Updated: Not Saved
-                    </div>
-                  </section>
                 </div>
               </div>
 
