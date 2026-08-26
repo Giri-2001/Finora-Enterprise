@@ -16,6 +16,8 @@ import {
   fieldStyle,
   headerStyle,
   inputStyle,
+  responsiveGridCss,
+  wrapperClassName,
   wrapperStyle,
 } from "./GuarantorForm.styles";
 
@@ -54,95 +56,139 @@ export default function GuarantorForm({
   onAddressChange,
 }: GuarantorFormProps) {
   return (
-    <div style={wrapperStyle}>
+    <>
       {/* =====================================================
-          FORM HEADER
+          RESPONSIVE GRID CSS
+
+          Real CSS media queries are required because
+          React inline style objects do not process @media.
+
+          Mobile  < 768px  → 1 column
+          Tablet  768px+   → 2 columns
+          Laptop  1200px+  → 4 columns
       ===================================================== */}
 
-      <div style={headerStyle}>
-        <span style={accentStyle} />
-
-        <span>Guarantor Information</span>
-      </div>
+      <style>{responsiveGridCss}</style>
 
       {/* =====================================================
-          GUARANTOR NAME
+          GUARANTOR INFORMATION WRAPPER
       ===================================================== */}
 
-      <div style={fieldStyle}>
-        <div style={fieldContentStyle}>
-          <FormField label="Guarantor Name" required>
-            <TextInput
-              value={guarantorName}
-              onChange={(event) => onGuarantorNameChange(event.target.value)}
-              placeholder="Enter guarantor name"
-              style={inputStyle}
-            />
-          </FormField>
+      <div
+        className={wrapperClassName}
+        style={wrapperStyle}
+      >
+        {/* ===================================================
+            FORM HEADER
+        =================================================== */}
+
+        <div style={headerStyle}>
+          <span style={accentStyle} />
+
+          <span>Guarantor Information</span>
+        </div>
+
+        {/* ===================================================
+            GUARANTOR NAME
+        =================================================== */}
+
+        <div style={fieldStyle}>
+          <div style={fieldContentStyle}>
+            <FormField
+              label="Guarantor Name"
+              required
+            >
+              <TextInput
+                value={guarantorName}
+                onChange={(event) =>
+                  onGuarantorNameChange(
+                    event.target.value
+                  )
+                }
+                placeholder="Enter guarantor name"
+                style={inputStyle}
+              />
+            </FormField>
+          </div>
+        </div>
+
+        {/* ===================================================
+            MOBILE NUMBER
+
+            Exactly 10 numeric digits.
+        =================================================== */}
+
+        <div style={fieldStyle}>
+          <div style={fieldContentStyle}>
+            <FormField
+              label="Mobile Number"
+              required
+            >
+              <TextInput
+                value={guarantorPhone}
+                onChange={(event) => {
+                  const numericValue =
+                    event.target.value
+                      .replace(/\D/g, "")
+                      .slice(0, 10);
+
+                  onGuarantorPhoneChange(
+                    numericValue
+                  );
+                }}
+                placeholder="Enter 10-digit mobile number"
+                style={inputStyle}
+                maxLength={10}
+                inputMode="numeric"
+                pattern="[0-9]{10}"
+              />
+            </FormField>
+          </div>
+        </div>
+
+        {/* ===================================================
+            OCCUPATION
+        =================================================== */}
+
+        <div style={fieldStyle}>
+          <div style={fieldContentStyle}>
+            <FormField label="Occupation">
+              <TextInput
+                value={occupation}
+                onChange={(event) =>
+                  onOccupationChange(
+                    event.target.value
+                  )
+                }
+                placeholder="Enter occupation"
+                style={inputStyle}
+              />
+            </FormField>
+          </div>
+        </div>
+
+        {/* ===================================================
+            ADDRESS
+        =================================================== */}
+
+        <div style={fieldStyle}>
+          <div style={fieldContentStyle}>
+            <FormField label="Address">
+              <TextInput
+                value={address}
+                onChange={(event) =>
+                  onAddressChange(
+                    event.target.value
+                  )
+                }
+                placeholder="Enter address"
+                style={inputStyle}
+              />
+            </FormField>
+          </div>
         </div>
       </div>
-
-      {/* =====================================================
-          MOBILE NUMBER
-          Exactly 10 numeric digits
-      ===================================================== */}
-
-      <div style={fieldStyle}>
-        <div style={fieldContentStyle}>
-          <FormField label="Mobile Number" required>
-            <TextInput
-              value={guarantorPhone}
-              onChange={(event) => {
-                const numericValue = event.target.value
-                  .replace(/\D/g, "")
-                  .slice(0, 10);
-
-                onGuarantorPhoneChange(numericValue);
-              }}
-              placeholder="Enter 10-digit mobile number"
-              style={inputStyle}
-              maxLength={10}
-              inputMode="numeric"
-              pattern="[0-9]{10}"
-            />
-          </FormField>
-        </div>
-      </div>
-
-      {/* =====================================================
-          OCCUPATION
-      ===================================================== */}
-
-      <div style={fieldStyle}>
-        <div style={fieldContentStyle}>
-          <FormField label="Occupation">
-            <TextInput
-              value={occupation}
-              onChange={(event) => onOccupationChange(event.target.value)}
-              placeholder="Enter occupation"
-              style={inputStyle}
-            />
-          </FormField>
-        </div>
-      </div>
-
-      {/* =====================================================
-          ADDRESS
-      ===================================================== */}
-
-      <div style={fieldStyle}>
-        <div style={fieldContentStyle}>
-          <FormField label="Address">
-            <TextInput
-              value={address}
-              onChange={(event) => onAddressChange(event.target.value)}
-              placeholder="Enter address"
-              style={inputStyle}
-            />
-          </FormField>
-        </div>
-      </div>
-    </div>
+    </>
   );
 }
 

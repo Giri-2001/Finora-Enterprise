@@ -6,19 +6,23 @@
 //
 // RESPONSIBILITY:
 // - GuarantorForm presentation only
-// - Compact 4-column guarantor information layout
-// - Equal-width fields
+// - Responsive guarantor information layout
 // - FINORA Enterprise Theme Engine compatibility
 // - Theme-connected guarantor inputs
-// - Single-viewport Step 4 compatibility
+// - No business logic
+// - No viewport detection
+// - No window.innerWidth
 //
-// LAYOUT:
-// Guarantor Name | Mobile Number | Occupation | Address
+// RESPONSIVE LAYOUT:
+// - Mobile  < 768px   → 1 field per row
+// - Tablet  768-1199  → 2 fields per row
+// - Laptop  >= 1200px → 4 fields per row
 //
-// THEME:
-// - Visual colours come only from FINORA Theme Engine
-// - No local application colour palette
-// - No hard-coded application colours
+// IMPORTANT:
+// React inline style objects cannot process @media rules.
+// Therefore responsive grid rules are provided through
+// `responsiveGridCss` and attached as a real <style> block
+// by GuarantorForm.
 //
 // ============================================================
 
@@ -55,30 +59,71 @@ const THEME = {
 
   shadow:
     "var(--finora-theme-overlay-shadow)",
-  
-  textSecondary: "var(--finora-theme-text-secondary)",
 
-  
+  textSecondary:
+    "var(--finora-theme-text-secondary)",
 } as const;
+
+// ============================================================
+// RESPONSIVE WRAPPER CLASS
+// ============================================================
+
+export const wrapperClassName =
+  "finora-guarantor-form-responsive";
+
+// ============================================================
+// RESPONSIVE GRID CSS
+//
+// REAL CSS MEDIA QUERIES.
+//
+// Mobile:
+//   1 column
+//
+// Tablet:
+//   2 columns
+//
+// Laptop/Desktop:
+//   4 columns
+//
+// This is presentation-only CSS.
+// No JavaScript viewport detection is used.
+// ============================================================
+
+export const responsiveGridCss = `
+  .${wrapperClassName} {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  @media (min-width: 768px) {
+    .${wrapperClassName} {
+      grid-template-columns:
+        repeat(2, minmax(0, 1fr));
+    }
+  }
+
+  @media (min-width: 1200px) {
+    .${wrapperClassName} {
+      grid-template-columns:
+        repeat(4, minmax(0, 1fr));
+    }
+  }
+`;
 
 // ============================================================
 // WRAPPER
 //
-// Four fields remain in ONE ROW.
+// Base layout is mobile-first.
 //
-// Guarantor Name | Mobile Number | Occupation | Address
+// The responsive column count is supplied by
+// responsiveGridCss above.
+//
 // ============================================================
 
 export const wrapperStyle: CSSProperties = {
   display: "grid",
 
-  gridTemplateColumns:
-    "repeat(4, minmax(0, 1fr))",
-
-  columnGap: "9px",
-  rowGap: "0px",
-
   width: "100%",
+
   minWidth: 0,
 
   marginBottom: "10px",
@@ -86,6 +131,10 @@ export const wrapperStyle: CSSProperties = {
   boxSizing: "border-box",
 
   padding: "8px 10px 4px 10px",
+
+  columnGap: "9px",
+
+  rowGap: "0px",
 
   border:
     `1px solid ${THEME.border}`,
@@ -156,9 +205,6 @@ export const accentStyle: CSSProperties = {
 
 // ============================================================
 // FIELD
-//
-// FormField internal spacing is neutralized so the four
-// guarantor fields remain aligned in one row.
 // ============================================================
 
 export const fieldStyle: CSSProperties = {
@@ -203,14 +249,6 @@ export const fieldContentStyle: CSSProperties = {
 
 // ============================================================
 // THEME-CONNECTED GUARANTOR INPUT
-//
-// This style is intentionally applied from GuarantorForm
-// instead of changing the shared TextInput component.
-//
-// Therefore:
-// - Other screens remain untouched.
-// - Guarantor inputs consume FINORA Theme Engine tokens.
-// - Existing TextInput API remains unchanged.
 // ============================================================
 
 export const inputStyle: CSSProperties = {
