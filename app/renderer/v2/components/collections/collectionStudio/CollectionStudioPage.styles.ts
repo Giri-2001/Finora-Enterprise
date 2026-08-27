@@ -171,7 +171,7 @@ export const collectionStudioStyles: Record<string, CSSProperties> = {
 
     gridTemplateColumns: "minmax(360px, 0.95fr) minmax(620px, 2.05fr)",
 
-    gap: "12px",
+    gap: "5px",
 
     alignItems: "stretch",
 
@@ -808,13 +808,13 @@ export const collectionStudioStyles: Record<string, CSSProperties> = {
   collectionWorkspace: {
     width: "100%",
 
-    marginTop: "12px",
+    marginTop: "5px",
 
     display: "grid",
 
-    gridTemplateColumns: "minmax(0, 1fr) minmax(0, 1fr)",
+    gridTemplateColumns: "minmax(360px, 0.95fr) minmax(620px, 2.05fr)",
 
-    gap: "12px",
+    gap: "5px",
 
     boxSizing: "border-box",
 
