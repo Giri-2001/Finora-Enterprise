@@ -826,24 +826,24 @@ export const collectionStudioStyles: Record<string, CSSProperties> = {
   ========================================================= */
 
   systemGeneratedColumn: {
-    minWidth: 0,
+  minWidth: 0,
 
-    width: "100%",
+  width: "100%",
 
-    boxSizing: "border-box",
+  boxSizing: "border-box",
 
-    padding: "16px",
+  padding: 0,
 
-    background: COLORS.surface,
+  background: "transparent",
 
-    border: `1px solid ${COLORS.border}`,
+  border: "none",
 
-    borderRadius: "16px",
+  borderRadius: 0,
 
-    boxShadow: "0 4px 18px rgba(15, 23, 42, 0.05)",
+  boxShadow: "none",
 
-    alignSelf: "stretch",
-  },
+  alignSelf: "stretch",
+},
 
   /* =========================================================
      STEP 4 — COLLECTION ENTRY COLUMN
@@ -1296,19 +1296,19 @@ export const collectionStudioStyles: Record<string, CSSProperties> = {
   paymentDetailsSection: {
     width: "100%",
 
-    marginTop: "0",
+    marginTop: "15px",
 
-    padding: "15px 18px",
+    padding: "0",
 
     boxSizing: "border-box",
 
-    background: COLORS.surface,
+    background: "transparent",
 
-    border: `1px solid ${COLORS.border}`,
+    border: "none",
 
-    borderRadius: "16px",
+    borderRadius: "0",
 
-    boxShadow: "0 4px 18px rgba(15, 23, 42, 0.05)",
+    boxShadow: "none",
   },
 
   paymentDetailsGrid: {

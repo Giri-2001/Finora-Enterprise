@@ -15,13 +15,14 @@
 //
 // ARCHITECTURE LOCK
 //
+// - No business logic changes
+// - No persistence changes
+// - No service changes
+// - No selection-flow changes
 // - No inline colours
 // - No inline theme values
 // - No inline responsive values
-// - No local breakpoint system
-// - No local CSS palette
 // - Theme is owned by FINORA Theme Engine
-// - Responsive geometry is owned by Responsive Engine
 // - Visual styles are owned by dedicated style file
 //
 // VERSION : 2.0
@@ -34,7 +35,11 @@
 
 import type { CSSProperties } from "react";
 
-import { collectionLoanSelectionStyles } from "./CollectionLoanSelection.styles";
+import { WalletCards } from "lucide-react";
+
+import { useTheme } from "../../../themes/provider";
+
+import { createCollectionLoanSelectionStyles } from "./CollectionLoanSelection.styles";
 
 // ============================================================
 // TYPES
@@ -71,7 +76,9 @@ export interface CollectionLoanSelectionProps {
 // ============================================================
 
 function formatCurrency(value: number): string {
-  return `₹ ${value.toLocaleString("en-IN")}`;
+  const safeValue = Number.isFinite(value) ? Math.max(0, value) : 0;
+
+  return `₹ ${safeValue.toLocaleString("en-IN")}`;
 }
 
 // ============================================================
@@ -86,30 +93,52 @@ export default function CollectionLoanSelection({
   onSelectLoan,
 }: CollectionLoanSelectionProps) {
   // ==========================================================
+  // FINORA THEME ENGINE
+  //
+  // Presentation only.
+  //
+  // The active theme comes from the central registered
+  // FINORA Theme Registry through ThemeProvider.
+  //
+  // No theme definitions are created here.
+  // ==========================================================
+
+  const { theme } = useTheme();
+
+  // ==========================================================
+  // THEME-AWARE PRESENTATION STYLES
+  // ==========================================================
+
+  const styles = createCollectionLoanSelectionStyles(theme);
+
+  // ==========================================================
   // EMPTY STATE
   // ==========================================================
 
   if (loans.length === 0) {
     return (
-      <section style={collectionLoanSelectionStyles.loansCard}>
-        <div style={collectionLoanSelectionStyles.loansHeader}>
-          <div>
-            <h2 style={collectionLoanSelectionStyles.sectionTitle}>
-              Customer Loans
-            </h2>
+      <section style={styles.loansCard}>
+        <div style={styles.loansHeader}>
+          <div style={styles.headingGroup}>
+            <div style={styles.sectionHeading}>
+              <WalletCards
+                size={styles.iconSize}
+                strokeWidth={2}
+                aria-hidden="true"
+                style={styles.sectionIcon}
+              />
 
-            <p style={collectionLoanSelectionStyles.sectionSubtitle}>
-              Select the loan for collection
-            </p>
+              <h2 style={styles.sectionTitle}>Customer Loans</h2>
+            </div>
+
+            <p style={styles.sectionSubtitle}>Select the loan for collection</p>
           </div>
         </div>
 
-        <div style={collectionLoanSelectionStyles.emptyState}>
-          <span style={collectionLoanSelectionStyles.emptyStateTitle}>
-            No active loans
-          </span>
+        <div style={styles.emptyState}>
+          <span style={styles.emptyStateTitle}>No active loans</span>
 
-          <span style={collectionLoanSelectionStyles.emptyStateMessage}>
+          <span style={styles.emptyStateMessage}>
             This customer has no loans available for collection.
           </span>
         </div>
@@ -122,43 +151,36 @@ export default function CollectionLoanSelection({
   // ==========================================================
 
   return (
-    <section style={collectionLoanSelectionStyles.loansCard}>
+    <section style={styles.loansCard}>
       {/* ==================================================
           HEADER
-          
+
           IMPORTANT:
           The dropdown remains in this same horizontal
           header row as the Customer Loans heading.
       ================================================== */}
 
-      <div style={collectionLoanSelectionStyles.loansHeader}>
-        <div
-          style={{
-            minWidth: 0,
-            flex: 1,
-          }}
-        >
-          <h2 style={collectionLoanSelectionStyles.sectionTitle}>
-            Customer Loans
-          </h2>
+      <div style={styles.loansHeader}>
+        <div style={styles.headingGroup}>
+          <div style={styles.sectionHeading}>
+            <WalletCards
+              size={styles.iconSize}
+              strokeWidth={2}
+              aria-hidden="true"
+              style={styles.sectionIcon}
+            />
 
-          <p style={collectionLoanSelectionStyles.sectionSubtitle}>
-            Select the loan for collection
-          </p>
+            <h2 style={styles.sectionTitle}>Customer Loans</h2>
+          </div>
+
+          <p style={styles.sectionSubtitle}>Select the loan for collection</p>
         </div>
 
         {/* =================================================
             SELECTED LOAN DROPDOWN
-
-            FINORA reference layout:
-            - Top right
-            - Same row as Customer Loans heading
-            - Fixed compact height
-            - Custom FINORA arrow
-            - Does not create an extra row
         ================================================= */}
 
-        <div style={collectionLoanSelectionStyles.loanDropdownWrapper}>
+        <div style={styles.loanDropdownWrapper}>
           <select
             value={selectedLoanId ?? ""}
             onChange={(event) => {
@@ -169,7 +191,7 @@ export default function CollectionLoanSelection({
               }
             }}
             aria-label="Select loan"
-            style={collectionLoanSelectionStyles.loanDropdown}
+            style={styles.loanDropdown}
           >
             {loans.map((loan) => (
               <option key={loan.id} value={loan.id}>
@@ -178,10 +200,7 @@ export default function CollectionLoanSelection({
             ))}
           </select>
 
-          <span
-            aria-hidden="true"
-            style={collectionLoanSelectionStyles.loanDropdownArrow}
-          >
+          <span aria-hidden="true" style={styles.loanDropdownArrow}>
             ▾
           </span>
         </div>
@@ -191,24 +210,28 @@ export default function CollectionLoanSelection({
           LOAN CARDS
       ================================================== */}
 
-      <div style={collectionLoanSelectionStyles.loanCardsGrid}>
+      <div style={styles.loanCardsGrid}>
         {loans.map((loan) => {
           const isSelected = loan.id === selectedLoanId;
 
-          const cardStyle: CSSProperties = {
-            ...collectionLoanSelectionStyles.loanCard,
+          // ==================================================
+          // CARD PRESENTATION
+          // ==================================================
 
-            ...(isSelected
-              ? collectionLoanSelectionStyles.loanCardSelected
-              : {}),
+          const cardStyle: CSSProperties = {
+            ...styles.loanCard,
+
+            ...(isSelected ? styles.loanCardSelected : {}),
           };
 
-          const statusStyle: CSSProperties = {
-            ...collectionLoanSelectionStyles.loanStatus,
+          // ==================================================
+          // STATUS PRESENTATION
+          // ==================================================
 
-            ...(isSelected
-              ? collectionLoanSelectionStyles.loanStatusSelected
-              : {}),
+          const statusStyle: CSSProperties = {
+            ...styles.loanStatus,
+
+            ...(isSelected ? styles.loanStatusSelected : {}),
           };
 
           return (
@@ -219,22 +242,29 @@ export default function CollectionLoanSelection({
               aria-pressed={isSelected}
               style={cardStyle}
             >
-              <span style={collectionLoanSelectionStyles.loanCardNumber}>
-                {loan.loanNumber}
-              </span>
+              {/* ============================================
+                  LOAN NUMBER + STATUS
+              ============================================ */}
 
-              <span style={collectionLoanSelectionStyles.loanCardAmount}>
-                {formatCurrency(loan.amount)}
-              </span>
+              <div style={styles.loanCardTopRow}>
+                <span style={styles.loanCardNumber}>{loan.loanNumber}</span>
 
-              <span
-                style={collectionLoanSelectionStyles.loanCardType}
-                title={loan.repaymentType}
-              >
-                {loan.repaymentType}
-              </span>
+                <span style={statusStyle}>{loan.status}</span>
+              </div>
 
-              <span style={statusStyle}>{loan.status}</span>
+              {/* ============================================
+                  LOAN AMOUNT + REPAYMENT TYPE
+              ============================================ */}
+
+              <div style={styles.loanCardTopRow}>
+                <span style={styles.loanCardAmount}>
+                  {formatCurrency(loan.amount)}
+                </span>
+
+                <span style={styles.loanCardType} title={loan.repaymentType}>
+                  {loan.repaymentType}
+                </span>
+              </div>
             </button>
           );
         })}

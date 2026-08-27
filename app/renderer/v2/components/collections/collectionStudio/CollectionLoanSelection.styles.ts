@@ -3,19 +3,27 @@
 //
 // COLLECTION STUDIO™
 //
-// CUSTOMER + LOAN SELECTION STYLES
+// CUSTOMER LOAN SELECTION — PREMIUM STYLES
 //
 // RESPONSIBILITY
 //
-// - Customer selection card geometry
-// - Customer information layout
-// - Customer photo area
-// - Customer loan selection area
-// - Loan cards
-// - Selected loan state
-// - FINORA theme CSS variable consumption
-// - No inline responsive system
-// - No local theme system
+// - Customer Loans card presentation
+// - Header typography
+// - Lucide icon presentation
+// - Selected loan presentation
+// - Loan card presentation
+// - Status badge presentation
+// - Dropdown presentation
+// - FINORA Theme Engine integration
+//
+// IMPORTANT
+//
+// - No business logic
+// - No persistence logic
+// - No local theme definitions
+// - No hard-coded theme palette
+// - Theme colours come from active FinoraTheme
+// - Geometry remains presentation-only
 //
 // VERSION : 2.0
 // STATUS  : Production
@@ -27,159 +35,310 @@
 
 import type { CSSProperties } from "react";
 
-// ============================================================
-// THEME VARIABLE HELPER
-// ============================================================
-
-const cssVar = (name: string, fallback: string): string =>
-  `var(${name}, ${fallback})`;
+import type { FinoraTheme } from "../../../themes/core/types";
 
 // ============================================================
-// FINORA THEME TOKENS
+// TYPES
 // ============================================================
 
-const COLORS = {
-  pageBackground: cssVar("--page-bg", "#eef1f5"),
+export interface CollectionLoanSelectionStyles extends Record<
+  string,
+  CSSProperties | number
+> {
+  iconSize: number;
 
-  surface: cssVar("--surface", "#ffffff"),
+  loansCard: CSSProperties;
 
-  surfaceSoft: cssVar("--surface-soft", "#f5f7fa"),
+  loansHeader: CSSProperties;
 
-  border: cssVar("--border", "#d5dce5"),
+  headingGroup: CSSProperties;
 
-  text: cssVar("--text", "#111827"),
+  sectionHeading: CSSProperties;
 
-  muted: cssVar("--text-muted", "#6b7280"),
+  sectionIcon: CSSProperties;
 
-  accent: cssVar("--finora-accent", "#c69214"),
+  sectionTitle: CSSProperties;
 
-  accentStrong: cssVar("--accent", "#c69214"),
+  sectionSubtitle: CSSProperties;
 
-  navy: cssVar("--finora-navy", "#10233f"),
+  loanDropdownWrapper: CSSProperties;
 
-  success: cssVar("--success", "#23865a"),
-};
+  loanDropdown: CSSProperties;
+
+  loanDropdownArrow: CSSProperties;
+
+  loanCardsGrid: CSSProperties;
+
+  loanCard: CSSProperties;
+
+  loanCardSelected: CSSProperties;
+
+  loanCardTopRow: CSSProperties;
+
+  loanCardNumber: CSSProperties;
+
+  loanCardAmount: CSSProperties;
+
+  loanCardType: CSSProperties;
+
+  loanStatus: CSSProperties;
+
+  loanStatusSelected: CSSProperties;
+
+  emptyState: CSSProperties;
+
+  emptyStateTitle: CSSProperties;
+
+  emptyStateMessage: CSSProperties;
+}
 
 // ============================================================
-// SHADOW TOKENS
+// THEME VISUAL CONTRACT
+// ============================================================
+//
+// Theme is owned centrally by FINORA Theme Engine.
+//
+// ThemeProvider
+//      ↓
+// active FinoraTheme
+//      ↓
+// theme.colors
+//      ↓
+// this presentation layer
+//
 // ============================================================
 
-const SHADOWS = {
-  card: "0 4px 18px rgba(15, 23, 42, 0.07)",
+function getThemeVisuals(theme: FinoraTheme) {
+  return {
+    page: theme.colors.background.page,
 
-  selected: "0 3px 12px rgba(198, 146, 20, 0.16)",
-};
+    surface: theme.colors.background.surface,
+
+    surfaceMuted: theme.colors.background.surfaceMuted,
+
+    surfaceStrong: theme.colors.background.surfaceStrong,
+
+    brand: theme.colors.brand.primary,
+
+    brandSecondary: theme.colors.brand.secondary,
+
+    accent: theme.colors.brand.accent,
+
+    accentSoft: theme.colors.brand.accentSoft,
+
+    textPrimary: theme.colors.text.primary,
+
+    textSecondary: theme.colors.text.secondary,
+
+    textMuted: theme.colors.text.muted,
+
+    textInverse: theme.colors.text.inverse,
+
+    border: theme.colors.border.default,
+
+    borderStrong: theme.colors.border.strong,
+
+    borderSubtle: theme.colors.border.subtle,
+
+    focus: theme.colors.border.focus,
+
+    success: theme.colors.status.success,
+
+    successSoft: theme.colors.status.successSoft,
+
+    warning: theme.colors.status.warning,
+
+    warningSoft: theme.colors.status.warningSoft,
+
+    shadow: theme.colors.overlay.shadow,
+  };
+}
 
 // ============================================================
-// EXPORT
+// TYPOGRAPHY
 // ============================================================
 
-export const collectionLoanSelectionStyles: Record<string, CSSProperties> = {
+const FONTS = {
+  ui: "Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
+
+  serif: "Georgia, 'Times New Roman', serif",
+} as const;
+
+// ============================================================
+// STYLE FACTORY
+// ============================================================
+
+export function createCollectionLoanSelectionStyles(
+  theme: FinoraTheme,
+): CollectionLoanSelectionStyles {
+  const colors = getThemeVisuals(theme);
+
   // ==========================================================
-  // MAIN SELECTION ROW
+  // ROOT CARD
   // ==========================================================
 
-  selectionRow: {
+  const loansCard: CSSProperties = {
     width: "100%",
 
-    display: "grid",
-
-    gridTemplateColumns: "minmax(360px, 0.95fr) minmax(620px, 2.05fr)",
-
-    gap: "12px",
-
-    alignItems: "stretch",
-
-    boxSizing: "border-box",
-  },
-
-  // ==========================================================
-  // CUSTOMER CARD
-  // ==========================================================
-
-  customerCard: {
     minWidth: 0,
 
-    minHeight: "142px",
-
-    display: "grid",
-
-    gridTemplateColumns: "minmax(0, 1fr) 104px",
-
-    gap: "18px",
-
-    alignItems: "stretch",
-
-    padding: "12px 18px",
-
     boxSizing: "border-box",
-
-    background: COLORS.surface,
-
-    border: `1px solid ${COLORS.border}`,
-
-    borderRadius: "16px",
-
-    boxShadow: SHADOWS.card,
-  },
-
-  // ==========================================================
-  // CUSTOMER SELECTION AREA
-  // ==========================================================
-
-  customerSelectionArea: {
-    minWidth: 0,
 
     display: "flex",
 
     flexDirection: "column",
 
-    justifyContent: "center",
+    padding: "12px 14px 13px",
 
-    boxSizing: "border-box",
-  },
+    background: colors.surface,
 
-  // ==========================================================
-  // FIELD LABEL
-  // ==========================================================
+    border: `1px solid ${colors.border}`,
 
-  fieldLabel: {
-    display: "block",
+    borderRadius: "15px",
 
-    marginBottom: "8px",
+    boxShadow: `0 7px 22px ${colors.shadow}`,
 
-    color: COLORS.text,
+    color: colors.textPrimary,
 
-    fontFamily:
-      "Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
-
-    fontSize: "13px",
-
-    fontWeight: 700,
-
-    lineHeight: 1.2,
-  },
+    overflow: "visible",
+  };
 
   // ==========================================================
-  // SELECT WRAPPER
+  // HEADER
   // ==========================================================
 
-  selectWrapper: {
-    position: "relative",
-
+  const loansHeader: CSSProperties = {
     width: "100%",
 
     minWidth: 0,
-  },
+
+    display: "flex",
+
+    alignItems: "flex-start",
+
+    justifyContent: "space-between",
+
+    gap: "16px",
+
+    paddingBottom: "10px",
+
+    borderBottom: `1px solid ${colors.borderSubtle}`,
+
+    boxSizing: "border-box",
+  };
 
   // ==========================================================
-  // CUSTOMER SELECT
+  // HEADING GROUP
   // ==========================================================
 
-  select: {
+  const headingGroup: CSSProperties = {
+    minWidth: 0,
+
+    flex: "1 1 auto",
+
+    display: "flex",
+
+    flexDirection: "column",
+
+    gap: "2px",
+  };
+
+  // ==========================================================
+  // SECTION HEADING
+  // ==========================================================
+
+  const sectionHeading: CSSProperties = {
+    minWidth: 0,
+
+    display: "flex",
+
+    alignItems: "center",
+
+    gap: "8px",
+
+    boxSizing: "border-box",
+  };
+
+  // ==========================================================
+  // LUCIDE ICON
+  // ==========================================================
+
+  const sectionIcon: CSSProperties = {
+    flexShrink: 0,
+
+    color: colors.brand,
+
+    display: "block",
+  };
+
+  // ==========================================================
+  // SECTION TITLE
+  // ==========================================================
+
+  const sectionTitle: CSSProperties = {
+    margin: 0,
+
+    padding: 0,
+
+    color: colors.textPrimary,
+
+    fontFamily: FONTS.serif,
+
+    fontSize: "19px",
+
+    fontWeight: 700,
+
+    lineHeight: 1.3,
+
+    letterSpacing: "-0.01em",
+  };
+
+  // ==========================================================
+  // SECTION SUBTITLE
+  // ==========================================================
+
+  const sectionSubtitle: CSSProperties = {
+    margin: 0,
+
+    padding: 0,
+
+    color: colors.textSecondary,
+
+    fontFamily: FONTS.ui,
+
+    fontSize: "14px",
+
+    fontWeight: 500,
+
+    lineHeight: 1.3,
+  };
+
+  // ==========================================================
+  // DROPDOWN WRAPPER
+  // ==========================================================
+
+  const loanDropdownWrapper: CSSProperties = {
+    position: "relative",
+
+    flex: "0 0 235px",
+
+    width: "235px",
+
+    minWidth: "190px",
+
+    boxSizing: "border-box",
+  };
+
+  // ==========================================================
+  // DROPDOWN
+  // ==========================================================
+
+  const loanDropdown: CSSProperties = {
     width: "100%",
 
-    height: "44px",
+    height: "41px",
+
+    minHeight: "41px",
 
     appearance: "none",
 
@@ -187,33 +346,37 @@ export const collectionLoanSelectionStyles: Record<string, CSSProperties> = {
 
     boxSizing: "border-box",
 
-    padding: "0 36px 0 14px",
+    padding: "0 36px 0 13px",
 
-    color: COLORS.text,
-
-    background: COLORS.surfaceSoft,
-
-    border: `1px solid ${COLORS.border}`,
+    border: `1px solid ${colors.border}`,
 
     borderRadius: "9px",
 
     outline: "none",
 
-    fontFamily:
-      "Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
+    background: colors.surfaceMuted,
 
-    fontSize: "13px",
+    color: colors.textPrimary,
 
-    fontWeight: 700,
+    fontFamily: FONTS.ui,
+
+    fontSize: "12px",
+
+    fontWeight: 750,
+
+    lineHeight: 1,
 
     cursor: "pointer",
-  },
+
+    transition:
+      "border-color 160ms ease, box-shadow 160ms ease, background 160ms ease",
+  };
 
   // ==========================================================
-  // SELECT ARROW
+  // DROPDOWN ARROW
   // ==========================================================
 
-  selectArrow: {
+  const loanDropdownArrow: CSSProperties = {
     position: "absolute",
 
     right: "13px",
@@ -224,448 +387,234 @@ export const collectionLoanSelectionStyles: Record<string, CSSProperties> = {
 
     pointerEvents: "none",
 
-    color: COLORS.accentStrong,
+    color: colors.brand,
 
-    fontSize: "14px",
-
-    fontWeight: 800,
-
-    lineHeight: 1,
-  },
-
-  // ==========================================================
-  // CUSTOMER DETAILS
-  // ==========================================================
-
-  customerDetails: {
-    display: "flex",
-
-    flexDirection: "column",
-
-    gap: "8px",
-
-    marginTop: "12px",
-
-    minWidth: 0,
-  },
-
-  // ==========================================================
-  // CUSTOMER DETAIL LINE
-  // ==========================================================
-
-  customerDetailLine: {
-    display: "grid",
-
-    gridTemplateColumns: "72px minmax(0, 1fr)",
-
-    gap: "4px",
-
-    alignItems: "center",
-
-    minWidth: 0,
-  },
-
-  // ==========================================================
-  // DETAIL LABEL
-  // ==========================================================
-
-  detailLabel: {
-    color: COLORS.muted,
-
-    fontFamily: "Georgia, 'Times New Roman', serif",
-
-    fontSize: "12px",
-
-    fontWeight: 700,
-
-    letterSpacing: "0.04em",
-
-    lineHeight: 1.2,
-  },
-
-  // ==========================================================
-  // DETAIL VALUE
-  // ==========================================================
-
-  detailValue: {
-    minWidth: 0,
-
-    overflow: "hidden",
-
-    textOverflow: "ellipsis",
-
-    whiteSpace: "nowrap",
-
-    color: COLORS.text,
-
-    fontFamily:
-      "Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
-
-    fontSize: "12px",
-
-    fontWeight: 700,
-
-    lineHeight: 1.2,
-  },
-
-  // ==========================================================
-  // CUSTOMER PHOTO FRAME
-  // ==========================================================
-
-  customerPhotoFrame: {
-    width: "104px",
-
-    minWidth: "104px",
-
-    height: "100%",
-
-    minHeight: "116px",
-
-    display: "flex",
-
-    alignItems: "center",
-
-    justifyContent: "center",
-
-    boxSizing: "border-box",
-
-    background: COLORS.surfaceSoft,
-
-    border: `1px solid ${COLORS.border}`,
-
-    borderRadius: "9px",
-
-    overflow: "hidden",
-  },
-
-  // ==========================================================
-  // CUSTOMER PHOTO
-  // ==========================================================
-
-  customerPhoto: {
-    width: "100%",
-
-    height: "100%",
-
-    objectFit: "cover",
-
-    display: "block",
-  },
-
-  // ==========================================================
-  // PHOTO PLACEHOLDER
-  // ==========================================================
-
-  photoPlaceholder: {
-    width: "100%",
-
-    height: "100%",
-
-    minHeight: "116px",
-
-    display: "flex",
-
-    flexDirection: "column",
-
-    alignItems: "center",
-
-    justifyContent: "center",
-
-    gap: "4px",
-
-    boxSizing: "border-box",
-  },
-
-  // ==========================================================
-  // PHOTO PLACEHOLDER MARK
-  // ==========================================================
-
-  photoPlaceholderMark: {
-    color: COLORS.accentStrong,
-
-    fontFamily: "Georgia, 'Times New Roman', serif",
-
-    fontSize: "30px",
-
-    fontWeight: 800,
-
-    lineHeight: 1,
-  },
-
-  // ==========================================================
-  // PHOTO PLACEHOLDER TEXT
-  // ==========================================================
-
-  photoPlaceholderText: {
-    color: COLORS.muted,
-
-    fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
-
-    fontSize: "8px",
-
-    fontWeight: 800,
-
-    letterSpacing: "0.18em",
-
-    lineHeight: 1,
-  },
-
-  // ==========================================================
-  // LOANS CARD
-  //
-  // REFERENCE LOCK
-  //
-  // Customer card and Loans card use the same minimum
-  // height so both selection panels align horizontally.
-  // ==========================================================
-
-  loansCard: {
-    minWidth: 0,
-
-    minHeight: "142px",
-
-    boxSizing: "border-box",
-
-    padding: "12px 14px",
-
-    background: COLORS.surface,
-
-    border: `1px solid ${COLORS.border}`,
-
-    borderRadius: "16px",
-
-    boxShadow: SHADOWS.card,
-  },
-
-  // ==========================================================
-  // LOANS HEADER
-  //
-  // REFERENCE LOCK
-  //
-  // Heading/subtitle on the left.
-  // Loan dropdown on the top-right.
-  // Both occupy the SAME horizontal row.
-  // ==========================================================
-
-  loansHeader: {
-    width: "100%",
-
-    display: "flex",
-
-    alignItems: "flex-start",
-
-    justifyContent: "space-between",
-
-    gap: "14px",
-
-    marginBottom: "10px",
-
-    minWidth: 0,
-
-    boxSizing: "border-box",
-  },
-
-  // ==========================================================
-  // SECTION TITLE
-  // ==========================================================
-
-  sectionTitle: {
-    margin: 0,
-
-    color: COLORS.text,
-
-    fontFamily: "Georgia, 'Times New Roman', serif",
-
-    fontSize: "17px",
-
-    fontWeight: 700,
-
-    lineHeight: 1.2,
-  },
-
-  // ==========================================================
-  // SECTION SUBTITLE
-  // ==========================================================
-
-  sectionSubtitle: {
-    margin: "4px 0 0",
-
-    color: COLORS.muted,
-
-    fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
-
-    fontSize: "11px",
-
-    lineHeight: 1.3,
-  },
-
-  // ==========================================================
-  // LOAN DROPDOWN WRAPPER
-  //
-  // REFERENCE LOCK
-  //
-  // Fixed compact width.
-  // Remains at the right side of the header.
-  // ==========================================================
-
-  loanDropdownWrapper: {
-    position: "relative",
-
-    width: "170px",
-
-    minWidth: "170px",
-
-    height: "38px",
-
-    flexShrink: 0,
-
-    boxSizing: "border-box",
-  },
-
-  // ==========================================================
-  // LOAN DROPDOWN
-  //
-  // REFERENCE LOCK
-  //
-  // Custom FINORA dropdown.
-  // No native browser arrow.
-  // Compact 38px height.
-  // ==========================================================
-
-  loanDropdown: {
-    width: "100%",
-
-    height: "38px",
-
-    appearance: "none",
-
-    WebkitAppearance: "none",
-
-    boxSizing: "border-box",
-
-    padding: "0 32px 0 11px",
-
-    color: COLORS.text,
-
-    background: COLORS.surfaceSoft,
-
-    border: `1px solid ${COLORS.border}`,
-
-    borderRadius: "8px",
-
-    outline: "none",
-
-    fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
-
-    fontSize: "12px",
-
-    fontWeight: 700,
-
-    lineHeight: 1,
-
-    cursor: "pointer",
-  },
-
-  // ==========================================================
-  // LOAN DROPDOWN ARROW
-  // ==========================================================
-
-  loanDropdownArrow: {
-    position: "absolute",
-
-    right: "11px",
-
-    top: "50%",
-
-    transform: "translateY(-50%)",
-
-    pointerEvents: "none",
-
-    color: COLORS.accentStrong,
+    fontFamily: FONTS.ui,
 
     fontSize: "12px",
 
     fontWeight: 800,
 
     lineHeight: 1,
-  },
+  };
 
   // ==========================================================
   // LOAN CARDS GRID
   // ==========================================================
+  //
+  // Four cards per row.
+  //
+  // If more loans exist:
+  //
+  // Card 1 | Card 2 | Card 3 | Card 4
+  // Card 5 | Card 6 | Card 7 | Card 8
+  //
+  // ==========================================================
 
-  loanCardsGrid: {
+  const loanCardsGrid: CSSProperties = {
     width: "100%",
+
+    minWidth: 0,
 
     display: "grid",
 
     gridTemplateColumns: "repeat(4, minmax(0, 1fr))",
 
-    gap: "8px",
+    gap: "9px",
 
-    minWidth: 0,
+    alignItems: "stretch",
+
+    paddingTop: "9px",
 
     boxSizing: "border-box",
-  },
+  };
 
   // ==========================================================
   // LOAN CARD
   // ==========================================================
+  //
+  // IMPORTANT
+  //
+  // The JSX already has the correct two-row structure:
+  //
+  // ROW 1
+  // ┌─────────────────────────────────┐
+  // │ LOAN NUMBER              ACTIVE │
+  // └─────────────────────────────────┘
+  //
+  // ROW 2
+  // ┌─────────────────────────────────┐
+  // │ ₹ 20,000                MONTHLY │
+  // └─────────────────────────────────┘
+  //
+  // Therefore DO NOT use CSS Grid inside the card.
+  //
+  // Flex column keeps the existing JSX structure intact.
+  //
+  // ==========================================================
 
-  loanCard: {
+  const loanCard: CSSProperties = {
+    width: "100%",
+
     minWidth: 0,
 
-    minHeight: "74px",
+    minHeight: "82px",
+
+    boxSizing: "border-box",
 
     display: "flex",
 
     flexDirection: "column",
 
-    alignItems: "flex-start",
+    alignItems: "stretch",
 
-    justifyContent: "center",
+    justifyContent: "space-between",
 
-    gap: "3px",
+    gap: "5px",
 
-    padding: "9px 11px",
+    padding: "10px 12px",
 
-    boxSizing: "border-box",
+    border: `1px solid ${colors.border}`,
 
-    background: COLORS.surfaceSoft,
+    borderRadius: "11px",
 
-    border: `1px solid ${COLORS.border}`,
+    background: colors.surfaceMuted,
 
-    borderRadius: "10px",
-
-    color: COLORS.text,
+    color: colors.textPrimary,
 
     textAlign: "left",
 
+    fontFamily: FONTS.ui,
+
     cursor: "pointer",
 
-    fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
+    outline: "none",
+
+    boxShadow: "none",
 
     transition:
-      "border-color 160ms ease, box-shadow 160ms ease, transform 160ms ease",
-  },
+      "border-color 160ms ease, background 160ms ease, box-shadow 160ms ease, transform 160ms ease",
+
+    overflow: "hidden",
+  };
 
   // ==========================================================
-  // LOAN CARD SELECTED
+  // SELECTED LOAN CARD
   // ==========================================================
 
-  loanCardSelected: {
-    border: `1.5px solid ${COLORS.accentStrong}`,
+  const loanCardSelected: CSSProperties = {
+    border: `1.5px solid ${colors.brand}`,
 
-    boxShadow: SHADOWS.selected,
+    background: colors.accentSoft,
+
+    boxShadow: `0 5px 15px ${colors.shadow}`,
 
     transform: "translateY(-1px)",
-  },
+  };
 
   // ==========================================================
-  // LOAN CARD NUMBER
+  // LOAN NUMBER + STATUS ROW
+  // ==========================================================
+  //
+  // TOP ROW
+  //
+  // Loan number = LEFT
+  // Active badge = RIGHT
+  //
   // ==========================================================
 
-  loanCardNumber: {
+  const loanCardTopRow: CSSProperties = {
+    minWidth: 0,
+
+    width: "100%",
+
+    display: "flex",
+
+    alignItems: "center",
+
+    justifyContent: "space-between",
+
+    gap: "10px",
+
+    boxSizing: "border-box",
+
+    flex: "0 0 auto",
+  };
+
+  // ==========================================================
+  // LOAN NUMBER
+  // ==========================================================
+  //
+  // TOP LEFT
+  // ==========================================================
+
+  const loanCardNumber: CSSProperties = {
+    minWidth: 0,
+
+    flex: "1 1 auto",
+
+    overflow: "hidden",
+
+    textOverflow: "ellipsis",
+
+    whiteSpace: "nowrap",
+
+    color: colors.textPrimary,
+
+    fontFamily: FONTS.ui,
+
+    fontSize: "12px",
+
+    fontWeight: 700,
+
+    lineHeight: 1.2,
+
+    letterSpacing: "0.01em",
+  };
+
+  // ==========================================================
+  // LOAN AMOUNT
+  // ==========================================================
+  //
+  // BOTTOM LEFT
+  //
+  // Same left alignment as loan number.
+  //
+  // ==========================================================
+
+  const loanCardAmount: CSSProperties = {
+    minWidth: 0,
+
+    color: colors.textPrimary,
+
+    fontFamily: FONTS.ui,
+
+    fontSize: "17px",
+
+    fontWeight: 700,
+
+    lineHeight: 1.15,
+
+    letterSpacing: "-0.01em",
+
+    whiteSpace: "nowrap",
+  };
+
+  // ==========================================================
+  // REPAYMENT TYPE
+  // ==========================================================
+  //
+  // BOTTOM RIGHT
+  //
+  // Example:
+  //
+  // MONTHLY
+  //
+  // ==========================================================
+
+  const loanCardType: CSSProperties = {
+    alignSelf: "flex-end",
+
     minWidth: 0,
 
     maxWidth: "100%",
@@ -676,101 +625,94 @@ export const collectionLoanSelectionStyles: Record<string, CSSProperties> = {
 
     whiteSpace: "nowrap",
 
-    color: COLORS.text,
+    color: colors.textMuted,
+
+    fontFamily: FONTS.ui,
 
     fontSize: "11px",
 
-    fontWeight: 800,
+    fontWeight: 650,
+
+    lineHeight: 1.2,
 
     letterSpacing: "0.04em",
 
-    lineHeight: 1.2,
-  },
+    textTransform: "uppercase",
+
+    textAlign: "right",
+  };
 
   // ==========================================================
-  // LOAN CARD AMOUNT
+  // STATUS BADGE
+  // ==========================================================
+  //
+  // TOP RIGHT
+  //
+  // IMPORTANT:
+  //
+  // justify-content on loanCardTopRow places this badge
+  // on the right side.
+  //
   // ==========================================================
 
-  loanCardAmount: {
-    minWidth: 0,
+  const loanStatus: CSSProperties = {
+    flexShrink: 0,
 
-    maxWidth: "100%",
+    display: "inline-flex",
 
-    overflow: "hidden",
+    alignItems: "center",
 
-    textOverflow: "ellipsis",
+    justifyContent: "center",
 
-    whiteSpace: "nowrap",
+    minHeight: "20px",
 
-    color: COLORS.text,
+    padding: "0px 5px",
 
-    fontSize: "13px",
+    boxSizing: "border-box",
 
-    fontWeight: 800,
+    border: `1px solid ${colors.success}`,
 
-    lineHeight: 1.2,
-  },
+    borderRadius: "999px",
 
-  // ==========================================================
-  // LOAN CARD TYPE
-  // ==========================================================
+    background: colors.successSoft,
 
-  loanCardType: {
-    minWidth: 0,
+    color: colors.success,
 
-    maxWidth: "100%",
-
-    overflow: "hidden",
-
-    textOverflow: "ellipsis",
-
-    whiteSpace: "nowrap",
-
-    color: COLORS.muted,
+    fontFamily: FONTS.ui,
 
     fontSize: "9px",
 
-    fontWeight: 600,
-
-    lineHeight: 1.2,
-  },
-
-  // ==========================================================
-  // LOAN STATUS
-  // ==========================================================
-
-  loanStatus: {
-    marginTop: "2px",
-
-    color: COLORS.success,
-
-    fontSize: "8px",
-
     fontWeight: 800,
+
+    lineHeight: 1,
+
+    letterSpacing: "0.05em",
 
     textTransform: "uppercase",
 
-    letterSpacing: "0.06em",
-
-    lineHeight: 1.2,
-  },
+    whiteSpace: "nowrap",
+  };
 
   // ==========================================================
-  // SELECTED LOAN STATUS
+  // SELECTED STATUS
   // ==========================================================
 
-  loanStatusSelected: {
-    color: COLORS.accentStrong,
-  },
+  const loanStatusSelected: CSSProperties = {
+    borderColor: colors.brand,
+
+    background: colors.accentSoft,
+
+    color: colors.brand,
+  };
 
   // ==========================================================
   // EMPTY STATE
   // ==========================================================
 
-  emptyState: {
+  const emptyState: CSSProperties = {
     width: "100%",
 
-    minHeight: "142px",
+    minHeight: "82px",
 
     display: "flex",
 
@@ -780,51 +722,109 @@ export const collectionLoanSelectionStyles: Record<string, CSSProperties> = {
 
     justifyContent: "center",
 
-    gap: "8px",
+    gap: "4px",
 
-    padding: "24px",
+    padding: "12px",
 
     boxSizing: "border-box",
 
-    background: COLORS.surface,
+    background: colors.surfaceMuted,
 
-    border: `1px solid ${COLORS.border}`,
+    border: `1px dashed ${colors.border}`,
 
-    borderRadius: "16px",
+    borderRadius: "10px",
 
-    boxShadow: SHADOWS.card,
+    marginTop: "10px",
 
     textAlign: "center",
-  },
+  };
 
   // ==========================================================
-  // EMPTY STATE TITLE
+  // EMPTY TITLE
   // ==========================================================
 
-  emptyStateTitle: {
-    color: COLORS.text,
+  const emptyStateTitle: CSSProperties = {
+    color: colors.textPrimary,
 
-    fontFamily: "Georgia, 'Times New Roman', serif",
+    fontFamily: FONTS.ui,
 
-    fontSize: "17px",
+    fontSize: "13px",
 
-    fontWeight: 700,
-  },
+    fontWeight: 750,
+
+    lineHeight: 1.2,
+  };
 
   // ==========================================================
-  // EMPTY STATE MESSAGE
+  // EMPTY MESSAGE
   // ==========================================================
 
-  emptyStateMessage: {
-    color: COLORS.muted,
+  const emptyStateMessage: CSSProperties = {
+    maxWidth: "520px",
 
-    fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
+    color: colors.textMuted,
 
-    fontSize: "12px",
+    fontFamily: FONTS.ui,
 
-    lineHeight: 1.5,
-  },
-};
+    fontSize: "11px",
+
+    fontWeight: 500,
+
+    lineHeight: 1.35,
+  };
+
+  // ==========================================================
+  // RETURN
+  // ==========================================================
+
+  return {
+    iconSize: 20,
+
+    loansCard,
+
+    loansHeader,
+
+    headingGroup,
+
+    sectionHeading,
+
+    sectionIcon,
+
+    sectionTitle,
+
+    sectionSubtitle,
+
+    loanDropdownWrapper,
+
+    loanDropdown,
+
+    loanDropdownArrow,
+
+    loanCardsGrid,
+
+    loanCard,
+
+    loanCardSelected,
+
+    loanCardTopRow,
+
+    loanCardNumber,
+
+    loanCardAmount,
+
+    loanCardType,
+
+    loanStatus,
+
+    loanStatusSelected,
+
+    emptyState,
+
+    emptyStateTitle,
+
+    emptyStateMessage,
+  };
+}
 
 // ============================================================
 // END

@@ -10,6 +10,7 @@
 // - EMI schedule presentation
 // - Manual collection presentation
 // - Collection value presentation
+// - EMI total row presentation
 // - FINORA Theme Engine token consumption
 //
 // IMPORTANT
@@ -36,51 +37,70 @@ import type { CSSProperties } from "react";
 // ============================================================
 
 const THEME = {
-  surface: "var(--finora-theme-surface, var(--surface, #FFFFFF))",
+  surface:
+    "var(--finora-theme-surface, var(--surface, #FFFFFF))",
 
   surfaceSoft:
     "var(--finora-theme-surface-muted, var(--surface-soft, #F5F7FA))",
 
-  textPrimary: "var(--finora-theme-text-primary, var(--text, #111827))",
+  textPrimary:
+    "var(--finora-theme-text-primary, var(--text, #111827))",
 
-  textSecondary: "var(--finora-theme-text-secondary, #475569)",
+  textSecondary:
+    "var(--finora-theme-text-secondary, #475569)",
 
-  textMuted: "var(--finora-theme-text-muted, var(--text-muted, #6B7280))",
+  textMuted:
+    "var(--finora-theme-text-muted, var(--text-muted, #6B7280))",
 
-  brand: "var(--finora-theme-brand-primary, var(--accent, #C69214))",
+  brand:
+    "var(--finora-theme-brand-primary, var(--accent, #C69214))",
 
-  brandSoft: "var(--finora-theme-brand-accent-soft, rgba(198, 146, 20, 0.10))",
+  brandSoft:
+    "var(--finora-theme-brand-accent-soft, rgba(198, 146, 20, 0.10))",
 
-  border: "var(--finora-theme-border-default, var(--border, #D5DCE5))",
+  border:
+    "var(--finora-theme-border-default, var(--border, #D5DCE5))",
 
-  borderStrong: "var(--finora-theme-border-strong, #B8C0CC)",
+  borderStrong:
+    "var(--finora-theme-border-strong, #B8C0CC)",
 
-  success: "var(--finora-theme-success, var(--success, #23865A))",
+  success:
+    "var(--finora-theme-success, var(--success, #23865A))",
 
-  successSoft: "var(--finora-theme-success-soft, rgba(35, 134, 90, 0.10))",
+  successSoft:
+    "var(--finora-theme-success-soft, rgba(35, 134, 90, 0.10))",
 
-  danger: "var(--finora-theme-danger, #C24141)",
+  danger:
+    "var(--finora-theme-danger, #C24141)",
 
-  dangerSoft: "var(--finora-theme-danger-soft, rgba(194, 65, 65, 0.10))",
+  dangerSoft:
+    "var(--finora-theme-danger-soft, rgba(194, 65, 65, 0.10))",
 
-  info: "var(--finora-theme-info, #2563EB)",
+  info:
+    "var(--finora-theme-info, #2563EB)",
 
-  infoSoft: "var(--finora-theme-info-soft, rgba(37, 99, 235, 0.08))",
+  infoSoft:
+    "var(--finora-theme-info-soft, rgba(37, 99, 235, 0.08))",
 } as const;
 
 // ============================================================
 // FONT CONTRACTS
 // ============================================================
 
-const INTER_FONT = "Inter, ui-sans-serif, system-ui, sans-serif";
+const INTER_FONT =
+  "Inter, ui-sans-serif, system-ui, sans-serif";
 
-const GEORGIA_FONT = "Georgia, 'Times New Roman', serif";
+const GEORGIA_FONT =
+  "Georgia, 'Times New Roman', serif";
 
 // ============================================================
 // EXPORT
 // ============================================================
 
-export const collectionEntryStyles: Record<string, CSSProperties> = {
+export const collectionEntryStyles: Record<
+  string,
+  CSSProperties
+> = {
   // ==========================================================
   // ROOT PANEL
   // ==========================================================
@@ -257,7 +277,8 @@ export const collectionEntryStyles: Record<string, CSSProperties> = {
     background: THEME.surface,
     border: `1px solid ${THEME.borderStrong}`,
     borderRadius: "5px",
-    boxShadow: "0 10px 24px rgba(15, 23, 42, 0.14)",
+    boxShadow:
+      "0 10px 24px rgba(15, 23, 42, 0.14)",
   },
 
   // ==========================================================
@@ -312,6 +333,76 @@ export const collectionEntryStyles: Record<string, CSSProperties> = {
     fontFamily: GEORGIA_FONT,
     fontSize: "10px",
     cursor: "pointer",
+  },
+
+  // ==========================================================
+  // EMI TOTAL ROW
+  //
+  // Same row height / same five-column geometry as EMI rows.
+  // Total amount is calculated by CollectionEntry.tsx.
+  // ==========================================================
+
+  emiTotalRow: {
+    width: "100%",
+    minWidth: 0,
+    display: "grid",
+    gridTemplateColumns:
+      "minmax(55px, 0.7fr) minmax(82px, 1fr) minmax(90px, 1fr) minmax(65px, 0.75fr) 34px",
+    alignItems: "center",
+    columnGap: "7px",
+    minHeight: "34px",
+    boxSizing: "border-box",
+    padding: "5px 10px",
+    background: THEME.surfaceSoft,
+    borderTop: `1px solid ${THEME.borderStrong}`,
+    color: THEME.textPrimary,
+    fontFamily: GEORGIA_FONT,
+    fontSize: "10px",
+  },
+
+  emiTotalLabel: {
+    minWidth: 0,
+    overflow: "hidden",
+    textOverflow: "ellipsis",
+    whiteSpace: "nowrap",
+    color: THEME.textPrimary,
+    fontFamily: INTER_FONT,
+    fontSize: "9px",
+    fontWeight: 800,
+    letterSpacing: "0.03em",
+    lineHeight: 1.2,
+    textTransform: "uppercase",
+  },
+
+  emiTotalSpacer: {
+    minWidth: 0,
+  },
+
+  emiTotalAmount: {
+    minWidth: 0,
+    overflow: "hidden",
+    textOverflow: "ellipsis",
+    whiteSpace: "nowrap",
+    color: THEME.textPrimary,
+    fontFamily: GEORGIA_FONT,
+    fontSize: "11px",
+    fontWeight: 700,
+    lineHeight: 1.2,
+  },
+
+  emiTotalStatus: {
+    minWidth: 0,
+    overflow: "hidden",
+    textOverflow: "ellipsis",
+    whiteSpace: "nowrap",
+    color: THEME.textMuted,
+    fontFamily: INTER_FONT,
+    fontSize: "7px",
+    fontWeight: 800,
+    letterSpacing: "0.04em",
+    lineHeight: 1.2,
+    textTransform: "uppercase",
+    textAlign: "center",
   },
 
   // ==========================================================
@@ -605,7 +696,8 @@ export const collectionEntryStyles: Record<string, CSSProperties> = {
     width: "100%",
     minWidth: 0,
     display: "grid",
-    gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
+    gridTemplateColumns:
+      "repeat(3, minmax(0, 1fr))",
     gap: "8px",
     boxSizing: "border-box",
   },
@@ -644,13 +736,19 @@ export const collectionEntryStyles: Record<string, CSSProperties> = {
 
   // ==========================================================
   // VALUE GRID
+  //
+  // 3 equal cards.
+  // Card height matches the EMI dropdown input height.
+  // Label + amount are horizontal.
+  // Hint remains below only where rendered.
   // ==========================================================
 
   valueGrid: {
     width: "100%",
     minWidth: 0,
     display: "grid",
-    gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
+    gridTemplateColumns:
+      "repeat(3, minmax(0, 1fr))",
     gap: "8px",
     boxSizing: "border-box",
     marginTop: "9px",
@@ -658,18 +756,24 @@ export const collectionEntryStyles: Record<string, CSSProperties> = {
 
   valueCard: {
     minWidth: 0,
-    display: "flex",
-    flexDirection: "column",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: "4px",
-    minHeight: "58px",
-    padding: "8px 10px",
+    height: "38px",
+    minHeight: "38px",
     boxSizing: "border-box",
+
+    display: "flex",
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+
+    gap: "8px",
+    padding: "6px 10px",
+
     background: THEME.surface,
+
     border: `1px solid ${THEME.border}`,
     borderRadius: "4px",
-    textAlign: "center",
+
+    textAlign: "left",
   },
 
   valueCardActive: {
@@ -678,27 +782,37 @@ export const collectionEntryStyles: Record<string, CSSProperties> = {
   },
 
   valueLabel: {
+    minWidth: 0,
+
+    overflow: "hidden",
+    textOverflow: "ellipsis",
+    whiteSpace: "nowrap",
+
     color: THEME.textSecondary,
     fontFamily: INTER_FONT,
     fontSize: "8px",
     fontWeight: 700,
     lineHeight: 1.2,
-    whiteSpace: "nowrap",
   },
 
   value: {
+    flexShrink: 0,
     minWidth: 0,
+
     overflow: "hidden",
     textOverflow: "ellipsis",
     whiteSpace: "nowrap",
+
     color: THEME.textPrimary,
     fontFamily: GEORGIA_FONT,
     fontSize: "16px",
     fontWeight: 700,
-    lineHeight: 1.15,
+    lineHeight: 1,
   },
 
   valueHint: {
+    flexShrink: 0,
+
     color: THEME.textMuted,
     fontFamily: INTER_FONT,
     fontSize: "7px",

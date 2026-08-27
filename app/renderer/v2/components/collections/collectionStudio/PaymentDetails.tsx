@@ -567,12 +567,6 @@ export default function PaymentDetails() {
         <div
           style={collectionPaymentDetailsStyles.remarksField}
         >
-          <label
-            htmlFor="finora-payment-remarks"
-            style={collectionPaymentDetailsStyles.label}
-          >
-            Remarks
-          </label>
 
           <textarea
             id="finora-payment-remarks"
@@ -596,14 +590,6 @@ export default function PaymentDetails() {
               style={collectionPaymentDetailsStyles.totalLabel}
             >
               FINAL COLLECTION
-            </span>
-
-            <span
-              style={collectionPaymentDetailsStyles.totalHint}
-            >
-              {reviewData.collectionType === "manual"
-                ? "Manual collection"
-                : "Selected EMI / collection amount"}
             </span>
           </div>
 

@@ -33,8 +33,7 @@ const THEME = {
 
   success: "var(--finora-theme-success, var(--success, #23865A))",
 
-  successSoft:
-    "var(--finora-theme-success-soft, rgba(35, 134, 90, 0.10))",
+  successSoft: "var(--finora-theme-success-soft, rgba(35, 134, 90, 0.10))",
 } as const;
 
 // ============================================================
@@ -49,10 +48,7 @@ const GEORGIA_FONT = "Georgia, 'Times New Roman', serif";
 // STYLES
 // ============================================================
 
-export const collectionPaymentDetailsStyles: Record<
-  string,
-  CSSProperties
-> = {
+export const collectionPaymentDetailsStyles: Record<string, CSSProperties> = {
   // ==========================================================
   // SECTION
   // ==========================================================
@@ -64,13 +60,11 @@ export const collectionPaymentDetailsStyles: Record<
 
     boxSizing: "border-box",
 
-    padding: "9px 18px 10px",
-
     background: THEME.surface,
 
-    border: `1px solid ${THEME.border}`,
+    border: "none",
 
-    borderRadius: "12px",
+    borderRadius: 0,
 
     overflow: "hidden",
   },
@@ -247,8 +241,8 @@ export const collectionPaymentDetailsStyles: Record<
   // Occupies first two grid columns.
   // ==========================================================
 
-  remarksField: {
-    gridColumn: "1 / span 2",
+    remarksField: {
+    gridColumn: "1",
 
     minWidth: 0,
 
@@ -259,14 +253,14 @@ export const collectionPaymentDetailsStyles: Record<
     gap: "3px",
   },
 
-  textarea: {
+    textarea: {
     width: "100%",
 
-    height: "58px",
+    height: "36px",
 
-    minHeight: "58px",
+    minHeight: "36px",
 
-    maxHeight: "58px",
+    maxHeight: "36px",
 
     padding: "7px 9px",
 
@@ -297,10 +291,14 @@ export const collectionPaymentDetailsStyles: Record<
   // Compact amount card placed in row 2.
   // ==========================================================
 
-  totalBar: {
+    totalBar: {
     minWidth: 0,
 
-    minHeight: "58px",
+    height: "36px",
+
+    minHeight: "36px",
+
+    maxHeight: "36px",
 
     boxSizing: "border-box",
 
@@ -391,20 +389,30 @@ export const collectionPaymentDetailsStyles: Record<
   // Second-row third-column.
   // ==========================================================
 
-  actions: {
+    actions: {
+    gridColumn: "3",
+
     minWidth: 0,
 
-    minHeight: "58px",
+    width: "100%",
+
+    height: "36px",
+
+    minHeight: "36px",
+
+    maxHeight: "36px",
 
     display: "flex",
 
-    alignItems: "center",
+    alignItems: "stretch",
 
-    justifyContent: "flex-end",
+    justifyContent: "stretch",
 
     gap: "6px",
 
     flexWrap: "nowrap",
+
+    boxSizing: "border-box",
   },
 
   // ==========================================================
@@ -413,6 +421,8 @@ export const collectionPaymentDetailsStyles: Record<
 
   saveButton: {
     minWidth: 0,
+
+    flex: "1 1 0",
 
     minHeight: "36px",
 
@@ -447,6 +457,8 @@ export const collectionPaymentDetailsStyles: Record<
 
   receiptButton: {
     minWidth: 0,
+
+    flex: "1 1 0",
 
     minHeight: "36px",
 
