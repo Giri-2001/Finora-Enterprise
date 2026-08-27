@@ -217,9 +217,7 @@ function createEmptyReviewData(): CollectionReviewData {
 
 function getAuthenticatedStorageMode(): StorageMode {
   try {
-    const storedMode = window.sessionStorage.getItem(
-      STORAGE_MODE_SESSION_KEY,
-    );
+    const storedMode = window.sessionStorage.getItem(STORAGE_MODE_SESSION_KEY);
 
     if (storedMode === StorageMode.USB) {
       return StorageMode.USB;
@@ -282,9 +280,7 @@ function isCollectionReadyLoan(loan: Loan): boolean {
 //
 // ============================================================
 
-function isCollectionEligibleCustomer(
-  customer: CustomerProfile,
-): boolean {
+function isCollectionEligibleCustomer(customer: CustomerProfile): boolean {
   return (
     customer.identity.isDeleted !== true &&
     customer.internal.isArchived !== true &&
@@ -302,9 +298,7 @@ function isCollectionEligibleCustomer(
 //
 // ============================================================
 
-function mapLoanToCollectionLoan(
-  loan: Loan,
-): CollectionLoanRecord {
+function mapLoanToCollectionLoan(loan: Loan): CollectionLoanRecord {
   return {
     id: loan.id,
 
@@ -312,15 +306,11 @@ function mapLoanToCollectionLoan(
 
     amount: Number.isFinite(loan.amount) ? loan.amount : 0,
 
-    repaymentType: String(
-      loan.repaymentType ?? loan.loanType ?? "",
-    ),
+    repaymentType: String(loan.repaymentType ?? loan.loanType ?? ""),
 
     status: String(loan.status ?? ""),
 
-    outstanding: Number.isFinite(loan.outstanding)
-      ? loan.outstanding
-      : 0,
+    outstanding: Number.isFinite(loan.outstanding) ? loan.outstanding : 0,
   };
 }
 
@@ -340,23 +330,14 @@ function buildCollectionCustomerRecord(
   const customerId = customer.identity.customerId;
 
   const customerLoans = loans
-    .filter(
-      (loan: Loan) => loan.customerId === customerId,
-    )
-    .filter(
-      (loan: Loan) => isCollectionReadyLoan(loan),
-    )
-    .map(
-      (loan: Loan) => mapLoanToCollectionLoan(loan),
-    );
+    .filter((loan: Loan) => loan.customerId === customerId)
+    .filter((loan: Loan) => isCollectionReadyLoan(loan))
+    .map((loan: Loan) => mapLoanToCollectionLoan(loan));
 
   return {
     id: customerId,
 
-    name:
-      customer.basic.displayName ||
-      customer.basic.fullName ||
-      "Unknown",
+    name: customer.basic.displayName || customer.basic.fullName || "Unknown",
 
     phone: customer.basic.mobileNumber || "",
 
@@ -478,15 +459,13 @@ export default function CollectionStudioPage() {
   // CUSTOMER STATE
   // ==========================================================
 
-  const [selectedCustomerId, setSelectedCustomerId] =
-    useState<string>("");
+  const [selectedCustomerId, setSelectedCustomerId] = useState<string>("");
 
   // ==========================================================
   // LOAN STATE
   // ==========================================================
 
-  const [selectedLoanId, setSelectedLoanId] =
-    useState<string>("");
+  const [selectedLoanId, setSelectedLoanId] = useState<string>("");
 
   // ==========================================================
   // COLLECTION REVIEW STATE
@@ -500,10 +479,9 @@ export default function CollectionStudioPage() {
   //
   // ==========================================================
 
-  const [reviewData, setReviewData] =
-    useState<CollectionReviewData>(
-      createEmptyReviewData(),
-    );
+  const [reviewData, setReviewData] = useState<CollectionReviewData>(
+    createEmptyReviewData(),
+  );
 
   // ==========================================================
   // LOAD AUTHORITATIVE CUSTOMER + LOAN DATA
@@ -520,13 +498,10 @@ export default function CollectionStudioPage() {
         // RESTORE AUTHENTICATED STORAGE MODE
         // ------------------------------------------------------
 
-        const storageMode =
-          getAuthenticatedStorageMode();
+        const storageMode = getAuthenticatedStorageMode();
 
         const storageResult =
-          await storageManager.selectStorageMode(
-            storageMode,
-          );
+          await storageManager.selectStorageMode(storageMode);
 
         if (!storageResult.success) {
           throw new Error(
@@ -551,8 +526,7 @@ export default function CollectionStudioPage() {
         // HYDRATE AUTHORITATIVE CUSTOMER DATA
         // ------------------------------------------------------
 
-        const customers =
-          await hydrateCustomersFromStorage();
+        const customers = await hydrateCustomersFromStorage();
 
         if (cancelled) {
           return;
@@ -577,32 +551,22 @@ export default function CollectionStudioPage() {
         // intentionally removed from this list.
         // ------------------------------------------------------
 
-        const eligibleCustomers =
-          customers
-            .filter(
-              (customer: CustomerProfile) =>
-                isCollectionEligibleCustomer(customer),
-            )
-            .map(
-              (customer: CustomerProfile) =>
-                buildCollectionCustomerRecord(
-                  customer,
-                  loans,
-                ),
-            )
-            .filter(
-              (
-                customer: CollectionCustomerRecord,
-              ) => customer.loans.length > 0,
-            );
+        const eligibleCustomers = customers
+          .filter((customer: CustomerProfile) =>
+            isCollectionEligibleCustomer(customer),
+          )
+          .map((customer: CustomerProfile) =>
+            buildCollectionCustomerRecord(customer, loans),
+          )
+          .filter(
+            (customer: CollectionCustomerRecord) => customer.loans.length > 0,
+          );
 
         if (cancelled) {
           return;
         }
 
-        setCollectionCustomers(
-          eligibleCustomers,
-        );
+        setCollectionCustomers(eligibleCustomers);
 
         // ------------------------------------------------------
         // AUTO-OPEN COLLECTION WORKSPACE
@@ -622,33 +586,22 @@ export default function CollectionStudioPage() {
         // inside the workspace.
         // ------------------------------------------------------
 
-        const firstCustomer =
-          eligibleCustomers[0];
+        const firstCustomer = eligibleCustomers[0];
 
-        const firstLoan =
-          firstCustomer?.loans[0];
+        const firstLoan = firstCustomer?.loans[0];
 
-        setSelectedCustomerId(
-          firstCustomer?.id ?? "",
-        );
+        setSelectedCustomerId(firstCustomer?.id ?? "");
 
-        setSelectedLoanId(
-          firstLoan?.id ?? "",
-        );
+        setSelectedLoanId(firstLoan?.id ?? "");
 
         // ------------------------------------------------------
         // REVIEW DATA WILL BE SYNCHRONIZED BY THE EFFECT
         // BELOW AFTER CUSTOMER / LOAN SELECTION IS AVAILABLE.
         // ------------------------------------------------------
 
-        setReviewData(
-          createEmptyReviewData(),
-        );
+        setReviewData(createEmptyReviewData());
       } catch (error) {
-        console.error(
-          "FINORA COLLECTION CUSTOMER/LOAN LOAD ERROR:",
-          error,
-        );
+        console.error("FINORA COLLECTION CUSTOMER/LOAN LOAD ERROR:", error);
 
         if (!cancelled) {
           setCollectionCustomers([]);
@@ -657,9 +610,7 @@ export default function CollectionStudioPage() {
 
           setSelectedLoanId("");
 
-          setReviewData(
-            createEmptyReviewData(),
-          );
+          setReviewData(createEmptyReviewData());
         }
       } finally {
         if (!cancelled) {
@@ -682,16 +633,11 @@ export default function CollectionStudioPage() {
   const selectedCustomer = useMemo(
     () =>
       collectionCustomers.find(
-        (
-          customer: CollectionCustomerRecord,
-        ) =>
+        (customer: CollectionCustomerRecord) =>
           customer.id === selectedCustomerId,
       ) ?? null,
 
-    [
-      collectionCustomers,
-      selectedCustomerId,
-    ],
+    [collectionCustomers, selectedCustomerId],
   );
 
   // ==========================================================
@@ -704,8 +650,7 @@ export default function CollectionStudioPage() {
   //
   // ==========================================================
 
-  const customerLoans =
-    selectedCustomer?.loans ?? [];
+  const customerLoans = selectedCustomer?.loans ?? [];
 
   // ==========================================================
   // SELECTED LOAN
@@ -714,16 +659,10 @@ export default function CollectionStudioPage() {
   const selectedLoan = useMemo(
     () =>
       customerLoans.find(
-        (
-          loan: CollectionLoanRecord,
-        ) =>
-          loan.id === selectedLoanId,
+        (loan: CollectionLoanRecord) => loan.id === selectedLoanId,
       ) ?? null,
 
-    [
-      customerLoans,
-      selectedLoanId,
-    ],
+    [customerLoans, selectedLoanId],
   );
 
   // ==========================================================
@@ -743,20 +682,15 @@ export default function CollectionStudioPage() {
     }
 
     return {
-      loanNumber:
-        selectedLoan.loanNumber,
+      loanNumber: selectedLoan.loanNumber,
 
-      principal:
-        selectedLoan.amount,
+      principal: selectedLoan.amount,
 
-      repaymentType:
-        selectedLoan.repaymentType,
+      repaymentType: selectedLoan.repaymentType,
 
-      outstanding:
-        selectedLoan.outstanding,
+      outstanding: selectedLoan.outstanding,
 
-      status:
-        selectedLoan.status,
+      status: selectedLoan.status,
     };
   }, [selectedLoan]);
 
@@ -766,42 +700,24 @@ export default function CollectionStudioPage() {
 
   useEffect(() => {
     if (!selectedCustomer || !selectedLoan) {
-      setReviewData(
-        createEmptyReviewData(),
-      );
+      setReviewData(createEmptyReviewData());
 
       return;
     }
 
-    setReviewData(
-      buildReviewData(
-        selectedCustomer,
-        selectedLoan,
-      ),
-    );
-  }, [
-    selectedCustomer,
-    selectedLoan,
-  ]);
+    setReviewData(buildReviewData(selectedCustomer, selectedLoan));
+  }, [selectedCustomer, selectedLoan]);
 
   // ==========================================================
   // CUSTOMER CHANGE
   // ==========================================================
 
-  function handleCustomerChange(
-    customerId: string,
-  ): void {
-    const nextCustomer =
-      collectionCustomers.find(
-        (
-          customer: CollectionCustomerRecord,
-        ) =>
-          customer.id === customerId,
-      );
-
-    setSelectedCustomerId(
-      customerId,
+  function handleCustomerChange(customerId: string): void {
+    const nextCustomer = collectionCustomers.find(
+      (customer: CollectionCustomerRecord) => customer.id === customerId,
     );
+
+    setSelectedCustomerId(customerId);
 
     // --------------------------------------------------------
     // IMPORTANT:
@@ -810,18 +726,14 @@ export default function CollectionStudioPage() {
     // first collection-ready loan.
     // --------------------------------------------------------
 
-    setSelectedLoanId(
-      nextCustomer?.loans[0]?.id ?? "",
-    );
+    setSelectedLoanId(nextCustomer?.loans[0]?.id ?? "");
   }
 
   // ==========================================================
   // LOAN CHANGE
   // ==========================================================
 
-  function handleLoanChange(
-    loanId: string,
-  ): void {
+  function handleLoanChange(loanId: string): void {
     // --------------------------------------------------------
     // SECURITY / DATA BOUNDARY
     //
@@ -829,21 +741,15 @@ export default function CollectionStudioPage() {
     // the currently selected customer.
     // --------------------------------------------------------
 
-    const loanBelongsToCustomer =
-      customerLoans.some(
-        (
-          loan: CollectionLoanRecord,
-        ) =>
-          loan.id === loanId,
-      );
+    const loanBelongsToCustomer = customerLoans.some(
+      (loan: CollectionLoanRecord) => loan.id === loanId,
+    );
 
     if (!loanBelongsToCustomer) {
       return;
     }
 
-    setSelectedLoanId(
-      loanId,
-    );
+    setSelectedLoanId(loanId);
   }
 
   // ==========================================================
@@ -852,36 +758,15 @@ export default function CollectionStudioPage() {
 
   if (loading) {
     return (
-      <main
-        style={
-          collectionStudioStyles.page
-        }
-      >
-        <div
-          style={
-            collectionStudioStyles.pageInner
-          }
-        >
-          <section
-            style={
-              collectionStudioStyles.emptyState
-            }
-          >
-            <strong
-              style={
-                collectionStudioStyles.emptyStateTitle
-              }
-            >
+      <main style={collectionStudioStyles.page}>
+        <div style={collectionStudioStyles.pageInner}>
+          <section style={collectionStudioStyles.emptyState}>
+            <strong style={collectionStudioStyles.emptyStateTitle}>
               Loading Collection Studio
             </strong>
 
-            <span
-              style={
-                collectionStudioStyles.emptyStateMessage
-              }
-            >
-              Loading collection-ready customers
-              and loans.
+            <span style={collectionStudioStyles.emptyStateMessage}>
+              Loading collection-ready customers and loans.
             </span>
           </section>
         </div>
@@ -893,42 +778,18 @@ export default function CollectionStudioPage() {
   // NO COLLECTION-READY CUSTOMERS
   // ==========================================================
 
-  if (
-    collectionCustomers.length === 0
-  ) {
+  if (collectionCustomers.length === 0) {
     return (
-      <main
-        style={
-          collectionStudioStyles.page
-        }
-      >
-        <div
-          style={
-            collectionStudioStyles.pageInner
-          }
-        >
-          <section
-            style={
-              collectionStudioStyles.emptyState
-            }
-          >
-            <strong
-              style={
-                collectionStudioStyles.emptyStateTitle
-              }
-            >
+      <main style={collectionStudioStyles.page}>
+        <div style={collectionStudioStyles.pageInner}>
+          <section style={collectionStudioStyles.emptyState}>
+            <strong style={collectionStudioStyles.emptyStateTitle}>
               No collection-ready customers
             </strong>
 
-            <span
-              style={
-                collectionStudioStyles.emptyStateMessage
-              }
-            >
-              Customers will appear here
-              automatically when they have an
-              active or running loan with an
-              outstanding balance.
+            <span style={collectionStudioStyles.emptyStateMessage}>
+              Customers will appear here automatically when they have an active
+              or running loan with an outstanding balance.
             </span>
           </section>
         </div>
@@ -950,42 +811,17 @@ export default function CollectionStudioPage() {
   //
   // ==========================================================
 
-  if (
-    !selectedCustomer ||
-    !selectedLoan ||
-    !selectedLoanView
-  ) {
+  if (!selectedCustomer || !selectedLoan || !selectedLoanView) {
     return (
-      <main
-        style={
-          collectionStudioStyles.page
-        }
-      >
-        <div
-          style={
-            collectionStudioStyles.pageInner
-          }
-        >
-          <section
-            style={
-              collectionStudioStyles.emptyState
-            }
-          >
-            <strong
-              style={
-                collectionStudioStyles.emptyStateTitle
-              }
-            >
+      <main style={collectionStudioStyles.page}>
+        <div style={collectionStudioStyles.pageInner}>
+          <section style={collectionStudioStyles.emptyState}>
+            <strong style={collectionStudioStyles.emptyStateTitle}>
               Preparing Collection Workspace
             </strong>
 
-            <span
-              style={
-                collectionStudioStyles.emptyStateMessage
-              }
-            >
-              Preparing the selected customer
-              and collection-ready loan.
+            <span style={collectionStudioStyles.emptyStateMessage}>
+              Preparing the selected customer and collection-ready loan.
             </span>
           </section>
         </div>
@@ -1010,90 +846,45 @@ export default function CollectionStudioPage() {
     <CollectionContext.Provider
       value={{
         reviewData,
-        onReviewDataChange:
-          setReviewData,
+        onReviewDataChange: setReviewData,
       }}
     >
-      <main
-        style={
-          collectionStudioStyles.page
-        }
-      >
-        <div
-          style={
-            collectionStudioStyles.pageInner
-          }
-        >
+      <main style={collectionStudioStyles.page}>
+        <div style={collectionStudioStyles.pageInner}>
           {/* ==================================================
               1. CUSTOMER + LOAN SELECTION
           ================================================== */}
 
-          <div
-            style={
-              collectionStudioStyles.selectionRow
-            }
-          >
+          <div style={collectionStudioStyles.selectionRow}>
             {/* ==================================================
                 CUSTOMER INFORMATION
             ================================================== */}
 
-            <section
-              style={
-                collectionStudioStyles.customerCard
-              }
-            >
-              <div
-                style={
-                  collectionStudioStyles.customerSelectionArea
-                }
-              >
+            <section style={collectionStudioStyles.customerCard}>
+              <div style={collectionStudioStyles.customerSelectionArea}>
                 <label
                   htmlFor="collection-customer-select"
-                  style={
-                    collectionStudioStyles.fieldLabel
-                  }
+                  style={collectionStudioStyles.fieldLabel}
                 >
                   Select Customer
                 </label>
 
-                <div
-                  style={
-                    collectionStudioStyles.selectWrapper
-                  }
-                >
+                <div style={collectionStudioStyles.selectWrapper}>
                   <select
                     id="collection-customer-select"
-                    value={
-                      selectedCustomer.id
-                    }
+                    value={selectedCustomer.id}
                     onChange={(event) =>
-                      handleCustomerChange(
-                        event.target.value,
-                      )
+                      handleCustomerChange(event.target.value)
                     }
-                    style={
-                      collectionStudioStyles.select
-                    }
+                    style={collectionStudioStyles.select}
                   >
-                    <option
-                      value=""
-                      disabled
-                    >
+                    <option value="" disabled>
                       Select Customer
                     </option>
 
                     {collectionCustomers.map(
-                      (
-                        customer: CollectionCustomerRecord,
-                      ) => (
-                        <option
-                          key={
-                            customer.id
-                          }
-                          value={
-                            customer.id
-                          }
-                        >
+                      (customer: CollectionCustomerRecord) => (
+                        <option key={customer.id} value={customer.id}>
                           {customer.name}
                         </option>
                       ),
@@ -1102,68 +893,33 @@ export default function CollectionStudioPage() {
 
                   <span
                     aria-hidden="true"
-                    style={
-                      collectionStudioStyles.selectArrow
-                    }
+                    style={collectionStudioStyles.selectArrow}
                   >
                     ▾
                   </span>
                 </div>
 
-                <div
-                  style={
-                    collectionStudioStyles.customerDetails
-                  }
-                >
-                  <div
-                    style={
-                      collectionStudioStyles.customerDetailLine
-                    }
-                  >
-                    <span
-                      style={
-                        collectionStudioStyles.detailLabel
-                      }
-                    >
+                <div style={collectionStudioStyles.customerDetails}>
+                  <div style={collectionStudioStyles.customerDetailLine}>
+                    <span style={collectionStudioStyles.detailLabel}>
                       CUST ID
                     </span>
 
                     <span
-                      style={
-                        collectionStudioStyles.detailValue
-                      }
-                      title={
-                        selectedCustomer.id
-                      }
+                      style={collectionStudioStyles.detailValue}
+                      title={selectedCustomer.id}
                     >
-                      {
-                        selectedCustomer.id
-                      }
+                      {selectedCustomer.id}
                     </span>
                   </div>
 
-                  <div
-                    style={
-                      collectionStudioStyles.customerDetailLine
-                    }
-                  >
-                    <span
-                      style={
-                        collectionStudioStyles.detailLabel
-                      }
-                    >
+                  <div style={collectionStudioStyles.customerDetailLine}>
+                    <span style={collectionStudioStyles.detailLabel}>
                       PHONE
                     </span>
 
-                    <span
-                      style={
-                        collectionStudioStyles.detailValue
-                      }
-                    >
-                      {
-                        selectedCustomer.phone ||
-                        "--"
-                      }
+                    <span style={collectionStudioStyles.detailValue}>
+                      {selectedCustomer.phone || "--"}
                     </span>
                   </div>
                 </div>
@@ -1173,42 +929,20 @@ export default function CollectionStudioPage() {
                   CUSTOMER PHOTO
               =============================================== */}
 
-              <div
-                style={
-                  collectionStudioStyles.customerPhotoFrame
-                }
-              >
+              <div style={collectionStudioStyles.customerPhotoFrame}>
                 {selectedCustomer.photo ? (
                   <img
-                    src={
-                      selectedCustomer.photo
-                    }
-                    alt={
-                      selectedCustomer.name
-                    }
-                    style={
-                      collectionStudioStyles.customerPhoto
-                    }
+                    src={selectedCustomer.photo}
+                    alt={selectedCustomer.name}
+                    style={collectionStudioStyles.customerPhoto}
                   />
                 ) : (
-                  <div
-                    style={
-                      collectionStudioStyles.photoPlaceholder
-                    }
-                  >
-                    <span
-                      style={
-                        collectionStudioStyles.photoPlaceholderMark
-                      }
-                    >
+                  <div style={collectionStudioStyles.photoPlaceholder}>
+                    <span style={collectionStudioStyles.photoPlaceholderMark}>
                       F
                     </span>
 
-                    <span
-                      style={
-                        collectionStudioStyles.photoPlaceholderText
-                      }
-                    >
+                    <span style={collectionStudioStyles.photoPlaceholderText}>
                       FINORA
                     </span>
                   </div>
@@ -1233,17 +967,9 @@ export default function CollectionStudioPage() {
             ================================================== */}
 
             <CollectionLoanSelection
-              loans={
-                customerLoans
-              }
-              selectedLoanId={
-                selectedLoan.id
-              }
-              onSelectLoan={(loan) =>
-                handleLoanChange(
-                  loan.id,
-                )
-              }
+              loans={customerLoans}
+              selectedLoanId={selectedLoan.id}
+              onSelectLoan={(loan) => handleLoanChange(loan.id)}
             />
           </div>
 
@@ -1252,20 +978,11 @@ export default function CollectionStudioPage() {
           ================================================== */}
 
           <CollectionSelectedLoan
-            loan={
-              selectedLoanView
-            }
-            formatCurrency={(
-              value: number,
-            ) => {
-              const safeValue =
-                Number.isFinite(value)
-                  ? value
-                  : 0;
+            loan={selectedLoanView}
+            formatCurrency={(value: number) => {
+              const safeValue = Number.isFinite(value) ? value : 0;
 
-              return `₹ ${safeValue.toLocaleString(
-                "en-IN",
-              )}`;
+              return `₹ ${safeValue.toLocaleString("en-IN")}`;
             }}
           />
 
@@ -1273,16 +990,8 @@ export default function CollectionStudioPage() {
               3 + 4. COLLECTION WORKSPACE
           ================================================== */}
 
-          <section
-            style={
-              collectionStudioStyles.collectionWorkspace
-            }
-          >
-            <div
-              style={
-                collectionStudioStyles.systemGeneratedColumn
-              }
-            >
+          <section style={collectionStudioStyles.collectionWorkspace}>
+            <div style={collectionStudioStyles.systemGeneratedColumn}>
               {/* ==============================================
                   3. SYSTEM GENERATED
               ============================================== */}
@@ -1290,11 +999,7 @@ export default function CollectionStudioPage() {
               <CollectionSystemGenerated />
             </div>
 
-            <div
-              style={
-                collectionStudioStyles.collectionEntryColumn
-              }
-            >
+            <div style={collectionStudioStyles.collectionEntryColumn}>
               {/* ==============================================
                   4. COLLECTION ENTRY
               ============================================== */}
@@ -1307,11 +1012,7 @@ export default function CollectionStudioPage() {
               5. COLLECTION SUMMARY
           ================================================== */}
 
-          <section
-            style={
-              collectionStudioStyles.collectionSummarySection
-            }
-          >
+          <section style={collectionStudioStyles.collectionSummarySection}>
             <CollectionSummary />
           </section>
 
@@ -1319,11 +1020,7 @@ export default function CollectionStudioPage() {
               6. PAYMENT DETAILS
           ================================================== */}
 
-          <section
-            style={
-              collectionStudioStyles.paymentDetailsSection
-            }
-          >
+          <section style={collectionStudioStyles.paymentDetailsSection}>
             <PaymentDetails />
           </section>
 
@@ -1331,24 +1028,12 @@ export default function CollectionStudioPage() {
               7 + 8. DOCUMENTS / HISTORY
           ================================================== */}
 
-          <section
-            style={
-              collectionStudioStyles.documentsHistoryRow
-            }
-          >
-            <div
-              style={
-                collectionStudioStyles.loanDocumentsColumn
-              }
-            >
+          <section style={collectionStudioStyles.documentsHistoryRow}>
+            <div style={collectionStudioStyles.loanDocumentsColumn}>
               <LoanDocuments />
             </div>
 
-            <div
-              style={
-                collectionStudioStyles.collectionHistoryColumn
-              }
-            >
+            <div style={collectionStudioStyles.collectionHistoryColumn}>
               <CollectionHistory />
             </div>
           </section>
