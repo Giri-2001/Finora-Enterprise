@@ -797,6 +797,92 @@ export const collectionStudioStyles: Record<string, CSSProperties> = {
 
   /* =========================================================
      COLLECTION WORKSPACE
+     
+     STEP 3
+     LEFT COLUMN
+     
+     STEP 4 + STEP 6
+     RIGHT COLUMN
+  ========================================================= */
+
+  collectionWorkspace: {
+    width: "100%",
+
+    marginTop: "12px",
+
+    display: "grid",
+
+    gridTemplateColumns: "minmax(0, 1fr) minmax(0, 1fr)",
+
+    gap: "12px",
+
+    boxSizing: "border-box",
+
+    alignItems: "start",
+  },
+
+  /* =========================================================
+     STEP 3 — SYSTEM GENERATED COLUMN
+  ========================================================= */
+
+  systemGeneratedColumn: {
+    minWidth: 0,
+
+    width: "100%",
+
+    boxSizing: "border-box",
+
+    padding: "16px",
+
+    background: COLORS.surface,
+
+    border: `1px solid ${COLORS.border}`,
+
+    borderRadius: "16px",
+
+    boxShadow: "0 4px 18px rgba(15, 23, 42, 0.05)",
+
+    alignSelf: "stretch",
+  },
+
+  /* =========================================================
+     STEP 4 — COLLECTION ENTRY COLUMN
+     
+     IMPORTANT:
+     This is the outer FORM SHELL for Step 4.
+     CollectionEntry itself remains transparent.
+  ========================================================= */
+
+  collectionEntryColumn: {
+    minWidth: 0,
+
+    width: "100%",
+
+    boxSizing: "border-box",
+
+    padding: "16px",
+
+    background: COLORS.surface,
+
+    border: `1px solid ${COLORS.border}`,
+
+    borderRadius: "16px",
+
+    boxShadow: "0 4px 18px rgba(15, 23, 42, 0.05)",
+
+    alignSelf: "stretch",
+
+    overflow: "visible",
+  },
+
+  collectionEntryBlock: {
+    minWidth: 0,
+
+    boxSizing: "border-box",
+  },
+
+  /* =========================================================
+     LEGACY WORKSPACE CONTRACT
   ========================================================= */
 
   workspacePlaceholder: {
@@ -1045,20 +1131,6 @@ export const collectionStudioStyles: Record<string, CSSProperties> = {
      SYSTEM GENERATED + COLLECTION ENTRY
   ========================================================= */
 
-  collectionWorkspace: {
-    width: "100%",
-
-    marginTop: "12px",
-
-    display: "grid",
-
-    gridTemplateColumns: "minmax(0, 1fr) minmax(0, 1fr)",
-
-    gap: "12px",
-
-    boxSizing: "border-box",
-  },
-
   systemGeneratedPanel: {
     minWidth: 0,
 
@@ -1213,12 +1285,18 @@ export const collectionStudioStyles: Record<string, CSSProperties> = {
 
   /* =========================================================
      PAYMENT DETAILS
+     
+     IMPORTANT:
+     This section is now rendered INSIDE the right-side
+     Collection Entry column.
+     
+     Therefore Step 6 appears directly underneath Step 4.
   ========================================================= */
 
   paymentDetailsSection: {
     width: "100%",
 
-    marginTop: "12px",
+    marginTop: "0",
 
     padding: "15px 18px",
 
@@ -1364,6 +1442,24 @@ export const collectionStudioStyles: Record<string, CSSProperties> = {
   },
 
   /* =========================================================
+     DOCUMENTS + HISTORY
+  ========================================================= */
+
+  documentsHistoryRow: {
+    width: "100%",
+
+    marginTop: "12px",
+
+    display: "grid",
+
+    gridTemplateColumns: "minmax(0, 0.95fr) minmax(0, 1.55fr)",
+
+    gap: "12px",
+
+    boxSizing: "border-box",
+  },
+
+  /* =========================================================
      LOAN DOCUMENTS
   ========================================================= */
 
@@ -1377,6 +1473,12 @@ export const collectionStudioStyles: Record<string, CSSProperties> = {
     gridTemplateColumns: "minmax(0, 0.95fr) minmax(0, 1.55fr)",
 
     gap: "12px",
+
+    boxSizing: "border-box",
+  },
+
+  loanDocumentsColumn: {
+    minWidth: 0,
 
     boxSizing: "border-box",
   },
@@ -1472,6 +1574,12 @@ export const collectionStudioStyles: Record<string, CSSProperties> = {
   /* =========================================================
      COLLECTION HISTORY
   ========================================================= */
+
+  collectionHistoryColumn: {
+    minWidth: 0,
+
+    boxSizing: "border-box",
+  },
 
   collectionHistorySection: {
     minWidth: 0,

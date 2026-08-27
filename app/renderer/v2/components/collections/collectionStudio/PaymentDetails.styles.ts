@@ -11,6 +11,10 @@
 
 import type { CSSProperties } from "react";
 
+// ============================================================
+// THEME
+// ============================================================
+
 const THEME = {
   surface: "var(--finora-theme-surface, var(--surface, #FFFFFF))",
 
@@ -25,204 +29,450 @@ const THEME = {
 
   brand: "var(--finora-theme-brand-primary, var(--accent, #C69214))",
 
-  brandSoft: "var(--finora-theme-brand-accent-soft, rgba(198, 146, 20, 0.10))",
-
   border: "var(--finora-theme-border-default, var(--border, #D5DCE5))",
 
   success: "var(--finora-theme-success, var(--success, #23865A))",
 
-  successSoft: "var(--finora-theme-success-soft, rgba(35, 134, 90, 0.10))",
+  successSoft:
+    "var(--finora-theme-success-soft, rgba(35, 134, 90, 0.10))",
 } as const;
+
+// ============================================================
+// FONTS
+// ============================================================
 
 const INTER_FONT = "Inter, ui-sans-serif, system-ui, sans-serif";
 
 const GEORGIA_FONT = "Georgia, 'Times New Roman', serif";
 
-export const collectionPaymentDetailsStyles: Record<string, CSSProperties> = {
+// ============================================================
+// STYLES
+// ============================================================
+
+export const collectionPaymentDetailsStyles: Record<
+  string,
+  CSSProperties
+> = {
+  // ==========================================================
+  // SECTION
+  // ==========================================================
+
   section: {
     width: "100%",
+
     minWidth: 0,
+
     boxSizing: "border-box",
-    padding: "10px 18px 12px",
+
+    padding: "9px 18px 10px",
+
     background: THEME.surface,
+
     border: `1px solid ${THEME.border}`,
+
     borderRadius: "12px",
+
+    overflow: "hidden",
   },
+
+  // ==========================================================
+  // HEADER
+  // ==========================================================
 
   header: {
     display: "flex",
+
     alignItems: "flex-start",
-    gap: "10px",
-    paddingBottom: "9px",
+
+    gap: "9px",
+
+    paddingBottom: "7px",
+
     borderBottom: `1px solid ${THEME.border}`,
   },
 
   step: {
     display: "inline-flex",
+
     alignItems: "center",
+
     justifyContent: "center",
-    width: "25px",
-    height: "25px",
+
+    width: "24px",
+
+    height: "24px",
+
     flexShrink: 0,
+
     boxSizing: "border-box",
+
     border: `1px solid ${THEME.brand}`,
+
     borderRadius: "50%",
+
     color: THEME.brand,
+
     fontFamily: INTER_FONT,
-    fontSize: "11px",
+
+    fontSize: "10px",
+
     fontWeight: 800,
   },
 
   title: {
     margin: 0,
+
     color: THEME.textPrimary,
+
     fontFamily: GEORGIA_FONT,
-    fontSize: "18px",
+
+    fontSize: "17px",
+
     fontWeight: 700,
-    lineHeight: 1.15,
+
+    lineHeight: 1.1,
+
+    letterSpacing: "0.01em",
   },
 
   subtitle: {
     margin: "2px 0 0",
+
     color: THEME.textSecondary,
+
     fontFamily: GEORGIA_FONT,
-    fontSize: "11px",
-    lineHeight: 1.25,
-  },
 
-  body: {
-    display: "grid",
-    gridTemplateColumns:
-      "minmax(180px, 1fr) minmax(160px, .9fr) minmax(180px, 1fr) minmax(220px, 1.2fr)",
-    gap: "10px",
-    alignItems: "start",
-    paddingTop: "10px",
-  },
+    fontSize: "10px",
 
-  field: {
-    minWidth: 0,
-    display: "flex",
-    flexDirection: "column",
-    gap: "4px",
-  },
-
-  label: {
-    color: THEME.textPrimary,
-    fontFamily: GEORGIA_FONT,
-    fontSize: "11px",
-    fontWeight: 700,
     lineHeight: 1.2,
   },
 
+  // ==========================================================
+  // FORM BODY
+  //
+  // 3-COLUMN COMPACT GRID
+  //
+  // ROW 1:
+  //   Date | Payment Mode | Reference
+  //
+  // ROW 2:
+  //   Remarks | Final Collection | Actions
+  // ==========================================================
+
+  body: {
+    display: "grid",
+
+    gridTemplateColumns:
+      "minmax(150px, 0.95fr) minmax(150px, 0.95fr) minmax(170px, 1fr)",
+
+    gridTemplateRows: "auto auto",
+
+    columnGap: "9px",
+
+    rowGap: "8px",
+
+    alignItems: "start",
+
+    paddingTop: "8px",
+
+    minWidth: 0,
+  },
+
+  // ==========================================================
+  // FIELD
+  // ==========================================================
+
+  field: {
+    minWidth: 0,
+
+    display: "flex",
+
+    flexDirection: "column",
+
+    gap: "3px",
+  },
+
+  // ==========================================================
+  // LABEL
+  // ==========================================================
+
+  label: {
+    color: THEME.textPrimary,
+
+    fontFamily: GEORGIA_FONT,
+
+    fontSize: "10px",
+
+    fontWeight: 700,
+
+    lineHeight: 1.15,
+  },
+
+  // ==========================================================
+  // INPUT / SELECT
+  // ==========================================================
+
   input: {
     width: "100%",
-    minHeight: "38px",
-    padding: "8px 10px",
+
+    height: "36px",
+
+    minHeight: "36px",
+
+    padding: "7px 9px",
+
     boxSizing: "border-box",
+
     border: `1px solid ${THEME.border}`,
+
     borderRadius: "7px",
+
     outline: "none",
+
     background: THEME.surfaceSoft,
+
     color: THEME.textPrimary,
+
     fontFamily: INTER_FONT,
-    fontSize: "11px",
+
+    fontSize: "10px",
+
     fontWeight: 600,
+  },
+
+  // ==========================================================
+  // REMARKS
+  //
+  // Second-row field.
+  // Occupies first two grid columns.
+  // ==========================================================
+
+  remarksField: {
+    gridColumn: "1 / span 2",
+
+    minWidth: 0,
+
+    display: "flex",
+
+    flexDirection: "column",
+
+    gap: "3px",
   },
 
   textarea: {
     width: "100%",
-    minHeight: "72px",
-    padding: "9px 10px",
+
+    height: "58px",
+
+    minHeight: "58px",
+
+    maxHeight: "58px",
+
+    padding: "7px 9px",
+
     boxSizing: "border-box",
-    resize: "vertical",
+
+    resize: "none",
+
     border: `1px solid ${THEME.border}`,
-    borderRadius: "10px",
+
+    borderRadius: "7px",
+
     outline: "none",
-    background: THEME.surface,
+
+    background: THEME.surfaceSoft,
+
     color: THEME.textPrimary,
+
     fontFamily: GEORGIA_FONT,
-    fontSize: "12px",
-    lineHeight: 1.35,
+
+    fontSize: "10px",
+
+    lineHeight: 1.3,
   },
 
+  // ==========================================================
+  // FINAL COLLECTION
+  //
+  // Compact amount card placed in row 2.
+  // ==========================================================
+
   totalBar: {
-    gridColumn: "1 / -1",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "space-between",
-    gap: "12px",
     minWidth: 0,
-    padding: "9px 12px",
+
+    minHeight: "58px",
+
     boxSizing: "border-box",
+
+    display: "flex",
+
+    alignItems: "center",
+
+    justifyContent: "space-between",
+
+    gap: "8px",
+
+    padding: "7px 10px",
+
     border: `1px solid ${THEME.success}`,
+
     borderRadius: "8px",
+
     background: THEME.successSoft,
+
+    overflow: "hidden",
+  },
+
+  totalContent: {
+    minWidth: 0,
+
+    display: "flex",
+
+    flexDirection: "column",
+
+    justifyContent: "center",
   },
 
   totalLabel: {
     display: "block",
+
     color: THEME.success,
+
     fontFamily: INTER_FONT,
-    fontSize: "9px",
+
+    fontSize: "8px",
+
     fontWeight: 800,
+
     letterSpacing: "0.06em",
+
+    lineHeight: 1.1,
   },
 
   totalHint: {
     display: "block",
+
     marginTop: "2px",
+
     color: THEME.textMuted,
+
     fontFamily: INTER_FONT,
-    fontSize: "8px",
+
+    fontSize: "7px",
+
+    lineHeight: 1.15,
+
+    whiteSpace: "nowrap",
+
+    overflow: "hidden",
+
+    textOverflow: "ellipsis",
   },
 
   totalValue: {
     flexShrink: 0,
+
     color: THEME.success,
+
     fontFamily: GEORGIA_FONT,
-    fontSize: "20px",
+
+    fontSize: "18px",
+
     fontWeight: 700,
+
+    lineHeight: 1,
+
     whiteSpace: "nowrap",
   },
 
+  // ==========================================================
+  // ACTIONS
+  //
+  // Second-row third-column.
+  // ==========================================================
+
   actions: {
-    gridColumn: "1 / -1",
+    minWidth: 0,
+
+    minHeight: "58px",
+
     display: "flex",
-    justifyContent: "flex-end",
+
     alignItems: "center",
-    gap: "8px",
-    flexWrap: "wrap",
-    paddingTop: "2px",
+
+    justifyContent: "flex-end",
+
+    gap: "6px",
+
+    flexWrap: "nowrap",
   },
+
+  // ==========================================================
+  // SAVE BUTTON
+  // ==========================================================
 
   saveButton: {
-    minHeight: "38px",
-    padding: "8px 16px",
+    minWidth: 0,
+
+    minHeight: "36px",
+
+    padding: "7px 11px",
+
     boxSizing: "border-box",
+
     border: `1px solid ${THEME.brand}`,
+
     borderRadius: "7px",
+
     background: THEME.surface,
+
     color: THEME.textPrimary,
+
     fontFamily: INTER_FONT,
-    fontSize: "10px",
+
+    fontSize: "9px",
+
     fontWeight: 800,
-    letterSpacing: "0.03em",
+
+    letterSpacing: "0.02em",
+
     cursor: "pointer",
+
+    whiteSpace: "nowrap",
   },
 
+  // ==========================================================
+  // SAVE & RECEIPT
+  // ==========================================================
+
   receiptButton: {
-    minHeight: "38px",
-    padding: "8px 18px",
+    minWidth: 0,
+
+    minHeight: "36px",
+
+    padding: "7px 12px",
+
     boxSizing: "border-box",
+
     border: `1px solid ${THEME.brand}`,
+
     borderRadius: "7px",
+
     background: THEME.brand,
+
     color: "#FFFFFF",
+
     fontFamily: INTER_FONT,
-    fontSize: "10px",
+
+    fontSize: "9px",
+
     fontWeight: 800,
-    letterSpacing: "0.03em",
+
+    letterSpacing: "0.02em",
+
     cursor: "pointer",
+
+    whiteSpace: "nowrap",
   },
 };
 

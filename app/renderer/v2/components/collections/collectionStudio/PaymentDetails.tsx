@@ -23,6 +23,14 @@
 // - No financial calculation engine here.
 // - Collection amount comes from Step 4 / controller.
 // - Discount and manual principal remain editable in Step 4.
+//
+// LAYOUT
+//
+// - Compact 3-column payment details grid.
+// - Row 1: Date / Payment Mode / Reference.
+// - Row 2: Remarks / Final Collection / Actions.
+// - Designed to fit below Collection Entry inside the
+//   right-side workspace column.
 // ============================================================
 
 // ============================================================
@@ -141,7 +149,8 @@ export default function PaymentDetails() {
   function buildSaveData() {
     const now = new Date().toISOString();
 
-    const receiptNumber = reviewData.receiptNumber || generateReceiptNumber();
+    const receiptNumber =
+      reviewData.receiptNumber || generateReceiptNumber();
 
     return {
       ...reviewData,
@@ -166,20 +175,11 @@ export default function PaymentDetails() {
 
   // ==========================================================
   // SAVE COLLECTION
-  //
-  // IMPORTANT:
-  //
-  // Existing FINORA persistence contract updates loan
-  // outstanding using the actual collection amount and then
-  // persists the collection record.
-  //
-  // Discount is stored as a settlement adjustment.
-  // Manual Principal is stored as principal allocation.
-  //
-  // No new repository boundary is introduced here.
   // ==========================================================
 
-  async function handleSaveCollection(printReceipt: boolean): Promise<void> {
+  async function handleSaveCollection(
+    printReceipt: boolean,
+  ): Promise<void> {
     if (saving) {
       return;
     }
@@ -207,9 +207,6 @@ export default function PaymentDetails() {
 
       // --------------------------------------------------------
       // UPDATE LOAN OUTSTANDING
-      //
-      // The existing LoanService remains the only loan
-      // persistence boundary.
       // --------------------------------------------------------
 
       const updatedLoan = await updateLoanOutstandingAmount(
@@ -280,7 +277,11 @@ export default function PaymentDetails() {
   function printCollectionReceipt(
     data: ReturnType<typeof buildSaveData>,
   ): void {
-    const receiptWindow = window.open("", "_blank", "width=760,height=900");
+    const receiptWindow = window.open(
+      "",
+      "_blank",
+      "width=760,height=900",
+    );
 
     if (!receiptWindow) {
       alert(
@@ -312,27 +313,32 @@ export default function PaymentDetails() {
               color: #111827;
               background: #ffffff;
             }
+
             .receipt {
               max-width: 680px;
               margin: 0 auto;
               border: 1px solid #d5dce5;
               padding: 28px;
             }
+
             h1 {
               margin: 0 0 6px;
               font-size: 24px;
             }
+
             .brand {
               color: #a56f00;
               font-weight: 800;
               letter-spacing: .08em;
             }
+
             .meta {
               margin: 18px 0;
               display: grid;
               grid-template-columns: 1fr 1fr;
               gap: 10px;
             }
+
             .row {
               display: flex;
               justify-content: space-between;
@@ -340,6 +346,7 @@ export default function PaymentDetails() {
               padding: 11px 0;
               border-bottom: 1px solid #e5e7eb;
             }
+
             .final {
               margin-top: 18px;
               padding: 16px;
@@ -349,33 +356,62 @@ export default function PaymentDetails() {
               display: flex;
               justify-content: space-between;
             }
+
             .muted {
               color: #64748b;
               font-size: 12px;
             }
+
             @media print {
               body {
                 padding: 0;
               }
+
               .receipt {
                 border: 0;
               }
             }
           </style>
         </head>
+
         <body>
           <div class="receipt">
             <div class="brand">FINORA ENTERPRISE</div>
+
             <h1>COLLECTION RECEIPT</h1>
+
             <div class="muted">Collection Studio™</div>
 
             <div class="meta">
-              <div><strong>Receipt No</strong><br>${data.receiptNumber}</div>
-              <div><strong>Date</strong><br>${receiptDate}</div>
-              <div><strong>Customer</strong><br>${customerName}</div>
-              <div><strong>Loan</strong><br>${loanNumber}</div>
-              <div><strong>Payment Mode</strong><br>${paymentMode}</div>
-              <div><strong>Reference</strong><br>${data.paymentReference || "--"}</div>
+              <div>
+                <strong>Receipt No</strong><br>
+                ${data.receiptNumber}
+              </div>
+
+              <div>
+                <strong>Date</strong><br>
+                ${receiptDate}
+              </div>
+
+              <div>
+                <strong>Customer</strong><br>
+                ${customerName}
+              </div>
+
+              <div>
+                <strong>Loan</strong><br>
+                ${loanNumber}
+              </div>
+
+              <div>
+                <strong>Payment Mode</strong><br>
+                ${paymentMode}
+              </div>
+
+              <div>
+                <strong>Reference</strong><br>
+                ${data.paymentReference || "--"}
+              </div>
             </div>
 
             <div class="row">
@@ -407,6 +443,7 @@ export default function PaymentDetails() {
     `);
 
     receiptWindow.document.close();
+
     receiptWindow.focus();
 
     window.setTimeout(() => {
@@ -431,7 +468,9 @@ export default function PaymentDetails() {
         <div style={collectionPaymentDetailsStyles.step}>6</div>
 
         <div>
-          <h2 style={collectionPaymentDetailsStyles.title}>PAYMENT DETAILS</h2>
+          <h2 style={collectionPaymentDetailsStyles.title}>
+            PAYMENT DETAILS
+          </h2>
 
           <p style={collectionPaymentDetailsStyles.subtitle}>
             Record the collection payment information.
@@ -440,10 +479,14 @@ export default function PaymentDetails() {
       </header>
 
       {/* ======================================================
-          FORM + ACTIONS
+          COMPACT PAYMENT GRID
       ====================================================== */}
 
       <div style={collectionPaymentDetailsStyles.body}>
+        {/* ====================================================
+            ROW 1 — COLLECTION DATE
+        ==================================================== */}
+
         <div style={collectionPaymentDetailsStyles.field}>
           <label
             htmlFor="finora-collection-date"
@@ -456,10 +499,16 @@ export default function PaymentDetails() {
             id="finora-collection-date"
             type="date"
             value={reviewData.receiptDate || ""}
-            onChange={(event) => handleDateChange(event.target.value)}
+            onChange={(event) =>
+              handleDateChange(event.target.value)
+            }
             style={collectionPaymentDetailsStyles.input}
           />
         </div>
+
+        {/* ====================================================
+            ROW 1 — PAYMENT MODE
+        ==================================================== */}
 
         <div style={collectionPaymentDetailsStyles.field}>
           <label
@@ -472,7 +521,9 @@ export default function PaymentDetails() {
           <select
             id="finora-payment-mode"
             value={reviewData.paymentMethod || "cash"}
-            onChange={(event) => handlePaymentMethodChange(event.target.value)}
+            onChange={(event) =>
+              handlePaymentMethodChange(event.target.value)
+            }
             style={collectionPaymentDetailsStyles.input}
           >
             <option value="cash">Cash</option>
@@ -484,6 +535,10 @@ export default function PaymentDetails() {
             <option value="cheque">Cheque</option>
           </select>
         </div>
+
+        {/* ====================================================
+            ROW 1 — REFERENCE NUMBER
+        ==================================================== */}
 
         <div style={collectionPaymentDetailsStyles.field}>
           <label
@@ -497,13 +552,21 @@ export default function PaymentDetails() {
             id="finora-payment-reference"
             type="text"
             value={reviewData.paymentReference || ""}
-            onChange={(event) => handleReferenceChange(event.target.value)}
+            onChange={(event) =>
+              handleReferenceChange(event.target.value)
+            }
             placeholder="Enter reference number"
             style={collectionPaymentDetailsStyles.input}
           />
         </div>
 
-        <div style={collectionPaymentDetailsStyles.field}>
+        {/* ====================================================
+            ROW 2 — REMARKS
+        ==================================================== */}
+
+        <div
+          style={collectionPaymentDetailsStyles.remarksField}
+        >
           <label
             htmlFor="finora-payment-remarks"
             style={collectionPaymentDetailsStyles.label}
@@ -514,44 +577,54 @@ export default function PaymentDetails() {
           <textarea
             id="finora-payment-remarks"
             value={reviewData.remarks || ""}
-            onChange={(event) => handleRemarksChange(event.target.value)}
+            onChange={(event) =>
+              handleRemarksChange(event.target.value)
+            }
             placeholder="Enter remarks"
-            rows={3}
+            rows={2}
             style={collectionPaymentDetailsStyles.textarea}
           />
         </div>
 
         {/* ====================================================
-            LIVE PAYMENT CHECK
+            ROW 2 — FINAL COLLECTION
         ==================================================== */}
 
         <div style={collectionPaymentDetailsStyles.totalBar}>
-          <div>
-            <span style={collectionPaymentDetailsStyles.totalLabel}>
+          <div style={collectionPaymentDetailsStyles.totalContent}>
+            <span
+              style={collectionPaymentDetailsStyles.totalLabel}
+            >
               FINAL COLLECTION
             </span>
 
-            <span style={collectionPaymentDetailsStyles.totalHint}>
+            <span
+              style={collectionPaymentDetailsStyles.totalHint}
+            >
               {reviewData.collectionType === "manual"
                 ? "Manual collection"
                 : "Selected EMI / collection amount"}
             </span>
           </div>
 
-          <strong style={collectionPaymentDetailsStyles.totalValue}>
+          <strong
+            style={collectionPaymentDetailsStyles.totalValue}
+          >
             {formatCurrency(finalCollection)}
           </strong>
         </div>
 
         {/* ====================================================
-            ACTIONS
+            ROW 2 — ACTIONS
         ==================================================== */}
 
         <div style={collectionPaymentDetailsStyles.actions}>
           <button
             type="button"
             disabled={saving}
-            onClick={() => void handleSaveCollection(false)}
+            onClick={() =>
+              void handleSaveCollection(false)
+            }
             style={collectionPaymentDetailsStyles.saveButton}
           >
             {saving ? "SAVING..." : "SAVE COLLECTION"}
@@ -560,7 +633,9 @@ export default function PaymentDetails() {
           <button
             type="button"
             disabled={saving}
-            onClick={() => void handleSaveCollection(true)}
+            onClick={() =>
+              void handleSaveCollection(true)
+            }
             style={collectionPaymentDetailsStyles.receiptButton}
           >
             {saving ? "SAVING..." : "SAVE & RECEIPT"}

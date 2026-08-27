@@ -885,25 +885,43 @@ export default function CollectionStudioPage() {
           </div>
 
           {/* ==================================================
-              3 + 4. COLLECTION WORKSPACE
+              3 + 4 + 6. COLLECTION WORKSPACE
+              
+              LEFT
+              - Step 3 System Generated
+              
+              RIGHT
+              - Step 4 Collection Entry
+              - Step 6 Payment Details
+              
+              IMPORTANT:
+              Step 6 intentionally lives inside the right
+              workspace column so it sits directly below
+              Step 4 instead of becoming a full-width section.
           ================================================== */}
 
           <section style={collectionStudioStyles.collectionWorkspace}>
+            {/* ==================================================
+                STEP 3 — SYSTEM GENERATED
+            ================================================== */}
+
             <div style={collectionStudioStyles.systemGeneratedColumn}>
               <CollectionSystemGenerated />
             </div>
 
+            {/* ==================================================
+                STEP 4 + STEP 6 — RIGHT WORKFLOW STACK
+            ================================================== */}
+
             <div style={collectionStudioStyles.collectionEntryColumn}>
-              <CollectionEntry />
+              <div style={collectionStudioStyles.collectionEntryBlock}>
+                <CollectionEntry />
+              </div>
+
+              <section style={collectionStudioStyles.paymentDetailsSection}>
+                <PaymentDetails />
+              </section>
             </div>
-          </section>
-
-          {/* ==================================================
-              6. PAYMENT DETAILS
-          ================================================== */}
-
-          <section style={collectionStudioStyles.paymentDetailsSection}>
-            <PaymentDetails />
           </section>
 
           {/* ==================================================
