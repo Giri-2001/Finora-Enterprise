@@ -22,6 +22,7 @@
 // - No inline colour palette
 // - Theme values consume FINORA Theme CSS variables
 // - Responsive geometry belongs to Responsive Engine
+// - Warning / brand colours come from FINORA Theme Engine
 //
 // VERSION : 2.0
 // STATUS  : Production
@@ -36,6 +37,16 @@ import type { CSSProperties } from "react";
 // ============================================================
 // FINORA THEME TOKENS
 // ============================================================
+//
+// ThemeProvider is the single source of truth.
+//
+// IMPORTANT:
+// There is intentionally NO local yellow / gold palette here.
+//
+// Brand / warning colours are consumed from the active FINORA
+// theme through CSS variables exposed by Collection Studio.
+//
+// ============================================================
 
 const THEME = {
   // ==========================================================
@@ -46,8 +57,6 @@ const THEME = {
 
   surfaceSoft:
     "var(--finora-theme-surface-muted, var(--surface-soft, #F5F7FA))",
-
-  surfaceWarm: "var(--finora-theme-surface-warm, #FFFBF0)",
 
   // ==========================================================
   // TEXT
@@ -63,7 +72,9 @@ const THEME = {
   // BRAND
   // ==========================================================
 
-  brand: "var(--finora-theme-brand-primary, var(--accent, #C69214))",
+  brand: "var(--finora-theme-brand-primary)",
+
+brandSoft: "var(--finora-theme-brand-accent-soft)",
 
   // ==========================================================
   // BORDER
@@ -74,15 +85,16 @@ const THEME = {
   borderStrong: "var(--finora-theme-border-strong, #B8C0CC)",
 
   // ==========================================================
-  // NOTICE
+  // WARNING
+  //
+  // IMPORTANT:
+  //
+  // These values are controlled by the active FINORA theme.
+  // No local yellow / gold colour is defined here.
   // ==========================================================
 
-  noticeBackground:
-    "var(--finora-theme-warning-soft, rgba(198, 146, 20, 0.08))",
 
-  noticeBorder: "var(--finora-theme-warning-border, rgba(198, 146, 20, 0.22))",
 
-  noticeText: "var(--finora-theme-warning-text, #6B4E00)",
 } as const;
 
 // ============================================================
@@ -103,13 +115,17 @@ export const collectionSystemGeneratedStyles: Record<string, CSSProperties> = {
 
     padding: "18px",
 
-    background: THEME.surfaceWarm,
+    // IMPORTANT:
+    // Do not use a local warm / yellow surface.
+    // The panel follows the active FINORA theme surface.
+    background: THEME.surface,
 
     border: `1px solid ${THEME.border}`,
 
     borderRadius: "12px",
 
-    boxShadow: "0 2px 12px rgba(15, 23, 42, 0.04)",
+    boxShadow:
+      "0 2px 12px var(--finora-theme-overlay-shadow, rgba(15, 23, 42, 0.04))",
   },
 
   // ==========================================================
@@ -346,6 +362,11 @@ export const collectionSystemGeneratedStyles: Record<string, CSSProperties> = {
 
   // ==========================================================
   // NOTICE
+  //
+  // WARNING COLOUR IS FULLY THEME CONNECTED.
+  //
+  // This notice is intentionally a semantic WARNING surface,
+  // not a locally defined yellow/gold surface.
   // ==========================================================
 
   notice: {
@@ -363,9 +384,9 @@ export const collectionSystemGeneratedStyles: Record<string, CSSProperties> = {
 
     boxSizing: "border-box",
 
-    background: THEME.noticeBackground,
 
-    border: `1px solid ${THEME.noticeBorder}`,
+
+border: `1px solid ${THEME.brand}`,
 
     borderRadius: "8px",
   },
@@ -405,13 +426,13 @@ export const collectionSystemGeneratedStyles: Record<string, CSSProperties> = {
   // ==========================================================
 
   noticeTitle: {
-    color: THEME.noticeText,
+    color: THEME.brand,
 
     fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
 
-    fontSize: "10px",
+    fontSize: "12px",
 
-    fontWeight: 800,
+    fontWeight: 600,
 
     lineHeight: 1.3,
   },
@@ -425,7 +446,7 @@ export const collectionSystemGeneratedStyles: Record<string, CSSProperties> = {
 
     fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
 
-    fontSize: "9px",
+    fontSize: "10px",
 
     fontWeight: 500,
 
@@ -449,7 +470,7 @@ export const collectionSystemGeneratedStyles: Record<string, CSSProperties> = {
 
     padding: "18px",
 
-    background: THEME.surfaceWarm,
+    background: THEME.surface,
 
     border: `1px solid ${THEME.border}`,
 
