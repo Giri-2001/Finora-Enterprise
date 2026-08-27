@@ -5,27 +5,20 @@
    COLLECTION CONTROLLER
 =========================================================== */
 
-import {
-  useCollection,
-} from "../context/CollectionContext";
+import { useCollection } from "../context/CollectionContext";
 
 /* ===========================================================
    COLLECTION CONTROLLER
 =========================================================== */
 
 export function useCollectionController() {
-  const {
-    reviewData,
-    onReviewDataChange,
-  } = useCollection();
+  const { reviewData, onReviewDataChange } = useCollection();
 
   /* ===========================================================
      GENERIC UPDATE
   =========================================================== */
 
-  function updateReviewData(
-    updates: Partial<typeof reviewData>,
-  ) {
+  function updateReviewData(updates: Partial<typeof reviewData>) {
     onReviewDataChange({
       ...reviewData,
       ...updates,
@@ -36,11 +29,9 @@ export function useCollectionController() {
      FIELD UPDATE
   =========================================================== */
 
-  function updateField<
-    K extends keyof typeof reviewData,
-  >(
+  function updateField<K extends keyof typeof reviewData>(
     field: K,
-    value: typeof reviewData[K],
+    value: (typeof reviewData)[K],
   ) {
     updateReviewData({
       [field]: value,
@@ -48,46 +39,38 @@ export function useCollectionController() {
   }
 
   return {
-  /* ===========================================================
+    /* ===========================================================
      DATA
   =========================================================== */
 
-  reviewData,
+    reviewData,
 
-  /* ===========================================================
+    /* ===========================================================
      UPDATE
   =========================================================== */
 
-  updateReviewData,
+    updateReviewData,
 
-  updateField,
+    updateField,
 
-  /* ===========================================================
+    /* ===========================================================
      DETAILS
   =========================================================== */
 
-  updateCollectionDate(
-    value: string,
-  ) {
-    updateField("receiptDate", value);
-  },
+    updateCollectionDate(value: string) {
+      updateField("receiptDate", value);
+    },
 
-  updateCollectionAmount(
-    value: number,
-  ) {
-    updateField("paymentAmount", value);
-  },
+    updateCollectionAmount(value: number) {
+      updateField("paymentAmount", value);
+    },
 
-  updatePaymentMethod(
-    value: string,
-  ) {
-    updateField("paymentMethod", value);
-  },
+    updatePaymentMethod(value: string) {
+      updateField("paymentMethod", value);
+    },
 
-  updateRemarks(
-    value: string,
-  ) {
-    updateField("remarks", value);
-  },
-};
+    updateRemarks(value: string) {
+      updateField("remarks", value);
+    },
+  };
 }

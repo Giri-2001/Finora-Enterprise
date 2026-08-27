@@ -7,47 +7,34 @@
 
 import SummaryCard from "../../common/cards/SummaryCard";
 
-import {
-  formatCurrency,
-} from "../../../utils/currency/formatCurrency";
+import { formatCurrency } from "../../../utils/currency/formatCurrency";
 
-import {
-  useCollectionController,
-} from "../controller";
+import { useCollectionController } from "../controller";
 
 /* ===========================================================
    COMPONENT
 =========================================================== */
 
 export default function CustomerLoanCard() {
-  const {
-    reviewData,
-  } = useCollectionController();
+  const { reviewData } = useCollectionController();
 
   return (
     <SummaryCard title="Customer Loan">
       <span>
-        Customer :
-        <strong> {reviewData.customerName || "--"}</strong>
+        Customer :<strong> {reviewData.customerName || "--"}</strong>
       </span>
 
       <span>
-        Loan Number :
-        <strong> {reviewData.loanNumber || "--"}</strong>
+        Loan Number :<strong> {reviewData.loanNumber || "--"}</strong>
       </span>
 
       <span>
-        Loan Amount :
-        <strong>
-          ₹ {formatCurrency(reviewData.loanAmount)}
-        </strong>
+        Loan Amount :<strong>₹ {formatCurrency(reviewData.loanAmount)}</strong>
       </span>
 
       <span>
         Outstanding :
-        <strong>
-          ₹ {formatCurrency(reviewData.outstandingBalance)}
-        </strong>
+        <strong>₹ {formatCurrency(reviewData.outstandingBalance)}</strong>
       </span>
     </SummaryCard>
   );

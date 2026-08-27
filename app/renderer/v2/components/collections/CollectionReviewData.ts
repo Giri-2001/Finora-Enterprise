@@ -75,4 +75,6 @@ export interface CollectionReviewData {
   createdAt: string;
 
   updatedAt: string;
+
+  collectionType?: "emi" | "manual";
 }

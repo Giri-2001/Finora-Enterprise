@@ -1,9 +1,35 @@
-/* ===========================================================
-   FINORA ENTERPRISE OS™
-   Collections Engine
+// ============================================================
+// FINORA ENTERPRISE OS™
+//
+// COLLECTIONS ENGINE
+//
+// RECEIPT CUSTOMER CARD
+//
+// RESPONSIBILITY
+//
+// - Display customer information
+// - Display selected loan number
+// - Display collection amount
+// - Display outstanding balance
+// - Consume Collection Controller data
+// - Keep presentation styling in dedicated style file
+//
+// IMPORTANT
+//
+// - No inline styles
+// - No inline colour definitions
+// - No inline responsive dimensions
+// - No local theme system
+// - No local breakpoint system
+// - No business calculation logic
+//
+// VERSION : 2.0
+// STATUS  : Production
+// ============================================================
 
-   RECEIPT CUSTOMER CARD
-=========================================================== */
+// ============================================================
+// IMPORTS
+// ============================================================
 
 import SummaryCard from "../../common/cards/SummaryCard";
 
@@ -15,48 +41,90 @@ import {
   useCollectionController,
 } from "../controller";
 
-/* ===========================================================
-   COMPONENT
-=========================================================== */
+import {
+  receiptCustomerCardStyles,
+} from "./ReceiptCustomerCard.styles";
+
+// ============================================================
+// COMPONENT
+// ============================================================
 
 export default function ReceiptCustomerCard() {
+  // ==========================================================
+  // COLLECTION CONTROLLER
+  // ==========================================================
+
   const {
     reviewData,
   } = useCollectionController();
 
+  // ==========================================================
+  // RENDER
+  // ==========================================================
+
   return (
     <SummaryCard title="Customer Information">
-      <span>
-        Customer :
-        <strong>
-          {" "}
-          {reviewData.customerName || "--"}
-        </strong>
-      </span>
+      <div style={receiptCustomerCardStyles.content}>
+        {/* ====================================================
+            CUSTOMER
+        ==================================================== */}
 
-      <span>
-        Loan Number :
-        <strong>
-          {" "}
-          {reviewData.loanNumber || "--"}
-        </strong>
-      </span>
+        <span style={receiptCustomerCardStyles.detail}>
+          <span style={receiptCustomerCardStyles.label}>
+            Customer :
+          </span>
 
-      <span>
-        Collection :
-        <strong>
-          {" "}
-          ₹ {formatCurrency(reviewData.paymentAmount)}
-        </strong>
-      </span>
+          <strong style={receiptCustomerCardStyles.value}>
+            {reviewData.customerName || "--"}
+          </strong>
+        </span>
 
-      <span>
-        Outstanding :
-        <strong>
-          {" "}
-          ₹ {formatCurrency(reviewData.outstandingBalance)}
-        </strong>
-      </span>
+        {/* ====================================================
+            LOAN NUMBER
+        ==================================================== */}
+
+        <span style={receiptCustomerCardStyles.detail}>
+          <span style={receiptCustomerCardStyles.label}>
+            Loan Number :
+          </span>
+
+          <strong style={receiptCustomerCardStyles.value}>
+            {reviewData.loanNumber || "--"}
+          </strong>
+        </span>
+
+        {/* ====================================================
+            COLLECTION
+        ==================================================== */}
+
+        <span style={receiptCustomerCardStyles.detail}>
+          <span style={receiptCustomerCardStyles.label}>
+            Collection :
+          </span>
+
+          <strong style={receiptCustomerCardStyles.value}>
+            ₹ {formatCurrency(reviewData.paymentAmount)}
+          </strong>
+        </span>
+
+        {/* ====================================================
+            OUTSTANDING
+        ==================================================== */}
+
+        <span style={receiptCustomerCardStyles.detail}>
+          <span style={receiptCustomerCardStyles.label}>
+            Outstanding :
+          </span>
+
+          <strong style={receiptCustomerCardStyles.value}>
+            ₹ {formatCurrency(reviewData.outstandingBalance)}
+          </strong>
+        </span>
+      </div>
     </SummaryCard>
   );
 }
+
+// ============================================================
+// END
+// ============================================================

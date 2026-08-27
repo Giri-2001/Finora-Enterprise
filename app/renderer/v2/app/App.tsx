@@ -71,7 +71,7 @@ import CustomerDepartmentPage from "../pages/customers/CustomerDepartmentPage";
 
 import LoansPage from "../pages/loans/LoansPage";
 
-import CollectionsPage from "../pages/collections/CollectionsPage";
+import CollectionStudioPage from "../components/collections/collectionStudio/CollectionStudioPage";
 
 import ReportsPage from "../pages/reports/ReportsPage";
 
@@ -994,7 +994,7 @@ function AuthenticatedV2Application({
             COLLECTIONS
         ================================================== */}
 
-        {page === "collections" && <CollectionsPage />}
+        {page === "collections" && <CollectionStudioPage />}
 
         {/* ==================================================
             REPORTS

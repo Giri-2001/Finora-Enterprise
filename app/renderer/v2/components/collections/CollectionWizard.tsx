@@ -7,9 +7,7 @@
 
 import { useState } from "react";
 
-import {
-  useCollection,
-} from "./context/CollectionContext";
+import { useCollection } from "./context/CollectionContext";
 
 /* ===========================================================
    DETAILS
@@ -82,16 +80,12 @@ export type CollectionWizardStep =
 =========================================================== */
 
 export default function CollectionWizard() {
-  const {
-    reviewData,
-    onReviewDataChange,
-  } = useCollection();
+  const { reviewData, onReviewDataChange } = useCollection();
 
   void reviewData;
   void onReviewDataChange;
 
-  const [step] =
-    useState<CollectionWizardStep>("details");
+  const [step] = useState<CollectionWizardStep>("details");
 
   switch (step) {
     case "details":

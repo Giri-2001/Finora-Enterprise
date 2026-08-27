@@ -11,72 +11,67 @@ import type { CollectionReviewData } from "./CollectionReviewData";
 
 import CollectionWizard from "./CollectionWizard";
 
-import {
-  CollectionContext,
-} from "./context/CollectionContext";
+import { CollectionContext } from "./context/CollectionContext";
 
 /* ===========================================================
    COLLECTION STUDIO
 =========================================================== */
 
 export default function CollectionStudio() {
-  const [
-  reviewData,
-  setReviewData,
-] = useState<CollectionReviewData>({
-      customerId: "",
+  const [reviewData, setReviewData] = useState<CollectionReviewData>({
+    customerId: "",
 
-      customerName: "",
+    customerName: "",
 
-      customerPhone: "",
+    customerPhone: "",
 
-      loanId: "",
+    loanId: "",
 
-loanNumber: "",
+    loanNumber: "",
 
-loanAmount: 0,
+    loanAmount: 0,
 
-outstandingBalance: 0,
+    outstandingBalance: 0,
 
-      todayDue: 0,
+    todayDue: 0,
 
-      previousDue: 0,
+    previousDue: 0,
 
-      paymentAmount: 0,
+    paymentAmount: 0,
 
-      paymentMethod: "",
+    paymentMethod: "",
 
-      paymentReference: "",
+    paymentReference: "",
 
-      penaltyAmount: 0,
+    penaltyAmount: 0,
 
-      discountAmount: 0,
+    discountAmount: 0,
 
-      advanceAdjustment: 0,
+    advanceAdjustment: 0,
 
-      remarks: "",
+    remarks: "",
 
-      receiptNumber: "",
+    receiptNumber: "",
 
-      receiptDate: "",
+    receiptDate: "",
 
-      status: "Draft",
+    status: "Draft",
 
-      createdAt: "",
+    createdAt: "",
 
-      updatedAt: "",
-    });
+    updatedAt: "",
+  });
 
   void reviewData;
 
   return (
-  <CollectionContext.Provider
-    value={{
-      reviewData,
-      onReviewDataChange: setReviewData,
-    }}
-  >
-    <CollectionWizard />
-  </CollectionContext.Provider>
-);
+    <CollectionContext.Provider
+      value={{
+        reviewData,
+        onReviewDataChange: setReviewData,
+      }}
+    >
+      <CollectionWizard />
+    </CollectionContext.Provider>
+  );
 }

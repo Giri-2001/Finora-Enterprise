@@ -1,36 +1,58 @@
-/* ===========================================================
-   FINORA ENTERPRISE OS™
-   Collections Engine
+// ============================================================
+// FINORA ENTERPRISE OS™
+//
+// COLLECTIONS ENGINE
+//
+// RECEIPT DRAFT STATUS
+//
+// RESPONSIBILITY
+//
+// - Display Receipt draft state
+// - Display last saved / updated timestamp
+// - Presentation only
+// - No persistence
+// - No storage access
+// - No business logic
+//
+// VERSION : 2.0
+// STATUS  : Production
+// ============================================================
 
-   RECEIPT DRAFT STATUS
-=========================================================== */
+// ============================================================
+// IMPORTS
+// ============================================================
 
-import StudioDraftStatus from "../../common/studio/StudioDraftStatus";
+import StudioDraftStatus
+  from "../../common/studio/StudioDraftStatus";
 
-import {
-  useCollectionController,
-} from "../controller";
+// ============================================================
+// TYPES
+// ============================================================
 
-/* ===========================================================
-   COMPONENT
-=========================================================== */
+interface ReceiptDraftStatusProps {
+  savedAt?: string;
 
-export default function ReceiptDraftStatus() {
-  const {
-    reviewData,
-  } = useCollectionController();
+  status?: "Draft" | "Completed";
+}
 
+// ============================================================
+// COMPONENT
+// ============================================================
+
+export default function ReceiptDraftStatus({
+  savedAt = "Not Saved",
+
+  status = "Draft",
+}: ReceiptDraftStatusProps) {
   return (
     <StudioDraftStatus
       title="Receipt Draft"
-      status={
-        reviewData.status === "Approved"
-          ? "Completed"
-          : "Draft"
-      }
-      updatedAt={
-        reviewData.updatedAt || "Not Saved"
-      }
+      status={status}
+      updatedAt={savedAt}
     />
   );
 }
+
+// ============================================================
+// END
+// ============================================================

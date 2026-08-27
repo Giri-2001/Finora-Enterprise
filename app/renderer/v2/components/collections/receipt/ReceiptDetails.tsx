@@ -1,11 +1,35 @@
-/* ===========================================================
-   FINORA ENTERPRISE OS™
-   Collections Engine
+// ============================================================
+// FINORA ENTERPRISE OS™
+//
+// COLLECTIONS ENGINE
+//
+// RECEIPT DETAILS
+//
+// RESPONSIBILITY
+//
+// - Render receipt metadata fields
+// - Connect receipt number to Collection Controller
+// - Connect receipt date to Collection Controller
+// - Render issued-by field
+// - Connect remarks to Collection Controller
+// - Consume dedicated Receipt Details styles
+//
+// IMPORTANT
+//
+// - No inline styles
+// - No inline colour definitions
+// - No inline responsive dimensions
+// - No local theme system
+// - No local breakpoint system
+// - No business styling logic
+//
+// VERSION : 2.0
+// STATUS  : Production
+// ============================================================
 
-   RECEIPT DETAILS
-=========================================================== */
-
-import type { CSSProperties } from "react";
+// ============================================================
+// IMPORTS
+// ============================================================
 
 import {
   FormField,
@@ -13,32 +37,34 @@ import {
   TextInput,
 } from "../../common";
 
-import {
-  useCollectionController,
-} from "../controller";
+import { useCollectionController } from "../controller";
 
-/* ===========================================================
-   STYLES
-=========================================================== */
+import { receiptDetailsStyles } from "./ReceiptDetails.styles";
 
-const wrapperStyle: CSSProperties = {
-  display: "flex",
-  flexDirection: "column",
-  gap: "20px",
-};
-
-/* ===========================================================
-   COMPONENT
-=========================================================== */
+// ============================================================
+// COMPONENT
+// ============================================================
 
 export default function ReceiptDetails() {
+  // ==========================================================
+  // COLLECTION CONTROLLER
+  // ==========================================================
+
   const {
     reviewData,
     updateField,
   } = useCollectionController();
 
+  // ==========================================================
+  // RENDER
+  // ==========================================================
+
   return (
-    <div style={wrapperStyle}>
+    <div style={receiptDetailsStyles.wrapper}>
+      {/* ======================================================
+          RECEIPT NUMBER
+      ====================================================== */}
+
       <FormField
         label="Receipt Number"
         required
@@ -54,6 +80,10 @@ export default function ReceiptDetails() {
           }
         />
       </FormField>
+
+      {/* ======================================================
+          RECEIPT DATE
+      ====================================================== */}
 
       <FormField
         label="Receipt Date"
@@ -71,6 +101,10 @@ export default function ReceiptDetails() {
         />
       </FormField>
 
+      {/* ======================================================
+          ISSUED BY
+      ====================================================== */}
+
       <FormField
         label="Issued By"
         required
@@ -80,9 +114,11 @@ export default function ReceiptDetails() {
         />
       </FormField>
 
-      <FormField
-        label="Remarks"
-      >
+      {/* ======================================================
+          REMARKS
+      ====================================================== */}
+
+      <FormField label="Remarks">
         <TextArea
           value={reviewData.remarks}
           placeholder="Enter receipt remarks"
@@ -97,3 +133,7 @@ export default function ReceiptDetails() {
     </div>
   );
 }
+
+// ============================================================
+// END
+// ============================================================
