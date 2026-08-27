@@ -43,7 +43,15 @@
 //     + accruedInterest
 //     + lateFee
 //
-// VERSION : 2.0
+// ICON STANDARD
+//
+// - Lucide React icons only
+// - No emoji icons
+// - No image icons
+// - No local colour palette
+// - Icon colours come from FINORA Theme Engine
+//
+// VERSION : 2.1
 // STATUS  : Production
 // ============================================================
 
@@ -51,11 +59,22 @@
 // IMPORTS
 // ============================================================
 
-import { collectionSystemGeneratedStyles } from "./CollectionSystemGenerated.styles";
+import {
+  Info,
+  LockKeyhole,
+} from "lucide-react";
 
-import { useCollectionController } from "../controller";
+import {
+  collectionSystemGeneratedStyles,
+} from "./CollectionSystemGenerated.styles";
 
-import { formatCurrency } from "../../../utils/currency/formatCurrency";
+import {
+  useCollectionController,
+} from "../controller";
+
+import {
+  formatCurrency,
+} from "../../../utils/currency/formatCurrency";
 
 // ============================================================
 // HELPERS
@@ -73,13 +92,23 @@ import { formatCurrency } from "../../../utils/currency/formatCurrency";
  * Math.round follows the required FINORA rule for
  * positive financial amounts.
  */
-function roundFinancialValue(value: number): number {
-  if (!Number.isFinite(value) || value <= 0) {
+function roundFinancialValue(
+  value: number,
+): number {
+
+  if (
+    !Number.isFinite(value) ||
+    value <= 0
+  ) {
+
     return 0;
+
   }
 
   return Math.round(value);
+
 }
+
 
 /**
  * Convert a stored date into a local calendar date
@@ -92,43 +121,85 @@ function roundFinancialValue(value: number): number {
  *
  * ISO date strings are also supported defensively.
  */
-function parseCalendarDate(value: string): Date | null {
-  const raw = String(value ?? "").trim();
+function parseCalendarDate(
+  value: string,
+): Date | null {
+
+  const raw =
+    String(
+      value ?? "",
+    ).trim();
 
   if (!raw) {
+
     return null;
+
   }
 
-  const dateOnlyMatch = /^(\d{4})-(\d{2})-(\d{2})$/.exec(raw);
+  const dateOnlyMatch =
+    /^(\d{4})-(\d{2})-(\d{2})$/.exec(
+      raw,
+    );
 
   if (dateOnlyMatch) {
-    const year = Number(dateOnlyMatch[1]);
 
-    const month = Number(dateOnlyMatch[2]);
+    const year =
+      Number(
+        dateOnlyMatch[1],
+      );
 
-    const day = Number(dateOnlyMatch[3]);
+    const month =
+      Number(
+        dateOnlyMatch[2],
+      );
 
-    const date = new Date(year, month - 1, day);
+    const day =
+      Number(
+        dateOnlyMatch[3],
+      );
+
+    const date =
+      new Date(
+        year,
+        month - 1,
+        day,
+      );
 
     if (
       date.getFullYear() !== year ||
       date.getMonth() !== month - 1 ||
       date.getDate() !== day
     ) {
+
       return null;
+
     }
 
     return date;
+
   }
 
-  const parsed = new Date(raw);
+  const parsed =
+    new Date(raw);
 
-  if (Number.isNaN(parsed.getTime())) {
+  if (
+    Number.isNaN(
+      parsed.getTime(),
+    )
+  ) {
+
     return null;
+
   }
 
-  return new Date(parsed.getFullYear(), parsed.getMonth(), parsed.getDate());
+  return new Date(
+    parsed.getFullYear(),
+    parsed.getMonth(),
+    parsed.getDate(),
+  );
+
 }
+
 
 /**
  * Return elapsed calendar days between loan date
@@ -145,31 +216,54 @@ function parseCalendarDate(value: string): Date | null {
  *
  * The calculation intentionally ignores time-of-day.
  */
-function getElapsedLoanDays(loanDateValue: string): number {
-  const loanDate = parseCalendarDate(loanDateValue);
+function getElapsedLoanDays(
+  loanDateValue: string,
+): number {
+
+  const loanDate =
+    parseCalendarDate(
+      loanDateValue,
+    );
 
   if (!loanDate) {
+
     return 0;
+
   }
 
-  const today = new Date();
+  const today =
+    new Date();
 
-  const todayDate = new Date(
-    today.getFullYear(),
-    today.getMonth(),
-    today.getDate(),
-  );
+  const todayDate =
+    new Date(
+      today.getFullYear(),
+      today.getMonth(),
+      today.getDate(),
+    );
 
-  const millisecondsPerDay = 24 * 60 * 60 * 1000;
+  const millisecondsPerDay =
+    24 *
+    60 *
+    60 *
+    1000;
 
-  const difference = todayDate.getTime() - loanDate.getTime();
+  const difference =
+    todayDate.getTime() -
+    loanDate.getTime();
 
   if (difference <= 0) {
+
     return 0;
+
   }
 
-  return Math.floor(difference / millisecondsPerDay);
+  return Math.floor(
+    difference /
+    millisecondsPerDay,
+  );
+
 }
+
 
 /**
  * FINORA flat monthly interest calculation.
@@ -182,33 +276,69 @@ function calculateAccruedInterest(
   monthlyInterestRate: number,
   elapsedDays: number,
 ): number {
-  if (!Number.isFinite(principal) || principal <= 0) {
+
+  if (
+    !Number.isFinite(principal) ||
+    principal <= 0
+  ) {
+
     return 0;
+
   }
 
-  if (!Number.isFinite(monthlyInterestRate) || monthlyInterestRate <= 0) {
+  if (
+    !Number.isFinite(
+      monthlyInterestRate,
+    ) ||
+    monthlyInterestRate <= 0
+  ) {
+
     return 0;
+
   }
 
-  if (!Number.isFinite(elapsedDays) || elapsedDays <= 0) {
+  if (
+    !Number.isFinite(elapsedDays) ||
+    elapsedDays <= 0
+  ) {
+
     return 0;
+
   }
 
-  const monthlyInterest = principal * (monthlyInterestRate / 100);
+  const monthlyInterest =
+    principal *
+    (
+      monthlyInterestRate /
+      100
+    );
 
-  const dailyInterest = monthlyInterest / 30;
+  const dailyInterest =
+    monthlyInterest /
+    30;
 
-  const accruedInterest = dailyInterest * elapsedDays;
+  const accruedInterest =
+    dailyInterest *
+    elapsedDays;
 
-  return roundFinancialValue(accruedInterest);
+  return roundFinancialValue(
+    accruedInterest,
+  );
+
 }
+
 
 // ============================================================
 // COMPONENT
 // ============================================================
 
 export default function CollectionSystemGenerated() {
-  const { reviewData } = useCollectionController();
+
+  const {
+    reviewData,
+  } =
+    useCollectionController();
+
 
   // ==========================================================
   // AUTHORITATIVE LOAN VALUES
@@ -227,11 +357,25 @@ export default function CollectionSystemGenerated() {
   //
   // ==========================================================
 
-  const principalDue = roundFinancialValue(Number(reviewData.loanAmount ?? 0));
+  const principalDue =
+    roundFinancialValue(
+      Number(
+        reviewData.loanAmount ?? 0,
+      ),
+    );
 
-  const monthlyInterestRate = Number(reviewData.loanInterestRate ?? 0);
 
-  const elapsedDays = getElapsedLoanDays(reviewData.loanDate);
+  const monthlyInterestRate =
+    Number(
+      reviewData.loanInterestRate ?? 0,
+    );
+
+
+  const elapsedDays =
+    getElapsedLoanDays(
+      reviewData.loanDate,
+    );
+
 
   // ==========================================================
   // ACCRUED INTEREST
@@ -249,17 +393,25 @@ export default function CollectionSystemGenerated() {
   //
   // ==========================================================
 
-  const accruedInterest = calculateAccruedInterest(
-    principalDue,
-    monthlyInterestRate,
-    elapsedDays,
-  );
+  const accruedInterest =
+    calculateAccruedInterest(
+      principalDue,
+      monthlyInterestRate,
+      elapsedDays,
+    );
+
 
   // ==========================================================
   // LATE FEE
   // ==========================================================
 
-  const lateFee = roundFinancialValue(Number(reviewData.penaltyAmount ?? 0));
+  const lateFee =
+    roundFinancialValue(
+      Number(
+        reviewData.penaltyAmount ?? 0,
+      ),
+    );
+
 
   // ==========================================================
   // GENERATED TOTAL
@@ -273,157 +425,352 @@ export default function CollectionSystemGenerated() {
   //
   // ==========================================================
 
-  const generatedTotal = roundFinancialValue(
-    principalDue + accruedInterest + lateFee,
-  );
+  const generatedTotal =
+    roundFinancialValue(
+      principalDue +
+      accruedInterest +
+      lateFee,
+    );
+
 
   // ==========================================================
   // CURRENCY
   // ==========================================================
 
-  function currency(value: number): string {
-    return `₹ ${formatCurrency(roundFinancialValue(value))}`;
+  function currency(
+    value: number,
+  ): string {
+
+    return `₹ ${formatCurrency(
+      roundFinancialValue(
+        value,
+      ),
+    )}`;
+
   }
+
 
   // ==========================================================
   // RENDER
   // ==========================================================
 
   return (
-    <section style={collectionSystemGeneratedStyles.panel}>
+
+    <section
+      style={
+        collectionSystemGeneratedStyles.panel
+      }
+    >
+
       {/* ====================================================
           HEADER
       ==================================================== */}
 
-      <header style={collectionSystemGeneratedStyles.header}>
-        <div style={collectionSystemGeneratedStyles.titleGroup}>
-          <span aria-hidden="true" style={collectionSystemGeneratedStyles.lock}>
-            🔒
-          </span>
+      <header
+        style={
+          collectionSystemGeneratedStyles.header
+        }
+      >
+
+        <div
+          style={
+            collectionSystemGeneratedStyles.titleGroup
+          }
+        >
+
+          {/* =================================================
+              LUCIDE LOCK ICON
+
+              System generated values are locked.
+              No emoji is used.
+          ================================================= */}
+
+          <LockKeyhole
+            aria-hidden="true"
+            style={
+              collectionSystemGeneratedStyles.lock
+            }
+            size={20}
+            strokeWidth={2}
+          />
+
 
           <div>
-            <h2 style={collectionSystemGeneratedStyles.title}>
-              3. System Generated (Auto Calculated)
+
+            <h2
+              style={
+                collectionSystemGeneratedStyles.title
+              }
+            >
+              System Generated (Auto Calculated)
             </h2>
 
-            <div style={collectionSystemGeneratedStyles.subtitle}>
+
+            <div
+              style={
+                collectionSystemGeneratedStyles.subtitle
+              }
+            >
               Calculated automatically from the original loan principal, loan
               interest terms and elapsed days.
             </div>
+
           </div>
+
         </div>
+
       </header>
+
 
       {/* ====================================================
           FINANCIAL VALUES
       ==================================================== */}
 
-      <div style={collectionSystemGeneratedStyles.financialList}>
+      <div
+        style={
+          collectionSystemGeneratedStyles.financialList
+        }
+      >
+
         {/* ==================================================
             PRINCIPAL DUE
         ================================================== */}
 
-        <div style={collectionSystemGeneratedStyles.financialRow}>
-          <span style={collectionSystemGeneratedStyles.financialLabel}>
+        <div
+          style={
+            collectionSystemGeneratedStyles.financialRow
+          }
+        >
+
+          <span
+            style={
+              collectionSystemGeneratedStyles.financialLabel
+            }
+          >
             Principal Due
           </span>
 
-          <strong style={collectionSystemGeneratedStyles.financialValue}>
-            {currency(principalDue)}
+
+          <strong
+            style={
+              collectionSystemGeneratedStyles.financialValue
+            }
+          >
+            {
+              currency(
+                principalDue,
+              )
+            }
           </strong>
+
         </div>
+
 
         {/* ==================================================
             ACCRUED INTEREST
         ================================================== */}
 
-        <div style={collectionSystemGeneratedStyles.financialRow}>
-          <span style={collectionSystemGeneratedStyles.financialLabel}>
+        <div
+          style={
+            collectionSystemGeneratedStyles.financialRow
+          }
+        >
+
+          <span
+            style={
+              collectionSystemGeneratedStyles.financialLabel
+            }
+          >
             Accrued Interest (till today)
           </span>
 
-          <strong style={collectionSystemGeneratedStyles.financialValue}>
-            {currency(accruedInterest)}
+
+          <strong
+            style={
+              collectionSystemGeneratedStyles.financialValue
+            }
+          >
+            {
+              currency(
+                accruedInterest,
+              )
+            }
           </strong>
+
         </div>
+
 
         {/* ==================================================
             INTEREST CALCULATION INFORMATION
         ================================================== */}
 
-        <div style={collectionSystemGeneratedStyles.financialRow}>
-          <span style={collectionSystemGeneratedStyles.financialLabel}>
+        <div
+          style={
+            collectionSystemGeneratedStyles.financialRow
+          }
+        >
+
+          <span
+            style={
+              collectionSystemGeneratedStyles.financialLabel
+            }
+          >
             Interest Basis
           </span>
 
-          <strong style={collectionSystemGeneratedStyles.financialValue}>
-            {monthlyInterestRate}% × {elapsedDays} day
-            {elapsedDays === 1 ? "" : "s"}
+
+          <strong
+            style={
+              collectionSystemGeneratedStyles.financialValue
+            }
+          >
+
+            {
+              monthlyInterestRate
+            }% × {
+              elapsedDays
+            } day
+            {
+              elapsedDays === 1
+                ? ""
+                : "s"
+            }
+
           </strong>
+
         </div>
+
 
         {/* ==================================================
             LATE FEE
         ================================================== */}
 
-        <div style={collectionSystemGeneratedStyles.financialRow}>
-          <span style={collectionSystemGeneratedStyles.financialLabel}>
+        <div
+          style={
+            collectionSystemGeneratedStyles.financialRow
+          }
+        >
+
+          <span
+            style={
+              collectionSystemGeneratedStyles.financialLabel
+            }
+          >
             Late Fee / Penalty
           </span>
 
-          <strong style={collectionSystemGeneratedStyles.financialValue}>
-            {currency(lateFee)}
+
+          <strong
+            style={
+              collectionSystemGeneratedStyles.financialValue
+            }
+          >
+            {
+              currency(
+                lateFee,
+              )
+            }
           </strong>
+
         </div>
+
       </div>
-
-      {/* ====================================================
-          TOTAL DIVIDER
-      ==================================================== */}
-
-      <div style={collectionSystemGeneratedStyles.totalDivider} />
 
       {/* ====================================================
           GENERATED TOTAL
       ==================================================== */}
 
-      <div style={collectionSystemGeneratedStyles.generatedTotal}>
-        <span style={collectionSystemGeneratedStyles.generatedTotalLabel}>
+      <div
+        style={
+          collectionSystemGeneratedStyles.generatedTotal
+        }
+      >
+
+        <span
+          style={
+            collectionSystemGeneratedStyles.generatedTotalLabel
+          }
+        >
           Generated Total
         </span>
 
-        <strong style={collectionSystemGeneratedStyles.generatedTotalValue}>
-          {currency(generatedTotal)}
+
+        <strong
+          style={
+            collectionSystemGeneratedStyles.generatedTotalValue
+          }
+        >
+          {
+            currency(
+              generatedTotal,
+            )
+          }
         </strong>
+
       </div>
+
 
       {/* ====================================================
           LOCKED INFORMATION NOTICE
       ==================================================== */}
 
-      <div style={collectionSystemGeneratedStyles.notice}>
-        <span
-          aria-hidden="true"
-          style={collectionSystemGeneratedStyles.noticeIcon}
-        >
-          ⓘ
-        </span>
+      <div
+        style={
+          collectionSystemGeneratedStyles.notice
+        }
+      >
 
-        <div style={collectionSystemGeneratedStyles.noticeContent}>
-          <strong style={collectionSystemGeneratedStyles.noticeTitle}>
+        {/* =================================================
+            LUCIDE INFO ICON
+
+            Replaces the old ⓘ symbol.
+        ================================================= */}
+
+        <Info
+          aria-hidden="true"
+          style={
+            collectionSystemGeneratedStyles.noticeIcon
+          }
+          size={15}
+          strokeWidth={2}
+        />
+
+
+        <div
+          style={
+            collectionSystemGeneratedStyles.noticeContent
+          }
+        >
+
+          <strong
+            style={
+              collectionSystemGeneratedStyles.noticeTitle
+            }
+          >
             This amount is auto calculated and locked.
           </strong>
 
-          <span style={collectionSystemGeneratedStyles.noticeMessage}>
+
+          <span
+            style={
+              collectionSystemGeneratedStyles.noticeMessage
+            }
+          >
             Principal is based on the actual loan amount. Interest is calculated
             from the loan date through today using the monthly flat-interest
             rule. EMI amount is not used.
           </span>
+
         </div>
+
       </div>
+
     </section>
+
   );
+
 }
+
 
 // ============================================================
 // END
