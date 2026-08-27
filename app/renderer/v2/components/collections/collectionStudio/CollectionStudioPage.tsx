@@ -75,8 +75,6 @@ import type { CollectionReviewData } from "../CollectionReviewData";
 
 import CollectionLoanSelection from "./CollectionLoanSelection";
 
-import CollectionSelectedLoan from "./CollectionSelectedLoan";
-
 import CollectionSystemGenerated from "./CollectionSystemGenerated";
 
 import CollectionEntry from "./CollectionEntry";
@@ -555,28 +553,6 @@ export default function CollectionStudioPage() {
   );
 
   // ==========================================================
-  // SELECTED LOAN VIEW DATA
-  // ==========================================================
-
-  const selectedLoanView = useMemo(() => {
-    if (!selectedLoan) {
-      return null;
-    }
-
-    return {
-      loanNumber: selectedLoan.loanNumber,
-
-      principal: selectedLoan.amount,
-
-      repaymentType: selectedLoan.repaymentType,
-
-      outstanding: selectedLoan.outstanding,
-
-      status: selectedLoan.status,
-    };
-  }, [selectedLoan]);
-
-  // ==========================================================
   // SYNC SELECTED CUSTOMER / LOAN INTO CONTEXT
   // ==========================================================
 
@@ -673,8 +649,8 @@ export default function CollectionStudioPage() {
   // CUSTOMER / LOAN SAFETY FALLBACK
   // ==========================================================
 
-  if (!selectedCustomer || !selectedLoan || !selectedLoanView) {
-    return (
+if (!selectedCustomer || !selectedLoan) {
+      return (
       <main style={collectionStudioStyles.page}>
         <div style={collectionStudioStyles.pageInner}>
           <section style={collectionStudioStyles.emptyState}>
@@ -814,19 +790,6 @@ export default function CollectionStudioPage() {
               onSelectLoan={(loan) => handleLoanChange(loan.id)}
             />
           </div>
-
-          {/* ==================================================
-              SELECTED LOAN
-          ================================================== */}
-
-          <CollectionSelectedLoan
-            loan={selectedLoanView}
-            formatCurrency={(value: number) => {
-              const safeValue = Number.isFinite(value) ? value : 0;
-
-              return `₹ ${safeValue.toLocaleString("en-IN")}`;
-            }}
-          />
 
           {/* ==================================================
               3 + 4. COLLECTION WORKSPACE
