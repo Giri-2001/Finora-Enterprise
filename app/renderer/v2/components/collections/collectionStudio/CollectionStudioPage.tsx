@@ -14,14 +14,13 @@
 // - Automatically open the collection workspace
 // - Maintain selected customer state
 // - Maintain selected loan state
-// - Provide customer / loan selection inside the workspace
 // - Normalize selected loan presentation data
 // - Carry persisted loan documents into Collection Studio
+// - Carry authoritative loan principal, interest and date
 // - Establish CollectionContext for the complete Studio tree
 // - Render complete Collection Studio workflow
 // - Connect System Generated section
 // - Connect Collection Entry section
-// - Connect Collection Summary section
 // - Connect Payment Details section
 // - Connect Loan Documents section
 // - Connect Collection History section
@@ -54,6 +53,15 @@
 // - Changing selected loan immediately changes its document gallery.
 // - Persisted document dataUrl is preferred by LoanDocuments.
 // - url remains the defensive fallback.
+//
+// FINANCIAL WIRING
+//
+// - Original loan principal comes from Loan.amount.
+// - Monthly interest percentage comes from Loan.interest.
+// - Loan date comes from Loan.loanDate.
+// - EMI / schedule amount is NOT used by System Generated.
+// - Step 3 calculates accrued interest from loan date.
+// - Step 3 remains presentation-only.
 //
 // VERSION : 2.0
 // STATUS  : Production
@@ -117,17 +125,20 @@ export interface CollectionLoanRecord {
 
   outstanding: number;
 
+  /*
+   * Monthly flat interest percentage.
+   */
+
+  interest: number;
+
+  /*
+   * Original loan date.
+   */
+
+  loanDate: string;
+
   // ==========================================================
   // LOAN DOCUMENTS
-  // ==========================================================
-  //
-  // IMPORTANT:
-  //
-  // These are the documents persisted against THIS loan.
-  //
-  // They are intentionally carried through the Collection
-  // presentation boundary without modification.
-  //
   // ==========================================================
 
   documents: DocumentsStudioItem[];
@@ -160,26 +171,52 @@ function createEmptyReviewData(): CollectionReviewData {
 
   return {
     customerId: "",
+
     customerName: "",
+
     customerPhone: "",
+
     loanId: "",
+
     loanNumber: "",
+
     loanAmount: 0,
+
     outstandingBalance: 0,
+
+    loanInterestRate: 0,
+
+    loanDate: "",
+
     todayDue: 0,
+
     previousDue: 0,
+
     paymentAmount: 0,
+
     paymentMethod: "cash",
+
     paymentReference: "",
+
     penaltyAmount: 0,
+
     discountAmount: 0,
+
     advanceAdjustment: 0,
+
     remarks: "",
+
     receiptNumber: "",
+
     receiptDate: today,
+
     status: "Draft",
+
     createdAt: "",
+
     updatedAt: "",
+
+    collectionType: "manual",
   };
 }
 
@@ -250,12 +287,17 @@ function isCollectionEligibleCustomer(customer: CustomerProfile): boolean {
 //
 // IMPORTANT:
 //
-// Documents are copied as the authoritative persisted
-// document array belonging to this exact loan.
+// Loan.amount
+//   → Original principal
 //
-// No dummy documents are created here.
-// No document filtering is performed here.
-// No document URL is changed here.
+// Loan.interest
+//   → Monthly interest percentage
+//
+// Loan.loanDate
+//   → Interest calculation start date
+//
+// EMI / schedule is intentionally not copied into
+// the System Generated calculation boundary.
 // ============================================================
 
 function mapLoanToCollectionLoan(loan: Loan): CollectionLoanRecord {
@@ -271,6 +313,10 @@ function mapLoanToCollectionLoan(loan: Loan): CollectionLoanRecord {
     status: String(loan.status ?? ""),
 
     outstanding: Number.isFinite(loan.outstanding) ? loan.outstanding : 0,
+
+    interest: Number.isFinite(loan.interest) ? loan.interest : 0,
+
+    loanDate: String(loan.loanDate ?? ""),
 
     documents: Array.isArray(loan.documents) ? loan.documents : [],
   };
@@ -306,6 +352,22 @@ function buildCollectionCustomerRecord(
 
 // ============================================================
 // BUILD COLLECTION REVIEW DATA
+//
+// IMPORTANT:
+//
+// The selected loan remains the authoritative source.
+//
+// Principal:
+//   loan.amount
+//
+// Interest:
+//   loan.interest
+//
+// Interest start:
+//   loan.loanDate
+//
+// EMI / todayDue is deliberately not used to build
+// the Step 3 financial values.
 // ============================================================
 
 function buildReviewData(
@@ -325,9 +387,40 @@ function buildReviewData(
 
     loanNumber: loan.loanNumber,
 
+    /*
+     * ORIGINAL PRINCIPAL
+     *
+     * This is the actual amount given to the customer.
+     */
+
     loanAmount: loan.amount,
 
+    /*
+     * Existing persisted outstanding value.
+     *
+     * Retained for the collection workflow.
+     *
+     * System Generated Step 3 uses loanAmount as
+     * the principal basis instead of deriving principal
+     * from EMI/todayDue.
+     */
+
     outstandingBalance: loan.outstanding,
+
+    /*
+     * AUTHORITATIVE INTEREST TERMS
+     */
+
+    loanInterestRate: loan.interest,
+
+    loanDate: loan.loanDate,
+
+    /*
+     * Existing EMI-related fields remain available
+     * to Collection Entry.
+     *
+     * Step 3 does not use todayDue as accrued interest.
+     */
 
     todayDue: 0,
 
@@ -356,6 +449,8 @@ function buildReviewData(
     createdAt: now,
 
     updatedAt: now,
+
+    collectionType: "manual",
   };
 }
 
@@ -817,24 +912,6 @@ export default function CollectionStudioPage() {
 
           <section style={collectionStudioStyles.documentsHistoryRow}>
             <div style={collectionStudioStyles.loanDocumentsColumn}>
-              {/* ==================================================
-                  IMPORTANT DOCUMENT WIRING
-
-                  Only the currently selected loan's
-                  persisted documents are passed.
-
-                  Customer A / Loan 1
-                    → Loan 1 documents
-
-                  Customer A / Loan 2
-                    → Loan 2 documents
-
-                  Customer B / Loan 3
-                    → Loan 3 documents
-
-                  No cross-loan document mixing.
-              ================================================== */}
-
               <LoanDocuments documents={selectedLoan.documents} />
             </div>
 
