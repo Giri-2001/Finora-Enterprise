@@ -1,51 +1,21 @@
-/* ===========================================================
-   FINORA ENTERPRISE OS™
-
-   COLLECTION STUDIO™
-
-   PAYMENT DETAILS STYLES
-
-   RESPONSIBILITY
-
-   - Payment details geometry
-   - Section header
-   - Payment form grid
-   - FINORA Theme Engine token consumption
-
-   IMPORTANT
-
-   - No local theme system
-   - No local breakpoint system
-   - No responsive logic
-   - No business logic
-   - No second colour palette
-   - Responsive geometry remains controlled by the
-     FINORA Responsive Engine
-=========================================================== */
-
 // ============================================================
-// IMPORTS
+// FINORA ENTERPRISE OS™
+//
+// COLLECTION STUDIO™
+//
+// PAYMENT DETAILS STYLES
+//
+// VERSION : 2.0
+// STATUS  : Production
 // ============================================================
 
 import type { CSSProperties } from "react";
 
-// ============================================================
-// FINORA THEME TOKENS
-// ============================================================
-
 const THEME = {
-  // ==========================================================
-  // SURFACES
-  // ==========================================================
-
   surface: "var(--finora-theme-surface, var(--surface, #FFFFFF))",
 
   surfaceSoft:
     "var(--finora-theme-surface-muted, var(--surface-soft, #F5F7FA))",
-
-  // ==========================================================
-  // TEXT
-  // ==========================================================
 
   textPrimary: "var(--finora-theme-text-primary, var(--text, #111827))",
 
@@ -53,248 +23,206 @@ const THEME = {
 
   textMuted: "var(--finora-theme-text-muted, var(--text-muted, #6B7280))",
 
-  // ==========================================================
-  // BRAND
-  // ==========================================================
-
   brand: "var(--finora-theme-brand-primary, var(--accent, #C69214))",
 
   brandSoft: "var(--finora-theme-brand-accent-soft, rgba(198, 146, 20, 0.10))",
 
-  // ==========================================================
-  // BORDER
-  // ==========================================================
-
   border: "var(--finora-theme-border-default, var(--border, #D5DCE5))",
 
-  borderStrong: "var(--finora-theme-border-strong, #B8C0CC)",
+  success: "var(--finora-theme-success, var(--success, #23865A))",
+
+  successSoft: "var(--finora-theme-success-soft, rgba(35, 134, 90, 0.10))",
 } as const;
 
-// ============================================================
-// PUBLIC STYLES
-// ============================================================
+const INTER_FONT = "Inter, ui-sans-serif, system-ui, sans-serif";
 
-export const paymentDetailsStyles: Record<string, CSSProperties> = {
-  // ==========================================================
-  // SECTION
-  // ==========================================================
+const GEORGIA_FONT = "Georgia, 'Times New Roman', serif";
 
+export const collectionPaymentDetailsStyles: Record<string, CSSProperties> = {
   section: {
     width: "100%",
-
     minWidth: 0,
-
     boxSizing: "border-box",
-
-    display: "flex",
-
-    flexDirection: "column",
-
-    gap: "16px",
-
-    padding: "16px",
-
+    padding: "10px 18px 12px",
     background: THEME.surface,
-
     border: `1px solid ${THEME.border}`,
-
-    borderRadius: "14px",
-
-    boxShadow: "0 4px 18px rgba(15, 23, 42, 0.04)",
+    borderRadius: "12px",
   },
 
-  // ==========================================================
-  // HEADER
-  // ==========================================================
-
   header: {
-    width: "100%",
-
-    boxSizing: "border-box",
-
-    paddingBottom: "12px",
-
+    display: "flex",
+    alignItems: "flex-start",
+    gap: "10px",
+    paddingBottom: "9px",
     borderBottom: `1px solid ${THEME.border}`,
   },
 
-  // ==========================================================
-  // HEADER CONTENT
-  // ==========================================================
-
-  headerContent: {
-    display: "flex",
-
-    alignItems: "center",
-
-    gap: "10px",
-
-    minWidth: 0,
-  },
-
-  // ==========================================================
-  // STEP NUMBER
-  // ==========================================================
-
   step: {
-    flexShrink: 0,
-
-    width: "24px",
-
-    height: "24px",
-
     display: "inline-flex",
-
     alignItems: "center",
-
     justifyContent: "center",
-
+    width: "25px",
+    height: "25px",
+    flexShrink: 0,
     boxSizing: "border-box",
-
     border: `1px solid ${THEME.brand}`,
-
-    borderRadius: "7px",
-
-    background: THEME.brandSoft,
-
+    borderRadius: "50%",
     color: THEME.brand,
-
-    fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
-
+    fontFamily: INTER_FONT,
     fontSize: "11px",
-
     fontWeight: 800,
   },
-
-  // ==========================================================
-  // TITLE
-  // ==========================================================
 
   title: {
     margin: 0,
-
     color: THEME.textPrimary,
-
-    fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
-
-    fontSize: "12px",
-
-    fontWeight: 800,
-
-    letterSpacing: "0.04em",
-
-    lineHeight: 1.3,
+    fontFamily: GEORGIA_FONT,
+    fontSize: "18px",
+    fontWeight: 700,
+    lineHeight: 1.15,
   },
-
-  // ==========================================================
-  // SUBTITLE
-  // ==========================================================
 
   subtitle: {
-    margin: "3px 0 0",
-
-    color: THEME.textMuted,
-
-    fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
-
-    fontSize: "10px",
-
-    fontWeight: 500,
-
-    lineHeight: 1.35,
+    margin: "2px 0 0",
+    color: THEME.textSecondary,
+    fontFamily: GEORGIA_FONT,
+    fontSize: "11px",
+    lineHeight: 1.25,
   },
 
-  // ==========================================================
-  // FORM
-  // ==========================================================
-
-  form: {
-    width: "100%",
-
-    minWidth: 0,
-
+  body: {
     display: "grid",
-
-    gridTemplateColumns: "repeat(4, minmax(0, 1fr))",
-
-    gap: "12px",
-
+    gridTemplateColumns:
+      "minmax(180px, 1fr) minmax(160px, .9fr) minmax(180px, 1fr) minmax(220px, 1.2fr)",
+    gap: "10px",
     alignItems: "start",
-
-    boxSizing: "border-box",
+    paddingTop: "10px",
   },
-
-  // ==========================================================
-  // FIELD
-  // ==========================================================
 
   field: {
     minWidth: 0,
+    display: "flex",
+    flexDirection: "column",
+    gap: "4px",
+  },
 
+  label: {
+    color: THEME.textPrimary,
+    fontFamily: GEORGIA_FONT,
+    fontSize: "11px",
+    fontWeight: 700,
+    lineHeight: 1.2,
+  },
+
+  input: {
     width: "100%",
-
+    minHeight: "38px",
+    padding: "8px 10px",
     boxSizing: "border-box",
+    border: `1px solid ${THEME.border}`,
+    borderRadius: "7px",
+    outline: "none",
+    background: THEME.surfaceSoft,
+    color: THEME.textPrimary,
+    fontFamily: INTER_FONT,
+    fontSize: "11px",
+    fontWeight: 600,
   },
 
-  // ==========================================================
-  // FULL-WIDTH FIELD CONTRACT
-  //
-  // Kept available for responsive/layout integration.
-  // ==========================================================
-
-  fieldFull: {
-    minWidth: 0,
-
+  textarea: {
     width: "100%",
-
-    gridColumn: "1 / -1",
-
+    minHeight: "72px",
+    padding: "9px 10px",
     boxSizing: "border-box",
-  },
-
-  // ==========================================================
-  // OPTIONAL COMPACT FIELD CONTRACT
-  // ==========================================================
-
-  fieldCompact: {
-    minWidth: 0,
-
-    width: "100%",
-
-    maxWidth: "100%",
-
-    boxSizing: "border-box",
-  },
-
-  // ==========================================================
-  // FORM DIVIDER
-  // ==========================================================
-
-  divider: {
-    width: "100%",
-
-    height: "1px",
-
-    margin: "2px 0",
-
-    background: THEME.borderStrong,
-
-    opacity: 0.55,
-  },
-
-  // ==========================================================
-  // FOOTNOTE
-  // ==========================================================
-
-  helperText: {
-    margin: "5px 0 0",
-
-    color: THEME.textMuted,
-
-    fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
-
-    fontSize: "9px",
-
+    resize: "vertical",
+    border: `1px solid ${THEME.border}`,
+    borderRadius: "10px",
+    outline: "none",
+    background: THEME.surface,
+    color: THEME.textPrimary,
+    fontFamily: GEORGIA_FONT,
+    fontSize: "12px",
     lineHeight: 1.35,
+  },
+
+  totalBar: {
+    gridColumn: "1 / -1",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: "12px",
+    minWidth: 0,
+    padding: "9px 12px",
+    boxSizing: "border-box",
+    border: `1px solid ${THEME.success}`,
+    borderRadius: "8px",
+    background: THEME.successSoft,
+  },
+
+  totalLabel: {
+    display: "block",
+    color: THEME.success,
+    fontFamily: INTER_FONT,
+    fontSize: "9px",
+    fontWeight: 800,
+    letterSpacing: "0.06em",
+  },
+
+  totalHint: {
+    display: "block",
+    marginTop: "2px",
+    color: THEME.textMuted,
+    fontFamily: INTER_FONT,
+    fontSize: "8px",
+  },
+
+  totalValue: {
+    flexShrink: 0,
+    color: THEME.success,
+    fontFamily: GEORGIA_FONT,
+    fontSize: "20px",
+    fontWeight: 700,
+    whiteSpace: "nowrap",
+  },
+
+  actions: {
+    gridColumn: "1 / -1",
+    display: "flex",
+    justifyContent: "flex-end",
+    alignItems: "center",
+    gap: "8px",
+    flexWrap: "wrap",
+    paddingTop: "2px",
+  },
+
+  saveButton: {
+    minHeight: "38px",
+    padding: "8px 16px",
+    boxSizing: "border-box",
+    border: `1px solid ${THEME.brand}`,
+    borderRadius: "7px",
+    background: THEME.surface,
+    color: THEME.textPrimary,
+    fontFamily: INTER_FONT,
+    fontSize: "10px",
+    fontWeight: 800,
+    letterSpacing: "0.03em",
+    cursor: "pointer",
+  },
+
+  receiptButton: {
+    minHeight: "38px",
+    padding: "8px 18px",
+    boxSizing: "border-box",
+    border: `1px solid ${THEME.brand}`,
+    borderRadius: "7px",
+    background: THEME.brand,
+    color: "#FFFFFF",
+    fontFamily: INTER_FONT,
+    fontSize: "10px",
+    fontWeight: 800,
+    letterSpacing: "0.03em",
+    cursor: "pointer",
   },
 };
 

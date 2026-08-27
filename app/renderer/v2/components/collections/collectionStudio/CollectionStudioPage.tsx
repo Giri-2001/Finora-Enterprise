@@ -79,8 +79,6 @@ import CollectionSystemGenerated from "./CollectionSystemGenerated";
 
 import CollectionEntry from "./CollectionEntry";
 
-import CollectionSummary from "../review/CollectionSummary";
-
 import PaymentDetails from "./PaymentDetails";
 
 import LoanDocuments from "./LoanDocuments";
@@ -649,8 +647,8 @@ export default function CollectionStudioPage() {
   // CUSTOMER / LOAN SAFETY FALLBACK
   // ==========================================================
 
-if (!selectedCustomer || !selectedLoan) {
-      return (
+  if (!selectedCustomer || !selectedLoan) {
+    return (
       <main style={collectionStudioStyles.page}>
         <div style={collectionStudioStyles.pageInner}>
           <section style={collectionStudioStyles.emptyState}>
@@ -803,14 +801,6 @@ if (!selectedCustomer || !selectedLoan) {
             <div style={collectionStudioStyles.collectionEntryColumn}>
               <CollectionEntry />
             </div>
-          </section>
-
-          {/* ==================================================
-              5. COLLECTION SUMMARY
-          ================================================== */}
-
-          <section style={collectionStudioStyles.collectionSummarySection}>
-            <CollectionSummary />
           </section>
 
           {/* ==================================================
