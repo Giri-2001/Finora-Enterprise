@@ -36,7 +36,9 @@
 =========================================================== */
 
 import {
+  useEffect,
   useMemo,
+  useRef,
   useState,
 } from "react";
 
@@ -49,6 +51,7 @@ import {
   dropdownStyle,
   customerOptionStyle,
   customerOptionActiveStyle,
+  customerOptionHoverStyle,
   customerOptionNameStyle,
   customerOptionMetaStyle,
   emptyStateStyle,
@@ -131,6 +134,94 @@ export default function LoanCustomerCard({
     search,
     setSearch,
   ] = useState("");
+
+  const [
+  hoveredCustomerId,
+  setHoveredCustomerId,
+] = useState<string | null>(null);
+
+  const selectorButtonRef =
+  useRef<HTMLButtonElement | null>(null);
+
+  /* =========================================================
+   DROPDOWN VIEWPORT POSITION
+   ========================================================= */
+
+const [
+  dropdownPosition,
+  setDropdownPosition,
+] = useState<{
+  top: number;
+  left: number;
+  width: number;
+}>({
+  top: 0,
+  left: 0,
+  width: 0,
+});
+
+
+useEffect(() => {
+
+  if (!isOpen) {
+    return;
+  }
+
+
+  function updateDropdownPosition(): void {
+
+    const button =
+      selectorButtonRef.current;
+
+    if (!button) {
+      return;
+    }
+
+
+    const rect =
+      button.getBoundingClientRect();
+
+
+    setDropdownPosition({
+      top: rect.bottom + 5,
+      left: rect.left,
+      width: rect.width,
+    });
+
+  }
+
+
+  updateDropdownPosition();
+
+
+  window.addEventListener(
+    "resize",
+    updateDropdownPosition,
+  );
+
+  window.addEventListener(
+    "scroll",
+    updateDropdownPosition,
+    true,
+  );
+
+
+  return () => {
+
+    window.removeEventListener(
+      "resize",
+      updateDropdownPosition,
+    );
+
+    window.removeEventListener(
+      "scroll",
+      updateDropdownPosition,
+      true,
+    );
+
+  };
+
+}, [isOpen]);
 
 
   /* =========================================================
@@ -272,9 +363,11 @@ export default function LoanCustomerCard({
       >
 
         <button
-          type="button"
+  ref={selectorButtonRef}
 
-          onClick={() =>
+  type="button"
+
+  onClick={() =>
             setIsOpen(
               (previous) =>
                 !previous,
@@ -326,26 +419,30 @@ export default function LoanCustomerCard({
         {isOpen && (
 
           <div
-            style={{
-              ...dropdownStyle,
+  style={{
+    ...dropdownStyle,
 
-              position: "absolute",
+    position: "fixed",
 
-              top: "calc(100% + 5px)",
+    top: dropdownPosition.top,
 
-              left: 0,
+    left: dropdownPosition.left,
 
-              right: 0,
+    width: dropdownPosition.width,
 
-              zIndex: 99999,
+    right: "auto",
 
-              overflowY: "auto",
+    zIndex: 999999,
 
-              overflowX: "hidden",
+    overflowY: "auto",
 
-              maxHeight: "280px",
-            }}
-          >
+    overflowX: "hidden",
+
+    maxHeight: "280px",
+
+    boxSizing: "border-box",
+  }}
+>
 
             {/* =============================================
                 SEARCH
@@ -420,11 +517,23 @@ export default function LoanCustomerCard({
                           )
                         }
 
+                        onMouseEnter={() =>
+  setHoveredCustomerId(
+    customer.customerId,
+  )
+}
+
+onMouseLeave={() =>
+  setHoveredCustomerId(null)
+}
+
                         style={
-                          active
-                            ? customerOptionActiveStyle
-                            : customerOptionStyle
-                        }
+  active
+    ? customerOptionActiveStyle
+    : hoveredCustomerId === customer.customerId
+      ? customerOptionHoverStyle
+      : customerOptionStyle
+}
                       >
 
                         <span

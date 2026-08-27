@@ -346,7 +346,10 @@ export const customerOptionStyle: CSSProperties = {
 
   border: "1px solid transparent",
 
-  borderRadius: "7px",
+  borderBottom:
+    `1px solid ${THEME.border}`,
+
+  borderRadius: "0",
 
   background: "transparent",
 
@@ -356,6 +359,9 @@ export const customerOptionStyle: CSSProperties = {
   cursor: "pointer",
 
   textAlign: "left",
+
+  transition:
+    "background 140ms ease, border-color 140ms ease, color 140ms ease",
 
 };
 
@@ -371,8 +377,29 @@ export const customerOptionActiveStyle: CSSProperties = {
   border:
     `1px solid ${THEME.primary}`,
 
+  borderBottom:
+    `1px solid ${THEME.primary}`,
+
+  borderRadius: "7px",
+
   background:
     THEME.primarySoft,
+
+};
+
+// ============================================================
+// HOVER CUSTOMER OPTION
+// ============================================================
+
+export const customerOptionHoverStyle: CSSProperties = {
+
+  ...customerOptionStyle,
+
+  background:
+    THEME.primarySoft,
+
+  borderBottom:
+    `1px solid ${THEME.primary}`,
 
 };
 
