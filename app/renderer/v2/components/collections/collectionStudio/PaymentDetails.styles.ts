@@ -92,21 +92,13 @@ export const collectionPaymentDetailsStyles: Record<string, CSSProperties> = {
 
     justifyContent: "center",
 
-    width: "24px",
-
-    height: "24px",
-
     flexShrink: 0,
 
     boxSizing: "border-box",
 
-    border: `1px solid ${THEME.brand}`,
-
-    borderRadius: "50%",
-
     color: THEME.brand,
 
-    fontFamily: INTER_FONT,
+    fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
 
     fontSize: "10px",
 
@@ -118,23 +110,25 @@ export const collectionPaymentDetailsStyles: Record<string, CSSProperties> = {
 
     color: THEME.textPrimary,
 
-    fontFamily: GEORGIA_FONT,
+    fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
 
-    fontSize: "17px",
+    fontSize: "16px",
 
     fontWeight: 700,
 
-    lineHeight: 1.1,
+    lineHeight: 1.6,
 
-    letterSpacing: "0.01em",
+    letterSpacing: "0.03em",
+
+    textTransform: "uppercase",
   },
 
   subtitle: {
-    margin: "2px 0 0",
+    margin: "5px 0 0",
 
     color: THEME.textSecondary,
 
-    fontFamily: GEORGIA_FONT,
+    fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
 
     fontSize: "10px",
 
@@ -163,11 +157,11 @@ export const collectionPaymentDetailsStyles: Record<string, CSSProperties> = {
 
     columnGap: "9px",
 
-    rowGap: "8px",
+    rowGap: "10px",
 
     alignItems: "start",
 
-    paddingTop: "8px",
+    paddingTop: "15px",
 
     minWidth: 0,
   },
@@ -183,7 +177,7 @@ export const collectionPaymentDetailsStyles: Record<string, CSSProperties> = {
 
     flexDirection: "column",
 
-    gap: "3px",
+    gap: "6px",
   },
 
   // ==========================================================
@@ -193,9 +187,9 @@ export const collectionPaymentDetailsStyles: Record<string, CSSProperties> = {
   label: {
     color: THEME.textPrimary,
 
-    fontFamily: GEORGIA_FONT,
+    fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
 
-    fontSize: "10px",
+    fontSize: "13px",
 
     fontWeight: 700,
 
@@ -227,9 +221,9 @@ export const collectionPaymentDetailsStyles: Record<string, CSSProperties> = {
 
     color: THEME.textPrimary,
 
-    fontFamily: INTER_FONT,
+    fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
 
-    fontSize: "10px",
+    fontSize: "13px",
 
     fontWeight: 600,
   },
@@ -241,7 +235,7 @@ export const collectionPaymentDetailsStyles: Record<string, CSSProperties> = {
   // Occupies first two grid columns.
   // ==========================================================
 
-    remarksField: {
+  remarksField: {
     gridColumn: "1",
 
     minWidth: 0,
@@ -253,7 +247,7 @@ export const collectionPaymentDetailsStyles: Record<string, CSSProperties> = {
     gap: "3px",
   },
 
-    textarea: {
+  textarea: {
     width: "100%",
 
     height: "36px",
@@ -278,11 +272,11 @@ export const collectionPaymentDetailsStyles: Record<string, CSSProperties> = {
 
     color: THEME.textPrimary,
 
-    fontFamily: GEORGIA_FONT,
+    fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
 
-    fontSize: "10px",
+    fontSize: "13px",
 
-    lineHeight: 1.3,
+    lineHeight: 1.5,
   },
 
   // ==========================================================
@@ -291,7 +285,7 @@ export const collectionPaymentDetailsStyles: Record<string, CSSProperties> = {
   // Compact amount card placed in row 2.
   // ==========================================================
 
-    totalBar: {
+  totalBar: {
     minWidth: 0,
 
     height: "36px",
@@ -316,7 +310,7 @@ export const collectionPaymentDetailsStyles: Record<string, CSSProperties> = {
 
     borderRadius: "8px",
 
-    background: THEME.successSoft,
+    background: "rgba(35, 134, 90, 0.05)",
 
     overflow: "hidden",
   },
@@ -336,11 +330,11 @@ export const collectionPaymentDetailsStyles: Record<string, CSSProperties> = {
 
     color: THEME.success,
 
-    fontFamily: INTER_FONT,
+    fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
 
-    fontSize: "8px",
+    fontSize: "12px",
 
-    fontWeight: 800,
+    fontWeight: 750,
 
     letterSpacing: "0.06em",
 
@@ -354,7 +348,7 @@ export const collectionPaymentDetailsStyles: Record<string, CSSProperties> = {
 
     color: THEME.textMuted,
 
-    fontFamily: INTER_FONT,
+    fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
 
     fontSize: "7px",
 
@@ -372,9 +366,9 @@ export const collectionPaymentDetailsStyles: Record<string, CSSProperties> = {
 
     color: THEME.success,
 
-    fontFamily: GEORGIA_FONT,
+    fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
 
-    fontSize: "18px",
+    fontSize: "16px",
 
     fontWeight: 700,
 
@@ -389,7 +383,7 @@ export const collectionPaymentDetailsStyles: Record<string, CSSProperties> = {
   // Second-row third-column.
   // ==========================================================
 
-    actions: {
+  actions: {
     gridColumn: "3",
 
     minWidth: 0,
@@ -438,11 +432,11 @@ export const collectionPaymentDetailsStyles: Record<string, CSSProperties> = {
 
     color: THEME.textPrimary,
 
-    fontFamily: INTER_FONT,
+    fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
 
-    fontSize: "9px",
+    fontSize: "11px",
 
-    fontWeight: 800,
+    fontWeight: 700,
 
     letterSpacing: "0.02em",
 
@@ -470,15 +464,15 @@ export const collectionPaymentDetailsStyles: Record<string, CSSProperties> = {
 
     borderRadius: "7px",
 
-    background: THEME.brand,
+    background: "rgba(198, 146, 20, 0.12)",
 
-    color: "#FFFFFF",
+    color: THEME.brand,
 
-    fontFamily: INTER_FONT,
+    fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
 
-    fontSize: "9px",
+    fontSize: "11px",
 
-    fontWeight: 800,
+    fontWeight: 700,
 
     letterSpacing: "0.02em",
 

@@ -57,13 +57,7 @@
 // IMPORTS
 // ============================================================
 
-import {
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { collectionEntryStyles } from "./CollectionEntry.styles";
 
@@ -72,6 +66,8 @@ import { useCollectionController } from "../controller";
 import { fetchLoans } from "../../../services/loan/loanService";
 
 import { formatCurrency } from "../../../utils/currency/formatCurrency";
+
+import { ReceiptText } from "lucide-react";
 
 // ============================================================
 // TYPES
@@ -98,9 +94,7 @@ interface EmiRecord {
 // ============================================================
 
 function currency(value: number): string {
-  const safeValue = Number.isFinite(value)
-    ? Math.max(0, Math.round(value))
-    : 0;
+  const safeValue = Number.isFinite(value) ? Math.max(0, Math.round(value)) : 0;
 
   return `₹ ${formatCurrency(safeValue)}`;
 }
@@ -171,9 +165,7 @@ export default function CollectionEntry() {
   // It must not depend on a non-canonical controller field.
   // ==========================================================
 
-  const [collectionMode, setCollectionMode] = useState<
-    "emi" | "manual"
-  >("emi");
+  const [collectionMode, setCollectionMode] = useState<"emi" | "manual">("emi");
 
   const isManual = collectionMode === "manual";
 
@@ -187,9 +179,7 @@ export default function CollectionEntry() {
 
   const [loadError, setLoadError] = useState("");
 
-  const [selectedEmiNumbers, setSelectedEmiNumbers] = useState<number[]>(
-    [],
-  );
+  const [selectedEmiNumbers, setSelectedEmiNumbers] = useState<number[]>([]);
 
   // ==========================================================
   // EMI DROPDOWN STATE
@@ -250,30 +240,22 @@ export default function CollectionEntry() {
       const normalizedSchedule = rawSchedule
         .map(
           (installment): EmiRecord => ({
-            installmentNumber:
-              Number(installment.installmentNumber) || 0,
+            installmentNumber: Number(installment.installmentNumber) || 0,
 
             dueDate: String(installment.dueDate ?? ""),
 
-            installmentAmount:
-              Number(installment.installmentAmount) || 0,
+            installmentAmount: Number(installment.installmentAmount) || 0,
 
             status: String(installment.status ?? "Pending"),
 
-            paidAmount:
-              Number(installment.paidAmount ?? 0) || 0,
+            paidAmount: Number(installment.paidAmount ?? 0) || 0,
 
-            receiptNumber:
-              String(installment.receiptNumber ?? ""),
+            receiptNumber: String(installment.receiptNumber ?? ""),
 
-            paidDate:
-              String(installment.paidDate ?? ""),
+            paidDate: String(installment.paidDate ?? ""),
           }),
         )
-        .filter(
-          (installment) =>
-            installment.installmentNumber > 0,
-        );
+        .filter((installment) => installment.installmentNumber > 0);
 
       setEmiSchedule(normalizedSchedule);
 
@@ -281,24 +263,18 @@ export default function CollectionEntry() {
         previous.filter((installmentNumber) =>
           normalizedSchedule.some(
             (installment) =>
-              installment.installmentNumber ===
-                installmentNumber &&
+              installment.installmentNumber === installmentNumber &&
               !isLockedStatus(installment.status) &&
               installment.installmentAmount > 0,
           ),
         ),
       );
     } catch (error) {
-      console.error(
-        "FINORA STEP 4 EMI SCHEDULE LOAD ERROR:",
-        error,
-      );
+      console.error("FINORA STEP 4 EMI SCHEDULE LOAD ERROR:", error);
 
       setEmiSchedule([]);
       setSelectedEmiNumbers([]);
-      setLoadError(
-        "Unable to load the selected loan EMI schedule.",
-      );
+      setLoadError("Unable to load the selected loan EMI schedule.");
     } finally {
       setLoading(false);
     }
@@ -321,16 +297,10 @@ export default function CollectionEntry() {
       void loadSchedule();
     }
 
-    window.addEventListener(
-      "FINORA_LOAN_UPDATED",
-      handleLoanUpdated,
-    );
+    window.addEventListener("FINORA_LOAN_UPDATED", handleLoanUpdated);
 
     return () => {
-      window.removeEventListener(
-        "FINORA_LOAN_UPDATED",
-        handleLoanUpdated,
-      );
+      window.removeEventListener("FINORA_LOAN_UPDATED", handleLoanUpdated);
     };
   }, [loadSchedule]);
 
@@ -347,11 +317,7 @@ export default function CollectionEntry() {
     () =>
       emiSchedule.reduce(
         (total, installment) =>
-          total +
-          Math.max(
-            0,
-            Number(installment.installmentAmount) || 0,
-          ),
+          total + Math.max(0, Number(installment.installmentAmount) || 0),
         0,
       ),
     [emiSchedule],
@@ -381,21 +347,11 @@ export default function CollectionEntry() {
   const selectedEmiAmount = useMemo(
     () =>
       emiSchedule.reduce((total, installment) => {
-        if (
-          !selectedEmiNumbers.includes(
-            installment.installmentNumber,
-          )
-        ) {
+        if (!selectedEmiNumbers.includes(installment.installmentNumber)) {
           return total;
         }
 
-        return (
-          total +
-          Math.max(
-            0,
-            Number(installment.installmentAmount) || 0,
-          )
-        );
+        return total + Math.max(0, Number(installment.installmentAmount) || 0);
       }, 0),
     [emiSchedule, selectedEmiNumbers],
   );
@@ -407,17 +363,12 @@ export default function CollectionEntry() {
   const allEligibleSelected =
     eligibleEmis.length > 0 &&
     eligibleEmis.every((installment) =>
-      selectedEmiNumbers.includes(
-        installment.installmentNumber,
-      ),
+      selectedEmiNumbers.includes(installment.installmentNumber),
     );
 
-  const someEligibleSelected =
-    eligibleEmis.some((installment) =>
-      selectedEmiNumbers.includes(
-        installment.installmentNumber,
-      ),
-    );
+  const someEligibleSelected = eligibleEmis.some((installment) =>
+    selectedEmiNumbers.includes(installment.installmentNumber),
+  );
 
   // ==========================================================
   // SYNC SELECT ALL INDETERMINATE STATE
@@ -445,29 +396,16 @@ export default function CollectionEntry() {
     }
 
     if (paymentAmount !== selectedEmiAmount) {
-      updateField(
-        "paymentAmount",
-        selectedEmiAmount,
-      );
+      updateField("paymentAmount", selectedEmiAmount);
     }
-  }, [
-    isManual,
-    paymentAmount,
-    selectedEmiAmount,
-    updateField,
-  ]);
+  }, [isManual, paymentAmount, selectedEmiAmount, updateField]);
 
   // ==========================================================
   // MODE CHANGE
   // ==========================================================
 
-  function handleModeChange(
-    mode: "emi" | "manual",
-  ): void {
-    console.log(
-      "FINORA STEP 4 MODE:",
-      mode,
-    );
+  function handleModeChange(mode: "emi" | "manual"): void {
+    console.log("FINORA STEP 4 MODE:", mode);
 
     setCollectionMode(mode);
 
@@ -492,24 +430,14 @@ export default function CollectionEntry() {
   // ==========================================================
 
   function handleManualValueChange(
-    field:
-      | "paymentAmount"
-      | "advanceAdjustment"
-      | "discountAmount",
+    field: "paymentAmount" | "advanceAdjustment" | "discountAmount",
     rawValue: string,
   ): void {
     const trimmed = rawValue.trim();
 
-    const value =
-      trimmed === ""
-        ? 0
-        : Math.max(0, Number(trimmed) || 0);
+    const value = trimmed === "" ? 0 : Math.max(0, Number(trimmed) || 0);
 
-    console.log(
-      "FINORA STEP 4 MANUAL VALUE:",
-      field,
-      value,
-    );
+    console.log("FINORA STEP 4 MANUAL VALUE:", field, value);
 
     updateField(field, value);
   }
@@ -528,9 +456,7 @@ export default function CollectionEntry() {
   // - Dropdown closes only from the selector trigger.
   // ==========================================================
 
-  function handleEmiSelection(
-    installment: EmiRecord,
-  ): void {
+  function handleEmiSelection(installment: EmiRecord): void {
     if (isLockedStatus(installment.status)) {
       return;
     }
@@ -540,21 +466,15 @@ export default function CollectionEntry() {
     }
 
     setSelectedEmiNumbers((previous) => {
-      const exists = previous.includes(
-        installment.installmentNumber,
-      );
+      const exists = previous.includes(installment.installmentNumber);
 
       if (exists) {
         return previous.filter(
-          (number) =>
-            number !== installment.installmentNumber,
+          (number) => number !== installment.installmentNumber,
         );
       }
 
-      return [
-        ...previous,
-        installment.installmentNumber,
-      ];
+      return [...previous, installment.installmentNumber];
     });
 
     // --------------------------------------------------------
@@ -596,15 +516,12 @@ export default function CollectionEntry() {
         previous.filter(
           (number) =>
             !eligibleEmis.some(
-              (installment) =>
-                installment.installmentNumber === number,
+              (installment) => installment.installmentNumber === number,
             ),
         ),
       );
 
-      console.log(
-        "FINORA STEP 4 ALL ELIGIBLE EMIS DESELECTED",
-      );
+      console.log("FINORA STEP 4 ALL ELIGIBLE EMIS DESELECTED");
 
       return;
     }
@@ -613,17 +530,13 @@ export default function CollectionEntry() {
       const selected = new Set(previous);
 
       eligibleEmis.forEach((installment) => {
-        selected.add(
-          installment.installmentNumber,
-        );
+        selected.add(installment.installmentNumber);
       });
 
       return Array.from(selected);
     });
 
-    console.log(
-      "FINORA STEP 4 ALL ELIGIBLE EMIS SELECTED",
-    );
+    console.log("FINORA STEP 4 ALL ELIGIBLE EMIS SELECTED");
   }
 
   // ==========================================================
@@ -638,17 +551,11 @@ export default function CollectionEntry() {
 
       <header style={collectionEntryStyles.header}>
         <span style={collectionEntryStyles.step}>
-          4.
+          <ReceiptText size={26} strokeWidth={2} />
         </span>
 
         <div style={collectionEntryStyles.titleGroup}>
-          <h2 style={collectionEntryStyles.title}>
-            COLLECTION ENTRY
-          </h2>
-
-          <span style={collectionEntryStyles.subtitle}>
-            Select EMI collection or enter a manual collection.
-          </span>
+          <h2 style={collectionEntryStyles.title}>Collection Entry</h2>
         </div>
       </header>
 
@@ -658,23 +565,17 @@ export default function CollectionEntry() {
 
       <div style={collectionEntryStyles.modeRow}>
         <label
-          onClick={() =>
-            handleModeChange("emi")
-          }
+          onClick={() => handleModeChange("emi")}
           style={{
             ...collectionEntryStyles.radioOption,
-            ...(!isManual
-              ? collectionEntryStyles.radioOptionActive
-              : {}),
+            ...(!isManual ? collectionEntryStyles.radioOptionActive : {}),
           }}
         >
           <input
             type="radio"
             name="collection-mode"
             checked={!isManual}
-            onChange={() =>
-              handleModeChange("emi")
-            }
+            onChange={() => handleModeChange("emi")}
             style={collectionEntryStyles.modeRadio}
           />
 
@@ -682,23 +583,17 @@ export default function CollectionEntry() {
         </label>
 
         <label
-          onClick={() =>
-            handleModeChange("manual")
-          }
+          onClick={() => handleModeChange("manual")}
           style={{
             ...collectionEntryStyles.radioOption,
-            ...(isManual
-              ? collectionEntryStyles.radioOptionActive
-              : {}),
+            ...(isManual ? collectionEntryStyles.radioOptionActive : {}),
           }}
         >
           <input
             type="radio"
             name="collection-mode"
             checked={isManual}
-            onChange={() =>
-              handleModeChange("manual")
-            }
+            onChange={() => handleModeChange("manual")}
             style={collectionEntryStyles.modeRadio}
           />
 
@@ -711,9 +606,7 @@ export default function CollectionEntry() {
       ====================================================== */}
 
       {!isManual && (
-        <div
-          style={collectionEntryStyles.emiDropdown}
-        >
+        <div style={collectionEntryStyles.emiDropdown}>
           {/* ==================================================
               DROPDOWN TRIGGER
           ================================================== */}
@@ -722,38 +615,22 @@ export default function CollectionEntry() {
             type="button"
             aria-haspopup="listbox"
             aria-expanded={emiDropdownOpen}
-            onClick={() =>
-              setEmiDropdownOpen(
-                (previous) => !previous,
-              )
-            }
-            style={
-              collectionEntryStyles.emiDropdownTrigger
-            }
+            onClick={() => setEmiDropdownOpen((previous) => !previous)}
+            style={collectionEntryStyles.emiDropdownTrigger}
           >
-            <span
-              style={
-                collectionEntryStyles.emiDropdownTriggerText
-              }
-            >
+            <span style={collectionEntryStyles.emiDropdownTriggerText}>
               {selectedEmiNumbers.length > 0
                 ? `${selectedEmiNumbers.length} EMI${
-                    selectedEmiNumbers.length === 1
-                      ? ""
-                      : "s"
+                    selectedEmiNumbers.length === 1 ? "" : "s"
                   } selected`
                 : "Select EMI(s)"}
             </span>
 
             <span
               aria-hidden="true"
-              style={
-                collectionEntryStyles.emiDropdownArrow
-              }
+              style={collectionEntryStyles.emiDropdownArrow}
             >
-              {emiDropdownOpen
-                ? "▴"
-                : "▾"}
+              {emiDropdownOpen ? "▴" : "▾"}
             </span>
           </button>
 
@@ -765,36 +642,20 @@ export default function CollectionEntry() {
             <div
               role="listbox"
               aria-label="EMI schedule"
-              style={
-                collectionEntryStyles.emiDropdownPanel
-              }
+              style={collectionEntryStyles.emiDropdownPanel}
             >
               {/* ==============================================
                   DROPDOWN HEADER
               ============================================== */}
 
-              <div
-                style={
-                  collectionEntryStyles.emiDropdownHeader
-                }
-              >
-                <span
-                  style={
-                    collectionEntryStyles.scheduleHeader
-                  }
-                >
+              <div style={collectionEntryStyles.emiDropdownHeader}>
+                <span style={collectionEntryStyles.scheduleHeader}>
                   EMI SCHEDULE
                 </span>
 
-                <span
-                  style={
-                    collectionEntryStyles.scheduleCount
-                  }
-                >
+                <span style={collectionEntryStyles.scheduleCount}>
                   {emiSchedule.length}{" "}
-                  {emiSchedule.length === 1
-                    ? "INSTALLMENT"
-                    : "INSTALLMENTS"}
+                  {emiSchedule.length === 1 ? "INSTALLMENT" : "INSTALLMENTS"}
                 </span>
               </div>
 
@@ -803,211 +664,133 @@ export default function CollectionEntry() {
               ============================================== */}
 
               {loading ? (
-                <div
-                  style={
-                    collectionEntryStyles.loadingSchedule
-                  }
-                >
+                <div style={collectionEntryStyles.loadingSchedule}>
                   Loading EMI schedule...
                 </div>
               ) : loadError ? (
-                <div
-                  style={
-                    collectionEntryStyles.errorSchedule
-                  }
-                >
+                <div style={collectionEntryStyles.errorSchedule}>
                   {loadError}
                 </div>
               ) : emiSchedule.length === 0 ? (
-                <div
-                  style={
-                    collectionEntryStyles.emptySchedule
-                  }
-                >
-                  No EMI schedule is stored for the selected
-                  loan.
+                <div style={collectionEntryStyles.emptySchedule}>
+                  No EMI schedule is stored for the selected loan.
                 </div>
               ) : (
-                <div
-                  style={
-                    collectionEntryStyles.emiDropdownList
-                  }
-                >
+                <div style={collectionEntryStyles.emiDropdownList}>
                   {/* ==========================================
                       EMI ROWS
                   ========================================== */}
 
-                  {emiSchedule.map(
-                    (installment) => {
-                      const locked =
-                        isLockedStatus(
-                          installment.status,
-                        );
+                  {emiSchedule.map((installment) => {
+                    const locked = isLockedStatus(installment.status);
 
-                      const selected =
-                        selectedEmiNumbers.includes(
-                          installment.installmentNumber,
-                        );
+                    const selected = selectedEmiNumbers.includes(
+                      installment.installmentNumber,
+                    );
 
-                      const normalizedStatus =
-                        normalizeStatus(
-                          installment.status,
-                        );
+                    const normalizedStatus = normalizeStatus(
+                      installment.status,
+                    );
 
-                      const statusStyle = {
-                        ...collectionEntryStyles.status,
+                    const statusStyle = {
+                      ...collectionEntryStyles.status,
 
-                        ...(normalizedStatus ===
-                        "paid"
-                          ? collectionEntryStyles.statusPaid
-                          : normalizedStatus ===
-                              "preclosed"
-                            ? collectionEntryStyles.statusPreclosed
-                            : collectionEntryStyles.statusPending),
-                      };
+                      ...(normalizedStatus === "paid"
+                        ? collectionEntryStyles.statusPaid
+                        : normalizedStatus === "preclosed"
+                          ? collectionEntryStyles.statusPreclosed
+                          : collectionEntryStyles.statusPending),
+                    };
 
-                      return (
-                        <label
-                          key={
-                            installment.installmentNumber
-                          }
-                          style={{
-                            ...collectionEntryStyles.emiDropdownRow,
+                    return (
+                      <label
+                        key={installment.installmentNumber}
+                        style={{
+                          ...collectionEntryStyles.emiDropdownRow,
 
-                            ...(selected
-                              ? collectionEntryStyles.selectedRow
-                              : {}),
+                          ...(selected
+                            ? collectionEntryStyles.selectedRow
+                            : {}),
 
-                            ...(locked
-                              ? collectionEntryStyles.lockedRow
-                              : {}),
-                          }}
-                        >
-                          {/* ==============================
+                          ...(locked ? collectionEntryStyles.lockedRow : {}),
+                        }}
+                      >
+                        {/* ==============================
                               EMI
                           ============================== */}
 
-                          <span
-                            style={
-                              collectionEntryStyles.emiName
-                            }
-                          >
-                            EMI{" "}
-                            {
-                              installment.installmentNumber
-                            }
-                          </span>
+                        <span style={collectionEntryStyles.emiName}>
+                          EMI {installment.installmentNumber}
+                        </span>
 
-                          {/* ==============================
+                        {/* ==============================
                               DUE DATE
                           ============================== */}
 
-                          <span
-                            style={
-                              collectionEntryStyles.scheduleTableCell
-                            }
-                          >
-                            {formatEmiDate(
-                              installment.dueDate,
-                            )}
-                          </span>
+                        <span style={collectionEntryStyles.scheduleTableCell}>
+                          {formatEmiDate(installment.dueDate)}
+                        </span>
 
-                          {/* ==============================
+                        {/* ==============================
                               AMOUNT
                           ============================== */}
 
-                          <strong
-                            style={
-                              collectionEntryStyles.emiAmount
-                            }
-                          >
-                            {currency(
-                              installment.installmentAmount,
-                            )}
-                          </strong>
+                        <strong style={collectionEntryStyles.emiAmount}>
+                          {currency(installment.installmentAmount)}
+                        </strong>
 
-                          {/* ==============================
+                        {/* ==============================
                               STATUS
                           ============================== */}
 
-                          <span
-                            style={statusStyle}
-                          >
-                            {getStatusLabel(
-                              installment.status,
-                            )}
-                          </span>
+                        <span style={statusStyle}>
+                          {getStatusLabel(installment.status)}
+                        </span>
 
-                          {/* ==============================
+                        {/* ==============================
                               CHECKBOX
                           ============================== */}
 
-                          <span
-                            style={
-                              collectionEntryStyles.selectCell
+                        <span style={collectionEntryStyles.selectCell}>
+                          <input
+                            type="checkbox"
+                            checked={locked || selected}
+                            disabled={
+                              locked || installment.installmentAmount <= 0
                             }
-                          >
-                            <input
-                              type="checkbox"
-                              checked={
-                                locked ||
-                                selected
-                              }
-                              disabled={
-                                locked ||
-                                installment.installmentAmount <=
-                                  0
-                              }
-                              onChange={() =>
-                                handleEmiSelection(
-                                  installment,
-                                )
-                              }
-                              aria-label={
-                                locked
-                                  ? `EMI ${installment.installmentNumber} is locked`
-                                  : `Select EMI ${installment.installmentNumber}`
-                              }
-                              style={
-                                collectionEntryStyles.selectControl
-                              }
-                            />
+                            onChange={() => handleEmiSelection(installment)}
+                            aria-label={
+                              locked
+                                ? `EMI ${installment.installmentNumber} is locked`
+                                : `Select EMI ${installment.installmentNumber}`
+                            }
+                            style={collectionEntryStyles.selectControl}
+                          />
 
-                            {locked && (
-                              <span
-                                style={
-                                  collectionEntryStyles.lockIcon
-                                }
-                                title="Completed installment"
-                                aria-hidden="true"
-                              >
-                                🔒
-                              </span>
-                            )}
-                          </span>
-                        </label>
-                      );
-                    },
-                  )}
+                          {locked && (
+                            <span
+                              style={collectionEntryStyles.lockIcon}
+                              title="Completed installment"
+                              aria-hidden="true"
+                            >
+                              🔒
+                            </span>
+                          )}
+                        </span>
+                      </label>
+                    );
+                  })}
 
                   {/* ==========================================
                       TOTAL EMI ROW
                   ========================================== */}
 
-                  <div
-                    style={
-                      collectionEntryStyles.emiTotalRow
-                    }
-                  >
+                  <div style={collectionEntryStyles.emiTotalRow}>
                     {/* ========================================
                         TOTAL LABEL
                     ======================================== */}
 
-                    <strong
-                      style={
-                        collectionEntryStyles.emiTotalLabel
-                      }
-                    >
+                    <strong style={collectionEntryStyles.emiTotalLabel}>
                       TOTAL EMIs
                     </strong>
 
@@ -1015,21 +798,13 @@ export default function CollectionEntry() {
                         EMPTY DATE COLUMN
                     ======================================== */}
 
-                    <span
-                      style={
-                        collectionEntryStyles.emiTotalSpacer
-                      }
-                    />
+                    <span style={collectionEntryStyles.emiTotalSpacer} />
 
                     {/* ========================================
                         TOTAL AMOUNT
                     ======================================== */}
 
-                    <strong
-                      style={
-                        collectionEntryStyles.emiTotalAmount
-                      }
-                    >
+                    <strong style={collectionEntryStyles.emiTotalAmount}>
                       {currency(totalEmiAmount)}
                     </strong>
 
@@ -1037,37 +812,21 @@ export default function CollectionEntry() {
                         TOTAL LABEL
                     ======================================== */}
 
-                    <span
-                      style={
-                        collectionEntryStyles.emiTotalStatus
-                      }
-                    >
-                      TOTAL
+                    <span style={collectionEntryStyles.emiTotalStatus}>
+                      SELECT ALL
                     </span>
 
                     {/* ========================================
                         SELECT ALL CHECKBOX
                     ======================================== */}
 
-                    <span
-                      style={
-                        collectionEntryStyles.selectCell
-                      }
-                    >
+                    <span style={collectionEntryStyles.selectCell}>
                       <input
-                        ref={
-                          selectAllCheckboxRef
-                        }
+                        ref={selectAllCheckboxRef}
                         type="checkbox"
-                        checked={
-                          allEligibleSelected
-                        }
-                        disabled={
-                          eligibleEmis.length === 0
-                        }
-                        onChange={
-                          handleSelectAllEmis
-                        }
+                        checked={allEligibleSelected}
+                        disabled={eligibleEmis.length === 0}
+                        onChange={handleSelectAllEmis}
                         aria-label={
                           allEligibleSelected
                             ? "Deselect all eligible EMIs"
@@ -1078,9 +837,7 @@ export default function CollectionEntry() {
                             ? "Deselect all EMIs"
                             : "Select all EMIs"
                         }
-                        style={
-                          collectionEntryStyles.selectControl
-                        }
+                        style={collectionEntryStyles.selectControl}
                       />
                     </span>
                   </div>
@@ -1096,53 +853,14 @@ export default function CollectionEntry() {
       ====================================================== */}
 
       {isManual && (
-        <div
-          style={
-            collectionEntryStyles.manualSection
-          }
-        >
-          <div
-            style={
-              collectionEntryStyles.manualHeader
-            }
-          >
-            <div
-              style={
-                collectionEntryStyles.manualTitle
-              }
-            >
-              MANUAL COLLECTION
-            </div>
-
-            <div
-              style={
-                collectionEntryStyles.manualHint
-              }
-            >
-              Enter the collection amount and settlement
-              adjustments.
-            </div>
-          </div>
-
-          <div
-            style={
-              collectionEntryStyles.manualInputGrid
-            }
-          >
+        <div style={collectionEntryStyles.manualSection}>
+          <div style={collectionEntryStyles.manualInputGrid}>
             {/* ==============================================
                 COLLECTION AMOUNT
             ============================================== */}
 
-            <label
-              style={
-                collectionEntryStyles.manualField
-              }
-            >
-              <span
-                style={
-                  collectionEntryStyles.manualFieldLabel
-                }
-              >
+            <label style={collectionEntryStyles.manualField}>
+              <span style={collectionEntryStyles.manualFieldLabel}>
                 COLLECTION AMOUNT
               </span>
 
@@ -1150,21 +868,12 @@ export default function CollectionEntry() {
                 type="number"
                 min="0"
                 step="1"
-                value={
-                  paymentAmount === 0
-                    ? ""
-                    : paymentAmount
-                }
+                value={paymentAmount === 0 ? "" : paymentAmount}
                 onChange={(event) =>
-                  handleManualValueChange(
-                    "paymentAmount",
-                    event.target.value,
-                  )
+                  handleManualValueChange("paymentAmount", event.target.value)
                 }
                 placeholder="₹ 0"
-                style={
-                  collectionEntryStyles.manualInput
-                }
+                style={collectionEntryStyles.manualInput}
                 aria-label="Manual collection amount"
               />
             </label>
@@ -1173,16 +882,8 @@ export default function CollectionEntry() {
                 MANUAL PRINCIPAL
             ============================================== */}
 
-            <label
-              style={
-                collectionEntryStyles.manualField
-              }
-            >
-              <span
-                style={
-                  collectionEntryStyles.manualFieldLabel
-                }
-              >
+            <label style={collectionEntryStyles.manualField}>
+              <span style={collectionEntryStyles.manualFieldLabel}>
                 MANUAL PRINCIPAL
               </span>
 
@@ -1190,11 +891,7 @@ export default function CollectionEntry() {
                 type="number"
                 min="0"
                 step="1"
-                value={
-                  manualPrincipal === 0
-                    ? ""
-                    : manualPrincipal
-                }
+                value={manualPrincipal === 0 ? "" : manualPrincipal}
                 onChange={(event) =>
                   handleManualValueChange(
                     "advanceAdjustment",
@@ -1202,9 +899,7 @@ export default function CollectionEntry() {
                   )
                 }
                 placeholder="₹ 0"
-                style={
-                  collectionEntryStyles.manualInput
-                }
+                style={collectionEntryStyles.manualInput}
                 aria-label="Manual principal"
               />
             </label>
@@ -1213,16 +908,8 @@ export default function CollectionEntry() {
                 DISCOUNT
             ============================================== */}
 
-            <label
-              style={
-                collectionEntryStyles.manualField
-              }
-            >
-              <span
-                style={
-                  collectionEntryStyles.manualFieldLabel
-                }
-              >
+            <label style={collectionEntryStyles.manualField}>
+              <span style={collectionEntryStyles.manualFieldLabel}>
                 DISCOUNT
               </span>
 
@@ -1230,21 +917,12 @@ export default function CollectionEntry() {
                 type="number"
                 min="0"
                 step="1"
-                value={
-                  discountAmount === 0
-                    ? ""
-                    : discountAmount
-                }
+                value={discountAmount === 0 ? "" : discountAmount}
                 onChange={(event) =>
-                  handleManualValueChange(
-                    "discountAmount",
-                    event.target.value,
-                  )
+                  handleManualValueChange("discountAmount", event.target.value)
                 }
                 placeholder="₹ 0"
-                style={
-                  collectionEntryStyles.manualInput
-                }
+                style={collectionEntryStyles.manualInput}
                 aria-label="Discount"
               />
             </label>
@@ -1256,11 +934,7 @@ export default function CollectionEntry() {
           COLLECTION VALUES
       ====================================================== */}
 
-      <div
-        style={
-          collectionEntryStyles.valueGrid
-        }
-      >
+      <div style={collectionEntryStyles.valueGrid}>
         {/* ====================================================
             SELECTED EMI
         ==================================================== */}
@@ -1269,43 +943,16 @@ export default function CollectionEntry() {
           style={{
             ...collectionEntryStyles.valueCard,
 
-            ...(!isManual
-              ? collectionEntryStyles.valueCardActive
-              : {}),
+            ...(!isManual ? collectionEntryStyles.valueCardActive : {}),
           }}
         >
-          <span
-            style={
-              collectionEntryStyles.valueLabel
-            }
-          >
+          <span style={collectionEntryStyles.valueLabel}>
             Selected EMI Amount
           </span>
 
-          <strong
-            style={
-              collectionEntryStyles.value
-            }
-          >
-            {currency(
-              isManual
-                ? 0
-                : selectedEmiAmount,
-            )}
+          <strong style={collectionEntryStyles.value}>
+            {currency(isManual ? 0 : selectedEmiAmount)}
           </strong>
-
-          {!isManual && (
-            <span
-              style={
-                collectionEntryStyles.valueHint
-              }
-            >
-              {selectedEmiNumbers.length}{" "}
-              {selectedEmiNumbers.length === 1
-                ? "EMI selected"
-                : "EMIs selected"}
-            </span>
-          )}
         </div>
 
         {/* ====================================================
@@ -1316,24 +963,12 @@ export default function CollectionEntry() {
           style={{
             ...collectionEntryStyles.valueCard,
 
-            ...(isManual
-              ? collectionEntryStyles.valueCardActive
-              : {}),
+            ...(isManual ? collectionEntryStyles.valueCardActive : {}),
           }}
         >
-          <span
-            style={
-              collectionEntryStyles.valueLabel
-            }
-          >
-            Manual Principal
-          </span>
+          <span style={collectionEntryStyles.valueLabel}>Manual Principal</span>
 
-          <strong
-            style={
-              collectionEntryStyles.value
-            }
-          >
+          <strong style={collectionEntryStyles.value}>
             {currency(manualPrincipal)}
           </strong>
         </div>
@@ -1342,24 +977,10 @@ export default function CollectionEntry() {
             DISCOUNT
         ==================================================== */}
 
-        <div
-          style={
-            collectionEntryStyles.valueCard
-          }
-        >
-          <span
-            style={
-              collectionEntryStyles.valueLabel
-            }
-          >
-            Discount
-          </span>
+        <div style={collectionEntryStyles.valueCard}>
+          <span style={collectionEntryStyles.valueLabel}>Discount</span>
 
-          <strong
-            style={
-              collectionEntryStyles.value
-            }
-          >
+          <strong style={collectionEntryStyles.value}>
             {currency(discountAmount)}
           </strong>
         </div>

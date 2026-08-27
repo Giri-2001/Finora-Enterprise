@@ -47,6 +47,8 @@ import { approveCollection } from "../../../services/collection/collectionServic
 
 import { collectionPaymentDetailsStyles } from "./PaymentDetails.styles";
 
+import { CreditCard } from "lucide-react";
+
 // ============================================================
 // HELPERS
 // ============================================================
@@ -149,8 +151,7 @@ export default function PaymentDetails() {
   function buildSaveData() {
     const now = new Date().toISOString();
 
-    const receiptNumber =
-      reviewData.receiptNumber || generateReceiptNumber();
+    const receiptNumber = reviewData.receiptNumber || generateReceiptNumber();
 
     return {
       ...reviewData,
@@ -177,9 +178,7 @@ export default function PaymentDetails() {
   // SAVE COLLECTION
   // ==========================================================
 
-  async function handleSaveCollection(
-    printReceipt: boolean,
-  ): Promise<void> {
+  async function handleSaveCollection(printReceipt: boolean): Promise<void> {
     if (saving) {
       return;
     }
@@ -277,11 +276,7 @@ export default function PaymentDetails() {
   function printCollectionReceipt(
     data: ReturnType<typeof buildSaveData>,
   ): void {
-    const receiptWindow = window.open(
-      "",
-      "_blank",
-      "width=760,height=900",
-    );
+    const receiptWindow = window.open("", "_blank", "width=760,height=900");
 
     if (!receiptWindow) {
       alert(
@@ -465,16 +460,12 @@ export default function PaymentDetails() {
       ====================================================== */}
 
       <header style={collectionPaymentDetailsStyles.header}>
-        <div style={collectionPaymentDetailsStyles.step}>6</div>
+        <span style={collectionPaymentDetailsStyles.step}>
+          <CreditCard size={30} strokeWidth={2} />
+        </span>
 
         <div>
-          <h2 style={collectionPaymentDetailsStyles.title}>
-            PAYMENT DETAILS
-          </h2>
-
-          <p style={collectionPaymentDetailsStyles.subtitle}>
-            Record the collection payment information.
-          </p>
+          <h2 style={collectionPaymentDetailsStyles.title}>Payment Details</h2>
         </div>
       </header>
 
@@ -499,9 +490,7 @@ export default function PaymentDetails() {
             id="finora-collection-date"
             type="date"
             value={reviewData.receiptDate || ""}
-            onChange={(event) =>
-              handleDateChange(event.target.value)
-            }
+            onChange={(event) => handleDateChange(event.target.value)}
             style={collectionPaymentDetailsStyles.input}
           />
         </div>
@@ -521,9 +510,7 @@ export default function PaymentDetails() {
           <select
             id="finora-payment-mode"
             value={reviewData.paymentMethod || "cash"}
-            onChange={(event) =>
-              handlePaymentMethodChange(event.target.value)
-            }
+            onChange={(event) => handlePaymentMethodChange(event.target.value)}
             style={collectionPaymentDetailsStyles.input}
           >
             <option value="cash">Cash</option>
@@ -552,9 +539,7 @@ export default function PaymentDetails() {
             id="finora-payment-reference"
             type="text"
             value={reviewData.paymentReference || ""}
-            onChange={(event) =>
-              handleReferenceChange(event.target.value)
-            }
+            onChange={(event) => handleReferenceChange(event.target.value)}
             placeholder="Enter reference number"
             style={collectionPaymentDetailsStyles.input}
           />
@@ -564,16 +549,11 @@ export default function PaymentDetails() {
             ROW 2 — REMARKS
         ==================================================== */}
 
-        <div
-          style={collectionPaymentDetailsStyles.remarksField}
-        >
-
+        <div style={collectionPaymentDetailsStyles.remarksField}>
           <textarea
             id="finora-payment-remarks"
             value={reviewData.remarks || ""}
-            onChange={(event) =>
-              handleRemarksChange(event.target.value)
-            }
+            onChange={(event) => handleRemarksChange(event.target.value)}
             placeholder="Enter remarks"
             rows={2}
             style={collectionPaymentDetailsStyles.textarea}
@@ -586,16 +566,12 @@ export default function PaymentDetails() {
 
         <div style={collectionPaymentDetailsStyles.totalBar}>
           <div style={collectionPaymentDetailsStyles.totalContent}>
-            <span
-              style={collectionPaymentDetailsStyles.totalLabel}
-            >
+            <span style={collectionPaymentDetailsStyles.totalLabel}>
               FINAL COLLECTION
             </span>
           </div>
 
-          <strong
-            style={collectionPaymentDetailsStyles.totalValue}
-          >
+          <strong style={collectionPaymentDetailsStyles.totalValue}>
             {formatCurrency(finalCollection)}
           </strong>
         </div>
@@ -608,9 +584,7 @@ export default function PaymentDetails() {
           <button
             type="button"
             disabled={saving}
-            onClick={() =>
-              void handleSaveCollection(false)
-            }
+            onClick={() => void handleSaveCollection(false)}
             style={collectionPaymentDetailsStyles.saveButton}
           >
             {saving ? "SAVING..." : "SAVE COLLECTION"}
@@ -619,9 +593,7 @@ export default function PaymentDetails() {
           <button
             type="button"
             disabled={saving}
-            onClick={() =>
-              void handleSaveCollection(true)
-            }
+            onClick={() => void handleSaveCollection(true)}
             style={collectionPaymentDetailsStyles.receiptButton}
           >
             {saving ? "SAVING..." : "SAVE & RECEIPT"}

@@ -55,6 +55,8 @@ export interface CollectionLoanSelectionStyles extends Record<
 
   sectionHeading: CSSProperties;
 
+  titleGroup: CSSProperties;
+
   sectionIcon: CSSProperties;
 
   sectionTitle: CSSProperties;
@@ -252,11 +254,23 @@ export function createCollectionLoanSelectionStyles(
 
     display: "flex",
 
-    alignItems: "center",
+    alignItems: "flex-start",
 
     gap: "8px",
 
     boxSizing: "border-box",
+  };
+
+  const titleGroup: CSSProperties = {
+    minWidth: 0,
+
+    display: "flex",
+
+    flexDirection: "column",
+
+    justifyContent: "center",
+
+    gap: "1px",
   };
 
   // ==========================================================
@@ -267,6 +281,8 @@ export function createCollectionLoanSelectionStyles(
     flexShrink: 0,
 
     color: colors.brand,
+
+    transform: "translateY(10px)",
 
     display: "block",
   };
@@ -282,9 +298,9 @@ export function createCollectionLoanSelectionStyles(
 
     color: colors.textPrimary,
 
-    fontFamily: FONTS.serif,
+    fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
 
-    fontSize: "19px",
+    fontSize: "17px",
 
     fontWeight: 700,
 
@@ -306,7 +322,7 @@ export function createCollectionLoanSelectionStyles(
 
     fontFamily: FONTS.ui,
 
-    fontSize: "14px",
+    fontSize: "13px",
 
     fontWeight: 500,
 
@@ -778,7 +794,7 @@ export function createCollectionLoanSelectionStyles(
   // ==========================================================
 
   return {
-    iconSize: 20,
+    iconSize: 24,
 
     loansCard,
 
@@ -793,6 +809,8 @@ export function createCollectionLoanSelectionStyles(
     sectionTitle,
 
     sectionSubtitle,
+
+    titleGroup,
 
     loanDropdownWrapper,
 

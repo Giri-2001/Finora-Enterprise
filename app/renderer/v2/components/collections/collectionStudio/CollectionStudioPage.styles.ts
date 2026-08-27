@@ -240,13 +240,13 @@ export const collectionStudioStyles: Record<string, CSSProperties> = {
   fieldLabel: {
     display: "block",
 
-    marginBottom: "8px",
+    marginBottom: "10px",
 
     color: COLORS.text,
 
     fontFamily: FONTS.ui,
 
-    fontSize: "13px",
+    fontSize: "16px",
 
     fontWeight: 700,
   },

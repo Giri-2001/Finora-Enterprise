@@ -128,10 +128,14 @@ export default function CollectionLoanSelection({
                 style={styles.sectionIcon}
               />
 
-              <h2 style={styles.sectionTitle}>Customer Loans</h2>
-            </div>
+              <div style={styles.titleGroup as CSSProperties}>
+                <h2 style={styles.sectionTitle}>Customer Loans</h2>
 
-            <p style={styles.sectionSubtitle}>Select the loan for collection</p>
+                <p style={styles.sectionSubtitle}>
+                  Select the loan for collection
+                </p>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -170,10 +174,14 @@ export default function CollectionLoanSelection({
               style={styles.sectionIcon}
             />
 
-            <h2 style={styles.sectionTitle}>Customer Loans</h2>
-          </div>
+            <div style={styles.titleGroup}>
+              <h2 style={styles.sectionTitle}>Customer Loans</h2>
 
-          <p style={styles.sectionSubtitle}>Select the loan for collection</p>
+              <p style={styles.sectionSubtitle}>
+                Select the loan for collection
+              </p>
+            </div>
+          </div>
         </div>
 
         {/* =================================================
