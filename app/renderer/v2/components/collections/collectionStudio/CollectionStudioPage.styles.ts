@@ -42,37 +42,56 @@ const cssVar = (name: string, fallback: string): string =>
 =========================================================== */
 
 const COLORS = {
-  pageBackground: cssVar("--page-bg", "#eef1f5"),
+  pageBackground: cssVar(
+    "--finora-theme-background-page",
+    "var(--finora-theme-page, #eef1f5)",
+  ),
 
-  surface: cssVar("--surface", "#ffffff"),
+  surface: cssVar(
+    "--finora-theme-background-surface",
+    "var(--finora-theme-surface, #ffffff)",
+  ),
 
-  surfaceSoft: cssVar("--surface-soft", "#f5f7fa"),
+  surfaceSoft: cssVar(
+    "--finora-theme-background-surface-muted",
+    "var(--finora-theme-surface-muted, #f5f7fa)",
+  ),
 
-  surfaceStrong: cssVar("--surface-strong", "#e7eaf0"),
+  surfaceStrong: cssVar("--finora-theme-surface-strong", "#e7eaf0"),
 
-  border: cssVar("--border", "#d5dce5"),
+  border: cssVar("--finora-theme-border-default", "#d5dce5"),
 
-  borderStrong: cssVar("--border-strong", "#b8c0cc"),
+  borderStrong: cssVar("--finora-theme-border-strong", "#b8c0cc"),
 
-  text: cssVar("--text", "#111827"),
+  text: cssVar("--finora-theme-text-primary", "#111827"),
 
-  muted: cssVar("--text-muted", "#6b7280"),
+  textInverse: cssVar("--finora-theme-text-inverse", "#ffffff"),
 
-  accent: cssVar("--finora-accent", "#c69214"),
+  muted: cssVar("--finora-theme-text-muted", "#6b7280"),
 
-  accentSoft: cssVar("--finora-accent-soft", "rgba(198, 146, 20, 0.10)"),
+  accent: cssVar(
+    "--finora-theme-brand-accent",
+    "var(--finora-theme-brand-primary, #c69214)",
+  ),
 
-  success: cssVar("--success", "#23865a"),
+  accentSoft: cssVar(
+    "--finora-theme-brand-accent-soft",
+    "rgba(198, 146, 20, 0.10)",
+  ),
 
-  successSoft: cssVar("--success-soft", "rgba(35, 134, 90, 0.10)"),
+  success: cssVar("--finora-theme-success", "#23865a"),
 
-  danger: cssVar("--danger", "#c24141"),
+  successSoft: cssVar("--finora-theme-success-soft", "rgba(35, 134, 90, 0.10)"),
 
-  dangerSoft: cssVar("--danger-soft", "rgba(194, 65, 65, 0.10)"),
+  danger: cssVar("--finora-theme-danger", "#c24141"),
 
-  info: cssVar("--info", "#3b82f6"),
+  dangerSoft: cssVar("--finora-theme-danger-soft", "rgba(194, 65, 65, 0.10)"),
 
-  infoSoft: cssVar("--info-soft", "rgba(59, 130, 246, 0.10)"),
+  info: cssVar("--finora-theme-info", "#3b82f6"),
+
+  infoSoft: cssVar("--finora-theme-info-soft", "rgba(59, 130, 246, 0.10)"),
+
+  shadow: cssVar("--finora-theme-overlay-shadow", "rgba(15, 23, 42, 0.08)"),
 };
 
 /* ===========================================================
@@ -205,7 +224,7 @@ export const collectionStudioStyles: Record<string, CSSProperties> = {
 
     borderRadius: "16px",
 
-    boxShadow: "0 4px 18px rgba(15, 23, 42, 0.07)",
+    boxShadow: `0 4px 18px ${COLORS.shadow}`,
   },
 
   customerSelectionArea: {
@@ -441,7 +460,7 @@ export const collectionStudioStyles: Record<string, CSSProperties> = {
 
     borderRadius: "16px",
 
-    boxShadow: "0 4px 18px rgba(15, 23, 42, 0.07)",
+    boxShadow: `0 4px 18px ${COLORS.shadow}`,
   },
 
   loansHeader: {
@@ -592,7 +611,7 @@ export const collectionStudioStyles: Record<string, CSSProperties> = {
   loanCardSelected: {
     border: `1.5px solid ${COLORS.accent}`,
 
-    boxShadow: "0 3px 12px rgba(198, 146, 20, 0.16)",
+    boxShadow: `0 3px 12px ${COLORS.accentSoft}`,
 
     transform: "translateY(-1px)",
   },
@@ -670,7 +689,7 @@ export const collectionStudioStyles: Record<string, CSSProperties> = {
 
     borderRadius: "16px",
 
-    boxShadow: "0 4px 18px rgba(15, 23, 42, 0.06)",
+    boxShadow: `0 4px 18px ${COLORS.shadow}`,
   },
 
   selectedLoanHeader: {
@@ -826,24 +845,24 @@ export const collectionStudioStyles: Record<string, CSSProperties> = {
   ========================================================= */
 
   systemGeneratedColumn: {
-  minWidth: 0,
+    minWidth: 0,
 
-  width: "100%",
+    width: "100%",
 
-  boxSizing: "border-box",
+    boxSizing: "border-box",
 
-  padding: 0,
+    padding: 0,
 
-  background: "transparent",
+    background: "transparent",
 
-  border: "none",
+    border: "none",
 
-  borderRadius: 0,
+    borderRadius: 0,
 
-  boxShadow: "none",
+    boxShadow: "none",
 
-  alignSelf: "stretch",
-},
+    alignSelf: "stretch",
+  },
 
   /* =========================================================
      STEP 4 — COLLECTION ENTRY COLUMN
@@ -868,7 +887,7 @@ export const collectionStudioStyles: Record<string, CSSProperties> = {
 
     borderRadius: "16px",
 
-    boxShadow: "0 4px 18px rgba(15, 23, 42, 0.05)",
+    boxShadow: `0 4px 18px ${COLORS.shadow}`,
 
     alignSelf: "stretch",
 
@@ -906,7 +925,7 @@ export const collectionStudioStyles: Record<string, CSSProperties> = {
 
     overflow: "hidden",
 
-    boxShadow: "0 4px 18px rgba(15, 23, 42, 0.06)",
+    boxShadow: `0 4px 18px ${COLORS.shadow}`,
   },
 
   workspaceColumn: {
@@ -1004,7 +1023,7 @@ export const collectionStudioStyles: Record<string, CSSProperties> = {
 
     background: COLORS.accent,
 
-    color: "#ffffff",
+    color: COLORS.textInverse,
 
     fontFamily: FONTS.ui,
 
@@ -1062,7 +1081,7 @@ export const collectionStudioStyles: Record<string, CSSProperties> = {
 
     borderRadius: "16px",
 
-    boxShadow: "0 4px 18px rgba(15, 23, 42, 0.05)",
+    boxShadow: `0 4px 18px ${COLORS.shadow}`,
   },
 
   workflowSectionHeader: {
@@ -1144,7 +1163,7 @@ export const collectionStudioStyles: Record<string, CSSProperties> = {
 
     borderRadius: "16px",
 
-    boxShadow: "0 4px 18px rgba(15, 23, 42, 0.05)",
+    boxShadow: `0 4px 18px ${COLORS.shadow}`,
   },
 
   collectionEntryPanel: {
@@ -1160,7 +1179,7 @@ export const collectionStudioStyles: Record<string, CSSProperties> = {
 
     borderRadius: "16px",
 
-    boxShadow: "0 4px 18px rgba(15, 23, 42, 0.05)",
+    boxShadow: `0 4px 18px ${COLORS.shadow}`,
   },
 
   /* =========================================================
@@ -1182,7 +1201,7 @@ export const collectionStudioStyles: Record<string, CSSProperties> = {
 
     borderRadius: "16px",
 
-    boxShadow: "0 4px 18px rgba(15, 23, 42, 0.05)",
+    boxShadow: `0 4px 18px ${COLORS.shadow}`,
   },
 
   collectionSummaryGrid: {
@@ -1430,7 +1449,7 @@ export const collectionStudioStyles: Record<string, CSSProperties> = {
 
     background: COLORS.accent,
 
-    color: "#ffffff",
+    color: COLORS.textInverse,
 
     fontFamily: FONTS.ui,
 
@@ -1496,7 +1515,7 @@ export const collectionStudioStyles: Record<string, CSSProperties> = {
 
     borderRadius: "16px",
 
-    boxShadow: "0 4px 18px rgba(15, 23, 42, 0.05)",
+    boxShadow: `0 4px 18px ${COLORS.shadow}`,
   },
 
   documentThumbnailGrid: {
@@ -1594,7 +1613,7 @@ export const collectionStudioStyles: Record<string, CSSProperties> = {
 
     borderRadius: "16px",
 
-    boxShadow: "0 4px 18px rgba(15, 23, 42, 0.05)",
+    boxShadow: `0 4px 18px ${COLORS.shadow}`,
 
     overflow: "hidden",
   },
@@ -1736,7 +1755,7 @@ export const collectionStudioStyles: Record<string, CSSProperties> = {
 
     borderRadius: "16px",
 
-    boxShadow: "0 4px 18px rgba(15, 23, 42, 0.05)",
+    boxShadow: `0 4px 18px ${COLORS.shadow}`,
 
     textAlign: "center",
   },
@@ -1780,7 +1799,7 @@ export const collectionStudioStyles: Record<string, CSSProperties> = {
 
     borderRadius: "16px",
 
-    boxShadow: "0 4px 18px rgba(15, 23, 42, 0.05)",
+    boxShadow: `0 4px 18px ${COLORS.shadow}`,
   },
 
   futureSectionTitle: {

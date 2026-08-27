@@ -71,7 +71,13 @@
 // IMPORTS
 // ============================================================
 
+import type { CSSProperties } from "react";
+
 import { useEffect, useMemo, useState } from "react";
+
+import { useTheme } from "../../../themes/provider";
+
+import type { FinoraTheme } from "../../../themes/core/types";
 
 import type { CustomerProfile } from "../../../types/customers";
 
@@ -107,6 +113,71 @@ import { storageManager } from "../../../storage/storageManager";
 import { StorageMode } from "../../../storage/storage.types";
 
 import { collectionStudioStyles } from "./CollectionStudioPage.styles";
+
+import { customerDropdownStyles } from "./CustomerDropdown.styles";
+
+// ============================================================
+// THEME STYLE TYPE
+// ============================================================
+
+type CollectionStudioThemeStyle = CSSProperties & Record<`--${string}`, string>;
+
+// ============================================================
+// THEME VARIABLE FACTORY
+// ============================================================
+//
+// ThemeProvider remains the single source of truth.
+// This adapter only exposes the active theme tokens to the
+// existing Collection Studio style tree.
+//
+// No business logic, persistence, responsive geometry, or
+// local theme definitions are introduced here.
+//
+// ============================================================
+
+function createCollectionStudioThemeVariables(
+  theme: FinoraTheme,
+): CollectionStudioThemeStyle {
+  return {
+    "--finora-theme-brand-primary": theme.colors.brand.primary,
+    "--finora-theme-brand-secondary": theme.colors.brand.secondary,
+    "--finora-theme-brand-accent": theme.colors.brand.accent,
+    "--finora-theme-brand-accent-soft": theme.colors.brand.accentSoft,
+
+    "--finora-theme-page": theme.colors.background.page,
+    "--finora-theme-background-page": theme.colors.background.page,
+    "--finora-theme-surface": theme.colors.background.surface,
+    "--finora-theme-background-surface": theme.colors.background.surface,
+    "--finora-theme-surface-muted": theme.colors.background.surfaceMuted,
+    "--finora-theme-background-surface-muted":
+      theme.colors.background.surfaceMuted,
+    "--finora-theme-surface-strong": theme.colors.background.surfaceStrong,
+
+    "--finora-theme-text-primary": theme.colors.text.primary,
+    "--finora-theme-text-secondary": theme.colors.text.secondary,
+    "--finora-theme-text-body": theme.colors.text.secondary,
+    "--finora-theme-text-muted": theme.colors.text.muted,
+    "--finora-theme-text-inverse": theme.colors.text.inverse,
+
+    "--finora-theme-border-default": theme.colors.border.default,
+    "--finora-theme-border-strong": theme.colors.border.strong,
+    "--finora-theme-border-subtle": theme.colors.border.subtle,
+    "--finora-theme-focus": theme.colors.border.focus,
+
+    "--finora-theme-success": theme.colors.status.success,
+    "--finora-theme-success-soft": theme.colors.status.successSoft,
+    "--finora-theme-success-border": theme.colors.border.strong,
+    "--finora-theme-warning": theme.colors.status.warning,
+    "--finora-theme-warning-soft": theme.colors.status.warningSoft,
+    "--finora-theme-danger": theme.colors.status.danger,
+    "--finora-theme-danger-soft": theme.colors.status.dangerSoft,
+    "--finora-theme-info": theme.colors.status.info,
+    "--finora-theme-info-soft": theme.colors.status.infoSoft,
+
+    "--finora-theme-overlay-shadow": theme.colors.overlay.shadow,
+    "--finora-theme-overlay-backdrop": theme.colors.overlay.backdrop,
+  };
+}
 
 // ============================================================
 // TYPES
@@ -460,12 +531,44 @@ function buildReviewData(
 
 export default function CollectionStudioPage() {
   // ==========================================================
+  // FINORA THEME ENGINE
+  // ==========================================================
+  //
+  // The active application theme is consumed from the central
+  // ThemeProvider and exposed to the existing style tree.
+  //
+  // ==========================================================
+
+  const { theme } = useTheme();
+
+  const pageThemeStyle = {
+    ...collectionStudioStyles.page,
+    ...createCollectionStudioThemeVariables(theme),
+  } as CollectionStudioThemeStyle;
+
+  // ==========================================================
   // COLLECTION CUSTOMER DATA
   // ==========================================================
 
   const [collectionCustomers, setCollectionCustomers] = useState<
     CollectionCustomerRecord[]
   >([]);
+
+  // ==========================================================
+  // LOAN CHANGE
+  // ==========================================================
+
+  function handleLoanChange(loanId: string): void {
+    const loanBelongsToCustomer = customerLoans.some(
+      (loan: CollectionLoanRecord) => loan.id === loanId,
+    );
+
+    if (!loanBelongsToCustomer) {
+      return;
+    }
+
+    setSelectedLoanId(loanId);
+  }
 
   // ==========================================================
   // LOADING STATE
@@ -478,6 +581,11 @@ export default function CollectionStudioPage() {
   // ==========================================================
 
   const [selectedCustomerId, setSelectedCustomerId] = useState<string>("");
+
+  const [customerDropdownOpen, setCustomerDropdownOpen] =
+    useState<boolean>(false);
+
+  const [customerSearch, setCustomerSearch] = useState<string>("");
 
   // ==========================================================
   // LOAN STATE
@@ -572,16 +680,20 @@ export default function CollectionStudioPage() {
         setCollectionCustomers(eligibleCustomers);
 
         // ------------------------------------------------------
-        // AUTO-OPEN FIRST CUSTOMER
+        // DO NOT AUTO-SELECT CUSTOMER
+        //
+        // Collection Studio must open with:
+        // - Customer dropdown = "Select Customer"
+        // - No customer selected
+        // - No loan selected
+        //
+        // Customer + loan workspace will appear only after
+        // the user selects a customer.
         // ------------------------------------------------------
 
-        const firstCustomer = eligibleCustomers[0];
+        setSelectedCustomerId("");
 
-        const firstLoan = firstCustomer?.loans[0];
-
-        setSelectedCustomerId(firstCustomer?.id ?? "");
-
-        setSelectedLoanId(firstLoan?.id ?? "");
+        setSelectedLoanId("");
 
         setReviewData(createEmptyReviewData());
       } catch (error) {
@@ -623,6 +735,25 @@ export default function CollectionStudioPage() {
 
     [collectionCustomers, selectedCustomerId],
   );
+
+  // ==========================================================
+  // FILTERED CUSTOMER DROPDOWN OPTIONS
+  // ==========================================================
+
+  const filteredCollectionCustomers = useMemo(() => {
+    const query = customerSearch.trim().toLowerCase();
+
+    if (!query) {
+      return collectionCustomers;
+    }
+
+    return collectionCustomers.filter(
+      (customer: CollectionCustomerRecord) =>
+        customer.name.toLowerCase().includes(query) ||
+        customer.phone.toLowerCase().includes(query) ||
+        customer.id.toLowerCase().includes(query),
+    );
+  }, [collectionCustomers, customerSearch]);
 
   // ==========================================================
   // CUSTOMER LOANS
@@ -668,29 +799,29 @@ export default function CollectionStudioPage() {
       (customer: CollectionCustomerRecord) => customer.id === customerId,
     );
 
-    setSelectedCustomerId(customerId);
-
-    // --------------------------------------------------------
-    // First collection-ready loan of the new customer.
-    // --------------------------------------------------------
-
-    setSelectedLoanId(nextCustomer?.loans[0]?.id ?? "");
-  }
-
-  // ==========================================================
-  // LOAN CHANGE
-  // ==========================================================
-
-  function handleLoanChange(loanId: string): void {
-    const loanBelongsToCustomer = customerLoans.some(
-      (loan: CollectionLoanRecord) => loan.id === loanId,
-    );
-
-    if (!loanBelongsToCustomer) {
+    if (!nextCustomer || nextCustomer.loans.length === 0) {
       return;
     }
 
-    setSelectedLoanId(loanId);
+    setSelectedCustomerId(customerId);
+
+    // --------------------------------------------------------
+    // Automatically select first collection-ready loan.
+    // --------------------------------------------------------
+
+    setSelectedLoanId(nextCustomer.loans[0]?.id ?? "");
+
+    // --------------------------------------------------------
+    // Close customer dropdown.
+    // --------------------------------------------------------
+
+    setCustomerDropdownOpen(false);
+
+    // --------------------------------------------------------
+    // Clear customer search.
+    // --------------------------------------------------------
+
+    setCustomerSearch("");
   }
 
   // ==========================================================
@@ -699,7 +830,7 @@ export default function CollectionStudioPage() {
 
   if (loading) {
     return (
-      <main style={collectionStudioStyles.page}>
+      <main style={pageThemeStyle}>
         <div style={collectionStudioStyles.pageInner}>
           <section style={collectionStudioStyles.emptyState}>
             <strong style={collectionStudioStyles.emptyStateTitle}>
@@ -721,7 +852,7 @@ export default function CollectionStudioPage() {
 
   if (collectionCustomers.length === 0) {
     return (
-      <main style={collectionStudioStyles.page}>
+      <main style={pageThemeStyle}>
         <div style={collectionStudioStyles.pageInner}>
           <section style={collectionStudioStyles.emptyState}>
             <strong style={collectionStudioStyles.emptyStateTitle}>
@@ -731,28 +862,6 @@ export default function CollectionStudioPage() {
             <span style={collectionStudioStyles.emptyStateMessage}>
               Customers will appear here automatically when they have an active
               or running loan with an outstanding balance.
-            </span>
-          </section>
-        </div>
-      </main>
-    );
-  }
-
-  // ==========================================================
-  // CUSTOMER / LOAN SAFETY FALLBACK
-  // ==========================================================
-
-  if (!selectedCustomer || !selectedLoan) {
-    return (
-      <main style={collectionStudioStyles.page}>
-        <div style={collectionStudioStyles.pageInner}>
-          <section style={collectionStudioStyles.emptyState}>
-            <strong style={collectionStudioStyles.emptyStateTitle}>
-              Preparing Collection Workspace
-            </strong>
-
-            <span style={collectionStudioStyles.emptyStateMessage}>
-              Preparing the selected customer and collection-ready loan.
             </span>
           </section>
         </div>
@@ -772,7 +881,7 @@ export default function CollectionStudioPage() {
         onReviewDataChange: setReviewData,
       }}
     >
-      <main style={collectionStudioStyles.page}>
+      <main style={pageThemeStyle}>
         <div style={collectionStudioStyles.pageInner}>
           {/* ==================================================
               1. CUSTOMER + LOAN SELECTION
@@ -792,34 +901,120 @@ export default function CollectionStudioPage() {
                   Select Customer
                 </label>
 
-                <div style={collectionStudioStyles.selectWrapper}>
-                  <select
+                <div style={customerDropdownStyles.wrapper}>
+                  {/* ======================================================
+      CUSTOMER SELECT BUTTON
+  ====================================================== */}
+
+                  <button
+                    type="button"
                     id="collection-customer-select"
-                    value={selectedCustomer.id}
-                    onChange={(event) =>
-                      handleCustomerChange(event.target.value)
-                    }
-                    style={collectionStudioStyles.select}
+                    aria-haspopup="listbox"
+                    aria-expanded={customerDropdownOpen}
+                    onClick={() => {
+                      setCustomerDropdownOpen((previous) => !previous);
+                      setCustomerSearch("");
+                    }}
+                    style={{
+                      ...collectionStudioStyles.select,
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      cursor: "pointer",
+                      textAlign: "left",
+                    }}
                   >
-                    <option value="" disabled>
-                      Select Customer
-                    </option>
+                    <span
+                      style={{
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                        whiteSpace: "nowrap",
+                      }}
+                    >
+                      {selectedCustomer?.name || "Select Customer"}
+                    </span>
 
-                    {collectionCustomers.map(
-                      (customer: CollectionCustomerRecord) => (
-                        <option key={customer.id} value={customer.id}>
-                          {customer.name}
-                        </option>
-                      ),
-                    )}
-                  </select>
+                    <span
+                      aria-hidden="true"
+                      style={collectionStudioStyles.selectArrow}
+                    >
+                      ▾
+                    </span>
+                  </button>
 
-                  <span
-                    aria-hidden="true"
-                    style={collectionStudioStyles.selectArrow}
-                  >
-                    ▾
-                  </span>
+                  {/* ======================================================
+    CUSTOMER SEARCH DROPDOWN
+====================================================== */}
+
+                  {customerDropdownOpen && (
+                    <div
+                      role="listbox"
+                      aria-label="Customer list"
+                      style={customerDropdownStyles.panel}
+                    >
+                      {/* ==================================================
+        SEARCH
+    ================================================== */}
+
+                      <input
+                        type="text"
+                        value={customerSearch}
+                        onChange={(event) =>
+                          setCustomerSearch(event.target.value)
+                        }
+                        onClick={(event) => event.stopPropagation()}
+                        placeholder="Search customer..."
+                        autoFocus
+                        style={customerDropdownStyles.searchInput}
+                      />
+
+                      {/* ==================================================
+        FILTERED CUSTOMERS
+    ================================================== */}
+
+                      {filteredCollectionCustomers.length > 0 ? (
+                        filteredCollectionCustomers.map(
+                          (customer: CollectionCustomerRecord) => {
+                            const isActive = customer.id === selectedCustomerId;
+
+                            return (
+                              <button
+                                key={customer.id}
+                                type="button"
+                                role="option"
+                                aria-selected={isActive}
+                                onClick={() =>
+                                  handleCustomerChange(customer.id)
+                                }
+                                style={{
+                                  ...customerDropdownStyles.option,
+                                  ...(isActive
+                                    ? customerDropdownStyles.activeOption
+                                    : {}),
+                                }}
+                              >
+                                <span
+                                  style={customerDropdownStyles.customerName}
+                                >
+                                  {customer.name}
+                                </span>
+
+                                <span
+                                  style={customerDropdownStyles.customerMeta}
+                                >
+                                  {customer.phone || customer.id}
+                                </span>
+                              </button>
+                            );
+                          },
+                        )
+                      ) : (
+                        <div style={customerDropdownStyles.emptyState}>
+                          No customers found
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
 
                 <div style={collectionStudioStyles.customerDetails}>
@@ -830,9 +1025,9 @@ export default function CollectionStudioPage() {
 
                     <span
                       style={collectionStudioStyles.detailValue}
-                      title={selectedCustomer.id}
+                      title={selectedCustomerId}
                     >
-                      {selectedCustomer.id}
+                      {selectedCustomerId}
                     </span>
                   </div>
 
@@ -842,7 +1037,7 @@ export default function CollectionStudioPage() {
                     </span>
 
                     <span style={collectionStudioStyles.detailValue}>
-                      {selectedCustomer.phone || "--"}
+                      {selectedCustomer?.phone || "--"}
                     </span>
                   </div>
                 </div>
@@ -853,10 +1048,10 @@ export default function CollectionStudioPage() {
               =============================================== */}
 
               <div style={collectionStudioStyles.customerPhotoFrame}>
-                {selectedCustomer.photo ? (
+                {selectedCustomer?.photo ? (
                   <img
-                    src={selectedCustomer.photo}
-                    alt={selectedCustomer.name}
+                    src={selectedCustomer?.photo}
+                    alt={selectedCustomer?.name || "Customer"}
                     style={collectionStudioStyles.customerPhoto}
                   />
                 ) : (
@@ -879,7 +1074,7 @@ export default function CollectionStudioPage() {
 
             <CollectionLoanSelection
               loans={customerLoans}
-              selectedLoanId={selectedLoan.id}
+              selectedLoanId={selectedLoanId}
               onSelectLoan={(loan) => handleLoanChange(loan.id)}
             />
           </div>
@@ -930,7 +1125,20 @@ export default function CollectionStudioPage() {
 
           <section style={collectionStudioStyles.documentsHistoryRow}>
             <div style={collectionStudioStyles.loanDocumentsColumn}>
-              <LoanDocuments documents={selectedLoan.documents} />
+              {selectedLoan ? (
+                <LoanDocuments documents={selectedLoan.documents} />
+              ) : (
+                <section style={collectionStudioStyles.emptyState}>
+                  <strong style={collectionStudioStyles.emptyStateTitle}>
+                    Select a Loan
+                  </strong>
+
+                  <span style={collectionStudioStyles.emptyStateMessage}>
+                    Select a customer and collection-ready loan to view loan
+                    documents.
+                  </span>
+                </section>
+              )}
             </div>
 
             <div style={collectionStudioStyles.collectionHistoryColumn}>
