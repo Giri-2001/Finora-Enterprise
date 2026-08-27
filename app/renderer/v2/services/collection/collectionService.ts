@@ -1,50 +1,79 @@
-/* ===========================================================
-   FINORA ENTERPRISE OS™
-   Collections Engine
+// FINORA ENTERPRISE OS™
+//
+// COLLECTIONS ENGINE™
+//
+// COLLECTION SERVICE
+//
+// RESPONSIBILITY
+//
+// - Provide application-level Collection service boundary
+// - Build and persist collection records
+// - Load persisted collection records
+// - Keep Collection UI independent from repositories
+// - Keep StorageManager details outside UI code
+//
+// VERSION : 2.0
+// STATUS  : Production
+// ============================================================
 
-   COLLECTION SERVICE
-=========================================================== */
+// ============================================================
+// IMPORTS
+// ============================================================
 
 import type { CollectionReviewData } from "../../components/collections/CollectionReviewData";
 
 import { buildCollection } from "./collectionBuilder";
 
-import {
-  collectionRepository,
-} from "../../repositories/collection/collectionRepository";
+import { collectionRepository } from "../../repositories/collection/collectionRepository";
 
-/* ===========================================================
-   COLLECTION SERVICE
-=========================================================== */
+// ============================================================
+// APPROVE COLLECTION
+// ============================================================
 
 export async function approveCollection(
   reviewData: CollectionReviewData,
 ): Promise<CollectionReviewData> {
-  const collection = buildCollection(
-    reviewData,
-  );
+  const collection = buildCollection(reviewData);
 
-  return collectionRepository.save(
-    collection,
-  );
+  return collectionRepository.save(collection);
 }
+
+// ============================================================
+// UPDATE COLLECTION
+// ============================================================
 
 export async function updateCollection(
   reviewData: CollectionReviewData,
 ): Promise<CollectionReviewData> {
-  const collection = buildCollection(
-    reviewData,
-  );
+  const collection = buildCollection(reviewData);
 
-  return collectionRepository.update(
-    collection,
-  );
+  return collectionRepository.update(collection);
 }
+
+// ============================================================
+// LOAD ALL COLLECTIONS
+// ============================================================
+//
+// Collection History uses this service boundary and then
+// selects records belonging to the currently selected loan.
+//
+// No UI or persistence logic is exposed to the component.
+// ============================================================
+
+export async function loadCollections(): Promise<CollectionReviewData[]> {
+  return collectionRepository.getAll();
+}
+
+// ============================================================
+// LOAD SINGLE COLLECTION
+// ============================================================
 
 export async function loadCollection(
   id: string,
-) {
-  return collectionRepository.findById(
-    id,
-  );
+): Promise<CollectionReviewData | null> {
+  return collectionRepository.findById(id);
 }
+
+// ============================================================
+// END
+// ============================================================

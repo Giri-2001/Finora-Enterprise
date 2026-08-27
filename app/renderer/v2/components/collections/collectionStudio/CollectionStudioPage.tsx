@@ -16,6 +16,7 @@
 // - Maintain selected loan state
 // - Provide customer / loan selection inside the workspace
 // - Normalize selected loan presentation data
+// - Carry persisted loan documents into Collection Studio
 // - Establish CollectionContext for the complete Studio tree
 // - Render complete Collection Studio workflow
 // - Connect System Generated section
@@ -44,35 +45,15 @@
 // - Collection state is exposed through CollectionContext
 // - Child collection sections remain controller-driven
 //
-// COLLECTION ELIGIBILITY
+// DOCUMENT WIRING
 //
-// A customer is shown in Collection Studio only when the
-// customer has at least one:
-//
-// - ACTIVE loan
-// - RUNNING loan
-//
-// and:
-//
-// - outstanding amount > 0
-//
-// CLOSED / REJECTED / zero-outstanding historical loans
-// do not make a customer collection-ready.
-//
-// IMPORTANT:
-//
-// If 12 customers exist and only 2 customers have active/
-// running loans, only those 2 customers are available in the
-// Collection Studio customer selector.
-//
-// When Collection Studio opens:
-//
-// - First eligible customer is automatically selected.
-// - First collection-ready loan of that customer is
-//   automatically selected.
-//
-// The user can then change customer / loan from inside
-// the Collection Studio workspace.
+// - Selected Loan is authoritative.
+// - Loan documents are carried unchanged from LoanService.
+// - Collection Studio never uses dummy documents.
+// - Collection Studio never mixes documents between loans.
+// - Changing selected loan immediately changes its document gallery.
+// - Persisted document dataUrl is preferred by LoanDocuments.
+// - url remains the defensive fallback.
 //
 // VERSION : 2.0
 // STATUS  : Production
@@ -87,6 +68,8 @@ import { useEffect, useMemo, useState } from "react";
 import type { CustomerProfile } from "../../../types/customers";
 
 import type { Loan } from "../../customers/office/CustomerOffice/types";
+
+import type { DocumentsStudioItem } from "../../loans/documents/DocumentsStudio";
 
 import type { CollectionReviewData } from "../CollectionReviewData";
 
@@ -137,6 +120,21 @@ export interface CollectionLoanRecord {
   status: string;
 
   outstanding: number;
+
+  // ==========================================================
+  // LOAN DOCUMENTS
+  // ==========================================================
+  //
+  // IMPORTANT:
+  //
+  // These are the documents persisted against THIS loan.
+  //
+  // They are intentionally carried through the Collection
+  // presentation boundary without modification.
+  //
+  // ==========================================================
+
+  documents: DocumentsStudioItem[];
 }
 
 export interface CollectionCustomerRecord {
@@ -159,15 +157,6 @@ const STORAGE_MODE_SESSION_KEY = "FINORA_STORAGE_MODE";
 
 // ============================================================
 // EMPTY REVIEW DATA
-// ============================================================
-//
-// CollectionContext expects CollectionReviewData.
-//
-// Therefore reviewData itself is never null.
-//
-// An empty contract is used until a customer + loan
-// is available.
-//
 // ============================================================
 
 function createEmptyReviewData(): CollectionReviewData {
@@ -200,19 +189,6 @@ function createEmptyReviewData(): CollectionReviewData {
 
 // ============================================================
 // STORAGE MODE RESOLVER
-// ============================================================
-//
-// Collection Studio must use the same authenticated storage
-// mode selected during FINORA login.
-//
-// IMPORTANT:
-//
-// USB remains USB.
-// LOCAL remains LOCAL.
-// CLOUD remains CLOUD.
-//
-// There is no silent storage fallback here.
-//
 // ============================================================
 
 function getAuthenticatedStorageMode(): StorageMode {
@@ -248,16 +224,6 @@ function normalizeLoanStatus(
 // ============================================================
 // COLLECTION-READY LOAN CHECK
 // ============================================================
-//
-// Only an unresolved loan with outstanding balance should
-// appear in Collection Studio.
-//
-// ACTIVE / RUNNING are the collection-ready states.
-//
-// A CLOSED loan with an old outstanding value must not
-// accidentally make a customer appear collection-ready.
-//
-// ============================================================
 
 function isCollectionReadyLoan(loan: Loan): boolean {
   const status = normalizeLoanStatus(loan.status);
@@ -274,11 +240,6 @@ function isCollectionReadyLoan(loan: Loan): boolean {
 // ============================================================
 // CUSTOMER ACTIVE CHECK
 // ============================================================
-//
-// Deleted / archived customers must never appear in the
-// Collection Studio selector.
-//
-// ============================================================
 
 function isCollectionEligibleCustomer(customer: CustomerProfile): boolean {
   return (
@@ -290,12 +251,15 @@ function isCollectionEligibleCustomer(customer: CustomerProfile): boolean {
 
 // ============================================================
 // LOAN → COLLECTION LOAN RECORD
-// ============================================================
 //
-// This is a presentation boundary only.
+// IMPORTANT:
 //
-// No financial calculation is performed here.
+// Documents are copied as the authoritative persisted
+// document array belonging to this exact loan.
 //
+// No dummy documents are created here.
+// No document filtering is performed here.
+// No document URL is changed here.
 // ============================================================
 
 function mapLoanToCollectionLoan(loan: Loan): CollectionLoanRecord {
@@ -311,16 +275,13 @@ function mapLoanToCollectionLoan(loan: Loan): CollectionLoanRecord {
     status: String(loan.status ?? ""),
 
     outstanding: Number.isFinite(loan.outstanding) ? loan.outstanding : 0,
+
+    documents: Array.isArray(loan.documents) ? loan.documents : [],
   };
 }
 
 // ============================================================
 // CUSTOMER → COLLECTION RECORD
-// ============================================================
-//
-// Only the customer's collection-ready loans are attached
-// to the presentation record.
-//
 // ============================================================
 
 function buildCollectionCustomerRecord(
@@ -350,16 +311,6 @@ function buildCollectionCustomerRecord(
 // ============================================================
 // BUILD COLLECTION REVIEW DATA
 // ============================================================
-//
-// CollectionContext requires the canonical
-// CollectionReviewData contract.
-//
-// The selected customer / loan presentation data is normalized
-// into that contract at the page boundary.
-//
-// No business calculation is performed here.
-//
-// ============================================================
 
 function buildReviewData(
   customer: CollectionCustomerRecord,
@@ -368,19 +319,11 @@ function buildReviewData(
   const now = new Date().toISOString();
 
   return {
-    // ----------------------------------------------------------
-    // CUSTOMER
-    // ----------------------------------------------------------
-
     customerId: customer.id,
 
     customerName: customer.name,
 
     customerPhone: customer.phone,
-
-    // ----------------------------------------------------------
-    // LOAN
-    // ----------------------------------------------------------
 
     loanId: loan.id,
 
@@ -394,19 +337,11 @@ function buildReviewData(
 
     previousDue: 0,
 
-    // ----------------------------------------------------------
-    // PAYMENT
-    // ----------------------------------------------------------
-
     paymentAmount: 0,
 
     paymentMethod: "cash",
 
     paymentReference: "",
-
-    // ----------------------------------------------------------
-    // SETTLEMENT
-    // ----------------------------------------------------------
 
     penaltyAmount: 0,
 
@@ -416,17 +351,9 @@ function buildReviewData(
 
     remarks: "",
 
-    // ----------------------------------------------------------
-    // RECEIPT
-    // ----------------------------------------------------------
-
     receiptNumber: "",
 
     receiptDate: new Date().toISOString().slice(0, 10),
-
-    // ----------------------------------------------------------
-    // REVIEW
-    // ----------------------------------------------------------
 
     status: "Draft",
 
@@ -469,14 +396,6 @@ export default function CollectionStudioPage() {
 
   // ==========================================================
   // COLLECTION REVIEW STATE
-  //
-  // IMPORTANT:
-  //
-  // Never use null here.
-  //
-  // CollectionContext expects a complete
-  // CollectionReviewData object.
-  //
   // ==========================================================
 
   const [reviewData, setReviewData] = useState<CollectionReviewData>(
@@ -516,8 +435,6 @@ export default function CollectionStudioPage() {
 
         // ------------------------------------------------------
         // CLEAR ONLY IN-MEMORY CUSTOMER CACHE
-        //
-        // Persisted customer data is NOT deleted.
         // ------------------------------------------------------
 
         clearCustomerCache();
@@ -534,8 +451,6 @@ export default function CollectionStudioPage() {
 
         // ------------------------------------------------------
         // LOAD AUTHORITATIVE LOAN DATA
-        //
-        // Loan access remains behind LoanService.
         // ------------------------------------------------------
 
         const loans = await fetchLoans();
@@ -546,9 +461,6 @@ export default function CollectionStudioPage() {
 
         // ------------------------------------------------------
         // BUILD COLLECTION-READY CUSTOMER LIST
-        //
-        // Customers without an ACTIVE / RUNNING loan are
-        // intentionally removed from this list.
         // ------------------------------------------------------
 
         const eligibleCustomers = customers
@@ -569,21 +481,7 @@ export default function CollectionStudioPage() {
         setCollectionCustomers(eligibleCustomers);
 
         // ------------------------------------------------------
-        // AUTO-OPEN COLLECTION WORKSPACE
-        //
-        // IMPORTANT:
-        //
-        // Collection Studio no longer shows a separate
-        // customer-selection landing page.
-        //
-        // The first eligible customer is selected
-        // automatically when the page opens.
-        //
-        // The first collection-ready loan belonging to that
-        // customer is also selected automatically.
-        //
-        // The user can still change both selections from
-        // inside the workspace.
+        // AUTO-OPEN FIRST CUSTOMER
         // ------------------------------------------------------
 
         const firstCustomer = eligibleCustomers[0];
@@ -593,11 +491,6 @@ export default function CollectionStudioPage() {
         setSelectedCustomerId(firstCustomer?.id ?? "");
 
         setSelectedLoanId(firstLoan?.id ?? "");
-
-        // ------------------------------------------------------
-        // REVIEW DATA WILL BE SYNCHRONIZED BY THE EFFECT
-        // BELOW AFTER CUSTOMER / LOAN SELECTION IS AVAILABLE.
-        // ------------------------------------------------------
 
         setReviewData(createEmptyReviewData());
       } catch (error) {
@@ -642,12 +535,6 @@ export default function CollectionStudioPage() {
 
   // ==========================================================
   // CUSTOMER LOANS
-  //
-  // IMPORTANT:
-  //
-  // These are ONLY the loans belonging to the selected
-  // customer.
-  //
   // ==========================================================
 
   const customerLoans = selectedCustomer?.loans ?? [];
@@ -660,20 +547,15 @@ export default function CollectionStudioPage() {
     () =>
       customerLoans.find(
         (loan: CollectionLoanRecord) => loan.id === selectedLoanId,
-      ) ?? null,
+      ) ??
+      customerLoans[0] ??
+      null,
 
     [customerLoans, selectedLoanId],
   );
 
   // ==========================================================
   // SELECTED LOAN VIEW DATA
-  //
-  // CollectionSelectedLoan expects "principal".
-  //
-  // The collection loan record uses "amount".
-  //
-  // Keep that normalization at the page boundary.
-  //
   // ==========================================================
 
   const selectedLoanView = useMemo(() => {
@@ -695,7 +577,7 @@ export default function CollectionStudioPage() {
   }, [selectedLoan]);
 
   // ==========================================================
-  // SYNC SELECTED CUSTOMER / LOAN INTO COLLECTION CONTEXT
+  // SYNC SELECTED CUSTOMER / LOAN INTO CONTEXT
   // ==========================================================
 
   useEffect(() => {
@@ -720,10 +602,7 @@ export default function CollectionStudioPage() {
     setSelectedCustomerId(customerId);
 
     // --------------------------------------------------------
-    // IMPORTANT:
-    //
-    // Customer change immediately selects that customer's
-    // first collection-ready loan.
+    // First collection-ready loan of the new customer.
     // --------------------------------------------------------
 
     setSelectedLoanId(nextCustomer?.loans[0]?.id ?? "");
@@ -734,13 +613,6 @@ export default function CollectionStudioPage() {
   // ==========================================================
 
   function handleLoanChange(loanId: string): void {
-    // --------------------------------------------------------
-    // SECURITY / DATA BOUNDARY
-    //
-    // Only allow selection of a loan already belonging to
-    // the currently selected customer.
-    // --------------------------------------------------------
-
     const loanBelongsToCustomer = customerLoans.some(
       (loan: CollectionLoanRecord) => loan.id === loanId,
     );
@@ -800,16 +672,6 @@ export default function CollectionStudioPage() {
   // ==========================================================
   // CUSTOMER / LOAN SAFETY FALLBACK
   // ==========================================================
-  //
-  // This is NOT a landing page.
-  //
-  // Under normal operation the first eligible
-  // customer + first loan are automatically selected.
-  //
-  // This guard only protects the render tree if the
-  // authoritative selection disappears unexpectedly.
-  //
-  // ==========================================================
 
   if (!selectedCustomer || !selectedLoan || !selectedLoanView) {
     return (
@@ -831,21 +693,13 @@ export default function CollectionStudioPage() {
 
   // ==========================================================
   // RENDER
-  //
-  // IMPORTANT:
-  //
-  // There is NO Collection Studio title/subtitle here.
-  //
-  // The Collection Studio workspace begins directly with
-  // Customer + Loan Selection underneath the global FINORA
-  // header.
-  //
   // ==========================================================
 
   return (
     <CollectionContext.Provider
       value={{
         reviewData,
+
         onReviewDataChange: setReviewData,
       }}
     >
@@ -952,18 +806,6 @@ export default function CollectionStudioPage() {
 
             {/* ==================================================
                 CUSTOMER LOANS
-            ==================================================
-            
-                IMPORTANT:
-                
-                This receives ONLY:
-                
-                selectedCustomer.loans
-                
-                Therefore:
-                
-                Customer A → Customer A loans only
-                Customer B → Customer B loans only
             ================================================== */}
 
             <CollectionLoanSelection
@@ -992,18 +834,10 @@ export default function CollectionStudioPage() {
 
           <section style={collectionStudioStyles.collectionWorkspace}>
             <div style={collectionStudioStyles.systemGeneratedColumn}>
-              {/* ==============================================
-                  3. SYSTEM GENERATED
-              ============================================== */}
-
               <CollectionSystemGenerated />
             </div>
 
             <div style={collectionStudioStyles.collectionEntryColumn}>
-              {/* ==============================================
-                  4. COLLECTION ENTRY
-              ============================================== */}
-
               <CollectionEntry />
             </div>
           </section>
@@ -1030,17 +864,31 @@ export default function CollectionStudioPage() {
 
           <section style={collectionStudioStyles.documentsHistoryRow}>
             <div style={collectionStudioStyles.loanDocumentsColumn}>
-              <LoanDocuments />
+              {/* ==================================================
+                  IMPORTANT DOCUMENT WIRING
+
+                  Only the currently selected loan's
+                  persisted documents are passed.
+
+                  Customer A / Loan 1
+                    → Loan 1 documents
+
+                  Customer A / Loan 2
+                    → Loan 2 documents
+
+                  Customer B / Loan 3
+                    → Loan 3 documents
+
+                  No cross-loan document mixing.
+              ================================================== */}
+
+              <LoanDocuments documents={selectedLoan.documents} />
             </div>
 
             <div style={collectionStudioStyles.collectionHistoryColumn}>
               <CollectionHistory />
             </div>
           </section>
-
-          {/* ==================================================
-              COLLECTION STUDIO FOOTER
-          ================================================== */}
         </div>
       </main>
     </CollectionContext.Provider>
