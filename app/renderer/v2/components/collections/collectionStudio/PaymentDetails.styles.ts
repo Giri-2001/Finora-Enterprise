@@ -202,46 +202,43 @@ export const collectionPaymentDetailsStyles: Record<string, CSSProperties> = {
   // ==========================================================
 
   body: {
-    width: "100%",
+  width: "100%",
+  minWidth: 0,
 
-    minWidth: 0,
+  display: "grid",
 
-    display: "grid",
+  gridTemplateColumns: "repeat(7, minmax(0, 1fr))",
 
-    gridTemplateColumns: "repeat(12, minmax(0, 1fr))",
+  gap: "9px",
 
-    columnGap: "10px",
+  alignItems: "end",
 
-    rowGap: "10px",
+  boxSizing: "border-box",
 
-    alignItems: "end",
+  paddingTop: "13px",
 
-    boxSizing: "border-box",
-
-    paddingTop: "13px",
-
-    fontFamily: INTER_FONT,
-  },
+  fontFamily: INTER_FONT,
+},
 
   // ==========================================================
   // STANDARD FIELD
   // ==========================================================
 
   field: {
-    gridColumn: "span 4",
+  gridColumn: "span 1",
 
-    minWidth: 0,
+  minWidth: 0,
 
-    display: "flex",
+  display: "flex",
 
-    flexDirection: "column",
+  flexDirection: "column",
 
-    gap: "6px",
+  gap: "6px",
 
-    boxSizing: "border-box",
+  boxSizing: "border-box",
 
-    fontFamily: INTER_FONT,
-  },
+  fontFamily: INTER_FONT,
+},
 
   // ==========================================================
   // LABEL
@@ -252,9 +249,9 @@ export const collectionPaymentDetailsStyles: Record<string, CSSProperties> = {
 
     fontFamily: INTER_FONT,
 
-    fontSize: "10px",
+    fontSize: "12px",
 
-    fontWeight: 750,
+    fontWeight: 700,
 
     lineHeight: 1.2,
 
@@ -312,20 +309,20 @@ export const collectionPaymentDetailsStyles: Record<string, CSSProperties> = {
   // ==========================================================
 
   remarksField: {
-    gridColumn: "span 6",
+  gridColumn: "span 1",
 
-    minWidth: 0,
+  minWidth: 0,
 
-    display: "flex",
+  display: "flex",
 
-    flexDirection: "column",
+  flexDirection: "column",
 
-    gap: "6px",
+  justifyContent: "flex-end",
 
-    boxSizing: "border-box",
+  boxSizing: "border-box",
 
-    fontFamily: INTER_FONT,
-  },
+  fontFamily: INTER_FONT,
+},
 
   textarea: {
     width: "100%",
@@ -360,9 +357,7 @@ export const collectionPaymentDetailsStyles: Record<string, CSSProperties> = {
 
     fontSize: "12px",
 
-    fontWeight: 550,
-
-    lineHeight: 1.45,
+    fontWeight: 650,
 
     transition:
       "border-color 150ms ease, box-shadow 150ms ease, background 150ms ease",
@@ -373,7 +368,7 @@ export const collectionPaymentDetailsStyles: Record<string, CSSProperties> = {
   // ==========================================================
 
   totalBar: {
-    gridColumn: "span 3",
+    gridColumn: "span 1",
 
     minWidth: 0,
 
@@ -487,28 +482,28 @@ export const collectionPaymentDetailsStyles: Record<string, CSSProperties> = {
   // ==========================================================
 
   actions: {
-    gridColumn: "span 3",
+  gridColumn: "span 2",
 
-    minWidth: 0,
+  minWidth: 0,
 
-    width: "100%",
+  width: "100%",
 
-    height: "42px",
+  height: "42px",
 
-    minHeight: "42px",
+  minHeight: "42px",
 
-    display: "grid",
+  display: "grid",
 
-    gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
+  gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
 
-    alignItems: "stretch",
+  gap: "9px",
 
-    gap: "7px",
+  alignItems: "stretch",
 
-    boxSizing: "border-box",
+  boxSizing: "border-box",
 
-    fontFamily: INTER_FONT,
-  },
+  fontFamily: INTER_FONT,
+},
 
   // ==========================================================
   // SAVE COLLECTION

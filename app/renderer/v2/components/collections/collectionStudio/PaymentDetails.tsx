@@ -112,6 +112,8 @@
 
 import { useState } from "react";
 
+import { WalletCards } from "lucide-react";
+
 import { useCollectionController } from "../controller";
 
 import { updateLoanOutstandingAmount } from "../../../services/loan/loanService";
@@ -919,9 +921,12 @@ export default function PaymentDetails() {
       ====================================================== */}
 
       <header style={collectionPaymentDetailsStyles.header}>
-        <div style={collectionPaymentDetailsStyles.step}>6</div>
+        <WalletCards
+          aria-hidden="true"
+          style={collectionPaymentDetailsStyles.headerIcon}
+        />
 
-        <div>
+        <div style={collectionPaymentDetailsStyles.headerContent}>
           <h2 style={collectionPaymentDetailsStyles.title}>PAYMENT DETAILS</h2>
 
           <p style={collectionPaymentDetailsStyles.subtitle}>
