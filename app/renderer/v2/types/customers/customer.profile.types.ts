@@ -9,73 +9,46 @@
    Status  : Production
 =========================================================== */
 
-
 /* ===========================================================
    IMPORTS
 =========================================================== */
 
-import type {
-  CustomerIdentity,
-} from "./customer.identity.types";
+import type { CustomerIdentity } from "./customer.identity.types";
 
-import type {
-  CustomerBasicInformation,
-} from "./customer.basic.types";
+import type { CustomerBasicInformation } from "./customer.basic.types";
 
-import type {
-  CustomerKYC,
-} from "./customer.kyc.types";
+import type { CustomerKYC } from "./customer.kyc.types";
 
-import type {
-  CustomerPersonalInformation,
-} from "./customer.personal.types";
+import type { CustomerPersonalInformation } from "./customer.personal.types";
 
-import type {
-  CustomerAddressInformation,
-} from "./customer.address.types";
+import type { CustomerAddressInformation } from "./customer.address.types";
 
-import type {
-  CustomerNomineeInformation,
-} from "./customer.nominee.types";
+import type { CustomerNomineeInformation } from "./customer.nominee.types";
 
-import type {
-  CustomerDigitalLocker,
-} from "./customer.documents.types";
+import type { CustomerDigitalLocker } from "./customer.documents.types";
 
-import type {
-  CustomerInternalInformation,
-} from "./customer.internal.types";
+import type { CustomerInternalInformation } from "./customer.internal.types";
 
-import type {
-  CustomerTimeline,
-} from "./customer.timeline.types";
+import type { CustomerTimeline } from "./customer.timeline.types";
 
-import type {
-  CustomerStatistics,
-} from "./customer.statistics.types";
-
+import type { CustomerStatistics } from "./customer.statistics.types";
 
 /* ===========================================================
    COMPLETE CUSTOMER PROFILE
 =========================================================== */
 
 export interface CustomerProfile {
-
   /* =========================================================
      IDENTITY INFORMATION
   ========================================================= */
 
-  identity:
-    CustomerIdentity;
-
+  identity: CustomerIdentity;
 
   /* =========================================================
      BASIC INFORMATION
   ========================================================= */
 
-  basic:
-    CustomerBasicInformation;
-
+  basic: CustomerBasicInformation;
 
   /* =========================================================
      CUSTOMER PROFILE PHOTO
@@ -89,74 +62,56 @@ export interface CustomerProfile {
      boundary.
   ========================================================= */
 
-  photo?:
-    string;
-
+  photo?: string;
 
   /* =========================================================
      GOVERNMENT KYC
   ========================================================= */
 
-  kyc:
-    CustomerKYC;
-
+  kyc: CustomerKYC;
 
   /* =========================================================
      PERSONAL INFORMATION
   ========================================================= */
 
-  personal:
-    CustomerPersonalInformation;
-
+  personal: CustomerPersonalInformation;
 
   /* =========================================================
      ADDRESS INFORMATION
   ========================================================= */
 
-  address:
-    CustomerAddressInformation;
-
+  address: CustomerAddressInformation;
 
   /* =========================================================
      NOMINEE INFORMATION
   ========================================================= */
 
-  nominee:
-    CustomerNomineeInformation;
-
+  nominee: CustomerNomineeInformation;
 
   /* =========================================================
      DIGITAL LOCKER
   ========================================================= */
 
-  documents:
-    CustomerDigitalLocker;
-
+  documents: CustomerDigitalLocker;
 
   /* =========================================================
      INTERNAL INFORMATION
   ========================================================= */
 
-  internal:
-    CustomerInternalInformation;
-
+  internal: CustomerInternalInformation;
 
   /* =========================================================
      CUSTOMER TIMELINE
   ========================================================= */
 
-  timeline:
-    CustomerTimeline;
-
+  timeline: CustomerTimeline;
 
   /* =========================================================
      STATISTICS & ANALYTICS
   ========================================================= */
 
-  statistics:
-    CustomerStatistics;
+  statistics: CustomerStatistics;
 }
-
 
 /* ===========================================================
    END

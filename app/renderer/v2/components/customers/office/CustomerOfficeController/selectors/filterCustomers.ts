@@ -40,70 +40,37 @@
    sha    → NO MATCH
 =========================================================== */
 
-
 /* ===========================================================
    IMPORTS
 =========================================================== */
 
-import type {
-  OfficeCustomer,
-} from "../../CustomerOffice/types";
-
+import type { OfficeCustomer } from "../../CustomerOffice/types";
 
 /* ===========================================================
    NORMALIZE GENERAL SEARCH VALUE
 =========================================================== */
 
-function normalizeSearchValue(
-  value: string | undefined,
-): string {
-
-  return (
-    value ?? ""
-  )
-    .trim()
-    .toLowerCase();
-
+function normalizeSearchValue(value: string | undefined): string {
+  return (value ?? "").trim().toLowerCase();
 }
-
 
 /* ===========================================================
    NORMALIZE IDENTITY SEARCH VALUE
 =========================================================== */
 
-function normalizeIdentitySearchValue(
-  value: string | undefined,
-): string {
-
-  return (
-    value ?? ""
-  )
-    .replace(/\D/g, "");
-
+function normalizeIdentitySearchValue(value: string | undefined): string {
+  return (value ?? "").replace(/\D/g, "");
 }
-
 
 /* ===========================================================
    CUSTOMER NAME PREFIX MATCH
 =========================================================== */
 
-function matchesCustomerName(
-  customerName: string,
-  keyword: string,
-): boolean {
+function matchesCustomerName(customerName: string, keyword: string): boolean {
+  const words = customerName.split(/\s+/).filter(Boolean);
 
-  const words =
-    customerName
-      .split(/\s+/)
-      .filter(Boolean);
-
-  return words.some(
-    (word) =>
-      word.startsWith(keyword),
-  );
-
+  return words.some((word) => word.startsWith(keyword));
 }
-
 
 /* ===========================================================
    FILTER CUSTOMERS
@@ -113,46 +80,32 @@ export default function filterCustomers(
   customers: OfficeCustomer[],
   searchText: string,
 ): OfficeCustomer[] {
-
   /* =========================================================
      GENERAL SEARCH VALUE
   ========================================================= */
 
-  const keyword =
-    normalizeSearchValue(
-      searchText,
-    );
-
+  const keyword = normalizeSearchValue(searchText);
 
   /* =========================================================
      EMPTY SEARCH
   ========================================================= */
 
   if (!keyword) {
-
     return customers;
-
   }
-
 
   /* =========================================================
      IDENTITY SEARCH VALUE
   ========================================================= */
 
-  const identityKeyword =
-    normalizeIdentitySearchValue(
-      searchText,
-    );
-
+  const identityKeyword = normalizeIdentitySearchValue(searchText);
 
   /* =========================================================
      APPROVED CUSTOMER SEARCH
   ========================================================= */
 
-  return customers.filter(
-    (customer) => {
-
-      /* =======================================================
+  return customers.filter((customer) => {
+    /* =======================================================
          CUSTOMER NAME
 
          WORD-START / PREFIX MATCH ONLY.
@@ -170,53 +123,31 @@ export default function filterCustomers(
          ri    → NO MATCH
       ======================================================= */
 
-      const customerName =
-        normalizeSearchValue(
-          customer.name,
-        );
+    const customerName = normalizeSearchValue(customer.name);
 
-      const customerNameMatch =
-        matchesCustomerName(
-          customerName,
-          keyword,
-        );
+    const customerNameMatch = matchesCustomerName(customerName, keyword);
 
-
-      /* =======================================================
+    /* =======================================================
          CUSTOMER ID
 
          Partial search supported.
       ======================================================= */
 
-      const customerId =
-        normalizeSearchValue(
-          customer.id,
-        );
+    const customerId = normalizeSearchValue(customer.id);
 
-      const customerIdMatch =
-        customerId.includes(
-          keyword,
-        );
+    const customerIdMatch = customerId.includes(keyword);
 
-
-      /* =======================================================
+    /* =======================================================
          MOBILE NUMBER
 
          Partial search supported.
       ======================================================= */
 
-      const mobileNumber =
-        normalizeSearchValue(
-          customer.phone,
-        );
+    const mobileNumber = normalizeSearchValue(customer.phone);
 
-      const mobileNumberMatch =
-        mobileNumber.includes(
-          keyword,
-        );
+    const mobileNumberMatch = mobileNumber.includes(keyword);
 
-
-      /* =======================================================
+    /* =======================================================
    AADHAAR
 
    EXACT 6-DIGIT MATCH ONLY.
@@ -235,63 +166,40 @@ export default function filterCustomers(
    89012 → NO MATCH
 ======================================================= */
 
-const aadhaarFirst6 =
-  normalizeIdentitySearchValue(
-    customer.aadhaarFirst6,
-  );
+    const aadhaarFirst6 = normalizeIdentitySearchValue(customer.aadhaarFirst6);
 
-const aadhaarLast6 =
-  normalizeIdentitySearchValue(
-    customer.aadhaarLast6,
-  );
+    const aadhaarLast6 = normalizeIdentitySearchValue(customer.aadhaarLast6);
 
-const aadhaarExactMatch =
-  identityKeyword.length === 6 &&
-  (
-    aadhaarFirst6 === identityKeyword ||
-    aadhaarLast6 === identityKeyword
-  );
+    const aadhaarExactMatch =
+      identityKeyword.length === 6 &&
+      (aadhaarFirst6 === identityKeyword || aadhaarLast6 === identityKeyword);
 
-      /* =======================================================
+    /* =======================================================
          ID CARD LAST 6 DIGITS
 
          EXACT 6-DIGIT MATCH ONLY.
       ======================================================= */
 
-      const idCardLast6 =
-        normalizeIdentitySearchValue(
-          customer.idCardLast6,
-        );
+    const idCardLast6 = normalizeIdentitySearchValue(customer.idCardLast6);
 
-      const idCardExactMatch =
-        identityKeyword.length === 6 &&
-        idCardLast6.length === 6 &&
-        idCardLast6 === identityKeyword;
+    const idCardExactMatch =
+      identityKeyword.length === 6 &&
+      idCardLast6.length === 6 &&
+      idCardLast6 === identityKeyword;
 
-
-      /* =======================================================
+    /* =======================================================
          FINAL APPROVED MATCH
       ======================================================= */
 
-      return (
-
-        customerNameMatch ||
-
-        customerIdMatch ||
-
-        mobileNumberMatch ||
-
-        aadhaarExactMatch ||
-
-        idCardExactMatch
-
-      );
-
-    },
-  );
-
+    return (
+      customerNameMatch ||
+      customerIdMatch ||
+      mobileNumberMatch ||
+      aadhaarExactMatch ||
+      idCardExactMatch
+    );
+  });
 }
-
 
 /* ===========================================================
    END

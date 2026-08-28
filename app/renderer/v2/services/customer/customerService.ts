@@ -30,22 +30,16 @@
 // IMPORTS
 // ============================================================
 
-import type {
-  CustomerProfile,
-} from "../../types/customers";
+import type { CustomerProfile } from "../../types/customers";
 
-import {
-  customerRepository,
-} from "../../repositories/customer/customerRepository";
+import { customerRepository } from "../../repositories/customer/customerRepository";
 
 import type {
   RepositoryQuery,
   RepositoryWriteOptions,
 } from "../../repositories/repository.types";
 
-import type {
-  StorageResult,
-} from "../../storage/storage.types";
+import type { StorageResult } from "../../storage/storage.types";
 
 // ============================================================
 // CUSTOMER SERVICE QUERY
@@ -67,127 +61,80 @@ import type {
 //
 // ============================================================
 
-export type CustomerServiceQuery =
-  Omit<
-    RepositoryQuery,
-    "entity"
-  >;
+export type CustomerServiceQuery = Omit<RepositoryQuery, "entity">;
 
 // ============================================================
 // CUSTOMER SERVICE
 // ============================================================
 
 export class CustomerService {
-
-// ==========================================================
-// GET ALL CUSTOMERS
-// ==========================================================
+  // ==========================================================
+  // GET ALL CUSTOMERS
+  // ==========================================================
 
   async getAll(
     query?: CustomerServiceQuery,
-  ): Promise<
-    StorageResult<CustomerProfile[]>
-  > {
-
-    return customerRepository.getAll(
-      query,
-    );
+  ): Promise<StorageResult<CustomerProfile[]>> {
+    return customerRepository.getAll(query);
   }
 
-// ==========================================================
-// GET CUSTOMER BY ID
-// ==========================================================
+  // ==========================================================
+  // GET CUSTOMER BY ID
+  // ==========================================================
 
   async getById(
     customerId: string,
-  ): Promise<
-    StorageResult<
-      CustomerProfile | undefined
-    >
-  > {
-
-    return customerRepository.findById(
-      customerId,
-    );
+  ): Promise<StorageResult<CustomerProfile | undefined>> {
+    return customerRepository.findById(customerId);
   }
 
-// ==========================================================
-// CREATE CUSTOMER
-// ==========================================================
+  // ==========================================================
+  // CREATE CUSTOMER
+  // ==========================================================
 
   async create(
     customer: CustomerProfile,
     options?: RepositoryWriteOptions,
-  ): Promise<
-    StorageResult<CustomerProfile>
-  > {
-
-    return customerRepository.save(
-      customer,
-      options,
-    );
+  ): Promise<StorageResult<CustomerProfile>> {
+    return customerRepository.save(customer, options);
   }
 
-// ==========================================================
-// UPDATE CUSTOMER
-// ==========================================================
+  // ==========================================================
+  // UPDATE CUSTOMER
+  // ==========================================================
 
   async update(
     customer: CustomerProfile,
     options?: RepositoryWriteOptions,
-  ): Promise<
-    StorageResult<CustomerProfile>
-  > {
-
-    return customerRepository.update(
-      customer,
-      options,
-    );
+  ): Promise<StorageResult<CustomerProfile>> {
+    return customerRepository.update(customer, options);
   }
 
-// ==========================================================
-// DELETE CUSTOMER
-// ==========================================================
+  // ==========================================================
+  // DELETE CUSTOMER
+  // ==========================================================
 
-  async delete(
-    customerId: string,
-  ): Promise<
-    StorageResult<void>
-  > {
-
-    return customerRepository.delete(
-      customerId,
-    );
+  async delete(customerId: string): Promise<StorageResult<void>> {
+    return customerRepository.delete(customerId);
   }
 
-// ==========================================================
-// REPLACE ALL CUSTOMERS
-// ==========================================================
+  // ==========================================================
+  // REPLACE ALL CUSTOMERS
+  // ==========================================================
 
   async replaceAll(
     customers: CustomerProfile[],
     options?: RepositoryWriteOptions,
-  ): Promise<
-    StorageResult<void>
-  > {
-
-    return customerRepository.replaceAll(
-      customers,
-      options,
-    );
+  ): Promise<StorageResult<void>> {
+    return customerRepository.replaceAll(customers, options);
   }
 
-// ==========================================================
-// CUSTOMER EXISTS
-// ==========================================================
+  // ==========================================================
+  // CUSTOMER EXISTS
+  // ==========================================================
 
-  async exists(
-    customerId: string,
-  ): Promise<boolean> {
-
-    return customerRepository.exists(
-      customerId,
-    );
+  async exists(customerId: string): Promise<boolean> {
+    return customerRepository.exists(customerId);
   }
 }
 
@@ -195,8 +142,7 @@ export class CustomerService {
 // SINGLETON
 // ============================================================
 
-export const customerService =
-  new CustomerService();
+export const customerService = new CustomerService();
 
 // ============================================================
 // END
