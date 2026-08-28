@@ -52,6 +52,10 @@ import {
 
 import CollectionPortfolioResponsiveRecord from "./components/CollectionPortfolioResponsiveRecord";
 
+import type { Loan } from "../../components/customers/office/CustomerOffice/types";
+
+import { fetchLoans } from "../../services/loan/loanService";
+
 import {
   pageStyle,
   topBarStyle,
@@ -366,10 +370,17 @@ export default function CollectionsOffice() {
   };
 
   const responsiveStatisticsGridStyle: CSSProperties = {
-    ...statisticsGridStyle,
+  ...statisticsGridStyle,
 
-    ...createLoansOfficeStatisticsGridStyle(responsiveTokens),
-  };
+  ...createLoansOfficeStatisticsGridStyle(responsiveTokens),
+
+  ...(responsiveTokens.viewport !== "mobile" &&
+  responsiveTokens.viewport !== "tablet"
+    ? {
+        gridTemplateColumns: "repeat(5, minmax(0, 1fr))",
+      }
+    : {}),
+};
 
   const responsiveStatisticCardStyle: CSSProperties = {
     ...statisticCardStyle,
@@ -406,6 +417,8 @@ export default function CollectionsOffice() {
   // ==========================================================
 
   const [collections, setCollections] = useState<CollectionReviewData[]>([]);
+
+  const [loans, setLoans] = useState<Loan[]>([]);
 
   const [viewingCollection, setViewingCollection] =
     useState<CollectionReviewData | null>(null);
@@ -458,7 +471,12 @@ export default function CollectionsOffice() {
           );
         }
 
-        const records = await loadCollections();
+        const [records, loanRecords] = await Promise.all([
+  loadCollections(),
+  fetchLoans(),
+]);
+
+setLoans(loanRecords);
 
         const sorted = [...records].sort(
           (a, b) => getSortTime(b) - getSortTime(a),
@@ -492,6 +510,7 @@ export default function CollectionsOffice() {
         console.error("FINORA COLLECTIONS OFFICE LOAD ERROR:", error);
 
         setCollections([]);
+        setLoans([]);
       } finally {
         setLoading(false);
 
@@ -511,43 +530,60 @@ export default function CollectionsOffice() {
     };
 
     window.addEventListener("FINORA_COLLECTION_UPDATED", handleUpdate);
+window.addEventListener("FINORA_LOAN_UPDATED", handleUpdate);
 
-    return () => {
-      window.removeEventListener("FINORA_COLLECTION_UPDATED", handleUpdate);
-    };
+return () => {
+  window.removeEventListener("FINORA_COLLECTION_UPDATED", handleUpdate);
+  window.removeEventListener("FINORA_LOAN_UPDATED", handleUpdate);
+};
   }, [loadCollectionRecords]);
 
   // ==========================================================
   // STATISTICS
   // ==========================================================
 
-  const statistics = useMemo(() => {
-    const today = getDateFilterKey(new Date().toISOString());
+const statistics = useMemo(() => {
+  const today = getDateFilterKey(new Date().toISOString());
 
-    const todayCollections = collections.filter(
-      (collection) => getDateFilterKey(getCollectionDate(collection)) === today,
-    );
+  const todayCollections = collections.filter(
+    (collection) => getDateFilterKey(getCollectionDate(collection)) === today,
+  );
 
-    const totalCollected = collections.reduce(
-      (total, collection) => total + safeNumber(collection.paymentAmount),
-      0,
-    );
+  const totalCollected = collections.reduce(
+    (total, collection) => total + safeNumber(collection.paymentAmount),
+    0,
+  );
 
-    const totalDiscount = collections.reduce(
-      (total, collection) => total + safeNumber(collection.discountAmount),
-      0,
-    );
+  const totalDiscount = collections.reduce(
+    (total, collection) => total + safeNumber(collection.discountAmount),
+    0,
+  );
 
-    return {
-      total: collections.length,
+  const totalOutstanding = loans.reduce((total, loan) => {
+    const status = String(loan.status ?? "")
+      .trim()
+      .toUpperCase();
 
-      today: todayCollections.length,
+    const outstanding = safeNumber(loan.outstanding);
 
-      collected: totalCollected,
+    if (
+      (status === "ACTIVE" || status === "RUNNING") &&
+      outstanding > 0
+    ) {
+      return total + outstanding;
+    }
 
-      discount: totalDiscount,
-    };
-  }, [collections]);
+    return total;
+  }, 0);
+
+  return {
+    total: collections.length,
+    today: todayCollections.length,
+    collected: totalCollected,
+    discount: totalDiscount,
+    outstanding: totalOutstanding,
+  };
+}, [collections, loans]);
 
   // ==========================================================
   // FILTERED COLLECTIONS
@@ -783,6 +819,14 @@ export default function CollectionsOffice() {
               {formatCurrency(statistics.discount)}
             </strong>
           </article>
+
+          <article style={responsiveStatisticCardStyle}>
+  <span style={statisticLabelStyle}>Total Outstanding</span>
+
+  <strong style={statisticValueStyle}>
+    {formatCurrency(statistics.outstanding)}
+  </strong>
+</article>
         </section>
 
         {/* PORTFOLIO */}

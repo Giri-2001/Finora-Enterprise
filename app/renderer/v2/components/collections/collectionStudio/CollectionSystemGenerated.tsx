@@ -115,7 +115,11 @@
 
 import { useEffect, useState } from "react";
 
-import { Info, LockKeyhole } from "lucide-react";
+import { LockKeyhole } from "lucide-react";
+
+import { useResponsive } from "../../../utils/responsive";
+
+import { createCollectionSystemFinancialListStyle } from "../../../utils/responsive/collections/collectionStudio.layout";
 
 import { collectionSystemGeneratedStyles } from "./CollectionSystemGenerated.styles";
 
@@ -310,6 +314,18 @@ function calculateAccruedInterest(
 
 export default function CollectionSystemGenerated() {
   const { reviewData } = useCollectionController();
+
+  // ==========================================================
+  // FINORA RESPONSIVE ENGINE
+  // ==========================================================
+
+  const { viewport } = useResponsive();
+
+  const responsiveFinancialListStyle = {
+    ...collectionSystemGeneratedStyles.financialList,
+
+    ...createCollectionSystemFinancialListStyle(viewport),
+  };
 
   // ==========================================================
   // CUMULATIVE COLLECTIONS
@@ -571,7 +587,7 @@ export default function CollectionSystemGenerated() {
           FINANCIAL VALUES
       ==================================================== */}
 
-      <div style={collectionSystemGeneratedStyles.financialList}>
+      <div style={responsiveFinancialListStyle}>
         {/* ==================================================
             PRINCIPAL DUE
         ================================================== */}

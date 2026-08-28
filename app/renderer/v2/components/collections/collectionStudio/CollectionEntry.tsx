@@ -74,6 +74,17 @@ import { formatCurrency } from "../../../utils/currency/formatCurrency";
 
 import TextInput from "../../common/form/TextInput";
 
+import { useResponsive } from "../../../utils/responsive";
+
+import {
+  createCollectionEntryModeWorkspaceStyle,
+  createCollectionEntryEmiCardStyle,
+  createCollectionEntryMiddleSlotStyle,
+  createCollectionEntryManualCardStyle,
+  createCollectionEntryManualInputGridStyle,
+  createCollectionEntryValueGridStyle,
+} from "../../../utils/responsive/collections/collectionStudio.layout";
+
 // ============================================================
 // TYPES
 // ============================================================
@@ -255,6 +266,36 @@ function sanitizeMoneyInput(rawValue: string): string {
 
 export default function CollectionEntry({ middleSlot }: CollectionEntryProps) {
   const { reviewData, updateField } = useCollectionController();
+
+  // ==========================================================
+  // FINORA RESPONSIVE ENGINE
+  // ==========================================================
+
+  const { viewport, tokens } = useResponsive();
+
+  const responsiveModeWorkspaceStyle = {
+    ...collectionEntryStyles.modeWorkspace,
+
+    ...createCollectionEntryModeWorkspaceStyle(tokens, viewport),
+  };
+
+  const responsiveMiddleSlotStyle = {
+    ...collectionEntryStyles.middleSlot,
+
+    ...createCollectionEntryMiddleSlotStyle(viewport),
+  };
+
+  const responsiveManualInputGridStyle = {
+    ...collectionEntryStyles.manualInputGrid,
+
+    ...createCollectionEntryManualInputGridStyle(tokens, viewport),
+  };
+
+  const responsiveValueGridStyle = {
+    ...collectionEntryStyles.valueGrid,
+
+    ...createCollectionEntryValueGridStyle(tokens, viewport),
+  };
 
   // ==========================================================
   // STABLE CONTROLLER WRITER
@@ -715,7 +756,7 @@ export default function CollectionEntry({ middleSlot }: CollectionEntryProps) {
 
   return (
     <section style={collectionEntryStyles.panel}>
-      <div style={collectionEntryStyles.modeWorkspace}>
+      <div style={responsiveModeWorkspaceStyle}>
         {/* ==================================================
             LEFT — EMI COLLECTION
         ================================================== */}
@@ -723,6 +764,8 @@ export default function CollectionEntry({ middleSlot }: CollectionEntryProps) {
         <section
           style={{
             ...collectionEntryStyles.modeCard,
+
+            ...createCollectionEntryEmiCardStyle(viewport),
 
             ...(!isManual
               ? collectionEntryStyles.modeCardActive
@@ -741,7 +784,6 @@ export default function CollectionEntry({ middleSlot }: CollectionEntryProps) {
               />
 
               <div style={collectionEntryStyles.modeCardHeadingGroup}>
-
                 <h2 style={collectionEntryStyles.modeCardTitle}>
                   EMI COLLECTION
                 </h2>
@@ -1003,7 +1045,7 @@ export default function CollectionEntry({ middleSlot }: CollectionEntryProps) {
             CENTER — SYSTEM GENERATED SLOT
         ================================================== */}
 
-        <div style={collectionEntryStyles.middleSlot}>{middleSlot}</div>
+        <div style={responsiveMiddleSlotStyle}>{middleSlot}</div>
 
         {/* ==================================================
             RIGHT — MANUAL COLLECTION
@@ -1012,6 +1054,8 @@ export default function CollectionEntry({ middleSlot }: CollectionEntryProps) {
         <section
           style={{
             ...collectionEntryStyles.modeCard,
+
+            ...createCollectionEntryManualCardStyle(viewport),
 
             ...(isManual
               ? collectionEntryStyles.modeCardActive
@@ -1023,40 +1067,39 @@ export default function CollectionEntry({ middleSlot }: CollectionEntryProps) {
           ================================================ */}
 
           <header style={collectionEntryStyles.modeCardHeader}>
-  <div style={collectionEntryStyles.modeCardHeaderMain}>
-    <HandCoins
-      aria-hidden="true"
-      style={collectionEntryStyles.modeCardIcon}
-    />
+            <div style={collectionEntryStyles.modeCardHeaderMain}>
+              <HandCoins
+                aria-hidden="true"
+                style={collectionEntryStyles.modeCardIcon}
+              />
 
-    <div style={collectionEntryStyles.modeCardHeadingGroup}>
+              <div style={collectionEntryStyles.modeCardHeadingGroup}>
+                <h2 style={collectionEntryStyles.modeCardTitle}>
+                  MANUAL COLLECTION
+                </h2>
 
-      <h2 style={collectionEntryStyles.modeCardTitle}>
-        MANUAL COLLECTION
-      </h2>
+                <p style={collectionEntryStyles.modeCardSubtitle}>
+                  Enter collection amount and settlement adjustments.
+                </p>
+              </div>
+            </div>
 
-      <p style={collectionEntryStyles.modeCardSubtitle}>
-        Enter collection amount and settlement adjustments.
-      </p>
-    </div>
-  </div>
+            <button
+              type="button"
+              aria-label="Use manual collection"
+              aria-pressed={isManual}
+              onClick={() => handleModeChange("manual")}
+              style={{
+                ...collectionEntryStyles.modeCardSelector,
 
-  <button
-    type="button"
-    aria-label="Use manual collection"
-    aria-pressed={isManual}
-    onClick={() => handleModeChange("manual")}
-    style={{
-      ...collectionEntryStyles.modeCardSelector,
-
-      ...(isManual
-        ? collectionEntryStyles.modeCardSelectorActive
-        : {}),
-    }}
-  >
-    {isManual ? "✓" : ""}
-  </button>
-</header>
+                ...(isManual
+                  ? collectionEntryStyles.modeCardSelectorActive
+                  : {}),
+              }}
+            >
+              {isManual ? "✓" : ""}
+            </button>
+          </header>
 
           {/* ================================================
               MANUAL BODY
@@ -1070,7 +1113,7 @@ export default function CollectionEntry({ middleSlot }: CollectionEntryProps) {
                 </div>
               </div>
 
-              <div style={collectionEntryStyles.manualInputGrid}>
+              <div style={responsiveManualInputGridStyle}>
                 {/* ========================================
                     COLLECTION AMOUNT
                 ======================================== */}
@@ -1158,7 +1201,7 @@ export default function CollectionEntry({ middleSlot }: CollectionEntryProps) {
                 MANUAL VALUES
             ============================================== */}
 
-            <div style={collectionEntryStyles.valueGrid}>
+            <div style={responsiveValueGridStyle}>
               <div
                 style={{
                   ...collectionEntryStyles.valueCard,

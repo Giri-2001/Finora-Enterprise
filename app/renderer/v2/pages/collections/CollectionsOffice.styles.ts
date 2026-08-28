@@ -164,7 +164,7 @@ export const createButtonStyle: CSSProperties = {
 
 export const statisticsGridStyle: CSSProperties = {
   display: "grid",
-  gridTemplateColumns: "repeat(4, minmax(0, 1fr))",
+  gridTemplateColumns: "repeat(5, minmax(0, 1fr))",
   gap: "14px",
   width: "100%",
   marginBottom: "20px",
@@ -236,7 +236,7 @@ export const portfolioTitleStyle: CSSProperties = {
   alignItems: "center",
   gap: "8px",
   color: THEME.textPrimary,
-  fontSize: "13px",
+  fontSize: "15px",
   fontWeight: 750,
   lineHeight: 1.2,
 };
@@ -281,7 +281,7 @@ export const filterFieldStyle: CSSProperties = {
 
 export const filterLabelStyle: CSSProperties = {
   color: THEME.textMuted,
-  fontSize: "10px",
+  fontSize: "12px",
   fontWeight: 650,
   whiteSpace: "nowrap",
 };
@@ -295,7 +295,7 @@ export const filterControlStyle: CSSProperties = {
   outline: "none",
   background: THEME.background,
   color: THEME.textPrimary,
-  fontSize: "11px",
+  fontSize: "13px",
   fontWeight: 550,
 };
 
@@ -324,7 +324,7 @@ export const clearFilterButtonStyle: CSSProperties = {
   borderRadius: "7px",
   background: THEME.surfaceMuted,
   color: THEME.textSecondary,
-  fontSize: "10px",
+  fontSize: "12px",
   fontWeight: 650,
   cursor: "pointer",
   whiteSpace: "nowrap",
@@ -337,7 +337,7 @@ export const applyFilterButtonStyle: CSSProperties = {
   borderRadius: "7px",
   background: THEME.primary,
   color: THEME.textInverse,
-  fontSize: "10px",
+  fontSize: "12px",
   fontWeight: 700,
   cursor: "pointer",
   whiteSpace: "nowrap",
@@ -350,7 +350,7 @@ export const refreshButtonStyle: CSSProperties = {
   borderRadius: "7px",
   background: THEME.surfaceMuted,
   color: THEME.textSecondary,
-  fontSize: "10px",
+  fontSize: "12px",
   fontWeight: 650,
   cursor: "pointer",
   whiteSpace: "nowrap",
@@ -366,7 +366,7 @@ export const collectionCountStyle: CSSProperties = {
   borderRadius: "999px",
   background: THEME.successSoft,
   color: THEME.success,
-  fontSize: "10px",
+  fontSize: "12px",
   fontWeight: 700,
   whiteSpace: "nowrap",
 };
@@ -398,7 +398,7 @@ export const tableHeaderCellStyle: CSSProperties = {
   padding: "0 7px",
   boxSizing: "border-box",
   color: THEME.textMuted,
-  fontSize: "10px",
+  fontSize: "12px",
   fontWeight: 650,
   lineHeight: 1.2,
   textAlign: "left",
@@ -438,7 +438,7 @@ export const tableCellStyle: CSSProperties = {
   padding: "7px",
   boxSizing: "border-box",
   color: THEME.textSecondary,
-  fontSize: "11px",
+  fontSize: "13px",
   fontWeight: 550,
   lineHeight: 1.25,
   overflow: "hidden",
@@ -460,7 +460,7 @@ export const tableCellCenterStyle: CSSProperties = {
 
 export const serialCellStyle: CSSProperties = {
   ...tableCellCenterStyle,
-  fontSize: "11px",
+  fontSize: "13px",
   fontWeight: 700,
 };
 
@@ -477,7 +477,7 @@ export const receiptIdentityStyle: CSSProperties = {
 
 export const receiptNumberStyle: CSSProperties = {
   color: THEME.textPrimary,
-  fontSize: "11px",
+  fontSize: "13px",
   fontWeight: 750,
   lineHeight: 1.2,
   whiteSpace: "nowrap",
@@ -487,7 +487,7 @@ export const receiptNumberStyle: CSSProperties = {
 
 export const receiptReferenceStyle: CSSProperties = {
   color: THEME.textMuted,
-  fontSize: "9px",
+  fontSize: "11px",
   fontWeight: 500,
   whiteSpace: "nowrap",
   overflow: "hidden",
@@ -500,7 +500,7 @@ export const receiptReferenceStyle: CSSProperties = {
 
 export const customerNameStyle: CSSProperties = {
   color: THEME.textPrimary,
-  fontSize: "11px",
+  fontSize: "13px",
   fontWeight: 700,
   lineHeight: 1.2,
   whiteSpace: "nowrap",
@@ -511,7 +511,7 @@ export const customerNameStyle: CSSProperties = {
 export const customerPhoneStyle: CSSProperties = {
   marginTop: "4px",
   color: THEME.textMuted,
-  fontSize: "9px",
+  fontSize: "11px",
   fontWeight: 500,
   whiteSpace: "nowrap",
 };
@@ -529,7 +529,7 @@ export const loanIdentityStyle: CSSProperties = {
 
 export const loanNumberStyle: CSSProperties = {
   color: THEME.textPrimary,
-  fontSize: "10px",
+  fontSize: "12px",
   fontWeight: 750,
   lineHeight: 1.2,
   whiteSpace: "nowrap",
@@ -539,7 +539,7 @@ export const loanNumberStyle: CSSProperties = {
 
 export const loanIdStyle: CSSProperties = {
   color: THEME.textMuted,
-  fontSize: "8px",
+  fontSize: "10px",
   fontWeight: 500,
   lineHeight: 1.2,
   whiteSpace: "nowrap",
@@ -553,7 +553,7 @@ export const loanIdStyle: CSSProperties = {
 
 export const amountStyle: CSSProperties = {
   color: THEME.textPrimary,
-  fontSize: "11px",
+  fontSize: "13px",
   fontWeight: 700,
   whiteSpace: "nowrap",
 };
@@ -564,7 +564,7 @@ export const outstandingStyle: CSSProperties = {
   borderRadius: "6px",
   background: THEME.successSoft,
   color: THEME.success,
-  fontSize: "11px",
+  fontSize: "13px",
   fontWeight: 750,
   whiteSpace: "nowrap",
 };
@@ -610,7 +610,7 @@ export function collectionTypeBadgeStyle(
 
     color: isEmi ? THEME.primary : THEME.textSecondary,
 
-    fontSize: "9px",
+    fontSize: "11px",
 
     fontWeight: 700,
 
@@ -641,7 +641,7 @@ export function statusBadgeStyle(
     borderRadius: "999px",
     background: approved ? THEME.successSoft : THEME.surfaceMuted,
     color: approved ? THEME.success : THEME.textMuted,
-    fontSize: "9px",
+    fontSize: "11px",
     fontWeight: 700,
     whiteSpace: "nowrap",
   };
@@ -658,7 +658,7 @@ export const viewButtonStyle: CSSProperties = {
   borderRadius: "6px",
   background: THEME.accentSoft,
   color: THEME.primary,
-  fontSize: "9px",
+  fontSize: "11px",
   fontWeight: 750,
   cursor: "pointer",
   whiteSpace: "nowrap",

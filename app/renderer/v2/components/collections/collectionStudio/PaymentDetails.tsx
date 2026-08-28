@@ -122,6 +122,19 @@ import { approveCollection } from "../../../services/collection/collectionServic
 
 import { collectionPaymentDetailsStyles } from "./PaymentDetails.styles";
 
+import { useResponsive } from "../../../utils/responsive";
+
+import {
+  createPaymentDetailsBodyStyle,
+  createPaymentDetailsFieldStyle,
+  createPaymentDetailsRemarksStyle,
+  createPaymentDetailsTotalStyle,
+  createPaymentDetailsActionsStyle,
+  createPaymentDetailsInputStyle,
+  createPaymentDetailsTextareaStyle,
+  createPaymentDetailsButtonStyle,
+} from "../../../utils/responsive/collections/collectionStudio.layout";
+
 // ============================================================
 // HELPERS
 // ============================================================
@@ -189,6 +202,66 @@ function generateReceiptNumber(): string {
 
 export default function PaymentDetails() {
   const { reviewData, updateField } = useCollectionController();
+
+  // ==========================================================
+  // FINORA RESPONSIVE ENGINE
+  // ==========================================================
+
+  const { viewport, tokens } = useResponsive();
+
+  const responsiveBodyStyle = {
+    ...collectionPaymentDetailsStyles.body,
+
+    ...createPaymentDetailsBodyStyle(tokens, viewport),
+  };
+
+  const responsiveFieldStyle = {
+    ...collectionPaymentDetailsStyles.field,
+
+    ...createPaymentDetailsFieldStyle(viewport),
+  };
+
+  const responsiveRemarksStyle = {
+    ...collectionPaymentDetailsStyles.remarksField,
+
+    ...createPaymentDetailsRemarksStyle(viewport),
+  };
+
+  const responsiveTotalStyle = {
+    ...collectionPaymentDetailsStyles.totalBar,
+
+    ...createPaymentDetailsTotalStyle(viewport),
+  };
+
+  const responsiveActionsStyle = {
+    ...collectionPaymentDetailsStyles.actions,
+
+    ...createPaymentDetailsActionsStyle(tokens, viewport),
+  };
+
+  const responsiveInputStyle = {
+    ...collectionPaymentDetailsStyles.input,
+
+    ...createPaymentDetailsInputStyle(tokens, viewport),
+  };
+
+  const responsiveTextareaStyle = {
+    ...collectionPaymentDetailsStyles.textarea,
+
+    ...createPaymentDetailsTextareaStyle(tokens, viewport),
+  };
+
+  const responsiveSaveButtonStyle = {
+    ...collectionPaymentDetailsStyles.saveButton,
+
+    ...createPaymentDetailsButtonStyle(tokens, viewport),
+  };
+
+  const responsiveReceiptButtonStyle = {
+    ...collectionPaymentDetailsStyles.receiptButton,
+
+    ...createPaymentDetailsButtonStyle(tokens, viewport),
+  };
 
   // ==========================================================
   // SAVING STATE
@@ -939,12 +1012,12 @@ export default function PaymentDetails() {
           COMPACT PAYMENT GRID
       ====================================================== */}
 
-      <div style={collectionPaymentDetailsStyles.body}>
+      <div style={responsiveBodyStyle}>
         {/* ====================================================
             COLLECTION DATE
         ==================================================== */}
 
-        <div style={collectionPaymentDetailsStyles.field}>
+        <div style={responsiveFieldStyle}>
           <label
             htmlFor="finora-collection-date"
             style={collectionPaymentDetailsStyles.label}
@@ -957,7 +1030,7 @@ export default function PaymentDetails() {
             type="date"
             value={reviewData.receiptDate || ""}
             onChange={(event) => handleDateChange(event.target.value)}
-            style={collectionPaymentDetailsStyles.input}
+            style={responsiveInputStyle}
           />
         </div>
 
@@ -1015,14 +1088,14 @@ export default function PaymentDetails() {
             REMARKS
         ==================================================== */}
 
-        <div style={collectionPaymentDetailsStyles.remarksField}>
+        <div style={responsiveRemarksStyle}>
           <textarea
             id="finora-payment-remarks"
             value={reviewData.remarks || ""}
             onChange={(event) => handleRemarksChange(event.target.value)}
             placeholder="Enter remarks"
             rows={2}
-            style={collectionPaymentDetailsStyles.textarea}
+            style={responsiveTextareaStyle}
           />
         </div>
 
@@ -1030,7 +1103,7 @@ export default function PaymentDetails() {
             FINAL COLLECTION
         ==================================================== */}
 
-        <div style={collectionPaymentDetailsStyles.totalBar}>
+        <div style={responsiveTotalStyle}>
           <div style={collectionPaymentDetailsStyles.totalContent}>
             <span style={collectionPaymentDetailsStyles.totalLabel}>
               FINAL COLLECTION
@@ -1046,12 +1119,12 @@ export default function PaymentDetails() {
             ACTIONS
         ==================================================== */}
 
-        <div style={collectionPaymentDetailsStyles.actions}>
+        <div style={responsiveActionsStyle}>
           <button
             type="button"
             disabled={saving}
             onClick={() => void handleSaveCollection(false)}
-            style={collectionPaymentDetailsStyles.saveButton}
+            style={responsiveSaveButtonStyle}
           >
             {saving ? "SAVING..." : "SAVE COLLECTION"}
           </button>
@@ -1060,7 +1133,7 @@ export default function PaymentDetails() {
             type="button"
             disabled={saving}
             onClick={() => void handleSaveCollection(true)}
-            style={collectionPaymentDetailsStyles.receiptButton}
+            style={responsiveReceiptButtonStyle}
           >
             {saving ? "SAVING..." : "SAVE & RECEIPT"}
           </button>

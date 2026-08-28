@@ -11,7 +11,6 @@
 // - Load authoritative Customer data through Customer Store
 // - Load authoritative Loan data through LoanService
 // - Show only customers having collection-ready loans
-// - Automatically open the collection workspace
 // - Maintain selected customer state
 // - Maintain selected loan state
 // - Normalize selected loan presentation data
@@ -19,13 +18,13 @@
 // - Carry authoritative loan principal, interest and date
 // - Establish CollectionContext for the complete Studio tree
 // - Render complete Collection Studio workflow
+// - Connect FINORA Responsive Engine
 // - Connect EMI Collection workspace
 // - Connect System Generated middle workspace
 // - Connect Manual Collection workspace
 // - Connect full-width Payment Details
 // - Connect full-width Loan Documents
 // - Connect full-width Collection History
-// - Consume dedicated Collection Studio styles
 //
 // ARCHITECTURE LOCK
 //
@@ -35,57 +34,15 @@
 // - No localStorage access
 // - No direct filesystem access
 // - No Electron IPC
-// - No inline colour definitions
-// - No inline responsive dimensions
 // - No local breakpoint logic
 // - No local theme system
+// - Responsive classification comes from FINORA Responsive Engine
 // - Customer master data comes through Customer Store
 // - Loan data comes through LoanService
 // - Storage selection comes through StorageManager
 // - Collection state is exposed through CollectionContext
-// - Child collection sections remain controller-driven
 //
-// PREMIUM COLLECTION WORKSPACE
-//
-// LEFT 40%
-// - EMI Collection
-//
-// CENTER 20%
-// - System Generated
-//
-// RIGHT 40%
-// - Manual Collection
-//
-// BELOW
-// - Payment Details       100%
-// - Loan Documents        100%
-// - Collection History    100%
-//
-// IMPORTANT:
-//
-// The top Customer + Customer Loans workspace is intentionally
-// preserved.
-//
-// DOCUMENT WIRING
-//
-// - Selected Loan is authoritative.
-// - Loan documents are carried unchanged from LoanService.
-// - Collection Studio never uses dummy documents.
-// - Collection Studio never mixes documents between loans.
-// - Changing selected loan immediately changes its document gallery.
-// - Persisted document dataUrl is preferred by LoanDocuments.
-// - url remains the defensive fallback.
-//
-// FINANCIAL WIRING
-//
-// - Original loan principal comes from Loan.amount.
-// - Monthly interest percentage comes from Loan.interest.
-// - Loan date comes from Loan.loanDate.
-// - EMI / schedule amount is NOT used by System Generated.
-// - System Generated remains presentation-only.
-// - CollectionEntry retains all existing EMI / Manual logic.
-//
-// VERSION : 2.1
+// VERSION : 2.2
 // STATUS  : Production
 // ============================================================
 
@@ -133,6 +90,19 @@ import { fetchLoans } from "../../../services/loan/loanService";
 import { storageManager } from "../../../storage/storageManager";
 
 import { StorageMode } from "../../../storage/storage.types";
+
+import { useResponsive } from "../../../utils/responsive";
+
+import {
+  createCollectionStudioPageInnerStyle,
+  createCollectionStudioSelectionRowStyle,
+  createCollectionStudioCustomerCardStyle,
+  createCollectionStudioCustomerPhotoFrameStyle,
+  createCollectionStudioPhotoPlaceholderStyle,
+  createCollectionStudioWorkspaceStyle,
+  createCollectionStudioPaymentDetailsSectionStyle,
+  createCollectionStudioDocumentsHistoryRowStyle,
+} from "../../../utils/responsive/collections/collectionStudio.layout";
 
 import { collectionStudioStyles } from "./CollectionStudioPage.styles";
 
@@ -439,7 +409,6 @@ function buildCollectionCustomerRecord(
 
 function buildReviewData(
   customer: CollectionCustomerRecord,
-
   loan: CollectionLoanRecord,
 ): CollectionReviewData {
   const now = new Date().toISOString();
@@ -506,11 +475,97 @@ export default function CollectionStudioPage() {
 
   const { theme } = useTheme();
 
+  // ==========================================================
+  // FINORA RESPONSIVE ENGINE
+  // ==========================================================
+
+  const { viewport, tokens } = useResponsive();
+
+  // ==========================================================
+  // THEME PAGE STYLE
+  // ==========================================================
+
   const pageThemeStyle = {
     ...collectionStudioStyles.page,
 
     ...createCollectionStudioThemeVariables(theme),
   } as CollectionStudioThemeStyle;
+
+  // ==========================================================
+  // RESPONSIVE PAGE INNER
+  // ==========================================================
+
+  const responsivePageInnerStyle: CSSProperties = {
+    ...collectionStudioStyles.pageInner,
+
+    ...createCollectionStudioPageInnerStyle(tokens, viewport),
+  };
+
+  // ==========================================================
+  // RESPONSIVE CUSTOMER + LOAN ROW
+  // ==========================================================
+
+  const responsiveSelectionRowStyle: CSSProperties = {
+    ...collectionStudioStyles.selectionRow,
+
+    ...createCollectionStudioSelectionRowStyle(tokens, viewport),
+  };
+
+  // ==========================================================
+  // RESPONSIVE CUSTOMER CARD
+  // ==========================================================
+
+  const responsiveCustomerCardStyle: CSSProperties = {
+    ...collectionStudioStyles.customerCard,
+
+    ...createCollectionStudioCustomerCardStyle(tokens, viewport),
+  };
+
+  // ==========================================================
+  // RESPONSIVE CUSTOMER PHOTO
+  // ==========================================================
+
+  const responsiveCustomerPhotoFrameStyle: CSSProperties = {
+    ...collectionStudioStyles.customerPhotoFrame,
+
+    ...createCollectionStudioCustomerPhotoFrameStyle(tokens, viewport),
+  };
+
+  const responsivePhotoPlaceholderStyle: CSSProperties = {
+    ...collectionStudioStyles.photoPlaceholder,
+
+    ...createCollectionStudioPhotoPlaceholderStyle(tokens, viewport),
+  };
+
+  // ==========================================================
+  // RESPONSIVE COLLECTION WORKSPACE
+  // ==========================================================
+
+  const responsiveCollectionWorkspaceStyle: CSSProperties = {
+    ...collectionStudioStyles.collectionWorkspace,
+
+    ...createCollectionStudioWorkspaceStyle(tokens, viewport),
+  };
+
+  // ==========================================================
+  // RESPONSIVE PAYMENT DETAILS SECTION
+  // ==========================================================
+
+  const responsivePaymentDetailsSectionStyle: CSSProperties = {
+    ...collectionStudioStyles.paymentDetailsSection,
+
+    ...createCollectionStudioPaymentDetailsSectionStyle(viewport),
+  };
+
+  // ==========================================================
+  // RESPONSIVE DOCUMENTS + HISTORY
+  // ==========================================================
+
+  const responsiveDocumentsHistoryRowStyle: CSSProperties = {
+    ...collectionStudioStyles.documentsHistoryRow,
+
+    ...createCollectionStudioDocumentsHistoryRowStyle(tokens, viewport),
+  };
 
   // ==========================================================
   // COLLECTION CUSTOMER DATA
@@ -763,21 +818,9 @@ export default function CollectionStudioPage() {
 
     setSelectedCustomerId(customerId);
 
-    // --------------------------------------------------------
-    // Automatically select first collection-ready loan.
-    // --------------------------------------------------------
-
     setSelectedLoanId(nextCustomer.loans[0]?.id ?? "");
 
-    // --------------------------------------------------------
-    // Close customer dropdown.
-    // --------------------------------------------------------
-
     setCustomerDropdownOpen(false);
-
-    // --------------------------------------------------------
-    // Clear customer search.
-    // --------------------------------------------------------
 
     setCustomerSearch("");
   }
@@ -789,7 +832,7 @@ export default function CollectionStudioPage() {
   if (loading) {
     return (
       <main style={pageThemeStyle}>
-        <div style={collectionStudioStyles.pageInner}>
+        <div style={responsivePageInnerStyle}>
           <section style={collectionStudioStyles.emptyState}>
             <strong style={collectionStudioStyles.emptyStateTitle}>
               Loading Collection Studio
@@ -811,7 +854,7 @@ export default function CollectionStudioPage() {
   if (collectionCustomers.length === 0) {
     return (
       <main style={pageThemeStyle}>
-        <div style={collectionStudioStyles.pageInner}>
+        <div style={responsivePageInnerStyle}>
           <section style={collectionStudioStyles.emptyState}>
             <strong style={collectionStudioStyles.emptyStateTitle}>
               No collection-ready customers
@@ -840,20 +883,17 @@ export default function CollectionStudioPage() {
       }}
     >
       <main style={pageThemeStyle}>
-        <div style={collectionStudioStyles.pageInner}>
+        <div style={responsivePageInnerStyle}>
           {/* ==================================================
-              1. CUSTOMER + LOAN SELECTION
-
-              IMPORTANT:
-              EXISTING TOP LAYOUT PRESERVED.
+              CUSTOMER + LOAN SELECTION
           ================================================== */}
 
-          <div style={collectionStudioStyles.selectionRow}>
+          <div style={responsiveSelectionRowStyle}>
             {/* ==================================================
                 CUSTOMER INFORMATION
             ================================================== */}
 
-            <section style={collectionStudioStyles.customerCard}>
+            <section style={responsiveCustomerCardStyle}>
               <div style={collectionStudioStyles.customerSelectionArea}>
                 <label
                   htmlFor="collection-customer-select"
@@ -1009,7 +1049,7 @@ export default function CollectionStudioPage() {
                   CUSTOMER PHOTO
               =============================================== */}
 
-              <div style={collectionStudioStyles.customerPhotoFrame}>
+              <div style={responsiveCustomerPhotoFrameStyle}>
                 {selectedCustomer?.photo ? (
                   <img
                     src={selectedCustomer.photo}
@@ -1017,7 +1057,7 @@ export default function CollectionStudioPage() {
                     style={collectionStudioStyles.customerPhoto}
                   />
                 ) : (
-                  <div style={collectionStudioStyles.photoPlaceholder}>
+                  <div style={responsivePhotoPlaceholderStyle}>
                     <span style={collectionStudioStyles.photoPlaceholderMark}>
                       F
                     </span>
@@ -1042,53 +1082,34 @@ export default function CollectionStudioPage() {
           </div>
 
           {/* ==================================================
-              PREMIUM COLLECTION WORKSPACE
-
-              INTERNAL COLLECTION ENTRY GRID:
-
-              40% EMI
-              20% SYSTEM GENERATED
-              40% MANUAL
+              COLLECTION WORKSPACE
           ================================================== */}
 
-          <section style={collectionStudioStyles.collectionWorkspace}>
+          <section style={responsiveCollectionWorkspaceStyle}>
             {/* ==================================================
-                FULL-WIDTH 40 / 20 / 40 ENTRY WORKSPACE
-
-                CollectionEntry owns EMI + Manual interaction.
-
-                System Generated is injected only as a visual
-                middle slot.
-
-                No financial ownership changes.
+                EMI + SYSTEM GENERATED + MANUAL
             ================================================== */}
 
-            <div style={collectionStudioStyles.paymentDetailsSection}>
+            <div style={responsivePaymentDetailsSectionStyle}>
               <CollectionEntry middleSlot={<CollectionSystemGenerated />} />
             </div>
 
             {/* ==================================================
-                PAYMENT DETAILS — FULL WIDTH
+                PAYMENT DETAILS
             ================================================== */}
 
-            <section style={collectionStudioStyles.paymentDetailsSection}>
+            <section style={responsivePaymentDetailsSectionStyle}>
               <PaymentDetails />
             </section>
           </section>
 
           {/* ==================================================
-              DOCUMENT GALLERY + COLLECTION HISTORY
-
-              DOCUMENTS
-              FULL WIDTH
-
-              HISTORY
-              FULL WIDTH BELOW DOCUMENTS
+              DOCUMENTS + COLLECTION HISTORY
           ================================================== */}
 
-          <section style={collectionStudioStyles.documentsHistoryRow}>
+          <section style={responsiveDocumentsHistoryRowStyle}>
             {/* ==================================================
-                LOAN DOCUMENTS — FULL WIDTH
+                LOAN DOCUMENTS
             ================================================== */}
 
             <div style={collectionStudioStyles.loanDocumentsColumn}>
@@ -1109,7 +1130,7 @@ export default function CollectionStudioPage() {
             </div>
 
             {/* ==================================================
-                COLLECTION HISTORY — FULL WIDTH BELOW DOCUMENTS
+                COLLECTION HISTORY
             ================================================== */}
 
             <div style={collectionStudioStyles.collectionHistoryColumn}>
