@@ -292,6 +292,7 @@ export default function LoanStudioView(props: LoanStudioViewModel) {
   ========================================================== */
 
   const {
+    isGoldLoan,
     customerName,
     selectedCustomer,
     setSelectedCustomer,
@@ -379,6 +380,8 @@ export default function LoanStudioView(props: LoanStudioViewModel) {
   } = props;
 
   const safeDisbursementAmount = getDisbursementAmount(netDisbursement);
+
+  const previousNavigationDisabled = step === 1 || (isGoldLoan && step === 2);
 
   /* ==========================================================
      RENDER
@@ -477,6 +480,66 @@ export default function LoanStudioView(props: LoanStudioViewModel) {
 
         {step === 2 && (
           <section style={step2WorkspaceStyle}>
+            {/* ==================================================
+        GOLD LOAN — REPAYMENT TERMS
+
+        Gold Step 1 already owns:
+        - Customer
+        - Gold valuation
+        - Eligible amount
+        - Requested amount
+        - Sanctioned principal
+        - Custody location
+
+        Shared Step 2 owns:
+        - EMI method
+        - Interest
+        - Fees
+        - Advance deduction
+        - Duration
+        - Purpose / remarks
+
+        Sanctioned principal remains read-only.
+    ================================================== */}
+
+            {isGoldLoan && (
+              <LoanForm
+                loanAmount={loanAmount}
+                loanAmountReadOnly
+                emiCalculation={emiCalculation}
+                interest={interest}
+                processingFee={processingFee}
+                advanceDeduction={advanceDeduction}
+                lateFee={lateFee}
+                repaymentType={repaymentType}
+                duration={duration}
+                durationType={durationType}
+                purpose={purpose}
+                remarks={remarks}
+                onLoanAmountChange={setLoanAmount}
+                onEMICalculationChange={setEMICalculation}
+                onInterestChange={setInterest}
+                onProcessingFeeChange={setProcessingFee}
+                onAdvanceDeductionChange={setAdvanceDeduction}
+                onLateFeeChange={setLateFee}
+                onRepaymentTypeChange={setRepaymentType}
+                onDurationChange={setDuration}
+                onDurationTypeChange={setDurationType}
+                onPurposeChange={setPurpose}
+                onRemarksChange={setRemarks}
+              />
+            )}
+
+            {/* ==================================================
+        REPAYMENT PREVIEW / SCHEDULE
+
+        STANDARD:
+        Terms were entered in Standard Step 1.
+
+        GOLD:
+        Terms are entered immediately above in Gold Step 2.
+    ================================================== */}
+
             <div style={step2GridStyle}>
               <div style={step2LeftColumnStyle}>
                 <div style={step2SummaryWrapperStyle}>
@@ -745,6 +808,16 @@ export default function LoanStudioView(props: LoanStudioViewModel) {
                 key={item.title}
                 style={stepItemStyle}
                 onClick={() => {
+                  /*
+                   * Gold Step 1 belongs to GoldLoanForm.
+                   *
+                   * Never allow the shared Loan Studio to expose the
+                   * Standard Loan Details page for a Gold Loan.
+                   */
+                  if (isGoldLoan && current === 1) {
+                    return;
+                  }
+
                   if (current === 6) {
                     if (!disbursementDate) {
                       setDisbursementDate(getTodayDate());
@@ -793,14 +866,20 @@ export default function LoanStudioView(props: LoanStudioViewModel) {
         <div style={navigationStyle}>
           <button
             type="button"
-            disabled={step === 1}
+            disabled={previousNavigationDisabled}
             onClick={() => {
+              if (previousNavigationDisabled) {
+                return;
+              }
+
               if (step > 1) {
                 setStep(step - 1);
               }
             }}
             style={
-              step === 1 ? disabledNavigationButtonStyle : navigationButtonStyle
+              previousNavigationDisabled
+                ? disabledNavigationButtonStyle
+                : navigationButtonStyle
             }
           >
             ← Previous

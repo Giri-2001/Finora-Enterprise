@@ -9,6 +9,7 @@
 // - Consume central FINORA Responsive Engine.
 // - Consume dedicated Step 1 responsive tokens.
 // - Forward field changes to LoanStudio.
+// - Support locked principal for Gold Loan handoff.
 // - Keep Loan business logic outside this component.
 //
 // RESPONSIVE CONTRACT:
@@ -24,6 +25,8 @@
 // - No persistence logic.
 // - Responsive geometry comes from Step 1 tokens.
 // - Theme colours remain owned by FINORA Theme Engine.
+// - Standard Loan behaviour remains unchanged.
+// - Gold Loan may lock Loan Amount after Gold Step 1.
 //
 // ============================================================
 
@@ -68,6 +71,16 @@ import {
 
 interface LoanFormProps {
   loanAmount: string;
+
+  /*
+   * STANDARD:
+   * false / undefined → existing editable Loan Amount.
+   *
+   * GOLD:
+   * true → sanctioned Gold principal is preserved and cannot
+   * be changed inside the shared Loan Studio.
+   */
+  loanAmountReadOnly?: boolean;
 
   emiCalculation: "fixed" | "reducing" | "interestOnly";
 
@@ -139,6 +152,8 @@ const formatIndianInteger = (value: string): string => {
 export default function LoanForm({
   loanAmount,
 
+  loanAmountReadOnly = false,
+
   emiCalculation,
 
   interest,
@@ -181,46 +196,18 @@ export default function LoanForm({
 }: LoanFormProps) {
   /* ==========================================================
      CENTRAL RESPONSIVE ENGINE
-
-     Theme / application viewport is resolved centrally.
-
-     LoanForm does NOT inspect:
-       - window.innerWidth
-       - media queries
-       - local breakpoints
-
-     The dedicated Step 1 engine receives only the resolved
-     viewport identity.
   ========================================================== */
 
   const { tokens } = useResponsive();
 
   /* ==========================================================
      STEP 1 RESPONSIVE TOKENS
-
-     Central viewport:
-       tokens.meta.viewport
-
-     Dedicated Step 1 geometry:
-       getStep1DetailsTokens()
   ========================================================== */
 
   const step1Tokens = getStep1DetailsTokens(tokens.meta.viewport);
 
   /* ==========================================================
      RESPONSIVE FORM GRID
-
-     Mobile:
-       1 column
-
-     Tablet:
-       2 columns
-
-     Laptop:
-       4 columns
-
-     Desktop:
-       4 columns
   ========================================================== */
 
   const resolvedFormGridStyle = createLoanFormGridStyle(step1Tokens);
@@ -240,6 +227,16 @@ export default function LoanForm({
   const handleLoanAmountChange = (
     event: ChangeEvent<HTMLInputElement>,
   ): void => {
+    /*
+     * Defence in depth.
+     *
+     * readOnly already prevents browser editing, but the handler
+     * also refuses mutation when Gold principal is locked.
+     */
+    if (loanAmountReadOnly) {
+      return;
+    }
+
     handleMoneyChange(event.target.value, onLoanAmountChange);
   };
 
@@ -328,15 +325,25 @@ export default function LoanForm({
           {/* LOAN AMOUNT */}
 
           <div style={fieldGroupStyle}>
-            {renderLabel("Loan Amount", true)}
+            {renderLabel(
+              loanAmountReadOnly ? "Sanctioned Loan Amount" : "Loan Amount",
+              true,
+            )}
 
             <input
               type="text"
               inputMode="numeric"
               value={formatIndianInteger(loanAmount)}
+              readOnly={loanAmountReadOnly}
+              aria-readonly={loanAmountReadOnly}
               onChange={handleLoanAmountChange}
               placeholder="Enter loan amount"
               autoComplete="off"
+              title={
+                loanAmountReadOnly
+                  ? "Locked from Gold Loan Step 1 sanctioned amount"
+                  : undefined
+              }
               style={inputStyle}
             />
           </div>
