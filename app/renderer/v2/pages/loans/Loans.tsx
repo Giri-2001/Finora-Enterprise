@@ -64,6 +64,8 @@ import { useTheme } from "../../themes/provider";
 
 import { useLoansOfficeResponsive } from "../../utils/responsive/loansOffice/loansOffice.useResponsive";
 
+import { Gem, Plus } from "lucide-react";
+
 import {
   createLoansOfficePageStyle,
   createLoansOfficeTopBarStyle,
@@ -652,6 +654,42 @@ export default function Loans() {
     width: responsiveTokens.viewport === "mobile" ? "100%" : undefined,
   };
 
+  const responsiveHeaderActionsStyle: CSSProperties = {
+    width: responsiveTokens.viewport === "mobile" ? "100%" : "auto",
+
+    display: "flex",
+
+    flexDirection: responsiveTokens.viewport === "mobile" ? "column" : "row",
+
+    alignItems: "center",
+
+    justifyContent: "flex-end",
+
+    gap: "8px",
+  };
+
+  const responsiveGoldCreateButtonStyle: CSSProperties = {
+    ...createButtonStyle,
+
+    width: responsiveTokens.viewport === "mobile" ? "100%" : undefined,
+
+    display: "inline-flex",
+
+    alignItems: "center",
+
+    justifyContent: "center",
+
+    gap: "7px",
+
+    border: `1px solid ${themeColors.brand}`,
+
+    background: themeColors.brandAccentSoft,
+
+    color: themeColors.brand,
+
+    boxShadow: "none",
+  };
+
   const responsiveStatisticsGridStyle: CSSProperties = {
     ...statisticsGridStyle,
     ...createLoansOfficeStatisticsGridStyle(responsiveTokens),
@@ -1016,7 +1054,26 @@ export default function Loans() {
   }, [currentPage, totalPages]);
 
   // ==========================================================
-  // CREATE LOAN
+  // CREATE GOLD LOAN
+  //
+  // IMPORTANT:
+  //
+  // Gold Loan has its own Step 1.
+  //
+  // Existing normal Loan Studio event is intentionally NOT
+  // reused here.
+  //
+  // LoansPage.tsx will handle this dedicated event separately.
+  // ==========================================================
+
+  const handleCreateGoldLoan = useCallback((): void => {
+    window.dispatchEvent(new CustomEvent("FINORA_V2_OPEN_GOLD_LOAN_STUDIO"));
+  }, []);
+
+  // ==========================================================
+  // CREATE STANDARD LOAN
+  //
+  // Existing production workflow remains untouched.
   // ==========================================================
 
   const handleCreateLoan = useCallback((): void => {
@@ -1071,13 +1128,25 @@ export default function Loans() {
             </p>
           </div>
 
-          <button
-            type="button"
-            onClick={handleCreateLoan}
-            style={responsiveCreateButtonStyle}
-          >
-            + Create New Loan
-          </button>
+          <div style={responsiveHeaderActionsStyle}>
+            <button
+              type="button"
+              onClick={handleCreateGoldLoan}
+              style={responsiveGoldCreateButtonStyle}
+            >
+              <Gem size={16} strokeWidth={1.9} />
+              Create Gold Loan
+            </button>
+
+            <button
+              type="button"
+              onClick={handleCreateLoan}
+              style={responsiveCreateButtonStyle}
+            >
+              <Plus size={16} strokeWidth={1.9} />
+              Create New Loan
+            </button>
+          </div>
         </section>
 
         {/* ==================================================

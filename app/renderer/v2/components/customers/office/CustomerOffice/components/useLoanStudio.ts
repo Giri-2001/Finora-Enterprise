@@ -13,6 +13,9 @@
 // - Attach Step 3 documents to the final persisted Loan.
 // - Persist guarantor verification metadata.
 // - Own reset workflow.
+// - Accept Standard / Gold Loan launch context.
+// - Allow Gold Loan to enter shared workflow at Step 2.
+// - Preload Gold sanctioned principal into existing loanAmount.
 //
 // IMPORTANT:
 // - No JSX.
@@ -22,6 +25,9 @@
 // - Documents remain owned by Loan Studio until approval.
 // - On loan creation, document metadata is linked to the
 //   created loan + active customer.
+// - STANDARD Loan behaviour remains backward compatible.
+// - GOLD entry only changes INITIAL launch state.
+// - Existing Steps 2–6 remain authoritative.
 //
 // FINANCIAL PERSISTENCE RULE:
 //
@@ -42,8 +48,31 @@
 // - Approved Loan records persist both values.
 // - Workspace reset restores both defaults.
 //
-// VERSION : 2.3
-// STATUS  : Production
+// GOLD ENTRY RULE:
+//
+// STANDARD:
+//
+// <LoanStudio />
+//
+// → Step 1
+// → empty principal
+// → existing workflow unchanged
+//
+// GOLD:
+//
+// <LoanStudio
+//   entryMode="GOLD"
+//   initialStep={2}
+//   initialLoanAmount={sanctionedAmount}
+//   goldStepOne={preparedGoldStepOne}
+// />
+//
+// → Step 2
+// → sanctioned Gold principal preloaded
+// → Gold Step-1 snapshot remains available to shared workflow
+//
+// VERSION : 2.4
+// STATUS  : Production + Gold Entry Foundation
 // ============================================================
 
 import { useEffect, useMemo, useState } from "react";
@@ -82,6 +111,18 @@ import {
   normalizeLoanType,
   getLoanTypeLabel,
 } from "./LoanStudio.helpers";
+
+/* ============================================================
+   INITIAL LOAN AMOUNT
+============================================================ */
+
+function resolveInitialLoanAmount(value?: number): string {
+  if (value === undefined || !Number.isFinite(value) || value <= 0) {
+    return "";
+  }
+
+  return String(value);
+}
 
 /* ============================================================
    DOCUMENT HELPERS
@@ -174,7 +215,29 @@ export function useLoanStudio({
   customerName,
   customerId,
   phoneNumber,
+  entryMode = "STANDARD",
+  initialStep,
+  initialLoanAmount,
+  goldStepOne,
 }: LoanStudioProps) {
+  /* ==========================================================
+     INITIAL LAUNCH CONTEXT
+
+     STANDARD:
+       default Step = 1
+
+     GOLD:
+       default Step = 2
+
+     Explicit initialStep always wins.
+  ========================================================== */
+
+  const resolvedInitialStep = initialStep ?? (entryMode === "GOLD" ? 2 : 1);
+
+  const resolvedInitialLoanAmount = resolveInitialLoanAmount(initialLoanAmount);
+
+  const isGoldLoan = entryMode === "GOLD";
+
   /* ==========================================================
      CUSTOMER HYDRATION
   ========================================================== */
@@ -311,15 +374,31 @@ export function useLoanStudio({
 
   /* ==========================================================
      WIZARD
+
+     IMPORTANT:
+
+     This is an INITIAL value only.
+
+     We deliberately do NOT run an effect that repeatedly forces
+     Step 2 for Gold loans.
+
+     Therefore normal Step navigation and reset behaviour remain
+     under Loan Studio control after mount.
   ========================================================== */
 
-  const [step, setStep] = useState(1);
+  const [step, setStep] = useState<number>(resolvedInitialStep);
 
   /* ==========================================================
      LOAN DETAILS
+
+     GOLD:
+       initialLoanAmount = sanctioned Gold principal.
+
+     STANDARD:
+       remains empty unless explicitly supplied.
   ========================================================== */
 
-  const [loanAmount, setLoanAmount] = useState("");
+  const [loanAmount, setLoanAmount] = useState(resolvedInitialLoanAmount);
 
   const [interest, setInterest] = useState("");
 
@@ -782,6 +861,8 @@ export function useLoanStudio({
     console.log("FINORA LOAN SAVE DRAFT", {
       customerId: activeCustomerId,
 
+      entryMode,
+
       documents: documents.length,
 
       guarantorVerificationStatus,
@@ -793,6 +874,8 @@ export function useLoanStudio({
   function handleRejectLoan(): void {
     console.log("FINORA LOAN REJECT", {
       customerId: activeCustomerId,
+
+      entryMode,
 
       documents: documents.length,
 
@@ -945,6 +1028,18 @@ export function useLoanStudio({
       ...loan,
 
       // ------------------------------------------------------
+      // ENTRY MODE
+      //
+      // Existing consumers can ignore these fields.
+      // ------------------------------------------------------
+
+      entryMode,
+
+      isGoldLoan,
+
+      goldStepOne: isGoldLoan ? goldStepOne : undefined,
+
+      // ------------------------------------------------------
       // DOCUMENTS
       // ------------------------------------------------------
 
@@ -994,43 +1089,50 @@ export function useLoanStudio({
     }
 
     /* ========================================================
-   FINALIZE SUCCESSFUL LOAN CREATION
-======================================================== */
+       FINALIZE SUCCESSFUL LOAN CREATION
+    ======================================================== */
 
-setDocuments(persistedDocuments);
+    setDocuments(persistedDocuments);
 
-setLoanApproved(true);
+    setLoanApproved(true);
 
-await refreshLoanStatistics();
+    await refreshLoanStatistics();
 
-/* ========================================================
-   SUCCESS CONFIRMATION
+    /* ========================================================
+       SUCCESS CONFIRMATION
 
-   alert() is blocking.
+       alert() is blocking.
 
-   Therefore resetLoanWorkspace() runs only AFTER the user
-   presses OK on the success popup.
+       Therefore resetLoanWorkspace() runs only AFTER the user
+       presses OK on the success popup.
 
-   Failed Loan creation never clears entered form data.
-======================================================== */
+       Failed Loan creation never clears entered form data.
+    ======================================================== */
 
-alert(
-  persistedDocuments.length > 0
-    ? `Loan Created Successfully with ${persistedDocuments.length} document${
-        persistedDocuments.length === 1 ? "" : "s"
-      }`
-    : "Loan Created Successfully",
-);
+    alert(
+      persistedDocuments.length > 0
+        ? `Loan Created Successfully with ${persistedDocuments.length} document${
+            persistedDocuments.length === 1 ? "" : "s"
+          }`
+        : "Loan Created Successfully",
+    );
 
-/* ========================================================
-   START FRESH LOAN WORKSPACE
-======================================================== */
+    /* ========================================================
+       START FRESH LOAN WORKSPACE
+    ======================================================== */
 
-resetLoanWorkspace();
+    resetLoanWorkspace();
   }
 
   /* ==========================================================
      RESET COMPLETED LOAN WORKSPACE
+
+     Reset deliberately returns to Step 1 and clears principal.
+
+     This preserves existing post-success Loan Studio behaviour.
+
+     We do NOT repeatedly force Gold initialStep / principal
+     after mount.
   ========================================================== */
 
   function resetLoanWorkspace(): void {
@@ -1106,6 +1208,24 @@ resetLoanWorkspace();
   ========================================================== */
 
   return {
+    /* ========================================================
+       LAUNCH CONTEXT
+    ======================================================== */
+
+    entryMode,
+
+    isGoldLoan,
+
+    initialStep: resolvedInitialStep,
+
+    initialLoanAmount,
+
+    goldStepOne,
+
+    /* ========================================================
+       EXISTING CUSTOMER CONTEXT
+    ======================================================== */
+
     customerName,
     customerId,
     phoneNumber,
