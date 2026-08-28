@@ -73,6 +73,8 @@ import LoansPage from "../pages/loans/LoansPage";
 
 import CollectionStudioPage from "../components/collections/collectionStudio/CollectionStudioPage";
 
+import CollectionsOffice from "../pages/collections/CollectionsOffice";
+
 import ReportsPage from "../pages/reports/ReportsPage";
 
 import LoanStudio from "../components/customers/office/CustomerOffice/components/LoanStudio";
@@ -169,6 +171,8 @@ const CUSTOMER_WIZARD_GLOBAL_BACK_EVENT = "FINORA_CUSTOMER_WIZARD_GLOBAL_BACK";
 // ============================================================
 
 const LOAN_STUDIO_OPEN_EVENT = "FINORA_V2_OPEN_LOAN_STUDIO";
+
+const COLLECTION_STUDIO_OPEN_EVENT = "FINORA_V2_OPEN_COLLECTION_STUDIO";
 
 // ============================================================
 // NAVIGATION STATE
@@ -728,6 +732,9 @@ function AuthenticatedV2Application({
 
   const [loanStudioOpen, setLoanStudioOpen] = useState<boolean>(false);
 
+  const [collectionStudioOpen, setCollectionStudioOpen] =
+    useState<boolean>(false);
+
   // ==========================================================
   // CUSTOMER WIZARD NAVIGATION BRIDGE
   // ==========================================================
@@ -792,6 +799,24 @@ function AuthenticatedV2Application({
     };
   }, []);
 
+  useEffect(() => {
+    function handleCollectionStudioOpen(): void {
+      setCollectionStudioOpen(true);
+    }
+
+    window.addEventListener(
+      COLLECTION_STUDIO_OPEN_EVENT,
+      handleCollectionStudioOpen,
+    );
+
+    return () => {
+      window.removeEventListener(
+        COLLECTION_STUDIO_OPEN_EVENT,
+        handleCollectionStudioOpen,
+      );
+    };
+  }, []);
+
   // ==========================================================
   // NAVIGATION CHANGE EVENT
   // ==========================================================
@@ -803,6 +828,8 @@ function AuthenticatedV2Application({
       setNavigation(next);
 
       setLoanStudioOpen(false);
+
+      setCollectionStudioOpen(false);
 
       window.dispatchEvent(new CustomEvent(NAVIGATION_EVENT));
     }
@@ -824,6 +851,8 @@ function AuthenticatedV2Application({
     }
 
     setLoanStudioOpen(false);
+
+    setCollectionStudioOpen(false);
 
     if (nextPage === navigation.page) {
       return;
@@ -853,6 +882,12 @@ function AuthenticatedV2Application({
 
     if (loanStudioOpen) {
       setLoanStudioOpen(false);
+
+      return;
+    }
+
+    if (collectionStudioOpen) {
+      setCollectionStudioOpen(false);
 
       return;
     }
@@ -952,7 +987,10 @@ function AuthenticatedV2Application({
         onNavigate={handleNavigate}
         onBack={handleBack}
         canGoBack={
-          loanStudioOpen || customerWizardOpen || navigation.stack.length > 0
+          loanStudioOpen ||
+          collectionStudioOpen ||
+          customerWizardOpen ||
+          navigation.stack.length > 0
         }
         onLogout={onLogout}
       >
@@ -994,7 +1032,13 @@ function AuthenticatedV2Application({
             COLLECTIONS
         ================================================== */}
 
-        {page === "collections" && <CollectionStudioPage />}
+        {page === "collections" && !collectionStudioOpen && (
+          <CollectionsOffice />
+        )}
+
+        {page === "collections" && collectionStudioOpen && (
+          <CollectionStudioPage />
+        )}
 
         {/* ==================================================
             REPORTS

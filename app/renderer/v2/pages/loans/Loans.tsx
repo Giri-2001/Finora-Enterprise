@@ -1,4 +1,3 @@
-// ============================================================
 // FINORA ENTERPRISE OS™
 //
 // V2 LOANS OFFICE™
@@ -120,13 +119,18 @@ import {
   customerNameStyle,
   customerPhoneStyle,
   amountStyle,
+  loanTypeStyle,
   statusBadgeStyle,
   emptyStateStyle,
   emptyTitleStyle,
   emptyDescriptionStyle,
   emptyCreateButtonStyle,
-  tableFooterStyle,
-  tableShowingStyle,
+  paginationBarStyle,
+  paginationSummaryStyle,
+  paginationControlsStyle,
+  paginationNavButtonStyle,
+  paginationPageButtonStyle,
+  paginationEllipsisStyle,
 } from "./LoansPage.styles";
 
 // ============================================================
@@ -138,6 +142,8 @@ import {
 // ============================================================
 
 const STORAGE_MODE_SESSION_KEY = "FINORA_STORAGE_MODE";
+
+const LOANS_PER_PAGE = 10;
 
 // ============================================================
 // AUTHENTICATED STORAGE MODE
@@ -567,6 +573,11 @@ export default function Loans() {
     color: themeColors.textPrimary,
   };
 
+  const themedLoanTypeStyle: CSSProperties = {
+    ...loanTypeStyle,
+    color: themeColors.textPrimary,
+  };
+
   const themedEmptyStateStyle: CSSProperties = {
     ...emptyStateStyle,
     background: themeColors.surface,
@@ -590,16 +601,37 @@ export default function Loans() {
     boxShadow: `0 7px 18px ${themeColors.shadow}`,
   };
 
-  const themedTableFooterStyle: CSSProperties = {
-    ...tableFooterStyle,
+  const themedPaginationBarStyle: CSSProperties = {
+    ...paginationBarStyle,
     borderTop: `1px solid ${themeColors.border}`,
     background: themeColors.surface,
   };
 
-  const themedTableShowingStyle: CSSProperties = {
-    ...tableShowingStyle,
+  const themedPaginationSummaryStyle: CSSProperties = {
+    ...paginationSummaryStyle,
     color: themeColors.textMuted,
   };
+
+  const themedPaginationNavButtonStyle: CSSProperties = {
+    ...paginationNavButtonStyle,
+    border: `1px solid ${themeColors.border}`,
+    background: themeColors.surfaceMuted,
+    color: themeColors.textSecondary,
+  };
+
+  const themedPaginationEllipsisStyle: CSSProperties = {
+    ...paginationEllipsisStyle,
+    color: themeColors.textMuted,
+  };
+
+  const getThemedPaginationPageButtonStyle = (
+    active: boolean,
+  ): CSSProperties => ({
+    ...paginationPageButtonStyle(active),
+    border: `1px solid ${active ? themeColors.brand : themeColors.border}`,
+    background: active ? themeColors.brand : themeColors.surfaceMuted,
+    color: active ? themeColors.textInverse : themeColors.textSecondary,
+  });
 
   // ==========================================================
   // RESPONSIVE PRESENTATION
@@ -695,6 +727,12 @@ export default function Loans() {
   const [appliedFilterToDate, setAppliedFilterToDate] = useState("");
 
   // ==========================================================
+  // PAGINATION
+  // ==========================================================
+
+  const [currentPage, setCurrentPage] = useState(1);
+
+  // ==========================================================
   // LOAD LOANS
   //
   // IMPORTANT:
@@ -750,28 +788,28 @@ export default function Loans() {
 
       const records = await getLoans();
 
-setLoans(records);
+      setLoans(records);
 
-/*
- * Keep View Loan Details connected to the latest persisted
- * Loan record.
- *
- * Collections dispatches FINORA_LOAN_UPDATED after a successful
- * payment. loadLoans() therefore reloads repository data and
- * replaces the old viewingLoan snapshot with the latest record.
- */
+      /*
+       * Keep View Loan Details connected to the latest persisted
+       * Loan record.
+       *
+       * Collections dispatches FINORA_LOAN_UPDATED after a successful
+       * payment. loadLoans() therefore reloads repository data and
+       * replaces the old viewingLoan snapshot with the latest record.
+       */
 
-setViewingLoan((currentLoan) => {
-  if (!currentLoan) {
-    return null;
-  }
+      setViewingLoan((currentLoan) => {
+        if (!currentLoan) {
+          return null;
+        }
 
-  const refreshedLoan = records.find(
-    (record) => record.id === currentLoan.id,
-  );
+        const refreshedLoan = records.find(
+          (record) => record.id === currentLoan.id,
+        );
 
-  return refreshedLoan ?? currentLoan;
-});
+        return refreshedLoan ?? currentLoan;
+      });
     } catch (error) {
       console.error("FINORA V2 LOANS OFFICE LOAD ERROR:", error);
 
@@ -848,6 +886,8 @@ setViewingLoan((currentLoan) => {
     setAppliedFilterFromDate(filterFromDate);
 
     setAppliedFilterToDate(filterToDate);
+
+    setCurrentPage(1);
   };
 
   // ==========================================================
@@ -866,6 +906,8 @@ setViewingLoan((currentLoan) => {
     setAppliedFilterFromDate("");
 
     setAppliedFilterToDate("");
+
+    setCurrentPage(1);
   };
 
   // ==========================================================
@@ -909,6 +951,69 @@ setViewingLoan((currentLoan) => {
       return true;
     });
   }, [loans, appliedFilterStatus, appliedFilterFromDate, appliedFilterToDate]);
+
+  // ==========================================================
+  // PAGINATION
+  // ==========================================================
+
+  const totalPages = Math.max(
+    1,
+    Math.ceil(filteredLoans.length / LOANS_PER_PAGE),
+  );
+
+  const pageStartIndex = (currentPage - 1) * LOANS_PER_PAGE;
+
+  const paginatedLoans = filteredLoans.slice(
+    pageStartIndex,
+    pageStartIndex + LOANS_PER_PAGE,
+  );
+
+  const showingFrom = filteredLoans.length === 0 ? 0 : pageStartIndex + 1;
+
+  const showingTo = Math.min(
+    pageStartIndex + LOANS_PER_PAGE,
+    filteredLoans.length,
+  );
+
+  useEffect(() => {
+    if (currentPage > totalPages) {
+      setCurrentPage(totalPages);
+    }
+  }, [currentPage, totalPages]);
+
+  const paginationItems = useMemo<
+    Array<number | "ellipsis-start" | "ellipsis-end">
+  >(() => {
+    if (totalPages <= 7) {
+      return Array.from({ length: totalPages }, (_, index) => index + 1);
+    }
+
+    if (currentPage <= 4) {
+      return [1, 2, 3, 4, 5, "ellipsis-end", totalPages];
+    }
+
+    if (currentPage >= totalPages - 3) {
+      return [
+        1,
+        "ellipsis-start",
+        totalPages - 4,
+        totalPages - 3,
+        totalPages - 2,
+        totalPages - 1,
+        totalPages,
+      ];
+    }
+
+    return [
+      1,
+      "ellipsis-start",
+      currentPage - 1,
+      currentPage,
+      currentPage + 1,
+      "ellipsis-end",
+      totalPages,
+    ];
+  }, [currentPage, totalPages]);
 
   // ==========================================================
   // CREATE LOAN
@@ -1216,17 +1321,15 @@ setViewingLoan((currentLoan) => {
                     {/* TABLE BODY */}
 
                     <div style={tableBodyStyle} role="rowgroup">
-                      {filteredLoans.map((loan, index) => (
+                      {paginatedLoans.map((loan, index) => (
                         <div
                           key={loan.id}
-                          style={{
-                            ...themedTableRowStyle,
-                            gridTemplateColumns:
-                              "56px minmax(120px,1.2fr) minmax(130px,1.25fr) minmax(80px,0.8fr) minmax(100px,0.9fr) minmax(110px,1fr) minmax(95px,0.8fr) minmax(80px,0.7fr) 72px",
-                          }}
+                          style={themedTableRowStyle}
                           role="row"
                         >
-                          <div style={themedSerialCellStyle}>{index + 1}</div>
+                          <div style={themedSerialCellStyle}>
+                            {pageStartIndex + index + 1}
+                          </div>
 
                           <div style={loanIdentityStyle}>
                             <div style={themedLoanNumberStyle}>
@@ -1248,7 +1351,9 @@ setViewingLoan((currentLoan) => {
                             </div>
                           </div>
 
-                          <div style={amountStyle}>{formatLoanType(loan)}</div>
+                          <div style={themedLoanTypeStyle}>
+                            {formatLoanType(loan)}
+                          </div>
 
                           <div style={themedTableCellRightStyle}>
                             <span style={themedAmountStyle}>
@@ -1312,11 +1417,77 @@ setViewingLoan((currentLoan) => {
                     </div>
                   </div>
 
-                  <div style={themedTableFooterStyle}>
-                    <span style={themedTableShowingStyle}>
-                      Showing 1 to {filteredLoans.length} of{" "}
+                  <div style={themedPaginationBarStyle}>
+                    <span style={themedPaginationSummaryStyle}>
+                      Showing {showingFrom} to {showingTo} of{" "}
                       {filteredLoans.length} loans
                     </span>
+
+                    <div style={paginationControlsStyle}>
+                      <button
+                        type="button"
+                        disabled={currentPage === 1}
+                        onClick={() => {
+                          setCurrentPage((page) => Math.max(1, page - 1));
+                        }}
+                        style={{
+                          ...themedPaginationNavButtonStyle,
+                          opacity: currentPage === 1 ? 0.45 : 1,
+                          cursor: currentPage === 1 ? "default" : "pointer",
+                        }}
+                      >
+                        ← Previous
+                      </button>
+
+                      {paginationItems.map((item) => {
+                        if (
+                          item === "ellipsis-start" ||
+                          item === "ellipsis-end"
+                        ) {
+                          return (
+                            <span
+                              key={item}
+                              style={themedPaginationEllipsisStyle}
+                            >
+                              …
+                            </span>
+                          );
+                        }
+
+                        return (
+                          <button
+                            key={item}
+                            type="button"
+                            onClick={() => {
+                              setCurrentPage(item);
+                            }}
+                            style={getThemedPaginationPageButtonStyle(
+                              item === currentPage,
+                            )}
+                          >
+                            {item}
+                          </button>
+                        );
+                      })}
+
+                      <button
+                        type="button"
+                        disabled={currentPage === totalPages}
+                        onClick={() => {
+                          setCurrentPage((page) =>
+                            Math.min(totalPages, page + 1),
+                          );
+                        }}
+                        style={{
+                          ...themedPaginationNavButtonStyle,
+                          opacity: currentPage === totalPages ? 0.45 : 1,
+                          cursor:
+                            currentPage === totalPages ? "default" : "pointer",
+                        }}
+                      >
+                        Next →
+                      </button>
+                    </div>
                   </div>
                 </>
               ) : (
@@ -1330,11 +1501,11 @@ setViewingLoan((currentLoan) => {
                     gap: `${responsiveTokens.layout.mobileRecordGap}px`,
                   }}
                 >
-                  {filteredLoans.map((loan, index) => (
+                  {paginatedLoans.map((loan, index) => (
                     <LoanPortfolioResponsiveRecord
                       key={loan.id}
                       loan={loan}
-                      index={index}
+                      index={pageStartIndex + index}
                       tokens={responsiveTokens}
                       formatLoanTitle={formatLoanTitle}
                       formatLoanType={formatLoanType}
@@ -1345,11 +1516,77 @@ setViewingLoan((currentLoan) => {
                     />
                   ))}
 
-                  <div style={themedTableFooterStyle}>
-                    <span style={themedTableShowingStyle}>
-                      Showing 1 to {filteredLoans.length} of{" "}
+                  <div style={themedPaginationBarStyle}>
+                    <span style={themedPaginationSummaryStyle}>
+                      Showing {showingFrom} to {showingTo} of{" "}
                       {filteredLoans.length} loans
                     </span>
+
+                    <div style={paginationControlsStyle}>
+                      <button
+                        type="button"
+                        disabled={currentPage === 1}
+                        onClick={() => {
+                          setCurrentPage((page) => Math.max(1, page - 1));
+                        }}
+                        style={{
+                          ...themedPaginationNavButtonStyle,
+                          opacity: currentPage === 1 ? 0.45 : 1,
+                          cursor: currentPage === 1 ? "default" : "pointer",
+                        }}
+                      >
+                        ← Previous
+                      </button>
+
+                      {paginationItems.map((item) => {
+                        if (
+                          item === "ellipsis-start" ||
+                          item === "ellipsis-end"
+                        ) {
+                          return (
+                            <span
+                              key={item}
+                              style={themedPaginationEllipsisStyle}
+                            >
+                              …
+                            </span>
+                          );
+                        }
+
+                        return (
+                          <button
+                            key={item}
+                            type="button"
+                            onClick={() => {
+                              setCurrentPage(item);
+                            }}
+                            style={getThemedPaginationPageButtonStyle(
+                              item === currentPage,
+                            )}
+                          >
+                            {item}
+                          </button>
+                        );
+                      })}
+
+                      <button
+                        type="button"
+                        disabled={currentPage === totalPages}
+                        onClick={() => {
+                          setCurrentPage((page) =>
+                            Math.min(totalPages, page + 1),
+                          );
+                        }}
+                        style={{
+                          ...themedPaginationNavButtonStyle,
+                          opacity: currentPage === totalPages ? 0.45 : 1,
+                          cursor:
+                            currentPage === totalPages ? "default" : "pointer",
+                        }}
+                      >
+                        Next →
+                      </button>
+                    </div>
                   </div>
                 </div>
               )}
