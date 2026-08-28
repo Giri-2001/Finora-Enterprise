@@ -264,9 +264,7 @@ export default function LoanStudioView(props: LoanStudioViewModel) {
      STEP 1 RESPONSIVE TOKENS
   ========================================================== */
 
-  const step1DetailsTokens = getStep1DetailsTokens(
-    tokens.meta.viewport,
-  );
+  const step1DetailsTokens = getStep1DetailsTokens(tokens.meta.viewport);
 
   /* ==========================================================
      STEP 1 RESPONSIVE STYLES
@@ -275,8 +273,7 @@ export default function LoanStudioView(props: LoanStudioViewModel) {
   const step1WorkspaceStyle =
     createStep1DetailsWorkspaceStyle(step1DetailsTokens);
 
-  const step1TopStyle =
-    createStep1DetailsTopStyle(step1DetailsTokens);
+  const step1TopStyle = createStep1DetailsTopStyle(step1DetailsTokens);
 
   const step1CustomerStyle =
     createStep1DetailsCustomerStyle(step1DetailsTokens);
@@ -284,14 +281,11 @@ export default function LoanStudioView(props: LoanStudioViewModel) {
   const step1OverviewStyle =
     createStep1DetailsOverviewStyle(step1DetailsTokens);
 
-  const step1BottomStyle =
-    createStep1DetailsMainStyle(step1DetailsTokens);
+  const step1BottomStyle = createStep1DetailsMainStyle(step1DetailsTokens);
 
-  const step1FormStyle =
-    createStep1DetailsFormStyle(step1DetailsTokens);
+  const step1FormStyle = createStep1DetailsFormStyle(step1DetailsTokens);
 
-  const step1PreviewStyle =
-    createStep1DetailsPreviewStyle(step1DetailsTokens);
+  const step1PreviewStyle = createStep1DetailsPreviewStyle(step1DetailsTokens);
 
   /* ==========================================================
      BUSINESS / VIEW MODEL
@@ -346,6 +340,12 @@ export default function LoanStudioView(props: LoanStudioViewModel) {
     guarantorAddress,
     setGuarantorAddress,
 
+    guarantorVerificationStatus,
+    setGuarantorVerificationStatus,
+
+    guarantorIdentityVerification,
+    setGuarantorIdentityVerification,
+
     loanApproved,
 
     disbursementDate,
@@ -378,8 +378,7 @@ export default function LoanStudioView(props: LoanStudioViewModel) {
     resetLoanWorkspace,
   } = props;
 
-  const safeDisbursementAmount =
-    getDisbursementAmount(netDisbursement);
+  const safeDisbursementAmount = getDisbursementAmount(netDisbursement);
 
   /* ==========================================================
      RENDER
@@ -464,9 +463,7 @@ export default function LoanStudioView(props: LoanStudioViewModel) {
                   }
                   lateFee={Number(lateFee || 0)}
                   repaymentType={
-                    repaymentType
-                      ? repaymentType.toUpperCase()
-                      : "--"
+                    repaymentType ? repaymentType.toUpperCase() : "--"
                   }
                 />
               </div>
@@ -498,9 +495,7 @@ export default function LoanStudioView(props: LoanStudioViewModel) {
                   <div style={step2PreviewWrapperStyle}>
                     <RepaymentPreviewCard
                       frequency={
-                        repaymentType
-                          ? repaymentType.toUpperCase()
-                          : "--"
+                        repaymentType ? repaymentType.toUpperCase() : "--"
                       }
                       repaymentMethod={emiCalculation}
                       installmentAmount={installmentAmount}
@@ -508,17 +503,13 @@ export default function LoanStudioView(props: LoanStudioViewModel) {
                       totalRepayable={totalPayable}
                       firstInstallmentDate={
                         schedule.length
-                          ? formatIndianDate(
-                              new Date(schedule[0].dueDate),
-                            )
+                          ? formatIndianDate(new Date(schedule[0].dueDate))
                           : "--"
                       }
                       lastInstallmentDate={
                         schedule.length
                           ? formatIndianDate(
-                              new Date(
-                                schedule[schedule.length - 1].dueDate,
-                              ),
+                              new Date(schedule[schedule.length - 1].dueDate),
                             )
                           : "--"
                       }
@@ -575,7 +566,14 @@ export default function LoanStudioView(props: LoanStudioViewModel) {
                   onAddressChange={setGuarantorAddress}
                 />
 
-                <GuarantorVerification />
+                <GuarantorVerification
+                  verificationStatus={guarantorVerificationStatus}
+                  identityVerification={guarantorIdentityVerification}
+                  onVerificationStatusChange={setGuarantorVerificationStatus}
+                  onIdentityVerificationChange={
+                    setGuarantorIdentityVerification
+                  }
+                />
               </div>
 
               <div style={step1PreviewStyle}>
@@ -714,9 +712,7 @@ export default function LoanStudioView(props: LoanStudioViewModel) {
                     disbursementDate={
                       disbursementDate
                         ? formatIndianDate(
-                            new Date(
-                              `${disbursementDate}T00:00:00`,
-                            ),
+                            new Date(`${disbursementDate}T00:00:00`),
                           )
                         : "--"
                     }
@@ -787,9 +783,7 @@ export default function LoanStudioView(props: LoanStudioViewModel) {
                     {item.title}
                   </span>
 
-                  <span style={stepSubtitleStyle}>
-                    {item.subtitle}
-                  </span>
+                  <span style={stepSubtitleStyle}>{item.subtitle}</span>
                 </div>
               </div>
             );
@@ -806,9 +800,7 @@ export default function LoanStudioView(props: LoanStudioViewModel) {
               }
             }}
             style={
-              step === 1
-                ? disabledNavigationButtonStyle
-                : navigationButtonStyle
+              step === 1 ? disabledNavigationButtonStyle : navigationButtonStyle
             }
           >
             ← Previous
@@ -825,18 +817,14 @@ export default function LoanStudioView(props: LoanStudioViewModel) {
               }
 
               if (!loanApproved) {
-                alert(
-                  "Please Approve Loan before completing Disbursement",
-                );
+                alert("Please Approve Loan before completing Disbursement");
 
                 return;
               }
 
               await refreshLoanStatistics();
 
-              alert(
-                "Loan Disbursement Workflow Completed Successfully",
-              );
+              alert("Loan Disbursement Workflow Completed Successfully");
 
               resetLoanWorkspace();
             }}

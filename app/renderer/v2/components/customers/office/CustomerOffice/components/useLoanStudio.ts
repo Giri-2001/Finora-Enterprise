@@ -9,7 +9,9 @@
 // - Own repayment schedule generation.
 // - Own approval / persistence workflow.
 // - Own Step 3 document evidence state.
+// - Own Step 4 guarantor verification state.
 // - Attach Step 3 documents to the final persisted Loan.
+// - Persist guarantor verification metadata.
 // - Own reset workflow.
 //
 // IMPORTANT:
@@ -31,7 +33,16 @@
 // - Collection outstanding and EMI schedule must always remain
 //   mathematically aligned.
 //
-// VERSION : 2.2
+// GUARANTOR VERIFICATION RULE:
+//
+// - Verification Status default = pending.
+// - Identity Verification default = aadhaar.
+// - Both values are controlled by Loan Studio.
+// - Step navigation must preserve the selected values.
+// - Approved Loan records persist both values.
+// - Workspace reset restores both defaults.
+//
+// VERSION : 2.3
 // STATUS  : Production
 // ============================================================
 
@@ -76,17 +87,6 @@ import {
    DOCUMENT HELPERS
 ============================================================ */
 
-/**
- * Converts the temporary browser object URL into a persistent
- * data URL when possible.
- *
- * DocumentsStudio creates `URL.createObjectURL(file)` for the
- * live preview. That URL is renderer/session specific and must
- * not be treated as a permanent loan-office reference.
- *
- * If conversion is not possible, the original document metadata
- * is still retained and the document remains linked to the loan.
- */
 async function resolveDocumentDataUrl(
   item: DocumentsStudioItem,
 ): Promise<string | undefined> {
@@ -129,29 +129,6 @@ async function resolveDocumentDataUrl(
   }
 }
 
-/**
- * Prepare Step 3 evidence for the persistent Loan record.
- *
- * The exact physical storage implementation remains behind
- * FINORA's storage/service layer. This hook only establishes
- * the stable logical relationship:
- *
- *   customerId
- *   loanId
- *   documentId
- *   storageKey
- *
- * This matches the Documents Studio persistence contract.
- *
- * IMPORTANT:
- *
- * Once a document is approved into a Loan workspace, its
- * persistent storage key must belong to that Loan.
- *
- * Therefore the Loan storage key is intentionally regenerated
- * from the newly created loanId instead of preserving any
- * previous customer-level or temporary storage key.
- */
 async function prepareLoanDocuments(
   documents: DocumentsStudioItem[],
   customerId: string,
@@ -276,8 +253,11 @@ export function useLoanStudio({
 
       setSelectedCustomer({
         customerId,
+
         customerName,
+
         phoneNumber,
+
         photo: matchingCustomer?.photo,
       });
     }
@@ -285,12 +265,6 @@ export function useLoanStudio({
 
   /* ==========================================================
      STEP 3 — DOCUMENT EVIDENCE
-     ----------------------------------------------------------
-     Evidence belongs to the currently selected customer.
-
-     It is intentionally cleared when the customer changes so
-     evidence from Customer A can never leak into Customer B's
-     loan workspace.
   ========================================================== */
 
   const [documents, setDocuments] = useState<DocumentsStudioItem[]>([]);
@@ -313,8 +287,11 @@ export function useLoanStudio({
         )
         .map((customer) => ({
           customerId: customer.identity.customerId,
+
           customerName: customer.basic.fullName,
+
           phoneNumber: customer.basic.mobileNumber,
+
           photo: customer.photo,
         })),
     [customers],
@@ -404,6 +381,16 @@ export function useLoanStudio({
 
   const [guarantorRelationship, setGuarantorRelationship] = useState("");
 
+  // ==========================================================
+  // GUARANTOR VERIFICATION
+  // ==========================================================
+
+  const [guarantorVerificationStatus, setGuarantorVerificationStatus] =
+    useState("pending");
+
+  const [guarantorIdentityVerification, setGuarantorIdentityVerification] =
+    useState("aadhaar");
+
   /* ==========================================================
      NOTES
   ========================================================== */
@@ -460,7 +447,9 @@ export function useLoanStudio({
 
   const [loanStatistics, setLoanStatistics] = useState({
     totalLoans: 0,
+
     activeLoans: 0,
+
     totalDisbursed: 0,
   });
 
@@ -498,7 +487,9 @@ export function useLoanStudio({
 
       setLoanStatistics({
         totalLoans,
+
         activeLoans,
+
         totalDisbursed,
       });
     } catch (error) {
@@ -615,18 +606,22 @@ export function useLoanStudio({
     switch (durationType) {
       case "days":
         maturityDate.setDate(maturityDate.getDate() + durationValue);
+
         break;
 
       case "weeks":
         maturityDate.setDate(maturityDate.getDate() + durationValue * 7);
+
         break;
 
       case "months":
         maturityDate.setMonth(maturityDate.getMonth() + durationValue);
+
         break;
 
       case "years":
         maturityDate.setFullYear(maturityDate.getFullYear() + durationValue);
+
         break;
     }
   }
@@ -642,14 +637,20 @@ export function useLoanStudio({
       normalizedRepaymentType === "MONTHLY")
       ? generateSchedule(
           totalInstallments,
+
           scheduleStartDate,
+
           normalizedRepaymentType.toLowerCase() as
             | "daily"
             | "weekly"
             | "monthly",
+
           flatTotalPayable,
+
           flatTotalInterest,
+
           emiCalculation,
+
           parseNumericValue(advanceDeduction),
         )
       : [];
@@ -670,46 +671,6 @@ export function useLoanStudio({
 
   /* ==========================================================
      COLLECTIBLE OUTSTANDING
-     ----------------------------------------------------------
-     CRITICAL FINORA RULE
-
-     totalPayable is the gross contractual payable.
-
-     The repayment schedule may already account for:
-
-     - Advance deduction
-     - Final installment adjustment
-     - Rounding
-     - Interest-only structure
-     - Reducing-balance structure
-
-     Therefore Loan.outstanding must NOT blindly equal
-     totalPayable.
-
-     The persisted schedule is the authoritative collection
-     contract.
-
-     Example:
-
-       Principal             = 10,000
-       Total Interest        =  1,600
-       Gross Total Payable   = 11,600
-       Advance Deduction     =    450
-       Schedule Total        = 11,150
-
-     Correct initial outstanding:
-
-       11,150
-
-     This keeps:
-
-       Loan Office
-       Collections
-       Collection History
-       EMI paid-state
-       Loan closure
-
-     mathematically aligned.
   ========================================================== */
 
   const scheduleCollectionTotal =
@@ -761,7 +722,11 @@ export function useLoanStudio({
      REVIEW DATA
   ========================================================== */
 
-  const reviewData: LoanReviewData = {
+  const reviewData: LoanReviewData & {
+    guarantorVerificationStatus: string;
+
+    guarantorIdentityVerification: string;
+  } = {
     customerId: activeCustomerId,
 
     customerName: activeCustomerName || "--",
@@ -796,6 +761,10 @@ export function useLoanStudio({
 
     guarantorOccupation,
 
+    guarantorVerificationStatus,
+
+    guarantorIdentityVerification,
+
     totalInstallments,
 
     installmentAmount,
@@ -814,6 +783,10 @@ export function useLoanStudio({
       customerId: activeCustomerId,
 
       documents: documents.length,
+
+      guarantorVerificationStatus,
+
+      guarantorIdentityVerification,
     });
   }
 
@@ -822,6 +795,10 @@ export function useLoanStudio({
       customerId: activeCustomerId,
 
       documents: documents.length,
+
+      guarantorVerificationStatus,
+
+      guarantorIdentityVerification,
     });
   }
 
@@ -866,7 +843,9 @@ export function useLoanStudio({
 
     const alreadyExists = await hasExistingLoan(
       activeCustomerId,
+
       loanTitle,
+
       principal,
     );
 
@@ -881,21 +860,13 @@ export function useLoanStudio({
     }
 
     /* ========================================================
-       CREATE STABLE LOAN ID FIRST
-       --------------------------------------------------------
-       Documents need this ID to establish their permanent
-       logical relationship with the loan.
+       CREATE STABLE LOAN ID
     ======================================================== */
 
     const loanId = crypto.randomUUID();
 
     /* ========================================================
        PREPARE DOCUMENT EVIDENCE
-       --------------------------------------------------------
-       Step 3 documents are now explicitly linked to:
-       - active customer
-       - newly created loan
-       - persistent logical storage key
     ======================================================== */
 
     let persistedDocuments: DocumentsStudioItem[] = [];
@@ -903,7 +874,9 @@ export function useLoanStudio({
     try {
       persistedDocuments = await prepareLoanDocuments(
         documents,
+
         activeCustomerId,
+
         loanId,
       );
     } catch (error) {
@@ -924,17 +897,6 @@ export function useLoanStudio({
       title: loanTitle,
 
       amount: principal,
-
-      /*
-       * CRITICAL:
-       *
-       * Persist the actual collectible schedule total,
-       * NOT the gross contractual totalPayable.
-       *
-       * This ensures advance deduction and schedule
-       * adjustments are reflected correctly in the
-       * authoritative loan balance from day one.
-       */
 
       outstanding: collectibleOutstanding,
 
@@ -976,22 +938,15 @@ export function useLoanStudio({
     });
 
     /* ========================================================
-       DOCUMENT ATTACHMENT
-       --------------------------------------------------------
-       The current Loan Builder contract predates the Documents
-       Studio persistence fields.
-
-       Preserve the existing Loan Builder contract and attach
-       document metadata to the final Loan record through
-       object spread.
-
-       This keeps existing loan calculations and builder
-       behavior unchanged while allowing Step 3 evidence
-       to travel with the persisted loan.
+       ATTACH EXTENDED LOAN METADATA
     ======================================================== */
 
     const loanWithDocuments = {
       ...loan,
+
+      // ------------------------------------------------------
+      // DOCUMENTS
+      // ------------------------------------------------------
 
       documents: persistedDocuments,
 
@@ -1000,6 +955,28 @@ export function useLoanStudio({
       documentsCustomerId: activeCustomerId,
 
       documentsLinkedAt: new Date().toISOString(),
+
+      // ------------------------------------------------------
+      // GUARANTOR DETAILS
+      // ------------------------------------------------------
+
+      guarantorName,
+
+      guarantorPhone,
+
+      guarantorOccupation,
+
+      guarantorAddress,
+
+      guarantorRelationship,
+
+      // ------------------------------------------------------
+      // GUARANTOR VERIFICATION
+      // ------------------------------------------------------
+
+      guarantorVerificationStatus,
+
+      guarantorIdentityVerification,
     };
 
     /* ========================================================
@@ -1017,25 +994,39 @@ export function useLoanStudio({
     }
 
     /* ========================================================
-       FINALIZE DOCUMENT STATE
-       --------------------------------------------------------
-       Keep the same evidence visible in the current Loan
-       Studio, but now mark it as persisted and linked.
-    ======================================================== */
+   FINALIZE SUCCESSFUL LOAN CREATION
+======================================================== */
 
-    setDocuments(persistedDocuments);
+setDocuments(persistedDocuments);
 
-    setLoanApproved(true);
+setLoanApproved(true);
 
-    await refreshLoanStatistics();
+await refreshLoanStatistics();
 
-    alert(
-      persistedDocuments.length > 0
-        ? `Loan Created Successfully with ${persistedDocuments.length} document${
-            persistedDocuments.length === 1 ? "" : "s"
-          }`
-        : "Loan Created Successfully",
-    );
+/* ========================================================
+   SUCCESS CONFIRMATION
+
+   alert() is blocking.
+
+   Therefore resetLoanWorkspace() runs only AFTER the user
+   presses OK on the success popup.
+
+   Failed Loan creation never clears entered form data.
+======================================================== */
+
+alert(
+  persistedDocuments.length > 0
+    ? `Loan Created Successfully with ${persistedDocuments.length} document${
+        persistedDocuments.length === 1 ? "" : "s"
+      }`
+    : "Loan Created Successfully",
+);
+
+/* ========================================================
+   START FRESH LOAN WORKSPACE
+======================================================== */
+
+resetLoanWorkspace();
   }
 
   /* ==========================================================
@@ -1082,6 +1073,14 @@ export function useLoanStudio({
     setGuarantorAddress("");
 
     setGuarantorRelationship("");
+
+    // --------------------------------------------------------
+    // GUARANTOR VERIFICATION DEFAULTS
+    // --------------------------------------------------------
+
+    setGuarantorVerificationStatus("pending");
+
+    setGuarantorIdentityVerification("aadhaar");
 
     setPurpose("");
 
@@ -1178,6 +1177,12 @@ export function useLoanStudio({
 
     guarantorRelationship,
     setGuarantorRelationship,
+
+    guarantorVerificationStatus,
+    setGuarantorVerificationStatus,
+
+    guarantorIdentityVerification,
+    setGuarantorIdentityVerification,
 
     purpose,
     setPurpose,

@@ -994,9 +994,10 @@ export const scheduleWrapperStyle: CSSProperties = {
 export const scheduleHeaderStyle: CSSProperties = {
   display: "grid",
 
-  gridTemplateColumns: "70px minmax(130px, 1fr) repeat(4, minmax(110px, 1fr))",
+  gridTemplateColumns:
+    "60px minmax(120px, 1fr) repeat(4, minmax(105px, 1fr)) minmax(105px, 0.9fr) minmax(110px, 1fr)",
 
-  minWidth: "720px",
+  minWidth: "940px",
 
   padding: "9px 10px",
 
@@ -1020,9 +1021,10 @@ export const scheduleHeaderCellStyle: CSSProperties = {
 export const scheduleRowStyle: CSSProperties = {
   display: "grid",
 
-  gridTemplateColumns: "70px minmax(130px, 1fr) repeat(4, minmax(110px, 1fr))",
+  gridTemplateColumns:
+    "60px minmax(120px, 1fr) repeat(4, minmax(105px, 1fr)) minmax(105px, 0.9fr) minmax(110px, 1fr)",
 
-  minWidth: "720px",
+  minWidth: "940px",
 
   padding: "9px 10px",
 
@@ -1036,6 +1038,101 @@ export const scheduleCellStyle: CSSProperties = {
 
   fontWeight: 600,
 };
+
+// ============================================================
+// SCHEDULE STATUS BADGE
+// ============================================================
+
+export function scheduleStatusBadgeStyle(
+  status: string | undefined,
+): CSSProperties {
+  const normalized = String(status ?? "")
+    .trim()
+    .toLowerCase();
+
+  if (normalized === "paid") {
+    return {
+      display: "inline-flex",
+      alignItems: "center",
+      justifyContent: "center",
+      minWidth: "58px",
+      padding: "4px 7px",
+      borderRadius: "999px",
+      border: `1px solid ${COLORS.success}`,
+      background: COLORS.successSoft,
+      color: COLORS.success,
+      fontSize: "9px",
+      fontWeight: 750,
+      whiteSpace: "nowrap",
+    };
+  }
+
+  if (normalized === "partial") {
+    return {
+      display: "inline-flex",
+      alignItems: "center",
+      justifyContent: "center",
+      minWidth: "58px",
+      padding: "4px 7px",
+      borderRadius: "999px",
+      border: `1px solid ${COLORS.warning}`,
+      background: COLORS.warningSoft,
+      color: COLORS.warning,
+      fontSize: "9px",
+      fontWeight: 750,
+      whiteSpace: "nowrap",
+    };
+  }
+
+  if (normalized === "preclosed") {
+    return {
+      display: "inline-flex",
+      alignItems: "center",
+      justifyContent: "center",
+      minWidth: "66px",
+      padding: "4px 7px",
+      borderRadius: "999px",
+      border: `1px solid ${COLORS.info}`,
+      background: COLORS.infoSoft,
+      color: COLORS.info,
+      fontSize: "9px",
+      fontWeight: 750,
+      whiteSpace: "nowrap",
+    };
+  }
+
+  if (normalized === "overdue") {
+    return {
+      display: "inline-flex",
+      alignItems: "center",
+      justifyContent: "center",
+      minWidth: "58px",
+      padding: "4px 7px",
+      borderRadius: "999px",
+      border: `1px solid ${COLORS.danger}`,
+      background: COLORS.dangerSoft,
+      color: COLORS.danger,
+      fontSize: "9px",
+      fontWeight: 750,
+      whiteSpace: "nowrap",
+    };
+  }
+
+  return {
+    display: "inline-flex",
+    alignItems: "center",
+    justifyContent: "center",
+    minWidth: "58px",
+    padding: "4px 7px",
+    borderRadius: "999px",
+    border: `1px solid ${COLORS.borderStrong}`,
+    background: COLORS.panelSoft,
+    color: COLORS.textMuted,
+    fontSize: "9px",
+    fontWeight: 750,
+    whiteSpace: "nowrap",
+  };
+}
 
 export const scheduleEmptyStyle: CSSProperties = {
   padding: "18px",
@@ -1108,6 +1205,33 @@ export const responsiveMediaQuery = `
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 8px;
     min-width: 0;
+  }
+
+    /* ========================================================
+     DOCUMENT GALLERY — DESKTOP FULL WIDTH
+     --------------------------------------------------------
+     Main Loan Details workspace uses:
+
+       left  = 1.35fr
+       right = 0.65fr
+       gap   = 16px
+
+     Documents are intentionally kept in their original
+     left-column DOM position.
+
+     On desktop/laptop only, extend the final Documents
+     section across the remaining right-side workspace.
+     No duplicate section is created.
+     ======================================================== */
+
+  @media (min-width: 1101px) {
+    .finora-view-loan-content-grid
+      > .finora-view-loan-column:first-child
+      > section:last-child {
+      width: calc(148.148148% + 16px) !important;
+      max-width: none !important;
+      box-sizing: border-box !important;
+    }
   }
 
   /* ========================================================

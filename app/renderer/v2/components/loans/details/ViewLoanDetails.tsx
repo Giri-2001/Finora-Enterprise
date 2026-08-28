@@ -102,6 +102,7 @@ import {
   scheduleHeaderCellStyle,
   scheduleRowStyle,
   scheduleCellStyle,
+  scheduleStatusBadgeStyle,
   scheduleEmptyStyle,
   footerStyle,
   footerBackButtonStyle,
@@ -251,6 +252,97 @@ function formatScheduleDate(value: unknown): string {
   }
 
   return formatDate(value);
+}
+
+// ============================================================
+// SCHEDULE STATUS
+// ============================================================
+
+function formatScheduleStatus(value: unknown): string {
+  const normalized = String(value ?? "")
+    .trim()
+    .toLowerCase();
+
+  switch (normalized) {
+    case "paid":
+      return "Paid";
+
+    case "partial":
+      return "Partial";
+
+    case "preclosed":
+      return "Preclosed";
+
+    case "overdue":
+      return "Overdue";
+
+    case "pending":
+      return "Pending";
+
+    default:
+      return "Pending";
+  }
+}
+
+// ============================================================
+// SCHEDULE PAID AMOUNT
+// ============================================================
+
+function getSchedulePaidAmount(value: unknown): number {
+  const amount = Number(value ?? 0);
+
+  if (!Number.isFinite(amount)) {
+    return 0;
+  }
+
+  return Math.max(0, amount);
+}
+
+// ============================================================
+// SCHEDULE BALANCE
+//
+// Persisted outstandingBalance is preferred.
+//
+// Older Loan schedules may not contain outstandingBalance.
+// For those records, remaining EMI value is reconstructed from
+// persisted installmentAmount + paidAmount + status.
+//
+// Paid / Preclosed rows always have zero collectible balance.
+// ============================================================
+
+function getScheduleBalance(
+  persistedBalance: unknown,
+  installmentAmount: unknown,
+  paidAmount: unknown,
+  status: unknown,
+): number | undefined {
+  const normalizedStatus = String(status ?? "")
+    .trim()
+    .toLowerCase();
+
+  if (normalizedStatus === "paid" || normalizedStatus === "preclosed") {
+    return 0;
+  }
+
+  const storedBalance = Number(persistedBalance);
+
+  if (
+    persistedBalance !== undefined &&
+    persistedBalance !== null &&
+    Number.isFinite(storedBalance)
+  ) {
+    return Math.max(0, storedBalance);
+  }
+
+  const installment = Number(installmentAmount);
+
+  if (!Number.isFinite(installment)) {
+    return undefined;
+  }
+
+  const paid = getSchedulePaidAmount(paidAmount);
+
+  return Math.max(0, installment - paid);
 }
 
 // ============================================================
@@ -908,6 +1000,10 @@ export default function ViewLoanDetails({
 
               <div style={scheduleHeaderCellStyle}>Installment</div>
 
+              <div style={scheduleHeaderCellStyle}>Paid</div>
+
+              <div style={scheduleHeaderCellStyle}>Status</div>
+
               <div style={scheduleHeaderCellStyle}>Balance</div>
             </div>
 
@@ -942,26 +1038,54 @@ export default function ViewLoanDetails({
                 "total",
               ]);
 
-              const balance = getScheduleValue(installment, [
+              const paidAmount = getScheduleValue(installment, ["paidAmount"]);
+
+              const scheduleStatus = getScheduleValue(installment, ["status"]);
+
+              const persistedBalance = getScheduleValue(installment, [
+                "outstandingBalance",
                 "balance",
                 "outstanding",
                 "remainingBalance",
               ]);
+
+              const balance = getScheduleBalance(
+                persistedBalance,
+                installmentAmount,
+                paidAmount,
+                scheduleStatus,
+              );
+
+              const resolvedStatus = formatScheduleStatus(scheduleStatus);
+
+              const resolvedPaidAmount = getSchedulePaidAmount(paidAmount);
 
               return (
                 <div
                   key={String(installmentNumber ?? index)}
                   style={scheduleRowStyle}
                 >
+                  {/* ================================================
+        INSTALLMENT NUMBER
+    ================================================ */}
+
                   <div style={scheduleCellStyle}>
                     {safeText(
                       (installmentNumber ?? index + 1) as string | number,
                     )}
                   </div>
 
+                  {/* ================================================
+        DUE DATE
+    ================================================ */}
+
                   <div style={scheduleCellStyle}>
                     {formatScheduleDate(dueDate)}
                   </div>
+
+                  {/* ================================================
+        PRINCIPAL
+    ================================================ */}
 
                   <div style={scheduleCellStyle}>
                     {typeof principal === "number"
@@ -969,11 +1093,19 @@ export default function ViewLoanDetails({
                       : safeText(principal as string | number | undefined)}
                   </div>
 
+                  {/* ================================================
+        INTEREST
+    ================================================ */}
+
                   <div style={scheduleCellStyle}>
                     {typeof interest === "number"
                       ? formatCurrency(interest)
                       : safeText(interest as string | number | undefined)}
                   </div>
+
+                  {/* ================================================
+        INSTALLMENT
+    ================================================ */}
 
                   <div style={scheduleCellStyle}>
                     {typeof installmentAmount === "number"
@@ -983,10 +1115,32 @@ export default function ViewLoanDetails({
                         )}
                   </div>
 
+                  {/* ================================================
+        PAID AMOUNT
+    ================================================ */}
+
+                  <div style={scheduleCellStyle}>
+                    {formatCurrency(resolvedPaidAmount)}
+                  </div>
+
+                  {/* ================================================
+        STATUS
+    ================================================ */}
+
+                  <div style={scheduleCellStyle}>
+                    <span style={scheduleStatusBadgeStyle(resolvedStatus)}>
+                      {resolvedStatus}
+                    </span>
+                  </div>
+
+                  {/* ================================================
+        EMI BALANCE
+    ================================================ */}
+
                   <div style={scheduleCellStyle}>
                     {typeof balance === "number"
                       ? formatCurrency(balance)
-                      : safeText(balance as string | number | undefined)}
+                      : "--"}
                   </div>
                 </div>
               );

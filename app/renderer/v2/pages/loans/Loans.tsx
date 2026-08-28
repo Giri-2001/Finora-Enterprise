@@ -750,7 +750,28 @@ export default function Loans() {
 
       const records = await getLoans();
 
-      setLoans(records);
+setLoans(records);
+
+/*
+ * Keep View Loan Details connected to the latest persisted
+ * Loan record.
+ *
+ * Collections dispatches FINORA_LOAN_UPDATED after a successful
+ * payment. loadLoans() therefore reloads repository data and
+ * replaces the old viewingLoan snapshot with the latest record.
+ */
+
+setViewingLoan((currentLoan) => {
+  if (!currentLoan) {
+    return null;
+  }
+
+  const refreshedLoan = records.find(
+    (record) => record.id === currentLoan.id,
+  );
+
+  return refreshedLoan ?? currentLoan;
+});
     } catch (error) {
       console.error("FINORA V2 LOANS OFFICE LOAD ERROR:", error);
 
