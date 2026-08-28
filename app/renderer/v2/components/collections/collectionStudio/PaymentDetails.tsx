@@ -12,7 +12,10 @@
 // - Capture reference number
 // - Capture remarks
 // - Save the current collection
+// - Apply approved discount / waiver to Loan settlement
+// - Generate a unique receipt for every transaction
 // - Save collection and open a printable receipt
+// - Reset transaction-entry fields after successful save
 //
 // IMPORTANT
 //
@@ -24,13 +27,83 @@
 // - Collection amount comes from Step 4 / controller.
 // - Discount and manual principal remain editable in Step 4.
 //
-// LAYOUT
+// SETTLEMENT CONTRACT
 //
-// - Compact 3-column payment details grid.
-// - Row 1: Date / Payment Mode / Reference.
-// - Row 2: Remarks / Final Collection / Actions.
-// - Designed to fit below Collection Entry inside the
-//   right-side workspace column.
+// Actual Payment:
+//
+//   reviewData.paymentAmount
+//
+// Discount:
+//
+//   reviewData.discountAmount
+//
+// Total Liability Reduction:
+//
+//   paymentAmount + discountAmount
+//
+// Example:
+//
+//   Current outstanding = ₹9,250
+//   Customer pays       = ₹9,100
+//   Discount            = ₹  150
+//
+//   Settlement reduction = ₹9,250
+//   Final outstanding    = ₹0
+//
+// IMPORTANT:
+//
+// - Collection History records ₹9,100 as Collected.
+// - ₹150 is a discount / waiver, NOT received cash.
+// - LoanRepository receives discount separately.
+// - EMI paidAmount receives actual payment only.
+// - Discount never becomes fake EMI payment.
+// - If payment + discount closes the Loan, repository finalizes
+//   the remaining contractual EMI liability as Preclosed.
+//
+// RECEIPT RULE
+//
+// Every new collection gets:
+//
+// - Fresh receipt number
+// - Fresh createdAt
+// - Fresh updatedAt
+//
+// Previous receipt numbers are never reused.
+//
+// POST-SAVE RESET
+//
+// A successful collection starts a fresh transaction form.
+//
+// Reset:
+//
+// - paymentAmount
+// - advanceAdjustment
+// - discountAmount
+// - selectedEmiNumbers
+// - selectedEmiAmount
+// - paymentReference
+// - remarks
+// - receiptNumber
+//
+// Defaults:
+//
+// - receiptDate   = today
+// - paymentMethod = cash
+//
+// CollectionEntry receives:
+//
+//   FINORA_COLLECTION_FORM_RESET
+//
+// and resets local presentation state:
+//
+// - mode -> EMI COLLECTION
+// - EMI selection -> empty
+// - dropdown -> closed
+//
+// Customer / Loan identity is NOT manually cleared here.
+//
+// VERSION : 2.3
+// STATUS  : Production
 // ============================================================
 
 // ============================================================
@@ -47,8 +120,6 @@ import { approveCollection } from "../../../services/collection/collectionServic
 
 import { collectionPaymentDetailsStyles } from "./PaymentDetails.styles";
 
-import { CreditCard } from "lucide-react";
-
 // ============================================================
 // HELPERS
 // ============================================================
@@ -59,14 +130,55 @@ function safeNumber(value: unknown): number {
   return Number.isFinite(parsed) ? Math.max(0, parsed) : 0;
 }
 
+// ============================================================
+// LOCAL TODAY
+// ============================================================
+//
+// Uses local calendar date instead of UTC date.
+//
+// This prevents a date shift around local midnight.
+//
+// ============================================================
+
+function getLocalTodayInputValue(): string {
+  const now = new Date();
+
+  const year = now.getFullYear();
+
+  const month = String(now.getMonth() + 1).padStart(2, "0");
+
+  const day = String(now.getDate()).padStart(2, "0");
+
+  return `${year}-${month}-${day}`;
+}
+
+// ============================================================
+// CURRENCY
+// ============================================================
+
 function formatCurrency(value: number): string {
   return `₹ ${Math.round(safeNumber(value)).toLocaleString("en-IN")}`;
 }
 
-function generateReceiptNumber(): string {
-  const stamp = Date.now().toString().slice(-8);
+// ============================================================
+// RECEIPT NUMBER
+// ============================================================
+//
+// Every Collection transaction must receive a unique receipt.
+//
+// reviewData.receiptNumber may contain the previous completed
+// transaction's receipt and must never be reused.
+//
+// ============================================================
 
-  return `RCPT-${stamp}`;
+function generateReceiptNumber(): string {
+  const timestampPart = Date.now().toString().slice(-8);
+
+  const randomPart = Math.floor(Math.random() * 100)
+    .toString()
+    .padStart(2, "0");
+
+  return `RCPT-${timestampPart}${randomPart}`;
 }
 
 // ============================================================
@@ -75,6 +187,10 @@ function generateReceiptNumber(): string {
 
 export default function PaymentDetails() {
   const { reviewData, updateField } = useCollectionController();
+
+  // ==========================================================
+  // SAVING STATE
+  // ==========================================================
 
   const [saving, setSaving] = useState(false);
 
@@ -88,7 +204,27 @@ export default function PaymentDetails() {
 
   const manualPrincipal = safeNumber(reviewData.advanceAdjustment);
 
-  const finalCollection = Math.max(0, collectionAmount);
+  // ==========================================================
+  // ACTUAL COLLECTION
+  // ==========================================================
+
+  const finalCollection = collectionAmount;
+
+  // ==========================================================
+  // TOTAL SETTLEMENT REDUCTION
+  // ==========================================================
+
+  const settlementReduction = finalCollection + discountAmount;
+
+  // ==========================================================
+  // SELECTED EMI STATE
+  // ==========================================================
+
+  const selectedEmiNumbers = Array.isArray(reviewData.selectedEmiNumbers)
+    ? reviewData.selectedEmiNumbers
+    : [];
+
+  const selectedEmiAmount = safeNumber(reviewData.selectedEmiAmount);
 
   // ==========================================================
   // UPDATE FIELD
@@ -111,29 +247,131 @@ export default function PaymentDetails() {
   }
 
   // ==========================================================
+  // RESET TRANSACTION FORM
+  // ==========================================================
+  //
+  // Called ONLY after:
+  //
+  // 1. Loan update succeeds.
+  // 2. Collection record persistence succeeds.
+  //
+  // Therefore a failed transaction never destroys the user's
+  // entered values.
+  //
+  // ==========================================================
+
+  function resetTransactionForm(): void {
+    // --------------------------------------------------------
+    // COLLECTION VALUES
+    // --------------------------------------------------------
+
+    updateField("paymentAmount", 0);
+
+    updateField("advanceAdjustment", 0);
+
+    updateField("discountAmount", 0);
+
+    // --------------------------------------------------------
+    // EMI SELECTION
+    // --------------------------------------------------------
+
+    updateField("selectedEmiNumbers", []);
+
+    updateField("selectedEmiAmount", 0);
+
+    // --------------------------------------------------------
+    // PAYMENT DETAILS
+    // --------------------------------------------------------
+
+    updateField("paymentReference", "");
+
+    updateField("remarks", "");
+
+    // --------------------------------------------------------
+    // PREVIOUS TRANSACTION RECEIPT
+    // --------------------------------------------------------
+
+    updateField("receiptNumber", "");
+
+    // --------------------------------------------------------
+    // NEW TRANSACTION DEFAULTS
+    // --------------------------------------------------------
+
+    updateField("paymentMethod", "cash");
+
+    updateField("receiptDate", getLocalTodayInputValue());
+
+    // --------------------------------------------------------
+    // RESET COLLECTION ENTRY LOCAL UI
+    // --------------------------------------------------------
+
+    window.dispatchEvent(new Event("FINORA_COLLECTION_FORM_RESET"));
+  }
+
+  // ==========================================================
   // VALIDATE
   // ==========================================================
 
   function validateCollection(): boolean {
+    // --------------------------------------------------------
+    // LOAN
+    // --------------------------------------------------------
+
     if (!reviewData.loanId) {
       alert("Please select a loan.");
 
       return false;
     }
 
-    if (collectionAmount <= 0) {
+    // --------------------------------------------------------
+    // ACTUAL PAYMENT
+    // --------------------------------------------------------
+
+    if (finalCollection <= 0) {
       alert("Please enter or select a collection amount.");
 
       return false;
     }
 
-    if (collectionAmount > safeNumber(reviewData.outstandingBalance)) {
+    // --------------------------------------------------------
+    // AUTHORITATIVE OUTSTANDING
+    // --------------------------------------------------------
+
+    const currentOutstanding = safeNumber(reviewData.outstandingBalance);
+
+    if (currentOutstanding <= 0) {
+      alert("This loan has no outstanding balance.");
+
+      return false;
+    }
+
+    // --------------------------------------------------------
+    // PAYMENT CANNOT EXCEED OUTSTANDING
+    // --------------------------------------------------------
+
+    if (finalCollection > currentOutstanding) {
       alert(
         "Collection amount cannot be greater than the current outstanding balance.",
       );
 
       return false;
     }
+
+    // --------------------------------------------------------
+    // PAYMENT + DISCOUNT CANNOT EXCEED OUTSTANDING
+    // --------------------------------------------------------
+
+    if (settlementReduction > currentOutstanding) {
+      alert(
+        "Collection amount plus discount cannot be greater than the current outstanding balance.",
+      );
+
+      return false;
+    }
+
+    // --------------------------------------------------------
+    // PAYMENT METHOD
+    // --------------------------------------------------------
 
     if (!reviewData.paymentMethod) {
       alert("Please select a payment mode.");
@@ -147,28 +385,68 @@ export default function PaymentDetails() {
   // ==========================================================
   // BUILD PERSISTENCE DATA
   // ==========================================================
+  //
+  // Every save is a NEW Collection transaction.
+  //
+  // ==========================================================
 
   function buildSaveData() {
     const now = new Date().toISOString();
 
-    const receiptNumber = reviewData.receiptNumber || generateReceiptNumber();
+    const receiptNumber = generateReceiptNumber();
 
     return {
       ...reviewData,
 
+      // ------------------------------------------------------
+      // ACTUAL CUSTOMER PAYMENT
+      // ------------------------------------------------------
+
       paymentAmount: finalCollection,
+
+      // ------------------------------------------------------
+      // EMI METADATA
+      // ------------------------------------------------------
+
+      selectedEmiNumbers,
+
+      selectedEmiAmount,
+
+      // ------------------------------------------------------
+      // DISCOUNT / WAIVER
+      // ------------------------------------------------------
 
       discountAmount,
 
+      // ------------------------------------------------------
+      // MANUAL PRINCIPAL METADATA
+      // ------------------------------------------------------
+
       advanceAdjustment: manualPrincipal,
+
+      // ------------------------------------------------------
+      // NEW RECEIPT
+      // ------------------------------------------------------
 
       receiptNumber,
 
-      receiptDate: reviewData.receiptDate || now.slice(0, 10),
+      // ------------------------------------------------------
+      // COLLECTION DATE
+      // ------------------------------------------------------
+
+      receiptDate: reviewData.receiptDate || getLocalTodayInputValue(),
+
+      // ------------------------------------------------------
+      // STATUS
+      // ------------------------------------------------------
 
       status: "Approved" as const,
 
-      createdAt: reviewData.createdAt || now,
+      // ------------------------------------------------------
+      // TRANSACTION TIMESTAMPS
+      // ------------------------------------------------------
+
+      createdAt: now,
 
       updatedAt: now,
     };
@@ -179,9 +457,17 @@ export default function PaymentDetails() {
   // ==========================================================
 
   async function handleSaveCollection(printReceipt: boolean): Promise<void> {
+    // --------------------------------------------------------
+    // DOUBLE SUBMIT PROTECTION
+    // --------------------------------------------------------
+
     if (saving) {
       return;
     }
+
+    // --------------------------------------------------------
+    // VALIDATION
+    // --------------------------------------------------------
 
     if (!validateCollection()) {
       return;
@@ -190,6 +476,10 @@ export default function PaymentDetails() {
     setSaving(true);
 
     try {
+      // ======================================================
+      // NEW TRANSACTION DATA
+      // ======================================================
+
       const saveData = buildSaveData();
 
       console.info("FINORA COLLECTION SAVE", {
@@ -197,20 +487,39 @@ export default function PaymentDetails() {
 
         paymentAmount: saveData.paymentAmount,
 
-        manualPrincipal: saveData.advanceAdjustment,
-
         discountAmount: saveData.discountAmount,
 
+        settlementReduction: saveData.paymentAmount + saveData.discountAmount,
+
+        manualPrincipal: saveData.advanceAdjustment,
+
         receiptNumber: saveData.receiptNumber,
+
+        selectedEmiNumbers: saveData.selectedEmiNumbers,
+
+        selectedEmiAmount: saveData.selectedEmiAmount,
+
+        createdAt: saveData.createdAt,
       });
 
-      // --------------------------------------------------------
-      // UPDATE LOAN OUTSTANDING
-      // --------------------------------------------------------
+      // ======================================================
+      // UPDATE AUTHORITATIVE LOAN
+      // ======================================================
 
       const updatedLoan = await updateLoanOutstandingAmount(
         saveData.loanId,
+
         saveData.paymentAmount,
+
+        {
+          selectedEmiNumbers: saveData.selectedEmiNumbers,
+
+          receiptNumber: saveData.receiptNumber,
+
+          paidDate: saveData.receiptDate,
+
+          discountAmount: saveData.discountAmount,
+        },
       );
 
       if (!updatedLoan) {
@@ -219,42 +528,90 @@ export default function PaymentDetails() {
         );
       }
 
-      // --------------------------------------------------------
+      // ======================================================
+      // AUTHORITATIVE POST-SETTLEMENT BALANCE
+      // ======================================================
+
+      const updatedOutstanding = safeNumber(
+        (
+          updatedLoan as {
+            outstanding?: unknown;
+          }
+        ).outstanding,
+      );
+
+      // ======================================================
+      // FINAL COLLECTION RECORD
+      // ======================================================
+
+      const collectionSaveData = {
+        ...saveData,
+
+        outstandingBalance: updatedOutstanding,
+      };
+
+      // ======================================================
       // SAVE COLLECTION RECORD
-      // --------------------------------------------------------
+      // ======================================================
 
-      const savedCollection = await approveCollection(saveData);
+      const savedCollection = await approveCollection(collectionSaveData);
 
-      // --------------------------------------------------------
-      // PUSH SAVED VALUES BACK INTO CONTROLLER
-      // --------------------------------------------------------
+      // ======================================================
+      // PUSH AUTHORITATIVE LOAN BALANCE INTO CONTROLLER
+      // ======================================================
 
-      updateField("receiptNumber", savedCollection.receiptNumber);
+      updateField(
+        "outstandingBalance",
+        safeNumber(savedCollection.outstandingBalance),
+      );
 
-      updateField("status", "Approved");
+      // ======================================================
+      // OPTIONAL PRINT RECEIPT
+      // ======================================================
+      //
+      // Uses immutable transaction data captured before the
+      // form is reset.
+      //
+      // ======================================================
 
-      updateField("updatedAt", savedCollection.updatedAt);
+      if (printReceipt) {
+        printCollectionReceipt(collectionSaveData);
+      }
 
-      // --------------------------------------------------------
-      // REFRESH LIVE COLLECTION / LOAN VIEWS
-      // --------------------------------------------------------
+      // ======================================================
+      // RESET CURRENT TRANSACTION FORM
+      // ======================================================
+      //
+      // This happens only after persistence is fully successful.
+      //
+      // EMI or Manual mode both return to a clean fresh form.
+      //
+      // ======================================================
+
+      resetTransactionForm();
+
+      // ======================================================
+      // REFRESH LIVE LOAN / COLLECTION VIEWS
+      // ======================================================
 
       window.dispatchEvent(new Event("FINORA_LOAN_UPDATED"));
 
       window.dispatchEvent(new Event("FINORA_COLLECTION_UPDATED"));
 
-      // --------------------------------------------------------
-      // OPTIONAL RECEIPT
-      // --------------------------------------------------------
+      // ======================================================
+      // SUCCESS MESSAGE
+      // ======================================================
 
-      if (printReceipt) {
-        printCollectionReceipt(saveData);
-      }
+      const loanClosed = updatedOutstanding === 0;
 
       alert(
-        printReceipt
-          ? "Collection saved successfully. Receipt is ready to print."
-          : "Collection saved successfully.",
+        loanClosed
+          ? printReceipt
+            ? "Collection saved successfully. Loan closed. Receipt is ready to print."
+            : "Collection saved successfully. Loan closed."
+          : printReceipt
+            ? "Collection saved successfully. Receipt is ready to print."
+            : "Collection saved successfully.",
       );
     } catch (error) {
       console.error("FINORA COLLECTION SAVE ERROR:", error);
@@ -286,6 +643,10 @@ export default function PaymentDetails() {
       return;
     }
 
+    // ========================================================
+    // RECEIPT VALUES
+    // ========================================================
+
     const customerName = data.customerName || "--";
 
     const loanNumber = data.loanNumber || "--";
@@ -294,13 +655,30 @@ export default function PaymentDetails() {
 
     const receiptDate = data.receiptDate || "--";
 
+    const settlementValue =
+      safeNumber(data.paymentAmount) + safeNumber(data.discountAmount);
+
+    // ========================================================
+    // RECEIPT DOCUMENT
+    // ========================================================
+
     receiptWindow.document.write(`
       <!doctype html>
+
       <html>
+
         <head>
-          <title>FINORA Collection Receipt</title>
-          <meta charset="utf-8" />
+
+          <title>
+            FINORA Collection Receipt
+          </title>
+
+          <meta
+            charset="utf-8"
+          />
+
           <style>
+
             body {
               margin: 0;
               padding: 32px;
@@ -358,6 +736,7 @@ export default function PaymentDetails() {
             }
 
             @media print {
+
               body {
                 padding: 0;
               }
@@ -365,75 +744,155 @@ export default function PaymentDetails() {
               .receipt {
                 border: 0;
               }
+
             }
+
           </style>
+
         </head>
 
         <body>
+
           <div class="receipt">
-            <div class="brand">FINORA ENTERPRISE</div>
 
-            <h1>COLLECTION RECEIPT</h1>
+            <div class="brand">
+              FINORA ENTERPRISE
+            </div>
 
-            <div class="muted">Collection Studio™</div>
+            <h1>
+              COLLECTION RECEIPT
+            </h1>
+
+            <div class="muted">
+              Collection Studio™
+            </div>
 
             <div class="meta">
+
               <div>
-                <strong>Receipt No</strong><br>
+                <strong>
+                  Receipt No
+                </strong>
+
+                <br>
+
                 ${data.receiptNumber}
               </div>
 
               <div>
-                <strong>Date</strong><br>
+                <strong>
+                  Date
+                </strong>
+
+                <br>
+
                 ${receiptDate}
               </div>
 
               <div>
-                <strong>Customer</strong><br>
+                <strong>
+                  Customer
+                </strong>
+
+                <br>
+
                 ${customerName}
               </div>
 
               <div>
-                <strong>Loan</strong><br>
+                <strong>
+                  Loan
+                </strong>
+
+                <br>
+
                 ${loanNumber}
               </div>
 
               <div>
-                <strong>Payment Mode</strong><br>
+                <strong>
+                  Payment Mode
+                </strong>
+
+                <br>
+
                 ${paymentMode}
               </div>
 
               <div>
-                <strong>Reference</strong><br>
+                <strong>
+                  Reference
+                </strong>
+
+                <br>
+
                 ${data.paymentReference || "--"}
               </div>
+
             </div>
 
             <div class="row">
-              <span>Collection Amount</span>
-              <strong>${formatCurrency(data.paymentAmount)}</strong>
+
+              <span>
+                Collection Amount
+              </span>
+
+              <strong>
+                ${formatCurrency(data.paymentAmount)}
+              </strong>
+
             </div>
 
             <div class="row">
-              <span>Manual Principal</span>
-              <strong>${formatCurrency(data.advanceAdjustment)}</strong>
+
+              <span>
+                Discount / Waiver
+              </span>
+
+              <strong>
+                ${formatCurrency(data.discountAmount)}
+              </strong>
+
             </div>
 
             <div class="row">
-              <span>Discount</span>
-              <strong>${formatCurrency(data.discountAmount)}</strong>
+
+              <span>
+                Manual Principal
+              </span>
+
+              <strong>
+                ${formatCurrency(data.advanceAdjustment)}
+              </strong>
+
             </div>
 
             <div class="final">
-              <span>FINAL COLLECTION</span>
-              <span>${formatCurrency(data.paymentAmount)}</span>
+
+              <span>
+                TOTAL SETTLEMENT
+              </span>
+
+              <span>
+                ${formatCurrency(settlementValue)}
+              </span>
+
             </div>
+
+            <p class="muted">
+              Actual amount received: ${formatCurrency(
+                data.paymentAmount,
+              )}. Discount / waiver is not treated as customer payment.
+            </p>
 
             <p class="muted">
               This receipt was generated by FINORA Enterprise Collection Studio™.
             </p>
+
           </div>
+
         </body>
+
       </html>
     `);
 
@@ -460,12 +919,14 @@ export default function PaymentDetails() {
       ====================================================== */}
 
       <header style={collectionPaymentDetailsStyles.header}>
-        <span style={collectionPaymentDetailsStyles.step}>
-          <CreditCard size={30} strokeWidth={2} />
-        </span>
+        <div style={collectionPaymentDetailsStyles.step}>6</div>
 
         <div>
-          <h2 style={collectionPaymentDetailsStyles.title}>Payment Details</h2>
+          <h2 style={collectionPaymentDetailsStyles.title}>PAYMENT DETAILS</h2>
+
+          <p style={collectionPaymentDetailsStyles.subtitle}>
+            Record the collection payment information.
+          </p>
         </div>
       </header>
 
@@ -475,7 +936,7 @@ export default function PaymentDetails() {
 
       <div style={collectionPaymentDetailsStyles.body}>
         {/* ====================================================
-            ROW 1 — COLLECTION DATE
+            COLLECTION DATE
         ==================================================== */}
 
         <div style={collectionPaymentDetailsStyles.field}>
@@ -496,7 +957,7 @@ export default function PaymentDetails() {
         </div>
 
         {/* ====================================================
-            ROW 1 — PAYMENT MODE
+            PAYMENT MODE
         ==================================================== */}
 
         <div style={collectionPaymentDetailsStyles.field}>
@@ -524,7 +985,7 @@ export default function PaymentDetails() {
         </div>
 
         {/* ====================================================
-            ROW 1 — REFERENCE NUMBER
+            REFERENCE NUMBER
         ==================================================== */}
 
         <div style={collectionPaymentDetailsStyles.field}>
@@ -546,7 +1007,7 @@ export default function PaymentDetails() {
         </div>
 
         {/* ====================================================
-            ROW 2 — REMARKS
+            REMARKS
         ==================================================== */}
 
         <div style={collectionPaymentDetailsStyles.remarksField}>
@@ -561,7 +1022,7 @@ export default function PaymentDetails() {
         </div>
 
         {/* ====================================================
-            ROW 2 — FINAL COLLECTION
+            FINAL COLLECTION
         ==================================================== */}
 
         <div style={collectionPaymentDetailsStyles.totalBar}>
@@ -577,7 +1038,7 @@ export default function PaymentDetails() {
         </div>
 
         {/* ====================================================
-            ROW 2 — ACTIONS
+            ACTIONS
         ==================================================== */}
 
         <div style={collectionPaymentDetailsStyles.actions}>

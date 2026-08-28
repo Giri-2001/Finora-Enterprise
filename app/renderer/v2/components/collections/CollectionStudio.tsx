@@ -29,6 +29,10 @@ export default function CollectionStudio() {
 
     loanNumber: "",
 
+    loanInterestRate: 0,
+
+    loanDate: "",
+
     loanAmount: 0,
 
     outstandingBalance: 0,

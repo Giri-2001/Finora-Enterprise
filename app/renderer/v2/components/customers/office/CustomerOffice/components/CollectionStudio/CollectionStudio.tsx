@@ -150,13 +150,15 @@ export default function CollectionStudio({
     useState<Loan | undefined>(loans[0]);
 
   const [reviewData, setReviewData] =
-    useState(
-      getInitialReviewData(
+    useState<any>({
+      ...getInitialReviewData(
         customerId,
         customerName,
         phoneNumber,
       ),
-    );
+      loanInterestRate: 0,
+      loanDate: "",
+    });
 
   useLoanSynchronization(
     customerId,

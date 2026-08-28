@@ -12,12 +12,13 @@
 // - Load the selected Loan's persisted EMI schedule
 // - Allow eligible EMI selection
 // - Allow Select All EMI selection
-// - Display total EMI schedule amount
+// - Display authoritative remaining loan / EMI balance
 // - Display selected EMI amount
 // - Allow manual collection amount editing
 // - Allow manual principal editing
 // - Allow discount editing
-// - Keep Step 4 values synchronized with Collection Controller
+// - Write Step 4 changes directly to the Collection Controller
+// - Reset local collection-entry presentation after save
 //
 // IMPORTANT
 //
@@ -33,11 +34,63 @@
 // - No inline colour palette
 // - Geometry belongs to dedicated styles
 //
-// NOTE
+// MANUAL INPUT RULE
 //
-// Actual collection persistence / loan balance mutation is NOT
-// performed by Step 4. That belongs to the collection workflow
-// action/service layer. Step 4 prepares the authoritative values.
+// Manual Collection uses FINORA TextInput.
+//
+// Native:
+//
+//   <input type="number">
+//
+// is intentionally NOT used.
+//
+// Reason:
+//
+// - No browser spinner arrows
+// - FINORA visual language remains consistent
+// - Numeric input remains supported through inputMode
+// - Invalid characters are sanitized before controller update
+//
+// EMI BALANCE RULE
+//
+// Individual EMI rows:
+//
+// installmentAmount
+//   = original contractual EMI amount.
+//
+// paidAmount
+//   = amount already collected against that EMI.
+//
+// remaining EMI amount
+//   = installmentAmount - paidAmount.
+//
+// Paid / Preclosed EMI
+//   = remaining collectible amount is always zero.
+//
+// Partial EMI
+//   = only its remaining amount may be selected.
+//
+// IMPORTANT:
+//
+// Original installmentAmount is NEVER mutated here.
+//
+// TOTAL EMI BALANCE:
+//
+// reviewData.outstandingBalance
+//
+// is the authoritative current collectible Loan balance.
+//
+// The remaining schedule total is retained only as a defensive
+// fallback when no authoritative outstanding value exists.
+//
+// CRITICAL LOOP FIX
+//
+// - Step 4 does NOT synchronize controller values from useEffect.
+// - Controller writes happen only from explicit user actions or
+//   the single loan-load boundary.
+// - No effect depends on controller values while also writing
+//   those same controller values.
+// - This prevents the React "Maximum update depth exceeded" loop.
 //
 // EMI DROPDOWN BEHAVIOUR
 //
@@ -49,7 +102,23 @@
 //   the EMI selector trigger again.
 // - Paid / Preclosed EMIs remain locked.
 //
-// VERSION : 2.0
+// POST-SAVE RESET
+//
+// PaymentDetails dispatches:
+//
+//   FINORA_COLLECTION_FORM_RESET
+//
+// after a successful collection.
+//
+// CollectionEntry then resets local presentation state:
+//
+// - Mode -> EMI Collection
+// - Selected EMI list -> empty
+// - EMI dropdown -> closed
+//
+// Controller financial fields are reset by PaymentDetails.
+//
+// VERSION : 2.4
 // STATUS  : Production
 // ============================================================
 
@@ -67,7 +136,7 @@ import { fetchLoans } from "../../../services/loan/loanService";
 
 import { formatCurrency } from "../../../utils/currency/formatCurrency";
 
-import { ReceiptText } from "lucide-react";
+import TextInput from "../../common/form/TextInput";
 
 // ============================================================
 // TYPES
@@ -93,11 +162,51 @@ interface EmiRecord {
 // HELPERS
 // ============================================================
 
+// ------------------------------------------------------------
+// SAFE NUMBER
+// ------------------------------------------------------------
+
+function safeNumber(value: unknown): number {
+  const parsed = Number(value ?? 0);
+
+  if (!Number.isFinite(parsed)) {
+    return 0;
+  }
+
+  return Math.max(0, parsed);
+}
+
+// ------------------------------------------------------------
+// AUTHORITATIVE NUMBER CHECK
+// ------------------------------------------------------------
+//
+// Zero is a valid authoritative value.
+//
+// ------------------------------------------------------------
+
+function hasAuthoritativeNumber(value: unknown): boolean {
+  if (value === null || value === undefined || value === "") {
+    return false;
+  }
+
+  const parsed = Number(value);
+
+  return Number.isFinite(parsed) && parsed >= 0;
+}
+
+// ------------------------------------------------------------
+// CURRENCY
+// ------------------------------------------------------------
+
 function currency(value: number): string {
-  const safeValue = Number.isFinite(value) ? Math.max(0, Math.round(value)) : 0;
+  const safeValue = Math.round(safeNumber(value));
 
   return `₹ ${formatCurrency(safeValue)}`;
 }
+
+// ------------------------------------------------------------
+// DATE
+// ------------------------------------------------------------
 
 function formatEmiDate(value: string): string {
   if (!value) {
@@ -121,11 +230,19 @@ function formatEmiDate(value: string): string {
   return `${day} ${month} ${year}`;
 }
 
+// ------------------------------------------------------------
+// STATUS
+// ------------------------------------------------------------
+
 function normalizeStatus(status: string): string {
   return String(status ?? "")
     .trim()
     .toLowerCase();
 }
+
+// ------------------------------------------------------------
+// LOCKED STATUS
+// ------------------------------------------------------------
 
 function isLockedStatus(status: string): boolean {
   const normalized = normalizeStatus(status);
@@ -133,10 +250,74 @@ function isLockedStatus(status: string): boolean {
   return normalized === "paid" || normalized === "preclosed";
 }
 
+// ------------------------------------------------------------
+// DISPLAY STATUS
+// ------------------------------------------------------------
+
 function getStatusLabel(status: string): string {
   const value = String(status ?? "").trim();
 
   return value ? value.toUpperCase() : "PENDING";
+}
+
+// ------------------------------------------------------------
+// REMAINING EMI AMOUNT
+// ------------------------------------------------------------
+
+function getRemainingEmiAmount(installment: EmiRecord): number {
+  if (isLockedStatus(installment.status)) {
+    return 0;
+  }
+
+  const installmentAmount = safeNumber(installment.installmentAmount);
+
+  const paidAmount = safeNumber(installment.paidAmount);
+
+  return Math.max(
+    0,
+
+    installmentAmount - paidAmount,
+  );
+}
+
+// ------------------------------------------------------------
+// SANITIZE MANUAL MONEY INPUT
+// ------------------------------------------------------------
+//
+// TextInput uses type="text" so native number arrows never
+// appear.
+//
+// Allowed:
+//
+//   0-9
+//   one decimal point
+//   maximum 2 decimal places
+//
+// Examples:
+//
+//   9100
+//   150
+//   9100.50
+//
+// ------------------------------------------------------------
+
+function sanitizeMoneyInput(rawValue: string): string {
+  let sanitized = rawValue.replace(/[^0-9.]/g, "");
+
+  const firstDecimalIndex = sanitized.indexOf(".");
+
+  if (firstDecimalIndex >= 0) {
+    const integerPart = sanitized.slice(0, firstDecimalIndex);
+
+    const decimalPart = sanitized
+      .slice(firstDecimalIndex + 1)
+      .replace(/\./g, "")
+      .slice(0, 2);
+
+    sanitized = `${integerPart}.${decimalPart}`;
+  }
+
+  return sanitized;
 }
 
 // ============================================================
@@ -147,22 +328,27 @@ export default function CollectionEntry() {
   const { reviewData, updateField } = useCollectionController();
 
   // ==========================================================
+  // STABLE CONTROLLER WRITER
+  // ==========================================================
+
+  const updateFieldRef = useRef(updateField);
+
+  updateFieldRef.current = updateField;
+
+  // ==========================================================
   // CONTROLLER VALUES
   // ==========================================================
 
-  const paymentAmount = Number(reviewData.paymentAmount ?? 0);
+  const paymentAmount = safeNumber(reviewData.paymentAmount);
 
-  const discountAmount = Number(reviewData.discountAmount ?? 0);
+  const discountAmount = safeNumber(reviewData.discountAmount);
 
-  const manualPrincipal = Number(reviewData.advanceAdjustment ?? 0);
+  const manualPrincipal = safeNumber(reviewData.advanceAdjustment);
 
   const loanId = String(reviewData.loanId ?? "");
 
   // ==========================================================
   // COLLECTION MODE
-  //
-  // Mode is presentation state only.
-  // It must not depend on a non-canonical controller field.
   // ==========================================================
 
   const [collectionMode, setCollectionMode] = useState<"emi" | "manual">("emi");
@@ -183,25 +369,12 @@ export default function CollectionEntry() {
 
   // ==========================================================
   // EMI DROPDOWN STATE
-  //
-  // The schedule remains available while the selector is open.
-  //
-  // IMPORTANT:
-  //
-  // Individual EMI selection NEVER closes this dropdown.
-  // This allows multiple EMI selection without repeatedly
-  // reopening the selector.
-  //
-  // The user explicitly closes the dropdown by clicking the
-  // selector trigger again.
   // ==========================================================
 
   const [emiDropdownOpen, setEmiDropdownOpen] = useState(false);
 
   // ==========================================================
   // SELECT ALL CHECKBOX REF
-  //
-  // Used only for native checkbox indeterminate presentation.
   // ==========================================================
 
   const selectAllCheckboxRef = useRef<HTMLInputElement | null>(null);
@@ -211,31 +384,70 @@ export default function CollectionEntry() {
   // ==========================================================
 
   const loadSchedule = useCallback(async (): Promise<void> => {
+    // ----------------------------------------------------
+    // NO SELECTED LOAN
+    // ----------------------------------------------------
+
     if (!loanId) {
       setEmiSchedule([]);
+
       setSelectedEmiNumbers([]);
+
       setEmiDropdownOpen(false);
+
       setLoadError("");
+
       setLoading(false);
+
+      updateFieldRef.current("selectedEmiNumbers", []);
+
+      updateFieldRef.current("selectedEmiAmount", 0);
+
       return;
     }
 
     setLoading(true);
+
     setLoadError("");
 
+    setEmiDropdownOpen(false);
+
     try {
+      // --------------------------------------------------
+      // LOAD AUTHORITATIVE LOAN DATA
+      // --------------------------------------------------
+
       const loans = await fetchLoans();
 
       const selectedLoan = loans.find(
         (loan: { id?: string }) => String(loan.id ?? "") === loanId,
       );
 
+      // --------------------------------------------------
+      // READ PERSISTED EMI SCHEDULE
+      // --------------------------------------------------
+
       const rawSchedule = Array.isArray(
-        (selectedLoan as { schedule?: unknown } | undefined)?.schedule,
+        (
+          selectedLoan as
+            | {
+                schedule?: unknown;
+              }
+            | undefined
+        )?.schedule,
       )
-        ? ((selectedLoan as { schedule?: unknown } | undefined)
-            ?.schedule as EmiRecord[])
+        ? ((
+            selectedLoan as
+              | {
+                  schedule?: unknown;
+                }
+              | undefined
+          )?.schedule as EmiRecord[])
         : [];
+
+      // --------------------------------------------------
+      // NORMALIZE SCHEDULE
+      // --------------------------------------------------
 
       const normalizedSchedule = rawSchedule
         .map(
@@ -244,11 +456,11 @@ export default function CollectionEntry() {
 
             dueDate: String(installment.dueDate ?? ""),
 
-            installmentAmount: Number(installment.installmentAmount) || 0,
+            installmentAmount: safeNumber(installment.installmentAmount),
 
             status: String(installment.status ?? "Pending"),
 
-            paidAmount: Number(installment.paidAmount ?? 0) || 0,
+            paidAmount: safeNumber(installment.paidAmount),
 
             receiptNumber: String(installment.receiptNumber ?? ""),
 
@@ -257,23 +469,34 @@ export default function CollectionEntry() {
         )
         .filter((installment) => installment.installmentNumber > 0);
 
+      // --------------------------------------------------
+      // NEW LOAN LOAD = CLEAR SELECTION
+      // --------------------------------------------------
+
       setEmiSchedule(normalizedSchedule);
 
-      setSelectedEmiNumbers((previous) =>
-        previous.filter((installmentNumber) =>
-          normalizedSchedule.some(
-            (installment) =>
-              installment.installmentNumber === installmentNumber &&
-              !isLockedStatus(installment.status) &&
-              installment.installmentAmount > 0,
-          ),
-        ),
-      );
+      setSelectedEmiNumbers([]);
+
+      updateFieldRef.current("selectedEmiNumbers", []);
+
+      updateFieldRef.current("selectedEmiAmount", 0);
+
+      updateFieldRef.current("paymentAmount", 0);
     } catch (error) {
       console.error("FINORA STEP 4 EMI SCHEDULE LOAD ERROR:", error);
 
       setEmiSchedule([]);
+
       setSelectedEmiNumbers([]);
+
+      setEmiDropdownOpen(false);
+
+      updateFieldRef.current("selectedEmiNumbers", []);
+
+      updateFieldRef.current("selectedEmiAmount", 0);
+
+      updateFieldRef.current("paymentAmount", 0);
+
       setLoadError("Unable to load the selected loan EMI schedule.");
     } finally {
       setLoading(false);
@@ -289,7 +512,7 @@ export default function CollectionEntry() {
   }, [loadSchedule]);
 
   // ==========================================================
-  // REFRESH AFTER LOAN / COLLECTION UPDATE
+  // REFRESH AFTER LOAN UPDATE
   // ==========================================================
 
   useEffect(() => {
@@ -305,29 +528,66 @@ export default function CollectionEntry() {
   }, [loadSchedule]);
 
   // ==========================================================
-  // TOTAL EMI SCHEDULE AMOUNT
+  // POST-SAVE LOCAL FORM RESET
+  // ==========================================================
   //
-  // This is the total amount of every persisted EMI in the
-  // selected loan schedule.
+  // PaymentDetails resets controller transaction values.
   //
-  // It is independent of the currently selected EMI amount.
+  // This listener resets CollectionEntry presentation state:
+  //
+  // - EMI mode
+  // - no selected EMI
+  // - dropdown closed
+  //
   // ==========================================================
 
-  const totalEmiAmount = useMemo(
+  useEffect(() => {
+    function handleCollectionFormReset(): void {
+      setCollectionMode("emi");
+
+      setSelectedEmiNumbers([]);
+
+      setEmiDropdownOpen(false);
+    }
+
+    window.addEventListener(
+      "FINORA_COLLECTION_FORM_RESET",
+      handleCollectionFormReset,
+    );
+
+    return () => {
+      window.removeEventListener(
+        "FINORA_COLLECTION_FORM_RESET",
+        handleCollectionFormReset,
+      );
+    };
+  }, []);
+
+  // ==========================================================
+  // SCHEDULE REMAINING AMOUNT
+  // ==========================================================
+
+  const scheduleRemainingAmount = useMemo(
     () =>
       emiSchedule.reduce(
-        (total, installment) =>
-          total + Math.max(0, Number(installment.installmentAmount) || 0),
+        (total, installment) => total + getRemainingEmiAmount(installment),
         0,
       ),
     [emiSchedule],
   );
 
   // ==========================================================
+  // AUTHORITATIVE TOTAL EMI / LOAN BALANCE
+  // ==========================================================
+
+  const totalRemainingEmiAmount = hasAuthoritativeNumber(
+    reviewData.outstandingBalance,
+  )
+    ? safeNumber(reviewData.outstandingBalance)
+    : scheduleRemainingAmount;
+
+  // ==========================================================
   // ELIGIBLE EMI LIST
-  //
-  // Paid / Preclosed installments remain locked and therefore
-  // are not included in Select All.
   // ==========================================================
 
   const eligibleEmis = useMemo(
@@ -335,7 +595,7 @@ export default function CollectionEntry() {
       emiSchedule.filter(
         (installment) =>
           !isLockedStatus(installment.status) &&
-          installment.installmentAmount > 0,
+          getRemainingEmiAmount(installment) > 0,
       ),
     [emiSchedule],
   );
@@ -351,7 +611,7 @@ export default function CollectionEntry() {
           return total;
         }
 
-        return total + Math.max(0, Number(installment.installmentAmount) || 0);
+        return total + getRemainingEmiAmount(installment);
       }, 0),
     [emiSchedule, selectedEmiNumbers],
   );
@@ -371,7 +631,7 @@ export default function CollectionEntry() {
   );
 
   // ==========================================================
-  // SYNC SELECT ALL INDETERMINATE STATE
+  // SELECT ALL INDETERMINATE PRESENTATION
   // ==========================================================
 
   useEffect(() => {
@@ -384,23 +644,6 @@ export default function CollectionEntry() {
   }, [someEligibleSelected, allEligibleSelected]);
 
   // ==========================================================
-  // EMI PAYMENT SYNC
-  //
-  // EMI mode writes the selected EMI total into
-  // paymentAmount. Manual mode leaves the typed amount intact.
-  // ==========================================================
-
-  useEffect(() => {
-    if (isManual) {
-      return;
-    }
-
-    if (paymentAmount !== selectedEmiAmount) {
-      updateField("paymentAmount", selectedEmiAmount);
-    }
-  }, [isManual, paymentAmount, selectedEmiAmount, updateField]);
-
-  // ==========================================================
   // MODE CHANGE
   // ==========================================================
 
@@ -411,18 +654,28 @@ export default function CollectionEntry() {
 
     setSelectedEmiNumbers([]);
 
-    // Changing collection mode should also close the EMI
-    // selector so the presentation state starts clean.
     setEmiDropdownOpen(false);
 
-    if (mode === "manual") {
-      // Start manual entry from a clean collection amount.
-      updateField("paymentAmount", 0);
-      return;
-    }
+    updateField("selectedEmiNumbers", []);
 
-    // Returning to EMI starts from zero until an EMI is selected.
+    updateField("selectedEmiAmount", 0);
+
     updateField("paymentAmount", 0);
+
+    // --------------------------------------------------------
+    // SWITCHING BACK TO EMI MODE
+    // --------------------------------------------------------
+    //
+    // Manual-only adjustment values must not remain silently
+    // attached to an EMI transaction.
+    //
+    // --------------------------------------------------------
+
+    if (mode === "emi") {
+      updateField("advanceAdjustment", 0);
+
+      updateField("discountAmount", 0);
+    }
   }
 
   // ==========================================================
@@ -433,27 +686,21 @@ export default function CollectionEntry() {
     field: "paymentAmount" | "advanceAdjustment" | "discountAmount",
     rawValue: string,
   ): void {
-    const trimmed = rawValue.trim();
+    const sanitized = sanitizeMoneyInput(rawValue);
 
-    const value = trimmed === "" ? 0 : Math.max(0, Number(trimmed) || 0);
+    if (sanitized === "" || sanitized === ".") {
+      updateField(field, 0);
 
-    console.log("FINORA STEP 4 MANUAL VALUE:", field, value);
+      return;
+    }
+
+    const value = safeNumber(sanitized);
 
     updateField(field, value);
   }
 
   // ==========================================================
   // EMI SELECTION
-  //
-  // IMPORTANT:
-  //
-  // - Real persisted EMI only.
-  // - Paid / Preclosed cannot be selected.
-  // - Multiple EMI selection remains supported.
-  // - Dropdown intentionally STAYS OPEN after selection.
-  // - User can select EMI 1, EMI 2, EMI 3, etc. without
-  //   reopening the dropdown each time.
-  // - Dropdown closes only from the selector trigger.
   // ==========================================================
 
   function handleEmiSelection(installment: EmiRecord): void {
@@ -461,49 +708,45 @@ export default function CollectionEntry() {
       return;
     }
 
-    if (installment.installmentAmount <= 0) {
+    const remainingAmount = getRemainingEmiAmount(installment);
+
+    if (remainingAmount <= 0) {
       return;
     }
 
-    setSelectedEmiNumbers((previous) => {
-      const exists = previous.includes(installment.installmentNumber);
+    const exists = selectedEmiNumbers.includes(installment.installmentNumber);
 
-      if (exists) {
-        return previous.filter(
+    const nextSelection = exists
+      ? selectedEmiNumbers.filter(
           (number) => number !== installment.installmentNumber,
-        );
+        )
+      : [...selectedEmiNumbers, installment.installmentNumber];
+
+    const nextAmount = emiSchedule.reduce((total, currentInstallment) => {
+      if (!nextSelection.includes(currentInstallment.installmentNumber)) {
+        return total;
       }
 
-      return [...previous, installment.installmentNumber];
-    });
+      return total + getRemainingEmiAmount(currentInstallment);
+    }, 0);
 
-    // --------------------------------------------------------
-    // IMPORTANT:
-    //
-    // DO NOT close the dropdown here.
-    //
-    // The user must be able to select multiple EMIs
-    // continuously. The dropdown is closed explicitly by
-    // clicking the selector trigger again.
-    // --------------------------------------------------------
+    setSelectedEmiNumbers(nextSelection);
+
+    updateField("selectedEmiNumbers", nextSelection);
+
+    updateField("selectedEmiAmount", nextAmount);
+
+    updateField("paymentAmount", nextAmount);
 
     console.log(
       "FINORA STEP 4 EMI SELECTED:",
       installment.installmentNumber,
-      installment.installmentAmount,
+      remainingAmount,
     );
   }
 
   // ==========================================================
   // SELECT ALL / DESELECT ALL
-  //
-  // Only eligible EMI installments are affected.
-  //
-  // Paid / Preclosed installments remain locked.
-  //
-  // IMPORTANT:
-  //
-  // Dropdown remains open after Select All / Deselect All.
   // ==========================================================
 
   function handleSelectAllEmis(): void {
@@ -511,32 +754,42 @@ export default function CollectionEntry() {
       return;
     }
 
-    if (allEligibleSelected) {
-      setSelectedEmiNumbers((previous) =>
-        previous.filter(
+    const nextSelection = allEligibleSelected
+      ? selectedEmiNumbers.filter(
           (number) =>
             !eligibleEmis.some(
               (installment) => installment.installmentNumber === number,
             ),
-        ),
-      );
+        )
+      : Array.from(
+          new Set([
+            ...selectedEmiNumbers,
 
-      console.log("FINORA STEP 4 ALL ELIGIBLE EMIS DESELECTED");
+            ...eligibleEmis.map((installment) => installment.installmentNumber),
+          ]),
+        );
 
-      return;
-    }
+    const nextAmount = emiSchedule.reduce((total, installment) => {
+      if (!nextSelection.includes(installment.installmentNumber)) {
+        return total;
+      }
 
-    setSelectedEmiNumbers((previous) => {
-      const selected = new Set(previous);
+      return total + getRemainingEmiAmount(installment);
+    }, 0);
 
-      eligibleEmis.forEach((installment) => {
-        selected.add(installment.installmentNumber);
-      });
+    setSelectedEmiNumbers(nextSelection);
 
-      return Array.from(selected);
-    });
+    updateField("selectedEmiNumbers", nextSelection);
 
-    console.log("FINORA STEP 4 ALL ELIGIBLE EMIS SELECTED");
+    updateField("selectedEmiAmount", nextAmount);
+
+    updateField("paymentAmount", nextAmount);
+
+    console.log(
+      allEligibleSelected
+        ? "FINORA STEP 4 ALL ELIGIBLE EMIS DESELECTED"
+        : "FINORA STEP 4 ALL ELIGIBLE EMIS SELECTED",
+    );
   }
 
   // ==========================================================
@@ -550,12 +803,14 @@ export default function CollectionEntry() {
       ====================================================== */}
 
       <header style={collectionEntryStyles.header}>
-        <span style={collectionEntryStyles.step}>
-          <ReceiptText size={26} strokeWidth={2} />
-        </span>
+        <span style={collectionEntryStyles.step}>4.</span>
 
         <div style={collectionEntryStyles.titleGroup}>
-          <h2 style={collectionEntryStyles.title}>Collection Entry</h2>
+          <h2 style={collectionEntryStyles.title}>COLLECTION ENTRY</h2>
+
+          <span style={collectionEntryStyles.subtitle}>
+            Select EMI collection or enter a manual collection.
+          </span>
         </div>
       </header>
 
@@ -568,6 +823,7 @@ export default function CollectionEntry() {
           onClick={() => handleModeChange("emi")}
           style={{
             ...collectionEntryStyles.radioOption,
+
             ...(!isManual ? collectionEntryStyles.radioOptionActive : {}),
           }}
         >
@@ -586,6 +842,7 @@ export default function CollectionEntry() {
           onClick={() => handleModeChange("manual")}
           style={{
             ...collectionEntryStyles.radioOption,
+
             ...(isManual ? collectionEntryStyles.radioOptionActive : {}),
           }}
         >
@@ -607,10 +864,6 @@ export default function CollectionEntry() {
 
       {!isManual && (
         <div style={collectionEntryStyles.emiDropdown}>
-          {/* ==================================================
-              DROPDOWN TRIGGER
-          ================================================== */}
-
           <button
             type="button"
             aria-haspopup="listbox"
@@ -634,10 +887,6 @@ export default function CollectionEntry() {
             </span>
           </button>
 
-          {/* ==================================================
-              DROPDOWN PANEL
-          ================================================== */}
-
           {emiDropdownOpen && (
             <div
               role="listbox"
@@ -660,7 +909,7 @@ export default function CollectionEntry() {
               </div>
 
               {/* ==============================================
-                  LOADING
+                  CONTENT
               ============================================== */}
 
               {loading ? (
@@ -683,6 +932,8 @@ export default function CollectionEntry() {
 
                   {emiSchedule.map((installment) => {
                     const locked = isLockedStatus(installment.status);
+
+                    const remainingAmount = getRemainingEmiAmount(installment);
 
                     const selected = selectedEmiNumbers.includes(
                       installment.installmentNumber,
@@ -715,49 +966,34 @@ export default function CollectionEntry() {
                           ...(locked ? collectionEntryStyles.lockedRow : {}),
                         }}
                       >
-                        {/* ==============================
-                              EMI
-                          ============================== */}
-
                         <span style={collectionEntryStyles.emiName}>
                           EMI {installment.installmentNumber}
                         </span>
-
-                        {/* ==============================
-                              DUE DATE
-                          ============================== */}
 
                         <span style={collectionEntryStyles.scheduleTableCell}>
                           {formatEmiDate(installment.dueDate)}
                         </span>
 
-                        {/* ==============================
-                              AMOUNT
-                          ============================== */}
-
-                        <strong style={collectionEntryStyles.emiAmount}>
+                        <strong
+                          style={collectionEntryStyles.emiAmount}
+                          title={
+                            locked
+                              ? "Remaining ₹0"
+                              : `Remaining ${currency(remainingAmount)}`
+                          }
+                        >
                           {currency(installment.installmentAmount)}
                         </strong>
-
-                        {/* ==============================
-                              STATUS
-                          ============================== */}
 
                         <span style={statusStyle}>
                           {getStatusLabel(installment.status)}
                         </span>
 
-                        {/* ==============================
-                              CHECKBOX
-                          ============================== */}
-
                         <span style={collectionEntryStyles.selectCell}>
                           <input
                             type="checkbox"
                             checked={locked || selected}
-                            disabled={
-                              locked || installment.installmentAmount <= 0
-                            }
+                            disabled={locked || remainingAmount <= 0}
                             onChange={() => handleEmiSelection(installment)}
                             aria-label={
                               locked
@@ -782,43 +1018,23 @@ export default function CollectionEntry() {
                   })}
 
                   {/* ==========================================
-                      TOTAL EMI ROW
+                      AUTHORITATIVE REMAINING BALANCE
                   ========================================== */}
 
                   <div style={collectionEntryStyles.emiTotalRow}>
-                    {/* ========================================
-                        TOTAL LABEL
-                    ======================================== */}
-
                     <strong style={collectionEntryStyles.emiTotalLabel}>
-                      TOTAL EMIs
+                      TOTAL EMI BALANCE
                     </strong>
-
-                    {/* ========================================
-                        EMPTY DATE COLUMN
-                    ======================================== */}
 
                     <span style={collectionEntryStyles.emiTotalSpacer} />
 
-                    {/* ========================================
-                        TOTAL AMOUNT
-                    ======================================== */}
-
                     <strong style={collectionEntryStyles.emiTotalAmount}>
-                      {currency(totalEmiAmount)}
+                      {currency(totalRemainingEmiAmount)}
                     </strong>
 
-                    {/* ========================================
-                        TOTAL LABEL
-                    ======================================== */}
-
                     <span style={collectionEntryStyles.emiTotalStatus}>
-                      SELECT ALL
+                      BALANCE
                     </span>
-
-                    {/* ========================================
-                        SELECT ALL CHECKBOX
-                    ======================================== */}
 
                     <span style={collectionEntryStyles.selectCell}>
                       <input
@@ -854,21 +1070,31 @@ export default function CollectionEntry() {
 
       {isManual && (
         <div style={collectionEntryStyles.manualSection}>
+          <div style={collectionEntryStyles.manualHeader}>
+            <div style={collectionEntryStyles.manualTitle}>
+              MANUAL COLLECTION
+            </div>
+
+            <div style={collectionEntryStyles.manualHint}>
+              Enter the collection amount and settlement adjustments.
+            </div>
+          </div>
+
           <div style={collectionEntryStyles.manualInputGrid}>
-            {/* ==============================================
+            {/* ================================================
                 COLLECTION AMOUNT
-            ============================================== */}
+            ================================================ */}
 
             <label style={collectionEntryStyles.manualField}>
               <span style={collectionEntryStyles.manualFieldLabel}>
                 COLLECTION AMOUNT
               </span>
 
-              <input
-                type="number"
-                min="0"
-                step="1"
-                value={paymentAmount === 0 ? "" : paymentAmount}
+              <TextInput
+                type="text"
+                inputMode="decimal"
+                autoComplete="off"
+                value={paymentAmount === 0 ? "" : String(paymentAmount)}
                 onChange={(event) =>
                   handleManualValueChange("paymentAmount", event.target.value)
                 }
@@ -878,20 +1104,20 @@ export default function CollectionEntry() {
               />
             </label>
 
-            {/* ==============================================
+            {/* ================================================
                 MANUAL PRINCIPAL
-            ============================================== */}
+            ================================================ */}
 
             <label style={collectionEntryStyles.manualField}>
               <span style={collectionEntryStyles.manualFieldLabel}>
                 MANUAL PRINCIPAL
               </span>
 
-              <input
-                type="number"
-                min="0"
-                step="1"
-                value={manualPrincipal === 0 ? "" : manualPrincipal}
+              <TextInput
+                type="text"
+                inputMode="decimal"
+                autoComplete="off"
+                value={manualPrincipal === 0 ? "" : String(manualPrincipal)}
                 onChange={(event) =>
                   handleManualValueChange(
                     "advanceAdjustment",
@@ -904,20 +1130,20 @@ export default function CollectionEntry() {
               />
             </label>
 
-            {/* ==============================================
+            {/* ================================================
                 DISCOUNT
-            ============================================== */}
+            ================================================ */}
 
             <label style={collectionEntryStyles.manualField}>
               <span style={collectionEntryStyles.manualFieldLabel}>
                 DISCOUNT
               </span>
 
-              <input
-                type="number"
-                min="0"
-                step="1"
-                value={discountAmount === 0 ? "" : discountAmount}
+              <TextInput
+                type="text"
+                inputMode="decimal"
+                autoComplete="off"
+                value={discountAmount === 0 ? "" : String(discountAmount)}
                 onChange={(event) =>
                   handleManualValueChange("discountAmount", event.target.value)
                 }
@@ -935,10 +1161,6 @@ export default function CollectionEntry() {
       ====================================================== */}
 
       <div style={collectionEntryStyles.valueGrid}>
-        {/* ====================================================
-            SELECTED EMI
-        ==================================================== */}
-
         <div
           style={{
             ...collectionEntryStyles.valueCard,
@@ -953,11 +1175,16 @@ export default function CollectionEntry() {
           <strong style={collectionEntryStyles.value}>
             {currency(isManual ? 0 : selectedEmiAmount)}
           </strong>
-        </div>
 
-        {/* ====================================================
-            MANUAL PRINCIPAL
-        ==================================================== */}
+          {!isManual && (
+            <span style={collectionEntryStyles.valueHint}>
+              {selectedEmiNumbers.length}{" "}
+              {selectedEmiNumbers.length === 1
+                ? "EMI selected"
+                : "EMIs selected"}
+            </span>
+          )}
+        </div>
 
         <div
           style={{
@@ -972,10 +1199,6 @@ export default function CollectionEntry() {
             {currency(manualPrincipal)}
           </strong>
         </div>
-
-        {/* ====================================================
-            DISCOUNT
-        ==================================================== */}
 
         <div style={collectionEntryStyles.valueCard}>
           <span style={collectionEntryStyles.valueLabel}>Discount</span>

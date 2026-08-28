@@ -7,12 +7,13 @@
 //
 // RESPONSIBILITY:
 //
-// - Provide the application-level Loan service boundary
-// - Delegate Loan operations to LoanRepository
-// - Keep Loan UI components independent from repositories
-// - Provide async Loan persistence operations
-// - Provide Loan duplicate-check capability
-// - Keep StorageManager details outside UI code
+// - Provide the application-level Loan service boundary.
+// - Delegate Loan persistence to LoanRepository.
+// - Keep Loan UI components independent from repositories.
+// - Provide async Loan persistence operations.
+// - Provide Loan duplicate-check capability.
+// - Forward collection EMI metadata to LoanRepository so that
+//   selected EMI rows become permanently Paid/locked.
 //
 // IMPORTANT:
 //
@@ -26,23 +27,36 @@
 //
 // DUPLICATE LOAN RULE:
 //
-// - An ACTIVE / RUNNING / PENDING / APPROVED / DISBURSED
-//   loan blocks creation of another matching active loan.
+// - ACTIVE / RUNNING / PENDING / APPROVED / DISBURSED
+//   loans block creation of another matching active loan.
 //
 // - CLOSED / REJECTED loans do NOT block a new loan.
 //
 // - Customer + Loan Type + Amount alone must NEVER make
 //   a historical loan permanently unique.
 //
-// VERSION : 2.0
+// COLLECTION EMI RULE:
+//
+// - PaymentDetails sends selectedEmiNumbers, receiptNumber,
+//   and paidDate.
+// - This service MUST forward those values unchanged to the
+//   repository.
+// - The repository is responsible for mutating the persisted
+//   schedule rows and saving the complete Loan.
+//
+// VERSION : 2.1
 // STATUS  : Production
 // ============================================================
+
 
 // ============================================================
 // IMPORTS
 // ============================================================
 
-import type { Loan } from "../../components/customers/office/CustomerOffice/types";
+import type {
+  Loan,
+} from "../../components/customers/office/CustomerOffice/types";
+
 
 import {
   addLoan,
@@ -51,23 +65,44 @@ import {
   updateLoanOutstanding,
 } from "../../repositories/loan/loanRepository";
 
-import type { StorageResult } from "../../storage/storage.types";
+
+import type {
+  LoanOutstandingUpdateOptions,
+} from "../../repositories/loan/loanRepository";
+
+
+import type {
+  StorageResult,
+} from "../../storage/storage.types";
+
 
 // ============================================================
 // GET ALL LOANS
 // ============================================================
 
-export async function fetchLoans(): Promise<Loan[]> {
+export async function fetchLoans():
+  Promise<Loan[]> {
+
   return getLoans();
+
 }
+
 
 // ============================================================
 // GET LOAN
 // ============================================================
 
-export async function fetchLoan(loanId: string): Promise<Loan | undefined> {
-  return getLoanById(loanId);
+export async function fetchLoan(
+  loanId: string,
+):
+  Promise<Loan | undefined> {
+
+  return getLoanById(
+    loanId,
+  );
+
 }
+
 
 // ============================================================
 // LOAN STATUS HELPERS
@@ -82,38 +117,74 @@ export async function fetchLoan(loanId: string): Promise<Loan | undefined> {
 // ============================================================
 
 function normalizeLoanStatus(
-  status: Loan["status"] | string | undefined,
-): string {
-  return String(status ?? "")
+  status:
+    | Loan["status"]
+    | string
+    | undefined,
+):
+  string {
+
+  return String(
+    status ?? "",
+  )
     .trim()
     .toUpperCase();
+
 }
 
+
 function isBlockingLoanStatus(
-  status: Loan["status"] | string | undefined,
-): boolean {
-  const normalizedStatus = normalizeLoanStatus(status);
+  status:
+    | Loan["status"]
+    | string
+    | undefined,
+):
+  boolean {
+
+  const normalizedStatus =
+    normalizeLoanStatus(
+      status,
+    );
+
 
   // ==========================================================
   // ACTIVE / UNRESOLVED LOAN STATUSES
   // ==========================================================
-  //
-  // These statuses represent a loan that is still active,
-  // being processed, approved, or already disbursed.
-  //
-  // Such a loan should block another matching active loan.
-  //
-  // ==========================================================
 
   return (
-    normalizedStatus === "ACTIVE" ||
-    normalizedStatus === "RUNNING" ||
-    normalizedStatus === "PENDING" ||
-    normalizedStatus === "PENDING APPROVAL" ||
-    normalizedStatus === "APPROVED" ||
-    normalizedStatus === "DISBURSED"
+
+    normalizedStatus ===
+      "ACTIVE"
+
+    ||
+
+    normalizedStatus ===
+      "RUNNING"
+
+    ||
+
+    normalizedStatus ===
+      "PENDING"
+
+    ||
+
+    normalizedStatus ===
+      "PENDING APPROVAL"
+
+    ||
+
+    normalizedStatus ===
+      "APPROVED"
+
+    ||
+
+    normalizedStatus ===
+      "DISBURSED"
+
   );
+
 }
+
 
 // ============================================================
 // CHECK EXISTING ACTIVE LOAN
@@ -126,129 +197,261 @@ function isBlockingLoanStatus(
 //
 // CLOSED / REJECTED historical loans are ignored.
 //
-// This prevents duplicate active loans without preventing
-// legitimate future loans after an old loan is completed.
-//
 // ============================================================
 
 export async function hasExistingLoan(
   customerId: string | undefined,
   loanTitle: string,
   amount: number,
-): Promise<boolean> {
+):
+  Promise<boolean> {
+
   // ==========================================================
   // CUSTOMER VALIDATION
   // ==========================================================
 
-  if (!customerId) {
+  if (
+    !customerId
+  ) {
+
     return false;
+
   }
+
 
   // ==========================================================
   // AMOUNT VALIDATION
   // ==========================================================
 
-  if (!Number.isFinite(amount)) {
+  if (
+    !Number.isFinite(
+      amount,
+    )
+  ) {
+
     return false;
+
   }
+
 
   // ==========================================================
   // LOAD LOANS THROUGH REPOSITORY
   // ==========================================================
 
-  const loans = await getLoans();
+  const loans =
+    await getLoans();
+
 
   // ==========================================================
   // NORMALIZE SEARCH VALUES
   // ==========================================================
 
-  const normalizedCustomerId = customerId.trim();
+  const normalizedCustomerId =
+    customerId
+      .trim();
 
-  const normalizedLoanTitle = loanTitle.trim().toLowerCase();
+
+  const normalizedLoanTitle =
+    loanTitle
+      .trim()
+      .toLowerCase();
+
 
   // ==========================================================
   // ACTIVE DUPLICATE CHECK
   // ==========================================================
 
-  return loans.some((loan: Loan) => {
-    // ========================================================
-    // CUSTOMER MATCH
-    // ========================================================
+  return loans.some(
+    (
+      loan: Loan,
+    ) => {
 
-    const sameCustomer =
-      String(loan.customerId ?? "").trim() === normalizedCustomerId;
+      // ========================================================
+      // CUSTOMER MATCH
+      // ========================================================
 
-    if (!sameCustomer) {
-      return false;
-    }
+      const sameCustomer =
+        String(
+          loan.customerId ?? "",
+        )
+          .trim() ===
+        normalizedCustomerId;
 
-    // ========================================================
-    // LOAN TITLE MATCH
-    // ========================================================
 
-    const sameLoanTitle =
-      String(loan.title ?? "")
-        .trim()
-        .toLowerCase() === normalizedLoanTitle;
+      if (
+        !sameCustomer
+      ) {
 
-    if (!sameLoanTitle) {
-      return false;
-    }
+        return false;
 
-    // ========================================================
-    // PRINCIPAL AMOUNT MATCH
-    // ========================================================
+      }
 
-    const sameAmount = Number(loan.amount ?? 0) === amount;
 
-    if (!sameAmount) {
-      return false;
-    }
+      // ========================================================
+      // LOAN TITLE MATCH
+      // ========================================================
 
-    // ========================================================
-    // ACTIVE STATUS CHECK
-    // ========================================================
-    //
-    // CLOSED / REJECTED historical loans are intentionally
-    // ignored.
-    //
-    // ========================================================
+      const sameLoanTitle =
+        String(
+          loan.title ?? "",
+        )
+          .trim()
+          .toLowerCase() ===
+        normalizedLoanTitle;
 
-    return isBlockingLoanStatus(loan.status);
-  });
+
+      if (
+        !sameLoanTitle
+      ) {
+
+        return false;
+
+      }
+
+
+      // ========================================================
+      // PRINCIPAL AMOUNT MATCH
+      // ========================================================
+
+      const sameAmount =
+        Number(
+          loan.amount ?? 0,
+        ) ===
+        amount;
+
+
+      if (
+        !sameAmount
+      ) {
+
+        return false;
+
+      }
+
+
+      // ========================================================
+      // ACTIVE STATUS CHECK
+      // ========================================================
+
+      return isBlockingLoanStatus(
+        loan.status,
+      );
+
+    },
+  );
+
 }
+
 
 // ============================================================
 // CREATE LOAN
 // ============================================================
 
-export async function createLoan(loan: Loan): Promise<StorageResult<Loan>> {
-  return addLoan(loan);
+export async function createLoan(
+  loan: Loan,
+):
+  Promise<StorageResult<Loan>> {
+
+  return addLoan(
+    loan,
+  );
+
 }
 
+
 // ============================================================
-// UPDATE LOAN OUTSTANDING
+// UPDATE LOAN OUTSTANDING + EMI PAYMENT STATE
 // ============================================================
 //
-// Collection workflows access Loan mutation through the
-// LoanService boundary.
+// This is the critical collection boundary.
 //
-// The actual persistence remains inside LoanRepository.
+// PaymentDetails supplies:
+//
+//   selectedEmiNumbers
+//   receiptNumber
+//   paidDate
+//
+// Those values MUST reach LoanRepository.
+//
+// The repository then:
+//
+//   1. Loads the authoritative persisted Loan.
+//   2. Reduces outstanding by the actual collection.
+//   3. Finds the selected EMI rows.
+//   4. Marks fully paid rows as "Paid".
+//   5. Persists receiptNumber / paidDate on those rows.
+//   6. Saves the complete updated Loan.
+//
+// IMPORTANT:
+//
+// Do NOT remove the third parameter.
+// Without forwarding it, collection history can save while
+// the EMI schedule remains Pending after reload.
 //
 // ============================================================
 
 export async function updateLoanOutstandingAmount(
   loanId: string,
   paymentAmount: number,
-): Promise<Loan | undefined> {
-  return updateLoanOutstanding(loanId, paymentAmount);
+  options?:
+    LoanOutstandingUpdateOptions,
+):
+  Promise<Loan | undefined> {
+
+  // ==========================================================
+  // VALIDATION
+  // ==========================================================
+
+  if (
+    !loanId
+  ) {
+
+    return undefined;
+
+  }
+
+
+  if (
+    !Number.isFinite(
+      paymentAmount,
+    ) ||
+    paymentAmount <= 0
+  ) {
+
+    return undefined;
+
+  }
+
+
+  // ==========================================================
+  // FORWARD AUTHORITATIVE COLLECTION METADATA
+  // ==========================================================
+  //
+  // Do not rebuild, reorder, or discard selected EMI numbers.
+  // PaymentDetails already carries the exact user selection.
+  //
+  // ==========================================================
+
+  return updateLoanOutstanding(
+    loanId,
+    paymentAmount,
+    options,
+  );
+
 }
+
 
 // ============================================================
 // SINGLETON SERVICE
 // ============================================================
+//
+// Existing consumers may use either the named functions above
+// or the singleton service object below.
+//
+// ============================================================
 
 export const loanService = {
+
   fetchLoans,
 
   fetchLoan,
@@ -257,8 +460,11 @@ export const loanService = {
 
   createLoan,
 
-  updateLoanOutstanding: updateLoanOutstandingAmount,
+  updateLoanOutstanding:
+    updateLoanOutstandingAmount,
+
 };
+
 
 // ============================================================
 // END

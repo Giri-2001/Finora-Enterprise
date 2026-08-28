@@ -20,6 +20,19 @@
 // - Documents remain owned by Loan Studio until approval.
 // - On loan creation, document metadata is linked to the
 //   created loan + active customer.
+//
+// FINANCIAL PERSISTENCE RULE:
+//
+// - totalPayable is the gross contractual payable.
+// - advanceDeduction is applied by the schedule engine.
+// - The persisted Loan.outstanding MUST represent the amount
+//   that is actually collectible through the persisted schedule.
+// - Therefore the persisted schedule total is authoritative.
+// - Collection outstanding and EMI schedule must always remain
+//   mathematically aligned.
+//
+// VERSION : 2.2
+// STATUS  : Production
 // ============================================================
 
 import { useEffect, useMemo, useState } from "react";
@@ -656,6 +669,71 @@ export function useLoanStudio({
   const totalPayable = Math.round(principal + totalInterest);
 
   /* ==========================================================
+     COLLECTIBLE OUTSTANDING
+     ----------------------------------------------------------
+     CRITICAL FINORA RULE
+
+     totalPayable is the gross contractual payable.
+
+     The repayment schedule may already account for:
+
+     - Advance deduction
+     - Final installment adjustment
+     - Rounding
+     - Interest-only structure
+     - Reducing-balance structure
+
+     Therefore Loan.outstanding must NOT blindly equal
+     totalPayable.
+
+     The persisted schedule is the authoritative collection
+     contract.
+
+     Example:
+
+       Principal             = 10,000
+       Total Interest        =  1,600
+       Gross Total Payable   = 11,600
+       Advance Deduction     =    450
+       Schedule Total        = 11,150
+
+     Correct initial outstanding:
+
+       11,150
+
+     This keeps:
+
+       Loan Office
+       Collections
+       Collection History
+       EMI paid-state
+       Loan closure
+
+     mathematically aligned.
+  ========================================================== */
+
+  const scheduleCollectionTotal =
+    schedule.length > 0
+      ? Math.round(
+          schedule.reduce(
+            (sum, installment) =>
+              sum + Math.max(0, Number(installment.installmentAmount ?? 0)),
+            0,
+          ),
+        )
+      : 0;
+
+  const fallbackCollectibleOutstanding = Math.max(
+    0,
+    Math.round(totalPayable - parseNumericValue(advanceDeduction)),
+  );
+
+  const collectibleOutstanding =
+    schedule.length > 0
+      ? scheduleCollectionTotal
+      : fallbackCollectibleOutstanding;
+
+  /* ==========================================================
      INSTALLMENT AMOUNT
   ========================================================== */
 
@@ -754,6 +832,7 @@ export function useLoanStudio({
   async function handleApproveLoan(): Promise<void> {
     if (loanApproved) {
       alert("Loan already created");
+
       return;
     }
 
@@ -846,7 +925,18 @@ export function useLoanStudio({
 
       amount: principal,
 
-      outstanding: totalPayable,
+      /*
+       * CRITICAL:
+       *
+       * Persist the actual collectible schedule total,
+       * NOT the gross contractual totalPayable.
+       *
+       * This ensures advance deduction and schedule
+       * adjustments are reflected correctly in the
+       * authoritative loan balance from day one.
+       */
+
+      outstanding: collectibleOutstanding,
 
       interest: interestRate,
 
@@ -1148,6 +1238,10 @@ export function useLoanStudio({
     totalInterest,
 
     totalPayable,
+
+    scheduleCollectionTotal,
+
+    collectibleOutstanding,
 
     installmentAmount,
 

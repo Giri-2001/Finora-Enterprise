@@ -1,3 +1,4 @@
+// ============================================================
 // FINORA ENTERPRISE OS™
 //
 // COLLECTION STUDIO™
@@ -22,7 +23,7 @@
 // - No second colour palette
 // - Geometry remains presentation-only
 //
-// VERSION : 2.0
+// VERSION : 2.1
 // STATUS  : Production
 // ============================================================
 
@@ -104,66 +105,55 @@ export const collectionEntryStyles: Record<string, CSSProperties> = {
 
   header: {
     display: "flex",
-
     alignItems: "flex-start",
-
     gap: "10px",
-
     paddingBottom: "8px",
-
     borderBottom: `1px solid ${THEME.border}`,
   },
 
   step: {
     display: "inline-flex",
-
     alignItems: "center",
-
     justifyContent: "center",
-
     width: "26px",
-
     height: "30px",
-
     flexShrink: 0,
-
     boxSizing: "border-box",
-
     border: "none",
-
     borderRadius: 0,
-
     color: THEME.brand,
+    fontFamily: INTER_FONT,
+    fontSize: "16px",
+    fontWeight: 800,
+    lineHeight: 1,
   },
 
   titleGroup: {
     minWidth: 0,
-
     display: "flex",
-
     flexDirection: "column",
-
     justifyContent: "flex-start",
-
     gap: "1px",
   },
 
   title: {
     margin: 0,
-
     color: THEME.textPrimary,
-
-    fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
-
+    fontFamily: INTER_FONT,
     fontSize: "16px",
-
     fontWeight: 700,
-
     lineHeight: 1.5,
-
     letterSpacing: "0.01em",
-
     textTransform: "uppercase",
+  },
+
+  subtitle: {
+    margin: 0,
+    color: THEME.textMuted,
+    fontFamily: INTER_FONT,
+    fontSize: "10px",
+    fontWeight: 500,
+    lineHeight: 1.3,
   },
 
   // ==========================================================
@@ -187,7 +177,7 @@ export const collectionEntryStyles: Record<string, CSSProperties> = {
     minHeight: "20px",
     boxSizing: "border-box",
     color: THEME.textSecondary,
-    fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
+    fontFamily: INTER_FONT,
     fontSize: "13px",
     fontWeight: 600,
     cursor: "pointer",
@@ -195,8 +185,17 @@ export const collectionEntryStyles: Record<string, CSSProperties> = {
   },
 
   radioOptionActive: {
+    display: "inline-flex",
+    alignItems: "center",
+    gap: "6px",
+    minHeight: "20px",
+    boxSizing: "border-box",
     color: THEME.textPrimary,
+    fontFamily: INTER_FONT,
+    fontSize: "13px",
     fontWeight: 700,
+    cursor: "pointer",
+    userSelect: "none",
   },
 
   modeRadio: {
@@ -218,10 +217,6 @@ export const collectionEntryStyles: Record<string, CSSProperties> = {
     boxSizing: "border-box",
   },
 
-  // ==========================================================
-  // EMI DROPDOWN TRIGGER
-  // ==========================================================
-
   emiDropdownTrigger: {
     width: "100%",
     minWidth: 0,
@@ -237,7 +232,7 @@ export const collectionEntryStyles: Record<string, CSSProperties> = {
     outline: "none",
     background: THEME.surface,
     color: THEME.textPrimary,
-    fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
+    fontFamily: INTER_FONT,
     fontSize: "13px",
     fontWeight: 700,
     cursor: "pointer",
@@ -254,7 +249,7 @@ export const collectionEntryStyles: Record<string, CSSProperties> = {
   emiDropdownArrow: {
     flexShrink: 0,
     color: THEME.brand,
-    fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
+    fontFamily: INTER_FONT,
     fontSize: "14px",
     fontWeight: 800,
   },
@@ -291,7 +286,7 @@ export const collectionEntryStyles: Record<string, CSSProperties> = {
     display: "flex",
     alignItems: "center",
     justifyContent: "space-between",
-    fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
+    fontFamily: INTER_FONT,
     gap: "10px",
     width: "100%",
     boxSizing: "border-box",
@@ -330,16 +325,52 @@ export const collectionEntryStyles: Record<string, CSSProperties> = {
     background: THEME.surface,
     borderBottom: `1px solid ${THEME.border}`,
     color: THEME.textSecondary,
-    fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
+    fontFamily: INTER_FONT,
     fontSize: "12px",
     cursor: "pointer",
   },
 
+  emiDropdownRowSelected: {
+    width: "100%",
+    minWidth: 0,
+    display: "grid",
+    gridTemplateColumns:
+      "minmax(55px, 0.7fr) minmax(82px, 1fr) minmax(90px, 1fr) minmax(65px, 0.75fr) 34px",
+    alignItems: "center",
+    columnGap: "10px",
+    minHeight: "38px",
+    boxSizing: "border-box",
+    padding: "5px 10px",
+    background: THEME.brandSoft,
+    borderBottom: `1px solid ${THEME.border}`,
+    color: THEME.textSecondary,
+    fontFamily: INTER_FONT,
+    fontSize: "12px",
+    cursor: "pointer",
+  },
+
+  emiDropdownRowLocked: {
+    width: "100%",
+    minWidth: 0,
+    display: "grid",
+    gridTemplateColumns:
+      "minmax(55px, 0.7fr) minmax(82px, 1fr) minmax(90px, 1fr) minmax(65px, 0.75fr) 34px",
+    alignItems: "center",
+    columnGap: "10px",
+    minHeight: "38px",
+    boxSizing: "border-box",
+    padding: "5px 10px",
+    background: THEME.surfaceSoft,
+    borderBottom: `1px solid ${THEME.border}`,
+    color: THEME.textSecondary,
+    fontFamily: INTER_FONT,
+    fontSize: "12px",
+    cursor: "default",
+    opacity: 0.72,
+  },
+
   // ==========================================================
   // EMI TOTAL ROW
-  //
-  // Same row height / same five-column geometry as EMI rows.
-  // Total amount is calculated by CollectionEntry.tsx.
   // ==========================================================
 
   emiTotalRow: {
@@ -356,7 +387,7 @@ export const collectionEntryStyles: Record<string, CSSProperties> = {
     background: THEME.surfaceSoft,
     borderTop: `1px solid ${THEME.borderStrong}`,
     color: THEME.textPrimary,
-    fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
+    fontFamily: INTER_FONT,
     fontSize: "12px",
   },
 
@@ -366,7 +397,7 @@ export const collectionEntryStyles: Record<string, CSSProperties> = {
     textOverflow: "ellipsis",
     whiteSpace: "nowrap",
     color: THEME.textPrimary,
-    fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
+    fontFamily: INTER_FONT,
     fontSize: "12px",
     fontWeight: 700,
     letterSpacing: "0.03em",
@@ -384,7 +415,7 @@ export const collectionEntryStyles: Record<string, CSSProperties> = {
     textOverflow: "ellipsis",
     whiteSpace: "nowrap",
     color: THEME.textPrimary,
-    fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
+    fontFamily: INTER_FONT,
     fontSize: "14px",
     fontWeight: 700,
     lineHeight: 1.2,
@@ -396,7 +427,7 @@ export const collectionEntryStyles: Record<string, CSSProperties> = {
     textOverflow: "ellipsis",
     whiteSpace: "nowrap",
     color: THEME.textMuted,
-    fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
+    fontFamily: INTER_FONT,
     fontSize: "13px",
     fontWeight: 700,
     letterSpacing: "0.04em",
@@ -434,7 +465,7 @@ export const collectionEntryStyles: Record<string, CSSProperties> = {
 
   scheduleHeader: {
     color: THEME.textMuted,
-    fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
+    fontFamily: INTER_FONT,
     fontSize: "12px",
     fontWeight: 700,
     letterSpacing: "0.05em",
@@ -444,7 +475,7 @@ export const collectionEntryStyles: Record<string, CSSProperties> = {
 
   scheduleCount: {
     color: THEME.textMuted,
-    fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
+    fontFamily: INTER_FONT,
     fontSize: "12px",
     fontWeight: 700,
     letterSpacing: "0.04em",
@@ -459,7 +490,7 @@ export const collectionEntryStyles: Record<string, CSSProperties> = {
     boxSizing: "border-box",
     display: "flex",
     flexDirection: "column",
-    fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
+    fontFamily: INTER_FONT,
   },
 
   scheduleTableHeader: {
@@ -474,7 +505,7 @@ export const collectionEntryStyles: Record<string, CSSProperties> = {
     background: THEME.surface,
     borderBottom: `1px solid ${THEME.border}`,
     color: THEME.textMuted,
-    fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
+    fontFamily: INTER_FONT,
     fontSize: "12px",
     fontWeight: 800,
     letterSpacing: "0.04em",
@@ -496,7 +527,7 @@ export const collectionEntryStyles: Record<string, CSSProperties> = {
     background: THEME.surface,
     borderBottom: `1px solid ${THEME.border}`,
     color: THEME.textSecondary,
-    fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
+    fontFamily: INTER_FONT,
     fontSize: "12px",
     fontWeight: 400,
     lineHeight: 1.2,
@@ -508,7 +539,7 @@ export const collectionEntryStyles: Record<string, CSSProperties> = {
     textOverflow: "ellipsis",
     whiteSpace: "nowrap",
     color: THEME.textSecondary,
-    fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
+    fontFamily: INTER_FONT,
     fontSize: "12px",
     fontWeight: 600,
   },
@@ -519,7 +550,7 @@ export const collectionEntryStyles: Record<string, CSSProperties> = {
     textOverflow: "ellipsis",
     whiteSpace: "nowrap",
     color: THEME.textPrimary,
-    fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
+    fontFamily: INTER_FONT,
     fontSize: "13px",
     fontWeight: 700,
   },
@@ -530,10 +561,14 @@ export const collectionEntryStyles: Record<string, CSSProperties> = {
     textOverflow: "ellipsis",
     whiteSpace: "nowrap",
     color: THEME.textPrimary,
-    fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
+    fontFamily: INTER_FONT,
     fontSize: "14px",
     fontWeight: 700,
   },
+
+  // ==========================================================
+  // STATUS
+  // ==========================================================
 
   status: {
     display: "inline-flex",
@@ -544,7 +579,7 @@ export const collectionEntryStyles: Record<string, CSSProperties> = {
     boxSizing: "border-box",
     padding: "7px 15px",
     borderRadius: "999px",
-    fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
+    fontFamily: INTER_FONT,
     fontSize: "9px",
     fontWeight: 700,
     letterSpacing: "0.04em",
@@ -554,22 +589,71 @@ export const collectionEntryStyles: Record<string, CSSProperties> = {
   },
 
   statusPaid: {
+    display: "inline-flex",
+    alignItems: "center",
+    justifyContent: "center",
+    width: "fit-content",
+    maxWidth: "100%",
+    boxSizing: "border-box",
+    padding: "7px 15px",
+    borderRadius: "999px",
     border: `1px solid ${THEME.success}`,
     background: THEME.successSoft,
     color: THEME.success,
+    fontFamily: INTER_FONT,
+    fontSize: "9px",
+    fontWeight: 700,
+    letterSpacing: "0.04em",
+    lineHeight: 1.1,
+    textTransform: "uppercase",
+    whiteSpace: "nowrap",
   },
 
   statusPreclosed: {
+    display: "inline-flex",
+    alignItems: "center",
+    justifyContent: "center",
+    width: "fit-content",
+    maxWidth: "100%",
+    boxSizing: "border-box",
+    padding: "7px 15px",
+    borderRadius: "999px",
     border: `1px solid ${THEME.info}`,
     background: THEME.infoSoft,
     color: THEME.info,
+    fontFamily: INTER_FONT,
+    fontSize: "9px",
+    fontWeight: 700,
+    letterSpacing: "0.04em",
+    lineHeight: 1.1,
+    textTransform: "uppercase",
+    whiteSpace: "nowrap",
   },
 
   statusPending: {
+    display: "inline-flex",
+    alignItems: "center",
+    justifyContent: "center",
+    width: "fit-content",
+    maxWidth: "100%",
+    boxSizing: "border-box",
+    padding: "7px 15px",
+    borderRadius: "999px",
     border: `1px solid ${THEME.borderStrong}`,
     background: THEME.surfaceSoft,
     color: THEME.textMuted,
+    fontFamily: INTER_FONT,
+    fontSize: "9px",
+    fontWeight: 700,
+    letterSpacing: "0.04em",
+    lineHeight: 1.1,
+    textTransform: "uppercase",
+    whiteSpace: "nowrap",
   },
+
+  // ==========================================================
+  // SELECTION
+  // ==========================================================
 
   selectCell: {
     display: "flex",
@@ -595,7 +679,7 @@ export const collectionEntryStyles: Record<string, CSSProperties> = {
     width: "13px",
     height: "13px",
     flexShrink: 0,
-    fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
+    fontFamily: INTER_FONT,
     fontSize: "9px",
     lineHeight: 1,
     opacity: 0.78,
@@ -620,7 +704,7 @@ export const collectionEntryStyles: Record<string, CSSProperties> = {
     padding: "12px",
     background: THEME.surface,
     color: THEME.textMuted,
-    fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
+    fontFamily: INTER_FONT,
     fontSize: "10px",
     fontWeight: 600,
     lineHeight: 1.35,
@@ -633,7 +717,7 @@ export const collectionEntryStyles: Record<string, CSSProperties> = {
     padding: "12px",
     background: THEME.dangerSoft,
     color: THEME.danger,
-    fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
+    fontFamily: INTER_FONT,
     fontSize: "10px",
     fontWeight: 650,
     lineHeight: 1.35,
@@ -646,7 +730,7 @@ export const collectionEntryStyles: Record<string, CSSProperties> = {
     padding: "12px",
     background: THEME.surface,
     color: THEME.textSecondary,
-    fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
+    fontFamily: INTER_FONT,
     fontSize: "12px",
     fontWeight: 400,
     lineHeight: 1.3,
@@ -676,7 +760,7 @@ export const collectionEntryStyles: Record<string, CSSProperties> = {
 
   manualTitle: {
     color: THEME.textPrimary,
-    fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
+    fontFamily: INTER_FONT,
     fontSize: "11px",
     fontWeight: 600,
     letterSpacing: "0.05em",
@@ -686,7 +770,7 @@ export const collectionEntryStyles: Record<string, CSSProperties> = {
 
   manualHint: {
     color: THEME.textMuted,
-    fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
+    fontFamily: INTER_FONT,
     fontSize: "8px",
     fontWeight: 500,
     lineHeight: 1.3,
@@ -710,7 +794,7 @@ export const collectionEntryStyles: Record<string, CSSProperties> = {
 
   manualFieldLabel: {
     color: THEME.textSecondary,
-    fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
+    fontFamily: INTER_FONT,
     fontSize: "10px",
     fontWeight: 700,
     lineHeight: 1.2,
@@ -728,18 +812,13 @@ export const collectionEntryStyles: Record<string, CSSProperties> = {
     outline: "none",
     background: THEME.surface,
     color: THEME.textPrimary,
-    fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
+    fontFamily: INTER_FONT,
     fontSize: "15px",
     fontWeight: 700,
   },
 
   // ==========================================================
   // VALUE GRID
-  //
-  // 3 equal cards.
-  // Card height matches the EMI dropdown input height.
-  // Label + amount are horizontal.
-  // Hint remains below only where rendered.
   // ==========================================================
 
   valueGrid: {
@@ -757,37 +836,42 @@ export const collectionEntryStyles: Record<string, CSSProperties> = {
     height: "38px",
     minHeight: "38px",
     boxSizing: "border-box",
-
     display: "flex",
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-
     gap: "8px",
     padding: "6px 10px",
-
     background: THEME.surface,
-
     border: `1px solid ${THEME.border}`,
     borderRadius: "4px",
-
     textAlign: "left",
   },
 
   valueCardActive: {
-    borderColor: THEME.brand,
+    minWidth: 0,
+    height: "38px",
+    minHeight: "38px",
+    boxSizing: "border-box",
+    display: "flex",
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: "8px",
+    padding: "6px 10px",
     background: THEME.brandSoft,
+    border: `1px solid ${THEME.brand}`,
+    borderRadius: "4px",
+    textAlign: "left",
   },
 
   valueLabel: {
     minWidth: 0,
-
     overflow: "hidden",
     textOverflow: "ellipsis",
     whiteSpace: "nowrap",
-
     color: THEME.textSecondary,
-    fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
+    fontFamily: INTER_FONT,
     fontSize: "12px",
     fontWeight: 700,
     lineHeight: 1.2,
@@ -796,13 +880,11 @@ export const collectionEntryStyles: Record<string, CSSProperties> = {
   value: {
     flexShrink: 0,
     minWidth: 0,
-
     overflow: "hidden",
     textOverflow: "ellipsis",
     whiteSpace: "nowrap",
-
     color: THEME.textPrimary,
-    fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
+    fontFamily: INTER_FONT,
     fontSize: "17px",
     fontWeight: 700,
     lineHeight: 1,
@@ -810,9 +892,8 @@ export const collectionEntryStyles: Record<string, CSSProperties> = {
 
   valueHint: {
     flexShrink: 0,
-
     color: THEME.textMuted,
-    fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
+    fontFamily: INTER_FONT,
     fontSize: "12px",
     fontWeight: 600,
     lineHeight: 1.2,

@@ -11,7 +11,13 @@
 // - Keep Loan domain model unchanged
 // - Use Loan.id as persistent storage identity
 // - Preserve existing Loan CRUD behavior
-// - Preserve Loan outstanding update behavior
+// - Preserve existing Loan outstanding update behavior
+// - Persist selected EMI payment state
+// - Persist manual collection allocation into EMI schedule
+// - Support final settlement discount / waiver
+// - Persist EMI receipt / paid-date information
+// - Finalize EMI schedule when a Loan is fully settled
+// - Repair legacy closed-loan schedule inconsistencies
 // - Keep physical storage implementation outside Loan domain
 //
 // IMPORTANT:
@@ -20,12 +26,96 @@
 // - No filesystem access.
 // - No Electron IPC.
 // - No UI logic.
-// - No Collection logic.
-// - No Payment logic.
+// - No Collection UI logic.
+// - No Payment UI logic.
 // - Storage access goes through StorageManager.
 //
-// VERSION : 2.0
-// STATUS  : Production Foundation
+// PAYMENT VS SETTLEMENT:
+//
+// Actual Payment:
+//
+//   Amount physically collected from the customer.
+//
+// Discount:
+//
+//   Approved waiver / settlement adjustment.
+//   Discount reduces Loan liability but MUST NOT be written
+//   into EMI paidAmount as though cash was received.
+//
+// Example:
+//
+//   Current outstanding = ₹9,250
+//   Customer payment    = ₹9,100
+//   Discount            = ₹  150
+//
+//   Settlement value    = ₹9,250
+//   New outstanding     = ₹0
+//
+// EMI metadata:
+//
+//   paidAmount increases only by ₹9,100.
+//
+// The remaining ₹150 is waived.
+//
+// Because the Loan is now fully settled:
+//
+//   Loan status = CLOSED
+//
+// Any remaining non-paid schedule row becomes:
+//
+//   Preclosed
+//
+// so no future EMI remains collectible.
+//
+// SELECTED EMI COLLECTION:
+//
+// - When selectedEmiNumbers are supplied, actual payment metadata
+//   is written ONLY into those selected EMI rows.
+// - Paid / Preclosed rows remain immutable.
+// - Partial EMI payments accumulate.
+// - Only the remaining amount of a Partial EMI can be collected.
+// - Any payment amount beyond selected EMI remaining value is
+//   never incorrectly pushed into another EMI row.
+//
+// MANUAL COLLECTION:
+//
+// - When no selectedEmiNumbers are supplied, the collection is
+//   treated as a manual Loan payment.
+// - Manual collection still reduces the authoritative Loan
+//   outstanding.
+// - The actual payment is reflected in the existing EMI schedule.
+// - Allocation begins from the earliest collectible installment.
+// - Paid / Preclosed rows are skipped.
+// - Partial rows consume only their remaining amount.
+// - Payment continues sequentially into later collectible rows.
+// - Original installmentAmount is NEVER mutated.
+// - Existing paidAmount is accumulated.
+//
+// DISCOUNT:
+//
+// - Discount reduces authoritative Loan outstanding.
+// - Discount never increases EMI paidAmount.
+// - When payment + discount closes the Loan, remaining
+//   contractual schedule liability becomes Preclosed.
+// - Actual paidAmount remains preserved.
+//
+// EMI schedule is NEVER generated here.
+// Existing persisted schedule is the only schedule source.
+//
+// LOAN CLOSURE:
+//
+// - Loan outstanding reaching zero is authoritative.
+// - Loan status becomes CLOSED.
+// - Fully-paid installments remain Paid.
+// - Remaining unpaid / partially-paid installments become
+//   Preclosed because no further amount is collectible.
+// - Actual paidAmount is preserved.
+// - No artificial payment is created.
+// - Remaining installment outstandingBalance becomes zero when
+//   that field already exists.
+//
+// VERSION : 2.6
+// STATUS  : Production
 // ============================================================
 
 // ============================================================
@@ -45,24 +135,675 @@ import type { StorageQuery, StorageResult } from "../../storage/storage.types";
 const LOAN_ENTITY = "LOAN";
 
 // ============================================================
-// LOAN DATA NORMALIZATION
+// TYPES
+// ============================================================
+
+interface LoanScheduleInstallment {
+  installmentNumber: number;
+
+  dueDate?: string;
+
+  installmentAmount?: number;
+
+  principalAmount?: number;
+
+  interestAmount?: number;
+
+  outstandingBalance?: number;
+
+  paidAmount?: number;
+
+  penaltyAmount?: number;
+
+  receiptNumber?: string;
+
+  paidDate?: string;
+
+  status?: string;
+}
+
+// ============================================================
+// INTERNAL LOAN STORAGE SHAPE
+// ============================================================
+
+type LoanWithPossibleSchedule = Loan & {
+  schedule?: unknown;
+
+  emiSchedule?: unknown;
+
+  installments?: unknown;
+};
+
+// ============================================================
+// LOAN OUTSTANDING UPDATE OPTIONS
+// ============================================================
+
+export interface LoanOutstandingUpdateOptions {
+  // ==========================================================
+  // SELECTED EMI NUMBERS
+  // ==========================================================
+
+  selectedEmiNumbers?: number[];
+
+  // ==========================================================
+  // PAYMENT RECEIPT
+  // ==========================================================
+
+  receiptNumber?: string;
+
+  // ==========================================================
+  // PAYMENT DATE
+  // ==========================================================
+
+  paidDate?: string;
+
+  // ==========================================================
+  // DISCOUNT / WAIVER
+  //
+  // IMPORTANT:
+  //
+  // This reduces Loan liability.
+  //
+  // It does NOT become EMI paidAmount.
+  // ==========================================================
+
+  discountAmount?: number;
+}
+
+// ============================================================
+// NORMALIZE POSITIVE NUMBER
+// ============================================================
+
+function safePositiveNumber(value: unknown): number {
+  const parsed = Number(value ?? 0);
+
+  if (!Number.isFinite(parsed)) {
+    return 0;
+  }
+
+  return Math.max(0, parsed);
+}
+
+// ============================================================
+// NORMALIZE STATUS
+// ============================================================
+
+function normalizeInstallmentStatus(value: unknown): string {
+  return String(value ?? "")
+    .trim()
+    .toLowerCase();
+}
+
+// ============================================================
+// NORMALIZE EMI NUMBER LIST
+// ============================================================
+
+function normalizeSelectedEmiNumbers(values?: number[]): number[] {
+  if (!Array.isArray(values)) {
+    return [];
+  }
+
+  return Array.from(
+    new Set(
+      values
+        .map((value) => Number(value))
+        .filter((value) => Number.isInteger(value) && value > 0),
+    ),
+  );
+}
+
+// ============================================================
+// DETECT PERSISTED EMI SCHEDULE
+// ============================================================
+
+function getPersistedSchedule(loan: Loan): {
+  field: "schedule" | "emiSchedule" | "installments" | undefined;
+
+  schedule: LoanScheduleInstallment[] | undefined;
+} {
+  const candidate = loan as LoanWithPossibleSchedule;
+
+  if (Array.isArray(candidate.schedule)) {
+    return {
+      field: "schedule",
+
+      schedule: candidate.schedule as LoanScheduleInstallment[],
+    };
+  }
+
+  if (Array.isArray(candidate.emiSchedule)) {
+    return {
+      field: "emiSchedule",
+
+      schedule: candidate.emiSchedule as LoanScheduleInstallment[],
+    };
+  }
+
+  if (Array.isArray(candidate.installments)) {
+    return {
+      field: "installments",
+
+      schedule: candidate.installments as LoanScheduleInstallment[],
+    };
+  }
+
+  return {
+    field: undefined,
+
+    schedule: undefined,
+  };
+}
+
+// ============================================================
+// BUILD LOAN WITH PERSISTED SCHEDULE
+// ============================================================
+
+function applyUpdatedSchedule(
+  loan: Loan,
+  field: "schedule" | "emiSchedule" | "installments",
+  updatedSchedule: LoanScheduleInstallment[],
+): Loan {
+  const candidate = loan as LoanWithPossibleSchedule;
+
+  if (field === "schedule") {
+    return {
+      ...candidate,
+
+      schedule: updatedSchedule,
+    } as Loan;
+  }
+
+  if (field === "emiSchedule") {
+    return {
+      ...candidate,
+
+      emiSchedule: updatedSchedule,
+    } as Loan;
+  }
+
+  return {
+    ...candidate,
+
+    installments: updatedSchedule,
+  } as Loan;
+}
+
+// ============================================================
+// GET INSTALLMENT REMAINING AMOUNT
+// ============================================================
+
+function getInstallmentRemainingAmount(
+  installment: LoanScheduleInstallment,
+): number {
+  const status = normalizeInstallmentStatus(installment.status);
+
+  if (status === "paid" || status === "preclosed") {
+    return 0;
+  }
+
+  const installmentAmount = safePositiveNumber(installment.installmentAmount);
+
+  const paidAmount = safePositiveNumber(installment.paidAmount);
+
+  return Math.max(
+    0,
+
+    installmentAmount - paidAmount,
+  );
+}
+
+// ============================================================
+// APPLY ACTUAL PAYMENT TO INSTALLMENT
 // ============================================================
 //
-// Preserve the existing FINORA Loan normalization behavior.
+// IMPORTANT:
 //
-// Legacy Loan records may have a title such as:
+// Only actual customer payment reaches this function.
 //
-// Daily Loan
-// Weekly Loan
-// Monthly Loan
-//
-// MigrationService performs the legacy migration itself.
-// This helper remains available as a defensive normalization
-// boundary for records entering the repository.
+// Discount / waiver is NEVER passed here.
 //
 // ============================================================
 
-function normalizeLoan(loan: Loan): Loan {
+function applyPaymentToInstallment(
+  installment: LoanScheduleInstallment,
+  paymentAmount: number,
+  receiptNumber: string,
+  paidDate: string,
+): {
+  installment: LoanScheduleInstallment;
+
+  consumedAmount: number;
+} {
+  const status = normalizeInstallmentStatus(installment.status);
+
+  // ==========================================================
+  // LOCKED FINAL STATUS
+  // ==========================================================
+
+  if (status === "paid" || status === "preclosed") {
+    return {
+      installment: {
+        ...installment,
+      },
+
+      consumedAmount: 0,
+    };
+  }
+
+  // ==========================================================
+  // CONTRACTUAL INSTALLMENT AMOUNT
+  // ==========================================================
+
+  const installmentAmount = safePositiveNumber(installment.installmentAmount);
+
+  if (installmentAmount <= 0) {
+    return {
+      installment: {
+        ...installment,
+      },
+
+      consumedAmount: 0,
+    };
+  }
+
+  // ==========================================================
+  // EXISTING PAID AMOUNT
+  // ==========================================================
+
+  const existingPaidAmount = safePositiveNumber(installment.paidAmount);
+
+  // ==========================================================
+  // REMAINING INSTALLMENT AMOUNT
+  // ==========================================================
+
+  const remainingInstallmentAmount = Math.max(
+    0,
+
+    installmentAmount - existingPaidAmount,
+  );
+
+  // ==========================================================
+  // ALREADY COMPLETE
+  // ==========================================================
+
+  if (remainingInstallmentAmount <= 0) {
+    const completedInstallment: LoanScheduleInstallment = {
+      ...installment,
+
+      paidAmount: installmentAmount,
+
+      status: "Paid",
+    };
+
+    if (typeof installment.outstandingBalance === "number") {
+      completedInstallment.outstandingBalance = 0;
+    }
+
+    return {
+      installment: completedInstallment,
+
+      consumedAmount: 0,
+    };
+  }
+
+  // ==========================================================
+  // PAYMENT AVAILABLE
+  // ==========================================================
+
+  const availablePayment = safePositiveNumber(paymentAmount);
+
+  if (availablePayment <= 0) {
+    return {
+      installment: {
+        ...installment,
+      },
+
+      consumedAmount: 0,
+    };
+  }
+
+  // ==========================================================
+  // PAYMENT FOR THIS INSTALLMENT
+  // ==========================================================
+
+  const paymentForInstallment = Math.min(
+    remainingInstallmentAmount,
+
+    availablePayment,
+  );
+
+  // ==========================================================
+  // NEW PAID AMOUNT
+  // ==========================================================
+
+  const newPaidAmount = Math.min(
+    installmentAmount,
+
+    existingPaidAmount + paymentForInstallment,
+  );
+
+  // ==========================================================
+  // NEW STATUS
+  // ==========================================================
+
+  const newStatus = newPaidAmount >= installmentAmount ? "Paid" : "Partial";
+
+  // ==========================================================
+  // UPDATED INSTALLMENT
+  // ==========================================================
+
+  const updatedInstallment: LoanScheduleInstallment = {
+    ...installment,
+
+    paidAmount: newPaidAmount,
+
+    status: newStatus,
+
+    ...(receiptNumber
+      ? {
+          receiptNumber,
+        }
+      : {}),
+
+    ...(paidDate
+      ? {
+          paidDate,
+        }
+      : {}),
+  };
+
+  // ==========================================================
+  // OPTIONAL ROW OUTSTANDING
+  // ==========================================================
+
+  if (typeof installment.outstandingBalance === "number") {
+    updatedInstallment.outstandingBalance = Math.max(
+      0,
+
+      installment.outstandingBalance - paymentForInstallment,
+    );
+  }
+
+  return {
+    installment: updatedInstallment,
+
+    consumedAmount: paymentForInstallment,
+  };
+}
+
+// ============================================================
+// ALLOCATE SELECTED EMI PAYMENT
+// ============================================================
+
+function allocateSelectedEmiPayment(
+  schedule: LoanScheduleInstallment[],
+  selectedEmiNumbers: number[],
+  actualPaymentAmount: number,
+  receiptNumber: string,
+  paidDate: string,
+): LoanScheduleInstallment[] {
+  const selectedSet = new Set(selectedEmiNumbers);
+
+  const selectedRemainingTotal = schedule.reduce((total, installment) => {
+    const installmentNumber = Number(installment.installmentNumber);
+
+    if (!selectedSet.has(installmentNumber)) {
+      return total;
+    }
+
+    return total + getInstallmentRemainingAmount(installment);
+  }, 0);
+
+  let remainingEmiPayment = Math.min(
+    safePositiveNumber(actualPaymentAmount),
+
+    selectedRemainingTotal,
+  );
+
+  return schedule.map((installment) => {
+    const installmentNumber = Number(installment.installmentNumber);
+
+    if (!selectedSet.has(installmentNumber)) {
+      return {
+        ...installment,
+      };
+    }
+
+    const result = applyPaymentToInstallment(
+      installment,
+
+      remainingEmiPayment,
+
+      receiptNumber,
+
+      paidDate,
+    );
+
+    remainingEmiPayment = Math.max(
+      0,
+
+      remainingEmiPayment - result.consumedAmount,
+    );
+
+    return result.installment;
+  });
+}
+
+// ============================================================
+// ALLOCATE MANUAL ACTUAL PAYMENT
+// ============================================================
+//
+// Discount is intentionally excluded.
+//
+// Example:
+//
+// Actual payment = ₹9,100
+// Discount       = ₹150
+//
+// Only ₹9,100 enters EMI paidAmount.
+//
+// ============================================================
+
+function allocateManualPayment(
+  schedule: LoanScheduleInstallment[],
+  actualPaymentAmount: number,
+  receiptNumber: string,
+  paidDate: string,
+): LoanScheduleInstallment[] {
+  let remainingManualPayment = safePositiveNumber(actualPaymentAmount);
+
+  return schedule.map((installment) => {
+    if (remainingManualPayment <= 0) {
+      return {
+        ...installment,
+      };
+    }
+
+    const remainingInstallmentAmount =
+      getInstallmentRemainingAmount(installment);
+
+    if (remainingInstallmentAmount <= 0) {
+      return {
+        ...installment,
+      };
+    }
+
+    const result = applyPaymentToInstallment(
+      installment,
+
+      remainingManualPayment,
+
+      receiptNumber,
+
+      paidDate,
+    );
+
+    remainingManualPayment = Math.max(
+      0,
+
+      remainingManualPayment - result.consumedAmount,
+    );
+
+    return result.installment;
+  });
+}
+
+// ============================================================
+// FINALIZE CLOSED-LOAN SCHEDULE
+// ============================================================
+//
+// Outstanding = 0 means no future collectible liability.
+//
+// Paid:
+//   stays Paid.
+//
+// Preclosed:
+//   stays Preclosed.
+//
+// Pending / Partial / Overdue:
+//   becomes Preclosed.
+//
+// paidAmount is preserved.
+//
+// ============================================================
+
+function finalizeClosedSchedule(schedule: LoanScheduleInstallment[]): {
+  schedule: LoanScheduleInstallment[];
+
+  changed: boolean;
+} {
+  let changed = false;
+
+  const finalizedSchedule = schedule.map((installment) => {
+    const normalizedStatus = normalizeInstallmentStatus(installment.status);
+
+    // ------------------------------------------------------
+    // FINAL HISTORICAL STATES
+    // ------------------------------------------------------
+
+    if (normalizedStatus === "paid" || normalizedStatus === "preclosed") {
+      return {
+        ...installment,
+      };
+    }
+
+    const installmentAmount = safePositiveNumber(installment.installmentAmount);
+
+    const existingPaidAmount = safePositiveNumber(installment.paidAmount);
+
+    // ------------------------------------------------------
+    // ACTUALLY FULLY PAID
+    // ------------------------------------------------------
+
+    if (installmentAmount > 0 && existingPaidAmount >= installmentAmount) {
+      changed = true;
+
+      const updatedInstallment: LoanScheduleInstallment = {
+        ...installment,
+
+        paidAmount: installmentAmount,
+
+        status: "Paid",
+      };
+
+      if (typeof installment.outstandingBalance === "number") {
+        updatedInstallment.outstandingBalance = 0;
+      }
+
+      return updatedInstallment;
+    }
+
+    // ------------------------------------------------------
+    // CLOSED WITH REMAINING WAIVED / PRECLOSED VALUE
+    // ------------------------------------------------------
+
+    changed = true;
+
+    const updatedInstallment: LoanScheduleInstallment = {
+      ...installment,
+
+      paidAmount: existingPaidAmount,
+
+      status: "Preclosed",
+    };
+
+    if (typeof installment.outstandingBalance === "number") {
+      updatedInstallment.outstandingBalance = 0;
+    }
+
+    return updatedInstallment;
+  });
+
+  return {
+    schedule: finalizedSchedule,
+
+    changed,
+  };
+}
+
+// ============================================================
+// REPAIR CLOSED LOAN SCHEDULE
+// ============================================================
+
+function repairClosedLoanSchedule(loan: Loan): {
+  loan: Loan;
+
+  changed: boolean;
+} {
+  const outstanding = safePositiveNumber(loan.outstanding);
+
+  const normalizedLoanStatus = String(loan.status ?? "")
+    .trim()
+    .toUpperCase();
+
+  const isClosed = outstanding === 0 || normalizedLoanStatus === "CLOSED";
+
+  if (!isClosed) {
+    return {
+      loan,
+
+      changed: false,
+    };
+  }
+
+  const persistedSchedule = getPersistedSchedule(loan);
+
+  if (!persistedSchedule.field || !persistedSchedule.schedule) {
+    return {
+      loan,
+
+      changed: false,
+    };
+  }
+
+  const finalized = finalizeClosedSchedule(persistedSchedule.schedule);
+
+  if (!finalized.changed) {
+    return {
+      loan,
+
+      changed: false,
+    };
+  }
+
+  return {
+    loan: applyUpdatedSchedule(
+      loan,
+
+      persistedSchedule.field,
+
+      finalized.schedule,
+    ),
+
+    changed: true,
+  };
+}
+
+// ============================================================
+// LOAN DATA NORMALIZATION
+// ============================================================
+
+function normalizeLoanBase(loan: Loan): Loan {
   let loanType = loan.loanType;
 
   let repaymentType = loan.repaymentType;
@@ -115,6 +856,16 @@ function normalizeLoan(loan: Loan): Loan {
 }
 
 // ============================================================
+// NORMALIZE LOAN
+// ============================================================
+
+function normalizeLoan(loan: Loan): Loan {
+  const baseLoan = normalizeLoanBase(loan);
+
+  return repairClosedLoanSchedule(baseLoan).loan;
+}
+
+// ============================================================
 // QUERY BUILDER
 // ============================================================
 
@@ -146,7 +897,21 @@ export async function getLoans(): Promise<Loan[]> {
       return [];
     }
 
-    return result.data.map(normalizeLoan);
+    const loans: Loan[] = [];
+
+    for (const storedLoan of result.data) {
+      const baseLoan = normalizeLoanBase(storedLoan);
+
+      const repaired = repairClosedLoanSchedule(baseLoan);
+
+      if (repaired.changed) {
+        await storageManager.update<Loan>(repaired.loan);
+      }
+
+      loans.push(repaired.loan);
+    }
+
+    return loans;
   } catch {
     return [];
   }
@@ -155,16 +920,13 @@ export async function getLoans(): Promise<Loan[]> {
 // ============================================================
 // SAVE ALL LOANS
 // ============================================================
-//
-// Kept as a compatibility operation for existing Loan
-// business workflows.
-//
-// Physical persistence is delegated to StorageManager.
-//
-// ============================================================
 
 export async function saveLoans(loans: Loan[]): Promise<StorageResult<void>> {
-  const normalizedLoans = loans.map(normalizeLoan);
+  const normalizedLoans = loans.map((loan) => {
+    const baseLoan = normalizeLoanBase(loan);
+
+    return repairClosedLoanSchedule(baseLoan).loan;
+  });
 
   return storageManager.replaceAll<Loan>(normalizedLoans);
 }
@@ -174,10 +936,6 @@ export async function saveLoans(loans: Loan[]): Promise<StorageResult<void>> {
 // ============================================================
 
 export async function addLoan(loan: Loan): Promise<StorageResult<Loan>> {
-  // ==========================================================
-  // VALIDATE ID
-  // ==========================================================
-
   if (!loan.id) {
     return {
       success: false,
@@ -186,15 +944,9 @@ export async function addLoan(loan: Loan): Promise<StorageResult<Loan>> {
     };
   }
 
-  // ==========================================================
-  // NORMALIZE
-  // ==========================================================
+  const normalizedBase = normalizeLoanBase(loan);
 
-  const normalizedLoan = normalizeLoan(loan);
-
-  // ==========================================================
-  // DUPLICATE ID CHECK
-  // ==========================================================
+  const normalizedLoan = repairClosedLoanSchedule(normalizedBase).loan;
 
   const existing = await storageManager.get<Loan>({
     entity: LOAN_ENTITY,
@@ -202,17 +954,22 @@ export async function addLoan(loan: Loan): Promise<StorageResult<Loan>> {
     id: normalizedLoan.id,
   });
 
-  if (existing.success && existing.data) {
+  if (!existing.success) {
+    return {
+      success: false,
+
+      error:
+        existing.error ?? "Unable to verify whether the loan already exists.",
+    };
+  }
+
+  if (existing.data) {
     return {
       success: false,
 
       error: "Loan with this ID already exists.",
     };
   }
-
-  // ==========================================================
-  // SAVE
-  // ==========================================================
 
   const result = await storageManager.save<Loan>(normalizedLoan);
 
@@ -250,45 +1007,76 @@ export async function getLoanById(loanId: string): Promise<Loan | undefined> {
     return undefined;
   }
 
-  return normalizeLoan(result.data);
+  const baseLoan = normalizeLoanBase(result.data);
+
+  const repaired = repairClosedLoanSchedule(baseLoan);
+
+  if (repaired.changed) {
+    await storageManager.update<Loan>(repaired.loan);
+  }
+
+  return repaired.loan;
 }
 
 // ============================================================
 // UPDATE LOAN OUTSTANDING
 // ============================================================
 //
-// Existing business behavior:
+// AUTHORITATIVE SETTLEMENT FORMULA:
 //
-// outstanding cannot go below zero.
+// balanceReduction
+//   = actualPayment
+//     + discount
 //
-// When outstanding reaches zero:
+// newOutstanding
+//   = currentOutstanding
+//     - balanceReduction
 //
-// status = CLOSED
+// EMI paidAmount:
 //
-// Otherwise:
+//   receives actualPayment only.
 //
-// status = ACTIVE
+// Discount:
+//
+//   never becomes paidAmount.
 //
 // ============================================================
 
 export async function updateLoanOutstanding(
   loanId: string,
   paymentAmount: number,
+  options?: LoanOutstandingUpdateOptions,
 ): Promise<Loan | undefined> {
   // ==========================================================
-  // VALIDATION
+  // VALIDATE LOAN ID
   // ==========================================================
 
   if (!loanId) {
     return undefined;
   }
 
-  if (!Number.isFinite(paymentAmount) || paymentAmount <= 0) {
+  // ==========================================================
+  // ACTUAL CUSTOMER PAYMENT
+  // ==========================================================
+
+  const actualPaymentAmount = safePositiveNumber(paymentAmount);
+
+  // ==========================================================
+  // DISCOUNT / WAIVER
+  // ==========================================================
+
+  const discountAmount = safePositiveNumber(options?.discountAmount);
+
+  // ==========================================================
+  // NOTHING TO SETTLE
+  // ==========================================================
+
+  if (actualPaymentAmount <= 0 && discountAmount <= 0) {
     return undefined;
   }
 
   // ==========================================================
-  // LOAD LOAN
+  // LOAD AUTHORITATIVE LOAN
   // ==========================================================
 
   const result = await storageManager.get<Loan>({
@@ -304,20 +1092,66 @@ export async function updateLoanOutstanding(
   const loan = normalizeLoan(result.data);
 
   // ==========================================================
-  // CALCULATE OUTSTANDING
+  // CURRENT OUTSTANDING
+  // ==========================================================
+
+  const currentOutstanding = safePositiveNumber(loan.outstanding);
+
+  if (currentOutstanding <= 0) {
+    return undefined;
+  }
+
+  // ==========================================================
+  // TOTAL SETTLEMENT REDUCTION
+  // ==========================================================
+
+  const settlementReduction = actualPaymentAmount + discountAmount;
+
+  // ==========================================================
+  // REJECT OVER-SETTLEMENT
+  // ==========================================================
+
+  if (settlementReduction > currentOutstanding) {
+    return undefined;
+  }
+
+  // ==========================================================
+  // NEW OUTSTANDING
   // ==========================================================
 
   const newOutstanding = Math.max(
     0,
 
-    loan.outstanding - paymentAmount,
+    currentOutstanding - settlementReduction,
   );
 
   // ==========================================================
-  // BUILD UPDATED LOAN
+  // SELECTED EMI NUMBERS
   // ==========================================================
 
-  const updatedLoan: Loan = {
+  const selectedEmiNumbers = normalizeSelectedEmiNumbers(
+    options?.selectedEmiNumbers,
+  );
+
+  // ==========================================================
+  // RECEIPT / DATE
+  // ==========================================================
+
+  const receiptNumber = String(options?.receiptNumber ?? "").trim();
+
+  const paidDate = String(options?.paidDate ?? "").trim();
+
+  // ==========================================================
+  // EXISTING SCHEDULE
+  // ==========================================================
+
+  const persistedSchedule = getPersistedSchedule(loan);
+
+  // ==========================================================
+  // BASE LOAN UPDATE
+  // ==========================================================
+
+  let updatedLoan: Loan = {
     ...loan,
 
     outstanding: newOutstanding,
@@ -326,7 +1160,106 @@ export async function updateLoanOutstanding(
   };
 
   // ==========================================================
-  // PERSIST UPDATE
+  // APPLY ACTUAL PAYMENT TO SCHEDULE
+  //
+  // IMPORTANT:
+  //
+  // Discount NEVER enters this allocation.
+  // ==========================================================
+
+  if (
+    persistedSchedule.field &&
+    persistedSchedule.schedule &&
+    actualPaymentAmount > 0
+  ) {
+    let updatedSchedule: LoanScheduleInstallment[];
+
+    // ========================================================
+    // SELECTED EMI PAYMENT
+    // ========================================================
+
+    if (selectedEmiNumbers.length > 0) {
+      updatedSchedule = allocateSelectedEmiPayment(
+        persistedSchedule.schedule,
+
+        selectedEmiNumbers,
+
+        actualPaymentAmount,
+
+        receiptNumber,
+
+        paidDate,
+      );
+    }
+
+    // ========================================================
+    // MANUAL PAYMENT
+    // ========================================================
+    else {
+      updatedSchedule = allocateManualPayment(
+        persistedSchedule.schedule,
+
+        actualPaymentAmount,
+
+        receiptNumber,
+
+        paidDate,
+      );
+    }
+
+    updatedLoan = applyUpdatedSchedule(
+      updatedLoan,
+
+      persistedSchedule.field,
+
+      updatedSchedule,
+    );
+  }
+
+  // ==========================================================
+  // AUTHORITATIVE LOAN CLOSURE
+  //
+  // Payment + discount may close the Loan.
+  //
+  // Example:
+  //
+  // Outstanding = 9,250
+  // Payment     = 9,100
+  // Discount    =   150
+  //
+  // New outstanding = 0.
+  //
+  // ₹9,100 is allocated as actual payment.
+  //
+  // Remaining ₹150 contractual liability is then Preclosed.
+  // ==========================================================
+
+  if (newOutstanding === 0) {
+    const scheduleAfterPayment = getPersistedSchedule(updatedLoan);
+
+    if (scheduleAfterPayment.field && scheduleAfterPayment.schedule) {
+      const finalized = finalizeClosedSchedule(scheduleAfterPayment.schedule);
+
+      updatedLoan = applyUpdatedSchedule(
+        updatedLoan,
+
+        scheduleAfterPayment.field,
+
+        finalized.schedule,
+      );
+    }
+
+    updatedLoan = {
+      ...updatedLoan,
+
+      outstanding: 0,
+
+      status: "CLOSED",
+    };
+  }
+
+  // ==========================================================
+  // PERSIST
   // ==========================================================
 
   const updateResult = await storageManager.update<Loan>(updatedLoan);
@@ -337,6 +1270,12 @@ export async function updateLoanOutstanding(
 
   return updatedLoan;
 }
+
+// ============================================================
+// COMPATIBILITY ALIAS
+// ============================================================
+
+export const updateLoanOutstandingAmount = updateLoanOutstanding;
 
 // ============================================================
 // END
