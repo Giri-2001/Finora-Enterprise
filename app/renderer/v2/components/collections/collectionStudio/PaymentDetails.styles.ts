@@ -125,6 +125,20 @@ export const collectionPaymentDetailsStyles: Record<string, CSSProperties> = {
     borderBottom: `1px solid ${THEME.border}`,
   },
 
+  headerIcon: {
+  width: "23px",
+  height: "23px",
+  minWidth: "23px",
+
+  flexShrink: 0,
+
+  marginTop: "2px",
+
+  color: THEME.brand,
+
+  strokeWidth: 2,
+},
+
   step: {
     width: "27px",
 

@@ -8,6 +8,7 @@
 // RESPONSIBILITY
 //
 // - Collection history geometry
+// - Premium Lucide header presentation
 // - History table presentation
 // - Empty state
 // - FINORA Theme Engine token consumption
@@ -21,7 +22,7 @@
 // - No second colour palette
 // - Responsive geometry belongs to Responsive Engine
 //
-// VERSION : 2.0
+// VERSION : 2.1
 // STATUS  : Production
 // ============================================================
 
@@ -61,7 +62,8 @@ const THEME = {
 
   brand: "var(--finora-theme-brand-primary, var(--accent, #C69214))",
 
-  brandSoft: "var(--finora-theme-brand-accent-soft, rgba(198, 146, 20, 0.10))",
+  brandSoft:
+    "var(--finora-theme-brand-accent-soft, rgba(198, 146, 20, 0.10))",
 
   // ==========================================================
   // BORDER
@@ -75,6 +77,13 @@ const THEME = {
 
   success: "var(--finora-theme-success, var(--success, #23865A))",
 } as const;
+
+// ============================================================
+// FONT
+// ============================================================
+
+const INTER_FONT =
+  "Inter, ui-sans-serif, system-ui, sans-serif";
 
 // ============================================================
 // EXPORT
@@ -107,6 +116,8 @@ export const collectionHistoryStyles: Record<string, CSSProperties> = {
     borderRadius: "14px",
 
     boxShadow: "0 4px 18px rgba(15, 23, 42, 0.04)",
+
+    fontFamily: INTER_FONT,
   },
 
   // ==========================================================
@@ -126,11 +137,13 @@ export const collectionHistoryStyles: Record<string, CSSProperties> = {
 
     gap: "16px",
 
-    paddingBottom: "12px",
+    paddingBottom: "13px",
 
     boxSizing: "border-box",
 
     borderBottom: `1px solid ${THEME.border}`,
+
+    fontFamily: INTER_FONT,
   },
 
   // ==========================================================
@@ -140,15 +153,59 @@ export const collectionHistoryStyles: Record<string, CSSProperties> = {
   headerTitle: {
     minWidth: 0,
 
+    flex: "1 1 auto",
+
     display: "flex",
 
-    alignItems: "center",
+    alignItems: "flex-start",
 
-    gap: "10px",
+    gap: "11px",
+
+    fontFamily: INTER_FONT,
   },
 
   // ==========================================================
-  // STEP
+  // HEADER ICON
+  // ==========================================================
+
+  headerIcon: {
+    width: "23px",
+
+    height: "23px",
+
+    minWidth: "23px",
+
+    flexShrink: 0,
+
+    marginTop: "8px",
+
+    color: THEME.brand,
+
+    strokeWidth: 2,
+  },
+
+  // ==========================================================
+  // HEADER CONTENT
+  // ==========================================================
+
+  headerContent: {
+    minWidth: 0,
+
+    flex: "1 1 auto",
+
+    display: "flex",
+
+    flexDirection: "column",
+
+    justifyContent: "center",
+
+    gap: "2px",
+
+    fontFamily: INTER_FONT,
+  },
+
+  // ==========================================================
+  // LEGACY STEP
   // ==========================================================
 
   step: {
@@ -174,7 +231,7 @@ export const collectionHistoryStyles: Record<string, CSSProperties> = {
 
     color: THEME.brand,
 
-    fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
+    fontFamily: INTER_FONT,
 
     fontSize: "11px",
 
@@ -190,15 +247,15 @@ export const collectionHistoryStyles: Record<string, CSSProperties> = {
 
     color: THEME.textPrimary,
 
-    fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
+    fontFamily: INTER_FONT,
 
-    fontSize: "12px",
+    fontSize: "16px",
 
     fontWeight: 800,
 
-    letterSpacing: "0.04em",
+    letterSpacing: "0.015em",
 
-    lineHeight: 1.3,
+    lineHeight: 1.25,
   },
 
   // ==========================================================
@@ -208,15 +265,15 @@ export const collectionHistoryStyles: Record<string, CSSProperties> = {
   subtitle: {
     margin: "3px 0 0",
 
-    color: THEME.textMuted,
+    color: THEME.textSecondary,
 
-    fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
+    fontFamily: INTER_FONT,
 
     fontSize: "10px",
 
     fontWeight: 500,
 
-    lineHeight: 1.35,
+    lineHeight: 1.4,
   },
 
   // ==========================================================
@@ -252,7 +309,7 @@ export const collectionHistoryStyles: Record<string, CSSProperties> = {
 
     color: THEME.textPrimary,
 
-    fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
+    fontFamily: INTER_FONT,
   },
 
   // ==========================================================
@@ -270,9 +327,9 @@ export const collectionHistoryStyles: Record<string, CSSProperties> = {
 
     color: THEME.textMuted,
 
-    fontSize: "9px",
+    fontSize: "10px",
 
-    fontWeight: 800,
+    fontWeight: 750,
 
     letterSpacing: "0.06em",
 
@@ -293,23 +350,22 @@ export const collectionHistoryStyles: Record<string, CSSProperties> = {
   // TABLE CELL
   // ==========================================================
 
-  tableCell: {
-    padding: "11px 12px",
+ tableCell: {
+  padding: "11px 12px",
 
-    boxSizing: "border-box",
+  boxSizing: "border-box",
 
-    borderBottom: `1px solid ${THEME.border}`,
+  borderBottom: `1px solid ${THEME.border}`,
 
-    color: THEME.textSecondary,
+  color: THEME.textSecondary,
 
-    fontSize: "11px",
+  fontSize: "12px",
+  fontWeight: 650,
 
-    fontWeight: 600,
+  lineHeight: 1.35,
 
-    lineHeight: 1.35,
-
-    whiteSpace: "nowrap",
-  },
+  whiteSpace: "nowrap",
+},
 
   // ==========================================================
   // AMOUNT CELL
@@ -318,11 +374,11 @@ export const collectionHistoryStyles: Record<string, CSSProperties> = {
   amountCell: {
     color: THEME.textPrimary,
 
-    fontSize: "12px",
+    fontSize: "14px",
 
-    fontWeight: 800,
+    fontWeight: 700,
 
-    textAlign: "right",
+    textAlign: "center",
   },
 
   // ==========================================================
@@ -332,9 +388,9 @@ export const collectionHistoryStyles: Record<string, CSSProperties> = {
   balanceCell: {
     color: THEME.success,
 
-    fontSize: "12px",
+    fontSize: "14px",
 
-    fontWeight: 800,
+    fontWeight: 750,
 
     textAlign: "right",
   },
@@ -360,9 +416,9 @@ export const collectionHistoryStyles: Record<string, CSSProperties> = {
 
     color: THEME.brand,
 
-    fontSize: "10px",
+    fontSize: "11px",
 
-    fontWeight: 800,
+    fontWeight: 700,
 
     letterSpacing: "0.03em",
   },
@@ -371,13 +427,25 @@ export const collectionHistoryStyles: Record<string, CSSProperties> = {
   // PAYMENT MODE
   // ==========================================================
 
-  paymentMode: {
-    color: THEME.textPrimary,
+paymentMode: {
+  color: THEME.textPrimary,
 
-    fontSize: "10px",
+  fontSize: "12px",
 
-    fontWeight: 700,
-  },
+  fontWeight: 750,
+
+  textAlign: "center",
+
+  textTransform: "uppercase",
+},
+
+centerHeader: {
+  textAlign: "center",
+},
+
+centerCell: {
+  textAlign: "center",
+},
 
   // ==========================================================
   // EMPTY STATE
@@ -409,6 +477,8 @@ export const collectionHistoryStyles: Record<string, CSSProperties> = {
     background: THEME.surfaceSoft,
 
     textAlign: "center",
+
+    fontFamily: INTER_FONT,
   },
 
   // ==========================================================
@@ -417,6 +487,8 @@ export const collectionHistoryStyles: Record<string, CSSProperties> = {
 
   emptyTitle: {
     color: THEME.textPrimary,
+
+    fontFamily: INTER_FONT,
 
     fontSize: "11px",
 
@@ -429,6 +501,8 @@ export const collectionHistoryStyles: Record<string, CSSProperties> = {
 
   emptyMessage: {
     color: THEME.textMuted,
+
+    fontFamily: INTER_FONT,
 
     fontSize: "10px",
 

@@ -37,6 +37,8 @@
 
 import { useEffect, useMemo, useState } from "react";
 
+import { Files } from "lucide-react";
+
 import type { DocumentsStudioItem } from "../../loans/documents/DocumentsStudio";
 
 import { loanDocumentsStyles } from "./LoanDocuments.styles";
@@ -274,11 +276,6 @@ export default function LoanDocuments({ documents = [] }: LoanDocumentsProps) {
   // ==========================================================
   // DOCUMENT COUNT BADGE
   // ==========================================================
-  //
-  // Intentionally inline here so the count remains a single
-  // clean badge and does not inherit the numbered "step"
-  // styling.
-  // ==========================================================
 
   const documentCountBadge: React.CSSProperties = {
     display: "inline-flex",
@@ -312,10 +309,15 @@ export default function LoanDocuments({ documents = [] }: LoanDocumentsProps) {
 
         <div style={loanDocumentsStyles.header}>
           <div style={loanDocumentsStyles.headerTitle}>
-            <span style={loanDocumentsStyles.step}>7</span>
+            <Files
+              aria-hidden="true"
+              style={loanDocumentsStyles.headerIcon}
+            />
 
-            <div>
-              <h2 style={loanDocumentsStyles.title}>LOAN DOCUMENTS / IMAGES</h2>
+            <div style={loanDocumentsStyles.headerContent}>
+              <h2 style={loanDocumentsStyles.title}>
+                LOAN DOCUMENTS / IMAGES
+              </h2>
 
               <p style={loanDocumentsStyles.subtitle}>
                 Documents and images attached to this loan.
@@ -363,6 +365,7 @@ export default function LoanDocuments({ documents = [] }: LoanDocumentsProps) {
               disabled={normalizedDocuments.length === 0}
             >
               VIEW ALL
+
               <span aria-hidden="true" style={loanDocumentsStyles.arrow}>
                 →
               </span>
@@ -391,10 +394,6 @@ export default function LoanDocuments({ documents = [] }: LoanDocumentsProps) {
                 key={document.id}
                 style={loanDocumentsStyles.allDocumentCard}
               >
-                {/* ----------------------------------------
-                        PREVIEW
-                    ---------------------------------------- */}
-
                 <button
                   type="button"
                   aria-label={`View ${document.name}`}
@@ -404,10 +403,6 @@ export default function LoanDocuments({ documents = [] }: LoanDocumentsProps) {
                 >
                   {renderDocumentPreview(document)}
                 </button>
-
-                {/* ----------------------------------------
-                        DOCUMENT INFO + VIEW
-                    ---------------------------------------- */}
 
                 <div style={loanDocumentsStyles.allDocumentInfo}>
                   <div
@@ -425,10 +420,6 @@ export default function LoanDocuments({ documents = [] }: LoanDocumentsProps) {
                     >
                       {document.name}
                     </span>
-
-                    {/* ------------------------------------
-                            INDIVIDUAL VIEW
-                        ------------------------------------ */}
 
                     <button
                       type="button"
@@ -468,10 +459,6 @@ export default function LoanDocuments({ documents = [] }: LoanDocumentsProps) {
           }}
         >
           <div style={loanDocumentsStyles.viewerContent}>
-            {/* ==================================================
-                MODAL HEADER
-            ================================================== */}
-
             <div style={loanDocumentsStyles.viewerHeader}>
               <div>
                 <strong style={loanDocumentsStyles.viewerTitle}>
@@ -494,20 +481,12 @@ export default function LoanDocuments({ documents = [] }: LoanDocumentsProps) {
               </button>
             </div>
 
-            {/* ==================================================
-                ALL DOCUMENTS
-            ================================================== */}
-
             <div style={loanDocumentsStyles.allDocumentsGrid}>
               {normalizedDocuments.map((document) => (
                 <article
                   key={document.id}
                   style={loanDocumentsStyles.allDocumentCard}
                 >
-                  {/* ----------------------------------------
-                        PREVIEW
-                    ---------------------------------------- */}
-
                   <button
                     type="button"
                     aria-label={`View ${document.name}`}
@@ -517,10 +496,6 @@ export default function LoanDocuments({ documents = [] }: LoanDocumentsProps) {
                   >
                     {renderDocumentPreview(document)}
                   </button>
-
-                  {/* ----------------------------------------
-                        NAME + VIEW
-                    ---------------------------------------- */}
 
                   <div style={loanDocumentsStyles.allDocumentInfo}>
                     <div
@@ -578,10 +553,6 @@ export default function LoanDocuments({ documents = [] }: LoanDocumentsProps) {
           }}
         >
           <div style={loanDocumentsStyles.imageViewerContent}>
-            {/* ==================================================
-                VIEWER HEADER
-            ================================================== */}
-
             <div style={loanDocumentsStyles.imageViewerHeader}>
               <span
                 style={loanDocumentsStyles.imageViewerTitle}
@@ -599,10 +570,6 @@ export default function LoanDocuments({ documents = [] }: LoanDocumentsProps) {
                 ×
               </button>
             </div>
-
-            {/* ==================================================
-                VIEWER BODY
-            ================================================== */}
 
             <div style={loanDocumentsStyles.imageViewerBody}>
               {renderImagePreview(viewerDocument, "viewer")}

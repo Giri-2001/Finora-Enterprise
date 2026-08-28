@@ -40,6 +40,8 @@
 
 import { useEffect, useState } from "react";
 
+import { History } from "lucide-react";
+
 import { useCollectionController } from "../controller";
 
 import { loadCollections } from "../../../services/collection/collectionService";
@@ -287,9 +289,12 @@ export default function CollectionHistory() {
       >
         <div style={collectionHistoryStyles.header}>
           <div style={collectionHistoryStyles.headerTitle}>
-            <span style={collectionHistoryStyles.step}>8</span>
+            <History
+              aria-hidden="true"
+              style={collectionHistoryStyles.headerIcon}
+            />
 
-            <div>
+            <div style={collectionHistoryStyles.headerContent}>
               <h2 style={collectionHistoryStyles.title}>COLLECTION HISTORY</h2>
 
               <p style={collectionHistoryStyles.subtitle}>
@@ -324,9 +329,12 @@ export default function CollectionHistory() {
       >
         <div style={collectionHistoryStyles.header}>
           <div style={collectionHistoryStyles.headerTitle}>
-            <span style={collectionHistoryStyles.step}>8</span>
+            <History
+              aria-hidden="true"
+              style={collectionHistoryStyles.headerIcon}
+            />
 
-            <div>
+            <div style={collectionHistoryStyles.headerContent}>
               <h2 style={collectionHistoryStyles.title}>COLLECTION HISTORY</h2>
 
               <p style={collectionHistoryStyles.subtitle}>
@@ -364,9 +372,12 @@ export default function CollectionHistory() {
 
       <div style={collectionHistoryStyles.header}>
         <div style={collectionHistoryStyles.headerTitle}>
-          <span style={collectionHistoryStyles.step}>8</span>
+          <History
+            aria-hidden="true"
+            style={collectionHistoryStyles.headerIcon}
+          />
 
-          <div>
+          <div style={collectionHistoryStyles.headerContent}>
             <h2 style={collectionHistoryStyles.title}>COLLECTION HISTORY</h2>
 
             <p style={collectionHistoryStyles.subtitle}>
@@ -386,14 +397,28 @@ export default function CollectionHistory() {
             <tr>
               <th style={collectionHistoryStyles.tableHeader}>DATE</th>
 
-              <th style={collectionHistoryStyles.tableHeader}>RECEIPT</th>
-
-              <th style={collectionHistoryStyles.tableHeader}>PAYMENT MODE</th>
+              <th
+                style={{
+                  ...collectionHistoryStyles.tableHeader,
+                  ...collectionHistoryStyles.centerHeader,
+                }}
+              >
+                RECEIPT
+              </th>
 
               <th
                 style={{
                   ...collectionHistoryStyles.tableHeader,
-                  ...collectionHistoryStyles.amountHeader,
+                  ...collectionHistoryStyles.centerHeader,
+                }}
+              >
+                PAYMENT MODE
+              </th>
+
+              <th
+                style={{
+                  ...collectionHistoryStyles.tableHeader,
+                  ...collectionHistoryStyles.centerHeader,
                 }}
               >
                 COLLECTED
@@ -417,13 +442,23 @@ export default function CollectionHistory() {
                   {formatCollectionDate(record.collectionDate)}
                 </td>
 
-                <td style={collectionHistoryStyles.tableCell}>
+                <td
+                  style={{
+                    ...collectionHistoryStyles.tableCell,
+                    ...collectionHistoryStyles.centerCell,
+                  }}
+                >
                   <span style={collectionHistoryStyles.receiptNumber}>
                     {record.receiptNumber}
                   </span>
                 </td>
 
-                <td style={collectionHistoryStyles.tableCell}>
+                <td
+                  style={{
+                    ...collectionHistoryStyles.tableCell,
+                    ...collectionHistoryStyles.centerCell,
+                  }}
+                >
                   <span style={collectionHistoryStyles.paymentMode}>
                     {record.paymentMode || "--"}
                   </span>
