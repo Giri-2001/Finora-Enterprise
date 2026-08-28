@@ -19,11 +19,12 @@
 // - Carry authoritative loan principal, interest and date
 // - Establish CollectionContext for the complete Studio tree
 // - Render complete Collection Studio workflow
-// - Connect System Generated section
-// - Connect Collection Entry section
-// - Connect Payment Details section
-// - Connect Loan Documents section
-// - Connect Collection History section
+// - Connect EMI Collection workspace
+// - Connect System Generated middle workspace
+// - Connect Manual Collection workspace
+// - Connect full-width Payment Details
+// - Connect full-width Loan Documents
+// - Connect full-width Collection History
 // - Consume dedicated Collection Studio styles
 //
 // ARCHITECTURE LOCK
@@ -44,6 +45,27 @@
 // - Collection state is exposed through CollectionContext
 // - Child collection sections remain controller-driven
 //
+// PREMIUM COLLECTION WORKSPACE
+//
+// LEFT 40%
+// - EMI Collection
+//
+// CENTER 20%
+// - System Generated
+//
+// RIGHT 40%
+// - Manual Collection
+//
+// BELOW
+// - Payment Details       100%
+// - Loan Documents        100%
+// - Collection History    100%
+//
+// IMPORTANT:
+//
+// The top Customer + Customer Loans workspace is intentionally
+// preserved.
+//
 // DOCUMENT WIRING
 //
 // - Selected Loan is authoritative.
@@ -60,10 +82,10 @@
 // - Monthly interest percentage comes from Loan.interest.
 // - Loan date comes from Loan.loanDate.
 // - EMI / schedule amount is NOT used by System Generated.
-// - Step 3 calculates accrued interest from loan date.
-// - Step 3 remains presentation-only.
+// - System Generated remains presentation-only.
+// - CollectionEntry retains all existing EMI / Manual logic.
 //
-// VERSION : 2.0
+// VERSION : 2.1
 // STATUS  : Production
 // ============================================================
 
@@ -125,56 +147,72 @@ type CollectionStudioThemeStyle = CSSProperties & Record<`--${string}`, string>;
 // ============================================================
 // THEME VARIABLE FACTORY
 // ============================================================
-//
-// ThemeProvider remains the single source of truth.
-// This adapter only exposes the active theme tokens to the
-// existing Collection Studio style tree.
-//
-// No business logic, persistence, responsive geometry, or
-// local theme definitions are introduced here.
-//
-// ============================================================
 
 function createCollectionStudioThemeVariables(
   theme: FinoraTheme,
 ): CollectionStudioThemeStyle {
   return {
     "--finora-theme-brand-primary": theme.colors.brand.primary,
+
     "--finora-theme-brand-secondary": theme.colors.brand.secondary,
+
     "--finora-theme-brand-accent": theme.colors.brand.accent,
+
     "--finora-theme-brand-accent-soft": theme.colors.brand.accentSoft,
 
     "--finora-theme-page": theme.colors.background.page,
+
     "--finora-theme-background-page": theme.colors.background.page,
+
     "--finora-theme-surface": theme.colors.background.surface,
+
     "--finora-theme-background-surface": theme.colors.background.surface,
+
     "--finora-theme-surface-muted": theme.colors.background.surfaceMuted,
+
     "--finora-theme-background-surface-muted":
       theme.colors.background.surfaceMuted,
+
     "--finora-theme-surface-strong": theme.colors.background.surfaceStrong,
 
     "--finora-theme-text-primary": theme.colors.text.primary,
+
     "--finora-theme-text-secondary": theme.colors.text.secondary,
+
     "--finora-theme-text-body": theme.colors.text.secondary,
+
     "--finora-theme-text-muted": theme.colors.text.muted,
+
     "--finora-theme-text-inverse": theme.colors.text.inverse,
 
     "--finora-theme-border-default": theme.colors.border.default,
+
     "--finora-theme-border-strong": theme.colors.border.strong,
+
     "--finora-theme-border-subtle": theme.colors.border.subtle,
+
     "--finora-theme-focus": theme.colors.border.focus,
 
     "--finora-theme-success": theme.colors.status.success,
+
     "--finora-theme-success-soft": theme.colors.status.successSoft,
+
     "--finora-theme-success-border": theme.colors.border.strong,
+
     "--finora-theme-warning": theme.colors.status.warning,
+
     "--finora-theme-warning-soft": theme.colors.status.warningSoft,
+
     "--finora-theme-danger": theme.colors.status.danger,
+
     "--finora-theme-danger-soft": theme.colors.status.dangerSoft,
+
     "--finora-theme-info": theme.colors.status.info,
+
     "--finora-theme-info-soft": theme.colors.status.infoSoft,
 
     "--finora-theme-overlay-shadow": theme.colors.overlay.shadow,
+
     "--finora-theme-overlay-backdrop": theme.colors.overlay.backdrop,
   };
 }
@@ -196,21 +234,9 @@ export interface CollectionLoanRecord {
 
   outstanding: number;
 
-  /*
-   * Monthly flat interest percentage.
-   */
-
   interest: number;
 
-  /*
-   * Original loan date.
-   */
-
   loanDate: string;
-
-  // ==========================================================
-  // LOAN DOCUMENTS
-  // ==========================================================
 
   documents: DocumentsStudioItem[];
 }
@@ -355,20 +381,6 @@ function isCollectionEligibleCustomer(customer: CustomerProfile): boolean {
 
 // ============================================================
 // LOAN → COLLECTION LOAN RECORD
-//
-// IMPORTANT:
-//
-// Loan.amount
-//   → Original principal
-//
-// Loan.interest
-//   → Monthly interest percentage
-//
-// Loan.loanDate
-//   → Interest calculation start date
-//
-// EMI / schedule is intentionally not copied into
-// the System Generated calculation boundary.
 // ============================================================
 
 function mapLoanToCollectionLoan(loan: Loan): CollectionLoanRecord {
@@ -423,26 +435,11 @@ function buildCollectionCustomerRecord(
 
 // ============================================================
 // BUILD COLLECTION REVIEW DATA
-//
-// IMPORTANT:
-//
-// The selected loan remains the authoritative source.
-//
-// Principal:
-//   loan.amount
-//
-// Interest:
-//   loan.interest
-//
-// Interest start:
-//   loan.loanDate
-//
-// EMI / todayDue is deliberately not used to build
-// the Step 3 financial values.
 // ============================================================
 
 function buildReviewData(
   customer: CollectionCustomerRecord,
+
   loan: CollectionLoanRecord,
 ): CollectionReviewData {
   const now = new Date().toISOString();
@@ -458,40 +455,13 @@ function buildReviewData(
 
     loanNumber: loan.loanNumber,
 
-    /*
-     * ORIGINAL PRINCIPAL
-     *
-     * This is the actual amount given to the customer.
-     */
-
     loanAmount: loan.amount,
 
-    /*
-     * Existing persisted outstanding value.
-     *
-     * Retained for the collection workflow.
-     *
-     * System Generated Step 3 uses loanAmount as
-     * the principal basis instead of deriving principal
-     * from EMI/todayDue.
-     */
-
     outstandingBalance: loan.outstanding,
-
-    /*
-     * AUTHORITATIVE INTEREST TERMS
-     */
 
     loanInterestRate: loan.interest,
 
     loanDate: loan.loanDate,
-
-    /*
-     * Existing EMI-related fields remain available
-     * to Collection Entry.
-     *
-     * Step 3 does not use todayDue as accrued interest.
-     */
 
     todayDue: 0,
 
@@ -533,16 +503,12 @@ export default function CollectionStudioPage() {
   // ==========================================================
   // FINORA THEME ENGINE
   // ==========================================================
-  //
-  // The active application theme is consumed from the central
-  // ThemeProvider and exposed to the existing style tree.
-  //
-  // ==========================================================
 
   const { theme } = useTheme();
 
   const pageThemeStyle = {
     ...collectionStudioStyles.page,
+
     ...createCollectionStudioThemeVariables(theme),
   } as CollectionStudioThemeStyle;
 
@@ -553,22 +519,6 @@ export default function CollectionStudioPage() {
   const [collectionCustomers, setCollectionCustomers] = useState<
     CollectionCustomerRecord[]
   >([]);
-
-  // ==========================================================
-  // LOAN CHANGE
-  // ==========================================================
-
-  function handleLoanChange(loanId: string): void {
-    const loanBelongsToCustomer = customerLoans.some(
-      (loan: CollectionLoanRecord) => loan.id === loanId,
-    );
-
-    if (!loanBelongsToCustomer) {
-      return;
-    }
-
-    setSelectedLoanId(loanId);
-  }
 
   // ==========================================================
   // LOADING STATE
@@ -600,6 +550,42 @@ export default function CollectionStudioPage() {
   const [reviewData, setReviewData] = useState<CollectionReviewData>(
     createEmptyReviewData(),
   );
+
+  // ==========================================================
+  // SELECTED CUSTOMER
+  // ==========================================================
+
+  const selectedCustomer = useMemo(
+    () =>
+      collectionCustomers.find(
+        (customer: CollectionCustomerRecord) =>
+          customer.id === selectedCustomerId,
+      ) ?? null,
+
+    [collectionCustomers, selectedCustomerId],
+  );
+
+  // ==========================================================
+  // CUSTOMER LOANS
+  // ==========================================================
+
+  const customerLoans = selectedCustomer?.loans ?? [];
+
+  // ==========================================================
+  // LOAN CHANGE
+  // ==========================================================
+
+  function handleLoanChange(loanId: string): void {
+    const loanBelongsToCustomer = customerLoans.some(
+      (loan: CollectionLoanRecord) => loan.id === loanId,
+    );
+
+    if (!loanBelongsToCustomer) {
+      return;
+    }
+
+    setSelectedLoanId(loanId);
+  }
 
   // ==========================================================
   // LOAD AUTHORITATIVE CUSTOMER + LOAN DATA
@@ -681,14 +667,6 @@ export default function CollectionStudioPage() {
 
         // ------------------------------------------------------
         // DO NOT AUTO-SELECT CUSTOMER
-        //
-        // Collection Studio must open with:
-        // - Customer dropdown = "Select Customer"
-        // - No customer selected
-        // - No loan selected
-        //
-        // Customer + loan workspace will appear only after
-        // the user selects a customer.
         // ------------------------------------------------------
 
         setSelectedCustomerId("");
@@ -723,20 +701,6 @@ export default function CollectionStudioPage() {
   }, []);
 
   // ==========================================================
-  // SELECTED CUSTOMER
-  // ==========================================================
-
-  const selectedCustomer = useMemo(
-    () =>
-      collectionCustomers.find(
-        (customer: CollectionCustomerRecord) =>
-          customer.id === selectedCustomerId,
-      ) ?? null,
-
-    [collectionCustomers, selectedCustomerId],
-  );
-
-  // ==========================================================
   // FILTERED CUSTOMER DROPDOWN OPTIONS
   // ==========================================================
 
@@ -754,12 +718,6 @@ export default function CollectionStudioPage() {
         customer.id.toLowerCase().includes(query),
     );
   }, [collectionCustomers, customerSearch]);
-
-  // ==========================================================
-  // CUSTOMER LOANS
-  // ==========================================================
-
-  const customerLoans = selectedCustomer?.loans ?? [];
 
   // ==========================================================
   // SELECTED LOAN
@@ -885,6 +843,9 @@ export default function CollectionStudioPage() {
         <div style={collectionStudioStyles.pageInner}>
           {/* ==================================================
               1. CUSTOMER + LOAN SELECTION
+
+              IMPORTANT:
+              EXISTING TOP LAYOUT PRESERVED.
           ================================================== */}
 
           <div style={collectionStudioStyles.selectionRow}>
@@ -902,9 +863,9 @@ export default function CollectionStudioPage() {
                 </label>
 
                 <div style={customerDropdownStyles.wrapper}>
-                  {/* ======================================================
-      CUSTOMER SELECT BUTTON
-  ====================================================== */}
+                  {/* ==========================================
+                      CUSTOMER SELECT BUTTON
+                  ========================================== */}
 
                   <button
                     type="button"
@@ -913,21 +874,29 @@ export default function CollectionStudioPage() {
                     aria-expanded={customerDropdownOpen}
                     onClick={() => {
                       setCustomerDropdownOpen((previous) => !previous);
+
                       setCustomerSearch("");
                     }}
                     style={{
                       ...collectionStudioStyles.select,
+
                       display: "flex",
+
                       alignItems: "center",
+
                       justifyContent: "space-between",
+
                       cursor: "pointer",
+
                       textAlign: "left",
                     }}
                   >
                     <span
                       style={{
                         overflow: "hidden",
+
                         textOverflow: "ellipsis",
+
                         whiteSpace: "nowrap",
                       }}
                     >
@@ -942,9 +911,9 @@ export default function CollectionStudioPage() {
                     </span>
                   </button>
 
-                  {/* ======================================================
-    CUSTOMER SEARCH DROPDOWN
-====================================================== */}
+                  {/* ==========================================
+                      CUSTOMER SEARCH DROPDOWN
+                  ========================================== */}
 
                   {customerDropdownOpen && (
                     <div
@@ -952,10 +921,6 @@ export default function CollectionStudioPage() {
                       aria-label="Customer list"
                       style={customerDropdownStyles.panel}
                     >
-                      {/* ==================================================
-        SEARCH
-    ================================================== */}
-
                       <input
                         type="text"
                         value={customerSearch}
@@ -967,10 +932,6 @@ export default function CollectionStudioPage() {
                         autoFocus
                         style={customerDropdownStyles.searchInput}
                       />
-
-                      {/* ==================================================
-        FILTERED CUSTOMERS
-    ================================================== */}
 
                       {filteredCollectionCustomers.length > 0 ? (
                         filteredCollectionCustomers.map(
@@ -988,6 +949,7 @@ export default function CollectionStudioPage() {
                                 }
                                 style={{
                                   ...customerDropdownStyles.option,
+
                                   ...(isActive
                                     ? customerDropdownStyles.activeOption
                                     : {}),
@@ -1050,8 +1012,8 @@ export default function CollectionStudioPage() {
               <div style={collectionStudioStyles.customerPhotoFrame}>
                 {selectedCustomer?.photo ? (
                   <img
-                    src={selectedCustomer?.photo}
-                    alt={selectedCustomer?.name || "Customer"}
+                    src={selectedCustomer.photo}
+                    alt={selectedCustomer.name || "Customer"}
                     style={collectionStudioStyles.customerPhoto}
                   />
                 ) : (
@@ -1080,50 +1042,55 @@ export default function CollectionStudioPage() {
           </div>
 
           {/* ==================================================
-              3 + 4 + 6. COLLECTION WORKSPACE
-              
-              LEFT
-              - Step 3 System Generated
-              
-              RIGHT
-              - Step 4 Collection Entry
-              - Step 6 Payment Details
-              
-              IMPORTANT:
-              Step 6 intentionally lives inside the right
-              workspace column so it sits directly below
-              Step 4 instead of becoming a full-width section.
+              PREMIUM COLLECTION WORKSPACE
+
+              INTERNAL COLLECTION ENTRY GRID:
+
+              40% EMI
+              20% SYSTEM GENERATED
+              40% MANUAL
           ================================================== */}
 
           <section style={collectionStudioStyles.collectionWorkspace}>
             {/* ==================================================
-                STEP 3 — SYSTEM GENERATED
+                FULL-WIDTH 40 / 20 / 40 ENTRY WORKSPACE
+
+                CollectionEntry owns EMI + Manual interaction.
+
+                System Generated is injected only as a visual
+                middle slot.
+
+                No financial ownership changes.
             ================================================== */}
 
-            <div style={collectionStudioStyles.systemGeneratedColumn}>
-              <CollectionSystemGenerated />
+            <div style={collectionStudioStyles.paymentDetailsSection}>
+              <CollectionEntry middleSlot={<CollectionSystemGenerated />} />
             </div>
 
             {/* ==================================================
-                STEP 4 + STEP 6 — RIGHT WORKFLOW STACK
+                PAYMENT DETAILS — FULL WIDTH
             ================================================== */}
 
-            <div style={collectionStudioStyles.collectionEntryColumn}>
-              <div style={collectionStudioStyles.collectionEntryBlock}>
-                <CollectionEntry />
-              </div>
-
-              <section style={collectionStudioStyles.paymentDetailsSection}>
-                <PaymentDetails />
-              </section>
-            </div>
+            <section style={collectionStudioStyles.paymentDetailsSection}>
+              <PaymentDetails />
+            </section>
           </section>
 
           {/* ==================================================
-              7 + 8. DOCUMENTS / HISTORY
+              DOCUMENT GALLERY + COLLECTION HISTORY
+
+              DOCUMENTS
+              FULL WIDTH
+
+              HISTORY
+              FULL WIDTH BELOW DOCUMENTS
           ================================================== */}
 
           <section style={collectionStudioStyles.documentsHistoryRow}>
+            {/* ==================================================
+                LOAN DOCUMENTS — FULL WIDTH
+            ================================================== */}
+
             <div style={collectionStudioStyles.loanDocumentsColumn}>
               {selectedLoan ? (
                 <LoanDocuments documents={selectedLoan.documents} />
@@ -1140,6 +1107,10 @@ export default function CollectionStudioPage() {
                 </section>
               )}
             </div>
+
+            {/* ==================================================
+                COLLECTION HISTORY — FULL WIDTH BELOW DOCUMENTS
+            ================================================== */}
 
             <div style={collectionStudioStyles.collectionHistoryColumn}>
               <CollectionHistory />

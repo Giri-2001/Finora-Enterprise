@@ -7,29 +7,24 @@
 //
 // RESPONSIBILITY
 //
-// - System generated collection panel geometry
-// - Auto calculated financial values presentation
-// - Locked financial information presentation
-// - Generated total presentation
-// - Information notice presentation
+// - Premium middle System Generated card
+// - Compact auto-calculated financial presentation
+// - Generated Total emphasis
+// - Locked information presentation
+// - FINORA Theme Engine token consumption
 //
 // IMPORTANT
 //
-// - No local theme system
-// - No local breakpoint system
-// - No responsive logic
+// - Presentation only
 // - No business logic
-// - No inline colour palette
-// - Theme values consume FINORA Theme CSS variables
-// - Responsive geometry belongs to Responsive Engine
-// - Warning / brand colours come from FINORA Theme Engine
+// - No persistence logic
+// - No local theme engine
+// - No local breakpoint engine
+// - No hardcoded application palette
+// - All text / numbers use FINORA Inter contract
 //
-// VERSION : 2.0
+// VERSION : 2.1
 // STATUS  : Production
-// ============================================================
-
-// ============================================================
-// IMPORTS
 // ============================================================
 
 import type { CSSProperties } from "react";
@@ -37,30 +32,15 @@ import type { CSSProperties } from "react";
 // ============================================================
 // FINORA THEME TOKENS
 // ============================================================
-//
-// ThemeProvider is the single source of truth.
-//
-// IMPORTANT:
-// There is intentionally NO local yellow / gold palette here.
-//
-// Brand / warning colours are consumed from the active FINORA
-// theme through CSS variables exposed by Collection Studio.
-//
-// ============================================================
 
 const THEME = {
-  // ==========================================================
-  // SURFACES
-  // ==========================================================
-
   surface: "var(--finora-theme-surface, var(--surface, #FFFFFF))",
 
   surfaceSoft:
     "var(--finora-theme-surface-muted, var(--surface-soft, #F5F7FA))",
 
-  // ==========================================================
-  // TEXT
-  // ==========================================================
+  surfaceStrong:
+    "var(--finora-theme-surface-strong, var(--finora-theme-surface-muted, #EEF2F7))",
 
   textPrimary: "var(--finora-theme-text-primary, var(--text, #111827))",
 
@@ -68,34 +48,22 @@ const THEME = {
 
   textMuted: "var(--finora-theme-text-muted, var(--text-muted, #6B7280))",
 
-  // ==========================================================
-  // BRAND
-  // ==========================================================
+  brand: "var(--finora-theme-brand-primary, var(--accent, #C69214))",
 
-  brand: "var(--finora-theme-brand-primary)",
-
-brandSoft: "var(--finora-theme-brand-accent-soft)",
-
-  // ==========================================================
-  // BORDER
-  // ==========================================================
+  brandSoft: "var(--finora-theme-brand-accent-soft, rgba(198, 146, 20, 0.10))",
 
   border: "var(--finora-theme-border-default, var(--border, #D5DCE5))",
 
   borderStrong: "var(--finora-theme-border-strong, #B8C0CC)",
 
-  // ==========================================================
-  // WARNING
-  //
-  // IMPORTANT:
-  //
-  // These values are controlled by the active FINORA theme.
-  // No local yellow / gold colour is defined here.
-  // ==========================================================
-
-
-
+  shadow: "var(--finora-theme-overlay-shadow, rgba(15, 23, 42, 0.08))",
 } as const;
+
+// ============================================================
+// FONT CONTRACT
+// ============================================================
+
+const INTER_FONT = "Inter, ui-sans-serif, system-ui, sans-serif";
 
 // ============================================================
 // EXPORT
@@ -104,6 +72,9 @@ brandSoft: "var(--finora-theme-brand-accent-soft)",
 export const collectionSystemGeneratedStyles: Record<string, CSSProperties> = {
   // ==========================================================
   // PANEL
+  //
+  // Designed specifically for the middle 20% workspace card.
+  // Parent layout controls final equal-height behaviour.
   // ==========================================================
 
   panel: {
@@ -111,21 +82,29 @@ export const collectionSystemGeneratedStyles: Record<string, CSSProperties> = {
 
     minWidth: 0,
 
+    height: "100%",
+
+    minHeight: "100%",
+
+    display: "flex",
+
+    flexDirection: "column",
+
     boxSizing: "border-box",
 
-    padding: "18px",
+    padding: "15px 14px",
 
-    // IMPORTANT:
-    // Do not use a local warm / yellow surface.
-    // The panel follows the active FINORA theme surface.
     background: THEME.surface,
 
     border: `1px solid ${THEME.border}`,
 
-    borderRadius: "12px",
+    borderRadius: "14px",
 
-    boxShadow:
-      "0 2px 12px var(--finora-theme-overlay-shadow, rgba(15, 23, 42, 0.04))",
+    boxShadow: `0 4px 18px ${THEME.shadow}`,
+
+    overflow: "hidden",
+
+    fontFamily: INTER_FONT,
   },
 
   // ==========================================================
@@ -133,15 +112,21 @@ export const collectionSystemGeneratedStyles: Record<string, CSSProperties> = {
   // ==========================================================
 
   header: {
+    width: "100%",
+
+    minWidth: 0,
+
     display: "flex",
 
     alignItems: "center",
 
     justifyContent: "space-between",
 
-    gap: "12px",
+    gap: "8px",
 
-    paddingBottom: "14px",
+    boxSizing: "border-box",
+
+    paddingBottom: "11px",
 
     borderBottom: `1px solid ${THEME.border}`,
   },
@@ -153,25 +138,31 @@ export const collectionSystemGeneratedStyles: Record<string, CSSProperties> = {
   titleGroup: {
     minWidth: 0,
 
+    width: "100%",
+
     display: "flex",
 
-    alignItems: "center",
+    alignItems: "flex-start",
 
     gap: "8px",
+
+    fontFamily: INTER_FONT,
   },
 
   // ==========================================================
-  // LOCK
+  // LOCK ICON
   // ==========================================================
 
   lock: {
     flexShrink: 0,
 
+    width: "22px",
+
+    height: "22px",
+
+    marginTop: "1px",
+
     color: THEME.brand,
-
-    fontSize: "20px",
-
-    lineHeight: 1,
   },
 
   // ==========================================================
@@ -179,21 +170,21 @@ export const collectionSystemGeneratedStyles: Record<string, CSSProperties> = {
   // ==========================================================
 
   title: {
-    margin: 0,
+    marginTop: "5px",
 
     color: THEME.textPrimary,
 
-    fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
+    fontFamily: INTER_FONT,
 
-    fontSize: "14px",
+    fontSize: "12px",
 
-    fontWeight: 700,
+    fontWeight: 800,
 
-    letterSpacing: "0.03em",
+    letterSpacing: "0.035em",
+
+    lineHeight: 1.3,
 
     textTransform: "uppercase",
-
-    lineHeight: 1.25,
   },
 
   // ==========================================================
@@ -205,9 +196,9 @@ export const collectionSystemGeneratedStyles: Record<string, CSSProperties> = {
 
     color: THEME.textMuted,
 
-    fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
+    fontFamily: INTER_FONT,
 
-    fontSize: "11px",
+    fontSize: "8px",
 
     fontWeight: 500,
 
@@ -218,106 +209,150 @@ export const collectionSystemGeneratedStyles: Record<string, CSSProperties> = {
   // FINANCIAL LIST
   // ==========================================================
 
-  financialList: {
-    width: "100%",
+financialList: {
+  width: "100%",
 
-    display: "flex",
+  minWidth: 0,
 
-    flexDirection: "column",
+  display: "grid",
 
-    gap: "0",
+  gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
 
-    marginTop: "14px",
-  },
+  gap: "7px",
+
+  marginTop: "9px",
+
+  boxSizing: "border-box",
+
+  fontFamily: INTER_FONT,
+},
 
   // ==========================================================
   // FINANCIAL ROW
   // ==========================================================
 
-  financialRow: {
-    minWidth: 0,
+ financialRow: {
+  minWidth: 0,
 
-    display: "flex",
+  minHeight: "54px",
 
-    alignItems: "center",
+  display: "flex",
 
-    justifyContent: "space-between",
+  flexDirection: "column",
 
-    gap: "16px",
+  alignItems: "flex-start",
 
-    padding: "11px 0",
+  justifyContent: "center",
 
-    borderBottom: `1px solid ${THEME.border}`,
-  },
+  gap: "4px",
 
-  // ==========================================================
-  // LABEL
-  // ==========================================================
+  boxSizing: "border-box",
 
-  financialLabel: {
-    minWidth: 0,
+  padding: "8px 9px",
 
-    color: THEME.textSecondary,
+  background: THEME.surfaceSoft,
 
-    fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
+  border: `1px solid ${THEME.border}`,
 
-    fontSize: "13px",
+  borderRadius: "8px",
 
-    fontWeight: 600,
-
-    lineHeight: 1.3,
-  },
+  fontFamily: INTER_FONT,
+},
 
   // ==========================================================
-  // VALUE
+  // FINANCIAL LABEL
   // ==========================================================
 
-  financialValue: {
-    flexShrink: 0,
+ financialLabel: {
+  width: "100%",
 
-    color: THEME.textPrimary,
+  minWidth: 0,
 
-    fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
+  overflow: "hidden",
 
-    fontSize: "14px",
+  textOverflow: "ellipsis",
 
-    fontWeight: 700,
+  whiteSpace: "nowrap",
 
-    lineHeight: 1.3,
+  color: THEME.textMuted,
 
-    whiteSpace: "nowrap",
-  },
+  fontFamily: INTER_FONT,
+
+  fontSize: "11px",
+
+  fontWeight: 750,
+
+  lineHeight: 1.2,
+},
+
+  // ==========================================================
+  // FINANCIAL VALUE
+  // ==========================================================
+
+financialValue: {
+  width: "100%",
+
+  minWidth: 0,
+
+  overflow: "hidden",
+
+  textOverflow: "ellipsis",
+
+  whiteSpace: "nowrap",
+
+  color: THEME.textPrimary,
+
+  fontFamily: INTER_FONT,
+
+  fontSize: "13px",
+
+  fontWeight: 750,
+
+  lineHeight: 1.15,
+
+  letterSpacing: "-0.01em",
+},
 
   // ==========================================================
   // TOTAL DIVIDER
   // ==========================================================
 
-  totalDivider: {
-    width: "100%",
-
-    height: "1px",
-
-    margin: "3px 0 0",
-
-    background: THEME.borderStrong,
-  },
+ totalDivider: {
+  display: "none",
+},
 
   // ==========================================================
-  // GENERATED TOTAL ROW
+  // GENERATED TOTAL
   // ==========================================================
 
   generatedTotal: {
+    width: "100%",
+
     minWidth: 0,
+
+    boxSizing: "border-box",
 
     display: "flex",
 
+    flexDirection: "column",
+
     alignItems: "center",
 
-    justifyContent: "space-between",
+    justifyContent: "center",
 
-    gap: "16px",
+    gap: "4px",
 
-    paddingTop: "10px",
+    marginTop: "8px",
+
+    padding: "10px",
+
+    border: `1px solid ${THEME.brand}`,
+
+    borderRadius: "9px",
+
+    background: THEME.brandSoft,
+
+    fontFamily: INTER_FONT,
   },
 
   // ==========================================================
@@ -325,19 +360,21 @@ export const collectionSystemGeneratedStyles: Record<string, CSSProperties> = {
   // ==========================================================
 
   generatedTotalLabel: {
-    color: THEME.textPrimary,
+    color: THEME.brand,
 
-    fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
+    fontFamily: INTER_FONT,
 
-    fontSize: "12px",
+    fontSize: "10px",
 
-    fontWeight: 800,
+    fontWeight: 750,
 
-    letterSpacing: "0.04em",
+    lineHeight: 1.2,
+
+    letterSpacing: "0.055em",
 
     textTransform: "uppercase",
 
-    lineHeight: 1.3,
+    textAlign: "center",
   },
 
   // ==========================================================
@@ -345,50 +382,59 @@ export const collectionSystemGeneratedStyles: Record<string, CSSProperties> = {
   // ==========================================================
 
   generatedTotalValue: {
-    flexShrink: 0,
+    width: "100%",
+
+    minWidth: 0,
+
+    overflow: "hidden",
+
+    textOverflow: "ellipsis",
+
+    whiteSpace: "nowrap",
 
     color: THEME.textPrimary,
 
-    fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
+    fontFamily: INTER_FONT,
 
-    fontSize: "20px",
+    fontSize: "16px",
 
-    fontWeight: 800,
+    fontWeight: 750,
 
-    lineHeight: 1.15,
+    lineHeight: 1.1,
 
-    whiteSpace: "nowrap",
+    letterSpacing: "-0.025em",
+
+    textAlign: "center",
   },
 
   // ==========================================================
-  // NOTICE
-  //
-  // WARNING COLOUR IS FULLY THEME CONNECTED.
-  //
-  // This notice is intentionally a semantic WARNING surface,
-  // not a locally defined yellow/gold surface.
+  // LOCKED NOTICE
   // ==========================================================
 
   notice: {
     width: "100%",
 
+    minWidth: 0,
+
     display: "flex",
 
     alignItems: "flex-start",
 
-    gap: "9px",
-
-    marginTop: "12px",
-
-    padding: "10px 10px",
+    gap: "7px",
 
     boxSizing: "border-box",
 
+    marginTop: "auto",
 
+    padding: "9px",
 
-border: `1px solid ${THEME.brand}`,
+    border: `1px solid ${THEME.borderStrong}`,
 
-    borderRadius: "8px",
+    borderRadius: "9px",
+
+    background: THEME.surfaceSoft,
+
+    fontFamily: INTER_FONT,
   },
 
   // ==========================================================
@@ -396,15 +442,15 @@ border: `1px solid ${THEME.brand}`,
   // ==========================================================
 
   noticeIcon: {
+    width: "13px",
+
+    height: "13px",
+
     flexShrink: 0,
 
+    marginTop: "1px",
+
     color: THEME.brand,
-
-    fontSize: "13px",
-
-    fontWeight: 800,
-
-    lineHeight: 1.3,
   },
 
   // ==========================================================
@@ -419,6 +465,8 @@ border: `1px solid ${THEME.brand}`,
     flexDirection: "column",
 
     gap: "2px",
+
+    fontFamily: INTER_FONT,
   },
 
   // ==========================================================
@@ -426,13 +474,13 @@ border: `1px solid ${THEME.brand}`,
   // ==========================================================
 
   noticeTitle: {
-    color: THEME.brand,
+    color: THEME.textPrimary,
 
-    fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
+    fontFamily: INTER_FONT,
 
-    fontSize: "12px",
+    fontSize: "8px",
 
-    fontWeight: 600,
+    fontWeight: 800,
 
     lineHeight: 1.3,
   },
@@ -444,21 +492,17 @@ border: `1px solid ${THEME.brand}`,
   noticeMessage: {
     color: THEME.textMuted,
 
-    fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
+    fontFamily: INTER_FONT,
 
-    fontSize: "10px",
+    fontSize: "7px",
 
     fontWeight: 500,
 
-    lineHeight: 1.45,
+    lineHeight: 1.4,
   },
 
   // ==========================================================
   // ALIAS CONTRACTS
-  //
-  // Supports the compact naming contract used by the
-  // presentation component without creating another style
-  // system.
   // ==========================================================
 
   card: {
@@ -466,47 +510,65 @@ border: `1px solid ${THEME.brand}`,
 
     minWidth: 0,
 
+    height: "100%",
+
     boxSizing: "border-box",
 
-    padding: "18px",
+    padding: "15px 14px",
 
     background: THEME.surface,
 
     border: `1px solid ${THEME.border}`,
 
-    borderRadius: "12px",
+    borderRadius: "14px",
+
+    boxShadow: `0 4px 18px ${THEME.shadow}`,
+
+    fontFamily: INTER_FONT,
   },
 
   row: {
+    width: "100%",
+
     minWidth: 0,
 
     display: "flex",
 
-    alignItems: "center",
+    flexDirection: "column",
 
-    justifyContent: "space-between",
+    alignItems: "flex-start",
 
-    gap: "16px",
+    gap: "3px",
 
-    padding: "11px 0",
+    boxSizing: "border-box",
+
+    padding: "8px 0",
 
     borderBottom: `1px solid ${THEME.border}`,
+
+    fontFamily: INTER_FONT,
   },
 
   label: {
     minWidth: 0,
 
-    color: THEME.textSecondary,
+    color: THEME.textMuted,
 
-    fontSize: "11px",
+    fontFamily: INTER_FONT,
 
-    fontWeight: 600,
+    fontSize: "8px",
+
+    fontWeight: 700,
+
+    lineHeight: 1.2,
   },
 
   value: {
-    flexShrink: 0,
+    minWidth: 0,
 
     color: THEME.textPrimary,
+
+    fontFamily: INTER_FONT,
 
     fontSize: "12px",
 
@@ -516,39 +578,57 @@ border: `1px solid ${THEME.brand}`,
   },
 
   total: {
+    width: "100%",
+
     minWidth: 0,
 
     display: "flex",
 
-    alignItems: "center",
+    flexDirection: "column",
 
-    justifyContent: "space-between",
+    alignItems: "flex-start",
 
-    gap: "16px",
+    gap: "4px",
 
-    paddingTop: "14px",
+    boxSizing: "border-box",
+
+    marginTop: "10px",
+
+    padding: "10px",
+
+    border: `1px solid ${THEME.brand}`,
+
+    borderRadius: "9px",
+
+    background: THEME.brandSoft,
+
+    fontFamily: INTER_FONT,
   },
 
   totalLabel: {
-    color: THEME.textPrimary,
+    color: THEME.brand,
 
-    fontSize: "11px",
+    fontFamily: INTER_FONT,
 
-    fontWeight: 800,
+    fontSize: "8px",
 
-    letterSpacing: "0.04em",
+    fontWeight: 850,
+
+    letterSpacing: "0.055em",
 
     textTransform: "uppercase",
   },
 
   totalValue: {
-    flexShrink: 0,
+    minWidth: 0,
 
     color: THEME.textPrimary,
 
-    fontSize: "20px",
+    fontFamily: INTER_FONT,
 
-    fontWeight: 800,
+    fontSize: "18px",
+
+    fontWeight: 900,
 
     whiteSpace: "nowrap",
   },

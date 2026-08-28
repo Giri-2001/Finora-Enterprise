@@ -555,19 +555,14 @@ export default function CollectionSystemGenerated() {
           <LockKeyhole
             aria-hidden="true"
             style={collectionSystemGeneratedStyles.lock}
-            size={20}
+            size={24}
             strokeWidth={2}
           />
 
           <div>
             <h2 style={collectionSystemGeneratedStyles.title}>
-              System Generated (Auto Calculated)
+              System (Auto Calculated)
             </h2>
-
-            <div style={collectionSystemGeneratedStyles.subtitle}>
-              Calculated automatically from the original principal, received
-              collections and current loan balance.
-            </div>
           </div>
         </div>
       </header>
@@ -597,7 +592,7 @@ export default function CollectionSystemGenerated() {
 
         <div style={collectionSystemGeneratedStyles.financialRow}>
           <span style={collectionSystemGeneratedStyles.financialLabel}>
-            Accrued Interest (till today)
+            Interest - till today
           </span>
 
           <strong style={collectionSystemGeneratedStyles.financialValue}>
@@ -647,31 +642,6 @@ export default function CollectionSystemGenerated() {
         <strong style={collectionSystemGeneratedStyles.generatedTotalValue}>
           {currency(generatedTotal)}
         </strong>
-      </div>
-
-      {/* ====================================================
-          LOCKED INFORMATION NOTICE
-      ==================================================== */}
-
-      <div style={collectionSystemGeneratedStyles.notice}>
-        <Info
-          aria-hidden="true"
-          style={collectionSystemGeneratedStyles.noticeIcon}
-          size={15}
-          strokeWidth={2}
-        />
-
-        <div style={collectionSystemGeneratedStyles.noticeContent}>
-          <strong style={collectionSystemGeneratedStyles.noticeTitle}>
-            This amount is auto calculated and locked.
-          </strong>
-
-          <span style={collectionSystemGeneratedStyles.noticeMessage}>
-            Principal Due is the original principal less received collections.
-            Generated Total follows the current authoritative outstanding Loan
-            balance.
-          </span>
-        </div>
       </div>
     </section>
   );

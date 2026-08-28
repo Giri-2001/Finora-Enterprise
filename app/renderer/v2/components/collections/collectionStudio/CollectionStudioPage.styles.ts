@@ -10,22 +10,45 @@
    - Customer selection
    - Customer loan selection
    - Selected loan summary
-   - Collection workspace
-   - System generated section
-   - Collection entry section
-   - Collection summary section
-   - Payment details section
-   - Loan documents section
-   - Collection history section
+   - Premium three-card collection workspace
+   - EMI Collection presentation boundary
+   - System Generated presentation boundary
+   - Manual Collection presentation boundary
+   - Full-width Payment Details section
+   - Full-width Loan Documents section
+   - Full-width Collection History section
    - FINORA theme-token consumption
 
    IMPORTANT
    - No local theme engine
    - No local breakpoint system
    - No business logic
+   - No persistence logic
    - No component-level responsive logic
    - No inline colour palette
-   - All visual geometry remains in dedicated style files
+   - All text and numbers use FINORA Inter contract
+   - Customer + Customer Loans top geometry remains unchanged
+
+   COLLECTION WORKSPACE CONTRACT
+
+   DESKTOP
+
+   ┌────────────── 40% ──────────────┬──── 20% ────┬────────────── 40% ──────────────┐
+   │ EMI COLLECTION                  │ SYSTEM      │ MANUAL COLLECTION               │
+   │                                 │ GENERATED   │                                 │
+   └─────────────────────────────────┴─────────────┴─────────────────────────────────┘
+
+   All three cards:
+   - Same row
+   - Same height
+   - Stretch together
+
+   FOLLOWING SECTIONS
+
+   Payment Details      → 100% width
+   Loan Documents       → 100% width
+   Collection History   → 100% width
+
 =========================================================== */
 
 import type { CSSProperties } from "react";
@@ -96,12 +119,25 @@ const COLORS = {
 
 /* ===========================================================
    TYPOGRAPHY
+
+   FINORA COLLECTION STUDIO LOCK:
+
+   Every visible text / number uses:
+
+   Inter, ui-sans-serif, system-ui, sans-serif
 =========================================================== */
 
 const FONTS = {
-  ui: "Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
+  ui: "Inter, ui-sans-serif, system-ui, sans-serif",
 
-  serif: "Georgia, 'Times New Roman', serif",
+  /*
+   * Kept only as a compatibility alias for existing
+   * style-key references.
+   *
+   * It intentionally resolves to Inter.
+   */
+
+  serif: "Inter, ui-sans-serif, system-ui, sans-serif",
 };
 
 /* ===========================================================
@@ -125,6 +161,8 @@ export const collectionStudioStyles: Record<string, CSSProperties> = {
     color: COLORS.text,
 
     overflowX: "hidden",
+
+    fontFamily: FONTS.ui,
   },
 
   pageInner: {
@@ -136,7 +174,9 @@ export const collectionStudioStyles: Record<string, CSSProperties> = {
 
     boxSizing: "border-box",
 
-    padding: "5px 12px 10px",
+    padding: "5px 12px 18px",
+
+    fontFamily: FONTS.ui,
   },
 
   /* =========================================================
@@ -149,6 +189,8 @@ export const collectionStudioStyles: Record<string, CSSProperties> = {
     boxSizing: "border-box",
 
     padding: "6px 10px 24px",
+
+    fontFamily: FONTS.ui,
   },
 
   pageTitle: {
@@ -156,11 +198,11 @@ export const collectionStudioStyles: Record<string, CSSProperties> = {
 
     color: COLORS.text,
 
-    fontFamily: FONTS.serif,
+    fontFamily: FONTS.ui,
 
     fontSize: "clamp(28px, 2.2vw, 38px)",
 
-    fontWeight: 700,
+    fontWeight: 800,
 
     lineHeight: 1.15,
 
@@ -181,6 +223,9 @@ export const collectionStudioStyles: Record<string, CSSProperties> = {
 
   /* =========================================================
      CUSTOMER + LOAN SELECTION
+
+     IMPORTANT:
+     GEOMETRY UNCHANGED.
   ========================================================= */
 
   selectionRow: {
@@ -199,6 +244,9 @@ export const collectionStudioStyles: Record<string, CSSProperties> = {
 
   /* =========================================================
      CUSTOMER CARD
+
+     IMPORTANT:
+     GEOMETRY UNCHANGED.
   ========================================================= */
 
   customerCard: {
@@ -225,6 +273,8 @@ export const collectionStudioStyles: Record<string, CSSProperties> = {
     borderRadius: "16px",
 
     boxShadow: `0 4px 18px ${COLORS.shadow}`,
+
+    fontFamily: FONTS.ui,
   },
 
   customerSelectionArea: {
@@ -235,6 +285,8 @@ export const collectionStudioStyles: Record<string, CSSProperties> = {
     flexDirection: "column",
 
     justifyContent: "center",
+
+    fontFamily: FONTS.ui,
   },
 
   fieldLabel: {
@@ -302,6 +354,8 @@ export const collectionStudioStyles: Record<string, CSSProperties> = {
 
     color: COLORS.accent,
 
+    fontFamily: FONTS.ui,
+
     fontSize: "14px",
 
     fontWeight: 800,
@@ -315,6 +369,8 @@ export const collectionStudioStyles: Record<string, CSSProperties> = {
     gap: "8px",
 
     marginTop: "12px",
+
+    fontFamily: FONTS.ui,
   },
 
   customerDetailLine: {
@@ -332,7 +388,7 @@ export const collectionStudioStyles: Record<string, CSSProperties> = {
   detailLabel: {
     color: COLORS.muted,
 
-    fontFamily: FONTS.serif,
+    fontFamily: FONTS.ui,
 
     fontSize: "12px",
 
@@ -361,6 +417,8 @@ export const collectionStudioStyles: Record<string, CSSProperties> = {
 
   /* =========================================================
      CUSTOMER PHOTO
+
+     GEOMETRY UNCHANGED.
   ========================================================= */
 
   customerPhotoFrame: {
@@ -415,12 +473,14 @@ export const collectionStudioStyles: Record<string, CSSProperties> = {
     justifyContent: "center",
 
     gap: "4px",
+
+    fontFamily: FONTS.ui,
   },
 
   photoPlaceholderMark: {
     color: COLORS.accent,
 
-    fontFamily: FONTS.serif,
+    fontFamily: FONTS.ui,
 
     fontSize: "30px",
 
@@ -443,6 +503,8 @@ export const collectionStudioStyles: Record<string, CSSProperties> = {
 
   /* =========================================================
      CUSTOMER LOANS CARD
+
+     GEOMETRY UNCHANGED.
   ========================================================= */
 
   loansCard: {
@@ -461,6 +523,8 @@ export const collectionStudioStyles: Record<string, CSSProperties> = {
     borderRadius: "16px",
 
     boxShadow: `0 4px 18px ${COLORS.shadow}`,
+
+    fontFamily: FONTS.ui,
   },
 
   loansHeader: {
@@ -480,7 +544,7 @@ export const collectionStudioStyles: Record<string, CSSProperties> = {
 
     color: COLORS.text,
 
-    fontFamily: FONTS.serif,
+    fontFamily: FONTS.ui,
 
     fontSize: "17px",
 
@@ -550,6 +614,8 @@ export const collectionStudioStyles: Record<string, CSSProperties> = {
 
     color: COLORS.accent,
 
+    fontFamily: FONTS.ui,
+
     fontSize: "11px",
 
     fontWeight: 800,
@@ -557,6 +623,8 @@ export const collectionStudioStyles: Record<string, CSSProperties> = {
 
   /* =========================================================
      LOAN CARDS
+
+     GEOMETRY UNCHANGED.
   ========================================================= */
 
   loanCardsGrid: {
@@ -619,6 +687,8 @@ export const collectionStudioStyles: Record<string, CSSProperties> = {
   loanCardNumber: {
     color: COLORS.text,
 
+    fontFamily: FONTS.ui,
+
     fontSize: "11px",
 
     fontWeight: 800,
@@ -628,6 +698,8 @@ export const collectionStudioStyles: Record<string, CSSProperties> = {
 
   loanCardAmount: {
     color: COLORS.text,
+
+    fontFamily: FONTS.ui,
 
     fontSize: "13px",
 
@@ -647,6 +719,8 @@ export const collectionStudioStyles: Record<string, CSSProperties> = {
 
     color: COLORS.muted,
 
+    fontFamily: FONTS.ui,
+
     fontSize: "9px",
 
     fontWeight: 600,
@@ -656,6 +730,8 @@ export const collectionStudioStyles: Record<string, CSSProperties> = {
     marginTop: "2px",
 
     color: COLORS.success,
+
+    fontFamily: FONTS.ui,
 
     fontSize: "8px",
 
@@ -690,6 +766,8 @@ export const collectionStudioStyles: Record<string, CSSProperties> = {
     borderRadius: "16px",
 
     boxShadow: `0 4px 18px ${COLORS.shadow}`,
+
+    fontFamily: FONTS.ui,
   },
 
   selectedLoanHeader: {
@@ -725,7 +803,7 @@ export const collectionStudioStyles: Record<string, CSSProperties> = {
 
     color: COLORS.text,
 
-    fontFamily: FONTS.serif,
+    fontFamily: FONTS.ui,
 
     fontSize: "21px",
 
@@ -784,6 +862,8 @@ export const collectionStudioStyles: Record<string, CSSProperties> = {
     border: `1px solid ${COLORS.border}`,
 
     borderRadius: "9px",
+
+    fontFamily: FONTS.ui,
   },
 
   metricLabel: {
@@ -815,61 +895,117 @@ export const collectionStudioStyles: Record<string, CSSProperties> = {
   },
 
   /* =========================================================
-     COLLECTION WORKSPACE
-     
-     STEP 3
-     LEFT COLUMN
-     
-     STEP 4 + STEP 6
-     RIGHT COLUMN
+     PREMIUM COLLECTION WORKSPACE
+
+     40% | 20% | 40%
+
+     ROW 1
+     EMI | SYSTEM | MANUAL
+
+     ROW 2
+     PAYMENT DETAILS 100%
+
+     IMPORTANT:
+     Exact component order is established by
+     CollectionStudioPage.tsx / CollectionEntry.tsx.
   ========================================================= */
 
   collectionWorkspace: {
     width: "100%",
 
-    marginTop: "5px",
+    minWidth: 0,
+
+    marginTop: "10px",
 
     display: "grid",
 
-    gridTemplateColumns: "minmax(360px, 0.95fr) minmax(620px, 2.05fr)",
+    gridTemplateColumns: "minmax(0, 2fr) minmax(210px, 1fr) minmax(0, 2fr)",
 
-    gap: "5px",
+    gridAutoRows: "auto",
+
+    gap: "10px",
 
     boxSizing: "border-box",
 
-    alignItems: "start",
+    alignItems: "stretch",
+
+    fontFamily: FONTS.ui,
   },
 
   /* =========================================================
-     STEP 3 — SYSTEM GENERATED COLUMN
+     EMI COLLECTION COLUMN
   ========================================================= */
 
-  systemGeneratedColumn: {
+  emiCollectionColumn: {
+    gridColumn: "1",
+
+    gridRow: "1",
+
     minWidth: 0,
 
     width: "100%",
 
+    height: "100%",
+
+    display: "flex",
+
     boxSizing: "border-box",
 
-    padding: 0,
-
-    background: "transparent",
-
-    border: "none",
-
-    borderRadius: 0,
-
-    boxShadow: "none",
-
     alignSelf: "stretch",
+
+    fontFamily: FONTS.ui,
   },
 
   /* =========================================================
-     STEP 4 — COLLECTION ENTRY COLUMN
-     
-     IMPORTANT:
-     This is the outer FORM SHELL for Step 4.
-     CollectionEntry itself remains transparent.
+     SYSTEM GENERATED COLUMN
+  ========================================================= */
+
+  systemGeneratedColumn: {
+    gridColumn: "2",
+
+    gridRow: "1",
+
+    minWidth: 0,
+
+    width: "100%",
+
+    height: "100%",
+
+    display: "flex",
+
+    boxSizing: "border-box",
+
+    alignSelf: "stretch",
+
+    fontFamily: FONTS.ui,
+  },
+
+  /* =========================================================
+     MANUAL COLLECTION COLUMN
+  ========================================================= */
+
+  manualCollectionColumn: {
+    gridColumn: "3",
+
+    gridRow: "1",
+
+    minWidth: 0,
+
+    width: "100%",
+
+    height: "100%",
+
+    display: "flex",
+
+    boxSizing: "border-box",
+
+    alignSelf: "stretch",
+
+    fontFamily: FONTS.ui,
+  },
+
+  /* =========================================================
+     COLLECTION ENTRY COMPATIBILITY CONTAINER
   ========================================================= */
 
   collectionEntryColumn: {
@@ -879,25 +1015,45 @@ export const collectionStudioStyles: Record<string, CSSProperties> = {
 
     boxSizing: "border-box",
 
-    padding: "16px",
-
-    background: COLORS.surface,
-
-    border: `1px solid ${COLORS.border}`,
-
-    borderRadius: "16px",
-
-    boxShadow: `0 4px 18px ${COLORS.shadow}`,
-
-    alignSelf: "stretch",
-
-    overflow: "visible",
+    fontFamily: FONTS.ui,
   },
 
   collectionEntryBlock: {
     minWidth: 0,
 
+    width: "100%",
+
     boxSizing: "border-box",
+
+    fontFamily: FONTS.ui,
+  },
+
+  /* =========================================================
+     PAYMENT DETAILS
+
+     Full width.
+  ========================================================= */
+
+  paymentDetailsSection: {
+    gridColumn: "1 / -1",
+
+    width: "100%",
+
+    minWidth: 0,
+
+    marginTop: 0,
+
+    boxSizing: "border-box",
+
+    background: "transparent",
+
+    border: "none",
+
+    borderRadius: 0,
+
+    boxShadow: "none",
+
+    fontFamily: FONTS.ui,
   },
 
   /* =========================================================
@@ -926,6 +1082,8 @@ export const collectionStudioStyles: Record<string, CSSProperties> = {
     overflow: "hidden",
 
     boxShadow: `0 4px 18px ${COLORS.shadow}`,
+
+    fontFamily: FONTS.ui,
   },
 
   workspaceColumn: {
@@ -938,6 +1096,8 @@ export const collectionStudioStyles: Record<string, CSSProperties> = {
     boxSizing: "border-box",
 
     background: COLORS.surface,
+
+    fontFamily: FONTS.ui,
   },
 
   workspaceEyebrow: {
@@ -959,7 +1119,7 @@ export const collectionStudioStyles: Record<string, CSSProperties> = {
 
     color: COLORS.text,
 
-    fontFamily: FONTS.serif,
+    fontFamily: FONTS.ui,
 
     fontSize: "18px",
 
@@ -1082,6 +1242,8 @@ export const collectionStudioStyles: Record<string, CSSProperties> = {
     borderRadius: "16px",
 
     boxShadow: `0 4px 18px ${COLORS.shadow}`,
+
+    fontFamily: FONTS.ui,
   },
 
   workflowSectionHeader: {
@@ -1104,6 +1266,8 @@ export const collectionStudioStyles: Record<string, CSSProperties> = {
     gap: "3px",
 
     minWidth: 0,
+
+    fontFamily: FONTS.ui,
   },
 
   workflowSectionEyebrow: {
@@ -1125,7 +1289,7 @@ export const collectionStudioStyles: Record<string, CSSProperties> = {
 
     color: COLORS.text,
 
-    fontFamily: FONTS.serif,
+    fontFamily: FONTS.ui,
 
     fontSize: "18px",
 
@@ -1147,12 +1311,14 @@ export const collectionStudioStyles: Record<string, CSSProperties> = {
   },
 
   /* =========================================================
-     SYSTEM GENERATED + COLLECTION ENTRY
+     SYSTEM GENERATED + COLLECTION ENTRY LEGACY PANELS
   ========================================================= */
 
   systemGeneratedPanel: {
     minWidth: 0,
 
+    height: "100%",
+
     padding: "16px",
 
     boxSizing: "border-box",
@@ -1164,11 +1330,15 @@ export const collectionStudioStyles: Record<string, CSSProperties> = {
     borderRadius: "16px",
 
     boxShadow: `0 4px 18px ${COLORS.shadow}`,
+
+    fontFamily: FONTS.ui,
   },
 
   collectionEntryPanel: {
     minWidth: 0,
 
+    height: "100%",
+
     padding: "16px",
 
     boxSizing: "border-box",
@@ -1180,6 +1350,8 @@ export const collectionStudioStyles: Record<string, CSSProperties> = {
     borderRadius: "16px",
 
     boxShadow: `0 4px 18px ${COLORS.shadow}`,
+
+    fontFamily: FONTS.ui,
   },
 
   /* =========================================================
@@ -1202,6 +1374,8 @@ export const collectionStudioStyles: Record<string, CSSProperties> = {
     borderRadius: "16px",
 
     boxShadow: `0 4px 18px ${COLORS.shadow}`,
+
+    fontFamily: FONTS.ui,
   },
 
   collectionSummaryGrid: {
@@ -1228,6 +1402,8 @@ export const collectionStudioStyles: Record<string, CSSProperties> = {
     border: `1px solid ${COLORS.border}`,
 
     borderRadius: "9px",
+
+    fontFamily: FONTS.ui,
   },
 
   collectionSummaryMetricAccent: {
@@ -1274,6 +1450,8 @@ export const collectionStudioStyles: Record<string, CSSProperties> = {
     border: `1px solid ${COLORS.success}`,
 
     borderRadius: "9px",
+
+    fontFamily: FONTS.ui,
   },
 
   collectionSummaryFinalLabel: {
@@ -1303,43 +1481,21 @@ export const collectionStudioStyles: Record<string, CSSProperties> = {
   },
 
   /* =========================================================
-     PAYMENT DETAILS
-     
-     IMPORTANT:
-     This section is now rendered INSIDE the right-side
-     Collection Entry column.
-     
-     Therefore Step 6 appears directly underneath Step 4.
+     PAYMENT DETAILS LEGACY STYLE CONTRACT
   ========================================================= */
-
-  paymentDetailsSection: {
-    width: "100%",
-
-    marginTop: "15px",
-
-    padding: "0",
-
-    boxSizing: "border-box",
-
-    background: "transparent",
-
-    border: "none",
-
-    borderRadius: "0",
-
-    boxShadow: "none",
-  },
 
   paymentDetailsGrid: {
     width: "100%",
 
     display: "grid",
 
-    gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
+    gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
 
     gap: "12px",
 
     marginTop: "12px",
+
+    fontFamily: FONTS.ui,
   },
 
   paymentDetailsField: {
@@ -1350,6 +1506,8 @@ export const collectionStudioStyles: Record<string, CSSProperties> = {
     flexDirection: "column",
 
     gap: "6px",
+
+    fontFamily: FONTS.ui,
   },
 
   paymentDetailsFieldFull: {
@@ -1362,6 +1520,8 @@ export const collectionStudioStyles: Record<string, CSSProperties> = {
     flexDirection: "column",
 
     gap: "6px",
+
+    fontFamily: FONTS.ui,
   },
 
   paymentDetailsLabel: {
@@ -1382,6 +1542,10 @@ export const collectionStudioStyles: Record<string, CSSProperties> = {
     padding: "0 11px",
 
     boxSizing: "border-box",
+
+    appearance: "none",
+
+    WebkitAppearance: "none",
 
     color: COLORS.text,
 
@@ -1462,20 +1626,34 @@ export const collectionStudioStyles: Record<string, CSSProperties> = {
 
   /* =========================================================
      DOCUMENTS + HISTORY
+
+     PREMIUM STACK:
+
+     DOCUMENTS
+     100%
+
+     ↓
+
+     COLLECTION HISTORY
+     100%
   ========================================================= */
 
   documentsHistoryRow: {
     width: "100%",
 
-    marginTop: "12px",
+    minWidth: 0,
 
-    display: "grid",
+    marginTop: "10px",
 
-    gridTemplateColumns: "minmax(0, 0.95fr) minmax(0, 1.55fr)",
+    display: "flex",
 
-    gap: "12px",
+    flexDirection: "column",
+
+    gap: "10px",
 
     boxSizing: "border-box",
+
+    fontFamily: FONTS.ui,
   },
 
   /* =========================================================
@@ -1485,24 +1663,34 @@ export const collectionStudioStyles: Record<string, CSSProperties> = {
   lowerWorkflowGrid: {
     width: "100%",
 
-    marginTop: "12px",
+    minWidth: 0,
 
-    display: "grid",
+    marginTop: "10px",
 
-    gridTemplateColumns: "minmax(0, 0.95fr) minmax(0, 1.55fr)",
+    display: "flex",
 
-    gap: "12px",
+    flexDirection: "column",
+
+    gap: "10px",
 
     boxSizing: "border-box",
+
+    fontFamily: FONTS.ui,
   },
 
   loanDocumentsColumn: {
+    width: "100%",
+
     minWidth: 0,
 
     boxSizing: "border-box",
+
+    fontFamily: FONTS.ui,
   },
 
   loanDocumentsSection: {
+    width: "100%",
+
     minWidth: 0,
 
     padding: "15px 18px",
@@ -1513,9 +1701,11 @@ export const collectionStudioStyles: Record<string, CSSProperties> = {
 
     border: `1px solid ${COLORS.border}`,
 
-    borderRadius: "16px",
+    borderRadius: "14px",
 
     boxShadow: `0 4px 18px ${COLORS.shadow}`,
+
+    fontFamily: FONTS.ui,
   },
 
   documentThumbnailGrid: {
@@ -1525,7 +1715,7 @@ export const collectionStudioStyles: Record<string, CSSProperties> = {
 
     gridTemplateColumns: "repeat(5, minmax(0, 1fr))",
 
-    gap: "7px",
+    gap: "9px",
 
     marginTop: "12px",
   },
@@ -1547,7 +1737,7 @@ export const collectionStudioStyles: Record<string, CSSProperties> = {
 
     border: `1px solid ${COLORS.border}`,
 
-    borderRadius: "8px",
+    borderRadius: "9px",
 
     overflow: "hidden",
 
@@ -1592,15 +1782,23 @@ export const collectionStudioStyles: Record<string, CSSProperties> = {
 
   /* =========================================================
      COLLECTION HISTORY
+
+     FULL WIDTH.
   ========================================================= */
 
   collectionHistoryColumn: {
+    width: "100%",
+
     minWidth: 0,
 
     boxSizing: "border-box",
+
+    fontFamily: FONTS.ui,
   },
 
   collectionHistorySection: {
+    width: "100%",
+
     minWidth: 0,
 
     padding: "15px 18px",
@@ -1611,11 +1809,13 @@ export const collectionStudioStyles: Record<string, CSSProperties> = {
 
     border: `1px solid ${COLORS.border}`,
 
-    borderRadius: "16px",
+    borderRadius: "14px",
 
     boxShadow: `0 4px 18px ${COLORS.shadow}`,
 
     overflow: "hidden",
+
+    fontFamily: FONTS.ui,
   },
 
   historyTableWrapper: {
@@ -1651,6 +1851,8 @@ export const collectionStudioStyles: Record<string, CSSProperties> = {
 
     color: COLORS.muted,
 
+    fontFamily: FONTS.ui,
+
     fontSize: "8px",
 
     fontWeight: 800,
@@ -1671,6 +1873,8 @@ export const collectionStudioStyles: Record<string, CSSProperties> = {
 
     color: COLORS.text,
 
+    fontFamily: FONTS.ui,
+
     fontSize: "9px",
 
     fontWeight: 600,
@@ -1682,6 +1886,8 @@ export const collectionStudioStyles: Record<string, CSSProperties> = {
     padding: "9px 10px",
 
     color: COLORS.text,
+
+    fontFamily: FONTS.ui,
 
     fontSize: "9px",
 
@@ -1704,6 +1910,8 @@ export const collectionStudioStyles: Record<string, CSSProperties> = {
     background: COLORS.successSoft,
 
     color: COLORS.success,
+
+    fontFamily: FONTS.ui,
 
     fontSize: "8px",
 
@@ -1758,12 +1966,14 @@ export const collectionStudioStyles: Record<string, CSSProperties> = {
     boxShadow: `0 4px 18px ${COLORS.shadow}`,
 
     textAlign: "center",
+
+    fontFamily: FONTS.ui,
   },
 
   emptyStateTitle: {
     color: COLORS.text,
 
-    fontFamily: FONTS.serif,
+    fontFamily: FONTS.ui,
 
     fontSize: "17px",
 
@@ -1800,12 +2010,14 @@ export const collectionStudioStyles: Record<string, CSSProperties> = {
     borderRadius: "16px",
 
     boxShadow: `0 4px 18px ${COLORS.shadow}`,
+
+    fontFamily: FONTS.ui,
   },
 
   futureSectionTitle: {
     color: COLORS.text,
 
-    fontFamily: FONTS.serif,
+    fontFamily: FONTS.ui,
 
     fontSize: "15px",
 

@@ -5,7 +5,26 @@
 //
 // PAYMENT DETAILS STYLES
 //
-// VERSION : 2.0
+// RESPONSIBILITY
+//
+// - Premium Payment Details presentation
+// - FINORA form-control presentation
+// - Full-width payment workflow geometry
+// - Final collection emphasis
+// - Save action hierarchy
+// - Active FINORA theme consumption
+//
+// IMPORTANT
+//
+// - Presentation only
+// - No business logic
+// - No persistence logic
+// - No local theme engine
+// - No local breakpoint engine
+// - No hardcoded application palette
+// - All text and numbers use FINORA Inter contract
+//
+// VERSION : 2.1
 // STATUS  : Production
 // ============================================================
 
@@ -21,28 +40,37 @@ const THEME = {
   surfaceSoft:
     "var(--finora-theme-surface-muted, var(--surface-soft, #F5F7FA))",
 
+  surfaceStrong:
+    "var(--finora-theme-surface-strong, var(--finora-theme-surface-muted, #EEF2F7))",
+
   textPrimary: "var(--finora-theme-text-primary, var(--text, #111827))",
 
   textSecondary: "var(--finora-theme-text-secondary, #475569)",
 
   textMuted: "var(--finora-theme-text-muted, var(--text-muted, #6B7280))",
 
+  textInverse: "var(--finora-theme-text-inverse, #FFFFFF)",
+
   brand: "var(--finora-theme-brand-primary, var(--accent, #C69214))",
 
+  brandSoft: "var(--finora-theme-brand-accent-soft, rgba(198, 146, 20, 0.10))",
+
   border: "var(--finora-theme-border-default, var(--border, #D5DCE5))",
+
+  borderStrong: "var(--finora-theme-border-strong, #B8C0CC)",
 
   success: "var(--finora-theme-success, var(--success, #23865A))",
 
   successSoft: "var(--finora-theme-success-soft, rgba(35, 134, 90, 0.10))",
+
+  shadow: "var(--finora-theme-overlay-shadow, rgba(15, 23, 42, 0.08))",
 } as const;
 
 // ============================================================
-// FONTS
+// FONT CONTRACT
 // ============================================================
 
 const INTER_FONT = "Inter, ui-sans-serif, system-ui, sans-serif";
-
-const GEORGIA_FONT = "Georgia, 'Times New Roman', serif";
 
 // ============================================================
 // STYLES
@@ -60,13 +88,19 @@ export const collectionPaymentDetailsStyles: Record<string, CSSProperties> = {
 
     boxSizing: "border-box",
 
+    padding: "16px",
+
     background: THEME.surface,
 
-    border: "none",
+    border: `1px solid ${THEME.border}`,
 
-    borderRadius: 0,
+    borderRadius: "14px",
 
-    overflow: "hidden",
+    boxShadow: `0 4px 18px ${THEME.shadow}`,
+
+    overflow: "visible",
+
+    fontFamily: INTER_FONT,
   },
 
   // ==========================================================
@@ -74,35 +108,53 @@ export const collectionPaymentDetailsStyles: Record<string, CSSProperties> = {
   // ==========================================================
 
   header: {
+    width: "100%",
+
+    minWidth: 0,
+
     display: "flex",
 
-    alignItems: "flex-start",
+    alignItems: "center",
 
-    gap: "9px",
+    gap: "10px",
 
-    paddingBottom: "7px",
+    boxSizing: "border-box",
+
+    paddingBottom: "12px",
 
     borderBottom: `1px solid ${THEME.border}`,
   },
 
   step: {
+    width: "27px",
+
+    height: "27px",
+
+    flexShrink: 0,
+
     display: "inline-flex",
 
     alignItems: "center",
 
     justifyContent: "center",
 
-    flexShrink: 0,
-
     boxSizing: "border-box",
+
+    border: `1px solid ${THEME.borderStrong}`,
+
+    borderRadius: "8px",
+
+    background: THEME.brandSoft,
 
     color: THEME.brand,
 
-    fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
+    fontFamily: INTER_FONT,
 
-    fontSize: "10px",
+    fontSize: "11px",
 
     fontWeight: 800,
+
+    lineHeight: 1,
   },
 
   title: {
@@ -110,67 +162,74 @@ export const collectionPaymentDetailsStyles: Record<string, CSSProperties> = {
 
     color: THEME.textPrimary,
 
-    fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
+    fontFamily: INTER_FONT,
 
-    fontSize: "16px",
+    fontSize: "14px",
 
-    fontWeight: 700,
+    fontWeight: 800,
 
-    lineHeight: 1.6,
+    lineHeight: 1.25,
 
-    letterSpacing: "0.03em",
+    letterSpacing: "0.035em",
 
     textTransform: "uppercase",
   },
 
   subtitle: {
-    margin: "5px 0 0",
+    margin: "3px 0 0",
 
-    color: THEME.textSecondary,
+    color: THEME.textMuted,
 
-    fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
+    fontFamily: INTER_FONT,
 
     fontSize: "10px",
 
-    lineHeight: 1.2,
+    fontWeight: 500,
+
+    lineHeight: 1.35,
   },
 
   // ==========================================================
-  // FORM BODY
+  // BODY
   //
-  // 3-COLUMN COMPACT GRID
+  // DESKTOP CONTRACT
   //
-  // ROW 1:
-  //   Date | Payment Mode | Reference
+  // ROW 1
+  // Date 4/12 | Mode 4/12 | Reference 4/12
   //
-  // ROW 2:
-  //   Remarks | Final Collection | Actions
+  // ROW 2
+  // Remarks 6/12 | Final 3/12 | Actions 3/12
   // ==========================================================
 
   body: {
+    width: "100%",
+
+    minWidth: 0,
+
     display: "grid",
 
-    gridTemplateColumns:
-      "minmax(150px, 0.95fr) minmax(150px, 0.95fr) minmax(170px, 1fr)",
+    gridTemplateColumns: "repeat(12, minmax(0, 1fr))",
 
-    gridTemplateRows: "auto auto",
-
-    columnGap: "9px",
+    columnGap: "10px",
 
     rowGap: "10px",
 
-    alignItems: "start",
+    alignItems: "end",
 
-    paddingTop: "15px",
+    boxSizing: "border-box",
 
-    minWidth: 0,
+    paddingTop: "13px",
+
+    fontFamily: INTER_FONT,
   },
 
   // ==========================================================
-  // FIELD
+  // STANDARD FIELD
   // ==========================================================
 
   field: {
+    gridColumn: "span 4",
+
     minWidth: 0,
 
     display: "flex",
@@ -178,6 +237,10 @@ export const collectionPaymentDetailsStyles: Record<string, CSSProperties> = {
     flexDirection: "column",
 
     gap: "6px",
+
+    boxSizing: "border-box",
+
+    fontFamily: INTER_FONT,
   },
 
   // ==========================================================
@@ -185,35 +248,46 @@ export const collectionPaymentDetailsStyles: Record<string, CSSProperties> = {
   // ==========================================================
 
   label: {
-    color: THEME.textPrimary,
+    color: THEME.textSecondary,
 
-    fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
+    fontFamily: INTER_FONT,
 
-    fontSize: "13px",
+    fontSize: "10px",
 
-    fontWeight: 700,
+    fontWeight: 750,
 
-    lineHeight: 1.15,
+    lineHeight: 1.2,
+
+    letterSpacing: "0.015em",
   },
 
   // ==========================================================
   // INPUT / SELECT
+  //
+  // Native browser visual language is intentionally removed.
+  // Controls visually follow FINORA Studio.
   // ==========================================================
 
   input: {
     width: "100%",
 
-    height: "36px",
+    minWidth: 0,
 
-    minHeight: "36px",
+    height: "42px",
 
-    padding: "7px 9px",
+    minHeight: "42px",
 
     boxSizing: "border-box",
 
+    padding: "0 12px",
+
+    appearance: "none",
+
+    WebkitAppearance: "none",
+
     border: `1px solid ${THEME.border}`,
 
-    borderRadius: "7px",
+    borderRadius: "9px",
 
     outline: "none",
 
@@ -221,22 +295,24 @@ export const collectionPaymentDetailsStyles: Record<string, CSSProperties> = {
 
     color: THEME.textPrimary,
 
-    fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
+    fontFamily: INTER_FONT,
 
-    fontSize: "13px",
+    fontSize: "12px",
 
-    fontWeight: 600,
+    fontWeight: 650,
+
+    lineHeight: 1.2,
+
+    transition:
+      "border-color 150ms ease, box-shadow 150ms ease, background 150ms ease",
   },
 
   // ==========================================================
   // REMARKS
-  //
-  // Second-row field.
-  // Occupies first two grid columns.
   // ==========================================================
 
   remarksField: {
-    gridColumn: "1",
+    gridColumn: "span 6",
 
     minWidth: 0,
 
@@ -244,27 +320,35 @@ export const collectionPaymentDetailsStyles: Record<string, CSSProperties> = {
 
     flexDirection: "column",
 
-    gap: "3px",
+    gap: "6px",
+
+    boxSizing: "border-box",
+
+    fontFamily: INTER_FONT,
   },
 
   textarea: {
     width: "100%",
 
-    height: "36px",
+    minWidth: 0,
 
-    minHeight: "36px",
+    height: "42px",
 
-    maxHeight: "36px",
+    minHeight: "42px",
 
-    padding: "7px 9px",
+    maxHeight: "42px",
 
     boxSizing: "border-box",
 
+    padding: "10px 12px",
+
     resize: "none",
+
+    overflow: "hidden",
 
     border: `1px solid ${THEME.border}`,
 
-    borderRadius: "7px",
+    borderRadius: "9px",
 
     outline: "none",
 
@@ -272,27 +356,32 @@ export const collectionPaymentDetailsStyles: Record<string, CSSProperties> = {
 
     color: THEME.textPrimary,
 
-    fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
+    fontFamily: INTER_FONT,
 
-    fontSize: "13px",
+    fontSize: "12px",
 
-    lineHeight: 1.5,
+    fontWeight: 550,
+
+    lineHeight: 1.45,
+
+    transition:
+      "border-color 150ms ease, box-shadow 150ms ease, background 150ms ease",
   },
 
   // ==========================================================
   // FINAL COLLECTION
-  //
-  // Compact amount card placed in row 2.
   // ==========================================================
 
   totalBar: {
+    gridColumn: "span 3",
+
     minWidth: 0,
 
-    height: "36px",
+    width: "100%",
 
-    minHeight: "36px",
+    height: "42px",
 
-    maxHeight: "36px",
+    minHeight: "42px",
 
     boxSizing: "border-box",
 
@@ -302,17 +391,19 @@ export const collectionPaymentDetailsStyles: Record<string, CSSProperties> = {
 
     justifyContent: "space-between",
 
-    gap: "8px",
+    gap: "10px",
 
-    padding: "7px 10px",
+    padding: "0 12px",
 
     border: `1px solid ${THEME.success}`,
 
-    borderRadius: "8px",
+    borderRadius: "9px",
 
-    background: "rgba(35, 134, 90, 0.05)",
+    background: THEME.successSoft,
 
     overflow: "hidden",
+
+    fontFamily: INTER_FONT,
   },
 
   totalContent: {
@@ -323,22 +414,32 @@ export const collectionPaymentDetailsStyles: Record<string, CSSProperties> = {
     flexDirection: "column",
 
     justifyContent: "center",
+
+    fontFamily: INTER_FONT,
   },
 
   totalLabel: {
     display: "block",
 
+    minWidth: 0,
+
+    overflow: "hidden",
+
+    textOverflow: "ellipsis",
+
+    whiteSpace: "nowrap",
+
     color: THEME.success,
 
-    fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
+    fontFamily: INTER_FONT,
 
-    fontSize: "12px",
+    fontSize: "9px",
 
-    fontWeight: 750,
+    fontWeight: 850,
 
-    letterSpacing: "0.06em",
+    letterSpacing: "0.055em",
 
-    lineHeight: 1.1,
+    lineHeight: 1.15,
   },
 
   totalHint: {
@@ -348,11 +449,13 @@ export const collectionPaymentDetailsStyles: Record<string, CSSProperties> = {
 
     color: THEME.textMuted,
 
-    fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
+    fontFamily: INTER_FONT,
 
-    fontSize: "7px",
+    fontSize: "8px",
 
-    lineHeight: 1.15,
+    fontWeight: 500,
+
+    lineHeight: 1.1,
 
     whiteSpace: "nowrap",
 
@@ -366,119 +469,129 @@ export const collectionPaymentDetailsStyles: Record<string, CSSProperties> = {
 
     color: THEME.success,
 
-    fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
+    fontFamily: INTER_FONT,
 
     fontSize: "16px",
 
-    fontWeight: 700,
+    fontWeight: 850,
 
     lineHeight: 1,
+
+    letterSpacing: "-0.015em",
 
     whiteSpace: "nowrap",
   },
 
   // ==========================================================
   // ACTIONS
-  //
-  // Second-row third-column.
   // ==========================================================
 
   actions: {
-    gridColumn: "3",
+    gridColumn: "span 3",
 
     minWidth: 0,
 
     width: "100%",
 
-    height: "36px",
+    height: "42px",
 
-    minHeight: "36px",
+    minHeight: "42px",
 
-    maxHeight: "36px",
+    display: "grid",
 
-    display: "flex",
+    gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
 
     alignItems: "stretch",
 
-    justifyContent: "stretch",
-
-    gap: "6px",
-
-    flexWrap: "nowrap",
+    gap: "7px",
 
     boxSizing: "border-box",
+
+    fontFamily: INTER_FONT,
   },
 
   // ==========================================================
-  // SAVE BUTTON
+  // SAVE COLLECTION
   // ==========================================================
 
   saveButton: {
     minWidth: 0,
 
-    flex: "1 1 0",
+    width: "100%",
 
-    minHeight: "36px",
-
-    padding: "7px 11px",
+    minHeight: "42px",
 
     boxSizing: "border-box",
 
-    border: `1px solid ${THEME.brand}`,
+    padding: "0 10px",
 
-    borderRadius: "7px",
+    border: `1px solid ${THEME.borderStrong}`,
 
-    background: THEME.surface,
+    borderRadius: "9px",
+
+    background: THEME.surfaceSoft,
 
     color: THEME.textPrimary,
 
-    fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
+    fontFamily: INTER_FONT,
 
-    fontSize: "11px",
+    fontSize: "9px",
 
-    fontWeight: 700,
+    fontWeight: 800,
+
+    lineHeight: 1.15,
 
     letterSpacing: "0.02em",
 
     cursor: "pointer",
 
     whiteSpace: "nowrap",
+
+    transition:
+      "border-color 150ms ease, background 150ms ease, transform 150ms ease",
   },
 
   // ==========================================================
-  // SAVE & RECEIPT
+  // SAVE + RECEIPT
   // ==========================================================
 
   receiptButton: {
     minWidth: 0,
 
-    flex: "1 1 0",
+    width: "100%",
 
-    minHeight: "36px",
-
-    padding: "7px 12px",
+    minHeight: "42px",
 
     boxSizing: "border-box",
 
+    padding: "0 10px",
+
     border: `1px solid ${THEME.brand}`,
 
-    borderRadius: "7px",
+    borderRadius: "9px",
 
-    background: "rgba(198, 146, 20, 0.12)",
+    background: THEME.brand,
 
-    color: THEME.brand,
+    color: THEME.textInverse,
 
-    fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
+    fontFamily: INTER_FONT,
 
-    fontSize: "11px",
+    fontSize: "9px",
 
-    fontWeight: 700,
+    fontWeight: 850,
+
+    lineHeight: 1.15,
 
     letterSpacing: "0.02em",
 
     cursor: "pointer",
 
     whiteSpace: "nowrap",
+
+    boxShadow: `0 4px 12px ${THEME.shadow}`,
+
+    transition:
+      "border-color 150ms ease, background 150ms ease, transform 150ms ease",
   },
 };
 

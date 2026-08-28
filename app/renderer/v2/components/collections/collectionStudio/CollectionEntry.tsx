@@ -7,7 +7,9 @@
 //
 // RESPONSIBILITY
 //
-// - Render Collection Entry section
+// - Render premium EMI Collection workspace
+// - Render premium Manual Collection workspace
+// - Provide middle presentation slot for System Generated
 // - Switch between EMI and Manual Collection
 // - Load the selected Loan's persisted EMI schedule
 // - Allow eligible EMI selection
@@ -22,103 +24,33 @@
 //
 // IMPORTANT
 //
+// - Business logic remains unchanged
+// - Persistence flow remains unchanged
+// - No financial calculations moved
+// - System Generated remains its own component
+// - middleSlot is presentation composition only
 // - No hardcoded EMI schedule
 // - No dummy schedule
 // - No schedule generation here
 // - No repository access
 // - LoanService remains the Loan boundary
 // - Controller remains the collection-state source of truth
-// - Collection mode is local presentation state
 // - No local theme system
 // - No local responsive system
-// - No inline colour palette
 // - Geometry belongs to dedicated styles
 //
-// MANUAL INPUT RULE
+// PREMIUM WORKSPACE CONTRACT
 //
-// Manual Collection uses FINORA TextInput.
+// LEFT
+//   EMI COLLECTION
 //
-// Native:
+// CENTER
+//   SYSTEM GENERATED
 //
-//   <input type="number">
+// RIGHT
+//   MANUAL COLLECTION
 //
-// is intentionally NOT used.
-//
-// Reason:
-//
-// - No browser spinner arrows
-// - FINORA visual language remains consistent
-// - Numeric input remains supported through inputMode
-// - Invalid characters are sanitized before controller update
-//
-// EMI BALANCE RULE
-//
-// Individual EMI rows:
-//
-// installmentAmount
-//   = original contractual EMI amount.
-//
-// paidAmount
-//   = amount already collected against that EMI.
-//
-// remaining EMI amount
-//   = installmentAmount - paidAmount.
-//
-// Paid / Preclosed EMI
-//   = remaining collectible amount is always zero.
-//
-// Partial EMI
-//   = only its remaining amount may be selected.
-//
-// IMPORTANT:
-//
-// Original installmentAmount is NEVER mutated here.
-//
-// TOTAL EMI BALANCE:
-//
-// reviewData.outstandingBalance
-//
-// is the authoritative current collectible Loan balance.
-//
-// The remaining schedule total is retained only as a defensive
-// fallback when no authoritative outstanding value exists.
-//
-// CRITICAL LOOP FIX
-//
-// - Step 4 does NOT synchronize controller values from useEffect.
-// - Controller writes happen only from explicit user actions or
-//   the single loan-load boundary.
-// - No effect depends on controller values while also writing
-//   those same controller values.
-// - This prevents the React "Maximum update depth exceeded" loop.
-//
-// EMI DROPDOWN BEHAVIOUR
-//
-// - Opening the EMI selector keeps the full schedule visible.
-// - Individual EMI selection does NOT close the dropdown.
-// - Multiple EMIs can therefore be selected continuously.
-// - Select All / Deselect All keeps the dropdown open.
-// - The dropdown closes only when the user explicitly clicks
-//   the EMI selector trigger again.
-// - Paid / Preclosed EMIs remain locked.
-//
-// POST-SAVE RESET
-//
-// PaymentDetails dispatches:
-//
-//   FINORA_COLLECTION_FORM_RESET
-//
-// after a successful collection.
-//
-// CollectionEntry then resets local presentation state:
-//
-// - Mode -> EMI Collection
-// - Selected EMI list -> empty
-// - EMI dropdown -> closed
-//
-// Controller financial fields are reset by PaymentDetails.
-//
-// VERSION : 2.4
+// VERSION : 2.7
 // STATUS  : Production
 // ============================================================
 
@@ -127,6 +59,10 @@
 // ============================================================
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+
+import type { ReactNode } from "react";
+
+import { CalendarCheck2, HandCoins } from "lucide-react";
 
 import { collectionEntryStyles } from "./CollectionEntry.styles";
 
@@ -159,6 +95,24 @@ interface EmiRecord {
 }
 
 // ============================================================
+// PROPS
+// ============================================================
+//
+// Presentation-only composition slot.
+//
+// CollectionStudioPage owns the System Generated component and
+// injects it here so the final workspace can render:
+//
+// EMI | SYSTEM GENERATED | MANUAL
+//
+// No financial or persistence responsibility is transferred.
+// ============================================================
+
+interface CollectionEntryProps {
+  middleSlot?: ReactNode;
+}
+
+// ============================================================
 // HELPERS
 // ============================================================
 
@@ -178,10 +132,6 @@ function safeNumber(value: unknown): number {
 
 // ------------------------------------------------------------
 // AUTHORITATIVE NUMBER CHECK
-// ------------------------------------------------------------
-//
-// Zero is a valid authoritative value.
-//
 // ------------------------------------------------------------
 
 function hasAuthoritativeNumber(value: unknown): boolean {
@@ -273,32 +223,11 @@ function getRemainingEmiAmount(installment: EmiRecord): number {
 
   const paidAmount = safeNumber(installment.paidAmount);
 
-  return Math.max(
-    0,
-
-    installmentAmount - paidAmount,
-  );
+  return Math.max(0, installmentAmount - paidAmount);
 }
 
 // ------------------------------------------------------------
 // SANITIZE MANUAL MONEY INPUT
-// ------------------------------------------------------------
-//
-// TextInput uses type="text" so native number arrows never
-// appear.
-//
-// Allowed:
-//
-//   0-9
-//   one decimal point
-//   maximum 2 decimal places
-//
-// Examples:
-//
-//   9100
-//   150
-//   9100.50
-//
 // ------------------------------------------------------------
 
 function sanitizeMoneyInput(rawValue: string): string {
@@ -324,7 +253,7 @@ function sanitizeMoneyInput(rawValue: string): string {
 // COMPONENT
 // ============================================================
 
-export default function CollectionEntry() {
+export default function CollectionEntry({ middleSlot }: CollectionEntryProps) {
   const { reviewData, updateField } = useCollectionController();
 
   // ==========================================================
@@ -384,10 +313,6 @@ export default function CollectionEntry() {
   // ==========================================================
 
   const loadSchedule = useCallback(async (): Promise<void> => {
-    // ----------------------------------------------------
-    // NO SELECTED LOAN
-    // ----------------------------------------------------
-
     if (!loanId) {
       setEmiSchedule([]);
 
@@ -413,19 +338,11 @@ export default function CollectionEntry() {
     setEmiDropdownOpen(false);
 
     try {
-      // --------------------------------------------------
-      // LOAD AUTHORITATIVE LOAN DATA
-      // --------------------------------------------------
-
       const loans = await fetchLoans();
 
       const selectedLoan = loans.find(
         (loan: { id?: string }) => String(loan.id ?? "") === loanId,
       );
-
-      // --------------------------------------------------
-      // READ PERSISTED EMI SCHEDULE
-      // --------------------------------------------------
 
       const rawSchedule = Array.isArray(
         (
@@ -444,10 +361,6 @@ export default function CollectionEntry() {
               | undefined
           )?.schedule as EmiRecord[])
         : [];
-
-      // --------------------------------------------------
-      // NORMALIZE SCHEDULE
-      // --------------------------------------------------
 
       const normalizedSchedule = rawSchedule
         .map(
@@ -468,10 +381,6 @@ export default function CollectionEntry() {
           }),
         )
         .filter((installment) => installment.installmentNumber > 0);
-
-      // --------------------------------------------------
-      // NEW LOAN LOAD = CLEAR SELECTION
-      // --------------------------------------------------
 
       setEmiSchedule(normalizedSchedule);
 
@@ -529,16 +438,6 @@ export default function CollectionEntry() {
 
   // ==========================================================
   // POST-SAVE LOCAL FORM RESET
-  // ==========================================================
-  //
-  // PaymentDetails resets controller transaction values.
-  //
-  // This listener resets CollectionEntry presentation state:
-  //
-  // - EMI mode
-  // - no selected EMI
-  // - dropdown closed
-  //
   // ==========================================================
 
   useEffect(() => {
@@ -631,7 +530,7 @@ export default function CollectionEntry() {
   );
 
   // ==========================================================
-  // SELECT ALL INDETERMINATE PRESENTATION
+  // SELECT ALL INDETERMINATE
   // ==========================================================
 
   useEffect(() => {
@@ -662,15 +561,6 @@ export default function CollectionEntry() {
 
     updateField("paymentAmount", 0);
 
-    // --------------------------------------------------------
-    // SWITCHING BACK TO EMI MODE
-    // --------------------------------------------------------
-    //
-    // Manual-only adjustment values must not remain silently
-    // attached to an EMI transaction.
-    //
-    // --------------------------------------------------------
-
     if (mode === "emi") {
       updateField("advanceAdjustment", 0);
 
@@ -684,6 +574,7 @@ export default function CollectionEntry() {
 
   function handleManualValueChange(
     field: "paymentAmount" | "advanceAdjustment" | "discountAmount",
+
     rawValue: string,
   ): void {
     const sanitized = sanitizeMoneyInput(rawValue);
@@ -793,420 +684,519 @@ export default function CollectionEntry() {
   }
 
   // ==========================================================
+  // ACTIVATE EMI + TOGGLE SELECTOR
+  // ==========================================================
+
+  function handleEmiTriggerClick(): void {
+    if (isManual) {
+      handleModeChange("emi");
+
+      setEmiDropdownOpen(true);
+
+      return;
+    }
+
+    setEmiDropdownOpen((previous) => !previous);
+  }
+
+  // ==========================================================
+  // ACTIVATE MANUAL FROM FIELD
+  // ==========================================================
+
+  function ensureManualMode(): void {
+    if (!isManual) {
+      handleModeChange("manual");
+    }
+  }
+
+  // ==========================================================
   // RENDER
   // ==========================================================
 
   return (
     <section style={collectionEntryStyles.panel}>
-      {/* ======================================================
-          STEP HEADER
-      ====================================================== */}
+      <div style={collectionEntryStyles.modeWorkspace}>
+        {/* ==================================================
+            LEFT — EMI COLLECTION
+        ================================================== */}
 
-      <header style={collectionEntryStyles.header}>
-        <span style={collectionEntryStyles.step}>4.</span>
-
-        <div style={collectionEntryStyles.titleGroup}>
-          <h2 style={collectionEntryStyles.title}>COLLECTION ENTRY</h2>
-
-          <span style={collectionEntryStyles.subtitle}>
-            Select EMI collection or enter a manual collection.
-          </span>
-        </div>
-      </header>
-
-      {/* ======================================================
-          COLLECTION MODE
-      ====================================================== */}
-
-      <div style={collectionEntryStyles.modeRow}>
-        <label
-          onClick={() => handleModeChange("emi")}
+        <section
           style={{
-            ...collectionEntryStyles.radioOption,
+            ...collectionEntryStyles.modeCard,
 
-            ...(!isManual ? collectionEntryStyles.radioOptionActive : {}),
+            ...(!isManual
+              ? collectionEntryStyles.modeCardActive
+              : collectionEntryStyles.modeCardInactive),
           }}
         >
-          <input
-            type="radio"
-            name="collection-mode"
-            checked={!isManual}
-            onChange={() => handleModeChange("emi")}
-            style={collectionEntryStyles.modeRadio}
-          />
+          {/* ================================================
+              EMI HEADER
+          ================================================ */}
 
-          <span>EMI COLLECTION</span>
-        </label>
+          <header style={collectionEntryStyles.modeCardHeader}>
+            <div style={collectionEntryStyles.modeCardHeaderMain}>
+              <CalendarCheck2
+                aria-hidden="true"
+                style={collectionEntryStyles.modeCardIcon}
+              />
 
-        <label
-          onClick={() => handleModeChange("manual")}
-          style={{
-            ...collectionEntryStyles.radioOption,
+              <div style={collectionEntryStyles.modeCardHeadingGroup}>
 
-            ...(isManual ? collectionEntryStyles.radioOptionActive : {}),
-          }}
-        >
-          <input
-            type="radio"
-            name="collection-mode"
-            checked={isManual}
-            onChange={() => handleModeChange("manual")}
-            style={collectionEntryStyles.modeRadio}
-          />
+                <h2 style={collectionEntryStyles.modeCardTitle}>
+                  EMI COLLECTION
+                </h2>
 
-          <span>MANUAL COLLECTION</span>
-        </label>
-      </div>
-
-      {/* ======================================================
-          EMI DROPDOWN SELECTOR
-      ====================================================== */}
-
-      {!isManual && (
-        <div style={collectionEntryStyles.emiDropdown}>
-          <button
-            type="button"
-            aria-haspopup="listbox"
-            aria-expanded={emiDropdownOpen}
-            onClick={() => setEmiDropdownOpen((previous) => !previous)}
-            style={collectionEntryStyles.emiDropdownTrigger}
-          >
-            <span style={collectionEntryStyles.emiDropdownTriggerText}>
-              {selectedEmiNumbers.length > 0
-                ? `${selectedEmiNumbers.length} EMI${
-                    selectedEmiNumbers.length === 1 ? "" : "s"
-                  } selected`
-                : "Select EMI(s)"}
-            </span>
-
-            <span
-              aria-hidden="true"
-              style={collectionEntryStyles.emiDropdownArrow}
-            >
-              {emiDropdownOpen ? "▴" : "▾"}
-            </span>
-          </button>
-
-          {emiDropdownOpen && (
-            <div
-              role="listbox"
-              aria-label="EMI schedule"
-              style={collectionEntryStyles.emiDropdownPanel}
-            >
-              {/* ==============================================
-                  DROPDOWN HEADER
-              ============================================== */}
-
-              <div style={collectionEntryStyles.emiDropdownHeader}>
-                <span style={collectionEntryStyles.scheduleHeader}>
-                  EMI SCHEDULE
-                </span>
-
-                <span style={collectionEntryStyles.scheduleCount}>
-                  {emiSchedule.length}{" "}
-                  {emiSchedule.length === 1 ? "INSTALLMENT" : "INSTALLMENTS"}
-                </span>
+                <p style={collectionEntryStyles.modeCardSubtitle}>
+                  Select one or more eligible EMI installments.
+                </p>
               </div>
+            </div>
 
-              {/* ==============================================
-                  CONTENT
-              ============================================== */}
+            <button
+              type="button"
+              aria-label="Use EMI collection"
+              aria-pressed={!isManual}
+              onClick={() => handleModeChange("emi")}
+              style={{
+                ...collectionEntryStyles.modeCardSelector,
 
-              {loading ? (
-                <div style={collectionEntryStyles.loadingSchedule}>
-                  Loading EMI schedule...
-                </div>
-              ) : loadError ? (
-                <div style={collectionEntryStyles.errorSchedule}>
-                  {loadError}
-                </div>
-              ) : emiSchedule.length === 0 ? (
-                <div style={collectionEntryStyles.emptySchedule}>
-                  No EMI schedule is stored for the selected loan.
-                </div>
-              ) : (
-                <div style={collectionEntryStyles.emiDropdownList}>
-                  {/* ==========================================
-                      EMI ROWS
-                  ========================================== */}
+                ...(!isManual
+                  ? collectionEntryStyles.modeCardSelectorActive
+                  : {}),
+              }}
+            >
+              {!isManual ? "✓" : ""}
+            </button>
+          </header>
 
-                  {emiSchedule.map((installment) => {
-                    const locked = isLockedStatus(installment.status);
+          {/* ================================================
+              EMI BODY
+          ================================================ */}
 
-                    const remainingAmount = getRemainingEmiAmount(installment);
+          <div style={collectionEntryStyles.modeCardBody}>
+            {/* ==============================================
+                EMI SELECTOR
+            ============================================== */}
 
-                    const selected = selectedEmiNumbers.includes(
-                      installment.installmentNumber,
-                    );
+            <div style={collectionEntryStyles.emiDropdown}>
+              <button
+                type="button"
+                aria-haspopup="listbox"
+                aria-expanded={emiDropdownOpen}
+                onClick={handleEmiTriggerClick}
+                style={collectionEntryStyles.emiDropdownTrigger}
+              >
+                <span style={collectionEntryStyles.emiDropdownTriggerText}>
+                  {selectedEmiNumbers.length > 0
+                    ? `${selectedEmiNumbers.length} EMI${
+                        selectedEmiNumbers.length === 1 ? "" : "s"
+                      } selected`
+                    : "Select EMI(s)"}
+                </span>
 
-                    const normalizedStatus = normalizeStatus(
-                      installment.status,
-                    );
+                <span
+                  aria-hidden="true"
+                  style={collectionEntryStyles.emiDropdownArrow}
+                >
+                  {emiDropdownOpen ? "▴" : "▾"}
+                </span>
+              </button>
 
-                    const statusStyle = {
-                      ...collectionEntryStyles.status,
+              {/* ============================================
+                  EMI DROPDOWN
+              ============================================ */}
 
-                      ...(normalizedStatus === "paid"
-                        ? collectionEntryStyles.statusPaid
-                        : normalizedStatus === "preclosed"
-                          ? collectionEntryStyles.statusPreclosed
-                          : collectionEntryStyles.statusPending),
-                    };
+              {emiDropdownOpen && (
+                <div
+                  role="listbox"
+                  aria-label="EMI schedule"
+                  style={collectionEntryStyles.emiDropdownPanel}
+                >
+                  <div style={collectionEntryStyles.emiDropdownHeader}>
+                    <span style={collectionEntryStyles.scheduleHeader}>
+                      EMI SCHEDULE
+                    </span>
 
-                    return (
-                      <label
-                        key={installment.installmentNumber}
-                        style={{
-                          ...collectionEntryStyles.emiDropdownRow,
+                    <span style={collectionEntryStyles.scheduleCount}>
+                      {emiSchedule.length}{" "}
+                      {emiSchedule.length === 1
+                        ? "INSTALLMENT"
+                        : "INSTALLMENTS"}
+                    </span>
+                  </div>
 
-                          ...(selected
-                            ? collectionEntryStyles.selectedRow
-                            : {}),
+                  {loading ? (
+                    <div style={collectionEntryStyles.loadingSchedule}>
+                      Loading EMI schedule...
+                    </div>
+                  ) : loadError ? (
+                    <div style={collectionEntryStyles.errorSchedule}>
+                      {loadError}
+                    </div>
+                  ) : emiSchedule.length === 0 ? (
+                    <div style={collectionEntryStyles.emptySchedule}>
+                      No EMI schedule is stored for the selected loan.
+                    </div>
+                  ) : (
+                    <div style={collectionEntryStyles.emiDropdownList}>
+                      {emiSchedule.map((installment) => {
+                        const locked = isLockedStatus(installment.status);
 
-                          ...(locked ? collectionEntryStyles.lockedRow : {}),
-                        }}
-                      >
-                        <span style={collectionEntryStyles.emiName}>
-                          EMI {installment.installmentNumber}
-                        </span>
+                        const remainingAmount =
+                          getRemainingEmiAmount(installment);
 
-                        <span style={collectionEntryStyles.scheduleTableCell}>
-                          {formatEmiDate(installment.dueDate)}
-                        </span>
+                        const selected = selectedEmiNumbers.includes(
+                          installment.installmentNumber,
+                        );
 
-                        <strong
-                          style={collectionEntryStyles.emiAmount}
-                          title={
-                            locked
-                              ? "Remaining ₹0"
-                              : `Remaining ${currency(remainingAmount)}`
-                          }
-                        >
-                          {currency(installment.installmentAmount)}
+                        const normalizedStatus = normalizeStatus(
+                          installment.status,
+                        );
+
+                        const statusStyle = {
+                          ...collectionEntryStyles.status,
+
+                          ...(normalizedStatus === "paid"
+                            ? collectionEntryStyles.statusPaid
+                            : normalizedStatus === "preclosed"
+                              ? collectionEntryStyles.statusPreclosed
+                              : collectionEntryStyles.statusPending),
+                        };
+
+                        return (
+                          <label
+                            key={installment.installmentNumber}
+                            style={{
+                              ...collectionEntryStyles.emiDropdownRow,
+
+                              ...(selected
+                                ? collectionEntryStyles.selectedRow
+                                : {}),
+
+                              ...(locked
+                                ? collectionEntryStyles.lockedRow
+                                : {}),
+                            }}
+                          >
+                            <span style={collectionEntryStyles.emiName}>
+                              EMI {installment.installmentNumber}
+                            </span>
+
+                            <span
+                              style={collectionEntryStyles.scheduleTableCell}
+                            >
+                              {formatEmiDate(installment.dueDate)}
+                            </span>
+
+                            <strong
+                              style={collectionEntryStyles.emiAmount}
+                              title={
+                                locked
+                                  ? "Remaining ₹0"
+                                  : `Remaining ${currency(remainingAmount)}`
+                              }
+                            >
+                              {currency(installment.installmentAmount)}
+                            </strong>
+
+                            <span style={statusStyle}>
+                              {getStatusLabel(installment.status)}
+                            </span>
+
+                            <span style={collectionEntryStyles.selectCell}>
+                              <input
+                                type="checkbox"
+                                checked={locked || selected}
+                                disabled={locked || remainingAmount <= 0}
+                                onChange={() => handleEmiSelection(installment)}
+                                aria-label={
+                                  locked
+                                    ? `EMI ${installment.installmentNumber} is locked`
+                                    : `Select EMI ${installment.installmentNumber}`
+                                }
+                                style={collectionEntryStyles.selectControl}
+                              />
+
+                              {locked && (
+                                <span
+                                  style={collectionEntryStyles.lockIcon}
+                                  title="Completed installment"
+                                  aria-hidden="true"
+                                >
+                                  🔒
+                                </span>
+                              )}
+                            </span>
+                          </label>
+                        );
+                      })}
+
+                      <div style={collectionEntryStyles.emiTotalRow}>
+                        <strong style={collectionEntryStyles.emiTotalLabel}>
+                          TOTAL BALANCE
                         </strong>
 
-                        <span style={statusStyle}>
-                          {getStatusLabel(installment.status)}
+                        <span style={collectionEntryStyles.emiTotalSpacer} />
+
+                        <strong style={collectionEntryStyles.emiTotalAmount}>
+                          {currency(totalRemainingEmiAmount)}
+                        </strong>
+
+                        <span style={collectionEntryStyles.emiTotalStatus}>
+                          SELECT ALL
                         </span>
 
                         <span style={collectionEntryStyles.selectCell}>
                           <input
+                            ref={selectAllCheckboxRef}
                             type="checkbox"
-                            checked={locked || selected}
-                            disabled={locked || remainingAmount <= 0}
-                            onChange={() => handleEmiSelection(installment)}
+                            checked={allEligibleSelected}
+                            disabled={eligibleEmis.length === 0}
+                            onChange={handleSelectAllEmis}
                             aria-label={
-                              locked
-                                ? `EMI ${installment.installmentNumber} is locked`
-                                : `Select EMI ${installment.installmentNumber}`
+                              allEligibleSelected
+                                ? "Deselect all eligible EMIs"
+                                : "Select all eligible EMIs"
+                            }
+                            title={
+                              allEligibleSelected
+                                ? "Deselect all EMIs"
+                                : "Select all EMIs"
                             }
                             style={collectionEntryStyles.selectControl}
                           />
-
-                          {locked && (
-                            <span
-                              style={collectionEntryStyles.lockIcon}
-                              title="Completed installment"
-                              aria-hidden="true"
-                            >
-                              🔒
-                            </span>
-                          )}
                         </span>
-                      </label>
-                    );
-                  })}
-
-                  {/* ==========================================
-                      AUTHORITATIVE REMAINING BALANCE
-                  ========================================== */}
-
-                  <div style={collectionEntryStyles.emiTotalRow}>
-                    <strong style={collectionEntryStyles.emiTotalLabel}>
-                      TOTAL EMI BALANCE
-                    </strong>
-
-                    <span style={collectionEntryStyles.emiTotalSpacer} />
-
-                    <strong style={collectionEntryStyles.emiTotalAmount}>
-                      {currency(totalRemainingEmiAmount)}
-                    </strong>
-
-                    <span style={collectionEntryStyles.emiTotalStatus}>
-                      BALANCE
-                    </span>
-
-                    <span style={collectionEntryStyles.selectCell}>
-                      <input
-                        ref={selectAllCheckboxRef}
-                        type="checkbox"
-                        checked={allEligibleSelected}
-                        disabled={eligibleEmis.length === 0}
-                        onChange={handleSelectAllEmis}
-                        aria-label={
-                          allEligibleSelected
-                            ? "Deselect all eligible EMIs"
-                            : "Select all eligible EMIs"
-                        }
-                        title={
-                          allEligibleSelected
-                            ? "Deselect all EMIs"
-                            : "Select all EMIs"
-                        }
-                        style={collectionEntryStyles.selectControl}
-                      />
-                    </span>
-                  </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
-          )}
-        </div>
-      )}
 
-      {/* ======================================================
-          MANUAL COLLECTION AREA
-      ====================================================== */}
+            {/* ==============================================
+                SELECTED EMI VALUE
+            ============================================== */}
 
-      {isManual && (
-        <div style={collectionEntryStyles.manualSection}>
-          <div style={collectionEntryStyles.manualHeader}>
-            <div style={collectionEntryStyles.manualTitle}>
-              MANUAL COLLECTION
-            </div>
+            <div
+              style={{
+                ...collectionEntryStyles.compactValueCard,
 
-            <div style={collectionEntryStyles.manualHint}>
-              Enter the collection amount and settlement adjustments.
+                ...(!isManual
+                  ? collectionEntryStyles.compactValueCardActive
+                  : {}),
+              }}
+            >
+              <div style={collectionEntryStyles.compactValueContent}>
+                <span style={collectionEntryStyles.compactValueLabel}>
+                  SELECTED EMI AMOUNT
+                </span>
+
+                <strong style={collectionEntryStyles.compactValueValue}>
+                  {currency(isManual ? 0 : selectedEmiAmount)}
+                </strong>
+              </div>
             </div>
           </div>
+        </section>
 
-          <div style={collectionEntryStyles.manualInputGrid}>
-            {/* ================================================
-                COLLECTION AMOUNT
-            ================================================ */}
+        {/* ==================================================
+            CENTER — SYSTEM GENERATED SLOT
+        ================================================== */}
 
-            <label style={collectionEntryStyles.manualField}>
-              <span style={collectionEntryStyles.manualFieldLabel}>
-                COLLECTION AMOUNT
-              </span>
+        <div style={collectionEntryStyles.middleSlot}>{middleSlot}</div>
 
-              <TextInput
-                type="text"
-                inputMode="decimal"
-                autoComplete="off"
-                value={paymentAmount === 0 ? "" : String(paymentAmount)}
-                onChange={(event) =>
-                  handleManualValueChange("paymentAmount", event.target.value)
-                }
-                placeholder="₹ 0"
-                style={collectionEntryStyles.manualInput}
-                aria-label="Manual collection amount"
-              />
-            </label>
+        {/* ==================================================
+            RIGHT — MANUAL COLLECTION
+        ================================================== */}
 
-            {/* ================================================
-                MANUAL PRINCIPAL
-            ================================================ */}
+        <section
+          style={{
+            ...collectionEntryStyles.modeCard,
 
-            <label style={collectionEntryStyles.manualField}>
-              <span style={collectionEntryStyles.manualFieldLabel}>
-                MANUAL PRINCIPAL
-              </span>
+            ...(isManual
+              ? collectionEntryStyles.modeCardActive
+              : collectionEntryStyles.modeCardInactive),
+          }}
+        >
+          {/* ================================================
+              MANUAL HEADER
+          ================================================ */}
 
-              <TextInput
-                type="text"
-                inputMode="decimal"
-                autoComplete="off"
-                value={manualPrincipal === 0 ? "" : String(manualPrincipal)}
-                onChange={(event) =>
-                  handleManualValueChange(
-                    "advanceAdjustment",
-                    event.target.value,
-                  )
-                }
-                placeholder="₹ 0"
-                style={collectionEntryStyles.manualInput}
-                aria-label="Manual principal"
-              />
-            </label>
+          <header style={collectionEntryStyles.modeCardHeader}>
+  <div style={collectionEntryStyles.modeCardHeaderMain}>
+    <HandCoins
+      aria-hidden="true"
+      style={collectionEntryStyles.modeCardIcon}
+    />
 
-            {/* ================================================
-                DISCOUNT
-            ================================================ */}
+    <div style={collectionEntryStyles.modeCardHeadingGroup}>
 
-            <label style={collectionEntryStyles.manualField}>
-              <span style={collectionEntryStyles.manualFieldLabel}>
-                DISCOUNT
-              </span>
+      <h2 style={collectionEntryStyles.modeCardTitle}>
+        MANUAL COLLECTION
+      </h2>
 
-              <TextInput
-                type="text"
-                inputMode="decimal"
-                autoComplete="off"
-                value={discountAmount === 0 ? "" : String(discountAmount)}
-                onChange={(event) =>
-                  handleManualValueChange("discountAmount", event.target.value)
-                }
-                placeholder="₹ 0"
-                style={collectionEntryStyles.manualInput}
-                aria-label="Discount"
-              />
-            </label>
+      <p style={collectionEntryStyles.modeCardSubtitle}>
+        Enter collection amount and settlement adjustments.
+      </p>
+    </div>
+  </div>
+
+  <button
+    type="button"
+    aria-label="Use manual collection"
+    aria-pressed={isManual}
+    onClick={() => handleModeChange("manual")}
+    style={{
+      ...collectionEntryStyles.modeCardSelector,
+
+      ...(isManual
+        ? collectionEntryStyles.modeCardSelectorActive
+        : {}),
+    }}
+  >
+    {isManual ? "✓" : ""}
+  </button>
+</header>
+
+          {/* ================================================
+              MANUAL BODY
+          ================================================ */}
+
+          <div style={collectionEntryStyles.modeCardBody}>
+            <div style={collectionEntryStyles.manualSection}>
+              <div style={collectionEntryStyles.manualHeader}>
+                <div style={collectionEntryStyles.manualTitle}>
+                  SETTLEMENT ENTRY
+                </div>
+              </div>
+
+              <div style={collectionEntryStyles.manualInputGrid}>
+                {/* ========================================
+                    COLLECTION AMOUNT
+                ======================================== */}
+
+                <label style={collectionEntryStyles.manualField}>
+                  <span style={collectionEntryStyles.manualFieldLabel}>
+                    COLLECTION AMOUNT
+                  </span>
+
+                  <TextInput
+                    type="text"
+                    inputMode="decimal"
+                    autoComplete="off"
+                    value={paymentAmount === 0 ? "" : String(paymentAmount)}
+                    onFocus={ensureManualMode}
+                    onChange={(event) =>
+                      handleManualValueChange(
+                        "paymentAmount",
+                        event.target.value,
+                      )
+                    }
+                    placeholder="₹ 0"
+                    style={collectionEntryStyles.manualInput}
+                    aria-label="Manual collection amount"
+                  />
+                </label>
+
+                {/* ========================================
+                    MANUAL PRINCIPAL
+                ======================================== */}
+
+                <label style={collectionEntryStyles.manualField}>
+                  <span style={collectionEntryStyles.manualFieldLabel}>
+                    MANUAL PRINCIPAL
+                  </span>
+
+                  <TextInput
+                    type="text"
+                    inputMode="decimal"
+                    autoComplete="off"
+                    value={manualPrincipal === 0 ? "" : String(manualPrincipal)}
+                    onFocus={ensureManualMode}
+                    onChange={(event) =>
+                      handleManualValueChange(
+                        "advanceAdjustment",
+                        event.target.value,
+                      )
+                    }
+                    placeholder="₹ 0"
+                    style={collectionEntryStyles.manualInput}
+                    aria-label="Manual principal"
+                  />
+                </label>
+
+                {/* ========================================
+                    DISCOUNT
+                ======================================== */}
+
+                <label style={collectionEntryStyles.manualField}>
+                  <span style={collectionEntryStyles.manualFieldLabel}>
+                    DISCOUNT
+                  </span>
+
+                  <TextInput
+                    type="text"
+                    inputMode="decimal"
+                    autoComplete="off"
+                    value={discountAmount === 0 ? "" : String(discountAmount)}
+                    onFocus={ensureManualMode}
+                    onChange={(event) =>
+                      handleManualValueChange(
+                        "discountAmount",
+                        event.target.value,
+                      )
+                    }
+                    placeholder="₹ 0"
+                    style={collectionEntryStyles.manualInput}
+                    aria-label="Discount"
+                  />
+                </label>
+              </div>
+            </div>
+
+            {/* ==============================================
+                MANUAL VALUES
+            ============================================== */}
+
+            <div style={collectionEntryStyles.valueGrid}>
+              <div
+                style={{
+                  ...collectionEntryStyles.valueCard,
+
+                  ...(isManual ? collectionEntryStyles.valueCardActive : {}),
+                }}
+              >
+                <span style={collectionEntryStyles.valueLabel}>Collection</span>
+
+                <strong style={collectionEntryStyles.value}>
+                  {currency(isManual ? paymentAmount : 0)}
+                </strong>
+              </div>
+
+              <div
+                style={{
+                  ...collectionEntryStyles.valueCard,
+
+                  ...(isManual ? collectionEntryStyles.valueCardActive : {}),
+                }}
+              >
+                <span style={collectionEntryStyles.valueLabel}>Principal</span>
+
+                <strong style={collectionEntryStyles.value}>
+                  {currency(manualPrincipal)}
+                </strong>
+              </div>
+
+              <div style={collectionEntryStyles.valueCard}>
+                <span style={collectionEntryStyles.valueLabel}>Discount</span>
+
+                <strong style={collectionEntryStyles.value}>
+                  {currency(discountAmount)}
+                </strong>
+              </div>
+            </div>
           </div>
-        </div>
-      )}
-
-      {/* ======================================================
-          COLLECTION VALUES
-      ====================================================== */}
-
-      <div style={collectionEntryStyles.valueGrid}>
-        <div
-          style={{
-            ...collectionEntryStyles.valueCard,
-
-            ...(!isManual ? collectionEntryStyles.valueCardActive : {}),
-          }}
-        >
-          <span style={collectionEntryStyles.valueLabel}>
-            Selected EMI Amount
-          </span>
-
-          <strong style={collectionEntryStyles.value}>
-            {currency(isManual ? 0 : selectedEmiAmount)}
-          </strong>
-
-          {!isManual && (
-            <span style={collectionEntryStyles.valueHint}>
-              {selectedEmiNumbers.length}{" "}
-              {selectedEmiNumbers.length === 1
-                ? "EMI selected"
-                : "EMIs selected"}
-            </span>
-          )}
-        </div>
-
-        <div
-          style={{
-            ...collectionEntryStyles.valueCard,
-
-            ...(isManual ? collectionEntryStyles.valueCardActive : {}),
-          }}
-        >
-          <span style={collectionEntryStyles.valueLabel}>Manual Principal</span>
-
-          <strong style={collectionEntryStyles.value}>
-            {currency(manualPrincipal)}
-          </strong>
-        </div>
-
-        <div style={collectionEntryStyles.valueCard}>
-          <span style={collectionEntryStyles.valueLabel}>Discount</span>
-
-          <strong style={collectionEntryStyles.value}>
-            {currency(discountAmount)}
-          </strong>
-        </div>
+        </section>
       </div>
     </section>
   );
