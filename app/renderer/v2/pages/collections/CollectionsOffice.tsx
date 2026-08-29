@@ -370,17 +370,17 @@ export default function CollectionsOffice() {
   };
 
   const responsiveStatisticsGridStyle: CSSProperties = {
-  ...statisticsGridStyle,
+    ...statisticsGridStyle,
 
-  ...createLoansOfficeStatisticsGridStyle(responsiveTokens),
+    ...createLoansOfficeStatisticsGridStyle(responsiveTokens),
 
-  ...(responsiveTokens.viewport !== "mobile" &&
-  responsiveTokens.viewport !== "tablet"
-    ? {
-        gridTemplateColumns: "repeat(5, minmax(0, 1fr))",
-      }
-    : {}),
-};
+    ...(responsiveTokens.viewport !== "mobile" &&
+    responsiveTokens.viewport !== "tablet"
+      ? {
+          gridTemplateColumns: "repeat(5, minmax(0, 1fr))",
+        }
+      : {}),
+  };
 
   const responsiveStatisticCardStyle: CSSProperties = {
     ...statisticCardStyle,
@@ -472,11 +472,11 @@ export default function CollectionsOffice() {
         }
 
         const [records, loanRecords] = await Promise.all([
-  loadCollections(),
-  fetchLoans(),
-]);
+          loadCollections(),
+          fetchLoans(),
+        ]);
 
-setLoans(loanRecords);
+        setLoans(loanRecords);
 
         const sorted = [...records].sort(
           (a, b) => getSortTime(b) - getSortTime(a),
@@ -530,60 +530,57 @@ setLoans(loanRecords);
     };
 
     window.addEventListener("FINORA_COLLECTION_UPDATED", handleUpdate);
-window.addEventListener("FINORA_LOAN_UPDATED", handleUpdate);
+    window.addEventListener("FINORA_LOAN_UPDATED", handleUpdate);
 
-return () => {
-  window.removeEventListener("FINORA_COLLECTION_UPDATED", handleUpdate);
-  window.removeEventListener("FINORA_LOAN_UPDATED", handleUpdate);
-};
+    return () => {
+      window.removeEventListener("FINORA_COLLECTION_UPDATED", handleUpdate);
+      window.removeEventListener("FINORA_LOAN_UPDATED", handleUpdate);
+    };
   }, [loadCollectionRecords]);
 
   // ==========================================================
   // STATISTICS
   // ==========================================================
 
-const statistics = useMemo(() => {
-  const today = getDateFilterKey(new Date().toISOString());
+  const statistics = useMemo(() => {
+    const today = getDateFilterKey(new Date().toISOString());
 
-  const todayCollections = collections.filter(
-    (collection) => getDateFilterKey(getCollectionDate(collection)) === today,
-  );
+    const todayCollections = collections.filter(
+      (collection) => getDateFilterKey(getCollectionDate(collection)) === today,
+    );
 
-  const totalCollected = collections.reduce(
-    (total, collection) => total + safeNumber(collection.paymentAmount),
-    0,
-  );
+    const totalCollected = collections.reduce(
+      (total, collection) => total + safeNumber(collection.paymentAmount),
+      0,
+    );
 
-  const totalDiscount = collections.reduce(
-    (total, collection) => total + safeNumber(collection.discountAmount),
-    0,
-  );
+    const totalDiscount = collections.reduce(
+      (total, collection) => total + safeNumber(collection.discountAmount),
+      0,
+    );
 
-  const totalOutstanding = loans.reduce((total, loan) => {
-    const status = String(loan.status ?? "")
-      .trim()
-      .toUpperCase();
+    const totalOutstanding = loans.reduce((total, loan) => {
+      const status = String(loan.status ?? "")
+        .trim()
+        .toUpperCase();
 
-    const outstanding = safeNumber(loan.outstanding);
+      const outstanding = safeNumber(loan.outstanding);
 
-    if (
-      (status === "ACTIVE" || status === "RUNNING") &&
-      outstanding > 0
-    ) {
-      return total + outstanding;
-    }
+      if ((status === "ACTIVE" || status === "RUNNING") && outstanding > 0) {
+        return total + outstanding;
+      }
 
-    return total;
-  }, 0);
+      return total;
+    }, 0);
 
-  return {
-    total: collections.length,
-    today: todayCollections.length,
-    collected: totalCollected,
-    discount: totalDiscount,
-    outstanding: totalOutstanding,
-  };
-}, [collections, loans]);
+    return {
+      total: collections.length,
+      today: todayCollections.length,
+      collected: totalCollected,
+      discount: totalDiscount,
+      outstanding: totalOutstanding,
+    };
+  }, [collections, loans]);
 
   // ==========================================================
   // FILTERED COLLECTIONS
@@ -737,6 +734,10 @@ const statistics = useMemo(() => {
   // VIEW COLLECTION
   // ==========================================================
 
+  const viewingLoan = viewingCollection
+    ? loans.find((loan) => loan.id === viewingCollection.loanId)
+    : undefined;
+
   if (viewingCollection) {
     return (
       <StudioLayout
@@ -746,6 +747,7 @@ const statistics = useMemo(() => {
       >
         <ViewCollectionDetails
           collection={viewingCollection}
+          loanDocuments={viewingLoan?.documents ?? []}
           onBack={() => setViewingCollection(null)}
         />
       </StudioLayout>
@@ -821,12 +823,12 @@ const statistics = useMemo(() => {
           </article>
 
           <article style={responsiveStatisticCardStyle}>
-  <span style={statisticLabelStyle}>Total Outstanding</span>
+            <span style={statisticLabelStyle}>Total Outstanding</span>
 
-  <strong style={statisticValueStyle}>
-    {formatCurrency(statistics.outstanding)}
-  </strong>
-</article>
+            <strong style={statisticValueStyle}>
+              {formatCurrency(statistics.outstanding)}
+            </strong>
+          </article>
         </section>
 
         {/* PORTFOLIO */}

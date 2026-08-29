@@ -114,6 +114,8 @@ const COLORS = {
 
   infoSoft: cssVar("--finora-theme-info-soft", "rgba(59, 130, 246, 0.10)"),
 
+  overlay: cssVar("--finora-theme-overlay-backdrop", "rgba(15, 23, 42, 0.58)"),
+
   shadow: cssVar("--finora-theme-overlay-shadow", "rgba(15, 23, 42, 0.08)"),
 };
 
@@ -1932,6 +1934,670 @@ export const collectionStudioStyles: Record<string, CSSProperties> = {
     fontFamily: FONTS.ui,
 
     fontSize: "11px",
+  },
+
+  /* ==========================================================
+     GOLD CUSTODY RELEASE
+  ========================================================== */
+
+  goldCustodyActions: {
+    width: "100%",
+
+    display: "flex",
+
+    alignItems: "center",
+
+    justifyContent: "space-between",
+
+    flexWrap: "wrap",
+
+    gap: "12px",
+
+    marginTop: "16px",
+
+    paddingTop: "14px",
+
+    borderTop: `1px solid ${COLORS.border}`,
+
+    boxSizing: "border-box",
+
+    fontFamily: FONTS.ui,
+  },
+
+  goldCustodyReleaseHint: {
+    minWidth: 0,
+
+    flex: "1 1 320px",
+
+    margin: 0,
+
+    color: COLORS.muted,
+
+    fontFamily: FONTS.ui,
+
+    fontSize: "10px",
+
+    fontWeight: 500,
+
+    lineHeight: 1.5,
+  },
+
+  goldCustodyReleaseHintReady: {
+    color: COLORS.success,
+
+    fontWeight: 700,
+  },
+
+  goldCustodyReleaseActionDisabled: {
+    opacity: 0.48,
+
+    cursor: "not-allowed",
+  },
+
+  /* ==========================================================
+     GOLD RELEASE MODAL — BACKDROP
+  ========================================================== */
+
+  goldReleaseBackdrop: {
+    position: "fixed",
+
+    inset: 0,
+
+    zIndex: 1200,
+
+    display: "flex",
+
+    alignItems: "center",
+
+    justifyContent: "center",
+
+    padding: "24px",
+
+    boxSizing: "border-box",
+
+    background: COLORS.overlay,
+
+    fontFamily: FONTS.ui,
+  },
+
+  /* ==========================================================
+     GOLD RELEASE MODAL — DIALOG
+  ========================================================== */
+
+  goldReleaseDialog: {
+    width: "min(760px, 100%)",
+
+    maxHeight: "92vh",
+
+    display: "flex",
+
+    flexDirection: "column",
+
+    overflow: "hidden",
+
+    boxSizing: "border-box",
+
+    background: COLORS.surface,
+
+    border: `1px solid ${COLORS.border}`,
+
+    borderRadius: "14px",
+
+    boxShadow: `0 20px 60px ${COLORS.shadow}`,
+
+    fontFamily: FONTS.ui,
+  },
+
+  /* ==========================================================
+     GOLD RELEASE MODAL — HEADER
+  ========================================================== */
+
+  goldReleaseHeader: {
+    flexShrink: 0,
+
+    display: "flex",
+
+    alignItems: "flex-start",
+
+    justifyContent: "space-between",
+
+    gap: "16px",
+
+    padding: "16px 18px",
+
+    boxSizing: "border-box",
+
+    borderBottom: `1px solid ${COLORS.border}`,
+  },
+
+  goldReleaseHeaderCopy: {
+    minWidth: 0,
+
+    display: "flex",
+
+    flexDirection: "column",
+
+    gap: "3px",
+  },
+
+  goldReleaseEyebrow: {
+    color: COLORS.accent,
+
+    fontFamily: FONTS.ui,
+
+    fontSize: "9px",
+
+    fontWeight: 800,
+
+    letterSpacing: "0.12em",
+
+    textTransform: "uppercase",
+  },
+
+  goldReleaseTitle: {
+    margin: 0,
+
+    color: COLORS.text,
+
+    fontFamily: FONTS.ui,
+
+    fontSize: "18px",
+
+    fontWeight: 800,
+
+    lineHeight: 1.25,
+  },
+
+  goldReleaseSubtitle: {
+    margin: 0,
+
+    color: COLORS.muted,
+
+    fontFamily: FONTS.ui,
+
+    fontSize: "10px",
+
+    fontWeight: 500,
+
+    lineHeight: 1.45,
+  },
+
+  goldReleaseClose: {
+    flexShrink: 0,
+
+    width: "32px",
+
+    height: "32px",
+
+    display: "inline-flex",
+
+    alignItems: "center",
+
+    justifyContent: "center",
+
+    padding: 0,
+
+    border: `1px solid ${COLORS.border}`,
+
+    borderRadius: "8px",
+
+    background: COLORS.surfaceSoft,
+
+    color: COLORS.text,
+
+    fontFamily: FONTS.ui,
+
+    fontSize: "18px",
+
+    fontWeight: 700,
+
+    lineHeight: 1,
+
+    cursor: "pointer",
+  },
+
+  /* ==========================================================
+     GOLD RELEASE MODAL — BODY
+  ========================================================== */
+
+  goldReleaseBody: {
+    minHeight: 0,
+
+    overflowY: "auto",
+
+    padding: "18px",
+
+    boxSizing: "border-box",
+
+    fontFamily: FONTS.ui,
+  },
+
+  /* ==========================================================
+     GOLD RELEASE — LOAN SUMMARY
+  ========================================================== */
+
+  goldReleaseSummaryGrid: {
+    width: "100%",
+
+    display: "grid",
+
+    gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
+
+    gap: "10px",
+
+    boxSizing: "border-box",
+  },
+
+  goldReleaseSummaryMetric: {
+    minWidth: 0,
+
+    padding: "11px 12px",
+
+    boxSizing: "border-box",
+
+    background: COLORS.surfaceSoft,
+
+    border: `1px solid ${COLORS.border}`,
+
+    borderRadius: "9px",
+
+    fontFamily: FONTS.ui,
+  },
+
+  goldReleaseSummaryLabel: {
+    display: "block",
+
+    color: COLORS.muted,
+
+    fontFamily: FONTS.ui,
+
+    fontSize: "9px",
+
+    fontWeight: 700,
+
+    letterSpacing: "0.06em",
+
+    textTransform: "uppercase",
+  },
+
+  goldReleaseSummaryValue: {
+    display: "block",
+
+    minWidth: 0,
+
+    marginTop: "5px",
+
+    overflow: "hidden",
+
+    textOverflow: "ellipsis",
+
+    whiteSpace: "nowrap",
+
+    color: COLORS.text,
+
+    fontFamily: FONTS.ui,
+
+    fontSize: "12px",
+
+    fontWeight: 800,
+  },
+
+  goldReleaseSettledValue: {
+    color: COLORS.success,
+  },
+
+  /* ==========================================================
+     GOLD RELEASE — PHYSICAL DIRECTION
+  ========================================================== */
+
+  goldReleaseDirectionCard: {
+    width: "100%",
+
+    marginTop: "14px",
+
+    padding: "14px",
+
+    boxSizing: "border-box",
+
+    background: COLORS.accentSoft,
+
+    border: `1px solid ${COLORS.accent}`,
+
+    borderRadius: "10px",
+
+    fontFamily: FONTS.ui,
+  },
+
+  goldReleaseDirectionLabel: {
+    display: "block",
+
+    color: COLORS.accent,
+
+    fontFamily: FONTS.ui,
+
+    fontSize: "9px",
+
+    fontWeight: 800,
+
+    letterSpacing: "0.08em",
+
+    textTransform: "uppercase",
+  },
+
+  goldReleaseDirectionValue: {
+    display: "block",
+
+    marginTop: "7px",
+
+    color: COLORS.text,
+
+    fontFamily: FONTS.ui,
+
+    fontSize: "13px",
+
+    fontWeight: 800,
+
+    lineHeight: 1.6,
+
+    wordBreak: "break-word",
+  },
+
+  goldReleaseLocationCode: {
+    display: "block",
+
+    marginTop: "6px",
+
+    color: COLORS.muted,
+
+    fontFamily: FONTS.ui,
+
+    fontSize: "9px",
+
+    fontWeight: 700,
+
+    letterSpacing: "0.04em",
+  },
+
+  /* ==========================================================
+     GOLD RELEASE — EVIDENCE
+  ========================================================== */
+
+  goldReleaseEvidenceSection: {
+    width: "100%",
+
+    marginTop: "16px",
+
+    fontFamily: FONTS.ui,
+  },
+
+  goldReleaseEvidenceHeader: {
+    display: "flex",
+
+    alignItems: "center",
+
+    justifyContent: "space-between",
+
+    gap: "12px",
+
+    marginBottom: "9px",
+  },
+
+  goldReleaseEvidenceTitle: {
+    margin: 0,
+
+    color: COLORS.text,
+
+    fontFamily: FONTS.ui,
+
+    fontSize: "12px",
+
+    fontWeight: 800,
+  },
+
+  goldReleaseEvidenceCount: {
+    color: COLORS.muted,
+
+    fontFamily: FONTS.ui,
+
+    fontSize: "9px",
+
+    fontWeight: 600,
+  },
+
+  goldReleaseEvidenceGrid: {
+    width: "100%",
+
+    display: "grid",
+
+    gridTemplateColumns: "repeat(auto-fit, minmax(120px, 1fr))",
+
+    gap: "9px",
+
+    boxSizing: "border-box",
+  },
+
+  goldReleaseEvidenceCard: {
+    minWidth: 0,
+
+    overflow: "hidden",
+
+    boxSizing: "border-box",
+
+    background: COLORS.surfaceSoft,
+
+    border: `1px solid ${COLORS.border}`,
+
+    borderRadius: "9px",
+  },
+
+  goldReleaseEvidencePreview: {
+    width: "100%",
+
+    aspectRatio: "4 / 3",
+
+    display: "flex",
+
+    alignItems: "center",
+
+    justifyContent: "center",
+
+    overflow: "hidden",
+
+    boxSizing: "border-box",
+
+    background: COLORS.surfaceStrong,
+  },
+
+  goldReleaseEvidenceImage: {
+    width: "100%",
+
+    height: "100%",
+
+    display: "block",
+
+    objectFit: "cover",
+  },
+
+  goldReleaseEvidencePlaceholder: {
+    padding: "10px",
+
+    color: COLORS.muted,
+
+    fontFamily: FONTS.ui,
+
+    fontSize: "9px",
+
+    fontWeight: 800,
+
+    textAlign: "center",
+
+    textTransform: "uppercase",
+  },
+
+  goldReleaseEvidenceName: {
+    display: "block",
+
+    minWidth: 0,
+
+    padding: "7px 9px",
+
+    overflow: "hidden",
+
+    textOverflow: "ellipsis",
+
+    whiteSpace: "nowrap",
+
+    boxSizing: "border-box",
+
+    color: COLORS.text,
+
+    fontFamily: FONTS.ui,
+
+    fontSize: "9px",
+
+    fontWeight: 700,
+  },
+
+  goldReleaseEvidenceEmpty: {
+    width: "100%",
+
+    padding: "16px",
+
+    boxSizing: "border-box",
+
+    background: COLORS.surfaceSoft,
+
+    border: `1px dashed ${COLORS.borderStrong}`,
+
+    borderRadius: "9px",
+
+    color: COLORS.muted,
+
+    fontFamily: FONTS.ui,
+
+    fontSize: "10px",
+
+    fontWeight: 600,
+
+    textAlign: "center",
+  },
+
+  /* ==========================================================
+     GOLD RELEASE — HANDOVER WARNING
+  ========================================================== */
+
+  goldReleaseWarning: {
+    width: "100%",
+
+    marginTop: "16px",
+
+    padding: "12px 13px",
+
+    boxSizing: "border-box",
+
+    background: COLORS.dangerSoft,
+
+    border: `1px solid ${COLORS.danger}`,
+
+    borderRadius: "9px",
+
+    color: COLORS.danger,
+
+    fontFamily: FONTS.ui,
+
+    fontSize: "10px",
+
+    fontWeight: 700,
+
+    lineHeight: 1.5,
+  },
+
+  goldReleaseError: {
+    width: "100%",
+
+    marginTop: "12px",
+
+    padding: "10px 12px",
+
+    boxSizing: "border-box",
+
+    background: COLORS.dangerSoft,
+
+    border: `1px solid ${COLORS.danger}`,
+
+    borderRadius: "9px",
+
+    color: COLORS.danger,
+
+    fontFamily: FONTS.ui,
+
+    fontSize: "10px",
+
+    fontWeight: 700,
+
+    lineHeight: 1.45,
+  },
+
+  /* ==========================================================
+     GOLD RELEASE MODAL — FOOTER
+  ========================================================== */
+
+  goldReleaseFooter: {
+    flexShrink: 0,
+
+    display: "flex",
+
+    alignItems: "center",
+
+    justifyContent: "flex-end",
+
+    flexWrap: "wrap",
+
+    gap: "9px",
+
+    padding: "13px 18px",
+
+    boxSizing: "border-box",
+
+    borderTop: `1px solid ${COLORS.border}`,
+
+    background: COLORS.surface,
+
+    fontFamily: FONTS.ui,
+  },
+
+  goldReleaseConfirmAction: {
+    minHeight: "42px",
+
+    padding: "0 18px",
+
+    boxSizing: "border-box",
+
+    border: `1px solid ${COLORS.danger}`,
+
+    borderRadius: "9px",
+
+    background: COLORS.danger,
+
+    color: COLORS.textInverse,
+
+    fontFamily: FONTS.ui,
+
+    fontSize: "10px",
+
+    fontWeight: 800,
+
+    letterSpacing: "0.04em",
+
+    textTransform: "uppercase",
+
+    cursor: "pointer",
+  },
+
+  goldReleaseConfirmActionBusy: {
+    opacity: 0.6,
+
+    cursor: "wait",
   },
 
   /* =========================================================

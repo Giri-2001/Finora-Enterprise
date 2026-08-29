@@ -54,17 +54,17 @@
 // IMPORTS
 // ============================================================
 
-import type {
-  CollectionReviewData,
-} from "../../components/collections/CollectionReviewData";
+import type { CollectionReviewData } from "../../components/collections/CollectionReviewData";
 
-import {
-  storageManager,
-} from "../../storage/storageManager";
+import { storageManager } from "../../storage/storageManager";
 
-import type {
-  StorageQuery,
-} from "../../storage/storage.types";
+import type { StorageQuery } from "../../storage/storage.types";
+
+// ============================================================
+// CONSTANTS
+// ============================================================
+
+const COLLECTION_ENTITY = "COLLECTION";
 
 // ============================================================
 // TYPES
@@ -73,21 +73,15 @@ import type {
 // The CollectionReviewData interface intentionally remains the
 // public application contract.
 //
-// StorageIdentity is repository-level metadata only.
+// Storage identity and entity are repository-level metadata only.
 //
 // ============================================================
 
-type CollectionStorageRecord =
-  CollectionReviewData & {
-    id: string;
-  };
+type CollectionStorageRecord = CollectionReviewData & {
+  id: string;
 
-// ============================================================
-// CONSTANTS
-// ============================================================
-
-const COLLECTION_ENTITY =
-  "COLLECTION";
+  entity: typeof COLLECTION_ENTITY;
+};
 
 // ============================================================
 // COLLECTION STORAGE ID
@@ -104,10 +98,7 @@ const COLLECTION_ENTITY =
 //
 // ============================================================
 
-function createCollectionId(
-  collection: CollectionReviewData,
-): string {
-
+function createCollectionId(collection: CollectionReviewData): string {
   // ----------------------------------------------------------
   // Prefer the persisted receipt number when available.
   //
@@ -118,44 +109,23 @@ function createCollectionId(
   // externally supplied receipt number is reused.
   // ----------------------------------------------------------
 
-  const receiptNumber =
-    String(
-      collection.receiptNumber ?? "",
-    ).trim();
+  const receiptNumber = String(collection.receiptNumber ?? "").trim();
 
-  const timestamp =
-    Date.now().toString(36);
+  const timestamp = Date.now().toString(36);
 
-  const randomPart =
-    Math.random()
-      .toString(36)
-      .slice(2, 10);
+  const randomPart = Math.random().toString(36).slice(2, 10);
 
   if (receiptNumber) {
-
-    return [
-      "COL",
-      receiptNumber,
-      timestamp,
-      randomPart,
-    ].join("-");
+    return ["COL", receiptNumber, timestamp, randomPart].join("-");
   }
 
   // ----------------------------------------------------------
   // Defensive fallback.
   // ----------------------------------------------------------
 
-  const loanId =
-    String(
-      collection.loanId ?? "",
-    ).trim();
+  const loanId = String(collection.loanId ?? "").trim();
 
-  return [
-    "COL",
-    loanId || "UNKNOWN-LOAN",
-    timestamp,
-    randomPart,
-  ].join("-");
+  return ["COL", loanId || "UNKNOWN-LOAN", timestamp, randomPart].join("-");
 }
 
 // ============================================================
@@ -163,7 +133,7 @@ function createCollectionId(
 // ============================================================
 //
 // Converts the application collection into a storage record
-// carrying its own unique identity.
+// carrying its own unique identity and storage entity.
 //
 // ============================================================
 
@@ -171,15 +141,12 @@ function buildStorageRecord(
   collection: CollectionReviewData,
   id?: string,
 ): CollectionStorageRecord {
-
   return {
     ...collection,
 
-    id:
-      id ||
-      createCollectionId(
-        collection,
-      ),
+    id: id || createCollectionId(collection),
+
+    entity: COLLECTION_ENTITY,
   };
 }
 
@@ -190,7 +157,7 @@ function buildStorageRecord(
 // The internal storage ID is intentionally not required by the
 // public CollectionReviewData interface.
 //
-// The additional property is preserved at runtime so future
+// The additional properties are preserved at runtime so future
 // update operations can still identify the exact record.
 //
 // ============================================================
@@ -198,7 +165,6 @@ function buildStorageRecord(
 function toCollectionReviewData(
   record: CollectionStorageRecord,
 ): CollectionReviewData {
-
   return {
     ...record,
   };
@@ -218,13 +184,9 @@ function toCollectionReviewData(
 //
 // ============================================================
 
-function buildCollectionQuery(
-  id?: string,
-): StorageQuery {
-
+function buildCollectionQuery(id?: string): StorageQuery {
   return {
-    entity:
-      COLLECTION_ENTITY,
+    entity: COLLECTION_ENTITY,
 
     id,
   };
@@ -253,22 +215,15 @@ function buildCollectionQuery(
 async function findLegacyCollectionByLoanId(
   loanId: string,
 ): Promise<CollectionReviewData | null> {
-
   if (!loanId) {
-
     return null;
   }
 
-  const result =
-    await storageManager.getAll<CollectionStorageRecord>(
-      buildCollectionQuery(),
-    );
+  const result = await storageManager.getAll<CollectionStorageRecord>(
+    buildCollectionQuery(),
+  );
 
-  if (
-    !result.success ||
-    !result.data
-  ) {
-
+  if (!result.success || !result.data) {
     return null;
   }
 
@@ -279,43 +234,19 @@ async function findLegacyCollectionByLoanId(
   // If multiple records exist, return the newest one.
   // ----------------------------------------------------------
 
-  const matchingRecords =
-    result.data
-      .filter(
-        (record) =>
-          String(
-            record.loanId ?? "",
-          ) === loanId,
-      )
-      .sort(
-        (a, b) => {
+  const matchingRecords = result.data
+    .filter((record) => String(record.loanId ?? "") === loanId)
+    .sort((a, b) => {
+      const aTime = new Date(a.updatedAt || a.createdAt || "").getTime();
 
-          const aTime =
-            new Date(
-              a.updatedAt ||
-              a.createdAt ||
-              "",
-            ).getTime();
+      const bTime = new Date(b.updatedAt || b.createdAt || "").getTime();
 
-          const bTime =
-            new Date(
-              b.updatedAt ||
-              b.createdAt ||
-              "",
-            ).getTime();
+      return bTime - aTime;
+    });
 
-          return bTime - aTime;
-        },
-      );
+  const latest = matchingRecords[0];
 
-  const latest =
-    matchingRecords[0];
-
-  return latest
-    ? toCollectionReviewData(
-        latest,
-      )
-    : null;
+  return latest ? toCollectionReviewData(latest) : null;
 }
 
 // ============================================================
@@ -323,35 +254,22 @@ async function findLegacyCollectionByLoanId(
 // ============================================================
 
 export class CollectionRepository {
-
   // ==========================================================
   // GET ALL
   // ==========================================================
 
-  async getAll():
-    Promise<CollectionReviewData[]> {
-
+  async getAll(): Promise<CollectionReviewData[]> {
     try {
+      const result = await storageManager.getAll<CollectionStorageRecord>(
+        buildCollectionQuery(),
+      );
 
-      const result =
-        await storageManager.getAll<CollectionStorageRecord>(
-          buildCollectionQuery(),
-        );
-
-      if (
-        !result.success ||
-        !result.data
-      ) {
-
+      if (!result.success || !result.data) {
         return [];
       }
 
-      return result.data.map(
-        toCollectionReviewData,
-      );
-
+      return result.data.map(toCollectionReviewData);
     } catch {
-
       return [];
     }
   }
@@ -376,62 +294,50 @@ export class CollectionRepository {
   // - createdAt is preserved when supplied.
   // - updatedAt is always refreshed.
   //
+  // Storage requirement:
+  //
+  // - Every persisted record carries entity = COLLECTION.
+  //
   // ==========================================================
 
-  async save(
-    collection: CollectionReviewData,
-  ): Promise<CollectionReviewData> {
-
-    if (
-      !collection.loanId
-    ) {
-
+  async save(collection: CollectionReviewData): Promise<CollectionReviewData> {
+    if (!collection.loanId) {
       throw new Error(
         "Collection loan ID is required before saving a collection.",
       );
     }
 
-    const now =
-      new Date().toISOString();
+    const now = new Date().toISOString();
 
-    const newCollection:
-      CollectionStorageRecord = {
-
+    const newCollection: CollectionStorageRecord = {
       ...collection,
 
       // ------------------------------------------------------
       // Every collection transaction gets a unique ID.
       // ------------------------------------------------------
 
-      id:
-        createCollectionId(
-          collection,
-        ),
+      id: createCollectionId(collection),
 
-      status:
-        "Approved",
+      // ------------------------------------------------------
+      // STORAGE ENTITY
+      //
+      // Required by LOCAL / USB / future CLOUD persistence.
+      // ------------------------------------------------------
 
-      createdAt:
-        collection.createdAt ||
-        now,
+      entity: COLLECTION_ENTITY,
 
-      updatedAt:
-        now,
+      status: "Approved",
+
+      createdAt: collection.createdAt || now,
+
+      updatedAt: now,
     };
 
     const result =
-      await storageManager.save<CollectionStorageRecord>(
-        newCollection,
-      );
+      await storageManager.save<CollectionStorageRecord>(newCollection);
 
-    if (
-      !result.success
-    ) {
-
-      throw new Error(
-        result.error ??
-        "Unable to save collection.",
-      );
+    if (!result.success) {
+      throw new Error(result.error ?? "Unable to save collection.");
     }
 
     // --------------------------------------------------------
@@ -442,9 +348,7 @@ export class CollectionRepository {
     // the public TypeScript contract.
     // --------------------------------------------------------
 
-    return toCollectionReviewData(
-      newCollection,
-    );
+    return toCollectionReviewData(newCollection);
   }
 
   // ==========================================================
@@ -462,30 +366,26 @@ export class CollectionRepository {
   // to locate the matching persisted record using receipt
   // number first and loanId as a final compatibility fallback.
   //
+  // Every updated storage record must also carry the
+  // COLLECTION entity because USB persistence validates the
+  // record itself rather than only the query.
+  //
   // ==========================================================
 
   async update(
     collection: CollectionReviewData,
   ): Promise<CollectionReviewData> {
-
-    if (
-      !collection.loanId
-    ) {
-
+    if (!collection.loanId) {
       throw new Error(
         "Collection loan ID is required before updating a collection.",
       );
     }
 
-    const runtimeCollection =
-      collection as CollectionReviewData & {
-        id?: string;
-      };
+    const runtimeCollection = collection as CollectionReviewData & {
+      id?: string;
+    };
 
-    let collectionId =
-      String(
-        runtimeCollection.id ?? "",
-      ).trim();
+    let collectionId = String(runtimeCollection.id ?? "").trim();
 
     // --------------------------------------------------------
     // Resolve an exact existing record when the application
@@ -493,50 +393,27 @@ export class CollectionRepository {
     // --------------------------------------------------------
 
     if (!collectionId) {
+      const allResult = await storageManager.getAll<CollectionStorageRecord>(
+        buildCollectionQuery(),
+      );
 
-      const allResult =
-        await storageManager.getAll<CollectionStorageRecord>(
-          buildCollectionQuery(),
-        );
-
-      if (
-        allResult.success &&
-        allResult.data
-      ) {
-
+      if (allResult.success && allResult.data) {
         // ----------------------------------------------------
         // Receipt number is the strongest application-level
         // identifier available in the current contract.
         // ----------------------------------------------------
 
-        const receiptNumber =
-          String(
-            collection.receiptNumber ?? "",
-          ).trim();
+        const receiptNumber = String(collection.receiptNumber ?? "").trim();
 
         if (receiptNumber) {
-
-          const receiptMatch =
-            allResult.data.find(
-              (record) =>
-                String(
-                  record.receiptNumber ?? "",
-                ).trim() ===
-                receiptNumber &&
-                String(
-                  record.loanId ?? "",
-                ) ===
-                String(
-                  collection.loanId,
-                ),
-            );
+          const receiptMatch = allResult.data.find(
+            (record) =>
+              String(record.receiptNumber ?? "").trim() === receiptNumber &&
+              String(record.loanId ?? "") === String(collection.loanId),
+          );
 
           if (receiptMatch) {
-
-            collectionId =
-              String(
-                receiptMatch.id ?? "",
-              ).trim();
+            collectionId = String(receiptMatch.id ?? "").trim();
           }
         }
 
@@ -548,36 +425,16 @@ export class CollectionRepository {
         // ----------------------------------------------------
 
         if (!collectionId) {
+          const createdAt = String(collection.createdAt ?? "").trim();
 
-          const createdAt =
-            String(
-              collection.createdAt ?? "",
-            ).trim();
-
-          const legacyMatch =
-            allResult.data.find(
-              (record) =>
-                String(
-                  record.loanId ?? "",
-                ) ===
-                String(
-                  collection.loanId,
-                ) &&
-                (
-                  !createdAt ||
-                  String(
-                    record.createdAt ?? "",
-                  ) ===
-                  createdAt
-                ),
-            );
+          const legacyMatch = allResult.data.find(
+            (record) =>
+              String(record.loanId ?? "") === String(collection.loanId) &&
+              (!createdAt || String(record.createdAt ?? "") === createdAt),
+          );
 
           if (legacyMatch) {
-
-            collectionId =
-              String(
-                legacyMatch.id ?? "",
-              ).trim();
+            collectionId = String(legacyMatch.id ?? "").trim();
           }
         }
       }
@@ -589,50 +446,37 @@ export class CollectionRepository {
     // --------------------------------------------------------
 
     if (!collectionId) {
-
-      collectionId =
-        String(
-          collection.loanId,
-        ).trim();
+      collectionId = String(collection.loanId).trim();
     }
 
     if (!collectionId) {
-
-      throw new Error(
-        "Collection storage ID could not be resolved.",
-      );
+      throw new Error("Collection storage ID could not be resolved.");
     }
 
-    const updatedCollection:
-      CollectionStorageRecord = {
-
+    const updatedCollection: CollectionStorageRecord = {
       ...collection,
 
-      id:
-        collectionId,
+      id: collectionId,
 
-      updatedAt:
-        new Date().toISOString(),
+      // ------------------------------------------------------
+      // STORAGE ENTITY
+      //
+      // Required by USB update validation.
+      // ------------------------------------------------------
+
+      entity: COLLECTION_ENTITY,
+
+      updatedAt: new Date().toISOString(),
     };
 
     const result =
-      await storageManager.update<CollectionStorageRecord>(
-        updatedCollection,
-      );
+      await storageManager.update<CollectionStorageRecord>(updatedCollection);
 
-    if (
-      !result.success
-    ) {
-
-      throw new Error(
-        result.error ??
-        "Unable to update collection.",
-      );
+    if (!result.success) {
+      throw new Error(result.error ?? "Unable to update collection.");
     }
 
-    return toCollectionReviewData(
-      updatedCollection,
-    );
+    return toCollectionReviewData(updatedCollection);
   }
 
   // ==========================================================
@@ -652,12 +496,8 @@ export class CollectionRepository {
   //
   // ==========================================================
 
-  async findById(
-    id: string,
-  ): Promise<CollectionReviewData | null> {
-
+  async findById(id: string): Promise<CollectionReviewData | null> {
     if (!id) {
-
       return null;
     }
 
@@ -665,30 +505,19 @@ export class CollectionRepository {
     // PRIMARY LOOKUP — EXACT COLLECTION STORAGE ID
     // --------------------------------------------------------
 
-    const result =
-      await storageManager.get<CollectionStorageRecord>(
-        buildCollectionQuery(
-          id,
-        ),
-      );
+    const result = await storageManager.get<CollectionStorageRecord>(
+      buildCollectionQuery(id),
+    );
 
-    if (
-      result.success &&
-      result.data
-    ) {
-
-      return toCollectionReviewData(
-        result.data,
-      );
+    if (result.success && result.data) {
+      return toCollectionReviewData(result.data);
     }
 
     // --------------------------------------------------------
     // LEGACY COMPATIBILITY — LOAN ID
     // --------------------------------------------------------
 
-    return findLegacyCollectionByLoanId(
-      id,
-    );
+    return findLegacyCollectionByLoanId(id);
   }
 
   // ==========================================================
@@ -708,28 +537,15 @@ export class CollectionRepository {
   //
   // ==========================================================
 
-  async delete(
-    id: string,
-  ): Promise<void> {
-
+  async delete(id: string): Promise<void> {
     if (!id) {
-
       return;
     }
 
-    const result =
-      await storageManager.delete(
-        buildCollectionQuery(
-          id,
-        ),
-      );
+    const result = await storageManager.delete(buildCollectionQuery(id));
 
     if (!result.success) {
-
-      throw new Error(
-        result.error ??
-        "Unable to delete collection.",
-      );
+      throw new Error(result.error ?? "Unable to delete collection.");
     }
   }
 }
@@ -738,8 +554,7 @@ export class CollectionRepository {
 // SINGLETON
 // ============================================================
 
-export const collectionRepository =
-  new CollectionRepository();
+export const collectionRepository = new CollectionRepository();
 
 // ============================================================
 // END

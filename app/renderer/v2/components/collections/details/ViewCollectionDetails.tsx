@@ -21,13 +21,13 @@
 // - No business mutation.
 // ============================================================
 
-import type {
-  CSSProperties,
-} from "react";
+import type { CSSProperties } from "react";
 
-import type {
-  CollectionReviewData,
-} from "../CollectionReviewData";
+import type { CollectionReviewData } from "../CollectionReviewData";
+
+import type { DocumentsStudioItem } from "../../loans/documents/DocumentsStudio";
+
+import LoanDocuments from "../collectionStudio/LoanDocuments";
 
 import { useTheme } from "../../../themes/provider";
 
@@ -59,143 +59,81 @@ import {
 // ============================================================
 
 interface Props {
-  collection:
-    CollectionReviewData;
+  collection: CollectionReviewData;
+
+  loanDocuments?: DocumentsStudioItem[];
 
   onBack(): void;
 }
 
-type ThemeStyle =
-  CSSProperties &
-    Record<
-      `--${string}`,
-      string
-    >;
+type ThemeStyle = CSSProperties & Record<`--${string}`, string>;
 
 // ============================================================
 // HELPERS
 // ============================================================
 
-function safeNumber(
-  value: number | undefined,
-): number {
-  return typeof value ===
-      "number" &&
-    Number.isFinite(value)
-    ? value
-    : 0;
+function safeNumber(value: number | undefined): number {
+  return typeof value === "number" && Number.isFinite(value) ? value : 0;
 }
 
-function formatCurrency(
-  value: number | undefined,
-): string {
-  return new Intl.NumberFormat(
-    "en-IN",
-    {
-      style: "currency",
+function formatCurrency(value: number | undefined): string {
+  return new Intl.NumberFormat("en-IN", {
+    style: "currency",
 
-      currency: "INR",
+    currency: "INR",
 
-      maximumFractionDigits: 0,
-    },
-  ).format(
-    safeNumber(value),
-  );
+    maximumFractionDigits: 0,
+  }).format(safeNumber(value));
 }
 
-function safeText(
-  value:
-    | string
-    | number
-    | undefined,
-): string {
-  if (
-    value === undefined ||
-    value === null ||
-    String(value).trim() === ""
-  ) {
+function safeText(value: string | number | undefined): string {
+  if (value === undefined || value === null || String(value).trim() === "") {
     return "--";
   }
 
   return String(value);
 }
 
-function formatDate(
-  value: string | undefined,
-): string {
+function formatDate(value: string | undefined): string {
   if (!value) {
     return "--";
   }
 
-  const date =
-    new Date(value);
+  const date = new Date(value);
 
-  if (
-    Number.isNaN(
-      date.getTime(),
-    )
-  ) {
+  if (Number.isNaN(date.getTime())) {
     return "--";
   }
 
-  return `${String(
-    date.getDate(),
-  ).padStart(
-    2,
-    "0",
-  )}/${String(
+  return `${String(date.getDate()).padStart(2, "0")}/${String(
     date.getMonth() + 1,
-  ).padStart(
-    2,
-    "0",
-  )}/${date.getFullYear()}`;
+  ).padStart(2, "0")}/${date.getFullYear()}`;
 }
 
-function formatDateTime(
-  value: string | undefined,
-): string {
+function formatDateTime(value: string | undefined): string {
   if (!value) {
     return "--";
   }
 
-  const date =
-    new Date(value);
+  const date = new Date(value);
 
-  if (
-    Number.isNaN(
-      date.getTime(),
-    )
-  ) {
+  if (Number.isNaN(date.getTime())) {
     return "--";
   }
 
-  return date.toLocaleString(
-    "en-IN",
-  );
+  return date.toLocaleString("en-IN");
 }
 
-function getCollectionType(
-  collection:
-    CollectionReviewData,
-): string {
-  if (
-    collection.collectionType ===
-    "emi"
-  ) {
+function getCollectionType(collection: CollectionReviewData): string {
+  if (collection.collectionType === "emi") {
     return "EMI Collection";
   }
 
-  if (
-    collection.collectionType ===
-    "manual"
-  ) {
+  if (collection.collectionType === "manual") {
     return "Manual Collection";
   }
 
-  if (
-    collection.selectedEmiNumbers
-      ?.length
-  ) {
+  if (collection.selectedEmiNumbers?.length) {
     return "EMI Collection";
   }
 
@@ -208,57 +146,41 @@ function getCollectionType(
 
 export default function ViewCollectionDetails({
   collection,
+  loanDocuments = [],
   onBack,
 }: Props) {
-  const { theme } =
-    useTheme();
+  const { theme } = useTheme();
 
-  const themeVariables:
-    ThemeStyle = {
-    "--finora-theme-background-page":
-      theme.colors.background.page,
+  const themeVariables: ThemeStyle = {
+    "--finora-theme-background-page": theme.colors.background.page,
 
-    "--finora-theme-background-surface":
-      theme.colors.background.surface,
+    "--finora-theme-background-surface": theme.colors.background.surface,
 
     "--finora-theme-background-surface-muted":
       theme.colors.background.surfaceMuted,
 
-    "--finora-theme-text-primary":
-      theme.colors.text.primary,
+    "--finora-theme-text-primary": theme.colors.text.primary,
 
-    "--finora-theme-text-secondary":
-      theme.colors.text.secondary,
+    "--finora-theme-text-secondary": theme.colors.text.secondary,
 
-    "--finora-theme-text-muted":
-      theme.colors.text.muted,
+    "--finora-theme-text-muted": theme.colors.text.muted,
 
-    "--finora-theme-border-default":
-      theme.colors.border.default,
+    "--finora-theme-border-default": theme.colors.border.default,
 
-    "--finora-theme-border-strong":
-      theme.colors.border.strong,
+    "--finora-theme-border-strong": theme.colors.border.strong,
 
-    "--finora-theme-brand-primary":
-      theme.colors.brand.primary,
+    "--finora-theme-brand-primary": theme.colors.brand.primary,
 
-    "--finora-theme-brand-accent-soft":
-      theme.colors.brand.accentSoft,
+    "--finora-theme-brand-accent-soft": theme.colors.brand.accentSoft,
 
-    "--finora-theme-success":
-      theme.colors.status.success,
+    "--finora-theme-success": theme.colors.status.success,
 
-    "--finora-theme-success-soft":
-      theme.colors.status.successSoft,
+    "--finora-theme-success-soft": theme.colors.status.successSoft,
   };
 
-  const selectedEmis =
-    collection.selectedEmiNumbers
-      ?.length
-      ? collection.selectedEmiNumbers.join(
-          ", ",
-        )
-      : "--";
+  const selectedEmis = collection.selectedEmiNumbers?.length
+    ? collection.selectedEmiNumbers.join(", ")
+    : "--";
 
   return (
     <main
@@ -268,23 +190,14 @@ export default function ViewCollectionDetails({
         ...themeVariables,
       }}
     >
-      <header
-        className="finora-view-collection-header"
-        style={headerStyle}
-      >
+      <header className="finora-view-collection-header" style={headerStyle}>
         <div style={headerLeftStyle}>
-          <button
-            type="button"
-            onClick={onBack}
-            style={backButtonStyle}
-          >
+          <button type="button" onClick={onBack} style={backButtonStyle}>
             ← Back
           </button>
 
           <div>
-            <h1 style={titleStyle}>
-              View Collection Details
-            </h1>
+            <h1 style={titleStyle}>View Collection Details</h1>
 
             <p style={subtitleStyle}>
               Read-only persisted collection transaction.
@@ -293,123 +206,67 @@ export default function ViewCollectionDetails({
         </div>
 
         <span style={receiptBadgeStyle}>
-          {collection.receiptNumber ||
-            "No Receipt"}
+          {collection.receiptNumber || "No Receipt"}
         </span>
       </header>
 
-      <div
-        className="finora-view-collection-grid"
-        style={contentGridStyle}
-      >
+      <div className="finora-view-collection-grid" style={contentGridStyle}>
         {/* LEFT */}
 
         <div style={columnStyle}>
           <section style={sectionStyle}>
-            <h2 style={sectionTitleStyle}>
-              Customer Information
-            </h2>
+            <h2 style={sectionTitleStyle}>Customer Information</h2>
 
             <div
               className="finora-view-collection-info-grid"
               style={infoGridStyle}
             >
-              <Info
-                label="Customer Name"
-                value={
-                  collection.customerName
-                }
-              />
+              <Info label="Customer Name" value={collection.customerName} />
 
-              <Info
-                label="Customer ID"
-                value={
-                  collection.customerId
-                }
-              />
+              <Info label="Customer ID" value={collection.customerId} />
 
-              <Info
-                label="Phone Number"
-                value={
-                  collection.customerPhone
-                }
-              />
+              <Info label="Phone Number" value={collection.customerPhone} />
 
               <Info
                 label="Collection Type"
-                value={
-                  getCollectionType(
-                    collection,
-                  )
-                }
+                value={getCollectionType(collection)}
               />
             </div>
           </section>
 
           <section style={sectionStyle}>
-            <h2 style={sectionTitleStyle}>
-              Loan Information
-            </h2>
+            <h2 style={sectionTitleStyle}>Loan Information</h2>
 
             <div
               className="finora-view-collection-info-grid"
               style={infoGridStyle}
             >
-              <Info
-                label="Loan Number"
-                value={
-                  collection.loanNumber
-                }
-              />
+              <Info label="Loan Number" value={collection.loanNumber} />
 
-              <Info
-                label="Loan ID"
-                value={
-                  collection.loanId
-                }
-              />
+              <Info label="Loan ID" value={collection.loanId} />
 
               <Info
                 label="Original Principal"
-                value={
-                  formatCurrency(
-                    collection.loanAmount,
-                  )
-                }
+                value={formatCurrency(collection.loanAmount)}
               />
 
               <Info
                 label="Interest Rate"
-                value={`${safeNumber(
-                  collection.loanInterestRate,
-                )}%`}
+                value={`${safeNumber(collection.loanInterestRate)}%`}
               />
 
-              <Info
-                label="Loan Date"
-                value={
-                  formatDate(
-                    collection.loanDate,
-                  )
-                }
-              />
+              <Info label="Loan Date" value={formatDate(collection.loanDate)} />
 
               <Info
                 label="Recorded Outstanding"
-                value={
-                  formatCurrency(
-                    collection.outstandingBalance,
-                  )
-                }
+                value={formatCurrency(collection.outstandingBalance)}
                 amount
               />
             </div>
           </section>
 
           <section style={sectionStyle}>
-            <h2 style={sectionTitleStyle}>
-              Payment Details
-            </h2>
+            <h2 style={sectionTitleStyle}>Payment Details</h2>
 
             <div
               className="finora-view-collection-info-grid"
@@ -417,43 +274,26 @@ export default function ViewCollectionDetails({
             >
               <Info
                 label="Collected Amount"
-                value={
-                  formatCurrency(
-                    collection.paymentAmount,
-                  )
-                }
+                value={formatCurrency(collection.paymentAmount)}
                 amount
               />
 
-              <Info
-                label="Payment Method"
-                value={
-                  collection.paymentMethod
-                }
-              />
+              <Info label="Payment Method" value={collection.paymentMethod} />
 
               <Info
                 label="Reference Number"
-                value={
-                  collection.paymentReference
-                }
+                value={collection.paymentReference}
               />
 
               <Info
                 label="Receipt Date"
-                value={
-                  formatDate(
-                    collection.receiptDate,
-                  )
-                }
+                value={formatDate(collection.receiptDate)}
               />
             </div>
           </section>
 
           <section style={sectionStyle}>
-            <h2 style={sectionTitleStyle}>
-              Remarks
-            </h2>
+            <h2 style={sectionTitleStyle}>Remarks</h2>
 
             <div style={remarksStyle}>
               {collection.remarks?.trim()
@@ -467,52 +307,33 @@ export default function ViewCollectionDetails({
 
         <div style={columnStyle}>
           <section style={sectionStyle}>
-            <h2 style={sectionTitleStyle}>
-              EMI Information
-            </h2>
+            <h2 style={sectionTitleStyle}>EMI Information</h2>
 
             <div
               className="finora-view-collection-info-grid"
               style={infoGridStyle}
             >
-              <Info
-                label="Selected EMI Numbers"
-                value={selectedEmis}
-              />
+              <Info label="Selected EMI Numbers" value={selectedEmis} />
 
               <Info
                 label="Selected EMI Amount"
-                value={
-                  formatCurrency(
-                    collection.selectedEmiAmount,
-                  )
-                }
+                value={formatCurrency(collection.selectedEmiAmount)}
               />
 
               <Info
                 label="Today Due"
-                value={
-                  formatCurrency(
-                    collection.todayDue,
-                  )
-                }
+                value={formatCurrency(collection.todayDue)}
               />
 
               <Info
                 label="Previous Due"
-                value={
-                  formatCurrency(
-                    collection.previousDue,
-                  )
-                }
+                value={formatCurrency(collection.previousDue)}
               />
             </div>
           </section>
 
           <section style={sectionStyle}>
-            <h2 style={sectionTitleStyle}>
-              Settlement Details
-            </h2>
+            <h2 style={sectionTitleStyle}>Settlement Details</h2>
 
             <div
               className="finora-view-collection-info-grid"
@@ -520,117 +341,74 @@ export default function ViewCollectionDetails({
             >
               <Info
                 label="Penalty"
-                value={
-                  formatCurrency(
-                    collection.penaltyAmount,
-                  )
-                }
+                value={formatCurrency(collection.penaltyAmount)}
               />
 
               <Info
                 label="Discount"
-                value={
-                  formatCurrency(
-                    collection.discountAmount,
-                  )
-                }
+                value={formatCurrency(collection.discountAmount)}
               />
 
               <Info
                 label="Advance Adjustment"
-                value={
-                  formatCurrency(
-                    collection.advanceAdjustment,
-                  )
-                }
+                value={formatCurrency(collection.advanceAdjustment)}
               />
 
               <Info
                 label="Outstanding"
-                value={
-                  formatCurrency(
-                    collection.outstandingBalance,
-                  )
-                }
+                value={formatCurrency(collection.outstandingBalance)}
                 amount
               />
             </div>
           </section>
 
           <section style={sectionStyle}>
-            <h2 style={sectionTitleStyle}>
-              Receipt & Audit
-            </h2>
+            <h2 style={sectionTitleStyle}>Receipt & Audit</h2>
 
             <div
               className="finora-view-collection-info-grid"
               style={infoGridStyle}
             >
-              <Info
-                label="Receipt Number"
-                value={
-                  collection.receiptNumber
-                }
-              />
+              <Info label="Receipt Number" value={collection.receiptNumber} />
 
               <div style={infoItemStyle}>
-                <span style={labelStyle}>
-                  Status
-                </span>
+                <span style={labelStyle}>Status</span>
 
-                <span style={statusStyle}>
-                  {collection.status}
-                </span>
+                <span style={statusStyle}>{collection.status}</span>
               </div>
 
               <Info
                 label="Created At"
-                value={
-                  formatDateTime(
-                    collection.createdAt,
-                  )
-                }
+                value={formatDateTime(collection.createdAt)}
               />
 
               <Info
                 label="Updated At"
-                value={
-                  formatDateTime(
-                    collection.updatedAt,
-                  )
-                }
+                value={formatDateTime(collection.updatedAt)}
               />
             </div>
           </section>
 
           <section style={sectionStyle}>
-            <h2 style={sectionTitleStyle}>
-              Payment Reference
-            </h2>
+            <h2 style={sectionTitleStyle}>Payment Reference</h2>
 
             <div style={remarksStyle}>
-              {collection.paymentReference
-                ?.trim()
+              {collection.paymentReference?.trim()
                 ? collection.paymentReference
                 : "No payment reference recorded."}
             </div>
           </section>
         </div>
       </div>
+      <LoanDocuments documents={loanDocuments} />
 
       <footer style={footerStyle}>
-        <button
-          type="button"
-          onClick={onBack}
-          style={backButtonStyle}
-        >
+        <button type="button" onClick={onBack} style={backButtonStyle}>
           ← Back to Collections Office
         </button>
       </footer>
 
-      <style>
-        {responsiveCss}
-      </style>
+      <style>{responsiveCss}</style>
     </main>
   );
 }
@@ -646,26 +424,15 @@ function Info({
 }: {
   label: string;
 
-  value:
-    | string
-    | number
-    | undefined;
+  value: string | number | undefined;
 
   amount?: boolean;
 }) {
   return (
     <div style={infoItemStyle}>
-      <span style={labelStyle}>
-        {label}
-      </span>
+      <span style={labelStyle}>{label}</span>
 
-      <span
-        style={
-          amount
-            ? amountValueStyle
-            : valueStyle
-        }
-      >
+      <span style={amount ? amountValueStyle : valueStyle}>
         {safeText(value)}
       </span>
     </div>

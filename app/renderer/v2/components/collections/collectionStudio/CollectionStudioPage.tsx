@@ -11,11 +11,14 @@
 // - Load authoritative Customer data through Customer Store
 // - Load authoritative Loan data through LoanService
 // - Show only customers having collection-ready loans
+// - Preserve closed Gold Loans while physical custody is active
 // - Maintain selected customer state
 // - Maintain selected loan state
 // - Normalize selected loan presentation data
 // - Carry persisted loan documents into Collection Studio
 // - Carry authoritative loan principal, interest and date
+// - Load active Gold custody location for Gold Loans
+// - Display selected Gold custody direction read-only
 // - Establish CollectionContext for the complete Studio tree
 // - Render complete Collection Studio workflow
 // - Connect FINORA Responsive Engine
@@ -29,7 +32,6 @@
 // ARCHITECTURE LOCK
 //
 // - No business calculations
-// - No persistence access
 // - No repository access
 // - No localStorage access
 // - No direct filesystem access
@@ -39,10 +41,11 @@
 // - Responsive classification comes from FINORA Responsive Engine
 // - Customer master data comes through Customer Store
 // - Loan data comes through LoanService
+// - Gold custody data comes through Gold custody services
 // - Storage selection comes through StorageManager
 // - Collection state is exposed through CollectionContext
 //
-// VERSION : 2.2
+// VERSION : 2.3
 // STATUS  : Production
 // ============================================================
 
@@ -66,6 +69,8 @@ import type { DocumentsStudioItem } from "../../loans/documents/DocumentsStudio"
 
 import type { CollectionReviewData } from "../CollectionReviewData";
 
+import type { GoldStorageSearchResult } from "../../../types/gold-loan/goldStorage.types";
+
 import CollectionLoanSelection from "./CollectionLoanSelection";
 
 import CollectionSystemGenerated from "./CollectionSystemGenerated";
@@ -86,6 +91,15 @@ import {
 } from "../../../store/customers/customer.store";
 
 import { fetchLoans } from "../../../services/loan/loanService";
+
+import {
+  loadPersistedGoldStorageState,
+  releasePersistedGoldStorage,
+} from "../../../services/gold-loan/goldCustodyPersistenceService";
+
+import { getSession } from "../../../store/authStore";
+
+import { findCurrentGoldStorageByLoanId } from "../../../services/gold-loan/goldStorageService";
 
 import { storageManager } from "../../../storage/storageManager";
 
@@ -223,6 +237,15 @@ export interface CollectionCustomerRecord {
   loans: CollectionLoanRecord[];
 }
 
+type PersistedCollectionDocument = DocumentsStudioItem & {
+  dataUrl?: string;
+};
+
+function getCollectionDocumentSource(document: DocumentsStudioItem): string {
+  const persistedDocument = document as PersistedCollectionDocument;
+
+  return persistedDocument.dataUrl || document.url || "";
+}
 // ============================================================
 // CONSTANTS
 // ============================================================
@@ -325,16 +348,39 @@ function normalizeLoanStatus(
 // COLLECTION-READY LOAN CHECK
 // ============================================================
 
-function isCollectionReadyLoan(loan: Loan): boolean {
+function isCollectionReadyLoan(
+  loan: Loan,
+  hasActiveGoldCustody: boolean,
+): boolean {
   const status = normalizeLoanStatus(loan.status);
 
   const outstanding = Number(loan.outstanding ?? 0);
 
-  return (
-    (status === "ACTIVE" || status === "RUNNING") &&
-    Number.isFinite(outstanding) &&
-    outstanding > 0
-  );
+  if (!Number.isFinite(outstanding)) {
+    return false;
+  }
+
+  // ----------------------------------------------------------
+  // STANDARD FINANCIAL COLLECTION
+  // ----------------------------------------------------------
+
+  const isFinanciallyCollectible =
+    (status === "ACTIVE" || status === "RUNNING") && outstanding > 0;
+
+  // ----------------------------------------------------------
+  // GOLD CUSTODY RELEASE PENDING
+  //
+  // Financial liability may already be CLOSED, but the
+  // physical Gold packet still remains under FINORA custody.
+  //
+  // Keep this Loan available in Collection Studio until the
+  // physical custody release workflow is completed.
+  // ----------------------------------------------------------
+
+  const isGoldCustodyReleasePending =
+    hasActiveGoldCustody && status === "CLOSED" && outstanding === 0;
+
+  return isFinanciallyCollectible || isGoldCustodyReleasePending;
 }
 
 // ============================================================
@@ -382,12 +428,15 @@ function mapLoanToCollectionLoan(loan: Loan): CollectionLoanRecord {
 function buildCollectionCustomerRecord(
   customer: CustomerProfile,
   loans: Loan[],
+  activeGoldCustodyLoanIds: ReadonlySet<string>,
 ): CollectionCustomerRecord {
   const customerId = customer.identity.customerId;
 
   const customerLoans = loans
     .filter((loan: Loan) => loan.customerId === customerId)
-    .filter((loan: Loan) => isCollectionReadyLoan(loan))
+    .filter((loan: Loan) =>
+      isCollectionReadyLoan(loan, activeGoldCustodyLoanIds.has(loan.id)),
+    )
     .map((loan: Loan) => mapLoanToCollectionLoan(loan));
 
   return {
@@ -576,6 +625,14 @@ export default function CollectionStudioPage() {
   >([]);
 
   // ==========================================================
+  // GOLD CUSTODY DATA
+  // ==========================================================
+
+  const [activeGoldCustodyByLoanId, setActiveGoldCustodyByLoanId] = useState<
+    Record<string, GoldStorageSearchResult>
+  >({});
+
+  // ==========================================================
   // LOADING STATE
   // ==========================================================
 
@@ -597,6 +654,18 @@ export default function CollectionStudioPage() {
   // ==========================================================
 
   const [selectedLoanId, setSelectedLoanId] = useState<string>("");
+
+  // ==========================================================
+  // GOLD RELEASE STATE
+  // ==========================================================
+
+  const [goldReleaseModalOpen, setGoldReleaseModalOpen] =
+    useState<boolean>(false);
+
+  const [goldReleaseInProgress, setGoldReleaseInProgress] =
+    useState<boolean>(false);
+
+  const [goldReleaseError, setGoldReleaseError] = useState<string>("");
 
   // ==========================================================
   // COLLECTION REVIEW STATE
@@ -643,7 +712,7 @@ export default function CollectionStudioPage() {
   }
 
   // ==========================================================
-  // LOAD AUTHORITATIVE CUSTOMER + LOAN DATA
+  // LOAD AUTHORITATIVE CUSTOMER + LOAN + GOLD CUSTODY DATA
   // ==========================================================
 
   useEffect(() => {
@@ -700,6 +769,42 @@ export default function CollectionStudioPage() {
         }
 
         // ------------------------------------------------------
+        // LOAD ACTIVE GOLD CUSTODY
+        // ------------------------------------------------------
+
+        const activeGoldCustodyLoanIds = new Set<string>();
+
+        const activeGoldCustodyMap: Record<string, GoldStorageSearchResult> =
+          {};
+
+        const goldStorageResult = await loadPersistedGoldStorageState();
+
+        if (goldStorageResult.success && goldStorageResult.state) {
+          for (const loan of loans) {
+            const activeCustody = findCurrentGoldStorageByLoanId(
+              goldStorageResult.state,
+              loan.id,
+            );
+
+            if (activeCustody) {
+              activeGoldCustodyLoanIds.add(loan.id);
+
+              activeGoldCustodyMap[loan.id] = activeCustody;
+            }
+          }
+        } else {
+          console.warn(
+            "FINORA COLLECTION GOLD CUSTODY LOAD WARNING:",
+            goldStorageResult.error ??
+              "Unable to load active Gold custody state.",
+          );
+        }
+
+        if (cancelled) {
+          return;
+        }
+
+        // ------------------------------------------------------
         // BUILD COLLECTION-READY CUSTOMER LIST
         // ------------------------------------------------------
 
@@ -708,7 +813,11 @@ export default function CollectionStudioPage() {
             isCollectionEligibleCustomer(customer),
           )
           .map((customer: CustomerProfile) =>
-            buildCollectionCustomerRecord(customer, loans),
+            buildCollectionCustomerRecord(
+              customer,
+              loans,
+              activeGoldCustodyLoanIds,
+            ),
           )
           .filter(
             (customer: CollectionCustomerRecord) => customer.loans.length > 0,
@@ -717,6 +826,8 @@ export default function CollectionStudioPage() {
         if (cancelled) {
           return;
         }
+
+        setActiveGoldCustodyByLoanId(activeGoldCustodyMap);
 
         setCollectionCustomers(eligibleCustomers);
 
@@ -734,6 +845,8 @@ export default function CollectionStudioPage() {
 
         if (!cancelled) {
           setCollectionCustomers([]);
+
+          setActiveGoldCustodyByLoanId({});
 
           setSelectedCustomerId("");
 
@@ -790,6 +903,43 @@ export default function CollectionStudioPage() {
   );
 
   // ==========================================================
+  // SELECTED GOLD CUSTODY
+  // ==========================================================
+
+  const selectedGoldCustody = useMemo(() => {
+    const loanId = selectedLoan?.id ?? "";
+
+    if (!loanId) {
+      return null;
+    }
+
+    return activeGoldCustodyByLoanId[loanId] ?? null;
+  }, [activeGoldCustodyByLoanId, selectedLoan]);
+
+  // ==========================================================
+  // GOLD RELEASE ELIGIBILITY
+  // ==========================================================
+
+  const liveOutstandingBalance = Number(reviewData.outstandingBalance ?? 0);
+
+  const canReleaseSelectedGold =
+    Boolean(selectedGoldCustody && selectedLoan) &&
+    Number.isFinite(liveOutstandingBalance) &&
+    liveOutstandingBalance === 0;
+
+  // ==========================================================
+  // SELECTED GOLD EVIDENCE
+  // ==========================================================
+
+  const selectedGoldEvidence = useMemo(
+    () =>
+      selectedLoan
+        ? selectedLoan.documents.filter((document) => Boolean(document?.id))
+        : [],
+    [selectedLoan],
+  );
+
+  // ==========================================================
   // SYNC SELECTED CUSTOMER / LOAN INTO CONTEXT
   // ==========================================================
 
@@ -802,6 +952,163 @@ export default function CollectionStudioPage() {
 
     setReviewData(buildReviewData(selectedCustomer, selectedLoan));
   }, [selectedCustomer, selectedLoan]);
+
+  // ==========================================================
+  // OPEN GOLD RELEASE CONFIRMATION
+  // ==========================================================
+
+  function openGoldReleaseConfirmation(): void {
+    if (!selectedGoldCustody || !selectedLoan || !canReleaseSelectedGold) {
+      return;
+    }
+
+    setGoldReleaseError("");
+
+    setGoldReleaseModalOpen(true);
+  }
+
+  // ==========================================================
+  // CLOSE GOLD RELEASE CONFIRMATION
+  // ==========================================================
+
+  function closeGoldReleaseConfirmation(): void {
+    if (goldReleaseInProgress) {
+      return;
+    }
+
+    setGoldReleaseError("");
+
+    setGoldReleaseModalOpen(false);
+  }
+
+  // ==========================================================
+  // CONFIRM GOLD RELEASE
+  // ==========================================================
+
+  async function confirmGoldRelease(): Promise<void> {
+    if (goldReleaseInProgress) {
+      return;
+    }
+
+    const custody = selectedGoldCustody;
+
+    const loan = selectedLoan;
+
+    if (!custody || !loan) {
+      setGoldReleaseError("Active Gold custody could not be resolved.");
+
+      return;
+    }
+
+    const outstandingBalance = Number(reviewData.outstandingBalance ?? 0);
+
+    if (!Number.isFinite(outstandingBalance) || outstandingBalance !== 0) {
+      setGoldReleaseError(
+        "Gold cannot be released until the remaining loan balance is zero.",
+      );
+
+      return;
+    }
+
+    const session = getSession();
+
+    const releasedBy = session?.username?.trim() ?? "";
+
+    if (!releasedBy) {
+      setGoldReleaseError("Authenticated FINORA user could not be resolved.");
+
+      return;
+    }
+
+    setGoldReleaseInProgress(true);
+
+    setGoldReleaseError("");
+
+    try {
+      const releaseResult = await releasePersistedGoldStorage({
+        allocationId: custody.allocationId,
+
+        loanId: loan.id,
+
+        releasedBy,
+
+        releasedAt: new Date().toISOString(),
+
+        remarks:
+          "Physical Gold released from Collection Studio after full loan settlement.",
+      });
+
+      if (!releaseResult.success || !releaseResult.allocation) {
+        setGoldReleaseError(
+          releaseResult.error ?? "Unable to release Gold custody.",
+        );
+
+        return;
+      }
+
+      const releasedLoanId = loan.id;
+
+      // --------------------------------------------------------
+      // REMOVE RELEASED CUSTODY FROM LIVE PAGE STATE
+      // --------------------------------------------------------
+
+      setActiveGoldCustodyByLoanId((previous) => {
+        const next = {
+          ...previous,
+        };
+
+        delete next[releasedLoanId];
+
+        return next;
+      });
+
+      // --------------------------------------------------------
+      // REMOVE RELEASED CLOSED GOLD LOAN FROM COLLECTION QUEUE
+      //
+      // Release is only allowed at authoritative outstanding = 0.
+      // Therefore after custody release this loan no longer has
+      // any Collection Studio responsibility.
+      // --------------------------------------------------------
+
+      setCollectionCustomers((previousCustomers) =>
+        previousCustomers
+          .map((customer) => ({
+            ...customer,
+
+            loans: customer.loans.filter(
+              (customerLoan) => customerLoan.id !== releasedLoanId,
+            ),
+          }))
+          .filter((customer) => customer.loans.length > 0),
+      );
+
+      // --------------------------------------------------------
+      // RESET SELECTION
+      // --------------------------------------------------------
+
+      setGoldReleaseModalOpen(false);
+
+      setSelectedCustomerId("");
+
+      setSelectedLoanId("");
+
+      setCustomerDropdownOpen(false);
+
+      setCustomerSearch("");
+
+      setReviewData(createEmptyReviewData());
+
+      window.alert("Gold custody released successfully.");
+    } catch (error) {
+      setGoldReleaseError(
+        error instanceof Error
+          ? error.message
+          : "Unable to release Gold custody.",
+      );
+    } finally {
+      setGoldReleaseInProgress(false);
+    }
+  }
 
   // ==========================================================
   // CUSTOMER CHANGE
@@ -862,7 +1169,8 @@ export default function CollectionStudioPage() {
 
             <span style={collectionStudioStyles.emptyStateMessage}>
               Customers will appear here automatically when they have an active
-              or running loan with an outstanding balance.
+              or running loan with an outstanding balance, or a closed Gold Loan
+              awaiting physical custody release.
             </span>
           </section>
         </div>
@@ -1082,6 +1390,156 @@ export default function CollectionStudioPage() {
           </div>
 
           {/* ==================================================
+              GOLD CUSTODY LOCATION
+          ================================================== */}
+
+          {selectedGoldCustody ? (
+            <section
+              aria-label="Gold Custody Location"
+              style={collectionStudioStyles.workflowSection}
+            >
+              {/* ==============================================
+                  HEADER
+              ============================================== */}
+
+              <div style={collectionStudioStyles.workflowSectionHeader}>
+                <div style={collectionStudioStyles.workflowSectionHeading}>
+                  <span style={collectionStudioStyles.workflowSectionEyebrow}>
+                    GOLD CUSTODY
+                  </span>
+
+                  <h2 style={collectionStudioStyles.workflowSectionTitle}>
+                    Physical Gold Location
+                  </h2>
+
+                  <p style={collectionStudioStyles.workflowSectionSubtitle}>
+                    Verify the secured Gold packet location before collection or
+                    physical release.
+                  </p>
+                </div>
+
+                <span style={collectionStudioStyles.selectedLoanStatus}>
+                  {selectedGoldCustody.custodyStatus}
+                </span>
+              </div>
+
+              {/* ==============================================
+                  ROOM
+              ============================================== */}
+
+              <div style={collectionStudioStyles.customerDetailLine}>
+                <span style={collectionStudioStyles.detailLabel}>ROOM</span>
+
+                <strong style={collectionStudioStyles.detailValue}>
+                  {selectedGoldCustody.location.roomName}
+                </strong>
+              </div>
+
+              {/* ==============================================
+                  LOCKER
+              ============================================== */}
+
+              <div style={collectionStudioStyles.customerDetailLine}>
+                <span style={collectionStudioStyles.detailLabel}>LOCKER</span>
+
+                <strong style={collectionStudioStyles.detailValue}>
+                  {selectedGoldCustody.location.lockerName}
+                </strong>
+              </div>
+
+              {/* ==============================================
+                  RACK
+              ============================================== */}
+
+              <div style={collectionStudioStyles.customerDetailLine}>
+                <span style={collectionStudioStyles.detailLabel}>RACK</span>
+
+                <strong style={collectionStudioStyles.detailValue}>
+                  {selectedGoldCustody.location.rackName}
+                </strong>
+              </div>
+
+              {/* ==============================================
+                  BAG / PACKET
+              ============================================== */}
+
+              <div style={collectionStudioStyles.customerDetailLine}>
+                <span style={collectionStudioStyles.detailLabel}>BAG</span>
+
+                <strong style={collectionStudioStyles.detailValue}>
+                  Bag / Packet {selectedGoldCustody.location.bagNumber}
+                </strong>
+              </div>
+
+              {/* ==============================================
+                  LOCATION CODE
+              ============================================== */}
+
+              <div style={collectionStudioStyles.customerDetailLine}>
+                <span style={collectionStudioStyles.detailLabel}>CODE</span>
+
+                <strong style={collectionStudioStyles.detailValue}>
+                  {selectedGoldCustody.locationCode.fullCode}
+                </strong>
+              </div>
+
+              {/* ==============================================
+                  PHYSICAL DIRECTION
+              ============================================== */}
+
+              <p style={collectionStudioStyles.futureSectionText}>
+                Physical Direction: {selectedGoldCustody.location.roomName}
+                {" → "}
+                {selectedGoldCustody.location.lockerName}
+                {" → "}
+                {selectedGoldCustody.location.rackName}
+                {" → "}
+                Bag / Packet {selectedGoldCustody.location.bagNumber}
+              </p>
+
+              {/* ==============================================
+    GOLD RELEASE ACTION
+============================================== */}
+
+              <div style={collectionStudioStyles.goldCustodyActions}>
+                <p
+                  style={{
+                    ...collectionStudioStyles.goldCustodyReleaseHint,
+
+                    ...(canReleaseSelectedGold
+                      ? collectionStudioStyles.goldCustodyReleaseHintReady
+                      : {}),
+                  }}
+                >
+                  {canReleaseSelectedGold
+                    ? "Loan balance is fully settled. Physical Gold custody is ready for verified release."
+                    : `Gold release is locked until the remaining balance becomes zero. Current remaining balance: ₹ ${Math.max(
+                        0,
+                        Number.isFinite(liveOutstandingBalance)
+                          ? liveOutstandingBalance
+                          : 0,
+                      ).toLocaleString("en-IN")}`}
+                </p>
+
+                <button
+                  type="button"
+                  disabled={!canReleaseSelectedGold || goldReleaseInProgress}
+                  onClick={openGoldReleaseConfirmation}
+                  style={{
+                    ...collectionStudioStyles.primaryAction,
+
+                    ...(!canReleaseSelectedGold || goldReleaseInProgress
+                      ? collectionStudioStyles.goldCustodyReleaseActionDisabled
+                      : {}),
+                  }}
+                >
+                  RELEASE GOLD
+                </button>
+              </div>
+            </section>
+          ) : null}
+
+          {/* ==================================================
               COLLECTION WORKSPACE
           ================================================== */}
 
@@ -1139,6 +1597,278 @@ export default function CollectionStudioPage() {
           </section>
         </div>
       </main>
+      {/* ==================================================
+    GOLD RELEASE CONFIRMATION
+================================================== */}
+
+      {goldReleaseModalOpen &&
+      selectedGoldCustody &&
+      selectedLoan &&
+      selectedCustomer ? (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-label="Release Gold Custody"
+          style={collectionStudioStyles.goldReleaseBackdrop}
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget) {
+              closeGoldReleaseConfirmation();
+            }
+          }}
+        >
+          <div style={collectionStudioStyles.goldReleaseDialog}>
+            {/* ============================================
+          HEADER
+      ============================================ */}
+
+            <div style={collectionStudioStyles.goldReleaseHeader}>
+              <div style={collectionStudioStyles.goldReleaseHeaderCopy}>
+                <span style={collectionStudioStyles.goldReleaseEyebrow}>
+                  GOLD CUSTODY
+                </span>
+
+                <h2 style={collectionStudioStyles.goldReleaseTitle}>
+                  Release Gold Custody
+                </h2>
+
+                <p style={collectionStudioStyles.goldReleaseSubtitle}>
+                  Verify the customer, loan, physical location and evidence
+                  before confirming handover.
+                </p>
+              </div>
+
+              <button
+                type="button"
+                aria-label="Close Gold release confirmation"
+                disabled={goldReleaseInProgress}
+                onClick={closeGoldReleaseConfirmation}
+                style={collectionStudioStyles.goldReleaseClose}
+              >
+                ×
+              </button>
+            </div>
+
+            {/* ============================================
+          BODY
+      ============================================ */}
+
+            <div style={collectionStudioStyles.goldReleaseBody}>
+              {/* ==========================================
+            LOAN SUMMARY
+        ========================================== */}
+
+              <div style={collectionStudioStyles.goldReleaseSummaryGrid}>
+                <div style={collectionStudioStyles.goldReleaseSummaryMetric}>
+                  <span style={collectionStudioStyles.goldReleaseSummaryLabel}>
+                    Customer
+                  </span>
+
+                  <strong
+                    style={collectionStudioStyles.goldReleaseSummaryValue}
+                    title={selectedCustomer.name}
+                  >
+                    {selectedCustomer.name}
+                  </strong>
+                </div>
+
+                <div style={collectionStudioStyles.goldReleaseSummaryMetric}>
+                  <span style={collectionStudioStyles.goldReleaseSummaryLabel}>
+                    Loan Number
+                  </span>
+
+                  <strong
+                    style={collectionStudioStyles.goldReleaseSummaryValue}
+                    title={selectedLoan.loanNumber}
+                  >
+                    {selectedLoan.loanNumber}
+                  </strong>
+                </div>
+
+                <div style={collectionStudioStyles.goldReleaseSummaryMetric}>
+                  <span style={collectionStudioStyles.goldReleaseSummaryLabel}>
+                    Outstanding
+                  </span>
+
+                  <strong
+                    style={{
+                      ...collectionStudioStyles.goldReleaseSummaryValue,
+
+                      ...collectionStudioStyles.goldReleaseSettledValue,
+                    }}
+                  >
+                    ₹{" "}
+                    {Math.max(
+                      0,
+                      Number.isFinite(liveOutstandingBalance)
+                        ? liveOutstandingBalance
+                        : 0,
+                    ).toLocaleString("en-IN")}
+                  </strong>
+                </div>
+              </div>
+
+              {/* ==========================================
+            PHYSICAL LOCATION
+        ========================================== */}
+
+              <div style={collectionStudioStyles.goldReleaseDirectionCard}>
+                <span style={collectionStudioStyles.goldReleaseDirectionLabel}>
+                  Current Physical Location
+                </span>
+
+                <strong
+                  style={collectionStudioStyles.goldReleaseDirectionValue}
+                >
+                  {selectedGoldCustody.location.roomName}
+                  {" → "}
+                  {selectedGoldCustody.location.lockerName}
+                  {" → "}
+                  {selectedGoldCustody.location.rackName}
+                  {" → "}
+                  Bag / Packet {selectedGoldCustody.location.bagNumber}
+                </strong>
+
+                <span style={collectionStudioStyles.goldReleaseLocationCode}>
+                  LOCATION CODE: {selectedGoldCustody.locationCode.fullCode}
+                </span>
+              </div>
+
+              {/* ==========================================
+            EVIDENCE
+        ========================================== */}
+
+              <section
+                style={collectionStudioStyles.goldReleaseEvidenceSection}
+              >
+                <div style={collectionStudioStyles.goldReleaseEvidenceHeader}>
+                  <h3 style={collectionStudioStyles.goldReleaseEvidenceTitle}>
+                    Loan Evidence / Images
+                  </h3>
+
+                  <span style={collectionStudioStyles.goldReleaseEvidenceCount}>
+                    {selectedGoldEvidence.length}{" "}
+                    {selectedGoldEvidence.length === 1
+                      ? "document"
+                      : "documents"}
+                  </span>
+                </div>
+
+                {selectedGoldEvidence.length === 0 ? (
+                  <div style={collectionStudioStyles.goldReleaseEvidenceEmpty}>
+                    No loan evidence is stored for this Gold Loan.
+                  </div>
+                ) : (
+                  <div style={collectionStudioStyles.goldReleaseEvidenceGrid}>
+                    {selectedGoldEvidence.map((document) => {
+                      const source = getCollectionDocumentSource(document);
+
+                      return (
+                        <article
+                          key={document.id}
+                          style={collectionStudioStyles.goldReleaseEvidenceCard}
+                        >
+                          <div
+                            style={
+                              collectionStudioStyles.goldReleaseEvidencePreview
+                            }
+                          >
+                            {document.type === "image" && source ? (
+                              <img
+                                src={source}
+                                alt={document.name}
+                                style={
+                                  collectionStudioStyles.goldReleaseEvidenceImage
+                                }
+                              />
+                            ) : (
+                              <span
+                                style={
+                                  collectionStudioStyles.goldReleaseEvidencePlaceholder
+                                }
+                              >
+                                {document.type === "pdf"
+                                  ? "PDF"
+                                  : "PREVIEW UNAVAILABLE"}
+                              </span>
+                            )}
+                          </div>
+
+                          <span
+                            style={
+                              collectionStudioStyles.goldReleaseEvidenceName
+                            }
+                            title={document.name}
+                          >
+                            {document.name}
+                          </span>
+                        </article>
+                      );
+                    })}
+                  </div>
+                )}
+              </section>
+
+              {/* ==========================================
+            HANDOVER WARNING
+        ========================================== */}
+
+              <div style={collectionStudioStyles.goldReleaseWarning}>
+                Confirm only after physically verifying and handing over this
+                exact Gold packet to the authorized customer. This action
+                changes the custody status from OCCUPIED to RELEASED and frees
+                the storage position.
+              </div>
+
+              {/* ==========================================
+            RELEASE ERROR
+        ========================================== */}
+
+              {goldReleaseError ? (
+                <div
+                  role="alert"
+                  style={collectionStudioStyles.goldReleaseError}
+                >
+                  {goldReleaseError}
+                </div>
+              ) : null}
+            </div>
+
+            {/* ============================================
+          FOOTER
+      ============================================ */}
+
+            <div style={collectionStudioStyles.goldReleaseFooter}>
+              <button
+                type="button"
+                disabled={goldReleaseInProgress}
+                onClick={closeGoldReleaseConfirmation}
+                style={collectionStudioStyles.secondaryAction}
+              >
+                CANCEL
+              </button>
+
+              <button
+                type="button"
+                disabled={goldReleaseInProgress}
+                onClick={() => {
+                  void confirmGoldRelease();
+                }}
+                style={{
+                  ...collectionStudioStyles.goldReleaseConfirmAction,
+
+                  ...(goldReleaseInProgress
+                    ? collectionStudioStyles.goldReleaseConfirmActionBusy
+                    : {}),
+                }}
+              >
+                {goldReleaseInProgress
+                  ? "RELEASING..."
+                  : "CONFIRM GOLD RELEASE"}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </CollectionContext.Provider>
   );
 }
