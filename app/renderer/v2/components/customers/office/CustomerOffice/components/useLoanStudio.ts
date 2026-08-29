@@ -91,7 +91,14 @@ import {
   createLoan,
   fetchLoans,
   hasExistingLoan,
+  rollbackCreatedLoan,
 } from "../../../../../services/loan/loanService";
+
+import { buildGoldLoanStorageAllocationRequest } from "../../../../../services/gold-loan/goldLoanService";
+
+import { allocatePersistedGoldStorage } from "../../../../../services/gold-loan/goldCustodyPersistenceService";
+
+import { getSession } from "../../../../../store/authStore";
 
 import {
   getCustomers,
@@ -251,16 +258,18 @@ export function useLoanStudio({
 
     async function loadLoanCustomers(): Promise<void> {
       try {
-        const storageMode = getAuthenticatedStorageMode();
+        if (!storageManager.isInitialized()) {
+          const storageMode = getAuthenticatedStorageMode();
 
-        const storageActivated =
-          await storageManager.selectStorageMode(storageMode);
+          const storageActivated =
+            await storageManager.selectStorageMode(storageMode);
 
-        if (!storageActivated.success) {
-          throw new Error(
-            storageActivated.error ??
-              `Unable to restore FINORA ${storageMode} storage.`,
-          );
+          if (!storageActivated.success) {
+            throw new Error(
+              storageActivated.error ??
+                `Unable to restore FINORA ${storageMode} storage.`,
+            );
+          }
         }
 
         if (cancelled) {
@@ -364,13 +373,11 @@ export function useLoanStudio({
      ACTIVE CUSTOMER
   ========================================================== */
 
-  const activeCustomerId = selectedCustomer?.customerId ?? customerId ?? "";
+  const activeCustomerId = selectedCustomer?.customerId ?? "";
 
-  const activeCustomerName =
-    selectedCustomer?.customerName ?? customerName ?? "";
+  const activeCustomerName = selectedCustomer?.customerName ?? "";
 
-  const activeCustomerPhone =
-    selectedCustomer?.phoneNumber ?? phoneNumber ?? "";
+  const activeCustomerPhone = selectedCustomer?.phoneNumber ?? "";
 
   /* ==========================================================
      WIZARD
@@ -585,13 +592,15 @@ export function useLoanStudio({
 
     async function loadInitialLoanStatistics(): Promise<void> {
       try {
-        const storageMode = getAuthenticatedStorageMode();
+        if (!storageManager.isInitialized()) {
+          const storageMode = getAuthenticatedStorageMode();
 
-        const storageActivated =
-          await storageManager.selectStorageMode(storageMode);
+          const storageActivated =
+            await storageManager.selectStorageMode(storageMode);
 
-        if (!storageActivated.success) {
-          return;
+          if (!storageActivated.success) {
+            return;
+          }
         }
 
         if (cancelled) {
@@ -1074,9 +1083,24 @@ export function useLoanStudio({
       guarantorIdentityVerification,
     };
 
-    /* ========================================================
-       CREATE LOAN
-    ======================================================== */
+    /* =========================================================
+   GOLD CUSTODY PRECONDITION
+
+   Gold Loan must still carry its prepared Step-1 snapshot
+   before any Loan record is persisted.
+========================================================= */
+
+    if (isGoldLoan && !goldStepOne) {
+      alert(
+        "Gold Loan custody details are unavailable. Return to Gold Step 1 and try again.",
+      );
+
+      return;
+    }
+
+    /* =========================================================
+   CREATE LOAN
+========================================================= */
 
     const createResult = await createLoan(loanWithDocuments);
 
@@ -1086,6 +1110,158 @@ export function useLoanStudio({
       alert(createResult.error ?? "Unable to create loan.");
 
       return;
+    }
+
+    /* =========================================================
+   GOLD PHYSICAL CUSTODY COMMIT
+
+   STANDARD loans skip this block completely.
+
+   GOLD flow:
+
+   Loan persisted
+        ↓
+   Build physical custody request
+        ↓
+   Re-load latest Gold Storage state
+        ↓
+   Re-check Rack capacity
+        ↓
+   Persist OCCUPIED custody allocation
+
+   If custody fails, the just-created Loan is removed through
+   the controlled compensation path before success is shown.
+========================================================= */
+
+    if (isGoldLoan && goldStepOne) {
+      const session = getSession();
+
+      const allocatedBy = String(session?.username ?? "").trim();
+
+      const persistedLoanId = String(
+        createResult.data?.id ?? loan.id ?? loanId,
+      ).trim();
+
+      const persistedLoanNumber = String(
+        createResult.data?.loanNumber ?? loan.loanNumber ?? "",
+      ).trim();
+
+      /* --------------------------------------------------------
+     AUTHENTICATED USER IS REQUIRED
+  -------------------------------------------------------- */
+
+      if (!allocatedBy) {
+        const rollbackResult = await rollbackCreatedLoan(
+          persistedLoanId || loanId,
+        );
+
+        if (!rollbackResult.success) {
+          console.error(
+            "CRITICAL GOLD LOAN ROLLBACK ERROR:",
+            rollbackResult.error,
+          );
+
+          alert(
+            "CRITICAL CONSISTENCY ERROR: the Gold Loan was created, but authenticated custody identity was unavailable and automatic Loan rollback failed. Do not create another Gold Loan until this record is reviewed.",
+          );
+
+          return;
+        }
+
+        alert(
+          "Gold Loan was not created because the authenticated custody user could not be resolved.",
+        );
+
+        return;
+      }
+
+      /* --------------------------------------------------------
+     PERSISTED LOAN IDENTITY IS REQUIRED
+  -------------------------------------------------------- */
+
+      if (!persistedLoanId || !persistedLoanNumber) {
+        const rollbackResult = await rollbackCreatedLoan(
+          persistedLoanId || loanId,
+        );
+
+        if (!rollbackResult.success) {
+          console.error(
+            "CRITICAL GOLD LOAN IDENTITY ROLLBACK ERROR:",
+            rollbackResult.error,
+          );
+
+          alert(
+            "CRITICAL CONSISTENCY ERROR: Gold Loan identity was incomplete after persistence and automatic Loan rollback failed.",
+          );
+
+          return;
+        }
+
+        alert(
+          "Gold Loan identity could not be finalized. The incomplete Loan record was rolled back.",
+        );
+
+        return;
+      }
+
+      /* --------------------------------------------------------
+     BUILD AUTHORITATIVE STORAGE REQUEST
+  -------------------------------------------------------- */
+
+      const custodyRequest = buildGoldLoanStorageAllocationRequest(
+        goldStepOne,
+
+        {
+          loanId: persistedLoanId,
+
+          loanNumber: persistedLoanNumber,
+
+          allocatedBy,
+        },
+      );
+
+      /* --------------------------------------------------------
+     ALLOCATE + PERSIST
+
+     allocatePersistedGoldStorage() loads fresh persisted
+     settings + allocations before calling allocateGoldStorage,
+     therefore Rack capacity is re-checked at save time.
+  -------------------------------------------------------- */
+
+      const custodyResult = await allocatePersistedGoldStorage(custodyRequest);
+
+      if (!custodyResult.success) {
+        console.error("FINORA GOLD CUSTODY COMMIT ERROR:", custodyResult.error);
+
+        /* ------------------------------------------------------
+       COMPENSATE LOAN CREATE
+
+       Custody allocation did not persist, so remove the Loan
+       that was created immediately before it.
+    ------------------------------------------------------ */
+
+        const rollbackResult = await rollbackCreatedLoan(persistedLoanId);
+
+        if (!rollbackResult.success) {
+          console.error(
+            "CRITICAL GOLD LOAN ROLLBACK ERROR:",
+            rollbackResult.error,
+          );
+
+          alert(
+            "CRITICAL CONSISTENCY ERROR: the Gold Loan was created but physical custody allocation failed, and automatic Loan rollback also failed. Do not create another Gold Loan until this record is reviewed.",
+          );
+
+          return;
+        }
+
+        alert(
+          custodyResult.error ??
+            "Gold physical custody allocation failed. The Loan record was rolled back.",
+        );
+
+        return;
+      }
     }
 
     /* ========================================================

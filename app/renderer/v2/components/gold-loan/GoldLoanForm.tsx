@@ -66,7 +66,7 @@ import {
   WalletCards,
 } from "lucide-react";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import type { ChangeEvent, CSSProperties } from "react";
 
@@ -618,6 +618,37 @@ export default function GoldLoanForm(props: GoldLoanFormProps) {
   const [sealReference, setSealReference] = useState("");
 
   /* =========================================================
+   DEFAULT STORAGE ROOM SYNCHRONIZATION
+========================================================= */
+
+  useEffect(() => {
+    if (rooms.length === 0) {
+      if (selectedRoomId !== null) {
+        setSelectedRoomId(null);
+        setSelectedLockerId(null);
+        setSelectedRackId(null);
+        setBagNumber("");
+      }
+
+      return;
+    }
+
+    const selectedRoomStillExists =
+      selectedRoomId !== null &&
+      rooms.some((room) => room.configuration.id === selectedRoomId);
+
+    if (selectedRoomStillExists) {
+      return;
+    }
+
+    setSelectedRoomId(rooms[0].configuration.id);
+
+    setSelectedLockerId(null);
+    setSelectedRackId(null);
+    setBagNumber("");
+  }, [rooms, selectedRoomId]);
+
+  /* =========================================================
      LOAN / LTV
   ========================================================= */
 
@@ -890,34 +921,17 @@ export default function GoldLoanForm(props: GoldLoanFormProps) {
      different selected Locker.
   ========================================================= */
 
-function handleRackSelect(
-  rack:
-    GoldRackView,
-): void {
+  function handleRackSelect(rack: GoldRackView): void {
+    if (!selectedLockerId || rack.configuration.lockerId !== selectedLockerId) {
+      return;
+    }
 
-  if (
-    !selectedLockerId ||
-    rack.configuration.lockerId !==
-      selectedLockerId
-  ) {
+    setSelectedRackId(rack.configuration.id);
 
-    return;
+    setBagNumber("");
 
+    setShowValidation(false);
   }
-
-  setSelectedRackId(
-    rack.configuration.id,
-  );
-
-  setBagNumber(
-    "",
-  );
-
-  setShowValidation(
-    false,
-  );
-
-}
 
   /* =========================================================
      VIEW LOCKER

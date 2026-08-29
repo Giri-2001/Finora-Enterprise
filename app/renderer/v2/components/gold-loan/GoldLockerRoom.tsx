@@ -305,6 +305,9 @@ export default function GoldLockerRoom(props: GoldLockerRoomProps) {
   const [inspectionLockerId, setInspectionLockerId] =
     useState<GoldLockerId | null>(null);
 
+    const [racksExpanded, setRacksExpanded] =
+  useState(false);
+
   /* =========================================================
      RESPONSIVE
   ========================================================= */
@@ -368,10 +371,12 @@ export default function GoldLockerRoom(props: GoldLockerRoomProps) {
   ========================================================= */
 
   useEffect(() => {
-    setInspectionLockerId(null);
+  setInspectionLockerId(null);
 
-    setRoomMenuOpen(false);
-  }, [selectedRoomId]);
+  setRoomMenuOpen(false);
+
+  setRacksExpanded(false);
+}, [selectedRoomId]);
 
   /* =========================================================
      TOGGLE ROOM MENU
@@ -401,15 +406,17 @@ export default function GoldLockerRoom(props: GoldLockerRoomProps) {
      SELECT LOCKER
   ========================================================= */
 
-  function handleSelectLocker(locker: GoldLockerView): void {
-    if (!canAllocateLocker(locker)) {
-      return;
-    }
-
-    setInspectionLockerId(null);
-
-    onSelectLocker(locker);
+ function handleSelectLocker(locker: GoldLockerView): void {
+  if (!canAllocateLocker(locker)) {
+    return;
   }
+
+  setInspectionLockerId(null);
+
+  setRacksExpanded(true);
+
+  onSelectLocker(locker);
+}
 
   /* =========================================================
      LOCKER VIEW
@@ -430,6 +437,8 @@ export default function GoldLockerRoom(props: GoldLockerRoomProps) {
 
     setInspectionLockerId(locker.configuration.id);
 
+    setRacksExpanded(true);
+
     onViewLocker(locker);
   }
 
@@ -446,6 +455,14 @@ export default function GoldLockerRoom(props: GoldLockerRoomProps) {
 
     handleSelectLocker(locker);
   }
+
+  function handleRackSelect(
+  rack: GoldRackView,
+): void {
+  onSelectRack(rack);
+
+  setRacksExpanded(false);
+}
 
   /* =========================================================
      EMPTY ROOM STATE
@@ -965,14 +982,14 @@ export default function GoldLockerRoom(props: GoldLockerRoomProps) {
           FULL Locker can reach this section via VIEW.
       ===================================================== */}
 
-      {activeLocker ? (
-        <GoldRacks
-          racks={activeLocker.racks}
-          selectedRackId={activeRackSelection}
-          onSelectRack={onSelectRack}
-          onViewRack={onViewRack}
-        />
-      ) : null}
+      {activeLocker && racksExpanded ? (
+  <GoldRacks
+    racks={activeLocker.racks}
+    selectedRackId={activeRackSelection}
+    onSelectRack={handleRackSelect}
+    onViewRack={onViewRack}
+  />
+) : null}
     </section>
   );
 }

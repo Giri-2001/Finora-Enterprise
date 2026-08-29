@@ -36,11 +36,7 @@
 // IMPORTS
 // ============================================================
 
-import {
-  useEffect,
-  useMemo,
-  useState,
-} from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import Loans from "./Loans";
 
@@ -48,38 +44,22 @@ import LoanStudio from "../../components/customers/office/CustomerOffice/compone
 
 import GoldLoanForm from "../../components/gold-loan/GoldLoanForm";
 
-import type {
-  GoldLoanStepOneFormValue,
-} from "../../components/gold-loan/GoldLoanForm";
+import type { GoldLoanStepOneFormValue } from "../../components/gold-loan/GoldLoanForm";
 
-import type {
-  LoanCustomerOption,
-} from "../../components/loans/details/LoanCustomerCard";
+import type { LoanCustomerOption } from "../../components/loans/details/LoanCustomerCard";
 
 import {
   clearCustomerCache,
   hydrateCustomersFromStorage,
 } from "../../store/customers/customer.store";
 
-import {
-  storageManager,
-} from "../../storage/storageManager";
+import { buildGoldStorageRoomViews } from "../../services/gold-loan/goldStorageService";
 
-import {
-  StorageMode,
-} from "../../storage/storage.types";
+import { loadPersistedGoldStorageState } from "../../services/gold-loan/goldCustodyPersistenceService";
 
-import {
-  buildGoldStorageRoomViews,
-} from "../../services/gold-loan/goldStorageService";
+import type { GoldStorageState } from "../../services/gold-loan/goldStorageService";
 
-import type {
-  GoldStorageState,
-} from "../../services/gold-loan/goldStorageService";
-
-import {
-  prepareGoldLoanStepTwoHandoff,
-} from "../../services/gold-loan/goldLoanService";
+import { prepareGoldLoanStepTwoHandoff } from "../../services/gold-loan/goldLoanService";
 
 import type {
   GoldLoanStepOneServiceInput,
@@ -100,18 +80,9 @@ type LoansWorkspace =
 // EVENTS
 // ============================================================
 
-const OPEN_STANDARD_LOAN_EVENT =
-  "FINORA_V2_OPEN_LOAN_STUDIO";
+const OPEN_STANDARD_LOAN_EVENT = "FINORA_V2_OPEN_LOAN_STUDIO";
 
-const OPEN_GOLD_LOAN_EVENT =
-  "FINORA_V2_OPEN_GOLD_LOAN_STUDIO";
-
-// ============================================================
-// STORAGE MODE SESSION KEY
-// ============================================================
-
-const STORAGE_MODE_SESSION_KEY =
-  "FINORA_STORAGE_MODE";
+const OPEN_GOLD_LOAN_EVENT = "FINORA_V2_OPEN_GOLD_LOAN_STUDIO";
 
 // ============================================================
 // GOLD CONFIGURATION DEFAULTS
@@ -130,31 +101,6 @@ const STORAGE_MODE_SESSION_KEY =
 const GOLD_DEFAULT_MARKET_RATE_PER_GRAM = 0;
 
 const GOLD_DEFAULT_MAX_LTV_PERCENTAGE = 0;
-
-// ============================================================
-// AUTHENTICATED STORAGE MODE
-// ============================================================
-
-function getAuthenticatedStorageMode(): StorageMode {
-  try {
-    const storedMode =
-      window.sessionStorage.getItem(
-        STORAGE_MODE_SESSION_KEY,
-      );
-
-    if (storedMode === StorageMode.USB) {
-      return StorageMode.USB;
-    }
-
-    if (storedMode === StorageMode.CLOUD) {
-      return StorageMode.CLOUD;
-    }
-
-    return StorageMode.LOCAL;
-  } catch {
-    return StorageMode.LOCAL;
-  }
-}
 
 // ============================================================
 // EMPTY GOLD STORAGE STATE
@@ -176,8 +122,7 @@ function getAuthenticatedStorageMode(): StorageMode {
 // ============================================================
 
 function createEmptyGoldStorageState(): GoldStorageState {
-  const now =
-    new Date().toISOString();
+  const now = new Date().toISOString();
 
   return {
     settings: {
@@ -202,35 +147,14 @@ function createEmptyGoldStorageState(): GoldStorageState {
 // CUSTOMER OPTIONS
 // ============================================================
 
-async function loadGoldLoanCustomers():
-  Promise<LoanCustomerOption[]> {
-  const storageMode =
-    getAuthenticatedStorageMode();
-
-  // ----------------------------------------------------------
-  // RESTORE AUTHENTICATED FINORA STORAGE
-  // ----------------------------------------------------------
-
-  const storageActivated =
-    await storageManager.selectStorageMode(
-      storageMode,
-    );
-
-  if (!storageActivated.success) {
-    throw new Error(
-      storageActivated.error ??
-        `Unable to restore FINORA ${storageMode} storage.`,
-    );
-  }
-
+async function loadGoldLoanCustomers(): Promise<LoanCustomerOption[]> {
   // ----------------------------------------------------------
   // FORCE AUTHORITATIVE CUSTOMER REFRESH
   // ----------------------------------------------------------
 
   clearCustomerCache();
 
-  const customers =
-    await hydrateCustomersFromStorage();
+  const customers = await hydrateCustomersFromStorage();
 
   // ----------------------------------------------------------
   // SAME CUSTOMER FILTER / MAPPING USED BY LOAN STUDIO
@@ -243,20 +167,14 @@ async function loadGoldLoanCustomers():
         customer.internal.isArchived !== true,
     )
     .map(
-      (
-        customer,
-      ): LoanCustomerOption => ({
-        customerId:
-          customer.identity.customerId,
+      (customer): LoanCustomerOption => ({
+        customerId: customer.identity.customerId,
 
-        customerName:
-          customer.basic.fullName,
+        customerName: customer.basic.fullName,
 
-        phoneNumber:
-          customer.basic.mobileNumber,
+        phoneNumber: customer.basic.mobileNumber,
 
-        photo:
-          customer.photo,
+        photo: customer.photo,
       }),
     );
 }
@@ -289,60 +207,42 @@ function buildGoldStepOneServiceInput(
 ): GoldLoanStepOneServiceInput {
   return {
     customer: {
-      customerId:
-        value.customer.customerId,
+      customerId: value.customer.customerId,
 
-      customerName:
-        value.customer.customerName,
+      customerName: value.customer.customerName,
 
-      phoneNumber:
-        value.customer.phoneNumber ?? "",
+      phoneNumber: value.customer.phoneNumber ?? "",
 
-      photo:
-        value.customer.photo,
+      photo: value.customer.photo,
     },
 
-    items:
-      value.items,
+    items: value.items,
 
-    roomId:
-      value.roomId,
+    roomId: value.roomId,
 
-    lockerId:
-      value.lockerId,
+    lockerId: value.lockerId,
 
-    rackId:
-      value.rackId,
+    rackId: value.rackId,
 
-    bagNumber:
-      value.bagNumber,
+    bagNumber: value.bagNumber,
 
-    packetReference:
-  value.packetReference,
+    packetReference: value.packetReference,
 
-sealReference:
-  value.sealReference,
+    sealReference: value.sealReference,
 
-maxLtvPercentage:
-  value.maxLtvPercentage,
+    maxLtvPercentage: value.maxLtvPercentage,
 
-requestedAmount:
-  value.requestedAmount,
+    requestedAmount: value.requestedAmount,
 
-sanctionedAmount:
-  value.sanctionedAmount,
+    sanctionedAmount: value.sanctionedAmount,
 
-valuerName:
-  value.valuerName,
+    valuerName: value.valuerName,
 
-valuerLicenseNumber:
-  value.valuerLicenseNumber,
+    valuerLicenseNumber: value.valuerLicenseNumber,
 
-valuationDate:
-  value.valuationDate,
+    valuationDate: value.valuationDate,
 
-valuationRemarks:
-  value.valuationRemarks,
+    valuationRemarks: value.valuationRemarks,
   };
 }
 
@@ -355,23 +255,15 @@ export default function LoansPage() {
   // ACTIVE WORKSPACE
   // ==========================================================
 
-  const [
-    workspace,
-    setWorkspace,
-  ] = useState<LoansWorkspace>(
-    "LOANS_OFFICE",
-  );
+  const [workspace, setWorkspace] = useState<LoansWorkspace>("LOANS_OFFICE");
 
   // ==========================================================
   // GOLD CUSTOMER OPTIONS
   // ==========================================================
 
-  const [
-    goldCustomerOptions,
-    setGoldCustomerOptions,
-  ] = useState<LoanCustomerOption[]>(
-    [],
-  );
+  const [goldCustomerOptions, setGoldCustomerOptions] = useState<
+    LoanCustomerOption[]
+  >([]);
 
   // ==========================================================
   // GOLD STEP-2 HANDOFF
@@ -383,23 +275,26 @@ export default function LoansPage() {
   // shared Loan Studio Step 2–6
   // ==========================================================
 
-  const [
-    goldLoanHandoff,
-    setGoldLoanHandoff,
-  ] = useState<
-    GoldLoanStudioStepTwoHandoff | null
-  >(null);
+  const [goldLoanHandoff, setGoldLoanHandoff] =
+    useState<GoldLoanStudioStepTwoHandoff | null>(null);
 
   // ==========================================================
   // GOLD STORAGE STATE
   //
-  // Physical persistence/configuration is intentionally not
-  // invented at this route boundary.
+  // Gold Storage state is loaded from authoritative persistence
+  // whenever Gold Step 1 opens.
+  //
+  // State includes:
+  //
+  // - persisted Storage Settings
+  // - custody allocations
+  // - relocation audits
+  //
+  // Rack occupancy is therefore derived from real persisted
+  // OCCUPIED allocations rather than temporary empty arrays.
   // ==========================================================
 
-  const [
-    goldStorageState,
-  ] = useState<GoldStorageState>(
+  const [goldStorageState, setGoldStorageState] = useState<GoldStorageState>(
     createEmptyGoldStorageState,
   );
 
@@ -407,45 +302,38 @@ export default function LoansPage() {
   // GOLD ROOM DIGITAL TWIN
   // ==========================================================
 
-  const goldRooms =
-    useMemo(
-      () =>
-        buildGoldStorageRoomViews(
-          goldStorageState.settings,
+  const goldRooms = useMemo(
+    () =>
+      buildGoldStorageRoomViews(
+        goldStorageState.settings,
 
-          goldStorageState.allocations,
-        ),
-      [goldStorageState],
-    );
+        goldStorageState.allocations,
+      ),
+    [goldStorageState],
+  );
 
   // ==========================================================
   // OPEN WORKSPACE EVENTS
   // ==========================================================
 
   useEffect(() => {
-    function handleOpenStandardLoanStudio():
-      void {
+    function handleOpenStandardLoanStudio(): void {
       /*
        * Clear any previous Gold launch snapshot before opening
        * the independent Standard Loan workflow.
        */
       setGoldLoanHandoff(null);
 
-      setWorkspace(
-        "STANDARD_LOAN",
-      );
+      setWorkspace("STANDARD_LOAN");
     }
 
-    function handleOpenGoldLoanStudio():
-      void {
+    function handleOpenGoldLoanStudio(): void {
       /*
        * Every new Gold Loan starts from dedicated Gold Step 1.
        */
       setGoldLoanHandoff(null);
 
-      setWorkspace(
-        "GOLD_LOAN_STEP_ONE",
-      );
+      setWorkspace("GOLD_LOAN_STEP_ONE");
     }
 
     window.addEventListener(
@@ -476,50 +364,112 @@ export default function LoansPage() {
   }, []);
 
   // ==========================================================
-  // LOAD GOLD LOAN CUSTOMERS
+  // LOAD GOLD STEP-1 WORKSPACE DATA
   //
-  // Customer list is required only while dedicated Gold
-  // Step 1 is active.
+  // Gold Step 1 requires:
   //
-  // Shared Loan Studio performs its own existing hydration.
+  // - authoritative Customer Hub customers
+  // - persisted Gold Storage Settings
+  //
+  // IMPORTANT:
+  //
+  // Customer hydration restores the authenticated Storage Mode
+  // first. Gold Storage Settings are loaded only after that
+  // storage boundary is ready.
+  //
+  // Allocations and relocation audits remain empty until
+  // persistent custody is introduced in Step 27.
   // ==========================================================
 
   useEffect(() => {
-    if (
-      workspace !==
-      "GOLD_LOAN_STEP_ONE"
-    ) {
+    if (workspace !== "GOLD_LOAN_STEP_ONE") {
       return;
     }
 
     let cancelled = false;
 
-    async function hydrateGoldLoanCustomers():
-      Promise<void> {
+    async function hydrateGoldLoanWorkspace(): Promise<void> {
       try {
-        const options =
-          await loadGoldLoanCustomers();
+        // ------------------------------------------------------
+        // 1. RESTORE STORAGE MODE + LOAD CUSTOMERS
+        // ------------------------------------------------------
+
+        const customerOptions = await loadGoldLoanCustomers();
 
         if (cancelled) {
           return;
         }
 
-        setGoldCustomerOptions(
-          options,
-        );
-      } catch (error) {
-        console.error(
-          "FINORA GOLD LOAN CUSTOMER HYDRATION ERROR:",
-          error,
-        );
+        setGoldCustomerOptions(customerOptions);
 
-        if (!cancelled) {
-          setGoldCustomerOptions([]);
+        // ------------------------------------------------------
+        // 2. LOAD AUTHORITATIVE PERSISTED GOLD STORAGE STATE
+        //
+        // Includes:
+        //
+        // - Storage Settings
+        // - Custody Allocations
+        // - Relocation Audits
+        //
+        // Customer hydration above executes first so the active
+        // FINORA storage boundary is already ready.
+        // ------------------------------------------------------
+
+        const storageStateResult = await loadPersistedGoldStorageState();
+
+        if (cancelled) {
+          return;
         }
+
+        if (!storageStateResult.success || !storageStateResult.state) {
+          console.error(
+            "FINORA GOLD STORAGE STATE HYDRATION ERROR:",
+            storageStateResult.error,
+          );
+
+          setGoldStorageState(createEmptyGoldStorageState());
+
+          alert(
+            storageStateResult.error ??
+              "Unable to load Gold Storage custody state.",
+          );
+
+          return;
+        }
+
+        // ------------------------------------------------------
+        // 3. AUTHORITATIVE PERSISTED STORAGE STATE
+        //
+        // No physical geometry is invented here.
+        //
+        // If Gold Storage has never been configured, the
+        // persistence service returns an empty settings state.
+        //
+        // Existing persisted allocations and relocation audits
+        // are hydrated through the same service.
+        // ------------------------------------------------------
+
+        setGoldStorageState(storageStateResult.state);
+      } catch (error) {
+        console.error("FINORA GOLD LOAN WORKSPACE HYDRATION ERROR:", error);
+
+        if (cancelled) {
+          return;
+        }
+
+        setGoldCustomerOptions([]);
+
+        setGoldStorageState(createEmptyGoldStorageState());
+
+        alert(
+          error instanceof Error
+            ? error.message
+            : "Unable to prepare Gold Loan Step 1.",
+        );
       }
     }
 
-    void hydrateGoldLoanCustomers();
+    void hydrateGoldLoanWorkspace();
 
     return () => {
       cancelled = true;
@@ -530,13 +480,10 @@ export default function LoansPage() {
   // BACK TO LOANS OFFICE
   // ==========================================================
 
-  function handleCloseGoldLoan():
-    void {
+  function handleCloseGoldLoan(): void {
     setGoldLoanHandoff(null);
 
-    setWorkspace(
-      "LOANS_OFFICE",
-    );
+    setWorkspace("LOANS_OFFICE");
   }
 
   // ==========================================================
@@ -553,37 +500,21 @@ export default function LoansPage() {
   // existing Loan Studio Step 2
   // ==========================================================
 
-  function handleGoldStepOneComplete(
-    value: GoldLoanStepOneFormValue,
-  ): void {
-    const serviceInput =
-      buildGoldStepOneServiceInput(
-        value,
-      );
+  function handleGoldStepOneComplete(value: GoldLoanStepOneFormValue): void {
+    const serviceInput = buildGoldStepOneServiceInput(value);
 
-    const result =
-      prepareGoldLoanStepTwoHandoff(
-        serviceInput,
-      );
+    const result = prepareGoldLoanStepTwoHandoff(serviceInput);
 
     // --------------------------------------------------------
     // DOMAIN VALIDATION FAILED
     // --------------------------------------------------------
 
-    if (
-      !result.success ||
-      !result.handoff
-    ) {
-      console.error(
-        "FINORA GOLD LOAN STEP-1 HANDOFF ERROR:",
-        {
-          error:
-            result.error,
+    if (!result.success || !result.handoff) {
+      console.error("FINORA GOLD LOAN STEP-1 HANDOFF ERROR:", {
+        error: result.error,
 
-          validation:
-            result.preparation.validation,
-        },
-      );
+        validation: result.preparation.validation,
+      });
 
       alert(
         result.error ??
@@ -597,13 +528,9 @@ export default function LoansPage() {
     // AUTHORITATIVE HANDOFF
     // --------------------------------------------------------
 
-    setGoldLoanHandoff(
-      result.handoff,
-    );
+    setGoldLoanHandoff(result.handoff);
 
-    setWorkspace(
-      "GOLD_LOAN_STUDIO",
-    );
+    setWorkspace("GOLD_LOAN_STUDIO");
   }
 
   // ==========================================================
@@ -612,50 +539,24 @@ export default function LoansPage() {
   // Existing production workflow remains unchanged.
   // ==========================================================
 
-  if (
-    workspace ===
-    "STANDARD_LOAN"
-  ) {
-    return (
-      <LoanStudio />
-    );
+  if (workspace === "STANDARD_LOAN") {
+    return <LoanStudio />;
   }
 
   // ==========================================================
   // GOLD LOAN — SHARED STEP 2–6
   // ==========================================================
 
-  if (
-    workspace ===
-      "GOLD_LOAN_STUDIO" &&
-    goldLoanHandoff
-  ) {
+  if (workspace === "GOLD_LOAN_STUDIO" && goldLoanHandoff) {
     return (
       <LoanStudio
-        entryMode={
-          goldLoanHandoff.entryMode
-        }
-        initialStep={
-          goldLoanHandoff.targetStep
-        }
-        customerId={
-          goldLoanHandoff.customer
-            .customerId
-        }
-        customerName={
-          goldLoanHandoff.customer
-            .customerName
-        }
-        phoneNumber={
-          goldLoanHandoff.customer
-            .phoneNumber
-        }
-        initialLoanAmount={
-          goldLoanHandoff.loanAmount
-        }
-        goldStepOne={
-          goldLoanHandoff.goldStepOne
-        }
+        entryMode={goldLoanHandoff.entryMode}
+        initialStep={goldLoanHandoff.targetStep}
+        customerId={goldLoanHandoff.customer.customerId}
+        customerName={goldLoanHandoff.customer.customerName}
+        phoneNumber={goldLoanHandoff.customer.phoneNumber}
+        initialLoanAmount={goldLoanHandoff.loanAmount}
+        goldStepOne={goldLoanHandoff.goldStepOne}
       />
     );
   }
@@ -664,30 +565,15 @@ export default function LoansPage() {
   // GOLD LOAN — STEP 1
   // ==========================================================
 
-  if (
-    workspace ===
-    "GOLD_LOAN_STEP_ONE"
-  ) {
+  if (workspace === "GOLD_LOAN_STEP_ONE") {
     return (
       <GoldLoanForm
-        customerOptions={
-          goldCustomerOptions
-        }
-        rooms={
-          goldRooms
-        }
-        defaultMarketRatePerGram={
-          GOLD_DEFAULT_MARKET_RATE_PER_GRAM
-        }
-        defaultMaxLtvPercentage={
-          GOLD_DEFAULT_MAX_LTV_PERCENTAGE
-        }
-        onBack={
-          handleCloseGoldLoan
-        }
-        onContinue={
-          handleGoldStepOneComplete
-        }
+        customerOptions={goldCustomerOptions}
+        rooms={goldRooms}
+        defaultMarketRatePerGram={GOLD_DEFAULT_MARKET_RATE_PER_GRAM}
+        defaultMaxLtvPercentage={GOLD_DEFAULT_MAX_LTV_PERCENTAGE}
+        onBack={handleCloseGoldLoan}
+        onContinue={handleGoldStepOneComplete}
       />
     );
   }
@@ -700,22 +586,15 @@ export default function LoansPage() {
   // Loans Office rather than mounting an incomplete LoanStudio.
   // ==========================================================
 
-  if (
-    workspace ===
-    "GOLD_LOAN_STUDIO"
-  ) {
-    return (
-      <Loans />
-    );
+  if (workspace === "GOLD_LOAN_STUDIO") {
+    return <Loans />;
   }
 
   // ==========================================================
   // LOANS OFFICE
   // ==========================================================
 
-  return (
-    <Loans />
-  );
+  return <Loans />;
 }
 
 // ============================================================

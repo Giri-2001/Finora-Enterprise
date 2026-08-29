@@ -33,13 +33,19 @@
 // IMPORTS
 // ============================================================
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import type { CSSProperties } from "react";
 
 import type { Loan } from "../../customers/office/CustomerOffice/types";
 
 import type { DocumentsStudioItem } from "../documents/DocumentsStudio";
+
+import { loadPersistedGoldStorageState } from "../../../services/gold-loan/goldCustodyPersistenceService";
+
+import { findCurrentGoldStorageByLoanId } from "../../../services/gold-loan/goldStorageService";
+
+import type { GoldStorageSearchResult } from "../../../types/gold-loan/goldStorage.types";
 
 // ============================================================
 // THEME ENGINE
@@ -494,8 +500,49 @@ export default function ViewLoanDetails({
   // PDFs open in the browser PDF viewer.
   // ==========================================================
 
+  const [goldCustodyLocation, setGoldCustodyLocation] =
+    useState<GoldStorageSearchResult | null>(null);
+
   const [viewerDocument, setViewerDocument] =
     useState<DocumentsStudioItem | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadGoldCustodyLocation(): Promise<void> {
+      const loanId = String(loan.id ?? "").trim();
+
+      if (!loanId) {
+        if (!cancelled) {
+          setGoldCustodyLocation(null);
+        }
+
+        return;
+      }
+
+      const result = await loadPersistedGoldStorageState();
+
+      if (cancelled) {
+        return;
+      }
+
+      if (!result.success || !result.state) {
+        setGoldCustodyLocation(null);
+
+        return;
+      }
+
+      setGoldCustodyLocation(
+        findCurrentGoldStorageByLoanId(result.state, loanId),
+      );
+    }
+
+    void loadGoldCustodyLocation();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [loan.id]);
 
   // ==========================================================
   // DOCUMENT OPEN
@@ -731,6 +778,87 @@ export default function ViewLoanDetails({
           {/* ================================================
               LOAN DOCUMENTS / EVIDENCE
           ================================================ */}
+
+          {/* ================================================
+    GOLD CUSTODY LOCATION — READ ONLY
+================================================ */}
+
+          {goldCustodyLocation ? (
+            <section style={sectionStyle}>
+              <div
+                className="finora-view-loan-section-header"
+                style={sectionHeaderStyle}
+              >
+                <div>
+                  <h2 style={sectionTitleStyle}>Gold Custody Location</h2>
+
+                  <p style={sectionSubtitleStyle}>
+                    Current physical location of the pledged Gold packet.
+                  </p>
+                </div>
+              </div>
+
+              <div style={infoGridStyle}>
+                <div style={infoItemStyle}>
+                  <span style={infoLabelStyle}>Custody Status</span>
+
+                  <strong>{goldCustodyLocation.custodyStatus}</strong>
+                </div>
+
+                <div style={infoItemStyle}>
+                  <span style={infoLabelStyle}>Locker Room</span>
+
+                  <strong>
+                    {goldCustodyLocation.location.roomName || "--"}
+                  </strong>
+                </div>
+
+                <div style={infoItemStyle}>
+                  <span style={infoLabelStyle}>Locker / Beeruva</span>
+
+                  <strong>
+                    {goldCustodyLocation.location.lockerName || "--"}
+                  </strong>
+                </div>
+
+                <div style={infoItemStyle}>
+                  <span style={infoLabelStyle}>Rack</span>
+
+                  <strong>
+                    {goldCustodyLocation.location.rackName || "--"}
+                  </strong>
+                </div>
+
+                <div style={infoItemStyle}>
+                  <span style={infoLabelStyle}>Bag / Packet</span>
+
+                  <strong>{goldCustodyLocation.location.bagNumber}</strong>
+                </div>
+
+                <div style={infoItemStyle}>
+                  <span style={infoLabelStyle}>Location Code</span>
+
+                  <strong>
+                    {goldCustodyLocation.locationCode.fullCode || "--"}
+                  </strong>
+                </div>
+              </div>
+
+              <div style={infoItemStyle}>
+                <span style={infoLabelStyle}>Physical Direction</span>
+
+                <strong>
+                  {goldCustodyLocation.location.roomName}
+                  {" → "}
+                  {goldCustodyLocation.location.lockerName}
+                  {" → "}
+                  {goldCustodyLocation.location.rackName}
+                  {" → Bag / Packet "}
+                  {goldCustodyLocation.location.bagNumber}
+                </strong>
+              </div>
+            </section>
+          ) : null}
 
           <section style={sectionStyle}>
             <div

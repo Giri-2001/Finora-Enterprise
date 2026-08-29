@@ -56,7 +56,8 @@ export type AppPage =
   | "customerDepartment"
   | "loans"
   | "collections"
-  | "reports";
+  | "reports"
+  | "settings";
 
 
 // ============================================================

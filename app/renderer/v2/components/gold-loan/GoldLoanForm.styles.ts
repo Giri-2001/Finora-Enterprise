@@ -648,7 +648,7 @@ export function getGoldLoanFormStyles(
 
       minHeight: topWorkspace.customerPanelHeight,
 
-      height: compact ? "auto" : topWorkspace.customerPanelHeight,
+      height: "auto",
 
       display: "flex",
 
@@ -678,7 +678,7 @@ export function getGoldLoanFormStyles(
 
       minHeight: topWorkspace.lockerPanelHeight,
 
-      height: compact ? "auto" : topWorkspace.lockerPanelHeight,
+      height: "auto",
 
       display: "flex",
 

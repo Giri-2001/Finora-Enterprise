@@ -134,6 +134,17 @@ import type { StorageQuery, StorageResult } from "../../storage/storage.types";
 
 const LOAN_ENTITY = "LOAN";
 
+interface LoanStorageRecord extends Loan {
+  entity: typeof LOAN_ENTITY;
+}
+
+function toLoanStorageRecord(loan: Loan): LoanStorageRecord {
+  return {
+    ...loan,
+    entity: LOAN_ENTITY,
+  };
+}
+
 // ============================================================
 // TYPES
 // ============================================================
@@ -905,7 +916,9 @@ export async function getLoans(): Promise<Loan[]> {
       const repaired = repairClosedLoanSchedule(baseLoan);
 
       if (repaired.changed) {
-        await storageManager.update<Loan>(repaired.loan);
+        await storageManager.update<LoanStorageRecord>(
+          toLoanStorageRecord(repaired.loan),
+        );
       }
 
       loans.push(repaired.loan);
@@ -928,7 +941,9 @@ export async function saveLoans(loans: Loan[]): Promise<StorageResult<void>> {
     return repairClosedLoanSchedule(baseLoan).loan;
   });
 
-  return storageManager.replaceAll<Loan>(normalizedLoans);
+  const storageRecords = normalizedLoans.map(toLoanStorageRecord);
+
+  return storageManager.replaceAll<LoanStorageRecord>(storageRecords);
 }
 
 // ============================================================
@@ -971,7 +986,9 @@ export async function addLoan(loan: Loan): Promise<StorageResult<Loan>> {
     };
   }
 
-  const result = await storageManager.save<Loan>(normalizedLoan);
+  const result = await storageManager.save<LoanStorageRecord>(
+    toLoanStorageRecord(normalizedLoan),
+  );
 
   if (!result.success) {
     return {
@@ -985,6 +1002,85 @@ export async function addLoan(loan: Loan): Promise<StorageResult<Loan>> {
     success: true,
 
     data: normalizedLoan,
+  };
+}
+
+// ============================================================
+// DELETE LOAN BY ID
+//
+// IMPORTANT:
+//
+// - This is a physical repository delete.
+// - Intended for controlled persistence compensation only.
+// - Example:
+//     Gold Loan persisted successfully
+//     Gold custody persistence failed
+//     → remove the just-created Loan record
+//
+// - Normal business workflows must NOT use this as a user-facing
+//   loan deletion feature.
+// - StorageManager applies active owner/demo context.
+// ============================================================
+
+export async function deleteLoanById(
+  loanId: string,
+): Promise<StorageResult<void>> {
+  const normalizedLoanId = String(loanId ?? "").trim();
+
+  if (!normalizedLoanId) {
+    return {
+      success: false,
+
+      error: "Loan ID is required before deleting a loan.",
+    };
+  }
+
+  /* ==========================================================
+     VERIFY AUTHORITATIVE RECORD EXISTS
+  ========================================================== */
+
+  const existing = await storageManager.get<Loan>(
+    buildLoanQuery({
+      id: normalizedLoanId,
+    }),
+  );
+
+  if (!existing.success) {
+    return {
+      success: false,
+
+      error: existing.error ?? "Unable to verify loan before deletion.",
+    };
+  }
+
+  if (!existing.data) {
+    return {
+      success: false,
+
+      error: "Loan was not found for deletion.",
+    };
+  }
+
+  /* ==========================================================
+     DELETE EXACT LOAN RECORD
+  ========================================================== */
+
+  const deleteResult = await storageManager.delete(
+    buildLoanQuery({
+      id: normalizedLoanId,
+    }),
+  );
+
+  if (!deleteResult.success) {
+    return {
+      success: false,
+
+      error: deleteResult.error ?? "Unable to delete loan.",
+    };
+  }
+
+  return {
+    success: true,
   };
 }
 
@@ -1012,7 +1108,9 @@ export async function getLoanById(loanId: string): Promise<Loan | undefined> {
   const repaired = repairClosedLoanSchedule(baseLoan);
 
   if (repaired.changed) {
-    await storageManager.update<Loan>(repaired.loan);
+    await storageManager.update<LoanStorageRecord>(
+      toLoanStorageRecord(repaired.loan),
+    );
   }
 
   return repaired.loan;
@@ -1262,7 +1360,9 @@ export async function updateLoanOutstanding(
   // PERSIST
   // ==========================================================
 
-  const updateResult = await storageManager.update<Loan>(updatedLoan);
+  const updateResult = await storageManager.update<LoanStorageRecord>(
+    toLoanStorageRecord(updatedLoan),
+  );
 
   if (!updateResult.success) {
     return undefined;

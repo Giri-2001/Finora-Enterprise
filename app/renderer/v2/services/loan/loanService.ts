@@ -56,6 +56,7 @@ import type { Loan } from "../../components/customers/office/CustomerOffice/type
 
 import {
   addLoan,
+  deleteLoanById,
   getLoanById,
   getLoans,
   updateLoanOutstanding,
@@ -224,6 +225,23 @@ export async function createLoan(loan: Loan): Promise<StorageResult<Loan>> {
 }
 
 // ============================================================
+// ROLLBACK JUST-CREATED LOAN
+//
+// IMPORTANT:
+//
+// - Internal persistence compensation only.
+// - Used when a Gold Loan record was saved successfully but
+//   its mandatory physical custody allocation failed.
+// - This is NOT a normal user-facing loan deletion workflow.
+// ============================================================
+
+export async function rollbackCreatedLoan(
+  loanId: string,
+): Promise<StorageResult<void>> {
+  return deleteLoanById(loanId);
+}
+
+// ============================================================
 // UPDATE LOAN OUTSTANDING + EMI PAYMENT STATE
 // ============================================================
 //
@@ -294,13 +312,10 @@ export async function updateLoanOutstandingAmount(
 
 export const loanService = {
   fetchLoans,
-
   fetchLoan,
-
   hasExistingLoan,
-
   createLoan,
-
+  rollbackCreatedLoan,
   updateLoanOutstanding: updateLoanOutstandingAmount,
 };
 

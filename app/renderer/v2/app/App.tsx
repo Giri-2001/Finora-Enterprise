@@ -77,6 +77,8 @@ import CollectionsOffice from "../pages/collections/CollectionsOffice";
 
 import ReportsPage from "../pages/reports/ReportsPage";
 
+import GoldStorageSettingsPage from "../pages/settings/GoldStorageSettingsPage";
+
 import LoanStudio from "../components/customers/office/CustomerOffice/components/LoanStudio";
 
 import Login from "../pages/auth/Login";
@@ -109,7 +111,8 @@ type Page =
   | "customerDepartment"
   | "loans"
   | "collections"
-  | "reports";
+  | "reports"
+  | "settings";
 
 // ============================================================
 // CONSTANTS
@@ -207,7 +210,8 @@ function isValidPage(value: unknown): value is Page {
     value === "customerDepartment" ||
     value === "loans" ||
     value === "collections" ||
-    value === "reports"
+    value === "reports" ||
+    value === "settings"
   );
 }
 
@@ -965,9 +969,7 @@ function AuthenticatedV2Application({
         break;
 
       case "settings":
-        // ----------------------------------------------------
-        // Coming Soon
-        // ----------------------------------------------------
+        handleNavigate("settings");
 
         break;
 
@@ -1041,10 +1043,16 @@ function AuthenticatedV2Application({
         )}
 
         {/* ==================================================
-            REPORTS
-        ================================================== */}
+    REPORTS
+================================================== */}
 
         {page === "reports" && <ReportsPage />}
+
+        {/* ==================================================
+    SETTINGS
+================================================== */}
+
+        {page === "settings" && <GoldStorageSettingsPage />}
       </AppShell>
     </SessionGuard>
   );

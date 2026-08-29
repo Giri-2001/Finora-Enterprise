@@ -801,23 +801,30 @@ export default function Loans() {
 
     try {
       // --------------------------------------------------
-      // RESTORE AUTHENTICATED STORAGE MODE
+      // PRESERVE LIVE FINORA STORAGE CONTEXT
+      //
+      // If StorageManager is already initialized, its live
+      // configuration is authoritative.
+      //
+      // This prevents a stale sessionStorage value from changing
+      // an active USB session to LOCAL while navigating to Loans.
+      //
+      // Only a fresh / uninitialized StorageManager may restore
+      // the persisted session mode.
       // --------------------------------------------------
 
-      const storageMode = getAuthenticatedStorageMode();
+      if (!storageManager.isInitialized()) {
+        const storageMode = getAuthenticatedStorageMode();
 
-      // --------------------------------------------------
-      // RESTORE SAME STORAGE CONTEXT
-      // --------------------------------------------------
+        const storageActivated =
+          await storageManager.selectStorageMode(storageMode);
 
-      const storageActivated =
-        await storageManager.selectStorageMode(storageMode);
-
-      if (!storageActivated.success) {
-        throw new Error(
-          storageActivated.error ??
-            `Unable to restore FINORA ${storageMode} storage.`,
-        );
+        if (!storageActivated.success) {
+          throw new Error(
+            storageActivated.error ??
+              `Unable to restore FINORA ${storageMode} storage.`,
+          );
+        }
       }
 
       // --------------------------------------------------

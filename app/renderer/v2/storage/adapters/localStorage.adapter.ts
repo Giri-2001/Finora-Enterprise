@@ -78,6 +78,12 @@ const ENTITY_BUSINESS_SETTINGS = "BUSINESS_SETTINGS";
 
 const ENTITY_LOAN = "LOAN";
 
+const ENTITY_GOLD_STORAGE_SETTINGS = "GOLD_STORAGE_SETTINGS";
+
+const ENTITY_GOLD_CUSTODY_ALLOCATION = "GOLD_CUSTODY_ALLOCATION";
+
+const ENTITY_GOLD_RELOCATION_AUDIT = "GOLD_RELOCATION_AUDIT";
+
 const ENTITY_COLLECTION = "COLLECTION";
 
 const ENTITY_PAYMENT = "PAYMENT";
@@ -98,6 +104,12 @@ const FINORA_RESET_ENTITIES: readonly string[] = [
   ENTITY_BUSINESS_IDENTITY,
 
   ENTITY_BUSINESS_SETTINGS,
+
+  ENTITY_GOLD_STORAGE_SETTINGS,
+
+  ENTITY_GOLD_CUSTODY_ALLOCATION,
+
+  ENTITY_GOLD_RELOCATION_AUDIT,
 
   ENTITY_LOAN,
 
@@ -268,6 +280,30 @@ function resolveEntity(record: unknown): string {
   }
 
   const value = record as Record<string, unknown>;
+
+  // ==========================================================
+  // GOLD STORAGE SETTINGS
+  // ==========================================================
+  //
+  // Gold Storage repository supplies an explicit entity marker
+  // because the same persisted record must work consistently
+  // across:
+  //
+  // - LOCAL
+  // - USB
+  // - future CLOUD
+  //
+  // Keep this rule narrow so existing heuristic routing for
+  // Customer / Loan / Collection remains untouched.
+  // ==========================================================
+
+  if (value.entity === ENTITY_GOLD_CUSTODY_ALLOCATION) {
+    return ENTITY_GOLD_CUSTODY_ALLOCATION;
+  }
+
+  if (value.entity === ENTITY_GOLD_RELOCATION_AUDIT) {
+    return ENTITY_GOLD_RELOCATION_AUDIT;
+  }
 
   // ==========================================================
   // COLLECTION
