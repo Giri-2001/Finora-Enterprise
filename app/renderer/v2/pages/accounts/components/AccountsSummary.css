@@ -1,0 +1,589 @@
+/* ===========================================================
+   FINORA ENTERPRISE OS™
+
+   ACCOUNTS ENGINE™
+
+   ACCOUNTS SUMMARY
+
+   MODULE  : Accounts
+   LAYER   : Summary Stylesheet
+   VERSION : 1.0
+
+   RESPONSIBILITY:
+
+   - Money Out summary card
+   - Money In summary card
+   - Net Movement summary card
+   - Transactions summary card
+   - Clear owner-facing debit / credit semantics
+   - Theme-aware visual presentation
+   - Responsive layout through Accounts CSS variables
+
+   IMPORTANT:
+
+   - No @media queries.
+   - No breakpoint values.
+   - No inline styles.
+   - No duplicate responsive geometry.
+   - No duplicate theme palette.
+=========================================================== */
+
+
+/* ===========================================================
+   ROOT
+=========================================================== */
+
+.finora-accounts-summary {
+  width: 100%;
+
+  box-sizing: border-box;
+}
+
+
+/* ===========================================================
+   GRID
+=========================================================== */
+
+.finora-accounts-summary__grid {
+  width: 100%;
+
+  display: grid;
+
+  grid-template-columns:
+    repeat(
+      var(--finora-accounts-summary-columns),
+      minmax(0, 1fr)
+    );
+
+  gap:
+    var(--finora-accounts-summary-gap);
+
+  box-sizing: border-box;
+}
+
+
+/* ===========================================================
+   CARD
+=========================================================== */
+
+.finora-accounts-summary__card {
+  position: relative;
+
+  min-width: 0;
+
+  min-height:
+    var(--finora-accounts-summary-card-min-height);
+
+  padding:
+    var(--finora-accounts-summary-card-padding);
+
+  display: flex;
+
+  flex-direction: column;
+
+  justify-content: space-between;
+
+  gap:
+    var(--finora-accounts-card-gap);
+
+  overflow: hidden;
+
+  box-sizing: border-box;
+
+  border:
+    var(--finora-accounts-panel-border-width)
+    solid
+    var(--finora-theme-card-border);
+
+  border-radius:
+    var(--finora-accounts-summary-card-radius);
+
+  background:
+    var(--finora-theme-card-background);
+
+  box-shadow:
+    var(--finora-theme-card-shadow);
+
+  transition:
+    border-color 140ms ease,
+    box-shadow 140ms ease,
+    transform 140ms ease;
+}
+
+
+/* ===========================================================
+   CARD HOVER
+=========================================================== */
+
+.finora-accounts-summary__card:hover {
+  border-color:
+    var(--finora-theme-border-strong);
+
+  transform:
+    translateY(-1px);
+}
+
+
+/* ===========================================================
+   CARD HEADER
+=========================================================== */
+
+.finora-accounts-summary__card-header {
+  min-width: 0;
+
+  display: flex;
+
+  align-items: flex-start;
+
+  justify-content: space-between;
+
+  gap:
+    var(--finora-accounts-compact-gap);
+}
+
+
+/* ===========================================================
+   IDENTITY
+=========================================================== */
+
+.finora-accounts-summary__identity {
+  min-width: 0;
+
+  display: flex;
+
+  align-items: flex-start;
+
+  gap:
+    var(--finora-accounts-compact-gap);
+}
+
+
+/* ===========================================================
+   ICON CONTAINER
+=========================================================== */
+
+.finora-accounts-summary__icon {
+  width:
+    var(--finora-accounts-summary-icon-container-size);
+
+  min-width:
+    var(--finora-accounts-summary-icon-container-size);
+
+  height:
+    var(--finora-accounts-summary-icon-container-size);
+
+  display: inline-flex;
+
+  align-items: center;
+
+  justify-content: center;
+
+  flex: 0 0 auto;
+
+  box-sizing: border-box;
+
+  border:
+    var(--finora-accounts-panel-border-width)
+    solid
+    var(--finora-theme-border-default);
+
+  border-radius:
+    var(--finora-accounts-panel-compact-radius);
+
+  background:
+    var(--finora-theme-background-surface-muted);
+
+  color:
+    var(--finora-theme-text-secondary);
+}
+
+
+/* ===========================================================
+   ICON SYMBOL
+=========================================================== */
+
+.finora-accounts-summary__icon-symbol {
+  width:
+    var(--finora-accounts-summary-icon-size);
+
+  height:
+    var(--finora-accounts-summary-icon-size);
+
+  flex: 0 0 auto;
+}
+
+
+/* ===========================================================
+   HEADING GROUP
+=========================================================== */
+
+.finora-accounts-summary__heading-group {
+  min-width: 0;
+
+  display: flex;
+
+  flex-direction: column;
+
+  gap:
+    var(--finora-accounts-compact-gap);
+}
+
+
+/* ===========================================================
+   TITLE ROW
+=========================================================== */
+
+.finora-accounts-summary__title-row {
+  min-width: 0;
+
+  display: flex;
+
+  align-items: center;
+
+  flex-wrap: wrap;
+
+  gap:
+    var(--finora-accounts-compact-gap);
+}
+
+
+/* ===========================================================
+   TITLE
+=========================================================== */
+
+.finora-accounts-summary__title {
+  margin: 0;
+
+  color:
+    var(--finora-theme-typography-heading);
+
+  font-family:
+    var(--finora-accounts-font-family);
+
+  font-size:
+    var(--finora-accounts-font-summary-label);
+
+  font-weight: 750;
+
+  line-height: 1.25;
+}
+
+
+/* ===========================================================
+   ACCOUNTING LABEL
+
+   Example:
+   Debit
+   Credit
+=========================================================== */
+
+.finora-accounts-summary__accounting-label {
+  display: inline-flex;
+
+  align-items: center;
+
+  justify-content: center;
+
+  min-height: 20px;
+
+  padding: 2px 7px;
+
+  box-sizing: border-box;
+
+  border:
+    var(--finora-accounts-panel-border-width)
+    solid
+    var(--finora-theme-border-default);
+
+  border-radius:
+    var(--finora-accounts-button-radius);
+
+  background:
+    var(--finora-theme-background-surface-muted);
+
+  color:
+    var(--finora-theme-text-muted);
+
+  font-family:
+    var(--finora-accounts-font-family);
+
+  font-size:
+    var(--finora-accounts-font-summary-hint);
+
+  font-weight: 700;
+
+  line-height: 1;
+}
+
+
+/* ===========================================================
+   VALUE
+=========================================================== */
+
+.finora-accounts-summary__value {
+  margin: 0;
+
+  color:
+    var(--finora-theme-text-primary);
+
+  font-family:
+    var(--finora-accounts-font-family);
+
+  font-size:
+    var(--finora-accounts-font-summary-value);
+
+  font-weight: 850;
+
+  line-height: 1.08;
+
+  letter-spacing: -0.025em;
+
+  font-variant-numeric:
+    tabular-nums;
+
+  overflow-wrap: anywhere;
+}
+
+
+/* ===========================================================
+   SUBTITLE
+=========================================================== */
+
+.finora-accounts-summary__subtitle {
+  margin: 0;
+
+  color:
+    var(--finora-theme-text-muted);
+
+  font-family:
+    var(--finora-accounts-font-family);
+
+  font-size:
+    var(--finora-accounts-font-summary-hint);
+
+  font-weight: 500;
+
+  line-height: 1.45;
+}
+
+
+/* ===========================================================
+   FOOTER
+=========================================================== */
+
+.finora-accounts-summary__footer {
+  min-width: 0;
+
+  display: flex;
+
+  align-items: center;
+
+  justify-content: space-between;
+
+  gap:
+    var(--finora-accounts-compact-gap);
+}
+
+
+/* ===========================================================
+   COUNT
+=========================================================== */
+
+.finora-accounts-summary__count {
+  color:
+    var(--finora-theme-text-muted);
+
+  font-family:
+    var(--finora-accounts-font-family);
+
+  font-size:
+    var(--finora-accounts-font-summary-hint);
+
+  font-weight: 650;
+
+  line-height: 1.3;
+
+  font-variant-numeric:
+    tabular-nums;
+}
+
+
+/* ===========================================================
+   MONEY OUT CARD
+
+   Owner meaning:
+   Money leaving business.
+
+   Accounting meaning:
+   Debit.
+=========================================================== */
+
+.finora-accounts-summary__card--money-out {
+  border-color:
+    var(--finora-theme-financial-debit)
+}
+
+
+.finora-accounts-summary__card--money-out
+.finora-accounts-summary__icon {
+  background:
+    var(--finora-theme-financial-debit-soft);
+
+  border-color:
+    var(--finora-theme-danger);
+}
+
+
+.finora-accounts-summary__card--money-out
+.finora-accounts-summary__accounting-label {
+  background:
+   var(--finora-theme-financial-debit-soft);
+
+  border-color:
+    var(--finora-theme-danger);
+
+  color:
+    var(--finora-theme-danger);
+}
+
+
+.finora-accounts-summary__value--money-out,
+.finora-accounts-summary__icon-symbol--money-out {
+  color:
+    var(--finora-theme-danger);
+}
+
+
+/* ===========================================================
+   MONEY IN CARD
+
+   Owner meaning:
+   Money received.
+
+   Accounting meaning:
+   Credit.
+=========================================================== */
+
+.finora-accounts-summary__card--money-in {
+  border-color:
+  var(--finora-theme-financial-credit);
+}
+
+
+.finora-accounts-summary__card--money-in
+.finora-accounts-summary__icon {
+  background:
+    var(--finora-theme-success-soft);
+
+  border-color:
+    var(--finora-theme-financial-credit);
+}
+
+
+.finora-accounts-summary__card--money-in
+.finora-accounts-summary__accounting-label {
+  background:
+    var(--finora-theme-success-soft);
+
+  border-color:
+    var(--finora-theme-financial-credit);
+
+  color:
+   var(--finora-theme-financial-credit);
+}
+
+
+.finora-accounts-summary__value--money-in,
+.finora-accounts-summary__icon-symbol--money-in {
+  color:
+    var(--finora-theme-financial-credit);
+}
+
+
+/* ===========================================================
+   NET POSITIVE
+=========================================================== */
+
+.finora-accounts-summary__card--net-positive
+.finora-accounts-summary__icon {
+  background:
+    var(--finora-theme-success-soft);
+
+  border-color:
+    var(--finora-theme-financial-credit);
+}
+
+
+.finora-accounts-summary__value--net-positive,
+.finora-accounts-summary__icon-symbol--net-positive {
+  color:
+    var(--finora-theme-financial-credit);
+}
+
+
+/* ===========================================================
+   NET NEGATIVE
+=========================================================== */
+
+.finora-accounts-summary__card--net-negative
+.finora-accounts-summary__icon {
+  background:
+    var(--finora-theme-financial-debit-soft);
+
+  border-color:
+    var(--finora-theme-danger);
+}
+
+
+.finora-accounts-summary__value--net-negative,
+.finora-accounts-summary__icon-symbol--net-negative {
+  color:
+    var(--finora-theme-danger);
+}
+
+
+/* ===========================================================
+   NET NEUTRAL
+=========================================================== */
+
+.finora-accounts-summary__card--net-neutral
+.finora-accounts-summary__icon {
+  background:
+    var(--finora-theme-info-soft);
+
+  border-color:
+    var(--finora-theme-info);
+}
+
+
+.finora-accounts-summary__value--net-neutral,
+.finora-accounts-summary__icon-symbol--net-neutral {
+  color:
+    var(--finora-theme-info);
+}
+
+
+/* ===========================================================
+   TRANSACTIONS
+=========================================================== */
+
+.finora-accounts-summary__card--transactions
+.finora-accounts-summary__icon {
+  background:
+    var(--finora-theme-brand-accent-soft);
+
+  border-color:
+    var(--finora-theme-brand-primary);
+}
+
+
+.finora-accounts-summary__value--transactions,
+.finora-accounts-summary__icon-symbol--transactions {
+  color:
+    var(--finora-theme-brand-primary);
+}
+
+
+/* ===========================================================
+   END
+=========================================================== */

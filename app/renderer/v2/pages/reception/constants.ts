@@ -13,198 +13,137 @@
    - Premium icons are resolved by DepartmentDoor component.
 =========================================================== */
 
-
 /* ===========================================================
    IMPORTS
 =========================================================== */
 
-import type {
-  DepartmentDoor,
-} from "./types";
-
+import type { DepartmentDoor } from "./types";
 
 /* ===========================================================
    DEPARTMENTS
 =========================================================== */
 
-export const DEPARTMENTS:
-  DepartmentDoor[] = [
-
+export const DEPARTMENTS: DepartmentDoor[] = [
   /* =========================================================
      CUSTOMERS
   ========================================================= */
 
   {
-    id:
-      "customers",
+    id: "customers",
 
-    title:
-      "Customers",
+    title: "Customers",
 
-    subtitle:
-      "Customer Department",
+    subtitle: "Customer Department",
 
-    icon:
-      "users",
+    icon: "users",
 
-    path:
-      "/customers",
+    path: "/customers",
 
-    enabled:
-      true,
+    enabled: true,
 
-    status:
-      "ready",
-
+    status: "ready",
   },
-
 
   /* =========================================================
      LOANS
   ========================================================= */
 
   {
-    id:
-      "loans",
+    id: "loans",
 
-    title:
-      "Loans",
+    title: "Loans",
 
-    subtitle:
-      "Loan Office",
+    subtitle: "Loan Office",
 
-    icon:
-      "banknote",
+    icon: "banknote",
 
-    path:
-      "/loans",
+    path: "/loans",
 
-    enabled:
-      true,
+    enabled: true,
 
-    status:
-      "ready",
-
+    status: "ready",
   },
-
 
   /* =========================================================
      COLLECTIONS
   ========================================================= */
 
   {
-    id:
-      "collections",
+    id: "collections",
 
-    title:
-      "Collections",
+    title: "Collections",
 
-    subtitle:
-      "Collection Office",
+    subtitle: "Collection Office",
 
-    icon:
-      "credit-card",
+    icon: "credit-card",
 
-    path:
-      "/collections",
+    path: "/collections",
 
-    enabled:
-      true,
+    enabled: true,
 
-    status:
-      "ready",
-
+    status: "ready",
   },
-
 
   /* =========================================================
      ACCOUNTS
   ========================================================= */
 
   {
-    id:
-      "accounts",
+    id: "accounts",
 
-    title:
-      "Accounts",
+    title: "Accounts",
 
-    subtitle:
-      "Accounts Office",
+    subtitle: "Accounts Office",
 
-    icon:
-      "notebook-tabs",
+    icon: "notebook-tabs",
 
-    path:
-      "/accounts",
+    path: "/accounts",
 
-    enabled:
-      false,
+    enabled: true,
 
-    status:
-      "comingSoon",
-
+    status: "ready",
   },
-
 
   /* =========================================================
      REPORTS
   ========================================================= */
 
   {
-    id:
-      "reports",
+    id: "reports",
 
-    title:
-      "Reports",
+    title: "Reports",
 
-    subtitle:
-      "Business Reports",
+    subtitle: "Business Reports",
 
-    icon:
-      "chart",
+    icon: "chart",
 
-    path:
-      "/reports",
+    path: "/reports",
 
-    enabled:
-      true,
+    enabled: true,
 
-    status:
-      "ready",
-
+    status: "ready",
   },
-
 
   /* =========================================================
      SETTINGS
   ========================================================= */
 
   {
-    id:
-      "settings",
+    id: "settings",
 
-    title:
-      "Settings",
+    title: "Settings",
 
-    subtitle:
-      "Enterprise Settings",
+    subtitle: "Enterprise Settings",
 
-    icon:
-      "settings",
+    icon: "settings",
 
-    path:
-      "/settings",
+    path: "/settings",
 
-    enabled:
-      true,
+    enabled: true,
 
-    status:
-      "ready",
-
+    status: "ready",
   },
-
 ];
-
 
 /* ===========================================================
    END

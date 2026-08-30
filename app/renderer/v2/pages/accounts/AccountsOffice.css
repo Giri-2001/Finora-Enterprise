@@ -1,0 +1,439 @@
+/* ===========================================================
+   FINORA ENTERPRISE OS™
+
+   ACCOUNTS ENGINE™
+
+   ACCOUNTS OFFICE
+
+   MODULE  : Accounts
+   LAYER   : Page Stylesheet
+   VERSION : 1.0
+
+   RESPONSIBILITY:
+
+   - Accounts page shell
+   - Main content workspace
+   - Generic section geometry
+   - Loading state
+   - Error state
+   - Retry action
+   - Money Out semantic helpers
+   - Money In semantic helpers
+
+   ARCHITECTURE:
+
+   FINORA Theme Engine
+        ↓
+   --finora-theme-*
+
+   FINORA Responsive Engine
+        ↓
+   --finora-accounts-*
+
+        ↓
+
+   ACCOUNTS CSS CLASSES
+
+   IMPORTANT:
+
+   - No @media queries.
+   - No breakpoint values.
+   - No duplicated theme palette.
+   - No duplicated responsive geometry.
+   - No JSX inline styles.
+=========================================================== */
+
+
+/* ===========================================================
+   PAGE
+=========================================================== */
+
+.finora-accounts-office {
+  width: 100%;
+  min-height: 100%;
+
+  box-sizing: border-box;
+
+  padding-top:
+    var(--finora-accounts-page-padding-top);
+
+  padding-right:
+    var(--finora-accounts-page-padding-x);
+
+  padding-bottom:
+    var(--finora-accounts-page-padding-bottom);
+
+  padding-left:
+    var(--finora-accounts-page-padding-x);
+
+  background:
+    var(--finora-theme-background-page);
+
+  color:
+    var(--finora-theme-text-primary);
+
+  font-family:
+    var(--finora-accounts-font-family);
+}
+
+
+/* ===========================================================
+   CONTENT
+=========================================================== */
+
+.finora-accounts-office__content {
+  width:
+    var(--finora-accounts-page-width);
+
+  max-width:
+    var(--finora-accounts-page-max-width);
+
+  margin-right: auto;
+  margin-left: auto;
+
+  display: flex;
+  flex-direction: column;
+
+  gap:
+    var(--finora-accounts-section-gap);
+
+  box-sizing: border-box;
+}
+
+
+/* ===========================================================
+   GENERIC SECTION
+=========================================================== */
+
+.finora-accounts-office__section {
+  width: 100%;
+
+  display: flex;
+  flex-direction: column;
+
+  gap:
+    var(--finora-accounts-content-gap);
+
+  box-sizing: border-box;
+}
+
+
+/* ===========================================================
+   STATE PANEL
+=========================================================== */
+
+.finora-accounts-state-panel {
+  width: 100%;
+
+  min-height:
+    var(--finora-accounts-empty-min-height);
+
+  padding:
+    var(--finora-accounts-panel-padding);
+
+  display: flex;
+  flex-direction: column;
+
+  align-items: center;
+  justify-content: center;
+
+  gap:
+    var(--finora-accounts-compact-gap);
+
+  box-sizing: border-box;
+
+  border-width:
+    var(--finora-accounts-panel-border-width);
+
+  border-style: solid;
+
+  border-radius:
+    var(--finora-accounts-panel-radius);
+
+  text-align: center;
+}
+
+
+/* ===========================================================
+   LOADING
+=========================================================== */
+
+.finora-accounts-state-panel--loading {
+  background:
+    var(--finora-theme-panel-background);
+
+  border-color:
+    var(--finora-theme-panel-border);
+
+  box-shadow:
+    var(--finora-theme-panel-shadow);
+}
+
+
+/* ===========================================================
+   ERROR
+=========================================================== */
+
+.finora-accounts-state-panel--error {
+  background:
+    var(--finora-theme-danger-soft);
+
+  border-color:
+    var(--finora-theme-danger);
+}
+
+
+/* ===========================================================
+   STATE TITLE
+=========================================================== */
+
+.finora-accounts-state-panel__title {
+  margin: 0;
+
+  color:
+    var(--finora-theme-typography-heading);
+
+  font-family:
+    var(--finora-accounts-font-family);
+
+  font-size:
+    var(--finora-accounts-font-section-title);
+
+  font-weight: 700;
+
+  line-height: 1.3;
+}
+
+
+/* ===========================================================
+   ERROR TITLE
+=========================================================== */
+
+.finora-accounts-state-panel--error
+.finora-accounts-state-panel__title {
+  color:
+    var(--finora-theme-danger);
+}
+
+
+/* ===========================================================
+   STATE TEXT
+=========================================================== */
+
+.finora-accounts-state-panel__text {
+  max-width: 620px;
+
+  margin: 0;
+
+  color:
+    var(--finora-theme-typography-caption);
+
+  font-family:
+    var(--finora-accounts-font-family);
+
+  font-size:
+    var(--finora-accounts-font-section-subtitle);
+
+  font-weight: 500;
+
+  line-height: 1.5;
+}
+
+
+/* ===========================================================
+   ERROR TEXT
+=========================================================== */
+
+.finora-accounts-state-panel--error
+.finora-accounts-state-panel__text {
+  color:
+    var(--finora-theme-text-secondary);
+}
+
+
+/* ===========================================================
+   RETRY BUTTON
+=========================================================== */
+
+.finora-accounts-retry-button {
+  min-height:
+    var(--finora-accounts-button-height);
+
+  padding-right:
+    var(--finora-accounts-button-padding-x);
+
+  padding-left:
+    var(--finora-accounts-button-padding-x);
+
+  display: inline-flex;
+
+  align-items: center;
+  justify-content: center;
+
+  gap:
+    var(--finora-accounts-compact-gap);
+
+  box-sizing: border-box;
+
+  border: 0;
+
+  border-radius:
+    var(--finora-accounts-button-radius);
+
+  background:
+    var(--finora-theme-button-primary-background);
+
+  color:
+    var(--finora-theme-button-primary-text);
+
+  font-family:
+    var(--finora-accounts-font-family);
+
+  font-size:
+    var(--finora-accounts-font-button);
+
+  font-weight: 700;
+
+  line-height: 1;
+
+  cursor: pointer;
+
+  transition:
+    background 140ms ease,
+    box-shadow 140ms ease,
+    transform 140ms ease;
+}
+
+
+.finora-accounts-retry-button:hover {
+  background:
+    var(--finora-theme-button-primary-hover);
+}
+
+
+.finora-accounts-retry-button:active {
+  transform: translateY(1px);
+}
+
+
+.finora-accounts-retry-button:focus-visible {
+  outline:
+    2px solid
+    var(--finora-theme-border-focus);
+
+  outline-offset: 2px;
+}
+
+
+/* ===========================================================
+   MONEY OUT
+
+   OWNER MEANING:
+   Money leaving the business.
+
+   ACCOUNTING MEANING:
+   Debit / disbursement.
+
+   Exact red tone comes from current FINORA theme.
+=========================================================== */
+
+.finora-accounts-money-out {
+  color:
+    var(--finora-theme-danger);
+
+  font-family:
+    var(--finora-accounts-font-family);
+
+  font-weight: 800;
+
+  font-variant-numeric:
+    tabular-nums;
+}
+
+
+.finora-accounts-money-out-surface {
+  background:
+    var(--finora-theme-danger-soft);
+
+  border-color:
+    var(--finora-theme-danger);
+}
+
+
+/* ===========================================================
+   MONEY IN
+
+   OWNER MEANING:
+   Money received by the business.
+
+   ACCOUNTING MEANING:
+   Credit / collection.
+
+   Exact green tone comes from current FINORA theme.
+=========================================================== */
+
+.finora-accounts-money-in {
+  color:
+    var(--finora-theme-success);
+
+  font-family:
+    var(--finora-accounts-font-family);
+
+  font-weight: 800;
+
+  font-variant-numeric:
+    tabular-nums;
+}
+
+
+.finora-accounts-money-in-surface {
+  background:
+    var(--finora-theme-success-soft);
+
+  border-color:
+    var(--finora-theme-success);
+}
+
+
+/* ===========================================================
+   NUMERIC ALIGNMENT
+
+   Useful for:
+   - Money Out
+   - Money In
+   - Net Movement
+   - transaction register amounts
+=========================================================== */
+
+.finora-accounts-number {
+  font-variant-numeric:
+    tabular-nums;
+}
+
+
+/* ===========================================================
+   SCREEN-READER ONLY
+=========================================================== */
+
+.finora-accounts-sr-only {
+  position: absolute;
+
+  width: 1px;
+  height: 1px;
+
+  padding: 0;
+  margin: -1px;
+
+  overflow: hidden;
+
+  clip: rect(0, 0, 0, 0);
+
+  white-space: nowrap;
+
+  border: 0;
+}
+
+
+/* ===========================================================
+   END
+=========================================================== */

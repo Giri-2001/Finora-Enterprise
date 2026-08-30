@@ -1,0 +1,1744 @@
+/* ===========================================================
+   FINORA ENTERPRISE OS™
+
+   ACCOUNTS ENGINE™
+
+   PHYSICAL ACCOUNTS REGISTER
+
+   MODULE  : Accounts
+   LAYER   : Ledger Stylesheet
+   VERSION : 1.0
+
+   RESPONSIBILITY:
+
+   - Physical-register table presentation
+   - Clear row / column separators
+   - Money Out red semantics
+   - Money In green semantics
+   - Gold / Standard loan identification
+   - Payment-method presentation
+   - Responsive horizontal behavior via Accounts Engine
+
+   IMPORTANT:
+
+   - No @media queries.
+   - No breakpoint values.
+   - No inline styles.
+   - No duplicated responsive geometry.
+   - No duplicated theme palette.
+=========================================================== */
+
+
+/* ===========================================================
+   REGISTER SECTION
+=========================================================== */
+
+.finora-accounts-ledger {
+  width: 100%;
+
+  min-height:
+    var(--finora-accounts-register-section-min-height);
+
+  padding:
+    var(--finora-accounts-register-section-padding);
+
+  display: flex;
+
+  flex-direction: column;
+
+  gap:
+    var(--finora-accounts-register-section-content-gap);
+
+  box-sizing: border-box;
+
+  border:
+    var(--finora-accounts-panel-border-width)
+    solid
+    var(--finora-theme-panel-border);
+
+  border-radius:
+    var(--finora-accounts-register-section-radius);
+
+  background:
+    var(--finora-theme-panel-background);
+
+  box-shadow:
+    var(--finora-theme-panel-shadow);
+}
+
+
+/* ===========================================================
+   REGISTER HEADER
+=========================================================== */
+
+.finora-accounts-ledger__header {
+  min-width: 0;
+
+  display: flex;
+
+  align-items: center;
+
+  justify-content: space-between;
+
+  flex-wrap: wrap;
+
+  gap:
+    var(--finora-accounts-register-section-header-gap);
+}
+
+
+/* ===========================================================
+   HEADER IDENTITY
+=========================================================== */
+
+.finora-accounts-ledger__header-identity {
+  min-width: 0;
+
+  display: flex;
+
+  align-items: center;
+
+  gap:
+    var(--finora-accounts-compact-gap);
+}
+
+
+/* ===========================================================
+   HEADER ICON
+=========================================================== */
+
+.finora-accounts-ledger__header-icon {
+  width:
+    var(--finora-accounts-header-icon-container-size);
+
+  min-width:
+    var(--finora-accounts-header-icon-container-size);
+
+  height:
+    var(--finora-accounts-header-icon-container-size);
+
+  display: inline-flex;
+
+  align-items: center;
+
+  justify-content: center;
+
+  flex: 0 0 auto;
+
+  box-sizing: border-box;
+
+  border:
+    var(--finora-accounts-panel-border-width)
+    solid
+    var(--finora-theme-border-default);
+
+  border-radius:
+    var(--finora-accounts-panel-compact-radius);
+
+  background:
+    var(--finora-theme-brand-accent-soft);
+
+  color:
+    var(--finora-theme-brand-primary);
+}
+
+
+/* ===========================================================
+   REGISTER ICON
+=========================================================== */
+
+.finora-accounts-ledger__register-icon {
+  width:
+    var(--finora-accounts-icon-size);
+
+  height:
+    var(--finora-accounts-icon-size);
+}
+
+
+/* ===========================================================
+   HEADING GROUP
+=========================================================== */
+
+.finora-accounts-ledger__heading-group {
+  min-width: 0;
+
+  display: flex;
+
+  flex-direction: column;
+
+  gap:
+    var(--finora-accounts-compact-gap);
+}
+
+
+/* ===========================================================
+   TITLE
+=========================================================== */
+
+.finora-accounts-ledger__title {
+  margin: 0;
+
+  color:
+    var(--finora-theme-typography-heading);
+
+  font-family:
+    var(--finora-accounts-font-family);
+
+  font-size:
+    var(--finora-accounts-font-register-title);
+
+  font-weight: 800;
+
+  line-height: 1.25;
+}
+
+
+/* ===========================================================
+   SUBTITLE
+=========================================================== */
+
+.finora-accounts-ledger__subtitle {
+  margin: 0;
+
+  color:
+    var(--finora-theme-text-muted);
+
+  font-family:
+    var(--finora-accounts-font-family);
+
+  font-size:
+    var(--finora-accounts-font-register-subtitle);
+
+  font-weight: 500;
+
+  line-height: 1.45;
+}
+
+
+/* ===========================================================
+   PERIOD BADGE
+=========================================================== */
+
+.finora-accounts-ledger__period {
+  display: inline-flex;
+
+  align-items: center;
+
+  gap:
+    var(--finora-accounts-compact-gap);
+
+  min-height:
+    var(--finora-accounts-compact-button-height);
+
+  padding-right:
+    var(--finora-accounts-input-padding-x);
+
+  padding-left:
+    var(--finora-accounts-input-padding-x);
+
+  box-sizing: border-box;
+
+  border:
+    var(--finora-accounts-panel-border-width)
+    solid
+    var(--finora-theme-border-default);
+
+  border-radius:
+    var(--finora-accounts-button-radius);
+
+  background:
+    var(--finora-theme-background-surface-muted);
+
+  color:
+    var(--finora-theme-text-secondary);
+}
+
+
+/* ===========================================================
+   PERIOD ICON
+=========================================================== */
+
+.finora-accounts-ledger__period-icon,
+.finora-accounts-ledger__calendar-icon {
+  width:
+    var(--finora-accounts-compact-icon-size);
+
+  height:
+    var(--finora-accounts-compact-icon-size);
+
+  flex: 0 0 auto;
+
+  color:
+    var(--finora-theme-brand-primary);
+}
+
+
+/* ===========================================================
+   PERIOD TEXT
+=========================================================== */
+
+.finora-accounts-ledger__period-text {
+  font-family:
+    var(--finora-accounts-font-family);
+
+  font-size:
+    var(--finora-accounts-font-table-secondary);
+
+  font-weight: 700;
+
+  line-height: 1;
+
+  white-space: nowrap;
+}
+
+
+/* ===========================================================
+   REGISTER WRAPPER
+
+   Mobile:
+     hidden by responsive variable
+
+   Tablet:
+     horizontal scrolling allowed
+
+   Laptop / Desktop:
+     full physical register
+=========================================================== */
+
+.finora-accounts-ledger__wrapper {
+  width: 100%;
+
+  display:
+    var(--finora-accounts-register-wrapper-display);
+
+  overflow-x:
+    var(--finora-accounts-register-overflow-x);
+
+  box-sizing: border-box;
+
+  border:
+    var(--finora-accounts-register-border-width)
+    solid
+    var(--finora-theme-border-strong);
+
+  border-radius:
+    var(--finora-accounts-register-radius);
+
+  background:
+    var(--finora-theme-background-surface);
+}
+
+
+/* ===========================================================
+   TABLE
+=========================================================== */
+
+.finora-accounts-ledger__table {
+  width: 100%;
+
+  min-width:
+    var(--finora-accounts-register-min-width);
+
+  display:
+    var(--finora-accounts-register-display);
+
+  border-collapse: collapse;
+
+  table-layout: fixed;
+
+  background:
+    var(--finora-theme-background-surface);
+
+  color:
+    var(--finora-theme-text-primary);
+
+  font-family:
+    var(--finora-accounts-font-family);
+}
+
+
+/* ===========================================================
+   TABLE HEAD
+=========================================================== */
+
+.finora-accounts-ledger__head {
+  background:
+    var(--finora-theme-background-surface-muted);
+}
+
+
+/* ===========================================================
+   TABLE BODY
+=========================================================== */
+
+.finora-accounts-ledger__body {
+  background:
+    var(--finora-theme-background-surface);
+}
+
+
+/* ===========================================================
+   HEADER CELL
+=========================================================== */
+
+.finora-accounts-ledger__header-cell {
+  height:
+    var(--finora-accounts-register-header-height);
+
+  padding:
+    var(--finora-accounts-register-cell-padding-y)
+    var(--finora-accounts-register-cell-padding-x);
+
+  box-sizing: border-box;
+
+  border-right:
+    var(--finora-accounts-register-border-width)
+    solid
+    var(--finora-theme-border-default);
+
+  border-bottom:
+    var(--finora-accounts-register-border-width)
+    solid
+    var(--finora-theme-border-strong);
+
+  color:
+    var(--finora-theme-text-secondary);
+
+  font-family:
+    var(--finora-accounts-font-family);
+
+  font-size:
+    var(--finora-accounts-font-table-header);
+
+  font-weight: 800;
+
+  line-height: 1.25;
+
+  text-align: left;
+
+  vertical-align: middle;
+
+  white-space: nowrap;
+}
+
+
+/* ===========================================================
+   LAST HEADER CELL
+=========================================================== */
+
+.finora-accounts-ledger__header-cell:last-child {
+  border-right: 0;
+}
+
+
+/* ===========================================================
+   HEADER MONEY ALIGNMENT
+=========================================================== */
+
+.finora-accounts-ledger__header-cell--money {
+  text-align: right;
+}
+
+
+/* ===========================================================
+   HEADER MONEY OUT
+=========================================================== */
+
+.finora-accounts-ledger__header-cell--money-out {
+  color:
+    var(--finora-theme-financial-debit);
+}
+
+
+/* ===========================================================
+   HEADER MONEY IN
+=========================================================== */
+
+.finora-accounts-ledger__header-cell--money-in {
+  color:
+    var(--finora-theme-financial-credit);
+}
+
+
+/* ===========================================================
+   COLUMN WIDTHS
+=========================================================== */
+
+.finora-accounts-ledger__header-cell--serial,
+.finora-accounts-ledger__cell--serial {
+  width:
+    var(--finora-accounts-register-serial-width);
+}
+
+
+.finora-accounts-ledger__header-cell--date,
+.finora-accounts-ledger__cell--date {
+  width:
+    var(--finora-accounts-register-date-width);
+}
+
+
+.finora-accounts-ledger__header-cell--customer,
+.finora-accounts-ledger__cell--customer {
+  width:
+    var(--finora-accounts-register-customer-width);
+}
+
+
+.finora-accounts-ledger__header-cell--activity,
+.finora-accounts-ledger__cell--activity {
+  width:
+    var(--finora-accounts-register-activity-width);
+}
+
+
+.finora-accounts-ledger__header-cell--money,
+.finora-accounts-ledger__cell--money {
+  width:
+    var(--finora-accounts-register-money-width);
+}
+
+
+.finora-accounts-ledger__header-cell--method,
+.finora-accounts-ledger__cell--method {
+  width:
+    var(--finora-accounts-register-method-width);
+}
+
+
+.finora-accounts-ledger__header-cell--reference,
+.finora-accounts-ledger__cell--reference {
+  width:
+    var(--finora-accounts-register-reference-width);
+}
+
+
+/* ===========================================================
+   ROW
+=========================================================== */
+
+.finora-accounts-ledger__row {
+  min-height:
+    var(--finora-accounts-register-row-min-height);
+
+  background:
+    var(--finora-theme-background-surface);
+
+  transition:
+    background 120ms ease;
+}
+
+
+/* ===========================================================
+   ROW HOVER
+=========================================================== */
+
+.finora-accounts-ledger__row:hover {
+  background:
+    var(--finora-theme-interactive-hover);
+}
+
+
+/* ===========================================================
+   MONEY OUT ROW INDICATOR
+=========================================================== */
+
+.finora-accounts-ledger__row--money-out
+.finora-accounts-ledger__cell:first-child {
+  box-shadow:
+    inset
+    3px
+    0
+    0
+    var(--finora-theme-financial-debit);
+}
+
+
+/* ===========================================================
+   MONEY IN ROW INDICATOR
+=========================================================== */
+
+.finora-accounts-ledger__row--money-in
+.finora-accounts-ledger__cell:first-child {
+  box-shadow:
+    inset
+    3px
+    0
+    0
+    var(--finora-theme-financial-credit);
+}
+
+
+/* ===========================================================
+   BODY CELL
+
+   Physical-register rule:
+   Every row and every column gets a separator.
+=========================================================== */
+
+.finora-accounts-ledger__cell {
+  min-height:
+    var(--finora-accounts-register-row-min-height);
+
+  padding:
+    var(--finora-accounts-register-cell-padding-y)
+    var(--finora-accounts-register-cell-padding-x);
+
+  box-sizing: border-box;
+
+  border-right:
+    var(--finora-accounts-register-border-width)
+    solid
+    var(--finora-theme-border-default);
+
+  border-bottom:
+    var(--finora-accounts-register-border-width)
+    solid
+    var(--finora-theme-border-default);
+
+  color:
+    var(--finora-theme-text-primary);
+
+  font-family:
+    var(--finora-accounts-font-family);
+
+  font-size:
+    var(--finora-accounts-font-table-body);
+
+  font-weight: 550;
+
+  line-height: 1.4;
+
+  text-align: left;
+
+  vertical-align: middle;
+
+  overflow-wrap: anywhere;
+}
+
+
+/* ===========================================================
+   LAST BODY CELL
+=========================================================== */
+
+.finora-accounts-ledger__cell:last-child {
+  border-right: 0;
+}
+
+
+/* ===========================================================
+   LAST REGISTER ROW
+=========================================================== */
+
+.finora-accounts-ledger__body
+.finora-accounts-ledger__row:last-child
+.finora-accounts-ledger__cell {
+  border-bottom: 0;
+}
+
+
+/* ===========================================================
+   SERIAL NUMBER
+=========================================================== */
+
+.finora-accounts-ledger__cell--serial {
+  color:
+    var(--finora-theme-text-muted);
+
+  font-weight: 700;
+
+  text-align: center;
+
+  font-variant-numeric:
+    tabular-nums;
+}
+
+
+/* ===========================================================
+   DATE / TIME
+=========================================================== */
+
+.finora-accounts-ledger__date-time {
+  display: flex;
+
+  flex-direction: column;
+
+  gap:
+    var(--finora-accounts-compact-gap);
+}
+
+
+.finora-accounts-ledger__date {
+  color:
+    var(--finora-theme-text-primary);
+
+  font-weight: 700;
+
+  font-variant-numeric:
+    tabular-nums;
+}
+
+
+.finora-accounts-ledger__time {
+  color:
+    var(--finora-theme-text-muted);
+
+  font-size:
+    var(--finora-accounts-font-table-secondary);
+
+  font-weight: 550;
+
+  font-variant-numeric:
+    tabular-nums;
+}
+
+
+/* ===========================================================
+   CUSTOMER
+=========================================================== */
+
+.finora-accounts-ledger__customer {
+  min-width: 0;
+
+  display: flex;
+
+  flex-direction: column;
+
+  gap:
+    var(--finora-accounts-compact-gap);
+}
+
+
+.finora-accounts-ledger__customer-name {
+  color:
+    var(--finora-theme-text-primary);
+
+  font-weight: 750;
+
+  line-height: 1.3;
+}
+
+
+.finora-accounts-ledger__customer-phone {
+  color:
+    var(--finora-theme-text-muted);
+
+  font-size:
+    var(--finora-accounts-font-table-secondary);
+
+  font-weight: 500;
+
+  line-height: 1.3;
+
+  font-variant-numeric:
+    tabular-nums;
+}
+
+
+/* ===========================================================
+   ACTIVITY
+=========================================================== */
+
+.finora-accounts-ledger__activity {
+  min-width: 0;
+
+  display: flex;
+
+  align-items: flex-start;
+
+  gap:
+    var(--finora-accounts-compact-gap);
+}
+
+
+/* ===========================================================
+   ACTIVITY ICON
+=========================================================== */
+
+.finora-accounts-ledger__activity-icon {
+  width:
+    var(--finora-accounts-compact-icon-size);
+
+  height:
+    var(--finora-accounts-compact-icon-size);
+
+  flex: 0 0 auto;
+
+  margin-top: 2px;
+
+  color:
+    var(--finora-theme-brand-primary);
+}
+
+
+/* ===========================================================
+   ACTIVITY CONTENT
+=========================================================== */
+
+.finora-accounts-ledger__activity-content {
+  min-width: 0;
+
+  display: flex;
+
+  flex-direction: column;
+
+  align-items: flex-start;
+
+  gap:
+    var(--finora-accounts-compact-gap);
+}
+
+
+/* ===========================================================
+   ACTIVITY LABEL
+=========================================================== */
+
+.finora-accounts-ledger__activity-label {
+  color:
+    var(--finora-theme-text-primary);
+
+  font-weight: 700;
+
+  line-height: 1.35;
+}
+
+
+/* ===========================================================
+   LOAN IDENTITY
+=========================================================== */
+
+.finora-accounts-ledger__activity-loan {
+  display: flex;
+
+  align-items: center;
+
+  flex-wrap: wrap;
+
+  gap:
+    var(--finora-accounts-compact-gap);
+}
+
+
+/* ===========================================================
+   LOAN BADGE
+=========================================================== */
+
+.finora-accounts-ledger__loan-badge {
+  display: inline-flex;
+
+  align-items: center;
+
+  gap:
+    var(--finora-accounts-compact-gap);
+
+  padding: 3px 7px;
+
+  box-sizing: border-box;
+
+  border:
+    var(--finora-accounts-panel-border-width)
+    solid
+    var(--finora-theme-border-default);
+
+  border-radius:
+    var(--finora-accounts-button-radius);
+
+  font-family:
+    var(--finora-accounts-font-family);
+
+  font-size:
+    var(--finora-accounts-font-table-secondary);
+
+  font-weight: 700;
+
+  line-height: 1;
+
+  white-space: nowrap;
+}
+
+
+/* ===========================================================
+   GOLD LOAN BADGE
+=========================================================== */
+
+.finora-accounts-ledger__loan-badge--gold {
+  background:
+    var(--finora-theme-brand-accent-soft);
+
+  border-color:
+    var(--finora-theme-brand-primary);
+
+  color:
+    var(--finora-theme-brand-primary);
+}
+
+
+/* ===========================================================
+   STANDARD LOAN BADGE
+=========================================================== */
+
+.finora-accounts-ledger__loan-badge--standard {
+  background:
+    var(--finora-theme-background-surface-muted);
+
+  color:
+    var(--finora-theme-text-secondary);
+}
+
+
+/* ===========================================================
+   GOLD / STANDARD ICONS
+=========================================================== */
+
+.finora-accounts-ledger__gold-icon,
+.finora-accounts-ledger__standard-icon {
+  width:
+    var(--finora-accounts-compact-icon-size);
+
+  height:
+    var(--finora-accounts-compact-icon-size);
+
+  flex: 0 0 auto;
+}
+
+
+/* ===========================================================
+   MONEY CELL
+=========================================================== */
+
+.finora-accounts-ledger__cell--money {
+  text-align: right;
+}
+
+
+/* ===========================================================
+   MONEY VALUE
+=========================================================== */
+
+.finora-accounts-ledger__money {
+  display: inline-block;
+
+  font-family:
+    var(--finora-accounts-font-family);
+
+  font-size:
+    var(--finora-accounts-font-table-money);
+
+  font-weight: 800;
+
+  line-height: 1.25;
+
+  font-variant-numeric:
+    tabular-nums;
+
+  white-space: nowrap;
+}
+
+
+/* ===========================================================
+   MONEY OUT
+=========================================================== */
+
+.finora-accounts-ledger__money--out {
+  color:
+    var(--finora-theme-financial-debit);
+}
+
+
+/* ===========================================================
+   MONEY IN
+=========================================================== */
+
+.finora-accounts-ledger__money--in {
+  color:
+    var(--finora-theme-financial-credit);
+}
+
+
+/* ===========================================================
+   EMPTY MONEY SIDE
+
+   Example:
+   Debit row → Money In = --
+=========================================================== */
+
+.finora-accounts-ledger__money-empty {
+  color:
+    var(--finora-theme-text-disabled);
+
+  font-size:
+    var(--finora-accounts-font-table-secondary);
+
+  font-weight: 600;
+}
+
+
+/* ===========================================================
+   PAYMENT METHOD BADGE
+=========================================================== */
+
+.finora-accounts-ledger__method-badge {
+  display: inline-flex;
+
+  align-items: center;
+
+  justify-content: center;
+
+  max-width: 100%;
+
+  padding: 4px 8px;
+
+  box-sizing: border-box;
+
+  border:
+    var(--finora-accounts-panel-border-width)
+    solid
+    var(--finora-theme-border-default);
+
+  border-radius:
+    var(--finora-accounts-button-radius);
+
+  background:
+    var(--finora-theme-background-surface-muted);
+
+  color:
+    var(--finora-theme-text-secondary);
+
+  font-family:
+    var(--finora-accounts-font-family);
+
+  font-size:
+    var(--finora-accounts-font-table-secondary);
+
+  font-weight: 700;
+
+  line-height: 1.2;
+
+  text-align: center;
+
+  overflow-wrap: anywhere;
+}
+
+
+/* ===========================================================
+   UNKNOWN PAYMENT METHOD
+=========================================================== */
+
+.finora-accounts-ledger__method-badge--unknown {
+  color:
+    var(--finora-theme-text-muted);
+}
+
+
+/* ===========================================================
+   REFERENCE
+=========================================================== */
+
+.finora-accounts-ledger__reference {
+  min-width: 0;
+
+  display: flex;
+
+  flex-direction: column;
+
+  gap:
+    var(--finora-accounts-compact-gap);
+}
+
+
+/* ===========================================================
+   PRIMARY REFERENCE
+=========================================================== */
+
+.finora-accounts-ledger__reference-primary {
+  color:
+    var(--finora-theme-text-primary);
+
+  font-size:
+    var(--finora-accounts-font-table-body);
+
+  font-weight: 700;
+
+  line-height: 1.3;
+
+  overflow-wrap: anywhere;
+}
+
+
+/* ===========================================================
+   SECONDARY REFERENCE
+=========================================================== */
+
+.finora-accounts-ledger__reference-secondary {
+  color:
+    var(--finora-theme-text-muted);
+
+  font-size:
+    var(--finora-accounts-font-table-secondary);
+
+  font-weight: 500;
+
+  line-height: 1.3;
+
+  overflow-wrap: anywhere;
+}
+
+
+/* ===========================================================
+   MONEY OUT ACTIVITY ICON
+=========================================================== */
+
+.finora-accounts-ledger__money-out-icon {
+  color:
+    var(--finora-theme-financial-debit);
+}
+
+
+/* ===========================================================
+   MONEY IN ACTIVITY ICON
+=========================================================== */
+
+.finora-accounts-ledger__money-in-icon {
+  color:
+    var(--finora-theme-financial-credit);
+}
+
+/* ===========================================================
+   MOBILE TRANSACTION REGISTER
+
+   Mobile:
+   - Physical table hidden by responsive engine
+   - Simple transaction cards visible
+   - Money Out large red
+   - Money In large green
+
+   Tablet / Laptop / Desktop:
+   - Card list hidden by responsive engine
+=========================================================== */
+
+
+/* ===========================================================
+   MOBILE LIST
+=========================================================== */
+
+.finora-accounts-mobile-ledger {
+  width: 100%;
+
+  display:
+    var(--finora-accounts-mobile-card-display);
+
+  flex-direction: column;
+
+  gap:
+    var(--finora-accounts-mobile-card-gap);
+
+  box-sizing: border-box;
+}
+
+
+/* ===========================================================
+   MOBILE CARD
+=========================================================== */
+
+.finora-accounts-mobile-card {
+  width: 100%;
+
+  min-width: 0;
+
+  min-height:
+    var(--finora-accounts-mobile-card-min-height);
+
+  padding:
+    var(--finora-accounts-mobile-card-padding);
+
+  display: flex;
+
+  flex-direction: column;
+
+  gap:
+    var(--finora-accounts-mobile-card-section-gap);
+
+  box-sizing: border-box;
+
+  overflow: hidden;
+
+  border:
+    var(--finora-accounts-panel-border-width)
+    solid
+    var(--finora-theme-card-border);
+
+  border-radius:
+    var(--finora-accounts-mobile-card-radius);
+
+  background:
+    var(--finora-theme-card-background);
+
+  box-shadow:
+    var(--finora-theme-card-shadow);
+}
+
+
+/* ===========================================================
+   MONEY OUT CARD
+=========================================================== */
+
+.finora-accounts-mobile-card--money-out {
+  border-left:
+    4px solid
+    var(--finora-theme-financial-debit);
+}
+
+
+/* ===========================================================
+   MONEY IN CARD
+=========================================================== */
+
+.finora-accounts-mobile-card--money-in {
+  border-left:
+    4px solid
+    var(--finora-theme-financial-credit);
+}
+
+
+/* ===========================================================
+   CARD HEADER
+=========================================================== */
+
+.finora-accounts-mobile-card__header {
+  min-width: 0;
+
+  display: flex;
+
+  align-items: flex-start;
+
+  justify-content: space-between;
+
+  gap:
+    var(--finora-accounts-compact-gap);
+}
+
+
+/* ===========================================================
+   IDENTITY
+=========================================================== */
+
+.finora-accounts-mobile-card__identity {
+  min-width: 0;
+
+  display: flex;
+
+  align-items: flex-start;
+
+  gap:
+    var(--finora-accounts-compact-gap);
+}
+
+
+/* ===========================================================
+   ACTIVITY ICON
+=========================================================== */
+
+.finora-accounts-mobile-card__activity-icon {
+  width:
+    var(--finora-accounts-mobile-card-icon-size);
+
+  min-width:
+    var(--finora-accounts-mobile-card-icon-size);
+
+  height:
+    var(--finora-accounts-mobile-card-icon-size);
+
+  flex: 0 0 auto;
+
+  margin-top: 2px;
+
+  color:
+    var(--finora-theme-brand-primary);
+}
+
+/* ===========================================================
+   MOBILE MONEY OUT ICON
+=========================================================== */
+
+.finora-accounts-mobile-card--money-out
+.finora-accounts-mobile-card__activity-icon {
+  color:
+    var(--finora-theme-financial-debit);
+}
+
+
+/* ===========================================================
+   MOBILE MONEY IN ICON
+=========================================================== */
+
+.finora-accounts-mobile-card--money-in
+.finora-accounts-mobile-card__activity-icon {
+  color:
+    var(--finora-theme-financial-credit);
+}
+
+
+/* ===========================================================
+   HEADING GROUP
+=========================================================== */
+
+.finora-accounts-mobile-card__heading-group {
+  min-width: 0;
+
+  display: flex;
+
+  flex-direction: column;
+
+  gap:
+    var(--finora-accounts-compact-gap);
+}
+
+
+/* ===========================================================
+   ACTIVITY
+=========================================================== */
+
+.finora-accounts-mobile-card__activity {
+  margin: 0;
+
+  color:
+    var(--finora-theme-text-primary);
+
+  font-family:
+    var(--finora-accounts-font-family);
+
+  font-size:
+    var(--finora-accounts-font-mobile-card-title);
+
+  font-weight: 800;
+
+  line-height: 1.3;
+
+  overflow-wrap: anywhere;
+}
+
+
+/* ===========================================================
+   CUSTOMER
+=========================================================== */
+
+.finora-accounts-mobile-card__customer {
+  color:
+    var(--finora-theme-text-secondary);
+
+  font-family:
+    var(--finora-accounts-font-family);
+
+  font-size:
+    var(--finora-accounts-font-mobile-card-secondary);
+
+  font-weight: 600;
+
+  line-height: 1.35;
+
+  overflow-wrap: anywhere;
+}
+
+
+/* ===========================================================
+   MONEY SECTION
+=========================================================== */
+
+.finora-accounts-mobile-card__money-section {
+  width: 100%;
+
+  display: grid;
+
+  grid-template-columns:
+    repeat(
+      var(--finora-accounts-mobile-money-columns),
+      minmax(0, 1fr)
+    );
+
+  gap:
+    var(--finora-accounts-mobile-money-gap);
+
+  box-sizing: border-box;
+}
+
+
+/* ===========================================================
+   MONEY LABEL
+=========================================================== */
+
+.finora-accounts-mobile-card__money-label {
+  display: block;
+
+  margin-bottom:
+    var(--finora-accounts-compact-gap);
+
+  color:
+    var(--finora-theme-text-muted);
+
+  font-family:
+    var(--finora-accounts-font-family);
+
+  font-size:
+    var(--finora-accounts-font-mobile-card-secondary);
+
+  font-weight: 700;
+
+  line-height: 1.2;
+}
+
+
+/* ===========================================================
+   MONEY VALUE
+=========================================================== */
+
+.finora-accounts-mobile-card__money-value {
+  display: block;
+
+  font-family:
+    var(--finora-accounts-font-family);
+
+  font-size:
+    var(--finora-accounts-font-mobile-money);
+
+  font-weight: 850;
+
+  line-height: 1.1;
+
+  letter-spacing: -0.02em;
+
+  font-variant-numeric:
+    tabular-nums;
+
+  overflow-wrap: anywhere;
+}
+
+
+/* ===========================================================
+   MONEY OUT VALUE
+=========================================================== */
+
+.finora-accounts-mobile-card__money-value--out {
+  color:
+    var(--finora-theme-financial-debit);
+}
+
+
+/* ===========================================================
+   MONEY IN VALUE
+=========================================================== */
+
+.finora-accounts-mobile-card__money-value--in {
+  color:
+    var(--finora-theme-financial-credit);
+}
+
+
+/* ===========================================================
+   DETAILS GRID
+=========================================================== */
+
+.finora-accounts-mobile-card__details {
+  width: 100%;
+
+  display: grid;
+
+  grid-template-columns:
+    repeat(
+      var(--finora-accounts-mobile-metadata-columns),
+      minmax(0, 1fr)
+    );
+
+  gap:
+    var(--finora-accounts-mobile-metadata-gap);
+
+  box-sizing: border-box;
+}
+
+
+/* ===========================================================
+   DETAIL
+=========================================================== */
+
+.finora-accounts-mobile-card__detail {
+  min-width: 0;
+
+  display: flex;
+
+  flex-direction: column;
+
+  gap:
+    var(--finora-accounts-compact-gap);
+}
+
+
+/* ===========================================================
+   DETAIL LABEL
+=========================================================== */
+
+.finora-accounts-mobile-card__detail-label {
+  color:
+    var(--finora-theme-text-muted);
+
+  font-family:
+    var(--finora-accounts-font-family);
+
+  font-size:
+    var(--finora-accounts-font-mobile-card-secondary);
+
+  font-weight: 650;
+
+  line-height: 1.2;
+}
+
+
+/* ===========================================================
+   DETAIL VALUE
+=========================================================== */
+
+.finora-accounts-mobile-card__detail-value {
+  min-width: 0;
+
+  color:
+    var(--finora-theme-text-primary);
+
+  font-family:
+    var(--finora-accounts-font-family);
+
+  font-size:
+    var(--finora-accounts-font-mobile-card-secondary);
+
+  font-weight: 700;
+
+  line-height: 1.35;
+
+  overflow-wrap: anywhere;
+}
+
+
+/* ===========================================================
+   FOOTER
+=========================================================== */
+
+.finora-accounts-mobile-card__footer {
+  width: 100%;
+
+  padding-top:
+    var(--finora-accounts-compact-gap);
+
+  display: flex;
+
+  flex-direction: column;
+
+  gap:
+    var(--finora-accounts-compact-gap);
+
+  box-sizing: border-box;
+
+  border-top:
+    var(--finora-accounts-panel-border-width)
+    solid
+    var(--finora-theme-border-subtle);
+}
+
+
+/* ===========================================================
+   DATE / TIME
+=========================================================== */
+
+.finora-accounts-mobile-card__date-time {
+  min-width: 0;
+
+  display: flex;
+
+  align-items: center;
+
+  flex-wrap: wrap;
+
+  gap:
+    var(--finora-accounts-compact-gap);
+}
+
+
+.finora-accounts-mobile-card__date {
+  color:
+    var(--finora-theme-text-secondary);
+
+  font-family:
+    var(--finora-accounts-font-family);
+
+  font-size:
+    var(--finora-accounts-font-mobile-card-secondary);
+
+  font-weight: 700;
+
+  line-height: 1.3;
+
+  font-variant-numeric:
+    tabular-nums;
+}
+
+
+.finora-accounts-mobile-card__time {
+  color:
+    var(--finora-theme-text-muted);
+
+  font-family:
+    var(--finora-accounts-font-family);
+
+  font-size:
+    var(--finora-accounts-font-mobile-card-secondary);
+
+  font-weight: 550;
+
+  line-height: 1.3;
+
+  font-variant-numeric:
+    tabular-nums;
+}
+
+
+/* ===========================================================
+   LOAN BADGE
+=========================================================== */
+
+.finora-accounts-mobile-card__loan-badge {
+  display: inline-flex;
+
+  align-items: center;
+
+  width: fit-content;
+
+  max-width: 100%;
+
+  padding: 4px 8px;
+
+  box-sizing: border-box;
+
+  border:
+    var(--finora-accounts-panel-border-width)
+    solid
+    var(--finora-theme-border-default);
+
+  border-radius:
+    var(--finora-accounts-button-radius);
+
+  background:
+    var(--finora-theme-background-surface-muted);
+
+  color:
+    var(--finora-theme-text-secondary);
+
+  font-family:
+    var(--finora-accounts-font-family);
+
+  font-size:
+    var(--finora-accounts-font-mobile-card-secondary);
+
+  font-weight: 700;
+
+  line-height: 1;
+
+  white-space: nowrap;
+}
+
+
+/* ===========================================================
+   GOLD BADGE
+=========================================================== */
+
+.finora-accounts-mobile-card__loan-badge--gold {
+  background:
+    var(--finora-theme-brand-accent-soft);
+
+  border-color:
+    var(--finora-theme-brand-primary);
+
+  color:
+    var(--finora-theme-brand-primary);
+}
+
+
+/* ===========================================================
+   STANDARD BADGE
+=========================================================== */
+
+.finora-accounts-mobile-card__loan-badge--standard {
+  background:
+    var(--finora-theme-background-surface-muted);
+
+  color:
+    var(--finora-theme-text-secondary);
+}
+
+
+/* ===========================================================
+   REFERENCE
+=========================================================== */
+
+.finora-accounts-mobile-card__reference,
+.finora-accounts-mobile-card__method {
+  min-width: 0;
+
+  display: flex;
+
+  flex-direction: column;
+
+  gap:
+    var(--finora-accounts-compact-gap);
+}
+
+
+/* ===========================================================
+   REFERENCE / METHOD LABEL
+=========================================================== */
+
+.finora-accounts-mobile-card__reference-label,
+.finora-accounts-mobile-card__method-label {
+  color:
+    var(--finora-theme-text-muted);
+
+  font-family:
+    var(--finora-accounts-font-family);
+
+  font-size:
+    var(--finora-accounts-font-mobile-card-secondary);
+
+  font-weight: 650;
+
+  line-height: 1.2;
+}
+
+
+/* ===========================================================
+   REFERENCE / METHOD VALUE
+=========================================================== */
+
+.finora-accounts-mobile-card__reference-value,
+.finora-accounts-mobile-card__method-value {
+  min-width: 0;
+
+  color:
+    var(--finora-theme-text-primary);
+
+  font-family:
+    var(--finora-accounts-font-family);
+
+  font-size:
+    var(--finora-accounts-font-mobile-card-secondary);
+
+  font-weight: 700;
+
+  line-height: 1.35;
+
+  overflow-wrap: anywhere;
+}
+
+
+/* ===========================================================
+   END MOBILE TRANSACTION REGISTER
+=========================================================== */
+
+/* ===========================================================
+   END
+=========================================================== */

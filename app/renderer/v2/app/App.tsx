@@ -75,6 +75,8 @@ import CollectionStudioPage from "../components/collections/collectionStudio/Col
 
 import CollectionsOffice from "../pages/collections/CollectionsOffice";
 
+import AccountsOffice from "../pages/accounts/AccountsOffice";
+
 import ReportsPage from "../pages/reports/ReportsPage";
 
 import GoldStorageSettingsPage from "../pages/settings/GoldStorageSettingsPage";
@@ -84,6 +86,10 @@ import LoanStudio from "../components/customers/office/CustomerOffice/components
 import Login from "../pages/auth/Login";
 
 import { getSession, logout } from "../store/authStore";
+
+import { storageManager } from "../storage/storageManager";
+
+import { StorageMode } from "../storage/storage.types";
 
 import {
   BusinessContextProvider,
@@ -101,6 +107,39 @@ import { useTheme } from "../themes/provider";
 import { useResponsive } from "../utils/responsive";
 
 // ============================================================
+// AUTHENTICATED STORAGE MODE
+//
+// Login persists the selected storage adapter in sessionStorage.
+//
+// This must be restored before any authenticated page can read
+// repositories after Ctrl + R / renderer refresh.
+// ============================================================
+
+const FINORA_STORAGE_MODE_SESSION_KEY = "FINORA_STORAGE_MODE";
+
+function getAuthenticatedStorageMode(): StorageMode {
+  try {
+    const storedMode = window.sessionStorage.getItem(
+      FINORA_STORAGE_MODE_SESSION_KEY,
+    );
+
+    if (storedMode === StorageMode.USB) {
+      return StorageMode.USB;
+    }
+
+    if (storedMode === StorageMode.CLOUD) {
+      return StorageMode.CLOUD;
+    }
+
+    return StorageMode.LOCAL;
+  } catch (error) {
+    console.error("FINORA STORAGE MODE RESTORE READ FAILED:", error);
+
+    return StorageMode.LOCAL;
+  }
+}
+
+// ============================================================
 // TYPES
 // ============================================================
 
@@ -111,6 +150,7 @@ type Page =
   | "customerDepartment"
   | "loans"
   | "collections"
+  | "accounts"
   | "reports"
   | "settings";
 
@@ -210,6 +250,7 @@ function isValidPage(value: unknown): value is Page {
     value === "customerDepartment" ||
     value === "loans" ||
     value === "collections" ||
+    value === "accounts" ||
     value === "reports" ||
     value === "settings"
   );
@@ -589,6 +630,39 @@ function AuthenticatedApplication() {
         setContextError(null);
       }
 
+      // ======================================================
+      // RESTORE AUTHENTICATED STORAGE MODE
+      //
+      // StorageManager defaults to USB after renderer reload.
+      //
+      // Therefore LOCAL / USB / CLOUD must be restored from
+      // the authenticated login session BEFORE repositories or
+      // Business Context can expose application data.
+      // ======================================================
+
+      const storageMode = getAuthenticatedStorageMode();
+
+      const storageResult = await storageManager.selectStorageMode(storageMode);
+
+      if (!active) {
+        return;
+      }
+
+      if (!storageResult.success) {
+        setContextReady(false);
+
+        setContextError(
+          storageResult.error ??
+            "Unable to restore the authenticated FINORA storage mode.",
+        );
+
+        return;
+      }
+
+      // ======================================================
+      // ESTABLISH BUSINESS / DATA CONTEXT
+      // ======================================================
+
       const result = await setContext({
         ownerId: session.ownerId,
 
@@ -962,9 +1036,7 @@ function AuthenticatedV2Application({
         break;
 
       case "accounts":
-        // ----------------------------------------------------
-        // Coming Soon
-        // ----------------------------------------------------
+        handleNavigate("accounts");
 
         break;
 
@@ -1041,6 +1113,12 @@ function AuthenticatedV2Application({
         {page === "collections" && collectionStudioOpen && (
           <CollectionStudioPage />
         )}
+
+        {/* ==================================================
+            ACCOUNTS
+        ================================================== */}
+
+        {page === "accounts" && <AccountsOffice />}
 
         {/* ==================================================
     REPORTS

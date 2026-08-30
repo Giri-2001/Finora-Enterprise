@@ -29,41 +29,27 @@
 // STATUS  : Production Foundation
 // ============================================================
 
-
 // ============================================================
 // IMPORTS
 // ============================================================
 
-import {
-  app,
-  BrowserWindow,
-  ipcMain,
-} from "electron";
+import { app, BrowserWindow, ipcMain, shell } from "electron";
 
 import path from "node:path";
 
 import fs from "node:fs/promises";
 
-import {
-  execFile,
-} from "node:child_process";
+import { execFile } from "node:child_process";
 
-import {
-  promisify,
-} from "node:util";
+import { promisify } from "node:util";
 
-import {
-  randomUUID,
-} from "node:crypto";
-
+import { randomUUID } from "node:crypto";
 
 // ============================================================
 // PROMISIFIED SYSTEM COMMAND
 // ============================================================
 
-const execFileAsync =
-  promisify(execFile);
-
+const execFileAsync = promisify(execFile);
 
 // ============================================================
 // TYPES
@@ -78,12 +64,10 @@ interface StorageQuery {
   offset?: number;
 }
 
-
 interface StorageWriteOptions {
   ownerId?: string;
   demoId?: string;
 }
-
 
 interface PersistedStorageRecord {
   id: string;
@@ -95,86 +79,57 @@ interface PersistedStorageRecord {
   demoId?: string;
 }
 
-
 interface UsbStoragePackage {
   version: "2.0";
   records: PersistedStorageRecord[];
   updatedAt: string;
 }
 
-
 // ============================================================
 // CONSTANTS
 // ============================================================
 
-const FINORA_DIRECTORY =
-  "FINORA";
+const FINORA_DIRECTORY = "FINORA";
 
+const FINORA_STORAGE_DIRECTORY = "storage";
 
-const FINORA_STORAGE_DIRECTORY =
-  "storage";
-
-
-const FINORA_STORAGE_FILE =
-  "finora-storage.json";
-
+const FINORA_STORAGE_FILE = "finora-storage.json";
 
 const IPC_CHANNELS = {
+  IS_AVAILABLE: "finora:usb:is-available",
 
-  IS_AVAILABLE:
-    "finora:usb:is-available",
+  GET_STATUS: "finora:usb:get-status",
 
-  GET_STATUS:
-    "finora:usb:get-status",
+  GET: "finora:usb:get",
 
-  GET:
-    "finora:usb:get",
+  GET_ALL: "finora:usb:get-all",
 
-  GET_ALL:
-    "finora:usb:get-all",
+  SAVE: "finora:usb:save",
 
-  SAVE:
-    "finora:usb:save",
+  UPDATE: "finora:usb:update",
 
-  UPDATE:
-    "finora:usb:update",
+  DELETE: "finora:usb:delete",
 
-  DELETE:
-    "finora:usb:delete",
+  REPLACE_ALL: "finora:usb:replace-all",
 
-  REPLACE_ALL:
-    "finora:usb:replace-all",
+  CLEAR: "finora:usb:clear",
 
-  CLEAR:
-    "finora:usb:clear",
-
-  RESET_FINORA_DATA:
-    "finora:usb:reset-finora-data",
-
+  RESET_FINORA_DATA: "finora:usb:reset-finora-data",
 } as const;
-
 
 // ============================================================
 // APPLICATION STATE
 // ============================================================
 
-let mainWindow:
-  BrowserWindow | null = null;
+let mainWindow: BrowserWindow | null = null;
 
-
-let handlersRegistered =
-  false;
-
+let handlersRegistered = false;
 
 // ============================================================
 // IPC SENDER VALIDATION
 // ============================================================
 
-function isTrustedRenderer(
-  senderFrame:
-    Electron.WebFrameMain | null,
-): boolean {
-
+function isTrustedRenderer(senderFrame: Electron.WebFrameMain | null): boolean {
   // ----------------------------------------------------------
   // Electron can provide null when the sender frame no longer
   // exists. Treat that as untrusted.
@@ -184,82 +139,60 @@ function isTrustedRenderer(
     return false;
   }
 
-
-  const frameUrl =
-    senderFrame.url;
-
+  const frameUrl = senderFrame.url;
 
   if (!frameUrl) {
     return false;
   }
-
 
   // ----------------------------------------------------------
   // DEVELOPMENT
   // ----------------------------------------------------------
 
   if (!app.isPackaged) {
-
     try {
-
-      const url =
-        new URL(frameUrl);
-
+      const url = new URL(frameUrl);
 
       return (
         url.protocol === "http:" &&
         url.hostname === "localhost" &&
         url.port === "5173"
       );
-
     } catch {
-
       return false;
     }
   }
-
 
   // ----------------------------------------------------------
   // PRODUCTION
   // ----------------------------------------------------------
 
-  return frameUrl.startsWith(
-    "file://",
-  );
+  return frameUrl.startsWith("file://");
 }
-
 
 // ============================================================
 // RESULT HELPERS
 // ============================================================
 
-function success<T>(
-  data?: T,
-): {
+function success<T>(data?: T): {
   success: true;
   data?: T;
 } {
-
   return {
     success: true,
     data,
   };
 }
 
-
-function failure(
-  error: string,
-): {
+function failure(error: string): {
   success: false;
   error: string;
 } {
-
   return {
     success: false,
     error,
   };
 }
-
 
 // ============================================================
 // USB DRIVE DETECTION
@@ -276,62 +209,40 @@ function failure(
  *
  * The renderer never provides a drive path.
  */
-async function detectWindowsUsbRoots():
-  Promise<string[]> {
-
+async function detectWindowsUsbRoots(): Promise<string[]> {
   if (process.platform !== "win32") {
     return [];
   }
 
-
   try {
-
-    const {
-      stdout,
-    } =
-      await execFileAsync(
-        "powershell.exe",
+    const { stdout } = await execFileAsync(
+      "powershell.exe",
+      [
+        "-NoProfile",
+        "-NonInteractive",
+        "-Command",
         [
-          "-NoProfile",
-          "-NonInteractive",
-          "-Command",
-          [
-            "Get-Volume",
-            "| Where-Object { $_.DriveType -eq 'Removable' -and $_.DriveLetter }",
-            "| Select-Object -ExpandProperty DriveLetter",
-          ].join(" "),
-        ],
-        {
-          windowsHide: true,
-          timeout: 5000,
-        },
-      );
-
-
-    const driveLetters =
-      stdout
-        .split(/\r?\n/)
-        .map(
-          (value) =>
-            value.trim(),
-        )
-        .filter(
-          (value) =>
-            /^[A-Za-z]$/.test(value),
-        );
-
-
-    return driveLetters.map(
-      (letter) =>
-        `${letter.toUpperCase()}:\\`,
+          "Get-Volume",
+          "| Where-Object { $_.DriveType -eq 'Removable' -and $_.DriveLetter }",
+          "| Select-Object -ExpandProperty DriveLetter",
+        ].join(" "),
+      ],
+      {
+        windowsHide: true,
+        timeout: 5000,
+      },
     );
 
-  } catch {
+    const driveLetters = stdout
+      .split(/\r?\n/)
+      .map((value) => value.trim())
+      .filter((value) => /^[A-Za-z]$/.test(value));
 
+    return driveLetters.map((letter) => `${letter.toUpperCase()}:\\`);
+  } catch {
     return [];
   }
 }
-
 
 // ============================================================
 // USB ROOT CACHE
@@ -361,152 +272,88 @@ async function detectWindowsUsbRoots():
 // - There is NO USB -> LOCAL fallback.
 // ============================================================
 
-const USB_ROOT_CACHE_TTL_MS =
-  30_000;
+const USB_ROOT_CACHE_TTL_MS = 30_000;
 
+let cachedUsbRoot: string | null = null;
 
-let cachedUsbRoot:
-  string | null =
-  null;
+let cachedUsbRootAt = 0;
 
-
-let cachedUsbRootAt =
-  0;
-
-
-let usbRootDetectionPromise:
-  Promise<string | null> | null =
-  null;
-
+let usbRootDetectionPromise: Promise<string | null> | null = null;
 
 function invalidateUsbRootCache(): void {
+  cachedUsbRoot = null;
 
-  cachedUsbRoot =
-    null;
-
-  cachedUsbRootAt =
-    0;
+  cachedUsbRootAt = 0;
 }
 
-
-async function detectAndCacheUsbRoot():
-  Promise<string | null> {
-
-  if (
-    usbRootDetectionPromise
-  ) {
-
+async function detectAndCacheUsbRoot(): Promise<string | null> {
+  if (usbRootDetectionPromise) {
     return usbRootDetectionPromise;
   }
 
+  usbRootDetectionPromise = (async () => {
+    try {
+      const roots = await detectWindowsUsbRoots();
 
-  usbRootDetectionPromise =
-    (async () => {
+      if (roots.length === 0) {
+        cachedUsbRoot = null;
 
-      try {
-
-        const roots =
-          await detectWindowsUsbRoots();
-
-
-        if (
-          roots.length === 0
-        ) {
-
-          cachedUsbRoot =
-            null;
-
-          cachedUsbRootAt =
-            Date.now();
-
-          return null;
-        }
-
-
-        // ----------------------------------------------------
-        // PREFER A DRIVE THAT ALREADY CONTAINS FINORA STORAGE
-        // ----------------------------------------------------
-
-        for (const root of roots) {
-
-          const storageDirectory =
-            path.join(
-              root,
-              FINORA_DIRECTORY,
-              FINORA_STORAGE_DIRECTORY,
-            );
-
-
-          try {
-
-            await fs.access(
-              storageDirectory,
-            );
-
-
-            cachedUsbRoot =
-              root;
-
-            cachedUsbRootAt =
-              Date.now();
-
-            return root;
-
-          } catch {
-            // Continue searching.
-          }
-        }
-
-
-        // ----------------------------------------------------
-        // OTHERWISE USE FIRST REMOVABLE DRIVE
-        // ----------------------------------------------------
-
-        const root =
-          roots[0] ?? null;
-
-
-        cachedUsbRoot =
-          root;
-
-        cachedUsbRootAt =
-          Date.now();
-
-
-        return root;
-
-      } catch {
-
-        cachedUsbRoot =
-          null;
-
-        cachedUsbRootAt =
-          Date.now();
-
+        cachedUsbRootAt = Date.now();
 
         return null;
-
-      } finally {
-
-        usbRootDetectionPromise =
-          null;
       }
 
-    })();
+      // ----------------------------------------------------
+      // PREFER A DRIVE THAT ALREADY CONTAINS FINORA STORAGE
+      // ----------------------------------------------------
 
+      for (const root of roots) {
+        const storageDirectory = path.join(
+          root,
+          FINORA_DIRECTORY,
+          FINORA_STORAGE_DIRECTORY,
+        );
+
+        try {
+          await fs.access(storageDirectory);
+
+          cachedUsbRoot = root;
+
+          cachedUsbRootAt = Date.now();
+
+          return root;
+        } catch {
+          // Continue searching.
+        }
+      }
+
+      // ----------------------------------------------------
+      // OTHERWISE USE FIRST REMOVABLE DRIVE
+      // ----------------------------------------------------
+
+      const root = roots[0] ?? null;
+
+      cachedUsbRoot = root;
+
+      cachedUsbRootAt = Date.now();
+
+      return root;
+    } catch {
+      cachedUsbRoot = null;
+
+      cachedUsbRootAt = Date.now();
+
+      return null;
+    } finally {
+      usbRootDetectionPromise = null;
+    }
+  })();
 
   return usbRootDetectionPromise;
 }
 
-
-async function findFinoraUsbRoot(
-  forceRefresh = false,
-):
-  Promise<string | null> {
-
-  const now =
-    Date.now();
-
+async function findFinoraUsbRoot(forceRefresh = false): Promise<string | null> {
+  const now = Date.now();
 
   // ----------------------------------------------------------
   // FAST PATH
@@ -517,13 +364,10 @@ async function findFinoraUsbRoot(
   if (
     !forceRefresh &&
     cachedUsbRoot &&
-    now - cachedUsbRootAt <
-      USB_ROOT_CACHE_TTL_MS
+    now - cachedUsbRootAt < USB_ROOT_CACHE_TTL_MS
   ) {
-
     return cachedUsbRoot;
   }
-
 
   // ----------------------------------------------------------
   // CACHE MISS / EXPIRED CACHE
@@ -531,7 +375,6 @@ async function findFinoraUsbRoot(
 
   return detectAndCacheUsbRoot();
 }
-
 
 // ============================================================
 // USB ROOT CACHE WARM-UP
@@ -544,418 +387,218 @@ async function findFinoraUsbRoot(
 // ============================================================
 
 function warmUsbRootCache(): void {
-
   void detectAndCacheUsbRoot();
 }
-
 
 // ============================================================
 // FINORA USB PATHS
 // ============================================================
 
-function getFinoraStorageDirectory(
-  usbRoot:
-    string,
-): string {
-
-  return path.join(
-    usbRoot,
-    FINORA_DIRECTORY,
-    FINORA_STORAGE_DIRECTORY,
-  );
+function getFinoraStorageDirectory(usbRoot: string): string {
+  return path.join(usbRoot, FINORA_DIRECTORY, FINORA_STORAGE_DIRECTORY);
 }
 
-
-function getFinoraStorageFile(
-  usbRoot:
-    string,
-): string {
-
-  return path.join(
-    getFinoraStorageDirectory(
-      usbRoot,
-    ),
-    FINORA_STORAGE_FILE,
-  );
+function getFinoraStorageFile(usbRoot: string): string {
+  return path.join(getFinoraStorageDirectory(usbRoot), FINORA_STORAGE_FILE);
 }
-
 
 // ============================================================
 // STORAGE PACKAGE
 // ============================================================
 
-function createEmptyStoragePackage():
-  UsbStoragePackage {
-
+function createEmptyStoragePackage(): UsbStoragePackage {
   return {
+    version: "2.0",
 
-    version:
-      "2.0",
+    records: [],
 
-    records:
-      [],
-
-    updatedAt:
-      new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
   };
 }
-
 
 // ============================================================
 // READ STORAGE PACKAGE
 // ============================================================
 
-async function readStoragePackage(
-  usbRoot:
-    string,
-):
-  Promise<UsbStoragePackage> {
+async function readStoragePackage(usbRoot: string): Promise<UsbStoragePackage> {
+  const storageDirectory = getFinoraStorageDirectory(usbRoot);
 
-  const storageDirectory =
-    getFinoraStorageDirectory(
-      usbRoot,
-    );
+  const storageFile = getFinoraStorageFile(usbRoot);
 
-
-  const storageFile =
-    getFinoraStorageFile(
-      usbRoot,
-    );
-
-
-  await fs.mkdir(
-    storageDirectory,
-    {
-      recursive: true,
-    },
-  );
-
+  await fs.mkdir(storageDirectory, {
+    recursive: true,
+  });
 
   try {
+    const raw = await fs.readFile(storageFile, "utf8");
 
-    const raw =
-      await fs.readFile(
-        storageFile,
-        "utf8",
-      );
+    const parsed: unknown = JSON.parse(raw);
 
-
-    const parsed:
-      unknown =
-      JSON.parse(raw);
-
-
-    if (
-      !parsed ||
-      typeof parsed !== "object"
-    ) {
-
-      throw new Error(
-        "Invalid FINORA USB storage package.",
-      );
+    if (!parsed || typeof parsed !== "object") {
+      throw new Error("Invalid FINORA USB storage package.");
     }
 
+    const candidate = parsed as Partial<UsbStoragePackage>;
 
-    const candidate =
-      parsed as Partial<UsbStoragePackage>;
-
-
-    if (
-      candidate.version !== "2.0" ||
-      !Array.isArray(
-        candidate.records,
-      )
-    ) {
-
-      throw new Error(
-        "Unsupported FINORA USB storage package.",
-      );
+    if (candidate.version !== "2.0" || !Array.isArray(candidate.records)) {
+      throw new Error("Unsupported FINORA USB storage package.");
     }
-
 
     return {
+      version: "2.0",
 
-      version:
-        "2.0",
-
-      records:
-        candidate.records as
-          PersistedStorageRecord[],
+      records: candidate.records as PersistedStorageRecord[],
 
       updatedAt:
         typeof candidate.updatedAt === "string"
           ? candidate.updatedAt
           : new Date().toISOString(),
     };
-
   } catch (error) {
-
     if (
       error instanceof Error &&
       "code" in error &&
-      (error as NodeJS.ErrnoException).code ===
-        "ENOENT"
+      (error as NodeJS.ErrnoException).code === "ENOENT"
     ) {
+      const emptyPackage = createEmptyStoragePackage();
 
-      const emptyPackage =
-        createEmptyStoragePackage();
-
-
-      await writeStoragePackage(
-        usbRoot,
-        emptyPackage,
-      );
-
+      await writeStoragePackage(usbRoot, emptyPackage);
 
       return emptyPackage;
     }
 
-
     throw error;
   }
 }
-
 
 // ============================================================
 // WRITE STORAGE PACKAGE
 // ============================================================
 
 async function writeStoragePackage(
-  usbRoot:
-    string,
+  usbRoot: string,
 
-  storagePackage:
-    UsbStoragePackage,
-):
-  Promise<void> {
+  storagePackage: UsbStoragePackage,
+): Promise<void> {
+  const storageDirectory = getFinoraStorageDirectory(usbRoot);
 
-  const storageDirectory =
-    getFinoraStorageDirectory(
-      usbRoot,
-    );
+  const storageFile = getFinoraStorageFile(usbRoot);
 
+  const temporaryFile = String(storageFile) + ".tmp";
 
-  const storageFile =
-    getFinoraStorageFile(
-      usbRoot,
-    );
+  await fs.mkdir(storageDirectory, {
+    recursive: true,
+  });
 
-
-  const temporaryFile =
-    String(storageFile) + ".tmp";
-
-
-  await fs.mkdir(
-    storageDirectory,
+  const content = JSON.stringify(
     {
-      recursive: true,
+      ...storagePackage,
+
+      updatedAt: new Date().toISOString(),
     },
+    null,
+    2,
   );
 
+  await fs.writeFile(temporaryFile, content, "utf8");
 
-  const content =
-    JSON.stringify(
-      {
-        ...storagePackage,
-
-        updatedAt:
-          new Date().toISOString(),
-      },
-      null,
-      2,
-    );
-
-
-  await fs.writeFile(
-    temporaryFile,
-    content,
-    "utf8",
-  );
-
-
-  await fs.rename(
-    temporaryFile,
-    storageFile,
-  );
+  await fs.rename(temporaryFile, storageFile);
 }
-
 
 // ============================================================
 // RECORD VALIDATION
 // ============================================================
 
-function validateQuery(
-  query:
-    StorageQuery,
-):
-  string | null {
-
-  if (
-    !query ||
-    typeof query !== "object"
-  ) {
-
+function validateQuery(query: StorageQuery): string | null {
+  if (!query || typeof query !== "object") {
     return "Storage query is required.";
   }
 
-
-  if (
-    typeof query.entity !== "string" ||
-    query.entity.trim().length === 0
-  ) {
-
+  if (typeof query.entity !== "string" || query.entity.trim().length === 0) {
     return "Storage entity is required.";
   }
-
 
   return null;
 }
 
-
-function validateRecord(
-  record:
-    unknown,
-):
-  record is Record<string, unknown> {
-
+function validateRecord(record: unknown): record is Record<string, unknown> {
   return (
-    typeof record === "object" &&
-    record !== null &&
-    !Array.isArray(record)
+    typeof record === "object" && record !== null && !Array.isArray(record)
   );
 }
-
 
 // ============================================================
 // RECORD MATCHING
 // ============================================================
 
 function recordMatchesQuery(
-  record:
-    PersistedStorageRecord,
+  record: PersistedStorageRecord,
 
-  query:
-    StorageQuery,
-):
-  boolean {
-
-  if (
-    record.entity !==
-    query.entity
-  ) {
-
+  query: StorageQuery,
+): boolean {
+  if (record.entity !== query.entity) {
     return false;
   }
 
-
-  if (
-    query.id !== undefined &&
-    record.id !== query.id
-  ) {
-
+  if (query.id !== undefined && record.id !== query.id) {
     return false;
   }
 
-
-  if (
-    query.ownerId !== undefined &&
-    record.ownerId !== query.ownerId
-  ) {
-
+  if (query.ownerId !== undefined && record.ownerId !== query.ownerId) {
     return false;
   }
 
-
-  if (
-    query.demoId !== undefined &&
-    record.demoId !== query.demoId
-  ) {
-
+  if (query.demoId !== undefined && record.demoId !== query.demoId) {
     return false;
   }
-
 
   return true;
 }
-
 
 // ============================================================
 // RECORD OUTPUT
 // ============================================================
 
-function getRecordData(
-  record:
-    PersistedStorageRecord,
-):
-  unknown {
-
+function getRecordData(record: PersistedStorageRecord): unknown {
   return record.data;
 }
-
 
 // ============================================================
 // USB STATUS
 // ============================================================
 
 async function getUsbStatus() {
-
-  const usbRoot =
-    await findFinoraUsbRoot();
-
+  const usbRoot = await findFinoraUsbRoot();
 
   if (!usbRoot) {
-
     return {
+      availability: "DISCONNECTED",
 
-      availability:
-        "DISCONNECTED",
-
-      message:
-        "FINORA Pendrive is not connected.",
+      message: "FINORA Pendrive is not connected.",
     };
   }
 
-
   try {
+    const storageDirectory = getFinoraStorageDirectory(usbRoot);
 
-    const storageDirectory =
-      getFinoraStorageDirectory(
-        usbRoot,
-      );
-
-
-    await fs.mkdir(
-      storageDirectory,
-      {
-        recursive: true,
-      },
-    );
-
+    await fs.mkdir(storageDirectory, {
+      recursive: true,
+    });
 
     return {
+      availability: "READY",
 
-      availability:
-        "READY",
+      storageId: path.parse(usbRoot).root,
 
-      storageId:
-        path.parse(
-          usbRoot,
-        ).root,
-
-      message:
-        "FINORA Pendrive is connected and ready.",
+      message: "FINORA Pendrive is connected and ready.",
     };
-
   } catch (error) {
-
     // A failed filesystem access can mean the removable drive
     // was removed or became unavailable.
     invalidateUsbRootCache();
 
     return {
-
-      availability:
-        "ERROR",
+      availability: "ERROR",
 
       message:
         error instanceof Error
@@ -965,83 +608,42 @@ async function getUsbStatus() {
   }
 }
 
-
 // ============================================================
 // USB AVAILABILITY
 // ============================================================
 
-async function isUsbAvailable():
-  Promise<boolean> {
+async function isUsbAvailable(): Promise<boolean> {
+  const status = await getUsbStatus();
 
-  const status =
-    await getUsbStatus();
-
-
-  return (
-    status.availability ===
-    "READY"
-  );
+  return status.availability === "READY";
 }
-
 
 // ============================================================
 // IPC: GET
 // ============================================================
 
-async function handleUsbGet(
-  query:
-    StorageQuery,
-) {
-
-  const queryError =
-    validateQuery(
-      query,
-    );
-
+async function handleUsbGet(query: StorageQuery) {
+  const queryError = validateQuery(query);
 
   if (queryError) {
     return failure(queryError);
   }
 
-
-  const usbRoot =
-    await findFinoraUsbRoot();
-
+  const usbRoot = await findFinoraUsbRoot();
 
   if (!usbRoot) {
-
-    return failure(
-      "FINORA Pendrive is disconnected.",
-    );
+    return failure("FINORA Pendrive is disconnected.");
   }
 
-
   try {
+    const storagePackage = await readStoragePackage(usbRoot);
 
-    const storagePackage =
-      await readStoragePackage(
-        usbRoot,
-      );
-
-
-    const record =
-      storagePackage.records.find(
-        (item) =>
-          recordMatchesQuery(
-            item,
-            query,
-          ),
-      );
-
-
-    return success(
-      record
-        ? getRecordData(record)
-        : undefined,
+    const record = storagePackage.records.find((item) =>
+      recordMatchesQuery(item, query),
     );
 
+    return success(record ? getRecordData(record) : undefined);
   } catch (error) {
-
     // USB may have been removed between detection and access.
     // Invalidate the cached root so the next operation re-detects it.
     invalidateUsbRootCache();
@@ -1054,93 +656,42 @@ async function handleUsbGet(
   }
 }
 
-
 // ============================================================
 // IPC: GET ALL
 // ============================================================
 
-async function handleUsbGetAll(
-  query:
-    StorageQuery,
-) {
-
-  const queryError =
-    validateQuery(
-      query,
-    );
-
+async function handleUsbGetAll(query: StorageQuery) {
+  const queryError = validateQuery(query);
 
   if (queryError) {
     return failure(queryError);
   }
 
-
-  const usbRoot =
-    await findFinoraUsbRoot();
-
+  const usbRoot = await findFinoraUsbRoot();
 
   if (!usbRoot) {
-
-    return failure(
-      "FINORA Pendrive is disconnected.",
-    );
+    return failure("FINORA Pendrive is disconnected.");
   }
 
-
   try {
+    const storagePackage = await readStoragePackage(usbRoot);
 
-    const storagePackage =
-      await readStoragePackage(
-        usbRoot,
-      );
+    let records = storagePackage.records.filter((item) =>
+      recordMatchesQuery(item, query),
+    );
 
-
-    let records =
-      storagePackage.records
-        .filter(
-          (item) =>
-            recordMatchesQuery(
-              item,
-              query,
-            ),
-        );
-
-
-    const offset =
-      Math.max(
-        query.offset ?? 0,
-        0,
-      );
-
+    const offset = Math.max(query.offset ?? 0, 0);
 
     const limit =
-      query.limit !== undefined
-        ? Math.max(
-            query.limit,
-            0,
-          )
-        : undefined;
-
+      query.limit !== undefined ? Math.max(query.limit, 0) : undefined;
 
     records =
       limit === undefined
-        ? records.slice(
-            offset,
-          )
-        : records.slice(
-            offset,
-            offset + limit,
-          );
+        ? records.slice(offset)
+        : records.slice(offset, offset + limit);
 
-
-    return success(
-      records.map(
-        getRecordData,
-      ),
-    );
-
+    return success(records.map(getRecordData));
   } catch (error) {
-
     // USB may have been removed between detection and access.
     // Invalidate the cached root so the next operation re-detects it.
     invalidateUsbRootCache();
@@ -1153,140 +704,75 @@ async function handleUsbGetAll(
   }
 }
 
-
 // ============================================================
 // IPC: SAVE
 // ============================================================
 
 async function handleUsbSave(
-  record:
-    unknown,
+  record: unknown,
 
-  options?:
-    StorageWriteOptions,
+  options?: StorageWriteOptions,
 ) {
-
-  if (
-    !validateRecord(
-      record,
-    )
-  ) {
-
-    return failure(
-      "A valid storage record is required.",
-    );
+  if (!validateRecord(record)) {
+    return failure("A valid storage record is required.");
   }
 
-
-  const entity =
-    typeof record.entity === "string"
-      ? record.entity
-      : undefined;
-
+  const entity = typeof record.entity === "string" ? record.entity : undefined;
 
   if (!entity) {
-
-    return failure(
-      "Storage record entity is required.",
-    );
+    return failure("Storage record entity is required.");
   }
 
-
-  const usbRoot =
-    await findFinoraUsbRoot();
-
+  const usbRoot = await findFinoraUsbRoot();
 
   if (!usbRoot) {
-
-    return failure(
-      "FINORA Pendrive is disconnected.",
-    );
+    return failure("FINORA Pendrive is disconnected.");
   }
 
-
   try {
+    const storagePackage = await readStoragePackage(usbRoot);
 
-    const storagePackage =
-      await readStoragePackage(
-        usbRoot,
-      );
-
-
-    const now =
-      new Date().toISOString();
-
+    const now = new Date().toISOString();
 
     const id =
-      typeof record.id === "string" &&
-      record.id.length > 0
+      typeof record.id === "string" && record.id.length > 0
         ? record.id
         : randomUUID();
 
-
-    const persistedRecord:
-      PersistedStorageRecord = {
-
+    const persistedRecord: PersistedStorageRecord = {
       id,
 
       entity,
 
-      data:
-        record.data ??
-        record,
+      data: record.data ?? record,
 
-      createdAt:
-        typeof record.createdAt === "string"
-          ? record.createdAt
-          : now,
+      createdAt: typeof record.createdAt === "string" ? record.createdAt : now,
 
-      updatedAt:
-        now,
+      updatedAt: now,
 
-      ownerId:
-        options?.ownerId,
+      ownerId: options?.ownerId,
 
-      demoId:
-        options?.demoId,
+      demoId: options?.demoId,
     };
 
+    const duplicateIndex = storagePackage.records.findIndex(
+      (item) =>
+        item.id === id &&
+        item.entity === entity &&
+        item.ownerId === options?.ownerId &&
+        item.demoId === options?.demoId,
+    );
 
-    const duplicateIndex =
-      storagePackage.records.findIndex(
-        (item) =>
-          item.id === id &&
-          item.entity === entity &&
-          item.ownerId === options?.ownerId &&
-          item.demoId === options?.demoId,
-      );
-
-
-    if (
-      duplicateIndex >= 0
-    ) {
-
-      return failure(
-        "A storage record with the same ID already exists.",
-      );
+    if (duplicateIndex >= 0) {
+      return failure("A storage record with the same ID already exists.");
     }
 
+    storagePackage.records.push(persistedRecord);
 
-    storagePackage.records.push(
-      persistedRecord,
-    );
+    await writeStoragePackage(usbRoot, storagePackage);
 
-
-    await writeStoragePackage(
-      usbRoot,
-      storagePackage,
-    );
-
-
-    return success(
-      persistedRecord.data,
-    );
-
+    return success(persistedRecord.data);
   } catch (error) {
-
     // USB may have been removed between detection and access.
     // Invalidate the cached root so the next operation re-detects it.
     invalidateUsbRootCache();
@@ -1299,139 +785,72 @@ async function handleUsbSave(
   }
 }
 
-
 // ============================================================
 // IPC: UPDATE
 // ============================================================
 
 async function handleUsbUpdate(
-  record:
-    unknown,
+  record: unknown,
 
-  options?:
-    StorageWriteOptions,
+  options?: StorageWriteOptions,
 ) {
-
-  if (
-    !validateRecord(
-      record,
-    )
-  ) {
-
-    return failure(
-      "A valid storage record is required.",
-    );
+  if (!validateRecord(record)) {
+    return failure("A valid storage record is required.");
   }
 
+  const entity = typeof record.entity === "string" ? record.entity : undefined;
 
-  const entity =
-    typeof record.entity === "string"
-      ? record.entity
-      : undefined;
-
-
-  const id =
-    typeof record.id === "string"
-      ? record.id
-      : undefined;
-
+  const id = typeof record.id === "string" ? record.id : undefined;
 
   if (!entity) {
-
-    return failure(
-      "Storage record entity is required.",
-    );
+    return failure("Storage record entity is required.");
   }
-
 
   if (!id) {
-
-    return failure(
-      "Storage record ID is required for update.",
-    );
+    return failure("Storage record ID is required for update.");
   }
 
-
-  const usbRoot =
-    await findFinoraUsbRoot();
-
+  const usbRoot = await findFinoraUsbRoot();
 
   if (!usbRoot) {
-
-    return failure(
-      "FINORA Pendrive is disconnected.",
-    );
+    return failure("FINORA Pendrive is disconnected.");
   }
 
-
   try {
+    const storagePackage = await readStoragePackage(usbRoot);
 
-    const storagePackage =
-      await readStoragePackage(
-        usbRoot,
-      );
-
-
-    const index =
-      storagePackage.records.findIndex(
-        (item) =>
-          item.id === id &&
-          item.entity === entity &&
-          item.ownerId === options?.ownerId &&
-          item.demoId === options?.demoId,
-      );
-
+    const index = storagePackage.records.findIndex(
+      (item) =>
+        item.id === id &&
+        item.entity === entity &&
+        item.ownerId === options?.ownerId &&
+        item.demoId === options?.demoId,
+    );
 
     if (index < 0) {
-
-      return failure(
-        "FINORA storage record was not found.",
-      );
+      return failure("FINORA storage record was not found.");
     }
 
-
-    const existing =
-      storagePackage.records[index];
-
+    const existing = storagePackage.records[index];
 
     if (!existing) {
-
-      return failure(
-        "FINORA storage record was not found.",
-      );
+      return failure("FINORA storage record was not found.");
     }
 
-
-    const updatedRecord:
-      PersistedStorageRecord = {
-
+    const updatedRecord: PersistedStorageRecord = {
       ...existing,
 
-      data:
-        record.data ??
-        record,
+      data: record.data ?? record,
 
-      updatedAt:
-        new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
     };
 
+    storagePackage.records[index] = updatedRecord;
 
-    storagePackage.records[index] =
-      updatedRecord;
+    await writeStoragePackage(usbRoot, storagePackage);
 
-
-    await writeStoragePackage(
-      usbRoot,
-      storagePackage,
-    );
-
-
-    return success(
-      updatedRecord.data,
-    );
-
+    return success(updatedRecord.data);
   } catch (error) {
-
     // USB may have been removed between detection and access.
     // Invalidate the cached root so the next operation re-detects it.
     invalidateUsbRootCache();
@@ -1444,79 +863,40 @@ async function handleUsbUpdate(
   }
 }
 
-
 // ============================================================
 // IPC: DELETE
 // ============================================================
 
-async function handleUsbDelete(
-  query:
-    StorageQuery,
-) {
-
-  const queryError =
-    validateQuery(
-      query,
-    );
-
+async function handleUsbDelete(query: StorageQuery) {
+  const queryError = validateQuery(query);
 
   if (queryError) {
     return failure(queryError);
   }
 
-
-  const usbRoot =
-    await findFinoraUsbRoot();
-
+  const usbRoot = await findFinoraUsbRoot();
 
   if (!usbRoot) {
-
-    return failure(
-      "FINORA Pendrive is disconnected.",
-    );
+    return failure("FINORA Pendrive is disconnected.");
   }
 
-
   try {
+    const storagePackage = await readStoragePackage(usbRoot);
 
-    const storagePackage =
-      await readStoragePackage(
-        usbRoot,
-      );
+    const originalLength = storagePackage.records.length;
 
+    storagePackage.records = storagePackage.records.filter(
+      (item) => !recordMatchesQuery(item, query),
+    );
 
-    const originalLength =
-      storagePackage.records.length;
-
-
-    storagePackage.records =
-      storagePackage.records.filter(
-        (item) =>
-          !recordMatchesQuery(
-            item,
-            query,
-          ),
-      );
-
-
-    const deleted =
-      storagePackage.records.length !==
-      originalLength;
-
+    const deleted = storagePackage.records.length !== originalLength;
 
     if (deleted) {
-
-      await writeStoragePackage(
-        usbRoot,
-        storagePackage,
-      );
+      await writeStoragePackage(usbRoot, storagePackage);
     }
 
-
     return success();
-
   } catch (error) {
-
     // USB may have been removed between detection and access.
     // Invalidate the cached root so the next operation re-detects it.
     invalidateUsbRootCache();
@@ -1529,144 +909,77 @@ async function handleUsbDelete(
   }
 }
 
-
 // ============================================================
 // IPC: REPLACE ALL
 // ============================================================
 
 async function handleUsbReplaceAll(
-  records:
-    unknown[],
+  records: unknown[],
 
-  options?:
-    StorageWriteOptions,
+  options?: StorageWriteOptions,
 ) {
-
   if (!Array.isArray(records)) {
-
-    return failure(
-      "Storage records must be an array.",
-    );
+    return failure("Storage records must be an array.");
   }
 
-
-  const usbRoot =
-    await findFinoraUsbRoot();
-
+  const usbRoot = await findFinoraUsbRoot();
 
   if (!usbRoot) {
-
-    return failure(
-      "FINORA Pendrive is disconnected.",
-    );
+    return failure("FINORA Pendrive is disconnected.");
   }
 
-
   try {
-
-    const invalidRecord =
-      records.find(
-        (record) =>
-          !validateRecord(
-            record,
-          ) ||
-          typeof record.entity !== "string",
-      );
-
-
-    if (invalidRecord) {
-
-      return failure(
-        "Every storage record must contain an entity.",
-      );
-    }
-
-
-    const storagePackage =
-      await readStoragePackage(
-        usbRoot,
-      );
-
-
-    const now =
-      new Date().toISOString();
-
-
-    const preparedRecords:
-      PersistedStorageRecord[] =
-      records.map(
-        (record) => {
-
-          const source =
-            record as Record<string, unknown>;
-
-
-          return {
-
-            id:
-              typeof source.id === "string" &&
-              source.id.length > 0
-                ? source.id
-                : randomUUID(),
-
-            entity:
-              source.entity as string,
-
-            data:
-              source.data ??
-              source,
-
-            createdAt:
-              typeof source.createdAt === "string"
-                ? source.createdAt
-                : now,
-
-            updatedAt:
-              now,
-
-            ownerId:
-              options?.ownerId,
-
-            demoId:
-              options?.demoId,
-          };
-        },
-      );
-
-
-    const preservedRecords =
-      storagePackage.records.filter(
-        (existing) => {
-
-          return !preparedRecords.some(
-            (replacement) =>
-              replacement.entity ===
-                existing.entity &&
-              replacement.ownerId ===
-                existing.ownerId &&
-              replacement.demoId ===
-                existing.demoId,
-          );
-        },
-      );
-
-
-    storagePackage.records = [
-      ...preservedRecords,
-      ...preparedRecords,
-    ];
-
-
-    await writeStoragePackage(
-      usbRoot,
-      storagePackage,
+    const invalidRecord = records.find(
+      (record) => !validateRecord(record) || typeof record.entity !== "string",
     );
 
+    if (invalidRecord) {
+      return failure("Every storage record must contain an entity.");
+    }
+
+    const storagePackage = await readStoragePackage(usbRoot);
+
+    const now = new Date().toISOString();
+
+    const preparedRecords: PersistedStorageRecord[] = records.map((record) => {
+      const source = record as Record<string, unknown>;
+
+      return {
+        id:
+          typeof source.id === "string" && source.id.length > 0
+            ? source.id
+            : randomUUID(),
+
+        entity: source.entity as string,
+
+        data: source.data ?? source,
+
+        createdAt:
+          typeof source.createdAt === "string" ? source.createdAt : now,
+
+        updatedAt: now,
+
+        ownerId: options?.ownerId,
+
+        demoId: options?.demoId,
+      };
+    });
+
+    const preservedRecords = storagePackage.records.filter((existing) => {
+      return !preparedRecords.some(
+        (replacement) =>
+          replacement.entity === existing.entity &&
+          replacement.ownerId === existing.ownerId &&
+          replacement.demoId === existing.demoId,
+      );
+    });
+
+    storagePackage.records = [...preservedRecords, ...preparedRecords];
+
+    await writeStoragePackage(usbRoot, storagePackage);
 
     return success();
-
   } catch (error) {
-
     // USB may have been removed between detection and access.
     // Invalidate the cached root so the next operation re-detects it.
     invalidateUsbRootCache();
@@ -1679,67 +992,34 @@ async function handleUsbReplaceAll(
   }
 }
 
-
 // ============================================================
 // IPC: CLEAR
 // ============================================================
 
-async function handleUsbClear(
-  query:
-    StorageQuery,
-) {
-
-  const queryError =
-    validateQuery(
-      query,
-    );
-
+async function handleUsbClear(query: StorageQuery) {
+  const queryError = validateQuery(query);
 
   if (queryError) {
     return failure(queryError);
   }
 
-
-  const usbRoot =
-    await findFinoraUsbRoot();
-
+  const usbRoot = await findFinoraUsbRoot();
 
   if (!usbRoot) {
-
-    return failure(
-      "FINORA Pendrive is disconnected.",
-    );
+    return failure("FINORA Pendrive is disconnected.");
   }
 
-
   try {
+    const storagePackage = await readStoragePackage(usbRoot);
 
-    const storagePackage =
-      await readStoragePackage(
-        usbRoot,
-      );
-
-
-    storagePackage.records =
-      storagePackage.records.filter(
-        (item) =>
-          !recordMatchesQuery(
-            item,
-            query,
-          ),
-      );
-
-
-    await writeStoragePackage(
-      usbRoot,
-      storagePackage,
+    storagePackage.records = storagePackage.records.filter(
+      (item) => !recordMatchesQuery(item, query),
     );
 
+    await writeStoragePackage(usbRoot, storagePackage);
 
     return success();
-
   } catch (error) {
-
     // USB may have been removed between detection and access.
     // Invalidate the cached root so the next operation re-detects it.
     invalidateUsbRootCache();
@@ -1751,7 +1031,6 @@ async function handleUsbClear(
     );
   }
 }
-
 
 // ============================================================
 // IPC: RESET FINORA DATA
@@ -1775,35 +1054,19 @@ async function handleUsbClear(
 // ============================================================
 
 async function handleUsbResetFinoraData() {
-
-  const usbRoot =
-    await findFinoraUsbRoot();
-
+  const usbRoot = await findFinoraUsbRoot();
 
   if (!usbRoot) {
-
-    return failure(
-      "FINORA Pendrive is disconnected.",
-    );
+    return failure("FINORA Pendrive is disconnected.");
   }
 
-
   try {
+    const emptyPackage = createEmptyStoragePackage();
 
-    const emptyPackage =
-      createEmptyStoragePackage();
-
-
-    await writeStoragePackage(
-      usbRoot,
-      emptyPackage,
-    );
-
+    await writeStoragePackage(usbRoot, emptyPackage);
 
     return success();
-
   } catch (error) {
-
     // USB may have been removed between detection and access.
     // Invalidate the cached root so the next operation re-detects it.
     invalidateUsbRootCache();
@@ -1816,136 +1079,68 @@ async function handleUsbResetFinoraData() {
   }
 }
 
-
 // ============================================================
 // REGISTER USB IPC HANDLERS
 // ============================================================
 
 function registerUsbStorageHandlers(): void {
-
   if (handlersRegistered) {
     return;
   }
 
-
-  handlersRegistered =
-    true;
-
+  handlersRegistered = true;
 
   // ----------------------------------------------------------
   // AVAILABILITY
   // ----------------------------------------------------------
 
-  ipcMain.handle(
-    IPC_CHANNELS.IS_AVAILABLE,
-    async (event) => {
+  ipcMain.handle(IPC_CHANNELS.IS_AVAILABLE, async (event) => {
+    if (!isTrustedRenderer(event.senderFrame)) {
+      return false;
+    }
 
-      if (
-        !isTrustedRenderer(
-          event.senderFrame,
-        )
-      ) {
-
-        return false;
-      }
-
-
-      return isUsbAvailable();
-    },
-  );
-
+    return isUsbAvailable();
+  });
 
   // ----------------------------------------------------------
   // STATUS
   // ----------------------------------------------------------
 
-  ipcMain.handle(
-    IPC_CHANNELS.GET_STATUS,
-    async (event) => {
+  ipcMain.handle(IPC_CHANNELS.GET_STATUS, async (event) => {
+    if (!isTrustedRenderer(event.senderFrame)) {
+      return {
+        availability: "ERROR",
 
-      if (
-        !isTrustedRenderer(
-          event.senderFrame,
-        )
-      ) {
+        message: "Untrusted renderer.",
+      };
+    }
 
-        return {
-
-          availability:
-            "ERROR",
-
-          message:
-            "Untrusted renderer.",
-        };
-      }
-
-
-      return getUsbStatus();
-    },
-  );
-
+    return getUsbStatus();
+  });
 
   // ----------------------------------------------------------
   // GET
   // ----------------------------------------------------------
 
-  ipcMain.handle(
-    IPC_CHANNELS.GET,
-    async (
-      event,
-      query:
-        StorageQuery,
-    ) => {
+  ipcMain.handle(IPC_CHANNELS.GET, async (event, query: StorageQuery) => {
+    if (!isTrustedRenderer(event.senderFrame)) {
+      return failure("Untrusted renderer.");
+    }
 
-      if (
-        !isTrustedRenderer(
-          event.senderFrame,
-        )
-      ) {
-
-        return failure(
-          "Untrusted renderer.",
-        );
-      }
-
-
-      return handleUsbGet(
-        query,
-      );
-    },
-  );
-
+    return handleUsbGet(query);
+  });
 
   // ----------------------------------------------------------
   // GET ALL
   // ----------------------------------------------------------
 
-  ipcMain.handle(
-    IPC_CHANNELS.GET_ALL,
-    async (
-      event,
-      query:
-        StorageQuery,
-    ) => {
+  ipcMain.handle(IPC_CHANNELS.GET_ALL, async (event, query: StorageQuery) => {
+    if (!isTrustedRenderer(event.senderFrame)) {
+      return failure("Untrusted renderer.");
+    }
 
-      if (
-        !isTrustedRenderer(
-          event.senderFrame,
-        )
-      ) {
-
-        return failure(
-          "Untrusted renderer.",
-        );
-      }
-
-
-      return handleUsbGetAll(
-        query,
-      );
-    },
-  );
-
+    return handleUsbGetAll(query);
+  });
 
   // ----------------------------------------------------------
   // SAVE
@@ -1953,33 +1148,14 @@ function registerUsbStorageHandlers(): void {
 
   ipcMain.handle(
     IPC_CHANNELS.SAVE,
-    async (
-      event,
-      record:
-        unknown,
-      options?:
-        StorageWriteOptions,
-    ) => {
-
-      if (
-        !isTrustedRenderer(
-          event.senderFrame,
-        )
-      ) {
-
-        return failure(
-          "Untrusted renderer.",
-        );
+    async (event, record: unknown, options?: StorageWriteOptions) => {
+      if (!isTrustedRenderer(event.senderFrame)) {
+        return failure("Untrusted renderer.");
       }
 
-
-      return handleUsbSave(
-        record,
-        options,
-      );
+      return handleUsbSave(record, options);
     },
   );
-
 
   // ----------------------------------------------------------
   // UPDATE
@@ -1987,64 +1163,26 @@ function registerUsbStorageHandlers(): void {
 
   ipcMain.handle(
     IPC_CHANNELS.UPDATE,
-    async (
-      event,
-      record:
-        unknown,
-      options?:
-        StorageWriteOptions,
-    ) => {
-
-      if (
-        !isTrustedRenderer(
-          event.senderFrame,
-        )
-      ) {
-
-        return failure(
-          "Untrusted renderer.",
-        );
+    async (event, record: unknown, options?: StorageWriteOptions) => {
+      if (!isTrustedRenderer(event.senderFrame)) {
+        return failure("Untrusted renderer.");
       }
 
-
-      return handleUsbUpdate(
-        record,
-        options,
-      );
+      return handleUsbUpdate(record, options);
     },
   );
-
 
   // ----------------------------------------------------------
   // DELETE
   // ----------------------------------------------------------
 
-  ipcMain.handle(
-    IPC_CHANNELS.DELETE,
-    async (
-      event,
-      query:
-        StorageQuery,
-    ) => {
+  ipcMain.handle(IPC_CHANNELS.DELETE, async (event, query: StorageQuery) => {
+    if (!isTrustedRenderer(event.senderFrame)) {
+      return failure("Untrusted renderer.");
+    }
 
-      if (
-        !isTrustedRenderer(
-          event.senderFrame,
-        )
-      ) {
-
-        return failure(
-          "Untrusted renderer.",
-        );
-      }
-
-
-      return handleUsbDelete(
-        query,
-      );
-    },
-  );
-
+    return handleUsbDelete(query);
+  });
 
   // ----------------------------------------------------------
   // REPLACE ALL
@@ -2052,214 +1190,157 @@ function registerUsbStorageHandlers(): void {
 
   ipcMain.handle(
     IPC_CHANNELS.REPLACE_ALL,
-    async (
-      event,
-      records:
-        unknown[],
-      options?:
-        StorageWriteOptions,
-    ) => {
-
-      if (
-        !isTrustedRenderer(
-          event.senderFrame,
-        )
-      ) {
-
-        return failure(
-          "Untrusted renderer.",
-        );
+    async (event, records: unknown[], options?: StorageWriteOptions) => {
+      if (!isTrustedRenderer(event.senderFrame)) {
+        return failure("Untrusted renderer.");
       }
 
-
-      return handleUsbReplaceAll(
-        records,
-        options,
-      );
+      return handleUsbReplaceAll(records, options);
     },
   );
-
 
   // ----------------------------------------------------------
   // CLEAR
   // ----------------------------------------------------------
 
-  ipcMain.handle(
-    IPC_CHANNELS.CLEAR,
-    async (
-      event,
-      query:
-        StorageQuery,
-    ) => {
+  ipcMain.handle(IPC_CHANNELS.CLEAR, async (event, query: StorageQuery) => {
+    if (!isTrustedRenderer(event.senderFrame)) {
+      return failure("Untrusted renderer.");
+    }
 
-      if (
-        !isTrustedRenderer(
-          event.senderFrame,
-        )
-      ) {
-
-        return failure(
-          "Untrusted renderer.",
-        );
-      }
-
-
-      return handleUsbClear(
-        query,
-      );
-    },
-  );
-
+    return handleUsbClear(query);
+  });
 
   // ----------------------------------------------------------
   // RESET FINORA DATA
   // ----------------------------------------------------------
 
-  ipcMain.handle(
-    IPC_CHANNELS.RESET_FINORA_DATA,
-    async (event) => {
+  ipcMain.handle(IPC_CHANNELS.RESET_FINORA_DATA, async (event) => {
+    if (!isTrustedRenderer(event.senderFrame)) {
+      return failure("Untrusted renderer.");
+    }
 
-      if (
-        !isTrustedRenderer(
-          event.senderFrame,
-        )
-      ) {
-
-        return failure(
-          "Untrusted renderer.",
-        );
-      }
-
-
-      return handleUsbResetFinoraData();
-    },
-  );
+    return handleUsbResetFinoraData();
+  });
 }
-
 
 // ============================================================
 // MAIN WINDOW CREATION
 // ============================================================
 
 function createMainWindow(): void {
+  const createdWindow = new BrowserWindow({
+    width: 1400,
 
-  mainWindow =
-    new BrowserWindow({
+    height: 900,
 
-      width:
-        1400,
+    minWidth: 1200,
 
-      height:
-        900,
+    minHeight: 700,
 
-      minWidth:
-        1200,
+    title: "FINORA Enterprise",
 
-      minHeight:
-        700,
+    backgroundColor: "#0f172a",
 
-      title:
-        "FINORA Enterprise",
+    autoHideMenuBar: true,
 
-      backgroundColor:
-        "#0f172a",
+    webPreferences: {
+      preload: path.join(__dirname, "preload.js"),
 
-      autoHideMenuBar:
-        true,
+      contextIsolation: true,
 
-      webPreferences: {
+      nodeIntegration: false,
 
-        preload:
-          path.join(
-            __dirname,
-            "preload.js",
-          ),
+      sandbox: true,
+    },
+  });
 
-        contextIsolation:
-          true,
+  mainWindow = createdWindow;
 
-        nodeIntegration:
-          false,
+  // ----------------------------------------------------------
+  // EXTERNAL LINKS
+  //
+  // Renderer links such as WhatsApp Web must open in the
+  // user's real default browser instead of a second Electron
+  // BrowserWindow.
+  // ----------------------------------------------------------
+  createdWindow.webContents.setWindowOpenHandler(({ url }) => {
+    try {
+      const targetUrl = new URL(url);
 
-        sandbox:
-          true,
-      },
-    });
+      /*
+       * FINORA PDF print preview.
+       * blob: URLs must open inside Electron.
+       */
+      if (targetUrl.protocol === "blob:") {
+        return {
+          action: "allow",
+        };
+      }
 
+      /*
+       * Normal external web links.
+       * Open in real default browser.
+       */
+      if (targetUrl.protocol === "https:" || targetUrl.protocol === "http:") {
+        void shell.openExternal(targetUrl.toString());
 
+        return {
+          action: "deny",
+        };
+      }
+    } catch (error) {
+      console.error("FINORA EXTERNAL LINK ERROR:", error);
+    }
+
+    /*
+     * Block unknown protocols.
+     */
+    return {
+      action: "deny",
+    };
+  });
   // ----------------------------------------------------------
   // DEVELOPMENT
   // ----------------------------------------------------------
 
   if (!app.isPackaged) {
+    void createdWindow.loadURL("http://localhost:5173");
 
-    void mainWindow.loadURL(
-      "http://localhost:5173",
-    );
-
-
-    mainWindow.webContents.openDevTools();
-
+    createdWindow.webContents.openDevTools();
   }
-
 
   // ----------------------------------------------------------
   // PRODUCTION
   // ----------------------------------------------------------
-
   else {
-
-    void mainWindow.loadFile(
-      path.join(
-        __dirname,
-        "../dist/index.html",
-      ),
-    );
+    void createdWindow.loadFile(path.join(__dirname, "../dist/index.html"));
   }
-
 
   // ----------------------------------------------------------
   // F11 FULLSCREEN
   // ----------------------------------------------------------
 
-  mainWindow.webContents.on(
-    "before-input-event",
-    (_event, input) => {
-
-      if (
-        input.type === "keyDown" &&
-        input.key === "F11"
-      ) {
-
-        mainWindow?.setFullScreen(
-          !mainWindow.isFullScreen(),
-        );
-      }
-    },
-  );
-
+  createdWindow.webContents.on("before-input-event", (_event, input) => {
+    if (input.type === "keyDown" && input.key === "F11") {
+      createdWindow.setFullScreen(!createdWindow.isFullScreen());
+    }
+  });
 
   // ----------------------------------------------------------
   // WINDOW CLOSED
   // ----------------------------------------------------------
 
-  mainWindow.on(
-    "closed",
-    () => {
-
-      mainWindow =
-        null;
-    },
-  );
+  createdWindow.on("closed", () => {
+    mainWindow = null;
+  });
 }
-
 
 // ============================================================
 // APPLICATION STARTUP
 // ============================================================
 
 app.whenReady().then(() => {
-
   registerUsbStorageHandlers();
 
   createMainWindow();
@@ -2274,45 +1355,26 @@ app.whenReady().then(() => {
 
   warmUsbRootCache();
 
-
   // ----------------------------------------------------------
   // MACOS WINDOW REACTIVATION
   // ----------------------------------------------------------
 
-  app.on(
-    "activate",
-    () => {
-
-      if (
-        BrowserWindow.getAllWindows()
-          .length === 0
-      ) {
-
-        createMainWindow();
-      }
-    },
-  );
+  app.on("activate", () => {
+    if (BrowserWindow.getAllWindows().length === 0) {
+      createMainWindow();
+    }
+  });
 });
-
 
 // ============================================================
 // APPLICATION SHUTDOWN
 // ============================================================
 
-app.on(
-  "window-all-closed",
-  () => {
-
-    if (
-      process.platform !==
-      "darwin"
-    ) {
-
-      app.quit();
-    }
-  },
-);
-
+app.on("window-all-closed", () => {
+  if (process.platform !== "darwin") {
+    app.quit();
+  }
+});
 
 // ============================================================
 // END

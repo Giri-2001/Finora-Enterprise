@@ -28,22 +28,15 @@
 // STATUS  : Production
 // ============================================================
 
-
 // ============================================================
 // IMPORTS
 // ============================================================
 
-import type {
-  ReactNode,
-} from "react";
+import type { ReactNode } from "react";
 
-import {
-  useTheme,
-} from "../themes/provider";
+import { useTheme } from "../themes/provider";
 
-import GlobalHeader
-  from "../components/common/header/GlobalHeader";
-
+import GlobalHeader from "../components/common/header/GlobalHeader";
 
 // ============================================================
 // PAGE TYPE
@@ -56,44 +49,33 @@ export type AppPage =
   | "customerDepartment"
   | "loans"
   | "collections"
+  | "accounts"
   | "reports"
   | "settings";
-
 
 // ============================================================
 // PROPS
 // ============================================================
 
 interface AppShellProps {
+  children: ReactNode;
 
-  children:
-    ReactNode;
+  page: AppPage;
 
-  page:
-    AppPage;
+  onNavigate: (page: AppPage) => void;
 
-  onNavigate: (
-    page:
-      AppPage,
-  ) => void;
+  onBack: () => void;
 
-  onBack:
-    () => void;
+  canGoBack: boolean;
 
-  canGoBack:
-    boolean;
-
-  onLogout:
-    () => void;
+  onLogout: () => void;
 }
-
 
 // ============================================================
 // COMPONENT
 // ============================================================
 
 export default function AppShell({
-
   children,
 
   page,
@@ -105,17 +87,12 @@ export default function AppShell({
   canGoBack,
 
   onLogout,
-
 }: AppShellProps) {
-
-
   // ==========================================================
   // DEPARTMENT TITLE
   // ==========================================================
 
-  const {
-  theme,
-} = useTheme();
+  const { theme } = useTheme();
 
   const department =
     page === "reception"
@@ -130,47 +107,40 @@ export default function AppShell({
               ? "Loans"
               : page === "collections"
                 ? "Collections"
-                : page === "reports"
-                  ? "Reports"
-                  : "Reception";
-
+                : page === "accounts"
+                  ? "Accounts"
+                  : page === "reports"
+                    ? "Reports"
+                    : "Reception";
 
   // ==========================================================
   // RENDER
   // ==========================================================
 
   return (
-
     <main
       style={{
         // ----------------------------------------------------
         // VIEWPORT
         // ----------------------------------------------------
 
-        width:
-          "100%",
+        width: "100%",
 
-        height:
-          "100%",
+        height: "100%",
 
-        minWidth:
-          0,
+        minWidth: 0,
 
-        minHeight:
-          0,
+        minHeight: 0,
 
-        boxSizing:
-          "border-box",
+        boxSizing: "border-box",
 
         // ----------------------------------------------------
         // APPLICATION LAYOUT
         // ----------------------------------------------------
 
-        display:
-          "flex",
+        display: "flex",
 
-        flexDirection:
-          "column",
+        flexDirection: "column",
 
         // ----------------------------------------------------
         // IMPORTANT
@@ -181,21 +151,17 @@ export default function AppShell({
         // scrolling boundary.
         // ----------------------------------------------------
 
-        overflow:
-          "hidden",
+        overflow: "hidden",
 
         // ----------------------------------------------------
         // GLOBAL BACKGROUND
         // ----------------------------------------------------
 
-        background:
-  theme.colors.background.page,
+        background: theme.colors.background.page,
 
-        position:
-          "relative",
+        position: "relative",
       }}
     >
-
       {/* =====================================================
           GLOBAL HEADER
 
@@ -206,25 +172,11 @@ export default function AppShell({
       ===================================================== */}
 
       <GlobalHeader
-
-        department={
-          department
-        }
-
-        onBack={
-          onBack
-        }
-
-        canGoBack={
-          canGoBack
-        }
-
-        onLogout={
-          onLogout
-        }
-
+        department={department}
+        onBack={onBack}
+        canGoBack={canGoBack}
+        onLogout={onLogout}
       />
-
 
       {/* =====================================================
           ACTIVE V2 PAGE SCROLL AREA
@@ -239,38 +191,27 @@ export default function AppShell({
 
       <div
         style={{
-          width:
-            "100%",
+          width: "100%",
 
-          minWidth:
-            0,
+          minWidth: 0,
 
-          minHeight:
-            0,
+          minHeight: 0,
 
-          flex:
-            "1 1 auto",
+          flex: "1 1 auto",
 
-          boxSizing:
-            "border-box",
+          boxSizing: "border-box",
 
-          display:
-            "flex",
+          display: "flex",
 
-          flexDirection:
-            "column",
+          flexDirection: "column",
 
-          overflowX:
-            "hidden",
+          overflowX: "hidden",
 
-          overflowY:
-            "auto",
+          overflowY: "auto",
 
-          WebkitOverflowScrolling:
-            "touch",
+          WebkitOverflowScrolling: "touch",
         }}
       >
-
         {/* =================================================
             PAGE CONTENT HOST
 
@@ -311,41 +252,27 @@ export default function AppShell({
 
         <div
           style={{
-            width:
-              "100%",
+            width: "100%",
 
-            minWidth:
-              0,
+            minWidth: 0,
 
-            minHeight:
-              0,
+            minHeight: 0,
 
-            boxSizing:
-              "border-box",
+            boxSizing: "border-box",
 
-            display:
-              "flex",
+            display: "flex",
 
-            flexDirection:
-              "column",
+            flexDirection: "column",
 
-            flex:
-              "1 0 auto",
+            flex: "1 0 auto",
           }}
         >
-
           {children}
-
         </div>
-
       </div>
-
     </main>
-
   );
-
 }
-
 
 // ============================================================
 // END
