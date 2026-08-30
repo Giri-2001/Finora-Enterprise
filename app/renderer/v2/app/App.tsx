@@ -57,7 +57,7 @@
 
 import { useEffect, useState } from "react";
 
-import type { CSSProperties } from "react";
+import type { CSSProperties, ReactNode } from "react";
 
 import AppShell from "../layouts/AppShell";
 
@@ -85,7 +85,19 @@ import LoanStudio from "../components/customers/office/CustomerOffice/components
 
 import Login from "../pages/auth/Login";
 
-import { getSession, logout } from "../store/authStore";
+import BranchActivationRequired from "../pages/auth/BranchActivationRequired";
+
+import {
+  hasActiveFinoraStorageEntitlement,
+  loadFinoraBranchActivation,
+  loadFinoraInstallationIdentity,
+} from "../services/activation/activationService";
+
+import {
+  getSession,
+  invalidateSession,
+  logout,
+} from "../store/authStore";
 
 import { storageManager } from "../storage/storageManager";
 
@@ -117,25 +129,31 @@ import { useResponsive } from "../utils/responsive";
 
 const FINORA_STORAGE_MODE_SESSION_KEY = "FINORA_STORAGE_MODE";
 
-function getAuthenticatedStorageMode(): StorageMode {
+function getAuthenticatedStorageMode():
+  StorageMode | null {
+
   try {
-    const storedMode = window.sessionStorage.getItem(
-      FINORA_STORAGE_MODE_SESSION_KEY,
-    );
+    const storedMode =
+      window.sessionStorage.getItem(
+        FINORA_STORAGE_MODE_SESSION_KEY,
+      );
+
+    if (storedMode === StorageMode.LOCAL) {
+      return StorageMode.LOCAL;
+    }
 
     if (storedMode === StorageMode.USB) {
       return StorageMode.USB;
     }
 
-    if (storedMode === StorageMode.CLOUD) {
-      return StorageMode.CLOUD;
-    }
-
-    return StorageMode.LOCAL;
+    return null;
   } catch (error) {
-    console.error("FINORA STORAGE MODE RESTORE READ FAILED:", error);
+    console.error(
+      "FINORA STORAGE MODE RESTORE READ FAILED:",
+      error,
+    );
 
-    return StorageMode.LOCAL;
+    return null;
   }
 }
 
@@ -562,6 +580,193 @@ function BusinessContextErrorScreen({
 }
 
 // ============================================================
+// GLOBAL BRANCH ACTIVATION GATE
+// ============================================================
+//
+// STARTUP ORDER:
+//
+// App Start
+//   ↓
+// Secure Installation Identity
+//   ↓
+// Branch Activation
+//   ↓
+// Existing Login / Authenticated Application
+//
+// IMPORTANT:
+//
+// AuthenticatedApplication is not mounted until FINORA branch
+// activation is securely confirmed ACTIVE.
+// ============================================================
+
+type ActivationGateState =
+  | "CHECKING"
+  | "ACTIVE"
+  | "REQUIRED";
+
+function BranchActivationGate({
+  children,
+}: {
+  children: ReactNode;
+}) {
+  const [state, setState] =
+    useState<ActivationGateState>(
+      "CHECKING",
+    );
+
+  const [message, setMessage] =
+    useState<string>(
+      "Checking secure FINORA branch activation...",
+    );
+
+  const [retryNonce, setRetryNonce] =
+    useState<number>(
+      0,
+    );
+
+  useEffect(() => {
+    let active = true;
+
+    async function verifyActivation():
+      Promise<void> {
+
+      if (active) {
+        setState(
+          "CHECKING",
+        );
+
+        setMessage(
+          "Checking secure FINORA branch activation...",
+        );
+      }
+
+      const installationResult =
+        await loadFinoraInstallationIdentity();
+
+      if (!active) {
+        return;
+      }
+
+      if (!installationResult.success) {
+        setState(
+          "REQUIRED",
+        );
+
+        setMessage(
+          installationResult.error ??
+            "FINORA secure installation identity could not be verified.",
+        );
+
+        return;
+      }
+
+      const installation =
+        installationResult.data;
+
+      if (!installation) {
+        setState(
+          "REQUIRED",
+        );
+
+        setMessage(
+          "This FINORA installation has not yet been provisioned for a registered business branch.",
+        );
+
+        return;
+      }
+
+      const activationResult =
+        await loadFinoraBranchActivation(
+          installation.ownerId,
+          installation.businessId,
+          installation.branchId,
+        );
+
+      if (!active) {
+        return;
+      }
+
+      if (!activationResult.success) {
+        setState(
+          "REQUIRED",
+        );
+
+        setMessage(
+          activationResult.error ??
+            "FINORA branch activation could not be verified.",
+        );
+
+        return;
+      }
+
+      const activation =
+        activationResult.data;
+
+      if (
+        !activation ||
+        activation.status !== "ACTIVE"
+      ) {
+        setState(
+          "REQUIRED",
+        );
+
+        if (!activation) {
+          setMessage(
+            "This FINORA installation does not have an active branch activation.",
+          );
+
+          return;
+        }
+
+        setMessage(
+          `FINORA branch activation status is ${activation.status}. An ACTIVE branch activation is required before signing in.`,
+        );
+
+        return;
+      }
+
+      setState(
+        "ACTIVE",
+      );
+
+      setMessage(
+        "",
+      );
+    }
+
+    void verifyActivation();
+
+    return () => {
+      active = false;
+    };
+  }, [retryNonce]);
+
+  function handleRetry(): void {
+    setRetryNonce(
+      (current) =>
+        current + 1,
+    );
+  }
+
+  if (state === "CHECKING") {
+    return (
+      <ContextLoadingScreen />
+    );
+  }
+
+  if (state === "REQUIRED") {
+    return (
+      <BranchActivationRequired
+        message={message}
+        onRetry={handleRetry}
+      />
+    );
+  }
+
+  return children;
+}
+
+// ============================================================
 // AUTHENTICATED APPLICATION
 // ============================================================
 
@@ -596,7 +801,12 @@ function AuthenticatedApplication() {
         return;
       }
 
-      if (!session.ownerId || !session.businessId || !session.branchId) {
+      if (
+        !session.userId ||
+        !session.ownerId ||
+        !session.businessId ||
+        !session.branchId
+      ) {
         if (active) {
           await clearContext();
 
@@ -635,14 +845,114 @@ function AuthenticatedApplication() {
       //
       // StorageManager defaults to USB after renderer reload.
       //
-      // Therefore LOCAL / USB / CLOUD must be restored from
-      // the authenticated login session BEFORE repositories or
+      // Therefore LOCAL / USB must be restored from the
+      // authenticated login session BEFORE repositories or
       // Business Context can expose application data.
+      //
+      // SECURITY:
+      //
+      // Revalidate the selected per-user storage entitlement
+      // before restoring storage or exposing business data.
+      // Suspended/revoked entitlement must invalidate an
+      // already-persisted authenticated session.
       // ======================================================
 
-      const storageMode = getAuthenticatedStorageMode();
+      const storageMode =
+        getAuthenticatedStorageMode();
 
-      const storageResult = await storageManager.selectStorageMode(storageMode);
+      if (!storageMode) {
+        console.warn(
+          "FINORA AUTHENTICATED STORAGE MODE INVALID OR MISSING.",
+        );
+
+        invalidateSession();
+
+        try {
+          window.sessionStorage.removeItem(
+            FINORA_STORAGE_MODE_SESSION_KEY,
+          );
+        } catch (storageSessionError) {
+          console.error(
+            "FINORA STORAGE MODE SESSION CLEAR FAILED:",
+            storageSessionError,
+          );
+        }
+
+        await clearContext();
+
+        if (!active) {
+          return;
+        }
+
+        setSession(null);
+
+        setContextReady(true);
+
+        setContextError(null);
+
+        return;
+      }
+
+      const entitlementStorageMode =
+        storageMode === StorageMode.USB
+          ? "USB"
+          : "LOCAL";
+
+      const entitlementResult =
+        await hasActiveFinoraStorageEntitlement(
+          session.userId,
+          session.ownerId,
+          session.businessId,
+          session.branchId,
+          entitlementStorageMode,
+        );
+
+      if (!active) {
+        return;
+      }
+
+      if (
+        !entitlementResult.success ||
+        entitlementResult.data !== true
+      ) {
+        console.warn(
+          "FINORA AUTHENTICATED STORAGE ENTITLEMENT INVALID:",
+          entitlementResult.error ??
+            `No active ${entitlementStorageMode} entitlement.`,
+        );
+
+        invalidateSession();
+
+        try {
+          window.sessionStorage.removeItem(
+            FINORA_STORAGE_MODE_SESSION_KEY,
+          );
+        } catch (storageSessionError) {
+          console.error(
+            "FINORA STORAGE MODE SESSION CLEAR FAILED:",
+            storageSessionError,
+          );
+        }
+
+        await clearContext();
+
+        if (!active) {
+          return;
+        }
+
+        setSession(null);
+
+        setContextReady(true);
+
+        setContextError(null);
+
+        return;
+      }
+
+      const storageResult =
+        await storageManager.selectStorageMode(
+          storageMode,
+        );
 
       if (!active) {
         return;
@@ -1142,9 +1452,11 @@ function AuthenticatedV2Application({
 
 export default function App() {
   return (
-    <BusinessContextProvider>
-      <AuthenticatedApplication />
-    </BusinessContextProvider>
+    <BranchActivationGate>
+      <BusinessContextProvider>
+        <AuthenticatedApplication />
+      </BusinessContextProvider>
+    </BranchActivationGate>
   );
 }
 

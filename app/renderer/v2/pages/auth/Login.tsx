@@ -11,11 +11,11 @@
 // RESPONSIBILITY:
 //
 // - Provide one clean login surface for Owner and Customer
-// - Owner selects Local / USB / Cloud storage
+// - Owner selects Local / USB storage
 // - Customer selects Customer ID / Mobile OTP login
 // - USB Login requires a detected FINORA Pendrive
 // - Local Owner Login uses the existing authStore authentication
-// - Cloud / Customer flows are prepared as non-editable placeholders
+// - Customer flow is prepared as a non-editable placeholder
 // - Forgot Password entry points are prepared for every login path
 // - Preserve existing storage mode activation and USB monitoring
 // - Consume the FINORA Responsive Engine
@@ -28,7 +28,6 @@
 // - USB presence alone NEVER authenticates a user.
 // - USB Owner Login requires USB + User ID + Password.
 // - Local Owner Login does not require USB.
-// - Cloud Owner Login is UI-ready only until cloud wiring is enabled.
 // - Customer Login is UI-ready only until customer authentication is enabled.
 // - USB Login selects StorageMode.USB.
 // - Local Login selects StorageMode.LOCAL.
@@ -70,13 +69,17 @@ import {
   UserRound,
   UsersRound,
   Usb,
-  Cloud,
   HardDrive,
 } from "lucide-react";
 
 import {
-  login,
+  authenticateLogin,
+  commitLoginSession,
 } from "../../store/authStore";
+
+import {
+  hasActiveFinoraStorageEntitlement,
+} from "../../services/activation/activationService";
 
 import {
   storageManager,
@@ -125,8 +128,7 @@ type LoginRole =
 
 type OwnerStorage =
   | "local"
-  | "usb"
-  | "cloud";
+  | "usb";
 
 
 type CustomerLoginMethod =
@@ -804,16 +806,10 @@ export default function Login({
       username.trim();
 
 
-    if (ownerStorage === "cloud") {
 
-      showComingSoon(
-        "Cloud Login is coming soon. Cloud backup and authentication wiring will be enabled here.",
-      );
-
-      return;
-
-    }
-
+    // --------------------------------------------------------
+    // CREDENTIAL INPUT VALIDATION
+    // --------------------------------------------------------
 
     if (!trimmedUsername) {
 
@@ -837,6 +833,10 @@ export default function Login({
     }
 
 
+    // --------------------------------------------------------
+    // USB PHYSICAL AVAILABILITY
+    // --------------------------------------------------------
+
     if (
       ownerStorage === "usb" &&
       !usbAvailable
@@ -856,8 +856,16 @@ export default function Login({
 
     try {
 
+      // ======================================================
+      // 1. VERIFY CREDENTIALS
+      //
+      // This creates a candidate session only.
+      //
+      // No authenticated session is persisted yet.
+      // ======================================================
+
       const session =
-        login({
+        authenticateLogin({
           username:
             trimmedUsername,
           password,
@@ -874,6 +882,82 @@ export default function Login({
 
       }
 
+
+      // ======================================================
+      // 2. VALIDATE BUSINESS ACCESS IDENTITY
+      // ======================================================
+
+      if (
+        !session.userId ||
+        !session.ownerId ||
+        !session.businessId ||
+        !session.branchId
+      ) {
+
+        setError(
+          "This FINORA login does not have a complete business access identity.",
+        );
+
+        return;
+
+      }
+
+
+      // ======================================================
+      // 3. RESOLVE COMMERCIAL STORAGE ENTITLEMENT MODE
+      //
+      // Entitlement modes deliberately support LOCAL / USB
+      // only.
+      // ======================================================
+
+      const entitlementStorageMode =
+        ownerStorage === "usb"
+          ? "USB"
+          : "LOCAL";
+
+
+      // ======================================================
+      // 4. VERIFY PER-LOGIN STORAGE ENTITLEMENT
+      // ======================================================
+
+      const entitlementResult =
+        await hasActiveFinoraStorageEntitlement(
+          session.userId,
+          session.ownerId,
+          session.businessId,
+          session.branchId,
+          entitlementStorageMode,
+        );
+
+
+      if (!entitlementResult.success) {
+
+        setError(
+          entitlementResult.error ??
+            "Unable to verify FINORA storage entitlement.",
+        );
+
+        return;
+
+      }
+
+
+      if (entitlementResult.data !== true) {
+
+        setError(
+          ownerStorage === "usb"
+            ? "This FINORA login does not have an active USB Storage entitlement."
+            : "This FINORA login does not have an active Local Storage entitlement.",
+        );
+
+        return;
+
+      }
+
+
+      // ======================================================
+      // 5. ACTIVATE SELECTED OPERATIONAL STORAGE
+      // ======================================================
 
       const storageMode =
         ownerStorage === "usb"
@@ -900,6 +984,10 @@ export default function Login({
       }
 
 
+      // ======================================================
+      // 6. PRESERVE AUTHENTICATED STORAGE MODE
+      // ======================================================
+
       try {
 
         window.sessionStorage.setItem(
@@ -923,11 +1011,35 @@ export default function Login({
       }
 
 
+      // ======================================================
+      // 7. COMMIT AUTHENTICATED SESSION
+      //
+      // Only now:
+      // - Persist finora_session
+      // - Create successful LOGIN audit
+      // ======================================================
+
+      commitLoginSession(
+        session,
+      );
+
+
       clearCustomerCache();
 
       setError("");
 
       onLogin();
+
+    } catch (loginError) {
+
+      console.error(
+        "FINORA OWNER LOGIN FAILED:",
+        loginError,
+      );
+
+      setError(
+        "Unable to complete FINORA login.",
+      );
 
     } finally {
 
@@ -936,7 +1048,6 @@ export default function Login({
     }
 
   }
-
 
   // ==========================================================
   // LOGIN CLICK
@@ -988,16 +1099,6 @@ export default function Login({
     }
 
 
-    if (ownerStorage === "cloud") {
-
-      showComingSoon(
-        "Cloud password recovery is coming soon.",
-      );
-
-      return;
-
-    }
-
 
     showComingSoon(
       "Owner password recovery is coming soon.",
@@ -1038,18 +1139,14 @@ export default function Login({
       : <UsersRound />;
 
   const storageLabel =
-    ownerStorage === "local"
-      ? "Local Storage"
-      : ownerStorage === "usb"
-        ? "USB Storage"
-        : "Cloud Storage";
+    ownerStorage === "usb"
+      ? "USB Storage"
+      : "Local Storage";
 
   const storageIcon =
-    ownerStorage === "local"
-      ? <HardDrive />
-      : ownerStorage === "usb"
-        ? <Usb />
-        : <Cloud />;
+    ownerStorage === "usb"
+      ? <Usb />
+      : <HardDrive />;
 
   const customerMethodLabel =
     customerLoginMethod === "customerId"
@@ -1479,25 +1576,6 @@ export default function Login({
                     </button>
 
 
-                    <button
-                      type="button"
-                      role="option"
-                      aria-selected={
-                        ownerStorage === "cloud"
-                      }
-                      onClick={() => {
-                        handleStorageChange("cloud");
-                      }}
-                      style={
-                        ownerStorage === "cloud"
-                          ? loginStyles.customSelectOptionActive
-                          : loginStyles.customSelectOption
-                      }
-                    >
-                      <Cloud />
-                      <span>Cloud Storage</span>
-                    </button>
-
                   </div>
 
                 )}
@@ -1575,9 +1653,7 @@ export default function Login({
               style={
                 ownerStorage === "usb"
                   ? loginStyles.modeNoticeUsb
-                  : ownerStorage === "cloud"
-                    ? loginStyles.modeNoticeCloud
-                    : loginStyles.modeNoticeNormal
+                  : loginStyles.modeNoticeNormal
               }
             >
 
@@ -1588,16 +1664,12 @@ export default function Login({
               >
                 {ownerStorage === "usb"
                   ? <Usb />
-                  : ownerStorage === "cloud"
-                    ? <Cloud />
-                    : <HardDrive />}
+                  : <HardDrive />}
 
                 <span>
                   {ownerStorage === "usb"
                     ? "USB Owner Login"
-                    : ownerStorage === "cloud"
-                      ? "Cloud Owner Login"
-                      : "Local Owner Login"}
+                    : "Local Owner Login"}
                 </span>
               </div>
 
@@ -1609,9 +1681,7 @@ export default function Login({
               >
                 {ownerStorage === "usb"
                   ? "Owner authentication • FINORA Pendrive"
-                  : ownerStorage === "cloud"
-                    ? "Owner authentication • Cloud storage ready"
-                    : "Owner authentication • Local storage"}
+                  : "Owner authentication • Local storage"}
               </div>
 
             </div>
@@ -1656,12 +1726,9 @@ export default function Login({
                   placeholder="User ID"
                   aria-label="User ID"
                   autoComplete="username"
-                  autoFocus={
-                    ownerStorage !== "cloud"
-                  }
+                  autoFocus
                   disabled={
-                    loginBusy ||
-                    ownerStorage === "cloud"
+                    loginBusy
                   }
                   style={
                     loginStyles.input
@@ -1706,8 +1773,7 @@ export default function Login({
                   }
                   autoComplete="current-password"
                   disabled={
-                    loginBusy ||
-                    ownerStorage === "cloud"
+                    loginBusy
                   }
                   onKeyDown={
                     handlePasswordKeyDown
@@ -1735,11 +1801,7 @@ export default function Login({
                     event,
                   ) => {
                     event.preventDefault();
-                  }}
-                  disabled={
-                    ownerStorage === "cloud"
-                  }
-                  style={
+                  }}                  style={
                     loginStyles.passwordToggle
                   }
                 >

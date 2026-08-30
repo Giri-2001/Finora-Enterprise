@@ -383,10 +383,23 @@ export function replaceUsers(
 }
 
 // ============================================================
-// LOGIN
+// AUTHENTICATE LOGIN
+// ============================================================
+//
+// IMPORTANT:
+//
+// This function validates credentials and creates a candidate
+// FINORA session only.
+//
+// It does NOT:
+// - Persist the session
+// - Create a successful LOGIN audit
+//
+// The caller must complete all additional access checks before
+// committing the authenticated session.
 // ============================================================
 
-export function login(
+export function authenticateLogin(
   credentials: LoginCredentials,
 ): AuthSession | null {
 
@@ -480,13 +493,11 @@ export function login(
   );
 
   // ==========================================================
-  // SESSION CREATION
+  // CANDIDATE SESSION CREATION
   //
   // Existing users authenticate as REAL sessions.
   //
-  // DEMO session creation will be introduced through an
-  // explicit demo lifecycle rather than by guessing from
-  // username or credentials.
+  // No session persistence occurs here.
   // ==========================================================
 
   const now =
@@ -530,17 +541,25 @@ export function login(
 
     // --------------------------------------------------------
     // ACTIVE DATA CONTEXT
-    //
-    // Existing authentication remains REAL.
     // --------------------------------------------------------
 
     dataContext:
       DEFAULT_DATA_CONTEXT,
   };
 
-  // ==========================================================
-  // PERSIST SESSION
-  // ==========================================================
+  return session;
+}
+
+// ============================================================
+// COMMIT LOGIN SESSION
+// ============================================================
+//
+// Call only AFTER every required FINORA access check succeeds.
+// ============================================================
+
+export function commitLoginSession(
+  session: AuthSession,
+): void {
 
   localStorage.setItem(
     SESSION_KEY,
@@ -548,10 +567,6 @@ export function login(
       session,
     ),
   );
-
-  // ==========================================================
-  // LOGIN AUDIT
-  // ==========================================================
 
   createAuditLog({
 
@@ -562,16 +577,14 @@ export function login(
       "AUTH",
 
     description:
-      `User ${user.fullName} logged into FINORA`,
+      `User ${session.fullName} logged into FINORA`,
 
     performedBy:
-      user.username,
+      session.username,
 
     userRole:
-      user.role,
+      session.role,
   });
-
-  return session;
 }
 
 // ============================================================
@@ -789,6 +802,25 @@ export function updateSessionActivity():
 
     }),
 
+  );
+}
+
+// ============================================================
+// INVALIDATE SESSION
+// ============================================================
+//
+// Security/system invalidation only.
+//
+// Unlike logout(), this does NOT create a user LOGOUT audit.
+// Use when FINORA rejects an existing session because an
+// authorization, entitlement, or session-integrity check fails.
+// ============================================================
+
+export function invalidateSession():
+  void {
+
+  localStorage.removeItem(
+    SESSION_KEY,
   );
 }
 

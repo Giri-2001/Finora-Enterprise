@@ -1,5 +1,5 @@
 // ============================================================
-// FINORA ENTERPRISE OS™
+// FINORA ENTERPRISE OSâ„¢
 // ELECTRON MAIN PROCESS
 // V2 USB / PENDRIVE STORAGE IPC
 //
@@ -44,6 +44,14 @@ import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 
 import { randomUUID } from "node:crypto";
+
+import {
+  registerFinoraControlHandlers,
+} from "./control/finoraControlIpc.js";
+
+import {
+  runFinoraDevelopmentProvisioning,
+} from "./control/finoraDevProvisioning.js";
 
 // ============================================================
 // PROMISIFIED SYSTEM COMMAND
@@ -1340,8 +1348,14 @@ function createMainWindow(): void {
 // APPLICATION STARTUP
 // ============================================================
 
-app.whenReady().then(() => {
+app.whenReady().then(async () => {
   registerUsbStorageHandlers();
+
+  registerFinoraControlHandlers(
+    isTrustedRenderer,
+  );
+
+  await runFinoraDevelopmentProvisioning();
 
   createMainWindow();
 

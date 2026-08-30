@@ -1,5 +1,5 @@
 // ============================================================
-// FINORA ENTERPRISE OS™
+// FINORA ENTERPRISE OSâ„¢
 // ELECTRON PRELOAD
 // V2 SECURE STORAGE BRIDGE
 //
@@ -224,6 +224,105 @@ interface UsbStorageBridge {
 
 
 // ============================================================
+// FINORA CONTROL TYPES
+// ============================================================
+
+type FinoraControlStorageMode =
+  | "LOCAL"
+  | "USB";
+
+interface FinoraControlInstallationIdentity {
+  installationId: string;
+
+  ownerId: string;
+
+  businessId: string;
+
+  branchId: string;
+
+  createdAt: string;
+
+  updatedAt: string;
+
+  schemaVersion: 1;
+}
+
+interface FinoraControlBranchActivation {
+  activationId: string;
+
+  ownerId: string;
+
+  businessId: string;
+
+  branchId: string;
+
+  status:
+    | "PENDING"
+    | "ACTIVE"
+    | "SUSPENDED"
+    | "DEACTIVATED";
+
+  activatedAt?: string;
+
+  createdAt: string;
+
+  updatedAt: string;
+
+  schemaVersion: 1;
+}
+
+interface FindBranchActivationRequest {
+  ownerId: string;
+
+  businessId: string;
+
+  branchId: string;
+}
+
+interface StorageEntitlementCheckRequest {
+  userId: string;
+
+  ownerId: string;
+
+  businessId: string;
+
+  branchId: string;
+
+  storageMode: FinoraControlStorageMode;
+}
+
+interface FinoraControlBridge {
+  getInstallation:
+    () =>
+      Promise<
+        StorageResult<
+          FinoraControlInstallationIdentity | undefined
+        >
+      >;
+
+  findBranchActivation:
+    (
+      request:
+        FindBranchActivationRequest,
+    ) =>
+      Promise<
+        StorageResult<
+          FinoraControlBranchActivation | undefined
+        >
+      >;
+
+  hasActiveStorageEntitlement:
+    (
+      request:
+        StorageEntitlementCheckRequest,
+    ) =>
+      Promise<
+        StorageResult<boolean>
+      >;
+}
+
+
+// ============================================================
 // IPC CHANNELS
 // ============================================================
 
@@ -258,6 +357,24 @@ const USB_CHANNELS = {
 
   RESET_FINORA_DATA:
     "finora:usb:reset-finora-data",
+
+} as const;
+
+
+// ============================================================
+// CONTROL IPC CHANNELS
+// ============================================================
+
+const CONTROL_CHANNELS = {
+
+  GET_INSTALLATION:
+    "finora:control:get-installation",
+
+  FIND_BRANCH_ACTIVATION:
+    "finora:control:find-branch-activation",
+
+  HAS_ACTIVE_STORAGE_ENTITLEMENT:
+    "finora:control:has-active-storage-entitlement",
 
 } as const;
 
@@ -449,6 +566,70 @@ const usbBridge:
 
 
 // ============================================================
+// FINORA CONTROL BRIDGE
+//
+// READ / CHECK ONLY.
+//
+// Activation creation and storage entitlement granting are
+// intentionally NOT exposed to the renderer.
+// ============================================================
+
+const controlBridge:
+  FinoraControlBridge = {
+
+  // ----------------------------------------------------------
+  // INSTALLATION IDENTITY
+  // ----------------------------------------------------------
+
+  getInstallation:
+    () =>
+      ipcRenderer.invoke(
+        CONTROL_CHANNELS.GET_INSTALLATION,
+      ) as Promise<
+        StorageResult<
+          FinoraControlInstallationIdentity | undefined
+        >
+      >,
+
+
+  // ----------------------------------------------------------
+  // BRANCH ACTIVATION
+  // ----------------------------------------------------------
+
+  findBranchActivation:
+    (
+      request:
+        FindBranchActivationRequest,
+    ) =>
+      ipcRenderer.invoke(
+        CONTROL_CHANNELS.FIND_BRANCH_ACTIVATION,
+        request,
+      ) as Promise<
+        StorageResult<
+          FinoraControlBranchActivation | undefined
+        >
+      >,
+
+
+  // ----------------------------------------------------------
+  // STORAGE ENTITLEMENT CHECK
+  // ----------------------------------------------------------
+
+  hasActiveStorageEntitlement:
+    (
+      request:
+        StorageEntitlementCheckRequest,
+    ) =>
+      ipcRenderer.invoke(
+        CONTROL_CHANNELS.HAS_ACTIVE_STORAGE_ENTITLEMENT,
+        request,
+      ) as Promise<
+        StorageResult<boolean>
+      >,
+};
+
+
+// ============================================================
 // FINORA RENDERER BRIDGE
 // ============================================================
 
@@ -461,6 +642,9 @@ contextBridge.exposeInMainWorld(
 
     usb:
       usbBridge,
+
+    control:
+      controlBridge,
 
   },
 );
