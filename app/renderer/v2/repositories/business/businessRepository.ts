@@ -79,6 +79,8 @@ interface BusinessIdentityStorageRecord
   extends BusinessIdentity {
 
   id: string;
+
+  entity: typeof BUSINESS_IDENTITY_ENTITY;
 }
 
 // ============================================================
@@ -97,6 +99,8 @@ interface BusinessSettingsStorageRecord
   extends BusinessSettings {
 
   id: string;
+
+  entity: typeof BUSINESS_SETTINGS_ENTITY;
 }
 
 // ============================================================
@@ -113,6 +117,9 @@ function toIdentityStorageRecord(
 
     id:
       identity.businessId,
+
+    entity:
+      BUSINESS_IDENTITY_ENTITY,
   };
 }
 
@@ -126,6 +133,9 @@ function fromIdentityStorageRecord(
 
   const {
     id: _storageId,
+
+    entity: _storageEntity,
+
     ...identity
   } = record;
 
@@ -146,6 +156,9 @@ function toSettingsStorageRecord(
 
     id:
       settings.businessId,
+
+    entity:
+      BUSINESS_SETTINGS_ENTITY,
   };
 }
 
@@ -159,6 +172,9 @@ function fromSettingsStorageRecord(
 
   const {
     id: _storageId,
+
+    entity: _storageEntity,
+
     ...settings
   } = record;
 

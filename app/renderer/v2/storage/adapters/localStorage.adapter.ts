@@ -76,6 +76,10 @@ const ENTITY_BUSINESS_IDENTITY = "BUSINESS_IDENTITY";
 
 const ENTITY_BUSINESS_SETTINGS = "BUSINESS_SETTINGS";
 
+const ENTITY_BRANCH_SETTINGS = "BRANCH_SETTINGS";
+
+const ENTITY_BUSINESS_OWNER_PROFILE = "BUSINESS_OWNER_PROFILE";
+
 const ENTITY_LOAN = "LOAN";
 
 const ENTITY_GOLD_STORAGE_SETTINGS = "GOLD_STORAGE_SETTINGS";
@@ -104,6 +108,10 @@ const FINORA_RESET_ENTITIES: readonly string[] = [
   ENTITY_BUSINESS_IDENTITY,
 
   ENTITY_BUSINESS_SETTINGS,
+
+  ENTITY_BRANCH_SETTINGS,
+
+  ENTITY_BUSINESS_OWNER_PROFILE,
 
   ENTITY_GOLD_STORAGE_SETTINGS,
 
@@ -296,6 +304,26 @@ function resolveEntity(record: unknown): string {
   // Keep this rule narrow so existing heuristic routing for
   // Customer / Loan / Collection remains untouched.
   // ==========================================================
+
+  if (value.entity === ENTITY_BUSINESS_IDENTITY) {
+    return ENTITY_BUSINESS_IDENTITY;
+  }
+
+  if (value.entity === ENTITY_BUSINESS_SETTINGS) {
+    return ENTITY_BUSINESS_SETTINGS;
+  }
+
+  if (value.entity === ENTITY_GOLD_STORAGE_SETTINGS) {
+    return ENTITY_GOLD_STORAGE_SETTINGS;
+  }
+
+  if (value.entity === ENTITY_BRANCH_SETTINGS) {
+    return ENTITY_BRANCH_SETTINGS;
+  }
+
+  if (value.entity === ENTITY_BUSINESS_OWNER_PROFILE) {
+    return ENTITY_BUSINESS_OWNER_PROFILE;
+  }
 
   if (value.entity === ENTITY_GOLD_CUSTODY_ALLOCATION) {
     return ENTITY_GOLD_CUSTODY_ALLOCATION;
