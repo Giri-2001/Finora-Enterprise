@@ -1,0 +1,297 @@
+/* ===========================================================
+   FINORA ENTERPRISE OS™
+
+   ENTERPRISE SETTINGS
+
+   SETTINGS FEEDBACK STYLES
+
+   RESPONSIBILITY:
+
+   - Style shared Settings feedback messages
+   - Map feedback severity to FINORA Theme Engine status colors
+   - Style optional dismiss action
+   - Consume Settings Responsive Engine geometry
+
+   IMPORTANT:
+
+   - No hardcoded theme colors.
+   - No breakpoint values.
+   - No @media queries.
+   - No duplicated responsive dimensions.
+   - No JavaScript.
+=========================================================== */
+
+/* ===========================================================
+   FEEDBACK SHELL
+=========================================================== */
+
+.finora-settings-feedback {
+  width:
+    100%;
+
+  min-width:
+    0;
+
+  display:
+    grid;
+
+  grid-template-columns:
+    auto minmax(0, 1fr) auto;
+
+  align-items:
+    start;
+
+  gap:
+    var(--finora-settings-compact-gap);
+
+  padding:
+    var(--finora-settings-panel-compact-padding);
+
+  border:
+    var(--finora-settings-panel-border-width)
+    solid
+    var(--finora-theme-border-default);
+
+  border-radius:
+    var(--finora-settings-panel-compact-radius);
+
+  background:
+    var(--finora-theme-surface-muted);
+
+  color:
+    var(--finora-theme-text-primary);
+
+  font-family:
+    var(--finora-settings-font-family);
+
+  box-sizing:
+    border-box;
+}
+
+/* ===========================================================
+   ICON
+=========================================================== */
+
+.finora-settings-feedback__icon {
+  width:
+    var(--finora-settings-icon-size);
+
+  height:
+    var(--finora-settings-icon-size);
+
+  display:
+    inline-flex;
+
+  align-items:
+    center;
+
+  justify-content:
+    center;
+
+  flex:
+    0 0 auto;
+}
+
+.finora-settings-feedback__icon-svg {
+  width:
+    var(--finora-settings-icon-size);
+
+  height:
+    var(--finora-settings-icon-size);
+
+  flex:
+    0 0 auto;
+
+  stroke-width:
+    2;
+}
+
+/* ===========================================================
+   CONTENT
+=========================================================== */
+
+.finora-settings-feedback__content {
+  min-width:
+    0;
+
+  display:
+    flex;
+
+  flex-direction:
+    column;
+
+  gap:
+    var(--finora-settings-compact-gap);
+}
+
+.finora-settings-feedback__title {
+  margin:
+    0;
+
+  font-size:
+    var(--finora-settings-font-feedback-title);
+
+  font-weight:
+    700;
+
+  line-height:
+    1.3;
+
+  color:
+    inherit;
+}
+
+.finora-settings-feedback__message {
+  margin:
+    0;
+
+  font-size:
+    var(--finora-settings-font-feedback-message);
+
+  font-weight:
+    400;
+
+  line-height:
+    1.5;
+
+  color:
+    var(--finora-theme-text-secondary);
+
+  overflow-wrap:
+    anywhere;
+}
+
+/* ===========================================================
+   DISMISS
+=========================================================== */
+
+.finora-settings-feedback__dismiss {
+  width:
+    var(--finora-settings-compact-button-height);
+
+  height:
+    var(--finora-settings-compact-button-height);
+
+  display:
+    inline-flex;
+
+  align-items:
+    center;
+
+  justify-content:
+    center;
+
+  padding:
+    0;
+
+  border:
+    0;
+
+  border-radius:
+    var(--finora-settings-button-radius);
+
+  background:
+    transparent;
+
+  color:
+    currentColor;
+
+  cursor:
+    pointer;
+
+  transition:
+    background-color 160ms ease,
+    color 160ms ease;
+}
+
+.finora-settings-feedback__dismiss:hover {
+  background:
+    var(--finora-theme-interactive-hover);
+}
+
+.finora-settings-feedback__dismiss:focus-visible {
+  outline:
+    2px solid
+    var(--finora-theme-focus);
+
+  outline-offset:
+    2px;
+}
+
+.finora-settings-feedback__dismiss-icon {
+  width:
+    var(--finora-settings-compact-icon-size);
+
+  height:
+    var(--finora-settings-compact-icon-size);
+
+  flex:
+    0 0 auto;
+
+  stroke-width:
+    2;
+}
+
+/* ===========================================================
+   SUCCESS
+=========================================================== */
+
+.finora-settings-feedback--success {
+  border-color:
+    var(--finora-theme-success);
+
+  background:
+    var(--finora-theme-success-soft);
+
+  color:
+    var(--finora-theme-success);
+}
+
+/* ===========================================================
+   WARNING
+=========================================================== */
+
+.finora-settings-feedback--warning {
+  border-color:
+    var(--finora-theme-warning);
+
+  background:
+    var(--finora-theme-warning-soft);
+
+  color:
+    var(--finora-theme-warning);
+}
+
+/* ===========================================================
+   DANGER
+=========================================================== */
+
+.finora-settings-feedback--danger {
+  border-color:
+    var(--finora-theme-danger);
+
+  background:
+    var(--finora-theme-danger-soft);
+
+  color:
+    var(--finora-theme-danger);
+}
+
+/* ===========================================================
+   INFO
+=========================================================== */
+
+.finora-settings-feedback--info {
+  border-color:
+    var(--finora-theme-info);
+
+  background:
+    var(--finora-theme-info-soft);
+
+  color:
+    var(--finora-theme-info);
+}
+
+/* ===========================================================
+   END
+=========================================================== */

@@ -52,9 +52,96 @@ import type {
   StorageResult,
 } from "../../storage/storage.types";
 
+import {
+  DEFAULT_BUSINESS_CURRENCY,
+  isSupportedBusinessCurrency,
+} from "../../constants/business/businessCurrency.constants";
+
 // ============================================================
 // BUSINESS IDENTITY
 // ============================================================
+
+// ============================================================
+// BUSINESS IDENTITY VALIDATION
+// ============================================================
+
+export interface BusinessIdentityValidationResult {
+  valid: boolean;
+
+  errors: string[];
+}
+
+export function validateBusinessIdentity(
+  identity: BusinessIdentity,
+): BusinessIdentityValidationResult {
+
+  const errors: string[] = [];
+
+  if (!identity.ownerId?.trim()) {
+    errors.push(
+      "Owner ID is required.",
+    );
+  }
+
+  if (!identity.businessId?.trim()) {
+    errors.push(
+      "Business ID is required.",
+    );
+  }
+
+  if (!identity.businessName?.trim()) {
+    errors.push(
+      "Business name is required.",
+    );
+  }
+
+  if (!identity.branchId?.trim()) {
+    errors.push(
+      "Branch ID is required.",
+    );
+  }
+
+  if (!identity.branchName?.trim()) {
+    errors.push(
+      "Branch name is required.",
+    );
+  }
+
+  return {
+    valid:
+      errors.length === 0,
+
+    errors,
+  };
+}
+
+// ============================================================
+// BUSINESS IDENTITY NORMALIZATION
+// ============================================================
+
+function normalizeBusinessIdentity(
+  identity: BusinessIdentity,
+): BusinessIdentity {
+
+  return {
+    ...identity,
+
+    ownerId:
+      identity.ownerId?.trim() ?? "",
+
+    businessId:
+      identity.businessId?.trim() ?? "",
+
+    businessName:
+      identity.businessName?.trim() ?? "",
+
+    branchId:
+      identity.branchId?.trim() ?? "",
+
+    branchName:
+      identity.branchName?.trim() ?? "",
+  };
+}
 
 // ============================================================
 // LOAD BUSINESS IDENTITY
@@ -71,7 +158,10 @@ export async function loadBusinessIdentity(
   >
 > {
 
-  if (!businessId) {
+  const normalizedBusinessId =
+    businessId?.trim();
+
+  if (!normalizedBusinessId) {
 
     return {
 
@@ -83,7 +173,7 @@ export async function loadBusinessIdentity(
   }
 
   return businessRepository.findIdentityByBusinessId(
-    businessId,
+    normalizedBusinessId,
   );
 }
 
@@ -103,19 +193,45 @@ export async function saveBusinessIdentity(
   StorageResult<BusinessIdentity>
 > {
 
-  if (!identity.businessId) {
+  const normalized =
+    normalizeBusinessIdentity(
+      identity,
+    );
+
+  const validation =
+    validateBusinessIdentity(
+      normalized,
+    );
+
+  if (!validation.valid) {
 
     return {
 
       success: false,
 
       error:
-        "Business ID is required.",
+        validation.errors.join(" "),
     };
   }
 
+  const now =
+    new Date().toISOString();
+
+  const prepared:
+    BusinessIdentity = {
+
+    ...normalized,
+
+    createdAt:
+      normalized.createdAt ||
+      now,
+
+    updatedAt:
+      now,
+  };
+
   return businessRepository.saveIdentity(
-    identity,
+    prepared,
     options,
   );
 }
@@ -134,19 +250,73 @@ export async function updateBusinessIdentity(
   StorageResult<BusinessIdentity>
 > {
 
-  if (!identity.businessId) {
+  const normalized =
+    normalizeBusinessIdentity(
+      identity,
+    );
+
+  const validation =
+    validateBusinessIdentity(
+      normalized,
+    );
+
+  if (!validation.valid) {
 
     return {
 
       success: false,
 
       error:
-        "Business ID is required.",
+        validation.errors.join(" "),
     };
   }
 
+  const existing =
+    await businessRepository
+      .findIdentityByBusinessId(
+        normalized.businessId,
+      );
+
+  if (!existing.success) {
+
+    return {
+
+      success: false,
+
+      error:
+        existing.error ??
+        "Unable to verify Business Identity.",
+    };
+  }
+
+  if (!existing.data) {
+
+    return {
+
+      success: false,
+
+      error:
+        "Business Identity does not exist.",
+    };
+  }
+
+  const now =
+    new Date().toISOString();
+
+  const prepared:
+    BusinessIdentity = {
+
+    ...normalized,
+
+    createdAt:
+      existing.data.createdAt,
+
+    updatedAt:
+      now,
+  };
+
   return businessRepository.updateIdentity(
-    identity,
+    prepared,
     options,
   );
 }
@@ -172,19 +342,64 @@ export async function saveOrUpdateBusinessIdentity(
   StorageResult<BusinessIdentity>
 > {
 
-  if (!identity.businessId) {
+  const normalized =
+    normalizeBusinessIdentity(
+      identity,
+    );
+
+  const validation =
+    validateBusinessIdentity(
+      normalized,
+    );
+
+  if (!validation.valid) {
 
     return {
 
       success: false,
 
       error:
-        "Business ID is required.",
+        validation.errors.join(" "),
     };
   }
 
+  const existing =
+    await businessRepository
+      .findIdentityByBusinessId(
+        normalized.businessId,
+      );
+
+  if (!existing.success) {
+
+    return {
+
+      success: false,
+
+      error:
+        existing.error ??
+        "Unable to verify Business Identity.",
+    };
+  }
+
+  const now =
+    new Date().toISOString();
+
+  const prepared:
+    BusinessIdentity = {
+
+    ...normalized,
+
+    createdAt:
+      existing.data?.createdAt ??
+      normalized.createdAt ??
+      now,
+
+    updatedAt:
+      now,
+  };
+
   return businessRepository.saveOrUpdateIdentity(
-    identity,
+    prepared,
     options,
   );
 }
@@ -203,7 +418,10 @@ export async function deleteBusinessIdentity(
   StorageResult<void>
 > {
 
-  if (!businessId) {
+  const normalizedBusinessId =
+    businessId?.trim();
+
+  if (!normalizedBusinessId) {
 
     return {
 
@@ -215,13 +433,170 @@ export async function deleteBusinessIdentity(
   }
 
   return businessRepository.deleteIdentity(
-    businessId,
+    normalizedBusinessId,
   );
 }
 
 // ============================================================
+// EMPTY BUSINESS IDENTITY FACTORY
+// ============================================================
+
+export function createEmptyBusinessIdentity(
+  ownerId: string,
+  businessId: string,
+  branchId: string,
+): BusinessIdentity {
+
+  const now =
+    new Date().toISOString();
+
+  return {
+    ownerId:
+      ownerId.trim(),
+
+    businessId:
+      businessId.trim(),
+
+    businessName:
+      "",
+
+    branchId:
+      branchId.trim(),
+
+    branchName:
+      "",
+
+    createdAt:
+      now,
+
+    updatedAt:
+      now,
+  };
+}
+
+// ============================================================
+// BUSINESS IDENTITY SERVICE
+// ============================================================
+
+export const businessIdentityService = {
+  load:
+    loadBusinessIdentity,
+
+  create:
+    saveBusinessIdentity,
+
+  update:
+    updateBusinessIdentity,
+
+  save:
+    saveOrUpdateBusinessIdentity,
+
+  delete:
+    deleteBusinessIdentity,
+
+  validate:
+    validateBusinessIdentity,
+
+  createEmpty:
+    createEmptyBusinessIdentity,
+};
+
+// ============================================================
 // BUSINESS SETTINGS
 // ============================================================
+
+// ============================================================
+// BUSINESS SETTINGS VALIDATION
+// ============================================================
+
+export interface BusinessSettingsValidationResult {
+  valid: boolean;
+
+  errors: string[];
+}
+
+export function validateBusinessSettings(
+  settings: BusinessSettings,
+): BusinessSettingsValidationResult {
+
+  const errors: string[] = [];
+
+  if (!settings.businessId?.trim()) {
+    errors.push(
+      "Business ID is required.",
+    );
+  }
+
+  if (!settings.address?.trim()) {
+    errors.push(
+      "Business address is required.",
+    );
+  }
+
+  if (!settings.phone?.trim()) {
+    errors.push(
+      "Business phone number is required.",
+    );
+  }
+
+  if (!settings.email?.trim()) {
+    errors.push(
+      "Business email address is required.",
+    );
+  }
+
+  if (!settings.currency?.trim()) {
+    errors.push(
+      "Business currency is required.",
+    );
+  } else if (
+    !isSupportedBusinessCurrency(
+      settings.currency.trim().toUpperCase(),
+    )
+  ) {
+    errors.push(
+      "Unsupported Business currency.",
+    );
+  }
+
+  return {
+    valid:
+      errors.length === 0,
+
+    errors,
+  };
+}
+
+// ============================================================
+// BUSINESS SETTINGS NORMALIZATION
+// ============================================================
+
+function normalizeBusinessSettings(
+  settings: BusinessSettings,
+): BusinessSettings {
+
+  return {
+    ...settings,
+
+    businessId:
+      settings.businessId.trim(),
+
+    address:
+      settings.address.trim(),
+
+    phone:
+      settings.phone.trim(),
+
+    email:
+      settings.email.trim(),
+
+    gst:
+      settings.gst?.trim() || undefined,
+
+    currency:
+      settings.currency.trim().toUpperCase(),
+  };
+}
 
 // ============================================================
 // LOAD BUSINESS SETTINGS
@@ -270,19 +645,43 @@ export async function saveBusinessSettings(
   StorageResult<BusinessSettings>
 > {
 
-  if (!settings.businessId) {
+  const normalized =
+    normalizeBusinessSettings(
+      settings,
+    );
 
+  const validation =
+    validateBusinessSettings(
+      normalized,
+    );
+
+  if (!validation.valid) {
     return {
-
       success: false,
 
       error:
-        "Business ID is required.",
+        validation.errors.join(" "),
     };
   }
 
+  const now =
+    new Date().toISOString();
+
+  const prepared:
+    BusinessSettings = {
+
+    ...normalized,
+
+    createdAt:
+      normalized.createdAt ||
+      now,
+
+    updatedAt:
+      now,
+  };
+
   return businessRepository.save(
-    settings,
+    prepared,
     options,
   );
 }
@@ -301,19 +700,60 @@ export async function updateBusinessSettings(
   StorageResult<BusinessSettings>
 > {
 
-  if (!settings.businessId) {
+  const normalized =
+    normalizeBusinessSettings(
+      settings,
+    );
 
+  const validation =
+    validateBusinessSettings(
+      normalized,
+    );
+
+  if (!validation.valid) {
     return {
-
       success: false,
 
       error:
-        "Business ID is required.",
+        validation.errors.join(" "),
     };
   }
 
+  const existing =
+    await businessRepository
+      .findByBusinessId(
+        normalized.businessId,
+      );
+
+  if (!existing.success) {
+    return {
+      success: false,
+
+      error:
+        existing.error ??
+        "Unable to verify Business Settings.",
+    };
+  }
+
+  const now =
+    new Date().toISOString();
+
+  const prepared:
+    BusinessSettings = {
+
+    ...normalized,
+
+    createdAt:
+      existing.data?.createdAt ??
+      normalized.createdAt ??
+      now,
+
+    updatedAt:
+      now,
+  };
+
   return businessRepository.update(
-    settings,
+    prepared,
     options,
   );
 }
@@ -339,19 +779,60 @@ export async function saveOrUpdateBusinessSettings(
   StorageResult<BusinessSettings>
 > {
 
-  if (!settings.businessId) {
+  const normalized =
+    normalizeBusinessSettings(
+      settings,
+    );
 
+  const validation =
+    validateBusinessSettings(
+      normalized,
+    );
+
+  if (!validation.valid) {
     return {
-
       success: false,
 
       error:
-        "Business ID is required.",
+        validation.errors.join(" "),
     };
   }
 
+  const existing =
+    await businessRepository
+      .findByBusinessId(
+        normalized.businessId,
+      );
+
+  if (!existing.success) {
+    return {
+      success: false,
+
+      error:
+        existing.error ??
+        "Unable to verify Business Settings.",
+    };
+  }
+
+  const now =
+    new Date().toISOString();
+
+  const prepared:
+    BusinessSettings = {
+
+    ...normalized,
+
+    createdAt:
+      existing.data?.createdAt ??
+      normalized.createdAt ??
+      now,
+
+    updatedAt:
+      now,
+  };
+
   return businessRepository.saveOrUpdate(
-    settings,
+    prepared,
     options,
   );
 }
@@ -385,6 +866,65 @@ export async function deleteBusinessSettings(
     businessId,
   );
 }
+
+// ============================================================
+// EMPTY BUSINESS SETTINGS FACTORY
+// ============================================================
+
+export function createEmptyBusinessSettings(
+  businessId: string,
+): BusinessSettings {
+
+  const now =
+    new Date().toISOString();
+
+  return {
+    businessId:
+      businessId.trim(),
+
+    address:
+      "",
+
+    phone:
+      "",
+
+    email:
+      "",
+
+    gst:
+      undefined,
+
+    currency:
+      DEFAULT_BUSINESS_CURRENCY,
+
+    createdAt:
+      now,
+
+    updatedAt:
+      now,
+  };
+}
+
+// ============================================================
+// BUSINESS SETTINGS SERVICE
+// ============================================================
+
+export const businessSettingsService = {
+  load:
+    loadBusinessSettings,
+
+  save:
+    saveOrUpdateBusinessSettings,
+
+  delete:
+    deleteBusinessSettings,
+
+  validate:
+    validateBusinessSettings,
+
+  createEmpty:
+    createEmptyBusinessSettings,
+};
 
 // ============================================================
 // END

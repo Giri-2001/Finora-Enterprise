@@ -1,0 +1,145 @@
+/* ===========================================================
+   FINORA ENTERPRISE OS™
+
+   ENTERPRISE SETTINGS
+
+   SETTINGS RESPONSIVE STRUCTURE STYLES
+
+   RESPONSIBILITY:
+
+   - Apply device-specific structural adaptations
+   - Consume canonical Settings device identity
+   - Keep breakpoint ownership inside FINORA Responsive Engine
+   - Keep responsive geometry inside Settings TS tokens/layout
+   - Preserve className-only Settings JSX
+
+   IMPORTANT:
+
+   - No viewport breakpoint values.
+   - No @media queries.
+   - No hardcoded theme colors.
+   - No duplicated responsive dimensions.
+   - Device identity comes from:
+     data-finora-settings-device
+=========================================================== */
+
+/* ===========================================================
+   MOBILE
+
+   On mobile the Settings navigation becomes a compact
+   horizontal section selector above the active content.
+
+   Widths, heights, spacing and typography continue to come
+   from Settings Responsive CSS variables.
+=========================================================== */
+
+html[data-finora-settings-device="mobile"]
+.finora-settings-page__navigation {
+  width:
+    100%;
+}
+
+html[data-finora-settings-device="mobile"]
+.finora-settings-navigation {
+  width:
+    100%;
+}
+
+html[data-finora-settings-device="mobile"]
+.finora-settings-navigation__header {
+  display:
+    none;
+}
+
+html[data-finora-settings-device="mobile"]
+.finora-settings-navigation__list {
+  grid-template-columns:
+    repeat(4, minmax(0, 1fr));
+}
+
+html[data-finora-settings-device="mobile"]
+.finora-settings-navigation__item {
+  grid-template-columns:
+    minmax(0, 1fr);
+
+  justify-items:
+    center;
+
+  text-align:
+    center;
+}
+
+html[data-finora-settings-device="mobile"]
+.finora-settings-navigation__icon {
+  justify-self:
+    center;
+}
+
+html[data-finora-settings-device="mobile"]
+.finora-settings-navigation__content {
+  align-items:
+    center;
+}
+
+html[data-finora-settings-device="mobile"]
+.finora-settings-navigation__description {
+  display:
+    none;
+}
+
+html[data-finora-settings-device="mobile"]
+.finora-settings-navigation__indicator {
+  display:
+    none;
+}
+
+html[data-finora-settings-device="mobile"]
+.finora-settings-form__submit {
+  width:
+    100%;
+}
+
+/* ===========================================================
+   TABLET
+
+   Tablet retains the standard vertical Settings navigation.
+   Geometry is supplied entirely by tablet Settings tokens.
+=========================================================== */
+
+html[data-finora-settings-device="tablet"]
+.finora-settings-page__navigation,
+html[data-finora-settings-device="tablet"]
+.finora-settings-navigation {
+  min-width:
+    0;
+}
+
+/* ===========================================================
+   LAPTOP
+
+   Laptop retains the standard two-column Settings workspace.
+   Geometry is supplied entirely by laptop Settings tokens.
+=========================================================== */
+
+html[data-finora-settings-device="laptop"]
+.finora-settings-page__main {
+  min-width:
+    0;
+}
+
+/* ===========================================================
+   DESKTOP
+
+   Desktop retains the standard two-column Settings workspace.
+   Geometry is supplied entirely by desktop Settings tokens.
+=========================================================== */
+
+html[data-finora-settings-device="desktop"]
+.finora-settings-page__main {
+  min-width:
+    0;
+}
+
+/* ===========================================================
+   END
+=========================================================== */

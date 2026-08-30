@@ -1,0 +1,666 @@
+/* ===========================================================
+   FINORA ENTERPRISE OS™
+
+   ENTERPRISE SETTINGS
+
+   SETTINGS PHOTO STYLES
+
+   RESPONSIBILITY:
+
+   - Style shared Settings multi-photo field
+   - Style Settings photo previews
+   - Style photo upload and remove actions
+   - Consume FINORA Theme Engine CSS variables
+   - Consume Settings Responsive Engine CSS variables
+
+   IMPORTANT:
+
+   - No hardcoded theme colors.
+   - No breakpoint values.
+   - No @media queries.
+   - No duplicated responsive dimensions.
+   - No JavaScript.
+=========================================================== */
+
+/* ===========================================================
+   PHOTO FIELD
+=========================================================== */
+
+.finora-settings-photo-field {
+  width:
+    100%;
+
+  min-width:
+    0;
+
+  display:
+    flex;
+
+  flex-direction:
+    column;
+
+  gap:
+    var(--finora-settings-content-gap);
+
+  padding:
+    var(--finora-settings-panel-padding);
+
+  border:
+    var(--finora-settings-panel-border-width)
+    solid
+    var(--finora-theme-panel-border);
+
+  border-radius:
+    var(--finora-settings-panel-radius);
+
+  background:
+    var(--finora-theme-panel-background);
+
+  color:
+    var(--finora-theme-text-primary);
+
+  box-shadow:
+    var(--finora-theme-panel-shadow);
+
+  font-family:
+    var(--finora-settings-font-family);
+
+  box-sizing:
+    border-box;
+}
+
+/* ===========================================================
+   FIELD HEADER
+=========================================================== */
+
+.finora-settings-photo-field__header {
+  width:
+    100%;
+
+  min-width:
+    0;
+
+  display:
+    flex;
+
+  align-items:
+    flex-start;
+
+  justify-content:
+    space-between;
+
+  gap:
+    var(--finora-settings-content-gap);
+}
+
+.finora-settings-photo-field__heading {
+  min-width:
+    0;
+
+  display:
+    flex;
+
+  flex-direction:
+    column;
+
+  gap:
+    var(--finora-settings-compact-gap);
+}
+
+.finora-settings-photo-field__title {
+  margin:
+    0;
+
+  font-size:
+    var(--finora-settings-font-photo-title);
+
+  font-weight:
+    700;
+
+  line-height:
+    1.3;
+
+  color:
+    var(--finora-theme-text-primary);
+}
+
+.finora-settings-photo-field__description {
+  margin:
+    0;
+
+  font-size:
+    var(--finora-settings-font-photo-description);
+
+  line-height:
+    1.5;
+
+  color:
+    var(--finora-theme-text-secondary);
+
+  overflow-wrap:
+    anywhere;
+}
+
+/* ===========================================================
+   PHOTO COUNT
+=========================================================== */
+
+.finora-settings-photo-field__count {
+  flex:
+    0 0 auto;
+
+  display:
+    inline-flex;
+
+  align-items:
+    center;
+
+  justify-content:
+    center;
+
+  min-height:
+    var(--finora-settings-compact-button-height);
+
+  padding-inline:
+    var(--finora-settings-input-padding-x);
+
+  border:
+    var(--finora-settings-panel-border-width)
+    solid
+    var(--finora-theme-border-default);
+
+  border-radius:
+    var(--finora-settings-button-radius);
+
+  background:
+    var(--finora-theme-surface-muted);
+
+  color:
+    var(--finora-theme-text-secondary);
+
+  font-size:
+    var(--finora-settings-font-helper);
+
+  font-weight:
+    700;
+
+  box-sizing:
+    border-box;
+}
+
+/* ===========================================================
+   PHOTO GRID
+=========================================================== */
+
+.finora-settings-photo-field__grid {
+  width:
+    100%;
+
+  min-width:
+    0;
+
+  display:
+    grid;
+
+  grid-template-columns:
+    var(--finora-settings-photo-template-columns);
+
+  gap:
+    var(--finora-settings-photo-gap);
+
+  align-items:
+    start;
+}
+
+/* ===========================================================
+   PHOTO PREVIEW
+=========================================================== */
+
+.finora-settings-photo-preview {
+  width:
+    100%;
+
+  min-width:
+    0;
+
+  display:
+    flex;
+
+  flex-direction:
+    column;
+
+  gap:
+    var(--finora-settings-compact-gap);
+
+  padding:
+    var(--finora-settings-panel-compact-padding);
+
+  border:
+    var(--finora-settings-panel-border-width)
+    solid
+    var(--finora-theme-card-border);
+
+  border-radius:
+    var(--finora-settings-photo-preview-radius);
+
+  background:
+    var(--finora-theme-card-background);
+
+  box-shadow:
+    var(--finora-theme-card-shadow);
+
+  box-sizing:
+    border-box;
+}
+
+/* ===========================================================
+   IMAGE FRAME
+=========================================================== */
+
+.finora-settings-photo-preview__image-frame {
+  position:
+    relative;
+
+  width:
+    100%;
+
+  max-width:
+    var(--finora-settings-photo-preview-width);
+
+  height:
+    var(--finora-settings-photo-preview-height);
+
+  margin-inline:
+    auto;
+
+  overflow:
+    hidden;
+
+  border:
+    var(--finora-settings-panel-border-width)
+    solid
+    var(--finora-theme-border-subtle);
+
+  border-radius:
+    var(--finora-settings-photo-preview-radius);
+
+  background:
+    var(--finora-theme-surface-muted);
+
+  box-sizing:
+    border-box;
+}
+
+.finora-settings-photo-preview__image {
+  width:
+    100%;
+
+  height:
+    100%;
+
+  display:
+    block;
+
+  object-fit:
+    cover;
+}
+
+/* ===========================================================
+   PREVIEW NUMBER
+=========================================================== */
+
+.finora-settings-photo-preview__number {
+  position:
+    absolute;
+
+  top:
+    var(--finora-settings-compact-gap);
+
+  right:
+    var(--finora-settings-compact-gap);
+
+  width:
+    var(--finora-settings-photo-badge-size);
+
+  height:
+    var(--finora-settings-photo-badge-size);
+
+  display:
+    inline-flex;
+
+  align-items:
+    center;
+
+  justify-content:
+    center;
+
+  border-radius:
+    999px;
+
+  background:
+    var(--finora-theme-brand-primary);
+
+  color:
+    var(--finora-theme-text-inverse);
+
+  font-size:
+    var(--finora-settings-font-helper);
+
+  font-weight:
+    700;
+
+  line-height:
+    1;
+
+  box-shadow:
+    var(--finora-theme-card-shadow);
+}
+
+/* ===========================================================
+   REMOVE ACTION
+=========================================================== */
+
+.finora-settings-photo-preview__remove {
+  width:
+    100%;
+
+  min-height:
+    var(--finora-settings-photo-remove-height);
+
+  display:
+    inline-flex;
+
+  align-items:
+    center;
+
+  justify-content:
+    center;
+
+  gap:
+    var(--finora-settings-compact-gap);
+
+  padding-inline:
+    var(--finora-settings-button-padding-x);
+
+  border:
+    var(--finora-settings-panel-border-width)
+    solid
+    var(--finora-theme-border-default);
+
+  border-radius:
+    var(--finora-settings-button-radius);
+
+  background:
+    var(--finora-theme-button-secondary-background);
+
+  color:
+    var(--finora-theme-button-secondary-text);
+
+  font-family:
+    inherit;
+
+  font-size:
+    var(--finora-settings-font-button);
+
+  font-weight:
+    650;
+
+  cursor:
+    pointer;
+
+  box-sizing:
+    border-box;
+
+  transition:
+    background-color 160ms ease,
+    border-color 160ms ease,
+    color 160ms ease;
+}
+
+.finora-settings-photo-preview__remove:hover:not(:disabled) {
+  background:
+    var(--finora-theme-button-danger-background);
+
+  border-color:
+    var(--finora-theme-button-danger-background);
+
+  color:
+    var(--finora-theme-button-danger-text);
+}
+
+.finora-settings-photo-preview__remove:focus-visible {
+  outline:
+    2px solid
+    var(--finora-theme-focus);
+
+  outline-offset:
+    2px;
+}
+
+.finora-settings-photo-preview__remove:disabled {
+  cursor:
+    not-allowed;
+
+  background:
+    var(--finora-theme-interactive-disabled);
+
+  color:
+    var(--finora-theme-text-disabled);
+
+  opacity:
+    0.7;
+}
+
+.finora-settings-photo-preview__remove-icon {
+  width:
+    var(--finora-settings-compact-icon-size);
+
+  height:
+    var(--finora-settings-compact-icon-size);
+
+  flex:
+    0 0 auto;
+
+  stroke-width:
+    2;
+}
+
+.finora-settings-photo-preview__remove-label {
+  min-width:
+    0;
+}
+
+/* ===========================================================
+   PHOTO ACTIONS
+=========================================================== */
+
+.finora-settings-photo-field__actions {
+  width:
+    100%;
+
+  min-width:
+    0;
+
+  display:
+    flex;
+
+  align-items:
+    center;
+
+  flex-wrap:
+    wrap;
+
+  gap:
+    var(--finora-settings-form-action-gap);
+}
+
+/* ===========================================================
+   UPLOAD ACTION
+=========================================================== */
+
+.finora-settings-photo-field__upload {
+  position:
+    relative;
+
+  min-height:
+    var(--finora-settings-photo-upload-min-height);
+
+  display:
+    inline-flex;
+
+  align-items:
+    center;
+
+  justify-content:
+    center;
+
+  gap:
+    var(--finora-settings-compact-gap);
+
+  padding-inline:
+    var(--finora-settings-button-padding-x);
+
+  border:
+    var(--finora-settings-panel-border-width)
+    solid
+    var(--finora-theme-button-secondary-border);
+
+  border-radius:
+    var(--finora-settings-button-radius);
+
+  background:
+    var(--finora-theme-button-secondary-background);
+
+  color:
+    var(--finora-theme-button-secondary-text);
+
+  font-size:
+    var(--finora-settings-font-button);
+
+  font-weight:
+    650;
+
+  cursor:
+    pointer;
+
+  box-sizing:
+    border-box;
+
+  transition:
+    background-color 160ms ease,
+    border-color 160ms ease,
+    color 160ms ease;
+}
+
+.finora-settings-photo-field__upload:hover {
+  background:
+    var(--finora-theme-button-secondary-hover);
+}
+
+.finora-settings-photo-field__upload:focus-within {
+  outline:
+    2px solid
+    var(--finora-theme-focus);
+
+  outline-offset:
+    2px;
+}
+
+.finora-settings-photo-field__upload--disabled {
+  cursor:
+    not-allowed;
+
+  background:
+    var(--finora-theme-interactive-disabled);
+
+  color:
+    var(--finora-theme-text-disabled);
+
+  opacity:
+    0.7;
+}
+
+.finora-settings-photo-field__upload--disabled:hover {
+  background:
+    var(--finora-theme-interactive-disabled);
+}
+
+.finora-settings-photo-field__upload-icon {
+  width:
+    var(--finora-settings-icon-size);
+
+  height:
+    var(--finora-settings-icon-size);
+
+  flex:
+    0 0 auto;
+
+  stroke-width:
+    2;
+}
+
+.finora-settings-photo-field__upload-label {
+  min-width:
+    0;
+}
+
+/* ===========================================================
+   FILE INPUT
+
+   Native file input remains inside the label for activation,
+   while visual presentation belongs to the label.
+=========================================================== */
+
+.finora-settings-photo-field__input {
+  position:
+    absolute;
+
+  width:
+    1px;
+
+  height:
+    1px;
+
+  padding:
+    0;
+
+  margin:
+    -1px;
+
+  overflow:
+    hidden;
+
+  clip:
+    rect(0, 0, 0, 0);
+
+  white-space:
+    nowrap;
+
+  border:
+    0;
+}
+
+/* ===========================================================
+   HELPER
+=========================================================== */
+
+.finora-settings-photo-field__helper {
+  min-width:
+    0;
+
+  font-size:
+    var(--finora-settings-font-helper);
+
+  line-height:
+    1.45;
+
+  color:
+    var(--finora-theme-text-muted);
+
+  overflow-wrap:
+    anywhere;
+}
+
+/* ===========================================================
+   END
+=========================================================== */

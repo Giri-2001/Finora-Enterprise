@@ -1,0 +1,545 @@
+/* ===========================================================
+   FINORA ENTERPRISE OS™
+
+   ENTERPRISE SETTINGS
+
+   SETTINGS FORM STYLES
+
+   RESPONSIBILITY:
+
+   - Style shared Enterprise Settings form contracts
+   - Style Business, Branch and Business Owner forms
+   - Consume FINORA Theme Engine CSS variables
+   - Consume Settings Responsive Engine CSS variables
+   - Keep form JSX className-only
+
+   IMPORTANT:
+
+   - No hardcoded theme colors.
+   - No breakpoint values.
+   - No @media queries.
+   - No duplicated responsive dimensions.
+   - No JavaScript.
+=========================================================== */
+
+/* ===========================================================
+   FORM
+=========================================================== */
+
+.finora-settings-form {
+  width:
+    100%;
+
+  min-width:
+    0;
+
+  display:
+    flex;
+
+  flex-direction:
+    column;
+
+  gap:
+    var(--finora-settings-content-gap);
+
+  color:
+    var(--finora-theme-text-primary);
+
+  font-family:
+    var(--finora-settings-font-family);
+
+  box-sizing:
+    border-box;
+}
+
+/* ===========================================================
+   FORM SECTION
+=========================================================== */
+
+.finora-settings-form__section {
+  width:
+    100%;
+
+  min-width:
+    0;
+
+  min-height:
+    var(--finora-settings-form-section-min-height);
+
+  display:
+    flex;
+
+  flex-direction:
+    column;
+
+  gap:
+    var(--finora-settings-content-gap);
+
+  padding:
+    var(--finora-settings-content-panel-padding);
+
+  border:
+    var(--finora-settings-panel-border-width)
+    solid
+    var(--finora-theme-panel-border);
+
+  border-radius:
+    var(--finora-settings-content-panel-radius);
+
+  background:
+    var(--finora-theme-panel-background);
+
+  box-shadow:
+    var(--finora-theme-panel-shadow);
+
+  box-sizing:
+    border-box;
+}
+
+/* ===========================================================
+   SECTION HEADER
+=========================================================== */
+
+.finora-settings-form__section-header {
+  width:
+    100%;
+
+  min-width:
+    0;
+
+  display:
+    flex;
+
+  align-items:
+    flex-start;
+
+  justify-content:
+    space-between;
+
+  gap:
+    var(--finora-settings-content-gap);
+}
+
+.finora-settings-form__section-heading {
+  min-width:
+    0;
+
+  display:
+    flex;
+
+  flex-direction:
+    column;
+
+  gap:
+    var(--finora-settings-compact-gap);
+}
+
+.finora-settings-form__section-title {
+  margin:
+    0;
+
+  color:
+    var(--finora-theme-text-primary);
+
+  font-size:
+    var(--finora-settings-font-section-title);
+
+  font-weight:
+    700;
+
+  line-height:
+    1.3;
+
+  overflow-wrap:
+    anywhere;
+}
+
+.finora-settings-form__section-subtitle {
+  margin:
+    0;
+
+  color:
+    var(--finora-theme-text-secondary);
+
+  font-size:
+    var(--finora-settings-font-section-subtitle);
+
+  line-height:
+    1.5;
+
+  overflow-wrap:
+    anywhere;
+}
+
+/* ===========================================================
+   FORM GRID
+=========================================================== */
+
+.finora-settings-form__grid {
+  width:
+    100%;
+
+  min-width:
+    0;
+
+  display:
+    grid;
+
+  grid-template-columns:
+    var(--finora-settings-form-template-columns);
+
+  column-gap:
+    var(--finora-settings-form-gap);
+
+  row-gap:
+    var(--finora-settings-form-row-gap);
+
+  align-items:
+    start;
+}
+
+/* ===========================================================
+   FIELD
+=========================================================== */
+
+.finora-settings-form__field {
+  width:
+    100%;
+
+  min-width:
+    var(--finora-settings-form-field-min-width);
+
+  display:
+    flex;
+
+  flex-direction:
+    column;
+
+  gap:
+    var(--finora-settings-field-gap);
+
+  box-sizing:
+    border-box;
+}
+
+.finora-settings-form__field--full {
+  grid-column:
+    1 / -1;
+}
+
+/* ===========================================================
+   LABEL
+=========================================================== */
+
+.finora-settings-form__label {
+  color:
+    var(--finora-theme-text-secondary);
+
+  font-size:
+    var(--finora-settings-font-field-label);
+
+  font-weight:
+    650;
+
+  line-height:
+    1.35;
+}
+
+/* ===========================================================
+   INPUT / SELECT / TEXTAREA
+=========================================================== */
+
+.finora-settings-form__input,
+.finora-settings-form__select,
+.finora-settings-form__textarea {
+  width:
+    100%;
+
+  min-width:
+    0;
+
+  border:
+    var(--finora-settings-panel-border-width)
+    solid
+    var(--finora-theme-input-border);
+
+  border-radius:
+    var(--finora-settings-input-radius);
+
+  background:
+    var(--finora-theme-input-background);
+
+  color:
+    var(--finora-theme-input-text);
+
+  font-family:
+    inherit;
+
+  font-size:
+    var(--finora-settings-font-field-text);
+
+  line-height:
+    1.4;
+
+  box-sizing:
+    border-box;
+
+  transition:
+    background-color 160ms ease,
+    border-color 160ms ease,
+    box-shadow 160ms ease;
+}
+
+.finora-settings-form__input,
+.finora-settings-form__select {
+  height:
+    var(--finora-settings-input-height);
+
+  padding-inline:
+    var(--finora-settings-input-padding-x);
+}
+
+.finora-settings-form__textarea {
+  min-height:
+    var(--finora-settings-form-textarea-min-height);
+
+  padding:
+    var(--finora-settings-input-padding-x);
+
+  resize:
+    vertical;
+}
+
+.finora-settings-form__input::placeholder,
+.finora-settings-form__textarea::placeholder {
+  color:
+    var(--finora-theme-input-placeholder);
+}
+
+/* ===========================================================
+   INPUT FOCUS
+=========================================================== */
+
+.finora-settings-form__input:focus,
+.finora-settings-form__select:focus,
+.finora-settings-form__textarea:focus {
+  outline:
+    none;
+
+  border-color:
+    var(--finora-theme-input-focus-border);
+
+  background:
+    var(--finora-theme-input-focus-background);
+
+  box-shadow:
+    0 0 0
+    var(--finora-settings-panel-border-width)
+    var(--finora-theme-focus);
+}
+
+.finora-settings-form__input:focus-visible,
+.finora-settings-form__select:focus-visible,
+.finora-settings-form__textarea:focus-visible {
+  outline:
+    2px solid
+    var(--finora-theme-focus);
+
+  outline-offset:
+    2px;
+}
+
+/* ===========================================================
+   READ-ONLY
+=========================================================== */
+
+.finora-settings-form__input--readonly {
+  background:
+    var(--finora-theme-surface-muted);
+
+  color:
+    var(--finora-theme-text-secondary);
+
+  cursor:
+    default;
+}
+
+/* ===========================================================
+   DISABLED
+=========================================================== */
+
+.finora-settings-form__input:disabled,
+.finora-settings-form__select:disabled,
+.finora-settings-form__textarea:disabled {
+  background:
+    var(--finora-theme-input-disabled-background);
+
+  color:
+    var(--finora-theme-text-disabled);
+
+  cursor:
+    not-allowed;
+
+  opacity:
+    0.7;
+}
+
+/* ===========================================================
+   HELPER
+=========================================================== */
+
+.finora-settings-form__helper {
+  color:
+    var(--finora-theme-text-muted);
+
+  font-size:
+    var(--finora-settings-font-helper);
+
+  line-height:
+    1.45;
+
+  overflow-wrap:
+    anywhere;
+}
+
+/* ===========================================================
+   ACTIONS
+=========================================================== */
+
+.finora-settings-form__actions {
+  width:
+    100%;
+
+  min-width:
+    0;
+
+  display:
+    flex;
+
+  flex-direction:
+    var(--finora-settings-form-actions-direction);
+
+  align-items:
+    stretch;
+
+  justify-content:
+    flex-end;
+
+  gap:
+    var(--finora-settings-form-action-gap);
+}
+
+/* ===========================================================
+   PRIMARY SUBMIT ACTION
+=========================================================== */
+
+.finora-settings-form__submit {
+  min-height:
+    var(--finora-settings-button-height);
+
+  display:
+    inline-flex;
+
+  align-items:
+    center;
+
+  justify-content:
+    center;
+
+  gap:
+    var(--finora-settings-compact-gap);
+
+  padding-inline:
+    var(--finora-settings-button-padding-x);
+
+  border:
+    var(--finora-settings-panel-border-width)
+    solid
+    var(--finora-theme-button-primary-background);
+
+  border-radius:
+    var(--finora-settings-button-radius);
+
+  background:
+    var(--finora-theme-button-primary-background);
+
+  color:
+    var(--finora-theme-button-primary-text);
+
+  font-family:
+    inherit;
+
+  font-size:
+    var(--finora-settings-font-button);
+
+  font-weight:
+    700;
+
+  cursor:
+    pointer;
+
+  box-sizing:
+    border-box;
+
+  transition:
+    background-color 160ms ease,
+    border-color 160ms ease,
+    color 160ms ease;
+}
+
+.finora-settings-form__submit:hover:not(:disabled) {
+  background:
+    var(--finora-theme-button-primary-hover);
+
+  border-color:
+    var(--finora-theme-button-primary-hover);
+}
+
+.finora-settings-form__submit:focus-visible {
+  outline:
+    2px solid
+    var(--finora-theme-focus);
+
+  outline-offset:
+    2px;
+}
+
+.finora-settings-form__submit:disabled {
+  cursor:
+    not-allowed;
+
+  background:
+    var(--finora-theme-interactive-disabled);
+
+  border-color:
+    var(--finora-theme-interactive-disabled);
+
+  color:
+    var(--finora-theme-text-disabled);
+
+  opacity:
+    0.7;
+}
+
+.finora-settings-form__submit-icon {
+  width:
+    var(--finora-settings-icon-size);
+
+  height:
+    var(--finora-settings-icon-size);
+
+  flex:
+    0 0 auto;
+
+  stroke-width:
+    2;
+}
+
+.finora-settings-form__submit-label {
+  min-width:
+    0;
+}
+
+/* ===========================================================
+   END
+=========================================================== */

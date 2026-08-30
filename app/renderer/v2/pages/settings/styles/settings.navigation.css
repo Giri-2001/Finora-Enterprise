@@ -1,0 +1,417 @@
+/* ===========================================================
+   FINORA ENTERPRISE OS™
+
+   ENTERPRISE SETTINGS
+
+   SETTINGS NAVIGATION STYLES
+
+   RESPONSIBILITY:
+
+   - Style Enterprise Settings navigation
+   - Consume FINORA Theme Engine CSS variables
+   - Consume Settings Responsive Engine CSS variables
+   - Style active, hover and focus states
+   - Style navigation section icons and indicator
+
+   IMPORTANT:
+
+   - No hardcoded theme colors.
+   - No breakpoint values.
+   - No @media queries.
+   - No duplicated responsive dimensions.
+   - No JavaScript.
+=========================================================== */
+
+/* ===========================================================
+   NAVIGATION SHELL
+=========================================================== */
+
+.finora-settings-navigation {
+  width:
+    var(--finora-settings-navigation-width);
+
+  min-width:
+    0;
+
+  position:
+    var(--finora-settings-navigation-position);
+
+  top:
+    var(--finora-settings-navigation-top);
+
+  align-self:
+    start;
+
+  display:
+    flex;
+
+  flex-direction:
+    column;
+
+  gap:
+    var(--finora-settings-content-gap);
+
+  padding:
+    var(--finora-settings-panel-padding);
+
+  border:
+    var(--finora-settings-panel-border-width)
+    solid
+    var(--finora-theme-panel-border);
+
+  border-radius:
+    var(--finora-settings-panel-radius);
+
+  background:
+    var(--finora-theme-navigation-background);
+
+  color:
+    var(--finora-theme-navigation-text);
+
+  box-shadow:
+    var(--finora-theme-panel-shadow);
+
+  font-family:
+    var(--finora-settings-font-family);
+
+  box-sizing:
+    border-box;
+}
+
+/* ===========================================================
+   NAVIGATION HEADER
+=========================================================== */
+
+.finora-settings-navigation__header {
+  display:
+    flex;
+
+  flex-direction:
+    column;
+
+  gap:
+    var(--finora-settings-compact-gap);
+
+  min-width:
+    0;
+}
+
+.finora-settings-navigation__eyebrow {
+  margin:
+    0;
+
+  font-size:
+    var(--finora-settings-font-eyebrow);
+
+  font-weight:
+    700;
+
+  letter-spacing:
+    0.08em;
+
+  text-transform:
+    uppercase;
+
+  color:
+    var(--finora-theme-brand-primary);
+}
+
+.finora-settings-navigation__title {
+  margin:
+    0;
+
+  font-size:
+    var(--finora-settings-font-navigation-title);
+
+  font-weight:
+    700;
+
+  line-height:
+    1.25;
+
+  color:
+    var(--finora-theme-text-primary);
+}
+
+.finora-settings-navigation__subtitle {
+  margin:
+    0;
+
+  font-size:
+    var(--finora-settings-font-navigation-description);
+
+  line-height:
+    1.55;
+
+  color:
+    var(--finora-theme-text-muted);
+}
+
+/* ===========================================================
+   NAVIGATION LIST
+=========================================================== */
+
+.finora-settings-navigation__list {
+  display:
+    grid;
+
+  grid-template-columns:
+    minmax(0, 1fr);
+
+  gap:
+    var(--finora-settings-navigation-gap);
+
+  min-width:
+    0;
+}
+
+/* ===========================================================
+   NAVIGATION ITEM
+=========================================================== */
+
+.finora-settings-navigation__item {
+  width:
+    100%;
+
+  min-width:
+    0;
+
+  min-height:
+    var(--finora-settings-navigation-item-min-height);
+
+  display:
+    grid;
+
+  grid-template-columns:
+    var(--finora-settings-navigation-icon-container-size)
+    minmax(0, 1fr)
+    var(--finora-settings-navigation-indicator-width);
+
+  align-items:
+    center;
+
+  gap:
+    var(--finora-settings-compact-gap);
+
+  padding:
+    var(--finora-settings-navigation-item-padding);
+
+  border:
+    var(--finora-settings-panel-border-width)
+    solid
+    transparent;
+
+  border-radius:
+    var(--finora-settings-navigation-item-radius);
+
+  background:
+    transparent;
+
+  color:
+    var(--finora-theme-navigation-text);
+
+  font-family:
+    inherit;
+
+  text-align:
+    left;
+
+  cursor:
+    pointer;
+
+  box-sizing:
+    border-box;
+
+  transition:
+    background-color 160ms ease,
+    border-color 160ms ease,
+    color 160ms ease;
+}
+
+.finora-settings-navigation__item:hover {
+  background:
+    var(--finora-theme-navigation-hover-background);
+}
+
+.finora-settings-navigation__item:focus-visible {
+  outline:
+    2px solid
+    var(--finora-theme-focus);
+
+  outline-offset:
+    2px;
+}
+
+.finora-settings-navigation__item--active {
+  background:
+    var(--finora-theme-navigation-active-background);
+
+  color:
+    var(--finora-theme-navigation-active-text);
+
+  border-color:
+    var(--finora-theme-border-focus);
+}
+
+/* ===========================================================
+   ICON
+=========================================================== */
+
+.finora-settings-navigation__icon {
+  width:
+    var(--finora-settings-navigation-icon-container-size);
+
+  height:
+    var(--finora-settings-navigation-icon-container-size);
+
+  display:
+    inline-flex;
+
+  align-items:
+    center;
+
+  justify-content:
+    center;
+
+  flex:
+    0 0 auto;
+
+  border-radius:
+    var(--finora-settings-panel-compact-radius);
+
+  background:
+    var(--finora-theme-surface-muted);
+
+  color:
+    var(--finora-theme-brand-primary);
+}
+
+.finora-settings-navigation__item--active
+.finora-settings-navigation__icon {
+  background:
+    var(--finora-theme-interactive-selected);
+
+  color:
+    var(--finora-theme-navigation-active-text);
+}
+
+.finora-settings-section-icon {
+  width:
+    var(--finora-settings-navigation-icon-size);
+
+  height:
+    var(--finora-settings-navigation-icon-size);
+
+  flex:
+    0 0 auto;
+
+  stroke-width:
+    2;
+}
+
+/* ===========================================================
+   ITEM CONTENT
+=========================================================== */
+
+.finora-settings-navigation__content {
+  min-width:
+    0;
+
+  display:
+    flex;
+
+  flex-direction:
+    column;
+
+  gap:
+    var(--finora-settings-compact-gap);
+}
+
+.finora-settings-navigation__label {
+  min-width:
+    0;
+
+  font-size:
+    var(--finora-settings-font-navigation-label);
+
+  font-weight:
+    650;
+
+  line-height:
+    1.3;
+
+  color:
+    inherit;
+}
+
+.finora-settings-navigation__description {
+  min-width:
+    0;
+
+  font-size:
+    var(--finora-settings-font-navigation-description);
+
+  line-height:
+    1.45;
+
+  color:
+    var(--finora-theme-text-muted);
+}
+
+.finora-settings-navigation__item--active
+.finora-settings-navigation__description {
+  color:
+    var(--finora-theme-navigation-active-text);
+
+  opacity:
+    0.82;
+}
+
+/* ===========================================================
+   ACTIVE INDICATOR
+=========================================================== */
+
+.finora-settings-navigation__indicator {
+  width:
+    var(--finora-settings-navigation-indicator-width);
+
+  height:
+    70%;
+
+  justify-self:
+    end;
+
+  border-radius:
+    var(--finora-settings-navigation-indicator-width);
+
+  background:
+    var(--finora-theme-brand-primary);
+
+  opacity:
+    0;
+
+  transition:
+    opacity 160ms ease;
+}
+
+.finora-settings-navigation__item--active
+.finora-settings-navigation__indicator {
+  opacity:
+    1;
+}
+
+/* ===========================================================
+   DISABLED SAFETY
+=========================================================== */
+
+.finora-settings-navigation__item:disabled {
+  cursor:
+    not-allowed;
+
+  opacity:
+    0.6;
+}
+
+/* ===========================================================
+   END
+=========================================================== */

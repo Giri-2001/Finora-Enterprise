@@ -79,7 +79,7 @@ import AccountsOffice from "../pages/accounts/AccountsOffice";
 
 import ReportsPage from "../pages/reports/ReportsPage";
 
-import GoldStorageSettingsPage from "../pages/settings/GoldStorageSettingsPage";
+import SettingsPage from "../pages/settings/SettingsPage";
 
 import LoanStudio from "../components/customers/office/CustomerOffice/components/LoanStudio";
 
@@ -1440,7 +1440,7 @@ function AuthenticatedV2Application({
     SETTINGS
 ================================================== */}
 
-        {page === "settings" && <GoldStorageSettingsPage />}
+        {page === "settings" && <SettingsPage />}
       </AppShell>
     </SessionGuard>
   );

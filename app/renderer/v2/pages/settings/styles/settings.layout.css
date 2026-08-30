@@ -1,0 +1,181 @@
+/* ===========================================================
+   FINORA ENTERPRISE OS™
+
+   ENTERPRISE SETTINGS
+
+   SETTINGS LAYOUT STYLES
+
+   RESPONSIBILITY:
+
+   - Define Enterprise Settings page shell
+   - Define Settings navigation/content workspace layout
+   - Consume Settings Responsive Engine CSS variables
+   - Keep Settings page JSX className-only
+
+   IMPORTANT:
+
+   - No hardcoded theme colors.
+   - No breakpoint values.
+   - No @media queries.
+   - No duplicated responsive dimensions.
+   - No JavaScript.
+=========================================================== */
+
+/* ===========================================================
+   PAGE
+=========================================================== */
+
+.finora-settings-page {
+  width:
+    var(--finora-settings-page-width);
+
+  max-width:
+    var(--finora-settings-page-max-width);
+
+  min-width:
+    0;
+
+  margin-inline:
+    auto;
+
+  padding:
+    var(--finora-settings-page-padding-top)
+    var(--finora-settings-page-padding-x)
+    var(--finora-settings-page-padding-bottom);
+
+  color:
+    var(--finora-theme-text-primary);
+
+  font-family:
+    var(--finora-settings-font-family);
+
+  box-sizing:
+    border-box;
+}
+
+/* ===========================================================
+   WORKSPACE
+=========================================================== */
+
+.finora-settings-page__workspace {
+  width:
+    100%;
+
+  min-width:
+    0;
+
+  display:
+    grid;
+
+  grid-template-columns:
+    var(--finora-settings-workspace-columns);
+
+  gap:
+    var(--finora-settings-workspace-gap);
+
+  align-items:
+    start;
+
+  box-sizing:
+    border-box;
+}
+
+/* ===========================================================
+   NAVIGATION COLUMN
+=========================================================== */
+
+.finora-settings-page__navigation {
+  width:
+    var(--finora-settings-navigation-width);
+
+  min-width:
+    0;
+
+  position:
+    var(--finora-settings-navigation-position);
+
+  top:
+    var(--finora-settings-navigation-top);
+
+  align-self:
+    start;
+
+  box-sizing:
+    border-box;
+}
+
+/* ===========================================================
+   MAIN COLUMN
+=========================================================== */
+
+.finora-settings-page__main {
+  width:
+    100%;
+
+  min-width:
+    var(--finora-settings-content-min-width);
+
+  display:
+    flex;
+
+  flex-direction:
+    column;
+
+  gap:
+    var(--finora-settings-content-layout-gap);
+
+  box-sizing:
+    border-box;
+}
+
+/* ===========================================================
+   ACTIVE CONTENT
+=========================================================== */
+
+.finora-settings-page__content {
+  width:
+    100%;
+
+  min-width:
+    0;
+
+  display:
+    flex;
+
+  flex-direction:
+    column;
+
+  gap:
+    var(--finora-settings-section-gap);
+
+  box-sizing:
+    border-box;
+}
+
+/* ===========================================================
+   SECTION SHELL
+=========================================================== */
+
+.finora-settings-section {
+  width:
+    100%;
+
+  min-width:
+    0;
+
+  display:
+    flex;
+
+  flex-direction:
+    column;
+
+  gap:
+    var(--finora-settings-content-gap);
+
+  box-sizing:
+    border-box;
+}
+
+/* ===========================================================
+   END
+=========================================================== */

@@ -1,0 +1,250 @@
+/* ===========================================================
+   FINORA ENTERPRISE OS™
+
+   ENTERPRISE SETTINGS
+
+   SETTINGS HEADER STYLES
+
+   RESPONSIBILITY:
+
+   - Style the active Enterprise Settings section header
+   - Consume FINORA Theme Engine CSS variables
+   - Consume Settings Responsive Engine CSS variables
+   - Keep shared section-icon sizing scoped to Settings Header
+
+   IMPORTANT:
+
+   - No hardcoded theme colors.
+   - No breakpoint values.
+   - No @media queries.
+   - No duplicated responsive dimensions.
+   - No JavaScript.
+=========================================================== */
+
+/* ===========================================================
+   HEADER SHELL
+=========================================================== */
+
+.finora-settings-header {
+  width:
+    100%;
+
+  min-width:
+    0;
+
+  min-height:
+    var(--finora-settings-header-min-height);
+
+  display:
+    flex;
+
+  align-items:
+    center;
+
+  padding:
+    var(--finora-settings-content-panel-padding);
+
+  border:
+    var(--finora-settings-panel-border-width)
+    solid
+    var(--finora-theme-header-border);
+
+  border-radius:
+    var(--finora-settings-content-panel-radius);
+
+  background:
+    var(--finora-theme-header-background);
+
+  color:
+    var(--finora-theme-header-text);
+
+  box-shadow:
+    var(--finora-theme-panel-shadow);
+
+  font-family:
+    var(--finora-settings-font-family);
+
+  box-sizing:
+    border-box;
+}
+
+/* ===========================================================
+   IDENTITY
+=========================================================== */
+
+.finora-settings-header__identity {
+  width:
+    100%;
+
+  min-width:
+    0;
+
+  display:
+    flex;
+
+  flex-direction:
+    var(--finora-settings-header-direction);
+
+  align-items:
+    flex-start;
+
+  gap:
+    var(--finora-settings-header-gap);
+}
+
+/* ===========================================================
+   ICON CONTAINER
+=========================================================== */
+
+.finora-settings-header__icon {
+  width:
+    var(--finora-settings-header-icon-container-size);
+
+  height:
+    var(--finora-settings-header-icon-container-size);
+
+  display:
+    inline-flex;
+
+  align-items:
+    center;
+
+  justify-content:
+    center;
+
+  flex:
+    0 0 auto;
+
+  border-radius:
+    var(--finora-settings-panel-compact-radius);
+
+  background:
+    var(--finora-theme-brand-accent-soft);
+
+  color:
+    var(--finora-theme-brand-primary);
+}
+
+/* ===========================================================
+   HEADER-SCOPED SECTION ICON
+
+   SettingsSectionIcon is shared by Navigation and Header.
+
+   Navigation owns its own icon dimensions.
+   Header overrides only inside this scope.
+=========================================================== */
+
+.finora-settings-header
+.finora-settings-section-icon {
+  width:
+    var(--finora-settings-header-icon-size);
+
+  height:
+    var(--finora-settings-header-icon-size);
+
+  flex:
+    0 0 auto;
+
+  stroke-width:
+    2;
+}
+
+/* ===========================================================
+   CONTENT
+=========================================================== */
+
+.finora-settings-header__content {
+  min-width:
+    0;
+
+  display:
+    flex;
+
+  flex-direction:
+    column;
+
+  gap:
+    var(--finora-settings-compact-gap);
+}
+
+/* ===========================================================
+   EYEBROW
+=========================================================== */
+
+.finora-settings-header__eyebrow {
+  margin:
+    0;
+
+  font-size:
+    var(--finora-settings-font-eyebrow);
+
+  font-weight:
+    700;
+
+  line-height:
+    1.25;
+
+  letter-spacing:
+    0.08em;
+
+  text-transform:
+    uppercase;
+
+  color:
+    var(--finora-theme-brand-primary);
+}
+
+/* ===========================================================
+   TITLE
+=========================================================== */
+
+.finora-settings-header__title {
+  margin:
+    0;
+
+  font-size:
+    var(--finora-settings-font-page-title);
+
+  font-weight:
+    750;
+
+  line-height:
+    1.2;
+
+  color:
+    var(--finora-theme-text-primary);
+
+  overflow-wrap:
+    anywhere;
+}
+
+/* ===========================================================
+   SUBTITLE
+=========================================================== */
+
+.finora-settings-header__subtitle {
+  margin:
+    0;
+
+  max-width:
+    72ch;
+
+  font-size:
+    var(--finora-settings-font-page-subtitle);
+
+  font-weight:
+    400;
+
+  line-height:
+    1.55;
+
+  color:
+    var(--finora-theme-text-secondary);
+
+  overflow-wrap:
+    anywhere;
+}
+
+/* ===========================================================
+   END
+=========================================================== */

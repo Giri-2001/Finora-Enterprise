@@ -1,0 +1,33 @@
+/* ===========================================================
+   FINORA ENTERPRISE OS™
+
+   ENTERPRISE SETTINGS
+
+   SETTINGS STYLE ENTRYPOINT
+
+   RESPONSIBILITY:
+
+   - Provide one CSS entrypoint for Enterprise Settings
+   - Preserve stylesheet responsibility boundaries
+   - Load base layout before component styles
+   - Load responsive structural overrides last
+
+   IMPORTANT:
+
+   - No style declarations belong here.
+   - No theme values.
+   - No responsive values.
+   - No breakpoint values.
+=========================================================== */
+
+@import "./settings.layout.css";
+@import "./settings.navigation.css";
+@import "./settings.header.css";
+@import "./settings.feedback.css";
+@import "./settings.forms.css";
+@import "./settings.photos.css";
+@import "./settings.responsive.css";
+
+/* ===========================================================
+   END
+=========================================================== */
