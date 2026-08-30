@@ -549,8 +549,8 @@ export const MOBILE_TOKENS: ResponsiveTokens = {
 customerCards: {
   columns: 1,
   width: 210,
-  height: 330,
-  minHeight: 330,
+  height: 360,
+  minHeight: 360,
   gap: 20,
   padding: 20,
   radius: 16,

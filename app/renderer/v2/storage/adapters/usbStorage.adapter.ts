@@ -53,143 +53,9 @@ import {
   StorageWriteOptions,
 } from "../storage.types";
 
-
-// ============================================================
-// ELECTRON USB BRIDGE CONTRACT
-// ============================================================
-
-interface FinoraUsbBridge {
-
-  // ----------------------------------------------------------
-  // AVAILABILITY
-  // ----------------------------------------------------------
-
-  isAvailable?: () =>
-    Promise<boolean>;
-
-
-  // ----------------------------------------------------------
-  // STATUS
-  // ----------------------------------------------------------
-
-  getStatus?: () =>
-    Promise<{
-      availability: StorageAvailability;
-      storageId?: string;
-      message?: string;
-    }>;
-
-
-  // ----------------------------------------------------------
-  // GET
-  // ----------------------------------------------------------
-
-  get?: (
-    query: StorageQuery,
-  ) =>
-    Promise<StorageResult>;
-
-
-  // ----------------------------------------------------------
-  // GET ALL
-  // ----------------------------------------------------------
-
-  getAll?: (
-    query: StorageQuery,
-  ) =>
-    Promise<StorageResult>;
-
-
-  // ----------------------------------------------------------
-  // SAVE
-  // ----------------------------------------------------------
-
-  save?: (
-    record: unknown,
-    options?: StorageWriteOptions,
-  ) =>
-    Promise<
-      StorageResult<unknown>
-    >;
-
-
-  // ----------------------------------------------------------
-  // UPDATE
-  // ----------------------------------------------------------
-
-  update?: (
-    record: unknown,
-    options?: StorageWriteOptions,
-  ) =>
-    Promise<
-      StorageResult<unknown>
-    >;
-
-
-  // ----------------------------------------------------------
-  // DELETE
-  // ----------------------------------------------------------
-
-  delete?: (
-    query: StorageQuery,
-  ) =>
-    Promise<
-      StorageResult<void>
-    >;
-
-
-  // ----------------------------------------------------------
-  // REPLACE ALL
-  // ----------------------------------------------------------
-
-  replaceAll?: (
-    records: unknown[],
-    options?: StorageWriteOptions,
-  ) =>
-    Promise<
-      StorageResult<void>
-    >;
-
-
-  // ----------------------------------------------------------
-  // CLEAR
-  // ----------------------------------------------------------
-
-  clear?: (
-    query: StorageQuery,
-  ) =>
-    Promise<
-      StorageResult<void>
-    >;
-
-
-  // ----------------------------------------------------------
-  // RESET FINORA DATA
-  // ----------------------------------------------------------
-
-  resetFinoraData?: () =>
-    Promise<
-      StorageResult<void>
-    >;
-}
-
-
-// ============================================================
-// GLOBAL BRIDGE LOOKUP
-// ============================================================
-
-function getUsbBridge():
-  FinoraUsbBridge | undefined {
-
-  const runtime =
-    globalThis as typeof globalThis & {
-      finora?: {
-        usb?: FinoraUsbBridge;
-      };
-    };
-
-  return runtime.finora?.usb;
-}
+import {
+  getFinoraUsbBridge,
+} from "../usbBridge";
 
 
 // ============================================================
@@ -346,7 +212,7 @@ export class USBStorageAdapter
     Promise<boolean> {
 
     const bridge =
-      getUsbBridge();
+      getFinoraUsbBridge();
 
 
     if (!bridge?.isAvailable) {
@@ -460,7 +326,7 @@ export class USBStorageAdapter
     Promise<void> {
 
     const bridge =
-      getUsbBridge();
+      getFinoraUsbBridge();
 
 
     if (!bridge) {
@@ -583,7 +449,7 @@ export class USBStorageAdapter
     > {
 
     const bridge =
-      getUsbBridge();
+      getFinoraUsbBridge();
 
 
     if (!bridge?.get) {
@@ -639,7 +505,7 @@ export class USBStorageAdapter
     > {
 
     const bridge =
-      getUsbBridge();
+      getFinoraUsbBridge();
 
 
     if (!bridge?.getAll) {
@@ -698,7 +564,7 @@ export class USBStorageAdapter
     > {
 
     const bridge =
-      getUsbBridge();
+      getFinoraUsbBridge();
 
 
     if (!bridge?.save) {
@@ -757,7 +623,7 @@ export class USBStorageAdapter
     > {
 
     const bridge =
-      getUsbBridge();
+      getFinoraUsbBridge();
 
 
     if (!bridge?.update) {
@@ -813,7 +679,7 @@ export class USBStorageAdapter
     > {
 
     const bridge =
-      getUsbBridge();
+      getFinoraUsbBridge();
 
 
     if (!bridge?.delete) {
@@ -871,7 +737,7 @@ export class USBStorageAdapter
     > {
 
     const bridge =
-      getUsbBridge();
+      getFinoraUsbBridge();
 
 
     if (!bridge?.replaceAll) {
@@ -927,7 +793,7 @@ export class USBStorageAdapter
     > {
 
     const bridge =
-      getUsbBridge();
+      getFinoraUsbBridge();
 
 
     if (!bridge?.clear) {
@@ -979,7 +845,7 @@ export class USBStorageAdapter
     > {
 
     const bridge =
-      getUsbBridge();
+      getFinoraUsbBridge();
 
 
     if (!bridge?.resetFinoraData) {

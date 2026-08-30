@@ -86,6 +86,10 @@ import {
 } from "../../storage/storageManager";
 
 import {
+  getFinoraUsbBridge,
+} from "../../storage/usbBridge";
+
+import {
   StorageMode,
 } from "../../storage/storage.types";
 
@@ -136,66 +140,12 @@ type CustomerLoginMethod =
   | "mobile";
 
 
-type UsbStatus = {
-
-  availability?:
-    string;
-
-  storageId?:
-    string;
-
-  message?:
-    string;
-
-};
-
-
-type UsbBridge = {
-
-  isAvailable?:
-    () => Promise<boolean>;
-
-  getStatus?:
-    () => Promise<UsbStatus>;
-
-};
-
-
-type FinoraWindow = {
-
-  finora?: {
-
-    usb?:
-      UsbBridge;
-
-  };
-
-};
-
-
 // ============================================================
 // CONSTANTS
 // ============================================================
 
 const USB_STATUS_POLL_INTERVAL_MS =
   2000;
-
-
-// ============================================================
-// USB BRIDGE
-// ============================================================
-
-function getUsbBridge():
-  UsbBridge | undefined {
-
-  const runtimeWindow =
-    window as unknown as FinoraWindow;
-
-  return runtimeWindow
-    .finora
-    ?.usb;
-
-}
 
 
 // ============================================================
@@ -406,6 +356,16 @@ export default function Login({
     "Checking FINORA USB...",
   );
 
+  const [
+    usbAvailability,
+    setUsbAvailability,
+  ] = useState<string | null>(null);
+
+  const [
+    usbAccessBusy,
+    setUsbAccessBusy,
+  ] = useState(false);
+
 
   // ==========================================================
   // USB STATUS MONITOR
@@ -437,7 +397,7 @@ export default function Login({
       try {
 
         const bridge =
-          getUsbBridge();
+          getFinoraUsbBridge();
 
 
         if (!bridge) {
@@ -476,6 +436,10 @@ export default function Login({
 
           const available =
             status.availability === "READY";
+
+          setUsbAvailability(
+            status.availability ?? null,
+          );
 
           setUsbAvailable(
             available,
@@ -754,6 +718,106 @@ export default function Login({
     setOpenDropdown(null);
 
     resetCredentials();
+
+  }
+
+
+  // ==========================================================
+  // USB ACCESS SELECTION
+  // ==========================================================
+
+  async function handleRequestUsbAccess(): Promise<void> {
+
+    setError("");
+
+    const bridge =
+      getFinoraUsbBridge();
+
+    if (!bridge?.requestAccess) {
+
+      setUsbMessage(
+        "FINORA USB access selection is unavailable.",
+      );
+
+      return;
+
+    }
+
+    setUsbAccessBusy(true);
+
+    try {
+
+      const result =
+        await bridge.requestAccess();
+
+      if (!result.success) {
+
+        setUsbMessage(
+          result.error ??
+            "Unable to select FINORA USB storage.",
+        );
+
+        return;
+
+      }
+
+      const status =
+        result.data;
+
+      if (!status) {
+
+        setUsbAvailable(false);
+
+        setUsbAvailability("ERROR");
+
+        setUsbMessage(
+          "FINORA USB access returned no storage status.",
+        );
+
+        return;
+
+      }
+
+      const available =
+        status.availability === "READY";
+
+      setUsbAvailability(
+        status.availability ?? null,
+      );
+
+      setUsbAvailable(
+        available,
+      );
+
+      setUsbMessage(
+        status.message ??
+          (
+            available
+              ? "FINORA USB detected."
+              : "FINORA USB is not ready."
+          ),
+      );
+
+    } catch (usbAccessError) {
+
+      console.error(
+        "FINORA USB ACCESS ERROR:",
+        usbAccessError,
+      );
+
+      setUsbAvailable(false);
+
+      setUsbAvailability("ERROR");
+
+      setUsbMessage(
+        "Unable to request FINORA USB access.",
+      );
+
+    } finally {
+
+      setUsbAccessBusy(false);
+
+    }
 
   }
 
@@ -1639,6 +1703,39 @@ export default function Login({
                 >
                   {usbMessage}
                 </div>
+
+                {usbAvailability === "NOT_CONFIGURED" &&
+                  getFinoraUsbBridge()?.requestAccess && (
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      void handleRequestUsbAccess();
+                    }}
+                    disabled={
+                      usbAccessBusy
+                    }
+                    style={
+                      loginStyles.secondaryButton
+                    }
+                  >
+
+                    <span
+                      style={
+                        loginStyles.secondaryButtonContent
+                      }
+                    >
+                      <Usb />
+                      <span>
+                        {usbAccessBusy
+                          ? "Opening USB Picker..."
+                          : "Select USB Storage"}
+                      </span>
+                    </span>
+
+                  </button>
+
+                )}
 
               </div>
 

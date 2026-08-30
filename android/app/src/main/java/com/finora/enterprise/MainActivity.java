@@ -3,6 +3,8 @@ package com.finora.enterprise;
 import android.os.Bundle;
 
 import com.finora.enterprise.control.FinoraControlPlugin;
+import com.finora.enterprise.control.FinoraDevProvisioning;
+import com.finora.enterprise.usb.FinoraUsbPlugin;
 import com.getcapacitor.BridgeActivity;
 
 public class MainActivity
@@ -21,6 +23,32 @@ public class MainActivity
         registerPlugin(
             FinoraControlPlugin.class
         );
+
+        registerPlugin(
+            FinoraUsbPlugin.class
+        );
+
+        /*
+         * Trusted Android development provisioning.
+         *
+         * - Native only.
+         * - Requires explicit Activity intent extras.
+         * - FinoraDevProvisioning itself rejects use when the
+         *   installed application is not debuggable.
+         * - Must run before the renderer starts so the global
+         *   activation gate reads the newly provisioned state.
+         */
+        try {
+            FinoraDevProvisioning.run(
+                this,
+                getIntent()
+            );
+        } catch (Exception error) {
+            throw new IllegalStateException(
+                "FINORA Android development provisioning failed.",
+                error
+            );
+        }
 
         super.onCreate(
             savedInstanceState
