@@ -85,6 +85,10 @@ import LoanStudio from "../components/customers/office/CustomerOffice/components
 
 import Login from "../pages/auth/Login";
 
+import {
+  scheduledLoanNotificationSchedulerLifecycle,
+} from "../services/notifications/scheduler/scheduledLoanNotificationSchedulerLifecycle";
+
 import BranchActivationRequired from "../pages/auth/BranchActivationRequired";
 
 import {
@@ -1090,7 +1094,7 @@ interface AuthenticatedV2ApplicationProps {
 }
 
 function AuthenticatedV2Application({
-  session: _session,
+  session,
 
   onLogout,
 }: AuthenticatedV2ApplicationProps) {
@@ -1107,6 +1111,46 @@ function AuthenticatedV2Application({
   });
 
   const page = navigation.page;
+
+  // ==========================================================
+  // SCHEDULED NOTIFICATION LIFECYCLE
+  //
+  // AuthenticatedV2Application mounts only after:
+  //
+  // - authenticated session validation
+  // - storage mode restoration
+  // - storage entitlement validation
+  // - Business / Data Context establishment
+  //
+  // Therefore this is the stable application boundary for the
+  // scheduled Notification lifecycle.
+  //
+  // Page navigation does not remount this component.
+  // Logout / authenticated scope replacement stops the lifecycle.
+  // ==========================================================
+
+  useEffect(() => {
+    scheduledLoanNotificationSchedulerLifecycle.start({
+      scope: {
+        ownerId:
+          session.ownerId ?? "",
+
+        businessId:
+          session.businessId ?? "",
+
+        branchId:
+          session.branchId ?? "",
+      },
+    });
+
+    return () => {
+      scheduledLoanNotificationSchedulerLifecycle.stop();
+    };
+  }, [
+    session.ownerId,
+    session.businessId,
+    session.branchId,
+  ]);
 
   // ==========================================================
   // CUSTOMER WIZARD NAVIGATION STATE

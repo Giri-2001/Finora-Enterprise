@@ -39,9 +39,20 @@ import {
   SUPPORTED_BUSINESS_CURRENCIES,
 } from "../../../constants/business/businessCurrency.constants";
 
+import {
+  BUSINESS_TIME_ZONE_OPTIONS,
+} from "../../../constants/business/businessTimeZone.constants";
+
 import type {
   BusinessSettingsFormProps,
 } from "./BusinessSettingsForm.types";
+
+// ============================================================
+// BUSINESS TIME ZONES
+// ============================================================
+
+const BUSINESS_TIME_ZONES =
+  BUSINESS_TIME_ZONE_OPTIONS;
 
 // ============================================================
 // COMPONENT
@@ -301,6 +312,60 @@ export default function BusinessSettingsForm({
                 ),
               )}
             </select>
+          </label>
+
+          <label className="finora-settings-form__field">
+            <span className="finora-settings-form__label">
+              Business Time Zone
+            </span>
+
+            <select
+              className="finora-settings-form__select"
+              value={settings.timeZone ?? ""}
+              disabled={controlsDisabled}
+              required
+              onChange={(event) =>
+                onFieldChange(
+                  "timeZone",
+                  event.currentTarget.value,
+                )
+              }
+            >
+              <option
+                value=""
+                disabled
+              >
+                Select business time zone
+              </option>
+
+              {settings.timeZone &&
+                !BUSINESS_TIME_ZONES.some(
+                  (option) =>
+                    option.value ===
+                    settings.timeZone,
+                ) && (
+                  <option
+                    value={settings.timeZone}
+                  >
+                    Current - {settings.timeZone}
+                  </option>
+                )}
+
+              {BUSINESS_TIME_ZONES.map(
+                (option) => (
+                  <option
+                    key={option.value}
+                    value={option.value}
+                  >
+                    {option.label} - {option.value}
+                  </option>
+                ),
+              )}
+            </select>
+
+            <span className="finora-settings-form__helper">
+              Used for scheduled notifications and business-local calendar time.
+            </span>
           </label>
         </div>
       </section>

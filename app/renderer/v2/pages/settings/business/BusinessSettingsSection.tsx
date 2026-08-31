@@ -68,6 +68,10 @@ import type {
   BusinessSettingsEditableField,
 } from "./BusinessSettingsForm.types";
 
+import {
+  scheduledLoanNotificationSchedulerLifecycle,
+} from "../../../services/notifications/scheduler/scheduledLoanNotificationSchedulerLifecycle";
+
 // ============================================================
 // COMPONENT
 // ============================================================
@@ -566,6 +570,15 @@ export default function BusinessSettingsSection() {
           result.data,
         );
       }
+
+      /**
+       * Business time zone is scheduler authority.
+       *
+       * Re-plan immediately after persisted Business Settings
+       * change so an already-armed scheduler timer cannot keep
+       * using the previous time zone.
+       */
+      scheduledLoanNotificationSchedulerLifecycle.refresh();
 
       setFeedback({
         kind:

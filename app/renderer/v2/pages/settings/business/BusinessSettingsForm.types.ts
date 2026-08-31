@@ -42,7 +42,8 @@ export type BusinessSettingsEditableField =
   | "phone"
   | "email"
   | "gst"
-  | "currency";
+  | "currency"
+  | "timeZone";
 
 // ============================================================
 // PROPS

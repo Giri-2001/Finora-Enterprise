@@ -105,6 +105,22 @@ export interface BusinessSettings {
   currency: string;
 
   /**
+   * IANA time-zone identifier used for business-local
+   * scheduling and calendar calculations.
+   *
+   * Optional for backward compatibility with Business Settings
+   * records created before time-zone support was introduced.
+   *
+   * Scheduler code must treat a missing or invalid value as
+   * unavailable configuration rather than silently falling back
+   * to the device time zone.
+   *
+   * Example:
+   * Asia/Kolkata
+   */
+  timeZone?: string;
+
+  /**
    * Settings creation timestamp.
    */
   createdAt: string;

@@ -57,6 +57,11 @@ import {
   isSupportedBusinessCurrency,
 } from "../../constants/business/businessCurrency.constants";
 
+import {
+  getDeviceBusinessTimeZone,
+  isSupportedBusinessTimeZone,
+} from "../../constants/business/businessTimeZone.constants";
+
 // ============================================================
 // BUSINESS IDENTITY
 // ============================================================
@@ -559,6 +564,17 @@ export function validateBusinessSettings(
     );
   }
 
+  if (
+    settings.timeZone?.trim() &&
+    !isSupportedBusinessTimeZone(
+      settings.timeZone.trim(),
+    )
+  ) {
+    errors.push(
+      "Unsupported Business time zone.",
+    );
+  }
+
   return {
     valid:
       errors.length === 0,
@@ -595,6 +611,9 @@ function normalizeBusinessSettings(
 
     currency:
       settings.currency.trim().toUpperCase(),
+
+    timeZone:
+      settings.timeZone?.trim() || undefined,
   };
 }
 
@@ -896,6 +915,10 @@ export function createEmptyBusinessSettings(
 
     currency:
       DEFAULT_BUSINESS_CURRENCY,
+
+    timeZone:
+      getDeviceBusinessTimeZone() ??
+      undefined,
 
     createdAt:
       now,

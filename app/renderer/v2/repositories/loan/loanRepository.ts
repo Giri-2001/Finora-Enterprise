@@ -149,7 +149,7 @@ function toLoanStorageRecord(loan: Loan): LoanStorageRecord {
 // TYPES
 // ============================================================
 
-interface LoanScheduleInstallment {
+export interface LoanScheduleInstallment {
   installmentNumber: number;
 
   dueDate?: string;
@@ -267,7 +267,7 @@ function normalizeSelectedEmiNumbers(values?: number[]): number[] {
 // DETECT PERSISTED EMI SCHEDULE
 // ============================================================
 
-function getPersistedSchedule(loan: Loan): {
+export function getPersistedSchedule(loan: Loan): {
   field: "schedule" | "emiSchedule" | "installments" | undefined;
 
   schedule: LoanScheduleInstallment[] | undefined;
@@ -927,6 +927,82 @@ export async function getLoans(): Promise<Loan[]> {
     return loans;
   } catch {
     return [];
+  }
+}
+
+// ============================================================
+// GET ALL LOANS - STRICT RESULT
+// ============================================================
+//
+// NOTIFICATIONS ENGINE:
+//
+// - Distinguishes an empty Loan portfolio from a storage failure.
+// - Preserves existing getLoans() compatibility behavior.
+// - Uses the same normalization / closed-schedule repair rules.
+// - Fails closed if authoritative repair persistence fails.
+//
+// ============================================================
+
+export async function getLoansResult(): Promise<StorageResult<Loan[]>> {
+  try {
+    const result =
+      await storageManager.getAll<Loan>(
+        buildLoanQuery(),
+      );
+
+    if (!result.success) {
+      return {
+        success: false,
+
+        error:
+          result.error ??
+          "Unable to load authoritative Loans.",
+      };
+    }
+
+    const loans: Loan[] = [];
+
+    for (const storedLoan of result.data ?? []) {
+      const baseLoan =
+        normalizeLoanBase(storedLoan);
+
+      const repaired =
+        repairClosedLoanSchedule(baseLoan);
+
+      if (repaired.changed) {
+        const repairResult =
+          await storageManager.update<LoanStorageRecord>(
+            toLoanStorageRecord(repaired.loan),
+          );
+
+        if (!repairResult.success) {
+          return {
+            success: false,
+
+            error:
+              repairResult.error ??
+              `Unable to persist authoritative Loan repair for ${repaired.loan.id}.`,
+          };
+        }
+      }
+
+      loans.push(repaired.loan);
+    }
+
+    return {
+      success: true,
+
+      data: loans,
+    };
+  } catch (error) {
+    return {
+      success: false,
+
+      error:
+        error instanceof Error
+          ? error.message
+          : "Unable to load authoritative Loans.",
+    };
   }
 }
 

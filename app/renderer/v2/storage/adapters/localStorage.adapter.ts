@@ -104,6 +104,14 @@ const ENTITY_PAYMENT = "PAYMENT";
 
 const ENTITY_NOTIFICATION = "NOTIFICATION";
 
+const ENTITY_NOTIFICATION_DELIVERY = "NOTIFICATION_DELIVERY";
+
+const ENTITY_BUSINESS_NOTIFICATION_POLICY =
+  "BUSINESS_NOTIFICATION_POLICY";
+
+const ENTITY_CUSTOMER_NOTIFICATION_PREFERENCE =
+  "CUSTOMER_NOTIFICATION_PREFERENCE";
+
 const ENTITY_REPORT = "REPORT";
 
 const ENTITY_GENERAL = "GENERAL";
@@ -146,6 +154,12 @@ const FINORA_RESET_ENTITIES: readonly string[] = [
   ENTITY_PAYMENT,
 
   ENTITY_NOTIFICATION,
+
+  ENTITY_NOTIFICATION_DELIVERY,
+
+  ENTITY_BUSINESS_NOTIFICATION_POLICY,
+
+  ENTITY_CUSTOMER_NOTIFICATION_PREFERENCE,
 
   ENTITY_REPORT,
 
@@ -371,6 +385,40 @@ function resolveEntity(record: unknown): string {
 
   if (value.entity === ENTITY_GOLD_RELOCATION_AUDIT) {
     return ENTITY_GOLD_RELOCATION_AUDIT;
+  }
+
+  // ==========================================================
+  // NOTIFICATIONS ENGINE
+  // ==========================================================
+  //
+  // Explicit Notification entities MUST be resolved before
+  // compatibility heuristics.
+  //
+  // NotificationDeliveryRecord also carries notificationId.
+  // Without this explicit check it would be incorrectly routed
+  // into the legacy NOTIFICATION entity.
+  // ==========================================================
+
+  if (value.entity === ENTITY_NOTIFICATION) {
+    return ENTITY_NOTIFICATION;
+  }
+
+  if (value.entity === ENTITY_NOTIFICATION_DELIVERY) {
+    return ENTITY_NOTIFICATION_DELIVERY;
+  }
+
+  if (
+    value.entity ===
+    ENTITY_BUSINESS_NOTIFICATION_POLICY
+  ) {
+    return ENTITY_BUSINESS_NOTIFICATION_POLICY;
+  }
+
+  if (
+    value.entity ===
+    ENTITY_CUSTOMER_NOTIFICATION_PREFERENCE
+  ) {
+    return ENTITY_CUSTOMER_NOTIFICATION_PREFERENCE;
   }
 
   // ==========================================================
