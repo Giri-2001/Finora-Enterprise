@@ -83,6 +83,7 @@
 // - selectedEmiAmount
 // - paymentReference
 // - remarks
+// - collectionNumber
 // - receiptNumber
 //
 // Defaults:
@@ -102,7 +103,7 @@
 //
 // Customer / Loan identity is NOT manually cleared here.
 //
-// VERSION : 2.3
+// VERSION : 2.6
 // STATUS  : Production
 // ============================================================
 
@@ -110,7 +111,10 @@
 // IMPORTS
 // ============================================================
 
-import { useState } from "react";
+import {
+  useEffect,
+  useState,
+} from "react";
 
 import { WalletCards } from "lucide-react";
 
@@ -119,6 +123,11 @@ import { useCollectionController } from "../controller";
 import { updateLoanOutstandingAmount } from "../../../services/loan/loanService";
 
 import { approveCollection } from "../../../services/collection/collectionService";
+
+import {
+  previewNextCollectionReceiptPair,
+  reserveNextCollectionReceiptPair,
+} from "../../../services/numbering/collectionSequenceService";
 
 import { collectionPaymentDetailsStyles } from "./PaymentDetails.styles";
 
@@ -173,27 +182,6 @@ function getLocalTodayInputValue(): string {
 
 function formatCurrency(value: number): string {
   return `₹ ${Math.round(safeNumber(value)).toLocaleString("en-IN")}`;
-}
-
-// ============================================================
-// RECEIPT NUMBER
-// ============================================================
-//
-// Every Collection transaction must receive a unique receipt.
-//
-// reviewData.receiptNumber may contain the previous completed
-// transaction's receipt and must never be reused.
-//
-// ============================================================
-
-function generateReceiptNumber(): string {
-  const timestampPart = Date.now().toString().slice(-8);
-
-  const randomPart = Math.floor(Math.random() * 100)
-    .toString()
-    .padStart(2, "0");
-
-  return `RCPT-${timestampPart}${randomPart}`;
 }
 
 // ============================================================
@@ -268,6 +256,97 @@ export default function PaymentDetails() {
   // ==========================================================
 
   const [saving, setSaving] = useState(false);
+
+  // ==========================================================
+  // COLLECTION / RECEIPT NUMBER PREVIEW
+  //
+  // Preview is non-consuming.
+  //
+  // Final authoritative reservation still occurs only inside
+  // handleSaveCollection() after validation succeeds.
+  // ==========================================================
+
+  const [
+    numberingPreview,
+    setNumberingPreview,
+  ] = useState({
+    collectionNumber: "",
+    receiptNumber: "",
+  });
+
+  const [
+    numberingPreviewVersion,
+    setNumberingPreviewVersion,
+  ] = useState(0);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const customerId =
+      reviewData.customerId.trim();
+
+    const loanNumber =
+      reviewData.loanNumber.trim();
+
+    if (!customerId || !loanNumber) {
+      setNumberingPreview({
+        collectionNumber: "",
+        receiptNumber: "",
+      });
+
+      return () => {
+        cancelled = true;
+      };
+    }
+
+    async function loadNumberingPreview(): Promise<void> {
+      const result =
+        await previewNextCollectionReceiptPair(
+          customerId,
+          loanNumber,
+        );
+
+      if (cancelled) {
+        return;
+      }
+
+      if (
+        !result.success ||
+        !result.data
+      ) {
+        console.error(
+          "FINORA COLLECTION NUMBER PREVIEW ERROR:",
+          result.error ??
+            "Unable to preview Collection / Receipt Numbers.",
+        );
+
+        setNumberingPreview({
+          collectionNumber: "",
+          receiptNumber: "",
+        });
+
+        return;
+      }
+
+      setNumberingPreview({
+        collectionNumber:
+          result.data.collectionNumber,
+
+        receiptNumber:
+          result.data.receiptNumber,
+      });
+    }
+
+    void loadNumberingPreview();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    reviewData.customerId,
+    reviewData.loanNumber,
+    numberingPreviewVersion,
+  ]);
 
   // ==========================================================
   // CURRENT COLLECTION VALUES
@@ -363,8 +442,10 @@ export default function PaymentDetails() {
     updateField("remarks", "");
 
     // --------------------------------------------------------
-    // PREVIOUS TRANSACTION RECEIPT
+    // PREVIOUS TRANSACTION IDENTITY
     // --------------------------------------------------------
+
+    updateField("collectionNumber", "");
 
     updateField("receiptNumber", "");
 
@@ -465,10 +546,11 @@ export default function PaymentDetails() {
   //
   // ==========================================================
 
-  function buildSaveData() {
+  function buildSaveData(
+    collectionNumber: string,
+    receiptNumber: string,
+  ) {
     const now = new Date().toISOString();
-
-    const receiptNumber = generateReceiptNumber();
 
     return {
       ...reviewData,
@@ -500,8 +582,10 @@ export default function PaymentDetails() {
       advanceAdjustment: manualPrincipal,
 
       // ------------------------------------------------------
-      // NEW RECEIPT
+      // AUTHORITATIVE COLLECTION / RECEIPT IDENTITY
       // ------------------------------------------------------
+
+      collectionNumber,
 
       receiptNumber,
 
@@ -552,13 +636,47 @@ export default function PaymentDetails() {
 
     try {
       // ======================================================
+      // AUTHORITATIVE COLLECTION / RECEIPT NUMBER RESERVATION
+      //
+      // Reservation occurs only after validation succeeds and
+      // before any Loan or Collection mutation begins.
+      //
+      // Once reserved, the sequence is never recycled.
+      // ======================================================
+
+      const numberingResult =
+        await reserveNextCollectionReceiptPair(
+          reviewData.customerId,
+          reviewData.loanNumber,
+        );
+
+      if (
+        !numberingResult.success ||
+        !numberingResult.data
+      ) {
+        throw new Error(
+          numberingResult.error ??
+            "Unable to reserve FINORA Collection / Receipt Numbers.",
+        );
+      }
+
+      const numbering =
+        numberingResult.data;
+
+      // ======================================================
       // NEW TRANSACTION DATA
       // ======================================================
 
-      const saveData = buildSaveData();
+      const saveData =
+        buildSaveData(
+          numbering.collectionNumber,
+          numbering.receiptNumber,
+        );
 
       console.info("FINORA COLLECTION SAVE", {
         loanId: saveData.loanId,
+
+        collectionNumber: saveData.collectionNumber,
 
         paymentAmount: saveData.paymentAmount,
 
@@ -697,6 +815,10 @@ export default function PaymentDetails() {
           : "Collection could not be saved.",
       );
     } finally {
+      setNumberingPreviewVersion(
+        (current) => current + 1,
+      );
+
       setSaving(false);
     }
   }
@@ -1013,6 +1135,54 @@ export default function PaymentDetails() {
       ====================================================== */}
 
       <div style={responsiveBodyStyle}>
+        {/* ====================================================
+            COLLECTION NUMBER
+        ==================================================== */}
+
+        <div style={responsiveFieldStyle}>
+          <label
+            htmlFor="finora-collection-number"
+            style={collectionPaymentDetailsStyles.label}
+          >
+            Collection Number
+          </label>
+
+          <input
+            id="finora-collection-number"
+            type="text"
+            value={
+              numberingPreview.collectionNumber ||
+              "Auto Generated"
+            }
+            readOnly
+            style={responsiveInputStyle}
+          />
+        </div>
+
+        {/* ====================================================
+            RECEIPT NUMBER
+        ==================================================== */}
+
+        <div style={responsiveFieldStyle}>
+          <label
+            htmlFor="finora-receipt-number"
+            style={collectionPaymentDetailsStyles.label}
+          >
+            Receipt Number
+          </label>
+
+          <input
+            id="finora-receipt-number"
+            type="text"
+            value={
+              numberingPreview.receiptNumber ||
+              "Auto Generated"
+            }
+            readOnly
+            style={responsiveInputStyle}
+          />
+        </div>
+
         {/* ====================================================
             COLLECTION DATE
         ==================================================== */}

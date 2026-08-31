@@ -296,6 +296,8 @@ function createEmptyReviewData(): CollectionReviewData {
 
     remarks: "",
 
+    collectionNumber: "",
+
     receiptNumber: "",
 
     receiptDate: today,
@@ -498,6 +500,8 @@ function buildReviewData(
     advanceAdjustment: 0,
 
     remarks: "",
+
+    collectionNumber: "",
 
     receiptNumber: "",
 

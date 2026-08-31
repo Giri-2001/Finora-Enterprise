@@ -28,7 +28,7 @@
 //   loan principal, loan interest rate and loan date.
 // - EMI amount is not the interest calculation basis.
 //
-// VERSION : 2.1
+// VERSION : 2.2
 // STATUS  : Production
 // ============================================================
 
@@ -204,11 +204,29 @@ export interface CollectionReviewData {
   remarks: string;
 
   // ==========================================================
-  // RECEIPT
+  // COLLECTION / RECEIPT IDENTITY
   // ==========================================================
 
   /**
-   * Generated / assigned collection receipt number.
+   * Authoritative human-readable FINORA Collection Number.
+   *
+   * Example:
+   *
+   * FIN-COL-RGG-BR1-100001-001-001
+   *
+   * Internal Collection storage identity remains separate.
+   */
+  collectionNumber: string;
+
+  /**
+   * Authoritative FINORA Receipt Number.
+   *
+   * Receipt mirrors the exact Collection transaction sequence
+   * and owns no separate counter.
+   *
+   * Example:
+   *
+   * FIN-RCP-RGG-BR1-100001-001-001
    */
   receiptNumber: string;
 

@@ -21,7 +21,7 @@
 // - No StorageManager access.
 // - Internal database IDs are NOT defined here.
 //
-// VERSION : 1.0
+// VERSION : 1.3
 // STATUS  : Production Foundation
 // ============================================================
 
@@ -205,6 +205,88 @@ export interface CustomerSeriesSetupPreview
 }
 
 // ============================================================
+// CUSTOMER NUMBERING BINDING
+//
+// Compatibility bridge for historical / non-canonical Customer
+// IDs created before the FINORA Numbering Engine.
+//
+// IMPORTANT:
+//
+// - legacyCustomerId remains the visible historical Customer ID.
+// - canonicalCustomerId is a hidden numbering root reference.
+// - customerNumber is reserved permanently from the branch
+//   Customer master series.
+// - Historical Customer records are NOT rewritten.
+// - No timestamp / suffix guessing is permitted.
+// - One immutable binding exists per historical Customer.
+// ============================================================
+
+export interface CustomerNumberingBinding
+  extends FinoraNumberingScope {
+
+  legacyCustomerId:
+    string;
+
+  canonicalCustomerId:
+    string;
+
+  customerNumber:
+    number;
+
+  createdAt:
+    string;
+}
+
+// ============================================================
+// LOAN SEQUENCE STATE
+//
+// Loan numbering is NOT a branch-level master series.
+//
+// Each Customer owns an independent system-controlled
+// subordinate Loan sequence:
+//
+// Customer 100001:
+//   001, 002, 003...
+//
+// Customer 100002:
+//   001, 002, 003...
+//
+// No owner-editable starting value exists.
+//
+// lastIssuedLoanSequence:
+//
+// null
+//   No Loan number has been permanently issued yet.
+//
+// number
+//   Last permanently issued Loan sequence for this Customer.
+//
+// customerId is retained as the human-readable Customer
+// reference associated with customerNumber.
+//
+// Internal database Customer IDs are not used here.
+// ============================================================
+
+export interface LoanSequenceState
+  extends FinoraNumberingScope {
+
+  customerId:
+    string;
+
+  customerNumber:
+    number;
+
+  lastIssuedLoanSequence:
+    number | null;
+
+  createdAt:
+    string;
+
+  updatedAt:
+    string;
+}
+
+// ============================================================
 // LOAN NUMBER PREVIEW
 // ============================================================
 
@@ -216,6 +298,101 @@ export interface LoanNumberPreview {
     number;
 
   loanNumber:
+    string;
+}
+
+// ============================================================
+// LOAN NUMBERING BINDING
+//
+// Compatibility bridge for historical / non-canonical Loan
+// Numbers created before the FINORA Numbering Engine.
+//
+// IMPORTANT:
+//
+// - legacyLoanNumber remains the visible historical Loan Number.
+// - canonicalLoanNumber is a hidden hierarchical numbering root.
+// - customerId is the visible Customer reference associated
+//   with the historical Loan.
+// - customerNumber + loanSequence define the hidden canonical
+//   Loan hierarchy.
+// - Historical Loan records are NOT rewritten.
+// - No timestamp / suffix guessing is permitted.
+// - One immutable binding exists per historical Loan.
+// ============================================================
+
+export interface LoanNumberingBinding
+  extends FinoraNumberingScope {
+
+  customerId:
+    string;
+
+  legacyLoanNumber:
+    string;
+
+  canonicalLoanNumber:
+    string;
+
+  customerNumber:
+    number;
+
+  loanSequence:
+    number;
+
+  createdAt:
+    string;
+}
+
+// ============================================================
+// COLLECTION SEQUENCE STATE
+//
+// Collection numbering is NOT a branch-level master series.
+//
+// Each canonical Loan owns an independent system-controlled
+// subordinate Collection sequence:
+//
+// Loan ...-001:
+//   001, 002, 003...
+//
+// Loan ...-002:
+//   001, 002, 003...
+//
+// Receipt owns no separate sequence. It mirrors the exact
+// Collection sequence.
+//
+// canonicalLoanNumber:
+//
+// - Current-format Loans use their visible Loan Number.
+// - Historical Loans use the immutable hidden Loan Number
+//   resolved through LoanNumberingBinding.
+//
+// lastIssuedCollectionSequence:
+//
+// null
+//   No Collection number has been permanently issued yet.
+//
+// number
+//   Last permanently issued Collection sequence for this Loan.
+// ============================================================
+
+export interface CollectionSequenceState
+  extends FinoraNumberingScope {
+
+  canonicalLoanNumber:
+    string;
+
+  customerNumber:
+    number;
+
+  loanSequence:
+    number;
+
+  lastIssuedCollectionSequence:
+    number | null;
+
+  createdAt:
+    string;
+
+  updatedAt:
     string;
 }
 

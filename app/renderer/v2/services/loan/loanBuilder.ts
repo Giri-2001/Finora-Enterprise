@@ -21,7 +21,7 @@ export interface BuildLoanOptions {
 
   title: string;
 
-  loanNumber?: string;
+  loanNumber: string;
 
   amount: number;
 
@@ -99,12 +99,22 @@ export interface BuildLoanOptions {
 =========================================================== */
 
 export function buildLoan(options: BuildLoanOptions): Loan {
+  const authoritativeLoanNumber =
+    options.loanNumber.trim();
+
+  if (!authoritativeLoanNumber) {
+    throw new Error(
+      "Authoritative FINORA Loan Number is required.",
+    );
+  }
+
   return {
     id: options.id,
 
     title: options.title,
 
-    loanNumber: options.loanNumber ?? `FIN-LOAN-${Date.now()}`,
+    loanNumber:
+      authoritativeLoanNumber,
 
     amount: options.amount,
 

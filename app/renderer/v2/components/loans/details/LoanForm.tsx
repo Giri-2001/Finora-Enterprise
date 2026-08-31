@@ -70,6 +70,8 @@ import {
 ============================================================ */
 
 interface LoanFormProps {
+  loanNumberPreview?: string;
+
   loanAmount: string;
 
   /*
@@ -150,6 +152,8 @@ const formatIndianInteger = (value: string): string => {
 ============================================================ */
 
 export default function LoanForm({
+  loanNumberPreview = "",
+
   loanAmount,
 
   loanAmountReadOnly = false,
@@ -311,7 +315,10 @@ export default function LoanForm({
 
             <input
               type="text"
-              value="Auto Generated"
+              value={
+                loanNumberPreview ||
+                "Auto Generated"
+              }
               readOnly
               aria-label="Loan Number"
               style={{

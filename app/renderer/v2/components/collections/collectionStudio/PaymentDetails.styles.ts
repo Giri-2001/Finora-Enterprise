@@ -221,7 +221,8 @@ export const collectionPaymentDetailsStyles: Record<string, CSSProperties> = {
 
   display: "grid",
 
-  gridTemplateColumns: "repeat(7, minmax(0, 1fr))",
+  gridTemplateColumns:
+    "minmax(0, 1.35fr) minmax(0, 1.35fr) repeat(5, minmax(0, 1fr))",
 
   gap: "9px",
 

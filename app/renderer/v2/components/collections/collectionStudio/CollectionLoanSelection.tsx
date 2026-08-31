@@ -39,7 +39,7 @@
 // LAPTOP / DESKTOP
 // - Existing premium geometry remains unchanged
 //
-// VERSION : 2.1
+// VERSION : 2.2
 // STATUS  : Production
 // ============================================================
 
@@ -163,6 +163,73 @@ export default function CollectionLoanSelection({
   };
 
   // ==========================================================
+  // VISIBLE LOAN CARDS
+  //
+  // The dropdown remains authoritative for the complete Loan
+  // list, including customers with many Loans.
+  //
+  // The card strip intentionally shows at most three Loans so
+  // its height never grows into a second row.
+  //
+  // The currently selected Loan is always represented.
+  // ==========================================================
+
+  const visibleLoans = (() => {
+    const maximumVisibleLoans =
+      viewport === "mobile"
+        ? 1
+        : viewport === "tablet"
+          ? 2
+          : 3;
+
+    if (loans.length <= maximumVisibleLoans) {
+      return loans;
+    }
+
+    const selectedLoan =
+      loans.find(
+        (loan) => loan.id === selectedLoanId,
+      ) ?? null;
+
+    if (!selectedLoan) {
+      return loans.slice(
+        0,
+        maximumVisibleLoans,
+      );
+    }
+
+    return [
+      selectedLoan,
+
+      ...loans
+        .filter(
+          (loan) =>
+            loan.id !== selectedLoan.id,
+        )
+        .slice(
+          0,
+          maximumVisibleLoans - 1,
+        ),
+    ];
+  })();
+
+  // ==========================================================
+  // SINGLE-ROW VISIBLE LOAN GRID
+  //
+  // Exactly one grid column is created per visible Loan.
+  // This prevents the card strip from ever creating row 2.
+  // ==========================================================
+
+  const visibleLoanCardsGridStyle: CSSProperties = {
+    ...responsiveLoanCardsGridStyle,
+
+    gridTemplateColumns:
+      visibleLoans.length > 0
+        ? `repeat(${visibleLoans.length}, minmax(0, 1fr))`
+        : "minmax(0, 1fr)",
+  };
+
+  // ==========================================================
   // EMPTY STATE
   // ==========================================================
 
@@ -265,8 +332,8 @@ export default function CollectionLoanSelection({
           LOAN CARDS
       ================================================== */}
 
-      <div style={responsiveLoanCardsGridStyle}>
-        {loans.map((loan) => {
+      <div style={visibleLoanCardsGridStyle}>
+        {visibleLoans.map((loan) => {
           const isSelected = loan.id === selectedLoanId;
 
           // ================================================

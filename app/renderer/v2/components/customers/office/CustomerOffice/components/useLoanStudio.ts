@@ -71,7 +71,7 @@
 // → sanctioned Gold principal preloaded
 // → Gold Step-1 snapshot remains available to shared workflow
 //
-// VERSION : 2.4
+// VERSION : 2.6
 // STATUS  : Production + Gold Entry Foundation
 // ============================================================
 
@@ -86,6 +86,11 @@ import type { EMICalculationMode } from "../../../../loans/repayment/EMIConfigur
 import { generateSchedule } from "../../../../loans/schedule/schedule.helpers";
 
 import { buildLoan } from "../../../../../services/loan/loanBuilder";
+
+import {
+  previewNextLoanNumber,
+  reserveNextLoanNumber,
+} from "../../../../../services/numbering/loanSequenceService";
 
 import {
   createLoan,
@@ -378,6 +383,67 @@ export function useLoanStudio({
   const activeCustomerName = selectedCustomer?.customerName ?? "";
 
   const activeCustomerPhone = selectedCustomer?.phoneNumber ?? "";
+
+  /* ==========================================================
+     LOAN NUMBER PREVIEW
+
+     IMPORTANT:
+
+     - Preview never consumes the per-Customer Loan sequence.
+     - Changing Customer reloads the appropriate preview.
+     - Final approval still uses reserveNextLoanNumber().
+     - Final reserved number remains authoritative.
+  ========================================================== */
+
+  const [
+    loanNumberPreview,
+    setLoanNumberPreview,
+  ] = useState("");
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadLoanNumberPreview(): Promise<void> {
+      if (!activeCustomerId) {
+        setLoanNumberPreview("");
+
+        return;
+      }
+
+      const result =
+        await previewNextLoanNumber(
+          activeCustomerId,
+        );
+
+      if (cancelled) {
+        return;
+      }
+
+      if (
+        !result.success ||
+        !result.data
+      ) {
+        console.error(
+          "FINORA LOAN NUMBER PREVIEW ERROR:",
+          result.error,
+        );
+
+        setLoanNumberPreview("");
+
+        return;
+      }
+
+      setLoanNumberPreview(
+        result.data.loanNumber,
+      );
+    }
+
+    void loadLoanNumberPreview();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [activeCustomerId]);
 
   /* ==========================================================
      WIZARD
@@ -980,11 +1046,52 @@ export function useLoanStudio({
     }
 
     /* ========================================================
+       RESERVE AUTHORITATIVE LOAN NUMBER
+
+       IMPORTANT:
+
+       - Reservation permanently consumes the per-Customer
+         Loan sequence.
+       - It occurs only after document preparation succeeds.
+       - A downstream Loan persistence failure may create a
+         numbering gap.
+       - Reserved Loan numbers are never rolled back or reused.
+    ======================================================== */
+
+    const loanNumberResult =
+      await reserveNextLoanNumber(
+        activeCustomerId,
+      );
+
+    if (
+      !loanNumberResult.success ||
+      !loanNumberResult.data
+    ) {
+      console.error(
+        "FINORA LOAN NUMBER RESERVATION ERROR:",
+        loanNumberResult.error,
+      );
+
+      alert(
+        loanNumberResult.error ??
+          "Unable to reserve the Loan Number. Please try again.",
+      );
+
+      return;
+    }
+
+    const authoritativeLoanNumber =
+      loanNumberResult.data.loanNumber;
+
+    /* ========================================================
        BUILD LOAN
     ======================================================== */
 
     const loan = buildLoan({
       id: loanId,
+
+      loanNumber:
+        authoritativeLoanNumber,
 
       title: loanTitle,
 
@@ -1419,6 +1526,8 @@ export function useLoanStudio({
     activeCustomerId,
     activeCustomerName,
     activeCustomerPhone,
+
+    loanNumberPreview,
 
     step,
     setStep,

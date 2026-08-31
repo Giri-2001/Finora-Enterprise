@@ -55,6 +55,8 @@ export default function CollectionStudio() {
 
     remarks: "",
 
+    collectionNumber: "",
+
     receiptNumber: "",
 
     receiptDate: "",

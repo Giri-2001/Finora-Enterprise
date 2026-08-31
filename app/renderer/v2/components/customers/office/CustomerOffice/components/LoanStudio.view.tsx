@@ -304,6 +304,8 @@ export default function LoanStudioView(props: LoanStudioViewModel) {
     activeCustomerName,
     activeCustomerPhone,
 
+    loanNumberPreview,
+
     step,
     setStep,
 
@@ -420,6 +422,7 @@ export default function LoanStudioView(props: LoanStudioViewModel) {
             <div style={step1BottomStyle}>
               <div style={step1FormStyle}>
                 <LoanForm
+                  loanNumberPreview={loanNumberPreview}
                   loanAmount={loanAmount}
                   emiCalculation={emiCalculation}
                   interest={interest}
@@ -504,6 +507,7 @@ export default function LoanStudioView(props: LoanStudioViewModel) {
 
             {isGoldLoan && (
               <LoanForm
+                loanNumberPreview={loanNumberPreview}
                 loanAmount={loanAmount}
                 loanAmountReadOnly
                 emiCalculation={emiCalculation}

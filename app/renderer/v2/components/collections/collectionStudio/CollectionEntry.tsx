@@ -353,105 +353,114 @@ export default function CollectionEntry({ middleSlot }: CollectionEntryProps) {
   // LOAD REAL EMI SCHEDULE
   // ==========================================================
 
-  const loadSchedule = useCallback(async (): Promise<void> => {
-    if (!loanId) {
-      setEmiSchedule([]);
+  const loadSchedule = useCallback(
+    async (resetSharedTransactionState = true): Promise<void> => {
+      if (!loanId) {
+        setEmiSchedule([]);
 
-      setSelectedEmiNumbers([]);
+        setSelectedEmiNumbers([]);
 
-      setEmiDropdownOpen(false);
+        setEmiDropdownOpen(false);
+
+        setLoadError("");
+
+        setLoading(false);
+
+        if (resetSharedTransactionState) {
+          updateFieldRef.current("selectedEmiNumbers", []);
+
+          updateFieldRef.current("selectedEmiAmount", 0);
+        }
+
+        return;
+      }
+
+      setLoading(true);
 
       setLoadError("");
 
-      setLoading(false);
+      setEmiDropdownOpen(false);
 
-      updateFieldRef.current("selectedEmiNumbers", []);
+      try {
+        const loans = await fetchLoans();
 
-      updateFieldRef.current("selectedEmiAmount", 0);
+        const selectedLoan = loans.find(
+          (loan: { id?: string }) => String(loan.id ?? "") === loanId,
+        );
 
-      return;
-    }
-
-    setLoading(true);
-
-    setLoadError("");
-
-    setEmiDropdownOpen(false);
-
-    try {
-      const loans = await fetchLoans();
-
-      const selectedLoan = loans.find(
-        (loan: { id?: string }) => String(loan.id ?? "") === loanId,
-      );
-
-      const rawSchedule = Array.isArray(
-        (
-          selectedLoan as
-            | {
-                schedule?: unknown;
-              }
-            | undefined
-        )?.schedule,
-      )
-        ? ((
+        const rawSchedule = Array.isArray(
+          (
             selectedLoan as
               | {
                   schedule?: unknown;
                 }
               | undefined
-          )?.schedule as EmiRecord[])
-        : [];
-
-      const normalizedSchedule = rawSchedule
-        .map(
-          (installment): EmiRecord => ({
-            installmentNumber: Number(installment.installmentNumber) || 0,
-
-            dueDate: String(installment.dueDate ?? ""),
-
-            installmentAmount: safeNumber(installment.installmentAmount),
-
-            status: String(installment.status ?? "Pending"),
-
-            paidAmount: safeNumber(installment.paidAmount),
-
-            receiptNumber: String(installment.receiptNumber ?? ""),
-
-            paidDate: String(installment.paidDate ?? ""),
-          }),
+          )?.schedule,
         )
-        .filter((installment) => installment.installmentNumber > 0);
+          ? ((
+              selectedLoan as
+                | {
+                    schedule?: unknown;
+                  }
+                | undefined
+            )?.schedule as EmiRecord[])
+          : [];
 
-      setEmiSchedule(normalizedSchedule);
+        const normalizedSchedule = rawSchedule
+          .map(
+            (installment): EmiRecord => ({
+              installmentNumber: Number(installment.installmentNumber) || 0,
 
-      setSelectedEmiNumbers([]);
+              dueDate: String(installment.dueDate ?? ""),
 
-      updateFieldRef.current("selectedEmiNumbers", []);
+              installmentAmount: safeNumber(installment.installmentAmount),
 
-      updateFieldRef.current("selectedEmiAmount", 0);
+              status: String(installment.status ?? "Pending"),
 
-      updateFieldRef.current("paymentAmount", 0);
-    } catch (error) {
-      console.error("FINORA STEP 4 EMI SCHEDULE LOAD ERROR:", error);
+              paidAmount: safeNumber(installment.paidAmount),
 
-      setEmiSchedule([]);
+              receiptNumber: String(installment.receiptNumber ?? ""),
 
-      setSelectedEmiNumbers([]);
+              paidDate: String(installment.paidDate ?? ""),
+            }),
+          )
+          .filter((installment) => installment.installmentNumber > 0);
 
-      setEmiDropdownOpen(false);
+        setEmiSchedule(normalizedSchedule);
 
-      updateFieldRef.current("selectedEmiNumbers", []);
+        setSelectedEmiNumbers([]);
 
-      updateFieldRef.current("selectedEmiAmount", 0);
+        if (resetSharedTransactionState) {
+          updateFieldRef.current("selectedEmiNumbers", []);
 
-      updateFieldRef.current("paymentAmount", 0);
+          updateFieldRef.current("selectedEmiAmount", 0);
 
-      setLoadError("Unable to load the selected loan EMI schedule.");
-    } finally {
-      setLoading(false);
-    }
-  }, [loanId]);
+          updateFieldRef.current("paymentAmount", 0);
+        }
+      } catch (error) {
+        console.error("FINORA STEP 4 EMI SCHEDULE LOAD ERROR:", error);
+
+        setEmiSchedule([]);
+
+        setSelectedEmiNumbers([]);
+
+        setEmiDropdownOpen(false);
+
+        if (resetSharedTransactionState) {
+          updateFieldRef.current("selectedEmiNumbers", []);
+
+          updateFieldRef.current("selectedEmiAmount", 0);
+
+          updateFieldRef.current("paymentAmount", 0);
+        }
+
+        setLoadError("Unable to load the selected loan EMI schedule.");
+      } finally {
+        setLoading(false);
+      }
+    },
+    [loanId],
+  );
 
   // ==========================================================
   // LOAD WHEN LOAN CHANGES
@@ -467,7 +476,16 @@ export default function CollectionEntry({ middleSlot }: CollectionEntryProps) {
 
   useEffect(() => {
     function handleLoanUpdated(): void {
-      void loadSchedule();
+      /*
+       * Refresh the persisted EMI schedule only.
+       *
+       * PaymentDetails already resets the shared Collection
+       * transaction state after successful persistence.
+       *
+       * Avoid writing shared controller fields here because this
+       * hook instance may still hold the pre-save review snapshot.
+       */
+      void loadSchedule(false);
     }
 
     window.addEventListener("FINORA_LOAN_UPDATED", handleLoanUpdated);
