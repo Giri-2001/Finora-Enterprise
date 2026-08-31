@@ -79,6 +79,70 @@ function getLast6Digits(value: unknown): string {
 }
 
 // ============================================================
+// COLLECTION PAYMENT DATE
+//
+// Authoritative transaction date:
+// 1. receiptDate
+// 2. createdAt for historical compatibility
+//
+// updatedAt is deliberately excluded because editing a stored
+// Collection must not make an older payment appear newer.
+// ============================================================
+
+function resolveCollectionPaymentDate(
+  collection: {
+    receiptDate?: string;
+    createdAt?: string;
+  },
+): string {
+
+  const candidates = [
+    collection.receiptDate,
+    collection.createdAt,
+  ];
+
+  for (const candidate of candidates) {
+
+    const value =
+      String(candidate ?? "").trim();
+
+    if (!value) {
+      continue;
+    }
+
+    const timestamp =
+      new Date(value).getTime();
+
+    if (Number.isFinite(timestamp)) {
+      return value;
+    }
+  }
+
+  return "";
+}
+
+function resolveCollectionPaymentTimestamp(
+  collection: {
+    receiptDate?: string;
+    createdAt?: string;
+  },
+): number {
+
+  const paymentDate =
+    resolveCollectionPaymentDate(
+      collection,
+    );
+
+  if (!paymentDate) {
+    return Number.NEGATIVE_INFINITY;
+  }
+
+  return new Date(
+    paymentDate,
+  ).getTime();
+}
+
+// ============================================================
 // MAPPER
 // ============================================================
 
@@ -186,6 +250,105 @@ export default async function customerOfficeMapper(
         const customerLoans = loans.filter(
           (loan) => loan.customerId === customerId,
         );
+
+        // ======================================================
+        // RELATED COLLECTIONS
+        //
+        // Keep the complete customer Collection history for the
+        // Customer Office, while deriving Last Payment only from
+        // finalized Approved cash transactions.
+        // ======================================================
+
+        const customerCollections =
+          collections.filter(
+            (collection) =>
+              collection.customerId === customerId,
+          );
+
+        // ======================================================
+        // LAST PAYMENT
+        //
+        // Rules:
+        //
+        // - Approved Collections only.
+        // - paymentAmount must represent positive actual cash.
+        // - receiptDate is authoritative.
+        // - createdAt is the historical compatibility fallback.
+        // - updatedAt must not change transaction chronology.
+        // ======================================================
+
+        let lastPayment:
+          (typeof collections)[number] |
+          undefined;
+
+        let lastPaymentTimestamp =
+          Number.NEGATIVE_INFINITY;
+
+        for (
+          const collection of
+          customerCollections
+        ) {
+
+          if (
+            collection.status !==
+            "Approved"
+          ) {
+            continue;
+          }
+
+          const paymentAmount =
+            Number(
+              collection.paymentAmount,
+            );
+
+          if (
+            !Number.isFinite(
+              paymentAmount,
+            ) ||
+            paymentAmount <= 0
+          ) {
+            continue;
+          }
+
+          const paymentTimestamp =
+            resolveCollectionPaymentTimestamp(
+              collection,
+            );
+
+          if (
+            paymentTimestamp ===
+            Number.NEGATIVE_INFINITY
+          ) {
+            continue;
+          }
+
+          if (
+            !lastPayment ||
+            paymentTimestamp >
+              lastPaymentTimestamp
+          ) {
+
+            lastPayment =
+              collection;
+
+            lastPaymentTimestamp =
+              paymentTimestamp;
+          }
+        }
+
+        const lastPaymentDate =
+          lastPayment
+            ? resolveCollectionPaymentDate(
+                lastPayment,
+              )
+            : "";
+
+        const lastPaymentAmount =
+          lastPayment
+            ? Number(
+                lastPayment.paymentAmount,
+              )
+            : 0;
 
         // ======================================================
         // LIVE LOAN STATISTICS
@@ -301,12 +464,15 @@ export default async function customerOfficeMapper(
 
           nextCollectionDate: customer.internal.lastCollectionAt ?? "",
 
+          lastPaymentDate,
+
+          lastPaymentAmount,
+
           // ====================================================
           // COLLECTION HISTORY
           // ====================================================
 
-          collections: collections
-            .filter((collection) => collection.customerId === customerId)
+          collections: customerCollections
             .map((collection) => ({
               id: collection.loanId,
 

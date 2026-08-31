@@ -21,7 +21,7 @@
 // - No persistence.
 // - No business logic.
 //
-// VERSION : 1.0
+// VERSION : 1.1
 // STATUS  : Production Foundation
 // ============================================================
 
@@ -84,6 +84,20 @@ export const SETTINGS_SECTIONS:
 
       description:
         "Manage Business Owner profile information and identification photos.",
+    },
+
+    {
+      id:
+        "numbering-series",
+
+      label:
+        "Numbering & Series",
+
+      shortLabel:
+        "Numbering",
+
+      description:
+        "Configure the permanent Customer ID series and view system-generated Loan, Collection and Receipt numbering rules.",
     },
 
     {

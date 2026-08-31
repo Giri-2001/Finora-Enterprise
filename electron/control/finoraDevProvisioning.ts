@@ -141,6 +141,16 @@ export async function runFinoraDevelopmentProvisioning():
         "FINORA_DEV_ACTIVATION_ID",
       );
 
+    const businessCode =
+      requireEnvironmentValue(
+        "FINORA_DEV_BUSINESS_CODE",
+      );
+
+    const branchCode =
+      requireEnvironmentValue(
+        "FINORA_DEV_BRANCH_CODE",
+      );
+
     const now =
       new Date().toISOString();
 
@@ -154,6 +164,10 @@ export async function runFinoraDevelopmentProvisioning():
       businessId,
 
       branchId,
+
+      businessCode,
+
+      branchCode,
 
       createdAt:
         now,

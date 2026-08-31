@@ -117,6 +117,16 @@ export interface FinoraControlInstallationIdentity {
 
   branchId: string;
 
+  /**
+   * Immutable FINORA-assigned numbering codes.
+   *
+   * Optional only for legacy schemaVersion 1 installations.
+   * New provisioning supplies both values together.
+   */
+  businessCode?: string;
+
+  branchCode?: string;
+
   createdAt: string;
 
   updatedAt: string;
@@ -288,6 +298,26 @@ function isInstallationIdentity(
   value: unknown,
 ): value is FinoraControlInstallationIdentity {
   if (!isRecord(value)) {
+    return false;
+  }
+
+  const hasBusinessCode =
+    value.businessCode !== undefined;
+
+  const hasBranchCode =
+    value.branchCode !== undefined;
+
+  if (hasBusinessCode !== hasBranchCode) {
+    return false;
+  }
+
+  if (
+    hasBusinessCode &&
+    (
+      !isNonEmptyString(value.businessCode) ||
+      !isNonEmptyString(value.branchCode)
+    )
+  ) {
     return false;
   }
 
@@ -739,6 +769,22 @@ export async function saveFinoraInstallationIdentity(
     if (identityChanged) {
       return failure(
         "FINORA installation identity cannot be replaced.",
+      );
+    }
+
+    const numberingCodeChanged =
+      (
+        existing.businessCode !== undefined &&
+        existing.businessCode !== installation.businessCode
+      ) ||
+      (
+        existing.branchCode !== undefined &&
+        existing.branchCode !== installation.branchCode
+      );
+
+    if (numberingCodeChanged) {
+      return failure(
+        "FINORA installation numbering codes cannot be replaced.",
       );
     }
   }

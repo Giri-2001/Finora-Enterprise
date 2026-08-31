@@ -911,7 +911,7 @@ export function createCustomerIdStyle(
 
 
     fontSize:
-      `${tokens.customerCards.idSize + 3}px`,
+      `${tokens.customerCards.idSize + 1}px`,
 
     fontWeight:
       600,

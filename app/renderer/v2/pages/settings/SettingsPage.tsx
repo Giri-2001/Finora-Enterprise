@@ -24,7 +24,7 @@
 // - No breakpoint values.
 // - Section-specific business logic belongs to section components.
 //
-// VERSION : 1.0
+// VERSION : 1.1
 // STATUS  : Production Foundation
 // ============================================================
 
@@ -51,6 +51,8 @@ import BusinessSettingsSection from "./business/BusinessSettingsSection";
 import BranchSettingsSection from "./branch/BranchSettingsSection";
 
 import BusinessOwnerProfileSection from "./owner/BusinessOwnerProfileSection";
+
+import NumberingSeriesSettingsSection from "./numbering/NumberingSeriesSettingsSection";
 
 import GoldStorageSettingsPage from "./GoldStorageSettingsPage";
 
@@ -105,6 +107,15 @@ export default function SettingsPage() {
     ) {
       return (
         <BusinessOwnerProfileSection />
+      );
+    }
+
+    if (
+      activeSection ===
+      "numbering-series"
+    ) {
+      return (
+        <NumberingSeriesSettingsSection />
       );
     }
 

@@ -240,6 +240,15 @@ interface FinoraControlInstallationIdentity {
 
   branchId: string;
 
+  /**
+   * Immutable FINORA-assigned numbering codes.
+   *
+   * Optional only for legacy installation identities.
+   */
+  businessCode?: string;
+
+  branchCode?: string;
+
   createdAt: string;
 
   updatedAt: string;

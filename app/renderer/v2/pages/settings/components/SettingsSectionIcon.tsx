@@ -19,13 +19,14 @@
 // - No persistence.
 // - No business logic.
 //
-// VERSION : 1.0
+// VERSION : 1.1
 // STATUS  : Production Foundation
 // ============================================================
 
 import {
   Building2,
   Gem,
+  Hash,
   Landmark,
   UserRoundCog,
 } from "lucide-react";
@@ -74,6 +75,15 @@ export default function SettingsSectionIcon({
   if (section === "business-owner") {
     return (
       <UserRoundCog
+        className={iconClassName}
+        aria-hidden="true"
+      />
+    );
+  }
+
+  if (section === "numbering-series") {
+    return (
+      <Hash
         className={iconClassName}
         aria-hidden="true"
       />

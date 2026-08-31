@@ -80,6 +80,12 @@ public final class FinoraDevProvisioning {
     public static final String EXTRA_BRANCH_ID =
         "finora_dev_branch_id";
 
+    public static final String EXTRA_BUSINESS_CODE =
+        "finora_dev_business_code";
+
+    public static final String EXTRA_BRANCH_CODE =
+        "finora_dev_branch_code";
+
     public static final String EXTRA_ENTITLEMENT_USER_ID =
         "finora_dev_entitlement_user_id";
 
@@ -188,12 +194,26 @@ public final class FinoraDevProvisioning {
                     EXTRA_ACTIVATION_ID
                 );
 
+            String businessCode =
+                requireExtra(
+                    intent,
+                    EXTRA_BUSINESS_CODE
+                );
+
+            String branchCode =
+                requireExtra(
+                    intent,
+                    EXTRA_BRANCH_CODE
+                );
+
             provisionInstallation(
                 controlPackage,
                 installationId,
                 ownerId,
                 businessId,
                 branchId,
+                businessCode,
+                branchCode,
                 now
             );
 
@@ -374,6 +394,8 @@ public final class FinoraDevProvisioning {
         String ownerId,
         String businessId,
         String branchId,
+        String businessCode,
+        String branchCode,
         String now
     ) throws Exception {
 
@@ -411,6 +433,60 @@ public final class FinoraDevProvisioning {
                 "FINORA installation Branch ID cannot be replaced."
             );
 
+            String existingBusinessCode =
+                existing.optString(
+                    "businessCode",
+                    ""
+                ).trim();
+
+            String existingBranchCode =
+                existing.optString(
+                    "branchCode",
+                    ""
+                ).trim();
+
+            boolean hasExistingBusinessCode =
+                !existingBusinessCode.isEmpty();
+
+            boolean hasExistingBranchCode =
+                !existingBranchCode.isEmpty();
+
+            if (
+                hasExistingBusinessCode !=
+                hasExistingBranchCode
+            ) {
+                throw new IllegalStateException(
+                    "FINORA installation numbering codes are incomplete."
+                );
+            }
+
+            if (
+                hasExistingBusinessCode
+            ) {
+                if (
+                    !existingBusinessCode.equals(
+                        businessCode
+                    ) ||
+                    !existingBranchCode.equals(
+                        branchCode
+                    )
+                ) {
+                    throw new IllegalStateException(
+                        "FINORA installation numbering codes cannot be replaced."
+                    );
+                }
+            } else {
+                existing.put(
+                    "businessCode",
+                    businessCode
+                );
+
+                existing.put(
+                    "branchCode",
+                    branchCode
+                );
+            }
+
             existing.put(
                 "updatedAt",
                 now
@@ -440,6 +516,16 @@ public final class FinoraDevProvisioning {
         installation.put(
             "branchId",
             branchId
+        );
+
+        installation.put(
+            "businessCode",
+            businessCode
+        );
+
+        installation.put(
+            "branchCode",
+            branchCode
         );
 
         installation.put(

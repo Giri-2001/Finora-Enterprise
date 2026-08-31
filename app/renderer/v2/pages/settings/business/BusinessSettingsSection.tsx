@@ -424,6 +424,9 @@ export default function BusinessSettingsSection() {
         return;
       }
 
+      const createdBusinessId =
+        result.data.businessId;
+
       setIdentity(
         result.data,
       );
@@ -433,7 +436,7 @@ export default function BusinessSettingsSection() {
           current ??
           businessSettingsService
             .createEmpty(
-              context.businessId,
+              createdBusinessId,
             ),
       );
 

@@ -28,7 +28,7 @@
 //   -> Branch Activation
 //   -> Login
 //
-// VERSION : 1.0
+// VERSION : 1.1
 // STATUS  : Production Foundation
 // ============================================================
 
@@ -81,6 +81,30 @@ export interface FinoraInstallationIdentity {
    * Branch bound to this installation.
    */
   branchId: BranchId;
+
+  /**
+   * Immutable FINORA-assigned business numbering code.
+   *
+   * Examples: RGG, RCL.
+   *
+   * Optional only for legacy schemaVersion 1 installations that
+   * were provisioned before numbering codes were introduced.
+   * New provisioning must supply businessCode and branchCode
+   * together.
+   */
+  businessCode?: string;
+
+  /**
+   * Immutable FINORA-assigned branch numbering code.
+   *
+   * Examples: BR1, BR3.
+   *
+   * Optional only for legacy schemaVersion 1 installations that
+   * were provisioned before numbering codes were introduced.
+   * New provisioning must supply businessCode and branchCode
+   * together.
+   */
+  branchCode?: string;
 
   /**
    * Installation provisioning timestamp.

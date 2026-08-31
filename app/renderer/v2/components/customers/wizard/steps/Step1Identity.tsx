@@ -6,7 +6,7 @@
 
    IDENTITY STUDIO™
 
-   Version : 3.0
+   Version : 3.2
    Status  : Production
 =========================================================== */
 
@@ -54,6 +54,19 @@ import {
 import {
   UserRound,
 } from "lucide-react";
+
+
+/* ===========================================================
+   BUSINESS CONTEXT
+=========================================================== */
+
+import {
+  requireBusinessContext,
+} from "../../../../services/business/businessContextService";
+
+import {
+  loadBusinessIdentity,
+} from "../../../../services/business/businessService";
 
 
 /* ===========================================================
@@ -174,13 +187,13 @@ const DEFAULT_STATE:
     "English",
 
   businessName:
-    "Sri Giri Finance",
+    "",
 
   branchName:
-    "Hyderabad",
+    "",
 
   customerId:
-    "FIN-CUS-SGF-HYD-900001",
+    "",
 
   photoUrl:
     "",
@@ -318,6 +331,111 @@ export default function Step1Identity({
   }, [
     initialData,
   ]);
+
+
+  /* =========================================================
+     ACTIVE BUSINESS IDENTITY SYNC
+
+     Business and Branch display values come from the active
+     FINORA Business Identity.
+
+     They are presentation context only in Step 1.
+     Final Customer persistence resolves authoritative scope
+     independently during the create flow.
+  ========================================================= */
+
+  useEffect(() => {
+
+    let active =
+      true;
+
+    async function loadActiveBusinessIdentity():
+      Promise<void> {
+
+      try {
+
+        const businessContext =
+          requireBusinessContext();
+
+        const activeBusinessId =
+          businessContext.businessId?.trim() ??
+          "";
+
+        if (!activeBusinessId) {
+
+          console.error(
+            "[FINORA CUSTOMER] Active Business ID is unavailable for Step 1 identity display.",
+          );
+
+          return;
+        }
+
+        const result =
+          await loadBusinessIdentity(
+            activeBusinessId,
+          );
+
+        if (!active) {
+          return;
+        }
+
+        if (
+          !result.success ||
+          !result.data
+        ) {
+
+          console.error(
+            "[FINORA CUSTOMER] Business Identity could not be loaded for Step 1 display:",
+            result.error,
+          );
+
+          return;
+        }
+
+        const businessName =
+          result.data.businessName?.trim() ??
+          "";
+
+        const branchName =
+          result.data.branchName?.trim() ??
+          "";
+
+        setState(
+          (previous) => ({
+
+            ...previous,
+
+            businessName,
+
+            branchName,
+
+          }),
+        );
+
+      } catch (error) {
+
+        if (!active) {
+          return;
+        }
+
+        console.error(
+          "[FINORA CUSTOMER] Failed to resolve active Business Identity for Step 1 display:",
+          error,
+        );
+
+      }
+    }
+
+    void loadActiveBusinessIdentity();
+
+    return () => {
+
+      active =
+        false;
+
+    };
+
+  }, []);
 
 
   /* =========================================================

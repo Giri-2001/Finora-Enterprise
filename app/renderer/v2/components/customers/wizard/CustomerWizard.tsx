@@ -3,7 +3,7 @@
 
    CUSTOMER WIZARD CONTROLLER™
 
-   Version     : 2.0
+   Version     : 2.1
    Phase       : Phase 2
    Architecture: Enterprise
    Status      : Production
@@ -79,6 +79,11 @@ import Step6Review
 import {
   customerService,
 } from "../../../services/customer/customerService";
+
+
+import {
+  previewNextCustomerNumber,
+} from "../../../services/numbering/customerSeriesService";
 
 
 import type {
@@ -793,6 +798,14 @@ export default function CustomerWizard({
 
       try {
 
+        const draftWizardData = {
+          ...wizardData,
+        };
+
+
+        delete draftWizardData.customerId;
+
+
         localStorage.setItem(
 
           STORAGE_KEY,
@@ -801,7 +814,8 @@ export default function CustomerWizard({
 
             currentStep,
 
-            wizardData,
+            wizardData:
+              draftWizardData,
 
           }),
 
@@ -877,8 +891,16 @@ export default function CustomerWizard({
           draft.wizardData
         ) {
 
+          const restoredWizardData = {
+            ...draft.wizardData,
+          };
+
+
+          delete restoredWizardData.customerId;
+
+
           setWizardData(
-            draft.wizardData,
+            restoredWizardData,
           );
 
         }
@@ -938,6 +960,99 @@ export default function CustomerWizard({
   }, [
     isEditMode,
     loadDraft,
+  ]);
+
+
+  /* =========================================================
+     CUSTOMER NUMBER PREVIEW
+
+     IMPORTANT:
+     - CREATE mode only.
+     - Preview does NOT reserve or consume the sequence.
+     - Preview remains runtime wizard state only.
+     - Draft persistence intentionally excludes customerId.
+     - Edit mode preserves the historical Customer ID.
+  ========================================================= */
+
+  useEffect(() => {
+
+    if (
+      isEditMode ||
+      loadingDraft ||
+      wizardData.customerId?.trim()
+    ) {
+
+      return;
+
+    }
+
+
+    let cancelled =
+      false;
+
+
+    async function loadCustomerNumberPreview():
+      Promise<void> {
+
+      const result =
+        await previewNextCustomerNumber();
+
+
+      if (cancelled) {
+
+        return;
+
+      }
+
+
+      if (
+        !result.success ||
+        !result.data
+      ) {
+
+        console.error(
+          "FINORA CUSTOMER NUMBER PREVIEW FAILED:",
+          result.error ??
+            "Customer number preview is unavailable.",
+        );
+
+        return;
+
+      }
+
+
+      const previewCustomerId =
+        result.data.customerId;
+
+
+      setWizardData(
+        (previous) => ({
+
+          ...previous,
+
+          customerId:
+            previewCustomerId,
+
+        }),
+      );
+
+    }
+
+
+    void loadCustomerNumberPreview();
+
+
+    return () => {
+
+      cancelled =
+        true;
+
+    };
+
+  }, [
+    isEditMode,
+    loadingDraft,
+    wizardData.customerId,
   ]);
 
 

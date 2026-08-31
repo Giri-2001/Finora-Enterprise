@@ -58,7 +58,7 @@ export default function SettingsNavigation({
         </h2>
 
         <p className="finora-settings-navigation__subtitle">
-          Configure your Business, Branch, Business Owner and Gold Storage.
+          Configure your Business, Branch, Business Owner, Numbering & Series and Gold Storage.
         </p>
       </div>
 

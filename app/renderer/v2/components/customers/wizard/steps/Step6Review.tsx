@@ -4,7 +4,7 @@
    CUSTOMER WIZARD
    STEP 6 — REVIEW ACTION WORKSPACE
 
-   VERSION : 4.2
+   VERSION : 4.4
    STATUS  : Production
 
    RESPONSIBILITY:
@@ -96,6 +96,21 @@ import {
 } from "../../../../services/customer/customerService";
 
 
+import {
+  reserveNextCustomerNumber,
+} from "../../../../services/numbering/customerSeriesService";
+
+
+import {
+  requireBusinessContext,
+} from "../../../../services/business/businessContextService";
+
+
+import {
+  loadBusinessIdentity,
+} from "../../../../services/business/businessService";
+
+
 /* ==========================================================
    TYPES
 ========================================================== */
@@ -156,15 +171,6 @@ interface Step6ReviewProps {
 /* ==========================================================
    HELPERS
 ========================================================== */
-
-function generateCustomerId(): string {
-
-  return (
-    `FIN-CUS-${Date.now()}`
-  );
-
-}
-
 
 function valueOrEmpty(
   value?: string,
@@ -1202,13 +1208,116 @@ export default function Step6Review({
            NEW CUSTOMER
         ================================================== */
 
+        let activeBusinessId:
+          string;
+
+        let activeBranchId:
+          string;
+
+
+        try {
+
+          const businessContext =
+            requireBusinessContext();
+
+
+          activeBusinessId =
+            businessContext.businessId?.trim() ??
+            "";
+
+          activeBranchId =
+            businessContext.branchId?.trim() ??
+            "";
+
+
+          if (!activeBusinessId) {
+            throw new Error(
+              "Active FINORA Business ID is unavailable.",
+            );
+          }
+
+
+          if (!activeBranchId) {
+            throw new Error(
+              "Active FINORA Branch ID is unavailable.",
+            );
+          }
+
+        } catch (error) {
+
+          console.error(
+            "FINORA CUSTOMER BUSINESS CONTEXT FAILED:",
+            error,
+          );
+
+          return;
+
+        }
+
+
+        const businessIdentityResult =
+          await loadBusinessIdentity(
+            activeBusinessId,
+          );
+
+
+        if (
+          !businessIdentityResult.success ||
+          !businessIdentityResult.data
+        ) {
+
+          console.error(
+            "FINORA CUSTOMER BUSINESS IDENTITY FAILED:",
+            businessIdentityResult.error ??
+              "Business Identity is unavailable.",
+          );
+
+          return;
+
+        }
+
+
+        const activeBusinessName =
+          businessIdentityResult.data.businessName.trim();
+
+
+        if (!activeBusinessName) {
+
+          console.error(
+            "FINORA CUSTOMER BUSINESS NAME FAILED:",
+            "Registered Business Name is unavailable.",
+          );
+
+          return;
+
+        }
+
+
         const now =
           new Date().toISOString();
 
 
+        const reservationResult =
+          await reserveNextCustomerNumber();
+
+
+        if (
+          !reservationResult.success ||
+          !reservationResult.data
+        ) {
+
+          console.error(
+            "FINORA CUSTOMER NUMBER RESERVATION FAILED:",
+            reservationResult.error,
+          );
+
+          return;
+
+        }
+
+
         const finalCustomerId =
-          customerId ||
-          generateCustomerId();
+          reservationResult.data.customerId;
 
 
         const documents = {
@@ -1324,13 +1433,13 @@ export default function Step6Review({
               finalCustomerId,
 
             branchId:
-              "BR-001",
+              activeBranchId,
 
             businessId:
-              "FINORA-HYD-01",
+              activeBusinessId,
 
             businessName:
-              "FINORA Enterprise",
+              activeBusinessName,
 
             createdAt:
               now,
@@ -1658,7 +1767,7 @@ export default function Step6Review({
               5,
 
             branchId:
-              "BR-001",
+              activeBranchId,
 
             customerSince:
               now,

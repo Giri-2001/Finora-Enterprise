@@ -598,6 +598,39 @@ public final class FinoraControlPlugin
     private boolean isValidInstallation(
         JSONObject value
     ) {
+        boolean hasBusinessCode =
+            value.has(
+                "businessCode"
+            );
+
+        boolean hasBranchCode =
+            value.has(
+                "branchCode"
+            );
+
+        if (
+            hasBusinessCode !=
+            hasBranchCode
+        ) {
+            return false;
+        }
+
+        if (
+            hasBusinessCode &&
+            (
+                !hasRequiredString(
+                    value,
+                    "businessCode"
+                ) ||
+                !hasRequiredString(
+                    value,
+                    "branchCode"
+                )
+            )
+        ) {
+            return false;
+        }
+
         return (
             hasRequiredString(
                 value,

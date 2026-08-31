@@ -20,7 +20,7 @@
 // - No persistence.
 // - No business logic.
 //
-// VERSION : 1.0
+// VERSION : 1.1
 // STATUS  : Production Foundation
 // ============================================================
 
@@ -32,6 +32,7 @@ export type SettingsSectionId =
   | "business"
   | "branch"
   | "business-owner"
+  | "numbering-series"
   | "gold-storage";
 
 // ============================================================
