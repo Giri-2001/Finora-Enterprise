@@ -89,6 +89,10 @@ import {
   scheduledLoanNotificationSchedulerLifecycle,
 } from "../services/notifications/scheduler/scheduledLoanNotificationSchedulerLifecycle";
 
+import {
+  notificationDeliveryLifecycle,
+} from "../services/notifications/delivery/productionNotificationDeliveryRuntime";
+
 import BranchActivationRequired from "../pages/auth/BranchActivationRequired";
 
 import {
@@ -1130,21 +1134,31 @@ function AuthenticatedV2Application({
   // ==========================================================
 
   useEffect(() => {
+    const notificationScope = {
+      ownerId:
+        session.ownerId ?? "",
+
+      businessId:
+        session.businessId ?? "",
+
+      branchId:
+        session.branchId ?? "",
+    };
+
     scheduledLoanNotificationSchedulerLifecycle.start({
-      scope: {
-        ownerId:
-          session.ownerId ?? "",
+      scope:
+        notificationScope,
+    });
 
-        businessId:
-          session.businessId ?? "",
-
-        branchId:
-          session.branchId ?? "",
-      },
+    notificationDeliveryLifecycle.start({
+      scope:
+        notificationScope,
     });
 
     return () => {
       scheduledLoanNotificationSchedulerLifecycle.stop();
+
+      notificationDeliveryLifecycle.stop();
     };
   }, [
     session.ownerId,

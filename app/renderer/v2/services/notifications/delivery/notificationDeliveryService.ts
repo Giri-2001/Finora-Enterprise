@@ -48,6 +48,14 @@ import {
   notificationRepository,
 } from "../../../repositories/notifications/notificationRepository";
 
+import {
+  effectiveNotificationPolicyResolver,
+} from "../preferences/effectiveNotificationPolicyResolver";
+
+import type {
+  EffectiveNotificationPolicyBlockReason,
+} from "../preferences/effectiveNotificationPolicyResolver";
+
 import type {
   NotificationDeliveryRepositoryScope,
 } from "../../../repositories/notifications/notificationDeliveryRepository";
@@ -215,6 +223,34 @@ function resolveRecipientError(
   return "Notification delivery channel is unsupported.";
 }
 
+/* ============================================================
+   POLICY BLOCK MESSAGE
+============================================================ */
+
+function getPolicyBlockMessage(
+  reason:
+    EffectiveNotificationPolicyBlockReason,
+): string {
+  switch (reason) {
+    case "MISSING_BUSINESS_POLICY":
+      return "Business Notification policy is not configured.";
+
+    case "BUSINESS_DISABLED":
+      return "Business customer Notifications are disabled.";
+
+    case "BUSINESS_CHANNEL_DISABLED":
+      return "This customer Notification channel is disabled by Business policy.";
+
+    case "BUSINESS_EVENT_DISABLED":
+      return "This Notification event is disabled by Business policy.";
+
+    case "CUSTOMER_CHANNEL_DISABLED":
+      return "This Notification channel is disabled for the Customer.";
+
+    case "CUSTOMER_EVENT_DISABLED":
+      return "This Notification event is disabled for the Customer.";
+  }
+}
 /* ============================================================
    PERSIST UPDATED DELIVERY
 ============================================================ */
@@ -402,6 +438,112 @@ export class NotificationDeliveryService {
       };
     }
 
+    /* --------------------------------------------------------
+       DELIVERY-TIME POLICY RE-CHECK
+
+       Generation-time policy is not sufficient.
+
+       Business policy or Customer preferences may change
+       after a SCHEDULED / FAILED delivery was persisted.
+
+       Re-resolve effective policy before adapter,
+       connectivity, SENDING, or provider work.
+
+       Explicit policy blocks become auditable SKIPPED
+       deliveries using the same semantics as generation.
+    -------------------------------------------------------- */
+
+    const policyResult =
+      await effectiveNotificationPolicyResolver.resolve(
+        {
+          ownerId:
+            scope.ownerId,
+
+          businessId:
+            scope.businessId,
+
+          branchId:
+            scope.branchId,
+
+          customerId:
+            delivery.recipient.customerId,
+        },
+
+        {
+          channel:
+            delivery.channel,
+
+          eventType:
+            notification.eventType,
+        },
+      );
+
+    if (
+      !policyResult.success ||
+      !policyResult.data
+    ) {
+      return {
+        success: false,
+
+        delivery,
+
+        error:
+          policyResult.error ??
+          "Unable to re-check effective Notification policy before delivery.",
+      };
+    }
+
+    const policyDecision =
+      policyResult.data;
+
+    if (!policyDecision.allowed) {
+      const blockReason =
+        policyDecision.blockReason;
+
+      if (!blockReason) {
+        return {
+          success: false,
+
+          delivery,
+
+          error:
+            "Notification delivery policy was blocked without a block reason.",
+        };
+      }
+
+      const skippedDelivery:
+        NotificationDeliveryRecord = {
+          ...delivery,
+
+          status:
+            "SKIPPED",
+
+          nextRetryAt:
+            undefined,
+
+          skippedAt:
+            now,
+
+          failureCode:
+            blockReason,
+
+          failureMessage:
+            getPolicyBlockMessage(
+              blockReason,
+            ),
+
+          updatedAt:
+            now,
+        };
+
+      return persistDelivery(
+        scope,
+
+        skippedDelivery,
+
+        options,
+      );
+    }
     /* --------------------------------------------------------
        CHANNEL ADAPTER
     -------------------------------------------------------- */

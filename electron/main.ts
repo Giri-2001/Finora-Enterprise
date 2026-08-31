@@ -53,6 +53,14 @@ import {
   runFinoraDevelopmentProvisioning,
 } from "./control/finoraDevProvisioning.js";
 
+import {
+  registerFinoraNotificationProviderHandlers,
+} from "./notifications/finoraNotificationProviderIpc.js";
+
+import {
+  getFinoraNotificationProviderRegistry,
+} from "./notifications/finoraNotificationProviderRegistry.js";
+
 // ============================================================
 // PROMISIFIED SYSTEM COMMAND
 // ============================================================
@@ -1353,6 +1361,11 @@ app.whenReady().then(async () => {
 
   registerFinoraControlHandlers(
     isTrustedRenderer,
+  );
+
+  registerFinoraNotificationProviderHandlers(
+    isTrustedRenderer,
+    getFinoraNotificationProviderRegistry(),
   );
 
   await runFinoraDevelopmentProvisioning();

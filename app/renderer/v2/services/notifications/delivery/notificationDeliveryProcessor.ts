@@ -66,6 +66,26 @@ import type {
 export interface NotificationDeliveryProcessorDependencies {
   deliveryService: NotificationDeliveryService;
 
+  /*
+   * Required environment/configuration execution gate.
+   *
+   * Returning false defers a due Delivery without mutating
+   * its durable lifecycle state.
+   *
+   * Typical reasons:
+   * - Privileged provider bridge unavailable
+   * - Channel provider not configured yet
+   *
+   * No provider delivery may execute without this gate.
+   */
+
+  canExecute:
+    (
+      delivery:
+        NotificationDeliveryRecord,
+    ) =>
+      boolean | Promise<boolean>;
+
   now?: () => string;
 }
 
@@ -282,6 +302,63 @@ export class NotificationDeliveryProcessor {
       }
 
       eligible += 1;
+
+        /*
+         * A due Delivery may still be temporarily unavailable
+         * because its privileged provider channel is not
+         * configured.
+         *
+         * Preserve the durable Delivery state in that case.
+         * Configuration absence must not become a permanent
+         * FAILED Delivery merely because the processor woke up.
+         */
+
+      let canExecute =
+        false;
+
+      try {
+        canExecute =
+          await this.dependencies.canExecute(
+            delivery,
+          );
+      } catch (error) {
+        errors += 1;
+
+        items.push({
+          deliveryId:
+            delivery.id,
+
+          executed:
+            false,
+
+          status:
+            delivery.status,
+
+          error:
+            error instanceof Error
+              ? error.message
+              : "Unable to verify Notification delivery execution availability.",
+        });
+
+        continue;
+      }
+
+      if (!canExecute) {
+        deferred += 1;
+
+        items.push({
+          deliveryId:
+            delivery.id,
+
+          executed:
+            false,
+
+          status:
+            delivery.status,
+        });
+
+        continue;
+      }
 
       const executionResult =
         await this.dependencies.deliveryService.execute(

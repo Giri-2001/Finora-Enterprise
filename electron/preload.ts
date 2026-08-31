@@ -332,6 +332,81 @@ interface FinoraControlBridge {
 
 
 // ============================================================
+// ============================================================
+// FINORA NOTIFICATION PROVIDER BRIDGE CONTRACT
+// ============================================================
+
+type FinoraNotificationProviderChannel =
+  | "SMS"
+  | "WHATSAPP"
+  | "EMAIL";
+
+interface FinoraNotificationProviderConfigurationRequest {
+  channel:
+    FinoraNotificationProviderChannel;
+}
+
+interface FinoraNotificationProviderSendRequest {
+  notificationId: string;
+
+  deliveryId: string;
+
+  channel:
+    FinoraNotificationProviderChannel;
+
+  title: string;
+
+  message: string;
+
+  customerId: string;
+
+  customerName?: string;
+
+  phoneNumber?: string;
+
+  whatsappNumber?: string;
+
+  emailAddress?: string;
+}
+
+type FinoraNotificationProviderSendOutcome =
+  | {
+      success: true;
+
+      providerMessageId?: string;
+
+      acceptedAt: string;
+    }
+  | {
+      success: false;
+
+      retryable: boolean;
+
+      failureCode: string;
+
+      failureMessage: string;
+    };
+
+interface FinoraNotificationProviderBridge {
+  isConfigured(
+    request:
+      FinoraNotificationProviderConfigurationRequest,
+  ):
+    Promise<
+      StorageResult<boolean>
+    >;
+
+  send(
+    request:
+      FinoraNotificationProviderSendRequest,
+  ):
+    Promise<
+      StorageResult<
+        FinoraNotificationProviderSendOutcome
+      >
+    >;
+}
+
 // IPC CHANNELS
 // ============================================================
 
@@ -575,6 +650,56 @@ const usbBridge:
 
 
 // ============================================================
+// FINORA NOTIFICATION PROVIDER IPC CHANNELS
+// ============================================================
+
+const NOTIFICATION_PROVIDER_CHANNELS = {
+  IS_CONFIGURED:
+    "finora:notifications:is-configured",
+
+  SEND:
+    "finora:notifications:send",
+} as const;
+
+
+// ============================================================
+// FINORA NOTIFICATION PROVIDER BRIDGE
+//
+// Provider credentials remain inside Electron main.
+// Renderer receives only safe configuration state and
+// normalized delivery outcomes.
+// ============================================================
+
+const notificationProviderBridge:
+  FinoraNotificationProviderBridge = {
+
+  isConfigured:
+    (
+      request:
+        FinoraNotificationProviderConfigurationRequest,
+    ) =>
+      ipcRenderer.invoke(
+        NOTIFICATION_PROVIDER_CHANNELS.IS_CONFIGURED,
+        request,
+      ) as Promise<
+        StorageResult<boolean>
+      >,
+
+  send:
+    (
+      request:
+        FinoraNotificationProviderSendRequest,
+    ) =>
+      ipcRenderer.invoke(
+        NOTIFICATION_PROVIDER_CHANNELS.SEND,
+        request,
+      ) as Promise<
+        StorageResult<
+          FinoraNotificationProviderSendOutcome
+        >
+      >,
+};
+
 // FINORA CONTROL BRIDGE
 //
 // READ / CHECK ONLY.
@@ -654,6 +779,9 @@ contextBridge.exposeInMainWorld(
 
     control:
       controlBridge,
+
+    notifications:
+      notificationProviderBridge,
 
   },
 );

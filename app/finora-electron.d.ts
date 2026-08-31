@@ -1,4 +1,4 @@
-﻿// ============================================================
+// ============================================================
 // FINORA ENTERPRISE OS™
 //
 // RENDERER ELECTRON BRIDGE DECLARATIONS
@@ -119,6 +119,95 @@ interface FinoraElectronControlBridge {
 }
 
 // ============================================================
+// NOTIFICATION PROVIDER BRIDGE
+// ============================================================
+
+type FinoraNotificationProviderChannel =
+  | "SMS"
+  | "WHATSAPP"
+  | "EMAIL";
+
+interface FinoraNotificationProviderConfigurationRequest {
+  channel:
+    FinoraNotificationProviderChannel;
+}
+
+interface FinoraNotificationProviderSendRequest {
+  notificationId: string;
+
+  deliveryId: string;
+
+  channel:
+    FinoraNotificationProviderChannel;
+
+  title: string;
+
+  message: string;
+
+  customerId: string;
+
+  customerName?: string;
+
+  phoneNumber?: string;
+
+  whatsappNumber?: string;
+
+  emailAddress?: string;
+}
+
+type FinoraNotificationProviderSendOutcome =
+  | {
+      success: true;
+
+      providerMessageId?: string;
+
+      acceptedAt: string;
+    }
+  | {
+      success: false;
+
+      retryable: boolean;
+
+      failureCode: string;
+
+      failureMessage: string;
+    };
+
+interface FinoraElectronNotificationProviderBridge {
+
+  /**
+   * Returns only whether the privileged provider for one
+   * Notification channel is configured and usable.
+   *
+   * Credential material is never exposed to the renderer.
+   */
+  isConfigured(
+    request:
+      FinoraNotificationProviderConfigurationRequest,
+  ):
+    Promise<
+      FinoraElectronResult<boolean>
+    >;
+
+  /**
+   * Requests one privileged provider delivery.
+   *
+   * The renderer supplies delivery content and durable identity.
+   * Provider credentials remain inside the privileged process.
+   */
+  send(
+    request:
+      FinoraNotificationProviderSendRequest,
+  ):
+    Promise<
+      FinoraElectronResult<
+        FinoraNotificationProviderSendOutcome
+      >
+    >;
+}
+
+
+// ============================================================
 // ROOT FINORA BRIDGE
 // ============================================================
 
@@ -141,6 +230,14 @@ interface FinoraElectronRendererBridge {
    * Read-only FINORA device control API.
    */
   control: FinoraElectronControlBridge;
+
+  /**
+   * Secure privileged Notification provider API.
+   *
+   * Provider credentials are never exposed through this bridge.
+   */
+  notifications:
+    FinoraElectronNotificationProviderBridge;
 }
 
 // ============================================================

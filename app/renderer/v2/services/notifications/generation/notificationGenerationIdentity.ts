@@ -10,7 +10,7 @@
 // - Build deterministic initial Customer Delivery IDs.
 // - Prevent duplicate generation across restart / catch-up runs.
 // - Keep mutable Loan values out of durable identity.
-// - Reserve separate identity space for future manual resends.
+// - Build deterministic manual resend Customer Delivery IDs.
 //
 // IMPORTANT:
 //
@@ -108,6 +108,27 @@ export interface InitialNotificationDeliveryIdentityInput {
   notificationId: NotificationId;
 
   channel: CustomerNotificationChannel;
+}
+
+/* ============================================================
+   MANUAL RESEND DELIVERY IDENTITY INPUT
+============================================================ */
+
+export interface ManualResendNotificationDeliveryIdentityInput {
+  notificationId:
+    NotificationId;
+
+  channel:
+    CustomerNotificationChannel;
+
+  /*
+   * Timestamp captured once when the resend request is created.
+   *
+   * Reusing the same request timestamp produces the same
+   * deterministic Delivery ID across retry/restart boundaries.
+   */
+  resendRequestedAt:
+    string;
 }
 
 /* ============================================================
@@ -411,6 +432,90 @@ export function buildInitialNotificationDeliveryId(
       "INITIAL",
     ]
       .map(encodeIdentitySegment)
+      .join("::");
+
+  return {
+    success: true,
+
+    id,
+  };
+}
+
+/* ============================================================
+   MANUAL RESEND CUSTOMER DELIVERY ID
+============================================================ */
+
+export function buildManualResendNotificationDeliveryId(
+  input:
+    ManualResendNotificationDeliveryIdentityInput,
+): NotificationIdentityBuildResult<NotificationDeliveryId> {
+  const notificationId =
+    normalizeString(
+      input.notificationId,
+    );
+
+  if (!notificationId) {
+    return {
+      success: false,
+
+      error:
+        "Notification ID is required to build manual resend Delivery identity.",
+    };
+  }
+
+  if (
+    !VALID_CUSTOMER_CHANNELS.includes(
+      input.channel,
+    )
+  ) {
+    return {
+      success: false,
+
+      error:
+        "Customer Notification channel is invalid for manual resend Delivery identity.",
+    };
+  }
+
+  const requestedAt =
+    normalizeString(
+      input.resendRequestedAt,
+    );
+
+  const requestedAtTimestamp =
+    Date.parse(
+      requestedAt,
+    );
+
+  if (
+    !requestedAt ||
+    !Number.isFinite(
+      requestedAtTimestamp,
+    )
+  ) {
+    return {
+      success: false,
+
+      error:
+        "Manual resend request timestamp is invalid.",
+    };
+  }
+
+  const canonicalRequestedAt =
+    new Date(
+      requestedAtTimestamp,
+    ).toISOString();
+
+  const id =
+    [
+      "DLV",
+      notificationId,
+      input.channel,
+      "RESEND",
+      canonicalRequestedAt,
+    ]
+      .map(
+        encodeIdentitySegment,
+      )
       .join("::");
 
   return {
