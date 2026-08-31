@@ -817,6 +817,9 @@ export class NotificationDeliveryService {
           message:
             notification.message,
 
+          templateContext:
+            notification.templateContext,
+
           customerId:
             sendingDelivery.recipient.customerId,
 

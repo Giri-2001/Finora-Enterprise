@@ -40,6 +40,29 @@ export type FinoraNotificationProviderChannel =
   | "SMS"
   | "WHATSAPP"
   | "EMAIL";
+/* ============================================================
+   EXTERNAL TEMPLATE CONTEXT
+============================================================ */
+
+/**
+ * FINORA-owned structured context for external provider
+ * templates.
+ *
+ * Vendor template / flow identifiers and provider credentials
+ * do not belong in this renderer-owned request context.
+ */
+export interface FinoraNotificationProviderTemplateContext {
+  templateKey: string;
+
+  requestedLanguage?: string;
+
+  resolvedLanguage?: string;
+
+  variables:
+    Record<string, string>;
+
+  schemaVersion: 1;
+}
 
 /* ============================================================
    SEND REQUEST
@@ -63,6 +86,16 @@ export interface FinoraNotificationProviderSendRequest {
   title: string;
 
   message: string;
+
+  /*
+   * Optional FINORA-owned structured template context.
+   *
+   * Provider implementations may map this context to their own
+   * approved template or flow without parsing rendered text.
+   */
+
+  templateContext?:
+    FinoraNotificationProviderTemplateContext;
 
   customerId: string;
 

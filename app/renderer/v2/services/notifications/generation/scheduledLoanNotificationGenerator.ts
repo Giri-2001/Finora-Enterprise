@@ -1047,6 +1047,23 @@ export class ScheduledLoanNotificationGenerator {
       );
     }
 
+    const templateLoanNumber =
+      normalizeString(
+        input.match.source.loanNumber,
+      );
+
+    const templateDueAt =
+      normalizeString(
+        input.match.dueAt,
+      );
+
+    const templateDueAmount =
+      input.match.installmentRemainingTotal > 0
+        ? input.match.installmentRemainingTotal
+        : input.match.loanOutstanding;
+
+    const templateResolvedLanguage =
+      customerContentResult.content.customer.resolvedLanguage;
     const customerNotification:
       CustomerNotificationRecord = {
         id:
@@ -1076,6 +1093,42 @@ export class ScheduledLoanNotificationGenerator {
 
         source:
           input.match.source,
+
+        templateContext: {
+          templateKey:
+            `SCHEDULED_LOAN::${input.match.eventType}::${templateResolvedLanguage.toUpperCase()}`,
+
+          requestedLanguage:
+            customerContentResult.content.customer.requestedLanguage,
+
+          resolvedLanguage:
+            templateResolvedLanguage,
+
+          variables: {
+            ...(templateLoanNumber
+              ? {
+                  loanNumber:
+                    templateLoanNumber,
+                }
+              : {}),
+
+            dueAt:
+              templateDueAt,
+
+            dueAmount:
+              String(
+                templateDueAmount,
+              ),
+
+            outstandingAmount:
+              String(
+                input.match.loanOutstanding,
+              ),
+          },
+
+          schemaVersion:
+            1,
+        },
 
         scheduledFor:
           input.scheduledFor,

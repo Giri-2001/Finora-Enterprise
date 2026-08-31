@@ -122,6 +122,52 @@ export interface NotificationSourceReference {
 
   receiptNumber?: string;
 }
+/* ===========================================================
+   EXTERNAL TEMPLATE CONTEXT
+=========================================================== */
+
+/**
+ * Vendor-neutral structured context for external customer
+ * message templates.
+ *
+ * Provider integrations map templateKey to their own
+ * provider-specific template / flow identity.
+ *
+ * Rendered Notification message text must never be parsed back
+ * into template variables by a provider adapter.
+ */
+export interface NotificationTemplateContext {
+  /*
+   * Stable FINORA template identity.
+   *
+   * Example shape:
+   * SCHEDULED_LOAN::LOAN_DUE::TELUGU
+   *
+   * The value is FINORA-owned, not a vendor template ID.
+   */
+
+  templateKey: string;
+
+  /*
+   * Original Customer language preference and the language
+   * actually used when FINORA generated the content.
+   */
+
+  requestedLanguage?: string;
+
+  resolvedLanguage?: string;
+
+  /*
+   * Named normalized values required by external provider
+   * templates.
+   *
+   * Provider-specific parameter names do not belong here.
+   */
+
+  variables: Record<string, string>;
+
+  schemaVersion: 1;
+}
 
 /* ===========================================================
    CANONICAL NOTIFICATION RECORD
@@ -206,6 +252,13 @@ export interface OwnerNotificationRecord
 export interface CustomerNotificationRecord
   extends NotificationRecordBase {
   audience: "CUSTOMER";
+
+  /*
+   * Optional for legacy records and Customer Notification event
+   * types that do not require an external provider template.
+   */
+
+  templateContext?: NotificationTemplateContext;
 
   readState?: never;
 

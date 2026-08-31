@@ -42,6 +42,7 @@ import type {
   FinoraNotificationProviderRegistry,
   FinoraNotificationProviderSendOutcome,
   FinoraNotificationProviderSendRequest,
+  FinoraNotificationProviderTemplateContext,
 } from "./finoraNotificationProvider.types.js";
 
 /* ============================================================
@@ -118,6 +119,74 @@ function isOptionalNonEmptyString(
   );
 }
 
+function isTemplateVariables(
+  value: unknown,
+): value is Record<string, string> {
+  if (
+    typeof value !== "object" ||
+    value === null ||
+    Array.isArray(value)
+  ) {
+    return false;
+  }
+
+  const variables =
+    value as Record<string, unknown>;
+
+  return Object.entries(
+    variables,
+  ).every(
+    ([key, variableValue]) =>
+      isNonEmptyString(key) &&
+      isNonEmptyString(variableValue),
+  );
+}
+
+function isTemplateContext(
+  value: unknown,
+): value is FinoraNotificationProviderTemplateContext {
+  if (
+    typeof value !== "object" ||
+    value === null ||
+    Array.isArray(value)
+  ) {
+    return false;
+  }
+
+  const context =
+    value as Record<string, unknown>;
+
+  return (
+    isNonEmptyString(
+      context.templateKey,
+    ) &&
+    isOptionalNonEmptyString(
+      context.requestedLanguage,
+    ) &&
+    isOptionalNonEmptyString(
+      context.resolvedLanguage,
+    ) &&
+    isTemplateVariables(
+      context.variables,
+    ) &&
+    context.schemaVersion === 1
+  );
+}
+
+function isOptionalTemplateContext(
+  value: unknown,
+): value is
+  | FinoraNotificationProviderTemplateContext
+  | undefined {
+  return (
+    value === undefined ||
+    isTemplateContext(value)
+  );
+}
+
+/* ============================================================
+   CHANNEL VALIDATION
+============================================================ */
 function isChannel(
   value: unknown,
 ): value is FinoraNotificationProviderChannel {
@@ -175,6 +244,7 @@ function isSendRequest(
     !isChannel(request.channel) ||
     !isNonEmptyString(request.title) ||
     !isNonEmptyString(request.message) ||
+    !isOptionalTemplateContext(request.templateContext) ||
     !isNonEmptyString(request.customerId) ||
     !isOptionalNonEmptyString(request.customerName) ||
     !isOptionalNonEmptyString(request.phoneNumber) ||

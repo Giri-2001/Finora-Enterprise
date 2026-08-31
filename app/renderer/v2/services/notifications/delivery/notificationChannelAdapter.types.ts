@@ -29,6 +29,7 @@ import type {
   CustomerNotificationChannel,
   NotificationDeliveryRecord,
   NotificationId,
+  NotificationTemplateContext,
 } from "../../../types/notifications/notification.types";
 
 /* ============================================================
@@ -45,6 +46,15 @@ export interface NotificationChannelSendRequest {
   title: string;
 
   message: string;
+
+  /*
+   * Optional vendor-neutral structured template context.
+   *
+   * Provider adapters may map this FINORA-owned context to
+   * provider-specific templates without parsing rendered text.
+   */
+
+  templateContext?: NotificationTemplateContext;
 
   customerId: string;
 

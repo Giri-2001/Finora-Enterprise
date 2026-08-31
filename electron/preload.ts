@@ -341,6 +341,18 @@ type FinoraNotificationProviderChannel =
   | "WHATSAPP"
   | "EMAIL";
 
+interface FinoraNotificationTemplateContext {
+  templateKey: string;
+
+  requestedLanguage?: string;
+
+  resolvedLanguage?: string;
+
+  variables:
+    Record<string, string>;
+
+  schemaVersion: 1;
+}
 interface FinoraNotificationProviderConfigurationRequest {
   channel:
     FinoraNotificationProviderChannel;
@@ -357,6 +369,14 @@ interface FinoraNotificationProviderSendRequest {
   title: string;
 
   message: string;
+
+  /**
+   * FINORA-owned structured external-template context.
+   *
+   * No provider credentials or vendor template IDs belong here.
+   */
+  templateContext?:
+    FinoraNotificationTemplateContext;
 
   customerId: string;
 

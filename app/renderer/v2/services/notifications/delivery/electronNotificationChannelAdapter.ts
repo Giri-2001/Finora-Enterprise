@@ -160,6 +160,13 @@ export class ElectronNotificationChannelAdapter
           message:
             request.message,
 
+          ...(request.templateContext
+            ? {
+                templateContext:
+                  request.templateContext,
+              }
+            : {}),
+
           customerId:
             request.customerId,
 
