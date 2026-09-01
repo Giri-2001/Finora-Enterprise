@@ -20,4 +20,5 @@ export interface GlobalHeaderProps {
 
   onNotificationsClick?: () => void;
 
+  onWalletClick?: () => void;
 }

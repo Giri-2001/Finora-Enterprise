@@ -89,6 +89,7 @@ export default function GlobalHeader({
 
   onNotificationsClick,
 
+  onWalletClick,
 }: GlobalHeaderProps) {
 
 
@@ -174,6 +175,7 @@ export default function GlobalHeader({
 
     rightStyle,
 
+    actionStyle,
     backButtonStyle,
 
     backIconStyle,
@@ -440,6 +442,29 @@ export default function GlobalHeader({
     onLogout
   }
 />
+        {/* ===================================================
+           FINORA WALLET
+        =================================================== */}
+
+        <button
+
+          type="button"
+
+          onClick={() => {
+            onWalletClick?.();
+          }}
+
+          aria-label="Open FINORA Wallet"
+
+          title="FINORA Wallet"
+
+          style={
+            actionStyle
+          }
+
+        >
+          FINORA Wallet
+        </button>
       </div>
 
     </header>

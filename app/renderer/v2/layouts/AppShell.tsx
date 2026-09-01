@@ -52,7 +52,8 @@ export type AppPage =
   | "accounts"
   | "reports"
   | "notifications"
-  | "settings";
+  | "settings"
+  | "wallet";
 
 // ============================================================
 // PROPS
@@ -74,6 +75,8 @@ interface AppShellProps {
   notificationUnreadCount?: number;
 
   onNotificationsClick?: () => void;
+
+  onWalletClick?: () => void;
 }
 
 // ============================================================
@@ -96,6 +99,8 @@ export default function AppShell({
   notificationUnreadCount = 0,
 
   onNotificationsClick,
+
+  onWalletClick,
 }: AppShellProps) {
   // ==========================================================
   // DEPARTMENT TITLE
@@ -122,7 +127,9 @@ export default function AppShell({
                     ? "Reports"
                     : page === "notifications"
                       ? "Notification Center"
-                      : "Reception";
+                      : page === "wallet"
+                        ? "FINORA Wallet"
+                        : "Reception";
 
   // ==========================================================
   // RENDER
@@ -189,6 +196,7 @@ export default function AppShell({
         onLogout={onLogout}
         notificationUnreadCount={notificationUnreadCount}
         onNotificationsClick={onNotificationsClick}
+        onWalletClick={onWalletClick}
       />
 
       {/* =====================================================

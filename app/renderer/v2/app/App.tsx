@@ -1,4 +1,4 @@
-// ============================================================
+﻿// ============================================================
 // FINORA ENTERPRISE OS™
 //
 // V2 APPLICATION ENTRY
@@ -82,6 +82,8 @@ import ReportsPage from "../pages/reports/ReportsPage";
 import NotificationsPage from "../pages/notifications/NotificationsPage";
 
 import SettingsPage from "../pages/settings/SettingsPage";
+
+import WalletPage from "../pages/wallet/WalletPage";
 
 import LoanStudio from "../components/customers/office/CustomerOffice/components/LoanStudio";
 
@@ -190,7 +192,8 @@ type Page =
   | "accounts"
   | "reports"
   | "notifications"
-  | "settings";
+  | "settings"
+  | "wallet";
 
 // ============================================================
 // CONSTANTS
@@ -291,7 +294,8 @@ function isValidPage(value: unknown): value is Page {
     value === "accounts" ||
     value === "reports" ||
     value === "notifications" ||
-    value === "settings"
+    value === "settings" ||
+    value === "wallet"
   );
 }
 
@@ -1575,6 +1579,9 @@ function AuthenticatedV2Application({
         onNotificationsClick={() => {
           handleNavigate("notifications");
         }}
+          onWalletClick={() => {
+            handleNavigate("wallet");
+          }}
       >
         {/* ==================================================
             RECEPTION
@@ -1657,6 +1664,20 @@ function AuthenticatedV2Application({
         ================================================== */}
 
         {page === "settings" && <SettingsPage />}
+
+        {/* ==================================================
+            FINORA WALLET
+        ================================================== */}
+
+        {page === "wallet" && (
+          <WalletPage
+            scope={{
+              ownerId: session.ownerId ?? "",
+              businessId: session.businessId ?? "",
+              branchId: session.branchId ?? "",
+            }}
+          />
+        )}
       </AppShell>
     </SessionGuard>
   );
@@ -1679,3 +1700,4 @@ export default function App() {
 // ============================================================
 // END
 // ============================================================
+
