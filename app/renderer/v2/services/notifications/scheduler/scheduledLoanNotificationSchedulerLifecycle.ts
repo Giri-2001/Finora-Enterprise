@@ -143,6 +143,14 @@ export class ScheduledLoanNotificationSchedulerLifecycle {
   private lastResult:
     ScheduledLoanNotificationSchedulerExecutionResult | undefined;
 
+  /**
+   * Prevent identical execution-boundary failures from
+   * flooding the console on focus, visibility and
+   * recovery wake-ups.
+   */
+  private lastReportedFailure:
+    string | undefined;
+
   // ==========================================================
   // START
   // ==========================================================
@@ -232,6 +240,9 @@ export class ScheduledLoanNotificationSchedulerLifecycle {
       undefined;
 
     this.nextWakeAt =
+      undefined;
+
+    this.lastReportedFailure =
       undefined;
   }
 
@@ -386,10 +397,21 @@ export class ScheduledLoanNotificationSchedulerLifecycle {
           result;
 
         if (!result.success) {
-          console.warn(
-            "FINORA scheduled Notification scheduler execution failed:",
-            result.error,
-          );
+          const shouldReportFailure =
+            result.errorCode !==
+              "BUSINESS_SETTINGS_NOT_CONFIGURED" &&
+            result.error !==
+              this.lastReportedFailure;
+
+          if (shouldReportFailure) {
+            console.warn(
+              "FINORA scheduled Notification scheduler execution failed:",
+              result.error,
+            );
+          }
+
+          this.lastReportedFailure =
+            result.error;
 
           /**
            * A due-slot execution failure must not wait until
@@ -403,6 +425,9 @@ export class ScheduledLoanNotificationSchedulerLifecycle {
 
           continue;
         }
+
+        this.lastReportedFailure =
+          undefined;
 
         const nextSlot =
           this.getNextSlotFromResult(

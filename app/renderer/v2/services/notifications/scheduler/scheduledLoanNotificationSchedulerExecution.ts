@@ -112,6 +112,9 @@ export type ScheduledLoanNotificationSchedulerExecutionResult =
   | {
       success: false;
 
+      errorCode?:
+        "BUSINESS_SETTINGS_NOT_CONFIGURED";
+
       error:
         string;
 
@@ -312,6 +315,9 @@ export class ScheduledLoanNotificationSchedulerExecution {
     if (!settings) {
       return {
         success: false,
+
+        errorCode:
+          "BUSINESS_SETTINGS_NOT_CONFIGURED",
 
         error:
           "Business Settings are not configured for scheduled Loan Notification execution.",

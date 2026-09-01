@@ -611,11 +611,17 @@ export function getLoginStyles(
     minWidth:
       0,
 
-    padding:
+    paddingTop:
+      spacingTokens.small,
+
+    paddingRight:
       loginTokens.cardPadding,
 
-    paddingTop:
-  spacingTokens.small,
+    paddingBottom:
+      loginTokens.cardPadding,
+
+    paddingLeft:
+      loginTokens.cardPadding,
 
     background:
       COLORS.surface,
