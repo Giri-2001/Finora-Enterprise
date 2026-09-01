@@ -49,6 +49,10 @@ import type {
   NotificationDeliveryRepositoryScope,
 } from "../../../repositories/notifications/notificationDeliveryRepository";
 
+import {
+  emitNotificationDataChanged,
+} from "../notificationDataChangeSignal";
+
 import type {
   RepositoryWriteOptions,
 } from "../../../repositories/repository.types";
@@ -384,6 +388,29 @@ export class NotificationSendingRecoveryService {
 
         continue;
       }
+
+      emitNotificationDataChanged({
+        ownerId:
+          updateResult.data.ownerId,
+
+        businessId:
+          updateResult.data.businessId,
+
+        branchId:
+          updateResult.data.branchId,
+
+        resource:
+          "DELIVERY",
+
+        operation:
+          "UPDATED",
+
+        notificationId:
+          updateResult.data.notificationId,
+
+        deliveryId:
+          updateResult.data.id,
+      });
 
       report.recovered +=
         1;

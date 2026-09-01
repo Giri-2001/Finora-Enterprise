@@ -85,6 +85,10 @@ export default function GlobalHeader({
 
   onLogout,
 
+  notificationUnreadCount = 0,
+
+  onNotificationsClick,
+
 }: GlobalHeaderProps) {
 
 
@@ -414,8 +418,10 @@ export default function GlobalHeader({
 
         <NotificationBell
 
+          unreadCount={notificationUnreadCount}
+
           onClick={() => {
-            /* Notifications */
+            onNotificationsClick?.();
           }}
 
         />

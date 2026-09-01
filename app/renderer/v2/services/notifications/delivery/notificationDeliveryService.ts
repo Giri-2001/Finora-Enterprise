@@ -49,6 +49,10 @@ import {
 } from "../../../repositories/notifications/notificationRepository";
 
 import {
+  emitNotificationDataChanged,
+} from "../notificationDataChangeSignal";
+
+import {
   effectiveNotificationPolicyResolver,
 } from "../preferences/effectiveNotificationPolicyResolver";
 
@@ -282,6 +286,29 @@ async function persistDelivery(
         "Unable to persist Notification delivery state.",
     };
   }
+
+  emitNotificationDataChanged({
+    ownerId:
+      updateResult.data.ownerId,
+
+    businessId:
+      updateResult.data.businessId,
+
+    branchId:
+      updateResult.data.branchId,
+
+    resource:
+      "DELIVERY",
+
+    operation:
+      "UPDATED",
+
+    notificationId:
+      updateResult.data.notificationId,
+
+    deliveryId:
+      updateResult.data.id,
+  });
 
   return {
     success: true,

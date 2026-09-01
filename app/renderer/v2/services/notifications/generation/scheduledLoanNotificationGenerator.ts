@@ -91,6 +91,10 @@ import {
   resolveScheduledLoanNotificationPriority,
 } from "./scheduledLoanNotificationPriority";
 
+import {
+  emitNotificationDataChanged,
+} from "../notificationDataChangeSignal";
+
 import type {
   RepositoryWriteOptions,
 } from "../../../repositories/repository.types";
@@ -968,6 +972,28 @@ export class ScheduledLoanNotificationGenerator {
     if (ownerEnsure.success) {
       report.owner.state =
         ownerEnsure.state;
+
+      if (ownerEnsure.state === "CREATED") {
+        emitNotificationDataChanged({
+          ownerId:
+            ownerEnsure.record.ownerId,
+
+          businessId:
+            ownerEnsure.record.businessId,
+
+          branchId:
+            ownerEnsure.record.branchId,
+
+          resource:
+            "NOTIFICATION",
+
+          operation:
+            "CREATED",
+
+          notificationId:
+            ownerEnsure.record.id,
+        });
+      }
     } else {
       report.owner.error =
         ownerEnsure.error;
@@ -1411,6 +1437,31 @@ export class ScheduledLoanNotificationGenerator {
         );
 
         continue;
+      }
+
+      if (deliveryEnsure.state === "CREATED") {
+        emitNotificationDataChanged({
+          ownerId:
+            deliveryEnsure.record.ownerId,
+
+          businessId:
+            deliveryEnsure.record.businessId,
+
+          branchId:
+            deliveryEnsure.record.branchId,
+
+          resource:
+            "DELIVERY",
+
+          operation:
+            "CREATED",
+
+          notificationId:
+            deliveryEnsure.record.notificationId,
+
+          deliveryId:
+            deliveryEnsure.record.id,
+        });
       }
 
       report.deliveries.push({

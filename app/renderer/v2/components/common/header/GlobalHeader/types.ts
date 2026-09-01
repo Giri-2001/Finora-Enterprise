@@ -16,4 +16,8 @@ export interface GlobalHeaderProps {
 
   onLogout: () => void;
 
+  notificationUnreadCount?: number;
+
+  onNotificationsClick?: () => void;
+
 }

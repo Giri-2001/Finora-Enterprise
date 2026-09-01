@@ -45,6 +45,10 @@ import type {
   NotificationDeliveryRepositoryScope,
 } from "../../../repositories/notifications/notificationDeliveryRepository";
 
+import {
+  emitNotificationDataChanged,
+} from "../notificationDataChangeSignal";
+
 import type {
   RepositoryWriteOptions,
 } from "../../../repositories/repository.types";
@@ -423,6 +427,29 @@ export class NotificationManualResendService {
           "Unable to create manual resend Notification Delivery.",
       };
     }
+
+    emitNotificationDataChanged({
+      ownerId:
+        saveResult.data.ownerId,
+
+      businessId:
+        saveResult.data.businessId,
+
+      branchId:
+        saveResult.data.branchId,
+
+      resource:
+        "DELIVERY",
+
+      operation:
+        "CREATED",
+
+      notificationId:
+        saveResult.data.notificationId,
+
+      deliveryId:
+        saveResult.data.id,
+    });
 
     return {
       success: true,

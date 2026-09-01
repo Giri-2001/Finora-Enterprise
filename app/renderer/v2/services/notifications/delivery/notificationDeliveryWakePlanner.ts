@@ -278,6 +278,26 @@ export class NotificationDeliveryWakePlanner {
       }
 
       // ------------------------------------------------------
+      // MANUAL RESEND
+      //
+      // A manual resend is a new SCHEDULED Delivery whose
+      // resendRequestedAt is the explicit command timestamp.
+      //
+      // nextRetryAt remains authoritative above if the resend
+      // was subsequently deferred by offline/retry handling.
+      // ------------------------------------------------------
+
+      if (delivery.resendRequestedAt) {
+        considerTimestamp(
+          delivery,
+          delivery.resendRequestedAt,
+          "resendRequestedAt",
+        );
+
+        continue;
+      }
+
+      // ------------------------------------------------------
       // INITIAL NOTIFICATION SCHEDULE
       // ------------------------------------------------------
 

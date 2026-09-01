@@ -554,6 +554,42 @@ export class NotificationDeliveryProcessor {
     }
 
     /* --------------------------------------------------------
+       MANUAL RESEND
+
+       A manual resend is a new SCHEDULED Delivery whose
+       resendRequestedAt is the explicit command timestamp.
+
+       nextRetryAt remains authoritative above when a manual
+       resend was later deferred by offline/retry handling.
+
+       Do not fall back to the original logical Notification
+       scheduledFor for an explicit manual resend.
+    -------------------------------------------------------- */
+
+    if (delivery.resendRequestedAt) {
+      const resendDue =
+        isTimestampDue(
+          delivery.resendRequestedAt,
+
+          nowTimestamp,
+        );
+
+      if (resendDue === undefined) {
+        return {
+          eligible: false,
+
+          error:
+            `Notification delivery ${delivery.id} has an invalid resendRequestedAt timestamp.`,
+        };
+      }
+
+      return {
+        eligible:
+          resendDue,
+      };
+    }
+
+    /* --------------------------------------------------------
        INITIAL SCHEDULE
 
        Initial scheduling belongs to the canonical logical

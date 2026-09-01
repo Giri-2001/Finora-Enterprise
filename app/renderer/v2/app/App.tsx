@@ -79,6 +79,8 @@ import AccountsOffice from "../pages/accounts/AccountsOffice";
 
 import ReportsPage from "../pages/reports/ReportsPage";
 
+import NotificationsPage from "../pages/notifications/NotificationsPage";
+
 import SettingsPage from "../pages/settings/SettingsPage";
 
 import LoanStudio from "../components/customers/office/CustomerOffice/components/LoanStudio";
@@ -92,6 +94,15 @@ import {
 import {
   notificationDeliveryLifecycle,
 } from "../services/notifications/delivery/productionNotificationDeliveryRuntime";
+
+import {
+  notificationCenterService,
+} from "../services/notifications/center/notificationCenterService";
+
+import {
+  notificationDataChangeMatchesScope,
+  subscribeNotificationDataChanged,
+} from "../services/notifications/notificationDataChangeSignal";
 
 import BranchActivationRequired from "../pages/auth/BranchActivationRequired";
 
@@ -178,6 +189,7 @@ type Page =
   | "collections"
   | "accounts"
   | "reports"
+  | "notifications"
   | "settings";
 
 // ============================================================
@@ -278,6 +290,7 @@ function isValidPage(value: unknown): value is Page {
     value === "collections" ||
     value === "accounts" ||
     value === "reports" ||
+    value === "notifications" ||
     value === "settings"
   );
 }
@@ -1117,6 +1130,129 @@ function AuthenticatedV2Application({
   const page = navigation.page;
 
   // ==========================================================
+  // OWNER NOTIFICATION UNREAD COUNT
+  // ==========================================================
+
+  const [
+    notificationUnreadCount,
+    setNotificationUnreadCount,
+  ] = useState<number>(0);
+
+  // ==========================================================
+  // OWNER NOTIFICATION UNREAD LIFECYCLE
+  //
+  // The authenticated App boundary owns the authoritative
+  // Owner / Business / Branch scope.
+  //
+  // Initial load reads persisted Owner unread state.
+  // Notification-domain changes refresh only the matching
+  // authenticated scope.
+  //
+  // Delivery-only changes do not affect the global unread badge.
+  // ==========================================================
+
+  useEffect(() => {
+    let active =
+      true;
+
+    let loadGeneration =
+      0;
+
+    const notificationScope = {
+      ownerId:
+        session.ownerId ?? "",
+
+      businessId:
+        session.businessId ?? "",
+
+      branchId:
+        session.branchId ?? "",
+    };
+
+    setNotificationUnreadCount(
+      0,
+    );
+
+    if (
+      !notificationScope.ownerId ||
+      !notificationScope.businessId ||
+      !notificationScope.branchId
+    ) {
+      return () => {
+        active =
+          false;
+      };
+    }
+
+    async function refreshUnreadCount():
+      Promise<void> {
+      const generation =
+        ++loadGeneration;
+
+      const result =
+        await notificationCenterService
+          .loadUnreadCount(
+            notificationScope,
+          );
+
+      if (
+        !active ||
+        generation !==
+          loadGeneration
+      ) {
+        return;
+      }
+
+      if (!result.success) {
+        console.warn(
+          "FINORA Notification unread count refresh failed:",
+          result.error,
+        );
+
+        return;
+      }
+
+      setNotificationUnreadCount(
+        result.count,
+      );
+    }
+
+    const unsubscribe =
+      subscribeNotificationDataChanged(
+        (detail) => {
+          if (
+            detail.resource !==
+              "NOTIFICATION" ||
+            !notificationDataChangeMatchesScope(
+              detail,
+
+              notificationScope,
+            )
+          ) {
+            return;
+          }
+
+          void refreshUnreadCount();
+        },
+      );
+
+    void refreshUnreadCount();
+
+    return () => {
+      active =
+        false;
+
+      loadGeneration +=
+        1;
+
+      unsubscribe();
+    };
+  }, [
+    session.ownerId,
+    session.businessId,
+    session.branchId,
+  ]);
+  // ==========================================================
   // SCHEDULED NOTIFICATION LIFECYCLE
   //
   // AuthenticatedV2Application mounts only after:
@@ -1435,6 +1571,10 @@ function AuthenticatedV2Application({
           navigation.stack.length > 0
         }
         onLogout={onLogout}
+        notificationUnreadCount={notificationUnreadCount}
+        onNotificationsClick={() => {
+          handleNavigate("notifications");
+        }}
       >
         {/* ==================================================
             RECEPTION
@@ -1495,8 +1635,22 @@ function AuthenticatedV2Application({
         {page === "reports" && <ReportsPage />}
 
         {/* ==================================================
-    SETTINGS
-================================================== */}
+            NOTIFICATIONS
+        ================================================== */}
+
+        {page === "notifications" && (
+          <NotificationsPage
+            scope={{
+              ownerId: session.ownerId ?? "",
+              businessId: session.businessId ?? "",
+              branchId: session.branchId ?? "",
+            }}
+          />
+        )}
+
+        {/* ==================================================
+            SETTINGS
+        ================================================== */}
 
         {page === "settings" && <SettingsPage />}
       </AppShell>

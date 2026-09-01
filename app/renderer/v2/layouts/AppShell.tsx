@@ -51,6 +51,7 @@ export type AppPage =
   | "collections"
   | "accounts"
   | "reports"
+  | "notifications"
   | "settings";
 
 // ============================================================
@@ -69,6 +70,10 @@ interface AppShellProps {
   canGoBack: boolean;
 
   onLogout: () => void;
+
+  notificationUnreadCount?: number;
+
+  onNotificationsClick?: () => void;
 }
 
 // ============================================================
@@ -87,6 +92,10 @@ export default function AppShell({
   canGoBack,
 
   onLogout,
+
+  notificationUnreadCount = 0,
+
+  onNotificationsClick,
 }: AppShellProps) {
   // ==========================================================
   // DEPARTMENT TITLE
@@ -111,7 +120,9 @@ export default function AppShell({
                   ? "Accounts"
                   : page === "reports"
                     ? "Reports"
-                    : "Reception";
+                    : page === "notifications"
+                      ? "Notification Center"
+                      : "Reception";
 
   // ==========================================================
   // RENDER
@@ -176,6 +187,8 @@ export default function AppShell({
         onBack={onBack}
         canGoBack={canGoBack}
         onLogout={onLogout}
+        notificationUnreadCount={notificationUnreadCount}
+        onNotificationsClick={onNotificationsClick}
       />
 
       {/* =====================================================
