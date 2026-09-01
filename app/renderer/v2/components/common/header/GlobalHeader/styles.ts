@@ -527,8 +527,46 @@ export function createGlobalHeaderStyles(
     minWidth:
       `${button.minHeight}px`,
 
+    maxWidth:
+      "100%",
+
     height:
       `${button.height}px`,
+
+    minHeight:
+      `${button.height}px`,
+
+    padding:
+      `0 ${tokens.spacing.small}px`,
+
+    borderRadius:
+      `${tokens.border.radius}px`,
+
+    border:
+      `${tokens.border.width}px solid ${
+        activeTheme
+          .colors
+          .border
+          .default
+      }`,
+
+    background:
+      activeTheme
+        .colors
+        .background
+        .surfaceMuted,
+
+    color:
+      headerActionColor,
+
+    display:
+      "flex",
+
+    alignItems:
+      "center",
+
+    justifyContent:
+      "center",
 
     cursor:
       "pointer",
@@ -536,11 +574,29 @@ export function createGlobalHeaderStyles(
     fontSize:
       `${button.fontSize}px`,
 
+    fontWeight:
+      700,
+
+    lineHeight:
+      1,
+
+    whiteSpace:
+      "nowrap",
+
+    overflow:
+      "hidden",
+
+    textOverflow:
+      "ellipsis",
+
     userSelect:
       "none",
 
-    color:
-      headerContentColor,
+    appearance:
+      "none",
+
+    WebkitAppearance:
+      "none",
 
     transition:
       "all 160ms ease",

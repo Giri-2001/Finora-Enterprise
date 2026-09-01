@@ -37,7 +37,7 @@
 // - The collection repository-generated `id` remains the storage
 //   identity.
 //
-// VERSION : 2.4
+// VERSION : 2.5
 // STATUS  : Production
 // ============================================================
 
@@ -102,6 +102,12 @@ const ENTITY_COLLECTION = "COLLECTION";
 
 const ENTITY_PAYMENT = "PAYMENT";
 
+const ENTITY_WALLET = "WALLET";
+
+const ENTITY_WALLET_TRANSACTION = "WALLET_TRANSACTION";
+
+const ENTITY_WALLET_PAYMENT_INTENT = "WALLET_PAYMENT_INTENT";
+
 const ENTITY_NOTIFICATION = "NOTIFICATION";
 
 const ENTITY_NOTIFICATION_DELIVERY = "NOTIFICATION_DELIVERY";
@@ -152,6 +158,12 @@ const FINORA_RESET_ENTITIES: readonly string[] = [
   ENTITY_COLLECTION,
 
   ENTITY_PAYMENT,
+
+  ENTITY_WALLET,
+
+  ENTITY_WALLET_TRANSACTION,
+
+  ENTITY_WALLET_PAYMENT_INTENT,
 
   ENTITY_NOTIFICATION,
 
@@ -385,6 +397,27 @@ function resolveEntity(record: unknown): string {
 
   if (value.entity === ENTITY_GOLD_RELOCATION_AUDIT) {
     return ENTITY_GOLD_RELOCATION_AUDIT;
+  }
+
+  // ==========================================================
+  // WALLET ENGINE
+  // ==========================================================
+  //
+  // Explicit Wallet entities MUST be resolved before
+  // compatibility heuristics so repository reads and writes use
+  // the same persistent entity key.
+  // ==========================================================
+
+  if (value.entity === ENTITY_WALLET) {
+    return ENTITY_WALLET;
+  }
+
+  if (value.entity === ENTITY_WALLET_TRANSACTION) {
+    return ENTITY_WALLET_TRANSACTION;
+  }
+
+  if (value.entity === ENTITY_WALLET_PAYMENT_INTENT) {
+    return ENTITY_WALLET_PAYMENT_INTENT;
   }
 
   // ==========================================================
