@@ -92,6 +92,17 @@ export const FINORA_WALLET_MAX_RECHARGE_AMOUNT =
   1_000_000 as const;
 
 /* ============================================================
+   PLATFORM CHARGE AMOUNTS
+============================================================ */
+
+/**
+ * Charged exactly once after a Loan is successfully created
+ * and any required Gold custody commit has completed.
+ */
+export const FINORA_WALLET_LOAN_DISBURSEMENT_PLATFORM_FEE =
+  10 as const;
+
+/* ============================================================
    TRANSACTION LABELS
 ============================================================ */
 

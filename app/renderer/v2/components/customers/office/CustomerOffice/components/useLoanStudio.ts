@@ -103,6 +103,11 @@ import { buildGoldLoanStorageAllocationRequest } from "../../../../../services/g
 
 import { allocatePersistedGoldStorage } from "../../../../../services/gold-loan/goldCustodyPersistenceService";
 
+import {
+  commitLoanDisbursementWalletCharge,
+  preflightLoanDisbursementWalletCharge,
+} from "../../../../../services/wallet/walletLoanDisbursementChargeService";
+
 import { getSession } from "../../../../../store/authStore";
 
 import {
@@ -1018,6 +1023,47 @@ export function useLoanStudio({
     }
 
     /* ========================================================
+       FINORA WALLET CHARGE PREFLIGHT
+
+       The Loan operation must not begin unless the active
+       scoped Wallet can cover the configured platform fee.
+
+       This preflight does not mutate Wallet state.
+    ======================================================== */
+
+    const authenticatedSession =
+      getSession();
+
+    const walletScope = {
+      ownerId:
+        String(authenticatedSession?.ownerId ?? "").trim(),
+
+      businessId:
+        String(authenticatedSession?.businessId ?? "").trim(),
+
+      branchId:
+        String(authenticatedSession?.branchId ?? "").trim(),
+    };
+
+    const walletChargePreflight =
+      await preflightLoanDisbursementWalletCharge(
+        walletScope,
+      );
+
+    if (!walletChargePreflight.success) {
+      console.error(
+        "FINORA LOAN WALLET CHARGE PREFLIGHT ERROR:",
+        walletChargePreflight.error,
+      );
+
+      alert(
+        walletChargePreflight.error,
+      );
+
+      return;
+    }
+
+    /* ========================================================
        CREATE STABLE LOAN ID
     ======================================================== */
 
@@ -1372,6 +1418,77 @@ export function useLoanStudio({
     }
 
     /* ========================================================
+       COMMIT FINORA WALLET LOAN PLATFORM FEE
+
+       Reaching this boundary means:
+       - Standard Loan persistence succeeded.
+       - Required Gold custody persistence also succeeded.
+
+       The generated Loan Number is the deterministic,
+       owner-facing Wallet transaction reference.
+    ======================================================== */
+
+    const finalizedLoanId =
+      String(
+        createResult.data?.id ??
+        loan.id ??
+        loanId,
+      ).trim();
+
+    const finalizedLoanNumber =
+      String(
+        createResult.data?.loanNumber ??
+        loan.loanNumber ??
+        authoritativeLoanNumber,
+      ).trim();
+
+    const walletChargeResult =
+      await commitLoanDisbursementWalletCharge({
+        walletId:
+          walletChargePreflight.data.walletId,
+
+        ownerId:
+          walletScope.ownerId,
+
+        businessId:
+          walletScope.businessId,
+
+        branchId:
+          walletScope.branchId,
+
+        loanId:
+          finalizedLoanId,
+
+        loanNumber:
+          finalizedLoanNumber,
+      });
+
+    if (!walletChargeResult.success) {
+      console.error(
+        "FINORA LOAN WALLET CHARGE COMMIT ERROR:",
+        walletChargeResult.error,
+      );
+
+      setDocuments(
+        persistedDocuments,
+      );
+
+      setLoanApproved(
+        true,
+      );
+
+      await refreshLoanStatistics();
+
+      alert(
+        "Loan was created successfully, but the FINORA Wallet platform fee could not be completed. " +
+          walletChargeResult.error +
+          " Do not create another Loan until this charge is reviewed.",
+      );
+
+      return;
+    }
+
+    /* ========================================================
        FINALIZE SUCCESSFUL LOAN CREATION
     ======================================================== */
 
@@ -1392,12 +1509,19 @@ export function useLoanStudio({
        Failed Loan creation never clears entered form data.
     ======================================================== */
 
-    alert(
+    const loanSuccessMessage =
       persistedDocuments.length > 0
         ? `Loan Created Successfully with ${persistedDocuments.length} document${
             persistedDocuments.length === 1 ? "" : "s"
           }`
-        : "Loan Created Successfully",
+        : "Loan Created Successfully";
+
+    alert(
+      `${loanSuccessMessage}
+
+Loan Number: ${finalizedLoanNumber}
+FINORA Wallet Fee: ₹${walletChargeResult.data.amount}
+Available Balance: ₹${walletChargeResult.data.availableBalance}`,
     );
 
     /* ========================================================

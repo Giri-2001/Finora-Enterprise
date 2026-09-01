@@ -223,7 +223,7 @@ export function createWalletTransactionRowStyles(
         0,
 
       color:
-        "var(--finora-theme-status-success)",
+        "var(--finora-theme-financial-credit)",
 
       fontSize:
         wallet.history.amountSize,
@@ -243,7 +243,7 @@ export function createWalletTransactionRowStyles(
         0,
 
       color:
-        "var(--finora-theme-status-danger)",
+        "var(--finora-theme-financial-debit)",
 
       fontSize:
         wallet.history.amountSize,

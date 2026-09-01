@@ -53,7 +53,6 @@ import {
 } from "./walletBalanceService";
 
 import {
-  buildWalletDebitIdempotencyKey,
   buildWalletTransactionId,
 } from "./wallet.identity";
 
@@ -289,20 +288,6 @@ export async function commitWalletDebit(
         "DEBIT",
     });
 
-  const idempotencyKey =
-    buildWalletDebitIdempotencyKey({
-      walletId:
-        wallet.walletId,
-
-      sourceType,
-
-      sourceId:
-        input.sourceId ?? sourceReference,
-
-      chargeCode:
-        input.type,
-    });
-
   /* ==========================================================
      IDEMPOTENCY CHECK
   ========================================================== */
@@ -434,7 +419,7 @@ export async function commitWalletDebit(
         balanceResult.transition.balanceAfter,
 
       referenceId:
-        idempotencyKey,
+        sourceReference,
 
       sourceId:
         input.sourceId ?? sourceReference,
