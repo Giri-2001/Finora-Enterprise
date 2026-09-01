@@ -71,6 +71,7 @@ export type NotificationEventType =
   | "LOAN_DUE"
   | "LOAN_OVERDUE"
   | "LOAN_MATURITY"
+  | "CUSTOMER_CREATED"
   | "COLLECTION_RECEIVED"
   | "LOAN_CLOSED";
 
@@ -170,6 +171,63 @@ export interface NotificationTemplateContext {
 }
 
 /* ===========================================================
+   DURABLE MEDIA ARTIFACT
+=========================================================== */
+
+/**
+ * Small durable reference to FINORA-owned Notification media.
+ *
+ * Binary data and physical filesystem paths never belong in
+ * Notification records.
+ *
+ * The privileged Electron artifact store resolves this
+ * reference when an external provider requires the media.
+ */
+export type NotificationMediaArtifactStorageMode =
+  | "LOCAL"
+  | "USB";
+
+export type NotificationMediaArtifactKind =
+  | "CUSTOMER_ID_CARD";
+
+export type NotificationMediaArtifactMimeType =
+  | "image/png";
+
+export interface NotificationMediaArtifactScope {
+  ownerId: string;
+
+  businessId: string;
+
+  branchId: string;
+}
+
+export interface NotificationMediaArtifactReference {
+  artifactId: string;
+
+  kind:
+    NotificationMediaArtifactKind;
+
+  storageMode:
+    NotificationMediaArtifactStorageMode;
+
+  mimeType:
+    NotificationMediaArtifactMimeType;
+
+  fileName: string;
+
+  byteLength: number;
+
+  sha256: string;
+
+  createdAt: string;
+
+  scope:
+    NotificationMediaArtifactScope;
+
+  schemaVersion: 1;
+}
+
+/* ===========================================================
    CANONICAL NOTIFICATION RECORD
 =========================================================== */
 
@@ -259,6 +317,19 @@ export interface CustomerNotificationRecord
    */
 
   templateContext?: NotificationTemplateContext;
+
+  /*
+   * Optional durable FINORA-owned media snapshot.
+   *
+   * CUSTOMER_CREATED uses the canonical Customer ID Card
+   * artifact. SMS ignores media; WhatsApp and Email may reuse
+   * this same durable reference.
+   *
+   * Optional preserves legacy Customer Notification records and
+   * event types that do not require media.
+   */
+
+  mediaArtifact?: NotificationMediaArtifactReference;
 
   readState?: never;
 

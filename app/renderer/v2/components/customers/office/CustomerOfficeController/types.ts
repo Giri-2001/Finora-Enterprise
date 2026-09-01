@@ -15,6 +15,8 @@ import type { OfficeCustomer } from "../CustomerOffice/types";
 export interface CustomerOfficeControllerProps {
   customers: OfficeCustomer[];
 
+  companyName?: string;
+
   /**
    * Opens the Customer Wizard from the Customer Hub.
    */

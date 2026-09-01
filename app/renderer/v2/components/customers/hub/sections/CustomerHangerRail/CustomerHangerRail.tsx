@@ -131,6 +131,8 @@ export default function CustomerHangerRail({
 
   customers,
 
+  companyName,
+
   selectedCustomerId,
 
   onCustomerSelect,
@@ -522,6 +524,8 @@ export default function CustomerHangerRail({
                     customer={
                       customer
                     }
+
+                    companyName={companyName}
 
 
                     /* =========================================

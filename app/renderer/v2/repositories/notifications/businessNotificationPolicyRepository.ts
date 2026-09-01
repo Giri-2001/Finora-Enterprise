@@ -97,6 +97,7 @@ const NOTIFICATION_EVENT_TYPES:
     "LOAN_DUE",
     "LOAN_OVERDUE",
     "LOAN_MATURITY",
+    "CUSTOMER_CREATED",
     "COLLECTION_RECEIVED",
     "LOAN_CLOSED",
   ];
@@ -120,6 +121,36 @@ function normalizeScope(
 
     businessId:
       normalizeString(scope.businessId),
+  };
+}
+
+/* ============================================================
+   LEGACY EVENT COMPATIBILITY
+============================================================ */
+
+function normalizeLegacyBusinessNotificationPolicyStorageRecord(
+  record: BusinessNotificationPolicyStorageRecord,
+): BusinessNotificationPolicyStorageRecord {
+  const events =
+    record.events;
+
+  if (
+    !events ||
+    typeof events !== "object" ||
+    typeof events.CUSTOMER_CREATED !== "undefined"
+  ) {
+    return record;
+  }
+
+  return {
+    ...record,
+
+    events: {
+      ...events,
+
+      CUSTOMER_CREATED:
+        false,
+    },
   };
 }
 
@@ -375,11 +406,16 @@ export class BusinessNotificationPolicyRepository {
       };
     }
 
+    const normalizedStorageRecord =
+      normalizeLegacyBusinessNotificationPolicyStorageRecord(
+        result.data,
+      );
+
     const recordError =
       validateStorageRecord(
         normalizedScope,
 
-        result.data,
+        normalizedStorageRecord,
       );
 
     if (recordError) {
@@ -395,7 +431,7 @@ export class BusinessNotificationPolicyRepository {
 
       data:
         fromStorageRecord(
-          result.data,
+          normalizedStorageRecord,
         ),
     };
   }

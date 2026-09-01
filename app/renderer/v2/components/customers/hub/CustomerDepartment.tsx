@@ -143,7 +143,14 @@ function getAuthenticatedStorageMode(): StorageMode {
 // COMPONENT
 // ============================================================
 
-export default function CustomerDepartment() {
+interface CustomerDepartmentProps {
+  companyName?: string;
+}
+
+
+export default function CustomerDepartment({
+  companyName,
+}: CustomerDepartmentProps) {
   // ==========================================================
   // CUSTOMER WIZARD STATE
   // ==========================================================
@@ -452,6 +459,7 @@ export default function CustomerDepartment() {
           ) : (
             <CustomerOfficeController
               customers={customers}
+              companyName={companyName}
               onOpenCustomerWizard={handleOpenCustomerWizard}
               onEditCustomer={handleEditCustomer}
             />

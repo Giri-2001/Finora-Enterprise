@@ -119,6 +119,94 @@ interface FinoraElectronControlBridge {
 }
 
 // ============================================================
+// NOTIFICATION ARTIFACT BRIDGE
+// ============================================================
+
+type FinoraNotificationArtifactStorageMode =
+  | "LOCAL"
+  | "USB";
+
+type FinoraNotificationArtifactKind =
+  | "CUSTOMER_ID_CARD";
+
+type FinoraNotificationArtifactMimeType =
+  | "image/png";
+
+interface FinoraNotificationArtifactScope {
+  ownerId: string;
+
+  businessId: string;
+
+  branchId: string;
+}
+
+interface FinoraNotificationArtifactReference {
+  artifactId: string;
+
+  kind:
+    FinoraNotificationArtifactKind;
+
+  storageMode:
+    FinoraNotificationArtifactStorageMode;
+
+  mimeType:
+    FinoraNotificationArtifactMimeType;
+
+  fileName: string;
+
+  byteLength: number;
+
+  sha256: string;
+
+  createdAt: string;
+
+  scope:
+    FinoraNotificationArtifactScope;
+
+  schemaVersion: 1;
+}
+
+interface FinoraNotificationArtifactSaveRequest {
+  artifactId: string;
+
+  kind:
+    FinoraNotificationArtifactKind;
+
+  storageMode:
+    FinoraNotificationArtifactStorageMode;
+
+  mimeType:
+    FinoraNotificationArtifactMimeType;
+
+  fileName: string;
+
+  contentBase64: string;
+
+  scope:
+    FinoraNotificationArtifactScope;
+}
+
+interface FinoraElectronNotificationArtifactBridge {
+
+  /**
+   * Persists one FINORA-owned Notification artifact.
+   *
+   * Renderer supplies no filesystem path.
+   * Physical LOCAL / USB destination remains privileged.
+   */
+  save(
+    request:
+      FinoraNotificationArtifactSaveRequest,
+  ):
+    Promise<
+      FinoraElectronResult<
+        FinoraNotificationArtifactReference
+      >
+    >;
+}
+
+
+// ============================================================
 // NOTIFICATION PROVIDER BRIDGE
 // ============================================================
 
@@ -250,6 +338,14 @@ interface FinoraElectronRendererBridge {
    * Read-only FINORA device control API.
    */
   control: FinoraElectronControlBridge;
+  /**
+   * Secure FINORA Notification artifact save API.
+   *
+   * Renderer receives save-only access.
+   * No filesystem path, read API or delete API is exposed.
+   */
+  notificationArtifacts:
+    FinoraElectronNotificationArtifactBridge;
 
   /**
    * Secure privileged Notification provider API.

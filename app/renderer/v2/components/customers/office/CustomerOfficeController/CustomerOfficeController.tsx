@@ -42,6 +42,8 @@ type CustomerOfficeView = "wall" | "workspace";
 export default function CustomerOfficeController({
   customers,
 
+  companyName,
+
   onOpenCustomerWizard,
 
   onEditCustomer,
@@ -215,6 +217,7 @@ export default function CustomerOfficeController({
               ================================================= */
 
             railCustomers={controller.paginatedCustomers}
+            companyName={companyName}
             /* =================================================
                  SELECTION
               ================================================= */

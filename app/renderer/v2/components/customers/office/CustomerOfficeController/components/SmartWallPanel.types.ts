@@ -35,6 +35,8 @@ export interface SmartWallPanelProps {
 
   railCustomers: CustomerRailItem[];
 
+  companyName?: string;
+
   /* =========================================================
      CUSTOMER SELECTION
   ========================================================= */

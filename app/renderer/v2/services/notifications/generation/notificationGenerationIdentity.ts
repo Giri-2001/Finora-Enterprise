@@ -101,6 +101,34 @@ export interface ScheduledLoanNotificationIdentityInput {
 }
 
 /* ============================================================
+   CUSTOMER CREATED IDENTITY INPUT
+============================================================ */
+
+export interface CustomerCreatedNotificationIdentityInput {
+  ownerId: string;
+
+  businessId: string;
+
+  branchId: string;
+
+  customerId: string;
+}
+
+/* ============================================================
+   CUSTOMER CREATED ARTIFACT IDENTITY INPUT
+============================================================ */
+
+export interface CustomerCreatedNotificationArtifactIdentityInput {
+  ownerId: string;
+
+  businessId: string;
+
+  branchId: string;
+
+  customerId: string;
+}
+
+/* ============================================================
    INITIAL DELIVERY IDENTITY INPUT
 ============================================================ */
 
@@ -249,6 +277,168 @@ function isValidCalendarDate(
     validationDate.getMonth() === month - 1 &&
     validationDate.getDate() === day
   );
+}
+
+/* ============================================================
+   CUSTOMER CREATED NOTIFICATION ID
+============================================================ */
+
+export function buildCustomerCreatedNotificationId(
+  input: CustomerCreatedNotificationIdentityInput,
+): NotificationIdentityBuildResult<NotificationId> {
+  const ownerId =
+    normalizeString(input.ownerId);
+
+  const businessId =
+    normalizeString(input.businessId);
+
+  const branchId =
+    normalizeString(input.branchId);
+
+  const customerId =
+    normalizeString(input.customerId);
+
+  if (!ownerId) {
+    return {
+      success: false,
+
+      error:
+        "Owner ID is required to build Customer-created Notification identity.",
+    };
+  }
+
+  if (!businessId) {
+    return {
+      success: false,
+
+      error:
+        "Business ID is required to build Customer-created Notification identity.",
+    };
+  }
+
+  if (!branchId) {
+    return {
+      success: false,
+
+      error:
+        "Branch ID is required to build Customer-created Notification identity.",
+    };
+  }
+
+  if (!customerId) {
+    return {
+      success: false,
+
+      error:
+        "Customer ID is required to build Customer-created Notification identity.",
+    };
+  }
+
+  const id =
+    [
+      "NTF",
+      ownerId,
+      businessId,
+      branchId,
+      "CUSTOMER",
+      customerId,
+      "CUSTOMER_CREATED",
+    ]
+      .map(encodeIdentitySegment)
+      .join("::");
+
+  return {
+    success: true,
+
+    id,
+  };
+}
+
+/* ============================================================
+   CUSTOMER CREATED ID CARD ARTIFACT ID
+============================================================ */
+
+export function buildCustomerCreatedNotificationArtifactId(
+  input:
+    CustomerCreatedNotificationArtifactIdentityInput,
+): NotificationIdentityBuildResult<string> {
+  const ownerId =
+    normalizeString(
+      input.ownerId,
+    );
+
+  const businessId =
+    normalizeString(
+      input.businessId,
+    );
+
+  const branchId =
+    normalizeString(
+      input.branchId,
+    );
+
+  const customerId =
+    normalizeString(
+      input.customerId,
+    );
+
+  if (!ownerId) {
+    return {
+      success: false,
+
+      error:
+        "Owner ID is required to build Customer-created Notification artifact identity.",
+    };
+  }
+
+  if (!businessId) {
+    return {
+      success: false,
+
+      error:
+        "Business ID is required to build Customer-created Notification artifact identity.",
+    };
+  }
+
+  if (!branchId) {
+    return {
+      success: false,
+
+      error:
+        "Branch ID is required to build Customer-created Notification artifact identity.",
+    };
+  }
+
+  if (!customerId) {
+    return {
+      success: false,
+
+      error:
+        "Customer ID is required to build Customer-created Notification artifact identity.",
+    };
+  }
+
+  const id =
+    [
+      "ART",
+      ownerId,
+      businessId,
+      branchId,
+      "CUSTOMER",
+      customerId,
+      "CUSTOMER_CREATED",
+      "CUSTOMER_ID_CARD",
+    ]
+      .map(
+        encodeIdentitySegment,
+      )
+      .join("::");
+
+  return {
+    success: true,
+
+    id,
+  };
 }
 
 /* ============================================================

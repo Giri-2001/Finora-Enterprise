@@ -353,6 +353,94 @@ interface FinoraNotificationTemplateContext {
 
   schemaVersion: 1;
 }
+type FinoraNotificationArtifactStorageMode =
+  | "LOCAL"
+  | "USB";
+
+type FinoraNotificationArtifactKind =
+  | "CUSTOMER_ID_CARD";
+
+type FinoraNotificationArtifactMimeType =
+  | "image/png";
+
+interface FinoraNotificationArtifactScope {
+  ownerId: string;
+
+  businessId: string;
+
+  branchId: string;
+}
+
+interface FinoraNotificationArtifactReference {
+  artifactId: string;
+
+  kind:
+    FinoraNotificationArtifactKind;
+
+  storageMode:
+    FinoraNotificationArtifactStorageMode;
+
+  mimeType:
+    FinoraNotificationArtifactMimeType;
+
+  fileName: string;
+
+  byteLength: number;
+
+  sha256: string;
+
+  createdAt: string;
+
+  scope:
+    FinoraNotificationArtifactScope;
+
+  schemaVersion: 1;
+}
+
+interface FinoraNotificationArtifactSaveRequest {
+  artifactId: string;
+
+  kind:
+    FinoraNotificationArtifactKind;
+
+  storageMode:
+    FinoraNotificationArtifactStorageMode;
+
+  mimeType:
+    FinoraNotificationArtifactMimeType;
+
+  fileName: string;
+
+  contentBase64: string;
+
+  scope:
+    FinoraNotificationArtifactScope;
+}
+
+type FinoraNotificationArtifactResult<T> =
+  | {
+      success: true;
+
+      data: T;
+    }
+  | {
+      success: false;
+
+      error: string;
+    };
+
+interface FinoraNotificationArtifactBridge {
+  save(
+    request:
+      FinoraNotificationArtifactSaveRequest,
+  ):
+    Promise<
+      FinoraNotificationArtifactResult<
+        FinoraNotificationArtifactReference
+      >
+    >;
+}
+
 interface FinoraNotificationProviderConfigurationRequest {
   channel:
     FinoraNotificationProviderChannel;
@@ -673,6 +761,16 @@ const usbBridge:
 // FINORA NOTIFICATION PROVIDER IPC CHANNELS
 // ============================================================
 
+const NOTIFICATION_ARTIFACT_CHANNELS = {
+  SAVE:
+    "finora:notification-artifacts:save",
+} as const;
+
+
+// ============================================================
+// FINORA NOTIFICATION PROVIDER IPC CHANNELS
+// ============================================================
+
 const NOTIFICATION_PROVIDER_CHANNELS = {
   IS_CONFIGURED:
     "finora:notifications:is-configured",
@@ -680,6 +778,33 @@ const NOTIFICATION_PROVIDER_CHANNELS = {
   SEND:
     "finora:notifications:send",
 } as const;
+
+
+// ============================================================
+// FINORA NOTIFICATION PROVIDER BRIDGE
+//
+// Provider credentials remain inside Electron main.
+// Renderer receives only safe configuration state and
+// normalized delivery outcomes.
+// ============================================================
+
+const notificationArtifactBridge:
+  FinoraNotificationArtifactBridge = {
+
+  save:
+    (
+      request:
+        FinoraNotificationArtifactSaveRequest,
+    ) =>
+      ipcRenderer.invoke(
+        NOTIFICATION_ARTIFACT_CHANNELS.SAVE,
+        request,
+      ) as Promise<
+        FinoraNotificationArtifactResult<
+          FinoraNotificationArtifactReference
+        >
+      >,
+};
 
 
 // ============================================================
@@ -799,6 +924,9 @@ contextBridge.exposeInMainWorld(
 
     control:
       controlBridge,
+
+    notificationArtifacts:
+      notificationArtifactBridge,
 
     notifications:
       notificationProviderBridge,

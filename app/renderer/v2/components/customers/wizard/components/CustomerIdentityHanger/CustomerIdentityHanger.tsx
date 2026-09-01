@@ -71,6 +71,8 @@ export interface CustomerIdentityHangerProps {
 
   customerName: string;
 
+  companyName?: string;
+
   phoneNumber: string;
 
   profilePhoto: string;
@@ -113,6 +115,8 @@ export default function CustomerIdentityHanger({
   customerId,
 
   customerName,
+
+  companyName,
 
   phoneNumber,
 
@@ -250,6 +254,8 @@ export default function CustomerIdentityHanger({
           customerName={
             customerName
           }
+
+          companyName={companyName}
 
           phoneNumber={
             phoneNumber

@@ -17,8 +17,6 @@ export const BRAND_NAME =
    FINANCE COMPANY
 =========================================================== */
 
-export const COMPANY_NAME =
-  "GIRI FINANCE COMPANY";
 
 export const CARD_TITLE =
   "CUSTOMER ID";

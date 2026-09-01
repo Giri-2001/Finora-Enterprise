@@ -8,32 +8,17 @@
    RESPONSIVE ENGINE CONSUMER
 =========================================================== */
 
-
 /* ===========================================================
    IMPORTS
 =========================================================== */
 
-import type {
-  CSSProperties,
-} from "react";
+import type { CSSProperties } from "react";
 
+import type { CustomerCardFlipProps } from "./types";
 
-import type {
-  CustomerCardFlipProps,
-} from "./types";
+import { DEFAULT_ROTATION } from "./constants";
 
-
-import {
-  DEFAULT_ROTATION,
-} from "./constants";
-
-
-import {
-  buildDuration,
-  buildPerspective,
-  isFlipped,
-} from "./helpers";
-
+import { buildDuration, buildPerspective, isFlipped } from "./helpers";
 
 import {
   createContainerStyle,
@@ -42,18 +27,13 @@ import {
   createBackStyle,
 } from "./styles";
 
-
-import type {
-  CustomerCardFlipResponsiveDimensions,
-} from "./styles";
-
+import type { CustomerCardFlipResponsiveDimensions } from "./styles";
 
 /* ===========================================================
    COMPONENT
 =========================================================== */
 
 export default function CustomerCardFlip({
-
   front,
 
   back,
@@ -65,10 +45,7 @@ export default function CustomerCardFlip({
   perspective,
 
   onFlip,
-
 }: CustomerCardFlipProps) {
-
-
   /* =========================================================
      CARD SURFACE
      ---------------------------------------------------------
@@ -84,72 +61,41 @@ export default function CustomerCardFlip({
      - No outer card layout ownership
   ========================================================= */
 
-  const responsiveCard:
-    CustomerCardFlipResponsiveDimensions = {
+  const responsiveCard: CustomerCardFlipResponsiveDimensions = {
+    width: "100%",
 
-    width:
-      "100%",
+    height: "100%",
 
-    height:
-      "100%",
-
-    radius:
-      0,
-
+    radius: 0,
   };
-
 
   /* =========================================================
      ANIMATION
   ========================================================= */
 
-  const duration =
-    buildDuration(
-      animationDuration,
-    );
-
+  const duration = buildDuration(animationDuration);
 
   /* =========================================================
      PERSPECTIVE
   ========================================================= */
 
-  const depth =
-    buildPerspective(
-      perspective,
-    );
-
+  const depth = buildPerspective(perspective);
 
   /* =========================================================
      ROTATION
   ========================================================= */
 
-  const rotation =
-    isFlipped(flipped)
-      ? DEFAULT_ROTATION
-      : 0;
-
+  const rotation = isFlipped(flipped) ? DEFAULT_ROTATION : 0;
 
   /* =========================================================
      FLIP STYLES
   ========================================================= */
 
-  const containerStyle =
-    createContainerStyle(
-      responsiveCard,
-    );
+  const containerStyle = createContainerStyle(responsiveCard);
 
+  const frontStyle = createFrontStyle(responsiveCard);
 
-  const frontStyle =
-    createFrontStyle(
-      responsiveCard,
-    );
-
-
-  const backStyle =
-    createBackStyle(
-      responsiveCard,
-    );
-
+  const backStyle = createBackStyle(responsiveCard);
 
   /* =========================================================
      ROOT STYLE
@@ -158,102 +104,46 @@ export default function CustomerCardFlip({
      Customer card geometry remains with the parent.
   ========================================================= */
 
-  const rootStyle:
-    CSSProperties = {
-
+  const rootStyle: CSSProperties = {
     ...containerStyle,
 
-    perspective:
-      `${depth}px`,
-
+    perspective: `${depth}px`,
   };
-
 
   /* =========================================================
      FLIP STYLE
   ========================================================= */
 
-  const flipStyle:
-    CSSProperties = {
-
+  const flipStyle: CSSProperties = {
     ...innerStyle,
 
-    transition:
-      `transform ${duration}ms ease`,
+    transition: `transform ${duration}ms ease`,
 
-    transform:
-      `rotateY(${rotation}deg)`,
-
+    transform: `rotateY(${rotation}deg)`,
   };
-
 
   /* =========================================================
      RENDER
   ========================================================= */
 
   return (
-
-    <div
-
-      style={
-        rootStyle
-      }
-
-      onClick={
-        onFlip
-      }
-
-    >
-
-      <div
-
-        style={
-          flipStyle
-        }
-
-      >
-
+    <div style={rootStyle} onClick={onFlip}>
+      <div style={flipStyle}>
         {/* ================================================
             FRONT FACE
         ================================================ */}
 
-        <div
-
-          style={
-            frontStyle
-          }
-
-        >
-
-          {front}
-
-        </div>
-
+        <div style={frontStyle}>{front}</div>
 
         {/* ================================================
             BACK FACE
         ================================================ */}
 
-        <div
-
-          style={
-            backStyle
-          }
-
-        >
-
-          {back}
-
-        </div>
-
+        <div style={backStyle}>{back}</div>
       </div>
-
     </div>
-
   );
-
 }
-
 
 /* ===========================================================
    END

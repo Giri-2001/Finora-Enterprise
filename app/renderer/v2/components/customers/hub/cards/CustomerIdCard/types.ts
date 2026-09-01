@@ -41,6 +41,8 @@ export interface CustomerIdCardProps {
 
   customerName: string;
 
+  companyName?: string;
+
   profilePhoto?: string;
 
   branchName?: string;

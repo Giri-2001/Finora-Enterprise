@@ -1600,7 +1600,11 @@ function AuthenticatedV2Application({
             CUSTOMER DEPARTMENT
         ================================================== */}
 
-        {page === "customerDepartment" && <CustomerDepartmentPage />}
+        {page === "customerDepartment" && (
+          <CustomerDepartmentPage
+            businessId={session.businessId ?? ""}
+          />
+        )}
 
         {/* ==================================================
             LOANS

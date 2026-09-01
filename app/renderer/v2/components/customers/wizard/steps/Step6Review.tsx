@@ -1,4 +1,4 @@
-/* ==========================================================
+﻿/* ==========================================================
    FINORA ENTERPRISE OS™
 
    CUSTOMER WIZARD
@@ -40,6 +40,7 @@
 ========================================================== */
 
 import {
+  useEffect,
   useState,
 } from "react";
 
@@ -105,10 +106,34 @@ import {
   requireBusinessContext,
 } from "../../../../services/business/businessContextService";
 
+import {
+  storageManager,
+} from "../../../../storage/storageManager";
+
+import {
+  StorageMode,
+} from "../../../../storage/storage.types";
+
 
 import {
   loadBusinessIdentity,
 } from "../../../../services/business/businessService";
+
+import {
+  customerCreatedNotificationGenerator,
+} from "../../../../services/notifications/generation/customerCreatedNotificationGenerator";
+
+import {
+  useCustomerIdCardCapture,
+} from "../../hub/cards/CustomerIdCardCapture/useCustomerIdCardCapture";
+
+import {
+  notificationArtifactService,
+} from "../../../../services/notifications/artifacts/notificationArtifactService";
+
+import {
+  buildCustomerCreatedNotificationArtifactId,
+} from "../../../../services/notifications/generation/notificationGenerationIdentity";
 
 
 /* ==========================================================
@@ -118,6 +143,10 @@ import {
 import type {
   CustomerProfile,
 } from "../../../../types/customers";
+
+import type {
+  BusinessIdentity,
+} from "../../../../types/business/business.identity.types";
 
 
 import type {
@@ -434,6 +463,20 @@ export default function Step6Review({
       tokens.meta.viewport,
     );
 
+  /* ========================================================
+     CUSTOMER ID CARD CAPTURE
+  ======================================================== */
+
+  const {
+    capture:
+      captureCustomerIdCard,
+    captureNode:
+      captureCustomerIdCardNode,
+  } = useCustomerIdCardCapture({
+    companyName:
+      "",
+  });
+
 
   const {
     workspaceStyle,
@@ -453,6 +496,206 @@ export default function Step6Review({
     isSaving,
     setIsSaving,
   ] = useState(false);
+
+  /* ========================================================
+     CUSTOMER ID CARD CAPTURE STATE
+     ======================================================== */
+
+  const [
+    customerCaptureProfile,
+    setCustomerCaptureProfile,
+  ] = useState<
+    CustomerProfile | undefined
+  >(
+    undefined,
+  );
+
+  /* ========================================================
+     PENDING CUSTOMER NOTIFICATION IDENTITY
+     ======================================================== */
+
+  const [
+    pendingNotificationBusinessIdentity,
+    setPendingNotificationBusinessIdentity,
+  ] = useState<
+    BusinessIdentity | undefined
+  >(
+    undefined,
+  );
+
+  /* ========================================================
+     CUSTOMER CREATED NOTIFICATION EFFECT
+  ======================================================== */
+
+  useEffect(() => {
+    if (
+      !customerCaptureProfile ||
+      !pendingNotificationBusinessIdentity
+    ) {
+      return;
+    }
+
+    let cancelled = false;
+
+    async function processCustomerCreatedNotification(): Promise<void> {
+      const currentCustomer =
+        customerCaptureProfile;
+
+      const currentBusinessIdentity =
+        pendingNotificationBusinessIdentity;
+
+      if (
+        !currentCustomer ||
+        !currentBusinessIdentity
+      ) {
+        return;
+      }
+
+      try {
+        const activeStorageMode =
+          storageManager.getStorageMode();
+
+        let mediaArtifactResult:
+          Awaited<
+            ReturnType<
+              typeof notificationArtifactService.save
+            >
+          > | undefined;
+
+        if (
+          activeStorageMode === StorageMode.LOCAL ||
+          activeStorageMode === StorageMode.USB
+        ) {
+          const artifactIdResult =
+            buildCustomerCreatedNotificationArtifactId({
+              ownerId:
+                currentBusinessIdentity.ownerId,
+              businessId:
+                currentBusinessIdentity.businessId,
+              branchId:
+                currentBusinessIdentity.branchId,
+              customerId:
+                currentCustomer.identity.customerId,
+            });
+
+          if (!artifactIdResult.success) {
+            console.error(
+              "FINORA CUSTOMER CREATED ARTIFACT ID FAILED:",
+              artifactIdResult.error,
+            );
+          } else {
+            const captureResult =
+              await captureCustomerIdCard(
+                currentCustomer,
+              );
+
+            if (!captureResult.success) {
+              console.error(
+                "FINORA CUSTOMER ID CARD CAPTURE FAILED:",
+                captureResult.error,
+              );
+            } else {
+              mediaArtifactResult =
+                await notificationArtifactService.save({
+                  artifactId:
+                    artifactIdResult.id,
+                  kind:
+                    "CUSTOMER_ID_CARD",
+                  storageMode:
+                    activeStorageMode,
+                  mimeType:
+                    "image/png",
+                  fileName:
+                    `${currentCustomer.identity.customerId}.png`,
+                  contentBase64:
+                    captureResult.contentBase64,
+                  scope: {
+                    ownerId:
+                      currentBusinessIdentity.ownerId,
+                    businessId:
+                      currentBusinessIdentity.businessId,
+                    branchId:
+                      currentBusinessIdentity.branchId,
+                  },
+                });
+
+              if (!mediaArtifactResult.success) {
+                console.error(
+                  "FINORA CUSTOMER CREATED ARTIFACT SAVE FAILED:",
+                  mediaArtifactResult.error,
+                );
+              }
+            }
+          }
+        } else {
+          console.warn(
+            "FINORA CUSTOMER CREATED ARTIFACT SKIPPED:",
+            `Unsupported storage mode ${activeStorageMode}.`,
+          );
+        }
+          if (
+            !mediaArtifactResult ||
+            !mediaArtifactResult.success
+          ) {
+            console.error(
+              "FINORA CUSTOMER CREATED NOTIFICATION BLOCKED:",
+              "A durable Customer ID Card artifact is required before Notification generation.",
+            );
+
+            return;
+          }
+
+          const generatedAt =
+            new Date().toISOString();
+
+          const notificationResult =
+            await customerCreatedNotificationGenerator.generate({
+              customer:
+                currentCustomer,
+
+              businessIdentity:
+                currentBusinessIdentity,
+
+              generatedAt,
+
+              mediaArtifact:
+                mediaArtifactResult.data,
+            });
+
+          if (!notificationResult.success) {
+          console.error(
+            "FINORA CUSTOMER CREATED NOTIFICATION GENERATION FAILED:",
+            notificationResult.error,
+          );
+
+          return;
+        }
+
+        setCustomerCaptureProfile(undefined);
+
+        setPendingNotificationBusinessIdentity(undefined);
+
+        resetWizard();
+
+      } catch (error) {
+        console.error(
+          "FINORA CUSTOMER CREATED NOTIFICATION EFFECT FAILED:",
+          error,
+        );
+      }
+    }
+
+    void processCustomerCreatedNotification();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    captureCustomerIdCard,
+    customerCaptureProfile,
+    pendingNotificationBusinessIdentity,
+    resetWizard,
+  ]);
 
 
   /* ========================================================
@@ -1884,7 +2127,38 @@ export default function Step6Review({
         );
 
 
-        resetWizard();
+        /* ==================================================
+           CUSTOMER CREATED NOTIFICATION
+
+           Customer persistence is already successful.
+           Notification failure must never roll back or fake-fail
+           the persisted Customer.
+        ================================================== */
+
+        if (result.data) {
+
+            /* ==================================================
+               PREPARE CUSTOMER ID CARD CAPTURE
+            ================================================== */
+
+            setCustomerCaptureProfile(
+              result.data,
+            );
+
+            setPendingNotificationBusinessIdentity(
+              businessIdentityResult.data,
+            );
+
+          } else {
+
+          console.error(
+            "FINORA CUSTOMER CREATED NOTIFICATION GENERATION SKIPPED:",
+            "Customer persistence returned no persisted Customer record.",
+          );
+        }
+
+
+        
 
       } finally {
 
@@ -2021,15 +2295,23 @@ export default function Step6Review({
 
               onCancel={
                 handleCancel
-              }
-
-            />
+              }            />
 
           </div>
 
         </div>
 
       </div>
+
+      {/* ==================================================
+          OFFSCREEN CUSTOMER ID CARD CAPTURE
+      ================================================== */}
+
+      {customerCaptureProfile
+        ? captureCustomerIdCardNode(
+            customerCaptureProfile,
+          )
+        : null}
 
     </StudioLayout>
 
@@ -2041,3 +2323,20 @@ export default function Step6Review({
 /* ==========================================================
    END
 ========================================================== */
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

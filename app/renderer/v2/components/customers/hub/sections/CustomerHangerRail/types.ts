@@ -50,6 +50,8 @@ export interface CustomerHangerRailProps {
 
   customers: CustomerRailItem[];
 
+  companyName?: string;
+
   selectedCustomerId?: string;
 
   onCustomerSelect?: (

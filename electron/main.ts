@@ -1,4 +1,4 @@
-// ============================================================
+﻿// ============================================================
 // FINORA ENTERPRISE OSâ„¢
 // ELECTRON MAIN PROCESS
 // V2 USB / PENDRIVE STORAGE IPC
@@ -32,6 +32,10 @@
 // ============================================================
 // IMPORTS
 // ============================================================
+
+import { config as loadDotEnv } from "dotenv";
+
+loadDotEnv();
 
 import { app, BrowserWindow, ipcMain, shell } from "electron";
 
@@ -68,6 +72,14 @@ import {
 import {
   runFinoraNotificationProviderDevelopmentProvisioning,
 } from "./notifications/finoraNotificationProviderDevProvisioning.js";
+
+import {
+  registerFinoraNotificationArtifactHandlers,
+} from "./notifications/finoraNotificationArtifactIpc.js";
+
+import {
+  FinoraNotificationArtifactStore,
+} from "./notifications/finoraNotificationArtifactStore.js";
 
 // ============================================================
 // PROMISIFIED SYSTEM COMMAND
@@ -148,6 +160,29 @@ const IPC_CHANNELS = {
 let mainWindow: BrowserWindow | null = null;
 
 let handlersRegistered = false;
+
+// ============================================================
+// NOTIFICATION ARTIFACT STORE
+//
+// LOCAL:
+//   Electron userData root.
+//
+// USB:
+//   Existing trusted FINORA removable-drive resolver.
+//
+// The renderer never supplies either filesystem root.
+// ============================================================
+
+const notificationArtifactStore =
+  new FinoraNotificationArtifactStore({
+    resolveLocalRoot:
+      () =>
+        app.getPath("userData"),
+
+    resolveUsbRoot:
+      () =>
+        findFinoraUsbRoot(),
+  });
 
 // ============================================================
 // IPC SENDER VALIDATION
@@ -1371,6 +1406,11 @@ app.whenReady().then(async () => {
     isTrustedRenderer,
   );
 
+  registerFinoraNotificationArtifactHandlers(
+    isTrustedRenderer,
+    notificationArtifactStore,
+  );
+
   registerFinoraNotificationProviders();
 
   await runFinoraNotificationProviderDevelopmentProvisioning();
@@ -1418,3 +1458,4 @@ app.on("window-all-closed", () => {
 // ============================================================
 // END
 // ============================================================
+

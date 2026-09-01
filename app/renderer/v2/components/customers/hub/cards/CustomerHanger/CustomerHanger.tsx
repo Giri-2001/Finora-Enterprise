@@ -120,6 +120,8 @@ type ThemeStyle = CSSProperties & Record<`--${string}`, string>;
 export default function CustomerHanger({
   customer,
 
+  companyName,
+
   onClick,
 
   flipped = false,
@@ -687,6 +689,7 @@ export default function CustomerHanger({
               <CustomerIdCard
                 customerId={id}
                 customerName={name}
+                companyName={companyName}
                 profilePhoto={photo}
                 phoneNumber={phone}
                 branchName={branch}
