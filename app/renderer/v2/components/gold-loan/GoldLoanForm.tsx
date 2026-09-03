@@ -1,4 +1,4 @@
-/* ===========================================================
+﻿/* ===========================================================
    FINORA ENTERPRISE OS™
 
    GOLD LOAN ENGINE™
@@ -1035,32 +1035,6 @@ export default function GoldLoanForm(props: GoldLoanFormProps) {
             PAGE HEADER
         =================================================== */}
 
-        <header style={styles.pageHeader}>
-          <div style={styles.pageHeadingGroup}>
-            <span style={styles.pageIcon}>
-              <Gem size={22} strokeWidth={1.9} />
-            </span>
-
-            <div style={styles.pageHeadingText}>
-              <div style={styles.pageTitleRow}>
-                <h1 style={styles.pageTitle}>Create Gold Loan</h1>
-
-                <span style={styles.stepBadge}>Step 1 of 6</span>
-              </div>
-
-              <p style={styles.pageSubtitle}>
-                Customer, pledged gold valuation and physical custody
-                allocation.
-              </p>
-            </div>
-          </div>
-
-          <div style={styles.pageStatus}>
-            <span style={styles.pageStatusDot} />
-
-            <span style={styles.pageStatusText}>Gold Loan Draft</span>
-          </div>
-        </header>
 
         {/* ===================================================
             30 / 70 TOP WORKSPACE

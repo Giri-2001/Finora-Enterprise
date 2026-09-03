@@ -138,6 +138,8 @@ export interface GoldLockerRoomStyles {
 
   roomControlArea: CSSProperties;
 
+  lockerControlArea: CSSProperties;
+
   controlLabel: CSSProperties;
 
   roomSelector: CSSProperties;
@@ -157,6 +159,8 @@ export interface GoldLockerRoomStyles {
   roomSelectorChevron: CSSProperties;
 
   roomMenu: CSSProperties;
+
+  lockerMenu: CSSProperties;
 
   roomOption: CSSProperties;
 
@@ -403,6 +407,21 @@ export function getGoldLockerRoomStyles(
       gap: 5,
     },
 
+    lockerControlArea: {
+      minWidth: isMobile ? "100%" : 230,
+
+      display: "flex",
+      flexDirection: "column",
+
+      gap: 5,
+
+      position: "relative",
+
+      zIndex: 500,
+
+      isolation: "isolate",
+    },
+
     controlLabel: {
       color: "var(--finora-theme-text-secondary)",
 
@@ -584,6 +603,52 @@ export function getGoldLockerRoomStyles(
       background: "var(--finora-theme-background-surface)",
 
       boxShadow: "var(--finora-theme-shadow-soft)",
+
+      boxSizing: "border-box",
+    },
+
+    lockerMenu: {
+      width: isMobile ? "100%" : 420,
+
+      maxWidth: isMobile
+        ? "100%"
+        : "min(420px, calc(100vw - 48px))",
+
+      maxHeight: isMobile ? 380 : 400,
+
+      overflowY: "auto",
+      overflowX: "hidden",
+
+      position: "absolute",
+
+      top: `calc(100% + ${moduleTokens.spacing.compactGap}px)`,
+
+      right: 0,
+      left: "auto",
+
+      zIndex: 1000,
+
+      display: "flex",
+      flexDirection: "column",
+
+      gap: moduleTokens.spacing.compactGap,
+
+      padding: 10,
+
+      border: "1px solid var(--finora-theme-border-default)",
+
+      borderRadius: moduleTokens.control.inputRadius,
+
+      backgroundColor: "var(--finora-theme-background-muted)",
+
+      backgroundImage: "none",
+
+      opacity: 1,
+
+      boxShadow:
+        "0 24px 60px rgba(15, 23, 42, 0.30), 0 8px 24px rgba(15, 23, 42, 0.16)",
+
+      isolation: "isolate",
 
       boxSizing: "border-box",
     },
@@ -800,6 +865,9 @@ export function getGoldLockerRoomStyles(
       flexDirection: "column",
 
       gap: moduleTokens.spacing.cardGap,
+
+      background: "var(--finora-theme-background-primary)",
+
     },
 
     lockerSectionHeader: {

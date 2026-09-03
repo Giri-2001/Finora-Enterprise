@@ -405,7 +405,7 @@ export function getGoldLoanFormStyles(
 
       gap: formLayout.sectionGap,
 
-      padding: `${moduleTokens.spacing.pageY}px ${moduleTokens.spacing.pageX}px`,
+      padding: `6px ${moduleTokens.spacing.pageX}px ${moduleTokens.spacing.pageY}px`,
 
       margin: 0,
 
@@ -630,7 +630,7 @@ export function getGoldLoanFormStyles(
         ? "minmax(0, 1fr)"
         : "minmax(0, 3fr) minmax(0, 7fr)",
 
-      gap: topWorkspace.gap,
+      gap: topWorkspace.isStacked ? topWorkspace.gap : 6,
 
       alignItems: "stretch",
 

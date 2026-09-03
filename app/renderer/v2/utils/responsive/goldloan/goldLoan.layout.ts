@@ -335,7 +335,10 @@ function resolveValuationLayout(
 
     gap: moduleTokens.spacing.fieldGap,
 
-    summaryColumns: resolveGoldLoanSummaryColumns(input.device),
+    summaryColumns:
+      input.device === "laptop"
+        ? 4
+        : resolveGoldLoanSummaryColumns(input.device),
 
     inputHeight: moduleTokens.control.inputHeight,
   };

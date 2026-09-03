@@ -302,6 +302,8 @@ export default function GoldLockerRoom(props: GoldLockerRoomProps) {
 
   const [roomMenuOpen, setRoomMenuOpen] = useState(false);
 
+  const [lockerMenuOpen, setLockerMenuOpen] = useState(false);
+
   const [inspectionLockerId, setInspectionLockerId] =
     useState<GoldLockerId | null>(null);
 
@@ -375,6 +377,8 @@ export default function GoldLockerRoom(props: GoldLockerRoomProps) {
 
   setRoomMenuOpen(false);
 
+  setLockerMenuOpen(false);
+
   setRacksExpanded(false);
 }, [selectedRoomId]);
 
@@ -384,6 +388,18 @@ export default function GoldLockerRoom(props: GoldLockerRoomProps) {
 
   function handleToggleRoomMenu(): void {
     setRoomMenuOpen((current) => !current);
+
+    setLockerMenuOpen(false);
+  }
+
+  /* =========================================================
+     TOGGLE LOCKER MENU
+  ========================================================= */
+
+  function handleToggleLockerMenu(): void {
+    setLockerMenuOpen((current) => !current);
+
+    setRoomMenuOpen(false);
   }
 
   /* =========================================================
@@ -397,6 +413,8 @@ export default function GoldLockerRoom(props: GoldLockerRoomProps) {
   function handleSelectRoom(room: GoldLockerRoomView): void {
     setRoomMenuOpen(false);
 
+    setLockerMenuOpen(false);
+
     setInspectionLockerId(null);
 
     onSelectRoom(room);
@@ -407,16 +425,18 @@ export default function GoldLockerRoom(props: GoldLockerRoomProps) {
   ========================================================= */
 
  function handleSelectLocker(locker: GoldLockerView): void {
-  if (!canAllocateLocker(locker)) {
-    return;
+    if (!canAllocateLocker(locker)) {
+      return;
+    }
+
+    setInspectionLockerId(null);
+
+    setLockerMenuOpen(false);
+
+    setRacksExpanded(true);
+
+    onSelectLocker(locker);
   }
-
-  setInspectionLockerId(null);
-
-  setRacksExpanded(true);
-
-  onSelectLocker(locker);
-}
 
   /* =========================================================
      LOCKER VIEW
@@ -436,6 +456,9 @@ export default function GoldLockerRoom(props: GoldLockerRoomProps) {
     event.stopPropagation();
 
     setInspectionLockerId(locker.configuration.id);
+
+
+    setLockerMenuOpen(false);
 
     setRacksExpanded(true);
 
@@ -518,6 +541,16 @@ export default function GoldLockerRoom(props: GoldLockerRoomProps) {
   const selectedRoomName = getRoomDisplayName(selectedRoom);
 
   const selectedRoomCode = getRoomCode(selectedRoom);
+
+  const selectedLockerName = selectedLocker
+    ? getLockerDisplayName(selectedLocker)
+    : "Select Locker";
+
+  const selectedLockerCode = selectedLocker
+    ? getLockerCode(selectedLocker)
+    : `${selectedRoom.lockers.length} ${
+        selectedRoom.lockers.length === 1 ? "Locker" : "Lockers"
+      }`;
 
   /* =========================================================
      ACTIVE LOCKER RACK SELECTION
@@ -653,322 +686,331 @@ export default function GoldLockerRoom(props: GoldLockerRoomProps) {
             ) : null}
           </div>
         </div>
-      </header>
 
-      {/* =====================================================
-          ROOM OVERVIEW
-      ===================================================== */}
+        {/* ===================================================
+            CUSTOM LOCKER SELECTOR
 
-      <div style={styles.overview}>
-        <article style={styles.overviewMetric}>
-          <span style={styles.overviewMetricLabel}>Lockers</span>
+            Existing Locker cards are moved here.
+            No duplicate Locker-card implementation.
+        =================================================== */}
 
-          <strong style={styles.overviewMetricValue}>
-            {selectedRoom.occupancy.totalLockers}
-          </strong>
+        <div style={styles.lockerControlArea}>
+          <span style={styles.controlLabel}>Locker</span>
 
-          <span style={styles.overviewMetricSubtext}>Physical lockers</span>
-        </article>
+          <div style={styles.roomSelector}>
+            <button
+              type="button"
+              onClick={handleToggleLockerMenu}
+              style={styles.roomSelectorButton}
+              aria-haspopup="dialog"
+              aria-expanded={lockerMenuOpen}
+            >
+              <span style={styles.roomSelectorButtonContent}>
+                <span style={styles.roomSelectorIcon}>
+                  <Archive
+                    size={moduleTokens.control.inputIconSize}
+                    strokeWidth={1.9}
+                  />
+                </span>
 
-        <article style={styles.overviewMetric}>
-          <span style={styles.overviewMetricLabel}>Racks</span>
-
-          <strong style={styles.overviewMetricValue}>
-            {selectedRoom.occupancy.totalRacks}
-          </strong>
-
-          <span style={styles.overviewMetricSubtext}>Configured racks</span>
-        </article>
-
-        <article style={styles.overviewMetric}>
-          <span style={styles.overviewMetricLabel}>Occupied</span>
-
-          <strong style={styles.overviewMetricValue}>
-            {selectedRoom.occupancy.occupied}
-          </strong>
-
-          <span style={styles.overviewMetricSubtext}>Gold bags stored</span>
-        </article>
-
-        <article style={styles.overviewMetric}>
-          <span style={styles.overviewMetricLabel}>Available</span>
-
-          <strong style={styles.overviewMetricValue}>
-            {selectedRoom.occupancy.available}
-          </strong>
-
-          <span style={styles.overviewMetricSubtext}>Bag capacity free</span>
-        </article>
-      </div>
-
-      {/* =====================================================
-          LOCKERS
-      ===================================================== */}
-
-      <div style={styles.lockerSection}>
-        <header style={styles.lockerSectionHeader}>
-          <div style={styles.lockerSectionTitleGroup}>
-            <h3 style={styles.lockerSectionTitle}>Lockers</h3>
-
-            <p style={styles.lockerSectionSubtitle}>
-              Full lockers cannot receive new bags but can always be viewed.
-            </p>
-          </div>
-
-          <span style={styles.lockerCountBadge}>
-            {selectedRoom.lockers.length}{" "}
-            {selectedRoom.lockers.length === 1 ? "Locker" : "Lockers"}
-          </span>
-        </header>
-
-        {selectedRoom.lockers.length === 0 ? (
-          <div style={styles.emptyState}>
-            <span style={styles.emptyIcon}>
-              <Archive size={20} strokeWidth={1.8} />
-            </span>
-
-            <h3 style={styles.emptyTitle}>No Lockers Configured</h3>
-
-            <p style={styles.emptyDescription}>
-              This locker room does not currently contain any configured
-              lockers.
-            </p>
-          </div>
-        ) : (
-          <div style={styles.lockerGrid}>
-            {selectedRoom.lockers.map((locker) => {
-              const selected = selectedLockerId === locker.configuration.id;
-
-              const inspected = inspectionLockerId === locker.configuration.id;
-
-              const canAllocate = canAllocateLocker(locker);
-
-              const visualStatus = getLockerVisualStatus(locker);
-
-              const cardStateStyle = getGoldLockerCardStateStyle({
-                occupancyStatus: visualStatus,
-
-                selected: selected || inspected,
-
-                canAllocate,
-              });
-
-              const cursorStyle = getGoldLockerCardCursorStyle(canAllocate);
-
-              const cardStyle = {
-                ...styles.lockerCard,
-                ...cardStateStyle,
-                ...cursorStyle,
-              };
-
-              const statusStyle = {
-                ...styles.lockerStatusBadge,
-                ...getGoldLockerStatusBadgeStyle(visualStatus),
-              };
-
-              const availabilityStyle = {
-                ...styles.availabilityText,
-                ...getGoldLockerAvailabilityTextStyle(visualStatus),
-              };
-
-              const progressFillStyle = getGoldLockerProgressFillStyle({
-                occupancyStatus: visualStatus,
-
-                occupancyPercentage: locker.occupancy.occupancyPercentage,
-              });
-
-              const allocationButtonStyle = {
-                ...styles.selectLockerButton,
-                ...getGoldLockerAllocationButtonStyle({
-                  selected,
-
-                  canAllocate,
-                }),
-              };
-
-              const lockerName = getLockerDisplayName(locker);
-
-              return (
-                <article
-                  key={locker.configuration.id}
-                  style={cardStyle}
-                  onClick={() => {
-                    handleSelectLocker(locker);
-                  }}
-                >
-                  {/* ======================================
-                        LOCKER HEADER
-                    ====================================== */}
-
-                  <div style={styles.lockerHeader}>
-                    <div style={styles.lockerIdentity}>
-                      <span style={styles.lockerIcon}>
-                        {canAllocate ? (
-                          <Archive
-                            size={moduleTokens.locker.iconSize}
-                            strokeWidth={1.9}
-                          />
-                        ) : (
-                          <LockKeyhole
-                            size={moduleTokens.locker.iconSize}
-                            strokeWidth={1.9}
-                          />
-                        )}
-                      </span>
-
-                      <div style={styles.lockerTitleGroup}>
-                        <h4 style={styles.lockerTitle}>{lockerName}</h4>
-
-                        <span style={styles.lockerCode}>
-                          {getLockerCode(locker)}
-                        </span>
-                      </div>
-                    </div>
-
-                    {/* ====================================
-                          VIEW — ALWAYS ENABLED
-                      ==================================== */}
-
-                    <div style={styles.lockerHeaderActions}>
-                      <button
-                        type="button"
-                        onClick={(event) => {
-                          handleViewLocker(event, locker);
-                        }}
-                        style={styles.lockerViewButton}
-                        aria-label={`View ${lockerName} racks`}
-                      >
-                        <Eye
-                          size={moduleTokens.control.buttonIconSize}
-                          strokeWidth={1.9}
-                        />
-                        View
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* ======================================
-                        STATUS
-                    ====================================== */}
-
-                  <span style={statusStyle}>
-                    {getLockerStatusLabel(locker)}
+                <span style={styles.roomSelectorTextGroup}>
+                  <span style={styles.roomSelectorPrimary}>
+                    {selectedLockerName}
                   </span>
 
-                  {/* ======================================
-                        OCCUPANCY
-                    ====================================== */}
+                  <span style={styles.roomSelectorSecondary}>
+                    {selectedLockerCode}
+                  </span>
+                </span>
+              </span>
 
-                  <div style={styles.occupancyBlock}>
-                    <div style={styles.occupancyRow}>
-                      <span style={styles.occupancyLabel}>Occupancy</span>
+              <span style={styles.roomSelectorChevron}>
+                <ChevronDown size={16} strokeWidth={1.9} />
+              </span>
+            </button>
 
-                      <strong style={styles.occupancyValue}>
-                        {locker.occupancy.occupied}
-                        {" / "}
-                        {locker.occupancy.totalCapacity}
-                      </strong>
-                    </div>
+            {lockerMenuOpen ? (
+              <div style={styles.lockerMenu}>
+              {/* =====================================================
+                  LOCKERS
+              ===================================================== */}
 
-                    <div style={styles.progressTrack}>
-                      <div style={progressFillStyle} />
-                    </div>
+              <div style={styles.lockerSection}>
+                <header style={styles.lockerSectionHeader}>
+                  <div style={styles.lockerSectionTitleGroup}>
+                    <h3 style={styles.lockerSectionTitle}>Lockers</h3>
 
-                    <span style={availabilityStyle}>
-                      {getLockerAvailabilityLabel(locker)}
+                    <p style={styles.lockerSectionSubtitle}>
+                      Full lockers cannot receive new bags but can always be viewed.
+                    </p>
+                  </div>
+
+                  <span style={styles.lockerCountBadge}>
+                    {selectedRoom.lockers.length}{" "}
+                    {selectedRoom.lockers.length === 1 ? "Locker" : "Lockers"}
+                  </span>
+                </header>
+
+                {selectedRoom.lockers.length === 0 ? (
+                  <div style={styles.emptyState}>
+                    <span style={styles.emptyIcon}>
+                      <Archive size={20} strokeWidth={1.8} />
                     </span>
+
+                    <h3 style={styles.emptyTitle}>No Lockers Configured</h3>
+
+                    <p style={styles.emptyDescription}>
+                      This locker room does not currently contain any configured
+                      lockers.
+                    </p>
                   </div>
+                ) : (
+                  <div
+                    style={{
+                      ...styles.lockerGrid,
+                      gridTemplateColumns: "1fr",
+                    }}
+                  >
+                    {selectedRoom.lockers.map((locker) => {
+                      const selected = selectedLockerId === locker.configuration.id;
 
-                  {/* ======================================
-                        LOCKER METRICS
-                    ====================================== */}
+                      const inspected = inspectionLockerId === locker.configuration.id;
 
-                  <div style={styles.lockerMetrics}>
-                    <div style={styles.lockerMetric}>
-                      <span style={styles.lockerMetricLabel}>Racks</span>
+                      const canAllocate = canAllocateLocker(locker);
 
-                      <strong style={styles.lockerMetricValue}>
-                        {locker.occupancy.totalRacks}
-                      </strong>
-                    </div>
+                      const visualStatus = getLockerVisualStatus(locker);
 
-                    <div style={styles.lockerMetric}>
-                      <span style={styles.lockerMetricLabel}>Full</span>
+                      const cardStateStyle = getGoldLockerCardStateStyle({
+                        occupancyStatus: visualStatus,
 
-                      <strong style={styles.lockerMetricValue}>
-                        {locker.occupancy.fullRackCount}
-                      </strong>
-                    </div>
+                        selected: selected || inspected,
 
-                    <div style={styles.lockerMetric}>
-                      <span style={styles.lockerMetricLabel}>Free</span>
+                        canAllocate,
+                      });
 
-                      <strong style={styles.lockerMetricValue}>
-                        {locker.occupancy.available}
-                      </strong>
-                    </div>
+                      const cursorStyle = getGoldLockerCardCursorStyle(canAllocate);
+
+                      const cardStyle = {
+                        ...styles.lockerCard,
+                        ...cardStateStyle,
+                        ...cursorStyle,
+                      };
+
+                      const statusStyle = {
+                        ...styles.lockerStatusBadge,
+                        ...getGoldLockerStatusBadgeStyle(visualStatus),
+                      };
+
+                      const availabilityStyle = {
+                        ...styles.availabilityText,
+                        ...getGoldLockerAvailabilityTextStyle(visualStatus),
+                      };
+
+                      const progressFillStyle = getGoldLockerProgressFillStyle({
+                        occupancyStatus: visualStatus,
+
+                        occupancyPercentage: locker.occupancy.occupancyPercentage,
+                      });
+
+                      const allocationButtonStyle = {
+                        ...styles.selectLockerButton,
+                        ...getGoldLockerAllocationButtonStyle({
+                          selected,
+
+                          canAllocate,
+                        }),
+                      };
+
+                      const lockerName = getLockerDisplayName(locker);
+
+                      return (
+                        <article
+                          key={locker.configuration.id}
+                          style={cardStyle}
+                          onClick={() => {
+                            handleSelectLocker(locker);
+                          }}
+                        >
+                          {/* ======================================
+                                LOCKER HEADER
+                            ====================================== */}
+
+                          <div style={styles.lockerHeader}>
+                            <div style={styles.lockerIdentity}>
+                              <span style={styles.lockerIcon}>
+                                {canAllocate ? (
+                                  <Archive
+                                    size={moduleTokens.locker.iconSize}
+                                    strokeWidth={1.9}
+                                  />
+                                ) : (
+                                  <LockKeyhole
+                                    size={moduleTokens.locker.iconSize}
+                                    strokeWidth={1.9}
+                                  />
+                                )}
+                              </span>
+
+                              <div style={styles.lockerTitleGroup}>
+                                <h4 style={styles.lockerTitle}>{lockerName}</h4>
+
+                                <span style={styles.lockerCode}>
+                                  {getLockerCode(locker)}
+                                </span>
+                              </div>
+                            </div>
+
+                            {/* ====================================
+                                  VIEW — ALWAYS ENABLED
+                              ==================================== */}
+
+                            <div style={styles.lockerHeaderActions}>
+                              <button
+                                type="button"
+                                onClick={(event) => {
+                                  handleViewLocker(event, locker);
+                                }}
+                                style={styles.lockerViewButton}
+                                aria-label={`View ${lockerName} racks`}
+                              >
+                                <Eye
+                                  size={moduleTokens.control.buttonIconSize}
+                                  strokeWidth={1.9}
+                                />
+                                View
+                              </button>
+                            </div>
+                          </div>
+
+                          {/* ======================================
+                                STATUS
+                            ====================================== */}
+
+                          <span style={statusStyle}>
+                            {getLockerStatusLabel(locker)}
+                          </span>
+
+                          {/* ======================================
+                                OCCUPANCY
+                            ====================================== */}
+
+                          <div style={styles.occupancyBlock}>
+                            <div style={styles.occupancyRow}>
+                              <span style={styles.occupancyLabel}>Occupancy</span>
+
+                              <strong style={styles.occupancyValue}>
+                                {locker.occupancy.occupied}
+                                {" / "}
+                                {locker.occupancy.totalCapacity}
+                              </strong>
+                            </div>
+
+                            <div style={styles.progressTrack}>
+                              <div style={progressFillStyle} />
+                            </div>
+
+                            <span style={availabilityStyle}>
+                              {getLockerAvailabilityLabel(locker)}
+                            </span>
+                          </div>
+
+                          {/* ======================================
+                                LOCKER METRICS
+                            ====================================== */}
+
+                          <div style={styles.lockerMetrics}>
+                            <div style={styles.lockerMetric}>
+                              <span style={styles.lockerMetricLabel}>Racks</span>
+
+                              <strong style={styles.lockerMetricValue}>
+                                {locker.occupancy.totalRacks}
+                              </strong>
+                            </div>
+
+                            <div style={styles.lockerMetric}>
+                              <span style={styles.lockerMetricLabel}>Full</span>
+
+                              <strong style={styles.lockerMetricValue}>
+                                {locker.occupancy.fullRackCount}
+                              </strong>
+                            </div>
+
+                            <div style={styles.lockerMetric}>
+                              <span style={styles.lockerMetricLabel}>Free</span>
+
+                              <strong style={styles.lockerMetricValue}>
+                                {locker.occupancy.available}
+                              </strong>
+                            </div>
+                          </div>
+
+                          {/* ======================================
+                                FOOTER
+                            ====================================== */}
+
+                          <div style={styles.lockerFooter}>
+                            {selected ? (
+                              <span style={styles.selectedIndicator}>
+                                <Check size={15} strokeWidth={2} />
+                                Selected
+                              </span>
+                            ) : inspected ? (
+                              <span style={styles.selectedIndicator}>
+                                <Eye size={15} strokeWidth={1.9} />
+                                Viewing
+                              </span>
+                            ) : (
+                              <span />
+                            )}
+
+                            <button
+                              type="button"
+                              disabled={!canAllocate}
+                              onClick={(event) => {
+                                handleLockerSelectButton(event, locker);
+                              }}
+                              style={allocationButtonStyle}
+                            >
+                              {selected ? (
+                                <>
+                                  <Check
+                                    size={moduleTokens.control.buttonIconSize}
+                                    strokeWidth={2}
+                                  />
+                                  Selected
+                                </>
+                              ) : canAllocate ? (
+                                <>
+                                  <Layers3
+                                    size={moduleTokens.control.buttonIconSize}
+                                    strokeWidth={1.9}
+                                  />
+                                  Select
+                                </>
+                              ) : (
+                                <>
+                                  <LockKeyhole
+                                    size={moduleTokens.control.buttonIconSize}
+                                    strokeWidth={1.9}
+                                  />
+                                  Full
+                                </>
+                              )}
+                            </button>
+                          </div>
+                        </article>
+                      );
+                    })}
                   </div>
+                )}
+              </div>
 
-                  {/* ======================================
-                        FOOTER
-                    ====================================== */}
-
-                  <div style={styles.lockerFooter}>
-                    {selected ? (
-                      <span style={styles.selectedIndicator}>
-                        <Check size={15} strokeWidth={2} />
-                        Selected
-                      </span>
-                    ) : inspected ? (
-                      <span style={styles.selectedIndicator}>
-                        <Eye size={15} strokeWidth={1.9} />
-                        Viewing
-                      </span>
-                    ) : (
-                      <span />
-                    )}
-
-                    <button
-                      type="button"
-                      disabled={!canAllocate}
-                      onClick={(event) => {
-                        handleLockerSelectButton(event, locker);
-                      }}
-                      style={allocationButtonStyle}
-                    >
-                      {selected ? (
-                        <>
-                          <Check
-                            size={moduleTokens.control.buttonIconSize}
-                            strokeWidth={2}
-                          />
-                          Selected
-                        </>
-                      ) : canAllocate ? (
-                        <>
-                          <Layers3
-                            size={moduleTokens.control.buttonIconSize}
-                            strokeWidth={1.9}
-                          />
-                          Select
-                        </>
-                      ) : (
-                        <>
-                          <LockKeyhole
-                            size={moduleTokens.control.buttonIconSize}
-                            strokeWidth={1.9}
-                          />
-                          Full
-                        </>
-                      )}
-                    </button>
-                  </div>
-                </article>
-              );
-            })}
+              </div>
+            ) : null}
           </div>
-        )}
-      </div>
+        </div>
+
+      </header>
 
       {/* =====================================================
           ACTIVE LOCKER RACKS
