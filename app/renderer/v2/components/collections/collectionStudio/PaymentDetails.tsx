@@ -7,7 +7,7 @@
 //
 // RESPONSIBILITY
 //
-// - Capture collection date
+// - Display the session-locked Collection Business Date
 // - Capture payment mode
 // - Capture reference number
 // - Capture remarks
@@ -88,7 +88,7 @@
 //
 // Defaults:
 //
-// - receiptDate   = today
+// - receiptDate   = active Login Business Date
 // - paymentMethod = cash
 //
 // CollectionEntry receives:
@@ -122,7 +122,22 @@ import { useCollectionController } from "../controller";
 
 import { updateLoanOutstandingAmount } from "../../../services/loan/loanService";
 
-import { approveCollection } from "../../../services/collection/collectionService";
+import {
+  approveCollection,
+  loadCollections,
+} from "../../../services/collection/collectionService";
+
+import {
+  resolveMinimumCollectionDate,
+  resolveOperationalDate,
+  validateCollectionDate,
+} from "../../../services/collection/collectionDateService";
+
+import { getSession } from "../../../store/authStore";
+
+import {
+  resolveBusinessDate,
+} from "../../../services/business/businessDateService";
 
 import {
   previewNextCollectionReceiptPair,
@@ -154,27 +169,6 @@ function safeNumber(value: unknown): number {
   return Number.isFinite(parsed) ? Math.max(0, parsed) : 0;
 }
 
-// ============================================================
-// LOCAL TODAY
-// ============================================================
-//
-// Uses local calendar date instead of UTC date.
-//
-// This prevents a date shift around local midnight.
-//
-// ============================================================
-
-function getLocalTodayInputValue(): string {
-  const now = new Date();
-
-  const year = now.getFullYear();
-
-  const month = String(now.getMonth() + 1).padStart(2, "0");
-
-  const day = String(now.getDate()).padStart(2, "0");
-
-  return `${year}-${month}-${day}`;
-}
 
 // ============================================================
 // CURRENCY
@@ -190,6 +184,19 @@ function formatCurrency(value: number): string {
 
 export default function PaymentDetails() {
   const { reviewData, updateField } = useCollectionController();
+
+  // ==========================================================
+  // ERP BUSINESS DATE
+  // ==========================================================
+
+  const authenticatedSession =
+    getSession();
+
+  const activeBusinessDate =
+    resolveBusinessDate(
+      authenticatedSession
+        ?.businessDate,
+    ) ?? "";
 
   // ==========================================================
   // FINORA RESPONSIVE ENGINE
@@ -256,6 +263,122 @@ export default function PaymentDetails() {
   // ==========================================================
 
   const [saving, setSaving] = useState(false);
+
+  // ==========================================================
+  // COLLECTION DATE LEDGER BOUNDARY
+  // ==========================================================
+  //
+  // First Collection:
+  //   Loan Date + 1 calendar day
+  //
+  // Later Collections:
+  //   Latest saved Collection Date
+  //
+  // Multiple Collections on the same operational date remain
+  // valid. A new Collection cannot move the ledger backwards.
+  // ==========================================================
+
+  const [
+    latestCollectionDate,
+    setLatestCollectionDate,
+  ] = useState("");
+
+  const [
+    collectionDateLedgerReady,
+    setCollectionDateLedgerReady,
+  ] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const loanId =
+      String(
+        reviewData.loanId ?? "",
+      ).trim();
+
+    setLatestCollectionDate("");
+    setCollectionDateLedgerReady(false);
+
+    if (!loanId) {
+      setCollectionDateLedgerReady(true);
+
+      return () => {
+        cancelled = true;
+      };
+    }
+
+    async function loadCollectionDateBoundary(): Promise<void> {
+      try {
+        const savedCollections =
+          await loadCollections();
+
+        if (cancelled) {
+          return;
+        }
+
+        const savedDates =
+          savedCollections
+            .filter(
+              (collection) =>
+                String(
+                  collection.loanId ?? "",
+                ).trim() === loanId,
+            )
+            .map(
+              (collection) =>
+                resolveOperationalDate(
+                  collection.receiptDate,
+                ),
+            )
+            .filter(
+              (value): value is string =>
+                Boolean(value),
+            )
+            .sort();
+
+        const latestDate =
+          savedDates.length > 0
+            ? savedDates[
+                savedDates.length - 1
+              ]
+            : "";
+
+        setLatestCollectionDate(
+          latestDate,
+        );
+
+        setCollectionDateLedgerReady(
+          true,
+        );
+      } catch (error) {
+        if (cancelled) {
+          return;
+        }
+
+        console.error(
+          "FINORA COLLECTION DATE LEDGER ERROR:",
+          error,
+        );
+
+        setLatestCollectionDate("");
+        setCollectionDateLedgerReady(false);
+      }
+    }
+
+    void loadCollectionDateBoundary();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    reviewData.loanId,
+  ]);
+
+  const minimumCollectionDate =
+    resolveMinimumCollectionDate(
+      reviewData.loanDate,
+      latestCollectionDate,
+    ) ?? "";
 
   // ==========================================================
   // COLLECTION / RECEIPT NUMBER PREVIEW
@@ -384,10 +507,6 @@ export default function PaymentDetails() {
   // UPDATE FIELD
   // ==========================================================
 
-  function handleDateChange(value: string): void {
-    updateField("receiptDate", value);
-  }
-
   function handlePaymentMethodChange(value: string): void {
     updateField("paymentMethod", value);
   }
@@ -455,7 +574,7 @@ export default function PaymentDetails() {
 
     updateField("paymentMethod", "cash");
 
-    updateField("receiptDate", getLocalTodayInputValue());
+    updateField("receiptDate", activeBusinessDate);
 
     // --------------------------------------------------------
     // RESET COLLECTION ENTRY LOCAL UI
@@ -593,7 +712,7 @@ export default function PaymentDetails() {
       // COLLECTION DATE
       // ------------------------------------------------------
 
-      receiptDate: reviewData.receiptDate || getLocalTodayInputValue(),
+      receiptDate: reviewData.receiptDate,
 
       // ------------------------------------------------------
       // STATUS
@@ -628,8 +747,109 @@ export default function PaymentDetails() {
     // VALIDATION
     // --------------------------------------------------------
 
+    if (!collectionDateLedgerReady) {
+      window.alert(
+        "Collection Date ledger is still loading. Please try again.",
+      );
+
+      return;
+    }
+
+    try {
+      validateCollectionDate({
+        collectionDate:
+          reviewData.receiptDate,
+
+        loanDate:
+          reviewData.loanDate,
+
+        activeBusinessDate,
+
+        latestCollectionDate:
+          latestCollectionDate || undefined,
+      });
+    } catch (error) {
+      window.alert(
+        error instanceof Error
+          ? error.message
+          : "Please select a valid Collection Date.",
+      );
+
+      return;
+    }
+
     if (!validateCollection()) {
       return;
+    }
+
+    let receiptWindow: Window | null = null;
+
+    let receiptRendered = false;
+
+    if (printReceipt) {
+      receiptWindow = window.open(
+        "about:blank#finora-collection-receipt",
+        "_blank",
+        "width=760,height=900",
+      );
+
+      if (!receiptWindow) {
+        window.alert(
+          "Receipt window was blocked. Please allow pop-ups for FINORA Enterprise. No collection was saved.",
+        );
+
+        return;
+      }
+
+      receiptWindow.document.open();
+
+      receiptWindow.document.write(`
+        <!doctype html>
+        <html>
+          <head>
+            <title>Preparing FINORA Receipt</title>
+            <meta charset="utf-8" />
+            <style>
+              body {
+                margin: 0;
+                min-height: 100vh;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                background: #f8fafc;
+                color: #0f172a;
+                font-family: Arial, sans-serif;
+              }
+
+              .preparing {
+                padding: 24px 32px;
+                border: 1px solid #d9dee8;
+                border-radius: 12px;
+                background: #ffffff;
+                box-shadow: 0 12px 30px rgba(15, 23, 42, .10);
+                text-align: center;
+              }
+
+              strong {
+                display: block;
+                margin-bottom: 8px;
+                color: #a56f00;
+                font-size: 18px;
+              }
+            </style>
+          </head>
+          <body>
+            <div class="preparing">
+              <strong>FINORA ENTERPRISE</strong>
+              Saving collection and preparing receipt...
+            </div>
+          </body>
+        </html>
+      `);
+
+      receiptWindow.document.close();
+
+      receiptWindow.focus();
     }
 
     setSaving(true);
@@ -749,6 +969,22 @@ export default function PaymentDetails() {
 
       const savedCollection = await approveCollection(collectionSaveData);
 
+      const savedCollectionDate =
+        resolveOperationalDate(
+          savedCollection.receiptDate,
+        );
+
+      if (savedCollectionDate) {
+        setLatestCollectionDate(
+          (currentDate) =>
+            !currentDate ||
+            savedCollectionDate >
+              currentDate
+              ? savedCollectionDate
+              : currentDate,
+        );
+      }
+
       // ======================================================
       // PUSH AUTHORITATIVE LOAN BALANCE INTO CONTROLLER
       // ======================================================
@@ -767,8 +1003,13 @@ export default function PaymentDetails() {
       //
       // ======================================================
 
-      if (printReceipt) {
-        printCollectionReceipt(collectionSaveData);
+      if (printReceipt && receiptWindow) {
+        printCollectionReceipt(
+          collectionSaveData,
+          receiptWindow,
+        );
+
+        receiptRendered = true;
       }
 
       // ======================================================
@@ -797,16 +1038,22 @@ export default function PaymentDetails() {
 
       const loanClosed = updatedOutstanding === 0;
 
-      alert(
-        loanClosed
-          ? printReceipt
-            ? "Collection saved successfully. Loan closed. Receipt is ready to print."
-            : "Collection saved successfully. Loan closed."
-          : printReceipt
-            ? "Collection saved successfully. Receipt is ready to print."
+      if (!printReceipt) {
+        alert(
+          loanClosed
+            ? "Collection saved successfully. Loan closed."
             : "Collection saved successfully.",
-      );
+        );
+      }
     } catch (error) {
+      if (
+        receiptWindow &&
+        !receiptRendered &&
+        !receiptWindow.closed
+      ) {
+        receiptWindow.close();
+      }
+
       console.error("FINORA COLLECTION SAVE ERROR:", error);
 
       alert(
@@ -829,16 +1076,8 @@ export default function PaymentDetails() {
 
   function printCollectionReceipt(
     data: ReturnType<typeof buildSaveData>,
+    receiptWindow: Window,
   ): void {
-    const receiptWindow = window.open("", "_blank", "width=760,height=900");
-
-    if (!receiptWindow) {
-      alert(
-        "Receipt window was blocked by the browser. Please allow pop-ups for FINORA Enterprise.",
-      );
-
-      return;
-    }
 
     // ========================================================
     // RECEIPT VALUES
@@ -858,6 +1097,8 @@ export default function PaymentDetails() {
     // ========================================================
     // RECEIPT DOCUMENT
     // ========================================================
+
+    receiptWindow.document.open();
 
     receiptWindow.document.write(`
       <!doctype html>
@@ -932,7 +1173,30 @@ export default function PaymentDetails() {
               font-size: 12px;
             }
 
+            .receipt-actions {
+              width: 100%;
+              max-width: 720px;
+              margin: 0 auto 14px;
+              display: flex;
+              justify-content: flex-end;
+            }
+
+            .print-button {
+              padding: 10px 18px;
+              border: 1px solid #a56f00;
+              border-radius: 8px;
+              background: #c89400;
+              color: #ffffff;
+              font-size: 13px;
+              font-weight: 800;
+              cursor: pointer;
+            }
+
             @media print {
+
+              .receipt-actions {
+                display: none;
+              }
 
               body {
                 padding: 0;
@@ -949,6 +1213,16 @@ export default function PaymentDetails() {
         </head>
 
         <body>
+
+          <div class="receipt-actions">
+            <button
+              type="button"
+              class="print-button"
+              onclick="window.print()"
+            >
+              PRINT RECEIPT
+            </button>
+          </div>
 
           <div class="receipt">
 
@@ -1096,10 +1370,6 @@ export default function PaymentDetails() {
     receiptWindow.document.close();
 
     receiptWindow.focus();
-
-    window.setTimeout(() => {
-      receiptWindow.print();
-    }, 250);
   }
 
   // ==========================================================
@@ -1199,7 +1469,25 @@ export default function PaymentDetails() {
             id="finora-collection-date"
             type="date"
             value={reviewData.receiptDate || ""}
-            onChange={(event) => handleDateChange(event.target.value)}
+            min={minimumCollectionDate || undefined}
+            max={activeBusinessDate || undefined}
+            onChange={(event) =>
+              updateField(
+                "receiptDate",
+                event.target.value,
+              )
+            }
+            disabled={
+              !reviewData.loanId ||
+              !collectionDateLedgerReady
+            }
+            aria-label="Collection Date"
+            title={
+              minimumCollectionDate &&
+              activeBusinessDate
+                ? `Allowed Collection Date: ${minimumCollectionDate} to ${activeBusinessDate}`
+                : "Select a valid Collection Date."
+            }
             style={responsiveInputStyle}
           />
         </div>
@@ -1292,7 +1580,7 @@ export default function PaymentDetails() {
         <div style={responsiveActionsStyle}>
           <button
             type="button"
-            disabled={saving}
+            disabled={saving || !collectionDateLedgerReady}
             onClick={() => void handleSaveCollection(false)}
             style={responsiveSaveButtonStyle}
           >
@@ -1301,7 +1589,7 @@ export default function PaymentDetails() {
 
           <button
             type="button"
-            disabled={saving}
+            disabled={saving || !collectionDateLedgerReady}
             onClick={() => void handleSaveCollection(true)}
             style={responsiveReceiptButtonStyle}
           >

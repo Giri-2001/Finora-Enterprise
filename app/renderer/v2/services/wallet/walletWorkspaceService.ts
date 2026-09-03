@@ -1,4 +1,4 @@
-﻿/* ============================================================
+/* ============================================================
    FINORA ENTERPRISE OS™
 
    V2 WALLET ENGINE™
@@ -128,6 +128,66 @@ export async function loadWalletWorkspace(
 
       transactions:
         transactionsResult.data ?? [],
+    },
+  };
+}
+
+/* ============================================================
+   LOAD AUTHORITATIVE BALANCE
+============================================================ */
+
+export interface WalletBalanceSnapshot {
+  walletId:
+    string;
+
+  availableBalance:
+    number;
+}
+
+export type WalletBalanceLoadResult =
+  | {
+      success:
+        true;
+
+      data:
+        WalletBalanceSnapshot;
+    }
+  | {
+      success:
+        false;
+
+      error:
+        string;
+    };
+
+export async function loadWalletBalance(
+  scope: WalletScope,
+): Promise<WalletBalanceLoadResult> {
+  const walletResult =
+    await ensureWalletForScope(
+      scope,
+    );
+
+  if (!walletResult.success) {
+    return {
+      success:
+        false,
+
+      error:
+        walletResult.error,
+    };
+  }
+
+  return {
+    success:
+      true,
+
+    data: {
+      walletId:
+        walletResult.data.walletId,
+
+      availableBalance:
+        walletResult.data.balance,
     },
   };
 }

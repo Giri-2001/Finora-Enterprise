@@ -1,4 +1,4 @@
-﻿/* ============================================================
+/* ============================================================
    FINORA ENTERPRISE OS™
 
    V2 WALLET ENGINE™
@@ -55,6 +55,9 @@ import {
 import {
   buildWalletTransactionId,
 } from "./wallet.identity";
+import {
+  publishWalletBalanceUpdate,
+} from "./walletBalanceEvent";
 
 /* ============================================================
    RESULT
@@ -554,6 +557,15 @@ export async function commitWalletDebit(
         "FINORA Wallet balance was debited, but ledger finalization is pending recovery.",
     };
   }
+
+
+  publishWalletBalanceUpdate({
+    walletId:
+      wallet.walletId,
+
+    availableBalance:
+      successTransaction.availableBalance,
+  });
 
   return {
     success:

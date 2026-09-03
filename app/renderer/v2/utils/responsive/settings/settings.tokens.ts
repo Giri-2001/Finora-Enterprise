@@ -103,8 +103,8 @@ const MOBILE_TOKENS:
   },
 
   control: {
-    inputHeight: 46,
-    buttonHeight: 46,
+    inputHeight: 44,
+    buttonHeight: 44,
     compactButtonHeight: 40,
 
     inputRadius: 10,
@@ -248,7 +248,7 @@ const TABLET_TOKENS:
   },
 
   navigation: {
-    width: 244,
+    width: 350,
 
     itemMinHeight: 62,
     itemRadius: 12,
@@ -306,19 +306,19 @@ const LAPTOP_TOKENS:
     SETTINGS_FONT_FAMILY,
 
   typography: {
-    pageTitle: 26,
+    pageTitle: 24,
     pageSubtitle: 13,
     eyebrow: 11,
 
-    navigationTitle: 19,
+    navigationTitle: 17,
     navigationLabel: 15,
     navigationDescription: 12,
 
-    sectionTitle: 19,
+    sectionTitle: 18,
     sectionSubtitle: 13,
 
-    fieldLabel: 13,
-    fieldText: 14,
+    fieldLabel: 12,
+    fieldText: 13,
     helperText: 12,
 
     buttonText: 14,
@@ -331,22 +331,22 @@ const LAPTOP_TOKENS:
   },
 
   spacing: {
-    pageX: 22,
-    pageTop: 20,
-    pageBottom: 30,
+    pageX: 0,
+    pageTop: 6,
+    pageBottom: 24,
 
-    sectionGap: 22,
-    contentGap: 18,
-    panelGap: 16,
+    sectionGap: 16,
+    contentGap: 12,
+    panelGap: 12,
 
-    fieldGap: 12,
-    rowGap: 12,
+    fieldGap: 10,
+    rowGap: 10,
     compactGap: 8,
   },
 
   control: {
-    inputHeight: 46,
-    buttonHeight: 46,
+    inputHeight: 44,
+    buttonHeight: 44,
     compactButtonHeight: 42,
 
     inputRadius: 10,
@@ -364,12 +364,12 @@ const LAPTOP_TOKENS:
     compactRadius: 12,
     borderWidth: 1,
 
-    padding: 18,
-    compactPadding: 14,
+    padding: 14,
+    compactPadding: 12,
   },
 
   navigation: {
-    width: 270,
+    width: 350,
 
     itemMinHeight: 68,
     itemRadius: 13,
@@ -397,7 +397,7 @@ const LAPTOP_TOKENS:
 
     actionGap: 12,
 
-    sectionMinHeight: 220,
+    sectionMinHeight: 180,
   },
 
   photo: {
@@ -427,19 +427,19 @@ const DESKTOP_TOKENS:
     SETTINGS_FONT_FAMILY,
 
   typography: {
-    pageTitle: 28,
+    pageTitle: 26,
     pageSubtitle: 14,
     eyebrow: 11,
 
-    navigationTitle: 20,
+    navigationTitle: 18,
     navigationLabel: 15,
     navigationDescription: 12,
 
-    sectionTitle: 20,
+    sectionTitle: 18,
     sectionSubtitle: 13,
 
-    fieldLabel: 13,
-    fieldText: 15,
+    fieldLabel: 12,
+    fieldText: 14,
     helperText: 12,
 
     buttonText: 14,
@@ -452,22 +452,22 @@ const DESKTOP_TOKENS:
   },
 
   spacing: {
-    pageX: 28,
-    pageTop: 24,
-    pageBottom: 34,
+    pageX: 0,
+    pageTop: 6,
+    pageBottom: 24,
 
-    sectionGap: 24,
-    contentGap: 20,
-    panelGap: 18,
+    sectionGap: 18,
+    contentGap: 14,
+    panelGap: 12,
 
-    fieldGap: 14,
-    rowGap: 14,
+    fieldGap: 10,
+    rowGap: 10,
     compactGap: 8,
   },
 
   control: {
-    inputHeight: 48,
-    buttonHeight: 48,
+    inputHeight: 44,
+    buttonHeight: 44,
     compactButtonHeight: 44,
 
     inputRadius: 11,
@@ -485,12 +485,12 @@ const DESKTOP_TOKENS:
     compactRadius: 13,
     borderWidth: 1,
 
-    padding: 20,
-    compactPadding: 15,
+    padding: 14,
+    compactPadding: 12,
   },
 
   navigation: {
-    width: 292,
+    width: 350,
 
     itemMinHeight: 72,
     itemRadius: 14,
@@ -518,7 +518,7 @@ const DESKTOP_TOKENS:
 
     actionGap: 12,
 
-    sectionMinHeight: 240,
+    sectionMinHeight: 190,
   },
 
   photo: {

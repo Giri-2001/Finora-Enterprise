@@ -57,6 +57,12 @@ export interface GlobalHeaderStyles {
   rightStyle:
     CSSProperties;
 
+  mobileSecondRowStyle:
+    CSSProperties;
+
+  loginDateStyle:
+    CSSProperties;
+
   actionStyle:
     CSSProperties;
 
@@ -250,7 +256,7 @@ export function createGlobalHeaderStyles(
 
     gridTemplateColumns:
   isMobile
-    ? "minmax(0, 1fr) auto"
+      ? "minmax(0, 1fr) auto minmax(0, 1fr)"
     : "auto minmax(0, 1fr) auto",
 
     gridTemplateRows:
@@ -293,21 +299,7 @@ export function createGlobalHeaderStyles(
           .strong
       }`,
 
-    boxShadow:
-      `
-        0 10px 30px ${
-          activeTheme
-            .colors
-            .overlay
-            .shadow
-        },
-        0 1px 0 ${
-          activeTheme
-            .colors
-            .border
-            .default
-        }
-      `,
+    boxShadow: "none",
 
     overflow:
   "visible",
@@ -407,7 +399,7 @@ export function createGlobalHeaderStyles(
 
     gridColumn:
       isMobile
-        ? "1 / -1"
+        ? "2"
         : "2",
 
     gridRow:
@@ -419,7 +411,7 @@ export function createGlobalHeaderStyles(
       "border-box",
 
     overflow:
-      "hidden",
+      isMobile ? "visible" : "hidden",
 
   };
 
@@ -468,6 +460,10 @@ export function createGlobalHeaderStyles(
           .overlay
           .shadow
       }`,
+
+
+    transform:
+      isMobile ? "translateY(-6px)" : "none",
 
   };
 
@@ -518,6 +514,45 @@ export function createGlobalHeaderStyles(
 
 
   /* =========================================================
+     MOBILE SECOND ROW
+  ========================================================= */
+
+  const mobileSecondRowStyle:
+    CSSProperties = {
+
+    width:
+      "100%",
+
+    minWidth:
+      0,
+
+    display:
+      isMobile
+        ? "grid"
+        : "none",
+
+    gridTemplateColumns:
+      "minmax(0, 1fr) auto minmax(0, 1fr)",
+
+    alignItems:
+      "center",
+
+    columnGap:
+      `${tokens.spacing.small}px`,
+
+    gridColumn:
+      "1 / -1",
+
+    gridRow:
+      "2",
+
+    boxSizing:
+      "border-box",
+
+  };
+
+
+  /* =========================================================
      ACTION
   ========================================================= */
 
@@ -561,6 +596,9 @@ export function createGlobalHeaderStyles(
 
     display:
       "flex",
+
+    gap:
+      `${tokens.spacing.small}px`,
 
     alignItems:
       "center",
@@ -710,6 +748,82 @@ export function createGlobalHeaderStyles(
 
   };
 
+
+  /* =========================================================
+     LOGIN DATE DISPLAY
+
+     Read-only operational Business Date preview.
+     Geometry comes from ResponsiveTokens.
+  ========================================================= */
+
+  const loginDateStyle:
+    CSSProperties = {
+
+    minWidth:
+      0,
+
+    minHeight:
+      `${tokens.themeSelector.buttonSize}px`,
+
+    padding:
+      `0 ${tokens.spacing.small}px`,
+
+    borderRadius:
+      `${tokens.border.radius}px`,
+
+    border:
+      "none",
+
+    background:
+      isMobile
+        ? "transparent"
+        : activeTheme
+            .colors
+            .background
+            .surfaceMuted,
+    color:
+      headerContentColor,
+
+    display:
+      "inline-flex",
+
+    alignItems:
+      "center",
+
+    justifyContent:
+      "center",
+
+    fontSize:
+      `${isMobile ? button.fontSize + 2 : button.fontSize}px`,
+
+    fontWeight:
+      800,
+
+    lineHeight:
+      1,
+
+    letterSpacing:
+      ".04em",
+
+    fontVariantNumeric:
+      "tabular-nums",
+
+    whiteSpace:
+      "nowrap",
+
+    userSelect:
+      "none",
+
+    flexShrink:
+      0,
+
+    transform:
+      isMobile ? "translateY(3px)" : "none",
+
+    boxSizing:
+      "border-box",
+
+  };
 
   /* =========================================================
      THEME PICKER
@@ -948,6 +1062,10 @@ boxShadow:
     departmentStyle,
 
     rightStyle,
+
+    mobileSecondRowStyle,
+
+    loginDateStyle,
 
     actionStyle,
 

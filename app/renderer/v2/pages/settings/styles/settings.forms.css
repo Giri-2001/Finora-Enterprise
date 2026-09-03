@@ -1,4 +1,4 @@
-/* ===========================================================
+﻿/* ===========================================================
    FINORA ENTERPRISE OS™
 
    ENTERPRISE SETTINGS
@@ -276,7 +276,10 @@
     inherit;
 
   font-size:
-    var(--finora-settings-font-field-text);
+    calc(var(--finora-settings-font-field-text) - 1px);
+
+  font-weight:
+    700;
 
   line-height:
     1.4;
@@ -543,3 +546,130 @@
 /* ===========================================================
    END
 =========================================================== */
+
+
+
+
+
+/* ===========================================================
+   BUSINESS IDENTITY SETUP
+=========================================================== */
+
+.finora-settings-business-identity-setup-form {
+  gap:
+    6px;
+}
+
+/* ===========================================================
+   BUSINESS FORM COMPACT LAYOUT
+=========================================================== */
+
+
+/* ===========================================================
+   BUSINESS OWNER FORM COMPACT LAYOUT
+=========================================================== */
+
+.finora-settings-owner-form {
+  gap:
+    6px;
+}
+
+.finora-settings-business-form {
+  gap:
+    6px;
+}
+
+.finora-settings-business-form .finora-settings-form__input,
+.finora-settings-business-form .finora-settings-form__select,
+.finora-settings-business-form .finora-settings-form__textarea {
+  line-height:
+    1.2;
+}
+
+.finora-settings-business-form .finora-settings-form__textarea {
+  min-height:
+    64px;
+
+  height:
+    64px;
+}
+
+/* ===========================================================
+   BUSINESS CONTACT GRID COMPACT SPACING
+=========================================================== */
+
+.finora-settings-business-form .finora-settings-form__grid {
+  row-gap:
+    10px;
+}
+
+.finora-settings-business-form .finora-settings-form__helper {
+  line-height:
+    1.2;
+}
+
+
+/* ===========================================================
+   BRANCH FORM COMPACT LAYOUT
+=========================================================== */
+
+.finora-settings-branch-form {
+  gap:
+    6px;
+}
+
+.finora-settings-branch-form__identity-grid {
+  grid-template-columns:
+    repeat(4, minmax(0, 1fr));
+}
+
+.finora-settings-branch-form .finora-settings-form__textarea {
+  min-height:
+    64px;
+
+  height:
+    64px;
+
+  line-height:
+    1.2;
+}
+
+/* ===========================================================
+   NUMBERING & SERIES COMPACT LAYOUT
+=========================================================== */
+
+.finora-settings-numbering-form {
+  gap:
+    6px;
+}
+
+/* ===========================================================
+   RESPONSIVE IDENTITY GRID CONTAINERS
+
+   Preserve 4-column laptop/desktop layout when space permits.
+   When the actual Settings content panel becomes narrow,
+   fall back to 2 columns without affecting mobile/tablet rules.
+=========================================================== */
+
+.finora-settings-owner-identity-section,
+.finora-settings-branch-form__identity-grid {
+  container-type:
+    inline-size;
+}
+
+/* ===========================================================
+   NARROW LAPTOP / DESKTOP IDENTITY FALLBACK
+=========================================================== */
+
+@container (max-width: 900px) {
+  .finora-settings-owner-identity-section
+  .finora-settings-form__grid {
+    grid-template-columns:
+      repeat(2, minmax(0, 1fr));
+  }
+
+  .finora-settings-branch-form__identity-grid {
+    grid-template-columns:
+      repeat(2, minmax(0, 1fr));
+  }
+}

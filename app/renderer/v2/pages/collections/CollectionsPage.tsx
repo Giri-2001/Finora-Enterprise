@@ -20,7 +20,7 @@
 //
 // - No direct repository access.
 // - No direct StorageManager access.
-// - No localStorage access.
+// - No direct localStorage access.
 // - No filesystem access.
 // - No Electron IPC.
 // - Existing Collection Studio remains unchanged.
@@ -53,6 +53,14 @@ import type {
 import {
   loadCollections,
 } from "../../services/collection/collectionService";
+
+import {
+  getSession,
+} from "../../store/authStore";
+
+import {
+  resolveBusinessDate,
+} from "../../services/business/businessDateService";
 
 import {
   useTheme,
@@ -255,35 +263,6 @@ function getDateFilterKey(
   return `${year}-${month}-${day}`;
 }
 
-/* ============================================================
-   TODAY
-============================================================ */
-
-function getTodayKey(): string {
-  const today =
-    new Date();
-
-  const year =
-    today.getFullYear();
-
-  const month =
-    String(
-      today.getMonth() + 1,
-    ).padStart(
-      2,
-      "0",
-    );
-
-  const day =
-    String(
-      today.getDate(),
-    ).padStart(
-      2,
-      "0",
-    );
-
-  return `${year}-${month}-${day}`;
-}
 
 /* ============================================================
    COLLECTION DATE
@@ -400,6 +379,16 @@ function PlusIcon() {
 ============================================================ */
 
 export default function CollectionsPage() {
+  /* ==========================================================
+     ERP BUSINESS DATE
+  ========================================================== */
+
+  const activeBusinessDate =
+    resolveBusinessDate(
+      getSession()
+        ?.businessDate,
+    ) ?? "";
+
   /* ==========================================================
      FINORA THEME ENGINE
   ========================================================== */
@@ -668,8 +657,8 @@ export default function CollectionsPage() {
 
   const statistics =
     useMemo(() => {
-      const today =
-        getTodayKey();
+      const operationalDate =
+        activeBusinessDate;
 
       const todayCollections =
         collections.filter(
@@ -678,7 +667,7 @@ export default function CollectionsPage() {
               getCollectionDate(
                 collection,
               ),
-            ) === today,
+            ) === operationalDate,
         );
 
       const totalCollected =
@@ -721,6 +710,7 @@ export default function CollectionsPage() {
           totalDiscount,
       };
     }, [
+      activeBusinessDate,
       collections,
     ]);
 

@@ -1035,9 +1035,36 @@ export async function addLoan(loan: Loan): Promise<StorageResult<Loan>> {
     };
   }
 
-  const normalizedBase = normalizeLoanBase(loan);
+  /* ==========================================================
+     AUTHORITATIVE SYSTEM AUDIT TIME
 
-  const normalizedLoan = repairClosedLoanSchedule(normalizedBase).loan;
+     The operational loanDate may be historical because it
+     comes from the authenticated ERP Business Date.
+
+     createdAt and updatedAt always record the actual system
+     time at which this Loan persistence operation occurred.
+
+     Caller-provided audit timestamps are intentionally ignored.
+  ========================================================== */
+
+  const systemTimestamp =
+    new Date().toISOString();
+
+  const normalizedBase =
+    normalizeLoanBase({
+      ...loan,
+
+      createdAt:
+        systemTimestamp,
+
+      updatedAt:
+        systemTimestamp,
+    });
+
+  const normalizedLoan =
+    repairClosedLoanSchedule(
+      normalizedBase,
+    ).loan;
 
   const existing = await storageManager.get<Loan>({
     entity: LOAN_ENTITY,
@@ -1431,6 +1458,22 @@ export async function updateLoanOutstanding(
       status: "CLOSED",
     };
   }
+
+  // ==========================================================
+  // AUTHORITATIVE SYSTEM UPDATE TIME
+  //
+  // paidDate remains the operational Collection Business Date.
+  //
+  // updatedAt records when FINORA actually persisted this
+  // Loan balance / schedule mutation.
+  // ==========================================================
+
+  updatedLoan = {
+    ...updatedLoan,
+
+    updatedAt:
+      new Date().toISOString(),
+  };
 
   // ==========================================================
   // PERSIST

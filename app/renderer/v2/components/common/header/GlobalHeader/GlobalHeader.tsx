@@ -24,6 +24,15 @@
    IMPORTS
 =========================================================== */
 
+import {
+  useEffect,
+  useState,
+} from "react";
+
+import {
+  WalletCards,
+} from "lucide-react";
+
 import type {
   GlobalHeaderProps,
 } from "./types";
@@ -47,6 +56,14 @@ import AdminProfile
 
 
 import {
+  getSession,
+} from "../../../../store/authStore";
+
+import {
+  formatBusinessDateForDisplay,
+} from "../../../../services/business/businessDateService";
+
+import {
   useResponsive,
 } from "../../../../utils/responsive";
 
@@ -55,6 +72,14 @@ import type {
   ResponsiveTokens,
 } from "../../../../utils/responsive/tokens";
 
+
+import {
+  loadWalletBalance,
+} from "../../../../services/wallet/walletWorkspaceService";
+
+import {
+  subscribeWalletBalanceUpdates,
+} from "../../../../services/wallet/walletBalanceEvent";
 
 import {
   useTheme,
@@ -99,6 +124,7 @@ export default function GlobalHeader({
 
   const {
     tokens,
+    isMobile,
   } = useResponsive();
 
 
@@ -125,6 +151,137 @@ export default function GlobalHeader({
 
   const globalHeaderTokens =
     tokens as ResponsiveTokens;
+  // =========================================================
+  // ACTIVE LOGIN BUSINESS DATE
+  // =========================================================
+  //
+  // Display only. Changing the operational date requires a
+  // fresh authenticated Login session.
+  // =========================================================
+
+  const authenticatedSession =
+    getSession();
+
+  const loginDateDisplay =
+    formatBusinessDateForDisplay(
+      authenticatedSession
+        ?.businessDate,
+    ) || "--";
+  // =========================================================
+  // LIVE FINORA WALLET BALANCE
+  // =========================================================
+
+  const [
+    walletBalance,
+    setWalletBalance,
+  ] = useState<number | null>(
+    null,
+  );
+
+  const walletOwnerId =
+    String(
+      authenticatedSession
+        ?.ownerId ?? "",
+    ).trim();
+
+  const walletBusinessId =
+    String(
+      authenticatedSession
+        ?.businessId ?? "",
+    ).trim();
+
+  const walletBranchId =
+    String(
+      authenticatedSession
+        ?.branchId ?? "",
+    ).trim();
+
+  useEffect(() => {
+    let cancelled =
+      false;
+
+    if (
+      !walletOwnerId ||
+      !walletBusinessId ||
+      !walletBranchId
+    ) {
+      setWalletBalance(
+        null,
+      );
+
+      return;
+    }
+
+    const walletScope = {
+      ownerId:
+        walletOwnerId,
+
+      businessId:
+        walletBusinessId,
+
+      branchId:
+        walletBranchId,
+    };
+
+    async function refreshHeaderWalletBalance(): Promise<void> {
+      const result =
+        await loadWalletBalance(
+          walletScope,
+        );
+
+      if (cancelled) {
+        return;
+      }
+
+      if (!result.success) {
+        console.error(
+          "FINORA GLOBAL HEADER WALLET ERROR:",
+          result.error,
+        );
+
+        setWalletBalance(
+          null,
+        );
+
+        return;
+      }
+
+      setWalletBalance(
+        result.data.availableBalance,
+      );
+    }
+
+    const unsubscribe =
+      subscribeWalletBalanceUpdates(
+        () => {
+          void refreshHeaderWalletBalance();
+        },
+      );
+
+    void refreshHeaderWalletBalance();
+
+    return () => {
+      cancelled =
+        true;
+
+      unsubscribe();
+    };
+  }, [
+    walletOwnerId,
+    walletBusinessId,
+    walletBranchId,
+  ]);
+
+  const walletBalanceDisplay =
+    walletBalance === null
+      ? "₹--"
+      : `₹ ${walletBalance.toLocaleString(
+          "en-IN",
+          {
+            maximumFractionDigits:
+              2,
+          },
+        )}`;
 
 
   /* =========================================================
@@ -175,6 +332,10 @@ export default function GlobalHeader({
 
     rightStyle,
 
+    mobileSecondRowStyle,
+
+    loginDateStyle,
+
     actionStyle,
     backButtonStyle,
 
@@ -215,7 +376,29 @@ export default function GlobalHeader({
 
       <div
         style={
-          leftStyle
+          isMobile
+            ? {
+                ...leftStyle,
+
+                gridColumn:
+                  "1",
+
+                gridRow:
+                  "1",
+
+                alignSelf:
+                  "center",
+
+                justifySelf:
+                  "start",
+
+                overflow:
+                  "visible",
+
+                zIndex:
+                  2,
+              }
+            : leftStyle
         }
       >
 
@@ -304,144 +487,216 @@ export default function GlobalHeader({
 
       <div
         style={
-          rightStyle
+          isMobile
+            ? {
+                ...rightStyle,
+
+                width: "100%",
+
+                display: "grid",
+
+                gridTemplateColumns:
+                  "minmax(0, 1fr) auto minmax(0, 1fr)",
+
+                gridTemplateRows:
+                  "auto auto",
+
+                gridColumn:
+                  "1 / -1",
+
+                gridRow:
+                  "1 / 3",
+
+                alignItems:
+                  "center",
+
+                pointerEvents:
+                  "none",
+              }
+            : rightStyle
         }
       >
 
+        {/* ===================================================
+           ACTIVE LOGIN DATE — DISPLAY ONLY
+        =================================================== */}
+
+        <span
+          style={
+            isMobile
+              ? {
+                  ...loginDateStyle,
+
+                  gridColumn:
+                    "1",
+
+                  gridRow:
+                    "2",
+
+                  justifySelf:
+                    "start",
+
+                  pointerEvents:
+                    "auto",
+                }
+              : loginDateStyle
+          }
+          aria-label="Active FINORA Login Date"
+          title="Active FINORA Login Date"
+        >
+          {loginDateDisplay}
+        </span>
+
 
         {/* ===================================================
-           FINORA THEME SELECTOR
-        ===================================================
-
-        Theme order comes directly from the central registry.
-
-          Imperial Gold
-          Royal Navy
-          Amethyst
-          Emerald
-          Obsidian
-
-        Each button resolves its complete FinoraTheme from
-        FINORA_THEMES so every swatch represents its own theme.
-
-        Clicking a swatch changes the global ThemeProvider
-        theme for the application.
-
+           TOP CONTROLS
         =================================================== */}
 
         <div
-
           style={
-            themePickerStyle
+            isMobile
+              ? {
+                  display:
+                    "flex",
+
+                  alignItems:
+                    "center",
+
+                  justifyContent:
+                    "flex-end",
+
+                  gap:
+                    `${globalHeaderTokens.spacing.small}px`,
+
+                  gridColumn:
+                    "2 / 4",
+
+                  gridRow:
+                    "1",
+
+                  justifySelf:
+                    "end",
+
+                  pointerEvents:
+                    "auto",
+                }
+              : {
+                  display:
+                    "contents",
+                }
           }
-
-          role="group"
-
-          aria-label="Theme selector"
-
         >
 
-          {
-            themes.map(
-              (
-                option,
-              ) => {
+          {/* =================================================
+             FINORA THEME SELECTOR
+          ================================================= */}
 
-                const active =
-                  option.id ===
-                  themeId;
+          <div
+            style={
+              themePickerStyle
+            }
+            role="group"
+            aria-label="Theme selector"
+          >
+            {
+              themes.map(
+                (
+                  option,
+                ) => {
 
+                  const active =
+                    option.id ===
+                    themeId;
 
-                /* =================================================
-                   RESOLVE COMPLETE THEME FROM CENTRAL REGISTRY
-                ================================================= */
-
-                const optionTheme =
-                  FINORA_THEMES[
-                    option.id
-                  ] ??
-                  theme;
-
-
-                return (
-
-                  <button
-
-                    key={
+                  const optionTheme =
+                    FINORA_THEMES[
                       option.id
-                    }
+                    ] ??
+                    theme;
 
-                    type="button"
+                  return (
 
-                    title={
-                      option.name
-                    }
+                    <button
 
-                    aria-label={
-                      `Use ${option.name} theme`
-                    }
+                      key={
+                        option.id
+                      }
 
-                    aria-pressed={
-                      active
-                    }
+                      type="button"
 
-                    onClick={() => {
+                      title={
+                        option.name
+                      }
 
-                      setTheme(
-                        option.id,
-                      );
+                      aria-label={
+                        `Use ${option.name} theme`
+                      }
 
-                    }}
+                      aria-pressed={
+                        active
+                      }
 
-                    style={
-                      themeButtonStyle(
+                      onClick={() => {
 
-                        optionTheme,
+                        setTheme(
+                          option.id,
+                        );
 
-                        active,
+                      }}
 
-                      )
-                    }
+                      style={
+                        themeButtonStyle(
 
-                  />
+                          optionTheme,
 
-                );
+                          active,
 
-              },
-            )
-          }
+                        )
+                      }
+
+                    />
+
+                  );
+
+                },
+              )
+            }
+
+          </div>
+
+
+          {/* =================================================
+             NOTIFICATIONS
+          ================================================= */}
+
+          <NotificationBell
+
+            unreadCount={notificationUnreadCount}
+
+            onClick={() => {
+              onNotificationsClick?.();
+            }}
+
+          />
+
+
+          {/* =================================================
+             ADMIN PROFILE
+          ================================================= */}
+
+          <AdminProfile
+            adminName="Admin"
+            onClick={() => {
+              /* Admin menu */
+            }}
+            onLogout={
+              onLogout
+            }
+          />
 
         </div>
 
 
-        {/* ===================================================
-           NOTIFICATIONS
-        =================================================== */}
-
-        <NotificationBell
-
-          unreadCount={notificationUnreadCount}
-
-          onClick={() => {
-            onNotificationsClick?.();
-          }}
-
-        />
-
-
-        {/* ===================================================
-           ADMIN PROFILE
-        =================================================== */}
-
-       <AdminProfile
-  adminName="Admin"
-  onClick={() => {
-    /* Admin menu */
-  }}
-  onLogout={
-    onLogout
-  }
-/>
         {/* ===================================================
            FINORA WALLET
         =================================================== */}
@@ -459,12 +714,44 @@ export default function GlobalHeader({
           title="FINORA Wallet"
 
           style={
-            actionStyle
+            isMobile
+              ? {
+                  ...actionStyle,
+
+                  gridColumn:
+                    "3",
+
+                  gridRow:
+                    "2",
+
+                  justifySelf:
+                    "end",
+
+                  pointerEvents:
+                    "auto",
+                }
+              : actionStyle
           }
 
         >
-          FINORA Wallet
+          <WalletCards
+            aria-hidden="true"
+            size={
+              globalHeaderTokens
+                .icon
+                .md
+            }
+            strokeWidth={
+              2
+            }
+          />
+
+          <span>
+            {walletBalanceDisplay}
+          </span>
+
         </button>
+
       </div>
 
     </header>

@@ -201,6 +201,20 @@ export type AuthSession = {
 
   loginTime: string;
 
+  // ----------------------------------------------------------
+  // ERP BUSINESS DATE
+  // ----------------------------------------------------------
+  //
+  // Owner-selected operational date for this login session.
+  //
+  // Stored as YYYY-MM-DD.
+  //
+  // This is not an audit timestamp. loginTime, createdAt and
+  // updatedAt remain authoritative system-generated times.
+  // ----------------------------------------------------------
+
+  businessDate: string;
+
   sessionId: string;
 
   lastActivity: string;
@@ -223,6 +237,21 @@ export type AuthSession = {
 
   demoId?: string;
 };
+
+// ============================================================
+// LOGIN SESSION CANDIDATE
+// ============================================================
+//
+// Credential verification creates this transient candidate.
+// The selected ERP Business Date is attached only at the
+// authoritative commitLoginSession boundary.
+// ============================================================
+
+export type AuthSessionCandidate =
+  Omit<
+    AuthSession,
+    "businessDate"
+  >;
 
 // ============================================================
 // END

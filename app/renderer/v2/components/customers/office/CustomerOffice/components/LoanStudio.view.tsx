@@ -136,17 +136,6 @@ const STEP_ITEMS = [
    HELPERS
 ============================================================ */
 
-function getTodayDate(): string {
-  const today = new Date();
-
-  return [
-    today.getFullYear(),
-
-    String(today.getMonth() + 1).padStart(2, "0"),
-
-    String(today.getDate()).padStart(2, "0"),
-  ].join("-");
-}
 
 function getDisbursementAmount(value: number): number {
   return Math.max(
@@ -352,7 +341,6 @@ export default function LoanStudioView(props: LoanStudioViewModel) {
     loanApproved,
 
     disbursementDate,
-    setDisbursementDate,
     paymentMode,
     setPaymentMode,
     transactionStatus,
@@ -717,7 +705,6 @@ export default function LoanStudioView(props: LoanStudioViewModel) {
                   <DisbursementForm
                     disbursementDate={disbursementDate}
                     netDisbursement={netDisbursement}
-                    onDisbursementDateChange={setDisbursementDate}
                   />
                 </div>
 
@@ -823,10 +810,6 @@ export default function LoanStudioView(props: LoanStudioViewModel) {
                   }
 
                   if (current === 6) {
-                    if (!disbursementDate) {
-                      setDisbursementDate(getTodayDate());
-                    }
-
                     setStep(6);
 
                     return;

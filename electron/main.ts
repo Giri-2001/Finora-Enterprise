@@ -1,4 +1,4 @@
-﻿// ============================================================
+// ============================================================
 // FINORA ENTERPRISE OSâ„¢
 // ELECTRON MAIN PROCESS
 // V2 USB / PENDRIVE STORAGE IPC
@@ -1326,6 +1326,22 @@ function createMainWindow(): void {
   createdWindow.webContents.setWindowOpenHandler(({ url }) => {
     try {
       const targetUrl = new URL(url);
+
+      /*
+       * FINORA collection receipt print window.
+       *
+       * Only this exact internal about: URL is allowed.
+       * All other about: URLs remain blocked.
+       */
+      if (
+        targetUrl.protocol === "about:" &&
+        targetUrl.pathname === "blank" &&
+        targetUrl.hash === "#finora-collection-receipt"
+      ) {
+        return {
+          action: "allow",
+        };
+      }
 
       /*
        * FINORA PDF print preview.

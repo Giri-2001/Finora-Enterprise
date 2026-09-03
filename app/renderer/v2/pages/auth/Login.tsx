@@ -10,13 +10,12 @@
 //
 // RESPONSIBILITY:
 //
-// - Provide one clean login surface for Owner and Customer
+// - Provide one clean authenticated Owner login surface
+// - Owner selects one ERP Login Date
 // - Owner selects Local / USB storage
-// - Customer selects Customer ID / Mobile OTP login
 // - USB Login requires a detected FINORA Pendrive
 // - Local Owner Login uses the existing authStore authentication
-// - Customer flow is prepared as a non-editable placeholder
-// - Forgot Password entry points are prepared for every login path
+// - Forgot Password entry points are prepared for Owner storage paths
 // - Preserve existing storage mode activation and USB monitoring
 // - Consume the FINORA Responsive Engine
 // - Use the installed Lucide icon system
@@ -28,7 +27,6 @@
 // - USB presence alone NEVER authenticates a user.
 // - USB Owner Login requires USB + User ID + Password.
 // - Local Owner Login does not require USB.
-// - Customer Login is UI-ready only until customer authentication is enabled.
 // - USB Login selects StorageMode.USB.
 // - Local Login selects StorageMode.LOCAL.
 //
@@ -57,17 +55,14 @@ import {
 } from "react";
 
 import {
+  CalendarDays,
   ChevronDown,
   Eye,
   EyeOff,
   Info,
   KeyRound,
   LockKeyhole,
-  MessageCircle,
-  ShieldCheck,
-  Smartphone,
   UserRound,
-  UsersRound,
   Usb,
   HardDrive,
 } from "lucide-react";
@@ -76,6 +71,11 @@ import {
   authenticateLogin,
   commitLoginSession,
 } from "../../store/authStore";
+
+import {
+  getCurrentLocalBusinessDate,
+  resolveBusinessDate,
+} from "../../services/business/businessDateService";
 
 import {
   hasActiveFinoraStorageEntitlement,
@@ -125,19 +125,9 @@ type LoginProps = {
 };
 
 
-type LoginRole =
-  | "owner"
-  | "customer";
-
-
 type OwnerStorage =
   | "local"
   | "usb";
-
-
-type CustomerLoginMethod =
-  | "customerId"
-  | "mobile";
 
 
 // ============================================================
@@ -235,14 +225,14 @@ export default function Login({
 
 
   // ==========================================================
-  // ROLE STATE
+  // ERP BUSINESS DATE STATE
   // ==========================================================
 
   const [
-    loginRole,
-    setLoginRole,
-  ] = useState<LoginRole>(
-    "owner",
+    businessDate,
+    setBusinessDate,
+  ] = useState<string>(
+    getCurrentLocalBusinessDate,
   );
 
 
@@ -259,18 +249,6 @@ export default function Login({
 
 
   // ==========================================================
-  // CUSTOMER LOGIN METHOD
-  // ==========================================================
-
-  const [
-    customerLoginMethod,
-    setCustomerLoginMethod,
-  ] = useState<CustomerLoginMethod>(
-    "customerId",
-  );
-
-
-  // ==========================================================
   // DROPDOWN STATE
   // ==========================================================
 
@@ -278,7 +256,7 @@ export default function Login({
     openDropdown,
     setOpenDropdown,
   ] = useState<
-    "role" | "storage" | "customerMethod" | null
+    "storage" | null
   >(null);
 
   const dropdownRef =
@@ -299,15 +277,6 @@ export default function Login({
     setPassword,
   ] = useState("");
 
-  const [
-    mobileNumber,
-    setMobileNumber,
-  ] = useState("");
-
-  const [
-    otp,
-    setOtp,
-  ] = useState("");
 
   const [
     error,
@@ -652,38 +621,12 @@ export default function Login({
 
     setPassword("");
 
-    setMobileNumber("");
-
-    setOtp("");
 
     setShowPassword(false);
 
     setError("");
 
     setLoginBusy(false);
-
-  }
-
-
-  // ==========================================================
-  // ROLE CHANGE
-  // ==========================================================
-
-  function handleRoleChange(
-    role: LoginRole,
-  ): void {
-
-    setLoginRole(role);
-
-    setOpenDropdown(null);
-
-    resetCredentials();
-
-    if (role === "customer") {
-
-      setCustomerLoginMethod("customerId");
-
-    }
 
   }
 
@@ -697,23 +640,6 @@ export default function Login({
   ): void {
 
     setOwnerStorage(storage);
-
-    setOpenDropdown(null);
-
-    resetCredentials();
-
-  }
-
-
-  // ==========================================================
-  // CUSTOMER METHOD CHANGE
-  // ==========================================================
-
-  function handleCustomerMethodChange(
-    method: CustomerLoginMethod,
-  ): void {
-
-    setCustomerLoginMethod(method);
 
     setOpenDropdown(null);
 
@@ -869,6 +795,23 @@ export default function Login({
     const trimmedUsername =
       username.trim();
 
+    const resolvedBusinessDate =
+      resolveBusinessDate(
+        businessDate,
+      );
+
+
+    // --------------------------------------------------------
+    // ERP BUSINESS DATE VALIDATION
+    // --------------------------------------------------------
+
+    if (!resolvedBusinessDate) {
+      setError(
+        "Choose a valid FINORA Login Date.",
+      );
+
+      return;
+    }
 
 
     // --------------------------------------------------------
@@ -1085,6 +1028,8 @@ export default function Login({
 
       commitLoginSession(
         session,
+
+        resolvedBusinessDate,
       );
 
 
@@ -1118,38 +1063,14 @@ export default function Login({
   // ==========================================================
 
   function handleLogin(): void {
-
-    if (loginRole === "customer") {
-
-      showComingSoon(
-        "Customer Login is coming soon. Customer authentication wiring will be enabled here.",
-      );
-
-      return;
-
-    }
-
-
     void authenticateOwner();
-
   }
-
 
   // ==========================================================
   // FORGOT PASSWORD
   // ==========================================================
 
   function handleForgotPassword(): void {
-
-    if (loginRole === "customer") {
-
-      showComingSoon(
-        "Customer password recovery is coming soon.",
-      );
-
-      return;
-
-    }
 
 
     if (ownerStorage === "usb") {
@@ -1192,16 +1113,6 @@ export default function Login({
   // DROPDOWN HELPERS
   // ==========================================================
 
-  const roleLabel =
-    loginRole === "owner"
-      ? "Owner"
-      : "Customer";
-
-  const roleIcon =
-    loginRole === "owner"
-      ? <ShieldCheck />
-      : <UsersRound />;
-
   const storageLabel =
     ownerStorage === "usb"
       ? "USB Storage"
@@ -1211,17 +1122,6 @@ export default function Login({
     ownerStorage === "usb"
       ? <Usb />
       : <HardDrive />;
-
-  const customerMethodLabel =
-    customerLoginMethod === "customerId"
-      ? "Customer ID"
-      : "Mobile Number";
-
-  const customerMethodIcon =
-    customerLoginMethod === "customerId"
-      ? <UserRound />
-      : <Smartphone />;
-
 
   // ==========================================================
   // LOGIN THEME SELECTION
@@ -1379,12 +1279,8 @@ export default function Login({
 
         </div>
 
-
-       
-
-
         {/* ==================================================
-            LOGIN ROLE
+            ERP BUSINESS DATE
         ================================================== */}
 
         <div
@@ -1398,130 +1294,55 @@ export default function Login({
               loginStyles.fieldLabel
             }
           >
-            Login As
+            Choose Login Date
           </div>
 
 
           <div
             style={
-              loginStyles.customSelect
+              loginStyles.inputWrapper
             }
           >
-
-            <button
-              type="button"
-              aria-haspopup="listbox"
-              aria-expanded={
-                openDropdown === "role"
-              }
-              onClick={() => {
-                setOpenDropdown(
-                  current =>
-                    current === "role"
-                      ? null
-                      : "role",
-                );
-              }}
+            <span
               style={
-                loginStyles.customSelectButton
+                loginStyles.inputIcon
               }
             >
+              <CalendarDays />
+            </span>
 
-              <span
-                style={
-                  loginStyles.customSelectValue
-                }
-              >
+            <input
+              type="date"
+              value={
+                businessDate
+              }
+              onChange={(
+                event,
+              ) => {
+                setBusinessDate(
+                  event.target.value,
+                );
 
-                <span
-                  style={
-                    loginStyles.customSelectIcon
-                  }
-                >
-                  {roleIcon}
-                </span>
-
-                <span>
-                  {roleLabel}
-                </span>
-
-              </span>
-
-              <span
-                style={
-                  loginStyles.customSelectChevron
-                }
-              >
-                <ChevronDown />
-              </span>
-
-            </button>
-
-
-            {openDropdown === "role" && (
-
-              <div
-                role="listbox"
-                style={
-                  loginStyles.customSelectMenu
-                }
-              >
-
-                <button
-                  type="button"
-                  role="option"
-                  aria-selected={
-                    loginRole === "owner"
-                  }
-                  onClick={() => {
-                    handleRoleChange("owner");
-                  }}
-                  style={
-                    loginRole === "owner"
-                      ? loginStyles.customSelectOptionActive
-                      : loginStyles.customSelectOption
-                  }
-                >
-                  <ShieldCheck />
-                  <span>Owner</span>
-                </button>
-
-
-                <button
-                  type="button"
-                  role="option"
-                  aria-selected={
-                    loginRole === "customer"
-                  }
-                  onClick={() => {
-                    handleRoleChange("customer");
-                  }}
-                  style={
-                    loginRole === "customer"
-                      ? loginStyles.customSelectOptionActive
-                      : loginStyles.customSelectOption
-                  }
-                >
-                  <UsersRound />
-                  <span>Customer</span>
-                </button>
-
-              </div>
-
-            )}
-
+                setError("");
+              }}
+              placeholder="DD-MM-YYYY"
+              aria-label="Choose Login Date"
+              autoComplete="off"
+              style={
+                loginStyles.input
+              }
+            />
           </div>
 
         </div>
+
+
 
 
         {/* ==================================================
             OWNER LOGIN
         ================================================== */}
 
-        {loginRole === "owner" && (
-
-          <>
 
             <div
               style={
@@ -1970,389 +1791,7 @@ export default function Login({
               Forgot Password?
             </button>
 
-          </>
 
-        )}
-
-
-        {/* ==================================================
-            CUSTOMER LOGIN
-        ================================================== */}
-
-        {loginRole === "customer" && (
-
-          <>
-
-            <div
-              style={
-                loginStyles.modeNoticeNormal
-              }
-            >
-
-              <div
-                style={
-                  loginStyles.modeNoticeHeader
-                }
-              >
-                <UsersRound />
-                <span>
-                  Customer Login
-                </span>
-              </div>
-
-              <div
-                style={
-                  loginStyles.modeNoticeSubtext
-                }
-              >
-                Secure customer access • Authentication ready
-              </div>
-
-            </div>
-
-
-            {/* ==============================================
-                CUSTOMER LOGIN METHOD
-            ============================================== */}
-
-            <div
-              style={
-                loginStyles.fieldSectionCompact
-              }
-            >
-
-              <div
-                style={
-                  loginStyles.fieldLabel
-                }
-              >
-                Login Method
-              </div>
-
-
-              <div
-                style={
-                  loginStyles.customSelect
-                }
-              >
-
-                <button
-                  type="button"
-                  aria-haspopup="listbox"
-                  aria-expanded={
-                    openDropdown === "customerMethod"
-                  }
-                  onClick={() => {
-                    setOpenDropdown(
-                      current =>
-                        current === "customerMethod"
-                          ? null
-                          : "customerMethod",
-                    );
-                  }}
-                  style={
-                    loginStyles.customSelectButton
-                  }
-                >
-
-                  <span
-                    style={
-                      loginStyles.customSelectValue
-                    }
-                  >
-                    <span
-                      style={
-                        loginStyles.customSelectIcon
-                      }
-                    >
-                      {customerMethodIcon}
-                    </span>
-                    <span>
-                      {customerMethodLabel}
-                    </span>
-                  </span>
-
-                  <span
-                    style={
-                      loginStyles.customSelectChevron
-                    }
-                  >
-                    <ChevronDown />
-                  </span>
-
-                </button>
-
-
-                {openDropdown === "customerMethod" && (
-
-                  <div
-                    role="listbox"
-                    style={
-                      loginStyles.customSelectMenu
-                    }
-                  >
-
-                    <button
-                      type="button"
-                      role="option"
-                      aria-selected={
-                        customerLoginMethod === "customerId"
-                      }
-                      onClick={() => {
-                        handleCustomerMethodChange("customerId");
-                      }}
-                      style={
-                        customerLoginMethod === "customerId"
-                          ? loginStyles.customSelectOptionActive
-                          : loginStyles.customSelectOption
-                      }
-                    >
-                      <UserRound />
-                      <span>Customer ID</span>
-                    </button>
-
-
-                    <button
-                      type="button"
-                      role="option"
-                      aria-selected={
-                        customerLoginMethod === "mobile"
-                      }
-                      onClick={() => {
-                        handleCustomerMethodChange("mobile");
-                      }}
-                      style={
-                        customerLoginMethod === "mobile"
-                          ? loginStyles.customSelectOptionActive
-                          : loginStyles.customSelectOption
-                      }
-                    >
-                      <Smartphone />
-                      <span>Mobile Number</span>
-                    </button>
-
-                  </div>
-
-                )}
-
-              </div>
-
-            </div>
-
-
-            {/* ==============================================
-                CUSTOMER ID LOGIN
-            ============================================== */}
-
-            {customerLoginMethod === "customerId" && (
-
-              <div
-                style={
-                  loginStyles.inputGroup
-                }
-              >
-
-                <div
-                  style={
-                    loginStyles.inputWrapper
-                  }
-                >
-                  <span
-                    style={
-                      loginStyles.inputIcon
-                    }
-                  >
-                    <UserRound />
-                  </span>
-
-                  <input
-                    value=""
-                    placeholder="Customer ID"
-                    aria-label="Customer ID"
-                    disabled
-                    style={
-                      loginStyles.inputDisabled
-                    }
-                  />
-                </div>
-
-
-                <div
-                  style={
-                    loginStyles.inputWrapper
-                  }
-                >
-                  <span
-                    style={
-                      loginStyles.inputIcon
-                    }
-                  >
-                    <LockKeyhole />
-                  </span>
-
-                  <input
-                    value=""
-                    placeholder="Password"
-                    aria-label="Password"
-                    type="password"
-                    disabled
-                    style={
-                      loginStyles.inputDisabled
-                    }
-                  />
-
-                  <Eye
-                    style={
-                      loginStyles.disabledPasswordIcon
-                    }
-                  />
-                </div>
-
-              </div>
-
-            )}
-
-
-            {/* ==============================================
-                CUSTOMER MOBILE OTP LOGIN
-            ============================================== */}
-
-            {customerLoginMethod === "mobile" && (
-
-              <div
-                style={
-                  loginStyles.inputGroup
-                }
-              >
-
-                <div
-                  style={
-                    loginStyles.inputWrapper
-                  }
-                >
-                  <span
-                    style={
-                      loginStyles.inputIcon
-                    }
-                  >
-                    <Smartphone />
-                  </span>
-
-                  <input
-                    value={mobileNumber}
-                    onChange={(
-                      event,
-                    ) => {
-                      setMobileNumber(
-                        event.target.value,
-                      );
-                      setError("");
-                    }}
-                    placeholder="Mobile Number"
-                    aria-label="Mobile Number"
-                    inputMode="numeric"
-                    disabled
-                    style={
-                      loginStyles.inputDisabled
-                    }
-                  />
-                </div>
-
-
-                <div
-                  style={
-                    loginStyles.inputWrapper
-                  }
-                >
-                  <span
-                    style={
-                      loginStyles.inputIcon
-                    }
-                  >
-                    <MessageCircle />
-                  </span>
-
-                  <input
-                    value={otp}
-                    onChange={(
-                      event,
-                    ) => {
-                      setOtp(
-                        event.target.value,
-                      );
-                      setError("");
-                    }}
-                    placeholder="OTP"
-                    aria-label="OTP"
-                    inputMode="numeric"
-                    disabled
-                    style={
-                      loginStyles.inputDisabled
-                    }
-                  />
-                </div>
-
-              </div>
-
-            )}
-
-
-            {error && (
-
-              <p
-                role="alert"
-                style={
-                  loginStyles.error
-                }
-              >
-                {error}
-              </p>
-
-            )}
-
-
-            <button
-              type="button"
-              onClick={
-                handleLogin
-              }
-              disabled={
-                loginBusy
-              }
-              style={
-                loginStyles.primaryButton
-              }
-            >
-
-              <span
-                style={
-                  loginStyles.primaryButtonContent
-                }
-              >
-                <KeyRound />
-                <span>
-                  Login
-                </span>
-              </span>
-
-            </button>
-
-
-            <button
-              type="button"
-              onClick={
-                handleForgotPassword
-              }
-              style={
-                loginStyles.forgotPassword
-              }
-            >
-              Forgot Password?
-            </button>
-
-          </>
-
-        )}
 
 
       </div>

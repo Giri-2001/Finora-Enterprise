@@ -203,7 +203,7 @@
     0;
 
   font-size:
-    var(--finora-settings-font-page-title);
+    calc(var(--finora-settings-font-page-title) - 5px);
 
   font-weight:
     750;

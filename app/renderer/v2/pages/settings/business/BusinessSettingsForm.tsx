@@ -1,4 +1,4 @@
-// ============================================================
+﻿// ============================================================
 // FINORA ENTERPRISE OS™
 //
 // ENTERPRISE SETTINGS
@@ -230,12 +230,19 @@ export default function BusinessSettingsForm({
               disabled={controlsDisabled}
               required
               autoComplete="tel"
-              onChange={(event) =>
-                onFieldChange(
-                  "phone",
-                  event.currentTarget.value,
-                )
-              }
+                inputMode="numeric"
+                maxLength={10}
+                pattern="[0-9]{10}"
+                onChange={(event) => {
+                  const value = event.currentTarget.value
+                    .replace(/\D/g, "")
+                    .slice(0, 10);
+
+                  onFieldChange(
+                    "phone",
+                    value,
+                  );
+                }}
             />
           </label>
 
@@ -260,9 +267,9 @@ export default function BusinessSettingsForm({
             />
           </label>
 
-          <label className="finora-settings-form__field">
+            <label className="finora-settings-form__field finora-settings-business-form__gst-field">
             <span className="finora-settings-form__label">
-              GST / Tax ID
+              GST / Tax ID (Optional)
             </span>
 
             <input
@@ -279,9 +286,6 @@ export default function BusinessSettingsForm({
               }
             />
 
-            <span className="finora-settings-form__helper">
-              Optional
-            </span>
           </label>
 
           <label className="finora-settings-form__field">

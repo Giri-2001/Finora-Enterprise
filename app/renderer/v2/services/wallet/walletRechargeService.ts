@@ -1,4 +1,4 @@
-﻿/* ============================================================
+/* ============================================================
    FINORA ENTERPRISE OS™
 
    V2 WALLET ENGINE™
@@ -63,6 +63,9 @@ import {
   FINORA_WALLET_RECHARGE_SUCCESS_REMARK,
   FINORA_WALLET_RECHARGE_TITLE,
 } from "./wallet.constants";
+import {
+  publishWalletBalanceUpdate,
+} from "./walletBalanceEvent";
 
 /* ============================================================
    RESULT
@@ -556,6 +559,14 @@ export async function commitVerifiedWalletRecharge(
         "FINORA Wallet balance was updated, but Recharge ledger finalization is pending recovery.",
     };
   }
+
+  publishWalletBalanceUpdate({
+    walletId:
+      wallet.walletId,
+
+    availableBalance:
+      successTransaction.availableBalance,
+  });
 
   /* ==========================================================
      SUCCESS

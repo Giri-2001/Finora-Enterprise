@@ -169,7 +169,7 @@ export default function NumberingSeriesSettingsForm({
       className="finora-settings-form finora-settings-numbering-form"
       onSubmit={handleSubmit}
     >
-      <section className="finora-settings-form__section">
+      <section className="finora-settings-form__section finora-settings-customer-series-section">
         <div className="finora-settings-form__section-header">
           <div className="finora-settings-form__section-heading">
             <h2 className="finora-settings-form__section-title">
@@ -332,21 +332,9 @@ export default function NumberingSeriesSettingsForm({
             </button>
           </div>
         )}
-
-        {locked && (
-          <div className="finora-settings-form__actions">
-            <span className="finora-settings-form__helper">
-              <LockKeyhole
-                className="finora-settings-form__submit-icon"
-                aria-hidden="true"
-              />
-              Customer Series locked
-            </span>
-          </div>
-        )}
       </section>
 
-      <section className="finora-settings-form__section">
+      <section className="finora-settings-form__section finora-settings-system-numbering-section">
         <div className="finora-settings-form__section-header">
           <div className="finora-settings-form__section-heading">
             <h2 className="finora-settings-form__section-title">

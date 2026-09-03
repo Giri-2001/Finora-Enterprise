@@ -39,6 +39,7 @@
 import type {
   AuthDataContext,
   AuthSession,
+  AuthSessionCandidate,
   LoginCredentials,
   User,
 } from "../components/auth/types";
@@ -56,6 +57,10 @@ import {
   hashPassword,
   verifyPassword,
 } from "../utils/security";
+
+import {
+  resolveBusinessDate,
+} from "../services/business/businessDateService";
 
 // ============================================================
 // STORAGE KEYS
@@ -401,7 +406,7 @@ export function replaceUsers(
 
 export function authenticateLogin(
   credentials: LoginCredentials,
-): AuthSession | null {
+): AuthSessionCandidate | null {
 
   // ==========================================================
   // ACCOUNT LOCK CHECK
@@ -503,7 +508,7 @@ export function authenticateLogin(
   const now =
     new Date().toISOString();
 
-  const session: AuthSession = {
+  const session: AuthSessionCandidate = {
 
     userId:
       user.id,
@@ -558,13 +563,34 @@ export function authenticateLogin(
 // ============================================================
 
 export function commitLoginSession(
-  session: AuthSession,
-): void {
+  session: AuthSessionCandidate,
+
+  businessDate:
+    string,
+): AuthSession {
+  const resolvedBusinessDate =
+    resolveBusinessDate(
+      businessDate,
+    );
+
+  if (!resolvedBusinessDate) {
+    throw new Error(
+      "A valid FINORA Business Date is required before login session commit.",
+    );
+  }
+
+  const committedSession:
+    AuthSession = {
+    ...session,
+
+    businessDate:
+      resolvedBusinessDate,
+  };
 
   localStorage.setItem(
     SESSION_KEY,
     JSON.stringify(
-      session,
+      committedSession,
     ),
   );
 
@@ -577,14 +603,16 @@ export function commitLoginSession(
       "AUTH",
 
     description:
-      `User ${session.fullName} logged into FINORA`,
+      `User ${committedSession.fullName} logged into FINORA for Business Date ${resolvedBusinessDate}`,
 
     performedBy:
-      session.username,
+      committedSession.username,
 
     userRole:
-      session.role,
+      committedSession.role,
   });
+
+  return committedSession;
 }
 
 // ============================================================
@@ -620,6 +648,29 @@ export function getSession():
       JSON.parse(
         data,
       ) as Partial<AuthSession>;
+
+    // --------------------------------------------------------
+    // ERP BUSINESS DATE SAFETY
+    //
+    // Sessions created before Business Date support must
+    // authenticate again and explicitly choose a date.
+    //
+    // Never infer today because that could silently assign
+    // operational transactions to an unintended date.
+    // --------------------------------------------------------
+
+    const resolvedBusinessDate =
+      resolveBusinessDate(
+        parsedSession.businessDate,
+      );
+
+    if (!resolvedBusinessDate) {
+      localStorage.removeItem(
+        SESSION_KEY,
+      );
+
+      return null;
+    }
 
     // --------------------------------------------------------
     // FIND AUTHENTICATED USER
@@ -712,6 +763,9 @@ export function getSession():
       loginTime:
         parsedSession.loginTime ??
         new Date().toISOString(),
+
+      businessDate:
+        resolvedBusinessDate,
 
       sessionId:
         parsedSession.sessionId ?? "",

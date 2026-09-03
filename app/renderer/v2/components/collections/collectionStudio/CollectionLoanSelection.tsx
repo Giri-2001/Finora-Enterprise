@@ -79,6 +79,9 @@ export interface CollectionLoanSelectionRecord {
   status: string;
 
   outstanding: number;
+
+  loanDate: string;
+
 }
 
 // ============================================================
@@ -101,6 +104,71 @@ function formatCurrency(value: number): string {
   const safeValue = Number.isFinite(value) ? Math.max(0, value) : 0;
 
   return `₹ ${safeValue.toLocaleString("en-IN")}`;
+}
+
+// ============================================================
+// OPERATIONAL DATE DISPLAY
+// ============================================================
+//
+// Persisted calendar dates are formatted directly from their
+// YYYY-MM-DD portion. No timezone conversion is permitted.
+//
+// ============================================================
+
+const OPERATIONAL_MONTH_NAMES = [
+  "Jan",
+  "Feb",
+  "Mar",
+  "Apr",
+  "May",
+  "Jun",
+  "Jul",
+  "Aug",
+  "Sep",
+  "Oct",
+  "Nov",
+  "Dec",
+] as const;
+
+function formatOperationalDate(
+  value: string,
+): string {
+  const raw =
+    String(value ?? "").trim();
+
+  const dateMatch =
+    /^(\d{4})-(\d{2})-(\d{2})/.exec(raw);
+
+  if (!dateMatch) {
+    return "--";
+  }
+
+  const year =
+    dateMatch[1];
+
+  const monthIndex =
+    Number(dateMatch[2]) - 1;
+
+  const day =
+    Number(dateMatch[3]);
+
+  if (
+    !Number.isInteger(monthIndex) ||
+    monthIndex < 0 ||
+    monthIndex >=
+      OPERATIONAL_MONTH_NAMES.length ||
+    !Number.isInteger(day) ||
+    day < 1 ||
+    day > 31
+  ) {
+    return "--";
+  }
+
+  return [
+    String(day).padStart(2, "0"),
+    OPERATIONAL_MONTH_NAMES[monthIndex],
+    year,
+  ].join(" ");
 }
 
 // ============================================================
@@ -386,6 +454,25 @@ export default function CollectionLoanSelection({
                 <span style={styles.loanCardType} title={loan.repaymentType}>
                   {loan.repaymentType}
                 </span>
+              </div>
+
+              {/* ==========================================
+                    LOAN DATE
+                ========================================== */}
+
+              <div style={styles.loanCardDateRow}>
+                <div style={styles.loanCardDateItem}>
+                  <span style={styles.loanCardDateLabel}>
+                    Loan Date
+                  </span>
+
+                  <span style={styles.loanCardDateValue}>
+                    {formatOperationalDate(
+                      loan.loanDate,
+                    )}
+                  </span>
+                </div>
+
               </div>
             </button>
           );

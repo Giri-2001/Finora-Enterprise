@@ -83,6 +83,14 @@ export interface CollectionLoanSelectionStyles extends Record<
 
   loanCardType: CSSProperties;
 
+  loanCardDateRow: CSSProperties;
+
+  loanCardDateItem: CSSProperties;
+
+  loanCardDateLabel: CSSProperties;
+
+  loanCardDateValue: CSSProperties;
+
   loanStatus: CSSProperties;
 
   loanStatusSelected: CSSProperties;
@@ -659,8 +667,77 @@ export function createCollectionLoanSelectionStyles(
   };
 
   // ==========================================================
-  // STATUS BADGE
+  // LOAN DATE
   // ==========================================================
+
+  const loanCardDateRow: CSSProperties = {
+    width: "100%",
+
+    minWidth: 0,
+
+    display: "grid",
+
+    gridTemplateColumns: "minmax(0, 1fr)",
+
+    gap: "10px",
+
+    paddingTop: "6px",
+
+    borderTop: `1px solid ${colors.borderSubtle}`,
+
+    boxSizing: "border-box",
+  };
+
+  const loanCardDateItem: CSSProperties = {
+    minWidth: 0,
+
+    display: "flex",
+
+    flexDirection: "column",
+
+    gap: "2px",
+  };
+
+  const loanCardDateLabel: CSSProperties = {
+    color: colors.textMuted,
+
+    fontFamily: FONTS.ui,
+
+    fontSize: "9px",
+
+    fontWeight: 700,
+
+    lineHeight: 1.2,
+
+    letterSpacing: "0.04em",
+
+    textTransform: "uppercase",
+
+    whiteSpace: "nowrap",
+  };
+
+  const loanCardDateValue: CSSProperties = {
+    minWidth: 0,
+
+    overflow: "hidden",
+
+    textOverflow: "ellipsis",
+
+    color: colors.textPrimary,
+
+    fontFamily: FONTS.ui,
+
+    fontSize: "11px",
+
+    fontWeight: 700,
+
+    lineHeight: 1.25,
+
+    whiteSpace: "nowrap",
+  };
+
+  // ==========================================================
+  // STATUS BADGE  // ==========================================================
   //
   // TOP RIGHT
   //
@@ -831,6 +908,14 @@ export function createCollectionLoanSelectionStyles(
     loanCardAmount,
 
     loanCardType,
+
+    loanCardDateRow,
+
+    loanCardDateItem,
+
+    loanCardDateLabel,
+
+    loanCardDateValue,
 
     loanStatus,
 

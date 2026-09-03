@@ -236,44 +236,60 @@ function parseCalendarDate(value: string): Date | null {
 }
 
 /**
- * Return elapsed calendar days between Loan date and today.
+ * Return elapsed calendar days between the Loan Business Date
+ * and the active Collection Business Date.
  *
- * Same-day Loan:
+ * The end date must come from the authenticated Login Date.
+ * The device clock must never control operational calculations.
+ *
+ * Same Business Date:
  *
  *   0 days
  *
- * Yesterday → today:
+ * Previous day → Collection Business Date:
  *
  *   1 day
  *
- * Future date:
+ * Collection date before Loan date:
  *
  *   0 days
  */
-function getElapsedLoanDays(loanDateValue: string): number {
-  const loanDate = parseCalendarDate(loanDateValue);
+function getElapsedLoanDays(
+  loanDateValue: string,
+  collectionBusinessDateValue: string,
+): number {
+  const loanDate =
+    parseCalendarDate(
+      loanDateValue,
+    );
 
-  if (!loanDate) {
+  const collectionBusinessDate =
+    parseCalendarDate(
+      collectionBusinessDateValue,
+    );
+
+  if (
+    !loanDate ||
+    !collectionBusinessDate
+  ) {
     return 0;
   }
 
-  const today = new Date();
+  const millisecondsPerDay =
+    24 * 60 * 60 * 1000;
 
-  const todayDate = new Date(
-    today.getFullYear(),
-    today.getMonth(),
-    today.getDate(),
-  );
-
-  const millisecondsPerDay = 24 * 60 * 60 * 1000;
-
-  const difference = todayDate.getTime() - loanDate.getTime();
+  const difference =
+    collectionBusinessDate.getTime() -
+    loanDate.getTime();
 
   if (difference <= 0) {
     return 0;
   }
 
-  return Math.floor(difference / millisecondsPerDay);
+  return Math.floor(
+    difference /
+      millisecondsPerDay,
+  );
 }
 
 /**
@@ -502,7 +518,11 @@ export default function CollectionSystemGenerated() {
   // ELAPSED DAYS
   // ==========================================================
 
-  const elapsedDays = getElapsedLoanDays(reviewData.loanDate);
+  const elapsedDays =
+    getElapsedLoanDays(
+      reviewData.loanDate,
+      reviewData.receiptDate,
+    );
 
   // ==========================================================
   // ACCRUED INTEREST
@@ -608,7 +628,7 @@ export default function CollectionSystemGenerated() {
 
         <div style={collectionSystemGeneratedStyles.financialRow}>
           <span style={collectionSystemGeneratedStyles.financialLabel}>
-            Interest - till today
+            Interest - till collection date
           </span>
 
           <strong style={collectionSystemGeneratedStyles.financialValue}>

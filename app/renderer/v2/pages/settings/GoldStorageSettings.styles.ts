@@ -161,7 +161,7 @@ export function getGoldStorageSettingsStyles(
      PAGE GEOMETRY
   ========================================================== */
 
-  const pagePadding = tokens.spacing.medium;
+  const pagePadding = tokens.spacing.small;
 
   const panelPadding = isMobile
     ? tokens.spacing.medium
@@ -171,7 +171,7 @@ export function getGoldStorageSettingsStyles(
 
   const workspaceGap = isMobile
     ? tokens.spacing.medium
-    : tokens.layout.contentGap;
+    : tokens.spacing.small + 2;
 
   /* ==========================================================
      HEADER
@@ -183,7 +183,7 @@ export function getGoldStorageSettingsStyles(
      SUMMARY GRID
   ========================================================== */
 
-  const summaryColumns = isMobile ? 2 : isTablet ? 4 : 4;
+  const summaryColumns = isMobile ? 1 : isTablet ? 4 : 4;
 
   /* ==========================================================
      WORKSPACE GRID
@@ -205,11 +205,11 @@ export function getGoldStorageSettingsStyles(
      CARD GRIDS
   ========================================================== */
 
-  const roomColumns = isMobile ? 1 : isTablet ? 2 : isLaptop ? 3 : 4;
+  const roomColumns = isMobile ? 1 : isTablet ? 2 : isLaptop ? 2 : 3;
 
-  const lockerColumns = isMobile ? 1 : isTablet ? 2 : isLaptop ? 3 : 4;
+  const lockerColumns = isMobile ? 1 : isTablet ? 2 : isLaptop ? 2 : 3;
 
-  const rackColumns = isMobile ? 1 : isTablet ? 2 : isLaptop ? 3 : 4;
+  const rackColumns = isMobile ? 1 : isTablet ? 2 : isLaptop ? 3 : 3;
 
   /* ==========================================================
      FORM GRID
@@ -244,6 +244,8 @@ export function getGoldStorageSettingsStyles(
 
     page: {
       width: "100%",
+      marginTop: -6,
+
 
       minHeight: "100%",
 
@@ -263,7 +265,7 @@ export function getGoldStorageSettingsStyles(
 
       margin: "0 auto",
 
-      padding: `${pagePadding}px`,
+      padding: `0px 0px ${pagePadding}px 0px`,
 
       boxSizing: "border-box",
 
@@ -277,21 +279,22 @@ export function getGoldStorageSettingsStyles(
     header: {
       width: "100%",
 
-      display: "flex",
+      display: "grid",
 
-      flexDirection: headerDirection,
+      gridTemplateColumns: isMobile
+        ? "minmax(0, 1fr)"
+        : "repeat(4, minmax(0, 1fr))",
 
-      alignItems: isMobile ? "stretch" : "flex-start",
+      alignItems: "center",
 
-      justifyContent: "space-between",
+      columnGap: `${tokens.spacing.inline}px`,
 
-      gap: `${tokens.spacing.medium}px`,
+      rowGap: `${tokens.spacing.small}px`,
 
-      marginBottom: `${tokens.spacing.medium}px`,
+      marginBottom: 6,
 
       boxSizing: "border-box",
     },
-
     headerContent: {
       minWidth: 0,
 
@@ -299,7 +302,7 @@ export function getGoldStorageSettingsStyles(
 
       flexDirection: "column",
 
-      gap: `${Math.max(3, tokens.spacing.small / 2)}px`,
+      gap: "2px",
     },
 
     eyebrow: {
@@ -353,21 +356,21 @@ export function getGoldStorageSettingsStyles(
     },
 
     headerActions: {
-      width: isMobile ? "100%" : "auto",
+      gridColumn: isMobile ? "1 / -1" : "4 / 5",
 
-      display: "flex",
+      width: "100%",
+display: "flex",
 
-      flexDirection: isMobile ? "column" : "row",
+      flexDirection: "row",
 
       alignItems: "center",
 
-      justifyContent: "flex-end",
+      justifyContent: "stretch",
 
-      gap: `${tokens.spacing.inline}px`,
+      gap: `${tokens.spacing.small}px`,
 
       boxSizing: "border-box",
     },
-
     /* ========================================================
        SUMMARY
     ======================================================== */
@@ -381,7 +384,7 @@ export function getGoldStorageSettingsStyles(
 
       gap: `${tokens.spacing.inline}px`,
 
-      marginBottom: `${tokens.spacing.medium}px`,
+      marginBottom: 0,
 
       boxSizing: "border-box",
     },
@@ -389,7 +392,7 @@ export function getGoldStorageSettingsStyles(
     summaryCard: {
       minWidth: 0,
 
-      minHeight: isMobile ? "72px" : "82px",
+      minHeight: isMobile ? "56px" : "60px",
 
       display: "flex",
 
@@ -397,7 +400,7 @@ export function getGoldStorageSettingsStyles(
 
       justifyContent: "center",
 
-      gap: `${Math.max(3, tokens.spacing.small / 2)}px`,
+      gap: "2px",
 
       padding: `${
         isMobile ? tokens.spacing.small + 2 : tokens.spacing.inline
@@ -411,7 +414,7 @@ export function getGoldStorageSettingsStyles(
 
       borderRadius: `${tokens.control.radius + 2}px`,
 
-      boxShadow: `0 3px 14px ${THEME.shadow}`,
+      boxShadow: `0 2px 10px ${THEME.shadow}`,
 
       fontFamily: INTER,
     },
@@ -429,7 +432,7 @@ export function getGoldStorageSettingsStyles(
 
       fontSize: `${isMobile ? 9 : tokens.typography.caption}px`,
 
-      fontWeight: 750,
+      fontWeight: 700,
 
       textTransform: "uppercase",
 
@@ -453,7 +456,7 @@ export function getGoldStorageSettingsStyles(
         isMobile ? tokens.typography.label : tokens.typography.body
       }px`,
 
-      fontWeight: 850,
+      fontWeight: 700,
 
       fontFamily: INTER,
     },
@@ -463,17 +466,21 @@ export function getGoldStorageSettingsStyles(
     ======================================================== */
 
     statusBanner: {
+      gridColumn: isMobile ? "1 / -1" : "1 / span 3",
+
+      minWidth: 0,
+
       width: "100%",
 
       display: "flex",
 
-      alignItems: "flex-start",
+      alignItems: "center",
 
       gap: `${tokens.spacing.inline}px`,
 
-      padding: `${tokens.spacing.inline}px`,
+      padding: `7px ${tokens.spacing.small}px`,
 
-      marginBottom: `${tokens.spacing.medium}px`,
+      marginBottom: 0,
 
       boxSizing: "border-box",
 
@@ -487,13 +494,11 @@ export function getGoldStorageSettingsStyles(
 
       fontFamily: INTER,
     },
-
     successBanner: {
-      background: THEME.successSoft,
+      background: THEME.brandSoft,
 
-      borderColor: THEME.success,
+      borderColor: THEME.brand,
     },
-
     warningBanner: {
       background: THEME.warningSoft,
 
@@ -533,7 +538,7 @@ export function getGoldStorageSettingsStyles(
 
       fontSize: `${tokens.typography.small}px`,
 
-      fontWeight: 800,
+      fontWeight: 700,
 
       fontFamily: INTER,
     },
@@ -541,9 +546,9 @@ export function getGoldStorageSettingsStyles(
     statusText: {
       color: THEME.muted,
 
-      fontSize: `${tokens.typography.caption}px`,
+      fontSize: `${tokens.typography.small}px`,
 
-      lineHeight: tokens.lineHeight.body,
+      lineHeight: "1.2",
 
       fontFamily: INTER,
     },
@@ -561,11 +566,12 @@ export function getGoldStorageSettingsStyles(
 
       gap: `${workspaceGap}px`,
 
+      marginTop: 6,
+
       alignItems: "start",
 
       boxSizing: "border-box",
     },
-
     /* ========================================================
        NAVIGATOR PANEL
     ======================================================== */
@@ -579,9 +585,9 @@ export function getGoldStorageSettingsStyles(
 
       flexDirection: "column",
 
-      gap: `${tokens.spacing.inline}px`,
+      gap: `${tokens.spacing.small}px`,
 
-      padding: `${panelPadding}px`,
+      padding: `${tokens.spacing.small + 2}px`,
 
       boxSizing: "border-box",
 
@@ -591,15 +597,14 @@ export function getGoldStorageSettingsStyles(
 
       borderRadius: `${tokens.panel.radius}px`,
 
-      boxShadow: `0 4px 18px ${THEME.shadow}`,
+      boxShadow: `0 3px 14px ${THEME.shadow}`,
 
       position: isCompact ? "relative" : "sticky",
 
-      top: isCompact ? undefined : `${tokens.spacing.medium}px`,
+      top: isCompact ? undefined : `${tokens.spacing.small}px`,
 
       fontFamily: INTER,
     },
-
     navigatorHeader: {
       display: "flex",
 
@@ -607,19 +612,18 @@ export function getGoldStorageSettingsStyles(
 
       justifyContent: "space-between",
 
-      gap: `${tokens.spacing.inline}px`,
+      gap: `${tokens.spacing.small}px`,
 
       boxSizing: "border-box",
     },
-
     navigatorTitle: {
       margin: 0,
 
       color: THEME.text,
 
-      fontSize: `${tokens.typography.label}px`,
+      fontSize: `${tokens.typography.subheading}px`,
 
-      fontWeight: 850,
+      fontWeight: 700,
 
       fontFamily: INTER,
     },
@@ -629,9 +633,9 @@ export function getGoldStorageSettingsStyles(
 
       color: THEME.muted,
 
-      fontSize: `${tokens.typography.caption}px`,
+      fontSize: `${tokens.typography.caption + 1}px`,
 
-      lineHeight: tokens.lineHeight.body,
+      lineHeight: 1.35,
 
       fontFamily: INTER,
     },
@@ -653,7 +657,7 @@ export function getGoldStorageSettingsStyles(
 
       minWidth: 0,
 
-      minHeight: `${Math.max(44, tokens.control.minHeight)}px`,
+      minHeight: `${Math.max(40, tokens.control.minHeight - 4)}px`,
 
       display: "flex",
 
@@ -702,7 +706,7 @@ export function getGoldStorageSettingsStyles(
 
       fontSize: `${tokens.typography.small}px`,
 
-      fontWeight: 800,
+      fontWeight: 700,
 
       fontFamily: INTER,
     },
@@ -712,9 +716,9 @@ export function getGoldStorageSettingsStyles(
 
       color: THEME.muted,
 
-      fontSize: `${tokens.typography.caption}px`,
+        fontSize: `${tokens.typography.caption + 2}px`,
 
-      fontWeight: 750,
+      fontWeight: 700,
 
       fontFamily: INTER,
     },
@@ -728,7 +732,7 @@ export function getGoldStorageSettingsStyles(
 
       width: "100%",
 
-      padding: `${panelPadding}px`,
+      padding: `${panelPadding - 2}px`,
 
       boxSizing: "border-box",
 
@@ -738,11 +742,10 @@ export function getGoldStorageSettingsStyles(
 
       borderRadius: `${tokens.panel.radius}px`,
 
-      boxShadow: `0 4px 18px ${THEME.shadow}`,
+      boxShadow: `0 3px 14px ${THEME.shadow}`,
 
       fontFamily: INTER,
     },
-
     editorHeader: {
       width: "100%",
 
@@ -756,7 +759,7 @@ export function getGoldStorageSettingsStyles(
 
       gap: `${tokens.spacing.inline}px`,
 
-      paddingBottom: `${tokens.spacing.medium}px`,
+      paddingBottom: 6,
 
       borderBottom: `${tokens.border.width}px solid ${THEME.border}`,
 
@@ -778,23 +781,34 @@ export function getGoldStorageSettingsStyles(
 
       color: THEME.text,
 
-      fontSize: `${sectionTitleSize}px`,
+      fontSize: `${sectionTitleSize + 3}px`,
 
-      fontWeight: 850,
+      fontWeight: 700,
 
       lineHeight: tokens.lineHeight.compact,
 
       fontFamily: INTER,
     },
 
+    lockerEditorSubtitle: {
+      margin: 0,
+
+      color: THEME.muted,
+
+      fontSize: `${tokens.typography.caption + 1}px`,
+
+      lineHeight: 1.35,
+
+      fontFamily: INTER,
+    },
     editorSubtitle: {
       margin: 0,
 
       color: THEME.muted,
 
-      fontSize: `${tokens.typography.caption}px`,
+      fontSize: `${tokens.typography.small}px`,
 
-      lineHeight: tokens.lineHeight.body,
+      lineHeight: 1.35,
 
       fontFamily: INTER,
     },
@@ -822,7 +836,7 @@ export function getGoldStorageSettingsStyles(
     section: {
       width: "100%",
 
-      marginTop: `${tokens.spacing.medium}px`,
+      marginTop: 6,
 
       boxSizing: "border-box",
 
@@ -842,7 +856,7 @@ export function getGoldStorageSettingsStyles(
 
       gap: `${tokens.spacing.inline}px`,
 
-      marginBottom: `${tokens.spacing.inline}px`,
+      marginBottom: 6,
 
       boxSizing: "border-box",
     },
@@ -862,9 +876,9 @@ export function getGoldStorageSettingsStyles(
 
       color: THEME.text,
 
-      fontSize: `${tokens.typography.label}px`,
+      fontSize: `${tokens.typography.label + 2}px`,
 
-      fontWeight: 850,
+      fontWeight: 700,
 
       fontFamily: INTER,
     },
@@ -874,7 +888,7 @@ export function getGoldStorageSettingsStyles(
 
       color: THEME.muted,
 
-      fontSize: `${tokens.typography.caption}px`,
+      fontSize: `${tokens.typography.small}px`,
 
       lineHeight: tokens.lineHeight.body,
 
@@ -949,6 +963,56 @@ export function getGoldStorageSettingsStyles(
       fontFamily: INTER,
     },
 
+    roomConfigurationCard: {
+      minWidth: 0,
+
+      width: "100%",
+
+      maxWidth: "360px",
+
+      display: "flex",
+
+      flexDirection: "column",
+
+      gap: `${tokens.spacing.small}px`,
+
+      padding: `${tokens.spacing.inline}px`,
+
+      boxSizing: "border-box",
+
+      background: THEME.surfaceSoft,
+
+      border: `${tokens.border.width}px solid ${THEME.border}`,
+
+      borderRadius: `${tokens.control.radius + 2}px`,
+
+      fontFamily: INTER,
+    },
+    lockerConfigurationCard: {
+      minWidth: 0,
+
+      width: "100%",
+
+      maxWidth: "420px",
+
+      display: "flex",
+
+      flexDirection: "column",
+
+      gap: `${tokens.spacing.small}px`,
+
+      padding: `${tokens.spacing.inline}px`,
+
+      boxSizing: "border-box",
+
+      background: THEME.surfaceSoft,
+
+      border: `${tokens.border.width}px solid ${THEME.border}`,
+
+      borderRadius: `${tokens.control.radius + 2}px`,
+
+      fontFamily: INTER,
+    },
     configurationCardSelected: {
       background: THEME.brandSoft,
 
@@ -976,6 +1040,8 @@ export function getGoldStorageSettingsStyles(
 
     configurationCardIdentity: {
       minWidth: 0,
+      flex: "1 1 auto",
+
 
       display: "flex",
 
@@ -984,6 +1050,19 @@ export function getGoldStorageSettingsStyles(
       gap: "2px",
     },
 
+    lockerConfigurationCardTitle: {
+      margin: 0,
+
+      minWidth: 0,
+
+      color: THEME.text,
+
+      fontSize: `${tokens.typography.small + 2}px`,
+
+      fontWeight: 700,
+
+      fontFamily: INTER,
+    },
     configurationCardTitle: {
       margin: 0,
 
@@ -997,25 +1076,106 @@ export function getGoldStorageSettingsStyles(
 
       color: THEME.text,
 
-      fontSize: `${tokens.typography.small}px`,
+      fontSize: `${tokens.typography.small + 2}px`,
 
-      fontWeight: 850,
+      fontWeight: 700,
 
       fontFamily: INTER,
     },
 
+    roomConfigurationCardTitle: {
+      margin: 0,
+
+      minWidth: 0,
+
+      color: THEME.text,
+
+      fontSize: `${tokens.typography.small + 2}px`,
+
+      fontWeight: 700,
+
+      lineHeight: 1.3,
+
+      overflowWrap: "anywhere",
+
+      fontFamily: INTER,
+    },
+    roomConfigurationCardSubtitle: {
+      margin: 0,
+
+      color: THEME.muted,
+
+      fontSize: `${tokens.typography.caption + 2}px`,
+
+      lineHeight: tokens.lineHeight.body,
+
+      fontWeight: 700,
+
+      fontFamily: INTER,
+    },
+    lockerConfigurationCardSubtitle: {
+      margin: 0,
+
+      minWidth: 0,
+
+      color: THEME.muted,
+
+      fontSize: `${tokens.typography.caption + 2}px`,
+
+      lineHeight: tokens.lineHeight.body,
+
+      fontWeight: 500,
+
+      fontFamily: INTER,
+    },
     configurationCardSubtitle: {
       margin: 0,
 
       color: THEME.muted,
 
-      fontSize: `${tokens.typography.caption}px`,
+      fontSize: `${tokens.typography.caption + 3}px`,
 
       lineHeight: tokens.lineHeight.body,
+      whiteSpace: "nowrap",
+      overflow: "hidden",
+      textOverflow: "ellipsis",
 
       fontFamily: INTER,
     },
 
+    rackEditorActions: {
+      width: "100%",
+
+      display: "grid",
+
+      gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
+
+      gap: `${tokens.spacing.small}px`,
+
+      boxSizing: "border-box",
+    },
+    roomEditorActions: {
+      width: "100%",
+
+      display: "grid",
+
+      gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
+
+      gap: `${tokens.spacing.small}px`,
+
+      boxSizing: "border-box",
+    },
+    lockerEditorActions: {
+      width: "100%",
+
+      display: "grid",
+
+      gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
+
+      gap: `${tokens.spacing.small}px`,
+
+      boxSizing: "border-box",
+    },
     configurationMeta: {
       width: "100%",
 
@@ -1062,6 +1222,15 @@ export function getGoldStorageSettingsStyles(
        STATUS CHIP
     ======================================================== */
 
+    lockerStatusChip: {
+      padding: "0 8px",
+
+      minHeight: "26px",
+
+      flexShrink: 0,
+
+      whiteSpace: "nowrap",
+    },
     statusChip: {
       minHeight: "26px",
 
@@ -1085,7 +1254,7 @@ export function getGoldStorageSettingsStyles(
 
       fontSize: `${tokens.typography.caption}px`,
 
-      fontWeight: 850,
+      fontWeight: 700,
 
       whiteSpace: "nowrap",
 
@@ -1136,16 +1305,58 @@ export function getGoldStorageSettingsStyles(
       fontFamily: INTER,
     },
 
+    lockerCapacityField: {
+      minWidth: 0,
+
+      display: "flex",
+
+      flexDirection: "column",
+
+      gap: `${tokens.form.labelGap}px`,
+
+      gridColumn: isCompact
+        ? "auto"
+        : "span 2",
+
+      fontFamily: INTER,
+    },
     fieldFull: {
       gridColumn: "1 / -1",
     },
 
+    roomLabel: {
+      color: THEME.text,
+
+      fontSize: `${tokens.typography.caption + 2}px`,
+
+      fontWeight: 700,
+
+      fontFamily: INTER,
+    },
+    lockerLabel: {
+      color: THEME.text,
+
+      fontSize: `${tokens.typography.caption + 2}px`,
+
+      fontWeight: 700,
+
+      fontFamily: INTER,
+    },
+    rackLabel: {
+      color: THEME.text,
+
+      fontSize: `${tokens.typography.caption + 2}px`,
+
+      fontWeight: 700,
+
+      fontFamily: INTER,
+    },
     label: {
       color: THEME.text,
 
       fontSize: `${tokens.typography.caption}px`,
 
-      fontWeight: 750,
+      fontWeight: 700,
 
       fontFamily: INTER,
     },
@@ -1153,11 +1364,70 @@ export function getGoldStorageSettingsStyles(
     requiredMark: {
       color: THEME.danger,
 
-      fontWeight: 850,
+      fontWeight: 700,
 
       marginLeft: "3px",
     },
 
+    roomInput: {
+      width: "100%",
+
+      minWidth: 0,
+
+      height: `${tokens.input.height}px`,
+
+      minHeight: `${tokens.input.minHeight}px`,
+
+      padding: `0 ${tokens.input.paddingX}px`,
+
+      boxSizing: "border-box",
+
+      outline: "none",
+
+      background: THEME.surfaceSoft,
+
+      color: THEME.text,
+
+      border: `${tokens.border.width}px solid ${THEME.border}`,
+
+      borderRadius: `${tokens.input.radius}px`,
+
+      fontSize: `${tokens.input.fontSize + 2}px`,
+
+      fontWeight: 650,
+
+      fontFamily: INTER,
+    },
+
+    roomSelect: {
+      width: "100%",
+
+      minWidth: 0,
+
+      height: `${tokens.input.height}px`,
+
+      minHeight: `${tokens.input.minHeight}px`,
+
+      padding: `0 ${tokens.input.paddingX}px`,
+
+      boxSizing: "border-box",
+
+      outline: "none",
+
+      background: THEME.surfaceSoft,
+
+      color: THEME.text,
+
+      border: `${tokens.border.width}px solid ${THEME.border}`,
+
+      borderRadius: `${tokens.input.radius}px`,
+
+      fontSize: `${tokens.input.fontSize + 2}px`,
+
+      fontWeight: 650,
+
+      fontFamily: INTER,
+    },
     input: {
       width: "100%",
 
@@ -1218,12 +1488,29 @@ export function getGoldStorageSettingsStyles(
       fontFamily: INTER,
     },
 
+    lockerHelperText: {
+      margin: 0,
+
+      color: THEME.muted,
+
+      fontSize: `${tokens.typography.caption + 1}px`,
+
+      lineHeight: 1.3,
+
+      whiteSpace: isCompact ? "normal" : "nowrap",
+
+      overflow: "hidden",
+
+      textOverflow: "ellipsis",
+
+      fontFamily: INTER,
+    },
     helperText: {
       margin: 0,
 
       color: THEME.muted,
 
-      fontSize: `${tokens.typography.caption}px`,
+      fontSize: `${tokens.typography.small}px`,
 
       lineHeight: tokens.lineHeight.body,
 
@@ -1235,9 +1522,13 @@ export function getGoldStorageSettingsStyles(
     ======================================================== */
 
     primaryButton: {
-      minHeight: `${Math.max(40, tokens.button.minHeight)}px`,
+      flex: "1 1 0",
 
-      padding: `0 ${tokens.button.paddingX}px`,
+      minWidth: 0,
+
+      minHeight: `${Math.max(36, tokens.button.minHeight - 4)}px`,
+
+      padding: `0 ${Math.min(tokens.button.paddingX, 12)}px`,
 
       boxSizing: "border-box",
 
@@ -1259,17 +1550,19 @@ export function getGoldStorageSettingsStyles(
 
       cursor: "pointer",
 
+      whiteSpace: "nowrap",
+
       fontSize: `${
         isMobile ? tokens.typography.caption : tokens.typography.small
       }px`,
 
-      fontWeight: 850,
+      fontWeight: 700,
 
       fontFamily: INTER,
     },
 
     secondaryButton: {
-      minHeight: `${Math.max(40, tokens.button.minHeight)}px`,
+      minHeight: `${Math.max(36, tokens.button.minHeight - 4)}px`,
 
       padding: `0 ${tokens.button.paddingX}px`,
 
@@ -1293,17 +1586,19 @@ export function getGoldStorageSettingsStyles(
 
       cursor: "pointer",
 
+      whiteSpace: "nowrap",
+
       fontSize: `${
         isMobile ? tokens.typography.caption : tokens.typography.small
       }px`,
 
-      fontWeight: 800,
+      fontWeight: 700,
 
       fontFamily: INTER,
     },
 
     dangerButton: {
-      minHeight: `${Math.max(40, tokens.button.minHeight)}px`,
+      minHeight: `${Math.max(36, tokens.button.minHeight - 4)}px`,
 
       padding: `0 ${tokens.button.paddingX}px`,
 
@@ -1331,7 +1626,7 @@ export function getGoldStorageSettingsStyles(
         isMobile ? tokens.typography.caption : tokens.typography.small
       }px`,
 
-      fontWeight: 800,
+      fontWeight: 700,
 
       fontFamily: INTER,
     },
@@ -1373,7 +1668,11 @@ export function getGoldStorageSettingsStyles(
     },
 
     mobileFullButton: {
-      width: isMobile ? "100%" : undefined,
+      width: isMobile || isTablet ? "auto" : undefined,
+
+      minWidth: isMobile || isTablet ? 0 : undefined,
+
+      flex: isMobile || isTablet ? "1 1 0" : undefined,
     },
 
     /* ========================================================
@@ -1499,7 +1798,7 @@ export function getGoldStorageSettingsStyles(
 
       color: THEME.muted,
 
-      fontSize: `${tokens.typography.caption}px`,
+      fontSize: `${tokens.typography.small}px`,
 
       lineHeight: tokens.lineHeight.body,
 

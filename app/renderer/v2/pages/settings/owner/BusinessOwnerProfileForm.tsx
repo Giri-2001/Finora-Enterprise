@@ -89,7 +89,7 @@ export default function BusinessOwnerProfileForm({
       className="finora-settings-form finora-settings-owner-form"
       onSubmit={handleSubmit}
     >
-      <section className="finora-settings-form__section">
+      <section className="finora-settings-form__section finora-settings-owner-identity-section">
         <div className="finora-settings-form__section-header">
           <div className="finora-settings-form__section-heading">
             <h2 className="finora-settings-form__section-title">
@@ -249,12 +249,19 @@ export default function BusinessOwnerProfileForm({
               disabled={controlsDisabled}
               required
               autoComplete="tel"
-              onChange={(event) =>
+              inputMode="numeric"
+              maxLength={10}
+              pattern="[0-9]{10}"
+              onChange={(event) => {
+                const value = event.currentTarget.value
+                  .replace(/\D/g, "")
+                  .slice(0, 10);
+
                 onFieldChange(
                   "phone",
-                  event.currentTarget.value,
-                )
-              }
+                  value,
+                );
+              }}
             />
           </label>
 

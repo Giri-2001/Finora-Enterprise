@@ -99,6 +99,10 @@ import {
 
 import { getSession } from "../../../store/authStore";
 
+import {
+  resolveBusinessDate,
+} from "../../../services/business/businessDateService";
+
 import { findCurrentGoldStorageByLoanId } from "../../../services/gold-loan/goldStorageService";
 
 import { storageManager } from "../../../storage/storageManager";
@@ -256,9 +260,9 @@ const STORAGE_MODE_SESSION_KEY = "FINORA_STORAGE_MODE";
 // EMPTY REVIEW DATA
 // ============================================================
 
-function createEmptyReviewData(): CollectionReviewData {
-  const today = new Date().toISOString().slice(0, 10);
-
+function createEmptyReviewData(
+  businessDate: string,
+): CollectionReviewData {
   return {
     customerId: "",
 
@@ -300,7 +304,7 @@ function createEmptyReviewData(): CollectionReviewData {
 
     receiptNumber: "",
 
-    receiptDate: today,
+    receiptDate: businessDate,
 
     status: "Draft",
 
@@ -461,6 +465,7 @@ function buildCollectionCustomerRecord(
 function buildReviewData(
   customer: CollectionCustomerRecord,
   loan: CollectionLoanRecord,
+  businessDate: string,
 ): CollectionReviewData {
   const now = new Date().toISOString();
 
@@ -505,7 +510,7 @@ function buildReviewData(
 
     receiptNumber: "",
 
-    receiptDate: new Date().toISOString().slice(0, 10),
+    receiptDate: businessDate,
 
     status: "Draft",
 
@@ -522,6 +527,19 @@ function buildReviewData(
 // ============================================================
 
 export default function CollectionStudioPage() {
+  // ==========================================================
+  // ERP BUSINESS DATE
+  // ==========================================================
+
+  const authenticatedSession =
+    getSession();
+
+  const activeBusinessDate =
+    resolveBusinessDate(
+      authenticatedSession
+        ?.businessDate,
+    ) ?? "";
+
   // ==========================================================
   // FINORA THEME ENGINE
   // ==========================================================
@@ -676,7 +694,7 @@ export default function CollectionStudioPage() {
   // ==========================================================
 
   const [reviewData, setReviewData] = useState<CollectionReviewData>(
-    createEmptyReviewData(),
+    createEmptyReviewData(activeBusinessDate),
   );
 
   // ==========================================================
@@ -843,7 +861,7 @@ export default function CollectionStudioPage() {
 
         setSelectedLoanId("");
 
-        setReviewData(createEmptyReviewData());
+        setReviewData(createEmptyReviewData(activeBusinessDate));
       } catch (error) {
         console.error("FINORA COLLECTION CUSTOMER/LOAN LOAD ERROR:", error);
 
@@ -856,7 +874,7 @@ export default function CollectionStudioPage() {
 
           setSelectedLoanId("");
 
-          setReviewData(createEmptyReviewData());
+          setReviewData(createEmptyReviewData(activeBusinessDate));
         }
       } finally {
         if (!cancelled) {
@@ -949,13 +967,23 @@ export default function CollectionStudioPage() {
 
   useEffect(() => {
     if (!selectedCustomer || !selectedLoan) {
-      setReviewData(createEmptyReviewData());
+      setReviewData(createEmptyReviewData(activeBusinessDate));
 
       return;
     }
 
-    setReviewData(buildReviewData(selectedCustomer, selectedLoan));
-  }, [selectedCustomer, selectedLoan]);
+    setReviewData(
+      buildReviewData(
+        selectedCustomer,
+        selectedLoan,
+        activeBusinessDate,
+      ),
+    );
+  }, [
+    activeBusinessDate,
+    selectedCustomer,
+    selectedLoan,
+  ]);
 
   // ==========================================================
   // OPEN GOLD RELEASE CONFIRMATION
@@ -1100,7 +1128,7 @@ export default function CollectionStudioPage() {
 
       setCustomerSearch("");
 
-      setReviewData(createEmptyReviewData());
+      setReviewData(createEmptyReviewData(activeBusinessDate));
 
       window.alert("Gold custody released successfully.");
     } catch (error) {

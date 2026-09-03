@@ -67,9 +67,6 @@ export default function SettingsHeader({
         </span>
 
         <div className="finora-settings-header__content">
-          <span className="finora-settings-header__eyebrow">
-            ENTERPRISE SETTINGS
-          </span>
 
           <h1 className="finora-settings-header__title">
             {section.label}

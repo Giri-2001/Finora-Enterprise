@@ -26,7 +26,6 @@ const wrapperStyle: CSSProperties = {
 export default function CollectionForm() {
   const {
     reviewData,
-    updateCollectionDate,
     updateCollectionAmount,
     updatePaymentMethod,
     updateRemarks,
@@ -40,7 +39,10 @@ export default function CollectionForm() {
         <TextInput
           type="date"
           value={reviewData.receiptDate}
-          onChange={(event) => updateCollectionDate(event.target.value)}
+          readOnly
+          disabled
+          aria-label="Collection Date locked to Login Date"
+          title="This date is locked to the active FINORA Login Date."
         />
       </FormField>
 

@@ -1,4 +1,4 @@
-// ============================================================
+﻿// ============================================================
 // FINORA ENTERPRISE OS™
 //
 // ENTERPRISE SETTINGS
@@ -101,7 +101,7 @@ export default function BranchSettingsForm({
           </div>
         </div>
 
-        <div className="finora-settings-form__grid">
+        <div className="finora-settings-form__grid finora-settings-branch-form__identity-grid">
           <label className="finora-settings-form__field">
             <span className="finora-settings-form__label">
               Business ID
@@ -199,20 +199,25 @@ export default function BranchSettingsForm({
               Branch Phone
             </span>
 
-            <input
-              className="finora-settings-form__input"
-              type="tel"
-              value={settings.phone}
-              disabled={controlsDisabled}
-              required
-              autoComplete="tel"
-              onChange={(event) =>
-                onFieldChange(
-                  "phone",
-                  event.currentTarget.value,
-                )
-              }
-            />
+              <input
+                className="finora-settings-form__input"
+                type="tel"
+                value={settings.phone}
+                disabled={controlsDisabled}
+                required
+                autoComplete="tel"
+                inputMode="numeric"
+                maxLength={10}
+                pattern="[0-9]{10}"
+                onChange={(event) =>
+                  onFieldChange(
+                    "phone",
+                    event.currentTarget.value
+                      .replace(/\D/g, "")
+                      .slice(0, 10),
+                  )
+                }
+              />
           </label>
 
           <label className="finora-settings-form__field">

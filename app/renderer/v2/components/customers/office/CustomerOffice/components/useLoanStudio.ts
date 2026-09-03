@@ -111,6 +111,10 @@ import {
 import { getSession } from "../../../../../store/authStore";
 
 import {
+  resolveBusinessDate,
+} from "../../../../../services/business/businessDateService";
+
+import {
   getCustomers,
   hydrateCustomersFromStorage,
   clearCustomerCache,
@@ -252,6 +256,15 @@ export function useLoanStudio({
   const resolvedInitialStep = initialStep ?? (entryMode === "GOLD" ? 2 : 1);
 
   const resolvedInitialLoanAmount = resolveInitialLoanAmount(initialLoanAmount);
+
+  const authenticatedSession =
+    getSession();
+
+  const activeBusinessDate =
+    resolveBusinessDate(
+      authenticatedSession
+        ?.businessDate,
+    ) ?? "";
 
   const isGoldLoan = entryMode === "GOLD";
 
@@ -568,21 +581,14 @@ export function useLoanStudio({
      DISBURSEMENT
   ========================================================== */
 
-  const [disbursementDate, setDisbursementDate] = useState("");
+  /**
+   * Disbursement Date is locked to the authenticated ERP
+   * Business Date. The Step 6 field remains controlled and
+   * cannot override the active session date.
+   */
+  const disbursementDate =
+    activeBusinessDate;
 
-  useEffect(() => {
-    if (step === 6 && !disbursementDate) {
-      const today = new Date();
-
-      const year = today.getFullYear();
-
-      const month = String(today.getMonth() + 1).padStart(2, "0");
-
-      const day = String(today.getDate()).padStart(2, "0");
-
-      setDisbursementDate(`${year}-${month}-${day}`);
-    }
-  }, [step, disbursementDate]);
 
   const [paymentMode, setPaymentMode] = useState("cash");
 
@@ -752,7 +758,10 @@ export function useLoanStudio({
      LOAN DATES
   ========================================================== */
 
-  const loanDate = new Date();
+  const loanDate =
+    new Date(
+      `${activeBusinessDate}T00:00:00.000Z`,
+    );
 
   const scheduleStartDate = firstInstallmentDate
     ? new Date(`${firstInstallmentDate}T00:00:00`)
@@ -970,6 +979,24 @@ export function useLoanStudio({
   ========================================================== */
 
   async function handleApproveLoan(): Promise<void> {
+    /* ========================================================
+       ERP BUSINESS DATE SAFETY
+
+       Loan creation must fail closed when the authenticated
+       session does not contain a valid Login Business Date.
+
+       No duplicate check, Wallet operation, number reservation
+       or Loan persistence may begin without this date.
+    ======================================================== */
+
+    if (!activeBusinessDate) {
+      alert(
+        "A valid FINORA Login Date is required. Please logout and login again.",
+      );
+
+      return;
+    }
+
     if (loanApproved) {
       alert("Loan already created");
 
@@ -1030,9 +1057,6 @@ export function useLoanStudio({
 
        This preflight does not mutate Wallet state.
     ======================================================== */
-
-    const authenticatedSession =
-      getSession();
 
     const walletScope = {
       ownerId:
@@ -1597,7 +1621,6 @@ Available Balance: ₹${walletChargeResult.data.availableBalance}`,
 
     setLoanApproved(false);
 
-    setDisbursementDate("");
 
     setPaymentMode("cash");
 
@@ -1725,7 +1748,6 @@ Available Balance: ₹${walletChargeResult.data.availableBalance}`,
     loanStatus,
 
     disbursementDate,
-    setDisbursementDate,
 
     paymentMode,
     setPaymentMode,

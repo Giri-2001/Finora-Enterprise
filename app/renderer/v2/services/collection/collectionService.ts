@@ -1,4 +1,4 @@
-// ============================================================
+﻿// ============================================================
 // FINORA ENTERPRISE OS™
 //
 // COLLECTIONS ENGINE™
@@ -18,7 +18,7 @@
 //
 // IMPORTANT
 //
-// - No localStorage access.
+// - No direct localStorage access.
 // - No filesystem access.
 // - No Electron IPC.
 // - No direct StorageManager access.
@@ -68,6 +68,18 @@ import {
 import {
   collectionRepository,
 } from "../../repositories/collection/collectionRepository";
+
+import {
+  getSession,
+} from "../../store/authStore";
+
+import {
+  resolveBusinessDate,
+} from "../business/businessDateService";
+import {
+  resolveOperationalDate,
+  validateCollectionDate,
+} from "./collectionDateService";
 
 // ============================================================
 // COLLECTION WORKFLOW NORMALIZATION
@@ -255,13 +267,96 @@ export async function approveCollection(
 ): Promise<CollectionReviewData> {
 
   // ==========================================================
+  // ACTIVE LOGIN BUSINESS DATE
+  // ==========================================================
+
+  const activeBusinessDate =
+    resolveBusinessDate(
+      getSession()
+        ?.businessDate,
+    );
+
+  if (!activeBusinessDate) {
+    throw new Error(
+      "A valid FINORA Login Date is required before Collection persistence.",
+    );
+  }
+
+  // ==========================================================
+  // LATEST SAVED COLLECTION DATE
+  // ==========================================================
+  //
+  // Multiple Collections on the latest operational date are
+  // valid. Backdating behind an existing ledger entry is not.
+  // ==========================================================
+
+  const loanId =
+    String(
+      reviewData.loanId ?? "",
+    ).trim();
+
+  const savedCollections =
+    await collectionRepository.getAll();
+
+  const collectionDates =
+    savedCollections
+      .filter(
+        (collection) =>
+          String(
+            collection.loanId ?? "",
+          ).trim() === loanId,
+      )
+      .map(
+        (collection) =>
+          resolveOperationalDate(
+            collection.receiptDate,
+          ),
+      )
+      .filter(
+        (value): value is string =>
+          Boolean(value),
+      )
+      .sort();
+
+  const latestCollectionDate =
+    collectionDates.length > 0
+      ? collectionDates[
+          collectionDates.length - 1
+        ]
+      : undefined;
+
+  // ==========================================================
+  // AUTHORITATIVE COLLECTION DATE VALIDATION
+  // ==========================================================
+
+  const validatedDate =
+    validateCollectionDate({
+      collectionDate:
+        reviewData.receiptDate,
+
+      loanDate:
+        reviewData.loanDate,
+
+      activeBusinessDate,
+
+      latestCollectionDate,
+    });
+
+  // ==========================================================
   // BUILD AUTHORITATIVE COLLECTION
+  // ==========================================================
+  //
+  // Owner-selected Collection Date is preserved.
+  // Audit timestamps remain repository-generated system time.
   // ==========================================================
 
   const collection =
-    buildPersistedCollection(
-      reviewData,
-    );
+    buildPersistedCollection({
+      ...reviewData,
+
+      receiptDate:
+        validatedDate.collectionDate,
+    });
 
   // ==========================================================
   // PERSIST COLLECTION
@@ -271,7 +366,6 @@ export async function approveCollection(
     collection,
   );
 }
-
 // ============================================================
 // UPDATE COLLECTION
 // ============================================================

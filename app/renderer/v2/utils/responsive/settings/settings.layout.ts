@@ -99,9 +99,11 @@ function resolveFormColumns(
       return 1;
 
     case "tablet":
+      return 2;
+
     case "laptop":
     case "desktop":
-      return 2;
+      return 3;
 
     default:
       return 1;

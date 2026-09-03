@@ -28,6 +28,12 @@ import type { CollectionReviewData } from "../../components/collections/Collecti
 
 import { loadCollections } from "../../services/collection/collectionService";
 
+import { getSession } from "../../store/authStore";
+
+import {
+  resolveBusinessDate,
+} from "../../services/business/businessDateService";
+
 import { storageManager } from "../../storage/storageManager";
 
 import { StorageMode } from "../../storage/storage.types";
@@ -298,6 +304,16 @@ function PlusIcon() {
 // ============================================================
 
 export default function CollectionsOffice() {
+  // ==========================================================
+  // ERP BUSINESS DATE
+  // ==========================================================
+
+  const activeBusinessDate =
+    resolveBusinessDate(
+      getSession()
+        ?.businessDate,
+    ) ?? "";
+
   const { theme } = useTheme();
 
   const { tokens: responsiveTokens } = useLoansOfficeResponsive();
@@ -543,10 +559,10 @@ export default function CollectionsOffice() {
   // ==========================================================
 
   const statistics = useMemo(() => {
-    const today = getDateFilterKey(new Date().toISOString());
+    const operationalDate = activeBusinessDate;
 
     const todayCollections = collections.filter(
-      (collection) => getDateFilterKey(getCollectionDate(collection)) === today,
+      (collection) => getDateFilterKey(getCollectionDate(collection)) === operationalDate,
     );
 
     const totalCollected = collections.reduce(
@@ -580,7 +596,7 @@ export default function CollectionsOffice() {
       discount: totalDiscount,
       outstanding: totalOutstanding,
     };
-  }, [collections, loans]);
+  }, [activeBusinessDate, collections, loans]);
 
   // ==========================================================
   // FILTERED COLLECTIONS

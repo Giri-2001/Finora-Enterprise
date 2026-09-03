@@ -149,7 +149,7 @@ export default function SettingsPage() {
           />
         </aside>
 
-        <main className="finora-settings-page__main">
+        <main className={`finora-settings-page__main finora-settings-page__main--${activeSection}`}>
           <SettingsHeader
             activeSection={
               activeSection

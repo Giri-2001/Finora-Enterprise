@@ -49,17 +49,10 @@ export default function SettingsNavigation({
       aria-label="Enterprise Settings"
     >
       <div className="finora-settings-navigation__header">
-        <span className="finora-settings-navigation__eyebrow">
-          FINORA ENTERPRISE OS™
-        </span>
 
         <h2 className="finora-settings-navigation__title">
           Enterprise Settings
         </h2>
-
-        <p className="finora-settings-navigation__subtitle">
-          Configure your Business, Branch, Business Owner, Numbering & Series and Gold Storage.
-        </p>
       </div>
 
       <div className="finora-settings-navigation__list">

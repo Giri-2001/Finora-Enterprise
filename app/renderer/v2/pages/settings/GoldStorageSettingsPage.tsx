@@ -1404,17 +1404,28 @@ export default function GoldStorageSettingsPage() {
         ================================================== */}
 
         <header style={styles.header}>
-          <div style={styles.headerContent}>
-            <span style={styles.eyebrow}>GOLD LOAN ENGINE™</span>
+            {feedback && (
+          <div style={getFeedbackStyle(feedback.kind)}>
+            {feedback.kind === "SUCCESS" ? (
+              <CircleCheck
+                size={responsive.tokens.icon.md}
+                style={styles.statusIcon}
+              />
+            ) : (
+              <TriangleAlert
+                size={responsive.tokens.icon.md}
+                style={styles.statusIcon}
+              />
+            )}
 
-            <h1 style={styles.title}>Gold Storage Settings</h1>
+            <div style={styles.statusContent}>
+              <span style={styles.statusTitle}>{feedback.title}</span>
 
-            <p style={styles.subtitle}>
-              Configure the physical Locker Room → Locker → Rack hierarchy used
-              for Gold Loan custody. Rack capacity represents the number of Gold
-              bags or packets that may be stored in that Rack.
-            </p>
+              <span style={styles.statusText}>{feedback.text}</span>
+            </div>
           </div>
+        )}
+
 
           <div style={styles.headerActions}>
             <button
@@ -1480,28 +1491,6 @@ export default function GoldStorageSettingsPage() {
         {/* ==================================================
             FEEDBACK
         ================================================== */}
-
-        {feedback && (
-          <div style={getFeedbackStyle(feedback.kind)}>
-            {feedback.kind === "SUCCESS" ? (
-              <CircleCheck
-                size={responsive.tokens.icon.md}
-                style={styles.statusIcon}
-              />
-            ) : (
-              <TriangleAlert
-                size={responsive.tokens.icon.md}
-                style={styles.statusIcon}
-              />
-            )}
-
-            <div style={styles.statusContent}>
-              <span style={styles.statusTitle}>{feedback.title}</span>
-
-              <span style={styles.statusText}>{feedback.text}</span>
-            </div>
-          </div>
-        )}
 
         {/* ==================================================
             LOADING
@@ -1624,7 +1613,7 @@ export default function GoldStorageSettingsPage() {
 
                     <div style={styles.formGrid}>
                       <label style={styles.field}>
-                        <span style={styles.label}>
+                        <span style={styles.roomLabel}>
                           Room Number
                           <span style={styles.requiredMark}>*</span>
                         </span>
@@ -1633,7 +1622,7 @@ export default function GoldStorageSettingsPage() {
                           type="number"
                           min="1"
                           step="1"
-                          style={styles.input}
+                          style={styles.roomInput}
                           value={roomDraft.roomNumber}
                           onChange={(event) =>
                             setRoomDraft((current) => ({
@@ -1646,14 +1635,14 @@ export default function GoldStorageSettingsPage() {
                       </label>
 
                       <label style={styles.field}>
-                        <span style={styles.label}>
+                        <span style={styles.roomLabel}>
                           Room Name
                           <span style={styles.requiredMark}>*</span>
                         </span>
 
                         <input
                           type="text"
-                          style={styles.input}
+                          style={styles.roomInput}
                           value={roomDraft.roomName}
                           onChange={(event) =>
                             setRoomDraft((current) => ({
@@ -1666,10 +1655,10 @@ export default function GoldStorageSettingsPage() {
                       </label>
 
                       <label style={styles.field}>
-                        <span style={styles.label}>Status</span>
+                        <span style={styles.roomLabel}>Status</span>
 
                         <select
-                          style={styles.select}
+                          style={styles.roomSelect}
                           value={roomDraft.status}
                           onChange={(event) =>
                             setRoomDraft((current) => ({
@@ -1744,11 +1733,11 @@ export default function GoldStorageSettingsPage() {
                         {rooms.map((room) => (
                           <article
                             key={room.id}
-                            style={styles.configurationCard}
+                            style={styles.roomConfigurationCard}
                           >
                             <div style={styles.configurationCardHeader}>
                               <div style={styles.configurationCardIdentity}>
-                                <h4 style={styles.configurationCardTitle}>
+                                <h4 style={styles.roomConfigurationCardTitle}>
                                   {room.roomName}
                                 </h4>
 
@@ -1769,7 +1758,7 @@ export default function GoldStorageSettingsPage() {
                               </span>
                             </div>
 
-                            <div style={styles.editorActions}>
+                            <div style={styles.roomEditorActions}>
                               <button
                                 type="button"
                                 style={styles.secondaryButton}
@@ -1806,7 +1795,7 @@ export default function GoldStorageSettingsPage() {
                     <div style={styles.editorHeading}>
                       <h2 style={styles.editorTitle}>Lockers / Beeruvas</h2>
 
-                      <p style={styles.editorSubtitle}>
+                      <p style={styles.lockerEditorSubtitle}>
                         Each Locker belongs to exactly one Locker Room.
                       </p>
                     </div>
@@ -1817,7 +1806,7 @@ export default function GoldStorageSettingsPage() {
                   <section style={styles.section}>
                     <div style={styles.formGrid}>
                       <label style={styles.field}>
-                        <span style={styles.label}>
+                        <span style={styles.lockerLabel}>
                           Locker Room
                           <span style={styles.requiredMark}>*</span>
                         </span>
@@ -1844,7 +1833,7 @@ export default function GoldStorageSettingsPage() {
                       </label>
 
                       <label style={styles.field}>
-                        <span style={styles.label}>
+                        <span style={styles.lockerLabel}>
                           Locker Number
                           <span style={styles.requiredMark}>*</span>
                         </span>
@@ -1866,7 +1855,7 @@ export default function GoldStorageSettingsPage() {
                       </label>
 
                       <label style={styles.field}>
-                        <span style={styles.label}>
+                        <span style={styles.lockerLabel}>
                           Locker Name
                           <span style={styles.requiredMark}>*</span>
                         </span>
@@ -1885,8 +1874,8 @@ export default function GoldStorageSettingsPage() {
                         />
                       </label>
 
-                      <label style={styles.field}>
-                        <span style={styles.label}>
+                      <label style={styles.lockerCapacityField}>
+                        <span style={styles.lockerLabel}>
                           Default Rack Capacity
                           <span style={styles.requiredMark}>*</span>
                         </span>
@@ -1906,14 +1895,14 @@ export default function GoldStorageSettingsPage() {
                           }
                         />
 
-                        <p style={styles.helperText}>
+                        <p style={styles.lockerHelperText}>
                           Used as the owner's preferred capacity when creating
                           Racks. Each Rack may still have its own capacity.
                         </p>
                       </label>
 
                       <label style={styles.field}>
-                        <span style={styles.label}>Status</span>
+                        <span style={styles.lockerLabel}>Status</span>
 
                         <select
                           style={styles.select}
@@ -1992,21 +1981,24 @@ export default function GoldStorageSettingsPage() {
                         {lockers.map((locker) => (
                           <article
                             key={locker.id}
-                            style={styles.configurationCard}
+                            style={styles.lockerConfigurationCard}
                           >
                             <div style={styles.configurationCardHeader}>
                               <div style={styles.configurationCardIdentity}>
-                                <h4 style={styles.configurationCardTitle}>
+                                <h4 style={styles.lockerConfigurationCardTitle}>
                                   {locker.lockerName}
                                 </h4>
 
-                                <p style={styles.configurationCardSubtitle}>
+                                <p style={styles.lockerConfigurationCardSubtitle}>
                                   {getRoomName(locker.roomId)} • Locker{" "}
                                   {locker.lockerNumber}
                                 </p>
                               </div>
 
-                              <span style={getStatusChipStyle(locker.status)}>
+                                <span style={{
+                                  ...getStatusChipStyle(locker.status),
+                                  ...styles.lockerStatusChip,
+                                }}>
                                 {locker.status}
                               </span>
                             </div>
@@ -2023,7 +2015,7 @@ export default function GoldStorageSettingsPage() {
                               </span>
                             </div>
 
-                            <div style={styles.editorActions}>
+                            <div style={styles.lockerEditorActions}>
                               <button
                                 type="button"
                                 style={styles.secondaryButton}
@@ -2072,7 +2064,7 @@ export default function GoldStorageSettingsPage() {
                   <section style={styles.section}>
                     <div style={styles.formGrid}>
                       <label style={styles.field}>
-                        <span style={styles.label}>
+                        <span style={styles.rackLabel}>
                           Locker / Beeruva
                           <span style={styles.requiredMark}>*</span>
                         </span>
@@ -2111,7 +2103,7 @@ export default function GoldStorageSettingsPage() {
                       </label>
 
                       <label style={styles.field}>
-                        <span style={styles.label}>
+                        <span style={styles.rackLabel}>
                           Rack Number
                           <span style={styles.requiredMark}>*</span>
                         </span>
@@ -2133,7 +2125,7 @@ export default function GoldStorageSettingsPage() {
                       </label>
 
                       <label style={styles.field}>
-                        <span style={styles.label}>
+                        <span style={styles.rackLabel}>
                           Rack Name
                           <span style={styles.requiredMark}>*</span>
                         </span>
@@ -2153,7 +2145,7 @@ export default function GoldStorageSettingsPage() {
                       </label>
 
                       <label style={styles.field}>
-                        <span style={styles.label}>
+                        <span style={styles.rackLabel}>
                           Bag / Packet Capacity
                           <span style={styles.requiredMark}>*</span>
                         </span>
@@ -2175,7 +2167,7 @@ export default function GoldStorageSettingsPage() {
                       </label>
 
                       <label style={styles.field}>
-                        <span style={styles.label}>Status</span>
+                        <span style={styles.rackLabel}>Status</span>
 
                         <select
                           style={styles.select}
@@ -2278,7 +2270,7 @@ export default function GoldStorageSettingsPage() {
                               </span>
                             </div>
 
-                            <div style={styles.editorActions}>
+                            <div style={styles.rackEditorActions}>
                               <button
                                 type="button"
                                 style={styles.secondaryButton}

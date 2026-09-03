@@ -5,7 +5,7 @@
 // DISBURSEMENT FORM
 //
 // RESPONSIBILITY:
-// - Collect disbursement date
+// - Display the session-locked ERP Business Date
 // - Display calculated net disbursement amount
 // - Disbursement amount is NOT manually editable
 // - Controlled by LoanStudio
@@ -54,7 +54,6 @@ interface DisbursementFormProps {
    */
   netDisbursement?: number;
 
-  onDisbursementDateChange?: (value: string) => void;
 }
 
 // ============================================================
@@ -65,8 +64,6 @@ export default function DisbursementForm({
   disbursementDate = "",
 
   netDisbursement = 0,
-
-  onDisbursementDateChange,
 }: DisbursementFormProps) {
   // ==========================================================
   // SAFE DISPLAY VALUE
@@ -94,10 +91,11 @@ export default function DisbursementForm({
                 <TextInput
                   type="date"
                   value={disbursementDate}
+                  readOnly
+                  disabled
+                  aria-label="Disbursement Date locked to Login Date"
+                  title="This date is locked to the active FINORA Login Date."
                   style={dateInputStyle}
-                  onChange={(event) => {
-                    onDisbursementDateChange?.(event.target.value);
-                  }}
                 />
               </div>
             </FormField>

@@ -1,4 +1,4 @@
-/* ===========================================================
+﻿/* ===========================================================
    FINORA ENTERPRISE OS™
 
    ENTERPRISE SETTINGS
@@ -54,7 +54,7 @@ html[data-finora-settings-device="mobile"]
 html[data-finora-settings-device="mobile"]
 .finora-settings-navigation__list {
   grid-template-columns:
-    repeat(4, minmax(0, 1fr));
+    repeat(3, minmax(0, 1fr));
 }
 
 html[data-finora-settings-device="mobile"]
@@ -140,6 +140,264 @@ html[data-finora-settings-device="desktop"]
     0;
 }
 
+
+/* ===========================================================
+   BUSINESS OWNER IDENTITY — FOUR COLUMNS
+
+   Laptop + Desktop only.
+
+   Keeps Business Linkage and other Settings forms on
+   their existing responsive grid.
+=========================================================== */
+
+html[data-finora-settings-device="laptop"]
+.finora-settings-owner-identity-section
+.finora-settings-form__grid,
+html[data-finora-settings-device="desktop"]
+.finora-settings-owner-identity-section
+.finora-settings-form__grid {
+  grid-template-columns:
+    repeat(4, minmax(0, 1fr));
+}
+
+/* ===========================================================
+   CUSTOMER SERIES — THREE COLUMN FLOW
+
+   Laptop + Desktop only.
+
+   The Customer Series preview field normally uses the
+   generic full-width modifier. Within this section only,
+   it becomes a normal grid item so the five fields flow as:
+
+   Row 1: 3 fields
+   Row 2: 2 fields + empty third column
+=========================================================== */
+
+html[data-finora-settings-device="laptop"]
+.finora-settings-customer-series-section
+.finora-settings-form__field--full,
+html[data-finora-settings-device="desktop"]
+.finora-settings-customer-series-section
+.finora-settings-form__field--full {
+  grid-column:
+    auto;
+}
+
+/* ===========================================================
+   SYSTEM NUMBERING RULES — THREE COLUMN FLOW
+
+   Laptop + Desktop only.
+
+   All three system-generated numbering examples appear
+   in a single row.
+=========================================================== */
+
+html[data-finora-settings-device="laptop"]
+.finora-settings-system-numbering-section
+.finora-settings-form__field--full,
+html[data-finora-settings-device="desktop"]
+.finora-settings-system-numbering-section
+.finora-settings-form__field--full {
+  grid-column:
+    auto;
+}
+
+html[data-finora-settings-device="laptop"]
+.finora-settings-system-numbering-section
+.finora-settings-form__grid,
+html[data-finora-settings-device="desktop"]
+.finora-settings-system-numbering-section
+.finora-settings-form__grid {
+  grid-template-columns:
+    repeat(3, minmax(0, 1fr));
+}
 /* ===========================================================
    END
 =========================================================== */
+
+
+
+
+
+/* ===========================================================
+   MOBILE — BRANCH IDENTITY SINGLE COLUMN
+=========================================================== */
+
+html[data-finora-settings-device="mobile"]
+.finora-settings-branch-form__identity-grid {
+  grid-template-columns:
+    minmax(0, 1fr);
+}
+
+/* ===========================================================
+   TABLET — TOP SETTINGS NAVIGATION
+=========================================================== */
+
+html[data-finora-settings-device="tablet"]
+.finora-settings-page__navigation {
+  width:
+    100%;
+}
+
+html[data-finora-settings-device="tablet"]
+.finora-settings-navigation {
+  width:
+    100%;
+}
+
+html[data-finora-settings-device="tablet"]
+.finora-settings-navigation__header {
+  display:
+    none;
+}
+
+html[data-finora-settings-device="tablet"]
+.finora-settings-navigation__list {
+  grid-template-columns:
+    repeat(5, minmax(0, 1fr));
+}
+
+html[data-finora-settings-device="tablet"]
+.finora-settings-navigation__item {
+  grid-template-columns:
+    minmax(0, 1fr);
+
+  justify-items:
+    center;
+
+  text-align:
+    center;
+}
+
+html[data-finora-settings-device="tablet"]
+.finora-settings-navigation__icon {
+  justify-self:
+    center;
+}
+
+html[data-finora-settings-device="tablet"]
+.finora-settings-navigation__content {
+  align-items:
+    center;
+}
+
+html[data-finora-settings-device="tablet"]
+.finora-settings-navigation__description {
+  display:
+    none;
+}
+
+html[data-finora-settings-device="tablet"]
+.finora-settings-navigation__indicator {
+  display:
+    none;
+}
+
+/* ===========================================================
+   TABLET — SINGLE COLUMN SETTINGS WORKSPACE
+
+   Row 1: 5-item Settings navigation
+   Row 2: Active Settings content
+=========================================================== */
+
+html[data-finora-settings-device="tablet"]
+.finora-settings-page__workspace {
+  grid-template-columns:
+    minmax(0, 1fr);
+}
+
+html[data-finora-settings-device="tablet"]
+.finora-settings-page__navigation {
+  width:
+    100%;
+
+  min-width:
+    0;
+}
+
+html[data-finora-settings-device="tablet"]
+.finora-settings-page__main {
+  width:
+    100%;
+
+  min-width:
+    0;
+}
+
+
+
+/* ===========================================================
+   TABLET — NAVIGATION TO MAIN CONTENT SPACING
+=========================================================== */
+
+html[data-finora-settings-device="tablet"]
+.finora-settings-page__main {
+  margin-top:
+    3px;
+}
+
+
+/* ===========================================================
+   TABLET — BRANCH IDENTITY TWO COLUMN GRID
+=========================================================== */
+
+html[data-finora-settings-device="tablet"]
+.finora-settings-branch-form__identity-grid {
+  grid-template-columns:
+    repeat(2, minmax(0, 1fr));
+}
+
+/* ===========================================================
+   TABLET — SETTINGS NAVIGATION NORMAL SCROLL FLOW
+=========================================================== */
+
+html[data-finora-settings-device="tablet"]
+.finora-settings-page__navigation,
+html[data-finora-settings-device="tablet"]
+.finora-settings-navigation {
+  position:
+    static;
+
+  top:
+    auto;
+}
+
+
+
+/* ===========================================================
+   TABLET — NAVIGATION TO ACTIVE CONTENT EXACT GAP
+=========================================================== */
+
+html[data-finora-settings-device="tablet"]
+.finora-settings-page__workspace {
+  row-gap:
+    6px;
+}
+
+html[data-finora-settings-device="tablet"]
+.finora-settings-page__main {
+  margin-top:
+    0;
+}
+
+
+/* ===========================================================
+   LAPTOP / DESKTOP — RESPONSIVE IDENTITY GRID WRAP
+
+   Wide content  : 4 columns
+   Narrow content: automatically wraps without overlap
+=========================================================== */
+
+html[data-finora-settings-device="laptop"]
+.finora-settings-owner-identity-section
+.finora-settings-form__grid,
+html[data-finora-settings-device="desktop"]
+.finora-settings-owner-identity-section
+.finora-settings-form__grid,
+html[data-finora-settings-device="laptop"]
+.finora-settings-branch-form__identity-grid,
+html[data-finora-settings-device="desktop"]
+.finora-settings-branch-form__identity-grid {
+  grid-template-columns:
+    repeat(auto-fit, minmax(250px, 1fr));
+}

@@ -31,9 +31,31 @@ export interface Loan {
 
   lateFee: number;
 
+  /**
+   * ERP operational date selected for the authenticated session.
+   *
+   * This may represent a historical Business Date.
+   */
   loanDate: string;
 
   dueDate: string;
+
+  /* ==========================================
+     SYSTEM AUDIT TIMESTAMPS
+
+     These timestamps represent when FINORA actually created
+     or last updated the persisted Loan record.
+
+     They must always come from the device system clock and
+     must never be derived from loanDate or Login Business Date.
+
+     Optional fields preserve compatibility with legacy Loans
+     created before system audit timestamp support.
+  ========================================== */
+
+  createdAt?: string;
+
+  updatedAt?: string;
 
   guarantor: string;
 

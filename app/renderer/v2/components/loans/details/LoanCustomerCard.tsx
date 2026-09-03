@@ -1,4 +1,4 @@
-/* ===========================================================
+﻿/* ===========================================================
    FINORA ENTERPRISE OS™
 
    LOAN CUSTOMER CARD™
@@ -868,7 +868,7 @@ onMouseLeave={() =>
             }
 
             style={{
-              width: "auto",
+              width: "96px",
 
               height: "105px",
 
@@ -878,7 +878,7 @@ onMouseLeave={() =>
 
               display: "block",
 
-              objectFit: "contain",
+              objectFit: "cover",
 
               objectPosition: "top right",
 

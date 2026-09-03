@@ -291,7 +291,7 @@ export class CollectionRepository {
   // Existing Collection behavior:
   //
   // - Collection is automatically Approved.
-  // - createdAt is preserved when supplied.
+  // - createdAt is always generated from the system clock.
   // - updatedAt is always refreshed.
   //
   // Storage requirement:
@@ -328,7 +328,18 @@ export class CollectionRepository {
 
       status: "Approved",
 
-      createdAt: collection.createdAt || now,
+      // ------------------------------------------------------
+      // AUTHORITATIVE SYSTEM AUDIT TIMESTAMPS
+      //
+      // receiptDate is the operational ERP Business Date.
+      //
+      // createdAt / updatedAt record when FINORA actually
+      // persisted this Collection transaction.
+      //
+      // Caller-provided timestamps are intentionally ignored.
+      // ------------------------------------------------------
+
+      createdAt: now,
 
       updatedAt: now,
     };

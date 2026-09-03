@@ -1,4 +1,4 @@
-/* ===========================================================
+﻿/* ===========================================================
    FINORA ENTERPRISE OS™
 
    ENTERPRISE SETTINGS
@@ -27,21 +27,19 @@
 
 .finora-settings-page {
   width:
-    var(--finora-settings-page-width);
+    100%;
 
   max-width:
-    var(--finora-settings-page-max-width);
+    none;
 
   min-width:
     0;
 
   margin-inline:
-    auto;
+    0;
 
   padding:
-    var(--finora-settings-page-padding-top)
-    var(--finora-settings-page-padding-x)
-    var(--finora-settings-page-padding-bottom);
+    6px 16px 24px 16px;
 
   color:
     var(--finora-theme-text-primary);
@@ -71,7 +69,7 @@
     var(--finora-settings-workspace-columns);
 
   gap:
-    var(--finora-settings-workspace-gap);
+    6px;
 
   align-items:
     start;
@@ -179,3 +177,68 @@
 /* ===========================================================
    END
 =========================================================== */
+
+
+
+/* ===========================================================
+   NUMBER INPUTS
+   Premium FINORA Settings controls
+=========================================================== */
+
+.finora-settings-page input[type="number"] {
+  -moz-appearance:
+    textfield;
+}
+
+.finora-settings-page input[type="number"]::-webkit-inner-spin-button,
+.finora-settings-page input[type="number"]::-webkit-outer-spin-button {
+  -webkit-appearance:
+    none;
+
+  margin:
+    0;
+}
+
+/* ===========================================================
+   BUSINESS SETTINGS SECTION
+=========================================================== */
+
+.finora-settings-business-section {
+  gap:
+    6px;
+}
+
+/* ===========================================================
+   BUSINESS HEADER TO CONTENT SPACING
+=========================================================== */
+
+.finora-settings-page__main--business {
+  gap:
+    6px;
+}
+
+.finora-settings-page__main--branch {
+  gap:
+    6px;
+}
+
+.finora-settings-page__main--business-owner {
+  gap:
+    6px;
+}
+
+
+/* ===========================================================
+   BUSINESS OWNER SECTION SPACING
+=========================================================== */
+
+.finora-settings-owner-section {
+  gap:
+    6px;
+}
+
+
+.finora-settings-page__main--numbering-series {
+  gap:
+    6px;
+}

@@ -106,7 +106,7 @@ const enterpriseWrapperStyle: CSSProperties = {
 
   borderRadius: "10px",
 
-  boxShadow: `0 4px 12px ${THEME.overlayShadow}`,
+  boxShadow: "none",
 };
 
 const enterpriseTitleRowStyle: CSSProperties = {
