@@ -386,7 +386,7 @@ export function getGoldLockerRoomStyles(
 
       fontFamily: moduleTokens.fontFamily,
 
-      fontSize: moduleTokens.typography.sectionSubtitle,
+      fontSize: moduleTokens.typography.sectionSubtitle + 1,
 
       fontWeight: 500,
 
@@ -427,7 +427,7 @@ export function getGoldLockerRoomStyles(
 
       fontFamily: moduleTokens.fontFamily,
 
-      fontSize: moduleTokens.typography.fieldLabel,
+      fontSize: moduleTokens.typography.fieldLabel + 2,
 
       fontWeight: 700,
 
@@ -554,7 +554,7 @@ export function getGoldLockerRoomStyles(
 
       fontFamily: moduleTokens.fontFamily,
 
-      fontSize: moduleTokens.typography.helperText,
+      fontSize: moduleTokens.typography.helperText + 2,
 
       fontWeight: 550,
 
@@ -580,11 +580,17 @@ export function getGoldLockerRoomStyles(
 
       overflowY: "auto",
 
-      position: "absolute",
+      position: isMobile ? "relative" : "absolute",
 
-      top: `calc(100% + ${moduleTokens.spacing.compactGap}px)`,
+      top: isMobile
+        ? "auto"
+        : `calc(100% + ${moduleTokens.spacing.compactGap}px)`,
 
       left: 0,
+
+      marginTop: isMobile
+        ? moduleTokens.spacing.compactGap
+        : 0,
 
       zIndex: 50,
 
@@ -754,7 +760,7 @@ export function getGoldLockerRoomStyles(
 
       fontFamily: moduleTokens.fontFamily,
 
-      fontSize: moduleTokens.typography.helperText,
+      fontSize: moduleTokens.typography.helperText + 1,
 
       fontWeight: 550,
     },
@@ -1072,7 +1078,7 @@ export function getGoldLockerRoomStyles(
 
       fontFamily: moduleTokens.fontFamily,
 
-      fontSize: moduleTokens.typography.cardTitle,
+      fontSize: moduleTokens.typography.cardTitle + 1,
 
       fontWeight: 780,
 
@@ -1090,7 +1096,7 @@ export function getGoldLockerRoomStyles(
 
       fontFamily: moduleTokens.fontFamily,
 
-      fontSize: moduleTokens.typography.helperText,
+      fontSize: moduleTokens.typography.helperText + 1,
 
       fontWeight: 600,
 
@@ -1215,7 +1221,7 @@ export function getGoldLockerRoomStyles(
 
       fontFamily: moduleTokens.fontFamily,
 
-      fontSize: moduleTokens.typography.helperText,
+      fontSize: moduleTokens.typography.helperText + 1,
 
       fontWeight: 600,
     },
@@ -1299,7 +1305,7 @@ export function getGoldLockerRoomStyles(
 
       fontFamily: moduleTokens.fontFamily,
 
-      fontSize: moduleTokens.typography.helperText,
+      fontSize: moduleTokens.typography.helperText + 1,
 
       fontWeight: 600,
 

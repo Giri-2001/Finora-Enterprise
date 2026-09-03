@@ -1,4 +1,4 @@
-﻿/* ===========================================================
+/* ===========================================================
    FINORA ENTERPRISE OS™
 
    GOLD LOAN ENGINE™
@@ -91,6 +91,13 @@ import type {
 } from "../../types/gold-loan/goldStorage.types";
 
 import { useTheme } from "../../themes/provider";
+
+import { getSession } from "../../store/authStore";
+
+import {
+  formatBusinessDateForDisplay,
+  resolveBusinessDate,
+} from "../../services/business/businessDateService";
 
 import type { FinoraTheme } from "../../themes/core/types";
 
@@ -320,7 +327,9 @@ const GOLD_LOAN_MONEY_FORMATTER = new Intl.NumberFormat("en-IN", {
 });
 
 function formatGoldLoanMoney(value: number): string {
-  return GOLD_LOAN_MONEY_FORMATTER.format(Number.isFinite(value) ? value : 0);
+  return GOLD_LOAN_MONEY_FORMATTER
+    .format(Number.isFinite(value) ? value : 0)
+    .replace("₹", "₹ ");
 }
 
 /* ===========================================================
@@ -668,7 +677,18 @@ export default function GoldLoanForm(props: GoldLoanFormProps) {
 
   const [valuerLicenseNumber, setValuerLicenseNumber] = useState("");
 
-  const [valuationDate, setValuationDate] = useState(getTodayDate);
+  const authenticatedSession =
+    getSession();
+
+  const valuationDate =
+    resolveBusinessDate(
+      authenticatedSession?.businessDate,
+    ) ?? "";
+
+  const valuationDateDisplay =
+    formatBusinessDateForDisplay(
+      valuationDate,
+    ) || "--";
 
   const [valuationRemarks, setValuationRemarks] = useState("");
 
@@ -856,14 +876,7 @@ export default function GoldLoanForm(props: GoldLoanFormProps) {
       disabled: validationErrors.length > 0,
     }),
   };
-
-  const assessedValueStyle = {
-    ...styles.metricValue,
-
-    ...getGoldLoanMoneyValueStyle(),
-  };
-
-  const eligibleValueStyle = {
+const eligibleValueStyle = {
     ...styles.amountMetricValue,
 
     ...getGoldLoanPositiveValueStyle(),
@@ -1085,106 +1098,6 @@ export default function GoldLoanForm(props: GoldLoanFormProps) {
 
         <div style={styles.formBody}>
           {/* =================================================
-              GOLD VALUATION SUMMARY
-          ================================================= */}
-
-          <section style={styles.section}>
-            <header style={styles.sectionHeader}>
-              <div style={styles.sectionHeadingGroup}>
-                <span style={styles.sectionIcon}>
-                  <Scale size={18} strokeWidth={1.9} />
-                </span>
-
-                <div style={styles.sectionHeadingText}>
-                  <h2 style={styles.sectionTitle}>Gold Valuation</h2>
-
-                  <p style={styles.sectionSubtitle}>
-                    Consolidated weight and assessed value from pledged items.
-                  </p>
-                </div>
-              </div>
-
-              <span style={styles.sectionBadge}>Auto Calculated</span>
-            </header>
-
-            <div style={styles.metricGrid}>
-              <article style={styles.metricCard}>
-                <div style={styles.metricHeader}>
-                  <Scale
-                    size={moduleTokens.metric.iconSize}
-                    strokeWidth={1.8}
-                    style={styles.metricIcon}
-                  />
-
-                  <span style={styles.metricLabel}>Gross Weight</span>
-                </div>
-
-                <strong style={styles.metricValue}>
-                  {formatGoldLoanWeight(totals.totalGrossWeightGrams)}
-                </strong>
-
-                <span style={styles.metricSubtext}>grams</span>
-              </article>
-
-              <article style={styles.metricCard}>
-                <div style={styles.metricHeader}>
-                  <Scale
-                    size={moduleTokens.metric.iconSize}
-                    strokeWidth={1.8}
-                    style={styles.metricIcon}
-                  />
-
-                  <span style={styles.metricLabel}>Net Weight</span>
-                </div>
-
-                <strong style={styles.metricValue}>
-                  {formatGoldLoanWeight(totals.totalNetWeightGrams)}
-                </strong>
-
-                <span style={styles.metricSubtext}>after deductions</span>
-              </article>
-
-              <article style={styles.metricCard}>
-                <div style={styles.metricHeader}>
-                  <ShieldCheck
-                    size={moduleTokens.metric.iconSize}
-                    strokeWidth={1.8}
-                    style={styles.metricIcon}
-                  />
-
-                  <span style={styles.metricLabel}>Fine Gold</span>
-                </div>
-
-                <strong style={styles.metricValue}>
-                  {formatGoldLoanWeight(totals.totalFineGoldWeightGrams)}
-                </strong>
-
-                <span style={styles.metricSubtext}>purity adjusted grams</span>
-              </article>
-
-              <article style={styles.metricCard}>
-                <div style={styles.metricHeader}>
-                  <BadgeIndianRupee
-                    size={moduleTokens.metric.iconSize}
-                    strokeWidth={1.8}
-                    style={styles.metricIcon}
-                  />
-
-                  <span style={styles.metricLabel}>Assessed Value</span>
-                </div>
-
-                <strong style={assessedValueStyle}>
-                  {formatGoldLoanMoney(totals.totalAssessedValue)}
-                </strong>
-
-                <span style={styles.metricSubtext}>
-                  pledged gold market value
-                </span>
-              </article>
-            </div>
-          </section>
-
-          {/* =================================================
               GOLD ITEMS
           ================================================= */}
 
@@ -1210,7 +1123,7 @@ export default function GoldLoanForm(props: GoldLoanFormProps) {
                 <div style={styles.sectionHeadingText}>
                   <h2 style={styles.sectionTitle}>Gold Loan Eligibility</h2>
 
-                  <p style={styles.sectionSubtitle}>
+                  <p style={styles.eligibilitySectionSubtitle}>
                     Configure LTV and finalize requested and sanctioned amounts.
                   </p>
                 </div>
@@ -1219,12 +1132,12 @@ export default function GoldLoanForm(props: GoldLoanFormProps) {
               <span style={styles.sectionBadge}>LTV Controlled</span>
             </header>
 
-            <div style={styles.fieldsGrid}>
+            <div style={styles.eligibilityFieldsGrid}>
               {/* MAX LTV */}
 
               <div style={styles.field}>
                 <div style={styles.fieldLabelRow}>
-                  <span style={styles.fieldLabel}>Max LTV</span>
+                  <span style={styles.eligibilityFieldLabel}>Max LTV</span>
 
                   <span style={styles.fieldRequired}>*</span>
                 </div>
@@ -1250,7 +1163,7 @@ export default function GoldLoanForm(props: GoldLoanFormProps) {
                   <span style={styles.controlSuffix}>%</span>
                 </div>
 
-                <span style={styles.fieldHelper}>
+                <span style={styles.eligibilityFieldHelper}>
                   Configurable maximum loan-to-value percentage.
                 </span>
               </div>
@@ -1259,7 +1172,7 @@ export default function GoldLoanForm(props: GoldLoanFormProps) {
 
               <div style={styles.field}>
                 <div style={styles.fieldLabelRow}>
-                  <span style={styles.fieldLabel}>Eligible Amount</span>
+                  <span style={styles.eligibilityFieldLabel}>Eligible Amount</span>
                 </div>
 
                 <div style={styles.readOnlyControl}>
@@ -1271,7 +1184,7 @@ export default function GoldLoanForm(props: GoldLoanFormProps) {
                   {formatGoldLoanMoney(eligibleAmount)}
                 </div>
 
-                <span style={styles.fieldHelper}>
+                <span style={styles.eligibilityFieldHelper}>
                   Calculated from assessed value and configured LTV.
                 </span>
               </div>
@@ -1280,7 +1193,7 @@ export default function GoldLoanForm(props: GoldLoanFormProps) {
 
               <div style={styles.field}>
                 <div style={styles.fieldLabelRow}>
-                  <span style={styles.fieldLabel}>Requested Amount</span>
+                  <span style={styles.eligibilityFieldLabel}>Requested Amount</span>
 
                   <span style={styles.fieldRequired}>*</span>
                 </div>
@@ -1311,7 +1224,7 @@ export default function GoldLoanForm(props: GoldLoanFormProps) {
 
               <div style={styles.field}>
                 <div style={styles.fieldLabelRow}>
-                  <span style={styles.fieldLabel}>Sanctioned Amount</span>
+                  <span style={styles.eligibilityFieldLabel}>Sanctioned Amount</span>
 
                   <span style={styles.fieldRequired}>*</span>
                 </div>
@@ -1398,22 +1311,22 @@ export default function GoldLoanForm(props: GoldLoanFormProps) {
                 <div style={styles.sectionHeadingText}>
                   <h2 style={styles.sectionTitle}>Custody & Valuer Details</h2>
 
-                  <p style={styles.sectionSubtitle}>
+                  <p style={styles.custodySectionSubtitle}>
                     Complete physical packet identity and valuation audit
                     information.
                   </p>
                 </div>
               </div>
 
-              <span style={styles.sectionBadge}>Physical Custody</span>
+              <span style={styles.custodySectionBadge}>Physical Custody</span>
             </header>
 
-            <div style={styles.fieldsGrid}>
+            <div style={styles.custodyFieldsGrid}>
               {/* BAG */}
 
               <div style={styles.field}>
                 <div style={styles.fieldLabelRow}>
-                  <span style={styles.fieldLabel}>Bag / Packet No.</span>
+                  <span style={styles.custodyFieldLabel}>Bag / Packet No.</span>
 
                   <span style={styles.fieldRequired}>*</span>
                 </div>
@@ -1444,7 +1357,7 @@ export default function GoldLoanForm(props: GoldLoanFormProps) {
 
               <div style={styles.field}>
                 <div style={styles.fieldLabelRow}>
-                  <span style={styles.fieldLabel}>Packet Reference</span>
+                  <span style={styles.custodyFieldLabel}>Packet Reference</span>
                 </div>
 
                 <div style={styles.controlShell}>
@@ -1471,7 +1384,7 @@ export default function GoldLoanForm(props: GoldLoanFormProps) {
 
               <div style={styles.field}>
                 <div style={styles.fieldLabelRow}>
-                  <span style={styles.fieldLabel}>Seal Reference</span>
+                  <span style={styles.custodyFieldLabel}>Seal Reference</span>
                 </div>
 
                 <div style={styles.controlShell}>
@@ -1498,7 +1411,7 @@ export default function GoldLoanForm(props: GoldLoanFormProps) {
 
               <div style={styles.field}>
                 <div style={styles.fieldLabelRow}>
-                  <span style={styles.fieldLabel}>Valuer / Appraiser</span>
+                  <span style={styles.custodyFieldLabel}>Valuer / Appraiser</span>
                 </div>
 
                 <div style={styles.controlShell}>
@@ -1525,7 +1438,7 @@ export default function GoldLoanForm(props: GoldLoanFormProps) {
 
               <div style={styles.field}>
                 <div style={styles.fieldLabelRow}>
-                  <span style={styles.fieldLabel}>
+                  <span style={styles.custodyFieldLabel}>
                     Valuer Reference / License
                   </span>
                 </div>
@@ -1554,7 +1467,7 @@ export default function GoldLoanForm(props: GoldLoanFormProps) {
 
               <div style={styles.field}>
                 <div style={styles.fieldLabelRow}>
-                  <span style={styles.fieldLabel}>Valuation Date</span>
+                  <span style={styles.custodyFieldLabel}>Valuation Date</span>
                 </div>
 
                 <div style={styles.controlShell}>
@@ -1567,11 +1480,11 @@ export default function GoldLoanForm(props: GoldLoanFormProps) {
 
                   <input
                     type="text"
-                    value={valuationDate}
-                    placeholder="YYYY-MM-DD"
-                    onChange={(event) => {
-                      setValuationDate(event.target.value);
-                    }}
+                    value={valuationDateDisplay}
+                    readOnly
+                    aria-readonly="true"
+                    aria-label="FINORA Login Valuation Date"
+                    title="Valuation Date is fixed to the active FINORA Login Date."
                     style={styles.controlInput}
                   />
                 </div>
@@ -1579,19 +1492,24 @@ export default function GoldLoanForm(props: GoldLoanFormProps) {
 
               {/* REMARKS */}
 
-              <div style={styles.fieldFull}>
+              <div style={styles.custodyRemarksField}>
                 <div style={styles.fieldLabelRow}>
-                  <span style={styles.fieldLabel}>Valuation Remarks</span>
+                  <span style={styles.custodyFieldLabel}>
+                    Valuation Remarks
+                  </span>
                 </div>
 
-                <textarea
-                  value={valuationRemarks}
-                  placeholder="Condition, appraisal notes, verification remarks..."
-                  onChange={(event) => {
-                    setValuationRemarks(event.target.value);
-                  }}
-                  style={styles.textarea}
-                />
+                <div style={styles.controlShell}>
+                  <input
+                    type="text"
+                    value={valuationRemarks}
+                    placeholder="Condition, appraisal notes, verification remarks..."
+                    onChange={(event) => {
+                      setValuationRemarks(event.target.value);
+                    }}
+                    style={styles.controlInput}
+                  />
+                </div>
               </div>
             </div>
 
@@ -1681,9 +1599,9 @@ export default function GoldLoanForm(props: GoldLoanFormProps) {
                 </h3>
 
                 <p style={styles.documentsHintText}>
-                  No duplicate uploader is added here. Gold photographs and
-                  supporting evidence continue through the existing Loan Studio
-                  Step 3 Documents Gallery.
+                  Gold item photographs and all important supporting evidence
+                  are mandatory and must be uploaded in the Loan Studio Step 3
+                  Documents Gallery before completing the loan process.
                 </p>
               </div>
             </div>

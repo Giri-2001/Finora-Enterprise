@@ -570,7 +570,7 @@ export function getGoldRacksStyles(
 
       fontFamily: moduleTokens.fontFamily,
 
-      fontSize: moduleTokens.typography.helperText,
+      fontSize: moduleTokens.typography.helperText + 2,
 
       fontWeight: 650,
 

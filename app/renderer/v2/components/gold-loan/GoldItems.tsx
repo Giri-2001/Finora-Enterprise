@@ -284,6 +284,16 @@ interface ActiveGoldItemField {
 }
 
 /* ===========================================================
+   NUMERIC INPUT DRAFT FIELD
+=========================================================== */
+
+type GoldItemNumericDraftField =
+  | "quantity"
+  | "grossWeightGrams"
+  | "stoneWeightGrams"
+  | "otherDeductionWeightGrams";
+
+/* ===========================================================
    CREATE ITEM ID
 =========================================================== */
 
@@ -376,7 +386,9 @@ const GOLD_MONEY_FORMATTER = new Intl.NumberFormat("en-IN", {
 });
 
 function formatGoldMoney(value: number): string {
-  return GOLD_MONEY_FORMATTER.format(Number.isFinite(value) ? value : 0);
+  return GOLD_MONEY_FORMATTER
+    .format(Number.isFinite(value) ? value : 0)
+    .replace("₹", "₹ ");
 }
 
 /* ===========================================================
@@ -475,6 +487,8 @@ export default function GoldItems(props: GoldItemsProps) {
   const [activeField, setActiveField] = useState<ActiveGoldItemField | null>(
     null,
   );
+
+  const [numericDrafts, setNumericDrafts] = useState<Record<string, string>>({});
 
   /* =========================================================
      RESPONSIVE
@@ -597,6 +611,56 @@ export default function GoldItems(props: GoldItemsProps) {
   }
 
   /* =========================================================
+     NUMERIC DRAFT KEY
+  ========================================================= */
+
+  function getNumericDraftKey(
+    itemId: string,
+    field: GoldItemNumericDraftField,
+  ): string {
+    return `${itemId}:${field}`;
+  }
+
+  /* =========================================================
+     NUMERIC INPUT DISPLAY VALUE
+  ========================================================= */
+
+  function getNumericInputValue(
+    itemId: string,
+    field: GoldItemNumericDraftField,
+    numericValue: number,
+  ): string {
+    const key = getNumericDraftKey(itemId, field);
+
+    if (Object.prototype.hasOwnProperty.call(numericDrafts, key)) {
+      return numericDrafts[key] ?? "";
+    }
+
+    if (field === "quantity") {
+      return numericValue === 1 ? "" : String(numericValue);
+    }
+
+    return numericValue === 0 ? "" : String(numericValue);
+  }
+
+  /* =========================================================
+     SET NUMERIC DRAFT
+  ========================================================= */
+
+  function setNumericDraft(
+    itemId: string,
+    field: GoldItemNumericDraftField,
+    value: string,
+  ): void {
+    const key = getNumericDraftKey(itemId, field);
+
+    setNumericDrafts((current) => ({
+      ...current,
+      [key]: value,
+    }));
+  }
+
+  /* =========================================================
      UPDATE ITEM
   ========================================================= */
 
@@ -694,8 +758,24 @@ export default function GoldItems(props: GoldItemsProps) {
       | "otherDeductionWeightGrams"
       | "marketRatePerGram",
   ): void {
+    const rawValue = event.target.value.replace(/,/g, "");
+
+    if (field === "marketRatePerGram") {
+      updateGoldItem(itemId, {
+        [field]: parseGoldNumberInput(rawValue),
+      });
+
+      return;
+    }
+
+    if (!/^\d*(?:\.\d{0,3})?$/.test(rawValue)) {
+      return;
+    }
+
+    setNumericDraft(itemId, field, rawValue);
+
     updateGoldItem(itemId, {
-      [field]: parseGoldNumberInput(event.target.value),
+      [field]: parseGoldNumberInput(rawValue),
     });
   }
 
@@ -708,8 +788,19 @@ export default function GoldItems(props: GoldItemsProps) {
 
     itemId: string,
   ): void {
+    const rawValue = event.target.value;
+
+    if (!/^\d*$/.test(rawValue)) {
+      return;
+    }
+
+    setNumericDraft(itemId, "quantity", rawValue);
+
     updateGoldItem(itemId, {
-      quantity: parseGoldQuantity(event.target.value),
+      quantity:
+        rawValue.length === 0
+          ? 1
+          : parseGoldQuantity(rawValue),
     });
   }
 
@@ -1176,7 +1267,12 @@ export default function GoldItems(props: GoldItemsProps) {
                     <input
                       type="text"
                       inputMode="numeric"
-                      value={item.quantity}
+                      value={getNumericInputValue(
+                        item.id,
+                        "quantity",
+                        item.quantity,
+                      )}
+                      placeholder="0"
                       readOnly={readOnly}
                       onFocus={() => {
                         handleFieldFocus(item.id, "quantity");
@@ -1242,7 +1338,11 @@ export default function GoldItems(props: GoldItemsProps) {
                     <input
                       type="text"
                       inputMode="decimal"
-                      value={item.grossWeightGrams}
+                      value={getNumericInputValue(
+                        item.id,
+                        "grossWeightGrams",
+                        item.grossWeightGrams,
+                      )}
                       readOnly={readOnly}
                       placeholder="0.000"
                       onFocus={() => {
@@ -1255,7 +1355,7 @@ export default function GoldItems(props: GoldItemsProps) {
                       style={styles.inputWithIcon}
                     />
 
-                    <span style={styles.inputSuffix}>g</span>
+                    <span style={styles.inputSuffix}>gm</span>
                   </div>
                 </div>
 
@@ -1277,7 +1377,11 @@ export default function GoldItems(props: GoldItemsProps) {
                     <input
                       type="text"
                       inputMode="decimal"
-                      value={item.stoneWeightGrams}
+                      value={getNumericInputValue(
+                        item.id,
+                        "stoneWeightGrams",
+                        item.stoneWeightGrams,
+                      )}
                       readOnly={readOnly}
                       placeholder="0.000"
                       onFocus={() => {
@@ -1290,7 +1394,7 @@ export default function GoldItems(props: GoldItemsProps) {
                       style={styles.inputWithIcon}
                     />
 
-                    <span style={styles.inputSuffix}>g</span>
+                    <span style={styles.inputSuffix}>gm</span>
                   </div>
                 </div>
 
@@ -1312,7 +1416,11 @@ export default function GoldItems(props: GoldItemsProps) {
                     <input
                       type="text"
                       inputMode="decimal"
-                      value={item.otherDeductionWeightGrams}
+                      value={getNumericInputValue(
+                        item.id,
+                        "otherDeductionWeightGrams",
+                        item.otherDeductionWeightGrams,
+                      )}
                       readOnly={readOnly}
                       placeholder="0.000"
                       onFocus={() => {
@@ -1329,7 +1437,7 @@ export default function GoldItems(props: GoldItemsProps) {
                       style={styles.inputWithIcon}
                     />
 
-                    <span style={styles.inputSuffix}>g</span>
+                    <span style={styles.inputSuffix}>gm</span>
                   </div>
 
                   {deductionsInvalid ? (
@@ -1470,7 +1578,7 @@ export default function GoldItems(props: GoldItemsProps) {
                       style={styles.inputWithIcon}
                     />
 
-                    <span style={styles.inputSuffix}>INR/g</span>
+                    <span style={styles.inputSuffix}>INR/gm</span>
                   </div>
                 </div>
 
@@ -1628,7 +1736,7 @@ export default function GoldItems(props: GoldItemsProps) {
                       {formatGoldWeight(item.netWeightGrams)}
                     </strong>
 
-                    <span style={styles.derivedMetricUnit}>grams</span>
+                    <span style={styles.derivedMetricUnit}>Grams</span>
                   </article>
 
                   <article style={styles.derivedMetric}>
@@ -1650,7 +1758,7 @@ export default function GoldItems(props: GoldItemsProps) {
                       {formatGoldWeight(item.fineGoldWeightGrams)}
                     </strong>
 
-                    <span style={styles.derivedMetricUnit}>grams</span>
+                    <span style={styles.derivedMetricUnit}>Grams</span>
                   </article>
 
                   <article style={styles.derivedMetric}>
@@ -1725,7 +1833,7 @@ export default function GoldItems(props: GoldItemsProps) {
             </strong>
 
             <span style={styles.summaryMetricUnit}>
-              {totals.totalQuantity} total quantity
+              {totals.totalQuantity} Total quantity
             </span>
           </article>
 
@@ -1736,7 +1844,7 @@ export default function GoldItems(props: GoldItemsProps) {
               {formatGoldWeight(totals.totalGrossWeightGrams)}
             </strong>
 
-            <span style={styles.summaryMetricUnit}>grams</span>
+            <span style={styles.summaryMetricUnit}>Grams</span>
           </article>
 
           <article style={styles.summaryMetric}>
@@ -1746,7 +1854,7 @@ export default function GoldItems(props: GoldItemsProps) {
               {formatGoldWeight(totals.totalNetWeightGrams)}
             </strong>
 
-            <span style={styles.summaryMetricUnit}>grams after deductions</span>
+            <span style={styles.summaryMetricUnit}>Grams after deductions</span>
           </article>
 
           <article style={styles.summaryMetric}>
@@ -1756,7 +1864,7 @@ export default function GoldItems(props: GoldItemsProps) {
               {formatGoldWeight(totals.totalFineGoldWeightGrams)}
             </strong>
 
-            <span style={styles.summaryMetricUnit}>purity-adjusted grams</span>
+            <span style={styles.summaryMetricUnit}>Purity-adjusted grams</span>
           </article>
 
           <article style={styles.summaryMetric}>
@@ -1766,7 +1874,7 @@ export default function GoldItems(props: GoldItemsProps) {
               {formatGoldWeight(totals.totalStoneWeightGrams)}
             </strong>
 
-            <span style={styles.summaryMetricUnit}>grams</span>
+            <span style={styles.summaryMetricUnit}>Grams</span>
           </article>
 
           <article style={styles.summaryMetric}>
@@ -1776,7 +1884,7 @@ export default function GoldItems(props: GoldItemsProps) {
               {formatGoldWeight(totals.totalOtherDeductionWeightGrams)}
             </strong>
 
-            <span style={styles.summaryMetricUnit}>grams</span>
+            <span style={styles.summaryMetricUnit}>Grams</span>
           </article>
 
           <article style={styles.summaryMetric}>

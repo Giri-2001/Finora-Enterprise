@@ -235,9 +235,23 @@ export interface GoldLoanFormStyles {
 
   sectionSubtitle: CSSProperties;
 
+  eligibilitySectionSubtitle: CSSProperties;
+
+  custodySectionSubtitle: CSSProperties;
+
+  custodySectionBadge: CSSProperties;
+
+  custodyFieldsGrid: CSSProperties;
+
+  custodyFieldLabel: CSSProperties;
+
+  custodyRemarksField: CSSProperties;
+
   sectionBadge: CSSProperties;
 
   fieldsGrid: CSSProperties;
+
+  eligibilityFieldsGrid: CSSProperties;
 
   field: CSSProperties;
 
@@ -249,9 +263,13 @@ export interface GoldLoanFormStyles {
 
   fieldLabel: CSSProperties;
 
+  eligibilityFieldLabel: CSSProperties;
+
   fieldRequired: CSSProperties;
 
   fieldHelper: CSSProperties;
+
+  eligibilityFieldHelper: CSSProperties;
 
   controlShell: CSSProperties;
 
@@ -601,7 +619,7 @@ export function getGoldLoanFormStyles(
 
       fontFamily: moduleTokens.fontFamily,
 
-      fontSize: moduleTokens.typography.badgeText,
+      fontSize: moduleTokens.typography.badgeText + 4,
 
       fontWeight: 720,
 
@@ -1345,6 +1363,8 @@ export function getGoldLoanFormStyles(
 
       gap: formLayout.sectionGap,
 
+      marginTop: 6 - formLayout.sectionGap,
+
       boxSizing: "border-box",
     },
 
@@ -1465,6 +1485,32 @@ export function getGoldLoanFormStyles(
 
       lineHeight: 1.45,
     },
+    eligibilitySectionSubtitle: {
+      margin: 0,
+
+      color: "var(--finora-theme-text-muted)",
+
+      fontFamily: moduleTokens.fontFamily,
+
+      fontSize: moduleTokens.typography.sectionSubtitle + 1,
+
+      fontWeight: 500,
+
+      lineHeight: 1.45,
+    },
+    custodySectionSubtitle: {
+      margin: 0,
+
+      color: "var(--finora-theme-text-muted)",
+
+      fontFamily: moduleTokens.fontFamily,
+
+      fontSize: moduleTokens.typography.sectionSubtitle + 1,
+
+      fontWeight: 500,
+
+      lineHeight: 1.45,
+    },
 
     sectionBadge: {
       minHeight: 28,
@@ -1495,6 +1541,35 @@ export function getGoldLoanFormStyles(
 
       boxSizing: "border-box",
     },
+    custodySectionBadge: {
+      minHeight: 28,
+
+      display: "inline-flex",
+
+      alignItems: "center",
+
+      justifyContent: "center",
+
+      padding: "0 9px",
+
+      border: "1px solid var(--finora-theme-border-subtle)",
+
+      borderRadius: 999,
+
+      background: "var(--finora-theme-background-muted)",
+
+      color: "var(--finora-theme-text-secondary)",
+
+      fontFamily: moduleTokens.fontFamily,
+
+      fontSize: moduleTokens.typography.badgeText + 1,
+
+      fontWeight: 720,
+
+      whiteSpace: "nowrap",
+
+      boxSizing: "border-box",
+    },
 
     /* =======================================================
        FIELDS
@@ -1508,6 +1583,40 @@ export function getGoldLoanFormStyles(
       display: "grid",
 
       gridTemplateColumns: `repeat(${valuationLayout.columns}, minmax(0, 1fr))`,
+
+      gap: valuationLayout.gap,
+
+      alignItems: "start",
+
+      boxSizing: "border-box",
+    },
+    eligibilityFieldsGrid: {
+      width: "100%",
+
+      minWidth: 0,
+
+      display: "grid",
+
+      gridTemplateColumns: `repeat(${
+        valuationLayout.columns >= 3 ? 4 : valuationLayout.columns
+      }, minmax(0, 1fr))`,
+
+      gap: valuationLayout.gap,
+
+      alignItems: "start",
+
+      boxSizing: "border-box",
+    },
+    custodyFieldsGrid: {
+      width: "100%",
+
+      minWidth: 0,
+
+      display: "grid",
+
+      gridTemplateColumns: `repeat(${
+        valuationLayout.columns >= 3 ? 4 : valuationLayout.columns
+      }, minmax(0, 1fr))`,
 
       gap: valuationLayout.gap,
 
@@ -1549,17 +1658,33 @@ export function getGoldLoanFormStyles(
 
       gap: 5,
     },
+    custodyRemarksField: {
+      minWidth: 0,
+
+      gridColumn:
+        valuationLayout.columns >= 3
+          ? "span 2"
+          : "auto",
+
+      display: "flex",
+
+      flexDirection: "column",
+
+      gap: 5,
+    },
 
     fieldLabelRow: {
       width: "100%",
+
+      minWidth: 0,
 
       display: "flex",
 
       alignItems: "center",
 
-      justifyContent: "space-between",
+      justifyContent: "flex-start",
 
-      gap: moduleTokens.spacing.compactGap,
+      gap: 4,
     },
 
     fieldLabel: {
@@ -1573,13 +1698,35 @@ export function getGoldLoanFormStyles(
 
       lineHeight: 1.3,
     },
+    eligibilityFieldLabel: {
+      color: "var(--finora-theme-text-secondary)",
+
+      fontFamily: moduleTokens.fontFamily,
+
+      fontSize: moduleTokens.typography.fieldLabel + 1,
+
+      fontWeight: 700,
+
+      lineHeight: 1.3,
+    },
+    custodyFieldLabel: {
+      color: "var(--finora-theme-text-secondary)",
+
+      fontFamily: moduleTokens.fontFamily,
+
+      fontSize: moduleTokens.typography.fieldLabel + 1,
+
+      fontWeight: 700,
+
+      lineHeight: 1.3,
+    },
 
     fieldRequired: {
       color: "var(--finora-theme-danger)",
 
       fontFamily: moduleTokens.fontFamily,
 
-      fontSize: moduleTokens.typography.fieldLabel,
+      fontSize: moduleTokens.typography.fieldLabel + 2,
 
       fontWeight: 800,
     },
@@ -1590,6 +1737,17 @@ export function getGoldLoanFormStyles(
       fontFamily: moduleTokens.fontFamily,
 
       fontSize: moduleTokens.typography.helperText,
+
+      fontWeight: 520,
+
+      lineHeight: 1.35,
+    },
+    eligibilityFieldHelper: {
+      color: "var(--finora-theme-text-muted)",
+
+      fontFamily: moduleTokens.fontFamily,
+
+      fontSize: moduleTokens.typography.helperText + 1,
 
       fontWeight: 520,
 
@@ -2060,7 +2218,7 @@ export function getGoldLoanFormStyles(
 
       fontFamily: moduleTokens.fontFamily,
 
-      fontSize: moduleTokens.typography.cardTitle,
+      fontSize: moduleTokens.typography.cardTitle + 2,
 
       fontWeight: 780,
 
@@ -2068,13 +2226,13 @@ export function getGoldLoanFormStyles(
     },
 
     locatorSubtitle: {
-      margin: 0,
+      margin: "4px 0 0",
 
       color: "var(--finora-theme-text-muted)",
 
       fontFamily: moduleTokens.fontFamily,
 
-      fontSize: moduleTokens.typography.helperText,
+      fontSize: moduleTokens.typography.helperText + 2,
 
       fontWeight: 520,
 
@@ -2120,7 +2278,11 @@ export function getGoldLoanFormStyles(
 
       display: "grid",
 
-      gridTemplateColumns: `repeat(${storageLayout.locatorColumns}, minmax(0, 1fr))`,
+      gridTemplateColumns: `repeat(${
+        storageLayout.locatorColumns >= 3
+          ? 4
+          : storageLayout.locatorColumns
+      }, minmax(0, 1fr))`,
 
       gap: storageLayout.gap,
 
@@ -2188,7 +2350,7 @@ export function getGoldLoanFormStyles(
 
       fontFamily: moduleTokens.fontFamily,
 
-      fontSize: moduleTokens.typography.helperText,
+      fontSize: moduleTokens.typography.helperText + 1,
 
       fontWeight: 520,
 
@@ -2262,7 +2424,7 @@ export function getGoldLoanFormStyles(
 
       fontFamily: moduleTokens.fontFamily,
 
-      fontSize: moduleTokens.typography.fieldValue,
+      fontSize: moduleTokens.typography.fieldValue + 1,
 
       fontWeight: 740,
 

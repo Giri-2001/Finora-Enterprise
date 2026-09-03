@@ -135,7 +135,7 @@ function getRoomCode(room: GoldLockerRoomView): string {
 function getRoomMeta(room: GoldLockerRoomView): string {
   const lockerLabel = room.occupancy.totalLockers === 1 ? "Locker" : "Lockers";
 
-  return `${room.occupancy.totalLockers} ${lockerLabel} • ${room.occupancy.available} bags available`;
+  return `${room.occupancy.totalLockers} ${lockerLabel} • ${room.occupancy.available} bags avl`;
 }
 
 /* ===========================================================
@@ -483,8 +483,6 @@ export default function GoldLockerRoom(props: GoldLockerRoomProps) {
   rack: GoldRackView,
 ): void {
   onSelectRack(rack);
-
-  setRacksExpanded(false);
 }
 
   /* =========================================================

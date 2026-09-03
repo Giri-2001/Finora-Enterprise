@@ -388,7 +388,7 @@ export function getGoldItemsStyles(
 
       fontFamily: moduleTokens.fontFamily,
 
-      fontSize: moduleTokens.typography.sectionSubtitle,
+      fontSize: moduleTokens.typography.sectionSubtitle + 1,
 
       fontWeight: 500,
 
@@ -601,7 +601,7 @@ export function getGoldItemsStyles(
 
       fontFamily: moduleTokens.fontFamily,
 
-      fontSize: moduleTokens.typography.cardTitle,
+      fontSize: moduleTokens.typography.cardTitle + 2,
 
       fontWeight: 780,
 
@@ -621,7 +621,7 @@ export function getGoldItemsStyles(
 
       fontFamily: moduleTokens.fontFamily,
 
-      fontSize: moduleTokens.typography.helperText,
+      fontSize: moduleTokens.typography.helperText + 1,
 
       fontWeight: 550,
 
@@ -661,7 +661,7 @@ export function getGoldItemsStyles(
 
       fontFamily: moduleTokens.fontFamily,
 
-      fontSize: moduleTokens.typography.badgeText,
+      fontSize: moduleTokens.typography.badgeText + 3,
 
       fontWeight: 760,
 
@@ -754,9 +754,9 @@ export function getGoldItemsStyles(
 
       alignItems: "center",
 
-      justifyContent: "space-between",
+      justifyContent: "flex-start",
 
-      gap: moduleTokens.spacing.compactGap,
+      gap: 4,
     },
 
     fieldLabel: {
@@ -764,7 +764,7 @@ export function getGoldItemsStyles(
 
       fontFamily: moduleTokens.fontFamily,
 
-      fontSize: moduleTokens.typography.fieldLabel,
+      fontSize: moduleTokens.typography.fieldLabel + 1,
 
       fontWeight: 700,
 
@@ -776,7 +776,7 @@ export function getGoldItemsStyles(
 
       fontFamily: moduleTokens.fontFamily,
 
-      fontSize: moduleTokens.typography.fieldLabel,
+      fontSize: moduleTokens.typography.fieldLabel + 3,
 
       fontWeight: 800,
     },
@@ -786,7 +786,7 @@ export function getGoldItemsStyles(
 
       fontFamily: moduleTokens.fontFamily,
 
-      fontSize: moduleTokens.typography.helperText,
+      fontSize: moduleTokens.typography.helperText + 1,
 
       fontWeight: 550,
 
@@ -867,7 +867,7 @@ export function getGoldItemsStyles(
 
       fontFamily: moduleTokens.fontFamily,
 
-      fontSize: moduleTokens.typography.inputText,
+      fontSize: moduleTokens.typography.inputText + 1,
 
       fontWeight: 600,
 
@@ -901,7 +901,7 @@ export function getGoldItemsStyles(
 
       fontFamily: moduleTokens.fontFamily,
 
-      fontSize: moduleTokens.typography.inputText,
+      fontSize: moduleTokens.typography.inputText + 1,
 
       fontWeight: 600,
 
@@ -921,7 +921,7 @@ export function getGoldItemsStyles(
 
       fontFamily: moduleTokens.fontFamily,
 
-      fontSize: moduleTokens.typography.helperText,
+      fontSize: moduleTokens.typography.helperText + 1,
 
       fontWeight: 700,
 
@@ -953,7 +953,7 @@ export function getGoldItemsStyles(
 
       fontFamily: moduleTokens.fontFamily,
 
-      fontSize: moduleTokens.typography.inputText,
+      fontSize: moduleTokens.typography.inputText + 1,
 
       fontWeight: 680,
 
@@ -1042,7 +1042,7 @@ export function getGoldItemsStyles(
 
       fontFamily: moduleTokens.fontFamily,
 
-      fontSize: moduleTokens.typography.inputText,
+      fontSize: moduleTokens.typography.inputText + 1,
 
       fontWeight: 650,
 
@@ -1060,7 +1060,7 @@ export function getGoldItemsStyles(
 
       fontFamily: moduleTokens.fontFamily,
 
-      fontSize: moduleTokens.typography.helperText,
+      fontSize: moduleTokens.typography.helperText + 1,
 
       fontWeight: 550,
 
@@ -1178,7 +1178,7 @@ export function getGoldItemsStyles(
 
       fontFamily: moduleTokens.fontFamily,
 
-      fontSize: moduleTokens.typography.inputText,
+      fontSize: moduleTokens.typography.inputText + 1,
 
       fontWeight: 660,
 
@@ -1196,7 +1196,7 @@ export function getGoldItemsStyles(
 
       fontFamily: moduleTokens.fontFamily,
 
-      fontSize: moduleTokens.typography.helperText,
+      fontSize: moduleTokens.typography.helperText + 1,
 
       fontWeight: 550,
 
@@ -1294,7 +1294,7 @@ export function getGoldItemsStyles(
 
       fontFamily: moduleTokens.fontFamily,
 
-      fontSize: moduleTokens.typography.fieldValue,
+      fontSize: moduleTokens.typography.fieldValue + 3,
 
       fontWeight: 760,
 
@@ -1308,7 +1308,7 @@ export function getGoldItemsStyles(
 
       fontFamily: moduleTokens.fontFamily,
 
-      fontSize: moduleTokens.typography.helperText,
+      fontSize: moduleTokens.typography.helperText + 1,
 
       fontWeight: 550,
 
@@ -1352,7 +1352,7 @@ export function getGoldItemsStyles(
 
       fontFamily: moduleTokens.fontFamily,
 
-      fontSize: moduleTokens.typography.metricLabel,
+      fontSize: moduleTokens.typography.metricLabel + 1,
 
       fontWeight: 700,
 
@@ -1374,7 +1374,7 @@ export function getGoldItemsStyles(
 
       fontFamily: moduleTokens.fontFamily,
 
-      fontSize: moduleTokens.typography.metricValue,
+      fontSize: moduleTokens.typography.metricValue + 1,
 
       fontWeight: 800,
 
@@ -1386,7 +1386,7 @@ export function getGoldItemsStyles(
 
       fontFamily: moduleTokens.fontFamily,
 
-      fontSize: moduleTokens.typography.helperText,
+      fontSize: moduleTokens.typography.helperText + 1,
 
       fontWeight: 600,
     },
@@ -1510,7 +1510,7 @@ export function getGoldItemsStyles(
 
       fontFamily: moduleTokens.fontFamily,
 
-      fontSize: moduleTokens.typography.cardTitle,
+      fontSize: moduleTokens.typography.cardTitle + 1,
 
       fontWeight: 780,
 
@@ -1524,7 +1524,7 @@ export function getGoldItemsStyles(
 
       fontFamily: moduleTokens.fontFamily,
 
-      fontSize: moduleTokens.typography.helperText,
+      fontSize: moduleTokens.typography.helperText + 2,
 
       fontWeight: 550,
 
@@ -1538,7 +1538,7 @@ export function getGoldItemsStyles(
 
       display: "grid",
 
-      gridTemplateColumns: `repeat(${itemsLayout.summaryColumns}, minmax(0, 1fr))`,
+      gridTemplateColumns: `repeat(${isMobile ? 2 : isTablet ? 4 : 7}, minmax(0, 1fr))`,
 
       gap: moduleTokens.spacing.compactGap,
 
