@@ -4,12 +4,14 @@
    DASHBOARD FILTERS
 =========================================================== */
 
+import { useState } from "react";
+
 import SummaryCard from "../../common/cards/SummaryCard";
 
 import {
+  FinoraCalendar,
   FormField,
   SelectInput,
-  TextInput,
 } from "../../common";
 
 /* ===========================================================
@@ -17,6 +19,12 @@ import {
 =========================================================== */
 
 export default function DashboardFilters() {
+
+  const [dateRange, setDateRange] =
+    useState({
+      from: "",
+      to: "",
+    });
 
   return (
 
@@ -26,8 +34,15 @@ export default function DashboardFilters() {
         label="Date Range"
         required
       >
-        <TextInput
-          type="date"
+        <FinoraCalendar
+          mode="range"
+          value={dateRange}
+          onChange={setDateRange}
+          fromLabel="From"
+          toLabel="To"
+          placeholder="DD/MM/YYYY"
+          ariaLabel="Dashboard Date Range"
+          showDuration
         />
       </FormField>
 

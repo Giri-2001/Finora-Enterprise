@@ -6,7 +6,7 @@
 
 import type { CSSProperties } from "react";
 
-import { FormField, SelectInput, TextArea, TextInput } from "../../common";
+import { FinoraCalendar, FormField, SelectInput, TextArea, TextInput } from "../../common";
 
 import { useCollectionController } from "../controller";
 
@@ -36,14 +36,19 @@ export default function CollectionForm() {
   return (
     <div style={wrapperStyle}>
       <FormField label="Collection Date" required>
-        <TextInput
-          type="date"
-          value={reviewData.receiptDate}
-          readOnly
-          disabled
-          aria-label="Collection Date locked to Login Date"
+        <div
           title="This date is locked to the active FINORA Login Date."
-        />
+        >
+          <FinoraCalendar
+            value={reviewData.receiptDate}
+            onChange={() => undefined}
+            disabled
+            allowClear={false}
+            showRelativeDay
+            placeholder="DD/MM/YYYY"
+            ariaLabel="Collection Date locked to Login Date"
+          />
+        </div>
       </FormField>
 
       <FormField label="Collection Amount" required>

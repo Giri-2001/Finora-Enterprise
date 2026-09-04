@@ -1374,7 +1374,9 @@ marginBottom:
       COLORS.textSoft,
 
     fontSize:
-      typographyTokens.small,
+      typeof typographyTokens.small === "number"
+        ? typographyTokens.small + 1
+        : `calc(${typographyTokens.small} + 1px)`,
 
     fontWeight:
       700,

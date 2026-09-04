@@ -1,0 +1,1163 @@
+﻿/* ===========================================================
+   FINORA ENTERPRISE OS™
+
+   FINORA DATE PICKER™
+
+   RESPONSIBILITY:
+
+   - DOB input presentation
+   - Calendar popup presentation
+   - Popup behaves as an overlay
+   - Popup never participates in form layout
+   - Popup never pushes following form sections
+   - Popup remains attached to the DOB input
+   - Popup follows the input while the page scrolls
+   - Internal month/year lists remain independently scrollable
+   - Theme colours come only from FINORA Theme Engine
+
+   IMPORTANT:
+
+   The calendar popup is intentionally removed from normal
+   document flow.
+
+   The popup uses CSS Anchor Positioning when supported by the
+   Chromium engine, with a safe fixed-position fallback.
+
+=========================================================== */
+
+
+/* ===========================================================
+   ROOT
+=========================================================== */
+
+.finora-calendar-root {
+  position: relative;
+  width: 100%;
+  min-width: 0;
+  height: 38px;
+  overflow: visible;
+}
+
+/* ===========================================================
+   INPUT WRAPPER
+=========================================================== */
+
+.finora-calendar-input-wrap {
+  position: relative;
+
+  width: 100%;
+  min-width: 0;
+
+  margin: 0;
+  padding: 0;
+
+  contain: layout;
+
+  box-sizing: border-box;
+}
+
+
+/* ===========================================================
+   INPUT
+=========================================================== */
+
+.finora-calendar-input {
+  width: 100%;
+
+  height: 38px;
+  min-height: 38px;
+
+  box-sizing: border-box;
+
+  padding:
+    0 72px 0 12px;
+
+  border:
+    1px solid
+    var(--finora-theme-border-default);
+
+  border-radius:
+    8px;
+
+  outline:
+    none;
+
+  background:
+    var(--finora-theme-surface-muted);
+
+  color:
+    var(--finora-theme-text-primary);
+
+  font:
+    600 13px/1.2
+    var(
+      --finora-theme-font-family,
+      Inter,
+      system-ui,
+      sans-serif
+    );
+
+  cursor:
+    pointer;
+
+  /*
+   * This input is the calendar popup's anchor.
+   */
+  anchor-name:
+    --finora-date-picker-input;
+
+}
+
+
+.finora-calendar-input:focus {
+
+  border-color:
+    var(--finora-theme-brand-accent);
+
+  box-shadow:
+    0 0 0 1px
+    var(--finora-theme-brand-accent);
+
+}
+
+
+.finora-calendar-input::placeholder {
+
+  color:
+    var(--finora-theme-text-muted);
+
+}
+
+
+/* ===========================================================
+   AGE
+=========================================================== */
+
+.finora-calendar-age {
+
+  position:
+    absolute;
+
+  right:
+    34px;
+
+  top:
+    50%;
+
+  transform:
+    translateY(-50%);
+
+  color:
+    var(--finora-theme-brand-accent);
+
+  font:
+    600 11px/1
+    var(
+      --finora-theme-font-family,
+      Inter,
+      system-ui,
+      sans-serif
+    );
+
+  white-space:
+    nowrap;
+
+  pointer-events:
+    none;
+
+}
+
+
+/* ===========================================================
+   CALENDAR ICON
+=========================================================== */
+
+.finora-calendar-icon {
+
+  position:
+    absolute;
+
+  right:
+    10px;
+
+  top:
+    50%;
+
+  width:
+    18px;
+
+  height:
+    18px;
+
+  transform:
+    translateY(-50%);
+
+  color:
+    var(--finora-theme-brand-accent);
+
+  pointer-events:
+    none;
+
+}
+
+
+/* ===========================================================
+   POPUP
+=========================================================== */
+
+.finora-calendar-popup {
+
+  position: fixed;
+
+  width: 100%;
+
+
+  box-sizing: border-box;
+
+  padding: 7px;
+
+  border:
+    1px solid
+    var(--finora-theme-border-strong);
+
+  border-radius: 9px;
+
+  background:
+    var(--finora-theme-surface);
+
+  color:
+    var(--finora-theme-text-primary);
+
+  box-shadow:
+    0 10px 28px
+    var(--finora-theme-overlay-shadow);
+
+  z-index: 999999;
+
+  font-family:
+    var(--finora-theme-font-family, Inter, system-ui, sans-serif);
+
+  overflow: visible;
+}
+
+
+/* ===========================================================
+   ANCHOR POSITIONING
+=========================================================== */
+
+/*
+ * Chromium / modern browser path.
+ *
+ * The popup is anchored to the actual DOB input.
+ *
+ * `fixed` means it is outside the form's layout flow.
+ *
+ * `anchor(bottom)` means it remains attached to the input.
+ *
+ * When the page scrolls, the browser recalculates the anchor
+ * position automatically.
+ */
+
+@supports (position-anchor: --finora-date-picker-input) {
+
+  .finora-calendar-popup {
+
+    position:
+      fixed;
+
+    position-anchor:
+      --finora-date-picker-input;
+
+    top:
+      anchor(bottom);
+
+    left:
+      anchor(left);
+
+    width:
+      anchor-size(width);
+
+    max-width:
+      min(
+        anchor-size(width),
+        calc(100vw - 16px)
+      );
+
+    margin-top:
+      4px;
+
+  }
+
+}
+
+
+/* ===========================================================
+   VIEWPORT SAFETY
+=========================================================== */
+
+/*
+ * If the calendar is close to the bottom of the viewport,
+ * Chromium may use the fallback placement instead of forcing
+ * the document to scroll.
+ */
+
+@supports (
+  position-try-fallbacks: flip-block
+) {
+
+  .finora-calendar-popup {
+
+    position-try-fallbacks:
+      flip-block;
+
+  }
+
+}
+
+
+/* ===========================================================
+   HEADER
+=========================================================== */
+
+.finora-calendar-header {
+
+  display:
+    grid;
+
+  grid-template-columns:
+    28px
+    minmax(0, 1fr)
+    72px
+    28px;
+
+  align-items:
+    center;
+
+  gap:
+    4px;
+
+}
+
+
+/* ===========================================================
+   NAVIGATION + SELECT
+=========================================================== */
+
+.finora-calendar-nav,
+.finora-calendar-select {
+
+  height:
+    28px;
+
+  min-height:
+    28px;
+
+  box-sizing:
+    border-box;
+
+  border:
+    1px solid
+    var(--finora-theme-border-default);
+
+  border-radius:
+    7px;
+
+  background:
+    var(--finora-theme-surface-muted);
+
+  color:
+    var(--finora-theme-text-primary);
+
+  font:
+    600 12px/1
+    var(
+      --finora-theme-font-family,
+      Inter,
+      system-ui,
+      sans-serif
+    );
+
+}
+
+
+/* ===========================================================
+   NAVIGATION BUTTON
+=========================================================== */
+
+.finora-calendar-nav {
+
+  display:
+    inline-flex;
+
+  align-items:
+    center;
+
+  justify-content:
+    center;
+
+  padding:
+    0;
+
+  color:
+    var(--finora-theme-brand-accent);
+
+  cursor:
+    pointer;
+
+}
+
+
+.finora-calendar-nav:hover,
+.finora-calendar-select:hover {
+
+  border-color:
+    var(--finora-theme-brand-accent);
+
+  background:
+    var(--finora-theme-brand-accent-soft);
+
+}
+
+
+/* ===========================================================
+   DROPDOWN WRAPPER
+=========================================================== */
+
+.finora-calendar-dropdown-wrap {
+
+  position:
+    relative;
+
+  min-width:
+    0;
+
+}
+
+
+/* ===========================================================
+   SELECT
+=========================================================== */
+
+.finora-calendar-select {
+
+  width:
+    100%;
+
+  display:
+    flex;
+
+  align-items:
+    center;
+
+  justify-content:
+    space-between;
+
+  gap:
+    3px;
+
+  padding:
+    0 7px;
+
+  cursor:
+    pointer;
+
+  text-align:
+    left;
+
+}
+
+
+/* ===========================================================
+   YEAR SELECT
+=========================================================== */
+
+.finora-calendar-year-select {
+
+  width:
+    72px;
+
+}
+
+
+/* ===========================================================
+   INTERNAL DROPDOWN
+=========================================================== */
+
+.finora-calendar-dropdown {
+
+  position:
+    absolute;
+
+  top:
+    calc(100% + 3px);
+
+  left:
+    0;
+
+  width:
+    100%;
+
+  max-height:
+    150px;
+
+  box-sizing:
+    border-box;
+
+  overflow-x:
+    hidden;
+
+  overflow-y:
+    auto;
+
+  padding:
+    3px;
+
+  border:
+    1px solid
+    var(--finora-theme-border-strong);
+
+  border-radius:
+    7px;
+
+  background:
+    var(--finora-theme-surface-muted);
+
+  box-shadow:
+    0 10px 24px
+    var(--finora-theme-overlay-shadow);
+
+  z-index:
+    100;
+
+  scrollbar-width:
+    none;
+
+}
+
+
+.finora-calendar-dropdown::-webkit-scrollbar {
+
+  width:
+    0;
+
+  height:
+    0;
+
+}
+
+
+/* ===========================================================
+   MONTH LIST
+=========================================================== */
+
+.finora-calendar-month-list {
+
+  max-height:
+    210px;
+
+}
+
+
+/* ===========================================================
+   OPTION
+=========================================================== */
+
+.finora-calendar-option {
+
+  width:
+    100%;
+
+  height:
+    25px;
+
+  min-height:
+    25px;
+
+  display:
+    flex;
+
+  align-items:
+    center;
+
+  justify-content:
+    flex-start;
+
+  box-sizing:
+    border-box;
+
+  padding:
+    0 8px;
+
+  border:
+    0;
+
+  border-radius:
+    5px;
+
+  background:
+    transparent;
+
+  color:
+    var(--finora-theme-text-primary);
+
+  font:
+    550 12px/1
+    var(
+      --finora-theme-font-family,
+      Inter,
+      system-ui,
+      sans-serif
+    );
+
+  cursor:
+    pointer;
+
+  text-align:
+    left;
+
+}
+
+
+.finora-calendar-option:hover {
+
+  background:
+    var(--finora-theme-brand-accent-soft);
+
+  color:
+    var(--finora-theme-text-primary);
+
+}
+
+
+.finora-calendar-option.is-selected {
+
+  background:
+    var(--finora-theme-brand-accent);
+
+  color:
+    var(--finora-theme-text-inverse);
+
+  font-weight:
+    700;
+
+}
+
+
+.finora-calendar-option.is-selected:hover {
+
+  background:
+    var(--finora-theme-brand-accent);
+
+  color:
+    var(--finora-theme-text-inverse);
+
+}
+
+
+/* ===========================================================
+   WEEKDAYS + DAYS
+=========================================================== */
+
+.finora-calendar-weekdays,
+.finora-calendar-days {
+
+  display:
+    grid;
+
+  grid-template-columns:
+    repeat(
+      7,
+      minmax(0, 1fr)
+    );
+
+  gap:
+    2px;
+
+}
+
+
+/* ===========================================================
+   WEEKDAYS
+=========================================================== */
+
+.finora-calendar-weekdays {
+
+  margin-top:
+    7px;
+
+  margin-bottom:
+    2px;
+
+}
+
+
+.finora-calendar-weekdays span {
+
+  height:
+    17px;
+
+  display:
+    flex;
+
+  align-items:
+    center;
+
+  justify-content:
+    center;
+
+  color:
+    var(--finora-theme-text-primary);
+
+  font:
+    500 9px/1
+    var(
+      --finora-theme-font-family,
+      Inter,
+      system-ui,
+      sans-serif
+    );
+
+}
+
+
+/* ===========================================================
+   DAY BUTTON
+=========================================================== */
+
+.finora-calendar-day {
+
+  width:
+    100%;
+
+  height:
+    26px;
+
+  min-width:
+    0;
+
+  box-sizing:
+    border-box;
+
+  border:
+    1px solid transparent;
+
+  border-radius:
+    5px;
+
+  background:
+    transparent;
+
+  color:
+    var(--finora-theme-text-primary);
+
+  font:
+    550 11px/1
+    var(
+      --finora-theme-font-family,
+      Inter,
+      system-ui,
+      sans-serif
+    );
+
+  cursor:
+    pointer;
+
+}
+
+
+.finora-calendar-day:hover:not(:disabled) {
+
+  background:
+    var(--finora-theme-brand-accent-soft);
+
+}
+
+
+/* ===========================================================
+   SELECTED DAY
+=========================================================== */
+
+.finora-calendar-day.is-selected {
+
+  border-color:
+    var(--finora-theme-brand-accent);
+
+  background:
+    var(--finora-theme-brand-accent-soft);
+
+  color:
+    var(--finora-theme-text-primary);
+
+  font-weight:
+    900;
+
+}
+
+
+.finora-calendar-day.is-selected:hover {
+
+  background:
+    var(--finora-theme-brand-accent-soft);
+
+  color:
+    var(--finora-theme-text-primary);
+
+}
+
+
+/* ===========================================================
+   TODAY
+=========================================================== */
+
+.finora-calendar-day.is-today:not(.is-selected) {
+
+  border-color:
+    var(--finora-theme-brand-accent);
+
+}
+
+
+/* ===========================================================
+   OUTSIDE MONTH
+=========================================================== */
+
+.finora-calendar-day.is-outside {
+
+  color:
+    var(--finora-theme-text-muted);
+
+}
+
+
+/* ===========================================================
+   FUTURE DATE
+=========================================================== */
+
+.finora-calendar-day.is-future {
+
+  opacity:
+    .38;
+
+  cursor:
+    not-allowed;
+
+}
+
+
+/* ===========================================================
+   FOOTER
+=========================================================== */
+
+.finora-calendar-footer {
+
+  display:
+    flex;
+
+  align-items:
+    center;
+
+  justify-content:
+    space-between;
+
+  margin-top:
+    6px;
+
+  padding-top:
+    6px;
+
+  border-top:
+    1px solid
+    var(--finora-theme-border-default);
+
+}
+
+
+/* ===========================================================
+   FOOTER BUTTON
+=========================================================== */
+
+.finora-calendar-footer-btn {
+
+  border:
+    0;
+
+  background:
+    transparent;
+
+  color:
+    var(--finora-theme-text-primary);
+
+  font:
+    600 10px/1
+    var(
+      --finora-theme-font-family,
+      Inter,
+      system-ui,
+      sans-serif
+    );
+
+  cursor:
+    pointer;
+
+  padding:
+    2px 0;
+
+}
+
+
+.finora-calendar-footer-btn:hover {
+
+  color:
+    var(--finora-theme-brand-accent);
+
+}
+
+
+.finora-calendar-footer-btn.is-today-action {
+
+  color:
+    var(--finora-theme-brand-accent);
+
+}
+
+
+/* ===========================================================
+   DATE PICKER TITLE
+=========================================================== */
+
+.finora-calendar-title {
+
+  text-align:
+    center;
+
+  font:
+    500 11px/1
+    var(
+      --finora-theme-font-family,
+      Inter,
+      system-ui,
+      sans-serif
+    );
+
+  margin-bottom:
+    7px;
+
+  color:
+    var(--finora-theme-text-primary);
+
+}
+
+
+/* ===========================================================
+   SMALL VIEWPORT SAFETY
+=========================================================== */
+
+@media (max-width: 767px) {
+
+  .finora-calendar-popup {
+
+    max-width:
+      calc(100vw - 16px);
+
+  }
+
+}
+
+
+/* ===========================================================
+   END
+=========================================================== */
+/* ===========================================================
+   FINORA CALENDAR
+   COMMON / ENTERPRISE EXTENSIONS
+=========================================================== */
+
+.finora-calendar-input {
+  padding-right: 42px;
+  font-weight: 700;
+}
+
+.finora-calendar-input:not(:disabled):not([readonly]) {
+  cursor: text;
+  user-select: text;
+  -webkit-user-select: text;
+}
+
+.finora-calendar-input.is-invalid {
+  border-color: rgba(202, 74, 74, 0.78);
+}
+
+.finora-calendar-icon-button {
+  position: absolute;
+  right: 7px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 29px;
+  height: 29px;
+  padding: 0;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: inherit;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.finora-calendar-icon-button:hover:not(:disabled) {
+  background: rgba(128, 128, 128, 0.12);
+}
+
+.finora-calendar-icon-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.finora-calendar-range-fields {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 10px;
+}
+
+.finora-calendar-range-field {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.finora-calendar-range-field .finora-calendar-input-wrap {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.finora-calendar-range-label {
+  display: block;
+  margin: 0;
+  flex: 0 0 auto;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  opacity: 0.78;
+}
+
+.finora-calendar-day.is-range-start,
+.finora-calendar-day.is-range-end {
+  border-color: currentColor;
+  font-weight: 800;
+}
+
+.finora-calendar-day.is-in-range:not(.is-range-start):not(.is-range-end) {
+  background: rgba(194, 145, 0, 0.15);
+  border-radius: 6px;
+}
+
+.finora-calendar-range-summary {
+  margin: 8px 0 0;
+  padding: 8px 10px;
+  border: 1px solid rgba(128, 128, 128, 0.2);
+  border-radius: 9px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 11px;
+}
+
+.finora-calendar-range-summary strong {
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+@media (max-width: 520px) {
+  .finora-calendar-range-fields {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ===========================================================
+   FINORA CALENDAR
+   PREMIUM POPUP GEOMETRY
+=========================================================== */
+
+.finora-calendar-popup {
+  width: 290px;
+  max-width: calc(100vw - 20px);
+}
+
+.finora-calendar-range-summary span {
+  min-width: 0;
+  white-space: nowrap;
+}
+
+.finora-calendar-range-summary strong {
+  flex: 0 0 auto;
+  white-space: nowrap;
+}
+/* ===========================================================
+   FINORA CALENDAR
+   SINGLE DATE RELATIVE-DAY INDICATOR
+=========================================================== */
+
+.finora-calendar-input.has-relative-day {
+  padding-right: 132px;
+}
+
+.finora-calendar-relative-day {
+  position: absolute;
+  right: 43px;
+  top: 50%;
+  transform: translateY(-50%);
+
+  max-width: 84px;
+  padding: 3px 8px;
+
+  box-sizing: border-box;
+
+  border:
+    1px solid
+    color-mix(
+      in srgb,
+      var(--finora-theme-border-strong) 76%,
+      transparent
+    );
+
+  border-radius: 999px;
+
+  background:
+    color-mix(
+      in srgb,
+      var(--finora-theme-surface-muted) 88%,
+      transparent
+    );
+
+  color:
+    var(--finora-theme-text-secondary);
+
+  font:
+    700 12px/1.15
+    var(
+      --finora-theme-font-family,
+      Inter,
+      system-ui,
+      sans-serif
+    );
+
+  white-space: nowrap;
+
+  pointer-events: auto;
+  cursor: default;
+}
+
+/* ===========================================================
+   LOGIN BUSINESS DATE SIZE OVERRIDE
+=========================================================== */
+
+.finora-login-business-date .finora-calendar-input {
+  height: 40px;
+  min-height: 40px;
+  font-size: 14px;
+}

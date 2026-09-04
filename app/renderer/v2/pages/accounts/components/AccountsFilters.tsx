@@ -41,6 +41,8 @@
 
 import type { ChangeEvent } from "react";
 
+import { FinoraCalendar } from "../../../components/common/calendar";
+
 /* ===========================================================
    ICONS
 =========================================================== */
@@ -268,15 +270,6 @@ export function AccountsFilters({
      DATE DETAILS
   ========================================================= */
 
-  function handleSelectedDateChange(
-    event: ChangeEvent<HTMLInputElement>,
-  ): void {
-    updateFilter(
-      "selectedDate",
-
-      event.target.value,
-    );
-  }
 
   function handleSelectedMonthChange(
     event: ChangeEvent<HTMLInputElement>,
@@ -298,21 +291,7 @@ export function AccountsFilters({
     );
   }
 
-  function handleFromDateChange(event: ChangeEvent<HTMLInputElement>): void {
-    updateFilter(
-      "fromDate",
 
-      event.target.value,
-    );
-  }
-
-  function handleToDateChange(event: ChangeEvent<HTMLInputElement>): void {
-    updateFilter(
-      "toDate",
-
-      event.target.value,
-    );
-  }
 
   /* =========================================================
      CUSTOMER DISPLAY
@@ -590,19 +569,26 @@ export function AccountsFilters({
         {periodDetailMode !== "NONE" && (
           <div className={periodDetailsClassName}>
             {filters.period === "SELECT_DATE" && (
-              <label className={ACCOUNTS_FILTER_FIELD_CLASSES.root}>
+              <div className={ACCOUNTS_FILTER_FIELD_CLASSES.root}>
                 <span className={ACCOUNTS_FILTER_FIELD_CLASSES.label}>
                   Select Date
                 </span>
 
-                <input
-                  type="date"
-                  className={ACCOUNTS_FILTER_FIELD_CLASSES.dateInput}
+                <FinoraCalendar
                   value={filters.selectedDate}
-                  onChange={handleSelectedDateChange}
+                  onChange={(nextDate) =>
+                    updateFilter(
+                      "selectedDate",
+                      nextDate,
+                    )
+                  }
                   disabled={disabled}
+                  allowToday
+                  showRelativeDay
+                  placeholder="DD/MM/YYYY"
+                  ariaLabel="Select Accounts Date"
                 />
-              </label>
+              </div>
             )}
 
             {filters.period === "SELECT_MONTH" && (
@@ -643,35 +629,32 @@ export function AccountsFilters({
             )}
 
             {filters.period === "CUSTOM_RANGE" && (
-              <>
-                <label className={ACCOUNTS_FILTER_FIELD_CLASSES.root}>
-                  <span className={ACCOUNTS_FILTER_FIELD_CLASSES.label}>
-                    From Date
-                  </span>
+              <div className={ACCOUNTS_FILTER_FIELD_CLASSES.rootWide}>
+                <FinoraCalendar
+                  mode="range"
+                  value={{
+                    from: filters.fromDate,
+                    to: filters.toDate,
+                  }}
+                  onChange={(nextRange) => {
+                    onChange({
+                      ...filters,
 
-                  <input
-                    type="date"
-                    className={ACCOUNTS_FILTER_FIELD_CLASSES.dateInput}
-                    value={filters.fromDate}
-                    onChange={handleFromDateChange}
-                    disabled={disabled}
-                  />
-                </label>
+                      fromDate:
+                        nextRange.from,
 
-                <label className={ACCOUNTS_FILTER_FIELD_CLASSES.root}>
-                  <span className={ACCOUNTS_FILTER_FIELD_CLASSES.label}>
-                    To Date
-                  </span>
-
-                  <input
-                    type="date"
-                    className={ACCOUNTS_FILTER_FIELD_CLASSES.dateInput}
-                    value={filters.toDate}
-                    onChange={handleToDateChange}
-                    disabled={disabled}
-                  />
-                </label>
-              </>
+                      toDate:
+                        nextRange.to,
+                    });
+                  }}
+                  disabled={disabled}
+                  fromLabel="From Date"
+                  toLabel="To Date"
+                  placeholder="DD/MM/YYYY"
+                  ariaLabel="Accounts Custom Date Range"
+                  showDuration
+                />
+              </div>
             )}
           </div>
         )}

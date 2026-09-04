@@ -20,7 +20,7 @@
 
 import SummaryCard from "../../common/cards/SummaryCard";
 
-import { FormField, TextInput } from "../../common";
+import { FinoraCalendar, FormField, TextInput } from "../../common";
 
 import { formatCurrency } from "../../../utils/currency/formatCurrency";
 
@@ -30,7 +30,6 @@ import {
   fieldStyle,
   formLabelTextStyle,
   inputWrapperStyle,
-  dateInputStyle,
   amountInputStyle,
 } from "./DisbursementForm.styles";
 
@@ -93,15 +92,19 @@ export default function DisbursementForm({
           <div style={fieldStyle}>
             <FormField label="Disbursement Date" required labelTextStyle={formLabelTextStyle}>
               <div style={inputWrapperStyle}>
-                <TextInput
-                  type="date"
-                  value={disbursementDate}
-                  readOnly
-                  disabled
-                  aria-label="Disbursement Date locked to Login Date"
+                <div
                   title="This date is locked to the active FINORA Login Date."
-                  style={dateInputStyle}
-                />
+                >
+                  <FinoraCalendar
+                    value={disbursementDate}
+                    onChange={() => undefined}
+                    disabled
+                    allowClear={false}
+                    showRelativeDay
+                    placeholder="DD/MM/YYYY"
+                    ariaLabel="Disbursement Date locked to Login Date"
+                  />
+                </div>
               </div>
             </FormField>
           </div>

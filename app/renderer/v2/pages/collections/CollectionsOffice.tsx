@@ -40,6 +40,8 @@ import { StorageMode } from "../../storage/storage.types";
 
 import StudioLayout from "../../components/common/layout/StudioLayout";
 
+import { FinoraCalendar } from "../../components/common/calendar";
+
 import {
   finoraWarning,
 } from "../../components/common/dialog/finoraDialog.service";
@@ -82,7 +84,6 @@ import {
   filterFieldStyle,
   filterLabelStyle,
   filterSelectStyle,
-  filterDateInputStyle,
   filterActionsStyle,
   clearFilterButtonStyle,
   applyFilterButtonStyle,
@@ -897,27 +898,38 @@ export default function CollectionsOffice() {
                     </select>
                   </div>
 
-                  <div style={filterFieldStyle}>
-                    <label style={filterLabelStyle}>From</label>
+                  <div
+                    style={{
+                      gridColumn:
+                        responsiveTokens.viewport === "mobile"
+                          ? "auto"
+                          : "span 2",
 
-                    <input
-                      type="date"
-                      value={filterFromDate}
-                      onChange={(event) =>
-                        setFilterFromDate(event.target.value)
-                      }
-                      style={filterDateInputStyle}
-                    />
-                  </div>
+                      minWidth: 0,
 
-                  <div style={filterFieldStyle}>
-                    <label style={filterLabelStyle}>To</label>
+                      width: "100%",
+                    }}
+                  >
+                    <FinoraCalendar
+                      mode="range"
+                      value={{
+                        from: filterFromDate,
+                        to: filterToDate,
+                      }}
+                      onChange={(nextRange) => {
+                        setFilterFromDate(
+                          nextRange.from,
+                        );
 
-                    <input
-                      type="date"
-                      value={filterToDate}
-                      onChange={(event) => setFilterToDate(event.target.value)}
-                      style={filterDateInputStyle}
+                        setFilterToDate(
+                          nextRange.to,
+                        );
+                      }}
+                      fromLabel="From"
+                      toLabel="To"
+                      placeholder="DD/MM/YYYY"
+                      ariaLabel="Collection Portfolio Date Range"
+                      showDuration
                     />
                   </div>
 

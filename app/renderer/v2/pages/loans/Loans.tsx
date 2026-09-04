@@ -58,6 +58,8 @@ import { StorageMode } from "../../storage/storage.types";
 
 import StudioLayout from "../../components/common/layout/StudioLayout";
 
+import { FinoraCalendar } from "../../components/common/calendar";
+
 import {
   finoraWarning,
 } from "../../components/common/dialog/finoraDialog.service";
@@ -102,7 +104,6 @@ import {
   filterFieldStyle,
   filterLabelStyle,
   filterSelectStyle,
-  filterDateInputStyle,
   filterActionsStyle,
   clearFilterButtonStyle,
   applyFilterButtonStyle,
@@ -1312,35 +1313,31 @@ export default function Loans() {
                     </select>
                   </div>
 
-                  <div style={filterFieldStyle}>
-                    <label style={themedFilterLabelStyle}>From</label>
-
-                    <input
-                      type="date"
-                      value={filterFromDate}
-                      onChange={(event) => {
-                        setFilterFromDate(event.target.value);
+                  <div
+                    style={{
+                      gridColumn:
+                        responsiveTokens.viewport === "mobile"
+                          ? "auto"
+                          : "span 2",
+                      minWidth: 0,
+                      width: "100%",
+                    }}
+                  >
+                    <FinoraCalendar
+                      mode="range"
+                      value={{
+                        from: filterFromDate,
+                        to: filterToDate,
                       }}
-                      style={{
-                        ...filterDateInputStyle,
-                        ...themedFilterControlStyle,
+                      onChange={(nextRange) => {
+                        setFilterFromDate(nextRange.from);
+                        setFilterToDate(nextRange.to);
                       }}
-                    />
-                  </div>
-
-                  <div style={filterFieldStyle}>
-                    <label style={themedFilterLabelStyle}>To</label>
-
-                    <input
-                      type="date"
-                      value={filterToDate}
-                      onChange={(event) => {
-                        setFilterToDate(event.target.value);
-                      }}
-                      style={{
-                        ...filterDateInputStyle,
-                        ...themedFilterControlStyle,
-                      }}
+                      fromLabel="From"
+                      toLabel="To"
+                      ariaLabel="Loan date filter"
+                      placeholder="DD/MM/YYYY"
+                      showDuration
                     />
                   </div>
 

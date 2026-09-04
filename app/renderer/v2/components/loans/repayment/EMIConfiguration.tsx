@@ -6,6 +6,7 @@
 import { useState } from "react";
 
 import {
+  FinoraCalendar,
   FormField,
   SelectInput,
   TextInput,
@@ -127,14 +128,17 @@ export default function EMIConfiguration({
         <div style={fieldStyle}>
           <div style={fieldContentStyle}>
             <FormField label="First Installment Date">
-              <TextInput
-                type="date"
+              <FinoraCalendar
                 value={firstInstallmentDate}
-                onChange={(event) =>
+                onChange={(nextDate) =>
                   handleFirstInstallmentDateChange(
-                    event.target.value,
+                    nextDate,
                   )
                 }
+                allowToday
+                showRelativeDay
+                placeholder="DD/MM/YYYY"
+                ariaLabel="First Installment Date"
               />
             </FormField>
           </div>

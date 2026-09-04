@@ -60,7 +60,6 @@ import {
 } from "react";
 
 import {
-  CalendarDays,
   ChevronDown,
   Eye,
   EyeOff,
@@ -81,6 +80,8 @@ import {
   getCurrentLocalBusinessDate,
   resolveBusinessDate,
 } from "../../services/business/businessDateService";
+
+import { FinoraCalendar } from "../../components/common/calendar";
 
 import {
   hasActiveFinoraStorageEntitlement,
@@ -1322,38 +1323,65 @@ export default function Login({
 
 
           <div
+            className="finora-login-business-date"
             style={
               loginStyles.inputWrapper
             }
           >
-            <span
-              style={
-                loginStyles.inputIcon
-              }
-            >
-              <CalendarDays />
-            </span>
-
-            <input
-              type="date"
+            <FinoraCalendar
               value={
                 businessDate
               }
               onChange={(
-                event,
+                nextDate,
               ) => {
                 setBusinessDate(
-                  event.target.value,
+                  nextDate,
                 );
 
                 setError("");
               }}
-              placeholder="DD-MM-YYYY"
-              aria-label="Choose Login Date"
-              autoComplete="off"
-              style={
-                loginStyles.input
+              max={
+                getCurrentLocalBusinessDate()
               }
+              allowClear={
+                false
+              }
+              allowToday
+              showRelativeDay
+              placeholder="DD/MM/YYYY"
+              ariaLabel="Choose Login Date"
+              themeOverride={{
+                page:
+                  activeLoginTheme.background,
+
+                surface:
+                  activeLoginTheme.surface,
+
+                surfaceMuted:
+                  activeLoginTheme.surfaceSoft,
+
+                textPrimary:
+                  activeLoginTheme.text,
+
+                textSecondary:
+                  activeLoginTheme.textSoft,
+
+                textMuted:
+                  activeLoginTheme.textFaint,
+
+                brand:
+                  activeLoginTheme.primary,
+
+                border:
+                  activeLoginTheme.border,
+
+                borderStrong:
+                  activeLoginTheme.borderStrong,
+
+                shadow:
+                  activeLoginTheme.shadow,
+              }}
             />
           </div>
 

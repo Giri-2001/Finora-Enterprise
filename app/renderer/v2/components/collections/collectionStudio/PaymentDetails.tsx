@@ -117,6 +117,8 @@ import {
   finoraWarning,
 } from "../../common/dialog/finoraDialog.service";
 
+import { FinoraCalendar } from "../../common/calendar";
+
 import {
   useEffect,
   useState,
@@ -208,6 +210,21 @@ export default function PaymentDetails() {
       authenticatedSession
         ?.businessDate,
     ) ?? "";
+
+  useEffect(() => {
+    if (
+      activeBusinessDate &&
+      reviewData.receiptDate !== activeBusinessDate
+    ) {
+      updateField(
+        "receiptDate",
+        activeBusinessDate,
+      );
+    }
+  }, [
+    activeBusinessDate,
+    reviewData.receiptDate,
+  ]);
 
   // ==========================================================
   // FINORA RESPONSIVE ENGINE
@@ -1539,31 +1556,15 @@ export default function PaymentDetails() {
             Collection Date *
           </label>
 
-          <input
-            id="finora-collection-date"
-            type="date"
-            value={reviewData.receiptDate || ""}
-            min={minimumCollectionDate || undefined}
-            max={activeBusinessDate || undefined}
-            onChange={(event) =>
-              updateField(
-                "receiptDate",
-                event.target.value,
-              )
-            }
-            disabled={
-              !reviewData.loanId ||
-              !collectionDateLedgerReady
-            }
-            aria-label="Collection Date"
-            title={
-              minimumCollectionDate &&
-              activeBusinessDate
-                ? `Allowed Collection Date: ${minimumCollectionDate} to ${activeBusinessDate}`
-                : "Select a valid Collection Date."
-            }
-            style={responsiveInputStyle}
-          />
+          <FinoraCalendar
+              value={activeBusinessDate}
+              onChange={() => undefined}
+              disabled
+              allowClear={false}
+              showRelativeDay
+              placeholder="DD/MM/YYYY"
+              ariaLabel="Collection Date locked to Login Date"
+            />
         </div>
 
         {/* ====================================================

@@ -32,6 +32,7 @@
 // ============================================================
 
 import {
+  FinoraCalendar,
   FormField,
   TextArea,
   TextInput,
@@ -89,15 +90,18 @@ export default function ReceiptDetails() {
         label="Receipt Date"
         required
       >
-        <TextInput
-          type="date"
+        <FinoraCalendar
           value={reviewData.receiptDate}
-          onChange={(event) =>
+          onChange={(nextDate) =>
             updateField(
               "receiptDate",
-              event.target.value,
+              nextDate,
             )
           }
+          allowToday
+          showRelativeDay
+          placeholder="DD/MM/YYYY"
+          ariaLabel="Receipt Date"
         />
       </FormField>
 
