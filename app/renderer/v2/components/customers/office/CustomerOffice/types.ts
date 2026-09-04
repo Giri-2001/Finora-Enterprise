@@ -1,4 +1,4 @@
-/* ===========================================================
+﻿/* ===========================================================
    FINORA ENTERPRISE OS™
 
    CUSTOMER OFFICE™
@@ -26,6 +26,14 @@ export interface Loan {
   outstanding: number;
 
   interest: number;
+
+  /**
+   * Authoritative repayment calculation method.
+   *
+   * This is separate from repaymentType, which represents
+   * collection frequency such as MONTHLY / YEARLY.
+   */
+  interestType?: "fixed" | "reducing" | "interestOnly";
 
   processingFee: number;
 
@@ -86,6 +94,18 @@ export interface Loan {
   ========================================== */
 
   advanceDeduction?: number;
+
+  /**
+   * Principal reductions collected outside normal EMI allocation.
+   *
+   * Each entry is part of the same Collection cash transaction;
+   * it is not additional cash.
+   */
+  principalCurtailments?: Array<{
+    amount: number;
+    effectiveDate: string;
+    receiptNumber?: string;
+  }>;
 
   netDisbursement?: number;
 

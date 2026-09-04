@@ -1,4 +1,4 @@
-/* ===========================================================
+﻿/* ===========================================================
    FINORA ENTERPRISE OS™
    PAYMENT SCHEDULE ENGINE™
 
@@ -37,6 +37,7 @@ export interface LoanInstallment {
   outstandingBalance: number;
 
   paidAmount: number;
+  waivedAmount?: number;
 
   penaltyAmount: number;
 

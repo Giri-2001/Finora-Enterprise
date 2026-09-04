@@ -1,4 +1,4 @@
-/* ===========================================================
+﻿/* ===========================================================
    FINORA ENTERPRISE OS™
 
    LOAN BUILDER™
@@ -26,6 +26,7 @@ export interface BuildLoanOptions {
   amount: number;
 
   interest: number;
+  interestType?: "fixed" | "reducing" | "interestOnly";
 
   processingFee: number;
 
@@ -121,6 +122,7 @@ export function buildLoan(options: BuildLoanOptions): Loan {
     outstanding: options.outstanding,
 
     interest: options.interest,
+    interestType: options.interestType,
 
     processingFee: options.processingFee,
 

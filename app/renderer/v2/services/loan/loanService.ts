@@ -107,7 +107,7 @@ export async function fetchLoan(loanId: string): Promise<Loan | undefined> {
 //
 //   min(
 //     principalAmount,
-//     max(0, paidAmount - interestAmount)
+//     max(0, settledAmount - interestAmount)
 //   )
 //
 // ============================================================
@@ -138,6 +138,27 @@ export async function fetchLoanPrincipalDue(
       ? rawPrincipal
       : 0;
 
+  // ==========================================================
+  // MANUAL PRINCIPAL CURTAILMENTS
+  //
+  // These are direct reductions of contractual principal.
+  // They are already part of Collection cash and must not
+  // be inferred from EMI paidAmount.
+  // ==========================================================
+
+  const manualPrincipalCurtailmentTotal = Array.isArray(
+    loan.principalCurtailments,
+  )
+    ? loan.principalCurtailments.reduce(
+        (total, curtailment) =>
+          total + Math.max(
+            0,
+            Number(curtailment?.amount) || 0,
+          ),
+        0,
+      )
+    : 0;
+
   if (originalPrincipal <= 0) {
     return 0;
   }
@@ -164,6 +185,9 @@ export async function fetchLoanPrincipalDue(
         const rawPaidAmount =
           Number(installment.paidAmount ?? 0);
 
+
+        const rawWaivedAmount =
+          Number(installment.waivedAmount ?? 0);
         const principalAmount =
           Number.isFinite(rawPrincipalAmount)
             ? Math.max(0, rawPrincipalAmount)
@@ -179,9 +203,17 @@ export async function fetchLoanPrincipalDue(
             ? Math.max(0, rawPaidAmount)
             : 0;
 
+        const waivedAmount =
+          Number.isFinite(rawWaivedAmount)
+            ? Math.max(0, rawWaivedAmount)
+            : 0;
+
+        const settledAmount =
+          paidAmount + waivedAmount;
+
         if (
           principalAmount <= 0 ||
-          paidAmount <= interestAmount
+          settledAmount <= interestAmount
         ) {
           return total;
         }
@@ -191,7 +223,7 @@ export async function fetchLoanPrincipalDue(
             principalAmount,
             Math.max(
               0,
-              paidAmount - interestAmount,
+              settledAmount - interestAmount,
             ),
           );
 
@@ -205,7 +237,7 @@ export async function fetchLoanPrincipalDue(
 
   return Math.max(
     0,
-    originalPrincipal - principalPaid,
+    originalPrincipal - principalPaid - manualPrincipalCurtailmentTotal,
   );
 }
 

@@ -1,4 +1,4 @@
-// ============================================================
+﻿// ============================================================
 // FINORA ENTERPRISE OS™
 //
 // VIEW COLLECTION DETAILS
@@ -28,6 +28,8 @@ import type { CollectionReviewData } from "../CollectionReviewData";
 import type { DocumentsStudioItem } from "../../loans/documents/DocumentsStudio";
 
 import LoanDocuments from "../collectionStudio/LoanDocuments";
+import CollectionEmiSchedule from "../collectionStudio/CollectionEmiSchedule";
+import CollectionHistory from "../collectionStudio/CollectionHistory";
 
 import { useTheme } from "../../../themes/provider";
 
@@ -401,6 +403,10 @@ export default function ViewCollectionDetails({
         </div>
       </div>
       <LoanDocuments documents={loanDocuments} />
+
+      <CollectionEmiSchedule loanId={collection.loanId} />
+
+      <CollectionHistory loanId={collection.loanId} />
 
       <footer style={footerStyle}>
         <button type="button" onClick={onBack} style={backButtonStyle}>

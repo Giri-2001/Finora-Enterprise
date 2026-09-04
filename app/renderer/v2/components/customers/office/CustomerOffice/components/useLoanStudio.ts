@@ -1798,6 +1798,7 @@ export function useLoanStudio({
       outstanding: collectibleOutstanding,
 
       interest: interestRate,
+      interestType: emiCalculation,
 
       processingFee: parseNumericValue(processingFee),
 

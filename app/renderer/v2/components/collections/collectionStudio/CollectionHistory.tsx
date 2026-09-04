@@ -38,11 +38,11 @@
 // IMPORTS
 // ============================================================
 
-import { useEffect, useState } from "react";
+import { useContext, useEffect, useState } from "react";
 
 import { History } from "lucide-react";
 
-import { useCollectionController } from "../controller";
+import { CollectionContext } from "../context/CollectionContext";
 
 import { loadCollections } from "../../../services/collection/collectionService";
 
@@ -153,12 +153,26 @@ function mapCollectionToHistoryRecord(
 // COMPONENT
 // ============================================================
 
-export default function CollectionHistory() {
+interface CollectionHistoryProps {
+  loanId?: string;
+}
+
+// ============================================================
+// COMPONENT
+// ============================================================
+
+export default function CollectionHistory({ loanId }: CollectionHistoryProps = {}) {
   // ==========================================================
   // COLLECTION CONTEXT
   // ==========================================================
+  const collectionContext = useContext(CollectionContext);
 
-  const { reviewData } = useCollectionController();
+  const resolvedLoanId =
+    String(
+      loanId ??
+        collectionContext?.reviewData.loanId ??
+        "",
+    ).trim();
 
   // ==========================================================
   // STATE
@@ -176,9 +190,9 @@ export default function CollectionHistory() {
     let cancelled = false;
 
     async function loadHistory(): Promise<void> {
-      const loanId = reviewData.loanId;
+      const activeLoanId = resolvedLoanId;
 
-      if (!loanId) {
+      if (!activeLoanId) {
         if (!cancelled) {
           setHistory([]);
 
@@ -210,7 +224,7 @@ export default function CollectionHistory() {
 
         const loanCollections = collections
 
-          .filter((collection) => collection.loanId === loanId)
+          .filter((collection) => collection.loanId === activeLoanId)
 
           // ----------------------------------------------
           // NEWEST COLLECTION FIRST
@@ -269,7 +283,7 @@ export default function CollectionHistory() {
         handleCollectionRefresh,
       );
     };
-  }, [reviewData.loanId]);
+  }, [resolvedLoanId]);
 
   // ==========================================================
   // LOADING STATE

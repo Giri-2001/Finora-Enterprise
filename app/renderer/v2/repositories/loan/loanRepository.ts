@@ -163,6 +163,7 @@ export interface LoanScheduleInstallment {
   outstandingBalance?: number;
 
   paidAmount?: number;
+  waivedAmount?: number;
 
   penaltyAmount?: number;
 
@@ -219,6 +220,7 @@ export interface LoanOutstandingUpdateOptions {
   // ==========================================================
 
   discountAmount?: number;
+  manualPrincipalAmount?: number;
   penaltyAmount?: number;
 }
 
@@ -357,10 +359,14 @@ function getInstallmentRemainingAmount(
 
   const paidAmount = safePositiveNumber(installment.paidAmount);
 
+  const waivedAmount = safePositiveNumber(
+    installment.waivedAmount,
+  );
+
   return Math.max(
     0,
 
-    installmentAmount - paidAmount,
+    installmentAmount - paidAmount - waivedAmount,
   );
 }
 
@@ -615,6 +621,207 @@ function allocateSelectedEmiPayment(
 // Only ₹9,100 enters EMI paidAmount.
 //
 // ============================================================
+
+// ============================================================
+// APPLY DISCOUNT / WAIVER TO INSTALLMENT
+// ============================================================
+//
+// IMPORTANT:
+//
+// Discount settles contractual liability but is NOT cash.
+// Therefore:
+//
+// - paidAmount remains actual customer cash only.
+// - waivedAmount records the waived contractual amount.
+// - paidAmount + waivedAmount determines settlement state.
+// ============================================================
+
+function applyDiscountToInstallment(
+  installment: LoanScheduleInstallment,
+  discountAmount: number,
+  receiptNumber: string,
+  paidDate: string,
+): {
+  installment: LoanScheduleInstallment;
+  consumedAmount: number;
+} {
+  const status = normalizeInstallmentStatus(
+    installment.status,
+  );
+
+  if (
+    status === "paid" ||
+    status === "overdue paid" ||
+    status === "preclosed"
+  ) {
+    return {
+      installment: { ...installment },
+      consumedAmount: 0,
+    };
+  }
+
+  const remainingAmount =
+    getInstallmentRemainingAmount(installment);
+
+  if (remainingAmount <= 0) {
+    return {
+      installment: { ...installment },
+      consumedAmount: 0,
+    };
+  }
+
+  const consumedAmount = Math.min(
+    safePositiveNumber(discountAmount),
+    remainingAmount,
+  );
+
+  if (consumedAmount <= 0) {
+    return {
+      installment: { ...installment },
+      consumedAmount: 0,
+    };
+  }
+
+  const installmentAmount = safePositiveNumber(
+    installment.installmentAmount,
+  );
+
+  const paidAmount = safePositiveNumber(
+    installment.paidAmount,
+  );
+
+  const existingWaivedAmount = safePositiveNumber(
+    installment.waivedAmount,
+  );
+
+  const nextWaivedAmount =
+    existingWaivedAmount + consumedAmount;
+
+  const fullySettled =
+    paidAmount + nextWaivedAmount >= installmentAmount;
+
+  const dueDate = String(installment.dueDate ?? "")
+    .trim()
+    .slice(0, 10);
+
+  const normalizedPaidDate = String(paidDate ?? "")
+    .trim()
+    .slice(0, 10);
+
+  const overdueByDate =
+    dueDate.length === 10 &&
+    normalizedPaidDate.length === 10 &&
+    dueDate < normalizedPaidDate;
+
+  const wasOverdue =
+    status === "overdue" ||
+    status === "overdue paid" ||
+    overdueByDate;
+
+  return {
+    installment: {
+      ...installment,
+
+      waivedAmount: nextWaivedAmount,
+
+      receiptNumber:
+        receiptNumber || installment.receiptNumber,
+
+      paidDate:
+        paidDate || installment.paidDate,
+
+      status: fullySettled
+        ? wasOverdue
+          ? "Overdue Paid"
+          : "Paid"
+        : "Partial",
+    },
+
+    consumedAmount,
+  };
+}
+
+// ============================================================
+// ALLOCATE MANUAL DISCOUNT
+// ============================================================
+
+function allocateManualDiscount(
+  schedule: LoanScheduleInstallment[],
+  discountAmount: number,
+  receiptNumber: string,
+  paidDate: string,
+): LoanScheduleInstallment[] {
+  let remainingDiscount = safePositiveNumber(
+    discountAmount,
+  );
+
+  return schedule.map((installment) => {
+    if (remainingDiscount <= 0) {
+      return { ...installment };
+    }
+
+    const result = applyDiscountToInstallment(
+      installment,
+      remainingDiscount,
+      receiptNumber,
+      paidDate,
+    );
+
+    remainingDiscount = Math.max(
+      0,
+      remainingDiscount - result.consumedAmount,
+    );
+
+    return result.installment;
+  });
+}
+
+// ============================================================
+// ALLOCATE SELECTED EMI DISCOUNT
+// ============================================================
+
+function allocateSelectedEmiDiscount(
+  schedule: LoanScheduleInstallment[],
+  selectedEmiNumbers: number[],
+  discountAmount: number,
+  receiptNumber: string,
+  paidDate: string,
+): LoanScheduleInstallment[] {
+  const selectedSet = new Set(selectedEmiNumbers);
+
+  let remainingDiscount = safePositiveNumber(
+    discountAmount,
+  );
+
+  return schedule.map((installment) => {
+    if (remainingDiscount <= 0) {
+      return { ...installment };
+    }
+
+    const installmentNumber = Number(
+      installment.installmentNumber,
+    );
+
+    if (!selectedSet.has(installmentNumber)) {
+      return { ...installment };
+    }
+
+    const result = applyDiscountToInstallment(
+      installment,
+      remainingDiscount,
+      receiptNumber,
+      paidDate,
+    );
+
+    remainingDiscount = Math.max(
+      0,
+      remainingDiscount - result.consumedAmount,
+    );
+
+    return result.installment;
+  });
+}
+
 
 function allocateManualPayment(
   schedule: LoanScheduleInstallment[],
@@ -1260,6 +1467,160 @@ export async function getLoanById(loanId: string): Promise<Loan | undefined> {
 //
 // ============================================================
 
+// ============================================================
+// MANUAL PRINCIPAL - INTEREST ONLY HELPERS
+// ============================================================
+
+function getInterestOnlyPeriodicRate(
+  monthlyInterestRate: number,
+  repaymentType: unknown,
+): number {
+  const safeMonthlyRate = Math.max(
+    0,
+    Number(monthlyInterestRate) || 0,
+  );
+
+  const frequency = String(repaymentType ?? "")
+    .trim()
+    .toLowerCase();
+
+  if (frequency === "daily") {
+    return safeMonthlyRate / 30;
+  }
+
+  if (frequency === "weekly") {
+    return safeMonthlyRate * 7 / 30;
+  }
+
+  if (frequency === "yearly") {
+    return safeMonthlyRate * 12;
+  }
+
+  return safeMonthlyRate;
+}
+
+function getScheduleRemainingTotal(
+  schedule: LoanScheduleInstallment[],
+): number {
+  return schedule.reduce(
+    (total, installment) =>
+      total + getInstallmentRemainingAmount(installment),
+    0,
+  );
+}
+
+function recalculateInterestOnlyAfterCurtailment(
+  schedule: LoanScheduleInstallment[],
+  reducedPrincipal: number,
+  monthlyInterestRate: number,
+  repaymentType: unknown,
+  paidDate: string,
+): LoanScheduleInstallment[] | undefined {
+  const normalizedPaidDate = String(paidDate ?? "")
+    .trim()
+    .slice(0, 10);
+
+  if (normalizedPaidDate.length !== 10) {
+    return undefined;
+  }
+
+  const eligibleIndexes: number[] = [];
+
+  schedule.forEach((installment, index) => {
+    const status = normalizeInstallmentStatus(
+      installment.status,
+    );
+
+    if (
+      status === "paid" ||
+      status === "overdue paid" ||
+      status === "preclosed"
+    ) {
+      return;
+    }
+
+    if (safePositiveNumber(installment.paidAmount) > 0) {
+      return;
+    }
+
+    const dueDate = String(installment.dueDate ?? "")
+      .trim()
+      .slice(0, 10);
+
+    if (dueDate.length !== 10) {
+      return;
+    }
+
+    if (dueDate <= normalizedPaidDate) {
+      return;
+    }
+
+    eligibleIndexes.push(index);
+  });
+
+  if (eligibleIndexes.length === 0) {
+    return undefined;
+  }
+
+  const finalEligibleIndex =
+    eligibleIndexes[eligibleIndexes.length - 1];
+
+  const periodicRate = getInterestOnlyPeriodicRate(
+    monthlyInterestRate,
+    repaymentType,
+  );
+
+  const revisedInterest = Math.max(
+    0,
+    Math.round(
+      reducedPrincipal * (periodicRate / 100),
+    ),
+  );
+
+  const eligibleSet = new Set(eligibleIndexes);
+
+  return schedule.map((installment, index) => {
+    if (!eligibleSet.has(index)) {
+      return {
+        ...installment,
+      };
+    }
+
+    const isFinalPrincipalRow =
+      index === finalEligibleIndex;
+
+    return {
+      ...installment,
+
+      installmentAmount: isFinalPrincipalRow
+        ? reducedPrincipal + revisedInterest
+        : revisedInterest,
+
+      principalAmount: isFinalPrincipalRow
+        ? reducedPrincipal
+        : 0,
+
+      interestAmount: revisedInterest,
+
+      outstandingBalance: isFinalPrincipalRow
+        ? 0
+        : reducedPrincipal,
+
+      paidAmount: 0,
+
+      penaltyAmount:
+        safePositiveNumber(installment.penaltyAmount),
+
+      receiptNumber: installment.receiptNumber ?? "",
+
+      paidDate: installment.paidDate ?? "",
+
+      status: "Pending",
+    };
+  });
+}
+
+
 export async function updateLoanOutstanding(
   loanId: string,
   paymentAmount: number,
@@ -1285,6 +1646,13 @@ export async function updateLoanOutstanding(
 
   const discountAmount = safePositiveNumber(options?.discountAmount);
   const penaltyAmount = safePositiveNumber(options?.penaltyAmount);
+
+  // ==========================================================
+  // MANUAL PRINCIPAL
+  // ==========================================================
+
+  const requestedManualPrincipalAmount =
+    safePositiveNumber(options?.manualPrincipalAmount);
 
   // ==========================================================
   // NOTHING TO SETTLE
@@ -1329,7 +1697,45 @@ export async function updateLoanOutstanding(
   // ==========================================================
 
   const debtPaymentAmount = Math.max(0, actualPaymentAmount - penaltyAmount);
+
+  // ==========================================================
+  // MANUAL PRINCIPAL CASH CLASSIFICATION
+  //
+  // IMPORTANT:
+  //
+  // Manual Principal is PART OF debtPaymentAmount.
+  // It is never additional settlement cash.
+  //
+  // Example:
+  //
+  // actual cash       = 21,000
+  // manual principal  = 20,000
+  // normal EMI cash   = 1,000
+  // ==========================================================
+
+  if (requestedManualPrincipalAmount > debtPaymentAmount) {
+    return undefined;
+  }
+
+  const manualPrincipalAmount =
+    requestedManualPrincipalAmount;
+
+  const emiPaymentAmount = Math.max(
+    0,
+    debtPaymentAmount - manualPrincipalAmount,
+  );
   const settlementReduction = debtPaymentAmount + discountAmount;
+
+  // ==========================================================
+  // MANUAL PRINCIPAL SPECIAL PATH
+  // ==========================================================
+
+  if (
+    manualPrincipalAmount > 0 &&
+    loan.interestType !== "interestOnly"
+  ) {
+    return undefined;
+  }
 
   // ==========================================================
   // REJECT OVER-SETTLEMENT
@@ -1343,7 +1749,7 @@ export async function updateLoanOutstanding(
   // NEW OUTSTANDING
   // ==========================================================
 
-  const newOutstanding = Math.max(
+  let newOutstanding = Math.max(
     0,
 
     currentOutstanding - settlementReduction,
@@ -1408,7 +1814,7 @@ export async function updateLoanOutstanding(
 
         selectedEmiNumbers,
 
-        debtPaymentAmount,
+        emiPaymentAmount,
 
         receiptNumber,
 
@@ -1423,7 +1829,7 @@ export async function updateLoanOutstanding(
       updatedSchedule = allocateManualPayment(
         persistedSchedule.schedule,
 
-        debtPaymentAmount,
+        emiPaymentAmount,
 
         receiptNumber,
 
@@ -1431,6 +1837,33 @@ export async function updateLoanOutstanding(
       );
     }
 
+
+
+      // ========================================================
+      // APPLY DISCOUNT TO SCHEDULE
+      //
+      // Discount reduces contractual liability but never enters
+      // paidAmount or Collection cash.
+      // ========================================================
+
+      if (discountAmount > 0) {
+        if (selectedEmiNumbers.length > 0) {
+          updatedSchedule = allocateSelectedEmiDiscount(
+            updatedSchedule,
+            selectedEmiNumbers,
+            discountAmount,
+            receiptNumber,
+            paidDate,
+          );
+        } else {
+          updatedSchedule = allocateManualDiscount(
+            updatedSchedule,
+            discountAmount,
+            receiptNumber,
+            paidDate,
+          );
+        }
+      }
 
     // ========================================================
     // PRESERVE OVERDUE PENALTY AFTER PAYMENT
@@ -1556,6 +1989,97 @@ export async function updateLoanOutstanding(
         };
       },
     );
+
+
+      // ========================================================
+      // MANUAL PRINCIPAL INTEREST ONLY RECALCULATION
+      //
+      // IMPORTANT:
+      //
+      // - Manual Principal never enters paidAmount.
+      // - Historical/current rows are preserved.
+      // - Only future untouched rows are recalculated.
+      // - Outstanding becomes revised schedule remaining total.
+      // ========================================================
+
+      if (manualPrincipalAmount > 0) {
+        const principalBearingRows =
+          updatedSchedule.filter(
+            (installment) =>
+              safePositiveNumber(
+                installment.principalAmount,
+              ) > 0,
+          );
+
+        const currentPrincipalBeforeCurtailment =
+          principalBearingRows.reduce(
+            (maximum, installment) =>
+              Math.max(
+                maximum,
+                safePositiveNumber(
+                  installment.principalAmount,
+                ),
+              ),
+            0,
+          );
+
+        if (
+          currentPrincipalBeforeCurtailment <= 0 ||
+          manualPrincipalAmount >
+            currentPrincipalBeforeCurtailment
+        ) {
+          return undefined;
+        }
+
+        const reducedPrincipal = Math.max(
+          0,
+          currentPrincipalBeforeCurtailment -
+            manualPrincipalAmount,
+        );
+
+        const recalculatedSchedule =
+          recalculateInterestOnlyAfterCurtailment(
+            updatedSchedule,
+            reducedPrincipal,
+            safePositiveNumber(loan.interest),
+            loan.repaymentType,
+            paidDate,
+          );
+
+        if (!recalculatedSchedule) {
+          return undefined;
+        }
+
+        updatedSchedule = recalculatedSchedule;
+
+        newOutstanding =
+          getScheduleRemainingTotal(updatedSchedule);
+
+        const existingCurtailments = Array.isArray(
+          loan.principalCurtailments,
+        )
+          ? loan.principalCurtailments
+          : [];
+
+        updatedLoan = {
+          ...updatedLoan,
+
+          outstanding: newOutstanding,
+
+          status:
+            newOutstanding === 0 ? "CLOSED" : "ACTIVE",
+
+          principalCurtailments: [
+            ...existingCurtailments,
+            {
+              amount: manualPrincipalAmount,
+              effectiveDate: paidDate,
+              receiptNumber:
+                receiptNumber || undefined,
+            },
+          ],
+        };
+      }
 
     // ========================================================
     // APPLY UPDATED SCHEDULE

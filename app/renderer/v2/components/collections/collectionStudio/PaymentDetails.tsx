@@ -492,8 +492,35 @@ export default function PaymentDetails() {
   // TOTAL SETTLEMENT REDUCTION
   // ==========================================================
 
-  const debtPaymentAmount = Math.max(0, finalCollection - penaltyAmount);
-  const settlementReduction = debtPaymentAmount + discountAmount;
+  const currentOutstanding =
+    safeNumber(reviewData.outstandingBalance);
+
+  // ==========================================================
+  // FINAL SETTLEMENT EXCESS -> OVERDUE
+  // ==========================================================
+
+  const excessOverdueAmount =
+    currentOutstanding > 0
+      ? Math.max(
+          0,
+          finalCollection - currentOutstanding,
+        )
+      : 0;
+
+  const effectivePenaltyAmount =
+    Math.max(
+      penaltyAmount,
+      excessOverdueAmount,
+    );
+
+  const debtPaymentAmount =
+    Math.max(
+      0,
+      finalCollection - effectivePenaltyAmount,
+    );
+
+  const settlementReduction =
+    debtPaymentAmount + discountAmount;
 
   // ==========================================================
   // SELECTED EMI STATE
@@ -615,8 +642,6 @@ export default function PaymentDetails() {
     // AUTHORITATIVE OUTSTANDING
     // --------------------------------------------------------
 
-    const currentOutstanding = safeNumber(reviewData.outstandingBalance);
-
     if (currentOutstanding <= 0) {
       alert("This loan has no outstanding balance.");
 
@@ -630,6 +655,18 @@ export default function PaymentDetails() {
     if (debtPaymentAmount > currentOutstanding) {
       alert(
         "Collection amount cannot be greater than the current outstanding balance.",
+      );
+
+      return false;
+    }
+
+    // --------------------------------------------------------
+    // MANUAL PRINCIPAL MUST BE PART OF ACTUAL DEBT CASH
+    // --------------------------------------------------------
+
+    if (manualPrincipal > debtPaymentAmount) {
+      alert(
+        "Manual Principal cannot be greater than the collection amount available for loan repayment.",
       );
 
       return false;
@@ -698,6 +735,13 @@ export default function PaymentDetails() {
       discountAmount,
 
       // ------------------------------------------------------
+        // OVERDUE / PENALTY
+        // ------------------------------------------------------
+
+        penaltyAmount: effectivePenaltyAmount,
+
+        // ------------------------------------------------------
+        // ------------------------------------------------------
       // MANUAL PRINCIPAL METADATA
       // ------------------------------------------------------
 
@@ -935,6 +979,10 @@ export default function PaymentDetails() {
           paidDate: saveData.receiptDate,
 
           discountAmount: saveData.discountAmount,
+
+          manualPrincipalAmount: safeNumber(
+            saveData.advanceAdjustment,
+          ),
           penaltyAmount: safeNumber(saveData.penaltyAmount),
         },
       );
