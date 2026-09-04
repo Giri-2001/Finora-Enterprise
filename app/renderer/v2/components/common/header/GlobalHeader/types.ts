@@ -14,6 +14,8 @@ export interface GlobalHeaderProps {
 
   canGoBack: boolean;
 
+  onRefreshCurrentPage?: () => void;
+
   onLogout: () => void;
 
   notificationUnreadCount?: number;

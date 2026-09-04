@@ -47,6 +47,8 @@ export default function ReceptionLogo({
 
   onClick,
 
+  title = "Go to Reception",
+
 }: ReceptionLogoProps) {
 
 
@@ -117,7 +119,7 @@ export default function ReceptionLogo({
         onClick
       }
 
-      title="Go to Reception"
+      title={title}
     >
 
       {/* ==========================================

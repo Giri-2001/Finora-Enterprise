@@ -1143,6 +1143,16 @@ function AuthenticatedV2Application({
   const page = navigation.page;
 
   // ==========================================================
+  // CURRENT PAGE REFRESH
+  // ==========================================================
+
+  const [pageRefreshKey, setPageRefreshKey] = useState<number>(0);
+
+  function handleRefreshCurrentPage(): void {
+    setPageRefreshKey((currentKey) => currentKey + 1);
+  }
+
+  // ==========================================================
   // OWNER NOTIFICATION UNREAD COUNT
   // ==========================================================
 
@@ -1631,6 +1641,7 @@ function AuthenticatedV2Application({
     <SessionGuard>
       <AppShell
         page={page}
+          pageRefreshKey={pageRefreshKey}
         onNavigate={handleNavigate}
         onBack={handleBack}
         canGoBack={
@@ -1639,6 +1650,7 @@ function AuthenticatedV2Application({
           customerWizardOpen ||
           navigation.stack.length > 0
         }
+          onRefreshCurrentPage={handleRefreshCurrentPage}
         onLogout={onLogout}
         notificationUnreadCount={notificationUnreadCount}
         onNotificationsClick={() => {
@@ -1769,4 +1781,3 @@ export default function App() {
 // ============================================================
 // END
 // ============================================================
-

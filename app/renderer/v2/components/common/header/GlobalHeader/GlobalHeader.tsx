@@ -108,6 +108,8 @@ export default function GlobalHeader({
 
   canGoBack,
 
+  onRefreshCurrentPage,
+
   onLogout,
 
   notificationUnreadCount = 0,
@@ -444,11 +446,8 @@ export default function GlobalHeader({
 
 
         <ReceptionLogo
-
-          onClick={() => {
-            /* Reception navigation */
-          }}
-
+          onClick={onRefreshCurrentPage}
+          title="Refresh current page"
         />
 
       </div>

@@ -64,11 +64,15 @@ interface AppShellProps {
 
   page: AppPage;
 
+  pageRefreshKey: number;
+
   onNavigate: (page: AppPage) => void;
 
   onBack: () => void;
 
   canGoBack: boolean;
+
+  onRefreshCurrentPage: () => void;
 
   onLogout: () => void;
 
@@ -88,11 +92,15 @@ export default function AppShell({
 
   page,
 
+  pageRefreshKey,
+
   onNavigate: _onNavigate,
 
   onBack,
 
   canGoBack,
+
+  onRefreshCurrentPage,
 
   onLogout,
 
@@ -193,6 +201,7 @@ export default function AppShell({
         department={department}
         onBack={onBack}
         canGoBack={canGoBack}
+        onRefreshCurrentPage={onRefreshCurrentPage}
         onLogout={onLogout}
         notificationUnreadCount={notificationUnreadCount}
         onNotificationsClick={onNotificationsClick}
@@ -211,6 +220,7 @@ export default function AppShell({
       ===================================================== */}
 
       <div
+        key={`${page}:${pageRefreshKey}`}
         style={{
           width: "100%",
 

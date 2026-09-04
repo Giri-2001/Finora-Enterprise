@@ -9,4 +9,6 @@ export interface ReceptionLogoProps {
 
   onClick?: () => void;
 
+  title?: string;
+
 }
