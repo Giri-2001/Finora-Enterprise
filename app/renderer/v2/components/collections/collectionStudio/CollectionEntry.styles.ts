@@ -1,4 +1,4 @@
-// ============================================================
+﻿// ============================================================
 // FINORA ENTERPRISE OS™
 //
 // COLLECTION STUDIO™
@@ -907,6 +907,8 @@ export const collectionEntryStyles: Record<string, CSSProperties> = {
     background: THEME.surfaceSoft,
 
     opacity: 0.72,
+
+    cursor: "not-allowed",
   },
 
   // ==========================================================

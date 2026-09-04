@@ -1,4 +1,4 @@
-/* ===========================================================
+﻿/* ===========================================================
    FINORA ENTERPRISE OS™
 
    GOLD LOAN ENGINE™
@@ -1741,7 +1741,7 @@ export function getGoldLockerCardCursorStyle(
   canAllocate: boolean,
 ): CSSProperties {
   return {
-    cursor: canAllocate ? "pointer" : "default",
+    cursor: canAllocate ? "pointer" : "not-allowed",
   };
 }
 

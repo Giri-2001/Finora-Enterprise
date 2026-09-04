@@ -1,0 +1,83 @@
+﻿/* ===========================================================
+   FINORA ENTERPRISE OS™
+
+   GLOBAL INTERACTION POLICY
+
+   RESPONSIBILITY:
+   - Prevent accidental text selection across application UI
+   - Preserve text selection inside editable form controls
+   - Provide clear disabled / readonly cursor feedback
+   - Keep intentional copyable content available by opt-in
+
+   IMPORTANT:
+   - No pointer-events suppression.
+   - Disabled semantics remain owned by components.
+   - Readonly semantics remain owned by components.
+=========================================================== */
+
+/* ===========================================================
+   1. APPLICATION UI TEXT
+=========================================================== */
+
+html,
+body,
+#root,
+#root * {
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+
+/* ===========================================================
+   2. EDITABLE TEXT CONTROLS
+=========================================================== */
+
+#root input:not([readonly]):not(:disabled),
+#root textarea:not([readonly]):not(:disabled),
+#root [contenteditable="true"] {
+  -webkit-user-select: text;
+  user-select: text;
+}
+
+
+/* ===========================================================
+   3. READONLY CONTROLS
+=========================================================== */
+
+#root input[readonly],
+#root textarea[readonly],
+#root [aria-readonly="true"] {
+  -webkit-user-select: none !important;
+  user-select: none !important;
+
+  cursor: not-allowed !important;
+
+  caret-color: transparent;
+}
+
+
+/* ===========================================================
+   4. DISABLED NATIVE CONTROLS
+=========================================================== */
+
+#root button:disabled,
+#root input:disabled,
+#root select:disabled,
+#root textarea:disabled,
+#root option:disabled,
+#root [aria-disabled="true"] {
+  cursor: not-allowed !important;
+}
+
+
+/* ===========================================================
+   5. OPTIONAL COPYABLE CONTENT
+   -----------------------------------------------------------
+   Use only where FINORA intentionally permits text copying.
+=========================================================== */
+
+#root .finora-allow-select,
+#root .finora-allow-select * {
+  -webkit-user-select: text !important;
+  user-select: text !important;
+}

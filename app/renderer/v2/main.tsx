@@ -1,7 +1,9 @@
-import React from "react";
+﻿import React from "react";
 import { createRoot } from "react-dom/client";
 
 import App from "./app/App";
+
+import "./styles/finora.interactions.css";
 
 import {
   ThemeProvider,
@@ -28,6 +30,16 @@ if (!rootElement) {
   );
 
 }
+
+
+/* ===========================================================
+   FINORA GLOBAL TEXT INPUT POLICY
+   -----------------------------------------------------------
+   Browser spelling diagnostics are disabled globally.
+   FINORA business validation remains authoritative.
+=========================================================== */
+
+rootElement.setAttribute("spellcheck", "false");
 
 
 createRoot(

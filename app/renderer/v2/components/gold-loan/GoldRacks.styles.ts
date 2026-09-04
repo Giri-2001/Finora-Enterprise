@@ -1048,7 +1048,7 @@ export function getGoldRackCardCursorStyle(
   canAllocate: boolean,
 ): CSSProperties {
   return {
-    cursor: canAllocate ? "pointer" : "default",
+    cursor: canAllocate ? "pointer" : "not-allowed",
   };
 }
 
