@@ -329,7 +329,7 @@ export default function NomineePreviewCard({
           icon={
             IdCard
           }
-          label="FINORA ID"
+          label="CUSTOMER NUMBER"
           value={
             value.nomineeCustomerId
           }
@@ -396,7 +396,7 @@ export default function NomineePreviewCard({
         {
           isCustomerLinked
             ? "Existing FINORA customer linked successfully."
-            : "Enter a FINORA Customer ID to link an existing customer."
+            : "Enter the existing customer's 6-digit Customer Number to link them."
         }
 
       </div>

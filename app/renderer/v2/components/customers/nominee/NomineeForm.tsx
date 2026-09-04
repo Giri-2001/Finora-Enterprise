@@ -57,6 +57,8 @@ interface NomineeFormProps {
   ) => void;
 
   isCustomerLinked?: boolean;
+
+  customerNumberLocked?: boolean;
 }
 
 
@@ -73,6 +75,8 @@ function Field({
   placeholder,
   helper,
   type = "text",
+  inputMode,
+  maxLength,
   styles,
 }: {
   label: string;
@@ -92,6 +96,18 @@ function Field({
   helper?: string;
 
   type?: string;
+
+  inputMode?:
+    | "text"
+    | "numeric"
+    | "tel"
+    | "email"
+    | "search"
+    | "url"
+    | "decimal"
+    | "none";
+
+  maxLength?: number;
 
   styles: ReturnType<
     typeof createNomineeFormStyles
@@ -118,6 +134,8 @@ function Field({
           readOnly={readOnly}
           placeholder={placeholder}
           autoComplete="off"
+          inputMode={inputMode}
+          maxLength={maxLength}
           style={
             readOnly
               ? styles.readonlyInputStyle
@@ -155,6 +173,8 @@ export default function NomineeForm({
   onChange,
 
   isCustomerLinked = false,
+
+  customerNumberLocked = false,
 
 }: NomineeFormProps) {
 
@@ -228,7 +248,7 @@ const nomineeTokens =
       <div style={styles.gridStyle}>
 
         <Field
-          label="FINORA Customer ID"
+          label="Customer Number"
           value={
             value.nomineeCustomerId
           }
@@ -241,11 +261,18 @@ const nomineeTokens =
           icon={
             <User size={15} />
           }
-          placeholder="FIN-CUS-000001"
+          placeholder="Enter your previous member ID"
+          inputMode="numeric"
+          maxLength={6}
+          readOnly={
+            customerNumberLocked
+          }
           helper={
             isCustomerLinked
               ? "Registered FINORA customer linked successfully."
-              : "Enter a registered FINORA Customer ID."
+              : customerNumberLocked
+                ? "Customer Number is disabled while manual nominee details are entered."
+                : "Enter the existing customer's 6-digit Customer Number."
           }
           styles={styles}
         />
@@ -266,7 +293,10 @@ const nomineeTokens =
             <UserRound size={15} />
           }
           readOnly={
-            isCustomerLinked
+            isCustomerLinked ||
+            Boolean(
+              value.nomineeCustomerId.trim(),
+            )
           }
           placeholder="Nominee full name"
           helper={
@@ -293,7 +323,10 @@ const nomineeTokens =
             <Phone size={15} />
           }
           readOnly={
-            isCustomerLinked
+            isCustomerLinked ||
+            Boolean(
+              value.nomineeCustomerId.trim(),
+            )
           }
           placeholder="Nominee mobile number"
           helper={

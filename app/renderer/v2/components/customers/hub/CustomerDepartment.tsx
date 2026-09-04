@@ -74,6 +74,9 @@ import { StorageMode } from "../../../storage/storage.types";
 
 const STORAGE_MODE_SESSION_KEY = "FINORA_STORAGE_MODE";
 
+const CUSTOMER_DEPARTMENT_REFRESH_EVENT =
+  "FINORA_V2_CUSTOMER_DEPARTMENT_REFRESH";
+
 // ============================================================
 // CUSTOMER WIZARD NAVIGATION EVENTS
 // ============================================================
@@ -203,10 +206,30 @@ export default function CustomerDepartment({
       setCustomerDataVersion((previous) => previous + 1);
     }
 
-    window.addEventListener("FINORA_LOAN_UPDATED", handleLoanUpdate);
+    function handleCustomerDepartmentRefresh(): void {
+      setCustomerDataVersion((previous) => previous + 1);
+    }
+
+    window.addEventListener(
+      "FINORA_LOAN_UPDATED",
+      handleLoanUpdate,
+    );
+
+    window.addEventListener(
+      CUSTOMER_DEPARTMENT_REFRESH_EVENT,
+      handleCustomerDepartmentRefresh,
+    );
 
     return () => {
-      window.removeEventListener("FINORA_LOAN_UPDATED", handleLoanUpdate);
+      window.removeEventListener(
+        "FINORA_LOAN_UPDATED",
+        handleLoanUpdate,
+      );
+
+      window.removeEventListener(
+        CUSTOMER_DEPARTMENT_REFRESH_EVENT,
+        handleCustomerDepartmentRefresh,
+      );
     };
   }, []);
 

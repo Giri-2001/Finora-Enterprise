@@ -238,6 +238,9 @@ const CUSTOMER_WIZARD_CLOSE_EVENT = "FINORA_CUSTOMER_WIZARD_CLOSE";
 
 const CUSTOMER_WIZARD_GLOBAL_BACK_EVENT = "FINORA_CUSTOMER_WIZARD_GLOBAL_BACK";
 
+const CUSTOMER_DEPARTMENT_REFRESH_EVENT =
+  "FINORA_V2_CUSTOMER_DEPARTMENT_REFRESH";
+
 // ============================================================
 // LOAN STUDIO NAVIGATION EVENTS
 // ============================================================
@@ -1149,7 +1152,19 @@ function AuthenticatedV2Application({
   const [pageRefreshKey, setPageRefreshKey] = useState<number>(0);
 
   function handleRefreshCurrentPage(): void {
-    setPageRefreshKey((currentKey) => currentKey + 1);
+    if (page === "customerDepartment") {
+      window.dispatchEvent(
+        new CustomEvent(
+          CUSTOMER_DEPARTMENT_REFRESH_EVENT,
+        ),
+      );
+
+      return;
+    }
+
+    setPageRefreshKey(
+      (currentKey) => currentKey + 1,
+    );
   }
 
   // ==========================================================

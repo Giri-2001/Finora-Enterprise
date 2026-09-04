@@ -75,6 +75,11 @@ import {
   startFinoraProcessing,
   stopFinoraProcessing,
 } from "../../../common/feedback/finoraProcessing.service";
+import {
+  finoraError,
+  finoraSuccess,
+  finoraWarning,
+} from "../../../common/dialog/finoraDialog.service";
 
 
 /* ==========================================================
@@ -804,23 +809,26 @@ export default function Step6Review({
     );
 
 
-  const kycDocumentsProvided =
+  const nomineeAdded =
     Boolean(
-      aadhaar ||
-      pan ||
-      voterId ||
-      drivingLicence,
+      (
+        nomineeName ||
+        nomineeCustomerId
+      ) &&
+      nomineeRelationship,
+    );
+
+
+  const aadhaarProvided =
+    Boolean(
+      aadhaar,
     );
 
 
   const kycVerified =
-    false;
-
-
-  const nomineeAdded =
     Boolean(
-      nomineeName ||
-      nomineeCustomerId,
+      aadhaarProvided &&
+      nomineeAdded,
     );
 
 
@@ -859,9 +867,16 @@ export default function Step6Review({
 
     {
       label:
-        kycDocumentsProvided
-          ? "KYC Submitted — Verification Pending"
-          : "KYC Information Required",
+        kycVerified
+          ? "KYC Verified"
+          : (
+              !aadhaarProvided &&
+              !nomineeAdded
+                ? "KYC Pending — Aadhaar & Nominee Required"
+                : !aadhaarProvided
+                  ? "KYC Pending — Aadhaar Required"
+                  : "KYC Pending — Nominee Required"
+            ),
 
       completed:
         kycVerified,
@@ -894,8 +909,21 @@ export default function Step6Review({
 
       if (!identityComplete) {
 
-        console.warn(
-          "FINORA REVIEW: Identity information is incomplete.",
+        const missingIdentityFields =
+          [
+            !customerName
+              ? "Full Name"
+              : "",
+
+            !mobileNumber
+              ? "Mobile Number"
+              : "",
+          ]
+            .filter(Boolean)
+            .join(", ");
+
+        await finoraWarning(
+          `Complete required Customer fields before saving: ${missingIdentityFields}.`,
         );
 
         return;
@@ -905,8 +933,8 @@ export default function Step6Review({
 
       if (!addressComplete) {
 
-        console.warn(
-          "FINORA REVIEW: Address information is incomplete.",
+        await finoraWarning(
+          "Complete the required Customer Address before saving.",
         );
 
         return;
@@ -916,8 +944,19 @@ export default function Step6Review({
 
       if (!nomineeAdded) {
 
-        console.warn(
-          "FINORA REVIEW: Nominee information is incomplete.",
+        await finoraWarning(
+          "Add or link Nominee information before saving the Customer.",
+        );
+
+        return;
+
+      }
+
+
+      if (!nomineeRelationship) {
+
+        await finoraWarning(
+          "Select the Nominee Relationship before saving the Customer.",
         );
 
         return;
@@ -961,6 +1000,10 @@ export default function Step6Review({
               "FINORA EDIT ERROR: Original customer profile not found.",
             );
 
+            await finoraError(
+              "The Customer profile could not be loaded for editing. Please reopen the Customer and try again.",
+            );
+
             return;
 
           }
@@ -998,8 +1041,13 @@ export default function Step6Review({
 
                           nomineeId:
                             nomineeCustomerId ||
-                            existingNominees[0]?.nomineeId ||
-                            `NOM-${Date.now()}`,
+                              (
+                                existingNominees[0]?.nomineeId?.startsWith(
+                                  "NOM-",
+                                )
+                                  ? existingNominees[0].nomineeId
+                                  : `NOM-${Date.now()}`
+                              ),
 
                           fullName:
                             nomineeName ||
@@ -1337,6 +1385,14 @@ export default function Step6Review({
 
               ...existingCustomer.kyc,
 
+
+              overallStatus:
+
+                kycVerified
+
+                  ? KYCStatus.VERIFIED
+
+                  : KYCStatus.PENDING,
               ...(aadhaar
                 ? {
 
@@ -1348,8 +1404,9 @@ export default function Step6Review({
                         aadhaar,
 
                       status:
-                        existingCustomer.kyc.aadhaar?.status ??
-                        KYCStatus.PENDING,
+                        kycVerified
+                          ? KYCStatus.VERIFIED
+                          : KYCStatus.PENDING,
 
                     },
 
@@ -1441,6 +1498,11 @@ export default function Step6Review({
               result.error,
             );
 
+            await finoraError(
+              result.error ??
+                "Customer changes could not be saved. Please try again.",
+            );
+
             return;
 
           }
@@ -1449,6 +1511,11 @@ export default function Step6Review({
           console.info(
             "FINORA CUSTOMER UPDATED:",
             updatedCustomer.identity.customerId,
+          );
+
+
+          await finoraSuccess(
+            `Customer updated successfully. Customer ID: ${updatedCustomer.identity.customerId}`,
           );
 
 
@@ -1936,7 +2003,9 @@ export default function Step6Review({
                       aadhaar,
 
                     status:
-                      KYCStatus.PENDING,
+                      kycVerified
+                      ? KYCStatus.VERIFIED
+                      : KYCStatus.PENDING,
 
                   },
 
@@ -1992,7 +2061,9 @@ export default function Step6Review({
               : {}),
 
             overallStatus:
-              KYCStatus.PENDING,
+              kycVerified
+                ? KYCStatus.VERIFIED
+                : KYCStatus.PENDING,
 
           },
 
@@ -2128,6 +2199,11 @@ export default function Step6Review({
             result.error,
           );
 
+          await finoraError(
+            result.error ??
+              "Customer could not be saved. Please try again.",
+          );
+
           return;
 
         }
@@ -2171,6 +2247,24 @@ export default function Step6Review({
 
 
         
+
+
+        await finoraSuccess(
+          `Customer saved successfully. Customer ID: ${finalCustomerId}`,
+        );
+
+      } catch (error) {
+
+        console.error(
+          "FINORA CUSTOMER SAVE ERROR:",
+          error,
+        );
+
+        await finoraError(
+          error instanceof Error
+            ? error.message
+            : "Customer could not be saved. Please try again.",
+        );
 
       } finally {
 

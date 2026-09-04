@@ -55,6 +55,8 @@ import {
   customerService,
 } from "../../../../services/customer/customerService";
 
+import { getSession } from "../../../../store/authStore";
+
 
 /* ===========================================================
    NOMINEE PRESENTATION
@@ -123,6 +125,32 @@ interface Step5NomineeProps {
 
 
 /* ===========================================================
+   NOMINEE CUSTOMER NUMBER
+=========================================================== */
+
+function resolveNomineeCustomerNumber(
+  value: string,
+): string {
+
+  const normalizedValue =
+    value.trim();
+
+  if (
+    !normalizedValue ||
+    normalizedValue.startsWith("NOM-")
+  ) {
+    return "";
+  }
+
+  const match =
+    normalizedValue.match(
+      /(\d{6})$/,
+    );
+
+  return match?.[1] ?? "";
+}
+
+/* ===========================================================
    COMPONENT
 =========================================================== */
 
@@ -173,8 +201,10 @@ export default function Step5Nominee({
   ] = useState<NomineeFormData>(() => ({
 
     nomineeCustomerId:
-      wizardData.nomineeCustomerId ??
-      "",
+      resolveNomineeCustomerNumber(
+        wizardData.nomineeCustomerId ??
+        "",
+      ),
 
     nomineeName:
       wizardData.nomineeName ??
@@ -211,28 +241,65 @@ export default function Step5Nominee({
   ] = useState(false);
 
 
+  const manualNomineeEntryActive =
+    !isCustomerLinked &&
+    !nominee.nomineeCustomerId.trim() &&
+    Boolean(
+      nominee.nomineeName.trim() ||
+      nominee.phoneNumber.trim(),
+    );
+
+
   /* =========================================================
      CUSTOMER LOOKUP
   ========================================================= */
 
   useEffect(() => {
 
-    const customerId =
+    const customerNumber =
       nominee.nomineeCustomerId.trim();
 
 
-    if (!customerId) {
-
-      setLinkedCustomerName(
-        nominee.nomineeName,
-      );
+    if (
+      !/^\d{6}$/.test(
+        customerNumber,
+      )
+    ) {
 
       setIsCustomerLinked(
         false,
       );
 
       return;
+    }
 
+
+    const session =
+      getSession();
+
+    const activeBusinessId =
+      String(
+        session?.businessId ??
+        "",
+      ).trim();
+
+    const activeBranchId =
+      String(
+        session?.branchId ??
+        "",
+      ).trim();
+
+
+    if (
+      !activeBusinessId ||
+      !activeBranchId
+    ) {
+
+      setIsCustomerLinked(
+        false,
+      );
+
+      return;
     }
 
 
@@ -246,56 +313,104 @@ export default function Step5Nominee({
       try {
 
         const result =
-          await customerService.getById(
-            customerId,
-          );
+          await customerService.getAll();
 
 
         if (cancelled) {
-
           return;
-
         }
 
 
-        if (!result.success) {
-
-          setLinkedCustomerName(
-            nominee.nomineeName,
-          );
+        if (
+          !result.success ||
+          !result.data
+        ) {
 
           setIsCustomerLinked(
             false,
           );
 
           return;
-
         }
 
 
         const customer =
-          result.data;
+          result.data.find(
+            (candidate) => {
+
+              const identity =
+                candidate.identity;
+
+              if (
+                identity.businessId !==
+                  activeBusinessId ||
+                identity.branchId !==
+                  activeBranchId ||
+                !identity.isActive ||
+                identity.isDeleted
+              ) {
+
+                return false;
+              }
 
 
-        if (!customer) {
+              const candidateNumber =
+                resolveNomineeCustomerNumber(
+                  identity.customerId,
+                );
 
-          setLinkedCustomerName(
-            nominee.nomineeName,
+
+              return (
+                candidateNumber ===
+                customerNumber
+              );
+            },
           );
+
+
+        if (
+          cancelled ||
+          !customer
+        ) {
 
           setIsCustomerLinked(
             false,
           );
 
           return;
+        }
 
+
+        const fullCustomerId =
+          customer.identity.customerId;
+
+
+        // ------------------------------------------------------
+        // Customer cannot nominate their own profile.
+        // ------------------------------------------------------
+
+        if (
+          wizardData.customerId &&
+          fullCustomerId ===
+            wizardData.customerId
+        ) {
+
+          setIsCustomerLinked(
+            false,
+          );
+
+          updateWizardData({
+            nomineeCustomerId:
+              "",
+          });
+
+          return;
         }
 
 
         const customerName =
           customer.basic.fullName ||
           "";
-
 
         const customerPhone =
           customer.basic.mobileNumber ||
@@ -317,6 +432,9 @@ export default function Step5Nominee({
 
             ...previous,
 
+            nomineeCustomerId:
+              customerNumber,
+
             nomineeName:
               customerName,
 
@@ -327,10 +445,15 @@ export default function Step5Nominee({
         );
 
 
+        // ------------------------------------------------------
+        // UI keeps only the six-digit Customer Number.
+        // Wizard data keeps the authoritative full FINORA ID.
+        // ------------------------------------------------------
+
         updateWizardData({
 
           nomineeCustomerId:
-            customerId,
+            fullCustomerId,
 
           nomineeName:
             customerName,
@@ -343,20 +466,13 @@ export default function Step5Nominee({
       } catch (error) {
 
         if (cancelled) {
-
           return;
-
         }
 
 
         console.error(
           "FINORA NOMINEE CUSTOMER LOOKUP ERROR:",
           error,
-        );
-
-
-        setLinkedCustomerName(
-          nominee.nomineeName,
         );
 
 
@@ -374,12 +490,14 @@ export default function Step5Nominee({
 
     return () => {
 
-      cancelled = true;
+      cancelled =
+        true;
 
     };
 
   }, [
     nominee.nomineeCustomerId,
+    wizardData.customerId,
   ]);
 
 
@@ -414,10 +532,29 @@ export default function Step5Nominee({
       "nomineeCustomerId"
     ) {
 
+      setIsCustomerLinked(
+        false,
+      );
+
+      setNominee(
+        (previous) => ({
+
+          ...previous,
+
+          relationship:
+            "",
+
+        }),
+      );
+
+
       updateWizardData({
 
         nomineeCustomerId:
-          value,
+          "",
+
+        nomineeRelationship:
+          "",
 
       });
 
@@ -431,12 +568,37 @@ export default function Step5Nominee({
       "nomineeName"
     ) {
 
+      setNominee(
+        (previous) => ({
+
+          ...previous,
+
+          nomineeCustomerId:
+            "",
+
+          nomineeName:
+            value,
+
+
+          relationship:
+            "",
+}),
+      );
+
+
       updateWizardData({
+
+        nomineeCustomerId:
+          "",
 
         nomineeName:
           value,
 
-      });
+
+
+        nomineeRelationship:
+          "",
+});
 
 
       setLinkedCustomerName(
@@ -459,12 +621,42 @@ export default function Step5Nominee({
       "phoneNumber"
     ) {
 
+      setNominee(
+        (previous) => ({
+
+          ...previous,
+
+          nomineeCustomerId:
+            "",
+
+          phoneNumber:
+            value,
+
+
+          relationship:
+            "",
+}),
+      );
+
+
       updateWizardData({
+
+        nomineeCustomerId:
+          "",
 
         nomineePhoneNumber:
           value,
 
-      });
+
+
+        nomineeRelationship:
+          "",
+});
+
+
+      setIsCustomerLinked(
+        false,
+      );
 
       return;
 
@@ -542,6 +734,10 @@ export default function Step5Nominee({
               isCustomerLinked
             }
 
+            customerNumberLocked={
+              manualNomineeEntryActive
+            }
+
           />
 
         </div>
@@ -580,9 +776,7 @@ export default function Step5Nominee({
 
             isCustomerLinked={
               isCustomerLinked
-            }
-
-          />
+            }/>
 
         </div>
 
@@ -615,7 +809,13 @@ export default function Step5Nominee({
             }
 
             kycVerified={
-              false
+              Boolean(
+                wizardData.aadhaar?.trim() &&
+                (
+                  nominee.nomineeCustomerId.trim() ||
+                  nominee.nomineeName.trim()
+                )
+              )
             }
 
           />

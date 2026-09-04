@@ -313,7 +313,7 @@ export default function CustomerSummary({
 
             {
               kycVerified
-                ? "KYC Ready"
+                ? "KYC Verified"
                 : "KYC Pending"
             }
 

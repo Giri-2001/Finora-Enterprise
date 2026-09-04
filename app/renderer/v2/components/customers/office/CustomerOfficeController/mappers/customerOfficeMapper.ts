@@ -438,7 +438,11 @@ export default async function customerOfficeMapper(
               (event) => event.type === "CUSTOMER_CREATED",
             )?.occurredAt ?? "",
 
-          kycVerified: true,
+          kycVerified:
+            Boolean(
+              customer.kyc?.aadhaar?.documentNumber &&
+              customer.nominee?.nominees?.length,
+            ),
 
           active: customer.identity.isActive,
 

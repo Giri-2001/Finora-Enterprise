@@ -382,7 +382,7 @@ const sharedButtonStyle:
 
     fontSize: "14px",
 
-    fontWeight: 800,
+    fontWeight: 850,
 
     lineHeight: 1.2,
 
@@ -412,16 +412,25 @@ export function createConfirmButtonStyle(
       ? THEME.danger
       : kind === "success"
         ? THEME.success
-        : THEME.primary;
+        : kind === "warning"
+          ? THEME.warning
+          : THEME.primary;
+
+  const foreground =
+    kind === "warning"
+      ? THEME.textPrimary
+      : THEME.primaryText;
 
   return {
     ...sharedButtonStyle,
 
-    border: "1px solid transparent",
+    border:
+      `1px solid color-mix(in srgb, ${background} 72%, ${THEME.border})`,
 
     background,
 
-    color: THEME.primaryText,
+    color:
+      foreground,
 
     boxShadow:
       `0 8px 20px color-mix(in srgb, ${background} 28%, transparent)`,

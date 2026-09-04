@@ -249,6 +249,10 @@ const TOTAL_STEPS =
   3;
 
 
+const CUSTOMER_DEPARTMENT_REFRESH_EVENT =
+  "FINORA_V2_CUSTOMER_DEPARTMENT_REFRESH";
+
+
 const STORAGE_KEY =
   "finora_customer_draft";
 
@@ -568,6 +572,18 @@ export default function CustomerWizard({
 
 
   const [
+    editRefreshNonce,
+    setEditRefreshNonce,
+  ] = useState(0);
+
+
+  const [
+    editHydrationRevision,
+    setEditHydrationRevision,
+  ] = useState(0);
+
+
+  const [
     loadingDraft,
     setLoadingDraft,
   ] = useState(true);
@@ -632,6 +648,53 @@ export default function CustomerWizard({
       currentStep,
     ]);
 
+
+  /* =========================================================
+     EDIT CUSTOMER — CURRENT PAGE REFRESH
+
+     FINORA logo refresh keeps the active Wizard Step but
+     discards unsaved edit changes by reloading the persisted
+     Customer profile.
+
+     Create mode intentionally keeps its existing draft flow.
+  ========================================================= */
+
+  useEffect(() => {
+
+    function handleCustomerDepartmentRefresh():
+      void {
+
+      if (!isEditMode) {
+        return;
+      }
+
+
+      setEditRefreshNonce(
+        (previous) =>
+          previous + 1,
+      );
+
+    }
+
+
+    window.addEventListener(
+      CUSTOMER_DEPARTMENT_REFRESH_EVENT,
+      handleCustomerDepartmentRefresh,
+    );
+
+
+    return () => {
+
+      window.removeEventListener(
+        CUSTOMER_DEPARTMENT_REFRESH_EVENT,
+        handleCustomerDepartmentRefresh,
+      );
+
+    };
+
+  }, [
+    isEditMode,
+  ]);
 
   /* =========================================================
      LOAD EXISTING CUSTOMER FOR EDIT
@@ -730,9 +793,21 @@ export default function CustomerWizard({
         );
 
 
-        setCurrentStep(
-          1,
+        setEditHydrationRevision(
+          (previous) =>
+            previous + 1,
         );
+
+
+        if (
+          editRefreshNonce === 0
+        ) {
+
+          setCurrentStep(
+            1,
+          );
+
+        }
 
       } catch (error) {
 
@@ -779,6 +854,7 @@ export default function CustomerWizard({
 
   }, [
     editCustomer,
+    editRefreshNonce,
   ]);
 
 
@@ -1500,6 +1576,10 @@ case 3:
 
         <Step5Nominee
 
+          key={
+            `nominee-${editHydrationRevision}`
+          }
+
           wizardData={
             wizardData
           }
@@ -1572,6 +1652,7 @@ case 3:
       currentStep,
       updateWizardData,
       wizardData,
+      editHydrationRevision,
       resetWizard,
       originalCustomerProfile,
       isEditMode,
