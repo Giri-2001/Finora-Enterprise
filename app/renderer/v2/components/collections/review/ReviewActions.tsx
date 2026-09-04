@@ -1,4 +1,4 @@
-// ============================================================
+﻿// ============================================================
 // FINORA ENTERPRISE OS™
 //
 // COLLECTIONS ENGINE
@@ -44,6 +44,17 @@ import {
   approveCollection,
 } from "../../../services/collection/collectionService";
 
+import {
+  finoraError,
+  finoraSuccess,
+  finoraWarning,
+} from "../../common/dialog/finoraDialog.service";
+
+import {
+  startFinoraProcessing,
+  stopFinoraProcessing,
+} from "../../common/feedback/finoraProcessing.service";
+
 
 // ============================================================
 // COMPONENT
@@ -83,7 +94,7 @@ export default function ReviewActions() {
       !reviewData.loanId
     ) {
 
-      alert(
+      await finoraWarning(
         "Please select loan",
       );
 
@@ -101,7 +112,7 @@ export default function ReviewActions() {
       reviewData.paymentAmount <= 0
     ) {
 
-      alert(
+      await finoraWarning(
         "Please enter collection amount",
       );
 
@@ -113,6 +124,11 @@ export default function ReviewActions() {
     // ========================================================
     // COLLECTION WORKFLOW
     // ========================================================
+
+    const processingId =
+      startFinoraProcessing(
+        "Completing Collection...",
+      );
 
     try {
 
@@ -171,7 +187,11 @@ export default function ReviewActions() {
       // SUCCESS
       // ------------------------------------------------------
 
-      alert(
+      stopFinoraProcessing(
+        processingId,
+      );
+
+      await finoraSuccess(
         "Collection Completed Successfully",
       );
 
@@ -185,10 +205,18 @@ export default function ReviewActions() {
       );
 
 
-      alert(
+      stopFinoraProcessing(
+        processingId,
+      );
+
+      await finoraError(
         "Collection failed",
       );
 
+    } finally {
+      stopFinoraProcessing(
+        processingId,
+      );
     }
 
   }

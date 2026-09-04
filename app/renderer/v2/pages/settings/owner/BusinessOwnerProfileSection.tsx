@@ -1,4 +1,4 @@
-// ============================================================
+﻿// ============================================================
 // FINORA ENTERPRISE OS™
 //
 // ENTERPRISE SETTINGS
@@ -66,6 +66,12 @@ import BusinessOwnerProfileForm from "./BusinessOwnerProfileForm";
 import type {
   BusinessOwnerProfileEditableField,
 } from "./BusinessOwnerProfileForm.types";
+
+
+import {
+  startFinoraProcessing,
+  stopFinoraProcessing,
+} from "../../../components/common/feedback/finoraProcessing.service";
 
 // ============================================================
 // COMPONENT
@@ -451,6 +457,11 @@ export default function BusinessOwnerProfileSection() {
       true,
     );
 
+    const processingId =
+      startFinoraProcessing(
+        "Saving Owner Profile...",
+      );
+
     setFeedback(
       null,
     );
@@ -511,6 +522,10 @@ export default function BusinessOwnerProfileSection() {
       });
 
     } finally {
+
+      stopFinoraProcessing(
+        processingId,
+      );
 
       setSaving(
         false,

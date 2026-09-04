@@ -1,4 +1,4 @@
-// ============================================================
+﻿// ============================================================
 // FINORA ENTERPRISE OS™
 //
 // ENTERPRISE LOGIN
@@ -47,6 +47,11 @@
 import type {
   KeyboardEvent as ReactKeyboardEvent,
 } from "react";
+
+import {
+  startFinoraProcessing,
+  stopFinoraProcessing,
+} from "../../components/common/feedback/finoraProcessing.service";
 
 import {
   useEffect,
@@ -671,6 +676,11 @@ export default function Login({
 
     setUsbAccessBusy(true);
 
+    const processingId =
+      startFinoraProcessing(
+        "Requesting USB Storage Access...",
+      );
+
     try {
 
       const result =
@@ -740,6 +750,10 @@ export default function Login({
       );
 
     } finally {
+
+      stopFinoraProcessing(
+        processingId,
+      );
 
       setUsbAccessBusy(false);
 
@@ -859,6 +873,11 @@ export default function Login({
 
 
     setLoginBusy(true);
+
+    const processingId =
+      startFinoraProcessing(
+        "Signing in to FINORA...",
+      );
 
 
     try {
@@ -1051,6 +1070,10 @@ export default function Login({
       );
 
     } finally {
+
+      stopFinoraProcessing(
+        processingId,
+      );
 
       setLoginBusy(false);
 

@@ -1,4 +1,4 @@
-// ============================================================
+﻿// ============================================================
 // FINORA ENTERPRISE OS™
 //
 // V2 CUSTOMER HOOK
@@ -60,6 +60,11 @@ import type {
 import {
   customerService,
 } from "../../services/customer/customerService";
+
+import {
+  startFinoraProcessing,
+  stopFinoraProcessing,
+} from "../../components/common/feedback/finoraProcessing.service";
 
 
 // ============================================================
@@ -334,6 +339,11 @@ export function useCustomer() {
         customerId: string,
       ): Promise<void> => {
 
+        const processingId =
+          startFinoraProcessing(
+            "Archiving Customer...",
+          );
+
         try {
 
           setError(
@@ -455,6 +465,10 @@ export function useCustomer() {
             message,
           );
 
+        } finally {
+          stopFinoraProcessing(
+            processingId,
+          );
         }
 
       },
@@ -473,6 +487,11 @@ export function useCustomer() {
       async (
         customerId: string,
       ): Promise<void> => {
+
+        const processingId =
+          startFinoraProcessing(
+            "Restoring Customer...",
+          );
 
         try {
 
@@ -595,6 +614,10 @@ export function useCustomer() {
             message,
           );
 
+        } finally {
+          stopFinoraProcessing(
+            processingId,
+          );
         }
 
       },
@@ -613,6 +636,11 @@ export function useCustomer() {
       async (
         customerId: string,
       ): Promise<void> => {
+
+        const processingId =
+          startFinoraProcessing(
+            "Deleting Customer...",
+          );
 
         try {
 
@@ -676,6 +704,10 @@ export function useCustomer() {
             message,
           );
 
+        } finally {
+          stopFinoraProcessing(
+            processingId,
+          );
         }
 
       },

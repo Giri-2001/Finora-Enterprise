@@ -1,4 +1,4 @@
-// ============================================================
+﻿// ============================================================
 // FINORA ENTERPRISE OS™
 // LOAN STUDIO STATE / BUSINESS ENGINE
 //
@@ -134,6 +134,17 @@ import { storageManager } from "../../../../../storage/storageManager";
 import type { LoanReviewData } from "../../../../loans/review/types";
 
 import type { LoanStudioProps } from "./LoanStudio.types";
+
+import {
+  finoraError,
+  finoraSuccess,
+  finoraWarning,
+} from "../../../../common/dialog/finoraDialog.service";
+
+import {
+  startFinoraProcessing,
+  stopFinoraProcessing,
+} from "../../../../common/feedback/finoraProcessing.service";
 
 import {
   clearLoanWorkspaceDraft,
@@ -901,6 +912,27 @@ export function useLoanStudio({
   const [isLoanProcessing, setIsLoanProcessing] =
     useState(false);
 
+  /* ==========================================================
+     FINORA GLOBAL LOAN PROCESSING
+  ========================================================== */
+
+  useEffect(() => {
+    if (!isLoanProcessing) {
+      return;
+    }
+
+    const processingId =
+      startFinoraProcessing(
+        "Creating Loan...",
+      );
+
+    return () => {
+      stopFinoraProcessing(
+        processingId,
+      );
+    };
+  }, [isLoanProcessing]);
+
   const loanStatus = loanApproved ? "Approved" : "Pending Approval";
 
   /* ==========================================================
@@ -1297,8 +1329,12 @@ export function useLoanStudio({
      - successful Loan creation
   ========================================================== */
 
-  async function persistCurrentLoanWorkspaceDraft():
-    Promise<boolean> {
+  async function persistCurrentLoanWorkspaceDraft(
+    overrides: {
+      disbursementSavedAt?: string;
+      disbursementDraftStatus?: "Draft" | "Completed";
+    } = {},
+  ): Promise<boolean> {
     const existingDraft =
       loadLoanWorkspaceDraft(
         draftMode,
@@ -1496,9 +1532,13 @@ export function useLoanStudio({
 
         transactionStatus,
 
-        disbursementSavedAt,
+        disbursementSavedAt:
+          overrides.disbursementSavedAt ??
+          disbursementSavedAt,
 
-        disbursementDraftStatus,
+        disbursementDraftStatus:
+          overrides.disbursementDraftStatus ??
+          disbursementDraftStatus,
 
         disbursementReceiptNumber,
       },
@@ -1585,8 +1625,17 @@ export function useLoanStudio({
   ]);
   async function handleSaveDraft():
     Promise<void> {
+    const savedAt =
+      new Date().toISOString();
+
     const saved =
-      await persistCurrentLoanWorkspaceDraft();
+      await persistCurrentLoanWorkspaceDraft({
+        disbursementSavedAt:
+          savedAt,
+
+        disbursementDraftStatus:
+          "Draft",
+      });
 
     console.log("FINORA LOAN SAVE DRAFT", {
       customerId: activeCustomerId,
@@ -1599,8 +1648,74 @@ export function useLoanStudio({
 
       guarantorIdentityVerification,
 
+      savedAt,
+
       saved,
     });
+
+    if (!saved) {
+      await finoraError(
+        "Unable to save the Loan Application draft. Please try again.",
+        {
+          heading:
+            "Draft Save Failed",
+        },
+      );
+
+      return;
+    }
+
+    /*
+     * State mirrors the exact values already persisted above.
+     * Prevent the state update from performing a duplicate save.
+     */
+    suppressNextDraftAutosaveRef.current =
+      true;
+
+    setDisbursementSavedAt(
+      savedAt,
+    );
+
+    setDisbursementDraftStatus(
+      "Draft",
+    );
+
+    const savedAtDisplay =
+      new Intl.DateTimeFormat(
+        "en-IN",
+        {
+          dateStyle: "medium",
+
+          timeStyle: "short",
+        },
+      ).format(
+        new Date(savedAt),
+      );
+
+    /*
+     * Publish the premium popup while Loan Studio is still mounted.
+     * The global App-level host keeps it alive after navigation.
+     */
+    const confirmation =
+      finoraSuccess(
+        `Loan Application draft saved successfully.\n\nSaved at: ${savedAtDisplay}`,
+        {
+          heading:
+            "Draft Saved",
+        },
+      );
+
+    /*
+     * Return to Loans Office immediately after successful save.
+     * The draft and its IndexedDB documents are not cleared.
+     */
+    window.dispatchEvent(
+      new CustomEvent(
+        "FINORA_V2_LOAN_WORKFLOW_COMPLETED",
+      ),
+    );
+
+    await confirmation;
   }
 
   async function handleRejectLoan(
@@ -1612,163 +1727,201 @@ export function useLoanStudio({
       ).trim();
 
     if (!rejectionReason) {
-      alert(
+      await finoraWarning(
         "Rejection reason is required.",
       );
 
       return;
     }
+
     if (
       transactionStatus !== "pending"
     ) {
-      alert(
+      await finoraWarning(
         "Only a Pending Loan transaction can be rejected.",
       );
 
       return;
     }
 
-    /* ======================================================
-       PUBLISH CURRENT WORKSPACE SNAPSHOT
-    ====================================================== */
-
-    const draftSaved =
-      await persistCurrentLoanWorkspaceDraft();
-
-    if (!draftSaved) {
-      alert(
-        "Unable to preserve the current Loan Application draft.",
+    const processingId =
+      startFinoraProcessing(
+        "Rejecting & Archiving Loan Application...",
       );
 
-      return;
-    }
+    try {
+      /* ======================================================
+         PUBLISH CURRENT WORKSPACE SNAPSHOT
+      ====================================================== */
 
-    const snapshot =
-      loadLoanWorkspaceDraft(
+      const draftSaved =
+        await persistCurrentLoanWorkspaceDraft();
+
+      if (!draftSaved) {
+        stopFinoraProcessing(
+          processingId,
+        );
+
+        await finoraError(
+          "Unable to preserve the current Loan Application draft.",
+        );
+
+        return;
+      }
+
+      const snapshot =
+        loadLoanWorkspaceDraft(
+          draftMode,
+        );
+
+      if (!snapshot) {
+        stopFinoraProcessing(
+          processingId,
+        );
+
+        await finoraError(
+          "Unable to load the Loan Application snapshot for rejection.",
+        );
+
+        return;
+      }
+
+      /* ======================================================
+         ARCHIVE DOCUMENT CONTENT BEFORE METADATA
+      ====================================================== */
+
+      const identity =
+        createRejectedLoanApplicationIdentity();
+
+      const documentArchiveResult =
+        await archiveRejectedLoanDocuments(
+          identity.id,
+          draftMode,
+          documents,
+        );
+
+      if (!documentArchiveResult.success) {
+        stopFinoraProcessing(
+          processingId,
+        );
+
+        await finoraError(
+          documentArchiveResult.error ??
+            "Unable to preserve rejected Loan documents.",
+        );
+
+        return;
+      }
+
+      /* ======================================================
+         PERSIST REJECTED APPLICATION
+      ====================================================== */
+
+      const rejectedResult =
+        await createRejectedLoanApplication({
+          identity,
+
+          snapshot,
+
+          rejectionReason,
+
+          customerId:
+            activeCustomerId,
+
+          customerName:
+            activeCustomerName,
+
+          customerPhone:
+            activeCustomerPhone,
+
+          requestedAmount:
+            parseNumericValue(loanAmount),
+
+          documentIds:
+            documents.map(
+              (document) => document.id,
+            ),
+        });
+
+      if (
+        !rejectedResult.success ||
+        !rejectedResult.data
+      ) {
+        stopFinoraProcessing(
+          processingId,
+        );
+
+        await finoraError(
+          rejectedResult.error ??
+            "Unable to archive the rejected Loan Application.",
+        );
+
+        return;
+      }
+
+      console.log(
+        "FINORA LOAN APPLICATION REJECTED",
+        {
+          applicationId:
+            rejectedResult.data.id,
+
+          applicationReference:
+            rejectedResult.data.applicationReference,
+
+          customerId:
+            activeCustomerId,
+
+          entryMode,
+
+          documents:
+            documents.length,
+
+          rejectionReason,
+        },
+      );
+
+      /* ======================================================
+         TERMINAL ACTIVE WORKSPACE CLEANUP
+      ====================================================== */
+
+      await clearLoanDocumentDrafts(
         draftMode,
       );
 
-    if (!snapshot) {
-      alert(
-        "Unable to load the Loan Application snapshot for rejection.",
-      );
+      suppressLoanWorkspaceAutosaveRef.current =
+        true;
 
-      return;
-    }
-
-    /* ======================================================
-       ARCHIVE DOCUMENT CONTENT BEFORE METADATA
-    ====================================================== */
-
-    const identity =
-      createRejectedLoanApplicationIdentity();
-
-    const documentArchiveResult =
-      await archiveRejectedLoanDocuments(
-        identity.id,
+      clearLoanWorkspaceDraft(
         draftMode,
-        documents,
       );
 
-    if (!documentArchiveResult.success) {
-      alert(
-        documentArchiveResult.error ??
-          "Unable to preserve rejected Loan documents.",
+      suppressNextDraftAutosaveRef.current =
+        true;
+
+      stopFinoraProcessing(
+        processingId,
       );
 
-      return;
+      const rejectionConfirmation =
+        finoraSuccess(
+          "Loan Application Rejected and Archived." +
+            `\nReference: ${rejectedResult.data.applicationReference}`,
+        );
+
+      resetLoanWorkspace();
+
+      window.dispatchEvent(
+        new CustomEvent(
+          "FINORA_V2_LOAN_WORKFLOW_COMPLETED",
+        ),
+      );
+
+      await rejectionConfirmation;
+    } finally {
+      stopFinoraProcessing(
+        processingId,
+      );
     }
-
-    /* ======================================================
-       PERSIST REJECTED APPLICATION
-    ====================================================== */
-
-    const rejectedResult =
-      await createRejectedLoanApplication({
-        identity,
-
-        snapshot,
-
-        rejectionReason,
-
-        customerId:
-          activeCustomerId,
-
-        customerName:
-          activeCustomerName,
-
-        customerPhone:
-          activeCustomerPhone,
-
-        requestedAmount:
-          parseNumericValue(loanAmount),
-
-        documentIds:
-          documents.map(
-            (document) => document.id,
-          ),
-      });
-
-    if (!rejectedResult.success || !rejectedResult.data) {
-      alert(
-        rejectedResult.error ??
-          "Unable to archive the rejected Loan Application.",
-      );
-
-      return;
-    }
-
-    console.log(
-      "FINORA LOAN APPLICATION REJECTED",
-      {
-        applicationId:
-          rejectedResult.data.id,
-
-        applicationReference:
-          rejectedResult.data.applicationReference,
-
-        customerId:
-          activeCustomerId,
-
-        entryMode,
-
-        documents:
-          documents.length,
-
-        rejectionReason,
-      },
-    );
-
-    /* ======================================================
-       TERMINAL ACTIVE WORKSPACE CLEANUP
-    ====================================================== */
-
-    await clearLoanDocumentDrafts(
-      draftMode,
-    );
-
-    suppressLoanWorkspaceAutosaveRef.current =
-      true;
-
-    clearLoanWorkspaceDraft(
-      draftMode,
-    );
-
-    suppressNextDraftAutosaveRef.current =
-      true;
-
-    alert(
-      "Loan Application Rejected and Archived." +
-        `\nReference: ${rejectedResult.data.applicationReference}`,
-    );
-
-    resetLoanWorkspace();
-
-    window.dispatchEvent(
-      new CustomEvent(
-        "FINORA_V2_LOAN_WORKFLOW_COMPLETED",
-      ),
-    );
   }
 
   /* ==========================================================
@@ -1787,7 +1940,7 @@ export function useLoanStudio({
     ======================================================== */
 
     if (!activeBusinessDate) {
-      alert(
+      await finoraWarning(
         "A valid FINORA Login Date is required. Please logout and login again.",
       );
 
@@ -1795,7 +1948,7 @@ export function useLoanStudio({
     }
 
     if (loanApproved) {
-      alert("Loan already created");
+      await finoraWarning("Loan already created");
 
       return;
     }
@@ -1804,7 +1957,7 @@ export function useLoanStudio({
       transactionStatus.trim().toLowerCase() !==
         "completed"
     ) {
-      alert(
+      await finoraWarning(
         "Transaction Status must be Completed before creating the Loan.",
       );
 
@@ -1816,19 +1969,19 @@ export function useLoanStudio({
     const normalizedLoanTypeValue = normalizeLoanType(repaymentType);
 
     if (!normalizedLoanTypeValue) {
-      alert("Please select a valid Loan Type");
+      await finoraWarning("Please select a valid Loan Type");
 
       return;
     }
 
     if (!normalizedRepaymentTypeValue) {
-      alert("Please select Duration Unit in Step 1");
+      await finoraWarning("Please select Duration Unit in Step 1");
 
       return;
     }
 
     if (!activeCustomerId) {
-      alert("Please select a customer before approving the loan.");
+      await finoraWarning("Please select a customer before approving the loan.");
 
       return;
     }
@@ -1867,12 +2020,14 @@ export function useLoanStudio({
         walletChargePreflight.error,
       );
 
-      alert(
+      await finoraError(
         walletChargePreflight.error,
       );
 
       return;
     }
+
+    setIsLoanProcessing(true);
 
     /* ========================================================
        CREATE STABLE LOAN ID
@@ -1897,7 +2052,7 @@ export function useLoanStudio({
     } catch (error) {
       console.error("FINORA LOAN DOCUMENT PREPARATION ERROR:", error);
 
-      alert("Unable to prepare loan documents. Please try again.");
+      await finoraError("Unable to prepare loan documents. Please try again.");
 
       return;
     }
@@ -1929,7 +2084,7 @@ export function useLoanStudio({
         loanNumberResult.error,
       );
 
-      alert(
+      await finoraError(
         loanNumberResult.error ??
           "Unable to reserve the Loan Number. Please try again.",
       );
@@ -2056,7 +2211,7 @@ export function useLoanStudio({
 ========================================================= */
 
     if (isGoldLoan && !goldStepOne) {
-      alert(
+      await finoraWarning(
         "Gold Loan custody details are unavailable. Return to Gold Step 1 and try again.",
       );
 
@@ -2072,7 +2227,7 @@ export function useLoanStudio({
     if (!createResult.success) {
       console.error("LOAN CREATE ERROR:", createResult.error);
 
-      alert(createResult.error ?? "Unable to create loan.");
+      await finoraError(createResult.error ?? "Unable to create loan.");
 
       return;
     }
@@ -2126,14 +2281,14 @@ export function useLoanStudio({
             rollbackResult.error,
           );
 
-          alert(
+          await finoraError(
             "CRITICAL CONSISTENCY ERROR: the Gold Loan was created, but authenticated custody identity was unavailable and automatic Loan rollback failed. Do not create another Gold Loan until this record is reviewed.",
           );
 
           return;
         }
 
-        alert(
+        await finoraError(
           "Gold Loan was not created because the authenticated custody user could not be resolved.",
         );
 
@@ -2155,14 +2310,14 @@ export function useLoanStudio({
             rollbackResult.error,
           );
 
-          alert(
+          await finoraError(
             "CRITICAL CONSISTENCY ERROR: Gold Loan identity was incomplete after persistence and automatic Loan rollback failed.",
           );
 
           return;
         }
 
-        alert(
+        await finoraError(
           "Gold Loan identity could not be finalized. The incomplete Loan record was rolled back.",
         );
 
@@ -2213,14 +2368,14 @@ export function useLoanStudio({
             rollbackResult.error,
           );
 
-          alert(
+          await finoraError(
             "CRITICAL CONSISTENCY ERROR: the Gold Loan was created but physical custody allocation failed, and automatic Loan rollback also failed. Do not create another Gold Loan until this record is reviewed.",
           );
 
           return;
         }
 
-        alert(
+        await finoraError(
           custodyResult.error ??
             "Gold physical custody allocation failed. The Loan record was rolled back.",
         );
@@ -2291,7 +2446,7 @@ export function useLoanStudio({
 
       await refreshLoanStatistics();
 
-      alert(
+      await finoraError(
         "Loan was created successfully, but the FINORA Wallet platform fee could not be completed. " +
           walletChargeResult.error +
           " Do not create another Loan until this charge is reviewed.",
@@ -2310,62 +2465,73 @@ export function useLoanStudio({
 
     await refreshLoanStatistics();
 
-    /* ========================================================
-       SUCCESS CONFIRMATION
+      /* ========================================================
+         PREMIUM SUCCESS CONFIRMATION
 
-       alert() is blocking.
+         Publish the success dialog before closing Loan Studio.
 
-       Therefore resetLoanWorkspace() runs only AFTER the user
-       presses OK on the success popup.
+         FinoraDialogHost belongs to the App root and therefore
+         remains visible over Loans Office during navigation.
 
-       Failed Loan creation never clears entered form data.
-    ======================================================== */
+         Failed Loan creation never reaches this cleanup block.
+      ======================================================== */
 
-    const loanSuccessMessage =
-      persistedDocuments.length > 0
-        ? `Loan Created Successfully with ${persistedDocuments.length} document${
-            persistedDocuments.length === 1 ? "" : "s"
-          }`
-        : "Loan Created Successfully";
+      const loanSuccessMessage =
+        persistedDocuments.length > 0
+          ? `Loan Created Successfully with ${persistedDocuments.length} document${
+              persistedDocuments.length === 1 ? "" : "s"
+            }`
+          : "Loan Created Successfully";
 
-    alert(
-      `${loanSuccessMessage}
+      const confirmation =
+        finoraSuccess(
+          `${loanSuccessMessage}
 
 Loan Number: ${finalizedLoanNumber}
 FINORA Wallet Fee: ₹${walletChargeResult.data.amount}
 Available Balance: ₹${walletChargeResult.data.availableBalance}`,
-    );
+          {
+            heading:
+              "Loan Created Successfully",
+          },
+        );
 
-    /* ========================================================
-       START FRESH LOAN WORKSPACE
-    ======================================================== */
+      /* ========================================================
+         TERMINAL LOAN WORKSPACE CLEANUP
+      ======================================================== */
 
-    suppressLoanWorkspaceAutosaveRef.current =
-      true;
+      suppressLoanWorkspaceAutosaveRef.current =
+        true;
 
-    suppressNextDraftAutosaveRef.current =
-      true;
+      suppressNextDraftAutosaveRef.current =
+        true;
 
-    resetLoanWorkspace();
+      resetLoanWorkspace();
 
-    window.dispatchEvent(
-      new CustomEvent(
-        "FINORA_V2_LOAN_WORKFLOW_COMPLETED",
-      ),
-    );
+      void clearLoanDocumentDrafts(
+        draftMode,
+      ).catch((error) => {
+        console.error(
+          "FINORA LOAN DOCUMENT DRAFT CLEANUP ERROR:",
+          error,
+        );
+      });
 
-    void clearLoanDocumentDrafts(
-      draftMode,
-    ).catch((error) => {
-      console.error(
-        "FINORA LOAN DOCUMENT DRAFT CLEANUP ERROR:",
-        error,
+      clearLoanWorkspaceDraft(
+        draftMode,
       );
-    });
 
-    clearLoanWorkspaceDraft(
-      draftMode,
-    );
+      /*
+       * Return both Standard and Gold workflows to Loans Office.
+       * Premium success confirmation remains visible above it.
+       */
+      window.dispatchEvent(
+        new CustomEvent(
+          "FINORA_V2_LOAN_WORKFLOW_COMPLETED",
+        ),
+      );
+
+      await confirmation;
   }
 
 
@@ -2374,7 +2540,21 @@ Available Balance: ₹${walletChargeResult.data.availableBalance}`,
   ========================================================== */
 
   async function handleApproveLoan(): Promise<void> {
-    setIsLoanProcessing(true);
+    /*
+     * Validation failures must not enter the global
+     * Creating Loan processing state.
+     */
+    if (
+      transactionStatus.trim().toLowerCase() !==
+        "completed"
+    ) {
+      await finoraWarning(
+        "Transaction Status must be Completed before creating the Loan.",
+      );
+
+      return;
+    }
+
 
     try {
       await executeApproveLoan();

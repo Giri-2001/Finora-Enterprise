@@ -112,6 +112,12 @@
 // ============================================================
 
 import {
+  finoraError,
+  finoraSuccess,
+  finoraWarning,
+} from "../../common/dialog/finoraDialog.service";
+
+import {
   useEffect,
   useState,
 } from "react";
@@ -119,6 +125,11 @@ import {
 import { WalletCards } from "lucide-react";
 
 import { useCollectionController } from "../controller";
+
+import {
+  startFinoraProcessing,
+  stopFinoraProcessing,
+} from "../../common/feedback/finoraProcessing.service";
 
 import { updateLoanOutstandingAmount } from "../../../services/loan/loanService";
 
@@ -623,7 +634,7 @@ export default function PaymentDetails() {
     // --------------------------------------------------------
 
     if (!reviewData.loanId) {
-      alert("Please select a loan.");
+      void finoraWarning("Please select a loan.");
 
       return false;
     }
@@ -633,7 +644,7 @@ export default function PaymentDetails() {
     // --------------------------------------------------------
 
     if (finalCollection <= 0) {
-      alert("Please enter or select a collection amount.");
+      void finoraWarning("Please enter or select a collection amount.");
 
       return false;
     }
@@ -643,7 +654,7 @@ export default function PaymentDetails() {
     // --------------------------------------------------------
 
     if (currentOutstanding <= 0) {
-      alert("This loan has no outstanding balance.");
+      void finoraWarning("This loan has no outstanding balance.");
 
       return false;
     }
@@ -653,7 +664,7 @@ export default function PaymentDetails() {
     // --------------------------------------------------------
 
     if (debtPaymentAmount > currentOutstanding) {
-      alert(
+      void finoraWarning(
         "Collection amount cannot be greater than the current outstanding balance.",
       );
 
@@ -665,7 +676,7 @@ export default function PaymentDetails() {
     // --------------------------------------------------------
 
     if (manualPrincipal > debtPaymentAmount) {
-      alert(
+      void finoraWarning(
         "Manual Principal cannot be greater than the collection amount available for loan repayment.",
       );
 
@@ -677,7 +688,7 @@ export default function PaymentDetails() {
     // --------------------------------------------------------
 
     if (settlementReduction > currentOutstanding) {
-      alert(
+      void finoraWarning(
         "Collection amount plus discount cannot be greater than the current outstanding balance.",
       );
 
@@ -689,7 +700,7 @@ export default function PaymentDetails() {
     // --------------------------------------------------------
 
     if (!reviewData.paymentMethod) {
-      alert("Please select a payment mode.");
+      void finoraWarning("Please select a payment mode.");
 
       return false;
     }
@@ -795,7 +806,7 @@ export default function PaymentDetails() {
     // --------------------------------------------------------
 
     if (!collectionDateLedgerReady) {
-      window.alert(
+      void finoraWarning(
         "Collection Date ledger is still loading. Please try again.",
       );
 
@@ -816,7 +827,7 @@ export default function PaymentDetails() {
           latestCollectionDate || undefined,
       });
     } catch (error) {
-      window.alert(
+      void finoraWarning(
         error instanceof Error
           ? error.message
           : "Please select a valid Collection Date.",
@@ -841,7 +852,7 @@ export default function PaymentDetails() {
       );
 
       if (!receiptWindow) {
-        window.alert(
+        void finoraWarning(
           "Receipt window was blocked. Please allow pop-ups for FINORA Enterprise. No collection was saved.",
         );
 
@@ -900,6 +911,13 @@ export default function PaymentDetails() {
     }
 
     setSaving(true);
+
+    const processingId =
+      startFinoraProcessing(
+        printReceipt
+          ? "Saving Collection & Preparing Receipt..."
+          : "Saving Collection...",
+      );
 
     try {
       // ======================================================
@@ -1091,7 +1109,7 @@ export default function PaymentDetails() {
       const loanClosed = updatedOutstanding === 0;
 
       if (!printReceipt) {
-        alert(
+        void finoraSuccess(
           loanClosed
             ? "Collection saved successfully. Loan closed."
             : "Collection saved successfully.",
@@ -1108,7 +1126,7 @@ export default function PaymentDetails() {
 
       console.error("FINORA COLLECTION SAVE ERROR:", error);
 
-      alert(
+      void finoraError(
         error instanceof Error
           ? error.message
           : "Collection could not be saved.",
@@ -1116,6 +1134,10 @@ export default function PaymentDetails() {
     } finally {
       setNumberingPreviewVersion(
         (current) => current + 1,
+      );
+
+      stopFinoraProcessing(
+        processingId,
       );
 
       setSaving(false);

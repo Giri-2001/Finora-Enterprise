@@ -1,4 +1,4 @@
-// ============================================================
+﻿// ============================================================
 // FINORA ENTERPRISE OS™
 //
 // ENTERPRISE SETTINGS
@@ -26,6 +26,11 @@
 // VERSION : 1.0
 // STATUS  : Production Foundation
 // ============================================================
+
+import {
+  startFinoraProcessing,
+  stopFinoraProcessing,
+} from "../../../components/common/feedback/finoraProcessing.service";
 
 import type {
   ChangeEvent,
@@ -136,44 +141,61 @@ export default function SettingsPhotoField({
       );
     }
 
-    const nextPhotos:
-      SettingsPhotoValue[] = [
-        ...photos,
-      ];
-
-    for (
-      const file of selectedFiles
-    ) {
-      try {
-        const photo =
-          await readSettingsPhoto(
-            file,
-          );
-
-        if (
-          !nextPhotos.includes(
-            photo,
-          )
-        ) {
-          nextPhotos.push(
-            photo,
-          );
-        }
-      } catch (error) {
-        reportError(
-          getSettingsPhotoErrorMessage(
-            error,
-          ),
-        );
-      }
+    if (selectedFiles.length === 0) {
+      return;
     }
 
-    if (
-      nextPhotos.length !==
-      photos.length
-    ) {
-      onChange(
-        nextPhotos,
+    const processingId =
+      startFinoraProcessing(
+        selectedFiles.length === 1
+          ? "Preparing Photo..."
+          : "Preparing Photos...",
+      );
+
+    try {
+      const nextPhotos:
+        SettingsPhotoValue[] = [
+          ...photos,
+        ];
+
+      for (
+        const file of selectedFiles
+      ) {
+        try {
+          const photo =
+            await readSettingsPhoto(
+              file,
+            );
+
+          if (
+            !nextPhotos.includes(
+              photo,
+            )
+          ) {
+            nextPhotos.push(
+              photo,
+            );
+          }
+        } catch (error) {
+          reportError(
+            getSettingsPhotoErrorMessage(
+              error,
+            ),
+          );
+        }
+      }
+
+      if (
+        nextPhotos.length !==
+        photos.length
+      ) {
+        onChange(
+          nextPhotos,
+        );
+      }
+    } finally {
+      stopFinoraProcessing(
+        processingId,
       );
     }
   }

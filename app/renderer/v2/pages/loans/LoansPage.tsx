@@ -1,4 +1,4 @@
-// ============================================================
+﻿// ============================================================
 // FINORA ENTERPRISE OS™
 //
 // V2 LOANS OFFICE™
@@ -35,6 +35,10 @@
 // ============================================================
 // IMPORTS
 // ============================================================
+
+import {
+  finoraError,
+} from "../../components/common/dialog/finoraDialog.service";
 
 import { useEffect, useMemo, useState } from "react";
 import Loans from "./Loans";
@@ -90,6 +94,8 @@ type LoansWorkspace =
 
 const LOANS_WORKSPACE_SESSION_KEY =
   "FINORA_LOANS_ACTIVE_WORKSPACE";
+
+const LOANS_GLOBAL_BACK_EVENT = "FINORA_V2_LOANS_GLOBAL_BACK";
 
 function readLoansWorkspaceSession(): LoansWorkspace | null {
   try {
@@ -188,6 +194,20 @@ function resolveInitialLoansWorkspace(
   draft: LoanWorkspaceDraft | null,
   goldHandoff: GoldLoanStudioStepTwoHandoff | null,
 ): LoansWorkspace {
+  const explicitSessionWorkspace =
+    readLoansWorkspaceSession();
+
+  /*
+   * An explicit return to Loans Office must win over
+   * persisted Loan draft restoration.
+   *
+   * Draft data remains preserved and can be reopened
+   * through the intended resume workflow.
+   */
+  if (explicitSessionWorkspace === "LOANS_OFFICE") {
+    return "LOANS_OFFICE";
+  }
+
   if (!draft) {
     const sessionWorkspace =
       readLoansWorkspaceSession();
@@ -583,6 +603,43 @@ window.removeEventListener(
     };
   }, []);
 
+
+  // ==========================================================
+  // GLOBAL APP BACK -> LOANS OFFICE
+  // ==========================================================
+
+  useEffect(() => {
+    function handleLoansGlobalBack(event: Event): void {
+      if (workspace === "LOANS_OFFICE") {
+        return;
+      }
+
+      event.preventDefault();
+
+      setGoldLoanHandoff(null);
+
+      writeLoansWorkspaceSession(
+        "LOANS_OFFICE",
+      );
+
+      setWorkspace(
+        "LOANS_OFFICE",
+      );
+    }
+
+    window.addEventListener(
+      LOANS_GLOBAL_BACK_EVENT,
+      handleLoansGlobalBack,
+    );
+
+    return () => {
+      window.removeEventListener(
+        LOANS_GLOBAL_BACK_EVENT,
+        handleLoansGlobalBack,
+      );
+    };
+  }, [workspace]);
+
   // ==========================================================
   // LOAD GOLD STEP-1 WORKSPACE DATA
   //
@@ -650,7 +707,7 @@ window.removeEventListener(
 
           setGoldStorageState(createEmptyGoldStorageState());
 
-          alert(
+          void finoraError(
             storageStateResult.error ??
               "Unable to load Gold Storage custody state.",
           );
@@ -682,7 +739,7 @@ window.removeEventListener(
 
         setGoldStorageState(createEmptyGoldStorageState());
 
-        alert(
+        void finoraError(
           error instanceof Error
             ? error.message
             : "Unable to prepare Gold Loan Step 1.",
@@ -716,7 +773,7 @@ window.removeEventListener(
       loadActiveLoanWorkspaceDraft();
 
     if (!reopenedDraft) {
-      alert(
+      void finoraError(
         "The reopened Loan workspace could not be loaded.",
       );
 
@@ -747,7 +804,7 @@ window.removeEventListener(
       );
 
     if (!reopenedGoldHandoff) {
-      alert(
+      void finoraError(
         "The reopened Gold Loan Step 1 snapshot is incomplete.",
       );
 
@@ -808,7 +865,7 @@ window.removeEventListener(
         validation: result.preparation.validation,
       });
 
-      alert(
+      void finoraError(
         result.error ??
           "Unable to continue Gold Loan. Please review Gold Step 1.",
       );

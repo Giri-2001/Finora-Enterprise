@@ -1,4 +1,4 @@
-// FINORA ENTERPRISE OS™
+﻿// FINORA ENTERPRISE OS™
 //
 // V2 LOANS OFFICE™
 //
@@ -57,6 +57,10 @@ import { storageManager } from "../../storage/storageManager";
 import { StorageMode } from "../../storage/storage.types";
 
 import StudioLayout from "../../components/common/layout/StudioLayout";
+
+import {
+  finoraWarning,
+} from "../../components/common/dialog/finoraDialog.service";
 
 import ViewLoanDetails from "../../components/loans/details/ViewLoanDetails";
 
@@ -952,9 +956,9 @@ export default function Loans() {
   // APPLY FILTERS
   // ==========================================================
 
-  const handleApplyFilters = (): void => {
+  const handleApplyFilters = async (): Promise<void> => {
     if (filterFromDate && filterToDate && filterFromDate > filterToDate) {
-      alert("From Date cannot be later than To Date.");
+      await finoraWarning("From Date cannot be later than To Date.");
 
       return;
     }

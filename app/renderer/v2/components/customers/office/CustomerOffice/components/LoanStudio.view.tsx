@@ -1,4 +1,4 @@
-// ============================================================
+﻿// ============================================================
 // FINORA ENTERPRISE OS™
 // LOAN STUDIO™
 // PRESENTATION VIEW
@@ -16,7 +16,6 @@
 // - No inline responsive logic.
 // ============================================================
 
-import { GlobalLoadingOverlay } from "../../../../common";
 import { formatIndianDate } from "./LoanStudio.helpers";
 
 import { useResponsive } from "../../../../../utils/responsive";
@@ -90,6 +89,11 @@ import ReviewHeader from "../../../../loans/review/ReviewHeader";
 import ValidationChecklist from "../../../../loans/review/ValidationChecklist";
 
 import ApprovalActions from "../../../../loans/review/ApprovalActions";
+
+import {
+  finoraSuccess,
+  finoraWarning,
+} from "../../../../common/dialog/finoraDialog.service";
 
 import ReviewPreviewCard from "../../../../loans/review/ReviewPreviewCard";
 
@@ -792,11 +796,6 @@ export default function LoanStudioView(props: LoanStudioViewModel) {
           WIZARD FOOTER
       ======================================================== */}
 
-      {isLoanProcessing && (
-        <GlobalLoadingOverlay
-          message="Creating Loan..."
-        />
-      )}
 
       <footer style={footerStyle}>
         <div style={stepListStyle}>
@@ -836,7 +835,7 @@ export default function LoanStudioView(props: LoanStudioViewModel) {
                     guarantorVerificationStatus.trim().toLowerCase() !==
                       "verified"
                   ) {
-                    alert(
+                    void finoraWarning(
                       "Guarantor verification must be Verified before proceeding to Review.",
                     );
 
@@ -910,7 +909,7 @@ export default function LoanStudioView(props: LoanStudioViewModel) {
                 ================================================ */
                 if (!isGoldLoan && step === 1) {
                   if (!activeCustomerId.trim()) {
-                    alert("Please select a customer before continuing.");
+                    void finoraWarning("Please select a customer before continuing.");
 
                     return;
                   }
@@ -922,7 +921,7 @@ export default function LoanStudioView(props: LoanStudioViewModel) {
                     !Number.isFinite(safeLoanAmount) ||
                     safeLoanAmount <= 0
                   ) {
-                    alert("Please enter a valid Loan Amount.");
+                    void finoraWarning("Please enter a valid Loan Amount.");
 
                     return;
                   }
@@ -934,7 +933,7 @@ export default function LoanStudioView(props: LoanStudioViewModel) {
                     !Number.isFinite(safeInterest) ||
                     safeInterest <= 0
                   ) {
-                    alert("Please enter a valid Interest percentage.");
+                    void finoraWarning("Please enter a valid Interest percentage.");
 
                     return;
                   }
@@ -946,7 +945,7 @@ export default function LoanStudioView(props: LoanStudioViewModel) {
                     !Number.isFinite(safeDuration) ||
                     safeDuration <= 0
                   ) {
-                    alert("Please enter a valid Loan Duration.");
+                    void finoraWarning("Please enter a valid Loan Duration.");
 
                     return;
                   }
@@ -955,7 +954,7 @@ export default function LoanStudioView(props: LoanStudioViewModel) {
                     durationType !== "months" &&
                     durationType !== "years"
                   ) {
-                    alert("Please select a valid Loan Duration unit.");
+                    void finoraWarning("Please select a valid Loan Duration unit.");
 
                     return;
                   }
@@ -966,7 +965,7 @@ export default function LoanStudioView(props: LoanStudioViewModel) {
                   guarantorVerificationStatus.trim().toLowerCase() !==
                     "verified"
                 ) {
-                  alert(
+                  void finoraWarning(
                     "Guarantor verification must be Verified before proceeding to Review.",
                   );
 
@@ -979,14 +978,14 @@ export default function LoanStudioView(props: LoanStudioViewModel) {
               }
 
               if (!loanApproved) {
-                alert("Please Approve Loan before completing Disbursement");
+                void finoraWarning("Please Approve Loan before completing Disbursement");
 
                 return;
               }
 
               await refreshLoanStatistics();
 
-              alert("Loan Disbursement Workflow Completed Successfully");
+              void finoraSuccess("Loan Disbursement Workflow Completed Successfully");
 
               resetLoanWorkspace();
             }}

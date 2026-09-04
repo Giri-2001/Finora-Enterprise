@@ -1,4 +1,4 @@
-// ============================================================
+﻿// ============================================================
 // FINORA ENTERPRISE OS™
 //
 // GOLD LOAN ENGINE™
@@ -99,6 +99,15 @@ import type {
 } from "../../types/gold-loan/goldStorage.types";
 
 import { getGoldStorageSettingsStyles } from "./GoldStorageSettings.styles";
+
+import {
+  finoraConfirm,
+} from "../../components/common/dialog/finoraDialog.service";
+
+import {
+  startFinoraProcessing,
+  stopFinoraProcessing,
+} from "../../components/common/feedback/finoraProcessing.service";
 
 // ============================================================
 // THEME STYLE
@@ -782,7 +791,7 @@ export default function GoldStorageSettingsPage() {
       return;
     }
 
-    const confirmed = window.confirm(
+    const confirmed = await finoraConfirm(
       `Delete "${room.roomName}" and its configured Lockers and Racks?`,
     );
 
@@ -1011,7 +1020,7 @@ export default function GoldStorageSettingsPage() {
       return;
     }
 
-    const confirmed = window.confirm(
+    const confirmed = await finoraConfirm(
       `Delete "${locker.lockerName}" and all Racks configured inside it?`,
     );
 
@@ -1239,7 +1248,7 @@ export default function GoldStorageSettingsPage() {
       return;
     }
 
-    const confirmed = window.confirm(
+    const confirmed = await finoraConfirm(
       `Delete "${rack.rackName}" from the Gold Storage configuration?`,
     );
 
@@ -1303,41 +1312,56 @@ export default function GoldStorageSettingsPage() {
 
     setSaving(true);
 
+    const processingId =
+      startFinoraProcessing(
+        "Saving Gold Storage Settings...",
+      );
+
     setFeedback(null);
 
-    const result = await saveGoldStorageSettings(
-      preparedSettings,
+    try {
+      const result = await saveGoldStorageSettings(
+        preparedSettings,
 
-      updatedBy,
-    );
+        updatedBy,
+      );
 
-    setSaving(false);
+      if (!result.success) {
+        setFeedback({
+          kind: "DANGER",
 
-    if (!result.success) {
+          title: "Unable to save Gold Storage",
+
+          text:
+            result.error ??
+            "Gold Storage Settings could not be saved.",
+        });
+
+        return;
+      }
+
+      setSettings(
+        synchronizeConfigurationCounts(
+          result.data ?? preparedSettings,
+        ),
+      );
+
+      setDirty(false);
+
       setFeedback({
-        kind: "DANGER",
+        kind: "SUCCESS",
 
-        title: "Unable to save Gold Storage",
+        title: "Gold Storage Settings saved",
 
-        text: result.error ?? "Gold Storage Settings could not be saved.",
+        text: "Locker Room, Locker, Rack and capacity configuration has been persisted.",
       });
+    } finally {
+      stopFinoraProcessing(
+        processingId,
+      );
 
-      return;
+      setSaving(false);
     }
-
-    setSettings(
-      synchronizeConfigurationCounts(result.data ?? preparedSettings),
-    );
-
-    setDirty(false);
-
-    setFeedback({
-      kind: "SUCCESS",
-
-      title: "Gold Storage Settings saved",
-
-      text: "Locker Room, Locker, Rack and capacity configuration has been persisted.",
-    });
   }
 
   // ==========================================================

@@ -1,4 +1,4 @@
-// ============================================================
+﻿// ============================================================
 // FINORA ENTERPRISE OS™
 //
 // ENTERPRISE SETTINGS
@@ -59,6 +59,11 @@ import type {
 } from "../components/SettingsFeedback.types";
 
 import BranchSettingsForm from "./BranchSettingsForm";
+
+import {
+  startFinoraProcessing,
+  stopFinoraProcessing,
+} from "../../../components/common/feedback/finoraProcessing.service";
 
 import type {
   BranchSettingsEditableField,
@@ -405,6 +410,11 @@ export default function BranchSettingsSection() {
       true,
     );
 
+    const processingId =
+      startFinoraProcessing(
+        "Saving Branch Settings...",
+      );
+
     setFeedback(
       null,
     );
@@ -452,6 +462,10 @@ export default function BranchSettingsSection() {
       });
 
     } finally {
+
+      stopFinoraProcessing(
+        processingId,
+      );
 
       setSaving(
         false,

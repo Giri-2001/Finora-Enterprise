@@ -1,4 +1,4 @@
-// ============================================================
+﻿// ============================================================
 // FINORA ENTERPRISE OS™
 //
 // REPORTS ENGINE™
@@ -95,6 +95,15 @@ import {
 import { Capacitor } from "@capacitor/core";
 
 import StudioLayout from "../../components/common/layout/StudioLayout";
+
+import {
+  finoraError,
+} from "../../components/common/dialog/finoraDialog.service";
+
+import {
+  startFinoraProcessing,
+  stopFinoraProcessing,
+} from "../../components/common/feedback/finoraProcessing.service";
 
 import type { Loan } from "../../components/customers/office/CustomerOffice/types";
 
@@ -1032,6 +1041,17 @@ export default function ReportsPage() {
 
     setReportAction(action);
 
+    const processingId =
+      startFinoraProcessing(
+        action === "download"
+          ? "Generating Report PDF..."
+          : action === "print"
+            ? "Preparing Report for Print..."
+            : isNativePlatform
+              ? "Preparing Report to Share..."
+              : "Opening WhatsApp Web...",
+      );
+
     setError("");
 
     try {
@@ -1184,8 +1204,16 @@ export default function ReportsPage() {
 
       setError(message);
 
-      alert(message);
+      stopFinoraProcessing(
+        processingId,
+      );
+
+      await finoraError(message);
     } finally {
+      stopFinoraProcessing(
+        processingId,
+      );
+
       setReportAction(null);
     }
   }

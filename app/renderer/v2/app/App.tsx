@@ -1,4 +1,4 @@
-// ============================================================
+﻿// ============================================================
 // FINORA ENTERPRISE OS™
 //
 // V2 APPLICATION ENTRY
@@ -139,6 +139,10 @@ import { useTheme } from "../themes/provider";
 
 import { useResponsive } from "../utils/responsive";
 
+import FinoraDialogHost from "../components/common/dialog/FinoraDialogHost";
+
+import FinoraProcessingHost from "../components/common/feedback/FinoraProcessingHost";
+
 // ============================================================
 // AUTHENTICATED STORAGE MODE
 //
@@ -204,6 +208,8 @@ const DEFAULT_PAGE: Page = "reception";
 const NAVIGATION_STATE_KEY = "finora-navigation";
 
 const NAVIGATION_EVENT = "finora-navigation-change";
+
+const LOANS_GLOBAL_BACK_EVENT = "FINORA_V2_LOANS_GLOBAL_BACK";
 
 // ============================================================
 // CUSTOMER WIZARD NAVIGATION EVENTS
@@ -1514,6 +1520,29 @@ function AuthenticatedV2Application({
       return;
     }
 
+
+    // ========================================================
+    // LOANS NESTED WORKSPACE
+    // ========================================================
+
+    if (page === "loans") {
+      const loansBackEvent = new CustomEvent(
+        LOANS_GLOBAL_BACK_EVENT,
+        {
+          cancelable: true,
+        },
+      );
+
+      const continueTopLevelBack =
+        window.dispatchEvent(
+          loansBackEvent,
+        );
+
+      if (!continueTopLevelBack) {
+        return;
+      }
+    }
+
     // ========================================================
     // CUSTOMER WIZARD SECOND
     // ========================================================
@@ -1728,6 +1757,10 @@ export default function App() {
     <BranchActivationGate>
       <BusinessContextProvider>
         <AuthenticatedApplication />
+
+        <FinoraProcessingHost />
+
+        <FinoraDialogHost />
       </BusinessContextProvider>
     </BranchActivationGate>
   );

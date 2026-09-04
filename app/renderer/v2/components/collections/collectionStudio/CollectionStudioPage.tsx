@@ -86,6 +86,15 @@ import CollectionHistory from "./CollectionHistory";
 import { CollectionContext } from "../context/CollectionContext";
 
 import {
+  finoraSuccess,
+} from "../../common/dialog/finoraDialog.service";
+
+import {
+  startFinoraProcessing,
+  stopFinoraProcessing,
+} from "../../common/feedback/finoraProcessing.service";
+
+import {
   hydrateCustomersFromStorage,
   clearCustomerCache,
 } from "../../../store/customers/customer.store";
@@ -1158,6 +1167,11 @@ export default function CollectionStudioPage() {
 
     setGoldReleaseInProgress(true);
 
+    const processingId =
+      startFinoraProcessing(
+        "Releasing Gold Custody...",
+      );
+
     setGoldReleaseError("");
 
     try {
@@ -1234,7 +1248,11 @@ export default function CollectionStudioPage() {
 
       setReviewData(createEmptyReviewData(activeBusinessDate));
 
-      window.alert("Gold custody released successfully.");
+      stopFinoraProcessing(
+        processingId,
+      );
+
+      await finoraSuccess("Gold custody released successfully.");
     } catch (error) {
       setGoldReleaseError(
         error instanceof Error
@@ -1242,6 +1260,10 @@ export default function CollectionStudioPage() {
           : "Unable to release Gold custody.",
       );
     } finally {
+      stopFinoraProcessing(
+        processingId,
+      );
+
       setGoldReleaseInProgress(false);
     }
   }

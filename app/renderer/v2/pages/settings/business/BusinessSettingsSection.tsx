@@ -1,4 +1,4 @@
-// ============================================================
+﻿// ============================================================
 // FINORA ENTERPRISE OS™
 //
 // ENTERPRISE SETTINGS
@@ -63,6 +63,11 @@ import type {
 } from "./BusinessIdentitySetupForm.types";
 
 import BusinessSettingsForm from "./BusinessSettingsForm";
+
+import {
+  startFinoraProcessing,
+  stopFinoraProcessing,
+} from "../../../components/common/feedback/finoraProcessing.service";
 
 import type {
   BusinessSettingsEditableField,
@@ -382,6 +387,11 @@ export default function BusinessSettingsSection() {
       true,
     );
 
+    const processingId =
+      startFinoraProcessing(
+        "Creating Business Identity...",
+      );
+
     setFeedback(
       null,
     );
@@ -474,6 +484,10 @@ export default function BusinessSettingsSection() {
 
     } finally {
 
+      stopFinoraProcessing(
+        processingId,
+      );
+
       setSaving(
         false,
       );
@@ -536,6 +550,11 @@ export default function BusinessSettingsSection() {
       true,
     );
 
+    const processingId =
+      startFinoraProcessing(
+        "Saving Business Settings...",
+      );
+
     setFeedback(
       null,
     );
@@ -592,6 +611,10 @@ export default function BusinessSettingsSection() {
       });
 
     } finally {
+
+      stopFinoraProcessing(
+        processingId,
+      );
 
       setSaving(
         false,

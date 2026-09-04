@@ -1,4 +1,4 @@
-/* ==========================================================
+﻿/* ==========================================================
    FINORA ENTERPRISE OS™
 
    LOAN STUDIO — STEP 3
@@ -20,6 +20,11 @@
    - Actual physical persistence is performed by the parent/service
      layer.
 ========================================================== */
+
+import {
+  startFinoraProcessing,
+  stopFinoraProcessing,
+} from "../../common/feedback/finoraProcessing.service";
 
 import type { ChangeEvent, KeyboardEvent } from "react";
 
@@ -236,6 +241,13 @@ export default function DocumentsStudio({
       return;
     }
 
+    const processingId =
+      startFinoraProcessing(
+        validFiles.length === 1
+          ? "Preparing Document..."
+          : "Preparing Documents...",
+      );
+
     try {
       const created: DocumentsStudioItem[] = [];
 
@@ -345,6 +357,10 @@ export default function DocumentsStudio({
       console.error(
         "FINORA Documents Studio: document preparation failed.",
         error,
+      );
+    } finally {
+      stopFinoraProcessing(
+        processingId,
       );
     }
   }

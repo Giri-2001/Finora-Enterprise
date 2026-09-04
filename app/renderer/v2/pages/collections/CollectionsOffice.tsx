@@ -1,4 +1,4 @@
-// ============================================================
+﻿// ============================================================
 // FINORA ENTERPRISE OS™
 //
 // COLLECTIONS OFFICE™
@@ -39,6 +39,10 @@ import { storageManager } from "../../storage/storageManager";
 import { StorageMode } from "../../storage/storage.types";
 
 import StudioLayout from "../../components/common/layout/StudioLayout";
+
+import {
+  finoraWarning,
+} from "../../components/common/dialog/finoraDialog.service";
 
 import ViewCollectionDetails from "../../components/collections/details/ViewCollectionDetails";
 
@@ -710,9 +714,9 @@ export default function CollectionsOffice() {
   // ACTIONS
   // ==========================================================
 
-  function handleApplyFilters(): void {
+  async function handleApplyFilters(): Promise<void> {
     if (filterFromDate && filterToDate && filterFromDate > filterToDate) {
-      alert("From Date cannot be later than To Date.");
+      await finoraWarning("From Date cannot be later than To Date.");
 
       return;
     }

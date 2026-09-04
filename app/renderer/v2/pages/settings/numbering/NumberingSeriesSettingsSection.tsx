@@ -1,4 +1,4 @@
-// ============================================================
+﻿// ============================================================
 // FINORA ENTERPRISE OS™
 //
 // ENTERPRISE SETTINGS
@@ -52,6 +52,11 @@ import type {
 } from "../components/SettingsFeedback.types";
 
 import NumberingSeriesSettingsForm from "./NumberingSeriesSettingsForm";
+
+import {
+  startFinoraProcessing,
+  stopFinoraProcessing,
+} from "../../../components/common/feedback/finoraProcessing.service";
 
 // ============================================================
 // COMPONENT
@@ -490,6 +495,11 @@ export default function NumberingSeriesSettingsSection() {
       true,
     );
 
+    const processingId =
+      startFinoraProcessing(
+        "Locking Customer Series...",
+      );
+
     setFeedback(
       null,
     );
@@ -597,6 +607,10 @@ export default function NumberingSeriesSettingsSection() {
       });
 
     } finally {
+
+      stopFinoraProcessing(
+        processingId,
+      );
 
       setSaving(
         false,

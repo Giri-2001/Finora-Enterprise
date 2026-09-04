@@ -71,6 +71,11 @@ import {
 import StudioLayout
   from "../../../common/layout/StudioLayout";
 
+import {
+  startFinoraProcessing,
+  stopFinoraProcessing,
+} from "../../../common/feedback/finoraProcessing.service";
+
 
 /* ==========================================================
    REVIEW
@@ -921,6 +926,13 @@ export default function Step6Review({
 
 
       setIsSaving(true);
+
+      const processingId =
+        startFinoraProcessing(
+          isEditMode
+            ? "Updating Customer..."
+            : "Saving Customer...",
+        );
 
 
       try {
@@ -2161,6 +2173,10 @@ export default function Step6Review({
         
 
       } finally {
+
+        stopFinoraProcessing(
+          processingId,
+        );
 
         setIsSaving(false);
 

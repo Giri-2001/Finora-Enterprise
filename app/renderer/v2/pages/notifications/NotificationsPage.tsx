@@ -1,4 +1,4 @@
-// ============================================================
+﻿// ============================================================
 // FINORA ENTERPRISE OS
 //
 // NOTIFICATIONS ENGINE
@@ -44,6 +44,11 @@ import {
   useRef,
   useState,
 } from "react";
+
+import {
+  startFinoraProcessing,
+  stopFinoraProcessing,
+} from "../../components/common/feedback/finoraProcessing.service";
 
 import type {
   CSSProperties,
@@ -748,6 +753,11 @@ export default function NotificationsPage({
       notification.id,
     );
 
+    const processingId =
+      startFinoraProcessing(
+        "Marking Notification as Read...",
+      );
+
     try {
       const result =
         await notificationCenterService
@@ -777,6 +787,10 @@ export default function NotificationsPage({
         false,
       );
     } finally {
+      stopFinoraProcessing(
+        processingId,
+      );
+
       setMarkingNotificationId(
         null,
       );
@@ -809,6 +823,11 @@ export default function NotificationsPage({
       true,
     );
 
+    const processingId =
+      startFinoraProcessing(
+        "Marking All Notifications as Read...",
+      );
+
     try {
       const result =
         await notificationCenterService
@@ -838,6 +857,10 @@ export default function NotificationsPage({
         false,
       );
     } finally {
+      stopFinoraProcessing(
+        processingId,
+      );
+
       setMarkingAll(
         false,
       );
@@ -873,6 +896,11 @@ export default function NotificationsPage({
       delivery.id,
     );
 
+    const processingId =
+      startFinoraProcessing(
+        "Scheduling Notification Resend...",
+      );
+
     try {
       const result =
         await notificationCenterService
@@ -900,6 +928,10 @@ export default function NotificationsPage({
         false,
       );
     } finally {
+      stopFinoraProcessing(
+        processingId,
+      );
+
       setResendingDeliveryId(
         null,
       );

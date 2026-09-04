@@ -1,4 +1,4 @@
-// ============================================================
+﻿// ============================================================
 // FINORA ENTERPRISE OS™
 //
 // COLLECTIONS OFFICE™
@@ -43,6 +43,10 @@ import type {
 } from "react";
 
 import StudioLayout from "../../components/common/layout/StudioLayout";
+
+import {
+  finoraWarning,
+} from "../../components/common/dialog/finoraDialog.service";
 
 import CollectionStudio from "../../components/customers/office/CustomerOffice/components/CollectionStudio";
 
@@ -779,14 +783,14 @@ export default function CollectionsPage() {
      APPLY FILTER
   ========================================================== */
 
-  function handleApplyFilters(): void {
+  async function handleApplyFilters(): Promise<void> {
     if (
       filterFromDate &&
       filterToDate &&
       filterFromDate >
         filterToDate
     ) {
-      alert(
+      await finoraWarning(
         "From Date cannot be later than To Date.",
       );
 

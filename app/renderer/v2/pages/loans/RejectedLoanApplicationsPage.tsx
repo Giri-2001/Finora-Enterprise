@@ -19,6 +19,18 @@
 // ============================================================
 
 import {
+  finoraConfirm,
+  finoraError,
+  finoraSuccess,
+  finoraWarning,
+} from "../../components/common/dialog/finoraDialog.service";
+
+import {
+  startFinoraProcessing,
+  stopFinoraProcessing,
+} from "../../components/common/feedback/finoraProcessing.service";
+
+import {
   useCallback,
   useEffect,
   useMemo,
@@ -643,6 +655,11 @@ export default function RejectedLoanApplicationsPage({
       document.id,
     );
 
+    const processingId =
+      startFinoraProcessing(
+        "Opening Archived Document...",
+      );
+
     try {
       const archivedDataUrl =
         await loadRejectedLoanDocument(
@@ -661,7 +678,11 @@ export default function RejectedLoanApplicationsPage({
         );
 
       if (!source) {
-        alert(
+        stopFinoraProcessing(
+          processingId,
+        );
+
+        await finoraWarning(
           "Archived document content is unavailable.",
         );
 
@@ -683,12 +704,20 @@ export default function RejectedLoanApplicationsPage({
         documentError,
       );
 
-      alert(
+      stopFinoraProcessing(
+        processingId,
+      );
+
+      await finoraError(
         documentError instanceof Error
           ? documentError.message
           : "Unable to open the archived document.",
       );
     } finally {
+      stopFinoraProcessing(
+        processingId,
+      );
+
       setLoadingDocumentId(
         null,
       );
@@ -710,7 +739,7 @@ export default function RejectedLoanApplicationsPage({
     }
 
     const confirmed =
-      window.confirm(
+      await finoraConfirm(
         [
           `Reopen ${application.applicationReference}?`,
 
@@ -730,6 +759,11 @@ export default function RejectedLoanApplicationsPage({
       application.id,
     );
 
+    const processingId =
+      startFinoraProcessing(
+        "Restoring Rejected Loan Application...",
+      );
+
     try {
       const result =
         await reopenRejectedLoanApplication(
@@ -740,7 +774,11 @@ export default function RejectedLoanApplicationsPage({
         !result.success ||
         !result.data
       ) {
-        alert(
+        stopFinoraProcessing(
+          processingId,
+        );
+
+        await finoraError(
           result.error ??
             "Unable to reopen the rejected Loan Application.",
         );
@@ -748,7 +786,11 @@ export default function RejectedLoanApplicationsPage({
         return;
       }
 
-      alert(
+      stopFinoraProcessing(
+        processingId,
+      );
+
+      await finoraSuccess(
         "Rejected Loan Application restored successfully.",
       );
 
@@ -761,12 +803,20 @@ export default function RejectedLoanApplicationsPage({
         reopenError,
       );
 
-      alert(
+      stopFinoraProcessing(
+        processingId,
+      );
+
+      await finoraError(
         reopenError instanceof Error
           ? reopenError.message
           : "Unable to reopen the rejected Loan Application.",
       );
     } finally {
+      stopFinoraProcessing(
+        processingId,
+      );
+
       setReopeningApplicationId(
         null,
       );

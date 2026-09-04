@@ -1,4 +1,4 @@
-/* ===========================================================
+﻿/* ===========================================================
    FINORA ENTERPRISE OS™
 
    ACCOUNTS ENGINE™
@@ -108,6 +108,11 @@ import { useAccountsResponsive } from "../../utils/responsive/accounts/accounts.
 /* ===========================================================
    COMPONENTS
 =========================================================== */
+
+import {
+  startFinoraProcessing,
+  stopFinoraProcessing,
+} from "../../components/common/feedback/finoraProcessing.service";
 
 import { AccountsHeader } from "./components/AccountsHeader";
 
@@ -386,16 +391,25 @@ export function AccountsOffice() {
      PRINT
   ========================================================= */
 
-  function handlePrint(): void {
-    if (documentActionsDisabled) {
+  async function handlePrint(): Promise<void> {
+    if (documentActionsDisabled || isDocumentBusy) {
       return;
     }
 
     setIsDocumentBusy(true);
 
+    const processingId =
+      startFinoraProcessing(
+        "Preparing Accounts Register for Print...",
+      );
+
     setDocumentError(null);
 
     try {
+      await new Promise<void>((resolve) => {
+        window.requestAnimationFrame(() => resolve());
+      });
+
       printAccountsPdf(createDocumentRequest());
     } catch (error) {
       setDocumentError(
@@ -405,6 +419,10 @@ export function AccountsOffice() {
         ),
       );
     } finally {
+      stopFinoraProcessing(
+        processingId,
+      );
+
       setIsDocumentBusy(false);
     }
   }
@@ -413,16 +431,25 @@ export function AccountsOffice() {
      DOWNLOAD
   ========================================================= */
 
-  function handleDownload(): void {
-    if (documentActionsDisabled) {
+  async function handleDownload(): Promise<void> {
+    if (documentActionsDisabled || isDocumentBusy) {
       return;
     }
 
     setIsDocumentBusy(true);
 
+    const processingId =
+      startFinoraProcessing(
+        "Generating Accounts Register PDF...",
+      );
+
     setDocumentError(null);
 
     try {
+      await new Promise<void>((resolve) => {
+        window.requestAnimationFrame(() => resolve());
+      });
+
       downloadAccountsPdf(createDocumentRequest());
     } catch (error) {
       setDocumentError(
@@ -432,6 +459,10 @@ export function AccountsOffice() {
         ),
       );
     } finally {
+      stopFinoraProcessing(
+        processingId,
+      );
+
       setIsDocumentBusy(false);
     }
   }
@@ -441,33 +472,28 @@ export function AccountsOffice() {
   ========================================================= */
 
   async function handleShare(): Promise<void> {
-    if (documentActionsDisabled) {
+    if (documentActionsDisabled || isDocumentBusy) {
       return;
     }
 
     setIsDocumentBusy(true);
 
+    const processingId =
+      startFinoraProcessing(
+        Capacitor.isNativePlatform()
+          ? "Preparing Accounts Register to Share..."
+          : "Opening WhatsApp Web...",
+      );
+
     setDocumentError(null);
 
     try {
-      /*
-       * Android / native:
-       * Generate the Accounts PDF and open the native share sheet.
-       */
       if (Capacitor.isNativePlatform()) {
         await shareAccountsPdf(createDocumentRequest());
 
         return;
       }
 
-      /*
-       * Desktop / Electron:
-       *
-       * Electron's Chromium runtime does not expose navigator.share.
-       * Match the existing FINORA Reports desktop-share behavior by
-       * opening WhatsApp Web instead of incorrectly triggering a PDF
-       * download/save dialog.
-       */
       window.open("https://web.whatsapp.com/", "_blank");
     } catch (error) {
       setDocumentError(
@@ -477,6 +503,10 @@ export function AccountsOffice() {
         ),
       );
     } finally {
+      stopFinoraProcessing(
+        processingId,
+      );
+
       setIsDocumentBusy(false);
     }
   }

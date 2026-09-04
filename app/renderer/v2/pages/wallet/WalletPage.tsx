@@ -67,6 +67,11 @@ import type {
 import WalletTransactionHistory from "../../components/wallet/WalletTransactionHistory";
 
 import {
+  startFinoraProcessing,
+  stopFinoraProcessing,
+} from "../../components/common/feedback/finoraProcessing.service";
+
+import {
   getWalletPageStyles,
 } from "./WalletPage.styles";
 
@@ -241,6 +246,11 @@ export default function WalletPage({
       true,
     );
 
+    const processingId =
+      startFinoraProcessing(
+        "Processing Wallet Recharge...",
+      );
+
     setError(
       null,
     );
@@ -299,6 +309,10 @@ export default function WalletPage({
 
       await loadWorkspace();
     } finally {
+      stopFinoraProcessing(
+        processingId,
+      );
+
       setRecharging(
         false,
       );

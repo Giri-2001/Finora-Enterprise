@@ -47,3 +47,18 @@ export type { SummaryCardProps } from "./cards/SummaryCard";
 
 export { default as GlobalLoadingOverlay } from "./feedback/GlobalLoadingOverlay";
 export type { GlobalLoadingOverlayProps } from "./feedback/GlobalLoadingOverlay";
+
+export { default as FinoraProcessingHost } from "./feedback/FinoraProcessingHost";
+
+export {
+  finoraProcessing,
+  startFinoraProcessing,
+  updateFinoraProcessing,
+  stopFinoraProcessing,
+  clearFinoraProcessing,
+  runWithFinoraProcessing,
+} from "./feedback/finoraProcessing.service";
+
+export type {
+  FinoraProcessingRequest,
+} from "./feedback/finoraProcessing.service";
