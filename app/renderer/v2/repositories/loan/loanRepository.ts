@@ -1,4 +1,4 @@
-// ============================================================
+﻿// ============================================================
 // FINORA ENTERPRISE OS™
 //
 // V2 LOAN REPOSITORY™
@@ -219,6 +219,7 @@ export interface LoanOutstandingUpdateOptions {
   // ==========================================================
 
   discountAmount?: number;
+  penaltyAmount?: number;
 }
 
 // ============================================================
@@ -348,7 +349,7 @@ function getInstallmentRemainingAmount(
 ): number {
   const status = normalizeInstallmentStatus(installment.status);
 
-  if (status === "paid" || status === "preclosed") {
+  if (status === "paid" || status === "overdue paid" || status === "preclosed") {
     return 0;
   }
 
@@ -391,7 +392,7 @@ function applyPaymentToInstallment(
   // LOCKED FINAL STATUS
   // ==========================================================
 
-  if (status === "paid" || status === "preclosed") {
+  if (status === "paid" || status === "overdue paid" || status === "preclosed") {
     return {
       installment: {
         ...installment,
@@ -692,7 +693,11 @@ function finalizeClosedSchedule(schedule: LoanScheduleInstallment[]): {
     // FINAL HISTORICAL STATES
     // ------------------------------------------------------
 
-    if (normalizedStatus === "paid" || normalizedStatus === "preclosed") {
+    if (
+      normalizedStatus === "paid" ||
+      normalizedStatus === "overdue paid" ||
+      normalizedStatus === "preclosed"
+    ) {
       return {
         ...installment,
       };
@@ -853,6 +858,18 @@ function normalizeLoanBase(loan: Loan): Loan {
     loanType = "MONTHLY";
 
     repaymentType = "MONTHLY";
+  }
+
+  // ==========================================================
+  // YEARLY
+  // ==========================================================
+
+  else if (title?.toLowerCase().includes("yearly")) {
+    title = "Yearly Loan";
+
+    loanType = "YEARLY";
+
+    repaymentType = "YEARLY";
   }
 
   return {
@@ -1267,12 +1284,17 @@ export async function updateLoanOutstanding(
   // ==========================================================
 
   const discountAmount = safePositiveNumber(options?.discountAmount);
+  const penaltyAmount = safePositiveNumber(options?.penaltyAmount);
 
   // ==========================================================
   // NOTHING TO SETTLE
   // ==========================================================
 
   if (actualPaymentAmount <= 0 && discountAmount <= 0) {
+    return undefined;
+  }
+
+  if (penaltyAmount > actualPaymentAmount) {
     return undefined;
   }
 
@@ -1306,7 +1328,8 @@ export async function updateLoanOutstanding(
   // TOTAL SETTLEMENT REDUCTION
   // ==========================================================
 
-  const settlementReduction = actualPaymentAmount + discountAmount;
+  const debtPaymentAmount = Math.max(0, actualPaymentAmount - penaltyAmount);
+  const settlementReduction = debtPaymentAmount + discountAmount;
 
   // ==========================================================
   // REJECT OVER-SETTLEMENT
@@ -1385,7 +1408,7 @@ export async function updateLoanOutstanding(
 
         selectedEmiNumbers,
 
-        actualPaymentAmount,
+        debtPaymentAmount,
 
         receiptNumber,
 
@@ -1400,7 +1423,7 @@ export async function updateLoanOutstanding(
       updatedSchedule = allocateManualPayment(
         persistedSchedule.schedule,
 
-        actualPaymentAmount,
+        debtPaymentAmount,
 
         receiptNumber,
 
@@ -1408,6 +1431,135 @@ export async function updateLoanOutstanding(
       );
     }
 
+
+    // ========================================================
+    // PRESERVE OVERDUE PENALTY AFTER PAYMENT
+    // ========================================================
+    //
+    // Overdue fee is separate income and must remain visible
+    // after the contractual EMI has been fully paid.
+    //
+    // Example:
+    //   EMI            = 200
+    //   Overdue fee    = 100
+    //   Cash received  = 300
+    //
+    // Stored schedule:
+    //   paidAmount     = 200
+    //   penaltyAmount  = 100
+    //   status         = Overdue Paid
+    //
+    // The penalty is NEVER added to paidAmount.
+    // ========================================================
+
+    const loanLateFee = safePositiveNumber(
+      (loan as Loan & { lateFee?: number }).lateFee,
+    );
+
+    const singleSelectedPenalty =
+      selectedEmiNumbers.length === 1
+        ? penaltyAmount
+        : 0;
+
+    updatedSchedule = updatedSchedule.map(
+      (installment, index) => {
+        const originalInstallment =
+          persistedSchedule.schedule?.[index];
+
+        if (!originalInstallment) {
+          return installment;
+        }
+
+        const originalPaidAmount =
+          safePositiveNumber(
+            originalInstallment.paidAmount,
+          );
+
+        const paidAmount =
+          safePositiveNumber(
+            installment.paidAmount,
+          );
+
+        const paymentIncreased =
+          paidAmount > originalPaidAmount;
+
+        if (!paymentIncreased) {
+          return installment;
+        }
+
+        const originalStatus =
+          normalizeInstallmentStatus(
+            originalInstallment.status,
+          );
+
+        const dueDate = String(
+          originalInstallment.dueDate ?? "",
+        )
+          .trim()
+          .slice(0, 10);
+
+        const normalizedPaidDate = String(
+          paidDate ?? "",
+        )
+          .trim()
+          .slice(0, 10);
+
+        const overdueByDate =
+          dueDate.length === 10 &&
+          normalizedPaidDate.length === 10 &&
+          dueDate < normalizedPaidDate;
+
+        const wasOverdue =
+          originalStatus === "overdue" ||
+          originalStatus === "overdue paid" ||
+          overdueByDate;
+
+        if (!wasOverdue) {
+          return installment;
+        }
+
+        const originalPenalty =
+          safePositiveNumber(
+            originalInstallment.penaltyAmount,
+          );
+
+        const preservedPenalty =
+          originalPenalty > 0
+            ? originalPenalty
+            : singleSelectedPenalty > 0
+              ? singleSelectedPenalty
+              : loanLateFee;
+
+        if (preservedPenalty <= 0) {
+          return installment;
+        }
+
+        const installmentAmount =
+          safePositiveNumber(
+            installment.installmentAmount,
+          );
+
+        const fullyPaid =
+          installmentAmount > 0 &&
+          paidAmount >= installmentAmount;
+
+        return {
+          ...installment,
+
+          penaltyAmount:
+            preservedPenalty,
+
+          status:
+            fullyPaid
+              ? "Overdue Paid"
+              : "Partial",
+        };
+      },
+    );
+
+    // ========================================================
+    // APPLY UPDATED SCHEDULE
+    // ========================================================
     updatedLoan = applyUpdatedSchedule(
       updatedLoan,
 
@@ -1499,3 +1651,4 @@ export const updateLoanOutstandingAmount = updateLoanOutstanding;
 // ============================================================
 // END
 // ============================================================
+

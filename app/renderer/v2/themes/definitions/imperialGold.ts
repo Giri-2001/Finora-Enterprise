@@ -1,4 +1,4 @@
-/* ===========================================================
+﻿/* ===========================================================
    FINORA ENTERPRISE OS
    THEME ENGINE
 
@@ -117,8 +117,8 @@ export const IMPERIAL_GOLD_THEME:
 
     status: {
 
-      success: "#3A2A08",
-successSoft: "#C9A227",
+      success: "#16845B",
+      successSoft: "#E7F6EF",
 
       warning: "#B7791F",
       warningSoft: "#FFF4D8",

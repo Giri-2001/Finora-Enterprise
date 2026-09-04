@@ -236,6 +236,9 @@ export default function LoanScheduleTable({
   return (
     <section
       style={{
+          fontFamily:
+            "Inter, ui-sans-serif, system-ui, sans-serif",
+
         width: "100%",
         minWidth: 0,
         boxSizing: "border-box",
@@ -451,7 +454,7 @@ function headerCellStyle(
     padding: "8px 10px",
     textAlign,
     color: THEME.textMuted,
-    fontSize: "12px",
+    fontSize: "13px",
     fontWeight: 650,
     lineHeight: 1.2,
   } as const;

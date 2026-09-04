@@ -272,7 +272,7 @@ export const inputStyle: CSSProperties = {
 
   fontSize: "12px",
 
-  fontWeight: 500,
+  fontWeight: 600,
 
   lineHeight: 1.2,
 

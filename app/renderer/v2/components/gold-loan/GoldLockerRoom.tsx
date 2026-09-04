@@ -379,7 +379,10 @@ export default function GoldLockerRoom(props: GoldLockerRoomProps) {
 
   setLockerMenuOpen(false);
 
-  setRacksExpanded(false);
+  setRacksExpanded(
+    selectedLockerId !== null ||
+      selectedRackId !== null,
+  );
 }, [selectedRoomId]);
 
   /* =========================================================

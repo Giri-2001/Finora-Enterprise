@@ -21,6 +21,9 @@
 
 import type { CSSProperties } from "react";
 
+const PREVIEW_FONT_FAMILY =
+  "Inter, ui-sans-serif, system-ui, sans-serif";
+
 // ============================================================
 // THEME TOKENS
 // ============================================================
@@ -57,6 +60,7 @@ const THEME = {
 // ============================================================
 
 export const cardStyle: CSSProperties = {
+  fontFamily: PREVIEW_FONT_FAMILY,
   width: "100%",
 
   minWidth: 0,
@@ -127,7 +131,7 @@ export const groupTitleStyle: CSSProperties = {
 
   color: THEME.textSecondary,
 
-  fontSize: "11px",
+  fontSize: "12px",
 
   fontWeight: 750,
 
@@ -209,7 +213,7 @@ export const rowStyle: CSSProperties = {
 
   color: THEME.textSecondary,
 
-  fontSize: "12px",
+  fontSize: "13px",
 
   fontWeight: 500,
 
@@ -229,7 +233,7 @@ export const labelStyle: CSSProperties = {
 
   color: THEME.textMuted,
 
-  fontSize: "12px",
+  fontSize: "13px",
 
   fontWeight: 550,
 
@@ -255,7 +259,7 @@ export const valueStyle: CSSProperties = {
 
   color: THEME.text,
 
-  fontSize: "12px",
+  fontSize: "13px",
 
   fontWeight: 650,
 
@@ -291,7 +295,7 @@ export const financialValueStyle: CSSProperties = {
 
   color: THEME.text,
 
-  fontSize: "13px",
+  fontSize: "14px",
 
   fontWeight: 750,
 };
@@ -343,7 +347,7 @@ export const previewBadgeStyle: CSSProperties = {
 
   color: THEME.textSecondary,
 
-  fontSize: "12px",
+  fontSize: "13px",
 
   fontWeight: 650,
 

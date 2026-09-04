@@ -42,6 +42,9 @@ const THEME = {
 
 export const cardStyle: CSSProperties = {
 
+  fontFamily:
+    "Inter, ui-sans-serif, system-ui, sans-serif",
+
   width: "100%",
 
   height: "100%",

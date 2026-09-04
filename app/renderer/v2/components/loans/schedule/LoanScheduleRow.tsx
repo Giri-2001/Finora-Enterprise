@@ -178,6 +178,9 @@ export default function LoanScheduleRow({ installment }: LoanScheduleRowProps) {
     <tr
       className="finora-loan-schedule-row"
       style={{
+          fontFamily:
+            "Inter, ui-sans-serif, system-ui, sans-serif",
+
         borderBottom: `1px solid ${THEME.borderSubtle}`,
 
         background: THEME.surface,
@@ -196,7 +199,7 @@ export default function LoanScheduleRow({ installment }: LoanScheduleRowProps) {
 
           color: THEME.textPrimary,
 
-          fontSize: "12px",
+          fontSize: "13px",
 
           fontWeight: 700,
 
@@ -227,7 +230,7 @@ export default function LoanScheduleRow({ installment }: LoanScheduleRowProps) {
 
             color: THEME.textPrimary,
 
-            fontSize: "12px",
+            fontSize: "13px",
 
             fontWeight: 700,
 
@@ -249,7 +252,7 @@ export default function LoanScheduleRow({ installment }: LoanScheduleRowProps) {
 
           color: THEME.textSecondary,
 
-          fontSize: "14px",
+          fontSize: "15px",
 
           fontWeight: 500,
 
@@ -276,7 +279,7 @@ export default function LoanScheduleRow({ installment }: LoanScheduleRowProps) {
 
           color: THEME.textPrimary,
 
-          fontSize: "14px",
+          fontSize: "15px",
 
           fontWeight: 700,
 
@@ -326,7 +329,7 @@ export default function LoanScheduleRow({ installment }: LoanScheduleRowProps) {
 
             color: statusStyle.color,
 
-            fontSize: "12px",
+            fontSize: "13px",
 
             fontWeight: 700,
 

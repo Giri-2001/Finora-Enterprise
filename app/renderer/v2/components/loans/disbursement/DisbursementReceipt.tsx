@@ -78,7 +78,7 @@ export default function DisbursementReceipt({
         Payment Mode :
         <strong>
           {" "}
-          {paymentMode}
+          {paymentMode.charAt(0).toUpperCase() + paymentMode.slice(1)}
         </strong>
       </span>
 

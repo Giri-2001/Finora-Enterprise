@@ -1,4 +1,4 @@
-// ============================================================
+﻿// ============================================================
 // FINORA ENTERPRISE OS™
 //
 // COLLECTION STUDIO™
@@ -69,6 +69,11 @@ import { collectionEntryStyles } from "./CollectionEntry.styles";
 import { useCollectionController } from "../controller";
 
 import { fetchLoans } from "../../../services/loan/loanService";
+import { getSession } from "../../../store/authStore";
+
+import {
+  resolveBusinessDate,
+} from "../../../services/business/businessDateService";
 
 import { formatCurrency } from "../../../utils/currency/formatCurrency";
 
@@ -100,6 +105,7 @@ interface EmiRecord {
 
   paidAmount?: number;
 
+  penaltyAmount?: number;
   receiptNumber?: string;
 
   paidDate?: string;
@@ -140,6 +146,62 @@ function safeNumber(value: unknown): number {
 
   return Math.max(0, parsed);
 }
+
+// ============================================================
+// COLLECTION BUSINESS DATE
+// ============================================================
+
+function getCollectionBusinessDate(): string {
+  const session = getSession();
+
+  return String(
+    resolveBusinessDate(
+      session?.businessDate,
+    ) ?? "",
+  ).trim();
+}
+
+// ============================================================
+// OVERDUE CHECK
+// ============================================================
+
+function isOverdueInstallment(
+  dueDate: string,
+  businessDate: string,
+): boolean {
+  const normalizedDueDate =
+    String(dueDate ?? "").trim().slice(0, 10);
+
+  const normalizedBusinessDate =
+    String(businessDate ?? "").trim().slice(0, 10);
+
+  if (
+    !normalizedDueDate ||
+    !normalizedBusinessDate
+  ) {
+    return false;
+  }
+
+  const dueTime =
+    new Date(
+      normalizedDueDate + "T00:00:00",
+    ).getTime();
+
+  const businessTime =
+    new Date(
+      normalizedBusinessDate + "T00:00:00",
+    ).getTime();
+
+  if (
+    Number.isNaN(dueTime) ||
+    Number.isNaN(businessTime)
+  ) {
+    return false;
+  }
+
+  return dueTime < businessTime;
+}
+
 
 // ------------------------------------------------------------
 // AUTHORITATIVE NUMBER CHECK
@@ -208,7 +270,11 @@ function normalizeStatus(status: string): string {
 function isLockedStatus(status: string): boolean {
   const normalized = normalizeStatus(status);
 
-  return normalized === "paid" || normalized === "preclosed";
+  return (
+    normalized === "paid" ||
+    normalized === "preclosed" ||
+    normalized === "overdue paid"
+  );
 }
 
 // ------------------------------------------------------------
@@ -230,11 +296,31 @@ function getRemainingEmiAmount(installment: EmiRecord): number {
     return 0;
   }
 
-  const installmentAmount = safeNumber(installment.installmentAmount);
+  const installmentAmount =
+    safeNumber(
+      installment.installmentAmount,
+    );
 
-  const paidAmount = safeNumber(installment.paidAmount);
+  const paidAmount =
+    safeNumber(
+      installment.paidAmount,
+    );
 
-  return Math.max(0, installmentAmount - paidAmount);
+  const remainingInstallmentAmount =
+    Math.max(
+      0,
+      installmentAmount - paidAmount,
+    );
+
+  const penaltyAmount =
+    safeNumber(
+      installment.penaltyAmount,
+    );
+
+  return Math.max(
+    0,
+    remainingInstallmentAmount + penaltyAmount,
+  );
 }
 
 // ------------------------------------------------------------
@@ -388,6 +474,21 @@ export default function CollectionEntry({ middleSlot }: CollectionEntryProps) {
           (loan: { id?: string }) => String(loan.id ?? "") === loanId,
         );
 
+        const selectedLoanLateFee =
+          safeNumber(
+            (
+              selectedLoan as
+                | {
+                    lateFee?: unknown;
+                  }
+                | undefined
+            )?.lateFee,
+          );
+
+        const collectionBusinessDate =
+          getCollectionBusinessDate();
+
+
         const rawSchedule = Array.isArray(
           (
             selectedLoan as
@@ -408,25 +509,124 @@ export default function CollectionEntry({ middleSlot }: CollectionEntryProps) {
 
         const normalizedSchedule = rawSchedule
           .map(
-            (installment): EmiRecord => ({
-              installmentNumber: Number(installment.installmentNumber) || 0,
+            (installment): EmiRecord => {
+              const installmentNumber =
+                Number(
+                  installment.installmentNumber,
+                ) || 0;
 
-              dueDate: String(installment.dueDate ?? ""),
+              const dueDate =
+                String(
+                  installment.dueDate ?? "",
+                );
 
-              installmentAmount: safeNumber(installment.installmentAmount),
+              const installmentAmount =
+                safeNumber(
+                  installment.installmentAmount,
+                );
 
-              status: String(installment.status ?? "Pending"),
+              const paidAmount =
+                safeNumber(
+                  installment.paidAmount,
+                );
 
-              paidAmount: safeNumber(installment.paidAmount),
+              const existingStatus =
+                String(
+                  installment.status ?? "Pending",
+                );
 
-              receiptNumber: String(installment.receiptNumber ?? ""),
+              const existingPenaltyAmount =
+                safeNumber(
+                  (
+                    installment as
+                      | {
+                          penaltyAmount?: unknown;
+                        }
+                      | undefined
+                  )?.penaltyAmount,
+                );
 
-              paidDate: String(installment.paidDate ?? ""),
-            }),
+              const normalizedStatus =
+                normalizeStatus(
+                  existingStatus,
+                );
+
+              const finalStatus =
+                normalizedStatus === "paid" ||
+                normalizedStatus === "overdue paid" ||
+                normalizedStatus === "preclosed";
+
+              const fullyPaid =
+                installmentAmount > 0 &&
+                paidAmount >= installmentAmount;
+
+              const overdue =
+                !finalStatus &&
+                !fullyPaid &&
+                isOverdueInstallment(
+                  dueDate,
+                  collectionBusinessDate,
+                );
+
+              const penaltyAmount =
+                overdue
+                  ? (
+                      existingPenaltyAmount > 0
+                        ? existingPenaltyAmount
+                        : selectedLoanLateFee
+                    )
+                  : existingPenaltyAmount;
+
+              const status =
+                normalizedStatus === "overdue paid"
+                  ? "Overdue Paid"
+                  : overdue
+                    ? "Overdue"
+                    : fullyPaid
+                      ? "Paid"
+                      : existingStatus;
+
+              return {
+                installmentNumber,
+
+                dueDate,
+
+                installmentAmount,
+
+                status,
+
+                paidAmount,
+
+                penaltyAmount,
+
+                receiptNumber:
+                  String(
+                    installment.receiptNumber ?? "",
+                  ),
+
+                paidDate:
+                  String(
+                    installment.paidDate ?? "",
+                  ),
+              };
+            },
           )
-          .filter((installment) => installment.installmentNumber > 0);
+          .filter(
+            (installment) =>
+              installment.installmentNumber > 0,
+          );
 
         setEmiSchedule(normalizedSchedule);
+
+        const overduePenaltyTotal = normalizedSchedule.reduce(
+          (total, installment) =>
+            normalizeStatus(installment.status) === "overdue"
+              ? total + safeNumber(installment.penaltyAmount)
+              : total,
+          0,
+        );
+
+        updateFieldRef.current("penaltyAmount", overduePenaltyTotal);
 
         setSelectedEmiNumbers([]);
 
@@ -609,6 +809,7 @@ export default function CollectionEntry({ middleSlot }: CollectionEntryProps) {
     console.log("FINORA STEP 4 MODE:", mode);
 
     setCollectionMode(mode);
+    updateField("penaltyAmount", 0);
 
     setSelectedEmiNumbers([]);
 
@@ -680,11 +881,28 @@ export default function CollectionEntry({ middleSlot }: CollectionEntryProps) {
       return total + getRemainingEmiAmount(currentInstallment);
     }, 0);
 
+    const nextPenaltyAmount = emiSchedule.reduce(
+      (total, currentInstallment) => {
+        if (!nextSelection.includes(currentInstallment.installmentNumber)) {
+          return total;
+        }
+
+        return (
+          total +
+          (normalizeStatus(currentInstallment.status) === "overdue"
+            ? safeNumber(currentInstallment.penaltyAmount)
+            : 0)
+        );
+      },
+      0,
+    );
+
     setSelectedEmiNumbers(nextSelection);
 
     updateField("selectedEmiNumbers", nextSelection);
 
     updateField("selectedEmiAmount", nextAmount);
+    updateField("penaltyAmount", nextPenaltyAmount);
 
     updateField("paymentAmount", nextAmount);
 
@@ -727,11 +945,28 @@ export default function CollectionEntry({ middleSlot }: CollectionEntryProps) {
       return total + getRemainingEmiAmount(installment);
     }, 0);
 
+    const nextPenaltyAmount = emiSchedule.reduce(
+      (total, installment) => {
+        if (!nextSelection.includes(installment.installmentNumber)) {
+          return total;
+        }
+
+        return (
+          total +
+          (normalizeStatus(installment.status) === "overdue"
+            ? safeNumber(installment.penaltyAmount)
+            : 0)
+        );
+      },
+      0,
+    );
+
     setSelectedEmiNumbers(nextSelection);
 
     updateField("selectedEmiNumbers", nextSelection);
 
     updateField("selectedEmiAmount", nextAmount);
+    updateField("penaltyAmount", nextPenaltyAmount);
 
     updateField("paymentAmount", nextAmount);
 
@@ -916,11 +1151,14 @@ export default function CollectionEntry({ middleSlot }: CollectionEntryProps) {
                         const statusStyle = {
                           ...collectionEntryStyles.status,
 
-                          ...(normalizedStatus === "paid"
+                          ...((normalizedStatus === "paid" ||
+                              normalizedStatus === "overdue paid")
                             ? collectionEntryStyles.statusPaid
                             : normalizedStatus === "preclosed"
                               ? collectionEntryStyles.statusPreclosed
-                              : collectionEntryStyles.statusPending),
+                              : normalizedStatus === "overdue"
+                                  ? collectionEntryStyles.statusOverdue
+                                  : collectionEntryStyles.statusPending),
                         };
 
                         return (
@@ -956,7 +1194,10 @@ export default function CollectionEntry({ middleSlot }: CollectionEntryProps) {
                                   : `Remaining ${currency(remainingAmount)}`
                               }
                             >
-                              {currency(installment.installmentAmount)}
+                                {safeNumber(installment.penaltyAmount) > 0                                   ? `${currency(                                       normalizedStatus === "overdue paid"                                         ? safeNumber(installment.installmentAmount)                                         : Math.max(                                             0,                                             safeNumber(installment.installmentAmount) -                                               safeNumber(installment.paidAmount),                                           ),                                     )} + ${currency(                                       safeNumber(installment.penaltyAmount),                                     )}`
+                                : normalizedStatus === "partial"
+                                  ? `${currency(safeNumber(installment.installmentAmount))} - ${currency(safeNumber(installment.paidAmount))}`
+                                  : currency(installment.installmentAmount)}
                             </strong>
 
                             <span style={statusStyle}>

@@ -1,4 +1,4 @@
-﻿/* ===========================================================
+/* ===========================================================
    FINORA ENTERPRISE OS™
 
    LOAN CUSTOMER CARD™
@@ -43,6 +43,7 @@ import {
 } from "react";
 
 import {
+  cardStyle,
   detailStyle,
   searchInputStyle,
   selectorButtonStyle,
@@ -311,36 +312,12 @@ useEffect(() => {
 
     <div
       style={{
-        width: "100%",
-        height: "100%",
-        minWidth: 0,
-        minHeight: 0,
-
-        boxSizing: "border-box",
+        ...cardStyle,
 
         display: "flex",
         flexDirection: "column",
 
         padding: "16px 18px",
-
-        background:
-  "linear-gradient(180deg, var(--finora-theme-surface, #111C2E), var(--finora-theme-surface-muted, #142238))",
-
-        border:
-          "1px solid rgba(148,163,184,0.20)",
-
-        borderRadius: "16px",
-
-        color: "#FFFFFF",
-
-        boxShadow:
-          "0 8px 24px rgba(0,0,0,0.16)",
-
-        overflow: "visible",
-
-        position: "relative",
-
-        zIndex: 10,
       }}
     >
 
@@ -666,6 +643,8 @@ onMouseLeave={() =>
             style={{
               flexShrink: 0,
 
+              fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
+
               fontSize: "12px",
 
               fontWeight: 600,
@@ -690,6 +669,8 @@ onMouseLeave={() =>
               minWidth: 0,
 
               flex: 1,
+
+              fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
 
               fontSize: "12px",
 
@@ -746,6 +727,8 @@ onMouseLeave={() =>
             style={{
               flexShrink: 0,
 
+              fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
+
               fontSize: "12px",
 
               fontWeight: 600,
@@ -770,6 +753,8 @@ onMouseLeave={() =>
               minWidth: 0,
 
               flex: 1,
+
+              fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
 
               fontSize: "12px",
 

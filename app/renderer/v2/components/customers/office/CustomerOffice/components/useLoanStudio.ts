@@ -1,4 +1,4 @@
-// ============================================================
+﻿// ============================================================
 // FINORA ENTERPRISE OS™
 // LOAN STUDIO STATE / BUSINESS ENGINE
 //
@@ -75,7 +75,7 @@
 // STATUS  : Production + Gold Entry Foundation
 // ============================================================
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import type { LoanCustomerOption } from "../../../../loans/details/LoanCustomerCard";
 
@@ -125,6 +125,19 @@ import { storageManager } from "../../../../../storage/storageManager";
 import type { LoanReviewData } from "../../../../loans/review/types";
 
 import type { LoanStudioProps } from "./LoanStudio.types";
+
+import {
+  clearLoanWorkspaceDraft,
+  loadLoanWorkspaceDraft,
+  saveLoanWorkspaceDraft,
+  type LoanWorkspaceDraftStep,
+} from "./loanWorkspaceDraft";
+
+import {
+  clearLoanDocumentDrafts,
+  loadLoanDocumentDraft,
+  saveLoanDocumentDraft,
+} from "./loanDocumentDraftStore";
 
 import {
   getAuthenticatedStorageMode,
@@ -240,6 +253,7 @@ export function useLoanStudio({
   initialStep,
   initialLoanAmount,
   goldStepOne,
+  onGoldStepOneDetails,
 }: LoanStudioProps) {
   /* ==========================================================
      INITIAL LAUNCH CONTEXT
@@ -267,6 +281,156 @@ export function useLoanStudio({
     ) ?? "";
 
   const isGoldLoan = entryMode === "GOLD";
+
+  const draftMode =
+    isGoldLoan
+      ? "GOLD"
+      : "STANDARD";
+
+  const initialWorkspaceDraft =
+    useMemo(
+      () =>
+        loadLoanWorkspaceDraft(
+          draftMode,
+        ),
+      [draftMode],
+    );
+
+  const initialDraftPayload =
+    initialWorkspaceDraft?.payload ?? {};
+
+  function readInitialDraftString(
+    key: string,
+    fallback = "",
+  ): string {
+    const value =
+      initialDraftPayload[key];
+
+    return typeof value === "string"
+      ? value
+      : fallback;
+  }
+
+  function readInitialDraftCustomer():
+    LoanCustomerOption | undefined {
+    const value =
+      initialDraftPayload.selectedCustomer;
+
+    if (
+      typeof value !== "object" ||
+      value === null
+    ) {
+      return undefined;
+    }
+
+    const customer =
+      value as Record<string, unknown>;
+
+    const restoredCustomerId =
+      typeof customer.customerId === "string"
+        ? customer.customerId
+        : "";
+
+    const restoredCustomerName =
+      typeof customer.customerName === "string"
+        ? customer.customerName
+        : "";
+
+    if (
+      !restoredCustomerId ||
+      !restoredCustomerName
+    ) {
+      return undefined;
+    }
+
+    return {
+      customerId:
+        restoredCustomerId,
+
+      customerName:
+        restoredCustomerName,
+
+      phoneNumber:
+        typeof customer.phoneNumber === "string"
+          ? customer.phoneNumber
+          : "",
+
+      photo:
+        typeof customer.photo === "string"
+          ? customer.photo
+          : undefined,
+    };
+  }
+
+  function readInitialDraftDocuments():
+    DocumentsStudioItem[] {
+    const value =
+      initialDraftPayload.documents;
+
+    if (!Array.isArray(value)) {
+      return [];
+    }
+
+    return value
+      .filter(
+        (item): item is DocumentsStudioItem =>
+          typeof item === "object" &&
+          item !== null &&
+          typeof (item as DocumentsStudioItem).id === "string" &&
+          typeof (item as DocumentsStudioItem).categoryId === "string" &&
+          typeof (item as DocumentsStudioItem).name === "string",
+      )
+      .map((item) => ({
+        ...item,
+
+        url:
+          item.dataUrl ||
+          (
+            typeof item.url === "string" &&
+            !item.url.startsWith("blob:")
+              ? item.url
+              : ""
+          ),
+      }));
+  }
+
+  const initialDraftCustomerRef =
+    useRef<LoanCustomerOption | undefined>(
+      readInitialDraftCustomer(),
+    );
+
+  const initialDraftDocumentsRef =
+    useRef<DocumentsStudioItem[]>(
+      readInitialDraftDocuments(),
+    );
+
+  const initialDraftCustomer =
+    initialDraftCustomerRef.current;
+
+  const initialDraftDocuments =
+    initialDraftDocumentsRef.current;
+
+  const restoredDocumentsCustomerIdRef =
+    useRef(
+      initialDraftCustomer?.customerId ?? "",
+    );
+
+  const skipInitialGoldPrincipalSyncRef =
+    useRef(
+      isGoldLoan &&
+      initialWorkspaceDraft !== null,
+    );
+
+  const suppressNextDraftAutosaveRef =
+    useRef(false);
+
+  /*
+   * Successful completion / Reject is a terminal workspace
+   * boundary. Resetting controlled state must never recreate
+   * the just-cleared Loan draft through autosave.
+   */
+  const suppressLoanWorkspaceAutosaveRef =
+    useRef(false);
 
   /* ==========================================================
      CUSTOMER HYDRATION
@@ -331,16 +495,23 @@ export function useLoanStudio({
   const [selectedCustomer, setSelectedCustomer] = useState<
     LoanCustomerOption | undefined
   >(
-    customerId && customerName
-      ? {
-          customerId,
-          customerName,
-          phoneNumber,
-        }
-      : undefined,
+    initialDraftCustomer ??
+      (
+        customerId && customerName
+          ? {
+              customerId,
+              customerName,
+              phoneNumber,
+            }
+          : undefined
+      ),
   );
 
   useEffect(() => {
+    if (initialDraftCustomer) {
+      return;
+    }
+
     if (customerId && customerName) {
       const matchingCustomer = customers.find(
         (customer) => customer.identity.customerId === customerId,
@@ -356,17 +527,111 @@ export function useLoanStudio({
         photo: matchingCustomer?.photo,
       });
     }
-  }, [customerId, customerName, phoneNumber, customers]);
+  }, [
+    customerId,
+    customerName,
+    phoneNumber,
+    customers,
+    initialDraftCustomer,
+  ]);
 
   /* ==========================================================
      STEP 3 — DOCUMENT EVIDENCE
   ========================================================== */
 
-  const [documents, setDocuments] = useState<DocumentsStudioItem[]>([]);
+  const [documents, setDocuments] =
+    useState<DocumentsStudioItem[]>(
+      initialDraftDocuments,
+    );
 
   useEffect(() => {
+    const restoredCustomerId =
+      restoredDocumentsCustomerIdRef.current;
+
+    if (
+      restoredCustomerId &&
+      restoredCustomerId ===
+        selectedCustomer?.customerId
+    ) {
+      restoredDocumentsCustomerIdRef.current =
+        "";
+
+      return;
+    }
+
     setDocuments([]);
   }, [selectedCustomer?.customerId]);
+
+  /*
+   * Loan workspace draft keeps document metadata only.
+   *
+   * Large image / PDF content is restored from IndexedDB.
+   */
+  useEffect(() => {
+    const draftDocuments =
+      initialDraftDocumentsRef.current;
+
+    if (draftDocuments.length === 0) {
+      return;
+    }
+
+    let cancelled =
+      false;
+
+    void (async () => {
+      const hydratedDocuments =
+        await Promise.all(
+          draftDocuments.map(
+            async (document) => {
+              /*
+               * Backward compatibility for any older draft
+               * that still contains an inline dataUrl.
+               */
+              if (document.dataUrl) {
+                return {
+                  ...document,
+
+                  url:
+                    document.dataUrl,
+                };
+              }
+
+              const dataUrl =
+                await loadLoanDocumentDraft(
+                  draftMode,
+                  document.id,
+                );
+
+              if (!dataUrl) {
+                return document;
+              }
+
+              return {
+                ...document,
+
+                dataUrl,
+
+                url:
+                  dataUrl,
+              };
+            },
+          ),
+        );
+
+      if (cancelled) {
+        return;
+      }
+
+      setDocuments(
+        hydratedDocuments,
+      );
+    })();
+
+    return () => {
+      cancelled =
+        true;
+    };
+  }, [draftMode]);
 
   /* ==========================================================
      CUSTOMER OPTIONS
@@ -477,7 +742,18 @@ export function useLoanStudio({
      under Loan Studio control after mount.
   ========================================================== */
 
-  const [step, setStep] = useState<number>(resolvedInitialStep);
+  const [step, setStep] = useState<number>(
+    initialWorkspaceDraft
+      ? (
+          isGoldLoan
+            ? Math.max(
+                2,
+                initialWorkspaceDraft.step,
+              )
+            : initialWorkspaceDraft.step
+        )
+      : resolvedInitialStep,
+  );
 
   /* ==========================================================
      LOAN DETAILS
@@ -489,49 +765,75 @@ export function useLoanStudio({
        remains empty unless explicitly supplied.
   ========================================================== */
 
-  const [loanAmount, setLoanAmount] = useState(resolvedInitialLoanAmount);
+  const [loanAmount, setLoanAmount] =
+    useState(
+      () =>
+        readInitialDraftString(
+          "loanAmount",
+          resolvedInitialLoanAmount,
+        ),
+    );
 
-  const [interest, setInterest] = useState("");
+  useEffect(() => {
+    if (!isGoldLoan) {
+      return;
+    }
 
-  const [processingFee, setProcessingFee] = useState("");
+    if (
+      skipInitialGoldPrincipalSyncRef.current
+    ) {
+      skipInitialGoldPrincipalSyncRef.current =
+        false;
 
-  const [advanceDeduction, setAdvanceDeduction] = useState("");
+      return;
+    }
 
-  const [penaltyType, setPenaltyType] = useState("Fixed Amount");
+    setLoanAmount(resolvedInitialLoanAmount);
+  }, [isGoldLoan, resolvedInitialLoanAmount]);
 
-  const [penaltyValue, setPenaltyValue] = useState("");
+  const [interest, setInterest] = useState(() => readInitialDraftString("interest"));
 
-  const [lateFee, setLateFee] = useState("");
+  const [processingFee, setProcessingFee] = useState(() => readInitialDraftString("processingFee"));
+
+  const [advanceDeduction, setAdvanceDeduction] = useState(() => readInitialDraftString("advanceDeduction"));
+
+  const [penaltyType, setPenaltyType] = useState(() => readInitialDraftString("penaltyType", "Fixed Amount"));
+
+  const [penaltyValue, setPenaltyValue] = useState(() => readInitialDraftString("penaltyValue"));
+
+  const [lateFee, setLateFee] = useState(() => readInitialDraftString("lateFee"));
 
   /* ==========================================================
      REPAYMENT
   ========================================================== */
 
   const [emiCalculation, setEMICalculation] =
-    useState<EMICalculationMode>("fixed");
+    useState<EMICalculationMode>(
+      () =>
+        readInitialDraftString(
+          "emiCalculation",
+          "interestOnly",
+        ) as EMICalculationMode,
+    );
 
-  const [firstInstallmentDate, setFirstInstallmentDate] = useState("");
+  const [firstInstallmentDate, setFirstInstallmentDate] = useState(() => readInitialDraftString("firstInstallmentDate"));
 
-  const [repaymentType, setRepaymentType] = useState("");
+  const [repaymentType, setRepaymentType] = useState(() => readInitialDraftString("repaymentType"));
 
-  const [duration, setDuration] = useState("");
+  const [duration, setDuration] = useState(() => readInitialDraftString("duration"));
 
-  const [durationType, setDurationType] = useState("");
+  const [durationType, setDurationType] = useState(() => readInitialDraftString("durationType", "months"));
 
   /* ==========================================================
      STEP 1 → STEP 2 REPAYMENT SYNC
   ========================================================== */
 
   const syncedRepaymentType =
-    durationType === "days"
-      ? "DAILY"
-      : durationType === "weeks"
-        ? "WEEKLY"
-        : durationType === "months"
-          ? "MONTHLY"
-          : durationType === "years"
-            ? "MONTHLY"
-            : "";
+    durationType === "months"
+      ? "MONTHLY"
+      : durationType === "years"
+        ? "YEARLY"
+        : "";
 
   useEffect(() => {
     setRepaymentType(syncedRepaymentType);
@@ -541,39 +843,54 @@ export function useLoanStudio({
      GUARANTOR
   ========================================================== */
 
-  const [guarantorName, setGuarantorName] = useState("");
+  const [guarantorName, setGuarantorName] = useState(() => readInitialDraftString("guarantorName"));
 
-  const [guarantorPhone, setGuarantorPhone] = useState("");
+  const [guarantorPhone, setGuarantorPhone] = useState(() => readInitialDraftString("guarantorPhone"));
 
-  const [guarantorOccupation, setGuarantorOccupation] = useState("");
+  const [guarantorOccupation, setGuarantorOccupation] = useState(() => readInitialDraftString("guarantorOccupation"));
 
-  const [guarantorAddress, setGuarantorAddress] = useState("");
+  const [guarantorAddress, setGuarantorAddress] = useState(() => readInitialDraftString("guarantorAddress"));
 
-  const [guarantorRelationship, setGuarantorRelationship] = useState("");
+  const [guarantorRelationship, setGuarantorRelationship] = useState(() => readInitialDraftString("guarantorRelationship"));
 
   // ==========================================================
   // GUARANTOR VERIFICATION
   // ==========================================================
 
   const [guarantorVerificationStatus, setGuarantorVerificationStatus] =
-    useState("pending");
+    useState(
+      () =>
+        readInitialDraftString(
+          "guarantorVerificationStatus",
+          "pending",
+        ),
+    );
 
   const [guarantorIdentityVerification, setGuarantorIdentityVerification] =
-    useState("aadhaar");
+    useState(
+      () =>
+        readInitialDraftString(
+          "guarantorIdentityVerification",
+          "aadhaar",
+        ),
+    );
 
   /* ==========================================================
      NOTES
   ========================================================== */
 
-  const [purpose, setPurpose] = useState("");
+  const [purpose, setPurpose] = useState(() => readInitialDraftString("purpose"));
 
-  const [remarks, setRemarks] = useState("");
+  const [remarks, setRemarks] = useState(() => readInitialDraftString("remarks"));
 
   /* ==========================================================
      APPROVAL
   ========================================================== */
 
   const [loanApproved, setLoanApproved] = useState(false);
+
+  const [isLoanProcessing, setIsLoanProcessing] =
+    useState(false);
 
   const loanStatus = loanApproved ? "Approved" : "Pending Approval";
 
@@ -590,18 +907,28 @@ export function useLoanStudio({
     activeBusinessDate;
 
 
-  const [paymentMode, setPaymentMode] = useState("cash");
+  const [paymentMode, setPaymentMode] = useState(() => readInitialDraftString("paymentMode", "cash"));
 
-  const [transactionStatus, setTransactionStatus] = useState("pending");
+  const [transactionStatus, setTransactionStatus] = useState(() => readInitialDraftString("transactionStatus", "pending"));
 
-  const [disbursementSavedAt, setDisbursementSavedAt] = useState("Not Saved");
+  const [disbursementSavedAt, setDisbursementSavedAt] = useState(() => readInitialDraftString("disbursementSavedAt", "Not Saved"));
 
   const [disbursementDraftStatus, setDisbursementDraftStatus] = useState<
     "Draft" | "Completed"
-  >("Draft");
+  >(
+    () =>
+      readInitialDraftString(
+        "disbursementDraftStatus",
+        "Draft",
+      ) as "Draft" | "Completed",
+  );
 
   const [disbursementReceiptNumber, setDisbursementReceiptNumber] = useState(
-    () => `DIS-${Date.now()}`,
+    () =>
+      readInitialDraftString(
+        "disbursementReceiptNumber",
+        `DIS-${Date.now()}`,
+      ),
   );
 
   /* ==========================================================
@@ -618,11 +945,33 @@ export function useLoanStudio({
 
   async function refreshLoanStatistics(): Promise<void> {
     try {
+      const normalizedCustomerId = activeCustomerId.trim();
+
+      if (!normalizedCustomerId) {
+        setLoanStatistics({
+          totalLoans: 0,
+
+          activeLoans: 0,
+
+          totalDisbursed: 0,
+        });
+
+        return;
+      }
+
       const loans = await fetchLoans();
 
-      const totalLoans = loans.length;
+      const customerLoans = loans.filter((loan) => {
+        const record = loan as unknown as Record<string, unknown>;
 
-      const activeLoans = loans.filter((loan) => {
+        const loanCustomerId = String(record.customerId ?? "").trim();
+
+        return loanCustomerId === normalizedCustomerId;
+      });
+
+      const totalLoans = customerLoans.length;
+
+      const activeLoans = customerLoans.filter((loan) => {
         const record = loan as unknown as Record<string, unknown>;
 
         const status = String(record.status ?? "")
@@ -634,7 +983,7 @@ export function useLoanStudio({
         return (status === "ACTIVE" || status === "RUNNING") && outstanding > 0;
       }).length;
 
-      const totalDisbursed = loans.reduce((total, loan) => {
+      const totalDisbursed = customerLoans.reduce((total, loan) => {
         const record = loan as unknown as Record<string, unknown>;
 
         const netValue = Number(record.netDisbursement ?? NaN);
@@ -695,7 +1044,7 @@ export function useLoanStudio({
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [activeCustomerId]);
 
   /* ==========================================================
      FINANCIAL CALCULATIONS
@@ -714,9 +1063,7 @@ export function useLoanStudio({
       ? durationValue * 12
       : durationType === "months"
         ? durationValue
-        : durationType === "weeks"
-          ? durationValue / 4.33
-          : durationValue / 30;
+        : 0;
 
   const flatTotalInterest = Math.round(monthlyInterestAmount * interestMonths);
 
@@ -727,9 +1074,7 @@ export function useLoanStudio({
       ? durationValue * 365
       : durationType === "months"
         ? durationValue * 30
-        : durationType === "weeks"
-          ? durationValue * 7
-          : durationValue;
+        : 0;
 
   /* ==========================================================
      REPAYMENT FREQUENCY
@@ -744,15 +1089,10 @@ export function useLoanStudio({
   const totalInstallments =
     durationValue <= 0 || !normalizedRepaymentType
       ? 0
-      : normalizedRepaymentType === "MONTHLY"
-        ? durationType === "years"
-          ? durationValue * 12
-          : Math.max(1, Math.ceil(durationDays / 30))
-        : normalizedRepaymentType === "WEEKLY"
-          ? Math.max(1, Math.ceil(durationDays / 7))
-          : normalizedRepaymentType === "DAILY"
-            ? Math.max(1, Math.ceil(durationDays))
-            : 0;
+      : normalizedRepaymentType === "MONTHLY" ||
+          normalizedRepaymentType === "YEARLY"
+        ? Math.max(1, Math.round(durationValue))
+        : 0;
 
   /* ==========================================================
      LOAN DATES
@@ -772,16 +1112,6 @@ export function useLoanStudio({
 
   if (maturityDate) {
     switch (durationType) {
-      case "days":
-        maturityDate.setDate(maturityDate.getDate() + durationValue);
-
-        break;
-
-      case "weeks":
-        maturityDate.setDate(maturityDate.getDate() + durationValue * 7);
-
-        break;
-
       case "months":
         maturityDate.setMonth(maturityDate.getMonth() + durationValue);
 
@@ -800,18 +1130,16 @@ export function useLoanStudio({
 
   const schedule =
     totalInstallments > 0 &&
-    (normalizedRepaymentType === "DAILY" ||
-      normalizedRepaymentType === "WEEKLY" ||
-      normalizedRepaymentType === "MONTHLY")
+    (normalizedRepaymentType === "MONTHLY" ||
+      normalizedRepaymentType === "YEARLY")
       ? generateSchedule(
           totalInstallments,
 
           scheduleStartDate,
 
           normalizedRepaymentType.toLowerCase() as
-            | "daily"
-            | "weekly"
-            | "monthly",
+            | "monthly"
+            | "yearly",
 
           flatTotalPayable,
 
@@ -946,7 +1274,299 @@ export function useLoanStudio({
      DRAFT / REJECT
   ========================================================== */
 
-  function handleSaveDraft(): void {
+  /* ==========================================================
+     DURABLE LOAN WORKSPACE DRAFT
+
+     Draft survives:
+     - Back to Loans Office
+     - Reload
+     - Logout / Login
+     - App close / reopen
+
+     Draft is cleared only after:
+     - explicit Reject
+     - successful Loan creation
+  ========================================================== */
+
+  async function persistCurrentLoanWorkspaceDraft():
+    Promise<boolean> {
+    const existingDraft =
+      loadLoanWorkspaceDraft(
+        draftMode,
+      );
+
+    /*
+     * Large document content belongs in IndexedDB.
+     *
+     * Save binary content before publishing the lightweight
+     * Loan workspace metadata snapshot into localStorage.
+     */
+    const documentSaveResults =
+      await Promise.all(
+        documents.map(
+          async (document) => {
+            if (!document.dataUrl) {
+              return true;
+            }
+
+            return saveLoanDocumentDraft(
+              draftMode,
+              document.id,
+              document.dataUrl,
+            );
+          },
+        ),
+      );
+
+    if (
+      documentSaveResults.some(
+        (saved) => !saved,
+      )
+    ) {
+      console.error(
+        "FINORA LOAN DOCUMENT DRAFT AUTOSAVE FAILED",
+      );
+
+      return false;
+    }
+
+    /*
+     * Keep workspace JSON lightweight.
+     *
+     * Never place dataUrl, blob: URLs or data: URLs
+     * inside the localStorage Loan draft.
+     */
+    const safeDocuments =
+      documents.map(
+        (document) => {
+          const {
+            dataUrl: _dataUrl,
+            ...metadata
+          } = document;
+
+          void _dataUrl;
+
+          return {
+            ...metadata,
+
+            url:
+              typeof document.url === "string" &&
+              !document.url.startsWith("blob:") &&
+              !document.url.startsWith("data:")
+                ? document.url
+                : "",
+          };
+        },
+      );
+
+    const safeStep =
+      Math.min(
+        6,
+        Math.max(
+          1,
+          Math.round(step),
+        ),
+      ) as LoanWorkspaceDraftStep;
+
+    /*
+     * Do not create a completely empty Standard Loan draft
+     * merely because the user opened Loan Studio.
+     *
+     * Once a draft already exists, empty/cleared field changes
+     * must still be persisted so stale values do not return.
+     */
+    const hasMeaningfulWorkspaceData =
+      Boolean(existingDraft) ||
+      safeStep > 1 ||
+      Boolean(selectedCustomer) ||
+      safeDocuments.length > 0 ||
+      Boolean(loanAmount) ||
+      Boolean(interest) ||
+      Boolean(processingFee) ||
+      Boolean(advanceDeduction) ||
+      Boolean(penaltyValue) ||
+      Boolean(lateFee) ||
+      Boolean(firstInstallmentDate) ||
+      Boolean(repaymentType) ||
+      Boolean(duration) ||
+      Boolean(guarantorName) ||
+      Boolean(guarantorPhone) ||
+      Boolean(guarantorOccupation) ||
+      Boolean(guarantorAddress) ||
+      Boolean(guarantorRelationship) ||
+      Boolean(purpose) ||
+      Boolean(remarks) ||
+      disbursementSavedAt !== "Not Saved" ||
+      disbursementDraftStatus !== "Draft";
+
+    if (
+      !hasMeaningfulWorkspaceData
+    ) {
+      return true;
+    }
+
+    return saveLoanWorkspaceDraft({
+      version: 1,
+
+      mode:
+        draftMode,
+
+      step:
+        safeStep,
+
+      savedAt:
+        new Date().toISOString(),
+
+      payload: {
+        /*
+         * Preserve fields owned by surrounding Gold workflow
+         * or future draft schema extensions.
+         */
+        ...(existingDraft?.payload ?? {}),
+
+        selectedCustomer,
+
+        documents:
+          safeDocuments,
+
+        loanAmount,
+
+        interest,
+
+        processingFee,
+
+        advanceDeduction,
+
+        penaltyType,
+
+        penaltyValue,
+
+        lateFee,
+
+        emiCalculation,
+
+        firstInstallmentDate,
+
+        repaymentType,
+
+        duration,
+
+        durationType,
+
+        guarantorName,
+
+        guarantorPhone,
+
+        guarantorOccupation,
+
+        guarantorAddress,
+
+        guarantorRelationship,
+
+        guarantorVerificationStatus,
+
+        guarantorIdentityVerification,
+
+        purpose,
+
+        remarks,
+
+        paymentMode,
+
+        transactionStatus,
+
+        disbursementSavedAt,
+
+        disbursementDraftStatus,
+
+        disbursementReceiptNumber,
+      },
+    });
+  }
+
+  useEffect(() => {
+    if (
+      suppressLoanWorkspaceAutosaveRef.current
+    ) {
+      return;
+    }
+
+    if (
+      suppressNextDraftAutosaveRef.current
+    ) {
+      suppressNextDraftAutosaveRef.current =
+        false;
+
+      return;
+    }
+
+    void persistCurrentLoanWorkspaceDraft();
+  }, [
+    draftMode,
+
+    step,
+
+    selectedCustomer,
+
+    documents,
+
+    loanAmount,
+
+    interest,
+
+    processingFee,
+
+    advanceDeduction,
+
+    penaltyType,
+
+    penaltyValue,
+
+    lateFee,
+
+    emiCalculation,
+
+    firstInstallmentDate,
+
+    repaymentType,
+
+    duration,
+
+    durationType,
+
+    guarantorName,
+
+    guarantorPhone,
+
+    guarantorOccupation,
+
+    guarantorAddress,
+
+    guarantorRelationship,
+
+    guarantorVerificationStatus,
+
+    guarantorIdentityVerification,
+
+    purpose,
+
+    remarks,
+
+    paymentMode,
+
+    transactionStatus,
+
+    disbursementSavedAt,
+
+    disbursementDraftStatus,
+
+    disbursementReceiptNumber,
+  ]);
+  async function handleSaveDraft():
+    Promise<void> {
+    const saved =
+      await persistCurrentLoanWorkspaceDraft();
+
     console.log("FINORA LOAN SAVE DRAFT", {
       customerId: activeCustomerId,
 
@@ -957,10 +1577,13 @@ export function useLoanStudio({
       guarantorVerificationStatus,
 
       guarantorIdentityVerification,
+
+      saved,
     });
   }
 
-  function handleRejectLoan(): void {
+  async function handleRejectLoan():
+    Promise<void> {
     console.log("FINORA LOAN REJECT", {
       customerId: activeCustomerId,
 
@@ -972,13 +1595,28 @@ export function useLoanStudio({
 
       guarantorIdentityVerification,
     });
+
+    await clearLoanDocumentDrafts(
+      draftMode,
+    );
+
+    suppressLoanWorkspaceAutosaveRef.current =
+      true;
+    clearLoanWorkspaceDraft(
+      draftMode,
+    );
+
+    suppressNextDraftAutosaveRef.current =
+      true;
+
+    resetLoanWorkspace();
   }
 
   /* ==========================================================
      APPROVE / CREATE LOAN
   ========================================================== */
 
-  async function handleApproveLoan(): Promise<void> {
+  async function executeApproveLoan(): Promise<void> {
     /* ========================================================
        ERP BUSINESS DATE SAFETY
 
@@ -999,6 +1637,17 @@ export function useLoanStudio({
 
     if (loanApproved) {
       alert("Loan already created");
+
+      return;
+    }
+
+    if (
+      transactionStatus.trim().toLowerCase() !==
+        "completed"
+    ) {
+      alert(
+        "Transaction Status must be Completed before creating the Loan.",
+      );
 
       return;
     }
@@ -1027,27 +1676,6 @@ export function useLoanStudio({
 
     const loanTitle = getLoanTypeLabel(normalizedLoanTypeValue);
 
-    /* ========================================================
-       DUPLICATE LOAN CHECK
-    ======================================================== */
-
-    const alreadyExists = await hasExistingLoan(
-      activeCustomerId,
-
-      loanTitle,
-
-      principal,
-    );
-
-    if (alreadyExists) {
-      setLoanApproved(true);
-
-      await refreshLoanStatistics();
-
-      alert("Loan already created");
-
-      return;
-    }
 
     /* ========================================================
        FINORA WALLET CHARGE PREFLIGHT
@@ -1552,7 +2180,41 @@ Available Balance: ₹${walletChargeResult.data.availableBalance}`,
        START FRESH LOAN WORKSPACE
     ======================================================== */
 
+    suppressLoanWorkspaceAutosaveRef.current =
+      true;
+
+    suppressNextDraftAutosaveRef.current =
+      true;
+
     resetLoanWorkspace();
+
+    void clearLoanDocumentDrafts(
+      draftMode,
+    ).catch((error) => {
+      console.error(
+        "FINORA LOAN DOCUMENT DRAFT CLEANUP ERROR:",
+        error,
+      );
+    });
+
+    clearLoanWorkspaceDraft(
+      draftMode,
+    );
+  }
+
+
+  /* ==========================================================
+     APPROVE / CREATE LOAN — GLOBAL PROCESSING WRAPPER
+  ========================================================== */
+
+  async function handleApproveLoan(): Promise<void> {
+    setIsLoanProcessing(true);
+
+    try {
+      await executeApproveLoan();
+    } finally {
+      setIsLoanProcessing(false);
+    }
   }
 
   /* ==========================================================
@@ -1587,15 +2249,15 @@ Available Balance: ₹${walletChargeResult.data.availableBalance}`,
 
     setLateFee("");
 
-    setEMICalculation("fixed");
+    setEMICalculation("interestOnly");
 
     setFirstInstallmentDate("");
 
-    setRepaymentType("");
+    setRepaymentType("MONTHLY");
 
     setDuration("");
 
-    setDurationType("");
+    setDurationType("months");
 
     setGuarantorName("");
 
@@ -1651,6 +2313,8 @@ Available Balance: ₹${walletChargeResult.data.availableBalance}`,
     initialLoanAmount,
 
     goldStepOne,
+
+    onGoldStepOneDetails,
 
     /* ========================================================
        EXISTING CUSTOMER CONTEXT
@@ -1814,6 +2478,8 @@ Available Balance: ₹${walletChargeResult.data.availableBalance}`,
     handleRejectLoan,
 
     handleApproveLoan,
+
+    isLoanProcessing,
 
     resetLoanWorkspace,
   };

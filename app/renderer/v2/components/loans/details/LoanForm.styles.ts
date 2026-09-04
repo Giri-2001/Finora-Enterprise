@@ -56,11 +56,15 @@ const COLORS = {
   required: "var(--finora-theme-brand-accent)",
 };
 
+const FORM_FONT_FAMILY =
+  "Inter, ui-sans-serif, system-ui, sans-serif";
+
 /* ============================================================
    SECTION
 ============================================================ */
 
 export const sectionStyle: CSSProperties = {
+  fontFamily: FORM_FONT_FAMILY,
   width: "100%",
 
   minWidth: 0,
@@ -89,11 +93,12 @@ export const sectionStyle: CSSProperties = {
 ============================================================ */
 
 export const sectionTitleStyle: CSSProperties = {
+  fontFamily: FORM_FONT_FAMILY,
   marginBottom: "6px",
 
   color: COLORS.text,
 
-  fontSize: "12px",
+  fontSize: "13px",
 
   fontWeight: 650,
 
@@ -131,6 +136,7 @@ export function createLoanFormGridStyle(
   tokens: Step1DetailsResponsiveTokens,
 ): CSSProperties {
   return {
+    fontFamily: FORM_FONT_FAMILY,
     display: "grid",
 
     gridTemplateColumns: `repeat(
@@ -164,6 +170,7 @@ export function createLoanFormGridStyle(
 */
 
 export const formGridStyle: CSSProperties = {
+  fontFamily: FORM_FONT_FAMILY,
   display: "grid",
 
   gridTemplateColumns: "repeat(4, minmax(0, 1fr))",
@@ -184,11 +191,12 @@ export const formGridStyle: CSSProperties = {
 ============================================================ */
 
 export const fieldGroupStyle: CSSProperties = {
+  fontFamily: FORM_FONT_FAMILY,
   display: "flex",
 
   flexDirection: "column",
 
-  gap: "6px",
+  gap: "7px",
 
   minWidth: 0,
 
@@ -202,6 +210,7 @@ export const fieldGroupStyle: CSSProperties = {
 ============================================================ */
 
 export const fieldLabelStyle: CSSProperties = {
+  fontFamily: FORM_FONT_FAMILY,
   display: "flex",
 
   alignItems: "center",
@@ -212,7 +221,7 @@ export const fieldLabelStyle: CSSProperties = {
 
   color: COLORS.textSecondary,
 
-  fontSize: "12px",
+  fontSize: "13px",
 
   fontWeight: 600,
 
@@ -230,9 +239,10 @@ export const fieldLabelStyle: CSSProperties = {
 ============================================================ */
 
 export const requiredMarkStyle: CSSProperties = {
+  fontFamily: FORM_FONT_FAMILY,
   color: COLORS.required,
 
-  fontSize: "12px",
+  fontSize: "13px",
 
   fontWeight: 700,
 };
@@ -242,11 +252,12 @@ export const requiredMarkStyle: CSSProperties = {
 ============================================================ */
 
 export const inputStyle: CSSProperties = {
+  fontFamily: FORM_FONT_FAMILY,
   width: "100%",
 
   minWidth: 0,
 
-  height: "32px",
+  height: "34px",
 
   padding: "0 9px",
 
@@ -262,11 +273,11 @@ export const inputStyle: CSSProperties = {
 
   color: COLORS.text,
 
-  fontSize: "12px",
+  fontSize: "13px",
 
-  fontWeight: 500,
+  fontWeight: 550,
 
-  lineHeight: "32px",
+  lineHeight: "34px",
 
   transition: "border-color 0.16s ease, box-shadow 0.16s ease",
 };
@@ -288,11 +299,12 @@ export const selectStyle: CSSProperties = {
 ============================================================ */
 
 export const textareaStyle: CSSProperties = {
+  fontFamily: FORM_FONT_FAMILY,
   width: "100%",
 
   minWidth: 0,
 
-  height: "40px",
+  height: "42px",
 
   minHeight: "40px",
 
@@ -312,9 +324,9 @@ export const textareaStyle: CSSProperties = {
 
   color: COLORS.text,
 
-  fontSize: "12px",
+  fontSize: "13px",
 
-  fontWeight: 500,
+  fontWeight: 550,
 
   lineHeight: 1.25,
 };
@@ -324,6 +336,7 @@ export const textareaStyle: CSSProperties = {
 ============================================================ */
 
 export const durationGroupStyle: CSSProperties = {
+  fontFamily: FORM_FONT_FAMILY,
   display: "grid",
 
   gridTemplateColumns: "minmax(0, 1fr) minmax(0, 1fr)",

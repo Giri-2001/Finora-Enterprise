@@ -333,7 +333,10 @@ export function createLoanStudioStyles(
 
     boxSizing: "border-box",
 
-    fontSize: tokens.typography.navigation,
+    fontFamily:
+      "Inter, ui-sans-serif, system-ui, sans-serif",
+
+    fontSize: tokens.typography.navigation + 1,
 
     fontWeight: 700,
   };
@@ -369,7 +372,10 @@ export function createLoanStudioStyles(
 
     whiteSpace: "nowrap",
 
-    fontSize: tokens.typography.navigation,
+    fontFamily:
+      "Inter, ui-sans-serif, system-ui, sans-serif",
+
+    fontSize: tokens.typography.navigation + 1,
 
     fontWeight: 700,
 
@@ -466,6 +472,7 @@ export function createLoanStudioStyles(
 
       boxSizing: "border-box",
 
+      paddingBottom: isCompact ? "190px" : "96px",
       overflow: "auto",
 
       scrollbarWidth: "thin",
@@ -476,11 +483,14 @@ export function createLoanStudioStyles(
     ======================================================= */
 
     footerStyle: {
-      position: "relative",
+      position: "fixed",
+      left: `${spacing.medium}px`,
+      right: `calc(${spacing.medium}px + 12px)`,
+      bottom: "1px",
 
-      zIndex: 50,
+      zIndex: 100,
 
-      width: "100%",
+      width: "auto",
 
       minWidth: 0,
 
@@ -683,7 +693,10 @@ export function createLoanStudioStyles(
 
       whiteSpace: "nowrap",
 
-      fontSize: tokens.typography.caption,
+      fontFamily:
+        "Inter, ui-sans-serif, system-ui, sans-serif",
+
+      fontSize: tokens.typography.caption + 1,
 
       fontWeight: 500,
 

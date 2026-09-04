@@ -1262,6 +1262,16 @@ export const collectionEntryStyles: Record<string, CSSProperties> = {
     color: THEME.textMuted,
   },
 
+  statusOverdue: {
+    border: `1px solid ${THEME.danger}`,
+
+    background: THEME.dangerSoft,
+
+    color: THEME.danger,
+
+    fontWeight: 700,
+  },
+
   // ==========================================================
   // SELECTION
   // ==========================================================

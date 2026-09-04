@@ -16,6 +16,7 @@
 // - No inline responsive logic.
 // ============================================================
 
+import { GlobalLoadingOverlay } from "../../../../common";
 import { formatIndianDate } from "./LoanStudio.helpers";
 
 import { useResponsive } from "../../../../../utils/responsive";
@@ -366,6 +367,8 @@ export default function LoanStudioView(props: LoanStudioViewModel) {
     handleSaveDraft,
     handleRejectLoan,
     handleApproveLoan,
+
+    isLoanProcessing,
     resetLoanWorkspace,
   } = props;
 
@@ -785,6 +788,12 @@ export default function LoanStudioView(props: LoanStudioViewModel) {
           WIZARD FOOTER
       ======================================================== */}
 
+      {isLoanProcessing && (
+        <GlobalLoadingOverlay
+          message="Creating Loan..."
+        />
+      )}
+
       <footer style={footerStyle}>
         <div style={stepListStyle}>
           {STEP_ITEMS.map((item, index) => {
@@ -806,11 +815,26 @@ export default function LoanStudioView(props: LoanStudioViewModel) {
                    * Standard Loan Details page for a Gold Loan.
                    */
                   if (isGoldLoan && current === 1) {
+                    props.onGoldStepOneDetails?.();
+
                     return;
                   }
 
                   if (current === 6) {
                     setStep(6);
+
+                    return;
+                  }
+
+                  if (
+                    step === 4 &&
+                    current > 4 &&
+                    guarantorVerificationStatus.trim().toLowerCase() !==
+                      "verified"
+                  ) {
+                    alert(
+                      "Guarantor verification must be Verified before proceeding to Review.",
+                    );
 
                     return;
                   }
@@ -877,6 +901,18 @@ export default function LoanStudioView(props: LoanStudioViewModel) {
             style={primaryNavigationButtonStyle}
             onClick={async () => {
               if (step < 6) {
+                if (
+                  step === 4 &&
+                  guarantorVerificationStatus.trim().toLowerCase() !==
+                    "verified"
+                ) {
+                  alert(
+                    "Guarantor verification must be Verified before proceeding to Review.",
+                  );
+
+                  return;
+                }
+
                 setStep(step + 1);
 
                 return;

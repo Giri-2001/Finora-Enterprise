@@ -897,9 +897,9 @@ function resolveAllocationBagNumber(
   if (requestedBagNumber !== undefined) {
     const normalizedBagNumber = normalizeBagNumber(requestedBagNumber);
 
-    if (normalizedBagNumber < 1 || normalizedBagNumber > capacity) {
+    if (normalizedBagNumber < 1) {
       return {
-        error: `Requested Bag number must be between 1 and ${capacity}.`,
+        error: "Requested Bag number must be greater than 0.",
       };
     }
 

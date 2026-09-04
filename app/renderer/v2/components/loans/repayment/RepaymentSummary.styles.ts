@@ -103,6 +103,9 @@ export function createRepaymentSummaryStyles(
 
   return {
     cardStyle: {
+      fontFamily:
+        "Inter, ui-sans-serif, system-ui, sans-serif",
+
       width: "100%",
       minWidth: 0,
       boxSizing: "border-box",
@@ -170,7 +173,7 @@ export function createRepaymentSummaryStyles(
       minWidth: 0,
       flex: "0 1 auto",
       color: THEME.text,
-      fontSize: `${valueFontSize}px`,
+      fontSize: `${valueFontSize + 1}px`,
       fontWeight: 650,
       lineHeight: 1.25,
       textAlign: "right",

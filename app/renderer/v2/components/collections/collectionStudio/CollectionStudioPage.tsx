@@ -1,4 +1,4 @@
-// ============================================================
+﻿// ============================================================
 // FINORA ENTERPRISE OS™
 //
 // COLLECTION STUDIO™
@@ -55,7 +55,7 @@
 
 import type { CSSProperties } from "react";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import { useTheme } from "../../../themes/provider";
 
@@ -678,6 +678,25 @@ export default function CollectionStudioPage() {
   const [selectedLoanId, setSelectedLoanId] = useState<string>("");
 
   // ==========================================================
+  // LATEST SELECTION REFS
+  // ==========================================================
+  //
+  // FINORA_COLLECTION_UPDATED is dispatched from the
+  // PaymentDetails child component. The workspace loader
+  // itself is mounted once, so refs are used to always read
+  // the latest selected customer / loan during auto-refresh.
+  //
+
+  const selectedCustomerIdRef = useRef<string>("");
+
+  const selectedLoanIdRef = useRef<string>("");
+
+  selectedCustomerIdRef.current = selectedCustomerId;
+
+  selectedLoanIdRef.current = selectedLoanId;
+
+
+  // ==========================================================
   // GOLD RELEASE STATE
   // ==========================================================
 
@@ -740,8 +759,12 @@ export default function CollectionStudioPage() {
   useEffect(() => {
     let cancelled = false;
 
-    async function loadCollectionWorkspace(): Promise<void> {
-      setLoading(true);
+    async function loadCollectionWorkspace(
+      preserveSelection = false,
+    ): Promise<void> {
+      if (!preserveSelection) {
+        setLoading(true);
+      }
 
       try {
         // ------------------------------------------------------
@@ -854,14 +877,70 @@ export default function CollectionStudioPage() {
         setCollectionCustomers(eligibleCustomers);
 
         // ------------------------------------------------------
-        // DO NOT AUTO-SELECT CUSTOMER
+        // INITIAL LOAD vs POST-COLLECTION REFRESH
+        // ------------------------------------------------------
+        //
+        // Initial workspace load starts with no selection.
+        //
+        // Post-collection refresh keeps the current customer /
+        // loan selection so freshly persisted EMI and balance
+        // state is immediately reflected in the workspace.
+        //
+
+        if (!preserveSelection) {
+          setSelectedCustomerId("");
+
+          setSelectedLoanId("");
+
+          setReviewData(createEmptyReviewData(activeBusinessDate));
+
+          return;
+        }
+
+        // ------------------------------------------------------
+        // PRESERVE CURRENT SELECTION WHEN IT STILL EXISTS
         // ------------------------------------------------------
 
-        setSelectedCustomerId("");
+        const currentSelectedCustomerId =
+          selectedCustomerIdRef.current;
 
-        setSelectedLoanId("");
+        const currentSelectedLoanId =
+          selectedLoanIdRef.current;
 
-        setReviewData(createEmptyReviewData(activeBusinessDate));
+        const refreshedCustomer = eligibleCustomers.find(
+          (customer: CollectionCustomerRecord) =>
+            customer.id === currentSelectedCustomerId,
+        );
+
+        if (!refreshedCustomer) {
+          setSelectedCustomerId("");
+
+          setSelectedLoanId("");
+
+          setReviewData(createEmptyReviewData(activeBusinessDate));
+
+          return;
+        }
+
+        const refreshedLoan = refreshedCustomer.loans.find(
+          (loan: CollectionLoanRecord) =>
+            loan.id === currentSelectedLoanId,
+        );
+
+        if (!refreshedLoan) {
+          setSelectedCustomerId(refreshedCustomer.id);
+
+          setSelectedLoanId(refreshedCustomer.loans[0]?.id ?? "");
+
+          return;
+        }
+
+        // Keep the existing selected customer + loan.
+        // The selected customer / loan effect below will rebuild
+        // reviewData from the refreshed authoritative loan.
+        setSelectedCustomerId(refreshedCustomer.id);
+
+        setSelectedLoanId(refreshedLoan.id);
       } catch (error) {
         console.error("FINORA COLLECTION CUSTOMER/LOAN LOAD ERROR:", error);
 
@@ -885,8 +964,33 @@ export default function CollectionStudioPage() {
 
     void loadCollectionWorkspace();
 
+    // ------------------------------------------------------
+    // COLLECTION SUCCESS AUTO-REFRESH
+    // ------------------------------------------------------
+    //
+    // PaymentDetails dispatches FINORA_COLLECTION_UPDATED
+    // only after the collection has been fully persisted.
+    //
+    // Reload authoritative customer + loan + Gold custody
+    // state without forcing a browser/page refresh.
+    //
+
+    function handleCollectionUpdated(): void {
+      void loadCollectionWorkspace(true);
+    }
+
+    window.addEventListener(
+      "FINORA_COLLECTION_UPDATED",
+      handleCollectionUpdated,
+    );
+
     return () => {
       cancelled = true;
+
+      window.removeEventListener(
+        "FINORA_COLLECTION_UPDATED",
+        handleCollectionUpdated,
+      );
     };
   }, []);
 

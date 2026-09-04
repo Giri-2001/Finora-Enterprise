@@ -116,10 +116,6 @@ export default function PaymentModeCard({
                 label: "Completed",
                 value: "completed",
               },
-              {
-                label: "Failed",
-                value: "failed",
-              },
             ]}
           />
         </FormField>

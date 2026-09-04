@@ -220,7 +220,7 @@ export const inputStyle: CSSProperties = {
 
   fontSize: "12px",
 
-  fontWeight: 550,
+  fontWeight: 600,
 
   lineHeight: 1.2,
 
@@ -261,7 +261,7 @@ export const selectStyle: CSSProperties = {
 
   fontSize: "12px",
 
-  fontWeight: 550,
+  fontWeight: 600,
 
   lineHeight: 1.2,
 

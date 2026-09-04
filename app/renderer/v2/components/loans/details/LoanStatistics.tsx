@@ -6,6 +6,8 @@ import {
   statisticValueStyle,
 } from "./LoanStatistics.styles";
 
+import { formatCurrency } from "../../../utils/currency/formatCurrency";
+
 interface LoanStatisticsProps {
   totalLoans?: number;
   activeLoans?: number;
@@ -36,12 +38,12 @@ export default function LoanStatistics({
 
           <span
             style={{
-              fontSize: "11px",
+              fontSize: "12px",
               fontWeight: 500,
               color: "var(--finora-theme-text-muted, #94A3B8)",
-              lineHeight: 1.1,
-              overflow: "hidden",
-              textOverflow: "ellipsis",
+              lineHeight: 1.25,
+              overflow: "visible",
+              textOverflow: "clip",
               whiteSpace: "nowrap",
             }}
           >
@@ -64,12 +66,12 @@ export default function LoanStatistics({
 
           <span
             style={{
-              fontSize: "11px",
+              fontSize: "12px",
               fontWeight: 500,
               color: "var(--finora-theme-text-muted, #94A3B8)",
-              lineHeight: 1.1,
-              overflow: "hidden",
-              textOverflow: "ellipsis",
+              lineHeight: 1.25,
+              overflow: "visible",
+              textOverflow: "clip",
               whiteSpace: "nowrap",
             }}
           >
@@ -87,17 +89,17 @@ export default function LoanStatistics({
           </span>
 
           <strong style={statisticValueStyle}>
-            ₹ {totalDisbursed}
+            ₹ {formatCurrency(totalDisbursed)}
           </strong>
 
           <span
             style={{
-              fontSize: "11px",
+              fontSize: "12px",
               fontWeight: 500,
               color: "var(--finora-theme-text-muted, #94A3B8)",
-              lineHeight: 1.1,
-              overflow: "hidden",
-              textOverflow: "ellipsis",
+              lineHeight: 1.25,
+              overflow: "visible",
+              textOverflow: "clip",
               whiteSpace: "nowrap",
             }}
           >

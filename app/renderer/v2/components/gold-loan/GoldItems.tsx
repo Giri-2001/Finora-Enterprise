@@ -76,6 +76,8 @@ import type {
   GoldPurityKarat,
 } from "../../types/gold-loan/goldLoan.types";
 
+import { formatCurrency } from "../../utils/currency/formatCurrency";
+
 import {
   getGoldLoanModuleTokens,
   useGoldLoanResponsive,
@@ -1561,7 +1563,11 @@ export default function GoldItems(props: GoldItemsProps) {
                     <input
                       type="text"
                       inputMode="decimal"
-                      value={item.marketRatePerGram}
+                      value={
+                        item.marketRatePerGram > 0
+                          ? formatCurrency(item.marketRatePerGram)
+                          : ""
+                      }
                       readOnly={readOnly}
                       placeholder="0"
                       onFocus={() => {

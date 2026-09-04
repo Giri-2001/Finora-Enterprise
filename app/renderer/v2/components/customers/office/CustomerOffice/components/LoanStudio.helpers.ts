@@ -39,22 +39,18 @@ export const parseNumericValue = (value: string): number => {
 
 export const normalizeLoanType = (
   value: string,
-): "DAILY" | "WEEKLY" | "MONTHLY" | "" => {
+): "MONTHLY" | "YEARLY" | "" => {
   const normalized = value
     .trim()
     .toUpperCase()
     .replace(/\s+LOAN$/, "");
 
-  if (normalized === "DAILY") {
-    return "DAILY";
-  }
-
-  if (normalized === "WEEKLY") {
-    return "WEEKLY";
-  }
-
   if (normalized === "MONTHLY") {
     return "MONTHLY";
+  }
+
+  if (normalized === "YEARLY") {
+    return "YEARLY";
   }
 
   return "";
@@ -64,14 +60,11 @@ export const getLoanTypeLabel = (value: string): string => {
   const normalized = normalizeLoanType(value);
 
   switch (normalized) {
-    case "DAILY":
-      return "Daily Loan";
-
-    case "WEEKLY":
-      return "Weekly Loan";
-
     case "MONTHLY":
       return "Monthly Loan";
+
+    case "YEARLY":
+      return "Yearly Loan";
 
     default:
       return "--";

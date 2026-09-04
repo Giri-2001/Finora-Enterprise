@@ -265,7 +265,38 @@ export default function LoanForm({
   };
 
   const handleDurationChange = (event: ChangeEvent<HTMLInputElement>): void => {
-    onDurationChange(onlyDigits(event.target.value));
+    const nextValue = onlyDigits(event.target.value);
+
+    if (!nextValue) {
+      onDurationChange("");
+      return;
+    }
+
+    const numericValue = Number(nextValue);
+
+    if (durationType === "months" && numericValue > 60) {
+      return;
+    }
+
+    if (durationType === "years" && numericValue > 5) {
+      return;
+    }
+
+    onDurationChange(nextValue);
+  };
+
+  const handleDurationTypeChange = (nextDurationType: string): void => {
+    const currentDuration = Number(duration || 0);
+
+    if (nextDurationType === "months" && currentDuration > 60) {
+      onDurationChange("60");
+    }
+
+    if (nextDurationType === "years" && currentDuration > 5) {
+      onDurationChange("5");
+    }
+
+    onDurationTypeChange(nextDurationType);
   };
 
   const handlePurposeChange = (event: ChangeEvent<HTMLInputElement>): void => {
@@ -376,11 +407,11 @@ export default function LoanForm({
               }}
               style={selectStyle}
             >
+              <option value="interestOnly">Interest Only</option>
+
               <option value="fixed">Fixed EMI</option>
 
               <option value="reducing">Reducing EMI</option>
-
-              <option value="interestOnly">Interest Only</option>
             </select>
           </div>
 
@@ -489,15 +520,9 @@ export default function LoanForm({
 
               <select
                 value={durationType}
-                onChange={(event) => onDurationTypeChange(event.target.value)}
+                onChange={(event) => handleDurationTypeChange(event.target.value)}
                 style={selectStyle}
               >
-                <option value="">Unit</option>
-
-                <option value="days">Days</option>
-
-                <option value="weeks">Weeks</option>
-
                 <option value="months">Months</option>
 
                 <option value="years">Years</option>

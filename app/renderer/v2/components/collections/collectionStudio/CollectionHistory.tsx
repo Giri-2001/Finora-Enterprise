@@ -1,4 +1,4 @@
-// ============================================================
+﻿// ============================================================
 // FINORA ENTERPRISE OS™
 //
 // COLLECTION STUDIO™
@@ -62,6 +62,7 @@ interface CollectionHistoryRecord {
   paymentMode: string;
 
   amount: number;
+  overdueAmount: number;
 
   remainingBalance: number;
 }
@@ -120,6 +121,7 @@ function mapCollectionToHistoryRecord(
     receiptDate: string;
     paymentMethod: string;
     paymentAmount: number;
+    penaltyAmount: number;
     outstandingBalance: number;
     createdAt: string;
     updatedAt: string;
@@ -138,6 +140,8 @@ function mapCollectionToHistoryRecord(
     amount: Number.isFinite(collection.paymentAmount)
       ? collection.paymentAmount
       : 0,
+
+    overdueAmount: Number(collection.penaltyAmount ?? 0),
 
     remainingBalance: Number.isFinite(collection.outstandingBalance)
       ? collection.outstandingBalance
@@ -212,17 +216,7 @@ export default function CollectionHistory() {
           // NEWEST COLLECTION FIRST
           // ----------------------------------------------
 
-          .sort((a, b) => {
-            const aDate = new Date(
-              a.receiptDate || a.createdAt || "",
-            ).getTime();
-
-            const bDate = new Date(
-              b.receiptDate || b.createdAt || "",
-            ).getTime();
-
-            return bDate - aDate;
-          })
+          .sort((a, b) => {             const aReceiptDate = new Date(               a.receiptDate || "",             ).getTime();                        const bReceiptDate = new Date(               b.receiptDate || "",             ).getTime();                        const safeAReceiptDate =               Number.isFinite(aReceiptDate)                 ? aReceiptDate                 : 0;                        const safeBReceiptDate =               Number.isFinite(bReceiptDate)                 ? bReceiptDate                 : 0;                        if (safeAReceiptDate !== safeBReceiptDate) {               return safeBReceiptDate - safeAReceiptDate;             }                        const aCreatedAt = new Date(               a.createdAt || a.updatedAt || "",             ).getTime();                        const bCreatedAt = new Date(               b.createdAt || b.updatedAt || "",             ).getTime();                        const safeACreatedAt =               Number.isFinite(aCreatedAt)                 ? aCreatedAt                 : 0;                        const safeBCreatedAt =               Number.isFinite(bCreatedAt)                 ? bCreatedAt                 : 0;                        if (safeACreatedAt !== safeBCreatedAt) {               return safeBCreatedAt - safeACreatedAt;             }                        return String(b.receiptNumber || "").localeCompare(               String(a.receiptNumber || ""),               undefined,               { numeric: true, sensitivity: "base" },             );           })
 
           .map((collection, index) =>
             mapCollectionToHistoryRecord(collection, index),
@@ -427,6 +421,15 @@ export default function CollectionHistory() {
               <th
                 style={{
                   ...collectionHistoryStyles.tableHeader,
+                  ...collectionHistoryStyles.centerHeader,
+                }}
+              >
+                OVERDUE
+              </th>
+
+              <th
+                style={{
+                  ...collectionHistoryStyles.tableHeader,
                   ...collectionHistoryStyles.amountHeader,
                 }}
               >
@@ -473,6 +476,14 @@ export default function CollectionHistory() {
                   {formatCurrency(record.amount)}
                 </td>
 
+                <td
+                  style={{
+                    ...collectionHistoryStyles.tableCell,
+                    ...collectionHistoryStyles.amountCell,
+                  }}
+                >
+                  {formatCurrency(record.overdueAmount)}
+                </td>
                 <td
                   style={{
                     ...collectionHistoryStyles.tableCell,

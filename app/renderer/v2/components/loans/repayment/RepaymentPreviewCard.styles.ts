@@ -81,6 +81,9 @@ export function createRepaymentPreviewCardStyles(
 
   return {
     cardStyle: {
+      fontFamily:
+        "Inter, ui-sans-serif, system-ui, sans-serif",
+
       width: "100%",
       minWidth: 0,
       boxSizing: "border-box",
@@ -148,7 +151,7 @@ export function createRepaymentPreviewCardStyles(
       minWidth: 0,
       flex: "0 1 auto",
       color: THEME.text,
-      fontSize: mobile ? "11px" : "12px",
+      fontSize: mobile ? "12px" : "13px",
       fontWeight: 650,
       lineHeight: 1.25,
       textAlign: "right",
@@ -161,7 +164,7 @@ export function createRepaymentPreviewCardStyles(
       minWidth: 0,
       flex: "0 1 auto",
       color: THEME.text,
-      fontSize: mobile ? "12px" : "13px",
+      fontSize: mobile ? "13px" : "14px",
       fontWeight: 700,
       lineHeight: 1.25,
       textAlign: "right",

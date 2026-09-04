@@ -49,6 +49,16 @@ import type { GoldLoanStepOneFormValue } from "../../components/gold-loan/GoldLo
 import type { LoanCustomerOption } from "../../components/loans/details/LoanCustomerCard";
 
 import {
+  loadActiveLoanWorkspaceDraft,
+  loadLoanWorkspaceDraft,
+  saveLoanWorkspaceDraft,
+} from "../../components/customers/office/CustomerOffice/components/loanWorkspaceDraft";
+
+import type {
+  LoanWorkspaceDraft,
+} from "../../components/customers/office/CustomerOffice/components/loanWorkspaceDraft";
+
+import {
   clearCustomerCache,
   hydrateCustomersFromStorage,
 } from "../../store/customers/customer.store";
@@ -75,6 +85,87 @@ type LoansWorkspace =
   | "STANDARD_LOAN"
   | "GOLD_LOAN_STEP_ONE"
   | "GOLD_LOAN_STUDIO";
+
+function readGoldLoanHandoffFromDraft(
+  draft: LoanWorkspaceDraft | null,
+): GoldLoanStudioStepTwoHandoff | null {
+  if (
+    !draft ||
+    draft.mode !== "GOLD"
+  ) {
+    return null;
+  }
+
+  const value =
+    draft.payload.goldLoanHandoff;
+
+  if (
+    typeof value !== "object" ||
+    value === null
+  ) {
+    return null;
+  }
+
+  const handoff =
+    value as Partial<GoldLoanStudioStepTwoHandoff>;
+
+  if (
+    handoff.entryMode !== "GOLD" ||
+    handoff.targetStep !== 2 ||
+    typeof handoff.loanAmount !== "number" ||
+    !Number.isFinite(handoff.loanAmount) ||
+    typeof handoff.customer !== "object" ||
+    handoff.customer === null ||
+    typeof handoff.goldStepOne !== "object" ||
+    handoff.goldStepOne === null
+  ) {
+    return null;
+  }
+
+  const customer =
+    handoff.customer as unknown as Record<string, unknown>;
+
+  if (
+    typeof customer.customerId !== "string" ||
+    !customer.customerId.trim() ||
+    typeof customer.customerName !== "string" ||
+    !customer.customerName.trim()
+  ) {
+    return null;
+  }
+
+  return handoff as GoldLoanStudioStepTwoHandoff;
+}
+
+function resolveInitialLoansWorkspace(
+  draft: LoanWorkspaceDraft | null,
+  goldHandoff: GoldLoanStudioStepTwoHandoff | null,
+): LoansWorkspace {
+  if (!draft) {
+    return "LOANS_OFFICE";
+  }
+
+  if (draft.mode === "STANDARD") {
+    return "STANDARD_LOAN";
+  }
+
+  if (
+    draft.mode === "GOLD" &&
+    draft.step === 1
+  ) {
+    return "GOLD_LOAN_STEP_ONE";
+  }
+
+  if (
+    draft.mode === "GOLD" &&
+    draft.step >= 2 &&
+    goldHandoff
+  ) {
+    return "GOLD_LOAN_STUDIO";
+  }
+
+  return "LOANS_OFFICE";
+}
 
 // ============================================================
 // EVENTS
@@ -255,7 +346,30 @@ export default function LoansPage() {
   // ACTIVE WORKSPACE
   // ==========================================================
 
-  const [workspace, setWorkspace] = useState<LoansWorkspace>("LOANS_OFFICE");
+  const initialActiveLoanDraft =
+    useMemo(
+      () =>
+        loadActiveLoanWorkspaceDraft(),
+      [],
+    );
+
+  const initialGoldLoanHandoff =
+    useMemo(
+      () =>
+        readGoldLoanHandoffFromDraft(
+          initialActiveLoanDraft,
+        ),
+      [initialActiveLoanDraft],
+    );
+
+  const [workspace, setWorkspace] =
+    useState<LoansWorkspace>(
+      () =>
+        resolveInitialLoansWorkspace(
+          initialActiveLoanDraft,
+          initialGoldLoanHandoff,
+        ),
+    );
 
   // ==========================================================
   // GOLD CUSTOMER OPTIONS
@@ -276,7 +390,9 @@ export default function LoansPage() {
   // ==========================================================
 
   const [goldLoanHandoff, setGoldLoanHandoff] =
-    useState<GoldLoanStudioStepTwoHandoff | null>(null);
+    useState<GoldLoanStudioStepTwoHandoff | null>(
+      initialGoldLoanHandoff,
+    );
 
   // ==========================================================
   // GOLD STORAGE STATE
@@ -386,6 +502,7 @@ export default function LoansPage() {
       return;
     }
 
+
     let cancelled = false;
 
     async function hydrateGoldLoanWorkspace(): Promise<void> {
@@ -474,7 +591,7 @@ export default function LoansPage() {
     return () => {
       cancelled = true;
     };
-  }, [workspace]);
+  }, [workspace, goldLoanHandoff]);
 
   // ==========================================================
   // BACK TO LOANS OFFICE
@@ -528,10 +645,126 @@ export default function LoansPage() {
     // AUTHORITATIVE HANDOFF
     // --------------------------------------------------------
 
-    setGoldLoanHandoff(result.handoff);
+    const existingGoldDraft =
+      loadLoanWorkspaceDraft(
+        "GOLD",
+      );
 
-    setWorkspace("GOLD_LOAN_STUDIO");
+    saveLoanWorkspaceDraft({
+      version: 1,
+
+      mode: "GOLD",
+
+      step: 2,
+
+      savedAt:
+        new Date().toISOString(),
+
+      payload: {
+        ...(existingGoldDraft?.payload ?? {}),
+
+        goldLoanHandoff:
+          result.handoff,
+      },
+    });
+
+    setGoldLoanHandoff(
+      result.handoff,
+    );
+
+    setWorkspace(
+      "GOLD_LOAN_STUDIO",
+    );
   }
+
+  // ==========================================================
+  // RETURN TO GOLD STEP 1
+  //
+  // Keep the authoritative handoff alive while reopening
+  // GoldLoanForm so the completed Step-1 data remains editable.
+  // ==========================================================
+
+  function handleEditGoldStepOne(): void {
+    if (!goldLoanHandoff) {
+      return;
+    }
+
+    setWorkspace("GOLD_LOAN_STEP_ONE");
+  }
+
+  const goldStepOneInitialCustomer: LoanCustomerOption | undefined =
+    goldLoanHandoff
+      ? (
+          goldCustomerOptions.find(
+            (customer) =>
+              customer.customerId ===
+              goldLoanHandoff.goldStepOne.customer.customerId,
+          ) ?? {
+            customerId:
+              goldLoanHandoff.customer.customerId,
+
+            customerName:
+              goldLoanHandoff.customer.customerName,
+
+            phoneNumber:
+              goldLoanHandoff.customer.phoneNumber,
+          }
+        )
+      : undefined;
+
+  const goldStepOneInitialValue: GoldLoanStepOneFormValue | undefined =
+    goldLoanHandoff && goldStepOneInitialCustomer
+      ? {
+          customer: goldStepOneInitialCustomer,
+
+          items: goldLoanHandoff.goldStepOne.items,
+
+          roomId: goldLoanHandoff.goldStepOne.custody.roomId,
+
+          lockerId: goldLoanHandoff.goldStepOne.custody.lockerId,
+
+          rackId: goldLoanHandoff.goldStepOne.custody.rackId,
+
+          bagNumber: String(
+            goldLoanHandoff.goldStepOne.custody.bagNumber,
+          ),
+
+          packetReference:
+            goldLoanHandoff.goldStepOne.custody.packetReference,
+
+          sealReference:
+            goldLoanHandoff.goldStepOne.custody.sealReference,
+
+          maxLtvPercentage:
+            goldLoanHandoff.goldStepOne.valuation.maxLtvPercentage,
+
+          assessedValue:
+            goldLoanHandoff.goldStepOne.valuation.assessedValue,
+
+          eligibleAmount:
+            goldLoanHandoff.goldStepOne.valuation.eligibleAmount,
+
+          requestedAmount:
+            goldLoanHandoff.goldStepOne.amounts.requestedAmount,
+
+          sanctionedAmount:
+            goldLoanHandoff.goldStepOne.amounts.sanctionedAmount,
+
+          valuerName:
+            goldLoanHandoff.goldStepOne.valuer.name,
+
+          valuerLicenseNumber:
+            goldLoanHandoff.goldStepOne.valuer.licenseNumber,
+
+          valuationDate:
+            goldLoanHandoff.goldStepOne.valuer.valuationDate,
+
+          valuationRemarks:
+            goldLoanHandoff.goldStepOne.valuer.remarks,
+
+          locationCode: "",
+        }
+      : undefined;
 
   // ==========================================================
   // STANDARD LOAN STUDIO
@@ -544,25 +777,60 @@ export default function LoansPage() {
   }
 
   // ==========================================================
-  // GOLD LOAN — SHARED STEP 2–6
+  // GOLD LOAN — KEEP-ALIVE STEP 1 ↔ STEP 2–6
+  //
+  // LoanStudio remains mounted after the first Gold handoff.
+  // Step-1 editing only hides it, preserving all Step 2–6 data.
   // ==========================================================
 
-  if (workspace === "GOLD_LOAN_STUDIO" && goldLoanHandoff) {
+  if (
+    goldLoanHandoff &&
+    (
+      workspace === "GOLD_LOAN_STUDIO" ||
+      workspace === "GOLD_LOAN_STEP_ONE"
+    )
+  ) {
     return (
-      <LoanStudio
-        entryMode={goldLoanHandoff.entryMode}
-        initialStep={goldLoanHandoff.targetStep}
-        customerId={goldLoanHandoff.customer.customerId}
-        customerName={goldLoanHandoff.customer.customerName}
-        phoneNumber={goldLoanHandoff.customer.phoneNumber}
-        initialLoanAmount={goldLoanHandoff.loanAmount}
-        goldStepOne={goldLoanHandoff.goldStepOne}
-      />
+      <>
+        <div
+          style={{
+            display:
+              workspace === "GOLD_LOAN_STUDIO"
+                ? "contents"
+                : "none",
+          }}
+        >
+          <LoanStudio
+            entryMode={goldLoanHandoff.entryMode}
+            initialStep={goldLoanHandoff.targetStep}
+            customerId={goldLoanHandoff.customer.customerId}
+            customerName={goldLoanHandoff.customer.customerName}
+            phoneNumber={goldLoanHandoff.customer.phoneNumber}
+            initialLoanAmount={goldLoanHandoff.loanAmount}
+            goldStepOne={goldLoanHandoff.goldStepOne}
+            onGoldStepOneDetails={handleEditGoldStepOne}
+          />
+        </div>
+
+        {workspace === "GOLD_LOAN_STEP_ONE" ? (
+          <GoldLoanForm
+            customerOptions={goldCustomerOptions}
+            rooms={goldRooms}
+            defaultMarketRatePerGram={GOLD_DEFAULT_MARKET_RATE_PER_GRAM}
+            defaultMaxLtvPercentage={GOLD_DEFAULT_MAX_LTV_PERCENTAGE}
+            initialValue={goldStepOneInitialValue}
+            onBack={handleCloseGoldLoan}
+            onContinue={handleGoldStepOneComplete}
+          />
+        ) : null}
+      </>
     );
   }
 
   // ==========================================================
-  // GOLD LOAN — STEP 1
+  // GOLD LOAN — INITIAL STEP 1
+  //
+  // First launch only. No LoanStudio draft exists yet.
   // ==========================================================
 
   if (workspace === "GOLD_LOAN_STEP_ONE") {

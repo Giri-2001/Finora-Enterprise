@@ -75,6 +75,11 @@ import LoanCustomerCard from "../loans/details/LoanCustomerCard";
 import type { LoanCustomerOption } from "../loans/details/LoanCustomerCard";
 
 import {
+  loadLoanWorkspaceDraft,
+  saveLoanWorkspaceDraft,
+} from "../customers/office/CustomerOffice/components/loanWorkspaceDraft";
+
+import {
   calculateGoldEligibleAmount,
   calculateGoldLoanItemTotals,
 } from "../../services/gold-loan/goldCalculations";
@@ -98,6 +103,8 @@ import {
   formatBusinessDateForDisplay,
   resolveBusinessDate,
 } from "../../services/business/businessDateService";
+
+import { formatCurrency } from "../../utils/currency/formatCurrency";
 
 import type { FinoraTheme } from "../../themes/core/types";
 
@@ -267,6 +274,8 @@ export interface GoldLoanFormProps {
 
   initialCustomer?: LoanCustomerOption;
 
+
+  initialValue?: GoldLoanStepOneFormValue;
   onBack?: () => void;
 
   onContinue?: (value: GoldLoanStepOneFormValue) => void;
@@ -528,6 +537,15 @@ function validateGoldStepOne(input: GoldStepOneValidationInput): string[] {
     );
   }
 
+  if (
+    input.requestedAmount > 0 &&
+    input.sanctionedAmount > input.requestedAmount
+  ) {
+    errors.push(
+      "Sanctioned amount cannot exceed the customer requested amount.",
+    );
+  }
+
   return errors;
 }
 
@@ -542,6 +560,7 @@ export default function GoldLoanForm(props: GoldLoanFormProps) {
     defaultMarketRatePerGram,
     defaultMaxLtvPercentage,
     initialCustomer,
+    initialValue,
     onBack,
     onContinue,
     onViewLocker,
@@ -598,33 +617,213 @@ export default function GoldLoanForm(props: GoldLoanFormProps) {
      CUSTOMER
   ========================================================= */
 
+  const initialGoldStepOneDraft =
+    useMemo(
+      () =>
+        loadLoanWorkspaceDraft(
+          "GOLD",
+        ),
+      [],
+    );
+
+  const initialGoldStepOnePayload =
+    useMemo(() => {
+      const value =
+        initialGoldStepOneDraft?.payload
+          .goldStepOneDraft;
+
+      if (
+        typeof value !== "object" ||
+        value === null
+      ) {
+        return {} as Record<string, unknown>;
+      }
+
+      return value as Record<string, unknown>;
+    }, [initialGoldStepOneDraft]);
+
+  function readGoldDraftString(
+    key: string,
+    fallback = "",
+  ): string {
+    const value =
+      initialGoldStepOnePayload[key];
+
+    return typeof value === "string"
+      ? value
+      : fallback;
+  }
+
+  function readGoldDraftNumber(
+    key: string,
+    fallback: number,
+  ): number {
+    const value =
+      initialGoldStepOnePayload[key];
+
+    return (
+      typeof value === "number" &&
+      Number.isFinite(value)
+    )
+      ? value
+      : fallback;
+  }
+
+  function readGoldDraftNullableString(
+    key: string,
+  ): string | null {
+    const value =
+      initialGoldStepOnePayload[key];
+
+    return typeof value === "string" &&
+      value.trim()
+      ? value
+      : null;
+  }
+
+  function readGoldDraftCustomer():
+    LoanCustomerOption | undefined {
+    const value =
+      initialGoldStepOnePayload
+        .selectedCustomer;
+
+    if (
+      typeof value !== "object" ||
+      value === null
+    ) {
+      return undefined;
+    }
+
+    const customer =
+      value as Record<string, unknown>;
+
+    if (
+      typeof customer.customerId !== "string" ||
+      !customer.customerId.trim() ||
+      typeof customer.customerName !== "string" ||
+      !customer.customerName.trim()
+    ) {
+      return undefined;
+    }
+
+    return {
+      customerId:
+        customer.customerId,
+
+      customerName:
+        customer.customerName,
+
+      phoneNumber:
+        typeof customer.phoneNumber === "string"
+          ? customer.phoneNumber
+          : "",
+
+      photo:
+        typeof customer.photo === "string"
+          ? customer.photo
+          : undefined,
+    };
+  }
+
+  function readGoldDraftItems():
+    GoldLoanItem[] {
+    const value =
+      initialGoldStepOnePayload.items;
+
+    if (!Array.isArray(value)) {
+      return [];
+    }
+
+    return value
+      .filter(
+        (item) =>
+          typeof item === "object" &&
+          item !== null,
+      )
+      .map(
+        (item) => ({
+          ...(item as GoldLoanItem),
+        }),
+      );
+  }
+
+  const draftInitialCustomer =
+    readGoldDraftCustomer();
+
+  const draftInitialItems =
+    readGoldDraftItems();
+
   const [selectedCustomer, setSelectedCustomer] = useState<
     LoanCustomerOption | undefined
-  >(initialCustomer);
+  >(
+    initialValue?.customer ??
+    draftInitialCustomer ??
+    initialCustomer,
+  );
 
   /* =========================================================
      GOLD ITEMS
   ========================================================= */
 
-  const [items, setItems] = useState<GoldLoanItem[]>([]);
+  const [items, setItems] = useState<GoldLoanItem[]>(
+    () =>
+      initialValue?.items.map(
+        (item) => ({ ...item }),
+      ) ??
+      draftInitialItems,
+  );
 
   /* =========================================================
      STORAGE SELECTION
   ========================================================= */
 
-  const [selectedRoomId, setSelectedRoomId] = useState<GoldRoomId | null>(null);
-
-  const [selectedLockerId, setSelectedLockerId] = useState<GoldLockerId | null>(
-    null,
+  const [selectedRoomId, setSelectedRoomId] = useState<GoldRoomId | null>(
+    initialValue?.roomId ??
+      (
+        readGoldDraftNullableString(
+          "selectedRoomId",
+        ) as GoldRoomId | null
+      ),
   );
 
-  const [selectedRackId, setSelectedRackId] = useState<GoldRackId | null>(null);
+  const [selectedLockerId, setSelectedLockerId] = useState<GoldLockerId | null>(
+    initialValue?.lockerId ??
+      (
+        readGoldDraftNullableString(
+          "selectedLockerId",
+        ) as GoldLockerId | null
+      ),
+  );
 
-  const [bagNumber, setBagNumber] = useState("");
+  const [selectedRackId, setSelectedRackId] = useState<GoldRackId | null>(
+    initialValue?.rackId ??
+      (
+        readGoldDraftNullableString(
+          "selectedRackId",
+        ) as GoldRackId | null
+      ),
+  );
 
-  const [packetReference, setPacketReference] = useState("");
+  const [bagNumber, setBagNumber] = useState(
+    initialValue?.bagNumber ??
+      readGoldDraftString(
+        "bagNumber",
+      ),
+  );
 
-  const [sealReference, setSealReference] = useState("");
+  const [packetReference, setPacketReference] = useState(
+    initialValue?.packetReference ??
+      readGoldDraftString(
+        "packetReference",
+      ),
+  );
+
+  const [sealReference, setSealReference] = useState(
+    initialValue?.sealReference ??
+      readGoldDraftString(
+        "sealReference",
+      ),
+  );
 
   /* =========================================================
    DEFAULT STORAGE ROOM SYNCHRONIZATION
@@ -632,13 +831,15 @@ export default function GoldLoanForm(props: GoldLoanFormProps) {
 
   useEffect(() => {
     if (rooms.length === 0) {
-      if (selectedRoomId !== null) {
-        setSelectedRoomId(null);
-        setSelectedLockerId(null);
-        setSelectedRackId(null);
-        setBagNumber("");
-      }
-
+      /*
+       * Gold Storage rooms hydrate asynchronously.
+       *
+       * Do not erase a restored draft Room / Locker / Rack / Bag
+       * during the temporary empty-room loading phase.
+       *
+       * Once authoritative rooms arrive, the existing validation
+       * below verifies whether the restored Room still exists.
+       */
       return;
     }
 
@@ -662,20 +863,49 @@ export default function GoldLoanForm(props: GoldLoanFormProps) {
   ========================================================= */
 
   const [maxLtvPercentage, setMaxLtvPercentage] = useState(
-    Math.max(0, defaultMaxLtvPercentage),
+    initialValue?.maxLtvPercentage ??
+      readGoldDraftNumber(
+        "maxLtvPercentage",
+        Math.max(
+          0,
+          defaultMaxLtvPercentage,
+        ),
+      ),
   );
 
-  const [requestedAmount, setRequestedAmount] = useState(0);
+  const [requestedAmount, setRequestedAmount] = useState(
+    initialValue?.requestedAmount ??
+      readGoldDraftNumber(
+        "requestedAmount",
+        0,
+      ),
+  );
 
-  const [sanctionedAmount, setSanctionedAmount] = useState(0);
+  const [sanctionedAmount, setSanctionedAmount] = useState(
+    initialValue?.sanctionedAmount ??
+      readGoldDraftNumber(
+        "sanctionedAmount",
+        0,
+      ),
+  );
 
   /* =========================================================
      VALUER
   ========================================================= */
 
-  const [valuerName, setValuerName] = useState("");
+  const [valuerName, setValuerName] = useState(
+    initialValue?.valuerName ??
+      readGoldDraftString(
+        "valuerName",
+      ),
+  );
 
-  const [valuerLicenseNumber, setValuerLicenseNumber] = useState("");
+  const [valuerLicenseNumber, setValuerLicenseNumber] = useState(
+    initialValue?.valuerLicenseNumber ??
+      readGoldDraftString(
+        "valuerLicenseNumber",
+      ),
+  );
 
   const authenticatedSession =
     getSession();
@@ -690,7 +920,12 @@ export default function GoldLoanForm(props: GoldLoanFormProps) {
       valuationDate,
     ) || "--";
 
-  const [valuationRemarks, setValuationRemarks] = useState("");
+  const [valuationRemarks, setValuationRemarks] = useState(
+    initialValue?.valuationRemarks ??
+      readGoldDraftString(
+        "valuationRemarks",
+      ),
+  );
 
   /* =========================================================
      VALIDATION DISPLAY
@@ -808,8 +1043,14 @@ export default function GoldLoanForm(props: GoldLoanFormProps) {
   const requestedInvalid =
     requestedAmount <= 0 || requestedAmount > eligibleAmount;
 
+  const sanctionedExceedsRequested =
+    requestedAmount > 0 &&
+    sanctionedAmount > requestedAmount;
+
   const sanctionedInvalid =
-    sanctionedAmount <= 0 || sanctionedAmount > eligibleAmount;
+    sanctionedAmount <= 0 ||
+    sanctionedAmount > eligibleAmount ||
+    sanctionedExceedsRequested;
 
   const bagInvalid = !bagNumber.trim();
 
@@ -843,7 +1084,9 @@ export default function GoldLoanForm(props: GoldLoanFormProps) {
     ...getGoldLoanFieldStateStyle({
       focused: false,
 
-      invalid: showValidation && sanctionedInvalid,
+      invalid:
+        sanctionedExceedsRequested ||
+        (showValidation && sanctionedInvalid),
 
       readOnly: false,
     }),
@@ -886,6 +1129,125 @@ const eligibleValueStyle = {
      ITEMS CHANGE
   ========================================================= */
 
+  /* =========================================================
+     DURABLE GOLD STEP-1 DRAFT
+
+     Partial Gold Step-1 values survive:
+     - Back to Loans Office
+     - Reload
+     - Logout / Login
+     - App close / reopen
+
+     Final lifecycle clearing remains owned by LoanStudio
+     after Reject or successful Loan creation.
+  ========================================================= */
+
+  useEffect(() => {
+    const existingDraft =
+      loadLoanWorkspaceDraft(
+        "GOLD",
+      );
+
+    /*
+     * Do not create a draft merely from automatic defaults.
+     *
+     * Once meaningful work begins, every later state change,
+     * including field clearing, continues to update the draft.
+     */
+    const hasMeaningfulGoldStepOneData =
+      Boolean(existingDraft) ||
+      Boolean(selectedCustomer) ||
+      items.length > 0 ||
+      Boolean(selectedLockerId) ||
+      Boolean(selectedRackId) ||
+      Boolean(bagNumber.trim()) ||
+      Boolean(packetReference.trim()) ||
+      Boolean(sealReference.trim()) ||
+      requestedAmount > 0 ||
+      sanctionedAmount > 0 ||
+      Boolean(valuerName.trim()) ||
+      Boolean(valuerLicenseNumber.trim()) ||
+      Boolean(valuationRemarks.trim());
+
+    if (
+      !hasMeaningfulGoldStepOneData
+    ) {
+      return;
+    }
+
+    saveLoanWorkspaceDraft({
+      version: 1,
+
+      mode: "GOLD",
+
+      step: 1,
+
+      savedAt:
+        new Date().toISOString(),
+
+      payload: {
+        ...(existingDraft?.payload ?? {}),
+
+        goldStepOneDraft: {
+          selectedCustomer,
+
+          items,
+
+          selectedRoomId,
+
+          selectedLockerId,
+
+          selectedRackId,
+
+          bagNumber,
+
+          packetReference,
+
+          sealReference,
+
+          maxLtvPercentage,
+
+          requestedAmount,
+
+          sanctionedAmount,
+
+          valuerName,
+
+          valuerLicenseNumber,
+
+          valuationRemarks,
+        },
+      },
+    });
+  }, [
+    selectedCustomer,
+
+    items,
+
+    selectedRoomId,
+
+    selectedLockerId,
+
+    selectedRackId,
+
+    bagNumber,
+
+    packetReference,
+
+    sealReference,
+
+    maxLtvPercentage,
+
+    requestedAmount,
+
+    sanctionedAmount,
+
+    valuerName,
+
+    valuerLicenseNumber,
+
+    valuationRemarks,
+  ]);
   function handleItemsChange(nextItems: GoldLoanItem[]): void {
     setItems(nextItems);
 
@@ -972,6 +1334,31 @@ const eligibleValueStyle = {
     setter: (value: number) => void,
   ): void {
     setter(parsePositiveNumber(event.target.value));
+
+    setShowValidation(false);
+  }
+
+  function handleMoneyFieldChange(
+    event: ChangeEvent<HTMLInputElement>,
+
+    setter: (value: number) => void,
+
+    maximumValue: number,
+  ): void {
+    const normalizedValue =
+      event.target.value.replace(/,/g, "");
+
+    const nextValue =
+      parsePositiveNumber(normalizedValue);
+
+    if (
+      maximumValue > 0 &&
+      nextValue > maximumValue
+    ) {
+      return;
+    }
+
+    setter(nextValue);
 
     setShowValidation(false);
   }
@@ -1208,10 +1595,18 @@ const eligibleValueStyle = {
 
                   <input
                     type="text"
-                    inputMode="decimal"
-                    value={requestedAmount}
+                    inputMode="numeric"
+                    value={
+                      requestedAmount > 0
+                        ? formatCurrency(requestedAmount)
+                        : ""
+                    }
                     onChange={(event) => {
-                      handleNumericFieldChange(event, setRequestedAmount);
+                      handleMoneyFieldChange(
+                          event,
+                          setRequestedAmount,
+                          eligibleAmount,
+                        );
                     }}
                     style={styles.controlInput}
                   />
@@ -1239,10 +1634,18 @@ const eligibleValueStyle = {
 
                   <input
                     type="text"
-                    inputMode="decimal"
-                    value={sanctionedAmount}
+                    inputMode="numeric"
+                    value={
+                      sanctionedAmount > 0
+                        ? formatCurrency(sanctionedAmount)
+                        : ""
+                    }
                     onChange={(event) => {
-                      handleNumericFieldChange(event, setSanctionedAmount);
+                      handleMoneyFieldChange(
+                          event,
+                          setSanctionedAmount,
+                          requestedAmount,
+                        );
                     }}
                     style={styles.controlInput}
                   />

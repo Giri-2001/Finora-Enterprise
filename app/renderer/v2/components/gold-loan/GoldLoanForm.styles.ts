@@ -2799,7 +2799,7 @@ export function getGoldLoanLocatorStateStyle(
     return {
       borderColor: "var(--finora-theme-success)",
 
-      background: "var(--finora-theme-success-soft)",
+      background: "var(--finora-theme-brand-soft)",
     };
   }
 

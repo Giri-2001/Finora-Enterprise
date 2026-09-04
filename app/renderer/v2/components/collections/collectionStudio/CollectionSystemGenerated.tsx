@@ -1,4 +1,4 @@
-// ============================================================
+﻿// ============================================================
 // FINORA ENTERPRISE OS™
 //
 // COLLECTION STUDIO™
@@ -46,7 +46,7 @@
 //
 // GENERATED TOTAL RULE
 //
-// Generated Total follows the authoritative current Loan
+// Outstanding Balance follows the authoritative current Loan
 // outstanding balance.
 //
 // Example:
@@ -54,7 +54,7 @@
 //   Original collectible outstanding = ₹16,550
 //   Collection                       = ₹900
 //
-//   Generated Total                  = ₹15,650
+//   Outstanding Balance                  = ₹15,650
 //
 // Therefore:
 //
@@ -62,7 +62,7 @@
 //
 // and:
 //
-//   Generated Total
+//   Outstanding Balance
 //
 // intentionally represent different financial concepts.
 //
@@ -72,7 +72,7 @@
 // remaining principal due using the monthly flat-interest rate
 // and elapsed calendar days.
 //
-// It is NOT added again to Generated Total because the current
+// It is NOT added again to Outstanding Balance because the current
 // authoritative Loan outstanding already represents the
 // persisted collectible balance.
 //
@@ -83,7 +83,7 @@
 //   Principal Due      = ₹0
 //   Accrued Interest   = ₹0
 //   Late Fee / Penalty = ₹0
-//   Generated Total    = ₹0
+//   Outstanding Balance    = ₹0
 //
 // LIVE REFRESH
 //
@@ -125,7 +125,7 @@ import { collectionSystemGeneratedStyles } from "./CollectionSystemGenerated.sty
 
 import { useCollectionController } from "../controller";
 
-import { loadCollections } from "../../../services/collection/collectionService";
+import { fetchLoanContractualInterest, fetchLoanPrincipalDue } from "../../../services/loan/loanService";
 
 import { formatCurrency } from "../../../utils/currency/formatCurrency";
 
@@ -344,87 +344,101 @@ export default function CollectionSystemGenerated() {
   };
 
   // ==========================================================
-  // CUMULATIVE COLLECTIONS
+  // AUTHORITATIVE PRINCIPAL DUE
   // ==========================================================
   //
-  // CollectionService is the authoritative service boundary.
+  // Principal Due is resolved through LoanService from the
+  // persisted contractual Loan schedule.
   //
-  // Example:
+  // IMPORTANT:
   //
-  // Collection 1 = ₹450
-  // Collection 2 = ₹450
-  //
-  // totalCollected = ₹900
+  // - Total cash collections are NOT principal repayment.
+  // - Interest payments do NOT reduce principal.
+  // - Penalty / late fee does NOT reduce principal.
+  // - Principal reduces only when the persisted schedule shows
+  //   actual payment against a principal component.
   //
   // ==========================================================
 
-  const [totalCollected, setTotalCollected] = useState(0);
+  const [
+    authoritativePrincipalDue,
+    setAuthoritativePrincipalDue,
+  ] = useState<number | null>(null);
+
+  const [
+    contractualInterestCap,
+    setContractualInterestCap,
+  ] = useState<number | null>(null);
 
   // ==========================================================
-  // LOAD CUMULATIVE COLLECTIONS
+  // LOAD AUTHORITATIVE PRINCIPAL DUE
   // ==========================================================
 
   useEffect(() => {
     let cancelled = false;
 
-    const loanId = String(reviewData.loanId ?? "").trim();
+    const loanId =
+      String(reviewData.loanId ?? "").trim();
 
-    // ========================================================
-    // LOAD CURRENT LOAN COLLECTION TOTAL
-    // ========================================================
-
-    async function refreshCollectedAmount(): Promise<void> {
+    async function refreshPrincipalDue(): Promise<void> {
       if (!loanId) {
         if (!cancelled) {
-          setTotalCollected(0);
+          setAuthoritativePrincipalDue(null);
+          setContractualInterestCap(null);
         }
 
         return;
       }
 
       try {
-        const collections = await loadCollections();
+        const [
+          principalDue,
+          contractualInterest,
+        ] = await Promise.all([
+          fetchLoanPrincipalDue(loanId),
+          fetchLoanContractualInterest(loanId),
+        ]);
 
         if (cancelled) {
           return;
         }
 
-        const collected = collections.reduce((total, collection) => {
-          if (String(collection.loanId ?? "") !== loanId) {
-            return total;
-          }
+        setAuthoritativePrincipalDue(
+          typeof principalDue === "number" &&
+          Number.isFinite(principalDue)
+            ? principalDue
+            : null,
+        );
 
-          return total + safeFinancialNumber(collection.paymentAmount);
-        }, 0);
-
-        setTotalCollected(roundFinancialValue(collected));
+        setContractualInterestCap(
+          typeof contractualInterest === "number" &&
+          Number.isFinite(contractualInterest)
+            ? Math.max(0, contractualInterest)
+            : null,
+        );
       } catch (error) {
         console.error(
-          "FINORA SYSTEM GENERATED COLLECTION TOTAL LOAD ERROR:",
+          "FINORA PRINCIPAL DUE REFRESH FAILED:",
           error,
         );
 
         if (!cancelled) {
-          setTotalCollected(0);
+          setAuthoritativePrincipalDue(null);
+          setContractualInterestCap(null);
         }
       }
     }
 
-    // ========================================================
-    // INITIAL LOAD
-    // ========================================================
-
-    void refreshCollectedAmount();
-
-    // ========================================================
-    // LIVE REFRESH
-    // ========================================================
+    void refreshPrincipalDue();
 
     function handleFinancialRefresh(): void {
-      void refreshCollectedAmount();
+      void refreshPrincipalDue();
     }
 
-    window.addEventListener("FINORA_LOAN_UPDATED", handleFinancialRefresh);
+    window.addEventListener(
+      "FINORA_LOAN_UPDATED",
+      handleFinancialRefresh,
+    );
 
     window.addEventListener(
       "FINORA_COLLECTION_UPDATED",
@@ -434,7 +448,10 @@ export default function CollectionSystemGenerated() {
     return () => {
       cancelled = true;
 
-      window.removeEventListener("FINORA_LOAN_UPDATED", handleFinancialRefresh);
+      window.removeEventListener(
+        "FINORA_LOAN_UPDATED",
+        handleFinancialRefresh,
+      );
 
       window.removeEventListener(
         "FINORA_COLLECTION_UPDATED",
@@ -506,7 +523,11 @@ export default function CollectionSystemGenerated() {
 
   const principalDue = loanClosed
     ? 0
-    : roundFinancialValue(Math.max(0, originalPrincipal - totalCollected));
+    : roundFinancialValue(
+        authoritativePrincipalDue !== null
+          ? authoritativePrincipalDue
+          : originalPrincipal,
+      );
 
   // ==========================================================
   // MONTHLY INTEREST RATE
@@ -532,15 +553,30 @@ export default function CollectionSystemGenerated() {
   //
   // IMPORTANT:
   //
-  // This amount is NOT added again to Generated Total because
+  // This amount is NOT added again to Outstanding Balance because
   // currentOutstanding already represents the authoritative
   // persisted collectible Loan balance.
   //
   // ==========================================================
 
+  const rawAccruedInterest = loanClosed
+    ? 0
+    : calculateAccruedInterest(
+        principalDue,
+        monthlyInterestRate,
+        elapsedDays,
+      );
+
   const accruedInterest = loanClosed
     ? 0
-    : calculateAccruedInterest(principalDue, monthlyInterestRate, elapsedDays);
+    : roundFinancialValue(
+        contractualInterestCap !== null
+          ? Math.min(
+              rawAccruedInterest,
+              contractualInterestCap,
+            )
+          : rawAccruedInterest,
+      );
 
   // ==========================================================
   // LATE FEE
@@ -562,7 +598,7 @@ export default function CollectionSystemGenerated() {
   //
   // Collection = ₹900
   //
-  // Generated Total = ₹15,650
+  // Outstanding Balance = ₹15,650
   //
   // ==========================================================
 
@@ -628,7 +664,7 @@ export default function CollectionSystemGenerated() {
 
         <div style={collectionSystemGeneratedStyles.financialRow}>
           <span style={collectionSystemGeneratedStyles.financialLabel}>
-            Interest - till collection date
+            Interest Generated
           </span>
 
           <strong style={collectionSystemGeneratedStyles.financialValue}>
@@ -672,7 +708,7 @@ export default function CollectionSystemGenerated() {
 
       <div style={collectionSystemGeneratedStyles.generatedTotal}>
         <span style={collectionSystemGeneratedStyles.generatedTotalLabel}>
-          Generated Total
+          Outstanding Balance
         </span>
 
         <strong style={collectionSystemGeneratedStyles.generatedTotalValue}>
@@ -686,3 +722,4 @@ export default function CollectionSystemGenerated() {
 // ============================================================
 // END
 // ============================================================
+

@@ -63,12 +63,17 @@ const THEME = {
 
 };
 
+const CUSTOMER_CARD_FONT_FAMILY =
+  "Inter, ui-sans-serif, system-ui, sans-serif";
+
 
 // ============================================================
 // CARD
 // ============================================================
 
 export const cardStyle: CSSProperties = {
+
+  fontFamily: CUSTOMER_CARD_FONT_FAMILY,
 
   width: "100%",
 
@@ -81,7 +86,7 @@ export const cardStyle: CSSProperties = {
   boxSizing: "border-box",
 
   background:
-    THEME.primarySoft,
+    THEME.dropdownSoft,
 
   border:
     `1px solid ${THEME.border}`,
@@ -107,6 +112,10 @@ export const cardStyle: CSSProperties = {
 // ============================================================
 
 export const contentStyle: CSSProperties = {
+
+  fontFamily: CUSTOMER_CARD_FONT_FAMILY,
+
+  borderRadius: "15px",
 
   width: "100%",
 
@@ -153,6 +162,8 @@ export const selectorWrapperStyle: CSSProperties = {
 // ============================================================
 
 export const selectorButtonStyle: CSSProperties = {
+
+  fontFamily: CUSTOMER_CARD_FONT_FAMILY,
 
   width: "100%",
 
@@ -204,6 +215,8 @@ export const selectorButtonStyle: CSSProperties = {
 
 export const selectorButtonTextStyle: CSSProperties = {
 
+  fontFamily: CUSTOMER_CARD_FONT_FAMILY,
+
   minWidth: 0,
 
   overflow: "hidden",
@@ -247,6 +260,8 @@ export const selectorArrowStyle: CSSProperties = {
 // ============================================================
 
 export const dropdownStyle: CSSProperties = {
+
+  fontFamily: CUSTOMER_CARD_FONT_FAMILY,
 
   position: "absolute",
 
@@ -292,6 +307,8 @@ export const dropdownStyle: CSSProperties = {
 
 export const searchInputStyle: CSSProperties = {
 
+  fontFamily: CUSTOMER_CARD_FONT_FAMILY,
+
   width: "100%",
 
   height: "34px",
@@ -327,6 +344,8 @@ export const searchInputStyle: CSSProperties = {
 // ============================================================
 
 export const customerOptionStyle: CSSProperties = {
+
+  fontFamily: CUSTOMER_CARD_FONT_FAMILY,
 
   width: "100%",
 
@@ -410,6 +429,8 @@ export const customerOptionHoverStyle: CSSProperties = {
 
 export const customerOptionNameStyle: CSSProperties = {
 
+  fontFamily: CUSTOMER_CARD_FONT_FAMILY,
+
   width: "100%",
 
   overflow: "hidden",
@@ -436,6 +457,8 @@ export const customerOptionNameStyle: CSSProperties = {
 
 export const customerOptionMetaStyle: CSSProperties = {
 
+  fontFamily: CUSTOMER_CARD_FONT_FAMILY,
+
   width: "100%",
 
   overflow: "hidden",
@@ -461,6 +484,8 @@ export const customerOptionMetaStyle: CSSProperties = {
 // ============================================================
 
 export const customerNameStyle: CSSProperties = {
+
+  fontFamily: CUSTOMER_CARD_FONT_FAMILY,
 
   width: "100%",
 
@@ -491,6 +516,8 @@ export const customerNameStyle: CSSProperties = {
 // ============================================================
 
 export const detailStyle: CSSProperties = {
+
+  fontFamily: CUSTOMER_CARD_FONT_FAMILY,
 
   width: "100%",
 
@@ -527,6 +554,8 @@ export const detailStyle: CSSProperties = {
 // ============================================================
 
 export const emptyStateStyle: CSSProperties = {
+
+  fontFamily: CUSTOMER_CARD_FONT_FAMILY,
 
   width: "100%",
 

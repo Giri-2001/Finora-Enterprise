@@ -33,6 +33,20 @@ interface GuarantorPreviewCardProps {
 }
 
 /* ===========================================================
+DISPLAY HELPERS
+=========================================================== */
+
+function capitalizeFirstLetter(
+  value: string,
+): string {
+  if (!value || value === "--") {
+    return value;
+  }
+
+  return value.charAt(0).toUpperCase() + value.slice(1);
+}
+
+/* ===========================================================
 COMPONENT
 =========================================================== */
 
@@ -54,7 +68,7 @@ export default function GuarantorPreviewCard({
             </span>
 
             <strong style={primaryValueStyle}>
-              {guarantorName}
+              {capitalizeFirstLetter(guarantorName)}
             </strong>
           </div>
 
@@ -76,7 +90,7 @@ export default function GuarantorPreviewCard({
             </span>
 
             <strong style={valueStyle}>
-              {occupation}
+              {capitalizeFirstLetter(occupation)}
             </strong>
           </div>
 
@@ -87,7 +101,7 @@ export default function GuarantorPreviewCard({
             </span>
 
             <strong style={valueStyle}>
-              {address}
+              {capitalizeFirstLetter(address)}
             </strong>
           </div>
 

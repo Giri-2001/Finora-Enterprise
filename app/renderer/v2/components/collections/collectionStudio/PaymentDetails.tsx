@@ -1,4 +1,4 @@
-// ============================================================
+﻿// ============================================================
 // FINORA ENTERPRISE OS™
 //
 // COLLECTION STUDIO™
@@ -478,6 +478,7 @@ export default function PaymentDetails() {
   const collectionAmount = safeNumber(reviewData.paymentAmount);
 
   const discountAmount = safeNumber(reviewData.discountAmount);
+  const penaltyAmount = safeNumber(reviewData.penaltyAmount);
 
   const manualPrincipal = safeNumber(reviewData.advanceAdjustment);
 
@@ -491,7 +492,8 @@ export default function PaymentDetails() {
   // TOTAL SETTLEMENT REDUCTION
   // ==========================================================
 
-  const settlementReduction = finalCollection + discountAmount;
+  const debtPaymentAmount = Math.max(0, finalCollection - penaltyAmount);
+  const settlementReduction = debtPaymentAmount + discountAmount;
 
   // ==========================================================
   // SELECTED EMI STATE
@@ -543,6 +545,7 @@ export default function PaymentDetails() {
     updateField("advanceAdjustment", 0);
 
     updateField("discountAmount", 0);
+    updateField("penaltyAmount", 0);
 
     // --------------------------------------------------------
     // EMI SELECTION
@@ -624,7 +627,7 @@ export default function PaymentDetails() {
     // PAYMENT CANNOT EXCEED OUTSTANDING
     // --------------------------------------------------------
 
-    if (finalCollection > currentOutstanding) {
+    if (debtPaymentAmount > currentOutstanding) {
       alert(
         "Collection amount cannot be greater than the current outstanding balance.",
       );
@@ -932,6 +935,7 @@ export default function PaymentDetails() {
           paidDate: saveData.receiptDate,
 
           discountAmount: saveData.discountAmount,
+          penaltyAmount: safeNumber(saveData.penaltyAmount),
         },
       );
 

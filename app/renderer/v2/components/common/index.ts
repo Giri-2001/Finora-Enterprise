@@ -44,3 +44,6 @@ export type { LoadingStateProps } from "./feedback/LoadingState";
 export { default as SummaryCard } from "./cards/SummaryCard";
 
 export type { SummaryCardProps } from "./cards/SummaryCard";
+
+export { default as GlobalLoadingOverlay } from "./feedback/GlobalLoadingOverlay";
+export type { GlobalLoadingOverlayProps } from "./feedback/GlobalLoadingOverlay";

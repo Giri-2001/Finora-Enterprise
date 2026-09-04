@@ -70,7 +70,7 @@ export default function DisbursementPreviewCard({
         Payment Mode :
         <strong>
           {" "}
-          {paymentMode}
+          {paymentMode.charAt(0).toUpperCase() + paymentMode.slice(1)}
         </strong>
       </span>
 
@@ -78,7 +78,7 @@ export default function DisbursementPreviewCard({
         Status :
         <strong>
           {" "}
-          {transactionStatus}
+          {transactionStatus.charAt(0).toUpperCase() + transactionStatus.slice(1)}
         </strong>
       </span>
 

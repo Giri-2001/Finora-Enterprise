@@ -233,7 +233,7 @@ export default function LoanPreviewCard({
         <div>
           <div
             style={{
-              fontSize: "14px",
+              fontSize: "15px",
 
               fontWeight: 750,
 
@@ -249,7 +249,7 @@ export default function LoanPreviewCard({
             style={{
               marginTop: "3px",
 
-              fontSize: "12px",
+              fontSize: "15px",
 
               fontWeight: 500,
 

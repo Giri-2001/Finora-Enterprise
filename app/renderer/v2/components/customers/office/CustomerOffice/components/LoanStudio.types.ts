@@ -142,6 +142,8 @@ export interface LoanStudioProps {
   ========================================================= */
 
   goldStepOne?: GoldLoanPreparedStepOne;
+
+  onGoldStepOneDetails?: () => void;
 }
 
 /* ===========================================================

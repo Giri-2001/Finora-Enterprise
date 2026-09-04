@@ -98,7 +98,8 @@ export function generateSchedule(
   frequency:
     | "daily"
     | "weekly"
-    | "monthly",
+    | "monthly"
+    | "yearly",
   totalPayable: number,
   totalInterest: number,
   repaymentMode: ScheduleRepaymentMode = "fixed",
@@ -188,6 +189,12 @@ export function generateSchedule(
       case "monthly":
         dueDate.setMonth(
           dueDate.getMonth() + index + 1,
+        );
+        break;
+
+      case "yearly":
+        dueDate.setFullYear(
+          dueDate.getFullYear() + index + 1,
         );
         break;
     }
@@ -308,7 +315,9 @@ export function generateSchedule(
           ? safeInstallments / 30
           : frequency === "weekly"
             ? safeInstallments * 7 / 30
-            : safeInstallments;
+            : frequency === "yearly"
+              ? safeInstallments * 12
+              : safeInstallments;
 
       if (estimatedMonthlyPeriods > 0) {
         safeMonthlyRate =
@@ -324,7 +333,9 @@ export function generateSchedule(
         ? safeMonthlyRate / 30
         : frequency === "weekly"
           ? safeMonthlyRate * 7 / 30
-          : safeMonthlyRate;
+          : frequency === "yearly"
+            ? safeMonthlyRate * 12
+            : safeMonthlyRate;
 
     const periodicRateDecimal =
       periodicRate / 100;
