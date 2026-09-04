@@ -1,4 +1,4 @@
-/* ===========================================================
+﻿/* ===========================================================
    FINORA ENTERPRISE V2
 
    REVIEW STUDIO
@@ -84,7 +84,7 @@ export default function ReviewPreviewCard({
 
   return (
     <div style={cardStyle}>
-      <SummaryCard title="Final Loan Preview">
+      <SummaryCard title="Final Loan Preview" shadowless>
         <div style={previewGridStyle}>
           {/* =================================================
               CUSTOMER

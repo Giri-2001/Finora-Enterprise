@@ -29,7 +29,7 @@ export default function ReviewHeader() {
 
         <div style={textWrapperStyle}>
           <h1 style={titleStyle}>
-            Review Studio™
+            Review Studio
           </h1>
 
           <p style={subtitleStyle}>

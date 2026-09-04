@@ -1,4 +1,4 @@
-// ============================================================
+﻿// ============================================================
 // FINORA ENTERPRISE V2
 // DESIGN SYSTEM
 // SUMMARY CARD
@@ -22,6 +22,7 @@ export interface SummaryCardProps {
   title?: string;
   children: ReactNode;
   footer?: ReactNode;
+  shadowless?: boolean;
 }
 
 // ============================================================
@@ -178,11 +179,12 @@ export default function SummaryCard({
   title,
   children,
   footer,
+  shadowless = false,
 }: SummaryCardProps) {
 
   return (
 
-    <section style={cardStyle}>
+    <section style={shadowless ? { ...cardStyle, boxShadow: "none" } : cardStyle}>
 
       {title && (
         <h3 style={titleStyle}>

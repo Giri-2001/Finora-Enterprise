@@ -47,6 +47,9 @@ const COLORS = {
 
   primary: "var(--finora-theme-brand-primary)",
 
+  primarySoft:
+    "var(--finora-theme-brand-primary-soft, color-mix(in srgb, var(--finora-theme-brand-primary) 14%, var(--finora-theme-surface)))",
+
   text: "var(--finora-theme-text-primary)",
 
   textSecondary: "var(--finora-theme-text-secondary)",
@@ -79,13 +82,9 @@ export const sectionStyle: CSSProperties = {
 
   borderRadius: "9px",
 
-  background: `linear-gradient(
-      180deg,
-      ${COLORS.panel},
-      ${COLORS.panelSoft}
-    )`,
+  background: COLORS.panel,
 
-  boxShadow: "0 4px 12px rgba(0, 0, 0, 0.12)",
+  boxShadow: "none",
 };
 
 /* ============================================================
@@ -98,15 +97,15 @@ export const sectionTitleStyle: CSSProperties = {
 
   color: COLORS.text,
 
-  fontSize: "13px",
+  fontSize: "14px",
 
   fontWeight: 650,
 
-  lineHeight: 1.3,
+  lineHeight: 1.4,
 
   letterSpacing: "0.01em",
 
-  minHeight: "16px",
+  minHeight: "19px",
 };
 
 /* ============================================================
@@ -196,7 +195,7 @@ export const fieldGroupStyle: CSSProperties = {
 
   flexDirection: "column",
 
-  gap: "7px",
+  gap: "8px",
 
   minWidth: 0,
 
@@ -217,15 +216,15 @@ export const fieldLabelStyle: CSSProperties = {
 
   gap: "3px",
 
-  minHeight: "14px",
+  minHeight: "19px",
 
   color: COLORS.textSecondary,
 
-  fontSize: "13px",
+  fontSize: "14px",
 
   fontWeight: 600,
 
-  lineHeight: 1.15,
+  lineHeight: 1.35,
 
   whiteSpace: "nowrap",
 
@@ -242,7 +241,7 @@ export const requiredMarkStyle: CSSProperties = {
   fontFamily: FORM_FONT_FAMILY,
   color: COLORS.required,
 
-  fontSize: "13px",
+  fontSize: "18px",
 
   fontWeight: 700,
 };
@@ -257,7 +256,9 @@ export const inputStyle: CSSProperties = {
 
   minWidth: 0,
 
-  height: "34px",
+  height: "39px",
+
+  minHeight: "39px",
 
   padding: "0 9px",
 
@@ -273,11 +274,11 @@ export const inputStyle: CSSProperties = {
 
   color: COLORS.text,
 
-  fontSize: "13px",
+  fontSize: "14px",
 
   fontWeight: 550,
 
-  lineHeight: "34px",
+  lineHeight: "39px",
 
   transition: "border-color 0.16s ease, box-shadow 0.16s ease",
 };
@@ -324,7 +325,7 @@ export const textareaStyle: CSSProperties = {
 
   color: COLORS.text,
 
-  fontSize: "13px",
+  fontSize: "14px",
 
   fontWeight: 550,
 

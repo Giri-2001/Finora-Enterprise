@@ -63,7 +63,8 @@ const THEME = {
 // ============================================================
 
 export const headerStyle: CSSProperties = {
-  width: "100%",
+    fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
+width: "100%",
   height: "74px",
   minHeight: "74px",
   boxSizing: "border-box",
@@ -80,7 +81,7 @@ export const headerStyle: CSSProperties = {
     ${THEME.panelSoft}
   )`,
 
-  boxShadow: `0 6px 18px ${THEME.shadow}`,
+  boxShadow: "none",
 };
 
 // ============================================================

@@ -1,4 +1,4 @@
-﻿// ============================================================
+// ============================================================
 // FINORA ENTERPRISE OS™
 //
 // V2 APPLICATION ENTRY
@@ -255,6 +255,9 @@ const CUSTOMER_WIZARD_GLOBAL_BACK_EVENT = "FINORA_CUSTOMER_WIZARD_GLOBAL_BACK";
 // ============================================================
 
 const LOAN_STUDIO_OPEN_EVENT = "FINORA_V2_OPEN_LOAN_STUDIO";
+
+const LOAN_WORKFLOW_COMPLETED_EVENT =
+  "FINORA_V2_LOAN_WORKFLOW_COMPLETED";
 
 const COLLECTION_STUDIO_OPEN_EVENT = "FINORA_V2_OPEN_COLLECTION_STUDIO";
 
@@ -1367,7 +1370,28 @@ function AuthenticatedV2Application({
 
   useEffect(() => {
     function handleLoanStudioOpen(): void {
-      setLoanStudioOpen(true);
+      setLoanStudioOpen(
+        true,
+      );
+    }
+
+    function handleLoanWorkflowCompleted(): void {
+      try {
+        sessionStorage.setItem(
+          "FINORA_LOANS_ACTIVE_WORKSPACE",
+
+          "LOANS_OFFICE",
+        );
+      } catch (error) {
+        console.error(
+          "FINORA LOANS WORKSPACE SESSION RESET ERROR:",
+          error,
+        );
+      }
+
+      setLoanStudioOpen(
+        false,
+      );
     }
 
     window.addEventListener(
@@ -1376,11 +1400,23 @@ function AuthenticatedV2Application({
       handleLoanStudioOpen,
     );
 
+    window.addEventListener(
+      LOAN_WORKFLOW_COMPLETED_EVENT,
+
+      handleLoanWorkflowCompleted,
+    );
+
     return () => {
       window.removeEventListener(
         LOAN_STUDIO_OPEN_EVENT,
 
         handleLoanStudioOpen,
+      );
+
+      window.removeEventListener(
+        LOAN_WORKFLOW_COMPLETED_EVENT,
+
+        handleLoanWorkflowCompleted,
       );
     };
   }, []);

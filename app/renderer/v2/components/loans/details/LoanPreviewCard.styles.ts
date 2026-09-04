@@ -67,7 +67,7 @@ export const cardStyle: CSSProperties = {
 
   boxSizing: "border-box",
 
-  padding: "10px 18px 18px",
+  padding: "10px 12px 18px",
 
   border: `1px solid ${THEME.border}`,
 
@@ -199,7 +199,7 @@ export const rowStyle: CSSProperties = {
 
   width: "100%",
 
-  minHeight: "31px",
+  minHeight: "39px",
 
   padding: "6px 8px",
 
@@ -253,13 +253,13 @@ export const labelStyle: CSSProperties = {
 export const valueStyle: CSSProperties = {
   minWidth: 0,
 
-  maxWidth: "60%",
+  maxWidth: "74%",
 
   flex: "0 1 auto",
 
   color: THEME.text,
 
-  fontSize: "13px",
+  fontSize: "14px",
 
   fontWeight: 650,
 
@@ -267,6 +267,7 @@ export const valueStyle: CSSProperties = {
 
   textAlign: "right",
 
+  paddingRight: "2px",
   overflow: "hidden",
 
   textOverflow: "ellipsis",
@@ -321,7 +322,7 @@ export const highlightRowStyle: CSSProperties = {
 export const fullWidthRowStyle: CSSProperties = {
   ...rowStyle,
 
-  minHeight: "34px",
+  minHeight: "39px",
 
   padding: "7px 9px",
 

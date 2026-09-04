@@ -1,4 +1,4 @@
-// ============================================================
+﻿// ============================================================
 // FINORA ENTERPRISE OS™
 // LOAN STUDIO™
 // RESPONSIVE LAYOUT STYLES
@@ -386,6 +386,8 @@ export function createLoanStudioStep6Layout(
 
     step6WorkspaceStyle: {
       ...step1WorkspaceStyle,
+
+      fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
 
       width: "100%",
       minWidth: 0,

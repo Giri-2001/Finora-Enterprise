@@ -734,7 +734,11 @@ export default function LoanStudioView(props: LoanStudioViewModel) {
                   <ApprovalActions
                     onSaveDraft={handleSaveDraft}
                     onApproveLoan={handleApproveLoan}
-                    onRejectLoan={handleRejectLoan}
+                      canRejectLoan={
+                        transactionStatus ===
+                        "pending"
+                      }
+                      onRejectLoan={handleRejectLoan}
                   />
                 </div>
               </div>
@@ -901,6 +905,62 @@ export default function LoanStudioView(props: LoanStudioViewModel) {
             style={primaryNavigationButtonStyle}
             onClick={async () => {
               if (step < 6) {
+                /* ================================================
+                   STANDARD LOAN STEP 1 REQUIRED VALIDATION
+                ================================================ */
+                if (!isGoldLoan && step === 1) {
+                  if (!activeCustomerId.trim()) {
+                    alert("Please select a customer before continuing.");
+
+                    return;
+                  }
+
+                  const safeLoanAmount =
+                    Number(String(loanAmount).replace(/,/g, "").trim());
+
+                  if (
+                    !Number.isFinite(safeLoanAmount) ||
+                    safeLoanAmount <= 0
+                  ) {
+                    alert("Please enter a valid Loan Amount.");
+
+                    return;
+                  }
+
+                  const safeInterest =
+                    Number(String(interest).trim());
+
+                  if (
+                    !Number.isFinite(safeInterest) ||
+                    safeInterest <= 0
+                  ) {
+                    alert("Please enter a valid Interest percentage.");
+
+                    return;
+                  }
+
+                  const safeDuration =
+                    Number(String(duration).trim());
+
+                  if (
+                    !Number.isFinite(safeDuration) ||
+                    safeDuration <= 0
+                  ) {
+                    alert("Please enter a valid Loan Duration.");
+
+                    return;
+                  }
+
+                  if (
+                    durationType !== "months" &&
+                    durationType !== "years"
+                  ) {
+                    alert("Please select a valid Loan Duration unit.");
+
+                    return;
+                  }
+                }
+
                 if (
                   step === 4 &&
                   guarantorVerificationStatus.trim().toLowerCase() !==

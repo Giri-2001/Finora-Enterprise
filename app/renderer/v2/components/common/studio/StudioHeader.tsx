@@ -50,6 +50,11 @@ interface StudioHeaderProps {
    * subtitle and bordered container.
    */
   variant?: "default" | "enterprise";
+
+  titleTextStyle?: CSSProperties;
+
+
+  subtitleTextStyle?: CSSProperties;
 }
 
 /* ===========================================================
@@ -148,6 +153,8 @@ export default function StudioHeader({
   subtitle,
   icon,
   variant = "default",
+  titleTextStyle,
+  subtitleTextStyle,
 }: StudioHeaderProps) {
   const isEnterprise = variant === "enterprise";
 
@@ -156,12 +163,32 @@ export default function StudioHeader({
       <div style={isEnterprise ? enterpriseTitleRowStyle : titleRowStyle}>
         {icon}
 
-        <h2 style={isEnterprise ? enterpriseTitleStyle : titleStyle}>
+        <h2
+
+          style={{
+
+            ...(isEnterprise ? enterpriseTitleStyle : titleStyle),
+
+            ...titleTextStyle,
+
+          }}
+
+        >
           {title}
         </h2>
       </div>
 
-      <p style={isEnterprise ? enterpriseSubtitleStyle : subtitleStyle}>
+      <p
+
+        style={{
+
+          ...(isEnterprise ? enterpriseSubtitleStyle : subtitleStyle),
+
+          ...subtitleTextStyle,
+
+        }}
+
+      >
         {subtitle}
       </p>
     </header>

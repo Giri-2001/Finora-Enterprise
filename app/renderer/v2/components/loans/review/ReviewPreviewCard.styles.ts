@@ -50,6 +50,7 @@ const THEME = {
 // ============================================================
 
 export const cardStyle: CSSProperties = {
+  fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
   width: "100%",
 
   minWidth: 0,
@@ -87,7 +88,7 @@ export function createPreviewGridStyle(
       ? "minmax(0, 1fr)"
       : "repeat(2, minmax(0, 1fr))",
 
-    gap: "6px 8px",
+    gap: "10px 8px",
 
     width: "100%",
 
@@ -109,7 +110,7 @@ export const previewGridStyle: CSSProperties = {
 
   gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
 
-  gap: "6px 8px",
+  gap: "10px 8px",
 
   width: "100%",
 
@@ -123,6 +124,7 @@ export const previewGridStyle: CSSProperties = {
 // ============================================================
 
 export const rowStyle: CSSProperties = {
+  fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
   display: "flex",
 
   alignItems: "center",
@@ -133,7 +135,7 @@ export const rowStyle: CSSProperties = {
 
   minWidth: 0,
 
-  minHeight: "31px",
+  minHeight: "35px",
 
   padding: "6px 8px",
 
@@ -147,11 +149,11 @@ export const rowStyle: CSSProperties = {
 
   color: THEME.textSecondary,
 
-  fontSize: "12px",
+  fontSize: "14px",
 
   fontWeight: 500,
 
-  lineHeight: 1.25,
+  lineHeight: 1.35,
 };
 
 // ============================================================
@@ -159,15 +161,16 @@ export const rowStyle: CSSProperties = {
 // ============================================================
 
 export const labelStyle: CSSProperties = {
+  fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
   minWidth: 0,
 
   color: THEME.textMuted,
 
-  fontSize: "12px",
+  fontSize: "14px",
 
   fontWeight: 550,
 
-  lineHeight: 1.25,
+  lineHeight: 1.35,
 
   overflow: "hidden",
 
@@ -181,15 +184,16 @@ export const labelStyle: CSSProperties = {
 // ============================================================
 
 export const valueStyle: CSSProperties = {
+  fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
   minWidth: 0,
 
   color: THEME.text,
 
-  fontSize: "12px",
+  fontSize: "14px",
 
   fontWeight: 650,
 
-  lineHeight: 1.25,
+  lineHeight: 1.35,
 
   textAlign: "right",
 
@@ -205,11 +209,12 @@ export const valueStyle: CSSProperties = {
 // ============================================================
 
 export const primaryValueStyle: CSSProperties = {
+  fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
   ...valueStyle,
 
   color: THEME.text,
 
-  fontSize: "13px",
+  fontSize: "15px",
 
   fontWeight: 700,
 };
@@ -235,7 +240,7 @@ export const highlightRowStyle: CSSProperties = {
 export const fullWidthRowStyle: CSSProperties = {
   ...rowStyle,
 
-  minHeight: "34px",
+  minHeight: "38px",
 
   padding: "7px 9px",
 

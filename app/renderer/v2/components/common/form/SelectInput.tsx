@@ -45,6 +45,8 @@ export interface SelectOption {
 
 export interface SelectInputProps extends SelectHTMLAttributes<HTMLSelectElement> {
   options: SelectOption[];
+
+  optionTextStyle?: CSSProperties;
 }
 
 // ============================================================
@@ -115,6 +117,7 @@ export default function SelectInput({
   id,
   className,
   style,
+  optionTextStyle,
   "aria-label": ariaLabel,
   "aria-labelledby": ariaLabelledBy,
   "aria-describedby": ariaDescribedBy,
@@ -727,6 +730,8 @@ export default function SelectInput({
                       overflow: "hidden",
                       textOverflow: "ellipsis",
                       whiteSpace: "nowrap",
+
+                      ...optionTextStyle,
                     }}
                   >
                     {option.label}
@@ -859,6 +864,9 @@ export default function SelectInput({
               textOverflow: "ellipsis",
 
               whiteSpace: "nowrap",
+
+
+              ...optionTextStyle,
             }}
           >
             {selectedOption?.label ?? ""}

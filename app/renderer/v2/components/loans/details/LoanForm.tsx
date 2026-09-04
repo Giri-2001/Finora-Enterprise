@@ -59,7 +59,6 @@ import {
   requiredMarkStyle,
   inputStyle,
   selectStyle,
-  textareaStyle,
   durationGroupStyle,
   sectionStyle,
   sectionTitleStyle,
@@ -304,7 +303,7 @@ export default function LoanForm({
   };
 
   const handleRemarksChange = (
-    event: ChangeEvent<HTMLTextAreaElement>,
+    event: ChangeEvent<HTMLInputElement>,
   ): void => {
     onRemarksChange(event.target.value);
   };
@@ -375,14 +374,14 @@ export default function LoanForm({
               readOnly={loanAmountReadOnly}
               aria-readonly={loanAmountReadOnly}
               onChange={handleLoanAmountChange}
-              placeholder="Enter loan amount"
+              placeholder="Enter Loan Amount"
               autoComplete="off"
               title={
                 loanAmountReadOnly
                   ? "Locked from Gold Loan Step 1 sanctioned amount"
                   : undefined
               }
-              style={inputStyle}
+              style={{                 ...inputStyle,                 fontWeight: 650,               }}
             />
           </div>
 
@@ -425,7 +424,7 @@ export default function LoanForm({
               inputMode="decimal"
               value={interest}
               onChange={handleInterestChange}
-              placeholder="Enter interest percentage"
+              placeholder="Percentage In Rupees"
               autoComplete="off"
               style={inputStyle}
             />
@@ -451,7 +450,7 @@ export default function LoanForm({
               inputMode="numeric"
               value={formatIndianInteger(processingFee)}
               onChange={handleProcessingFeeChange}
-              placeholder="Enter processing fee"
+              placeholder="Enter Processing Fee"
               autoComplete="off"
               style={inputStyle}
             />
@@ -471,7 +470,7 @@ export default function LoanForm({
                   : formatIndianInteger(advanceDeduction)
               }
               onChange={handleAdvanceDeductionChange}
-              placeholder="Enter deduction amount"
+              placeholder="Enter Deduction Amount"
               autoComplete="off"
               disabled={emiCalculation === "reducing"}
               style={inputStyle}
@@ -488,7 +487,7 @@ export default function LoanForm({
               inputMode="numeric"
               value={formatIndianInteger(lateFee)}
               onChange={handleLateFeeChange}
-              placeholder="Enter late fee"
+              placeholder="Enter Late Fee"
               autoComplete="off"
               style={inputStyle}
             />
@@ -549,7 +548,7 @@ export default function LoanForm({
               type="text"
               value={purpose}
               onChange={handlePurposeChange}
-              placeholder="Enter loan purpose"
+              placeholder="Enter Loan Purpose"
               autoComplete="off"
               style={inputStyle}
             />
@@ -560,20 +559,20 @@ export default function LoanForm({
           <div style={fieldGroupStyle}>
             {renderLabel("Remarks")}
 
-            <textarea
+            <input
+
+              type="text"
+
               value={remarks}
+
               onChange={handleRemarksChange}
-              placeholder="Enter remarks"
-              rows={1}
-              style={{
-                ...textareaStyle,
 
-                height: "32px",
+              placeholder="Enter Remarks"
 
-                minHeight: "32px",
+              autoComplete="off"
 
-                resize: "none",
-              }}
+              style={inputStyle}
+
             />
           </div>
         </div>

@@ -91,6 +91,7 @@ const THEME = {
 =========================================================== */
 
 export const cardStyle: CSSProperties = {
+  fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
   width: "100%",
 
   minWidth: 0,
@@ -136,6 +137,7 @@ export const checklistStyle: CSSProperties = {
 =========================================================== */
 
 export const itemStyle: ResponsiveCSSProperties = {
+  fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
   display: "flex",
 
   alignItems: "center",
@@ -148,7 +150,7 @@ export const itemStyle: ResponsiveCSSProperties = {
 
   minWidth: 0,
 
-  minHeight: "32px",
+  minHeight: "40px",
 
   padding: "6px 8px",
 
@@ -160,11 +162,11 @@ export const itemStyle: ResponsiveCSSProperties = {
 
   color: THEME.textPrimary,
 
-  fontSize: "12px",
+  fontSize: "14px",
 
   fontWeight: 600,
 
-  lineHeight: 1.25,
+  lineHeight: 1.35,
 
   /* ---------------------------------------------------------
      MOBILE
@@ -177,7 +179,7 @@ export const itemStyle: ResponsiveCSSProperties = {
 
     minWidth: 0,
 
-    minHeight: "34px",
+    minHeight: "40px",
 
     padding: "7px 6px",
 
@@ -242,11 +244,11 @@ export const statusMarkCompleteStyle: CSSProperties = {
 
   color: THEME.success,
 
-  fontSize: "12px",
+  fontSize: "14px",
 
   fontWeight: 750,
 
-  lineHeight: 1,
+  lineHeight: 1.1,
 };
 
 /* ===========================================================
@@ -274,11 +276,11 @@ export const statusMarkPendingStyle: CSSProperties = {
 
   color: THEME.brandAccent,
 
-  fontSize: "12px",
+  fontSize: "14px",
 
   fontWeight: 750,
 
-  lineHeight: 1,
+  lineHeight: 1.1,
 };
 
 /* ===========================================================
@@ -286,17 +288,18 @@ export const statusMarkPendingStyle: CSSProperties = {
 =========================================================== */
 
 export const itemTextStyle: ResponsiveCSSProperties = {
+  fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
   minWidth: 0,
 
   flex: "1 1 auto",
 
   color: THEME.textPrimary,
 
-  fontSize: "12px",
+  fontSize: "14px",
 
   fontWeight: 600,
 
-  lineHeight: 1.25,
+  lineHeight: 1.35,
 
   overflow: "hidden",
 
@@ -311,7 +314,7 @@ export const itemTextStyle: ResponsiveCSSProperties = {
   "@media (max-width: 767px)": {
     minWidth: 0,
 
-    fontSize: "11.5px",
+    fontSize: "13.5px",
   },
 };
 
@@ -320,17 +323,18 @@ export const itemTextStyle: ResponsiveCSSProperties = {
 =========================================================== */
 
 export const statusTextCompleteStyle: ResponsiveCSSProperties = {
+  fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
   flexShrink: 0,
 
   whiteSpace: "nowrap",
 
   color: THEME.success,
 
-  fontSize: "12px",
+  fontSize: "14px",
 
   fontWeight: 700,
 
-  lineHeight: 1.25,
+  lineHeight: 1.35,
 
   /* ---------------------------------------------------------
      MOBILE
@@ -339,7 +343,7 @@ export const statusTextCompleteStyle: ResponsiveCSSProperties = {
   "@media (max-width: 767px)": {
     flexShrink: 0,
 
-    fontSize: "11px",
+    fontSize: "13px",
   },
 };
 
@@ -348,17 +352,18 @@ export const statusTextCompleteStyle: ResponsiveCSSProperties = {
 =========================================================== */
 
 export const statusTextPendingStyle: ResponsiveCSSProperties = {
+  fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
   flexShrink: 0,
 
   whiteSpace: "nowrap",
 
   color: THEME.brandAccent,
 
-  fontSize: "12px",
+  fontSize: "14px",
 
   fontWeight: 700,
 
-  lineHeight: 1.25,
+  lineHeight: 1.35,
 
   /* ---------------------------------------------------------
      MOBILE
@@ -367,7 +372,7 @@ export const statusTextPendingStyle: ResponsiveCSSProperties = {
   "@media (max-width: 767px)": {
     flexShrink: 0,
 
-    fontSize: "11px",
+    fontSize: "13px",
   },
 };
 
@@ -380,7 +385,7 @@ export const emptyStateStyle: ResponsiveCSSProperties = {
 
   alignItems: "center",
 
-  minHeight: "31px",
+  minHeight: "35px",
 
   width: "100%",
 
@@ -396,11 +401,11 @@ export const emptyStateStyle: ResponsiveCSSProperties = {
 
   color: THEME.textMuted,
 
-  fontSize: "12px",
+  fontSize: "14px",
 
   fontWeight: 500,
 
-  lineHeight: 1.25,
+  lineHeight: 1.35,
 
   /* ---------------------------------------------------------
      MOBILE
@@ -409,7 +414,7 @@ export const emptyStateStyle: ResponsiveCSSProperties = {
   "@media (max-width: 767px)": {
     minWidth: 0,
 
-    minHeight: "32px",
+    minHeight: "40px",
 
     padding: "6px",
   },

@@ -1,4 +1,4 @@
-// ============================================================
+﻿// ============================================================
 // FINORA ENTERPRISE V2
 // DESIGN SYSTEM
 // FORM FIELD
@@ -42,6 +42,9 @@ export interface FormFieldProps {
   helpText?: string;
 
   error?: string;
+
+
+  labelTextStyle?: CSSProperties;
 
 }
 
@@ -157,6 +160,9 @@ export default function FormField({
 
   error,
 
+
+  labelTextStyle,
+
 }: FormFieldProps) {
 
   return (
@@ -166,7 +172,7 @@ export default function FormField({
     >
 
       <label
-        style={labelStyle}
+        style={{ ...labelStyle, ...labelTextStyle }}
       >
 
         {label}
@@ -174,7 +180,7 @@ export default function FormField({
         {required && (
 
           <span
-            style={requiredStyle}
+            style={{ ...requiredStyle, ...labelTextStyle }}
           >
 
             *

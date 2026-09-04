@@ -25,6 +25,7 @@ import {
   fieldContentStyle,
   fieldStyle,
   headerStyle,
+  selectOptionTextStyle,
   selectStyle,
   wrapperStyle,
 } from "./GuarantorVerification.styles";
@@ -77,6 +78,7 @@ export default function GuarantorVerification({
                   onVerificationStatusChange(event.target.value)
                 }
                 style={selectStyle}
+                optionTextStyle={selectOptionTextStyle}
                 options={[
                   {
                     label: "Pending",
@@ -107,6 +109,7 @@ export default function GuarantorVerification({
                   onIdentityVerificationChange(event.target.value)
                 }
                 style={selectStyle}
+                optionTextStyle={selectOptionTextStyle}
                 options={[
                   {
                     label: "Aadhaar",

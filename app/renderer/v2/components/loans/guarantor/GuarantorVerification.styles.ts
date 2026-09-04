@@ -82,7 +82,8 @@ const THEME = {
 // ============================================================
 
 export const wrapperStyle: CSSProperties = {
-  width: "100%",
+    fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
+width: "100%",
   minWidth: 0,
   boxSizing: "border-box",
 
@@ -99,7 +100,7 @@ export const wrapperStyle: CSSProperties = {
     ${THEME.panelSoft}
   )`,
 
-  boxShadow: `0 6px 18px ${THEME.overlayShadow}`,
+  boxShadow: "none",
 
   overflow: "hidden",
 };
@@ -200,7 +201,8 @@ export const fieldContentStyle: CSSProperties = {
 // ============================================================
 
 export const inputStyle: CSSProperties = {
-  width: "100%",
+    fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
+width: "100%",
 
   minWidth: 0,
 
@@ -220,7 +222,7 @@ export const inputStyle: CSSProperties = {
 
   fontSize: "12px",
 
-  fontWeight: 600,
+  fontWeight: 700,
 
   lineHeight: 1.2,
 
@@ -234,6 +236,7 @@ export const inputStyle: CSSProperties = {
     "border-color 0.18s ease, box-shadow 0.18s ease, background 0.18s ease",
 
   boxShadow: "none",
+  textTransform: "capitalize",
 };
 
 // ============================================================
@@ -241,7 +244,8 @@ export const inputStyle: CSSProperties = {
 // ============================================================
 
 export const selectStyle: CSSProperties = {
-  width: "100%",
+    fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
+width: "100%",
 
   minWidth: 0,
 
@@ -277,6 +281,16 @@ export const selectStyle: CSSProperties = {
     "border-color 0.18s ease, box-shadow 0.18s ease, background 0.18s ease",
 
   boxShadow: "none",
+  textTransform: "capitalize",
+};
+
+// ============================================================
+// FINORA SELECT OPTION TEXT
+// ============================================================
+
+export const selectOptionTextStyle: CSSProperties = {
+  fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
+  fontWeight: 600,
 };
 
 // ============================================================

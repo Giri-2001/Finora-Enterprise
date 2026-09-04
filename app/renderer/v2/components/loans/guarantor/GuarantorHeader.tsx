@@ -29,7 +29,7 @@ export default function GuarantorHeader() {
 
         <div style={textWrapperStyle}>
           <h1 style={titleStyle}>
-            Guarantor Studio™
+            Guarantor Studio
           </h1>
 
           <p style={subtitleStyle}>

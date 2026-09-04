@@ -31,29 +31,20 @@
 
 import { getSession } from "../../../../../store/authStore";
 
+import type {
+  LoanApplicationMode,
+  LoanApplicationSnapshot,
+  LoanApplicationStep,
+} from "../../../../../types/loan-applications/rejectedLoanApplication.types";
+
 export type LoanWorkspaceDraftMode =
-  | "STANDARD"
-  | "GOLD";
+  LoanApplicationMode;
 
 export type LoanWorkspaceDraftStep =
-  | 1
-  | 2
-  | 3
-  | 4
-  | 5
-  | 6;
+  LoanApplicationStep;
 
-export interface LoanWorkspaceDraft {
-  version: 1;
-
-  mode: LoanWorkspaceDraftMode;
-
-  step: LoanWorkspaceDraftStep;
-
-  savedAt: string;
-
-  payload: Record<string, unknown>;
-}
+export type LoanWorkspaceDraft =
+  LoanApplicationSnapshot;
 
 /* ============================================================
    STORAGE KEYS

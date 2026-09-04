@@ -1,4 +1,4 @@
-/* ===========================================================
+﻿/* ===========================================================
    FINORA ENTERPRISE OS™
 
    LOAN STUDIO
@@ -236,10 +236,10 @@ export function createStep1DetailsMainStyle(
       display: "grid",
 
       gridTemplateColumns:
-        `minmax(0, calc(${tokens.formWidth} - ${tokens.mainGap / 2}px)) ` +
-        `minmax(0, calc(${tokens.previewWidth} - ${tokens.mainGap / 2}px))`,
+        `minmax(0, calc(${tokens.formWidth} - 3px)) ` +
+        `minmax(0, calc(${tokens.previewWidth} - 3px))`,
 
-      gap: `${tokens.mainGap}px`,
+      gap: "6px",
 
       alignItems: "start",
 

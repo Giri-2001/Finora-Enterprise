@@ -37,6 +37,23 @@ const fieldsStyle: CSSProperties = {
 };
 
 // ============================================================
+// STEP 6 FORM TYPOGRAPHY
+// ============================================================
+
+const formLabelTextStyle: CSSProperties = {
+  fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
+  fontSize: "15px",
+  fontWeight: 600,
+};
+
+const dropdownTextStyle: CSSProperties = {
+  fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
+  fontSize: "14px",
+  fontWeight: 650,
+  lineHeight: 1.4,
+};
+
+// ============================================================
 // TYPES
 // ============================================================
 
@@ -70,9 +87,11 @@ export default function PaymentModeCard({
             PRIMARY PAYMENT MODE
         ================================================== */}
 
-        <FormField label="Payment Mode" required>
+        <FormField label="Payment Mode" required labelTextStyle={formLabelTextStyle}>
           <SelectInput
             value={paymentMode}
+            style={dropdownTextStyle}
+            optionTextStyle={dropdownTextStyle}
             onChange={(event) => {
               onPaymentModeChange?.(event.target.value);
             }}
@@ -101,9 +120,11 @@ export default function PaymentModeCard({
             TRANSACTION STATUS
         ================================================== */}
 
-        <FormField label="Transaction Status">
+        <FormField label="Transaction Status" labelTextStyle={formLabelTextStyle}>
           <SelectInput
             value={transactionStatus}
+            style={dropdownTextStyle}
+            optionTextStyle={dropdownTextStyle}
             onChange={(event) => {
               onTransactionStatusChange?.(event.target.value);
             }}

@@ -1,4 +1,4 @@
-/* ===========================================================
+﻿/* ===========================================================
    FINORA ENTERPRISE OS™
 
    LOAN CUSTOMER CARD™
@@ -674,7 +674,7 @@ onMouseLeave={() =>
 
               fontSize: "12px",
 
-              fontWeight: 600,
+              fontWeight: 700,
 
               color: "var(--finora-theme-text-primary)",
 
@@ -758,7 +758,7 @@ onMouseLeave={() =>
 
               fontSize: "12px",
 
-              fontWeight: 600,
+              fontWeight: 700,
 
               color: "var(--finora-theme-text-primary)",
 

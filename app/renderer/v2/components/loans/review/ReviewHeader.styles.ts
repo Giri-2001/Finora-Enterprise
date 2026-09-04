@@ -80,6 +80,7 @@ const THEME = {
 // ============================================================
 
 export const headerStyle: CSSProperties = {
+  fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
   width: "100%",
 
   minWidth: 0,
@@ -100,7 +101,7 @@ export const headerStyle: CSSProperties = {
       ${THEME.surfaceMuted}
     )`,
 
-  boxShadow: `0 6px 18px ${THEME.shadow}`,
+  boxShadow: "none",
 };
 
 // ============================================================
@@ -132,7 +133,7 @@ export const accentStyle: CSSProperties = {
 
   background: THEME.brandAccent,
 
-  boxShadow: `0 0 12px ${THEME.brandAccentSoft}`,
+  boxShadow: "none",
 };
 
 // ============================================================
@@ -154,15 +155,16 @@ export const textWrapperStyle: CSSProperties = {
 // ============================================================
 
 export const titleStyle: CSSProperties = {
+  fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
   margin: 0,
 
   color: THEME.textPrimary,
 
-  fontSize: "21px",
+  fontSize: "22px",
 
   fontWeight: 750,
 
-  lineHeight: 1.2,
+  lineHeight: 1.3,
 
   letterSpacing: "0.01em",
 };
@@ -172,15 +174,16 @@ export const titleStyle: CSSProperties = {
 // ============================================================
 
 export const subtitleStyle: CSSProperties = {
+  fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
   margin: 0,
 
   color: THEME.textSecondary,
 
-  fontSize: "12px",
+  fontSize: "14px",
 
   fontWeight: 500,
 
-  lineHeight: 1.35,
+  lineHeight: 1.45,
 };
 
 // ============================================================

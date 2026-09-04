@@ -1,4 +1,4 @@
-// ============================================================
+﻿// ============================================================
 // FINORA ENTERPRISE V2
 //
 // GUARANTOR STUDIO
@@ -71,13 +71,18 @@ const THEME = {
 // ============================================================
 
 export const cardStyle: CSSProperties = {
+  fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
   width: "100%",
   minWidth: 0,
   boxSizing: "border-box",
 
   marginBottom: "10px",
 
+  borderRadius: "10px",
   overflow: "hidden",
+  clipPath: "inset(0 round 10px)",
+  isolation: "isolate",
+  boxShadow: "none",
 };
 
 // ============================================================
@@ -193,6 +198,7 @@ export const valueStyle: CSSProperties = {
   overflow: "hidden",
   textOverflow: "ellipsis",
   whiteSpace: "nowrap",
+  textTransform: "capitalize",
 };
 
 // ============================================================
@@ -204,6 +210,7 @@ export const primaryValueStyle: CSSProperties = {
 
   fontSize: "13px",
   fontWeight: 700,
+  textTransform: "capitalize",
 };
 
 // ============================================================

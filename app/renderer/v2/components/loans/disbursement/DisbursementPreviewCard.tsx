@@ -12,6 +12,8 @@
 
 import SummaryCard from "../../common/cards/SummaryCard";
 
+import { formatCurrency } from "../../../utils/currency/formatCurrency";
+
 // ============================================================
 // TYPES
 // ============================================================
@@ -62,7 +64,7 @@ export default function DisbursementPreviewCard({
         Amount :
         <strong>
           {" "}
-          ₹ {amount}
+          ₹ {formatCurrency(amount)}
         </strong>
       </span>
 

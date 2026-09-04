@@ -86,7 +86,11 @@ export const cardStyle: CSSProperties = {
   boxSizing: "border-box",
 
   background:
-    THEME.dropdownSoft,
+    `linear-gradient(
+      135deg,
+      ${THEME.primarySoft},
+      ${THEME.dropdownSoft}
+    )`,
 
   border:
     `1px solid ${THEME.border}`,
@@ -96,8 +100,7 @@ export const cardStyle: CSSProperties = {
   color:
     THEME.text,
 
-  boxShadow:
-    `var(--finora-theme-overlay-shadow)`,
+  boxShadow: "none",
 
   overflow: "visible",
 
@@ -188,10 +191,14 @@ export const selectorButtonStyle: CSSProperties = {
   borderRadius: "7px",
 
   border:
-    `1px solid ${THEME.borderStrong}`,
+    `1px solid ${THEME.primary}`,
 
   background:
-    THEME.dropdownSoft,
+    `linear-gradient(
+      180deg,
+      ${THEME.primarySoft},
+      ${THEME.dropdownSoft}
+    )`,
 
   color:
     THEME.primary,

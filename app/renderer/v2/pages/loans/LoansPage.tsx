@@ -37,8 +37,9 @@
 // ============================================================
 
 import { useEffect, useMemo, useState } from "react";
-
 import Loans from "./Loans";
+
+import RejectedLoanApplicationsPage from "./RejectedLoanApplicationsPage";
 
 import LoanStudio from "../../components/customers/office/CustomerOffice/components/LoanStudio";
 
@@ -84,7 +85,53 @@ type LoansWorkspace =
   | "LOANS_OFFICE"
   | "STANDARD_LOAN"
   | "GOLD_LOAN_STEP_ONE"
-  | "GOLD_LOAN_STUDIO";
+  | "GOLD_LOAN_STUDIO"
+  | "REJECTED_APPLICATIONS";
+
+const LOANS_WORKSPACE_SESSION_KEY =
+  "FINORA_LOANS_ACTIVE_WORKSPACE";
+
+function readLoansWorkspaceSession(): LoansWorkspace | null {
+  try {
+    const value =
+      sessionStorage.getItem(
+        LOANS_WORKSPACE_SESSION_KEY,
+      );
+
+    if (
+      value === "LOANS_OFFICE" ||
+      value === "STANDARD_LOAN" ||
+      value === "GOLD_LOAN_STEP_ONE" ||
+      value === "GOLD_LOAN_STUDIO" ||
+      value === "REJECTED_APPLICATIONS"
+    ) {
+      return value;
+    }
+  } catch (error) {
+    console.error(
+      "FINORA LOANS WORKSPACE SESSION READ ERROR:",
+      error,
+    );
+  }
+
+  return null;
+}
+
+function writeLoansWorkspaceSession(
+  workspace: LoansWorkspace,
+): void {
+  try {
+    sessionStorage.setItem(
+      LOANS_WORKSPACE_SESSION_KEY,
+      workspace,
+    );
+  } catch (error) {
+    console.error(
+      "FINORA LOANS WORKSPACE SESSION WRITE ERROR:",
+      error,
+    );
+  }
+}
 
 function readGoldLoanHandoffFromDraft(
   draft: LoanWorkspaceDraft | null,
@@ -142,6 +189,26 @@ function resolveInitialLoansWorkspace(
   goldHandoff: GoldLoanStudioStepTwoHandoff | null,
 ): LoansWorkspace {
   if (!draft) {
+    const sessionWorkspace =
+      readLoansWorkspaceSession();
+
+    /*
+     * Page/workspace restoration is intentionally separate
+     * from Loan workspace draft persistence.
+     *
+     * STANDARD_LOAN can safely reopen without a Loan draft.
+     * GOLD Step 1 can also reopen independently.
+     *
+     * GOLD_LOAN_STUDIO requires its authoritative handoff,
+     * so it must never be restored from session state alone.
+     */
+    if (
+      sessionWorkspace === "GOLD_LOAN_STEP_ONE" ||
+      sessionWorkspace === "REJECTED_APPLICATIONS"
+    ) {
+      return sessionWorkspace;
+    }
+
     return "LOANS_OFFICE";
   }
 
@@ -171,9 +238,10 @@ function resolveInitialLoansWorkspace(
 // EVENTS
 // ============================================================
 
-const OPEN_STANDARD_LOAN_EVENT = "FINORA_V2_OPEN_LOAN_STUDIO";
-
 const OPEN_GOLD_LOAN_EVENT = "FINORA_V2_OPEN_GOLD_LOAN_STUDIO";
+
+const OPEN_REJECTED_APPLICATIONS_EVENT =
+  "FINORA_V2_OPEN_REJECTED_LOAN_APPLICATIONS";
 
 // ============================================================
 // GOLD CONFIGURATION DEFAULTS
@@ -371,6 +439,7 @@ export default function LoansPage() {
         ),
     );
 
+
   // ==========================================================
   // GOLD CUSTOMER OPTIONS
   // ==========================================================
@@ -433,48 +502,83 @@ export default function LoansPage() {
   // ==========================================================
 
   useEffect(() => {
-    function handleOpenStandardLoanStudio(): void {
-      /*
-       * Clear any previous Gold launch snapshot before opening
-       * the independent Standard Loan workflow.
-       */
-      setGoldLoanHandoff(null);
-
-      setWorkspace("STANDARD_LOAN");
-    }
-
-    function handleOpenGoldLoanStudio(): void {
+function handleOpenGoldLoanStudio(): void {
       /*
        * Every new Gold Loan starts from dedicated Gold Step 1.
        */
       setGoldLoanHandoff(null);
 
+      writeLoansWorkspaceSession("GOLD_LOAN_STEP_ONE");
       setWorkspace("GOLD_LOAN_STEP_ONE");
     }
 
-    window.addEventListener(
-      OPEN_STANDARD_LOAN_EVENT,
+    function handleOpenRejectedApplications(): void {
+      writeLoansWorkspaceSession(
+        "REJECTED_APPLICATIONS",
+      );
 
-      handleOpenStandardLoanStudio,
-    );
+      setWorkspace(
+        "REJECTED_APPLICATIONS",
+      );
+    }
 
-    window.addEventListener(
+window.addEventListener(
       OPEN_GOLD_LOAN_EVENT,
 
       handleOpenGoldLoanStudio,
     );
 
+    window.addEventListener(
+      OPEN_REJECTED_APPLICATIONS_EVENT,
+
+      handleOpenRejectedApplications,
+    );
+
     return () => {
-      window.removeEventListener(
-        OPEN_STANDARD_LOAN_EVENT,
-
-        handleOpenStandardLoanStudio,
-      );
-
-      window.removeEventListener(
+window.removeEventListener(
         OPEN_GOLD_LOAN_EVENT,
 
         handleOpenGoldLoanStudio,
+      );
+
+      window.removeEventListener(
+        OPEN_REJECTED_APPLICATIONS_EVENT,
+
+        handleOpenRejectedApplications,
+      );
+    };
+  }, []);
+
+  // ==========================================================
+  // LOAN WORKFLOW COMPLETION
+  // ==========================================================
+
+  useEffect(() => {
+    function handleLoanWorkflowCompleted(): void {
+      setGoldLoanHandoff(
+        null,
+      );
+
+      writeLoansWorkspaceSession(
+        "LOANS_OFFICE",
+      );
+
+      setWorkspace(
+        "LOANS_OFFICE",
+      );
+    }
+
+    window.addEventListener(
+      "FINORA_V2_LOAN_WORKFLOW_COMPLETED",
+
+      handleLoanWorkflowCompleted,
+    );
+
+    return () => {
+      window.removeEventListener(
+        "FINORA_V2_LOAN_WORKFLOW_COMPLETED",
+
+        handleLoanWorkflowCompleted,
       );
     };
   }, []);
@@ -594,12 +698,83 @@ export default function LoansPage() {
   }, [workspace, goldLoanHandoff]);
 
   // ==========================================================
+  // REJECTED APPLICATIONS NAVIGATION
+  // ==========================================================
+
+  function handleCloseRejectedApplications(): void {
+    writeLoansWorkspaceSession(
+      "LOANS_OFFICE",
+    );
+
+    setWorkspace(
+      "LOANS_OFFICE",
+    );
+  }
+
+  function handleRejectedApplicationReopened(): void {
+    const reopenedDraft =
+      loadActiveLoanWorkspaceDraft();
+
+    if (!reopenedDraft) {
+      alert(
+        "The reopened Loan workspace could not be loaded.",
+      );
+
+      return;
+    }
+
+    if (
+      reopenedDraft.mode === "STANDARD"
+    ) {
+      setGoldLoanHandoff(
+        null,
+      );
+
+      writeLoansWorkspaceSession(
+        "STANDARD_LOAN",
+      );
+
+      setWorkspace(
+        "STANDARD_LOAN",
+      );
+
+      return;
+    }
+
+    const reopenedGoldHandoff =
+      readGoldLoanHandoffFromDraft(
+        reopenedDraft,
+      );
+
+    if (!reopenedGoldHandoff) {
+      alert(
+        "The reopened Gold Loan Step 1 snapshot is incomplete.",
+      );
+
+      return;
+    }
+
+    setGoldLoanHandoff(
+      reopenedGoldHandoff,
+    );
+
+    writeLoansWorkspaceSession(
+      "GOLD_LOAN_STEP_ONE",
+    );
+
+    setWorkspace(
+      "GOLD_LOAN_STEP_ONE",
+    );
+  }
+
+  // ==========================================================
   // BACK TO LOANS OFFICE
   // ==========================================================
 
   function handleCloseGoldLoan(): void {
     setGoldLoanHandoff(null);
 
+    writeLoansWorkspaceSession("LOANS_OFFICE");
     setWorkspace("LOANS_OFFICE");
   }
 
@@ -672,6 +847,7 @@ export default function LoansPage() {
       result.handoff,
     );
 
+    writeLoansWorkspaceSession("GOLD_LOAN_STUDIO");
     setWorkspace(
       "GOLD_LOAN_STUDIO",
     );
@@ -689,6 +865,7 @@ export default function LoansPage() {
       return;
     }
 
+    writeLoansWorkspaceSession("GOLD_LOAN_STEP_ONE");
     setWorkspace("GOLD_LOAN_STEP_ONE");
   }
 
@@ -765,6 +942,26 @@ export default function LoansPage() {
           locationCode: "",
         }
       : undefined;
+
+  // ==========================================================
+  // REJECTED LOAN APPLICATIONS
+  // ==========================================================
+
+  if (
+    workspace ===
+    "REJECTED_APPLICATIONS"
+  ) {
+    return (
+      <RejectedLoanApplicationsPage
+        onBack={
+          handleCloseRejectedApplications
+        }
+        onReopenComplete={
+          handleRejectedApplicationReopened
+        }
+      />
+    );
+  }
 
   // ==========================================================
   // STANDARD LOAN STUDIO

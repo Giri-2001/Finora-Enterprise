@@ -120,7 +120,8 @@ export const responsiveGridCss = `
 // ============================================================
 
 export const wrapperStyle: CSSProperties = {
-  display: "grid",
+    fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
+display: "grid",
 
   width: "100%",
 
@@ -148,8 +149,7 @@ export const wrapperStyle: CSSProperties = {
       ${THEME.panelSoft}
     )`,
 
-  boxShadow:
-    `0 4px 14px ${THEME.shadow}`,
+  boxShadow: "none",
 
   overflow: "hidden",
 };
@@ -252,7 +252,8 @@ export const fieldContentStyle: CSSProperties = {
 // ============================================================
 
 export const inputStyle: CSSProperties = {
-  width: "100%",
+    fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
+width: "100%",
 
   minWidth: 0,
 
@@ -272,7 +273,7 @@ export const inputStyle: CSSProperties = {
 
   fontSize: "12px",
 
-  fontWeight: 600,
+  fontWeight: 700,
 
   lineHeight: 1.2,
 
@@ -286,6 +287,7 @@ export const inputStyle: CSSProperties = {
   WebkitAppearance: "none",
 
   MozAppearance: "textfield",
+  textTransform: "capitalize",
 };
 
 // ============================================================

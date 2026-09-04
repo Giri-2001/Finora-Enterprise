@@ -80,7 +80,8 @@ export const headerTextStyle = {
 
 export const headerTitleStyle = {
   margin: 0,
-  fontSize: "18px",
+  fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
+  fontSize: "20px",
   fontWeight: 750,
   color: THEME.textPrimary,
 };
@@ -88,7 +89,8 @@ export const headerTitleStyle = {
 export const headerDescriptionStyle = {
   margin: 0,
   color: THEME.textMuted,
-  fontSize: "12px",
+  fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
+  fontSize: "14px",
   fontWeight: 500,
 };
 
@@ -106,7 +108,8 @@ export const headerBadgeWrapStyle = {
 export const categorySectionTitleStyle = {
   marginBottom: "8px",
   color: THEME.textSecondary,
-  fontSize: "11px",
+  fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
+  fontSize: "12px",
   fontWeight: 800,
   letterSpacing: "0.08em",
 };
@@ -122,14 +125,16 @@ export const sectionTitleRowStyle = {
 
 export const sectionTitleStyle = {
   color: THEME.textSecondary,
-  fontSize: "11px",
+  fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
+  fontSize: "12px",
   fontWeight: 800,
   letterSpacing: "0.08em",
 };
 
 export const sectionHintStyle = {
   color: THEME.textMuted,
-  fontSize: "11px",
+  fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
+  fontSize: "12px",
 };
 
 export const badgeStyle = {
@@ -143,6 +148,7 @@ export const badgeStyle = {
   border: strongBorder,
   background: THEME.surface,
   color: THEME.textSecondary,
+  fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
   fontSize: "13px",
   fontWeight: 800,
 };
@@ -158,6 +164,7 @@ export const addButtonStyle = {
   border: strongBorder,
   background: THEME.surface,
   color: THEME.textSecondary,
+  fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
   fontSize: "11px",
   fontWeight: 750,
   cursor: "pointer",
@@ -173,6 +180,7 @@ export const backButtonStyle = {
   border: panelBorder,
   background: THEME.surface,
   color: THEME.textSecondary,
+  fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
   fontSize: "13px",
   fontWeight: 700,
   cursor: "pointer",
@@ -193,6 +201,7 @@ export const viewAllButtonStyle = {
   border: panelBorder,
   background: THEME.surface,
   color: THEME.textSecondary,
+  fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
   fontSize: "11px",
   fontWeight: 700,
   lineHeight: 1,
@@ -297,7 +306,8 @@ export const categoryTitleWrapStyle = {
 export const categoryTitleStyle = {
   minWidth: 0,
   color: THEME.textPrimary,
-  fontSize: "13px",
+  fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
+  fontSize: "14px",
   fontWeight: 750,
   overflow: "visible",
   textOverflow: "clip",
@@ -308,7 +318,8 @@ export const categoryTitleStyle = {
 export const categoryMetaStyle = {
   marginTop: "2px",
   color: THEME.textMuted,
-  fontSize: "10px",
+  fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
+  fontSize: "11px",
   fontWeight: 500,
 };
 
@@ -368,14 +379,16 @@ export const evidencePreviewTextStyle = {
 
 export const evidencePreviewTitleStyle = {
   color: THEME.textPrimary,
-  fontSize: "14px",
+  fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
+  fontSize: "15px",
   fontWeight: 750,
 };
 
 export const evidencePreviewMetaStyle = {
   marginTop: "5px",
   color: THEME.textSecondary,
-  fontSize: "13px",
+  fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
+  fontSize: "14px",
 };
 
 export const evidencePreviewStripStyle = {
@@ -410,7 +423,8 @@ export const emptyStateStyle = {
   minHeight: "55px",
   width: "100%",
   color: THEME.textMuted,
-  fontSize: "12px",
+  fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
+  fontSize: "13px",
   fontWeight: 600,
   textAlign: "center" as const,
 };
@@ -430,6 +444,7 @@ export const uploadLabelStyle = {
   border: strongBorder,
   background: THEME.primarySoft,
   color: THEME.textInverse,
+  fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
   fontSize: "11px",
   fontWeight: 700,
   cursor: "pointer",
@@ -476,12 +491,14 @@ export const galleryTitleWrapStyle = {
 
 export const galleryTitleStyle = {
   color: THEME.textPrimary,
+  fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
   fontSize: "16px",
   fontWeight: 800,
 };
 
 export const galleryMetaStyle = {
   color: THEME.textMuted,
+  fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
   fontSize: "11px",
   marginTop: "3px",
 };
@@ -542,6 +559,7 @@ export const pdfTileStyle = {
   justifyContent: "center",
   color: THEME.info,
   fontWeight: 800,
+  fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
   fontSize: "20px",
 };
 
@@ -552,6 +570,7 @@ export const pdfCompactStyle = {
   justifyContent: "center",
   color: THEME.info,
   fontWeight: 800,
+  fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
   fontSize: "11px",
 };
 
@@ -561,6 +580,7 @@ export const documentTileFooterStyle = {
 
 export const documentTileNameStyle = {
   color: THEME.textPrimary,
+  fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
   fontSize: "11px",
   fontWeight: 750,
   overflow: "hidden",
@@ -571,6 +591,7 @@ export const documentTileNameStyle = {
 export const documentTileTypeStyle = {
   marginTop: "2px",
   color: THEME.textMuted,
+  fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
   fontSize: "9px",
   fontWeight: 600,
 };
@@ -588,6 +609,7 @@ export const renameButtonStyle = {
   border: strongBorder,
   background: THEME.primarySoft,
   color: THEME.info,
+  fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
   fontSize: "9px",
   fontWeight: 700,
   cursor: "pointer",
@@ -601,6 +623,7 @@ export const itemMenuStyle = {
   border: `1px solid ${THEME.danger}`,
   background: THEME.dangerSoft,
   color: THEME.danger,
+  fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
   fontSize: "15px",
   lineHeight: 1,
   cursor: "pointer",
@@ -621,6 +644,7 @@ export const renameDialogStyle = {
 
 export const renameDialogTitleStyle = {
   color: THEME.textPrimary,
+  fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
   fontSize: "15px",
   fontWeight: 800,
   marginBottom: "10px",
@@ -651,7 +675,7 @@ export const renameActionsStyle = {
 export const viewerBackdropStyle = {
   position: "fixed" as const,
   inset: 0,
-  zIndex: 1100,
+  zIndex: 1700,
   display: "flex",
   alignItems: "center",
   justifyContent: "center",
@@ -680,6 +704,7 @@ export const viewerContentStyle = {
 export const viewerTitleStyle = {
   alignSelf: "stretch",
   color: THEME.textPrimary,
+  fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
   fontSize: "13px",
   fontWeight: 800,
   textAlign: "center" as const,
@@ -705,15 +730,20 @@ export const viewerCloseStyle = {
   position: "fixed" as const,
   top: "14px",
   right: "16px",
-  zIndex: 1110,
-  width: "36px",
-  height: "36px",
+  zIndex: 1710,
+  width: "38px",
+  height: "38px",
   padding: 0,
+  display: "inline-flex",
+  alignItems: "center",
+  justifyContent: "center",
   borderRadius: "999px",
   border: panelBorder,
-  background: THEME.surface,
-  color: THEME.textInverse,
-  fontSize: "22px",
+  background: THEME.surfaceMuted,
+  color: THEME.textPrimary,
+  fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
+  fontSize: "24px",
+  fontWeight: 700,
   lineHeight: 1,
   cursor: "pointer",
 };

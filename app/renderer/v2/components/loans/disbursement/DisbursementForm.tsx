@@ -22,10 +22,13 @@ import SummaryCard from "../../common/cards/SummaryCard";
 
 import { FormField, TextInput } from "../../common";
 
+import { formatCurrency } from "../../../utils/currency/formatCurrency";
+
 import {
   disbursementFormStyle,
   fieldsGridStyle,
   fieldStyle,
+  formLabelTextStyle,
   inputWrapperStyle,
   dateInputStyle,
   amountInputStyle,
@@ -73,6 +76,8 @@ export default function DisbursementForm({
     ? Math.max(0, netDisbursement)
     : 0;
 
+  const formattedDisbursement = formatCurrency(calculatedDisbursement);
+
   // ==========================================================
   // RENDER
   // ==========================================================
@@ -86,7 +91,7 @@ export default function DisbursementForm({
           ================================================= */}
 
           <div style={fieldStyle}>
-            <FormField label="Disbursement Date" required>
+            <FormField label="Disbursement Date" required labelTextStyle={formLabelTextStyle}>
               <div style={inputWrapperStyle}>
                 <TextInput
                   type="date"
@@ -106,11 +111,11 @@ export default function DisbursementForm({
           ================================================= */}
 
           <div style={fieldStyle}>
-            <FormField label="Disbursement Amount" required>
+            <FormField label="Disbursement Amount" required labelTextStyle={formLabelTextStyle}>
               <div style={inputWrapperStyle}>
                 <TextInput
-                  type="number"
-                  value={calculatedDisbursement}
+                  type="text"
+                  value={formattedDisbursement}
                   readOnly
                   disabled
                   style={amountInputStyle}

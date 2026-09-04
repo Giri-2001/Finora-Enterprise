@@ -1,4 +1,4 @@
-import {
+﻿import {
   cardStyle,
   statisticsGridStyle,
   statisticItemStyle,
@@ -47,7 +47,7 @@ export default function LoanStatistics({
               whiteSpace: "nowrap",
             }}
           >
-            All loan records
+            All Loan Records
           </span>
         </div>
 
@@ -75,7 +75,7 @@ export default function LoanStatistics({
               whiteSpace: "nowrap",
             }}
           >
-            Currently running
+            Currently Running
           </span>
         </div>
 
@@ -103,7 +103,7 @@ export default function LoanStatistics({
               whiteSpace: "nowrap",
             }}
           >
-            Disbursed amount
+            Disbursed Amount
           </span>
         </div>
 

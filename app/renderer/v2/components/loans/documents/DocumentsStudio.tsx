@@ -454,7 +454,7 @@ export default function DocumentsStudio({
         <div style={headerAccentStyle} />
 
         <div style={headerTextStyle}>
-          <h2 style={headerTitleStyle}>Documents Studio™</h2>
+          <h2 style={headerTitleStyle}>Documents Studio</h2>
 
           <p style={headerDescriptionStyle}>
             Upload & manage customer, collateral and loan documents.

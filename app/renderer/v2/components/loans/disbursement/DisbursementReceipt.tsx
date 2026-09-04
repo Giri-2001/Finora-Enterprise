@@ -12,6 +12,8 @@
 
 import SummaryCard from "../../common/cards/SummaryCard";
 
+import { formatCurrency } from "../../../utils/currency/formatCurrency";
+
 // ============================================================
 // TYPES
 // ============================================================
@@ -39,8 +41,6 @@ export default function DisbursementReceipt({
   customerName = "--",
 
   amount = 0,
-
-  paymentMode = "--",
 
 }: DisbursementReceiptProps) {
 
@@ -70,15 +70,7 @@ export default function DisbursementReceipt({
         Amount :
         <strong>
           {" "}
-          ₹ {amount}
-        </strong>
-      </span>
-
-      <span>
-        Payment Mode :
-        <strong>
-          {" "}
-          {paymentMode.charAt(0).toUpperCase() + paymentMode.slice(1)}
+          ₹ {formatCurrency(amount)}
         </strong>
       </span>
 

@@ -122,7 +122,7 @@ export default function ValidationChecklist({
 
   return (
     <div style={cardStyle}>
-      <SummaryCard title="Validation Checklist">
+      <SummaryCard title="Validation Checklist" shadowless>
         <ul style={checklistStyle}>
           {checklist.map((item) => (
             <li key={item.label} style={itemStyle}>

@@ -1,4 +1,4 @@
-﻿// ============================================================
+// ============================================================
 // FINORA ENTERPRISE OS™
 // LOAN STUDIO STATE / BUSINESS ENGINE
 //
@@ -98,6 +98,15 @@ import {
   hasExistingLoan,
   rollbackCreatedLoan,
 } from "../../../../../services/loan/loanService";
+
+import {
+  createRejectedLoanApplication,
+  createRejectedLoanApplicationIdentity,
+} from "../../../../../services/loan-applications/rejectedLoanApplicationService";
+
+import {
+  archiveRejectedLoanDocuments,
+} from "../../../../../services/loan-applications/rejectedLoanDocumentService";
 
 import { buildGoldLoanStorageAllocationRequest } from "../../../../../services/gold-loan/goldLoanService";
 
@@ -1376,9 +1385,7 @@ export function useLoanStudio({
      * must still be persisted so stale values do not return.
      */
     const hasMeaningfulWorkspaceData =
-      Boolean(existingDraft) ||
       safeStep > 1 ||
-      Boolean(selectedCustomer) ||
       safeDocuments.length > 0 ||
       Boolean(loanAmount) ||
       Boolean(interest) ||
@@ -1387,7 +1394,6 @@ export function useLoanStudio({
       Boolean(penaltyValue) ||
       Boolean(lateFee) ||
       Boolean(firstInstallmentDate) ||
-      Boolean(repaymentType) ||
       Boolean(duration) ||
       Boolean(guarantorName) ||
       Boolean(guarantorPhone) ||
@@ -1399,9 +1405,24 @@ export function useLoanStudio({
       disbursementSavedAt !== "Not Saved" ||
       disbursementDraftStatus !== "Draft";
 
+    /*
+     * Customer selection alone is not a Loan draft.
+     *
+     * Default repayment frequency is also intentionally excluded
+     * because Step 1 synchronizes it automatically.
+     *
+     * When no real Loan work remains, remove any older stale
+     * customer-only/default draft so refresh opens a fresh studio.
+     */
     if (
       !hasMeaningfulWorkspaceData
     ) {
+      if (existingDraft) {
+        clearLoanWorkspaceDraft(
+          draftMode,
+        );
+      }
+
       return true;
     }
 
@@ -1582,19 +1603,145 @@ export function useLoanStudio({
     });
   }
 
-  async function handleRejectLoan():
-    Promise<void> {
-    console.log("FINORA LOAN REJECT", {
-      customerId: activeCustomerId,
+  async function handleRejectLoan(
+    rejectionReasonInput: string,
+  ): Promise<void> {
+    const rejectionReason =
+      String(
+        rejectionReasonInput ?? "",
+      ).trim();
 
-      entryMode,
+    if (!rejectionReason) {
+      alert(
+        "Rejection reason is required.",
+      );
 
-      documents: documents.length,
+      return;
+    }
+    if (
+      transactionStatus !== "pending"
+    ) {
+      alert(
+        "Only a Pending Loan transaction can be rejected.",
+      );
 
-      guarantorVerificationStatus,
+      return;
+    }
 
-      guarantorIdentityVerification,
-    });
+    /* ======================================================
+       PUBLISH CURRENT WORKSPACE SNAPSHOT
+    ====================================================== */
+
+    const draftSaved =
+      await persistCurrentLoanWorkspaceDraft();
+
+    if (!draftSaved) {
+      alert(
+        "Unable to preserve the current Loan Application draft.",
+      );
+
+      return;
+    }
+
+    const snapshot =
+      loadLoanWorkspaceDraft(
+        draftMode,
+      );
+
+    if (!snapshot) {
+      alert(
+        "Unable to load the Loan Application snapshot for rejection.",
+      );
+
+      return;
+    }
+
+    /* ======================================================
+       ARCHIVE DOCUMENT CONTENT BEFORE METADATA
+    ====================================================== */
+
+    const identity =
+      createRejectedLoanApplicationIdentity();
+
+    const documentArchiveResult =
+      await archiveRejectedLoanDocuments(
+        identity.id,
+        draftMode,
+        documents,
+      );
+
+    if (!documentArchiveResult.success) {
+      alert(
+        documentArchiveResult.error ??
+          "Unable to preserve rejected Loan documents.",
+      );
+
+      return;
+    }
+
+    /* ======================================================
+       PERSIST REJECTED APPLICATION
+    ====================================================== */
+
+    const rejectedResult =
+      await createRejectedLoanApplication({
+        identity,
+
+        snapshot,
+
+        rejectionReason,
+
+        customerId:
+          activeCustomerId,
+
+        customerName:
+          activeCustomerName,
+
+        customerPhone:
+          activeCustomerPhone,
+
+        requestedAmount:
+          parseNumericValue(loanAmount),
+
+        documentIds:
+          documents.map(
+            (document) => document.id,
+          ),
+      });
+
+    if (!rejectedResult.success || !rejectedResult.data) {
+      alert(
+        rejectedResult.error ??
+          "Unable to archive the rejected Loan Application.",
+      );
+
+      return;
+    }
+
+    console.log(
+      "FINORA LOAN APPLICATION REJECTED",
+      {
+        applicationId:
+          rejectedResult.data.id,
+
+        applicationReference:
+          rejectedResult.data.applicationReference,
+
+        customerId:
+          activeCustomerId,
+
+        entryMode,
+
+        documents:
+          documents.length,
+
+        rejectionReason,
+      },
+    );
+
+    /* ======================================================
+       TERMINAL ACTIVE WORKSPACE CLEANUP
+    ====================================================== */
 
     await clearLoanDocumentDrafts(
       draftMode,
@@ -1602,6 +1749,7 @@ export function useLoanStudio({
 
     suppressLoanWorkspaceAutosaveRef.current =
       true;
+
     clearLoanWorkspaceDraft(
       draftMode,
     );
@@ -1609,7 +1757,18 @@ export function useLoanStudio({
     suppressNextDraftAutosaveRef.current =
       true;
 
+    alert(
+      "Loan Application Rejected and Archived." +
+        `\nReference: ${rejectedResult.data.applicationReference}`,
+    );
+
     resetLoanWorkspace();
+
+    window.dispatchEvent(
+      new CustomEvent(
+        "FINORA_V2_LOAN_WORKFLOW_COMPLETED",
+      ),
+    );
   }
 
   /* ==========================================================
@@ -2188,6 +2347,12 @@ Available Balance: ₹${walletChargeResult.data.availableBalance}`,
       true;
 
     resetLoanWorkspace();
+
+    window.dispatchEvent(
+      new CustomEvent(
+        "FINORA_V2_LOAN_WORKFLOW_COMPLETED",
+      ),
+    );
 
     void clearLoanDocumentDrafts(
       draftMode,

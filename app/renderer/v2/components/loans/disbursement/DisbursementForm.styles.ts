@@ -60,6 +60,8 @@ const THEME = {
 =========================================================== */
 
 export const disbursementFormStyle: CSSProperties = {
+  fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
+
   width: "100%",
 
   minWidth: 0,
@@ -100,6 +102,16 @@ export const fieldStyle: CSSProperties = {
 };
 
 /* ===========================================================
+   FORM LABEL TEXT
+=========================================================== */
+
+export const formLabelTextStyle: CSSProperties = {
+  fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
+  fontSize: "15px",
+  fontWeight: 600,
+};
+
+/* ===========================================================
    INPUT WRAPPER
 =========================================================== */
 
@@ -128,11 +140,13 @@ export const dateInputStyle: CSSProperties = {
   */
   colorScheme: "inherit",
 
-  fontFamily: "Inter, Segoe UI, Roboto, Arial, sans-serif",
+  fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
 
-  fontSize: "13px",
+  fontSize: "15px",
 
-  fontWeight: 500,
+  fontWeight: 650,
+
+  lineHeight: 1.4,
 
   color: THEME.textPrimary,
 
@@ -166,7 +180,7 @@ export const amountInputStyle: CSSProperties = {
 
   border: `1px solid ${THEME.borderStrong}`,
 
-  fontWeight: 700,
+  fontWeight: 650,
 
   cursor: "default",
 

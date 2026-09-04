@@ -64,7 +64,11 @@ import { useTheme } from "../../themes/provider";
 
 import { useLoansOfficeResponsive } from "../../utils/responsive/loansOffice/loansOffice.useResponsive";
 
-import { Gem, Plus } from "lucide-react";
+import {
+  ArchiveX,
+  Gem,
+  Plus,
+} from "lucide-react";
 
 import {
   createLoansOfficePageStyle,
@@ -668,6 +672,35 @@ export default function Loans() {
     gap: "8px",
   };
 
+  const responsiveRejectedButtonStyle: CSSProperties = {
+    ...createButtonStyle,
+
+    width:
+      responsiveTokens.viewport === "mobile"
+        ? "100%"
+        : undefined,
+
+    display: "inline-flex",
+
+    alignItems: "center",
+
+    justifyContent: "center",
+
+    gap: "7px",
+
+    border:
+      `1px solid ${themeColors.borderStrong}`,
+
+    background:
+      themeColors.surfaceMuted,
+
+    color:
+      themeColors.textSecondary,
+
+    boxShadow:
+      "none",
+  };
+
   const responsiveGoldCreateButtonStyle: CSSProperties = {
     ...createButtonStyle,
 
@@ -1061,6 +1094,22 @@ export default function Loans() {
   }, [currentPage, totalPages]);
 
   // ==========================================================
+  // REJECTED LOAN APPLICATIONS
+  // ==========================================================
+
+  const handleOpenRejectedApplications =
+    useCallback(
+      (): void => {
+        window.dispatchEvent(
+          new CustomEvent(
+            "FINORA_V2_OPEN_REJECTED_LOAN_APPLICATIONS",
+          ),
+        );
+      },
+      [],
+    );
+
+  // ==========================================================
   // CREATE GOLD LOAN
   //
   // IMPORTANT:
@@ -1136,6 +1185,23 @@ export default function Loans() {
           </div>
 
           <div style={responsiveHeaderActionsStyle}>
+            <button
+              type="button"
+              onClick={
+                handleOpenRejectedApplications
+              }
+              style={
+                responsiveRejectedButtonStyle
+              }
+            >
+              <ArchiveX
+                size={16}
+                strokeWidth={1.9}
+              />
+
+              Rejected Applications
+            </button>
+
             <button
               type="button"
               onClick={handleCreateGoldLoan}
