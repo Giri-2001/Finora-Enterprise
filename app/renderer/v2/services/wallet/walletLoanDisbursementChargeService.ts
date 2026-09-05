@@ -27,6 +27,10 @@
    STATUS  : Production Foundation
 ============================================================ */
 
+import {
+  resolveFinoraBasePrice,
+} from "../pricing/finoraPricingEngine";
+
 import type {
   WalletScope,
 } from "../../types/wallet/wallet.types";
@@ -48,7 +52,6 @@ import {
 } from "./walletDebitService";
 
 import {
-  FINORA_WALLET_LOAN_DISBURSEMENT_PLATFORM_FEE,
   FINORA_WALLET_TRANSACTION_LABELS,
 } from "./wallet.constants";
 
@@ -64,6 +67,7 @@ export interface LoanWalletChargePreflightFailure {
     | "INVALID_SCOPE"
     | "WALLET_UNAVAILABLE"
     | "WALLET_NOT_ACTIVE"
+    | "PRICING_UNAVAILABLE"
     | "INSUFFICIENT_BALANCE";
 
   error:
@@ -155,6 +159,27 @@ export async function preflightLoanDisbursementWalletCharge(
     };
   }
 
+  const pricingResult =
+    resolveFinoraBasePrice(
+      "LOAN_DISBURSEMENT",
+    );
+
+  if (!pricingResult.success) {
+    return {
+      success:
+        false,
+
+      errorCode:
+        "PRICING_UNAVAILABLE",
+
+      error:
+        pricingResult.reason,
+    };
+  }
+
+  const pricingQuote =
+    pricingResult.quote;
+
   const walletResult =
     await ensureWalletForScope(
       normalizedScope,
@@ -195,7 +220,7 @@ export async function preflightLoanDisbursementWalletCharge(
   const balanceResult =
     calculateWalletDebit(
       wallet.balance,
-      FINORA_WALLET_LOAN_DISBURSEMENT_PLATFORM_FEE,
+      pricingQuote.amount,
     );
 
   if (!balanceResult.success) {
@@ -207,7 +232,7 @@ export async function preflightLoanDisbursementWalletCharge(
         "INSUFFICIENT_BALANCE",
 
       error:
-        `Insufficient FINORA Wallet balance. A ₹${FINORA_WALLET_LOAN_DISBURSEMENT_PLATFORM_FEE} Loan platform fee is required.`,
+        `Insufficient FINORA Wallet balance. A ₹${pricingQuote.amount} Loan platform fee is required.`,
     };
   }
 
@@ -220,7 +245,7 @@ export async function preflightLoanDisbursementWalletCharge(
         wallet.walletId,
 
       amount:
-        FINORA_WALLET_LOAN_DISBURSEMENT_PLATFORM_FEE,
+        pricingQuote.amount,
 
       availableBalance:
         wallet.balance,
@@ -264,6 +289,27 @@ export async function commitLoanDisbursementWalletCharge(
     };
   }
 
+  const pricingResult =
+    resolveFinoraBasePrice(
+      "LOAN_DISBURSEMENT",
+    );
+
+  if (!pricingResult.success) {
+    return {
+      success:
+        false,
+
+      errorCode:
+        "INVALID_INPUT",
+
+      error:
+        pricingResult.reason,
+    };
+  }
+
+  const pricingQuote =
+    pricingResult.quote;
+
   return commitWalletDebit({
     walletId,
 
@@ -277,14 +323,15 @@ export async function commitLoanDisbursementWalletCharge(
       String(input.branchId ?? "").trim(),
 
     type:
-      "LOAN_DISBURSEMENT_PLATFORM_FEE",
+      pricingQuote.transactionType,
 
     amount:
-      FINORA_WALLET_LOAN_DISBURSEMENT_PLATFORM_FEE,
+      pricingQuote.amount,
 
     title:
-      FINORA_WALLET_TRANSACTION_LABELS
-        .LOAN_DISBURSEMENT_PLATFORM_FEE,
+      FINORA_WALLET_TRANSACTION_LABELS[
+        pricingQuote.transactionType
+      ],
 
     remarks:
       `Loan disbursed: ${loanNumber}`,
