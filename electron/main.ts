@@ -58,6 +58,10 @@ import {
 } from "./control/finoraDevProvisioning.js";
 
 import {
+  ensureFinoraWindowsInstallationBinding,
+} from "./control/finoraInstallationBindingService.js";
+
+import {
   registerFinoraNotificationProviderHandlers,
 } from "./notifications/finoraNotificationProviderIpc.js";
 
@@ -1436,7 +1440,9 @@ app.whenReady().then(async () => {
     getFinoraNotificationProviderRegistry(),
   );
 
-  await runFinoraDevelopmentProvisioning();
+  await ensureFinoraWindowsInstallationBinding();
+
+    await runFinoraDevelopmentProvisioning();
 
   createMainWindow();
 

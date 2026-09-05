@@ -4,35 +4,25 @@ package com.finora.enterprise.control;
 // FINORA ENTERPRISE OS™
 //
 // ANDROID CONTROL
-// BRANCH ACTIVATION APPLY COORDINATOR
+// VERIFIED STORAGE ENTITLEMENT APPLY COORDINATOR
 //
 // RESPONSIBILITY:
 //
-// - Read authoritative native control state through a port
-// - Resolve current installation identity
-// - Verify Control Center ECDSA P-256 signature
-// - Verify exact installation target
-// - Apply REGISTERED / DEMO domain rules
-// - Enforce package replay / monotonic sequence
-// - Commit exactly one complete next-state package
+// - Serialize verified Control Package application
+// - Read authoritative encrypted Control Store state
+// - Read AndroidKeyStore-backed public installation binding
+// - Verify Control Center ECDSA signature and exact target
+// - Require purpose = STORAGE_ENTITLEMENT
+// - Run pure Storage Entitlement state transition
+// - Commit the complete next state exactly once
 //
 // SECURITY:
 //
-// - Pure Java.
-// - PUBLIC verification only.
-// - No private key.
+// - PUBLIC binding metadata only.
+// - No private installation key crosses this boundary.
 // - No signing.
-// - No Android Context.
 // - No WebView.
 // - No Business Date.
-//
-// Production persistence is supplied by
-// FinoraBranchActivationPackageApplyService, whose adapter routes
-// writes to FinoraControlStore:
-//
-// Android Keystore AES-256-GCM
-// +
-// AtomicFile.
 //
 // VERSION : 1.0
 // STATUS  : Production Foundation
@@ -42,7 +32,7 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 
-public final class FinoraBranchActivationApplyCoordinator {
+public final class FinoraStorageEntitlementApplyCoordinator {
 
     private static final Object APPLY_LOCK =
         FinoraControlPackageApplyLock.LOCK;
@@ -50,7 +40,8 @@ public final class FinoraBranchActivationApplyCoordinator {
     private final ControlStatePort controlStatePort;
 
     private final NativeBindingPort nativeBindingPort;
-    public FinoraBranchActivationApplyCoordinator(
+
+    public FinoraStorageEntitlementApplyCoordinator(
         ControlStatePort controlStatePort,
         NativeBindingPort nativeBindingPort
     ) {
@@ -88,6 +79,47 @@ public final class FinoraBranchActivationApplyCoordinator {
         void write(
             Map<String, Object> nextState
         ) throws Exception;
+    }
+
+    // ========================================================
+    // NATIVE BINDING PORT
+    // ========================================================
+
+    public interface NativeBindingPort {
+
+        NativeBinding read()
+            throws Exception;
+    }
+
+    public static final class NativeBinding {
+
+        public final String installationId;
+
+        public final String bindingKeyId;
+
+        public final String fingerprintAlgorithm;
+
+        public final String publicKeyFingerprint;
+
+        public NativeBinding(
+            String installationId,
+            String bindingKeyId,
+            String fingerprintAlgorithm,
+            String publicKeyFingerprint
+        ) {
+
+            this.installationId =
+                installationId;
+
+            this.bindingKeyId =
+                bindingKeyId;
+
+            this.fingerprintAlgorithm =
+                fingerprintAlgorithm;
+
+            this.publicKeyFingerprint =
+                publicKeyFingerprint;
+        }
     }
 
     // ========================================================
@@ -153,46 +185,6 @@ public final class FinoraBranchActivationApplyCoordinator {
     }
 
     // ========================================================
-    // NATIVE INSTALLATION BINDING PORT
-    // ========================================================
-
-    public interface NativeBindingPort {
-
-        NativeBinding read()
-            throws Exception;
-    }
-
-    public static final class NativeBinding {
-
-        public final String installationId;
-
-        public final String bindingKeyId;
-
-        public final String fingerprintAlgorithm;
-
-        public final String publicKeyFingerprint;
-
-        public NativeBinding(
-            String installationId,
-            String bindingKeyId,
-            String fingerprintAlgorithm,
-            String publicKeyFingerprint
-        ) {
-            this.installationId =
-                installationId;
-
-            this.bindingKeyId =
-                bindingKeyId;
-
-            this.fingerprintAlgorithm =
-                fingerprintAlgorithm;
-
-            this.publicKeyFingerprint =
-                publicKeyFingerprint;
-        }
-    }
-
-    // ========================================================
     // APPLY
     // ========================================================
 
@@ -229,7 +221,7 @@ public final class FinoraBranchActivationApplyCoordinator {
         ) {
 
             return Result.failure(
-                "FINORA signed Branch Activation apply input is incomplete."
+                "FINORA signed Storage Entitlement apply input is incomplete."
             );
         }
 
@@ -245,7 +237,7 @@ public final class FinoraBranchActivationApplyCoordinator {
             if (currentState == null) {
 
                 return Result.failure(
-                    "FINORA installation identity is required before activation."
+                    "FINORA installation identity is required before applying a Storage Entitlement."
                 );
             }
 
@@ -259,7 +251,7 @@ public final class FinoraBranchActivationApplyCoordinator {
             if (installation == null) {
 
                 return Result.failure(
-                    "FINORA installation identity is required before activation."
+                    "FINORA installation identity is required before applying a Storage Entitlement."
                 );
             }
 
@@ -305,74 +297,109 @@ public final class FinoraBranchActivationApplyCoordinator {
 
 
             // ------------------------------------------------
-              // ------------------------------------------------
-              // AUTHORITATIVE NATIVE INSTALLATION BINDING
-              //
-              // Only public binding metadata crosses this pure
-              // coordinator boundary. The AndroidKeyStore private
-              // key remains non-exportable.
-              // ------------------------------------------------
-
-              NativeBinding nativeBinding =
-                  nativeBindingPort.read();
-
-              if (nativeBinding == null) {
-
-                  return Result.failure(
-                      "FINORA native installation binding is required before activation."
-                  );
-              }
-
-              if (
-                  !installationId.equals(
-                      nativeBinding.installationId
-                  )
-              ) {
-
-                  return Result.failure(
-                      "FINORA native installation binding does not match the Control Store installation identity."
-                  );
-              }
-
-            // CRYPTOGRAPHIC VERIFICATION
+            // AUTHORITATIVE NATIVE INSTALLATION BINDING
             // ------------------------------------------------
 
-            FinoraSignedControlPackageVerifier.Result verification =
-                FinoraSignedControlPackageVerifier
-                    .verify(
-                        signedPackage,
-                        trustedKeys,
-                        new FinoraSignedControlPackageVerifier.Target(
-                            ownerId,
-                            businessId,
-                            branchId,
-                            installationId,
-                            nativeBinding.bindingKeyId,
-                            nativeBinding.fingerprintAlgorithm,
-                            nativeBinding.publicKeyFingerprint
-                        ),
-                        now
-                    );
+            NativeBinding nativeBinding =
+                nativeBindingPort.read();
 
-            if (!verification.valid) {
+            if (
+                !isValidNativeBinding(
+                    nativeBinding
+                )
+            ) {
 
                 return Result.failure(
-                    verification.reason +
-                    ": " +
-                    verification.error
+                    "FINORA Android native installation binding is required before applying a Storage Entitlement."
+                );
+            }
+
+            if (
+                !installationId.equals(
+                    nativeBinding.installationId
+                )
+            ) {
+
+                return Result.failure(
+                    "FINORA native installation binding does not match the Control Store installation identity."
                 );
             }
 
 
             // ------------------------------------------------
-            // DOMAIN + REPLAY / SEQUENCE ENGINE
+            // SIGNATURE + EXACT TARGET
             // ------------------------------------------------
 
-            FinoraBranchActivationStateEngine.Result stateResult =
-                FinoraBranchActivationStateEngine
+            FinoraSignedControlPackageVerifier.Result verification =
+                FinoraSignedControlPackageVerifier.verify(
+                    signedPackage,
+                    trustedKeys,
+                    new FinoraSignedControlPackageVerifier.Target(
+                        ownerId,
+                        businessId,
+                        branchId,
+                        nativeBinding.installationId,
+                        nativeBinding.bindingKeyId,
+                        nativeBinding.fingerprintAlgorithm,
+                        nativeBinding.publicKeyFingerprint
+                    ),
+                    now
+                );
+
+            if (!verification.valid) {
+
+                return Result.failure(
+                    verification.reason +
+                        ": " +
+                        verification.error
+                );
+            }
+
+            Map<String, Object> controlPackage =
+                verification.controlPackage;
+
+
+            // ------------------------------------------------
+            // PURPOSE / PAYLOAD VERSION
+            // ------------------------------------------------
+
+            if (
+                !"STORAGE_ENTITLEMENT".equals(
+                    controlPackage.get(
+                        "purpose"
+                    )
+                )
+            ) {
+
+                return Result.failure(
+                    "FINORA signed package purpose must be STORAGE_ENTITLEMENT."
+                );
+            }
+
+            if (
+                !isExactInteger(
+                    controlPackage.get(
+                        "payloadVersion"
+                    ),
+                    1L
+                )
+            ) {
+
+                return Result.failure(
+                    "FINORA Storage Entitlement payloadVersion must be 1."
+                );
+            }
+
+
+            // ------------------------------------------------
+            // VERIFIED PURE STATE TRANSITION
+            // ------------------------------------------------
+
+            FinoraStorageEntitlementStateEngine.Result stateResult =
+                FinoraStorageEntitlementStateEngine
                     .applyVerifiedPackage(
                         currentState,
-                        verification.controlPackage,
+                        controlPackage,
                         now
                     );
 
@@ -395,14 +422,14 @@ public final class FinoraBranchActivationApplyCoordinator {
 
             String packageId =
                 requiredString(
-                    signedPackage.get(
+                    controlPackage.get(
                         "packageId"
                     )
                 );
 
             Long sequence =
                 positiveSafeLong(
-                    signedPackage.get(
+                    controlPackage.get(
                         "sequence"
                     )
                 );
@@ -413,7 +440,7 @@ public final class FinoraBranchActivationApplyCoordinator {
             ) {
 
                 return Result.failure(
-                    "Applied FINORA Control Package identity is invalid."
+                    "Applied FINORA Storage Entitlement package identity is invalid."
                 );
             }
 
@@ -427,14 +454,53 @@ public final class FinoraBranchActivationApplyCoordinator {
             return Result.failure(
                 error.getMessage() != null
                     ? error.getMessage()
-                    : "Unable to apply FINORA signed Branch Activation package."
+                    : "Unable to apply FINORA signed Storage Entitlement package."
             );
         }
     }
 
+
     // ========================================================
     // HELPERS
     // ========================================================
+
+    private static boolean isValidNativeBinding(
+        NativeBinding binding
+    ) {
+
+        if (
+            binding == null ||
+            requiredString(
+                binding.installationId
+            ) == null ||
+            requiredString(
+                binding.bindingKeyId
+            ) == null ||
+            !"SHA-256".equals(
+                binding.fingerprintAlgorithm
+            ) ||
+            binding.publicKeyFingerprint == null ||
+            !binding.publicKeyFingerprint.matches(
+                "[0-9a-f]{64}"
+            )
+        ) {
+
+            return false;
+        }
+
+        String expectedBindingKeyId =
+            "FINORA-BINDING-" +
+            binding.publicKeyFingerprint
+                .substring(
+                    0,
+                    32
+                )
+                .toUpperCase();
+
+        return expectedBindingKeyId.equals(
+            binding.bindingKeyId
+        );
+    }
 
     @SuppressWarnings("unchecked")
     private static Map<String, Object> asMap(
@@ -481,8 +547,7 @@ public final class FinoraBranchActivationApplyCoordinator {
             !Double.isFinite(
                 number
             ) ||
-            number <=
-                0 ||
+            number <= 0 ||
             Math.rint(
                 number
             ) !=
@@ -511,7 +576,24 @@ public final class FinoraBranchActivationApplyCoordinator {
         );
     }
 
-    // ========================================================
-    // END
-    // ========================================================
+    private static boolean isExactInteger(
+        Object value,
+        long expected
+    ) {
+
+        Long converted =
+            positiveSafeLong(
+                value
+            );
+
+        return (
+            converted != null &&
+            converted.longValue() ==
+                expected
+        );
+    }
 }
+
+// ============================================================
+// END
+// ============================================================

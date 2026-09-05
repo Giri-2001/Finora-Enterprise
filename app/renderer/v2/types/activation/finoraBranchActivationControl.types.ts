@@ -80,6 +80,21 @@ export interface FinoraBranchActivationInstallationBinding {
    */
   installationId:
     FinoraInstallationId;
+
+  /**
+   * Native installation possession-key identity.
+   */
+  bindingKeyId:
+    string;
+
+  fingerprintAlgorithm:
+    "SHA-256";
+
+  /**
+   * Lowercase SHA-256 fingerprint of the native SPKI public key.
+   */
+  publicKeyFingerprint:
+    string;
 }
 
 // ============================================================

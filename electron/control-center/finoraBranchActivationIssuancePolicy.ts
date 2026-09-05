@@ -64,6 +64,15 @@ export interface FinoraBranchActivationIssuanceTarget {
 
   installationId:
     string;
+
+  bindingKeyId:
+    string;
+
+  fingerprintAlgorithm:
+    "SHA-256";
+
+  publicKeyFingerprint:
+    string;
 }
 
 // ============================================================
@@ -172,6 +181,59 @@ function isPositiveSafeInteger(
 // VALIDATE
 // ============================================================
 
+
+function isSha256Fingerprint(
+  value:
+    unknown,
+): value is string {
+
+  return (
+    typeof value ===
+      "string" &&
+    /^[0-9a-f]{64}$/.test(
+      value,
+    )
+  );
+}
+
+function isInstallationBindingIdentityValid(
+  bindingKeyId:
+    unknown,
+
+  fingerprintAlgorithm:
+    unknown,
+
+  publicKeyFingerprint:
+    unknown,
+): boolean {
+
+  if (
+    typeof bindingKeyId !==
+      "string" ||
+    bindingKeyId.trim().length ===
+      0 ||
+    fingerprintAlgorithm !==
+      "SHA-256" ||
+    !isSha256Fingerprint(
+      publicKeyFingerprint,
+    )
+  ) {
+    return false;
+  }
+
+  const expectedBindingKeyId =
+    `FINORA-BINDING-${publicKeyFingerprint
+      .slice(
+        0,
+        32,
+      )
+      .toUpperCase()}`;
+
+  return (
+    bindingKeyId ===
+      expectedBindingKeyId
+  );
+}
 export function validateFinoraBranchActivationIssuance(
   payload:
     unknown,
@@ -200,6 +262,20 @@ export function validateFinoraBranchActivationIssuance(
   ) {
     return rejected(
       "FINORA Branch Activation issuance target is incomplete.",
+    );
+  }
+
+
+  // ----------------------------------------------------------
+  if (
+    !isInstallationBindingIdentityValid(
+      target.bindingKeyId,
+      target.fingerprintAlgorithm,
+      target.publicKeyFingerprint,
+    )
+  ) {
+    return rejected(
+      "FINORA Branch Activation issuance device-binding target is invalid.",
     );
   }
 
@@ -246,6 +322,42 @@ export function validateFinoraBranchActivationIssuance(
   ) {
     return rejected(
       "FINORA Branch Activation payload issuedAt is invalid.",
+    );
+  }
+
+
+  // ----------------------------------------------------------
+  if (
+    !isRecord(
+      payload.installationBinding,
+    ) ||
+    !isNonEmptyString(
+      payload.installationBinding
+        .installationId,
+    ) ||
+    !isInstallationBindingIdentityValid(
+      payload.installationBinding
+        .bindingKeyId,
+      payload.installationBinding
+        .fingerprintAlgorithm,
+      payload.installationBinding
+        .publicKeyFingerprint,
+    ) ||
+    payload.installationBinding
+      .installationId !==
+        target.installationId ||
+    payload.installationBinding
+      .bindingKeyId !==
+        target.bindingKeyId ||
+    payload.installationBinding
+      .fingerprintAlgorithm !==
+        target.fingerprintAlgorithm ||
+    payload.installationBinding
+      .publicKeyFingerprint !==
+        target.publicKeyFingerprint
+  ) {
+    return rejected(
+      "FINORA Branch Activation installation binding does not match the device-binding target.",
     );
   }
 

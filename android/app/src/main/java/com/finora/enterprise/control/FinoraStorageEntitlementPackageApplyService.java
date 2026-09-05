@@ -4,13 +4,14 @@ package com.finora.enterprise.control;
 // FINORA ENTERPRISE OS™
 //
 // ANDROID CONTROL
-// VERIFIED BRANCH ACTIVATION PACKAGE APPLY SERVICE
+// VERIFIED STORAGE ENTITLEMENT PACKAGE APPLY SERVICE
 //
 // RESPONSIBILITY:
 //
-// - Adapt encrypted FinoraControlStore to pure apply coordinator
-// - Convert JSONObject packages/state to canonical Java values
-// - Route the coordinator's one state commit to:
+// - Adapt encrypted FinoraControlStore to pure coordinator
+// - Convert JSONObject package/state to canonical Java values
+// - Resolve AndroidKeyStore-backed installation public binding
+// - Route exactly one complete state commit to:
 //
 //   Android Keystore AES-256-GCM
 //   +
@@ -36,10 +37,11 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 
-public final class FinoraBranchActivationPackageApplyService {
+public final class FinoraStorageEntitlementPackageApplyService {
 
-    private final FinoraBranchActivationApplyCoordinator coordinator;
-    public FinoraBranchActivationPackageApplyService(
+    private final FinoraStorageEntitlementApplyCoordinator coordinator;
+
+    public FinoraStorageEntitlementPackageApplyService(
         FinoraControlStore controlStore,
         FinoraInstallationBindingService bindingService
     ) {
@@ -59,7 +61,7 @@ public final class FinoraBranchActivationPackageApplyService {
         }
 
         this.coordinator =
-            new FinoraBranchActivationApplyCoordinator(
+            new FinoraStorageEntitlementApplyCoordinator(
                 new EncryptedControlStatePort(
                     controlStore
                 ),
@@ -104,7 +106,7 @@ public final class FinoraBranchActivationPackageApplyService {
         }
 
         private static ApplyResult fromCoordinator(
-            FinoraBranchActivationApplyCoordinator.Result result
+            FinoraStorageEntitlementApplyCoordinator.Result result
         ) {
 
             return new ApplyResult(
@@ -132,7 +134,7 @@ public final class FinoraBranchActivationPackageApplyService {
 
             return new ApplyResult(
                 false,
-                "FINORA signed Branch Activation package is required.",
+                "FINORA signed Storage Entitlement package is required.",
                 null,
                 null
             );
@@ -161,7 +163,7 @@ public final class FinoraBranchActivationPackageApplyService {
                 false,
                 error.getMessage() != null
                     ? error.getMessage()
-                    : "Unable to prepare FINORA signed Branch Activation package.",
+                    : "Unable to prepare FINORA signed Storage Entitlement package.",
                 null,
                 null
             );
@@ -169,13 +171,13 @@ public final class FinoraBranchActivationPackageApplyService {
     }
 
     // ========================================================
-    // PRODUCTION ENCRYPTED CONTROL STATE PORT
+    // ANDROID NATIVE BINDING PORT
     // ========================================================
 
     private static final class AndroidNativeBindingPort
 
         implements
-            FinoraBranchActivationApplyCoordinator.NativeBindingPort {
+            FinoraStorageEntitlementApplyCoordinator.NativeBindingPort {
 
         private final FinoraInstallationBindingService bindingService;
 
@@ -188,7 +190,7 @@ public final class FinoraBranchActivationPackageApplyService {
         }
 
         @Override
-        public FinoraBranchActivationApplyCoordinator.NativeBinding read()
+        public FinoraStorageEntitlementApplyCoordinator.NativeBinding read()
             throws Exception {
 
             FinoraInstallationBindingCrypto.PublicBinding binding =
@@ -198,7 +200,7 @@ public final class FinoraBranchActivationPackageApplyService {
                 return null;
             }
 
-            return new FinoraBranchActivationApplyCoordinator.NativeBinding(
+            return new FinoraStorageEntitlementApplyCoordinator.NativeBinding(
                 binding.installationId,
                 binding.bindingKeyId,
                 "SHA-256",
@@ -207,10 +209,14 @@ public final class FinoraBranchActivationPackageApplyService {
         }
     }
 
+    // ========================================================
+    // ENCRYPTED CONTROL STATE PORT
+    // ========================================================
+
     private static final class EncryptedControlStatePort
 
         implements
-            FinoraBranchActivationApplyCoordinator.ControlStatePort {
+            FinoraStorageEntitlementApplyCoordinator.ControlStatePort {
 
         private final FinoraControlStore controlStore;
 
@@ -257,12 +263,12 @@ public final class FinoraBranchActivationPackageApplyService {
             /*
              * Exactly one production write.
              *
-             * FinoraControlStore provides:
+             * FinoraControlStore supplies:
              *
              * - Android Keystore AES-256-GCM
-             * - fresh IV per encryption
+             * - fresh IV
              * - authenticated AAD
-             * - AtomicFile startWrite / finishWrite / failWrite
+             * - AtomicFile replacement
              */
             controlStore.write(
                 controlState.toString()

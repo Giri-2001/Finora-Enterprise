@@ -75,6 +75,9 @@ export type FinoraBranchAccessGrantId =
 export type FinoraBranchAccessType =
   | "REGISTERED"
   | "DEMO";
+export type FinoraBranchAccessStorageMode =
+  | "LOCAL"
+  | "USB";
 
 // ============================================================
 // ACCESS STATUS
@@ -197,7 +200,10 @@ interface FinoraBranchAccessGrantBase {
   branchId:
     BranchId;
 
-  administrativeStatus:
+
+  storageMode:
+    FinoraBranchAccessStorageMode;
+administrativeStatus:
     FinoraBranchAccessAdministrativeStatus;
 
   validity:

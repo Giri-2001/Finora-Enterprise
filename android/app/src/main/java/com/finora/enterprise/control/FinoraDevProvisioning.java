@@ -108,7 +108,8 @@ public final class FinoraDevProvisioning {
 
     public static void run(
         Context context,
-        Intent intent
+        Intent intent,
+        FinoraInstallationBindingCrypto.PublicBinding nativeBinding
     ) throws Exception {
 
         if (
@@ -116,6 +117,24 @@ public final class FinoraDevProvisioning {
             intent == null
         ) {
             return;
+        }
+
+        if (nativeBinding == null) {
+            throw new IllegalArgumentException(
+                "FINORA native installation binding is required."
+            );
+        }
+
+        String nativeInstallationId =
+            nativeBinding.installationId;
+
+        if (
+            nativeInstallationId == null ||
+            nativeInstallationId.trim().isEmpty()
+        ) {
+            throw new IllegalStateException(
+                "FINORA native installation ID is invalid."
+            );
         }
 
         if (!isDebuggable(context)) {
@@ -138,7 +157,15 @@ public final class FinoraDevProvisioning {
             intent.getBooleanExtra(
                 EXTRA_PROVISION_USB_ENTITLEMENT,
                 false
+            );        if (
+            shouldProvisionLocal &&
+            shouldProvisionUsb
+        ) {
+            throw new IllegalStateException(
+                "FINORA Android DEV registration cannot provision both LOCAL and USB storage modes."
             );
+        }
+
 
         if (
             !shouldProvisionBranch &&
@@ -183,10 +210,40 @@ public final class FinoraDevProvisioning {
 
         if (shouldProvisionBranch) {
             String installationId =
-                requireExtra(
-                    intent,
+                requireNativeInstallationId(
+                    nativeInstallationId
+                );
+
+            /*
+             * Backward-compatible development assertion only.
+             *
+             * EXTRA_INSTALLATION_ID no longer creates or selects
+             * installation identity. Android Keystore binding is
+             * authoritative.
+             */
+            String configuredInstallationId =
+                intent.getStringExtra(
                     EXTRA_INSTALLATION_ID
                 );
+
+            if (
+                configuredInstallationId != null
+            ) {
+
+                configuredInstallationId =
+                    configuredInstallationId.trim();
+
+                if (
+                    !configuredInstallationId.isEmpty() &&
+                    !configuredInstallationId.equals(
+                        installationId
+                    )
+                ) {
+                    throw new IllegalStateException(
+                        "FINORA Android DEV installation ID does not match the native installation binding."
+                    );
+                }
+            }
 
             String activationId =
                 requireExtra(
@@ -244,6 +301,17 @@ public final class FinoraDevProvisioning {
                         EXTRA_LOCAL_ENTITLEMENT_ID
                     );
 
+                provisionBranchAccessGrant(
+                    controlPackage,
+                    entitlementId,
+                    userId,
+                    ownerId,
+                    businessId,
+                    branchId,
+                    "LOCAL",
+                    now
+                );
+
                 provisionStorageEntitlement(
                     controlPackage,
                     entitlementId,
@@ -251,6 +319,7 @@ public final class FinoraDevProvisioning {
                     ownerId,
                     businessId,
                     branchId,
+                    nativeBinding,
                     "LOCAL",
                     now
                 );
@@ -263,6 +332,17 @@ public final class FinoraDevProvisioning {
                         EXTRA_USB_ENTITLEMENT_ID
                     );
 
+                provisionBranchAccessGrant(
+                    controlPackage,
+                    entitlementId,
+                    userId,
+                    ownerId,
+                    businessId,
+                    branchId,
+                    "USB",
+                    now
+                );
+
                 provisionStorageEntitlement(
                     controlPackage,
                     entitlementId,
@@ -270,6 +350,7 @@ public final class FinoraDevProvisioning {
                     ownerId,
                     businessId,
                     branchId,
+                    nativeBinding,
                     "USB",
                     now
                 );
@@ -339,6 +420,10 @@ public final class FinoraDevProvisioning {
                 "storageEntitlements",
                 new JSONArray()
             );
+            created.put(
+                "branchAccessGrants",
+                new JSONArray()
+            );
 
             created.put(
                 "updatedAt",
@@ -381,7 +466,31 @@ public final class FinoraDevProvisioning {
             );
         }
 
-        return existing;
+                JSONArray branchAccessGrants =
+            existing.optJSONArray(
+                "branchAccessGrants"
+            );
+
+        if (branchAccessGrants == null) {
+            if (
+                existing.has(
+                    "branchAccessGrants"
+                ) &&
+                !existing.isNull(
+                    "branchAccessGrants"
+                )
+            ) {
+                throw new IllegalStateException(
+                    "FINORA Android Branch Access Grant collection is invalid."
+                );
+            }
+
+            existing.put(
+                "branchAccessGrants",
+                new JSONArray()
+            );
+        }
+return existing;
     }
 
     // ========================================================
@@ -663,7 +772,255 @@ public final class FinoraDevProvisioning {
 
     // ========================================================
     // STORAGE ENTITLEMENT
+        // ========================================================
+    // DEVELOPMENT REGISTERED BRANCH ACCESS
     // ========================================================
+
+    private static void provisionBranchAccessGrant(
+        JSONObject controlPackage,
+        String entitlementId,
+        String userId,
+        String ownerId,
+        String businessId,
+        String branchId,
+        String storageMode,
+        String now
+    ) throws Exception {
+
+        if (
+            !"LOCAL".equals(
+                storageMode
+            ) &&
+            !"USB".equals(
+                storageMode
+            )
+        ) {
+            throw new IllegalStateException(
+                "FINORA Android DEV Branch Access storage mode must be LOCAL or USB."
+            );
+        }
+
+        JSONArray grants =
+            controlPackage.optJSONArray(
+                "branchAccessGrants"
+            );
+
+        if (grants == null) {
+            throw new IllegalStateException(
+                "FINORA Android Branch Access Grant collection is unavailable."
+            );
+        }
+
+        JSONObject existing =
+            null;
+
+        for (
+            int index = 0;
+            index < grants.length();
+            index++
+        ) {
+            JSONObject candidate =
+                grants.getJSONObject(
+                    index
+                );
+
+            if (
+                userId.equals(
+                    candidate.optString(
+                        "userId",
+                        ""
+                    )
+                ) &&
+                ownerId.equals(
+                    candidate.optString(
+                        "ownerId",
+                        ""
+                    )
+                ) &&
+                businessId.equals(
+                    candidate.optString(
+                        "businessId",
+                        ""
+                    )
+                ) &&
+                branchId.equals(
+                    candidate.optString(
+                        "branchId",
+                        ""
+                    )
+                )
+            ) {
+                existing =
+                    candidate;
+
+                break;
+            }
+        }
+
+        String grantId =
+            "FINORA-DEV-GRANT-" +
+            entitlementId;
+
+        if (existing != null) {
+            ensureSameIdentity(
+                existing,
+                "grantId",
+                grantId,
+                "FINORA Android DEV Branch Access Grant identity cannot be replaced."
+            );
+
+            ensureSameIdentity(
+                existing,
+                "storageMode",
+                storageMode,
+                "FINORA Android DEV registration storage mode cannot be changed."
+            );
+
+            ensureSameIdentity(
+                existing,
+                "accessType",
+                "REGISTERED",
+                "FINORA Android DEV Branch Access type cannot be replaced."
+            );
+
+            return;
+        }
+
+        java.time.Instant validFrom =
+            java.time.Instant.parse(
+                now
+            );
+
+        java.time.Instant validUntil =
+            validFrom.plusSeconds(
+                365L * 24L * 60L * 60L
+            );
+
+        JSONObject validity =
+            new JSONObject();
+
+        validity.put(
+            "validFrom",
+            validFrom.toString()
+        );
+
+        validity.put(
+            "validUntil",
+            validUntil.toString()
+        );
+
+        JSONObject payment =
+            new JSONObject();
+
+        payment.put(
+            "amount",
+            2000
+        );
+
+        payment.put(
+            "currency",
+            "INR"
+        );
+
+        payment.put(
+            "paymentMode",
+            "CASH"
+        );
+
+        payment.put(
+            "paidAt",
+            now
+        );
+
+        payment.put(
+            "remarks",
+            "FINORA trusted Android development provisioning."
+        );
+
+        payment.put(
+            "refundable",
+            false
+        );
+
+        JSONObject grant =
+            new JSONObject();
+
+        grant.put(
+            "grantId",
+            grantId
+        );
+
+        grant.put(
+            "userId",
+            userId
+        );
+
+        grant.put(
+            "ownerId",
+            ownerId
+        );
+
+        grant.put(
+            "businessId",
+            businessId
+        );
+
+        grant.put(
+            "branchId",
+            branchId
+        );
+
+        grant.put(
+            "storageMode",
+            storageMode
+        );
+
+        grant.put(
+            "accessType",
+            "REGISTERED"
+        );
+
+        grant.put(
+            "administrativeStatus",
+            "ACTIVE"
+        );
+
+        grant.put(
+            "validity",
+            validity
+        );
+
+        grant.put(
+            "registrationPayment",
+            payment
+        );
+
+        grant.put(
+            "registrationCycle",
+            1
+        );
+
+        grant.put(
+            "createdAt",
+            now
+        );
+
+        grant.put(
+            "updatedAt",
+            now
+        );
+
+        grant.put(
+            "schemaVersion",
+            1
+        );
+
+        grants.put(
+            grant
+        );
+    }
+
+// ========================================================
 
     private static void provisionStorageEntitlement(
         JSONObject controlPackage,
@@ -672,6 +1029,7 @@ public final class FinoraDevProvisioning {
         String ownerId,
         String businessId,
         String branchId,
+        FinoraInstallationBindingCrypto.PublicBinding nativeBinding,
         String storageMode,
         String now
     ) throws Exception {
@@ -697,6 +1055,34 @@ public final class FinoraDevProvisioning {
                 "entitlementId",
                 entitlementId,
                 "FINORA storage entitlement identity cannot be replaced."
+            );
+
+            ensureSameIdentity(
+                existing,
+                "installationId",
+                nativeBinding.installationId,
+                "FINORA storage entitlement installation cannot be replaced."
+            );
+
+            ensureSameIdentity(
+                existing,
+                "bindingKeyId",
+                nativeBinding.bindingKeyId,
+                "FINORA storage entitlement binding key cannot be replaced."
+            );
+
+            ensureSameIdentity(
+                existing,
+                "fingerprintAlgorithm",
+                nativeBinding.fingerprintAlgorithm,
+                "FINORA storage entitlement fingerprint algorithm cannot be replaced."
+            );
+
+            ensureSameIdentity(
+                existing,
+                "publicKeyFingerprint",
+                nativeBinding.publicKeyFingerprint,
+                "FINORA storage entitlement fingerprint cannot be replaced."
             );
 
             existing.put(
@@ -738,6 +1124,27 @@ public final class FinoraDevProvisioning {
         entitlement.put(
             "branchId",
             branchId
+        );
+
+
+        entitlement.put(
+            "installationId",
+            nativeBinding.installationId
+        );
+
+        entitlement.put(
+            "bindingKeyId",
+            nativeBinding.bindingKeyId
+        );
+
+        entitlement.put(
+            "fingerprintAlgorithm",
+            nativeBinding.fingerprintAlgorithm
+        );
+
+        entitlement.put(
+            "publicKeyFingerprint",
+            nativeBinding.publicKeyFingerprint
         );
 
         entitlement.put(
@@ -912,6 +1319,27 @@ public final class FinoraDevProvisioning {
     // STRING HELPERS
     // ========================================================
 
+    private static String requireNativeInstallationId(
+        String value
+    ) {
+
+        if (value == null) {
+            throw new IllegalStateException(
+                "FINORA Android native installation binding is required."
+            );
+        }
+
+        String normalized =
+            value.trim();
+
+        if (normalized.isEmpty()) {
+            throw new IllegalStateException(
+                "FINORA Android native installation binding is required."
+            );
+        }
+
+        return normalized;
+    }
     private static String requireExtra(
         Intent intent,
         String key

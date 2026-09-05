@@ -41,6 +41,10 @@ import {
   verifyFinoraSignedControlPackageNative,
 } from "./finoraSignedControlPackageVerifier.js";
 
+import {
+  getFinoraWindowsInstallationBinding,
+} from "./finoraInstallationBindingService.js";
+
 import type {
   FinoraBranchTrustedControlPublicKey,
 } from "./finoraSignedControlPackageVerifier.js";
@@ -124,6 +128,47 @@ export async function applyFinoraSignedBranchActivationPackage(
 
 
   // ----------------------------------------------------------
+  // ----------------------------------------------------------
+  // AUTHORITATIVE NATIVE INSTALLATION BINDING
+  //
+  // The encrypted Control Store identity alone is not sufficient
+  // proof that this package belongs to this physical installation.
+  //
+  // The private possession key remains inside the Windows
+  // safeStorage binding vault. Only its public identity is used
+  // here for exact signed-target matching.
+  // ----------------------------------------------------------
+
+  let nativeBinding;
+
+  try {
+    nativeBinding =
+      await getFinoraWindowsInstallationBinding();
+  } catch (error) {
+    return failure(
+      error instanceof Error
+        ? error.message
+        : "Unable to load the FINORA native installation binding.",
+    );
+  }
+
+  if (!nativeBinding) {
+    return failure(
+      "FINORA native installation binding is required before activation.",
+    );
+  }
+
+  if (
+    nativeBinding.installationId !==
+      installation.installationId
+  ) {
+    return failure(
+      "FINORA native installation binding does not match the Control Store installation identity.",
+    );
+  }
+
+
+  // ----------------------------------------------------------
   // CRYPTOGRAPHIC VERIFICATION
   // ----------------------------------------------------------
 
@@ -143,6 +188,15 @@ export async function applyFinoraSignedBranchActivationPackage(
 
         installationId:
           installation.installationId,
+
+        bindingKeyId:
+          nativeBinding.bindingKeyId,
+
+        fingerprintAlgorithm:
+          "SHA-256",
+
+        publicKeyFingerprint:
+          nativeBinding.publicKeyFingerprint,
       },
       now,
     );
@@ -207,10 +261,31 @@ export async function applyFinoraSignedBranchActivationPackage(
   if (
     payload.installationBinding
       .installationId !==
-      installation.installationId
+        installation.installationId ||
+    payload.installationBinding
+      .installationId !==
+        nativeBinding.installationId ||
+    payload.installationBinding
+      .bindingKeyId !==
+        nativeBinding.bindingKeyId ||
+    payload.installationBinding
+      .fingerprintAlgorithm !==
+        "SHA-256" ||
+    payload.installationBinding
+      .publicKeyFingerprint !==
+        nativeBinding.publicKeyFingerprint ||
+    payload.installationBinding
+      .bindingKeyId !==
+        controlPackage.target.bindingKeyId ||
+    payload.installationBinding
+      .fingerprintAlgorithm !==
+        controlPackage.target.fingerprintAlgorithm ||
+    payload.installationBinding
+      .publicKeyFingerprint !==
+        controlPackage.target.publicKeyFingerprint
   ) {
     return failure(
-      "FINORA Branch Activation payload installation binding does not match.",
+      "FINORA Branch Activation payload native installation binding does not match.",
     );
   }
 

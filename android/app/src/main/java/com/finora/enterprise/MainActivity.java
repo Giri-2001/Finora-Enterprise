@@ -4,6 +4,8 @@ import android.os.Bundle;
 
 import com.finora.enterprise.control.FinoraControlPlugin;
 import com.finora.enterprise.control.FinoraDevProvisioning;
+import com.finora.enterprise.control.FinoraInstallationBindingCrypto;
+import com.finora.enterprise.control.FinoraInstallationBindingService;
 import com.finora.enterprise.usb.FinoraUsbPlugin;
 import com.getcapacitor.BridgeActivity;
 
@@ -39,9 +41,19 @@ public class MainActivity
          *   activation gate reads the newly provisioned state.
          */
         try {
+            FinoraInstallationBindingService bindingService =
+                new FinoraInstallationBindingService(
+                    this
+                );
+
+            FinoraInstallationBindingCrypto.PublicBinding nativeBinding =
+                bindingService
+                    .ensure();
+
             FinoraDevProvisioning.run(
                 this,
-                getIntent()
+                getIntent(),
+                nativeBinding
             );
         } catch (Exception error) {
             throw new IllegalStateException(

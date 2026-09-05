@@ -33,17 +33,25 @@
 // ============================================================
 
 import {
+  findFinoraBranchAccessGrant,
   findFinoraStorageEntitlement,
+  saveFinoraBranchAccessGrant,
   saveFinoraBranchActivation,
   saveFinoraInstallationIdentity,
   saveFinoraStorageEntitlement,
 } from "./finoraControlStore.js";
 
 import type {
+  FinoraControlBranchAccessGrant,
   FinoraControlBranchActivation,
   FinoraControlInstallationIdentity,
   FinoraControlStorageEntitlement,
+  FinoraControlStorageMode,
 } from "./finoraControlStore.js";
+
+import {
+  ensureFinoraWindowsInstallationBinding,
+} from "./finoraInstallationBindingService.js";
 
 // ============================================================
 // ENVIRONMENT
@@ -64,6 +72,152 @@ function requireEnvironmentValue(
   return value;
 }
 
+const FINORA_DEV_REGISTERED_ACCESS_DURATION_MS =
+  365 * 24 * 60 * 60 * 1000;
+
+async function provisionFinoraDevelopmentRegisteredAccessGrant(
+  entitlementId: string,
+  userId: string,
+  ownerId: string,
+  businessId: string,
+  branchId: string,
+  storageMode: FinoraControlStorageMode,
+  now: string,
+): Promise<void> {
+
+  const existingResult =
+    await findFinoraBranchAccessGrant(
+      userId,
+      ownerId,
+      businessId,
+      branchId,
+    );
+
+  if (!existingResult.success) {
+    throw new Error(
+      existingResult.error ??
+        "Unable to load the FINORA development Branch Access Grant.",
+    );
+  }
+
+  const grantId =
+    `FINORA-DEV-GRANT-${entitlementId}`;
+
+  if (existingResult.data) {
+    const existing =
+      existingResult.data;
+
+    if (
+      existing.grantId !==
+        grantId
+    ) {
+      throw new Error(
+        "FINORA DEV Branch Access Grant identity does not match the existing registration.",
+      );
+    }
+
+    if (
+      existing.storageMode !==
+        storageMode
+    ) {
+      throw new Error(
+        "FINORA DEV registration storage mode cannot be changed.",
+      );
+    }
+
+    return;
+  }
+
+  const validFromMs =
+    Date.parse(
+      now,
+    );
+
+  if (!Number.isFinite(validFromMs)) {
+    throw new Error(
+      "FINORA DEV registration timestamp is invalid.",
+    );
+  }
+
+  const validUntil =
+    new Date(
+      validFromMs +
+        FINORA_DEV_REGISTERED_ACCESS_DURATION_MS,
+    ).toISOString();
+
+  const accessGrant:
+    FinoraControlBranchAccessGrant = {
+
+      grantId,
+
+      userId,
+
+      ownerId,
+
+      businessId,
+
+      branchId,
+
+      storageMode,
+
+      accessType:
+        "REGISTERED",
+
+      administrativeStatus:
+        "ACTIVE",
+
+      validity: {
+        validFrom:
+          now,
+
+        validUntil,
+      },
+
+      registrationPayment: {
+        amount:
+          2000,
+
+        currency:
+          "INR",
+
+        paymentMode:
+          "CASH",
+
+        paidAt:
+          now,
+
+        remarks:
+          "FINORA trusted development provisioning.",
+
+        refundable:
+          false,
+      },
+
+      registrationCycle:
+        1,
+
+      createdAt:
+        now,
+
+      updatedAt:
+        now,
+
+      schemaVersion:
+        1,
+    };
+
+  const saveResult =
+    await saveFinoraBranchAccessGrant(
+      accessGrant,
+    );
+
+  if (!saveResult.success) {
+    throw new Error(
+      saveResult.error ??
+        "FINORA development Branch Access Grant provisioning failed.",
+    );
+  }
+}
 // ============================================================
 // DEVELOPMENT PROVISIONING
 // ============================================================
@@ -91,6 +245,14 @@ export async function runFinoraDevelopmentProvisioning():
     process.env.FINORA_DEV_DELAYED_REVOKE_USB_ENTITLEMENT ===
     "1";
 
+  if (
+    shouldProvisionLocalEntitlement &&
+    shouldProvisionUsbEntitlement
+  ) {
+    throw new Error(
+      "FINORA DEV registration cannot provision both LOCAL and USB storage modes.",
+    );
+  }
   if (
     shouldProvisionUsbEntitlement &&
     shouldRevokeUsbEntitlement
@@ -131,10 +293,31 @@ export async function runFinoraDevelopmentProvisioning():
 
   if (shouldProvisionBranch) {
 
+    const nativeBinding =
+      await ensureFinoraWindowsInstallationBinding();
+
     const installationId =
-      requireEnvironmentValue(
-        "FINORA_DEV_INSTALLATION_ID",
+      nativeBinding.installationId;
+
+    /*
+     * Backward-compatible development assertion only.
+     *
+     * FINORA_DEV_INSTALLATION_ID no longer creates or selects
+     * installation identity. Native binding is authoritative.
+     */
+    const configuredInstallationId =
+      process.env.FINORA_DEV_INSTALLATION_ID
+        ?.trim();
+
+    if (
+      configuredInstallationId &&
+      configuredInstallationId !==
+        installationId
+    ) {
+      throw new Error(
+        "FINORA DEV installation ID does not match the native installation binding.",
       );
+    }
 
     const activationId =
       requireEnvironmentValue(
@@ -265,6 +448,9 @@ export async function runFinoraDevelopmentProvisioning():
         "FINORA_DEV_ENTITLEMENT_USER_ID",
       );
 
+    const nativeBinding =
+      await ensureFinoraWindowsInstallationBinding();
+
     const now =
       new Date().toISOString();
 
@@ -280,6 +466,18 @@ export async function runFinoraDevelopmentProvisioning():
       businessId,
 
       branchId,
+
+      installationId:
+        nativeBinding.installationId,
+
+      bindingKeyId:
+        nativeBinding.bindingKeyId,
+
+      fingerprintAlgorithm:
+        nativeBinding.fingerprintAlgorithm,
+
+      publicKeyFingerprint:
+        nativeBinding.publicKeyFingerprint,
 
       storageMode:
         "LOCAL",
@@ -312,6 +510,15 @@ export async function runFinoraDevelopmentProvisioning():
       );
     }
 
+    await provisionFinoraDevelopmentRegisteredAccessGrant(
+      entitlementId,
+      userId,
+      ownerId,
+      businessId,
+      branchId,
+      "LOCAL",
+      now,
+    );
     console.log(
       "[FINORA DEV] LOCAL storage entitlement provisioning completed:",
       {
@@ -350,6 +557,9 @@ export async function runFinoraDevelopmentProvisioning():
         "FINORA_DEV_ENTITLEMENT_USER_ID",
       );
 
+    const nativeBinding =
+      await ensureFinoraWindowsInstallationBinding();
+
     const now =
       new Date().toISOString();
 
@@ -365,6 +575,18 @@ export async function runFinoraDevelopmentProvisioning():
       businessId,
 
       branchId,
+
+      installationId:
+        nativeBinding.installationId,
+
+      bindingKeyId:
+        nativeBinding.bindingKeyId,
+
+      fingerprintAlgorithm:
+        nativeBinding.fingerprintAlgorithm,
+
+      publicKeyFingerprint:
+        nativeBinding.publicKeyFingerprint,
 
       storageMode:
         "USB",
@@ -397,6 +619,15 @@ export async function runFinoraDevelopmentProvisioning():
       );
     }
 
+    await provisionFinoraDevelopmentRegisteredAccessGrant(
+      entitlementId,
+      userId,
+      ownerId,
+      businessId,
+      branchId,
+      "USB",
+      now,
+    );
     console.log(
       "[FINORA DEV] USB storage entitlement provisioning completed:",
       {

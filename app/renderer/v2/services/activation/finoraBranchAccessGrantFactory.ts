@@ -101,7 +101,9 @@ export interface FinoraBranchAccessIdentityInput {
 
   branchId:
     string;
-}
+
+  storageMode:
+    FinoraBranchAccessGrant["storageMode"];}
 
 // ============================================================
 // REGISTERED INPUT
@@ -336,6 +338,10 @@ export function createFinoraRegisteredAccessGrant(
       branchId:
         input.branchId,
 
+
+      storageMode:
+        input.storageMode,
+
       accessType:
         "REGISTERED",
 
@@ -540,6 +546,10 @@ export function createFinoraDemoAccessGrant(
 
       branchId:
         input.branchId,
+
+
+      storageMode:
+        input.storageMode,
 
       accessType:
         "DEMO",

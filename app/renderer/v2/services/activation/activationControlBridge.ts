@@ -1,4 +1,4 @@
-﻿// ============================================================
+// ============================================================
 // FINORA ENTERPRISE OS™
 //
 // V2 ACTIVATION DOMAIN
@@ -46,6 +46,9 @@ import type {
 } from "../../types/activation/finoraStorageEntitlement.types";
 
 import type {
+  FinoraBranchAccessGrant,
+} from "../../types/activation/finoraBranchAccess.types";
+import type {
   StorageResult,
 } from "../../storage/storage.types";
 
@@ -61,6 +64,15 @@ export interface FinoraBranchActivationRequest {
   branchId: string;
 }
 
+export interface FinoraBranchAccessGrantRequest {
+  userId: string;
+
+  ownerId: string;
+
+  businessId: string;
+
+  branchId: string;
+}
 export interface FinoraStorageEntitlementRequest {
   userId: string;
 
@@ -96,6 +108,15 @@ export interface FinoraActivationControlBridge {
       >
     >;
 
+  findBranchAccessGrant(
+    request:
+      FinoraBranchAccessGrantRequest,
+  ):
+    Promise<
+      StorageResult<
+        FinoraBranchAccessGrant | undefined
+      >
+    >;
   hasActiveStorageEntitlement(
     request:
       FinoraStorageEntitlementRequest,
@@ -130,7 +151,7 @@ function getElectronControlBridge():
     return undefined;
   }
 
-  return bridge;
+  return bridge as unknown as FinoraActivationControlBridge;
 }
 
 // ============================================================

@@ -1,4 +1,4 @@
-﻿// ============================================================
+// ============================================================
 // FINORA ENTERPRISE OS™
 //
 // V2 APPLICATION ENTRY
@@ -110,10 +110,14 @@ import BranchActivationRequired from "../pages/auth/BranchActivationRequired";
 
 import {
   hasActiveFinoraStorageEntitlement,
+  loadFinoraBranchAccessGrant,
   loadFinoraBranchActivation,
   loadFinoraInstallationIdentity,
 } from "../services/activation/activationService";
 
+import {
+  evaluateFinoraBranchAccess,
+} from "../services/activation/finoraBranchAccessEvaluator";
 import {
   getSession,
   invalidateSession,
@@ -878,6 +882,155 @@ function AuthenticatedApplication() {
       }
 
       // ======================================================
+      // SIGNED BRANCH ACCESS GRANT
+      //
+      // This check occurs AFTER credential/session identity is
+      // available but BEFORE storage selection or BusinessContext
+      // can expose branch data.
+      //
+      // Trusted runtime/system time is used by the evaluator.
+      // FINORA Business Date is deliberately not involved.
+      //
+      // COMMERCIAL EXPIRY POLICY:
+      //
+      // DEMO EXPIRED:
+      //   deny authenticated access completely.
+      //
+      // REGISTERED EXPIRED:
+      //   retain read-only application access.
+      //   Revenue writes are denied by Phase 5 write guards.
+      // ======================================================
+
+      async function denyAuthenticatedBranchAccess(
+        reason: string,
+      ): Promise<void> {
+
+        console.warn(
+          "FINORA AUTHENTICATED BRANCH ACCESS DENIED:",
+          reason,
+        );
+
+        invalidateSession();
+
+        try {
+          window.sessionStorage.removeItem(
+            FINORA_STORAGE_MODE_SESSION_KEY,
+          );
+        } catch (storageSessionError) {
+          console.error(
+            "FINORA STORAGE MODE SESSION CLEAR FAILED:",
+            storageSessionError,
+          );
+        }
+
+        await clearContext();
+
+        if (!active) {
+          return;
+        }
+
+        setSession(null);
+
+        setContextReady(true);
+
+        setContextError(null);
+      }
+
+      const accessGrantResult =
+        await loadFinoraBranchAccessGrant(
+          session.userId,
+          session.ownerId,
+          session.businessId,
+          session.branchId,
+        );
+
+      if (!active) {
+        return;
+      }
+
+      if (
+        !accessGrantResult.success ||
+        !accessGrantResult.data
+      ) {
+        await denyAuthenticatedBranchAccess(
+          accessGrantResult.error ??
+            "FINORA registration or Demo access is required.",
+        );
+
+        return;
+      }
+
+      const accessGrant =
+        accessGrantResult.data;
+
+      const grantIdentityMatches =
+        accessGrant.userId ===
+          session.userId &&
+        accessGrant.ownerId ===
+          session.ownerId &&
+        accessGrant.businessId ===
+          session.businessId &&
+        accessGrant.branchId ===
+          session.branchId;
+
+      const grantContextMatches =
+        session.dataContext ===
+          "DEMO"
+          ? (
+              accessGrant.accessType ===
+                "DEMO" &&
+              accessGrant.demoId ===
+                session.demoId
+            )
+          : (
+              accessGrant.accessType ===
+                "REGISTERED" &&
+              session.demoId ===
+                undefined
+            );
+
+      if (
+        !grantIdentityMatches ||
+        !grantContextMatches
+      ) {
+        await denyAuthenticatedBranchAccess(
+          "The authenticated FINORA session does not match its signed Branch Access Grant.",
+        );
+
+        return;
+      }
+
+      const accessDecision =
+        evaluateFinoraBranchAccess(
+          accessGrant,
+          new Date(),
+        );
+
+      const registeredExpiredReadOnly =
+        !accessDecision.allowed &&
+        accessDecision.state ===
+          "EXPIRED" &&
+        accessGrant.accessType ===
+          "REGISTERED";
+
+      if (
+        !accessDecision.allowed &&
+        !registeredExpiredReadOnly
+      ) {
+        await denyAuthenticatedBranchAccess(
+          accessDecision.reason,
+        );
+
+        return;
+      }
+
+      if (registeredExpiredReadOnly) {
+        console.warn(
+          "FINORA ANNUAL REGISTRATION EXPIRED: read-only access remains available until renewal. Revenue writes must remain blocked.",
+        );
+      }
+
+      // ======================================================
       // RESTORE AUTHENTICATED STORAGE MODE
       //
       // StorageManager defaults to USB after renderer reload.
@@ -934,6 +1087,17 @@ function AuthenticatedApplication() {
         storageMode === StorageMode.USB
           ? "USB"
           : "LOCAL";
+
+      if (
+        accessGrant.storageMode !==
+          entitlementStorageMode
+      ) {
+        await denyAuthenticatedBranchAccess(
+          `FINORA ${accessGrant.accessType} access is licensed for ${accessGrant.storageMode} storage, but the authenticated session requested ${entitlementStorageMode}.`,
+        );
+
+        return;
+      }
 
       const entitlementResult =
         await hasActiveFinoraStorageEntitlement(

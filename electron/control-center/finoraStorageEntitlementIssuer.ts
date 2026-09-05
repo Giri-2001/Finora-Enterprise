@@ -2,23 +2,24 @@
 // FINORA ENTERPRISE OS™
 //
 // CONTROL CENTER
-// PRIVILEGED BRANCH ACTIVATION ISSUER
+// PRIVILEGED STORAGE ENTITLEMENT ISSUER
 //
 // RESPONSIBILITY:
 //
-// - Accept a prepared REGISTERED / DEMO activation payload
-// - Revalidate it inside the privileged boundary
-// - Bind it to the exact package target
-// - Issue purpose = BRANCH_ACTIVATION
-// - Sign it using FINORA Control Center private-key vault
+// - Accept a prepared LOCAL / USB storage entitlement payload
+// - Revalidate it inside the privileged signing boundary
+// - Bind it to the exact native installation target
+// - Issue purpose = STORAGE_ENTITLEMENT
+// - Sign using FINORA Control Center private-key vault
 //
 // IMPORTANT:
 //
 // - MAIN PROCESS / CONTROL CENTER ONLY.
 // - No renderer IPC is exposed here.
-// - Private signing key never leaves the Step-1 signer.
+// - Private signing key remains inside the Control Center signer.
 // - Payload is revalidated immediately before signing.
-// - Business Date is not accepted.
+// - No Business Date.
+// - USB volume identity is not accepted.
 //
 // VERSION : 1.0
 // STATUS  : Production Foundation
@@ -34,18 +35,18 @@ import {
 } from "./finoraControlCenterSigner.js";
 
 import type {
-  FinoraBranchActivationIssuanceTarget,
-} from "./finoraBranchActivationIssuancePolicy.js";
+  FinoraStorageEntitlementIssuanceTarget,
+} from "./finoraStorageEntitlementIssuancePolicy.js";
 
 import {
-  validateFinoraBranchActivationIssuance,
-} from "./finoraBranchActivationIssuancePolicy.js";
+  validateFinoraStorageEntitlementIssuance,
+} from "./finoraStorageEntitlementIssuancePolicy.js";
 
 // ============================================================
 // INPUT
 // ============================================================
 
-export interface SignFinoraBranchActivationPackageInput {
+export interface SignFinoraStorageEntitlementPackageInput {
 
   packageId:
     string;
@@ -57,7 +58,7 @@ export interface SignFinoraBranchActivationPackageInput {
     string;
 
   target:
-    FinoraBranchActivationIssuanceTarget;
+    FinoraStorageEntitlementIssuanceTarget;
 
   payload:
     unknown;
@@ -71,7 +72,8 @@ export interface SignFinoraBranchActivationPackageInput {
 // ============================================================
 
 function isNonEmptyString(
-  value: unknown,
+  value:
+    unknown,
 ): value is string {
 
   return (
@@ -83,7 +85,8 @@ function isNonEmptyString(
 }
 
 function parseTimestamp(
-  value: string,
+  value:
+    string,
 ): number | undefined {
 
   const parsed =
@@ -102,9 +105,9 @@ function parseTimestamp(
 // SIGN
 // ============================================================
 
-export async function signFinoraBranchActivationPackage(
+export async function signFinoraStorageEntitlementPackage(
   input:
-    SignFinoraBranchActivationPackageInput,
+    SignFinoraStorageEntitlementPackageInput,
 ): Promise<
   FinoraControlCenterSignedPackage<
     Record<string, unknown>
@@ -117,10 +120,9 @@ export async function signFinoraBranchActivationPackage(
     )
   ) {
     throw new Error(
-      "FINORA Branch Activation packageId is required.",
+      "FINORA Storage Entitlement packageId is required.",
     );
   }
-
 
   if (
     !Number.isSafeInteger(
@@ -130,10 +132,9 @@ export async function signFinoraBranchActivationPackage(
       0
   ) {
     throw new Error(
-      "FINORA Branch Activation sequence must be a positive safe integer.",
+      "FINORA Storage Entitlement sequence must be a positive safe integer.",
     );
   }
-
 
   const envelopeIssuedAt =
     parseTimestamp(
@@ -145,24 +146,21 @@ export async function signFinoraBranchActivationPackage(
       undefined
   ) {
     throw new Error(
-      "FINORA Branch Activation package issuedAt is invalid.",
+      "FINORA Storage Entitlement package issuedAt is invalid.",
     );
   }
 
-
   const policy =
-    validateFinoraBranchActivationIssuance(
+    validateFinoraStorageEntitlementIssuance(
       input.payload,
       input.target,
     );
-
 
   if (!policy.valid) {
     throw new Error(
       policy.error,
     );
   }
-
 
   const payloadIssuedAt =
     parseTimestamp(
@@ -171,7 +169,6 @@ export async function signFinoraBranchActivationPackage(
       ),
     );
 
-
   if (
     payloadIssuedAt ===
       undefined ||
@@ -179,17 +176,16 @@ export async function signFinoraBranchActivationPackage(
       envelopeIssuedAt
   ) {
     throw new Error(
-      "FINORA Branch Activation payload and package issuedAt timestamps must match.",
+      "FINORA Storage Entitlement payload and package issuedAt timestamps must match.",
     );
   }
-
 
   return signFinoraControlCenterPackage({
     packageId:
       input.packageId,
 
     purpose:
-      "BRANCH_ACTIVATION",
+      "STORAGE_ENTITLEMENT",
 
     target: {
       ownerId:

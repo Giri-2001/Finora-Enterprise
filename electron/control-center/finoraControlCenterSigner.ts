@@ -67,6 +67,22 @@ export interface FinoraControlCenterPackageTarget {
 
   installationId?:
     string;
+
+  /**
+   * Optional at the generic signer boundary.
+   *
+   * Installation-bound package policies such as
+   * BRANCH_ACTIVATION and STORAGE_ENTITLEMENT make these
+   * fields mandatory before signing.
+   */
+  bindingKeyId?:
+    string;
+
+  fingerprintAlgorithm?:
+    "SHA-256";
+
+  publicKeyFingerprint?:
+    string;
 }
 
 // ============================================================

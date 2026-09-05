@@ -133,7 +133,9 @@ const identity = {
 
   branchId:
     "BRANCH-001",
-};
+
+  storageMode:
+    "LOCAL" as const,};
 
 // ============================================================
 // 1. INITIAL REGISTERED ACCESS

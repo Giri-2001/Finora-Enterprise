@@ -1,4 +1,4 @@
-﻿// ============================================================
+// ============================================================
 // FINORA ENTERPRISE OS™
 //
 // ELECTRON CONTROL IPC
@@ -39,6 +39,7 @@ import {
 } from "electron";
 
 import {
+  findFinoraBranchAccessGrant,
   findFinoraBranchActivation,
   getFinoraInstallationIdentity,
   hasActiveFinoraStorageEntitlement,
@@ -48,6 +49,9 @@ import type {
   FinoraControlStorageMode,
 } from "./finoraControlStore.js";
 
+import {
+  getFinoraWindowsInstallationBinding,
+} from "./finoraInstallationBindingService.js";
 // ============================================================
 // IPC CHANNELS
 // ============================================================
@@ -59,6 +63,8 @@ const CONTROL_IPC_CHANNELS = {
   FIND_BRANCH_ACTIVATION:
     "finora:control:find-branch-activation",
 
+  FIND_BRANCH_ACCESS_GRANT:
+    "finora:control:find-branch-access-grant",
   HAS_ACTIVE_STORAGE_ENTITLEMENT:
     "finora:control:has-active-storage-entitlement",
 } as const;
@@ -84,6 +90,15 @@ interface FindBranchActivationRequest {
   branchId: string;
 }
 
+interface FindBranchAccessGrantRequest {
+  userId: string;
+
+  ownerId: string;
+
+  businessId: string;
+
+  branchId: string;
+}
 interface StorageEntitlementCheckRequest {
   userId: string;
 
@@ -152,6 +167,27 @@ function isFindBranchActivationRequest(
   );
 }
 
+function isFindBranchAccessGrantRequest(
+  value: unknown,
+): value is FindBranchAccessGrantRequest {
+  if (
+    typeof value !== "object" ||
+    value === null ||
+    Array.isArray(value)
+  ) {
+    return false;
+  }
+
+  const request =
+    value as Record<string, unknown>;
+
+  return (
+    isNonEmptyString(request.userId) &&
+    isNonEmptyString(request.ownerId) &&
+    isNonEmptyString(request.businessId) &&
+    isNonEmptyString(request.branchId)
+  );
+}
 function isStorageEntitlementCheckRequest(
   value: unknown,
 ): value is StorageEntitlementCheckRequest {
@@ -256,6 +292,44 @@ export function registerFinoraControlHandlers(
   );
 
   // ----------------------------------------------------------
+  // BRANCH ACCESS GRANT
+  // ----------------------------------------------------------
+
+  ipcMain.handle(
+    CONTROL_IPC_CHANNELS.FIND_BRANCH_ACCESS_GRANT,
+    async (
+      event,
+      request: unknown,
+    ) => {
+      if (
+        !isTrustedRenderer(
+          event.senderFrame,
+        )
+      ) {
+        return failure(
+          "Untrusted renderer.",
+        );
+      }
+
+      if (
+        !isFindBranchAccessGrantRequest(
+          request,
+        )
+      ) {
+        return failure(
+          "A valid FINORA branch access request is required.",
+        );
+      }
+
+      return findFinoraBranchAccessGrant(
+        request.userId,
+        request.ownerId,
+        request.businessId,
+        request.branchId,
+      );
+    },
+  );
+  // ----------------------------------------------------------
   // STORAGE ENTITLEMENT CHECK
   // ----------------------------------------------------------
 
@@ -285,12 +359,34 @@ export function registerFinoraControlHandlers(
         );
       }
 
+      const nativeBinding =
+        await getFinoraWindowsInstallationBinding();
+
+      if (!nativeBinding) {
+        return failure(
+          "FINORA Windows native installation binding is unavailable.",
+        );
+      }
+
       return hasActiveFinoraStorageEntitlement(
         request.userId,
         request.ownerId,
         request.businessId,
         request.branchId,
         request.storageMode,
+        {
+          installationId:
+            nativeBinding.installationId,
+
+          bindingKeyId:
+            nativeBinding.bindingKeyId,
+
+          fingerprintAlgorithm:
+            nativeBinding.fingerprintAlgorithm,
+
+          publicKeyFingerprint:
+            nativeBinding.publicKeyFingerprint,
+        },
       );
     },
   );

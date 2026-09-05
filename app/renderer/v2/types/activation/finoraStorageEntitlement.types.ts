@@ -1,4 +1,4 @@
-﻿// ============================================================
+// ============================================================
 // FINORA ENTERPRISE OS™
 //
 // V2 ACTIVATION DOMAIN
@@ -151,7 +151,28 @@ export interface FinoraStorageEntitlement {
    */
   branchId: BranchId;
 
+
   /**
+   * Exact native FINORA installation receiving this entitlement.
+   */
+  installationId: string;
+
+  /**
+   * Native installation possession-key identity.
+   */
+  bindingKeyId: string;
+
+  /**
+   * Public-key fingerprint algorithm.
+   */
+  fingerprintAlgorithm: "SHA-256";
+
+  /**
+   * Canonical lowercase SHA-256 fingerprint of the native
+   * installation public key.
+   */
+  publicKeyFingerprint: string;
+/**
    * Independently activated storage mode.
    */
   storageMode: FinoraEntitlementStorageMode;

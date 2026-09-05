@@ -53,6 +53,9 @@ import type {
 } from "../../types/activation/finoraStorageEntitlement.types";
 
 import type {
+  FinoraBranchAccessGrant,
+} from "../../types/activation/finoraBranchAccess.types";
+import type {
   StorageResult,
 } from "../../storage/storage.types";
 
@@ -214,6 +217,66 @@ export async function hasActiveFinoraBranchActivation(
 
 // ============================================================
 // STORAGE ENTITLEMENT
+// ============================================================
+// BRANCH ACCESS GRANT
+// ============================================================
+
+/**
+ * Load the signed REGISTERED / DEMO access grant for the
+ * authenticated login identity.
+ *
+ * Runtime validity is evaluated separately using trusted/system
+ * current time. FINORA Business Date is never used here.
+ */
+export async function loadFinoraBranchAccessGrant(
+  userId: string,
+  ownerId: string,
+  businessId: string,
+  branchId: string,
+): Promise<
+  StorageResult<
+    FinoraBranchAccessGrant | undefined
+  >
+> {
+  if (
+    !isNonEmptyString(userId) ||
+    !isNonEmptyString(ownerId) ||
+    !isNonEmptyString(businessId) ||
+    !isNonEmptyString(branchId)
+  ) {
+    return {
+      success: false,
+
+      error:
+        "User ID, Owner ID, Business ID and Branch ID are required.",
+    };
+  }
+
+  const bridge =
+    getFinoraActivationControlBridge();
+
+  if (!bridge) {
+    return bridgeUnavailable();
+  }
+
+  try {
+    return await bridge.findBranchAccessGrant({
+      userId,
+      ownerId,
+      businessId,
+      branchId,
+    });
+  } catch (error) {
+    return {
+      success: false,
+
+      error:
+        error instanceof Error
+          ? error.message
+          : "Unable to load FINORA branch access grant.",
+    };
+  }
+}
 // ============================================================
 
 /**

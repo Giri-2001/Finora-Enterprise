@@ -80,6 +80,19 @@ export interface FinoraBranchControlTarget {
 
   installationId:
     string;
+
+  bindingKeyId:
+    string;
+
+  fingerprintAlgorithm:
+    "SHA-256";
+
+  /**
+   * Canonical lowercase SHA-256 fingerprint of the
+   * installation possession public key.
+   */
+  publicKeyFingerprint:
+    string;
 }
 
 export interface FinoraSignedBranchControlPackage {
@@ -250,6 +263,64 @@ function parseTimestamp(
     : undefined;
 }
 
+function isSha256Fingerprint(
+  value:
+    unknown,
+): value is string {
+
+  return (
+    typeof value ===
+      "string" &&
+    /^[0-9a-f]{64}$/.test(
+      value,
+    )
+  );
+}
+
+function isInstallationBindingTargetValid(
+  value:
+    FinoraBranchControlTarget,
+): boolean {
+
+  if (
+    !isNonEmptyString(
+      value.ownerId,
+    ) ||
+    !isNonEmptyString(
+      value.businessId,
+    ) ||
+    !isNonEmptyString(
+      value.branchId,
+    ) ||
+    !isNonEmptyString(
+      value.installationId,
+    ) ||
+    !isNonEmptyString(
+      value.bindingKeyId,
+    ) ||
+    value.fingerprintAlgorithm !==
+      "SHA-256" ||
+    !isSha256Fingerprint(
+      value.publicKeyFingerprint,
+    )
+  ) {
+    return false;
+  }
+
+  const expectedBindingKeyId =
+    `FINORA-BINDING-${value.publicKeyFingerprint
+      .slice(
+        0,
+        32,
+      )
+      .toUpperCase()}`;
+
+  return (
+    value.bindingKeyId ===
+      expectedBindingKeyId
+  );
+}
+
 function targetMatches(
   actual:
     FinoraBranchControlTarget,
@@ -257,6 +328,17 @@ function targetMatches(
   expected:
     FinoraBranchControlTarget,
 ): boolean {
+
+  if (
+    !isInstallationBindingTargetValid(
+      actual,
+    ) ||
+    !isInstallationBindingTargetValid(
+      expected,
+    )
+  ) {
+    return false;
+  }
 
   return (
     actual.ownerId ===
@@ -266,7 +348,13 @@ function targetMatches(
     actual.branchId ===
       expected.branchId &&
     actual.installationId ===
-      expected.installationId
+      expected.installationId &&
+    actual.bindingKeyId ===
+      expected.bindingKeyId &&
+    actual.fingerprintAlgorithm ===
+      expected.fingerprintAlgorithm &&
+    actual.publicKeyFingerprint ===
+      expected.publicKeyFingerprint
   );
 }
 

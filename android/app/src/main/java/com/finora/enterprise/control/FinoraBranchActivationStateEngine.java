@@ -346,22 +346,118 @@ public final class FinoraBranchActivationStateEngine {
             );
         }
 
-        if (
-            !requiredString(
+        String controlInstallationId =
+            requiredString(
                 installation.get(
                     "installationId"
                 )
-            ).equals(
-                requiredString(
-                    installationBinding.get(
-                        "installationId"
-                    )
+            );
+
+        String targetInstallationId =
+            requiredString(
+                target.get(
+                    "installationId"
                 )
+            );
+
+        String targetBindingKeyId =
+            requiredString(
+                target.get(
+                    "bindingKeyId"
+                )
+            );
+
+        String targetFingerprintAlgorithm =
+            requiredString(
+                target.get(
+                    "fingerprintAlgorithm"
+                )
+            );
+
+        String targetPublicKeyFingerprint =
+            requiredString(
+                target.get(
+                    "publicKeyFingerprint"
+                )
+            );
+
+        String payloadInstallationId =
+            requiredString(
+                installationBinding.get(
+                    "installationId"
+                )
+            );
+
+        String payloadBindingKeyId =
+            requiredString(
+                installationBinding.get(
+                    "bindingKeyId"
+                )
+            );
+
+        String payloadFingerprintAlgorithm =
+            requiredString(
+                installationBinding.get(
+                    "fingerprintAlgorithm"
+                )
+            );
+
+        String payloadPublicKeyFingerprint =
+            requiredString(
+                installationBinding.get(
+                    "publicKeyFingerprint"
+                )
+            );
+
+        if (
+            controlInstallationId == null ||
+            targetInstallationId == null ||
+            targetBindingKeyId == null ||
+            targetFingerprintAlgorithm == null ||
+            targetPublicKeyFingerprint == null ||
+            payloadInstallationId == null ||
+            payloadBindingKeyId == null ||
+            payloadFingerprintAlgorithm == null ||
+            payloadPublicKeyFingerprint == null ||
+            !"SHA-256".equals(
+                targetFingerprintAlgorithm
+            ) ||
+            !"SHA-256".equals(
+                payloadFingerprintAlgorithm
+            ) ||
+            !isCanonicalSha256Fingerprint(
+                targetPublicKeyFingerprint
+            ) ||
+            !isCanonicalSha256Fingerprint(
+                payloadPublicKeyFingerprint
+            ) ||
+            !bindingKeyMatchesFingerprint(
+                targetBindingKeyId,
+                targetPublicKeyFingerprint
+            ) ||
+            !bindingKeyMatchesFingerprint(
+                payloadBindingKeyId,
+                payloadPublicKeyFingerprint
+            ) ||
+            !controlInstallationId.equals(
+                targetInstallationId
+            ) ||
+            !targetInstallationId.equals(
+                payloadInstallationId
+            ) ||
+            !targetBindingKeyId.equals(
+                payloadBindingKeyId
+            ) ||
+            !targetFingerprintAlgorithm.equals(
+                payloadFingerprintAlgorithm
+            ) ||
+            !targetPublicKeyFingerprint.equals(
+                payloadPublicKeyFingerprint
             )
         ) {
 
             return Result.failure(
-                "FINORA Branch Activation installation binding does not match."
+                "FINORA Branch Activation native installation binding does not match."
             );
         }
 
@@ -846,7 +942,26 @@ public final class FinoraBranchActivationStateEngine {
             return "FINORA Branch Access grant identity is invalid.";
         }
 
-        String administrativeStatus =
+                String storageMode =
+            requiredString(
+                grant.get(
+                    "storageMode"
+                )
+            );
+
+        if (
+            !"LOCAL".equals(
+                storageMode
+            ) &&
+            !"USB".equals(
+                storageMode
+            )
+        ) {
+
+            return "FINORA Branch Access storage mode must be LOCAL or USB.";
+        }
+
+String administrativeStatus =
             requiredString(
                 grant.get(
                     "administrativeStatus"
@@ -1456,6 +1571,48 @@ public final class FinoraBranchActivationStateEngine {
                     )
                 )
             )
+        );
+    }
+
+    private static boolean isCanonicalSha256Fingerprint(
+        String value
+    ) {
+
+        return (
+            value != null &&
+            value.matches(
+                "[0-9a-f]{64}"
+            )
+        );
+    }
+
+    private static boolean bindingKeyMatchesFingerprint(
+        String bindingKeyId,
+        String publicKeyFingerprint
+    ) {
+
+        if (
+            bindingKeyId == null ||
+            !isCanonicalSha256Fingerprint(
+                publicKeyFingerprint
+            )
+        ) {
+            return false;
+        }
+
+        String expectedBindingKeyId =
+            "FINORA-BINDING-" +
+            publicKeyFingerprint
+                .substring(
+                    0,
+                    32
+                )
+                .toUpperCase(
+                    java.util.Locale.ROOT
+                );
+
+        return expectedBindingKeyId.equals(
+            bindingKeyId
         );
     }
 

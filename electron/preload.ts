@@ -280,6 +280,76 @@ interface FinoraControlBranchActivation {
   schemaVersion: 1;
 }
 
+type FinoraControlBranchAccessType =
+  | "REGISTERED"
+  | "DEMO";
+
+type FinoraControlBranchAccessStatus =
+  | "ACTIVE"
+  | "SUSPENDED"
+  | "REVOKED";
+
+interface FinoraControlRegistrationPayment {
+  amount: number;
+
+  currency: string;
+
+  paymentMode:
+    | "CASH"
+    | "UPI"
+    | "BANK_TRANSFER"
+    | "OTHER";
+
+  paidAt: string;
+
+  reference?: string;
+
+  remarks?: string;
+
+  refundable: false;
+}
+
+interface FinoraControlBranchAccessGrant {
+  grantId: string;
+
+  userId: string;
+
+  ownerId: string;
+
+  businessId: string;
+
+  branchId: string;
+
+
+  storageMode:
+    FinoraControlStorageMode;
+accessType:
+    FinoraControlBranchAccessType;
+
+  administrativeStatus:
+    FinoraControlBranchAccessStatus;
+
+  validity: {
+    validFrom: string;
+
+    validUntil: string;
+  };
+
+  registrationPayment?:
+    FinoraControlRegistrationPayment;
+
+  registrationCycle?: number;
+
+  demoId?: string;
+
+  demoRemarks?: string;
+
+  createdAt: string;
+
+  updatedAt: string;
+
+  schemaVersion: 1;
+}
 interface FindBranchActivationRequest {
   ownerId: string;
 
@@ -288,6 +358,15 @@ interface FindBranchActivationRequest {
   branchId: string;
 }
 
+interface FindBranchAccessGrantRequest {
+  userId: string;
+
+  ownerId: string;
+
+  businessId: string;
+
+  branchId: string;
+}
 interface StorageEntitlementCheckRequest {
   userId: string;
 
@@ -320,6 +399,16 @@ interface FinoraControlBridge {
         >
       >;
 
+  findBranchAccessGrant:
+    (
+      request:
+        FindBranchAccessGrantRequest,
+    ) =>
+      Promise<
+        StorageResult<
+          FinoraControlBranchAccessGrant | undefined
+        >
+      >;
   hasActiveStorageEntitlement:
     (
       request:
@@ -565,6 +654,8 @@ const CONTROL_CHANNELS = {
   FIND_BRANCH_ACTIVATION:
     "finora:control:find-branch-activation",
 
+  FIND_BRANCH_ACCESS_GRANT:
+    "finora:control:find-branch-access-grant",
   HAS_ACTIVE_STORAGE_ENTITLEMENT:
     "finora:control:has-active-storage-entitlement",
 
@@ -889,6 +980,24 @@ const controlBridge:
         >
       >,
 
+
+  // ----------------------------------------------------------
+  // BRANCH ACCESS GRANT
+  // ----------------------------------------------------------
+
+  findBranchAccessGrant:
+    (
+      request:
+        FindBranchAccessGrantRequest,
+    ) =>
+      ipcRenderer.invoke(
+        CONTROL_CHANNELS.FIND_BRANCH_ACCESS_GRANT,
+        request,
+      ) as Promise<
+        StorageResult<
+          FinoraControlBranchAccessGrant | undefined
+        >
+      >,
 
   // ----------------------------------------------------------
   // STORAGE ENTITLEMENT CHECK

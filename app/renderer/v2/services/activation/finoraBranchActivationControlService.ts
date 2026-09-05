@@ -116,10 +116,102 @@ function identitiesMatch(
 // VALIDATE
 // ============================================================
 
+
+function isFinoraActivationSha256Fingerprint(
+  value:
+    unknown,
+): value is string {
+
+  return (
+    typeof value ===
+      "string" &&
+    /^[0-9a-f]{64}$/.test(
+      value,
+    )
+  );
+}
+
+function isFinoraActivationBindingIdentityValid(
+  bindingKeyId:
+    unknown,
+
+  fingerprintAlgorithm:
+    unknown,
+
+  publicKeyFingerprint:
+    unknown,
+): boolean {
+
+  if (
+    typeof bindingKeyId !==
+      "string" ||
+    bindingKeyId.trim().length ===
+      0 ||
+    fingerprintAlgorithm !==
+      "SHA-256" ||
+    !isFinoraActivationSha256Fingerprint(
+      publicKeyFingerprint,
+    )
+  ) {
+    return false;
+  }
+
+  const expectedBindingKeyId =
+    `FINORA-BINDING-${publicKeyFingerprint
+      .slice(
+        0,
+        32,
+      )
+      .toUpperCase()}`;
+
+  return (
+    bindingKeyId ===
+      expectedBindingKeyId
+  );
+}
 export function validateFinoraBranchActivationControlPayload(
   payload:
     FinoraBranchActivationControlPayloadV1,
 ): FinoraBranchActivationPayloadValidation {
+
+  const installationBinding =
+    payload.installationBinding as
+      unknown;
+
+  if (
+    typeof installationBinding !==
+      "object" ||
+    installationBinding ===
+      null
+  ) {
+    return {
+      valid:
+        false,
+
+      error:
+        "FINORA branch activation native installation binding is required.",
+    };
+  }
+
+  const installationBindingRecord =
+    installationBinding as
+      Record<string, unknown>;
+
+  if (
+    !isFinoraActivationBindingIdentityValid(
+      installationBindingRecord.bindingKeyId,
+      installationBindingRecord.fingerprintAlgorithm,
+      installationBindingRecord.publicKeyFingerprint,
+    )
+  ) {
+    return {
+      valid:
+        false,
+
+      error:
+        "FINORA branch activation native installation binding is invalid.",
+    };
+  }
 
   if (
     payload.schemaVersion !==
@@ -308,6 +400,15 @@ export interface CreateFinoraBranchActivationControlPayloadInput {
 
   issuedAt?:
     string;
+
+  bindingKeyId:
+    string;
+
+  fingerprintAlgorithm:
+    "SHA-256";
+
+  publicKeyFingerprint:
+    string;
 }
 
 // ============================================================
@@ -332,9 +433,18 @@ export function createFinoraBranchActivationControlPayload(
         input.accessGrant,
 
       installationBinding: {
-        installationId:
-          input.installationId,
-      },
+      installationId:
+        input.installationId,
+
+      bindingKeyId:
+        input.bindingKeyId,
+
+      fingerprintAlgorithm:
+        input.fingerprintAlgorithm,
+
+      publicKeyFingerprint:
+        input.publicKeyFingerprint,
+    },
 
       issuedAt:
         input.issuedAt ??
@@ -380,6 +490,15 @@ export interface FinoraBranchActivationExpectedTarget {
 
   installationId:
     string;
+
+  bindingKeyId:
+    string;
+
+  fingerprintAlgorithm:
+    "SHA-256";
+
+  publicKeyFingerprint:
+    string;
 }
 
 /**
@@ -393,6 +512,24 @@ export function doesFinoraBranchActivationPayloadMatchTarget(
   target:
     FinoraBranchActivationExpectedTarget,
 ): boolean {
+
+  if (
+    !isFinoraActivationBindingIdentityValid(
+      target.bindingKeyId,
+      target.fingerprintAlgorithm,
+      target.publicKeyFingerprint,
+    ) ||
+    payload.installationBinding.installationId !==
+      target.installationId ||
+    payload.installationBinding.bindingKeyId !==
+      target.bindingKeyId ||
+    payload.installationBinding.fingerprintAlgorithm !==
+      target.fingerprintAlgorithm ||
+    payload.installationBinding.publicKeyFingerprint !==
+      target.publicKeyFingerprint
+  ) {
+    return false;
+  }
 
   return (
     payload.activation.ownerId ===

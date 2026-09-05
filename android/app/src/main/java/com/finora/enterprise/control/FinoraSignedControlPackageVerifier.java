@@ -111,7 +111,6 @@ public final class FinoraSignedControlPackageVerifier {
     // ========================================================
     // TARGET
     // ========================================================
-
     public static final class Target {
 
         public final String ownerId;
@@ -122,11 +121,20 @@ public final class FinoraSignedControlPackageVerifier {
 
         public final String installationId;
 
+        public final String bindingKeyId;
+
+        public final String fingerprintAlgorithm;
+
+        public final String publicKeyFingerprint;
+
         public Target(
             String ownerId,
             String businessId,
             String branchId,
-            String installationId
+            String installationId,
+            String bindingKeyId,
+            String fingerprintAlgorithm,
+            String publicKeyFingerprint
         ) {
             this.ownerId =
                 ownerId;
@@ -139,6 +147,15 @@ public final class FinoraSignedControlPackageVerifier {
 
             this.installationId =
                 installationId;
+
+            this.bindingKeyId =
+                bindingKeyId;
+
+            this.fingerprintAlgorithm =
+                fingerprintAlgorithm;
+
+            this.publicKeyFingerprint =
+                publicKeyFingerprint;
         }
     }
 
@@ -1033,32 +1050,183 @@ public final class FinoraSignedControlPackageVerifier {
 
         return null;
     }
-
-    private static boolean matchesTarget(
-        Map<String, Object> target,
-        Target expected
+    private static boolean isCanonicalSha256Fingerprint(
+        String value
     ) {
 
         return (
-            expected.ownerId.equals(
-                target.get(
+            value != null &&
+            value.matches(
+                "[0-9a-f]{64}"
+            )
+        );
+    }
+
+    private static boolean bindingKeyMatchesFingerprint(
+        String bindingKeyId,
+        String publicKeyFingerprint
+    ) {
+
+        if (
+            bindingKeyId == null ||
+            !isCanonicalSha256Fingerprint(
+                publicKeyFingerprint
+            )
+        ) {
+            return false;
+        }
+
+        String expectedBindingKeyId =
+            "FINORA-BINDING-" +
+            publicKeyFingerprint
+                .substring(
+                    0,
+                    32
+                )
+                .toUpperCase(
+                    java.util.Locale.ROOT
+                );
+
+        return expectedBindingKeyId.equals(
+            bindingKeyId
+        );
+    }
+
+    private static boolean isExpectedTargetValid(
+        Target value
+    ) {
+
+        return (
+            value != null &&
+            value.ownerId != null &&
+            !value.ownerId.trim().isEmpty() &&
+            value.businessId != null &&
+            !value.businessId.trim().isEmpty() &&
+            value.branchId != null &&
+            !value.branchId.trim().isEmpty() &&
+            value.installationId != null &&
+            !value.installationId.trim().isEmpty() &&
+            value.bindingKeyId != null &&
+            !value.bindingKeyId.trim().isEmpty() &&
+            "SHA-256".equals(
+                value.fingerprintAlgorithm
+            ) &&
+            isCanonicalSha256Fingerprint(
+                value.publicKeyFingerprint
+            ) &&
+            bindingKeyMatchesFingerprint(
+                value.bindingKeyId,
+                value.publicKeyFingerprint
+            )
+        );
+    }
+
+    private static boolean matchesTarget(
+        Map<String, Object> actual,
+        Target expected
+    ) {
+
+        if (
+            actual == null ||
+            !isExpectedTargetValid(
+                expected
+            )
+        ) {
+            return false;
+        }
+
+        String ownerId =
+            requiredString(
+                actual.get(
                     "ownerId"
                 )
-            ) &&
-            expected.businessId.equals(
-                target.get(
+            );
+
+        String businessId =
+            requiredString(
+                actual.get(
                     "businessId"
                 )
-            ) &&
-            expected.branchId.equals(
-                target.get(
+            );
+
+        String branchId =
+            requiredString(
+                actual.get(
                     "branchId"
                 )
-            ) &&
-            expected.installationId.equals(
-                target.get(
+            );
+
+        String installationId =
+            requiredString(
+                actual.get(
                     "installationId"
                 )
+            );
+
+        String bindingKeyId =
+            requiredString(
+                actual.get(
+                    "bindingKeyId"
+                )
+            );
+
+        String fingerprintAlgorithm =
+            requiredString(
+                actual.get(
+                    "fingerprintAlgorithm"
+                )
+            );
+
+        String publicKeyFingerprint =
+            requiredString(
+                actual.get(
+                    "publicKeyFingerprint"
+                )
+            );
+
+        if (
+            ownerId == null ||
+            businessId == null ||
+            branchId == null ||
+            installationId == null ||
+            bindingKeyId == null ||
+            fingerprintAlgorithm == null ||
+            publicKeyFingerprint == null ||
+            !"SHA-256".equals(
+                fingerprintAlgorithm
+            ) ||
+            !isCanonicalSha256Fingerprint(
+                publicKeyFingerprint
+            ) ||
+            !bindingKeyMatchesFingerprint(
+                bindingKeyId,
+                publicKeyFingerprint
+            )
+        ) {
+            return false;
+        }
+
+        return (
+            expected.ownerId.equals(
+                ownerId
+            ) &&
+            expected.businessId.equals(
+                businessId
+            ) &&
+            expected.branchId.equals(
+                branchId
+            ) &&
+            expected.installationId.equals(
+                installationId
+            ) &&
+            expected.bindingKeyId.equals(
+                bindingKeyId
+            ) &&
+            expected.fingerprintAlgorithm.equals(
+                fingerprintAlgorithm
+            ) &&
+            expected.publicKeyFingerprint.equals(
+                publicKeyFingerprint
             )
         );
     }

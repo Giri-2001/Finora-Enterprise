@@ -149,6 +149,14 @@ function validateCommonGrant(
   ) {
     return "FINORA access grant identity is incomplete.";
   }
+  if (
+    grant.storageMode !==
+      "LOCAL" &&
+    grant.storageMode !==
+      "USB"
+  ) {
+    return "FINORA access grant storage mode must be LOCAL or USB.";
+  }
 
   if (
     grant.administrativeStatus !==
