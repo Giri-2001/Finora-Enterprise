@@ -93,6 +93,11 @@ import {
 } from "../../../../../services/numbering/loanSequenceService";
 
 import {
+  authorizeFinoraCommercialWrite,
+} from "../../../../../services/activation/finoraCommercialWriteGuard";
+
+
+import {
   createLoan,
   fetchLoans,
   hasExistingLoan,
@@ -2069,6 +2074,34 @@ export function useLoanStudio({
          numbering gap.
        - Reserved Loan numbers are never rolled back or reused.
     ======================================================== */
+
+    /* ========================================================
+       COMMERCIAL WRITE AUTHORIZATION
+
+       DISBURSE_LOAN must be authorized before the permanent
+       per-Customer Loan sequence is consumed.
+
+       Historical Loan numbering compatibility remains outside
+       this commercial workflow boundary.
+    ======================================================== */
+
+    const commercialWriteDecision =
+      await authorizeFinoraCommercialWrite(
+        "DISBURSE_LOAN",
+      );
+
+    if (!commercialWriteDecision.allowed) {
+      console.warn(
+        "FINORA DISBURSE LOAN WRITE DENIED:",
+        commercialWriteDecision.reason,
+      );
+
+      await finoraError(
+        commercialWriteDecision.reason,
+      );
+
+      return;
+    }
 
     const loanNumberResult =
       await reserveNextLoanNumber(

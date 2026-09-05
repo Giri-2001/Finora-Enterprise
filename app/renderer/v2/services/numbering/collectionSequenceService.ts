@@ -32,6 +32,14 @@
 // STATUS  : Production Foundation
 // ============================================================
 
+import type {
+  FinoraCommercialWriteOperationAuthorization,
+} from "../activation/finoraCommercialWriteOperation";
+
+import {
+  consumeFinoraPostCollectionOperationStage,
+} from "../activation/finoraCommercialWriteOperation";
+
 import {
   COLLECTION_SEQUENCE_MAX,
   COLLECTION_SEQUENCE_MIN,
@@ -514,11 +522,18 @@ async function reserveNextCollectionReceiptPairUnlocked(
 export async function reserveNextCollectionReceiptPair(
   customerId: string,
   loanNumber: string,
+  authorization:
+    FinoraCommercialWriteOperationAuthorization,
 ): Promise<
   StorageResult<
     CollectionReceiptNumberPair
   >
 > {
+
+  consumeFinoraPostCollectionOperationStage(
+    authorization,
+    "NUMBER_RESERVED",
+  );
 
   return withCollectionReservationLock(
     customerId,

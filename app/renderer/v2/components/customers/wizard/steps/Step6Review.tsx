@@ -103,6 +103,11 @@ import ReviewActions
 ========================================================== */
 
 import {
+  authorizeFinoraCommercialWrite,
+} from "../../../../services/activation/finoraCommercialWriteGuard";
+
+
+import {
   customerService,
 } from "../../../../services/customer/customerService";
 
@@ -1653,6 +1658,37 @@ export default function Step6Review({
 
         const now =
           new Date().toISOString();
+
+
+        /* ==================================================
+           COMMERCIAL WRITE AUTHORIZATION
+
+           CREATE_CUSTOMER must be authorized BEFORE the
+           permanent Customer number is consumed.
+
+           Historical numbering compatibility paths remain
+           independent from this workflow-level guard.
+        ================================================== */
+
+        const commercialWriteDecision =
+          await authorizeFinoraCommercialWrite(
+            "CREATE_CUSTOMER",
+          );
+
+
+        if (!commercialWriteDecision.allowed) {
+
+          console.warn(
+            "FINORA CREATE CUSTOMER WRITE DENIED:",
+            commercialWriteDecision.reason,
+          );
+
+          await finoraError(
+            commercialWriteDecision.reason,
+          );
+
+          return;
+        }
 
 
         const reservationResult =

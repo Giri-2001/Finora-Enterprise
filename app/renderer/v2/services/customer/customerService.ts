@@ -34,6 +34,10 @@ import type { CustomerProfile } from "../../types/customers";
 
 import { customerRepository } from "../../repositories/customer/customerRepository";
 
+import {
+  authorizeFinoraCommercialWrite,
+} from "../activation/finoraCommercialWriteGuard";
+
 import type {
   RepositoryQuery,
   RepositoryWriteOptions,
@@ -96,7 +100,26 @@ export class CustomerService {
     customer: CustomerProfile,
     options?: RepositoryWriteOptions,
   ): Promise<StorageResult<CustomerProfile>> {
-    return customerRepository.save(customer, options);
+
+    const commercialWriteDecision =
+      await authorizeFinoraCommercialWrite(
+        "CREATE_CUSTOMER",
+      );
+
+    if (!commercialWriteDecision.allowed) {
+      return {
+        success:
+          false,
+
+        error:
+          commercialWriteDecision.reason,
+      };
+    }
+
+    return customerRepository.save(
+      customer,
+      options,
+    );
   }
 
   // ==========================================================

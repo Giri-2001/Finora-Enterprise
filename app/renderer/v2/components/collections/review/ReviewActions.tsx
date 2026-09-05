@@ -26,6 +26,10 @@
 // IMPORTS
 // ============================================================
 
+import {
+  beginFinoraPostCollectionOperation,
+} from "../../../services/activation/finoraCommercialWriteOperation";
+
 import Button
   from "../../common/buttons/Button";
 
@@ -133,6 +137,25 @@ export default function ReviewActions() {
     try {
 
       // ------------------------------------------------------
+      // FRESH COMMERCIAL TRANSACTION AUTHORIZATION
+      //
+      // Legacy path skips Collection number reservation.
+      // ------------------------------------------------------
+
+      const operationResult =
+        await beginFinoraPostCollectionOperation();
+
+      if (!operationResult.success) {
+        throw new Error(
+          operationResult.error,
+        );
+      }
+
+      const commercialWriteAuthorization =
+        operationResult.authorization;
+
+
+      // ------------------------------------------------------
       // UPDATE LOAN OUTSTANDING
       //
       // Loan access now goes through LoanService.
@@ -142,6 +165,8 @@ export default function ReviewActions() {
         await updateLoanOutstandingAmount(
           reviewData.loanId,
           reviewData.paymentAmount,
+          undefined,
+          commercialWriteAuthorization,
         );
 
 
@@ -169,6 +194,7 @@ export default function ReviewActions() {
 
       await approveCollection(
         reviewData,
+        commercialWriteAuthorization,
       );
 
 
@@ -210,7 +236,9 @@ export default function ReviewActions() {
       );
 
       await finoraError(
-        "Collection failed",
+        error instanceof Error
+          ? error.message
+          : "Collection failed",
       );
 
     } finally {

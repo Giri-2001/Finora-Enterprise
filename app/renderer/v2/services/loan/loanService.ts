@@ -52,6 +52,14 @@
 // IMPORTS
 // ============================================================
 
+import type {
+  FinoraCommercialWriteOperationAuthorization,
+} from "../activation/finoraCommercialWriteOperation";
+
+import {
+  consumeFinoraPostCollectionOperationStage,
+} from "../activation/finoraCommercialWriteOperation";
+
 import type { Loan } from "../../components/customers/office/CustomerOffice/types";
 
 import {
@@ -66,6 +74,10 @@ import {
 import type { LoanOutstandingUpdateOptions } from "../../repositories/loan/loanRepository";
 
 import type { StorageResult } from "../../storage/storage.types";
+
+import {
+  authorizeFinoraCommercialWrite,
+} from "../activation/finoraCommercialWriteGuard";
 
 // ============================================================
 // GET ALL LOANS
@@ -450,8 +462,28 @@ export async function hasExistingLoan(
 // CREATE LOAN
 // ============================================================
 
-export async function createLoan(loan: Loan): Promise<StorageResult<Loan>> {
-  return addLoan(loan);
+export async function createLoan(
+  loan: Loan,
+): Promise<StorageResult<Loan>> {
+
+  const commercialWriteDecision =
+    await authorizeFinoraCommercialWrite(
+      "DISBURSE_LOAN",
+    );
+
+  if (!commercialWriteDecision.allowed) {
+    return {
+      success:
+        false,
+
+      error:
+        commercialWriteDecision.reason,
+    };
+  }
+
+  return addLoan(
+    loan,
+  );
 }
 
 // ============================================================
@@ -505,7 +537,10 @@ export async function rollbackCreatedLoan(
 export async function updateLoanOutstandingAmount(
   loanId: string,
   paymentAmount: number,
-  options?: LoanOutstandingUpdateOptions,
+  options:
+    LoanOutstandingUpdateOptions | undefined,
+  authorization:
+    FinoraCommercialWriteOperationAuthorization,
 ): Promise<Loan | undefined> {
   // ==========================================================
   // VALIDATION
@@ -528,7 +563,16 @@ export async function updateLoanOutstandingAmount(
   //
   // ==========================================================
 
-  return updateLoanOutstanding(loanId, paymentAmount, options);
+  consumeFinoraPostCollectionOperationStage(
+    authorization,
+    "LOAN_UPDATED",
+  );
+
+  return updateLoanOutstanding(
+    loanId,
+    paymentAmount,
+    options,
+  );
 }
 
 // ============================================================

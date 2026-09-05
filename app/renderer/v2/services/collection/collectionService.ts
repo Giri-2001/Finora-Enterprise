@@ -58,6 +58,14 @@
 // ============================================================
 
 import type {
+  FinoraCommercialWriteOperationAuthorization,
+} from "../activation/finoraCommercialWriteOperation";
+
+import {
+  consumeFinoraPostCollectionOperationStage,
+} from "../activation/finoraCommercialWriteOperation";
+
+import type {
   CollectionReviewData,
 } from "../../components/collections/CollectionReviewData";
 
@@ -264,6 +272,8 @@ function buildPersistedCollection(
 
 export async function approveCollection(
   reviewData: CollectionReviewData,
+  authorization:
+    FinoraCommercialWriteOperationAuthorization,
 ): Promise<CollectionReviewData> {
 
   // ==========================================================
@@ -361,6 +371,11 @@ export async function approveCollection(
   // ==========================================================
   // PERSIST COLLECTION
   // ==========================================================
+
+  consumeFinoraPostCollectionOperationStage(
+    authorization,
+    "COLLECTION_SAVED",
+  );
 
   return collectionRepository.save(
     collection,

@@ -112,6 +112,10 @@
 // ============================================================
 
 import {
+  beginFinoraPostCollectionOperation,
+} from "../../../services/activation/finoraCommercialWriteOperation";
+
+import {
   finoraError,
   finoraSuccess,
   finoraWarning,
@@ -938,6 +942,22 @@ export default function PaymentDetails() {
 
     try {
       // ======================================================
+      // FRESH COMMERCIAL TRANSACTION AUTHORIZATION
+      // ======================================================
+
+      const operationResult =
+        await beginFinoraPostCollectionOperation();
+
+      if (!operationResult.success) {
+        throw new Error(
+          operationResult.error,
+        );
+      }
+
+      const commercialWriteAuthorization =
+        operationResult.authorization;
+
+      // ======================================================
       // AUTHORITATIVE COLLECTION / RECEIPT NUMBER RESERVATION
       //
       // Reservation occurs only after validation succeeds and
@@ -950,6 +970,7 @@ export default function PaymentDetails() {
         await reserveNextCollectionReceiptPair(
           reviewData.customerId,
           reviewData.loanNumber,
+          commercialWriteAuthorization,
         );
 
       if (
@@ -1020,6 +1041,7 @@ export default function PaymentDetails() {
           ),
           penaltyAmount: safeNumber(saveData.penaltyAmount),
         },
+        commercialWriteAuthorization,
       );
 
       if (!updatedLoan) {
@@ -1054,7 +1076,11 @@ export default function PaymentDetails() {
       // SAVE COLLECTION RECORD
       // ======================================================
 
-      const savedCollection = await approveCollection(collectionSaveData);
+      const savedCollection =
+        await approveCollection(
+          collectionSaveData,
+          commercialWriteAuthorization,
+        );
 
       const savedCollectionDate =
         resolveOperationalDate(
