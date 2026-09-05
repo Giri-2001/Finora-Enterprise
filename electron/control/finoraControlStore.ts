@@ -49,6 +49,15 @@ import path from "node:path";
 
 import fs from "node:fs/promises";
 
+import {
+  evaluateFinoraControlReplay,
+} from "./finoraControlReplayPolicy.js";
+
+import type {
+  FinoraControlAppliedPackageRecord,
+  FinoraControlSequenceStateRecord,
+} from "./finoraControlReplayPolicy.js";
+
 // ============================================================
 // CONSTANTS
 // ============================================================
@@ -166,6 +175,102 @@ export interface FinoraControlStorageEntitlement {
 // CONTROL PACKAGE
 // ============================================================
 
+// ============================================================
+// BRANCH ACCESS GRANT DTO
+// ============================================================
+
+export type FinoraControlBranchAccessType =
+  | "REGISTERED"
+  | "DEMO";
+
+export type FinoraControlBranchAccessStatus =
+  | "ACTIVE"
+  | "SUSPENDED"
+  | "REVOKED";
+
+export interface FinoraControlRegistrationPayment {
+
+  amount:
+    number;
+
+  currency:
+    string;
+
+  paymentMode:
+    | "CASH"
+    | "UPI"
+    | "BANK_TRANSFER"
+    | "OTHER";
+
+  paidAt:
+    string;
+
+  reference?:
+    string;
+
+  remarks?:
+    string;
+
+  refundable:
+    false;
+}
+
+export interface FinoraControlBranchAccessGrant {
+
+  grantId:
+    string;
+
+  userId:
+    string;
+
+  ownerId:
+    string;
+
+  businessId:
+    string;
+
+  branchId:
+    string;
+
+  accessType:
+    FinoraControlBranchAccessType;
+
+  administrativeStatus:
+    FinoraControlBranchAccessStatus;
+
+  validity: {
+    validFrom:
+      string;
+
+    validUntil:
+      string;
+  };
+
+  registrationPayment?:
+    FinoraControlRegistrationPayment;
+
+  registrationCycle?:
+    number;
+
+  demoId?:
+    string;
+
+  demoRemarks?:
+    string;
+
+  createdAt:
+    string;
+
+  updatedAt:
+    string;
+
+  schemaVersion:
+    1;
+}
+
+// ============================================================
+// VERIFIED CONTROL STATE
+// ============================================================
 export interface FinoraControlStorePackage {
   version: typeof CONTROL_STORE_VERSION;
 
@@ -174,6 +279,27 @@ export interface FinoraControlStorePackage {
   activations: FinoraControlBranchActivation[];
 
   storageEntitlements: FinoraControlStorageEntitlement[];
+
+  /**
+   * Current signed REGISTERED / DEMO access by login identity.
+   *
+   * Optional only for backward compatibility with encrypted
+   * Control Stores created before the Branch Access Engine.
+   */
+  branchAccessGrants?:
+    FinoraControlBranchAccessGrant[];
+
+  /**
+   * Cryptographically verified package IDs already applied.
+   */
+  appliedControlPackages?:
+    FinoraControlAppliedPackageRecord[];
+
+  /**
+   * Highest accepted sequence per issuer / purpose / target.
+   */
+  controlSequences?:
+    FinoraControlSequenceStateRecord[];
 
   updatedAt: string;
 }
@@ -400,62 +526,534 @@ function hasDuplicateEntitlementKeys(
   return false;
 }
 
-function isControlStorePackage(
+function isControlTimestamp(
   value: unknown,
-): value is FinoraControlStorePackage {
+): value is string {
+
+  return (
+    isNonEmptyString(
+      value,
+    ) &&
+    Number.isFinite(
+      Date.parse(
+        value,
+      ),
+    )
+  );
+}
+
+function isBranchAccessGrant(
+  value: unknown,
+): value is FinoraControlBranchAccessGrant {
+
   if (!isRecord(value)) {
     return false;
   }
 
   if (
-    value.version !== CONTROL_STORE_VERSION ||
-    (
-      value.installation !== undefined &&
-      !isInstallationIdentity(value.installation)
+    value.schemaVersion !==
+      1 ||
+    !isNonEmptyString(
+      value.grantId,
     ) ||
-    !Array.isArray(value.activations) ||
-    !Array.isArray(value.storageEntitlements) ||
-    !isNonEmptyString(value.updatedAt)
+    !isNonEmptyString(
+      value.userId,
+    ) ||
+    !isNonEmptyString(
+      value.ownerId,
+    ) ||
+    !isNonEmptyString(
+      value.businessId,
+    ) ||
+    !isNonEmptyString(
+      value.branchId,
+    ) ||
+    (
+      value.administrativeStatus !==
+        "ACTIVE" &&
+      value.administrativeStatus !==
+        "SUSPENDED" &&
+      value.administrativeStatus !==
+        "REVOKED"
+    ) ||
+    !isRecord(
+      value.validity,
+    ) ||
+    !isControlTimestamp(
+      value.validity.validFrom,
+    ) ||
+    !isControlTimestamp(
+      value.validity.validUntil,
+    ) ||
+    !isControlTimestamp(
+      value.createdAt,
+    ) ||
+    !isControlTimestamp(
+      value.updatedAt,
+    ) ||
+    !isOptionalString(
+      value.demoRemarks,
+    )
   ) {
     return false;
   }
 
-  if (!value.activations.every(isBranchActivation)) {
+  const validFrom =
+    Date.parse(
+      value.validity.validFrom,
+    );
+
+  const validUntil =
+    Date.parse(
+      value.validity.validUntil,
+    );
+
+  if (
+    validUntil <=
+      validFrom
+  ) {
     return false;
   }
 
-  if (!value.storageEntitlements.every(isStorageEntitlement)) {
+
+  // ----------------------------------------------------------
+  // REGISTERED
+  // ----------------------------------------------------------
+
+  if (
+    value.accessType ===
+      "REGISTERED"
+  ) {
+
+    const registrationDuration =
+      365 *
+      24 *
+      60 *
+      60 *
+      1000;
+
+    if (
+      validUntil -
+        validFrom !==
+          registrationDuration ||
+      !Number.isSafeInteger(
+        value.registrationCycle,
+      ) ||
+      (
+        value.registrationCycle as number
+      ) <=
+        0 ||
+      !isRecord(
+        value.registrationPayment,
+      ) ||
+      value.demoId !==
+        undefined
+    ) {
+      return false;
+    }
+
+    const payment =
+      value.registrationPayment;
+
+    return (
+      payment.amount ===
+        2000 &&
+      payment.currency ===
+        "INR" &&
+      (
+        payment.paymentMode ===
+          "CASH" ||
+        payment.paymentMode ===
+          "UPI" ||
+        payment.paymentMode ===
+          "BANK_TRANSFER" ||
+        payment.paymentMode ===
+          "OTHER"
+      ) &&
+      isControlTimestamp(
+        payment.paidAt,
+      ) &&
+      isOptionalString(
+        payment.reference,
+      ) &&
+      isOptionalString(
+        payment.remarks,
+      ) &&
+      payment.refundable ===
+        false
+    );
+  }
+
+
+  // ----------------------------------------------------------
+  // DEMO
+  // ----------------------------------------------------------
+
+  if (
+    value.accessType ===
+      "DEMO"
+  ) {
+
+    return (
+      isNonEmptyString(
+        value.demoId,
+      ) &&
+      value.registrationPayment ===
+        undefined &&
+      value.registrationCycle ===
+        undefined
+    );
+  }
+
+
+  return false;
+}
+
+function isAppliedControlPackageRecord(
+  value: unknown,
+): value is FinoraControlAppliedPackageRecord {
+
+  return (
+    isRecord(value) &&
+    isNonEmptyString(
+      value.packageId,
+    ) &&
+    isNonEmptyString(
+      value.issuerId,
+    ) &&
+    isNonEmptyString(
+      value.purpose,
+    ) &&
+    Number.isSafeInteger(
+      value.sequence,
+    ) &&
+    (
+      value.sequence as number
+    ) >
+      0 &&
+    isNonEmptyString(
+      value.ownerId,
+    ) &&
+    isNonEmptyString(
+      value.businessId,
+    ) &&
+    isNonEmptyString(
+      value.branchId,
+    ) &&
+    isNonEmptyString(
+      value.installationId,
+    ) &&
+    isControlTimestamp(
+      value.appliedAt,
+    )
+  );
+}
+
+function isControlSequenceStateRecord(
+  value: unknown,
+): value is FinoraControlSequenceStateRecord {
+
+  return (
+    isRecord(value) &&
+    isNonEmptyString(
+      value.issuerId,
+    ) &&
+    isNonEmptyString(
+      value.purpose,
+    ) &&
+    isNonEmptyString(
+      value.ownerId,
+    ) &&
+    isNonEmptyString(
+      value.businessId,
+    ) &&
+    isNonEmptyString(
+      value.branchId,
+    ) &&
+    isNonEmptyString(
+      value.installationId,
+    ) &&
+    Number.isSafeInteger(
+      value.lastSequence,
+    ) &&
+    (
+      value.lastSequence as number
+    ) >
+      0 &&
+    isControlTimestamp(
+      value.updatedAt,
+    )
+  );
+}
+
+function hasDuplicateBranchAccessKeys(
+  grants:
+    FinoraControlBranchAccessGrant[],
+): boolean {
+
+  const keys =
+    new Set<string>();
+
+  for (const grant of grants) {
+
+    const key = [
+      grant.userId,
+      grant.ownerId,
+      grant.businessId,
+      grant.branchId,
+    ].join("::");
+
+    if (keys.has(key)) {
+      return true;
+    }
+
+    keys.add(key);
+  }
+
+  return false;
+}
+
+function hasDuplicateAppliedPackageIds(
+  records:
+    FinoraControlAppliedPackageRecord[],
+): boolean {
+
+  const packageIds =
+    new Set<string>();
+
+  for (const record of records) {
+
+    if (
+      packageIds.has(
+        record.packageId,
+      )
+    ) {
+      return true;
+    }
+
+    packageIds.add(
+      record.packageId,
+    );
+  }
+
+  return false;
+}
+
+function hasDuplicateControlSequenceKeys(
+  records:
+    FinoraControlSequenceStateRecord[],
+): boolean {
+
+  const keys =
+    new Set<string>();
+
+  for (const record of records) {
+
+    const key = [
+      record.issuerId,
+      record.purpose,
+      record.ownerId,
+      record.businessId,
+      record.branchId,
+      record.installationId,
+    ].join("::");
+
+    if (keys.has(key)) {
+      return true;
+    }
+
+    keys.add(key);
+  }
+
+  return false;
+}
+
+function isControlStorePackage(
+  value: unknown,
+): value is FinoraControlStorePackage {
+
+  if (!isRecord(value)) {
     return false;
   }
 
-  if (hasDuplicateActivationKeys(value.activations)) {
+  if (
+    value.version !==
+      CONTROL_STORE_VERSION ||
+    (
+      value.installation !==
+        undefined &&
+      !isInstallationIdentity(
+        value.installation,
+      )
+    ) ||
+    !Array.isArray(
+      value.activations,
+    ) ||
+    !Array.isArray(
+      value.storageEntitlements,
+    ) ||
+    !isNonEmptyString(
+      value.updatedAt,
+    )
+  ) {
     return false;
   }
 
-  if (hasDuplicateEntitlementKeys(value.storageEntitlements)) {
+
+  // ----------------------------------------------------------
+  // EXISTING STATE
+  // ----------------------------------------------------------
+
+  if (
+    !value.activations.every(
+      isBranchActivation,
+    )
+  ) {
     return false;
   }
+
+  if (
+    !value.storageEntitlements.every(
+      isStorageEntitlement,
+    )
+  ) {
+    return false;
+  }
+
+  if (
+    hasDuplicateActivationKeys(
+      value.activations,
+    )
+  ) {
+    return false;
+  }
+
+  if (
+    hasDuplicateEntitlementKeys(
+      value.storageEntitlements,
+    )
+  ) {
+    return false;
+  }
+
+
+  // ----------------------------------------------------------
+  // SIGNED BRANCH ACCESS STATE
+  // ----------------------------------------------------------
+
+  const branchAccessGrants =
+    value.branchAccessGrants;
+
+  if (
+    branchAccessGrants !==
+      undefined
+  ) {
+
+    if (
+      !Array.isArray(
+        branchAccessGrants,
+      ) ||
+      !branchAccessGrants.every(
+        isBranchAccessGrant,
+      ) ||
+      hasDuplicateBranchAccessKeys(
+        branchAccessGrants,
+      )
+    ) {
+      return false;
+    }
+  }
+
+
+  // ----------------------------------------------------------
+  // REPLAY LEDGER
+  // ----------------------------------------------------------
+
+  const appliedControlPackages =
+    value.appliedControlPackages;
+
+  if (
+    appliedControlPackages !==
+      undefined
+  ) {
+
+    if (
+      !Array.isArray(
+        appliedControlPackages,
+      ) ||
+      !appliedControlPackages.every(
+        isAppliedControlPackageRecord,
+      ) ||
+      hasDuplicateAppliedPackageIds(
+        appliedControlPackages,
+      )
+    ) {
+      return false;
+    }
+  }
+
+
+  // ----------------------------------------------------------
+  // MONOTONIC SEQUENCES
+  // ----------------------------------------------------------
+
+  const controlSequences =
+    value.controlSequences;
+
+  if (
+    controlSequences !==
+      undefined
+  ) {
+
+    if (
+      !Array.isArray(
+        controlSequences,
+      ) ||
+      !controlSequences.every(
+        isControlSequenceStateRecord,
+      ) ||
+      hasDuplicateControlSequenceKeys(
+        controlSequences,
+      )
+    ) {
+      return false;
+    }
+  }
+
 
   return true;
 }
-
 // ============================================================
 // DEFAULT PACKAGE
 // ============================================================
 
 function createEmptyControlStore():
   FinoraControlStorePackage {
+
   return {
-    version: CONTROL_STORE_VERSION,
+    version:
+      CONTROL_STORE_VERSION,
 
-    activations: [],
+    activations:
+      [],
 
-    storageEntitlements: [],
+    storageEntitlements:
+      [],
 
-    updatedAt: new Date().toISOString(),
+    branchAccessGrants:
+      [],
+
+    appliedControlPackages:
+      [],
+
+    controlSequences:
+      [],
+
+    updatedAt:
+      new Date()
+        .toISOString(),
   };
 }
-
 // ============================================================
 // FILE PATH
 // ============================================================
@@ -1096,5 +1694,545 @@ export async function hasActiveFinoraStorageEntitlement(
 }
 
 // ============================================================
+// ============================================================
+// VERIFIED BRANCH ACTIVATION ATOMIC APPLY
+// ============================================================
+
+export interface FinoraVerifiedBranchActivationApplyInput {
+
+  packageId:
+    string;
+
+  issuerId:
+    string;
+
+  purpose:
+    "BRANCH_ACTIVATION";
+
+  sequence:
+    number;
+
+  target: {
+    ownerId:
+      string;
+
+    businessId:
+      string;
+
+    branchId:
+      string;
+
+    installationId:
+      string;
+  };
+
+  activation:
+    FinoraControlBranchActivation;
+
+  accessGrant:
+    FinoraControlBranchAccessGrant;
+
+  appliedAt:
+    string;
+}
+
+export interface FinoraVerifiedBranchActivationApplyResult {
+
+  activation:
+    FinoraControlBranchActivation;
+
+  accessGrant:
+    FinoraControlBranchAccessGrant;
+}
+
+/**
+ * Serializes verified activation mutations inside this process.
+ *
+ * Replay evaluation and encrypted persistence therefore execute
+ * against the latest committed state rather than racing two
+ * concurrent imports.
+ */
+let branchActivationApplyQueue:
+  Promise<void> =
+    Promise.resolve();
+
+async function applyVerifiedBranchActivationInternal(
+  input:
+    FinoraVerifiedBranchActivationApplyInput,
+): Promise<
+  FinoraControlStoreResult<
+    FinoraVerifiedBranchActivationApplyResult
+  >
+> {
+
+  if (
+    !isNonEmptyString(
+      input.packageId,
+    ) ||
+    !isNonEmptyString(
+      input.issuerId,
+    ) ||
+    input.purpose !==
+      "BRANCH_ACTIVATION" ||
+    !Number.isSafeInteger(
+      input.sequence,
+    ) ||
+    input.sequence <=
+      0 ||
+    !isControlTimestamp(
+      input.appliedAt,
+    ) ||
+    !isBranchActivation(
+      input.activation,
+    ) ||
+    !isBranchAccessGrant(
+      input.accessGrant,
+    )
+  ) {
+    return failure(
+      "A valid verified FINORA Branch Activation package is required.",
+    );
+  }
+
+
+  // ----------------------------------------------------------
+  // LOAD AUTHORITATIVE ENCRYPTED STATE
+  // ----------------------------------------------------------
+
+  const currentResult =
+    await readFinoraControlStore();
+
+  if (
+    !currentResult.success ||
+    !currentResult.data
+  ) {
+    return failure(
+      currentResult.error ??
+        "Unable to load the FINORA Control Store.",
+    );
+  }
+
+  const controlStore =
+    currentResult.data;
+
+  const installation =
+    controlStore.installation;
+
+
+  // ----------------------------------------------------------
+  // INSTALLATION TARGET BINDING
+  // ----------------------------------------------------------
+
+  if (
+    !installation ||
+    installation.installationId !==
+      input.target.installationId ||
+    installation.ownerId !==
+      input.target.ownerId ||
+    installation.businessId !==
+      input.target.businessId ||
+    installation.branchId !==
+      input.target.branchId
+  ) {
+    return failure(
+      "FINORA Branch Activation target does not match this installation.",
+    );
+  }
+
+
+  // ----------------------------------------------------------
+  // DOMAIN TARGET BINDING
+  // ----------------------------------------------------------
+
+  if (
+    input.activation.ownerId !==
+      input.target.ownerId ||
+    input.activation.businessId !==
+      input.target.businessId ||
+    input.activation.branchId !==
+      input.target.branchId ||
+    input.accessGrant.ownerId !==
+      input.target.ownerId ||
+    input.accessGrant.businessId !==
+      input.target.businessId ||
+    input.accessGrant.branchId !==
+      input.target.branchId
+  ) {
+    return failure(
+      "FINORA verified activation payload identity does not match its target.",
+    );
+  }
+
+
+  // ----------------------------------------------------------
+  // REPLAY / MONOTONIC SEQUENCE
+  // ----------------------------------------------------------
+
+  const appliedPackages =
+    controlStore.appliedControlPackages ??
+    [];
+
+  const sequenceStates =
+    controlStore.controlSequences ??
+    [];
+
+  const replayDecision =
+    evaluateFinoraControlReplay(
+      {
+        packageId:
+          input.packageId,
+
+        issuerId:
+          input.issuerId,
+
+        purpose:
+          input.purpose,
+
+        sequence:
+          input.sequence,
+
+        ownerId:
+          input.target.ownerId,
+
+        businessId:
+          input.target.businessId,
+
+        branchId:
+          input.target.branchId,
+
+        installationId:
+          input.target.installationId,
+      },
+      appliedPackages,
+      sequenceStates,
+    );
+
+  if (!replayDecision.accepted) {
+    return failure(
+      `${replayDecision.reason}: ${replayDecision.error}`,
+    );
+  }
+
+
+  // ----------------------------------------------------------
+  // ACTIVATION
+  //
+  // Activation identity remains immutable for this branch.
+  // Commercial REGISTERED / DEMO grants may be replaced through
+  // newer signed packages.
+  // ----------------------------------------------------------
+
+  const activationIndex =
+    controlStore.activations.findIndex(
+      (item) =>
+        item.ownerId ===
+          input.activation.ownerId &&
+        item.businessId ===
+          input.activation.businessId &&
+        item.branchId ===
+          input.activation.branchId,
+    );
+
+  if (activationIndex >= 0) {
+
+    const existingActivation =
+      controlStore.activations[
+        activationIndex
+      ];
+
+    if (
+      !existingActivation ||
+      existingActivation.activationId !==
+        input.activation.activationId
+    ) {
+      return failure(
+        "FINORA branch activation identity cannot be replaced.",
+      );
+    }
+
+    controlStore.activations[
+      activationIndex
+    ] =
+      input.activation;
+
+  } else {
+
+    controlStore.activations.push(
+      input.activation,
+    );
+  }
+
+
+  // ----------------------------------------------------------
+  // CURRENT ACCESS GRANT
+  // ----------------------------------------------------------
+
+  const accessGrants =
+    controlStore.branchAccessGrants ??
+    [];
+
+  const accessIndex =
+    accessGrants.findIndex(
+      (item) =>
+        item.userId ===
+          input.accessGrant.userId &&
+        item.ownerId ===
+          input.accessGrant.ownerId &&
+        item.businessId ===
+          input.accessGrant.businessId &&
+        item.branchId ===
+          input.accessGrant.branchId,
+    );
+
+  if (accessIndex >= 0) {
+
+    accessGrants[
+      accessIndex
+    ] =
+      input.accessGrant;
+
+  } else {
+
+    accessGrants.push(
+      input.accessGrant,
+    );
+  }
+
+
+  // ----------------------------------------------------------
+  // REPLAY LEDGER
+  // ----------------------------------------------------------
+
+  appliedPackages.push({
+    packageId:
+      input.packageId,
+
+    issuerId:
+      input.issuerId,
+
+    purpose:
+      input.purpose,
+
+    sequence:
+      input.sequence,
+
+    ownerId:
+      input.target.ownerId,
+
+    businessId:
+      input.target.businessId,
+
+    branchId:
+      input.target.branchId,
+
+    installationId:
+      input.target.installationId,
+
+    appliedAt:
+      input.appliedAt,
+  });
+
+
+  // ----------------------------------------------------------
+  // MONOTONIC SEQUENCE STATE
+  // ----------------------------------------------------------
+
+  const sequenceIndex =
+    sequenceStates.findIndex(
+      (item) =>
+        item.issuerId ===
+          input.issuerId &&
+        item.purpose ===
+          input.purpose &&
+        item.ownerId ===
+          input.target.ownerId &&
+        item.businessId ===
+          input.target.businessId &&
+        item.branchId ===
+          input.target.branchId &&
+        item.installationId ===
+          input.target.installationId,
+    );
+
+  const nextSequenceState:
+    FinoraControlSequenceStateRecord = {
+
+      issuerId:
+        input.issuerId,
+
+      purpose:
+        input.purpose,
+
+      ownerId:
+        input.target.ownerId,
+
+      businessId:
+        input.target.businessId,
+
+      branchId:
+        input.target.branchId,
+
+      installationId:
+        input.target.installationId,
+
+      lastSequence:
+        input.sequence,
+
+      updatedAt:
+        input.appliedAt,
+    };
+
+  if (sequenceIndex >= 0) {
+
+    sequenceStates[
+      sequenceIndex
+    ] =
+      nextSequenceState;
+
+  } else {
+
+    sequenceStates.push(
+      nextSequenceState,
+    );
+  }
+
+
+  // ----------------------------------------------------------
+  // ONE AUTHORITATIVE STATE OBJECT
+  // ----------------------------------------------------------
+
+  controlStore.branchAccessGrants =
+    accessGrants;
+
+  controlStore.appliedControlPackages =
+    appliedPackages;
+
+  controlStore.controlSequences =
+    sequenceStates;
+
+  controlStore.updatedAt =
+    input.appliedAt;
+
+
+  // ----------------------------------------------------------
+  // ONE ENCRYPTED ATOMIC FILE REPLACEMENT
+  //
+  // activation + access grant + replay ledger + sequence are
+  // validated and persisted as one Control Store package.
+  // ----------------------------------------------------------
+
+  try {
+
+    await persistControlStorePackage(
+      controlStore,
+    );
+
+  } catch (error) {
+
+    return failure(
+      error instanceof Error
+        ? error.message
+        : "Unable to atomically persist verified FINORA control state.",
+    );
+  }
+
+
+  return success({
+    activation:
+      input.activation,
+
+    accessGrant:
+      input.accessGrant,
+  });
+}
+
+export function applyFinoraVerifiedBranchActivationState(
+  input:
+    FinoraVerifiedBranchActivationApplyInput,
+): Promise<
+  FinoraControlStoreResult<
+    FinoraVerifiedBranchActivationApplyResult
+  >
+> {
+
+  const operation =
+    branchActivationApplyQueue.then(
+      () =>
+        applyVerifiedBranchActivationInternal(
+          input,
+        ),
+      () =>
+        applyVerifiedBranchActivationInternal(
+          input,
+        ),
+    );
+
+  branchActivationApplyQueue =
+    operation.then(
+      () =>
+        undefined,
+      () =>
+        undefined,
+    );
+
+  return operation;
+}
+
+// ============================================================
+// FIND CURRENT BRANCH ACCESS GRANT
+// ============================================================
+
+export async function findFinoraBranchAccessGrant(
+  userId:
+    string,
+
+  ownerId:
+    string,
+
+  businessId:
+    string,
+
+  branchId:
+    string,
+): Promise<
+  FinoraControlStoreResult<
+    FinoraControlBranchAccessGrant |
+    undefined
+  >
+> {
+
+  const currentResult =
+    await readFinoraControlStore();
+
+  if (
+    !currentResult.success ||
+    !currentResult.data
+  ) {
+    return failure(
+      currentResult.error ??
+        "Unable to load the FINORA Control Store.",
+    );
+  }
+
+  const accessGrant =
+    currentResult.data
+      .branchAccessGrants
+      ?.find(
+        (item) =>
+          item.userId ===
+            userId &&
+          item.ownerId ===
+            ownerId &&
+          item.businessId ===
+            businessId &&
+          item.branchId ===
+            branchId,
+      );
+
+  return success(
+    accessGrant,
+  );
+}
+
 // END
 // ============================================================
