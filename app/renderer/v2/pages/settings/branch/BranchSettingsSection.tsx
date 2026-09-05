@@ -7,7 +7,7 @@
 // RESPONSIBILITY:
 //
 // - Resolve the active FINORA Business Context
-// - Load active Business Identity and Branch Settings
+// - Resolve signed Business Profile identity and Branch Settings
 // - Own editable Branch Settings form state
 // - Persist Branch Settings through the service boundary
 // - Surface photo, loading, success and failure feedback
@@ -33,8 +33,8 @@ import {
 } from "react";
 
 import type {
-  BusinessIdentity,
-} from "../../../types/business/business.identity.types";
+  FinoraProvisionedBusinessProfileV1,
+} from "../../../types/business/finoraBusinessProfileControl.types";
 
 import type {
   BranchSettings,
@@ -43,10 +43,6 @@ import type {
 import {
   getBusinessContext,
 } from "../../../services/business/businessContextService";
-
-import {
-  loadBusinessIdentity,
-} from "../../../services/business/businessService";
 
 import {
   branchSettingsService,
@@ -79,8 +75,8 @@ export default function BranchSettingsSection() {
     identity,
     setIdentity,
   ] = useState<
-    BusinessIdentity | null
-  >(null);
+      FinoraProvisionedBusinessProfileV1 | null
+    >(null);
 
   const [
     settings,
@@ -135,7 +131,8 @@ export default function BranchSettingsSection() {
           getBusinessContext();
 
         if (
-          !context?.businessId ||
+          !context?.ownerId ||
+          !context.businessId ||
           !context.branchId
         ) {
 
@@ -160,89 +157,69 @@ export default function BranchSettingsSection() {
           return;
         }
 
-        const [
-          identityResult,
-          settingsResult,
-        ] = await Promise.all([
-          loadBusinessIdentity(
-            context.businessId,
-          ),
+        const profile =
+          context.businessProfile;
 
-          branchSettingsService.load(
+        if (!profile) {
+
+          if (active) {
+
+            setFeedback({
+              kind:
+                "danger",
+
+              title:
+                "Signed Branch Profile Unavailable",
+
+              message:
+                "The authoritative FINORA Business Profile is unavailable for this branch.",
+            });
+
+            setLoading(
+              false,
+            );
+          }
+
+          return;
+        }
+
+        if (
+          profile.ownerId !==
+            context.ownerId ||
+          profile.businessId !==
+            context.businessId ||
+          profile.branchId !==
+            context.branchId
+        ) {
+
+          if (active) {
+
+            setFeedback({
+              kind:
+                "danger",
+
+              title:
+                "Branch Profile Mismatch",
+
+              message:
+                "The signed FINORA Business Profile does not match the active branch context.",
+            });
+
+            setLoading(
+              false,
+            );
+          }
+
+          return;
+        }
+
+        const settingsResult =
+          await branchSettingsService.load(
             context.businessId,
             context.branchId,
-          ),
-        ]);
+          );
 
         if (!active) {
-          return;
-        }
-
-        if (
-          !identityResult.success
-        ) {
-
-          setFeedback({
-            kind:
-              "danger",
-
-            title:
-              "Unable to Load Branch Identity",
-
-            message:
-              identityResult.error ??
-              "Business Identity could not be loaded.",
-          });
-
-          setLoading(
-            false,
-          );
-
-          return;
-        }
-
-        if (
-          !identityResult.data
-        ) {
-
-          setFeedback({
-            kind:
-              "danger",
-
-            title:
-              "Branch Identity Missing",
-
-            message:
-              "No Business Identity exists for the active FINORA branch.",
-          });
-
-          setLoading(
-            false,
-          );
-
-          return;
-        }
-
-        if (
-          identityResult.data.branchId !==
-          context.branchId
-        ) {
-
-          setFeedback({
-            kind:
-              "danger",
-
-            title:
-              "Branch Context Mismatch",
-
-            message:
-              "The active branch does not match the loaded Business Identity.",
-          });
-
-          setLoading(
-            false,
-          );
-
           return;
         }
 
@@ -270,7 +247,7 @@ export default function BranchSettingsSection() {
         }
 
         setIdentity(
-          identityResult.data,
+          profile,
         );
 
         setSettings(

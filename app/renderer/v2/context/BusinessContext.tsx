@@ -20,9 +20,9 @@
 // - Does NOT access localStorage.
 // - Does NOT access filesystem.
 // - Does NOT use Electron IPC.
-// - Does NOT load BusinessIdentity automatically.
+// - Does NOT load legacy mutable business identity records automatically.
 // - CollectionContext remains separate.
-// - BusinessIdentity remains a persisted domain model.
+// - Legacy mutable business identity storage remains compatibility-only.
 //
 // ARCHITECTURE:
 //
@@ -153,9 +153,9 @@ export function BusinessContextProvider({
           result.success
         ) {
 
-          setReactContext({
-            ...nextContext,
-          });
+          setReactContext(
+            getBusinessContext(),
+          );
         }
 
         return result;
@@ -183,9 +183,9 @@ export function BusinessContextProvider({
           result.success
         ) {
 
-          setReactContext({
-            ...nextContext,
-          });
+          setReactContext(
+            getBusinessContext(),
+          );
         }
 
         return result;

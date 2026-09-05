@@ -22,9 +22,9 @@
 // - No storage logic.
 // - No business calculations.
 //
-// BUSINESS IDENTITY IS KEPT SEPARATE:
+// BUSINESS IDENTITY AUTHORITY IS KEPT SEPARATE:
 //
-// BusinessIdentity
+// Signed FINORA Business Profile
 // - ownerId
 // - businessId
 // - businessName
@@ -49,7 +49,7 @@
 
 import type {
   BusinessId,
-} from "./business.identity.types";
+} from "./business.scope.types";
 
 // ============================================================
 // BUSINESS SETTINGS

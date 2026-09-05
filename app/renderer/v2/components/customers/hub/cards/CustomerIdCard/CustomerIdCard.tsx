@@ -79,7 +79,8 @@ export default function CustomerIdCard({
 
   void compact;
 
-  const resolvedCompanyName = companyName?.trim() || BRAND_NAME;
+  const resolvedCompanyName =
+    companyName?.trim() ?? "";
 
   /* =========================================================
      RESPONSIVE TOKEN CONTRACT

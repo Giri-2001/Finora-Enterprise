@@ -350,6 +350,41 @@ accessType:
 
   schemaVersion: 1;
 }
+interface FinoraControlBusinessProfileView {
+
+  profileId: string;
+
+  ownerId: string;
+
+  businessId: string;
+
+  branchId: string;
+
+  businessCode: string;
+
+  branchCode: string;
+
+  businessName: string;
+
+  branchName: string;
+
+  createdAt: string;
+
+  updatedAt: string;
+
+  schemaVersion: 1;
+}
+
+
+interface FindBusinessProfileRequest {
+
+  ownerId: string;
+
+  businessId: string;
+
+  branchId: string;
+}
+
 interface FindBranchActivationRequest {
   ownerId: string;
 
@@ -399,6 +434,16 @@ interface FinoraControlBridge {
         >
       >;
 
+  findBusinessProfile:
+    (
+      request:
+        FindBusinessProfileRequest,
+    ) =>
+      Promise<
+        StorageResult<
+          FinoraControlBusinessProfileView | undefined
+        >
+      >;
   findBranchAccessGrant:
     (
       request:
@@ -656,6 +701,8 @@ const CONTROL_CHANNELS = {
 
   FIND_BRANCH_ACCESS_GRANT:
     "finora:control:find-branch-access-grant",
+  FIND_BUSINESS_PROFILE:
+    "finora:control:find-business-profile",
   HAS_ACTIVE_STORAGE_ENTITLEMENT:
     "finora:control:has-active-storage-entitlement",
 
@@ -984,6 +1031,26 @@ const controlBridge:
   // ----------------------------------------------------------
   // BRANCH ACCESS GRANT
   // ----------------------------------------------------------
+
+  // ----------------------------------------------------------
+  // PROVISIONED BUSINESS PROFILE
+  //
+  // READ ONLY.
+  // ----------------------------------------------------------
+
+  findBusinessProfile:
+    (
+      request:
+        FindBusinessProfileRequest,
+    ) =>
+      ipcRenderer.invoke(
+        CONTROL_CHANNELS.FIND_BUSINESS_PROFILE,
+        request,
+      ) as Promise<
+        StorageResult<
+          FinoraControlBusinessProfileView | undefined
+        >
+      >,
 
   findBranchAccessGrant:
     (

@@ -148,11 +148,15 @@ function getAuthenticatedStorageMode(): StorageMode {
 
 interface CustomerDepartmentProps {
   companyName?: string;
+
+  branchName?: string;
 }
 
 
 export default function CustomerDepartment({
   companyName,
+
+  branchName,
 }: CustomerDepartmentProps) {
   // ==========================================================
   // CUSTOMER WIZARD STATE
@@ -483,6 +487,7 @@ export default function CustomerDepartment({
             <CustomerOfficeController
               customers={customers}
               companyName={companyName}
+              branchName={branchName}
               onOpenCustomerWizard={handleOpenCustomerWizard}
               onEditCustomer={handleEditCustomer}
             />

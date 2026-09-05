@@ -6,11 +6,9 @@
 //
 // RESPONSIBILITY:
 //
-// - Persist BusinessIdentity through StorageManager
 // - Persist BusinessSettings through StorageManager
 // - Keep Business domain models unchanged
-// - Use businessId as the persistent identity for both
-//   BusinessIdentity and BusinessSettings records
+// - Use businessId as the persistent identity for BusinessSettings records
 // - Keep physical storage implementation outside Business domain
 // - Prepare Business domain persistence for LOCAL / USB / CLOUD
 //
@@ -32,9 +30,6 @@
 // IMPORTS
 // ============================================================
 
-import type {
-  BusinessIdentity,
-} from "../../types/business/business.identity.types";
 
 import type {
   BusinessSettings,
@@ -57,31 +52,9 @@ import type {
 // CONSTANTS
 // ============================================================
 
-const BUSINESS_IDENTITY_ENTITY =
-  "BUSINESS_IDENTITY";
 
 const BUSINESS_SETTINGS_ENTITY =
   "BUSINESS_SETTINGS";
-
-// ============================================================
-// BUSINESS IDENTITY STORAGE RECORD
-//
-// StorageManager requires a stable top-level string ID.
-//
-// Business Identity domain code continues using:
-//
-// businessIdentity.businessId
-//
-// The top-level `id` exists only at the storage boundary.
-// ============================================================
-
-interface BusinessIdentityStorageRecord
-  extends BusinessIdentity {
-
-  id: string;
-
-  entity: typeof BUSINESS_IDENTITY_ENTITY;
-}
 
 // ============================================================
 // BUSINESS SETTINGS STORAGE RECORD
@@ -101,45 +74,6 @@ interface BusinessSettingsStorageRecord
   id: string;
 
   entity: typeof BUSINESS_SETTINGS_ENTITY;
-}
-
-// ============================================================
-// BUSINESS IDENTITY STORAGE RECORD BUILDER
-// ============================================================
-
-function toIdentityStorageRecord(
-  identity: BusinessIdentity,
-): BusinessIdentityStorageRecord {
-
-  return {
-
-    ...identity,
-
-    id:
-      identity.businessId,
-
-    entity:
-      BUSINESS_IDENTITY_ENTITY,
-  };
-}
-
-// ============================================================
-// BUSINESS IDENTITY MAPPER
-// ============================================================
-
-function fromIdentityStorageRecord(
-  record: BusinessIdentityStorageRecord,
-): BusinessIdentity {
-
-  const {
-    id: _storageId,
-
-    entity: _storageEntity,
-
-    ...identity
-  } = record;
-
-  return identity;
 }
 
 // ============================================================
@@ -182,24 +116,6 @@ function fromSettingsStorageRecord(
 }
 
 // ============================================================
-// BUSINESS IDENTITY QUERY BUILDER
-// ============================================================
-
-function buildBusinessIdentityQuery(
-  businessId?: string,
-): StorageQuery {
-
-  return {
-
-    entity:
-      BUSINESS_IDENTITY_ENTITY,
-
-    id:
-      businessId,
-  };
-}
-
-// ============================================================
 // BUSINESS SETTINGS QUERY BUILDER
 // ============================================================
 
@@ -222,333 +138,6 @@ function buildBusinessSettingsQuery(
 // ============================================================
 
 export class BusinessRepository {
-
-  // ==========================================================
-  // BUSINESS IDENTITY
-  // ==========================================================
-
-  // ==========================================================
-  // FIND BUSINESS IDENTITY
-  // ==========================================================
-
-  async findIdentityByBusinessId(
-    businessId: string,
-  ): Promise<
-    StorageResult<
-      BusinessIdentity | undefined
-    >
-  > {
-
-    if (!businessId) {
-
-      return {
-
-        success: false,
-
-        error:
-          "Business ID is required.",
-      };
-    }
-
-    const result =
-      await storageManager.get<
-        BusinessIdentityStorageRecord
-      >(
-        buildBusinessIdentityQuery(
-          businessId,
-        ),
-      );
-
-    if (!result.success) {
-
-      return {
-
-        success: false,
-
-        error:
-          result.error ??
-          "Unable to load business identity.",
-      };
-    }
-
-    if (!result.data) {
-
-      return {
-
-        success: true,
-
-        data:
-          undefined,
-      };
-    }
-
-    return {
-
-      success: true,
-
-      data:
-        fromIdentityStorageRecord(
-          result.data,
-        ),
-    };
-  }
-
-  // ==========================================================
-  // SAVE BUSINESS IDENTITY
-  // ==========================================================
-
-  async saveIdentity(
-    identity: BusinessIdentity,
-    options?: RepositoryWriteOptions,
-  ): Promise<
-    StorageResult<BusinessIdentity>
-  > {
-
-    const businessId =
-      identity.businessId;
-
-    if (!businessId) {
-
-      return {
-
-        success: false,
-
-        error:
-          "Business ID is required before saving business identity.",
-      };
-    }
-
-    const existing =
-      await this.findIdentityByBusinessId(
-        businessId,
-      );
-
-    if (
-      existing.success &&
-      existing.data
-    ) {
-
-      return {
-
-        success: false,
-
-        error:
-          "Business identity already exists for this business.",
-      };
-    }
-
-    if (!existing.success) {
-
-      return {
-
-        success: false,
-
-        error:
-          existing.error ??
-          "Unable to verify existing business identity.",
-      };
-    }
-
-    const storageRecord =
-      toIdentityStorageRecord(
-        identity,
-      );
-
-    const result =
-      await storageManager.save<
-        BusinessIdentityStorageRecord
-      >(
-        storageRecord,
-        options,
-      );
-
-    if (!result.success) {
-
-      return {
-
-        success: false,
-
-        error:
-          result.error ??
-          "Unable to save business identity.",
-      };
-    }
-
-    return {
-
-      success: true,
-
-      data:
-        identity,
-    };
-  }
-
-  // ==========================================================
-  // UPDATE BUSINESS IDENTITY
-  // ==========================================================
-
-  async updateIdentity(
-    identity: BusinessIdentity,
-    options?: RepositoryWriteOptions,
-  ): Promise<
-    StorageResult<BusinessIdentity>
-  > {
-
-    const businessId =
-      identity.businessId;
-
-    if (!businessId) {
-
-      return {
-
-        success: false,
-
-        error:
-          "Business ID is required before updating business identity.",
-      };
-    }
-
-    const storageRecord =
-      toIdentityStorageRecord(
-        identity,
-      );
-
-    const result =
-      await storageManager.update<
-        BusinessIdentityStorageRecord
-      >(
-        storageRecord,
-        options,
-      );
-
-    if (!result.success) {
-
-      return {
-
-        success: false,
-
-        error:
-          result.error ??
-          "Unable to update business identity.",
-      };
-    }
-
-    return {
-
-      success: true,
-
-      data:
-        identity,
-    };
-  }
-
-  // ==========================================================
-  // SAVE OR UPDATE BUSINESS IDENTITY
-  //
-  // Existing record:
-  // UPDATE
-  //
-  // Missing record:
-  // SAVE
-  // ==========================================================
-
-  async saveOrUpdateIdentity(
-    identity: BusinessIdentity,
-    options?: RepositoryWriteOptions,
-  ): Promise<
-    StorageResult<BusinessIdentity>
-  > {
-
-    const businessId =
-      identity.businessId;
-
-    if (!businessId) {
-
-      return {
-
-        success: false,
-
-        error:
-          "Business ID is required before saving business identity.",
-      };
-    }
-
-    const existing =
-      await this.findIdentityByBusinessId(
-        businessId,
-      );
-
-    if (!existing.success) {
-
-      return {
-
-        success: false,
-
-        error:
-          existing.error ??
-          "Unable to verify business identity.",
-      };
-    }
-
-    if (existing.data) {
-
-      return this.updateIdentity(
-        identity,
-        options,
-      );
-    }
-
-    return this.saveIdentity(
-      identity,
-      options,
-    );
-  }
-
-  // ==========================================================
-  // DELETE BUSINESS IDENTITY
-  // ==========================================================
-
-  async deleteIdentity(
-    businessId: string,
-  ): Promise<
-    StorageResult<void>
-  > {
-
-    if (!businessId) {
-
-      return {
-
-        success: false,
-
-        error:
-          "Business ID is required before deleting business identity.",
-      };
-    }
-
-    const result =
-      await storageManager.delete(
-        buildBusinessIdentityQuery(
-          businessId,
-        ),
-      );
-
-    if (!result.success) {
-
-      return {
-
-        success: false,
-
-        error:
-          result.error ??
-          "Unable to delete business identity.",
-      };
-    }
-
-    return {
-
-      success: true,
-    };
-  }
 
   // ==========================================================
   // BUSINESS SETTINGS

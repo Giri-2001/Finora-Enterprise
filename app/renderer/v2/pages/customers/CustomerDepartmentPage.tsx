@@ -13,8 +13,8 @@ import {
 import CustomerDepartment from "../../components/customers/hub/CustomerDepartment";
 
 import {
-  businessIdentityService,
-} from "../../services/business/businessService";
+  requireBusinessContext,
+} from "../../services/business/businessContextService";
 
 /* ===========================================================
    PROPS
@@ -35,55 +35,89 @@ export default function CustomerDepartmentPage({
     string | undefined
   >(undefined);
 
+  const [branchName, setBranchName] = useState<
+    string | undefined
+  >(undefined);
+
   useEffect(() => {
-    let active = true;
 
     const normalizedBusinessId =
       businessId?.trim() ?? "";
 
     setCompanyName(undefined);
+    setBranchName(undefined);
 
     if (!normalizedBusinessId) {
-      return () => {
-        active = false;
-      };
+      return;
     }
 
-    void (async () => {
-      const result =
-        await businessIdentityService.load(
-          normalizedBusinessId,
+    try {
+
+      const context =
+        requireBusinessContext();
+
+      const profile =
+        context.businessProfile;
+
+      if (!profile) {
+
+        console.error(
+          "[FINORA CUSTOMER DEPARTMENT] Signed Business Profile is unavailable.",
         );
 
-      if (!active) {
         return;
       }
 
       if (
-        !result.success ||
-        !result.data
+        context.businessId?.trim() !==
+          normalizedBusinessId ||
+        profile.businessId !==
+          normalizedBusinessId ||
+        profile.ownerId !==
+          context.ownerId ||
+        profile.branchId !==
+          context.branchId
       ) {
+
+        console.error(
+          "[FINORA CUSTOMER DEPARTMENT] Signed Business Profile does not match the active FINORA scope.",
+        );
+
         return;
       }
 
       const resolvedBusinessName =
-        result.data.businessName.trim();
+        profile.businessName.trim();
+
+      const resolvedBranchName =
+        profile.branchName.trim();
 
       setCompanyName(
         resolvedBusinessName.length > 0
           ? resolvedBusinessName
           : undefined,
       );
-    })();
 
-    return () => {
-      active = false;
-    };
+      setBranchName(
+        resolvedBranchName.length > 0
+          ? resolvedBranchName
+          : undefined,
+      );
+
+    } catch (error) {
+
+      console.error(
+        "[FINORA CUSTOMER DEPARTMENT] Unable to resolve signed Business Profile:",
+        error,
+      );
+    }
+
   }, [businessId]);
 
   return (
     <CustomerDepartment
-      companyName={companyName}
+        companyName={companyName}
+        branchName={branchName}
     />
   );
 }

@@ -7,10 +7,10 @@
 // RESPONSIBILITY:
 //
 // - Resolve the active FINORA Business Context
-// - Load Business Identity and Business Settings
-// - Coordinate first-time Business Identity setup
+// - Resolve signed Business Profile identity and Business Settings
+// - Present signed Business / Branch identity as read-only
 // - Own editable Business Settings form state
-// - Persist Business Identity and Business Settings through services
+// - Persist operational Business Settings through services
 // - Surface loading, success and failure feedback
 //
 // IMPORTANT:
@@ -34,8 +34,8 @@ import {
 } from "react";
 
 import type {
-  BusinessIdentity,
-} from "../../../types/business/business.identity.types";
+  FinoraProvisionedBusinessProfileV1,
+} from "../../../types/business/finoraBusinessProfileControl.types";
 
 import type {
   BusinessSettings,
@@ -46,7 +46,6 @@ import {
 } from "../../../services/business/businessContextService";
 
 import {
-  businessIdentityService,
   businessSettingsService,
 } from "../../../services/business/businessService";
 
@@ -55,12 +54,6 @@ import SettingsFeedback from "../components/SettingsFeedback";
 import type {
   SettingsFeedbackMessage,
 } from "../components/SettingsFeedback.types";
-
-import BusinessIdentitySetupForm from "./BusinessIdentitySetupForm";
-
-import type {
-  BusinessIdentitySetupEditableField,
-} from "./BusinessIdentitySetupForm.types";
 
 import BusinessSettingsForm from "./BusinessSettingsForm";
 
@@ -87,8 +80,8 @@ export default function BusinessSettingsSection() {
     identity,
     setIdentity,
   ] = useState<
-    BusinessIdentity | null
-  >(null);
+      FinoraProvisionedBusinessProfileV1 | null
+    >(null);
 
   const [
     settings,
@@ -96,13 +89,6 @@ export default function BusinessSettingsSection() {
   ] = useState<
     BusinessSettings | null
   >(null);
-
-  const [
-    identitySetupRequired,
-    setIdentitySetupRequired,
-  ] = useState(
-    false,
-  );
 
   const [
     loading,
@@ -142,10 +128,6 @@ export default function BusinessSettingsSection() {
           true,
         );
 
-        setIdentitySetupRequired(
-          false,
-        );
-
         setFeedback(
           null,
         );
@@ -180,43 +162,68 @@ export default function BusinessSettingsSection() {
           return;
         }
 
-        const [
-          identityResult,
-          settingsResult,
-        ] = await Promise.all([
-          businessIdentityService.load(
-            context.businessId,
-          ),
+        const profile =
+          context.businessProfile;
 
-          businessSettingsService.load(
-            context.businessId,
-          ),
-        ]);
+        if (!profile) {
 
-        if (!active) {
+          if (active) {
+
+            setFeedback({
+              kind:
+                "danger",
+
+              title:
+                "Signed Business Profile Unavailable",
+
+              message:
+                "The authoritative FINORA Business Profile is unavailable for this workspace.",
+            });
+
+            setLoading(
+              false,
+            );
+          }
+
           return;
         }
 
         if (
-          !identityResult.success
+          profile.ownerId !==
+            context.ownerId ||
+          profile.businessId !==
+            context.businessId ||
+          profile.branchId !==
+            context.branchId
         ) {
 
-          setFeedback({
-            kind:
-              "danger",
+          if (active) {
 
-            title:
-              "Unable to Load Business",
+            setFeedback({
+              kind:
+                "danger",
 
-            message:
-              identityResult.error ??
-              "Business Identity could not be loaded.",
-          });
+              title:
+                "Business Profile Mismatch",
 
-          setLoading(
-            false,
+              message:
+                "The signed FINORA Business Profile does not match the active Business Context.",
+            });
+
+            setLoading(
+              false,
+            );
+          }
+
+          return;
+        }
+
+        const settingsResult =
+          await businessSettingsService.load(
+            context.businessId,
           );
 
+        if (!active) {
           return;
         }
 
@@ -250,55 +257,12 @@ export default function BusinessSettingsSection() {
               context.businessId,
             );
 
-        if (
-          !identityResult.data
-        ) {
-
-          setIdentity(
-            businessIdentityService
-              .createEmpty(
-                context.ownerId,
-                context.businessId,
-                context.branchId,
-              ),
-          );
-
-          setSettings(
-            resolvedSettings,
-          );
-
-          setIdentitySetupRequired(
-            true,
-          );
-
-          setFeedback({
-            kind:
-              "info",
-
-            title:
-              "Complete Business Identity",
-
-            message:
-              "Enter the registered Business Name and active Branch Name to complete first-time setup.",
-          });
-
-          setLoading(
-            false,
-          );
-
-          return;
-        }
-
         setIdentity(
-          identityResult.data,
+          profile,
         );
 
         setSettings(
           resolvedSettings,
-        );
-
-        setIdentitySetupRequired(
-          false,
         );
 
         setLoading(
@@ -316,183 +280,6 @@ export default function BusinessSettingsSection() {
     },
     [],
   );
-
-  // ==========================================================
-  // BUSINESS IDENTITY FIELD CHANGE
-  // ==========================================================
-
-  function handleIdentityFieldChange(
-    field:
-      BusinessIdentitySetupEditableField,
-    value:
-      string,
-  ): void {
-
-    setIdentity(
-      (current) => {
-
-        if (!current) {
-          return current;
-        }
-
-        return {
-          ...current,
-
-          [field]:
-            value,
-        };
-      },
-    );
-  }
-
-  // ==========================================================
-  // CREATE BUSINESS IDENTITY
-  // ==========================================================
-
-  async function handleIdentitySubmit():
-    Promise<void> {
-
-    if (
-      !identity ||
-      !identitySetupRequired ||
-      saving
-    ) {
-      return;
-    }
-
-    const context =
-      getBusinessContext();
-
-    if (
-      !context?.ownerId ||
-      !context.businessId ||
-      !context.branchId
-    ) {
-
-      setFeedback({
-        kind:
-          "danger",
-
-        title:
-          "Business Context Unavailable",
-
-        message:
-          "The active FINORA Business Context is incomplete.",
-      });
-
-      return;
-    }
-
-    setSaving(
-      true,
-    );
-
-    const processingId =
-      startFinoraProcessing(
-        "Creating Business Identity...",
-      );
-
-    setFeedback(
-      null,
-    );
-
-    try {
-
-      const prepared:
-        BusinessIdentity = {
-
-        ...identity,
-
-        ownerId:
-          context.ownerId,
-
-        businessId:
-          context.businessId,
-
-        branchId:
-          context.branchId,
-      };
-
-      const result =
-        await businessIdentityService.create(
-          prepared,
-        );
-
-      if (
-        !result.success ||
-        !result.data
-      ) {
-
-        setFeedback({
-          kind:
-            "danger",
-
-          title:
-            "Unable to Create Business Identity",
-
-          message:
-            result.error ??
-            "Business Identity could not be created.",
-        });
-
-        return;
-      }
-
-      const createdBusinessId =
-        result.data.businessId;
-
-      setIdentity(
-        result.data,
-      );
-
-      setSettings(
-        (current) =>
-          current ??
-          businessSettingsService
-            .createEmpty(
-              createdBusinessId,
-            ),
-      );
-
-      setIdentitySetupRequired(
-        false,
-      );
-
-      setFeedback({
-        kind:
-          "success",
-
-        title:
-          "Business Identity Created",
-
-        message:
-          "Business and active branch identity were created successfully.",
-      });
-
-    } catch {
-
-      setFeedback({
-        kind:
-          "danger",
-
-        title:
-          "Unable to Create Business Identity",
-
-        message:
-          "An unexpected error occurred while creating Business Identity.",
-      });
-
-    } finally {
-
-      stopFinoraProcessing(
-        processingId,
-      );
-
-      setSaving(
-        false,
-      );
-    }
-  }
 
   // ==========================================================
   // BUSINESS SETTINGS FIELD CHANGE
@@ -634,35 +421,6 @@ export default function BusinessSettingsSection() {
           kind="info"
           title="Loading Business Settings"
           message="FINORA is loading the active business configuration."
-        />
-      </section>
-    );
-  }
-
-  // ==========================================================
-  // FIRST-TIME BUSINESS IDENTITY SETUP
-  // ==========================================================
-
-  if (
-    identitySetupRequired &&
-    identity
-  ) {
-
-    return (
-      <section className="finora-settings-section finora-settings-business-section">
-        {feedback && (
-          <SettingsFeedback
-            {...feedback}
-          />
-        )}
-
-        <BusinessIdentitySetupForm
-          identity={identity}
-          saving={saving}
-          onFieldChange={handleIdentityFieldChange}
-          onSubmit={() => {
-            void handleIdentitySubmit();
-          }}
         />
       </section>
     );

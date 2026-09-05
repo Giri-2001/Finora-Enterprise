@@ -419,7 +419,6 @@ export default async function customerOfficeMapper(
 
           photo: customer.photo,
 
-          branch: customer.identity.businessName,
 
           // ====================================================
           // BACK SIDE ID CARD DETAILS

@@ -23,9 +23,9 @@
 // - No storage logic.
 // - No business calculations.
 //
-// BRANCH IDENTITY REMAINS IN:
+// BRANCH IDENTITY AUTHORITY:
 //
-// BusinessIdentity
+// Signed FINORA Business Profile
 // - businessId
 // - branchId
 // - branchName
@@ -43,7 +43,7 @@
 import type {
   BranchId,
   BusinessId,
-} from "./business.identity.types";
+} from "./business.scope.types";
 
 // ============================================================
 // BRANCH SETTINGS
@@ -52,7 +52,7 @@ import type {
 /**
  * Operational settings belonging to one FINORA branch.
  *
- * The active branch identity remains in BusinessIdentity.
+ * The active branch identity comes from the signed FINORA Business Profile.
  *
  * This contract stores only branch-specific operational
  * settings and is logically identified by:

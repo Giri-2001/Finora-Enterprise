@@ -49,8 +49,8 @@ import {
 } from "../../repositories/numbering/customerNumberingBindingRepository";
 
 import {
-  loadFinoraInstallationIdentity,
-} from "../activation/activationService";
+  resolveFinoraNumberingScope,
+} from "./finoraNumberingScopeService";
 
 import {
   previewNextLoanNumber,
@@ -69,7 +69,6 @@ import type {
 import {
   formatCustomerId,
   formatLoanNumber,
-  normalizeNumberingCode,
 } from "../../utils/numbering/numbering.formatter";
 
 // ============================================================
@@ -101,41 +100,6 @@ export interface ResolvedLoanNumberingRoot
 // ============================================================
 // HELPERS
 // ============================================================
-
-function normalizeProvisionedCode(
-  value: string | undefined,
-  label: string,
-): StorageResult<string> {
-
-  if (!value?.trim()) {
-    return {
-      success: false,
-
-      error:
-        `FINORA ${label} is not provisioned for this installation.`,
-    };
-  }
-
-  try {
-    return {
-      success: true,
-
-      data:
-        normalizeNumberingCode(
-          value,
-        ),
-    };
-  } catch (error) {
-    return {
-      success: false,
-
-      error:
-        error instanceof Error
-          ? error.message
-          : `FINORA ${label} is invalid.`,
-    };
-  }
-}
 
 // ============================================================
 // CANONICAL LOAN PARSER
@@ -279,7 +243,10 @@ function parseCanonicalLoanNumber(
 }
 
 // ============================================================
-// ACTIVE INSTALLATION SCOPE
+// ACTIVE NUMBERING SCOPE
+//
+// Installation Identity owns owner/business/branch scope.
+// Signed Business Profile owns businessCode / branchCode.
 // ============================================================
 
 async function resolveInstallationScope(): Promise<
@@ -288,91 +255,8 @@ async function resolveInstallationScope(): Promise<
   >
 > {
 
-  const installationResult =
-    await loadFinoraInstallationIdentity();
-
-  if (!installationResult.success) {
-    return {
-      success: false,
-
-      error:
-        installationResult.error ??
-        "Unable to load FINORA installation identity.",
-    };
-  }
-
-  const installation =
-    installationResult.data;
-
-  if (!installation) {
-    return {
-      success: false,
-
-      error:
-        "FINORA installation has not been provisioned.",
-    };
-  }
-
-  const businessCodeResult =
-    normalizeProvisionedCode(
-      installation.businessCode,
-      "Business Code",
-    );
-
-  if (
-    !businessCodeResult.success ||
-    !businessCodeResult.data
-  ) {
-    return {
-      success: false,
-
-      error:
-        businessCodeResult.error ??
-        "FINORA Business Code is required.",
-    };
-  }
-
-  const branchCodeResult =
-    normalizeProvisionedCode(
-      installation.branchCode,
-      "Branch Code",
-    );
-
-  if (
-    !branchCodeResult.success ||
-    !branchCodeResult.data
-  ) {
-    return {
-      success: false,
-
-      error:
-        branchCodeResult.error ??
-        "FINORA Branch Code is required.",
-    };
-  }
-
-  return {
-    success: true,
-
-    data: {
-      ownerId:
-        installation.ownerId,
-
-      businessId:
-        installation.businessId,
-
-      branchId:
-        installation.branchId,
-
-      businessCode:
-        businessCodeResult.data,
-
-      branchCode:
-        branchCodeResult.data,
-    },
-  };
+  return resolveFinoraNumberingScope();
 }
-
 // ============================================================
 // STORED BINDING VALIDATION
 // ============================================================

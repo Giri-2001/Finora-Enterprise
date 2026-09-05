@@ -41,6 +41,10 @@
 // ============================================================
 
 import type {
+  FinoraProvisionedBusinessProfileV1,
+} from "../../types/business/finoraBusinessProfileControl.types";
+
+import type {
   FinoraActivation,
 } from "../../types/activation/finoraActivation.types";
 
@@ -58,6 +62,7 @@ import type {
 import type {
   StorageResult,
 } from "../../storage/storage.types";
+
 
 import {
   getFinoraActivationControlBridge,
@@ -277,6 +282,126 @@ export async function loadFinoraBranchAccessGrant(
     };
   }
 }
+// ============================================================
+// SIGNED BUSINESS PROFILE
+// ============================================================
+
+/**
+ * Load the current signed FINORA Business / Branch Profile
+ * for one exact authenticated Owner / Business / Branch scope.
+ *
+ * This service does not read legacy mutable business identity repositories.
+ * Control-plane signed state remains the authority.
+ *
+ * READ ONLY.
+ */
+export async function loadFinoraBusinessProfile(
+  ownerId:
+    string,
+
+  businessId:
+    string,
+
+  branchId:
+    string,
+): Promise<
+  StorageResult<
+    FinoraProvisionedBusinessProfileV1 | undefined
+  >
+> {
+
+  if (
+    !isNonEmptyString(
+      ownerId,
+    ) ||
+    !isNonEmptyString(
+      businessId,
+    ) ||
+    !isNonEmptyString(
+      branchId,
+    )
+  ) {
+    return {
+      success:
+        false,
+
+      error:
+        "Owner ID, Business ID and Branch ID are required to load the FINORA Business Profile.",
+    };
+  }
+
+  const bridge =
+    getFinoraActivationControlBridge();
+
+  if (!bridge) {
+    return bridgeUnavailable();
+  }
+
+  if (
+    typeof bridge.findBusinessProfile !==
+      "function"
+  ) {
+    return {
+      success:
+        false,
+
+      error:
+        "FINORA Business Profile read capability is unavailable in this runtime.",
+    };
+  }
+
+  try {
+
+    const result =
+      await bridge.findBusinessProfile({
+        ownerId,
+        businessId,
+        branchId,
+      });
+
+    if (
+      !result.success ||
+      !result.data
+    ) {
+      return result;
+    }
+
+    const profile =
+      result.data;
+
+    if (
+      profile.ownerId !==
+        ownerId ||
+      profile.businessId !==
+        businessId ||
+      profile.branchId !==
+        branchId
+    ) {
+      return {
+        success:
+          false,
+
+        error:
+          "FINORA Business Profile does not match the requested business scope.",
+      };
+    }
+
+    return result;
+
+  } catch (error) {
+
+    return {
+      success:
+        false,
+
+      error:
+        error instanceof Error
+          ? error.message
+          : "Unable to load the FINORA Business Profile.",
+    };
+  }
+}
+
 // ============================================================
 
 /**

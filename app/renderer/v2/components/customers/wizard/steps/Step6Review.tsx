@@ -125,9 +125,6 @@ import {
 } from "../../../../storage/storage.types";
 
 
-import {
-  loadBusinessIdentity,
-} from "../../../../services/business/businessService";
 
 import {
   customerCreatedNotificationGenerator,
@@ -155,8 +152,8 @@ import type {
 } from "../../../../types/customers";
 
 import type {
-  BusinessIdentity,
-} from "../../../../types/business/business.identity.types";
+  FinoraProvisionedBusinessProfileV1,
+} from "../../../../types/business/finoraBusinessProfileControl.types";
 
 
 import type {
@@ -482,10 +479,7 @@ export default function Step6Review({
       captureCustomerIdCard,
     captureNode:
       captureCustomerIdCardNode,
-  } = useCustomerIdCardCapture({
-    companyName:
-      "",
-  });
+  } = useCustomerIdCardCapture();
 
 
   const {
@@ -528,7 +522,7 @@ export default function Step6Review({
     pendingNotificationBusinessIdentity,
     setPendingNotificationBusinessIdentity,
   ] = useState<
-    BusinessIdentity | undefined
+    FinoraProvisionedBusinessProfileV1 | undefined
   >(
     undefined,
   );
@@ -1536,12 +1530,23 @@ export default function Step6Review({
         let activeBranchId:
           string;
 
+        let activeBusinessName =
+          "";
+
+        let notificationBusinessIdentity:
+          FinoraProvisionedBusinessProfileV1 | null =
+            null;
+
 
         try {
 
           const businessContext =
             requireBusinessContext();
 
+
+          const activeOwnerId =
+            businessContext.ownerId?.trim() ??
+            "";
 
           activeBusinessId =
             businessContext.businessId?.trim() ??
@@ -1550,6 +1555,13 @@ export default function Step6Review({
           activeBranchId =
             businessContext.branchId?.trim() ??
             "";
+
+
+          if (!activeOwnerId) {
+            throw new Error(
+              "Active FINORA Owner ID is unavailable.",
+            );
+          }
 
 
           if (!activeBusinessId) {
@@ -1565,10 +1577,60 @@ export default function Step6Review({
             );
           }
 
+
+          const businessProfile =
+            businessContext.businessProfile;
+
+
+          if (!businessProfile) {
+            throw new Error(
+              "Signed FINORA Business Profile is unavailable.",
+            );
+          }
+
+
+          if (
+            businessProfile.ownerId !==
+              activeOwnerId ||
+            businessProfile.businessId !==
+              activeBusinessId ||
+            businessProfile.branchId !==
+              activeBranchId
+          ) {
+            throw new Error(
+              "Signed FINORA Business Profile does not match the active Business scope.",
+            );
+          }
+
+
+          activeBusinessName =
+            businessProfile.businessName.trim();
+
+          const activeBranchName =
+            businessProfile.branchName.trim();
+
+
+          if (!activeBusinessName) {
+            throw new Error(
+              "Registered Business Name is unavailable in the signed FINORA Business Profile.",
+            );
+          }
+
+
+          if (!activeBranchName) {
+            throw new Error(
+              "Registered Branch Name is unavailable in the signed FINORA Business Profile.",
+            );
+          }
+
+
+          notificationBusinessIdentity =
+            businessProfile;
+
         } catch (error) {
 
           console.error(
-            "FINORA CUSTOMER BUSINESS CONTEXT FAILED:",
+            "FINORA CUSTOMER SIGNED BUSINESS PROFILE FAILED:",
             error,
           );
 
@@ -1577,37 +1639,11 @@ export default function Step6Review({
         }
 
 
-        const businessIdentityResult =
-          await loadBusinessIdentity(
-            activeBusinessId,
-          );
-
-
-        if (
-          !businessIdentityResult.success ||
-          !businessIdentityResult.data
-        ) {
+        if (!notificationBusinessIdentity) {
 
           console.error(
-            "FINORA CUSTOMER BUSINESS IDENTITY FAILED:",
-            businessIdentityResult.error ??
-              "Business Identity is unavailable.",
-          );
-
-          return;
-
-        }
-
-
-        const activeBusinessName =
-          businessIdentityResult.data.businessName.trim();
-
-
-        if (!activeBusinessName) {
-
-          console.error(
-            "FINORA CUSTOMER BUSINESS NAME FAILED:",
-            "Registered Business Name is unavailable.",
+            "FINORA CUSTOMER SIGNED BUSINESS PROFILE FAILED:",
+            "Authoritative Business Identity snapshot could not be resolved.",
           );
 
           return;
@@ -2234,7 +2270,7 @@ export default function Step6Review({
             );
 
             setPendingNotificationBusinessIdentity(
-              businessIdentityResult.data,
+              notificationBusinessIdentity,
             );
 
           } else {
@@ -2417,9 +2453,17 @@ export default function Step6Review({
           OFFSCREEN CUSTOMER ID CARD CAPTURE
       ================================================== */}
 
-      {customerCaptureProfile
+      {customerCaptureProfile &&
+      pendingNotificationBusinessIdentity
         ? captureCustomerIdCardNode(
             customerCaptureProfile,
+            {
+              companyName:
+                pendingNotificationBusinessIdentity.businessName,
+
+              branchName:
+                pendingNotificationBusinessIdentity.branchName,
+            },
           )
         : null}
 

@@ -23,7 +23,7 @@
 // - Does NOT read localStorage directly.
 // - Does NOT access filesystem.
 // - Does NOT use Electron IPC.
-// - Does NOT load BusinessIdentity automatically.
+// - Does NOT load legacy mutable business identity records automatically.
 // - Does NOT contain Customer logic.
 // - Does NOT contain Loan logic.
 // - Does NOT contain Collection logic.
@@ -135,6 +135,30 @@ function validateBusinessContext(
   if (!context.branchId) {
 
     return "Branch ID is required.";
+  }
+
+  if (!context.businessProfile) {
+
+    return "Signed FINORA Business Profile is required.";
+  }
+
+  if (
+    context.businessProfile.ownerId !==
+      context.ownerId ||
+    context.businessProfile.businessId !==
+      context.businessId ||
+    context.businessProfile.branchId !==
+      context.branchId
+  ) {
+
+    return "FINORA Business Profile does not match the active business context.";
+  }
+
+  if (
+    context.businessProfile.schemaVersion !== 1
+  ) {
+
+    return "Unsupported FINORA Business Profile schema version.";
   }
 
   // ----------------------------------------------------------
@@ -277,6 +301,10 @@ export async function setBusinessContext(
             context.demoId,
         }
       : {}),
+
+    businessProfile: {
+      ...context.businessProfile!,
+    },
   };
 
   return {
@@ -300,6 +328,14 @@ export function getBusinessContext():
   return {
 
     ...activeBusinessContext,
+
+    ...(activeBusinessContext.businessProfile
+      ? {
+          businessProfile: {
+            ...activeBusinessContext.businessProfile,
+          },
+        }
+      : {}),
   };
 }
 
@@ -330,6 +366,14 @@ export function requireBusinessContext():
   return {
 
     ...activeBusinessContext,
+
+    ...(activeBusinessContext.businessProfile
+      ? {
+          businessProfile: {
+            ...activeBusinessContext.businessProfile,
+          },
+        }
+      : {}),
   };
 }
 
@@ -489,6 +533,10 @@ export async function replaceBusinessContext(
             context.demoId,
         }
       : {}),
+
+    businessProfile: {
+      ...context.businessProfile!,
+    },
   };
 
   return {

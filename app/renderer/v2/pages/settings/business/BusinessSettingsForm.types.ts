@@ -26,8 +26,8 @@
 // ============================================================
 
 import type {
-  BusinessIdentity,
-} from "../../../types/business/business.identity.types";
+  FinoraProvisionedBusinessProfileV1,
+} from "../../../types/business/finoraBusinessProfileControl.types";
 
 import type {
   BusinessSettings,
@@ -51,7 +51,7 @@ export type BusinessSettingsEditableField =
 
 export interface BusinessSettingsFormProps {
   identity:
-    BusinessIdentity;
+    FinoraProvisionedBusinessProfileV1;
 
   settings:
     BusinessSettings;

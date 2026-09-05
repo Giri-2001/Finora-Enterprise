@@ -29,7 +29,7 @@ import type {
   BranchId,
   BusinessId,
   OwnerId,
-} from "../business/business.identity.types";
+} from "../business/business.scope.types";
 
 // ============================================================
 // NUMBERING ENTITY

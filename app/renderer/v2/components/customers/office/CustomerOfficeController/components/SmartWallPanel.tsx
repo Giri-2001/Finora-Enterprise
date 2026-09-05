@@ -83,6 +83,8 @@ export default function SmartWallPanel({
 
   companyName,
 
+  branchName,
+
   selectedCustomerId,
 
   selectedCustomer,
@@ -572,6 +574,7 @@ export default function SmartWallPanel({
         <CustomerHangerRail
           customers={railCustomers}
           companyName={companyName}
+          branchName={branchName}
           selectedCustomerId={selectedCustomerId}
           onCustomerSelect={onCustomerSelect}
         />

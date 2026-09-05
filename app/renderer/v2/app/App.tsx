@@ -110,6 +110,7 @@ import BranchActivationRequired from "../pages/auth/BranchActivationRequired";
 
 import {
   hasActiveFinoraStorageEntitlement,
+  loadFinoraBusinessProfile,
   loadFinoraBranchAccessGrant,
   loadFinoraBranchActivation,
   loadFinoraInstallationIdentity,
@@ -1171,6 +1172,42 @@ function AuthenticatedApplication() {
       }
 
       // ======================================================
+      // AUTHORITATIVE SIGNED BUSINESS / BRANCH PROFILE
+      //
+      // Storage selection has succeeded, but branch data must
+      // not become active until the exact provisioned profile
+      // is available for this authenticated scope.
+      // ======================================================
+
+      const businessProfileResult =
+        await loadFinoraBusinessProfile(
+          session.ownerId,
+          session.businessId,
+          session.branchId,
+        );
+
+      if (!active) {
+        return;
+      }
+
+      if (
+        !businessProfileResult.success ||
+        !businessProfileResult.data
+      ) {
+        setContextReady(false);
+
+        setContextError(
+          businessProfileResult.error ??
+            "The signed FINORA Business Profile is required for this branch.",
+        );
+
+        return;
+      }
+
+      const businessProfile =
+        businessProfileResult.data;
+
+      // ======================================================
       // ESTABLISH BUSINESS / DATA CONTEXT
       // ======================================================
 
@@ -1184,6 +1221,8 @@ function AuthenticatedApplication() {
         dataContext: session.dataContext,
 
         demoId: session.demoId,
+
+        businessProfile,
       });
 
       if (!active) {

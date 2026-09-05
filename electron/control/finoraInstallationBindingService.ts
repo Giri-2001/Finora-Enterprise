@@ -46,7 +46,7 @@ import {
 } from "./finoraInstallationBindingVault.js";
 
 import {
-  getFinoraInstallationIdentity,
+  getFinoraInstallationIdentityForBindingReconciliation,
 } from "./finoraControlStore.js";
 
 import type {
@@ -73,7 +73,7 @@ async function loadControlInstallationId():
   > {
 
   const result =
-    await getFinoraInstallationIdentity();
+    await getFinoraInstallationIdentityForBindingReconciliation();
 
   if (!result.success) {
 

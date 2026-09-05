@@ -8,8 +8,8 @@
 //
 // - Resolve the Customer root number from a canonical FINORA
 //   Customer ID
-// - Validate Business / Branch numbering codes against the
-//   secure FINORA Installation Identity
+// - Resolve Business / Branch numbering codes from the signed
+//   FINORA Business Profile
 // - Preview the next per-Customer Loan sequence
 // - Permanently reserve the next per-Customer Loan sequence
 // - Format the authoritative hierarchical Loan Number
@@ -43,8 +43,8 @@ import {
 } from "../../repositories/numbering/loanSequenceRepository";
 
 import {
-  loadFinoraInstallationIdentity,
-} from "../activation/activationService";
+  resolveFinoraNumberingScope,
+} from "./finoraNumberingScopeService";
 
 import {
   previewCustomerNumberingRoot,
@@ -64,7 +64,6 @@ import type {
 import {
   formatCustomerId,
   formatLoanNumber,
-  normalizeNumberingCode,
 } from "../../utils/numbering/numbering.formatter";
 
 // ============================================================
@@ -84,45 +83,6 @@ interface ResolvedLoanCustomerScope
 type LoanCustomerScopeResolutionMode =
   | "PREVIEW"
   | "RESERVE";
-
-// ============================================================
-// HELPERS
-// ============================================================
-
-function normalizeProvisionedCode(
-  value: string | undefined,
-  label: string,
-): StorageResult<string> {
-
-  if (!value?.trim()) {
-    return {
-      success: false,
-
-      error:
-        `FINORA ${label} is not provisioned for this installation.`,
-    };
-  }
-
-  try {
-    return {
-      success: true,
-
-      data:
-        normalizeNumberingCode(
-          value,
-        ),
-    };
-  } catch (error) {
-    return {
-      success: false,
-
-      error:
-        error instanceof Error
-          ? error.message
-          : `FINORA ${label} is invalid.`,
-    };
-  }
-}
 
 // ============================================================
 // CUSTOMER ROOT PARSER
@@ -249,68 +209,26 @@ async function resolveLoanCustomerScope(
   >
 > {
 
-  const installationResult =
-    await loadFinoraInstallationIdentity();
-
-  if (!installationResult.success) {
-    return {
-      success: false,
-
-      error:
-        installationResult.error ??
-        "Unable to load FINORA installation identity.",
-    };
-  }
-
-  const installation =
-    installationResult.data;
-
-  if (!installation) {
-    return {
-      success: false,
-
-      error:
-        "FINORA installation has not been provisioned.",
-    };
-  }
-
-  const businessCodeResult =
-    normalizeProvisionedCode(
-      installation.businessCode,
-      "Business Code",
-    );
+  const scopeResult =
+    await resolveFinoraNumberingScope();
 
   if (
-    !businessCodeResult.success ||
-    !businessCodeResult.data
+    !scopeResult.success ||
+    !scopeResult.data
   ) {
+
     return {
-      success: false,
+      success:
+        false,
 
       error:
-        businessCodeResult.error ??
-        "FINORA Business Code is required.",
+        scopeResult.error ??
+        "Unable to resolve the authoritative FINORA numbering scope.",
     };
   }
 
-  const branchCodeResult =
-    normalizeProvisionedCode(
-      installation.branchCode,
-      "Branch Code",
-    );
-
-  if (
-    !branchCodeResult.success ||
-    !branchCodeResult.data
-  ) {
-    return {
-      success: false,
-
-      error:
-        branchCodeResult.error ??
-        "FINORA Branch Code is required.",
-    };
-  }
+  const scope =
+    scopeResult.data;
 
   const rootResult =
     mode === "RESERVE"
@@ -325,8 +243,10 @@ async function resolveLoanCustomerScope(
     !rootResult.success ||
     !rootResult.data
   ) {
+
     return {
-      success: false,
+      success:
+        false,
 
       error:
         rootResult.error ??
@@ -340,16 +260,18 @@ async function resolveLoanCustomerScope(
   const customerNumberResult =
     parseCanonicalCustomerNumber(
       root.customerId,
-      businessCodeResult.data,
-      branchCodeResult.data,
+      scope.businessCode,
+      scope.branchCode,
     );
 
   if (
     !customerNumberResult.success ||
     customerNumberResult.data === undefined
   ) {
+
     return {
-      success: false,
+      success:
+        false,
 
       error:
         customerNumberResult.error ??
@@ -359,10 +281,12 @@ async function resolveLoanCustomerScope(
 
   if (
     customerNumberResult.data !==
-    root.customerNumber
+      root.customerNumber
   ) {
+
     return {
-      success: false,
+      success:
+        false,
 
       error:
         "Resolved Customer numbering root is inconsistent.",
@@ -370,23 +294,11 @@ async function resolveLoanCustomerScope(
   }
 
   return {
-    success: true,
+    success:
+      true,
 
     data: {
-      ownerId:
-        installation.ownerId,
-
-      businessId:
-        installation.businessId,
-
-      branchId:
-        installation.branchId,
-
-      businessCode:
-        businessCodeResult.data,
-
-      branchCode:
-        branchCodeResult.data,
+      ...scope,
 
       customerId:
         root.customerId,
@@ -396,7 +308,6 @@ async function resolveLoanCustomerScope(
     },
   };
 }
-
 // ============================================================
 // LOAN RESERVATION SERIALIZATION
 //

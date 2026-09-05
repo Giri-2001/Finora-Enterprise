@@ -28,8 +28,8 @@
 // ============================================================
 
 import type {
-  BusinessIdentity,
-} from "../../../types/business/business.identity.types";
+  FinoraProvisionedBusinessProfileV1,
+} from "../../../types/business/finoraBusinessProfileControl.types";
 
 import type {
   BranchSettings,
@@ -50,7 +50,7 @@ export type BranchSettingsEditableField =
 
 export interface BranchSettingsFormProps {
   identity:
-    BusinessIdentity;
+    FinoraProvisionedBusinessProfileV1;
 
   settings:
     BranchSettings;

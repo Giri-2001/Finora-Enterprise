@@ -17,6 +17,8 @@ export interface CustomerOfficeControllerProps {
 
   companyName?: string;
 
+  branchName?: string;
+
   /**
    * Opens the Customer Wizard from the Customer Hub.
    */

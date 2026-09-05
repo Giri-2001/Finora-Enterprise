@@ -34,6 +34,8 @@
 
 import {
   findFinoraBranchAccessGrant,
+  applyFinoraVerifiedBusinessProfileState,
+  findFinoraBusinessProfile,
   findFinoraStorageEntitlement,
   saveFinoraBranchAccessGrant,
   saveFinoraBranchActivation,
@@ -43,6 +45,7 @@ import {
 
 import type {
   FinoraControlBranchAccessGrant,
+  FinoraControlBusinessProfile,
   FinoraControlBranchActivation,
   FinoraControlInstallationIdentity,
   FinoraControlStorageEntitlement,
@@ -334,6 +337,37 @@ export async function runFinoraDevelopmentProvisioning():
         "FINORA_DEV_BRANCH_CODE",
       );
 
+    const profileId =
+      requireEnvironmentValue(
+        "FINORA_DEV_PROFILE_ID",
+      );
+
+    const businessName =
+      requireEnvironmentValue(
+        "FINORA_DEV_BUSINESS_NAME",
+      );
+
+    const branchName =
+      requireEnvironmentValue(
+        "FINORA_DEV_BRANCH_NAME",
+      );
+
+    /*
+     * Windows and Android Business Profile validators use the
+     * same numbering-code contract.
+     */
+    if (
+      !/^[A-Z0-9]{2,10}$/.test(
+        businessCode,
+      ) ||
+      !/^[A-Z0-9]{2,10}$/.test(
+        branchCode,
+      )
+    ) {
+      throw new Error(
+        "FINORA DEV Business / Branch codes must contain 2-10 uppercase letters or digits.",
+      );
+    }
     const now =
       new Date().toISOString();
 
@@ -413,6 +447,160 @@ export async function runFinoraDevelopmentProvisioning():
       );
     }
 
+    // ========================================================
+    // DEVELOPMENT BUSINESS PROFILE PROVISIONING
+    //
+    // IMPORTANT:
+    //
+    // - Development-only trusted seed.
+    // - Does NOT import or invoke the Control Center signer.
+    // - Does NOT expose a renderer write API.
+    // - Uses the same replay / sequence / immutable-profile
+    //   state transition used after production signature
+    //   verification.
+    // - Existing profile is idempotently accepted only when
+    //   every authority-owned field still matches exactly.
+    // ========================================================
+
+    const existingProfileResult =
+      await findFinoraBusinessProfile(
+        ownerId,
+        businessId,
+        branchId,
+      );
+
+    if (!existingProfileResult.success) {
+      throw new Error(
+        existingProfileResult.error ??
+          "Unable to read the FINORA DEV Business Profile.",
+      );
+    }
+
+    const existingProfile =
+      existingProfileResult.data;
+
+    if (existingProfile) {
+
+      const profileMatches =
+        existingProfile.profileId ===
+          profileId &&
+        existingProfile.ownerId ===
+          ownerId &&
+        existingProfile.businessId ===
+          businessId &&
+        existingProfile.branchId ===
+          branchId &&
+        existingProfile.businessCode ===
+          businessCode &&
+        existingProfile.branchCode ===
+          branchCode &&
+        existingProfile.businessName ===
+          businessName &&
+        existingProfile.branchName ===
+          branchName &&
+        existingProfile.installationId ===
+          installationId &&
+        existingProfile.bindingKeyId ===
+          nativeBinding.bindingKeyId &&
+        existingProfile.fingerprintAlgorithm ===
+          nativeBinding.fingerprintAlgorithm &&
+        existingProfile.publicKeyFingerprint ===
+          nativeBinding.publicKeyFingerprint &&
+        existingProfile.schemaVersion ===
+          1;
+
+      if (!profileMatches) {
+        throw new Error(
+          "Existing FINORA DEV Business Profile does not match the configured signed-profile identity. Refusing a silent local replacement.",
+        );
+      }
+
+    } else {
+
+      const profile:
+        FinoraControlBusinessProfile = {
+
+        profileId,
+
+        ownerId,
+
+        businessId,
+
+        branchId,
+
+        businessCode,
+
+        branchCode,
+
+        businessName,
+
+        branchName,
+
+        installationId,
+
+        bindingKeyId:
+          nativeBinding.bindingKeyId,
+
+        fingerprintAlgorithm:
+          nativeBinding.fingerprintAlgorithm,
+
+        publicKeyFingerprint:
+          nativeBinding.publicKeyFingerprint,
+
+        createdAt:
+          now,
+
+        updatedAt:
+          now,
+
+        schemaVersion:
+          1,
+      };
+
+      /*
+       * applyFinoraVerifiedBusinessProfileState is the trusted
+       * post-verification state transition. DEV provisioning is
+       * already main-process-only and development-gated, so it
+       * supplies one deterministic synthetic DEV control identity
+       * without importing any signing key.
+       */
+      const profileResult =
+        await applyFinoraVerifiedBusinessProfileState({
+          packageId:
+            `FINORA-DEV-BUSINESS-PROFILE-${profileId}`,
+
+          issuerId:
+            "FINORA_DEV_PROVISIONER",
+
+          purpose:
+            "BUSINESS_PROFILE",
+
+          sequence:
+            1,
+
+          action:
+            "ISSUE",
+
+          target: {
+            ownerId,
+            businessId,
+            branchId,
+            installationId,
+          },
+
+          profile,
+
+          appliedAt:
+            now,
+        });
+
+      if (!profileResult.success) {
+        throw new Error(
+          profileResult.error ??
+            "FINORA development Business Profile provisioning failed.",
+        );
+      }
+    }
     console.log(
       "[FINORA DEV] Branch provisioning completed:",
       {

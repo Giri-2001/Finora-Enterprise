@@ -56,8 +56,8 @@ import type {
 } from "../../../types/customers";
 
 import type {
-  BusinessIdentity,
-} from "../../../types/business/business.identity.types";
+  FinoraProvisionedBusinessProfileV1,
+} from "../../../types/business/finoraBusinessProfileControl.types";
 
 import {
   notificationRepository,
@@ -127,9 +127,10 @@ export interface CustomerCreatedNotificationGeneratorInput {
   customer: CustomerProfile;
 
   /**
-   * Persisted Business Identity resolved by the creation flow.
+   * Authoritative signed FINORA Business Profile resolved by the creation flow.
    */
-  businessIdentity: BusinessIdentity;
+  businessIdentity:
+    FinoraProvisionedBusinessProfileV1;
 
   /**
    * Notification generation metadata timestamp.
@@ -270,8 +271,8 @@ function normalizeString(
 
 function normalizeScope(
   identity:
-    BusinessIdentity,
-): CustomerCreatedNotificationGeneratorScope {
+      FinoraProvisionedBusinessProfileV1,
+  ): CustomerCreatedNotificationGeneratorScope {
   return {
     ownerId:
       normalizeString(

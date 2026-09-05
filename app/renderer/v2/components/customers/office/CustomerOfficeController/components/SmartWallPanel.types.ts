@@ -37,6 +37,8 @@ export interface SmartWallPanelProps {
 
   companyName?: string;
 
+  branchName?: string;
+
   /* =========================================================
      CUSTOMER SELECTION
   ========================================================= */

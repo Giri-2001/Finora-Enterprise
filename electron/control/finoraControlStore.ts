@@ -134,6 +134,59 @@ export interface FinoraControlInstallationIdentity {
 }
 
 // ============================================================
+// BUSINESS PROFILE DTO
+// ============================================================
+
+/**
+ * Trusted native representation of one signed FINORA
+ * Business / Branch Profile.
+ *
+ * Immutable identity:
+ *
+ * - profileId
+ * - ownerId
+ * - businessId
+ * - branchId
+ * - businessCode
+ * - branchCode
+ * - installation binding tuple
+ *
+ * Signed REPLACE may update businessName / branchName and
+ * updatedAt while immutable identity remains unchanged.
+ */
+export interface FinoraControlBusinessProfile {
+
+  profileId: string;
+
+  ownerId: string;
+
+  businessId: string;
+
+  branchId: string;
+
+  businessCode: string;
+
+  branchCode: string;
+
+  businessName: string;
+
+  branchName: string;
+
+  installationId: string;
+
+  bindingKeyId: string;
+
+  fingerprintAlgorithm: "SHA-256";
+
+  publicKeyFingerprint: string;
+
+  createdAt: string;
+
+  updatedAt: string;
+
+  schemaVersion: 1;
+}
+// ============================================================
 // STORAGE ENTITLEMENT DTO
 // ============================================================
 
@@ -247,6 +300,17 @@ export interface FinoraControlStorePackage {
   activations: FinoraControlBranchActivation[];
 
   storageEntitlements: FinoraControlStorageEntitlement[];
+
+  /**
+   * Current signed FINORA Business / Branch profile.
+   *
+   * Optional only for backward compatibility with encrypted
+   * Control Stores created before Phase 4.
+   *
+   * New verified BUSINESS_PROFILE applies persist this array.
+   */
+  businessProfiles?:
+    FinoraControlBusinessProfile[];
 
   /**
    * Current signed REGISTERED / DEMO access by login identity.
@@ -413,6 +477,77 @@ function isStorageEntitlementNativeBinding(
   return value.bindingKeyId === expectedBindingKeyId;
 }
 
+// ============================================================
+// BUSINESS PROFILE VALIDATION
+// ============================================================
+
+function isBusinessProfile(
+  value:
+    unknown,
+): value is FinoraControlBusinessProfile {
+
+  if (!isRecord(value)) {
+    return false;
+  }
+
+  if (
+    !isNonEmptyString(value.profileId) ||
+    !isNonEmptyString(value.ownerId) ||
+    !isNonEmptyString(value.businessId) ||
+    !isNonEmptyString(value.branchId) ||
+    !isNonEmptyString(value.businessCode) ||
+    !isNonEmptyString(value.branchCode) ||
+    !isNonEmptyString(value.businessName) ||
+    !isNonEmptyString(value.branchName) ||
+    !isNonEmptyString(value.installationId) ||
+    !isNonEmptyString(value.bindingKeyId) ||
+    value.fingerprintAlgorithm !==
+      "SHA-256" ||
+    typeof value.publicKeyFingerprint !==
+      "string" ||
+    !/^[0-9a-f]{64}$/.test(
+      value.publicKeyFingerprint,
+    ) ||
+    !isControlTimestamp(value.createdAt) ||
+    !isControlTimestamp(value.updatedAt) ||
+    value.schemaVersion !==
+      1
+  ) {
+    return false;
+  }
+
+  const expectedBindingKeyId =
+    `FINORA-BINDING-${value.publicKeyFingerprint
+      .slice(
+        0,
+        32,
+      )
+      .toUpperCase()}`;
+
+  if (
+    value.bindingKeyId !==
+      expectedBindingKeyId
+  ) {
+    return false;
+  }
+
+  const createdAt =
+    Date.parse(
+      value.createdAt,
+    );
+
+  const updatedAt =
+    Date.parse(
+      value.updatedAt,
+    );
+
+  return (
+    Number.isFinite(createdAt) &&
+    Number.isFinite(updatedAt) &&
+    updatedAt >=
+      createdAt
+  );
+}
 function isStorageEntitlement(
   value: unknown,
 ): value is FinoraControlStorageEntitlement {
@@ -458,6 +593,54 @@ function hasDuplicateActivationKeys(
   return false;
 }
 
+// ============================================================
+// DUPLICATE BUSINESS PROFILE VALIDATION
+// ============================================================
+
+function hasDuplicateBusinessProfileKeys(
+  profiles:
+    readonly FinoraControlBusinessProfile[],
+): boolean {
+
+  const scopeKeys =
+    new Set<string>();
+
+  const profileIds =
+    new Set<string>();
+
+  for (const profile of profiles) {
+
+    const scopeKey =
+      [
+        profile.ownerId,
+        profile.businessId,
+        profile.branchId,
+      ].join(
+        "::",
+      );
+
+    if (
+      scopeKeys.has(
+        scopeKey,
+      ) ||
+      profileIds.has(
+        profile.profileId,
+      )
+    ) {
+      return true;
+    }
+
+    scopeKeys.add(
+      scopeKey,
+    );
+
+    profileIds.add(
+      profile.profileId,
+    );
+  }
+
+  return false;
+}
 function hasDuplicateEntitlementKeys(
   entitlements: FinoraControlStorageEntitlement[],
 ): boolean {
@@ -715,6 +898,31 @@ function isControlStorePackage(
   }
 
   // ----------------------------------------------------------
+  // SIGNED BUSINESS PROFILE STATE
+  //
+  // Optional only for backward compatibility with encrypted
+  // Control Stores created before the Business Profile Engine.
+  // ----------------------------------------------------------
+
+  if (
+    value.businessProfiles !==
+      undefined &&
+    (
+      !Array.isArray(
+        value.businessProfiles,
+      ) ||
+      !value.businessProfiles.every(
+        isBusinessProfile,
+      ) ||
+      hasDuplicateBusinessProfileKeys(
+        value.businessProfiles,
+      )
+    )
+  ) {
+    return false;
+  }
+
+  // ----------------------------------------------------------
   // SIGNED BRANCH ACCESS STATE
   // ----------------------------------------------------------
 
@@ -763,6 +971,441 @@ function isControlStorePackage(
   }
 
   return true;
+}
+
+// ============================================================
+// DEVELOPMENT VALIDATION DIAGNOSTIC
+// ============================================================
+//
+// Reports only the failing structural section / array index.
+// No IDs, names, fingerprints, payments or decrypted values
+// are emitted.
+//
+// Enabled only by:
+// FINORA_DEV_CONTROL_STORE_DIAGNOSTICS=1
+// ============================================================
+
+function describeStorageEntitlementValidationFailure(
+  value:
+    unknown,
+): string {
+
+  if (!isRecord(value)) {
+    return "NOT_OBJECT";
+  }
+
+  if (
+    !isNonEmptyString(
+      value.entitlementId,
+    )
+  ) {
+    return "ENTITLEMENT_ID_INVALID";
+  }
+
+  if (
+    !isNonEmptyString(
+      value.userId,
+    )
+  ) {
+    return "USER_ID_INVALID";
+  }
+
+  if (
+    !isNonEmptyString(
+      value.ownerId,
+    )
+  ) {
+    return "OWNER_ID_INVALID";
+  }
+
+  if (
+    !isNonEmptyString(
+      value.businessId,
+    )
+  ) {
+    return "BUSINESS_ID_INVALID";
+  }
+
+  if (
+    !isNonEmptyString(
+      value.branchId,
+    )
+  ) {
+    return "BRANCH_ID_INVALID";
+  }
+
+  if (
+    !isNonEmptyString(
+      value.installationId,
+    )
+  ) {
+    return "INSTALLATION_ID_INVALID";
+  }
+
+  if (
+    !isNonEmptyString(
+      value.bindingKeyId,
+    )
+  ) {
+    return "BINDING_KEY_ID_INVALID";
+  }
+
+  if (
+    value.fingerprintAlgorithm !==
+      "SHA-256"
+  ) {
+    return "FINGERPRINT_ALGORITHM_INVALID";
+  }
+
+  if (
+    !isStorageEntitlementFingerprint(
+      value.publicKeyFingerprint,
+    )
+  ) {
+    return "PUBLIC_KEY_FINGERPRINT_INVALID";
+  }
+
+  const expectedBindingKeyId =
+    `FINORA-BINDING-${value.publicKeyFingerprint
+      .slice(
+        0,
+        32,
+      )
+      .toUpperCase()}`;
+
+  if (
+    value.bindingKeyId !==
+      expectedBindingKeyId
+  ) {
+    return "BINDING_KEY_FINGERPRINT_MISMATCH";
+  }
+
+  if (
+    !isStorageMode(
+      value.storageMode,
+    )
+  ) {
+    return "STORAGE_MODE_INVALID";
+  }
+
+  if (
+    !isEntitlementStatus(
+      value.status,
+    )
+  ) {
+    return "STATUS_INVALID";
+  }
+
+  if (
+    !isNonEmptyString(
+      value.activatedAt,
+    )
+  ) {
+    return "ACTIVATED_AT_INVALID";
+  }
+
+  if (
+    !isNonEmptyString(
+      value.createdAt,
+    )
+  ) {
+    return "CREATED_AT_INVALID";
+  }
+
+  if (
+    !isNonEmptyString(
+      value.updatedAt,
+    )
+  ) {
+    return "UPDATED_AT_INVALID";
+  }
+
+  if (
+    value.schemaVersion !==
+      1
+  ) {
+    return "SCHEMA_VERSION_INVALID";
+  }
+
+  return "UNKNOWN_STORAGE_ENTITLEMENT_FAILURE";
+}
+
+function describeControlStorePackageValidationFailure(
+  value:
+    unknown,
+): string {
+
+  if (!isRecord(value)) {
+    return "ROOT_NOT_OBJECT";
+  }
+
+  if (
+    value.version !==
+      CONTROL_STORE_VERSION
+  ) {
+    return "ROOT_VERSION_INVALID";
+  }
+
+  if (
+    value.installation !==
+      undefined &&
+    !isInstallationIdentity(
+      value.installation,
+    )
+  ) {
+    return "INSTALLATION_INVALID";
+  }
+
+  if (
+    !Array.isArray(
+      value.activations,
+    )
+  ) {
+    return "ACTIVATIONS_NOT_ARRAY";
+  }
+
+  const activationInvalidIndex =
+    value.activations.findIndex(
+      (item) =>
+        !isBranchActivation(
+          item,
+        ),
+    );
+
+  if (
+    activationInvalidIndex >=
+      0
+  ) {
+    return `ACTIVATION_INVALID_INDEX_${activationInvalidIndex}`;
+  }
+
+  const activations =
+    value.activations as
+      FinoraControlBranchActivation[];
+
+  if (
+    hasDuplicateActivationKeys(
+      activations,
+    )
+  ) {
+    return "ACTIVATION_DUPLICATE_SCOPE";
+  }
+
+  if (
+    !Array.isArray(
+      value.storageEntitlements,
+    )
+  ) {
+    return "STORAGE_ENTITLEMENTS_NOT_ARRAY";
+  }
+
+  const entitlementInvalidIndex =
+    value.storageEntitlements.findIndex(
+      (item) =>
+        !isStorageEntitlement(
+          item,
+        ),
+    );
+
+  if (
+    entitlementInvalidIndex >=
+      0
+  ) {
+    const entitlementFailure =
+      describeStorageEntitlementValidationFailure(
+        value.storageEntitlements[
+          entitlementInvalidIndex
+        ],
+      );
+
+    return `STORAGE_ENTITLEMENT_INVALID_INDEX_${entitlementInvalidIndex}_${entitlementFailure}`;
+  }
+
+  const storageEntitlements =
+    value.storageEntitlements as
+      FinoraControlStorageEntitlement[];
+
+  if (
+    hasDuplicateEntitlementKeys(
+      storageEntitlements,
+    )
+  ) {
+    return "STORAGE_ENTITLEMENT_DUPLICATE_SCOPE";
+  }
+
+  if (
+    value.businessProfiles !==
+      undefined
+  ) {
+
+    if (
+      !Array.isArray(
+        value.businessProfiles,
+      )
+    ) {
+      return "BUSINESS_PROFILES_NOT_ARRAY";
+    }
+
+    const profileInvalidIndex =
+      value.businessProfiles.findIndex(
+        (item) =>
+          !isBusinessProfile(
+            item,
+          ),
+      );
+
+    if (
+      profileInvalidIndex >=
+        0
+    ) {
+      return `BUSINESS_PROFILE_INVALID_INDEX_${profileInvalidIndex}`;
+    }
+
+    const businessProfiles =
+      value.businessProfiles as
+        FinoraControlBusinessProfile[];
+
+    if (
+      hasDuplicateBusinessProfileKeys(
+        businessProfiles,
+      )
+    ) {
+      return "BUSINESS_PROFILE_DUPLICATE_IDENTITY";
+    }
+  }
+
+  if (
+    value.branchAccessGrants !==
+      undefined
+  ) {
+
+    if (
+      !Array.isArray(
+        value.branchAccessGrants,
+      )
+    ) {
+      return "BRANCH_ACCESS_GRANTS_NOT_ARRAY";
+    }
+
+    const accessGrantInvalidIndex =
+      value.branchAccessGrants.findIndex(
+        (item) =>
+          !isBranchAccessGrant(
+            item,
+          ),
+      );
+
+    if (
+      accessGrantInvalidIndex >=
+        0
+    ) {
+      return `BRANCH_ACCESS_GRANT_INVALID_INDEX_${accessGrantInvalidIndex}`;
+    }
+
+    const branchAccessGrants =
+      value.branchAccessGrants as
+        FinoraControlBranchAccessGrant[];
+
+    if (
+      hasDuplicateBranchAccessKeys(
+        branchAccessGrants,
+      )
+    ) {
+      return "BRANCH_ACCESS_GRANT_DUPLICATE_SCOPE";
+    }
+  }
+
+  if (
+    value.appliedControlPackages !==
+      undefined
+  ) {
+
+    if (
+      !Array.isArray(
+        value.appliedControlPackages,
+      )
+    ) {
+      return "APPLIED_CONTROL_PACKAGES_NOT_ARRAY";
+    }
+
+    const appliedInvalidIndex =
+      value.appliedControlPackages.findIndex(
+        (item) =>
+          !isAppliedControlPackageRecord(
+            item,
+          ),
+      );
+
+    if (
+      appliedInvalidIndex >=
+        0
+    ) {
+      return `APPLIED_CONTROL_PACKAGE_INVALID_INDEX_${appliedInvalidIndex}`;
+    }
+
+    const appliedControlPackages =
+      value.appliedControlPackages as
+        FinoraControlAppliedPackageRecord[];
+
+    if (
+      hasDuplicateAppliedPackageIds(
+        appliedControlPackages,
+      )
+    ) {
+      return "APPLIED_CONTROL_PACKAGE_DUPLICATE_ID";
+    }
+  }
+
+  if (
+    value.controlSequences !==
+      undefined
+  ) {
+
+    if (
+      !Array.isArray(
+        value.controlSequences,
+      )
+    ) {
+      return "CONTROL_SEQUENCES_NOT_ARRAY";
+    }
+
+    const sequenceInvalidIndex =
+      value.controlSequences.findIndex(
+        (item) =>
+          !isControlSequenceStateRecord(
+            item,
+          ),
+      );
+
+    if (
+      sequenceInvalidIndex >=
+        0
+    ) {
+      return `CONTROL_SEQUENCE_INVALID_INDEX_${sequenceInvalidIndex}`;
+    }
+
+    const controlSequences =
+      value.controlSequences as
+        FinoraControlSequenceStateRecord[];
+
+    if (
+      hasDuplicateControlSequenceKeys(
+        controlSequences,
+      )
+    ) {
+      return "CONTROL_SEQUENCE_DUPLICATE_SCOPE";
+    }
+  }
+
+  if (
+    !isNonEmptyString(
+      value.updatedAt,
+    )
+  ) {
+    return "ROOT_UPDATED_AT_INVALID";
+  }
+
+  return "UNKNOWN_VALIDATION_FAILURE";
 }
 // ============================================================
 // DEFAULT PACKAGE
@@ -943,7 +1586,22 @@ export async function readFinoraControlStore(): Promise<
     }
 
     if (!isControlStorePackage(parsed)) {
-      return failure("FINORA Control Store package validation failed.");
+
+      if (
+        process.env.FINORA_DEV_CONTROL_STORE_DIAGNOSTICS ===
+          "1"
+      ) {
+        console.error(
+          "[FINORA CONTROL DIAG]",
+          describeControlStorePackageValidationFailure(
+            parsed,
+          ),
+        );
+      }
+
+      return failure(
+        "FINORA Control Store package validation failed.",
+      );
     }
 
     if (decrypted.shouldReEncrypt) {
@@ -956,6 +1614,142 @@ export async function readFinoraControlStore(): Promise<
       error instanceof Error
         ? error.message
         : "Unable to read the FINORA Control Store.",
+    );
+  }
+}
+
+// ============================================================
+// GET INSTALLATION IDENTITY FOR BINDING RECONCILIATION
+// ============================================================
+//
+// MIGRATION-ONLY READ:
+//
+// The native installation-binding vault may need to be created
+// for a legacy Control Store whose operational state no longer
+// passes current full-package validation.
+//
+// This reader therefore validates ONLY:
+//
+// - encrypted Control Store readability
+// - JSON root structure
+// - Control Store version
+// - installation identity structure
+//
+// It deliberately does NOT:
+//
+// - validate or authorize storage entitlements
+// - validate or authorize branch access grants
+// - expose operational state
+// - persist / rewrite / repair the legacy Control Store
+//
+// Normal runtime access continues through readFinoraControlStore()
+// and remains fail-closed on any invalid legacy entitlement.
+// ============================================================
+
+export async function getFinoraInstallationIdentityForBindingReconciliation():
+  Promise<
+    FinoraControlStoreResult<
+      FinoraControlInstallationIdentity |
+      undefined
+    >
+  > {
+
+  try {
+
+    if (
+      !await controlFileExists()
+    ) {
+      return success(
+        undefined,
+      );
+    }
+
+    const encrypted =
+      await fs.readFile(
+        getControlFile(),
+      );
+
+    if (
+      encrypted.length ===
+        0
+    ) {
+      return failure(
+        "FINORA Control Store file is empty.",
+      );
+    }
+
+    const decrypted =
+      await decryptControlPayload(
+        encrypted,
+      );
+
+    let parsed:
+      unknown;
+
+    try {
+
+      parsed =
+        JSON.parse(
+          decrypted.plainText,
+        );
+
+    } catch {
+
+      return failure(
+        "FINORA Control Store contains invalid encrypted data.",
+      );
+    }
+
+    if (
+      !isRecord(
+        parsed,
+      )
+    ) {
+      return failure(
+        "FINORA Control Store root structure is invalid for installation binding reconciliation.",
+      );
+    }
+
+    if (
+      parsed.version !==
+        CONTROL_STORE_VERSION
+    ) {
+      return failure(
+        "FINORA Control Store version is invalid for installation binding reconciliation.",
+      );
+    }
+
+    if (
+      parsed.installation ===
+        undefined
+    ) {
+      return success(
+        undefined,
+      );
+    }
+
+    if (
+      !isInstallationIdentity(
+        parsed.installation,
+      )
+    ) {
+      return failure(
+        "FINORA Control Store installation identity is invalid for binding reconciliation.",
+      );
+    }
+
+    return success(
+      parsed.installation,
+    );
+
+  } catch (
+    error
+  ) {
+
+    return failure(
+      error instanceof Error
+        ? error.message
+        : "Unable to read FINORA installation identity for binding reconciliation.",
     );
   }
 }
@@ -1405,6 +2199,54 @@ export interface FinoraVerifiedStorageEntitlementApplyResult {
  * BRANCH_ACTIVATION and STORAGE_ENTITLEMENT therefore cannot
  * race each other and overwrite a newer committed package.
  */
+
+// ============================================================
+// VERIFIED BUSINESS PROFILE APPLY CONTRACT
+// ============================================================
+
+export interface FinoraVerifiedBusinessProfileApplyInput {
+
+  packageId:
+    string;
+
+  issuerId:
+    string;
+
+  purpose:
+    "BUSINESS_PROFILE";
+
+  sequence:
+    number;
+
+  action:
+    "ISSUE" | "REPLACE";
+
+  target: {
+    ownerId:
+      string;
+
+    businessId:
+      string;
+
+    branchId:
+      string;
+
+    installationId:
+      string;
+  };
+
+  profile:
+    FinoraControlBusinessProfile;
+
+  appliedAt:
+    string;
+}
+
+export interface FinoraVerifiedBusinessProfileApplyResult {
+
+  profile:
+    FinoraControlBusinessProfile;
+}
 
 let controlPackageApplyQueue: Promise<void> = Promise.resolve();
 
@@ -1974,6 +2816,754 @@ export function applyFinoraVerifiedStorageEntitlementState(
   );
 
   return operation;
+}
+
+// ============================================================
+// VERIFIED BUSINESS PROFILE ATOMIC APPLY
+// ============================================================
+
+async function applyVerifiedBusinessProfileInternal(
+  input:
+    FinoraVerifiedBusinessProfileApplyInput,
+): Promise<
+  FinoraControlStoreResult<
+    FinoraVerifiedBusinessProfileApplyResult
+  >
+> {
+
+  // ----------------------------------------------------------
+  // INPUT STRUCTURE
+  // ----------------------------------------------------------
+
+  if (
+    !isNonEmptyString(
+      input.packageId,
+    ) ||
+    !isNonEmptyString(
+      input.issuerId,
+    ) ||
+    input.purpose !==
+      "BUSINESS_PROFILE" ||
+    (
+      input.action !==
+        "ISSUE" &&
+      input.action !==
+        "REPLACE"
+    ) ||
+    !Number.isSafeInteger(
+      input.sequence,
+    ) ||
+    input.sequence <=
+      0 ||
+    !isControlTimestamp(
+      input.appliedAt,
+    ) ||
+    !isBusinessProfile(
+      input.profile,
+    ) ||
+    !isRecord(
+      input.target,
+    ) ||
+    !isNonEmptyString(
+      input.target.ownerId,
+    ) ||
+    !isNonEmptyString(
+      input.target.businessId,
+    ) ||
+    !isNonEmptyString(
+      input.target.branchId,
+    ) ||
+    !isNonEmptyString(
+      input.target.installationId,
+    )
+  ) {
+    return failure(
+      "A valid verified FINORA Business Profile package is required.",
+    );
+  }
+
+
+  // ----------------------------------------------------------
+  // PROFILE ↔ TARGET
+  // ----------------------------------------------------------
+
+  if (
+    input.profile.ownerId !==
+      input.target.ownerId ||
+    input.profile.businessId !==
+      input.target.businessId ||
+    input.profile.branchId !==
+      input.target.branchId ||
+    input.profile.installationId !==
+      input.target.installationId
+  ) {
+    return failure(
+      "FINORA Business Profile identity does not match the verified package target.",
+    );
+  }
+
+
+  // ----------------------------------------------------------
+  // PROFILE AUDIT TIME
+  // ----------------------------------------------------------
+
+  const appliedAtTime =
+    Date.parse(
+      input.appliedAt,
+    );
+
+  const profileUpdatedAtTime =
+    Date.parse(
+      input.profile.updatedAt,
+    );
+
+  if (
+    !Number.isFinite(
+      appliedAtTime,
+    ) ||
+    !Number.isFinite(
+      profileUpdatedAtTime,
+    ) ||
+    profileUpdatedAtTime >
+      appliedAtTime
+  ) {
+    return failure(
+      "FINORA Business Profile update timestamp cannot be later than package application.",
+    );
+  }
+
+
+  // ----------------------------------------------------------
+  // AUTHORITATIVE CONTROL STORE
+  // ----------------------------------------------------------
+
+  const currentResult =
+    await readFinoraControlStore();
+
+  if (
+    !currentResult.success ||
+    !currentResult.data
+  ) {
+    return failure(
+      currentResult.error ??
+        "Unable to load the FINORA Control Store.",
+    );
+  }
+
+  const controlStore =
+    currentResult.data;
+
+  const installation =
+    controlStore.installation;
+
+  if (!installation) {
+    return failure(
+      "FINORA installation identity is required before applying a Business Profile.",
+    );
+  }
+
+
+  // ----------------------------------------------------------
+  // CONTROL STORE INSTALLATION ↔ VERIFIED TARGET
+  // ----------------------------------------------------------
+
+  if (
+    installation.ownerId !==
+      input.target.ownerId ||
+    installation.businessId !==
+      input.target.businessId ||
+    installation.branchId !==
+      input.target.branchId ||
+    installation.installationId !==
+      input.target.installationId
+  ) {
+    return failure(
+      "FINORA Business Profile target does not match the Control Store installation identity.",
+    );
+  }
+
+
+  // ----------------------------------------------------------
+  // NUMBERING CODE CONSISTENCY
+  //
+  // Existing Phase-3 installations may be legacy records with
+  // both codes absent.
+  //
+  // If Control Store already has authoritative numbering codes,
+  // the signed Business Profile must match them exactly.
+  // ----------------------------------------------------------
+
+  const installationHasBusinessCode =
+    isNonEmptyString(
+      installation.businessCode,
+    );
+
+  const installationHasBranchCode =
+    isNonEmptyString(
+      installation.branchCode,
+    );
+
+  if (
+    installationHasBusinessCode !==
+      installationHasBranchCode
+  ) {
+    return failure(
+      "FINORA Control Store installation numbering-code state is inconsistent.",
+    );
+  }
+
+  if (
+    installationHasBusinessCode &&
+    installationHasBranchCode &&
+    (
+      installation.businessCode !==
+        input.profile.businessCode ||
+      installation.branchCode !==
+        input.profile.branchCode
+    )
+  ) {
+    return failure(
+      "FINORA Business Profile numbering codes do not match the installation identity.",
+    );
+  }
+
+
+  // ----------------------------------------------------------
+  // REPLAY / MONOTONIC SEQUENCE
+  // ----------------------------------------------------------
+
+  const appliedPackages =
+    controlStore.appliedControlPackages ??
+    [];
+
+  const sequenceStates =
+    controlStore.controlSequences ??
+    [];
+
+  const replayDecision =
+    evaluateFinoraControlReplay(
+      {
+        packageId:
+          input.packageId,
+
+        issuerId:
+          input.issuerId,
+
+        purpose:
+          input.purpose,
+
+        sequence:
+          input.sequence,
+
+        ownerId:
+          input.target.ownerId,
+
+        businessId:
+          input.target.businessId,
+
+        branchId:
+          input.target.branchId,
+
+        installationId:
+          input.target.installationId,
+      },
+      appliedPackages,
+      sequenceStates,
+    );
+
+  if (!replayDecision.accepted) {
+    return failure(
+      `${replayDecision.reason}: ${replayDecision.error}`,
+    );
+  }
+
+
+  // ----------------------------------------------------------
+  // BUSINESS PROFILE
+  //
+  // Logical identity:
+  //
+  // ownerId + businessId + branchId
+  //
+  // Immutable across signed replacements:
+  //
+  // - profileId
+  // - ownerId
+  // - businessId
+  // - branchId
+  // - businessCode
+  // - branchCode
+  // - installationId
+  // - bindingKeyId
+  // - fingerprintAlgorithm
+  // - publicKeyFingerprint
+  // - createdAt
+  //
+  // REPLACE may update:
+  //
+  // - businessName
+  // - branchName
+  // - updatedAt
+  // ----------------------------------------------------------
+
+  const profiles =
+    controlStore.businessProfiles ??
+    [];
+
+  const profileIndex =
+    profiles.findIndex(
+      (item) =>
+        item.ownerId ===
+          input.profile.ownerId &&
+        item.businessId ===
+          input.profile.businessId &&
+        item.branchId ===
+          input.profile.branchId,
+    );
+
+  const sameProfileIdIndex =
+    profiles.findIndex(
+      (item) =>
+        item.profileId ===
+          input.profile.profileId,
+    );
+
+
+  // ----------------------------------------------------------
+  // PROFILE ID CANNOT MOVE TO ANOTHER SCOPE
+  // ----------------------------------------------------------
+
+  if (
+    sameProfileIdIndex >=
+      0 &&
+    sameProfileIdIndex !==
+      profileIndex
+  ) {
+    return failure(
+      "FINORA Business Profile identity cannot move to another Owner / Business / Branch scope.",
+    );
+  }
+
+
+  // ----------------------------------------------------------
+  // ISSUE / REPLACE LIFECYCLE
+  // ----------------------------------------------------------
+
+  if (
+    input.action ===
+      "ISSUE" &&
+    profileIndex >=
+      0
+  ) {
+    return failure(
+      "FINORA Business Profile already exists; a newer signed REPLACE package is required.",
+    );
+  }
+
+  if (
+    input.action ===
+      "REPLACE" &&
+    profileIndex <
+      0
+  ) {
+    return failure(
+      "FINORA Business Profile REPLACE requires an existing signed profile.",
+    );
+  }
+
+
+  // ----------------------------------------------------------
+  // REPLACE IMMUTABILITY
+  // ----------------------------------------------------------
+
+  if (
+    profileIndex >=
+      0
+  ) {
+
+    const existingProfile =
+      profiles[
+        profileIndex
+      ];
+
+    if (!existingProfile) {
+      return failure(
+        "FINORA existing Business Profile state is invalid.",
+      );
+    }
+
+    if (
+      existingProfile.profileId !==
+        input.profile.profileId ||
+      existingProfile.ownerId !==
+        input.profile.ownerId ||
+      existingProfile.businessId !==
+        input.profile.businessId ||
+      existingProfile.branchId !==
+        input.profile.branchId ||
+      existingProfile.businessCode !==
+        input.profile.businessCode ||
+      existingProfile.branchCode !==
+        input.profile.branchCode ||
+      existingProfile.installationId !==
+        input.profile.installationId ||
+      existingProfile.bindingKeyId !==
+        input.profile.bindingKeyId ||
+      existingProfile.fingerprintAlgorithm !==
+        input.profile.fingerprintAlgorithm ||
+      existingProfile.publicKeyFingerprint !==
+        input.profile.publicKeyFingerprint ||
+      existingProfile.createdAt !==
+        input.profile.createdAt
+    ) {
+      return failure(
+        "FINORA Business Profile immutable identity cannot be replaced.",
+      );
+    }
+
+    profiles[
+      profileIndex
+    ] =
+      input.profile;
+
+  } else {
+
+    profiles.push(
+      input.profile,
+    );
+  }
+
+
+  // ----------------------------------------------------------
+  // APPLIED PACKAGE LEDGER
+  // ----------------------------------------------------------
+
+  appliedPackages.push({
+    packageId:
+      input.packageId,
+
+    issuerId:
+      input.issuerId,
+
+    purpose:
+      input.purpose,
+
+    sequence:
+      input.sequence,
+
+    ownerId:
+      input.target.ownerId,
+
+    businessId:
+      input.target.businessId,
+
+    branchId:
+      input.target.branchId,
+
+    installationId:
+      input.target.installationId,
+
+    appliedAt:
+      input.appliedAt,
+  });
+
+
+  // ----------------------------------------------------------
+  // MONOTONIC SEQUENCE STATE
+  // ----------------------------------------------------------
+
+  const sequenceIndex =
+    sequenceStates.findIndex(
+      (item) =>
+        item.issuerId ===
+          input.issuerId &&
+        item.purpose ===
+          input.purpose &&
+        item.ownerId ===
+          input.target.ownerId &&
+        item.businessId ===
+          input.target.businessId &&
+        item.branchId ===
+          input.target.branchId &&
+        item.installationId ===
+          input.target.installationId,
+    );
+
+  const nextSequenceState:
+    FinoraControlSequenceStateRecord = {
+
+      issuerId:
+        input.issuerId,
+
+      purpose:
+        input.purpose,
+
+      ownerId:
+        input.target.ownerId,
+
+      businessId:
+        input.target.businessId,
+
+      branchId:
+        input.target.branchId,
+
+      installationId:
+        input.target.installationId,
+
+      lastSequence:
+        input.sequence,
+
+      updatedAt:
+        input.appliedAt,
+    };
+
+  if (
+    sequenceIndex >=
+      0
+  ) {
+    sequenceStates[
+      sequenceIndex
+    ] =
+      nextSequenceState;
+  } else {
+    sequenceStates.push(
+      nextSequenceState,
+    );
+  }
+
+
+  // ----------------------------------------------------------
+  // ONE AUTHORITATIVE STATE OBJECT
+  // ----------------------------------------------------------
+
+  controlStore.businessProfiles =
+    profiles;
+
+  controlStore.appliedControlPackages =
+    appliedPackages;
+
+  controlStore.controlSequences =
+    sequenceStates;
+
+  controlStore.updatedAt =
+    input.appliedAt;
+
+
+  // ----------------------------------------------------------
+  // ONE ENCRYPTED ATOMIC FILE REPLACEMENT
+  //
+  // profile + replay ledger + monotonic sequence are committed
+  // together as one Control Store package.
+  // ----------------------------------------------------------
+
+  try {
+
+    await persistControlStorePackage(
+      controlStore,
+    );
+
+  } catch (error) {
+
+    return failure(
+      error instanceof Error
+        ? error.message
+        : "Unable to atomically persist verified FINORA Business Profile state.",
+    );
+  }
+
+
+  return success({
+    profile:
+      input.profile,
+  });
+}
+
+
+// ============================================================
+// SERIALIZED VERIFIED BUSINESS PROFILE APPLY
+// ============================================================
+
+export function applyFinoraVerifiedBusinessProfileState(
+  input:
+    FinoraVerifiedBusinessProfileApplyInput,
+): Promise<
+  FinoraControlStoreResult<
+    FinoraVerifiedBusinessProfileApplyResult
+  >
+> {
+
+  const operation =
+    controlPackageApplyQueue.then(
+      () =>
+        applyVerifiedBusinessProfileInternal(
+          input,
+        ),
+      () =>
+        applyVerifiedBusinessProfileInternal(
+          input,
+        ),
+    );
+
+  controlPackageApplyQueue =
+    operation.then(
+      () =>
+        undefined,
+      () =>
+        undefined,
+    );
+
+  return operation;
+}
+
+// ============================================================
+// FIND SIGNED BUSINESS PROFILE
+// ============================================================
+
+/**
+ * Read the current trusted signed FINORA Business / Branch
+ * Profile for one exact Owner / Business / Branch scope.
+ *
+ * READ ONLY:
+ *
+ * - No profile creation.
+ * - No profile replacement.
+ * - No repository mutation.
+ * - No renderer-provided display identity authority.
+ *
+ * Legacy Control Stores may not yet contain businessProfiles.
+ * In that case this returns success(undefined).
+ */
+export async function findFinoraBusinessProfile(
+  ownerId:
+    string,
+
+  businessId:
+    string,
+
+  branchId:
+    string,
+): Promise<
+  FinoraControlStoreResult<
+    FinoraControlBusinessProfile | undefined
+  >
+> {
+
+  if (
+    !isNonEmptyString(
+      ownerId,
+    ) ||
+    !isNonEmptyString(
+      businessId,
+    ) ||
+    !isNonEmptyString(
+      branchId,
+    )
+  ) {
+    return failure(
+      "Owner ID, Business ID and Branch ID are required to read the FINORA Business Profile.",
+    );
+  }
+
+  const currentResult =
+    await readFinoraControlStore();
+
+  if (
+    !currentResult.success ||
+    !currentResult.data
+  ) {
+    return failure(
+      currentResult.error ??
+        "Unable to load the FINORA Control Store.",
+    );
+  }
+
+  const installation =
+    currentResult.data.installation;
+
+  if (!installation) {
+    return failure(
+      "FINORA installation identity is required before reading the Business Profile.",
+    );
+  }
+
+  // ----------------------------------------------------------
+  // CALLER SCOPE MUST BE THIS INSTALLATION
+  // ----------------------------------------------------------
+
+  if (
+    installation.ownerId !==
+      ownerId ||
+    installation.businessId !==
+      businessId ||
+    installation.branchId !==
+      branchId
+  ) {
+    return failure(
+      "FINORA Business Profile request does not match the installation identity.",
+    );
+  }
+
+  const profiles =
+    currentResult.data.businessProfiles ??
+    [];
+
+  const profile =
+    profiles.find(
+      (item) =>
+        item.ownerId ===
+          ownerId &&
+        item.businessId ===
+          businessId &&
+        item.branchId ===
+          branchId,
+    );
+
+  if (!profile) {
+    return success(
+      undefined,
+    );
+  }
+
+  // ----------------------------------------------------------
+  // DEFENCE-IN-DEPTH INSTALLATION CONSISTENCY
+  // ----------------------------------------------------------
+
+  if (
+    profile.installationId !==
+      installation.installationId
+  ) {
+    return failure(
+      "FINORA Business Profile installation identity is inconsistent.",
+    );
+  }
+
+  if (
+    isNonEmptyString(
+      installation.businessCode,
+    ) &&
+    installation.businessCode !==
+      profile.businessCode
+  ) {
+    return failure(
+      "FINORA Business Profile businessCode does not match the installation identity.",
+    );
+  }
+
+  if (
+    isNonEmptyString(
+      installation.branchCode,
+    ) &&
+    installation.branchCode !==
+      profile.branchCode
+  ) {
+    return failure(
+      "FINORA Business Profile branchCode does not match the installation identity.",
+    );
+  }
+
+  return success(
+    profile,
+  );
 }
 
 // ============================================================

@@ -6,7 +6,6 @@
 =========================================================== */
 
 import {
-  DEFAULT_BRANCH,
   DEFAULT_PHOTO,
   VERIFIED_LABEL,
   UNVERIFIED_LABEL,
@@ -20,11 +19,7 @@ export function buildBranch(
   branchName?: string,
 ): string {
 
-  const value = branchName?.trim();
-
-  return value && value.length > 0
-    ? value
-    : DEFAULT_BRANCH;
+  return branchName?.trim() ?? "";
 
 }
 

@@ -35,8 +35,6 @@ export const UNVERIFIED_LABEL =
    DEFAULTS
 =========================================================== */
 
-export const DEFAULT_BRANCH =
-  "Main Branch";
 
 export const DEFAULT_PHOTO =
   "";

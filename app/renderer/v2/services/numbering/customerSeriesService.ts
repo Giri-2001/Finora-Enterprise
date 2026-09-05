@@ -9,7 +9,7 @@
 // - Load the Customer Series for the provisioned branch
 // - Lock the owner-selected starting Customer number once
 // - Resolve immutable Business / Branch numbering codes from
-//   the secure FINORA Installation Identity
+//   the signed FINORA Business Profile
 // - Keep Customer Series business rules outside repositories
 //
 // IMPORTANT:
@@ -21,7 +21,7 @@
 // - No Customer record creation.
 // - No Loan / Collection / Receipt sequence logic.
 // - Owner controls only startingCustomerNumber.
-// - Business / Branch codes come only from trusted provisioning.
+// - Business / Branch codes come only from the signed Business Profile.
 //
 // VERSION : 1.2
 // STATUS  : Production Foundation
@@ -37,14 +37,15 @@ import {
 } from "../../repositories/numbering/numberingSeriesRepository";
 
 import {
-  loadFinoraInstallationIdentity,
-} from "../activation/activationService";
+  resolveFinoraNumberingScope,
+} from "./finoraNumberingScopeService";
 
 import type {
   CustomerNumberPreview,
   CustomerSeriesConfiguration,
   CustomerSeriesSetupInput,
   CustomerSeriesSetupPreview,
+  FinoraNumberingScope,
 } from "../../types/numbering/numbering.types";
 
 import type {
@@ -53,7 +54,6 @@ import type {
 
 import {
   formatCustomerId,
-  normalizeNumberingCode,
 } from "../../utils/numbering/numbering.formatter";
 
 // ============================================================
@@ -79,38 +79,43 @@ function validateStartingCustomerNumber(
   return null;
 }
 
-function normalizeProvisionedCode(
-  value: string | undefined,
-  label: string,
-): StorageResult<string> {
-  if (!value?.trim()) {
+// ============================================================
+// STORED CUSTOMER SERIES SCOPE VALIDATION
+// ============================================================
+
+function validateStoredCustomerSeriesScope(
+  configuration:
+    CustomerSeriesConfiguration,
+  scope:
+    FinoraNumberingScope,
+): StorageResult<void> {
+
+  if (
+    configuration.ownerId !==
+      scope.ownerId ||
+    configuration.businessId !==
+      scope.businessId ||
+    configuration.branchId !==
+      scope.branchId ||
+    configuration.businessCode !==
+      scope.businessCode ||
+    configuration.branchCode !==
+      scope.branchCode
+  ) {
+
     return {
-      success: false,
+      success:
+        false,
 
       error:
-        `FINORA ${label} is not provisioned for this installation.`,
+        "Stored Customer Series identity does not match the authoritative FINORA numbering scope.",
     };
   }
 
-  try {
-    return {
-      success: true,
-
-      data:
-        normalizeNumberingCode(
-          value,
-        ),
-    };
-  } catch (error) {
-    return {
-      success: false,
-
-      error:
-        error instanceof Error
-          ? error.message
-          : `FINORA ${label} is invalid.`,
-    };
-  }
+  return {
+    success:
+      true,
+  };
 }
 
 // ============================================================
@@ -164,37 +169,73 @@ export async function loadCustomerSeriesConfiguration():
       CustomerSeriesConfiguration | undefined
     >
   > {
-  const installationResult =
-    await loadFinoraInstallationIdentity();
 
-  if (!installationResult.success) {
+  const scopeResult =
+    await resolveFinoraNumberingScope();
+
+  if (
+    !scopeResult.success ||
+    !scopeResult.data
+  ) {
+
     return {
-      success: false,
+      success:
+        false,
 
       error:
-        installationResult.error ??
-        "Unable to load FINORA installation identity.",
+        scopeResult.error ??
+        "Unable to resolve the authoritative FINORA numbering scope.",
     };
   }
 
-  const installation =
-    installationResult.data;
+  const scope =
+    scopeResult.data;
 
-  if (!installation) {
+  const configurationResult =
+    await numberingSeriesRepository.findByBranch(
+      scope.businessId,
+      scope.branchId,
+    );
+
+  if (!configurationResult.success) {
+
     return {
-      success: false,
+      success:
+        false,
 
       error:
-        "FINORA installation has not been provisioned.",
+        configurationResult.error ??
+        "Unable to load Customer Series configuration.",
     };
   }
 
-  return numberingSeriesRepository.findByBranch(
-    installation.businessId,
-    installation.branchId,
-  );
+  const configuration =
+    configurationResult.data;
+
+  if (!configuration) {
+    return configurationResult;
+  }
+
+  const scopeValidation =
+    validateStoredCustomerSeriesScope(
+      configuration,
+      scope,
+    );
+
+  if (!scopeValidation.success) {
+
+    return {
+      success:
+        false,
+
+      error:
+        scopeValidation.error ??
+        "Stored Customer Series scope validation failed.",
+    };
+  }
+
+  return configurationResult;
 }
-
 // ============================================================
 // PREVIEW CUSTOMER SERIES SETUP
 // ============================================================
@@ -207,7 +248,7 @@ export async function loadCustomerSeriesConfiguration():
  *
  * - Does NOT persist anything.
  * - Does NOT reserve or consume a Customer number.
- * - Business / Branch codes come only from secure provisioning.
+ * - Business / Branch codes come only from the signed Business Profile.
  * - Owner controls only startingCustomerNumber.
  */
 export async function previewCustomerSeriesSetup(
@@ -218,6 +259,7 @@ export async function previewCustomerSeriesSetup(
     CustomerSeriesSetupPreview
   >
 > {
+
   const validationError =
     validateStartingCustomerNumber(
       input.startingCustomerNumber,
@@ -225,77 +267,40 @@ export async function previewCustomerSeriesSetup(
 
   if (validationError) {
     return {
-      success: false,
-      error: validationError,
-    };
-  }
-
-  const installationResult =
-    await loadFinoraInstallationIdentity();
-
-  if (!installationResult.success) {
-    return {
-      success: false,
+      success:
+        false,
 
       error:
-        installationResult.error ??
-        "Unable to load FINORA installation identity.",
+        validationError,
     };
   }
 
-  const installation =
-    installationResult.data;
-
-  if (!installation) {
-    return {
-      success: false,
-
-      error:
-        "FINORA installation has not been provisioned.",
-    };
-  }
-
-  const businessCodeResult =
-    normalizeProvisionedCode(
-      installation.businessCode,
-      "Business Code",
-    );
+  const scopeResult =
+    await resolveFinoraNumberingScope();
 
   if (
-    !businessCodeResult.success ||
-    !businessCodeResult.data
+    !scopeResult.success ||
+    !scopeResult.data
   ) {
+
     return {
-      success: false,
+      success:
+        false,
 
       error:
-        businessCodeResult.error ??
-        "FINORA Business Code is required.",
+        scopeResult.error ??
+        "Unable to resolve the authoritative FINORA numbering scope.",
     };
   }
 
-  const branchCodeResult =
-    normalizeProvisionedCode(
-      installation.branchCode,
-      "Branch Code",
-    );
-
-  if (
-    !branchCodeResult.success ||
-    !branchCodeResult.data
-  ) {
-    return {
-      success: false,
-
-      error:
-        branchCodeResult.error ??
-        "FINORA Branch Code is required.",
-    };
-  }
+  const scope =
+    scopeResult.data;
 
   try {
+
     return {
-      success: true,
+      success:
+        true,
 
       data: {
         customerNumber:
@@ -303,21 +308,24 @@ export async function previewCustomerSeriesSetup(
 
         customerId:
           formatCustomerId(
-            businessCodeResult.data,
-            branchCodeResult.data,
+            scope.businessCode,
+            scope.branchCode,
             input.startingCustomerNumber,
           ),
 
         businessCode:
-          businessCodeResult.data,
+          scope.businessCode,
 
         branchCode:
-          branchCodeResult.data,
+          scope.branchCode,
       },
     };
+
   } catch (error) {
+
     return {
-      success: false,
+      success:
+        false,
 
       error:
         error instanceof Error
@@ -326,7 +334,6 @@ export async function previewCustomerSeriesSetup(
     };
   }
 }
-
 // ============================================================
 // LOCK CUSTOMER SERIES
 // ============================================================
@@ -348,6 +355,7 @@ export async function lockCustomerSeries(
     CustomerSeriesConfiguration
   >
 > {
+
   const validationError =
     validateStartingCustomerNumber(
       input.startingCustomerNumber,
@@ -355,83 +363,46 @@ export async function lockCustomerSeries(
 
   if (validationError) {
     return {
-      success: false,
-      error: validationError,
-    };
-  }
-
-  const installationResult =
-    await loadFinoraInstallationIdentity();
-
-  if (!installationResult.success) {
-    return {
-      success: false,
+      success:
+        false,
 
       error:
-        installationResult.error ??
-        "Unable to load FINORA installation identity.",
+        validationError,
     };
   }
 
-  const installation =
-    installationResult.data;
-
-  if (!installation) {
-    return {
-      success: false,
-
-      error:
-        "FINORA installation has not been provisioned.",
-    };
-  }
-
-  const businessCodeResult =
-    normalizeProvisionedCode(
-      installation.businessCode,
-      "Business Code",
-    );
+  const scopeResult =
+    await resolveFinoraNumberingScope();
 
   if (
-    !businessCodeResult.success ||
-    !businessCodeResult.data
+    !scopeResult.success ||
+    !scopeResult.data
   ) {
+
     return {
-      success: false,
+      success:
+        false,
 
       error:
-        businessCodeResult.error ??
-        "FINORA Business Code is required.",
+        scopeResult.error ??
+        "Unable to resolve the authoritative FINORA numbering scope.",
     };
   }
 
-  const branchCodeResult =
-    normalizeProvisionedCode(
-      installation.branchCode,
-      "Branch Code",
-    );
-
-  if (
-    !branchCodeResult.success ||
-    !branchCodeResult.data
-  ) {
-    return {
-      success: false,
-
-      error:
-        branchCodeResult.error ??
-        "FINORA Branch Code is required.",
-    };
-  }
+  const scope =
+    scopeResult.data;
 
   const existingResult =
     await numberingSeriesRepository.findByBranch(
-      installation.businessId,
-      installation.branchId,
+      scope.businessId,
+      scope.branchId,
     );
 
   if (!existingResult.success) {
+
     return {
-      success: false,
+      success:
+        false,
 
       error:
         existingResult.error ??
@@ -440,8 +411,30 @@ export async function lockCustomerSeries(
   }
 
   if (existingResult.data) {
+
+    const existingScopeValidation =
+      validateStoredCustomerSeriesScope(
+        existingResult.data,
+        scope,
+      );
+
+    if (
+      !existingScopeValidation.success
+    ) {
+
+      return {
+        success:
+          false,
+
+        error:
+          existingScopeValidation.error ??
+          "Existing Customer Series scope validation failed.",
+      };
+    }
+
     return {
-      success: false,
+      success:
+        false,
 
       error:
         "Customer Series is already locked for this branch.",
@@ -453,49 +446,49 @@ export async function lockCustomerSeries(
 
   const configuration:
     CustomerSeriesConfiguration = {
-      ownerId:
-        installation.ownerId,
 
-      businessId:
-        installation.businessId,
+    ownerId:
+      scope.ownerId,
 
-      branchId:
-        installation.branchId,
+    businessId:
+      scope.businessId,
 
-      businessCode:
-        businessCodeResult.data,
+    branchId:
+      scope.branchId,
 
-      branchCode:
-        branchCodeResult.data,
+    businessCode:
+      scope.businessCode,
 
-      startingCustomerNumber:
-        input.startingCustomerNumber,
+    branchCode:
+      scope.branchCode,
 
-      lastIssuedCustomerNumber:
-        null,
+    startingCustomerNumber:
+      input.startingCustomerNumber,
 
-      status:
-        "LOCKED",
+    lastIssuedCustomerNumber:
+      null,
 
-      lockedAt:
-        now,
+    status:
+      "LOCKED",
 
-      createdAt:
-        now,
+    lockedAt:
+      now,
 
-      updatedAt:
-        now,
-    };
+    createdAt:
+      now,
+
+    updatedAt:
+      now,
+  };
 
   return numberingSeriesRepository.save(
     configuration,
     {
       ownerId:
-        installation.ownerId,
+        scope.ownerId,
     },
   );
 }
-
 // ============================================================
 // PREVIEW NEXT CUSTOMER NUMBER
 // ============================================================

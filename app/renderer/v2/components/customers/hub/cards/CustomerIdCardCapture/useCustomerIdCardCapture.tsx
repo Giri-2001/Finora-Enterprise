@@ -53,18 +53,19 @@ export type CustomerIdCardCaptureHookResult =
       error: string;
     };
 
-export interface UseCustomerIdCardCaptureOptions {
-  companyName?: string;
+export interface CustomerIdCardCaptureIdentity {
+  companyName:
+    string;
+
+  branchName:
+    string;
 }
 
 /* ============================================================
    HOOK
 ============================================================ */
 
-export function useCustomerIdCardCapture(
-  options:
-    UseCustomerIdCardCaptureOptions = {},
-) {
+export function useCustomerIdCardCapture() {
   const captureTargets =
     useRef<
       Map<string, HTMLElement>
@@ -191,12 +192,25 @@ export function useCustomerIdCardCapture(
       (
         customer:
           CustomerProfile,
+
+        identity:
+          CustomerIdCardCaptureIdentity,
       ) => {
         const customerId =
           customer.identity.customerId
             ?.trim();
 
-        if (!customerId) {
+        const companyName =
+          identity.companyName.trim();
+
+        const branchName =
+          identity.branchName.trim();
+
+        if (
+          !customerId ||
+          !companyName ||
+          !branchName
+        ) {
           return null;
         }
 
@@ -252,16 +266,19 @@ export function useCustomerIdCardCapture(
               }
 
               companyName={
-                options.companyName
-              }
+                  companyName
+                }
+
+                branchName={
+                  branchName
+                }
             />
           </div>
         );
       },
       [
-        options.companyName,
-        registerCaptureTarget,
-      ],
+          registerCaptureTarget,
+        ],
     );
 
   return {

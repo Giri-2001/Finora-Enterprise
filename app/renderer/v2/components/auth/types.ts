@@ -91,6 +91,10 @@ export type AuthDataContext =
 // An active V2 business context requires all three values.
 // ============================================================
 
+import type {
+  FinoraProvisionedBusinessProfileV1,
+} from "../../types/business/finoraBusinessProfileControl.types";
+
 export type BusinessAccessContext = {
   ownerId?: string;
 
@@ -114,6 +118,17 @@ export type BusinessAccessContext = {
   dataContext?: AuthDataContext;
 
   demoId?: string;
+
+  // ----------------------------------------------------------
+  // SIGNED BUSINESS / BRANCH PROFILE
+  //
+  // Provisioned by the FINORA Control Plane.
+  // This is the authoritative runtime identity view.
+  // Legacy mutable business identity storage is not authoritative here.
+  // ----------------------------------------------------------
+
+  businessProfile?:
+    FinoraProvisionedBusinessProfileV1;
 };
 
 // ============================================================

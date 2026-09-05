@@ -27,7 +27,6 @@ export interface CustomerRailItem {
 
   phone?: string;
 
-  branch: string;
 
   active: boolean;
 
@@ -51,6 +50,8 @@ export interface CustomerHangerRailProps {
   customers: CustomerRailItem[];
 
   companyName?: string;
+
+  branchName?: string;
 
   selectedCustomerId?: string;
 

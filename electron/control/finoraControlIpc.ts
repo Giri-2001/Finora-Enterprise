@@ -50,6 +50,10 @@ import type {
 } from "./finoraControlStore.js";
 
 import {
+  findFinoraBusinessProfile,
+} from "./finoraControlStore.js";
+
+import {
   getFinoraWindowsInstallationBinding,
 } from "./finoraInstallationBindingService.js";
 // ============================================================
@@ -65,6 +69,8 @@ const CONTROL_IPC_CHANNELS = {
 
   FIND_BRANCH_ACCESS_GRANT:
     "finora:control:find-branch-access-grant",
+  FIND_BUSINESS_PROFILE:
+    "finora:control:find-business-profile",
   HAS_ACTIVE_STORAGE_ENTITLEMENT:
     "finora:control:has-active-storage-entitlement",
 } as const;
@@ -329,6 +335,143 @@ export function registerFinoraControlHandlers(
       );
     },
   );
+  // ----------------------------------------------------------
+  // BUSINESS PROFILE
+  //
+  // READ ONLY.
+  //
+  // Native installation-binding metadata remains inside
+  // Electron main. Renderer receives only provisioned identity.
+  // ----------------------------------------------------------
+
+  ipcMain.handle(
+    CONTROL_IPC_CHANNELS.FIND_BUSINESS_PROFILE,
+    async (
+      event,
+      request: unknown,
+    ) => {
+
+      if (
+        !isTrustedRenderer(
+          event.senderFrame,
+        )
+      ) {
+        return failure(
+          "FINORA Control Business Profile access is restricted to the trusted renderer.",
+        );
+      }
+
+      if (
+        typeof request !==
+          "object" ||
+        request ===
+          null ||
+        Array.isArray(
+          request,
+        )
+      ) {
+        return failure(
+          "A valid FINORA Business Profile request is required.",
+        );
+      }
+
+      const record =
+        request as Record<string, unknown>;
+
+      const ownerId =
+        typeof record.ownerId ===
+          "string"
+          ? record.ownerId.trim()
+          : "";
+
+      const businessId =
+        typeof record.businessId ===
+          "string"
+          ? record.businessId.trim()
+          : "";
+
+      const branchId =
+        typeof record.branchId ===
+          "string"
+          ? record.branchId.trim()
+          : "";
+
+      if (
+        !ownerId ||
+        !businessId ||
+        !branchId
+      ) {
+        return failure(
+          "Owner ID, Business ID and Branch ID are required to read the FINORA Business Profile.",
+        );
+      }
+
+      const result =
+        await findFinoraBusinessProfile(
+          ownerId,
+          businessId,
+          branchId,
+        );
+
+      if (!result.success) {
+        return result;
+      }
+
+      if (!result.data) {
+        return {
+          success:
+            true,
+
+          data:
+            undefined,
+        };
+      }
+
+      const profile =
+        result.data;
+
+      return {
+        success:
+          true,
+
+        data: {
+          profileId:
+            profile.profileId,
+
+          ownerId:
+            profile.ownerId,
+
+          businessId:
+            profile.businessId,
+
+          branchId:
+            profile.branchId,
+
+          businessCode:
+            profile.businessCode,
+
+          branchCode:
+            profile.branchCode,
+
+          businessName:
+            profile.businessName,
+
+          branchName:
+            profile.branchName,
+
+          createdAt:
+            profile.createdAt,
+
+          updatedAt:
+            profile.updatedAt,
+
+          schemaVersion:
+            1 as const,
+        },
+      };
+    },
+  );
+
   // ----------------------------------------------------------
   // STORAGE ENTITLEMENT CHECK
   // ----------------------------------------------------------

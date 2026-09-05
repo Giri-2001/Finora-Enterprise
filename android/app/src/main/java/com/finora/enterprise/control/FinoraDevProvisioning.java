@@ -95,6 +95,14 @@ public final class FinoraDevProvisioning {
     public static final String EXTRA_USB_ENTITLEMENT_ID =
         "finora_dev_usb_entitlement_id";
 
+    public static final String EXTRA_PROFILE_ID =
+        "finora_dev_profile_id";
+
+    public static final String EXTRA_BUSINESS_NAME =
+        "finora_dev_business_name";
+
+    public static final String EXTRA_BRANCH_NAME =
+        "finora_dev_branch_name";
     // ========================================================
     // CONSTRUCTOR
     // ========================================================
@@ -263,6 +271,23 @@ public final class FinoraDevProvisioning {
                     EXTRA_BRANCH_CODE
                 );
 
+            String profileId =
+                requireExtra(
+                    intent,
+                    EXTRA_PROFILE_ID
+                );
+
+            String businessName =
+                requireExtra(
+                    intent,
+                    EXTRA_BUSINESS_NAME
+                );
+
+            String branchName =
+                requireExtra(
+                    intent,
+                    EXTRA_BRANCH_NAME
+                );
             provisionInstallation(
                 controlPackage,
                 installationId,
@@ -274,6 +299,20 @@ public final class FinoraDevProvisioning {
                 now
             );
 
+            controlPackage =
+                provisionBusinessProfile(
+                    controlPackage,
+                    profileId,
+                    ownerId,
+                    businessId,
+                    branchId,
+                    businessCode,
+                    branchCode,
+                    businessName,
+                    branchName,
+                    nativeBinding,
+                    now
+                );
             provisionBranchActivation(
                 controlPackage,
                 activationId,
@@ -424,6 +463,10 @@ public final class FinoraDevProvisioning {
                 "branchAccessGrants",
                 new JSONArray()
             );
+            created.put(
+                "businessProfiles",
+                new JSONArray()
+            );
 
             created.put(
                 "updatedAt",
@@ -487,6 +530,33 @@ public final class FinoraDevProvisioning {
 
             existing.put(
                 "branchAccessGrants",
+                new JSONArray()
+            );
+        }
+
+        JSONArray businessProfiles =
+            existing.optJSONArray(
+                "businessProfiles"
+            );
+
+        if (businessProfiles == null) {
+
+            if (
+                existing.has(
+                    "businessProfiles"
+                ) &&
+                !existing.isNull(
+                    "businessProfiles"
+                )
+            ) {
+
+                throw new IllegalStateException(
+                    "FINORA Android Business Profile collection is invalid."
+                );
+            }
+
+            existing.put(
+                "businessProfiles",
                 new JSONArray()
             );
         }
@@ -655,6 +725,473 @@ return existing;
         controlPackage.put(
             "installation",
             installation
+        );
+    }
+
+    // ========================================================
+    // DEVELOPMENT BUSINESS PROFILE
+    // ========================================================
+
+    private static JSONObject provisionBusinessProfile(
+        JSONObject controlPackage,
+        String profileId,
+        String ownerId,
+        String businessId,
+        String branchId,
+        String businessCode,
+        String branchCode,
+        String businessName,
+        String branchName,
+        FinoraInstallationBindingCrypto.PublicBinding nativeBinding,
+        String now
+    ) throws Exception {
+
+        if (
+            controlPackage == null ||
+            nativeBinding == null
+        ) {
+            throw new IllegalStateException(
+                "FINORA Android DEV Business Profile input is incomplete."
+            );
+        }
+
+        JSONArray profiles =
+            controlPackage.optJSONArray(
+                "businessProfiles"
+            );
+
+        if (profiles == null) {
+            throw new IllegalStateException(
+                "FINORA Android Business Profile collection is unavailable."
+            );
+        }
+
+
+        // ----------------------------------------------------
+        // EXACT EXISTING PROFILE / IDEMPOTENCY
+        // ----------------------------------------------------
+
+        JSONObject existingByScope =
+            null;
+
+        for (
+            int index = 0;
+            index < profiles.length();
+            index++
+        ) {
+
+            JSONObject candidate =
+                profiles.optJSONObject(
+                    index
+                );
+
+            if (candidate == null) {
+                throw new IllegalStateException(
+                    "FINORA Android Business Profile collection contains an invalid record."
+                );
+            }
+
+            String candidateProfileId =
+                candidate.optString(
+                    "profileId",
+                    ""
+                );
+
+            boolean sameScope =
+                ownerId.equals(
+                    candidate.optString(
+                        "ownerId",
+                        ""
+                    )
+                ) &&
+                businessId.equals(
+                    candidate.optString(
+                        "businessId",
+                        ""
+                    )
+                ) &&
+                branchId.equals(
+                    candidate.optString(
+                        "branchId",
+                        ""
+                    )
+                );
+
+            if (
+                profileId.equals(
+                    candidateProfileId
+                ) &&
+                !sameScope
+            ) {
+                throw new IllegalStateException(
+                    "FINORA Android DEV Business Profile ID cannot move to another branch scope."
+                );
+            }
+
+            if (sameScope) {
+
+                if (existingByScope != null) {
+                    throw new IllegalStateException(
+                        "Duplicate FINORA Android Business Profile branch scope detected."
+                    );
+                }
+
+                existingByScope =
+                    candidate;
+            }
+        }
+
+
+        if (existingByScope != null) {
+
+            boolean exactMatch =
+                profileId.equals(
+                    existingByScope.optString(
+                        "profileId",
+                        ""
+                    )
+                ) &&
+                ownerId.equals(
+                    existingByScope.optString(
+                        "ownerId",
+                        ""
+                    )
+                ) &&
+                businessId.equals(
+                    existingByScope.optString(
+                        "businessId",
+                        ""
+                    )
+                ) &&
+                branchId.equals(
+                    existingByScope.optString(
+                        "branchId",
+                        ""
+                    )
+                ) &&
+                businessCode.equals(
+                    existingByScope.optString(
+                        "businessCode",
+                        ""
+                    )
+                ) &&
+                branchCode.equals(
+                    existingByScope.optString(
+                        "branchCode",
+                        ""
+                    )
+                ) &&
+                businessName.equals(
+                    existingByScope.optString(
+                        "businessName",
+                        ""
+                    )
+                ) &&
+                branchName.equals(
+                    existingByScope.optString(
+                        "branchName",
+                        ""
+                    )
+                ) &&
+                nativeBinding.installationId.equals(
+                    existingByScope.optString(
+                        "installationId",
+                        ""
+                    )
+                ) &&
+                nativeBinding.bindingKeyId.equals(
+                    existingByScope.optString(
+                        "bindingKeyId",
+                        ""
+                    )
+                ) &&
+                nativeBinding.fingerprintAlgorithm.equals(
+                    existingByScope.optString(
+                        "fingerprintAlgorithm",
+                        ""
+                    )
+                ) &&
+                nativeBinding.publicKeyFingerprint.equals(
+                    existingByScope.optString(
+                        "publicKeyFingerprint",
+                        ""
+                    )
+                ) &&
+                existingByScope.optInt(
+                    "schemaVersion",
+                    -1
+                ) ==
+                    1;
+
+            if (!exactMatch) {
+                throw new IllegalStateException(
+                    "Existing FINORA Android DEV Business Profile does not match the configured profile identity. Refusing a silent local replacement."
+                );
+            }
+
+            return controlPackage;
+        }
+
+
+        // ----------------------------------------------------
+        // SYNTHETIC VERIFIED DEV PACKAGE
+        //
+        // This path is reachable only through debuggable
+        // FinoraDevProvisioning. It does not sign anything and
+        // does not expose package apply authority to WebView.
+        //
+        // Production BUSINESS_PROFILE packages still enter via:
+        //
+        // FinoraBusinessProfilePackageApplyService
+        // -> signature verification
+        // -> FinoraBusinessProfileStateEngine.
+        // ----------------------------------------------------
+
+        java.util.Map<String, Object> issuer =
+            new java.util.LinkedHashMap<>();
+
+        issuer.put(
+            "issuerId",
+            "FINORA_DEV_PROVISIONER"
+        );
+
+
+        java.util.Map<String, Object> target =
+            new java.util.LinkedHashMap<>();
+
+        target.put(
+            "ownerId",
+            ownerId
+        );
+
+        target.put(
+            "businessId",
+            businessId
+        );
+
+        target.put(
+            "branchId",
+            branchId
+        );
+
+        target.put(
+            "installationId",
+            nativeBinding.installationId
+        );
+
+        target.put(
+            "bindingKeyId",
+            nativeBinding.bindingKeyId
+        );
+
+        target.put(
+            "fingerprintAlgorithm",
+            nativeBinding.fingerprintAlgorithm
+        );
+
+        target.put(
+            "publicKeyFingerprint",
+            nativeBinding.publicKeyFingerprint
+        );
+
+
+        java.util.Map<String, Object> profile =
+            new java.util.LinkedHashMap<>();
+
+        profile.put(
+            "profileId",
+            profileId
+        );
+
+        profile.put(
+            "ownerId",
+            ownerId
+        );
+
+        profile.put(
+            "businessId",
+            businessId
+        );
+
+        profile.put(
+            "branchId",
+            branchId
+        );
+
+        profile.put(
+            "businessCode",
+            businessCode
+        );
+
+        profile.put(
+            "branchCode",
+            branchCode
+        );
+
+        profile.put(
+            "businessName",
+            businessName
+        );
+
+        profile.put(
+            "branchName",
+            branchName
+        );
+
+        profile.put(
+            "createdAt",
+            now
+        );
+
+        profile.put(
+            "updatedAt",
+            now
+        );
+
+        profile.put(
+            "schemaVersion",
+            Long.valueOf(
+                1L
+            )
+        );
+
+
+        java.util.Map<String, Object> installationBinding =
+            new java.util.LinkedHashMap<>();
+
+        installationBinding.put(
+            "installationId",
+            nativeBinding.installationId
+        );
+
+        installationBinding.put(
+            "bindingKeyId",
+            nativeBinding.bindingKeyId
+        );
+
+        installationBinding.put(
+            "fingerprintAlgorithm",
+            nativeBinding.fingerprintAlgorithm
+        );
+
+        installationBinding.put(
+            "publicKeyFingerprint",
+            nativeBinding.publicKeyFingerprint
+        );
+
+        installationBinding.put(
+            "schemaVersion",
+            Long.valueOf(
+                1L
+            )
+        );
+
+
+        java.util.Map<String, Object> payload =
+            new java.util.LinkedHashMap<>();
+
+        payload.put(
+            "action",
+            "ISSUE"
+        );
+
+        payload.put(
+            "profile",
+            profile
+        );
+
+        payload.put(
+            "installationBinding",
+            installationBinding
+        );
+
+        payload.put(
+            "issuedAt",
+            now
+        );
+
+        payload.put(
+            "schemaVersion",
+            Long.valueOf(
+                1L
+            )
+        );
+
+
+        java.util.Map<String, Object> verifiedPackage =
+            new java.util.LinkedHashMap<>();
+
+        verifiedPackage.put(
+            "packageId",
+            "FINORA-DEV-BUSINESS-PROFILE-" +
+                profileId
+        );
+
+        verifiedPackage.put(
+            "issuer",
+            issuer
+        );
+
+        verifiedPackage.put(
+            "purpose",
+            "BUSINESS_PROFILE"
+        );
+
+        verifiedPackage.put(
+            "sequence",
+            Long.valueOf(
+                1L
+            )
+        );
+
+        verifiedPackage.put(
+            "payloadVersion",
+            Long.valueOf(
+                1L
+            )
+        );
+
+        verifiedPackage.put(
+            "issuedAt",
+            now
+        );
+
+        verifiedPackage.put(
+            "target",
+            target
+        );
+
+        verifiedPackage.put(
+            "payload",
+            payload
+        );
+
+
+        java.util.Map<String, Object> currentState =
+            FinoraJsonBridge.toMap(
+                controlPackage
+            );
+
+        FinoraBusinessProfileStateEngine.Result result =
+            FinoraBusinessProfileStateEngine
+                .applyVerifiedPackage(
+                    currentState,
+                    verifiedPackage,
+                    java.time.Instant.parse(
+                        now
+                    )
+                );
+
+        if (!result.success) {
+            throw new IllegalStateException(
+                result.error != null
+                    ? result.error
+                    : "FINORA Android DEV Business Profile provisioning failed."
+            );
+        }
+
+        return new JSONObject(
+            result.nextState
         );
     }
 

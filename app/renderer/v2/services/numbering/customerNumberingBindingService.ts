@@ -41,8 +41,8 @@ import {
 } from "../../repositories/numbering/customerNumberingBindingRepository";
 
 import {
-  loadFinoraInstallationIdentity,
-} from "../activation/activationService";
+  resolveFinoraNumberingScope,
+} from "./finoraNumberingScopeService";
 
 import {
   previewNextCustomerNumber,
@@ -61,7 +61,6 @@ import type {
 
 import {
   formatCustomerId,
-  normalizeNumberingCode,
 } from "../../utils/numbering/numbering.formatter";
 
 // ============================================================
@@ -72,46 +71,10 @@ type ActiveNumberingScope =
   FinoraNumberingScope;
 
 // ============================================================
-// PROVISIONED CODE
-// ============================================================
-
-function normalizeProvisionedCode(
-  value: string | undefined,
-  label: string,
-): StorageResult<string> {
-
-  if (!value?.trim()) {
-    return {
-      success: false,
-
-      error:
-        `FINORA ${label} is not provisioned for this installation.`,
-    };
-  }
-
-  try {
-    return {
-      success: true,
-
-      data:
-        normalizeNumberingCode(
-          value,
-        ),
-    };
-  } catch (error) {
-    return {
-      success: false,
-
-      error:
-        error instanceof Error
-          ? error.message
-          : `FINORA ${label} is invalid.`,
-    };
-  }
-}
-
-// ============================================================
 // LOAD ACTIVE NUMBERING SCOPE
+//
+// Authoritative numbering codes come from the signed FINORA
+// Business Profile through the shared Numbering Scope service.
 // ============================================================
 
 async function loadActiveNumberingScope():
@@ -121,91 +84,8 @@ async function loadActiveNumberingScope():
     >
   > {
 
-  const installationResult =
-    await loadFinoraInstallationIdentity();
-
-  if (!installationResult.success) {
-    return {
-      success: false,
-
-      error:
-        installationResult.error ??
-        "Unable to load FINORA installation identity.",
-    };
-  }
-
-  const installation =
-    installationResult.data;
-
-  if (!installation) {
-    return {
-      success: false,
-
-      error:
-        "FINORA installation has not been provisioned.",
-    };
-  }
-
-  const businessCodeResult =
-    normalizeProvisionedCode(
-      installation.businessCode,
-      "Business Code",
-    );
-
-  if (
-    !businessCodeResult.success ||
-    !businessCodeResult.data
-  ) {
-    return {
-      success: false,
-
-      error:
-        businessCodeResult.error ??
-        "FINORA Business Code is required.",
-    };
-  }
-
-  const branchCodeResult =
-    normalizeProvisionedCode(
-      installation.branchCode,
-      "Branch Code",
-    );
-
-  if (
-    !branchCodeResult.success ||
-    !branchCodeResult.data
-  ) {
-    return {
-      success: false,
-
-      error:
-        branchCodeResult.error ??
-        "FINORA Branch Code is required.",
-    };
-  }
-
-  return {
-    success: true,
-
-    data: {
-      ownerId:
-        installation.ownerId,
-
-      businessId:
-        installation.businessId,
-
-      branchId:
-        installation.branchId,
-
-      businessCode:
-        businessCodeResult.data,
-
-      branchCode:
-        branchCodeResult.data,
-    },
-  };
+  return resolveFinoraNumberingScope();
 }
-
 // ============================================================
 // CANONICAL CUSTOMER CHECK
 //

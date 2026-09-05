@@ -122,6 +122,8 @@ export default function CustomerHanger({
 
   companyName,
 
+  branchName,
+
   onClick,
 
   flipped = false,
@@ -151,7 +153,7 @@ export default function CustomerHanger({
 
     photo,
 
-    branch,
+
 
     active,
 
@@ -692,7 +694,7 @@ export default function CustomerHanger({
                 companyName={companyName}
                 profilePhoto={photo}
                 phoneNumber={phone}
-                branchName={branch}
+                branchName={branchName}
                 kycVerified={kycVerified}
                 responsiveTokens={customerTokens}
                 compact={true}

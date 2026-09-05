@@ -9,7 +9,7 @@
 // - Define persisted Business Owner profile information
 // - Link the profile to the existing authentication User
 // - Keep authentication credentials outside this contract
-// - Keep owner profile information separate from BusinessIdentity
+// - Keep owner profile information separate from signed business identity authority
 // - Support FINORA LOCAL / USB storage
 //
 // IMPORTANT:
@@ -49,7 +49,7 @@ import type {
   BranchId,
   BusinessId,
   OwnerId,
-} from "./business.identity.types";
+} from "./business.scope.types";
 
 // ============================================================
 // BUSINESS OWNER PROFILE

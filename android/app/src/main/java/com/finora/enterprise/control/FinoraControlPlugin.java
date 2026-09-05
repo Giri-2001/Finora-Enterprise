@@ -282,6 +282,551 @@ public final class FinoraControlPlugin
         // ========================================================
     // FIND BRANCH ACCESS GRANT
     // ========================================================
+    // FIND BUSINESS PROFILE
+    // ========================================================
+
+    /**
+     * Read the signed FINORA Business / Branch Profile for one
+     * exact Owner / Business / Branch scope.
+     *
+     * SECURITY:
+     *
+     * - READ ONLY.
+     * - No profile creation.
+     * - No profile mutation.
+     * - No signed package apply authority.
+     * - No signing authority.
+     * - Scope must match the installed branch.
+     * - Persisted native-binding metadata must match the current
+     *   AndroidKeyStore-backed installation binding.
+     * - Renderer receives only sanitized profile fields.
+     */
+    @PluginMethod
+    public void findBusinessProfile(
+        PluginCall call
+    ) {
+
+        String ownerId =
+            normalizeRequiredString(
+                call.getString(
+                    "ownerId"
+                )
+            );
+
+        String businessId =
+            normalizeRequiredString(
+                call.getString(
+                    "businessId"
+                )
+            );
+
+        String branchId =
+            normalizeRequiredString(
+                call.getString(
+                    "branchId"
+                )
+            );
+
+        if (
+            ownerId == null ||
+            businessId == null ||
+            branchId == null
+        ) {
+
+            resolveFailure(
+                call,
+                "Owner ID, Business ID and Branch ID are required."
+            );
+
+            return;
+        }
+
+
+        try {
+
+            // ------------------------------------------------
+            // AUTHORITATIVE ENCRYPTED CONTROL STATE
+            // ------------------------------------------------
+
+            JSONObject controlPackage =
+                readValidatedControlPackage();
+
+            if (controlPackage == null) {
+
+                resolveSuccess(
+                    call
+                );
+
+                return;
+            }
+
+
+            // ------------------------------------------------
+            // INSTALLED BRANCH SCOPE
+            // ------------------------------------------------
+
+            JSONObject installation =
+                controlPackage.optJSONObject(
+                    "installation"
+                );
+
+            if (
+                installation == null ||
+                !isValidInstallation(
+                    installation
+                )
+            ) {
+
+                resolveFailure(
+                    call,
+                    "FINORA installation identity is required before reading the Business Profile."
+                );
+
+                return;
+            }
+
+            String installationId =
+                normalizeRequiredString(
+                    installation.optString(
+                        "installationId",
+                        null
+                    )
+                );
+
+            String installedOwnerId =
+                normalizeRequiredString(
+                    installation.optString(
+                        "ownerId",
+                        null
+                    )
+                );
+
+            String installedBusinessId =
+                normalizeRequiredString(
+                    installation.optString(
+                        "businessId",
+                        null
+                    )
+                );
+
+            String installedBranchId =
+                normalizeRequiredString(
+                    installation.optString(
+                        "branchId",
+                        null
+                    )
+                );
+
+            if (
+                installationId == null ||
+                installedOwnerId == null ||
+                installedBusinessId == null ||
+                installedBranchId == null
+            ) {
+
+                resolveFailure(
+                    call,
+                    "FINORA installation identity is invalid."
+                );
+
+                return;
+            }
+
+            if (
+                !ownerId.equals(
+                    installedOwnerId
+                ) ||
+                !businessId.equals(
+                    installedBusinessId
+                ) ||
+                !branchId.equals(
+                    installedBranchId
+                )
+            ) {
+
+                resolveFailure(
+                    call,
+                    "FINORA Business Profile request does not match the installed branch."
+                );
+
+                return;
+            }
+
+
+            // ------------------------------------------------
+            // CURRENT NATIVE INSTALLATION BINDING
+            // ------------------------------------------------
+
+            FinoraInstallationBindingService bindingService =
+                new FinoraInstallationBindingService(
+                    getContext()
+                );
+
+            FinoraInstallationBindingCrypto.PublicBinding nativeBinding =
+                bindingService.get();
+
+            if (nativeBinding == null) {
+
+                resolveFailure(
+                    call,
+                    "FINORA Android native installation binding is required before reading the Business Profile."
+                );
+
+                return;
+            }
+
+            if (
+                !installationId.equals(
+                    nativeBinding.installationId
+                )
+            ) {
+
+                resolveFailure(
+                    call,
+                    "FINORA native installation binding does not match the Control Store installation identity."
+                );
+
+                return;
+            }
+
+
+            // ------------------------------------------------
+            // LEGACY STORE WITHOUT BUSINESS PROFILE
+            // ------------------------------------------------
+
+            JSONArray businessProfiles =
+                controlPackage.optJSONArray(
+                    "businessProfiles"
+                );
+
+            if (businessProfiles == null) {
+
+                resolveSuccess(
+                    call
+                );
+
+                return;
+            }
+
+
+            // ------------------------------------------------
+            // EXACT PROFILE LOOKUP
+            // ------------------------------------------------
+
+            for (
+                int index = 0;
+                index < businessProfiles.length();
+                index++
+            ) {
+
+                JSONObject profile =
+                    businessProfiles.getJSONObject(
+                        index
+                    );
+
+                boolean scopeMatches =
+                    ownerId.equals(
+                        profile.getString(
+                            "ownerId"
+                        )
+                    ) &&
+                    businessId.equals(
+                        profile.getString(
+                            "businessId"
+                        )
+                    ) &&
+                    branchId.equals(
+                        profile.getString(
+                            "branchId"
+                        )
+                    );
+
+                if (!scopeMatches) {
+                    continue;
+                }
+
+
+                // --------------------------------------------
+                // PROFILE -> INSTALLATION
+                // --------------------------------------------
+
+                String profileInstallationId =
+                    normalizeRequiredString(
+                        profile.optString(
+                            "installationId",
+                            null
+                        )
+                    );
+
+                String profileBindingKeyId =
+                    normalizeRequiredString(
+                        profile.optString(
+                            "bindingKeyId",
+                            null
+                        )
+                    );
+
+                String profileFingerprintAlgorithm =
+                    normalizeRequiredString(
+                        profile.optString(
+                            "fingerprintAlgorithm",
+                            null
+                        )
+                    );
+
+                String profilePublicKeyFingerprint =
+                    normalizeRequiredString(
+                        profile.optString(
+                            "publicKeyFingerprint",
+                            null
+                        )
+                    );
+
+                if (
+                    profileInstallationId == null ||
+                    profileBindingKeyId == null ||
+                    profileFingerprintAlgorithm == null ||
+                    profilePublicKeyFingerprint == null ||
+                    !installationId.equals(
+                        profileInstallationId
+                    )
+                ) {
+
+                    resolveFailure(
+                        call,
+                        "FINORA Business Profile does not match the installed branch."
+                    );
+
+                    return;
+                }
+
+
+                // --------------------------------------------
+                // PROFILE -> CURRENT NATIVE BINDING
+                // --------------------------------------------
+
+                if (
+                    !nativeBinding.bindingKeyId.equals(
+                        profileBindingKeyId
+                    ) ||
+                    !"SHA-256".equals(
+                        profileFingerprintAlgorithm
+                    ) ||
+                    !nativeBinding.publicKeyFingerprint.equals(
+                        profilePublicKeyFingerprint
+                    )
+                ) {
+
+                    resolveFailure(
+                        call,
+                        "FINORA Business Profile native installation binding is invalid."
+                    );
+
+                    return;
+                }
+
+
+                // --------------------------------------------
+                // OPTIONAL INSTALLATION NUMBERING CODES
+                // --------------------------------------------
+
+                String installedBusinessCode =
+                    normalizeRequiredString(
+                        installation.optString(
+                            "businessCode",
+                            null
+                        )
+                    );
+
+                String installedBranchCode =
+                    normalizeRequiredString(
+                        installation.optString(
+                            "branchCode",
+                            null
+                        )
+                    );
+
+                String profileBusinessCode =
+                    normalizeRequiredString(
+                        profile.optString(
+                            "businessCode",
+                            null
+                        )
+                    );
+
+                String profileBranchCode =
+                    normalizeRequiredString(
+                        profile.optString(
+                            "branchCode",
+                            null
+                        )
+                    );
+
+                if (
+                    (
+                        installedBusinessCode == null
+                    ) !=
+                    (
+                        installedBranchCode == null
+                    )
+                ) {
+
+                    resolveFailure(
+                        call,
+                        "FINORA installation numbering-code state is inconsistent."
+                    );
+
+                    return;
+                }
+
+                if (
+                    installedBusinessCode != null &&
+                    (
+                        !installedBusinessCode.equals(
+                            profileBusinessCode
+                        ) ||
+                        !installedBranchCode.equals(
+                            profileBranchCode
+                        )
+                    )
+                ) {
+
+                    resolveFailure(
+                        call,
+                        "FINORA Business Profile numbering codes do not match the installation identity."
+                    );
+
+                    return;
+                }
+
+
+                // --------------------------------------------
+                // SANITIZED READ-ONLY RENDERER VIEW
+                //
+                // Deliberately excludes:
+                //
+                // installationId
+                // bindingKeyId
+                // fingerprintAlgorithm
+                // publicKeyFingerprint
+                // --------------------------------------------
+
+                JSObject data =
+                    new JSObject();
+
+                data.put(
+                    "profileId",
+                    profile.getString(
+                        "profileId"
+                    )
+                );
+
+                data.put(
+                    "ownerId",
+                    profile.getString(
+                        "ownerId"
+                    )
+                );
+
+                data.put(
+                    "businessId",
+                    profile.getString(
+                        "businessId"
+                    )
+                );
+
+                data.put(
+                    "branchId",
+                    profile.getString(
+                        "branchId"
+                    )
+                );
+
+                data.put(
+                    "businessCode",
+                    profile.getString(
+                        "businessCode"
+                    )
+                );
+
+                data.put(
+                    "branchCode",
+                    profile.getString(
+                        "branchCode"
+                    )
+                );
+
+                data.put(
+                    "businessName",
+                    profile.getString(
+                        "businessName"
+                    )
+                );
+
+                data.put(
+                    "branchName",
+                    profile.getString(
+                        "branchName"
+                    )
+                );
+
+                data.put(
+                    "createdAt",
+                    profile.getString(
+                        "createdAt"
+                    )
+                );
+
+                data.put(
+                    "updatedAt",
+                    profile.getString(
+                        "updatedAt"
+                    )
+                );
+
+                data.put(
+                    "schemaVersion",
+                    profile.get(
+                        "schemaVersion"
+                    )
+                );
+
+
+                JSObject result =
+                    createSuccessResult();
+
+                result.put(
+                    "data",
+                    data
+                );
+
+                call.resolve(
+                    result
+                );
+
+                return;
+            }
+
+
+            // ------------------------------------------------
+            // NO PROFILE FOR EXACT INSTALLED SCOPE
+            // ------------------------------------------------
+
+            resolveSuccess(
+                call
+            );
+
+        } catch (Exception error) {
+
+            resolveFailure(
+                call,
+                error,
+                "Unable to read FINORA Business Profile."
+            );
+        }
+    }
+
+    // ========================================================
 
     /**
      * Find the signed REGISTERED / DEMO access grant for one
@@ -749,6 +1294,333 @@ public final class FinoraControlPlugin
     // ========================================================
     // CONTROL PACKAGE VALIDATION
     // ========================================================
+    // BUSINESS PROFILE VALIDATION
+    // ========================================================
+
+    private boolean isValidBusinessProfile(
+        JSONObject value
+    ) {
+
+        if (value == null) {
+            return false;
+        }
+
+        String businessCode =
+            normalizeRequiredString(
+                value.optString(
+                    "businessCode",
+                    null
+                )
+            );
+
+        String branchCode =
+            normalizeRequiredString(
+                value.optString(
+                    "branchCode",
+                    null
+                )
+            );
+
+        String bindingKeyId =
+            normalizeRequiredString(
+                value.optString(
+                    "bindingKeyId",
+                    null
+                )
+            );
+
+        String fingerprintAlgorithm =
+            normalizeRequiredString(
+                value.optString(
+                    "fingerprintAlgorithm",
+                    null
+                )
+            );
+
+        String publicKeyFingerprint =
+            normalizeRequiredString(
+                value.optString(
+                    "publicKeyFingerprint",
+                    null
+                )
+            );
+
+        String createdAt =
+            normalizeRequiredString(
+                value.optString(
+                    "createdAt",
+                    null
+                )
+            );
+
+        String updatedAt =
+            normalizeRequiredString(
+                value.optString(
+                    "updatedAt",
+                    null
+                )
+            );
+
+        Object schemaVersion =
+            value.opt(
+                "schemaVersion"
+            );
+
+        if (
+            !hasRequiredString(
+                value,
+                "profileId"
+            ) ||
+            !hasRequiredString(
+                value,
+                "ownerId"
+            ) ||
+            !hasRequiredString(
+                value,
+                "businessId"
+            ) ||
+            !hasRequiredString(
+                value,
+                "branchId"
+            ) ||
+            !hasRequiredString(
+                value,
+                "businessName"
+            ) ||
+            !hasRequiredString(
+                value,
+                "branchName"
+            ) ||
+            !hasRequiredString(
+                value,
+                "installationId"
+            ) ||
+            businessCode == null ||
+            branchCode == null ||
+            !businessCode.matches(
+                "[A-Z0-9]{2,10}"
+            ) ||
+            !branchCode.matches(
+                "[A-Z0-9]{2,10}"
+            ) ||
+            bindingKeyId == null ||
+            !"SHA-256".equals(
+                fingerprintAlgorithm
+            ) ||
+            publicKeyFingerprint == null ||
+            !publicKeyFingerprint.matches(
+                "[0-9a-f]{64}"
+            ) ||
+            !bindingKeyMatchesProfileFingerprint(
+                bindingKeyId,
+                publicKeyFingerprint
+            ) ||
+            !isCanonicalProfileInstant(
+                createdAt
+            ) ||
+            !isCanonicalProfileInstant(
+                updatedAt
+            ) ||
+            !isProfileSchemaVersionOne(
+                schemaVersion
+            )
+        ) {
+            return false;
+        }
+
+        try {
+
+            java.time.Instant created =
+                java.time.Instant.parse(
+                    createdAt
+                );
+
+            java.time.Instant updated =
+                java.time.Instant.parse(
+                    updatedAt
+                );
+
+            return !updated.isBefore(
+                created
+            );
+
+        } catch (
+            java.time.format.DateTimeParseException error
+        ) {
+
+            return false;
+        }
+    }
+
+
+    private void ensureUniqueBusinessProfiles(
+        JSONArray businessProfiles
+    ) {
+
+        java.util.HashSet<String> scopes =
+            new java.util.HashSet<>();
+
+        java.util.HashSet<String> profileIds =
+            new java.util.HashSet<>();
+
+        for (
+            int index = 0;
+            index < businessProfiles.length();
+            index++
+        ) {
+
+            JSONObject profile =
+                businessProfiles.optJSONObject(
+                    index
+                );
+
+            if (
+                !isValidBusinessProfile(
+                    profile
+                )
+            ) {
+
+                throw new IllegalStateException(
+                    "Invalid FINORA Business Profile."
+                );
+            }
+
+            String ownerId =
+                profile.optString(
+                    "ownerId",
+                    ""
+                );
+
+            String businessId =
+                profile.optString(
+                    "businessId",
+                    ""
+                );
+
+            String branchId =
+                profile.optString(
+                    "branchId",
+                    ""
+                );
+
+            String profileId =
+                profile.optString(
+                    "profileId",
+                    ""
+                );
+
+            String scope =
+                ownerId +
+                "::" +
+                businessId +
+                "::" +
+                branchId;
+
+            if (
+                !scopes.add(
+                    scope
+                )
+            ) {
+
+                throw new IllegalStateException(
+                    "Duplicate FINORA Business Profile branch scope detected."
+                );
+            }
+
+            if (
+                !profileIds.add(
+                    profileId
+                )
+            ) {
+
+                throw new IllegalStateException(
+                    "Duplicate FINORA Business Profile ID detected."
+                );
+            }
+        }
+    }
+
+
+    private boolean bindingKeyMatchesProfileFingerprint(
+        String bindingKeyId,
+        String publicKeyFingerprint
+    ) {
+
+        if (
+            bindingKeyId == null ||
+            publicKeyFingerprint == null ||
+            !publicKeyFingerprint.matches(
+                "[0-9a-f]{64}"
+            )
+        ) {
+            return false;
+        }
+
+        String expectedBindingKeyId =
+            "FINORA-BINDING-" +
+            publicKeyFingerprint
+                .substring(
+                    0,
+                    32
+                )
+                .toUpperCase(
+                    java.util.Locale.ROOT
+                );
+
+        return expectedBindingKeyId.equals(
+            bindingKeyId
+        );
+    }
+
+
+    private boolean isCanonicalProfileInstant(
+        String value
+    ) {
+
+        if (value == null) {
+            return false;
+        }
+
+        try {
+
+            java.time.Instant.parse(
+                value
+            );
+
+            return true;
+
+        } catch (
+            java.time.format.DateTimeParseException error
+        ) {
+
+            return false;
+        }
+    }
+
+
+    private boolean isProfileSchemaVersionOne(
+        Object value
+    ) {
+
+        if (!(value instanceof Number)) {
+            return false;
+        }
+
+        double number =
+            ((Number) value)
+                .doubleValue();
+
+        return (
+            Double.isFinite(
+                number
+            ) &&
+            number ==
+                1.0d
+        );
+    }
+
+
+    // ========================================================
 
     private void validateControlPackage(
         JSONObject controlPackage
@@ -779,6 +1651,10 @@ public final class FinoraControlPlugin
         JSONArray branchAccessGrants =
             controlPackage.optJSONArray(
                 "branchAccessGrants"
+            );
+        JSONArray businessProfiles =
+            controlPackage.optJSONArray(
+                "businessProfiles"
             );
 
         String updatedAt =
@@ -924,6 +1800,36 @@ public final class FinoraControlPlugin
         if (branchAccessGrants != null) {
             ensureUniqueBranchAccessGrants(
                 branchAccessGrants
+            );
+        }
+
+        /*
+         * businessProfiles is optional only for encrypted
+         * Control Stores written before Phase-4 Business Profile
+         * provisioning existed.
+         *
+         * Once present it must be a valid JSON array containing
+         * unique, fully validated signed profile records.
+         */
+        if (businessProfiles == null) {
+
+            if (
+                controlPackage.has(
+                    "businessProfiles"
+                ) &&
+                !controlPackage.isNull(
+                    "businessProfiles"
+                )
+            ) {
+                throw new IllegalStateException(
+                    "FINORA Business Profile collection is invalid."
+                );
+            }
+
+        } else {
+
+            ensureUniqueBusinessProfiles(
+                businessProfiles
             );
         }
     }

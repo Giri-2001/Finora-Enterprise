@@ -44,6 +44,8 @@ export default function CustomerOfficeController({
 
   companyName,
 
+  branchName,
+
   onOpenCustomerWizard,
 
   onEditCustomer,
@@ -218,6 +220,7 @@ export default function CustomerOfficeController({
 
             railCustomers={controller.paginatedCustomers}
             companyName={companyName}
+            branchName={branchName}
             /* =================================================
                  SELECTION
               ================================================= */

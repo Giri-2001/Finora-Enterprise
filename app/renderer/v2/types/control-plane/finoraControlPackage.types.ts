@@ -51,7 +51,7 @@ import type {
   OwnerId,
   BusinessId,
   BranchId,
-} from "../business/business.identity.types";
+} from "../business/business.scope.types";
 
 import type {
   FinoraInstallationId,

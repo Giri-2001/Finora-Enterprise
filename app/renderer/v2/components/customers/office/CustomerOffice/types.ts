@@ -244,7 +244,6 @@ export interface OfficeCustomer {
 
   photo?: string;
 
-  branch: string;
 
   active: boolean;
 

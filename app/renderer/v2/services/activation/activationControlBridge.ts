@@ -28,6 +28,10 @@
 // IMPORTS
 // ============================================================
 
+import type {
+  FinoraProvisionedBusinessProfileV1,
+} from "../../types/business/finoraBusinessProfileControl.types";
+
 import {
   Capacitor,
   registerPlugin,
@@ -64,8 +68,21 @@ export interface FinoraBranchActivationRequest {
   branchId: string;
 }
 
+export interface FinoraBusinessProfileRequest {
+
+  ownerId:
+    string;
+
+  businessId:
+    string;
+
+  branchId:
+    string;
+}
+
 export interface FinoraBranchAccessGrantRequest {
-  userId: string;
+
+userId: string;
 
   ownerId: string;
 
@@ -108,6 +125,23 @@ export interface FinoraActivationControlBridge {
       >
     >;
 
+  /**
+   * Read the current signed FINORA Business / Branch Profile.
+   *
+   * Optional only until Android native Business Profile read
+   * parity is installed in the next Phase-4 substep.
+   *
+   * READ ONLY.
+   */
+  findBusinessProfile(
+    request:
+      FinoraBusinessProfileRequest,
+  ):
+    Promise<
+      StorageResult<
+        FinoraProvisionedBusinessProfileV1 | undefined
+      >
+    >;
   findBranchAccessGrant(
     request:
       FinoraBranchAccessGrantRequest,

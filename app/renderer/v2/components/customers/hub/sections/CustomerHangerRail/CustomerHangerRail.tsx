@@ -133,6 +133,8 @@ export default function CustomerHangerRail({
 
   companyName,
 
+  branchName,
+
   selectedCustomerId,
 
   onCustomerSelect,
@@ -526,6 +528,8 @@ export default function CustomerHangerRail({
                     }
 
                     companyName={companyName}
+
+                    branchName={branchName}
 
 
                     /* =========================================

@@ -34,10 +34,6 @@ import type {
   CustomerProfile,
 } from "../../../../../types/customers";
 
-import {
-  BRAND_NAME,
-} from "../CustomerIdCard/constants";
-
 /* ===========================================================
    PROPS
 =========================================================== */
@@ -46,7 +42,10 @@ export interface CustomerIdCardCaptureProps {
   customer:
     CustomerProfile;
 
-  companyName?:
+  companyName:
+    string;
+
+  branchName:
     string;
 
   captureWidth?:
@@ -71,6 +70,7 @@ export const DEFAULT_CAPTURE_HEIGHT = 360;
 export default function CustomerIdCardCapture({
   customer,
   companyName,
+  branchName,
   captureWidth = DEFAULT_CAPTURE_WIDTH,
   captureHeight = DEFAULT_CAPTURE_HEIGHT,
 }: CustomerIdCardCaptureProps) {
@@ -89,14 +89,11 @@ export default function CustomerIdCardCapture({
     customer.basic.mobileNumber?.trim() ||
     "";
 
-  const branchName =
-    customer.identity.businessName?.trim() ||
-    "";
-
   const resolvedCompanyName =
-    companyName?.trim() ||
-    branchName ||
-    BRAND_NAME;
+    companyName.trim();
+
+  const resolvedBranchName =
+    branchName.trim();
 
   const kycVerified =
     customer.kyc?.overallStatus === "VERIFIED";
@@ -184,7 +181,7 @@ export default function CustomerIdCardCapture({
         }
 
         branchName={
-          branchName
+          resolvedBranchName
         }
 
         kycVerified={
