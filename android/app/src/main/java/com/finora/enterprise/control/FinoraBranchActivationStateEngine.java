@@ -328,7 +328,10 @@ public final class FinoraBranchActivationStateEngine {
             (
                 !"ISSUE".equals(action) &&
                 !"RENEW".equals(action) &&
-                !"REPLACE".equals(action)
+                !"REPLACE".equals(action) &&
+                !"SUSPEND".equals(action) &&
+                !"RESUME".equals(action) &&
+                !"REVOKE".equals(action)
             ) ||
             activation == null ||
             accessGrant == null ||
@@ -533,6 +536,61 @@ public final class FinoraBranchActivationStateEngine {
 
 
         // ----------------------------------------------------
+        // SIGNED STATUS ACTION / TARGET CONSISTENCY
+        // ----------------------------------------------------
+
+        String nextAdministrativeStatus =
+            requiredString(
+                accessGrant.get(
+                    "administrativeStatus"
+                )
+            );
+
+        boolean isStatusAction =
+            "SUSPEND".equals(
+                action
+            ) ||
+            "RESUME".equals(
+                action
+            ) ||
+            "REVOKE".equals(
+                action
+            );
+
+        if (
+            (
+                "ISSUE".equals(action) &&
+                !"ACTIVE".equals(
+                    nextAdministrativeStatus
+                )
+            ) ||
+            (
+                "SUSPEND".equals(action) &&
+                !"SUSPENDED".equals(
+                    nextAdministrativeStatus
+                )
+            ) ||
+            (
+                "RESUME".equals(action) &&
+                !"ACTIVE".equals(
+                    nextAdministrativeStatus
+                )
+            ) ||
+            (
+                "REVOKE".equals(action) &&
+                !"REVOKED".equals(
+                    nextAdministrativeStatus
+                )
+            )
+        ) {
+
+            return Result.failure(
+                "FINORA Branch Activation action does not match the Branch Access administrative status."
+            );
+        }
+
+
+        // ----------------------------------------------------
         // SECURITY ARRAYS
         // ----------------------------------------------------
 
@@ -713,6 +771,18 @@ public final class FinoraBranchActivationStateEngine {
                 );
             }
 
+            if (
+                isStatusAction &&
+                !existing.equals(
+                    activation
+                )
+            ) {
+
+                return Result.failure(
+                    "FINORA Branch Access status action cannot modify the Branch Activation record."
+                );
+            }
+
             nextActivations.set(
                 activationIndex,
                 deepCopyMap(
@@ -721,6 +791,13 @@ public final class FinoraBranchActivationStateEngine {
             );
 
         } else {
+
+            if (isStatusAction) {
+
+                return Result.failure(
+                    "FINORA Branch Access status action requires an existing Branch Activation."
+                );
+            }
 
             nextActivations.add(
                 deepCopyMap(
@@ -739,6 +816,142 @@ public final class FinoraBranchActivationStateEngine {
                 nextAccessGrants,
                 accessGrant
             );
+
+        Map<String, Object> existingAccessGrant =
+            accessIndex >= 0
+                ? nextAccessGrants.get(
+                    accessIndex
+                )
+                : null;
+
+        // ----------------------------------------------------
+        // AUTHORITATIVE CURRENT-STATE TRANSITION
+        // ----------------------------------------------------
+
+        if ("ISSUE".equals(action)) {
+
+            if (existingAccessGrant != null) {
+
+                return Result.failure(
+                    "FINORA ISSUE action requires that no current Branch Access grant exists for this scope."
+                );
+            }
+
+        } else if (existingAccessGrant == null) {
+
+            return Result.failure(
+                "FINORA Branch Access lifecycle action requires an existing current grant."
+            );
+        }
+
+        if (existingAccessGrant != null) {
+
+            String currentAdministrativeStatus =
+                requiredString(
+                    existingAccessGrant.get(
+                        "administrativeStatus"
+                    )
+                );
+
+            if (
+                "REVOKED".equals(
+                    currentAdministrativeStatus
+                ) &&
+                !"REVOKED".equals(
+                    nextAdministrativeStatus
+                )
+            ) {
+
+                return Result.failure(
+                    "FINORA revoked Branch Access is terminal and cannot become active or suspended again."
+                );
+            }
+
+            if (
+                (
+                    "SUSPEND".equals(action) &&
+                    !"ACTIVE".equals(
+                        currentAdministrativeStatus
+                    )
+                ) ||
+                (
+                    "RESUME".equals(action) &&
+                    !"SUSPENDED".equals(
+                        currentAdministrativeStatus
+                    )
+                ) ||
+                (
+                    "REVOKE".equals(action) &&
+                    !"ACTIVE".equals(
+                        currentAdministrativeStatus
+                    ) &&
+                    !"SUSPENDED".equals(
+                        currentAdministrativeStatus
+                    )
+                ) ||
+                (
+                    (
+                        "RENEW".equals(action) ||
+                        "REPLACE".equals(action)
+                    ) &&
+                    !nextAdministrativeStatus.equals(
+                        currentAdministrativeStatus
+                    )
+                )
+            ) {
+
+                return Result.failure(
+                    "FINORA signed Branch Access administrative status transition is invalid."
+                );
+            }
+
+            // ------------------------------------------------
+            // STATUS ACTION IMMUTABLE METADATA
+            //
+            // Only administrativeStatus and updatedAt may
+            // differ for SUSPEND / RESUME / REVOKE.
+            // ------------------------------------------------
+
+            if (isStatusAction) {
+
+                Map<String, Object> currentMetadata =
+                    deepCopyMap(
+                        existingAccessGrant
+                    );
+
+                Map<String, Object> nextMetadata =
+                    deepCopyMap(
+                        accessGrant
+                    );
+
+                currentMetadata.remove(
+                    "administrativeStatus"
+                );
+
+                currentMetadata.remove(
+                    "updatedAt"
+                );
+
+                nextMetadata.remove(
+                    "administrativeStatus"
+                );
+
+                nextMetadata.remove(
+                    "updatedAt"
+                );
+
+                if (
+                    !currentMetadata.equals(
+                        nextMetadata
+                    )
+                ) {
+
+                    return Result.failure(
+                        "FINORA Branch Access status action cannot modify grant metadata."
+                    );
+                }
+            }
+        }
 
         if (accessIndex >= 0) {
 

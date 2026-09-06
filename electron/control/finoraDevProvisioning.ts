@@ -32,6 +32,8 @@
 // STATUS  : Development Only
 // ============================================================
 
+import { app } from "electron";
+
 import {
   findFinoraBranchAccessGrant,
   applyFinoraVerifiedBusinessProfileState,
@@ -227,6 +229,18 @@ async function provisionFinoraDevelopmentRegisteredAccessGrant(
 
 export async function runFinoraDevelopmentProvisioning():
   Promise<void> {
+
+  /*
+   * Development provisioning must never mutate the
+   * authoritative Control Store from a packaged build.
+   *
+   * Explicit FINORA_DEV_* environment variables are
+   * development inputs only; they are not production
+   * authorization.
+   */
+  if (app.isPackaged) {
+    return;
+  }
 
   const shouldProvisionBranch =
     process.env.FINORA_DEV_PROVISION_BRANCH ===

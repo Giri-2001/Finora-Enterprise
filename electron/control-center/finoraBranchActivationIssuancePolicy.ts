@@ -307,7 +307,13 @@ export function validateFinoraBranchActivationIssuance(
     payload.action !==
       "RENEW" &&
     payload.action !==
-      "REPLACE"
+      "REPLACE" &&
+    payload.action !==
+      "SUSPEND" &&
+    payload.action !==
+      "RESUME" &&
+    payload.action !==
+      "REVOKE"
   ) {
     return rejected(
       "FINORA Branch Activation action is invalid.",
@@ -517,6 +523,38 @@ export function validateFinoraBranchActivationIssuance(
   ) {
     return rejected(
       "FINORA Branch Access administrative status is invalid.",
+    );
+  }
+
+
+  if (
+    (
+      payload.action ===
+        "ISSUE" &&
+      grant.administrativeStatus !==
+        "ACTIVE"
+    ) ||
+    (
+      payload.action ===
+        "SUSPEND" &&
+      grant.administrativeStatus !==
+        "SUSPENDED"
+    ) ||
+    (
+      payload.action ===
+        "RESUME" &&
+      grant.administrativeStatus !==
+        "ACTIVE"
+    ) ||
+    (
+      payload.action ===
+        "REVOKE" &&
+      grant.administrativeStatus !==
+        "REVOKED"
+    )
+  ) {
+    return rejected(
+      "FINORA Branch Activation action does not match the Branch Access administrative status.",
     );
   }
 

@@ -248,7 +248,13 @@ export async function applyFinoraSignedBranchActivationPackage(
       payload.action !==
         "RENEW" &&
       payload.action !==
-        "REPLACE"
+        "REPLACE" &&
+      payload.action !==
+        "SUSPEND" &&
+      payload.action !==
+        "RESUME" &&
+      payload.action !==
+        "REVOKE"
     ) ||
     payload.schemaVersion !==
       1
@@ -348,6 +354,48 @@ export async function applyFinoraSignedBranchActivationPackage(
 
 
   // ----------------------------------------------------------
+  // SIGNED STATUS ACTION / TARGET CONSISTENCY
+  //
+  // Current-state transition authority lives inside the
+  // serialized Control Store apply boundary.
+  // ----------------------------------------------------------
+
+  const administrativeStatus =
+    accessGrant.administrativeStatus;
+
+  if (
+    (
+      payload.action ===
+        "ISSUE" &&
+      administrativeStatus !==
+        "ACTIVE"
+    ) ||
+    (
+      payload.action ===
+        "SUSPEND" &&
+      administrativeStatus !==
+        "SUSPENDED"
+    ) ||
+    (
+      payload.action ===
+        "RESUME" &&
+      administrativeStatus !==
+        "ACTIVE"
+    ) ||
+    (
+      payload.action ===
+        "REVOKE" &&
+      administrativeStatus !==
+        "REVOKED"
+    )
+  ) {
+    return failure(
+      "FINORA Branch Activation action does not match the Branch Access administrative status.",
+    );
+  }
+
+
+  // ----------------------------------------------------------
   // REPLAY-PROTECTED ATOMIC APPLY
   // ----------------------------------------------------------
 
@@ -360,6 +408,9 @@ export async function applyFinoraSignedBranchActivationPackage(
 
     purpose:
       "BRANCH_ACTIVATION",
+
+    action:
+      payload.action,
 
     sequence:
       controlPackage.sequence,

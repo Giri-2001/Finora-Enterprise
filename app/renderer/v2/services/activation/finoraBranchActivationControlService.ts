@@ -233,7 +233,13 @@ export function validateFinoraBranchActivationControlPayload(
     payload.action !==
       "RENEW" &&
     payload.action !==
-      "REPLACE"
+      "REPLACE" &&
+    payload.action !==
+      "SUSPEND" &&
+    payload.action !==
+      "RESUME" &&
+    payload.action !==
+      "REVOKE"
   ) {
     return {
       valid:
@@ -316,6 +322,53 @@ export function validateFinoraBranchActivationControlPayload(
 
       error:
         "FINORA issued branch access requires an ACTIVE branch activation.",
+    };
+  }
+
+
+  // ----------------------------------------------------------
+  // SIGNED STATUS ACTION / TARGET CONSISTENCY
+  //
+  // Current-state transition rules for RENEW / REPLACE /
+  // terminal REVOKED state are enforced again at the native
+  // authoritative apply boundary.
+  // ----------------------------------------------------------
+
+  const administrativeStatus =
+    payload.accessGrant.administrativeStatus;
+
+  if (
+    (
+      payload.action ===
+        "ISSUE" &&
+      administrativeStatus !==
+        "ACTIVE"
+    ) ||
+    (
+      payload.action ===
+        "SUSPEND" &&
+      administrativeStatus !==
+        "SUSPENDED"
+    ) ||
+    (
+      payload.action ===
+        "RESUME" &&
+      administrativeStatus !==
+        "ACTIVE"
+    ) ||
+    (
+      payload.action ===
+        "REVOKE" &&
+      administrativeStatus !==
+        "REVOKED"
+    )
+  ) {
+    return {
+      valid:
+        false,
+
+      error:
+        "FINORA Branch Activation action does not match the Branch Access administrative status.",
     };
   }
 

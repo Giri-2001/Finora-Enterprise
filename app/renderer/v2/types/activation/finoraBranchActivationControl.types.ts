@@ -56,18 +56,30 @@ export const FINORA_BRANCH_ACTIVATION_PAYLOAD_VERSION =
  * Initial REGISTERED or DEMO access.
  *
  * RENEW:
- * New REGISTERED annual cycle.
+ * New REGISTERED annual cycle without changing the current
+ * administrative status.
  *
  * REPLACE:
- * Authoritative replacement of current access metadata.
+ * Authoritative replacement of current access metadata without
+ * changing the current administrative status.
  *
- * Administrative suspend/revoke lifecycle is introduced by
- * its owning Control Center lifecycle phase.
+ * SUSPEND:
+ * Temporarily block an ACTIVE Branch Access grant.
+ *
+ * RESUME:
+ * Restore a SUSPENDED Branch Access grant to ACTIVE.
+ *
+ * REVOKE:
+ * Permanently block Branch Access. A REVOKED grant must never
+ * become ACTIVE or SUSPENDED again.
  */
 export type FinoraBranchActivationControlAction =
   | "ISSUE"
   | "RENEW"
-  | "REPLACE";
+  | "REPLACE"
+  | "SUSPEND"
+  | "RESUME"
+  | "REVOKE";
 
 // ============================================================
 // INSTALLATION BINDING

@@ -219,8 +219,15 @@ export async function signFinoraBranchActivationPackage(
         envelopeIssuedAt,
       ).toISOString(),
 
-    validity:
-      input.packageValidity,
+    ...(
+      input.packageValidity ===
+        undefined
+        ? {}
+        : {
+            validity:
+              input.packageValidity,
+          }
+    ),
 
     sequence:
       input.sequence,

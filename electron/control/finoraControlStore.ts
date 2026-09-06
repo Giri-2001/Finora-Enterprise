@@ -2874,6 +2874,14 @@ export interface FinoraVerifiedBranchActivationApplyInput {
 
   purpose: "BRANCH_ACTIVATION";
 
+  action:
+    | "ISSUE"
+    | "RENEW"
+    | "REPLACE"
+    | "SUSPEND"
+    | "RESUME"
+    | "REVOKE";
+
   sequence: number;
 
   target: {
@@ -3000,10 +3008,25 @@ async function applyVerifiedBranchActivationInternal(
     !isNonEmptyString(input.packageId) ||
     !isNonEmptyString(input.issuerId) ||
     input.purpose !== "BRANCH_ACTIVATION" ||
+    (
+      input.action !==
+        "ISSUE" &&
+      input.action !==
+        "RENEW" &&
+      input.action !==
+        "REPLACE" &&
+      input.action !==
+        "SUSPEND" &&
+      input.action !==
+        "RESUME" &&
+      input.action !==
+        "REVOKE"
+    ) ||
     !Number.isSafeInteger(input.sequence) ||
     input.sequence <= 0 ||
     !isControlTimestamp(input.appliedAt) ||
     !isBranchActivation(input.activation) ||
+    input.activation.status !== "ACTIVE" ||
     !isBranchAccessGrant(input.accessGrant)
   ) {
     return failure(
@@ -3102,6 +3125,14 @@ async function applyVerifiedBranchActivationInternal(
   // newer signed packages.
   // ----------------------------------------------------------
 
+  const isStatusAction =
+    input.action ===
+      "SUSPEND" ||
+    input.action ===
+      "RESUME" ||
+    input.action ===
+      "REVOKE";
+
   const activationIndex = controlStore.activations.findIndex(
     (item) =>
       item.ownerId === input.activation.ownerId &&
@@ -3119,8 +3150,42 @@ async function applyVerifiedBranchActivationInternal(
       return failure("FINORA branch activation identity cannot be replaced.");
     }
 
+    if (
+      isStatusAction &&
+      (
+        existingActivation.activationId !==
+          input.activation.activationId ||
+        existingActivation.ownerId !==
+          input.activation.ownerId ||
+        existingActivation.businessId !==
+          input.activation.businessId ||
+        existingActivation.branchId !==
+          input.activation.branchId ||
+        existingActivation.status !==
+          input.activation.status ||
+        existingActivation.activatedAt !==
+          input.activation.activatedAt ||
+        existingActivation.createdAt !==
+          input.activation.createdAt ||
+        existingActivation.updatedAt !==
+          input.activation.updatedAt ||
+        existingActivation.schemaVersion !==
+          input.activation.schemaVersion
+      )
+    ) {
+      return failure(
+        "FINORA Branch Access status action cannot modify the Branch Activation record.",
+      );
+    }
+
     controlStore.activations[activationIndex] = input.activation;
   } else {
+    if (isStatusAction) {
+      return failure(
+        "FINORA Branch Access status action requires an existing Branch Activation.",
+      );
+    }
+
     controlStore.activations.push(input.activation);
   }
 
@@ -3137,6 +3202,207 @@ async function applyVerifiedBranchActivationInternal(
       item.businessId === input.accessGrant.businessId &&
       item.branchId === input.accessGrant.branchId,
   );
+
+  const existingAccessGrant =
+    accessIndex >= 0
+      ? accessGrants[accessIndex]
+      : undefined;
+
+  const nextAdministrativeStatus =
+    input.accessGrant.administrativeStatus;
+
+  // ----------------------------------------------------------
+  // ACTION / TARGET STATUS CONSISTENCY
+  // ----------------------------------------------------------
+
+  if (
+    (
+      input.action ===
+        "ISSUE" &&
+      nextAdministrativeStatus !==
+        "ACTIVE"
+    ) ||
+    (
+      input.action ===
+        "SUSPEND" &&
+      nextAdministrativeStatus !==
+        "SUSPENDED"
+    ) ||
+    (
+      input.action ===
+        "RESUME" &&
+      nextAdministrativeStatus !==
+        "ACTIVE"
+    ) ||
+    (
+      input.action ===
+        "REVOKE" &&
+      nextAdministrativeStatus !==
+        "REVOKED"
+    )
+  ) {
+    return failure(
+      "FINORA Branch Activation action does not match the Branch Access administrative status.",
+    );
+  }
+
+  if (
+    input.action ===
+      "RENEW" &&
+    input.accessGrant.accessType !==
+      "REGISTERED"
+  ) {
+    return failure(
+      "FINORA RENEW action is valid only for REGISTERED access.",
+    );
+  }
+
+  // ----------------------------------------------------------
+  // AUTHORITATIVE CURRENT-STATE TRANSITION
+  // ----------------------------------------------------------
+
+  if (
+    input.action ===
+      "ISSUE"
+  ) {
+    if (existingAccessGrant) {
+      return failure(
+        "FINORA ISSUE action requires that no current Branch Access grant exists for this scope.",
+      );
+    }
+  } else if (!existingAccessGrant) {
+    return failure(
+      "FINORA Branch Access lifecycle action requires an existing current grant.",
+    );
+  }
+
+  if (existingAccessGrant) {
+    const currentAdministrativeStatus =
+      existingAccessGrant.administrativeStatus;
+
+    if (
+      currentAdministrativeStatus ===
+        "REVOKED" &&
+      nextAdministrativeStatus !==
+        "REVOKED"
+    ) {
+      return failure(
+        "FINORA revoked Branch Access is terminal and cannot become active or suspended again.",
+      );
+    }
+
+    if (
+      (
+        input.action ===
+          "SUSPEND" &&
+        currentAdministrativeStatus !==
+          "ACTIVE"
+      ) ||
+      (
+        input.action ===
+          "RESUME" &&
+        currentAdministrativeStatus !==
+          "SUSPENDED"
+      ) ||
+      (
+        input.action ===
+          "REVOKE" &&
+        currentAdministrativeStatus !==
+          "ACTIVE" &&
+        currentAdministrativeStatus !==
+          "SUSPENDED"
+      ) ||
+      (
+        (
+          input.action ===
+            "RENEW" ||
+          input.action ===
+            "REPLACE"
+        ) &&
+        nextAdministrativeStatus !==
+          currentAdministrativeStatus
+      )
+    ) {
+      return failure(
+        "FINORA signed Branch Access administrative status transition is invalid.",
+      );
+    }
+
+    // --------------------------------------------------------
+    // STATUS ACTION IMMUTABLE METADATA
+    //
+    // SUSPEND / RESUME / REVOKE may change only:
+    //
+    // - administrativeStatus
+    // - updatedAt
+    // --------------------------------------------------------
+
+    if (isStatusAction) {
+      const currentPayment =
+        existingAccessGrant.registrationPayment;
+
+      const nextPayment =
+        input.accessGrant.registrationPayment;
+
+      const registrationPaymentMatches =
+        currentPayment ===
+          undefined
+          ? nextPayment ===
+              undefined
+          : nextPayment !==
+              undefined &&
+            currentPayment.amount ===
+              nextPayment.amount &&
+            currentPayment.currency ===
+              nextPayment.currency &&
+            currentPayment.paymentMode ===
+              nextPayment.paymentMode &&
+            currentPayment.paidAt ===
+              nextPayment.paidAt &&
+            currentPayment.reference ===
+              nextPayment.reference &&
+            currentPayment.remarks ===
+              nextPayment.remarks &&
+            currentPayment.refundable ===
+              nextPayment.refundable;
+
+      if (
+        existingAccessGrant.grantId !==
+          input.accessGrant.grantId ||
+        existingAccessGrant.userId !==
+          input.accessGrant.userId ||
+        existingAccessGrant.ownerId !==
+          input.accessGrant.ownerId ||
+        existingAccessGrant.businessId !==
+          input.accessGrant.businessId ||
+        existingAccessGrant.branchId !==
+          input.accessGrant.branchId ||
+        existingAccessGrant.storageMode !==
+          input.accessGrant.storageMode ||
+        existingAccessGrant.accessType !==
+          input.accessGrant.accessType ||
+        existingAccessGrant.validity.validFrom !==
+          input.accessGrant.validity.validFrom ||
+        existingAccessGrant.validity.validUntil !==
+          input.accessGrant.validity.validUntil ||
+        existingAccessGrant.registrationCycle !==
+          input.accessGrant.registrationCycle ||
+        existingAccessGrant.demoId !==
+          input.accessGrant.demoId ||
+        existingAccessGrant.demoRemarks !==
+          input.accessGrant.demoRemarks ||
+        existingAccessGrant.createdAt !==
+          input.accessGrant.createdAt ||
+        existingAccessGrant.schemaVersion !==
+          input.accessGrant.schemaVersion ||
+        !registrationPaymentMatches
+      ) {
+        return failure(
+          "FINORA Branch Access status action cannot modify grant metadata.",
+        );
+      }
+    }
+  }
 
   if (accessIndex >= 0) {
     accessGrants[accessIndex] = input.accessGrant;
@@ -5607,12 +5873,17 @@ export async function findFinoraWalletRechargeAuthorization(
 // ============================================================
 
 // ============================================================
-// SAVE BRANCH ACCESS GRANT
+// CREATE BRANCH ACCESS GRANT
 //
-// INTERNAL MAIN-PROCESS MUTATION.
+// DEVELOPMENT BOOTSTRAP ONLY.
 //
-// Production signed packages continue through their verified
-// package-apply service. This function is not renderer IPC.
+// This direct Control Store helper may create a missing
+// Branch Access Grant, but it must never replace an existing
+// grant.
+//
+// Production ISSUE / RENEW / REPLACE / SUSPEND / RESUME /
+// REVOKE authority remains exclusively in the verified signed
+// package-apply path. This function is not renderer IPC.
 // ============================================================
 
 export async function saveFinoraBranchAccessGrant(
@@ -5645,18 +5916,14 @@ export async function saveFinoraBranchAccessGrant(
   );
 
   if (existingIndex >= 0) {
-    const existing = branchAccessGrants[existingIndex];
-
-    if (existing.storageMode !== accessGrant.storageMode) {
-      return failure(
-        "FINORA Branch Access storage mode cannot be replaced through direct Control Store mutation.",
-      );
-    }
-
-    branchAccessGrants[existingIndex] = accessGrant;
-  } else {
-    branchAccessGrants.push(accessGrant);
+    return failure(
+      "Existing FINORA Branch Access Grants cannot be changed through direct Control Store mutation.",
+    );
   }
+
+  branchAccessGrants.push(
+    accessGrant,
+  );
 
   controlStore.updatedAt = new Date().toISOString();
 
