@@ -62,6 +62,98 @@ export type WalletPlatformChargeCode =
   | "OTHER_PLATFORM_FEE";
 
 /* ============================================================
+   PLATFORM CHARGE -> TRANSACTION TYPE AUTHORITY
+
+   This mapping is Wallet-domain identity, not Pricing policy.
+
+   Pricing decides whether a known charge is billable and what
+   amount applies. This authority only defines which canonical
+   Wallet transaction type belongs to each canonical charge code.
+============================================================ */
+
+export const FINORA_WALLET_PLATFORM_CHARGE_TRANSACTION_TYPES:
+  Readonly<
+    Record<
+      WalletPlatformChargeCode,
+      Exclude<
+        WalletTransactionType,
+        "WALLET_RECHARGE"
+      >
+    >
+  > = Object.freeze({
+    LOAN_DISBURSEMENT:
+      "LOAN_DISBURSEMENT_PLATFORM_FEE",
+
+    LOAN_NUMBER_GENERATION:
+      "LOAN_NUMBER_GENERATION_FEE",
+
+    CUSTOMER_NUMBER_GENERATION:
+      "CUSTOMER_NUMBER_GENERATION_FEE",
+
+    COLLECTION_PROCESSING:
+      "COLLECTION_PROCESSING_FEE",
+
+    RECEIPT_PROCESSING:
+      "RECEIPT_PROCESSING_FEE",
+
+    CUSTOMER_ID_CARD_GENERATION:
+      "CUSTOMER_ID_CARD_GENERATION_FEE",
+
+    OTHER_PLATFORM_FEE:
+      "OTHER_PLATFORM_FEE",
+  });
+
+/* ============================================================
+   RUNTIME CHARGE CODE GUARD
+============================================================ */
+
+export function isWalletPlatformChargeCode(
+  value:
+    unknown,
+): value is WalletPlatformChargeCode {
+
+  if (
+    typeof value !==
+    "string"
+  ) {
+    return false;
+  }
+
+  return Object.prototype.hasOwnProperty.call(
+    FINORA_WALLET_PLATFORM_CHARGE_TRANSACTION_TYPES,
+    value,
+  );
+}
+
+/* ============================================================
+   RUNTIME CHARGE / TRANSACTION TYPE CONSISTENCY
+============================================================ */
+
+export function isWalletPlatformChargeTransactionTypeMatch(
+  chargeCode:
+    unknown,
+
+  transactionType:
+    unknown,
+): boolean {
+
+  if (
+    !isWalletPlatformChargeCode(
+      chargeCode,
+    )
+  ) {
+    return false;
+  }
+
+  return (
+    FINORA_WALLET_PLATFORM_CHARGE_TRANSACTION_TYPES[
+      chargeCode
+    ] ===
+    transactionType
+  );
+}
+
+/* ============================================================
    TRANSACTION SOURCE REFERENCE
 ============================================================ */
 

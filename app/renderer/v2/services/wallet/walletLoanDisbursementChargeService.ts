@@ -3,33 +3,28 @@
 
    V2 WALLET ENGINE™
 
-   LOAN DISBURSEMENT CHARGE SERVICE
+   LOAN DISBURSEMENT CHARGE ADAPTER
 
    RESPONSIBILITY:
-   - Preflight the configured Loan disbursement platform fee
-   - Block Loan creation when Wallet balance is insufficient
-   - Commit one deterministic debit after successful Loan creation
-   - Preserve generated Loan Number as the owner-facing reference
-   - Delegate authoritative balance and ledger mutation to the
-     Wallet Debit Service
+   - Preserve the Loan Studio Wallet-charge public contract
+   - Bind Loan disbursement to LOAN_DISBURSEMENT charge code
+   - Bind Loan identity to the generic platform-charge service
+   - Preserve Loan Number as the owner-facing source reference
+   - Preserve Loan-specific user-facing failure wording
 
    IMPORTANT:
    - No React.
    - No UI.
    - No direct storage access.
-   - No payment gateway logic.
-   - No Loan persistence.
-   - No negative Wallet balance.
-   - Preflight does not mutate Wallet state.
-   - Commit remains deterministic and idempotent per Loan.
+   - No Business Date dependency.
+   - No direct pricing resolution.
+   - No direct Wallet balance calculation.
+   - No direct Wallet debit mutation.
+   - Generic Platform Charge Service owns charge orchestration.
 
    VERSION : 1.0
    STATUS  : Production Foundation
 ============================================================ */
-
-import {
-  resolveFinoraAuthoritativeEffectivePrice,
-} from "../pricing/finoraEffectivePricingAuthorityService";
 
 import type {
   FinoraEffectivePriceQuote,
@@ -44,20 +39,9 @@ import type {
 } from "./walletDebitService";
 
 import {
-  ensureWalletForScope,
-} from "./walletInitializationService";
-
-import {
-  calculateWalletDebit,
-} from "./walletBalanceService";
-
-import {
-  commitWalletDebit,
-} from "./walletDebitService";
-
-import {
-  FINORA_WALLET_TRANSACTION_LABELS,
-} from "./wallet.constants";
+  commitWalletPlatformCharge,
+  preflightWalletPlatformCharge,
+} from "./walletPlatformChargeService";
 
 /* ============================================================
    PREFLIGHT RESULT
@@ -110,6 +94,7 @@ export type LoanWalletChargePreflightResult =
 
 export interface CommitLoanDisbursementWalletChargeInput
   extends WalletScope {
+
   walletId:
     string;
 
@@ -124,204 +109,83 @@ export interface CommitLoanDisbursementWalletChargeInput
 }
 
 /* ============================================================
-   SCOPE NORMALIZATION
-============================================================ */
-
-function normalizeScope(
-  scope: WalletScope,
-): WalletScope {
-  return {
-    ownerId:
-      String(scope.ownerId ?? "").trim(),
-
-    businessId:
-      String(scope.businessId ?? "").trim(),
-
-    branchId:
-      String(scope.branchId ?? "").trim(),
-  };
-}
-
-/* ============================================================
-   EFFECTIVE PRICE QUOTE CONSISTENCY
-============================================================ */
-
-function areSameFinoraEffectivePriceQuotes(
-  expected:
-    FinoraEffectivePriceQuote,
-  current:
-    FinoraEffectivePriceQuote,
-): boolean {
-
-  if (
-    expected.chargeCode !==
-      current.chargeCode ||
-    expected.transactionType !==
-      current.transactionType ||
-    expected.pricingModel !==
-      current.pricingModel ||
-    expected.amount !==
-      current.amount ||
-    expected.currency !==
-      current.currency ||
-    expected.source !==
-      current.source ||
-    expected.schemaVersion !==
-      current.schemaVersion
-  ) {
-    return false;
-  }
-
-  if (
-    expected.source === "BASE" &&
-    current.source === "BASE"
-  ) {
-    return true;
-  }
-
-  if (
-    expected.source !== "PRICING_OVERRIDE" ||
-    current.source !== "PRICING_OVERRIDE"
-  ) {
-    return false;
-  }
-
-  return (
-    expected.overrideSetId === current.overrideSetId &&
-    expected.overrideId === current.overrideId &&
-    expected.validFrom === current.validFrom &&
-    expected.validUntil === current.validUntil
-  );
-}
-
-/* ============================================================
    PREFLIGHT
 ============================================================ */
 
 export async function preflightLoanDisbursementWalletCharge(
-  scope: WalletScope,
+  scope:
+    WalletScope,
 ): Promise<LoanWalletChargePreflightResult> {
-  const normalizedScope =
-    normalizeScope(scope);
+
+  const result =
+    await preflightWalletPlatformCharge({
+      ownerId:
+        scope.ownerId,
+
+      businessId:
+        scope.businessId,
+
+      branchId:
+        scope.branchId,
+
+      chargeCode:
+        "LOAN_DISBURSEMENT",
+    });
+
+  if (result.success) {
+    return {
+      success:
+        true,
+
+      data:
+        result.data,
+    };
+  }
 
   if (
-    !normalizedScope.ownerId ||
-    !normalizedScope.businessId ||
-    !normalizedScope.branchId
+    result.errorCode ===
+    "WALLET_NOT_ACTIVE"
   ) {
     return {
       success:
         false,
 
       errorCode:
-        "INVALID_SCOPE",
-
-      error:
-        "Authenticated Owner, Business and Branch are required for the FINORA Wallet charge.",
-    };
-  }
-
-  const pricingResult =
-    await resolveFinoraAuthoritativeEffectivePrice({
-      chargeCode:
-        "LOAN_DISBURSEMENT",
-
-      scope:
-        normalizedScope,
-    });
-
-  if (!pricingResult.success) {
-    return {
-      success:
-        false,
-
-      errorCode:
-        "PRICING_UNAVAILABLE",
-
-      error:
-        pricingResult.error,
-    };
-  }
-
-  const pricingQuote =
-    pricingResult.quote;
-
-  const walletResult =
-    await ensureWalletForScope(
-      normalizedScope,
-    );
-
-  if (!walletResult.success) {
-    return {
-      success:
-        false,
-
-      errorCode:
-        walletResult.errorCode ===
-        "INVALID_SCOPE"
-          ? "INVALID_SCOPE"
-          : "WALLET_UNAVAILABLE",
-
-      error:
-        walletResult.error,
-    };
-  }
-
-  const wallet =
-    walletResult.data;
-
-  if (wallet.status !== "ACTIVE") {
-    return {
-      success:
-        false,
-
-      errorCode:
-        "WALLET_NOT_ACTIVE",
+        result.errorCode,
 
       error:
         "FINORA Wallet is not active. Loan creation cannot continue.",
     };
   }
 
-  const balanceResult =
-    calculateWalletDebit(
-      wallet.balance,
-      pricingQuote.amount,
-    );
-
-  if (!balanceResult.success) {
+  if (
+    result.errorCode ===
+    "INSUFFICIENT_BALANCE"
+  ) {
     return {
       success:
         false,
 
       errorCode:
-        "INSUFFICIENT_BALANCE",
+        result.errorCode,
 
       error:
-        `Insufficient FINORA Wallet balance. A ₹${pricingQuote.amount} Loan platform fee is required.`,
+        result.error.replace(
+          " platform fee is required.",
+          " Loan platform fee is required.",
+        ),
     };
   }
 
   return {
     success:
-      true,
+      false,
 
-    data: {
-      walletId:
-        wallet.walletId,
+    errorCode:
+      result.errorCode,
 
-      amount:
-        pricingQuote.amount,
-
-      pricingQuote:
-        pricingQuote,
-
-      availableBalance:
-        wallet.balance,
-
-      availableBalanceAfterCharge:
-        balanceResult.transition.balanceAfter,
-    },
+    error:
+      result.error,
   };
 }
 
@@ -330,8 +194,10 @@ export async function preflightLoanDisbursementWalletCharge(
 ============================================================ */
 
 export async function commitLoanDisbursementWalletCharge(
-  input: CommitLoanDisbursementWalletChargeInput,
+  input:
+    CommitLoanDisbursementWalletChargeInput,
 ): Promise<WalletDebitServiceResult> {
+
   const walletId =
     String(input.walletId ?? "").trim();
 
@@ -359,40 +225,45 @@ export async function commitLoanDisbursementWalletCharge(
     };
   }
 
-  const pricingResult =
-    await resolveFinoraAuthoritativeEffectivePrice({
+  const result =
+    await commitWalletPlatformCharge({
+      walletId,
+
+      ownerId:
+        String(input.ownerId ?? "").trim(),
+
+      businessId:
+        String(input.businessId ?? "").trim(),
+
+      branchId:
+        String(input.branchId ?? "").trim(),
+
       chargeCode:
         "LOAN_DISBURSEMENT",
 
-      scope:
-        normalizeScope(
-          input,
-        ),
+      sourceType:
+        "LOAN",
+
+      sourceId:
+        loanId,
+
+      sourceReference:
+        loanNumber,
+
+      remarks:
+        `Loan disbursed: ${loanNumber}`,
+
+      expectedPricingQuote:
+        input.expectedPricingQuote,
     });
 
-  if (!pricingResult.success) {
-    return {
-      success:
-        false,
-
-      errorCode:
-        "INVALID_INPUT",
-
-      error:
-        pricingResult.error,
-    };
-  }
-
-  const pricingQuote =
-    pricingResult.quote;
-
   if (
-    !areSameFinoraEffectivePriceQuotes(
-      input.expectedPricingQuote,
-      pricingQuote,
-    )
+    !result.success &&
+    result.errorCode ===
+      "INVALID_INPUT" &&
+    result.error ===
+      "FINORA Pricing changed after platform-charge preflight. The Wallet debit was not committed. Review the current platform fee before retrying."
   ) {
-
     return {
       success:
         false,
@@ -405,41 +276,7 @@ export async function commitLoanDisbursementWalletCharge(
     };
   }
 
-  return commitWalletDebit({
-    walletId,
-
-    ownerId:
-      String(input.ownerId ?? "").trim(),
-
-    businessId:
-      String(input.businessId ?? "").trim(),
-
-    branchId:
-      String(input.branchId ?? "").trim(),
-
-    type:
-      pricingQuote.transactionType,
-
-    amount:
-      pricingQuote.amount,
-
-    title:
-      FINORA_WALLET_TRANSACTION_LABELS[
-        pricingQuote.transactionType
-      ],
-
-    remarks:
-      `Loan disbursed: ${loanNumber}`,
-
-    sourceType:
-      "LOAN",
-
-    sourceReference:
-      loanNumber,
-
-    sourceId:
-      loanId,
-  });
+  return result;
 }
 
 /* ============================================================

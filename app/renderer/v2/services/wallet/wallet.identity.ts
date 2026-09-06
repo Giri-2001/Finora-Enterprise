@@ -27,6 +27,7 @@ import type {
 } from "../../types/wallet/wallet.types";
 
 import type {
+  WalletPlatformChargeCode,
   WalletTransactionSourceType,
 } from "../../types/wallet/wallet.transaction.types";
 
@@ -158,7 +159,8 @@ export function buildWalletDebitIdempotencyKey(input: {
   walletId: WalletId;
   sourceType: WalletTransactionSourceType;
   sourceId: string;
-  chargeCode: string;
+  chargeCode:
+    WalletPlatformChargeCode;
 }): string {
   return [
     "FINORA",

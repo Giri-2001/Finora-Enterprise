@@ -37,6 +37,11 @@ import type {
   WalletTransactionId,
 } from "../../types/wallet/wallet.types";
 
+import {
+  isWalletPlatformChargeCode,
+  isWalletPlatformChargeTransactionTypeMatch,
+} from "../../types/wallet/wallet.transaction.types";
+
 import { storageManager } from "../../storage/storageManager";
 
 import type {
@@ -105,6 +110,266 @@ function buildWalletTransactionQuery(
 }
 
 /* ============================================================
+   RECOVERY SNAPSHOT VALIDATION
+============================================================ */
+
+function normalizeWalletPersistenceMoney(
+  value: number,
+): number {
+  if (!Number.isFinite(value)) {
+    return Number.NaN;
+  }
+
+  return Math.round(
+    (value + Number.EPSILON) * 100,
+  ) / 100;
+}
+
+/* ============================================================
+   PLATFORM CHARGE METADATA VALIDATION
+
+   Historical Debit ledger records may predate chargeCode and
+   therefore remain valid when the field is absent.
+
+   Once chargeCode is present it is authoritative machine
+   metadata and must:
+   - be a canonical Wallet platform charge code
+   - map to the exact canonical Wallet transaction type
+
+   WALLET_RECHARGE is never a platform Debit and must never
+   persist a runtime-injected chargeCode.
+============================================================ */
+
+function validatePlatformChargeMetadataForPersistence(
+  transaction:
+    WalletTransaction,
+): string | undefined {
+
+  const runtimeTransaction =
+    transaction as WalletTransaction & {
+      chargeCode?:
+        unknown;
+    };
+
+  const chargeCode =
+    runtimeTransaction.chargeCode;
+
+  if (
+    transaction.type ===
+    "WALLET_RECHARGE"
+  ) {
+    if (
+      chargeCode !==
+      undefined
+    ) {
+      return "Wallet recharge transactions cannot carry a FINORA platform charge code.";
+    }
+
+    return undefined;
+  }
+
+  /*
+   * Historical Debit compatibility:
+   *
+   * Old committed Debit records were created before chargeCode
+   * became persisted machine-readable metadata.
+   */
+  if (
+    chargeCode ===
+    undefined
+  ) {
+    return undefined;
+  }
+
+  if (
+    !isWalletPlatformChargeCode(
+      chargeCode,
+    )
+  ) {
+    return "Wallet Debit platform charge code is not canonical.";
+  }
+
+  if (
+    !isWalletPlatformChargeTransactionTypeMatch(
+      chargeCode,
+      transaction.type,
+    )
+  ) {
+    return "Wallet Debit platform charge code does not match the canonical transaction type.";
+  }
+
+  return undefined;
+}
+function validateRecoverySnapshotForPersistence(
+  transaction: WalletTransaction,
+): string | undefined {
+  const snapshot =
+    transaction.recoverySnapshot;
+
+  /*
+   * Historical Wallet transactions predate recovery snapshots.
+   * Their absence remains valid for backward compatibility.
+   */
+  if (!snapshot) {
+    return undefined;
+  }
+
+  if (snapshot.schemaVersion !== 1) {
+    return "Wallet recovery snapshot schema version is invalid.";
+  }
+
+  const before =
+    snapshot.walletBefore;
+
+  const after =
+    snapshot.walletAfter;
+
+  if (
+    !before ||
+    !after
+  ) {
+    return "Wallet recovery snapshot requires before and after Wallet state.";
+  }
+
+  const beforeBalance =
+    normalizeWalletPersistenceMoney(
+      before.balance,
+    );
+
+  const afterBalance =
+    normalizeWalletPersistenceMoney(
+      after.balance,
+    );
+
+  const amount =
+    normalizeWalletPersistenceMoney(
+      transaction.amount,
+    );
+
+  const transactionAvailableBalance =
+    normalizeWalletPersistenceMoney(
+      transaction.availableBalance,
+    );
+
+  if (
+    !Number.isFinite(beforeBalance) ||
+    beforeBalance < 0 ||
+    beforeBalance !== before.balance
+  ) {
+    return "Wallet recovery before-balance must be a canonical non-negative two-decimal amount.";
+  }
+
+  if (
+    !Number.isFinite(afterBalance) ||
+    afterBalance < 0 ||
+    afterBalance !== after.balance
+  ) {
+    return "Wallet recovery after-balance must be a canonical non-negative two-decimal amount.";
+  }
+
+  if (
+    !Number.isFinite(amount) ||
+    amount <= 0 ||
+    amount !== transaction.amount
+  ) {
+    return "Wallet recovery transaction amount must be a canonical positive two-decimal amount.";
+  }
+
+  if (
+    !Number.isFinite(
+      transactionAvailableBalance,
+    ) ||
+    transactionAvailableBalance !==
+      transaction.availableBalance ||
+    transactionAvailableBalance !==
+      afterBalance
+  ) {
+    return "Wallet recovery after-balance must match transaction available balance.";
+  }
+
+  if (
+    !Number.isInteger(
+      before.transactionCount,
+    ) ||
+    before.transactionCount < 0
+  ) {
+    return "Wallet recovery before transaction count must be a non-negative integer.";
+  }
+
+  if (
+    !Number.isInteger(
+      after.transactionCount,
+    ) ||
+    after.transactionCount < 1 ||
+    after.transactionCount !==
+      before.transactionCount + 1
+  ) {
+    return "Wallet recovery after transaction count must increment exactly once.";
+  }
+
+  if (
+    !String(
+      before.updatedAt ?? "",
+    ).trim()
+  ) {
+    return "Wallet recovery before updated timestamp is required.";
+  }
+
+  if (
+    !String(
+      after.lastTransactionAt ?? "",
+    ).trim() ||
+    !String(
+      after.updatedAt ?? "",
+    ).trim()
+  ) {
+    return "Wallet recovery after mutation timestamps are required.";
+  }
+
+  if (
+    after.lastTransactionAt !==
+    after.updatedAt
+  ) {
+    return "Wallet recovery after mutation timestamps must match.";
+  }
+
+  let expectedAfterBalance:
+    number;
+
+  if (
+    transaction.direction ===
+    "DEBIT"
+  ) {
+    expectedAfterBalance =
+      normalizeWalletPersistenceMoney(
+        beforeBalance - amount,
+      );
+  } else if (
+    transaction.direction ===
+    "CREDIT"
+  ) {
+    expectedAfterBalance =
+      normalizeWalletPersistenceMoney(
+        beforeBalance + amount,
+      );
+  } else {
+    return "Wallet recovery snapshot transaction direction is unsupported.";
+  }
+
+  if (
+    !Number.isFinite(
+      expectedAfterBalance,
+    ) ||
+    expectedAfterBalance < 0 ||
+    expectedAfterBalance !==
+      afterBalance
+  ) {
+    return "Wallet recovery snapshot financial transition is inconsistent.";
+  }
+
+  return undefined;
+}
+/* ============================================================
    VALIDATION
 ============================================================ */
 
@@ -143,6 +408,24 @@ function validateTransactionForPersistence(
     transaction.availableBalance < 0
   ) {
     return "Wallet available balance must be a non-negative finite number.";
+  }
+
+  const chargeMetadataError =
+    validatePlatformChargeMetadataForPersistence(
+      transaction,
+    );
+
+  if (chargeMetadataError) {
+    return chargeMetadataError;
+  }
+
+  const recoverySnapshotError =
+    validateRecoverySnapshotForPersistence(
+      transaction,
+    );
+
+  if (recoverySnapshotError) {
+    return recoverySnapshotError;
   }
 
   return undefined;

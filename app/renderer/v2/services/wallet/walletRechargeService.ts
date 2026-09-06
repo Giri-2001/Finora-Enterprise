@@ -31,6 +31,7 @@
 
 import type {
   WalletAccount,
+  WalletMutationRecoverySnapshot,
   WalletRechargeTransaction,
 } from "../../types/wallet/wallet.types";
 
@@ -67,6 +68,13 @@ import {
   publishWalletBalanceUpdate,
 } from "./walletBalanceEvent";
 
+import {
+  runSerializedWalletMutation,
+} from "./walletMutationCoordinator";
+import {
+  recoverPendingWalletMutationWithinSerializedBoundary,
+} from "./walletPendingMutationRecoveryService";
+
 /* ============================================================
    RESULT
 ============================================================ */
@@ -80,6 +88,7 @@ export interface WalletRechargeServiceFailure {
     | "WALLET_NOT_FOUND"
     | "WALLET_NOT_ACTIVE"
     | "DUPLICATE_RECHARGE"
+    | "PENDING_RECOVERY_FAILED"
     | "RECHARGE_IN_PROGRESS"
     | "BALANCE_ERROR"
     | "LEDGER_WRITE_FAILED"
@@ -181,6 +190,43 @@ export async function commitVerifiedWalletRecharge(
 
       error:
         "Valid Wallet ID, payment reference and recharge amount are required.",
+    };
+  }
+
+  return runSerializedWalletMutation(
+    walletId,
+    async () => {
+  /* ==========================================================
+     RECOVER INTERRUPTED WALLET MUTATION
+
+     The same-Wallet serialization boundary is already owned
+     by this Recharge commit. Recovery must not acquire it again.
+  ========================================================== */
+
+  const recoveryResult =
+    await recoverPendingWalletMutationWithinSerializedBoundary({
+      walletId,
+
+      ownerId:
+        input.ownerId,
+
+      businessId:
+        input.businessId,
+
+      branchId:
+        input.branchId,
+    });
+
+  if (!recoveryResult.success) {
+    return {
+      success:
+        false,
+
+      errorCode:
+        "PENDING_RECOVERY_FAILED",
+
+      error:
+        `FINORA Wallet has an unresolved PENDING mutation: ${recoveryResult.error}`,
     };
   }
 
@@ -361,6 +407,39 @@ export async function commitVerifiedWalletRecharge(
       paymentReference,
     });
 
+  const recoverySnapshot:
+    WalletMutationRecoverySnapshot = {
+      walletBefore: {
+        balance:
+          wallet.balance,
+
+        transactionCount:
+          wallet.transactionCount,
+
+        lastTransactionAt:
+          wallet.lastTransactionAt,
+
+        updatedAt:
+          wallet.updatedAt,
+      },
+
+      walletAfter: {
+        balance:
+          balanceResult.transition.balanceAfter,
+
+        transactionCount:
+          wallet.transactionCount + 1,
+
+        lastTransactionAt:
+          now,
+
+        updatedAt:
+          now,
+      },
+
+      schemaVersion:
+        1,
+    };
   /* ==========================================================
      PENDING LEDGER RECORD
   ========================================================== */
@@ -411,6 +490,8 @@ export async function commitVerifiedWalletRecharge(
 
       availableBalance:
         balanceResult.transition.balanceAfter,
+
+      recoverySnapshot,
 
       referenceId:
         idempotencyKey,
@@ -472,16 +553,16 @@ export async function commitVerifiedWalletRecharge(
     ...wallet,
 
     balance:
-      balanceResult.transition.balanceAfter,
+      recoverySnapshot.walletAfter.balance,
 
     transactionCount:
-      wallet.transactionCount + 1,
+      recoverySnapshot.walletAfter.transactionCount,
 
     lastTransactionAt:
-      now,
+      recoverySnapshot.walletAfter.lastTransactionAt,
 
     updatedAt:
-      now,
+      recoverySnapshot.walletAfter.updatedAt,
   };
 
   /* ==========================================================
@@ -598,6 +679,7 @@ export async function commitVerifiedWalletRecharge(
         now,
     },
   };
+  });
 }
 
 /* ============================================================

@@ -24,6 +24,10 @@
    accidentally becoming billable.
 =========================================================== */
 
+import {
+  FINORA_WALLET_PLATFORM_CHARGE_TRANSACTION_TYPES,
+} from "../../types/wallet/wallet.transaction.types";
+
 import type {
   WalletPlatformChargeCode,
 } from "../../types/wallet/wallet.transaction.types";
@@ -48,7 +52,7 @@ export const FINORA_BASE_PRICING_CATALOG:
         "LOAN_DISBURSEMENT",
 
       transactionType:
-        "LOAN_DISBURSEMENT_PLATFORM_FEE",
+        FINORA_WALLET_PLATFORM_CHARGE_TRANSACTION_TYPES.LOAN_DISBURSEMENT,
 
       enabled:
         true,
@@ -71,7 +75,7 @@ export const FINORA_BASE_PRICING_CATALOG:
         "LOAN_NUMBER_GENERATION",
 
       transactionType:
-        "LOAN_NUMBER_GENERATION_FEE",
+        FINORA_WALLET_PLATFORM_CHARGE_TRANSACTION_TYPES.LOAN_NUMBER_GENERATION,
 
       enabled:
         false,
@@ -91,7 +95,7 @@ export const FINORA_BASE_PRICING_CATALOG:
         "CUSTOMER_NUMBER_GENERATION",
 
       transactionType:
-        "CUSTOMER_NUMBER_GENERATION_FEE",
+        FINORA_WALLET_PLATFORM_CHARGE_TRANSACTION_TYPES.CUSTOMER_NUMBER_GENERATION,
 
       enabled:
         false,
@@ -111,7 +115,7 @@ export const FINORA_BASE_PRICING_CATALOG:
         "COLLECTION_PROCESSING",
 
       transactionType:
-        "COLLECTION_PROCESSING_FEE",
+        FINORA_WALLET_PLATFORM_CHARGE_TRANSACTION_TYPES.COLLECTION_PROCESSING,
 
       enabled:
         false,
@@ -131,7 +135,7 @@ export const FINORA_BASE_PRICING_CATALOG:
         "RECEIPT_PROCESSING",
 
       transactionType:
-        "RECEIPT_PROCESSING_FEE",
+        FINORA_WALLET_PLATFORM_CHARGE_TRANSACTION_TYPES.RECEIPT_PROCESSING,
 
       enabled:
         false,
@@ -151,7 +155,7 @@ export const FINORA_BASE_PRICING_CATALOG:
         "CUSTOMER_ID_CARD_GENERATION",
 
       transactionType:
-        "CUSTOMER_ID_CARD_GENERATION_FEE",
+        FINORA_WALLET_PLATFORM_CHARGE_TRANSACTION_TYPES.CUSTOMER_ID_CARD_GENERATION,
 
       enabled:
         false,
@@ -171,7 +175,7 @@ export const FINORA_BASE_PRICING_CATALOG:
         "OTHER_PLATFORM_FEE",
 
       transactionType:
-        "OTHER_PLATFORM_FEE",
+        FINORA_WALLET_PLATFORM_CHARGE_TRANSACTION_TYPES.OTHER_PLATFORM_FEE,
 
       enabled:
         false,

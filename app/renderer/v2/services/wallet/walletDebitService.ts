@@ -30,10 +30,12 @@
 import type {
   WalletAccount,
   WalletDebitTransaction,
+  WalletMutationRecoverySnapshot,
   WalletTransactionType,
 } from "../../types/wallet/wallet.types";
 
 import type {
+  WalletPlatformChargeCode,
   WalletTransactionSourceType,
 } from "../../types/wallet/wallet.transaction.types";
 
@@ -53,11 +55,19 @@ import {
 } from "./walletBalanceService";
 
 import {
+  buildWalletDebitIdempotencyKey,
   buildWalletTransactionId,
 } from "./wallet.identity";
 import {
   publishWalletBalanceUpdate,
 } from "./walletBalanceEvent";
+
+import {
+  runSerializedWalletMutation,
+} from "./walletMutationCoordinator";
+import {
+  recoverPendingWalletMutationWithinSerializedBoundary,
+} from "./walletPendingMutationRecoveryService";
 
 /* ============================================================
    RESULT
@@ -73,6 +83,7 @@ export interface WalletDebitServiceFailure {
     | "WALLET_NOT_ACTIVE"
     | "INSUFFICIENT_BALANCE"
     | "DUPLICATE_DEBIT"
+    | "PENDING_RECOVERY_FAILED"
     | "DEBIT_IN_PROGRESS"
     | "LEDGER_WRITE_FAILED"
     | "WALLET_UPDATE_FAILED"
@@ -125,6 +136,9 @@ export interface CommitWalletDebitInput {
   branchId:
     string;
 
+  chargeCode:
+    WalletPlatformChargeCode;
+
   type:
     WalletTransactionType;
 
@@ -143,7 +157,7 @@ export interface CommitWalletDebitInput {
   sourceReference:
     string;
 
-  sourceId?:
+  sourceId:
     string;
 }
 
@@ -160,8 +174,14 @@ export async function commitWalletDebit(
   const sourceType =
     input.sourceType;
 
+  const chargeCode =
+    input.chargeCode;
+
   const sourceReference =
     String(input.sourceReference ?? "").trim();
+
+  const sourceId =
+    String(input.sourceId ?? "").trim();
 
   const title =
     String(input.title ?? "").trim();
@@ -172,7 +192,9 @@ export async function commitWalletDebit(
   if (
     !walletId ||
     !sourceType ||
+    !chargeCode ||
     !sourceReference ||
+    !sourceId ||
     !title ||
     !remarks ||
     !Number.isFinite(input.amount) ||
@@ -200,6 +222,43 @@ export async function commitWalletDebit(
 
       error:
         "Wallet Recharge cannot be processed as a Wallet debit.",
+    };
+  }
+
+  return runSerializedWalletMutation(
+    walletId,
+    async () => {
+  /* ==========================================================
+     RECOVER INTERRUPTED WALLET MUTATION
+
+     The same-Wallet serialization boundary is already owned
+     by this Debit commit. Recovery must not acquire it again.
+  ========================================================== */
+
+  const recoveryResult =
+    await recoverPendingWalletMutationWithinSerializedBoundary({
+      walletId,
+
+      ownerId:
+        input.ownerId,
+
+      businessId:
+        input.businessId,
+
+      branchId:
+        input.branchId,
+    });
+
+  if (!recoveryResult.success) {
+    return {
+      success:
+        false,
+
+      errorCode:
+        "PENDING_RECOVERY_FAILED",
+
+      error:
+        `FINORA Wallet has an unresolved PENDING mutation: ${recoveryResult.error}`,
     };
   }
 
@@ -276,9 +335,27 @@ export async function commitWalletDebit(
 
   /* ==========================================================
      DETERMINISTIC IDS
+
+     New platform Debit identity is charge-aware and uses the
+     stable source entity ID.
+
+     legacyTransactionId preserves detection of historical
+     Debit records created before charge-aware identity.
   ========================================================== */
 
   const transactionId =
+    buildWalletDebitIdempotencyKey({
+      walletId:
+        wallet.walletId,
+
+      sourceType,
+
+      sourceId,
+
+      chargeCode,
+    });
+
+  const legacyTransactionId =
     buildWalletTransactionId({
       walletId:
         wallet.walletId,
@@ -292,7 +369,7 @@ export async function commitWalletDebit(
     });
 
   /* ==========================================================
-     IDEMPOTENCY CHECK
+     CHARGE-AWARE IDEMPOTENCY CHECK
   ========================================================== */
 
   const existingTransaction =
@@ -310,7 +387,7 @@ export async function commitWalletDebit(
 
       error:
         existingTransaction.error ??
-        "Unable to verify Wallet debit idempotency.",
+        "Unable to verify charge-aware Wallet debit idempotency.",
     };
   }
 
@@ -327,7 +404,7 @@ export async function commitWalletDebit(
           "DEBIT_IN_PROGRESS",
 
         error:
-          "This FINORA Wallet debit already has a pending ledger record.",
+          "This FINORA Wallet debit already has a pending charge-aware ledger record.",
       };
     }
 
@@ -343,6 +420,64 @@ export async function commitWalletDebit(
     };
   }
 
+  /* ==========================================================
+     LEGACY IDEMPOTENCY COMPATIBILITY
+
+     Historical Debit records used:
+       Wallet + DEBIT + sourceType + sourceReference
+
+     They did not include sourceId + chargeCode in transaction
+     identity. Keep checking that identity so an existing Loan
+     platform fee cannot be charged again after migration.
+  ========================================================== */
+
+  const legacyExistingTransaction =
+    await getWalletTransactionByIdResult(
+      legacyTransactionId,
+    );
+
+  if (!legacyExistingTransaction.success) {
+    return {
+      success:
+        false,
+
+      errorCode:
+        "LEDGER_WRITE_FAILED",
+
+      error:
+        legacyExistingTransaction.error ??
+        "Unable to verify historical Wallet debit idempotency.",
+    };
+  }
+
+  if (legacyExistingTransaction.data) {
+    if (
+      legacyExistingTransaction.data.status ===
+      "PENDING"
+    ) {
+      return {
+        success:
+          false,
+
+        errorCode:
+          "DEBIT_IN_PROGRESS",
+
+        error:
+          "This FINORA Wallet debit already has a historical pending ledger record.",
+      };
+    }
+
+    return {
+      success:
+        false,
+
+      errorCode:
+        "DUPLICATE_DEBIT",
+
+      error:
+        "This FINORA Wallet charge was already processed under the historical Debit identity.",
+    };
+  }
   /* ==========================================================
      BALANCE TRANSITION
   ========================================================== */
@@ -371,6 +506,40 @@ export async function commitWalletDebit(
 
   const now =
     new Date().toISOString();
+
+  const recoverySnapshot:
+    WalletMutationRecoverySnapshot = {
+      walletBefore: {
+        balance:
+          wallet.balance,
+
+        transactionCount:
+          wallet.transactionCount,
+
+        lastTransactionAt:
+          wallet.lastTransactionAt,
+
+        updatedAt:
+          wallet.updatedAt,
+      },
+
+      walletAfter: {
+        balance:
+          balanceResult.transition.balanceAfter,
+
+        transactionCount:
+          wallet.transactionCount + 1,
+
+        lastTransactionAt:
+          now,
+
+        updatedAt:
+          now,
+      },
+
+      schemaVersion:
+        1,
+    };
 
   /* ==========================================================
      PENDING LEDGER
@@ -421,13 +590,16 @@ export async function commitWalletDebit(
       availableBalance:
         balanceResult.transition.balanceAfter,
 
+      recoverySnapshot,
+
       referenceId:
         sourceReference,
 
-      sourceId:
-        input.sourceId ?? sourceReference,
+      sourceId,
 
       sourceType,
+
+      chargeCode,
 
       chargeReason:
         input.type,
@@ -473,16 +645,16 @@ export async function commitWalletDebit(
     ...wallet,
 
     balance:
-      balanceResult.transition.balanceAfter,
+      recoverySnapshot.walletAfter.balance,
 
     transactionCount:
-      wallet.transactionCount + 1,
+      recoverySnapshot.walletAfter.transactionCount,
 
     lastTransactionAt:
-      now,
+      recoverySnapshot.walletAfter.lastTransactionAt,
 
     updatedAt:
-      now,
+      recoverySnapshot.walletAfter.updatedAt,
   };
 
   /* ==========================================================
@@ -588,6 +760,7 @@ export async function commitWalletDebit(
         now,
     },
   };
+  });
 }
 
 /* ============================================================

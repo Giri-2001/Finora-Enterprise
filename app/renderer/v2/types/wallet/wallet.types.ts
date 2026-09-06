@@ -276,6 +276,55 @@ export interface WalletAccount
 }
 
 /* ============================================================
+   WALLET MUTATION RECOVERY SNAPSHOT
+============================================================ */
+
+/**
+ * Authoritative Wallet account state immediately before a
+ * recoverable Wallet mutation begins.
+ */
+export interface WalletMutationRecoveryBeforeSnapshot {
+  balance: number;
+
+  transactionCount: number;
+
+  lastTransactionAt?: string;
+
+  updatedAt: string;
+}
+
+/**
+ * Intended Wallet account state immediately after the
+ * recoverable Wallet mutation is applied.
+ */
+export interface WalletMutationRecoveryAfterSnapshot {
+  balance: number;
+
+  transactionCount: number;
+
+  lastTransactionAt: string;
+
+  updatedAt: string;
+}
+
+/**
+ * Crash-recovery evidence persisted with new PENDING Wallet
+ * transactions.
+ *
+ * Historical transactions may not contain this field.
+ * Recovery orchestration must fail closed when the snapshot is
+ * absent or inconsistent.
+ */
+export interface WalletMutationRecoverySnapshot {
+  walletBefore:
+    WalletMutationRecoveryBeforeSnapshot;
+
+  walletAfter:
+    WalletMutationRecoveryAfterSnapshot;
+
+  schemaVersion: 1;
+}
+/* ============================================================
    TRANSACTION BASE
 ============================================================ */
 
@@ -358,6 +407,16 @@ export interface WalletTransactionBase
    */
   availableBalance: number;
 
+  /**
+   * Optional crash-recovery evidence.
+   *
+   * New recoverable PENDING Wallet mutations should persist
+   * this snapshot before the Wallet account is updated.
+   *
+   * Optionality preserves historical ledger compatibility.
+   */
+  recoverySnapshot?:
+    WalletMutationRecoverySnapshot;
   /**
    * Optional source business reference.
    *
@@ -446,6 +505,16 @@ export interface WalletDebitTransaction
   direction: "DEBIT";
 
   moneyFlow: "MONEY_OUT";
+
+  /**
+   * Stable machine-readable FINORA platform charge identity.
+   *
+   * New platform Debit records should persist this field.
+   * Optionality preserves compatibility with historical Wallet
+   * Debit ledger records created before charge-aware identity.
+   */
+  chargeCode?:
+    import("./wallet.transaction.types").WalletPlatformChargeCode;
 
   /**
    * Human-readable platform charge reason.
