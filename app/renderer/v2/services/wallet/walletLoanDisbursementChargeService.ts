@@ -28,8 +28,12 @@
 ============================================================ */
 
 import {
-  resolveFinoraBasePrice,
-} from "../pricing/finoraPricingEngine";
+  resolveFinoraAuthoritativeEffectivePrice,
+} from "../pricing/finoraEffectivePricingAuthorityService";
+
+import type {
+  FinoraEffectivePriceQuote,
+} from "../../types/pricing/finoraEffectivePricing.types";
 
 import type {
   WalletScope,
@@ -85,6 +89,9 @@ export interface LoanWalletChargePreflightSuccess {
     amount:
       number;
 
+    pricingQuote:
+      FinoraEffectivePriceQuote;
+
     availableBalance:
       number;
 
@@ -111,6 +118,9 @@ export interface CommitLoanDisbursementWalletChargeInput
 
   loanNumber:
     string;
+
+  expectedPricingQuote:
+    FinoraEffectivePriceQuote;
 }
 
 /* ============================================================
@@ -130,6 +140,58 @@ function normalizeScope(
     branchId:
       String(scope.branchId ?? "").trim(),
   };
+}
+
+/* ============================================================
+   EFFECTIVE PRICE QUOTE CONSISTENCY
+============================================================ */
+
+function areSameFinoraEffectivePriceQuotes(
+  expected:
+    FinoraEffectivePriceQuote,
+  current:
+    FinoraEffectivePriceQuote,
+): boolean {
+
+  if (
+    expected.chargeCode !==
+      current.chargeCode ||
+    expected.transactionType !==
+      current.transactionType ||
+    expected.pricingModel !==
+      current.pricingModel ||
+    expected.amount !==
+      current.amount ||
+    expected.currency !==
+      current.currency ||
+    expected.source !==
+      current.source ||
+    expected.schemaVersion !==
+      current.schemaVersion
+  ) {
+    return false;
+  }
+
+  if (
+    expected.source === "BASE" &&
+    current.source === "BASE"
+  ) {
+    return true;
+  }
+
+  if (
+    expected.source !== "PRICING_OVERRIDE" ||
+    current.source !== "PRICING_OVERRIDE"
+  ) {
+    return false;
+  }
+
+  return (
+    expected.overrideSetId === current.overrideSetId &&
+    expected.overrideId === current.overrideId &&
+    expected.validFrom === current.validFrom &&
+    expected.validUntil === current.validUntil
+  );
 }
 
 /* ============================================================
@@ -160,9 +222,13 @@ export async function preflightLoanDisbursementWalletCharge(
   }
 
   const pricingResult =
-    resolveFinoraBasePrice(
-      "LOAN_DISBURSEMENT",
-    );
+    await resolveFinoraAuthoritativeEffectivePrice({
+      chargeCode:
+        "LOAN_DISBURSEMENT",
+
+      scope:
+        normalizedScope,
+    });
 
   if (!pricingResult.success) {
     return {
@@ -173,7 +239,7 @@ export async function preflightLoanDisbursementWalletCharge(
         "PRICING_UNAVAILABLE",
 
       error:
-        pricingResult.reason,
+        pricingResult.error,
     };
   }
 
@@ -247,6 +313,9 @@ export async function preflightLoanDisbursementWalletCharge(
       amount:
         pricingQuote.amount,
 
+      pricingQuote:
+        pricingQuote,
+
       availableBalance:
         wallet.balance,
 
@@ -275,7 +344,8 @@ export async function commitLoanDisbursementWalletCharge(
   if (
     !walletId ||
     !loanId ||
-    !loanNumber
+    !loanNumber ||
+    !input.expectedPricingQuote
   ) {
     return {
       success:
@@ -290,9 +360,15 @@ export async function commitLoanDisbursementWalletCharge(
   }
 
   const pricingResult =
-    resolveFinoraBasePrice(
-      "LOAN_DISBURSEMENT",
-    );
+    await resolveFinoraAuthoritativeEffectivePrice({
+      chargeCode:
+        "LOAN_DISBURSEMENT",
+
+      scope:
+        normalizeScope(
+          input,
+        ),
+    });
 
   if (!pricingResult.success) {
     return {
@@ -303,12 +379,31 @@ export async function commitLoanDisbursementWalletCharge(
         "INVALID_INPUT",
 
       error:
-        pricingResult.reason,
+        pricingResult.error,
     };
   }
 
   const pricingQuote =
     pricingResult.quote;
+
+  if (
+    !areSameFinoraEffectivePriceQuotes(
+      input.expectedPricingQuote,
+      pricingQuote,
+    )
+  ) {
+
+    return {
+      success:
+        false,
+
+      errorCode:
+        "INVALID_INPUT",
+
+      error:
+        "FINORA Pricing changed after Loan preflight. The Wallet debit was not committed. Review the current platform fee before retrying.",
+    };
+  }
 
   return commitWalletDebit({
     walletId,

@@ -51,6 +51,7 @@ import type {
 
 import {
   findFinoraBusinessProfile,
+  findFinoraPricingPolicy,
 } from "./finoraControlStore.js";
 
 import {
@@ -71,6 +72,10 @@ const CONTROL_IPC_CHANNELS = {
     "finora:control:find-branch-access-grant",
   FIND_BUSINESS_PROFILE:
     "finora:control:find-business-profile",
+
+  FIND_PRICING_POLICY:
+    "finora:control:find-pricing-policy",
+
   HAS_ACTIVE_STORAGE_ENTITLEMENT:
     "finora:control:has-active-storage-entitlement",
 } as const;
@@ -472,6 +477,158 @@ export function registerFinoraControlHandlers(
     },
   );
 
+  // ----------------------------------------------------------
+  // PRICING POLICY
+  //
+  // READ ONLY.
+  //
+  // Native installation-binding metadata remains inside
+  // Electron main. Renderer receives only the authoritative
+  // verified Pricing Override schedule.
+  // ----------------------------------------------------------
+
+  ipcMain.handle(
+    CONTROL_IPC_CHANNELS.FIND_PRICING_POLICY,
+    async (
+      event,
+      request: unknown,
+    ) => {
+
+      if (
+        !isTrustedRenderer(
+          event.senderFrame,
+        )
+      ) {
+        return failure(
+          "FINORA Control Pricing Policy access is restricted to the trusted renderer.",
+        );
+      }
+
+      if (
+        typeof request !==
+          "object" ||
+        request ===
+          null ||
+        Array.isArray(
+          request,
+        )
+      ) {
+        return failure(
+          "A valid FINORA Pricing Policy request is required.",
+        );
+      }
+
+      const record =
+        request as Record<string, unknown>;
+
+      const ownerId =
+        typeof record.ownerId ===
+          "string"
+          ? record.ownerId.trim()
+          : "";
+
+      const businessId =
+        typeof record.businessId ===
+          "string"
+          ? record.businessId.trim()
+          : "";
+
+      const branchId =
+        typeof record.branchId ===
+          "string"
+          ? record.branchId.trim()
+          : "";
+
+      if (
+        !ownerId ||
+        !businessId ||
+        !branchId
+      ) {
+        return failure(
+          "Owner ID, Business ID and Branch ID are required to read the FINORA Pricing Policy.",
+        );
+      }
+
+      const result =
+        await findFinoraPricingPolicy(
+          ownerId,
+          businessId,
+          branchId,
+        );
+
+      if (!result.success) {
+        return result;
+      }
+
+      if (!result.data) {
+        return {
+          success:
+            true,
+
+          data:
+            undefined,
+        };
+      }
+
+      const policy =
+        result.data;
+
+      return {
+        success:
+          true,
+
+        data: {
+          overrideSetId:
+            policy.overrideSetId,
+
+          scope: {
+            ownerId:
+              policy.ownerId,
+
+            businessId:
+              policy.businessId,
+
+            branchId:
+              policy.branchId,
+          },
+
+          overrides:
+            policy.overrides.map(
+              (rule) => ({
+                overrideId:
+                  rule.overrideId,
+
+                chargeCode:
+                  rule.chargeCode,
+
+                model:
+                  rule.model,
+
+                amount:
+                  rule.amount,
+
+                currency:
+                  rule.currency,
+
+                validity: {
+                  validFrom:
+                    rule.validFrom,
+
+                  validUntil:
+                    rule.validUntil,
+                },
+
+                schemaVersion:
+                  1 as const,
+              }),
+            ),
+
+          schemaVersion:
+            1 as const,
+        },
+      };
+    },
+  );
   // ----------------------------------------------------------
   // STORAGE ENTITLEMENT CHECK
   // ----------------------------------------------------------

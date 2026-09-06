@@ -2461,6 +2461,9 @@ export function useLoanStudio({
 
         loanNumber:
           finalizedLoanNumber,
+
+        expectedPricingQuote:
+          walletChargePreflight.data.pricingQuote,
       });
 
     if (!walletChargeResult.success) {

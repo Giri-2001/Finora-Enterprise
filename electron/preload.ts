@@ -376,7 +376,74 @@ interface FinoraControlBusinessProfileView {
 }
 
 
+interface FinoraControlPricingOverrideRuleView {
+
+  overrideId:
+    string;
+
+  chargeCode:
+    | "LOAN_DISBURSEMENT"
+    | "LOAN_NUMBER_GENERATION"
+    | "CUSTOMER_NUMBER_GENERATION"
+    | "COLLECTION_PROCESSING"
+    | "RECEIPT_PROCESSING"
+    | "CUSTOMER_ID_CARD_GENERATION"
+    | "OTHER_PLATFORM_FEE";
+
+  model:
+    "FIXED_PRICE_OVERRIDE";
+
+  amount:
+    number;
+
+  currency:
+    "INR";
+
+  validity: {
+    validFrom:
+      string;
+
+    validUntil:
+      string;
+  };
+
+  schemaVersion:
+    1;
+}
+
+interface FinoraControlPricingOverrideSetView {
+
+  overrideSetId:
+    string;
+
+  scope: {
+    ownerId:
+      string;
+
+    businessId:
+      string;
+
+    branchId:
+      string;
+  };
+
+  overrides:
+    FinoraControlPricingOverrideRuleView[];
+
+  schemaVersion:
+    1;
+}
+
 interface FindBusinessProfileRequest {
+
+  ownerId: string;
+
+  businessId: string;
+
+  branchId: string;
+}
+
+interface FindPricingPolicyRequest {
 
   ownerId: string;
 
@@ -444,6 +511,18 @@ interface FinoraControlBridge {
           FinoraControlBusinessProfileView | undefined
         >
       >;
+
+  findPricingPolicy:
+    (
+      request:
+        FindPricingPolicyRequest,
+    ) =>
+      Promise<
+        StorageResult<
+          FinoraControlPricingOverrideSetView | undefined
+        >
+      >;
+
   findBranchAccessGrant:
     (
       request:
@@ -703,6 +782,10 @@ const CONTROL_CHANNELS = {
     "finora:control:find-branch-access-grant",
   FIND_BUSINESS_PROFILE:
     "finora:control:find-business-profile",
+
+  FIND_PRICING_POLICY:
+    "finora:control:find-pricing-policy",
+
   HAS_ACTIVE_STORAGE_ENTITLEMENT:
     "finora:control:has-active-storage-entitlement",
 
@@ -1049,6 +1132,26 @@ const controlBridge:
       ) as Promise<
         StorageResult<
           FinoraControlBusinessProfileView | undefined
+        >
+      >,
+
+  // ----------------------------------------------------------
+  // VERIFIED PRICING POLICY
+  //
+  // READ ONLY.
+  // ----------------------------------------------------------
+
+  findPricingPolicy:
+    (
+      request:
+        FindPricingPolicyRequest,
+    ) =>
+      ipcRenderer.invoke(
+        CONTROL_CHANNELS.FIND_PRICING_POLICY,
+        request,
+      ) as Promise<
+        StorageResult<
+          FinoraControlPricingOverrideSetView | undefined
         >
       >,
 

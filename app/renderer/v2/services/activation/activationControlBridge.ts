@@ -32,6 +32,10 @@ import type {
   FinoraProvisionedBusinessProfileV1,
 } from "../../types/business/finoraBusinessProfileControl.types";
 
+import type {
+  FinoraPricingOverrideSetV1,
+} from "../../types/pricing/finoraPricingOverride.types";
+
 import {
   Capacitor,
   registerPlugin,
@@ -69,6 +73,18 @@ export interface FinoraBranchActivationRequest {
 }
 
 export interface FinoraBusinessProfileRequest {
+
+  ownerId:
+    string;
+
+  businessId:
+    string;
+
+  branchId:
+    string;
+}
+
+export interface FinoraPricingPolicyRequest {
 
   ownerId:
     string;
@@ -142,6 +158,25 @@ export interface FinoraActivationControlBridge {
         FinoraProvisionedBusinessProfileV1 | undefined
       >
     >;
+
+  /**
+   * Read the current verified FINORA Pricing Override set.
+   *
+   * READ ONLY.
+   *
+   * Native installation-binding metadata and signed-package
+   * mutation authority remain outside the renderer.
+   */
+  findPricingPolicy(
+    request:
+      FinoraPricingPolicyRequest,
+  ):
+    Promise<
+      StorageResult<
+        FinoraPricingOverrideSetV1 | undefined
+      >
+    >;
+
   findBranchAccessGrant(
     request:
       FinoraBranchAccessGrantRequest,

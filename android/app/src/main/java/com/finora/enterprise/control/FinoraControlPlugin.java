@@ -840,6 +840,550 @@ public final class FinoraControlPlugin
      * - Runtime expiry evaluation remains in the shared
      *   renderer Branch Access evaluator using system time.
      */
+    // ========================================================
+    // FIND PRICING POLICY
+    // ========================================================
+
+    /**
+     * Read the authoritative verified FINORA Pricing Override
+     * schedule for one exact installed branch scope.
+     *
+     * SECURITY:
+     *
+     * - READ ONLY.
+     * - No Pricing Policy creation.
+     * - No Pricing Policy replacement.
+     * - No signed package apply authority.
+     * - No signing authority.
+     * - Scope must match the installed branch.
+     * - Persisted native-binding metadata must match the current
+     *   AndroidKeyStore-backed installation binding.
+     * - Renderer receives only override-set pricing data.
+     */
+    @PluginMethod
+    public void findPricingPolicy(
+        PluginCall call
+    ) {
+
+        String ownerId =
+            normalizeRequiredString(
+                call.getString(
+                    "ownerId"
+                )
+            );
+
+        String businessId =
+            normalizeRequiredString(
+                call.getString(
+                    "businessId"
+                )
+            );
+
+        String branchId =
+            normalizeRequiredString(
+                call.getString(
+                    "branchId"
+                )
+            );
+
+        if (
+            ownerId == null ||
+            businessId == null ||
+            branchId == null
+        ) {
+
+            resolveFailure(
+                call,
+                "Owner ID, Business ID and Branch ID are required."
+            );
+
+            return;
+        }
+
+
+        try {
+
+            // ------------------------------------------------
+            // AUTHORITATIVE ENCRYPTED CONTROL STATE
+            // ------------------------------------------------
+
+            JSONObject controlPackage =
+                readValidatedControlPackage();
+
+            if (controlPackage == null) {
+
+                resolveSuccess(
+                    call
+                );
+
+                return;
+            }
+
+
+            // ------------------------------------------------
+            // INSTALLED BRANCH SCOPE
+            // ------------------------------------------------
+
+            JSONObject installation =
+                controlPackage.optJSONObject(
+                    "installation"
+                );
+
+            if (
+                installation == null ||
+                !isValidInstallation(
+                    installation
+                )
+            ) {
+
+                resolveFailure(
+                    call,
+                    "FINORA installation identity is required before reading the Pricing Policy."
+                );
+
+                return;
+            }
+
+            String installationId =
+                normalizeRequiredString(
+                    installation.optString(
+                        "installationId",
+                        null
+                    )
+                );
+
+            String installedOwnerId =
+                normalizeRequiredString(
+                    installation.optString(
+                        "ownerId",
+                        null
+                    )
+                );
+
+            String installedBusinessId =
+                normalizeRequiredString(
+                    installation.optString(
+                        "businessId",
+                        null
+                    )
+                );
+
+            String installedBranchId =
+                normalizeRequiredString(
+                    installation.optString(
+                        "branchId",
+                        null
+                    )
+                );
+
+            if (
+                installationId == null ||
+                installedOwnerId == null ||
+                installedBusinessId == null ||
+                installedBranchId == null
+            ) {
+
+                resolveFailure(
+                    call,
+                    "FINORA installation identity is invalid."
+                );
+
+                return;
+            }
+
+            if (
+                !ownerId.equals(
+                    installedOwnerId
+                ) ||
+                !businessId.equals(
+                    installedBusinessId
+                ) ||
+                !branchId.equals(
+                    installedBranchId
+                )
+            ) {
+
+                resolveFailure(
+                    call,
+                    "FINORA Pricing Policy request does not match the installation identity."
+                );
+
+                return;
+            }
+
+
+            // ------------------------------------------------
+            // CURRENT ANDROID NATIVE INSTALLATION BINDING
+            // ------------------------------------------------
+
+            if (installationBindingService == null) {
+
+                resolveFailure(
+                    call,
+                    "FINORA installation binding service is unavailable."
+                );
+
+                return;
+            }
+
+            FinoraInstallationBindingCrypto.PublicBinding nativeBinding =
+                installationBindingService.get();
+
+            if (nativeBinding == null) {
+
+                resolveFailure(
+                    call,
+                    "FINORA Android native installation binding is required before reading the Pricing Policy."
+                );
+
+                return;
+            }
+
+            if (
+                !installationId.equals(
+                    nativeBinding.installationId
+                )
+            ) {
+
+                resolveFailure(
+                    call,
+                    "FINORA native installation binding does not match the Control Store installation identity."
+                );
+
+                return;
+            }
+
+
+            // ------------------------------------------------
+            // AUTHORITATIVE PRICING POLICY COLLECTION
+            //
+            // Legacy Control Stores may not contain this field.
+            // ------------------------------------------------
+
+            JSONArray pricingPolicies =
+                controlPackage.optJSONArray(
+                    "pricingPolicies"
+                );
+
+            if (pricingPolicies == null) {
+
+                resolveSuccess(
+                    call
+                );
+
+                return;
+            }
+
+
+            JSONObject selectedPolicy =
+                null;
+
+            for (
+                int index = 0;
+                index < pricingPolicies.length();
+                index++
+            ) {
+
+                JSONObject policy =
+                    pricingPolicies.optJSONObject(
+                        index
+                    );
+
+                if (
+                    policy == null ||
+                    !isValidPricingPolicy(
+                        policy
+                    )
+                ) {
+
+                    resolveFailure(
+                        call,
+                        "FINORA Pricing Policy state is invalid."
+                    );
+
+                    return;
+                }
+
+                String policyOwnerId =
+                    normalizeRequiredString(
+                        policy.optString(
+                            "ownerId",
+                            null
+                        )
+                    );
+
+                String policyBusinessId =
+                    normalizeRequiredString(
+                        policy.optString(
+                            "businessId",
+                            null
+                        )
+                    );
+
+                String policyBranchId =
+                    normalizeRequiredString(
+                        policy.optString(
+                            "branchId",
+                            null
+                        )
+                    );
+
+                String policyInstallationId =
+                    normalizeRequiredString(
+                        policy.optString(
+                            "installationId",
+                            null
+                        )
+                    );
+
+                if (
+                    ownerId.equals(
+                        policyOwnerId
+                    ) &&
+                    businessId.equals(
+                        policyBusinessId
+                    ) &&
+                    branchId.equals(
+                        policyBranchId
+                    ) &&
+                    installationId.equals(
+                        policyInstallationId
+                    )
+                ) {
+
+                    selectedPolicy =
+                        policy;
+
+                    break;
+                }
+            }
+
+            if (selectedPolicy == null) {
+
+                resolveSuccess(
+                    call
+                );
+
+                return;
+            }
+
+
+            // ------------------------------------------------
+            // DEFENCE-IN-DEPTH NATIVE BINDING CONSISTENCY
+            // ------------------------------------------------
+
+            String policyBindingKeyId =
+                normalizeRequiredString(
+                    selectedPolicy.optString(
+                        "bindingKeyId",
+                        null
+                    )
+                );
+
+            String policyFingerprintAlgorithm =
+                normalizeRequiredString(
+                    selectedPolicy.optString(
+                        "fingerprintAlgorithm",
+                        null
+                    )
+                );
+
+            String policyPublicKeyFingerprint =
+                normalizeRequiredString(
+                    selectedPolicy.optString(
+                        "publicKeyFingerprint",
+                        null
+                    )
+                );
+
+            if (
+                policyBindingKeyId == null ||
+                !"SHA-256".equals(
+                    policyFingerprintAlgorithm
+                ) ||
+                policyPublicKeyFingerprint == null ||
+                !nativeBinding.bindingKeyId.equals(
+                    policyBindingKeyId
+                ) ||
+                !nativeBinding.publicKeyFingerprint.equals(
+                    policyPublicKeyFingerprint
+                )
+            ) {
+
+                resolveFailure(
+                    call,
+                    "FINORA Pricing Policy native installation binding is inconsistent."
+                );
+
+                return;
+            }
+
+
+            // ------------------------------------------------
+            // SANITIZED RENDERER RESPONSE
+            //
+            // Do NOT expose:
+            //
+            // - installationId
+            // - bindingKeyId
+            // - fingerprintAlgorithm
+            // - publicKeyFingerprint
+            // - issuedAt
+            // ------------------------------------------------
+
+            JSObject data =
+                new JSObject();
+
+            data.put(
+                "overrideSetId",
+                selectedPolicy.getString(
+                    "overrideSetId"
+                )
+            );
+
+            JSObject scope =
+                new JSObject();
+
+            scope.put(
+                "ownerId",
+                selectedPolicy.getString(
+                    "ownerId"
+                )
+            );
+
+            scope.put(
+                "businessId",
+                selectedPolicy.getString(
+                    "businessId"
+                )
+            );
+
+            scope.put(
+                "branchId",
+                selectedPolicy.getString(
+                    "branchId"
+                )
+            );
+
+            data.put(
+                "scope",
+                scope
+            );
+
+
+            JSONArray persistedOverrides =
+                selectedPolicy.getJSONArray(
+                    "overrides"
+                );
+
+            JSONArray rendererOverrides =
+                new JSONArray();
+
+            for (
+                int index = 0;
+                index < persistedOverrides.length();
+                index++
+            ) {
+
+                JSONObject persistedRule =
+                    persistedOverrides.getJSONObject(
+                        index
+                    );
+
+                JSONObject rendererRule =
+                    new JSONObject();
+
+                rendererRule.put(
+                    "overrideId",
+                    persistedRule.getString(
+                        "overrideId"
+                    )
+                );
+
+                rendererRule.put(
+                    "chargeCode",
+                    persistedRule.getString(
+                        "chargeCode"
+                    )
+                );
+
+                rendererRule.put(
+                    "model",
+                    persistedRule.getString(
+                        "model"
+                    )
+                );
+
+                rendererRule.put(
+                    "amount",
+                    persistedRule.getDouble(
+                        "amount"
+                    )
+                );
+
+                rendererRule.put(
+                    "currency",
+                    persistedRule.getString(
+                        "currency"
+                    )
+                );
+
+                JSONObject validity =
+                    new JSONObject();
+
+                validity.put(
+                    "validFrom",
+                    persistedRule.getString(
+                        "validFrom"
+                    )
+                );
+
+                validity.put(
+                    "validUntil",
+                    persistedRule.getString(
+                        "validUntil"
+                    )
+                );
+
+                rendererRule.put(
+                    "validity",
+                    validity
+                );
+
+                rendererRule.put(
+                    "schemaVersion",
+                    1
+                );
+
+                rendererOverrides.put(
+                    rendererRule
+                );
+            }
+
+            data.put(
+                "overrides",
+                rendererOverrides
+            );
+
+            data.put(
+                "schemaVersion",
+                1
+            );
+
+            call.resolve(
+                data
+            );
+
+        } catch (Exception error) {
+
+            resolveFailure(
+                call,
+                error,
+                "Unable to read FINORA Pricing Policy."
+            );
+        }
+    }
+
     @PluginMethod
     public void findBranchAccessGrant(
         PluginCall call
@@ -1622,6 +2166,508 @@ public final class FinoraControlPlugin
 
     // ========================================================
 
+    // ========================================================
+    // PRICING POLICY VALIDATION
+    // ========================================================
+
+    private boolean isValidPricingPolicy(
+        JSONObject value
+    ) {
+
+        if (value == null) {
+            return false;
+        }
+
+        String bindingKeyId =
+            normalizeRequiredString(
+                value.optString(
+                    "bindingKeyId",
+                    null
+                )
+            );
+
+        String fingerprintAlgorithm =
+            normalizeRequiredString(
+                value.optString(
+                    "fingerprintAlgorithm",
+                    null
+                )
+            );
+
+        String publicKeyFingerprint =
+            normalizeRequiredString(
+                value.optString(
+                    "publicKeyFingerprint",
+                    null
+                )
+            );
+
+        String issuedAt =
+            normalizeRequiredString(
+                value.optString(
+                    "issuedAt",
+                    null
+                )
+            );
+
+        JSONArray overrides =
+            value.optJSONArray(
+                "overrides"
+            );
+
+        if (
+            !hasRequiredString(
+                value,
+                "overrideSetId"
+            ) ||
+            !hasRequiredString(
+                value,
+                "ownerId"
+            ) ||
+            !hasRequiredString(
+                value,
+                "businessId"
+            ) ||
+            !hasRequiredString(
+                value,
+                "branchId"
+            ) ||
+            !hasRequiredString(
+                value,
+                "installationId"
+            ) ||
+            bindingKeyId == null ||
+            !"SHA-256".equals(
+                fingerprintAlgorithm
+            ) ||
+            publicKeyFingerprint == null ||
+            !publicKeyFingerprint.matches(
+                "[0-9a-f]{64}"
+            ) ||
+            !bindingKeyMatchesProfileFingerprint(
+                bindingKeyId,
+                publicKeyFingerprint
+            ) ||
+            issuedAt == null ||
+            !isCanonicalControlTimestamp(
+                issuedAt
+            ) ||
+            overrides == null ||
+            value.optInt(
+                "schemaVersion",
+                -1
+            ) != 1
+        ) {
+            return false;
+        }
+
+        java.util.HashSet<String> overrideIds =
+            new java.util.HashSet<>();
+
+        for (
+            int index = 0;
+            index < overrides.length();
+            index++
+        ) {
+
+            JSONObject rule =
+                overrides.optJSONObject(
+                    index
+                );
+
+            if (
+                rule == null ||
+                !isValidPricingOverrideRule(
+                    rule
+                )
+            ) {
+                return false;
+            }
+
+            String overrideId =
+                normalizeRequiredString(
+                    rule.optString(
+                        "overrideId",
+                        null
+                    )
+                );
+
+            if (
+                overrideId == null ||
+                !overrideIds.add(
+                    overrideId
+                )
+            ) {
+                return false;
+            }
+        }
+
+        return !hasOverlappingPricingOverrideWindows(
+            overrides
+        );
+    }
+
+
+    private boolean isValidPricingOverrideRule(
+        JSONObject rule
+    ) {
+
+        if (rule == null) {
+            return false;
+        }
+
+        String overrideId =
+            normalizeRequiredString(
+                rule.optString(
+                    "overrideId",
+                    null
+                )
+            );
+
+        String chargeCode =
+            normalizeRequiredString(
+                rule.optString(
+                    "chargeCode",
+                    null
+                )
+            );
+
+        String model =
+            normalizeRequiredString(
+                rule.optString(
+                    "model",
+                    null
+                )
+            );
+
+        String currency =
+            normalizeRequiredString(
+                rule.optString(
+                    "currency",
+                    null
+                )
+            );
+
+        String validFrom =
+            normalizeRequiredString(
+                rule.optString(
+                    "validFrom",
+                    null
+                )
+            );
+
+        String validUntil =
+            normalizeRequiredString(
+                rule.optString(
+                    "validUntil",
+                    null
+                )
+            );
+
+        Object amountValue =
+            rule.opt(
+                "amount"
+            );
+
+        if (
+            overrideId == null ||
+            !"LOAN_DISBURSEMENT".equals(
+                chargeCode
+            ) ||
+            !"FIXED_PRICE_OVERRIDE".equals(
+                model
+            ) ||
+            !"INR".equals(
+                currency
+            ) ||
+            validFrom == null ||
+            validUntil == null ||
+            !isCanonicalControlTimestamp(
+                validFrom
+            ) ||
+            !isCanonicalControlTimestamp(
+                validUntil
+            ) ||
+            !(amountValue instanceof Number) ||
+            rule.optInt(
+                "schemaVersion",
+                -1
+            ) != 1
+        ) {
+            return false;
+        }
+
+        double amount =
+            ((Number) amountValue)
+                .doubleValue();
+
+        if (
+            !Double.isFinite(
+                amount
+            ) ||
+            amount <=
+                0.0d
+        ) {
+            return false;
+        }
+
+        try {
+
+            java.time.Instant from =
+                java.time.Instant.parse(
+                    validFrom
+                );
+
+            java.time.Instant until =
+                java.time.Instant.parse(
+                    validUntil
+                );
+
+            return until.isAfter(
+                from
+            );
+
+        } catch (Exception error) {
+
+            return false;
+        }
+    }
+
+
+    private boolean hasOverlappingPricingOverrideWindows(
+        JSONArray overrides
+    ) {
+
+        for (
+            int leftIndex = 0;
+            leftIndex < overrides.length();
+            leftIndex++
+        ) {
+
+            JSONObject left =
+                overrides.optJSONObject(
+                    leftIndex
+                );
+
+            if (left == null) {
+                return true;
+            }
+
+            String leftCharge =
+                normalizeRequiredString(
+                    left.optString(
+                        "chargeCode",
+                        null
+                    )
+                );
+
+            String leftFromText =
+                normalizeRequiredString(
+                    left.optString(
+                        "validFrom",
+                        null
+                    )
+                );
+
+            String leftUntilText =
+                normalizeRequiredString(
+                    left.optString(
+                        "validUntil",
+                        null
+                    )
+                );
+
+            if (
+                leftCharge == null ||
+                leftFromText == null ||
+                leftUntilText == null
+            ) {
+                return true;
+            }
+
+            java.time.Instant leftFrom;
+            java.time.Instant leftUntil;
+
+            try {
+
+                leftFrom =
+                    java.time.Instant.parse(
+                        leftFromText
+                    );
+
+                leftUntil =
+                    java.time.Instant.parse(
+                        leftUntilText
+                    );
+
+            } catch (Exception error) {
+
+                return true;
+            }
+
+            for (
+                int rightIndex =
+                    leftIndex + 1;
+                rightIndex < overrides.length();
+                rightIndex++
+            ) {
+
+                JSONObject right =
+                    overrides.optJSONObject(
+                        rightIndex
+                    );
+
+                if (right == null) {
+                    return true;
+                }
+
+                String rightCharge =
+                    normalizeRequiredString(
+                        right.optString(
+                            "chargeCode",
+                            null
+                        )
+                    );
+
+                if (
+                    !leftCharge.equals(
+                        rightCharge
+                    )
+                ) {
+                    continue;
+                }
+
+                String rightFromText =
+                    normalizeRequiredString(
+                        right.optString(
+                            "validFrom",
+                            null
+                        )
+                    );
+
+                String rightUntilText =
+                    normalizeRequiredString(
+                        right.optString(
+                            "validUntil",
+                            null
+                        )
+                    );
+
+                if (
+                    rightFromText == null ||
+                    rightUntilText == null
+                ) {
+                    return true;
+                }
+
+                try {
+
+                    java.time.Instant rightFrom =
+                        java.time.Instant.parse(
+                            rightFromText
+                        );
+
+                    java.time.Instant rightUntil =
+                        java.time.Instant.parse(
+                            rightUntilText
+                        );
+
+                    if (
+                        leftFrom.isBefore(
+                            rightUntil
+                        ) &&
+                        rightFrom.isBefore(
+                            leftUntil
+                        )
+                    ) {
+                        return true;
+                    }
+
+                } catch (Exception error) {
+
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
+
+    private void ensureUniquePricingPolicies(
+        JSONArray pricingPolicies
+    ) {
+
+        java.util.HashSet<String> scopes =
+            new java.util.HashSet<>();
+
+        java.util.HashSet<String> overrideSetIds =
+            new java.util.HashSet<>();
+
+        for (
+            int index = 0;
+            index < pricingPolicies.length();
+            index++
+        ) {
+
+            JSONObject policy =
+                pricingPolicies.optJSONObject(
+                    index
+                );
+
+            if (
+                policy == null ||
+                !isValidPricingPolicy(
+                    policy
+                )
+            ) {
+                throw new IllegalStateException(
+                    "FINORA Pricing Policy validation failed."
+                );
+            }
+
+            String overrideSetId =
+                policy.optString(
+                    "overrideSetId",
+                    ""
+                );
+
+            String scope =
+                policy.optString(
+                    "ownerId",
+                    ""
+                ) +
+                "\u0000" +
+                policy.optString(
+                    "businessId",
+                    ""
+                ) +
+                "\u0000" +
+                policy.optString(
+                    "branchId",
+                    ""
+                ) +
+                "\u0000" +
+                policy.optString(
+                    "installationId",
+                    ""
+                );
+
+            if (
+                !scopes.add(
+                    scope
+                ) ||
+                !overrideSetIds.add(
+                    overrideSetId
+                )
+            ) {
+                throw new IllegalStateException(
+                    "FINORA Pricing Policy collection contains duplicate identities."
+                );
+            }
+        }
+    }
+
     private void validateControlPackage(
         JSONObject controlPackage
     ) {
@@ -1655,6 +2701,11 @@ public final class FinoraControlPlugin
         JSONArray businessProfiles =
             controlPackage.optJSONArray(
                 "businessProfiles"
+            );
+
+        JSONArray pricingPolicies =
+            controlPackage.optJSONArray(
+                "pricingPolicies"
             );
 
         String updatedAt =
@@ -1830,6 +2881,34 @@ public final class FinoraControlPlugin
 
             ensureUniqueBusinessProfiles(
                 businessProfiles
+            );
+        }
+        /*
+         * pricingPolicies is optional for encrypted Control
+         * Stores written before Phase-7 Pricing Policy support.
+         *
+         * Once present it must contain fully validated,
+         * unique authoritative Pricing Policy records.
+         */
+        if (pricingPolicies == null) {
+
+            if (
+                controlPackage.has(
+                    "pricingPolicies"
+                ) &&
+                !controlPackage.isNull(
+                    "pricingPolicies"
+                )
+            ) {
+                throw new IllegalStateException(
+                    "FINORA Pricing Policy collection is invalid."
+                );
+            }
+
+        } else {
+
+            ensureUniquePricingPolicies(
+                pricingPolicies
             );
         }
     }
