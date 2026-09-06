@@ -71,7 +71,7 @@ export type WalletBalanceResult =
    MONEY NORMALIZATION
 ============================================================ */
 
-function normalizeMoney(
+export function normalizeWalletMoney(
   value: number,
 ): number {
   if (!Number.isFinite(value)) {
@@ -83,6 +83,39 @@ function normalizeMoney(
   ) / 100;
 }
 
+/**
+ * Convert one FINORA Wallet rupee amount into canonical
+ * INR minor units (paise).
+ *
+ * Wallet persistence remains rupee-denominated. This helper
+ * exists for exact comparison with signed WALLET_RECHARGE
+ * amountMinor values.
+ *
+ * Number.NaN means the supplied value cannot be represented
+ * as a safe canonical minor-unit integer.
+ */
+export function convertWalletMoneyToMinorUnits(
+  value: number,
+): number {
+  const normalizedValue =
+    normalizeWalletMoney(value);
+
+  if (!Number.isFinite(normalizedValue)) {
+    return Number.NaN;
+  }
+
+  const amountMinor =
+    Math.round(
+      normalizedValue * 100,
+    );
+
+  if (!Number.isSafeInteger(amountMinor)) {
+    return Number.NaN;
+  }
+
+  return amountMinor;
+}
+
 /* ============================================================
    BALANCE VALIDATION
 ============================================================ */
@@ -91,7 +124,7 @@ function validateCurrentBalance(
   balance: number,
 ): WalletBalanceFailure | undefined {
   const normalizedBalance =
-    normalizeMoney(balance);
+    normalizeWalletMoney(balance);
 
   if (
     !Number.isFinite(normalizedBalance) ||
@@ -120,7 +153,7 @@ function validateTransactionAmount(
   amount: number,
 ): WalletBalanceFailure | undefined {
   const normalizedAmount =
-    normalizeMoney(amount);
+    normalizeWalletMoney(amount);
 
   if (
     !Number.isFinite(normalizedAmount) ||
@@ -164,13 +197,13 @@ export function calculateWalletRecharge(
   }
 
   const balanceBefore =
-    normalizeMoney(currentBalance);
+    normalizeWalletMoney(currentBalance);
 
   const amount =
-    normalizeMoney(rechargeAmount);
+    normalizeWalletMoney(rechargeAmount);
 
   const balanceAfter =
-    normalizeMoney(
+    normalizeWalletMoney(
       balanceBefore + amount,
     );
 
@@ -211,10 +244,10 @@ export function calculateWalletDebit(
   }
 
   const balanceBefore =
-    normalizeMoney(currentBalance);
+    normalizeWalletMoney(currentBalance);
 
   const amount =
-    normalizeMoney(debitAmount);
+    normalizeWalletMoney(debitAmount);
 
   if (amount > balanceBefore) {
     return {
@@ -230,7 +263,7 @@ export function calculateWalletDebit(
   }
 
   const balanceAfter =
-    normalizeMoney(
+    normalizeWalletMoney(
       balanceBefore - amount,
     );
 

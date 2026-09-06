@@ -502,6 +502,19 @@ export interface WalletRechargeTransaction
  */
 export interface WalletDebitTransaction
   extends WalletTransactionBase {
+  /**
+   * Debit transactions can never be WALLET_RECHARGE.
+   *
+   * Tightening this inherited classification makes the
+   * WalletTransaction union safely discriminated by `type`
+   * without changing any persisted transaction value.
+   */
+  type:
+    Exclude<
+      WalletTransactionType,
+      "WALLET_RECHARGE"
+    >;
+
   direction: "DEBIT";
 
   moneyFlow: "MONEY_OUT";

@@ -53,6 +53,7 @@ import {
 
 import {
   calculateWalletRecharge,
+  convertWalletMoneyToMinorUnits,
 } from "./walletBalanceService";
 
 import {
@@ -75,6 +76,10 @@ import {
   recoverPendingWalletMutationWithinSerializedBoundary,
 } from "./walletPendingMutationRecoveryService";
 
+import {
+  resolveSignedWalletRechargeAuthorization,
+} from "./finoraWalletRechargeAuthorizationService";
+
 /* ============================================================
    RESULT
 ============================================================ */
@@ -89,6 +94,7 @@ export interface WalletRechargeServiceFailure {
     | "WALLET_NOT_ACTIVE"
     | "DUPLICATE_RECHARGE"
     | "PENDING_RECOVERY_FAILED"
+    | "SIGNED_AUTHORIZATION_FAILED"
     | "RECHARGE_IN_PROGRESS"
     | "BALANCE_ERROR"
     | "LEDGER_WRITE_FAILED"
@@ -105,6 +111,12 @@ export interface WalletRechargeServiceSuccess {
 
   data:
     WalletRechargeCompletionResult;
+
+  verification:
+    WalletPaymentVerificationSuccess;
+
+  paymentMethod:
+    WalletRechargeTransaction["paymentMethod"];
 }
 
 export type WalletRechargeServiceResult =
@@ -119,8 +131,14 @@ export interface CommitVerifiedWalletRechargeInput {
   walletId:
     string;
 
-  verification:
-    WalletPaymentVerificationSuccess;
+  /**
+   * Authoritative completion lookup key.
+   *
+   * Signed amount/source/method/provider evidence is resolved
+   * internally from the native-verified authorization.
+   */
+  paymentReference:
+    string;
 
   ownerId:
     string;
@@ -132,33 +150,6 @@ export interface CommitVerifiedWalletRechargeInput {
     string;
 }
 
-/* ============================================================
-   PAYMENT METHOD RESOLUTION
-============================================================ */
-
-function resolveRechargePaymentMethod(
-  paymentSource: WalletPaymentVerificationSuccess["paymentSource"],
-): WalletRechargeTransaction["paymentMethod"] {
-  switch (paymentSource) {
-    case "PHONEPE":
-      return "PHONEPE";
-
-    case "GOOGLE_PAY":
-      return "GOOGLE_PAY";
-
-    case "PAYTM":
-      return "PAYTM";
-
-    case "RAZORPAY":
-      return "RAZORPAY";
-
-    case "BANK_TRANSFER":
-      return "BANK_TRANSFER";
-
-    default:
-      return "UPI";
-  }
-}
 
 /* ============================================================
    COMMIT VERIFIED RECHARGE
@@ -170,16 +161,34 @@ export async function commitVerifiedWalletRecharge(
   const walletId =
     String(input.walletId ?? "").trim();
 
+  const ownerId =
+    String(input.ownerId ?? "").trim();
+
+  const businessId =
+    String(input.businessId ?? "").trim();
+
+  const branchId =
+    String(input.branchId ?? "").trim();
+
+  /*
+   * The incoming verification object is NOT a trust boundary.
+   *
+   * Only its paymentReference is used as a lookup key.
+   * Amount/source/provider evidence is re-resolved from the
+   * native-verified signed authorization inside the serialized
+   * Wallet mutation boundary.
+   */
   const paymentReference =
     String(
-      input.verification.paymentReference ?? "",
+      input.paymentReference ?? "",
     ).trim();
 
   if (
     !walletId ||
-    !paymentReference ||
-    !Number.isFinite(input.verification.amount) ||
-    input.verification.amount <= 0
+    !ownerId ||
+    !businessId ||
+    !branchId ||
+    !paymentReference
   ) {
     return {
       success:
@@ -189,7 +198,7 @@ export async function commitVerifiedWalletRecharge(
         "INVALID_INPUT",
 
       error:
-        "Valid Wallet ID, payment reference and recharge amount are required.",
+        "Valid Wallet ID, Wallet scope and payment reference are required.",
     };
   }
 
@@ -207,14 +216,11 @@ export async function commitVerifiedWalletRecharge(
     await recoverPendingWalletMutationWithinSerializedBoundary({
       walletId,
 
-      ownerId:
-        input.ownerId,
+      ownerId,
 
-      businessId:
-        input.businessId,
+      businessId,
 
-      branchId:
-        input.branchId,
+      branchId,
     });
 
   if (!recoveryResult.success) {
@@ -229,6 +235,48 @@ export async function commitVerifiedWalletRecharge(
         `FINORA Wallet has an unresolved PENDING mutation: ${recoveryResult.error}`,
     };
   }
+
+  /* ==========================================================
+     RESOLVE NATIVE-VERIFIED SIGNED RECHARGE AUTHORIZATION
+
+     Security order:
+
+     1. Same-Wallet serialization already acquired.
+     2. Existing PENDING mutation recovered first.
+     3. Native-verified signed authorization resolved now.
+     4. Fresh Wallet state loaded only after authorization passes.
+
+     The caller-provided `verification` object does not authorize
+     any balance mutation.
+  ========================================================== */
+
+  const authorizationResult =
+    await resolveSignedWalletRechargeAuthorization({
+      walletId,
+      ownerId,
+      businessId,
+      branchId,
+      paymentReference,
+    });
+
+  if (!authorizationResult.success) {
+    return {
+      success:
+        false,
+
+      errorCode:
+        "SIGNED_AUTHORIZATION_FAILED",
+
+      error:
+        authorizationResult.error,
+    };
+  }
+
+  const verification =
+    authorizationResult.verification;
+
+  const paymentMethod =
+    authorizationResult.paymentMethod;
 
   /* ==========================================================
      LOAD AUTHORITATIVE WALLET
@@ -285,9 +333,9 @@ export async function commitVerifiedWalletRecharge(
   ========================================================== */
 
   if (
-    wallet.ownerId !== input.ownerId ||
-    wallet.businessId !== input.businessId ||
-    wallet.branchId !== input.branchId
+    wallet.ownerId !== ownerId ||
+    wallet.businessId !== businessId ||
+    wallet.branchId !== branchId
   ) {
     return {
       success:
@@ -344,8 +392,11 @@ export async function commitVerifiedWalletRecharge(
   }
 
   if (existingTransaction.data) {
+    const existingRecharge =
+      existingTransaction.data;
+
     if (
-      existingTransaction.data.status ===
+      existingRecharge.status ===
       "PENDING"
     ) {
       return {
@@ -360,6 +411,79 @@ export async function commitVerifiedWalletRecharge(
       };
     }
 
+    /*
+     * Recovery-safe idempotent completion:
+     *
+     * Wallet credit may have succeeded while the Payment Intent
+     * SUCCESS update failed afterwards. A retry must not credit
+     * the Wallet again, but it may return the exact existing
+     * successful Recharge so orchestration can finalize the
+     * Payment Intent.
+     */
+    /*
+     * Narrow the Wallet transaction union before reading
+     * Recharge-only payment fields.
+     */
+    if (
+      existingRecharge.type ===
+      "WALLET_RECHARGE"
+    ) {
+      if (
+        existingRecharge.status === "SUCCESS" &&
+        existingRecharge.walletId === wallet.walletId &&
+        existingRecharge.ownerId === ownerId &&
+        existingRecharge.businessId === businessId &&
+        existingRecharge.branchId === branchId &&
+        existingRecharge.sourceType === "PAYMENT" &&
+        existingRecharge.paymentReference === paymentReference &&
+        existingRecharge.paymentSource ===
+          verification.paymentSource &&
+        existingRecharge.paymentMethod === paymentMethod &&
+        Number.isSafeInteger(
+          convertWalletMoneyToMinorUnits(
+            existingRecharge.amount,
+          ),
+        ) &&
+        convertWalletMoneyToMinorUnits(
+          existingRecharge.amount,
+        ) ===
+          convertWalletMoneyToMinorUnits(
+            verification.amount,
+          )
+      ) {
+        return {
+          success:
+            true,
+
+          data: {
+            walletId:
+              existingRecharge.walletId,
+
+            amount:
+              existingRecharge.amount,
+
+            paymentReference,
+
+            paymentSource:
+              existingRecharge.paymentSource,
+
+            transactionId:
+              existingRecharge.id,
+
+            availableBalance:
+              existingRecharge.availableBalance,
+
+            completedAt:
+              existingRecharge.occurredAt,
+          },
+
+          verification,
+
+          paymentMethod,
+        };
+      }
+    }
+
     return {
       success:
         false,
@@ -368,7 +492,7 @@ export async function commitVerifiedWalletRecharge(
         "DUPLICATE_RECHARGE",
 
       error:
-        "This Wallet Recharge payment has already been processed.",
+        "A Wallet transaction already exists for this payment reference but does not exactly match the signed Recharge authorization.",
     };
   }
 
@@ -379,7 +503,7 @@ export async function commitVerifiedWalletRecharge(
   const balanceResult =
     calculateWalletRecharge(
       wallet.balance,
-      input.verification.amount,
+      verification.amount,
     );
 
   if (!balanceResult.success) {
@@ -395,8 +519,15 @@ export async function commitVerifiedWalletRecharge(
     };
   }
 
+  /*
+   * Wallet financial mutation time MUST come from the actual
+   * system clock at commit time.
+   *
+   * Payment/native verifiedAt is verification evidence only and
+   * must never drive occurredAt, createdAt, updatedAt,
+   * lastTransactionAt or recoverySnapshot timestamps.
+   */
   const now =
-    input.verification.verifiedAt ||
     new Date().toISOString();
 
   const idempotencyKey =
@@ -504,13 +635,10 @@ export async function commitVerifiedWalletRecharge(
 
       paymentReference,
 
-      paymentMethod:
-        resolveRechargePaymentMethod(
-          input.verification.paymentSource,
-        ),
+      paymentMethod,
 
       paymentSource:
-        input.verification.paymentSource,
+        verification.paymentSource,
 
       createdAt:
         now,
@@ -678,6 +806,10 @@ export async function commitVerifiedWalletRecharge(
       completedAt:
         now,
     },
+
+    verification,
+
+    paymentMethod,
   };
   });
 }

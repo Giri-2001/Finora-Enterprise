@@ -45,8 +45,13 @@ import {
 } from "../../services/wallet/walletWorkspaceService";
 
 import {
+  cancelPendingSignedWalletRecharge,
+  resumeSignedWalletRecharge,
   startWalletRecharge,
 } from "../../services/wallet/walletRechargeOrchestrationService";
+import {
+  getPendingWalletRechargeIntentsForScope,
+} from "../../services/wallet/walletPaymentIntentService";
 
 import {
   buildWalletPaymentReference,
@@ -83,10 +88,6 @@ export interface WalletPageProps {
   scope:
     WalletScope;
 
-  onRechargeRequest?:
-    (
-      input: WalletRechargePanelSubmitInput,
-    ) => void | Promise<void>;
 }
 
 /* ============================================================
@@ -116,7 +117,6 @@ function resolvePaymentSource(
 
 export default function WalletPage({
   scope,
-  onRechargeRequest,
 }: WalletPageProps) {
   const {
     tokens,
@@ -163,6 +163,19 @@ export default function WalletPage({
     false,
   );
 
+  const [
+    cancellingRecharge,
+    setCancellingRecharge,
+  ] = useState(
+    false,
+  );
+  const [
+    pendingRechargeReference,
+    setPendingRechargeReference,
+  ] = useState<string | null>(
+    null,
+  );
+
   /* ==========================================================
      LOAD
   ========================================================== */
@@ -188,6 +201,10 @@ export default function WalletPage({
             null,
           );
 
+          setPendingRechargeReference(
+            null,
+          );
+
           setError(
             result.error,
           );
@@ -199,8 +216,164 @@ export default function WalletPage({
           return;
         }
 
+        let workspaceResult =
+          result;
+
+        const resumeResult =
+          await resumeSignedWalletRecharge({
+            walletId:
+              workspaceResult.data.wallet.walletId,
+
+            ownerId:
+              scope.ownerId,
+
+            businessId:
+              scope.businessId,
+
+            branchId:
+              scope.branchId,
+          });
+
+        if (!resumeResult.success) {
+          setSnapshot(
+            null,
+          );
+
+          setPendingRechargeReference(
+            null,
+          );
+
+          setError(
+            resumeResult.error,
+          );
+
+          setLoading(
+            false,
+          );
+
+          return;
+        }
+
+        if (resumeResult.completed) {
+          const refreshedResult =
+            await loadWalletWorkspace(
+              scope,
+            );
+
+          if (!refreshedResult.success) {
+            setSnapshot(
+              null,
+            );
+
+            setPendingRechargeReference(
+              null,
+            );
+
+            setError(
+              refreshedResult.error,
+            );
+
+            setLoading(
+              false,
+            );
+
+            return;
+          }
+
+          workspaceResult =
+            refreshedResult;
+        }
+        const pendingResult =
+          await getPendingWalletRechargeIntentsForScope({
+            walletId:
+              workspaceResult.data.wallet.walletId,
+
+            ownerId:
+              scope.ownerId,
+
+            businessId:
+              scope.businessId,
+
+            branchId:
+              scope.branchId,
+          });
+
+        if (!pendingResult.success) {
+          setSnapshot(
+            null,
+          );
+
+          setPendingRechargeReference(
+            null,
+          );
+
+          setError(
+            pendingResult.error,
+          );
+
+          setLoading(
+            false,
+          );
+
+          return;
+        }
+
+        if (pendingResult.data.length > 1) {
+          setSnapshot(
+            null,
+          );
+
+          setPendingRechargeReference(
+            null,
+          );
+
+          setError(
+            "Multiple pending Wallet Recharge requests exist for this Wallet. Automatic selection is blocked.",
+          );
+
+          setLoading(
+            false,
+          );
+
+          return;
+        }
+
+        const pendingIntent =
+          pendingResult.data[0];
+
+        const pendingPaymentReference =
+          pendingIntent
+            ? String(
+                pendingIntent.paymentReference ?? "",
+              ).trim()
+            : "";
+
+        if (pendingIntent && !pendingPaymentReference) {
+          setSnapshot(
+            null,
+          );
+
+          setPendingRechargeReference(
+            null,
+          );
+
+          setError(
+            "Pending Wallet Recharge request is missing its canonical payment reference.",
+          );
+
+          setLoading(
+            false,
+          );
+
+          return;
+        }
+
+        setPendingRechargeReference(
+          pendingPaymentReference || null,
+        );
+
         setSnapshot(
-          result.data,
+          workspaceResult.data,
         );
 
         setLoading(
@@ -231,14 +404,6 @@ export default function WalletPage({
     input: WalletRechargePanelSubmitInput,
   ): Promise<void> {
     if (!snapshot) {
-      return;
-    }
-
-    if (!onRechargeRequest) {
-      setError(
-        "Online Wallet recharge is unavailable until a verified payment provider is configured.",
-      );
-
       return;
     }
 
@@ -301,12 +466,9 @@ export default function WalletPage({
         return;
       }
 
-      if (onRechargeRequest) {
-        await onRechargeRequest(
-          input,
-        );
-      }
-
+      setPendingRechargeReference(
+        startResult.paymentReference,
+      );
       await loadWorkspace();
     } finally {
       stopFinoraProcessing(
@@ -319,6 +481,73 @@ export default function WalletPage({
     }
   }
 
+  /* ==========================================================
+     CANCEL PENDING RECHARGE REQUEST
+  ========================================================== */
+
+  async function handleCancelPendingRecharge(): Promise<void> {
+    if (
+      !snapshot ||
+      !pendingRechargeReference
+    ) {
+      return;
+    }
+
+    setCancellingRecharge(
+      true,
+    );
+
+    setError(
+      null,
+    );
+
+    const processingId =
+      startFinoraProcessing(
+        "Cancelling Wallet Recharge Request...",
+      );
+
+    try {
+      const cancelResult =
+        await cancelPendingSignedWalletRecharge({
+          walletId:
+            snapshot.wallet.walletId,
+
+          ownerId:
+            scope.ownerId,
+
+          businessId:
+            scope.businessId,
+
+          branchId:
+            scope.branchId,
+
+          paymentReference:
+            pendingRechargeReference,
+        });
+
+      if (!cancelResult.success) {
+        setError(
+          cancelResult.error,
+        );
+
+        return;
+      }
+
+      setPendingRechargeReference(
+        null,
+      );
+
+      await loadWorkspace();
+    } finally {
+      stopFinoraProcessing(
+        processingId,
+      );
+
+      setCancellingRecharge(
+        false,
+      );
+    }
+  }
   /* ==========================================================
      RENDER
   ========================================================== */
@@ -354,7 +583,7 @@ export default function WalletPage({
             onClick={() => {
               void loadWorkspace();
             }}
-            disabled={loading}
+            disabled={loading || recharging || cancellingRecharge}
             aria-label="Refresh FINORA Wallet"
             style={styles.refreshButton}
           >
@@ -402,11 +631,47 @@ export default function WalletPage({
               <WalletRechargePanel
                 disabled={
                   snapshot.wallet.status !== "ACTIVE" ||
-                  !onRechargeRequest
+                  Boolean(pendingRechargeReference)
                 }
                 submitting={recharging}
                 onSubmit={handleRechargeRequest}
               />
+
+              {pendingRechargeReference ? (
+                <section style={styles.stateCard}>
+                  <p style={styles.stateText}>
+                    Wallet Recharge request is pending signed verification.
+                  </p>
+
+                  <p style={styles.stateText}>
+                    Payment Reference:{" "}
+                    <strong>
+                      {pendingRechargeReference}
+                    </strong>
+                  </p>
+
+                  <p style={styles.stateText}>
+                    Apply the matching signed FINORA Recharge package, then refresh this Wallet.
+                  </p>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      void handleCancelPendingRecharge();
+                    }}
+                    disabled={
+                      cancellingRecharge ||
+                      recharging ||
+                      loading
+                    }
+                    style={styles.retryButton}
+                  >
+                    {cancellingRecharge
+                      ? "Cancelling..."
+                      : "Cancel Recharge Request"}
+                  </button>
+                </section>
+              ) : null}
             </div>
 
             <div style={styles.secondaryColumn}>

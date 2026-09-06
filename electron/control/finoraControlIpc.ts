@@ -52,6 +52,7 @@ import type {
 import {
   findFinoraBusinessProfile,
   findFinoraPricingPolicy,
+  findFinoraWalletRechargeAuthorization,
 } from "./finoraControlStore.js";
 
 import {
@@ -75,6 +76,9 @@ const CONTROL_IPC_CHANNELS = {
 
   FIND_PRICING_POLICY:
     "finora:control:find-pricing-policy",
+
+  FIND_WALLET_RECHARGE_AUTHORIZATION:
+    "finora:control:find-wallet-recharge-authorization",
 
   HAS_ACTIVE_STORAGE_ENTITLEMENT:
     "finora:control:has-active-storage-entitlement",
@@ -110,6 +114,16 @@ interface FindBranchAccessGrantRequest {
 
   branchId: string;
 }
+interface FindWalletRechargeAuthorizationRequest {
+  ownerId: string;
+
+  businessId: string;
+
+  branchId: string;
+
+  paymentReference: string;
+}
+
 interface StorageEntitlementCheckRequest {
   userId: string;
 
@@ -199,6 +213,28 @@ function isFindBranchAccessGrantRequest(
     isNonEmptyString(request.branchId)
   );
 }
+function isFindWalletRechargeAuthorizationRequest(
+  value: unknown,
+): value is FindWalletRechargeAuthorizationRequest {
+  if (
+    typeof value !== "object" ||
+    value === null ||
+    Array.isArray(value)
+  ) {
+    return false;
+  }
+
+  const request =
+    value as Record<string, unknown>;
+
+  return (
+    isNonEmptyString(request.ownerId) &&
+    isNonEmptyString(request.businessId) &&
+    isNonEmptyString(request.branchId) &&
+    isNonEmptyString(request.paymentReference)
+  );
+}
+
 function isStorageEntitlementCheckRequest(
   value: unknown,
 ): value is StorageEntitlementCheckRequest {
@@ -629,6 +665,168 @@ export function registerFinoraControlHandlers(
       };
     },
   );
+  // ----------------------------------------------------------
+  // VERIFIED WALLET RECHARGE AUTHORIZATION
+  //
+  // READ ONLY.
+  //
+  // Signed-package verification/application remains inside
+  // trusted main/native Control Plane flows.
+  //
+  // Installation binding metadata remains private to Electron
+  // main. Renderer receives only sanitized verified
+  // authorization evidence required for Wallet consumption.
+  // ----------------------------------------------------------
+
+  ipcMain.handle(
+    CONTROL_IPC_CHANNELS.FIND_WALLET_RECHARGE_AUTHORIZATION,
+    async (
+      event,
+      request: unknown,
+    ) => {
+
+      if (
+        !isTrustedRenderer(
+          event.senderFrame,
+        )
+      ) {
+        return failure(
+          "FINORA Wallet Recharge authorization access is restricted to the trusted renderer.",
+        );
+      }
+
+      if (
+        !isFindWalletRechargeAuthorizationRequest(
+          request,
+        )
+      ) {
+        return failure(
+          "A valid FINORA Wallet Recharge authorization request is required.",
+        );
+      }
+
+      const nativeBinding =
+        await getFinoraWindowsInstallationBinding();
+
+      if (!nativeBinding) {
+        return failure(
+          "FINORA Windows native installation binding is unavailable.",
+        );
+      }
+
+      const result =
+        await findFinoraWalletRechargeAuthorization(
+          request.ownerId,
+          request.businessId,
+          request.branchId,
+          request.paymentReference,
+        );
+
+      if (!result.success) {
+        return result;
+      }
+
+      if (!result.data) {
+        return {
+          success:
+            true,
+
+          data:
+            undefined,
+        };
+      }
+
+      const authorization =
+        result.data;
+
+      if (
+        authorization.installationId !==
+          nativeBinding.installationId ||
+        authorization.bindingKeyId !==
+          nativeBinding.bindingKeyId ||
+        authorization.fingerprintAlgorithm !==
+          nativeBinding.fingerprintAlgorithm ||
+        authorization.publicKeyFingerprint !==
+          nativeBinding.publicKeyFingerprint
+      ) {
+        return failure(
+          "FINORA Wallet Recharge authorization does not match the current native installation binding.",
+        );
+      }
+
+      return {
+        success:
+          true,
+
+        data: {
+          packageId:
+            authorization.packageId,
+
+          issuerId:
+            authorization.issuerId,
+
+          signingKeyId:
+            authorization.signingKeyId,
+
+          purpose:
+            authorization.purpose,
+
+          sequence:
+            authorization.sequence,
+
+          scope: {
+            ownerId:
+              authorization.ownerId,
+
+            businessId:
+              authorization.businessId,
+
+            branchId:
+              authorization.branchId,
+          },
+
+          paymentReference:
+            authorization.paymentReference,
+
+          amountMinor:
+            authorization.amountMinor,
+
+          currency:
+            authorization.currency,
+
+          paymentMethod:
+            authorization.paymentMethod,
+
+          paymentSource:
+            authorization.paymentSource,
+
+          ...(authorization.providerOrderId
+            ? {
+                providerOrderId:
+                  authorization.providerOrderId,
+              }
+            : {}),
+
+          ...(authorization.providerTransactionId
+            ? {
+                providerTransactionId:
+                  authorization.providerTransactionId,
+              }
+            : {}),
+
+          issuedAt:
+            authorization.issuedAt,
+
+          verifiedAt:
+            authorization.verifiedAt,
+
+          schemaVersion:
+            1 as const,
+        },
+      };
+    },
+  );
+
   // ----------------------------------------------------------
   // STORAGE ENTITLEMENT CHECK
   // ----------------------------------------------------------

@@ -37,6 +37,10 @@ import type {
   FinoraEntitlementStorageMode,
 } from "./renderer/v2/types/activation/finoraStorageEntitlement.types";
 
+import type {
+  FinoraVerifiedWalletRechargeAuthorization,
+} from "./renderer/v2/types/wallet/finoraWalletRechargeControl.types";
+
 // ============================================================
 // GENERIC BRIDGE RESULT
 // ============================================================
@@ -74,6 +78,31 @@ interface FinoraStorageEntitlementCheckRequest {
 }
 
 // ============================================================
+// WALLET RECHARGE READ CONTRACT
+// ============================================================
+
+type FinoraElectronWalletRechargeAuthorizationView =
+  Omit<
+    FinoraVerifiedWalletRechargeAuthorization,
+    "installationBinding"
+  >;
+
+interface FinoraFindWalletRechargeAuthorizationRequest {
+
+  ownerId:
+    string;
+
+  businessId:
+    string;
+
+  branchId:
+    string;
+
+  paymentReference:
+    string;
+}
+
+// ============================================================
 // CONTROL BRIDGE
 // ============================================================
 
@@ -102,6 +131,25 @@ interface FinoraElectronControlBridge {
     Promise<
       FinoraElectronResult<
         FinoraActivation | undefined
+      >
+    >;
+
+  /**
+   * Returns one previously verified signed Wallet Recharge
+   * authorization for the exact branch/payment reference.
+   *
+   * READ ONLY.
+   *
+   * Native installation binding, signed package, signature and
+   * apply authority remain outside the renderer.
+   */
+  findWalletRechargeAuthorization(
+    request:
+      FinoraFindWalletRechargeAuthorizationRequest,
+  ):
+    Promise<
+      FinoraElectronResult<
+        FinoraElectronWalletRechargeAuthorizationView | undefined
       >
     >;
 

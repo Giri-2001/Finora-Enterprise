@@ -33,6 +33,7 @@ import type {
 import {
   addWalletPaymentIntent,
   getWalletPaymentIntentByReferenceResult,
+  getWalletPaymentIntentsResult,
   updateWalletPaymentIntent,
 } from "../../repositories/wallet/walletPaymentIntentRepository";
 
@@ -412,6 +413,130 @@ export async function updateWalletPaymentIntentStatus(
   };
 }
 
+/* ============================================================
+   PENDING RECHARGE DISCOVERY
+============================================================ */
+
+export interface GetPendingWalletRechargeIntentsInput {
+  walletId:
+    string;
+
+  ownerId:
+    string;
+
+  businessId:
+    string;
+
+  branchId:
+    string;
+}
+
+export type GetPendingWalletRechargeIntentsResult =
+  | {
+      success:
+        true;
+
+      data:
+        WalletPaymentIntent[];
+    }
+  | {
+      success:
+        false;
+
+      errorCode:
+        | "INVALID_INPUT"
+        | "PAYMENT_INTENT_READ_FAILED";
+
+      error:
+        string;
+    };
+
+/**
+ * Load resumable PENDING Recharge intents for one exact
+ * Wallet scope.
+ *
+ * StorageQuery can constrain ownerId, but it cannot query
+ * walletId, businessId, branchId or status. Those fields
+ * are therefore revalidated here before any intent is
+ * exposed to higher layers.
+ */
+export async function getPendingWalletRechargeIntentsForScope(
+  input: GetPendingWalletRechargeIntentsInput,
+): Promise<GetPendingWalletRechargeIntentsResult> {
+  const walletId =
+    normalizeText(input.walletId);
+
+  const ownerId =
+    normalizeText(input.ownerId);
+
+  const businessId =
+    normalizeText(input.businessId);
+
+  const branchId =
+    normalizeText(input.branchId);
+
+  if (
+    !walletId ||
+    !ownerId ||
+    !businessId ||
+    !branchId
+  ) {
+    return {
+      success:
+        false,
+
+      errorCode:
+        "INVALID_INPUT",
+
+      error:
+        "Valid Wallet scope is required to load pending Recharge intents.",
+    };
+  }
+
+  const intentsResult =
+    await getWalletPaymentIntentsResult({
+      ownerId,
+    });
+
+  if (!intentsResult.success) {
+    return {
+      success:
+        false,
+
+      errorCode:
+        "PAYMENT_INTENT_READ_FAILED",
+
+      error:
+        intentsResult.error ??
+        "Unable to load pending Wallet Recharge intents.",
+    };
+  }
+
+  const pendingIntents =
+    (intentsResult.data ?? [])
+      .filter(
+        (intent) =>
+          normalizeText(intent.walletId) === walletId &&
+          normalizeText(intent.ownerId) === ownerId &&
+          normalizeText(intent.businessId) === businessId &&
+          normalizeText(intent.branchId) === branchId &&
+          intent.status === "PENDING",
+      )
+      .sort(
+        (left, right) =>
+          String(right.createdAt).localeCompare(
+            String(left.createdAt),
+          ),
+      );
+
+  return {
+    success:
+      true,
+
+    data:
+      pendingIntents,
+  };
+}
 /* ============================================================
    END
 ============================================================ */

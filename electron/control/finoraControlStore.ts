@@ -267,6 +267,108 @@ export interface FinoraControlPricingPolicy {
   schemaVersion:
     1;
 }
+/* ============================================================
+   VERIFIED WALLET RECHARGE AUTHORIZATION DTO
+============================================================ */
+
+export type FinoraControlWalletRechargePaymentMethod =
+  | "UPI"
+  | "PHONEPE"
+  | "GOOGLE_PAY"
+  | "PAYTM"
+  | "RAZORPAY"
+  | "BANK_TRANSFER"
+  | "OTHER";
+
+export type FinoraControlWalletPaymentSource =
+  | "PHONEPE"
+  | "RAZORPAY"
+  | "UPI"
+  | "GOOGLE_PAY"
+  | "PAYTM"
+  | "BANK_TRANSFER"
+  | "MANUAL";
+
+/**
+ * Durable public evidence that one WALLET_RECHARGE package was
+ * cryptographically verified and accepted for this exact native
+ * installation.
+ *
+ * This record authorizes later Wallet mutation by stable
+ * paymentReference.
+ *
+ * verifiedAt is Control Package verification/application
+ * evidence only. It MUST NOT drive Wallet financial timestamps.
+ */
+export interface FinoraControlWalletRechargeAuthorization {
+
+  packageId:
+    string;
+
+  issuerId:
+    string;
+
+  signingKeyId:
+    string;
+
+  purpose:
+    "WALLET_RECHARGE";
+
+  sequence:
+    number;
+
+  ownerId:
+    string;
+
+  businessId:
+    string;
+
+  branchId:
+    string;
+
+  installationId:
+    string;
+
+  bindingKeyId:
+    string;
+
+  fingerprintAlgorithm:
+    "SHA-256";
+
+  publicKeyFingerprint:
+    string;
+
+  paymentReference:
+    string;
+
+  amountMinor:
+    number;
+
+  currency:
+    "INR";
+
+  paymentMethod:
+    FinoraControlWalletRechargePaymentMethod;
+
+  paymentSource:
+    FinoraControlWalletPaymentSource;
+
+  providerOrderId?:
+    string;
+
+  providerTransactionId?:
+    string;
+
+  issuedAt:
+    string;
+
+  verifiedAt:
+    string;
+
+  schemaVersion:
+    1;
+}
+
 // ============================================================
 // STORAGE ENTITLEMENT DTO
 // ============================================================
@@ -403,6 +505,18 @@ export interface FinoraControlStorePackage {
    */
   pricingPolicies?:
     FinoraControlPricingPolicy[];
+
+  /**
+   * Accepted signed WALLET_RECHARGE authorizations.
+   *
+   * Optional only for backward compatibility with encrypted
+   * Control Stores created before the Signed Recharge Engine.
+   *
+   * Historical accepted authorizations remain available for
+   * crash-safe Wallet completion by paymentReference.
+   */
+  walletRechargeAuthorizations?:
+    FinoraControlWalletRechargeAuthorization[];
   /**
    * Current signed REGISTERED / DEMO access by login identity.
    *
@@ -1018,6 +1132,187 @@ function hasDuplicatePricingPolicyKeys(
 
   return false;
 }
+function isWalletRechargePaymentMethod(
+  value:
+    unknown,
+): value is FinoraControlWalletRechargePaymentMethod {
+  return (
+    value === "UPI" ||
+    value === "PHONEPE" ||
+    value === "GOOGLE_PAY" ||
+    value === "PAYTM" ||
+    value === "RAZORPAY" ||
+    value === "BANK_TRANSFER" ||
+    value === "OTHER"
+  );
+}
+
+function isWalletPaymentSource(
+  value:
+    unknown,
+): value is FinoraControlWalletPaymentSource {
+  return (
+    value === "PHONEPE" ||
+    value === "RAZORPAY" ||
+    value === "UPI" ||
+    value === "GOOGLE_PAY" ||
+    value === "PAYTM" ||
+    value === "BANK_TRANSFER" ||
+    value === "MANUAL"
+  );
+}
+
+function isWalletRechargeAuthorization(
+  value:
+    unknown,
+): value is FinoraControlWalletRechargeAuthorization {
+
+  if (!isRecord(value)) {
+    return false;
+  }
+
+  if (
+    !isNonEmptyString(
+      value.packageId,
+    ) ||
+    !isNonEmptyString(
+      value.issuerId,
+    ) ||
+    !isNonEmptyString(
+      value.signingKeyId,
+    ) ||
+    value.purpose !==
+      "WALLET_RECHARGE" ||
+    !Number.isSafeInteger(
+      value.sequence,
+    ) ||
+    (value.sequence as number) <=
+      0 ||
+    !isNonEmptyString(
+      value.ownerId,
+    ) ||
+    !isNonEmptyString(
+      value.businessId,
+    ) ||
+    !isNonEmptyString(
+      value.branchId,
+    ) ||
+    !isNonEmptyString(
+      value.installationId,
+    ) ||
+    !isNonEmptyString(
+      value.bindingKeyId,
+    ) ||
+    value.fingerprintAlgorithm !==
+      "SHA-256" ||
+    typeof value.publicKeyFingerprint !==
+      "string" ||
+    !/^[0-9a-f]{64}$/.test(
+      value.publicKeyFingerprint,
+    ) ||
+    !isNonEmptyString(
+      value.paymentReference,
+    ) ||
+    !Number.isSafeInteger(
+      value.amountMinor,
+    ) ||
+    (value.amountMinor as number) <=
+      0 ||
+    value.currency !==
+      "INR" ||
+    !isWalletRechargePaymentMethod(
+      value.paymentMethod,
+    ) ||
+    !isWalletPaymentSource(
+      value.paymentSource,
+    ) ||
+    (
+      value.providerOrderId !==
+        undefined &&
+      !isNonEmptyString(
+        value.providerOrderId,
+      )
+    ) ||
+    (
+      value.providerTransactionId !==
+        undefined &&
+      !isNonEmptyString(
+        value.providerTransactionId,
+      )
+    ) ||
+    !isControlTimestamp(
+      value.issuedAt,
+    ) ||
+    !isControlTimestamp(
+      value.verifiedAt,
+    ) ||
+    value.schemaVersion !==
+      1
+  ) {
+    return false;
+  }
+
+  const expectedBindingKeyId =
+    `FINORA-BINDING-${value.publicKeyFingerprint
+      .slice(
+        0,
+        32,
+      )
+      .toUpperCase()}`;
+
+  if (
+    value.bindingKeyId !==
+      expectedBindingKeyId
+  ) {
+    return false;
+  }
+
+  return (
+    Date.parse(
+      value.issuedAt,
+    ) <=
+    Date.parse(
+      value.verifiedAt,
+    )
+  );
+}
+
+function hasDuplicateWalletRechargeAuthorizationKeys(
+  values:
+    FinoraControlWalletRechargeAuthorization[],
+): boolean {
+
+  const packageIds =
+    new Set<string>();
+
+  const paymentReferences =
+    new Set<string>();
+
+  for (const value of values) {
+
+    if (
+      packageIds.has(
+        value.packageId,
+      ) ||
+      paymentReferences.has(
+        value.paymentReference,
+      )
+    ) {
+      return true;
+    }
+
+    packageIds.add(
+      value.packageId,
+    );
+
+    paymentReferences.add(
+      value.paymentReference,
+    );
+  }
+
+  return false;
+}
+
 function isControlTimestamp(value: unknown): value is string {
   return isNonEmptyString(value) && Number.isFinite(Date.parse(value));
 }
@@ -1299,6 +1594,31 @@ function isControlStorePackage(
   ) {
     return false;
   }
+  // ----------------------------------------------------------
+  // SIGNED WALLET RECHARGE AUTHORIZATION STATE
+  //
+  // Optional only for backward compatibility with encrypted
+  // Control Stores created before the Signed Recharge Engine.
+  // ----------------------------------------------------------
+
+  if (
+    value.walletRechargeAuthorizations !==
+      undefined &&
+    (
+      !Array.isArray(
+        value.walletRechargeAuthorizations,
+      ) ||
+      !value.walletRechargeAuthorizations.every(
+        isWalletRechargeAuthorization,
+      ) ||
+      hasDuplicateWalletRechargeAuthorizationKeys(
+        value.walletRechargeAuthorizations,
+      )
+    )
+  ) {
+    return false;
+  }
+
   // ----------------------------------------------------------
   // SIGNED BRANCH ACCESS STATE
   // ----------------------------------------------------------
@@ -1837,6 +2157,8 @@ function createEmptyControlStore(): FinoraControlStorePackage {
     storageEntitlements: [],
 
   pricingPolicies: [],
+
+    walletRechargeAuthorizations: [],
 
     branchAccessGrants: [],
 
@@ -4688,6 +5010,598 @@ export async function findFinoraPricingPolicy(
     policy,
   );
 }
+// ============================================================
+// VERIFIED WALLET RECHARGE AUTHORIZATION APPLY CONTRACT
+// ============================================================
+
+export interface FinoraVerifiedWalletRechargeApplyInput {
+
+  packageId:
+    string;
+
+  issuerId:
+    string;
+
+  signingKeyId:
+    string;
+
+  purpose:
+    "WALLET_RECHARGE";
+
+  sequence:
+    number;
+
+  target: {
+
+    ownerId:
+      string;
+
+    businessId:
+      string;
+
+    branchId:
+      string;
+
+    installationId:
+      string;
+
+    bindingKeyId:
+      string;
+
+    fingerprintAlgorithm:
+      "SHA-256";
+
+    publicKeyFingerprint:
+      string;
+  };
+
+  authorization:
+    FinoraControlWalletRechargeAuthorization;
+
+  appliedAt:
+    string;
+}
+
+export interface FinoraVerifiedWalletRechargeApplyResult {
+
+  authorization:
+    FinoraControlWalletRechargeAuthorization;
+}
+
+// ============================================================
+// VERIFIED WALLET RECHARGE AUTHORIZATION ATOMIC APPLY
+// ============================================================
+
+async function applyVerifiedWalletRechargeAuthorizationInternal(
+  input:
+    FinoraVerifiedWalletRechargeApplyInput,
+): Promise<
+  FinoraControlStoreResult<
+    FinoraVerifiedWalletRechargeApplyResult
+  >
+> {
+
+  // ----------------------------------------------------------
+  // INPUT STRUCTURE
+  // ----------------------------------------------------------
+
+  if (
+    !isNonEmptyString(
+      input.packageId,
+    ) ||
+    !isNonEmptyString(
+      input.issuerId,
+    ) ||
+    !isNonEmptyString(
+      input.signingKeyId,
+    ) ||
+    input.purpose !==
+      "WALLET_RECHARGE" ||
+    !Number.isSafeInteger(
+      input.sequence,
+    ) ||
+    input.sequence <=
+      0 ||
+    !isControlTimestamp(
+      input.appliedAt,
+    ) ||
+    !isRecord(
+      input.target,
+    ) ||
+    !isNonEmptyString(
+      input.target.ownerId,
+    ) ||
+    !isNonEmptyString(
+      input.target.businessId,
+    ) ||
+    !isNonEmptyString(
+      input.target.branchId,
+    ) ||
+    !isNonEmptyString(
+      input.target.installationId,
+    ) ||
+    !isNonEmptyString(
+      input.target.bindingKeyId,
+    ) ||
+    input.target.fingerprintAlgorithm !==
+      "SHA-256" ||
+    typeof input.target.publicKeyFingerprint !==
+      "string" ||
+    !/^[0-9a-f]{64}$/.test(
+      input.target.publicKeyFingerprint,
+    ) ||
+    !isWalletRechargeAuthorization(
+      input.authorization,
+    )
+  ) {
+    return failure(
+      "A valid verified FINORA Wallet Recharge authorization package is required.",
+    );
+  }
+
+  const expectedTargetBindingKeyId =
+    `FINORA-BINDING-${input.target.publicKeyFingerprint
+      .slice(
+        0,
+        32,
+      )
+      .toUpperCase()}`;
+
+  if (
+    input.target.bindingKeyId !==
+      expectedTargetBindingKeyId
+  ) {
+    return failure(
+      "FINORA Wallet Recharge target binding identity is invalid.",
+    );
+  }
+
+  // ----------------------------------------------------------
+  // AUTHORIZATION <-> VERIFIED PACKAGE EVIDENCE
+  // ----------------------------------------------------------
+
+  const authorization =
+    input.authorization;
+
+  if (
+    authorization.packageId !==
+      input.packageId ||
+    authorization.issuerId !==
+      input.issuerId ||
+    authorization.signingKeyId !==
+      input.signingKeyId ||
+    authorization.purpose !==
+      input.purpose ||
+    authorization.sequence !==
+      input.sequence ||
+    authorization.ownerId !==
+      input.target.ownerId ||
+    authorization.businessId !==
+      input.target.businessId ||
+    authorization.branchId !==
+      input.target.branchId ||
+    authorization.installationId !==
+      input.target.installationId ||
+    authorization.bindingKeyId !==
+      input.target.bindingKeyId ||
+    authorization.fingerprintAlgorithm !==
+      input.target.fingerprintAlgorithm ||
+    authorization.publicKeyFingerprint !==
+      input.target.publicKeyFingerprint ||
+    authorization.verifiedAt !==
+      input.appliedAt
+  ) {
+    return failure(
+      "FINORA Wallet Recharge authorization does not match the verified signed package target.",
+    );
+  }
+
+  // ----------------------------------------------------------
+  // LOAD AUTHORITATIVE ENCRYPTED STATE
+  // ----------------------------------------------------------
+
+  const currentResult =
+    await readFinoraControlStore();
+
+  if (
+    !currentResult.success ||
+    !currentResult.data
+  ) {
+    return failure(
+      currentResult.error ??
+        "Unable to load the FINORA Control Store.",
+    );
+  }
+
+  const controlStore =
+    currentResult.data;
+
+  const installation =
+    controlStore.installation;
+
+  if (!installation) {
+    return failure(
+      "FINORA installation identity is required before applying a Wallet Recharge authorization.",
+    );
+  }
+
+  if (
+    installation.ownerId !==
+      input.target.ownerId ||
+    installation.businessId !==
+      input.target.businessId ||
+    installation.branchId !==
+      input.target.branchId ||
+    installation.installationId !==
+      input.target.installationId
+  ) {
+    return failure(
+      "FINORA Wallet Recharge authorization target does not match the installed branch identity.",
+    );
+  }
+
+  const authorizations =
+    controlStore.walletRechargeAuthorizations ??
+    [];
+
+  const appliedPackages =
+    controlStore.appliedControlPackages ??
+    [];
+
+  const sequenceStates =
+    controlStore.controlSequences ??
+    [];
+
+  // ----------------------------------------------------------
+  // PACKAGE REPLAY
+  // ----------------------------------------------------------
+
+  if (
+    appliedPackages.some(
+      (item) =>
+        item.packageId ===
+          input.packageId,
+    )
+  ) {
+    return failure(
+      "FINORA Wallet Recharge signed package has already been applied.",
+    );
+  }
+
+  // ----------------------------------------------------------
+  // PAYMENT REFERENCE DUPLICATE AUTHORIZATION
+  //
+  // A fresh package must never authorize the same payment
+  // reference a second time.
+  // ----------------------------------------------------------
+
+  if (
+    authorizations.some(
+      (item) =>
+        item.paymentReference ===
+          authorization.paymentReference,
+    )
+  ) {
+    return failure(
+      "FINORA Wallet Recharge payment reference has already been authorized.",
+    );
+  }
+
+  // ----------------------------------------------------------
+  // MONOTONIC SEQUENCE
+  // ----------------------------------------------------------
+
+  const sequenceIndex =
+    sequenceStates.findIndex(
+      (item) =>
+        item.issuerId ===
+          input.issuerId &&
+        item.purpose ===
+          input.purpose &&
+        item.ownerId ===
+          input.target.ownerId &&
+        item.businessId ===
+          input.target.businessId &&
+        item.branchId ===
+          input.target.branchId &&
+        item.installationId ===
+          input.target.installationId,
+    );
+
+  if (
+    sequenceIndex >=
+      0 &&
+    input.sequence <=
+      sequenceStates[
+        sequenceIndex
+      ].lastSequence
+  ) {
+    return failure(
+      "FINORA Wallet Recharge signed package sequence is stale.",
+    );
+  }
+
+  // ----------------------------------------------------------
+  // AUTHORIZATION APPEND
+  // ----------------------------------------------------------
+
+  authorizations.push(
+    authorization,
+  );
+
+  // ----------------------------------------------------------
+  // APPLIED PACKAGE LEDGER
+  // ----------------------------------------------------------
+
+  appliedPackages.push({
+    packageId:
+      input.packageId,
+
+    issuerId:
+      input.issuerId,
+
+    purpose:
+      input.purpose,
+
+    sequence:
+      input.sequence,
+
+    ownerId:
+      input.target.ownerId,
+
+    businessId:
+      input.target.businessId,
+
+    branchId:
+      input.target.branchId,
+
+    installationId:
+      input.target.installationId,
+
+    appliedAt:
+      input.appliedAt,
+  });
+
+  // ----------------------------------------------------------
+  // MONOTONIC SEQUENCE STATE
+  // ----------------------------------------------------------
+
+  const nextSequenceState:
+    FinoraControlSequenceStateRecord = {
+
+      issuerId:
+        input.issuerId,
+
+      purpose:
+        input.purpose,
+
+      ownerId:
+        input.target.ownerId,
+
+      businessId:
+        input.target.businessId,
+
+      branchId:
+        input.target.branchId,
+
+      installationId:
+        input.target.installationId,
+
+      lastSequence:
+        input.sequence,
+
+      updatedAt:
+        input.appliedAt,
+    };
+
+  if (
+    sequenceIndex >=
+      0
+  ) {
+    sequenceStates[
+      sequenceIndex
+    ] =
+      nextSequenceState;
+  } else {
+    sequenceStates.push(
+      nextSequenceState,
+    );
+  }
+
+  // ----------------------------------------------------------
+  // ONE AUTHORITATIVE STATE OBJECT
+  // ----------------------------------------------------------
+
+  controlStore.walletRechargeAuthorizations =
+    authorizations;
+
+  controlStore.appliedControlPackages =
+    appliedPackages;
+
+  controlStore.controlSequences =
+    sequenceStates;
+
+  controlStore.updatedAt =
+    input.appliedAt;
+
+  // ----------------------------------------------------------
+  // ONE ENCRYPTED CONTROL STORE REPLACEMENT
+  //
+  // Authorization + replay ledger + monotonic sequence are
+  // committed together.
+  // ----------------------------------------------------------
+
+  try {
+
+    await persistControlStorePackage(
+      controlStore,
+    );
+
+  } catch (error) {
+
+    return failure(
+      error instanceof Error
+        ? error.message
+        : "Unable to atomically persist verified FINORA Wallet Recharge authorization state.",
+    );
+  }
+
+  return success({
+    authorization,
+  });
+}
+
+// ============================================================
+// SERIALIZED VERIFIED WALLET RECHARGE APPLY
+// ============================================================
+
+export function applyFinoraVerifiedWalletRechargeAuthorizationState(
+  input:
+    FinoraVerifiedWalletRechargeApplyInput,
+): Promise<
+  FinoraControlStoreResult<
+    FinoraVerifiedWalletRechargeApplyResult
+  >
+> {
+
+  const operation =
+    controlPackageApplyQueue.then(
+      () =>
+        applyVerifiedWalletRechargeAuthorizationInternal(
+          input,
+        ),
+      () =>
+        applyVerifiedWalletRechargeAuthorizationInternal(
+          input,
+        ),
+    );
+
+  controlPackageApplyQueue =
+    operation.then(
+      () =>
+        undefined,
+      () =>
+        undefined,
+    );
+
+  return operation;
+}
+
+// ============================================================
+// FIND VERIFIED WALLET RECHARGE AUTHORIZATION
+// ============================================================
+
+export async function findFinoraWalletRechargeAuthorization(
+  ownerId:
+    string,
+
+  businessId:
+    string,
+
+  branchId:
+    string,
+
+  paymentReference:
+    string,
+): Promise<
+  FinoraControlStoreResult<
+    FinoraControlWalletRechargeAuthorization | undefined
+  >
+> {
+
+  if (
+    !isNonEmptyString(
+      ownerId,
+    ) ||
+    !isNonEmptyString(
+      businessId,
+    ) ||
+    !isNonEmptyString(
+      branchId,
+    ) ||
+    !isNonEmptyString(
+      paymentReference,
+    )
+  ) {
+    return failure(
+      "Owner ID, Business ID, Branch ID and payment reference are required to read a FINORA Wallet Recharge authorization.",
+    );
+  }
+
+  const currentResult =
+    await readFinoraControlStore();
+
+  if (
+    !currentResult.success ||
+    !currentResult.data
+  ) {
+    return failure(
+      currentResult.error ??
+        "Unable to load the FINORA Control Store.",
+    );
+  }
+
+  const installation =
+    currentResult.data.installation;
+
+  if (!installation) {
+    return failure(
+      "FINORA installation identity is required before reading a Wallet Recharge authorization.",
+    );
+  }
+
+  if (
+    installation.ownerId !==
+      ownerId ||
+    installation.businessId !==
+      businessId ||
+    installation.branchId !==
+      branchId
+  ) {
+    return failure(
+      "FINORA Wallet Recharge authorization request does not match the installation identity.",
+    );
+  }
+
+  const authorizations =
+    currentResult.data.walletRechargeAuthorizations ??
+    [];
+
+  const authorization =
+    authorizations.find(
+      (item) =>
+        item.ownerId ===
+          ownerId &&
+        item.businessId ===
+          businessId &&
+        item.branchId ===
+          branchId &&
+        item.installationId ===
+          installation.installationId &&
+        item.paymentReference ===
+          paymentReference,
+    );
+
+  if (!authorization) {
+    return success(
+      undefined,
+    );
+  }
+
+  if (
+    authorization.installationId !==
+      installation.installationId
+  ) {
+    return failure(
+      "FINORA Wallet Recharge authorization installation identity is inconsistent.",
+    );
+  }
+
+  return success(
+    authorization,
+  );
+}
+
 // ============================================================
 // FIND CURRENT BRANCH ACCESS GRANT
 // ============================================================

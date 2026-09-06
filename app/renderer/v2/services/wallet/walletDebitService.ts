@@ -40,6 +40,10 @@ import type {
 } from "../../types/wallet/wallet.transaction.types";
 
 import {
+  isWalletPlatformChargeTransactionTypeMatch,
+} from "../../types/wallet/wallet.transaction.types";
+
+import {
   getWalletByIdResult,
   updateWallet,
 } from "../../repositories/wallet/walletRepository";
@@ -140,7 +144,10 @@ export interface CommitWalletDebitInput {
     WalletPlatformChargeCode;
 
   type:
-    WalletTransactionType;
+    Exclude<
+      WalletTransactionType,
+      "WALLET_RECHARGE"
+    >;
 
   amount:
     number;
@@ -212,7 +219,20 @@ export async function commitWalletDebit(
     };
   }
 
-  if (input.type === "WALLET_RECHARGE") {
+  /*
+   * Runtime fail-closed protection:
+   *
+   * The compile-time Debit contract excludes WALLET_RECHARGE,
+   * while this canonical check also protects JavaScript/runtime
+   * callers from supplying a transaction type that does not
+   * belong to the supplied platform charge code.
+   */
+  if (
+    !isWalletPlatformChargeTransactionTypeMatch(
+      chargeCode,
+      input.type,
+    )
+  ) {
     return {
       success:
         false,
@@ -221,7 +241,7 @@ export async function commitWalletDebit(
         "INVALID_INPUT",
 
       error:
-        "Wallet Recharge cannot be processed as a Wallet debit.",
+        "Wallet Debit transaction type does not match the canonical platform charge code.",
     };
   }
 

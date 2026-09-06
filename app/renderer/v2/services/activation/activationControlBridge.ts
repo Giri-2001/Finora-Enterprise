@@ -36,6 +36,10 @@ import type {
   FinoraPricingOverrideSetV1,
 } from "../../types/pricing/finoraPricingOverride.types";
 
+import type {
+  FinoraVerifiedWalletRechargeAuthorization,
+} from "../../types/wallet/finoraWalletRechargeControl.types";
+
 import {
   Capacitor,
   registerPlugin,
@@ -59,6 +63,16 @@ import type {
 import type {
   StorageResult,
 } from "../../storage/storage.types";
+
+// ============================================================
+// WALLET RECHARGE AUTHORIZATION VIEW
+// ============================================================
+
+export type FinoraWalletRechargeAuthorizationView =
+  Omit<
+    FinoraVerifiedWalletRechargeAuthorization,
+    "installationBinding"
+  >;
 
 // ============================================================
 // REQUEST TYPES
@@ -93,6 +107,21 @@ export interface FinoraPricingPolicyRequest {
     string;
 
   branchId:
+    string;
+}
+
+export interface FinoraWalletRechargeAuthorizationRequest {
+
+  ownerId:
+    string;
+
+  businessId:
+    string;
+
+  branchId:
+    string;
+
+  paymentReference:
     string;
 }
 
@@ -174,6 +203,25 @@ export interface FinoraActivationControlBridge {
     Promise<
       StorageResult<
         FinoraPricingOverrideSetV1 | undefined
+      >
+    >;
+
+  /**
+   * Read one previously verified signed Wallet Recharge
+   * authorization for the exact branch/payment reference.
+   *
+   * READ ONLY.
+   *
+   * Native installation binding, signature verification and
+   * signed-package apply authority remain outside the renderer.
+   */
+  findWalletRechargeAuthorization(
+    request:
+      FinoraWalletRechargeAuthorizationRequest,
+  ):
+    Promise<
+      StorageResult<
+        FinoraWalletRechargeAuthorizationView | undefined
       >
     >;
 

@@ -434,6 +434,65 @@ interface FinoraControlPricingOverrideSetView {
     1;
 }
 
+interface FinoraControlWalletRechargeAuthorizationView {
+
+  packageId:
+    string;
+
+  issuerId:
+    string;
+
+  signingKeyId:
+    string;
+
+  purpose:
+    "WALLET_RECHARGE";
+
+  sequence:
+    number;
+
+  scope: {
+    ownerId:
+      string;
+
+    businessId:
+      string;
+
+    branchId:
+      string;
+  };
+
+  paymentReference:
+    string;
+
+  amountMinor:
+    number;
+
+  currency:
+    "INR";
+
+  paymentMethod:
+    string;
+
+  paymentSource:
+    string;
+
+  providerOrderId?:
+    string;
+
+  providerTransactionId?:
+    string;
+
+  issuedAt:
+    string;
+
+  verifiedAt:
+    string;
+
+  schemaVersion:
+    1;
+}
+
 interface FindBusinessProfileRequest {
 
   ownerId: string;
@@ -450,6 +509,17 @@ interface FindPricingPolicyRequest {
   businessId: string;
 
   branchId: string;
+}
+
+interface FindWalletRechargeAuthorizationRequest {
+
+  ownerId: string;
+
+  businessId: string;
+
+  branchId: string;
+
+  paymentReference: string;
 }
 
 interface FindBranchActivationRequest {
@@ -520,6 +590,17 @@ interface FinoraControlBridge {
       Promise<
         StorageResult<
           FinoraControlPricingOverrideSetView | undefined
+        >
+      >;
+
+  findWalletRechargeAuthorization:
+    (
+      request:
+        FindWalletRechargeAuthorizationRequest,
+    ) =>
+      Promise<
+        StorageResult<
+          FinoraControlWalletRechargeAuthorizationView | undefined
         >
       >;
 
@@ -785,6 +866,9 @@ const CONTROL_CHANNELS = {
 
   FIND_PRICING_POLICY:
     "finora:control:find-pricing-policy",
+
+  FIND_WALLET_RECHARGE_AUTHORIZATION:
+    "finora:control:find-wallet-recharge-authorization",
 
   HAS_ACTIVE_STORAGE_ENTITLEMENT:
     "finora:control:has-active-storage-entitlement",
@@ -1152,6 +1236,26 @@ const controlBridge:
       ) as Promise<
         StorageResult<
           FinoraControlPricingOverrideSetView | undefined
+        >
+      >,
+
+  // ----------------------------------------------------------
+  // VERIFIED WALLET RECHARGE AUTHORIZATION
+  //
+  // READ ONLY.
+  // ----------------------------------------------------------
+
+  findWalletRechargeAuthorization:
+    (
+      request:
+        FindWalletRechargeAuthorizationRequest,
+    ) =>
+      ipcRenderer.invoke(
+        CONTROL_CHANNELS.FIND_WALLET_RECHARGE_AUTHORIZATION,
+        request,
+      ) as Promise<
+        StorageResult<
+          FinoraControlWalletRechargeAuthorizationView | undefined
         >
       >,
 

@@ -1384,6 +1384,583 @@ public final class FinoraControlPlugin
         }
     }
 
+    // ========================================================
+    // FIND VERIFIED WALLET RECHARGE AUTHORIZATION
+    // ========================================================
+
+    /**
+     * Read one previously verified signed Wallet Recharge
+     * authorization for the exact installed branch scope and
+     * paymentReference.
+     *
+     * SECURITY:
+     *
+     * - READ ONLY.
+     * - No signed-package apply authority.
+     * - No signing authority.
+     * - No Wallet balance mutation.
+     * - No raw signature exposure.
+     * - No trusted-key exposure.
+     * - No installation binding metadata exposure.
+     * - Native binding consistency is checked before release.
+     */
+    @PluginMethod
+    public void findWalletRechargeAuthorization(
+        PluginCall call
+    ) {
+
+        String ownerId =
+            normalizeRequiredString(
+                call.getString(
+                    "ownerId"
+                )
+            );
+
+        String businessId =
+            normalizeRequiredString(
+                call.getString(
+                    "businessId"
+                )
+            );
+
+        String branchId =
+            normalizeRequiredString(
+                call.getString(
+                    "branchId"
+                )
+            );
+
+        String paymentReference =
+            normalizeRequiredString(
+                call.getString(
+                    "paymentReference"
+                )
+            );
+
+        if (
+            ownerId == null ||
+            businessId == null ||
+            branchId == null ||
+            paymentReference == null
+        ) {
+
+            resolveFailure(
+                call,
+                "Owner ID, Business ID, Branch ID and Payment Reference are required."
+            );
+
+            return;
+        }
+
+        try {
+
+            // ------------------------------------------------
+            // AUTHORITATIVE ENCRYPTED CONTROL STATE
+            // ------------------------------------------------
+
+            JSONObject controlPackage =
+                readValidatedControlPackage();
+
+            if (controlPackage == null) {
+
+                resolveSuccess(
+                    call
+                );
+
+                return;
+            }
+
+
+            // ------------------------------------------------
+            // INSTALLED BRANCH IDENTITY
+            // ------------------------------------------------
+
+            JSONObject installation =
+                controlPackage.optJSONObject(
+                    "installation"
+                );
+
+            if (
+                installation == null ||
+                !isValidInstallation(
+                    installation
+                )
+            ) {
+
+                resolveFailure(
+                    call,
+                    "FINORA installation identity is required before reading a Wallet Recharge authorization."
+                );
+
+                return;
+            }
+
+            String installationId =
+                normalizeRequiredString(
+                    installation.optString(
+                        "installationId",
+                        null
+                    )
+                );
+
+            String installedOwnerId =
+                normalizeRequiredString(
+                    installation.optString(
+                        "ownerId",
+                        null
+                    )
+                );
+
+            String installedBusinessId =
+                normalizeRequiredString(
+                    installation.optString(
+                        "businessId",
+                        null
+                    )
+                );
+
+            String installedBranchId =
+                normalizeRequiredString(
+                    installation.optString(
+                        "branchId",
+                        null
+                    )
+                );
+
+            if (
+                installationId == null ||
+                installedOwnerId == null ||
+                installedBusinessId == null ||
+                installedBranchId == null
+            ) {
+
+                resolveFailure(
+                    call,
+                    "FINORA installation identity is invalid."
+                );
+
+                return;
+            }
+
+            if (
+                !ownerId.equals(
+                    installedOwnerId
+                ) ||
+                !businessId.equals(
+                    installedBusinessId
+                ) ||
+                !branchId.equals(
+                    installedBranchId
+                )
+            ) {
+
+                resolveFailure(
+                    call,
+                    "FINORA Wallet Recharge authorization request does not match the installation identity."
+                );
+
+                return;
+            }
+
+
+            // ------------------------------------------------
+            // CURRENT ANDROID NATIVE INSTALLATION BINDING
+            // ------------------------------------------------
+
+            if (installationBindingService == null) {
+
+                resolveFailure(
+                    call,
+                    "FINORA installation binding service is unavailable."
+                );
+
+                return;
+            }
+
+            FinoraInstallationBindingCrypto.PublicBinding nativeBinding =
+                installationBindingService.get();
+
+            if (nativeBinding == null) {
+
+                resolveFailure(
+                    call,
+                    "FINORA Android native installation binding is required before reading a Wallet Recharge authorization."
+                );
+
+                return;
+            }
+
+            if (
+                !installationId.equals(
+                    nativeBinding.installationId
+                )
+            ) {
+
+                resolveFailure(
+                    call,
+                    "FINORA native installation binding does not match the Control Store installation identity."
+                );
+
+                return;
+            }
+
+
+            // ------------------------------------------------
+            // VERIFIED RECHARGE AUTHORIZATION COLLECTION
+            //
+            // Legacy Control Stores may not contain this field.
+            // ------------------------------------------------
+
+            JSONArray authorizations =
+                controlPackage.optJSONArray(
+                    "walletRechargeAuthorizations"
+                );
+
+            if (authorizations == null) {
+
+                resolveSuccess(
+                    call
+                );
+
+                return;
+            }
+
+
+            // ------------------------------------------------
+            // EXACT SCOPE + PAYMENT REFERENCE LOOKUP
+            // ------------------------------------------------
+
+            JSONObject selectedAuthorization =
+                null;
+
+            for (
+                int index = 0;
+                index < authorizations.length();
+                index++
+            ) {
+
+                JSONObject authorization =
+                    authorizations.optJSONObject(
+                        index
+                    );
+
+                if (
+                    authorization == null ||
+                    !isValidWalletRechargeAuthorization(
+                        authorization
+                    )
+                ) {
+
+                    resolveFailure(
+                        call,
+                        "FINORA Wallet Recharge authorization state is invalid."
+                    );
+
+                    return;
+                }
+
+                String authorizationOwnerId =
+                    normalizeRequiredString(
+                        authorization.optString(
+                            "ownerId",
+                            null
+                        )
+                    );
+
+                String authorizationBusinessId =
+                    normalizeRequiredString(
+                        authorization.optString(
+                            "businessId",
+                            null
+                        )
+                    );
+
+                String authorizationBranchId =
+                    normalizeRequiredString(
+                        authorization.optString(
+                            "branchId",
+                            null
+                        )
+                    );
+
+                String authorizationInstallationId =
+                    normalizeRequiredString(
+                        authorization.optString(
+                            "installationId",
+                            null
+                        )
+                    );
+
+                String authorizationPaymentReference =
+                    normalizeRequiredString(
+                        authorization.optString(
+                            "paymentReference",
+                            null
+                        )
+                    );
+
+                if (
+                    ownerId.equals(
+                        authorizationOwnerId
+                    ) &&
+                    businessId.equals(
+                        authorizationBusinessId
+                    ) &&
+                    branchId.equals(
+                        authorizationBranchId
+                    ) &&
+                    installationId.equals(
+                        authorizationInstallationId
+                    ) &&
+                    paymentReference.equals(
+                        authorizationPaymentReference
+                    )
+                ) {
+
+                    selectedAuthorization =
+                        authorization;
+
+                    break;
+                }
+            }
+
+            if (selectedAuthorization == null) {
+
+                resolveSuccess(
+                    call
+                );
+
+                return;
+            }
+
+
+            // ------------------------------------------------
+            // DEFENCE-IN-DEPTH NATIVE BINDING CONSISTENCY
+            // ------------------------------------------------
+
+            String authorizationBindingKeyId =
+                normalizeRequiredString(
+                    selectedAuthorization.optString(
+                        "bindingKeyId",
+                        null
+                    )
+                );
+
+            String authorizationFingerprintAlgorithm =
+                normalizeRequiredString(
+                    selectedAuthorization.optString(
+                        "fingerprintAlgorithm",
+                        null
+                    )
+                );
+
+            String authorizationPublicKeyFingerprint =
+                normalizeRequiredString(
+                    selectedAuthorization.optString(
+                        "publicKeyFingerprint",
+                        null
+                    )
+                );
+
+            if (
+                authorizationBindingKeyId == null ||
+                !"SHA-256".equals(
+                    authorizationFingerprintAlgorithm
+                ) ||
+                authorizationPublicKeyFingerprint == null ||
+                !nativeBinding.bindingKeyId.equals(
+                    authorizationBindingKeyId
+                ) ||
+                !nativeBinding.publicKeyFingerprint.equals(
+                    authorizationPublicKeyFingerprint
+                )
+            ) {
+
+                resolveFailure(
+                    call,
+                    "FINORA Wallet Recharge authorization native installation binding is inconsistent."
+                );
+
+                return;
+            }
+
+
+            // ------------------------------------------------
+            // SANITIZED RENDERER RESPONSE
+            //
+            // Deliberately NOT exposed:
+            //
+            // - installationId
+            // - bindingKeyId
+            // - fingerprintAlgorithm
+            // - publicKeyFingerprint
+            // - raw signed package
+            // - payloadDigest
+            // - signature
+            // - trusted public keys
+            // ------------------------------------------------
+
+            JSObject data =
+                new JSObject();
+
+            data.put(
+                "packageId",
+                selectedAuthorization.getString(
+                    "packageId"
+                )
+            );
+
+            data.put(
+                "issuerId",
+                selectedAuthorization.getString(
+                    "issuerId"
+                )
+            );
+
+            data.put(
+                "signingKeyId",
+                selectedAuthorization.getString(
+                    "signingKeyId"
+                )
+            );
+
+            data.put(
+                "purpose",
+                "WALLET_RECHARGE"
+            );
+
+            data.put(
+                "sequence",
+                selectedAuthorization.getLong(
+                    "sequence"
+                )
+            );
+
+            JSObject scope =
+                new JSObject();
+
+            scope.put(
+                "ownerId",
+                selectedAuthorization.getString(
+                    "ownerId"
+                )
+            );
+
+            scope.put(
+                "businessId",
+                selectedAuthorization.getString(
+                    "businessId"
+                )
+            );
+
+            scope.put(
+                "branchId",
+                selectedAuthorization.getString(
+                    "branchId"
+                )
+            );
+
+            data.put(
+                "scope",
+                scope
+            );
+
+            data.put(
+                "paymentReference",
+                selectedAuthorization.getString(
+                    "paymentReference"
+                )
+            );
+
+            data.put(
+                "amountMinor",
+                selectedAuthorization.getLong(
+                    "amountMinor"
+                )
+            );
+
+            data.put(
+                "currency",
+                selectedAuthorization.getString(
+                    "currency"
+                )
+            );
+
+            data.put(
+                "paymentMethod",
+                selectedAuthorization.getString(
+                    "paymentMethod"
+                )
+            );
+
+            data.put(
+                "paymentSource",
+                selectedAuthorization.getString(
+                    "paymentSource"
+                )
+            );
+
+            if (
+                selectedAuthorization.has(
+                    "providerOrderId"
+                )
+            ) {
+
+                data.put(
+                    "providerOrderId",
+                    selectedAuthorization.getString(
+                        "providerOrderId"
+                    )
+                );
+            }
+
+            if (
+                selectedAuthorization.has(
+                    "providerTransactionId"
+                )
+            ) {
+
+                data.put(
+                    "providerTransactionId",
+                    selectedAuthorization.getString(
+                        "providerTransactionId"
+                    )
+                );
+            }
+
+            data.put(
+                "issuedAt",
+                selectedAuthorization.getString(
+                    "issuedAt"
+                )
+            );
+
+            data.put(
+                "verifiedAt",
+                selectedAuthorization.getString(
+                    "verifiedAt"
+                )
+            );
+
+            data.put(
+                "schemaVersion",
+                1
+            );
+
+            call.resolve(
+                data
+            );
+
+        } catch (Exception error) {
+
+            resolveFailure(
+                call,
+                error,
+                "Unable to read FINORA Wallet Recharge authorization."
+            );
+        }
+    }
+
     @PluginMethod
     public void findBranchAccessGrant(
         PluginCall call
@@ -2167,6 +2744,379 @@ public final class FinoraControlPlugin
     // ========================================================
 
     // ========================================================
+    // ========================================================
+    // WALLET RECHARGE AUTHORIZATION VALIDATION
+    // ========================================================
+
+    private boolean isValidWalletRechargeAuthorization(
+        JSONObject value
+    ) {
+
+        if (value == null) {
+            return false;
+        }
+
+        String purpose =
+            normalizeRequiredString(
+                value.optString(
+                    "purpose",
+                    null
+                )
+            );
+
+        String bindingKeyId =
+            normalizeRequiredString(
+                value.optString(
+                    "bindingKeyId",
+                    null
+                )
+            );
+
+        String fingerprintAlgorithm =
+            normalizeRequiredString(
+                value.optString(
+                    "fingerprintAlgorithm",
+                    null
+                )
+            );
+
+        String publicKeyFingerprint =
+            normalizeRequiredString(
+                value.optString(
+                    "publicKeyFingerprint",
+                    null
+                )
+            );
+
+        String currency =
+            normalizeRequiredString(
+                value.optString(
+                    "currency",
+                    null
+                )
+            );
+
+        String paymentMethod =
+            normalizeRequiredString(
+                value.optString(
+                    "paymentMethod",
+                    null
+                )
+            );
+
+        String paymentSource =
+            normalizeRequiredString(
+                value.optString(
+                    "paymentSource",
+                    null
+                )
+            );
+
+        String issuedAt =
+            normalizeRequiredString(
+                value.optString(
+                    "issuedAt",
+                    null
+                )
+            );
+
+        String verifiedAt =
+            normalizeRequiredString(
+                value.optString(
+                    "verifiedAt",
+                    null
+                )
+            );
+
+        Object amountMinor =
+            value.opt(
+                "amountMinor"
+            );
+
+        Object sequence =
+            value.opt(
+                "sequence"
+            );
+
+        if (
+            !hasRequiredString(
+                value,
+                "packageId"
+            ) ||
+            !hasRequiredString(
+                value,
+                "issuerId"
+            ) ||
+            !hasRequiredString(
+                value,
+                "signingKeyId"
+            ) ||
+            !"WALLET_RECHARGE".equals(
+                purpose
+            ) ||
+            !isPositiveSafeControlInteger(
+                sequence
+            ) ||
+            !hasRequiredString(
+                value,
+                "ownerId"
+            ) ||
+            !hasRequiredString(
+                value,
+                "businessId"
+            ) ||
+            !hasRequiredString(
+                value,
+                "branchId"
+            ) ||
+            !hasRequiredString(
+                value,
+                "installationId"
+            ) ||
+            bindingKeyId == null ||
+            !"SHA-256".equals(
+                fingerprintAlgorithm
+            ) ||
+            publicKeyFingerprint == null ||
+            !publicKeyFingerprint.matches(
+                "[0-9a-f]{64}"
+            ) ||
+            !bindingKeyMatchesProfileFingerprint(
+                bindingKeyId,
+                publicKeyFingerprint
+            ) ||
+            !hasRequiredString(
+                value,
+                "paymentReference"
+            ) ||
+            !isPositiveSafeControlInteger(
+                amountMinor
+            ) ||
+            !"INR".equals(
+                currency
+            ) ||
+            !isWalletRechargePaymentMethod(
+                paymentMethod
+            ) ||
+            !isWalletRechargePaymentSource(
+                paymentSource
+            ) ||
+            !isOptionalWalletRechargeString(
+                value,
+                "providerOrderId"
+            ) ||
+            !isOptionalWalletRechargeString(
+                value,
+                "providerTransactionId"
+            ) ||
+            !isCanonicalControlTimestamp(
+                issuedAt
+            ) ||
+            !isCanonicalControlTimestamp(
+                verifiedAt
+            ) ||
+            value.optInt(
+                "schemaVersion",
+                -1
+            ) != 1
+        ) {
+            return false;
+        }
+
+        try {
+
+            java.time.Instant issuedAtInstant =
+                java.time.Instant.parse(
+                    issuedAt
+                );
+
+            java.time.Instant verifiedAtInstant =
+                java.time.Instant.parse(
+                    verifiedAt
+                );
+
+            return !verifiedAtInstant.isBefore(
+                issuedAtInstant
+            );
+
+        } catch (Exception error) {
+
+            return false;
+        }
+    }
+
+
+    private boolean isWalletRechargePaymentMethod(
+        String value
+    ) {
+
+        return (
+            "UPI".equals(
+                value
+            ) ||
+            "PHONEPE".equals(
+                value
+            ) ||
+            "GOOGLE_PAY".equals(
+                value
+            ) ||
+            "PAYTM".equals(
+                value
+            ) ||
+            "RAZORPAY".equals(
+                value
+            ) ||
+            "BANK_TRANSFER".equals(
+                value
+            ) ||
+            "OTHER".equals(
+                value
+            )
+        );
+    }
+
+
+    private boolean isWalletRechargePaymentSource(
+        String value
+    ) {
+
+        return (
+            "PHONEPE".equals(
+                value
+            ) ||
+            "RAZORPAY".equals(
+                value
+            ) ||
+            "UPI".equals(
+                value
+            ) ||
+            "GOOGLE_PAY".equals(
+                value
+            ) ||
+            "PAYTM".equals(
+                value
+            ) ||
+            "BANK_TRANSFER".equals(
+                value
+            ) ||
+            "MANUAL".equals(
+                value
+            )
+        );
+    }
+
+
+    private boolean isOptionalWalletRechargeString(
+        JSONObject value,
+        String key
+    ) {
+
+        if (!value.has(key)) {
+            return true;
+        }
+
+        if (value.isNull(key)) {
+            return false;
+        }
+
+        return normalizeRequiredString(
+            value.optString(
+                key,
+                null
+            )
+        ) != null;
+    }
+
+
+    private boolean isPositiveSafeControlInteger(
+        Object value
+    ) {
+
+        if (!(value instanceof Number)) {
+            return false;
+        }
+
+        double number =
+            ((Number) value)
+                .doubleValue();
+
+        return (
+            Double.isFinite(
+                number
+            ) &&
+            number >
+                0.0d &&
+            number <=
+                9007199254740991.0d &&
+            Math.rint(
+                number
+            ) ==
+                number
+        );
+    }
+
+
+    private void ensureUniqueWalletRechargeAuthorizations(
+        JSONArray authorizations
+    ) {
+
+        java.util.HashSet<String> packageIds =
+            new java.util.HashSet<>();
+
+        java.util.HashSet<String> paymentReferences =
+            new java.util.HashSet<>();
+
+        for (
+            int index = 0;
+            index < authorizations.length();
+            index++
+        ) {
+
+            JSONObject authorization =
+                authorizations.optJSONObject(
+                    index
+                );
+
+            if (
+                authorization == null ||
+                !isValidWalletRechargeAuthorization(
+                    authorization
+                )
+            ) {
+
+                throw new IllegalStateException(
+                    "FINORA Wallet Recharge authorization validation failed."
+                );
+            }
+
+            String packageId =
+                authorization.optString(
+                    "packageId",
+                    ""
+                );
+
+            String paymentReference =
+                authorization.optString(
+                    "paymentReference",
+                    ""
+                );
+
+            if (
+                !packageIds.add(
+                    packageId
+                ) ||
+                !paymentReferences.add(
+                    paymentReference
+                )
+            ) {
+
+                throw new IllegalStateException(
+                    "FINORA Wallet Recharge authorization collection contains duplicate identities."
+                );
+            }
+        }
+    }
+
     // PRICING POLICY VALIDATION
     // ========================================================
 
@@ -2708,6 +3658,11 @@ public final class FinoraControlPlugin
                 "pricingPolicies"
             );
 
+        JSONArray walletRechargeAuthorizations =
+            controlPackage.optJSONArray(
+                "walletRechargeAuthorizations"
+            );
+
         String updatedAt =
             normalizeRequiredString(
                 controlPackage.optString(
@@ -2909,6 +3864,37 @@ public final class FinoraControlPlugin
 
             ensureUniquePricingPolicies(
                 pricingPolicies
+            );
+        }
+
+        /*
+         * walletRechargeAuthorizations is optional for
+         * encrypted Control Stores written before Phase-9
+         * Signed Wallet Recharge authorization support.
+         *
+         * Once present it must contain fully validated,
+         * unique verified Recharge authorization records.
+         */
+        if (walletRechargeAuthorizations == null) {
+
+            if (
+                controlPackage.has(
+                    "walletRechargeAuthorizations"
+                ) &&
+                !controlPackage.isNull(
+                    "walletRechargeAuthorizations"
+                )
+            ) {
+
+                throw new IllegalStateException(
+                    "FINORA Wallet Recharge authorization collection is invalid."
+                );
+            }
+
+        } else {
+
+            ensureUniqueWalletRechargeAuthorizations(
+                walletRechargeAuthorizations
             );
         }
     }
