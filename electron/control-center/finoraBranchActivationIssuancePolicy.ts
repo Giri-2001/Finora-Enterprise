@@ -142,6 +142,50 @@ function isNonEmptyString(
   );
 }
 
+function isOptionalString(
+  value: unknown,
+): boolean {
+
+  return (
+    value ===
+      undefined ||
+    typeof value ===
+      "string"
+  );
+}
+
+function isStorageMode(
+  value: unknown,
+): value is "LOCAL" | "USB" {
+
+  return (
+    value ===
+      "LOCAL" ||
+    value ===
+      "USB"
+  );
+}
+
+function isRegistrationPaymentMode(
+  value: unknown,
+): value is
+  | "CASH"
+  | "UPI"
+  | "BANK_TRANSFER"
+  | "OTHER" {
+
+  return (
+    value ===
+      "CASH" ||
+    value ===
+      "UPI" ||
+    value ===
+      "BANK_TRANSFER" ||
+    value ===
+      "OTHER"
+  );
+}
+
 function parseTimestamp(
   value: unknown,
 ): number | undefined {
@@ -433,7 +477,16 @@ export function validateFinoraBranchActivationIssuance(
       activation.branchId,
     ) ||
     activation.status !==
-      "ACTIVE"
+      "ACTIVE" ||
+    !isOptionalString(
+      activation.activatedAt,
+    ) ||
+    !isNonEmptyString(
+      activation.createdAt,
+    ) ||
+    !isNonEmptyString(
+      activation.updatedAt,
+    )
   ) {
     return rejected(
       "FINORA Branch Activation record is not ACTIVE or is malformed.",
@@ -491,6 +544,12 @@ export function validateFinoraBranchActivationIssuance(
     ) ||
     !isNonEmptyString(
       grant.branchId,
+    ) ||
+    !isStorageMode(
+      grant.storageMode,
+    ) ||
+    !isOptionalString(
+      grant.demoRemarks,
     )
   ) {
     return rejected(
@@ -621,6 +680,15 @@ export function validateFinoraBranchActivationIssuance(
   ) {
 
     if (
+      grant.demoId !==
+        undefined
+    ) {
+      return rejected(
+        "FINORA REGISTERED access cannot contain a Demo ID.",
+      );
+    }
+
+    if (
       validUntil -
         validFrom !==
       REGISTERED_DURATION_MS
@@ -662,11 +730,20 @@ export function validateFinoraBranchActivationIssuance(
         REGISTRATION_FEE ||
       payment.currency !==
         REGISTRATION_CURRENCY ||
-      payment.refundable !==
-        false ||
+      !isRegistrationPaymentMode(
+        payment.paymentMode,
+      ) ||
       parseTimestamp(
         payment.paidAt,
-      ) === undefined
+      ) === undefined ||
+      !isOptionalString(
+        payment.reference,
+      ) ||
+      !isOptionalString(
+        payment.remarks,
+      ) ||
+      payment.refundable !==
+        false
     ) {
       return rejected(
         "FINORA annual registration payment policy is invalid.",
@@ -703,6 +780,17 @@ export function validateFinoraBranchActivationIssuance(
     ) {
       return rejected(
         "FINORA Demo ID is required.",
+      );
+    }
+
+    if (
+      grant.registrationPayment !==
+        undefined ||
+      grant.registrationCycle !==
+        undefined
+    ) {
+      return rejected(
+        "FINORA Demo access cannot contain registration payment or registration cycle fields.",
       );
     }
 

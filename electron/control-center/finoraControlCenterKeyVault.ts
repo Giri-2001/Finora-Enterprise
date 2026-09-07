@@ -348,7 +348,7 @@ async function writeVault(
 // LOAD OR INITIALIZE
 // ============================================================
 
-export async function loadOrCreateFinoraControlCenterKeyVault():
+async function loadOrCreateFinoraControlCenterKeyVaultInternal():
   Promise<
     FinoraControlCenterKeyVaultRecord
   > {
@@ -402,6 +402,40 @@ export async function loadOrCreateFinoraControlCenterKeyVault():
   );
 
   return record;
+}
+
+let controlCenterKeyVaultLoadPromise:
+  Promise<
+    FinoraControlCenterKeyVaultRecord
+  > | null =
+    null;
+
+export async function loadOrCreateFinoraControlCenterKeyVault():
+  Promise<
+    FinoraControlCenterKeyVaultRecord
+  > {
+
+  if (controlCenterKeyVaultLoadPromise) {
+    return controlCenterKeyVaultLoadPromise;
+  }
+
+  const loadPromise =
+    loadOrCreateFinoraControlCenterKeyVaultInternal();
+
+  controlCenterKeyVaultLoadPromise =
+    loadPromise;
+
+  try {
+    return await loadPromise;
+  } finally {
+    if (
+      controlCenterKeyVaultLoadPromise ===
+      loadPromise
+    ) {
+      controlCenterKeyVaultLoadPromise =
+        null;
+    }
+  }
 }
 
 // ============================================================

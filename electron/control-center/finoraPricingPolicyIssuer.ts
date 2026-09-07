@@ -2,24 +2,26 @@
 // FINORA ENTERPRISE OS™
 //
 // CONTROL CENTER
-// PRIVILEGED STORAGE ENTITLEMENT ISSUER
+// PRIVILEGED PRICING POLICY ISSUER
 //
 // RESPONSIBILITY:
 //
-// - Accept a prepared LOCAL / USB storage entitlement payload
-// - Revalidate it inside the privileged signing boundary
-// - Bind it to the exact native installation target
-// - Issue purpose = STORAGE_ENTITLEMENT
+// - Accept a prepared PRICING_POLICY payload
+// - Revalidate it inside the privileged boundary
+// - Bind it to the exact package + installation target
+// - Enforce canonical payload/package issuedAt equality
+// - Issue purpose = PRICING_POLICY
 // - Sign using FINORA Control Center private-key vault
 //
 // IMPORTANT:
 //
 // - MAIN PROCESS / CONTROL CENTER ONLY.
 // - No renderer IPC is exposed here.
-// - Private signing key remains inside the Control Center signer.
+// - Private signing key remains inside Control Center signer.
 // - Payload is revalidated immediately before signing.
-// - No Business Date.
-// - USB volume identity is not accepted.
+// - No operational Pricing state mutation.
+// - Pricing lineage/current-state checks remain recipient-side
+//   inside the serialized Control Store apply boundary.
 //
 // VERSION : 1.0
 // STATUS  : Production Foundation
@@ -35,18 +37,18 @@ import {
 } from "./finoraControlCenterSigner.js";
 
 import type {
-  FinoraStorageEntitlementIssuanceTarget,
-} from "./finoraStorageEntitlementIssuancePolicy.js";
+  FinoraPricingPolicyIssuanceTarget,
+} from "./finoraPricingPolicyIssuancePolicy.js";
 
 import {
-  validateFinoraStorageEntitlementIssuance,
-} from "./finoraStorageEntitlementIssuancePolicy.js";
+  validateFinoraPricingPolicyIssuance,
+} from "./finoraPricingPolicyIssuancePolicy.js";
 
 // ============================================================
 // INPUT
 // ============================================================
 
-export interface SignFinoraStorageEntitlementPackageInput {
+export interface SignFinoraPricingPolicyPackageInput {
 
   packageId:
     string;
@@ -58,7 +60,7 @@ export interface SignFinoraStorageEntitlementPackageInput {
     string;
 
   target:
-    FinoraStorageEntitlementIssuanceTarget;
+    FinoraPricingPolicyIssuanceTarget;
 
   payload:
     unknown;
@@ -71,43 +73,52 @@ export interface SignFinoraStorageEntitlementPackageInput {
 // HELPERS
 // ============================================================
 
-function isNonEmptyString(
+function parseCanonicalTimestamp(
   value:
     unknown,
-): value is string {
-
-  return (
-    typeof value ===
-      "string" &&
-    value.trim().length >
-      0
-  );
-}
-
-function parseTimestamp(
-  value:
-    string,
 ): number | undefined {
+
+  if (
+    typeof value !==
+      "string" ||
+    value.trim().length ===
+      0
+  ) {
+    return undefined;
+  }
 
   const parsed =
     Date.parse(
       value,
     );
 
-  return Number.isFinite(
-    parsed,
-  )
-    ? parsed
-    : undefined;
+  if (
+    !Number.isFinite(
+      parsed,
+    )
+  ) {
+    return undefined;
+  }
+
+  if (
+    new Date(
+      parsed,
+    ).toISOString() !==
+      value
+  ) {
+    return undefined;
+  }
+
+  return parsed;
 }
 
 // ============================================================
 // SIGN
 // ============================================================
 
-export async function signFinoraStorageEntitlementPackage(
+export async function signFinoraPricingPolicyPackage(
   input:
-    SignFinoraStorageEntitlementPackageInput,
+    SignFinoraPricingPolicyPackageInput,
 ): Promise<
   FinoraControlCenterSignedPackage<
     Record<string, unknown>
@@ -115,12 +126,10 @@ export async function signFinoraStorageEntitlementPackage(
 > {
 
   if (
-    !isNonEmptyString(
-      input.packageId,
-    )
+    !input.packageId.trim()
   ) {
     throw new Error(
-      "FINORA Storage Entitlement packageId is required.",
+      "FINORA Pricing Policy packageId is required.",
     );
   }
 
@@ -132,12 +141,12 @@ export async function signFinoraStorageEntitlementPackage(
       0
   ) {
     throw new Error(
-      "FINORA Storage Entitlement sequence must be a positive safe integer.",
+      "FINORA Pricing Policy package sequence must be a positive safe integer.",
     );
   }
 
   const envelopeIssuedAt =
-    parseTimestamp(
+    parseCanonicalTimestamp(
       input.issuedAt,
     );
 
@@ -146,12 +155,12 @@ export async function signFinoraStorageEntitlementPackage(
       undefined
   ) {
     throw new Error(
-      "FINORA Storage Entitlement package issuedAt is invalid.",
+      "FINORA Pricing Policy package issuedAt must be a canonical ISO timestamp.",
     );
   }
 
   const policy =
-    validateFinoraStorageEntitlementIssuance(
+    validateFinoraPricingPolicyIssuance(
       input.payload,
       input.target,
     );
@@ -163,20 +172,23 @@ export async function signFinoraStorageEntitlementPackage(
   }
 
   const payloadIssuedAt =
-    parseTimestamp(
-      String(
-        policy.payload.issuedAt,
-      ),
+    policy.payload.issuedAt;
+
+  const parsedPayloadIssuedAt =
+    parseCanonicalTimestamp(
+      payloadIssuedAt,
     );
 
   if (
-    payloadIssuedAt ===
+    parsedPayloadIssuedAt ===
       undefined ||
+    parsedPayloadIssuedAt !==
+      envelopeIssuedAt ||
     payloadIssuedAt !==
-      envelopeIssuedAt
+      input.issuedAt
   ) {
     throw new Error(
-      "FINORA Storage Entitlement payload and package issuedAt timestamps must match.",
+      "FINORA Pricing Policy payload and package issuedAt timestamps must match exactly.",
     );
   }
 
@@ -185,7 +197,7 @@ export async function signFinoraStorageEntitlementPackage(
       input.packageId,
 
     purpose:
-      "STORAGE_ENTITLEMENT",
+      "PRICING_POLICY",
 
     target: {
       ownerId:
@@ -211,9 +223,7 @@ export async function signFinoraStorageEntitlementPackage(
     },
 
     issuedAt:
-      new Date(
-        envelopeIssuedAt,
-      ).toISOString(),
+      input.issuedAt,
 
     ...(
       input.packageValidity ===

@@ -54,6 +54,13 @@ import {
 } from "./control/finoraControlIpc.js";
 
 import {
+  registerFinoraControlCenterHandlers,
+} from "./control-center/finoraControlCenterIpc.js";
+
+import {
+  openFinoraControlCenterWindow,
+} from "./control-center/finoraControlCenterWindow.js";
+import {
   runFinoraDevelopmentProvisioning,
 } from "./control/finoraDevProvisioning.js";
 
@@ -1426,6 +1433,8 @@ app.whenReady().then(async () => {
     isTrustedRenderer,
   );
 
+  registerFinoraControlCenterHandlers();
+
   registerFinoraNotificationArtifactHandlers(
     isTrustedRenderer,
     notificationArtifactStore,
@@ -1445,6 +1454,14 @@ app.whenReady().then(async () => {
     await runFinoraDevelopmentProvisioning();
 
   createMainWindow();
+
+  if (
+    !app.isPackaged &&
+    process.env.FINORA_DEV_OPEN_CONTROL_CENTER ===
+      "1"
+  ) {
+    await openFinoraControlCenterWindow();
+  }
 
   // ----------------------------------------------------------
   // WARM USB DETECTION

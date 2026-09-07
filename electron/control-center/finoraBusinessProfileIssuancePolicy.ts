@@ -148,11 +148,20 @@ function parseTimestamp(
       value,
     );
 
-  return Number.isFinite(
-    parsed,
-  )
-    ? parsed
-    : undefined;
+  if (!Number.isFinite(parsed)) {
+    return undefined;
+  }
+
+  if (
+    new Date(
+      parsed,
+    ).toISOString() !==
+      value
+  ) {
+    return undefined;
+  }
+
+  return parsed;
 }
 
 function isSha256Fingerprint(
@@ -399,10 +408,12 @@ export function validateFinoraBusinessProfileIssuance(
 
   if (
     profileUpdatedAt <
-      profileCreatedAt
+      profileCreatedAt ||
+    profileUpdatedAt >
+      payloadIssuedAt
   ) {
     return rejected(
-      "FINORA Business Profile updatedAt cannot precede createdAt.",
+      "FINORA Business Profile audit timestamps must satisfy createdAt <= updatedAt <= issuedAt.",
     );
   }
 
