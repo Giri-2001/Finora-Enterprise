@@ -51,6 +51,9 @@ const CONTROL_CENTER_CHANNELS = {
 
   ISSUE_WALLET_RECHARGE:
     "finora:control-center:issue-wallet-recharge",
+
+  ISSUE_AND_EXPORT_CONTROL_BUNDLE:
+    "finora:control-center:issue-and-export-control-bundle",
 } as const;
 
 // ============================================================
@@ -151,6 +154,30 @@ export interface FinoraControlCenterIssuanceRequest {
 export type FinoraControlCenterSignedPackageView =
   Record<string, unknown>;
 
+export interface FinoraControlCenterBundleIssuanceRequest {
+  target:
+    FinoraControlCenterIssuanceTarget;
+
+  payload:
+    Record<string, unknown>;
+}
+
+export type FinoraControlBundleExportView =
+  | {
+      cancelled:
+        true;
+    }
+  | {
+      cancelled:
+        false;
+
+      fileName:
+        string;
+
+      bytesWritten:
+        number;
+    };
+
 // ============================================================
 // BRIDGE CONTRACT
 // ============================================================
@@ -216,6 +243,17 @@ export interface FinoraControlCenterBridge {
       Promise<
         FinoraControlCenterResult<
           FinoraControlCenterSignedPackageView
+        >
+      >;
+
+  issueAndExportControlBundle:
+    (
+      request:
+        FinoraControlCenterBundleIssuanceRequest,
+    ) =>
+      Promise<
+        FinoraControlCenterResult<
+          FinoraControlBundleExportView
         >
       >;
 }
@@ -299,6 +337,20 @@ const controlCenterBridge:
       ) as Promise<
         FinoraControlCenterResult<
           FinoraControlCenterSignedPackageView
+        >
+      >,
+
+  issueAndExportControlBundle:
+    (
+      request,
+    ) =>
+      ipcRenderer.invoke(
+        CONTROL_CENTER_CHANNELS
+          .ISSUE_AND_EXPORT_CONTROL_BUNDLE,
+        request,
+      ) as Promise<
+        FinoraControlCenterResult<
+          FinoraControlBundleExportView
         >
       >,
 };

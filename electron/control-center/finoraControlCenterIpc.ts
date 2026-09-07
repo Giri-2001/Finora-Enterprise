@@ -30,17 +30,20 @@
 // ============================================================
 
 import {
+  BrowserWindow,
   ipcMain,
 } from "electron";
 
 import {
   issueFinoraBranchActivationPackage,
   issueFinoraBusinessProfilePackage,
+  issueFinoraControlBundlePackage,
   issueFinoraPricingPolicyPackage,
   issueFinoraStorageEntitlementPackage,
   issueFinoraWalletRechargePackage,
   type IssueFinoraBranchActivationRequest,
   type IssueFinoraBusinessProfileRequest,
+  type IssueFinoraControlBundleRequest,
   type IssueFinoraPricingPolicyRequest,
   type IssueFinoraStorageEntitlementRequest,
   type IssueFinoraWalletRechargeRequest,
@@ -49,6 +52,10 @@ import {
 import {
   getFinoraControlCenterTrustRecord,
 } from "./finoraControlCenterSigner.js";
+
+import {
+  exportFinoraControlBundleFile,
+} from "./finoraControlBundleFileTransport.js";
 
 import {
   isTrustedFinoraControlCenterRenderer,
@@ -76,6 +83,9 @@ export const FINORA_CONTROL_CENTER_IPC_CHANNELS = {
 
   ISSUE_WALLET_RECHARGE:
     "finora:control-center:issue-wallet-recharge",
+
+  ISSUE_AND_EXPORT_CONTROL_BUNDLE:
+    "finora:control-center:issue-and-export-control-bundle",
 } as const;
 
 // ============================================================
@@ -296,6 +306,44 @@ async function executePrivileged<T>(
 
 let controlCenterHandlersRegistered =
   false;
+
+// ============================================================
+// CONTROL BUNDLE REQUEST
+// ============================================================
+
+function isControlBundleIssuanceRequest(
+  value:
+    unknown,
+): boolean {
+
+  if (
+    !isBaseIssuanceRequest(
+      value,
+    ) ||
+    !isRecord(
+      value,
+    )
+  ) {
+    return false;
+  }
+
+  /*
+   * CONTROL_BUNDLE v1 does not expose an outer validity draft.
+   *
+   * Reject extra packageValidity authority instead of silently
+   * dropping it at the coordinator boundary.
+   */
+  if (
+    Object.prototype.hasOwnProperty.call(
+      value,
+      "packageValidity",
+    )
+  ) {
+    return false;
+  }
+
+  return true;
+}
 
 // ============================================================
 // REGISTER
@@ -546,6 +594,92 @@ export function registerFinoraControlCenterHandlers():
             request as
               IssueFinoraWalletRechargeRequest,
           ),
+      );
+    },
+  );
+
+  // ----------------------------------------------------------
+  // CONTROL BUNDLE — ISSUE + NATIVE .FINORA EXPORT
+  //
+  // The renderer supplies only the issuance draft.
+  //
+  // Main process:
+  // 1. verifies the exact privileged Control Center mainFrame,
+  // 2. resolves that sender's BrowserWindow,
+  // 3. reserves/signs the CONTROL_BUNDLE,
+  // 4. opens the native Save dialog,
+  // 5. writes the signed .finora file.
+  //
+  // Save cancellation may consume a reserved issuance sequence.
+  // Issuance-ledger gaps are permitted by the current contract.
+  // ----------------------------------------------------------
+
+  ipcMain.handle(
+    FINORA_CONTROL_CENTER_IPC_CHANNELS
+      .ISSUE_AND_EXPORT_CONTROL_BUNDLE,
+    async (
+      event,
+      request:
+        unknown,
+    ) => {
+
+      if (
+        !isTrustedFinoraControlCenterRenderer(
+          event.senderFrame,
+        )
+      ) {
+        return failure(
+          "FINORA Control Bundle export is restricted to the dedicated Control Center renderer.",
+        );
+      }
+
+      if (
+        !isControlBundleIssuanceRequest(
+          request,
+        )
+      ) {
+        return failure(
+          "A valid FINORA Control Bundle issuance request is required.",
+        );
+      }
+
+      const parentWindow =
+        BrowserWindow.fromWebContents(
+          event.sender,
+        );
+
+      if (
+        !parentWindow ||
+        parentWindow.isDestroyed()
+      ) {
+        return failure(
+          "The FINORA Control Center window is not available for bundle export.",
+        );
+      }
+
+      return executePrivileged(
+        async () => {
+
+          const signedBundle =
+            await issueFinoraControlBundlePackage(
+              request as
+                IssueFinoraControlBundleRequest,
+            );
+
+          const exportResult =
+            await exportFinoraControlBundleFile(
+              parentWindow,
+              signedBundle,
+            );
+
+          if (!exportResult.success) {
+            throw new Error(
+              exportResult.error,
+            );
+          }
+
+          return exportResult;
+        },
       );
     },
   );

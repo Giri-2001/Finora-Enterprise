@@ -24,6 +24,10 @@ import {
   buildFinoraWalletRechargeIssuanceRequest,
 } from "./FinoraControlCenterIssuancePayloadBuilder";
 
+import {
+  buildFinoraControlBundleIssuanceRequest,
+} from "./FinoraControlBundleDraftBuilder";
+
 /* ===========================================================
    FINORA ENTERPRISE OS™
 
@@ -246,6 +250,25 @@ export default function FinoraControlCenterIssuanceWorkspace() {
     useState<Record<string, unknown> | undefined>();
 
   const walletRechargeIssuanceInFlightRef = useRef(false);
+
+  const [bundleExportState, setBundleExportState] = useState<
+    "IDLE" | "EXPORTING" | "SUCCESS" | "ERROR"
+  >("IDLE");
+
+  const [bundleExportError, setBundleExportError] = useState<
+    string | undefined
+  >();
+
+  const [bundleExportResult, setBundleExportResult] = useState<
+    | {
+        fileName: string;
+
+        bytesWritten: number;
+      }
+    | undefined
+  >();
+
+  const bundleExportInFlightRef = useRef(false);
 
   function updateTarget(
     field: keyof Omit<FinoraControlCenterTargetDraft, "fingerprintAlgorithm">,
@@ -539,6 +562,119 @@ export default function FinoraControlCenterIssuanceWorkspace() {
     }
   }
 
+  async function exportCurrentControlBundle(): Promise<void> {
+    if (bundleExportInFlightRef.current) {
+      return;
+    }
+
+    bundleExportInFlightRef.current = true;
+
+    setBundleExportState("EXPORTING");
+
+    setBundleExportError(undefined);
+
+    setBundleExportResult(undefined);
+
+    try {
+      const signedPackages = [
+        branchSignedPackage,
+        storageSignedPackage,
+        businessProfileSignedPackage,
+        pricingPolicySignedPackage,
+        walletRechargeSignedPackage,
+      ].filter(
+        (
+          candidate,
+        ): candidate is Record<string, unknown> =>
+          candidate !== undefined,
+      );
+
+      const request =
+        buildFinoraControlBundleIssuanceRequest({
+          target,
+
+          packages:
+            signedPackages,
+        });
+
+      const bridge =
+        window.finoraControlCenter;
+
+      if (!bridge) {
+        throw new Error(
+          "Dedicated FINORA Control Center preload bridge is unavailable.",
+        );
+      }
+
+      const result =
+        await bridge.issueAndExportControlBundle(
+          request,
+        );
+
+      if (!result.success) {
+        throw new Error(
+          result.error ??
+            "FINORA Control Bundle export failed.",
+        );
+      }
+
+      if (!result.data) {
+        throw new Error(
+          "FINORA Control Bundle export returned no result.",
+        );
+      }
+
+      if (result.data.cancelled) {
+        setBundleExportState(
+          "IDLE",
+        );
+
+        return;
+      }
+
+      setBundleExportResult({
+        fileName:
+          result.data.fileName,
+
+        bytesWritten:
+          result.data.bytesWritten,
+      });
+
+      setBundleExportState(
+        "SUCCESS",
+      );
+
+    } catch (error) {
+
+      setBundleExportError(
+        error instanceof Error
+          ? error.message
+          : "Unable to export the FINORA Control Bundle.",
+      );
+
+      setBundleExportState(
+        "ERROR",
+      );
+
+    } finally {
+
+      bundleExportInFlightRef.current =
+        false;
+    }
+  }
+
+  const availableBundlePackageCount =
+    [
+      branchSignedPackage,
+      storageSignedPackage,
+      businessProfileSignedPackage,
+      pricingPolicySignedPackage,
+      walletRechargeSignedPackage,
+    ].filter(
+      (candidate) =>
+        candidate !== undefined,
+    ).length;
+
   return (
     <section
       data-finora-control-center-issuance-workspace="true"
@@ -771,6 +907,146 @@ export default function FinoraControlCenterIssuanceWorkspace() {
         </div>
       </section>
 
+      <section
+        data-finora-control-bundle-export="true"
+        aria-live="polite"
+        style={{
+          marginTop: "20px",
+          border: "1px solid rgba(148, 163, 184, 0.2)",
+          borderRadius: "11px",
+          padding: "16px",
+          background: "rgba(2, 6, 23, 0.34)",
+        }}
+      >
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: "18px",
+          }}
+        >
+          <div
+            style={{
+              minWidth: 0,
+            }}
+          >
+            <h3
+              style={{
+                margin: 0,
+                fontSize: "14px",
+                fontWeight: 650,
+              }}
+            >
+              Control Bundle Export
+            </h3>
+
+            <p
+              style={{
+                margin: "6px 0 0",
+                maxWidth: "720px",
+                fontSize: "12px",
+                lineHeight: 1.55,
+                opacity: 0.7,
+              }}
+            >
+              Export all currently issued signed packages for this exact
+              installation target as one signed FINORA .finora bundle.
+            </p>
+          </div>
+
+          <button
+            type="button"
+            disabled={
+              availableBundlePackageCount === 0 ||
+              bundleExportState === "EXPORTING"
+            }
+            onClick={() => {
+              void exportCurrentControlBundle();
+            }}
+            style={{
+              minWidth: "150px",
+              minHeight: "42px",
+              border: "1px solid rgba(96, 165, 250, 0.62)",
+              borderRadius: "9px",
+              padding: "9px 14px",
+              fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
+              fontSize: "12px",
+              fontWeight: 650,
+              background:
+                availableBundlePackageCount === 0
+                  ? "rgba(30, 41, 59, 0.46)"
+                  : "rgba(30, 64, 175, 0.3)",
+              color:
+                availableBundlePackageCount === 0
+                  ? "rgba(203, 213, 225, 0.48)"
+                  : "#dbeafe",
+              cursor:
+                availableBundlePackageCount === 0 ||
+                bundleExportState === "EXPORTING"
+                  ? "not-allowed"
+                  : "pointer",
+            }}
+          >
+            {bundleExportState === "EXPORTING"
+              ? "Exporting…"
+              : "Export .finora"}
+          </button>
+        </div>
+
+        <p
+          style={{
+            margin: "12px 0 0",
+            fontSize: "11px",
+            opacity: 0.62,
+          }}
+        >
+          Available signed packages: {availableBundlePackageCount} / 5
+        </p>
+
+        {availableBundlePackageCount === 0 && (
+          <p
+            style={{
+              margin: "8px 0 0",
+              fontSize: "11px",
+              lineHeight: 1.5,
+              color: "#fbbf24",
+            }}
+          >
+            Issue at least one signed package before exporting a Control Bundle.
+          </p>
+        )}
+
+        {bundleExportState === "ERROR" &&
+          bundleExportError && (
+            <p
+              style={{
+                margin: "10px 0 0",
+                fontSize: "12px",
+                lineHeight: 1.55,
+                color: "#fca5a5",
+              }}
+            >
+              {bundleExportError}
+            </p>
+          )}
+
+        {bundleExportState === "SUCCESS" &&
+          bundleExportResult && (
+            <p
+              style={{
+                margin: "10px 0 0",
+                fontSize: "12px",
+                lineHeight: 1.55,
+                color: "#86efac",
+              }}
+            >
+              Exported {bundleExportResult.fileName} (
+              {bundleExportResult.bytesWritten.toLocaleString()} bytes).
+            </p>
+          )}
+      </section>
+
       {workflow === "BRANCH_ACTIVATION" && (
         <FinoraControlCenterBranchActivationForm
           target={target}
@@ -872,8 +1148,7 @@ export default function FinoraControlCenterIssuanceWorkspace() {
                     opacity: 0.58,
                   }}
                 >
-                  Signed package display only. Bundle export is not performed by
-                  this workflow.
+                  Signed package display only. Use the workspace-level Export .finora action to bundle currently issued packages.
                 </p>
               </>
             )}
@@ -974,8 +1249,7 @@ export default function FinoraControlCenterIssuanceWorkspace() {
                       opacity: 0.58,
                     }}
                   >
-                    Signed package display only. Bundle export is not performed
-                    by this workflow.
+                    Signed package display only. Use the workspace-level Export .finora action to bundle currently issued packages.
                   </p>
                 </>
               )}
@@ -1076,8 +1350,7 @@ export default function FinoraControlCenterIssuanceWorkspace() {
                       opacity: 0.58,
                     }}
                   >
-                    Signed package display only. Bundle export is not performed
-                    by this workflow.
+                    Signed package display only. Use the workspace-level Export .finora action to bundle currently issued packages.
                   </p>
                 </>
               )}
@@ -1178,8 +1451,7 @@ export default function FinoraControlCenterIssuanceWorkspace() {
                       opacity: 0.58,
                     }}
                   >
-                    Signed package display only. Bundle export is not performed
-                    by this workflow.
+                    Signed package display only. Use the workspace-level Export .finora action to bundle currently issued packages.
                   </p>
                 </>
               )}
@@ -1268,8 +1540,7 @@ export default function FinoraControlCenterIssuanceWorkspace() {
                   opacity: 0.58,
                 }}
               >
-                Signed package display only. Bundle export is not performed by
-                this workflow.
+                Signed package display only. Use the workspace-level Export .finora action to bundle currently issued packages.
               </p>
             </>
           )}

@@ -27,6 +27,7 @@
 // - BUSINESS_PROFILE
 // - PRICING_POLICY
 // - WALLET_RECHARGE
+// - CONTROL_BUNDLE
 // ============================================================
 
 import {
@@ -53,6 +54,11 @@ import {
   signFinoraWalletRechargePackage,
   type SignFinoraWalletRechargePackageInput,
 } from "./finoraWalletRechargeIssuer.js";
+
+import {
+  signFinoraControlBundlePackage,
+  type SignFinoraControlBundlePackageInput,
+} from "./finoraControlBundleIssuer.js";
 
 import {
   reserveFinoraControlCenterIssuance,
@@ -97,6 +103,14 @@ export type IssueFinoraPricingPolicyRequest =
 export type IssueFinoraWalletRechargeRequest =
   Omit<
     SignFinoraWalletRechargePackageInput,
+    | "packageId"
+    | "sequence"
+    | "issuedAt"
+  >;
+
+export type IssueFinoraControlBundleRequest =
+  Omit<
+    SignFinoraControlBundlePackageInput,
     | "packageId"
     | "sequence"
     | "issuedAt"
@@ -498,6 +512,54 @@ export function issueFinoraWalletRechargePackage(
                   request.packageValidity,
               }
         ),
+      });
+    },
+  );
+}
+
+// ============================================================
+// CONTROL BUNDLE
+// ============================================================
+
+export function issueFinoraControlBundlePackage(
+  request:
+    IssueFinoraControlBundleRequest,
+) {
+
+  return runSerializedIssuance(
+    async () => {
+
+      const reservation =
+        await reserveFinoraControlCenterIssuance({
+          purpose:
+            "CONTROL_BUNDLE",
+
+          scope:
+            toIssuanceScope(
+              request.target,
+            ),
+        });
+
+      const payload =
+        withAuthoritativeIssuedAt(
+          request.payload,
+          reservation.issuedAt,
+        );
+
+      return signFinoraControlBundlePackage({
+        packageId:
+          reservation.packageId,
+
+        sequence:
+          reservation.sequence,
+
+        issuedAt:
+          reservation.issuedAt,
+
+        target:
+          request.target,
+
+        payload,
       });
     },
   );
