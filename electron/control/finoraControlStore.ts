@@ -3291,6 +3291,52 @@ async function applyVerifiedBranchActivationInternal(
       );
     }
 
+    // --------------------------------------------------------
+    // COMMERCIAL ACCESS-TYPE TRANSITIONS
+    //
+    // DEMO -> REGISTERED is a commercial conversion and may
+    // occur only through signed REPLACE.
+    //
+    // REGISTERED -> DEMO is never a valid replacement.
+    //
+    // RENEW is strictly REGISTERED -> REGISTERED.
+    // --------------------------------------------------------
+
+    if (
+      input.action ===
+        "RENEW" &&
+      existingAccessGrant.accessType !==
+        "REGISTERED"
+    ) {
+      return failure(
+        "FINORA RENEW action requires existing REGISTERED access.",
+      );
+    }
+
+    if (
+      input.action ===
+        "REPLACE" &&
+      existingAccessGrant.accessType ===
+        "REGISTERED" &&
+      input.accessGrant.accessType ===
+        "DEMO"
+    ) {
+      return failure(
+        "FINORA REGISTERED access cannot be replaced with DEMO access.",
+      );
+    }
+
+    if (
+      existingAccessGrant.accessType !==
+        input.accessGrant.accessType &&
+      input.action !==
+        "REPLACE"
+    ) {
+      return failure(
+        "FINORA Branch Access type can change only through the signed REPLACE action.",
+      );
+    }
+
     if (
       (
         input.action ===

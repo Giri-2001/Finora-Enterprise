@@ -48,6 +48,7 @@ import {
   StorageConfiguration,
   StorageMode,
   StorageQuery,
+  StorageResetScope,
   StorageResult,
   StorageStatus,
   StorageWriteOptions,
@@ -844,6 +845,120 @@ export class USBStorageAdapter
       StorageResult<void>
     > {
 
+    const configuration =
+      this.configuration;
+
+
+    if (!configuration) {
+
+      return {
+
+        success:
+          false,
+
+        error:
+          "FINORA USB storage is not initialized.",
+      };
+    }
+
+
+    let scope:
+      StorageResetScope;
+
+
+    // --------------------------------------------------------
+    // REAL RESET SCOPE
+    //
+    // REAL reset must never inherit or forward a Demo ID.
+    // --------------------------------------------------------
+
+    if (
+      configuration.dataContext ===
+      DataContext.REAL
+    ) {
+
+      if (
+        !configuration.ownerId ||
+        configuration.ownerId.trim().length === 0
+      ) {
+
+        return {
+
+          success:
+            false,
+
+          error:
+            "A valid owner ID is required to reset REAL FINORA USB data.",
+        };
+      }
+
+
+      scope = {
+
+        dataContext:
+          DataContext.REAL,
+
+        ownerId:
+          configuration.ownerId,
+      };
+
+    } else if (
+      configuration.dataContext ===
+      DataContext.DEMO
+    ) {
+
+      // ------------------------------------------------------
+      // DEMO RESET SCOPE
+      //
+      // Demo ID is the required isolation boundary.
+      // Owner ID, when available, narrows it further.
+      // ------------------------------------------------------
+
+      if (
+        !configuration.demoId ||
+        configuration.demoId.trim().length === 0
+      ) {
+
+        return {
+
+          success:
+            false,
+
+          error:
+            "A valid Demo ID is required to reset DEMO FINORA USB data.",
+        };
+      }
+
+
+      scope = {
+
+        dataContext:
+          DataContext.DEMO,
+
+        ...(configuration.ownerId
+          ? {
+              ownerId:
+                configuration.ownerId,
+            }
+          : {}),
+
+        demoId:
+          configuration.demoId,
+      };
+
+    } else {
+
+      return {
+
+        success:
+          false,
+
+        error:
+          "Unsupported FINORA data context for USB reset.",
+      };
+    }
+
+
     const bridge =
       getFinoraUsbBridge();
 
@@ -864,7 +979,9 @@ export class USBStorageAdapter
     try {
 
       const result =
-        await bridge.resetFinoraData();
+        await bridge.resetFinoraData(
+          scope,
+        );
 
 
       return result;

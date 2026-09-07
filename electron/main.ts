@@ -92,6 +92,15 @@ import {
   FinoraNotificationArtifactStore,
 } from "./notifications/finoraNotificationArtifactStore.js";
 
+import {
+  recordMatchesFinoraUsbResetScope,
+  validateFinoraUsbResetScope,
+} from "./finoraUsbResetScopePolicy.js";
+
+import type {
+  FinoraUsbResetScope,
+} from "./finoraUsbResetScopePolicy.js";
+
 // ============================================================
 // PROMISIFIED SYSTEM COMMAND
 // ============================================================
@@ -115,6 +124,7 @@ interface StorageWriteOptions {
   ownerId?: string;
   demoId?: string;
 }
+
 
 interface PersistedStorageRecord {
   id: string;
@@ -591,6 +601,7 @@ function validateQuery(query: StorageQuery): string | null {
   return null;
 }
 
+
 function validateRecord(record: unknown): record is Record<string, unknown> {
   return (
     typeof record === "object" && record !== null && !Array.isArray(record)
@@ -624,6 +635,7 @@ function recordMatchesQuery(
 
   return true;
 }
+
 
 // ============================================================
 // RECORD OUTPUT
@@ -1119,11 +1131,21 @@ async function handleUsbClear(query: StorageQuery) {
 //
 // Result:
 //
-// records -> []
+// Only records inside the validated active REAL / DEMO
+// logical scope are removed. Other owners and Demo
+// environments remain intact.
 //
 // ============================================================
 
-async function handleUsbResetFinoraData() {
+async function handleUsbResetFinoraData(
+  scope: FinoraUsbResetScope,
+) {
+  const scopeError = validateFinoraUsbResetScope(scope);
+
+  if (scopeError) {
+    return failure(scopeError);
+  }
+
   const usbRoot = await findFinoraUsbRoot();
 
   if (!usbRoot) {
@@ -1131,9 +1153,13 @@ async function handleUsbResetFinoraData() {
   }
 
   try {
-    const emptyPackage = createEmptyStoragePackage();
+    const storagePackage = await readStoragePackage(usbRoot);
 
-    await writeStoragePackage(usbRoot, emptyPackage);
+    storagePackage.records = storagePackage.records.filter(
+      (record) => !recordMatchesFinoraUsbResetScope(record, scope),
+    );
+
+    await writeStoragePackage(usbRoot, storagePackage);
 
     return success();
   } catch (error) {
@@ -1285,13 +1311,19 @@ function registerUsbStorageHandlers(): void {
   // RESET FINORA DATA
   // ----------------------------------------------------------
 
-  ipcMain.handle(IPC_CHANNELS.RESET_FINORA_DATA, async (event) => {
-    if (!isTrustedRenderer(event.senderFrame)) {
-      return failure("Untrusted renderer.");
-    }
+  ipcMain.handle(
+    IPC_CHANNELS.RESET_FINORA_DATA,
+    async (
+      event,
+      scope: FinoraUsbResetScope,
+    ) => {
+      if (!isTrustedRenderer(event.senderFrame)) {
+        return failure("Untrusted renderer.");
+      }
 
-    return handleUsbResetFinoraData();
-  });
+      return handleUsbResetFinoraData(scope);
+    },
+  );
 }
 
 // ============================================================

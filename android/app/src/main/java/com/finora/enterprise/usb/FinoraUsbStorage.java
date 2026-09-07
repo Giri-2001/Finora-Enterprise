@@ -1288,7 +1288,21 @@ public final class FinoraUsbStorage {
     // CRUD: RESET FINORA DATA
     // ========================================================
 
-    public JSONObject resetFinoraData() {
+
+    public JSONObject resetFinoraData(
+        JSONObject scope
+    ) {
+        String scopeError =
+            validateResetScope(
+                scope
+            );
+
+        if (scopeError != null) {
+            return failure(
+                scopeError
+            );
+        }
+
         UsbTarget target =
             resolveConfiguredTarget();
 
@@ -1301,9 +1315,55 @@ public final class FinoraUsbStorage {
         }
 
         try {
+            JSONObject storagePackage =
+                readStoragePackage(
+                    target
+                );
+
+            JSONArray records =
+                storagePackage.getJSONArray(
+                    "records"
+                );
+
+            JSONArray remaining =
+                new JSONArray();
+
+            for (
+                int index = 0;
+                index < records.length();
+                index++
+            ) {
+                JSONObject record =
+                    records.optJSONObject(
+                        index
+                    );
+
+                if (record == null) {
+                    throw new IllegalStateException(
+                        "FINORA USB storage contains an invalid record."
+                    );
+                }
+
+                if (
+                    !recordMatchesResetScope(
+                        record,
+                        scope
+                    )
+                ) {
+                    remaining.put(
+                        record
+                    );
+                }
+            }
+
+            storagePackage.put(
+                "records",
+                remaining
+            );
+
             writeStoragePackage(
                 target,
-                createEmptyStoragePackage()
+                storagePackage
             );
 
             return success();
@@ -2076,6 +2136,84 @@ public final class FinoraUsbStorage {
         }
 
         return null;
+    }
+
+    // ========================================================
+    // RESET SCOPE VALIDATION
+    // ========================================================
+
+    private String validateResetScope(
+        JSONObject scope
+    ) {
+        String dataContext =
+            scope == null
+                ? null
+                : getStringValue(
+                    scope,
+                    "dataContext"
+                );
+
+        String ownerId =
+            scope == null
+                ? null
+                : getOptionalString(
+                    scope,
+                    "ownerId"
+                );
+
+        String demoId =
+            scope == null
+                ? null
+                : getOptionalString(
+                    scope,
+                    "demoId"
+                );
+
+        return FinoraUsbResetScopePolicy.validate(
+            dataContext,
+            ownerId,
+            demoId
+        );
+    }
+
+    // ========================================================
+    // RESET SCOPE RECORD MATCHING
+    //
+    // REAL:
+    // - Exact owner.
+    // - Demo ID must be absent from the persisted record.
+    //
+    // DEMO:
+    // - Exact Demo ID.
+    // - Optional owner further narrows the boundary.
+    // ========================================================
+
+    private boolean recordMatchesResetScope(
+        JSONObject record,
+        JSONObject scope
+    ) {
+        return FinoraUsbResetScopePolicy.recordMatches(
+            getOptionalString(
+                record,
+                "ownerId"
+            ),
+            getOptionalString(
+                record,
+                "demoId"
+            ),
+            getStringValue(
+                scope,
+                "dataContext"
+            ),
+            getOptionalString(
+                scope,
+                "ownerId"
+            ),
+            getOptionalString(
+                scope,
+                "demoId"
+            )
+        );
     }
 
     private boolean recordMatchesQuery(

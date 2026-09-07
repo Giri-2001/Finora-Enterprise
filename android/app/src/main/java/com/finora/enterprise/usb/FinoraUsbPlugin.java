@@ -659,20 +659,38 @@ public final class FinoraUsbPlugin
     public void resetFinoraData(
         PluginCall call
     ) {
+        JSObject scope =
+            call.getObject(
+                "scope"
+            );
+
+        if (scope == null) {
+            resolveFailure(
+                call,
+                "FINORA reset scope is required."
+            );
+
+            return;
+        }
+
         try {
             ensureInitialized();
 
             /*
-             * This rewrites only:
+             * The renderer supplies only the logical REAL / DEMO
+             * reset scope.
              *
-             * FINORA/storage/finora-storage.json
+             * USB target resolution remains native-owned:
              *
-             * It never formats the selected USB and never deletes
-             * unrelated user files.
+             * - No filesystem path is accepted.
+             * - No drive letter is accepted.
+             * - No arbitrary native storage location is accepted.
              */
             resolveStorageResult(
                 call,
-                usbStorage.resetFinoraData()
+                usbStorage.resetFinoraData(
+                    scope
+                )
             );
         } catch (Exception error) {
             resolveFailure(

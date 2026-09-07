@@ -296,22 +296,18 @@ export class StorageManager {
 
       dataContext,
 
-      ownerId: identifiers?.ownerId ?? this.configuration.ownerId,
+      ownerId:
+        identifiers?.ownerId,
 
-      demoId: identifiers?.demoId ?? this.configuration.demoId,
+      demoId:
+        dataContext === DataContext.DEMO
+          ? identifiers?.demoId
+          : undefined,
 
       deviceId: identifiers?.deviceId ?? this.configuration.deviceId,
 
       storageId: identifiers?.storageId ?? this.configuration.storageId,
     };
-
-    // --------------------------------------------------------
-    // REAL CONTEXT
-    // --------------------------------------------------------
-
-    if (dataContext === DataContext.REAL) {
-      nextConfiguration.demoId = undefined;
-    }
 
     // --------------------------------------------------------
     // DEMO CONTEXT REQUIRES DEMO ID
@@ -833,30 +829,58 @@ export class StorageManager {
   }
 
   // ==========================================================
-  // APPLY CONTEXT TO QUERY
+  // APPLY AUTHORITATIVE CONTEXT TO QUERY
+  //
+  // SECURITY:
+  //
+  // The active StorageManager configuration is the only
+  // authority for REAL / DEMO persistence scope.
+  //
+  // Callers may provide entity / record / pagination fields,
+  // but they must never switch ownerId or demoId through an
+  // individual storage operation.
+  //
+  // Context changes occur only through setDataContext().
   // ==========================================================
 
   private applyContextToQuery(query: StorageQuery): StorageQuery {
     return {
       ...query,
 
-      ownerId: query.ownerId ?? this.configuration.ownerId,
+      ownerId:
+        this.configuration.ownerId,
 
-      demoId: query.demoId ?? this.configuration.demoId,
+      demoId:
+        this.configuration.dataContext ===
+          DataContext.DEMO
+          ? this.configuration.demoId
+          : undefined,
     };
   }
 
   // ==========================================================
-  // APPLY CONTEXT TO WRITE OPTIONS
+  // APPLY AUTHORITATIVE CONTEXT TO WRITE OPTIONS
+  //
+  // SECURITY:
+  //
+  // Per-operation write options cannot override the active
+  // REAL / DEMO storage boundary.
   // ==========================================================
 
   private applyContextToWriteOptions(
     options?: StorageWriteOptions,
   ): StorageWriteOptions {
     return {
-      ownerId: options?.ownerId ?? this.configuration.ownerId,
+      ...options,
 
-      demoId: options?.demoId ?? this.configuration.demoId,
+      ownerId:
+        this.configuration.ownerId,
+
+      demoId:
+        this.configuration.dataContext ===
+          DataContext.DEMO
+          ? this.configuration.demoId
+          : undefined,
     };
   }
 }

@@ -25,6 +25,10 @@
 // - Invalid transition rejection
 // - RENEW status-change bypass rejection
 // - REPLACE status-change bypass rejection
+// - DEMO ISSUE
+// - DEMO -> REGISTERED RENEW rejection
+// - DEMO -> REGISTERED signed REPLACE conversion
+// - REGISTERED -> DEMO signed REPLACE rejection
 // - Status-action access metadata immutability
 // - Status-action activation-record immutability
 // - Replay rejection
@@ -431,6 +435,72 @@ function createRegisteredGrant(
   };
 }
 
+function createDemoGrant(
+  scope:
+    SelfTestScope,
+
+  userId:
+    string,
+
+  administrativeStatus:
+    AdministrativeStatus,
+
+  createdAt:
+    string,
+
+  updatedAt:
+    string,
+): FinoraControlBranchAccessGrant {
+
+  return {
+    grantId:
+      `FINORA-DEMO-GRANT-${userId}`,
+
+    userId,
+
+    ownerId:
+      scope.ownerId,
+
+    businessId:
+      scope.businessId,
+
+    branchId:
+      scope.branchId,
+
+    storageMode:
+      "LOCAL",
+
+    accessType:
+      "DEMO",
+
+    administrativeStatus,
+
+    validity: {
+      validFrom:
+        createdAt,
+
+      validUntil:
+        addMinutes(
+          createdAt,
+          37 * 60,
+        ),
+    },
+
+    demoId:
+      `FINORA-DEMO-${userId}`,
+
+    demoRemarks:
+      "Phase 13 Demo lifecycle conversion selftest",
+
+    createdAt,
+
+    updatedAt,
+
+    schemaVersion:
+      1,
+  };
+}
+
 function withStatus(
   grant:
     FinoraControlBranchAccessGrant,
@@ -475,20 +545,26 @@ function createActivationPayload(
       ...activation,
     },
 
-    accessGrant: {
-      ...accessGrant,
+    accessGrant:
+      accessGrant.registrationPayment
+        ? {
+            ...accessGrant,
 
-      validity: {
-        ...accessGrant.validity,
-      },
+            validity: {
+              ...accessGrant.validity,
+            },
 
-      registrationPayment:
-        accessGrant.registrationPayment
-          ? {
+            registrationPayment: {
               ...accessGrant.registrationPayment,
-            }
-          : undefined,
-    },
+            },
+          }
+        : {
+            ...accessGrant,
+
+            validity: {
+              ...accessGrant.validity,
+            },
+          },
 
     installationBinding: {
       ...binding,
@@ -1554,6 +1630,317 @@ async function runSelfTest():
     await expectPersistedStatus(
       directRevokeUser,
       "REVOKED",
+    );
+
+
+    // ========================================================
+    // TEST 15 - DEMO ISSUE
+    // ========================================================
+
+    const demoConversionUser =
+      "USER-DEMO-CONVERSION";
+
+    const demoInitial =
+      createDemoGrant(
+        scope,
+        demoConversionUser,
+        "ACTIVE",
+        baseTimestamp,
+        baseTimestamp,
+      );
+
+    const demoIssuePackage =
+      signPackage(
+        "FINORA-STATUS-SELFTEST-DEMO-ISSUE",
+        "ISSUE",
+        demoInitial,
+      );
+
+    const demoIssueResult =
+      await applyFinoraSignedBranchActivationPackage(
+        demoIssuePackage,
+        trustedKeys,
+        now,
+      );
+
+    expectSuccess(
+      "DEMO ISSUE applied",
+      demoIssueResult,
+    );
+
+    let conversionStoreResult =
+      await readFinoraControlStore();
+
+    assert(
+      conversionStoreResult.success &&
+        conversionStoreResult.data,
+      conversionStoreResult.error ??
+        "Unable to read DEMO ISSUE state.",
+    );
+
+    let persistedConversionGrant =
+      conversionStoreResult.data.branchAccessGrants
+        ?.find(
+          (item) =>
+            item.userId ===
+              demoConversionUser &&
+            item.ownerId ===
+              scope.ownerId &&
+            item.businessId ===
+              scope.businessId &&
+            item.branchId ===
+              scope.branchId,
+        );
+
+    assert(
+      persistedConversionGrant?.accessType ===
+        "DEMO" &&
+      persistedConversionGrant.demoId ===
+        demoInitial.demoId &&
+      persistedConversionGrant.registrationPayment ===
+        undefined &&
+      persistedConversionGrant.registrationCycle ===
+        undefined,
+      "Signed DEMO ISSUE did not persist an isolated DEMO grant.",
+    );
+
+    console.log(
+      "PASS: signed DEMO ISSUE persisted DEMO access",
+    );
+
+
+    // ========================================================
+    // TEST 16 - DEMO -> REGISTERED CANNOT USE RENEW
+    // ========================================================
+
+    const conversionTimestamp =
+      addMinutes(
+        baseTimestamp,
+        12,
+      );
+
+    const convertedRegisteredGrant =
+      createRegisteredGrant(
+        scope,
+        demoConversionUser,
+        "ACTIVE",
+        conversionTimestamp,
+        conversionTimestamp,
+      );
+
+    const invalidDemoRenewPackage =
+      signPackage(
+        "FINORA-STATUS-SELFTEST-DEMO-RENEW-CONVERSION",
+        "RENEW",
+        convertedRegisteredGrant,
+      );
+
+    const invalidDemoRenewResult =
+      await applyFinoraSignedBranchActivationPackage(
+        invalidDemoRenewPackage,
+        trustedKeys,
+        now,
+      );
+
+    expectFailure(
+      "DEMO -> REGISTERED RENEW rejected",
+      invalidDemoRenewResult,
+      "requires existing REGISTERED access",
+    );
+
+    conversionStoreResult =
+      await readFinoraControlStore();
+
+    assert(
+      conversionStoreResult.success &&
+        conversionStoreResult.data,
+      conversionStoreResult.error ??
+        "Unable to read post-RENEW rejection state.",
+    );
+
+    persistedConversionGrant =
+      conversionStoreResult.data.branchAccessGrants
+        ?.find(
+          (item) =>
+            item.userId ===
+              demoConversionUser &&
+            item.ownerId ===
+              scope.ownerId &&
+            item.businessId ===
+              scope.businessId &&
+            item.branchId ===
+              scope.branchId,
+        );
+
+    assert(
+      persistedConversionGrant?.accessType ===
+        "DEMO" &&
+      persistedConversionGrant.demoId ===
+        demoInitial.demoId,
+      "Rejected DEMO -> REGISTERED RENEW mutated the persisted DEMO grant.",
+    );
+
+    console.log(
+      "PASS: rejected DEMO -> REGISTERED RENEW preserved DEMO state",
+    );
+
+
+    // ========================================================
+    // TEST 17 - DEMO -> REGISTERED SIGNED REPLACE
+    // ========================================================
+
+    const demoReplacePackage =
+      signPackage(
+        "FINORA-STATUS-SELFTEST-DEMO-REGISTERED-REPLACE",
+        "REPLACE",
+        convertedRegisteredGrant,
+      );
+
+    const demoReplaceResult =
+      await applyFinoraSignedBranchActivationPackage(
+        demoReplacePackage,
+        trustedKeys,
+        now,
+      );
+
+    expectSuccess(
+      "DEMO -> REGISTERED REPLACE applied",
+      demoReplaceResult,
+    );
+
+    conversionStoreResult =
+      await readFinoraControlStore();
+
+    assert(
+      conversionStoreResult.success &&
+        conversionStoreResult.data,
+      conversionStoreResult.error ??
+        "Unable to read converted REGISTERED state.",
+    );
+
+    persistedConversionGrant =
+      conversionStoreResult.data.branchAccessGrants
+        ?.find(
+          (item) =>
+            item.userId ===
+              demoConversionUser &&
+            item.ownerId ===
+              scope.ownerId &&
+            item.businessId ===
+              scope.businessId &&
+            item.branchId ===
+              scope.branchId,
+        );
+
+    assert(
+      persistedConversionGrant?.accessType ===
+        "REGISTERED",
+      "Signed DEMO -> REGISTERED REPLACE did not persist REGISTERED access.",
+    );
+
+    assert(
+      persistedConversionGrant.demoId ===
+        undefined &&
+      persistedConversionGrant.registrationCycle ===
+        1 &&
+      persistedConversionGrant.registrationPayment?.amount ===
+        2000 &&
+      persistedConversionGrant.registrationPayment.currency ===
+        "INR" &&
+      Date.parse(
+        persistedConversionGrant.validity.validUntil,
+      ) -
+        Date.parse(
+          persistedConversionGrant.validity.validFrom,
+        ) ===
+        365 *
+          24 *
+          60 *
+          60 *
+          1000,
+      "Converted REGISTERED grant did not contain canonical annual commercial metadata.",
+    );
+
+    console.log(
+      "PASS: signed DEMO -> REGISTERED REPLACE persisted paid 365-day REGISTERED access without Demo ID",
+    );
+
+
+    // ========================================================
+    // TEST 18 - REGISTERED -> DEMO REPLACE IS FORBIDDEN
+    // ========================================================
+
+    const downgradeTimestamp =
+      addMinutes(
+        baseTimestamp,
+        14,
+      );
+
+    const downgradeDemoGrant =
+      createDemoGrant(
+        scope,
+        demoConversionUser,
+        "ACTIVE",
+        downgradeTimestamp,
+        downgradeTimestamp,
+      );
+
+    const downgradePackage =
+      signPackage(
+        "FINORA-STATUS-SELFTEST-REGISTERED-DEMO-REPLACE",
+        "REPLACE",
+        downgradeDemoGrant,
+      );
+
+    const downgradeResult =
+      await applyFinoraSignedBranchActivationPackage(
+        downgradePackage,
+        trustedKeys,
+        now,
+      );
+
+    expectFailure(
+      "REGISTERED -> DEMO REPLACE rejected",
+      downgradeResult,
+      "cannot be replaced with DEMO access",
+    );
+
+    conversionStoreResult =
+      await readFinoraControlStore();
+
+    assert(
+      conversionStoreResult.success &&
+        conversionStoreResult.data,
+      conversionStoreResult.error ??
+        "Unable to read post-downgrade rejection state.",
+    );
+
+    persistedConversionGrant =
+      conversionStoreResult.data.branchAccessGrants
+        ?.find(
+          (item) =>
+            item.userId ===
+              demoConversionUser &&
+            item.ownerId ===
+              scope.ownerId &&
+            item.businessId ===
+              scope.businessId &&
+            item.branchId ===
+              scope.branchId,
+        );
+
+    assert(
+      persistedConversionGrant?.accessType ===
+        "REGISTERED" &&
+      persistedConversionGrant.demoId ===
+        undefined &&
+      persistedConversionGrant.registrationCycle ===
+        1,
+      "Rejected REGISTERED -> DEMO REPLACE mutated the persisted REGISTERED grant.",
+    );
+
+    console.log(
+      "PASS: rejected REGISTERED -> DEMO REPLACE preserved REGISTERED state",
     );
 
 

@@ -63,6 +63,18 @@ interface StorageWriteOptions {
 }
 
 
+interface StorageResetScope {
+
+  dataContext:
+    | "REAL"
+    | "DEMO";
+
+  ownerId?: string;
+
+  demoId?: string;
+}
+
+
 interface StorageResult<T = unknown> {
 
   success: boolean;
@@ -216,7 +228,10 @@ interface UsbStorageBridge {
   // ----------------------------------------------------------
 
   resetFinoraData:
-    () =>
+    (
+      scope:
+        StorageResetScope,
+    ) =>
       Promise<
         StorageResult<void>
       >;
@@ -1053,9 +1068,13 @@ const usbBridge:
   // ==========================================================
 
   resetFinoraData:
-    () =>
+    (
+      scope:
+        StorageResetScope,
+    ) =>
       ipcRenderer.invoke(
         USB_CHANNELS.RESET_FINORA_DATA,
+        scope,
       ) as Promise<
         StorageResult<void>
       >,

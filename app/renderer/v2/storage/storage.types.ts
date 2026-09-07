@@ -313,6 +313,34 @@ export interface StorageWriteOptions {
 
   demoId?: string;
 }
+// ============================================================
+// STORAGE RESET SCOPE
+//
+// Defines the logical FINORA data boundary that may be reset.
+//
+// REAL:
+// - ownerId is required.
+// - demoId must be absent.
+// - Only REAL records for that owner may be removed.
+//
+// DEMO:
+// - demoId is required.
+// - ownerId, when present, further narrows the Demo boundary.
+// - REAL records and other Demo environments must survive.
+//
+// SECURITY:
+//
+// This contract never carries a filesystem path, drive letter,
+// USB root, or arbitrary native storage location.
+// ============================================================
+
+export interface StorageResetScope {
+  dataContext: DataContext;
+
+  ownerId?: string;
+
+  demoId?: string;
+}
 
 
 // ============================================================

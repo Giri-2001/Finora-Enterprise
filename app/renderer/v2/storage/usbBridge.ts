@@ -32,6 +32,7 @@ import {
 import type {
   StorageAvailability,
   StorageQuery,
+  StorageResetScope,
   StorageResult,
   StorageWriteOptions,
 } from "./storage.types";
@@ -136,7 +137,10 @@ export interface FinoraUsbBridge {
       StorageResult<void>
     >;
 
-  resetFinoraData?():
+  resetFinoraData?(
+    scope:
+      StorageResetScope,
+  ):
     Promise<
       StorageResult<void>
     >;
@@ -245,7 +249,12 @@ interface FinoraAndroidUsbPlugin {
       StorageResult<void>
     >;
 
-  resetFinoraData():
+  resetFinoraData(
+    request: {
+      scope:
+        StorageResetScope;
+    },
+  ):
     Promise<
       StorageResult<void>
     >;
@@ -397,9 +406,13 @@ function getAndroidUsbBridge():
           }),
 
     resetFinoraData:
-      async () =>
+      async (
+        scope,
+      ) =>
         finoraAndroidUsbPlugin
-          .resetFinoraData(),
+          .resetFinoraData({
+            scope,
+          }),
   };
 }
 
