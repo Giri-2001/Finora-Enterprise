@@ -109,16 +109,12 @@ import {
 import BranchActivationRequired from "../pages/auth/BranchActivationRequired";
 
 import {
+  evaluateAuthoritativeFinoraBranchAccess,
   hasActiveFinoraStorageEntitlement,
   loadFinoraBusinessProfile,
-  loadFinoraBranchAccessGrant,
   loadFinoraBranchActivation,
   loadFinoraInstallationIdentity,
 } from "../services/activation/activationService";
-
-import {
-  evaluateFinoraBranchAccess,
-} from "../services/activation/finoraBranchAccessEvaluator";
 import {
   getSession,
   invalidateSession,
@@ -937,8 +933,8 @@ function AuthenticatedApplication() {
         setContextError(null);
       }
 
-      const accessGrantResult =
-        await loadFinoraBranchAccessGrant(
+      const accessAuthorityResult =
+        await evaluateAuthoritativeFinoraBranchAccess(
           session.userId,
           session.ownerId,
           session.businessId,
@@ -950,19 +946,30 @@ function AuthenticatedApplication() {
       }
 
       if (
-        !accessGrantResult.success ||
-        !accessGrantResult.data
+        !accessAuthorityResult.success ||
+        !accessAuthorityResult.data
       ) {
         await denyAuthenticatedBranchAccess(
-          accessGrantResult.error ??
-            "FINORA registration or Demo access is required.",
+          accessAuthorityResult.error ??
+            "Unable to resolve authoritative FINORA Branch Access.",
         );
 
         return;
       }
 
+      const accessDecision =
+        accessAuthorityResult.data;
+
       const accessGrant =
-        accessGrantResult.data;
+        accessDecision.grant;
+
+      if (!accessGrant) {
+        await denyAuthenticatedBranchAccess(
+          accessDecision.reason,
+        );
+
+        return;
+      }
 
       const grantIdentityMatches =
         accessGrant.userId ===
@@ -1000,12 +1007,6 @@ function AuthenticatedApplication() {
 
         return;
       }
-
-      const accessDecision =
-        evaluateFinoraBranchAccess(
-          accessGrant,
-          new Date(),
-        );
 
       const registeredExpiredReadOnly =
         !accessDecision.allowed &&

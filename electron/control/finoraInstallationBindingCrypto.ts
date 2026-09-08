@@ -180,6 +180,87 @@ export function createFinoraInstallationBindingFingerprint(
 }
 
 // ============================================================
+// SHARED P-256 SPKI PUBLIC-KEY VALIDATION
+//
+// Pure reusable recipient / installation crypto primitive.
+//
+// - Canonical Base64 only.
+// - SPKI DER only.
+// - EC only.
+// - P-256 only.
+// - No persistence.
+// - No Electron API.
+// ============================================================
+
+export function assertFinoraP256SpkiPublicKey(
+  publicKeySpkiDerBase64:
+    string,
+): void {
+
+  let der:
+    Buffer;
+
+  try {
+    der =
+      decodeStrictBase64(
+        publicKeySpkiDerBase64,
+      );
+  } catch {
+    throw new Error(
+      "FINORA P-256 SPKI public key contains invalid canonical Base64.",
+    );
+  }
+
+  let publicKey:
+    ReturnType<
+      typeof createPublicKey
+    >;
+
+  try {
+    publicKey =
+      createPublicKey({
+        key:
+          der,
+
+        format:
+          "der",
+
+        type:
+          "spki",
+      });
+  } catch {
+    throw new Error(
+      "FINORA P-256 SPKI public key is invalid SPKI DER.",
+    );
+  }
+
+  if (
+    publicKey.asymmetricKeyType !==
+      "ec"
+  ) {
+    throw new Error(
+      "FINORA P-256 SPKI public key must be EC.",
+    );
+  }
+
+  const namedCurve =
+    publicKey
+      .asymmetricKeyDetails
+      ?.namedCurve;
+
+  if (
+    namedCurve !==
+      "prime256v1" &&
+    namedCurve !==
+      "P-256"
+  ) {
+    throw new Error(
+      "FINORA P-256 SPKI public key must use P-256.",
+    );
+  }
+}
+
+// ============================================================
 // KEY VALIDATION
 // ============================================================
 
@@ -425,7 +506,7 @@ export function validateFinoraWindowsInstallationBindingMaterial(
 
 export function generateFinoraWindowsInstallationBindingMaterial(
   now:
-    Date = new Date(),
+    Date,
 
   preferredInstallationId?:
     string,

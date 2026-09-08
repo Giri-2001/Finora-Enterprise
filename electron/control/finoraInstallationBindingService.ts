@@ -168,6 +168,25 @@ async function ensureBindingInternal():
     );
   }
 
+  /*
+   * RECIPIENT CLOCK BOOTSTRAP BOUNDARY:
+   *
+   * This timestamp belongs to first creation of the immutable
+   * native Windows installation binding.
+   *
+   * The recipient clock high-water authority cannot guard this
+   * genesis timestamp because that authority must first resolve
+   * this installation binding and bind high-water state to its
+   * installationId. Routing binding creation through that same
+   * authority would introduce a circular dependency.
+   *
+   * Once the binding exists, authoritative recipient-side clock
+   * decisions use the installation-bound high-water authority.
+   *
+   * The binding createdAt timestamp therefore remains a bootstrap
+   * trust assumption and is not itself rollback-protected by the
+   * recipient high-water mechanism.
+   */
   const generated =
     generateFinoraWindowsInstallationBindingMaterial(
       new Date(),

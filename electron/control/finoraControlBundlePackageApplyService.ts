@@ -440,7 +440,7 @@ export async function applyFinoraSignedControlBundlePackage(
     readonly FinoraBranchTrustedControlPublicKey[],
 
   now:
-    Date = new Date(),
+    Date,
 ): Promise<
   FinoraControlBundleApplyResult
 > {

@@ -60,14 +60,10 @@ import {
 } from "../../store/authStore";
 
 import {
+  evaluateAuthoritativeFinoraBranchAccess,
   hasActiveFinoraStorageEntitlement,
   loadFinoraBusinessProfile,
-  loadFinoraBranchAccessGrant,
 } from "./activationService";
-
-import {
-  evaluateFinoraCommercialWrite,
-} from "./finoraCommercialWritePolicy";
 
 // ============================================================
 // ALLOWED DECISION
@@ -112,6 +108,22 @@ export interface FinoraCommercialWriteGuardDeniedDecision {
 export type FinoraCommercialWriteGuardDecision =
   | FinoraCommercialWriteGuardAllowedDecision
   | FinoraCommercialWriteGuardDeniedDecision;
+
+// ============================================================
+// CAPABILITY VALIDATION
+// ============================================================
+
+function isFinoraCommercialWriteCapability(
+  value:
+    unknown,
+): value is FinoraCommercialWriteCapability {
+
+  return (
+    value === "CREATE_CUSTOMER" ||
+    value === "DISBURSE_LOAN" ||
+    value === "POST_COLLECTION"
+  );
+}
 
 // ============================================================
 // DENY
@@ -177,6 +189,21 @@ export async function authorizeFinoraCommercialWrite(
 ): Promise<
   FinoraCommercialWriteGuardDecision
 > {
+
+  // ----------------------------------------------------------
+  // CAPABILITY
+  // ----------------------------------------------------------
+
+  if (
+    !isFinoraCommercialWriteCapability(
+      capability,
+    )
+  ) {
+    return denyCommercialWrite(
+      capability,
+      "The requested FINORA commercial write capability is invalid.",
+    );
+  }
 
   // ----------------------------------------------------------
   // AUTHENTICATED SESSION
@@ -247,11 +274,17 @@ export async function authorizeFinoraCommercialWrite(
   }
 
   // ----------------------------------------------------------
-  // FRESH SIGNED BRANCH ACCESS GRANT
+  // AUTHORITATIVE BRANCH ACCESS
+  //
+  // This is intentionally evaluated on every invocation.
+  // Expiry takes effect without an application reload.
+  //
+  // Renderer supplies identity only. Current-time evaluation and
+  // persisted clock rollback defense remain in Electron main.
   // ----------------------------------------------------------
 
-  const accessGrantResult =
-    await loadFinoraBranchAccessGrant(
+  const accessAuthorityResult =
+    await evaluateAuthoritativeFinoraBranchAccess(
       userId,
       ownerId,
       businessId,
@@ -259,18 +292,28 @@ export async function authorizeFinoraCommercialWrite(
     );
 
   if (
-    !accessGrantResult.success ||
-    !accessGrantResult.data
+    !accessAuthorityResult.success ||
+    !accessAuthorityResult.data
   ) {
     return denyCommercialWrite(
       capability,
-      accessGrantResult.error ??
-        "A current signed FINORA Branch Access Grant is required for commercial writes.",
+      accessAuthorityResult.error ??
+        "Authoritative FINORA Branch Access evaluation is required for commercial writes.",
     );
   }
 
+  const accessDecision =
+    accessAuthorityResult.data;
+
   const accessGrant =
-    accessGrantResult.data;
+    accessDecision.grant;
+
+  if (!accessGrant) {
+    return denyCommercialWrite(
+      capability,
+      accessDecision.reason,
+    );
+  }
 
   // ----------------------------------------------------------
   // EXACT SESSION / GRANT IDENTITY
@@ -319,23 +362,15 @@ export async function authorizeFinoraCommercialWrite(
 
   // ----------------------------------------------------------
   // CURRENT-TIME COMMERCIAL ACCESS
-  //
-  // This is intentionally evaluated on every invocation.
-  // An application reload is not required for expiry to take
-  // effect.
   // ----------------------------------------------------------
 
-  const commercialDecision =
-    evaluateFinoraCommercialWrite(
-      accessGrant,
-      capability,
-      new Date(),
-    );
-
-  if (!commercialDecision.allowed) {
+  if (
+    !accessDecision.allowed ||
+    accessDecision.state !== "ACTIVE"
+  ) {
     return denyCommercialWrite(
       capability,
-      commercialDecision.reason,
+      accessDecision.reason,
     );
   }
 

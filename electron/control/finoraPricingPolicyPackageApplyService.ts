@@ -307,7 +307,7 @@ export async function applyFinoraSignedPricingPolicyPackage(
     readonly FinoraBranchTrustedControlPublicKey[],
 
   now:
-    Date = new Date(),
+    Date,
 ): Promise<
   FinoraControlStoreResult<
     FinoraVerifiedPricingPolicyApplyResult

@@ -554,6 +554,51 @@ interface FindBranchAccessGrantRequest {
 
   branchId: string;
 }
+
+type FinoraControlBranchAccessAuthorityState =
+  | "MISSING"
+  | "INVALID"
+  | "REVOKED"
+  | "SUSPENDED"
+  | "NOT_YET_VALID"
+  | "EXPIRED"
+  | "ACTIVE";
+
+interface FinoraControlBranchAccessAuthorityDecision {
+  allowed: boolean;
+
+  state:
+    FinoraControlBranchAccessAuthorityState;
+
+  reason: string;
+
+  observedAt: string;
+
+  grant?:
+    FinoraControlBranchAccessGrant;
+}
+
+interface FinoraControlBranchAccessAuthorityResult {
+  success: boolean;
+
+  data?:
+    FinoraControlBranchAccessAuthorityDecision;
+
+  error?: string;
+
+  errorCode?:
+    | "INVALID_REQUEST"
+    | "CLOCK_AUTHORITY_FAILED"
+    | "CONTROL_STORE_FAILED";
+
+  clockErrorCode?:
+    | "INVALID_OBSERVED_TIME"
+    | "INSTALLATION_BINDING_UNAVAILABLE"
+    | "INSTALLATION_ID_MISMATCH"
+    | "CLOCK_ROLLBACK_DETECTED"
+    | "CLOCK_HIGH_WATER_STORAGE_FAILED";
+}
+
 interface StorageEntitlementCheckRequest {
   userId: string;
 
@@ -565,6 +610,38 @@ interface StorageEntitlementCheckRequest {
 
   storageMode: FinoraControlStorageMode;
 }
+
+type FinoraControlBundleImportResult =
+  | {
+      success:
+        true;
+
+      cancelled:
+        true;
+    }
+  | {
+      success:
+        true;
+
+      cancelled:
+        false;
+
+      fileName:
+        string;
+
+      bytesRead:
+        number;
+
+      applySummary:
+        unknown;
+    }
+  | {
+      success:
+        false;
+
+      error:
+        string;
+    };
 
 interface FinoraControlBridge {
   getInstallation:
@@ -619,16 +696,15 @@ interface FinoraControlBridge {
         >
       >;
 
-  findBranchAccessGrant:
+  evaluateBranchAccess:
     (
       request:
         FindBranchAccessGrantRequest,
     ) =>
       Promise<
-        StorageResult<
-          FinoraControlBranchAccessGrant | undefined
-        >
+        FinoraControlBranchAccessAuthorityResult
       >;
+
   hasActiveStorageEntitlement:
     (
       request:
@@ -636,6 +712,12 @@ interface FinoraControlBridge {
     ) =>
       Promise<
         StorageResult<boolean>
+      >;
+
+  importControlBundle:
+    () =>
+      Promise<
+        FinoraControlBundleImportResult
       >;
 }
 
@@ -874,8 +956,9 @@ const CONTROL_CHANNELS = {
   FIND_BRANCH_ACTIVATION:
     "finora:control:find-branch-activation",
 
-  FIND_BRANCH_ACCESS_GRANT:
-    "finora:control:find-branch-access-grant",
+  EVALUATE_BRANCH_ACCESS:
+    "finora:control:evaluate-branch-access",
+
   FIND_BUSINESS_PROFILE:
     "finora:control:find-business-profile",
 
@@ -887,6 +970,9 @@ const CONTROL_CHANNELS = {
 
   HAS_ACTIVE_STORAGE_ENTITLEMENT:
     "finora:control:has-active-storage-entitlement",
+
+  IMPORT_CONTROL_BUNDLE:
+    "finora:control:import-control-bundle",
 
 } as const;
 
@@ -1171,9 +1257,14 @@ const notificationProviderBridge:
 
 // FINORA CONTROL BRIDGE
 //
-// READ / CHECK ONLY.
+// Normal control-state operations remain READ / CHECK ONLY.
 //
-// Activation creation and storage entitlement granting are
+// Signed Control Bundle import is the sole constrained action:
+// renderer supplies no filesystem path, signed package bytes,
+// trusted signing keys, installation target, or signing authority.
+// Electron main owns native file selection and authoritative apply.
+//
+// Activation creation and storage entitlement granting remain
 // intentionally NOT exposed to the renderer.
 // ============================================================
 
@@ -1278,18 +1369,16 @@ const controlBridge:
         >
       >,
 
-  findBranchAccessGrant:
+  evaluateBranchAccess:
     (
       request:
         FindBranchAccessGrantRequest,
     ) =>
       ipcRenderer.invoke(
-        CONTROL_CHANNELS.FIND_BRANCH_ACCESS_GRANT,
+        CONTROL_CHANNELS.EVALUATE_BRANCH_ACCESS,
         request,
       ) as Promise<
-        StorageResult<
-          FinoraControlBranchAccessGrant | undefined
-        >
+        FinoraControlBranchAccessAuthorityResult
       >,
 
   // ----------------------------------------------------------
@@ -1306,6 +1395,28 @@ const controlBridge:
         request,
       ) as Promise<
         StorageResult<boolean>
+      >,
+
+  // ----------------------------------------------------------
+  // SIGNED CONTROL BUNDLE IMPORT
+  //
+  // Renderer supplies no path, package bytes, trusted keys,
+  // installation target, or signing authority.
+  //
+  // Electron main owns:
+  //
+  // native file selection
+  // -> authoritative recipient trust resolution
+  // -> cryptographic verification
+  // -> CONTROL_BUNDLE application
+  // ----------------------------------------------------------
+
+  importControlBundle:
+    () =>
+      ipcRenderer.invoke(
+        CONTROL_CHANNELS.IMPORT_CONTROL_BUNDLE,
+      ) as Promise<
+        FinoraControlBundleImportResult
       >,
 };
 

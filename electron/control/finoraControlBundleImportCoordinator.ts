@@ -7,10 +7,10 @@
 // RESPONSIBILITY:
 //
 // - Compose native .finora file selection/read transport
-// - Accept trusted verification keys only from a main-process
-//   authority supplied by the caller
-// - Delegate cryptographic/preflight/domain application to the
-//   signed CONTROL_BUNDLE apply service
+// - Load recipient-authoritative trusted verification keys
+//   from the encrypted recipient trust store
+// - Serialize trust snapshot + cryptographic/domain apply with
+//   recipient trust bootstrap / transition mutation authority
 // - Return transport metadata + per-child apply summary
 //
 // SECURITY:
@@ -19,12 +19,12 @@
 // - No IPC.
 // - No renderer-provided filepath.
 // - No renderer-provided trusted keys.
+// - No caller-provided trusted keys.
 // - No signing.
 // - No private-key access.
 // - No Control Center key-vault access.
 // - Does not create or bootstrap trust.
-// - Production trusted-key persistence/bootstrap is a separate
-//   authority boundary.
+// - Missing recipient trust fails closed.
 //
 // VERSION : 1.0
 // STATUS  : Production Foundation
@@ -34,17 +34,19 @@ import type {
   BrowserWindow,
 } from "electron";
 
-import type {
-  FinoraBranchTrustedControlPublicKey,
-} from "./finoraSignedControlPackageVerifier.js";
+
 
 import {
   openFinoraControlBundleFile,
 } from "./finoraControlBundleImportFileTransport.js";
 
 import {
-  applyFinoraSignedControlBundlePackage,
-} from "./finoraControlBundlePackageApplyService.js";
+  observeFinoraAuthoritativeWallClock,
+} from "./finoraClockHighWaterAuthorityService.js";
+
+import {
+  applyFinoraSignedControlBundleWithAuthoritativeRecipientTrust,
+} from "./finoraAuthoritativeControlBundleApplyService.js";
 
 import type {
   FinoraControlBundleApplySummary,
@@ -111,32 +113,17 @@ export async function importFinoraControlBundleFromNativeDialog(
   parentWindow:
     BrowserWindow,
 
-  trustedKeys:
-    readonly FinoraBranchTrustedControlPublicKey[],
-
-  now:
-    Date = new Date(),
+  now?:
+    Date,
 ): Promise<
   FinoraControlBundleImportResult
 > {
-
-  /*
-   * Trust must already exist before import.
-   *
-   * This coordinator never creates, discovers, imports or
-   * renderer-resolves a Control Center public key.
-   */
-  if (
-    trustedKeys.length ===
-      0
-  ) {
-    return failure(
-      "FINORA trusted Control Center verification key is required before importing a Control Bundle.",
-    );
-  }
-
   // ----------------------------------------------------------
   // NATIVE FILE TRANSPORT
+  //
+  // The native dialog/file read does not consume recipient
+  // trust authority, so do not hold the trust queue while the
+  // operator selects a file.
   // ----------------------------------------------------------
 
   const fileResult =
@@ -161,20 +148,56 @@ export async function importFinoraControlBundleFromNativeDialog(
   }
 
   // ----------------------------------------------------------
-  // CRYPTOGRAPHIC + DOMAIN APPLY
+  // AUTHORITATIVE WALL CLOCK
   //
-  // Outer/child cryptographic preflight occurs before child
-  // mutation inside the apply service.
+  // Production captures wall time only after native file
+  // selection/read completes. Tests may inject one explicit
+  // observation through the optional now parameter.
   //
-  // Bundle application remains deliberately NON-ATOMIC after
-  // successful cryptographic/composition preflight.
+  // Rollback, installation mismatch or clock-state storage
+  // failure stops the operation before recipient trust or
+  // Control Bundle application begins.
+  // ----------------------------------------------------------
+
+  const observedNow =
+    now ??
+    new Date();
+
+  const clockResult =
+    await observeFinoraAuthoritativeWallClock(
+      observedNow,
+    );
+
+  if (!clockResult.success) {
+    return failure(
+      clockResult.error,
+    );
+  }
+
+  const acceptedNow =
+    new Date(
+      clockResult.data.observedAt,
+    );
+
+  // ----------------------------------------------------------
+  // AUTHORITATIVE RECIPIENT TRUST + APPLY
+  //
+  // The selected file is already read before entering the
+  // recipient-trust authority queue. The authoritative apply
+  // service owns:
+  //
+  // recipient trust load
+  // -> cryptographic/composition verification
+  // -> purpose-specific child application
+  //
+  // inside the shared serialization boundary used by bootstrap
+  // and signed recipient trust transitions.
   // ----------------------------------------------------------
 
   const applyResult =
-    await applyFinoraSignedControlBundlePackage(
+    await applyFinoraSignedControlBundleWithAuthoritativeRecipientTrust(
       fileResult.signedBundle,
-      trustedKeys,
-      now,
+      acceptedNow,
     );
 
   if (!applyResult.success) {

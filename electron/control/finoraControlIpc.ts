@@ -35,11 +35,11 @@
 // ============================================================
 
 import {
+  BrowserWindow,
   ipcMain,
 } from "electron";
 
 import {
-  findFinoraBranchAccessGrant,
   findFinoraBranchActivation,
   getFinoraInstallationIdentity,
   hasActiveFinoraStorageEntitlement,
@@ -58,6 +58,15 @@ import {
 import {
   getFinoraWindowsInstallationBinding,
 } from "./finoraInstallationBindingService.js";
+
+import {
+  importFinoraControlBundleFromNativeDialog,
+} from "./finoraControlBundleImportCoordinator.js";
+
+import {
+  evaluateFinoraAuthoritativeBranchAccess,
+} from "./finoraBranchAccessAuthorityService.js";
+
 // ============================================================
 // IPC CHANNELS
 // ============================================================
@@ -69,8 +78,9 @@ const CONTROL_IPC_CHANNELS = {
   FIND_BRANCH_ACTIVATION:
     "finora:control:find-branch-activation",
 
-  FIND_BRANCH_ACCESS_GRANT:
-    "finora:control:find-branch-access-grant",
+  EVALUATE_BRANCH_ACCESS:
+    "finora:control:evaluate-branch-access",
+
   FIND_BUSINESS_PROFILE:
     "finora:control:find-business-profile",
 
@@ -82,6 +92,9 @@ const CONTROL_IPC_CHANNELS = {
 
   HAS_ACTIVE_STORAGE_ENTITLEMENT:
     "finora:control:has-active-storage-entitlement",
+
+  IMPORT_CONTROL_BUNDLE:
+    "finora:control:import-control-bundle",
 } as const;
 
 // ============================================================
@@ -339,11 +352,18 @@ export function registerFinoraControlHandlers(
   );
 
   // ----------------------------------------------------------
-  // BRANCH ACCESS GRANT
+  // AUTHORITATIVE BRANCH ACCESS
+  //
+  // SECURITY:
+  //
+  // Renderer supplies identity only.
+  // Current wall-clock authority, installation binding,
+  // persisted high-water and Branch Access validity evaluation
+  // remain inside Electron main.
   // ----------------------------------------------------------
 
   ipcMain.handle(
-    CONTROL_IPC_CHANNELS.FIND_BRANCH_ACCESS_GRANT,
+    CONTROL_IPC_CHANNELS.EVALUATE_BRANCH_ACCESS,
     async (
       event,
       request: unknown,
@@ -358,24 +378,55 @@ export function registerFinoraControlHandlers(
         );
       }
 
+      const parentWindow =
+        BrowserWindow.fromWebContents(
+          event.sender,
+        );
+
+      if (
+        !parentWindow ||
+        parentWindow.isDestroyed()
+      ) {
+        return failure(
+          "The FINORA application window is not available for Branch Access authorization.",
+        );
+      }
+
+      if (
+        event.senderFrame !==
+          parentWindow.webContents.mainFrame
+      ) {
+        return failure(
+          "FINORA Branch Access authorization is restricted to the trusted application main frame.",
+        );
+      }
+
       if (
         !isFindBranchAccessGrantRequest(
           request,
         )
       ) {
         return failure(
-          "A valid FINORA branch access request is required.",
+          "A valid FINORA branch access authorization request is required.",
         );
       }
 
-      return findFinoraBranchAccessGrant(
-        request.userId,
-        request.ownerId,
-        request.businessId,
-        request.branchId,
-      );
+      return evaluateFinoraAuthoritativeBranchAccess({
+        userId:
+          request.userId,
+
+        ownerId:
+          request.ownerId,
+
+        businessId:
+          request.businessId,
+
+        branchId:
+          request.branchId,
+      });
     },
   );
+
   // ----------------------------------------------------------
   // BUSINESS PROFILE
   //
@@ -885,6 +936,63 @@ export function registerFinoraControlHandlers(
           publicKeyFingerprint:
             nativeBinding.publicKeyFingerprint,
         },
+      );
+    },
+  );
+
+  // ----------------------------------------------------------
+  // CONTROL BUNDLE IMPORT
+  //
+  // SECURITY:
+  //
+  // - Renderer supplies no filesystem path.
+  // - Renderer supplies no signed package bytes.
+  // - Renderer supplies no trusted signing keys.
+  // - Renderer supplies no installation target.
+  // - Native file selection remains Electron main-process owned.
+  // - Existing trusted-origin validation is required.
+  // - Sender must also be the exact main frame of its owning
+  //   BrowserWindow; trusted-origin subframes are rejected.
+  // ----------------------------------------------------------
+
+  ipcMain.handle(
+    CONTROL_IPC_CHANNELS.IMPORT_CONTROL_BUNDLE,
+    async (event) => {
+      if (
+        !isTrustedRenderer(
+          event.senderFrame,
+        )
+      ) {
+        return failure(
+          "FINORA Control Bundle import is restricted to the trusted renderer.",
+        );
+      }
+
+      const parentWindow =
+        BrowserWindow.fromWebContents(
+          event.sender,
+        );
+
+      if (
+        !parentWindow ||
+        parentWindow.isDestroyed()
+      ) {
+        return failure(
+          "The FINORA application window is not available for Control Bundle import.",
+        );
+      }
+
+      if (
+        event.senderFrame !==
+          parentWindow.webContents.mainFrame
+      ) {
+        return failure(
+          "FINORA Control Bundle import is restricted to the trusted application main frame.",
+        );
+      }
+
+      return importFinoraControlBundleFromNativeDialog(
+        parentWindow,
       );
     },
   );

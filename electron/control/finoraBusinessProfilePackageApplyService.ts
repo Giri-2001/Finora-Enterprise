@@ -196,7 +196,7 @@ export async function applyFinoraSignedBusinessProfilePackage(
     readonly FinoraBranchTrustedControlPublicKey[],
 
   now:
-    Date = new Date(),
+    Date,
 ): Promise<
   FinoraControlStoreResult<
     FinoraVerifiedBusinessProfileApplyResult

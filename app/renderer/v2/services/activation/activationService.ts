@@ -56,13 +56,15 @@ import type {
   FinoraEntitlementStorageMode,
 } from "../../types/activation/finoraStorageEntitlement.types";
 
-import type {
-  FinoraBranchAccessGrant,
-} from "../../types/activation/finoraBranchAccess.types";
+
 import type {
   StorageResult,
 } from "../../storage/storage.types";
 
+
+import type {
+  FinoraAuthoritativeBranchAccessResult,
+} from "./activationControlBridge";
 
 import {
   getFinoraActivationControlBridge,
@@ -222,26 +224,31 @@ export async function hasActiveFinoraBranchActivation(
 
 // ============================================================
 // STORAGE ENTITLEMENT
+
 // ============================================================
-// BRANCH ACCESS GRANT
+// AUTHORITATIVE BRANCH ACCESS
 // ============================================================
 
 /**
- * Load the signed REGISTERED / DEMO access grant for the
- * authenticated login identity.
+ * Resolve current REGISTERED / DEMO access through the secure
+ * platform authority.
  *
- * Runtime validity is evaluated separately using trusted/system
- * current time. FINORA Business Date is never used here.
+ * SECURITY:
+ *
+ * - Renderer supplies identity only.
+ * - Renderer does not supply current time.
+ * - Renderer does not evaluate expiry locally.
+ * - Renderer does not read or mutate clock high-water state.
+ * - Missing platform authority fails closed.
+ * - No fallback to renderer wall-clock evaluation.
  */
-export async function loadFinoraBranchAccessGrant(
+export async function evaluateAuthoritativeFinoraBranchAccess(
   userId: string,
   ownerId: string,
   businessId: string,
   branchId: string,
 ): Promise<
-  StorageResult<
-    FinoraBranchAccessGrant | undefined
-  >
+  FinoraAuthoritativeBranchAccessResult
 > {
   if (
     !isNonEmptyString(userId) ||
@@ -250,7 +257,11 @@ export async function loadFinoraBranchAccessGrant(
     !isNonEmptyString(branchId)
   ) {
     return {
-      success: false,
+      success:
+        false,
+
+      errorCode:
+        "INVALID_REQUEST",
 
       error:
         "User ID, Owner ID, Business ID and Branch ID are required.",
@@ -261,11 +272,30 @@ export async function loadFinoraBranchAccessGrant(
     getFinoraActivationControlBridge();
 
   if (!bridge) {
-    return bridgeUnavailable();
+    return {
+      success:
+        false,
+
+      error:
+        "FINORA secure control bridge is unavailable.",
+    };
+  }
+
+  if (
+    typeof bridge.evaluateBranchAccess !==
+      "function"
+  ) {
+    return {
+      success:
+        false,
+
+      error:
+        "FINORA authoritative Branch Access evaluation is unavailable on this platform.",
+    };
   }
 
   try {
-    return await bridge.findBranchAccessGrant({
+    return await bridge.evaluateBranchAccess({
       userId,
       ownerId,
       businessId,
@@ -273,15 +303,17 @@ export async function loadFinoraBranchAccessGrant(
     });
   } catch (error) {
     return {
-      success: false,
+      success:
+        false,
 
       error:
         error instanceof Error
           ? error.message
-          : "Unable to load FINORA branch access grant.",
+          : "Unable to evaluate authoritative FINORA Branch Access.",
     };
   }
 }
+
 // ============================================================
 // SIGNED BUSINESS PROFILE
 // ============================================================

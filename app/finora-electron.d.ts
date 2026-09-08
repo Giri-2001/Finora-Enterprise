@@ -106,6 +106,46 @@ interface FinoraFindWalletRechargeAuthorizationRequest {
 // CONTROL BRIDGE
 // ============================================================
 
+type FinoraElectronControlBundleImportResult =
+  | {
+      success:
+        true;
+
+      cancelled:
+        true;
+    }
+  | {
+      success:
+        true;
+
+      cancelled:
+        false;
+
+      fileName:
+        string;
+
+      bytesRead:
+        number;
+
+      /**
+       * Purpose-specific application summary returned by the
+       * authoritative Electron main-process import pipeline.
+       *
+       * Renderer receives this as informational output only.
+       * It supplies no trusted keys, installation target,
+       * filesystem path, or signed package bytes.
+       */
+      applySummary:
+        unknown;
+    }
+  | {
+      success:
+        false;
+
+      error:
+        string;
+    };
+
 interface FinoraElectronControlBridge {
 
   /**
@@ -163,6 +203,25 @@ interface FinoraElectronControlBridge {
   ):
     Promise<
       FinoraElectronResult<boolean>
+    >;
+
+  /**
+   * Opens Electron-owned native file selection for one signed
+   * FINORA CONTROL_BUNDLE and applies it through authoritative
+   * recipient trust verification.
+   *
+   * This method accepts ZERO renderer arguments.
+   *
+   * Renderer cannot supply:
+   * - filesystem path
+   * - package bytes
+   * - trusted signing keys
+   * - installation target
+   * - signing authority
+   */
+  importControlBundle():
+    Promise<
+      FinoraElectronControlBundleImportResult
     >;
 }
 
@@ -383,7 +442,12 @@ interface FinoraElectronRendererBridge {
   usb: unknown;
 
   /**
-   * Read-only FINORA device control API.
+   * FINORA device control API.
+   *
+   * Normal control-state operations remain read/check only.
+   * Signed Control Bundle import is exposed only as a
+   * zero-argument trigger; Electron main owns native file
+   * selection, recipient trust resolution and application.
    */
   control: FinoraElectronControlBridge;
   /**

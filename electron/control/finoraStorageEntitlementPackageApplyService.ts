@@ -278,7 +278,7 @@ export async function applyFinoraSignedStorageEntitlementPackage(
     readonly FinoraBranchTrustedControlPublicKey[],
 
   now:
-    Date = new Date(),
+    Date,
 ): Promise<
   FinoraControlStoreResult<
     FinoraVerifiedStorageEntitlementApplyResult

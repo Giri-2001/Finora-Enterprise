@@ -34,6 +34,10 @@ import {
 } from "./finoraControlCenterCrypto.js";
 
 import {
+  runFinoraControlCenterKeyAuthoritySerialized,
+} from "./finoraControlCenterKeyAuthorityQueue.js";
+
+import {
   getFinoraControlCenterPublicIdentity,
   loadOrCreateFinoraControlCenterKeyVault,
 } from "./finoraControlCenterKeyVault.js";
@@ -253,60 +257,75 @@ export async function signFinoraControlCenterPackage<
       FinoraControlCenterPackageDraft<object>,
   );
 
-  const vault =
-    await loadOrCreateFinoraControlCenterKeyVault();
+  // ----------------------------------------------------------
+  // KEY-AUTHORITY SERIALIZATION
+  //
+  // The active signing material must remain stable from vault
+  // resolution through canonical signing.
+  //
+  // Sharing the same main-process authority queue used by
+  // signing-key rotation prevents operational package signing
+  // from observing one key and racing a concurrent rotation.
+  // ----------------------------------------------------------
 
-  const unsignedPackage = {
-    ...draft,
+  return runFinoraControlCenterKeyAuthoritySerialized(
+    async () => {
+      const vault =
+        await loadOrCreateFinoraControlCenterKeyVault();
 
-    issuer: {
-      type:
-        "FINORA_CONTROL_CENTER" as const,
+      const unsignedPackage = {
+        ...draft,
 
-      issuerId:
-        vault.issuerId,
+        issuer: {
+          type:
+            "FINORA_CONTROL_CENTER" as const,
 
-      signingKeyId:
-        vault.signingKeyId,
+          issuerId:
+            vault.issuerId,
+
+          signingKeyId:
+            vault.signingKeyId,
+        },
+
+        payloadDigest:
+          createFinoraControlCenterPayloadDigest(
+            draft.payload,
+          ),
+      };
+
+      const canonicalPackage =
+        canonicalizeFinoraControlCenterValue(
+          unsignedPackage,
+        );
+
+      const signature =
+        signFinoraControlCenterCanonicalValue(
+          canonicalPackage,
+          vault.privateKeyPkcs8DerBase64,
+        );
+
+      return {
+        ...unsignedPackage,
+
+        signature: {
+          algorithm:
+            "ECDSA_P256_SHA256" as const,
+
+          encoding:
+            "IEEE_P1363" as const,
+
+          canonicalization:
+            "FINORA_CANONICAL_JSON_V1" as const,
+
+          signingKeyId:
+            vault.signingKeyId,
+
+          value:
+            signature,
+        },
+      };
     },
-
-    payloadDigest:
-      createFinoraControlCenterPayloadDigest(
-        draft.payload,
-      ),
-  };
-
-  const canonicalPackage =
-    canonicalizeFinoraControlCenterValue(
-      unsignedPackage,
-    );
-
-  const signature =
-    signFinoraControlCenterCanonicalValue(
-      canonicalPackage,
-      vault.privateKeyPkcs8DerBase64,
-    );
-
-  return {
-    ...unsignedPackage,
-
-    signature: {
-      algorithm:
-        "ECDSA_P256_SHA256",
-
-      encoding:
-        "IEEE_P1363",
-
-      canonicalization:
-        "FINORA_CANONICAL_JSON_V1",
-
-      signingKeyId:
-        vault.signingKeyId,
-
-      value:
-        signature,
-    },
-  };
+  );
 }
 
 // ============================================================

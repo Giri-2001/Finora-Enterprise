@@ -54,6 +54,22 @@ import {
 } from "./control/finoraControlIpc.js";
 
 import {
+  registerFinoraRecipientTrustMaintenanceHandlers,
+} from "./control/finoraRecipientTrustMaintenanceIpc.js";
+
+import {
+  openFinoraRecipientTrustMaintenanceWindow,
+} from "./control/finoraRecipientTrustMaintenanceWindow.js";
+
+import {
+  registerFinoraRecipientTrustRecoveryHandlers,
+} from "./control/finoraRecipientTrustRecoveryIpc.js";
+
+import {
+  openFinoraRecipientTrustRecoveryWindow,
+} from "./control/finoraRecipientTrustRecoveryWindow.js";
+
+import {
   registerFinoraControlCenterHandlers,
 } from "./control-center/finoraControlCenterIpc.js";
 
@@ -1459,60 +1475,137 @@ function createMainWindow(): void {
 // ============================================================
 
 app.whenReady().then(async () => {
-  registerUsbStorageHandlers();
+  // ----------------------------------------------------------
+  // PRIVILEGED RECIPIENT TRUST RECOVERY / MAINTENANCE MODES
+  //
+  // These command-line switches select dedicated privileged
+  // shells. They are launch selectors, not authentication.
+  //
+  // Recovery is evaluated before Maintenance if both selectors
+  // are present.
+  //
+  // Emergency Recovery still requires:
+  // - the exact dedicated Recovery main frame,
+  // - a valid signed Recipient Trust Recovery package,
+  // - the independently provisioned Recovery public root,
+  // - authoritative target / sequence / replay validation,
+  // - successful cryptographic verification.
+  //
+  // Normal Maintenance still requires:
+  // - the exact dedicated Maintenance main frame,
+  // - a valid signed Recipient Trust Transition,
+  // - authoritative target / sequence / replay validation,
+  // - successful cryptographic verification.
+  //
+  // Both privileged startup modes intentionally exclude the
+  // ordinary application IPC surface, Control Center IPC,
+  // notification providers, DEV provisioning and USB warm-up.
+  //
+  // Native installation binding remains authoritative for both.
+  // ----------------------------------------------------------
+  const openRecipientTrustMaintenance =
+    process.argv.includes(
+      "--finora-recipient-trust-maintenance",
+    );
 
-  registerFinoraControlHandlers(
-    isTrustedRenderer,
-  );
+  const openRecipientTrustRecovery =
+    process.argv.includes(
+      "--finora-recipient-trust-recovery",
+    );
 
-  registerFinoraControlCenterHandlers();
+  if (
+    openRecipientTrustRecovery
+  ) {
+    registerFinoraRecipientTrustRecoveryHandlers();
 
-  registerFinoraNotificationArtifactHandlers(
-    isTrustedRenderer,
-    notificationArtifactStore,
-  );
+    await ensureFinoraWindowsInstallationBinding();
 
-  registerFinoraNotificationProviders();
+    await openFinoraRecipientTrustRecoveryWindow();
+  }
+  else if (
+    openRecipientTrustMaintenance
+  ) {
+    registerFinoraRecipientTrustMaintenanceHandlers();
 
-  await runFinoraNotificationProviderDevelopmentProvisioning();
+    await ensureFinoraWindowsInstallationBinding();
 
-  registerFinoraNotificationProviderHandlers(
-    isTrustedRenderer,
-    getFinoraNotificationProviderRegistry(),
-  );
+    await openFinoraRecipientTrustMaintenanceWindow();
+  }
+  else {
+    registerUsbStorageHandlers();
 
-  await ensureFinoraWindowsInstallationBinding();
+    registerFinoraControlHandlers(
+      isTrustedRenderer,
+    );
+
+    registerFinoraControlCenterHandlers();
+
+    registerFinoraNotificationArtifactHandlers(
+      isTrustedRenderer,
+      notificationArtifactStore,
+    );
+
+    registerFinoraNotificationProviders();
+
+    await runFinoraNotificationProviderDevelopmentProvisioning();
+
+    registerFinoraNotificationProviderHandlers(
+      isTrustedRenderer,
+      getFinoraNotificationProviderRegistry(),
+    );
+
+    await ensureFinoraWindowsInstallationBinding();
 
     await runFinoraDevelopmentProvisioning();
 
-  createMainWindow();
+    createMainWindow();
 
-  if (
-    !app.isPackaged &&
-    process.env.FINORA_DEV_OPEN_CONTROL_CENTER ===
-      "1"
-  ) {
-    await openFinoraControlCenterWindow();
+    if (
+      !app.isPackaged &&
+      process.env.FINORA_DEV_OPEN_CONTROL_CENTER ===
+        "1"
+    ) {
+      await openFinoraControlCenterWindow();
+    }
+
+    // --------------------------------------------------------
+    // WARM USB DETECTION
+    //
+    // Ordinary application startup only.
+    // --------------------------------------------------------
+
+    warmUsbRootCache();
   }
-
-  // ----------------------------------------------------------
-  // WARM USB DETECTION
-  //
-  // Runs in the background and does not block Electron window
-  // creation. Customer/Storage requests share this in-flight
-  // detection promise if they arrive before it completes.
-  // ----------------------------------------------------------
-
-  warmUsbRootCache();
 
   // ----------------------------------------------------------
   // MACOS WINDOW REACTIVATION
   // ----------------------------------------------------------
 
   app.on("activate", () => {
-    if (BrowserWindow.getAllWindows().length === 0) {
-      createMainWindow();
+    if (
+      BrowserWindow.getAllWindows().length !==
+        0
+    ) {
+      return;
     }
+
+    if (
+      openRecipientTrustRecovery
+    ) {
+      void openFinoraRecipientTrustRecoveryWindow();
+
+      return;
+    }
+
+    if (
+      openRecipientTrustMaintenance
+    ) {
+      void openFinoraRecipientTrustMaintenanceWindow();
+
+      return;
+    }
+
+    createMainWindow();
   });
 });
 

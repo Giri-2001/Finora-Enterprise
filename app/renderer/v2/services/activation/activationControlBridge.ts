@@ -135,6 +135,56 @@ userId: string;
 
   branchId: string;
 }
+
+export type FinoraAuthoritativeBranchAccessState =
+  | "MISSING"
+  | "INVALID"
+  | "REVOKED"
+  | "SUSPENDED"
+  | "NOT_YET_VALID"
+  | "EXPIRED"
+  | "ACTIVE";
+
+export interface FinoraAuthoritativeBranchAccessDecision {
+  allowed:
+    boolean;
+
+  state:
+    FinoraAuthoritativeBranchAccessState;
+
+  reason:
+    string;
+
+  observedAt:
+    string;
+
+  grant?:
+    FinoraBranchAccessGrant;
+}
+
+export interface FinoraAuthoritativeBranchAccessResult {
+  success:
+    boolean;
+
+  data?:
+    FinoraAuthoritativeBranchAccessDecision;
+
+  error?:
+    string;
+
+  errorCode?:
+    | "INVALID_REQUEST"
+    | "CLOCK_AUTHORITY_FAILED"
+    | "CONTROL_STORE_FAILED";
+
+  clockErrorCode?:
+    | "INVALID_OBSERVED_TIME"
+    | "INSTALLATION_BINDING_UNAVAILABLE"
+    | "INSTALLATION_ID_MISMATCH"
+    | "CLOCK_ROLLBACK_DETECTED"
+    | "CLOCK_HIGH_WATER_STORAGE_FAILED";
+}
+
 export interface FinoraStorageEntitlementRequest {
   userId: string;
 
@@ -225,15 +275,25 @@ export interface FinoraActivationControlBridge {
       >
     >;
 
-  findBranchAccessGrant(
+  /**
+   * Resolve current Branch Access using the platform's trusted
+   * runtime clock authority.
+   *
+   * Electron provides this through the hardened main-process
+   * clock-high-water authority.
+   *
+   * Optional until equivalent Android native authority parity is
+   * implemented. Callers must fail closed when unavailable and
+   * must never fall back to renderer wall-clock evaluation.
+   */
+  evaluateBranchAccess?(
     request:
       FinoraBranchAccessGrantRequest,
   ):
     Promise<
-      StorageResult<
-        FinoraBranchAccessGrant | undefined
-      >
+      FinoraAuthoritativeBranchAccessResult
     >;
+
   hasActiveStorageEntitlement(
     request:
       FinoraStorageEntitlementRequest,

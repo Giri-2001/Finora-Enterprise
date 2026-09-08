@@ -48,8 +48,8 @@ import type {
 } from "./finoraControlCenterSigner.js";
 
 import {
-  getFinoraControlCenterPublicIdentity,
-} from "./finoraControlCenterKeyVault.js";
+  observeFinoraControlCenterAuthoritativeWallClock,
+} from "./finoraControlCenterClockHighWaterAuthorityService.js";
 
 // ============================================================
 // CONSTANTS
@@ -361,22 +361,21 @@ function validateReservationInput(
 // DEFAULT
 // ============================================================
 
-function createEmptyLedger():
+function createEmptyLedger(
+  issuedAt:
+    string,
+):
   FinoraControlCenterIssuanceLedger {
-
-  const now =
-    new Date()
-      .toISOString();
 
   return {
     sequences:
       [],
 
     createdAt:
-      now,
+      issuedAt,
 
     updatedAt:
-      now,
+      issuedAt,
 
     schemaVersion:
       1,
@@ -604,22 +603,38 @@ async function reserveInternal(
     input,
   );
 
-  const identity =
-    await getFinoraControlCenterPublicIdentity();
+  const clockResult =
+    await observeFinoraControlCenterAuthoritativeWallClock();
+
+  if (
+    !clockResult.success
+  ) {
+    throw new Error(
+      clockResult.error,
+    );
+  }
+
+  const issuerId =
+    clockResult.data.issuerId;
+
+  const issuedAt =
+    clockResult.data.observedAt;
 
   const existingLedger =
     await readLedger();
 
   const ledger =
     existingLedger ??
-      createEmptyLedger();
+      createEmptyLedger(
+        issuedAt,
+      );
 
   const existingIndex =
     ledger.sequences.findIndex(
       (record) =>
         isSameIssuanceScope(
           record,
-          identity.issuerId,
+          issuerId,
           input,
         ),
     );
@@ -648,15 +663,12 @@ async function reserveInternal(
     );
   }
 
-  const issuedAt =
-    new Date()
-      .toISOString();
 
   const nextRecord:
     FinoraControlCenterIssuanceSequenceRecord = {
 
       issuerId:
-        identity.issuerId,
+        issuerId,
 
       purpose:
         input.purpose,

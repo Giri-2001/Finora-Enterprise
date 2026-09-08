@@ -26,8 +26,9 @@
 //
 // IMPORTANT:
 //
-// - trustedKeys are supplied directly by this main-process
-//   isolated test harness.
+// - The isolated harness persists recipient trust through the
+//   encrypted production recipient trust-store boundary.
+// - The import coordinator receives no trustedKeys argument.
 // - This does NOT create production trust bootstrap.
 // - This does NOT expose trustedKeys through renderer IPC.
 //
@@ -80,8 +81,18 @@ import {
 } from "./finoraControlStore.js";
 
 import {
-  importFinoraControlBundleFromNativeDialog,
-} from "./finoraControlBundleImportCoordinator.js";
+  registerFinoraControlHandlers,
+} from "./finoraControlIpc.js";
+
+import {
+  loadFinoraRecipientTrustStore,
+  persistFinoraRecipientTrustStore,
+} from "./finoraRecipientTrustStore.js";
+
+import {
+  loadFinoraClockHighWaterState,
+  persistFinoraClockHighWaterState,
+} from "./finoraClockHighWaterStore.js";
 
 // ============================================================
 // TYPES
@@ -283,6 +294,10 @@ async function runSelfTest():
     BrowserWindow |
     undefined;
 
+  let restoreNativeOpenDialog:
+    (() => void) |
+    undefined;
+
   let failure:
     unknown;
 
@@ -459,8 +474,30 @@ async function runSelfTest():
         },
       ];
 
+    await persistFinoraRecipientTrustStore({
+      schemaVersion:
+        1,
+
+      trustedKeys,
+    });
+
+    const persistedRecipientTrust =
+      await loadFinoraRecipientTrustStore();
+
+    assert(
+      persistedRecipientTrust !==
+        undefined &&
+      persistedRecipientTrust.trustedKeys.length ===
+        1 &&
+      persistedRecipientTrust.trustedKeys[0].issuerId ===
+        issuerId &&
+      persistedRecipientTrust.trustedKeys[0].signingKeyId ===
+        signingMaterial.signingKeyId,
+      "Authoritative recipient trust fixture was not persisted correctly.",
+    );
+
     console.log(
-      "PASS: isolated ephemeral trusted signing identity created",
+      "PASS: isolated ephemeral trusted signing identity persisted through authoritative recipient trust store",
     );
 
     // --------------------------------------------------------
@@ -654,6 +691,181 @@ async function runSelfTest():
           signingMaterial.privateKeyPkcs8DerBase64,
       });
 
+
+    // --------------------------------------------------------
+    // AUTHORITATIVE TARGET DIAGNOSTIC PREFLIGHT
+    //
+    // SELFTEST ONLY.
+    //
+    // Before native transport / IPC, prove that the generated
+    // signed bundle belongs to the exact authoritative target
+    // reconstructed from persisted Control Store installation
+    // identity plus the current native installation binding.
+    //
+    // Production verifier is invoked directly here without
+    // mutation.
+    // --------------------------------------------------------
+
+    const {
+      getFinoraWindowsInstallationBinding:
+        getRuntimeNativeBinding,
+    } =
+      await import(
+        "./finoraInstallationBindingService.js"
+      );
+
+    const {
+      loadFinoraRecipientTrustStore:
+        loadRuntimeRecipientTrust,
+    } =
+      await import(
+        "./finoraRecipientTrustStore.js"
+      );
+
+    const {
+      verifyFinoraSignedControlPackageNative:
+        verifyRuntimeSignedControlPackage,
+    } =
+      await import(
+        "./finoraSignedControlPackageVerifier.js"
+      );
+
+    const diagnosticStoreResult =
+      await readFinoraControlStore();
+
+    assert(
+      diagnosticStoreResult.success &&
+        diagnosticStoreResult.data &&
+        diagnosticStoreResult.data.installation,
+      diagnosticStoreResult.error ??
+        "Diagnostic preflight could not load persisted Control Store installation identity.",
+    );
+
+    const diagnosticInstallation =
+      diagnosticStoreResult.data.installation;
+
+    const diagnosticNativeBinding =
+      await getRuntimeNativeBinding();
+
+    assert(
+      diagnosticNativeBinding !==
+        undefined,
+      "Diagnostic preflight could not load authoritative native installation binding.",
+    );
+
+    const diagnosticRecipientTrust =
+      await loadRuntimeRecipientTrust();
+
+    assert(
+      diagnosticRecipientTrust !==
+        undefined &&
+      diagnosticRecipientTrust.trustedKeys.length >
+        0,
+      "Diagnostic preflight could not load authoritative recipient trust.",
+    );
+
+    const diagnosticExpectedTarget:
+      SelfTestTarget = {
+
+        ownerId:
+          diagnosticInstallation.ownerId,
+
+        businessId:
+          diagnosticInstallation.businessId,
+
+        branchId:
+          diagnosticInstallation.branchId,
+
+        installationId:
+          diagnosticInstallation.installationId,
+
+        bindingKeyId:
+          diagnosticNativeBinding.bindingKeyId,
+
+        fingerprintAlgorithm:
+          "SHA-256",
+
+        publicKeyFingerprint:
+          diagnosticNativeBinding.publicKeyFingerprint,
+      };
+
+    const diagnosticTargetComparisons = {
+
+      ownerId:
+        signedBundle.target.ownerId ===
+          diagnosticExpectedTarget.ownerId,
+
+      businessId:
+        signedBundle.target.businessId ===
+          diagnosticExpectedTarget.businessId,
+
+      branchId:
+        signedBundle.target.branchId ===
+          diagnosticExpectedTarget.branchId,
+
+      installationId:
+        signedBundle.target.installationId ===
+          diagnosticExpectedTarget.installationId,
+
+      bindingKeyId:
+        signedBundle.target.bindingKeyId ===
+          diagnosticExpectedTarget.bindingKeyId,
+
+      fingerprintAlgorithm:
+        signedBundle.target.fingerprintAlgorithm ===
+          diagnosticExpectedTarget.fingerprintAlgorithm,
+
+      publicKeyFingerprint:
+        signedBundle.target.publicKeyFingerprint ===
+          diagnosticExpectedTarget.publicKeyFingerprint,
+    };
+
+    console.log(
+      "DIAGNOSTIC TARGET FIELD EQUALITY:",
+      diagnosticTargetComparisons,
+    );
+
+    console.log(
+      "DIAGNOSTIC SIGNED TARGET:",
+      signedBundle.target,
+    );
+
+    console.log(
+      "DIAGNOSTIC AUTHORITATIVE TARGET:",
+      diagnosticExpectedTarget,
+    );
+
+    assert(
+      Object.values(
+        diagnosticTargetComparisons,
+      ).every(
+        (
+          matches,
+        ) =>
+          matches,
+      ),
+      "Generated signed CONTROL_BUNDLE target differs from the authoritative runtime target before IPC.",
+    );
+
+    const inMemoryVerification =
+      verifyRuntimeSignedControlPackage(
+        signedBundle,
+        diagnosticRecipientTrust.trustedKeys,
+        diagnosticExpectedTarget,
+        now,
+      );
+
+    assert(
+      inMemoryVerification.valid,
+      inMemoryVerification.valid
+        ? "In-memory signed CONTROL_BUNDLE verification unexpectedly failed."
+        : `${inMemoryVerification.reason}: ${inMemoryVerification.error}`,
+    );
+
+    console.log(
+      "PASS: in-memory signed CONTROL_BUNDLE matches authoritative runtime target",
+    );
+
     // --------------------------------------------------------
     // TEST .finora FILE
     // --------------------------------------------------------
@@ -672,6 +884,31 @@ async function runSelfTest():
         null,
         2,
       );
+
+    const parsedSerializedBundle:
+      unknown =
+        JSON.parse(
+          serializedBundle,
+        );
+
+    const serializedVerification =
+      verifyRuntimeSignedControlPackage(
+        parsedSerializedBundle,
+        diagnosticRecipientTrust.trustedKeys,
+        diagnosticExpectedTarget,
+        now,
+      );
+
+    assert(
+      serializedVerification.valid,
+      serializedVerification.valid
+        ? "Serialized signed CONTROL_BUNDLE verification unexpectedly failed."
+        : `${serializedVerification.reason}: ${serializedVerification.error}`,
+    );
+
+    console.log(
+      "PASS: serialized/parsed CONTROL_BUNDLE preserves authoritative target and signature verification",
+    );
 
     await writeFile(
       importFilePath,
@@ -694,8 +931,330 @@ async function runSelfTest():
     );
 
     // --------------------------------------------------------
-    // REAL NATIVE IMPORT COORDINATOR
+    // NATIVE DIALOG SELECTED-FILE IDENTITY DIAGNOSTIC
+    //
+    // SELFTEST ONLY.
+    //
+    // Observe the real Electron Open dialog result used by the
+    // production import transport. The wrapper delegates to the
+    // original native dialog and does not supply a path itself.
+    //
+    // Proves:
+    // - exact path selected by native dialog
+    // - exact bytes/hash selected
+    // - selected JSON outer target
+    // - authoritative target immediately after dialog returns
     // --------------------------------------------------------
+
+    const {
+      dialog:
+        runtimeDialog,
+    } =
+      await import(
+        "electron"
+      );
+
+    const {
+      readFile:
+        readDiagnosticFile,
+    } =
+      await import(
+        "node:fs/promises"
+      );
+
+    const {
+      createHash:
+        createDiagnosticHash,
+    } =
+      await import(
+        "node:crypto"
+      );
+
+    const {
+      resolve:
+        resolveDiagnosticPath,
+    } =
+      await import(
+        "node:path"
+      );
+
+    const originalOpenDialogDescriptor =
+      Object.getOwnPropertyDescriptor(
+        runtimeDialog,
+        "showOpenDialog",
+      );
+
+    assert(
+      originalOpenDialogDescriptor !==
+        undefined &&
+      typeof originalOpenDialogDescriptor.value ===
+        "function",
+      "Electron dialog.showOpenDialog descriptor is unavailable for selftest observation.",
+    );
+
+    const originalShowOpenDialog =
+      originalOpenDialogDescriptor.value.bind(
+        runtimeDialog,
+      ) as
+        typeof runtimeDialog.showOpenDialog;
+
+    Object.defineProperty(
+      runtimeDialog,
+      "showOpenDialog",
+      {
+        ...originalOpenDialogDescriptor,
+
+        value:
+          async (
+            ownerWindow:
+              BrowserWindow,
+
+            options:
+              Electron.OpenDialogOptions,
+          ) => {
+
+            console.log(
+              "DIAGNOSTIC NATIVE DIALOG DEFAULT PATH:",
+              importFilePath,
+            );
+
+            const nativeResult =
+              await originalShowOpenDialog(
+                ownerWindow,
+                {
+                  ...options,
+
+                  defaultPath:
+                    importFilePath,
+                },
+              );
+
+            if (
+              !nativeResult.canceled &&
+              nativeResult.filePaths.length >
+                0
+            ) {
+              const selectedPath =
+                nativeResult.filePaths[0];
+
+              assert(
+                selectedPath !==
+                  undefined,
+                "Native dialog returned no selected path.",
+              );
+
+              const selectedBytes =
+                await readDiagnosticFile(
+                  selectedPath,
+                );
+
+              const expectedBytes =
+                Buffer.from(
+                  serializedBundle,
+                  "utf8",
+                );
+
+              const selectedSha256 =
+                createDiagnosticHash(
+                  "sha256",
+                )
+                  .update(
+                    selectedBytes,
+                  )
+                  .digest(
+                    "hex",
+                  );
+
+              const expectedSha256 =
+                createDiagnosticHash(
+                  "sha256",
+                )
+                  .update(
+                    expectedBytes,
+                  )
+                  .digest(
+                    "hex",
+                  );
+
+              console.log(
+                "DIAGNOSTIC NATIVE DIALOG SELECTED PATH:",
+                selectedPath,
+              );
+
+              console.log(
+                "DIAGNOSTIC NATIVE DIALOG SELECTED BYTES:",
+                selectedBytes.byteLength,
+              );
+
+              console.log(
+                "DIAGNOSTIC GENERATED BUNDLE BYTES:",
+                expectedBytes.byteLength,
+              );
+
+              console.log(
+                "DIAGNOSTIC NATIVE DIALOG SELECTED SHA256:",
+                selectedSha256,
+              );
+
+              console.log(
+                "DIAGNOSTIC GENERATED BUNDLE SHA256:",
+                expectedSha256,
+              );
+
+              assert(
+                resolveDiagnosticPath(
+                  selectedPath,
+                ) ===
+                  resolveDiagnosticPath(
+                    importFilePath,
+                  ),
+                "Native dialog did not select the exact generated E2E .finora path.",
+              );
+
+              assert(
+                selectedBytes.equals(
+                  expectedBytes,
+                ),
+                "Native dialog selected file bytes differ from the generated E2E bundle.",
+              );
+
+              const parsedSelectedBundle:
+                unknown =
+                  JSON.parse(
+                    selectedBytes.toString(
+                      "utf8",
+                    ),
+                  );
+
+              const selectedVerification =
+                verifyRuntimeSignedControlPackage(
+                  parsedSelectedBundle,
+                  diagnosticRecipientTrust.trustedKeys,
+                  diagnosticExpectedTarget,
+                  now,
+                );
+
+              assert(
+                selectedVerification.valid,
+                selectedVerification.valid
+                  ? "Selected native-dialog bundle verification unexpectedly failed."
+                  : `${selectedVerification.reason}: ${selectedVerification.error}`,
+              );
+
+              const postDialogStoreResult =
+                await readFinoraControlStore();
+
+              assert(
+                postDialogStoreResult.success &&
+                  postDialogStoreResult.data &&
+                  postDialogStoreResult.data.installation,
+                postDialogStoreResult.error ??
+                  "Unable to reload authoritative Control Store immediately after native dialog.",
+              );
+
+              const postDialogNativeBinding =
+                await getRuntimeNativeBinding();
+
+              assert(
+                postDialogNativeBinding !==
+                  undefined,
+                "Unable to reload native installation binding immediately after native dialog.",
+              );
+
+              const postDialogExpectedTarget:
+                SelfTestTarget = {
+
+                  ownerId:
+                    postDialogStoreResult.data.installation.ownerId,
+
+                  businessId:
+                    postDialogStoreResult.data.installation.businessId,
+
+                  branchId:
+                    postDialogStoreResult.data.installation.branchId,
+
+                  installationId:
+                    postDialogStoreResult.data.installation.installationId,
+
+                  bindingKeyId:
+                    postDialogNativeBinding.bindingKeyId,
+
+                  fingerprintAlgorithm:
+                    "SHA-256",
+
+                  publicKeyFingerprint:
+                    postDialogNativeBinding.publicKeyFingerprint,
+                };
+
+              const postDialogTargetMatches =
+                Object.entries(
+                  diagnosticExpectedTarget,
+                ).every(
+                  (
+                    [
+                      key,
+                      value,
+                    ],
+                  ) =>
+                    postDialogExpectedTarget[
+                      key as
+                        keyof SelfTestTarget
+                    ] ===
+                      value,
+                );
+
+              console.log(
+                "DIAGNOSTIC POST-DIALOG AUTHORITATIVE TARGET:",
+                postDialogExpectedTarget,
+              );
+
+              assert(
+                postDialogTargetMatches,
+                "Authoritative target changed while the native dialog was open.",
+              );
+
+              console.log(
+                "PASS: native dialog selected exact generated .finora bytes",
+              );
+
+              console.log(
+                "PASS: authoritative target remained unchanged through native dialog selection",
+              );
+            }
+
+            return nativeResult;
+          },
+      },
+    );
+
+    restoreNativeOpenDialog =
+      () => {
+        Object.defineProperty(
+          runtimeDialog,
+          "showOpenDialog",
+          originalOpenDialogDescriptor,
+        );
+      };
+
+    // --------------------------------------------------------
+    // REAL PRODUCTION PRELOAD + CONTROL IPC + NATIVE IMPORT
+    //
+    // The private electron/main.ts URL-origin validator cannot
+    // be imported without starting the application entrypoint.
+    // This E2E therefore supplies a narrow test validator while
+    // executing the real production Control IPC handler.
+    //
+    // The handler's own exact BrowserWindow main-frame identity
+    // check remains active and authoritative in this test.
+    // --------------------------------------------------------
+
+    registerFinoraControlHandlers(
+      (
+        senderFrame,
+      ) =>
+        senderFrame !==
+          null,
+    );
 
     parentWindow =
       new BrowserWindow({
@@ -713,6 +1272,13 @@ async function runSelfTest():
 
         webPreferences: {
 
+          preload:
+            join(
+              process.cwd(),
+              "dist-electron",
+              "preload.js",
+            ),
+
           contextIsolation:
             true,
 
@@ -724,12 +1290,35 @@ async function runSelfTest():
         },
       });
 
-    const importResult =
-      await importFinoraControlBundleFromNativeDialog(
-        parentWindow,
-        trustedKeys,
-        now,
+    await parentWindow.loadURL(
+      "data:text/html;charset=utf-8," +
+        encodeURIComponent(
+          "<!doctype html><html><body>FINORA Control Bundle Import E2E</body></html>",
+        ),
+    );
+
+    const preloadImportAvailable =
+      await parentWindow.webContents.executeJavaScript(
+        'typeof window.finora?.control?.importControlBundle === "function"',
+        true,
       );
+
+    assert(
+      preloadImportAvailable ===
+        true,
+      "Production preload did not expose window.finora.control.importControlBundle().",
+    );
+
+    console.log(
+      "PASS: production preload exposed zero-argument Control Bundle import bridge",
+    );
+
+    const importResult =
+      await parentWindow.webContents.executeJavaScript(
+        "window.finora.control.importControlBundle()",
+        true,
+      );
+
 
     if (!importResult.success) {
       throw new Error(
@@ -770,7 +1359,7 @@ async function runSelfTest():
     );
 
     console.log(
-      "PASS: native .finora transport + CONTROL_BUNDLE apply coordinator succeeded",
+      "PASS: production preload + Control IPC + native .finora + authoritative CONTROL_BUNDLE apply chain succeeded",
     );
 
     // --------------------------------------------------------
@@ -806,6 +1395,147 @@ async function runSelfTest():
       "PASS: imported signed child persisted in isolated trusted Control Store",
     );
 
+    // --------------------------------------------------------
+    // CLOCK HIGH-WATER ROLLBACK FAIL-CLOSED E2E
+    //
+    // Seed a future high-water using the authoritative native
+    // installationId. This direct store write is test-fixture
+    // setup only. Production import never receives installationId
+    // or a caller-supplied high-water state.
+    //
+    // Then invoke the exact same zero-argument production preload
+    // bridge. The native dialog selects the same valid .finora.
+    // Clock rollback must stop the operation before recipient
+    // trust or Control Store application can mutate state.
+    // --------------------------------------------------------
+
+    const controlStoreBeforeRollback =
+      JSON.stringify(
+        storeResult.data,
+      );
+
+    const recipientTrustBeforeRollback =
+      await loadFinoraRecipientTrustStore();
+
+    assert(
+      recipientTrustBeforeRollback !==
+        undefined,
+      "Recipient Trust Store is unavailable before rollback E2E proof.",
+    );
+
+    const recipientTrustSnapshotBeforeRollback =
+      JSON.stringify(
+        recipientTrustBeforeRollback,
+      );
+
+    const futureHighWaterAt =
+      new Date(
+        Date.now() +
+          24 * 60 * 60 * 1000,
+      ).toISOString();
+
+    await persistFinoraClockHighWaterState({
+      schemaVersion:
+        1,
+
+      installationId:
+        nativeBinding.installationId,
+
+      highWaterAt:
+        futureHighWaterAt,
+    });
+
+    const seededHighWater =
+      await loadFinoraClockHighWaterState();
+
+    assert(
+      seededHighWater !==
+        undefined &&
+      seededHighWater.installationId ===
+        nativeBinding.installationId &&
+      seededHighWater.highWaterAt ===
+        futureHighWaterAt,
+      "Future clock high-water rollback fixture was not persisted correctly.",
+    );
+
+    console.log(
+      "PASS: authoritative installation clock high-water seeded into the future for rollback E2E proof",
+    );
+
+    const rollbackImportResult =
+      await parentWindow.webContents.executeJavaScript(
+        "window.finora.control.importControlBundle()",
+        true,
+      );
+
+    assert(
+      rollbackImportResult &&
+      rollbackImportResult.success ===
+        false,
+      "Production Control Bundle import unexpectedly succeeded during clock rollback.",
+    );
+
+    assert(
+      typeof rollbackImportResult.error ===
+        "string" &&
+      /clock rollback/i.test(
+        rollbackImportResult.error,
+      ),
+      "Production Control Bundle import did not fail specifically for clock rollback.",
+    );
+
+    console.log(
+      "PASS: production preload + Control IPC + native .finora import rejected persisted clock rollback before apply",
+    );
+
+    const controlStoreAfterRollback =
+      await readFinoraControlStore();
+
+    assert(
+      controlStoreAfterRollback.success &&
+        controlStoreAfterRollback.data,
+      controlStoreAfterRollback.error ??
+        "Unable to read isolated Control Store after rollback rejection.",
+    );
+
+    assert(
+      JSON.stringify(
+        controlStoreAfterRollback.data,
+      ) ===
+        controlStoreBeforeRollback,
+      "Clock-rollback rejection mutated trusted Control Store state.",
+    );
+
+    const recipientTrustAfterRollback =
+      await loadFinoraRecipientTrustStore();
+
+    assert(
+      recipientTrustAfterRollback !==
+        undefined &&
+      JSON.stringify(
+        recipientTrustAfterRollback,
+      ) ===
+        recipientTrustSnapshotBeforeRollback,
+      "Clock-rollback rejection mutated Recipient Trust Store state.",
+    );
+
+    const highWaterAfterRollback =
+      await loadFinoraClockHighWaterState();
+
+    assert(
+      highWaterAfterRollback !==
+        undefined &&
+      highWaterAfterRollback.installationId ===
+        nativeBinding.installationId &&
+      highWaterAfterRollback.highWaterAt ===
+        futureHighWaterAt,
+      "Clock-rollback rejection mutated the persisted future high-water fixture.",
+    );
+
+    console.log(
+      "PASS: clock rollback rejection preserved Control Store, Recipient Trust Store and persisted high-water state",
+    );
+
     console.log(
       "============================================================",
     );
@@ -826,6 +1556,15 @@ async function runSelfTest():
       error;
 
   } finally {
+
+    if (
+      restoreNativeOpenDialog
+    ) {
+      restoreNativeOpenDialog();
+
+      restoreNativeOpenDialog =
+        undefined;
+    }
 
     if (
       parentWindow &&
@@ -858,32 +1597,21 @@ async function runSelfTest():
       }
     }
 
-    try {
-
-      await rm(
-        temporaryUserData,
-        {
-          recursive:
-            true,
-
-          force:
-            true,
-        },
-      );
-
-      console.log(
-        "PASS: isolated temporary FINORA userData deleted",
-      );
-
-    } catch (
-      cleanupError
-    ) {
-
-      if (!failure) {
-        failure =
-          cleanupError;
-      }
-    }
+    /*
+     * BrowserWindow creation activates Chromium profile state.
+     *
+     * On Windows, Electron/Chromium may retain or recreate files
+     * under app.getPath("userData") until the Electron process
+     * has fully exited.
+     *
+     * Therefore this self-test does not claim in-process
+     * deletion of temporaryUserData. The outer runtime harness
+     * must delete the isolated directory after Electron exits
+     * and verify that no matching self-test directory remains.
+     */
+    console.log(
+      `POST-EXIT CLEANUP REQUIRED: ${temporaryUserData}`,
+    );
   }
 
   if (failure) {
@@ -893,22 +1621,88 @@ async function runSelfTest():
 
 // ============================================================
 // ENTRY
+//
+// Native Open dialog interaction is intentionally asynchronous
+// and operator-driven in this E2E harness.
+//
+// BrowserWindow.destroy() during finally can emit
+// "window-all-closed". On Windows/Linux, Electron may otherwise
+// terminate the application before runSelfTest() settles and
+// before buffered PASS / FAIL output is drained.
+//
+// This self-test therefore owns window-all-closed and allows
+// ONLY the explicit final app.exit(0 / 1) path below to end the
+// Electron process.
+//
+// Keep one explicit main-process event-loop handle alive until
+// runSelfTest() settles so Electron cannot terminate before the
+// native dialog result, assertions and finally cleanup complete.
 // ============================================================
+
+app.on(
+  "window-all-closed",
+  () => {
+    // Intentionally keep the self-test main process alive.
+  },
+);
+
+const selfTestKeepAlive =
+  setInterval(
+    () => {
+      // Intentionally empty.
+    },
+    1000,
+  );
+
+function flushSelfTestConsoleStreams():
+  Promise<void> {
+  return new Promise(
+    (
+      resolve,
+    ) => {
+      process.stdout.write(
+        "",
+        () => {
+          process.stderr.write(
+            "",
+            () => {
+              resolve();
+            },
+          );
+        },
+      );
+    },
+  );
+}
 
 void runSelfTest()
   .then(
-    () => {
+    async () => {
+
+      clearInterval(
+        selfTestKeepAlive,
+      );
+
+      await flushSelfTestConsoleStreams();
 
       app.exit(
         0,
       );
     },
-    (error) => {
+    async (
+      error,
+    ) => {
+
+      clearInterval(
+        selfTestKeepAlive,
+      );
 
       console.error(
         "FAIL: FINORA NATIVE .finora CONTROL_BUNDLE IMPORT E2E SELFTEST",
         error,
       );
+
+      await flushSelfTestConsoleStreams();
 
       app.exit(
         1,

@@ -93,7 +93,7 @@ export async function applyFinoraSignedBranchActivationPackage(
     readonly FinoraBranchTrustedControlPublicKey[],
 
   now:
-    Date = new Date(),
+    Date,
 ): Promise<
   FinoraControlStoreResult<
     FinoraVerifiedBranchActivationApplyResult

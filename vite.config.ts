@@ -14,6 +14,12 @@ export default defineConfig({
 
         controlCenter:
           "control-center.html",
+
+        recipientTrustMaintenance:
+          "recipient-trust-maintenance.html",
+
+        recipientTrustRecovery:
+          "recipient-trust-recovery.html",
       },
     },
   },

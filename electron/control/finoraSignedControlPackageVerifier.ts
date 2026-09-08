@@ -373,7 +373,7 @@ export function verifyFinoraSignedControlPackageNative(
     FinoraBranchControlTarget,
 
   now:
-    Date = new Date(),
+    Date,
 ): FinoraSignedControlVerificationResult {
 
   if (!isRecord(value)) {

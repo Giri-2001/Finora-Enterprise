@@ -55,12 +55,37 @@ export interface FinoraControlCenterSigningMaterial {
 // KEY ID
 // ============================================================
 
+export function createFinoraControlCenterSigningKeyIdFromPublicKeyFingerprint(
+  publicKeyFingerprint:
+    string,
+): string {
+
+  if (
+    !/^[0-9a-f]{64}$/.test(
+      publicKeyFingerprint,
+    )
+  ) {
+    throw new Error(
+      "FINORA Control Center signing-key fingerprint must be canonical lowercase SHA-256 hex.",
+    );
+  }
+
+  return (
+    `FINORA-KEY-${publicKeyFingerprint
+      .slice(
+        0,
+        24,
+      )
+      .toUpperCase()}`
+  );
+}
+
 function createSigningKeyId(
   publicKeyDer:
     Buffer,
 ): string {
 
-  const digest =
+  const publicKeyFingerprint =
     createHash(
       "sha256",
     )
@@ -69,14 +94,11 @@ function createSigningKeyId(
       )
       .digest(
         "hex",
-      )
-      .slice(
-        0,
-        24,
-      )
-      .toUpperCase();
+      );
 
-  return `FINORA-KEY-${digest}`;
+  return createFinoraControlCenterSigningKeyIdFromPublicKeyFingerprint(
+    publicKeyFingerprint,
+  );
 }
 
 // ============================================================

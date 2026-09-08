@@ -232,7 +232,7 @@ export async function applyFinoraSignedWalletRechargePackage(
     readonly FinoraBranchTrustedControlPublicKey[],
 
   now:
-    Date = new Date(),
+    Date,
 ): Promise<
   FinoraControlStoreResult<
     FinoraVerifiedWalletRechargeApplyResult
