@@ -69,13 +69,7 @@ import {
   openFinoraRecipientTrustRecoveryWindow,
 } from "./control/finoraRecipientTrustRecoveryWindow.js";
 
-import {
-  registerFinoraControlCenterHandlers,
-} from "./control-center/finoraControlCenterIpc.js";
 
-import {
-  openFinoraControlCenterWindow,
-} from "./control-center/finoraControlCenterWindow.js";
 import {
   runFinoraDevelopmentProvisioning,
 } from "./control/finoraDevProvisioning.js";
@@ -1538,7 +1532,23 @@ app.whenReady().then(async () => {
       isTrustedRenderer,
     );
 
-    registerFinoraControlCenterHandlers();
+    // --------------------------------------------------------
+    // DEVELOPMENT-ONLY CONTROL CENTER AUTHORITY
+    //
+    // Recipient production packages must not load issuer-side
+    // Control Center authority modules.
+    // --------------------------------------------------------
+
+    if (!app.isPackaged) {
+      const {
+        registerFinoraControlCenterHandlers,
+      } =
+        await import(
+          "./control-center/finoraControlCenterIpc.js"
+        );
+
+      registerFinoraControlCenterHandlers();
+    }
 
     registerFinoraNotificationArtifactHandlers(
       isTrustedRenderer,
@@ -1565,6 +1575,13 @@ app.whenReady().then(async () => {
       process.env.FINORA_DEV_OPEN_CONTROL_CENTER ===
         "1"
     ) {
+      const {
+        openFinoraControlCenterWindow,
+      } =
+        await import(
+          "./control-center/finoraControlCenterWindow.js"
+        );
+
       await openFinoraControlCenterWindow();
     }
 

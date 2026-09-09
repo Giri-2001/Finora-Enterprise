@@ -3,6 +3,9 @@ package com.finora.enterprise;
 import android.os.Bundle;
 
 import com.finora.enterprise.control.FinoraControlPlugin;
+import com.finora.enterprise.control.FinoraControlBundleImportPlugin;
+import com.finora.enterprise.control.FinoraRecipientTrustTransitionImportPlugin;
+import com.finora.enterprise.control.FinoraRecipientTrustRecoveryImportPlugin;
 import com.finora.enterprise.control.FinoraDevProvisioning;
 import com.finora.enterprise.control.FinoraInstallationBindingCrypto;
 import com.finora.enterprise.control.FinoraInstallationBindingService;
@@ -24,6 +27,18 @@ public class MainActivity
          */
         registerPlugin(
             FinoraControlPlugin.class
+        );
+
+        registerPlugin(
+            FinoraControlBundleImportPlugin.class
+        );
+
+        registerPlugin(
+            FinoraRecipientTrustTransitionImportPlugin.class
+        );
+
+        registerPlugin(
+            FinoraRecipientTrustRecoveryImportPlugin.class
         );
 
         registerPlugin(
