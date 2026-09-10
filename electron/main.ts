@@ -454,7 +454,8 @@ async function findFinoraUsbRoot(forceRefresh = false): Promise<string | null> {
   // ----------------------------------------------------------
   // FAST PATH
   //
-  // No PowerShell process is created here.
+  // No PowerShell process is created while the cached root is
+  // still inside the normal revalidation window.
   // ----------------------------------------------------------
 
   if (
@@ -466,10 +467,58 @@ async function findFinoraUsbRoot(forceRefresh = false): Promise<string | null> {
   }
 
   // ----------------------------------------------------------
-  // CACHE MISS / EXPIRED CACHE
+  // PERIODIC RE-DETECTION
+  //
+  // Preserve the last known removable root before invoking
+  // PowerShell. Get-Volume is an external system dependency and
+  // a transient timeout / empty result must not turn an already
+  // accessible FINORA Pendrive into a false DISCONNECTED state.
   // ----------------------------------------------------------
 
-  return detectAndCacheUsbRoot();
+  const previousCachedRoot =
+    !forceRefresh
+      ? cachedUsbRoot
+      : null;
+
+  const detectedRoot =
+    await detectAndCacheUsbRoot();
+
+  if (
+    detectedRoot ||
+    forceRefresh ||
+    !previousCachedRoot
+  ) {
+    return detectedRoot;
+  }
+
+  // ----------------------------------------------------------
+  // TRANSIENT DETECTION FALLBACK
+  //
+  // Re-detection returned no removable root, but a previously
+  // trusted root existed. Verify that exact filesystem root is
+  // still accessible before retaining it.
+  //
+  // Actual device removal still fails closed:
+  // filesystem access fails -> cache invalidated -> null.
+  //
+  // No renderer path is accepted and there is no LOCAL fallback.
+  // ----------------------------------------------------------
+
+  try {
+    await fs.access(previousCachedRoot);
+
+    cachedUsbRoot =
+      previousCachedRoot;
+
+    cachedUsbRootAt =
+      Date.now();
+
+    return previousCachedRoot;
+  } catch {
+    invalidateUsbRootCache();
+
+    return null;
+  }
 }
 
 // ============================================================
