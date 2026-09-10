@@ -107,6 +107,9 @@ function resolvePaymentSource(
     case "PAYTM":
       return "PAYTM" as const;
 
+    case "OTHER":
+      return "MANUAL" as const;
+
     default:
       return "UPI" as const;
   }
@@ -169,6 +172,13 @@ export default function WalletPage({
   ] = useState(
     false,
   );
+  const [
+    importingControlBundle,
+    setImportingControlBundle,
+  ] = useState(
+    false,
+  );
+
   const [
     pendingRechargeReference,
     setPendingRechargeReference,
@@ -482,6 +492,106 @@ export default function WalletPage({
   }
 
   /* ==========================================================
+     IMPORT SIGNED RECHARGE AUTHORIZATION
+
+     SECURITY:
+
+     - Renderer never receives or supplies a filesystem path.
+     - Native Control Bundle transport owns file selection.
+     - Main process owns recipient trust + signature verification.
+     - Wallet credit still occurs only through the existing
+       signed Recharge resume / verification pipeline.
+  ========================================================== */
+
+  async function handleImportSignedRecharge():
+    Promise<void> {
+
+    if (
+      importingControlBundle ||
+      loading ||
+      recharging ||
+      cancellingRecharge
+    ) {
+      return;
+    }
+
+    setImportingControlBundle(
+      true,
+    );
+
+    setError(
+      null,
+    );
+
+    const processingId =
+      startFinoraProcessing(
+        "Importing Signed Wallet Recharge...",
+      );
+
+    try {
+
+      const importControlBundle =
+        window.finora?.control
+          ?.importControlBundle;
+
+      if (
+        typeof importControlBundle !==
+          "function"
+      ) {
+        setError(
+          "FINORA signed Recharge import is unavailable in this application build.",
+        );
+
+        return;
+      }
+
+      const result =
+        await importControlBundle();
+
+      if (!result.success) {
+        setError(
+          result.error ??
+            "Unable to import the signed FINORA Recharge package.",
+        );
+
+        return;
+      }
+
+      if (result.cancelled) {
+        return;
+      }
+
+      /*
+       * Import only establishes native-verified Control authority.
+       *
+       * loadWorkspace() then executes the existing
+       * resumeSignedWalletRecharge() path, which requires the
+       * exact pending payment intent / signed authorization match
+       * before any Wallet financial mutation can occur.
+       */
+      await loadWorkspace();
+
+    } catch (error) {
+
+      setError(
+        error instanceof Error
+          ? error.message
+          : "Unable to import the signed FINORA Recharge package.",
+      );
+
+    } finally {
+
+      stopFinoraProcessing(
+        processingId,
+      );
+
+      setImportingControlBundle(
+        false,
+      );
+    }
+  }
+
+  /* ==========================================================
      CANCEL PENDING RECHARGE REQUEST
   ========================================================== */
 
@@ -583,7 +693,12 @@ export default function WalletPage({
             onClick={() => {
               void loadWorkspace();
             }}
-            disabled={loading || recharging || cancellingRecharge}
+            disabled={
+              loading ||
+              recharging ||
+              cancellingRecharge ||
+              importingControlBundle
+            }
             aria-label="Refresh FINORA Wallet"
             style={styles.refreshButton}
           >
@@ -657,12 +772,31 @@ export default function WalletPage({
                   <button
                     type="button"
                     onClick={() => {
+                      void handleImportSignedRecharge();
+                    }}
+                    disabled={
+                      importingControlBundle ||
+                      cancellingRecharge ||
+                      recharging ||
+                      loading
+                    }
+                    style={styles.retryButton}
+                  >
+                    {importingControlBundle
+                      ? "Importing..."
+                      : "Import Signed Recharge"}
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
                       void handleCancelPendingRecharge();
                     }}
                     disabled={
                       cancellingRecharge ||
                       recharging ||
-                      loading
+                      loading ||
+                      importingControlBundle
                     }
                     style={styles.retryButton}
                   >

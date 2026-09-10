@@ -121,6 +121,14 @@ const PAYMENT_METHODS:
       label:
         "UPI",
     },
+
+    {
+      value:
+        "OTHER",
+
+      label:
+        "Cash / Manual",
+    },
   ];
 
 /* ============================================================
