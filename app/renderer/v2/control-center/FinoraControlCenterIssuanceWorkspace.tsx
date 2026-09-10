@@ -1883,7 +1883,7 @@ export default function FinoraControlCenterIssuanceWorkspace() {
             opacity: 0.62,
           }}
         >
-          Available signed packages: {availableBundlePackageCount} / 5
+          Available signed packages: {availableBundlePackageCount} / {WORKFLOWS.length}
         </p>
 
         {availableBundlePackageCount === 0 && (
@@ -2437,9 +2437,8 @@ export default function FinoraControlCenterIssuanceWorkspace() {
                       opacity: 0.58,
                     }}
                   >
-                    Signed package display only. Control Bundle inclusion
-                    remains intentionally disabled until Branch Activation
-                    access-state ownership is split.
+                    Signed package display only. Use the workspace-level Export
+                    .finora action to bundle currently issued packages.
                   </p>
                 </>
               )}

@@ -566,11 +566,14 @@ export function getLoginStyles(
     minHeight:
       "100vh",
 
+    height:
+      "100vh",
+
     display:
       "flex",
 
     alignItems:
-      "center",
+      "flex-start",
 
     justifyContent:
       "center",
@@ -587,7 +590,10 @@ export function getLoginStyles(
     fontFamily:
       "Segoe UI, Inter, system-ui, -apple-system, BlinkMacSystemFont, sans-serif",
 
-    overflow:
+    overflowX:
+      "hidden",
+
+    overflowY:
       "auto",
 
   };
@@ -610,6 +616,12 @@ export function getLoginStyles(
 
     minWidth:
       0,
+
+    marginTop:
+      "auto",
+
+    marginBottom:
+      "auto",
 
     paddingTop:
       spacingTokens.small,

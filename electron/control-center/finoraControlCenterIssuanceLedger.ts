@@ -235,6 +235,8 @@ function isIssuancePurpose(
     value ===
       "BRANCH_ACTIVATION" ||
     value ===
+      "BRANCH_ACCESS" ||
+    value ===
       "STORAGE_ENTITLEMENT" ||
     value ===
       "BUSINESS_PROFILE" ||
