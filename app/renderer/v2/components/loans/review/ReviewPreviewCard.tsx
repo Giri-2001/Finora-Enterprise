@@ -21,6 +21,8 @@
 
 import { useResponsive } from "../../../utils/responsive";
 
+import { formatRupee } from "../../../utils/currency/formatCurrency";
+
 import SummaryCard from "../../common/cards/SummaryCard";
 
 import type { LoanReviewData } from "./types";
@@ -106,7 +108,7 @@ export default function ReviewPreviewCard({
             <span style={labelStyle}>Loan Amount</span>
 
             <strong style={valueStyle}>
-              ₹ {review.loanAmount}
+              {formatRupee(review.loanAmount)}
             </strong>
           </div>
 
@@ -155,7 +157,9 @@ export default function ReviewPreviewCard({
 
             <strong style={valueStyle}>
               {review.installmentAmount > 0
-                ? `₹ ${review.installmentAmount.toLocaleString("en-IN")}`
+                ? formatRupee(
+                    review.installmentAmount,
+                  )
                 : "--"}
             </strong>
           </div>

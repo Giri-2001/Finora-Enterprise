@@ -64,6 +64,18 @@ import {
 } from "./finoraControlBundleImportCoordinator.js";
 
 import {
+  exportFinoraInstallationEnrollmentRequestFromNativeDialog,
+} from "./finoraInstallationEnrollmentRequestFileTransport.js";
+
+import {
+  openVerifiedFinoraInstallationEnrollmentResponse,
+} from "./finoraInstallationEnrollmentResponseFileTransport.js";
+
+import {
+  applyVerifiedFinoraInstallationEnrollmentResponse,
+} from "./finoraInstallationEnrollmentBootstrapCoordinator.js";
+
+import {
   evaluateFinoraAuthoritativeBranchAccess,
 } from "./finoraBranchAccessAuthorityService.js";
 
@@ -92,6 +104,12 @@ const CONTROL_IPC_CHANNELS = {
 
   HAS_ACTIVE_STORAGE_ENTITLEMENT:
     "finora:control:has-active-storage-entitlement",
+
+  EXPORT_INSTALLATION_ENROLLMENT_REQUEST:
+    "finora:control:export-installation-enrollment-request",
+
+  IMPORT_INSTALLATION_ENROLLMENT_RESPONSE:
+    "finora:control:import-installation-enrollment-response",
 
   IMPORT_CONTROL_BUNDLE:
     "finora:control:import-control-bundle",
@@ -937,6 +955,214 @@ export function registerFinoraControlHandlers(
             nativeBinding.publicKeyFingerprint,
         },
       );
+    },
+  );
+
+  // ----------------------------------------------------------
+  // INSTALLATION ENROLLMENT REQUEST EXPORT
+  //
+  // SECURITY:
+  //
+  // - Zero renderer arguments.
+  // - Renderer supplies no filesystem path.
+  // - Renderer supplies no enrollment payload.
+  // - Renderer supplies no signature.
+  // - Native main process generates the possession proof.
+  // - Native main process owns the Save dialog.
+  // - Trusted application main frame only.
+  // ----------------------------------------------------------
+
+  ipcMain.handle(
+    CONTROL_IPC_CHANNELS.EXPORT_INSTALLATION_ENROLLMENT_REQUEST,
+    async (event) => {
+
+      if (
+        !isTrustedRenderer(
+          event.senderFrame,
+        )
+      ) {
+        return failure(
+          "FINORA Installation Enrollment Request export is restricted to the trusted renderer.",
+        );
+      }
+
+      const parentWindow =
+        BrowserWindow.fromWebContents(
+          event.sender,
+        );
+
+      if (
+        !parentWindow ||
+        parentWindow.isDestroyed()
+      ) {
+        return failure(
+          "The FINORA application window is not available for Installation Enrollment Request export.",
+        );
+      }
+
+      if (
+        event.senderFrame !==
+          parentWindow.webContents.mainFrame
+      ) {
+        return failure(
+          "FINORA Installation Enrollment Request export is restricted to the trusted application main frame.",
+        );
+      }
+
+      return exportFinoraInstallationEnrollmentRequestFromNativeDialog(
+        parentWindow,
+      );
+    },
+  );
+
+  // ----------------------------------------------------------
+  // INSTALLATION ENROLLMENT RESPONSE — IMPORT + BOOTSTRAP
+  //
+  // SECURITY:
+  //
+  // - Renderer supplies only the independently known Control
+  //   Center SHA-256 fingerprint.
+  // - Renderer supplies no filepath.
+  // - Renderer supplies no signed response bytes.
+  // - Renderer supplies no trusted key.
+  // - Renderer supplies no installation identity.
+  // - Native main process owns file selection and verification.
+  // - Verified response never crosses into renderer state.
+  // - Bootstrap mutation remains entirely main-process owned.
+  // ----------------------------------------------------------
+
+  ipcMain.handle(
+    CONTROL_IPC_CHANNELS.IMPORT_INSTALLATION_ENROLLMENT_RESPONSE,
+    async (
+      event,
+      expectedControlCenterPublicKeyFingerprint:
+        unknown,
+    ) => {
+
+      if (
+        !isTrustedRenderer(
+          event.senderFrame,
+        )
+      ) {
+        return failure(
+          "FINORA Installation Enrollment Response import is restricted to the trusted renderer.",
+        );
+      }
+
+      const parentWindow =
+        BrowserWindow.fromWebContents(
+          event.sender,
+        );
+
+      if (
+        !parentWindow ||
+        parentWindow.isDestroyed()
+      ) {
+        return failure(
+          "The FINORA application window is not available for Installation Enrollment Response import.",
+        );
+      }
+
+      if (
+        event.senderFrame !==
+          parentWindow.webContents.mainFrame
+      ) {
+        return failure(
+          "FINORA Installation Enrollment Response import is restricted to the trusted application main frame.",
+        );
+      }
+
+      if (
+        typeof expectedControlCenterPublicKeyFingerprint !==
+          "string" ||
+        !/^[0-9a-f]{64}$/.test(
+          expectedControlCenterPublicKeyFingerprint,
+        )
+      ) {
+        return failure(
+          "Enter the independently supplied lowercase 64-character FINORA Control Center SHA-256 fingerprint.",
+        );
+      }
+
+      const openResult =
+        await openVerifiedFinoraInstallationEnrollmentResponse(
+          parentWindow,
+          expectedControlCenterPublicKeyFingerprint,
+        );
+
+      if (!openResult.success) {
+        return failure(
+          openResult.error,
+        );
+      }
+
+      if (openResult.cancelled) {
+        return {
+          success:
+            true,
+
+          cancelled:
+            true as const,
+        };
+      }
+
+      const applyResult =
+        await applyVerifiedFinoraInstallationEnrollmentResponse(
+          openResult.response,
+        );
+
+      if (!applyResult.success) {
+        return failure(
+          applyResult.error,
+        );
+      }
+
+      return {
+        success:
+          true,
+
+        cancelled:
+          false as const,
+
+        fileName:
+          openResult.fileName,
+
+        bytesRead:
+          openResult.bytesRead,
+
+        responseId:
+          applyResult.data.responseId,
+
+        requestId:
+          applyResult.data.requestId,
+
+        installationId:
+          applyResult.data.installationId,
+
+        ownerId:
+          applyResult.data.ownerId,
+
+        businessId:
+          applyResult.data.businessId,
+
+        branchId:
+          applyResult.data.branchId,
+
+        businessCode:
+          applyResult.data.businessCode,
+
+        branchCode:
+          applyResult.data.branchCode,
+
+        trustRecovered:
+          applyResult.data.trustRecovered,
+
+        installationRecovered:
+          applyResult.data.installationRecovered,
+
+        completedAt:
+          applyResult.data.completedAt,
+      };
     },
   );
 

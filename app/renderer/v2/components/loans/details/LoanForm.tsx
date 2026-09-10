@@ -42,6 +42,8 @@ import type { ChangeEvent } from "react";
 
 import { useResponsive } from "../../../utils/responsive";
 
+import { formatCurrency } from "../../../utils/currency/formatCurrency";
+
 /* ============================================================
    STEP 1 RESPONSIVE TOKEN ENGINE
 ============================================================ */
@@ -141,9 +143,9 @@ const formatIndianInteger = (value: string): string => {
     return "";
   }
 
-  return new Intl.NumberFormat("en-IN", {
-    maximumFractionDigits: 0,
-  }).format(Number(digits));
+  return formatCurrency(
+    Number(digits),
+  );
 };
 
 /* ============================================================

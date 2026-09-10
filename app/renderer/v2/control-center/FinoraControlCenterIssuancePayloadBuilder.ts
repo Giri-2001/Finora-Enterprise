@@ -28,6 +28,7 @@ import type {
 
 import type {
   FinoraBranchActivationFormDraft,
+  FinoraBranchAccessFormDraft,
   FinoraBusinessProfileFormDraft,
   FinoraControlCenterTargetDraft,
   FinoraPricingPolicyFormDraft,
@@ -371,30 +372,7 @@ function buildTarget(
   };
 }
 
-function deriveAdministrativeStatus(
-  draft:
-    FinoraBranchActivationFormDraft,
-):
-  | "ACTIVE"
-  | "SUSPENDED"
-  | "REVOKED" {
 
-  switch (draft.action) {
-    case "ISSUE":
-    case "RESUME":
-      return "ACTIVE";
-
-    case "SUSPEND":
-      return "SUSPENDED";
-
-    case "REVOKE":
-      return "REVOKED";
-
-    case "RENEW":
-    case "REPLACE":
-      return draft.administrativeStatus;
-  }
-}
 
 /* ============================================================
    BRANCH ACTIVATION
@@ -467,6 +445,49 @@ export function buildFinoraBranchActivationIssuanceRequest(
       1 as const,
   };
 
+  return {
+    target,
+
+    payload: {
+      action:
+        "ISSUE",
+
+      activation,
+
+      installationBinding: {
+        installationId:
+          target.installationId,
+
+        bindingKeyId:
+          target.bindingKeyId,
+
+        fingerprintAlgorithm:
+          target.fingerprintAlgorithm,
+
+        publicKeyFingerprint:
+          target.publicKeyFingerprint,
+      },
+
+      schemaVersion:
+        1,
+    },
+  };
+}
+
+/* ============================================================
+   BRANCH ACCESS
+============================================================ */
+
+export function buildFinoraBranchAccessIssuanceRequest(
+  draft:
+    FinoraBranchAccessFormDraft,
+): FinoraControlCenterBuiltIssuanceRequest {
+
+  const target =
+    buildTarget(
+      draft.target,
+    );
+
   const validFrom =
     canonicalTimestamp(
       draft.validFrom,
@@ -490,6 +511,35 @@ export function buildFinoraBranchActivationIssuanceRequest(
     throw new Error(
       "Access Valid Until must be later than Access Valid From.",
     );
+  }
+
+  let administrativeStatus:
+    | "ACTIVE"
+    | "SUSPENDED"
+    | "REVOKED";
+
+  switch (draft.action) {
+    case "ISSUE":
+    case "RESUME":
+      administrativeStatus =
+        "ACTIVE";
+      break;
+
+    case "SUSPEND":
+      administrativeStatus =
+        "SUSPENDED";
+      break;
+
+    case "REVOKE":
+      administrativeStatus =
+        "REVOKED";
+      break;
+
+    case "RENEW":
+    case "REPLACE":
+      administrativeStatus =
+        draft.administrativeStatus;
+      break;
   }
 
   const grantBase = {
@@ -517,10 +567,7 @@ export function buildFinoraBranchActivationIssuanceRequest(
     storageMode:
       draft.storageMode,
 
-    administrativeStatus:
-      deriveAdministrativeStatus(
-        draft,
-      ),
+    administrativeStatus,
 
     validity: {
       validFrom,
@@ -550,6 +597,7 @@ export function buildFinoraBranchActivationIssuanceRequest(
     draft.accessType ===
       "REGISTERED"
   ) {
+
     if (
       Date.parse(
         validUntil,
@@ -637,7 +685,9 @@ export function buildFinoraBranchActivationIssuanceRequest(
 
       registrationCycle,
     };
+
   } else {
+
     if (
       draft.action ===
         "RENEW"
@@ -675,6 +725,111 @@ export function buildFinoraBranchActivationIssuanceRequest(
     };
   }
 
+  let credentialEnrollment:
+    Record<string, unknown> |
+    undefined;
+
+  if (
+    draft.credentialEnrollmentEnabled
+  ) {
+
+    if (
+      draft.action !==
+        "ISSUE"
+    ) {
+      throw new Error(
+        "Credential enrollment authorization is permitted only with ISSUE.",
+      );
+    }
+
+    if (
+      draft.credentialRole !==
+        "ADMIN" &&
+      draft.credentialRole !==
+        "MANAGER" &&
+      draft.credentialRole !==
+        "COLLECTOR" &&
+      draft.credentialRole !==
+        "VIEWER"
+    ) {
+      throw new Error(
+        "A valid Branch Access credential role is required.",
+      );
+    }
+
+    const credentialBase = {
+      authorizationId:
+        requiredString(
+          draft.credentialAuthorizationId,
+          "Credential Authorization ID",
+        ),
+
+      userId:
+        requiredString(
+          draft.userId,
+          "User ID",
+        ),
+
+      username:
+        requiredString(
+          draft.credentialUsername,
+          "Credential Username",
+        ),
+
+      fullName:
+        requiredString(
+          draft.credentialFullName,
+          "Credential Full Name",
+        ),
+
+      role:
+        draft.credentialRole,
+
+      ownerId:
+        target.ownerId,
+
+      businessId:
+        target.businessId,
+
+      branchId:
+        target.branchId,
+
+      storageMode:
+        draft.storageMode,
+
+      method:
+        "SET_PASSWORD_ON_RECIPIENT" as const,
+
+      oneTime:
+        true as const,
+
+      schemaVersion:
+        1 as const,
+    };
+
+    credentialEnrollment =
+      draft.accessType ===
+        "DEMO"
+        ? {
+            ...credentialBase,
+
+            dataContext:
+              "DEMO",
+
+            demoId:
+              requiredString(
+                draft.demoId,
+                "Demo ID",
+              ),
+          }
+        : {
+            ...credentialBase,
+
+            dataContext:
+              "REAL",
+          };
+  }
+
   return {
     target,
 
@@ -682,30 +837,27 @@ export function buildFinoraBranchActivationIssuanceRequest(
       action:
         draft.action,
 
-      activation,
-
       accessGrant,
 
-      installationBinding: {
-        installationId:
-          target.installationId,
+      ...(
+        credentialEnrollment ===
+          undefined
+          ? {}
+          : {
+              credentialEnrollment,
+            }
+      ),
 
-        bindingKeyId:
-          target.bindingKeyId,
-
-        fingerprintAlgorithm:
-          target.fingerprintAlgorithm,
-
-        publicKeyFingerprint:
-          target.publicKeyFingerprint,
-      },
-
+      /*
+       * Root payload.issuedAt is deliberately absent.
+       * The privileged main-process issuance coordinator
+       * injects the authoritative timestamp before signing.
+       */
       schemaVersion:
         1,
     },
   };
 }
-
 /* ============================================================
    STORAGE ENTITLEMENT
 ============================================================ */

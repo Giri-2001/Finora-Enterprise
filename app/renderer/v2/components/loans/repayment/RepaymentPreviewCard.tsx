@@ -8,6 +8,8 @@ import SummaryCard from "../../common/cards/SummaryCard";
 
 import { useResponsive } from "../../../utils/responsive";
 
+import { formatCurrency } from "../../../utils/currency/formatCurrency";
+
 import {
   createRepaymentPreviewCardStyles,
 } from "./RepaymentPreviewCard.styles";
@@ -31,7 +33,9 @@ interface RepaymentPreviewCardProps {
 =========================================================== */
 
 function formatAmount(value: number): string {
-  return Math.round(value).toLocaleString("en-IN");
+  return formatCurrency(
+    value,
+  );
 }
 
 function formatRepaymentMethod(value?: string): string {

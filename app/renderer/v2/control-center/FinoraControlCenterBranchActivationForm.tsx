@@ -3,13 +3,9 @@ import {
 } from "react";
 
 import type {
-  FinoraBranchAccessAdministrativeStatusDraft,
-  FinoraBranchAccessTypeDraft,
   FinoraBranchActivationActionDraft,
   FinoraBranchActivationFormDraft,
   FinoraControlCenterTargetDraft,
-  FinoraRegistrationPaymentModeDraft,
-  FinoraStorageModeDraft,
 } from "./FinoraControlCenterIssuanceForm.types";
 
 /* ===========================================================
@@ -22,7 +18,7 @@ import type {
 
    - Own renderer-editable Branch Activation draft fields
    - Reuse the authoritative shared signed-package target
-   - Separate REGISTERED and DEMO commercial inputs
+   - Keep Branch Activation separate from Branch Access issuance
    - Keep package envelope authority out of renderer form state
 
    NOT RESPONSIBLE FOR:
@@ -279,54 +275,6 @@ export default function FinoraControlCenterBranchActivationForm({
 
     activationUpdatedAt:
       "",
-
-    grantId:
-      "",
-
-    userId:
-      "",
-
-    storageMode:
-      "LOCAL",
-
-    administrativeStatus:
-      "ACTIVE",
-
-    accessType:
-      "REGISTERED",
-
-    validFrom:
-      "",
-
-    validUntil:
-      "",
-
-    grantCreatedAt:
-      "",
-
-    grantUpdatedAt:
-      "",
-
-    registrationCycle:
-      "1",
-
-    registrationPaymentMode:
-      "CASH",
-
-    registrationPaidAt:
-      "",
-
-    registrationPaymentReference:
-      "",
-
-    registrationPaymentRemarks:
-      "",
-
-    demoId:
-      "",
-
-    demoRemarks:
-      "",
   });
 
   function update<
@@ -350,10 +298,6 @@ export default function FinoraControlCenterBranchActivationForm({
       }),
     );
   }
-
-  const registered =
-    draft.accessType ===
-      "REGISTERED";
 
   return (
     <section
@@ -398,7 +342,7 @@ export default function FinoraControlCenterBranchActivationForm({
               0.7,
           }}
         >
-          Configure the activation lifecycle and Branch Access grant for the shared signed-package target.
+          Prepare the initial ACTIVE Branch Activation for the shared signed-package target. Branch Access is issued separately.
         </p>
       </header>
 
@@ -417,34 +361,12 @@ export default function FinoraControlCenterBranchActivationForm({
           value={draft.action}
           options={[
             "ISSUE",
-            "RENEW",
-            "REPLACE",
-            "SUSPEND",
-            "RESUME",
-            "REVOKE",
           ]}
           onChange={(
             value,
           ) => {
             update(
               "action",
-              value,
-            );
-          }}
-        />
-
-        <SelectField<FinoraBranchAccessTypeDraft>
-          label="Access Type"
-          value={draft.accessType}
-          options={[
-            "REGISTERED",
-            "DEMO",
-          ]}
-          onChange={(
-            value,
-          ) => {
-            update(
-              "accessType",
               value,
             );
           }}
@@ -459,69 +381,6 @@ export default function FinoraControlCenterBranchActivationForm({
           ) => {
             update(
               "activationId",
-              value,
-            );
-          }}
-        />
-
-        <Field
-          label="Grant ID"
-          value={draft.grantId}
-          placeholder="GRANT-..."
-          onChange={(
-            value,
-          ) => {
-            update(
-              "grantId",
-              value,
-            );
-          }}
-        />
-
-        <Field
-          label="User ID"
-          value={draft.userId}
-          placeholder="USER-..."
-          onChange={(
-            value,
-          ) => {
-            update(
-              "userId",
-              value,
-            );
-          }}
-        />
-
-        <SelectField<FinoraStorageModeDraft>
-          label="Storage Mode"
-          value={draft.storageMode}
-          options={[
-            "LOCAL",
-            "USB",
-          ]}
-          onChange={(
-            value,
-          ) => {
-            update(
-              "storageMode",
-              value,
-            );
-          }}
-        />
-
-        <SelectField<FinoraBranchAccessAdministrativeStatusDraft>
-          label="Administrative Status"
-          value={draft.administrativeStatus}
-          options={[
-            "ACTIVE",
-            "SUSPENDED",
-            "REVOKED",
-          ]}
-          onChange={(
-            value,
-          ) => {
-            update(
-              "administrativeStatus",
               value,
             );
           }}
@@ -568,260 +427,7 @@ export default function FinoraControlCenterBranchActivationForm({
             );
           }}
         />
-
-        <Field
-          label="Access Valid From"
-          type="datetime-local"
-          value={draft.validFrom}
-          onChange={(
-            value,
-          ) => {
-            update(
-              "validFrom",
-              value,
-            );
-          }}
-        />
-
-        <Field
-          label="Access Valid Until"
-          type="datetime-local"
-          value={draft.validUntil}
-          onChange={(
-            value,
-          ) => {
-            update(
-              "validUntil",
-              value,
-            );
-          }}
-        />
-
-        <Field
-          label="Grant Created At"
-          type="datetime-local"
-          value={draft.grantCreatedAt}
-          onChange={(
-            value,
-          ) => {
-            update(
-              "grantCreatedAt",
-              value,
-            );
-          }}
-        />
-
-        <Field
-          label="Grant Updated At"
-          type="datetime-local"
-          value={draft.grantUpdatedAt}
-          onChange={(
-            value,
-          ) => {
-            update(
-              "grantUpdatedAt",
-              value,
-            );
-          }}
-        />
       </div>
-
-      {registered ? (
-        <section
-          style={{
-            marginTop:
-              "20px",
-          }}
-        >
-          <h4
-            style={{
-              margin:
-                "0 0 14px",
-              fontSize:
-                "13px",
-              fontWeight:
-                650,
-            }}
-          >
-            Registration Payment
-          </h4>
-
-          <div
-            style={{
-              display:
-                "grid",
-              gridTemplateColumns:
-                "repeat(2, minmax(0, 1fr))",
-              gap:
-                "14px",
-            }}
-          >
-            <Field
-              label="Registration Cycle"
-              type="number"
-              value={draft.registrationCycle}
-              onChange={(
-                value,
-              ) => {
-                update(
-                  "registrationCycle",
-                  value,
-                );
-              }}
-            />
-
-            <SelectField<FinoraRegistrationPaymentModeDraft>
-              label="Payment Mode"
-              value={draft.registrationPaymentMode}
-              options={[
-                "CASH",
-                "UPI",
-                "BANK_TRANSFER",
-                "OTHER",
-              ]}
-              onChange={(
-                value,
-              ) => {
-                update(
-                  "registrationPaymentMode",
-                  value,
-                );
-              }}
-            />
-
-            <Field
-              label="Paid At"
-              type="datetime-local"
-              value={draft.registrationPaidAt}
-              onChange={(
-                value,
-              ) => {
-                update(
-                  "registrationPaidAt",
-                  value,
-                );
-              }}
-            />
-
-            <Field
-              label="Payment Reference"
-              value={draft.registrationPaymentReference}
-              placeholder="Optional"
-              onChange={(
-                value,
-              ) => {
-                update(
-                  "registrationPaymentReference",
-                  value,
-                );
-              }}
-            />
-
-            <Field
-              label="Payment Remarks"
-              value={draft.registrationPaymentRemarks}
-              placeholder="Optional"
-              onChange={(
-                value,
-              ) => {
-                update(
-                  "registrationPaymentRemarks",
-                  value,
-                );
-              }}
-            />
-
-            <div
-              style={{
-                alignSelf:
-                  "end",
-                minHeight:
-                  "42px",
-                display:
-                  "flex",
-                alignItems:
-                  "center",
-                border:
-                  "1px solid rgba(148, 163, 184, 0.2)",
-                borderRadius:
-                  "9px",
-                padding:
-                  "9px 11px",
-                boxSizing:
-                  "border-box",
-                fontSize:
-                  "12px",
-                color:
-                  "#cbd5e1",
-                background:
-                  "rgba(30, 41, 59, 0.54)",
-              }}
-            >
-              Registration Fee: 2000 INR · Non-refundable
-            </div>
-          </div>
-        </section>
-      ) : (
-        <section
-          style={{
-            marginTop:
-              "20px",
-          }}
-        >
-          <h4
-            style={{
-              margin:
-                "0 0 14px",
-              fontSize:
-                "13px",
-              fontWeight:
-                650,
-            }}
-          >
-            Demo Access
-          </h4>
-
-          <div
-            style={{
-              display:
-                "grid",
-              gridTemplateColumns:
-                "repeat(2, minmax(0, 1fr))",
-              gap:
-                "14px",
-            }}
-          >
-            <Field
-              label="Demo ID"
-              value={draft.demoId}
-              placeholder="DEMO-..."
-              onChange={(
-                value,
-              ) => {
-                update(
-                  "demoId",
-                  value,
-                );
-              }}
-            />
-
-            <Field
-              label="Demo Remarks"
-              value={draft.demoRemarks}
-              placeholder="Optional"
-              onChange={(
-                value,
-              ) => {
-                update(
-                  "demoRemarks",
-                  value,
-                );
-              }}
-            />
-          </div>
-        </section>
-      )}
-
       <div
         style={{
           display:

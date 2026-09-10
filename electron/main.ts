@@ -52,6 +52,12 @@ import { randomUUID } from "node:crypto";
 import {
   registerFinoraControlHandlers,
 } from "./control/finoraControlIpc.js";
+import {
+  registerFinoraBranchCredentialHandlers,
+} from "./control/finoraBranchCredentialIpc.js";
+import {
+  registerFinoraBranchLoginSessionHandlers,
+} from "./control/finoraBranchLoginSessionIpc.js";
 
 import {
   registerFinoraRecipientTrustMaintenanceHandlers,
@@ -1529,6 +1535,12 @@ app.whenReady().then(async () => {
     registerUsbStorageHandlers();
 
     registerFinoraControlHandlers(
+      isTrustedRenderer,
+    );
+    registerFinoraBranchCredentialHandlers(
+      isTrustedRenderer,
+    );
+    registerFinoraBranchLoginSessionHandlers(
       isTrustedRenderer,
     );
 

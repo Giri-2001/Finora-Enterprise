@@ -379,6 +379,34 @@ export default function FinoraControlCenterShell() {
                 {trustRecord.format}
               </dd>
 
+                <dt>
+                  Control Center Signing Key SHA-256 Fingerprint
+                </dt>
+                <dd
+                  style={{
+                    margin:
+                      0,
+                    overflowWrap:
+                      "anywhere",
+                    fontFamily:
+                      "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace",
+                  }}
+                >
+                  {trustRecord.publicKeyFingerprint}
+                </dd>
+
+                <dt>
+                  Fingerprint Algorithm
+                </dt>
+                <dd
+                  style={{
+                    margin:
+                      0,
+                  }}
+                >
+                  {trustRecord.fingerprintAlgorithm}
+                </dd>
+
               <dt>
                 Created At
               </dt>

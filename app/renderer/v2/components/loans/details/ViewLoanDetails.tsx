@@ -53,6 +53,8 @@ import type { GoldStorageSearchResult } from "../../../types/gold-loan/goldStora
 
 import { useTheme } from "../../../themes/provider/ThemeProvider";
 
+import { formatRupee } from "../../../utils/currency/formatCurrency";
+
 import {
   responsiveMediaQuery,
   pageStyle,
@@ -138,13 +140,9 @@ function safeNumber(value: number | undefined): number {
 // ============================================================
 
 function formatCurrency(value: number | undefined): string {
-  return new Intl.NumberFormat("en-IN", {
-    style: "currency",
-
-    currency: "INR",
-
-    maximumFractionDigits: 0,
-  }).format(safeNumber(value));
+  return formatRupee(
+    safeNumber(value),
+  );
 }
 
 // ============================================================

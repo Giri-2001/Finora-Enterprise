@@ -364,6 +364,55 @@ function createBranchActivationPayload(
         1,
     },
 
+    installationBinding: {
+
+      installationId:
+        input.target.installationId,
+
+      bindingKeyId:
+        input.target.bindingKeyId,
+
+      fingerprintAlgorithm:
+        input.target.fingerprintAlgorithm,
+
+      publicKeyFingerprint:
+        input.target.publicKeyFingerprint,
+    },
+
+    issuedAt:
+      input.issuedAt,
+
+    schemaVersion:
+      1,
+  };
+}
+
+// ============================================================
+// BRANCH ACCESS PAYLOAD
+// ============================================================
+
+function createBranchAccessPayload(
+  input: {
+
+    scope:
+      SelfTestScope;
+
+    issuedAt:
+      string;
+
+    validFrom:
+      string;
+
+    validUntil:
+      string;
+  },
+): Record<string, unknown> {
+
+  return {
+
+    action:
+      "ISSUE",
+
     accessGrant: {
 
       grantId:
@@ -417,7 +466,7 @@ function createBranchActivationPayload(
           "CONTROL-BUNDLE-SELFTEST-CASH",
 
         remarks:
-          "FINORA CONTROL_BUNDLE apply self-test.",
+          "FINORA CONTROL_BUNDLE dedicated Branch Access self-test.",
 
         refundable:
           false,
@@ -434,21 +483,6 @@ function createBranchActivationPayload(
 
       schemaVersion:
         1,
-    },
-
-    installationBinding: {
-
-      installationId:
-        input.target.installationId,
-
-      bindingKeyId:
-        input.target.bindingKeyId,
-
-      fingerprintAlgorithm:
-        input.target.fingerprintAlgorithm,
-
-      publicKeyFingerprint:
-        input.target.publicKeyFingerprint,
     },
 
     issuedAt:
@@ -1047,6 +1081,45 @@ async function runSelfTest():
           signingMaterial.privateKeyPkcs8DerBase64,
       });
 
+    const accessPayload =
+      createBranchAccessPayload({
+
+        scope,
+
+        issuedAt,
+
+        validFrom,
+
+        validUntil,
+      });
+
+    const accessPackage =
+      createSignedPackage({
+
+        packageId:
+          "FINORA-CONTROL-BUNDLE-SELFTEST-ACCESS-1",
+
+        purpose:
+          "BRANCH_ACCESS",
+
+        target,
+
+        issuedAt,
+
+        sequence:
+          1,
+
+        payload:
+          accessPayload,
+
+        issuerId,
+
+        signingKeyId:
+          signingMaterial.signingKeyId,
+
+        privateKeyPkcs8DerBase64:
+          signingMaterial.privateKeyPkcs8DerBase64,
+      });
     const pricingPayload =
       createPricingPayload({
 
@@ -1313,6 +1386,7 @@ async function runSelfTest():
 
         children: [
           pricingPackage,
+          accessPackage,
         ],
 
         issuerId,
@@ -1336,13 +1410,29 @@ async function runSelfTest():
 
     assert(
       validBundleResult.data.childResults.length ===
-        1 &&
+        2 &&
       validBundleResult.data.succeededCount ===
-        1 &&
+        2 &&
       validBundleResult.data.failedCount ===
         0 &&
       validBundleResult.data.allChildrenApplied,
       "Valid CONTROL_BUNDLE summary is invalid.",
+    );
+
+    assert(
+      validBundleResult.data.childResults.some(
+        (result) =>
+          result.packageId ===
+            accessPackage.packageId &&
+          result.purpose ===
+            "BRANCH_ACCESS" &&
+          result.success,
+      ),
+      "Valid CONTROL_BUNDLE did not report successful dedicated BRANCH_ACCESS child apply.",
+    );
+
+    console.log(
+      "PASS: valid CONTROL_BUNDLE dispatched dedicated BRANCH_ACCESS child",
     );
 
     const afterValidBundle =
@@ -1355,8 +1445,19 @@ async function runSelfTest():
       "Valid Pricing Policy child was not persisted.",
     );
 
+    assert(
+      afterValidBundle.includes(
+        accessPackage.packageId,
+      ),
+      "Valid Branch Access child was not persisted.",
+    );
+
     console.log(
-      "PASS: valid signed CONTROL_BUNDLE applied child package",
+      "PASS: dedicated BRANCH_ACCESS child persisted through CONTROL_BUNDLE",
+    );
+
+    console.log(
+      "PASS: valid signed CONTROL_BUNDLE applied child packages",
     );
 
     // ========================================================
@@ -1499,6 +1600,193 @@ async function runSelfTest():
 
     console.log(
       "PASS: CONTROL_BUNDLE deliberate NON-ATOMIC per-child result semantics verified",
+    );
+
+    // ========================================================
+    // TEST 8 — SIX-PURPOSE CONTROL_BUNDLE CARDINALITY
+    //
+    // All six child envelopes are independently signed and
+    // target-bound.
+    //
+    // Branch Activation / Branch Access / Pricing children have
+    // already participated in earlier tests and may therefore
+    // fail their child-level replay checks here.
+    //
+    // Synthetic Storage / Business Profile / Wallet payloads
+    // intentionally reach their purpose-specific validators and
+    // may fail there.
+    //
+    // The proof required here is outer CONTROL_BUNDLE acceptance
+    // plus ordered dispatch of exactly six supported purposes.
+    // ========================================================
+
+    const storageCardinalityPackage =
+      createSignedPackage({
+
+        packageId:
+          "FINORA-CONTROL-BUNDLE-SELFTEST-SIX-STORAGE",
+
+        purpose:
+          "STORAGE_ENTITLEMENT",
+
+        target,
+
+        issuedAt,
+
+        sequence:
+          1,
+
+        payload:
+          {},
+
+        issuerId,
+
+        signingKeyId:
+          signingMaterial.signingKeyId,
+
+        privateKeyPkcs8DerBase64:
+          signingMaterial.privateKeyPkcs8DerBase64,
+      });
+
+    const businessProfileCardinalityPackage =
+      createSignedPackage({
+
+        packageId:
+          "FINORA-CONTROL-BUNDLE-SELFTEST-SIX-BUSINESS",
+
+        purpose:
+          "BUSINESS_PROFILE",
+
+        target,
+
+        issuedAt,
+
+        sequence:
+          1,
+
+        payload:
+          {},
+
+        issuerId,
+
+        signingKeyId:
+          signingMaterial.signingKeyId,
+
+        privateKeyPkcs8DerBase64:
+          signingMaterial.privateKeyPkcs8DerBase64,
+      });
+
+    const walletRechargeCardinalityPackage =
+      createSignedPackage({
+
+        packageId:
+          "FINORA-CONTROL-BUNDLE-SELFTEST-SIX-WALLET",
+
+        purpose:
+          "WALLET_RECHARGE",
+
+        target,
+
+        issuedAt,
+
+        sequence:
+          1,
+
+        payload:
+          {},
+
+        issuerId,
+
+        signingKeyId:
+          signingMaterial.signingKeyId,
+
+        privateKeyPkcs8DerBase64:
+          signingMaterial.privateKeyPkcs8DerBase64,
+      });
+
+    const sixPurposeBundle =
+      createSignedBundle({
+
+        packageId:
+          "FINORA-CONTROL-BUNDLE-SELFTEST-SIX-PURPOSES",
+
+        sequence:
+          7,
+
+        issuedAt,
+
+        target,
+
+        children: [
+          branchPackage,
+          accessPackage,
+          storageCardinalityPackage,
+          businessProfileCardinalityPackage,
+          pricingPackage,
+          walletRechargeCardinalityPackage,
+        ],
+
+        issuerId,
+
+        signingMaterial,
+      });
+
+    const sixPurposeResult =
+      await applyFinoraSignedControlBundlePackage(
+        sixPurposeBundle,
+        trustedKeys,
+        now,
+      );
+
+    if (!sixPurposeResult.success) {
+      throw new Error(
+        sixPurposeResult.error ??
+          "Six-purpose CONTROL_BUNDLE was rejected before child dispatch.",
+      );
+    }
+
+    assert(
+      sixPurposeResult.data.childResults.length ===
+        6,
+      "Six-purpose CONTROL_BUNDLE did not dispatch exactly six child packages.",
+    );
+
+    const sixPurposeResultPurposes =
+      sixPurposeResult.data.childResults.map(
+        (result) =>
+          result.purpose,
+      );
+
+    assert(
+      sixPurposeResultPurposes.join("|") ===
+        [
+          "BRANCH_ACTIVATION",
+          "BRANCH_ACCESS",
+          "STORAGE_ENTITLEMENT",
+          "BUSINESS_PROFILE",
+          "PRICING_POLICY",
+          "WALLET_RECHARGE",
+        ].join("|"),
+      "Six-purpose CONTROL_BUNDLE did not preserve complete signed child-purpose order.",
+    );
+
+    assert(
+      sixPurposeResult.data.succeededCount +
+        sixPurposeResult.data.failedCount ===
+        6,
+      "Six-purpose CONTROL_BUNDLE summary does not account for all six children.",
+    );
+
+    console.log(
+      "PASS: six supported CONTROL_BUNDLE child purposes passed outer preflight",
+    );
+
+    console.log(
+      "PASS: six-purpose CONTROL_BUNDLE dispatched exactly six signed children",
+    );
+
+    console.log(
+      "PASS: CONTROL_BUNDLE six-child cardinality aligned across recipient contract",
     );
 
     // ========================================================

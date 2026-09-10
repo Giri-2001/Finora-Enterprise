@@ -119,6 +119,7 @@ import {
   getSession,
   invalidateSession,
   logout,
+  persistRevalidatedSessionSnapshot,
 } from "../store/authStore";
 
 import { storageManager } from "../storage/storageManager";
@@ -662,6 +663,36 @@ function BranchActivationGate({
       0,
     );
 
+  const [enrollmentExporting, setEnrollmentExporting] =
+    useState<boolean>(
+      false,
+    );
+
+  const [enrollmentExportMessage, setEnrollmentExportMessage] =
+    useState<string>(
+      "",
+    );
+
+  const [enrollmentImporting, setEnrollmentImporting] =
+    useState<boolean>(
+      false,
+    );
+
+  const [enrollmentImportMessage, setEnrollmentImportMessage] =
+    useState<string>(
+      "",
+    );
+
+  const [controlBundleImporting, setControlBundleImporting] =
+    useState<boolean>(
+      false,
+    );
+
+  const [controlBundleImportMessage, setControlBundleImportMessage] =
+    useState<string>(
+      "",
+    );
+
   useEffect(() => {
     let active = true;
 
@@ -786,6 +817,262 @@ function BranchActivationGate({
     );
   }
 
+  async function handleExportEnrollmentRequest():
+    Promise<void> {
+
+    if (enrollmentExporting) {
+      return;
+    }
+
+    setEnrollmentExporting(
+      true,
+    );
+
+    setEnrollmentExportMessage(
+      "",
+    );
+
+    try {
+      const exportEnrollmentRequest =
+        window.finora?.control
+          ?.exportInstallationEnrollmentRequest;
+
+      if (
+        typeof exportEnrollmentRequest !==
+          "function"
+      ) {
+        setEnrollmentExportMessage(
+          "FINORA Installation Enrollment Request export is unavailable in this application build.",
+        );
+
+        return;
+      }
+
+      const result =
+        await exportEnrollmentRequest();
+
+      if (!result.success) {
+        setEnrollmentExportMessage(
+          result.error ??
+            "Unable to export the FINORA Installation Enrollment Request.",
+        );
+
+        return;
+      }
+
+      if (result.cancelled) {
+        setEnrollmentExportMessage(
+          "Installation Enrollment Request export was cancelled.",
+        );
+
+        return;
+      }
+
+      setEnrollmentExportMessage(
+        "Enrollment Request saved as " + result.fileName + ". Transfer this .finora file to FINORA Control Center for approval.",
+      );
+    } catch (error) {
+      setEnrollmentExportMessage(
+        error instanceof Error
+          ? error.message
+          : "Unable to export the FINORA Installation Enrollment Request.",
+      );
+    } finally {
+      setEnrollmentExporting(
+        false,
+      );
+    }
+  }
+
+  async function handleImportEnrollmentResponse(
+    expectedControlCenterPublicKeyFingerprint:
+      string,
+  ): Promise<void> {
+
+    if (
+      enrollmentImporting ||
+      enrollmentExporting
+    ) {
+      return;
+    }
+
+    const fingerprint =
+      expectedControlCenterPublicKeyFingerprint.trim();
+
+    if (
+      !/^[0-9a-f]{64}$/.test(
+        fingerprint,
+      )
+    ) {
+      setEnrollmentImportMessage(
+        "Enter the independently supplied lowercase 64-character FINORA Control Center SHA-256 fingerprint.",
+      );
+
+      return;
+    }
+
+    setEnrollmentImporting(
+      true,
+    );
+
+    setEnrollmentImportMessage(
+      "",
+    );
+
+    try {
+      const importEnrollmentResponse =
+        window.finora?.control
+          ?.importInstallationEnrollmentResponse;
+
+      if (
+        typeof importEnrollmentResponse !==
+          "function"
+      ) {
+        setEnrollmentImportMessage(
+          "FINORA Installation Enrollment Response import is unavailable in this application build.",
+        );
+
+        return;
+      }
+
+      const result =
+        await importEnrollmentResponse(
+          fingerprint,
+        );
+
+      if (!result.success) {
+        setEnrollmentImportMessage(
+          result.error ??
+            "Unable to import the FINORA Installation Enrollment Response.",
+        );
+
+        return;
+      }
+
+      if (result.cancelled) {
+        setEnrollmentImportMessage(
+          "Installation Enrollment Response import was cancelled.",
+        );
+
+        return;
+      }
+
+      setEnrollmentImportMessage(
+        "Enrollment Response verified and installation trust established for " +
+          result.businessCode +
+          " / " +
+          result.branchCode +
+          ". Continue with the signed FINORA Control Bundle, then check activation.",
+      );
+
+      /*
+       * Enrollment establishes installation identity + trust.
+       * It does not itself activate the branch.
+       *
+       * Re-evaluate immediately so authoritative state is fresh.
+       * The gate may correctly remain REQUIRED until the signed
+       * Control Bundle is imported.
+       */
+      handleRetry();
+
+    } catch (error) {
+      setEnrollmentImportMessage(
+        error instanceof Error
+          ? error.message
+          : "Unable to import the FINORA Installation Enrollment Response.",
+      );
+
+    } finally {
+      setEnrollmentImporting(
+        false,
+      );
+    }
+  }
+
+  async function handleImportControlBundle():
+    Promise<void> {
+
+    if (
+      controlBundleImporting ||
+      enrollmentImporting ||
+      enrollmentExporting
+    ) {
+      return;
+    }
+
+    setControlBundleImporting(
+      true,
+    );
+
+    setControlBundleImportMessage(
+      "",
+    );
+
+    try {
+      const importControlBundle =
+        window.finora?.control
+          ?.importControlBundle;
+
+      if (
+        typeof importControlBundle !==
+          "function"
+      ) {
+        setControlBundleImportMessage(
+          "FINORA Control Bundle import is unavailable in this application build.",
+        );
+
+        return;
+      }
+
+      const result =
+        await importControlBundle();
+
+      if (!result.success) {
+        setControlBundleImportMessage(
+          result.error ??
+            "Unable to import the FINORA Control Bundle.",
+        );
+
+        return;
+      }
+
+      if (result.cancelled) {
+        setControlBundleImportMessage(
+          "FINORA Control Bundle import was cancelled.",
+        );
+
+        return;
+      }
+
+      setControlBundleImportMessage(
+        "FINORA Control Bundle " +
+          result.fileName +
+          " was verified and applied. Rechecking branch activation.",
+      );
+
+      /*
+       * The authoritative main-process importer owns signature,
+       * recipient-trust, target, sequence and domain application.
+       *
+       * Renderer only asks the activation gate to re-read the
+       * resulting authoritative state.
+       */
+      handleRetry();
+
+    } catch (error) {
+      setControlBundleImportMessage(
+        error instanceof Error
+          ? error.message
+          : "Unable to import the FINORA Control Bundle.",
+      );
+
+    } finally {
+      setControlBundleImporting(
+        false,
+      );
+    }
+  }
+
   if (state === "CHECKING") {
     return (
       <ContextLoadingScreen />
@@ -797,6 +1084,33 @@ function BranchActivationGate({
       <BranchActivationRequired
         message={message}
         onRetry={handleRetry}
+        onExportEnrollmentRequest={
+          handleExportEnrollmentRequest
+        }
+        onImportEnrollmentResponse={
+          handleImportEnrollmentResponse
+        }
+        onImportControlBundle={
+          handleImportControlBundle
+        }
+        enrollmentExporting={
+          enrollmentExporting
+        }
+        enrollmentExportMessage={
+          enrollmentExportMessage
+        }
+        enrollmentImporting={
+          enrollmentImporting
+        }
+        enrollmentImportMessage={
+          enrollmentImportMessage
+        }
+        controlBundleImporting={
+          controlBundleImporting
+        }
+        controlBundleImportMessage={
+          controlBundleImportMessage
+        }
       />
     );
   }
@@ -835,6 +1149,267 @@ function AuthenticatedApplication() {
 
           setContextError(null);
         }
+
+        return;
+      }
+
+      // ======================================================
+      // MAIN-PROCESS LOGIN SESSION REVALIDATION
+      //
+      // SECURITY:
+      //
+      // finora_session in localStorage is only a renderer
+      // snapshot. Its identity, role, scope and data context
+      // are not trusted until the opaque sessionId is accepted
+      // by Electron main-process session authority.
+      //
+      // Full Electron restart destroys the main in-memory
+      // authority. Therefore any stale persisted renderer
+      // session fails closed and returns to Login.
+      //
+      // Business Date is intentionally preserved from the
+      // renderer ERP session and is never supplied as security
+      // time to the main authority.
+      // ======================================================
+
+      const currentSessionId =
+        session.sessionId;
+
+      async function rejectUnverifiedSession(
+        reason:
+          string,
+      ): Promise<void> {
+        console.warn(
+          "FINORA LOGIN SESSION REVALIDATION DENIED:",
+          reason,
+        );
+
+        if (currentSessionId) {
+          try {
+            await window.finora
+              ?.loginSession
+              ?.invalidate({
+                sessionId:
+                  currentSessionId,
+              });
+          }
+          catch {
+            // Best-effort main-session cleanup only.
+          }
+        }
+
+        invalidateSession();
+
+        try {
+          window.sessionStorage.removeItem(
+            FINORA_STORAGE_MODE_SESSION_KEY,
+          );
+        }
+        catch (storageSessionError) {
+          console.error(
+            "FINORA STORAGE MODE SESSION CLEAR FAILED:",
+            storageSessionError,
+          );
+        }
+
+        await clearContext();
+
+        if (!active) {
+          return;
+        }
+
+        setSession(
+          null,
+        );
+
+        setContextReady(
+          true,
+        );
+
+        setContextError(
+          null,
+        );
+      }
+
+      if (!session.sessionId) {
+        await rejectUnverifiedSession(
+          "The persisted FINORA session does not contain a secure session ID.",
+        );
+
+        return;
+      }
+
+      const validateLoginSession =
+        window.finora
+          ?.loginSession
+          ?.validate;
+
+      if (
+        typeof validateLoginSession !==
+          "function"
+      ) {
+        await rejectUnverifiedSession(
+          "FINORA secure login-session validation is unavailable in this application build.",
+        );
+
+        return;
+      }
+
+      let validationResult:
+        Awaited<
+          ReturnType<
+            typeof validateLoginSession
+          >
+        >;
+
+      try {
+        validationResult =
+          await validateLoginSession({
+            sessionId:
+              session.sessionId,
+          });
+      }
+      catch {
+        await rejectUnverifiedSession(
+          "FINORA secure login-session validation failed.",
+        );
+
+        return;
+      }
+
+      if (!active) {
+        return;
+      }
+
+      if (
+        !validationResult.success
+      ) {
+        await rejectUnverifiedSession(
+          validationResult.error ??
+            "The persisted FINORA login session is no longer valid.",
+        );
+
+        return;
+      }
+
+      const authoritativeSession =
+        validationResult.data;
+
+      if (
+        authoritativeSession.sessionId !==
+          session.sessionId
+      ) {
+        await rejectUnverifiedSession(
+          "FINORA secure login-session identity mismatch.",
+        );
+
+        return;
+      }
+
+      const revalidatedSession:
+        AuthSession = {
+        userId:
+          authoritativeSession.userId,
+
+        username:
+          authoritativeSession.username,
+
+        fullName:
+          authoritativeSession.fullName,
+
+        role:
+          authoritativeSession.role,
+
+        loginTime:
+          authoritativeSession.loginTime,
+
+        businessDate:
+          session.businessDate,
+
+        sessionId:
+          authoritativeSession.sessionId,
+
+        lastActivity:
+          authoritativeSession.lastActivity,
+
+        ownerId:
+          authoritativeSession.ownerId,
+
+        businessId:
+          authoritativeSession.businessId,
+
+        branchId:
+          authoritativeSession.branchId,
+
+        dataContext:
+          authoritativeSession.dataContext,
+
+        ...(
+          authoritativeSession.demoId ===
+            undefined
+            ? {}
+            : {
+                demoId:
+                  authoritativeSession.demoId,
+              }
+        ),
+      };
+
+      const persistedRevalidatedSession =
+        persistRevalidatedSessionSnapshot(
+          revalidatedSession,
+        );
+
+      if (!persistedRevalidatedSession) {
+        await rejectUnverifiedSession(
+          "The authoritative FINORA login session could not be reconciled with the renderer session.",
+        );
+
+        return;
+      }
+
+      const rendererSnapshotMatchesAuthority =
+        session.userId ===
+          persistedRevalidatedSession.userId &&
+        session.username ===
+          persistedRevalidatedSession.username &&
+        session.fullName ===
+          persistedRevalidatedSession.fullName &&
+        session.role ===
+          persistedRevalidatedSession.role &&
+        session.loginTime ===
+          persistedRevalidatedSession.loginTime &&
+        session.businessDate ===
+          persistedRevalidatedSession.businessDate &&
+        session.sessionId ===
+          persistedRevalidatedSession.sessionId &&
+        session.lastActivity ===
+          persistedRevalidatedSession.lastActivity &&
+        session.ownerId ===
+          persistedRevalidatedSession.ownerId &&
+        session.businessId ===
+          persistedRevalidatedSession.businessId &&
+        session.branchId ===
+          persistedRevalidatedSession.branchId &&
+        session.dataContext ===
+          persistedRevalidatedSession.dataContext &&
+        session.demoId ===
+          persistedRevalidatedSession.demoId;
+
+      if (
+        !rendererSnapshotMatchesAuthority
+      ) {
+        setContextReady(
+          false,
+        );
+
+        setContextError(
+          null,
+        );
+
+        setSession(
+          persistedRevalidatedSession,
+        );
 
         return;
       }
@@ -1266,20 +1841,82 @@ function AuthenticatedApplication() {
   // LOGOUT
   // ==========================================================
 
-  function handleLogout(): void {
+  async function handleLogout():
+    Promise<void> {
+    const currentSessionId =
+      session?.sessionId;
+
+    // --------------------------------------------------------
+    // MAIN-PROCESS SESSION INVALIDATION
+    //
+    // Explicit Logout revokes the opaque main-process session
+    // before the renderer removes its local snapshot.
+    // --------------------------------------------------------
+
+    async function completeMainSessionLogout():
+      Promise<void> {
+      if (!currentSessionId) {
+        return;
+      }
+
+      const invalidateLoginSession =
+        window.finora
+          ?.loginSession
+          ?.invalidate;
+
+      if (
+        typeof invalidateLoginSession !==
+          "function"
+      ) {
+        console.warn(
+          "FINORA MAIN LOGIN SESSION INVALIDATION IS UNAVAILABLE.",
+        );
+
+        return;
+      }
+
+      try {
+        await invalidateLoginSession({
+          sessionId:
+            currentSessionId,
+        });
+      }
+      catch (mainLogoutError) {
+        console.warn(
+          "FINORA MAIN LOGIN SESSION INVALIDATION FAILED:",
+          mainLogoutError,
+        );
+      }
+    }
+
+    await completeMainSessionLogout();
+
+    // Existing renderer logout preserves the explicit user
+    // LOGOUT audit and removes the persisted session snapshot.
+
     logout();
 
-    void clearContext();
+    await clearContext();
 
-    setSession(null);
+    setSession(
+      null,
+    );
 
-    setContextReady(true);
+    setContextReady(
+      true,
+    );
 
-    setContextError(null);
+    setContextError(
+      null,
+    );
 
-    const navigation = createDefaultNavigationState();
+    const navigation =
+      createDefaultNavigationState();
 
-    writeNavigationState(navigation, true);
+    writeNavigationState(
+      navigation,
+      true,
+    );
   }
 
   // ==========================================================

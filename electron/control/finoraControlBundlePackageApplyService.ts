@@ -61,6 +61,10 @@ import {
 } from "./finoraBranchActivationPackageApplyService.js";
 
 import {
+  applyFinoraSignedBranchAccessPackage,
+} from "./finoraBranchAccessPackageApplyService.js";
+
+import {
   applyFinoraSignedStorageEntitlementPackage,
 } from "./finoraStorageEntitlementPackageApplyService.js";
 
@@ -85,6 +89,7 @@ export const FINORA_CONTROL_BUNDLE_FORMAT =
 
 export type FinoraControlBundleChildPurpose =
   | "BRANCH_ACTIVATION"
+  | "BRANCH_ACCESS"
   | "STORAGE_ENTITLEMENT"
   | "BUSINESS_PROFILE"
   | "PRICING_POLICY"
@@ -231,6 +236,8 @@ function isSupportedChildPurpose(
     value ===
       "BRANCH_ACTIVATION" ||
     value ===
+      "BRANCH_ACCESS" ||
+    value ===
       "STORAGE_ENTITLEMENT" ||
     value ===
       "BUSINESS_PROFILE" ||
@@ -327,6 +334,30 @@ async function applyChildPackage(
             error:
               result.error ??
               "FINORA Branch Activation child apply failed.",
+          };
+    }
+
+    case "BRANCH_ACCESS": {
+
+      const result =
+        await applyFinoraSignedBranchAccessPackage(
+          signedPackage,
+          trustedKeys,
+          now,
+        );
+
+      return result.success
+        ? {
+            success:
+              true,
+          }
+        : {
+            success:
+              false,
+
+            error:
+              result.error ??
+              "FINORA Branch Access child apply failed.",
           };
     }
 
@@ -595,7 +626,7 @@ export async function applyFinoraSignedControlBundlePackage(
     payload.packages.length <
       1 ||
     payload.packages.length >
-      5
+      6
   ) {
     return failure(
       "FINORA CONTROL_BUNDLE payload structure is invalid.",

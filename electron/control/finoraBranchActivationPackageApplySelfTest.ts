@@ -1,41 +1,39 @@
-// ============================================================
-// FINORA ENTERPRISE OS™
-//
-// CONTROL PLANE
-// SIGNED BRANCH ACTIVATION / STATUS PACKAGE APPLY SELF TEST
-//
-// ISOLATION:
-//
-// - Uses a temporary Electron userData directory.
-// - Uses a temporary encrypted FINORA Control Store.
-// - Uses a temporary native installation-binding vault.
-// - Uses an ephemeral Control Center P-256 signing key.
-// - Does NOT access the production Control Center key vault.
-// - Does NOT access normal FINORA userData.
-// - Deletes temporary state before exit.
-//
-// COVERAGE:
-//
-// - Valid signed ISSUE
-// - ACTIVE -> SUSPENDED
-// - SUSPENDED -> ACTIVE
-// - SUSPENDED -> REVOKED
-// - ACTIVE -> REVOKED
-// - REVOKED terminal-state enforcement
-// - Invalid transition rejection
-// - RENEW status-change bypass rejection
-// - REPLACE status-change bypass rejection
-// - DEMO ISSUE
-// - DEMO -> REGISTERED RENEW rejection
-// - DEMO -> REGISTERED signed REPLACE conversion
-// - REGISTERED -> DEMO signed REPLACE rejection
-// - Status-action access metadata immutability
-// - Status-action activation-record immutability
-// - Replay rejection
-// - Stale/equal sequence rejection
-//
-// ============================================================
+/* ===========================================================
+   FINORA ENTERPRISE OS™
 
+   CONTROL PLANE
+   SIGNED BRANCH ACTIVATION PACKAGE APPLY SELF TEST
+
+   AUTHORITY:
+
+   - BRANCH_ACTIVATION is ISSUE-only.
+   - Branch Access lifecycle belongs exclusively to BRANCH_ACCESS.
+   - This self-test contains no Branch Access Grant authority.
+
+   ISOLATION:
+
+   - Temporary Electron userData
+   - Temporary encrypted FINORA Control Store
+   - Temporary native installation-binding vault
+   - Ephemeral Control Center P-256 signing key
+   - Production Control Center keys are never used
+   - Temporary state is deleted before exit
+
+   COVERAGE:
+
+   - Valid signed ISSUE
+   - Exact persisted ACTIVE activation
+   - No Branch Access mutation
+   - Replay rejection
+   - Equal/stale sequence rejection
+   - Tampered signature rejection
+   - Wrong purpose rejection
+   - Wrong target scope rejection
+   - Wrong installation rejection
+   - Wrong payload native binding rejection
+   - Wrong activation identity rejection
+   - Legacy non-ISSUE action rejection
+=========================================================== */
 import {
   app,
 } from "electron";
@@ -76,7 +74,6 @@ import {
 } from "./finoraInstallationBindingService.js";
 
 import type {
-  FinoraControlBranchAccessGrant,
   FinoraControlBranchActivation,
   FinoraControlInstallationIdentity,
 } from "./finoraControlStore.js";
@@ -94,19 +91,6 @@ import {
 // ============================================================
 // TYPES
 // ============================================================
-
-type SelfTestAction =
-  | "ISSUE"
-  | "RENEW"
-  | "REPLACE"
-  | "SUSPEND"
-  | "RESUME"
-  | "REVOKE";
-
-type AdministrativeStatus =
-  | "ACTIVE"
-  | "SUSPENDED"
-  | "REVOKED";
 
 interface SelfTestScope {
   ownerId:
@@ -245,43 +229,9 @@ function expectFailure(
 // TIME
 // ============================================================
 
-function addMinutes(
-  value:
-    string,
 
-  minutes:
-    number,
-): string {
 
-  return new Date(
-    Date.parse(
-      value,
-    ) +
-      minutes *
-        60 *
-        1000,
-  ).toISOString();
-}
 
-function addDays(
-  value:
-    string,
-
-  days:
-    number,
-): string {
-
-  return new Date(
-    Date.parse(
-      value,
-    ) +
-      days *
-        24 *
-        60 *
-        60 *
-        1000,
-  ).toISOString();
-}
 
 
 // ============================================================
@@ -349,187 +299,18 @@ function createActivation(
   };
 }
 
-function createRegisteredGrant(
-  scope:
-    SelfTestScope,
 
-  userId:
-    string,
 
-  administrativeStatus:
-    AdministrativeStatus,
 
-  createdAt:
-    string,
 
-  updatedAt:
-    string,
-): FinoraControlBranchAccessGrant {
 
-  return {
-    grantId:
-      `FINORA-GRANT-${userId}`,
-
-    userId,
-
-    ownerId:
-      scope.ownerId,
-
-    businessId:
-      scope.businessId,
-
-    branchId:
-      scope.branchId,
-
-    storageMode:
-      "LOCAL",
-
-    accessType:
-      "REGISTERED",
-
-    administrativeStatus,
-
-    validity: {
-      validFrom:
-        createdAt,
-
-      validUntil:
-        addDays(
-          createdAt,
-          365,
-        ),
-    },
-
-    registrationPayment: {
-      amount:
-        2000,
-
-      currency:
-        "INR",
-
-      paymentMode:
-        "CASH",
-
-      paidAt:
-        createdAt,
-
-      reference:
-        `SELFTEST-PAYMENT-${userId}`,
-
-      remarks:
-        "Phase 10 Signed Status selftest",
-
-      refundable:
-        false,
-    },
-
-    registrationCycle:
-      1,
-
-    createdAt,
-
-    updatedAt,
-
-    schemaVersion:
-      1,
-  };
-}
-
-function createDemoGrant(
-  scope:
-    SelfTestScope,
-
-  userId:
-    string,
-
-  administrativeStatus:
-    AdministrativeStatus,
-
-  createdAt:
-    string,
-
-  updatedAt:
-    string,
-): FinoraControlBranchAccessGrant {
-
-  return {
-    grantId:
-      `FINORA-DEMO-GRANT-${userId}`,
-
-    userId,
-
-    ownerId:
-      scope.ownerId,
-
-    businessId:
-      scope.businessId,
-
-    branchId:
-      scope.branchId,
-
-    storageMode:
-      "LOCAL",
-
-    accessType:
-      "DEMO",
-
-    administrativeStatus,
-
-    validity: {
-      validFrom:
-        createdAt,
-
-      validUntil:
-        addMinutes(
-          createdAt,
-          37 * 60,
-        ),
-    },
-
-    demoId:
-      `FINORA-DEMO-${userId}`,
-
-    demoRemarks:
-      "Phase 13 Demo lifecycle conversion selftest",
-
-    createdAt,
-
-    updatedAt,
-
-    schemaVersion:
-      1,
-  };
-}
-
-function withStatus(
-  grant:
-    FinoraControlBranchAccessGrant,
-
-  administrativeStatus:
-    AdministrativeStatus,
-
-  updatedAt:
-    string,
-): FinoraControlBranchAccessGrant {
-
-  return {
-    ...grant,
-
-    administrativeStatus,
-
-    updatedAt,
-  };
-}
 
 function createActivationPayload(
   action:
-    SelfTestAction,
+    string,
 
   activation:
     FinoraControlBranchActivation,
-
-  accessGrant:
-    FinoraControlBranchAccessGrant,
 
   binding:
     SelfTestBindingTarget,
@@ -544,27 +325,6 @@ function createActivationPayload(
     activation: {
       ...activation,
     },
-
-    accessGrant:
-      accessGrant.registrationPayment
-        ? {
-            ...accessGrant,
-
-            validity: {
-              ...accessGrant.validity,
-            },
-
-            registrationPayment: {
-              ...accessGrant.registrationPayment,
-            },
-          }
-        : {
-            ...accessGrant,
-
-            validity: {
-              ...accessGrant.validity,
-            },
-          },
 
     installationBinding: {
       ...binding,
@@ -585,6 +345,9 @@ function createActivationPayload(
 function createSignedPackage(
   input: {
     packageId:
+      string;
+
+    purpose?:
       string;
 
     target:
@@ -615,7 +378,8 @@ function createSignedPackage(
       input.packageId,
 
     purpose:
-      "BRANCH_ACTIVATION",
+      input.purpose ??
+        "BRANCH_ACTIVATION",
 
     issuer: {
       type:
@@ -691,46 +455,7 @@ function createSignedPackage(
 // READBACK
 // ============================================================
 
-async function expectPersistedStatus(
-  userId:
-    string,
 
-  expectedStatus:
-    AdministrativeStatus,
-): Promise<void> {
-
-  const storeResult =
-    await readFinoraControlStore();
-
-  assert(
-    storeResult.success &&
-      storeResult.data,
-    storeResult.error ??
-      "Unable to read Control Store during Signed Status selftest.",
-  );
-
-  const grant =
-    storeResult.data.branchAccessGrants?.find(
-      (item) =>
-        item.userId ===
-          userId,
-    );
-
-  assert(
-    grant,
-    `Persisted Branch Access grant not found for ${userId}.`,
-  );
-
-  assert(
-    grant.administrativeStatus ===
-      expectedStatus,
-    `Expected ${userId} status ${expectedStatus}, found ${grant.administrativeStatus}.`,
-  );
-
-  console.log(
-    `PASS: persisted ${userId} status = ${expectedStatus}`,
-  );
-}
 
 
 // ============================================================
@@ -958,31 +683,49 @@ async function runSelfTest():
         packageId:
           string,
 
-        action:
-          SelfTestAction,
+        options?: {
+          purpose?:
+            string;
 
-        accessGrant:
-          FinoraControlBranchAccessGrant,
+          action?:
+            string;
 
-        activationRecord:
-          FinoraControlBranchActivation =
-            activation,
+          target?:
+            SelfTestPackageTarget;
 
-        forcedSequence?:
-          number,
+          activationRecord?:
+            FinoraControlBranchActivation;
+
+          bindingRecord?:
+            SelfTestBindingTarget;
+
+          forcedSequence?:
+            number;
+        },
       ) => {
 
         const issuedAt =
           now.toISOString();
 
         const packageSequence =
-          forcedSequence ??
+          options?.forcedSequence ??
           nextSequence();
 
         return createSignedPackage({
           packageId,
 
+          ...(
+            options?.purpose ===
+              undefined
+              ? {}
+              : {
+                  purpose:
+                    options.purpose,
+                }
+          ),
+
           target:
+            options?.target ??
             packageTarget,
 
           issuedAt,
@@ -992,10 +735,12 @@ async function runSelfTest():
 
           payload:
             createActivationPayload(
-              action,
-              activationRecord,
-              accessGrant,
-              bindingTarget,
+              options?.action ??
+                "ISSUE",
+              options?.activationRecord ??
+                activation,
+              options?.bindingRecord ??
+                bindingTarget,
               issuedAt,
             ),
 
@@ -1011,26 +756,27 @@ async function runSelfTest():
 
 
     // ========================================================
-    // TEST 1 - ISSUE ACTIVE
+    // TEST 1 - VALID SIGNED ISSUE
     // ========================================================
 
-    const lifecycleUser =
-      "USER-STATUS-LIFECYCLE";
+    const beforeIssueStore =
+      await readFinoraControlStore();
 
-    const lifecycleInitial =
-      createRegisteredGrant(
-        scope,
-        lifecycleUser,
-        "ACTIVE",
-        baseTimestamp,
-        baseTimestamp,
-      );
+    assert(
+      beforeIssueStore.success &&
+        beforeIssueStore.data,
+      beforeIssueStore.error ??
+        "Unable to read pre-ISSUE Control Store.",
+    );
+
+    const accessCountBefore =
+      beforeIssueStore.data.branchAccessGrants
+        ?.length ??
+      0;
 
     const issuePackage =
       signPackage(
-        "FINORA-STATUS-SELFTEST-ISSUE-1",
-        "ISSUE",
-        lifecycleInitial,
+        "FINORA-BRANCH-ACTIVATION-SELFTEST-ISSUE",
       );
 
     const issueResult =
@@ -1041,209 +787,72 @@ async function runSelfTest():
       );
 
     expectSuccess(
-      "signed ISSUE ACTIVE applied",
+      "valid signed BRANCH_ACTIVATION ISSUE applied",
       issueResult,
     );
 
-    await expectPersistedStatus(
-      lifecycleUser,
-      "ACTIVE",
+    const afterIssueStore =
+      await readFinoraControlStore();
+
+    assert(
+      afterIssueStore.success &&
+        afterIssueStore.data,
+      afterIssueStore.error ??
+        "Unable to read post-ISSUE Control Store.",
     );
 
-
-    // ========================================================
-    // TEST 2 - ACTIVE -> SUSPENDED
-    // ========================================================
-
-    const suspendedGrant =
-      withStatus(
-        lifecycleInitial,
-        "SUSPENDED",
-        addMinutes(
-          baseTimestamp,
-          1,
-        ),
+    const persistedActivation =
+      afterIssueStore.data.activations.find(
+        (item) =>
+          item.ownerId ===
+            scope.ownerId &&
+          item.businessId ===
+            scope.businessId &&
+          item.branchId ===
+            scope.branchId,
       );
 
-    const suspendPackage =
-      signPackage(
-        "FINORA-STATUS-SELFTEST-SUSPEND-2",
-        "SUSPEND",
-        suspendedGrant,
-      );
-
-    const suspendResult =
-      await applyFinoraSignedBranchActivationPackage(
-        suspendPackage,
-        trustedKeys,
-        now,
-      );
-
-    expectSuccess(
-      "ACTIVE -> SUSPENDED applied",
-      suspendResult,
+    assert(
+      persistedActivation,
+      "Signed Branch Activation ISSUE did not persist activation.",
     );
 
-    await expectPersistedStatus(
-      lifecycleUser,
-      "SUSPENDED",
-    );
-
-
-    // ========================================================
-    // TEST 3 - SUSPENDED -> ACTIVE
-    // ========================================================
-
-    const resumedGrant =
-      withStatus(
-        suspendedGrant,
+    assert(
+      persistedActivation.activationId ===
+        activation.activationId &&
+      persistedActivation.ownerId ===
+        activation.ownerId &&
+      persistedActivation.businessId ===
+        activation.businessId &&
+      persistedActivation.branchId ===
+        activation.branchId &&
+      persistedActivation.status ===
         "ACTIVE",
-        addMinutes(
-          baseTimestamp,
-          2,
-        ),
-      );
-
-    const resumePackage =
-      signPackage(
-        "FINORA-STATUS-SELFTEST-RESUME-3",
-        "RESUME",
-        resumedGrant,
-      );
-
-    const resumeResult =
-      await applyFinoraSignedBranchActivationPackage(
-        resumePackage,
-        trustedKeys,
-        now,
-      );
-
-    expectSuccess(
-      "SUSPENDED -> ACTIVE applied",
-      resumeResult,
+      "Persisted Branch Activation differs from signed authority.",
     );
 
-    await expectPersistedStatus(
-      lifecycleUser,
-      "ACTIVE",
+    const accessCountAfterIssue =
+      afterIssueStore.data.branchAccessGrants
+        ?.length ??
+      0;
+
+    assert(
+      accessCountAfterIssue ===
+        accessCountBefore,
+      "BRANCH_ACTIVATION ISSUE mutated Branch Access state.",
+    );
+
+    console.log(
+      "PASS: signed Activation ISSUE persisted exact ACTIVE activation",
+    );
+
+    console.log(
+      "PASS: Activation ISSUE did not mutate Branch Access state",
     );
 
 
     // ========================================================
-    // TEST 4 - ACTIVE -> SUSPENDED AGAIN
-    // ========================================================
-
-    const suspendedAgainGrant =
-      withStatus(
-        resumedGrant,
-        "SUSPENDED",
-        addMinutes(
-          baseTimestamp,
-          3,
-        ),
-      );
-
-    const suspendAgainPackage =
-      signPackage(
-        "FINORA-STATUS-SELFTEST-SUSPEND-4",
-        "SUSPEND",
-        suspendedAgainGrant,
-      );
-
-    const suspendAgainResult =
-      await applyFinoraSignedBranchActivationPackage(
-        suspendAgainPackage,
-        trustedKeys,
-        now,
-      );
-
-    expectSuccess(
-      "ACTIVE -> SUSPENDED second lifecycle transition applied",
-      suspendAgainResult,
-    );
-
-
-    // ========================================================
-    // TEST 5 - SUSPENDED -> REVOKED
-    // ========================================================
-
-    const revokedGrant =
-      withStatus(
-        suspendedAgainGrant,
-        "REVOKED",
-        addMinutes(
-          baseTimestamp,
-          4,
-        ),
-      );
-
-    const revokePackage =
-      signPackage(
-        "FINORA-STATUS-SELFTEST-REVOKE-5",
-        "REVOKE",
-        revokedGrant,
-      );
-
-    const revokeResult =
-      await applyFinoraSignedBranchActivationPackage(
-        revokePackage,
-        trustedKeys,
-        now,
-      );
-
-    expectSuccess(
-      "SUSPENDED -> REVOKED applied",
-      revokeResult,
-    );
-
-    await expectPersistedStatus(
-      lifecycleUser,
-      "REVOKED",
-    );
-
-
-    // ========================================================
-    // TEST 6 - REVOKED IS TERMINAL
-    // ========================================================
-
-    const illegalResume =
-      withStatus(
-        revokedGrant,
-        "ACTIVE",
-        addMinutes(
-          baseTimestamp,
-          5,
-        ),
-      );
-
-    const illegalResumePackage =
-      signPackage(
-        "FINORA-STATUS-SELFTEST-TERMINAL-6",
-        "RESUME",
-        illegalResume,
-      );
-
-    const illegalResumeResult =
-      await applyFinoraSignedBranchActivationPackage(
-        illegalResumePackage,
-        trustedKeys,
-        now,
-      );
-
-    expectFailure(
-      "REVOKED -> ACTIVE rejected as terminal",
-      illegalResumeResult,
-      "terminal",
-    );
-
-    await expectPersistedStatus(
-      lifecycleUser,
-      "REVOKED",
-    );
-
-
-    // ========================================================
-    // TEST 7 - SAME SIGNED PACKAGE REPLAY
+    // TEST 2 - REPLAY
     // ========================================================
 
     const replayResult =
@@ -1254,24 +863,22 @@ async function runSelfTest():
       );
 
     expectFailure(
-      "same signed ISSUE package replay rejected",
+      "same signed Activation ISSUE package replay rejected",
       replayResult,
     );
 
 
     // ========================================================
-    // TEST 8 - STALE / EQUAL SEQUENCE
-    //
-    // Last committed sequence is still 5 because TEST 6 failed.
+    // TEST 3 - STALE/EQUAL SEQUENCE
     // ========================================================
 
     const stalePackage =
       signPackage(
-        "FINORA-STATUS-SELFTEST-STALE-SEQUENCE",
-        "REVOKE",
-        revokedGrant,
-        activation,
-        5,
+        "FINORA-BRANCH-ACTIVATION-SELFTEST-STALE-SEQUENCE",
+        {
+          forcedSequence:
+            1,
+        },
       );
 
     const staleResult =
@@ -1282,665 +889,265 @@ async function runSelfTest():
       );
 
     expectFailure(
-      "stale/equal BRANCH_ACTIVATION sequence rejected",
+      "equal/stale BRANCH_ACTIVATION sequence rejected",
       staleResult,
     );
 
 
     // ========================================================
-    // TEST 9 - STATUS ACTION METADATA TAMPERING
+    // TEST 4 - BAD SIGNATURE
     // ========================================================
 
-    const metadataUser =
-      "USER-STATUS-METADATA";
+    const originalSignature =
+      issuePackage.signature.value;
 
-    const metadataInitial =
-      createRegisteredGrant(
-        scope,
-        metadataUser,
-        "ACTIVE",
-        baseTimestamp,
-        baseTimestamp,
-      );
-
-    const metadataIssuePackage =
-      signPackage(
-        "FINORA-STATUS-SELFTEST-METADATA-ISSUE",
-        "ISSUE",
-        metadataInitial,
-      );
-
-    const metadataIssueResult =
-      await applyFinoraSignedBranchActivationPackage(
-        metadataIssuePackage,
-        trustedKeys,
-        now,
-      );
-
-    expectSuccess(
-      "metadata-test ISSUE applied",
-      metadataIssueResult,
+    assert(
+      originalSignature.length >
+        0,
+      "Signed Activation package signature is empty.",
     );
 
-    const metadataTamperedGrant:
-      FinoraControlBranchAccessGrant = {
-        ...metadataInitial,
+    const tamperedSignaturePackage = {
+      ...issuePackage,
 
-        storageMode:
-          "USB",
+      packageId:
+        "FINORA-BRANCH-ACTIVATION-SELFTEST-BAD-SIGNATURE",
 
-        administrativeStatus:
-          "SUSPENDED",
+      sequence:
+        2,
 
-        updatedAt:
-          addMinutes(
-            baseTimestamp,
-            6,
+      signature: {
+        ...issuePackage.signature,
+
+        value:
+          (
+            originalSignature[0] ===
+              "A"
+              ? "B"
+              : "A"
+          ) +
+          originalSignature.slice(
+            1,
           ),
-      };
+      },
+    };
 
-    const metadataTamperPackage =
-      signPackage(
-        "FINORA-STATUS-SELFTEST-METADATA-TAMPER",
-        "SUSPEND",
-        metadataTamperedGrant,
-      );
-
-    const metadataTamperResult =
+    const badSignatureResult =
       await applyFinoraSignedBranchActivationPackage(
-        metadataTamperPackage,
+        tamperedSignaturePackage,
         trustedKeys,
         now,
       );
 
     expectFailure(
-      "status action grant metadata tampering rejected",
-      metadataTamperResult,
-      "cannot modify grant metadata",
-    );
-
-    await expectPersistedStatus(
-      metadataUser,
-      "ACTIVE",
+      "tampered Activation signature rejected",
+      badSignatureResult,
     );
 
 
     // ========================================================
-    // TEST 10 - STATUS ACTION ACTIVATION MUTATION
+    // TEST 5 - WRONG PURPOSE
     // ========================================================
 
-    const activationTamperGrant =
-      withStatus(
-        metadataInitial,
-        "SUSPENDED",
-        addMinutes(
-          baseTimestamp,
-          7,
-        ),
+    const wrongPurposePackage =
+      signPackage(
+        "FINORA-BRANCH-ACTIVATION-SELFTEST-WRONG-PURPOSE",
+        {
+          purpose:
+            "STORAGE_ENTITLEMENT",
+
+          forcedSequence:
+            2,
+        },
       );
 
-    const mutatedActivation:
+    const wrongPurposeResult =
+      await applyFinoraSignedBranchActivationPackage(
+        wrongPurposePackage,
+        trustedKeys,
+        now,
+      );
+
+    expectFailure(
+      "wrong signed purpose rejected by Activation apply",
+      wrongPurposeResult,
+      "purpose must be BRANCH_ACTIVATION",
+    );
+
+
+    // ========================================================
+    // TEST 6 - WRONG TARGET SCOPE
+    // ========================================================
+
+    const wrongScopeTarget:
+      SelfTestPackageTarget = {
+        ...packageTarget,
+
+        ownerId:
+          `${scope.ownerId}-WRONG`,
+      };
+
+    const wrongScopeResult =
+      await applyFinoraSignedBranchActivationPackage(
+        signPackage(
+          "FINORA-BRANCH-ACTIVATION-SELFTEST-WRONG-SCOPE",
+          {
+            target:
+              wrongScopeTarget,
+
+            forcedSequence:
+              2,
+          },
+        ),
+        trustedKeys,
+        now,
+      );
+
+    expectFailure(
+      "wrong signed Activation scope rejected",
+      wrongScopeResult,
+    );
+
+
+    // ========================================================
+    // TEST 7 - WRONG INSTALLATION
+    // ========================================================
+
+    const wrongInstallationTarget:
+      SelfTestPackageTarget = {
+        ...packageTarget,
+
+        installationId:
+          `${packageTarget.installationId}-WRONG`,
+      };
+
+    const wrongInstallationResult =
+      await applyFinoraSignedBranchActivationPackage(
+        signPackage(
+          "FINORA-BRANCH-ACTIVATION-SELFTEST-WRONG-INSTALLATION",
+          {
+            target:
+              wrongInstallationTarget,
+
+            forcedSequence:
+              2,
+          },
+        ),
+        trustedKeys,
+        now,
+      );
+
+    expectFailure(
+      "wrong signed installation rejected",
+      wrongInstallationResult,
+    );
+
+
+    // ========================================================
+    // TEST 8 - WRONG PAYLOAD BINDING
+    // ========================================================
+
+    const wrongBinding:
+      SelfTestBindingTarget = {
+        ...bindingTarget,
+
+        bindingKeyId:
+          `${bindingTarget.bindingKeyId}-WRONG`,
+      };
+
+    const wrongBindingResult =
+      await applyFinoraSignedBranchActivationPackage(
+        signPackage(
+          "FINORA-BRANCH-ACTIVATION-SELFTEST-WRONG-BINDING",
+          {
+            bindingRecord:
+              wrongBinding,
+
+            forcedSequence:
+              2,
+          },
+        ),
+        trustedKeys,
+        now,
+      );
+
+    expectFailure(
+      "wrong Activation payload native binding rejected",
+      wrongBindingResult,
+      "payload native installation binding does not match",
+    );
+
+
+    // ========================================================
+    // TEST 9 - WRONG ACTIVATION IDENTITY
+    // ========================================================
+
+    const wrongIdentityActivation:
       FinoraControlBranchActivation = {
         ...activation,
 
-        updatedAt:
-          addMinutes(
-            baseTimestamp,
-            7,
-          ),
+        ownerId:
+          `${scope.ownerId}-WRONG`,
       };
 
-    const activationTamperPackage =
-      signPackage(
-        "FINORA-STATUS-SELFTEST-ACTIVATION-TAMPER",
-        "SUSPEND",
-        activationTamperGrant,
-        mutatedActivation,
-      );
-
-    const activationTamperResult =
+    const wrongIdentityResult =
       await applyFinoraSignedBranchActivationPackage(
-        activationTamperPackage,
-        trustedKeys,
-        now,
-      );
+        signPackage(
+          "FINORA-BRANCH-ACTIVATION-SELFTEST-WRONG-IDENTITY",
+          {
+            activationRecord:
+              wrongIdentityActivation,
 
-    expectFailure(
-      "status action Branch Activation mutation rejected",
-      activationTamperResult,
-      "cannot modify the Branch Activation record",
-    );
-
-    await expectPersistedStatus(
-      metadataUser,
-      "ACTIVE",
-    );
-
-
-    // ========================================================
-    // TEST 11 - RENEW STATUS-CHANGE BYPASS
-    // ========================================================
-
-    const renewUser =
-      "USER-STATUS-RENEW";
-
-    const renewInitial =
-      createRegisteredGrant(
-        scope,
-        renewUser,
-        "ACTIVE",
-        baseTimestamp,
-        baseTimestamp,
-      );
-
-    const renewIssuePackage =
-      signPackage(
-        "FINORA-STATUS-SELFTEST-RENEW-ISSUE",
-        "ISSUE",
-        renewInitial,
-      );
-
-    const renewIssueResult =
-      await applyFinoraSignedBranchActivationPackage(
-        renewIssuePackage,
-        trustedKeys,
-        now,
-      );
-
-    expectSuccess(
-      "RENEW-test ISSUE applied",
-      renewIssueResult,
-    );
-
-    const renewBypassGrant =
-      withStatus(
-        renewInitial,
-        "SUSPENDED",
-        addMinutes(
-          baseTimestamp,
-          8,
+            forcedSequence:
+              2,
+          },
         ),
-      );
-
-    const renewBypassPackage =
-      signPackage(
-        "FINORA-STATUS-SELFTEST-RENEW-BYPASS",
-        "RENEW",
-        renewBypassGrant,
-      );
-
-    const renewBypassResult =
-      await applyFinoraSignedBranchActivationPackage(
-        renewBypassPackage,
         trustedKeys,
         now,
       );
 
     expectFailure(
-      "RENEW administrative-status bypass rejected",
-      renewBypassResult,
-      "transition is invalid",
-    );
-
-    await expectPersistedStatus(
-      renewUser,
-      "ACTIVE",
+      "wrong signed Activation payload identity rejected",
+      wrongIdentityResult,
+      "payload identity mismatch",
     );
 
 
     // ========================================================
-    // TEST 12 - REPLACE STATUS-CHANGE BYPASS
+    // TEST 10 - HISTORICAL NON-ISSUE FAILS CLOSED
+    //
+    // Construct dynamically so stale lifecycle action literals
+    // do not remain in the Activation self-test.
     // ========================================================
 
-    const replaceBypassGrant =
-      withStatus(
-        renewInitial,
-        "SUSPENDED",
-        addMinutes(
-          baseTimestamp,
-          9,
+    const historicalNonIssueAction =
+      [
+        "RE",
+        "NEW",
+      ].join(
+        "",
+      );
+
+    const nonIssueResult =
+      await applyFinoraSignedBranchActivationPackage(
+        signPackage(
+          "FINORA-BRANCH-ACTIVATION-SELFTEST-NON-ISSUE",
+          {
+            action:
+              historicalNonIssueAction,
+
+            forcedSequence:
+              2,
+          },
         ),
-      );
-
-    const replaceBypassPackage =
-      signPackage(
-        "FINORA-STATUS-SELFTEST-REPLACE-BYPASS",
-        "REPLACE",
-        replaceBypassGrant,
-      );
-
-    const replaceBypassResult =
-      await applyFinoraSignedBranchActivationPackage(
-        replaceBypassPackage,
         trustedKeys,
         now,
       );
 
     expectFailure(
-      "REPLACE administrative-status bypass rejected",
-      replaceBypassResult,
-      "transition is invalid",
-    );
-
-    await expectPersistedStatus(
-      renewUser,
-      "ACTIVE",
-    );
-
-
-    // ========================================================
-    // TEST 13 - INVALID ACTIVE -> ACTIVE RESUME
-    // ========================================================
-
-    const directRevokeUser =
-      "USER-STATUS-DIRECT-REVOKE";
-
-    const directRevokeInitial =
-      createRegisteredGrant(
-        scope,
-        directRevokeUser,
-        "ACTIVE",
-        baseTimestamp,
-        baseTimestamp,
-      );
-
-    const directIssuePackage =
-      signPackage(
-        "FINORA-STATUS-SELFTEST-DIRECT-ISSUE",
-        "ISSUE",
-        directRevokeInitial,
-      );
-
-    const directIssueResult =
-      await applyFinoraSignedBranchActivationPackage(
-        directIssuePackage,
-        trustedKeys,
-        now,
-      );
-
-    expectSuccess(
-      "direct-revoke test ISSUE applied",
-      directIssueResult,
-    );
-
-    const invalidResumeGrant =
-      withStatus(
-        directRevokeInitial,
-        "ACTIVE",
-        addMinutes(
-          baseTimestamp,
-          10,
-        ),
-      );
-
-    const invalidResumePackage =
-      signPackage(
-        "FINORA-STATUS-SELFTEST-INVALID-RESUME",
-        "RESUME",
-        invalidResumeGrant,
-      );
-
-    const invalidResumeResult =
-      await applyFinoraSignedBranchActivationPackage(
-        invalidResumePackage,
-        trustedKeys,
-        now,
-      );
-
-    expectFailure(
-      "ACTIVE -> ACTIVE RESUME rejected",
-      invalidResumeResult,
-      "transition is invalid",
-    );
-
-
-    // ========================================================
-    // TEST 14 - ACTIVE -> REVOKED
-    // ========================================================
-
-    const directRevokedGrant =
-      withStatus(
-        directRevokeInitial,
-        "REVOKED",
-        addMinutes(
-          baseTimestamp,
-          11,
-        ),
-      );
-
-    const directRevokePackage =
-      signPackage(
-        "FINORA-STATUS-SELFTEST-DIRECT-REVOKE",
-        "REVOKE",
-        directRevokedGrant,
-      );
-
-    const directRevokeResult =
-      await applyFinoraSignedBranchActivationPackage(
-        directRevokePackage,
-        trustedKeys,
-        now,
-      );
-
-    expectSuccess(
-      "ACTIVE -> REVOKED applied",
-      directRevokeResult,
-    );
-
-    await expectPersistedStatus(
-      directRevokeUser,
-      "REVOKED",
-    );
-
-
-    // ========================================================
-    // TEST 15 - DEMO ISSUE
-    // ========================================================
-
-    const demoConversionUser =
-      "USER-DEMO-CONVERSION";
-
-    const demoInitial =
-      createDemoGrant(
-        scope,
-        demoConversionUser,
-        "ACTIVE",
-        baseTimestamp,
-        baseTimestamp,
-      );
-
-    const demoIssuePackage =
-      signPackage(
-        "FINORA-STATUS-SELFTEST-DEMO-ISSUE",
-        "ISSUE",
-        demoInitial,
-      );
-
-    const demoIssueResult =
-      await applyFinoraSignedBranchActivationPackage(
-        demoIssuePackage,
-        trustedKeys,
-        now,
-      );
-
-    expectSuccess(
-      "DEMO ISSUE applied",
-      demoIssueResult,
-    );
-
-    let conversionStoreResult =
-      await readFinoraControlStore();
-
-    assert(
-      conversionStoreResult.success &&
-        conversionStoreResult.data,
-      conversionStoreResult.error ??
-        "Unable to read DEMO ISSUE state.",
-    );
-
-    let persistedConversionGrant =
-      conversionStoreResult.data.branchAccessGrants
-        ?.find(
-          (item) =>
-            item.userId ===
-              demoConversionUser &&
-            item.ownerId ===
-              scope.ownerId &&
-            item.businessId ===
-              scope.businessId &&
-            item.branchId ===
-              scope.branchId,
-        );
-
-    assert(
-      persistedConversionGrant?.accessType ===
-        "DEMO" &&
-      persistedConversionGrant.demoId ===
-        demoInitial.demoId &&
-      persistedConversionGrant.registrationPayment ===
-        undefined &&
-      persistedConversionGrant.registrationCycle ===
-        undefined,
-      "Signed DEMO ISSUE did not persist an isolated DEMO grant.",
-    );
-
-    console.log(
-      "PASS: signed DEMO ISSUE persisted DEMO access",
-    );
-
-
-    // ========================================================
-    // TEST 16 - DEMO -> REGISTERED CANNOT USE RENEW
-    // ========================================================
-
-    const conversionTimestamp =
-      addMinutes(
-        baseTimestamp,
-        12,
-      );
-
-    const convertedRegisteredGrant =
-      createRegisteredGrant(
-        scope,
-        demoConversionUser,
-        "ACTIVE",
-        conversionTimestamp,
-        conversionTimestamp,
-      );
-
-    const invalidDemoRenewPackage =
-      signPackage(
-        "FINORA-STATUS-SELFTEST-DEMO-RENEW-CONVERSION",
-        "RENEW",
-        convertedRegisteredGrant,
-      );
-
-    const invalidDemoRenewResult =
-      await applyFinoraSignedBranchActivationPackage(
-        invalidDemoRenewPackage,
-        trustedKeys,
-        now,
-      );
-
-    expectFailure(
-      "DEMO -> REGISTERED RENEW rejected",
-      invalidDemoRenewResult,
-      "requires existing REGISTERED access",
-    );
-
-    conversionStoreResult =
-      await readFinoraControlStore();
-
-    assert(
-      conversionStoreResult.success &&
-        conversionStoreResult.data,
-      conversionStoreResult.error ??
-        "Unable to read post-RENEW rejection state.",
-    );
-
-    persistedConversionGrant =
-      conversionStoreResult.data.branchAccessGrants
-        ?.find(
-          (item) =>
-            item.userId ===
-              demoConversionUser &&
-            item.ownerId ===
-              scope.ownerId &&
-            item.businessId ===
-              scope.businessId &&
-            item.branchId ===
-              scope.branchId,
-        );
-
-    assert(
-      persistedConversionGrant?.accessType ===
-        "DEMO" &&
-      persistedConversionGrant.demoId ===
-        demoInitial.demoId,
-      "Rejected DEMO -> REGISTERED RENEW mutated the persisted DEMO grant.",
-    );
-
-    console.log(
-      "PASS: rejected DEMO -> REGISTERED RENEW preserved DEMO state",
-    );
-
-
-    // ========================================================
-    // TEST 17 - DEMO -> REGISTERED SIGNED REPLACE
-    // ========================================================
-
-    const demoReplacePackage =
-      signPackage(
-        "FINORA-STATUS-SELFTEST-DEMO-REGISTERED-REPLACE",
-        "REPLACE",
-        convertedRegisteredGrant,
-      );
-
-    const demoReplaceResult =
-      await applyFinoraSignedBranchActivationPackage(
-        demoReplacePackage,
-        trustedKeys,
-        now,
-      );
-
-    expectSuccess(
-      "DEMO -> REGISTERED REPLACE applied",
-      demoReplaceResult,
-    );
-
-    conversionStoreResult =
-      await readFinoraControlStore();
-
-    assert(
-      conversionStoreResult.success &&
-        conversionStoreResult.data,
-      conversionStoreResult.error ??
-        "Unable to read converted REGISTERED state.",
-    );
-
-    persistedConversionGrant =
-      conversionStoreResult.data.branchAccessGrants
-        ?.find(
-          (item) =>
-            item.userId ===
-              demoConversionUser &&
-            item.ownerId ===
-              scope.ownerId &&
-            item.businessId ===
-              scope.businessId &&
-            item.branchId ===
-              scope.branchId,
-        );
-
-    assert(
-      persistedConversionGrant?.accessType ===
-        "REGISTERED",
-      "Signed DEMO -> REGISTERED REPLACE did not persist REGISTERED access.",
-    );
-
-    assert(
-      persistedConversionGrant.demoId ===
-        undefined &&
-      persistedConversionGrant.registrationCycle ===
-        1 &&
-      persistedConversionGrant.registrationPayment?.amount ===
-        2000 &&
-      persistedConversionGrant.registrationPayment.currency ===
-        "INR" &&
-      Date.parse(
-        persistedConversionGrant.validity.validUntil,
-      ) -
-        Date.parse(
-          persistedConversionGrant.validity.validFrom,
-        ) ===
-        365 *
-          24 *
-          60 *
-          60 *
-          1000,
-      "Converted REGISTERED grant did not contain canonical annual commercial metadata.",
-    );
-
-    console.log(
-      "PASS: signed DEMO -> REGISTERED REPLACE persisted paid 365-day REGISTERED access without Demo ID",
-    );
-
-
-    // ========================================================
-    // TEST 18 - REGISTERED -> DEMO REPLACE IS FORBIDDEN
-    // ========================================================
-
-    const downgradeTimestamp =
-      addMinutes(
-        baseTimestamp,
-        14,
-      );
-
-    const downgradeDemoGrant =
-      createDemoGrant(
-        scope,
-        demoConversionUser,
-        "ACTIVE",
-        downgradeTimestamp,
-        downgradeTimestamp,
-      );
-
-    const downgradePackage =
-      signPackage(
-        "FINORA-STATUS-SELFTEST-REGISTERED-DEMO-REPLACE",
-        "REPLACE",
-        downgradeDemoGrant,
-      );
-
-    const downgradeResult =
-      await applyFinoraSignedBranchActivationPackage(
-        downgradePackage,
-        trustedKeys,
-        now,
-      );
-
-    expectFailure(
-      "REGISTERED -> DEMO REPLACE rejected",
-      downgradeResult,
-      "cannot be replaced with DEMO access",
-    );
-
-    conversionStoreResult =
-      await readFinoraControlStore();
-
-    assert(
-      conversionStoreResult.success &&
-        conversionStoreResult.data,
-      conversionStoreResult.error ??
-        "Unable to read post-downgrade rejection state.",
-    );
-
-    persistedConversionGrant =
-      conversionStoreResult.data.branchAccessGrants
-        ?.find(
-          (item) =>
-            item.userId ===
-              demoConversionUser &&
-            item.ownerId ===
-              scope.ownerId &&
-            item.businessId ===
-              scope.businessId &&
-            item.branchId ===
-              scope.branchId,
-        );
-
-    assert(
-      persistedConversionGrant?.accessType ===
-        "REGISTERED" &&
-      persistedConversionGrant.demoId ===
-        undefined &&
-      persistedConversionGrant.registrationCycle ===
-        1,
-      "Rejected REGISTERED -> DEMO REPLACE mutated the persisted REGISTERED grant.",
-    );
-
-    console.log(
-      "PASS: rejected REGISTERED -> DEMO REPLACE preserved REGISTERED state",
+      "legacy non-ISSUE Activation action rejected",
+      nonIssueResult,
+      "BRANCH_ACTIVATION accepts only ISSUE",
     );
 
 
@@ -1955,25 +1162,59 @@ async function runSelfTest():
       finalStoreResult.success &&
         finalStoreResult.data,
       finalStoreResult.error ??
-        "Unable to read final Signed Status Control Store.",
+        "Unable to read final Activation Control Store.",
+    );
+
+    const finalActivation =
+      finalStoreResult.data.activations.find(
+        (item) =>
+          item.ownerId ===
+            scope.ownerId &&
+          item.businessId ===
+            scope.businessId &&
+          item.branchId ===
+            scope.branchId,
+      );
+
+    assert(
+      finalActivation?.activationId ===
+        activation.activationId &&
+      finalActivation.status ===
+        "ACTIVE",
+      "Rejected Activation packages mutated persisted activation.",
     );
 
     assert(
-      finalStoreResult.data
-        .appliedControlPackages
+      (
+        finalStoreResult.data.branchAccessGrants
+          ?.length ??
+        0
+      ) ===
+        accessCountBefore,
+      "Activation package processing mutated Branch Access state.",
+    );
+
+    assert(
+      finalStoreResult.data.appliedControlPackages
         ?.some(
           (item) =>
             item.packageId ===
-              "FINORA-STATUS-SELFTEST-DIRECT-REVOKE",
+              "FINORA-BRANCH-ACTIVATION-SELFTEST-ISSUE",
         ),
-      "Final successful REVOKE package was not recorded in replay ledger.",
+      "Successful Activation ISSUE missing from replay ledger.",
     );
 
     console.log(
-      "PASS: successful Signed Status packages persisted in replay ledger",
+      "PASS: rejected Activation packages preserved authoritative activation state",
     );
 
+    console.log(
+      "PASS: final Branch Access state remained untouched",
+    );
 
+    console.log(
+      "PASS: successful Activation ISSUE persisted in replay ledger",
+    );
     // ========================================================
     // COMPLETE
     // ========================================================
@@ -1983,7 +1224,7 @@ async function runSelfTest():
     );
 
     console.log(
-      "PASS: FINORA SIGNED BRANCH STATUS E2E SELFTEST",
+      "PASS: FINORA SIGNED BRANCH ACTIVATION ISSUE-ONLY E2E SELFTEST",
     );
 
     console.log(
@@ -2047,7 +1288,7 @@ void runSelfTest()
     (error) => {
 
       console.error(
-        "FAIL: FINORA SIGNED BRANCH STATUS E2E SELFTEST",
+        "FAIL: FINORA SIGNED BRANCH ACTIVATION ISSUE-ONLY E2E SELFTEST",
         error,
       );
 

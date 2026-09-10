@@ -67,6 +67,10 @@ import {
   useResponsive,
 } from "../../../../utils/responsive";
 
+import {
+  formatRupee,
+} from "../../../../utils/currency/formatCurrency";
+
 
 import type {
   ResponsiveTokens,
@@ -277,13 +281,9 @@ export default function GlobalHeader({
   const walletBalanceDisplay =
     walletBalance === null
       ? "₹--"
-      : `₹ ${walletBalance.toLocaleString(
-          "en-IN",
-          {
-            maximumFractionDigits:
-              2,
-          },
-        )}`;
+      : formatRupee(
+          walletBalance,
+        );
 
 
   /* =========================================================

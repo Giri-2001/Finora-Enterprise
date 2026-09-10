@@ -22,8 +22,9 @@
 // STATUS  : Production Foundation
 // ============================================================
 
-import type {
-  CSSProperties,
+import {
+  useState,
+  type CSSProperties,
 } from "react";
 
 import {
@@ -43,7 +44,28 @@ interface BranchActivationRequiredProps {
 
   onRetry(): void;
 
-  retrying?: boolean;
+  onExportEnrollmentRequest():
+    void | Promise<void>;
+
+  onImportEnrollmentResponse(
+    expectedControlCenterPublicKeyFingerprint:
+      string,
+  ):
+    void | Promise<void>;
+
+  onImportControlBundle():
+    void | Promise<void>;  retrying?: boolean;
+
+  enrollmentExporting?: boolean;
+
+  enrollmentExportMessage?: string;
+
+  enrollmentImporting?: boolean;
+
+  enrollmentImportMessage?: string;
+  controlBundleImporting?: boolean;
+
+  controlBundleImportMessage?: string;
 }
 
 // ============================================================
@@ -56,13 +78,46 @@ export default function BranchActivationRequired({
 
   onRetry,
 
+  onExportEnrollmentRequest,
+
+  onImportEnrollmentResponse,
+
+  onImportControlBundle,
+
   retrying = false,
+
+  enrollmentExporting = false,
+
+  enrollmentExportMessage = "",
+
+  enrollmentImporting = false,
+
+  enrollmentImportMessage = "",
+  controlBundleImporting = false,
+
+  controlBundleImportMessage = "",
 }: BranchActivationRequiredProps) {
   const { theme } =
     useTheme();
 
   const { tokens } =
     useResponsive();
+
+  const [controlCenterFingerprint, setControlCenterFingerprint] =
+    useState<string>(
+      "",
+    );
+
+  const fingerprintValid =
+    /^[0-9a-f]{64}$/.test(
+      controlCenterFingerprint.trim(),
+    );
+
+  const interactionBusy =
+    retrying ||
+    enrollmentExporting ||
+    enrollmentImporting ||
+    controlBundleImporting;
 
   // ==========================================================
   // STYLES
@@ -194,6 +249,23 @@ export default function BranchActivationRequired({
       theme.colors.text.secondary,
   };
 
+  const actionRowStyle: CSSProperties = {
+    display:
+      "flex",
+
+    alignItems:
+      "center",
+
+    justifyContent:
+      "center",
+
+    flexWrap:
+      "wrap",
+
+    gap:
+      `${tokens.spacing.small}px`,
+  };
+
   const buttonStyle: CSSProperties = {
     minWidth:
       `${tokens.button.minHeight}px`,
@@ -217,7 +289,7 @@ export default function BranchActivationRequired({
       theme.components.button.primaryText,
 
     cursor:
-      retrying
+      interactionBusy
         ? "default"
         : "pointer",
 
@@ -229,12 +301,73 @@ export default function BranchActivationRequired({
     boxSizing: "border-box",
 
     opacity:
-      retrying
+      interactionBusy
         ? 0.7
         : 1,
   };
 
-  // ==========================================================
+  const fingerprintFieldStyle: CSSProperties = {
+    display:
+      "grid",
+
+    gap:
+      "6px",
+
+    marginBottom:
+      `${tokens.spacing.medium}px`,
+
+    textAlign:
+      "left",
+  };
+
+  const fingerprintLabelStyle: CSSProperties = {
+    fontSize:
+      `${tokens.typography.body}px`,
+
+    lineHeight:
+      tokens.lineHeight.body,
+
+    fontWeight:
+      600,
+
+    color:
+      theme.colors.text.secondary,
+  };
+
+  const fingerprintInputStyle: CSSProperties = {
+    width:
+      "100%",
+
+    height:
+      `${tokens.button.height}px`,
+
+    padding:
+      "0 12px",
+
+    boxSizing:
+      "border-box",
+
+    borderRadius:
+      `${tokens.button.radius}px`,
+
+    border:
+      `${tokens.border.width}px solid ${theme.components.card.border}`,
+
+    background:
+      theme.colors.background.page,
+
+    color:
+      theme.colors.text.primary,
+
+    fontFamily:
+      "Inter, ui-sans-serif, system-ui, sans-serif",
+
+    fontSize:
+      `${tokens.typography.body}px`,
+
+    outline:
+      "none",
+  };  // ==========================================================
   // RENDER
   // ==========================================================
 
@@ -257,16 +390,110 @@ export default function BranchActivationRequired({
           Complete trusted FINORA branch provisioning before signing in.
         </p>
 
-        <button
-          type="button"
-          onClick={onRetry}
-          disabled={retrying}
-          style={buttonStyle}
-        >
-          {retrying
-            ? "Checking Activation..."
-            : "Check Activation"}
-        </button>
+        {enrollmentExportMessage ? (
+          <p style={noteStyle}>
+            {enrollmentExportMessage}
+          </p>
+        ) : null}
+
+        {enrollmentImportMessage ? (
+          <p style={noteStyle}>
+            {enrollmentImportMessage}
+          </p>
+        ) : null}
+
+        {controlBundleImportMessage ? (
+          <p style={noteStyle}>
+            {controlBundleImportMessage}
+          </p>
+        ) : null}        <div style={fingerprintFieldStyle}>
+          <label
+            htmlFor="finora-control-center-fingerprint"
+            style={fingerprintLabelStyle}
+          >
+            FINORA Control Center SHA-256 Fingerprint
+          </label>
+
+          <input
+            id="finora-control-center-fingerprint"
+            type="text"
+            value={controlCenterFingerprint}
+            onChange={(event) => {
+              setControlCenterFingerprint(
+                event.target.value,
+              );
+            }}
+            placeholder="64 lowercase hexadecimal characters"
+            autoCapitalize="none"
+            autoCorrect="off"
+            spellCheck={false}
+            disabled={interactionBusy}
+            style={fingerprintInputStyle}
+          />
+
+          <span style={noteStyle}>
+            Enter the fingerprint supplied independently by FINORA Control Center.
+          </span>
+        </div>
+
+        <div style={actionRowStyle}>
+          <button
+            type="button"
+            onClick={() => {
+              void onExportEnrollmentRequest();
+            }}
+            disabled={
+              interactionBusy
+            }
+            style={buttonStyle}
+          >
+            {enrollmentExporting
+              ? "Exporting Enrollment..."
+              : "Export Enrollment Request"}
+          </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              void onImportEnrollmentResponse(
+                controlCenterFingerprint.trim(),
+              );
+            }}
+            disabled={
+              interactionBusy ||
+              !fingerprintValid
+            }
+            style={buttonStyle}
+          >
+            {enrollmentImporting
+              ? "Importing Enrollment..."
+              : "Import Enrollment Response"}
+          </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              void onImportControlBundle();
+            }}
+            disabled={interactionBusy}
+            style={buttonStyle}
+          >
+            {controlBundleImporting
+              ? "Importing Control Bundle..."
+              : "Import Control Bundle"}
+          </button>          <button
+            type="button"
+            onClick={onRetry}
+            disabled={
+              interactionBusy
+            }
+            style={buttonStyle}
+          >
+            {retrying
+              ? "Checking Activation..."
+              : "Check Activation"}
+          </button>
+        </div>
       </div>
     </div>
   );

@@ -6,7 +6,7 @@
   statisticValueStyle,
 } from "./LoanStatistics.styles";
 
-import { formatCurrency } from "../../../utils/currency/formatCurrency";
+import { formatRupee } from "../../../utils/currency/formatCurrency";
 
 interface LoanStatisticsProps {
   totalLoans?: number;
@@ -89,7 +89,7 @@ export default function LoanStatistics({
           </span>
 
           <strong style={statisticValueStyle}>
-            ₹ {formatCurrency(totalDisbursed)}
+            {formatRupee(totalDisbursed)}
           </strong>
 
           <span

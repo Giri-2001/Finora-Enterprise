@@ -27,6 +27,10 @@ import {
 } from "../../utils/responsive";
 
 import {
+  formatRupee,
+} from "../../utils/currency/formatCurrency";
+
+import {
   createWalletBalanceCardStyles,
 } from "./WalletBalanceCard.styles";
 
@@ -45,23 +49,6 @@ export interface WalletBalanceCardProps {
     string;
 }
 
-/* ============================================================
-   HELPERS
-============================================================ */
-
-function formatWalletCurrency(
-  value: number,
-): string {
-  const safeValue =
-    Number.isFinite(value)
-      ? value
-      : 0;
-
-  return `₹${safeValue.toLocaleString("en-IN", {
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 2,
-  })}`;
-}
 
 /* ============================================================
    COMPONENT
@@ -114,7 +101,7 @@ export default function WalletBalanceCard({
         </p>
 
         <p style={styles.balance}>
-          {formatWalletCurrency(balance)}
+          {formatRupee(balance)}
         </p>
       </div>
 

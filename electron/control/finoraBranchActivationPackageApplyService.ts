@@ -31,7 +31,6 @@ import {
 } from "./finoraControlStore.js";
 
 import type {
-  FinoraControlBranchAccessGrant,
   FinoraControlBranchActivation,
   FinoraControlStoreResult,
   FinoraVerifiedBranchActivationApplyResult,
@@ -237,9 +236,6 @@ export async function applyFinoraSignedBranchActivationPackage(
       payload.activation,
     ) ||
     !isRecord(
-      payload.accessGrant,
-    ) ||
-    !isRecord(
       payload.installationBinding,
     ) ||
     (
@@ -261,6 +257,15 @@ export async function applyFinoraSignedBranchActivationPackage(
   ) {
     return failure(
       "FINORA Branch Activation payload structure is invalid.",
+    );
+  }
+
+  if (
+    String(payload.action) !==
+      "ISSUE"
+  ) {
+    return failure(
+      "FINORA BRANCH_ACTIVATION accepts only ISSUE. Use BRANCH_ACCESS for renew, replace, suspend, resume or revoke.",
     );
   }
 
@@ -299,13 +304,9 @@ export async function applyFinoraSignedBranchActivationPackage(
     payload.activation as unknown as
       FinoraControlBranchActivation;
 
-  const accessGrant =
-    payload.accessGrant as unknown as
-      FinoraControlBranchAccessGrant;
-
 
   // ----------------------------------------------------------
-  // SIGNED IDENTITY BINDING
+  // SIGNED ACTIVATION IDENTITY BINDING
   // ----------------------------------------------------------
 
   if (
@@ -314,12 +315,6 @@ export async function applyFinoraSignedBranchActivationPackage(
     activation.businessId !==
       installation.businessId ||
     activation.branchId !==
-      installation.branchId ||
-    accessGrant.ownerId !==
-      installation.ownerId ||
-    accessGrant.businessId !==
-      installation.businessId ||
-    accessGrant.branchId !==
       installation.branchId
   ) {
     return failure(
@@ -329,7 +324,7 @@ export async function applyFinoraSignedBranchActivationPackage(
 
 
   // ----------------------------------------------------------
-  // PHASE-2 ACTIVATION REQUIREMENT
+  // ACTIVATION REQUIREMENT
   // ----------------------------------------------------------
 
   if (
@@ -340,60 +335,6 @@ export async function applyFinoraSignedBranchActivationPackage(
       "FINORA signed Branch Activation must contain ACTIVE activation state.",
     );
   }
-
-  if (
-    payload.action ===
-      "RENEW" &&
-    accessGrant.accessType !==
-      "REGISTERED"
-  ) {
-    return failure(
-      "FINORA RENEW action is valid only for REGISTERED access.",
-    );
-  }
-
-
-  // ----------------------------------------------------------
-  // SIGNED STATUS ACTION / TARGET CONSISTENCY
-  //
-  // Current-state transition authority lives inside the
-  // serialized Control Store apply boundary.
-  // ----------------------------------------------------------
-
-  const administrativeStatus =
-    accessGrant.administrativeStatus;
-
-  if (
-    (
-      payload.action ===
-        "ISSUE" &&
-      administrativeStatus !==
-        "ACTIVE"
-    ) ||
-    (
-      payload.action ===
-        "SUSPEND" &&
-      administrativeStatus !==
-        "SUSPENDED"
-    ) ||
-    (
-      payload.action ===
-        "RESUME" &&
-      administrativeStatus !==
-        "ACTIVE"
-    ) ||
-    (
-      payload.action ===
-        "REVOKE" &&
-      administrativeStatus !==
-        "REVOKED"
-    )
-  ) {
-    return failure(
-      "FINORA Branch Activation action does not match the Branch Access administrative status.",
-    );
-  }
-
 
   // ----------------------------------------------------------
   // REPLAY-PROTECTED ATOMIC APPLY
@@ -430,10 +371,7 @@ export async function applyFinoraSignedBranchActivationPackage(
     },
 
     activation,
-
-    accessGrant,
-
-    appliedAt:
+appliedAt:
       now.toISOString(),
   });
 }

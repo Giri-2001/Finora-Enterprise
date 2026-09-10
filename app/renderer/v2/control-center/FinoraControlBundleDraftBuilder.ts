@@ -38,6 +38,7 @@ export const FINORA_CONTROL_BUNDLE_FORMAT =
 export const FINORA_CONTROL_BUNDLE_CHILD_PURPOSES =
   [
     "BRANCH_ACTIVATION",
+    "BRANCH_ACCESS",
     "STORAGE_ENTITLEMENT",
     "BUSINESS_PROFILE",
     "PRICING_POLICY",
@@ -436,7 +437,7 @@ export function buildFinoraControlBundleIssuanceRequest(
       FINORA_CONTROL_BUNDLE_CHILD_PURPOSES.length
   ) {
     throw new Error(
-      "FINORA CONTROL_BUNDLE v1 supports at most five signed child packages.",
+      "FINORA CONTROL_BUNDLE v1 supports at most six signed child packages.",
     );
   }
 

@@ -18,6 +18,8 @@
 
 import { useResponsive } from "../../../utils/responsive";
 
+import { formatCurrency } from "../../../utils/currency/formatCurrency";
+
 import type { LoanInstallment } from "./types";
 import LoanScheduleRow from "./LoanScheduleRow";
 
@@ -62,9 +64,14 @@ const THEME = {
 // ============================================================
 
 function formatIndianCurrency(value: number): string {
-  const safeValue = Number.isFinite(value) ? Math.max(0, Math.round(value)) : 0;
+  const safeValue =
+    Number.isFinite(value)
+      ? Math.max(0, value)
+      : 0;
 
-  return safeValue.toLocaleString("en-IN");
+  return formatCurrency(
+    safeValue,
+  );
 }
 
 function formatIndianDate(value: string): string {

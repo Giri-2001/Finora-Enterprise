@@ -28,8 +28,12 @@ import {
   canonicalizeFinoraControlCenterValue,
   createFinoraControlCenterPayloadDigest,
 } from "./finoraControlCenterCanonicalization.js";
+import {
+  createFinoraInstallationBindingFingerprint,
+} from "../control/finoraInstallationBindingCrypto.js";
 
 import {
+  createFinoraControlCenterSigningKeyIdFromPublicKeyFingerprint,
   signFinoraControlCenterCanonicalValue,
 } from "./finoraControlCenterCrypto.js";
 
@@ -48,6 +52,7 @@ import {
 
 export type FinoraControlCenterPackagePurpose =
   | "BRANCH_ACTIVATION"
+  | "BRANCH_ACCESS"
   | "STORAGE_ENTITLEMENT"
   | "BUSINESS_PROFILE"
   | "PRICING_POLICY"
@@ -337,6 +342,25 @@ export async function getFinoraControlCenterTrustRecord() {
   const identity =
     await getFinoraControlCenterPublicIdentity();
 
+  const publicKeyFingerprint =
+    createFinoraInstallationBindingFingerprint(
+      identity.publicKeySpkiDerBase64,
+    );
+
+  const expectedSigningKeyId =
+    createFinoraControlCenterSigningKeyIdFromPublicKeyFingerprint(
+      publicKeyFingerprint,
+    );
+
+  if (
+    identity.signingKeyId !==
+      expectedSigningKeyId
+  ) {
+    throw new Error(
+      "FINORA Control Center trust-record signingKeyId does not match the active public key.",
+    );
+  }
+
   return {
     issuerId:
       identity.issuerId,
@@ -352,6 +376,11 @@ export async function getFinoraControlCenterTrustRecord() {
 
     publicKey:
       identity.publicKeySpkiDerBase64,
+
+    fingerprintAlgorithm:
+      "SHA-256" as const,
+
+    publicKeyFingerprint,
 
     status:
       "ACTIVE" as const,

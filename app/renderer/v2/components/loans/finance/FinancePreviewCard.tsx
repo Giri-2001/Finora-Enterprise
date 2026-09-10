@@ -42,9 +42,7 @@ import {
 } from "./FinancePreviewCard.styles";
 
 
-import {
-  formatCurrency,
-} from "../../../utils/currency/formatCurrency";
+import { formatRupee } from "../../../utils/currency/formatCurrency";
 
 
 // ============================================================
@@ -287,7 +285,7 @@ export default function FinancePreviewCard({
               valueStyle
             }
           >
-            ₹ {formatCurrency(totalInterest)}
+            {formatRupee(totalInterest)}
           </strong>
 
         </div>
@@ -317,7 +315,7 @@ export default function FinancePreviewCard({
               primaryValueStyle
             }
           >
-            ₹ {formatCurrency(totalPayable)}
+            {formatRupee(totalPayable)}
           </strong>
 
         </div>
@@ -347,7 +345,7 @@ export default function FinancePreviewCard({
               valueStyle
             }
           >
-            ₹ {formatCurrency(processingFee)}
+            {formatRupee(processingFee)}
           </strong>
 
         </div>
@@ -377,7 +375,7 @@ export default function FinancePreviewCard({
               valueStyle
             }
           >
-            ₹ {formatCurrency(penaltyValue)}
+            {formatRupee(penaltyValue)}
           </strong>
 
         </div>

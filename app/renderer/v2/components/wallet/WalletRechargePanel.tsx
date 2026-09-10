@@ -39,6 +39,10 @@ import {
 } from "../../utils/responsive";
 
 import {
+  formatRupee,
+} from "../../utils/currency/formatCurrency";
+
+import {
   createWalletRechargePanelStyles,
 } from "./WalletRechargePanel.styles";
 
@@ -270,14 +274,14 @@ export default function WalletRechargePanel({
 
         {amountText && !amountIsValid ? (
           <p style={styles.helper}>
-            Enter an amount between ₹
-            {FINORA_WALLET_MIN_RECHARGE_AMOUNT.toLocaleString(
-              "en-IN",
-            )}{" "}
-            and ₹
-            {FINORA_WALLET_MAX_RECHARGE_AMOUNT.toLocaleString(
-              "en-IN",
-            )}.
+            Enter an amount between{" "}
+{formatRupee(
+  FINORA_WALLET_MIN_RECHARGE_AMOUNT,
+)}{" "}
+and{" "}
+{formatRupee(
+  FINORA_WALLET_MAX_RECHARGE_AMOUNT,
+)}.
           </p>
         ) : null}
 

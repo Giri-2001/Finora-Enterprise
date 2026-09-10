@@ -611,6 +611,47 @@ interface StorageEntitlementCheckRequest {
   storageMode: FinoraControlStorageMode;
 }
 
+type FinoraInstallationEnrollmentRequestExportResult =
+  | {
+      success:
+        true;
+
+      cancelled:
+        true;
+    }
+  | {
+      success:
+        true;
+
+      cancelled:
+        false;
+
+      fileName:
+        string;
+
+      bytesWritten:
+        number;
+
+      requestId:
+        string;
+
+      installationId:
+        string;
+
+      bindingKeyId:
+        string;
+
+      publicKeyFingerprint:
+        string;
+    }
+  | {
+      success:
+        false;
+
+      error:
+        string;
+    };
+
 type FinoraControlBundleImportResult =
   | {
       success:
@@ -712,6 +753,80 @@ interface FinoraControlBridge {
     ) =>
       Promise<
         StorageResult<boolean>
+      >;
+
+  exportInstallationEnrollmentRequest:
+    () =>
+      Promise<
+        FinoraInstallationEnrollmentRequestExportResult
+      >;
+
+  importInstallationEnrollmentResponse:
+    (
+      expectedControlCenterPublicKeyFingerprint:
+        string,
+    ) =>
+      Promise<
+        | {
+            success:
+              true;
+
+            cancelled:
+              true;
+          }
+        | {
+            success:
+              true;
+
+            cancelled:
+              false;
+
+            fileName:
+              string;
+
+            bytesRead:
+              number;
+
+            responseId:
+              string;
+
+            requestId:
+              string;
+
+            installationId:
+              string;
+
+            ownerId:
+              string;
+
+            businessId:
+              string;
+
+            branchId:
+              string;
+
+            businessCode:
+              string;
+
+            branchCode:
+              string;
+
+            trustRecovered:
+              boolean;
+
+            installationRecovered:
+              boolean;
+
+            completedAt:
+              string;
+          }
+        | {
+            success:
+              false;
+
+            error:
+              string;
+          }
       >;
 
   importControlBundle:
@@ -971,11 +1086,283 @@ const CONTROL_CHANNELS = {
   HAS_ACTIVE_STORAGE_ENTITLEMENT:
     "finora:control:has-active-storage-entitlement",
 
+  EXPORT_INSTALLATION_ENROLLMENT_REQUEST:
+    "finora:control:export-installation-enrollment-request",
+
+  IMPORT_INSTALLATION_ENROLLMENT_RESPONSE:
+    "finora:control:import-installation-enrollment-response",
+
   IMPORT_CONTROL_BUNDLE:
     "finora:control:import-control-bundle",
 
 } as const;
 
+// ============================================================
+// BRANCH CREDENTIAL IPC CHANNELS
+// ============================================================
+
+const BRANCH_CREDENTIAL_CHANNELS = {
+
+  ENROLL:
+    "finora:credential:enroll",
+
+} as const;
+
+
+// ============================================================
+// BRANCH CREDENTIAL PRELOAD CONTRACT
+//
+// Password is transient request material only.
+// No verifier, salt or derived-key contract is exposed.
+// ============================================================
+
+interface FinoraCredentialEnrollmentRequest {
+
+  username:
+    string;
+
+  password:
+    string;
+}
+
+type FinoraCredentialBridgeResult<T> =
+  | {
+      success:
+        true;
+
+      data:
+        T;
+    }
+  | {
+      success:
+        false;
+
+      errorCode?:
+        string;
+
+      error:
+        string;
+    };
+
+interface FinoraCredentialEnrollmentView {
+
+  credentialId:
+    string;
+
+  userId:
+    string;
+
+  username:
+    string;
+
+  fullName:
+    string;
+
+  role:
+    | "ADMIN"
+    | "MANAGER"
+    | "COLLECTOR"
+    | "VIEWER";
+
+  ownerId:
+    string;
+
+  businessId:
+    string;
+
+  branchId:
+    string;
+
+  storageMode:
+    | "LOCAL"
+    | "USB";
+
+  dataContext:
+    | "REAL"
+    | "DEMO";
+
+  demoId?:
+    string;
+
+  enrolledAt:
+    string;
+}
+
+interface FinoraCredentialBridge {
+
+  enroll(
+    request:
+      FinoraCredentialEnrollmentRequest,
+  ):
+    Promise<
+      FinoraCredentialBridgeResult<
+        FinoraCredentialEnrollmentView
+      >
+    >;
+
+
+}
+
+// ============================================================
+// BRANCH LOGIN SESSION IPC CHANNELS
+// ============================================================
+
+const BRANCH_LOGIN_SESSION_CHANNELS = {
+  LOGIN:
+    "finora:login-session:login",
+
+  VALIDATE:
+    "finora:login-session:validate",
+
+  TOUCH:
+    "finora:login-session:touch",
+
+  INVALIDATE:
+    "finora:login-session:invalidate",
+} as const;
+
+
+// ============================================================
+// BRANCH LOGIN SESSION PRELOAD CONTRACT
+// ============================================================
+interface FinoraLoginSessionLoginRequest {
+  username:
+    string;
+
+  password:
+    string;
+
+  storageMode:
+    | "LOCAL"
+    | "USB";
+}
+
+interface FinoraLoginSessionRequest {
+  sessionId:
+    string;
+}
+
+type FinoraLoginSessionAccessMode =
+  | "ACTIVE"
+  | "REGISTERED_EXPIRED_READ_ONLY";
+
+interface FinoraLoginSessionView {
+  sessionId:
+    string;
+
+  userId:
+    string;
+
+  username:
+    string;
+
+  fullName:
+    string;
+
+  role:
+    | "ADMIN"
+    | "MANAGER"
+    | "COLLECTOR"
+    | "VIEWER";
+
+  ownerId:
+    string;
+
+  businessId:
+    string;
+
+  branchId:
+    string;
+
+  storageMode:
+    | "LOCAL"
+    | "USB";
+
+  dataContext:
+    | "REAL"
+    | "DEMO";
+
+  demoId?:
+    string;
+
+  accessMode:
+    FinoraLoginSessionAccessMode;
+
+  loginTime:
+    string;
+
+  lastActivity:
+    string;
+
+  validatedAt:
+    string;
+}
+
+type FinoraLoginSessionBridgeResult<T> =
+  | {
+      success:
+        true;
+
+      data:
+        T;
+    }
+  | {
+      success:
+        false;
+
+      errorCode?:
+        string;
+
+      error:
+        string;
+    };
+
+interface FinoraLoginSessionBridge {
+  login(
+    request:
+      FinoraLoginSessionLoginRequest,
+  ):
+    Promise<
+      FinoraLoginSessionBridgeResult<
+        FinoraLoginSessionView
+      >
+    >;
+
+  validate(
+    request:
+      FinoraLoginSessionRequest,
+  ):
+    Promise<
+      FinoraLoginSessionBridgeResult<
+        FinoraLoginSessionView
+      >
+    >;
+
+  touch(
+    request:
+      FinoraLoginSessionRequest,
+  ):
+    Promise<
+      FinoraLoginSessionBridgeResult<{
+        sessionId:
+          string;
+
+        lastActivity:
+          string;
+      }>
+    >;
+
+  invalidate(
+    request:
+      FinoraLoginSessionRequest,
+  ):
+    Promise<
+      FinoraLoginSessionBridgeResult<{
+        invalidated:
+          boolean;
+      }>
+    >;
+}
 
 // ============================================================
 // SECURE USB BRIDGE
@@ -1411,6 +1798,32 @@ const controlBridge:
   // -> CONTROL_BUNDLE application
   // ----------------------------------------------------------
 
+  // ----------------------------------------------------------
+  // INSTALLATION ENROLLMENT REQUEST EXPORT
+  //
+  // Zero arguments.
+  // Renderer cannot supply path, payload or signature.
+  // Electron main owns generation + native Save dialog.
+  // ----------------------------------------------------------
+
+  exportInstallationEnrollmentRequest:
+    () =>
+      ipcRenderer.invoke(
+        CONTROL_CHANNELS.EXPORT_INSTALLATION_ENROLLMENT_REQUEST,
+      ) as Promise<
+        FinoraInstallationEnrollmentRequestExportResult
+      >,
+
+  importInstallationEnrollmentResponse:
+    (
+      expectedControlCenterPublicKeyFingerprint,
+    ) =>
+      ipcRenderer.invoke(
+        CONTROL_CHANNELS
+          .IMPORT_INSTALLATION_ENROLLMENT_RESPONSE,
+        expectedControlCenterPublicKeyFingerprint,
+      ),
+
   importControlBundle:
     () =>
       ipcRenderer.invoke(
@@ -1422,12 +1835,107 @@ const controlBridge:
 
 
 // ============================================================
+// BRANCH CREDENTIAL BRIDGE
+// ============================================================
+
+const credentialBridge:
+  FinoraCredentialBridge = {
+
+  enroll:
+    (
+      request:
+        FinoraCredentialEnrollmentRequest,
+    ) =>
+      ipcRenderer.invoke(
+        BRANCH_CREDENTIAL_CHANNELS.ENROLL,
+        request,
+      ) as Promise<
+        FinoraCredentialBridgeResult<
+          FinoraCredentialEnrollmentView
+        >
+      >,
+
+
+};
+
+// ============================================================
+// BRANCH LOGIN SESSION BRIDGE
+// ============================================================
+
+const loginSessionBridge:
+  FinoraLoginSessionBridge = {
+  login:
+    (
+      request:
+        FinoraLoginSessionLoginRequest,
+    ) =>
+      ipcRenderer.invoke(
+        BRANCH_LOGIN_SESSION_CHANNELS.LOGIN,
+        request,
+      ) as Promise<
+        FinoraLoginSessionBridgeResult<
+          FinoraLoginSessionView
+        >
+      >,
+
+  validate:
+    (
+      request:
+        FinoraLoginSessionRequest,
+    ) =>
+      ipcRenderer.invoke(
+        BRANCH_LOGIN_SESSION_CHANNELS.VALIDATE,
+        request,
+      ) as Promise<
+        FinoraLoginSessionBridgeResult<
+          FinoraLoginSessionView
+        >
+      >,
+
+  touch:
+    (
+      request:
+        FinoraLoginSessionRequest,
+    ) =>
+      ipcRenderer.invoke(
+        BRANCH_LOGIN_SESSION_CHANNELS.TOUCH,
+        request,
+      ) as Promise<
+        FinoraLoginSessionBridgeResult<{
+          sessionId:
+            string;
+
+          lastActivity:
+            string;
+        }>
+      >,
+
+  invalidate:
+    (
+      request:
+        FinoraLoginSessionRequest,
+    ) =>
+      ipcRenderer.invoke(
+        BRANCH_LOGIN_SESSION_CHANNELS.INVALIDATE,
+        request,
+      ) as Promise<
+        FinoraLoginSessionBridgeResult<{
+          invalidated:
+            boolean;
+        }>
+      >,
+};
+
+
+// ============================================================
 // FINORA RENDERER BRIDGE
 // ============================================================
 
 contextBridge.exposeInMainWorld(
   "finora",
   {
+    loginSession:
+      loginSessionBridge,
 
     version:
       "2.0.0",
@@ -1437,6 +1945,8 @@ contextBridge.exposeInMainWorld(
 
     control:
       controlBridge,
+    credentials:
+      credentialBridge,
 
     notificationArtifacts:
       notificationArtifactBridge,

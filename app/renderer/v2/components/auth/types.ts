@@ -6,9 +6,8 @@
 // RESPONSIBILITY:
 //
 // - Define FINORA authentication contracts
-// - Define user roles and status
+// - Define authenticated user roles
 // - Define business access context
-// - Define login credentials
 // - Define authenticated session
 // - Define authenticated data context
 //
@@ -36,29 +35,6 @@ export type UserRole =
 
 // ============================================================
 // USER STATUS
-// ============================================================
-
-export type UserStatus =
-  | "ACTIVE"
-  | "INACTIVE";
-
-// ============================================================
-// AUTHENTICATED DATA CONTEXT
-//
-// Defines whether the authenticated session is operating
-// against REAL production data or an isolated DEMO context.
-//
-// IMPORTANT:
-//
-// - REAL uses ownerId for production owner isolation.
-// - DEMO uses demoId for isolated demonstration data.
-// - DEMO is a data context, not a storage mode.
-//
-// Storage modes remain:
-//
-// LOCAL
-// USB
-// CLOUD
 // ============================================================
 
 export type AuthDataContext =
@@ -145,64 +121,6 @@ export type BusinessAccessContext = {
 // remains compatible with the current User contract.
 //
 // The active REAL / DEMO context belongs to AuthSession.
-// ============================================================
-
-export type User = {
-  id: string;
-
-  username: string;
-
-  password: string;
-
-  fullName: string;
-
-  role: UserRole;
-
-  status: UserStatus;
-
-  createdAt: string;
-
-  updatedAt: string;
-
-  // ----------------------------------------------------------
-  // BUSINESS ACCESS CONTEXT
-  // ----------------------------------------------------------
-
-  ownerId?: string;
-
-  businessId?: string;
-
-  branchId?: string;
-};
-
-// ============================================================
-// LOGIN CREDENTIALS
-// ============================================================
-
-export type LoginCredentials = {
-  username: string;
-
-  password: string;
-};
-
-// ============================================================
-// AUTHENTICATED SESSION
-//
-// The session carries the authenticated user's identity,
-// business context and active data context.
-//
-// Existing authentication fields remain unchanged.
-//
-// dataContext:
-// - REAL = production owner data.
-// - DEMO = isolated demonstration data.
-//
-// demoId:
-// - Required when dataContext is DEMO.
-// - Must never be used for REAL sessions.
-//
-// This keeps authentication/session state separate from the
-// persisted User identity model.
 // ============================================================
 
 export type AuthSession = {

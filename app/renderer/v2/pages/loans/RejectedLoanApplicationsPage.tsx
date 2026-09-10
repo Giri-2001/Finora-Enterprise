@@ -59,6 +59,8 @@ import {
   fetchRejectedLoanApplications,
 } from "../../services/loan-applications/rejectedLoanApplicationService";
 
+import { formatCurrency } from "../../utils/currency/formatCurrency";
+
 import {
   reopenRejectedLoanApplication,
 } from "../../services/loan-applications/rejectedLoanApplicationReopenService";
@@ -145,12 +147,9 @@ function formatIndianAmount(
       ? Math.max(0, value)
       : 0;
 
-  return new Intl.NumberFormat(
-    "en-IN",
-    {
-      maximumFractionDigits: 2,
-    },
-  ).format(normalized);
+  return formatCurrency(
+    normalized,
+  );
 }
 
 function formatDateTime(

@@ -61,7 +61,7 @@ import {
   previewBadgeStyle,
 } from "./LoanPreviewCard.styles";
 
-import { formatCurrency } from "../../../utils/currency/formatCurrency";
+import { formatRupee } from "../../../utils/currency/formatCurrency";
 
 // ============================================================
 // TYPES
@@ -294,7 +294,7 @@ export default function LoanPreviewCard({
               <span style={labelStyle}>Loan Amount</span>
 
               <strong style={financialValueStyle}>
-                ₹ {formatCurrency(loanAmount)}
+                {formatRupee(loanAmount)}
               </strong>
             </div>
 
@@ -320,7 +320,7 @@ export default function LoanPreviewCard({
               <span style={labelStyle}>Total Interest</span>
 
               <strong style={financialValueStyle}>
-                ₹ {formatCurrency(totalInterest)}
+                {formatRupee(totalInterest)}
               </strong>
             </div>
 
@@ -330,7 +330,7 @@ export default function LoanPreviewCard({
               <span style={labelStyle}>Total Payable</span>
 
               <strong style={financialValueStyle}>
-                ₹ {formatCurrency(totalPayable)}
+                {formatRupee(totalPayable)}
               </strong>
             </div>
           </div>
@@ -376,7 +376,7 @@ export default function LoanPreviewCard({
               <span style={labelStyle}>Processing Fee</span>
 
               <strong style={valueStyle}>
-                ₹ {formatCurrency(processingFee)}
+                {formatRupee(processingFee)}
               </strong>
             </div>
 
@@ -386,7 +386,7 @@ export default function LoanPreviewCard({
               <span style={labelStyle}>Advance Deduction</span>
 
               <strong style={financialValueStyle}>
-                ₹ {formatCurrency(advanceDeduction)}
+                {formatRupee(advanceDeduction)}
               </strong>
             </div>
 
@@ -396,7 +396,7 @@ export default function LoanPreviewCard({
               <span style={labelStyle}>Net Disbursement</span>
 
               <strong style={financialValueStyle}>
-                ₹ {formatCurrency(netDisbursement)}
+                {formatRupee(netDisbursement)}
               </strong>
             </div>
           </div>

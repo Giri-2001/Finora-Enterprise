@@ -18,11 +18,7 @@ export function formatCurrency(
 ): string {
 
 
-  if (
-
-    isNaN(value)
-
-  ) {
+  if (!Number.isFinite(value)) {
 
     return "0";
 
@@ -37,7 +33,39 @@ export function formatCurrency(
 
     "en-IN",
 
+    {
+
+      minimumFractionDigits: 0,
+
+      maximumFractionDigits: 0,
+
+    },
+
   );
 
+
+}
+
+
+/* ===========================================================
+   FORMAT INDIAN RUPEE
+
+   UI DISPLAY AUTHORITY:
+
+   1000   -> ₹1,000
+   9999   -> ₹9,999
+   10000  -> ₹10,000
+   100000 -> ₹1,00,000
+
+   Financial precision remains unchanged outside presentation.
+=========================================================== */
+
+export function formatRupee(
+
+  value: number,
+
+): string {
+
+  return `₹${formatCurrency(value)}`;
 
 }

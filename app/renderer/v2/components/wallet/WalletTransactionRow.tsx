@@ -31,6 +31,10 @@ import {
 } from "../../utils/responsive";
 
 import {
+  formatRupee,
+} from "../../utils/currency/formatCurrency";
+
+import {
   createWalletTransactionRowStyles,
 } from "./WalletTransactionRow.styles";
 
@@ -46,34 +50,6 @@ export interface WalletTransactionRowProps {
 /* ============================================================
    HELPERS
 ============================================================ */
-
-function formatWalletAmount(
-  value: number,
-): string {
-  const safeValue =
-    Number.isFinite(value)
-      ? Math.abs(value)
-      : 0;
-
-  return `₹${safeValue.toLocaleString("en-IN", {
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 2,
-  })}`;
-}
-
-function formatWalletBalance(
-  value: number,
-): string {
-  const safeValue =
-    Number.isFinite(value)
-      ? value
-      : 0;
-
-  return `₹${safeValue.toLocaleString("en-IN", {
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 2,
-  })}`;
-}
 
 function formatWalletOccurredAt(
   value: string,
@@ -112,7 +88,7 @@ export default function WalletTransactionRow({
     transaction.direction === "CREDIT";
 
   const amount =
-    `${isCredit ? "+" : "-"}${formatWalletAmount(transaction.amount)}`;
+    `${isCredit ? "+" : "-"}${formatRupee(Math.abs(transaction.amount))}`;
 
   const subtitleParts = [
     transaction.referenceId,
@@ -167,7 +143,7 @@ export default function WalletTransactionRow({
           </p>
 
           <p style={styles.balance}>
-            Avl. Bal {formatWalletBalance(transaction.availableBalance)}
+            Avl. Bal {formatRupee(transaction.availableBalance)}
           </p>
         </div>
       </div>

@@ -64,6 +64,7 @@ export interface FinoraControlBundleIssuanceTarget {
 
 export type FinoraControlBundleChildPurpose =
   | "BRANCH_ACTIVATION"
+  | "BRANCH_ACCESS"
   | "STORAGE_ENTITLEMENT"
   | "BUSINESS_PROFILE"
   | "PRICING_POLICY"
@@ -72,6 +73,7 @@ export type FinoraControlBundleChildPurpose =
 const FINORA_CONTROL_BUNDLE_CHILD_PURPOSES:
   readonly FinoraControlBundleChildPurpose[] = [
     "BRANCH_ACTIVATION",
+    "BRANCH_ACCESS",
     "STORAGE_ENTITLEMENT",
     "BUSINESS_PROFILE",
     "PRICING_POLICY",

@@ -36,12 +36,14 @@ import {
 
 import {
   issueFinoraBranchActivationPackage,
+  issueFinoraBranchAccessPackage,
   issueFinoraBusinessProfilePackage,
   issueFinoraControlBundlePackage,
   issueFinoraPricingPolicyPackage,
   issueFinoraStorageEntitlementPackage,
   issueFinoraWalletRechargePackage,
   type IssueFinoraBranchActivationRequest,
+  type IssueFinoraBranchAccessRequest,
   type IssueFinoraBusinessProfileRequest,
   type IssueFinoraControlBundleRequest,
   type IssueFinoraPricingPolicyRequest,
@@ -58,6 +60,25 @@ import {
 } from "./finoraControlBundleFileTransport.js";
 
 import {
+  openVerifiedFinoraInstallationEnrollmentRequest,
+} from "./finoraInstallationEnrollmentRequestFileTransport.js";
+
+import {
+  getFinoraVerifiedInstallationEnrollment,
+  rememberFinoraVerifiedInstallationEnrollment,
+  takeFinoraVerifiedInstallationEnrollment,
+} from "./finoraInstallationEnrollmentSessionAuthority.js";
+
+import {
+  issueFinoraInstallationEnrollmentResponse,
+  type FinoraInstallationEnrollmentOperatorAssignment,
+} from "./finoraInstallationEnrollmentResponseIssuanceCoordinator.js";
+
+import {
+  exportFinoraInstallationEnrollmentResponseFile,
+} from "./finoraInstallationEnrollmentResponseFileTransport.js";
+
+import {
   isTrustedFinoraControlCenterRenderer,
 } from "./finoraControlCenterWindow.js";
 
@@ -69,8 +90,17 @@ export const FINORA_CONTROL_CENTER_IPC_CHANNELS = {
   GET_TRUST_RECORD:
     "finora:control-center:get-trust-record",
 
+  OPEN_INSTALLATION_ENROLLMENT_REQUEST:
+    "finora:control-center:open-installation-enrollment-request",
+
+  ISSUE_AND_EXPORT_INSTALLATION_ENROLLMENT_RESPONSE:
+    "finora:control-center:issue-and-export-installation-enrollment-response",
+
   ISSUE_BRANCH_ACTIVATION:
     "finora:control-center:issue-branch-activation",
+
+  ISSUE_BRANCH_ACCESS:
+    "finora:control-center:issue-branch-access",
 
   ISSUE_STORAGE_ENTITLEMENT:
     "finora:control-center:issue-storage-entitlement",
@@ -301,6 +331,87 @@ async function executePrivileged<T>(
 }
 
 // ============================================================
+// INSTALLATION ENROLLMENT OPERATOR ASSIGNMENT
+// ============================================================
+
+function isInstallationEnrollmentOperatorAssignment(
+  value:
+    unknown,
+): value is FinoraInstallationEnrollmentOperatorAssignment {
+
+  if (!isRecord(value)) {
+    return false;
+  }
+
+  const expectedKeys = [
+    "ownerId",
+    "businessId",
+    "branchId",
+    "businessCode",
+    "branchCode",
+  ].sort();
+
+  const actualKeys =
+    Object.keys(
+      value,
+    ).sort();
+
+  if (
+    actualKeys.length !==
+      expectedKeys.length ||
+    !actualKeys.every(
+      (key, index) =>
+        key ===
+          expectedKeys[index],
+    )
+  ) {
+    return false;
+  }
+
+  function isAssignmentText(
+    candidate:
+      unknown,
+    maxLength:
+      number,
+  ): candidate is string {
+
+    return (
+      typeof candidate ===
+        "string" &&
+      candidate.length >
+        0 &&
+      candidate.length <=
+        maxLength &&
+      candidate ===
+        candidate.trim()
+    );
+  }
+
+  return (
+    isAssignmentText(
+      value.ownerId,
+      256,
+    ) &&
+    isAssignmentText(
+      value.businessId,
+      256,
+    ) &&
+    isAssignmentText(
+      value.branchId,
+      256,
+    ) &&
+    isAssignmentText(
+      value.businessCode,
+      64,
+    ) &&
+    isAssignmentText(
+      value.branchCode,
+      64,
+    )
+  );
+}
+
+// ============================================================
 // REGISTRATION STATE
 // ============================================================
 
@@ -389,6 +500,276 @@ export function registerFinoraControlCenterHandlers():
   );
 
   // ----------------------------------------------------------
+  // VERIFIED INSTALLATION ENROLLMENT REQUEST
+  //
+  // SECURITY:
+  //
+  // - Dedicated Control Center renderer only.
+  // - Zero renderer arguments.
+  // - Renderer supplies no filesystem path.
+  // - Renderer supplies no request bytes.
+  // - Main process owns native file selection and verification.
+  // - Native public key bytes are not returned to renderer.
+  // - Opening/verifying a request does not approve enrollment.
+  // ----------------------------------------------------------
+
+  ipcMain.handle(
+    FINORA_CONTROL_CENTER_IPC_CHANNELS
+      .OPEN_INSTALLATION_ENROLLMENT_REQUEST,
+    async (
+      event,
+    ) => {
+
+      if (
+        !isTrustedFinoraControlCenterRenderer(
+          event.senderFrame,
+        )
+      ) {
+        return failure(
+          "FINORA Installation Enrollment Request access is restricted to the dedicated Control Center renderer.",
+        );
+      }
+
+      const parentWindow =
+        BrowserWindow.fromWebContents(
+          event.sender,
+        );
+
+      if (
+        !parentWindow ||
+        parentWindow.isDestroyed()
+      ) {
+        return failure(
+          "The FINORA Control Center window is unavailable for Installation Enrollment Request selection.",
+        );
+      }
+
+      if (
+        event.senderFrame !==
+          parentWindow.webContents.mainFrame
+      ) {
+        return failure(
+          "FINORA Installation Enrollment Request access is restricted to the dedicated Control Center main frame.",
+        );
+      }
+
+      const openResult =
+        await openVerifiedFinoraInstallationEnrollmentRequest(
+          parentWindow,
+        );
+
+      if (!openResult.success) {
+        return failure(
+          openResult.error,
+        );
+      }
+
+      if (openResult.cancelled) {
+        return success({
+          cancelled:
+            true as const,
+        });
+      }
+
+      const enrollment =
+        openResult.enrollment;
+
+      rememberFinoraVerifiedInstallationEnrollment(
+        event.sender,
+        enrollment,
+      );
+
+      return success({
+        cancelled:
+          false as const,
+
+        fileName:
+          openResult.fileName,
+
+        bytesRead:
+          openResult.bytesRead,
+
+        requestId:
+          enrollment.requestId,
+
+        requestedAt:
+          enrollment.requestedAt,
+
+        installationId:
+          enrollment.target.installationId,
+
+        bindingKeyId:
+          enrollment.target.bindingKeyId,
+
+        fingerprintAlgorithm:
+          enrollment.target.fingerprintAlgorithm,
+
+        publicKeyFingerprint:
+          enrollment.target.publicKeyFingerprint,
+      });
+    },
+  );
+
+  // ----------------------------------------------------------
+  // INSTALLATION ENROLLMENT RESPONSE — ISSUE + EXPORT
+  //
+  // Renderer authority is limited to the five operator
+  // assignment strings validated above.
+  //
+  // Native installation identity / binding data comes only
+  // from the previously verified main-process session.
+  // ----------------------------------------------------------
+
+  ipcMain.handle(
+    FINORA_CONTROL_CENTER_IPC_CHANNELS
+      .ISSUE_AND_EXPORT_INSTALLATION_ENROLLMENT_RESPONSE,
+    async (
+      event,
+      assignment:
+        unknown,
+    ) => {
+
+      if (
+        !isTrustedFinoraControlCenterRenderer(
+          event.senderFrame,
+        )
+      ) {
+        return failure(
+          "FINORA Installation Enrollment Response issuance is restricted to the dedicated Control Center renderer.",
+        );
+      }
+
+      const parentWindow =
+        BrowserWindow.fromWebContents(
+          event.sender,
+        );
+
+      if (
+        !parentWindow ||
+        parentWindow.isDestroyed()
+      ) {
+        return failure(
+          "The FINORA Control Center window is unavailable for Installation Enrollment Response export.",
+        );
+      }
+
+      if (
+        event.senderFrame !==
+          parentWindow.webContents.mainFrame
+      ) {
+        return failure(
+          "FINORA Installation Enrollment Response issuance is restricted to the dedicated Control Center main frame.",
+        );
+      }
+
+      if (
+        !isInstallationEnrollmentOperatorAssignment(
+          assignment,
+        )
+      ) {
+        return failure(
+          "A valid FINORA Installation Enrollment operator assignment is required.",
+        );
+      }
+
+      const verifiedEnrollment =
+        takeFinoraVerifiedInstallationEnrollment(
+          event.sender,
+        );
+
+      if (!verifiedEnrollment) {
+        return failure(
+          "Open and cryptographically verify an Installation Enrollment Request before issuing its Enrollment Response.",
+        );
+      }
+
+      let responseExported =
+        false;
+
+      try {
+        const signedResponse =
+          await issueFinoraInstallationEnrollmentResponse({
+            verifiedEnrollment,
+
+            assignment,
+          });
+
+        const exportResult =
+          await exportFinoraInstallationEnrollmentResponseFile(
+            parentWindow,
+            signedResponse,
+          );
+
+        if (!exportResult.success) {
+          return failure(
+            exportResult.error,
+          );
+        }
+
+        if (exportResult.cancelled) {
+          return success({
+            cancelled:
+              true as const,
+          });
+        }
+
+        responseExported =
+          true;
+
+        return success({
+          cancelled:
+            false as const,
+
+          fileName:
+            exportResult.fileName,
+
+          bytesWritten:
+            exportResult.bytesWritten,
+
+          responseId:
+            exportResult.responseId,
+
+          requestId:
+            exportResult.requestId,
+
+          installationId:
+            exportResult.installationId,
+        });
+
+      } catch (error) {
+        return failure(
+          error instanceof Error
+            ? error.message
+            : "Unable to issue and export the FINORA Installation Enrollment Response.",
+        );
+
+      } finally {
+
+        /*
+         * The verified request is consumed permanently only
+         * after a successful response export.
+         *
+         * On cancellation/failure, restore it only when no
+         * newer verified request has already replaced it.
+         */
+        if (
+          !responseExported &&
+          !event.sender.isDestroyed() &&
+          getFinoraVerifiedInstallationEnrollment(
+            event.sender,
+          ) ===
+            undefined
+        ) {
+          rememberFinoraVerifiedInstallationEnrollment(
+            event.sender,
+            verifiedEnrollment,
+          );
+        }
+      }
+    },
+  );
+
+  // ----------------------------------------------------------
   // BRANCH ACTIVATION
   // ----------------------------------------------------------
 
@@ -425,6 +806,48 @@ export function registerFinoraControlCenterHandlers():
           issueFinoraBranchActivationPackage(
             request as
               IssueFinoraBranchActivationRequest,
+          ),
+      );
+    },
+  );
+
+  // ----------------------------------------------------------
+  // BRANCH ACCESS
+  // ----------------------------------------------------------
+
+  ipcMain.handle(
+    FINORA_CONTROL_CENTER_IPC_CHANNELS.ISSUE_BRANCH_ACCESS,
+    async (
+      event,
+      request:
+        unknown,
+    ) => {
+
+      if (
+        !isTrustedFinoraControlCenterRenderer(
+          event.senderFrame,
+        )
+      ) {
+        return failure(
+          "FINORA Branch Access issuance is restricted to the dedicated Control Center renderer.",
+        );
+      }
+
+      if (
+        !isBaseIssuanceRequest(
+          request,
+        )
+      ) {
+        return failure(
+          "A valid FINORA Branch Access issuance request is required.",
+        );
+      }
+
+      return executePrivileged(
+        () =>
+          issueFinoraBranchAccessPackage(
+            request as
+              IssueFinoraBranchAccessRequest,
           ),
       );
     },

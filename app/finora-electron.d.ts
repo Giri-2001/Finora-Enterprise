@@ -106,6 +106,47 @@ interface FinoraFindWalletRechargeAuthorizationRequest {
 // CONTROL BRIDGE
 // ============================================================
 
+type FinoraElectronInstallationEnrollmentRequestExportResult =
+  | {
+      success:
+        true;
+
+      cancelled:
+        true;
+    }
+  | {
+      success:
+        true;
+
+      cancelled:
+        false;
+
+      fileName:
+        string;
+
+      bytesWritten:
+        number;
+
+      requestId:
+        string;
+
+      installationId:
+        string;
+
+      bindingKeyId:
+        string;
+
+      publicKeyFingerprint:
+        string;
+    }
+  | {
+      success:
+        false;
+
+      error:
+        string;
+    };
+
 type FinoraElectronControlBundleImportResult =
   | {
       success:
@@ -146,14 +187,265 @@ type FinoraElectronControlBundleImportResult =
         string;
     };
 
-interface FinoraElectronControlBridge {
+// ============================================================
+// CONTROL BRIDGE — STRONGLY TYPED RENDERER CONTRACT
+// ============================================================
 
-  /**
-   * Returns the device-level FINORA installation identity.
-   *
-   * Undefined means this installation has not yet been
-   * provisioned.
-   */
+interface FinoraFindBranchAccessGrantRequest {
+  userId: string;
+
+  ownerId: string;
+
+  businessId: string;
+
+  branchId: string;
+}
+
+interface FinoraFindBusinessProfileRequest {
+  ownerId: string;
+
+  businessId: string;
+
+  branchId: string;
+}
+
+interface FinoraFindPricingPolicyRequest {
+  ownerId: string;
+
+  businessId: string;
+
+  branchId: string;
+}
+
+type FinoraElectronBranchAccessType =
+  | "REGISTERED"
+  | "DEMO";
+
+type FinoraElectronBranchAccessStatus =
+  | "ACTIVE"
+  | "SUSPENDED"
+  | "REVOKED";
+
+interface FinoraElectronRegistrationPayment {
+  amount: number;
+
+  currency: string;
+
+  paymentMode:
+    | "CASH"
+    | "UPI"
+    | "BANK_TRANSFER"
+    | "OTHER";
+
+  paidAt: string;
+
+  reference?: string;
+
+  remarks?: string;
+
+  refundable: false;
+}
+
+interface FinoraElectronBranchAccessGrant {
+  grantId: string;
+
+  userId: string;
+
+  ownerId: string;
+
+  businessId: string;
+
+  branchId: string;
+
+  storageMode:
+    FinoraEntitlementStorageMode;
+
+  accessType:
+    FinoraElectronBranchAccessType;
+
+  administrativeStatus:
+    FinoraElectronBranchAccessStatus;
+
+  validity: {
+    validFrom: string;
+
+    validUntil: string;
+  };
+
+  registrationPayment?:
+    FinoraElectronRegistrationPayment;
+
+  registrationCycle?: number;
+
+  demoId?: string;
+
+  demoRemarks?: string;
+
+  createdAt: string;
+
+  updatedAt: string;
+
+  schemaVersion: 1;
+}
+
+type FinoraElectronBranchAccessAuthorityState =
+  | "MISSING"
+  | "INVALID"
+  | "REVOKED"
+  | "SUSPENDED"
+  | "NOT_YET_VALID"
+  | "EXPIRED"
+  | "ACTIVE";
+
+interface FinoraElectronBranchAccessAuthorityDecision {
+  allowed: boolean;
+
+  state:
+    FinoraElectronBranchAccessAuthorityState;
+
+  reason: string;
+
+  observedAt: string;
+
+  grant?:
+    FinoraElectronBranchAccessGrant;
+}
+
+interface FinoraElectronBranchAccessAuthorityResult {
+  success: boolean;
+
+  data?:
+    FinoraElectronBranchAccessAuthorityDecision;
+
+  error?: string;
+
+  errorCode?:
+    | "INVALID_REQUEST"
+    | "CLOCK_AUTHORITY_FAILED"
+    | "CONTROL_STORE_FAILED";
+
+  clockErrorCode?:
+    | "INVALID_OBSERVED_TIME"
+    | "INSTALLATION_BINDING_UNAVAILABLE"
+    | "INSTALLATION_ID_MISMATCH"
+    | "CLOCK_ROLLBACK_DETECTED"
+    | "CLOCK_HIGH_WATER_STORAGE_FAILED";
+}
+
+interface FinoraElectronBusinessProfileView {
+  profileId: string;
+
+  ownerId: string;
+
+  businessId: string;
+
+  branchId: string;
+
+  businessCode: string;
+
+  branchCode: string;
+
+  businessName: string;
+
+  branchName: string;
+
+  createdAt: string;
+
+  updatedAt: string;
+
+  schemaVersion: 1;
+}
+
+interface FinoraElectronPricingOverrideRuleView {
+  overrideId: string;
+
+  chargeCode:
+    | "LOAN_DISBURSEMENT"
+    | "LOAN_NUMBER_GENERATION"
+    | "CUSTOMER_NUMBER_GENERATION"
+    | "COLLECTION_PROCESSING"
+    | "RECEIPT_PROCESSING"
+    | "CUSTOMER_ID_CARD_GENERATION"
+    | "OTHER_PLATFORM_FEE";
+
+  model:
+    "FIXED_PRICE_OVERRIDE";
+
+  amount: number;
+
+  currency:
+    "INR";
+
+  validity: {
+    validFrom: string;
+
+    validUntil: string;
+  };
+
+  schemaVersion: 1;
+}
+
+interface FinoraElectronPricingOverrideSetView {
+  overrideSetId: string;
+
+  scope: {
+    ownerId: string;
+
+    businessId: string;
+
+    branchId: string;
+  };
+
+  overrides:
+    FinoraElectronPricingOverrideRuleView[];
+
+  schemaVersion: 1;
+}
+
+type FinoraElectronInstallationEnrollmentResponseImportResult =
+  | {
+      success: true;
+
+      cancelled: true;
+    }
+  | {
+      success: true;
+
+      cancelled: false;
+
+      fileName: string;
+
+      bytesRead: number;
+
+      responseId: string;
+
+      requestId: string;
+
+      installationId: string;
+
+      ownerId: string;
+
+      businessId: string;
+
+      branchId: string;
+
+      businessCode: string;
+
+      branchCode: string;
+
+      trustRecovered: boolean;
+
+      installationRecovered: boolean;
+
+      completedAt: string;
+    }
+  | {
+      success: false;
+
+      error: string;
+    };
+
+interface FinoraElectronControlBridge {
   getInstallation():
     Promise<
       FinoraElectronResult<
@@ -161,9 +453,6 @@ interface FinoraElectronControlBridge {
       >
     >;
 
-  /**
-   * Returns activation state for one Owner / Business / Branch.
-   */
   findBranchActivation(
     request:
       FinoraFindBranchActivationRequest,
@@ -174,15 +463,26 @@ interface FinoraElectronControlBridge {
       >
     >;
 
-  /**
-   * Returns one previously verified signed Wallet Recharge
-   * authorization for the exact branch/payment reference.
-   *
-   * READ ONLY.
-   *
-   * Native installation binding, signed package, signature and
-   * apply authority remain outside the renderer.
-   */
+  findBusinessProfile(
+    request:
+      FinoraFindBusinessProfileRequest,
+  ):
+    Promise<
+      FinoraElectronResult<
+        FinoraElectronBusinessProfileView | undefined
+      >
+    >;
+
+  findPricingPolicy(
+    request:
+      FinoraFindPricingPolicyRequest,
+  ):
+    Promise<
+      FinoraElectronResult<
+        FinoraElectronPricingOverrideSetView | undefined
+      >
+    >;
+
   findWalletRechargeAuthorization(
     request:
       FinoraFindWalletRechargeAuthorizationRequest,
@@ -193,10 +493,14 @@ interface FinoraElectronControlBridge {
       >
     >;
 
-  /**
-   * Checks whether one user/login currently owns an ACTIVE
-   * entitlement for the selected LOCAL or USB storage mode.
-   */
+  evaluateBranchAccess(
+    request:
+      FinoraFindBranchAccessGrantRequest,
+  ):
+    Promise<
+      FinoraElectronBranchAccessAuthorityResult
+    >;
+
   hasActiveStorageEntitlement(
     request:
       FinoraStorageEntitlementCheckRequest,
@@ -205,24 +509,106 @@ interface FinoraElectronControlBridge {
       FinoraElectronResult<boolean>
     >;
 
-  /**
-   * Opens Electron-owned native file selection for one signed
-   * FINORA CONTROL_BUNDLE and applies it through authoritative
-   * recipient trust verification.
-   *
-   * This method accepts ZERO renderer arguments.
-   *
-   * Renderer cannot supply:
-   * - filesystem path
-   * - package bytes
-   * - trusted signing keys
-   * - installation target
-   * - signing authority
-   */
+  exportInstallationEnrollmentRequest():
+    Promise<
+      FinoraElectronInstallationEnrollmentRequestExportResult
+    >;
+
+  importInstallationEnrollmentResponse(
+    expectedControlCenterPublicKeyFingerprint:
+      string,
+  ):
+    Promise<
+      FinoraElectronInstallationEnrollmentResponseImportResult
+    >;
+
   importControlBundle():
     Promise<
       FinoraElectronControlBundleImportResult
     >;
+}
+interface FinoraElectronCredentialEnrollmentRequest {
+  username:
+    string;
+
+  password:
+    string;
+}
+
+interface FinoraElectronCredentialEnrollmentView {
+  credentialId:
+    string;
+
+  userId:
+    string;
+
+  username:
+    string;
+
+  fullName:
+    string;
+
+  role:
+    | "ADMIN"
+    | "MANAGER"
+    | "COLLECTOR"
+    | "VIEWER";
+
+  ownerId:
+    string;
+
+  businessId:
+    string;
+
+  branchId:
+    string;
+
+  storageMode:
+    | "LOCAL"
+    | "USB";
+
+  dataContext:
+    | "REAL"
+    | "DEMO";
+
+  demoId?:
+    string;
+
+  enrolledAt:
+    string;
+}
+
+type FinoraElectronCredentialResult<T> =
+  | {
+      success:
+        true;
+
+      data:
+        T;
+    }
+  | {
+      success:
+        false;
+
+      errorCode?:
+        string;
+
+      error:
+        string;
+    };
+
+interface FinoraElectronCredentialBridge {
+  enroll(
+    request:
+      FinoraElectronCredentialEnrollmentRequest,
+  ):
+    Promise<
+      FinoraElectronCredentialResult<
+        FinoraElectronCredentialEnrollmentView
+      >
+    >;
+
+
 }
 
 // ============================================================
@@ -426,7 +812,159 @@ interface FinoraElectronNotificationProviderBridge {
 // ROOT FINORA BRIDGE
 // ============================================================
 
+type FinoraElectronLoginSessionAccessMode =
+  | "ACTIVE"
+  | "REGISTERED_EXPIRED_READ_ONLY";
+
+interface FinoraElectronLoginSessionLoginRequest {
+  username:
+    string;
+
+  password:
+    string;
+
+  storageMode:
+    | "LOCAL"
+    | "USB";
+}
+
+interface FinoraElectronLoginSessionRequest {
+  sessionId:
+    string;
+}
+
+interface FinoraElectronLoginSessionView {
+  sessionId:
+    string;
+
+  userId:
+    string;
+
+  username:
+    string;
+
+  fullName:
+    string;
+
+  role:
+    | "ADMIN"
+    | "MANAGER"
+    | "COLLECTOR"
+    | "VIEWER";
+
+  ownerId:
+    string;
+
+  businessId:
+    string;
+
+  branchId:
+    string;
+
+  storageMode:
+    | "LOCAL"
+    | "USB";
+
+  dataContext:
+    | "REAL"
+    | "DEMO";
+
+  demoId?:
+    string;
+
+  accessMode:
+    FinoraElectronLoginSessionAccessMode;
+
+  loginTime:
+    string;
+
+  lastActivity:
+    string;
+
+  validatedAt:
+    string;
+}
+
+type FinoraElectronLoginSessionResult<T> =
+  | {
+      success:
+        true;
+
+      data:
+        T;
+    }
+  | {
+      success:
+        false;
+
+      errorCode?:
+        string;
+
+      error:
+        string;
+    };
+
+interface FinoraElectronLoginSessionBridge {
+  login(
+    request:
+      FinoraElectronLoginSessionLoginRequest,
+  ):
+    Promise<
+      FinoraElectronLoginSessionResult<
+        FinoraElectronLoginSessionView
+      >
+    >;
+
+  validate(
+    request:
+      FinoraElectronLoginSessionRequest,
+  ):
+    Promise<
+      FinoraElectronLoginSessionResult<
+        FinoraElectronLoginSessionView
+      >
+    >;
+
+  touch(
+    request:
+      FinoraElectronLoginSessionRequest,
+  ):
+    Promise<
+      FinoraElectronLoginSessionResult<{
+        sessionId:
+          string;
+
+        lastActivity:
+          string;
+      }>
+    >;
+
+  invalidate(
+    request:
+      FinoraElectronLoginSessionRequest,
+  ):
+    Promise<
+      FinoraElectronLoginSessionResult<{
+        invalidated:
+          boolean;
+      }>
+    >;
+}
+
+// ============================================================
+// ROOT RENDERER BRIDGE
+// ============================================================
 interface FinoraElectronRendererBridge {
+  loginSession:
+    FinoraElectronLoginSessionBridge;
+
+  /**
+   * Main-process one-time local credential enrollment.
+   *
+   * No verifier, salt or derived-key material is exposed.
+   */
+  credentials:
+    FinoraElectronCredentialBridge;
 
   /**
    * Preload bridge version.

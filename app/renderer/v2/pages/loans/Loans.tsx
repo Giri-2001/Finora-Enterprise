@@ -68,6 +68,8 @@ import ViewLoanDetails from "../../components/loans/details/ViewLoanDetails";
 
 import { useTheme } from "../../themes/provider";
 
+import { formatRupee } from "../../utils/currency/formatCurrency";
+
 import { useLoansOfficeResponsive } from "../../utils/responsive/loansOffice/loansOffice.useResponsive";
 
 import {
@@ -204,11 +206,9 @@ function safeNumber(value: number | undefined): number {
 // ============================================================
 
 function formatCurrency(value: number): string {
-  return new Intl.NumberFormat("en-IN", {
-    style: "currency",
-    currency: "INR",
-    maximumFractionDigits: 0,
-  }).format(safeNumber(value));
+  return formatRupee(
+    safeNumber(value),
+  );
 }
 
 // ============================================================

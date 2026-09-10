@@ -23,6 +23,7 @@
 // CURRENT PURPOSES:
 //
 // - BRANCH_ACTIVATION
+// - BRANCH_ACCESS
 // - STORAGE_ENTITLEMENT
 // - BUSINESS_PROFILE
 // - PRICING_POLICY
@@ -34,6 +35,11 @@ import {
   signFinoraBranchActivationPackage,
   type SignFinoraBranchActivationPackageInput,
 } from "./finoraBranchActivationIssuer.js";
+
+import {
+  signFinoraBranchAccessPackage,
+  type SignFinoraBranchAccessPackageInput,
+} from "./finoraBranchAccessIssuer.js";
 
 import {
   signFinoraStorageEntitlementPackage,
@@ -71,6 +77,14 @@ import {
 export type IssueFinoraBranchActivationRequest =
   Omit<
     SignFinoraBranchActivationPackageInput,
+    | "packageId"
+    | "sequence"
+    | "issuedAt"
+  >;
+
+export type IssueFinoraBranchAccessRequest =
+  Omit<
+    SignFinoraBranchAccessPackageInput,
     | "packageId"
     | "sequence"
     | "issuedAt"
@@ -285,6 +299,63 @@ export function issueFinoraBranchActivationPackage(
   );
 }
 
+// ============================================================
+// BRANCH ACCESS
+// ============================================================
+
+export function issueFinoraBranchAccessPackage(
+  request:
+    IssueFinoraBranchAccessRequest,
+) {
+
+  return runSerializedIssuance(
+    async () => {
+
+      const reservation =
+        await reserveFinoraControlCenterIssuance({
+          purpose:
+            "BRANCH_ACCESS",
+
+          scope:
+            toIssuanceScope(
+              request.target,
+            ),
+        });
+
+      const payload =
+        withAuthoritativeIssuedAt(
+          request.payload,
+          reservation.issuedAt,
+        );
+
+      return signFinoraBranchAccessPackage({
+        packageId:
+          reservation.packageId,
+
+        sequence:
+          reservation.sequence,
+
+        issuedAt:
+          reservation.issuedAt,
+
+        target:
+          request.target,
+
+        payload,
+
+        ...(
+          request.packageValidity ===
+            undefined
+            ? {}
+            : {
+                packageValidity:
+                  request.packageValidity,
+              }
+        ),
+      });
+    },
+  );
+}
 // ============================================================
 // STORAGE ENTITLEMENT
 // ============================================================

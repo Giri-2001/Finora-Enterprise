@@ -1,4 +1,4 @@
-﻿// ============================================================
+// ============================================================
 // FINORA ENTERPRISE OS™
 //
 // ENTERPRISE LOGIN
@@ -14,7 +14,7 @@
 // - Owner selects one ERP Login Date
 // - Owner selects Local / USB storage
 // - USB Login requires a detected FINORA Pendrive
-// - Local Owner Login uses the existing authStore authentication
+// - Local / USB Login uses main-process secure login-session authority
 // - Forgot Password entry points are prepared for Owner storage paths
 // - Preserve existing storage mode activation and USB monitoring
 // - Consume the FINORA Responsive Engine
@@ -72,9 +72,13 @@ import {
 } from "lucide-react";
 
 import {
-  authenticateLogin,
   commitLoginSession,
 } from "../../store/authStore";
+import {
+  isAccountLocked,
+  registerFailedLogin,
+  resetLoginAttempts,
+} from "../../store/loginSecurityStore";
 
 import {
   getCurrentLocalBusinessDate,
@@ -82,10 +86,6 @@ import {
 } from "../../services/business/businessDateService";
 
 import { FinoraCalendar } from "../../components/common/calendar";
-
-import {
-  hasActiveFinoraStorageEntitlement,
-} from "../../services/activation/activationService";
 
 import {
   storageManager,
@@ -281,6 +281,28 @@ export default function Login({
   const [
     password,
     setPassword,
+  ] = useState("");
+
+
+  const [
+    credentialMode,
+    setCredentialMode,
+  ] = useState<
+    "LOGIN" | "SET_PASSWORD"
+  >(
+    "LOGIN",
+  );
+
+
+  const [
+    confirmPassword,
+    setConfirmPassword,
+  ] = useState("");
+
+
+  const [
+    credentialEnrollmentMessage,
+    setCredentialEnrollmentMessage,
   ] = useState("");
 
 
@@ -881,60 +903,53 @@ export default function Login({
       );
 
 
+    let issuedSessionId:
+      string |
+      undefined;
+
+    let loginCompleted =
+      false;
+
     try {
 
       // ======================================================
-      // 1. VERIFY CREDENTIALS
+      // 1. SUPPLEMENTAL LOCAL LOGIN LOCKOUT
       //
-      // This creates a candidate session only.
+      // This remains renderer-local UX protection only.
       //
-      // No authenticated session is persisted yet.
+      // It is NOT credential or access authority.
       // ======================================================
 
-      const session =
-        authenticateLogin({
-          username:
-            trimmedUsername,
-          password,
-        });
-
-
-      if (!session) {
-
+      if (
+        isAccountLocked(
+          trimmedUsername,
+        )
+      ) {
         setError(
           "Invalid username or password",
         );
 
         return;
-
       }
 
 
       // ======================================================
-      // 2. VALIDATE BUSINESS ACCESS IDENTITY
-      // ======================================================
-
-      if (
-        !session.userId ||
-        !session.ownerId ||
-        !session.businessId ||
-        !session.branchId
-      ) {
-
-        setError(
-          "This FINORA login does not have a complete business access identity.",
-        );
-
-        return;
-
-      }
-
-
-      // ======================================================
-      // 3. RESOLVE COMMERCIAL STORAGE ENTITLEMENT MODE
+      // 2. MAIN-PROCESS SECURE LOGIN AUTHORITY
       //
-      // Entitlement modes deliberately support LOCAL / USB
-      // only.
+      // Main process owns:
+      //
+      // - SCRYPT credential verification
+      // - authoritative Branch Activation
+      // - signed Branch Access evaluation
+      // - exact credential/access context agreement
+      // - native-bound storage entitlement
+      // - cryptographic login session creation
+      //
+      // Renderer supplies only:
+      //
+      // - username
+      // - password
+      // - selected LOCAL / USB mode
       // ======================================================
 
       const entitlementStorageMode =
@@ -942,48 +957,138 @@ export default function Login({
           ? "USB"
           : "LOCAL";
 
+      const loginSessionBridge =
+        window.finora?.loginSession;
 
-      // ======================================================
-      // 4. VERIFY PER-LOGIN STORAGE ENTITLEMENT
-      // ======================================================
-
-      const entitlementResult =
-        await hasActiveFinoraStorageEntitlement(
-          session.userId,
-          session.ownerId,
-          session.businessId,
-          session.branchId,
-          entitlementStorageMode,
-        );
-
-
-      if (!entitlementResult.success) {
-
+      if (
+        !loginSessionBridge?.login
+      ) {
         setError(
-          entitlementResult.error ??
-            "Unable to verify FINORA storage entitlement.",
+          "FINORA secure login authority is unavailable in this application build.",
         );
 
         return;
-
       }
 
+      const loginResult =
+        await loginSessionBridge.login({
+          username:
+            trimmedUsername,
 
-      if (entitlementResult.data !== true) {
+          password,
 
-        setError(
-          ownerStorage === "usb"
-            ? "This FINORA login does not have an active USB Storage entitlement."
-            : "This FINORA login does not have an active Local Storage entitlement.",
-        );
+          storageMode:
+            entitlementStorageMode,
+        });
+
+      if (!loginResult.success) {
+        if (
+          loginResult.errorCode ===
+            "INVALID_CREDENTIALS"
+        ) {
+          registerFailedLogin(
+            trimmedUsername,
+          );
+
+          setError(
+            "Invalid username or password",
+          );
+        }
+        else {
+          setError(
+            loginResult.error ??
+              "Unable to authorize this FINORA login.",
+          );
+        }
 
         return;
-
       }
+
+      resetLoginAttempts(
+        trimmedUsername,
+      );
+
+      const authoritativeSession =
+        loginResult.data;
+
+      issuedSessionId =
+        authoritativeSession.sessionId;
 
 
       // ======================================================
-      // 5. ACTIVATE SELECTED OPERATIONAL STORAGE
+      // 3. BUILD RENDERER SESSION SNAPSHOT
+      //
+      // SECURITY:
+      //
+      // Every identity / role / scope / context field below
+      // originates from the authoritative main-process result.
+      //
+      // sessionId is the opaque 256-bit main-process bearer
+      // token. Renderer does not generate it.
+      // ======================================================
+
+      if (
+        !authoritativeSession.userId ||
+        !authoritativeSession.ownerId ||
+        !authoritativeSession.businessId ||
+        !authoritativeSession.branchId ||
+        authoritativeSession.storageMode !==
+          entitlementStorageMode
+      ) {
+        setError(
+          "The secure FINORA login authority returned an invalid session identity.",
+        );
+
+        return;
+      }
+
+      const session = {
+        userId:
+          authoritativeSession.userId,
+
+        username:
+          authoritativeSession.username,
+
+        fullName:
+          authoritativeSession.fullName,
+
+        role:
+          authoritativeSession.role,
+
+        loginTime:
+          authoritativeSession.loginTime,
+
+        sessionId:
+          authoritativeSession.sessionId,
+
+        lastActivity:
+          authoritativeSession.lastActivity,
+
+        ownerId:
+          authoritativeSession.ownerId,
+
+        businessId:
+          authoritativeSession.businessId,
+
+        branchId:
+          authoritativeSession.branchId,
+
+        dataContext:
+          authoritativeSession.dataContext,
+
+        ...(
+          authoritativeSession.demoId ===
+            undefined
+            ? {}
+            : {
+                demoId:
+                  authoritativeSession.demoId,
+              }
+        ),
+      };
+
+
+      // ======================================================      // 4. ACTIVATE SELECTED OPERATIONAL STORAGE
       // ======================================================
 
       const storageMode =
@@ -1012,7 +1117,7 @@ export default function Login({
 
 
       // ======================================================
-      // 6. PRESERVE AUTHENTICATED STORAGE MODE
+      // 5. PRESERVE AUTHENTICATED STORAGE MODE
       // ======================================================
 
       try {
@@ -1039,7 +1144,7 @@ export default function Login({
 
 
       // ======================================================
-      // 7. COMMIT AUTHENTICATED SESSION
+      // 6. COMMIT AUTHENTICATED SESSION
       //
       // Only now:
       // - Persist finora_session
@@ -1051,6 +1156,9 @@ export default function Login({
 
         resolvedBusinessDate,
       );
+
+      loginCompleted =
+        true;
 
 
       clearCustomerCache();
@@ -1072,6 +1180,27 @@ export default function Login({
 
     } finally {
 
+      if (
+        issuedSessionId &&
+        !loginCompleted
+      ) {
+        try {
+          await window.finora
+            ?.loginSession
+            ?.invalidate({
+              sessionId:
+                issuedSessionId,
+            });
+        }
+        catch {
+          // Best-effort cleanup only.
+          //
+          // The renderer never treats invalidation failure as
+          // authorization. Electron process termination also
+          // destroys the in-memory session authority.
+        }
+      }
+
       stopFinoraProcessing(
         processingId,
       );
@@ -1082,12 +1211,261 @@ export default function Login({
 
   }
 
+
   // ==========================================================
-  // LOGIN CLICK
+  // FIRST-TIME LOCAL CREDENTIAL ENROLLMENT
+  //
+  // SECURITY:
+  //
+  // - Renderer supplies username + password only.
+  // - Signed pending authorization is resolved in Electron main.
+  // - No authorization ID is exposed to this UI.
+  // - Successful enrollment does NOT authenticate the user.
+  // ==========================================================
+
+  async function enrollOwnerCredential():
+    Promise<void> {
+
+    setError(
+      "",
+    );
+
+    setCredentialEnrollmentMessage(
+      "",
+    );
+
+    const trimmedUsername =
+      username.trim();
+
+    if (!trimmedUsername) {
+
+      setError(
+        "Enter your User ID.",
+      );
+
+      return;
+    }
+
+
+    const passwordLength =
+      Array.from(
+        password,
+      ).length;
+
+
+    if (
+      passwordLength < 8 ||
+      passwordLength > 128 ||
+      password.trim().length === 0
+    ) {
+
+      setError(
+        "Password must contain between 8 and 128 characters.",
+      );
+
+      return;
+    }
+
+
+    if (!confirmPassword) {
+
+      setError(
+        "Confirm your new password.",
+      );
+
+      return;
+    }
+
+
+    if (
+      password !==
+        confirmPassword
+    ) {
+
+      setError(
+        "New Password and Confirm Password do not match.",
+      );
+
+      return;
+    }
+
+
+    const enrollCredential =
+      window.finora?.credentials
+        ?.enroll;
+
+
+    if (
+      typeof enrollCredential !==
+        "function"
+    ) {
+
+      setError(
+        "FINORA secure credential enrollment is unavailable in this application build.",
+      );
+
+      return;
+    }
+
+
+    setLoginBusy(
+      true,
+    );
+
+    const processingId =
+      startFinoraProcessing(
+        "Creating secure FINORA password...",
+      );
+
+
+    try {
+
+      const result =
+        await enrollCredential({
+          username:
+            trimmedUsername,
+
+          password,
+        });
+
+
+      if (!result.success) {
+
+        setError(
+          result.error ??
+            "Unable to create the FINORA password.",
+        );
+
+        return;
+      }
+
+
+      setPassword(
+        "",
+      );
+
+      setConfirmPassword(
+        "",
+      );
+
+      setShowPassword(
+        false,
+      );
+
+      setCredentialMode(
+        "LOGIN",
+      );
+
+      setCredentialEnrollmentMessage(
+        "Password created successfully. Sign in with your new password.",
+      );
+
+    } catch (enrollmentError) {
+
+      console.error(
+        "FINORA CREDENTIAL ENROLLMENT FAILED:",
+        enrollmentError,
+      );
+
+      setError(
+        "Unable to complete FINORA password setup.",
+      );
+
+    } finally {
+
+      stopFinoraProcessing(
+        processingId,
+      );
+
+      setLoginBusy(
+        false,
+      );
+
+    }
+
+  }
+
+
+  // ==========================================================
+  // CREDENTIAL MODE
+  // ==========================================================
+
+  function openSetPasswordMode(): void {
+
+    setCredentialMode(
+      "SET_PASSWORD",
+    );
+
+    setPassword(
+      "",
+    );
+
+    setConfirmPassword(
+      "",
+    );
+
+    setShowPassword(
+      false,
+    );
+
+    setCredentialEnrollmentMessage(
+      "",
+    );
+
+    setError(
+      "",
+    );
+
+  }
+
+
+  function returnToLoginMode(): void {
+
+    setCredentialMode(
+      "LOGIN",
+    );
+
+    setPassword(
+      "",
+    );
+
+    setConfirmPassword(
+      "",
+    );
+
+    setShowPassword(
+      false,
+    );
+
+    setCredentialEnrollmentMessage(
+      "",
+    );
+
+    setError(
+      "",
+    );
+
+  }
+
+
+  // ==========================================================
+  // LOGIN / SET PASSWORD CLICK
   // ==========================================================
 
   function handleLogin(): void {
+
+    if (
+      credentialMode ===
+        "SET_PASSWORD"
+    ) {
+
+      void enrollOwnerCredential();
+
+      return;
+    }
+
     void authenticateOwner();
+
   }
 
   // ==========================================================
@@ -1648,9 +2026,11 @@ export default function Login({
                   loginStyles.modeNoticeSubtext
                 }
               >
-                {ownerStorage === "usb"
-                  ? "Owner authentication • FINORA Pendrive"
-                  : "Owner authentication • Local storage"}
+                {credentialMode === "SET_PASSWORD"
+                  ? "First-time setup • Create your secure password"
+                  : ownerStorage === "usb"
+                    ? "Owner authentication • FINORA Pendrive"
+                    : "Owner authentication • Local storage"}
               </div>
 
             </div>
@@ -1733,14 +2113,26 @@ export default function Login({
                     );
                     setError("");
                   }}
-                  placeholder="Password"
-                  aria-label="Password"
+                  placeholder={
+                    credentialMode === "SET_PASSWORD"
+                      ? "New Password"
+                      : "Password"
+                  }
+                  aria-label={
+                    credentialMode === "SET_PASSWORD"
+                      ? "New Password"
+                      : "Password"
+                  }
                   type={
                     showPassword
                       ? "text"
                       : "password"
                   }
-                  autoComplete="current-password"
+                  autoComplete={
+                    credentialMode === "SET_PASSWORD"
+                      ? "new-password"
+                      : "current-password"
+                  }
                   disabled={
                     loginBusy
                   }
@@ -1781,7 +2173,73 @@ export default function Login({
 
               </div>
 
+
+              {credentialMode === "SET_PASSWORD" && (
+
+                <div
+                  style={
+                    loginStyles.inputWrapper
+                  }
+                >
+
+                  <span
+                    style={
+                      loginStyles.inputIcon
+                    }
+                  >
+                    <LockKeyhole />
+                  </span>
+
+                  <input
+                    value={
+                      confirmPassword
+                    }
+                    onChange={(
+                      event,
+                    ) => {
+                      setConfirmPassword(
+                        event.target.value,
+                      );
+                      setError("");
+                    }}
+                    placeholder="Confirm Password"
+                    aria-label="Confirm Password"
+                    type={
+                      showPassword
+                        ? "text"
+                        : "password"
+                    }
+                    autoComplete="new-password"
+                    disabled={
+                      loginBusy
+                    }
+                    onKeyDown={
+                      handlePasswordKeyDown
+                    }
+                    style={
+                      loginStyles.input
+                    }
+                  />
+
+                </div>
+
+              )}
+
             </div>
+
+
+            {credentialEnrollmentMessage && (
+
+              <p
+                role="status"
+                style={
+                  loginStyles.modeNoticeSubtext
+                }
+              >
+                {credentialEnrollmentMessage}
+              </p>
+
+            )}
 
 
             {error && (
@@ -1819,28 +2277,70 @@ export default function Login({
                 <KeyRound />
                 <span>
                   {loginBusy
-                    ? "Authenticating..."
-                    : "Login"}
+                    ? credentialMode === "SET_PASSWORD"
+                      ? "Creating Password..."
+                      : "Authenticating..."
+                    : credentialMode === "SET_PASSWORD"
+                      ? "Set Password"
+                      : "Login"}
                 </span>
               </span>
 
             </button>
 
 
-            <button
-              type="button"
-              onClick={
-                handleForgotPassword
-              }
-              disabled={
-                loginBusy
-              }
-              style={
-                loginStyles.forgotPassword
-              }
-            >
-              Forgot Password?
-            </button>
+            {credentialMode === "LOGIN"
+              ? (
+                  <>
+
+                    <button
+                      type="button"
+                      onClick={
+                        openSetPasswordMode
+                      }
+                      disabled={
+                        loginBusy
+                      }
+                      style={
+                        loginStyles.forgotPassword
+                      }
+                    >
+                      Set Password
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={
+                        handleForgotPassword
+                      }
+                      disabled={
+                        loginBusy
+                      }
+                      style={
+                        loginStyles.forgotPassword
+                      }
+                    >
+                      Forgot Password?
+                    </button>
+
+                  </>
+                )
+              : (
+                  <button
+                    type="button"
+                    onClick={
+                      returnToLoginMode
+                    }
+                    disabled={
+                      loginBusy
+                    }
+                    style={
+                      loginStyles.forgotPassword
+                    }
+                  >
+                    Back to Login
+                  </button>
+                )}
 
 
 

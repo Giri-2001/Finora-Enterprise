@@ -1,7 +1,12 @@
 import { useRef, useState } from "react";
 
 import type {
+  FinoraControlCenterEnrollmentOpenView,
+} from "../../../../electron/control-center/finoraControlCenterPreload";
+
+import type {
   FinoraBranchActivationFormDraft,
+  FinoraBranchAccessFormDraft,
   FinoraBusinessProfileFormDraft,
   FinoraControlCenterIssuanceWorkflow,
   FinoraControlCenterTargetDraft,
@@ -11,6 +16,7 @@ import type {
 } from "./FinoraControlCenterIssuanceForm.types";
 
 import FinoraControlCenterBranchActivationForm from "./FinoraControlCenterBranchActivationForm";
+import FinoraControlCenterBranchAccessForm from "./FinoraControlCenterBranchAccessForm";
 import FinoraControlCenterStorageEntitlementForm from "./FinoraControlCenterStorageEntitlementForm";
 import FinoraControlCenterBusinessProfileForm from "./FinoraControlCenterBusinessProfileForm";
 import { FinoraControlCenterPricingPolicyForm } from "./FinoraControlCenterPricingPolicyForm";
@@ -18,6 +24,7 @@ import { FinoraControlCenterWalletRechargeForm } from "./FinoraControlCenterWall
 
 import {
   buildFinoraBranchActivationIssuanceRequest,
+  buildFinoraBranchAccessIssuanceRequest,
   buildFinoraBusinessProfileIssuanceRequest,
   buildFinoraPricingPolicyIssuanceRequest,
   buildFinoraStorageEntitlementIssuanceRequest,
@@ -62,7 +69,15 @@ const WORKFLOWS: readonly {
     label: "Branch Activation",
 
     description:
-      "Issue or manage signed Branch Activation and Branch Access state.",
+      "Issue or manage signed Branch Activation state.",
+  },
+  {
+    id: "BRANCH_ACCESS",
+
+    label: "Branch Access",
+
+    description:
+      "Issue or manage signed Branch Access and recipient credential authorization.",
   },
   {
     id: "STORAGE_ENTITLEMENT",
@@ -124,6 +139,8 @@ interface TargetFieldProps {
   placeholder: string;
 
   onChange: (value: string) => void;
+
+  readOnly?: boolean;
 }
 
 function TargetField({
@@ -131,6 +148,7 @@ function TargetField({
   value,
   placeholder,
   onChange,
+  readOnly = false,
 }: TargetFieldProps) {
   return (
     <label
@@ -155,6 +173,7 @@ function TargetField({
         placeholder={placeholder}
         autoComplete="off"
         spellCheck={false}
+        readOnly={readOnly}
         onChange={(event) => {
           onChange(event.target.value);
         }}
@@ -187,6 +206,63 @@ export default function FinoraControlCenterIssuanceWorkspace() {
   const [target, setTarget] =
     useState<FinoraControlCenterTargetDraft>(EMPTY_TARGET);
 
+  const [enrollmentOpenState, setEnrollmentOpenState] =
+    useState<
+      "IDLE" | "OPENING" | "SUCCESS" | "ERROR"
+    >(
+      "IDLE",
+    );
+
+  const [enrollmentOpenError, setEnrollmentOpenError] =
+    useState<string | undefined>();
+
+  const [verifiedEnrollment, setVerifiedEnrollment] =
+    useState<
+      FinoraControlCenterEnrollmentOpenView | undefined
+    >();
+
+  const enrollmentOpenInFlightRef =
+    useRef(false);
+
+  const [enrollmentBusinessCode, setEnrollmentBusinessCode] =
+    useState<string>(
+      "",
+    );
+
+  const [enrollmentBranchCode, setEnrollmentBranchCode] =
+    useState<string>(
+      "",
+    );
+
+  const [enrollmentResponseState, setEnrollmentResponseState] =
+    useState<
+      "IDLE" | "EXPORTING" | "SUCCESS" | "ERROR"
+    >(
+      "IDLE",
+    );
+
+  const [enrollmentResponseError, setEnrollmentResponseError] =
+    useState<string | undefined>();
+
+  const [enrollmentResponseResult, setEnrollmentResponseResult] =
+    useState<
+      | {
+          fileName: string;
+
+          bytesWritten: number;
+
+          responseId: string;
+
+          requestId: string;
+
+          installationId: string;
+        }
+      | undefined
+    >();
+
+  const enrollmentResponseInFlightRef =
+    useRef(false);
+
   const [branchIssuanceState, setBranchIssuanceState] = useState<
     "IDLE" | "ISSUING" | "SUCCESS" | "ERROR"
   >("IDLE");
@@ -200,6 +276,18 @@ export default function FinoraControlCenterIssuanceWorkspace() {
   >();
 
   const branchIssuanceInFlightRef = useRef(false);
+
+  const [branchAccessIssuanceState, setBranchAccessIssuanceState] =
+    useState<"IDLE" | "ISSUING" | "SUCCESS" | "ERROR">("IDLE");
+
+  const [branchAccessIssuanceError, setBranchAccessIssuanceError] =
+    useState<string | undefined>();
+
+  const [branchAccessSignedPackage, setBranchAccessSignedPackage] =
+    useState<Record<string, unknown> | undefined>();
+
+  const branchAccessIssuanceInFlightRef =
+    useRef(false);
 
   const [storageIssuanceState, setStorageIssuanceState] = useState<
     "IDLE" | "ISSUING" | "SUCCESS" | "ERROR"
@@ -270,6 +358,331 @@ export default function FinoraControlCenterIssuanceWorkspace() {
 
   const bundleExportInFlightRef = useRef(false);
 
+  async function openVerifiedEnrollmentRequest():
+    Promise<void> {
+
+    if (enrollmentOpenInFlightRef.current) {
+      return;
+    }
+
+    enrollmentOpenInFlightRef.current =
+      true;
+
+    setEnrollmentOpenState(
+      "OPENING",
+    );
+
+    setEnrollmentOpenError(
+      undefined,
+    );
+
+    try {
+      const bridge =
+        window.finoraControlCenter;
+
+      if (!bridge) {
+        throw new Error(
+          "Dedicated FINORA Control Center preload bridge is unavailable.",
+        );
+      }
+
+      const result =
+        await bridge.openInstallationEnrollmentRequest();
+
+      if (!result.success) {
+        throw new Error(
+          result.error ??
+            "Unable to open the FINORA Installation Enrollment Request.",
+        );
+      }
+
+      const enrollment =
+        result.data;
+
+      if (enrollment.cancelled) {
+        setEnrollmentOpenState(
+          "IDLE",
+        );
+
+        return;
+      }
+
+      setVerifiedEnrollment(
+        enrollment,
+      );
+
+      setEnrollmentBusinessCode(
+        "",
+      );
+
+      setEnrollmentBranchCode(
+        "",
+      );
+
+      setEnrollmentResponseResult(
+        undefined,
+      );
+
+      setEnrollmentResponseError(
+        undefined,
+      );
+
+      setEnrollmentResponseState(
+        "IDLE",
+      );
+
+      setTarget(
+        (current) => ({
+          ...current,
+
+          installationId:
+            enrollment.installationId,
+
+          bindingKeyId:
+            enrollment.bindingKeyId,
+
+          fingerprintAlgorithm:
+            enrollment.fingerprintAlgorithm,
+
+          publicKeyFingerprint:
+            enrollment.publicKeyFingerprint,
+        }),
+      );
+
+      /*
+       * A newly verified installation target invalidates any
+       * previously issued package workspace state.
+       *
+       * This prevents signed packages for a previous target
+       * from being mixed into the newly loaded enrollment.
+       */
+      setBranchSignedPackage(
+        undefined,
+      );
+
+      setBranchIssuanceState(
+        "IDLE",
+      );
+
+      setBranchIssuanceError(
+        undefined,
+      );
+
+      setBranchAccessSignedPackage(
+        undefined,
+      );
+
+      setBranchAccessIssuanceState(
+        "IDLE",
+      );
+
+      setBranchAccessIssuanceError(
+        undefined,
+      );
+
+      setStorageSignedPackage(
+        undefined,
+      );
+
+      setStorageIssuanceState(
+        "IDLE",
+      );
+
+      setStorageIssuanceError(
+        undefined,
+      );
+
+      setBusinessProfileSignedPackage(
+        undefined,
+      );
+
+      setBusinessProfileIssuanceState(
+        "IDLE",
+      );
+
+      setBusinessProfileIssuanceError(
+        undefined,
+      );
+
+      setPricingPolicySignedPackage(
+        undefined,
+      );
+
+      setPricingPolicyIssuanceState(
+        "IDLE",
+      );
+
+      setPricingPolicyIssuanceError(
+        undefined,
+      );
+
+      setWalletRechargeSignedPackage(
+        undefined,
+      );
+
+      setWalletRechargeIssuanceState(
+        "IDLE",
+      );
+
+      setWalletRechargeIssuanceError(
+        undefined,
+      );
+
+      setBundleExportResult(
+        undefined,
+      );
+
+      setBundleExportState(
+        "IDLE",
+      );
+
+      setBundleExportError(
+        undefined,
+      );
+
+      setEnrollmentOpenState(
+        "SUCCESS",
+      );
+
+    } catch (error) {
+      setVerifiedEnrollment(
+        undefined,
+      );
+
+      setEnrollmentOpenError(
+        error instanceof Error
+          ? error.message
+          : "Unable to open the FINORA Installation Enrollment Request.",
+      );
+
+      setEnrollmentOpenState(
+        "ERROR",
+      );
+
+    } finally {
+      enrollmentOpenInFlightRef.current =
+        false;
+    }
+  }
+
+  async function issueAndExportEnrollmentResponse():
+    Promise<void> {
+
+    if (enrollmentResponseInFlightRef.current) {
+      return;
+    }
+
+    if (
+      !verifiedEnrollment ||
+      verifiedEnrollment.cancelled
+    ) {
+      setEnrollmentResponseError(
+        "Open and verify an Installation Enrollment Request first.",
+      );
+
+      setEnrollmentResponseState(
+        "ERROR",
+      );
+
+      return;
+    }
+
+    enrollmentResponseInFlightRef.current =
+      true;
+
+    setEnrollmentResponseState(
+      "EXPORTING",
+    );
+
+    setEnrollmentResponseError(
+      undefined,
+    );
+
+    setEnrollmentResponseResult(
+      undefined,
+    );
+
+    try {
+      const bridge =
+        window.finoraControlCenter;
+
+      if (!bridge) {
+        throw new Error(
+          "Dedicated FINORA Control Center preload bridge is unavailable.",
+        );
+      }
+
+      const result =
+        await bridge.issueAndExportInstallationEnrollmentResponse({
+          ownerId:
+            target.ownerId,
+
+          businessId:
+            target.businessId,
+
+          branchId:
+            target.branchId,
+
+          businessCode:
+            enrollmentBusinessCode,
+
+          branchCode:
+            enrollmentBranchCode,
+        });
+
+      if (!result.success) {
+        throw new Error(
+          result.error ??
+            "FINORA Installation Enrollment Response issuance failed.",
+        );
+      }
+
+      if (result.data.cancelled) {
+        setEnrollmentResponseState(
+          "IDLE",
+        );
+
+        return;
+      }
+
+      setEnrollmentResponseResult({
+        fileName:
+          result.data.fileName,
+
+        bytesWritten:
+          result.data.bytesWritten,
+
+        responseId:
+          result.data.responseId,
+
+        requestId:
+          result.data.requestId,
+
+        installationId:
+          result.data.installationId,
+      });
+
+      setEnrollmentResponseState(
+        "SUCCESS",
+      );
+
+    } catch (error) {
+      setEnrollmentResponseError(
+        error instanceof Error
+          ? error.message
+          : "Unable to issue and export the FINORA Installation Enrollment Response.",
+      );
+
+      setEnrollmentResponseState(
+        "ERROR",
+      );
+
+    } finally {
+      enrollmentResponseInFlightRef.current =
+        false;
+    }
+  }
+
   function updateTarget(
     field: keyof Omit<FinoraControlCenterTargetDraft, "fingerprintAlgorithm">,
 
@@ -338,6 +751,91 @@ export default function FinoraControlCenterIssuanceWorkspace() {
     }
   }
 
+  async function issueBranchAccessDraft(
+    draft: FinoraBranchAccessFormDraft,
+  ): Promise<void> {
+
+    if (
+      branchAccessIssuanceInFlightRef.current
+    ) {
+      return;
+    }
+
+    branchAccessIssuanceInFlightRef.current =
+      true;
+
+    setBranchAccessIssuanceState(
+      "ISSUING",
+    );
+
+    setBranchAccessIssuanceError(
+      undefined,
+    );
+
+    setBranchAccessSignedPackage(
+      undefined,
+    );
+
+    try {
+
+      const request =
+        buildFinoraBranchAccessIssuanceRequest(
+          draft,
+        );
+
+      const bridge =
+        window.finoraControlCenter;
+
+      if (!bridge) {
+        throw new Error(
+          "Dedicated FINORA Control Center preload bridge is unavailable.",
+        );
+      }
+
+      const result =
+        await bridge.issueBranchAccess(
+          request,
+        );
+
+      if (!result.success) {
+        throw new Error(
+          result.error ??
+            "FINORA Branch Access issuance failed.",
+        );
+      }
+
+      if (!result.data) {
+        throw new Error(
+          "FINORA Branch Access issuance returned no signed package.",
+        );
+      }
+
+      setBranchAccessSignedPackage(
+        result.data,
+      );
+
+      setBranchAccessIssuanceState(
+        "SUCCESS",
+      );
+
+    } catch (error) {
+
+      setBranchAccessIssuanceError(
+        error instanceof Error
+          ? error.message
+          : "Unable to issue FINORA Branch Access package.",
+      );
+
+      setBranchAccessIssuanceState(
+        "ERROR",
+      );
+
+    } finally {
+
+      branchAccessIssuanceInFlightRef.current =
+        false;
+    }
+  }
   async function issueStorageEntitlementDraft(
     draft: FinoraStorageEntitlementFormDraft,
   ): Promise<void> {
@@ -578,6 +1076,7 @@ export default function FinoraControlCenterIssuanceWorkspace() {
     try {
       const signedPackages = [
         branchSignedPackage,
+        branchAccessSignedPackage,
         storageSignedPackage,
         businessProfileSignedPackage,
         pricingPolicySignedPackage,
@@ -666,6 +1165,7 @@ export default function FinoraControlCenterIssuanceWorkspace() {
   const availableBundlePackageCount =
     [
       branchSignedPackage,
+      branchAccessSignedPackage,
       storageSignedPackage,
       businessProfileSignedPackage,
       pricingPolicySignedPackage,
@@ -720,7 +1220,7 @@ export default function FinoraControlCenterIssuanceWorkspace() {
         aria-label="FINORA issuance workflow"
         style={{
           display: "grid",
-          gridTemplateColumns: "repeat(5, minmax(0, 1fr))",
+          gridTemplateColumns: "repeat(6, minmax(0, 1fr))",
           gap: "10px",
           marginBottom: "22px",
         }}
@@ -777,6 +1277,169 @@ export default function FinoraControlCenterIssuanceWorkspace() {
         })}
       </div>
 
+      <section
+        data-finora-installation-enrollment="true"
+        aria-live="polite"
+        style={{
+          marginBottom: "20px",
+          border: "1px solid rgba(96, 165, 250, 0.28)",
+          borderRadius: "11px",
+          padding: "16px",
+          background: "rgba(2, 6, 23, 0.34)",
+        }}
+      >
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: "18px",
+          }}
+        >
+          <div
+            style={{
+              minWidth: 0,
+            }}
+          >
+            <h3
+              style={{
+                margin: 0,
+                fontSize: "14px",
+                fontWeight: 650,
+              }}
+            >
+              Installation Enrollment Request
+            </h3>
+
+            <p
+              style={{
+                margin: "6px 0 0",
+                maxWidth: "720px",
+                fontSize: "12px",
+                lineHeight: 1.55,
+                opacity: 0.7,
+              }}
+            >
+              Open the Branch Client .finora Enrollment Request and
+              cryptographically verify its native installation possession proof.
+              Opening a request does not authorize registration.
+            </p>
+          </div>
+
+          <button
+            type="button"
+            disabled={
+              enrollmentOpenState === "OPENING"
+            }
+            onClick={() => {
+              void openVerifiedEnrollmentRequest();
+            }}
+            style={{
+              minWidth: "190px",
+              minHeight: "42px",
+              border: "1px solid rgba(96, 165, 250, 0.62)",
+              borderRadius: "9px",
+              padding: "9px 14px",
+              fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
+              fontSize: "12px",
+              fontWeight: 650,
+              background: "rgba(30, 64, 175, 0.3)",
+              color: "#dbeafe",
+              cursor:
+                enrollmentOpenState === "OPENING"
+                  ? "not-allowed"
+                  : "pointer",
+            }}
+          >
+            {enrollmentOpenState === "OPENING"
+              ? "Opening & Verifying…"
+              : "Open Enrollment Request"}
+          </button>
+        </div>
+
+        {enrollmentOpenState === "ERROR" &&
+          enrollmentOpenError && (
+            <p
+              style={{
+                margin: "12px 0 0",
+                fontSize: "12px",
+                lineHeight: 1.55,
+                color: "#fca5a5",
+              }}
+            >
+              {enrollmentOpenError}
+            </p>
+          )}
+
+        {enrollmentOpenState === "SUCCESS" &&
+          verifiedEnrollment &&
+          !verifiedEnrollment.cancelled && (
+            <div
+              style={{
+                marginTop: "14px",
+                display: "grid",
+                gap: "7px",
+                fontSize: "11px",
+                lineHeight: 1.5,
+                color: "#cbd5e1",
+              }}
+            >
+              <strong
+                style={{
+                  color: "#86efac",
+                }}
+              >
+                Verified native Installation Enrollment Request.
+              </strong>
+
+              <span>
+                File: {verifiedEnrollment.fileName}
+              </span>
+
+              <span>
+                Request ID: {verifiedEnrollment.requestId}
+              </span>
+
+              <span>
+                Requested At: {verifiedEnrollment.requestedAt}
+              </span>
+
+              <span
+                style={{
+                  overflowWrap: "anywhere",
+                }}
+              >
+                Installation ID: {verifiedEnrollment.installationId}
+              </span>
+
+              <span
+                style={{
+                  overflowWrap: "anywhere",
+                }}
+              >
+                Binding Key ID: {verifiedEnrollment.bindingKeyId}
+              </span>
+
+              <span
+                style={{
+                  overflowWrap: "anywhere",
+                }}
+              >
+                SHA-256: {verifiedEnrollment.publicKeyFingerprint}
+              </span>
+
+              <span
+                style={{
+                  color: "#fbbf24",
+                }}
+              >
+                Owner, Business and Branch identity still require explicit
+                FINORA operator assignment and approval.
+              </span>
+            </div>
+          )}
+      </section>
+
       <section>
         <div
           style={{
@@ -820,6 +1483,9 @@ export default function FinoraControlCenterIssuanceWorkspace() {
             label="Owner ID"
             value={target.ownerId}
             placeholder="OWNER-..."
+            readOnly={
+              enrollmentResponseState === "SUCCESS"
+            }
             onChange={(value) => {
               updateTarget("ownerId", value);
             }}
@@ -829,6 +1495,9 @@ export default function FinoraControlCenterIssuanceWorkspace() {
             label="Business ID"
             value={target.businessId}
             placeholder="BUSINESS-..."
+            readOnly={
+              enrollmentResponseState === "SUCCESS"
+            }
             onChange={(value) => {
               updateTarget("businessId", value);
             }}
@@ -838,6 +1507,9 @@ export default function FinoraControlCenterIssuanceWorkspace() {
             label="Branch ID"
             value={target.branchId}
             placeholder="BRANCH-..."
+            readOnly={
+              enrollmentResponseState === "SUCCESS"
+            }
             onChange={(value) => {
               updateTarget("branchId", value);
             }}
@@ -847,6 +1519,10 @@ export default function FinoraControlCenterIssuanceWorkspace() {
             label="Installation ID"
             value={target.installationId}
             placeholder="INSTALLATION-..."
+            readOnly={
+              verifiedEnrollment !== undefined &&
+              !verifiedEnrollment.cancelled
+            }
             onChange={(value) => {
               updateTarget("installationId", value);
             }}
@@ -856,6 +1532,10 @@ export default function FinoraControlCenterIssuanceWorkspace() {
             label="Binding Key ID"
             value={target.bindingKeyId}
             placeholder="FINORA-BINDING-..."
+            readOnly={
+              verifiedEnrollment !== undefined &&
+              !verifiedEnrollment.cancelled
+            }
             onChange={(value) => {
               updateTarget("bindingKeyId", value);
             }}
@@ -865,6 +1545,10 @@ export default function FinoraControlCenterIssuanceWorkspace() {
             label="Public Key Fingerprint"
             value={target.publicKeyFingerprint}
             placeholder="64-character SHA-256 hex fingerprint"
+            readOnly={
+              verifiedEnrollment !== undefined &&
+              !verifiedEnrollment.cancelled
+            }
             onChange={(value) => {
               updateTarget("publicKeyFingerprint", value);
             }}
@@ -905,6 +1589,204 @@ export default function FinoraControlCenterIssuanceWorkspace() {
             </div>
           </div>
         </div>
+      </section>
+
+      <section
+        data-finora-enrollment-response-export="true"
+        aria-live="polite"
+        style={{
+          marginTop: "20px",
+          border: "1px solid rgba(96, 165, 250, 0.28)",
+          borderRadius: "11px",
+          padding: "16px",
+          background: "rgba(2, 6, 23, 0.34)",
+        }}
+      >
+        <div
+          style={{
+            display: "flex",
+            alignItems: "flex-start",
+            justifyContent: "space-between",
+            gap: "18px",
+          }}
+        >
+          <div
+            style={{
+              flex: 1,
+              minWidth: 0,
+            }}
+          >
+            <h3
+              style={{
+                margin: 0,
+                fontSize: "14px",
+                fontWeight: 650,
+              }}
+            >
+              Installation Enrollment Response
+            </h3>
+
+            <p
+              style={{
+                margin: "6px 0 0",
+                maxWidth: "720px",
+                fontSize: "12px",
+                lineHeight: 1.55,
+                opacity: 0.7,
+              }}
+            >
+              Assign Owner, Business and Branch identity above, then define
+              the immutable numbering codes. Device-binding authority comes
+              only from the cryptographically verified Enrollment Request.
+            </p>
+          </div>
+        </div>
+
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
+            gap: "14px",
+            marginTop: "14px",
+          }}
+        >
+          <TargetField
+            label="Business Code"
+            value={enrollmentBusinessCode}
+            placeholder="BUSINESS CODE"
+            readOnly={
+              enrollmentResponseState === "SUCCESS"
+            }
+            onChange={setEnrollmentBusinessCode}
+          />
+
+          <TargetField
+            label="Branch Code"
+            value={enrollmentBranchCode}
+            placeholder="BRANCH CODE"
+            readOnly={
+              enrollmentResponseState === "SUCCESS"
+            }
+            onChange={setEnrollmentBranchCode}
+          />
+        </div>
+
+        <div
+          style={{
+            marginTop: "14px",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: "16px",
+          }}
+        >
+          <p
+            style={{
+              margin: 0,
+              fontSize: "11px",
+              lineHeight: 1.5,
+              color: "#fbbf24",
+            }}
+          >
+            This response establishes installation identity and initial
+            Control Center trust only. It does not activate the branch or
+            grant storage.
+          </p>
+
+          <button
+            type="button"
+            disabled={
+              !verifiedEnrollment ||
+              verifiedEnrollment.cancelled ||
+              !target.ownerId.trim() ||
+              !target.businessId.trim() ||
+              !target.branchId.trim() ||
+              !enrollmentBusinessCode.trim() ||
+              !enrollmentBranchCode.trim() ||
+              enrollmentResponseState === "EXPORTING" ||
+              enrollmentResponseState === "SUCCESS"
+            }
+            onClick={() => {
+              void issueAndExportEnrollmentResponse();
+            }}
+            style={{
+              minWidth: "220px",
+              minHeight: "42px",
+              border: "1px solid rgba(96, 165, 250, 0.62)",
+              borderRadius: "9px",
+              padding: "9px 14px",
+              fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
+              fontSize: "12px",
+              fontWeight: 650,
+              background: "rgba(30, 64, 175, 0.3)",
+              color: "#dbeafe",
+              cursor:
+                enrollmentResponseState === "EXPORTING" ||
+                enrollmentResponseState === "SUCCESS"
+                  ? "not-allowed"
+                  : "pointer",
+            }}
+          >
+            {enrollmentResponseState === "EXPORTING"
+              ? "Issuing & Exporting…"
+              : enrollmentResponseState === "SUCCESS"
+                ? "Enrollment Response Exported"
+                : "Issue & Export Response"}
+          </button>
+        </div>
+
+        {enrollmentResponseState === "ERROR" &&
+          enrollmentResponseError && (
+            <p
+              style={{
+                margin: "12px 0 0",
+                fontSize: "12px",
+                lineHeight: 1.55,
+                color: "#fca5a5",
+              }}
+            >
+              {enrollmentResponseError}
+            </p>
+          )}
+
+        {enrollmentResponseState === "SUCCESS" &&
+          enrollmentResponseResult && (
+            <div
+              style={{
+                marginTop: "12px",
+                display: "grid",
+                gap: "5px",
+                fontSize: "11px",
+                lineHeight: 1.5,
+                color: "#86efac",
+              }}
+            >
+              <strong>
+                Enrollment Response signed and exported successfully.
+              </strong>
+
+              <span>
+                File: {enrollmentResponseResult.fileName} (
+                {enrollmentResponseResult.bytesWritten.toLocaleString()} bytes)
+              </span>
+
+              <span
+                style={{
+                  overflowWrap: "anywhere",
+                }}
+              >
+                Response ID: {enrollmentResponseResult.responseId}
+              </span>
+
+              <span
+                style={{
+                  overflowWrap: "anywhere",
+                }}
+              >
+                Request ID: {enrollmentResponseResult.requestId}
+              </span>
+            </div>
+          )}
       </section>
 
       <section
@@ -1056,6 +1938,14 @@ export default function FinoraControlCenterIssuanceWorkspace() {
         />
       )}
 
+      {workflow === "BRANCH_ACCESS" && (
+        <FinoraControlCenterBranchAccessForm
+          target={target}
+          onIssue={(draft) => {
+            void issueBranchAccessDraft(draft);
+          }}
+        />
+      )}
       {workflow === "STORAGE_ENTITLEMENT" && (
         <FinoraControlCenterStorageEntitlementForm
           target={target}
@@ -1458,6 +2348,103 @@ export default function FinoraControlCenterIssuanceWorkspace() {
           </section>
         )}
 
+      {workflow === "BRANCH_ACCESS" &&
+        branchAccessIssuanceState !== "IDLE" && (
+          <section
+            aria-live="polite"
+            style={{
+              marginTop: "20px",
+              borderTop: "1px solid rgba(148, 163, 184, 0.18)",
+              paddingTop: "18px",
+            }}
+          >
+            <h3
+              style={{
+                margin: "0 0 10px",
+                fontSize: "14px",
+                fontWeight: 650,
+              }}
+            >
+              Branch Access Issuance Result
+            </h3>
+
+            {branchAccessIssuanceState === "ISSUING" && (
+              <p
+                style={{
+                  margin: 0,
+                  fontSize: "12px",
+                  opacity: 0.72,
+                }}
+              >
+                Issuing signed Branch Access package…
+              </p>
+            )}
+
+            {branchAccessIssuanceState === "ERROR" &&
+              branchAccessIssuanceError && (
+                <p
+                  style={{
+                    margin: 0,
+                    fontSize: "12px",
+                    lineHeight: 1.55,
+                    color: "#fca5a5",
+                  }}
+                >
+                  {branchAccessIssuanceError}
+                </p>
+              )}
+
+            {branchAccessIssuanceState === "SUCCESS" &&
+              branchAccessSignedPackage && (
+                <>
+                  <p
+                    style={{
+                      margin: "0 0 10px",
+                      fontSize: "12px",
+                      color: "#86efac",
+                    }}
+                  >
+                    Signed Branch Access package issued successfully.
+                  </p>
+
+                  <pre
+                    style={{
+                      margin: 0,
+                      maxHeight: "360px",
+                      overflow: "auto",
+                      border: "1px solid rgba(148, 163, 184, 0.2)",
+                      borderRadius: "9px",
+                      padding: "12px",
+                      fontSize: "11px",
+                      lineHeight: 1.5,
+                      background: "rgba(2, 6, 23, 0.5)",
+                      color: "#cbd5e1",
+                      whiteSpace: "pre-wrap",
+                      overflowWrap: "anywhere",
+                    }}
+                  >
+                    {JSON.stringify(
+                      branchAccessSignedPackage,
+                      null,
+                      2,
+                    )}
+                  </pre>
+
+                  <p
+                    style={{
+                      margin: "10px 0 0",
+                      fontSize: "11px",
+                      opacity: 0.58,
+                    }}
+                  >
+                    Signed package display only. Control Bundle inclusion
+                    remains intentionally disabled until Branch Activation
+                    access-state ownership is split.
+                  </p>
+                </>
+              )}
+          </section>
+        )}
       {workflow === "BRANCH_ACTIVATION" && branchIssuanceState !== "IDLE" && (
         <section
           aria-live="polite"

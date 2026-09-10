@@ -14,6 +14,8 @@ import type {
   LoanReviewData,
 } from "./types";
 
+import { formatRupee } from "../../../utils/currency/formatCurrency";
+
 import {
   cardStyle,
   highlightRowStyle,
@@ -62,7 +64,7 @@ export default function LoanSummary({
             </span>
 
             <strong style={valueStyle}>
-              ₹ {review.loanAmount}
+              {formatRupee(review.loanAmount)}
             </strong>
           </div>
 

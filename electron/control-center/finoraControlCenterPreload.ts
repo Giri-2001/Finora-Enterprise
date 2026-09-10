@@ -37,8 +37,17 @@ const CONTROL_CENTER_CHANNELS = {
   GET_TRUST_RECORD:
     "finora:control-center:get-trust-record",
 
+  OPEN_INSTALLATION_ENROLLMENT_REQUEST:
+    "finora:control-center:open-installation-enrollment-request",
+
+  ISSUE_AND_EXPORT_INSTALLATION_ENROLLMENT_RESPONSE:
+    "finora:control-center:issue-and-export-installation-enrollment-response",
+
   ISSUE_BRANCH_ACTIVATION:
     "finora:control-center:issue-branch-activation",
+
+  ISSUE_BRANCH_ACCESS:
+    "finora:control-center:issue-branch-access",
 
   ISSUE_STORAGE_ENTITLEMENT:
     "finora:control-center:issue-storage-entitlement",
@@ -98,6 +107,12 @@ export interface FinoraControlCenterTrustRecordView {
     "SPKI_DER_BASE64";
 
   publicKey:
+    string;
+
+  fingerprintAlgorithm:
+    "SHA-256";
+
+  publicKeyFingerprint:
     string;
 
   status:
@@ -179,6 +194,90 @@ export type FinoraControlBundleExportView =
     };
 
 // ============================================================
+// VERIFIED INSTALLATION ENROLLMENT VIEW
+// ============================================================
+
+export type FinoraControlCenterEnrollmentOpenView =
+  | {
+      cancelled:
+        true;
+    }
+  | {
+      cancelled:
+        false;
+
+      fileName:
+        string;
+
+      bytesRead:
+        number;
+
+      requestId:
+        string;
+
+      requestedAt:
+        string;
+
+      installationId:
+        string;
+
+      bindingKeyId:
+        string;
+
+      fingerprintAlgorithm:
+        "SHA-256";
+
+      publicKeyFingerprint:
+        string;
+    };
+
+// ============================================================
+// INSTALLATION ENROLLMENT RESPONSE OPERATOR ASSIGNMENT
+// ============================================================
+
+export interface FinoraControlCenterEnrollmentOperatorAssignment {
+  ownerId:
+    string;
+
+  businessId:
+    string;
+
+  branchId:
+    string;
+
+  businessCode:
+    string;
+
+  branchCode:
+    string;
+}
+
+export type FinoraControlCenterEnrollmentResponseExportView =
+  | {
+      cancelled:
+        true;
+    }
+  | {
+      cancelled:
+        false;
+
+      fileName:
+        string;
+
+      bytesWritten:
+        number;
+
+      responseId:
+        string;
+
+      requestId:
+        string;
+
+      installationId:
+        string;
+    };
+
+// ============================================================
 // BRIDGE CONTRACT
 // ============================================================
 
@@ -191,7 +290,37 @@ export interface FinoraControlCenterBridge {
         >
       >;
 
+  openInstallationEnrollmentRequest:
+    () =>
+      Promise<
+        FinoraControlCenterResult<
+          FinoraControlCenterEnrollmentOpenView
+        >
+      >;
+
+  issueAndExportInstallationEnrollmentResponse:
+    (
+      assignment:
+        FinoraControlCenterEnrollmentOperatorAssignment,
+    ) =>
+      Promise<
+        FinoraControlCenterResult<
+          FinoraControlCenterEnrollmentResponseExportView
+        >
+      >;
+
   issueBranchActivation:
+    (
+      request:
+        FinoraControlCenterIssuanceRequest,
+    ) =>
+      Promise<
+        FinoraControlCenterResult<
+          FinoraControlCenterSignedPackageView
+        >
+      >;
+
+  issueBranchAccess:
     (
       request:
         FinoraControlCenterIssuanceRequest,
@@ -275,12 +404,50 @@ const controlCenterBridge:
         >
       >,
 
+  openInstallationEnrollmentRequest:
+    () =>
+      ipcRenderer.invoke(
+        CONTROL_CENTER_CHANNELS
+          .OPEN_INSTALLATION_ENROLLMENT_REQUEST,
+      ) as Promise<
+        FinoraControlCenterResult<
+          FinoraControlCenterEnrollmentOpenView
+        >
+      >,
+
+  issueAndExportInstallationEnrollmentResponse:
+    (
+      assignment,
+    ) =>
+      ipcRenderer.invoke(
+        CONTROL_CENTER_CHANNELS
+          .ISSUE_AND_EXPORT_INSTALLATION_ENROLLMENT_RESPONSE,
+        assignment,
+      ) as Promise<
+        FinoraControlCenterResult<
+          FinoraControlCenterEnrollmentResponseExportView
+        >
+      >,
+
   issueBranchActivation:
     (
       request,
     ) =>
       ipcRenderer.invoke(
         CONTROL_CENTER_CHANNELS.ISSUE_BRANCH_ACTIVATION,
+        request,
+      ) as Promise<
+        FinoraControlCenterResult<
+          FinoraControlCenterSignedPackageView
+        >
+      >,
+
+  issueBranchAccess:
+    (
+      request,
+    ) =>
+      ipcRenderer.invoke(
+        CONTROL_CENTER_CHANNELS.ISSUE_BRANCH_ACCESS,
         request,
       ) as Promise<
         FinoraControlCenterResult<

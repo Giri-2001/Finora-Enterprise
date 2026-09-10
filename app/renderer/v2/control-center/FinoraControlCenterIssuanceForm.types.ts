@@ -22,6 +22,7 @@
 
 export type FinoraControlCenterIssuanceWorkflow =
   | "BRANCH_ACTIVATION"
+  | "BRANCH_ACCESS"
   | "STORAGE_ENTITLEMENT"
   | "BUSINESS_PROFILE"
   | "PRICING_POLICY"
@@ -59,12 +60,7 @@ export interface FinoraControlCenterTargetDraft {
 ============================================================ */
 
 export type FinoraBranchActivationActionDraft =
-  | "ISSUE"
-  | "RENEW"
-  | "REPLACE"
-  | "SUSPEND"
-  | "RESUME"
-  | "REVOKE";
+  "ISSUE";
 
 export type FinoraBranchAccessAdministrativeStatusDraft =
   | "ACTIVE"
@@ -99,6 +95,35 @@ export interface FinoraBranchActivationFormDraft {
 
   activationUpdatedAt:
     string;
+}
+
+/* ============================================================
+   BRANCH ACCESS
+
+   Credential enrollment carries authorization metadata only.
+   The actual recipient password is never entered or signed here.
+============================================================ */
+
+export type FinoraBranchAccessActionDraft =
+  | "ISSUE"
+  | "RENEW"
+  | "REPLACE"
+  | "SUSPEND"
+  | "RESUME"
+  | "REVOKE";
+
+export type FinoraBranchAccessUserRoleDraft =
+  | "ADMIN"
+  | "MANAGER"
+  | "COLLECTOR"
+  | "VIEWER";
+
+export interface FinoraBranchAccessFormDraft {
+  target:
+    FinoraControlCenterTargetDraft;
+
+  action:
+    FinoraBranchAccessActionDraft;
 
   grantId:
     string;
@@ -147,8 +172,22 @@ export interface FinoraBranchActivationFormDraft {
 
   demoRemarks:
     string;
-}
 
+  credentialEnrollmentEnabled:
+    boolean;
+
+  credentialAuthorizationId:
+    string;
+
+  credentialUsername:
+    string;
+
+  credentialFullName:
+    string;
+
+  credentialRole:
+    FinoraBranchAccessUserRoleDraft;
+}
 /* ============================================================
    STORAGE ENTITLEMENT
 ============================================================ */

@@ -68,6 +68,17 @@ const LEDGER_FILE =
 // CONTRACTS
 // ============================================================
 
+/**
+ * Purpose namespace owned by the issuance ledger.
+ *
+ * INSTALLATION_ENROLLMENT_RESPONSE is intentionally a
+ * pre-trust bootstrap issuance purpose and is NOT added to
+ * FinoraControlCenterPackagePurpose.
+ */
+export type FinoraControlCenterIssuancePurpose =
+  | FinoraControlCenterPackagePurpose
+  | "INSTALLATION_ENROLLMENT_RESPONSE";
+
 export interface FinoraControlCenterIssuanceScope {
   ownerId:
     string;
@@ -84,7 +95,7 @@ export interface FinoraControlCenterIssuanceScope {
 
 export interface ReserveFinoraControlCenterIssuanceInput {
   purpose:
-    FinoraControlCenterPackagePurpose;
+    FinoraControlCenterIssuancePurpose;
 
   scope:
     FinoraControlCenterIssuanceScope;
@@ -106,7 +117,7 @@ interface FinoraControlCenterIssuanceSequenceRecord {
     string;
 
   purpose:
-    FinoraControlCenterPackagePurpose;
+    FinoraControlCenterIssuancePurpose;
 
   ownerId:
     string;
@@ -215,10 +226,10 @@ function isCanonicalTimestamp(
   );
 }
 
-function isPackagePurpose(
+function isIssuancePurpose(
   value:
     unknown,
-): value is FinoraControlCenterPackagePurpose {
+): value is FinoraControlCenterIssuancePurpose {
 
   return (
     value ===
@@ -232,7 +243,9 @@ function isPackagePurpose(
     value ===
       "WALLET_RECHARGE" ||
     value ===
-      "CONTROL_BUNDLE"
+      "CONTROL_BUNDLE" ||
+    value ===
+      "INSTALLATION_ENROLLMENT_RESPONSE"
   );
 }
 
@@ -261,7 +274,7 @@ function isSequenceRecord(
     isNonEmptyString(
       record.issuerId,
     ) &&
-    isPackagePurpose(
+    isIssuancePurpose(
       record.purpose,
     ) &&
     isNonEmptyString(
@@ -335,7 +348,7 @@ function validateReservationInput(
 ): void {
 
   if (
-    !isPackagePurpose(
+    !isIssuancePurpose(
       input.purpose,
     ) ||
     !isNonEmptyString(
@@ -721,9 +734,14 @@ async function reserveInternal(
     ledger,
   );
 
+  const packageId =
+    input.purpose ===
+      "INSTALLATION_ENROLLMENT_RESPONSE"
+      ? `FINORA-ENROLLMENT-RESPONSE-${randomUUID()}`
+      : `FINORA-CC-PKG-${randomUUID()}`;
+
   return {
-    packageId:
-      `FINORA-CC-PKG-${randomUUID()}`,
+    packageId,
 
     sequence,
 
