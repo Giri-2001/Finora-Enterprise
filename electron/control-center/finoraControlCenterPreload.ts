@@ -26,6 +26,10 @@ import {
   ipcRenderer,
 } from "electron";
 
+import type {
+  FinoraControlCenterBranchRegistry,
+} from "./finoraControlCenterBranchRegistry.types.js";
+
 // ============================================================
 // IPC CHANNELS
 //
@@ -36,6 +40,12 @@ import {
 const CONTROL_CENTER_CHANNELS = {
   GET_TRUST_RECORD:
     "finora:control-center:get-trust-record",
+
+  GET_BRANCH_REGISTRY:
+    "finora:control-center:get-branch-registry",
+
+  BACKFILL_HISTORICAL_ENROLLMENT_BRANCH:
+    "finora:control-center:backfill-historical-enrollment-branch",
 
   OPEN_INSTALLATION_ENROLLMENT_REQUEST:
     "finora:control-center:open-installation-enrollment-request",
@@ -90,6 +100,52 @@ type FinoraControlCenterResult<T> =
   | FinoraControlCenterResultFailure;
 
 // ============================================================
+// BRANCH REGISTRY VIEW
+// ============================================================
+
+export type FinoraControlCenterBranchRegistryView =
+  FinoraControlCenterBranchRegistry;
+
+
+// ============================================================
+// HISTORICAL BRANCH BACKFILL VIEW
+//
+// This is intentionally an operator-facing summary only.
+// No raw Enrollment evidence, filesystem path, recipient public
+// key, binding fingerprint, or Control Center signing-key
+// verification metadata crosses into the renderer.
+// ============================================================
+
+export type FinoraControlCenterHistoricalBranchBackfillView =
+  | {
+      cancelled:
+        true;
+
+      cancelledAt:
+        "REQUEST" | "RESPONSE";
+    }
+  | {
+      cancelled:
+        false;
+
+      created:
+        boolean;
+
+      requestFileName:
+        string;
+
+      responseFileName:
+        string;
+
+      branchId:
+        string;
+
+      businessCode:
+        string;
+
+      branchCode:
+        string;
+    };// ============================================================
 // TRUST RECORD
 // ============================================================
 
@@ -290,6 +346,21 @@ export interface FinoraControlCenterBridge {
         >
       >;
 
+  getBranchRegistry:
+    () =>
+      Promise<
+        FinoraControlCenterResult<
+          FinoraControlCenterBranchRegistryView | undefined
+        >
+      >;
+
+  backfillHistoricalEnrollmentBranch:
+    () =>
+      Promise<
+        FinoraControlCenterResult<
+          FinoraControlCenterHistoricalBranchBackfillView
+        >
+      >;
   openInstallationEnrollmentRequest:
     () =>
       Promise<
@@ -404,6 +475,26 @@ const controlCenterBridge:
         >
       >,
 
+  getBranchRegistry:
+    () =>
+      ipcRenderer.invoke(
+        CONTROL_CENTER_CHANNELS.GET_BRANCH_REGISTRY,
+      ) as Promise<
+        FinoraControlCenterResult<
+          FinoraControlCenterBranchRegistryView | undefined
+        >
+      >,
+
+  backfillHistoricalEnrollmentBranch:
+    () =>
+      ipcRenderer.invoke(
+        CONTROL_CENTER_CHANNELS
+          .BACKFILL_HISTORICAL_ENROLLMENT_BRANCH,
+      ) as Promise<
+        FinoraControlCenterResult<
+          FinoraControlCenterHistoricalBranchBackfillView
+        >
+      >,
   openInstallationEnrollmentRequest:
     () =>
       ipcRenderer.invoke(

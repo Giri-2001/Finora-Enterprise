@@ -1,4 +1,7 @@
-import { useRef, useState } from "react";
+import {
+  useEffect, useRef, useState } from "react";
+
+import type { FinoraControlCenterBranchRegistryRecord } from "../../../../electron/control-center/finoraControlCenterBranchRegistry.types";
 
 import type {
   FinoraControlCenterEnrollmentOpenView,
@@ -199,12 +202,64 @@ function TargetField({
    WORKSPACE
 ============================================================ */
 
-export default function FinoraControlCenterIssuanceWorkspace() {
-  const [workflow, setWorkflow] =
-    useState<FinoraControlCenterIssuanceWorkflow>("BRANCH_ACTIVATION");
+interface FinoraControlCenterIssuanceWorkspaceProps {
+  selectedBranch?:
+    FinoraControlCenterBranchRegistryRecord;
+  workflow:
+    FinoraControlCenterIssuanceWorkflow;
+  workspaceFocusRequestId:
+    number;
+  onWorkflowChange:
+    (
+      workflow:
+        FinoraControlCenterIssuanceWorkflow,
+    ) => void;
+  onClearSelectedBranch:
+    () => void;
+}
+
+export default function FinoraControlCenterIssuanceWorkspace({
+  selectedBranch,
+  workflow,
+  workspaceFocusRequestId,
+  onWorkflowChange,
+  onClearSelectedBranch,
+}: FinoraControlCenterIssuanceWorkspaceProps) {
+  const workspaceRef =
+    useRef<HTMLElement | null>(
+      null,
+    );
+
+  const handledWorkspaceFocusRequestRef =
+    useRef(0);
 
   const [target, setTarget] =
     useState<FinoraControlCenterTargetDraft>(EMPTY_TARGET);
+
+  useEffect(
+    () => {
+      if (
+        workspaceFocusRequestId <= 0 ||
+        handledWorkspaceFocusRequestRef.current ===
+          workspaceFocusRequestId
+      ) {
+        return;
+      }
+
+      handledWorkspaceFocusRequestRef.current =
+        workspaceFocusRequestId;
+
+      workspaceRef.current?.scrollIntoView({
+        behavior:
+          "smooth",
+        block:
+          "start",
+      });
+    },
+    [
+      workspaceFocusRequestId,
+    ],
+  );
 
   const [enrollmentOpenState, setEnrollmentOpenState] =
     useState<
@@ -223,6 +278,21 @@ export default function FinoraControlCenterIssuanceWorkspace() {
 
   const enrollmentOpenInFlightRef =
     useRef(false);
+
+  const [enrollmentOwnerId, setEnrollmentOwnerId] =
+    useState<string>(
+      "",
+    );
+
+  const [enrollmentBusinessId, setEnrollmentBusinessId] =
+    useState<string>(
+      "",
+    );
+
+  const [enrollmentBranchId, setEnrollmentBranchId] =
+    useState<string>(
+      "",
+    );
 
   const [enrollmentBusinessCode, setEnrollmentBusinessCode] =
     useState<string>(
@@ -357,6 +427,81 @@ export default function FinoraControlCenterIssuanceWorkspace() {
   >();
 
   const bundleExportInFlightRef = useRef(false);
+  function resetNormalIssuanceArtifacts(): void {
+    setBranchSignedPackage(undefined);
+    setBranchIssuanceState("IDLE");
+    setBranchIssuanceError(undefined);
+
+    setBranchAccessSignedPackage(undefined);
+    setBranchAccessIssuanceState("IDLE");
+    setBranchAccessIssuanceError(undefined);
+
+    setStorageSignedPackage(undefined);
+    setStorageIssuanceState("IDLE");
+    setStorageIssuanceError(undefined);
+
+    setBusinessProfileSignedPackage(undefined);
+    setBusinessProfileIssuanceState("IDLE");
+    setBusinessProfileIssuanceError(undefined);
+
+    setPricingPolicySignedPackage(undefined);
+    setPricingPolicyIssuanceState("IDLE");
+    setPricingPolicyIssuanceError(undefined);
+
+    setWalletRechargeSignedPackage(undefined);
+    setWalletRechargeIssuanceState("IDLE");
+    setWalletRechargeIssuanceError(undefined);
+
+    setBundleExportResult(undefined);
+    setBundleExportState("IDLE");
+    setBundleExportError(undefined);
+  }
+
+  useEffect(
+    () => {
+      if (!selectedBranch) {
+        return;
+      }
+
+      const identity =
+        selectedBranch.identity;
+
+      setTarget({
+        ownerId:
+          identity.ownerId,
+
+        businessId:
+          identity.businessId,
+
+        branchId:
+          identity.branchId,
+
+        installationId:
+          identity.installation.installationId,
+
+        bindingKeyId:
+          identity.installation.bindingKeyId,
+
+        fingerprintAlgorithm:
+          identity.installation.fingerprintAlgorithm,
+
+        publicKeyFingerprint:
+          identity.installation.publicKeyFingerprint,
+      });
+
+      /*
+       * A registry-selected branch becomes the complete
+       * immutable identity source for normal signed issuance.
+       *
+       * Signed artifacts belonging to any previous target must
+       * not survive a target switch.
+       */
+      resetNormalIssuanceArtifacts();
+    },
+    [
+      selectedBranch,
+    ],
+  );
 
   async function openVerifiedEnrollmentRequest():
     Promise<void> {
@@ -411,6 +556,18 @@ export default function FinoraControlCenterIssuanceWorkspace() {
         enrollment,
       );
 
+      setEnrollmentOwnerId(
+        "",
+      );
+
+      setEnrollmentBusinessId(
+        "",
+      );
+
+      setEnrollmentBranchId(
+        "",
+      );
+
       setEnrollmentBusinessCode(
         "",
       );
@@ -431,116 +588,7 @@ export default function FinoraControlCenterIssuanceWorkspace() {
         "IDLE",
       );
 
-      setTarget(
-        (current) => ({
-          ...current,
-
-          installationId:
-            enrollment.installationId,
-
-          bindingKeyId:
-            enrollment.bindingKeyId,
-
-          fingerprintAlgorithm:
-            enrollment.fingerprintAlgorithm,
-
-          publicKeyFingerprint:
-            enrollment.publicKeyFingerprint,
-        }),
-      );
-
-      /*
-       * A newly verified installation target invalidates any
-       * previously issued package workspace state.
-       *
-       * This prevents signed packages for a previous target
-       * from being mixed into the newly loaded enrollment.
-       */
-      setBranchSignedPackage(
-        undefined,
-      );
-
-      setBranchIssuanceState(
-        "IDLE",
-      );
-
-      setBranchIssuanceError(
-        undefined,
-      );
-
-      setBranchAccessSignedPackage(
-        undefined,
-      );
-
-      setBranchAccessIssuanceState(
-        "IDLE",
-      );
-
-      setBranchAccessIssuanceError(
-        undefined,
-      );
-
-      setStorageSignedPackage(
-        undefined,
-      );
-
-      setStorageIssuanceState(
-        "IDLE",
-      );
-
-      setStorageIssuanceError(
-        undefined,
-      );
-
-      setBusinessProfileSignedPackage(
-        undefined,
-      );
-
-      setBusinessProfileIssuanceState(
-        "IDLE",
-      );
-
-      setBusinessProfileIssuanceError(
-        undefined,
-      );
-
-      setPricingPolicySignedPackage(
-        undefined,
-      );
-
-      setPricingPolicyIssuanceState(
-        "IDLE",
-      );
-
-      setPricingPolicyIssuanceError(
-        undefined,
-      );
-
-      setWalletRechargeSignedPackage(
-        undefined,
-      );
-
-      setWalletRechargeIssuanceState(
-        "IDLE",
-      );
-
-      setWalletRechargeIssuanceError(
-        undefined,
-      );
-
-      setBundleExportResult(
-        undefined,
-      );
-
-      setBundleExportState(
-        "IDLE",
-      );
-
-      setBundleExportError(
-        undefined,
-      );
-
-      setEnrollmentOpenState(
+setEnrollmentOpenState(
         "SUCCESS",
       );
 
@@ -615,13 +663,13 @@ export default function FinoraControlCenterIssuanceWorkspace() {
       const result =
         await bridge.issueAndExportInstallationEnrollmentResponse({
           ownerId:
-            target.ownerId,
+            enrollmentOwnerId,
 
           businessId:
-            target.businessId,
+            enrollmentBusinessId,
 
           branchId:
-            target.branchId,
+            enrollmentBranchId,
 
           businessCode:
             enrollmentBusinessCode,
@@ -1177,9 +1225,11 @@ export default function FinoraControlCenterIssuanceWorkspace() {
 
   return (
     <section
+      ref={workspaceRef}
       data-finora-control-center-issuance-workspace="true"
       style={{
         marginTop: "22px",
+        scrollMarginTop: "16px",
         border: "1px solid rgba(148, 163, 184, 0.22)",
         borderRadius: "14px",
         padding: "22px",
@@ -1234,7 +1284,7 @@ export default function FinoraControlCenterIssuanceWorkspace() {
               type="button"
               aria-pressed={selected}
               onClick={() => {
-                setWorkflow(item.id);
+                onWorkflowChange(item.id);
               }}
               style={{
                 minHeight: "88px",
@@ -1479,115 +1529,381 @@ export default function FinoraControlCenterIssuanceWorkspace() {
             gap: "14px",
           }}
         >
-          <TargetField
-            label="Owner ID"
-            value={target.ownerId}
-            placeholder="OWNER-..."
-            readOnly={
-              enrollmentResponseState === "SUCCESS"
-            }
-            onChange={(value) => {
-              updateTarget("ownerId", value);
-            }}
-          />
-
-          <TargetField
-            label="Business ID"
-            value={target.businessId}
-            placeholder="BUSINESS-..."
-            readOnly={
-              enrollmentResponseState === "SUCCESS"
-            }
-            onChange={(value) => {
-              updateTarget("businessId", value);
-            }}
-          />
-
-          <TargetField
-            label="Branch ID"
-            value={target.branchId}
-            placeholder="BRANCH-..."
-            readOnly={
-              enrollmentResponseState === "SUCCESS"
-            }
-            onChange={(value) => {
-              updateTarget("branchId", value);
-            }}
-          />
-
-          <TargetField
-            label="Installation ID"
-            value={target.installationId}
-            placeholder="INSTALLATION-..."
-            readOnly={
-              verifiedEnrollment !== undefined &&
-              !verifiedEnrollment.cancelled
-            }
-            onChange={(value) => {
-              updateTarget("installationId", value);
-            }}
-          />
-
-          <TargetField
-            label="Binding Key ID"
-            value={target.bindingKeyId}
-            placeholder="FINORA-BINDING-..."
-            readOnly={
-              verifiedEnrollment !== undefined &&
-              !verifiedEnrollment.cancelled
-            }
-            onChange={(value) => {
-              updateTarget("bindingKeyId", value);
-            }}
-          />
-
-          <TargetField
-            label="Public Key Fingerprint"
-            value={target.publicKeyFingerprint}
-            placeholder="64-character SHA-256 hex fingerprint"
-            readOnly={
-              verifiedEnrollment !== undefined &&
-              !verifiedEnrollment.cancelled
-            }
-            onChange={(value) => {
-              updateTarget("publicKeyFingerprint", value);
-            }}
-          />
-
-          <div
-            style={{
-              display: "grid",
-              gap: "7px",
-            }}
-          >
-            <span
-              style={{
-                fontSize: "12px",
-                fontWeight: 650,
-                letterSpacing: "0.02em",
-                color: "#cbd5e1",
-              }}
-            >
-              Fingerprint Algorithm
-            </span>
-
+          {selectedBranch && (
             <div
+              data-finora-control-center-selected-registry-target="true"
               style={{
-                minHeight: "42px",
-                display: "flex",
-                alignItems: "center",
-                boxSizing: "border-box",
-                border: "1px solid rgba(148, 163, 184, 0.2)",
-                borderRadius: "9px",
-                padding: "9px 11px",
-                fontSize: "13px",
-                background: "rgba(30, 41, 59, 0.62)",
-                color: "#cbd5e1",
+                gridColumn:
+                  "1 / -1",
+                border:
+                  "1px solid rgba(96, 165, 250, 0.38)",
+                borderRadius:
+                  "10px",
+                padding:
+                  "14px",
+                background:
+                  "rgba(30, 64, 175, 0.12)",
               }}
             >
-              {target.fingerprintAlgorithm}
+              <div
+                style={{
+                  display:
+                    "flex",
+                  alignItems:
+                    "flex-start",
+                  justifyContent:
+                    "space-between",
+                  gap:
+                    "16px",
+                }}
+              >
+                <div
+                  style={{
+                    minWidth:
+                      0,
+                  }}
+                >
+                  <div
+                    style={{
+                      fontSize:
+                        "12px",
+                      fontWeight:
+                        700,
+                    }}
+                  >
+                    Registry Target Selected
+                  </div>
+
+                  <div
+                    style={{
+                      marginTop:
+                        "4px",
+                      fontSize:
+                        "15px",
+                      fontWeight:
+                        700,
+                      overflowWrap:
+                        "anywhere",
+                    }}
+                  >
+                    {selectedBranch.profile?.businessName ??
+                      selectedBranch.identity.businessCode}
+                    {" / "}
+                    {selectedBranch.profile?.branchName ??
+                      selectedBranch.identity.branchCode}
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setTarget(
+                      EMPTY_TARGET,
+                    );
+
+                    resetNormalIssuanceArtifacts();
+                    onClearSelectedBranch();
+                  }}
+                  style={{
+                    flex:
+                      "0 0 auto",
+                    minHeight:
+                      "34px",
+                    padding:
+                      "6px 11px",
+                    border:
+                      "1px solid rgba(148, 163, 184, 0.28)",
+                    borderRadius:
+                      "8px",
+                    background:
+                      "rgba(15, 23, 42, 0.72)",
+                    color:
+                      "#e2e8f0",
+                    fontFamily:
+                      "inherit",
+                    fontWeight:
+                      650,
+                    cursor:
+                      "pointer",
+                  }}
+                >
+                  Clear Selection
+                </button>
+              </div>
+
+              <div
+                style={{
+                  marginTop:
+                    "14px",
+                  display:
+                    "grid",
+                  gridTemplateColumns:
+                    "repeat(2, minmax(0, 1fr))",
+                  gap:
+                    "12px 18px",
+                }}
+              >
+                <div>
+                  <div
+                    style={{
+                      fontSize:
+                        "10px",
+                      textTransform:
+                        "uppercase",
+                      letterSpacing:
+                        "0.07em",
+                      opacity:
+                        0.58,
+                    }}
+                  >
+                    Branch Code
+                  </div>
+
+                  <div
+                    style={{
+                      marginTop:
+                        "4px",
+                      fontSize:
+                        "12px",
+                      fontWeight:
+                        650,
+                    }}
+                  >
+                    {selectedBranch.identity.branchCode}
+                  </div>
+                </div>
+
+                <div>
+                  <div
+                    style={{
+                      fontSize:
+                        "10px",
+                      textTransform:
+                        "uppercase",
+                      letterSpacing:
+                        "0.07em",
+                      opacity:
+                        0.58,
+                    }}
+                  >
+                    Business Code
+                  </div>
+
+                  <div
+                    style={{
+                      marginTop:
+                        "4px",
+                      fontSize:
+                        "12px",
+                      fontWeight:
+                        650,
+                    }}
+                  >
+                    {selectedBranch.identity.businessCode}
+                  </div>
+                </div>
+
+                <div
+                  style={{
+                    minWidth:
+                      0,
+                  }}
+                >
+                  <div
+                    style={{
+                      fontSize:
+                        "10px",
+                      textTransform:
+                        "uppercase",
+                      letterSpacing:
+                        "0.07em",
+                      opacity:
+                        0.58,
+                    }}
+                  >
+                    Installation ID
+                  </div>
+
+                  <div
+                    style={{
+                      marginTop:
+                        "4px",
+                      fontSize:
+                        "11px",
+                      overflowWrap:
+                        "anywhere",
+                      fontFamily:
+                        "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace",
+                    }}
+                  >
+                    {selectedBranch.identity.installation.installationId}
+                  </div>
+                </div>
+
+                <div
+                  style={{
+                    minWidth:
+                      0,
+                  }}
+                >
+                  <div
+                    style={{
+                      fontSize:
+                        "10px",
+                      textTransform:
+                        "uppercase",
+                      letterSpacing:
+                        "0.07em",
+                      opacity:
+                        0.58,
+                    }}
+                  >
+                    SHA-256 Fingerprint
+                  </div>
+
+                  <div
+                    style={{
+                      marginTop:
+                        "4px",
+                      fontSize:
+                        "11px",
+                      overflowWrap:
+                        "anywhere",
+                      fontFamily:
+                        "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace",
+                    }}
+                  >
+                    {selectedBranch.identity.installation.publicKeyFingerprint}
+                  </div>
+                </div>
+              </div>
+
+              <div
+                style={{
+                  marginTop:
+                    "12px",
+                  fontSize:
+                    "11px",
+                  lineHeight:
+                    1.5,
+                  opacity:
+                    0.66,
+                }}
+              >
+                Immutable registry identity is locked for this signed issuance target.
+              </div>
             </div>
-          </div>
+          )}
+
+          {!selectedBranch && (
+            <>
+              <div
+                data-finora-control-center-manual-target="true"
+                style={{
+                  display:
+                    "contents",
+                }}
+              >
+                <TargetField
+                  label="Owner ID"
+                  value={target.ownerId}
+                  placeholder="OWNER-..."
+                  readOnly={selectedBranch !== undefined}
+                  onChange={(value) => {
+                    updateTarget("ownerId", value);
+                  }}
+                />
+
+                <TargetField
+                  label="Business ID"
+                  value={target.businessId}
+                  placeholder="BUSINESS-..."
+                  readOnly={selectedBranch !== undefined}
+                  onChange={(value) => {
+                    updateTarget("businessId", value);
+                  }}
+                />
+
+                <TargetField
+                  label="Branch ID"
+                  value={target.branchId}
+                  placeholder="BRANCH-..."
+                  readOnly={selectedBranch !== undefined}
+                  onChange={(value) => {
+                    updateTarget("branchId", value);
+                  }}
+                />
+
+                <TargetField
+                  label="Installation ID"
+                  value={target.installationId}
+                  placeholder="INSTALLATION-..."
+                  readOnly={selectedBranch !== undefined}
+
+                  onChange={(value) => {
+                    updateTarget("installationId", value);
+                  }}
+                />
+
+                <TargetField
+                  label="Binding Key ID"
+                  value={target.bindingKeyId}
+                  placeholder="FINORA-BINDING-..."
+                  readOnly={selectedBranch !== undefined}
+
+                  onChange={(value) => {
+                    updateTarget("bindingKeyId", value);
+                  }}
+                />
+
+                <TargetField
+                  label="Public Key Fingerprint"
+                  value={target.publicKeyFingerprint}
+                  placeholder="64-character SHA-256 hex fingerprint"
+                  readOnly={selectedBranch !== undefined}
+
+                  onChange={(value) => {
+                    updateTarget("publicKeyFingerprint", value);
+                  }}
+                />
+
+                <div
+                  style={{
+                    display: "grid",
+                    gap: "7px",
+                  }}
+                >
+                  <span
+                    style={{
+                      fontSize: "12px",
+                      fontWeight: 650,
+                      letterSpacing: "0.02em",
+                      color: "#cbd5e1",
+                    }}
+                  >
+                    Fingerprint Algorithm
+                  </span>
+
+                  <div
+                    style={{
+                      minHeight: "42px",
+                      display: "flex",
+                      alignItems: "center",
+                      boxSizing: "border-box",
+                      border: "1px solid rgba(148, 163, 184, 0.2)",
+                      borderRadius: "9px",
+                      padding: "9px 11px",
+                      fontSize: "13px",
+                      background: "rgba(30, 41, 59, 0.62)",
+                      color: "#cbd5e1",
+                    }}
+                  >
+                    {target.fingerprintAlgorithm}
+                  </div>
+                </div>
+              </div>
+            </>
+          )}
         </div>
       </section>
 
@@ -1651,6 +1967,36 @@ export default function FinoraControlCenterIssuanceWorkspace() {
           }}
         >
           <TargetField
+            label="Enrollment Owner ID"
+            value={enrollmentOwnerId}
+            placeholder="OWNER-..."
+            readOnly={
+              enrollmentResponseState === "SUCCESS"
+            }
+            onChange={setEnrollmentOwnerId}
+          />
+
+          <TargetField
+            label="Enrollment Business ID"
+            value={enrollmentBusinessId}
+            placeholder="BUSINESS-..."
+            readOnly={
+              enrollmentResponseState === "SUCCESS"
+            }
+            onChange={setEnrollmentBusinessId}
+          />
+
+          <TargetField
+            label="Enrollment Branch ID"
+            value={enrollmentBranchId}
+            placeholder="BRANCH-..."
+            readOnly={
+              enrollmentResponseState === "SUCCESS"
+            }
+            onChange={setEnrollmentBranchId}
+          />
+
+          <TargetField
             label="Business Code"
             value={enrollmentBusinessCode}
             placeholder="BUSINESS CODE"
@@ -1698,9 +2044,9 @@ export default function FinoraControlCenterIssuanceWorkspace() {
             disabled={
               !verifiedEnrollment ||
               verifiedEnrollment.cancelled ||
-              !target.ownerId.trim() ||
-              !target.businessId.trim() ||
-              !target.branchId.trim() ||
+              !enrollmentOwnerId.trim() ||
+              !enrollmentBusinessId.trim() ||
+              !enrollmentBranchId.trim() ||
               !enrollmentBusinessCode.trim() ||
               !enrollmentBranchCode.trim() ||
               enrollmentResponseState === "EXPORTING" ||

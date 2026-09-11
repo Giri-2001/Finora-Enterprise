@@ -1230,6 +1230,87 @@ export function verifyFinoraInstallationEnrollmentResponseFile(
 }
 
 // ============================================================
+// HISTORICAL ENROLLMENT RESPONSE EVIDENCE
+//
+// This path is for Control Center historical evidence
+// verification only.
+//
+// It deliberately reuses the same complete Enrollment Response
+// verifier used by normal recipient bootstrap:
+//
+// - exact file / envelope / payload structure,
+// - exact purpose / schema / payload version,
+// - request provenance,
+// - exact installation binding,
+// - canonical binding identity,
+// - signed validity-envelope structure,
+// - initial trusted-key validation,
+// - independent Control Center public-key fingerprint,
+// - issuer / signingKeyId consistency,
+// - payload digest,
+// - canonical ECDSA P-256 signature.
+//
+// DIFFERENCE FROM LIVE BOOTSTRAP:
+//
+// Current wall-clock notBefore / expiresAt authorization is not
+// applied. Historical evidence can legitimately be inspected
+// after its original bootstrap validity window has elapsed.
+//
+// The signed validity envelope itself remains mandatory and is
+// still structurally validated by the common verifier.
+//
+// SECURITY:
+//
+// - No trust-on-first-use.
+// - No package-provided trust authority.
+// - No current-machine binding lookup.
+// - The caller must supply binding authority obtained from the
+//   cryptographically verified original Enrollment Request.
+// - The caller must supply Control Center fingerprint authority
+//   obtained independently from validated Control Center
+//   current / retained public verification-key history.
+// - No persistence.
+// - No registry mutation.
+// ============================================================
+
+export interface VerifyFinoraInstallationEnrollmentResponseHistoricalEvidenceInput {
+
+  value:
+    unknown;
+
+  expectedControlCenterPublicKeyFingerprint:
+    string;
+
+  expectedRequestId:
+    string;
+
+  verifiedRequestBinding:
+    FinoraEnrollmentResponseNativeBindingView;
+}
+
+export function verifyFinoraInstallationEnrollmentResponseFileForHistoricalEvidence(
+  input:
+    VerifyFinoraInstallationEnrollmentResponseHistoricalEvidenceInput,
+): FinoraInstallationEnrollmentResponseVerificationResult {
+
+  return verifyFinoraInstallationEnrollmentResponseFileAtTime(
+    {
+      value:
+        input.value,
+
+      expectedControlCenterPublicKeyFingerprint:
+        input.expectedControlCenterPublicKeyFingerprint,
+
+      expectedRequestId:
+        input.expectedRequestId,
+
+      nativeBinding:
+        input.verifiedRequestBinding,
+    },
+    undefined,
+  );
+}
+// ============================================================
 // PROTECTED LATCHED-RESPONSE RECOVERY VERIFICATION
 //
 // The supplied acceptedAt is not renderer authority.

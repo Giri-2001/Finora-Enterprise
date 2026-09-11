@@ -79,6 +79,17 @@ import {
 } from "./finoraInstallationEnrollmentResponseFileTransport.js";
 
 import {
+  loadFinoraControlCenterBranchRegistry,
+  registerFinoraControlCenterBranch,
+} from "./finoraControlCenterBranchRegistryStore.js";
+import {
+  authorizeFinoraControlCenterRegistryBoundIssuanceTarget,
+} from "./finoraControlCenterBranchIssuanceAuthorization.js";
+
+import {
+  backfillFinoraControlCenterBranchFromHistoricalEnrollmentEvidence,
+} from "./finoraInstallationEnrollmentHistoricalBackfillCoordinator.js";
+import {
   isTrustedFinoraControlCenterRenderer,
 } from "./finoraControlCenterWindow.js";
 
@@ -90,6 +101,11 @@ export const FINORA_CONTROL_CENTER_IPC_CHANNELS = {
   GET_TRUST_RECORD:
     "finora:control-center:get-trust-record",
 
+  GET_BRANCH_REGISTRY:
+    "finora:control-center:get-branch-registry",
+
+  BACKFILL_HISTORICAL_ENROLLMENT_BRANCH:
+    "finora:control-center:backfill-historical-enrollment-branch",
   OPEN_INSTALLATION_ENROLLMENT_REQUEST:
     "finora:control-center:open-installation-enrollment-request",
 
@@ -500,6 +516,40 @@ export function registerFinoraControlCenterHandlers():
   );
 
   // ----------------------------------------------------------
+  // BRANCH REGISTRY READ
+  //
+  // SECURITY:
+  //
+  // - Dedicated privileged Control Center renderer only.
+  // - Zero renderer arguments.
+  // - Read-only defensive registry snapshot.
+  // - No registry mutation capability crosses IPC.
+  // ----------------------------------------------------------
+
+  ipcMain.handle(
+    FINORA_CONTROL_CENTER_IPC_CHANNELS.GET_BRANCH_REGISTRY,
+    async (
+      event,
+    ) => {
+
+      if (
+        !isTrustedFinoraControlCenterRenderer(
+          event.senderFrame,
+        )
+      ) {
+        return failure(
+          "FINORA Control Center Branch Registry access is restricted to the dedicated privileged renderer.",
+        );
+      }
+
+      return executePrivileged(
+        () =>
+          loadFinoraControlCenterBranchRegistry(),
+      );
+    },
+  );
+
+  // ----------------------------------------------------------
   // VERIFIED INSTALLATION ENROLLMENT REQUEST
   //
   // SECURITY:
@@ -513,6 +563,118 @@ export function registerFinoraControlCenterHandlers():
   // - Opening/verifying a request does not approve enrollment.
   // ----------------------------------------------------------
 
+  // ----------------------------------------------------------
+  // HISTORICAL ENROLLMENT BRANCH BACKFILL
+  //
+  // Renderer supplies ZERO identity fields, ZERO file paths,
+  // and ZERO file bytes.
+  //
+  // Native file selection, Request verification, historical
+  // Response authentication, and Registry persistence remain
+  // authoritative Electron-main responsibilities.
+  // ----------------------------------------------------------
+
+  ipcMain.handle(
+    FINORA_CONTROL_CENTER_IPC_CHANNELS
+      .BACKFILL_HISTORICAL_ENROLLMENT_BRANCH,
+    async (
+      event,
+    ) => {
+
+      if (
+        !isTrustedFinoraControlCenterRenderer(
+          event.senderFrame,
+        )
+      ) {
+        return failure(
+          "Unauthorized FINORA Control Center historical Branch backfill request.",
+        );
+      }
+
+      /*
+       * The trusted renderer predicate proves this invocation
+       * originates from the dedicated Control Center main frame.
+       *
+       * Native dialogs must be parented by that exact owning
+       * BrowserWindow. No renderer-supplied window/path is used.
+       */
+      const parentWindow =
+        BrowserWindow.fromWebContents(
+          event.sender,
+        );
+
+      if (
+        !parentWindow ||
+        parentWindow.isDestroyed() ||
+        parentWindow.webContents !==
+          event.sender
+      ) {
+        return failure(
+          "FINORA Control Center historical Branch backfill requires the trusted owning Control Center window.",
+        );
+      }
+
+      const backfill =
+        await backfillFinoraControlCenterBranchFromHistoricalEnrollmentEvidence(
+          parentWindow,
+        );
+
+      if (!backfill.success) {
+        return failure(
+          backfill.error,
+        );
+      }
+
+      if (backfill.cancelled) {
+        return success({
+          cancelled:
+            true as const,
+
+          cancelledAt:
+            backfill.cancelledAt,
+        });
+      }
+
+      /*
+       * Return only the minimal operator-facing summary.
+       *
+       * Do not expose:
+       * - recipient public-key material
+       * - verification signing-key metadata
+       * - native filesystem paths
+       * - raw Enrollment evidence
+       *
+       * The renderer can refresh the normal read-only Branch
+       * Registry view after successful completion.
+       */
+      return success({
+        cancelled:
+          false as const,
+
+        created:
+          backfill.created,
+
+        requestFileName:
+          backfill.requestFileName,
+
+        responseFileName:
+          backfill.responseFileName,
+
+        branchId:
+          backfill.record.identity.branchId,
+
+        businessCode:
+          backfill.record.identity.businessCode,
+
+        branchCode:
+          backfill.record.identity.branchCode,
+      });
+    },
+  );
+
+  // ----------------------------------------------------------
+  // INSTALLATION ENROLLMENT REQUEST
+  // ----------------------------------------------------------
   ipcMain.handle(
     FINORA_CONTROL_CENTER_IPC_CHANNELS
       .OPEN_INSTALLATION_ENROLLMENT_REQUEST,
@@ -713,8 +875,65 @@ export function registerFinoraControlCenterHandlers():
           });
         }
 
+        /*
+         * A non-cancelled native export means the signed Enrollment
+         * Response now exists outside Control Center.
+         *
+         * From this point forward the verified Enrollment Request
+         * must never be restored merely because registry persistence
+         * fails. Reissuing would create a second signed response for
+         * an already-exported enrollment operation.
+         */
         responseExported =
           true;
+
+        await registerFinoraControlCenterBranch({
+          identity: {
+            ownerId:
+              assignment.ownerId,
+
+            businessId:
+              assignment.businessId,
+
+            branchId:
+              assignment.branchId,
+
+            businessCode:
+              assignment.businessCode,
+
+            branchCode:
+              assignment.branchCode,
+
+            installation: {
+              installationId:
+                verifiedEnrollment.deviceBinding.installationId,
+
+              bindingKeyId:
+                verifiedEnrollment.deviceBinding.bindingKeyId,
+
+              platform:
+                verifiedEnrollment.deviceBinding.platform,
+
+              algorithm:
+                verifiedEnrollment.deviceBinding.algorithm,
+
+              publicKeyFormat:
+                verifiedEnrollment.deviceBinding.publicKeyFormat,
+
+              publicKey:
+                verifiedEnrollment.deviceBinding.publicKey,
+
+              fingerprintAlgorithm:
+                verifiedEnrollment.deviceBinding.fingerprintAlgorithm,
+
+              publicKeyFingerprint:
+                verifiedEnrollment.deviceBinding.publicKeyFingerprint,
+
+              bindingCreatedAt:
+                verifiedEnrollment.deviceBinding.createdAt,
+            },
+          },
+        });
 
         return success({
           cancelled:
@@ -737,6 +956,18 @@ export function registerFinoraControlCenterHandlers():
         });
 
       } catch (error) {
+
+        if (responseExported) {
+          const registryError =
+            error instanceof Error
+              ? error.message
+              : "Unknown Branch Registry persistence failure.";
+
+          return failure(
+            `The FINORA Installation Enrollment Response was exported successfully, but automatic Branch Registry registration failed. Do not issue another Enrollment Response for this request. Repair/backfill the Branch Registry from authentic enrollment evidence. Registry error: ${registryError}`,
+          );
+        }
+
         return failure(
           error instanceof Error
             ? error.message
@@ -801,12 +1032,20 @@ export function registerFinoraControlCenterHandlers():
         );
       }
 
+      const authorizedRequest =
+        request as
+          IssueFinoraBranchActivationRequest;
+
       return executePrivileged(
-        () =>
-          issueFinoraBranchActivationPackage(
-            request as
-              IssueFinoraBranchActivationRequest,
-          ),
+        async () => {
+          await authorizeFinoraControlCenterRegistryBoundIssuanceTarget(
+            authorizedRequest.target,
+          );
+
+          return issueFinoraBranchActivationPackage(
+            authorizedRequest,
+          );
+        },
       );
     },
   );
@@ -843,12 +1082,20 @@ export function registerFinoraControlCenterHandlers():
         );
       }
 
+      const authorizedRequest =
+        request as
+          IssueFinoraBranchAccessRequest;
+
       return executePrivileged(
-        () =>
-          issueFinoraBranchAccessPackage(
-            request as
-              IssueFinoraBranchAccessRequest,
-          ),
+        async () => {
+          await authorizeFinoraControlCenterRegistryBoundIssuanceTarget(
+            authorizedRequest.target,
+          );
+
+          return issueFinoraBranchAccessPackage(
+            authorizedRequest,
+          );
+        },
       );
     },
   );
@@ -885,12 +1132,20 @@ export function registerFinoraControlCenterHandlers():
         );
       }
 
+      const authorizedRequest =
+        request as
+          IssueFinoraStorageEntitlementRequest;
+
       return executePrivileged(
-        () =>
-          issueFinoraStorageEntitlementPackage(
-            request as
-              IssueFinoraStorageEntitlementRequest,
-          ),
+        async () => {
+          await authorizeFinoraControlCenterRegistryBoundIssuanceTarget(
+            authorizedRequest.target,
+          );
+
+          return issueFinoraStorageEntitlementPackage(
+            authorizedRequest,
+          );
+        },
       );
     },
   );
@@ -927,12 +1182,20 @@ export function registerFinoraControlCenterHandlers():
         );
       }
 
+      const authorizedRequest =
+        request as
+          IssueFinoraBusinessProfileRequest;
+
       return executePrivileged(
-        () =>
-          issueFinoraBusinessProfilePackage(
-            request as
-              IssueFinoraBusinessProfileRequest,
-          ),
+        async () => {
+          await authorizeFinoraControlCenterRegistryBoundIssuanceTarget(
+            authorizedRequest.target,
+          );
+
+          return issueFinoraBusinessProfilePackage(
+            authorizedRequest,
+          );
+        },
       );
     },
   );
@@ -969,12 +1232,20 @@ export function registerFinoraControlCenterHandlers():
         );
       }
 
+      const authorizedRequest =
+        request as
+          IssueFinoraPricingPolicyRequest;
+
       return executePrivileged(
-        () =>
-          issueFinoraPricingPolicyPackage(
-            request as
-              IssueFinoraPricingPolicyRequest,
-          ),
+        async () => {
+          await authorizeFinoraControlCenterRegistryBoundIssuanceTarget(
+            authorizedRequest.target,
+          );
+
+          return issueFinoraPricingPolicyPackage(
+            authorizedRequest,
+          );
+        },
       );
     },
   );
@@ -1011,12 +1282,20 @@ export function registerFinoraControlCenterHandlers():
         );
       }
 
+      const authorizedRequest =
+        request as
+          IssueFinoraWalletRechargeRequest;
+
       return executePrivileged(
-        () =>
-          issueFinoraWalletRechargePackage(
-            request as
-              IssueFinoraWalletRechargeRequest,
-          ),
+        async () => {
+          await authorizeFinoraControlCenterRegistryBoundIssuanceTarget(
+            authorizedRequest.target,
+          );
+
+          return issueFinoraWalletRechargePackage(
+            authorizedRequest,
+          );
+        },
       );
     },
   );

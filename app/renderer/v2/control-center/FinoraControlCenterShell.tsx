@@ -7,6 +7,10 @@ import type {
   FinoraControlCenterTrustRecordView,
 } from "../../../../electron/control-center/finoraControlCenterPreload";
 
+import type { FinoraControlCenterBranchRegistryRecord } from "../../../../electron/control-center/finoraControlCenterBranchRegistry.types";
+import type { FinoraControlCenterIssuanceWorkflow } from "./FinoraControlCenterIssuanceForm.types";
+
+import FinoraControlCenterBranchRegistryPanel from "./FinoraControlCenterBranchRegistryPanel";
 import FinoraControlCenterIssuanceWorkspace from "./FinoraControlCenterIssuanceWorkspace";
 
 /* ===========================================================
@@ -38,6 +42,26 @@ type ControlCenterLoadState =
   | "ERROR";
 
 export default function FinoraControlCenterShell() {
+  const [
+    selectedIssuanceBranch,
+    setSelectedIssuanceBranch,
+  ] = useState<
+    FinoraControlCenterBranchRegistryRecord | undefined
+  >();
+
+  const [
+    issuanceWorkflow,
+    setIssuanceWorkflow,
+  ] = useState<
+    FinoraControlCenterIssuanceWorkflow
+  >(
+    "BRANCH_ACTIVATION",
+  );
+
+  const [
+    workspaceFocusRequestId,
+    setWorkspaceFocusRequestId,
+  ] = useState(0);
   const [
     loadState,
     setLoadState,
@@ -427,7 +451,53 @@ export default function FinoraControlCenterShell() {
             "READY" &&
           trustRecord
         ) && (
-          <FinoraControlCenterIssuanceWorkspace />
+          <>
+            <FinoraControlCenterBranchRegistryPanel
+              selectedBranchId={
+                selectedIssuanceBranch?.identity.branchId
+              }
+              selectedWorkflow={
+                issuanceWorkflow
+              }
+              onLaunchBranchWorkflow={(
+                record,
+                workflow,
+              ) => {
+                setSelectedIssuanceBranch(
+                  record,
+                );
+
+                setIssuanceWorkflow(
+                  workflow,
+                );
+
+                setWorkspaceFocusRequestId(
+                  (current) =>
+                    current + 1,
+                );
+              }}
+            />
+
+            <FinoraControlCenterIssuanceWorkspace
+              selectedBranch={
+                selectedIssuanceBranch
+              }
+              workflow={
+                issuanceWorkflow
+              }
+              workspaceFocusRequestId={
+                workspaceFocusRequestId
+              }
+              onWorkflowChange={
+                setIssuanceWorkflow
+              }
+              onClearSelectedBranch={() => {
+                setSelectedIssuanceBranch(
+                  undefined,
+                );
+              }}
+            />
+          </>
         )}
       </section>
     </main>

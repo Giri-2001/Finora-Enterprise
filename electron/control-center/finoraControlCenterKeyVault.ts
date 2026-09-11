@@ -989,6 +989,128 @@ export async function getFinoraControlCenterPublicIdentity():
   };
 }
 
+
+// ============================================================
+// PUBLIC VERIFICATION KEY HISTORY
+//
+// Historical signature verification must never initialize a
+// missing Control Center signing identity.
+//
+// This API therefore:
+// - uses the existing validated read-only vault primitive,
+// - fails closed when no vault exists,
+// - returns public verification material only,
+// - never returns private signing material,
+// - never creates, replaces, or persists vault state.
+// ============================================================
+
+export interface FinoraControlCenterPublicVerificationKey {
+
+  issuerId:
+    string;
+
+  signingKeyId:
+    string;
+
+  publicKeySpkiDerBase64:
+    string;
+
+  createdAt:
+    string;
+
+  retiredAt?:
+    string;
+
+  current:
+    boolean;
+}
+
+export interface FinoraControlCenterPublicVerificationHistory {
+
+  issuerId:
+    string;
+
+  keys:
+    FinoraControlCenterPublicVerificationKey[];
+
+  schemaVersion:
+    1;
+}
+
+export async function loadFinoraControlCenterPublicVerificationHistory():
+  Promise<
+    FinoraControlCenterPublicVerificationHistory
+  > {
+
+  const vault =
+    await readVault();
+
+  if (!vault) {
+    throw new Error(
+      "FINORA Control Center signing-key vault does not exist. Historical verification cannot proceed.",
+    );
+  }
+
+  const currentKey:
+    FinoraControlCenterPublicVerificationKey = {
+
+      issuerId:
+        vault.issuerId,
+
+      signingKeyId:
+        vault.signingKeyId,
+
+      publicKeySpkiDerBase64:
+        vault.publicKeySpkiDerBase64,
+
+      createdAt:
+        vault.createdAt,
+
+      current:
+        true,
+    };
+
+  const retainedKeys:
+    FinoraControlCenterPublicVerificationKey[] =
+      (
+        vault.retainedSigningKeys ??
+        []
+      ).map(
+        (key) => ({
+          issuerId:
+            vault.issuerId,
+
+          signingKeyId:
+            key.signingKeyId,
+
+          publicKeySpkiDerBase64:
+            key.publicKeySpkiDerBase64,
+
+          createdAt:
+            key.createdAt,
+
+          retiredAt:
+            key.retiredAt,
+
+          current:
+            false,
+        }),
+      );
+
+  return {
+    issuerId:
+      vault.issuerId,
+
+    keys: [
+      currentKey,
+      ...retainedKeys,
+    ],
+
+    schemaVersion:
+      1,
+  };
+}
+
 // ============================================================
 // END
 // ============================================================
