@@ -32,7 +32,7 @@
 
 import {
   generateFinoraWindowsInstallationBindingMaterial,
-  signFinoraInstallationEnrollmentCanonicalValue,
+  signFinoraInstallationBindingCanonicalValue,
   toFinoraWindowsInstallationBindingPublic,
 } from "./finoraInstallationBindingCrypto.js";
 
@@ -297,11 +297,11 @@ export async function getFinoraWindowsInstallationBinding():
 }
 
 // ============================================================
-// INTERNAL ENROLLMENT POSSESSION PROOF
+// INTERNAL GENERIC INSTALLATION-BINDING SIGNING
 // ============================================================
 
-export async function signFinoraWindowsInstallationEnrollment(
-  canonicalEnrollmentPayload:
+export async function signFinoraWindowsInstallationCanonicalValue(
+  canonicalValue:
     string,
 ): Promise<string> {
 
@@ -319,12 +319,41 @@ export async function signFinoraWindowsInstallationEnrollment(
     material,
   );
 
-  return signFinoraInstallationEnrollmentCanonicalValue(
-    canonicalEnrollmentPayload,
+  return signFinoraInstallationBindingCanonicalValue(
+    canonicalValue,
     material,
   );
 }
 
+// ============================================================
+// ENROLLMENT POSSESSION PROOF
+//
+// Compatibility wrapper retained for the existing Enrollment
+// Request flow. Enrollment-specific validation/message remains
+// unchanged while signing is delegated to the generic native
+// installation-binding authority.
+// ============================================================
+
+export async function signFinoraWindowsInstallationEnrollment(
+  canonicalEnrollmentPayload:
+    string,
+): Promise<string> {
+
+  if (
+    typeof canonicalEnrollmentPayload !==
+      "string" ||
+    canonicalEnrollmentPayload.length ===
+      0
+  ) {
+    throw new Error(
+      "Canonical FINORA installation enrollment payload is required.",
+    );
+  }
+
+  return signFinoraWindowsInstallationCanonicalValue(
+    canonicalEnrollmentPayload,
+  );
+}
 // ============================================================
 // END
 // ============================================================

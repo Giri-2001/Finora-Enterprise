@@ -528,14 +528,83 @@ interface FindPricingPolicyRequest {
 
 interface FindWalletRechargeAuthorizationRequest {
 
-  ownerId: string;
+  ownerId:
+    string;
 
-  businessId: string;
+  businessId:
+    string;
 
-  branchId: string;
+  branchId:
+    string;
 
-  paymentReference: string;
+  paymentReference:
+    string;
 }
+
+interface ExportWalletRechargeRequest {
+
+  sessionId:
+    string;
+
+  paymentReference:
+    string;
+
+  amountMinor:
+    number;
+
+  paymentMethod:
+    | "UPI"
+    | "PHONEPE"
+    | "GOOGLE_PAY"
+    | "PAYTM"
+    | "RAZORPAY"
+    | "BANK_TRANSFER"
+    | "OTHER";
+
+  paymentSource:
+    | "PHONEPE"
+    | "RAZORPAY"
+    | "UPI"
+    | "GOOGLE_PAY"
+    | "PAYTM"
+    | "BANK_TRANSFER"
+    | "MANUAL";
+}
+
+type FinoraWalletRechargeRequestExportResult =
+  | {
+      success:
+        true;
+
+      cancelled:
+        true;
+    }
+  | {
+      success:
+        true;
+
+      cancelled:
+        false;
+
+      fileName:
+        string;
+
+      bytesWritten:
+        number;
+
+      requestId:
+        string;
+
+      paymentReference:
+        string;
+    }
+  | {
+      success:
+        false;
+
+      error:
+        string;
+    };
 
 interface FindBranchActivationRequest {
   ownerId: string;
@@ -735,6 +804,15 @@ interface FinoraControlBridge {
         StorageResult<
           FinoraControlWalletRechargeAuthorizationView | undefined
         >
+      >;
+
+  exportWalletRechargeRequest:
+    (
+      request:
+        ExportWalletRechargeRequest,
+    ) =>
+      Promise<
+        FinoraWalletRechargeRequestExportResult
       >;
 
   evaluateBranchAccess:
@@ -1083,6 +1161,8 @@ const CONTROL_CHANNELS = {
   FIND_WALLET_RECHARGE_AUTHORIZATION:
     "finora:control:find-wallet-recharge-authorization",
 
+  EXPORT_WALLET_RECHARGE_REQUEST:
+    "finora:control:export-wallet-recharge-request",
   HAS_ACTIVE_STORAGE_ENTITLEMENT:
     "finora:control:has-active-storage-entitlement",
 
@@ -1754,6 +1834,22 @@ const controlBridge:
         StorageResult<
           FinoraControlWalletRechargeAuthorizationView | undefined
         >
+      >,
+
+  // ----------------------------------------------------------
+  // SIGNED WALLET RECHARGE REQUEST EXPORT
+  // ----------------------------------------------------------
+
+  exportWalletRechargeRequest:
+    (
+      request:
+        ExportWalletRechargeRequest,
+    ) =>
+      ipcRenderer.invoke(
+        CONTROL_CHANNELS.EXPORT_WALLET_RECHARGE_REQUEST,
+        request,
+      ) as Promise<
+        FinoraWalletRechargeRequestExportResult
       >,
 
   evaluateBranchAccess:

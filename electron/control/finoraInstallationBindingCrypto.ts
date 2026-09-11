@@ -687,11 +687,11 @@ export function toFinoraWindowsInstallationBindingPublic(
 }
 
 // ============================================================
-// ENROLLMENT POSSESSION SIGNATURE
+// GENERIC INSTALLATION-BINDING SIGNATURE
 // ============================================================
 
-export function signFinoraInstallationEnrollmentCanonicalValue(
-  canonicalEnrollmentPayload:
+export function signFinoraInstallationBindingCanonicalValue(
+  canonicalValue:
     string,
 
   material:
@@ -699,13 +699,13 @@ export function signFinoraInstallationEnrollmentCanonicalValue(
 ): string {
 
   if (
-    typeof canonicalEnrollmentPayload !==
+    typeof canonicalValue !==
       "string" ||
-    canonicalEnrollmentPayload.length ===
+    canonicalValue.length ===
       0
   ) {
     throw new Error(
-      "Canonical FINORA installation enrollment payload is required.",
+      "Canonical FINORA installation binding value is required.",
     );
   }
 
@@ -722,7 +722,7 @@ export function signFinoraInstallationEnrollmentCanonicalValue(
     nodeSign(
       "sha256",
       Buffer.from(
-        canonicalEnrollmentPayload,
+        canonicalValue,
         "utf8",
       ),
       {
@@ -748,6 +748,34 @@ export function signFinoraInstallationEnrollmentCanonicalValue(
   );
 }
 
+// ============================================================
+// ENROLLMENT POSSESSION SIGNATURE
+// ============================================================
+
+export function signFinoraInstallationEnrollmentCanonicalValue(
+  canonicalEnrollmentPayload:
+    string,
+
+  material:
+    FinoraWindowsInstallationBindingMaterial,
+): string {
+
+  if (
+    typeof canonicalEnrollmentPayload !==
+      "string" ||
+    canonicalEnrollmentPayload.length ===
+      0
+  ) {
+    throw new Error(
+      "Canonical FINORA installation enrollment payload is required.",
+    );
+  }
+
+  return signFinoraInstallationBindingCanonicalValue(
+    canonicalEnrollmentPayload,
+    material,
+  );
+}
 // ============================================================
 // PUBLIC VERIFY
 // ============================================================

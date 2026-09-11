@@ -83,6 +83,19 @@ import {
 // IPC CHANNELS
 // ============================================================
 
+import {
+  exportFinoraWalletRechargeRequestFromNativeDialog,
+} from "./finoraWalletRechargeRequestFileTransport.js";
+
+import type {
+  CreateFinoraWalletRechargeRequestInput,
+} from "./finoraWalletRechargeRequestService.js";
+
+import type {
+  FinoraWalletRechargeRequestPaymentMethod,
+  FinoraWalletRechargeRequestPaymentSource,
+} from "./finoraWalletRechargeRequest.types.js";
+
 const CONTROL_IPC_CHANNELS = {
   GET_INSTALLATION:
     "finora:control:get-installation",
@@ -102,6 +115,8 @@ const CONTROL_IPC_CHANNELS = {
   FIND_WALLET_RECHARGE_AUTHORIZATION:
     "finora:control:find-wallet-recharge-authorization",
 
+  EXPORT_WALLET_RECHARGE_REQUEST:
+    "finora:control:export-wallet-recharge-request",
   HAS_ACTIVE_STORAGE_ENTITLEMENT:
     "finora:control:has-active-storage-entitlement",
 
@@ -154,6 +169,9 @@ interface FindWalletRechargeAuthorizationRequest {
 
   paymentReference: string;
 }
+
+type ExportWalletRechargeRequest =
+  CreateFinoraWalletRechargeRequestInput;
 
 interface StorageEntitlementCheckRequest {
   userId: string;
@@ -263,6 +281,79 @@ function isFindWalletRechargeAuthorizationRequest(
     isNonEmptyString(request.businessId) &&
     isNonEmptyString(request.branchId) &&
     isNonEmptyString(request.paymentReference)
+  );
+}
+
+function isWalletRechargeRequestPaymentMethod(
+  value:
+    unknown,
+): value is FinoraWalletRechargeRequestPaymentMethod {
+
+  return (
+    value === "UPI" ||
+    value === "PHONEPE" ||
+    value === "GOOGLE_PAY" ||
+    value === "PAYTM" ||
+    value === "RAZORPAY" ||
+    value === "BANK_TRANSFER" ||
+    value === "OTHER"
+  );
+}
+
+function isWalletRechargeRequestPaymentSource(
+  value:
+    unknown,
+): value is FinoraWalletRechargeRequestPaymentSource {
+
+  return (
+    value === "PHONEPE" ||
+    value === "RAZORPAY" ||
+    value === "UPI" ||
+    value === "GOOGLE_PAY" ||
+    value === "PAYTM" ||
+    value === "BANK_TRANSFER" ||
+    value === "MANUAL"
+  );
+}
+
+function isExportWalletRechargeRequest(
+  value:
+    unknown,
+): value is ExportWalletRechargeRequest {
+
+  if (
+    typeof value !== "object" ||
+    value === null ||
+    Array.isArray(
+      value,
+    )
+  ) {
+    return false;
+  }
+
+  const request =
+    value as Record<string, unknown>;
+
+  return (
+    isNonEmptyString(
+      request.sessionId,
+    ) &&
+    isNonEmptyString(
+      request.paymentReference,
+    ) &&
+    typeof request.amountMinor ===
+      "number" &&
+    Number.isSafeInteger(
+      request.amountMinor,
+    ) &&
+    request.amountMinor >
+      0 &&
+    isWalletRechargeRequestPaymentMethod(
+      request.paymentMethod,
+    ) &&
+    isWalletRechargeRequestPaymentSource(
+      request.paymentSource,
+    )
   );
 }
 
@@ -954,6 +1045,81 @@ export function registerFinoraControlHandlers(
           publicKeyFingerprint:
             nativeBinding.publicKeyFingerprint,
         },
+      );
+    },
+  );
+
+  // ----------------------------------------------------------
+  // WALLET RECHARGE REQUEST EXPORT
+  //
+  // SECURITY:
+  //
+  // - Trusted renderer only.
+  // - Exact owning BrowserWindow main frame only.
+  // - Renderer supplies no filesystem path.
+  // - Renderer supplies no owner/business/branch identity.
+  // - Renderer supplies no installation/binding identity.
+  // - Renderer supplies no signature.
+  // - Native session authority resolves branch scope.
+  // - Native Business Profile resolves display identity.
+  // - Native installation binding signs the request.
+  // - Native main process owns the Save dialog.
+  // ----------------------------------------------------------
+
+  ipcMain.handle(
+    CONTROL_IPC_CHANNELS.EXPORT_WALLET_RECHARGE_REQUEST,
+    async (
+      event,
+      request:
+        unknown,
+    ) => {
+
+      if (
+        !isTrustedRenderer(
+          event.senderFrame,
+        )
+      ) {
+        return failure(
+          "FINORA Wallet Recharge Request export is restricted to the trusted renderer.",
+        );
+      }
+
+      if (
+        !isExportWalletRechargeRequest(
+          request,
+        )
+      ) {
+        return failure(
+          "FINORA Wallet Recharge Request export input is invalid.",
+        );
+      }
+
+      const parentWindow =
+        BrowserWindow.fromWebContents(
+          event.sender,
+        );
+
+      if (
+        !parentWindow ||
+        parentWindow.isDestroyed()
+      ) {
+        return failure(
+          "The FINORA application window is not available for Wallet Recharge Request export.",
+        );
+      }
+
+      if (
+        event.senderFrame !==
+          parentWindow.webContents.mainFrame
+      ) {
+        return failure(
+          "FINORA Wallet Recharge Request export is restricted to the trusted application main frame.",
+        );
+      }
+
+      return exportFinoraWalletRechargeRequestFromNativeDialog(
+        parentWindow,
+        request,
       );
     },
   );

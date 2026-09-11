@@ -1,4 +1,4 @@
-﻿/* ============================================================
+/* ============================================================
    FINORA ENTERPRISE OS™
 
    FINORA WALLET™
@@ -52,6 +52,18 @@ import {
 import {
   getPendingWalletRechargeIntentsForScope,
 } from "../../services/wallet/walletPaymentIntentService";
+
+import {
+  convertWalletMoneyToMinorUnits,
+} from "../../services/wallet/walletBalanceService";
+
+import {
+  getFinoraWalletRechargeRequestBridge,
+} from "../../services/wallet/finoraWalletRechargeRequestBridge";
+
+import {
+  getSession,
+} from "../../store/authStore";
 
 import {
   buildWalletPaymentReference,
@@ -175,6 +187,13 @@ export default function WalletPage({
   const [
     importingControlBundle,
     setImportingControlBundle,
+  ] = useState(
+    false,
+  );
+
+  const [
+    downloadingRechargeRequest,
+    setDownloadingRechargeRequest,
   ] = useState(
     false,
   );
@@ -492,6 +511,208 @@ export default function WalletPage({
   }
 
   /* ==========================================================
+     DOWNLOAD SIGNED WALLET RECHARGE REQUEST
+  ========================================================== */
+
+  async function handleDownloadRechargeRequest():
+    Promise<void> {
+
+    if (
+      !snapshot ||
+      !pendingRechargeReference ||
+      downloadingRechargeRequest
+    ) {
+      return;
+    }
+
+    setDownloadingRechargeRequest(
+      true,
+    );
+
+    setError(
+      null,
+    );
+
+    const processingId =
+      startFinoraProcessing(
+        "Preparing Wallet Recharge Request...",
+      );
+
+    try {
+
+      /*
+       * finora_session is only the renderer-held opaque bearer.
+       *
+       * The native request service independently validates this
+       * sessionId against main-process session authority before
+       * deriving any owner/business/branch/install identity.
+       */
+      const session =
+        getSession();
+
+      const sessionId =
+        String(
+          session?.sessionId ?? "",
+        ).trim();
+
+      if (!sessionId) {
+        setError(
+          "An active FINORA login session is required to download the Wallet Recharge Request.",
+        );
+
+        return;
+      }
+
+      /*
+       * Re-read the durable pending intent at click time.
+       *
+       * Do not reconstruct amount/method/source from UI state.
+       */
+      const pendingResult =
+        await getPendingWalletRechargeIntentsForScope({
+          walletId:
+            snapshot.wallet.walletId,
+
+          ownerId:
+            scope.ownerId,
+
+          businessId:
+            scope.businessId,
+
+          branchId:
+            scope.branchId,
+        });
+
+      if (!pendingResult.success) {
+        setError(
+          pendingResult.error,
+        );
+
+        return;
+      }
+
+      if (
+        pendingResult.data.length !==
+          1
+      ) {
+        setError(
+          pendingResult.data.length === 0
+            ? "No pending Wallet Recharge request is available to download."
+            : "Multiple pending Wallet Recharge requests exist. Request export is blocked.",
+        );
+
+        return;
+      }
+
+      const pendingIntent =
+        pendingResult.data[0];
+
+      const paymentReference =
+        String(
+          pendingIntent.paymentReference ?? "",
+        ).trim();
+
+      if (
+        !paymentReference ||
+        paymentReference !==
+          pendingRechargeReference
+      ) {
+        setError(
+          "The durable Wallet Recharge request no longer matches the active pending payment reference.",
+        );
+
+        return;
+      }
+
+      const amountMinor =
+        convertWalletMoneyToMinorUnits(
+          pendingIntent.amount,
+        );
+
+      if (
+        !Number.isSafeInteger(
+          amountMinor,
+        ) ||
+        amountMinor <=
+          0
+      ) {
+        setError(
+          "The pending Wallet Recharge amount cannot be represented as canonical INR minor units.",
+        );
+
+        return;
+      }
+
+      const bridge =
+        getFinoraWalletRechargeRequestBridge();
+
+      if (!bridge) {
+        setError(
+          "Wallet Recharge Request download is not available in this runtime.",
+        );
+
+        return;
+      }
+
+      const exportResult =
+        await bridge.exportWalletRechargeRequest({
+          sessionId,
+
+          paymentReference,
+
+          amountMinor,
+
+          paymentMethod:
+            pendingIntent.paymentMethod,
+
+          paymentSource:
+            pendingIntent.paymentSource,
+        });
+
+      if (!exportResult.success) {
+        setError(
+          exportResult.error,
+        );
+
+        return;
+      }
+
+      if (exportResult.cancelled) {
+        return;
+      }
+
+      if (
+        exportResult.paymentReference !==
+          paymentReference
+      ) {
+        setError(
+          "The exported Wallet Recharge Request returned an unexpected payment reference.",
+        );
+
+        return;
+      }
+
+    } catch (error) {
+
+      setError(
+        error instanceof Error
+          ? error.message
+          : "Unable to download the Wallet Recharge Request.",
+      );
+
+    } finally {
+
+      stopFinoraProcessing(
+        processingId,
+      );
+
+      setDownloadingRechargeRequest(
+        false,
+      );
+    }
+  }
+
+  /* ==========================================================
      IMPORT SIGNED RECHARGE AUTHORIZATION
 
      SECURITY:
@@ -768,6 +989,24 @@ export default function WalletPage({
                   <p style={styles.stateText}>
                     Apply the matching signed FINORA Recharge package, then refresh this Wallet.
                   </p>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      void handleDownloadRechargeRequest();
+                    }}
+                    disabled={
+                      downloadingRechargeRequest ||
+                      importingControlBundle ||
+                      cancellingRecharge ||
+                      recharging ||
+                      loading
+                    }
+                    style={styles.retryButton}
+                  >
+                    {downloadingRechargeRequest
+                      ? "Downloading..."
+                      : "Download Request File"}
+                  </button>
 
                   <button
                     type="button"
@@ -775,6 +1014,7 @@ export default function WalletPage({
                       void handleImportSignedRecharge();
                     }}
                     disabled={
+                      downloadingRechargeRequest ||
                       importingControlBundle ||
                       cancellingRecharge ||
                       recharging ||
@@ -793,6 +1033,7 @@ export default function WalletPage({
                       void handleCancelPendingRecharge();
                     }}
                     disabled={
+                      downloadingRechargeRequest ||
                       cancellingRecharge ||
                       recharging ||
                       loading ||
