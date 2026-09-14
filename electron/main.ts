@@ -1,5 +1,5 @@
 // ============================================================
-// FINORA ENTERPRISE OSâ„¢
+// FINORA ENTERPRISE OSÃ¢â€žÂ¢
 // ELECTRON MAIN PROCESS
 // V2 USB / PENDRIVE STORAGE IPC
 //
@@ -55,6 +55,14 @@ import {
 import {
   registerFinoraBranchCredentialHandlers,
 } from "./control/finoraBranchCredentialIpc.js";
+
+import {
+  FinoraPortableBranchAuthStore,
+} from "./control/finoraPortableBranchAuthStore.js";
+
+import {
+  recoverFinoraPortableBranchAuthCredentialRotations,
+} from "./control/finoraPortableBranchAuthCredentialRotationRecoveryService.js";
 import {
   registerFinoraBranchLoginSessionHandlers,
 } from "./control/finoraBranchLoginSessionIpc.js";
@@ -1586,11 +1594,65 @@ app.whenReady().then(async () => {
     registerFinoraControlHandlers(
       isTrustedRenderer,
     );
+    const portableBranchAuthStore =
+      new FinoraPortableBranchAuthStore({
+        resolveLocalRoot:
+          () =>
+            app.getPath(
+              "userData",
+            ),
+
+        resolveUsbRoot:
+          () =>
+            findFinoraUsbRoot(),
+      });
+
+    // --------------------------------------------------------
+    // PORTABLE CREDENTIAL ROTATION CRASH RECOVERY
+    //
+    // Pending credential rotation is reconciled before the
+    // ordinary credential/login IPC surface becomes available.
+    //
+    // Recovery replays only durable transaction artifacts and
+    // remains entirely inside the privileged main process.
+    //
+    // Failure is startup-fatal for the normal recipient shell.
+    // Authentication must never continue through an unresolved
+    // credential-generation transition.
+    // --------------------------------------------------------
+
+    const credentialRotationRecoveryResult =
+      await recoverFinoraPortableBranchAuthCredentialRotations({
+        portableStore:
+          portableBranchAuthStore,
+      });
+
+    if (
+      !credentialRotationRecoveryResult.success
+    ) {
+      console.error(
+        "FINORA pending credential rotation recovery failed.",
+        {
+          errorCode:
+            credentialRotationRecoveryResult.errorCode,
+
+          transactionId:
+            credentialRotationRecoveryResult.transactionId,
+        },
+      );
+
+      throw new Error(
+        "FINORA could not safely reconcile a pending credential rotation.",
+      );
+    }
+
     registerFinoraBranchCredentialHandlers(
       isTrustedRenderer,
+      portableBranchAuthStore,
     );
     registerFinoraBranchLoginSessionHandlers(
       isTrustedRenderer,
+      portableBranchAuthStore,
     );
 
     // --------------------------------------------------------

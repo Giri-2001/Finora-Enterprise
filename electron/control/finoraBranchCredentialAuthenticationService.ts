@@ -43,6 +43,10 @@ import {
   readFinoraControlStore,
 } from "./finoraControlStore.js";
 
+import {
+  FINORA_PORTABLE_BRANCH_AUTH_INITIAL_GENERATION,
+} from "./finoraPortableBranchAuthContract.js";
+
 import type {
   FinoraControlBranchCredential,
 } from "./finoraControlStore.js";
@@ -86,6 +90,12 @@ export interface FinoraBranchCredentialAuthenticationRequest {
 export interface FinoraBranchCredentialAuthenticationSuccess {
   credentialId:
     string;
+
+  /**
+   * Current authoritative credential lineage generation.
+   */
+  authGeneration:
+    number;
 
   userId:
     string;
@@ -456,6 +466,10 @@ export async function authenticateFinoraBranchCredential(
       data: {
         credentialId:
           credential.credentialId,
+
+        authGeneration:
+          credential.authGeneration ??
+            FINORA_PORTABLE_BRANCH_AUTH_INITIAL_GENERATION,
 
         userId:
           credential.userId,

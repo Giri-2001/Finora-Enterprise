@@ -91,7 +91,8 @@ export type FinoraBranchAccessAction =
   | "REPLACE"
   | "SUSPEND"
   | "RESUME"
-  | "REVOKE";
+  | "REVOKE"
+  | "AUTHORIZE_CREDENTIAL";
 
 // ============================================================
 // REGISTRATION PAYMENT
@@ -252,7 +253,7 @@ export interface FinoraBranchAccessPayloadV1 {
   action:
     FinoraBranchAccessAction;
 
-  accessGrant:
+  accessGrant?:
     FinoraBranchAccessGrantPayload;
 
   credentialEnrollment?:

@@ -1,4 +1,4 @@
-﻿/* ============================================================
+/* ============================================================
    FINORA ENTERPRISE OS™
 
    V2 WALLET ENGINE™
@@ -100,6 +100,8 @@ export interface UpdateWalletPaymentIntentStatusInput {
     string;
 
   providerTransactionId?:
+    string;
+  cancellationReason?:
     string;
 }
 
@@ -303,6 +305,9 @@ export async function updateWalletPaymentIntentStatus(
   const paymentReference =
     normalizeText(input.paymentReference);
 
+  const cancellationReason =
+    normalizeText(input.cancellationReason);
+
   if (!paymentReference) {
     return {
       success:
@@ -338,6 +343,24 @@ export async function updateWalletPaymentIntentStatus(
   const existing =
     existingResult.data;
 
+  if (
+    input.status === "CANCELLED" &&
+    cancellationReason &&
+    cancellationReason.replace(/\s/g, "").length <
+      15
+  ) {
+    return {
+      success:
+        false,
+
+      errorCode:
+        "INVALID_INPUT",
+
+      error:
+        "Wallet Recharge cancellation reason must contain at least 15 non-whitespace characters.",
+    };
+  }
+
   if (!existing) {
     return {
       success:
@@ -369,6 +392,9 @@ export async function updateWalletPaymentIntentStatus(
     };
   }
 
+  const updatedAt =
+    new Date().toISOString();
+
   const updated: WalletPaymentIntent = {
     ...existing,
 
@@ -383,8 +409,18 @@ export async function updateWalletPaymentIntentStatus(
       normalizeText(input.providerTransactionId) ||
       existing.providerTransactionId,
 
-    updatedAt:
-      new Date().toISOString(),
+    cancellationReason:
+      input.status === "CANCELLED" &&
+      cancellationReason
+        ? cancellationReason
+        : existing.cancellationReason,
+
+    cancelledAt:
+      input.status === "CANCELLED"
+        ? existing.cancelledAt ?? updatedAt
+        : existing.cancelledAt,
+
+    updatedAt,
   };
 
   const updateResult =

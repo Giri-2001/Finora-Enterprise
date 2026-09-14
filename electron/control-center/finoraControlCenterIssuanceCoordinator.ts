@@ -60,6 +60,11 @@ import {
   signFinoraWalletRechargePackage,
   type SignFinoraWalletRechargePackageInput,
 } from "./finoraWalletRechargeIssuer.js";
+import {
+  signFinoraWalletRechargeDeclinePackage,
+  type SignFinoraWalletRechargeDeclinePackageInput,
+} from "./finoraWalletRechargeDeclineIssuer.js";
+
 
 import {
   signFinoraControlBundlePackage,
@@ -117,6 +122,14 @@ export type IssueFinoraPricingPolicyRequest =
 export type IssueFinoraWalletRechargeRequest =
   Omit<
     SignFinoraWalletRechargePackageInput,
+    | "packageId"
+    | "sequence"
+    | "issuedAt"
+  >;
+
+export type IssueFinoraWalletRechargeDeclineRequest =
+  Omit<
+    SignFinoraWalletRechargeDeclinePackageInput,
     | "packageId"
     | "sequence"
     | "issuedAt"
@@ -560,6 +573,64 @@ export function issueFinoraWalletRechargePackage(
         );
 
       return signFinoraWalletRechargePackage({
+        packageId:
+          reservation.packageId,
+
+        sequence:
+          reservation.sequence,
+
+        issuedAt:
+          reservation.issuedAt,
+
+        target:
+          request.target,
+
+        payload,
+
+        ...(
+          request.packageValidity ===
+            undefined
+            ? {}
+            : {
+                packageValidity:
+                  request.packageValidity,
+              }
+        ),
+      });
+    },
+  );
+}
+
+// ============================================================
+// WALLET RECHARGE DECLINE
+// ============================================================
+
+export function issueFinoraWalletRechargeDeclinePackage(
+  request:
+    IssueFinoraWalletRechargeDeclineRequest,
+) {
+
+  return runSerializedIssuance(
+    async () => {
+
+      const reservation =
+        await reserveFinoraControlCenterIssuance({
+          purpose:
+            "WALLET_RECHARGE_DECLINE",
+
+          scope:
+            toIssuanceScope(
+              request.target,
+            ),
+        });
+
+      const payload =
+        withAuthoritativeIssuedAt(
+          request.payload,
+          reservation.issuedAt,
+        );
+
+      return signFinoraWalletRechargeDeclinePackage({
         packageId:
           reservation.packageId,
 

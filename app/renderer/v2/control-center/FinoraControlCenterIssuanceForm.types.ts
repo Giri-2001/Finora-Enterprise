@@ -110,7 +110,8 @@ export type FinoraBranchAccessActionDraft =
   | "REPLACE"
   | "SUSPEND"
   | "RESUME"
-  | "REVOKE";
+  | "REVOKE"
+  | "AUTHORIZE_CREDENTIAL";
 
 export type FinoraBranchAccessUserRoleDraft =
   | "ADMIN"

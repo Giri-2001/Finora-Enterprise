@@ -302,7 +302,8 @@ function isBranchAccessAction(
   | "REPLACE"
   | "SUSPEND"
   | "RESUME"
-  | "REVOKE" {
+  | "REVOKE"
+  | "AUTHORIZE_CREDENTIAL" {
 
   return (
     value ===
@@ -316,7 +317,9 @@ function isBranchAccessAction(
     value ===
       "RESUME" ||
     value ===
-      "REVOKE"
+      "REVOKE" ||
+    value ===
+      "AUTHORIZE_CREDENTIAL"
   );
 }
 
@@ -757,6 +760,108 @@ function validateCredentialEnrollment(
     FinoraBranchCredentialEnrollmentAuthorization;
 }
 
+function validateCredentialAuthorizationForTarget(
+  value:
+    unknown,
+
+  target:
+    FinoraBranchAccessPackageTarget,
+): FinoraBranchCredentialEnrollmentAuthorization | undefined {
+
+  if (
+    !isRecord(
+      value,
+    ) ||
+    !hasOnlyKeys(
+      value,
+      [
+        "authorizationId",
+        "userId",
+        "username",
+        "fullName",
+        "role",
+        "ownerId",
+        "businessId",
+        "branchId",
+        "storageMode",
+        "dataContext",
+        "demoId",
+        "method",
+        "oneTime",
+        "schemaVersion",
+      ],
+    ) ||
+    !hasText(
+      value.authorizationId,
+      256,
+    ) ||
+    !value.authorizationId.startsWith(
+      "FINORA-CREDENTIAL-ENROLLMENT-",
+    ) ||
+    !hasText(
+      value.userId,
+      256,
+    ) ||
+    !hasText(
+      value.username,
+      128,
+    ) ||
+    !hasText(
+      value.fullName,
+      256,
+    ) ||
+    !isUserRole(
+      value.role,
+    ) ||
+    value.ownerId !==
+      target.ownerId ||
+    value.businessId !==
+      target.businessId ||
+    value.branchId !==
+      target.branchId ||
+    !isStorageMode(
+      value.storageMode,
+    ) ||
+    (
+      value.dataContext !==
+        "REAL" &&
+      value.dataContext !==
+        "DEMO"
+    ) ||
+    value.method !==
+      FINORA_BRANCH_ACCESS_CREDENTIAL_ENROLLMENT_METHOD ||
+    value.oneTime !==
+      true ||
+    value.schemaVersion !==
+      1
+  ) {
+    return undefined;
+  }
+
+  if (
+    value.dataContext ===
+      "REAL"
+  ) {
+    if (
+      value.demoId !==
+        undefined
+    ) {
+      return undefined;
+    }
+  }
+  else if (
+    !hasText(
+      value.demoId,
+      256,
+    )
+  ) {
+    return undefined;
+  }
+
+  return value as unknown as
+    FinoraBranchCredentialEnrollmentAuthorization;
+}
+
 // ============================================================
 // VALIDATE
 // ============================================================
@@ -851,6 +956,46 @@ export function validateFinoraBranchAccessIssuance(
   const action =
     payload.action;
 
+  if (
+    action ===
+      "AUTHORIZE_CREDENTIAL"
+  ) {
+    if (
+      payload.accessGrant !==
+        undefined ||
+      payload.credentialEnrollment ===
+        undefined
+    ) {
+      return rejected(
+        "FINORA AUTHORIZE_CREDENTIAL requires credential enrollment authority and no Access Grant snapshot.",
+      );
+    }
+
+    const credentialEnrollment =
+      validateCredentialAuthorizationForTarget(
+        payload.credentialEnrollment,
+        target,
+      );
+
+    if (!credentialEnrollment) {
+      return rejected(
+        "FINORA AUTHORIZE_CREDENTIAL credential authorization is invalid.",
+      );
+    }
+
+    return accepted({
+      action,
+
+      credentialEnrollment,
+
+      issuedAt:
+        issuedAt.canonical,
+
+      schemaVersion:
+        1,
+    });
+  }
+
   const accessGrant =
     validateAccessGrant(
       payload.accessGrant,
@@ -920,7 +1065,7 @@ export function validateFinoraBranchAccessIssuance(
         "ISSUE"
     ) {
       return rejected(
-        "FINORA credential enrollment authorization is permitted only with the signed ISSUE action.",
+        "FINORA credential enrollment authorization is permitted only with signed ISSUE or AUTHORIZE_CREDENTIAL actions.",
       );
     }
 

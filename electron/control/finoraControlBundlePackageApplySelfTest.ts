@@ -1603,9 +1603,9 @@ async function runSelfTest():
     );
 
     // ========================================================
-    // TEST 8 — SIX-PURPOSE CONTROL_BUNDLE CARDINALITY
+    // TEST 8 — SEVEN-PURPOSE CONTROL_BUNDLE CARDINALITY
     //
-    // All six child envelopes are independently signed and
+    // all seven child envelopes are independently signed and
     // target-bound.
     //
     // Branch Activation / Branch Access / Pricing children have
@@ -1617,14 +1617,14 @@ async function runSelfTest():
     // may fail there.
     //
     // The proof required here is outer CONTROL_BUNDLE acceptance
-    // plus ordered dispatch of exactly six supported purposes.
+    // plus ordered dispatch of exactly seven supported purposes.
     // ========================================================
 
     const storageCardinalityPackage =
       createSignedPackage({
 
         packageId:
-          "FINORA-CONTROL-BUNDLE-SELFTEST-SIX-STORAGE",
+          "FINORA-CONTROL-BUNDLE-SELFTEST-SEVEN-STORAGE",
 
         purpose:
           "STORAGE_ENTITLEMENT",
@@ -1652,7 +1652,7 @@ async function runSelfTest():
       createSignedPackage({
 
         packageId:
-          "FINORA-CONTROL-BUNDLE-SELFTEST-SIX-BUSINESS",
+          "FINORA-CONTROL-BUNDLE-SELFTEST-SEVEN-BUSINESS",
 
         purpose:
           "BUSINESS_PROFILE",
@@ -1680,7 +1680,7 @@ async function runSelfTest():
       createSignedPackage({
 
         packageId:
-          "FINORA-CONTROL-BUNDLE-SELFTEST-SIX-WALLET",
+          "FINORA-CONTROL-BUNDLE-SELFTEST-SEVEN-WALLET",
 
         purpose:
           "WALLET_RECHARGE",
@@ -1704,11 +1704,38 @@ async function runSelfTest():
           signingMaterial.privateKeyPkcs8DerBase64,
       });
 
-    const sixPurposeBundle =
+    const walletRechargeDeclineCardinalityPackage =
+      createSignedPackage({
+
+        packageId:
+          "FINORA-CONTROL-BUNDLE-SELFTEST-SEVEN-WALLET-DECLINE",
+
+        purpose:
+          "WALLET_RECHARGE_DECLINE",
+
+        target,
+
+        issuedAt,
+
+        sequence:
+          1,
+
+        payload:
+          {},
+
+        issuerId,
+
+        signingKeyId:
+          signingMaterial.signingKeyId,
+
+        privateKeyPkcs8DerBase64:
+          signingMaterial.privateKeyPkcs8DerBase64,
+      });
+    const sevenPurposeBundle =
       createSignedBundle({
 
         packageId:
-          "FINORA-CONTROL-BUNDLE-SELFTEST-SIX-PURPOSES",
+          "FINORA-CONTROL-BUNDLE-SELFTEST-SEVEN-PURPOSES",
 
         sequence:
           7,
@@ -1724,6 +1751,7 @@ async function runSelfTest():
           businessProfileCardinalityPackage,
           pricingPackage,
           walletRechargeCardinalityPackage,
+          walletRechargeDeclineCardinalityPackage,
         ],
 
         issuerId,
@@ -1731,34 +1759,34 @@ async function runSelfTest():
         signingMaterial,
       });
 
-    const sixPurposeResult =
+    const sevenPurposeResult =
       await applyFinoraSignedControlBundlePackage(
-        sixPurposeBundle,
+        sevenPurposeBundle,
         trustedKeys,
         now,
       );
 
-    if (!sixPurposeResult.success) {
+    if (!sevenPurposeResult.success) {
       throw new Error(
-        sixPurposeResult.error ??
-          "Six-purpose CONTROL_BUNDLE was rejected before child dispatch.",
+        sevenPurposeResult.error ??
+          "seven-purpose CONTROL_BUNDLE was rejected before child dispatch.",
       );
     }
 
     assert(
-      sixPurposeResult.data.childResults.length ===
-        6,
-      "Six-purpose CONTROL_BUNDLE did not dispatch exactly six child packages.",
+      sevenPurposeResult.data.childResults.length ===
+        7,
+      "seven-purpose CONTROL_BUNDLE did not dispatch exactly seven child packages.",
     );
 
-    const sixPurposeResultPurposes =
-      sixPurposeResult.data.childResults.map(
+    const sevenPurposeResultPurposes =
+      sevenPurposeResult.data.childResults.map(
         (result) =>
           result.purpose,
       );
 
     assert(
-      sixPurposeResultPurposes.join("|") ===
+      sevenPurposeResultPurposes.join("|") ===
         [
           "BRANCH_ACTIVATION",
           "BRANCH_ACCESS",
@@ -1766,27 +1794,28 @@ async function runSelfTest():
           "BUSINESS_PROFILE",
           "PRICING_POLICY",
           "WALLET_RECHARGE",
+          "WALLET_RECHARGE_DECLINE",
         ].join("|"),
-      "Six-purpose CONTROL_BUNDLE did not preserve complete signed child-purpose order.",
+      "seven-purpose CONTROL_BUNDLE did not preserve complete signed child-purpose order.",
     );
 
     assert(
-      sixPurposeResult.data.succeededCount +
-        sixPurposeResult.data.failedCount ===
-        6,
-      "Six-purpose CONTROL_BUNDLE summary does not account for all six children.",
+      sevenPurposeResult.data.succeededCount +
+        sevenPurposeResult.data.failedCount ===
+        7,
+      "seven-purpose CONTROL_BUNDLE summary does not account for all seven children.",
     );
 
     console.log(
-      "PASS: six supported CONTROL_BUNDLE child purposes passed outer preflight",
+      "PASS: seven supported CONTROL_BUNDLE child purposes passed outer preflight",
     );
 
     console.log(
-      "PASS: six-purpose CONTROL_BUNDLE dispatched exactly six signed children",
+      "PASS: seven-purpose CONTROL_BUNDLE dispatched exactly seven signed children",
     );
 
     console.log(
-      "PASS: CONTROL_BUNDLE six-child cardinality aligned across recipient contract",
+      "PASS: CONTROL_BUNDLE seven-child cardinality aligned across recipient contract",
     );
 
     // ========================================================

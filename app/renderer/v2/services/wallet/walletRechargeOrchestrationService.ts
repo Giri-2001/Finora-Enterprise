@@ -1,4 +1,4 @@
-﻿/* ============================================================
+/* ============================================================
    FINORA ENTERPRISE OS™
 
    V2 WALLET ENGINE™
@@ -530,6 +530,8 @@ export interface CancelPendingSignedWalletRechargeInput {
 
   paymentReference:
     string;
+  cancellationReason:
+    string;
 }
 
 export type CancelPendingSignedWalletRechargeResult =
@@ -566,6 +568,11 @@ export async function cancelPendingSignedWalletRecharge(
       input.paymentReference ?? "",
     ).trim();
 
+  const cancellationReason =
+    String(
+      input.cancellationReason ?? "",
+    ).trim();
+
   if (!paymentReference) {
     return {
       success:
@@ -576,6 +583,22 @@ export async function cancelPendingSignedWalletRecharge(
 
       error:
         "Wallet Recharge payment reference is required for cancellation.",
+    };
+  }
+
+  if (
+    cancellationReason.replace(/\s/g, "").length <
+      15
+  ) {
+    return {
+      success:
+        false,
+
+      errorCode:
+        "INVALID_CANCELLATION_REASON",
+
+      error:
+        "Cancellation reason must contain at least 15 non-whitespace characters.",
     };
   }
 
@@ -704,6 +727,8 @@ export async function cancelPendingSignedWalletRecharge(
 
       status:
         "CANCELLED",
+      cancellationReason,
+
     });
 
   if (!cancelResult.success) {

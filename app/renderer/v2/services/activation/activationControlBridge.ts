@@ -73,6 +73,88 @@ export type FinoraWalletRechargeAuthorizationView =
     FinoraVerifiedWalletRechargeAuthorization,
     "installationBinding"
   >;
+export interface FinoraWalletRechargeDeclineView {
+  packageId:
+    string;
+
+  issuerId:
+    string;
+
+  signingKeyId:
+    string;
+
+  purpose:
+    "WALLET_RECHARGE_DECLINE";
+
+  sequence:
+    number;
+
+  ownerId:
+    string;
+
+  businessId:
+    string;
+
+  branchId:
+    string;
+
+  installationId:
+    string;
+
+  bindingKeyId:
+    string;
+
+  fingerprintAlgorithm:
+    "SHA-256";
+
+  publicKeyFingerprint:
+    string;
+
+  requestId:
+    string;
+
+  paymentReference:
+    string;
+
+  amountMinor:
+    number;
+
+  currency:
+    "INR";
+
+  paymentMethod:
+    | "UPI"
+    | "PHONEPE"
+    | "GOOGLE_PAY"
+    | "PAYTM"
+    | "RAZORPAY"
+    | "BANK_TRANSFER"
+    | "OTHER";
+
+  paymentSource:
+    | "PHONEPE"
+    | "RAZORPAY"
+    | "UPI"
+    | "GOOGLE_PAY"
+    | "PAYTM"
+    | "BANK_TRANSFER"
+    | "MANUAL";
+
+  requestedAt:
+    string;
+
+  outcome:
+    "DECLINED";
+
+  issuedAt:
+    string;
+
+  verifiedAt:
+    string;
+
+  schemaVersion:
+    1;
+}
 
 // ============================================================
 // REQUEST TYPES
@@ -112,6 +194,19 @@ export interface FinoraPricingPolicyRequest {
 
 export interface FinoraWalletRechargeAuthorizationRequest {
 
+  ownerId:
+    string;
+
+  businessId:
+    string;
+
+  branchId:
+    string;
+
+  paymentReference:
+    string;
+}
+export interface FinoraWalletRechargeDeclineRequest {
   ownerId:
     string;
 
@@ -272,6 +367,24 @@ export interface FinoraActivationControlBridge {
     Promise<
       StorageResult<
         FinoraWalletRechargeAuthorizationView | undefined
+      >
+    >;
+  /**
+   * Read one previously verified signed Wallet Recharge decline
+   * for the exact branch/payment reference.
+   *
+   * READ ONLY.
+   *
+   * Optional until Android native decline-read parity is added.
+   * Electron preload already provides this operation.
+   */
+  findWalletRechargeDecline?(
+    request:
+      FinoraWalletRechargeDeclineRequest,
+  ):
+    Promise<
+      StorageResult<
+        FinoraWalletRechargeDeclineView | undefined
       >
     >;
 

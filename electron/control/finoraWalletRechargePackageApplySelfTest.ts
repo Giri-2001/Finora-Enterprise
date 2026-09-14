@@ -89,6 +89,14 @@ import {
 import {
   applyFinoraSignedWalletRechargePackage,
 } from "./finoraWalletRechargePackageApplyService.js";
+import {
+  applyFinoraSignedWalletRechargeDeclinePackage,
+} from "./finoraWalletRechargeDeclinePackageApplyService.js";
+
+import {
+  findFinoraWalletRechargeDecline,
+  readFinoraControlStore,
+} from "./finoraControlStore.js";
 
 // ============================================================
 // TYPES
@@ -1302,6 +1310,819 @@ async function runSelfTest():
     );
 
     // ========================================================
+
+    // ========================================================
+    // TEST 14 - VALID SIGNED DECLINE
+    // ========================================================
+
+    const declinePaymentReference =
+      "FINORA-WALLET-RECHARGE-SELFTEST-DECLINE-PAYMENT";
+
+    const declineRequestId =
+      "FINORA-WAL-REQ-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
+
+    const createDeclinePayload =
+      (input: {
+        paymentReference:
+          string;
+
+        requestId:
+          string;
+
+        amountMinor?:
+          number;
+      }) => ({
+        scope,
+
+        installationBinding: {
+          installationId:
+            bindingTarget.installationId,
+
+          bindingKeyId:
+            bindingTarget.bindingKeyId,
+
+          fingerprintAlgorithm:
+            bindingTarget.fingerprintAlgorithm,
+
+          publicKeyFingerprint:
+            bindingTarget.publicKeyFingerprint,
+
+          schemaVersion:
+            1,
+        },
+
+        requestId:
+          input.requestId,
+
+        paymentReference:
+          input.paymentReference,
+
+        amountMinor:
+          input.amountMinor ??
+          10000,
+
+        currency:
+          "INR",
+
+        paymentMethod:
+          "UPI",
+
+        paymentSource:
+          "UPI",
+
+        requestedAt:
+          issuedAt,
+
+        outcome:
+          "DECLINED",
+
+        issuedAt,
+
+        schemaVersion:
+          1,
+      });
+
+    const validDeclinePackage =
+      createSignedPackage({
+        packageId:
+          "FINORA-WALLET-RECHARGE-DECLINE-SELFTEST-VALID",
+
+        purpose:
+          "WALLET_RECHARGE_DECLINE",
+
+        target:
+          packageTarget,
+
+        issuedAt,
+
+        sequence:
+          1,
+
+        payload:
+          createDeclinePayload({
+            paymentReference:
+              declinePaymentReference,
+
+            requestId:
+              declineRequestId,
+          }),
+
+        issuerId,
+
+        signingKeyId:
+          signingMaterial.signingKeyId,
+
+        privateKeyPkcs8DerBase64:
+          signingMaterial.privateKeyPkcs8DerBase64,
+      });
+
+    const validDeclineResult =
+      await applyFinoraSignedWalletRechargeDeclinePackage(
+        validDeclinePackage,
+        trustedKeys,
+        now,
+      );
+
+    assert(
+      validDeclineResult.success,
+      validDeclineResult.error ??
+        "Valid signed Wallet Recharge decline was rejected.",
+    );
+
+    console.log(
+      "PASS: valid signed Wallet Recharge decline accepted",
+    );
+
+    const persistedDeclineResult =
+      await findFinoraWalletRechargeDecline(
+        scope.ownerId,
+        scope.businessId,
+        scope.branchId,
+        declinePaymentReference,
+      );
+
+    assert(
+      persistedDeclineResult.success &&
+        persistedDeclineResult.data?.requestId ===
+          declineRequestId,
+      persistedDeclineResult.error ??
+        "Accepted Wallet Recharge decline was not persisted under the exact payment reference.",
+    );
+
+    console.log(
+      "PASS: accepted Wallet Recharge decline persisted under exact paymentReference",
+    );
+    assert(
+      persistedDeclineResult.success &&
+        persistedDeclineResult.data?.packageId ===
+          validDeclinePackage.packageId &&
+        persistedDeclineResult.data?.issuerId ===
+          issuerId &&
+        persistedDeclineResult.data?.signingKeyId ===
+          signingMaterial.signingKeyId &&
+        persistedDeclineResult.data?.purpose ===
+          "WALLET_RECHARGE_DECLINE" &&
+        persistedDeclineResult.data?.sequence ===
+          1 &&
+        persistedDeclineResult.data?.ownerId ===
+          scope.ownerId &&
+        persistedDeclineResult.data?.businessId ===
+          scope.businessId &&
+        persistedDeclineResult.data?.branchId ===
+          scope.branchId &&
+        persistedDeclineResult.data?.installationId ===
+          bindingTarget.installationId &&
+        persistedDeclineResult.data?.bindingKeyId ===
+          bindingTarget.bindingKeyId &&
+        persistedDeclineResult.data?.fingerprintAlgorithm ===
+          bindingTarget.fingerprintAlgorithm &&
+        persistedDeclineResult.data?.publicKeyFingerprint ===
+          bindingTarget.publicKeyFingerprint &&
+        persistedDeclineResult.data?.requestId ===
+          declineRequestId &&
+        persistedDeclineResult.data?.paymentReference ===
+          declinePaymentReference &&
+        persistedDeclineResult.data?.amountMinor ===
+          10000 &&
+        persistedDeclineResult.data?.currency ===
+          "INR" &&
+        persistedDeclineResult.data?.paymentMethod ===
+          "UPI" &&
+        persistedDeclineResult.data?.paymentSource ===
+          "UPI" &&
+        persistedDeclineResult.data?.requestedAt ===
+          issuedAt &&
+        persistedDeclineResult.data?.outcome ===
+          "DECLINED" &&
+        persistedDeclineResult.data?.issuedAt ===
+          issuedAt &&
+        persistedDeclineResult.data?.verifiedAt ===
+          now.toISOString() &&
+        persistedDeclineResult.data?.schemaVersion ===
+          1,
+      persistedDeclineResult.error ??
+        "Persisted Wallet Recharge decline evidence did not preserve the exact signed request, scope, binding, finance, and timestamp fields.",
+    );
+
+    console.log(
+      "PASS: persisted Wallet Recharge decline retained exact signed evidence",
+    );
+
+    const unrelatedDeclineLookup =
+      await findFinoraWalletRechargeDecline(
+        scope.ownerId,
+        scope.businessId,
+        scope.branchId,
+        "FINORA-WALLET-RECHARGE-SELFTEST-NEWER-PAYMENT",
+      );
+
+    assert(
+      unrelatedDeclineLookup.success &&
+        unrelatedDeclineLookup.data ===
+          undefined,
+      unrelatedDeclineLookup.error ??
+        "Old signed decline incorrectly matched a different payment reference.",
+    );
+
+    console.log(
+      "PASS: old signed decline does not match a newer paymentReference",
+    );
+    // ========================================================
+    // TEST 14A - DECLINE FIRST / APPROVAL LATER
+    // ========================================================
+
+    const approvalAfterDeclinePackage =
+      createSignedPackage({
+        packageId:
+          "FINORA-WALLET-RECHARGE-SELFTEST-APPROVAL-AFTER-DECLINE",
+
+        purpose:
+          "WALLET_RECHARGE",
+
+        target:
+          packageTarget,
+
+        issuedAt,
+
+        sequence:
+          2,
+
+        payload:
+          createRechargePayload({
+            scope,
+
+            binding:
+              bindingTarget,
+
+            issuedAt,
+
+            paymentReference:
+              declinePaymentReference,
+
+            amountMinor:
+              10000,
+
+            paymentMethod:
+              "UPI",
+
+            paymentSource:
+              "UPI",
+          }),
+
+        issuerId,
+
+        signingKeyId:
+          signingMaterial.signingKeyId,
+
+        privateKeyPkcs8DerBase64:
+          signingMaterial.privateKeyPkcs8DerBase64,
+      });
+
+    const approvalAfterDeclineResult =
+      await applyFinoraSignedWalletRechargePackage(
+        approvalAfterDeclinePackage,
+        trustedKeys,
+        now,
+      );
+
+    expectFailure(
+      "declined Wallet Recharge paymentReference cannot later be authorized",
+      approvalAfterDeclineResult,
+    );
+
+    // ========================================================
+    // TEST 15 - EXACT DECLINE REPLAY
+    // ========================================================
+
+    const declineReplayResult =
+      await applyFinoraSignedWalletRechargeDeclinePackage(
+        validDeclinePackage,
+        trustedKeys,
+        now,
+      );
+
+    expectFailure(
+      "exact signed Wallet Recharge decline replay rejected",
+      declineReplayResult,
+    );
+
+    // ========================================================
+    // TEST 16 - DECLINE SEQUENCE ROLLBACK
+    // ========================================================
+
+    const rollbackDeclinePackage =
+      createSignedPackage({
+        packageId:
+          "FINORA-WALLET-RECHARGE-DECLINE-SELFTEST-ROLLBACK",
+
+        purpose:
+          "WALLET_RECHARGE_DECLINE",
+
+        target:
+          packageTarget,
+
+        issuedAt,
+
+        sequence:
+          1,
+
+        payload:
+          createDeclinePayload({
+            paymentReference:
+              "FINORA-WALLET-RECHARGE-SELFTEST-DECLINE-ROLLBACK",
+
+            requestId:
+              "FINORA-WAL-REQ-BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB",
+          }),
+
+        issuerId,
+
+        signingKeyId:
+          signingMaterial.signingKeyId,
+
+        privateKeyPkcs8DerBase64:
+          signingMaterial.privateKeyPkcs8DerBase64,
+      });
+
+    const rollbackDeclineResult =
+      await applyFinoraSignedWalletRechargeDeclinePackage(
+        rollbackDeclinePackage,
+        trustedKeys,
+        now,
+      );
+
+    expectFailure(
+      "Wallet Recharge decline sequence rollback rejected",
+      rollbackDeclineResult,
+    );
+
+    // ========================================================
+    // TEST 17 - WRONG PURPOSE
+    // ========================================================
+
+    const wrongPurposeDeclinePackage =
+      createSignedPackage({
+        packageId:
+          "FINORA-WALLET-RECHARGE-DECLINE-SELFTEST-WRONG-PURPOSE",
+
+        purpose:
+          "WALLET_RECHARGE",
+
+        target:
+          packageTarget,
+
+        issuedAt,
+
+        sequence:
+          2,
+
+        payload:
+          createDeclinePayload({
+            paymentReference:
+              "FINORA-WALLET-RECHARGE-SELFTEST-DECLINE-WRONG-PURPOSE",
+
+            requestId:
+              "FINORA-WAL-REQ-CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC",
+          }),
+
+        issuerId,
+
+        signingKeyId:
+          signingMaterial.signingKeyId,
+
+        privateKeyPkcs8DerBase64:
+          signingMaterial.privateKeyPkcs8DerBase64,
+      });
+
+    const wrongPurposeDeclineResult =
+      await applyFinoraSignedWalletRechargeDeclinePackage(
+        wrongPurposeDeclinePackage,
+        trustedKeys,
+        now,
+      );
+
+    expectFailure(
+      "wrong-purpose Wallet Recharge decline package rejected",
+      wrongPurposeDeclineResult,
+    );
+
+    // ========================================================
+    // TEST 18 - WRONG INSTALLATION TARGET
+    // ========================================================
+
+    const wrongInstallationDeclinePackage =
+      createSignedPackage({
+        packageId:
+          "FINORA-WALLET-RECHARGE-DECLINE-SELFTEST-WRONG-INSTALLATION",
+
+        purpose:
+          "WALLET_RECHARGE_DECLINE",
+
+        target: {
+          ...packageTarget,
+
+          installationId:
+            `${packageTarget.installationId}-WRONG`,
+        },
+
+        issuedAt,
+
+        sequence:
+          2,
+
+        payload:
+          createDeclinePayload({
+            paymentReference:
+              "FINORA-WALLET-RECHARGE-SELFTEST-DECLINE-WRONG-INSTALLATION",
+
+            requestId:
+              "FINORA-WAL-REQ-DDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDD",
+          }),
+
+        issuerId,
+
+        signingKeyId:
+          signingMaterial.signingKeyId,
+
+        privateKeyPkcs8DerBase64:
+          signingMaterial.privateKeyPkcs8DerBase64,
+      });
+
+    const wrongInstallationDeclineResult =
+      await applyFinoraSignedWalletRechargeDeclinePackage(
+        wrongInstallationDeclinePackage,
+        trustedKeys,
+        now,
+      );
+
+    expectFailure(
+      "wrong-installation Wallet Recharge decline rejected",
+      wrongInstallationDeclineResult,
+    );
+
+    // ========================================================
+    // TEST 19 - MALFORMED AMOUNT
+    // ========================================================
+
+    const malformedAmountDeclinePackage =
+      createSignedPackage({
+        packageId:
+          "FINORA-WALLET-RECHARGE-DECLINE-SELFTEST-MALFORMED-AMOUNT",
+
+        purpose:
+          "WALLET_RECHARGE_DECLINE",
+
+        target:
+          packageTarget,
+
+        issuedAt,
+
+        sequence:
+          2,
+
+        payload:
+          createDeclinePayload({
+            paymentReference:
+              "FINORA-WALLET-RECHARGE-SELFTEST-DECLINE-BAD-AMOUNT",
+
+            requestId:
+              "FINORA-WAL-REQ-EEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE",
+
+            amountMinor:
+              0,
+          }),
+
+        issuerId,
+
+        signingKeyId:
+          signingMaterial.signingKeyId,
+
+        privateKeyPkcs8DerBase64:
+          signingMaterial.privateKeyPkcs8DerBase64,
+      });
+
+    const malformedAmountDeclineResult =
+      await applyFinoraSignedWalletRechargeDeclinePackage(
+        malformedAmountDeclinePackage,
+        trustedKeys,
+        now,
+      );
+
+    expectFailure(
+      "malformed Wallet Recharge decline amount rejected",
+      malformedAmountDeclineResult,
+    );
+
+    // ========================================================
+    // TEST 20 - CRYPTOGRAPHIC PAYLOAD TAMPER
+    // ========================================================
+
+    const declineTamperSource =
+      createSignedPackage({
+        packageId:
+          "FINORA-WALLET-RECHARGE-DECLINE-SELFTEST-TAMPERED",
+
+        purpose:
+          "WALLET_RECHARGE_DECLINE",
+
+        target:
+          packageTarget,
+
+        issuedAt,
+
+        sequence:
+          2,
+
+        payload:
+          createDeclinePayload({
+            paymentReference:
+              "FINORA-WALLET-RECHARGE-SELFTEST-DECLINE-TAMPERED",
+
+            requestId:
+              "FINORA-WAL-REQ-FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF",
+          }),
+
+        issuerId,
+
+        signingKeyId:
+          signingMaterial.signingKeyId,
+
+        privateKeyPkcs8DerBase64:
+          signingMaterial.privateKeyPkcs8DerBase64,
+      });
+
+    const tamperedDeclinePackage = {
+      ...declineTamperSource,
+
+      payload: {
+        ...declineTamperSource.payload,
+
+        amountMinor:
+          999999,
+      },
+    };
+
+    const tamperedDeclineResult =
+      await applyFinoraSignedWalletRechargeDeclinePackage(
+        tamperedDeclinePackage,
+        trustedKeys,
+        now,
+      );
+
+    expectFailure(
+      "cryptographically tampered Wallet Recharge decline rejected",
+      tamperedDeclineResult,
+    );
+
+    // ========================================================
+    // TEST 21 - INVALID SIGNATURE
+    // ========================================================
+
+    const declineSignatureSource =
+      createSignedPackage({
+        packageId:
+          "FINORA-WALLET-RECHARGE-DECLINE-SELFTEST-BAD-SIGNATURE",
+
+        purpose:
+          "WALLET_RECHARGE_DECLINE",
+
+        target:
+          packageTarget,
+
+        issuedAt,
+
+        sequence:
+          2,
+
+        payload:
+          createDeclinePayload({
+            paymentReference:
+              "FINORA-WALLET-RECHARGE-SELFTEST-DECLINE-BAD-SIGNATURE",
+
+            requestId:
+              "FINORA-WAL-REQ-1111111111111111111111111111111111111111111111111111111111111111",
+          }),
+
+        issuerId,
+
+        signingKeyId:
+          signingMaterial.signingKeyId,
+
+        privateKeyPkcs8DerBase64:
+          signingMaterial.privateKeyPkcs8DerBase64,
+      });
+
+    const declineOriginalSignature =
+      declineSignatureSource.signature.value;
+
+    const invalidDeclineSignaturePackage = {
+      ...declineSignatureSource,
+
+      signature: {
+        ...declineSignatureSource.signature,
+
+        value:
+          `${
+            declineOriginalSignature.startsWith(
+              "A",
+            )
+              ? "B"
+              : "A"
+          }${declineOriginalSignature.slice(
+            1,
+          )}`,
+      },
+    };
+
+    const invalidDeclineSignatureResult =
+      await applyFinoraSignedWalletRechargeDeclinePackage(
+        invalidDeclineSignaturePackage,
+        trustedKeys,
+        now,
+      );
+
+    expectFailure(
+      "invalid Wallet Recharge decline signature rejected",
+      invalidDeclineSignatureResult,
+    );
+
+    // ========================================================
+    // TEST 22 - DUPLICATE DECLINE PAYMENT REFERENCE
+    // ========================================================
+
+    const duplicateDeclinePaymentPackage =
+      createSignedPackage({
+        packageId:
+          "FINORA-WALLET-RECHARGE-DECLINE-SELFTEST-DUPLICATE-PAYMENT",
+
+        purpose:
+          "WALLET_RECHARGE_DECLINE",
+
+        target:
+          packageTarget,
+
+        issuedAt,
+
+        sequence:
+          2,
+
+        payload:
+          createDeclinePayload({
+            paymentReference:
+              declinePaymentReference,
+
+            requestId:
+              "FINORA-WAL-REQ-2222222222222222222222222222222222222222222222222222222222222222",
+          }),
+
+        issuerId,
+
+        signingKeyId:
+          signingMaterial.signingKeyId,
+
+        privateKeyPkcs8DerBase64:
+          signingMaterial.privateKeyPkcs8DerBase64,
+      });
+
+    const duplicateDeclinePaymentResult =
+      await applyFinoraSignedWalletRechargeDeclinePackage(
+        duplicateDeclinePaymentPackage,
+        trustedKeys,
+        now,
+      );
+
+    expectFailure(
+      "fresh decline package with duplicate paymentReference rejected",
+      duplicateDeclinePaymentResult,
+    );
+
+    // ========================================================
+    // TEST 23 - APPROVED PAYMENT CANNOT BE DECLINED
+    // ========================================================
+
+    const authorizedPaymentDeclinePackage =
+      createSignedPackage({
+        packageId:
+          "FINORA-WALLET-RECHARGE-DECLINE-SELFTEST-AUTH-CONFLICT",
+
+        purpose:
+          "WALLET_RECHARGE_DECLINE",
+
+        target:
+          packageTarget,
+
+        issuedAt,
+
+        sequence:
+          2,
+
+        payload:
+          createDeclinePayload({
+            paymentReference,
+
+            requestId:
+              "FINORA-WAL-REQ-3333333333333333333333333333333333333333333333333333333333333333",
+          }),
+
+        issuerId,
+
+        signingKeyId:
+          signingMaterial.signingKeyId,
+
+        privateKeyPkcs8DerBase64:
+          signingMaterial.privateKeyPkcs8DerBase64,
+      });
+
+    const authorizedPaymentDeclineResult =
+      await applyFinoraSignedWalletRechargeDeclinePackage(
+        authorizedPaymentDeclinePackage,
+        trustedKeys,
+        now,
+      );
+
+    expectFailure(
+      "already-authorized Wallet Recharge paymentReference cannot be declined",
+      authorizedPaymentDeclineResult,
+    );
+
+    // ========================================================
+    // TEST 24 - FAILED ATTEMPTS DO NOT BURN NEXT SEQUENCE
+    // ========================================================
+
+    const secondValidDeclinePackage =
+      createSignedPackage({
+        packageId:
+          "FINORA-WALLET-RECHARGE-DECLINE-SELFTEST-SECOND-VALID",
+
+        purpose:
+          "WALLET_RECHARGE_DECLINE",
+
+        target:
+          packageTarget,
+
+        issuedAt,
+
+        sequence:
+          2,
+
+        payload:
+          createDeclinePayload({
+            paymentReference:
+              "FINORA-WALLET-RECHARGE-SELFTEST-DECLINE-SECOND-VALID",
+
+            requestId:
+              "FINORA-WAL-REQ-4444444444444444444444444444444444444444444444444444444444444444",
+          }),
+
+        issuerId,
+
+        signingKeyId:
+          signingMaterial.signingKeyId,
+
+        privateKeyPkcs8DerBase64:
+          signingMaterial.privateKeyPkcs8DerBase64,
+      });
+
+    const secondValidDeclineResult =
+      await applyFinoraSignedWalletRechargeDeclinePackage(
+        secondValidDeclinePackage,
+        trustedKeys,
+        now,
+      );
+
+    assert(
+      secondValidDeclineResult.success,
+      secondValidDeclineResult.error ??
+        "Next valid Wallet Recharge decline was rejected after failed attempts.",
+    );
+
+    console.log(
+      "PASS: next valid Wallet Recharge decline accepted after rejected attempts",
+    );
+
+    const finalDeclineStoreResult =
+      await readFinoraControlStore();
+
+    assert(
+      finalDeclineStoreResult.success &&
+        finalDeclineStoreResult.data !==
+          undefined &&
+        (
+          finalDeclineStoreResult.data.walletRechargeDeclines ??
+          []
+        ).length ===
+          2,
+      finalDeclineStoreResult.error ??
+        "Wallet Recharge decline store did not preserve exactly two accepted declines.",
+    );
+
+    console.log(
+      "PASS: rejected decline attempts did not mutate durable decline count or burn next sequence",
+    );
+
+    console.log(
+      "PASS: FINORA SIGNED WALLET RECHARGE DECLINE E2E",
+    );
     // COMPLETE
     // ========================================================
 

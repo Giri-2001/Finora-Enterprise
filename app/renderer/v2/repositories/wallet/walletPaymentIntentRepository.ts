@@ -156,6 +156,29 @@ function validateWalletPaymentIntent(
     return "Payment intent updatedAt is required.";
   }
 
+  if (intent.cancellationReason !== undefined) {
+    const cancellationReason =
+      String(intent.cancellationReason).trim();
+
+    if (!cancellationReason) {
+      return "Payment intent cancellation reason cannot be empty.";
+    }
+
+    if (
+      cancellationReason.replace(/\s/g, "").length <
+        15
+    ) {
+      return "Payment intent cancellation reason must contain at least 15 non-whitespace characters.";
+    }
+  }
+
+  if (
+    intent.cancelledAt !== undefined &&
+    !String(intent.cancelledAt).trim()
+  ) {
+    return "Payment intent cancelledAt cannot be empty.";
+  }
+
   return undefined;
 }
 

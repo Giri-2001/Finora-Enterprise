@@ -80,6 +80,10 @@ import {
   applyFinoraSignedWalletRechargePackage,
 } from "./finoraWalletRechargePackageApplyService.js";
 
+import {
+  applyFinoraSignedWalletRechargeDeclinePackage,
+} from "./finoraWalletRechargeDeclinePackageApplyService.js";
+
 // ============================================================
 // CONTRACT
 // ============================================================
@@ -93,7 +97,8 @@ export type FinoraControlBundleChildPurpose =
   | "STORAGE_ENTITLEMENT"
   | "BUSINESS_PROFILE"
   | "PRICING_POLICY"
-  | "WALLET_RECHARGE";
+  | "WALLET_RECHARGE"
+  | "WALLET_RECHARGE_DECLINE";
 
 export interface FinoraControlBundleChildApplyResult {
 
@@ -244,7 +249,9 @@ function isSupportedChildPurpose(
     value ===
       "PRICING_POLICY" ||
     value ===
-      "WALLET_RECHARGE"
+      "WALLET_RECHARGE" ||
+    value ===
+      "WALLET_RECHARGE_DECLINE"
   );
 }
 
@@ -456,6 +463,30 @@ async function applyChildPackage(
               "FINORA Wallet Recharge child apply failed.",
           };
     }
+
+    case "WALLET_RECHARGE_DECLINE": {
+
+      const result =
+        await applyFinoraSignedWalletRechargeDeclinePackage(
+          signedPackage,
+          trustedKeys,
+          now,
+        );
+
+      return result.success
+        ? {
+            success:
+              true,
+          }
+        : {
+            success:
+              false,
+
+            error:
+              result.error ??
+              "FINORA Wallet Recharge Decline child apply failed.",
+          };
+    }
   }
 }
 
@@ -626,7 +657,7 @@ export async function applyFinoraSignedControlBundlePackage(
     payload.packages.length <
       1 ||
     payload.packages.length >
-      6
+      7
   ) {
     return failure(
       "FINORA CONTROL_BUNDLE payload structure is invalid.",

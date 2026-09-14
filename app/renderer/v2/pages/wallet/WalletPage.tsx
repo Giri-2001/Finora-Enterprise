@@ -52,6 +52,9 @@ import {
 import {
   getPendingWalletRechargeIntentsForScope,
 } from "../../services/wallet/walletPaymentIntentService";
+import {
+  resolveSignedWalletRechargeDeclineForScope,
+} from "../../services/wallet/walletSignedRechargeDeclineResolutionService";
 
 import {
   convertWalletMoneyToMinorUnits,
@@ -205,6 +208,26 @@ export default function WalletPage({
     null,
   );
 
+  const [
+    cancelDialogOpen,
+    setCancelDialogOpen,
+  ] = useState(
+    false,
+  );
+
+  const [
+    cancellationReason,
+    setCancellationReason,
+  ] = useState(
+    "",
+  );
+
+  const cancellationReasonCharacterCount =
+    cancellationReason.replace(/\s/g, "").length;
+
+  const cancellationReasonValid =
+    cancellationReasonCharacterCount >= 15;
+
   /* ==========================================================
      LOAD
   ========================================================== */
@@ -311,6 +334,51 @@ export default function WalletPage({
 
           workspaceResult =
             refreshedResult;
+        }
+        /*
+         * Approval resolution runs first.
+         *
+         * If a signed approval completed the Recharge, its local
+         * Payment Intent is no longer PENDING and decline resolution
+         * becomes a no-op.
+         *
+         * Otherwise, a native-verified signed decline may transition
+         * only the exact matching PENDING Payment Intent to CANCELLED.
+         * It never mutates Wallet balance or Wallet transaction state.
+         */
+        const declineResolutionResult =
+          await resolveSignedWalletRechargeDeclineForScope({
+            walletId:
+              workspaceResult.data.wallet.walletId,
+
+            ownerId:
+              scope.ownerId,
+
+            businessId:
+              scope.businessId,
+
+            branchId:
+              scope.branchId,
+          });
+
+        if (!declineResolutionResult.success) {
+          setSnapshot(
+            null,
+          );
+
+          setPendingRechargeReference(
+            null,
+          );
+
+          setError(
+            declineResolutionResult.error,
+          );
+
+          setLoading(
+            false,
+          );
+
+          return;
         }
         const pendingResult =
           await getPendingWalletRechargeIntentsForScope({
@@ -785,10 +853,13 @@ export default function WalletPage({
       /*
        * Import only establishes native-verified Control authority.
        *
-       * loadWorkspace() then executes the existing
-       * resumeSignedWalletRecharge() path, which requires the
-       * exact pending payment intent / signed authorization match
-       * before any Wallet financial mutation can occur.
+       * loadWorkspace() then resolves:
+       *
+       * 1. signed approval through the secured Wallet Recharge path;
+       * 2. signed decline through exact PENDING-intent cancellation.
+       *
+       * Approval is the only path that may credit Wallet balance.
+       * Decline never mutates Wallet financial state.
        */
       await loadWorkspace();
 
@@ -816,11 +887,47 @@ export default function WalletPage({
      CANCEL PENDING RECHARGE REQUEST
   ========================================================== */
 
+  function handleOpenCancelRechargeDialog(): void {
+    setCancellationReason(
+      "",
+    );
+
+    setError(
+      null,
+    );
+
+    setCancelDialogOpen(
+      true,
+    );
+  }
+
+  function handleCloseCancelRechargeDialog(): void {
+    if (cancellingRecharge) {
+      return;
+    }
+
+    setCancelDialogOpen(
+      false,
+    );
+
+    setCancellationReason(
+      "",
+    );
+  }
+
   async function handleCancelPendingRecharge(): Promise<void> {
     if (
       !snapshot ||
       !pendingRechargeReference
     ) {
+      return;
+    }
+
+    if (!cancellationReasonValid) {
+      setError(
+        "Cancellation reason must contain at least 15 non-whitespace characters.",
+      );
+
       return;
     }
 
@@ -854,6 +961,8 @@ export default function WalletPage({
 
           paymentReference:
             pendingRechargeReference,
+          cancellationReason,
+
         });
 
       if (!cancelResult.success) {
@@ -863,6 +972,14 @@ export default function WalletPage({
 
         return;
       }
+
+      setCancelDialogOpen(
+        false,
+      );
+
+      setCancellationReason(
+        "",
+      );
 
       setPendingRechargeReference(
         null,
@@ -1030,7 +1147,7 @@ export default function WalletPage({
                   <button
                     type="button"
                     onClick={() => {
-                      void handleCancelPendingRecharge();
+                      handleOpenCancelRechargeDialog();
                     }}
                     disabled={
                       downloadingRechargeRequest ||
@@ -1057,6 +1174,104 @@ export default function WalletPage({
           </div>
         ) : null}
       </div>
+      {cancelDialogOpen && pendingRechargeReference ? (
+        <div
+          style={styles.cancelDialogBackdrop}
+          role="presentation"
+          onClick={(event) => {
+            if (
+              event.target === event.currentTarget &&
+              !cancellingRecharge
+            ) {
+              handleCloseCancelRechargeDialog();
+            }
+          }}
+        >
+          <section
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="finora-wallet-cancel-recharge-title"
+            aria-describedby="finora-wallet-cancel-recharge-description"
+            style={styles.cancelDialogPanel}
+          >
+            <h2
+              id="finora-wallet-cancel-recharge-title"
+              style={styles.cancelDialogTitle}
+            >
+              Cancel Recharge Request
+            </h2>
+
+            <p
+              id="finora-wallet-cancel-recharge-description"
+              style={styles.cancelDialogDescription}
+            >
+              Enter a reason before permanently cancelling this Recharge request. At least 15 non-whitespace characters are required. Any approval file already issued for this request will no longer complete this cancelled request.
+            </p>
+
+            <textarea
+              value={cancellationReason}
+              onChange={(event) => {
+                setCancellationReason(
+                  event.target.value,
+                );
+              }}
+              placeholder="Example: Mistakenly requested this payment"
+              rows={4}
+              autoFocus={true}
+              disabled={cancellingRecharge}
+              style={styles.cancelDialogTextarea}
+              aria-label="Wallet Recharge cancellation reason"
+            />
+
+            <div style={styles.cancelDialogCounter}>
+              {cancellationReasonCharacterCount} / 15 required non-whitespace characters
+            </div>
+
+            <div style={styles.cancelDialogActions}>
+              <button
+                type="button"
+                onClick={handleCloseCancelRechargeDialog}
+                disabled={cancellingRecharge}
+                style={{
+                  ...styles.cancelDialogKeepButton,
+                  opacity:
+                    cancellingRecharge ? 0.55 : 1,
+                  cursor:
+                    cancellingRecharge ? "default" : "pointer",
+                }}
+              >
+                Keep Request
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  void handleCancelPendingRecharge();
+                }}
+                disabled={
+                  !cancellationReasonValid || cancellingRecharge
+                }
+                style={{
+                  ...styles.cancelDialogConfirmButton,
+                  opacity:
+                    !cancellationReasonValid || cancellingRecharge
+                      ? 0.5
+                      : 1,
+                  cursor:
+                    !cancellationReasonValid || cancellingRecharge
+                      ? "not-allowed"
+                      : "pointer",
+                }}
+              >
+                {cancellingRecharge
+                  ? "Cancelling..."
+                  : "Confirm Cancellation"}
+              </button>
+            </div>
+          </section>
+        </div>
+      ) : null}
+
     </main>
   );
 }

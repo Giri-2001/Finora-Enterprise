@@ -68,7 +68,8 @@ export type FinoraControlBundleChildPurpose =
   | "STORAGE_ENTITLEMENT"
   | "BUSINESS_PROFILE"
   | "PRICING_POLICY"
-  | "WALLET_RECHARGE";
+  | "WALLET_RECHARGE"
+  | "WALLET_RECHARGE_DECLINE";
 
 const FINORA_CONTROL_BUNDLE_CHILD_PURPOSES:
   readonly FinoraControlBundleChildPurpose[] = [
@@ -78,6 +79,7 @@ const FINORA_CONTROL_BUNDLE_CHILD_PURPOSES:
     "BUSINESS_PROFILE",
     "PRICING_POLICY",
     "WALLET_RECHARGE",
+    "WALLET_RECHARGE_DECLINE",
   ];
 
 // ============================================================

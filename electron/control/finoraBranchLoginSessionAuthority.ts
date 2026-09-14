@@ -54,7 +54,7 @@ import {
 
 import {
   findFinoraBranchActivation,
-  hasActiveFinoraStorageEntitlement,
+  findFinoraStorageEntitlement,
   readFinoraControlStore,
 } from "./finoraControlStore.js";
 
@@ -64,8 +64,13 @@ import type {
 } from "./finoraControlStore.js";
 
 import {
-  getFinoraWindowsInstallationBinding,
-} from "./finoraInstallationBindingService.js";
+  authorizeFinoraCurrentBranchDevice,
+  checkFinoraCurrentBranchDeviceTrust,
+} from "./finoraBranchDeviceTrustAuthority.js";
+
+import type {
+  FinoraPortableBranchAuthStore,
+} from "./finoraPortableBranchAuthStore.js";
 
 // ============================================================
 // CONSTANTS
@@ -95,6 +100,16 @@ export interface FinoraBranchLoginRequest {
 
   storageMode:
     FinoraControlStorageMode;
+
+  /**
+   * Present only after Electron main has authenticated the
+   * username/password and returned SECURITY_CODE_REQUIRED for
+   * an unknown current device.
+   *
+   * This value is never persisted in a login session.
+   */
+  securityCode?:
+    string;
 }
 
 export type FinoraBranchLoginAccessMode =
@@ -157,6 +172,9 @@ export type FinoraBranchLoginErrorCode =
   | "INVALID_CREDENTIALS"
   | "AUTHENTICATION_FAILED"
   | "NATIVE_BINDING_UNAVAILABLE"
+  | "SECURITY_CODE_REQUIRED"
+  | "SECURITY_CODE_INVALID"
+  | "DEVICE_TRUST_FAILED"
   | "ACTIVATION_REQUIRED"
   | "BRANCH_ACCESS_DENIED"
   | "STORAGE_MODE_MISMATCH"
@@ -429,14 +447,41 @@ function sanitizeLoginRequest(
   if (
     !isRecord(
       input,
-    ) ||
-    !hasExactKeys(
+    )
+  ) {
+    return undefined;
+  }
+
+  const passwordOnlyRequest =
+    hasExactKeys(
       input,
       [
         "username",
         "password",
         "storageMode",
       ],
+    );
+
+  const securityCodeRequest =
+    hasExactKeys(
+      input,
+      [
+        "username",
+        "password",
+        "storageMode",
+        "securityCode",
+      ],
+    );
+
+  const securityCode =
+    securityCodeRequest
+      ? input.securityCode
+      : undefined;
+
+  if (
+    (
+      !passwordOnlyRequest &&
+      !securityCodeRequest
     ) ||
     !isNonEmptyString(
       input.username,
@@ -445,6 +490,12 @@ function sanitizeLoginRequest(
       "string" ||
     !isStorageMode(
       input.storageMode,
+    ) ||
+    (
+      securityCode !==
+        undefined &&
+      typeof securityCode !==
+        "string"
     )
   ) {
     return undefined;
@@ -459,6 +510,15 @@ function sanitizeLoginRequest(
 
     storageMode:
       input.storageMode,
+
+    ...(
+      typeof securityCode ===
+        "string"
+        ? {
+            securityCode,
+          }
+        : {}
+    ),
   };
 }
 
@@ -755,21 +815,6 @@ async function authorizePrincipal(
     };
   }
 
-  const nativeBinding =
-    await getFinoraWindowsInstallationBinding();
-
-  if (!nativeBinding) {
-    return {
-      success:
-        false,
-
-      errorCode:
-        "NATIVE_BINDING_UNAVAILABLE",
-
-      error:
-        "FINORA native installation binding is unavailable.",
-    };
-  }
 
   const activationResult =
     await findFinoraBranchActivation(
@@ -936,26 +981,24 @@ async function authorizePrincipal(
     };
   }
 
+  /*
+   * Current-device authorization is owned by Branch Device
+   * Trust before this authorization layer is entered.
+   *
+   * The signed storage entitlement remains the durable logical
+   * authorization for the exact user + branch + storage mode.
+   *
+   * Its historical installation-binding fields are NOT
+   * rewritten when another legitimate device becomes trusted.
+   * This preserves concurrent trusted devices for one branch.
+   */
   const entitlementResult =
-    await hasActiveFinoraStorageEntitlement(
+    await findFinoraStorageEntitlement(
       principal.userId,
       principal.ownerId,
       principal.businessId,
       principal.branchId,
       requestedStorageMode,
-      {
-        installationId:
-          nativeBinding.installationId,
-
-        bindingKeyId:
-          nativeBinding.bindingKeyId,
-
-        fingerprintAlgorithm:
-          nativeBinding.fingerprintAlgorithm,
-
-        publicKeyFingerprint:
-          nativeBinding.publicKeyFingerprint,
-      },
     );
 
   if (
@@ -970,13 +1013,31 @@ async function authorizePrincipal(
 
       error:
         entitlementResult.error ??
-        "Unable to verify FINORA storage entitlement.",
+          "Unable to verify FINORA storage entitlement.",
     };
   }
 
+  const entitlement =
+    entitlementResult.data;
+
+  const logicalEntitlementMatches =
+    entitlement !==
+      undefined &&
+    entitlement.status ===
+      "ACTIVE" &&
+    entitlement.userId ===
+      principal.userId &&
+    entitlement.ownerId ===
+      principal.ownerId &&
+    entitlement.businessId ===
+      principal.businessId &&
+    entitlement.branchId ===
+      principal.branchId &&
+    entitlement.storageMode ===
+      requestedStorageMode;
+
   if (
-    entitlementResult.data !==
-      true
+    !logicalEntitlementMatches
   ) {
     return {
       success:
@@ -1008,6 +1069,9 @@ async function authorizePrincipal(
 export async function createFinoraBranchLoginSession(
   input:
     unknown,
+
+  portableStore?:
+    FinoraPortableBranchAuthStore,
 ): Promise<
   FinoraBranchLoginResult
 > {
@@ -1069,6 +1133,137 @@ export async function createFinoraBranchLoginSession(
       error:
         "FINORA could not securely authenticate the local credential.",
     };
+  }
+
+  // ----------------------------------------------------------
+  // CURRENT DEVICE TRUST
+  //
+  // Username/password authentication above always happens
+  // before this block.
+  //
+  // Therefore an invalid credential can never trigger a
+  // Security Code challenge or Device Trust mutation.
+  // ----------------------------------------------------------
+
+  if (!portableStore) {
+    return {
+      success:
+        false,
+
+      errorCode:
+        "DEVICE_TRUST_FAILED",
+
+      error:
+        "FINORA device-trust authority is unavailable.",
+    };
+  }
+
+  const deviceTrustResult =
+    await checkFinoraCurrentBranchDeviceTrust({
+      principal:
+        authenticationResult.data,
+
+      portableStore,
+    });
+
+  if (
+    !deviceTrustResult.success
+  ) {
+    return {
+      success:
+        false,
+
+      errorCode:
+        deviceTrustResult.errorCode ===
+          "NATIVE_BINDING_UNAVAILABLE"
+          ? "NATIVE_BINDING_UNAVAILABLE"
+          : "DEVICE_TRUST_FAILED",
+
+      error:
+        "FINORA could not verify this device for the authenticated branch.",
+    };
+  }
+
+  if (
+    deviceTrustResult.status ===
+      "SECURITY_CODE_REQUIRED"
+  ) {
+    if (
+      request.securityCode ===
+        undefined
+    ) {
+      return {
+        success:
+          false,
+
+        errorCode:
+          "SECURITY_CODE_REQUIRED",
+
+        error:
+          "Security Code is required to authorize this device.",
+      };
+    }
+
+    const deviceAuthorizationResult =
+      await authorizeFinoraCurrentBranchDevice({
+        principal:
+          authenticationResult.data,
+
+        portableStore,
+
+        password:
+          request.password,
+
+        securityCode:
+          request.securityCode,
+      });
+
+    if (
+      !deviceAuthorizationResult.success
+    ) {
+      if (
+        deviceAuthorizationResult.errorCode ===
+          "NATIVE_BINDING_UNAVAILABLE"
+      ) {
+        return {
+          success:
+            false,
+
+          errorCode:
+            "NATIVE_BINDING_UNAVAILABLE",
+
+          error:
+            "FINORA native device binding is unavailable.",
+        };
+      }
+
+      if (
+        deviceAuthorizationResult.errorCode ===
+          "PORTABLE_AUTH_AUTHENTICATION_FAILED"
+      ) {
+        return {
+          success:
+            false,
+
+          errorCode:
+            "SECURITY_CODE_INVALID",
+
+          error:
+            "Security Code could not authorize this device.",
+        };
+      }
+
+      return {
+        success:
+          false,
+
+        errorCode:
+          "DEVICE_TRUST_FAILED",
+
+        error:
+          "FINORA could not securely authorize this device.",
+      };
+    }
   }
 
   const principal =

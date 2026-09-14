@@ -1,4 +1,4 @@
-﻿/* ============================================================
+/* ============================================================
    FINORA ENTERPRISE OS™
 
    V2 WALLET ENGINE™
@@ -95,6 +95,12 @@ export interface WalletPaymentIntent
     string;
 
   providerTransactionId?:
+    string;
+
+  cancellationReason?:
+    string;
+
+  cancelledAt?:
     string;
 
   createdAt:

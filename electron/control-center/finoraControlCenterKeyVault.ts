@@ -411,6 +411,29 @@ function validateVaultCryptography(
 }
 
 // ============================================================
+// PUBLIC NON-MUTATING VALIDATOR
+// ============================================================
+
+export function validateFinoraControlCenterKeyVaultRecord(
+  value:
+    unknown,
+): asserts value is FinoraControlCenterKeyVaultRecord {
+  if (
+    !isVaultRecord(
+      value,
+    )
+  ) {
+    throw new Error(
+      "FINORA Control Center signing-key vault schema is invalid.",
+    );
+  }
+
+  validateVaultCryptography(
+    value,
+  );
+}
+
+// ============================================================
 // READ
 // ============================================================
 
@@ -674,6 +697,122 @@ let controlCenterKeyVaultLoadPromise:
     FinoraControlCenterKeyVaultRecord
   > | null =
     null;
+
+// ============================================================
+// FRESH-MACHINE BOOTSTRAP RESTORE
+//
+// This primitive restores an existing Control Center signing
+// identity onto a machine where no local key vault exists.
+//
+// SECURITY:
+// - Existing local vault => fail closed; never overwrite.
+// - Restored record receives the same schema + cryptographic
+//   validation as ordinary vault persistence.
+// - writeVault re-wraps private material with this machine's
+//   Electron safeStorage.
+// - Exact issuerId/current key/retained history are preserved.
+// - The shared load promise prevents a concurrent
+//   loadOrCreate call from generating a competing genesis
+//   identity after bootstrap restoration has started.
+// - No renderer / IPC authority is exposed here.
+// ============================================================
+
+async function bootstrapRestoreFinoraControlCenterKeyVaultInternal(
+  recoveredRecord:
+    FinoraControlCenterKeyVaultRecord,
+): Promise<
+  FinoraControlCenterKeyVaultRecord
+> {
+  const existing =
+    await readVault();
+
+  if (existing) {
+    throw new Error(
+      "FINORA Control Center key-vault bootstrap restore requires a fresh machine with no existing signing-key vault.",
+    );
+  }
+
+  await writeVault(
+    recoveredRecord,
+  );
+
+  const restored =
+    await readVault();
+
+  if (
+    !restored ||
+    JSON.stringify(
+      restored,
+    ) !==
+      JSON.stringify(
+        recoveredRecord,
+      )
+  ) {
+    throw new Error(
+      "FINORA Control Center key-vault bootstrap restore read-back verification failed.",
+    );
+  }
+
+  return restored;
+}
+
+export function bootstrapRestoreFinoraControlCenterKeyVault(
+  recoveredRecord:
+    FinoraControlCenterKeyVaultRecord,
+): Promise<
+  FinoraControlCenterKeyVaultRecord
+> {
+  const snapshot:
+    FinoraControlCenterKeyVaultRecord = {
+      ...recoveredRecord,
+
+      ...(
+        recoveredRecord.retainedSigningKeys ===
+          undefined
+          ? {}
+          : {
+              retainedSigningKeys:
+                recoveredRecord.retainedSigningKeys.map(
+                  (
+                    key,
+                  ) => ({
+                    ...key,
+                  }),
+                ),
+            }
+      ),
+  };
+
+  if (
+    controlCenterKeyVaultLoadPromise
+  ) {
+    return Promise.reject(
+      new Error(
+        "FINORA Control Center key-vault initialization is already in progress.",
+      ),
+    );
+  }
+
+  const restorePromise =
+    bootstrapRestoreFinoraControlCenterKeyVaultInternal(
+      snapshot,
+    );
+
+  controlCenterKeyVaultLoadPromise =
+    restorePromise;
+
+  return restorePromise.finally(
+    () => {
+      if (
+        controlCenterKeyVaultLoadPromise ===
+          restorePromise
+      ) {
+        controlCenterKeyVaultLoadPromise =
+          null;
+      }
+    },
+  );
+}
 
 export async function loadOrCreateFinoraControlCenterKeyVault():
   Promise<

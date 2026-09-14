@@ -5,6 +5,7 @@ import type { FinoraControlCenterBranchRegistryRecord } from "../../../../electr
 
 import type {
   FinoraControlCenterEnrollmentOpenView,
+  FinoraControlCenterWalletRechargeRequestOpenView,
 } from "../../../../electron/control-center/finoraControlCenterPreload";
 
 import type {
@@ -218,6 +219,22 @@ interface FinoraControlCenterIssuanceWorkspaceProps {
     () => void;
 }
 
+function formatWalletRechargeAmount(
+  amountMinor: number,
+): string {
+  return new Intl.NumberFormat(
+    "en-IN",
+    {
+      style: "currency",
+      currency: "INR",
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 2,
+    },
+  ).format(
+    amountMinor / 100,
+  );
+}
+
 export default function FinoraControlCenterIssuanceWorkspace({
   selectedBranch,
   workflow,
@@ -260,6 +277,28 @@ export default function FinoraControlCenterIssuanceWorkspace({
       workspaceFocusRequestId,
     ],
   );
+
+  const [walletRechargeRequestOpenState, setWalletRechargeRequestOpenState] =
+    useState<
+      "IDLE" | "OPENING" | "SUCCESS" | "ERROR"
+    >(
+      "IDLE",
+    );
+
+  const [walletRechargeRequestOpenError, setWalletRechargeRequestOpenError] =
+    useState<string | undefined>();
+
+  const [verifiedWalletRechargeRequest, setVerifiedWalletRechargeRequest] =
+    useState<
+      | Extract<
+          FinoraControlCenterWalletRechargeRequestOpenView,
+          { cancelled: false }
+        >
+      | undefined
+    >();
+
+  const walletRechargeRequestOpenInFlightRef =
+    useRef(false);
 
   const [enrollmentOpenState, setEnrollmentOpenState] =
     useState<
@@ -1049,6 +1088,347 @@ setEnrollmentOpenState(
       setPricingPolicyIssuanceState("ERROR");
     } finally {
       pricingPolicyIssuanceInFlightRef.current = false;
+    }
+  }
+
+  const [
+    walletRechargeApprovalState,
+    setWalletRechargeApprovalState,
+  ] = useState<
+    "IDLE" | "EXPORTING" | "SUCCESS" | "ERROR"
+  >("IDLE");
+
+  const [
+    walletRechargeApprovalError,
+    setWalletRechargeApprovalError,
+  ] = useState<string | undefined>(
+    undefined,
+  );
+
+  const [
+    walletRechargeApprovalFileName,
+    setWalletRechargeApprovalFileName,
+  ] = useState<string | undefined>(
+    undefined,
+  );
+
+  const walletRechargeApprovalInFlightRef =
+    useRef(
+      false,
+    );
+  const [
+    walletRechargeDeclineState,
+    setWalletRechargeDeclineState,
+  ] = useState<
+    "IDLE" | "EXPORTING" | "SUCCESS" | "ERROR"
+  >("IDLE");
+
+  const [
+    walletRechargeDeclineError,
+    setWalletRechargeDeclineError,
+  ] = useState<string | undefined>(
+    undefined,
+  );
+
+  const [
+    walletRechargeDeclineFileName,
+    setWalletRechargeDeclineFileName,
+  ] = useState<string | undefined>(
+    undefined,
+  );
+
+  const walletRechargeDeclineInFlightRef =
+    useRef(
+      false,
+    );
+
+  /*
+   * Approval and Decline consume the same authoritative
+   * main-process verified Request session. Keep one renderer
+   * interaction lock so both actions cannot be started together.
+   */
+  const walletRechargeDecisionInFlightRef =
+    useRef(
+      false,
+    );
+
+  async function openWalletRechargeRequest(): Promise<void> {
+    if (walletRechargeRequestOpenInFlightRef.current) {
+      return;
+    }
+
+    walletRechargeRequestOpenInFlightRef.current =
+      true;
+
+    setWalletRechargeApprovalState(
+      "IDLE",
+    );
+
+    setWalletRechargeApprovalError(
+      undefined,
+    );
+
+    setWalletRechargeApprovalFileName(
+      undefined,
+    );
+
+    setWalletRechargeDeclineState(
+      "IDLE",
+    );
+
+    setWalletRechargeDeclineError(
+      undefined,
+    );
+
+    setWalletRechargeDeclineFileName(
+      undefined,
+    );
+
+    setWalletRechargeRequestOpenState(
+      "OPENING",
+    );
+
+    setWalletRechargeRequestOpenError(
+      undefined,
+    );
+
+    setVerifiedWalletRechargeRequest(
+      undefined,
+    );
+
+    try {
+      const bridge =
+        window.finoraControlCenter;
+
+      if (!bridge) {
+        throw new Error(
+          "Dedicated FINORA Control Center preload bridge is unavailable.",
+        );
+      }
+
+      const result =
+        await bridge.openWalletRechargeRequest();
+
+      if (!result.success) {
+        throw new Error(
+          result.error ??
+            "Unable to open the FINORA Wallet Recharge Request.",
+        );
+      }
+
+      const request =
+        result.data;
+
+      if (request.cancelled) {
+        setWalletRechargeRequestOpenState(
+          "IDLE",
+        );
+
+        return;
+      }
+
+      setVerifiedWalletRechargeRequest(
+        request,
+      );
+
+      setWalletRechargeRequestOpenState(
+        "SUCCESS",
+      );
+    } catch (error) {
+      setVerifiedWalletRechargeRequest(
+        undefined,
+      );
+
+      setWalletRechargeRequestOpenError(
+        error instanceof Error
+          ? error.message
+          : "Unable to import the FINORA Wallet Recharge Request.",
+      );
+
+      setWalletRechargeRequestOpenState(
+        "ERROR",
+      );
+    } finally {
+      walletRechargeRequestOpenInFlightRef.current =
+        false;
+    }
+  }
+
+  async function approveAndExportVerifiedWalletRechargeRequest():
+    Promise<void> {
+
+    if (
+      walletRechargeDecisionInFlightRef.current ||
+      walletRechargeApprovalInFlightRef.current ||
+      walletRechargeDeclineState === "SUCCESS" ||
+      !verifiedWalletRechargeRequest
+    ) {
+      return;
+    }
+
+    walletRechargeDecisionInFlightRef.current =
+      true;
+
+    walletRechargeApprovalInFlightRef.current =
+      true;
+
+    setWalletRechargeApprovalState(
+      "EXPORTING",
+    );
+
+    setWalletRechargeApprovalError(
+      undefined,
+    );
+
+    setWalletRechargeApprovalFileName(
+      undefined,
+    );
+
+    try {
+      const bridge =
+        window.finoraControlCenter;
+
+      if (!bridge) {
+        throw new Error(
+          "Dedicated FINORA Control Center preload bridge is unavailable.",
+        );
+      }
+
+      const result =
+        await bridge.approveAndExportWalletRechargeRequest();
+
+      if (!result.success) {
+        throw new Error(
+          result.error ??
+            "FINORA Wallet Recharge approval export failed.",
+        );
+      }
+
+      const exportResult =
+        result.data;
+
+      if (exportResult.cancelled) {
+        setWalletRechargeApprovalState(
+          "IDLE",
+        );
+
+        return;
+      }
+
+      setWalletRechargeApprovalFileName(
+        exportResult.fileName,
+      );
+
+      setWalletRechargeApprovalState(
+        "SUCCESS",
+      );
+
+    } catch (error) {
+      setWalletRechargeApprovalError(
+        error instanceof Error
+          ? error.message
+          : "Unable to approve and export the FINORA Wallet Recharge authorization.",
+      );
+
+      setWalletRechargeApprovalState(
+        "ERROR",
+      );
+
+    } finally {
+      walletRechargeApprovalInFlightRef.current =
+        false;
+
+      walletRechargeDecisionInFlightRef.current =
+        false;
+    }
+  }
+
+  async function declineAndExportVerifiedWalletRechargeRequest():
+    Promise<void> {
+
+    if (
+      walletRechargeDecisionInFlightRef.current ||
+      walletRechargeDeclineInFlightRef.current ||
+      walletRechargeApprovalState === "SUCCESS" ||
+      !verifiedWalletRechargeRequest
+    ) {
+      return;
+    }
+
+    walletRechargeDecisionInFlightRef.current =
+      true;
+
+    walletRechargeDeclineInFlightRef.current =
+      true;
+
+    setWalletRechargeDeclineState(
+      "EXPORTING",
+    );
+
+    setWalletRechargeDeclineError(
+      undefined,
+    );
+
+    setWalletRechargeDeclineFileName(
+      undefined,
+    );
+
+    try {
+      const bridge =
+        window.finoraControlCenter;
+
+      if (!bridge) {
+        throw new Error(
+          "Dedicated FINORA Control Center preload bridge is unavailable.",
+        );
+      }
+
+      const result =
+        await bridge.declineAndExportWalletRechargeRequest();
+
+      if (!result.success) {
+        throw new Error(
+          result.error ??
+            "FINORA Wallet Recharge decline export failed.",
+        );
+      }
+
+      const exportResult =
+        result.data;
+
+      if (exportResult.cancelled) {
+        setWalletRechargeDeclineState(
+          "IDLE",
+        );
+
+        return;
+      }
+
+      setWalletRechargeDeclineFileName(
+        exportResult.fileName,
+      );
+
+      setWalletRechargeDeclineState(
+        "SUCCESS",
+      );
+
+    } catch (error) {
+      setWalletRechargeDeclineError(
+        error instanceof Error
+          ? error.message
+          : "Unable to decline and export the FINORA Wallet Recharge Request.",
+      );
+
+      setWalletRechargeDeclineState(
+        "ERROR",
+      );
+
+    } finally {
+      walletRechargeDeclineInFlightRef.current =
+        false;
+
+      walletRechargeDecisionInFlightRef.current =
+        false;
     }
   }
 
@@ -2592,6 +2972,421 @@ setEnrollmentOpenState(
               )}
           </section>
         )}
+
+      {workflow === "WALLET_RECHARGE" && (
+        <section
+          aria-live="polite"
+          style={{
+            marginBottom: "20px",
+            border: "1px solid rgba(56, 189, 248, 0.24)",
+            borderRadius: "12px",
+            padding: "16px",
+            background: "rgba(2, 132, 199, 0.06)",
+          }}
+        >
+          <div
+            style={{
+              display: "flex",
+              alignItems: "flex-start",
+              justifyContent: "space-between",
+              gap: "16px",
+              flexWrap: "wrap",
+            }}
+          >
+            <div>
+              <h3
+                style={{
+                  margin: 0,
+                  fontSize: "15px",
+                  fontWeight: 650,
+                }}
+              >
+                Recharge Request Approval
+              </h3>
+
+              <p
+                style={{
+                  margin: "6px 0 0",
+                  maxWidth: "760px",
+                  fontSize: "12px",
+                  lineHeight: 1.55,
+                  opacity: 0.7,
+                }}
+              >
+                Import the owner&apos;s signed .finora request. FINORA
+                verifies the exact Branch Registry installation binding
+                before displaying this locked review. Filename is
+                convenience metadata only.
+              </p>
+            </div>
+
+            <button
+              type="button"
+              disabled={
+                walletRechargeRequestOpenState === "OPENING" ||
+                walletRechargeApprovalState === "EXPORTING" ||
+                walletRechargeDeclineState === "EXPORTING"
+              }
+              onClick={() => {
+                void openWalletRechargeRequest();
+              }}
+              style={{
+                border: "1px solid rgba(56, 189, 248, 0.42)",
+                borderRadius: "9px",
+                padding: "10px 14px",
+                font: "inherit",
+                fontSize: "12px",
+                fontWeight: 650,
+                cursor:
+                  walletRechargeRequestOpenState === "OPENING"
+                    ? "wait"
+                    : "pointer",
+                color: "#bae6fd",
+                background: "rgba(3, 105, 161, 0.18)",
+                opacity:
+                  walletRechargeRequestOpenState === "OPENING"
+                    ? 0.65
+                    : 1,
+              }}
+            >
+              {walletRechargeRequestOpenState === "OPENING"
+                ? "Verifying Request..."
+                : "Import Recharge Request"}
+            </button>
+          </div>
+
+          {walletRechargeRequestOpenState === "ERROR" &&
+            walletRechargeRequestOpenError && (
+              <p
+                style={{
+                  margin: "14px 0 0",
+                  fontSize: "12px",
+                  lineHeight: 1.55,
+                  color: "#fca5a5",
+                }}
+              >
+                {walletRechargeRequestOpenError}
+              </p>
+            )}
+
+          {walletRechargeRequestOpenState === "SUCCESS" &&
+            verifiedWalletRechargeRequest && (
+              <div
+                style={{
+                  marginTop: "16px",
+                  border: "1px solid rgba(74, 222, 128, 0.28)",
+                  borderRadius: "10px",
+                  padding: "14px",
+                  background: "rgba(22, 101, 52, 0.08)",
+                }}
+              >
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    gap: "12px",
+                    flexWrap: "wrap",
+                    marginBottom: "14px",
+                  }}
+                >
+                  <div>
+                    <div
+                      style={{
+                        fontSize: "11px",
+                        fontWeight: 700,
+                        letterSpacing: "0.08em",
+                        textTransform: "uppercase",
+                        color: "#86efac",
+                      }}
+                    >
+                      Cryptographically Verified Request
+                    </div>
+
+                    <div
+                      style={{
+                        marginTop: "5px",
+                        fontSize: "24px",
+                        fontWeight: 700,
+                        letterSpacing: "-0.02em",
+                      }}
+                    >
+                      {formatWalletRechargeAmount(
+                        verifiedWalletRechargeRequest.amountMinor,
+                      )}
+                    </div>
+                  </div>
+
+                  <div
+                    style={{
+                      border: "1px solid rgba(74, 222, 128, 0.3)",
+                      borderRadius: "999px",
+                      padding: "6px 10px",
+                      fontSize: "11px",
+                      fontWeight: 650,
+                      color: "#bbf7d0",
+                    }}
+                  >
+                    {verifiedWalletRechargeRequest.paymentMethod}
+                  </div>
+                </div>
+
+                <dl
+                  style={{
+                    display: "grid",
+                    gridTemplateColumns:
+                      "repeat(auto-fit, minmax(230px, 1fr))",
+                    gap: "12px",
+                    margin: 0,
+                  }}
+                >
+                  {[
+                    [
+                      "Business / Branch",
+                      `${verifiedWalletRechargeRequest.businessCode} / ${verifiedWalletRechargeRequest.branchCode}`,
+                    ],
+                    [
+                      "Owner / Business / Branch IDs",
+                      `${verifiedWalletRechargeRequest.ownerId} / ${verifiedWalletRechargeRequest.businessId} / ${verifiedWalletRechargeRequest.branchId}`,
+                    ],
+                    [
+                      "Payment Reference",
+                      verifiedWalletRechargeRequest.paymentReference,
+                    ],
+                    [
+                      "Payment Source",
+                      verifiedWalletRechargeRequest.paymentSource,
+                    ],
+                    [
+                      "Requested At",
+                      verifiedWalletRechargeRequest.requestedAt,
+                    ],
+                    [
+                      "Verified Installation",
+                      verifiedWalletRechargeRequest.installationId,
+                    ],
+                    [
+                      "Binding Key",
+                      verifiedWalletRechargeRequest.bindingKeyId,
+                    ],
+                    [
+                      "Binding Fingerprint",
+                      verifiedWalletRechargeRequest.publicKeyFingerprint,
+                    ],
+                    [
+                      "Request ID",
+                      verifiedWalletRechargeRequest.requestId,
+                    ],
+                    [
+                      "Imported File",
+                      verifiedWalletRechargeRequest.fileName,
+                    ],
+                  ].map(([label, value]) => (
+                    <div
+                      key={label}
+                      style={{
+                        minWidth: 0,
+                        borderTop:
+                          "1px solid rgba(148, 163, 184, 0.14)",
+                        paddingTop: "9px",
+                      }}
+                    >
+                      <dt
+                        style={{
+                          margin: 0,
+                          fontSize: "10px",
+                          fontWeight: 700,
+                          letterSpacing: "0.06em",
+                          textTransform: "uppercase",
+                          opacity: 0.55,
+                        }}
+                      >
+                        {label}
+                      </dt>
+
+                      <dd
+                        style={{
+                          margin: "5px 0 0",
+                          fontSize: "12px",
+                          lineHeight: 1.5,
+                          overflowWrap: "anywhere",
+                          color: "#e2e8f0",
+                        }}
+                      >
+                        {value}
+                      </dd>
+                    </div>
+                  ))}
+                </dl>
+
+                <div
+                  style={{
+                    marginTop: "16px",
+                    paddingTop: "14px",
+                    borderTop:
+                      "1px solid rgba(74, 222, 128, 0.18)",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "12px",
+                    flexWrap: "wrap",
+                  }}
+                >
+                  <button
+                    type="button"
+                    disabled={
+                      walletRechargeApprovalState === "EXPORTING" ||
+                      walletRechargeApprovalState === "SUCCESS" ||
+                      walletRechargeDeclineState === "EXPORTING" ||
+                      walletRechargeDeclineState === "SUCCESS"
+                    }
+                    onClick={() => {
+                      void approveAndExportVerifiedWalletRechargeRequest();
+                    }}
+                    style={{
+                      border:
+                        "1px solid rgba(74, 222, 128, 0.48)",
+                      borderRadius: "9px",
+                      padding: "10px 14px",
+                      font: "inherit",
+                      fontSize: "12px",
+                      fontWeight: 700,
+                      cursor:
+                        walletRechargeApprovalState === "EXPORTING" ||
+                        walletRechargeDeclineState === "EXPORTING"
+                          ? "wait"
+                          : walletRechargeApprovalState === "SUCCESS" ||
+                              walletRechargeDeclineState === "SUCCESS"
+                            ? "default"
+                            : "pointer",
+                      color: "#dcfce7",
+                      background:
+                        "rgba(22, 163, 74, 0.2)",
+                      opacity:
+                        walletRechargeApprovalState === "EXPORTING" ||
+                        walletRechargeApprovalState === "SUCCESS" ||
+                        walletRechargeDeclineState === "EXPORTING" ||
+                        walletRechargeDeclineState === "SUCCESS"
+                          ? 0.7
+                          : 1,
+                    }}
+                  >
+                    {walletRechargeApprovalState === "EXPORTING"
+                      ? "Approving..."
+                      : walletRechargeApprovalState === "SUCCESS"
+                        ? "Approved"
+                        : "Approve"}
+                  </button>
+
+                  <button
+                    type="button"
+                    disabled={
+                      walletRechargeDeclineState === "EXPORTING" ||
+                      walletRechargeDeclineState === "SUCCESS" ||
+                      walletRechargeApprovalState === "EXPORTING" ||
+                      walletRechargeApprovalState === "SUCCESS"
+                    }
+                    onClick={() => {
+                      void declineAndExportVerifiedWalletRechargeRequest();
+                    }}
+                    style={{
+                      border:
+                        "1px solid rgba(248, 113, 113, 0.48)",
+                      borderRadius: "9px",
+                      padding: "10px 14px",
+                      font: "inherit",
+                      fontSize: "12px",
+                      fontWeight: 700,
+                      cursor:
+                        walletRechargeDeclineState === "EXPORTING" ||
+                        walletRechargeApprovalState === "EXPORTING"
+                          ? "wait"
+                          : walletRechargeDeclineState === "SUCCESS" ||
+                              walletRechargeApprovalState === "SUCCESS"
+                            ? "default"
+                            : "pointer",
+                      color: "#fecaca",
+                      background:
+                        "rgba(185, 28, 28, 0.18)",
+                      opacity:
+                        walletRechargeDeclineState === "EXPORTING" ||
+                        walletRechargeDeclineState === "SUCCESS" ||
+                        walletRechargeApprovalState === "EXPORTING" ||
+                        walletRechargeApprovalState === "SUCCESS"
+                          ? 0.7
+                          : 1,
+                    }}
+                  >
+                    {walletRechargeDeclineState === "EXPORTING"
+                      ? "Declining..."
+                      : walletRechargeDeclineState === "SUCCESS"
+                        ? "Declined"
+                        : "Decline"}
+                  </button>
+
+                  {walletRechargeDeclineState === "ERROR" &&
+                    walletRechargeDeclineError && (
+                      <span
+                        style={{
+                          fontSize: "12px",
+                          lineHeight: 1.5,
+                          color: "#fca5a5",
+                        }}
+                      >
+                        {walletRechargeDeclineError}
+                      </span>
+                    )}
+
+                  {walletRechargeDeclineState === "SUCCESS" &&
+                    walletRechargeDeclineFileName && (
+                      <span
+                        style={{
+                          fontSize: "12px",
+                          lineHeight: 1.5,
+                          color: "#fca5a5",
+                          overflowWrap: "anywhere",
+                        }}
+                      >
+                        Decline exported:{" "}
+                        <strong>
+                          {walletRechargeDeclineFileName}
+                        </strong>
+                      </span>
+                    )}
+
+                  {walletRechargeApprovalState === "ERROR" &&
+                    walletRechargeApprovalError && (
+                      <span
+                        style={{
+                          fontSize: "12px",
+                          lineHeight: 1.5,
+                          color: "#fca5a5",
+                        }}
+                      >
+                        {walletRechargeApprovalError}
+                      </span>
+                    )}
+
+                  {walletRechargeApprovalState === "SUCCESS" &&
+                    walletRechargeApprovalFileName && (
+                      <span
+                        style={{
+                          fontSize: "12px",
+                          lineHeight: 1.5,
+                          color: "#86efac",
+                          overflowWrap: "anywhere",
+                        }}
+                      >
+                        Approval exported:{" "}
+                        <strong>
+                          {walletRechargeApprovalFileName}
+                        </strong>
+                      </span>
+                    )}
+                </div>
+              </div>
+            )}
+        </section>
+      )}
 
       {workflow === "WALLET_RECHARGE" && (
         <FinoraControlCenterWalletRechargeForm

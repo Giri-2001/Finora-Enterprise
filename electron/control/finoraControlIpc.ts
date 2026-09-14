@@ -53,6 +53,8 @@ import {
   findFinoraBusinessProfile,
   findFinoraPricingPolicy,
   findFinoraWalletRechargeAuthorization,
+
+  findFinoraWalletRechargeDecline,
 } from "./finoraControlStore.js";
 
 import {
@@ -114,6 +116,9 @@ const CONTROL_IPC_CHANNELS = {
 
   FIND_WALLET_RECHARGE_AUTHORIZATION:
     "finora:control:find-wallet-recharge-authorization",
+
+  FIND_WALLET_RECHARGE_DECLINE:
+    "finora:control:find-wallet-recharge-decline",
 
   EXPORT_WALLET_RECHARGE_REQUEST:
     "finora:control:export-wallet-recharge-request",
@@ -195,6 +200,17 @@ function failure(
   return {
     success: false,
     error,
+  };
+}
+function success<T>(
+  data:
+    T,
+) {
+  return {
+    success:
+      true,
+
+    data,
   };
 }
 
@@ -1066,6 +1082,158 @@ export function registerFinoraControlHandlers(
   // - Native main process owns the Save dialog.
   // ----------------------------------------------------------
 
+  // ----------------------------------------------------------
+  // FIND VERIFIED WALLET RECHARGE DECLINE
+  //
+  // Read-only sanitized evidence bridge.
+  // ----------------------------------------------------------
+
+  ipcMain.handle(
+    CONTROL_IPC_CHANNELS
+      .FIND_WALLET_RECHARGE_DECLINE,
+    async (
+      event,
+      request:
+        unknown,
+    ) => {
+
+      if (
+        !isTrustedRenderer(
+          event.senderFrame,
+        )
+      ) {
+        return failure(
+          "FINORA Wallet Recharge decline evidence is restricted to the trusted renderer.",
+        );
+      }
+
+      if (
+        !isFindWalletRechargeAuthorizationRequest(
+          request,
+        )
+      ) {
+        return failure(
+          "A valid FINORA Wallet Recharge decline evidence request is required.",
+        );
+      }
+
+      const nativeBinding =
+        await getFinoraWindowsInstallationBinding();
+
+      if (!nativeBinding) {
+        return failure(
+          "FINORA Windows native installation binding is unavailable.",
+        );
+      }
+
+      const result =
+        await findFinoraWalletRechargeDecline(
+          request.ownerId,
+          request.businessId,
+          request.branchId,
+          request.paymentReference,
+        );
+
+      if (!result.success) {
+        return result;
+      }
+
+      if (!result.data) {
+        return success(
+          undefined,
+        );
+      }
+
+      const decline =
+        result.data;
+
+      if (
+        decline.installationId !==
+          nativeBinding.installationId ||
+        decline.bindingKeyId !==
+          nativeBinding.bindingKeyId ||
+        decline.fingerprintAlgorithm !==
+          nativeBinding.fingerprintAlgorithm ||
+        decline.publicKeyFingerprint !==
+          nativeBinding.publicKeyFingerprint
+      ) {
+        return failure(
+          "FINORA Wallet Recharge decline evidence does not match the current native installation binding.",
+        );
+      }
+
+      return success({
+        packageId:
+          decline.packageId,
+
+        issuerId:
+          decline.issuerId,
+
+        signingKeyId:
+          decline.signingKeyId,
+
+        purpose:
+          decline.purpose,
+
+        sequence:
+          decline.sequence,
+
+        ownerId:
+          decline.ownerId,
+
+        businessId:
+          decline.businessId,
+
+        branchId:
+          decline.branchId,
+
+        installationId:
+          decline.installationId,
+
+        bindingKeyId:
+          decline.bindingKeyId,
+
+        fingerprintAlgorithm:
+          decline.fingerprintAlgorithm,
+
+        publicKeyFingerprint:
+          decline.publicKeyFingerprint,
+
+        requestId:
+          decline.requestId,
+
+        paymentReference:
+          decline.paymentReference,
+
+        amountMinor:
+          decline.amountMinor,
+
+        currency:
+          decline.currency,
+
+        paymentMethod:
+          decline.paymentMethod,
+
+        paymentSource:
+          decline.paymentSource,
+
+        requestedAt:
+          decline.requestedAt,
+
+        outcome:
+          decline.outcome,
+
+        issuedAt:
+          decline.issuedAt,
+
+        verifiedAt:
+          decline.verifiedAt,
+
+        schemaVersion:
+          decline.schemaVersion,
+      });
+    },
+  );
   ipcMain.handle(
     CONTROL_IPC_CHANNELS.EXPORT_WALLET_RECHARGE_REQUEST,
     async (

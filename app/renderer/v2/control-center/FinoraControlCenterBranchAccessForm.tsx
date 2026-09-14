@@ -366,8 +366,8 @@ export default function FinoraControlCenterBranchAccessForm({
   }
 
   const credentialEnrollmentAvailable =
-    draft.action ===
-      "ISSUE";
+    draft.action === "ISSUE" ||
+    draft.action === "AUTHORIZE_CREDENTIAL";
 
   return (
     <section
@@ -436,6 +436,7 @@ export default function FinoraControlCenterBranchAccessForm({
             "SUSPEND",
             "RESUME",
             "REVOKE",
+            "AUTHORIZE_CREDENTIAL",
           ]}
           onChange={(
             value,
@@ -451,10 +452,13 @@ export default function FinoraControlCenterBranchAccessForm({
 
                 credentialEnrollmentEnabled:
                   value ===
-                    "ISSUE"
-                    ? current
-                        .credentialEnrollmentEnabled
-                    : false,
+                    "AUTHORIZE_CREDENTIAL"
+                    ? true
+                    : value ===
+                        "ISSUE"
+                      ? current
+                          .credentialEnrollmentEnabled
+                      : false,
               }),
             );
           }}
@@ -869,7 +873,9 @@ export default function FinoraControlCenterBranchAccessForm({
                 .credentialEnrollmentEnabled
             }
             disabled={
-              !credentialEnrollmentAvailable
+              !credentialEnrollmentAvailable ||
+              draft.action ===
+                "AUTHORIZE_CREDENTIAL"
             }
             onChange={(
               event,
@@ -900,7 +906,7 @@ export default function FinoraControlCenterBranchAccessForm({
             }}
           >
             Credential enrollment authorization is available
-            only for the ISSUE action.
+            only for ISSUE or AUTHORIZE_CREDENTIAL actions.
           </p>
         )}
 

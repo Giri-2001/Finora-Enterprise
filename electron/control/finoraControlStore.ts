@@ -57,6 +57,370 @@ import type {
   FinoraBranchCredentialEnrollmentAuthorization,
 } from "./finoraBranchAccessPackage.types.js";
 
+import type {
+  FinoraBranchTrustedControlPublicKey,
+} from "./finoraSignedControlPackageVerifier.js";
+import {
+  isFinoraBranchCredentialPortabilityAuthorityProvenanceV1,
+} from "./finoraBranchCredentialPortabilityAuthorityProvenance.js";
+
+import type {
+  FinoraBranchCredentialPortabilityAuthorityProvenanceV1,
+} from "./finoraBranchCredentialPortabilityAuthorityProvenance.js";
+
+import {
+  canAdvanceFinoraPortableBranchAuthEnrollmentTransaction,
+  validateFinoraPortableBranchAuthEnrollmentTransactionV1,
+} from "./finoraPortableBranchAuthEnrollmentTransaction.js";
+
+import type {
+  FinoraPortableBranchAuthEnrollmentTransactionV1,
+  FinoraPortableBranchAuthEnrollmentTransactionStatus,
+} from "./finoraPortableBranchAuthEnrollmentTransaction.js";
+
+import {
+  canAdvanceFinoraPortableBranchAuthCredentialRotationTransaction,
+  validateFinoraPortableBranchAuthCredentialRotationTransactionV1,
+} from "./finoraPortableBranchAuthCredentialRotationTransaction.js";
+
+import type {
+  FinoraPortableBranchAuthCredentialRotationTransactionStatus,
+  FinoraPortableBranchAuthCredentialRotationTransactionV1,
+} from "./finoraPortableBranchAuthCredentialRotationTransaction.js";
+
+// ============================================================
+// PORTABLE BRANCH AUTH ENROLLMENT JOURNAL VALIDATION
+// ============================================================
+
+function hasExactPortableBranchAuthEnrollmentTransactionKeys(
+  value:
+    Record<string, unknown>,
+  status:
+    FinoraPortableBranchAuthEnrollmentTransactionStatus,
+): boolean {
+  const expectedKeys = [
+    "schemaVersion",
+    "transactionId",
+    "sourceAuthorizationId",
+    "sourceAuthorizationVerificationEvidence",
+    "canonicalUsername",
+    "ownerId",
+    "businessId",
+    "branchId",
+    "storageMode",
+    "status",
+    "credential",
+    "portableEnvelope",
+    "portableEnvelopeSha256",
+    "createdAt",
+    "updatedAt",
+  ];
+
+  if (
+    status === "PORTABLE_WRITTEN" ||
+    status === "CONTROL_APPLIED" ||
+    status === "COMPLETE"
+  ) {
+    expectedKeys.push(
+      "portableWrittenAt",
+    );
+  }
+
+  if (
+    status === "CONTROL_APPLIED" ||
+    status === "COMPLETE"
+  ) {
+    expectedKeys.push(
+      "controlAppliedAt",
+    );
+  }
+
+  if (
+    status === "COMPLETE"
+  ) {
+    expectedKeys.push(
+      "completedAt",
+    );
+  }
+
+  const actualKeys =
+    Object.keys(
+      value,
+    ).sort();
+
+  expectedKeys.sort();
+
+  return (
+    actualKeys.length ===
+      expectedKeys.length &&
+    actualKeys.every(
+      (
+        key,
+        index,
+      ) =>
+        key ===
+        expectedKeys[index],
+    )
+  );
+}
+
+function isPortableBranchAuthEnrollmentTransaction(
+  value:
+    unknown,
+): value is FinoraPortableBranchAuthEnrollmentTransactionV1 {
+  if (
+    typeof value !== "object" ||
+    value === null ||
+    Array.isArray(
+      value,
+    )
+  ) {
+    return false;
+  }
+
+  try {
+    validateFinoraPortableBranchAuthEnrollmentTransactionV1(
+      value as
+        FinoraPortableBranchAuthEnrollmentTransactionV1,
+    );
+  }
+  catch {
+    return false;
+  }
+
+  const transaction =
+    value as
+      FinoraPortableBranchAuthEnrollmentTransactionV1;
+
+  if (
+    !hasExactPortableBranchAuthEnrollmentTransactionKeys(
+      value as
+        Record<string, unknown>,
+      transaction.status,
+    )
+  ) {
+    return false;
+  }
+
+  return isBranchCredential(
+    transaction.credential,
+  );
+}
+
+function hasDuplicatePortableBranchAuthEnrollmentTransactionKeys(
+  transactions:
+    FinoraPortableBranchAuthEnrollmentTransactionV1[],
+): boolean {
+  const transactionIds =
+    new Set<string>();
+
+  const sourceAuthorizationIds =
+    new Set<string>();
+
+  for (
+    const transaction of transactions
+  ) {
+    if (
+      transactionIds.has(
+        transaction.transactionId,
+      ) ||
+      sourceAuthorizationIds.has(
+        transaction.sourceAuthorizationId,
+      )
+    ) {
+      return true;
+    }
+
+    transactionIds.add(
+      transaction.transactionId,
+    );
+
+    sourceAuthorizationIds.add(
+      transaction.sourceAuthorizationId,
+    );
+  }
+
+  return false;
+}
+
+// ============================================================
+// PORTABLE BRANCH AUTH CREDENTIAL ROTATION JOURNAL VALIDATION
+// ============================================================
+
+function hasExactPortableBranchAuthCredentialRotationTransactionKeys(
+  value:
+    Record<string, unknown>,
+  status:
+    FinoraPortableBranchAuthCredentialRotationTransactionStatus,
+  dataContext:
+    "REAL" | "DEMO",
+): boolean {
+  const expectedKeys = [
+    "schemaVersion",
+    "transactionId",
+    "sourceAuthorizationId",
+    "sourceAuthorizationVerificationEvidence",
+    "credentialId",
+    "userId",
+    "canonicalUsername",
+    "ownerId",
+    "businessId",
+    "branchId",
+    "storageMode",
+    "dataContext",
+    "currentGeneration",
+    "targetGeneration",
+    "expectedCredential",
+    "replacementCredential",
+    "expectedPortableEnvelope",
+    "expectedPortableEnvelopeSha256",
+    "replacementPortableEnvelope",
+    "replacementPortableEnvelopeSha256",
+    "status",
+    "createdAt",
+    "updatedAt",
+  ];
+
+  if (
+    dataContext ===
+      "DEMO"
+  ) {
+    expectedKeys.push(
+      "demoId",
+    );
+  }
+
+  if (
+    status ===
+      "PORTABLE_REPLACED" ||
+    status ===
+      "CONTROL_APPLIED" ||
+    status ===
+      "COMPLETE"
+  ) {
+    expectedKeys.push(
+      "portableReplacedAt",
+    );
+  }
+
+  if (
+    status ===
+      "CONTROL_APPLIED" ||
+    status ===
+      "COMPLETE"
+  ) {
+    expectedKeys.push(
+      "controlAppliedAt",
+    );
+  }
+
+  if (
+    status ===
+      "COMPLETE"
+  ) {
+    expectedKeys.push(
+      "completedAt",
+    );
+  }
+
+  const actualKeys =
+    Object.keys(
+      value,
+    ).sort();
+
+  expectedKeys.sort();
+
+  return (
+    actualKeys.length ===
+      expectedKeys.length &&
+    actualKeys.every(
+      (
+        key,
+        index,
+      ) =>
+        key ===
+          expectedKeys[index],
+    )
+  );
+}
+
+function isPortableBranchAuthCredentialRotationTransaction(
+  value:
+    unknown,
+): value is FinoraPortableBranchAuthCredentialRotationTransactionV1 {
+  if (
+    typeof value !== "object" ||
+    value ===
+      null ||
+    Array.isArray(
+      value,
+    )
+  ) {
+    return false;
+  }
+
+  try {
+    validateFinoraPortableBranchAuthCredentialRotationTransactionV1(
+      value as
+        FinoraPortableBranchAuthCredentialRotationTransactionV1,
+    );
+  }
+  catch {
+    return false;
+  }
+
+  const transaction =
+    value as
+      FinoraPortableBranchAuthCredentialRotationTransactionV1;
+
+  if (
+    !hasExactPortableBranchAuthCredentialRotationTransactionKeys(
+      value as
+        Record<string, unknown>,
+      transaction.status,
+      transaction.dataContext,
+    )
+  ) {
+    return false;
+  }
+
+  return (
+    isBranchCredential(
+      transaction.expectedCredential,
+    ) &&
+    isBranchCredential(
+      transaction.replacementCredential,
+    )
+  );
+}
+
+function hasDuplicatePortableBranchAuthCredentialRotationTransactionIds(
+  transactions:
+    FinoraPortableBranchAuthCredentialRotationTransactionV1[],
+): boolean {
+  const transactionIds =
+    new Set<string>();
+
+  for (
+    const transaction of
+      transactions
+  ) {
+    if (
+      transactionIds.has(
+        transaction.transactionId,
+      )
+    ) {
+      return true;
+    }
+
+    transactionIds.add(
+      transaction.transactionId,
+    );
+  }
+
+  return false;
+}
+
 // ============================================================
 // CONSTANTS
 // ============================================================
@@ -416,6 +780,91 @@ export interface FinoraControlStorageEntitlement {
 // BRANCH ACCESS GRANT DTO
 // ============================================================
 
+/* ============================================================
+   VERIFIED WALLET RECHARGE DECLINE EVIDENCE DTO
+============================================================ */
+
+/**
+ * Durable public evidence that one WALLET_RECHARGE_DECLINE
+ * package was cryptographically verified and accepted for this
+ * exact native installation.
+ *
+ * This record never authorizes Wallet credit. It only proves
+ * that the exact signed Recharge Request identity was declined.
+ *
+ * verifiedAt is Control Package acceptance evidence only.
+ */
+export interface FinoraControlWalletRechargeDeclineEvidence {
+
+  packageId:
+    string;
+
+  issuerId:
+    string;
+
+  signingKeyId:
+    string;
+
+  purpose:
+    "WALLET_RECHARGE_DECLINE";
+
+  sequence:
+    number;
+
+  ownerId:
+    string;
+
+  businessId:
+    string;
+
+  branchId:
+    string;
+
+  installationId:
+    string;
+
+  bindingKeyId:
+    string;
+
+  fingerprintAlgorithm:
+    "SHA-256";
+
+  publicKeyFingerprint:
+    string;
+
+  requestId:
+    string;
+
+  paymentReference:
+    string;
+
+  amountMinor:
+    number;
+
+  currency:
+    "INR";
+
+  paymentMethod:
+    FinoraControlWalletRechargePaymentMethod;
+
+  paymentSource:
+    FinoraControlWalletPaymentSource;
+
+  requestedAt:
+    string;
+
+  outcome:
+    "DECLINED";
+
+  issuedAt:
+    string;
+
+  verifiedAt:
+    string;
+
+  schemaVersion:
+    1;
+}
 export type FinoraControlBranchAccessType = "REGISTERED" | "DEMO";
 
 export type FinoraControlBranchAccessStatus =
@@ -514,6 +963,16 @@ export interface FinoraControlBranchCredential {
 
   sourceAuthorizationId: string;
 
+  /**
+   * Current Portable Auth credential lineage generation.
+   *
+   * Optional only for backward compatibility with credentials
+   * persisted before D4E4I8. New enrollment persists the
+   * initial generation explicitly.
+   */
+  authGeneration?:
+    number;
+
   userId: string;
 
   username: string;
@@ -549,6 +1008,9 @@ export interface FinoraControlBranchCredential {
   verifier:
     FinoraControlBranchCredentialVerifierV1;
 
+  securityVerifier?:
+    FinoraControlBranchCredentialVerifierV1;
+
   createdAt: string;
 
   updatedAt: string;
@@ -556,6 +1018,46 @@ export interface FinoraControlBranchCredential {
   schemaVersion: 1;
 }
 
+/* ============================================================
+   VERIFIED CREDENTIAL AUTHORIZATION SIGNER EVIDENCE DTO
+============================================================ */
+
+/**
+ * Recipient-local public verification evidence for one signed
+ * credential-enrollment authorization.
+ *
+ * SECURITY:
+ *
+ * - This record is never signing authority by itself.
+ * - verifiedControlSigner is copied only from the exact trusted
+ *   public key selected by native signature verification.
+ * - No password, Security Code or private key is stored here.
+ * - authorizationId binds evidence to credential enrollment.
+ * - verifiedAt is verification/application evidence only.
+ */
+export interface FinoraBranchCredentialAuthorizationVerificationEvidence {
+
+  authorizationId:
+    string;
+
+  packageId:
+    string;
+
+  issuerId:
+    string;
+
+  sequence:
+    number;
+
+  verifiedControlSigner:
+    FinoraBranchTrustedControlPublicKey;
+
+  verifiedAt:
+    string;
+
+  schemaVersion:
+    1;
+}
 // ============================================================
 // VERIFIED CONTROL STATE
 // ============================================================
@@ -601,6 +1103,15 @@ export interface FinoraControlStorePackage {
    */
   walletRechargeAuthorizations?:
     FinoraControlWalletRechargeAuthorization[];
+
+  /**
+   * Accepted signed WALLET_RECHARGE_DECLINE evidence.
+   *
+   * Optional for backward compatibility with Control Stores
+   * created before remote Recharge decline support.
+   */
+  walletRechargeDeclines?:
+    FinoraControlWalletRechargeDeclineEvidence[];
   /**
    * Current signed REGISTERED / DEMO access by login identity.
    *
@@ -618,6 +1129,34 @@ export interface FinoraControlStorePackage {
    */
   branchCredentialEnrollmentAuthorizations?:
     FinoraBranchCredentialEnrollmentAuthorization[];
+  /**
+   * Public signer evidence captured from successful native
+   * verification of credential-enrollment authority.
+   *
+   * Optional only for backward compatibility with encrypted
+   * Control Stores created before this evidence existed.
+   *
+   * Evidence may temporarily outlive its pending authorization
+   * while Portable Branch Auth crash recovery is incomplete.
+   */
+  branchCredentialAuthorizationVerificationEvidence?:
+    FinoraBranchCredentialAuthorizationVerificationEvidence[];
+
+  /**
+   * Verified reusable Branch Portability Authority provenance
+   * bound to one credential-enrollment source authorization.
+   *
+   * SECURITY:
+   *
+   * - Exact signed portability package is preserved.
+   * - Exact verified Control Center public signer is preserved.
+   * - This collection is NOT the applied-package replay ledger.
+   * - Portability authority remains reusable on legitimate
+   *   devices for this exact credential lineage.
+   * - Optional for backward compatibility with older stores.
+   */
+  branchCredentialPortabilityAuthorities?:
+    FinoraBranchCredentialPortabilityAuthorityProvenanceV1[];
 
   /**
    * Recipient-local production credential verifiers.
@@ -629,6 +1168,40 @@ export interface FinoraControlStorePackage {
    */
   branchCredentials?:
     FinoraControlBranchCredential[];
+
+  /**
+   * Durable crash-recovery journal for Portable Branch Auth
+   * credential enrollment.
+   *
+   * The journal contains only the already-derived credential
+   * verifier record and the already-encrypted portable envelope.
+   * Plaintext password and Security Code are never stored here.
+   *
+   * Optional only for backward compatibility with encrypted
+   * Control Stores created before Portable Branch Auth support.
+   */
+  portableBranchAuthEnrollmentTransactions?:
+    FinoraPortableBranchAuthEnrollmentTransactionV1[];
+
+  /**
+   * Durable crash-recovery journal for Portable Branch Auth
+   * credential rotation.
+   *
+   * The journal preserves only derived credential verifier
+   * snapshots and encrypted Portable Auth envelopes.
+   * Plaintext Password and Security Code are never stored.
+   *
+   * Multiple completed rotations may retain the same immutable
+   * sourceAuthorizationId because that value identifies credential
+   * lineage provenance, not one-time rotation authority.
+   *
+   * transactionId remains unique per durable rotation.
+   *
+   * Optional only for backward compatibility with encrypted
+   * Control Stores created before credential rotation support.
+   */
+  portableBranchAuthCredentialRotationTransactions?:
+    FinoraPortableBranchAuthCredentialRotationTransactionV1[];
 
   /**
    * Cryptographically verified package IDs already applied.
@@ -1267,6 +1840,169 @@ function isWalletPaymentSource(
   );
 }
 
+function isWalletRechargeDeclineEvidence(
+  value:
+    unknown,
+): value is FinoraControlWalletRechargeDeclineEvidence {
+
+  if (!isRecord(value)) {
+    return false;
+  }
+
+  if (
+    !isNonEmptyString(
+      value.packageId,
+    ) ||
+    !isNonEmptyString(
+      value.issuerId,
+    ) ||
+    !isNonEmptyString(
+      value.signingKeyId,
+    ) ||
+    value.purpose !==
+      "WALLET_RECHARGE_DECLINE" ||
+    !Number.isSafeInteger(
+      value.sequence,
+    ) ||
+    (value.sequence as number) <=
+      0 ||
+    !isNonEmptyString(
+      value.ownerId,
+    ) ||
+    !isNonEmptyString(
+      value.businessId,
+    ) ||
+    !isNonEmptyString(
+      value.branchId,
+    ) ||
+    !isNonEmptyString(
+      value.installationId,
+    ) ||
+    !isNonEmptyString(
+      value.bindingKeyId,
+    ) ||
+    value.fingerprintAlgorithm !==
+      "SHA-256" ||
+    typeof value.publicKeyFingerprint !==
+      "string" ||
+    !/^[0-9a-f]{64}$/.test(
+      value.publicKeyFingerprint,
+    ) ||
+    !isNonEmptyString(
+      value.requestId,
+    ) ||
+    !/^FINORA-WAL-REQ-[0-9A-F]{64}$/.test(
+      value.requestId,
+    ) ||
+    !isNonEmptyString(
+      value.paymentReference,
+    ) ||
+    !Number.isSafeInteger(
+      value.amountMinor,
+    ) ||
+    (value.amountMinor as number) <=
+      0 ||
+    value.currency !==
+      "INR" ||
+    !isWalletRechargePaymentMethod(
+      value.paymentMethod,
+    ) ||
+    !isWalletPaymentSource(
+      value.paymentSource,
+    ) ||
+    !isControlTimestamp(
+      value.requestedAt,
+    ) ||
+    value.outcome !==
+      "DECLINED" ||
+    !isControlTimestamp(
+      value.issuedAt,
+    ) ||
+    !isControlTimestamp(
+      value.verifiedAt,
+    ) ||
+    value.schemaVersion !==
+      1
+  ) {
+    return false;
+  }
+
+  const expectedBindingKeyId =
+    `FINORA-BINDING-${value.publicKeyFingerprint
+      .slice(
+        0,
+        32,
+      )
+      .toUpperCase()}`;
+
+  if (
+    value.bindingKeyId !==
+      expectedBindingKeyId
+  ) {
+    return false;
+  }
+
+  return (
+    Date.parse(
+      value.requestedAt,
+    ) <=
+      Date.parse(
+        value.issuedAt,
+      ) &&
+    Date.parse(
+      value.issuedAt,
+    ) <=
+      Date.parse(
+        value.verifiedAt,
+      )
+  );
+}
+
+function hasDuplicateWalletRechargeDeclineKeys(
+  values:
+    FinoraControlWalletRechargeDeclineEvidence[],
+): boolean {
+
+  const packageIds =
+    new Set<string>();
+
+  const paymentReferences =
+    new Set<string>();
+
+  const requestIds =
+    new Set<string>();
+
+  for (const value of values) {
+
+    if (
+      packageIds.has(
+        value.packageId,
+      ) ||
+      paymentReferences.has(
+        value.paymentReference,
+      ) ||
+      requestIds.has(
+        value.requestId,
+      )
+    ) {
+      return true;
+    }
+
+    packageIds.add(
+      value.packageId,
+    );
+
+    paymentReferences.add(
+      value.paymentReference,
+    );
+
+    requestIds.add(
+      value.requestId,
+    );
+  }
+
+  return false;
+}
 function isWalletRechargeAuthorization(
   value:
     unknown,
@@ -1597,6 +2333,262 @@ function isBranchCredentialEnrollmentAuthorization(
   return isNonEmptyString(value.demoId);
 }
 
+function hasExactVerifiedControlSignerEvidenceKeys(
+  value:
+    Record<string, unknown>,
+): boolean {
+  const expectedKeys = [
+    "issuerId",
+    "signingKeyId",
+    "algorithm",
+    "format",
+    "publicKey",
+    "status",
+    "validFrom",
+  ];
+
+  if (
+    value.validUntil !==
+      undefined
+  ) {
+    expectedKeys.push(
+      "validUntil",
+    );
+  }
+
+  const actualKeys =
+    Object.keys(
+      value,
+    ).sort();
+
+  expectedKeys.sort();
+
+  return (
+    actualKeys.length ===
+      expectedKeys.length &&
+    actualKeys.every(
+      (
+        key,
+        index,
+      ) =>
+        key ===
+          expectedKeys[index],
+    )
+  );
+}
+
+function isVerifiedControlSignerEvidence(
+  value:
+    unknown,
+): value is FinoraBranchTrustedControlPublicKey {
+  if (
+    !isRecord(
+      value,
+    ) ||
+    !hasExactVerifiedControlSignerEvidenceKeys(
+      value,
+    ) ||
+    !isNonEmptyString(
+      value.issuerId,
+    ) ||
+    !isNonEmptyString(
+      value.signingKeyId,
+    ) ||
+    value.algorithm !==
+      "ECDSA_P256_SHA256" ||
+    value.format !==
+      "SPKI_DER_BASE64" ||
+    !isNonEmptyString(
+      value.publicKey,
+    ) ||
+    (
+      value.status !==
+        "ACTIVE" &&
+      value.status !==
+        "RETIRED"
+    ) ||
+    !isControlTimestamp(
+      value.validFrom,
+    ) ||
+    (
+      value.validUntil !==
+        undefined &&
+      !isControlTimestamp(
+        value.validUntil,
+      )
+    )
+  ) {
+    return false;
+  }
+
+  if (
+    value.validUntil !==
+      undefined &&
+    Date.parse(
+      value.validUntil,
+    ) <
+      Date.parse(
+        value.validFrom,
+      )
+  ) {
+    return false;
+  }
+
+  return true;
+}
+
+function hasExactBranchCredentialAuthorizationVerificationEvidenceKeys(
+  value:
+    Record<string, unknown>,
+): boolean {
+  const actualKeys =
+    Object.keys(
+      value,
+    ).sort();
+
+  const expectedKeys = [
+    "authorizationId",
+    "packageId",
+    "issuerId",
+    "sequence",
+    "verifiedControlSigner",
+    "verifiedAt",
+    "schemaVersion",
+  ].sort();
+
+  return (
+    actualKeys.length ===
+      expectedKeys.length &&
+    actualKeys.every(
+      (
+        key,
+        index,
+      ) =>
+        key ===
+          expectedKeys[index],
+    )
+  );
+}
+
+function isBranchCredentialAuthorizationVerificationEvidence(
+  value:
+    unknown,
+): value is FinoraBranchCredentialAuthorizationVerificationEvidence {
+  if (
+    !isRecord(
+      value,
+    ) ||
+    !hasExactBranchCredentialAuthorizationVerificationEvidenceKeys(
+      value,
+    ) ||
+    !isNonEmptyString(
+      value.authorizationId,
+    ) ||
+    !isNonEmptyString(
+      value.packageId,
+    ) ||
+    !isNonEmptyString(
+      value.issuerId,
+    ) ||
+    !Number.isSafeInteger(
+      value.sequence,
+    ) ||
+    (
+      value.sequence as
+        number
+    ) <=
+      0 ||
+    !isVerifiedControlSignerEvidence(
+      value.verifiedControlSigner,
+    ) ||
+    !isControlTimestamp(
+      value.verifiedAt,
+    ) ||
+    value.schemaVersion !==
+      1
+  ) {
+    return false;
+  }
+
+  return (
+    value.verifiedControlSigner.issuerId ===
+      value.issuerId
+  );
+}
+
+function hasDuplicateBranchCredentialAuthorizationVerificationEvidenceKeys(
+  evidence:
+    FinoraBranchCredentialAuthorizationVerificationEvidence[],
+): boolean {
+  const authorizationIds =
+    new Set<string>();
+
+  const packageIds =
+    new Set<string>();
+
+  for (
+    const item of
+    evidence
+  ) {
+    if (
+      authorizationIds.has(
+        item.authorizationId,
+      ) ||
+      packageIds.has(
+        item.packageId,
+      )
+    ) {
+      return true;
+    }
+
+    authorizationIds.add(
+      item.authorizationId,
+    );
+
+    packageIds.add(
+      item.packageId,
+    );
+  }
+
+  return false;
+}
+function hasDuplicateBranchCredentialPortabilityAuthorityProvenanceKeys(
+  records:
+    FinoraBranchCredentialPortabilityAuthorityProvenanceV1[],
+): boolean {
+
+  const sourceAuthorizationIds =
+    new Set<string>();
+
+  const packageIds =
+    new Set<string>();
+
+  for (
+    const record of
+    records
+  ) {
+    if (
+      sourceAuthorizationIds.has(
+        record.sourceAuthorizationId,
+      ) ||
+      packageIds.has(
+        record.signedPortabilityAuthorityPackage.packageId,
+      )
+    ) {
+      return true;
+    }
+
+    sourceAuthorizationIds.add(
+      record.sourceAuthorizationId,
+    );
+
+    packageIds.add(
+      record.signedPortabilityAuthorityPackage.packageId,
+    );
+  }
+
+  return false;
+}
 function hasDuplicateBranchCredentialAuthorizationKeys(
   values: FinoraBranchCredentialEnrollmentAuthorization[],
 ): boolean {
@@ -1745,9 +2737,27 @@ function hasExactBranchCredentialKeys(
     "schemaVersion",
   ];
 
+  if (
+    value.authGeneration !==
+      undefined
+  ) {
+    expectedKeys.push(
+      "authGeneration",
+    );
+  }
+
   if (value.demoId !== undefined) {
     expectedKeys.push(
       "demoId",
+    );
+  }
+
+  if (
+    value.securityVerifier !==
+      undefined
+  ) {
+    expectedKeys.push(
+      "securityVerifier",
     );
   }
 
@@ -1779,6 +2789,17 @@ function isBranchCredential(
     value.schemaVersion !== 1 ||
     !isNonEmptyString(value.credentialId) ||
     !isNonEmptyString(value.sourceAuthorizationId) ||
+    (
+      value.authGeneration !==
+        undefined &&
+      (
+        !Number.isSafeInteger(
+          value.authGeneration,
+        ) ||
+        (value.authGeneration as number) <=
+          0
+      )
+    ) ||
     !isNonEmptyString(value.userId) ||
     !isNonEmptyString(value.username) ||
     !isNonEmptyString(value.canonicalUsername) ||
@@ -1807,6 +2828,13 @@ function isBranchCredential(
     value.status !== "ACTIVE" ||
     !isBranchCredentialVerifierV1(
       value.verifier,
+    ) ||
+    (
+      value.securityVerifier !==
+        undefined &&
+      !isBranchCredentialVerifierV1(
+        value.securityVerifier,
+      )
     ) ||
     !isControlTimestamp(value.createdAt) ||
     !isControlTimestamp(value.updatedAt)
@@ -2102,6 +3130,56 @@ function isControlStorePackage(
   }
 
   // ----------------------------------------------------------
+  // ----------------------------------------------------------
+  // SIGNED WALLET RECHARGE DECLINE STATE
+  //
+  // Optional for backward compatibility. A paymentReference
+  // may never coexist as both APPROVED and DECLINED evidence.
+  // ----------------------------------------------------------
+
+  if (
+    value.walletRechargeDeclines !==
+      undefined &&
+    (
+      !Array.isArray(
+        value.walletRechargeDeclines,
+      ) ||
+      !value.walletRechargeDeclines.every(
+        isWalletRechargeDeclineEvidence,
+      ) ||
+      hasDuplicateWalletRechargeDeclineKeys(
+        value.walletRechargeDeclines,
+      )
+    )
+  ) {
+    return false;
+  }
+
+  if (
+    value.walletRechargeAuthorizations !==
+      undefined &&
+    value.walletRechargeDeclines !==
+      undefined
+  ) {
+    const authorizedPaymentReferences =
+      new Set(
+        value.walletRechargeAuthorizations.map(
+          (item) =>
+            item.paymentReference,
+        ),
+      );
+
+    if (
+      value.walletRechargeDeclines.some(
+        (item) =>
+          authorizedPaymentReferences.has(
+            item.paymentReference,
+          ),
+      )
+    ) {
+      return false;
+    }
+  }
   // SIGNED BRANCH ACCESS STATE
   // ----------------------------------------------------------
 
@@ -2166,6 +3244,81 @@ function isControlStorePackage(
     }
   }
 
+  // ----------------------------------------------------------
+  // PORTABLE BRANCH AUTH ENROLLMENT RECOVERY JOURNAL
+  // ----------------------------------------------------------
+
+  const branchCredentialPortabilityAuthorities =
+    value.branchCredentialPortabilityAuthorities;
+
+  if (
+    branchCredentialPortabilityAuthorities !==
+      undefined
+  ) {
+    if (
+      !Array.isArray(
+        branchCredentialPortabilityAuthorities,
+      ) ||
+      !branchCredentialPortabilityAuthorities.every(
+        (
+          item,
+        ) =>
+          isFinoraBranchCredentialPortabilityAuthorityProvenanceV1(
+            item,
+          ),
+      ) ||
+      hasDuplicateBranchCredentialPortabilityAuthorityProvenanceKeys(
+        branchCredentialPortabilityAuthorities as
+          FinoraBranchCredentialPortabilityAuthorityProvenanceV1[],
+      )
+    ) {
+      return false;
+    }
+  }
+  const portableBranchAuthEnrollmentTransactions =
+    value.portableBranchAuthEnrollmentTransactions;
+
+  if (
+    portableBranchAuthEnrollmentTransactions !==
+      undefined
+  ) {
+    if (
+      !Array.isArray(
+        portableBranchAuthEnrollmentTransactions,
+      ) ||
+      !portableBranchAuthEnrollmentTransactions.every(
+        isPortableBranchAuthEnrollmentTransaction,
+      ) ||
+      hasDuplicatePortableBranchAuthEnrollmentTransactionKeys(
+        portableBranchAuthEnrollmentTransactions,
+      )
+    ) {
+      return false;
+    }
+  }
+
+  const portableBranchAuthCredentialRotationTransactions =
+    value.portableBranchAuthCredentialRotationTransactions;
+
+  if (
+    portableBranchAuthCredentialRotationTransactions !==
+      undefined
+  ) {
+    if (
+      !Array.isArray(
+        portableBranchAuthCredentialRotationTransactions,
+      ) ||
+      !portableBranchAuthCredentialRotationTransactions.every(
+        isPortableBranchAuthCredentialRotationTransaction,
+      ) ||
+      hasDuplicatePortableBranchAuthCredentialRotationTransactionIds(
+        portableBranchAuthCredentialRotationTransactions,
+      )
+    ) {
+      return false;
+    }
+  }
+
   const appliedControlPackages = value.appliedControlPackages;
 
   if (appliedControlPackages !== undefined) {
@@ -2189,6 +3342,47 @@ function isControlStorePackage(
       !Array.isArray(controlSequences) ||
       !controlSequences.every(isControlSequenceStateRecord) ||
       hasDuplicateControlSequenceKeys(controlSequences)
+    ) {
+      return false;
+    }
+  }
+  if (
+    value.branchCredentialAuthorizationVerificationEvidence !==
+      undefined
+  ) {
+    if (
+      !Array.isArray(
+        value.branchCredentialAuthorizationVerificationEvidence,
+      )
+    ) {
+      return false;
+    }
+
+    const verificationEvidenceInvalidIndex =
+      value.branchCredentialAuthorizationVerificationEvidence.findIndex(
+        (
+          item,
+        ) =>
+          !isBranchCredentialAuthorizationVerificationEvidence(
+            item,
+          ),
+      );
+
+    if (
+      verificationEvidenceInvalidIndex >=
+        0
+    ) {
+      return false;
+    }
+
+    const verificationEvidence =
+      value.branchCredentialAuthorizationVerificationEvidence as
+        FinoraBranchCredentialAuthorizationVerificationEvidence[];
+
+    if (
+      hasDuplicateBranchCredentialAuthorizationVerificationEvidenceKeys(
+        verificationEvidence,
+      )
     ) {
       return false;
     }
@@ -2615,6 +3809,88 @@ function describeControlStorePackageValidationFailure(
     }
 
   if (
+    value.branchCredentialAuthorizationVerificationEvidence !==
+      undefined
+  ) {
+    if (
+      !Array.isArray(
+        value.branchCredentialAuthorizationVerificationEvidence,
+      )
+    ) {
+      return "BRANCH_CREDENTIAL_AUTHORIZATION_VERIFICATION_EVIDENCE_NOT_ARRAY";
+    }
+
+    const verificationEvidenceInvalidIndex =
+      value.branchCredentialAuthorizationVerificationEvidence.findIndex(
+        (
+          item,
+        ) =>
+          !isBranchCredentialAuthorizationVerificationEvidence(
+            item,
+          ),
+      );
+
+    if (
+      verificationEvidenceInvalidIndex >=
+        0
+    ) {
+      return `BRANCH_CREDENTIAL_AUTHORIZATION_VERIFICATION_EVIDENCE_INVALID_INDEX_${verificationEvidenceInvalidIndex}`;
+    }
+
+    const verificationEvidence =
+      value.branchCredentialAuthorizationVerificationEvidence as
+        FinoraBranchCredentialAuthorizationVerificationEvidence[];
+
+    if (
+      hasDuplicateBranchCredentialAuthorizationVerificationEvidenceKeys(
+        verificationEvidence,
+      )
+    ) {
+      return "BRANCH_CREDENTIAL_AUTHORIZATION_VERIFICATION_EVIDENCE_DUPLICATE";
+    }
+  }
+  if (
+    value.branchCredentialPortabilityAuthorities !==
+      undefined
+  ) {
+    if (
+      !Array.isArray(
+        value.branchCredentialPortabilityAuthorities,
+      )
+    ) {
+      return "BRANCH_CREDENTIAL_PORTABILITY_AUTHORITIES_NOT_ARRAY";
+    }
+
+    const portabilityAuthorityInvalidIndex =
+      value.branchCredentialPortabilityAuthorities.findIndex(
+        (
+          item,
+        ) =>
+          !isFinoraBranchCredentialPortabilityAuthorityProvenanceV1(
+            item,
+          ),
+      );
+
+    if (
+      portabilityAuthorityInvalidIndex >=
+        0
+    ) {
+      return `BRANCH_CREDENTIAL_PORTABILITY_AUTHORITY_INVALID_INDEX_${portabilityAuthorityInvalidIndex}`;
+    }
+
+    const portabilityAuthorities =
+      value.branchCredentialPortabilityAuthorities as
+        FinoraBranchCredentialPortabilityAuthorityProvenanceV1[];
+
+    if (
+      hasDuplicateBranchCredentialPortabilityAuthorityProvenanceKeys(
+        portabilityAuthorities,
+      )
+    ) {
+      return "BRANCH_CREDENTIAL_PORTABILITY_AUTHORITY_DUPLICATE";
+    }
+  }
+  if (
     value.branchCredentials !==
       undefined
   ) {
@@ -2651,6 +3927,116 @@ function describeControlStorePackageValidationFailure(
       )
     ) {
       return "BRANCH_CREDENTIAL_DUPLICATE";
+    }
+  }
+
+  if (
+    value.portableBranchAuthEnrollmentTransactions !==
+      undefined
+  ) {
+    if (
+      !Array.isArray(
+        value.portableBranchAuthEnrollmentTransactions,
+      )
+    ) {
+      return "PORTABLE_BRANCH_AUTH_ENROLLMENT_TRANSACTIONS_NOT_ARRAY";
+    }
+
+    const portableTransactionInvalidIndex =
+      value.portableBranchAuthEnrollmentTransactions.findIndex(
+        (
+          item,
+        ) =>
+          !isPortableBranchAuthEnrollmentTransaction(
+            item,
+          ),
+      );
+
+    if (
+      portableTransactionInvalidIndex >=
+        0
+    ) {
+      return `PORTABLE_BRANCH_AUTH_ENROLLMENT_TRANSACTION_INVALID_INDEX_${portableTransactionInvalidIndex}`;
+    }
+
+    const portableTransactions =
+      value.portableBranchAuthEnrollmentTransactions as
+        FinoraPortableBranchAuthEnrollmentTransactionV1[];
+
+    const transactionIds =
+      new Set(
+        portableTransactions.map(
+          (
+            item,
+          ) =>
+            item.transactionId,
+        ),
+      );
+
+    if (
+      transactionIds.size !==
+        portableTransactions.length
+    ) {
+      return "PORTABLE_BRANCH_AUTH_ENROLLMENT_TRANSACTION_ID_DUPLICATE";
+    }
+
+    const sourceAuthorizationIds =
+      new Set(
+        portableTransactions.map(
+          (
+            item,
+          ) =>
+            item.sourceAuthorizationId,
+        ),
+      );
+
+    if (
+      sourceAuthorizationIds.size !==
+        portableTransactions.length
+    ) {
+      return "PORTABLE_BRANCH_AUTH_ENROLLMENT_SOURCE_AUTHORIZATION_ID_DUPLICATE";
+    }
+  }
+
+  if (
+    value.portableBranchAuthCredentialRotationTransactions !==
+      undefined
+  ) {
+    if (
+      !Array.isArray(
+        value.portableBranchAuthCredentialRotationTransactions,
+      )
+    ) {
+      return "PORTABLE_BRANCH_AUTH_CREDENTIAL_ROTATION_TRANSACTIONS_NOT_ARRAY";
+    }
+
+    const rotationTransactionInvalidIndex =
+      value.portableBranchAuthCredentialRotationTransactions.findIndex(
+        (
+          item,
+        ) =>
+          !isPortableBranchAuthCredentialRotationTransaction(
+            item,
+          ),
+      );
+
+    if (
+      rotationTransactionInvalidIndex >=
+        0
+    ) {
+      return `PORTABLE_BRANCH_AUTH_CREDENTIAL_ROTATION_TRANSACTION_INVALID_INDEX_${rotationTransactionInvalidIndex}`;
+    }
+
+    const rotationTransactions =
+      value.portableBranchAuthCredentialRotationTransactions as
+        FinoraPortableBranchAuthCredentialRotationTransactionV1[];
+
+    if (
+      hasDuplicatePortableBranchAuthCredentialRotationTransactionIds(
+        rotationTransactions,
+      )
+    ) {
+      return "PORTABLE_BRANCH_AUTH_CREDENTIAL_ROTATION_TRANSACTION_ID_DUPLICATE";
     }
   }
 
@@ -2762,11 +4148,21 @@ function createEmptyControlStore(): FinoraControlStorePackage {
 
     walletRechargeAuthorizations: [],
 
+    walletRechargeDeclines: [],
+
     branchAccessGrants: [],
 
     branchCredentialEnrollmentAuthorizations: [],
 
+    branchCredentialAuthorizationVerificationEvidence: [],
+
+    branchCredentialPortabilityAuthorities: [],
+
     branchCredentials: [],
+
+    portableBranchAuthEnrollmentTransactions: [],
+
+    portableBranchAuthCredentialRotationTransactions: [],
 
     appliedControlPackages: [],
 
@@ -3552,7 +4948,46 @@ export interface FinoraVerifiedBranchAccessApplyInput {
   credentialEnrollmentAuthorization?:
     FinoraBranchCredentialEnrollmentAuthorization;
 
+  verifiedControlSigner?:
+    FinoraBranchTrustedControlPublicKey;
+
+  credentialPortabilityAuthorityProvenance?:
+    FinoraBranchCredentialPortabilityAuthorityProvenanceV1;
+
   appliedAt: string;
+}
+
+export interface FinoraVerifiedBranchCredentialAuthorizationApplyInput {
+
+  packageId:
+    string;
+
+  issuerId:
+    string;
+
+  purpose:
+    "BRANCH_ACCESS";
+
+  sequence:
+    number;
+
+  action:
+    "AUTHORIZE_CREDENTIAL";
+
+  target:
+    FinoraVerifiedBranchAccessApplyInput["target"];
+
+  credentialEnrollmentAuthorization:
+    FinoraBranchCredentialEnrollmentAuthorization;
+
+  verifiedControlSigner:
+    FinoraBranchTrustedControlPublicKey;
+
+  credentialPortabilityAuthorityProvenance?:
+    FinoraBranchCredentialPortabilityAuthorityProvenanceV1;
+
+  appliedAt:
+    string;
 }
 
 export interface FinoraVerifiedBranchAccessApplyResult {
@@ -3560,32 +4995,6 @@ export interface FinoraVerifiedBranchAccessApplyResult {
 
   credentialEnrollmentAuthorization?:
     FinoraBranchCredentialEnrollmentAuthorization;
-}
-
-// ============================================================
-// LOCAL BRANCH CREDENTIAL ENROLLMENT APPLY CONTRACT
-//
-// Caller supplies only an already-derived credential verifier.
-// Plaintext password never enters this store mutation boundary.
-// ============================================================
-
-export interface FinoraBranchCredentialEnrollmentApplyInput {
-  authorizationId:
-    string;
-
-  credential:
-    FinoraControlBranchCredential;
-
-  appliedAt:
-    string;
-}
-
-export interface FinoraBranchCredentialEnrollmentApplyResult {
-  credential:
-    FinoraControlBranchCredential;
-
-  consumedAuthorizationId:
-    string;
 }
 
 export interface FinoraVerifiedStorageEntitlementApplyInput {
@@ -4087,7 +5496,174 @@ async function applyVerifiedBranchAccessInternal(
 
   const credentialAuthorization =
     input.credentialEnrollmentAuthorization;
+  const verifiedControlSigner =
+    input.verifiedControlSigner;
 
+  const credentialPortabilityAuthorityProvenance =
+    input.credentialPortabilityAuthorityProvenance;
+
+  /*
+   * Credential enrollment authority must carry the exact
+   * public Control Center key selected by the successful native
+   * package verifier.
+   *
+   * Ordinary BRANCH_ACCESS mutations without credential
+   * enrollment must not smuggle unrelated signer evidence into
+   * this state boundary.
+   */
+  if (
+    credentialAuthorization ===
+      undefined
+  ) {
+    if (
+      verifiedControlSigner !==
+        undefined ||
+      credentialPortabilityAuthorityProvenance !==
+        undefined
+    ) {
+      return failure(
+        "FINORA verified Control signer evidence is valid only with credential enrollment authority.",
+      );
+    }
+  }
+  else if (
+    !verifiedControlSigner ||
+    !isNonEmptyString(
+      verifiedControlSigner.issuerId,
+    ) ||
+    verifiedControlSigner.issuerId !==
+      input.issuerId ||
+    !isNonEmptyString(
+      verifiedControlSigner.signingKeyId,
+    ) ||
+    verifiedControlSigner.algorithm !==
+      "ECDSA_P256_SHA256" ||
+    verifiedControlSigner.format !==
+      "SPKI_DER_BASE64" ||
+    !isNonEmptyString(
+      verifiedControlSigner.publicKey,
+    ) ||
+    (
+      verifiedControlSigner.status !==
+        "ACTIVE" &&
+      verifiedControlSigner.status !==
+        "RETIRED"
+    ) ||
+    !isControlTimestamp(
+      verifiedControlSigner.validFrom,
+    ) ||
+    (
+      verifiedControlSigner.validUntil !==
+        undefined &&
+      !isControlTimestamp(
+        verifiedControlSigner.validUntil,
+      )
+    )
+  ) {
+    return failure(
+      "FINORA credential enrollment requires exact verified Control Center signer evidence.",
+    );
+  }
+
+  if (
+    credentialPortabilityAuthorityProvenance !==
+      undefined
+  ) {
+    if (
+      credentialAuthorization ===
+        undefined ||
+      !verifiedControlSigner ||
+      !isFinoraBranchCredentialPortabilityAuthorityProvenanceV1(
+        credentialPortabilityAuthorityProvenance,
+      )
+    ) {
+      return failure(
+        "FINORA credential portability authority provenance is invalid.",
+      );
+    }
+
+    const signedPortabilityAuthorityPackage =
+      credentialPortabilityAuthorityProvenance
+        .signedPortabilityAuthorityPackage;
+
+    const portabilityPayload =
+      signedPortabilityAuthorityPackage.payload;
+
+    const portabilitySigner =
+      credentialPortabilityAuthorityProvenance
+        .verifiedControlSigner;
+
+    const signerMatchesExactly =
+      portabilitySigner.issuerId ===
+        verifiedControlSigner.issuerId &&
+      portabilitySigner.signingKeyId ===
+        verifiedControlSigner.signingKeyId &&
+      portabilitySigner.algorithm ===
+        verifiedControlSigner.algorithm &&
+      portabilitySigner.format ===
+        verifiedControlSigner.format &&
+      portabilitySigner.publicKey ===
+        verifiedControlSigner.publicKey &&
+      portabilitySigner.status ===
+        verifiedControlSigner.status &&
+      portabilitySigner.validFrom ===
+        verifiedControlSigner.validFrom &&
+      portabilitySigner.validUntil ===
+        verifiedControlSigner.validUntil;
+
+    const credentialLineageMatches =
+      portabilityPayload.sourceAuthorizationId ===
+        credentialAuthorization.authorizationId &&
+      portabilityPayload.userId ===
+        credentialAuthorization.userId &&
+      portabilityPayload.username ===
+        credentialAuthorization.username &&
+      portabilityPayload.role ===
+        credentialAuthorization.role &&
+      portabilityPayload.ownerId ===
+        credentialAuthorization.ownerId &&
+      portabilityPayload.businessId ===
+        credentialAuthorization.businessId &&
+      portabilityPayload.branchId ===
+        credentialAuthorization.branchId &&
+      portabilityPayload.storageMode ===
+        credentialAuthorization.storageMode &&
+      portabilityPayload.dataContext ===
+        credentialAuthorization.dataContext &&
+      portabilityPayload.sourceAuthorizationMethod ===
+        credentialAuthorization.method &&
+      (
+        credentialAuthorization.dataContext ===
+          "DEMO"
+          ? portabilityPayload.demoId ===
+              credentialAuthorization.demoId
+          : portabilityPayload.demoId ===
+              undefined
+      );
+
+    if (
+      credentialPortabilityAuthorityProvenance
+        .sourceAuthorizationId !==
+          credentialAuthorization.authorizationId ||
+      credentialPortabilityAuthorityProvenance
+        .verifiedAt !==
+          input.appliedAt ||
+      signedPortabilityAuthorityPackage.target.ownerId !==
+        credentialAuthorization.ownerId ||
+      signedPortabilityAuthorityPackage.target.businessId !==
+        credentialAuthorization.businessId ||
+      signedPortabilityAuthorityPackage.target.branchId !==
+        credentialAuthorization.branchId ||
+      signedPortabilityAuthorityPackage.issuer.issuerId !==
+        input.issuerId ||
+      !credentialLineageMatches ||
+      !signerMatchesExactly
+    ) {
+      return failure(
+        "FINORA credential portability authority provenance does not match the verified credential authorization lineage.",
+      );
+    }
+  }
   if (credentialAuthorization !== undefined) {
     const expectedDataContext =
       input.accessGrant.accessType === "DEMO"
@@ -4095,7 +5671,10 @@ async function applyVerifiedBranchAccessInternal(
         : "REAL";
 
     if (
-      input.action !== "ISSUE" ||
+      (
+        input.action !== "ISSUE" &&
+        input.action !== "REPLACE"
+      ) ||
       credentialAuthorization.userId !== input.accessGrant.userId ||
       credentialAuthorization.ownerId !== input.accessGrant.ownerId ||
       credentialAuthorization.businessId !== input.accessGrant.businessId ||
@@ -4330,10 +5909,126 @@ async function applyVerifiedBranchAccessInternal(
     }
   }
 
+  // ----------------------------------------------------------
+  // INTERNAL CREDENTIAL AUTHORIZATION ADAPTER
+  //
+  // External signed recovery uses AUTHORIZE_CREDENTIAL.
+  // The dedicated native adapter resolves the authoritative
+  // existing grant and enters this exact-match REPLACE path.
+  //
+  // SECURITY:
+  //
+  // - External REPLACE packages cannot carry credential authority.
+  // - Every existing grant field must remain identical.
+  // - Only the one-time credential authorization may be added.
+  // - Storage mode / lifecycle / validity / payment / identity
+  //   cannot be changed through credential recovery.
+  // ----------------------------------------------------------
+
+  if (
+    credentialAuthorization !== undefined &&
+    input.action === "REPLACE"
+  ) {
+    if (!existingAccessGrant) {
+      return failure(
+        "FINORA credential recovery requires an existing Branch Access grant.",
+      );
+    }
+
+    const existingPayment =
+      existingAccessGrant.registrationPayment;
+
+    const replacementPayment =
+      input.accessGrant.registrationPayment;
+
+    const registrationPaymentMatches =
+      existingPayment === undefined
+        ? replacementPayment === undefined
+        : replacementPayment !== undefined &&
+          existingPayment.amount === replacementPayment.amount &&
+          existingPayment.currency === replacementPayment.currency &&
+          existingPayment.paymentMode === replacementPayment.paymentMode &&
+          existingPayment.paidAt === replacementPayment.paidAt &&
+          existingPayment.reference === replacementPayment.reference &&
+          existingPayment.remarks === replacementPayment.remarks &&
+          existingPayment.refundable === replacementPayment.refundable;
+
+    const grantMatchesExactly =
+      existingAccessGrant.grantId === input.accessGrant.grantId &&
+      existingAccessGrant.userId === input.accessGrant.userId &&
+      existingAccessGrant.ownerId === input.accessGrant.ownerId &&
+      existingAccessGrant.businessId === input.accessGrant.businessId &&
+      existingAccessGrant.branchId === input.accessGrant.branchId &&
+      existingAccessGrant.storageMode === input.accessGrant.storageMode &&
+      existingAccessGrant.accessType === input.accessGrant.accessType &&
+      existingAccessGrant.administrativeStatus ===
+        input.accessGrant.administrativeStatus &&
+      existingAccessGrant.validity.validFrom ===
+        input.accessGrant.validity.validFrom &&
+      existingAccessGrant.validity.validUntil ===
+        input.accessGrant.validity.validUntil &&
+      existingAccessGrant.registrationCycle ===
+        input.accessGrant.registrationCycle &&
+      existingAccessGrant.demoId === input.accessGrant.demoId &&
+      existingAccessGrant.demoRemarks === input.accessGrant.demoRemarks &&
+      existingAccessGrant.createdAt === input.accessGrant.createdAt &&
+      existingAccessGrant.updatedAt === input.accessGrant.updatedAt &&
+      existingAccessGrant.schemaVersion === input.accessGrant.schemaVersion &&
+      registrationPaymentMatches;
+
+    if (!grantMatchesExactly) {
+      return failure(
+        "FINORA credential recovery REPLACE cannot modify Branch Access grant metadata.",
+      );
+    }
+  }
+
   const credentialAuthorizations =
     controlStore.branchCredentialEnrollmentAuthorizations ?? [];
 
+  const credentialAuthorizationVerificationEvidence =
+    controlStore.branchCredentialAuthorizationVerificationEvidence ??
+      [];
+
+  const credentialPortabilityAuthorities = [
+    ...(
+      controlStore.branchCredentialPortabilityAuthorities ??
+      []
+    ),
+  ];
+
   if (credentialAuthorization !== undefined) {
+    const canonicalCredentialUsername =
+      canonicalizeFinoraCredentialUsername(
+        credentialAuthorization.username,
+      );
+
+    const existingCredential =
+      (
+        controlStore.branchCredentials ??
+        []
+      ).some(
+        (item) =>
+          item.canonicalUsername ===
+            canonicalCredentialUsername ||
+          (
+            item.userId ===
+              credentialAuthorization.userId &&
+            item.ownerId ===
+              credentialAuthorization.ownerId &&
+            item.businessId ===
+              credentialAuthorization.businessId &&
+            item.branchId ===
+              credentialAuthorization.branchId
+          ),
+      );
+
+    if (existingCredential) {
+      return failure(
+        "FINORA Branch Credential already exists for this username or user scope.",
+      );
+    }
+
     const duplicateAuthorization =
       credentialAuthorizations.some(
         (item) =>
@@ -4351,19 +6046,112 @@ async function applyVerifiedBranchAccessInternal(
         "FINORA credential enrollment authorization already exists for this user scope.",
       );
     }
+    if (!verifiedControlSigner) {
+      return failure(
+        "FINORA credential enrollment verified signer evidence is missing.",
+      );
+    }
+
+    const duplicateVerificationEvidence =
+      credentialAuthorizationVerificationEvidence.some(
+        (
+          item,
+        ) =>
+          item.authorizationId ===
+            credentialAuthorization.authorizationId ||
+          item.packageId ===
+            input.packageId,
+      );
+
+    if (duplicateVerificationEvidence) {
+      return failure(
+        "FINORA credential authorization verification evidence already exists.",
+      );
+    }
+
+    if (
+      credentialPortabilityAuthorityProvenance !==
+        undefined
+    ) {
+      const duplicatePortabilityAuthority =
+        credentialPortabilityAuthorities.some(
+          (
+            item,
+          ) =>
+            item.sourceAuthorizationId ===
+              credentialPortabilityAuthorityProvenance.sourceAuthorizationId ||
+            item.signedPortabilityAuthorityPackage.packageId ===
+              credentialPortabilityAuthorityProvenance
+                .signedPortabilityAuthorityPackage
+                .packageId,
+        );
+
+      if (duplicatePortabilityAuthority) {
+        return failure(
+          "FINORA credential portability authority provenance already exists.",
+        );
+      }
+    }
   }
 
   if (accessIndex >= 0) {
-    accessGrants[accessIndex] = input.accessGrant;
+    if (
+      credentialAuthorization === undefined ||
+      input.action !== "REPLACE"
+    ) {
+      accessGrants[accessIndex] =
+        input.accessGrant;
+    }
   }
   else {
-    accessGrants.push(input.accessGrant);
+    accessGrants.push(
+      input.accessGrant,
+    );
   }
 
   if (credentialAuthorization !== undefined) {
+    if (!verifiedControlSigner) {
+      return failure(
+        "FINORA credential enrollment verified signer evidence is missing before persistence.",
+      );
+    }
+
     credentialAuthorizations.push(
       credentialAuthorization,
     );
+
+    credentialAuthorizationVerificationEvidence.push({
+      authorizationId:
+        credentialAuthorization.authorizationId,
+
+      packageId:
+        input.packageId,
+
+      issuerId:
+        input.issuerId,
+
+      sequence:
+        input.sequence,
+
+      verifiedControlSigner: {
+        ...verifiedControlSigner,
+      },
+
+      verifiedAt:
+        input.appliedAt,
+
+      schemaVersion:
+        1,
+    });
+
+    if (
+      credentialPortabilityAuthorityProvenance !==
+        undefined
+    ) {
+      credentialPortabilityAuthorities.push(
+        credentialPortabilityAuthorityProvenance,
+      );
+    }
   }
 
   appliedPackages.push({
@@ -4427,6 +6215,12 @@ async function applyVerifiedBranchAccessInternal(
   controlStore.branchCredentialEnrollmentAuthorizations =
     credentialAuthorizations;
 
+  controlStore.branchCredentialAuthorizationVerificationEvidence =
+    credentialAuthorizationVerificationEvidence;
+
+  controlStore.branchCredentialPortabilityAuthorities =
+    credentialPortabilityAuthorities;
+
   controlStore.appliedControlPackages = appliedPackages;
 
   controlStore.controlSequences = sequenceStates;
@@ -4476,6 +6270,153 @@ export function applyFinoraVerifiedBranchAccessState(
   return operation;
 }
 
+export async function applyFinoraVerifiedBranchCredentialAuthorizationState(
+  input:
+    FinoraVerifiedBranchCredentialAuthorizationApplyInput,
+): Promise<
+  FinoraControlStoreResult<FinoraVerifiedBranchAccessApplyResult>
+> {
+  if (
+    !isNonEmptyString(
+      input.packageId,
+    ) ||
+    !isNonEmptyString(
+      input.issuerId,
+    ) ||
+    input.purpose !==
+      "BRANCH_ACCESS" ||
+    input.action !==
+      "AUTHORIZE_CREDENTIAL" ||
+    !Number.isSafeInteger(
+      input.sequence,
+    ) ||
+    input.sequence <=
+      0 ||
+    !isControlTimestamp(
+      input.appliedAt,
+    ) ||
+    !isBranchCredentialEnrollmentAuthorization(
+      input.credentialEnrollmentAuthorization,
+    )
+  ) {
+    return failure(
+      "A valid verified FINORA Branch Credential authorization package is required.",
+    );
+  }
+
+  const authorization =
+    input.credentialEnrollmentAuthorization;
+
+  if (
+    authorization.ownerId !==
+      input.target.ownerId ||
+    authorization.businessId !==
+      input.target.businessId ||
+    authorization.branchId !==
+      input.target.branchId
+  ) {
+    return failure(
+      "FINORA credential authorization scope does not match the verified package target.",
+    );
+  }
+
+  const currentResult =
+    await readFinoraControlStore();
+
+  if (
+    !currentResult.success ||
+    !currentResult.data
+  ) {
+    return failure(
+      currentResult.error ??
+        "Unable to load the FINORA Control Store.",
+    );
+  }
+
+  const existingAccessGrant =
+    currentResult.data.branchAccessGrants
+      ?.find(
+        (item) =>
+          item.userId ===
+            authorization.userId &&
+          item.ownerId ===
+            authorization.ownerId &&
+          item.businessId ===
+            authorization.businessId &&
+          item.branchId ===
+            authorization.branchId,
+      );
+
+  if (!existingAccessGrant) {
+    return failure(
+      "FINORA credential authorization requires an existing Branch Access grant.",
+    );
+  }
+
+  const expectedDataContext =
+    existingAccessGrant.accessType ===
+      "DEMO"
+      ? "DEMO"
+      : "REAL";
+
+  if (
+    existingAccessGrant.administrativeStatus !==
+      "ACTIVE" ||
+    existingAccessGrant.storageMode !==
+      authorization.storageMode ||
+    expectedDataContext !==
+      authorization.dataContext ||
+    (
+      expectedDataContext ===
+        "DEMO"
+        ? existingAccessGrant.demoId !==
+            authorization.demoId
+        : authorization.demoId !==
+            undefined
+    )
+  ) {
+    return failure(
+      "FINORA credential authorization does not match active Branch Access.",
+    );
+  }
+
+  return applyFinoraVerifiedBranchAccessState({
+    packageId:
+      input.packageId,
+
+    issuerId:
+      input.issuerId,
+
+    purpose:
+      "BRANCH_ACCESS",
+
+    sequence:
+      input.sequence,
+
+    action:
+      "REPLACE",
+
+    target:
+      input.target,
+
+    accessGrant:
+      existingAccessGrant,
+
+    credentialEnrollmentAuthorization:
+      authorization,
+
+    verifiedControlSigner: {
+      ...input.verifiedControlSigner,
+    },
+
+    credentialPortabilityAuthorityProvenance:
+      input.credentialPortabilityAuthorityProvenance,
+
+    appliedAt:
+      input.appliedAt,
+  });
+}
+
 // ============================================================
 // LOCAL ONE-TIME BRANCH CREDENTIAL ENROLLMENT
 //
@@ -4495,79 +6436,148 @@ export function applyFinoraVerifiedBranchAccessState(
 // - Credential creation does not itself grant Branch Access.
 // ============================================================
 
-async function applyBranchCredentialEnrollmentInternal(
-  input:
-    FinoraBranchCredentialEnrollmentApplyInput,
-): Promise<
-  FinoraControlStoreResult<
-    FinoraBranchCredentialEnrollmentApplyResult
-  >
-> {
-  if (
-    !isNonEmptyString(
-      input.authorizationId,
-    ) ||
-    !isBranchCredential(
-      input.credential,
-    ) ||
-    input.credential.sourceAuthorizationId !==
-      input.authorizationId ||
-    !isControlTimestamp(
-      input.appliedAt,
-    ) ||
-    input.credential.createdAt !==
-      input.appliedAt ||
-    input.credential.updatedAt !==
-      input.appliedAt
-  ) {
-    return failure(
-      "A valid FINORA Branch Credential enrollment request is required.",
+// ============================================================
+// PORTABLE BRANCH AUTH ENROLLMENT TRANSACTION MUTATIONS
+//
+// Cross-file atomicity is intentionally NOT claimed here.
+//
+// This Control Store owns only the durable transaction journal,
+// pending signed enrollment authorization, and local credential.
+//
+// Portable file mutation is performed by the native Portable
+// Branch Auth Store outside this encrypted Control Store.
+//
+// Recovery therefore advances the durable state monotonically:
+//
+// PREPARED
+//   -> PORTABLE_WRITTEN
+//   -> CONTROL_APPLIED
+//   -> COMPLETE
+//
+// CONTROL_APPLIED is special:
+// credential insertion + signed authorization consumption +
+// journal transition are persisted in ONE encrypted Control
+// Store write.
+// ============================================================
+
+export interface FinoraPortableBranchAuthEnrollmentPrepareInput {
+  transaction:
+    FinoraPortableBranchAuthEnrollmentTransactionV1;
+}
+
+export interface FinoraPortableBranchAuthEnrollmentTransitionInput {
+  transactionId:
+    string;
+
+  transitionedAt:
+    string;
+}
+
+export interface FinoraPortableBranchAuthEnrollmentMutationResult {
+  transaction:
+    FinoraPortableBranchAuthEnrollmentTransactionV1;
+}
+
+export interface FinoraPortableBranchAuthEnrollmentControlApplyResult {
+  transaction:
+    FinoraPortableBranchAuthEnrollmentTransactionV1;
+
+  credential:
+    FinoraControlBranchCredential;
+
+  consumedAuthorizationId:
+    string;
+}
+
+function portableBranchAuthEnrollmentTransactionsEqual(
+  left:
+    FinoraPortableBranchAuthEnrollmentTransactionV1,
+  right:
+    FinoraPortableBranchAuthEnrollmentTransactionV1,
+): boolean {
+  return JSON.stringify(
+    left,
+  ) ===
+    JSON.stringify(
+      right,
     );
-  }
+}
 
-  const currentResult =
-    await readFinoraControlStore();
-
-  if (
-    !currentResult.success ||
-    !currentResult.data
-  ) {
-    return failure(
-      currentResult.error ??
-        "Unable to load the FINORA Control Store.",
+function portableBranchAuthCredentialsEqual(
+  left:
+    FinoraControlBranchCredential,
+  right:
+    FinoraControlBranchCredential,
+): boolean {
+  return JSON.stringify(
+    left,
+  ) ===
+    JSON.stringify(
+      right,
     );
-  }
+}
 
-  const controlStore =
-    currentResult.data;
+interface FinoraPortableBranchAuthEnrollmentAuthorityMatch {
+  authorizationIndex:
+    number;
 
-  const credentialAuthorizations =
+  authorization:
+    FinoraBranchCredentialEnrollmentAuthorization;
+}
+
+function resolvePortableBranchAuthEnrollmentAuthority(
+  controlStore:
+    FinoraControlStorePackage,
+  transaction:
+    FinoraPortableBranchAuthEnrollmentTransactionV1,
+):
+  | {
+      success:
+        true;
+
+      data:
+        FinoraPortableBranchAuthEnrollmentAuthorityMatch;
+    }
+  | {
+      success:
+        false;
+
+      error:
+        string;
+    } {
+  const authorizations =
     controlStore.branchCredentialEnrollmentAuthorizations ??
     [];
 
   const authorizationIndex =
-    credentialAuthorizations.findIndex(
-      (item) =>
+    authorizations.findIndex(
+      (
+        item,
+      ) =>
         item.authorizationId ===
-          input.authorizationId,
+          transaction.sourceAuthorizationId,
     );
 
   if (
     authorizationIndex <
       0
   ) {
-    return failure(
-      "FINORA credential enrollment authorization is missing or already consumed.",
-    );
+    return {
+      success:
+        false,
+
+      error:
+        "FINORA credential enrollment authorization is missing or already consumed.",
+    };
   }
 
   const authorization =
-    credentialAuthorizations[
+    authorizations[
       authorizationIndex
     ];
 
   const credential =
-    input.credential;
+    transaction.credential;
 
   const expectedCanonicalUsername =
     canonicalizeFinoraCredentialUsername(
@@ -4575,6 +6585,8 @@ async function applyBranchCredentialEnrollmentInternal(
     );
 
   if (
+    credential.sourceAuthorizationId !==
+      authorization.authorizationId ||
     credential.userId !==
       authorization.userId ||
     credential.username !==
@@ -4604,20 +6616,20 @@ async function applyBranchCredentialEnrollmentInternal(
             undefined
     )
   ) {
-    return failure(
-      "FINORA Branch Credential does not match the signed enrollment authorization.",
-    );
-  }
+    return {
+      success:
+        false,
 
-  // ----------------------------------------------------------
-  // CURRENT BRANCH ACCESS MUST STILL CORRELATE
-  //
-  // Password setup never creates or repairs commercial access.
-  // ----------------------------------------------------------
+      error:
+        "FINORA Branch Credential does not match the signed enrollment authorization.",
+    };
+  }
 
   const accessGrant =
     controlStore.branchAccessGrants?.find(
-      (item) =>
+      (
+        item,
+      ) =>
         item.userId ===
           authorization.userId &&
         item.ownerId ===
@@ -4629,9 +6641,13 @@ async function applyBranchCredentialEnrollmentInternal(
     );
 
   if (!accessGrant) {
-    return failure(
-      "FINORA Branch Credential enrollment requires the matching Branch Access grant.",
-    );
+    return {
+      success:
+        false,
+
+      error:
+        "FINORA Branch Credential enrollment requires the matching Branch Access grant.",
+    };
   }
 
   const expectedDataContext =
@@ -4656,17 +6672,463 @@ async function applyBranchCredentialEnrollmentInternal(
             undefined
     )
   ) {
+    return {
+      success:
+        false,
+
+      error:
+        "FINORA Branch Credential enrollment authorization no longer matches active Branch Access.",
+    };
+  }
+
+  return {
+    success:
+      true,
+
+    data: {
+      authorizationIndex,
+
+      authorization,
+    },
+  };
+}
+
+async function preparePortableBranchAuthEnrollmentTransactionInternal(
+  input:
+    FinoraPortableBranchAuthEnrollmentPrepareInput,
+): Promise<
+  FinoraControlStoreResult<
+    FinoraPortableBranchAuthEnrollmentMutationResult
+  >
+> {
+  try {
+    validateFinoraPortableBranchAuthEnrollmentTransactionV1(
+      input.transaction,
+    );
+  }
+  catch {
     return failure(
-      "FINORA Branch Credential enrollment authorization no longer matches active Branch Access.",
+      "A valid PREPARED Portable Branch Auth enrollment transaction is required.",
     );
   }
 
-  // ----------------------------------------------------------
-  // PERMANENT REPLAY / DUPLICATE PROTECTION
-  //
-  // sourceAuthorizationId remains inside the credential after
-  // the pending authorization is consumed.
-  // ----------------------------------------------------------
+  const transaction =
+    input.transaction;
+
+  if (
+    transaction.status !==
+      "PREPARED"
+  ) {
+    return failure(
+      "Portable Branch Auth enrollment preparation requires PREPARED state.",
+    );
+  }
+
+  const currentResult =
+    await readFinoraControlStore();
+
+  if (
+    !currentResult.success ||
+    !currentResult.data
+  ) {
+    return failure(
+      currentResult.error ??
+        "Unable to load the FINORA Control Store.",
+    );
+  }
+
+  const controlStore =
+    currentResult.data;
+
+  const transactions = [
+    ...(
+      controlStore.portableBranchAuthEnrollmentTransactions ??
+      []
+    ),
+  ];
+
+  const existingByTransactionId =
+    transactions.find(
+      (
+        item,
+      ) =>
+        item.transactionId ===
+          transaction.transactionId,
+    );
+
+  if (
+    existingByTransactionId
+  ) {
+    if (
+      portableBranchAuthEnrollmentTransactionsEqual(
+        existingByTransactionId,
+        transaction,
+      )
+    ) {
+      return success({
+        transaction:
+          existingByTransactionId,
+      });
+    }
+
+    return failure(
+      "Portable Branch Auth enrollment transactionId already exists with different state.",
+    );
+  }
+
+  if (
+    transactions.some(
+      (
+        item,
+      ) =>
+        item.sourceAuthorizationId ===
+          transaction.sourceAuthorizationId,
+    )
+  ) {
+    return failure(
+      "Portable Branch Auth enrollment authorization already has a durable transaction.",
+    );
+  }
+
+  const authorityResult =
+    resolvePortableBranchAuthEnrollmentAuthority(
+      controlStore,
+      transaction,
+    );
+
+  if (
+    !authorityResult.success
+  ) {
+    return failure(
+      authorityResult.error,
+    );
+  }
+
+  const branchCredentials =
+    controlStore.branchCredentials ??
+    [];
+
+  if (
+    hasDuplicateBranchCredentialKeys([
+      ...branchCredentials,
+      transaction.credential,
+    ])
+  ) {
+    return failure(
+      "FINORA Branch Credential already exists for this authorization, username or user scope.",
+    );
+  }
+
+  transactions.push(
+    transaction,
+  );
+
+  controlStore.portableBranchAuthEnrollmentTransactions =
+    transactions;
+
+  controlStore.updatedAt =
+    transaction.updatedAt;
+
+  try {
+    await persistControlStorePackage(
+      controlStore,
+    );
+  }
+  catch (
+    error
+  ) {
+    return failure(
+      error instanceof Error
+        ? error.message
+        : "Unable to persist PREPARED Portable Branch Auth enrollment transaction.",
+    );
+  }
+
+  return success({
+    transaction,
+  });
+}
+
+async function markPortableBranchAuthEnrollmentWrittenInternal(
+  input:
+    FinoraPortableBranchAuthEnrollmentTransitionInput,
+): Promise<
+  FinoraControlStoreResult<
+    FinoraPortableBranchAuthEnrollmentMutationResult
+  >
+> {
+  if (
+    !isNonEmptyString(
+      input.transactionId,
+    ) ||
+    !isControlTimestamp(
+      input.transitionedAt,
+    )
+  ) {
+    return failure(
+      "A valid Portable Branch Auth written transition is required.",
+    );
+  }
+
+  const currentResult =
+    await readFinoraControlStore();
+
+  if (
+    !currentResult.success ||
+    !currentResult.data
+  ) {
+    return failure(
+      currentResult.error ??
+        "Unable to load the FINORA Control Store.",
+    );
+  }
+
+  const controlStore =
+    currentResult.data;
+
+  const transactions = [
+    ...(
+      controlStore.portableBranchAuthEnrollmentTransactions ??
+      []
+    ),
+  ];
+
+  const transactionIndex =
+    transactions.findIndex(
+      (
+        item,
+      ) =>
+        item.transactionId ===
+          input.transactionId,
+    );
+
+  if (
+    transactionIndex <
+      0
+  ) {
+    return failure(
+      "Portable Branch Auth enrollment transaction was not found.",
+    );
+  }
+
+  const transaction =
+    transactions[
+      transactionIndex
+    ];
+
+  if (
+    transaction.status ===
+      "PORTABLE_WRITTEN" ||
+    transaction.status ===
+      "CONTROL_APPLIED" ||
+    transaction.status ===
+      "COMPLETE"
+  ) {
+    return success({
+      transaction,
+    });
+  }
+
+  if (
+    !canAdvanceFinoraPortableBranchAuthEnrollmentTransaction(
+      transaction.status,
+      "PORTABLE_WRITTEN",
+    )
+  ) {
+    return failure(
+      "Portable Branch Auth enrollment transaction cannot advance to PORTABLE_WRITTEN.",
+    );
+  }
+
+  const nextTransaction:
+    FinoraPortableBranchAuthEnrollmentTransactionV1 =
+    {
+      ...transaction,
+
+      status:
+        "PORTABLE_WRITTEN",
+
+      updatedAt:
+        input.transitionedAt,
+
+      portableWrittenAt:
+        input.transitionedAt,
+    };
+
+  try {
+    validateFinoraPortableBranchAuthEnrollmentTransactionV1(
+      nextTransaction,
+    );
+  }
+  catch {
+    return failure(
+      "Portable Branch Auth PORTABLE_WRITTEN transition is invalid.",
+    );
+  }
+
+  transactions[
+    transactionIndex
+  ] =
+    nextTransaction;
+
+  controlStore.portableBranchAuthEnrollmentTransactions =
+    transactions;
+
+  controlStore.updatedAt =
+    input.transitionedAt;
+
+  try {
+    await persistControlStorePackage(
+      controlStore,
+    );
+  }
+  catch (
+    error
+  ) {
+    return failure(
+      error instanceof Error
+        ? error.message
+        : "Unable to persist PORTABLE_WRITTEN enrollment state.",
+    );
+  }
+
+  return success({
+    transaction:
+      nextTransaction,
+  });
+}
+
+async function applyPortableBranchAuthEnrollmentControlStateInternal(
+  input:
+    FinoraPortableBranchAuthEnrollmentTransitionInput,
+): Promise<
+  FinoraControlStoreResult<
+    FinoraPortableBranchAuthEnrollmentControlApplyResult
+  >
+> {
+  if (
+    !isNonEmptyString(
+      input.transactionId,
+    ) ||
+    !isControlTimestamp(
+      input.transitionedAt,
+    )
+  ) {
+    return failure(
+      "A valid Portable Branch Auth Control apply transition is required.",
+    );
+  }
+
+  const currentResult =
+    await readFinoraControlStore();
+
+  if (
+    !currentResult.success ||
+    !currentResult.data
+  ) {
+    return failure(
+      currentResult.error ??
+        "Unable to load the FINORA Control Store.",
+    );
+  }
+
+  const controlStore =
+    currentResult.data;
+
+  const transactions = [
+    ...(
+      controlStore.portableBranchAuthEnrollmentTransactions ??
+      []
+    ),
+  ];
+
+  const transactionIndex =
+    transactions.findIndex(
+      (
+        item,
+      ) =>
+        item.transactionId ===
+          input.transactionId,
+    );
+
+  if (
+    transactionIndex <
+      0
+  ) {
+    return failure(
+      "Portable Branch Auth enrollment transaction was not found.",
+    );
+  }
+
+  const transaction =
+    transactions[
+      transactionIndex
+    ];
+
+  if (
+    transaction.status ===
+      "CONTROL_APPLIED" ||
+    transaction.status ===
+      "COMPLETE"
+  ) {
+    const existingCredential =
+      controlStore.branchCredentials?.find(
+        (
+          item,
+        ) =>
+          item.credentialId ===
+            transaction.credential.credentialId &&
+          item.sourceAuthorizationId ===
+            transaction.sourceAuthorizationId,
+      );
+
+    if (
+      !existingCredential ||
+      !portableBranchAuthCredentialsEqual(
+        existingCredential,
+        transaction.credential,
+      )
+    ) {
+      return failure(
+        "Portable Branch Auth Control-applied transaction is missing matching credential evidence.",
+      );
+    }
+
+    return success({
+      transaction,
+
+      credential:
+        existingCredential,
+
+      consumedAuthorizationId:
+        transaction.sourceAuthorizationId,
+    });
+  }
+
+  if (
+    !canAdvanceFinoraPortableBranchAuthEnrollmentTransaction(
+      transaction.status,
+      "CONTROL_APPLIED",
+    )
+  ) {
+    return failure(
+      "Portable Branch Auth enrollment transaction cannot advance to CONTROL_APPLIED.",
+    );
+  }
+
+  const authorityResult =
+    resolvePortableBranchAuthEnrollmentAuthority(
+      controlStore,
+      transaction,
+    );
+
+  if (
+    !authorityResult.success
+  ) {
+    return failure(
+      authorityResult.error,
+    );
+  }
 
   const branchCredentials = [
     ...(
@@ -4678,7 +7140,7 @@ async function applyBranchCredentialEnrollmentInternal(
   if (
     hasDuplicateBranchCredentialKeys([
       ...branchCredentials,
-      credential,
+      transaction.credential,
     ])
   ) {
     return failure(
@@ -4686,69 +7148,303 @@ async function applyBranchCredentialEnrollmentInternal(
     );
   }
 
-  const nextCredentialAuthorizations = [
-    ...credentialAuthorizations,
+  const authorizations = [
+    ...(
+      controlStore.branchCredentialEnrollmentAuthorizations ??
+      []
+    ),
   ];
 
-  nextCredentialAuthorizations.splice(
-    authorizationIndex,
+  authorizations.splice(
+    authorityResult.data.authorizationIndex,
     1,
   );
 
   branchCredentials.push(
-    credential,
+    transaction.credential,
   );
 
+  const nextTransaction:
+    FinoraPortableBranchAuthEnrollmentTransactionV1 =
+    {
+      ...transaction,
+
+      status:
+        "CONTROL_APPLIED",
+
+      updatedAt:
+        input.transitionedAt,
+
+      controlAppliedAt:
+        input.transitionedAt,
+    };
+
+  try {
+    validateFinoraPortableBranchAuthEnrollmentTransactionV1(
+      nextTransaction,
+    );
+  }
+  catch {
+    return failure(
+      "Portable Branch Auth CONTROL_APPLIED transition is invalid.",
+    );
+  }
+
+  transactions[
+    transactionIndex
+  ] =
+    nextTransaction;
+
   // ----------------------------------------------------------
-  // ONE LOGICAL CONTROL STORE COMMIT
+  // ONE LOGICAL ENCRYPTED CONTROL STORE COMMIT
+  //
+  // These three mutations must persist together:
+  //
+  // 1. exact pre-generated credential becomes ACTIVE evidence
+  // 2. pending signed authorization is consumed
+  // 3. durable transaction becomes CONTROL_APPLIED
   // ----------------------------------------------------------
 
   controlStore.branchCredentials =
     branchCredentials;
 
   controlStore.branchCredentialEnrollmentAuthorizations =
-    nextCredentialAuthorizations;
+    authorizations;
+
+  controlStore.portableBranchAuthEnrollmentTransactions =
+    transactions;
 
   controlStore.updatedAt =
-    input.appliedAt;
+    input.transitionedAt;
 
   try {
     await persistControlStorePackage(
       controlStore,
     );
   }
-  catch (error) {
+  catch (
+    error
+  ) {
     return failure(
       error instanceof Error
         ? error.message
-        : "Unable to atomically persist FINORA Branch Credential enrollment.",
+        : "Unable to atomically persist Portable Branch Auth Control application.",
     );
   }
 
   return success({
-    credential,
+    transaction:
+      nextTransaction,
+
+    credential:
+      transaction.credential,
 
     consumedAuthorizationId:
-      authorization.authorizationId,
+      authorityResult.data.authorization.authorizationId,
   });
 }
 
-export function applyFinoraBranchCredentialEnrollmentState(
+async function completePortableBranchAuthEnrollmentTransactionInternal(
   input:
-    FinoraBranchCredentialEnrollmentApplyInput,
+    FinoraPortableBranchAuthEnrollmentTransitionInput,
 ): Promise<
   FinoraControlStoreResult<
-    FinoraBranchCredentialEnrollmentApplyResult
+    FinoraPortableBranchAuthEnrollmentMutationResult
+  >
+> {
+  if (
+    !isNonEmptyString(
+      input.transactionId,
+    ) ||
+    !isControlTimestamp(
+      input.transitionedAt,
+    )
+  ) {
+    return failure(
+      "A valid Portable Branch Auth completion transition is required.",
+    );
+  }
+
+  const currentResult =
+    await readFinoraControlStore();
+
+  if (
+    !currentResult.success ||
+    !currentResult.data
+  ) {
+    return failure(
+      currentResult.error ??
+        "Unable to load the FINORA Control Store.",
+    );
+  }
+
+  const controlStore =
+    currentResult.data;
+
+  const transactions = [
+    ...(
+      controlStore.portableBranchAuthEnrollmentTransactions ??
+      []
+    ),
+  ];
+
+  const transactionIndex =
+    transactions.findIndex(
+      (
+        item,
+      ) =>
+        item.transactionId ===
+          input.transactionId,
+    );
+
+  if (
+    transactionIndex <
+      0
+  ) {
+    return failure(
+      "Portable Branch Auth enrollment transaction was not found.",
+    );
+  }
+
+  const transaction =
+    transactions[
+      transactionIndex
+    ];
+
+  if (
+    transaction.status ===
+      "COMPLETE"
+  ) {
+    return success({
+      transaction,
+    });
+  }
+
+  if (
+    !canAdvanceFinoraPortableBranchAuthEnrollmentTransaction(
+      transaction.status,
+      "COMPLETE",
+    )
+  ) {
+    return failure(
+      "Portable Branch Auth enrollment transaction cannot advance to COMPLETE.",
+    );
+  }
+
+  const existingCredential =
+    controlStore.branchCredentials?.find(
+      (
+        item,
+      ) =>
+        item.credentialId ===
+          transaction.credential.credentialId &&
+        item.sourceAuthorizationId ===
+          transaction.sourceAuthorizationId,
+    );
+
+  if (
+    !existingCredential ||
+    !portableBranchAuthCredentialsEqual(
+      existingCredential,
+      transaction.credential,
+    )
+  ) {
+    return failure(
+      "Portable Branch Auth completion requires matching persisted credential evidence.",
+    );
+  }
+
+  if (
+    (
+      controlStore.branchCredentialEnrollmentAuthorizations ??
+      []
+    ).some(
+      (
+        item,
+      ) =>
+        item.authorizationId ===
+          transaction.sourceAuthorizationId,
+    )
+  ) {
+    return failure(
+      "Portable Branch Auth completion requires consumed enrollment authorization.",
+    );
+  }
+
+  const nextTransaction:
+    FinoraPortableBranchAuthEnrollmentTransactionV1 =
+    {
+      ...transaction,
+
+      status:
+        "COMPLETE",
+
+      updatedAt:
+        input.transitionedAt,
+
+      completedAt:
+        input.transitionedAt,
+    };
+
+  try {
+    validateFinoraPortableBranchAuthEnrollmentTransactionV1(
+      nextTransaction,
+    );
+  }
+  catch {
+    return failure(
+      "Portable Branch Auth COMPLETE transition is invalid.",
+    );
+  }
+
+  transactions[
+    transactionIndex
+  ] =
+    nextTransaction;
+
+  controlStore.portableBranchAuthEnrollmentTransactions =
+    transactions;
+
+  controlStore.updatedAt =
+    input.transitionedAt;
+
+  try {
+    await persistControlStorePackage(
+      controlStore,
+    );
+  }
+  catch (
+    error
+  ) {
+    return failure(
+      error instanceof Error
+        ? error.message
+        : "Unable to persist COMPLETE Portable Branch Auth enrollment state.",
+    );
+  }
+
+  return success({
+    transaction:
+      nextTransaction,
+  });
+}
+
+export function prepareFinoraPortableBranchAuthEnrollmentTransaction(
+  input:
+    FinoraPortableBranchAuthEnrollmentPrepareInput,
+): Promise<
+  FinoraControlStoreResult<
+    FinoraPortableBranchAuthEnrollmentMutationResult
   >
 > {
   const operation =
     controlPackageApplyQueue.then(
       () =>
-        applyBranchCredentialEnrollmentInternal(
+        preparePortableBranchAuthEnrollmentTransactionInternal(
           input,
         ),
       () =>
-        applyBranchCredentialEnrollmentInternal(
+        preparePortableBranchAuthEnrollmentTransactionInternal(
           input,
         ),
     );
@@ -4757,6 +7453,1031 @@ export function applyFinoraBranchCredentialEnrollmentState(
     operation.then(
       () => undefined,
       () => undefined,
+    );
+
+  return operation;
+}
+
+export function markFinoraPortableBranchAuthEnrollmentWritten(
+  input:
+    FinoraPortableBranchAuthEnrollmentTransitionInput,
+): Promise<
+  FinoraControlStoreResult<
+    FinoraPortableBranchAuthEnrollmentMutationResult
+  >
+> {
+  const operation =
+    controlPackageApplyQueue.then(
+      () =>
+        markPortableBranchAuthEnrollmentWrittenInternal(
+          input,
+        ),
+      () =>
+        markPortableBranchAuthEnrollmentWrittenInternal(
+          input,
+        ),
+    );
+
+  controlPackageApplyQueue =
+    operation.then(
+      () => undefined,
+      () => undefined,
+    );
+
+  return operation;
+}
+
+export function applyFinoraPortableBranchAuthEnrollmentControlState(
+  input:
+    FinoraPortableBranchAuthEnrollmentTransitionInput,
+): Promise<
+  FinoraControlStoreResult<
+    FinoraPortableBranchAuthEnrollmentControlApplyResult
+  >
+> {
+  const operation =
+    controlPackageApplyQueue.then(
+      () =>
+        applyPortableBranchAuthEnrollmentControlStateInternal(
+          input,
+        ),
+      () =>
+        applyPortableBranchAuthEnrollmentControlStateInternal(
+          input,
+        ),
+    );
+
+  controlPackageApplyQueue =
+    operation.then(
+      () => undefined,
+      () => undefined,
+    );
+
+  return operation;
+}
+
+export function completeFinoraPortableBranchAuthEnrollmentTransaction(
+  input:
+    FinoraPortableBranchAuthEnrollmentTransitionInput,
+): Promise<
+  FinoraControlStoreResult<
+    FinoraPortableBranchAuthEnrollmentMutationResult
+  >
+> {
+  const operation =
+    controlPackageApplyQueue.then(
+      () =>
+        completePortableBranchAuthEnrollmentTransactionInternal(
+          input,
+        ),
+      () =>
+        completePortableBranchAuthEnrollmentTransactionInternal(
+          input,
+        ),
+    );
+
+  controlPackageApplyQueue =
+    operation.then(
+      () => undefined,
+      () => undefined,
+    );
+
+  return operation;
+}
+
+// ============================================================
+// PORTABLE BRANCH AUTH CREDENTIAL ROTATION MUTATION AUTHORITY
+//
+// PREPARED
+//   -> PORTABLE_REPLACED
+//   -> CONTROL_APPLIED
+//   -> COMPLETE
+//
+// CONTROL_APPLIED is the atomic Control Store boundary:
+//
+// 1. exact expected credential is replaced
+// 2. durable rotation transaction advances to CONTROL_APPLIED
+//
+// Both mutations persist through one encrypted Control Store write.
+// No enrollment authorization is consumed by credential rotation.
+// ============================================================
+
+export interface FinoraPortableBranchAuthCredentialRotationPrepareInput {
+  transaction:
+    FinoraPortableBranchAuthCredentialRotationTransactionV1;
+}
+
+export interface FinoraPortableBranchAuthCredentialRotationTransitionInput {
+  transactionId:
+    string;
+
+  transitionedAt:
+    string;
+}
+
+export interface FinoraPortableBranchAuthCredentialRotationMutationResult {
+  transaction:
+    FinoraPortableBranchAuthCredentialRotationTransactionV1;
+}
+
+export interface FinoraPortableBranchAuthCredentialRotationControlApplyResult {
+  transaction:
+    FinoraPortableBranchAuthCredentialRotationTransactionV1;
+
+  credential:
+    FinoraControlBranchCredential;
+}
+
+function portableBranchAuthCredentialRotationTransactionsEqual(
+  left:
+    FinoraPortableBranchAuthCredentialRotationTransactionV1,
+  right:
+    FinoraPortableBranchAuthCredentialRotationTransactionV1,
+): boolean {
+  return JSON.stringify(
+    left,
+  ) ===
+    JSON.stringify(
+      right,
+    );
+}
+
+async function preparePortableBranchAuthCredentialRotationTransactionInternal(
+  input:
+    FinoraPortableBranchAuthCredentialRotationPrepareInput,
+): Promise<
+  FinoraControlStoreResult<
+    FinoraPortableBranchAuthCredentialRotationMutationResult
+  >
+> {
+  try {
+    validateFinoraPortableBranchAuthCredentialRotationTransactionV1(
+      input.transaction,
+    );
+  }
+  catch {
+    return failure(
+      "A valid PREPARED Portable Branch Auth credential rotation transaction is required.",
+    );
+  }
+
+  const transaction =
+    input.transaction;
+
+  if (
+    transaction.status !==
+      "PREPARED"
+  ) {
+    return failure(
+      "Portable Branch Auth credential rotation preparation requires PREPARED state.",
+    );
+  }
+
+  const currentResult =
+    await readFinoraControlStore();
+
+  if (
+    !currentResult.success ||
+    !currentResult.data
+  ) {
+    return failure(
+      currentResult.error ??
+        "Unable to load the FINORA Control Store.",
+    );
+  }
+
+  const controlStore =
+    currentResult.data;
+
+  const transactions = [
+    ...(
+      controlStore.portableBranchAuthCredentialRotationTransactions ??
+      []
+    ),
+  ];
+
+  const existingByTransactionId =
+    transactions.find(
+      (
+        item,
+      ) =>
+        item.transactionId ===
+          transaction.transactionId,
+    );
+
+  if (
+    existingByTransactionId
+  ) {
+    if (
+      portableBranchAuthCredentialRotationTransactionsEqual(
+        existingByTransactionId,
+        transaction,
+      )
+    ) {
+      return success({
+        transaction:
+          existingByTransactionId,
+      });
+    }
+
+    return failure(
+      "Portable Branch Auth credential rotation transactionId already exists with different state.",
+    );
+  }
+
+  const activeForCredential =
+    transactions.find(
+      (
+        item,
+      ) =>
+        item.credentialId ===
+          transaction.credentialId &&
+        item.status !==
+          "COMPLETE",
+    );
+
+  if (
+    activeForCredential
+  ) {
+    return failure(
+      "FINORA Branch Credential already has an unfinished credential rotation transaction.",
+    );
+  }
+
+  const branchCredentials = [
+    ...(
+      controlStore.branchCredentials ??
+      []
+    ),
+  ];
+
+  const credentialIndex =
+    branchCredentials.findIndex(
+      (
+        item,
+      ) =>
+        item.credentialId ===
+          transaction.credentialId &&
+        item.sourceAuthorizationId ===
+          transaction.sourceAuthorizationId,
+    );
+
+  if (
+    credentialIndex <
+      0
+  ) {
+    return failure(
+      "Portable Branch Auth credential rotation requires the authoritative current credential.",
+    );
+  }
+
+  const currentCredential =
+    branchCredentials[
+      credentialIndex
+    ];
+
+  if (
+    !portableBranchAuthCredentialsEqual(
+      currentCredential,
+      transaction.expectedCredential,
+    )
+  ) {
+    return failure(
+      "Portable Branch Auth credential rotation expected credential is stale or does not match authoritative state.",
+    );
+  }
+
+  const replacementCandidate = [
+    ...branchCredentials,
+  ];
+
+  replacementCandidate[
+    credentialIndex
+  ] =
+    transaction.replacementCredential;
+
+  if (
+    hasDuplicateBranchCredentialKeys(
+      replacementCandidate,
+    )
+  ) {
+    return failure(
+      "Portable Branch Auth replacement credential conflicts with existing credential identity.",
+    );
+  }
+
+  transactions.push(
+    transaction,
+  );
+
+  controlStore.portableBranchAuthCredentialRotationTransactions =
+    transactions;
+
+  controlStore.updatedAt =
+    transaction.updatedAt;
+
+  try {
+    await persistControlStorePackage(
+      controlStore,
+    );
+  }
+  catch (
+    error
+  ) {
+    return failure(
+      error instanceof Error
+        ? error.message
+        : "Unable to persist PREPARED Portable Branch Auth credential rotation transaction.",
+    );
+  }
+
+  return success({
+    transaction,
+  });
+}
+
+async function markPortableBranchAuthCredentialRotationPortableReplacedInternal(
+  input:
+    FinoraPortableBranchAuthCredentialRotationTransitionInput,
+): Promise<
+  FinoraControlStoreResult<
+    FinoraPortableBranchAuthCredentialRotationMutationResult
+  >
+> {
+  if (
+    !isNonEmptyString(
+      input.transactionId,
+    ) ||
+    !isControlTimestamp(
+      input.transitionedAt,
+    )
+  ) {
+    return failure(
+      "A valid Portable Branch Auth PORTABLE_REPLACED transition is required.",
+    );
+  }
+
+  const currentResult =
+    await readFinoraControlStore();
+
+  if (
+    !currentResult.success ||
+    !currentResult.data
+  ) {
+    return failure(
+      currentResult.error ??
+        "Unable to load the FINORA Control Store.",
+    );
+  }
+
+  const controlStore =
+    currentResult.data;
+
+  const transactions = [
+    ...(
+      controlStore.portableBranchAuthCredentialRotationTransactions ??
+      []
+    ),
+  ];
+
+  const transactionIndex =
+    transactions.findIndex(
+      (
+        item,
+      ) =>
+        item.transactionId ===
+          input.transactionId,
+    );
+
+  if (
+    transactionIndex <
+      0
+  ) {
+    return failure(
+      "Portable Branch Auth credential rotation transaction was not found.",
+    );
+  }
+
+  const transaction =
+    transactions[
+      transactionIndex
+    ];
+
+  if (
+    transaction.status ===
+      "PORTABLE_REPLACED" ||
+    transaction.status ===
+      "CONTROL_APPLIED" ||
+    transaction.status ===
+      "COMPLETE"
+  ) {
+    return success({
+      transaction,
+    });
+  }
+
+  if (
+    !canAdvanceFinoraPortableBranchAuthCredentialRotationTransaction(
+      transaction.status,
+      "PORTABLE_REPLACED",
+    )
+  ) {
+    return failure(
+      "Portable Branch Auth credential rotation cannot advance to PORTABLE_REPLACED.",
+    );
+  }
+
+  const nextTransaction:
+    FinoraPortableBranchAuthCredentialRotationTransactionV1 =
+    {
+      ...transaction,
+
+      status:
+        "PORTABLE_REPLACED",
+
+      updatedAt:
+        input.transitionedAt,
+
+      portableReplacedAt:
+        input.transitionedAt,
+    };
+
+  try {
+    validateFinoraPortableBranchAuthCredentialRotationTransactionV1(
+      nextTransaction,
+    );
+  }
+  catch {
+    return failure(
+      "Portable Branch Auth credential rotation PORTABLE_REPLACED transition is invalid.",
+    );
+  }
+
+  transactions[
+    transactionIndex
+  ] =
+    nextTransaction;
+
+  controlStore.portableBranchAuthCredentialRotationTransactions =
+    transactions;
+
+  controlStore.updatedAt =
+    input.transitionedAt;
+
+  try {
+    await persistControlStorePackage(
+      controlStore,
+    );
+  }
+  catch (
+    error
+  ) {
+    return failure(
+      error instanceof Error
+        ? error.message
+        : "Unable to persist PORTABLE_REPLACED credential rotation state.",
+    );
+  }
+
+  return success({
+    transaction:
+      nextTransaction,
+  });
+}
+
+async function applyPortableBranchAuthCredentialRotationControlStateInternal(
+  input:
+    FinoraPortableBranchAuthCredentialRotationTransitionInput,
+): Promise<
+  FinoraControlStoreResult<
+    FinoraPortableBranchAuthCredentialRotationControlApplyResult
+  >
+> {
+  if (
+    !isNonEmptyString(
+      input.transactionId,
+    ) ||
+    !isControlTimestamp(
+      input.transitionedAt,
+    )
+  ) {
+    return failure(
+      "A valid Portable Branch Auth credential rotation Control apply transition is required.",
+    );
+  }
+
+  const currentResult =
+    await readFinoraControlStore();
+
+  if (
+    !currentResult.success ||
+    !currentResult.data
+  ) {
+    return failure(
+      currentResult.error ??
+        "Unable to load the FINORA Control Store.",
+    );
+  }
+
+  const controlStore =
+    currentResult.data;
+
+  const transactions = [
+    ...(
+      controlStore.portableBranchAuthCredentialRotationTransactions ??
+      []
+    ),
+  ];
+
+  const transactionIndex =
+    transactions.findIndex(
+      (
+        item,
+      ) =>
+        item.transactionId ===
+          input.transactionId,
+    );
+
+  if (
+    transactionIndex <
+      0
+  ) {
+    return failure(
+      "Portable Branch Auth credential rotation transaction was not found.",
+    );
+  }
+
+  const transaction =
+    transactions[
+      transactionIndex
+    ];
+
+  const branchCredentials = [
+    ...(
+      controlStore.branchCredentials ??
+      []
+    ),
+  ];
+
+  const credentialIndex =
+    branchCredentials.findIndex(
+      (
+        item,
+      ) =>
+        item.credentialId ===
+          transaction.credentialId &&
+        item.sourceAuthorizationId ===
+          transaction.sourceAuthorizationId,
+    );
+
+  if (
+    credentialIndex <
+      0
+  ) {
+    return failure(
+      "Portable Branch Auth credential rotation is missing authoritative credential evidence.",
+    );
+  }
+
+  const currentCredential =
+    branchCredentials[
+      credentialIndex
+    ];
+
+  if (
+    transaction.status ===
+      "CONTROL_APPLIED" ||
+    transaction.status ===
+      "COMPLETE"
+  ) {
+    if (
+      !portableBranchAuthCredentialsEqual(
+        currentCredential,
+        transaction.replacementCredential,
+      )
+    ) {
+      return failure(
+        "Portable Branch Auth credential rotation Control-applied state is missing exact replacement credential evidence.",
+      );
+    }
+
+    return success({
+      transaction,
+
+      credential:
+        currentCredential,
+    });
+  }
+
+  if (
+    !canAdvanceFinoraPortableBranchAuthCredentialRotationTransaction(
+      transaction.status,
+      "CONTROL_APPLIED",
+    )
+  ) {
+    return failure(
+      "Portable Branch Auth credential rotation cannot advance to CONTROL_APPLIED.",
+    );
+  }
+
+  if (
+    !portableBranchAuthCredentialsEqual(
+      currentCredential,
+      transaction.expectedCredential,
+    )
+  ) {
+    return failure(
+      "Portable Branch Auth credential rotation expected credential changed before Control application.",
+    );
+  }
+
+  const replacementCandidate = [
+    ...branchCredentials,
+  ];
+
+  replacementCandidate[
+    credentialIndex
+  ] =
+    transaction.replacementCredential;
+
+  if (
+    hasDuplicateBranchCredentialKeys(
+      replacementCandidate,
+    )
+  ) {
+    return failure(
+      "Portable Branch Auth replacement credential conflicts with authoritative credential state.",
+    );
+  }
+
+  const nextTransaction:
+    FinoraPortableBranchAuthCredentialRotationTransactionV1 =
+    {
+      ...transaction,
+
+      status:
+        "CONTROL_APPLIED",
+
+      updatedAt:
+        input.transitionedAt,
+
+      controlAppliedAt:
+        input.transitionedAt,
+    };
+
+  try {
+    validateFinoraPortableBranchAuthCredentialRotationTransactionV1(
+      nextTransaction,
+    );
+  }
+  catch {
+    return failure(
+      "Portable Branch Auth credential rotation CONTROL_APPLIED transition is invalid.",
+    );
+  }
+
+  replacementCandidate[
+    credentialIndex
+  ] =
+    transaction.replacementCredential;
+
+  transactions[
+    transactionIndex
+  ] =
+    nextTransaction;
+
+  // ----------------------------------------------------------
+  // ONE LOGICAL ENCRYPTED CONTROL STORE COMMIT
+  //
+  // These two authoritative mutations MUST persist together:
+  //
+  // 1. exact expected credential becomes replacement credential
+  // 2. durable rotation transaction becomes CONTROL_APPLIED
+  //
+  // There is deliberately no enrollment-authorization mutation.
+  // sourceAuthorizationId remains immutable lineage provenance.
+  // ----------------------------------------------------------
+
+  controlStore.branchCredentials =
+    replacementCandidate;
+
+  controlStore.portableBranchAuthCredentialRotationTransactions =
+    transactions;
+
+  controlStore.updatedAt =
+    input.transitionedAt;
+
+  try {
+    await persistControlStorePackage(
+      controlStore,
+    );
+  }
+  catch (
+    error
+  ) {
+    return failure(
+      error instanceof Error
+        ? error.message
+        : "Unable to atomically persist Portable Branch Auth credential rotation Control state.",
+    );
+  }
+
+  return success({
+    transaction:
+      nextTransaction,
+
+    credential:
+      transaction.replacementCredential,
+  });
+}
+
+async function completePortableBranchAuthCredentialRotationTransactionInternal(
+  input:
+    FinoraPortableBranchAuthCredentialRotationTransitionInput,
+): Promise<
+  FinoraControlStoreResult<
+    FinoraPortableBranchAuthCredentialRotationMutationResult
+  >
+> {
+  if (
+    !isNonEmptyString(
+      input.transactionId,
+    ) ||
+    !isControlTimestamp(
+      input.transitionedAt,
+    )
+  ) {
+    return failure(
+      "A valid Portable Branch Auth credential rotation completion transition is required.",
+    );
+  }
+
+  const currentResult =
+    await readFinoraControlStore();
+
+  if (
+    !currentResult.success ||
+    !currentResult.data
+  ) {
+    return failure(
+      currentResult.error ??
+        "Unable to load the FINORA Control Store.",
+    );
+  }
+
+  const controlStore =
+    currentResult.data;
+
+  const transactions = [
+    ...(
+      controlStore.portableBranchAuthCredentialRotationTransactions ??
+      []
+    ),
+  ];
+
+  const transactionIndex =
+    transactions.findIndex(
+      (
+        item,
+      ) =>
+        item.transactionId ===
+          input.transactionId,
+    );
+
+  if (
+    transactionIndex <
+      0
+  ) {
+    return failure(
+      "Portable Branch Auth credential rotation transaction was not found.",
+    );
+  }
+
+  const transaction =
+    transactions[
+      transactionIndex
+    ];
+
+  const currentCredential =
+    controlStore.branchCredentials?.find(
+      (
+        item,
+      ) =>
+        item.credentialId ===
+          transaction.credentialId &&
+        item.sourceAuthorizationId ===
+          transaction.sourceAuthorizationId,
+    );
+
+  if (
+    !currentCredential ||
+    !portableBranchAuthCredentialsEqual(
+      currentCredential,
+      transaction.replacementCredential,
+    )
+  ) {
+    return failure(
+      "Portable Branch Auth credential rotation completion requires exact replacement credential evidence.",
+    );
+  }
+
+  if (
+    transaction.status ===
+      "COMPLETE"
+  ) {
+    return success({
+      transaction,
+    });
+  }
+
+  if (
+    !canAdvanceFinoraPortableBranchAuthCredentialRotationTransaction(
+      transaction.status,
+      "COMPLETE",
+    )
+  ) {
+    return failure(
+      "Portable Branch Auth credential rotation cannot advance to COMPLETE.",
+    );
+  }
+
+  const nextTransaction:
+    FinoraPortableBranchAuthCredentialRotationTransactionV1 =
+    {
+      ...transaction,
+
+      status:
+        "COMPLETE",
+
+      updatedAt:
+        input.transitionedAt,
+
+      completedAt:
+        input.transitionedAt,
+    };
+
+  try {
+    validateFinoraPortableBranchAuthCredentialRotationTransactionV1(
+      nextTransaction,
+    );
+  }
+  catch {
+    return failure(
+      "Portable Branch Auth credential rotation COMPLETE transition is invalid.",
+    );
+  }
+
+  transactions[
+    transactionIndex
+  ] =
+    nextTransaction;
+
+  controlStore.portableBranchAuthCredentialRotationTransactions =
+    transactions;
+
+  controlStore.updatedAt =
+    input.transitionedAt;
+
+  try {
+    await persistControlStorePackage(
+      controlStore,
+    );
+  }
+  catch (
+    error
+  ) {
+    return failure(
+      error instanceof Error
+        ? error.message
+        : "Unable to persist COMPLETE Portable Branch Auth credential rotation state.",
+    );
+  }
+
+  return success({
+    transaction:
+      nextTransaction,
+  });
+}
+
+export function prepareFinoraPortableBranchAuthCredentialRotationTransaction(
+  input:
+    FinoraPortableBranchAuthCredentialRotationPrepareInput,
+): Promise<
+  FinoraControlStoreResult<
+    FinoraPortableBranchAuthCredentialRotationMutationResult
+  >
+> {
+  const operation =
+    controlPackageApplyQueue.then(
+      () =>
+        preparePortableBranchAuthCredentialRotationTransactionInternal(
+          input,
+        ),
+      () =>
+        preparePortableBranchAuthCredentialRotationTransactionInternal(
+          input,
+        ),
+    );
+
+  controlPackageApplyQueue =
+    operation.then(
+      () =>
+        undefined,
+      () =>
+        undefined,
+    );
+
+  return operation;
+}
+
+export function markFinoraPortableBranchAuthCredentialRotationPortableReplaced(
+  input:
+    FinoraPortableBranchAuthCredentialRotationTransitionInput,
+): Promise<
+  FinoraControlStoreResult<
+    FinoraPortableBranchAuthCredentialRotationMutationResult
+  >
+> {
+  const operation =
+    controlPackageApplyQueue.then(
+      () =>
+        markPortableBranchAuthCredentialRotationPortableReplacedInternal(
+          input,
+        ),
+      () =>
+        markPortableBranchAuthCredentialRotationPortableReplacedInternal(
+          input,
+        ),
+    );
+
+  controlPackageApplyQueue =
+    operation.then(
+      () =>
+        undefined,
+      () =>
+        undefined,
+    );
+
+  return operation;
+}
+
+export function applyFinoraPortableBranchAuthCredentialRotationControlState(
+  input:
+    FinoraPortableBranchAuthCredentialRotationTransitionInput,
+): Promise<
+  FinoraControlStoreResult<
+    FinoraPortableBranchAuthCredentialRotationControlApplyResult
+  >
+> {
+  const operation =
+    controlPackageApplyQueue.then(
+      () =>
+        applyPortableBranchAuthCredentialRotationControlStateInternal(
+          input,
+        ),
+      () =>
+        applyPortableBranchAuthCredentialRotationControlStateInternal(
+          input,
+        ),
+    );
+
+  controlPackageApplyQueue =
+    operation.then(
+      () =>
+        undefined,
+      () =>
+        undefined,
+    );
+
+  return operation;
+}
+
+export function completeFinoraPortableBranchAuthCredentialRotationTransaction(
+  input:
+    FinoraPortableBranchAuthCredentialRotationTransitionInput,
+): Promise<
+  FinoraControlStoreResult<
+    FinoraPortableBranchAuthCredentialRotationMutationResult
+  >
+> {
+  const operation =
+    controlPackageApplyQueue.then(
+      () =>
+        completePortableBranchAuthCredentialRotationTransactionInternal(
+          input,
+        ),
+      () =>
+        completePortableBranchAuthCredentialRotationTransactionInternal(
+          input,
+        ),
+    );
+
+  controlPackageApplyQueue =
+    operation.then(
+      () =>
+        undefined,
+      () =>
+        undefined,
     );
 
   return operation;
@@ -6742,6 +10463,10 @@ async function applyVerifiedWalletRechargeAuthorizationInternal(
     controlStore.walletRechargeAuthorizations ??
     [];
 
+  const declines =
+    controlStore.walletRechargeDeclines ??
+    [];
+
   const appliedPackages =
     controlStore.appliedControlPackages ??
     [];
@@ -6767,7 +10492,23 @@ async function applyVerifiedWalletRechargeAuthorizationInternal(
   }
 
   // ----------------------------------------------------------
-  // PAYMENT REFERENCE DUPLICATE AUTHORIZATION
+  // ----------------------------------------------------------
+  // PAYMENT REFERENCE DECLINE CONFLICT
+  // ----------------------------------------------------------
+
+  if (
+    declines.some(
+      (item) =>
+        item.paymentReference ===
+          authorization.paymentReference,
+    )
+  ) {
+    return failure(
+      "FINORA Wallet Recharge payment reference has already been declined.",
+    );
+  }
+
+  // ----------------------------------------------------------  // PAYMENT REFERENCE DUPLICATE AUTHORIZATION
   //
   // A fresh package must never authorize the same payment
   // reference a second time.
@@ -7101,6 +10842,573 @@ export async function findFinoraWalletRechargeAuthorization(
 }
 
 // ============================================================
+// ============================================================
+// VERIFIED WALLET RECHARGE DECLINE APPLY CONTRACT
+// ============================================================
+
+export interface FinoraVerifiedWalletRechargeDeclineApplyInput {
+
+  packageId:
+    string;
+
+  issuerId:
+    string;
+
+  signingKeyId:
+    string;
+
+  purpose:
+    "WALLET_RECHARGE_DECLINE";
+
+  sequence:
+    number;
+
+  target: {
+
+    ownerId:
+      string;
+
+    businessId:
+      string;
+
+    branchId:
+      string;
+
+    installationId:
+      string;
+
+    bindingKeyId:
+      string;
+
+    fingerprintAlgorithm:
+      "SHA-256";
+
+    publicKeyFingerprint:
+      string;
+  };
+
+  decline:
+    FinoraControlWalletRechargeDeclineEvidence;
+
+  appliedAt:
+    string;
+}
+
+export interface FinoraVerifiedWalletRechargeDeclineApplyResult {
+
+  decline:
+    FinoraControlWalletRechargeDeclineEvidence;
+}
+
+async function applyVerifiedWalletRechargeDeclineInternal(
+  input:
+    FinoraVerifiedWalletRechargeDeclineApplyInput,
+): Promise<
+  FinoraControlStoreResult<
+    FinoraVerifiedWalletRechargeDeclineApplyResult
+  >
+> {
+
+  if (
+    !isNonEmptyString(
+      input.packageId,
+    ) ||
+    !isNonEmptyString(
+      input.issuerId,
+    ) ||
+    !isNonEmptyString(
+      input.signingKeyId,
+    ) ||
+    input.purpose !==
+      "WALLET_RECHARGE_DECLINE" ||
+    !Number.isSafeInteger(
+      input.sequence,
+    ) ||
+    input.sequence <=
+      0 ||
+    !isControlTimestamp(
+      input.appliedAt,
+    ) ||
+    !isRecord(
+      input.target,
+    ) ||
+    !isNonEmptyString(
+      input.target.ownerId,
+    ) ||
+    !isNonEmptyString(
+      input.target.businessId,
+    ) ||
+    !isNonEmptyString(
+      input.target.branchId,
+    ) ||
+    !isNonEmptyString(
+      input.target.installationId,
+    ) ||
+    !isNonEmptyString(
+      input.target.bindingKeyId,
+    ) ||
+    input.target.fingerprintAlgorithm !==
+      "SHA-256" ||
+    typeof input.target.publicKeyFingerprint !==
+      "string" ||
+    !/^[0-9a-f]{64}$/.test(
+      input.target.publicKeyFingerprint,
+    ) ||
+    !isWalletRechargeDeclineEvidence(
+      input.decline,
+    )
+  ) {
+    return failure(
+      "A valid verified FINORA Wallet Recharge Decline package is required.",
+    );
+  }
+
+  const expectedTargetBindingKeyId =
+    `FINORA-BINDING-${input.target.publicKeyFingerprint
+      .slice(
+        0,
+        32,
+      )
+      .toUpperCase()}`;
+
+  if (
+    input.target.bindingKeyId !==
+      expectedTargetBindingKeyId
+  ) {
+    return failure(
+      "FINORA Wallet Recharge Decline target binding identity is invalid.",
+    );
+  }
+
+  const decline =
+    input.decline;
+
+  if (
+    decline.packageId !==
+      input.packageId ||
+    decline.issuerId !==
+      input.issuerId ||
+    decline.signingKeyId !==
+      input.signingKeyId ||
+    decline.purpose !==
+      input.purpose ||
+    decline.sequence !==
+      input.sequence ||
+    decline.ownerId !==
+      input.target.ownerId ||
+    decline.businessId !==
+      input.target.businessId ||
+    decline.branchId !==
+      input.target.branchId ||
+    decline.installationId !==
+      input.target.installationId ||
+    decline.bindingKeyId !==
+      input.target.bindingKeyId ||
+    decline.fingerprintAlgorithm !==
+      input.target.fingerprintAlgorithm ||
+    decline.publicKeyFingerprint !==
+      input.target.publicKeyFingerprint ||
+    decline.verifiedAt !==
+      input.appliedAt
+  ) {
+    return failure(
+      "FINORA Wallet Recharge Decline evidence does not match the verified signed package target.",
+    );
+  }
+
+  const currentResult =
+    await readFinoraControlStore();
+
+  if (
+    !currentResult.success ||
+    !currentResult.data
+  ) {
+    return failure(
+      currentResult.error ??
+        "Unable to load the FINORA Control Store.",
+    );
+  }
+
+  const controlStore =
+    currentResult.data;
+
+  const installation =
+    controlStore.installation;
+
+  if (!installation) {
+    return failure(
+      "FINORA installation identity is required before applying a Wallet Recharge Decline.",
+    );
+  }
+
+  if (
+    installation.ownerId !==
+      input.target.ownerId ||
+    installation.businessId !==
+      input.target.businessId ||
+    installation.branchId !==
+      input.target.branchId ||
+    installation.installationId !==
+      input.target.installationId
+  ) {
+    return failure(
+      "FINORA Wallet Recharge Decline target does not match the installed branch identity.",
+    );
+  }
+
+  const authorizations =
+    controlStore.walletRechargeAuthorizations ??
+    [];
+
+  const declines =
+    controlStore.walletRechargeDeclines ??
+    [];
+
+  const appliedPackages =
+    controlStore.appliedControlPackages ??
+    [];
+
+  const sequenceStates =
+    controlStore.controlSequences ??
+    [];
+
+  const replayDecision =
+    evaluateFinoraControlReplay(
+      {
+        packageId:
+          input.packageId,
+
+        issuerId:
+          input.issuerId,
+
+        purpose:
+          input.purpose,
+
+        sequence:
+          input.sequence,
+
+        ownerId:
+          input.target.ownerId,
+
+        businessId:
+          input.target.businessId,
+
+        branchId:
+          input.target.branchId,
+
+        installationId:
+          input.target.installationId,
+      },
+      appliedPackages,
+      sequenceStates,
+    );
+
+  if (!replayDecision.accepted) {
+    return failure(
+      replayDecision.error,
+    );
+  }
+
+  if (
+    authorizations.some(
+      (item) =>
+        item.paymentReference ===
+          decline.paymentReference,
+    )
+  ) {
+    return failure(
+      "FINORA Wallet Recharge payment reference has already been authorized and cannot be declined.",
+    );
+  }
+
+  if (
+    declines.some(
+      (item) =>
+        item.paymentReference ===
+          decline.paymentReference ||
+        item.requestId ===
+          decline.requestId
+    )
+  ) {
+    return failure(
+      "FINORA Wallet Recharge request has already been declined.",
+    );
+  }
+
+  declines.push(
+    decline,
+  );
+
+  appliedPackages.push({
+    packageId:
+      input.packageId,
+
+    issuerId:
+      input.issuerId,
+
+    purpose:
+      input.purpose,
+
+    sequence:
+      input.sequence,
+
+    ownerId:
+      input.target.ownerId,
+
+    businessId:
+      input.target.businessId,
+
+    branchId:
+      input.target.branchId,
+
+    installationId:
+      input.target.installationId,
+
+    appliedAt:
+      input.appliedAt,
+  });
+
+  const sequenceIndex =
+    sequenceStates.findIndex(
+      (item) =>
+        item.issuerId ===
+          input.issuerId &&
+        item.purpose ===
+          input.purpose &&
+        item.ownerId ===
+          input.target.ownerId &&
+        item.businessId ===
+          input.target.businessId &&
+        item.branchId ===
+          input.target.branchId &&
+        item.installationId ===
+          input.target.installationId,
+    );
+
+  const nextSequenceState:
+    FinoraControlSequenceStateRecord = {
+
+      issuerId:
+        input.issuerId,
+
+      purpose:
+        input.purpose,
+
+      ownerId:
+        input.target.ownerId,
+
+      businessId:
+        input.target.businessId,
+
+      branchId:
+        input.target.branchId,
+
+      installationId:
+        input.target.installationId,
+
+      lastSequence:
+        input.sequence,
+
+      updatedAt:
+        input.appliedAt,
+    };
+
+  if (
+    sequenceIndex >=
+      0
+  ) {
+    sequenceStates[
+      sequenceIndex
+    ] =
+      nextSequenceState;
+  } else {
+    sequenceStates.push(
+      nextSequenceState,
+    );
+  }
+
+  controlStore.walletRechargeDeclines =
+    declines;
+
+  controlStore.appliedControlPackages =
+    appliedPackages;
+
+  controlStore.controlSequences =
+    sequenceStates;
+
+  controlStore.updatedAt =
+    input.appliedAt;
+
+  try {
+
+    await persistControlStorePackage(
+      controlStore,
+    );
+
+  } catch (error) {
+
+    return failure(
+      error instanceof Error
+        ? error.message
+        : "Unable to atomically persist verified FINORA Wallet Recharge Decline state.",
+    );
+  }
+
+  return success({
+    decline,
+  });
+}
+
+// ============================================================
+// SERIALIZED VERIFIED WALLET RECHARGE DECLINE APPLY
+// ============================================================
+
+export function applyFinoraVerifiedWalletRechargeDeclineState(
+  input:
+    FinoraVerifiedWalletRechargeDeclineApplyInput,
+): Promise<
+  FinoraControlStoreResult<
+    FinoraVerifiedWalletRechargeDeclineApplyResult
+  >
+> {
+
+  const operation =
+    controlPackageApplyQueue.then(
+      () =>
+        applyVerifiedWalletRechargeDeclineInternal(
+          input,
+        ),
+      () =>
+        applyVerifiedWalletRechargeDeclineInternal(
+          input,
+        ),
+    );
+
+  controlPackageApplyQueue =
+    operation.then(
+      () =>
+        undefined,
+      () =>
+        undefined,
+    );
+
+  return operation;
+}
+
+// ============================================================
+// FIND VERIFIED WALLET RECHARGE DECLINE
+// ============================================================
+
+export async function findFinoraWalletRechargeDecline(
+  ownerId:
+    string,
+
+  businessId:
+    string,
+
+  branchId:
+    string,
+
+  paymentReference:
+    string,
+): Promise<
+  FinoraControlStoreResult<
+    FinoraControlWalletRechargeDeclineEvidence | undefined
+  >
+> {
+
+  if (
+    !isNonEmptyString(
+      ownerId,
+    ) ||
+    !isNonEmptyString(
+      businessId,
+    ) ||
+    !isNonEmptyString(
+      branchId,
+    ) ||
+    !isNonEmptyString(
+      paymentReference,
+    )
+  ) {
+    return failure(
+      "Owner ID, Business ID, Branch ID and payment reference are required to read a FINORA Wallet Recharge Decline.",
+    );
+  }
+
+  const currentResult =
+    await readFinoraControlStore();
+
+  if (
+    !currentResult.success ||
+    !currentResult.data
+  ) {
+    return failure(
+      currentResult.error ??
+        "Unable to load the FINORA Control Store.",
+    );
+  }
+
+  const installation =
+    currentResult.data.installation;
+
+  if (!installation) {
+    return failure(
+      "FINORA installation identity is required to read a Wallet Recharge Decline.",
+    );
+  }
+
+  if (
+    installation.ownerId !==
+      ownerId ||
+    installation.businessId !==
+      businessId ||
+    installation.branchId !==
+      branchId
+  ) {
+    return failure(
+      "FINORA Wallet Recharge Decline request does not match the installation identity.",
+    );
+  }
+
+  const declines =
+    currentResult.data.walletRechargeDeclines ??
+    [];
+
+  const decline =
+    declines.find(
+      (item) =>
+        item.ownerId ===
+          ownerId &&
+        item.businessId ===
+          businessId &&
+        item.branchId ===
+          branchId &&
+        item.installationId ===
+          installation.installationId &&
+        item.paymentReference ===
+          paymentReference,
+    );
+
+  if (!decline) {
+    return success(
+      undefined,
+    );
+  }
+
+  if (
+    decline.installationId !==
+      installation.installationId
+  ) {
+    return failure(
+      "FINORA Wallet Recharge Decline installation identity is inconsistent.",
+    );
+  }
+
+  return success(
+    decline,
+  );
+}
 // FIND CURRENT BRANCH ACCESS GRANT
 // ============================================================
 

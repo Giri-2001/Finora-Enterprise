@@ -488,6 +488,125 @@ export function buildFinoraBranchAccessIssuanceRequest(
       draft.target,
     );
 
+  if (
+    draft.action ===
+      "AUTHORIZE_CREDENTIAL"
+  ) {
+    if (
+      !draft.credentialEnrollmentEnabled
+    ) {
+      throw new Error(
+        "AUTHORIZE_CREDENTIAL requires one-time recipient credential authorization.",
+      );
+    }
+
+    if (
+      draft.credentialRole !==
+        "ADMIN" &&
+      draft.credentialRole !==
+        "MANAGER" &&
+      draft.credentialRole !==
+        "COLLECTOR" &&
+      draft.credentialRole !==
+        "VIEWER"
+    ) {
+      throw new Error(
+        "A valid Branch Access credential role is required.",
+      );
+    }
+
+    const credentialBase = {
+      authorizationId:
+        requiredString(
+          draft.credentialAuthorizationId,
+          "Credential Authorization ID",
+        ),
+
+      userId:
+        requiredString(
+          draft.userId,
+          "User ID",
+        ),
+
+      username:
+        requiredString(
+          draft.credentialUsername,
+          "Credential Username",
+        ),
+
+      fullName:
+        requiredString(
+          draft.credentialFullName,
+          "Credential Full Name",
+        ),
+
+      role:
+        draft.credentialRole,
+
+      ownerId:
+        target.ownerId,
+
+      businessId:
+        target.businessId,
+
+      branchId:
+        target.branchId,
+
+      storageMode:
+        draft.storageMode,
+
+      method:
+        "SET_PASSWORD_ON_RECIPIENT" as const,
+
+      oneTime:
+        true as const,
+
+      schemaVersion:
+        1 as const,
+    };
+
+    const credentialEnrollment =
+      draft.accessType ===
+        "DEMO"
+        ? {
+            ...credentialBase,
+
+            dataContext:
+              "DEMO" as const,
+
+            demoId:
+              requiredString(
+                draft.demoId,
+                "Demo ID",
+              ),
+          }
+        : {
+            ...credentialBase,
+
+            dataContext:
+              "REAL" as const,
+          };
+
+    return {
+      target,
+
+      payload: {
+        action:
+          "AUTHORIZE_CREDENTIAL",
+
+        credentialEnrollment,
+
+        /*
+         * Root payload.issuedAt is deliberately absent.
+         * The privileged main-process issuance coordinator
+         * injects the authoritative timestamp before signing.
+         */
+        schemaVersion:
+          1,
+      },
+    };
+  }
+
   const validFrom =
     canonicalTimestamp(
       draft.validFrom,
@@ -738,7 +857,7 @@ export function buildFinoraBranchAccessIssuanceRequest(
         "ISSUE"
     ) {
       throw new Error(
-        "Credential enrollment authorization is permitted only with ISSUE.",
+        "Credential enrollment authorization is permitted only with ISSUE or AUTHORIZE_CREDENTIAL.",
       );
     }
 

@@ -41,8 +41,12 @@ import type {
 } from "./finoraControlIpc.js";
 
 import {
-  enrollFinoraBranchCredential,
+  enrollFinoraBranchCredentialWithPortableStore,
 } from "./finoraBranchCredentialEnrollmentService.js";
+
+import type {
+  FinoraPortableBranchAuthStore,
+} from "./finoraPortableBranchAuthStore.js";
 
 // ============================================================
 // CHANNELS
@@ -124,6 +128,9 @@ let credentialHandlersRegistered =
 export function registerFinoraBranchCredentialHandlers(
   isTrustedRenderer:
     FinoraControlRendererValidator,
+
+  portableStore:
+    FinoraPortableBranchAuthStore,
 ): void {
   if (
     credentialHandlersRegistered
@@ -155,8 +162,9 @@ export function registerFinoraBranchCredentialHandlers(
       }
 
       try {
-        return await enrollFinoraBranchCredential(
+        return await enrollFinoraBranchCredentialWithPortableStore(
           request,
+          portableStore,
         );
       }
       catch {

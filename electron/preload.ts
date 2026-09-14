@@ -540,6 +540,102 @@ interface FindWalletRechargeAuthorizationRequest {
   paymentReference:
     string;
 }
+type FindWalletRechargeDeclineRequest =
+  FindWalletRechargeAuthorizationRequest;
+
+interface FinoraWalletRechargeDeclineView {
+  packageId:
+    string;
+
+  issuerId:
+    string;
+
+  signingKeyId:
+    string;
+
+  purpose:
+    "WALLET_RECHARGE_DECLINE";
+
+  sequence:
+    number;
+
+  ownerId:
+    string;
+
+  businessId:
+    string;
+
+  branchId:
+    string;
+
+  installationId:
+    string;
+
+  bindingKeyId:
+    string;
+
+  fingerprintAlgorithm:
+    "SHA-256";
+
+  publicKeyFingerprint:
+    string;
+
+  requestId:
+    string;
+
+  paymentReference:
+    string;
+
+  amountMinor:
+    number;
+
+  currency:
+    "INR";
+
+  paymentMethod:
+    | "UPI"
+    | "PHONEPE"
+    | "GOOGLE_PAY"
+    | "PAYTM"
+    | "RAZORPAY"
+    | "BANK_TRANSFER"
+    | "OTHER";
+
+  paymentSource:
+    | "PHONEPE"
+    | "RAZORPAY"
+    | "UPI"
+    | "GOOGLE_PAY"
+    | "PAYTM"
+    | "BANK_TRANSFER"
+    | "MANUAL";
+
+  requestedAt:
+    string;
+
+  outcome:
+    "DECLINED";
+
+  issuedAt:
+    string;
+
+  verifiedAt:
+    string;
+
+  schemaVersion:
+    1;
+}
+
+interface FindWalletRechargeDeclineResult {
+  success:
+    boolean;
+
+  data?:
+    FinoraWalletRechargeDeclineView;
+
+  error?:
+    string;
+}
 
 interface ExportWalletRechargeRequest {
 
@@ -806,6 +902,14 @@ interface FinoraControlBridge {
         >
       >;
 
+  findWalletRechargeDecline:
+    (
+      request:
+        FindWalletRechargeDeclineRequest,
+    ) =>
+      Promise<
+        FindWalletRechargeDeclineResult
+      >;
   exportWalletRechargeRequest:
     (
       request:
@@ -1161,6 +1265,9 @@ const CONTROL_CHANNELS = {
   FIND_WALLET_RECHARGE_AUTHORIZATION:
     "finora:control:find-wallet-recharge-authorization",
 
+  FIND_WALLET_RECHARGE_DECLINE:
+    "finora:control:find-wallet-recharge-decline",
+
   EXPORT_WALLET_RECHARGE_REQUEST:
     "finora:control:export-wallet-recharge-request",
   HAS_ACTIVE_STORAGE_ENTITLEMENT:
@@ -1192,7 +1299,7 @@ const BRANCH_CREDENTIAL_CHANNELS = {
 // ============================================================
 // BRANCH CREDENTIAL PRELOAD CONTRACT
 //
-// Password is transient request material only.
+// Password and Security Code are transient request material only.
 // No verifier, salt or derived-key contract is exposed.
 // ============================================================
 
@@ -1202,6 +1309,9 @@ interface FinoraCredentialEnrollmentRequest {
     string;
 
   password:
+    string;
+
+  securityCode:
     string;
 }
 
@@ -1315,6 +1425,9 @@ interface FinoraLoginSessionLoginRequest {
   storageMode:
     | "LOCAL"
     | "USB";
+
+  securityCode?:
+    string;
 }
 
 interface FinoraLoginSessionRequest {
@@ -1840,6 +1953,17 @@ const controlBridge:
   // SIGNED WALLET RECHARGE REQUEST EXPORT
   // ----------------------------------------------------------
 
+  findWalletRechargeDecline:
+    (
+      request,
+    ) =>
+      ipcRenderer.invoke(
+        CONTROL_CHANNELS
+          .FIND_WALLET_RECHARGE_DECLINE,
+        request,
+      ) as Promise<
+        FindWalletRechargeDeclineResult
+      >,
   exportWalletRechargeRequest:
     (
       request:

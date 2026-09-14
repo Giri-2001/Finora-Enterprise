@@ -1,4 +1,4 @@
-﻿/* ============================================================
+/* ============================================================
    FINORA ENTERPRISE OS™
 
    FINORA WALLET™
@@ -104,6 +104,32 @@ export interface WalletPageStyles {
     CSSProperties;
 
   retryButton:
+    CSSProperties;
+  cancelDialogBackdrop:
+    CSSProperties;
+
+  cancelDialogPanel:
+    CSSProperties;
+
+  cancelDialogTitle:
+    CSSProperties;
+
+  cancelDialogDescription:
+    CSSProperties;
+
+  cancelDialogTextarea:
+    CSSProperties;
+
+  cancelDialogCounter:
+    CSSProperties;
+
+  cancelDialogActions:
+    CSSProperties;
+
+  cancelDialogKeepButton:
+    CSSProperties;
+
+  cancelDialogConfirmButton:
     CSSProperties;
 }
 
@@ -493,6 +519,173 @@ export function getWalletPageStyles(
       boxSizing:
         "border-box",
     },
+    cancelDialogBackdrop: {
+      position:
+        "fixed",
+      inset:
+        0,
+      zIndex:
+        1600,
+      display:
+        "flex",
+      alignItems:
+        "center",
+      justifyContent:
+        "center",
+      padding:
+        pagePadding,
+      background:
+        "color-mix(in srgb, var(--finora-theme-text-primary) 32%, transparent)",
+      boxSizing:
+        "border-box",
+    },
+
+    cancelDialogPanel: {
+      width:
+        "100%",
+      maxWidth:
+        560,
+      display:
+        "flex",
+      flexDirection:
+        "column",
+      gap:
+        wallet.summary.gap,
+      padding:
+        wallet.summary.cardPadding,
+      border:
+        "1px solid var(--finora-theme-border-default)",
+      borderRadius:
+        wallet.actions.buttonRadius,
+      background:
+        "var(--finora-theme-background-surface)",
+      color:
+        "var(--finora-theme-text-primary)",
+      boxSizing:
+        "border-box",
+    },
+
+    cancelDialogTitle: {
+      margin:
+        0,
+      color:
+        "var(--finora-theme-text-primary)",
+      fontSize:
+        tokens.typography.subheading,
+      fontWeight:
+        800,
+      lineHeight:
+        1.25,
+    },
+
+    cancelDialogDescription: {
+      margin:
+        0,
+      color:
+        "var(--finora-theme-text-muted)",
+      fontSize:
+        tokens.typography.body,
+      lineHeight:
+        1.5,
+    },
+
+    cancelDialogTextarea: {
+      width:
+        "100%",
+      minHeight:
+        116,
+      padding:
+        tokens.spacing.medium,
+      border:
+        "1px solid var(--finora-theme-border-default)",
+      borderRadius:
+        wallet.actions.buttonRadius,
+      background:
+        "var(--finora-theme-background-page)",
+      color:
+        "var(--finora-theme-text-primary)",
+      fontFamily:
+        "Inter, ui-sans-serif, system-ui, sans-serif",
+      fontSize:
+        tokens.typography.body,
+      lineHeight:
+        1.5,
+      resize:
+        "vertical",
+      outline:
+        "none",
+      boxSizing:
+        "border-box",
+    },
+
+    cancelDialogCounter: {
+      color:
+        "var(--finora-theme-text-muted)",
+      fontSize:
+        wallet.history.detailSize,
+      fontWeight:
+        650,
+      textAlign:
+        "right",
+    },
+
+    cancelDialogActions: {
+      display:
+        "flex",
+      flexDirection:
+        isMobile ? "column-reverse" : "row",
+      justifyContent:
+        "flex-end",
+      gap:
+        wallet.actions.gap,
+    },
+
+    cancelDialogKeepButton: {
+      minHeight:
+        wallet.actions.buttonHeight,
+      padding:
+        `0 ${wallet.actions.buttonPaddingX}px`,
+      border:
+        "1px solid var(--finora-theme-border-default)",
+      borderRadius:
+        wallet.actions.buttonRadius,
+      background:
+        "var(--finora-theme-background-surface)",
+      color:
+        "var(--finora-theme-text-secondary)",
+      fontFamily:
+        "Inter, ui-sans-serif, system-ui, sans-serif",
+      fontSize:
+        wallet.actions.buttonFontSize,
+      fontWeight:
+        750,
+      boxSizing:
+        "border-box",
+    },
+
+    cancelDialogConfirmButton: {
+      minHeight:
+        wallet.actions.buttonHeight,
+      padding:
+        `0 ${wallet.actions.buttonPaddingX}px`,
+      border:
+        "1px solid var(--finora-theme-brand-primary)",
+      borderRadius:
+        wallet.actions.buttonRadius,
+      background:
+        "var(--finora-theme-background-surface)",
+      color:
+        "var(--finora-theme-brand-primary)",
+      fontFamily:
+        "Inter, ui-sans-serif, system-ui, sans-serif",
+      fontSize:
+        wallet.actions.buttonFontSize,
+      fontWeight:
+        800,
+      boxSizing:
+        "border-box",
+    },
+
   };
 }
 

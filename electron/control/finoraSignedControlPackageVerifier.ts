@@ -67,7 +67,7 @@ export interface FinoraBranchTrustedControlPublicKey {
     string;
 }
 
-export interface FinoraBranchControlTarget {
+export interface FinoraBranchScopeControlTarget {
 
   ownerId:
     string;
@@ -77,6 +77,10 @@ export interface FinoraBranchControlTarget {
 
   branchId:
     string;
+}
+
+export interface FinoraBranchControlTarget
+  extends FinoraBranchScopeControlTarget {
 
   installationId:
     string;
@@ -95,7 +99,9 @@ export interface FinoraBranchControlTarget {
     string;
 }
 
-export interface FinoraSignedBranchControlPackage {
+export interface FinoraSignedControlPackageV1<
+  TTarget extends FinoraBranchScopeControlTarget,
+> {
 
   packageId:
     string;
@@ -115,7 +121,7 @@ export interface FinoraSignedBranchControlPackage {
   };
 
   target:
-    FinoraBranchControlTarget;
+    TTarget;
 
   issuedAt:
     string;
@@ -166,47 +172,74 @@ export interface FinoraSignedBranchControlPackage {
     1;
 }
 
-export type FinoraSignedControlVerificationResult =
+export type FinoraSignedBranchControlPackage =
+  FinoraSignedControlPackageV1<
+    FinoraBranchControlTarget
+  >;
+
+export type FinoraSignedBranchScopeControlPackage =
+  FinoraSignedControlPackageV1<
+    FinoraBranchScopeControlTarget
+  >;
+export type FinoraSignedControlVerificationFailureReason =
+  | "MALFORMED_PACKAGE"
+  | "UNSUPPORTED_ALGORITHM"
+  | "INVALID_PAYLOAD_DIGEST"
+  | "INVALID_SIGNATURE"
+  | "UNKNOWN_SIGNING_KEY"
+  | "UNTRUSTED_ISSUER"
+  | "SIGNING_KEY_REVOKED"
+  | "SIGNING_KEY_NOT_VALID"
+  | "NOT_YET_VALID"
+  | "PACKAGE_EXPIRED"
+  | "PURPOSE_MISMATCH"
+  | "TARGET_MISMATCH";
+
+export interface FinoraSignedControlVerificationFailure {
+  valid:
+    false;
+
+  reason:
+    FinoraSignedControlVerificationFailureReason;
+
+  error:
+    string;
+}
+
+export type FinoraSignedControlVerificationResultV1<
+  TTarget extends FinoraBranchScopeControlTarget,
+> =
   | {
       valid: true;
 
       controlPackage:
-        FinoraSignedBranchControlPackage;
+        FinoraSignedControlPackageV1<TTarget>;
+
+      verifiedTrustedKey:
+        FinoraBranchTrustedControlPublicKey;
     }
-  | {
-      valid: false;
+  | FinoraSignedControlVerificationFailure;
 
-      reason:
-        | "MALFORMED_PACKAGE"
-        | "UNSUPPORTED_ALGORITHM"
-        | "INVALID_PAYLOAD_DIGEST"
-        | "INVALID_SIGNATURE"
-        | "UNKNOWN_SIGNING_KEY"
-        | "UNTRUSTED_ISSUER"
-        | "SIGNING_KEY_REVOKED"
-        | "SIGNING_KEY_NOT_VALID"
-        | "NOT_YET_VALID"
-        | "PACKAGE_EXPIRED"
-        | "TARGET_MISMATCH";
+export type FinoraSignedControlVerificationResult =
+  FinoraSignedControlVerificationResultV1<
+    FinoraBranchControlTarget
+  >;
 
-      error:
-        string;
-    };
-
+export type FinoraSignedBranchScopeControlVerificationResult =
+  FinoraSignedControlVerificationResultV1<
+    FinoraBranchScopeControlTarget
+  >;
 // ============================================================
 // HELPERS
 // ============================================================
 
 function failure(
   reason:
-    Exclude<
-      FinoraSignedControlVerificationResult,
-      { valid: true }
-    >["reason"],
+    FinoraSignedControlVerificationFailureReason,
 
   error:
     string,
-): FinoraSignedControlVerificationResult {
+): FinoraSignedControlVerificationFailure {
 
   return {
     valid:
@@ -277,20 +310,32 @@ function isSha256Fingerprint(
   );
 }
 
+export function isFinoraBranchScopeControlTargetValid(
+  value:
+    FinoraBranchScopeControlTarget,
+): boolean {
+
+  return (
+    isNonEmptyString(
+      value.ownerId,
+    ) &&
+    isNonEmptyString(
+      value.businessId,
+    ) &&
+    isNonEmptyString(
+      value.branchId,
+    )
+  );
+}
+
 function isInstallationBindingTargetValid(
   value:
     FinoraBranchControlTarget,
 ): boolean {
 
   if (
-    !isNonEmptyString(
-      value.ownerId,
-    ) ||
-    !isNonEmptyString(
-      value.businessId,
-    ) ||
-    !isNonEmptyString(
-      value.branchId,
+    !isFinoraBranchScopeControlTargetValid(
+      value,
     ) ||
     !isNonEmptyString(
       value.installationId,
@@ -321,6 +366,30 @@ function isInstallationBindingTargetValid(
   );
 }
 
+export function finoraBranchScopeControlTargetMatches(
+  actual:
+    FinoraBranchScopeControlTarget,
+
+  expected:
+    FinoraBranchScopeControlTarget,
+): boolean {
+
+  return (
+    isFinoraBranchScopeControlTargetValid(
+      actual,
+    ) &&
+    isFinoraBranchScopeControlTargetValid(
+      expected,
+    ) &&
+    actual.ownerId ===
+      expected.ownerId &&
+    actual.businessId ===
+      expected.businessId &&
+    actual.branchId ===
+      expected.branchId
+  );
+}
+
 function targetMatches(
   actual:
     FinoraBranchControlTarget,
@@ -341,12 +410,10 @@ function targetMatches(
   }
 
   return (
-    actual.ownerId ===
-      expected.ownerId &&
-    actual.businessId ===
-      expected.businessId &&
-    actual.branchId ===
-      expected.branchId &&
+    finoraBranchScopeControlTargetMatches(
+      actual,
+      expected,
+    ) &&
     actual.installationId ===
       expected.installationId &&
     actual.bindingKeyId ===
@@ -362,7 +429,9 @@ function targetMatches(
 // VERIFY
 // ============================================================
 
-export function verifyFinoraSignedControlPackageNative(
+function verifyFinoraSignedControlPackageWithTargetPolicy<
+  TTarget extends FinoraBranchScopeControlTarget,
+>(
   value:
     unknown,
 
@@ -370,11 +439,22 @@ export function verifyFinoraSignedControlPackageNative(
     readonly FinoraBranchTrustedControlPublicKey[],
 
   expectedTarget:
-    FinoraBranchControlTarget,
+    TTarget,
+
+  targetPolicy:
+    (
+      actual:
+        TTarget,
+      expected:
+        TTarget,
+    ) => boolean,
+
+  targetMismatchError:
+    string,
 
   now:
     Date,
-): FinoraSignedControlVerificationResult {
+): FinoraSignedControlVerificationResultV1<TTarget> {
 
   if (!isRecord(value)) {
     return failure(
@@ -385,7 +465,7 @@ export function verifyFinoraSignedControlPackageNative(
 
   const controlPackage =
     value as unknown as
-      FinoraSignedBranchControlPackage;
+      FinoraSignedControlPackageV1<TTarget>;
 
   if (
     controlPackage.schemaVersion !==
@@ -462,14 +542,14 @@ export function verifyFinoraSignedControlPackageNative(
   }
 
   if (
-    !targetMatches(
+    !targetPolicy(
       controlPackage.target,
       expectedTarget,
     )
   ) {
     return failure(
       "TARGET_MISMATCH",
-      "FINORA Control Package does not belong to this installation.",
+      targetMismatchError,
     );
   }
 
@@ -744,9 +824,128 @@ export function verifyFinoraSignedControlPackageNative(
       true,
 
     controlPackage,
+
+    verifiedTrustedKey: {
+      ...trustedKey,
+    },
   };
 }
 
+function branchScopeTargetHasExactKeys(
+  value:
+    FinoraBranchScopeControlTarget,
+): boolean {
+
+  const actualKeys =
+    Object.keys(
+      value,
+    ).sort();
+
+  const expectedKeys = [
+    "branchId",
+    "businessId",
+    "ownerId",
+  ];
+
+  return (
+    actualKeys.length ===
+      expectedKeys.length &&
+    actualKeys.every(
+      (
+        key,
+        index,
+      ) =>
+        key ===
+        expectedKeys[index],
+    )
+  );
+}
+
+function branchPortabilityAuthorityTargetMatches(
+  actual:
+    FinoraBranchScopeControlTarget,
+
+  expected:
+    FinoraBranchScopeControlTarget,
+): boolean {
+
+  return (
+    branchScopeTargetHasExactKeys(
+      actual,
+    ) &&
+    branchScopeTargetHasExactKeys(
+      expected,
+    ) &&
+    finoraBranchScopeControlTargetMatches(
+      actual,
+      expected,
+    )
+  );
+}
+
+export function verifyFinoraSignedBranchPortabilityAuthorityPackage(
+  value:
+    unknown,
+
+  trustedKeys:
+    readonly FinoraBranchTrustedControlPublicKey[],
+
+  expectedTarget:
+    FinoraBranchScopeControlTarget,
+
+  now:
+    Date,
+): FinoraSignedBranchScopeControlVerificationResult {
+
+  const verification =
+    verifyFinoraSignedControlPackageWithTargetPolicy(
+      value,
+      trustedKeys,
+      expectedTarget,
+      branchPortabilityAuthorityTargetMatches,
+      "FINORA Branch Portability Authority does not belong to this branch.",
+      now,
+    );
+
+  if (!verification.valid) {
+    return verification;
+  }
+
+  if (
+    verification.controlPackage.purpose !==
+      "BRANCH_PORTABILITY_AUTHORITY"
+  ) {
+    return failure(
+      "PURPOSE_MISMATCH",
+      "FINORA signed package purpose is not BRANCH_PORTABILITY_AUTHORITY.",
+    );
+  }
+
+  return verification;
+}
+export function verifyFinoraSignedControlPackageNative(
+  value:
+    unknown,
+
+  trustedKeys:
+    readonly FinoraBranchTrustedControlPublicKey[],
+
+  expectedTarget:
+    FinoraBranchControlTarget,
+
+  now:
+    Date,
+): FinoraSignedControlVerificationResult {
+
+  return verifyFinoraSignedControlPackageWithTargetPolicy(
+    value,
+    trustedKeys,
+    expectedTarget,
+    targetMatches,
+    "FINORA Control Package does not belong to this installation.",
+    now,
+  );
+}
 // ============================================================
 // END
 // ============================================================

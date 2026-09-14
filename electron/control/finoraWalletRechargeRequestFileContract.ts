@@ -231,6 +231,62 @@ function createRequestToken(
   );
 }
 
+export type FinoraWalletRechargeResultFileOutcome =
+  | "DONE"
+  | "NOT";
+
+export interface FinoraWalletRechargeResultFileNameInput {
+  businessCode:
+    string;
+
+  branchCode:
+    string;
+
+  paymentMethod:
+    string;
+
+  amountMinor:
+    number;
+
+  requestId:
+    string;
+}
+
+export function createFinoraWalletRechargeResultFileName(
+  input:
+    FinoraWalletRechargeResultFileNameInput,
+
+  outcome:
+    FinoraWalletRechargeResultFileOutcome,
+): string {
+
+  return (
+    "FIN-WAL-" +
+    outcome +
+    "-" +
+    createBusinessCodeToken(
+      input.businessCode,
+    ) +
+    "-" +
+    createBranchCodeToken(
+      input.branchCode,
+    ) +
+    "-" +
+    createPaymentMethodToken(
+      input.paymentMethod,
+    ) +
+    "-" +
+    createAmountToken(
+      input.amountMinor,
+    ) +
+    "-" +
+    createRequestToken(
+      input.requestId,
+    ) +
+    FINORA_WALLET_RECHARGE_REQUEST_FILE_EXTENSION
+  );
+}
+
 export function createFinoraWalletRechargeRequestFileName(
   request:
     FinoraSignedWalletRechargeRequest,

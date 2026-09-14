@@ -64,6 +64,28 @@ import {
 } from "./finoraInstallationEnrollmentRequestFileTransport.js";
 
 import {
+  openVerifiedFinoraWalletRechargeRequest,
+} from "./finoraWalletRechargeRequestFileTransport.js";
+
+import {
+  getFinoraVerifiedWalletRechargeRequest,
+  rememberFinoraVerifiedWalletRechargeRequest,
+  takeFinoraVerifiedWalletRechargeRequest,
+} from "./finoraWalletRechargeRequestSessionAuthority.js";
+
+import {
+  issueFinoraVerifiedWalletRechargeApprovalBundle,
+} from "./finoraWalletRechargeRequestApprovalBundleService.js";
+import {
+  issueFinoraVerifiedWalletRechargeDeclineBundle,
+} from "./finoraWalletRechargeRequestDeclineBundleService.js";
+
+
+import {
+  createFinoraWalletRechargeResultFileName,
+} from "../control/finoraWalletRechargeRequestFileContract.js";
+
+import {
   getFinoraVerifiedInstallationEnrollment,
   rememberFinoraVerifiedInstallationEnrollment,
   takeFinoraVerifiedInstallationEnrollment,
@@ -90,6 +112,16 @@ import {
   backfillFinoraControlCenterBranchFromHistoricalEnrollmentEvidence,
 } from "./finoraInstallationEnrollmentHistoricalBackfillCoordinator.js";
 import {
+  exportFinoraControlCenterAdminAuthorityRecovery,
+  importAndRecoverFinoraControlCenterAdminAuthority,
+} from "./finoraControlCenterAdminAuthorityRecoveryCoordinator.js";
+
+import {
+  FINORA_CONTROL_CENTER_ADMIN_SECURITY_CODE_MAX_LENGTH,
+  FINORA_CONTROL_CENTER_ADMIN_SECURITY_CODE_MIN_LENGTH,
+} from "./finoraControlCenterAdminAuthorityRecoveryBundle.js";
+
+import {
   isTrustedFinoraControlCenterRenderer,
 } from "./finoraControlCenterWindow.js";
 
@@ -108,6 +140,15 @@ export const FINORA_CONTROL_CENTER_IPC_CHANNELS = {
     "finora:control-center:backfill-historical-enrollment-branch",
   OPEN_INSTALLATION_ENROLLMENT_REQUEST:
     "finora:control-center:open-installation-enrollment-request",
+
+  OPEN_WALLET_RECHARGE_REQUEST:
+    "finora:control-center:open-wallet-recharge-request",
+
+  APPROVE_AND_EXPORT_WALLET_RECHARGE_REQUEST:
+    "finora:control-center:approve-and-export-wallet-recharge-request",
+
+  DECLINE_AND_EXPORT_WALLET_RECHARGE_REQUEST:
+    "finora:control-center:decline-and-export-wallet-recharge-request",
 
   ISSUE_AND_EXPORT_INSTALLATION_ENROLLMENT_RESPONSE:
     "finora:control-center:issue-and-export-installation-enrollment-response",
@@ -132,6 +173,12 @@ export const FINORA_CONTROL_CENTER_IPC_CHANNELS = {
 
   ISSUE_AND_EXPORT_CONTROL_BUNDLE:
     "finora:control-center:issue-and-export-control-bundle",
+
+  EXPORT_ADMIN_AUTHORITY_RECOVERY:
+    "finora:control-center:export-admin-authority-recovery",
+
+  IMPORT_AND_RECOVER_ADMIN_AUTHORITY:
+    "finora:control-center:import-and-recover-admin-authority",
 } as const;
 
 // ============================================================
@@ -472,6 +519,32 @@ function isControlBundleIssuanceRequest(
   return true;
 }
 
+function isFinoraControlCenterAdminSecurityCodeInput(
+  value:
+    unknown,
+): value is string {
+  if (
+    typeof value !==
+      "string"
+  ) {
+    return false;
+  }
+
+  const length =
+    Array.from(
+      value,
+    ).length;
+
+  return (
+    length >=
+      FINORA_CONTROL_CENTER_ADMIN_SECURITY_CODE_MIN_LENGTH &&
+    length <=
+      FINORA_CONTROL_CENTER_ADMIN_SECURITY_CODE_MAX_LENGTH &&
+    value.trim().length >
+      0
+  );
+}
+
 // ============================================================
 // REGISTER
 // ============================================================
@@ -782,6 +855,311 @@ export function registerFinoraControlCenterHandlers():
   // from the previously verified main-process session.
   // ----------------------------------------------------------
 
+  // ----------------------------------------------------------
+  // WALLET RECHARGE REQUEST - OPEN + VERIFY
+  //
+  // The renderer supplies no filepath, branch identity, amount,
+  // paymentReference, payment method, or payment source.
+  //
+  // Native file selection verifies the signed request against
+  // the authoritative Branch Registry, then the exact verified
+  // request is bound to this Control Center WebContents for a
+  // later privileged Approve / Decline operation.
+  // ----------------------------------------------------------
+
+  ipcMain.handle(
+    FINORA_CONTROL_CENTER_IPC_CHANNELS
+      .OPEN_WALLET_RECHARGE_REQUEST,
+    async (
+      event,
+    ) => {
+
+      if (
+        !isTrustedFinoraControlCenterRenderer(
+          event.senderFrame,
+        )
+      ) {
+        return failure(
+          "FINORA Wallet Recharge Request access is restricted to the dedicated Control Center renderer.",
+        );
+      }
+
+      const parentWindow =
+        BrowserWindow.fromWebContents(
+          event.sender,
+        );
+
+      if (
+        !parentWindow ||
+        parentWindow.isDestroyed()
+      ) {
+        return failure(
+          "The FINORA Control Center window is unavailable for Wallet Recharge Request selection.",
+        );
+      }
+
+      if (
+        event.senderFrame !==
+          parentWindow.webContents.mainFrame
+      ) {
+        return failure(
+          "FINORA Wallet Recharge Request access is restricted to the dedicated Control Center main frame.",
+        );
+      }
+
+      const openResult =
+        await openVerifiedFinoraWalletRechargeRequest(
+          parentWindow,
+        );
+
+      if (!openResult.success) {
+        return failure(
+          openResult.error,
+        );
+      }
+
+      if (openResult.cancelled) {
+        return success({
+          cancelled:
+            true as const,
+        });
+      }
+
+      const request =
+        openResult.request;
+
+      rememberFinoraVerifiedWalletRechargeRequest(
+        event.sender,
+        request,
+      );
+
+      return success({
+        cancelled:
+          false as const,
+
+        fileName:
+          openResult.fileName,
+
+        bytesRead:
+          openResult.bytesRead,
+
+        requestId:
+          request.requestId,
+
+        paymentReference:
+          request.paymentReference,
+
+        ownerId:
+          request.target.ownerId,
+
+        businessId:
+          request.target.businessId,
+
+        branchId:
+          request.target.branchId,
+
+        businessCode:
+          request.target.businessCode,
+
+        branchCode:
+          request.target.branchCode,
+
+        installationId:
+          request.target.installationId,
+
+        bindingKeyId:
+          request.target.bindingKeyId,
+
+        fingerprintAlgorithm:
+          request.target.fingerprintAlgorithm,
+
+        publicKeyFingerprint:
+          request.target.publicKeyFingerprint,
+
+        amountMinor:
+          request.amountMinor,
+
+        currency:
+          request.currency,
+
+        paymentMethod:
+          request.paymentMethod,
+
+        paymentSource:
+          request.paymentSource,
+
+        requestedAt:
+          request.requestedAt,
+      });
+    },
+  );
+
+  // ----------------------------------------------------------
+  // WALLET RECHARGE REQUEST - APPROVE + EXPORT DONE
+  //
+  // SECURITY:
+  //
+  // - Renderer supplies zero target / financial arguments.
+  // - Exact verified request is atomically taken from the
+  //   main-process WebContents session before async issuance.
+  // - Existing approval service re-authorizes Branch Registry.
+  // - Existing WALLET_RECHARGE + CONTROL_BUNDLE issuance paths
+  //   own authoritative packageId / sequence / issuedAt.
+  // - Native Save dialog receives only a deterministic
+  //   filename convenience hint; filename is never authority.
+  // - Successful export consumes the verified request.
+  // - Cancel / failure restores it only when no newer verified
+  //   request has replaced that WebContents session.
+  // ----------------------------------------------------------
+
+  ipcMain.handle(
+    FINORA_CONTROL_CENTER_IPC_CHANNELS
+      .APPROVE_AND_EXPORT_WALLET_RECHARGE_REQUEST,
+    async (
+      event,
+    ) => {
+
+      if (
+        !isTrustedFinoraControlCenterRenderer(
+          event.senderFrame,
+        )
+      ) {
+        return failure(
+          "FINORA Wallet Recharge Request approval is restricted to the dedicated Control Center renderer.",
+        );
+      }
+
+      const parentWindow =
+        BrowserWindow.fromWebContents(
+          event.sender,
+        );
+
+      if (
+        !parentWindow ||
+        parentWindow.isDestroyed()
+      ) {
+        return failure(
+          "The FINORA Control Center window is unavailable for Wallet Recharge approval export.",
+        );
+      }
+
+      if (
+        event.senderFrame !==
+          parentWindow.webContents.mainFrame
+      ) {
+        return failure(
+          "FINORA Wallet Recharge Request approval is restricted to the dedicated Control Center main frame.",
+        );
+      }
+
+      const verifiedRequest =
+        takeFinoraVerifiedWalletRechargeRequest(
+          event.sender,
+        );
+
+      if (!verifiedRequest) {
+        return failure(
+          "Import and verify a FINORA Wallet Recharge Request before approval.",
+        );
+      }
+
+      let exportCompleted =
+        false;
+
+      try {
+        const signedBundle =
+          await issueFinoraVerifiedWalletRechargeApprovalBundle(
+            verifiedRequest,
+          );
+
+        const suggestedFileName =
+          createFinoraWalletRechargeResultFileName(
+            {
+              businessCode:
+                verifiedRequest.target.businessCode,
+
+              branchCode:
+                verifiedRequest.target.branchCode,
+
+              paymentMethod:
+                verifiedRequest.paymentMethod,
+
+              amountMinor:
+                verifiedRequest.amountMinor,
+
+              requestId:
+                verifiedRequest.requestId,
+            },
+            "DONE",
+          );
+
+        const exportResult =
+          await exportFinoraControlBundleFile(
+            parentWindow,
+            signedBundle,
+            suggestedFileName,
+          );
+
+        if (!exportResult.success) {
+          return failure(
+            exportResult.error,
+          );
+        }
+
+        if (exportResult.cancelled) {
+          return success({
+            cancelled:
+              true as const,
+          });
+        }
+
+        exportCompleted =
+          true;
+
+        return success({
+          cancelled:
+            false as const,
+
+          fileName:
+            exportResult.fileName,
+
+          bytesWritten:
+            exportResult.bytesWritten,
+
+          requestId:
+            verifiedRequest.requestId,
+
+          paymentReference:
+            verifiedRequest.paymentReference,
+
+          controlBundlePackageId:
+            signedBundle.packageId,
+        });
+
+      } catch (error) {
+        return failure(
+          getErrorMessage(
+            error,
+          ),
+        );
+
+      } finally {
+        if (
+          !exportCompleted &&
+          !event.sender.isDestroyed() &&
+          !getFinoraVerifiedWalletRechargeRequest(
+            event.sender,
+          )
+        ) {
+          rememberFinoraVerifiedWalletRechargeRequest(
+            event.sender,
+            verifiedRequest,
+          );
+        }
+      }
+    },
+  );
+
   ipcMain.handle(
     FINORA_CONTROL_CENTER_IPC_CHANNELS
       .ISSUE_AND_EXPORT_INSTALLATION_ENROLLMENT_RESPONSE,
@@ -1001,7 +1379,179 @@ export function registerFinoraControlCenterHandlers():
   );
 
   // ----------------------------------------------------------
-  // BRANCH ACTIVATION
+  // ----------------------------------------------------------
+  // VERIFIED WALLET RECHARGE REQUEST â€” DECLINE + NATIVE EXPORT
+  //
+  // Renderer supplies ZERO target / financial authority args.
+  // The main-process verified Request session is consumed before
+  // async issuance/export and restored only on cancel/failure
+  // when no newer verified Request has replaced it.
+  // ----------------------------------------------------------
+
+  ipcMain.handle(
+    FINORA_CONTROL_CENTER_IPC_CHANNELS
+      .DECLINE_AND_EXPORT_WALLET_RECHARGE_REQUEST,
+    async (
+      event,
+    ) => {
+
+      if (
+        !isTrustedFinoraControlCenterRenderer(
+          event.senderFrame,
+        )
+      ) {
+        return failure(
+          "FINORA Wallet Recharge decline is restricted to the dedicated Control Center renderer.",
+        );
+      }
+
+      const parentWindow =
+        BrowserWindow.fromWebContents(
+          event.sender,
+        );
+
+      if (
+        !parentWindow ||
+        parentWindow.isDestroyed()
+      ) {
+        return failure(
+          "The FINORA Control Center window is not available for Wallet Recharge decline export.",
+        );
+      }
+
+      if (
+        event.senderFrame !==
+          parentWindow.webContents.mainFrame
+      ) {
+        return failure(
+          "FINORA Wallet Recharge decline is restricted to the trusted Control Center main frame.",
+        );
+      }
+
+      const verifiedRequest =
+        takeFinoraVerifiedWalletRechargeRequest(
+          event.sender,
+        );
+
+      if (!verifiedRequest) {
+        return failure(
+          "Import and cryptographically verify a FINORA Wallet Recharge Request before declining it.",
+        );
+      }
+
+      let exportCompleted =
+        false;
+
+      try {
+
+        const signedBundle =
+          await issueFinoraVerifiedWalletRechargeDeclineBundle(
+            verifiedRequest,
+          );
+
+        const suggestedFileName =
+          createFinoraWalletRechargeResultFileName(
+            {
+              businessCode:
+                verifiedRequest.target.businessCode,
+
+              branchCode:
+                verifiedRequest.target.branchCode,
+
+              paymentMethod:
+                verifiedRequest.paymentMethod,
+
+              amountMinor:
+                verifiedRequest.amountMinor,
+
+              requestId:
+                verifiedRequest.requestId,
+            },
+            "NOT",
+          );
+
+        const exportResult =
+          await exportFinoraControlBundleFile(
+            parentWindow,
+            signedBundle,
+            suggestedFileName,
+          );
+
+        if (!exportResult.success) {
+          return failure(
+            exportResult.error ??
+              "Unable to export the signed FINORA Wallet Recharge decline.",
+          );
+        }
+
+        if (exportResult.cancelled) {
+          return {
+            success:
+              true,
+
+            data: {
+              cancelled:
+                true,
+            },
+          };
+        }
+
+        exportCompleted =
+          true;
+
+        return {
+          success:
+            true,
+
+          data: {
+            cancelled:
+              false,
+
+            fileName:
+              exportResult.fileName,
+
+            bytesWritten:
+              exportResult.bytesWritten,
+
+            requestId:
+              verifiedRequest.requestId,
+
+            paymentReference:
+              verifiedRequest.paymentReference,
+
+            controlBundlePackageId:
+              signedBundle.packageId,
+          },
+        };
+
+      } catch (error) {
+
+        return failure(
+          error instanceof Error
+            ? error.message
+            : "Unable to decline and export the FINORA Wallet Recharge Request.",
+        );
+
+      } finally {
+
+        if (
+          !exportCompleted &&
+          !event.sender.isDestroyed() &&
+          getFinoraVerifiedWalletRechargeRequest(
+            event.sender,
+          ) ===
+            undefined
+        ) {
+          rememberFinoraVerifiedWalletRechargeRequest(
+            event.sender,
+            verifiedRequest,
+          );
+        }
+      }
+    },
+  );
+
+  // ----------------------------------------------------------  // BRANCH ACTIVATION
   // ----------------------------------------------------------
 
   ipcMain.handle(
@@ -1382,6 +1932,130 @@ export function registerFinoraControlCenterHandlers():
 
           return exportResult;
         },
+      );
+    },
+  );
+
+  // ----------------------------------------------------------
+  // ADMIN AUTHORITY RECOVERY — ENCRYPTED EXPORT
+  //
+  // Security Code is a one-shot main-process input only.
+  // No filesystem path or private signing material is returned.
+  // ----------------------------------------------------------
+
+  ipcMain.handle(
+    FINORA_CONTROL_CENTER_IPC_CHANNELS
+      .EXPORT_ADMIN_AUTHORITY_RECOVERY,
+    async (
+      event,
+      securityCode:
+        unknown,
+    ) => {
+      if (
+        !isTrustedFinoraControlCenterRenderer(
+          event.senderFrame,
+        )
+      ) {
+        return failure(
+          "FINORA Admin Authority Recovery export is restricted to the dedicated Control Center renderer.",
+        );
+      }
+
+      const parentWindow =
+        BrowserWindow.fromWebContents(
+          event.sender,
+        );
+
+      if (
+        !parentWindow ||
+        parentWindow.isDestroyed() ||
+        parentWindow.webContents !==
+          event.sender ||
+        event.senderFrame !==
+          parentWindow.webContents.mainFrame
+      ) {
+        return failure(
+          "FINORA Admin Authority Recovery export is restricted to the dedicated Control Center main frame.",
+        );
+      }
+
+      if (
+        !isFinoraControlCenterAdminSecurityCodeInput(
+          securityCode,
+        )
+      ) {
+        return failure(
+          "A valid FINORA Control Center Admin Security Code is required.",
+        );
+      }
+
+      return executePrivileged(
+        () =>
+          exportFinoraControlCenterAdminAuthorityRecovery(
+            securityCode,
+          ),
+      );
+    },
+  );
+
+  // ----------------------------------------------------------
+  // ADMIN AUTHORITY RECOVERY — IMPORT + FRESH-MACHINE RESTORE
+  //
+  // Native file selection happens inside privileged transport.
+  // Renderer supplies no path and no file bytes.
+  // ----------------------------------------------------------
+
+  ipcMain.handle(
+    FINORA_CONTROL_CENTER_IPC_CHANNELS
+      .IMPORT_AND_RECOVER_ADMIN_AUTHORITY,
+    async (
+      event,
+      securityCode:
+        unknown,
+    ) => {
+      if (
+        !isTrustedFinoraControlCenterRenderer(
+          event.senderFrame,
+        )
+      ) {
+        return failure(
+          "FINORA Admin Authority Recovery import is restricted to the dedicated Control Center renderer.",
+        );
+      }
+
+      const parentWindow =
+        BrowserWindow.fromWebContents(
+          event.sender,
+        );
+
+      if (
+        !parentWindow ||
+        parentWindow.isDestroyed() ||
+        parentWindow.webContents !==
+          event.sender ||
+        event.senderFrame !==
+          parentWindow.webContents.mainFrame
+      ) {
+        return failure(
+          "FINORA Admin Authority Recovery import is restricted to the dedicated Control Center main frame.",
+        );
+      }
+
+      if (
+        !isFinoraControlCenterAdminSecurityCodeInput(
+          securityCode,
+        )
+      ) {
+        return failure(
+          "A valid FINORA Control Center Admin Security Code is required.",
+        );
+      }
+
+      return executePrivileged(
+        () =>
+          importAndRecoverFinoraControlCenterAdminAuthority(
+            securityCode,
+          ),
       );
     },
   );

@@ -101,6 +101,102 @@ interface FinoraFindWalletRechargeAuthorizationRequest {
   paymentReference:
     string;
 }
+interface FinoraFindWalletRechargeDeclineRequest {
+  ownerId:
+    string;
+
+  businessId:
+    string;
+
+  branchId:
+    string;
+
+  paymentReference:
+    string;
+}
+
+interface FinoraElectronWalletRechargeDeclineView {
+  packageId:
+    string;
+
+  issuerId:
+    string;
+
+  signingKeyId:
+    string;
+
+  purpose:
+    "WALLET_RECHARGE_DECLINE";
+
+  sequence:
+    number;
+
+  ownerId:
+    string;
+
+  businessId:
+    string;
+
+  branchId:
+    string;
+
+  installationId:
+    string;
+
+  bindingKeyId:
+    string;
+
+  fingerprintAlgorithm:
+    "SHA-256";
+
+  publicKeyFingerprint:
+    string;
+
+  requestId:
+    string;
+
+  paymentReference:
+    string;
+
+  amountMinor:
+    number;
+
+  currency:
+    "INR";
+
+  paymentMethod:
+    | "UPI"
+    | "PHONEPE"
+    | "GOOGLE_PAY"
+    | "PAYTM"
+    | "RAZORPAY"
+    | "BANK_TRANSFER"
+    | "OTHER";
+
+  paymentSource:
+    | "PHONEPE"
+    | "RAZORPAY"
+    | "UPI"
+    | "GOOGLE_PAY"
+    | "PAYTM"
+    | "BANK_TRANSFER"
+    | "MANUAL";
+
+  requestedAt:
+    string;
+
+  outcome:
+    "DECLINED";
+
+  issuedAt:
+    string;
+
+  verifiedAt:
+    string;
+
+  schemaVersion:
+    1;
+}
 
 // ============================================================
 // CONTROL BRIDGE
@@ -492,6 +588,24 @@ interface FinoraElectronControlBridge {
         FinoraElectronWalletRechargeAuthorizationView | undefined
       >
     >;
+  /**
+   * Returns one previously verified signed Wallet Recharge
+   * decline for the exact branch/payment reference.
+   *
+   * READ ONLY.
+   *
+   * Native installation binding, signature verification and
+   * signed-package apply authority remain outside the renderer.
+   */
+  findWalletRechargeDecline(
+    request:
+      FinoraFindWalletRechargeDeclineRequest,
+  ):
+    Promise<
+      FinoraElectronResult<
+        FinoraElectronWalletRechargeDeclineView | undefined
+      >
+    >;
 
   evaluateBranchAccess(
     request:
@@ -532,6 +646,9 @@ interface FinoraElectronCredentialEnrollmentRequest {
     string;
 
   password:
+    string;
+
+  securityCode:
     string;
 }
 
@@ -826,6 +943,9 @@ interface FinoraElectronLoginSessionLoginRequest {
   storageMode:
     | "LOCAL"
     | "USB";
+
+  securityCode?:
+    string;
 }
 
 interface FinoraElectronLoginSessionRequest {

@@ -6,46 +6,39 @@
 
    RESPONSIBILITY:
 
-   - Accept recipient username plus password
-   - Resolve exactly one pending signed authorization by canonical username
-   - Apply explicit recipient password policy
-   - Derive a credential verifier with async Node scrypt
-   - Generate cryptographic salt and credential ID
-   - Forward only the derived credential record to the atomic
-     one-time Control Store enrollment mutation
+   - Validate recipient username, Password and Security Code request shape
+   - Preserve the existing renderer-facing enrollment result contract
+   - Delegate enrollment authority to Portable Branch Auth coordinator
+   - Return only non-secret enrolled principal metadata
 
    SECURITY:
 
    - MAIN PROCESS ONLY.
-   - Plaintext password is never persisted.
-   - Plaintext password is never returned.
-   - No renderer-provided user/scope/role/data-context authority.
+   - Plaintext Password and Security Code are ephemeral inputs only.
+   - No direct credential KDF is performed in this service.
+   - No direct credential enrollment Control Store mutation is performed here.
+   - No renderer-provided user/scope/role/storage authority.
    - No localStorage.
    - No legacy FINORA_HASH_.
    - No Business Date.
    - No private signing material.
-   - Final authorization consumption remains atomic in the
-     Control Store mutation boundary.
+   - Durable PREPARED / PORTABLE_WRITTEN / CONTROL_APPLIED / COMPLETE
+     authority is owned by the Portable Branch Auth coordinator.
 
    VERSION : 1.0
    STATUS  : Production Foundation
 ============================================================ */
 
-import {
-  randomBytes,
-  randomUUID,
-  scrypt as nodeScrypt,
-} from "node:crypto";
+
+
 
 import {
-  applyFinoraBranchCredentialEnrollmentState,
-  canonicalizeFinoraCredentialUsername,
-  readFinoraControlStore,
-} from "./finoraControlStore.js";
+  enrollFinoraPortableBranchAuth,
+} from "./finoraPortableBranchAuthEnrollmentCoordinator.js";
 
 import type {
-  FinoraControlBranchCredential,
-} from "./finoraControlStore.js";
+  FinoraPortableBranchAuthStore,
+} from "./finoraPortableBranchAuthStore.js";
 
 // ============================================================
 // PASSWORD / KDF POLICY
@@ -59,25 +52,13 @@ export const FINORA_BRANCH_CREDENTIAL_PASSWORD_POLICY = {
     128,
 } as const;
 
-const FINORA_BRANCH_CREDENTIAL_SALT_BYTES =
-  16;
+export const FINORA_BRANCH_SECURITY_CODE_POLICY = {
+  minLength:
+    8,
 
-const FINORA_BRANCH_CREDENTIAL_KEY_BYTES =
-  32;
-
-const FINORA_BRANCH_CREDENTIAL_SCRYPT_N =
-  32768;
-
-const FINORA_BRANCH_CREDENTIAL_SCRYPT_R =
-  8;
-
-const FINORA_BRANCH_CREDENTIAL_SCRYPT_P =
-  1;
-
-const FINORA_BRANCH_CREDENTIAL_SCRYPT_MAXMEM =
-  64 *
-  1024 *
-  1024;
+  maxLength:
+    128,
+} as const;
 
 // ============================================================
 // CONTRACT
@@ -88,6 +69,9 @@ export interface FinoraBranchCredentialEnrollmentRequest {
     string;
 
   password:
+    string;
+
+  securityCode:
     string;
 }
 
@@ -137,6 +121,7 @@ export interface FinoraBranchCredentialEnrollmentSuccess {
 export type FinoraBranchCredentialEnrollmentErrorCode =
   | "INVALID_REQUEST"
   | "INVALID_PASSWORD"
+  | "INVALID_SECURITY_CODE"
   | "CONTROL_STORE_FAILED"
   | "AUTHORIZATION_NOT_FOUND"
   | "AUTHORIZATION_AMBIGUOUS"
@@ -232,6 +217,7 @@ function sanitizeRequest(
   const expectedKeys = [
     "username",
     "password",
+    "securityCode",
   ].sort();
 
   if (
@@ -246,6 +232,8 @@ function sanitizeRequest(
       value.username,
     ) ||
     typeof value.password !==
+      "string" ||
+    typeof value.securityCode !==
       "string"
   ) {
     return undefined;
@@ -257,6 +245,9 @@ function sanitizeRequest(
 
     password:
       value.password,
+
+    securityCode:
+      value.securityCode,
   };
 }
 
@@ -279,63 +270,41 @@ function isPasswordAllowed(
   );
 }
 
-function deriveScryptKey(
-  password:
+function isSecurityCodeAllowed(
+  securityCode:
     string,
+): boolean {
+  const securityCodeLength =
+    Array.from(
+      securityCode,
+    ).length;
 
-  salt:
-    Buffer,
-): Promise<Buffer> {
-  return new Promise(
-    (
-      resolve,
-      reject,
-    ) => {
-      nodeScrypt(
-        password,
-        salt,
-        FINORA_BRANCH_CREDENTIAL_KEY_BYTES,
-        {
-          N:
-            FINORA_BRANCH_CREDENTIAL_SCRYPT_N,
-
-          r:
-            FINORA_BRANCH_CREDENTIAL_SCRYPT_R,
-
-          p:
-            FINORA_BRANCH_CREDENTIAL_SCRYPT_P,
-
-          maxmem:
-            FINORA_BRANCH_CREDENTIAL_SCRYPT_MAXMEM,
-        },
-        (
-          error,
-          derivedKey,
-        ) => {
-          if (error) {
-            reject(
-              error,
-            );
-
-            return;
-          }
-
-          resolve(
-            derivedKey,
-          );
-        },
-      );
-    },
+  return (
+    securityCodeLength >=
+      FINORA_BRANCH_SECURITY_CODE_POLICY.minLength &&
+    securityCodeLength <=
+      FINORA_BRANCH_SECURITY_CODE_POLICY.maxLength &&
+    securityCode.trim().length >
+      0
   );
 }
 
 // ============================================================
-// ENROLL
+// PORTABLE AUTH PRODUCTION ENROLLMENT ADAPTER
+//
+// Renderer-facing request/result contracts remain unchanged.
+//
+// Portable Branch Auth coordinator is the sole production
+// enrollment mutation authority. This service performs request
+// policy validation and result-shape adaptation only.
 // ============================================================
 
-export async function enrollFinoraBranchCredential(
+export async function enrollFinoraBranchCredentialWithPortableStore(
   input:
     unknown,
+
+  portableStore:
+    FinoraPortableBranchAuthStore,
 ): Promise<
   FinoraBranchCredentialEnrollmentResult
 > {
@@ -362,281 +331,133 @@ export async function enrollFinoraBranchCredential(
     );
   }
 
-  // ----------------------------------------------------------
-  // AUTHORITATIVE SIGNED ENROLLMENT AUTHORIZATION
-  //
-  // User identity/scope/role/storage/data-context are derived
-  // exclusively from the persisted signed authorization.
-  // ----------------------------------------------------------
-
-  const storeResult =
-    await readFinoraControlStore();
-
   if (
-    !storeResult.success ||
-    !storeResult.data
+    !isSecurityCodeAllowed(
+      request.securityCode,
+    )
   ) {
     return failure(
-      "CONTROL_STORE_FAILED",
-      storeResult.error ??
-        "Unable to load the FINORA Control Store.",
+      "INVALID_SECURITY_CODE",
+      `FINORA Security Code must contain between ${FINORA_BRANCH_SECURITY_CODE_POLICY.minLength} and ${FINORA_BRANCH_SECURITY_CODE_POLICY.maxLength} characters and cannot be whitespace-only.`,
     );
   }
 
-  const canonicalUsername =
-    canonicalizeFinoraCredentialUsername(
-      request.username,
-    );
+  const coordinatorResult =
+    await enrollFinoraPortableBranchAuth({
+      request,
 
-  const matchingAuthorizations =
-    (
-      storeResult.data
-        .branchCredentialEnrollmentAuthorizations ??
-      []
-    ).filter(
-      (item) =>
-        canonicalizeFinoraCredentialUsername(
-          item.username,
-        ) ===
-          canonicalUsername,
-    );
+      portableStore,
+    });
 
   if (
-    matchingAuthorizations.length ===
+    !coordinatorResult.success
+  ) {
+    switch (
+      coordinatorResult.errorCode
+    ) {
+      case "CONTROL_STORE_FAILED":
+        return failure(
+          "CONTROL_STORE_FAILED",
+          coordinatorResult.error,
+        );
+
+      case "AUTHORIZATION_NOT_FOUND":
+        return failure(
+          "AUTHORIZATION_NOT_FOUND",
+          coordinatorResult.error,
+        );
+
+      case "AUTHORIZATION_AMBIGUOUS":
+      case "DURABLE_TRANSACTION_AMBIGUOUS":
+        return failure(
+          "AUTHORIZATION_AMBIGUOUS",
+          coordinatorResult.error,
+        );
+
+      case "MATERIAL_DERIVATION_FAILED":
+        return failure(
+          "KDF_FAILED",
+          "FINORA could not securely derive the local credential verifier.",
+        );
+
+      default:
+        return failure(
+          "ENROLLMENT_APPLY_FAILED",
+          coordinatorResult.error,
+        );
+    }
+  }
+
+  const credential =
+    coordinatorResult.data.credential;
+
+  const transaction =
+    coordinatorResult.data.transaction;
+
+  const enrolledAt =
+    transaction.controlAppliedAt;
+
+  if (
+    typeof enrolledAt !==
+      "string" ||
+    enrolledAt.length ===
       0
   ) {
     return failure(
-      "AUTHORIZATION_NOT_FOUND",
-      "FINORA credential enrollment authorization is missing or already consumed.",
+      "ENROLLMENT_APPLY_FAILED",
+      "Portable Branch Auth enrollment completed without Control apply evidence.",
     );
   }
 
-  if (
-    matchingAuthorizations.length !==
-      1
-  ) {
-    return failure(
-      "AUTHORIZATION_AMBIGUOUS",
-      "FINORA credential enrollment authority is ambiguous for this username.",
-    );
-  }
+  return {
+    success:
+      true,
 
-  const authorization =
-    matchingAuthorizations[0];
+    data: {
+      credentialId:
+        credential.credentialId,
 
-  // ----------------------------------------------------------
-  // KDF
-  //
-  // Password remains an ephemeral in-memory input only.
-  // ----------------------------------------------------------
+      userId:
+        credential.userId,
 
-  const salt =
-    randomBytes(
-      FINORA_BRANCH_CREDENTIAL_SALT_BYTES,
-    );
+      username:
+        credential.username,
 
-  let derivedKey:
-    Buffer |
-    undefined;
+      fullName:
+        credential.fullName,
 
-  try {
-    derivedKey =
-      await deriveScryptKey(
-        request.password,
-        salt,
-      );
+      role:
+        credential.role,
 
-    const appliedAt =
-      new Date().toISOString();
+      ownerId:
+        credential.ownerId,
 
-    const credentialId =
-      `FINORA-CREDENTIAL-${randomUUID()}`;
+      businessId:
+        credential.businessId,
 
-    const credential:
-      FinoraControlBranchCredential = {
-        credentialId,
+      branchId:
+        credential.branchId,
 
-        sourceAuthorizationId:
-          authorization.authorizationId,
+      storageMode:
+        credential.storageMode,
 
-        userId:
-          authorization.userId,
+      dataContext:
+        credential.dataContext,
 
-        username:
-          authorization.username,
+      ...(
+        credential.demoId ===
+          undefined
+          ? {}
+          : {
+              demoId:
+                credential.demoId,
+            }
+      ),
 
-        canonicalUsername:
-          canonicalizeFinoraCredentialUsername(
-            authorization.username,
-          ),
-
-        fullName:
-          authorization.fullName,
-
-        role:
-          authorization.role,
-
-        ownerId:
-          authorization.ownerId,
-
-        businessId:
-          authorization.businessId,
-
-        branchId:
-          authorization.branchId,
-
-        storageMode:
-          authorization.storageMode,
-
-        dataContext:
-          authorization.dataContext,
-
-        ...(
-          authorization.demoId ===
-            undefined
-            ? {}
-            : {
-                demoId:
-                  authorization.demoId,
-              }
-        ),
-
-        status:
-          "ACTIVE",
-
-        verifier: {
-          algorithm:
-            "SCRYPT",
-
-          saltEncoding:
-            "BASE64",
-
-          salt:
-            salt.toString(
-              "base64",
-            ),
-
-          derivedKeyEncoding:
-            "BASE64",
-
-          derivedKey:
-            derivedKey.toString(
-              "base64",
-            ),
-
-          keyLength:
-            32,
-
-          N:
-            32768,
-
-          r:
-            8,
-
-          p:
-            1,
-        },
-
-        createdAt:
-          appliedAt,
-
-        updatedAt:
-          appliedAt,
-
-        schemaVersion:
-          1,
-      };
-
-    const applyResult =
-      await applyFinoraBranchCredentialEnrollmentState({
-        authorizationId:
-          authorization.authorizationId,
-
-        credential,
-
-        appliedAt,
-      });
-
-    if (
-      !applyResult.success ||
-      !applyResult.data
-    ) {
-      return failure(
-        "ENROLLMENT_APPLY_FAILED",
-        applyResult.error ??
-          "Unable to apply FINORA Branch Credential enrollment.",
-      );
-    }
-
-    return {
-      success:
-        true,
-
-      data: {
-        credentialId:
-          applyResult.data.credential.credentialId,
-
-        userId:
-          authorization.userId,
-
-        username:
-          authorization.username,
-
-        fullName:
-          authorization.fullName,
-
-        role:
-          authorization.role,
-
-        ownerId:
-          authorization.ownerId,
-
-        businessId:
-          authorization.businessId,
-
-        branchId:
-          authorization.branchId,
-
-        storageMode:
-          authorization.storageMode,
-
-        dataContext:
-          authorization.dataContext,
-
-        ...(
-          authorization.demoId ===
-            undefined
-            ? {}
-            : {
-                demoId:
-                  authorization.demoId,
-              }
-        ),
-
-        enrolledAt:
-          appliedAt,
-      },
-    };
-  }
-  catch {
-    return failure(
-      "KDF_FAILED",
-      "FINORA could not securely derive the local credential verifier.",
-    );
-  }
-  finally {
-    salt.fill(
-      0,
-    );
-
-    if (derivedKey) {
-      derivedKey.fill(
-        0,
-      );
-    }
-  }
+      enrolledAt,
+    },
+  };
 }
-
 // ============================================================
 // END
 // ============================================================

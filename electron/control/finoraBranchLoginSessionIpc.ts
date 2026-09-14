@@ -43,6 +43,10 @@ import type {
   FinoraControlRendererValidator,
 } from "./finoraControlIpc.js";
 
+import type {
+  FinoraPortableBranchAuthStore,
+} from "./finoraPortableBranchAuthStore.js";
+
 import {
   createFinoraBranchLoginSession,
   invalidateFinoraBranchLoginSession,
@@ -138,6 +142,9 @@ let loginSessionHandlersRegistered =
 export function registerFinoraBranchLoginSessionHandlers(
   isTrustedRenderer:
     FinoraControlRendererValidator,
+
+  portableStore:
+    FinoraPortableBranchAuthStore,
 ): void {
   if (
     loginSessionHandlersRegistered
@@ -171,6 +178,7 @@ export function registerFinoraBranchLoginSessionHandlers(
       try {
         return await createFinoraBranchLoginSession(
           request,
+          portableStore,
         );
       }
       catch {

@@ -33,6 +33,7 @@
 
 import {
   applyFinoraVerifiedBranchAccessState,
+  applyFinoraVerifiedBranchCredentialAuthorizationState,
   readFinoraControlStore,
 } from "./finoraControlStore.js";
 
@@ -58,6 +59,10 @@ import {
 import type {
   FinoraBranchTrustedControlPublicKey,
 } from "./finoraSignedControlPackageVerifier.js";
+
+import type {
+  FinoraBranchCredentialPortabilityAuthorityProvenanceV1,
+} from "./finoraBranchCredentialPortabilityAuthorityProvenance.js";
 
 import {
   getFinoraWindowsInstallationBinding,
@@ -594,6 +599,9 @@ export async function applyFinoraSignedBranchAccessPackage(
     readonly FinoraBranchTrustedControlPublicKey[],
 
   now: Date,
+
+  credentialPortabilityAuthorityProvenance?:
+    FinoraBranchCredentialPortabilityAuthorityProvenanceV1,
 ): Promise<
   FinoraControlStoreResult<
     FinoraVerifiedBranchAccessApplyResult
@@ -762,11 +770,11 @@ export async function applyFinoraSignedBranchAccessPackage(
       payload,
       [
         "action",
-        "accessGrant",
         "issuedAt",
         "schemaVersion",
       ],
       [
+        "accessGrant",
         "credentialEnrollment",
       ],
     ) ||
@@ -776,7 +784,8 @@ export async function applyFinoraSignedBranchAccessPackage(
       payload.action !== "REPLACE" &&
       payload.action !== "SUSPEND" &&
       payload.action !== "RESUME" &&
-      payload.action !== "REVOKE"
+      payload.action !== "REVOKE" &&
+      payload.action !== "AUTHORIZE_CREDENTIAL"
     ) ||
     payload.schemaVersion !== 1 ||
     !isTimestamp(
@@ -787,6 +796,120 @@ export async function applyFinoraSignedBranchAccessPackage(
   ) {
     return failure(
       "FINORA BRANCH_ACCESS payload structure is invalid.",
+    );
+  }
+
+  if (
+    credentialPortabilityAuthorityProvenance !==
+      undefined &&
+    payload.action !==
+      "AUTHORIZE_CREDENTIAL"
+  ) {
+    return failure(
+      "FINORA credential portability authority provenance is valid only for AUTHORIZE_CREDENTIAL.",
+    );
+  }
+
+  if (
+    payload.action ===
+      "AUTHORIZE_CREDENTIAL"
+  ) {
+    if (
+      payload.accessGrant !==
+        undefined ||
+      payload.credentialEnrollment ===
+        undefined
+    ) {
+      return failure(
+        "FINORA AUTHORIZE_CREDENTIAL requires credential enrollment authority and no Access Grant snapshot.",
+      );
+    }
+
+    const credentialAuthorization =
+      sanitizeCredentialEnrollmentAuthorization(
+        payload.credentialEnrollment,
+      );
+
+    if (
+      !credentialAuthorization
+    ) {
+      return failure(
+        "FINORA AUTHORIZE_CREDENTIAL credential authorization is invalid.",
+      );
+    }
+
+    if (
+      credentialAuthorization.ownerId !==
+        installation.ownerId ||
+      credentialAuthorization.businessId !==
+        installation.businessId ||
+      credentialAuthorization.branchId !==
+        installation.branchId
+    ) {
+      return failure(
+        "FINORA AUTHORIZE_CREDENTIAL scope does not match this installation.",
+      );
+    }
+
+    return applyFinoraVerifiedBranchCredentialAuthorizationState({
+      packageId:
+        controlPackage.packageId,
+
+      issuerId:
+        controlPackage.issuer.issuerId,
+
+      purpose:
+        "BRANCH_ACCESS",
+
+      action:
+        "AUTHORIZE_CREDENTIAL",
+
+      sequence:
+        controlPackage.sequence,
+
+      target: {
+        ownerId:
+          installation.ownerId,
+
+        businessId:
+          installation.businessId,
+
+        branchId:
+          installation.branchId,
+
+        installationId:
+          installation.installationId,
+
+        bindingKeyId:
+          nativeBinding.bindingKeyId,
+
+        fingerprintAlgorithm:
+          "SHA-256",
+
+        publicKeyFingerprint:
+          nativeBinding.publicKeyFingerprint,
+      },
+
+      credentialEnrollmentAuthorization:
+        credentialAuthorization,
+
+      verifiedControlSigner: {
+        ...verification.verifiedTrustedKey,
+      },
+
+      credentialPortabilityAuthorityProvenance,
+
+      appliedAt:
+        now.toISOString(),
+    });
+  }
+
+  if (
+    payload.accessGrant ===
+      undefined
+  ) {
+    return failure(
+      "FINORA BRANCH_ACCESS lifecycle package requires a signed Access Grant.",
     );
   }
 
@@ -937,6 +1060,10 @@ export async function applyFinoraSignedBranchAccessPackage(
         ? {}
         : {
             credentialEnrollmentAuthorization,
+
+            verifiedControlSigner: {
+              ...verification.verifiedTrustedKey,
+            },
           }
     ),
 

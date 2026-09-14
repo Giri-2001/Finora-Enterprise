@@ -13,7 +13,7 @@
    - Prove signed ISSUE / RENEW / REPLACE
    - Prove signed SUSPEND / RESUME / REVOKE
    - Prove action / administrative-status mismatch rejection
-   - Prove credential enrollment is ISSUE-only
+   - Prove credential enrollment is ISSUE or dedicated AUTHORIZE_CREDENTIAL only
    - Prove credential authorization contains metadata only
 
    ISOLATION:
@@ -206,6 +206,7 @@ function administrativeStatusForAction(
     case "RENEW":
     case "REPLACE":
     case "RESUME":
+    case "AUTHORIZE_CREDENTIAL":
       return "ACTIVE";
   }
 }
@@ -736,7 +737,119 @@ async function runFinoraBranchAccessSignedLifecycleIssuerSelfTest():
     );
 
     // --------------------------------------------------------
-    // CREDENTIAL ENROLLMENT ON NON-ISSUE MUST FAIL
+    // VALID DEDICATED AUTHORIZE_CREDENTIAL
+    //
+    // Recovery intentionally carries no Access Grant snapshot.
+    // The recipient must resolve current Branch Access from its
+    // own authoritative encrypted Control Store.
+    // --------------------------------------------------------
+
+    const recoveryIssuedAt =
+      "2026-09-06T06:00:01.000Z";
+
+    const recoveryCredentialEnrollment:
+      FinoraBranchCredentialEnrollmentAuthorization = {
+        ...credentialEnrollment,
+
+        authorizationId:
+          "FINORA-CREDENTIAL-ENROLLMENT-BRANCH-ACCESS-RECOVERY-TEST",
+      };
+
+    const recoveryPackage =
+      await signFinoraBranchAccessPackage({
+        packageId:
+          "PACKAGE-BRANCH-ACCESS-CREDENTIAL-AUTHORIZE",
+
+        sequence:
+          9,
+
+        issuedAt:
+          recoveryIssuedAt,
+
+        target:
+          TARGET,
+
+        payload: {
+          action:
+            "AUTHORIZE_CREDENTIAL",
+
+          credentialEnrollment:
+            recoveryCredentialEnrollment,
+
+          issuedAt:
+            recoveryIssuedAt,
+
+          schemaVersion:
+            1,
+        },
+      });
+
+    assert(
+      recoveryPackage.purpose ===
+        "BRANCH_ACCESS",
+      "AUTHORIZE_CREDENTIAL signer emitted wrong purpose.",
+    );
+
+    const recoveryPayload =
+      recoveryPackage.payload as
+        Record<string, unknown>;
+
+    assert(
+      recoveryPayload.action ===
+        "AUTHORIZE_CREDENTIAL",
+      "AUTHORIZE_CREDENTIAL signed action changed.",
+    );
+
+    assert(
+      !Object.prototype.hasOwnProperty.call(
+        recoveryPayload,
+        "accessGrant",
+      ),
+      "AUTHORIZE_CREDENTIAL leaked an Access Grant snapshot.",
+    );
+
+    const signedRecoveryCredential =
+      recoveryPayload.credentialEnrollment as
+        Record<string, unknown>;
+
+    assert(
+      signedRecoveryCredential.authorizationId ===
+        recoveryCredentialEnrollment.authorizationId &&
+      signedRecoveryCredential.method ===
+        "SET_PASSWORD_ON_RECIPIENT" &&
+      signedRecoveryCredential.oneTime ===
+        true,
+      "AUTHORIZE_CREDENTIAL credential authority changed during signing.",
+    );
+
+    const forbiddenRecoverySecretField =
+      Object.keys(
+        signedRecoveryCredential,
+      ).find(
+        (
+          key,
+        ) =>
+          /^(password|passwordHash|hash|salt|privateKey)$/i.test(
+            key,
+          ),
+      );
+
+    assert(
+      forbiddenRecoverySecretField ===
+        undefined,
+      `AUTHORIZE_CREDENTIAL leaked forbidden credential-secret field "${forbiddenRecoverySecretField ?? "<none>"}".`,
+    );
+
+    console.log(
+      "PASS: dedicated AUTHORIZE_CREDENTIAL signed without Access Grant snapshot",
+    );
+
+    console.log(
+      "PASS: AUTHORIZE_CREDENTIAL contains authorization metadata only",
+    );
+
+    // --------------------------------------------------------
+    // CREDENTIAL ENROLLMENT ON OTHER LIFECYCLE ACTION MUST FAIL
     // --------------------------------------------------------
 
     await expectRejected(
@@ -748,7 +861,7 @@ async function runFinoraBranchAccessSignedLifecycleIssuerSelfTest():
             "PACKAGE-BRANCH-ACCESS-CREDENTIAL-RENEW",
 
           sequence:
-            9,
+            10,
 
           issuedAt:
             ISSUED_AT,
@@ -765,7 +878,7 @@ async function runFinoraBranchAccessSignedLifecycleIssuerSelfTest():
             ),
         });
       },
-      "permitted only with the signed ISSUE action",
+      "permitted only with signed ISSUE or AUTHORIZE_CREDENTIAL actions",
     );
 
     console.log(

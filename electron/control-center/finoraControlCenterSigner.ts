@@ -53,10 +53,12 @@ import {
 export type FinoraControlCenterPackagePurpose =
   | "BRANCH_ACTIVATION"
   | "BRANCH_ACCESS"
+  | "BRANCH_PORTABILITY_AUTHORITY"
   | "STORAGE_ENTITLEMENT"
   | "BUSINESS_PROFILE"
   | "PRICING_POLICY"
   | "WALLET_RECHARGE"
+  | "WALLET_RECHARGE_DECLINE"
   | "CONTROL_BUNDLE";
 
 // ============================================================

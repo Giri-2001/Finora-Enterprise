@@ -416,6 +416,9 @@ export async function exportFinoraControlBundleFile(
 
   signedBundle:
     unknown,
+
+  suggestedFileNameOverride?:
+    string,
 ): Promise<
   FinoraControlBundleExportResult
 > {
@@ -457,10 +460,36 @@ export async function exportFinoraControlBundleFile(
         Record<string, unknown>
       >;
 
-  const suggestedFileName =
-    createSuggestedFileName(
-      controlBundle.packageId,
-    );
+  let suggestedFileName:
+    string;
+
+  if (
+    suggestedFileNameOverride ===
+      undefined
+  ) {
+    suggestedFileName =
+      createSuggestedFileName(
+        controlBundle.packageId,
+      );
+  } else {
+    const candidate =
+      suggestedFileNameOverride.trim();
+
+    if (
+      candidate.length === 0 ||
+      candidate.length > 180 ||
+      path.basename(candidate) !== candidate ||
+      /[\\/]/.test(candidate) ||
+      !candidate.toLowerCase().endsWith(".finora")
+    ) {
+      return failure(
+        "FINORA Control Bundle suggested filename override is invalid.",
+      );
+    }
+
+    suggestedFileName =
+      candidate;
+  }
 
   const dialogResult =
     await dialog.showSaveDialog(

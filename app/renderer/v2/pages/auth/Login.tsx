@@ -299,6 +299,16 @@ export default function Login({
     setConfirmPassword,
   ] = useState("");
 
+  const [
+    securityCode,
+    setSecurityCode,
+  ] = useState("");
+
+  const [
+    confirmSecurityCode,
+    setConfirmSecurityCode,
+  ] = useState("");
+
 
   const [
     credentialEnrollmentMessage,
@@ -669,6 +679,10 @@ export default function Login({
 
     setOwnerStorage(storage);
 
+    setDeviceSecurityCodeRequired(false);
+
+    setDeviceSecurityCode("");
+
     setOpenDropdown(null);
 
     resetCredentials();
@@ -822,6 +836,26 @@ export default function Login({
 
 
   // ==========================================================
+  // UNKNOWN-DEVICE LOGIN CHALLENGE
+  //
+  // Separate from first-time credential-enrollment Security
+  // Code state. This value exists only in renderer memory and
+  // is sent only after main explicitly returns
+  // SECURITY_CODE_REQUIRED.
+  // ==========================================================
+
+  const [
+    deviceSecurityCodeRequired,
+    setDeviceSecurityCodeRequired,
+  ] = useState(false);
+
+  const [
+    deviceSecurityCode,
+    setDeviceSecurityCode,
+  ] = useState("");
+
+
+  // ==========================================================
   // OWNER AUTHENTICATION
   // ==========================================================
 
@@ -942,20 +976,36 @@ export default function Login({
       // - authoritative Branch Activation
       // - signed Branch Access evaluation
       // - exact credential/access context agreement
-      // - native-bound storage entitlement
+      // - ACTIVE logical storage entitlement after current Device Trust
       // - cryptographic login session creation
       //
-      // Renderer supplies only:
+      // Renderer supplies only user-entered login inputs:
       //
       // - username
       // - password
       // - selected LOCAL / USB mode
+      // - Security Code only after main returns
+      //   SECURITY_CODE_REQUIRED
+      //
+      // Renderer never supplies identity, scope, binding,
+      // signer, portability proof or trust authority.
       // ======================================================
 
       const entitlementStorageMode =
         ownerStorage === "usb"
           ? "USB"
           : "LOCAL";
+
+      if (
+        deviceSecurityCodeRequired &&
+        deviceSecurityCode.length === 0
+      ) {
+        setError(
+          "Enter your Security Code to authorize this device.",
+        );
+
+        return;
+      }
 
       const loginSessionBridge =
         window.finora?.loginSession;
@@ -979,13 +1029,60 @@ export default function Login({
 
           storageMode:
             entitlementStorageMode,
+
+          ...(deviceSecurityCodeRequired
+            ? {
+                securityCode:
+                  deviceSecurityCode,
+              }
+            : {}),
         });
 
       if (!loginResult.success) {
         if (
           loginResult.errorCode ===
+            "SECURITY_CODE_REQUIRED"
+        ) {
+          setDeviceSecurityCodeRequired(
+            true,
+          );
+
+          setDeviceSecurityCode("");
+
+          setError(
+            "Enter your Security Code to authorize this device.",
+          );
+
+          return;
+        }
+
+        if (
+          loginResult.errorCode ===
+            "SECURITY_CODE_INVALID"
+        ) {
+          setDeviceSecurityCodeRequired(
+            true,
+          );
+
+          setDeviceSecurityCode("");
+
+          setError(
+            "Invalid Security Code",
+          );
+
+          return;
+        }
+
+        if (
+          loginResult.errorCode ===
             "INVALID_CREDENTIALS"
         ) {
+          setDeviceSecurityCodeRequired(
+            false,
+          );
+
+          setDeviceSecurityCode("");
+
           registerFailedLogin(
             trimmedUsername,
           );
@@ -995,14 +1092,29 @@ export default function Login({
           );
         }
         else {
+          setDeviceSecurityCodeRequired(
+            false,
+          );
+
+          setDeviceSecurityCode("");
+
           setError(
-            loginResult.error ??
-              "Unable to authorize this FINORA login.",
+            loginResult.errorCode ===
+              "DEVICE_TRUST_FAILED"
+              ? "Unable to authorize this device."
+              : loginResult.error ??
+                "Unable to authorize this FINORA login.",
           );
         }
 
         return;
       }
+
+      setDeviceSecurityCodeRequired(
+        false,
+      );
+
+      setDeviceSecurityCode("");
 
       resetLoginAttempts(
         trimmedUsername,
@@ -1290,6 +1402,45 @@ export default function Login({
     }
 
 
+    const securityCodeLength =
+      Array.from(
+        securityCode,
+      ).length;
+
+    if (
+      securityCodeLength <
+        8 ||
+      securityCodeLength >
+        128 ||
+      securityCode.trim().length ===
+        0
+    ) {
+      setError(
+        "Security Code must contain between 8 and 128 characters.",
+      );
+
+      return;
+    }
+
+    if (!confirmSecurityCode) {
+      setError(
+        "Confirm your Security Code.",
+      );
+
+      return;
+    }
+
+    if (
+      securityCode !==
+        confirmSecurityCode
+    ) {
+      setError(
+        "Security Code and Confirm Security Code do not match.",
+      );
+
+      return;
+    }
+
     const enrollCredential =
       window.finora?.credentials
         ?.enroll;
@@ -1326,6 +1477,8 @@ export default function Login({
             trimmedUsername,
 
           password,
+
+          securityCode,
         });
 
 
@@ -1348,6 +1501,14 @@ export default function Login({
         "",
       );
 
+      setSecurityCode(
+        "",
+      );
+
+      setConfirmSecurityCode(
+        "",
+      );
+
       setShowPassword(
         false,
       );
@@ -1357,7 +1518,7 @@ export default function Login({
       );
 
       setCredentialEnrollmentMessage(
-        "Password created successfully. Sign in with your new password.",
+        "Password and Security Code created successfully. Sign in with your new password.",
       );
 
     } catch (enrollmentError) {
@@ -1392,6 +1553,10 @@ export default function Login({
 
   function openSetPasswordMode(): void {
 
+    setDeviceSecurityCodeRequired(false);
+
+    setDeviceSecurityCode("");
+
     setCredentialMode(
       "SET_PASSWORD",
     );
@@ -1401,6 +1566,14 @@ export default function Login({
     );
 
     setConfirmPassword(
+      "",
+    );
+
+    setSecurityCode(
+      "",
+    );
+
+    setConfirmSecurityCode(
       "",
     );
 
@@ -1421,6 +1594,10 @@ export default function Login({
 
   function returnToLoginMode(): void {
 
+    setDeviceSecurityCodeRequired(false);
+
+    setDeviceSecurityCode("");
+
     setCredentialMode(
       "LOGIN",
     );
@@ -1430,6 +1607,14 @@ export default function Login({
     );
 
     setConfirmPassword(
+      "",
+    );
+
+    setSecurityCode(
+      "",
+    );
+
+    setConfirmSecurityCode(
       "",
     );
 
@@ -2070,6 +2255,10 @@ export default function Login({
                     setUsername(
                       event.target.value,
                     );
+                    setDeviceSecurityCodeRequired(
+                      false,
+                    );
+                    setDeviceSecurityCode("");
                     setError("");
                   }}
                   placeholder="User ID"
@@ -2111,6 +2300,10 @@ export default function Login({
                     setPassword(
                       event.target.value,
                     );
+                    setDeviceSecurityCodeRequired(
+                      false,
+                    );
+                    setDeviceSecurityCode("");
                     setError("");
                   }}
                   placeholder={
@@ -2225,7 +2418,132 @@ export default function Login({
 
               )}
 
+              {credentialMode === "SET_PASSWORD" && (
+
+                <div
+                  style={
+                    loginStyles.inputWrapper
+                  }
+                >
+
+                  <span
+                    style={
+                      loginStyles.inputIcon
+                    }
+                  >
+                    <LockKeyhole />
+                  </span>
+
+                  <input
+                    value={
+                      securityCode
+                    }
+                    onChange={(
+                      event,
+                    ) => {
+                      setSecurityCode(
+                        event.target.value,
+                      );
+                      setError("");
+                    }}
+                    placeholder="Security Code"
+                    aria-label="Security Code"
+                    type="password"
+                    autoComplete="new-password"
+                    disabled={
+                      loginBusy
+                    }
+                    onKeyDown={
+                      handlePasswordKeyDown
+                    }
+                    style={
+                      loginStyles.input
+                    }
+                  />
+
+                </div>
+
+              )}
+
+              {credentialMode === "SET_PASSWORD" && (
+
+                <div
+                  style={
+                    loginStyles.inputWrapper
+                  }
+                >
+
+                  <span
+                    style={
+                      loginStyles.inputIcon
+                    }
+                  >
+                    <LockKeyhole />
+                  </span>
+
+                  <input
+                    value={
+                      confirmSecurityCode
+                    }
+                    onChange={(
+                      event,
+                    ) => {
+                      setConfirmSecurityCode(
+                        event.target.value,
+                      );
+                      setError("");
+                    }}
+                    placeholder="Confirm Security Code"
+                    aria-label="Confirm Security Code"
+                    type="password"
+                    autoComplete="new-password"
+                    disabled={
+                      loginBusy
+                    }
+                    onKeyDown={
+                      handlePasswordKeyDown
+                    }
+                    style={
+                      loginStyles.input
+                    }
+                  />
+
+                </div>
+
+              )}
+
             </div>
+
+
+            {credentialMode === "LOGIN" &&
+              deviceSecurityCodeRequired && (
+                <input
+                  value={
+                    deviceSecurityCode
+                  }
+                  onChange={(
+                    event,
+                  ) => {
+                    setDeviceSecurityCode(
+                      event.target.value,
+                    );
+                    setError("");
+                  }}
+                  placeholder="Security Code"
+                  aria-label="Device Security Code"
+                  type="password"
+                  autoComplete="off"
+                  disabled={
+                    loginBusy
+                  }
+                  onKeyDown={
+                    handlePasswordKeyDown
+                  }
+                  style={
+                    loginStyles.input
+                  }
+                />
+              )}
 
 
             {credentialEnrollmentMessage && (

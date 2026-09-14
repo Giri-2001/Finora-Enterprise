@@ -50,6 +50,15 @@ const CONTROL_CENTER_CHANNELS = {
   OPEN_INSTALLATION_ENROLLMENT_REQUEST:
     "finora:control-center:open-installation-enrollment-request",
 
+  OPEN_WALLET_RECHARGE_REQUEST:
+    "finora:control-center:open-wallet-recharge-request",
+
+  APPROVE_AND_EXPORT_WALLET_RECHARGE_REQUEST:
+    "finora:control-center:approve-and-export-wallet-recharge-request",
+
+  DECLINE_AND_EXPORT_WALLET_RECHARGE_REQUEST:
+    "finora:control-center:decline-and-export-wallet-recharge-request",
+
   ISSUE_AND_EXPORT_INSTALLATION_ENROLLMENT_RESPONSE:
     "finora:control-center:issue-and-export-installation-enrollment-response",
 
@@ -73,6 +82,12 @@ const CONTROL_CENTER_CHANNELS = {
 
   ISSUE_AND_EXPORT_CONTROL_BUNDLE:
     "finora:control-center:issue-and-export-control-bundle",
+
+  EXPORT_ADMIN_AUTHORITY_RECOVERY:
+    "finora:control-center:export-admin-authority-recovery",
+
+  IMPORT_AND_RECOVER_ADMIN_AUTHORITY:
+    "finora:control-center:import-and-recover-admin-authority",
 } as const;
 
 // ============================================================
@@ -288,8 +303,105 @@ export type FinoraControlCenterEnrollmentOpenView =
     };
 
 // ============================================================
+// VERIFIED WALLET RECHARGE REQUEST VIEW
+// ============================================================
+
+export type FinoraControlCenterWalletRechargeRequestOpenView =
+  | {
+      cancelled:
+        true;
+    }
+  | {
+      cancelled:
+        false;
+
+      fileName:
+        string;
+
+      bytesRead:
+        number;
+
+      requestId:
+        string;
+
+      paymentReference:
+        string;
+
+      ownerId:
+        string;
+
+      businessId:
+        string;
+
+      branchId:
+        string;
+
+      businessCode:
+        string;
+
+      branchCode:
+        string;
+
+      installationId:
+        string;
+
+      bindingKeyId:
+        string;
+
+      fingerprintAlgorithm:
+        "SHA-256";
+
+      publicKeyFingerprint:
+        string;
+
+      amountMinor:
+        number;
+
+      currency:
+        "INR";
+
+      paymentMethod:
+        string;
+
+      paymentSource:
+        string;
+
+      requestedAt:
+        string;
+    };
+
+// ============================================================
 // INSTALLATION ENROLLMENT RESPONSE OPERATOR ASSIGNMENT
 // ============================================================
+
+// ============================================================
+// WALLET RECHARGE REQUEST APPROVAL EXPORT VIEW
+// ============================================================
+
+export type FinoraControlCenterWalletRechargeRequestApprovalExportView =
+  | {
+      cancelled:
+        true;
+    }
+  | {
+      cancelled:
+        false;
+
+      fileName:
+        string;
+
+      bytesWritten:
+        number;
+
+      requestId:
+        string;
+
+      paymentReference:
+        string;
+
+      controlBundlePackageId:
+        string;
+    };
 
 export interface FinoraControlCenterEnrollmentOperatorAssignment {
   ownerId:
@@ -337,6 +449,97 @@ export type FinoraControlCenterEnrollmentResponseExportView =
 // BRIDGE CONTRACT
 // ============================================================
 
+export type FinoraControlCenterAdminAuthorityRecoveryExportView =
+  | {
+      success:
+        true;
+
+      cancelled:
+        false;
+
+      status:
+        "EXPORTED";
+
+      issuerId:
+        string;
+
+      signingKeyId:
+        string;
+
+      fileName:
+        string;
+
+      bytes:
+        number;
+    }
+  | {
+      success:
+        false;
+
+      cancelled:
+        true;
+    }
+  | {
+      success:
+        false;
+
+      cancelled:
+        false;
+
+      error:
+        string;
+    };
+
+export type FinoraControlCenterAdminAuthorityRecoveryImportView =
+  | {
+      success:
+        true;
+
+      cancelled:
+        false;
+
+      status:
+        "RESTORED";
+
+      issuerId:
+        string;
+
+      signingKeyId:
+        string;
+
+      createdAt:
+        string;
+
+      retainedSigningKeyCount:
+        number;
+
+      fileName:
+        string;
+
+      bytes:
+        number;
+    }
+  | {
+      success:
+        false;
+
+      cancelled:
+        true;
+    }
+  | {
+      success:
+        false;
+
+      cancelled:
+        false;
+
+      errorCode?:
+        string;
+
+      error:
+        string;
+    };
+
 export interface FinoraControlCenterBridge {
   getTrustRecord:
     () =>
@@ -369,6 +572,29 @@ export interface FinoraControlCenterBridge {
         >
       >;
 
+  openWalletRechargeRequest:
+    () =>
+      Promise<
+        FinoraControlCenterResult<
+          FinoraControlCenterWalletRechargeRequestOpenView
+        >
+      >;
+
+  approveAndExportWalletRechargeRequest:
+    () =>
+      Promise<
+        FinoraControlCenterResult<
+          FinoraControlCenterWalletRechargeRequestApprovalExportView
+        >
+      >;
+
+  declineAndExportWalletRechargeRequest:
+    () =>
+      Promise<
+        FinoraControlCenterResult<
+          FinoraControlCenterWalletRechargeRequestApprovalExportView
+        >
+      >;
   issueAndExportInstallationEnrollmentResponse:
     (
       assignment:
@@ -456,6 +682,28 @@ export interface FinoraControlCenterBridge {
           FinoraControlBundleExportView
         >
       >;
+
+  exportAdminAuthorityRecovery:
+    (
+      securityCode:
+        string,
+    ) =>
+      Promise<
+        FinoraControlCenterResult<
+          FinoraControlCenterAdminAuthorityRecoveryExportView
+        >
+      >;
+
+  importAndRecoverAdminAuthority:
+    (
+      securityCode:
+        string,
+    ) =>
+      Promise<
+        FinoraControlCenterResult<
+          FinoraControlCenterAdminAuthorityRecoveryImportView
+        >
+      >;
 }
 
 // ============================================================
@@ -506,6 +754,38 @@ const controlCenterBridge:
         >
       >,
 
+  openWalletRechargeRequest:
+    () =>
+      ipcRenderer.invoke(
+        CONTROL_CENTER_CHANNELS
+          .OPEN_WALLET_RECHARGE_REQUEST,
+      ) as Promise<
+        FinoraControlCenterResult<
+          FinoraControlCenterWalletRechargeRequestOpenView
+        >
+      >,
+
+  approveAndExportWalletRechargeRequest:
+    () =>
+      ipcRenderer.invoke(
+        CONTROL_CENTER_CHANNELS
+          .APPROVE_AND_EXPORT_WALLET_RECHARGE_REQUEST,
+      ) as Promise<
+        FinoraControlCenterResult<
+          FinoraControlCenterWalletRechargeRequestApprovalExportView
+        >
+      >,
+
+  declineAndExportWalletRechargeRequest:
+    () =>
+      ipcRenderer.invoke(
+        CONTROL_CENTER_CHANNELS
+          .DECLINE_AND_EXPORT_WALLET_RECHARGE_REQUEST,
+      ) as Promise<
+        FinoraControlCenterResult<
+          FinoraControlCenterWalletRechargeRequestApprovalExportView
+        >
+      >,
   issueAndExportInstallationEnrollmentResponse:
     (
       assignment,
@@ -609,6 +889,34 @@ const controlCenterBridge:
       ) as Promise<
         FinoraControlCenterResult<
           FinoraControlBundleExportView
+        >
+      >,
+
+  exportAdminAuthorityRecovery:
+    (
+      securityCode,
+    ) =>
+      ipcRenderer.invoke(
+        CONTROL_CENTER_CHANNELS
+          .EXPORT_ADMIN_AUTHORITY_RECOVERY,
+        securityCode,
+      ) as Promise<
+        FinoraControlCenterResult<
+          FinoraControlCenterAdminAuthorityRecoveryExportView
+        >
+      >,
+
+  importAndRecoverAdminAuthority:
+    (
+      securityCode,
+    ) =>
+      ipcRenderer.invoke(
+        CONTROL_CENTER_CHANNELS
+          .IMPORT_AND_RECOVER_ADMIN_AUTHORITY,
+        securityCode,
+      ) as Promise<
+        FinoraControlCenterResult<
+          FinoraControlCenterAdminAuthorityRecoveryImportView
         >
       >,
 };

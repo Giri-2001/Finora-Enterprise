@@ -245,6 +245,8 @@ function isIssuancePurpose(
     value ===
       "WALLET_RECHARGE" ||
     value ===
+      "WALLET_RECHARGE_DECLINE" ||
+    value ===
       "CONTROL_BUNDLE" ||
     value ===
       "INSTALLATION_ENROLLMENT_RESPONSE"
