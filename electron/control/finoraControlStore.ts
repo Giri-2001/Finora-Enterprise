@@ -7192,6 +7192,151 @@ export function completeFinoraPortableBranchAuthCredentialRotationTransaction(
   return operation;
 }
 
+/* ============================================================
+   LEGACY SECURITY CODE BOOTSTRAP — CREDENTIAL COMMIT
+
+   This authority is intentionally narrow:
+   - existing ACTIVE credential only
+   - legacy credential must have no securityVerifier
+   - immutable credential identity cannot change
+   - authGeneration advances exactly once
+   - retained signed authorization + portability provenance required
+   - Portable Auth file mutation is owned by the coordinator
+============================================================ */
+
+export interface FinoraLegacySecurityCodeBootstrapCredentialReplaceInput {
+  expectedCredential: FinoraControlBranchCredential;
+  replacementCredential: FinoraControlBranchCredential;
+  appliedAt: string;
+}
+
+function legacySecurityCodeBootstrapCredentialIdentityEqual(
+  left: FinoraControlBranchCredential,
+  right: FinoraControlBranchCredential,
+): boolean {
+  return (
+    left.credentialId === right.credentialId &&
+    left.sourceAuthorizationId === right.sourceAuthorizationId &&
+    left.userId === right.userId &&
+    left.username === right.username &&
+    left.canonicalUsername === right.canonicalUsername &&
+    left.fullName === right.fullName &&
+    left.role === right.role &&
+    left.ownerId === right.ownerId &&
+    left.businessId === right.businessId &&
+    left.branchId === right.branchId &&
+    left.storageMode === right.storageMode &&
+    left.dataContext === right.dataContext &&
+    left.demoId === right.demoId &&
+    left.status === right.status &&
+    left.createdAt === right.createdAt &&
+    left.schemaVersion === right.schemaVersion
+  );
+}
+
+async function applyLegacySecurityCodeBootstrapCredentialReplaceInternal(
+  input: FinoraLegacySecurityCodeBootstrapCredentialReplaceInput,
+): Promise<FinoraControlStoreResult<FinoraControlBranchCredential>> {
+  if (
+    !isControlTimestamp(input.appliedAt) ||
+    !isBranchCredential(input.expectedCredential) ||
+    !isBranchCredential(input.replacementCredential)
+  ) {
+    return failure("A valid FINORA legacy Security Code bootstrap credential replacement is required.");
+  }
+
+  const currentResult = await readFinoraControlStore();
+
+  if (!currentResult.success || !currentResult.data) {
+    return failure(currentResult.error ?? "Unable to load the FINORA Control Store.");
+  }
+
+  const controlStore = currentResult.data;
+  const credentials = [...(controlStore.branchCredentials ?? [])];
+  const credentialIndex = credentials.findIndex(
+    (item) =>
+      item.credentialId === input.expectedCredential.credentialId &&
+      item.sourceAuthorizationId === input.expectedCredential.sourceAuthorizationId,
+  );
+
+  if (credentialIndex < 0) {
+    return failure("FINORA legacy bootstrap credential was not found.");
+  }
+
+  const currentCredential = credentials[credentialIndex];
+
+  if (JSON.stringify(currentCredential) !== JSON.stringify(input.expectedCredential)) {
+    return failure("FINORA legacy bootstrap credential changed before commit.");
+  }
+
+  if (currentCredential.securityVerifier !== undefined) {
+    return failure("FINORA legacy bootstrap is allowed only when Security Code has never been established.");
+  }
+
+  const replacementCredential = input.replacementCredential;
+  const currentGeneration = currentCredential.authGeneration ?? 1;
+  const targetGeneration = currentGeneration + 1;
+
+  if (
+    !Number.isSafeInteger(targetGeneration) ||
+    replacementCredential.securityVerifier === undefined ||
+    replacementCredential.authGeneration !== targetGeneration ||
+    replacementCredential.updatedAt !== input.appliedAt ||
+    !legacySecurityCodeBootstrapCredentialIdentityEqual(
+      currentCredential,
+      replacementCredential,
+    )
+  ) {
+    return failure("FINORA legacy bootstrap replacement credential lineage is invalid.");
+  }
+
+  const verificationEvidence =
+    (controlStore.branchCredentialAuthorizationVerificationEvidence ?? []).filter(
+      (item) => item.authorizationId === currentCredential.sourceAuthorizationId,
+    );
+
+  const portabilityAuthorities =
+    (controlStore.branchCredentialPortabilityAuthorities ?? []).filter(
+      (item) => item.sourceAuthorizationId === currentCredential.sourceAuthorizationId,
+    );
+
+  if (verificationEvidence.length !== 1 || portabilityAuthorities.length !== 1) {
+    return failure("FINORA legacy bootstrap requires exact retained signed credential portability provenance.");
+  }
+
+  credentials[credentialIndex] = structuredClone(replacementCredential);
+  controlStore.branchCredentials = credentials;
+  controlStore.updatedAt = input.appliedAt;
+
+  try {
+    await persistControlStorePackage(controlStore);
+  } catch (error) {
+    return failure(
+      error instanceof Error
+        ? error.message
+        : "Unable to atomically persist FINORA legacy Security Code bootstrap credential state.",
+    );
+  }
+
+  return success(structuredClone(replacementCredential));
+}
+
+export function applyFinoraLegacySecurityCodeBootstrapCredentialReplace(
+  input: FinoraLegacySecurityCodeBootstrapCredentialReplaceInput,
+): Promise<FinoraControlStoreResult<FinoraControlBranchCredential>> {
+  const operation = controlPackageApplyQueue.then(
+    () => applyLegacySecurityCodeBootstrapCredentialReplaceInternal(input),
+    () => applyLegacySecurityCodeBootstrapCredentialReplaceInternal(input),
+  );
+
+  controlPackageApplyQueue = operation.then(
+    () => undefined,
+    () => undefined,
+  );
+
+  return operation;
+}
+
 type FinoraStorageEntitlementSequenceAuthority =
   | "NATIVE_INSTALLATION"
   | "PORTABLE_BRANCH";

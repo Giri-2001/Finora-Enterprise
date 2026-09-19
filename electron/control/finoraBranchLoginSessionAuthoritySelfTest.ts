@@ -34,11 +34,15 @@
 
 import {
   app,
+  safeStorage,
 } from "electron";
 
 import {
+  mkdir,
   mkdtemp,
+  rename,
   rm,
+  writeFile,
 } from "node:fs/promises";
 
 import {
@@ -94,6 +98,19 @@ import type {
 } from "./finoraSignedControlPackageVerifier.js";
 
 import {
+  generateFinoraBranchCertificationKeyMaterial,
+} from "./finoraBranchCertificationCrypto.js";
+
+import {
+  bindFinoraBranchCertificationBootstrapToBranch,
+  persistFinoraBranchCertificationBootstrapGenerated,
+} from "./finoraBranchCertificationBootstrapStore.js";
+
+import {
+  generateFinoraWindowsInstallationBindingMaterial,
+} from "./finoraInstallationBindingCrypto.js";
+
+import {
   FinoraPortableBranchAuthStore,
 } from "./finoraPortableBranchAuthStore.js";
 
@@ -120,6 +137,74 @@ function assert(
       message,
     );
   }
+}
+
+function getRawLoginControlStoreFixtureFile(): string {
+  return join(
+    app.getPath("userData"),
+    "FINORA",
+    "control",
+    "finora-control.bin",
+  );
+}
+
+async function persistRawLoginControlStoreFixture(
+  value: unknown,
+): Promise<void> {
+  const controlFile =
+    getRawLoginControlStoreFixtureFile();
+
+  const controlDirectory =
+    join(
+      app.getPath("userData"),
+      "FINORA",
+      "control",
+    );
+
+  const temporaryFile =
+    `${controlFile}.legacy-login.tmp`;
+
+  await mkdir(
+    controlDirectory,
+    {
+      recursive: true,
+      mode: 0o700,
+    },
+  );
+
+  const plainText =
+    JSON.stringify(value);
+
+  let encrypted: Buffer;
+
+  if (await safeStorage.isAsyncEncryptionAvailable()) {
+    encrypted =
+      await safeStorage.encryptStringAsync(
+        plainText,
+      );
+  }
+  else if (safeStorage.isEncryptionAvailable()) {
+    encrypted =
+      safeStorage.encryptString(
+        plainText,
+      );
+  }
+  else {
+    throw new Error(
+      "Secure operating-system encryption is unavailable for the legacy Login Authority fixture.",
+    );
+  }
+
+  await writeFile(
+    temporaryFile,
+    encrypted,
+    { mode: 0o600 },
+  );
+
+  await rename(
+    temporaryFile,
+    controlFile,
+  );
 }
 
 function addDays(
@@ -454,6 +539,88 @@ async function main(): Promise<void> {
 
     console.log(
       "PASS: real signed Credential Enrollment Bundle applied with portability provenance",
+    );
+
+    // ========================================================
+    // BRANCH CERTIFICATION BOOTSTRAP
+    //
+    // Current enrollment production flow requires durable
+    // BRANCH_BOUND_AFTER_RESPONSE certification custody.
+    // This is isolated self-test state only.
+    // ========================================================
+
+    const loginBranchCertificationBinding =
+      generateFinoraWindowsInstallationBindingMaterial(
+        new Date(),
+        "FINORA-INSTALLATION-LOGIN-SELFTEST-BRANCH-CERT",
+      );
+
+    const loginBranchCertificationKeyMaterial =
+      generateFinoraBranchCertificationKeyMaterial(
+        new Date(),
+      );
+
+    const loginBranchCertificationRequestId =
+      "FINORA-ENROLLMENT-LOGIN-SELFTEST-BRANCH-CERT-REQUEST";
+
+    const loginBranchCertificationResponseId =
+      "FINORA-ENROLLMENT-RESPONSE-LOGIN-SELFTEST-BRANCH-CERT";
+
+    await persistFinoraBranchCertificationBootstrapGenerated({
+      requestId:
+        loginBranchCertificationRequestId,
+
+      installationId:
+        loginBranchCertificationBinding.installationId,
+
+      bindingKeyId:
+        loginBranchCertificationBinding.bindingKeyId,
+
+      fingerprintAlgorithm:
+        loginBranchCertificationBinding.fingerprintAlgorithm,
+
+      publicKeyFingerprint:
+        loginBranchCertificationBinding.publicKeyFingerprint,
+
+      certificationKeyMaterial:
+        loginBranchCertificationKeyMaterial,
+
+      generatedAt:
+        loginBranchCertificationKeyMaterial.createdAt,
+    });
+
+    const loginBoundBranchCertification =
+      await bindFinoraBranchCertificationBootstrapToBranch({
+        requestId:
+          loginBranchCertificationRequestId,
+
+        responseId:
+          loginBranchCertificationResponseId,
+
+        ownerId,
+        businessId,
+        branchId,
+
+        boundAt:
+          new Date().toISOString(),
+      });
+
+    assert(
+      loginBoundBranchCertification.state ===
+        "BRANCH_BOUND_AFTER_RESPONSE" &&
+      loginBoundBranchCertification.branchBinding?.responseId ===
+        loginBranchCertificationResponseId &&
+      loginBoundBranchCertification.branchBinding?.ownerId ===
+        ownerId &&
+      loginBoundBranchCertification.branchBinding?.businessId ===
+        businessId &&
+      loginBoundBranchCertification.branchBinding?.branchId ===
+        branchId,
+      "Login Authority self-test Branch Certification bootstrap was not bound to the exact branch.",
+    );
+
+    console.log(
+      "PASS: exact BRANCH_BOUND_AFTER_RESPONSE certification custody prepared for Login Authority enrollment",
     );
 
     // ========================================================
@@ -1021,6 +1188,301 @@ async function main(): Promise<void> {
     console.log(
       "PASS: K2B matrix 12 Password -> Device Trust -> Session runtime ordering proven",
     );
+
+    // ========================================================
+    // LEGACY LOGIN SECURITY CODE SETUP MATRIX
+    // ========================================================
+
+    const legacySourceStore =
+      await readFinoraControlStore();
+
+    assert(
+      legacySourceStore.success &&
+        legacySourceStore.data,
+      legacySourceStore.success
+        ? "Unexpected legacy source Control Store state."
+        : (legacySourceStore.error ?? "Legacy source Control Store read failed."),
+    );
+
+    const legacyFixtureStore =
+      structuredClone(
+        legacySourceStore.data,
+      );
+
+    const legacyFixtureCredential =
+      legacyFixtureStore.branchCredentials?.find(
+        (item) =>
+          item.userId === userId &&
+          item.sourceAuthorizationId === sourceAuthorizationId,
+      );
+
+    assert(
+      legacyFixtureCredential !== undefined,
+      "Legacy login fixture credential is missing.",
+    );
+
+    const legacySourceGeneration =
+      legacyFixtureCredential.authGeneration ?? 1;
+
+    delete legacyFixtureCredential.securityVerifier;
+
+    let exactLegacyEntitlementFound =
+      false;
+
+    legacyFixtureStore.storageEntitlements =
+      (legacyFixtureStore.storageEntitlements ?? []).map(
+        (item) => {
+          if (item.entitlementId !== entitlement.entitlementId) {
+            return item;
+          }
+
+          exactLegacyEntitlementFound =
+            true;
+
+          return {
+            ...item,
+            installationId: nativeBinding.installationId,
+            bindingKeyId: nativeBinding.bindingKeyId,
+            fingerprintAlgorithm: nativeBinding.fingerprintAlgorithm,
+            publicKeyFingerprint: nativeBinding.publicKeyFingerprint,
+            storageMode: "LOCAL" as const,
+            status: "ACTIVE" as const,
+          };
+        },
+      );
+
+    assert(
+      exactLegacyEntitlementFound,
+      "Legacy login fixture could not locate Storage Entitlement.",
+    );
+
+    await persistRawLoginControlStoreFixture(
+      legacyFixtureStore,
+    );
+
+    const legacyPortableFile =
+      join(
+        temporaryUserData,
+        "FINORA",
+        "auth",
+        "finora-branch-auth.bin",
+      );
+
+    await rm(
+      legacyPortableFile,
+      { force: true },
+    );
+
+    assert(
+      await portableStore.read("LOCAL") === null,
+      "Legacy login fixture did not remove predecessor Portable Auth.",
+    );
+
+    const legacyReadable =
+      await readFinoraControlStore();
+
+    assert(
+      legacyReadable.success &&
+        legacyReadable.data &&
+      legacyReadable.data.branchCredentials?.find(
+        (item) => item.userId === userId,
+      )?.securityVerifier === undefined,
+      legacyReadable.success
+        ? "Legacy credential unexpectedly retained Security Code verifier."
+        : (legacyReadable.error ?? "Legacy fixture became unreadable."),
+    );
+
+    console.log(
+      "PASS: legacy Login Authority fixture preserves signed lineage + exact current native storage authority",
+    );
+
+    // --------------------------------------------------------
+    // WRONG PASSWORD MUST NOT EXPOSE SETUP CHALLENGE
+    // --------------------------------------------------------
+
+    const legacyWrongPassword =
+      await createFinoraBranchLoginSession(
+        {
+          username,
+          password: "wrong-password",
+          storageMode: "LOCAL",
+        },
+        portableStore,
+      );
+
+    assert(
+      !legacyWrongPassword.success &&
+      legacyWrongPassword.errorCode === "INVALID_CREDENTIALS" &&
+      String(legacyWrongPassword.errorCode) !== "SECURITY_CODE_SETUP_REQUIRED",
+      "Legacy wrong Password leaked into Security Code setup challenge.",
+    );
+
+    console.log(
+      "PASS: legacy wrong Password still fails before Security Code setup disclosure",
+    );
+
+    // --------------------------------------------------------
+    // VALID PASSWORD -> SECURITY CODE SETUP REQUIRED
+    // --------------------------------------------------------
+
+    const legacySetupChallenge =
+      await createFinoraBranchLoginSession(
+        {
+          username,
+          password,
+          storageMode: "LOCAL",
+        },
+        portableStore,
+      );
+
+    assert(
+      !legacySetupChallenge.success &&
+      legacySetupChallenge.errorCode === "SECURITY_CODE_SETUP_REQUIRED",
+      legacySetupChallenge.success
+        ? "Legacy Password-only login unexpectedly issued a session."
+        : `Unexpected legacy setup challenge: ${legacySetupChallenge.errorCode}: ${legacySetupChallenge.error}`,
+    );
+
+    console.log(
+      "PASS: valid legacy Password returns SECURITY_CODE_SETUP_REQUIRED before Device Trust",
+    );
+
+    // --------------------------------------------------------
+    // INVALID SETUP CODE -> ZERO DURABLE MIGRATION
+    // --------------------------------------------------------
+
+    const legacyInvalidSetup =
+      await createFinoraBranchLoginSession(
+        {
+          username,
+          password,
+          storageMode: "LOCAL",
+          securityCode: "short",
+        },
+        portableStore,
+      );
+
+    assert(
+      !legacyInvalidSetup.success,
+      "Invalid legacy Security Code unexpectedly succeeded.",
+    );
+
+    const afterInvalidLegacySetup =
+      await readFinoraControlStore();
+
+    assert(
+      afterInvalidLegacySetup.success &&
+        afterInvalidLegacySetup.data &&
+      afterInvalidLegacySetup.data.branchCredentials?.find(
+        (item) => item.userId === userId,
+      )?.securityVerifier === undefined &&
+      await portableStore.read("LOCAL") === null,
+      "Invalid legacy Security Code mutated credential or Portable Auth state.",
+    );
+
+    console.log(
+      "PASS: invalid legacy Security Code fails closed with zero durable migration",
+    );
+
+    // --------------------------------------------------------
+    // VALID SETUP -> BOOTSTRAP + DEVICE TRUST + SESSION
+    // --------------------------------------------------------
+
+    const legacySecurityCode =
+      "FINORA-LEGACY-LOGIN-SELFTEST";
+
+    const legacyAuthorizedLogin =
+      await createFinoraBranchLoginSession(
+        {
+          username,
+          password,
+          storageMode: "LOCAL",
+          securityCode: legacySecurityCode,
+        },
+        portableStore,
+      );
+
+    assert(
+      legacyAuthorizedLogin.success,
+      legacyAuthorizedLogin.success
+        ? "Unexpected legacy authorized-login state."
+        : `${legacyAuthorizedLogin.errorCode}: ${legacyAuthorizedLogin.error}`,
+    );
+
+    const afterLegacySetup =
+      await readFinoraControlStore();
+
+    assert(
+      afterLegacySetup.success &&
+        afterLegacySetup.data,
+      afterLegacySetup.success
+        ? "Unexpected post-bootstrap Control Store state."
+        : (afterLegacySetup.error ?? "Post-bootstrap Control Store read failed."),
+    );
+
+    const migratedLegacyCredential =
+      afterLegacySetup.data.branchCredentials?.find(
+        (item) =>
+          item.userId === userId &&
+          item.sourceAuthorizationId === sourceAuthorizationId,
+      );
+
+    assert(
+      migratedLegacyCredential !== undefined &&
+      migratedLegacyCredential.securityVerifier !== undefined &&
+      migratedLegacyCredential.authGeneration === legacySourceGeneration + 1 &&
+      await portableStore.read("LOCAL") !== null,
+      "Legacy setup did not persist Security Code verifier, generation advance and Portable Auth.",
+    );
+
+    const legacySessionValidation =
+      await validateFinoraBranchLoginSession({
+        sessionId: legacyAuthorizedLogin.data.sessionId,
+      });
+
+    assert(
+      legacySessionValidation.success,
+      legacySessionValidation.success
+        ? "Unexpected migrated session validation state."
+        : legacySessionValidation.error,
+    );
+
+    console.log(
+      "PASS: valid legacy Security Code bootstraps Portable Auth, authorizes device and issues authoritative session",
+    );
+
+    invalidateFinoraBranchLoginSession({
+      sessionId: legacyAuthorizedLogin.data.sessionId,
+    });
+
+    // --------------------------------------------------------
+    // MIGRATED TRUSTED DEVICE -> PASSWORD ONLY
+    // --------------------------------------------------------
+
+    const legacyPasswordOnlyRetry =
+      await createFinoraBranchLoginSession(
+        {
+          username,
+          password,
+          storageMode: "LOCAL",
+        },
+        portableStore,
+      );
+
+    assert(
+      legacyPasswordOnlyRetry.success,
+      legacyPasswordOnlyRetry.success
+        ? "Unexpected migrated Password-only retry state."
+        : `${legacyPasswordOnlyRetry.errorCode}: ${legacyPasswordOnlyRetry.error}`,
+    );
+
+    console.log(
+      "PASS: migrated legacy credential retries on trusted device with Password only",
+    );
+
+    invalidateFinoraBranchLoginSession({
+      sessionId: legacyPasswordOnlyRetry.data.sessionId,
+    });
 
     // ========================================================
     // FINAL CONTROL STATE SANITY

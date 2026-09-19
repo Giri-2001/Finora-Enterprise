@@ -73,6 +73,10 @@ import type {
   FinoraPortableBranchAuthStore,
 } from "./finoraPortableBranchAuthStore.js";
 
+import {
+  bootstrapFinoraLegacySecurityCode,
+} from "./finoraLegacySecurityCodeBootstrapCoordinator.js";
+
 // ============================================================
 // CONSTANTS
 // ============================================================
@@ -173,6 +177,7 @@ export type FinoraBranchLoginErrorCode =
   | "INVALID_CREDENTIALS"
   | "AUTHENTICATION_FAILED"
   | "NATIVE_BINDING_UNAVAILABLE"
+  | "SECURITY_CODE_SETUP_REQUIRED"
   | "SECURITY_CODE_REQUIRED"
   | "SECURITY_CODE_INVALID"
   | "DEVICE_TRUST_FAILED"
@@ -1225,6 +1230,107 @@ export async function createFinoraBranchLoginSession(
       error:
         "FINORA device-trust authority is unavailable.",
     };
+  }
+
+  // ----------------------------------------------------------
+  // LEGACY SECURITY CODE BOOTSTRAP
+  //
+  // Password authentication has already succeeded above.
+  // A credential that predates Security Code / Portable Auth
+  // must establish that authority before Device Trust runs.
+  // ----------------------------------------------------------
+
+  const legacyControlStoreResult =
+    await readFinoraControlStore();
+
+  if (
+    !legacyControlStoreResult.success ||
+    !legacyControlStoreResult.data
+  ) {
+    return {
+      success: false,
+      errorCode: "CONTROL_STATE_FAILED",
+      error: "FINORA could not verify the authenticated credential state.",
+    };
+  }
+
+  const authenticatedCredential =
+    legacyControlStoreResult.data.branchCredentials?.find(
+      (item) =>
+        item.credentialId === authenticationResult.data.credentialId &&
+        item.userId === authenticationResult.data.userId &&
+        item.ownerId === authenticationResult.data.ownerId &&
+        item.businessId === authenticationResult.data.businessId &&
+        item.branchId === authenticationResult.data.branchId &&
+        item.storageMode === authenticationResult.data.storageMode &&
+        (item.authGeneration ?? 1) === authenticationResult.data.authGeneration,
+    );
+
+  if (!authenticatedCredential) {
+    return {
+      success: false,
+      errorCode: "CONTROL_STATE_FAILED",
+      error: "FINORA authenticated credential state is unavailable.",
+    };
+  }
+
+  if (authenticatedCredential.securityVerifier === undefined) {
+    if (request.securityCode === undefined) {
+      return {
+        success: false,
+        errorCode: "SECURITY_CODE_SETUP_REQUIRED",
+        error: "Create and confirm a Security Code to upgrade this FINORA credential.",
+      };
+    }
+
+    const legacyBootstrapResult =
+      await bootstrapFinoraLegacySecurityCode(
+        {
+          username: request.username,
+          password: request.password,
+          securityCode: request.securityCode,
+        },
+        portableStore,
+      );
+
+    if (!legacyBootstrapResult.success) {
+      if (legacyBootstrapResult.errorCode === "ALREADY_BOOTSTRAPPED") {
+        return createFinoraBranchLoginSession(
+          request,
+          portableStore,
+        );
+      }
+
+      if (legacyBootstrapResult.errorCode === "NATIVE_BINDING_UNAVAILABLE") {
+        return {
+          success: false,
+          errorCode: "NATIVE_BINDING_UNAVAILABLE",
+          error: "FINORA native device binding is unavailable.",
+        };
+      }
+
+      if (legacyBootstrapResult.errorCode === "STORAGE_ENTITLEMENT_DENIED") {
+        return {
+          success: false,
+          errorCode: "STORAGE_ENTITLEMENT_DENIED",
+          error: "This device does not hold the exact active storage authority required for legacy Security Code setup.",
+        };
+      }
+
+      return {
+        success: false,
+        errorCode: "DEVICE_TRUST_FAILED",
+        error: "FINORA could not securely establish Security Code portability for this legacy credential.",
+      };
+    }
+
+    // Re-authenticate against the advanced credential generation.
+    // The same Security Code can then authorize the current device
+    // through the ordinary Device Trust path below.
+    return createFinoraBranchLoginSession(
+      request,
+      portableStore,
+    );
   }
 
   const deviceTrustResult =

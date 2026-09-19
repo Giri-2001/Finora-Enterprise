@@ -85,8 +85,17 @@ import {
 } from "./finoraPortableBranchAuthEnrollmentCoordinator.js";
 
 import {
+  bootstrapFinoraLegacySecurityCode,
+} from "./finoraLegacySecurityCodeBootstrapCoordinator.js";
+
+import {
   FinoraPortableBranchAuthStore,
 } from "./finoraPortableBranchAuthStore.js";
+
+import {
+  authorizeFinoraCurrentBranchDevice,
+  checkFinoraCurrentBranchDeviceTrust,
+} from "./finoraBranchDeviceTrustAuthority.js";
 
 import {
   createFinoraPortableBranchAuthEnvelopeV1,
@@ -2533,6 +2542,198 @@ async function runSelfTest():
     );
 
     // ========================================================
+    // UPDATE COMPATIBILITY RECOVERY MATRIX
+    // ========================================================
+
+    const recoveryTransaction =
+      finalStore.data
+        .portableBranchAuthEnrollmentTransactions
+        ?.[0];
+
+    const recoveryCredential =
+      finalStore.data
+        .branchCredentials
+        ?.[0];
+
+    assert(
+      recoveryTransaction !== undefined &&
+      recoveryTransaction.status === "COMPLETE" &&
+      recoveryCredential !== undefined &&
+      recoveryCredential.credentialId === preparedCredentialId,
+      "Recovery fixture is missing exact COMPLETE enrollment evidence.",
+    );
+
+    assert(
+      recoveryCredential.storageMode === "USB",
+      "Recovery fixture unexpectedly changed storage mode.",
+    );
+
+    const recoveryPrincipal = {
+      credentialId:
+        recoveryCredential.credentialId,
+
+      sourceAuthorizationId:
+        recoveryCredential.sourceAuthorizationId,
+
+      authGeneration:
+        recoveryCredential.authGeneration ?? 1,
+
+      userId:
+        recoveryCredential.userId,
+
+      username:
+        recoveryCredential.username,
+
+      fullName:
+        recoveryCredential.fullName,
+
+      role:
+        recoveryCredential.role,
+
+      ownerId:
+        recoveryCredential.ownerId,
+
+      businessId:
+        recoveryCredential.businessId,
+
+      branchId:
+        recoveryCredential.branchId,
+
+      storageMode:
+        recoveryCredential.storageMode,
+
+      dataContext:
+        recoveryCredential.dataContext,
+
+      ...(
+        recoveryCredential.demoId === undefined
+          ? {}
+          : {
+              demoId:
+                recoveryCredential.demoId,
+            }
+      ),
+
+      authenticatedAt:
+        new Date().toISOString(),
+    };
+
+    usbConnected =
+      true;
+
+    const recoveryPortableAuthFile =
+      join(
+        portableUsbRoot,
+        "FINORA",
+        "auth",
+        "finora-branch-auth.bin",
+      );
+
+    await rm(
+      recoveryPortableAuthFile,
+      {
+        force:
+          true,
+      },
+    );
+
+    assert(
+      await portableStore.read("USB") === null,
+      "Unknown-device recovery fixture did not remove physical Portable Auth.",
+    );
+
+    const recoveredUnknownCheck =
+      await checkFinoraCurrentBranchDeviceTrust({
+        principal:
+          recoveryPrincipal,
+
+        portableStore,
+      });
+
+    assert(
+      recoveredUnknownCheck.success &&
+      recoveredUnknownCheck.status === "SECURITY_CODE_REQUIRED",
+      "Missing Portable Auth was not recovered into the unknown-device Security Code challenge.",
+    );
+
+    const recoveredEnvelopeForUnknownDevice =
+      await portableStore.read("USB");
+
+    assert(
+      recoveredEnvelopeForUnknownDevice !== null &&
+      JSON.stringify(recoveredEnvelopeForUnknownDevice) ===
+        JSON.stringify(recoveryTransaction.portableEnvelope),
+      "Unknown-device recovery did not restore the exact completed enrollment envelope.",
+    );
+
+    console.log(
+      "PASS: missing Portable Auth recovers exact COMPLETE envelope and unknown device requires Security Code",
+    );
+
+    const recoveredUnknownAuthorization =
+      await authorizeFinoraCurrentBranchDevice({
+        principal:
+          recoveryPrincipal,
+
+        portableStore,
+
+        password,
+        securityCode,
+      });
+
+    assert(
+      recoveredUnknownAuthorization.success,
+      recoveredUnknownAuthorization.success
+        ? "Unexpected unknown-device authorization result."
+        : recoveredUnknownAuthorization.error,
+    );
+
+    console.log(
+      "PASS: correct Security Code authorizes recovered unknown device",
+    );
+
+    await rm(
+      recoveryPortableAuthFile,
+      {
+        force:
+          true,
+      },
+    );
+
+    assert(
+      await portableStore.read("USB") === null,
+      "Trusted-device update fixture did not remove physical Portable Auth.",
+    );
+
+    const recoveredTrustedCheck =
+      await checkFinoraCurrentBranchDeviceTrust({
+        principal:
+          recoveryPrincipal,
+
+        portableStore,
+      });
+
+    assert(
+      recoveredTrustedCheck.success &&
+      recoveredTrustedCheck.status === "TRUSTED",
+      "Trusted device did not survive missing Portable Auth after update recovery.",
+    );
+
+    const recoveredEnvelopeForTrustedDevice =
+      await portableStore.read("USB");
+
+    assert(
+      recoveredEnvelopeForTrustedDevice !== null &&
+      JSON.stringify(recoveredEnvelopeForTrustedDevice) ===
+        JSON.stringify(recoveryTransaction.portableEnvelope),
+      "Trusted-device recovery did not restore the exact completed enrollment envelope.",
+    );
+
+    console.log(
+      "PASS: trusted device survives update-time Portable Auth loss without a new Security Code challenge",
+    );
+
+    // ========================================================
     // USB MODE MUST NEVER CONSULT LOCAL ROOT
     // ========================================================
 
@@ -2567,6 +2768,547 @@ async function runSelfTest():
 
     console.log(
       "",
+    );
+
+    // ========================================================
+    // LEGACY SECURITY CODE BOOTSTRAP REGRESSION MATRIX
+    // ========================================================
+
+    usbConnected =
+      true;
+
+    const legacyBootstrapSecurityCode =
+      "FINORA-Legacy-Security@8421";
+
+    const legacyOriginalStoreResult =
+      await readFinoraControlStore();
+
+    assert(
+      legacyOriginalStoreResult.success &&
+        legacyOriginalStoreResult.data,
+      legacyOriginalStoreResult.error ??
+        "Unable to read legacy-bootstrap source Control Store.",
+    );
+
+    const legacyOriginalStoreSnapshot =
+      structuredClone(
+        legacyOriginalStoreResult.data,
+      );
+
+    const legacyOriginalEnvelope =
+      await portableStore.read(
+        "USB",
+      );
+
+    assert(
+      legacyOriginalEnvelope !==
+        null,
+      "Legacy-bootstrap source Portable Auth is missing.",
+    );
+
+    const legacyBaselineStore =
+      structuredClone(
+        legacyOriginalStoreSnapshot,
+      );
+
+    const legacyCredentialIndex =
+      (legacyBaselineStore.branchCredentials ?? []).findIndex(
+        (item) =>
+          item.canonicalUsername ===
+            username.trim().toLowerCase(),
+      );
+
+    assert(
+      legacyCredentialIndex >=
+        0,
+      "Legacy-bootstrap source credential was not found.",
+    );
+
+    const legacyCredential =
+      legacyBaselineStore.branchCredentials![legacyCredentialIndex];
+
+    const legacySourceGeneration =
+      legacyCredential.authGeneration ??
+      1;
+
+    delete legacyCredential.securityVerifier;
+
+    // Positive legacy-bootstrap fixture requires the same exact
+    // ACTIVE native-bound Storage Entitlement enforced in production.
+    legacyBaselineStore.storageEntitlements =
+      [
+        ...(legacyBaselineStore.storageEntitlements ?? []).filter(
+          (item) =>
+            !(
+              item.userId === legacyCredential.userId &&
+              item.ownerId === legacyCredential.ownerId &&
+              item.businessId === legacyCredential.businessId &&
+              item.branchId === legacyCredential.branchId &&
+              item.storageMode === legacyCredential.storageMode
+            ),
+        ),
+        {
+          entitlementId:
+            "FINORA-LEGACY-BOOTSTRAP-SELFTEST-STORAGE",
+          userId:
+            legacyCredential.userId,
+          ownerId:
+            legacyCredential.ownerId,
+          businessId:
+            legacyCredential.businessId,
+          branchId:
+            legacyCredential.branchId,
+          installationId:
+            nativeBinding.installationId,
+          bindingKeyId:
+            nativeBinding.bindingKeyId,
+          fingerprintAlgorithm:
+            nativeBinding.fingerprintAlgorithm,
+          publicKeyFingerprint:
+            nativeBinding.publicKeyFingerprint,
+          storageMode:
+            legacyCredential.storageMode,
+          status:
+            "ACTIVE",
+          activatedAt:
+            legacyCredential.createdAt,
+          createdAt:
+            legacyCredential.createdAt,
+          updatedAt:
+            legacyCredential.updatedAt,
+          schemaVersion:
+            1,
+        },
+      ];
+
+    console.log(
+      "PASS: legacy bootstrap fixture carries exact ACTIVE native-bound storage authority",
+    );
+
+    const legacyBootstrapPortableFile =
+      join(
+        portableUsbRoot,
+        "FINORA",
+        "auth",
+        "finora-branch-auth.bin",
+      );
+
+    await persistRawControlStoreFixture(
+      legacyBaselineStore,
+    );
+
+    await rm(
+      legacyBootstrapPortableFile,
+      {
+        force:
+          true,
+      },
+    );
+
+    assert(
+      await portableStore.read("USB") ===
+        null,
+      "Legacy-bootstrap success fixture did not remove predecessor Portable Auth.",
+    );
+
+    const legacyBootstrapResult =
+      await bootstrapFinoraLegacySecurityCode(
+        {
+          username,
+          password,
+          securityCode:
+            legacyBootstrapSecurityCode,
+        },
+        portableStore,
+      );
+
+    assert(
+      legacyBootstrapResult.success &&
+        legacyBootstrapResult.data.authGeneration ===
+          legacySourceGeneration +
+            1 &&
+        legacyBootstrapResult.data.portableResult ===
+          "WRITTEN",
+      legacyBootstrapResult.success
+        ? "Legacy bootstrap returned unexpected success state."
+        : `${legacyBootstrapResult.errorCode}: ${legacyBootstrapResult.error}`,
+    );
+
+    const afterLegacyBootstrap =
+      await readFinoraControlStore();
+
+    assert(
+      afterLegacyBootstrap.success &&
+        afterLegacyBootstrap.data,
+      afterLegacyBootstrap.error ??
+        "Unable to read successful legacy-bootstrap Control Store.",
+    );
+
+    const bootstrappedCredential =
+      afterLegacyBootstrap.data.branchCredentials?.find(
+        (item) =>
+          item.credentialId ===
+            legacyCredential.credentialId,
+      );
+
+    assert(
+      bootstrappedCredential !==
+        undefined &&
+      bootstrappedCredential.securityVerifier !==
+        undefined &&
+      bootstrappedCredential.authGeneration ===
+        legacySourceGeneration +
+          1,
+      "Successful legacy bootstrap did not persist Security Code verifier + generation.",
+    );
+
+    const successfulLegacyEnvelope =
+      await portableStore.read(
+        "USB",
+      );
+
+    assert(
+      successfulLegacyEnvelope !==
+        null,
+      "Successful legacy bootstrap did not persist Portable Auth.",
+    );
+
+    const successfulLegacyPayload =
+      await decryptFinoraPortableBranchAuthEnvelopeV1(
+        successfulLegacyEnvelope,
+        password,
+        legacyBootstrapSecurityCode,
+        {
+          expectedScope: {
+            ownerId,
+            businessId,
+            branchId,
+          },
+        },
+      );
+
+    assert(
+      successfulLegacyPayload.authGeneration ===
+        legacySourceGeneration +
+          1 &&
+      successfulLegacyPayload.sourceAuthorizationId ===
+        legacyCredential.sourceAuthorizationId &&
+      successfulLegacyPayload.sourceAuthorizationVerificationEvidence.portabilityAuthorityProof !==
+        undefined,
+      "Successful legacy bootstrap Portable Auth lost generation or signed portability provenance.",
+    );
+
+    console.log(
+      "PASS: legacy credential + missing Portable Auth bootstraps Security Code with signed provenance",
+    );
+
+    // --------------------------------------------------------
+    // INTERRUPTED AFTER PORTABLE WRITE, BEFORE CONTROL COMMIT
+    // --------------------------------------------------------
+
+    await persistRawControlStoreFixture(
+      legacyBaselineStore,
+    );
+
+    const interruptedBefore =
+      await readFinoraControlStore();
+
+    assert(
+      interruptedBefore.success &&
+        interruptedBefore.data &&
+      interruptedBefore.data.branchCredentials?.[legacyCredentialIndex]?.securityVerifier ===
+        undefined,
+      "Interrupted legacy fixture did not restore pre-bootstrap credential state.",
+    );
+
+    const interruptedRetry =
+      await bootstrapFinoraLegacySecurityCode(
+        {
+          username,
+          password,
+          securityCode:
+            legacyBootstrapSecurityCode,
+        },
+        portableStore,
+      );
+
+    assert(
+      interruptedRetry.success &&
+        interruptedRetry.data.portableResult ===
+          "ALREADY_MATCHED" &&
+        interruptedRetry.data.authGeneration ===
+          legacySourceGeneration +
+            1,
+      interruptedRetry.success
+        ? "Interrupted legacy retry returned unexpected success state."
+        : `${interruptedRetry.errorCode}: ${interruptedRetry.error}`,
+    );
+
+    const interruptedAfter =
+      await readFinoraControlStore();
+
+    assert(
+      interruptedAfter.success &&
+        interruptedAfter.data &&
+      interruptedAfter.data.branchCredentials?.[legacyCredentialIndex]?.securityVerifier !==
+        undefined &&
+      interruptedAfter.data.branchCredentials?.[legacyCredentialIndex]?.authGeneration ===
+        legacySourceGeneration +
+          1,
+      "Interrupted legacy retry did not complete exact credential commit.",
+    );
+
+    console.log(
+      "PASS: interrupted legacy bootstrap resumes from exact persisted Portable Auth envelope",
+    );
+
+    // --------------------------------------------------------
+    // WRONG SECURITY CODE AGAINST INTERRUPTED ENVELOPE
+    // --------------------------------------------------------
+
+    await persistRawControlStoreFixture(
+      legacyBaselineStore,
+    );
+
+    const wrongCodeBefore =
+      await readFinoraControlStore();
+
+    assert(
+      wrongCodeBefore.success &&
+        wrongCodeBefore.data,
+      wrongCodeBefore.error ??
+        "Unable to read wrong-code legacy baseline.",
+    );
+
+    const wrongCodeBeforeJson =
+      JSON.stringify(
+        wrongCodeBefore.data,
+      );
+
+    const wrongLegacyCodeResult =
+      await bootstrapFinoraLegacySecurityCode(
+        {
+          username,
+          password,
+          securityCode:
+            `${legacyBootstrapSecurityCode}-WRONG`,
+        },
+        portableStore,
+      );
+
+    assert(
+      !wrongLegacyCodeResult.success &&
+        wrongLegacyCodeResult.errorCode ===
+          "PORTABLE_AUTH_MISMATCH",
+      wrongLegacyCodeResult.success
+        ? "Wrong interrupted Security Code unexpectedly completed legacy bootstrap."
+        : `Unexpected wrong-code result: ${wrongLegacyCodeResult.errorCode}: ${wrongLegacyCodeResult.error}`,
+    );
+
+    const wrongCodeAfter =
+      await readFinoraControlStore();
+
+    assert(
+      wrongCodeAfter.success &&
+        wrongCodeAfter.data &&
+      JSON.stringify(wrongCodeAfter.data) ===
+        wrongCodeBeforeJson,
+      "Wrong legacy Security Code mutated authoritative Control Store.",
+    );
+
+    console.log(
+      "PASS: wrong Security Code cannot complete interrupted legacy bootstrap",
+    );
+
+    // --------------------------------------------------------
+    // MISSING SIGNED PORTABILITY PROVENANCE
+    // --------------------------------------------------------
+
+    const missingLegacyProofStore =
+      structuredClone(
+        legacyBaselineStore,
+      );
+
+    missingLegacyProofStore.branchCredentialPortabilityAuthorities =
+      [];
+
+    await persistRawControlStoreFixture(
+      missingLegacyProofStore,
+    );
+
+    await rm(
+      legacyBootstrapPortableFile,
+      { force: true },
+    );
+
+    const missingLegacyProofResult =
+      await bootstrapFinoraLegacySecurityCode(
+        {
+          username,
+          password,
+          securityCode:
+            legacyBootstrapSecurityCode,
+        },
+        portableStore,
+      );
+
+    assert(
+      !missingLegacyProofResult.success &&
+        missingLegacyProofResult.errorCode ===
+          "SIGNED_PROVENANCE_UNAVAILABLE" &&
+      await portableStore.read("USB") ===
+        null,
+      missingLegacyProofResult.success
+        ? "Legacy bootstrap unexpectedly succeeded without signed portability provenance."
+        : `Unexpected missing-provenance result: ${missingLegacyProofResult.errorCode}: ${missingLegacyProofResult.error}`,
+    );
+
+    console.log(
+      "PASS: legacy bootstrap requires exact retained signed portability provenance",
+    );
+
+    // --------------------------------------------------------
+    // REVOKED CONTROL SIGNER PROVENANCE
+    // --------------------------------------------------------
+
+    const revokedLegacySignerStore =
+      structuredClone(
+        legacyBaselineStore,
+      );
+
+    const revokedEvidence =
+      revokedLegacySignerStore.branchCredentialAuthorizationVerificationEvidence?.find(
+        (item) =>
+          item.authorizationId ===
+            legacyCredential.sourceAuthorizationId,
+      );
+
+    const revokedPortability =
+      revokedLegacySignerStore.branchCredentialPortabilityAuthorities?.find(
+        (item) =>
+          item.sourceAuthorizationId ===
+            legacyCredential.sourceAuthorizationId,
+      );
+
+    assert(
+      revokedEvidence !==
+        undefined &&
+      revokedPortability !==
+        undefined,
+      "Revoked-signer legacy fixture is missing retained provenance.",
+    );
+
+    revokedEvidence.verifiedControlSigner.status =
+      "REVOKED";
+
+    revokedPortability.verifiedControlSigner.status =
+      "REVOKED";
+
+    await persistRawControlStoreFixture(
+      revokedLegacySignerStore,
+    );
+
+    const revokedLegacySignerResult =
+      await bootstrapFinoraLegacySecurityCode(
+        {
+          username,
+          password,
+          securityCode:
+            legacyBootstrapSecurityCode,
+        },
+        portableStore,
+      );
+
+    assert(
+      !revokedLegacySignerResult.success &&
+        (
+          revokedLegacySignerResult.errorCode ===
+            "SIGNED_PROVENANCE_UNAVAILABLE" ||
+          revokedLegacySignerResult.errorCode ===
+            "CONTROL_STORE_FAILED"
+        ) &&
+      await portableStore.read("USB") ===
+        null,
+      revokedLegacySignerResult.success
+        ? "Legacy bootstrap unexpectedly accepted revoked signer provenance."
+        : `Unexpected revoked-signer result: ${revokedLegacySignerResult.errorCode}: ${revokedLegacySignerResult.error}`,
+    );
+
+    console.log(
+      "PASS: revoked Control signer provenance cannot bootstrap legacy Security Code",
+    );
+
+    // --------------------------------------------------------
+    // ACTIVE NATIVE-BOUND STORAGE AUTHORITY REQUIRED
+    // --------------------------------------------------------
+
+    const noStorageAuthorityStore =
+      structuredClone(
+        legacyBaselineStore,
+      );
+
+    noStorageAuthorityStore.storageEntitlements =
+      [];
+
+    await persistRawControlStoreFixture(
+      noStorageAuthorityStore,
+    );
+
+    const noStorageAuthorityResult =
+      await bootstrapFinoraLegacySecurityCode(
+        {
+          username,
+          password,
+          securityCode:
+            legacyBootstrapSecurityCode,
+        },
+        portableStore,
+      );
+
+    assert(
+      !noStorageAuthorityResult.success &&
+        noStorageAuthorityResult.errorCode ===
+          "STORAGE_ENTITLEMENT_DENIED" &&
+      await portableStore.read("USB") ===
+        null,
+      noStorageAuthorityResult.success
+        ? "Legacy bootstrap unexpectedly succeeded without exact native-bound storage authority."
+        : `Unexpected storage-authority result: ${noStorageAuthorityResult.errorCode}: ${noStorageAuthorityResult.error}`,
+    );
+
+    console.log(
+      "PASS: legacy bootstrap requires exact ACTIVE native-bound storage authority",
+    );
+
+    // --------------------------------------------------------
+    // RESTORE HEALTHY FIXTURE
+    // --------------------------------------------------------
+
+    await persistRawControlStoreFixture(
+      legacyOriginalStoreSnapshot,
+    );
+
+    await rm(
+      legacyBootstrapPortableFile,
+      { force: true },
+    );
+
+    const restoredLegacyPortable =
+      await portableStore.ensureExact(
+        "USB",
+        legacyOriginalEnvelope,
+      );
+
+    assert(
+      restoredLegacyPortable ===
+        "WRITTEN" ||
+      restoredLegacyPortable ===
+        "ALREADY_MATCHED",
+      "Legacy-bootstrap regression matrix failed to restore original Portable Auth.",
+    );
+
+    console.log(
+      "PASS: legacy bootstrap regression matrix restored exact healthy fixture",
     );
 
     console.log(

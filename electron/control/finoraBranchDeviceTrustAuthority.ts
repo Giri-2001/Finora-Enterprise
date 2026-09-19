@@ -41,6 +41,10 @@ import {
 } from "./finoraControlStore.js";
 
 import {
+  resolveFinoraCompletedPortableBranchAuthEnrollmentRecovery,
+} from "./finoraPortableBranchAuthCompletedEnrollmentRecovery.js";
+
+import {
   getFinoraWindowsInstallationBinding,
 } from "./finoraInstallationBindingService.js";
 
@@ -90,6 +94,9 @@ import type {
 // ============================================================
 
 export interface FinoraBranchDeviceTrustCheckPrincipal {
+  credentialId?:
+    string;
+
   /**
    * Current authoritative credential lineage generation.
    *
@@ -490,10 +497,46 @@ export async function checkFinoraCurrentBranchDeviceTrust(
   }
 
   if (!envelope) {
-    return checkFailure(
-      "PORTABLE_AUTH_UNAVAILABLE",
-      "FINORA Portable Branch Auth state is unavailable.",
-    );
+    /*
+     * Update compatibility recovery is allowed only after
+     * Password authentication has already established the
+     * exact current credential principal.
+     *
+     * Only the original encrypted envelope retained in one
+     * exact COMPLETE enrollment transaction may be restored.
+     * Security Code and unknown-device authorization remain
+     * enforced by the existing authorization path below.
+     */
+    const recoveryResult =
+      await resolveFinoraCompletedPortableBranchAuthEnrollmentRecovery(
+        input.principal,
+      );
+
+    if (!recoveryResult.success) {
+      return checkFailure(
+        recoveryResult.errorCode === "CONTROL_STORE_FAILED" ||
+        recoveryResult.errorCode === "RECOVERY_AMBIGUOUS"
+          ? "DEVICE_TRUST_STORE_FAILED"
+          : "PORTABLE_AUTH_UNAVAILABLE",
+        recoveryResult.error,
+      );
+    }
+
+    try {
+      await input.portableStore.ensureExact(
+        input.principal.storageMode,
+        recoveryResult.data.envelope,
+      );
+    }
+    catch {
+      return checkFailure(
+        "PORTABLE_AUTH_UNAVAILABLE",
+        "FINORA Portable Branch Auth recovery could not be persisted.",
+      );
+    }
+
+    envelope =
+      recoveryResult.data.envelope;
   }
 
   if (

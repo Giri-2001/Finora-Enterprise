@@ -686,6 +686,12 @@ export default function Login({
 
     setDeviceSecurityCode("");
 
+    setLegacySecurityCodeSetupRequired(false);
+
+    setSecurityCode("");
+
+    setConfirmSecurityCode("");
+
     setOpenDropdown(null);
 
     resetCredentials();
@@ -857,6 +863,11 @@ export default function Login({
     setDeviceSecurityCode,
   ] = useState("");
 
+  const [
+    legacySecurityCodeSetupRequired,
+    setLegacySecurityCodeSetupRequired,
+  ] = useState(false);
+
 
   // ==========================================================
   // OWNER AUTHENTICATION
@@ -999,6 +1010,36 @@ export default function Login({
           ? "USB"
           : "LOCAL";
 
+      if (legacySecurityCodeSetupRequired) {
+        const legacySecurityCodeLength =
+          Array.from(securityCode).length;
+
+        if (
+          legacySecurityCodeLength < 8 ||
+          legacySecurityCodeLength > 128 ||
+          securityCode.trim().length === 0
+        ) {
+          setError(
+            "Security Code must contain between 8 and 128 characters.",
+          );
+          return;
+        }
+
+        if (!confirmSecurityCode) {
+          setError(
+            "Confirm your Security Code.",
+          );
+          return;
+        }
+
+        if (securityCode !== confirmSecurityCode) {
+          setError(
+            "Security Code and Confirm Security Code do not match.",
+          );
+          return;
+        }
+      }
+
       if (
         deviceSecurityCodeRequired &&
         deviceSecurityCode.length === 0
@@ -1033,19 +1074,54 @@ export default function Login({
           storageMode:
             entitlementStorageMode,
 
-          ...(deviceSecurityCodeRequired
+          ...(legacySecurityCodeSetupRequired
             ? {
-                securityCode:
-                  deviceSecurityCode,
+                securityCode,
               }
-            : {}),
+            : deviceSecurityCodeRequired
+              ? {
+                  securityCode:
+                    deviceSecurityCode,
+                }
+              : {}),
         });
 
       if (!loginResult.success) {
         if (
           loginResult.errorCode ===
+            "SECURITY_CODE_SETUP_REQUIRED"
+        ) {
+          setLegacySecurityCodeSetupRequired(
+            true,
+          );
+
+          setDeviceSecurityCodeRequired(
+            false,
+          );
+
+          setDeviceSecurityCode("");
+          setSecurityCode("");
+          setConfirmSecurityCode("");
+
+          setCredentialEnrollmentMessage(
+            "This existing FINORA credential needs a Branch Security Code upgrade. Create and confirm your Security Code, then continue.",
+          );
+
+          setError("");
+          return;
+        }
+
+        if (
+          loginResult.errorCode ===
             "SECURITY_CODE_REQUIRED"
         ) {
+          setLegacySecurityCodeSetupRequired(
+            false,
+          );
+
+          setSecurityCode("");
+          setConfirmSecurityCode("");
+
           setDeviceSecurityCodeRequired(
             true,
           );
@@ -1063,6 +1139,13 @@ export default function Login({
           loginResult.errorCode ===
             "SECURITY_CODE_INVALID"
         ) {
+          setLegacySecurityCodeSetupRequired(
+            false,
+          );
+
+          setSecurityCode("");
+          setConfirmSecurityCode("");
+
           setDeviceSecurityCodeRequired(
             true,
           );
@@ -1085,6 +1168,10 @@ export default function Login({
           );
 
           setDeviceSecurityCode("");
+
+          setLegacySecurityCodeSetupRequired(false);
+          setSecurityCode("");
+          setConfirmSecurityCode("");
 
           registerFailedLogin(
             trimmedUsername,
@@ -1118,6 +1205,11 @@ export default function Login({
       );
 
       setDeviceSecurityCode("");
+
+      setLegacySecurityCodeSetupRequired(false);
+      setSecurityCode("");
+      setConfirmSecurityCode("");
+      setCredentialEnrollmentMessage("");
 
       resetLoginAttempts(
         trimmedUsername,
@@ -1599,6 +1691,8 @@ export default function Login({
     setDeviceSecurityCodeRequired(false);
 
     setDeviceSecurityCode("");
+
+    setLegacySecurityCodeSetupRequired(false);
 
     setCredentialMode(
       "LOGIN",
@@ -2841,6 +2935,41 @@ export default function Login({
 
             </div>
 
+
+            {credentialMode === "LOGIN" &&
+              legacySecurityCodeSetupRequired && (
+                <>
+                  <input
+                    value={securityCode}
+                    onChange={(event) => {
+                      setSecurityCode(event.target.value);
+                      setError("");
+                    }}
+                    placeholder="Create Security Code"
+                    aria-label="Create Branch Security Code"
+                    type="password"
+                    autoComplete="new-password"
+                    disabled={loginBusy}
+                    onKeyDown={handlePasswordKeyDown}
+                    style={loginStyles.input}
+                  />
+
+                  <input
+                    value={confirmSecurityCode}
+                    onChange={(event) => {
+                      setConfirmSecurityCode(event.target.value);
+                      setError("");
+                    }}
+                    placeholder="Confirm Security Code"
+                    aria-label="Confirm Branch Security Code"
+                    type="password"
+                    autoComplete="new-password"
+                    disabled={loginBusy}
+                    onKeyDown={handlePasswordKeyDown}
+                    style={loginStyles.input}
+                  />
+                </>
+              )}
 
             {credentialMode === "LOGIN" &&
               deviceSecurityCodeRequired && (
