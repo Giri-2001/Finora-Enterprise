@@ -7204,10 +7204,40 @@ export function completeFinoraPortableBranchAuthCredentialRotationTransaction(
    - Portable Auth file mutation is owned by the coordinator
 ============================================================ */
 
+export interface FinoraLegacySecurityCodeBootstrapNativeBoundMigrationEvidenceV1 {
+  schemaVersion: 1;
+  migrationMethod: "PASSWORD_AND_ACTIVE_NATIVE_STORAGE_ENTITLEMENT";
+  sourceAuthorizationId: string;
+  ownerId: string;
+  businessId: string;
+  branchId: string;
+  userId: string;
+  username: string;
+  storageMode: FinoraControlBranchCredential["storageMode"];
+  authGeneration: number;
+  installationId: string;
+  bindingKeyId: string;
+  fingerprintAlgorithm: "SHA-256";
+  publicKeyFingerprint: string;
+  migratedAt: string;
+}
+
+export type FinoraLegacySecurityCodeBootstrapCredentialReplaceAuthority =
+  | {
+      mode: "SIGNED_PORTABILITY_PROVENANCE";
+    }
+  | {
+      mode: "LEGACY_NATIVE_BOUND_MIGRATION";
+      migrationEvidence:
+        FinoraLegacySecurityCodeBootstrapNativeBoundMigrationEvidenceV1;
+    };
+
 export interface FinoraLegacySecurityCodeBootstrapCredentialReplaceInput {
   expectedCredential: FinoraControlBranchCredential;
   replacementCredential: FinoraControlBranchCredential;
   appliedAt: string;
+  authority:
+    FinoraLegacySecurityCodeBootstrapCredentialReplaceAuthority;
 }
 
 function legacySecurityCodeBootstrapCredentialIdentityEqual(
@@ -7300,8 +7330,152 @@ async function applyLegacySecurityCodeBootstrapCredentialReplaceInternal(
       (item) => item.sourceAuthorizationId === currentCredential.sourceAuthorizationId,
     );
 
-  if (verificationEvidence.length !== 1 || portabilityAuthorities.length !== 1) {
-    return failure("FINORA legacy bootstrap requires exact retained signed credential portability provenance.");
+  if (
+    input.authority.mode ===
+      "SIGNED_PORTABILITY_PROVENANCE"
+  ) {
+    if (
+      verificationEvidence.length !==
+        1 ||
+      portabilityAuthorities.length !==
+        1
+    ) {
+      return failure(
+        "FINORA legacy bootstrap requires exact retained signed credential portability provenance.",
+      );
+    }
+  }
+  else {
+    if (
+      verificationEvidence.length !==
+        0 ||
+      portabilityAuthorities.length !==
+        0
+    ) {
+      return failure(
+        "FINORA native-bound legacy migration is allowed only for a credential with zero retained signed portability provenance.",
+      );
+    }
+
+    const migrationEvidence =
+      input.authority.migrationEvidence;
+
+    const expectedBindingKeyId =
+      isStorageEntitlementFingerprint(
+        migrationEvidence.publicKeyFingerprint,
+      )
+        ? `FINORA-BINDING-${migrationEvidence.publicKeyFingerprint
+            .slice(0, 32)
+            .toUpperCase()}`
+        : undefined;
+
+    if (
+      migrationEvidence.schemaVersion !==
+        1 ||
+      migrationEvidence.migrationMethod !==
+        "PASSWORD_AND_ACTIVE_NATIVE_STORAGE_ENTITLEMENT" ||
+      !isNonEmptyString(
+        migrationEvidence.sourceAuthorizationId,
+      ) ||
+      !isNonEmptyString(
+        migrationEvidence.ownerId,
+      ) ||
+      !isNonEmptyString(
+        migrationEvidence.businessId,
+      ) ||
+      !isNonEmptyString(
+        migrationEvidence.branchId,
+      ) ||
+      !isNonEmptyString(
+        migrationEvidence.userId,
+      ) ||
+      !isNonEmptyString(
+        migrationEvidence.username,
+      ) ||
+      !Number.isSafeInteger(
+        migrationEvidence.authGeneration,
+      ) ||
+      !isNonEmptyString(
+        migrationEvidence.installationId,
+      ) ||
+      !isNonEmptyString(
+        migrationEvidence.bindingKeyId,
+      ) ||
+      migrationEvidence.fingerprintAlgorithm !==
+        "SHA-256" ||
+      !expectedBindingKeyId ||
+      migrationEvidence.bindingKeyId !==
+        expectedBindingKeyId ||
+      !isControlTimestamp(
+        migrationEvidence.migratedAt,
+      ) ||
+      migrationEvidence.migratedAt >
+        input.appliedAt
+    ) {
+      return failure(
+        "FINORA native-bound legacy migration evidence is invalid.",
+      );
+    }
+
+    if (
+      migrationEvidence.sourceAuthorizationId !==
+        currentCredential.sourceAuthorizationId ||
+      migrationEvidence.ownerId !==
+        currentCredential.ownerId ||
+      migrationEvidence.businessId !==
+        currentCredential.businessId ||
+      migrationEvidence.branchId !==
+        currentCredential.branchId ||
+      migrationEvidence.userId !==
+        currentCredential.userId ||
+      migrationEvidence.username !==
+        currentCredential.username ||
+      migrationEvidence.storageMode !==
+        currentCredential.storageMode ||
+      migrationEvidence.authGeneration !==
+        targetGeneration
+    ) {
+      return failure(
+        "FINORA native-bound legacy migration evidence does not match the exact credential lineage.",
+      );
+    }
+
+    const exactActiveNativeEntitlements =
+      (
+        controlStore.storageEntitlements ??
+        []
+      ).filter(
+        (item) =>
+          item.status ===
+            "ACTIVE" &&
+          item.userId ===
+            currentCredential.userId &&
+          item.ownerId ===
+            currentCredential.ownerId &&
+          item.businessId ===
+            currentCredential.businessId &&
+          item.branchId ===
+            currentCredential.branchId &&
+          item.storageMode ===
+            currentCredential.storageMode &&
+          item.installationId ===
+            migrationEvidence.installationId &&
+          item.bindingKeyId ===
+            migrationEvidence.bindingKeyId &&
+          item.fingerprintAlgorithm ===
+            migrationEvidence.fingerprintAlgorithm &&
+          item.publicKeyFingerprint ===
+            migrationEvidence.publicKeyFingerprint,
+      );
+
+    if (
+      exactActiveNativeEntitlements.length !==
+        1
+    ) {
+      return failure(
+        "FINORA native-bound legacy migration requires exactly one matching ACTIVE Storage Entitlement.",
+      );
+    }
   }
 
   credentials[credentialIndex] = structuredClone(replacementCredential);

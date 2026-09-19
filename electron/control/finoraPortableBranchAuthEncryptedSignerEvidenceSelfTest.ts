@@ -97,6 +97,15 @@ async function main():
       securityCode,
     });
 
+  if (
+    "legacyNativeBoundMigrationEvidence" in
+      evidence
+  ) {
+    throw new Error(
+      "Encrypted signer fixture unexpectedly used legacy migration evidence.",
+    );
+  }
+
   const serialized =
     JSON.stringify(
       envelope,
@@ -153,14 +162,26 @@ async function main():
       },
     );
 
+  const decryptedEvidence =
+    payload.sourceAuthorizationVerificationEvidence;
+
+  if (
+    "legacyNativeBoundMigrationEvidence" in
+      decryptedEvidence
+  ) {
+    throw new Error(
+      "Decrypted signer fixture unexpectedly returned legacy migration evidence.",
+    );
+  }
+
   assert(
     payload.sourceAuthorizationId ===
       sourceAuthorizationId &&
-    payload.sourceAuthorizationVerificationEvidence.authorizationId ===
+    decryptedEvidence.authorizationId ===
       sourceAuthorizationId &&
-    payload.sourceAuthorizationVerificationEvidence.packageId ===
+    decryptedEvidence.packageId ===
       evidence.packageId &&
-    payload.sourceAuthorizationVerificationEvidence.verifiedControlSigner.signingKeyId ===
+    decryptedEvidence.verifiedControlSigner.signingKeyId ===
       evidence.verifiedControlSigner.signingKeyId,
     "Full-factor decrypt did not preserve exact signer provenance.",
   );

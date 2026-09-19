@@ -1317,10 +1317,50 @@ export async function createFinoraBranchLoginSession(
         };
       }
 
+      if (legacyBootstrapResult.errorCode === "SIGNED_PROVENANCE_UNAVAILABLE") {
+        return {
+          success: false,
+          errorCode: "CONTROL_STATE_FAILED",
+          error: "This legacy credential does not contain the retained signed portability authority required for automatic Security Code upgrade.",
+        };
+      }
+
+      if (legacyBootstrapResult.errorCode === "PORTABLE_AUTH_FAILED") {
+        return {
+          success: false,
+          errorCode: "CONTROL_STATE_FAILED",
+          error: "FINORA could not read or persist the Portable Auth state required for this Security Code upgrade.",
+        };
+      }
+
+      if (legacyBootstrapResult.errorCode === "PORTABLE_AUTH_MISMATCH") {
+        return {
+          success: false,
+          errorCode: "CONTROL_STATE_FAILED",
+          error: "Existing Portable Auth state does not match this legacy credential migration.",
+        };
+      }
+
+      if (legacyBootstrapResult.errorCode === "MATERIAL_DERIVATION_FAILED") {
+        return {
+          success: false,
+          errorCode: "CONTROL_STATE_FAILED",
+          error: "FINORA could not derive the protected credential material for this Security Code upgrade.",
+        };
+      }
+
+      if (legacyBootstrapResult.errorCode === "CONTROL_COMMIT_FAILED") {
+        return {
+          success: false,
+          errorCode: "CONTROL_STATE_FAILED",
+          error: "FINORA could not commit the upgraded legacy credential state.",
+        };
+      }
+
       return {
         success: false,
-        errorCode: "DEVICE_TRUST_FAILED",
-        error: "FINORA could not securely establish Security Code portability for this legacy credential.",
+        errorCode: "CONTROL_STATE_FAILED",
+        error: "FINORA could not complete the legacy Security Code upgrade.",
       };
     }
 

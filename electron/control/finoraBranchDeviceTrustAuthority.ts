@@ -843,161 +843,239 @@ async function authorizeCurrentDeviceInternal(
   const sourceVerificationEvidence =
     payload.sourceAuthorizationVerificationEvidence;
 
-  const portabilityAuthorityProof =
-    sourceVerificationEvidence.portabilityAuthorityProof;
-
-  if (!portabilityAuthorityProof) {
-    return authorizeFailure(
-      "PORTABILITY_AUTH_VERIFICATION_FAILED",
-      "FINORA Portable Branch Auth does not contain a verified Branch Portability Authority.",
-    );
-  }
-
-  const portabilityPackage =
-    portabilityAuthorityProof.signedPortabilityAuthorityPackage;
-
-  const portabilityPayload =
-    portabilityPackage.payload;
-
-  const pinnedSigner =
-    portabilityAuthorityProof.verifiedControlSigner;
-
-  const portabilityVerification =
-    verifyFinoraSignedBranchPortabilityAuthorityPackage(
-      portabilityPackage,
-      [
-        pinnedSigner,
-      ],
-      {
-        ownerId:
-          input.principal.ownerId,
-
-        businessId:
-          input.principal.businessId,
-
-        branchId:
-          input.principal.branchId,
-      },
-      new Date(),
-    );
-
-  if (!portabilityVerification.valid) {
-    return authorizeFailure(
-      "PORTABILITY_AUTH_VERIFICATION_FAILED",
-      `FINORA Branch Portability Authority verification failed: ${portabilityVerification.reason}.`,
-    );
-  }
-
-  const verifiedSigner =
-    portabilityVerification.verifiedTrustedKey;
-
-  const exactPinnedSignerMatched =
-    verifiedSigner.issuerId ===
-      pinnedSigner.issuerId &&
-    verifiedSigner.signingKeyId ===
-      pinnedSigner.signingKeyId &&
-    verifiedSigner.algorithm ===
-      pinnedSigner.algorithm &&
-    verifiedSigner.format ===
-      pinnedSigner.format &&
-    verifiedSigner.publicKey ===
-      pinnedSigner.publicKey &&
-    verifiedSigner.status ===
-      pinnedSigner.status &&
-    verifiedSigner.validFrom ===
-      pinnedSigner.validFrom &&
-    (
-      verifiedSigner.validUntil ??
-      undefined
-    ) ===
-      (
-        pinnedSigner.validUntil ??
-        undefined
-      );
-
-  const sourceSigner =
-    sourceVerificationEvidence.verifiedControlSigner;
-
-  const exactSourceSignerMatched =
-    sourceSigner.issuerId ===
-      pinnedSigner.issuerId &&
-    sourceSigner.signingKeyId ===
-      pinnedSigner.signingKeyId &&
-    sourceSigner.algorithm ===
-      pinnedSigner.algorithm &&
-    sourceSigner.format ===
-      pinnedSigner.format &&
-    sourceSigner.publicKey ===
-      pinnedSigner.publicKey &&
-    sourceSigner.status ===
-      pinnedSigner.status &&
-    sourceSigner.validFrom ===
-      pinnedSigner.validFrom &&
-    (
-      sourceSigner.validUntil ??
-      undefined
-    ) ===
-      (
-        pinnedSigner.validUntil ??
-        undefined
-      );
-
-  const exactPortabilityLineageMatched =
-    payload.sourceAuthorizationId ===
-      sourceVerificationEvidence.authorizationId &&
-    portabilityAuthorityProof.sourceAuthorizationId ===
-      payload.sourceAuthorizationId &&
-    portabilityPayload.sourceAuthorizationId ===
-      payload.sourceAuthorizationId &&
-    sourceVerificationEvidence.issuerId ===
-      pinnedSigner.issuerId &&
-    portabilityPackage.issuer.issuerId ===
-      pinnedSigner.issuerId &&
-    portabilityPackage.issuer.signingKeyId ===
-      pinnedSigner.signingKeyId &&
-    portabilityPayload.userId ===
-      payload.userId &&
-    portabilityPayload.username ===
-      payload.username &&
-    portabilityPayload.role ===
-      payload.role &&
-    portabilityPayload.ownerId ===
-      payload.ownerId &&
-    portabilityPayload.businessId ===
-      payload.businessId &&
-    portabilityPayload.branchId ===
-      payload.branchId &&
-    portabilityPayload.storageMode ===
-      payload.storageMode &&
-    portabilityPayload.dataContext ===
-      payload.dataContext &&
-    portabilityPayload.sourceAuthorizationMethod ===
-      FINORA_BRANCH_ACCESS_CREDENTIAL_ENROLLMENT_METHOD &&
-    (
-      portabilityPayload.demoId ??
-      undefined
-    ) ===
-      (
-        payload.demoId ??
-        undefined
-      ) &&
-    contextsEqual(
-      input.principal,
-      portabilityPayload.dataContext,
-      portabilityPayload.demoId,
-    );
-
   if (
-    !exactPinnedSignerMatched ||
-    !exactSourceSignerMatched ||
-    !exactPortabilityLineageMatched
+    "legacyNativeBoundMigrationEvidence" in
+      sourceVerificationEvidence
   ) {
-    return authorizeFailure(
-      "PORTABILITY_AUTH_VERIFICATION_FAILED",
-      "FINORA Branch Portability Authority does not match the exact encrypted authorization lineage and pinned Control Center signer.",
-    );
-  }
+    const legacyMigrationEvidence =
+      sourceVerificationEvidence
+        .legacyNativeBoundMigrationEvidence;
 
+    const fingerprintValid =
+      /^[0-9a-f]{64}$/i.test(
+        legacyMigrationEvidence
+          .publicKeyFingerprint,
+      );
+
+    const expectedLegacyBindingKeyId =
+      fingerprintValid
+        ? `FINORA-BINDING-${legacyMigrationEvidence
+            .publicKeyFingerprint
+            .slice(0, 32)
+            .toUpperCase()}`
+        : undefined;
+
+    const exactLegacyMigrationLineageMatched =
+      sourceVerificationEvidence.authorizationId ===
+        payload.sourceAuthorizationId &&
+      legacyMigrationEvidence.sourceAuthorizationId ===
+        payload.sourceAuthorizationId &&
+      legacyMigrationEvidence.migrationMethod ===
+        "PASSWORD_AND_ACTIVE_NATIVE_STORAGE_ENTITLEMENT" &&
+      legacyMigrationEvidence.ownerId ===
+        payload.ownerId &&
+      legacyMigrationEvidence.businessId ===
+        payload.businessId &&
+      legacyMigrationEvidence.branchId ===
+        payload.branchId &&
+      legacyMigrationEvidence.userId ===
+        payload.userId &&
+      legacyMigrationEvidence.username ===
+        payload.username &&
+      legacyMigrationEvidence.storageMode ===
+        payload.storageMode &&
+      legacyMigrationEvidence.authGeneration ===
+        payload.authGeneration &&
+      legacyMigrationEvidence.ownerId ===
+        input.principal.ownerId &&
+      legacyMigrationEvidence.businessId ===
+        input.principal.businessId &&
+      legacyMigrationEvidence.branchId ===
+        input.principal.branchId &&
+      legacyMigrationEvidence.userId ===
+        input.principal.userId &&
+      fingerprintValid &&
+      expectedLegacyBindingKeyId !==
+        undefined &&
+      legacyMigrationEvidence.bindingKeyId ===
+        expectedLegacyBindingKeyId &&
+      legacyMigrationEvidence.fingerprintAlgorithm ===
+        "SHA-256" &&
+      contextsEqual(
+        input.principal,
+        payload.dataContext,
+        payload.demoId,
+      );
+
+    if (
+      !exactLegacyMigrationLineageMatched
+    ) {
+      return authorizeFailure(
+        "PORTABILITY_AUTH_VERIFICATION_FAILED",
+        "FINORA legacy Portable Branch Auth migration evidence does not match the exact encrypted credential and branch lineage.",
+      );
+    }
+  }
+  else {
+    const portabilityAuthorityProof =
+      sourceVerificationEvidence
+        .portabilityAuthorityProof;
+
+    if (!portabilityAuthorityProof) {
+      return authorizeFailure(
+        "PORTABILITY_AUTH_VERIFICATION_FAILED",
+        "FINORA Portable Branch Auth does not contain a verified Branch Portability Authority.",
+      );
+    }
+
+    const portabilityPackage =
+      portabilityAuthorityProof
+        .signedPortabilityAuthorityPackage;
+
+    const portabilityPayload =
+      portabilityPackage.payload;
+
+    const pinnedSigner =
+      portabilityAuthorityProof
+        .verifiedControlSigner;
+
+    const portabilityVerification =
+      verifyFinoraSignedBranchPortabilityAuthorityPackage(
+        portabilityPackage,
+        [
+          pinnedSigner,
+        ],
+        {
+          ownerId:
+            input.principal.ownerId,
+
+          businessId:
+            input.principal.businessId,
+
+          branchId:
+            input.principal.branchId,
+        },
+        new Date(),
+      );
+
+    if (!portabilityVerification.valid) {
+      return authorizeFailure(
+        "PORTABILITY_AUTH_VERIFICATION_FAILED",
+        `FINORA Branch Portability Authority verification failed: ${portabilityVerification.reason}.`,
+      );
+    }
+
+    const verifiedSigner =
+      portabilityVerification.verifiedTrustedKey;
+
+    const exactPinnedSignerMatched =
+      verifiedSigner.issuerId ===
+        pinnedSigner.issuerId &&
+      verifiedSigner.signingKeyId ===
+        pinnedSigner.signingKeyId &&
+      verifiedSigner.algorithm ===
+        pinnedSigner.algorithm &&
+      verifiedSigner.format ===
+        pinnedSigner.format &&
+      verifiedSigner.publicKey ===
+        pinnedSigner.publicKey &&
+      verifiedSigner.status ===
+        pinnedSigner.status &&
+      verifiedSigner.validFrom ===
+        pinnedSigner.validFrom &&
+      (
+        verifiedSigner.validUntil ??
+        undefined
+      ) ===
+        (
+          pinnedSigner.validUntil ??
+          undefined
+        );
+
+    const sourceSigner =
+      sourceVerificationEvidence
+        .verifiedControlSigner;
+
+    const exactSourceSignerMatched =
+      sourceSigner.issuerId ===
+        pinnedSigner.issuerId &&
+      sourceSigner.signingKeyId ===
+        pinnedSigner.signingKeyId &&
+      sourceSigner.algorithm ===
+        pinnedSigner.algorithm &&
+      sourceSigner.format ===
+        pinnedSigner.format &&
+      sourceSigner.publicKey ===
+        pinnedSigner.publicKey &&
+      sourceSigner.status ===
+        pinnedSigner.status &&
+      sourceSigner.validFrom ===
+        pinnedSigner.validFrom &&
+      (
+        sourceSigner.validUntil ??
+        undefined
+      ) ===
+        (
+          pinnedSigner.validUntil ??
+          undefined
+        );
+
+    const exactPortabilityLineageMatched =
+      payload.sourceAuthorizationId ===
+        sourceVerificationEvidence.authorizationId &&
+      portabilityAuthorityProof.sourceAuthorizationId ===
+        payload.sourceAuthorizationId &&
+      portabilityPayload.sourceAuthorizationId ===
+        payload.sourceAuthorizationId &&
+      sourceVerificationEvidence.issuerId ===
+        pinnedSigner.issuerId &&
+      portabilityPackage.issuer.issuerId ===
+        pinnedSigner.issuerId &&
+      portabilityPackage.issuer.signingKeyId ===
+        pinnedSigner.signingKeyId &&
+      portabilityPayload.userId ===
+        payload.userId &&
+      portabilityPayload.username ===
+        payload.username &&
+      portabilityPayload.role ===
+        payload.role &&
+      portabilityPayload.ownerId ===
+        payload.ownerId &&
+      portabilityPayload.businessId ===
+        payload.businessId &&
+      portabilityPayload.branchId ===
+        payload.branchId &&
+      portabilityPayload.storageMode ===
+        payload.storageMode &&
+      portabilityPayload.dataContext ===
+        payload.dataContext &&
+      portabilityPayload.sourceAuthorizationMethod ===
+        FINORA_BRANCH_ACCESS_CREDENTIAL_ENROLLMENT_METHOD &&
+      (
+        portabilityPayload.demoId ??
+        undefined
+      ) ===
+        (
+          payload.demoId ??
+          undefined
+        ) &&
+      contextsEqual(
+        input.principal,
+        portabilityPayload.dataContext,
+        portabilityPayload.demoId,
+      );
+
+    if (
+      !exactPinnedSignerMatched ||
+      !exactSourceSignerMatched ||
+      !exactPortabilityLineageMatched
+    ) {
+      return authorizeFailure(
+        "PORTABILITY_AUTH_VERIFICATION_FAILED",
+        "FINORA Branch Portability Authority does not match the exact encrypted authorization lineage and pinned Control Center signer.",
+      );
+    }
+  }
   let existingStore:
     FinoraBranchDeviceTrustStoreState | undefined;
 

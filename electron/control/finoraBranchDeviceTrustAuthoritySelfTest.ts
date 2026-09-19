@@ -769,6 +769,15 @@ async function runSelfTest():
         sourceAuthorizationVerificationEvidence,
       );
 
+    if (
+      "legacyNativeBoundMigrationEvidence" in
+        missingProofEvidence
+    ) {
+      throw new Error(
+        "Device Trust signed portability fixture unexpectedly used legacy migration evidence.",
+      );
+    }
+
     delete missingProofEvidence.portabilityAuthorityProof;
 
     const missingProofEnvelope =

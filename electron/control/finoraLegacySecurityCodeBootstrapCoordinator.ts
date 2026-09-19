@@ -260,46 +260,158 @@ export async function bootstrapFinoraLegacySecurityCode(
       (item) => item.sourceAuthorizationId === currentCredential.sourceAuthorizationId,
     );
 
-  if (verificationEvidence.length !== 1 || portabilityAuthorities.length !== 1) {
-    return failure(
-      "SIGNED_PROVENANCE_UNAVAILABLE",
-      "Legacy bootstrap requires exact retained signed credential portability provenance.",
-    );
-  }
+  let portableVerificationEvidence:
+    FinoraPortableBranchAuthSourceAuthorizationVerificationEvidenceV1;
 
-  const retainedEvidence = verificationEvidence[0];
-  const retainedSigner = retainedEvidence.verifiedControlSigner;
+  if (
+    verificationEvidence.length ===
+      1 &&
+    portabilityAuthorities.length ===
+      1
+  ) {
+    const retainedEvidence =
+      verificationEvidence[0];
 
-  if (retainedSigner.status === "REVOKED") {
-    return failure(
-      "SIGNED_PROVENANCE_UNAVAILABLE",
-      "Legacy bootstrap cannot use revoked Control signer provenance.",
-    );
-  }
+    const retainedSigner =
+      retainedEvidence.verifiedControlSigner;
 
-  const portableVerificationEvidence:
-    FinoraPortableBranchAuthSourceAuthorizationVerificationEvidenceV1 = {
-      authorizationId: retainedEvidence.authorizationId,
-      packageId: retainedEvidence.packageId,
-      issuerId: retainedEvidence.issuerId,
-      sequence: retainedEvidence.sequence,
+    if (
+      retainedSigner.status ===
+        "REVOKED"
+    ) {
+      return failure(
+        "SIGNED_PROVENANCE_UNAVAILABLE",
+        "Legacy bootstrap cannot use revoked Control signer provenance.",
+      );
+    }
+
+    portableVerificationEvidence = {
+      authorizationId:
+        retainedEvidence.authorizationId,
+
+      packageId:
+        retainedEvidence.packageId,
+
+      issuerId:
+        retainedEvidence.issuerId,
+
+      sequence:
+        retainedEvidence.sequence,
+
       verifiedControlSigner: {
-        issuerId: retainedSigner.issuerId,
-        signingKeyId: retainedSigner.signingKeyId,
-        algorithm: retainedSigner.algorithm,
-        format: retainedSigner.format,
-        publicKey: retainedSigner.publicKey,
-        status: retainedSigner.status,
-        validFrom: retainedSigner.validFrom,
-        ...(retainedSigner.validUntil === undefined
-          ? {}
-          : { validUntil: retainedSigner.validUntil }),
-      },
-      portabilityAuthorityProof: structuredClone(portabilityAuthorities[0]),
-      verifiedAt: retainedEvidence.verifiedAt,
-      schemaVersion: 1,
-    };
+        issuerId:
+          retainedSigner.issuerId,
 
+        signingKeyId:
+          retainedSigner.signingKeyId,
+
+        algorithm:
+          retainedSigner.algorithm,
+
+        format:
+          retainedSigner.format,
+
+        publicKey:
+          retainedSigner.publicKey,
+
+        status:
+          retainedSigner.status,
+
+        validFrom:
+          retainedSigner.validFrom,
+
+        ...(
+          retainedSigner.validUntil ===
+            undefined
+            ? {}
+            : {
+                validUntil:
+                  retainedSigner.validUntil,
+              }
+        ),
+      },
+
+      portabilityAuthorityProof:
+        structuredClone(
+          portabilityAuthorities[0],
+        ),
+
+      verifiedAt:
+        retainedEvidence.verifiedAt,
+
+      schemaVersion:
+        1,
+    };
+  }
+  else if (
+    verificationEvidence.length ===
+      0 &&
+    portabilityAuthorities.length ===
+      0
+  ) {
+    const migratedAt =
+      new Date().toISOString();
+
+    portableVerificationEvidence = {
+      authorizationId:
+        currentCredential.sourceAuthorizationId,
+
+      legacyNativeBoundMigrationEvidence: {
+        schemaVersion:
+          1,
+
+        migrationMethod:
+          "PASSWORD_AND_ACTIVE_NATIVE_STORAGE_ENTITLEMENT",
+
+        sourceAuthorizationId:
+          currentCredential.sourceAuthorizationId,
+
+        ownerId:
+          currentCredential.ownerId,
+
+        businessId:
+          currentCredential.businessId,
+
+        branchId:
+          currentCredential.branchId,
+
+        userId:
+          currentCredential.userId,
+
+        username:
+          currentCredential.username,
+
+        storageMode:
+          currentCredential.storageMode,
+
+        authGeneration:
+          targetGeneration,
+
+        installationId:
+          nativeBinding.installationId,
+
+        bindingKeyId:
+          nativeBinding.bindingKeyId,
+
+        fingerprintAlgorithm:
+          nativeBinding.fingerprintAlgorithm,
+
+        publicKeyFingerprint:
+          nativeBinding.publicKeyFingerprint,
+
+        migratedAt,
+      },
+
+      schemaVersion:
+        1,
+    };
+  }
+  else {
+    return failure(
+      "SIGNED_PROVENANCE_UNAVAILABLE",
+      "Legacy bootstrap found incomplete or conflicting retained credential portability provenance.",
+    );
+  }
   let existingEnvelope;
 
   try {
@@ -313,6 +425,9 @@ export async function bootstrapFinoraLegacySecurityCode(
 
   let replacementCredential: FinoraControlBranchCredential;
   let portableResult: FinoraPortableBranchAuthEnsureResult;
+
+  let commitVerificationEvidence:
+    FinoraPortableBranchAuthSourceAuthorizationVerificationEvidenceV1;
 
   if (existingEnvelope === null) {
     const preparedAt = new Date().toISOString();
@@ -365,6 +480,11 @@ export async function bootstrapFinoraLegacySecurityCode(
       securityVerifier: toControlCredentialVerifier(material.securityVerifier),
       updatedAt: preparedAt,
     };
+
+    commitVerificationEvidence =
+      structuredClone(
+        portableVerificationEvidence,
+      );
   } else {
     let recoveredPayload;
 
@@ -404,12 +524,37 @@ export async function bootstrapFinoraLegacySecurityCode(
       securityVerifier: toControlCredentialVerifier(recoveredPayload.securityVerifier),
       updatedAt: recoveredPayload.updatedAt,
     };
+
+    commitVerificationEvidence =
+      structuredClone(
+        recoveredPayload
+          .sourceAuthorizationVerificationEvidence,
+      );
   }
+
+  const commitAuthority =
+    "legacyNativeBoundMigrationEvidence" in
+      commitVerificationEvidence
+      ? {
+          mode:
+            "LEGACY_NATIVE_BOUND_MIGRATION" as const,
+
+          migrationEvidence:
+            structuredClone(
+              commitVerificationEvidence
+                .legacyNativeBoundMigrationEvidence,
+            ),
+        }
+      : {
+          mode:
+            "SIGNED_PORTABILITY_PROVENANCE" as const,
+        };
 
   const commitResult = await applyFinoraLegacySecurityCodeBootstrapCredentialReplace({
     expectedCredential: structuredClone(currentCredential),
     replacementCredential,
     appliedAt: replacementCredential.updatedAt,
+    authority: commitAuthority,
   });
 
   if (!commitResult.success) {

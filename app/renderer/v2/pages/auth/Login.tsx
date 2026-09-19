@@ -334,6 +334,11 @@ export default function Login({
     setShowPassword,
   ] = useState(false);
 
+  const [
+    showLegacySecurityCode,
+    setShowLegacySecurityCode,
+  ] = useState(false);
+
 
   // ==========================================================
   // LOGIN BUSY STATE
@@ -1093,6 +1098,10 @@ export default function Login({
         ) {
           setLegacySecurityCodeSetupRequired(
             true,
+          );
+
+          setShowLegacySecurityCode(
+            false,
           );
 
           setDeviceSecurityCodeRequired(
@@ -2939,20 +2948,55 @@ export default function Login({
             {credentialMode === "LOGIN" &&
               legacySecurityCodeSetupRequired && (
                 <>
-                  <input
-                    value={securityCode}
-                    onChange={(event) => {
-                      setSecurityCode(event.target.value);
-                      setError("");
-                    }}
-                    placeholder="Create Security Code"
-                    aria-label="Create Branch Security Code"
-                    type="password"
-                    autoComplete="new-password"
-                    disabled={loginBusy}
-                    onKeyDown={handlePasswordKeyDown}
-                    style={loginStyles.input}
-                  />
+                  <div
+                    style={
+                      loginStyles.inputWrapper
+                    }
+                  >
+                    <input
+                      value={securityCode}
+                      onChange={(event) => {
+                        setSecurityCode(event.target.value);
+                        setError("");
+                      }}
+                      placeholder="Create Security Code"
+                      aria-label="Create Branch Security Code"
+                      type={
+                        showLegacySecurityCode
+                          ? "text"
+                          : "password"
+                      }
+                      autoComplete="new-password"
+                      disabled={loginBusy}
+                      onKeyDown={handlePasswordKeyDown}
+                      style={loginStyles.input}
+                    />
+
+                    <button
+                      type="button"
+                      aria-label={
+                        showLegacySecurityCode
+                          ? "Hide Security Code"
+                          : "Show Security Code"
+                      }
+                      onClick={() => {
+                        setShowLegacySecurityCode(
+                          current =>
+                            !current,
+                        );
+                      }}
+                      onMouseDown={(event) => {
+                        event.preventDefault();
+                      }}
+                      style={
+                        loginStyles.passwordToggle
+                      }
+                    >
+                      {showLegacySecurityCode
+                        ? <EyeOff />
+                        : <Eye />}
+                    </button>
+                  </div>
 
                   <input
                     value={confirmSecurityCode}

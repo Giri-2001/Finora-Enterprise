@@ -1635,9 +1635,21 @@ async function runSelfTest():
     const preparedTransaction =
       preparedTransactions[0];
 
-    const preparedPortabilityProof =
+    const preparedSourceEvidence =
       preparedTransaction
-        .sourceAuthorizationVerificationEvidence
+        .sourceAuthorizationVerificationEvidence;
+
+    if (
+      "legacyNativeBoundMigrationEvidence" in
+        preparedSourceEvidence
+    ) {
+      throw new Error(
+        "PREPARED signed enrollment fixture unexpectedly used legacy migration evidence.",
+      );
+    }
+
+    const preparedPortabilityProof =
+      preparedSourceEvidence
         .portabilityAuthorityProof;
 
     assert(
@@ -1702,9 +1714,21 @@ async function runSelfTest():
         },
       );
 
-    const encryptedPortabilityProof =
+    const encryptedSourceEvidence =
       preparedPayload
-        .sourceAuthorizationVerificationEvidence
+        .sourceAuthorizationVerificationEvidence;
+
+    if (
+      "legacyNativeBoundMigrationEvidence" in
+        encryptedSourceEvidence
+    ) {
+      throw new Error(
+        "Encrypted signed enrollment fixture unexpectedly used legacy migration evidence.",
+      );
+    }
+
+    const encryptedPortabilityProof =
+      encryptedSourceEvidence
         .portabilityAuthorityProof;
 
     assert(
@@ -2987,13 +3011,26 @@ async function runSelfTest():
         },
       );
 
+    const successfulLegacyEvidence =
+      successfulLegacyPayload
+        .sourceAuthorizationVerificationEvidence;
+
+    if (
+      "legacyNativeBoundMigrationEvidence" in
+        successfulLegacyEvidence
+    ) {
+      throw new Error(
+        "Signed-provenance legacy regression fixture unexpectedly used native-bound migration evidence.",
+      );
+    }
+
     assert(
       successfulLegacyPayload.authGeneration ===
         legacySourceGeneration +
           1 &&
       successfulLegacyPayload.sourceAuthorizationId ===
         legacyCredential.sourceAuthorizationId &&
-      successfulLegacyPayload.sourceAuthorizationVerificationEvidence.portabilityAuthorityProof !==
+      successfulLegacyEvidence.portabilityAuthorityProof !==
         undefined,
       "Successful legacy bootstrap Portable Auth lost generation or signed portability provenance.",
     );
@@ -3121,7 +3158,310 @@ async function runSelfTest():
     );
 
     // --------------------------------------------------------
-    // MISSING SIGNED PORTABILITY PROVENANCE
+    // PRE-PORTABILITY LEGACY 0+0 PROVENANCE MIGRATION
+    //
+    // Physical legacy branches created before retained signer
+    // evidence and reusable portability authority have neither
+    // record. Password + exact ACTIVE native-bound Storage
+    // Entitlement may establish the Branch Security Code once.
+    // --------------------------------------------------------
+
+    const zeroProvenanceLegacyStore =
+      structuredClone(
+        legacyBaselineStore,
+      );
+
+    zeroProvenanceLegacyStore
+      .branchCredentialAuthorizationVerificationEvidence =
+      (
+        zeroProvenanceLegacyStore
+          .branchCredentialAuthorizationVerificationEvidence ??
+        []
+      ).filter(
+        (item) =>
+          item.authorizationId !==
+            legacyCredential.sourceAuthorizationId,
+      );
+
+    zeroProvenanceLegacyStore
+      .branchCredentialPortabilityAuthorities =
+      (
+        zeroProvenanceLegacyStore
+          .branchCredentialPortabilityAuthorities ??
+        []
+      ).filter(
+        (item) =>
+          item.sourceAuthorizationId !==
+            legacyCredential.sourceAuthorizationId,
+      );
+
+    assert(
+      (
+        zeroProvenanceLegacyStore
+          .branchCredentialAuthorizationVerificationEvidence ??
+        []
+      ).filter(
+        (item) =>
+          item.authorizationId ===
+            legacyCredential.sourceAuthorizationId,
+      ).length ===
+        0 &&
+      (
+        zeroProvenanceLegacyStore
+          .branchCredentialPortabilityAuthorities ??
+        []
+      ).filter(
+        (item) =>
+          item.sourceAuthorizationId ===
+            legacyCredential.sourceAuthorizationId,
+      ).length ===
+        0,
+      "0+0 legacy fixture still retained modern portability provenance.",
+    );
+
+    await persistRawControlStoreFixture(
+      zeroProvenanceLegacyStore,
+    );
+
+    await rm(
+      legacyBootstrapPortableFile,
+      {
+        force:
+          true,
+      },
+    );
+
+    assert(
+      await portableStore.read(
+        "USB",
+      ) ===
+        null,
+      "0+0 legacy fixture did not begin without Portable Auth.",
+    );
+
+    const zeroProvenanceBootstrapResult =
+      await bootstrapFinoraLegacySecurityCode(
+        {
+          username,
+          password,
+          securityCode:
+            legacyBootstrapSecurityCode,
+        },
+        portableStore,
+      );
+
+    assert(
+      zeroProvenanceBootstrapResult.success &&
+        zeroProvenanceBootstrapResult.data.authGeneration ===
+          legacySourceGeneration +
+            1 &&
+        zeroProvenanceBootstrapResult.data.portableResult ===
+          "WRITTEN",
+      zeroProvenanceBootstrapResult.success
+        ? "0+0 legacy bootstrap returned unexpected success state."
+        : `${zeroProvenanceBootstrapResult.errorCode}: ${zeroProvenanceBootstrapResult.error}`,
+    );
+
+    const zeroProvenanceAfter =
+      await readFinoraControlStore();
+
+    assert(
+      zeroProvenanceAfter.success &&
+        zeroProvenanceAfter.data,
+      zeroProvenanceAfter.error ??
+        "Unable to read 0+0 legacy bootstrap Control Store.",
+    );
+
+    const zeroProvenanceCredential =
+      zeroProvenanceAfter.data
+        .branchCredentials
+        ?.find(
+          (item) =>
+            item.credentialId ===
+              legacyCredential.credentialId,
+        );
+
+    assert(
+      zeroProvenanceCredential !==
+        undefined &&
+      zeroProvenanceCredential.securityVerifier !==
+        undefined &&
+      zeroProvenanceCredential.authGeneration ===
+        legacySourceGeneration +
+          1,
+      "0+0 legacy bootstrap did not durably establish Security Code generation.",
+    );
+
+    const zeroProvenanceEnvelope =
+      await portableStore.read(
+        "USB",
+      );
+
+    assert(
+      zeroProvenanceEnvelope !==
+        null,
+      "0+0 legacy bootstrap did not persist Portable Auth.",
+    );
+
+    const zeroProvenancePayload =
+      await decryptFinoraPortableBranchAuthEnvelopeV1(
+        zeroProvenanceEnvelope,
+        password,
+        legacyBootstrapSecurityCode,
+        {
+          expectedScope: {
+            ownerId,
+            businessId,
+            branchId,
+          },
+        },
+      );
+
+    const zeroProvenanceEvidence =
+      zeroProvenancePayload
+        .sourceAuthorizationVerificationEvidence;
+
+    assert(
+      "legacyNativeBoundMigrationEvidence" in
+        zeroProvenanceEvidence,
+      "0+0 legacy bootstrap did not persist native-bound migration evidence.",
+    );
+
+    if (
+      !(
+        "legacyNativeBoundMigrationEvidence" in
+          zeroProvenanceEvidence
+      )
+    ) {
+      throw new Error(
+        "0+0 legacy migration evidence narrowing failed.",
+      );
+    }
+
+    const nativeMigrationEvidence =
+      zeroProvenanceEvidence
+        .legacyNativeBoundMigrationEvidence;
+
+    assert(
+      zeroProvenancePayload.sourceAuthorizationId ===
+        legacyCredential.sourceAuthorizationId &&
+      zeroProvenancePayload.authGeneration ===
+        legacySourceGeneration +
+          1 &&
+      nativeMigrationEvidence.migrationMethod ===
+        "PASSWORD_AND_ACTIVE_NATIVE_STORAGE_ENTITLEMENT" &&
+      nativeMigrationEvidence.sourceAuthorizationId ===
+        legacyCredential.sourceAuthorizationId &&
+      nativeMigrationEvidence.ownerId ===
+        legacyCredential.ownerId &&
+      nativeMigrationEvidence.businessId ===
+        legacyCredential.businessId &&
+      nativeMigrationEvidence.branchId ===
+        legacyCredential.branchId &&
+      nativeMigrationEvidence.userId ===
+        legacyCredential.userId &&
+      nativeMigrationEvidence.username ===
+        legacyCredential.username &&
+      nativeMigrationEvidence.storageMode ===
+        legacyCredential.storageMode &&
+      nativeMigrationEvidence.authGeneration ===
+        legacySourceGeneration +
+          1 &&
+      nativeMigrationEvidence.installationId ===
+        nativeBinding.installationId &&
+      nativeMigrationEvidence.bindingKeyId ===
+        nativeBinding.bindingKeyId &&
+      nativeMigrationEvidence.fingerprintAlgorithm ===
+        nativeBinding.fingerprintAlgorithm &&
+      nativeMigrationEvidence.publicKeyFingerprint ===
+        nativeBinding.publicKeyFingerprint,
+      "0+0 legacy Portable Auth migration evidence lost exact native-bound credential lineage.",
+    );
+
+    console.log(
+      "PASS: pre-portability 0+0 legacy credential bootstraps one-time native-bound Security Code evidence",
+    );
+
+    const zeroProvenancePrincipal = {
+      ...recoveryPrincipal,
+
+      credentialId:
+        legacyCredential.credentialId,
+
+      userId:
+        legacyCredential.userId,
+
+      ownerId:
+        legacyCredential.ownerId,
+
+      businessId:
+        legacyCredential.businessId,
+
+      branchId:
+        legacyCredential.branchId,
+
+      username:
+        legacyCredential.username,
+
+      canonicalUsername:
+        legacyCredential.canonicalUsername,
+
+      fullName:
+        legacyCredential.fullName,
+
+      role:
+        legacyCredential.role,
+
+      dataContext:
+        legacyCredential.dataContext,
+
+      ...(
+        legacyCredential.demoId ===
+          undefined
+          ? {
+              demoId:
+                undefined,
+            }
+          : {
+              demoId:
+                legacyCredential.demoId,
+            }
+      ),
+
+      storageMode:
+        legacyCredential.storageMode,
+
+      authGeneration:
+        legacySourceGeneration +
+          1,
+    };
+
+    const zeroProvenanceAuthorization =
+      await authorizeFinoraCurrentBranchDevice({
+        principal:
+          zeroProvenancePrincipal,
+
+        portableStore,
+
+        password,
+
+        securityCode:
+          legacyBootstrapSecurityCode,
+      });
+
+    assert(
+      zeroProvenanceAuthorization.success,
+      zeroProvenanceAuthorization.success
+        ? "Unexpected 0+0 legacy device authorization result."
+        : zeroProvenanceAuthorization.error,
+    );
+
+    console.log(
+      "PASS: migrated 0+0 legacy Portable Auth authorizes current device with the established Security Code",
+    );
+
+    // --------------------------------------------------------
+    // PARTIAL SIGNED PORTABILITY PROVENANCE MUST FAIL CLOSED
     // --------------------------------------------------------
 
     const missingLegacyProofStore =

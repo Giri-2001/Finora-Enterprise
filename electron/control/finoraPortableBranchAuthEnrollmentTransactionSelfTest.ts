@@ -356,10 +356,21 @@ async function main(): Promise<void> {
       prepared,
     );
 
-  structurallyTamperedEvidence
-    .sourceAuthorizationVerificationEvidence
-    .packageId =
-      "FINORA-CONTROL-PACKAGE-STRUCTURAL-TAMPER";
+  const structurallyTamperedSourceEvidence =
+    structurallyTamperedEvidence
+      .sourceAuthorizationVerificationEvidence;
+
+  if (
+    "legacyNativeBoundMigrationEvidence" in
+      structurallyTamperedSourceEvidence
+  ) {
+    throw new Error(
+      "Enrollment transaction signed fixture unexpectedly used legacy migration evidence.",
+    );
+  }
+
+  structurallyTamperedSourceEvidence.packageId =
+    "FINORA-CONTROL-PACKAGE-STRUCTURAL-TAMPER";
 
   validateFinoraPortableBranchAuthEnrollmentTransactionV1(
     structurallyTamperedEvidence,

@@ -258,6 +258,40 @@ export function finoraPortableBranchAuthSourceAuthorizationVerificationEvidenceE
     FinoraPortableBranchAuthSourceAuthorizationVerificationEvidenceV1,
 ): boolean {
 
+  if (
+    "legacyNativeBoundMigrationEvidence" in
+      left
+  ) {
+    if (
+      !(
+        "legacyNativeBoundMigrationEvidence" in
+          right
+      )
+    ) {
+      return false;
+    }
+
+    return (
+      left.authorizationId ===
+        right.authorizationId &&
+      left.schemaVersion ===
+        right.schemaVersion &&
+      JSON.stringify(
+        left.legacyNativeBoundMigrationEvidence,
+      ) ===
+        JSON.stringify(
+          right.legacyNativeBoundMigrationEvidence,
+        )
+    );
+  }
+
+  if (
+    "legacyNativeBoundMigrationEvidence" in
+      right
+  ) {
+    return false;
+  }
+
   const leftSigner =
     left.verifiedControlSigner;
 

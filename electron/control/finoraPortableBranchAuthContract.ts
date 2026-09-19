@@ -205,7 +205,55 @@ export interface FinoraPortableBranchAuthVerifiedControlSignerV1 {
  * This record is evidence only. It contains no private key,
  * Password or Security Code.
  */
-export interface FinoraPortableBranchAuthSourceAuthorizationVerificationEvidenceV1 {
+export interface FinoraPortableBranchAuthLegacyNativeBoundMigrationEvidenceV1 {
+
+  schemaVersion:
+    1;
+
+  migrationMethod:
+    "PASSWORD_AND_ACTIVE_NATIVE_STORAGE_ENTITLEMENT";
+
+  sourceAuthorizationId:
+    string;
+
+  ownerId:
+    string;
+
+  businessId:
+    string;
+
+  branchId:
+    string;
+
+  userId:
+    string;
+
+  username:
+    string;
+
+  storageMode:
+    "LOCAL" | "USB";
+
+  authGeneration:
+    number;
+
+  installationId:
+    string;
+
+  bindingKeyId:
+    string;
+
+  fingerprintAlgorithm:
+    "SHA-256";
+
+  publicKeyFingerprint:
+    string;
+
+  migratedAt:
+    string;
+}
+
+export interface FinoraPortableBranchAuthSignedSourceAuthorizationVerificationEvidenceV1 {
 
   authorizationId:
     string;
@@ -222,14 +270,6 @@ export interface FinoraPortableBranchAuthSourceAuthorizationVerificationEvidence
   verifiedControlSigner:
     FinoraPortableBranchAuthVerifiedControlSignerV1;
 
-  /**
-   * Reusable branch portability authority proven during the
-   * same native Credential Enrollment composition apply.
-   *
-   * Optional at schema-v1 parsing level only so pre-I6
-   * Portable Auth artifacts remain parseable. New enrollment
-   * coordinator flows require and populate this proof.
-   */
   portabilityAuthorityProof?:
     FinoraBranchCredentialPortabilityAuthorityProvenanceV1;
 
@@ -239,6 +279,22 @@ export interface FinoraPortableBranchAuthSourceAuthorizationVerificationEvidence
   schemaVersion:
     1;
 }
+
+export interface FinoraPortableBranchAuthLegacySourceAuthorizationVerificationEvidenceV1 {
+
+  authorizationId:
+    string;
+
+  legacyNativeBoundMigrationEvidence:
+    FinoraPortableBranchAuthLegacyNativeBoundMigrationEvidenceV1;
+
+  schemaVersion:
+    1;
+}
+
+export type FinoraPortableBranchAuthSourceAuthorizationVerificationEvidenceV1 =
+  | FinoraPortableBranchAuthSignedSourceAuthorizationVerificationEvidenceV1
+  | FinoraPortableBranchAuthLegacySourceAuthorizationVerificationEvidenceV1;
 export interface FinoraPortableBranchAuthPayloadV1 {
   schemaVersion:
     typeof FINORA_PORTABLE_BRANCH_AUTH_PAYLOAD_SCHEMA_VERSION;
@@ -912,6 +968,192 @@ export function validateFinoraPortableBranchAuthSourceAuthorizationVerificationE
       "sourceAuthorizationVerificationEvidence",
     );
 
+  if (
+    evidence.legacyNativeBoundMigrationEvidence !==
+      undefined
+  ) {
+    assertExactKeys(
+      evidence,
+      [
+        "authorizationId",
+        "legacyNativeBoundMigrationEvidence",
+        "schemaVersion",
+      ],
+      [],
+      "sourceAuthorizationVerificationEvidence",
+    );
+
+    assertNonEmptyString(
+      evidence.authorizationId,
+      "sourceAuthorizationVerificationEvidence.authorizationId",
+    );
+
+    if (
+      evidence.schemaVersion !==
+        1
+    ) {
+      throw new Error(
+        "Portable Branch Auth legacy source authorization verification evidence schemaVersion is unsupported.",
+      );
+    }
+
+    const migrationEvidence =
+      assertObject(
+        evidence.legacyNativeBoundMigrationEvidence,
+        "legacyNativeBoundMigrationEvidence",
+      );
+
+    assertExactKeys(
+      migrationEvidence,
+      [
+        "schemaVersion",
+        "migrationMethod",
+        "sourceAuthorizationId",
+        "ownerId",
+        "businessId",
+        "branchId",
+        "userId",
+        "username",
+        "storageMode",
+        "authGeneration",
+        "installationId",
+        "bindingKeyId",
+        "fingerprintAlgorithm",
+        "publicKeyFingerprint",
+        "migratedAt",
+      ],
+      [],
+      "legacyNativeBoundMigrationEvidence",
+    );
+
+    if (
+      migrationEvidence.schemaVersion !==
+        1 ||
+      migrationEvidence.migrationMethod !==
+        "PASSWORD_AND_ACTIVE_NATIVE_STORAGE_ENTITLEMENT"
+    ) {
+      throw new Error(
+        "Portable Branch Auth legacy native-bound migration evidence is unsupported.",
+      );
+    }
+
+    assertNonEmptyString(
+      migrationEvidence.sourceAuthorizationId,
+      "legacyNativeBoundMigrationEvidence.sourceAuthorizationId",
+    );
+
+    assertNonEmptyString(
+      migrationEvidence.ownerId,
+      "legacyNativeBoundMigrationEvidence.ownerId",
+    );
+
+    assertNonEmptyString(
+      migrationEvidence.businessId,
+      "legacyNativeBoundMigrationEvidence.businessId",
+    );
+
+    assertNonEmptyString(
+      migrationEvidence.branchId,
+      "legacyNativeBoundMigrationEvidence.branchId",
+    );
+
+    assertNonEmptyString(
+      migrationEvidence.userId,
+      "legacyNativeBoundMigrationEvidence.userId",
+    );
+
+    assertNonEmptyString(
+      migrationEvidence.username,
+      "legacyNativeBoundMigrationEvidence.username",
+    );
+
+    if (
+      migrationEvidence.storageMode !==
+        "LOCAL" &&
+      migrationEvidence.storageMode !==
+        "USB"
+    ) {
+      throw new Error(
+        "Portable Branch Auth legacy migration storageMode is invalid.",
+      );
+    }
+
+    if (
+      !Number.isSafeInteger(
+        migrationEvidence.authGeneration,
+      ) ||
+      (
+        migrationEvidence.authGeneration as
+          number
+      ) <= 0
+    ) {
+      throw new Error(
+        "Portable Branch Auth legacy migration authGeneration is invalid.",
+      );
+    }
+
+    assertNonEmptyString(
+      migrationEvidence.installationId,
+      "legacyNativeBoundMigrationEvidence.installationId",
+    );
+
+    const publicKeyFingerprint =
+      migrationEvidence.publicKeyFingerprint;
+
+    if (
+      typeof publicKeyFingerprint !==
+        "string" ||
+      !/^[0-9a-f]{64}$/i.test(
+        publicKeyFingerprint,
+      )
+    ) {
+      throw new Error(
+        "Portable Branch Auth legacy migration publicKeyFingerprint is invalid.",
+      );
+    }
+
+    const bindingKeyId =
+      migrationEvidence.bindingKeyId;
+
+    if (
+      typeof bindingKeyId !==
+        "string" ||
+      bindingKeyId !==
+        `FINORA-BINDING-${publicKeyFingerprint
+          .slice(0, 32)
+          .toUpperCase()}`
+    ) {
+      throw new Error(
+        "Portable Branch Auth legacy migration bindingKeyId does not match its fingerprint.",
+      );
+    }
+
+    if (
+      migrationEvidence.fingerprintAlgorithm !==
+        "SHA-256"
+    ) {
+      throw new Error(
+        "Portable Branch Auth legacy migration fingerprintAlgorithm is invalid.",
+      );
+    }
+
+    assertCanonicalIsoTimestamp(
+      migrationEvidence.migratedAt,
+      "legacyNativeBoundMigrationEvidence.migratedAt",
+    );
+
+    if (
+      migrationEvidence.sourceAuthorizationId !==
+        evidence.authorizationId
+    ) {
+      throw new Error(
+        "Portable Branch Auth legacy migration evidence does not match authorizationId.",
+      );
+    }
+
+    return;
+  }
+
   assertExactKeys(
     evidence,
     [
@@ -951,8 +1193,7 @@ export function validateFinoraPortableBranchAuthSourceAuthorizationVerificationE
     (
       evidence.sequence as
         number
-    ) <=
-      0
+    ) <= 0
   ) {
     throw new Error(
       "Portable Branch Auth source authorization verification sequence is invalid.",
@@ -984,7 +1225,8 @@ export function validateFinoraPortableBranchAuthSourceAuthorizationVerificationE
       portabilityAuthorityProof.verifiedControlSigner;
 
     const sourceSigner =
-      evidence.verifiedControlSigner;
+      evidence.verifiedControlSigner as
+        FinoraPortableBranchAuthVerifiedControlSignerV1;
 
     if (
       portabilityAuthorityProof.sourceAuthorizationId !==
@@ -1043,8 +1285,12 @@ export function validateFinoraPortableBranchAuthSourceAuthorizationVerificationE
     );
   }
 
+  const verifiedControlSigner =
+    evidence.verifiedControlSigner as
+      FinoraPortableBranchAuthVerifiedControlSignerV1;
+
   if (
-    evidence.verifiedControlSigner.issuerId !==
+    verifiedControlSigner.issuerId !==
       evidence.issuerId
   ) {
     throw new Error(
