@@ -470,6 +470,287 @@ async function main(): Promise<void> {
     "PASS: COMPLETE transaction validates",
   );
 
+  // ==========================================================
+  // CERTIFICATION-AWARE DURABLE MIGRATION CONTRACT
+  // ==========================================================
+
+  const branchCertificationProvenance = {
+    requestId:
+      "FINORA-ENROLLMENT-TRANSACTION-CERT-000001",
+
+    responseId:
+      "FINORA-ENROLLMENT-RESPONSE-TRANSACTION-CERT-000001",
+
+    certificationKeyId:
+      "FINORA-BRANCH-CERT-0123456789ABCDEF0123456789ABCDEF",
+  };
+
+  const certificationPrepared:
+    FinoraPortableBranchAuthEnrollmentTransactionV1 =
+    {
+      ...cloneTransaction(
+        prepared,
+      ),
+
+      branchCertificationProvenance,
+    };
+
+  validateFinoraPortableBranchAuthEnrollmentTransactionV1(
+    certificationPrepared,
+  );
+
+  console.log(
+    "PASS: certification-aware PREPARED transaction validates with non-secret provenance",
+  );
+
+  const certificationPortableWritten:
+    FinoraPortableBranchAuthEnrollmentTransactionV1 =
+    {
+      ...cloneTransaction(
+        certificationPrepared,
+      ),
+
+      status:
+        "PORTABLE_WRITTEN",
+
+      updatedAt:
+        "2026-09-11T12:00:03.000Z",
+
+      portableWrittenAt:
+        "2026-09-11T12:00:03.000Z",
+    };
+
+  validateFinoraPortableBranchAuthEnrollmentTransactionV1(
+    certificationPortableWritten,
+  );
+
+  const certificationControlApplied:
+    FinoraPortableBranchAuthEnrollmentTransactionV1 =
+    {
+      ...cloneTransaction(
+        certificationPortableWritten,
+      ),
+
+      status:
+        "CONTROL_APPLIED",
+
+      updatedAt:
+        "2026-09-11T12:00:04.000Z",
+
+      controlAppliedAt:
+        "2026-09-11T12:00:04.000Z",
+    };
+
+  validateFinoraPortableBranchAuthEnrollmentTransactionV1(
+    certificationControlApplied,
+  );
+
+  const certificationMigrated:
+    FinoraPortableBranchAuthEnrollmentTransactionV1 =
+    {
+      ...cloneTransaction(
+        certificationControlApplied,
+      ),
+
+      status:
+        "CERTIFICATION_MIGRATED",
+
+      updatedAt:
+        "2026-09-11T12:00:04.500Z",
+
+      certificationMigratedAt:
+        "2026-09-11T12:00:04.500Z",
+    };
+
+  validateFinoraPortableBranchAuthEnrollmentTransactionV1(
+    certificationMigrated,
+  );
+
+  console.log(
+    "PASS: CERTIFICATION_MIGRATED transaction validates with exact durable provenance",
+  );
+
+  const certificationComplete:
+    FinoraPortableBranchAuthEnrollmentTransactionV1 =
+    {
+      ...cloneTransaction(
+        certificationMigrated,
+      ),
+
+      status:
+        "COMPLETE",
+
+      updatedAt:
+        "2026-09-11T12:00:05.000Z",
+
+      completedAt:
+        "2026-09-11T12:00:05.000Z",
+    };
+
+  validateFinoraPortableBranchAuthEnrollmentTransactionV1(
+    certificationComplete,
+  );
+
+  console.log(
+    "PASS: certification-aware COMPLETE preserves durable migration evidence",
+  );
+
+  const migratedWithoutProvenance =
+    {
+      ...cloneTransaction(
+        controlApplied,
+      ),
+
+      status:
+        "CERTIFICATION_MIGRATED",
+
+      updatedAt:
+        "2026-09-11T12:00:04.500Z",
+
+      certificationMigratedAt:
+        "2026-09-11T12:00:04.500Z",
+    } as FinoraPortableBranchAuthEnrollmentTransactionV1;
+
+  expectFailure(
+    "CERTIFICATION_MIGRATED without provenance rejected",
+    () =>
+      validateFinoraPortableBranchAuthEnrollmentTransactionV1(
+        migratedWithoutProvenance,
+      ),
+  );
+
+  const skippedMigrationEvidence =
+    {
+      ...cloneTransaction(
+        certificationControlApplied,
+      ),
+
+      status:
+        "COMPLETE",
+
+      updatedAt:
+        "2026-09-11T12:00:05.000Z",
+
+      completedAt:
+        "2026-09-11T12:00:05.000Z",
+    } as FinoraPortableBranchAuthEnrollmentTransactionV1;
+
+  expectFailure(
+    "certification-aware COMPLETE cannot skip migration evidence",
+    () =>
+      validateFinoraPortableBranchAuthEnrollmentTransactionV1(
+        skippedMigrationEvidence,
+      ),
+  );
+
+  const malformedKeyId =
+    cloneTransaction(
+      certificationPrepared,
+    );
+
+  malformedKeyId.branchCertificationProvenance =
+    {
+      ...branchCertificationProvenance,
+
+      certificationKeyId:
+        "FINORA-BRANCH-CERT-invalid",
+    };
+
+  expectFailure(
+    "non-canonical certificationKeyId rejected",
+    () =>
+      validateFinoraPortableBranchAuthEnrollmentTransactionV1(
+        malformedKeyId,
+      ),
+  );
+
+  const malformedResponseId =
+    cloneTransaction(
+      certificationPrepared,
+    );
+
+  malformedResponseId.branchCertificationProvenance =
+    {
+      ...branchCertificationProvenance,
+
+      responseId:
+        "FINORA-ENROLLMENT-NOT-A-RESPONSE",
+    };
+
+  expectFailure(
+    "malformed certification responseId rejected",
+    () =>
+      validateFinoraPortableBranchAuthEnrollmentTransactionV1(
+        malformedResponseId,
+      ),
+  );
+
+  const prematureMigrationTimestamp =
+    cloneTransaction(
+      certificationControlApplied,
+    );
+
+  prematureMigrationTimestamp.certificationMigratedAt =
+    "2026-09-11T12:00:04.500Z";
+
+  expectFailure(
+    "migration timestamp before migration state rejected",
+    () =>
+      validateFinoraPortableBranchAuthEnrollmentTransactionV1(
+        prematureMigrationTimestamp,
+      ),
+  );
+
+  const badMigrationOrder =
+    cloneTransaction(
+      certificationMigrated,
+    );
+
+  badMigrationOrder.certificationMigratedAt =
+    "2026-09-11T12:00:03.500Z";
+
+  badMigrationOrder.updatedAt =
+    "2026-09-11T12:00:04.500Z";
+
+  expectFailure(
+    "migration timestamp before CONTROL_APPLIED rejected",
+    () =>
+      validateFinoraPortableBranchAuthEnrollmentTransactionV1(
+        badMigrationOrder,
+      ),
+  );
+
+  const secretBearingProvenance =
+    cloneTransaction(
+      certificationPrepared,
+    );
+
+  (
+    secretBearingProvenance.branchCertificationProvenance as
+      unknown as Record<string, unknown>
+  ).privateKey =
+    "FORBIDDEN-PRIVATE-KEY";
+
+  expectFailure(
+    "secret-bearing certification provenance rejected",
+    () =>
+      validateFinoraPortableBranchAuthEnrollmentTransactionV1(
+        secretBearingProvenance,
+      ),
+  );
+
+  assertTrue(
+    certificationPrepared.schemaVersion ===
+      FINORA_PORTABLE_BRANCH_AUTH_ENROLLMENT_TRANSACTION_SCHEMA_VERSION &&
+    certificationPrepared.schemaVersion ===
+      1,
+    "Certification migration contract changed schemaVersion.",
+  );
+
+  console.log(
+    "PASS: certification migration remains additive under schemaVersion 1",
+  );
+
   assertTrue(
     canAdvanceFinoraPortableBranchAuthEnrollmentTransaction(
       "PREPARED",
@@ -494,8 +775,56 @@ async function main(): Promise<void> {
     "CONTROL_APPLIED -> COMPLETE must be allowed.",
   );
 
+  assertTrue(
+    canAdvanceFinoraPortableBranchAuthEnrollmentTransaction(
+      "CONTROL_APPLIED",
+      "CERTIFICATION_MIGRATED",
+    ),
+    "CONTROL_APPLIED -> CERTIFICATION_MIGRATED must be allowed.",
+  );
+
+  assertTrue(
+    canAdvanceFinoraPortableBranchAuthEnrollmentTransaction(
+      "CERTIFICATION_MIGRATED",
+      "COMPLETE",
+    ),
+    "CERTIFICATION_MIGRATED -> COMPLETE must be allowed.",
+  );
+
+  assertTrue(
+    !canAdvanceFinoraPortableBranchAuthEnrollmentTransaction(
+      "PREPARED",
+      "CERTIFICATION_MIGRATED",
+    ),
+    "PREPARED -> CERTIFICATION_MIGRATED must be rejected.",
+  );
+
+  assertTrue(
+    !canAdvanceFinoraPortableBranchAuthEnrollmentTransaction(
+      "PORTABLE_WRITTEN",
+      "CERTIFICATION_MIGRATED",
+    ),
+    "PORTABLE_WRITTEN -> CERTIFICATION_MIGRATED must be rejected.",
+  );
+
+  assertTrue(
+    !canAdvanceFinoraPortableBranchAuthEnrollmentTransaction(
+      "CERTIFICATION_MIGRATED",
+      "CONTROL_APPLIED",
+    ),
+    "CERTIFICATION_MIGRATED -> CONTROL_APPLIED must be rejected.",
+  );
+
+  assertTrue(
+    !canAdvanceFinoraPortableBranchAuthEnrollmentTransaction(
+      "COMPLETE",
+      "CERTIFICATION_MIGRATED",
+    ),
+    "COMPLETE -> CERTIFICATION_MIGRATED must be rejected.",
+  );
+
   console.log(
-    "PASS: all three forward transitions are allowed",
+    "PASS: legacy and certification-aware forward transition policies validate",
   );
 
   const illegalTransitions:

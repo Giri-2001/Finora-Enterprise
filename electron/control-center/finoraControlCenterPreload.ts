@@ -68,8 +68,14 @@ const CONTROL_CENTER_CHANNELS = {
   ISSUE_BRANCH_ACCESS:
     "finora:control-center:issue-branch-access",
 
+  ISSUE_BRANCH_DEVICE_REVOCATION:
+    "finora:control-center:issue-branch-device-revocation",
+
   ISSUE_STORAGE_ENTITLEMENT:
     "finora:control-center:issue-storage-entitlement",
+
+  ISSUE_PORTABLE_STORAGE_ENTITLEMENT:
+    "finora:control-center:issue-portable-storage-entitlement",
 
   ISSUE_BUSINESS_PROFILE:
     "finora:control-center:issue-business-profile",
@@ -628,7 +634,29 @@ export interface FinoraControlCenterBridge {
         >
       >;
 
+  issueBranchDeviceRevocation:
+    (
+      request:
+        FinoraControlCenterIssuanceRequest,
+    ) =>
+      Promise<
+        FinoraControlCenterResult<
+          FinoraControlCenterSignedPackageView
+        >
+      >;
+
   issueStorageEntitlement:
+    (
+      request:
+        FinoraControlCenterIssuanceRequest,
+    ) =>
+      Promise<
+        FinoraControlCenterResult<
+          FinoraControlCenterSignedPackageView
+        >
+      >;
+
+  issuePortableStorageEntitlement:
     (
       request:
         FinoraControlCenterIssuanceRequest,
@@ -826,12 +854,38 @@ const controlCenterBridge:
         >
       >,
 
+  issueBranchDeviceRevocation:
+    (
+      request,
+    ) =>
+      ipcRenderer.invoke(
+        CONTROL_CENTER_CHANNELS.ISSUE_BRANCH_DEVICE_REVOCATION,
+        request,
+      ) as Promise<
+        FinoraControlCenterResult<
+          FinoraControlCenterSignedPackageView
+        >
+      >,
+
   issueStorageEntitlement:
     (
       request,
     ) =>
       ipcRenderer.invoke(
         CONTROL_CENTER_CHANNELS.ISSUE_STORAGE_ENTITLEMENT,
+        request,
+      ) as Promise<
+        FinoraControlCenterResult<
+          FinoraControlCenterSignedPackageView
+        >
+      >,
+
+  issuePortableStorageEntitlement:
+    (
+      request,
+    ) =>
+      ipcRenderer.invoke(
+        CONTROL_CENTER_CHANNELS.ISSUE_PORTABLE_STORAGE_ENTITLEMENT,
         request,
       ) as Promise<
         FinoraControlCenterResult<

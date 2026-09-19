@@ -81,24 +81,68 @@ import type {
 } from "./finoraPortableBranchAuthStore.js";
 
 import type {
-  FinoraBranchDeviceTrustRecordV1,
-  FinoraBranchDeviceTrustStoreStateV1,
+  FinoraBranchDeviceTrustRecord,
+  FinoraBranchDeviceTrustStoreState,
 } from "./finoraBranchDeviceTrustStore.js";
 
 // ============================================================
 // PUBLIC CONTRACTS
 // ============================================================
 
+export interface FinoraBranchDeviceTrustCheckPrincipal {
+  /**
+   * Current authoritative credential lineage generation.
+   *
+   * Trusted-device continuity intentionally does not compare
+   * this value against historical Device Trust records.
+   * Fresh-device authorization continues to enforce generation
+   * freshness through the full authentication principal.
+   */
+  authGeneration:
+    number;
+
+  userId:
+    string;
+
+  username:
+    string;
+
+  ownerId:
+    string;
+
+  businessId:
+    string;
+
+  branchId:
+    string;
+
+  storageMode:
+    | "LOCAL"
+    | "USB";
+
+  dataContext:
+    | "REAL"
+    | "DEMO";
+
+  demoId?:
+    string;
+}
+
 export interface FinoraBranchDeviceTrustCheckInput {
   principal:
-    FinoraBranchCredentialAuthenticationSuccess;
+    FinoraBranchDeviceTrustCheckPrincipal;
 
   portableStore:
     FinoraPortableBranchAuthStore;
 }
 
-export interface FinoraBranchDeviceTrustAuthorizeInput
-  extends FinoraBranchDeviceTrustCheckInput {
+export interface FinoraBranchDeviceTrustAuthorizeInput {
+  principal:
+    FinoraBranchCredentialAuthenticationSuccess;
+
+  portableStore:
+    FinoraPortableBranchAuthStore;
+
   password:
     string;
 
@@ -114,6 +158,7 @@ export type FinoraBranchDeviceTrustCheckErrorCode =
   | "PORTABLE_AUTH_UNAVAILABLE"
   | "PORTABLE_AUTH_MISMATCH"
   | "NATIVE_BINDING_UNAVAILABLE"
+  | "DEVICE_REVOKED"
   | "DEVICE_TRUST_STORE_FAILED";
 
 export type FinoraBranchDeviceTrustCheckResult =
@@ -158,7 +203,7 @@ export type FinoraBranchDeviceTrustAuthorizeResult =
         FinoraBranchDeviceTrustAuthorizeStatus;
 
       record:
-        FinoraBranchDeviceTrustRecordV1;
+        FinoraBranchDeviceTrustRecord;
     }
   | {
       success:
@@ -178,6 +223,17 @@ export type FinoraBranchDeviceTrustAuthorizeResult =
 let deviceTrustMutationQueue:
   Promise<void> =
     Promise.resolve();
+
+export function runFinoraBranchDeviceTrustMutationSerialized<T>(
+  operation: () => Promise<T>,
+): Promise<T> {
+  const result = deviceTrustMutationQueue.then(operation, operation);
+  deviceTrustMutationQueue = result.then(
+    () => undefined,
+    () => undefined,
+  );
+  return result;
+}
 
 // ============================================================
 // HELPERS
@@ -219,7 +275,7 @@ function authorizeFailure(
 
 function contextsEqual(
   principal:
-    FinoraBranchCredentialAuthenticationSuccess,
+    FinoraBranchDeviceTrustCheckPrincipal,
 
   dataContext:
     "REAL" | "DEMO",
@@ -255,7 +311,7 @@ function outerEnvelopeMatchesPrincipal(
     FinoraPortableBranchAuthEnvelopeV1,
 
   principal:
-    FinoraBranchCredentialAuthenticationSuccess,
+    FinoraBranchDeviceTrustCheckPrincipal,
 ): boolean {
   const canonicalUsername =
     canonicalizeFinoraCredentialUsername(
@@ -319,7 +375,7 @@ function payloadMatchesPrincipal(
 
 function bindingMatchesRecord(
   record:
-    FinoraBranchDeviceTrustRecordV1,
+    FinoraBranchDeviceTrustRecord,
 
   nativeBinding:
     NonNullable<
@@ -346,10 +402,10 @@ function bindingMatchesRecord(
 
 function principalMatchesRecord(
   record:
-    FinoraBranchDeviceTrustRecordV1,
+    FinoraBranchDeviceTrustRecord,
 
   principal:
-    FinoraBranchCredentialAuthenticationSuccess,
+    FinoraBranchDeviceTrustCheckPrincipal,
 ): boolean {
   const canonicalUsername =
     canonicalizeFinoraCredentialUsername(
@@ -483,7 +539,7 @@ export async function checkFinoraCurrentBranchDeviceTrust(
   }
 
   let store:
-    FinoraBranchDeviceTrustStoreStateV1 | undefined;
+    FinoraBranchDeviceTrustStoreState | undefined;
 
   try {
     store =
@@ -553,12 +609,14 @@ export async function checkFinoraCurrentBranchDeviceTrust(
   }
 
   if (
-    matchingRecords.length !==
-      1
+    matchingRecords.some(
+      (record) =>
+        record.status === "REVOKED",
+    )
   ) {
     return checkFailure(
-      "DEVICE_TRUST_STORE_FAILED",
-      "FINORA Device Trust state contains ambiguous current-device authority.",
+      "DEVICE_REVOKED",
+      "FINORA current device has been revoked.",
     );
   }
 
@@ -898,7 +956,7 @@ async function authorizeCurrentDeviceInternal(
   }
 
   let existingStore:
-    FinoraBranchDeviceTrustStoreStateV1 | undefined;
+    FinoraBranchDeviceTrustStoreState | undefined;
 
   try {
     existingStore =
@@ -916,8 +974,35 @@ async function authorizeCurrentDeviceInternal(
       input.principal.username,
     );
 
+  const existingDeviceRecords =
+    existingStore?.records.filter(
+      (
+        record,
+      ) =>
+        principalMatchesRecord(
+          record,
+          input.principal,
+        ) &&
+        bindingMatchesRecord(
+          record,
+          nativeBinding,
+        ),
+    ) ?? [];
+
+  if (
+    existingDeviceRecords.some(
+      (record) =>
+        record.status === "REVOKED",
+    )
+  ) {
+    return authorizeFailure(
+      "DEVICE_REVOKED",
+      "FINORA current device has been revoked and cannot be reauthorized.",
+    );
+  }
+
   const existingExact =
-    existingStore?.records.find(
+    existingDeviceRecords.find(
       (
         record,
       ) =>
@@ -956,7 +1041,7 @@ async function authorizeCurrentDeviceInternal(
     new Date().toISOString();
 
   const record:
-    FinoraBranchDeviceTrustRecordV1 = {
+    FinoraBranchDeviceTrustRecord = {
       authStateId:
         payload.authStateId,
 
@@ -1013,6 +1098,9 @@ async function authorizeCurrentDeviceInternal(
       publicKeyFingerprint:
         nativeBinding.publicKeyFingerprint,
 
+      status:
+        "ACTIVE",
+
       trustedAt,
 
       updatedAt:
@@ -1023,7 +1111,7 @@ async function authorizeCurrentDeviceInternal(
     };
 
   const nextStore:
-    FinoraBranchDeviceTrustStoreStateV1 = {
+    FinoraBranchDeviceTrustStoreState = {
       format:
         FINORA_BRANCH_DEVICE_TRUST_FORMAT,
 

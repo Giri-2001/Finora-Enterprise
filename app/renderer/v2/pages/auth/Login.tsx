@@ -1,3 +1,4 @@
+import { getFinoraLoginSessionBridge } from "../../services/auth/loginSessionBridge";
 // ============================================================
 // FINORA ENTERPRISE OS™
 //
@@ -288,7 +289,9 @@ export default function Login({
     credentialMode,
     setCredentialMode,
   ] = useState<
-    "LOGIN" | "SET_PASSWORD"
+    "LOGIN" |
+    "SET_PASSWORD" |
+    "RESTORE_BACKUP"
   >(
     "LOGIN",
   );
@@ -1008,7 +1011,7 @@ export default function Login({
       }
 
       const loginSessionBridge =
-        window.finora?.loginSession;
+        getFinoraLoginSessionBridge();
 
       if (
         !loginSessionBridge?.login
@@ -1297,8 +1300,7 @@ export default function Login({
         !loginCompleted
       ) {
         try {
-          await window.finora
-            ?.loginSession
+          await getFinoraLoginSessionBridge()
             ?.invalidate({
               sessionId:
                 issuedSessionId,
@@ -1634,6 +1636,272 @@ export default function Login({
 
 
   // ==========================================================
+  // BRANCH BACKUP RESTORE MODE
+  //
+  // This path is intentionally sessionless.
+  //
+  // Renderer authority is limited to:
+  // - Username
+  // - Password
+  // - Security Code
+  //
+  // Backup file selection, scope, storage mode, generation and
+  // destination remain privileged Electron-main authorities.
+  // ==========================================================
+
+  function openRestoreBackupMode(): void {
+
+    setDeviceSecurityCodeRequired(
+      false,
+    );
+
+    setDeviceSecurityCode(
+      "",
+    );
+
+    setCredentialMode(
+      "RESTORE_BACKUP",
+    );
+
+    setPassword(
+      "",
+    );
+
+    setConfirmPassword(
+      "",
+    );
+
+    setSecurityCode(
+      "",
+    );
+
+    setConfirmSecurityCode(
+      "",
+    );
+
+    setShowPassword(
+      false,
+    );
+
+    setCredentialEnrollmentMessage(
+      "Restore mode: enter your User ID, Password and Security Code, then select the FINORA backup.",
+    );
+
+    setError(
+      "",
+    );
+
+  }
+
+
+  async function restoreBranchBackup():
+    Promise<void> {
+
+    const trimmedUsername =
+      username.trim();
+
+    if (
+      trimmedUsername.length ===
+        0
+    ) {
+
+      setError(
+        "Enter your User ID.",
+      );
+
+      return;
+
+    }
+
+
+    if (
+      password.length ===
+        0
+    ) {
+
+      setError(
+        "Enter your Password.",
+      );
+
+      return;
+
+    }
+
+
+    if (
+      securityCode.length <
+        8 ||
+      securityCode.length >
+        128 ||
+      securityCode.trim().length ===
+        0
+    ) {
+
+      setError(
+        "Security Code must contain between 8 and 128 characters.",
+      );
+
+      return;
+
+    }
+
+
+    const restoreBridge =
+      window.finora
+        ?.portableBranchAuthRestore;
+
+    if (
+      !restoreBridge ||
+      typeof restoreBridge.restoreBackup !==
+        "function"
+    ) {
+
+      setError(
+        "FINORA Branch Backup Restore is unavailable in this application build.",
+      );
+
+      return;
+
+    }
+
+
+    setLoginBusy(
+      true,
+    );
+
+    setError(
+      "",
+    );
+
+
+    try {
+
+      const result =
+        await restoreBridge.restoreBackup({
+          username:
+            trimmedUsername,
+
+          password,
+
+          securityCode,
+        });
+
+
+      if (!result.success) {
+
+        if (
+          result.errorCode ===
+            "CREDENTIAL_AUTHENTICATION_FAILED"
+        ) {
+
+          setError(
+            "Invalid username or password",
+          );
+
+          return;
+
+        }
+
+
+        if (
+          result.errorCode ===
+            "BACKUP_AUTHENTICATION_FAILED"
+        ) {
+
+          setError(
+            "Unable to authenticate this backup with the supplied Password and Security Code.",
+          );
+
+          return;
+
+        }
+
+
+        setError(
+          result.error ||
+            "Unable to restore the FINORA Branch Backup.",
+        );
+
+        return;
+
+      }
+
+
+      if (result.cancelled) {
+
+        setCredentialEnrollmentMessage(
+          "Restore cancelled. No changes were made.",
+        );
+
+        return;
+
+      }
+
+
+      setUsername(
+        "",
+      );
+
+      setDeviceSecurityCodeRequired(
+        false,
+      );
+
+      setDeviceSecurityCode(
+        "",
+      );
+
+      setConfirmPassword(
+        "",
+      );
+
+      setConfirmSecurityCode(
+        "",
+      );
+
+      setCredentialMode(
+        "LOGIN",
+      );
+
+      setCredentialEnrollmentMessage(
+        "Branch backup restored successfully. Sign in to continue.",
+      );
+
+      setError(
+        "",
+      );
+
+    } catch {
+
+      setError(
+        "Unable to restore the FINORA Branch Backup.",
+      );
+
+    } finally {
+
+      // Sensitive authentication factors must not remain in UI
+      // state after a native Restore attempt.
+
+      setPassword(
+        "",
+      );
+
+      setSecurityCode(
+        "",
+      );
+
+      setShowPassword(
+        false,
+      );
+
+      setLoginBusy(
+        false,
+      );
+
+    }
+
+  }
+
+  // ==========================================================
   // LOGIN / SET PASSWORD CLICK
   // ==========================================================
 
@@ -1648,6 +1916,18 @@ export default function Login({
 
       return;
     }
+
+
+    if (
+      credentialMode ===
+        "RESTORE_BACKUP"
+    ) {
+
+      void restoreBranchBackup();
+
+      return;
+    }
+
 
     void authenticateOwner();
 
@@ -2512,6 +2792,53 @@ export default function Login({
 
               )}
 
+              {credentialMode === "RESTORE_BACKUP" && (
+
+                <div
+                  style={
+                    loginStyles.inputWrapper
+                  }
+                >
+
+                  <span
+                    style={
+                      loginStyles.inputIcon
+                    }
+                  >
+                    <LockKeyhole />
+                  </span>
+
+                  <input
+                    value={
+                      securityCode
+                    }
+                    onChange={(
+                      event,
+                    ) => {
+                      setSecurityCode(
+                        event.target.value,
+                      );
+                      setError("");
+                    }}
+                    placeholder="Security Code"
+                    aria-label="Restore Security Code"
+                    type="password"
+                    autoComplete="off"
+                    disabled={
+                      loginBusy
+                    }
+                    onKeyDown={
+                      handlePasswordKeyDown
+                    }
+                    style={
+                      loginStyles.input
+                    }
+                  />
+
+                </div>
+
+              )}
+
             </div>
 
 
@@ -2597,10 +2924,14 @@ export default function Login({
                   {loginBusy
                     ? credentialMode === "SET_PASSWORD"
                       ? "Creating Password..."
-                      : "Authenticating..."
+                      : credentialMode === "RESTORE_BACKUP"
+                        ? "Restoring Backup..."
+                        : "Authenticating..."
                     : credentialMode === "SET_PASSWORD"
                       ? "Set Password"
-                      : "Login"}
+                      : credentialMode === "RESTORE_BACKUP"
+                        ? "Restore Branch Backup"
+                        : "Login"}
                 </span>
               </span>
 
@@ -2639,6 +2970,20 @@ export default function Login({
                       }
                     >
                       Forgot Password?
+                    </button>
+                    <button
+                      type="button"
+                      onClick={
+                        openRestoreBackupMode
+                      }
+                      disabled={
+                        loginBusy
+                      }
+                      style={
+                        loginStyles.forgotPassword
+                      }
+                    >
+                      Restore Branch Backup
                     </button>
 
                   </>

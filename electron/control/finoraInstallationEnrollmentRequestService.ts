@@ -44,6 +44,14 @@ import {
   signFinoraWindowsInstallationEnrollment,
 } from "./finoraInstallationBindingService.js";
 
+import {
+  assertFinoraBranchCertificationPublicKey,
+} from "./finoraBranchCertificationCrypto.js";
+
+import type {
+  FinoraBranchCertificationPublicKeyV1,
+} from "./finoraBranchCertificationContract.js";
+
 // ============================================================
 // PUBLIC DEVICE BINDING
 // ============================================================
@@ -67,11 +75,14 @@ export interface FinoraWindowsInstallationEnrollmentPayload {
   deviceBinding:
     FinoraWindowsInstallationEnrollmentDeviceBinding;
 
+  branchCertificationPublicKey:
+    FinoraBranchCertificationPublicKeyV1;
+
   requestedAt:
     string;
 
   schemaVersion:
-    1;
+    2;
 }
 
 // ============================================================
@@ -109,7 +120,7 @@ export interface FinoraWindowsInstallationEnrollmentRequest {
     FinoraWindowsInstallationEnrollmentSignature;
 
   schemaVersion:
-    1;
+    2;
 }
 
 // ============================================================
@@ -145,16 +156,30 @@ function assertCanonicalP1363Signature(
 // CREATE REQUEST
 // ============================================================
 
-export async function createFinoraWindowsInstallationEnrollmentRequest():
-  Promise<
-    FinoraWindowsInstallationEnrollmentRequest
-  > {
+export async function createFinoraWindowsInstallationEnrollmentRequest(
+  branchCertificationPublicKey:
+    FinoraBranchCertificationPublicKeyV1,
+): Promise<
+  FinoraWindowsInstallationEnrollmentRequest
+> {
+
+  /*
+   * Branch Certification public identity is supplied only by the
+   * main-process export orchestration after selecting an existing
+   * bootstrap keypair or generating a new one.
+   *
+   * The private Branch Certification key never enters this request.
+   */
+  assertFinoraBranchCertificationPublicKey(
+    branchCertificationPublicKey,
+  );
 
   /*
    * ensureFinoraWindowsInstallationBinding() owns native
    * installation-binding creation/reconciliation.
    *
-   * The private key remains inside the protected binding vault.
+   * The private installation key remains inside the protected
+   * binding vault.
    */
   const deviceBinding =
     await ensureFinoraWindowsInstallationBinding();
@@ -167,18 +192,23 @@ export async function createFinoraWindowsInstallationEnrollmentRequest():
 
       deviceBinding,
 
+      branchCertificationPublicKey: {
+        ...branchCertificationPublicKey,
+      },
+
       requestedAt:
         new Date().toISOString(),
 
       schemaVersion:
-        1,
+        2,
     };
 
   /*
-   * Sign exactly the canonical enrollment payload.
+   * Sign exactly the full V2 canonical enrollment payload.
    *
-   * This proves possession of the private key corresponding to
-   * deviceBinding.publicKey. It grants no commercial authority.
+   * This binds the Branch Certification public authority to
+   * possession of the initial native installation private key.
+   * It grants no commercial authority.
    */
   const canonicalPayload =
     canonicalizeFinoraControlCenterValue(
@@ -224,7 +254,7 @@ export async function createFinoraWindowsInstallationEnrollmentRequest():
     },
 
     schemaVersion:
-      1,
+      2,
   };
 }
 

@@ -28,6 +28,7 @@
 // ============================================================
 
 import {
+  applyFinoraVerifiedPortableStorageEntitlementState,
   applyFinoraVerifiedStorageEntitlementState,
   readFinoraControlStore,
 } from "./finoraControlStore.js";
@@ -39,6 +40,7 @@ import type {
 } from "./finoraControlStore.js";
 
 import {
+  verifyFinoraSignedControlPackageBranchScope,
   verifyFinoraSignedControlPackageNative,
 } from "./finoraSignedControlPackageVerifier.js";
 
@@ -505,6 +507,252 @@ export async function applyFinoraSignedStorageEntitlementPackage(
   // ----------------------------------------------------------
 
   return applyFinoraVerifiedStorageEntitlementState({
+    packageId:
+      controlPackage.packageId,
+
+    issuerId:
+      controlPackage.issuer.issuerId,
+
+    purpose:
+      "STORAGE_ENTITLEMENT",
+
+    sequence:
+      controlPackage.sequence,
+
+    target: {
+      ownerId:
+        controlPackage.target.ownerId,
+
+      businessId:
+        controlPackage.target.businessId,
+
+      branchId:
+        controlPackage.target.branchId,
+
+      installationId:
+        controlPackage.target.installationId,
+
+      bindingKeyId:
+        controlPackage.target.bindingKeyId,
+
+      fingerprintAlgorithm:
+        controlPackage.target.fingerprintAlgorithm,
+
+      publicKeyFingerprint:
+        controlPackage.target.publicKeyFingerprint,
+    },
+
+    entitlement,
+
+    appliedAt:
+      now.toISOString(),
+  });
+}
+
+// ============================================================
+// PORTABLE APPLY
+// ============================================================
+
+export async function applyFinoraSignedPortableStorageEntitlementPackage(
+  signedPackage:
+    unknown,
+
+  trustedKeys:
+    readonly FinoraBranchTrustedControlPublicKey[],
+
+  now:
+    Date,
+): Promise<
+  FinoraControlStoreResult<
+    FinoraVerifiedStorageEntitlementApplyResult
+  >
+> {
+
+  // ----------------------------------------------------------
+  // AUTHORITATIVE CONTROL STORE INSTALLATION
+  // ----------------------------------------------------------
+
+  const storeResult =
+    await readFinoraControlStore();
+
+  if (
+    !storeResult.success ||
+    !storeResult.data
+  ) {
+    return failure(
+      storeResult.error ??
+        "Unable to load the FINORA Control Store.",
+    );
+  }
+
+  const installation =
+    storeResult.data.installation;
+
+  if (!installation) {
+    return failure(
+      "FINORA installation identity is required before applying a Storage Entitlement.",
+    );
+  }
+
+
+  // ----------------------------------------------------------
+  // PORTABLE BRANCH AUTHORIZATION
+  //
+  // Current-device authorization is owner/business/branch.
+  // Signed installation/binding/fingerprint remain immutable
+  // historical package provenance and are never rebound.
+  // ----------------------------------------------------------
+
+  // ----------------------------------------------------------
+  // SIGNATURE + EXACT TARGET
+  // ----------------------------------------------------------
+
+  const verification =
+    verifyFinoraSignedControlPackageBranchScope(
+      signedPackage,
+      trustedKeys,
+      {
+        ownerId:
+          installation.ownerId,
+
+        businessId:
+          installation.businessId,
+
+        branchId:
+          installation.branchId,
+      },
+      now,
+    );
+
+  if (!verification.valid) {
+    return failure(
+      `${verification.reason}: ${verification.error}`,
+    );
+  }
+
+  const controlPackage =
+    verification.controlPackage;
+
+
+  // ----------------------------------------------------------
+  // PURPOSE / PAYLOAD VERSION
+  // ----------------------------------------------------------
+
+  if (
+    controlPackage.purpose !==
+      "STORAGE_ENTITLEMENT"
+  ) {
+    return failure(
+      "FINORA signed package purpose must be STORAGE_ENTITLEMENT.",
+    );
+  }
+
+  if (
+    controlPackage.payloadVersion !==
+      1
+  ) {
+    return failure(
+      "FINORA Storage Entitlement payloadVersion must be 1.",
+    );
+  }
+
+
+  // ----------------------------------------------------------
+  // PAYLOAD ROOT
+  // ----------------------------------------------------------
+
+  const payload =
+    controlPackage.payload;
+
+  if (
+    !isRecord(
+      payload,
+    ) ||
+    payload.schemaVersion !==
+      1 ||
+    !isStorageEntitlement(
+      payload.entitlement,
+    )
+  ) {
+    return failure(
+      "FINORA signed Storage Entitlement payload is invalid.",
+    );
+  }
+
+  const payloadIssuedAt =
+    parseCanonicalTimestamp(
+      payload.issuedAt,
+    );
+
+  const packageIssuedAt =
+    parseCanonicalTimestamp(
+      controlPackage.issuedAt,
+    );
+
+  if (
+    payloadIssuedAt ===
+      undefined ||
+    packageIssuedAt ===
+      undefined ||
+    payload.issuedAt !==
+      controlPackage.issuedAt
+  ) {
+    return failure(
+      "FINORA Storage Entitlement payload and package issuedAt timestamps must match.",
+    );
+  }
+
+  const entitlement =
+    payload.entitlement;
+
+  const entitlementUpdatedAt =
+    parseCanonicalTimestamp(
+      entitlement.updatedAt,
+    );
+
+  if (
+    entitlementUpdatedAt ===
+      undefined ||
+    entitlementUpdatedAt >
+      payloadIssuedAt
+  ) {
+    return failure(
+      "FINORA Storage Entitlement update timestamp cannot be later than package issuance.",
+    );
+  }
+
+
+  // ----------------------------------------------------------
+  // PAYLOAD <-> SIGNED HISTORICAL TARGET
+  // ----------------------------------------------------------
+
+  if (
+    entitlement.ownerId !==
+      controlPackage.target.ownerId ||
+    entitlement.businessId !==
+      controlPackage.target.businessId ||
+    entitlement.branchId !==
+      controlPackage.target.branchId ||
+    entitlement.installationId !==
+      controlPackage.target.installationId ||
+    entitlement.bindingKeyId !==
+      controlPackage.target.bindingKeyId ||
+    entitlement.fingerprintAlgorithm !==
+      controlPackage.target.fingerprintAlgorithm ||
+    entitlement.publicKeyFingerprint !==
+      controlPackage.target.publicKeyFingerprint
+  ) {
+    return failure(
+      "FINORA Storage Entitlement payload does not match the signed historical installation target.",
+    );
+  }
+
+
+  // ----------------------------------------------------------
+  // REPLAY-PROTECTED ATOMIC APPLY
+  // ----------------------------------------------------------
+
+  return applyFinoraVerifiedPortableStorageEntitlementState({
     packageId:
       controlPackage.packageId,
 

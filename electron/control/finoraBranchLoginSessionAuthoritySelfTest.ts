@@ -835,10 +835,45 @@ async function main(): Promise<void> {
       "PASS: K2B matrix 9 trusted replacement-device binding accepts ACTIVE logical historical entitlement",
     );
 
-    invalidateFinoraBranchLoginSession({
-      sessionId:
-        authorizedLogin.data.sessionId,
-    });
+    const authorizedSessionInvalidated =
+      invalidateFinoraBranchLoginSession({
+        sessionId:
+          authorizedLogin.data.sessionId,
+      });
+
+    assert(
+      authorizedSessionInvalidated,
+      "Active authoritative login session was not invalidated.",
+    );
+
+    const validationAfterInvalidation =
+      await validateFinoraBranchLoginSession({
+        sessionId:
+          authorizedLogin.data.sessionId,
+      });
+
+    assert(
+      !validationAfterInvalidation.success &&
+        validationAfterInvalidation.errorCode ===
+          "SESSION_NOT_FOUND",
+      "Invalidated authoritative session remained valid.",
+    );
+
+    const repeatedInvalidation =
+      invalidateFinoraBranchLoginSession({
+        sessionId:
+          authorizedLogin.data.sessionId,
+      });
+
+    assert(
+      repeatedInvalidation ===
+        false,
+      "Repeated session invalidation was not idempotent.",
+    );
+
+    console.log(
+      "PASS: 5.6I authoritative session invalidation removes bearer and is idempotent",
+    );
 
     // ========================================================
     // MATRIX 8

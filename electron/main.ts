@@ -57,6 +57,17 @@ import {
 } from "./control/finoraBranchCredentialIpc.js";
 
 import {
+  registerFinoraPortableBranchAuthUsbReplacementHandlers,
+} from "./control/finoraPortableBranchAuthUsbReplacementIpc.js";
+
+import {
+  registerFinoraPortableBranchAuthBackupHandlers,
+} from "./control/finoraPortableBranchAuthBackupIpc.js";
+import {
+  registerFinoraPortableBranchAuthRestoreHandlers,
+} from "./control/finoraPortableBranchAuthRestoreIpc.js";
+
+import {
   FinoraPortableBranchAuthStore,
 } from "./control/finoraPortableBranchAuthStore.js";
 
@@ -346,6 +357,62 @@ async function detectWindowsUsbRoots(): Promise<string[]> {
   } catch {
     return [];
   }
+}
+
+// ============================================================
+// USB REPLACEMENT ROOT VALIDATION
+// ============================================================
+//
+// OLD and NEW USB drives may be attached simultaneously.
+//
+// Replacement therefore validates every native-selected drive
+// against a fresh Windows removable-drive enumeration.
+//
+// Renderer never supplies this filesystem path.
+// ============================================================
+
+async function validateFinoraReplacementUsbRoot(
+  candidateRoot:
+    string,
+): Promise<boolean> {
+  if (
+    process.platform !==
+      "win32"
+  ) {
+    return false;
+  }
+
+  const normalizedCandidate =
+    path.resolve(
+      candidateRoot,
+    );
+
+  const parsedRoot =
+    path.resolve(
+      path.parse(
+        normalizedCandidate,
+      ).root,
+    );
+
+  if (
+    normalizedCandidate.toLowerCase() !==
+      parsedRoot.toLowerCase()
+  ) {
+    return false;
+  }
+
+  const removableRoots =
+    await detectWindowsUsbRoots();
+
+  return removableRoots.some(
+    (
+      root,
+    ) =>
+      path.resolve(
+        root,
+      ).toLowerCase() ===
+      normalizedCandidate.toLowerCase(),
+  );
 }
 
 // ============================================================
@@ -1591,9 +1658,6 @@ app.whenReady().then(async () => {
   else {
     registerUsbStorageHandlers();
 
-    registerFinoraControlHandlers(
-      isTrustedRenderer,
-    );
     const portableBranchAuthStore =
       new FinoraPortableBranchAuthStore({
         resolveLocalRoot:
@@ -1645,6 +1709,49 @@ app.whenReady().then(async () => {
         "FINORA could not safely reconcile a pending credential rotation.",
       );
     }
+
+    registerFinoraControlHandlers(
+      isTrustedRenderer,
+      portableBranchAuthStore,
+    );
+
+    registerFinoraPortableBranchAuthUsbReplacementHandlers({
+      isTrustedRenderer,
+
+      getParentWindow:
+        () =>
+          mainWindow,
+
+      validateUsbRoot:
+        validateFinoraReplacementUsbRoot,
+    });
+
+    registerFinoraPortableBranchAuthBackupHandlers({
+      isTrustedRenderer,
+
+      getParentWindow:
+        () =>
+          mainWindow,
+
+      portableStore:
+        portableBranchAuthStore,
+    });
+    registerFinoraPortableBranchAuthRestoreHandlers({
+      isTrustedRenderer,
+
+      getParentWindow:
+        () =>
+          mainWindow,
+
+      resolveLocalRoot:
+        () =>
+          app.getPath(
+            "userData",
+          ),
+
+      validateUsbRoot:
+        validateFinoraReplacementUsbRoot,
+    });
 
     registerFinoraBranchCredentialHandlers(
       isTrustedRenderer,

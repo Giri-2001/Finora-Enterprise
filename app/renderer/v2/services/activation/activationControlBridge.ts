@@ -180,6 +180,12 @@ export interface FinoraBusinessProfileRequest {
     string;
 }
 
+export interface FinoraPortableBusinessProfileRequest {
+
+  sessionId:
+    string;
+}
+
 export interface FinoraPricingPolicyRequest {
 
   ownerId:
@@ -326,6 +332,16 @@ export interface FinoraActivationControlBridge {
   findBusinessProfile(
     request:
       FinoraBusinessProfileRequest,
+  ):
+    Promise<
+      StorageResult<
+        FinoraProvisionedBusinessProfileV1 | undefined
+      >
+    >;
+
+  findPortableBusinessProfile(
+    request:
+      FinoraPortableBusinessProfileRequest,
   ):
     Promise<
       StorageResult<

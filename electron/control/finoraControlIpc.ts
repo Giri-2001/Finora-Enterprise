@@ -51,6 +51,7 @@ import type {
 
 import {
   findFinoraBusinessProfile,
+  findFinoraPortableBusinessProfile,
   findFinoraPricingPolicy,
   findFinoraWalletRechargeAuthorization,
 
@@ -64,6 +65,22 @@ import {
 import {
   importFinoraControlBundleFromNativeDialog,
 } from "./finoraControlBundleImportCoordinator.js";
+
+import type {
+  FinoraControlBundleImportAuthorityContext,
+} from "./finoraControlBundlePackageApplyService.js";
+
+import type {
+  FinoraPortableBranchAuthStore,
+} from "./finoraPortableBranchAuthStore.js";
+
+import {
+  resolveFinoraBranchOperationalSessionContext,
+} from "./finoraBranchLoginSessionAuthority.js";
+
+import {
+  checkFinoraCurrentBranchDeviceTrust,
+} from "./finoraBranchDeviceTrustAuthority.js";
 
 import {
   exportFinoraInstallationEnrollmentRequestFromNativeDialog,
@@ -110,6 +127,9 @@ const CONTROL_IPC_CHANNELS = {
 
   FIND_BUSINESS_PROFILE:
     "finora:control:find-business-profile",
+
+  FIND_PORTABLE_BUSINESS_PROFILE:
+    "finora:control:find-portable-business-profile",
 
   FIND_PRICING_POLICY:
     "finora:control:find-pricing-policy",
@@ -190,6 +210,11 @@ interface StorageEntitlementCheckRequest {
   storageMode: FinoraControlStorageMode;
 }
 
+interface ControlBundleOperationalImportRequest {
+  sessionId:
+    string;
+}
+
 // ============================================================
 // RESULT HELPERS
 // ============================================================
@@ -235,6 +260,42 @@ function isStorageMode(
 // ============================================================
 // REQUEST VALIDATION
 // ============================================================
+
+function isControlBundleOperationalImportRequest(
+  value:
+    unknown,
+): value is ControlBundleOperationalImportRequest {
+  if (
+    typeof value !== "object" ||
+    value === null ||
+    Array.isArray(
+      value,
+    )
+  ) {
+    return false;
+  }
+
+  const request =
+    value as Record<
+      string,
+      unknown
+    >;
+
+  const keys =
+    Object.keys(
+      request,
+    );
+
+  return (
+    keys.length ===
+      1 &&
+    keys[0] ===
+      "sessionId" &&
+    isNonEmptyString(
+      request.sessionId,
+    )
+  );
+}
 
 function isFindBranchActivationRequest(
   value: unknown,
@@ -410,6 +471,9 @@ let controlHandlersRegistered =
 export function registerFinoraControlHandlers(
   isTrustedRenderer:
     FinoraControlRendererValidator,
+
+  portableBranchAuthStore:
+    FinoraPortableBranchAuthStore,
 ): void {
   if (controlHandlersRegistered) {
     return;
@@ -689,6 +753,204 @@ export function registerFinoraControlHandlers(
     },
   );
 
+  // ----------------------------------------------------------
+  // PORTABLE BUSINESS PROFILE
+  //
+  // READ ONLY.
+  //
+  // Renderer supplies only the opaque operational sessionId.
+  // Owner / Business / Branch scope is resolved in Electron
+  // main from fresh authenticated session authority.
+  //
+  // The current device must also remain TRUSTED.
+  // ----------------------------------------------------------
+
+  ipcMain.handle(
+    CONTROL_IPC_CHANNELS.FIND_PORTABLE_BUSINESS_PROFILE,
+    async (
+      event,
+      ...args:
+        unknown[]
+    ) => {
+
+      if (
+        !isTrustedRenderer(
+          event.senderFrame,
+        )
+      ) {
+        return failure(
+          "FINORA portable Business Profile access is restricted to the trusted renderer.",
+        );
+      }
+
+      if (
+        args.length !==
+          1
+      ) {
+        return failure(
+          "A valid FINORA portable Business Profile session is required.",
+        );
+      }
+
+      const request =
+        args[0];
+
+      if (
+        typeof request !==
+          "object" ||
+        request ===
+          null ||
+        Array.isArray(
+          request,
+        )
+      ) {
+        return failure(
+          "A valid FINORA portable Business Profile session is required.",
+        );
+      }
+
+      const record =
+        request as Record<string, unknown>;
+
+      const keys =
+        Object.keys(
+          record,
+        );
+
+      if (
+        keys.length !==
+          1 ||
+        keys[0] !==
+          "sessionId" ||
+        typeof record.sessionId !==
+          "string" ||
+        !record.sessionId.trim()
+      ) {
+        return failure(
+          "A valid FINORA portable Business Profile session is required.",
+        );
+      }
+
+      const sessionContextResult =
+        await resolveFinoraBranchOperationalSessionContext({
+          sessionId:
+            record.sessionId.trim(),
+        });
+
+      if (
+        !sessionContextResult.success
+      ) {
+        return failure(
+          sessionContextResult.error,
+        );
+      }
+
+      const principal =
+        sessionContextResult.data.principal;
+
+      const deviceTrustResult =
+        await checkFinoraCurrentBranchDeviceTrust({
+          principal,
+
+          portableStore:
+            portableBranchAuthStore,
+        });
+
+      if (
+        !deviceTrustResult.success
+      ) {
+        return failure(
+          deviceTrustResult.error,
+        );
+      }
+
+      if (
+        deviceTrustResult.status !==
+          "TRUSTED"
+      ) {
+        return failure(
+          "The current FINORA device must be authorized before reading the portable Business Profile.",
+        );
+      }
+
+      const result =
+        await findFinoraPortableBusinessProfile(
+          principal.ownerId,
+          principal.businessId,
+          principal.branchId,
+        );
+
+      if (!result.success) {
+        return result;
+      }
+
+      if (!result.data) {
+        return {
+          success:
+            true,
+
+          data:
+            undefined,
+        };
+      }
+
+      const profile =
+        result.data;
+
+      if (
+        profile.ownerId !==
+          principal.ownerId ||
+        profile.businessId !==
+          principal.businessId ||
+        profile.branchId !==
+          principal.branchId
+      ) {
+        return failure(
+          "FINORA portable Business Profile does not match the authenticated branch scope.",
+        );
+      }
+
+      return {
+        success:
+          true,
+
+        data: {
+          profileId:
+            profile.profileId,
+
+          ownerId:
+            profile.ownerId,
+
+          businessId:
+            profile.businessId,
+
+          branchId:
+            profile.branchId,
+
+          businessCode:
+            profile.businessCode,
+
+          branchCode:
+            profile.branchCode,
+
+          businessName:
+            profile.businessName,
+
+          branchName:
+            profile.branchName,
+
+          createdAt:
+            profile.createdAt,
+
+          updatedAt:
+            profile.updatedAt,
+
+          schemaVersion:
+            1 as const,
+        },
+      };
+    },
+  );
   // ----------------------------------------------------------
   // PRICING POLICY
   //
@@ -1288,6 +1550,7 @@ export function registerFinoraControlHandlers(
       return exportFinoraWalletRechargeRequestFromNativeDialog(
         parentWindow,
         request,
+        portableBranchAuthStore,
       );
     },
   );
@@ -1517,7 +1780,11 @@ export function registerFinoraControlHandlers(
 
   ipcMain.handle(
     CONTROL_IPC_CHANNELS.IMPORT_CONTROL_BUNDLE,
-    async (event) => {
+    async (
+      event,
+      ...args:
+        unknown[]
+    ) => {
       if (
         !isTrustedRenderer(
           event.senderFrame,
@@ -1551,8 +1818,98 @@ export function registerFinoraControlHandlers(
         );
       }
 
+      /*
+       * Main-process import-lane derivation:
+       *
+       * zero arguments
+       *   -> BOOTSTRAP_NATIVE
+       *
+       * exactly one strict { sessionId }
+       *   -> authenticated operational import
+       *
+       * Any supplied malformed or extra argument fails closed.
+       * It must never downgrade into the bootstrap lane.
+       */
+      let authorityContext:
+        FinoraControlBundleImportAuthorityContext = {
+          lane:
+            "BOOTSTRAP_NATIVE",
+        };
+
+      if (
+        args.length !==
+          0
+      ) {
+        const operationalRequest =
+          args[0];
+
+        if (
+          args.length !==
+            1 ||
+          !isControlBundleOperationalImportRequest(
+            operationalRequest,
+          )
+        ) {
+          return failure(
+            "A valid FINORA operational Control Bundle import session is required.",
+          );
+        }
+
+        const sessionContextResult =
+          await resolveFinoraBranchOperationalSessionContext({
+            sessionId:
+              operationalRequest.sessionId,
+          });
+
+        if (
+          !sessionContextResult.success
+        ) {
+          return failure(
+            sessionContextResult.error,
+          );
+        }
+
+        const deviceTrustResult =
+          await checkFinoraCurrentBranchDeviceTrust({
+            principal:
+              sessionContextResult.data.principal,
+
+            portableStore:
+              portableBranchAuthStore,
+          });
+
+        if (
+          !deviceTrustResult.success
+        ) {
+          return failure(
+            deviceTrustResult.error,
+          );
+        }
+
+        if (
+          deviceTrustResult.status !==
+            "TRUSTED"
+        ) {
+          return failure(
+            "The current FINORA device must be authorized before operational Control Bundle import.",
+          );
+        }
+
+        authorityContext = {
+          lane:
+            "AUTHENTICATED_PORTABLE",
+
+          principal:
+            sessionContextResult.data.principal,
+
+          portableAuthFingerprint:
+            deviceTrustResult.portableAuthFingerprint,
+        };
+      }
+
       return importFinoraControlBundleFromNativeDialog(
         parentWindow,
+        authorityContext,
       );
     },
   );

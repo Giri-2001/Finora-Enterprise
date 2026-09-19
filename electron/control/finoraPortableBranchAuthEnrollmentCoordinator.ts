@@ -11,7 +11,7 @@
 // - Reconcile/write the exact prepared portable envelope
 // - Advance PORTABLE_WRITTEN
 // - Atomically apply credential + consume authorization
-// - Advance CONTROL_APPLIED -> COMPLETE
+// - Advance CONTROL_APPLIED -> CERTIFICATION_MIGRATED -> destroy bootstrap -> COMPLETE
 //
 // SECURITY:
 //
@@ -41,6 +41,15 @@ import {
 } from "./finoraPortableBranchAuthCrypto.js";
 
 import {
+  assertFinoraBranchCertificationKeyMaterial,
+} from "./finoraBranchCertificationCrypto.js";
+
+import {
+  destroyFinoraBranchCertificationBootstrapAfterMigration,
+  loadFinoraBranchCertificationBootstrap,
+} from "./finoraBranchCertificationBootstrapStore.js";
+
+import {
   FINORA_PORTABLE_BRANCH_AUTH_ENROLLMENT_TRANSACTION_ID_PREFIX,
   FINORA_PORTABLE_BRANCH_AUTH_ENROLLMENT_TRANSACTION_SCHEMA_VERSION,
   computeFinoraPortableBranchAuthEnvelopeSha256,
@@ -50,6 +59,7 @@ import {
   applyFinoraPortableBranchAuthEnrollmentControlState,
   canonicalizeFinoraCredentialUsername,
   completeFinoraPortableBranchAuthEnrollmentTransaction,
+  markFinoraPortableBranchAuthEnrollmentCertificationMigrated,
   markFinoraPortableBranchAuthEnrollmentWritten,
   prepareFinoraPortableBranchAuthEnrollmentTransaction,
   readFinoraControlStore,
@@ -107,6 +117,8 @@ export type FinoraPortableBranchAuthEnrollmentCoordinatorErrorCode =
   | "PORTABLE_STORAGE_FAILED"
   | "PORTABLE_WRITTEN_STATE_FAILED"
   | "CONTROL_APPLY_FAILED"
+  | "CERTIFICATION_MIGRATION_STATE_FAILED"
+  | "CERTIFICATION_BOOTSTRAP_DESTRUCTION_FAILED"
   | "COMPLETE_FAILED";
 
 export interface FinoraPortableBranchAuthEnrollmentCoordinatorSuccess {
@@ -428,6 +440,171 @@ async function advanceDurableTransaction(
       controlApplyResult.error ??
         "Unable to atomically apply Portable Branch Auth credential state.",
     );
+  }
+
+  const controlAppliedTransaction =
+    controlApplyResult.data.transaction;
+
+  if (
+    controlAppliedTransaction.branchCertificationProvenance !==
+      undefined
+  ) {
+    const certificationMigrationWasAlreadyDurable =
+      controlAppliedTransaction.certificationMigratedAt !==
+        undefined;
+
+    const expectedCertificationProvenance =
+      controlAppliedTransaction.branchCertificationProvenance;
+
+    if (!certificationMigrationWasAlreadyDurable) {
+      let bootstrapBeforeMigration;
+
+      try {
+        bootstrapBeforeMigration =
+          await loadFinoraBranchCertificationBootstrap();
+      }
+      catch (
+        error
+      ) {
+        return failure(
+          "CERTIFICATION_BOOTSTRAP_DESTRUCTION_FAILED",
+          error instanceof Error
+            ? error.message
+            : "Unable to verify Branch Certification bootstrap custody before durable migration.",
+        );
+      }
+
+      if (
+        bootstrapBeforeMigration ===
+          undefined ||
+        bootstrapBeforeMigration.state !==
+          "BRANCH_BOUND_AFTER_RESPONSE" ||
+        bootstrapBeforeMigration.branchBinding ===
+          undefined
+      ) {
+        return failure(
+          "CERTIFICATION_BOOTSTRAP_DESTRUCTION_FAILED",
+          "Branch Certification bootstrap custody is missing before durable migration evidence exists.",
+        );
+      }
+
+      const bootstrapBindingBeforeMigration =
+        bootstrapBeforeMigration.branchBinding;
+
+      if (
+        bootstrapBeforeMigration.requestId !==
+          expectedCertificationProvenance.requestId ||
+        bootstrapBindingBeforeMigration.responseId !==
+          expectedCertificationProvenance.responseId ||
+        bootstrapBindingBeforeMigration.ownerId !==
+          controlAppliedTransaction.ownerId ||
+        bootstrapBindingBeforeMigration.businessId !==
+          controlAppliedTransaction.businessId ||
+        bootstrapBindingBeforeMigration.branchId !==
+          controlAppliedTransaction.branchId ||
+        bootstrapBeforeMigration.certificationKeyMaterial.keyId !==
+          expectedCertificationProvenance.certificationKeyId
+      ) {
+        return failure(
+          "CERTIFICATION_BOOTSTRAP_DESTRUCTION_FAILED",
+          "Branch Certification bootstrap custody does not match the exact durable enrollment provenance before migration.",
+        );
+      }
+    }
+
+    let certificationReadyTransaction =
+      controlAppliedTransaction;
+
+    if (!certificationMigrationWasAlreadyDurable) {
+      const certificationMigrationResult =
+        await markFinoraPortableBranchAuthEnrollmentCertificationMigrated({
+          transactionId:
+            controlAppliedTransaction.transactionId,
+
+          transitionedAt:
+            new Date().toISOString(),
+        });
+
+      if (
+        !certificationMigrationResult.success ||
+        !certificationMigrationResult.data
+      ) {
+        return failure(
+          "CERTIFICATION_MIGRATION_STATE_FAILED",
+          certificationMigrationResult.error ??
+            "Unable to persist durable Branch Certification migration evidence.",
+        );
+      }
+
+      certificationReadyTransaction =
+        certificationMigrationResult.data.transaction;
+    }
+
+    const durableCertificationProvenance =
+      certificationReadyTransaction.branchCertificationProvenance;
+
+    const certificationMigratedAt =
+      certificationReadyTransaction.certificationMigratedAt;
+
+    if (
+      durableCertificationProvenance ===
+        undefined ||
+      certificationMigratedAt ===
+        undefined
+    ) {
+      return failure(
+        "RECOVERY_STATE_INVALID",
+        "Certification-aware enrollment reached destruction without durable migration evidence.",
+      );
+    }
+
+    let bootstrapDestroyed;
+
+    try {
+      bootstrapDestroyed =
+        await destroyFinoraBranchCertificationBootstrapAfterMigration({
+          requestId:
+            durableCertificationProvenance.requestId,
+
+          responseId:
+            durableCertificationProvenance.responseId,
+
+          ownerId:
+            certificationReadyTransaction.ownerId,
+
+          businessId:
+            certificationReadyTransaction.businessId,
+
+          branchId:
+            certificationReadyTransaction.branchId,
+
+          certificationKeyId:
+            durableCertificationProvenance.certificationKeyId,
+
+          migratedAt:
+            certificationMigratedAt,
+        });
+    }
+    catch (
+      error
+    ) {
+      return failure(
+        "CERTIFICATION_BOOTSTRAP_DESTRUCTION_FAILED",
+        error instanceof Error
+          ? error.message
+          : "Unable to destroy migrated Branch Certification bootstrap custody.",
+      );
+    }
+
+    if (
+      !bootstrapDestroyed &&
+      !certificationMigrationWasAlreadyDurable
+    ) {
+      return failure(
+        "CERTIFICATION_BOOTSTRAP_DESTRUCTION_FAILED",
+        "Branch Certification bootstrap disappeared during first migration finalization.",
+      );
+    }
   }
 
   const completeResult =
@@ -809,6 +986,83 @@ async function enrollFinoraPortableBranchAuthInternal(
       1 as const,
   };
 
+  // ----------------------------------------------------------
+  // BRANCH CERTIFICATION BOOTSTRAP CUSTODY
+  //
+  // Fresh enrollment only. Durable PREPARED recovery returns
+  // before this point and therefore never reloads bootstrap
+  // custody or regenerates encrypted Portable Auth material.
+  //
+  // Exact non-secret requestId / responseId / certificationKeyId
+  // provenance is snapshotted into PREPARED below. Recovery then
+  // uses the durable journal without reloading bootstrap custody.
+  // Bootstrap custody remains until crash-safe destruction.
+  // ----------------------------------------------------------
+
+  let branchCertificationBootstrap;
+
+  try {
+    branchCertificationBootstrap =
+      await loadFinoraBranchCertificationBootstrap();
+  }
+  catch (
+    error
+  ) {
+    return failure(
+      "AUTHORIZATION_NOT_FOUND",
+      error instanceof Error
+        ? error.message
+        : "Unable to load FINORA Branch Certification bootstrap custody.",
+    );
+  }
+
+  if (
+    branchCertificationBootstrap ===
+      undefined ||
+    branchCertificationBootstrap.state !==
+      "BRANCH_BOUND_AFTER_RESPONSE" ||
+    branchCertificationBootstrap.branchBinding ===
+      undefined
+  ) {
+    return failure(
+      "AUTHORIZATION_NOT_FOUND",
+      "FINORA Branch Certification bootstrap is not durably bound to a verified Enrollment Response.",
+    );
+  }
+
+  const branchCertificationBinding =
+    branchCertificationBootstrap.branchBinding;
+
+  if (
+    branchCertificationBinding.ownerId !==
+      authorization.ownerId ||
+    branchCertificationBinding.businessId !==
+      authorization.businessId ||
+    branchCertificationBinding.branchId !==
+      authorization.branchId
+  ) {
+    return failure(
+      "AUTHORIZATION_NOT_FOUND",
+      "FINORA Branch Certification bootstrap scope does not match the exact credential enrollment authorization.",
+    );
+  }
+
+  try {
+    assertFinoraBranchCertificationKeyMaterial(
+      branchCertificationBootstrap.certificationKeyMaterial,
+    );
+  }
+  catch (
+    error
+  ) {
+    return failure(
+      "AUTHORIZATION_NOT_FOUND",
+      error instanceof Error
+        ? error.message
+        : "FINORA Branch Certification bootstrap key material is invalid.",
+    );
+  }
+
   const preparedAt =
     new Date().toISOString();
 
@@ -869,6 +1123,11 @@ async function enrollFinoraPortableBranchAuthInternal(
 
         storageMode:
           authorization.storageMode,
+
+        branchCertificationKeyMaterial:
+          structuredClone(
+            branchCertificationBootstrap.certificationKeyMaterial,
+          ),
 
         authGeneration:
           FINORA_PORTABLE_BRANCH_AUTH_INITIAL_GENERATION,
@@ -997,6 +1256,17 @@ async function enrollFinoraPortableBranchAuthInternal(
 
       storageMode:
         authorization.storageMode,
+
+      branchCertificationProvenance: {
+        requestId:
+          branchCertificationBootstrap.requestId,
+
+        responseId:
+          branchCertificationBinding.responseId,
+
+        certificationKeyId:
+          branchCertificationBootstrap.certificationKeyMaterial.keyId,
+      },
 
       status:
         "PREPARED",

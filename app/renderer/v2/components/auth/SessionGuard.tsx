@@ -1,3 +1,4 @@
+import { getFinoraLoginSessionBridge } from "../../services/auth/loginSessionBridge";
 // ============================================================
 // LAYER   : Renderer / V2 Authentication
 // VERSION : 2.0
@@ -154,8 +155,7 @@ export default function SessionGuard({
       }
 
       const touchLoginSession =
-        window.finora
-          ?.loginSession
+        getFinoraLoginSessionBridge()
           ?.touch;
 
       if (
@@ -233,8 +233,7 @@ export default function SessionGuard({
       }
 
       const validateLoginSession =
-        window.finora
-          ?.loginSession
+        getFinoraLoginSessionBridge()
           ?.validate;
 
       if (

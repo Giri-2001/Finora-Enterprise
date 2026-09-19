@@ -11,6 +11,7 @@ import type {
 import type {
   FinoraBranchActivationFormDraft,
   FinoraBranchAccessFormDraft,
+  FinoraBranchDeviceRevocationFormDraft,
   FinoraBusinessProfileFormDraft,
   FinoraControlCenterIssuanceWorkflow,
   FinoraControlCenterTargetDraft,
@@ -21,6 +22,7 @@ import type {
 
 import FinoraControlCenterBranchActivationForm from "./FinoraControlCenterBranchActivationForm";
 import FinoraControlCenterBranchAccessForm from "./FinoraControlCenterBranchAccessForm";
+import FinoraControlCenterDeviceRevocationForm from "./FinoraControlCenterDeviceRevocationForm";
 import FinoraControlCenterStorageEntitlementForm from "./FinoraControlCenterStorageEntitlementForm";
 import FinoraControlCenterBusinessProfileForm from "./FinoraControlCenterBusinessProfileForm";
 import { FinoraControlCenterPricingPolicyForm } from "./FinoraControlCenterPricingPolicyForm";
@@ -29,6 +31,7 @@ import { FinoraControlCenterWalletRechargeForm } from "./FinoraControlCenterWall
 import {
   buildFinoraBranchActivationIssuanceRequest,
   buildFinoraBranchAccessIssuanceRequest,
+  buildFinoraBranchDeviceRevocationIssuanceRequest,
   buildFinoraBusinessProfileIssuanceRequest,
   buildFinoraPricingPolicyIssuanceRequest,
   buildFinoraStorageEntitlementIssuanceRequest,
@@ -82,6 +85,14 @@ const WORKFLOWS: readonly {
 
     description:
       "Issue or manage signed Branch Access and recipient credential authorization.",
+  },
+  {
+    id: "DEVICE_REVOCATION",
+
+    label: "Device Revocation",
+
+    description:
+      "Issue a signed terminal revocation for one exact branch user and native device binding.",
   },
   {
     id: "STORAGE_ENTITLEMENT",
@@ -398,6 +409,18 @@ export default function FinoraControlCenterIssuanceWorkspace({
   const branchAccessIssuanceInFlightRef =
     useRef(false);
 
+  const [deviceRevocationIssuanceState, setDeviceRevocationIssuanceState] =
+    useState<"IDLE" | "ISSUING" | "SUCCESS" | "ERROR">("IDLE");
+
+  const [deviceRevocationIssuanceError, setDeviceRevocationIssuanceError] =
+    useState<string | undefined>();
+
+  const [deviceRevocationSignedPackage, setDeviceRevocationSignedPackage] =
+    useState<Record<string, unknown> | undefined>();
+
+  const deviceRevocationIssuanceInFlightRef =
+    useRef(false);
+
   const [storageIssuanceState, setStorageIssuanceState] = useState<
     "IDLE" | "ISSUING" | "SUCCESS" | "ERROR"
   >("IDLE");
@@ -474,6 +497,10 @@ export default function FinoraControlCenterIssuanceWorkspace({
     setBranchAccessSignedPackage(undefined);
     setBranchAccessIssuanceState("IDLE");
     setBranchAccessIssuanceError(undefined);
+
+    setDeviceRevocationSignedPackage(undefined);
+    setDeviceRevocationIssuanceState("IDLE");
+    setDeviceRevocationIssuanceError(undefined);
 
     setStorageSignedPackage(undefined);
     setStorageIssuanceState("IDLE");
@@ -923,6 +950,64 @@ setEnrollmentOpenState(
         false;
     }
   }
+  async function issueDeviceRevocationDraft(
+    draft: FinoraBranchDeviceRevocationFormDraft,
+  ): Promise<void> {
+    if (deviceRevocationIssuanceInFlightRef.current) {
+      return;
+    }
+
+    deviceRevocationIssuanceInFlightRef.current = true;
+    setDeviceRevocationIssuanceState("ISSUING");
+    setDeviceRevocationIssuanceError(undefined);
+    setDeviceRevocationSignedPackage(undefined);
+
+    try {
+      const request =
+        buildFinoraBranchDeviceRevocationIssuanceRequest(
+          draft,
+        );
+
+      const bridge = window.finoraControlCenter;
+
+      if (!bridge) {
+        throw new Error(
+          "Dedicated FINORA Control Center preload bridge is unavailable.",
+        );
+      }
+
+      const result =
+        await bridge.issueBranchDeviceRevocation(
+          request,
+        );
+
+      if (!result.success) {
+        throw new Error(
+          result.error ??
+            "FINORA Device Revocation issuance failed.",
+        );
+      }
+
+      if (!result.data) {
+        throw new Error(
+          "FINORA Device Revocation issuance returned no signed package.",
+        );
+      }
+
+      setDeviceRevocationSignedPackage(result.data);
+      setDeviceRevocationIssuanceState("SUCCESS");
+    } catch (error) {
+      setDeviceRevocationIssuanceError(
+        error instanceof Error
+          ? error.message
+          : "Unable to issue FINORA Device Revocation package.",
+      );
+      setDeviceRevocationIssuanceState("ERROR");
+    } finally {
+      deviceRevocationIssuanceInFlightRef.current = false;
+    }
+  }
+
   async function issueStorageEntitlementDraft(
     draft: FinoraStorageEntitlementFormDraft,
   ): Promise<void> {
@@ -971,6 +1056,66 @@ setEnrollmentOpenState(
         error instanceof Error
           ? error.message
           : "Unable to issue FINORA Storage Entitlement package.",
+      );
+
+      setStorageIssuanceState("ERROR");
+    } finally {
+      storageIssuanceInFlightRef.current = false;
+    }
+  }
+
+  async function issuePortableStorageEntitlementDraft(
+    draft: FinoraStorageEntitlementFormDraft,
+  ): Promise<void> {
+    if (storageIssuanceInFlightRef.current) {
+      return;
+    }
+
+    storageIssuanceInFlightRef.current = true;
+
+    setStorageIssuanceState("ISSUING");
+
+    setStorageIssuanceError(undefined);
+
+    setStorageSignedPackage(undefined);
+
+    try {
+      const request = buildFinoraStorageEntitlementIssuanceRequest(draft);
+
+      const bridge = window.finoraControlCenter;
+
+      if (!bridge) {
+        throw new Error(
+          "Dedicated FINORA Control Center preload bridge is unavailable.",
+        );
+      }
+
+      const result =
+        await bridge.issuePortableStorageEntitlement(
+          request,
+        );
+
+      if (!result.success) {
+        throw new Error(
+          result.error ??
+            "FINORA Portable Storage Entitlement issuance failed.",
+        );
+      }
+
+      if (!result.data) {
+        throw new Error(
+          "FINORA Portable Storage Entitlement issuance returned no signed package.",
+        );
+      }
+
+      setStorageSignedPackage(result.data);
+
+      setStorageIssuanceState("SUCCESS");
+    } catch (error) {
+      setStorageIssuanceError(
+        error instanceof Error
+          ? error.message
+          : "Unable to issue FINORA Portable Storage Entitlement package.",
       );
 
       setStorageIssuanceState("ERROR");
@@ -1505,6 +1650,7 @@ setEnrollmentOpenState(
       const signedPackages = [
         branchSignedPackage,
         branchAccessSignedPackage,
+        deviceRevocationSignedPackage,
         storageSignedPackage,
         businessProfileSignedPackage,
         pricingPolicySignedPackage,
@@ -1594,6 +1740,7 @@ setEnrollmentOpenState(
     [
       branchSignedPackage,
       branchAccessSignedPackage,
+      deviceRevocationSignedPackage,
       storageSignedPackage,
       businessProfileSignedPackage,
       pricingPolicySignedPackage,
@@ -2672,11 +2819,25 @@ setEnrollmentOpenState(
           }}
         />
       )}
+      {workflow === "DEVICE_REVOCATION" && (
+        <FinoraControlCenterDeviceRevocationForm
+          target={target}
+          onIssue={(draft) => {
+            void issueDeviceRevocationDraft(draft);
+          }}
+        />
+      )}
+
       {workflow === "STORAGE_ENTITLEMENT" && (
         <FinoraControlCenterStorageEntitlementForm
           target={target}
           onIssue={(draft) => {
             void issueStorageEntitlementDraft(draft);
+          }}
+          onIssuePortable={(draft) => {
+            void issuePortableStorageEntitlementDraft(
+              draft,
+            );
           }}
         />
       )}
@@ -3585,6 +3746,102 @@ setEnrollmentOpenState(
               )}
           </section>
         )}
+      {workflow === "DEVICE_REVOCATION" &&
+        deviceRevocationIssuanceState !== "IDLE" && (
+          <section
+            aria-live="polite"
+            style={{
+              marginTop: "20px",
+              borderTop: "1px solid rgba(148, 163, 184, 0.18)",
+              paddingTop: "18px",
+            }}
+          >
+            <h3
+              style={{
+                margin: "0 0 10px",
+                fontSize: "14px",
+                fontWeight: 650,
+              }}
+            >
+              Device Revocation Issuance Result
+            </h3>
+
+            {deviceRevocationIssuanceState === "ISSUING" && (
+              <p
+                style={{
+                  margin: 0,
+                  fontSize: "12px",
+                  opacity: 0.72,
+                }}
+              >
+                Issuing signed Device Revocation package…
+              </p>
+            )}
+
+            {deviceRevocationIssuanceState === "ERROR" &&
+              deviceRevocationIssuanceError && (
+                <p
+                  style={{
+                    margin: 0,
+                    fontSize: "12px",
+                    lineHeight: 1.55,
+                    color: "#fca5a5",
+                  }}
+                >
+                  {deviceRevocationIssuanceError}
+                </p>
+              )}
+
+            {deviceRevocationIssuanceState === "SUCCESS" &&
+              deviceRevocationSignedPackage && (
+                <>
+                  <p
+                    style={{
+                      margin: "0 0 10px",
+                      fontSize: "12px",
+                      color: "#86efac",
+                    }}
+                  >
+                    Signed Device Revocation package issued successfully.
+                  </p>
+
+                  <pre
+                    style={{
+                      margin: 0,
+                      maxHeight: "360px",
+                      overflow: "auto",
+                      border: "1px solid rgba(148, 163, 184, 0.2)",
+                      borderRadius: "9px",
+                      padding: "12px",
+                      fontSize: "11px",
+                      lineHeight: 1.5,
+                      background: "rgba(2, 6, 23, 0.5)",
+                      color: "#cbd5e1",
+                      whiteSpace: "pre-wrap",
+                      overflowWrap: "anywhere",
+                    }}
+                  >
+                    {JSON.stringify(
+                      deviceRevocationSignedPackage,
+                      null,
+                      2,
+                    )}
+                  </pre>
+
+                  <p
+                    style={{
+                      margin: "10px 0 0",
+                      fontSize: "11px",
+                      opacity: 0.58,
+                    }}
+                  >
+                    Signed package display only. Use the workspace-level Export .finora action to bundle currently issued packages.
+                  </p>
+                </>
+              )}
+          </section>
+        )}
+
       {workflow === "BRANCH_ACTIVATION" && branchIssuanceState !== "IDLE" && (
         <section
           aria-live="polite"

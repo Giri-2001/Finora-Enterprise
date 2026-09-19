@@ -25,9 +25,12 @@ import {
 
 import {
   verifyFinoraSignedBranchPortabilityAuthorityPackage,
+  verifyFinoraSignedControlPackageBranchScope,
+  verifyFinoraSignedControlPackageNative,
 } from "./finoraSignedControlPackageVerifier.js";
 
 import type {
+  FinoraBranchControlTarget,
   FinoraBranchScopeControlTarget,
   FinoraBranchTrustedControlPublicKey,
 } from "./finoraSignedControlPackageVerifier.js";
@@ -60,6 +63,40 @@ function expectFailureReason(
       { valid: true }
     >["reason"],
 ): void {
+  assertTrue(
+    !result.valid,
+    `${label} unexpectedly succeeded.`,
+  );
+
+  assertTrue(
+    result.reason ===
+      reason,
+    `${label} returned ${result.reason}; expected ${reason}.`,
+  );
+
+  console.log(
+    `PASS: ${label} -> ${reason}`,
+  );
+}
+
+function expectControlFailureReason(
+  label:
+    string,
+
+  result:
+    ReturnType<
+      typeof verifyFinoraSignedControlPackageBranchScope
+    >,
+
+  reason:
+    Exclude<
+      ReturnType<
+        typeof verifyFinoraSignedControlPackageBranchScope
+      >,
+      { valid: true }
+    >["reason"],
+): void {
+
   assertTrue(
     !result.valid,
     `${label} unexpectedly succeeded.`,
@@ -346,6 +383,272 @@ async function runSelfTest(): Promise<void> {
       "unknown signer rejected",
       unknownSignerResult,
       "UNKNOWN_SIGNING_KEY",
+    );
+
+    // ========================================================
+    // G4 PORTABLE FULL-HISTORICAL-TARGET VERIFIER
+    //
+    // Ordinary operational Control Packages retain the complete
+    // historical installation binding inside their signatures.
+    //
+    // Portable authorization compares only the permanent branch
+    // scope, while the historical installation target must still
+    // be internally valid.
+    // ========================================================
+
+    const historicalFingerprint =
+      "ab".repeat(
+        32,
+      );
+
+    const historicalTarget:
+      FinoraBranchControlTarget = {
+        ...target,
+
+        installationId:
+          "INSTALLATION-HISTORICAL-PORTABLE-000001",
+
+        bindingKeyId:
+          `FINORA-BINDING-${historicalFingerprint
+            .slice(
+              0,
+              32,
+            )
+            .toUpperCase()}`,
+
+        fingerprintAlgorithm:
+          "SHA-256",
+
+        publicKeyFingerprint:
+          historicalFingerprint,
+      };
+
+    const historicalPackage =
+      await signFinoraControlCenterPackage({
+        packageId:
+          "PACKAGE-G4-PORTABLE-FULL-TARGET-000001",
+
+        purpose:
+          "BUSINESS_PROFILE",
+
+        target:
+          historicalTarget,
+
+        issuedAt,
+
+        sequence:
+          4,
+
+        payloadVersion:
+          1,
+
+        payload,
+
+        schemaVersion:
+          1,
+      });
+
+    const portableValidResult =
+      verifyFinoraSignedControlPackageBranchScope(
+        historicalPackage,
+        trustedKeys,
+        target,
+        now,
+      );
+
+    assertTrue(
+      portableValidResult.valid,
+      portableValidResult.valid
+        ? ""
+        : portableValidResult.error,
+    );
+
+    assertTrue(
+      portableValidResult.controlPackage.target.installationId ===
+        historicalTarget.installationId &&
+      portableValidResult.controlPackage.target.bindingKeyId ===
+        historicalTarget.bindingKeyId &&
+      portableValidResult.controlPackage.target.publicKeyFingerprint ===
+        historicalTarget.publicKeyFingerprint,
+      "Portable verifier did not preserve the signed historical installation-binding provenance.",
+    );
+
+    console.log(
+      "PASS: full historical installation target verified through matching portable branch scope",
+    );
+
+    const portableWrongBranchResult =
+      verifyFinoraSignedControlPackageBranchScope(
+        historicalPackage,
+        trustedKeys,
+        {
+          ...target,
+
+          branchId:
+            "BRANCH-G4-PORTABLE-WRONG",
+        },
+        now,
+      );
+
+    expectControlFailureReason(
+      "portable verifier rejected wrong branch scope",
+      portableWrongBranchResult,
+      "TARGET_MISMATCH",
+    );
+
+    // --------------------------------------------------------
+    // Cryptographically sign a malformed historical target.
+    //
+    // The bindingKeyId is syntactically populated but does not
+    // correspond to the signed SHA-256 fingerprint.
+    // --------------------------------------------------------
+
+    const malformedHistoricalFingerprint =
+      "cd".repeat(
+        32,
+      );
+
+    const malformedHistoricalTarget:
+      FinoraBranchControlTarget = {
+        ...target,
+
+        installationId:
+          "INSTALLATION-HISTORICAL-MALFORMED-000001",
+
+        bindingKeyId:
+          "FINORA-BINDING-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+
+        fingerprintAlgorithm:
+          "SHA-256",
+
+        publicKeyFingerprint:
+          malformedHistoricalFingerprint,
+      };
+
+    const malformedHistoricalPackage =
+      await signFinoraControlCenterPackage({
+        packageId:
+          "PACKAGE-G4-PORTABLE-MALFORMED-HISTORICAL-000001",
+
+        purpose:
+          "BUSINESS_PROFILE",
+
+        target:
+          malformedHistoricalTarget,
+
+        issuedAt,
+
+        sequence:
+          5,
+
+        payloadVersion:
+          1,
+
+        payload,
+
+        schemaVersion:
+          1,
+      });
+
+    const malformedHistoricalResult =
+      verifyFinoraSignedControlPackageBranchScope(
+        malformedHistoricalPackage,
+        trustedKeys,
+        target,
+        now,
+      );
+
+    expectControlFailureReason(
+      "portable verifier rejected signed malformed historical binding provenance",
+      malformedHistoricalResult,
+      "TARGET_MISMATCH",
+    );
+
+    const badPortableSignaturePackage = {
+      ...historicalPackage,
+
+      signature: {
+        ...historicalPackage.signature,
+
+        value:
+          Buffer.alloc(
+            64,
+          ).toString(
+            "base64",
+          ),
+      },
+    };
+
+    const badPortableSignatureResult =
+      verifyFinoraSignedControlPackageBranchScope(
+        badPortableSignaturePackage,
+        trustedKeys,
+        target,
+        now,
+      );
+
+    expectControlFailureReason(
+      "portable verifier rejected bad signature",
+      badPortableSignatureResult,
+      "INVALID_SIGNATURE",
+    );
+
+    // --------------------------------------------------------
+    // Native exact-binding regression.
+    //
+    // This represents another internally valid device binding.
+    // The same historical package must remain rejected by the
+    // native verifier because exact installation equality is
+    // still mandatory in the native policy.
+    // --------------------------------------------------------
+
+    const differentNativeFingerprint =
+      "ef".repeat(
+        32,
+      );
+
+    const differentNativeTarget:
+      FinoraBranchControlTarget = {
+        ...target,
+
+        installationId:
+          "INSTALLATION-DIFFERENT-NATIVE-000001",
+
+        bindingKeyId:
+          `FINORA-BINDING-${differentNativeFingerprint
+            .slice(
+              0,
+              32,
+            )
+            .toUpperCase()}`,
+
+        fingerprintAlgorithm:
+          "SHA-256",
+
+        publicKeyFingerprint:
+          differentNativeFingerprint,
+      };
+
+    const nativeDifferentInstallationResult =
+      verifyFinoraSignedControlPackageNative(
+        historicalPackage,
+        trustedKeys,
+        differentNativeTarget,
+        now,
+      );
+
+    expectControlFailureReason(
+      "native verifier preserved exact installation binding",
+      nativeDifferentInstallationResult,
+      "TARGET_MISMATCH",
+    );
+
+    console.log(
+      "",
+    );
+
+    console.log(
+      "PASS: G4 PORTABLE FULL-TARGET VERIFIER EXECUTABLE MATRIX",
     );
 
     console.log(

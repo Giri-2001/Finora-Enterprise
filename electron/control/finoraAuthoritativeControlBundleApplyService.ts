@@ -62,6 +62,7 @@ import {
 
 import type {
   FinoraControlBundleApplyResult,
+  FinoraControlBundleImportAuthorityContext,
 } from "./finoraControlBundlePackageApplyService.js";
 
 import {
@@ -98,6 +99,9 @@ async function applyFinoraSignedControlBundleWithAuthoritativeRecipientTrustInte
 
   now:
     Date,
+
+  authorityContext:
+    FinoraControlBundleImportAuthorityContext,
 ): Promise<
   FinoraControlBundleApplyResult
 > {
@@ -136,6 +140,7 @@ async function applyFinoraSignedControlBundleWithAuthoritativeRecipientTrustInte
     signedBundle,
     recipientTrust.trustedKeys,
     now,
+    authorityContext,
   );
 }
 
@@ -149,6 +154,9 @@ export function applyFinoraSignedControlBundleWithAuthoritativeRecipientTrust(
 
   now:
     Date,
+
+  authorityContext:
+    FinoraControlBundleImportAuthorityContext,
 ): Promise<
   FinoraControlBundleApplyResult
 > {
@@ -157,6 +165,7 @@ export function applyFinoraSignedControlBundleWithAuthoritativeRecipientTrust(
       applyFinoraSignedControlBundleWithAuthoritativeRecipientTrustInternal(
         signedBundle,
         now,
+        authorityContext,
       ),
   );
 }

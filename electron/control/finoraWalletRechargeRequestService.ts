@@ -41,12 +41,20 @@ import {
 } from "../control-center/finoraControlCenterCanonicalization.js";
 
 import {
-  validateFinoraBranchLoginSession,
+  resolveFinoraBranchOperationalSessionContext,
 } from "./finoraBranchLoginSessionAuthority.js";
 
 import {
-  findFinoraBusinessProfile,
+  findFinoraPortableBusinessProfile,
 } from "./finoraControlStore.js";
+
+import {
+  checkFinoraCurrentBranchDeviceTrust,
+} from "./finoraBranchDeviceTrustAuthority.js";
+
+import type {
+  FinoraPortableBranchAuthStore,
+} from "./finoraPortableBranchAuthStore.js";
 
 import {
   getFinoraWindowsInstallationBinding,
@@ -221,6 +229,9 @@ function buildDeterministicRequestId(
 export async function createFinoraWalletRechargeRequest(
   input:
     CreateFinoraWalletRechargeRequestInput,
+
+  portableStore:
+    FinoraPortableBranchAuthStore,
 ): Promise<
   FinoraSignedWalletRechargeRequest
 > {
@@ -292,21 +303,27 @@ export async function createFinoraWalletRechargeRequest(
   // This re-reads Control Store and re-evaluates access/binding.
   // ----------------------------------------------------------
 
-  const sessionResult =
-    await validateFinoraBranchLoginSession({
+  const sessionContextResult =
+    await resolveFinoraBranchOperationalSessionContext({
       sessionId,
     });
 
   if (
-    !sessionResult.success
+    !sessionContextResult.success
   ) {
     throw new Error(
-      sessionResult.error,
+      sessionContextResult.error,
     );
   }
 
+  const sessionContext =
+    sessionContextResult.data;
+
   const session =
-    sessionResult.data;
+    sessionContext.session;
+
+  const principal =
+    sessionContext.principal;
 
   if (
     session.dataContext !==
@@ -327,11 +344,40 @@ export async function createFinoraWalletRechargeRequest(
   }
 
   // ----------------------------------------------------------
+  // FRESH CURRENT-DEVICE TRUST
+  //
+  // The login session proves authenticated branch authority.
+  // Wallet export additionally requires the exact current
+  // native device to remain TRUSTED at export time.
+  //
+  // SECURITY_CODE_REQUIRED is not handled here. Unknown
+  // devices must complete the existing login authorization
+  // flow before creating a Wallet Recharge Request.
+  // ----------------------------------------------------------
+
+  const deviceTrustResult =
+    await checkFinoraCurrentBranchDeviceTrust({
+      principal,
+
+      portableStore,
+    });
+
+  if (
+    !deviceTrustResult.success ||
+    deviceTrustResult.status !==
+      "TRUSTED"
+  ) {
+    throw new Error(
+      "Wallet Recharge Request creation requires a trusted current FINORA device.",
+    );
+  }
+
+  // ----------------------------------------------------------
   // TRUSTED BUSINESS / BRANCH PROFILE
   // ----------------------------------------------------------
 
   const profileResult =
-    await findFinoraBusinessProfile(
+    await findFinoraPortableBusinessProfile(
       session.ownerId,
       session.businessId,
       session.branchId,
@@ -385,20 +431,15 @@ export async function createFinoraWalletRechargeRequest(
     );
   }
 
-  if (
-    profile.installationId !==
-      installation.installationId ||
-    profile.bindingKeyId !==
-      installation.bindingKeyId ||
-    profile.fingerprintAlgorithm !==
-      installation.fingerprintAlgorithm ||
-    profile.publicKeyFingerprint !==
-      installation.publicKeyFingerprint
-  ) {
-    throw new Error(
-      "FINORA Wallet Recharge Request installation binding does not match the trusted Business Profile.",
-    );
-  }
+  /*
+   * Portable BUSINESS_PROFILE installation/binding values are
+   * immutable signed historical provenance. They deliberately
+   * do not identify the current portable device.
+   *
+   * Current-device authorization is established independently
+   * above by fresh Device Trust, and possession is proven below
+   * by signing with this device's native P-256 key.
+   */
 
   // ----------------------------------------------------------
   // STABLE REQUEST ID

@@ -69,6 +69,27 @@ function cloneVerifiedEnrollment(
     requestedAt:
       enrollment.requestedAt,
 
+    ...(
+      enrollment.requestSchemaVersion ===
+        undefined
+        ? {}
+        : {
+            requestSchemaVersion:
+              enrollment.requestSchemaVersion,
+          }
+    ),
+
+    ...(
+      enrollment.branchCertificationPublicKey ===
+        undefined
+        ? {}
+        : {
+            branchCertificationPublicKey: {
+              ...enrollment.branchCertificationPublicKey,
+            },
+          }
+    ),
+
     target: {
       ...enrollment.target,
     },

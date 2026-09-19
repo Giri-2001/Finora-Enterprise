@@ -768,6 +768,18 @@ async function rotatePortableBranchAuthCredentialInternal(
             currentPayload.sourceAuthorizationVerificationEvidence,
           ),
 
+        ...(
+          currentPayload.branchCertificationKeyMaterial ===
+            undefined
+            ? {}
+            : {
+                branchCertificationKeyMaterial:
+                  structuredClone(
+                    currentPayload.branchCertificationKeyMaterial,
+                  ),
+              }
+        ),
+
         ownerId:
           currentCredential.ownerId,
 

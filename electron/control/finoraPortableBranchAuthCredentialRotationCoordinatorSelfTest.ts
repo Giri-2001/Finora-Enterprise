@@ -20,6 +20,10 @@
 // ============================================================
 
 import {
+  generateFinoraBranchCertificationKeyMaterial,
+} from "./finoraBranchCertificationCrypto.js";
+
+import {
   app,
   safeStorage,
 } from "electron";
@@ -393,6 +397,11 @@ async function runSelfTest():
         sourceAuthorizationId,
       );
 
+    const branchCertificationKeyMaterial =
+      generateFinoraBranchCertificationKeyMaterial(
+        new Date(initialAt),
+      );
+
     const initialMaterial =
       await createFinoraPortableBranchAuthEnrollmentMaterialV1({
         authStateId,
@@ -401,6 +410,8 @@ async function runSelfTest():
 
         sourceAuthorizationVerificationEvidence:
           sourceEvidence,
+
+        branchCertificationKeyMaterial,
 
         ownerId,
 
@@ -1009,6 +1020,40 @@ async function runSelfTest():
       finalPayload.authGeneration ===
         3,
       "Final Portable Auth generation is not 3.",
+    );
+
+    assert(
+      jsonEqual(
+        finalPayload.branchCertificationKeyMaterial,
+        branchCertificationKeyMaterial,
+      ),
+      "Branch Certification private authority changed or disappeared during credential rotation.",
+    );
+
+    console.log(
+      "PASS: Branch Certification private authority survives Password and Security Code rotations",
+    );
+
+    const serializedFinalEnvelope =
+      JSON.stringify(
+        finalEnvelope,
+      );
+
+    assert(
+      !serializedFinalEnvelope.includes(
+        '"branchCertificationKeyMaterial"',
+      ) &&
+      !serializedFinalEnvelope.includes(
+        '"privateKey"',
+      ) &&
+      !serializedFinalEnvelope.includes(
+        branchCertificationKeyMaterial.privateKey,
+      ),
+      "Rotated Portable envelope exposed Branch Certification private authority.",
+    );
+
+    console.log(
+      "PASS: rotated Portable envelope exposes no plaintext Branch Certification private key",
     );
 
     console.log(

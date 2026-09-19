@@ -154,6 +154,23 @@ export async function applyFinoraHistoricalEnrollmentEvidenceToBranchRegistry(
     const verifiedResponse =
       authority.data.response;
 
+    const branchCertificationPublicKey =
+      verifiedEnrollment.requestSchemaVersion ===
+        2
+        ? verifiedEnrollment.branchCertificationPublicKey
+        : undefined;
+
+    if (
+      verifiedEnrollment.requestSchemaVersion ===
+        2 &&
+      branchCertificationPublicKey ===
+        undefined
+    ) {
+      return failure(
+        "FINORA historical Enrollment Request V2 is missing its verified Branch Certification authority.",
+      );
+    }
+
     // --------------------------------------------------------
     // 2. IMMUTABLE IDENTITY DERIVATION
     //
@@ -218,6 +235,17 @@ export async function applyFinoraHistoricalEnrollmentEvidenceToBranchRegistry(
               verifiedEnrollment.deviceBinding.createdAt,
           },
         },
+
+        ...(
+          branchCertificationPublicKey ===
+            undefined
+            ? {}
+            : {
+                branchCertificationPublicKey: {
+                  ...branchCertificationPublicKey,
+                },
+              }
+        ),
       });
 
     // --------------------------------------------------------

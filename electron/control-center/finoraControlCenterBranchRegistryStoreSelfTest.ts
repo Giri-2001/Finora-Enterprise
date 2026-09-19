@@ -32,6 +32,10 @@
 ============================================================ */
 
 import {
+  generateFinoraBranchCertificationKeyMaterial,
+  toFinoraBranchCertificationPublicKey,
+} from "../control/finoraBranchCertificationCrypto.js";
+import {
   app,
   safeStorage,
 } from "electron";
@@ -391,6 +395,31 @@ async function runSelfTest():
       "PASS: first branch registered and read back",
     );
 
+    const firstRecord =
+      registryAfterFirst.branches[0];
+
+    assert(
+      firstRecord.authorizedDevices.length ===
+        1 &&
+      firstRecord.authorizedDevices[0].evidenceSource ===
+        "INITIAL_PROVISIONING" &&
+      JSON.stringify(
+        firstRecord.authorizedDevices[0].installation,
+      ) ===
+        JSON.stringify(
+          branchA.installation,
+        ) &&
+      firstRecord.authorizedDevices[0].firstObservedAt ===
+        firstRecord.createdAt &&
+      firstRecord.authorizedDevices[0].updatedAt ===
+        firstRecord.createdAt,
+      "New Branch Registry record did not seed the exact initial provisioned authorized device.",
+    );
+
+    console.log(
+      "PASS: initial provisioned installation seeded as the exact authorized device",
+    );
+
     // ========================================================
     // ENCRYPTED PERSISTENCE
     // ========================================================
@@ -480,6 +509,168 @@ async function runSelfTest():
 
     console.log(
       "PASS: exact branch registration is idempotent with zero registry mutation",
+    );
+
+    // ========================================================
+    // BRANCH CERTIFICATION ONE-TIME PIN
+    // ========================================================
+
+    const branchCertificationMaterial3D3C =
+      generateFinoraBranchCertificationKeyMaterial(
+        new Date(
+          "2026-09-17T02:00:00.000Z",
+        ),
+      );
+
+    const branchCertificationPublicKey3D3C =
+      toFinoraBranchCertificationPublicKey(
+        branchCertificationMaterial3D3C,
+      );
+
+    const registryBytesBeforeCertificationPin3D3C =
+      await readFile(
+        registryPath,
+      );
+
+    const certificationPinResult3D3C =
+      await registerFinoraControlCenterBranch({
+        identity:
+          firstRecord.identity,
+
+        branchCertificationPublicKey:
+          branchCertificationPublicKey3D3C,
+      });
+
+    const registryBytesAfterCertificationPin3D3C =
+      await readFile(
+        registryPath,
+      );
+
+    assert(
+      certificationPinResult3D3C.created ===
+        false &&
+      certificationPinResult3D3C.record.branchCertificationPublicKey?.keyId ===
+        branchCertificationPublicKey3D3C.keyId &&
+      !registryBytesBeforeCertificationPin3D3C.equals(
+        registryBytesAfterCertificationPin3D3C,
+      ),
+      "Authentic Branch Certification authority was not pinned exactly once onto the existing branch.",
+    );
+
+    console.log(
+      "PASS: Branch Certification authority pinned once onto an existing exact branch",
+    );
+
+    const bytesBeforeExactCertificationRetry3D3C =
+      Buffer.from(
+        registryBytesAfterCertificationPin3D3C,
+      );
+
+    const exactCertificationRetry3D3C =
+      await registerFinoraControlCenterBranch({
+        identity:
+          firstRecord.identity,
+
+        branchCertificationPublicKey:
+          branchCertificationPublicKey3D3C,
+      });
+
+    const bytesAfterExactCertificationRetry3D3C =
+      await readFile(
+        registryPath,
+      );
+
+    assert(
+      exactCertificationRetry3D3C.created ===
+        false &&
+      exactCertificationRetry3D3C.record.branchCertificationPublicKey?.keyId ===
+        branchCertificationPublicKey3D3C.keyId &&
+      bytesBeforeExactCertificationRetry3D3C.equals(
+        bytesAfterExactCertificationRetry3D3C,
+      ),
+      "Exact Branch Certification pin retry rewrote registry state.",
+    );
+
+    console.log(
+      "PASS: exact Branch Certification pin retry is byte-stable",
+    );
+
+    const bytesBeforeLegacyRegistrationRetry3D3C =
+      Buffer.from(
+        bytesAfterExactCertificationRetry3D3C,
+      );
+
+    const legacyRegistrationRetry3D3C =
+      await registerFinoraControlCenterBranch({
+        identity:
+          firstRecord.identity,
+      });
+
+    const bytesAfterLegacyRegistrationRetry3D3C =
+      await readFile(
+        registryPath,
+      );
+
+    assert(
+      legacyRegistrationRetry3D3C.record.branchCertificationPublicKey?.keyId ===
+        branchCertificationPublicKey3D3C.keyId &&
+      bytesBeforeLegacyRegistrationRetry3D3C.equals(
+        bytesAfterLegacyRegistrationRetry3D3C,
+      ),
+      "Legacy exact registration removed or rewrote pinned Branch Certification authority.",
+    );
+
+    console.log(
+      "PASS: registration without certification preserves an existing pinned authority",
+    );
+
+    const conflictingCertification3D3C =
+      toFinoraBranchCertificationPublicKey(
+        generateFinoraBranchCertificationKeyMaterial(
+          new Date(
+            "2026-09-17T02:01:00.000Z",
+          ),
+        ),
+      );
+
+    const bytesBeforeConflictingCertification3D3C =
+      await readFile(
+        registryPath,
+      );
+
+    let conflictingCertificationRejected3D3C =
+      false;
+
+    try {
+
+      await registerFinoraControlCenterBranch({
+        identity:
+          firstRecord.identity,
+
+        branchCertificationPublicKey:
+          conflictingCertification3D3C,
+      });
+
+    } catch {
+      conflictingCertificationRejected3D3C =
+        true;
+    }
+
+    const bytesAfterConflictingCertification3D3C =
+      await readFile(
+        registryPath,
+      );
+
+    assert(
+      conflictingCertificationRejected3D3C &&
+      bytesBeforeConflictingCertification3D3C.equals(
+        bytesAfterConflictingCertification3D3C,
+      ),
+      "Conflicting Branch Certification authority was not rejected with zero registry mutation.",
+    );
+
+    console.log(
+      "PASS: conflicting Branch Certification authority rejected with zero registry mutation",
     );
 
     // ========================================================
@@ -934,6 +1125,277 @@ async function runSelfTest():
     // ========================================================
     // ENCRYPTED MALFORMED SCHEMA — FAIL CLOSED
     // ========================================================
+
+    // ========================================================
+    // ENCRYPTED V1 -> V2 MIGRATION
+    // ========================================================
+
+    const stableRegistryPlaintext =
+      safeStorage.decryptString(
+        stableRegistryBytes,
+      );
+
+    const stableRegistryValue =
+      JSON.parse(
+        stableRegistryPlaintext,
+      ) as {
+        branches:
+          Array<Record<string, unknown>>;
+        createdAt:
+          string;
+        updatedAt:
+          string;
+        schemaVersion:
+          number;
+      };
+
+    assert(
+      stableRegistryValue.schemaVersion ===
+        2 &&
+      stableRegistryValue.branches.length ===
+        2,
+      "Known-good V2 Branch Registry fixture is invalid before V1 migration proof.",
+    );
+
+    const legacyV1Registry = {
+      branches:
+        stableRegistryValue.branches.map(
+          (branch) => {
+
+            const legacyBranch = {
+              ...branch,
+            };
+
+            delete legacyBranch.authorizedDevices;
+            delete legacyBranch.branchCertificationPublicKey;
+
+            legacyBranch.schemaVersion =
+              1;
+
+            return legacyBranch;
+          },
+        ),
+
+      createdAt:
+        stableRegistryValue.createdAt,
+
+      updatedAt:
+        stableRegistryValue.updatedAt,
+
+      schemaVersion:
+        1,
+    };
+
+    const encryptedLegacyV1Registry =
+      safeStorage.encryptString(
+        JSON.stringify(
+          legacyV1Registry,
+        ),
+      );
+
+    await writeFile(
+      registryPath,
+      encryptedLegacyV1Registry,
+    );
+
+    const migratedRegistry =
+      await loadFinoraControlCenterBranchRegistry();
+
+    assert(
+      migratedRegistry !==
+        undefined &&
+      migratedRegistry.schemaVersion ===
+        2 &&
+      migratedRegistry.branches.length ===
+        2 &&
+      migratedRegistry.branches.every(
+        (branch) =>
+          branch.schemaVersion ===
+            2 &&
+          branch.authorizedDevices.length ===
+            1 &&
+          branch.authorizedDevices[0].evidenceSource ===
+            "INITIAL_PROVISIONING" &&
+          JSON.stringify(
+            branch.authorizedDevices[0].installation,
+          ) ===
+            JSON.stringify(
+              branch.identity.installation,
+            ) &&
+          branch.authorizedDevices[0].firstObservedAt ===
+            branch.createdAt &&
+          branch.authorizedDevices[0].updatedAt ===
+            branch.createdAt,
+      ),
+      "Encrypted V1 Branch Registry did not migrate to canonical V2 authorized-device state.",
+    );
+
+    const migratedAsLegacy = {
+      branches:
+        migratedRegistry.branches.map(
+          (branch) => {
+
+            const legacyBranch =
+              JSON.parse(
+                JSON.stringify(
+                  branch,
+                ),
+              ) as
+                Record<string, unknown>;
+
+            delete legacyBranch.authorizedDevices;
+            delete legacyBranch.branchCertificationPublicKey;
+
+            legacyBranch.schemaVersion =
+              1;
+
+            return legacyBranch;
+          },
+        ),
+
+      createdAt:
+        migratedRegistry.createdAt,
+
+      updatedAt:
+        migratedRegistry.updatedAt,
+
+      schemaVersion:
+        1,
+    };
+
+    assert(
+      JSON.stringify(
+        migratedAsLegacy,
+      ) ===
+        JSON.stringify(
+          legacyV1Registry,
+        ),
+      "V1 -> V2 migration changed pre-existing Branch Registry data.",
+    );
+
+    const migratedRegistryBytes =
+      await readFile(
+        registryPath,
+      );
+
+    const persistedMigratedValue =
+      JSON.parse(
+        safeStorage.decryptString(
+          migratedRegistryBytes,
+        ),
+      ) as {
+        branches:
+          Array<{
+            schemaVersion:
+              number;
+            authorizedDevices:
+              unknown[];
+          }>;
+        schemaVersion:
+          number;
+      };
+
+    assert(
+      persistedMigratedValue.schemaVersion ===
+        2 &&
+      persistedMigratedValue.branches.every(
+        (branch) =>
+          branch.schemaVersion ===
+            2 &&
+          Array.isArray(
+            branch.authorizedDevices,
+          ) &&
+          branch.authorizedDevices.length ===
+            1,
+      ),
+      "Migrated V2 Branch Registry was not persisted after V1 load.",
+    );
+
+    const bytesBeforeSecondMigratedLoad =
+      Buffer.from(
+        migratedRegistryBytes,
+      );
+
+    const secondMigratedLoad =
+      await loadFinoraControlCenterBranchRegistry();
+
+    const bytesAfterSecondMigratedLoad =
+      await readFile(
+        registryPath,
+      );
+
+    assert(
+      secondMigratedLoad !==
+        undefined &&
+      secondMigratedLoad.schemaVersion ===
+        2 &&
+      bytesBeforeSecondMigratedLoad.equals(
+        bytesAfterSecondMigratedLoad,
+      ),
+      "Canonical migrated V2 registry was rewritten on the second load.",
+    );
+
+    console.log(
+      "PASS: encrypted V1 registry migrated once to V2 with legacy data preserved",
+    );
+
+    // ========================================================
+    // MALFORMED AUTHORIZED-DEVICE EVIDENCE — FAIL CLOSED
+    // ========================================================
+
+    const malformedAuthorizedDeviceRegistry =
+      JSON.parse(
+        safeStorage.decryptString(
+          migratedRegistryBytes,
+        ),
+      ) as {
+        branches:
+          Array<{
+            authorizedDevices:
+              unknown[];
+          }>;
+      };
+
+    assert(
+      malformedAuthorizedDeviceRegistry.branches.length >
+        0 &&
+      malformedAuthorizedDeviceRegistry.branches[0].authorizedDevices.length ===
+        1,
+      "Expected one migrated authorized-device fixture before malformed proof.",
+    );
+
+    malformedAuthorizedDeviceRegistry.branches[0].authorizedDevices.push(
+      JSON.parse(
+        JSON.stringify(
+          malformedAuthorizedDeviceRegistry.branches[0].authorizedDevices[0],
+        ),
+      ),
+    );
+
+    await writeFile(
+      registryPath,
+      safeStorage.encryptString(
+        JSON.stringify(
+          malformedAuthorizedDeviceRegistry,
+        ),
+      ),
+    );
+
+    await expectRejection(
+      () =>
+        loadFinoraControlCenterBranchRegistry(),
+      "exactly one initial provisioned authorized device",
+      "Duplicate authorized-device evidence",
+    );
+
+    console.log(
+      "PASS: duplicate authorized-device evidence fails closed",
+    );
+
+    await writeFile(
+      registryPath,
+      migratedRegistryBytes,
+    );
 
     const malformedEncrypted =
       safeStorage.encryptString(

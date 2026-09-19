@@ -49,6 +49,7 @@ import {
 } from "./finoraInstallationBindingService.js";
 
 import {
+  verifyFinoraSignedControlPackageBranchScope,
   verifyFinoraSignedControlPackageNative,
 } from "./finoraSignedControlPackageVerifier.js";
 
@@ -56,23 +57,31 @@ import type {
   FinoraBranchTrustedControlPublicKey,
 } from "./finoraSignedControlPackageVerifier.js";
 
+import type {
+  FinoraBranchOperationalSessionPrincipal,
+} from "./finoraBranchLoginSessionAuthority.js";
+
 import {
   applyFinoraSignedBranchActivationPackage,
 } from "./finoraBranchActivationPackageApplyService.js";
 
 import {
   applyFinoraSignedBranchAccessPackage,
+  applyFinoraSignedPortableBranchAccessPackage,
 } from "./finoraBranchAccessPackageApplyService.js";
 
 import {
+  applyFinoraSignedPortableStorageEntitlementPackage,
   applyFinoraSignedStorageEntitlementPackage,
 } from "./finoraStorageEntitlementPackageApplyService.js";
 
 import {
   applyFinoraSignedBusinessProfilePackage,
+  applyFinoraSignedPortableBusinessProfilePackage,
 } from "./finoraBusinessProfilePackageApplyService.js";
 
 import {
+  applyFinoraSignedPortablePricingPolicyPackage,
   applyFinoraSignedPricingPolicyPackage,
 } from "./finoraPricingPolicyPackageApplyService.js";
 
@@ -99,6 +108,22 @@ export type FinoraControlBundleChildPurpose =
   | "PRICING_POLICY"
   | "WALLET_RECHARGE"
   | "WALLET_RECHARGE_DECLINE";
+
+export type FinoraControlBundleImportAuthorityContext =
+  | {
+      lane:
+        "BOOTSTRAP_NATIVE";
+    }
+  | {
+      lane:
+        "AUTHENTICATED_PORTABLE";
+
+      principal:
+        FinoraBranchOperationalSessionPrincipal;
+
+      portableAuthFingerprint:
+        string;
+    };
 
 export interface FinoraControlBundleChildApplyResult {
 
@@ -292,6 +317,49 @@ function targetsMatch(
   );
 }
 
+type FinoraControlBundleBranchAccessChildLane =
+  | "NATIVE_BRANCH_ACCESS"
+  | "PORTABLE_BRANCH_ACCESS";
+
+type FinoraControlBundleStorageEntitlementChildLane =
+  | "NATIVE_STORAGE_ENTITLEMENT"
+  | "PORTABLE_STORAGE_ENTITLEMENT";
+
+type FinoraControlBundleBusinessProfileChildLane =
+  | "NATIVE_BUSINESS_PROFILE"
+  | "PORTABLE_BUSINESS_PROFILE";
+
+type FinoraControlBundlePricingPolicyChildLane =
+  | "NATIVE_PRICING_POLICY"
+  | "PORTABLE_PRICING_POLICY";
+
+function isPortableBranchAccessBundleAction(
+  value:
+    unknown,
+): value is
+  | "ISSUE"
+  | "RENEW"
+  | "REPLACE"
+  | "SUSPEND"
+  | "RESUME"
+  | "REVOKE" {
+
+  return (
+    value ===
+      "ISSUE" ||
+    value ===
+      "RENEW" ||
+    value ===
+      "REPLACE" ||
+    value ===
+      "SUSPEND" ||
+    value ===
+      "RESUME" ||
+    value ===
+      "REVOKE"
+  );
+}
+
 // ============================================================
 // CHILD DISPATCH
 // ============================================================
@@ -299,6 +367,18 @@ function targetsMatch(
 async function applyChildPackage(
   purpose:
     FinoraControlBundleChildPurpose,
+
+  branchAccessLane:
+    FinoraControlBundleBranchAccessChildLane,
+
+  storageEntitlementLane:
+    FinoraControlBundleStorageEntitlementChildLane,
+
+  businessProfileLane:
+    FinoraControlBundleBusinessProfileChildLane,
+
+  pricingPolicyLane:
+    FinoraControlBundlePricingPolicyChildLane,
 
   signedPackage:
     unknown,
@@ -347,11 +427,18 @@ async function applyChildPackage(
     case "BRANCH_ACCESS": {
 
       const result =
-        await applyFinoraSignedBranchAccessPackage(
-          signedPackage,
-          trustedKeys,
-          now,
-        );
+        branchAccessLane ===
+          "PORTABLE_BRANCH_ACCESS"
+          ? await applyFinoraSignedPortableBranchAccessPackage(
+              signedPackage,
+              trustedKeys,
+              now,
+            )
+          : await applyFinoraSignedBranchAccessPackage(
+              signedPackage,
+              trustedKeys,
+              now,
+            );
 
       return result.success
         ? {
@@ -371,11 +458,18 @@ async function applyChildPackage(
     case "STORAGE_ENTITLEMENT": {
 
       const result =
-        await applyFinoraSignedStorageEntitlementPackage(
-          signedPackage,
-          trustedKeys,
-          now,
-        );
+        storageEntitlementLane ===
+          "PORTABLE_STORAGE_ENTITLEMENT"
+          ? await applyFinoraSignedPortableStorageEntitlementPackage(
+              signedPackage,
+              trustedKeys,
+              now,
+            )
+          : await applyFinoraSignedStorageEntitlementPackage(
+              signedPackage,
+              trustedKeys,
+              now,
+            );
 
       return result.success
         ? {
@@ -395,11 +489,18 @@ async function applyChildPackage(
     case "BUSINESS_PROFILE": {
 
       const result =
-        await applyFinoraSignedBusinessProfilePackage(
-          signedPackage,
-          trustedKeys,
-          now,
-        );
+        businessProfileLane ===
+          "PORTABLE_BUSINESS_PROFILE"
+          ? await applyFinoraSignedPortableBusinessProfilePackage(
+              signedPackage,
+              trustedKeys,
+              now,
+            )
+          : await applyFinoraSignedBusinessProfilePackage(
+              signedPackage,
+              trustedKeys,
+              now,
+            );
 
       return result.success
         ? {
@@ -419,11 +520,18 @@ async function applyChildPackage(
     case "PRICING_POLICY": {
 
       const result =
-        await applyFinoraSignedPricingPolicyPackage(
-          signedPackage,
-          trustedKeys,
-          now,
-        );
+        pricingPolicyLane ===
+          "PORTABLE_PRICING_POLICY"
+          ? await applyFinoraSignedPortablePricingPolicyPackage(
+              signedPackage,
+              trustedKeys,
+              now,
+            )
+          : await applyFinoraSignedPricingPolicyPackage(
+              signedPackage,
+              trustedKeys,
+              now,
+            );
 
       return result.success
         ? {
@@ -503,9 +611,38 @@ export async function applyFinoraSignedControlBundlePackage(
 
   now:
     Date,
+
+  authorityContext:
+    FinoraControlBundleImportAuthorityContext,
 ): Promise<
   FinoraControlBundleApplyResult
 > {
+
+  /*
+   * G4 selects the outer Control Bundle target policy only from
+   * the already-derived main-process import authority.
+   *
+   * BOOTSTRAP_NATIVE:
+   *   exact current native installation target.
+   *
+   * AUTHENTICATED_PORTABLE:
+   *   exact authoritative branch scope carried by the validated
+   *   operational session. The signed historical installation
+   *   target remains cryptographically preserved as provenance.
+   *
+   * Migrated child preflight and apply are branch-portable;
+   * non-migrated child families remain strict native.
+   */
+  if (
+    authorityContext.lane !==
+      "BOOTSTRAP_NATIVE" &&
+    authorityContext.lane !==
+      "AUTHENTICATED_PORTABLE"
+  ) {
+    return failure(
+      "FINORA Control Bundle import authority context is invalid.",
+    );
+  }
 
   // ----------------------------------------------------------
   // AUTHORITATIVE CONTROL STORE INSTALLATION
@@ -531,6 +668,54 @@ export async function applyFinoraSignedControlBundlePackage(
     return failure(
       "FINORA installation identity is required before importing a Control Bundle.",
     );
+  }
+
+  const expectedBranchScope = {
+    ownerId:
+      installation.ownerId,
+
+    businessId:
+      installation.businessId,
+
+    branchId:
+      installation.branchId,
+  };
+
+  if (
+    authorityContext.lane ===
+      "AUTHENTICATED_PORTABLE"
+  ) {
+    if (
+      !isNonEmptyString(
+        authorityContext.portableAuthFingerprint,
+      ) ||
+      !isNonEmptyString(
+        authorityContext.principal.ownerId,
+      ) ||
+      !isNonEmptyString(
+        authorityContext.principal.businessId,
+      ) ||
+      !isNonEmptyString(
+        authorityContext.principal.branchId,
+      )
+    ) {
+      return failure(
+        "FINORA authenticated portable Control Bundle authority context is invalid.",
+      );
+    }
+
+    if (
+      authorityContext.principal.ownerId !==
+        expectedBranchScope.ownerId ||
+      authorityContext.principal.businessId !==
+        expectedBranchScope.businessId ||
+      authorityContext.principal.branchId !==
+        expectedBranchScope.branchId
+    ) {
+      return failure(
+        "FINORA authenticated portable Control Bundle session does not belong to the authoritative Control Store branch.",
+      );
+    }
   }
 
   // ----------------------------------------------------------
@@ -560,6 +745,8 @@ export async function applyFinoraSignedControlBundlePackage(
   }
 
   if (
+    authorityContext.lane ===
+      "BOOTSTRAP_NATIVE" &&
     nativeBinding.installationId !==
       installation.installationId
   ) {
@@ -568,7 +755,7 @@ export async function applyFinoraSignedControlBundlePackage(
     );
   }
 
-  const expectedTarget = {
+  const nativeExpectedTarget = {
     ownerId:
       installation.ownerId,
 
@@ -579,7 +766,7 @@ export async function applyFinoraSignedControlBundlePackage(
       installation.branchId,
 
     installationId:
-      installation.installationId,
+      nativeBinding.installationId,
 
     bindingKeyId:
       nativeBinding.bindingKeyId,
@@ -598,12 +785,20 @@ export async function applyFinoraSignedControlBundlePackage(
   // ----------------------------------------------------------
 
   const verification =
-    verifyFinoraSignedControlPackageNative(
-      signedBundle,
-      trustedKeys,
-      expectedTarget,
-      now,
-    );
+    authorityContext.lane ===
+      "BOOTSTRAP_NATIVE"
+      ? verifyFinoraSignedControlPackageNative(
+          signedBundle,
+          trustedKeys,
+          nativeExpectedTarget,
+          now,
+        )
+      : verifyFinoraSignedControlPackageBranchScope(
+          signedBundle,
+          trustedKeys,
+          expectedBranchScope,
+          now,
+        );
 
   if (!verification.valid) {
     return failure(
@@ -680,6 +875,18 @@ export async function applyFinoraSignedControlBundlePackage(
       purpose:
         FinoraControlBundleChildPurpose;
 
+      branchAccessLane:
+        FinoraControlBundleBranchAccessChildLane;
+
+      storageEntitlementLane:
+        FinoraControlBundleStorageEntitlementChildLane;
+
+      businessProfileLane:
+        FinoraControlBundleBusinessProfileChildLane;
+
+      pricingPolicyLane:
+        FinoraControlBundlePricingPolicyChildLane;
+
       signedPackage:
         unknown;
     }[] =
@@ -733,18 +940,74 @@ export async function applyFinoraSignedControlBundlePackage(
      * Complete cryptographic preflight for every child before
      * any purpose-specific child apply is allowed to begin.
      *
+     * BRANCH_ACCESS lifecycle, BUSINESS_PROFILE, and PRICING_POLICY
+     * are migrated portable child families. Every other package
+     * family remains strict-native during this migration.
+     *
      * Existing child apply services intentionally verify again
      * at mutation time. This duplicate verification provides a
      * defense-in-depth boundary while preserving those services
      * as the authoritative domain/replay/state validators.
      */
+    const branchAccessLane:
+      FinoraControlBundleBranchAccessChildLane =
+        authorityContext.lane ===
+          "AUTHENTICATED_PORTABLE" &&
+        child.purpose ===
+          "BRANCH_ACCESS"
+          ? "PORTABLE_BRANCH_ACCESS"
+          : "NATIVE_BRANCH_ACCESS";
+
+    const storageEntitlementLane:
+      FinoraControlBundleStorageEntitlementChildLane =
+        authorityContext.lane ===
+          "AUTHENTICATED_PORTABLE" &&
+        child.purpose ===
+          "STORAGE_ENTITLEMENT"
+          ? "PORTABLE_STORAGE_ENTITLEMENT"
+          : "NATIVE_STORAGE_ENTITLEMENT";
+
+    const businessProfileLane:
+      FinoraControlBundleBusinessProfileChildLane =
+        authorityContext.lane ===
+          "AUTHENTICATED_PORTABLE" &&
+        child.purpose ===
+          "BUSINESS_PROFILE"
+          ? "PORTABLE_BUSINESS_PROFILE"
+          : "NATIVE_BUSINESS_PROFILE";
+
+    const pricingPolicyLane:
+      FinoraControlBundlePricingPolicyChildLane =
+        authorityContext.lane ===
+          "AUTHENTICATED_PORTABLE" &&
+        child.purpose ===
+          "PRICING_POLICY"
+          ? "PORTABLE_PRICING_POLICY"
+          : "NATIVE_PRICING_POLICY";
+
     const childVerification =
-      verifyFinoraSignedControlPackageNative(
-        child,
-        trustedKeys,
-        expectedTarget,
-        now,
-      );
+      (
+        branchAccessLane ===
+          "PORTABLE_BRANCH_ACCESS" ||
+        storageEntitlementLane ===
+          "PORTABLE_STORAGE_ENTITLEMENT" ||
+        businessProfileLane ===
+          "PORTABLE_BUSINESS_PROFILE" ||
+        pricingPolicyLane ===
+          "PORTABLE_PRICING_POLICY"
+      )
+        ? verifyFinoraSignedControlPackageBranchScope(
+            child,
+            trustedKeys,
+            expectedBranchScope,
+            now,
+          )
+        : verifyFinoraSignedControlPackageNative(
+            child,
+            trustedKeys,
+            nativeExpectedTarget,
+            now,
+          );
 
     if (!childVerification.valid) {
       return failure(
@@ -759,6 +1022,58 @@ export async function applyFinoraSignedControlBundlePackage(
       return failure(
         "FINORA CONTROL_BUNDLE verified child purpose does not match the preflight purpose.",
       );
+    }
+
+    /*
+     * Native-only BRANCH_ACCESS sub-actions must fail during
+     * complete bundle preflight, before the first child mutation.
+     *
+     * Presence of credentialEnrollment is itself authoritative
+     * evidence that the child belongs to the native enrollment
+     * lane, even when the property value is undefined.
+     */
+    if (
+      branchAccessLane ===
+        "PORTABLE_BRANCH_ACCESS"
+    ) {
+      const verifiedPayload =
+        childVerification.controlPackage.payload;
+
+      if (!isRecord(verifiedPayload)) {
+        return failure(
+          `FINORA CONTROL_BUNDLE child ${child.packageId} portable BRANCH_ACCESS payload is invalid.`,
+        );
+      }
+
+      if (
+        verifiedPayload.action ===
+          "AUTHORIZE_CREDENTIAL"
+      ) {
+        return failure(
+          `FINORA CONTROL_BUNDLE child ${child.packageId} BRANCH_ACCESS AUTHORIZE_CREDENTIAL is native-only.`,
+        );
+      }
+
+      if (
+        Object.prototype.hasOwnProperty.call(
+          verifiedPayload,
+          "credentialEnrollment",
+        )
+      ) {
+        return failure(
+          `FINORA CONTROL_BUNDLE child ${child.packageId} portable BRANCH_ACCESS cannot carry credential enrollment authority.`,
+        );
+      }
+
+      if (
+        !isPortableBranchAccessBundleAction(
+          verifiedPayload.action,
+        )
+      ) {
+        return failure(
+          `FINORA CONTROL_BUNDLE child ${child.packageId} BRANCH_ACCESS action is not eligible for portable authority.`,
+        );
+      }
     }
 
     if (
@@ -801,6 +1116,14 @@ export async function applyFinoraSignedControlBundlePackage(
       purpose:
         child.purpose,
 
+      branchAccessLane,
+
+      storageEntitlementLane,
+
+      businessProfileLane,
+
+      pricingPolicyLane,
+
       signedPackage:
         child,
     });
@@ -829,6 +1152,10 @@ export async function applyFinoraSignedControlBundlePackage(
       const childResult =
         await applyChildPackage(
           child.purpose,
+          child.branchAccessLane,
+          child.storageEntitlementLane,
+          child.businessProfileLane,
+          child.pricingPolicyLane,
           child.signedPackage,
           trustedKeys,
           now,

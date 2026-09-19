@@ -85,6 +85,10 @@ import {
 } from "./finoraControlIpc.js";
 
 import {
+  FinoraPortableBranchAuthStore,
+} from "./finoraPortableBranchAuthStore.js";
+
+import {
   loadFinoraRecipientTrustStore,
   persistFinoraRecipientTrustStore,
 } from "./finoraRecipientTrustStore.js";
@@ -998,6 +1002,13 @@ async function runSelfTest():
       ) as
         typeof runtimeDialog.showOpenDialog;
 
+    let nativeOpenDialogInvocationCount =
+      0;
+
+    const readNativeOpenDialogInvocationCount =
+      (): number =>
+        nativeOpenDialogInvocationCount;
+
     Object.defineProperty(
       runtimeDialog,
       "showOpenDialog",
@@ -1012,6 +1023,9 @@ async function runSelfTest():
             options:
               Electron.OpenDialogOptions,
           ) => {
+
+            nativeOpenDialogInvocationCount +=
+              1;
 
             console.log(
               "DIAGNOSTIC NATIVE DIALOG DEFAULT PATH:",
@@ -1248,12 +1262,26 @@ async function runSelfTest():
     // check remains active and authoritative in this test.
     // --------------------------------------------------------
 
+    const portableBranchAuthStore =
+      new FinoraPortableBranchAuthStore({
+        resolveLocalRoot:
+          () =>
+            app.getPath(
+              "userData",
+            ),
+
+        resolveUsbRoot:
+          async () =>
+            null,
+      });
+
     registerFinoraControlHandlers(
       (
         senderFrame,
       ) =>
         senderFrame !==
           null,
+      portableBranchAuthStore,
     );
 
     parentWindow =
@@ -1313,6 +1341,218 @@ async function runSelfTest():
       "PASS: production preload exposed zero-argument Control Bundle import bridge",
     );
 
+    // --------------------------------------------------------
+    // DOWNGRADE-PROOF IPC ARGUMENT MATRIX
+    //
+    // A supplied argument must never be interpreted as absence
+    // of arguments. Every malformed supplied request must fail
+    // before the native file picker opens.
+    //
+    // The valid-shaped nonexistent session proves that a strict
+    // one-argument request passes shape validation but still
+    // fails through main-process session authority before dialog.
+    // --------------------------------------------------------
+
+    const malformedOperationalImportError =
+      "A valid FINORA operational Control Bundle import session is required.";
+
+    const downgradeProofResults =
+      await parentWindow.webContents.executeJavaScript(
+        `(async () => {
+          const invoke = (...args) =>
+            window.finora.control.importControlBundle(
+              ...args
+            );
+
+          const cases = [
+            [
+              "explicit undefined",
+              () =>
+                invoke(
+                  undefined
+                ),
+            ],
+            [
+              "explicit null",
+              () =>
+                invoke(
+                  null
+                ),
+            ],
+            [
+              "empty object",
+              () =>
+                invoke(
+                  {}
+                ),
+            ],
+            [
+              "empty sessionId",
+              () =>
+                invoke({
+                  sessionId:
+                    "",
+                }),
+            ],
+            [
+              "whitespace sessionId",
+              () =>
+                invoke({
+                  sessionId:
+                    "   ",
+                }),
+            ],
+            [
+              "extra request key",
+              () =>
+                invoke({
+                  sessionId:
+                    "FINORA-G3-8C-EXTRA-KEY",
+                  extra:
+                    true,
+                }),
+            ],
+            [
+              "nonexistent valid-shaped session",
+              () =>
+                invoke({
+                  sessionId:
+                    "FINORA-G3-8C-NONEXISTENT-SESSION",
+                }),
+            ],
+            [
+              "extra IPC argument",
+              () =>
+                invoke(
+                  {
+                    sessionId:
+                      "FINORA-G3-8C-EXTRA-ARG",
+                  },
+                  {
+                    extra:
+                      true,
+                  },
+                ),
+            ],
+          ];
+
+          const results = [];
+
+          for (
+            const [
+              label,
+              run,
+            ] of cases
+          ) {
+            try {
+              results.push({
+                label,
+                result:
+                  await run(),
+              });
+            }
+            catch (
+              error
+            ) {
+              results.push({
+                label,
+                threw:
+                  true,
+                error:
+                  String(
+                    error &&
+                    typeof error === "object" &&
+                    "message" in error
+                      ? error.message
+                      : error,
+                  ),
+              });
+            }
+          }
+
+          return results;
+        })()`,
+        true,
+      );
+
+    assert(
+      Array.isArray(
+        downgradeProofResults,
+      ) &&
+      downgradeProofResults.length ===
+        8,
+      "Downgrade-proof IPC matrix did not return all eight cases.",
+    );
+
+    const malformedCaseIndexes = [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      7,
+    ];
+
+    for (
+      const index of
+        malformedCaseIndexes
+    ) {
+      const entry =
+        downgradeProofResults[
+          index
+        ];
+
+      assert(
+        entry &&
+        entry.threw !==
+          true &&
+        entry.result &&
+        entry.result.success ===
+          false &&
+        entry.result.error ===
+          malformedOperationalImportError,
+        `Malformed supplied Control Bundle import case ${index} did not fail through the strict argument gate.`,
+      );
+
+      console.log(
+        `PASS: malformed supplied import rejected before native dialog - ${entry.label}`,
+      );
+    }
+
+    const nonexistentSessionResult =
+      downgradeProofResults[6];
+
+    assert(
+      nonexistentSessionResult &&
+      nonexistentSessionResult.threw !==
+        true &&
+      nonexistentSessionResult.result &&
+      nonexistentSessionResult.result.success ===
+        false &&
+      typeof nonexistentSessionResult.result.error ===
+        "string" &&
+      nonexistentSessionResult.result.error.length >
+        0 &&
+      nonexistentSessionResult.result.error !==
+        malformedOperationalImportError,
+      "Valid-shaped nonexistent session did not fail through operational session authority.",
+    );
+
+    console.log(
+      "PASS: valid-shaped nonexistent session reached session authority and failed before native dialog",
+    );
+
+    assert(
+      readNativeOpenDialogInvocationCount() ===
+        0,
+      "A supplied malformed or invalid operational import request opened the native file picker.",
+    );
+
+    console.log(
+      "PASS: all eight supplied-request downgrade cases completed with zero native-dialog invocations",
+    );
+
     const importResult =
       await parentWindow.webContents.executeJavaScript(
         "window.finora.control.importControlBundle()",
@@ -1326,6 +1566,16 @@ async function runSelfTest():
           "Native CONTROL_BUNDLE import failed.",
       );
     }
+
+    assert(
+      readNativeOpenDialogInvocationCount() ===
+        1,
+      "Zero-argument bootstrap import did not open the native file picker exactly once after downgrade-proof rejection cases.",
+    );
+
+    console.log(
+      "PASS: exact zero-argument bootstrap lane opened native dialog after supplied-request rejection matrix",
+    );
 
     assert(
       !importResult.cancelled,
@@ -1467,6 +1717,16 @@ async function runSelfTest():
         "window.finora.control.importControlBundle()",
         true,
       );
+
+    assert(
+      readNativeOpenDialogInvocationCount() ===
+        2,
+      "Second zero-argument bootstrap import did not produce exactly the second native-dialog invocation.",
+    );
+
+    console.log(
+      "PASS: only the two exact zero-argument bootstrap imports reached the native dialog",
+    );
 
     assert(
       rollbackImportResult &&

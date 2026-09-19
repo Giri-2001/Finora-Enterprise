@@ -40,6 +40,12 @@ interface Props {
       draft:
         FinoraStorageEntitlementFormDraft,
     ) => void;
+
+  onIssuePortable:
+    (
+      draft:
+        FinoraStorageEntitlementFormDraft,
+    ) => void;
 }
 
 /* ============================================================
@@ -251,6 +257,7 @@ function SelectField<
 export default function FinoraControlCenterStorageEntitlementForm({
   target,
   onIssue,
+  onIssuePortable,
 }: Props) {
 
   const [
@@ -511,6 +518,42 @@ export default function FinoraControlCenterStorageEntitlementForm({
           }}
         >
           Prepare Storage Entitlement Issuance
+        </button>
+
+        <button
+          type="button"
+          onClick={() => {
+            onIssuePortable({
+              target,
+              ...draft,
+            });
+          }}
+          style={{
+            minHeight:
+              "42px",
+            marginLeft:
+              "10px",
+            border:
+              "1px solid rgba(45, 212, 191, 0.72)",
+            borderRadius:
+              "9px",
+            padding:
+              "9px 16px",
+            fontFamily:
+              "Inter, ui-sans-serif, system-ui, sans-serif",
+            fontSize:
+              "13px",
+            fontWeight:
+              650,
+            background:
+              "rgba(13, 148, 136, 0.2)",
+            color:
+              "#ccfbf1",
+            cursor:
+              "pointer",
+          }}
+        >
+          Prepare Portable Storage Entitlement Issuance
         </button>
       </div>
 

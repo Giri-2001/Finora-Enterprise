@@ -42,6 +42,7 @@ import {
 
 import {
   authenticateFinoraBranchCredential,
+  resolveFinoraBranchCredentialAuthGeneration,
 } from "./finoraBranchCredentialAuthenticationService.js";
 
 import type {
@@ -236,6 +237,63 @@ export type FinoraBranchSessionValidationResult =
         string;
     };
 
+export interface FinoraBranchOperationalSessionPrincipal {
+  authGeneration:
+    number;
+
+  userId:
+    string;
+
+  username:
+    string;
+
+  ownerId:
+    string;
+
+  businessId:
+    string;
+
+  branchId:
+    string;
+
+  storageMode:
+    FinoraControlStorageMode;
+
+  dataContext:
+    | "REAL"
+    | "DEMO";
+
+  demoId?:
+    string;
+}
+
+export interface FinoraBranchOperationalSessionContext {
+  session:
+    FinoraBranchLoginSessionView;
+
+  principal:
+    FinoraBranchOperationalSessionPrincipal;
+}
+
+export type FinoraBranchOperationalSessionContextResult =
+  | {
+      success:
+        true;
+
+      data:
+        FinoraBranchOperationalSessionContext;
+    }
+  | {
+      success:
+        false;
+
+      errorCode:
+        FinoraBranchSessionValidationErrorCode;
+
+      error:
+        string;
+    };
+
 export type FinoraBranchSessionTouchResult =
   | {
       success:
@@ -309,6 +367,9 @@ const activeSessions =
 type FinoraBranchLoginPrincipal = {
   credentialId:
     string;
+
+  authGeneration:
+    number;
 
   userId:
     string;
@@ -630,6 +691,9 @@ function toPrincipalFromAuthentication(
     credentialId:
       value.credentialId,
 
+    authGeneration:
+      value.authGeneration,
+
     userId:
       value.userId,
 
@@ -676,6 +740,11 @@ function toPrincipalFromCredential(
   return {
     credentialId:
       credential.credentialId,
+
+    authGeneration:
+      resolveFinoraBranchCredentialAuthGeneration(
+        credential.authGeneration,
+      ),
 
     userId:
       credential.userId,
@@ -1359,11 +1428,11 @@ export async function createFinoraBranchLoginSession(
 // access authorities are re-evaluated fresh.
 // ============================================================
 
-export async function validateFinoraBranchLoginSession(
+export async function resolveFinoraBranchOperationalSessionContext(
   input:
     unknown,
 ): Promise<
-  FinoraBranchSessionValidationResult
+  FinoraBranchOperationalSessionContextResult
 > {
   const request =
     sanitizeSessionRequest(
@@ -1503,12 +1572,50 @@ export async function validateFinoraBranchLoginSession(
     success:
       true,
 
-    data:
-      toSessionView(
-        record,
-        principal,
-        authorizationResult.accessMode,
-      ),
+    data: {
+      session:
+        toSessionView(
+          record,
+          principal,
+          authorizationResult.accessMode,
+        ),
+
+      principal: {
+        authGeneration:
+          principal.authGeneration,
+
+        userId:
+          principal.userId,
+
+        username:
+          principal.username,
+
+        ownerId:
+          principal.ownerId,
+
+        businessId:
+          principal.businessId,
+
+        branchId:
+          principal.branchId,
+
+        storageMode:
+          principal.storageMode,
+
+        dataContext:
+          principal.dataContext,
+
+        ...(
+          principal.demoId ===
+            undefined
+            ? {}
+            : {
+                demoId:
+                  principal.demoId,
+              }
+        ),
+      },
+    },
   };
 }
 
@@ -1520,6 +1627,32 @@ export async function validateFinoraBranchLoginSession(
 //
 // It does not modify credential/access authority.
 // ============================================================
+
+export async function validateFinoraBranchLoginSession(
+  input:
+    unknown,
+): Promise<
+  FinoraBranchSessionValidationResult
+> {
+  const contextResult =
+    await resolveFinoraBranchOperationalSessionContext(
+      input,
+    );
+
+  if (
+    !contextResult.success
+  ) {
+    return contextResult;
+  }
+
+  return {
+    success:
+      true,
+
+    data:
+      contextResult.data.session,
+  };
+}
 
 export function touchFinoraBranchLoginSession(
   input:

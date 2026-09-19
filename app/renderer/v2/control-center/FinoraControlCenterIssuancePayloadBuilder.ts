@@ -29,6 +29,7 @@ import type {
 import type {
   FinoraBranchActivationFormDraft,
   FinoraBranchAccessFormDraft,
+  FinoraBranchDeviceRevocationFormDraft,
   FinoraBusinessProfileFormDraft,
   FinoraControlCenterTargetDraft,
   FinoraPricingPolicyFormDraft,
@@ -977,6 +978,93 @@ export function buildFinoraBranchAccessIssuanceRequest(
     },
   };
 }
+/* ============================================================
+   DEVICE REVOCATION
+============================================================ */
+
+export function buildFinoraBranchDeviceRevocationIssuanceRequest(
+  draft:
+    FinoraBranchDeviceRevocationFormDraft,
+): FinoraControlCenterBuiltIssuanceRequest {
+
+  const target =
+    buildTarget(
+      draft.target,
+    );
+
+  if (
+    draft.storageMode !==
+      "LOCAL" &&
+    draft.storageMode !==
+      "USB"
+  ) {
+    throw new Error(
+      "A valid Device Revocation storage mode is required.",
+    );
+  }
+
+  if (
+    draft.dataContext !==
+      "REAL" &&
+    draft.dataContext !==
+      "DEMO"
+  ) {
+    throw new Error(
+      "A valid Device Revocation data context is required.",
+    );
+  }
+
+  const basePayload = {
+    schemaVersion:
+      1 as const,
+
+    action:
+      "REVOKE" as const,
+
+    userId:
+      requiredString(
+        draft.userId,
+        "User ID",
+      ),
+
+    canonicalUsername:
+      requiredString(
+        draft.canonicalUsername,
+        "Canonical Username",
+      ).toLowerCase(),
+
+    storageMode:
+      draft.storageMode,
+
+    dataContext:
+      draft.dataContext,
+
+    reason:
+      requiredString(
+        draft.reason,
+        "Revocation Reason",
+      ),
+  };
+
+  return {
+    target,
+
+    payload:
+      draft.dataContext ===
+        "DEMO"
+        ? {
+            ...basePayload,
+
+            demoId:
+              requiredString(
+                draft.demoId,
+                "Demo ID",
+              ),
+          }
+        : basePayload,
+  };
+}
+
 /* ============================================================
    STORAGE ENTITLEMENT
 ============================================================ */

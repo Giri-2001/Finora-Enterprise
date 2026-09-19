@@ -37,13 +37,16 @@ import {
 import {
   issueFinoraBranchActivationPackage,
   issueFinoraBranchAccessPackage,
+  issueFinoraBranchDeviceRevocationPackage,
   issueFinoraBusinessProfilePackage,
   issueFinoraControlBundlePackage,
   issueFinoraPricingPolicyPackage,
   issueFinoraStorageEntitlementPackage,
+  issueFinoraPortableStorageEntitlementPackage,
   issueFinoraWalletRechargePackage,
   type IssueFinoraBranchActivationRequest,
   type IssueFinoraBranchAccessRequest,
+  type IssueFinoraBranchDeviceRevocationRequest,
   type IssueFinoraBusinessProfileRequest,
   type IssueFinoraControlBundleRequest,
   type IssueFinoraPricingPolicyRequest,
@@ -159,8 +162,14 @@ export const FINORA_CONTROL_CENTER_IPC_CHANNELS = {
   ISSUE_BRANCH_ACCESS:
     "finora:control-center:issue-branch-access",
 
+  ISSUE_BRANCH_DEVICE_REVOCATION:
+    "finora:control-center:issue-branch-device-revocation",
+
   ISSUE_STORAGE_ENTITLEMENT:
     "finora:control-center:issue-storage-entitlement",
+
+  ISSUE_PORTABLE_STORAGE_ENTITLEMENT:
+    "finora:control-center:issue-portable-storage-entitlement",
 
   ISSUE_BUSINESS_PROFILE:
     "finora:control-center:issue-business-profile",
@@ -1265,6 +1274,20 @@ export function registerFinoraControlCenterHandlers():
         responseExported =
           true;
 
+        const branchCertificationPublicKey =
+          verifiedEnrollment.branchCertificationPublicKey;
+
+        if (
+          verifiedEnrollment.requestSchemaVersion !==
+            2 ||
+          branchCertificationPublicKey ===
+            undefined
+        ) {
+          throw new Error(
+            "The exported FINORA Enrollment Response came from a verified request without the required V2 Branch Certification authority. Repair/backfill is required; do not issue another response.",
+          );
+        }
+
         await registerFinoraControlCenterBranch({
           identity: {
             ownerId:
@@ -1310,6 +1333,10 @@ export function registerFinoraControlCenterHandlers():
               bindingCreatedAt:
                 verifiedEnrollment.deviceBinding.createdAt,
             },
+          },
+
+          branchCertificationPublicKey: {
+            ...branchCertificationPublicKey,
           },
         });
 
@@ -1651,6 +1678,56 @@ export function registerFinoraControlCenterHandlers():
   );
 
   // ----------------------------------------------------------
+  // BRANCH DEVICE REVOCATION
+  // ----------------------------------------------------------
+
+  ipcMain.handle(
+    FINORA_CONTROL_CENTER_IPC_CHANNELS.ISSUE_BRANCH_DEVICE_REVOCATION,
+    async (
+      event,
+      request:
+        unknown,
+    ) => {
+
+      if (
+        !isTrustedFinoraControlCenterRenderer(
+          event.senderFrame,
+        )
+      ) {
+        return failure(
+          "FINORA Branch Device Revocation issuance is restricted to the dedicated Control Center renderer.",
+        );
+      }
+
+      if (
+        !isBaseIssuanceRequest(
+          request,
+        )
+      ) {
+        return failure(
+          "A valid FINORA Branch Device Revocation issuance request is required.",
+        );
+      }
+
+      const authorizedRequest =
+        request as
+          IssueFinoraBranchDeviceRevocationRequest;
+
+      return executePrivileged(
+        async () => {
+          await authorizeFinoraControlCenterRegistryBoundIssuanceTarget(
+            authorizedRequest.target,
+          );
+
+          return issueFinoraBranchDeviceRevocationPackage(
+            authorizedRequest,
+          );
+        },
+      );
+    },
+  );
+
+  // ----------------------------------------------------------
   // STORAGE ENTITLEMENT
   // ----------------------------------------------------------
 
@@ -1693,6 +1770,56 @@ export function registerFinoraControlCenterHandlers():
           );
 
           return issueFinoraStorageEntitlementPackage(
+            authorizedRequest,
+          );
+        },
+      );
+    },
+  );
+
+  // ----------------------------------------------------------
+  // PORTABLE STORAGE ENTITLEMENT
+  // ----------------------------------------------------------
+
+  ipcMain.handle(
+    FINORA_CONTROL_CENTER_IPC_CHANNELS.ISSUE_PORTABLE_STORAGE_ENTITLEMENT,
+    async (
+      event,
+      request:
+        unknown,
+    ) => {
+
+      if (
+        !isTrustedFinoraControlCenterRenderer(
+          event.senderFrame,
+        )
+      ) {
+        return failure(
+          "FINORA Portable Storage Entitlement issuance is restricted to the dedicated Control Center renderer.",
+        );
+      }
+
+      if (
+        !isBaseIssuanceRequest(
+          request,
+        )
+      ) {
+        return failure(
+          "A valid FINORA Portable Storage Entitlement issuance request is required.",
+        );
+      }
+
+      const authorizedRequest =
+        request as
+          IssueFinoraStorageEntitlementRequest;
+
+      return executePrivileged(
+        async () => {
+          await authorizeFinoraControlCenterRegistryBoundIssuanceTarget(
+            authorizedRequest.target,
+          );
+
+          return issueFinoraPortableStorageEntitlementPackage(
             authorizedRequest,
           );
         },

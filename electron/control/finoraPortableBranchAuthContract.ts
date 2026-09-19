@@ -5,6 +5,14 @@
 // STATUS  : Portable Auth Foundation
 // ============================================================
 
+import type {
+  FinoraBranchCertificationKeyMaterialV1,
+} from "./finoraBranchCertificationContract.js";
+
+import {
+  assertFinoraBranchCertificationKeyMaterial,
+} from "./finoraBranchCertificationCrypto.js";
+
 import {
   Buffer,
 } from "node:buffer";
@@ -243,6 +251,16 @@ export interface FinoraPortableBranchAuthPayloadV1 {
 
   sourceAuthorizationVerificationEvidence:
     FinoraPortableBranchAuthSourceAuthorizationVerificationEvidenceV1;
+
+  /**
+   * Branch-scoped signing authority carried only inside the
+   * Password + Security Code encrypted Portable Auth payload.
+   *
+   * Optional at schema-v1 parsing level so Portable Auth artifacts
+   * created before Branch Certification migration remain valid.
+   */
+  branchCertificationKeyMaterial?:
+    FinoraBranchCertificationKeyMaterialV1;
 
   ownerId:
     string;
@@ -1068,9 +1086,20 @@ export function validateFinoraPortableBranchAuthPayloadV1(
     ],
     [
       "demoId",
+      "branchCertificationKeyMaterial",
     ],
     "portableBranchAuthPayload",
   );
+
+  if (
+    objectValue.branchCertificationKeyMaterial !==
+      undefined
+  ) {
+    assertFinoraBranchCertificationKeyMaterial(
+      objectValue.branchCertificationKeyMaterial as
+        FinoraBranchCertificationKeyMaterialV1,
+    );
+  }
 
   if (
     objectValue.schemaVersion !==

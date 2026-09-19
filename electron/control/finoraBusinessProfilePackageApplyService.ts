@@ -35,10 +35,12 @@ import type {
 
 import {
   applyFinoraVerifiedBusinessProfileState,
+  applyFinoraVerifiedPortableBusinessProfileState,
   readFinoraControlStore,
 } from "./finoraControlStore.js";
 
 import {
+  verifyFinoraSignedControlPackageBranchScope,
   verifyFinoraSignedControlPackageNative,
 } from "./finoraSignedControlPackageVerifier.js";
 
@@ -639,6 +641,420 @@ export async function applyFinoraSignedBusinessProfilePackage(
 
       installationId:
         nativeBinding.installationId,
+    },
+
+    profile:
+      controlProfile,
+
+    appliedAt:
+      now.toISOString(),
+  });
+}
+
+// ============================================================
+// PORTABLE APPLY
+// ============================================================
+
+export async function applyFinoraSignedPortableBusinessProfilePackage(
+  signedPackage:
+    unknown,
+
+  trustedKeys:
+    readonly FinoraBranchTrustedControlPublicKey[],
+
+  now:
+    Date,
+): Promise<
+  FinoraControlStoreResult<
+    FinoraVerifiedBusinessProfileApplyResult
+  >
+> {
+
+  // ----------------------------------------------------------
+  // AUTHORITATIVE CURRENT BRANCH IDENTITY
+  //
+  // Portable BUSINESS_PROFILE authorization is branch scoped.
+  // The signed full installation target remains immutable
+  // historical provenance and is never rebound to this device.
+  // ----------------------------------------------------------
+
+  const storeResult =
+    await readFinoraControlStore();
+
+  if (
+    !storeResult.success ||
+    !storeResult.data
+  ) {
+    return failure(
+      storeResult.error ??
+        "Unable to load the FINORA Control Store.",
+    );
+  }
+
+  const installation =
+    storeResult.data.installation;
+
+  if (!installation) {
+    return failure(
+      "FINORA installation identity is required before applying a Business Profile.",
+    );
+  }
+
+
+  // ----------------------------------------------------------
+  // BRANCH-SCOPE CRYPTOGRAPHIC VERIFICATION
+  // ----------------------------------------------------------
+
+  // SIGNATURE + HISTORICAL TARGET VERIFICATION
+  // ----------------------------------------------------------
+
+  const verification =
+    verifyFinoraSignedControlPackageBranchScope(
+      signedPackage,
+      trustedKeys,
+      {
+        ownerId:
+          installation.ownerId,
+
+        businessId:
+          installation.businessId,
+
+        branchId:
+          installation.branchId,
+      },
+      now,
+    );
+  if (!verification.valid) {
+    return failure(
+      `${verification.reason}: ${verification.error}`,
+    );
+  }
+
+  const controlPackage =
+    verification.controlPackage;
+
+
+  // ----------------------------------------------------------
+  // PURPOSE / PAYLOAD VERSION
+  // ----------------------------------------------------------
+
+  if (
+    controlPackage.purpose !==
+      "BUSINESS_PROFILE"
+  ) {
+    return failure(
+      "FINORA signed package purpose must be BUSINESS_PROFILE.",
+    );
+  }
+
+  if (
+    controlPackage.payloadVersion !==
+      1
+  ) {
+    return failure(
+      "FINORA Business Profile payloadVersion must be 1.",
+    );
+  }
+
+
+  // ----------------------------------------------------------
+  // PAYLOAD ROOT
+  // ----------------------------------------------------------
+
+  const payload =
+    controlPackage.payload;
+
+  if (
+    !isRecord(
+      payload,
+    ) ||
+    payload.schemaVersion !==
+      1 ||
+    (
+      payload.action !==
+        "ISSUE" &&
+      payload.action !==
+        "REPLACE"
+    ) ||
+    !isRecord(
+      payload.profile,
+    ) ||
+    !isRecord(
+      payload.installationBinding,
+    )
+  ) {
+    return failure(
+      "FINORA signed BUSINESS_PROFILE payload is invalid.",
+    );
+  }
+
+
+  // ----------------------------------------------------------
+  // PAYLOAD / PACKAGE ISSUANCE TIME
+  // ----------------------------------------------------------
+
+  const payloadIssuedAt =
+    parseCanonicalTimestamp(
+      payload.issuedAt,
+    );
+
+  const packageIssuedAt =
+    parseCanonicalTimestamp(
+      controlPackage.issuedAt,
+    );
+
+  if (
+    payloadIssuedAt ===
+      undefined ||
+    packageIssuedAt ===
+      undefined ||
+    payload.issuedAt !==
+      controlPackage.issuedAt
+  ) {
+    return failure(
+      "FINORA Business Profile payload and package issuedAt timestamps must match exactly.",
+    );
+  }
+
+
+  // ----------------------------------------------------------
+  // PROFILE STRUCTURE
+  // ----------------------------------------------------------
+
+  const profile =
+    payload.profile;
+
+  if (
+    !isNonEmptyString(
+      profile.profileId,
+    ) ||
+    !isNonEmptyString(
+      profile.ownerId,
+    ) ||
+    !isNonEmptyString(
+      profile.businessId,
+    ) ||
+    !isNonEmptyString(
+      profile.branchId,
+    ) ||
+    !isNonEmptyString(
+      profile.businessCode,
+    ) ||
+    !isNonEmptyString(
+      profile.branchCode,
+    ) ||
+    !isNonEmptyString(
+      profile.businessName,
+    ) ||
+    !isNonEmptyString(
+      profile.branchName,
+    ) ||
+    profile.schemaVersion !==
+      1
+  ) {
+    return failure(
+      "FINORA signed Business Profile identity is invalid.",
+    );
+  }
+
+  const profileCreatedAtValue =
+    profile.createdAt;
+
+  const profileUpdatedAtValue =
+    profile.updatedAt;
+
+  if (
+    !isNonEmptyString(
+      profileCreatedAtValue,
+    ) ||
+    !isNonEmptyString(
+      profileUpdatedAtValue,
+    )
+  ) {
+    return failure(
+      "FINORA Business Profile audit timestamps are invalid for this signed package.",
+    );
+  }
+
+  const profileCreatedAt =
+    parseCanonicalTimestamp(
+      profileCreatedAtValue,
+    );
+
+  const profileUpdatedAt =
+    parseCanonicalTimestamp(
+      profileUpdatedAtValue,
+    );
+
+  if (
+    profileCreatedAt ===
+      undefined ||
+    profileUpdatedAt ===
+      undefined ||
+    profileUpdatedAt <
+      profileCreatedAt ||
+    profileUpdatedAt >
+      payloadIssuedAt
+  ) {
+    return failure(
+      "FINORA Business Profile audit timestamps are invalid for this signed package.",
+    );
+  }
+
+
+  // ----------------------------------------------------------
+  // PROFILE IDENTITY ↔ SIGNED PACKAGE TARGET
+  // ----------------------------------------------------------
+
+  if (
+    profile.ownerId !==
+      controlPackage.target.ownerId ||
+    profile.businessId !==
+      controlPackage.target.businessId ||
+    profile.branchId !==
+      controlPackage.target.branchId ||
+    profile.ownerId !==
+      installation.ownerId ||
+    profile.businessId !==
+      installation.businessId ||
+    profile.branchId !==
+      installation.branchId
+  ) {
+    return failure(
+      "FINORA Business Profile identity does not match the verified package target.",
+    );
+  }
+
+
+  // ----------------------------------------------------------
+  // SIGNED PAYLOAD INSTALLATION BINDING
+  // ----------------------------------------------------------
+
+  const payloadBinding =
+    payload.installationBinding;
+
+  if (
+    payloadBinding.schemaVersion !==
+      1 ||
+    !isNonEmptyString(
+      payloadBinding.installationId,
+    ) ||
+    !bindingIdentityIsValid(
+      payloadBinding.bindingKeyId,
+      payloadBinding.fingerprintAlgorithm,
+      payloadBinding.publicKeyFingerprint,
+    )
+  ) {
+    return failure(
+      "FINORA BUSINESS_PROFILE installation binding is invalid.",
+    );
+  }
+
+  if (
+    payloadBinding.installationId !==
+      controlPackage.target.installationId ||
+    payloadBinding.bindingKeyId !==
+      controlPackage.target.bindingKeyId ||
+    payloadBinding.fingerprintAlgorithm !==
+      controlPackage.target.fingerprintAlgorithm ||
+    payloadBinding.publicKeyFingerprint !==
+      controlPackage.target.publicKeyFingerprint
+  ) {
+    return failure(
+      "FINORA BUSINESS_PROFILE signed installation binding does not match the verified package target.",
+    );
+  }
+
+  // ----------------------------------------------------------
+  // TRUSTED CONTROL STORE DTO
+  //
+  // The signed domain profile carries business identity while
+  // the signed payload installationBinding remains immutable
+  // historical provenance. It is preserved exactly as signed.
+  // ----------------------------------------------------------
+
+  const controlProfile:
+    FinoraControlBusinessProfile = {
+
+      profileId:
+        profile.profileId,
+
+      ownerId:
+        profile.ownerId,
+
+      businessId:
+        profile.businessId,
+
+      branchId:
+        profile.branchId,
+
+      businessCode:
+        profile.businessCode,
+
+      branchCode:
+        profile.branchCode,
+
+      businessName:
+        profile.businessName,
+
+      branchName:
+        profile.branchName,
+
+      installationId:
+        payloadBinding.installationId,
+
+      bindingKeyId:
+        payloadBinding.bindingKeyId,
+
+      fingerprintAlgorithm:
+        "SHA-256",
+
+      publicKeyFingerprint:
+        payloadBinding.publicKeyFingerprint,
+
+      createdAt:
+        profileCreatedAtValue,
+
+      updatedAt:
+        profileUpdatedAtValue,
+
+      schemaVersion:
+        1,
+    };
+
+
+  // ----------------------------------------------------------
+  // SERIALIZED REPLAY/SEQUENCE-SAFE ATOMIC APPLY
+  // ----------------------------------------------------------
+
+  return applyFinoraVerifiedPortableBusinessProfileState({
+    packageId:
+      controlPackage.packageId,
+
+    issuerId:
+      controlPackage.issuer.issuerId,
+
+    purpose:
+      "BUSINESS_PROFILE",
+
+    sequence:
+      controlPackage.sequence,
+
+    action:
+      payload.action,
+
+    target: {
+      ownerId:
+        controlPackage.target.ownerId,
+
+      businessId:
+        controlPackage.target.businessId,
+
+      branchId:
+        controlPackage.target.branchId,
+
+      installationId:
+        controlPackage.target.installationId,
     },
 
     profile:

@@ -31,12 +31,16 @@
    - No Business Date is used for security validity.
 ============================================================ */
 
+import type {
+  FinoraBranchCertificationPublicKeyV1,
+} from "../control/finoraBranchCertificationContract.js";
+
 // ============================================================
 // CONSTANTS
 // ============================================================
 
 export const FINORA_CONTROL_CENTER_BRANCH_REGISTRY_SCHEMA_VERSION =
-  1 as const;
+  2 as const;
 
 export const FINORA_CONTROL_CENTER_BRANCH_REGISTRY_PLATFORM =
   "WINDOWS" as const;
@@ -66,6 +70,9 @@ export type FinoraControlCenterBranchAdministrativeStatus =
 export type FinoraControlCenterBranchStorageMode =
   | "LOCAL"
   | "USB";
+
+export type FinoraControlCenterBranchAuthorizedDeviceEvidenceSource =
+  | "INITIAL_PROVISIONING";
 
 // ============================================================
 // PUBLIC RECIPIENT INSTALLATION IDENTITY
@@ -98,6 +105,28 @@ export interface FinoraControlCenterBranchInstallationIdentity {
     string;
 
   bindingCreatedAt:
+    string;
+}
+
+// ============================================================
+// AUTHORIZED DEVICE
+//
+// Registry-side administrative evidence only.
+// Recipient Device Trust remains the runtime login authority.
+// ============================================================
+
+export interface FinoraControlCenterBranchAuthorizedDevice {
+
+  installation:
+    FinoraControlCenterBranchInstallationIdentity;
+
+  evidenceSource:
+    FinoraControlCenterBranchAuthorizedDeviceEvidenceSource;
+
+  firstObservedAt:
+    string;
+
+  updatedAt:
     string;
 }
 
@@ -237,6 +266,19 @@ export interface FinoraControlCenterBranchRegistryRecord {
 
   identity:
     FinoraControlCenterBranchProvisionedIdentity;
+
+  authorizedDevices:
+    FinoraControlCenterBranchAuthorizedDevice[];
+
+  /*
+   * Immutable branch-held public certification authority.
+   *
+   * Legacy Registry V2 records may legitimately omit this field.
+   * It may only be introduced from cryptographically verified
+   * Enrollment Request V2 evidence.
+   */
+  branchCertificationPublicKey?:
+    FinoraBranchCertificationPublicKeyV1;
 
   profile?:
     FinoraControlCenterBranchDisplayProfile;

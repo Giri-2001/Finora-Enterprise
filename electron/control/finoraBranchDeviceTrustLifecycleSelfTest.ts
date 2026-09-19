@@ -1,0 +1,10 @@
+import { assertFinoraBranchDeviceTrustLifecycleTransition, normalizeFinoraBranchDeviceTrustLifecycle } from "./finoraBranchDeviceTrustLifecycle.js";
+const a=(c:unknown,m:string)=>{if(!c)throw new Error(m)};
+const r=(f:()=>void,m:string)=>{let x=false;try{f()}catch{x=true}a(x,m)};
+const legacy=normalizeFinoraBranchDeviceTrustLifecycle({},true);
+a(legacy.status==="ACTIVE","legacy V1 did not normalize to ACTIVE");
+const revoked=normalizeFinoraBranchDeviceTrustLifecycle({status:"REVOKED",revokedAt:"2026-09-19T00:00:00.000Z"},false);
+a(revoked.status==="REVOKED","REVOKED lifecycle failed");
+r(()=>normalizeFinoraBranchDeviceTrustLifecycle({status:"ACTIVE",revokedAt:"2026-09-19T00:00:00.000Z"},false),"ACTIVE revokedAt accepted");
+r(()=>assertFinoraBranchDeviceTrustLifecycleTransition(revoked,{status:"ACTIVE"}),"REVOKED reactivation accepted");
+console.log("PASS: Windows Device Trust lifecycle invariants");

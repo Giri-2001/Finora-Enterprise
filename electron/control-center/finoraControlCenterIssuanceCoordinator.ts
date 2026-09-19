@@ -42,6 +42,11 @@ import {
 } from "./finoraBranchAccessIssuer.js";
 
 import {
+  signFinoraBranchDeviceRevocationPackage,
+  type SignFinoraBranchDeviceRevocationPackageInput,
+} from "./finoraBranchDeviceTrustRevocationIssuer.js";
+
+import {
   signFinoraStorageEntitlementPackage,
   type SignFinoraStorageEntitlementPackageInput,
 } from "./finoraStorageEntitlementIssuer.js";
@@ -74,6 +79,18 @@ import {
 import {
   reserveFinoraControlCenterIssuance,
 } from "./finoraControlCenterIssuanceLedger.js";
+import {
+  reserveFinoraPortableBranchAccessIssuance,
+} from "./finoraPortableBranchAccessIssuanceLedger.js";
+import {
+  reserveFinoraPortableBusinessProfileIssuance,
+} from "./finoraPortableBusinessProfileIssuanceLedger.js";
+import {
+  reserveFinoraPortablePricingPolicyIssuance,
+} from "./finoraPortablePricingPolicyIssuanceLedger.js";
+import {
+  reserveFinoraPortableStorageEntitlementIssuance,
+} from "./finoraPortableStorageEntitlementIssuanceLedger.js";
 
 // ============================================================
 // PUBLIC REQUEST CONTRACTS
@@ -90,6 +107,14 @@ export type IssueFinoraBranchActivationRequest =
 export type IssueFinoraBranchAccessRequest =
   Omit<
     SignFinoraBranchAccessPackageInput,
+    | "packageId"
+    | "sequence"
+    | "issuedAt"
+  >;
+
+export type IssueFinoraBranchDeviceRevocationRequest =
+  Omit<
+    SignFinoraBranchDeviceRevocationPackageInput,
     | "packageId"
     | "sequence"
     | "issuedAt"
@@ -177,6 +202,164 @@ function isRecord(
   );
 }
 
+export type FinoraBranchAccessIssuanceSequenceLane =
+  | "NATIVE_INSTALLATION"
+  | "PORTABLE_BRANCH";
+
+export function resolveFinoraBranchAccessIssuanceSequenceLane(
+  payload:
+    unknown,
+): FinoraBranchAccessIssuanceSequenceLane {
+
+  if (!isRecord(payload)) {
+    return "NATIVE_INSTALLATION";
+  }
+
+  /*
+   * Any credential-enrollment authority is installation-bound.
+   *
+   * Presence is checked rather than truthiness. Even malformed
+   * or explicitly-undefined credentialEnrollment input must not
+   * acquire portable sequence authority before final signing
+   * policy rejects it.
+   */
+  if (
+    Object.prototype.hasOwnProperty.call(
+      payload,
+      "credentialEnrollment",
+    )
+  ) {
+    return "NATIVE_INSTALLATION";
+  }
+
+  const action =
+    payload.action;
+
+  if (
+    action ===
+      "AUTHORIZE_CREDENTIAL"
+  ) {
+    return "NATIVE_INSTALLATION";
+  }
+
+  switch (action) {
+    case "ISSUE":
+    case "RENEW":
+    case "REPLACE":
+    case "SUSPEND":
+    case "RESUME":
+    case "REVOKE":
+      return "PORTABLE_BRANCH";
+
+    default:
+      /*
+       * Unknown / missing / malformed actions fail closed toward
+       * the existing installation-scoped sequence namespace.
+       *
+       * The purpose-specific signer remains the authoritative
+       * payload validator and will reject invalid issuance.
+       */
+      return "NATIVE_INSTALLATION";
+  }
+}
+
+// ============================================================
+// BUSINESS_PROFILE SEQUENCE AUTHORITY
+// ============================================================
+
+export type FinoraBusinessProfileIssuanceSequenceLane =
+  | "NATIVE_INSTALLATION"
+  | "PORTABLE_BRANCH";
+
+export function resolveFinoraBusinessProfileIssuanceSequenceLane(
+  payload:
+    unknown,
+): FinoraBusinessProfileIssuanceSequenceLane {
+
+  if (
+    typeof payload !==
+      "object" ||
+    payload ===
+      null ||
+    Array.isArray(
+      payload,
+    )
+  ) {
+    return "NATIVE_INSTALLATION";
+  }
+
+  const action =
+    (
+      payload as
+        Record<
+          string,
+          unknown
+        >
+    ).action;
+
+  /*
+   * Initial BUSINESS_PROFILE ISSUE remains tied to native
+   * provisioning authority. Signed REPLACE is branch-global
+   * operational state and therefore uses the portable branch
+   * sequence namespace. Invalid/malformed lifecycle payloads
+   * fail closed toward native; the issuer policy rejects them
+   * before signing.
+   */
+  return action ===
+    "REPLACE"
+    ? "PORTABLE_BRANCH"
+    : "NATIVE_INSTALLATION";
+}
+// ============================================================
+// PRICING_POLICY SEQUENCE AUTHORITY
+// ============================================================
+
+export type FinoraPricingPolicyIssuanceSequenceLane =
+  | "NATIVE_INSTALLATION"
+  | "PORTABLE_BRANCH";
+
+export function resolveFinoraPricingPolicyIssuanceSequenceLane(
+  payload:
+    unknown,
+): FinoraPricingPolicyIssuanceSequenceLane {
+
+  if (
+    typeof payload !==
+      "object" ||
+    payload ===
+      null ||
+    Array.isArray(
+      payload,
+    )
+  ) {
+    return "NATIVE_INSTALLATION";
+  }
+
+  const action =
+    (
+      payload as
+        Record<
+          string,
+          unknown
+        >
+    ).action;
+
+  /*
+   * PRICING_POLICY intentionally has no separate ISSUE lifecycle.
+   * Authoritative REPLACE initializes absent branch pricing and
+   * later replaces the same branch-global override lineage.
+   *
+   * Therefore valid REPLACE uses the portable branch sequence
+   * namespace. Invalid or malformed lifecycle payloads fail
+   * closed toward native issuance; the Pricing issuer rejects
+   * them before signing.
+   */
+  return action ===
+    "REPLACE"
+    ? "PORTABLE_BRANCH"
+    : "NATIVE_INSTALLATION";
+}
+
 function withAuthoritativeIssuedAt(
   payload:
     unknown,
@@ -221,6 +404,72 @@ function toIssuanceScope(
 
     installationId:
       target.installationId,
+  };
+}
+
+function toPortableBranchAccessIssuanceScope(
+  target:
+    FinoraIssuanceTargetScope,
+) {
+
+  return {
+    ownerId:
+      target.ownerId,
+
+    businessId:
+      target.businessId,
+
+    branchId:
+      target.branchId,
+  };
+}
+
+function toPortableBusinessProfileIssuanceScope(
+  target:
+    FinoraIssuanceTargetScope,
+) {
+
+  return {
+    ownerId:
+      target.ownerId,
+
+    businessId:
+      target.businessId,
+
+    branchId:
+      target.branchId,
+  };
+}
+function toPortablePricingPolicyIssuanceScope(
+  target:
+    FinoraIssuanceTargetScope,
+) {
+
+  return {
+    ownerId:
+      target.ownerId,
+
+    businessId:
+      target.businessId,
+
+    branchId:
+      target.branchId,
+  };
+}
+function toPortableStorageEntitlementIssuanceScope(
+  target:
+    FinoraIssuanceTargetScope,
+) {
+
+  return {
+    ownerId:
+      target.ownerId,
+
+    businessId:
+      target.businessId,
+
+    branchId:
+      target.branchId,
   };
 }
 
@@ -324,16 +573,28 @@ export function issueFinoraBranchAccessPackage(
   return runSerializedIssuance(
     async () => {
 
-      const reservation =
-        await reserveFinoraControlCenterIssuance({
-          purpose:
-            "BRANCH_ACCESS",
+      const sequenceLane =
+        resolveFinoraBranchAccessIssuanceSequenceLane(
+          request.payload,
+        );
 
-          scope:
-            toIssuanceScope(
-              request.target,
-            ),
-        });
+      const reservation =
+        sequenceLane ===
+          "PORTABLE_BRANCH"
+          ? await reserveFinoraPortableBranchAccessIssuance(
+              toPortableBranchAccessIssuanceScope(
+                request.target,
+              ),
+            )
+          : await reserveFinoraControlCenterIssuance({
+              purpose:
+                "BRANCH_ACCESS",
+
+              scope:
+                toIssuanceScope(
+                  request.target,
+                ),
+            });
 
       const payload =
         withAuthoritativeIssuedAt(
@@ -369,6 +630,64 @@ export function issueFinoraBranchAccessPackage(
     },
   );
 }
+// ============================================================
+// DEVICE REVOCATION
+// ============================================================
+
+export function issueFinoraBranchDeviceRevocationPackage(
+  request:
+    IssueFinoraBranchDeviceRevocationRequest,
+) {
+
+  return runSerializedIssuance(
+    async () => {
+
+      const reservation =
+        await reserveFinoraControlCenterIssuance({
+          purpose:
+            "DEVICE_REVOCATION",
+
+          scope:
+            toIssuanceScope(
+              request.target,
+            ),
+        });
+
+      const payload =
+        withAuthoritativeIssuedAt(
+          request.payload,
+          reservation.issuedAt,
+        );
+
+      return signFinoraBranchDeviceRevocationPackage({
+        packageId:
+          reservation.packageId,
+
+        sequence:
+          reservation.sequence,
+
+        issuedAt:
+          reservation.issuedAt,
+
+        target:
+          request.target,
+
+        payload,
+
+        ...(
+          request.packageValidity ===
+            undefined
+            ? {}
+            : {
+                packageValidity:
+                  request.packageValidity,
+              }
+        ),
+      });
+    },
+  );
+}
+
 // ============================================================
 // STORAGE ENTITLEMENT
 // ============================================================
@@ -428,6 +747,60 @@ export function issueFinoraStorageEntitlementPackage(
 }
 
 // ============================================================
+// PORTABLE STORAGE ENTITLEMENT
+// ============================================================
+
+export function issueFinoraPortableStorageEntitlementPackage(
+  request:
+    IssueFinoraStorageEntitlementRequest,
+) {
+
+  return runSerializedIssuance(
+    async () => {
+
+      const reservation =
+        await reserveFinoraPortableStorageEntitlementIssuance(
+          toPortableStorageEntitlementIssuanceScope(
+            request.target,
+          ),
+        );
+
+      const payload =
+        withAuthoritativeIssuedAt(
+          request.payload,
+          reservation.issuedAt,
+        );
+
+      return signFinoraStorageEntitlementPackage({
+        packageId:
+          reservation.packageId,
+
+        sequence:
+          reservation.sequence,
+
+        issuedAt:
+          reservation.issuedAt,
+
+        target:
+          request.target,
+
+        payload,
+
+        ...(
+          request.packageValidity ===
+            undefined
+            ? {}
+            : {
+                packageValidity:
+                  request.packageValidity,
+              }
+        ),
+      });
+    },
+  );
+}
+
+// ============================================================
 // BUSINESS PROFILE
 // ============================================================
 
@@ -439,16 +812,28 @@ export function issueFinoraBusinessProfilePackage(
   return runSerializedIssuance(
     async () => {
 
-      const reservation =
-        await reserveFinoraControlCenterIssuance({
-          purpose:
-            "BUSINESS_PROFILE",
+      const sequenceLane =
+        resolveFinoraBusinessProfileIssuanceSequenceLane(
+          request.payload,
+        );
 
-          scope:
-            toIssuanceScope(
-              request.target,
-            ),
-        });
+      const reservation =
+        sequenceLane ===
+          "PORTABLE_BRANCH"
+          ? await reserveFinoraPortableBusinessProfileIssuance(
+              toPortableBusinessProfileIssuanceScope(
+                request.target,
+              ),
+            )
+          : await reserveFinoraControlCenterIssuance({
+              purpose:
+                "BUSINESS_PROFILE",
+
+              scope:
+                toIssuanceScope(
+                  request.target,
+                ),
+            });
 
       const payload =
         withAuthoritativeIssuedAt(
@@ -497,16 +882,28 @@ export function issueFinoraPricingPolicyPackage(
   return runSerializedIssuance(
     async () => {
 
-      const reservation =
-        await reserveFinoraControlCenterIssuance({
-          purpose:
-            "PRICING_POLICY",
+      const sequenceLane =
+        resolveFinoraPricingPolicyIssuanceSequenceLane(
+          request.payload,
+        );
 
-          scope:
-            toIssuanceScope(
-              request.target,
-            ),
-        });
+      const reservation =
+        sequenceLane ===
+          "PORTABLE_BRANCH"
+          ? await reserveFinoraPortablePricingPolicyIssuance(
+              toPortablePricingPolicyIssuanceScope(
+                request.target,
+              ),
+            )
+          : await reserveFinoraControlCenterIssuance({
+              purpose:
+                "PRICING_POLICY",
+
+              scope:
+                toIssuanceScope(
+                  request.target,
+                ),
+            });
 
       const payload =
         withAuthoritativeIssuedAt(

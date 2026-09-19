@@ -305,6 +305,10 @@ interface FinoraFindBusinessProfileRequest {
   branchId: string;
 }
 
+interface FinoraFindPortableBusinessProfileRequest {
+  sessionId: string;
+}
+
 interface FinoraFindPricingPolicyRequest {
   ownerId: string;
 
@@ -569,6 +573,16 @@ interface FinoraElectronControlBridge {
       >
     >;
 
+  findPortableBusinessProfile(
+    request:
+      FinoraFindPortableBusinessProfileRequest,
+  ):
+    Promise<
+      FinoraElectronResult<
+        FinoraElectronBusinessProfileView | undefined
+      >
+    >;
+
   findPricingPolicy(
     request:
       FinoraFindPricingPolicyRequest,
@@ -636,7 +650,16 @@ interface FinoraElectronControlBridge {
       FinoraElectronInstallationEnrollmentResponseImportResult
     >;
 
-  importControlBundle():
+  importControlBundle(
+    ...args:
+      | []
+      | [
+          request: {
+            sessionId:
+              string;
+          },
+        ]
+  ):
     Promise<
       FinoraElectronControlBundleImportResult
     >;
@@ -1072,8 +1095,367 @@ interface FinoraElectronLoginSessionBridge {
 }
 
 // ============================================================
+// PORTABLE BRANCH AUTH USB REPLACEMENT
+//
+// Filesystem roots are intentionally absent from this contract.
+// Native Electron main owns OLD / NEW USB selection.
+// ============================================================
+
+interface FinoraElectronUsbReplacementScope {
+  ownerId:
+    string;
+
+  businessId:
+    string;
+
+  branchId:
+    string;
+}
+
+interface FinoraElectronUsbReplacementRequest {
+  password:
+    string;
+
+  securityCode:
+    string;
+
+  expectedScope:
+    FinoraElectronUsbReplacementScope;
+}
+
+interface FinoraElectronUsbReplacementLifecycle {
+  schemaVersion:
+    1;
+
+  targetState:
+    "EXACT_VERIFIED_COPY";
+
+  crashRecovery:
+    "IDEMPOTENT_RETRY";
+
+  crashJournalRequired:
+    false;
+
+  sourceState:
+    "UNCHANGED_AND_STILL_VALID";
+
+  sourceRetirement:
+    "PHYSICAL_RETIREMENT_REQUIRED";
+
+  offlinePreexistingCloneRevocation:
+    "NOT_AVAILABLE";
+
+  authGeneration:
+    "UNCHANGED";
+
+  lostOrUnreadableSource:
+    "BACKUP_RESTORE_REQUIRED";
+}
+
+interface FinoraElectronUsbReplacementSuccessData {
+  result:
+    | "WRITTEN"
+    | "ALREADY_MATCHED";
+
+  ownerId:
+    string;
+
+  businessId:
+    string;
+
+  branchId:
+    string;
+
+  authGeneration:
+    number;
+
+  certificationKeyId:
+    string;
+
+  lifecycle:
+    FinoraElectronUsbReplacementLifecycle;
+}
+
+type FinoraElectronUsbReplacementResult =
+  | {
+      success:
+        true;
+
+      cancelled:
+        true;
+
+      data:
+        null;
+
+      errorCode:
+        null;
+
+      error:
+        null;
+    }
+  | {
+      success:
+        true;
+
+      cancelled:
+        false;
+
+      data:
+        FinoraElectronUsbReplacementSuccessData;
+
+      errorCode:
+        null;
+
+      error:
+        null;
+    }
+  | {
+      success:
+        false;
+
+      cancelled:
+        false;
+
+      data:
+        null;
+
+      errorCode:
+        string;
+
+      error:
+        string;
+    };
+
+interface FinoraElectronUsbReplacementBridge {
+  replace(
+    request:
+      FinoraElectronUsbReplacementRequest,
+  ):
+    Promise<
+      FinoraElectronUsbReplacementResult
+    >;
+}
+
+// ============================================================
+// PORTABLE BRANCH AUTH BACKUP
+//
+// Renderer supplies only the authenticated session bearer token
+// plus Password + Security Code.
+//
+// Branch identity, storage authority, credential generation,
+// backup serialization and filesystem destination are intentionally
+// absent from the renderer request contract.
+// ============================================================
+
+interface FinoraElectronPortableBranchAuthBackupRequest {
+  sessionId:
+    string;
+
+  password:
+    string;
+
+  securityCode:
+    string;
+}
+
+interface FinoraElectronPortableBranchAuthBackupSuccessData {
+  backupId:
+    string;
+
+  fileName:
+    string;
+
+  bytesWritten:
+    number;
+
+  sourceStorageMode:
+    | "LOCAL"
+    | "USB";
+
+  authGeneration:
+    number;
+}
+
+type FinoraElectronPortableBranchAuthBackupResult =
+  | {
+      success:
+        true;
+
+      cancelled:
+        true;
+
+      data:
+        null;
+
+      errorCode:
+        null;
+
+      error:
+        null;
+    }
+  | {
+      success:
+        true;
+
+      cancelled:
+        false;
+
+      data:
+        FinoraElectronPortableBranchAuthBackupSuccessData;
+
+      errorCode:
+        null;
+
+      error:
+        null;
+    }
+  | {
+      success:
+        false;
+
+      cancelled:
+        false;
+
+      data:
+        null;
+
+      errorCode:
+        string;
+
+      error:
+        string;
+    };
+
+interface FinoraElectronPortableBranchAuthBackupBridge {
+  exportBackup(
+    request:
+      FinoraElectronPortableBranchAuthBackupRequest,
+  ):
+    Promise<
+      FinoraElectronPortableBranchAuthBackupResult
+    >;
+}
+// ============================================================
 // ROOT RENDERER BRIDGE
 // ============================================================
+// ============================================================
+// PORTABLE BRANCH AUTH RESTORE
+//
+// Renderer supplies Username + Password + Security Code only.
+//
+// Backup serialization, filesystem source/target, branch scope,
+// storage authority and auth generation remain main-process-owned.
+// ============================================================
+
+interface FinoraElectronPortableBranchAuthRestoreRequest {
+  username:
+    string;
+
+  password:
+    string;
+
+  securityCode:
+    string;
+}
+
+interface FinoraElectronPortableBranchAuthRestoreSuccessData {
+  backupId:
+    string;
+
+  fileName:
+    string;
+
+  storageMode:
+    | "LOCAL"
+    | "USB";
+
+  authGeneration:
+    number;
+}
+
+type FinoraElectronPortableBranchAuthRestoreErrorCode =
+  | "UNAUTHORIZED"
+  | "INVALID_REQUEST"
+  | "WINDOW_UNAVAILABLE"
+  | "SERVICE_FAILURE"
+  | "PARENT_WINDOW_UNAVAILABLE"
+  | "BACKUP_SELECTION_FAILED"
+  | "BACKUP_FILE_INVALID"
+  | "BACKUP_READ_FAILED"
+  | "TARGET_SELECTION_FAILED"
+  | "BACKUP_INVALID"
+  | "CREDENTIAL_AUTHENTICATION_FAILED"
+  | "BACKUP_AUTHENTICATION_FAILED"
+  | "SCOPE_MISMATCH"
+  | "STORAGE_MODE_MISMATCH"
+  | "STALE_BACKUP"
+  | "FUTURE_BACKUP"
+  | "CERTIFICATION_AUTHORITY_MISSING"
+  | "TARGET_UNAVAILABLE"
+  | "TARGET_WRITE_FAILED"
+  | "TARGET_READBACK_FAILED"
+  | "RESTORE_FAILED";
+
+type FinoraElectronPortableBranchAuthRestoreResult =
+  | {
+      success:
+        true;
+
+      cancelled:
+        true;
+
+      data:
+        null;
+
+      errorCode:
+        null;
+
+      error:
+        null;
+    }
+  | {
+      success:
+        true;
+
+      cancelled:
+        false;
+
+      data:
+        FinoraElectronPortableBranchAuthRestoreSuccessData;
+
+      errorCode:
+        null;
+
+      error:
+        null;
+    }
+  | {
+      success:
+        false;
+
+      cancelled:
+        false;
+
+      data:
+        null;
+
+      errorCode:
+        FinoraElectronPortableBranchAuthRestoreErrorCode;
+
+      error:
+        string;
+    };
+
+interface FinoraElectronPortableBranchAuthRestoreBridge {
+  restoreBackup(
+    request:
+      FinoraElectronPortableBranchAuthRestoreRequest,
+  ):
+    Promise<
+      FinoraElectronPortableBranchAuthRestoreResult
+    >;
+}
+
 interface FinoraElectronRendererBridge {
   loginSession:
     FinoraElectronLoginSessionBridge;
@@ -1085,6 +1467,33 @@ interface FinoraElectronRendererBridge {
    */
   credentials:
     FinoraElectronCredentialBridge;
+
+  /**
+   * Privileged OLD USB -> NEW USB Portable Auth replacement.
+   *
+   * Renderer supplies only Password, Security Code and expected
+   * branch scope. Electron main owns both filesystem selections.
+   */
+  usbReplacement:
+    FinoraElectronUsbReplacementBridge;
+
+  /**
+   * Privileged Portable Branch Auth recovery backup export.
+   *
+   * Renderer supplies sessionId + Password + Security Code only.
+   * Electron main owns branch authority and native save destination.
+   */
+  portableBranchAuthBackup:
+    FinoraElectronPortableBranchAuthBackupBridge;
+  /**
+   * Privileged Portable Branch Auth recovery restore.
+   *
+   * Renderer supplies Username + Password + Security Code only.
+   * Electron main owns Backup selection, Backup bytes, branch
+   * authority and the LOCAL/USB Restore target.
+   */
+  portableBranchAuthRestore:
+    FinoraElectronPortableBranchAuthRestoreBridge;
 
   /**
    * Preload bridge version.

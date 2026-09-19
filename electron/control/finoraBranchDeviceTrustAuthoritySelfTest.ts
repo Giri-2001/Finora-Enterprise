@@ -38,6 +38,7 @@ import {
 
 import {
   loadFinoraBranchDeviceTrustStore,
+  persistFinoraBranchDeviceTrustStore,
 } from "./finoraBranchDeviceTrustStore.js";
 
 import {
@@ -45,6 +46,14 @@ import {
   checkFinoraCurrentBranchDeviceTrust,
   createFinoraPortableBranchAuthFingerprint,
 } from "./finoraBranchDeviceTrustAuthority.js";
+
+import type {
+  FinoraBranchDeviceTrustCheckPrincipal,
+} from "./finoraBranchDeviceTrustAuthority.js";
+
+import type {
+  FinoraBranchOperationalSessionPrincipal,
+} from "./finoraBranchLoginSessionAuthority.js";
 
 import type {
   FinoraBranchCredentialAuthenticationSuccess,
@@ -472,6 +481,65 @@ async function runSelfTest():
           createdAt,
       };
 
+    const checkPrincipal:
+      FinoraBranchDeviceTrustCheckPrincipal = {
+        authGeneration:
+          principal.authGeneration,
+
+        userId:
+          principal.userId,
+
+        username:
+          principal.username,
+
+        ownerId:
+          principal.ownerId,
+
+        businessId:
+          principal.businessId,
+
+        branchId:
+          principal.branchId,
+
+        storageMode:
+          principal.storageMode,
+
+        dataContext:
+          principal.dataContext,
+      };
+
+    const operationalSessionPrincipal:
+      FinoraBranchOperationalSessionPrincipal = {
+        ...checkPrincipal,
+      };
+
+    const operationalCheckPrincipal:
+      FinoraBranchDeviceTrustCheckPrincipal =
+        operationalSessionPrincipal;
+
+    assert(
+      !(
+        "credentialId" in
+          checkPrincipal
+      ) &&
+      !(
+        "authenticatedAt" in
+          checkPrincipal
+      ) &&
+      !(
+        "fullName" in
+          checkPrincipal
+      ) &&
+      !(
+        "role" in
+          checkPrincipal
+      ),
+      "Device Trust CHECK principal contains full-auth-only fields.",
+    );
+
+    console.log(
+      "PASS: Device Trust CHECK accepts the narrow operational session principal contract",
+    );
     const expectedFingerprint =
       createFinoraPortableBranchAuthFingerprint(
         envelope,
@@ -490,7 +558,9 @@ async function runSelfTest():
 
     const initialCheck =
       await checkFinoraCurrentBranchDeviceTrust({
-        principal,
+        principal:
+          operationalCheckPrincipal,
+
         portableStore,
       });
 
@@ -1313,6 +1383,69 @@ async function runSelfTest():
 
     console.log(
       "PASS: trusted exact device survives Portable Auth generation rotation without trust mutation",
+    );
+
+    const revokedAt =
+      new Date().toISOString();
+
+    await persistFinoraBranchDeviceTrustStore({
+      ...persistedAfterRotation,
+
+      records: [
+        {
+          ...persistedAfterRotation.records[0],
+          status: "REVOKED",
+          revokedAt,
+          updatedAt: revokedAt,
+        },
+      ],
+
+      updatedAt: revokedAt,
+    });
+
+    const revokedCheck =
+      await checkFinoraCurrentBranchDeviceTrust({
+        principal: rotatedPrincipal,
+        portableStore,
+      });
+
+    assert(
+      !revokedCheck.success &&
+      revokedCheck.errorCode === "DEVICE_REVOKED",
+      "Revoked exact current device remained trusted.",
+    );
+
+    console.log(
+      "PASS: revoked exact current device fails trusted-device check",
+    );
+
+    const revokedReauthorization =
+      await authorizeFinoraCurrentBranchDevice({
+        principal: rotatedPrincipal,
+        portableStore,
+        password,
+        securityCode,
+      });
+
+    assert(
+      !revokedReauthorization.success &&
+      revokedReauthorization.errorCode === "DEVICE_REVOKED",
+      "Correct Security Code reactivated a revoked exact device.",
+    );
+
+    const persistedAfterRevokedReauthorization =
+      await loadFinoraBranchDeviceTrustStore();
+
+    assert(
+      persistedAfterRevokedReauthorization !== undefined &&
+      persistedAfterRevokedReauthorization.records.length === 1 &&
+      persistedAfterRevokedReauthorization.records[0].status === "REVOKED" &&
+      persistedAfterRevokedReauthorization.records[0].revokedAt === revokedAt,
+      "Revoked Device Trust evidence was mutated or reactivated.",
+    );
+
+    console.log(
+      "PASS: Security Code cannot reactivate revoked exact device",
     );
 
     const mismatchedPrincipal:

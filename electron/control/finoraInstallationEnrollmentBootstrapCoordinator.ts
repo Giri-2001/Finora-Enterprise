@@ -64,6 +64,11 @@ import {
 } from "./finoraInstallationEnrollmentPendingStore.js";
 
 import {
+  bindFinoraBranchCertificationBootstrapToBranch,
+  loadFinoraBranchCertificationBootstrap,
+} from "./finoraBranchCertificationBootstrapStore.js";
+
+import {
   bootstrapFinoraRecipientTrust,
 } from "./finoraRecipientTrustBootstrapService.js";
 
@@ -374,6 +379,71 @@ export function applyVerifiedFinoraInstallationEnrollmentResponse(
         }
 
         // ----------------------------------------------------
+        // PREFLIGHT BRANCH CERTIFICATION CUSTODY
+        //
+        // Enrollment Request V2 exported its public Branch
+        // Certification authority only after the matching private
+        // key had been persisted here.
+        //
+        // Fail before the first bootstrap mutation if that protected
+        // custody is now unavailable or belongs to another request /
+        // native installation.
+        // ----------------------------------------------------
+
+        const certificationBeforeBind =
+          await loadFinoraBranchCertificationBootstrap();
+
+        if (
+          certificationBeforeBind ===
+            undefined
+        ) {
+          return failure(
+            "FINORA Branch Certification bootstrap custody is unavailable for the protected Enrollment Request.",
+          );
+        }
+
+        if (
+          certificationBeforeBind.requestId !==
+            response.requestId ||
+          certificationBeforeBind.installationId !==
+            nativeBinding.installationId ||
+          certificationBeforeBind.bindingKeyId !==
+            nativeBinding.bindingKeyId ||
+          certificationBeforeBind.fingerprintAlgorithm !==
+            nativeBinding.fingerprintAlgorithm ||
+          certificationBeforeBind.publicKeyFingerprint !==
+            nativeBinding.publicKeyFingerprint
+        ) {
+          return failure(
+            "FINORA Branch Certification bootstrap custody does not exactly match the protected Enrollment Request and current native installation.",
+          );
+        }
+
+        /*
+         * boundAt must be deterministic across crash/retry.
+         *
+         * response.issuedAt is signed Control Center evidence, but
+         * the Control Center clock may be behind the recipient clock
+         * that produced certificationBeforeBind.generatedAt.
+         *
+         * Taking the later canonical timestamp preserves:
+         * - boundAt >= generatedAt store invariant
+         * - exact retry stability
+         * - zero dependence on the retry wall clock
+         */
+        const branchCertificationBoundAt =
+          new Date(
+            Math.max(
+              Date.parse(
+                certificationBeforeBind.generatedAt,
+              ),
+              Date.parse(
+                response.issuedAt,
+              ),
+            ),
+          ).toISOString();
+
+        // ----------------------------------------------------
         // PREFLIGHT EXISTING TRUST
         //
         // Never mutate trust if an incompatible root already
@@ -652,9 +722,134 @@ export function applyVerifiedFinoraInstallationEnrollmentResponse(
         }
 
         // ----------------------------------------------------
+        // BRANCH CERTIFICATION BIND / RECOVERY
+        //
+        // This moves the private Branch Certification authority
+        // from request-scoped bootstrap custody into immutable
+        // branch-scoped custody.
+        //
+        // The store accepts an exact retry byte-stably and rejects
+        // any conflicting response / branch rebinding.
+        // ----------------------------------------------------
+
+        const boundCertification =
+          await bindFinoraBranchCertificationBootstrapToBranch({
+            requestId:
+              response.requestId,
+
+            responseId:
+              response.responseId,
+
+            ownerId:
+              response.target.ownerId,
+
+            businessId:
+              response.target.businessId,
+
+            branchId:
+              response.target.branchId,
+
+            boundAt:
+              branchCertificationBoundAt,
+          });
+
+        const expectedBranchBinding = {
+          responseId:
+            response.responseId,
+
+          ownerId:
+            response.target.ownerId,
+
+          businessId:
+            response.target.businessId,
+
+          branchId:
+            response.target.branchId,
+
+          boundAt:
+            branchCertificationBoundAt,
+        };
+
+        if (
+          boundCertification.state !==
+            "BRANCH_BOUND_AFTER_RESPONSE" ||
+          boundCertification.requestId !==
+            response.requestId ||
+          boundCertification.installationId !==
+            nativeBinding.installationId ||
+          boundCertification.bindingKeyId !==
+            nativeBinding.bindingKeyId ||
+          boundCertification.fingerprintAlgorithm !==
+            nativeBinding.fingerprintAlgorithm ||
+          boundCertification.publicKeyFingerprint !==
+            nativeBinding.publicKeyFingerprint ||
+          boundCertification.generatedAt !==
+            certificationBeforeBind.generatedAt ||
+          JSON.stringify(
+            boundCertification.certificationKeyMaterial,
+          ) !==
+            JSON.stringify(
+              certificationBeforeBind.certificationKeyMaterial,
+            ) ||
+          JSON.stringify(
+            boundCertification.branchBinding,
+          ) !==
+            JSON.stringify(
+              expectedBranchBinding,
+            )
+        ) {
+          return failure(
+            "FINORA Enrollment bootstrap Branch Certification bind result is not the exact expected immutable custody.",
+          );
+        }
+
+        // ----------------------------------------------------
+        // BRANCH CERTIFICATION DURABLE READ-BACK
+        // ----------------------------------------------------
+
+        const confirmedCertification =
+          await loadFinoraBranchCertificationBootstrap();
+
+        if (
+          confirmedCertification ===
+            undefined ||
+          confirmedCertification.state !==
+            "BRANCH_BOUND_AFTER_RESPONSE" ||
+          confirmedCertification.requestId !==
+            response.requestId ||
+          confirmedCertification.installationId !==
+            nativeBinding.installationId ||
+          confirmedCertification.bindingKeyId !==
+            nativeBinding.bindingKeyId ||
+          confirmedCertification.fingerprintAlgorithm !==
+            nativeBinding.fingerprintAlgorithm ||
+          confirmedCertification.publicKeyFingerprint !==
+            nativeBinding.publicKeyFingerprint ||
+          confirmedCertification.generatedAt !==
+            certificationBeforeBind.generatedAt ||
+          JSON.stringify(
+            confirmedCertification.certificationKeyMaterial,
+          ) !==
+            JSON.stringify(
+              certificationBeforeBind.certificationKeyMaterial,
+            ) ||
+          JSON.stringify(
+            confirmedCertification.branchBinding,
+          ) !==
+            JSON.stringify(
+              expectedBranchBinding,
+            )
+        ) {
+          return failure(
+            "FINORA Enrollment bootstrap Branch Certification durable read-back confirmation failed.",
+          );
+        }
+
+        // ----------------------------------------------------
         // FINAL MUTATION — CLEAR EXACT PENDING REQUEST
         //
-        // This must remain after both authority read-backs.
+        // This must remain after recipient trust, installation,
+        // and Branch Certification authority read-back.
         // ----------------------------------------------------
 
         const pendingCleared =

@@ -40,6 +40,14 @@ import {
 } from "../control/finoraInstallationBindingCrypto.js";
 
 import {
+  assertFinoraBranchCertificationPublicKey,
+} from "../control/finoraBranchCertificationCrypto.js";
+
+import type {
+  FinoraBranchCertificationPublicKeyV1,
+} from "../control/finoraBranchCertificationContract.js";
+
+import {
   canonicalizeFinoraControlCenterValue,
 } from "./finoraControlCenterCanonicalization.js";
 
@@ -47,8 +55,18 @@ import {
 // CONSTANTS
 // ============================================================
 
-export const FINORA_INSTALLATION_ENROLLMENT_REQUEST_FILE_FORMAT =
+export const FINORA_INSTALLATION_ENROLLMENT_REQUEST_FILE_FORMAT_V1 =
   "FINORA_INSTALLATION_ENROLLMENT_REQUEST_V1" as const;
+
+export const FINORA_INSTALLATION_ENROLLMENT_REQUEST_FILE_FORMAT_V2 =
+  "FINORA_INSTALLATION_ENROLLMENT_REQUEST_V2" as const;
+
+/*
+ * Legacy alias retained for callers that only need the historical
+ * V1 identifier. Verification below accepts V1 and V2 explicitly.
+ */
+export const FINORA_INSTALLATION_ENROLLMENT_REQUEST_FILE_FORMAT =
+  FINORA_INSTALLATION_ENROLLMENT_REQUEST_FILE_FORMAT_V1;
 
 // ============================================================
 // TYPES
@@ -87,6 +105,18 @@ export interface FinoraVerifiedInstallationEnrollmentRequest {
 
   requestedAt:
     string;
+
+  /*
+   * Optional for source compatibility with historical in-process
+   * proof fixtures. The cryptographic verifier always populates it.
+   *
+   * Live issuance accepts only value 2.
+   */
+  requestSchemaVersion?:
+    1 | 2;
+
+  branchCertificationPublicKey?:
+    FinoraBranchCertificationPublicKeyV1;
 
   target:
     FinoraVerifiedInstallationEnrollmentTarget;
@@ -316,12 +346,28 @@ export function verifyFinoraInstallationEnrollmentRequestFile(
     );
   }
 
+  let requestSchemaVersion:
+    1 | 2;
+
   if (
-    value.format !==
-      FINORA_INSTALLATION_ENROLLMENT_REQUEST_FILE_FORMAT ||
-    value.schemaVersion !==
+    value.format ===
+      FINORA_INSTALLATION_ENROLLMENT_REQUEST_FILE_FORMAT_V1 &&
+    value.schemaVersion ===
       1
   ) {
+    requestSchemaVersion =
+      1;
+
+  } else if (
+    value.format ===
+      FINORA_INSTALLATION_ENROLLMENT_REQUEST_FILE_FORMAT_V2 &&
+    value.schemaVersion ===
+      2
+  ) {
+    requestSchemaVersion =
+      2;
+
+  } else {
     return failure(
       "FINORA Installation Enrollment Request file format is unsupported.",
     );
@@ -346,7 +392,7 @@ export function verifyFinoraInstallationEnrollmentRequestFile(
       ],
     ) ||
     request.schemaVersion !==
-      1
+      requestSchemaVersion
   ) {
     return failure(
       "FINORA Installation Enrollment Request structure is invalid.",
@@ -366,18 +412,29 @@ export function verifyFinoraInstallationEnrollmentRequestFile(
     );
   }
 
+  const expectedPayloadKeys = [
+    "requestId",
+    "deviceBinding",
+    "requestedAt",
+    "schemaVersion",
+  ];
+
+  if (
+    requestSchemaVersion ===
+      2
+  ) {
+    expectedPayloadKeys.push(
+      "branchCertificationPublicKey",
+    );
+  }
+
   if (
     !hasExactKeys(
       payload,
-      [
-        "requestId",
-        "deviceBinding",
-        "requestedAt",
-        "schemaVersion",
-      ],
+      expectedPayloadKeys,
     ) ||
     payload.schemaVersion !==
-      1
+      requestSchemaVersion
   ) {
     return failure(
       "FINORA Installation Enrollment payload structure is invalid.",
@@ -406,6 +463,66 @@ export function verifyFinoraInstallationEnrollmentRequestFile(
     return failure(
       "FINORA Installation Enrollment requestedAt is invalid.",
     );
+  }
+
+  // ----------------------------------------------------------
+  // V2 BRANCH CERTIFICATION PUBLIC AUTHORITY
+  // ----------------------------------------------------------
+
+  let branchCertificationPublicKey:
+    FinoraBranchCertificationPublicKeyV1 |
+    undefined;
+
+  if (
+    requestSchemaVersion ===
+      2
+  ) {
+
+    const candidate =
+      payload.branchCertificationPublicKey;
+
+    if (
+      !isRecord(
+        candidate,
+      ) ||
+      !hasExactKeys(
+        candidate,
+        [
+          "keyId",
+          "algorithm",
+          "publicKeyFormat",
+          "publicKey",
+          "fingerprintAlgorithm",
+          "publicKeyFingerprint",
+          "createdAt",
+          "schemaVersion",
+        ],
+      )
+    ) {
+      return failure(
+        "FINORA Installation Enrollment Branch Certification public-key structure is invalid.",
+      );
+    }
+
+    try {
+
+      assertFinoraBranchCertificationPublicKey(
+        candidate as unknown as
+          FinoraBranchCertificationPublicKeyV1,
+      );
+
+    } catch {
+      return failure(
+        "FINORA Installation Enrollment Branch Certification public key is invalid.",
+      );
+    }
+
+    branchCertificationPublicKey = {
+      ...(
+        candidate as unknown as
+          FinoraBranchCertificationPublicKeyV1
+      ),
+    };
   }
 
   // ----------------------------------------------------------
@@ -666,6 +783,19 @@ export function verifyFinoraInstallationEnrollmentRequestFile(
 
       requestedAt:
         payload.requestedAt,
+
+      requestSchemaVersion,
+
+      ...(
+        branchCertificationPublicKey ===
+          undefined
+          ? {}
+          : {
+              branchCertificationPublicKey: {
+                ...branchCertificationPublicKey,
+              },
+            }
+      ),
 
       target: {
         installationId:

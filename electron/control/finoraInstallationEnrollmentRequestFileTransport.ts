@@ -58,12 +58,23 @@ import {
   restoreFinoraPendingInstallationEnrollment,
 } from "./finoraInstallationEnrollmentPendingStore.js";
 
+import {
+  loadFinoraBranchCertificationBootstrap,
+  persistFinoraBranchCertificationBootstrapGenerated,
+  restoreFinoraBranchCertificationBootstrapGenerated,
+} from "./finoraBranchCertificationBootstrapStore.js";
+
+import {
+  generateFinoraBranchCertificationKeyMaterial,
+  toFinoraBranchCertificationPublicKey,
+} from "./finoraBranchCertificationCrypto.js";
+
 // ============================================================
 // FORMAT
 // ============================================================
 
 export const FINORA_INSTALLATION_ENROLLMENT_REQUEST_FILE_FORMAT =
-  "FINORA_INSTALLATION_ENROLLMENT_REQUEST_V1" as const;
+  "FINORA_INSTALLATION_ENROLLMENT_REQUEST_V2" as const;
 
 export const FINORA_INSTALLATION_ENROLLMENT_REQUEST_FILE_EXTENSION =
   ".finora" as const;
@@ -84,7 +95,7 @@ export interface FinoraInstallationEnrollmentRequestFile {
     FinoraWindowsInstallationEnrollmentRequest;
 
   schemaVersion:
-    1;
+    2;
 }
 
 // ============================================================
@@ -216,8 +227,42 @@ export async function exportFinoraInstallationEnrollmentRequestFromNativeDialog(
      * The resulting request contains only public device-binding
      * material plus the installation possession proof.
      */
+    const existingBranchCertificationBootstrap =
+      await loadFinoraBranchCertificationBootstrap();
+
+    if (
+      existingBranchCertificationBootstrap !==
+        undefined &&
+      existingBranchCertificationBootstrap.state !==
+        "GENERATED_FOR_REQUEST"
+    ) {
+      throw new Error(
+        "FINORA Branch Certification bootstrap is already branch-bound; a new Installation Enrollment Request cannot replace it.",
+      );
+    }
+
+    /*
+     * One branch holds one immutable Branch Certification keypair.
+     *
+     * A replacement Enrollment Request reuses the same keypair.
+     * A fresh installation bootstrap generates the keypair once.
+     */
+    const certificationKeyMaterial =
+      existingBranchCertificationBootstrap
+        ?.certificationKeyMaterial ??
+      generateFinoraBranchCertificationKeyMaterial(
+        new Date(),
+      );
+
+    const branchCertificationPublicKey =
+      toFinoraBranchCertificationPublicKey(
+        certificationKeyMaterial,
+      );
+
     const request =
-      await createFinoraWindowsInstallationEnrollmentRequest();
+      await createFinoraWindowsInstallationEnrollmentRequest(
+        branchCertificationPublicKey,
+      );
 
     const installationId =
       request.payload.deviceBinding.installationId;
@@ -274,7 +319,7 @@ export async function exportFinoraInstallationEnrollmentRequestFromNativeDialog(
         request,
 
         schemaVersion:
-          1,
+          2,
       };
 
     const serialized =
@@ -307,18 +352,20 @@ export async function exportFinoraInstallationEnrollmentRequestFromNativeDialog(
       );
 
     /*
-     * Persist exact request provenance before the external
-     * .finora write.
+     * Two protected stores participate in Request export:
      *
-     * This gives the recipient a protected requestId across
-     * application restart and the offline Control Center
-     * round-trip.
+     * 1. Branch Certification bootstrap custody
+     * 2. Pending Enrollment provenance
      *
-     * If the external write fails, restore the previous
-     * pending request only when no newer request replaced it.
+     * Forward mutation order is intentionally:
+     *
+     *   Branch Certification -> Pending Enrollment -> external file
+     *
+     * This prevents a protected pending request from existing without
+     * the Branch Certification private key required by that request.
      */
-    const previousPending =
-      await persistFinoraPendingInstallationEnrollment({
+    const previousBranchCertificationBootstrap =
+      await persistFinoraBranchCertificationBootstrapGenerated({
         requestId:
           request.payload.requestId,
 
@@ -334,14 +381,66 @@ export async function exportFinoraInstallationEnrollmentRequestFromNativeDialog(
         publicKeyFingerprint:
           request.payload.deviceBinding.publicKeyFingerprint,
 
-        requestedAt:
-          request.payload.requestedAt,
+        certificationKeyMaterial,
 
-        schemaVersion:
-          1,
+        generatedAt:
+          certificationKeyMaterial.createdAt,
       });
 
+    let previousPending:
+      Awaited<
+        ReturnType<
+          typeof persistFinoraPendingInstallationEnrollment
+        >
+      >;
+
     try {
+
+      previousPending =
+        await persistFinoraPendingInstallationEnrollment({
+          requestId:
+            request.payload.requestId,
+
+          installationId:
+            request.payload.deviceBinding.installationId,
+
+          bindingKeyId:
+            request.payload.deviceBinding.bindingKeyId,
+
+          fingerprintAlgorithm:
+            request.payload.deviceBinding.fingerprintAlgorithm,
+
+          publicKeyFingerprint:
+            request.payload.deviceBinding.publicKeyFingerprint,
+
+          requestedAt:
+            request.payload.requestedAt,
+
+          schemaVersion:
+            1,
+        });
+
+    } catch (
+      error
+    ) {
+
+      const certificationRestored =
+        await restoreFinoraBranchCertificationBootstrapGenerated(
+          request.payload.requestId,
+          previousBranchCertificationBootstrap,
+        );
+
+      if (!certificationRestored) {
+        throw new Error(
+          "FINORA Enrollment Request pending-provenance persistence failed and Branch Certification bootstrap custody could not be restored safely.",
+        );
+      }
+
+      throw error;
+    }
+
+    try {
+
       await writeFile(
         destination,
         serialized,
@@ -351,17 +450,52 @@ export async function exportFinoraInstallationEnrollmentRequestFromNativeDialog(
         },
       );
 
-    } catch (error) {
+    } catch (
+      error
+    ) {
 
-      const restored =
-        await restoreFinoraPendingInstallationEnrollment(
-          request.payload.requestId,
-          previousPending,
-        );
+      let pendingRestored =
+        false;
 
-      if (!restored) {
+      let certificationRestored =
+        false;
+
+      let pendingRestoreFailed =
+        false;
+
+      let certificationRestoreFailed =
+        false;
+
+      try {
+        pendingRestored =
+          await restoreFinoraPendingInstallationEnrollment(
+            request.payload.requestId,
+            previousPending,
+          );
+      } catch {
+        pendingRestoreFailed =
+          true;
+      }
+
+      try {
+        certificationRestored =
+          await restoreFinoraBranchCertificationBootstrapGenerated(
+            request.payload.requestId,
+            previousBranchCertificationBootstrap,
+          );
+      } catch {
+        certificationRestoreFailed =
+          true;
+      }
+
+      if (
+        !pendingRestored ||
+        !certificationRestored ||
+        pendingRestoreFailed ||
+        certificationRestoreFailed
+      ) {
         throw new Error(
-          "FINORA Enrollment Request file export failed and protected pending-request provenance could not be restored safely.",
+          "FINORA Enrollment Request file export failed and its protected Pending Enrollment / Branch Certification state could not be restored safely.",
         );
       }
 

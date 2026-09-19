@@ -425,12 +425,47 @@ function targetMatches(
   );
 }
 
+function historicalInstallationTargetMatchesBranchScope(
+  actual:
+    FinoraBranchControlTarget,
+
+  expected:
+    FinoraBranchScopeControlTarget,
+): boolean {
+
+  /*
+   * Portable operational verification retains the complete
+   * historical installation-binding target inside the signed
+   * package.
+   *
+   * The historical target must remain structurally valid,
+   * including bindingKeyId <-> publicKeyFingerprint integrity.
+   *
+   * Authorization equality is branch-scoped only. The signed
+   * historical installation/binding fields are provenance and
+   * are deliberately not compared with the current device.
+   */
+  return (
+    isInstallationBindingTargetValid(
+      actual,
+    ) &&
+    isFinoraBranchScopeControlTargetValid(
+      expected,
+    ) &&
+    finoraBranchScopeControlTargetMatches(
+      actual,
+      expected,
+    )
+  );
+}
+
 // ============================================================
 // VERIFY
 // ============================================================
 
 function verifyFinoraSignedControlPackageWithTargetPolicy<
-  TTarget extends FinoraBranchScopeControlTarget,
+  TActualTarget extends FinoraBranchScopeControlTarget,
+  TExpectedTarget extends FinoraBranchScopeControlTarget,
 >(
   value:
     unknown,
@@ -439,14 +474,14 @@ function verifyFinoraSignedControlPackageWithTargetPolicy<
     readonly FinoraBranchTrustedControlPublicKey[],
 
   expectedTarget:
-    TTarget,
+    TExpectedTarget,
 
   targetPolicy:
     (
       actual:
-        TTarget,
+        TActualTarget,
       expected:
-        TTarget,
+        TExpectedTarget,
     ) => boolean,
 
   targetMismatchError:
@@ -454,7 +489,7 @@ function verifyFinoraSignedControlPackageWithTargetPolicy<
 
   now:
     Date,
-): FinoraSignedControlVerificationResultV1<TTarget> {
+): FinoraSignedControlVerificationResultV1<TActualTarget> {
 
   if (!isRecord(value)) {
     return failure(
@@ -465,7 +500,7 @@ function verifyFinoraSignedControlPackageWithTargetPolicy<
 
   const controlPackage =
     value as unknown as
-      FinoraSignedControlPackageV1<TTarget>;
+      FinoraSignedControlPackageV1<TActualTarget>;
 
   if (
     controlPackage.schemaVersion !==
@@ -923,6 +958,33 @@ export function verifyFinoraSignedBranchPortabilityAuthorityPackage(
 
   return verification;
 }
+export function verifyFinoraSignedControlPackageBranchScope(
+  value:
+    unknown,
+
+  trustedKeys:
+    readonly FinoraBranchTrustedControlPublicKey[],
+
+  expectedTarget:
+    FinoraBranchScopeControlTarget,
+
+  now:
+    Date,
+): FinoraSignedControlVerificationResult {
+
+  return verifyFinoraSignedControlPackageWithTargetPolicy<
+    FinoraBranchControlTarget,
+    FinoraBranchScopeControlTarget
+  >(
+    value,
+    trustedKeys,
+    expectedTarget,
+    historicalInstallationTargetMatchesBranchScope,
+    "FINORA Control Package does not belong to this branch.",
+    now,
+  );
+}
+
 export function verifyFinoraSignedControlPackageNative(
   value:
     unknown,

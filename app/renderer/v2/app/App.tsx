@@ -1,3 +1,4 @@
+import { getFinoraLoginSessionBridge } from "../services/auth/loginSessionBridge";
 // ============================================================
 // FINORA ENTERPRISE OS™
 //
@@ -111,7 +112,7 @@ import BranchActivationRequired from "../pages/auth/BranchActivationRequired";
 import {
   evaluateAuthoritativeFinoraBranchAccess,
   hasActiveFinoraStorageEntitlement,
-  loadFinoraBusinessProfile,
+  loadFinoraPortableBusinessProfile,
   loadFinoraBranchActivation,
   loadFinoraInstallationIdentity,
 } from "../services/activation/activationService";
@@ -1186,8 +1187,7 @@ function AuthenticatedApplication() {
 
         if (currentSessionId) {
           try {
-            await window.finora
-              ?.loginSession
+            await getFinoraLoginSessionBridge()
               ?.invalidate({
                 sessionId:
                   currentSessionId,
@@ -1240,8 +1240,7 @@ function AuthenticatedApplication() {
       }
 
       const validateLoginSession =
-        window.finora
-          ?.loginSession
+        getFinoraLoginSessionBridge()
           ?.validate;
 
       if (
@@ -1756,10 +1755,8 @@ function AuthenticatedApplication() {
       // ======================================================
 
       const businessProfileResult =
-        await loadFinoraBusinessProfile(
-          session.ownerId,
-          session.businessId,
-          session.branchId,
+        await loadFinoraPortableBusinessProfile(
+          session.sessionId,
         );
 
       if (!active) {
@@ -1854,14 +1851,13 @@ function AuthenticatedApplication() {
     // --------------------------------------------------------
 
     async function completeMainSessionLogout():
-      Promise<void> {
+      Promise<boolean> {
       if (!currentSessionId) {
-        return;
+        return true;
       }
 
       const invalidateLoginSession =
-        window.finora
-          ?.loginSession
+        getFinoraLoginSessionBridge()
           ?.invalidate;
 
       if (
@@ -1872,24 +1868,60 @@ function AuthenticatedApplication() {
           "FINORA MAIN LOGIN SESSION INVALIDATION IS UNAVAILABLE.",
         );
 
-        return;
+        setContextError(
+          "FINORA could not securely end the active login session. Please try Logout again.",
+        );
+
+        return false;
       }
 
       try {
-        await invalidateLoginSession({
-          sessionId:
-            currentSessionId,
-        });
+        const invalidationResult =
+          await invalidateLoginSession({
+            sessionId:
+              currentSessionId,
+          });
+
+        if (!invalidationResult.success) {
+          console.warn(
+            "FINORA MAIN LOGIN SESSION INVALIDATION DENIED:",
+            invalidationResult.errorCode,
+            invalidationResult.error,
+          );
+
+          setContextError(
+            "FINORA could not securely end the active login session. Please try Logout again.",
+          );
+
+          return false;
+        }
+
+        // invalidated=false means the bearer was already
+        // absent in main-process authority. The secure
+        // postcondition is therefore already satisfied.
+
+        return true;
       }
       catch (mainLogoutError) {
         console.warn(
           "FINORA MAIN LOGIN SESSION INVALIDATION FAILED:",
           mainLogoutError,
         );
+
+        setContextError(
+          "FINORA could not securely end the active login session. Please try Logout again.",
+        );
+
+        return false;
       }
     }
 
-    await completeMainSessionLogout();
+    const mainSessionLogoutComplete =
+      await completeMainSessionLogout();
+
+    if (!mainSessionLogoutComplete) {
+      return;
+    }
 
     // Existing renderer logout preserves the explicit user
     // LOGOUT audit and removes the persisted session snapshot.

@@ -101,6 +101,61 @@ export interface ReserveFinoraControlCenterIssuanceInput {
     FinoraControlCenterIssuanceScope;
 }
 
+export interface FinoraHistoricalBranchAccessIssuanceHighWaterScope {
+  issuerId:
+    string;
+
+  ownerId:
+    string;
+
+  businessId:
+    string;
+
+  branchId:
+    string;
+}
+
+export interface FinoraHistoricalBusinessProfileIssuanceHighWaterScope {
+  issuerId:
+    string;
+
+  ownerId:
+    string;
+
+  businessId:
+    string;
+
+  branchId:
+    string;
+}
+
+export interface FinoraHistoricalPricingPolicyIssuanceHighWaterScope {
+  issuerId:
+    string;
+
+  ownerId:
+    string;
+
+  businessId:
+    string;
+
+  branchId:
+    string;
+}
+
+export interface FinoraHistoricalStorageEntitlementIssuanceHighWaterScope {
+  issuerId:
+    string;
+
+  ownerId:
+    string;
+
+  businessId:
+    string;
+
+  branchId:
+    string;
+}
 export interface FinoraControlCenterIssuanceReservation {
   packageId:
     string;
@@ -236,6 +291,8 @@ function isIssuancePurpose(
       "BRANCH_ACTIVATION" ||
     value ===
       "BRANCH_ACCESS" ||
+    value ===
+      "DEVICE_REVOCATION" ||
     value ===
       "STORAGE_ENTITLEMENT" ||
     value ===
@@ -489,6 +546,418 @@ async function readLedger():
   return parsed;
 }
 
+// ============================================================
+// HISTORICAL BRANCH_ACCESS BRANCH HIGH-WATER
+// ============================================================
+
+export async function getFinoraHistoricalBranchAccessIssuanceHighWater(
+  scope:
+    FinoraHistoricalBranchAccessIssuanceHighWaterScope,
+): Promise<number> {
+
+  if (
+    typeof scope !==
+      "object" ||
+    scope ===
+      null ||
+    Array.isArray(
+      scope,
+    )
+  ) {
+    throw new Error(
+      "FINORA historical Branch Access issuance scope is invalid.",
+    );
+  }
+
+  const actualKeys =
+    Object.keys(
+      scope,
+    ).sort();
+
+  const expectedKeys =
+    [
+      "issuerId",
+      "ownerId",
+      "businessId",
+      "branchId",
+    ].sort();
+
+  if (
+    actualKeys.length !==
+      expectedKeys.length ||
+    !actualKeys.every(
+      (
+        key,
+        index,
+      ) =>
+        key ===
+          expectedKeys[
+            index
+          ],
+    ) ||
+    !isNonEmptyString(
+      scope.issuerId,
+    ) ||
+    !isNonEmptyString(
+      scope.ownerId,
+    ) ||
+    !isNonEmptyString(
+      scope.businessId,
+    ) ||
+    !isNonEmptyString(
+      scope.branchId,
+    )
+  ) {
+    throw new Error(
+      "FINORA historical Branch Access issuance scope is incomplete.",
+    );
+  }
+
+  const ledger =
+    await readLedger();
+
+  if (!ledger) {
+    return 0;
+  }
+
+  let highWater =
+    0;
+
+  for (
+    const record
+    of ledger.sequences
+  ) {
+    if (
+      record.issuerId ===
+        scope.issuerId &&
+      record.purpose ===
+        "BRANCH_ACCESS" &&
+      record.ownerId ===
+        scope.ownerId &&
+      record.businessId ===
+        scope.businessId &&
+      record.branchId ===
+        scope.branchId
+    ) {
+      highWater =
+        Math.max(
+          highWater,
+          record.lastReservedSequence,
+        );
+    }
+  }
+
+  return highWater;
+}
+
+// ============================================================
+// HISTORICAL BUSINESS_PROFILE BRANCH HIGH-WATER
+// ============================================================
+
+export async function getFinoraHistoricalBusinessProfileIssuanceHighWater(
+  scope:
+    FinoraHistoricalBusinessProfileIssuanceHighWaterScope,
+): Promise<number> {
+
+  if (
+    typeof scope !==
+      "object" ||
+    scope ===
+      null ||
+    Array.isArray(
+      scope,
+    )
+  ) {
+    throw new Error(
+      "FINORA historical Business Profile issuance scope is invalid.",
+    );
+  }
+
+  const actualKeys =
+    Object.keys(
+      scope,
+    ).sort();
+
+  const expectedKeys =
+    [
+      "issuerId",
+      "ownerId",
+      "businessId",
+      "branchId",
+    ].sort();
+
+  if (
+    actualKeys.length !==
+      expectedKeys.length ||
+    !actualKeys.every(
+      (
+        key,
+        index,
+      ) =>
+        key ===
+          expectedKeys[
+            index
+          ],
+    ) ||
+    !isNonEmptyString(
+      scope.issuerId,
+    ) ||
+    !isNonEmptyString(
+      scope.ownerId,
+    ) ||
+    !isNonEmptyString(
+      scope.businessId,
+    ) ||
+    !isNonEmptyString(
+      scope.branchId,
+    )
+  ) {
+    throw new Error(
+      "FINORA historical Business Profile issuance scope is incomplete.",
+    );
+  }
+
+  const ledger =
+    await readLedger();
+
+  if (!ledger) {
+    return 0;
+  }
+
+  let highWater =
+    0;
+
+  for (
+    const record
+    of ledger.sequences
+  ) {
+    if (
+      record.issuerId ===
+        scope.issuerId &&
+      record.purpose ===
+        "BUSINESS_PROFILE" &&
+      record.ownerId ===
+        scope.ownerId &&
+      record.businessId ===
+        scope.businessId &&
+      record.branchId ===
+        scope.branchId
+    ) {
+      highWater =
+        Math.max(
+          highWater,
+          record.lastReservedSequence,
+        );
+    }
+  }
+
+  return highWater;
+}
+// ============================================================
+// HISTORICAL PRICING_POLICY BRANCH HIGH-WATER
+// ============================================================
+
+export async function getFinoraHistoricalPricingPolicyIssuanceHighWater(
+  scope:
+    FinoraHistoricalPricingPolicyIssuanceHighWaterScope,
+): Promise<number> {
+
+  if (
+    typeof scope !==
+      "object" ||
+    scope ===
+      null ||
+    Array.isArray(
+      scope,
+    )
+  ) {
+    throw new Error(
+      "FINORA historical Pricing Policy issuance scope is invalid.",
+    );
+  }
+
+  const actualKeys =
+    Object.keys(
+      scope,
+    ).sort();
+
+  const expectedKeys =
+    [
+      "issuerId",
+      "ownerId",
+      "businessId",
+      "branchId",
+    ].sort();
+
+  if (
+    actualKeys.length !==
+      expectedKeys.length ||
+    !actualKeys.every(
+      (
+        key,
+        index,
+      ) =>
+        key ===
+          expectedKeys[
+            index
+          ],
+    ) ||
+    !isNonEmptyString(
+      scope.issuerId,
+    ) ||
+    !isNonEmptyString(
+      scope.ownerId,
+    ) ||
+    !isNonEmptyString(
+      scope.businessId,
+    ) ||
+    !isNonEmptyString(
+      scope.branchId,
+    )
+  ) {
+    throw new Error(
+      "FINORA historical Pricing Policy issuance scope is incomplete.",
+    );
+  }
+
+  const ledger =
+    await readLedger();
+
+  if (!ledger) {
+    return 0;
+  }
+
+  let highWater =
+    0;
+
+  for (
+    const record
+    of ledger.sequences
+  ) {
+    if (
+      record.issuerId ===
+        scope.issuerId &&
+      record.purpose ===
+        "PRICING_POLICY" &&
+      record.ownerId ===
+        scope.ownerId &&
+      record.businessId ===
+        scope.businessId &&
+      record.branchId ===
+        scope.branchId
+    ) {
+      highWater =
+        Math.max(
+          highWater,
+          record.lastReservedSequence,
+        );
+    }
+  }
+
+  return highWater;
+}
+// ============================================================
+// HISTORICAL STORAGE_ENTITLEMENT BRANCH HIGH-WATER
+// ============================================================
+export async function getFinoraHistoricalStorageEntitlementIssuanceHighWater(
+  scope:
+    FinoraHistoricalStorageEntitlementIssuanceHighWaterScope,
+): Promise<number> {
+
+  if (
+    typeof scope !==
+      "object" ||
+    scope ===
+      null ||
+    Array.isArray(
+      scope,
+    )
+  ) {
+    throw new Error(
+      "FINORA historical Storage Entitlement issuance scope is invalid.",
+    );
+  }
+
+  const actualKeys =
+    Object.keys(
+      scope,
+    ).sort();
+
+  const expectedKeys =
+    [
+      "issuerId",
+      "ownerId",
+      "businessId",
+      "branchId",
+    ].sort();
+
+  if (
+    actualKeys.length !==
+      expectedKeys.length ||
+    !actualKeys.every(
+      (
+        key,
+        index,
+      ) =>
+        key ===
+          expectedKeys[
+            index
+          ],
+    ) ||
+    !isNonEmptyString(
+      scope.issuerId,
+    ) ||
+    !isNonEmptyString(
+      scope.ownerId,
+    ) ||
+    !isNonEmptyString(
+      scope.businessId,
+    ) ||
+    !isNonEmptyString(
+      scope.branchId,
+    )
+  ) {
+    throw new Error(
+      "FINORA historical Storage Entitlement issuance scope is incomplete.",
+    );
+  }
+
+  const ledger =
+    await readLedger();
+
+  if (!ledger) {
+    return 0;
+  }
+
+  let highWater =
+    0;
+
+  for (
+    const record
+    of ledger.sequences
+  ) {
+    if (
+      record.issuerId ===
+        scope.issuerId &&
+      record.purpose ===
+        "STORAGE_ENTITLEMENT" &&
+      record.ownerId ===
+        scope.ownerId &&
+      record.businessId ===
+        scope.businessId &&
+      record.branchId ===
+        scope.branchId
+    ) {
+      highWater =
+        Math.max(
+          highWater,
+          record.lastReservedSequence,
+        );
+    }
+  }
+
+  return highWater;
+}
 // ============================================================
 // WRITE
 // ============================================================

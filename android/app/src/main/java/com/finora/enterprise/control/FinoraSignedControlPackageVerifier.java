@@ -227,6 +227,137 @@ public final class FinoraSignedControlPackageVerifier {
         Instant now
     ) {
 
+        return verifyWithTargetPolicy(
+            controlPackage,
+            trustedKeys,
+            expectedTarget,
+            now,
+            false
+        );
+    }
+
+    public static Result verifyBranchScope(
+        Map<String, Object> controlPackage,
+        List<TrustedKey> trustedKeys,
+        String ownerId,
+        String businessId,
+        String branchId,
+        Instant now
+    ) {
+
+        Target expectedTarget =
+            new Target(
+                ownerId,
+                businessId,
+                branchId,
+                null,
+                null,
+                null,
+                null
+            );
+
+        Result verification =
+            verifyWithTargetPolicy(
+                controlPackage,
+                trustedKeys,
+                expectedTarget,
+                now,
+                true
+            );
+
+        if (!verification.valid) {
+            return verification;
+        }
+
+        if (
+            verification.controlPackage == null ||
+            !"BRANCH_PORTABILITY_AUTHORITY".equals(
+                verification.controlPackage.get(
+                    "purpose"
+                )
+            )
+        ) {
+            return Result.failure(
+                "PURPOSE_MISMATCH",
+                "FINORA signed package purpose is not BRANCH_PORTABILITY_AUTHORITY."
+            );
+        }
+
+        Result expiryFailure =
+            branchScopeTopLevelExpiryFailure(
+                verification.controlPackage,
+                now
+            );
+
+        if (expiryFailure != null) {
+            return expiryFailure;
+        }
+
+        return verification;
+    }
+
+    private static Result branchScopeTopLevelExpiryFailure(
+        Map<String, Object> controlPackage,
+        Instant now
+    ) {
+
+        if (
+            controlPackage == null ||
+            now == null
+        ) {
+            return Result.failure(
+                "MALFORMED_PACKAGE",
+                "FINORA Branch Portability Authority expiry verification input is incomplete."
+            );
+        }
+
+        Object expiresAtValue =
+            controlPackage.get(
+                "expiresAt"
+            );
+
+        if (expiresAtValue == null) {
+            return null;
+        }
+
+        Instant expiresAt =
+            parseInstant(
+                expiresAtValue
+            );
+
+        if (expiresAt == null) {
+            return Result.failure(
+                "MALFORMED_PACKAGE",
+                "FINORA Branch Portability Authority expiresAt timestamp is invalid."
+            );
+        }
+
+        /*
+         * Same expiry boundary as the canonical verifier:
+         * valid at exactly expiresAt; expired strictly after it.
+         */
+        if (
+            now.isAfter(
+                expiresAt
+            )
+        ) {
+            return Result.failure(
+                "PACKAGE_EXPIRED",
+                "FINORA Branch Portability Authority has expired."
+            );
+        }
+
+        return null;
+    }
+
+    private static Result verifyWithTargetPolicy(
+        Map<String, Object> controlPackage,
+        List<TrustedKey> trustedKeys,
+        Target expectedTarget,
+        Instant now,
+        boolean branchScope
+    ) {
+
         if (
             controlPackage == null ||
             trustedKeys == null ||
@@ -415,7 +546,8 @@ public final class FinoraSignedControlPackageVerifier {
         if (
             !matchesTarget(
                 target,
-                expectedTarget
+                expectedTarget,
+                branchScope
             )
         ) {
             return Result.failure(
@@ -1121,6 +1253,93 @@ public final class FinoraSignedControlPackageVerifier {
         );
     }
 
+    private static boolean matchesTarget(
+        Map<String, Object> actual,
+        Target expected,
+        boolean branchScope
+    ) {
+
+        if (!branchScope) {
+            return matchesTarget(
+                actual,
+                expected
+            );
+        }
+
+        return matchesBranchScopeTarget(
+            actual,
+            expected
+        );
+    }
+
+    private static boolean matchesBranchScopeTarget(
+        Map<String, Object> actual,
+        Target expected
+    ) {
+
+        if (
+            actual == null ||
+            expected == null ||
+            expected.ownerId == null ||
+            expected.ownerId.trim().isEmpty() ||
+            expected.businessId == null ||
+            expected.businessId.trim().isEmpty() ||
+            expected.branchId == null ||
+            expected.branchId.trim().isEmpty() ||
+            expected.installationId != null ||
+            expected.bindingKeyId != null ||
+            expected.fingerprintAlgorithm != null ||
+            expected.publicKeyFingerprint != null ||
+            actual.size() != 3 ||
+            !actual.containsKey(
+                "ownerId"
+            ) ||
+            !actual.containsKey(
+                "businessId"
+            ) ||
+            !actual.containsKey(
+                "branchId"
+            )
+        ) {
+            return false;
+        }
+
+        String ownerId =
+            requiredString(
+                actual.get(
+                    "ownerId"
+                )
+            );
+
+        String businessId =
+            requiredString(
+                actual.get(
+                    "businessId"
+                )
+            );
+
+        String branchId =
+            requiredString(
+                actual.get(
+                    "branchId"
+                )
+            );
+
+        return (
+            ownerId != null &&
+            businessId != null &&
+            branchId != null &&
+            expected.ownerId.equals(
+                ownerId
+            ) &&
+            expected.businessId.equals(
+                businessId
+            ) &&
+            expected.branchId.equals(
+                branchId
+            )
+        );
+    }
     private static boolean matchesTarget(
         Map<String, Object> actual,
         Target expected

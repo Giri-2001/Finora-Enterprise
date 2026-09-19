@@ -195,6 +195,12 @@ const BRANCH_ISSUANCE_ACTIONS: readonly {
   },
   {
     workflow:
+      "DEVICE_REVOCATION",
+    label:
+      "Revoke Device",
+  },
+  {
+    workflow:
       "STORAGE_ENTITLEMENT",
     label:
       "Storage",
@@ -246,6 +252,9 @@ function BranchCard({
 
   const identity =
     record.identity;
+
+  const authorizedDevices =
+    record.authorizedDevices;
 
   const businessName =
     record.profile?.businessName ??
@@ -662,6 +671,25 @@ function BranchCard({
               value={identity.branchCode}
             />
 
+            <div
+              style={{
+                gridColumn:
+                  "1 / -1",
+                marginTop:
+                  "2px",
+                paddingTop:
+                  "14px",
+                borderTop:
+                  "1px solid rgba(148, 163, 184, 0.14)",
+                fontSize:
+                  "12px",
+                fontWeight:
+                  700,
+              }}
+            >
+              Provisioned Device
+            </div>
+
             <DetailRow
               label="Installation ID"
               value={identity.installation.installationId}
@@ -706,6 +734,152 @@ function BranchCard({
                 identity.installation.bindingCreatedAt,
               )}
             />
+          </div>
+
+          <div
+            style={{
+              margin:
+                "18px 0 6px",
+              paddingTop:
+                "16px",
+              borderTop:
+                "1px solid rgba(148, 163, 184, 0.14)",
+              fontSize:
+                "12px",
+              fontWeight:
+                700,
+            }}
+          >
+            Authorized Devices ({authorizedDevices.length})
+          </div>
+
+          <div
+            style={{
+              marginBottom:
+                "12px",
+              fontSize:
+                "11px",
+              opacity:
+                0.62,
+            }}
+          >
+            Control Center verified evidence only. Runtime device access
+            remains enforced by recipient Device Trust.
+          </div>
+
+          <div
+            style={{
+              display:
+                "grid",
+              gap:
+                "12px",
+            }}
+          >
+            {authorizedDevices.map(
+              (device, index) => (
+                <div
+                  key={device.installation.installationId}
+                  style={{
+                    padding:
+                      "14px",
+                    border:
+                      "1px solid rgba(148, 163, 184, 0.14)",
+                    borderRadius:
+                      "12px",
+                    background:
+                      "rgba(15, 23, 42, 0.18)",
+                  }}
+                >
+                  <div
+                    style={{
+                      display:
+                        "flex",
+                      justifyContent:
+                        "space-between",
+                      alignItems:
+                        "baseline",
+                      gap:
+                        "12px",
+                      marginBottom:
+                        "12px",
+                    }}
+                  >
+                    <div
+                      style={{
+                        fontSize:
+                          "12px",
+                        fontWeight:
+                          700,
+                      }}
+                    >
+                      Device {index + 1}
+                    </div>
+
+                    <div
+                      style={{
+                        fontSize:
+                          "11px",
+                        opacity:
+                          0.68,
+                      }}
+                    >
+                      {device.evidenceSource ===
+                      "INITIAL_PROVISIONING"
+                        ? "Initial Provisioning"
+                        : device.evidenceSource}
+                    </div>
+                  </div>
+
+                  <div
+                    style={{
+                      display:
+                        "grid",
+                      gridTemplateColumns:
+                        "repeat(2, minmax(0, 1fr))",
+                      gap:
+                        "12px",
+                    }}
+                  >
+                    <DetailRow
+                      label="Installation ID"
+                      value={device.installation.installationId}
+                      monospace
+                    />
+
+                    <DetailRow
+                      label="Platform"
+                      value={device.installation.platform}
+                    />
+
+                    <DetailRow
+                      label="Binding Key ID"
+                      value={device.installation.bindingKeyId}
+                      monospace
+                    />
+
+                    <DetailRow
+                      label="Public Key Fingerprint"
+                      value={device.installation.publicKeyFingerprint}
+                      monospace
+                    />
+
+                    <DetailRow
+                      label="First Observed"
+                      value={formatTimestamp(
+                        device.firstObservedAt,
+                      )}
+                    />
+
+                    <DetailRow
+                      label="Evidence Updated"
+                      value={formatTimestamp(
+                        device.updatedAt,
+                      )}
+                    />
+                  </div>
+                </div>
+              ),
+            )}
           </div>
 
           <div
@@ -892,7 +1066,7 @@ function BranchCard({
           Branch ID: {identity.branchId}
         </div>
         <div>
-          Installation ID: {identity.installation.installationId}
+          Provisioned Installation ID: {identity.installation.installationId}
         </div>
       </div>
     </article>

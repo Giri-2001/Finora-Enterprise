@@ -27,12 +27,14 @@ import {
 
 import {
   FINORA_BRANCH_DEVICE_TRUST_FORMAT,
-  FINORA_BRANCH_DEVICE_TRUST_RECORD_SCHEMA_VERSION,
-  FINORA_BRANCH_DEVICE_TRUST_SCHEMA_VERSION,
+  FINORA_BRANCH_DEVICE_TRUST_LEGACY_RECORD_SCHEMA_VERSION,
+  FINORA_BRANCH_DEVICE_TRUST_LEGACY_SCHEMA_VERSION,
   getFinoraBranchDeviceTrustStorePath,
   loadFinoraBranchDeviceTrustStore,
+  normalizeFinoraBranchDeviceTrustStoreStateV1,
   persistFinoraBranchDeviceTrustStore,
   validateFinoraBranchDeviceTrustStoreStateV1,
+  validateFinoraBranchDeviceTrustStoreStateV2,
 } from "./finoraBranchDeviceTrustStore.js";
 
 import type {
@@ -140,7 +142,7 @@ async function runSelfTest():
           FINORA_BRANCH_DEVICE_TRUST_FORMAT,
 
         schemaVersion:
-          FINORA_BRANCH_DEVICE_TRUST_SCHEMA_VERSION,
+          FINORA_BRANCH_DEVICE_TRUST_LEGACY_SCHEMA_VERSION,
 
         records: [
           {
@@ -198,7 +200,7 @@ async function runSelfTest():
               trustedAt,
 
             schemaVersion:
-              FINORA_BRANCH_DEVICE_TRUST_RECORD_SCHEMA_VERSION,
+              FINORA_BRANCH_DEVICE_TRUST_LEGACY_RECORD_SCHEMA_VERSION,
           },
         ],
 
@@ -212,6 +214,19 @@ async function runSelfTest():
 
     console.log(
       "PASS: canonical Device Trust state validates",
+    );
+
+    const currentState =
+      normalizeFinoraBranchDeviceTrustStoreStateV1(
+        validState,
+      );
+
+    validateFinoraBranchDeviceTrustStoreStateV2(
+      currentState,
+    );
+
+    console.log(
+      "PASS: legacy Device Trust state normalizes to current V2 ACTIVE state",
     );
 
     expectRejected(
@@ -386,7 +401,7 @@ async function runSelfTest():
     );
 
     await persistFinoraBranchDeviceTrustStore(
-      validState,
+      currentState,
     );
 
     const loaded =
@@ -399,7 +414,7 @@ async function runSelfTest():
         loaded,
       ) ===
         JSON.stringify(
-          validState,
+          currentState,
         ),
       "Encrypted Device Trust roundtrip changed state.",
     );
@@ -502,7 +517,7 @@ async function runSelfTest():
     );
 
     await persistFinoraBranchDeviceTrustStore(
-      validState,
+      currentState,
     );
 
     const restored =
@@ -515,7 +530,7 @@ async function runSelfTest():
         restored,
       ) ===
         JSON.stringify(
-          validState,
+          currentState,
         ),
       "Canonical Device Trust state did not restore.",
     );

@@ -78,6 +78,14 @@ public final class FinoraControlPlugin
     private FinoraControlStore controlStore;
 
     private FinoraInstallationBindingService installationBindingService;
+    private FinoraBranchPasswordFirstLoginAuthority
+        passwordFirstLoginAuthority;
+
+    private FinoraBranchAccessRuntimeAuthority
+        branchAccessRuntimeAuthority;
+
+    private FinoraBranchLoginSessionAuthority
+        loginSessionAuthority;
 
     // ========================================================
     // LOAD
@@ -95,7 +103,539 @@ public final class FinoraControlPlugin
                 getContext()
             );
 
+
+        FinoraPortableBranchAuthStore portableBranchAuthStore =
+            new FinoraPortableBranchAuthStore(
+                getContext()
+            );
+
+        FinoraBranchDeviceTrustStore branchDeviceTrustStore =
+            new FinoraBranchDeviceTrustStore(
+                getContext()
+            );
+
+        this.passwordFirstLoginAuthority =
+            FinoraBranchPasswordFirstLoginProductionFactory.create(
+                getContext(),
+                portableBranchAuthStore,
+                this.installationBindingService,
+                branchDeviceTrustStore
+            );
+        FinoraClockHighWaterStore branchAccessClockStore =
+            new FinoraClockHighWaterStore(
+                getContext()
+            );
+
+        FinoraClockHighWaterAuthorityService branchAccessClockAuthority =
+            new FinoraClockHighWaterAuthorityService(
+                branchAccessClockStore,
+                this.installationBindingService
+            );
+
+        this.branchAccessRuntimeAuthority =
+            FinoraBranchAccessRuntimeProductionAdapters.create(
+                new FinoraBranchAccessRuntimeProductionAdapters
+                    .ValidatedControlStatePort() {
+                        @Override
+                        public String readValidated()
+                            throws Exception {
+                            JSONObject validated =
+                                readValidatedControlPackage();
+
+                            return validated == null
+                                ? null
+                                : validated.toString();
+                        }
+                    },
+                branchAccessClockAuthority
+            );
+
+        FinoraBranchCredentialStore branchCredentialStore =
+            new FinoraBranchCredentialStore(
+                getContext()
+            );
+
+        FinoraBranchAccessRuntimeProductionAdapters.ValidatedControlStatePort
+            sessionControlState =
+                new FinoraBranchAccessRuntimeProductionAdapters
+                    .ValidatedControlStatePort() {
+                        @Override
+                        public String readValidated()
+                            throws Exception {
+                            JSONObject validated =
+                                readValidatedControlPackage();
+
+                            return validated == null
+                                ? null
+                                : validated.toString();
+                        }
+                    };
+
+        FinoraBranchDeviceTrustAuthority sessionDeviceTrust =
+            FinoraBranchDeviceTrustProductionAdapters.create(
+                portableBranchAuthStore,
+                this.installationBindingService,
+                branchDeviceTrustStore
+            );
+
+        FinoraBranchLoginSessionProductionAuthorizationAdapter
+            sessionAuthorization =
+                new FinoraBranchLoginSessionProductionAuthorizationAdapter(
+                    branchCredentialStore,
+                    this.branchAccessRuntimeAuthority,
+                    sessionControlState,
+                    new FinoraBranchLoginSessionProductionAuthorizationAdapter.DeviceTrustCheckPort() {
+                        @Override
+                        public FinoraBranchDeviceTrustAuthority.Result check(
+                            FinoraBranchDeviceTrustAuthority.Principal principal
+                        ) {
+                            return sessionDeviceTrust.check(principal);
+                        }
+                    }
+                );
+
+        this.loginSessionAuthority =
+            new FinoraBranchLoginSessionAuthority(
+                sessionAuthorization
+            );
+
         super.load();
+    }
+
+    // ========================================================
+    // PASSWORD-FIRST BRANCH LOGIN
+    // ========================================================
+
+    /**
+     * Android native Password-first branch login.
+     *
+     * Renderer supplies Username + Password and, only after
+     * SECURITY_CODE_REQUIRED, the Security Code.
+     *
+     * Expected authentication failures resolve as structured
+     * results. This method does not create a login session.
+     */
+    @PluginMethod
+    public void passwordFirstLogin(
+        PluginCall call
+    ) {
+
+        try {
+
+            if (passwordFirstLoginAuthority == null) {
+
+                JSObject unavailable =
+                    new JSObject();
+
+                unavailable.put(
+                    "success",
+                    false
+                );
+
+                unavailable.put(
+                    "errorCode",
+                    FinoraBranchPasswordFirstLoginBridgeContract
+                        .PASSWORD_FIRST_LOGIN_FAILED
+                );
+
+                unavailable.put(
+                    "error",
+                    "FINORA Password-first login authority is unavailable."
+                );
+
+                call.resolve(
+                    unavailable
+                );
+
+                return;
+            }
+
+            FinoraBranchPasswordFirstLoginAuthority.Result
+                authorityResult =
+                    passwordFirstLoginAuthority.login(
+                        new FinoraBranchPasswordFirstLoginAuthority
+                            .Request(
+                                call.getString(
+                                    "username"
+                                ),
+                                call.getString(
+                                    "password"
+                                ),
+                                call.getString(
+                                    "securityCode"
+                                )
+                            )
+                    );
+
+            FinoraBranchPasswordFirstLoginBridgeContract.Response
+                bridgeResult =
+                    FinoraBranchPasswordFirstLoginBridgeContract
+                        .fromAuthorityResult(
+                            authorityResult
+                        );
+
+            JSObject response =
+                new JSObject();
+
+            response.put(
+                "success",
+                bridgeResult.success
+            );
+
+            if (bridgeResult.success) {
+
+                response.put(
+                    "status",
+                    bridgeResult.status
+                );
+
+                FinoraBranchPasswordFirstLoginBridgeContract.Data source =
+                    bridgeResult.data;
+
+                JSObject data =
+                    new JSObject();
+
+                data.put(
+                    "credentialId",
+                    source.credentialId
+                );
+
+                data.put(
+                    "authGeneration",
+                    source.authGeneration
+                );
+
+                data.put(
+                    "userId",
+                    source.userId
+                );
+
+                data.put(
+                    "username",
+                    source.username
+                );
+
+                data.put(
+                    "fullName",
+                    source.fullName
+                );
+
+                data.put(
+                    "role",
+                    source.role
+                );
+
+                data.put(
+                    "ownerId",
+                    source.ownerId
+                );
+
+                data.put(
+                    "businessId",
+                    source.businessId
+                );
+
+                data.put(
+                    "branchId",
+                    source.branchId
+                );
+
+                data.put(
+                    "storageMode",
+                    source.storageMode
+                );
+
+                data.put(
+                    "dataContext",
+                    source.dataContext
+                );
+
+                if (source.demoId != null) {
+
+                    data.put(
+                        "demoId",
+                        source.demoId
+                    );
+                }
+
+                data.put(
+                    "authenticatedAt",
+                    source.authenticatedAt
+                );
+
+                response.put(
+                    "data",
+                    data
+                );
+            }
+            else {
+
+                response.put(
+                    "errorCode",
+                    bridgeResult.errorCode
+                );
+
+                response.put(
+                    "error",
+                    bridgeResult.error
+                );
+            }
+
+            call.resolve(
+                response
+            );
+        }
+        catch (Exception error) {
+
+            JSObject response =
+                new JSObject();
+
+            response.put(
+                "success",
+                false
+            );
+
+            response.put(
+                "errorCode",
+                FinoraBranchPasswordFirstLoginBridgeContract
+                    .PASSWORD_FIRST_LOGIN_FAILED
+            );
+
+            response.put(
+                "error",
+                "FINORA Password-first login could not be completed."
+            );
+
+            call.resolve(
+                response
+            );
+        }
+    }
+
+    // ========================================================
+    // AUTHORITATIVE LOGIN SESSION LIFECYCLE
+    // ========================================================
+
+    @PluginMethod
+    public void login(
+        PluginCall call
+    ) {
+        if (
+            passwordFirstLoginAuthority == null ||
+            loginSessionAuthority == null
+        ) {
+            resolveLoginSessionFailure(
+                call,
+                FinoraBranchLoginSessionAuthority
+                    .ERROR_CONTROL_STATE_FAILED,
+                "FINORA secure login session authority is unavailable."
+            );
+            return;
+        }
+
+        String storageMode =
+            normalizeStorageMode(
+                call.getString(
+                    "storageMode"
+                )
+            );
+
+        if (storageMode == null) {
+            resolveLoginSessionFailure(
+                call,
+                FinoraBranchLoginSessionAuthority
+                    .ERROR_INVALID_REQUEST,
+                "FINORA storage mode must be LOCAL or USB."
+            );
+            return;
+        }
+
+        try {
+            FinoraBranchPasswordFirstLoginAuthority.Result
+                authorityResult =
+                    passwordFirstLoginAuthority.login(
+                        new FinoraBranchPasswordFirstLoginAuthority
+                            .Request(
+                                call.getString(
+                                    "username"
+                                ),
+                                call.getString(
+                                    "password"
+                                ),
+                                call.getString(
+                                    "securityCode"
+                                )
+                            )
+                    );
+
+            if (!authorityResult.success) {
+                FinoraBranchPasswordFirstLoginBridgeContract.Response
+                    bridgeResult =
+                        FinoraBranchPasswordFirstLoginBridgeContract
+                            .fromAuthorityResult(
+                                authorityResult
+                            );
+
+                resolveLoginSessionFailure(
+                    call,
+                    bridgeResult.errorCode,
+                    bridgeResult.error
+                );
+                return;
+            }
+
+            if (
+                authorityResult.data == null ||
+                !storageMode.equals(
+                    authorityResult.data.storageMode
+                )
+            ) {
+                resolveLoginSessionFailure(
+                    call,
+                    FinoraBranchLoginSessionAuthority
+                        .ERROR_STORAGE_MODE_MISMATCH,
+                    "FINORA login storage mode does not match the authenticated credential."
+                );
+                return;
+            }
+
+            resolveLoginSessionResult(
+                call,
+                loginSessionAuthority.issue(
+                    authorityResult.data
+                )
+            );
+        }
+        catch (Exception error) {
+            resolveLoginSessionFailure(
+                call,
+                FinoraBranchLoginSessionAuthority
+                    .ERROR_CONTROL_STATE_FAILED,
+                "FINORA secure login session could not be created."
+            );
+        }
+    }
+
+    @PluginMethod
+    public void validate(
+        PluginCall call
+    ) {
+        if (loginSessionAuthority == null) {
+            resolveLoginSessionFailure(
+                call,
+                FinoraBranchLoginSessionAuthority
+                    .ERROR_CONTROL_STATE_FAILED,
+                "FINORA secure login session authority is unavailable."
+            );
+            return;
+        }
+
+        resolveLoginSessionResult(
+            call,
+            loginSessionAuthority.validate(
+                call.getString(
+                    "sessionId"
+                )
+            )
+        );
+    }
+
+    @PluginMethod
+    public void touch(
+        PluginCall call
+    ) {
+        if (loginSessionAuthority == null) {
+            resolveLoginSessionFailure(
+                call,
+                FinoraBranchLoginSessionAuthority
+                    .ERROR_CONTROL_STATE_FAILED,
+                "FINORA secure login session authority is unavailable."
+            );
+            return;
+        }
+
+        FinoraBranchLoginSessionAuthority.TouchResult result =
+            loginSessionAuthority.touch(
+                call.getString(
+                    "sessionId"
+                )
+            );
+
+        if (!result.success) {
+            resolveLoginSessionFailure(
+                call,
+                result.errorCode,
+                result.error
+            );
+            return;
+        }
+
+        JSObject data =
+            new JSObject();
+
+        data.put(
+            "sessionId",
+            result.data.sessionId
+        );
+
+        data.put(
+            "lastActivity",
+            result.data.lastActivity
+        );
+
+        JSObject response =
+            createSuccessResult();
+
+        response.put(
+            "data",
+            data
+        );
+
+        call.resolve(
+            response
+        );
+    }
+
+    @PluginMethod
+    public void invalidate(
+        PluginCall call
+    ) {
+        if (loginSessionAuthority == null) {
+            resolveLoginSessionFailure(
+                call,
+                FinoraBranchLoginSessionAuthority
+                    .ERROR_CONTROL_STATE_FAILED,
+                "FINORA secure login session authority is unavailable."
+            );
+            return;
+        }
+
+        boolean invalidated =
+            loginSessionAuthority.invalidate(
+                call.getString(
+                    "sessionId"
+                )
+            );
+
+        JSObject data =
+            new JSObject();
+
+        data.put(
+            "invalidated",
+            invalidated
+        );
+
+        JSObject response =
+            createSuccessResult();
+
+        response.put(
+            "data",
+            data
+        );
+
+        call.resolve(
+            response
+        );
     }
 
     // ========================================================
@@ -1959,6 +2499,105 @@ public final class FinoraControlPlugin
                 "Unable to read FINORA Wallet Recharge authorization."
             );
         }
+    }
+
+    // ========================================================
+    // AUTHORITATIVE BRANCH ACCESS EVALUATION
+    // ========================================================
+
+    @PluginMethod
+    public void evaluateBranchAccess(
+        PluginCall call
+    ) {
+        String userId =
+            normalizeRequiredString(
+                call.getString("userId")
+            );
+
+        String ownerId =
+            normalizeRequiredString(
+                call.getString("ownerId")
+            );
+
+        String businessId =
+            normalizeRequiredString(
+                call.getString("businessId")
+            );
+
+        String branchId =
+            normalizeRequiredString(
+                call.getString("branchId")
+            );
+
+        if (
+            userId == null ||
+            ownerId == null ||
+            businessId == null ||
+            branchId == null
+        ) {
+            JSObject invalid = new JSObject();
+            invalid.put("success", false);
+            invalid.put("errorCode", "INVALID_REQUEST");
+            invalid.put(
+                "error",
+                "User ID, Owner ID, Business ID and Branch ID are required."
+            );
+            call.resolve(invalid);
+            return;
+        }
+
+        if (branchAccessRuntimeAuthority == null) {
+            JSObject unavailable = new JSObject();
+            unavailable.put("success", false);
+            unavailable.put("errorCode", "CONTROL_STORE_FAILED");
+            unavailable.put(
+                "error",
+                "FINORA authoritative Branch Access service is unavailable."
+            );
+            call.resolve(unavailable);
+            return;
+        }
+
+        FinoraBranchAccessRuntimeAuthority.Result result =
+            branchAccessRuntimeAuthority.evaluate(
+                userId,
+                ownerId,
+                businessId,
+                branchId
+            );
+
+        if (!result.success) {
+            JSObject failure = new JSObject();
+            failure.put("success", false);
+
+            if (result.errorCode != null) {
+                failure.put("errorCode", result.errorCode);
+            }
+
+            if (result.clockErrorCode != null) {
+                failure.put("clockErrorCode", result.clockErrorCode);
+            }
+
+            failure.put(
+                "error",
+                result.error == null
+                    ? "Unable to evaluate authoritative FINORA Branch Access."
+                    : result.error
+            );
+
+            call.resolve(failure);
+            return;
+        }
+
+        JSObject decision = new JSObject();
+        decision.put("allowed", result.data.allowed);
+        decision.put("state", result.data.state);
+        decision.put("reason", result.data.reason);
+        decision.put("observedAt", result.data.observedAt);
+
+        JSObject response = createSuccessResult();
+        response.put("data", decision);
+        call.resolve(response);
     }
 
     @PluginMethod
@@ -4814,6 +5453,160 @@ private boolean isValidEntitlement(
         }
 
         return null;
+    }
+
+    private void resolveLoginSessionResult(
+        PluginCall call,
+        FinoraBranchLoginSessionAuthority.SessionResult result
+    ) {
+        if (
+            result == null ||
+            !result.success ||
+            result.data == null
+        ) {
+            resolveLoginSessionFailure(
+                call,
+                result == null
+                    ? FinoraBranchLoginSessionAuthority
+                        .ERROR_CONTROL_STATE_FAILED
+                    : result.errorCode,
+                result == null
+                    ? "FINORA secure login session operation failed."
+                    : result.error
+            );
+            return;
+        }
+
+        FinoraBranchLoginSessionAuthority.SessionView source =
+            result.data;
+
+        JSObject data =
+            new JSObject();
+
+        data.put(
+            "sessionId",
+            source.sessionId
+        );
+
+        data.put(
+            "userId",
+            source.userId
+        );
+
+        data.put(
+            "username",
+            source.username
+        );
+
+        data.put(
+            "fullName",
+            source.fullName
+        );
+
+        data.put(
+            "role",
+            source.role
+        );
+
+        data.put(
+            "ownerId",
+            source.ownerId
+        );
+
+        data.put(
+            "businessId",
+            source.businessId
+        );
+
+        data.put(
+            "branchId",
+            source.branchId
+        );
+
+        data.put(
+            "storageMode",
+            source.storageMode
+        );
+
+        data.put(
+            "dataContext",
+            source.dataContext
+        );
+
+        if (source.demoId != null) {
+            data.put(
+                "demoId",
+                source.demoId
+            );
+        }
+
+        data.put(
+            "accessMode",
+            source.accessMode
+        );
+
+        data.put(
+            "loginTime",
+            source.loginTime
+        );
+
+        data.put(
+            "lastActivity",
+            source.lastActivity
+        );
+
+        data.put(
+            "validatedAt",
+            source.validatedAt
+        );
+
+        JSObject response =
+            createSuccessResult();
+
+        response.put(
+            "data",
+            data
+        );
+
+        call.resolve(
+            response
+        );
+    }
+
+    private void resolveLoginSessionFailure(
+        PluginCall call,
+        String errorCode,
+        String error
+    ) {
+        JSObject response =
+            new JSObject();
+
+        response.put(
+            "success",
+            false
+        );
+
+        if (
+            errorCode != null &&
+            !errorCode.trim().isEmpty()
+        ) {
+            response.put(
+                "errorCode",
+                errorCode
+            );
+        }
+
+        response.put(
+            "error",
+            error == null ||
+                error.trim().isEmpty()
+                ? "FINORA secure login session operation failed."
+                : error
+        );
+
+        call.resolve(
+            response
+        );
     }
 
     // ========================================================

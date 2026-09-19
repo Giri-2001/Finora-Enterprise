@@ -41,6 +41,10 @@ import {
   type CreateFinoraWalletRechargeRequestInput,
 } from "./finoraWalletRechargeRequestService.js";
 
+import type {
+  FinoraPortableBranchAuthStore,
+} from "./finoraPortableBranchAuthStore.js";
+
 import {
   FINORA_WALLET_RECHARGE_REQUEST_FILE_EXTENSION,
   createFinoraWalletRechargeRequestFileName,
@@ -132,6 +136,9 @@ export async function exportFinoraWalletRechargeRequestFromNativeDialog(
 
   input:
     CreateFinoraWalletRechargeRequestInput,
+
+  portableStore:
+    FinoraPortableBranchAuthStore,
 ): Promise<
   FinoraWalletRechargeRequestExportResult
 > {
@@ -141,6 +148,7 @@ export async function exportFinoraWalletRechargeRequestFromNativeDialog(
     const request =
       await createFinoraWalletRechargeRequest(
         input,
+        portableStore,
       );
 
     const defaultFileName =

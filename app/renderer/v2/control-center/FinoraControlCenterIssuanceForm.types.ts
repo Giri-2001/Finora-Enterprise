@@ -23,6 +23,7 @@
 export type FinoraControlCenterIssuanceWorkflow =
   | "BRANCH_ACTIVATION"
   | "BRANCH_ACCESS"
+  | "DEVICE_REVOCATION"
   | "STORAGE_ENTITLEMENT"
   | "BUSINESS_PROFILE"
   | "PRICING_POLICY"
@@ -189,6 +190,37 @@ export interface FinoraBranchAccessFormDraft {
   credentialRole:
     FinoraBranchAccessUserRoleDraft;
 }
+/* ============================================================
+   DEVICE REVOCATION
+============================================================ */
+
+export type FinoraBranchDeviceRevocationDataContextDraft =
+  | "REAL"
+  | "DEMO";
+
+export interface FinoraBranchDeviceRevocationFormDraft {
+  target:
+    FinoraControlCenterTargetDraft;
+
+  userId:
+    string;
+
+  canonicalUsername:
+    string;
+
+  storageMode:
+    FinoraStorageModeDraft;
+
+  dataContext:
+    FinoraBranchDeviceRevocationDataContextDraft;
+
+  demoId:
+    string;
+
+  reason:
+    string;
+}
+
 /* ============================================================
    STORAGE ENTITLEMENT
 ============================================================ */

@@ -125,6 +125,11 @@ import type {
 // TYPES
 // ============================================================
 
+const BOOTSTRAP_IMPORT_AUTHORITY_CONTEXT = {
+  lane:
+    "BOOTSTRAP_NATIVE",
+} as const;
+
 type TestSigningMaterial =
   ReturnType<
     typeof generateFinoraControlCenterSigningMaterial
@@ -857,6 +862,7 @@ async function runSelfTest():
         new Date(
           "2026-09-07T12:00:00.000Z",
         ),
+        BOOTSTRAP_IMPORT_AUTHORITY_CONTEXT,
       );
 
     assert(
@@ -1024,6 +1030,7 @@ async function runSelfTest():
         new Date(
           "2026-09-07T12:00:00.000Z",
         ),
+        BOOTSTRAP_IMPORT_AUTHORITY_CONTEXT,
       );
 
     const case1RevokePromise =
@@ -1156,6 +1163,7 @@ async function runSelfTest():
         new Date(
           "2026-09-07T12:00:00.000Z",
         ),
+        BOOTSTRAP_IMPORT_AUTHORITY_CONTEXT,
       );
 
     case2Gate.release();

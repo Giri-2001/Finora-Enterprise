@@ -47,11 +47,23 @@ export type FinoraPortableBranchAuthEnrollmentTransactionStatus =
   | "PREPARED"
   | "PORTABLE_WRITTEN"
   | "CONTROL_APPLIED"
+  | "CERTIFICATION_MIGRATED"
   | "COMPLETE";
 
 // ============================================================
 // CONTRACT
 // ============================================================
+
+export interface FinoraPortableBranchAuthEnrollmentCertificationProvenanceV1 {
+  requestId:
+    string;
+
+  responseId:
+    string;
+
+  certificationKeyId:
+    string;
+}
 
 export interface FinoraPortableBranchAuthEnrollmentTransactionV1 {
   schemaVersion:
@@ -84,6 +96,9 @@ export interface FinoraPortableBranchAuthEnrollmentTransactionV1 {
   status:
     FinoraPortableBranchAuthEnrollmentTransactionStatus;
 
+  branchCertificationProvenance?:
+    FinoraPortableBranchAuthEnrollmentCertificationProvenanceV1;
+
   credential:
     FinoraControlBranchCredential;
 
@@ -103,6 +118,9 @@ export interface FinoraPortableBranchAuthEnrollmentTransactionV1 {
     string;
 
   controlAppliedAt?:
+    string;
+
+  certificationMigratedAt?:
     string;
 
   completedAt?:
@@ -306,6 +324,97 @@ export function finoraPortableBranchAuthSourceAuthorizationVerificationEvidenceE
     portabilityProofEqual
   );
 }
+function validateFinoraPortableBranchAuthEnrollmentCertificationProvenanceV1(
+  value:
+    unknown,
+): asserts value is FinoraPortableBranchAuthEnrollmentCertificationProvenanceV1 {
+  if (
+    !value ||
+    typeof value !== "object" ||
+    Array.isArray(
+      value,
+    )
+  ) {
+    throw new Error(
+      "Portable Branch Auth enrollment certification provenance is invalid.",
+    );
+  }
+
+  const record =
+    value as Record<string, unknown>;
+
+  const actualKeys =
+    Object.keys(
+      record,
+    ).sort();
+
+  const expectedKeys =
+    [
+      "certificationKeyId",
+      "requestId",
+      "responseId",
+    ].sort();
+
+  if (
+    actualKeys.length !==
+      expectedKeys.length ||
+    !actualKeys.every(
+      (
+        key,
+        index,
+      ) =>
+        key ===
+          expectedKeys[index],
+    )
+  ) {
+    throw new Error(
+      "Portable Branch Auth enrollment certification provenance fields are invalid.",
+    );
+  }
+
+  if (
+    typeof record.requestId !== "string" ||
+    record.requestId.length === 0 ||
+    record.requestId.length > 256 ||
+    record.requestId.trim() !== record.requestId ||
+    !record.requestId.startsWith(
+      "FINORA-ENROLLMENT-",
+    ) ||
+    record.requestId.startsWith(
+      "FINORA-ENROLLMENT-RESPONSE-",
+    )
+  ) {
+    throw new Error(
+      "Portable Branch Auth enrollment certification requestId is invalid.",
+    );
+  }
+
+  if (
+    typeof record.responseId !== "string" ||
+    record.responseId.length === 0 ||
+    record.responseId.length > 256 ||
+    record.responseId.trim() !== record.responseId ||
+    !record.responseId.startsWith(
+      "FINORA-ENROLLMENT-RESPONSE-",
+    )
+  ) {
+    throw new Error(
+      "Portable Branch Auth enrollment certification responseId is invalid.",
+    );
+  }
+
+  if (
+    typeof record.certificationKeyId !== "string" ||
+    !/^FINORA-BRANCH-CERT-[0-9A-F]{32}$/.test(
+      record.certificationKeyId,
+    )
+  ) {
+    throw new Error(
+      "Portable Branch Auth enrollment certificationKeyId is not canonical.",
+    );
+  }
+}
+
 export function validateFinoraPortableBranchAuthEnrollmentTransactionV1(
   transaction:
     FinoraPortableBranchAuthEnrollmentTransactionV1,
@@ -394,6 +503,7 @@ export function validateFinoraPortableBranchAuthEnrollmentTransactionV1(
     transaction.status !== "PREPARED" &&
     transaction.status !== "PORTABLE_WRITTEN" &&
     transaction.status !== "CONTROL_APPLIED" &&
+    transaction.status !== "CERTIFICATION_MIGRATED" &&
     transaction.status !== "COMPLETE"
   ) {
     throw new Error(
@@ -475,6 +585,77 @@ export function validateFinoraPortableBranchAuthEnrollmentTransactionV1(
     transaction.updatedAt,
     "createdAt/updatedAt",
   );
+
+  const branchCertificationProvenance =
+    transaction.branchCertificationProvenance;
+
+  if (
+    branchCertificationProvenance !==
+      undefined
+  ) {
+    validateFinoraPortableBranchAuthEnrollmentCertificationProvenanceV1(
+      branchCertificationProvenance,
+    );
+  }
+
+  if (
+    transaction.certificationMigratedAt !==
+      undefined
+  ) {
+    assertTimestamp(
+      transaction.certificationMigratedAt,
+      "certificationMigratedAt",
+    );
+  }
+
+  if (
+    branchCertificationProvenance ===
+      undefined
+  ) {
+    if (
+      transaction.status ===
+        "CERTIFICATION_MIGRATED" ||
+      transaction.certificationMigratedAt !==
+        undefined
+    ) {
+      throw new Error(
+        "Legacy Portable Branch Auth enrollment transaction contains certification migration state.",
+      );
+    }
+  }
+  else {
+    if (
+      (
+        transaction.status ===
+          "PREPARED" ||
+        transaction.status ===
+          "PORTABLE_WRITTEN" ||
+        transaction.status ===
+          "CONTROL_APPLIED"
+      ) &&
+      transaction.certificationMigratedAt !==
+        undefined
+    ) {
+      throw new Error(
+        "Portable Branch Auth certification migration evidence appeared before durable migration state.",
+      );
+    }
+
+    if (
+      (
+        transaction.status ===
+          "CERTIFICATION_MIGRATED" ||
+        transaction.status ===
+          "COMPLETE"
+      ) &&
+      transaction.certificationMigratedAt ===
+        undefined
+    ) {
+      throw new Error(
+        "Certification-aware Portable Branch Auth enrollment requires durable certification migration evidence.",
+      );
+    }
+  }
 
   if (
     transaction.status ===
@@ -558,16 +739,72 @@ export function validateFinoraPortableBranchAuthEnrollmentTransactionV1(
     return;
   }
 
+  if (
+    transaction.status ===
+      "CERTIFICATION_MIGRATED"
+  ) {
+    assertTimestamp(
+      transaction.certificationMigratedAt,
+      "certificationMigratedAt",
+    );
+
+    assertTimestampOrder(
+      transaction.controlAppliedAt,
+      transaction.certificationMigratedAt,
+      "controlAppliedAt/certificationMigratedAt",
+    );
+
+    assertTimestampOrder(
+      transaction.certificationMigratedAt,
+      transaction.updatedAt,
+      "certificationMigratedAt/updatedAt",
+    );
+
+    if (
+      transaction.completedAt !==
+        undefined
+    ) {
+      throw new Error(
+        "CERTIFICATION_MIGRATED transaction contains completedAt.",
+      );
+    }
+
+    return;
+  }
+
   assertTimestamp(
     transaction.completedAt,
     "completedAt",
   );
 
-  assertTimestampOrder(
-    transaction.controlAppliedAt,
-    transaction.completedAt,
-    "controlAppliedAt/completedAt",
-  );
+  if (
+    branchCertificationProvenance !==
+      undefined
+  ) {
+    assertTimestamp(
+      transaction.certificationMigratedAt,
+      "certificationMigratedAt",
+    );
+
+    assertTimestampOrder(
+      transaction.controlAppliedAt,
+      transaction.certificationMigratedAt,
+      "controlAppliedAt/certificationMigratedAt",
+    );
+
+    assertTimestampOrder(
+      transaction.certificationMigratedAt,
+      transaction.completedAt,
+      "certificationMigratedAt/completedAt",
+    );
+  }
+  else {
+    assertTimestampOrder(
+      transaction.controlAppliedAt,
+      transaction.completedAt,
+      "controlAppliedAt/completedAt",
+    );
+  }
 
   assertTimestampOrder(
     transaction.completedAt,
@@ -597,6 +834,13 @@ export function canAdvanceFinoraPortableBranchAuthEnrollmentTransaction(
     ) ||
     (
       current === "CONTROL_APPLIED" &&
+      (
+        next === "COMPLETE" ||
+        next === "CERTIFICATION_MIGRATED"
+      )
+    ) ||
+    (
+      current === "CERTIFICATION_MIGRATED" &&
       next === "COMPLETE"
     )
   );

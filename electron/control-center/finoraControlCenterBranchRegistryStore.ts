@@ -46,6 +46,14 @@ import {
 } from "../control/finoraInstallationBindingCrypto.js";
 
 import {
+  assertFinoraBranchCertificationPublicKey,
+} from "../control/finoraBranchCertificationCrypto.js";
+
+import type {
+  FinoraBranchCertificationPublicKeyV1,
+} from "../control/finoraBranchCertificationContract.js";
+
+import {
   observeFinoraControlCenterAuthoritativeWallClock,
 } from "./finoraControlCenterClockHighWaterAuthorityService.js";
 
@@ -102,6 +110,15 @@ export interface RegisterFinoraControlCenterBranchInput {
 
   identity:
     FinoraControlCenterBranchProvisionedIdentity;
+
+  /*
+   * Optional only because authentic historical Enrollment V1
+   * evidence has no Branch Certification authority.
+   *
+   * New live Enrollment V2 callers require this field.
+   */
+  branchCertificationPublicKey?:
+    FinoraBranchCertificationPublicKeyV1;
 }
 
 export interface RegisterFinoraControlCenterBranchResult {
@@ -255,6 +272,94 @@ function validateInstallationIdentity(
 // ============================================================
 // PROVISIONED IDENTITY VALIDATION
 // ============================================================
+
+function isSameInstallationIdentity(
+  left:
+    FinoraControlCenterBranchRegistryRecord["identity"]["installation"],
+  right:
+    FinoraControlCenterBranchRegistryRecord["identity"]["installation"],
+): boolean {
+
+  return (
+    left.installationId ===
+      right.installationId &&
+    left.bindingKeyId ===
+      right.bindingKeyId &&
+    left.platform ===
+      right.platform &&
+    left.algorithm ===
+      right.algorithm &&
+    left.publicKeyFormat ===
+      right.publicKeyFormat &&
+    left.publicKey ===
+      right.publicKey &&
+    left.fingerprintAlgorithm ===
+      right.fingerprintAlgorithm &&
+    left.publicKeyFingerprint ===
+      right.publicKeyFingerprint &&
+    left.bindingCreatedAt ===
+      right.bindingCreatedAt
+  );
+}
+
+function isSameBranchCertificationPublicKey(
+  left:
+    FinoraBranchCertificationPublicKeyV1,
+
+  right:
+    FinoraBranchCertificationPublicKeyV1,
+): boolean {
+
+  return (
+    left.keyId ===
+      right.keyId &&
+    left.algorithm ===
+      right.algorithm &&
+    left.publicKeyFormat ===
+      right.publicKeyFormat &&
+    left.publicKey ===
+      right.publicKey &&
+    left.fingerprintAlgorithm ===
+      right.fingerprintAlgorithm &&
+    left.publicKeyFingerprint ===
+      right.publicKeyFingerprint &&
+    left.createdAt ===
+      right.createdAt &&
+    left.schemaVersion ===
+      right.schemaVersion
+  );
+}
+
+function validateAuthorizedDevice(
+  device:
+    FinoraControlCenterBranchRegistryRecord["authorizedDevices"][number],
+): void {
+
+  validateInstallationIdentity(
+    device.installation,
+  );
+
+  if (
+    device.evidenceSource !==
+      "INITIAL_PROVISIONING" ||
+    !isCanonicalTimestamp(
+      device.firstObservedAt,
+    ) ||
+    !isCanonicalTimestamp(
+      device.updatedAt,
+    ) ||
+    Date.parse(
+      device.updatedAt,
+    ) <
+      Date.parse(
+        device.firstObservedAt,
+      )
+  ) {
+    throw new Error(
+      "FINORA Control Center Branch Registry authorized-device evidence is invalid.",
+    );
+  }
+}
 
 function validateProvisionedIdentity(
   identity:
@@ -452,6 +557,47 @@ function validateRecord(
   );
 
   if (
+    record.branchCertificationPublicKey !==
+      undefined
+  ) {
+    assertFinoraBranchCertificationPublicKey(
+      record.branchCertificationPublicKey,
+    );
+  }
+
+  if (
+    !Array.isArray(
+      record.authorizedDevices,
+    ) ||
+    record.authorizedDevices.length !==
+      1
+  ) {
+    throw new Error(
+      "FINORA Control Center Branch Registry must contain exactly one initial provisioned authorized device in schema V2.",
+    );
+  }
+
+  const initialAuthorizedDevice =
+    record.authorizedDevices[0];
+
+  validateAuthorizedDevice(
+    initialAuthorizedDevice,
+  );
+
+  if (
+    initialAuthorizedDevice.evidenceSource !==
+      "INITIAL_PROVISIONING" ||
+    !isSameInstallationIdentity(
+      initialAuthorizedDevice.installation,
+      record.identity.installation,
+    )
+  ) {
+    throw new Error(
+      "FINORA Control Center Branch Registry initial authorized device must exactly match the immutable provisioned installation identity.",
+    );
+  }
+
+  if (
     record.profile !==
       undefined
   ) {
@@ -613,6 +759,27 @@ function validateRegistryUniqueness(
   const publicKeys =
     new Set<string>();
 
+  const authorizedInstallationIds =
+    new Set<string>();
+
+  const authorizedBindingKeyIds =
+    new Set<string>();
+
+  const authorizedFingerprints =
+    new Set<string>();
+
+  const authorizedPublicKeys =
+    new Set<string>();
+
+  const branchCertificationKeyIds =
+    new Set<string>();
+
+  const branchCertificationFingerprints =
+    new Set<string>();
+
+  const branchCertificationPublicKeys =
+    new Set<string>();
+
   for (
     const record of
       branches
@@ -620,6 +787,57 @@ function validateRegistryUniqueness(
 
     const identity =
       record.identity;
+
+    const certification =
+      record.branchCertificationPublicKey;
+
+    if (
+      certification !==
+        undefined
+    ) {
+
+      if (
+        branchCertificationKeyIds.has(
+          certification.keyId,
+        )
+      ) {
+        throw new Error(
+          "FINORA Control Center Branch Registry contains a Branch Certification keyId assigned to more than one branch.",
+        );
+      }
+
+      if (
+        branchCertificationFingerprints.has(
+          certification.publicKeyFingerprint,
+        )
+      ) {
+        throw new Error(
+          "FINORA Control Center Branch Registry contains a Branch Certification fingerprint assigned to more than one branch.",
+        );
+      }
+
+      if (
+        branchCertificationPublicKeys.has(
+          certification.publicKey,
+        )
+      ) {
+        throw new Error(
+          "FINORA Control Center Branch Registry contains a Branch Certification public key assigned to more than one branch.",
+        );
+      }
+
+      branchCertificationKeyIds.add(
+        certification.keyId,
+      );
+
+      branchCertificationFingerprints.add(
+        certification.publicKeyFingerprint,
+      );
+
+      branchCertificationPublicKeys.add(
+        certification.publicKey,
+      );
+    }
 
     const scope =
       branchScopeKey(
@@ -698,6 +916,71 @@ function validateRegistryUniqueness(
     ) {
       throw new Error(
         "FINORA Control Center Branch Registry contains a duplicate recipient public key.",
+      );
+    }
+
+    for (
+      const device of
+        record.authorizedDevices
+    ) {
+
+      const installation =
+        device.installation;
+
+      if (
+        authorizedInstallationIds.has(
+          installation.installationId,
+        )
+      ) {
+        throw new Error(
+          "FINORA Control Center Branch Registry contains a duplicate authorized-device Installation ID.",
+        );
+      }
+
+      if (
+        authorizedBindingKeyIds.has(
+          installation.bindingKeyId,
+        )
+      ) {
+        throw new Error(
+          "FINORA Control Center Branch Registry contains a duplicate authorized-device Binding Key ID.",
+        );
+      }
+
+      if (
+        authorizedFingerprints.has(
+          installation.publicKeyFingerprint,
+        )
+      ) {
+        throw new Error(
+          "FINORA Control Center Branch Registry contains a duplicate authorized-device public-key fingerprint.",
+        );
+      }
+
+      if (
+        authorizedPublicKeys.has(
+          installation.publicKey,
+        )
+      ) {
+        throw new Error(
+          "FINORA Control Center Branch Registry contains a duplicate authorized-device public key.",
+        );
+      }
+
+      authorizedInstallationIds.add(
+        installation.installationId,
+      );
+
+      authorizedBindingKeyIds.add(
+        installation.bindingKeyId,
+      );
+
+      authorizedFingerprints.add(
+        installation.publicKeyFingerprint,
+      );
+
+      authorizedPublicKeys.add(
+        installation.publicKey,
       );
     }
 
@@ -876,6 +1159,288 @@ function cloneRegistry(
 }
 
 // ============================================================
+// V1 -> V2 MIGRATION
+// ============================================================
+
+function migrateFinoraControlCenterBranchRegistryV1(
+  value:
+    unknown,
+): {
+  value:
+    unknown;
+  migrated:
+    boolean;
+} {
+
+  if (
+    typeof value !==
+      "object" ||
+    value ===
+      null ||
+    Array.isArray(
+      value,
+    )
+  ) {
+    return {
+      value,
+      migrated:
+        false,
+    };
+  }
+
+  const legacyRoot =
+    value as
+      Record<string, unknown>;
+
+  if (
+    legacyRoot.schemaVersion !==
+      1
+  ) {
+    return {
+      value,
+      migrated:
+        false,
+    };
+  }
+
+  if (
+    !Array.isArray(
+      legacyRoot.branches,
+    ) ||
+    !isCanonicalTimestamp(
+      legacyRoot.createdAt,
+    ) ||
+    !isCanonicalTimestamp(
+      legacyRoot.updatedAt,
+    )
+  ) {
+    throw new Error(
+      "FINORA Control Center Branch Registry V1 persistence schema is invalid.",
+    );
+  }
+
+  const migratedBranches =
+    legacyRoot.branches.map(
+      (branchValue) => {
+
+        if (
+          typeof branchValue !==
+            "object" ||
+          branchValue ===
+            null ||
+          Array.isArray(
+            branchValue,
+          )
+        ) {
+          throw new Error(
+            "FINORA Control Center Branch Registry V1 branch record is invalid.",
+          );
+        }
+
+        const legacyRecord =
+          branchValue as
+            Record<string, unknown>;
+
+        if (
+          legacyRecord.schemaVersion !==
+            1 ||
+          typeof legacyRecord.identity !==
+            "object" ||
+          legacyRecord.identity ===
+            null ||
+          Array.isArray(
+            legacyRecord.identity,
+          )
+        ) {
+          throw new Error(
+            "FINORA Control Center Branch Registry V1 branch metadata is invalid.",
+          );
+        }
+
+        const identity =
+          legacyRecord.identity as
+            FinoraControlCenterBranchRegistryRecord["identity"];
+
+        validateProvisionedIdentity(
+          identity,
+        );
+
+        if (
+          legacyRecord.profile !==
+            undefined
+        ) {
+          validateProfile(
+            legacyRecord.profile as
+              NonNullable<FinoraControlCenterBranchRegistryRecord["profile"]>,
+          );
+        }
+
+        if (
+          legacyRecord.access !==
+            undefined
+        ) {
+          validateAccess(
+            legacyRecord.access as
+              NonNullable<FinoraControlCenterBranchRegistryRecord["access"]>,
+          );
+        }
+
+        if (
+          legacyRecord.lastSync !==
+            undefined
+        ) {
+          validateLastSync(
+            legacyRecord.lastSync as
+              NonNullable<FinoraControlCenterBranchRegistryRecord["lastSync"]>,
+          );
+        }
+
+        if (
+          legacyRecord.lastReportedWallet !==
+            undefined
+        ) {
+          validateLastReportedWallet(
+            legacyRecord.lastReportedWallet as
+              NonNullable<FinoraControlCenterBranchRegistryRecord["lastReportedWallet"]>,
+          );
+        }
+
+        if (
+          !isCanonicalTimestamp(
+            legacyRecord.createdAt,
+          ) ||
+          !isCanonicalTimestamp(
+            legacyRecord.updatedAt,
+          ) ||
+          Date.parse(
+            legacyRecord.updatedAt,
+          ) <
+            Date.parse(
+              legacyRecord.createdAt,
+            )
+        ) {
+          throw new Error(
+            "FINORA Control Center Branch Registry V1 record timestamps are invalid.",
+          );
+        }
+
+        const createdAt =
+          legacyRecord.createdAt;
+
+        const migratedRecord:
+          FinoraControlCenterBranchRegistryRecord = {
+
+            identity:
+              JSON.parse(
+                JSON.stringify(
+                  identity,
+                ),
+              ) as
+                FinoraControlCenterBranchRegistryRecord["identity"],
+
+            authorizedDevices: [
+              {
+                installation: {
+                  ...identity.installation,
+                },
+
+                evidenceSource:
+                  "INITIAL_PROVISIONING",
+
+                firstObservedAt:
+                  createdAt,
+
+                updatedAt:
+                  createdAt,
+              },
+            ],
+
+            ...(legacyRecord.profile !==
+            undefined
+              ? {
+                  profile:
+                    JSON.parse(
+                      JSON.stringify(
+                        legacyRecord.profile,
+                      ),
+                    ),
+                }
+              : {}),
+
+            ...(legacyRecord.access !==
+            undefined
+              ? {
+                  access:
+                    JSON.parse(
+                      JSON.stringify(
+                        legacyRecord.access,
+                      ),
+                    ),
+                }
+              : {}),
+
+            ...(legacyRecord.lastSync !==
+            undefined
+              ? {
+                  lastSync:
+                    JSON.parse(
+                      JSON.stringify(
+                        legacyRecord.lastSync,
+                      ),
+                    ),
+                }
+              : {}),
+
+            ...(legacyRecord.lastReportedWallet !==
+            undefined
+              ? {
+                  lastReportedWallet:
+                    JSON.parse(
+                      JSON.stringify(
+                        legacyRecord.lastReportedWallet,
+                      ),
+                    ),
+                }
+              : {}),
+
+            createdAt,
+
+            updatedAt:
+              legacyRecord.updatedAt,
+
+            schemaVersion:
+              FINORA_CONTROL_CENTER_BRANCH_REGISTRY_SCHEMA_VERSION,
+          };
+
+        return migratedRecord;
+      },
+    );
+
+  const migratedRegistry:
+    FinoraControlCenterBranchRegistry = {
+
+      branches:
+        migratedBranches,
+
+      createdAt:
+        legacyRoot.createdAt,
+
+      updatedAt:
+        legacyRoot.updatedAt,
+
+      schemaVersion:
+        FINORA_CONTROL_CENTER_BRANCH_REGISTRY_SCHEMA_VERSION,
+    };
+
+  return {
+    value:
+      migratedRegistry,
+    migrated:
+      true,
+  };
+}
+
+// ============================================================
 // READ
 // ============================================================
 
@@ -957,11 +1522,27 @@ async function readRegistry():
     );
   }
 
+  const migration =
+    migrateFinoraControlCenterBranchRegistryV1(
+      parsed,
+    );
+
+  const registry =
+    migration.value;
+
   validateFinoraControlCenterBranchRegistry(
-    parsed,
+    registry,
   );
 
-  return parsed;
+  if (
+    migration.migrated
+  ) {
+    await writeRegistry(
+      registry,
+    );
+  }
+
+  return registry;
 }
 
 // ============================================================
@@ -1239,6 +1820,15 @@ async function registerInternal(
     input.identity,
   );
 
+  if (
+    input.branchCertificationPublicKey !==
+      undefined
+  ) {
+    assertFinoraBranchCertificationPublicKey(
+      input.branchCertificationPublicKey,
+    );
+  }
+
   const clockResult =
     await observeFinoraControlCenterAuthoritativeWallClock();
 
@@ -1290,6 +1880,87 @@ async function registerInternal(
       undefined
   ) {
 
+    const incomingCertification =
+      input.branchCertificationPublicKey;
+
+    const existingCertification =
+      existing.branchCertificationPublicKey;
+
+    /*
+     * Legacy exact branch registrations remain byte-stable when
+     * no certification evidence is supplied.
+     */
+    if (
+      incomingCertification ===
+        undefined
+    ) {
+      return {
+        created:
+          false,
+
+        record:
+          cloneRegistryRecord(
+            existing,
+          ),
+      };
+    }
+
+    /*
+     * Once pinned, Branch Certification authority is immutable.
+     * Exact retries are idempotent and do not rewrite registry bytes.
+     */
+    if (
+      existingCertification !==
+        undefined
+    ) {
+
+      if (
+        !isSameBranchCertificationPublicKey(
+          existingCertification,
+          incomingCertification,
+        )
+      ) {
+        throw new Error(
+          "FINORA Control Center Branch Registry rejected a conflicting Branch Certification authority for an existing branch.",
+        );
+      }
+
+      return {
+        created:
+          false,
+
+        record:
+          cloneRegistryRecord(
+            existing,
+          ),
+      };
+    }
+
+    /*
+     * One-time certification pin:
+     *
+     * The immutable provisioned identity already matched above.
+     * Callers may only supply this input from verified Enrollment
+     * Request V2 evidence.
+     */
+    existing.branchCertificationPublicKey = {
+      ...incomingCertification,
+    };
+
+    existing.updatedAt =
+      observedAt;
+
+    registry.updatedAt =
+      observedAt;
+
+    validateFinoraControlCenterBranchRegistry(
+      registry,
+    );
+
+    await writeRegistry(
+      registry,
+    );
+
     return {
       created:
         false,
@@ -1305,19 +1976,40 @@ async function registerInternal(
     FinoraControlCenterBranchRegistryRecord = {
 
       identity:
-        cloneRegistryRecord({
-          identity:
+        JSON.parse(
+          JSON.stringify(
             input.identity,
+          ),
+        ) as
+          FinoraControlCenterBranchProvisionedIdentity,
 
-          createdAt:
+      authorizedDevices: [
+        {
+          installation: {
+            ...input.identity.installation,
+          },
+
+          evidenceSource:
+            "INITIAL_PROVISIONING",
+
+          firstObservedAt:
             observedAt,
 
           updatedAt:
             observedAt,
+        },
+      ],
 
-          schemaVersion:
-            FINORA_CONTROL_CENTER_BRANCH_REGISTRY_SCHEMA_VERSION,
-        }).identity,
+      ...(
+        input.branchCertificationPublicKey ===
+          undefined
+          ? {}
+          : {
+              branchCertificationPublicKey: {
+                ...input.branchCertificationPublicKey,
+              },
+            }
+      ),
 
       createdAt:
         observedAt,

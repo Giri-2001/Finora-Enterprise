@@ -56,6 +56,7 @@ import {
 import {
   applyFinoraPortableBranchAuthEnrollmentControlState,
   completeFinoraPortableBranchAuthEnrollmentTransaction,
+  markFinoraPortableBranchAuthEnrollmentCertificationMigrated,
   markFinoraPortableBranchAuthEnrollmentWritten,
   prepareFinoraPortableBranchAuthEnrollmentTransaction,
   readFinoraControlStore,
@@ -826,6 +827,17 @@ async function runSelfTest():
         status:
           "PREPARED",
 
+        branchCertificationProvenance: {
+          requestId:
+            "FINORA-ENROLLMENT-MUTATION-CERT-000001",
+
+          responseId:
+            "FINORA-ENROLLMENT-RESPONSE-MUTATION-CERT-000001",
+
+          certificationKeyId:
+            "FINORA-BRANCH-CERT-0123456789ABCDEF0123456789ABCDEF",
+        },
+
         credential,
 
         portableEnvelope:
@@ -1292,13 +1304,328 @@ async function runSelfTest():
     );
 
     // ========================================================
+    // CERTIFICATION-AWARE DIRECT COMPLETE MUST FAIL
+    // ========================================================
+
+    const prematureCompleteAt =
+      new Date(
+        now.getTime() +
+          6000,
+      ).toISOString();
+
+    const prematureComplete =
+      await completeFinoraPortableBranchAuthEnrollmentTransaction({
+        transactionId:
+          transaction.transactionId,
+
+        transitionedAt:
+          prematureCompleteAt,
+      });
+
+    expectFailure(
+      "certification-aware CONTROL_APPLIED cannot skip durable migration evidence",
+      prematureComplete,
+    );
+
+    const afterPrematureComplete =
+      await readFinoraControlStore();
+
+    assert(
+      afterPrematureComplete.success &&
+        afterPrematureComplete.data &&
+      afterPrematureComplete.data
+        .portableBranchAuthEnrollmentTransactions
+        ?.[0]
+        .status ===
+        "CONTROL_APPLIED" &&
+      afterPrematureComplete.data
+        .portableBranchAuthEnrollmentTransactions
+        ?.[0]
+        .certificationMigratedAt ===
+        undefined &&
+      afterPrematureComplete.data
+        .portableBranchAuthEnrollmentTransactions
+        ?.[0]
+        .completedAt ===
+        undefined,
+      "Rejected certification-aware direct COMPLETE mutated durable journal state.",
+    );
+
+    console.log(
+      "PASS: rejected direct COMPLETE leaves CONTROL_APPLIED journal unchanged",
+    );
+
+    // ========================================================
+    // FORCED CERTIFICATION_MIGRATED PERSISTENCE FAILURE
+    // ========================================================
+
+    const certificationMigratedAt =
+      new Date(
+        now.getTime() +
+          5000,
+      ).toISOString();
+
+    await mkdir(
+      controlTemporaryFile,
+      {
+        recursive:
+          false,
+      },
+    );
+
+    const failedCertificationMigration =
+      await markFinoraPortableBranchAuthEnrollmentCertificationMigrated({
+        transactionId:
+          transaction.transactionId,
+
+        transitionedAt:
+          certificationMigratedAt,
+      });
+
+    expectFailure(
+      "forced CERTIFICATION_MIGRATED persistence failure surfaces failure",
+      failedCertificationMigration,
+    );
+
+    await rm(
+      controlTemporaryFile,
+      {
+        recursive:
+          true,
+        force:
+          true,
+      },
+    );
+
+    const afterFailedCertificationMigration =
+      await readFinoraControlStore();
+
+    assert(
+      afterFailedCertificationMigration.success &&
+        afterFailedCertificationMigration.data &&
+      afterFailedCertificationMigration.data
+        .portableBranchAuthEnrollmentTransactions
+        ?.[0]
+        .status ===
+        "CONTROL_APPLIED" &&
+      afterFailedCertificationMigration.data
+        .portableBranchAuthEnrollmentTransactions
+        ?.[0]
+        .certificationMigratedAt ===
+        undefined &&
+      (
+        afterFailedCertificationMigration.data
+          .branchCredentialEnrollmentAuthorizations
+          ?.length ??
+        0
+      ) ===
+        0 &&
+      (
+        afterFailedCertificationMigration.data
+          .branchCredentials
+          ?.length ??
+        0
+      ) ===
+        1,
+      "Failed CERTIFICATION_MIGRATED commit leaked partial durable mutation.",
+    );
+
+    console.log(
+      "PASS: failed CERTIFICATION_MIGRATED commit leaves journal + credential + consumed authority atomically unchanged",
+    );
+
+    // ========================================================
+    // CERTIFICATION_MIGRATED SUCCESS
+    // ========================================================
+
+    const certificationMigration =
+      await markFinoraPortableBranchAuthEnrollmentCertificationMigrated({
+        transactionId:
+          transaction.transactionId,
+
+        transitionedAt:
+          certificationMigratedAt,
+      });
+
+    expectSuccess(
+      "CONTROL_APPLIED advances to CERTIFICATION_MIGRATED",
+      certificationMigration,
+    );
+
+    const certificationMigratedStore =
+      await readFinoraControlStore();
+
+    assert(
+      certificationMigratedStore.success &&
+        certificationMigratedStore.data,
+      certificationMigratedStore.error ??
+        "Unable to read CERTIFICATION_MIGRATED store.",
+    );
+
+    const migratedTransaction =
+      certificationMigratedStore.data
+        .portableBranchAuthEnrollmentTransactions
+        ?.[0];
+
+    assert(
+      migratedTransaction?.status ===
+        "CERTIFICATION_MIGRATED" &&
+      migratedTransaction.certificationMigratedAt ===
+        certificationMigratedAt &&
+      migratedTransaction.branchCertificationProvenance?.requestId ===
+        "FINORA-ENROLLMENT-MUTATION-CERT-000001" &&
+      migratedTransaction.branchCertificationProvenance?.responseId ===
+        "FINORA-ENROLLMENT-RESPONSE-MUTATION-CERT-000001" &&
+      migratedTransaction.branchCertificationProvenance?.certificationKeyId ===
+        "FINORA-BRANCH-CERT-0123456789ABCDEF0123456789ABCDEF" &&
+      (
+        certificationMigratedStore.data
+          .branchCredentialEnrollmentAuthorizations
+          ?.length ??
+        0
+      ) ===
+        0 &&
+      (
+        certificationMigratedStore.data
+          .branchCredentials
+          ?.length ??
+        0
+      ) ===
+        1,
+      "CERTIFICATION_MIGRATED did not durably preserve exact non-secret provenance and existing Control state.",
+    );
+
+    console.log(
+      "PASS: CERTIFICATION_MIGRATED durably persists exact provenance without credential or authority mutation",
+    );
+
+    // ========================================================
+    // CERTIFICATION_MIGRATED RETRY
+    // ========================================================
+
+    const certificationMigrationRetry =
+      await markFinoraPortableBranchAuthEnrollmentCertificationMigrated({
+        transactionId:
+          transaction.transactionId,
+
+        transitionedAt:
+          new Date(
+            now.getTime() +
+              5500,
+          ).toISOString(),
+      });
+
+    expectSuccess(
+      "CERTIFICATION_MIGRATED retry is idempotent",
+      certificationMigrationRetry,
+    );
+
+    const afterCertificationMigrationRetry =
+      await readFinoraControlStore();
+
+    assert(
+      afterCertificationMigrationRetry.success &&
+        afterCertificationMigrationRetry.data &&
+      afterCertificationMigrationRetry.data
+        .portableBranchAuthEnrollmentTransactions
+        ?.[0]
+        .status ===
+        "CERTIFICATION_MIGRATED" &&
+      afterCertificationMigrationRetry.data
+        .portableBranchAuthEnrollmentTransactions
+        ?.[0]
+        .certificationMigratedAt ===
+        certificationMigratedAt &&
+      (
+        afterCertificationMigrationRetry.data
+          .branchCredentials
+          ?.length ??
+        0
+      ) ===
+        1 &&
+      (
+        afterCertificationMigrationRetry.data
+          .branchCredentialEnrollmentAuthorizations
+          ?.length ??
+        0
+      ) ===
+        0,
+      "CERTIFICATION_MIGRATED retry rewrote first evidence or Control state.",
+    );
+
+    console.log(
+      "PASS: CERTIFICATION_MIGRATED retry preserves first durable migration evidence",
+    );
+
+    // ========================================================
+    // RECOVERY-STYLE EARLIER TRANSITION RETRIES
+    // ========================================================
+
+    const writtenAfterMigration =
+      await markFinoraPortableBranchAuthEnrollmentWritten({
+        transactionId:
+          transaction.transactionId,
+
+        transitionedAt:
+          new Date(
+            now.getTime() +
+              5600,
+          ).toISOString(),
+      });
+
+    expectSuccess(
+      "PORTABLE_WRITTEN retry succeeds after CERTIFICATION_MIGRATED",
+      writtenAfterMigration,
+    );
+
+    const controlAfterMigration =
+      await applyFinoraPortableBranchAuthEnrollmentControlState({
+        transactionId:
+          transaction.transactionId,
+
+        transitionedAt:
+          new Date(
+            now.getTime() +
+              5700,
+          ).toISOString(),
+      });
+
+    expectSuccess(
+      "CONTROL_APPLIED retry succeeds after CERTIFICATION_MIGRATED",
+      controlAfterMigration,
+    );
+
+    const afterRecoveryStyleRetries =
+      await readFinoraControlStore();
+
+    assert(
+      afterRecoveryStyleRetries.success &&
+        afterRecoveryStyleRetries.data &&
+      afterRecoveryStyleRetries.data
+        .portableBranchAuthEnrollmentTransactions
+        ?.[0]
+        .status ===
+        "CERTIFICATION_MIGRATED" &&
+      afterRecoveryStyleRetries.data
+        .portableBranchAuthEnrollmentTransactions
+        ?.[0]
+        .certificationMigratedAt ===
+        certificationMigratedAt,
+      "Earlier transition retries regressed CERTIFICATION_MIGRATED evidence.",
+    );
+
+    console.log(
+      "PASS: recovery-style earlier transition retries preserve CERTIFICATION_MIGRATED evidence",
+    );
+
+    // ========================================================
     // COMPLETE
     // ========================================================
 
     const completedAt =
       new Date(
         now.getTime() +
-          5000,
+          6000,
       ).toISOString();
 
     const completeResult =
@@ -1311,7 +1638,7 @@ async function runSelfTest():
       });
 
     expectSuccess(
-      "CONTROL_APPLIED advances to COMPLETE",
+      "CERTIFICATION_MIGRATED advances to COMPLETE",
       completeResult,
     );
 
@@ -1336,6 +1663,17 @@ async function runSelfTest():
         ?.[0]
         .completedAt ===
         completedAt &&
+      completeStore.data
+        .portableBranchAuthEnrollmentTransactions
+        ?.[0]
+        .certificationMigratedAt ===
+        certificationMigratedAt &&
+      completeStore.data
+        .portableBranchAuthEnrollmentTransactions
+        ?.[0]
+        .branchCertificationProvenance
+        ?.certificationKeyId ===
+        "FINORA-BRANCH-CERT-0123456789ABCDEF0123456789ABCDEF" &&
       (
         completeStore.data
           .branchCredentials
@@ -1369,7 +1707,7 @@ async function runSelfTest():
         transitionedAt:
           new Date(
             now.getTime() +
-              6000,
+              7000,
           ).toISOString(),
       });
 
@@ -1403,6 +1741,17 @@ async function runSelfTest():
         ?.[0]
         .completedAt ===
         completedAt &&
+      finalStore.data
+        .portableBranchAuthEnrollmentTransactions
+        ?.[0]
+        .certificationMigratedAt ===
+        certificationMigratedAt &&
+      finalStore.data
+        .portableBranchAuthEnrollmentTransactions
+        ?.[0]
+        .branchCertificationProvenance
+        ?.responseId ===
+        "FINORA-ENROLLMENT-RESPONSE-MUTATION-CERT-000001" &&
       (
         finalStore.data
           .branchCredentials

@@ -114,6 +114,23 @@ export default function BusinessOwnerProfileSection() {
     SettingsFeedbackMessage | null
   >(null);
 
+  const [
+    backupPassword,
+    setBackupPassword,
+  ] = useState("");
+
+  const [
+    backupSecurityCode,
+    setBackupSecurityCode,
+  ] = useState("");
+
+  const [
+    backupBusy,
+    setBackupBusy,
+  ] = useState(
+    false,
+  );
+
   // ==========================================================
   // LOAD
   // ==========================================================
@@ -534,6 +551,189 @@ export default function BusinessOwnerProfileSection() {
   }
 
   // ==========================================================
+  // PORTABLE BRANCH AUTH BACKUP
+  //
+  // Renderer supplies current opaque sessionId plus fresh
+  // Password + Security Code only. Branch/storage/filesystem
+  // authority remains Electron-main-owned.
+  // ==========================================================
+
+  async function handleBranchBackup():
+    Promise<void> {
+
+    if (backupBusy) {
+      return;
+    }
+
+    const currentSession =
+      getSession();
+
+    const sessionId =
+      String(
+        currentSession?.sessionId ??
+        "",
+      ).trim();
+
+    if (!sessionId) {
+      setFeedback({
+        kind:
+          "danger",
+
+        title:
+          "Authenticated Session Required",
+
+        message:
+          "Sign in again before creating a FINORA Branch Backup.",
+      });
+
+      return;
+    }
+
+    if (
+      backupPassword.trim().length ===
+        0 ||
+      backupSecurityCode.trim().length ===
+        0
+    ) {
+      setFeedback({
+        kind:
+          "danger",
+
+        title:
+          "Backup Authentication Required",
+
+        message:
+          "Enter your current Password and Security Code to create the Branch Backup.",
+      });
+
+      return;
+    }
+
+    const bridge =
+      window.finora
+        ?.portableBranchAuthBackup;
+
+    if (
+      !bridge ||
+      typeof bridge.exportBackup !==
+        "function"
+    ) {
+      setFeedback({
+        kind:
+          "danger",
+
+        title:
+          "Branch Backup Unavailable",
+
+        message:
+          "FINORA Branch Backup is not available in this application build.",
+      });
+
+      return;
+    }
+
+    setBackupBusy(
+      true,
+    );
+
+    setFeedback(
+      null,
+    );
+
+    const processingId =
+      startFinoraProcessing(
+        "Preparing FINORA Branch Backup...",
+      );
+
+    try {
+      const result =
+        await bridge.exportBackup({
+          sessionId,
+
+          password:
+            backupPassword,
+
+          securityCode:
+            backupSecurityCode,
+        });
+
+      if (!result.success) {
+        setFeedback({
+          kind:
+            "danger",
+
+          title:
+            "Branch Backup Failed",
+
+          message:
+            result.error,
+        });
+
+        return;
+      }
+
+      if (result.cancelled) {
+        setFeedback({
+          kind:
+            "info",
+
+          title:
+            "Branch Backup Cancelled",
+
+          message:
+            "No backup file was written.",
+        });
+
+        return;
+      }
+
+      setFeedback({
+        kind:
+          "success",
+
+        title:
+          "Branch Backup Created",
+
+        message:
+          (
+            "FINORA saved " +
+            result.data.fileName +
+            ". Store this backup securely. It contains encrypted branch recovery authority."
+          ),
+      });
+    }
+    catch {
+      setFeedback({
+        kind:
+          "danger",
+
+        title:
+          "Branch Backup Failed",
+
+        message:
+          "FINORA could not complete the Branch Backup request.",
+      });
+    }
+    finally {
+      setBackupPassword(
+        "",
+      );
+
+      setBackupSecurityCode(
+        "",
+      );
+
+      stopFinoraProcessing(
+        processingId,
+      );
+
+      setBackupBusy(
+        false,
+      );
+    }
+  }
+
+  // ==========================================================
   // LOADING
   // ==========================================================
 
@@ -599,6 +799,205 @@ export default function BusinessOwnerProfileSection() {
           void handleSubmit();
         }}
       />
+
+      <section
+        aria-labelledby="finora-branch-backup-title"
+        style={{
+          marginTop:
+            "24px",
+
+          padding:
+            "20px",
+
+          border:
+            "1px solid rgba(148, 163, 184, 0.28)",
+
+          borderRadius:
+            "12px",
+        }}
+      >
+        <h3
+          id="finora-branch-backup-title"
+          style={{
+            margin:
+              "0 0 8px",
+          }}
+        >
+          Branch Backup
+        </h3>
+
+        <p
+          style={{
+            margin:
+              "0 0 18px",
+
+            opacity:
+              0.78,
+
+            lineHeight:
+              1.5,
+          }}
+        >
+          Create an encrypted recovery backup for this FINORA branch.
+          Keep the exported .finora file in a secure location.
+        </p>
+
+        <div
+          style={{
+            display:
+              "grid",
+
+            gridTemplateColumns:
+              "repeat(auto-fit, minmax(220px, 1fr))",
+
+            gap:
+              "12px",
+
+            marginBottom:
+              "14px",
+          }}
+        >
+          <label>
+            <span
+              style={{
+                display:
+                  "block",
+
+                marginBottom:
+                  "6px",
+
+                fontWeight:
+                  600,
+              }}
+            >
+              Current Password
+            </span>
+
+            <input
+              type="password"
+              autoComplete="current-password"
+              value={backupPassword}
+              disabled={backupBusy}
+              onChange={(event) => {
+                setBackupPassword(
+                  event.target.value,
+                );
+              }}
+              aria-label="Current Password for Branch Backup"
+              style={{
+                width:
+                  "100%",
+
+                boxSizing:
+                  "border-box",
+
+                padding:
+                  "10px 12px",
+
+                borderRadius:
+                  "8px",
+
+                border:
+                  "1px solid rgba(148, 163, 184, 0.45)",
+
+                font:
+                  "inherit",
+              }}
+            />
+          </label>
+
+          <label>
+            <span
+              style={{
+                display:
+                  "block",
+
+                marginBottom:
+                  "6px",
+
+                fontWeight:
+                  600,
+              }}
+            >
+              Security Code
+            </span>
+
+            <input
+              type="password"
+              autoComplete="off"
+              value={backupSecurityCode}
+              disabled={backupBusy}
+              onChange={(event) => {
+                setBackupSecurityCode(
+                  event.target.value,
+                );
+              }}
+              aria-label="Security Code for Branch Backup"
+              style={{
+                width:
+                  "100%",
+
+                boxSizing:
+                  "border-box",
+
+                padding:
+                  "10px 12px",
+
+                borderRadius:
+                  "8px",
+
+                border:
+                  "1px solid rgba(148, 163, 184, 0.45)",
+
+                font:
+                  "inherit",
+              }}
+            />
+          </label>
+        </div>
+
+        <button
+          type="button"
+          disabled={
+            backupBusy ||
+            backupPassword.trim().length ===
+              0 ||
+            backupSecurityCode.trim().length ===
+              0
+          }
+          onClick={() => {
+            void handleBranchBackup();
+          }}
+          style={{
+            minHeight:
+              "40px",
+
+            padding:
+              "0 16px",
+
+            border:
+              0,
+
+            borderRadius:
+              "8px",
+
+            cursor:
+              backupBusy
+                ? "not-allowed"
+                : "pointer",
+
+            font:
+              "inherit",
+
+            fontWeight:
+              600,
+          }}
+        >
+          {backupBusy
+            ? "Creating Backup..."
+            : "Create Branch Backup"}
+        </button>
+      </section>
     </section>
   );
 }

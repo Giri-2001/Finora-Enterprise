@@ -13,6 +13,10 @@
 // ============================================================
 
 import {
+  generateFinoraBranchCertificationKeyMaterial,
+} from "./finoraBranchCertificationCrypto.js";
+
+import {
   createFinoraPortableBranchAuthTestSourceAuthorizationEvidence,
 } from "./finoraPortableBranchAuthTestEvidence.js";
 
@@ -238,6 +242,116 @@ async function runSelfTest():
 
   console.log(
     "PASS: enrollment material payload preserves authoritative identity and scope",
+  );
+
+  // ==========================================================
+  // LEGACY PAYLOAD COMPATIBILITY
+  // ==========================================================
+
+  assert(
+    payload.branchCertificationKeyMaterial ===
+      undefined,
+    "Legacy Portable Auth payload unexpectedly acquired Branch Certification authority.",
+  );
+
+  console.log(
+    "PASS: legacy Portable Auth payload remains valid without Branch Certification authority",
+  );
+
+  // ==========================================================
+  // ENCRYPTED BRANCH CERTIFICATION AUTHORITY
+  // ==========================================================
+
+  const branchCertificationKeyMaterial =
+    generateFinoraBranchCertificationKeyMaterial(
+      new Date(
+        "2026-09-11T12:00:00.000Z",
+      ),
+    );
+
+  const certifiedMaterial =
+    await createFinoraPortableBranchAuthEnrollmentMaterialV1({
+      ...input,
+
+      branchCertificationKeyMaterial,
+    });
+
+  const serializedCertifiedEnvelope =
+    JSON.stringify(
+      certifiedMaterial.envelope,
+    );
+
+  assert(
+    !serializedCertifiedEnvelope.includes(
+      '"branchCertificationKeyMaterial"',
+    ) &&
+      !serializedCertifiedEnvelope.includes(
+        '"privateKey"',
+      ) &&
+      !serializedCertifiedEnvelope.includes(
+        branchCertificationKeyMaterial.privateKey,
+      ),
+    "Branch Certification private authority escaped the encrypted Portable Auth payload.",
+  );
+
+  const certifiedPayload =
+    await decryptFinoraPortableBranchAuthEnvelopeV1(
+      certifiedMaterial.envelope,
+      password,
+      securityCode,
+      {
+        expectedScope: {
+          ownerId:
+            input.ownerId,
+
+          businessId:
+            input.businessId,
+
+          branchId:
+            input.branchId,
+        },
+      },
+    );
+
+  assertJsonEqual(
+    certifiedPayload.branchCertificationKeyMaterial,
+    branchCertificationKeyMaterial,
+    "Encrypted Portable Auth payload changed Branch Certification key material.",
+  );
+
+  console.log(
+    "PASS: Branch Certification private authority is carried only inside encrypted Portable Auth payload",
+  );
+
+  let malformedCertificationRejected =
+    false;
+
+  try {
+    await createFinoraPortableBranchAuthEnrollmentMaterialV1({
+      ...input,
+
+      branchCertificationKeyMaterial: {
+        ...branchCertificationKeyMaterial,
+
+        publicKeyFingerprint:
+          "0".repeat(
+            64,
+          ),
+      },
+    });
+  }
+  catch {
+    malformedCertificationRejected =
+      true;
+  }
+
+  assert(
+    malformedCertificationRejected,
+    "Malformed Branch Certification authority was accepted by Portable Auth payload validation.",
+  );
+
+  console.log(
+    "PASS: malformed Branch Certification authority fails closed during Portable Auth material creation",
   );
 
   // ==========================================================

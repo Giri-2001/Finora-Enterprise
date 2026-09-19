@@ -60,6 +60,7 @@ import {
 import {
   applyFinoraPortableBranchAuthEnrollmentControlState,
   completeFinoraPortableBranchAuthEnrollmentTransaction,
+  markFinoraPortableBranchAuthEnrollmentCertificationMigrated,
   markFinoraPortableBranchAuthEnrollmentWritten,
   prepareFinoraPortableBranchAuthEnrollmentTransaction,
   readFinoraControlStore,
@@ -91,6 +92,22 @@ import {
   createFinoraPortableBranchAuthEnvelopeV1,
   decryptFinoraPortableBranchAuthEnvelopeV1,
 } from "./finoraPortableBranchAuthCrypto.js";
+
+import {
+  generateFinoraBranchCertificationKeyMaterial,
+} from "./finoraBranchCertificationCrypto.js";
+
+import {
+  bindFinoraBranchCertificationBootstrapToBranch,
+  getFinoraBranchCertificationBootstrapStorePath,
+  destroyFinoraBranchCertificationBootstrapAfterMigration,
+  loadFinoraBranchCertificationBootstrap,
+  persistFinoraBranchCertificationBootstrapGenerated,
+} from "./finoraBranchCertificationBootstrapStore.js";
+
+import {
+  generateFinoraWindowsInstallationBindingMaterial,
+} from "./finoraInstallationBindingCrypto.js";
 
 import {
   FINORA_PORTABLE_BRANCH_AUTH_ENROLLMENT_TRANSACTION_ID_PREFIX,
@@ -906,7 +923,7 @@ async function runSelfTest():
       getRawControlStoreFixtureFile();
 
     // --------------------------------------------------------
-    // CASE 1 — MISSING PORTABILITY PROVENANCE
+    // CASE 1 ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â MISSING PORTABILITY PROVENANCE
     // --------------------------------------------------------
 
     const missingProofStore =
@@ -1025,7 +1042,7 @@ async function runSelfTest():
     );
 
     // --------------------------------------------------------
-    // CASE 2 — CROSS-RECORD VERIFICATION / PROVENANCE MISMATCH
+    // CASE 2 ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â CROSS-RECORD VERIFICATION / PROVENANCE MISMATCH
     //
     // Keep each record structurally valid, but make the source
     // Branch Access verification timestamp disagree with the
@@ -1159,7 +1176,7 @@ async function runSelfTest():
     );
 
     // --------------------------------------------------------
-    // CASE 3 — AMBIGUOUS / DUPLICATE PORTABILITY PROVENANCE
+    // CASE 3 ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â AMBIGUOUS / DUPLICATE PORTABILITY PROVENANCE
     //
     // Production APIs cannot create this state: the Control
     // Store duplicate guard rejects it.
@@ -1299,6 +1316,247 @@ async function runSelfTest():
     );
 
     // ========================================================
+    // BRANCH CERTIFICATION CUSTODY FAIL-CLOSED MATRIX
+    // ========================================================
+
+    const certificationResolverCallsBefore =
+      usbResolverCalls;
+
+    const missingCertificationResult =
+      await enrollFinoraPortableBranchAuth({
+        request: {
+          username,
+
+          password,
+
+          securityCode,
+        },
+
+        portableStore,
+      });
+
+    assert(
+      !missingCertificationResult.success &&
+        missingCertificationResult.errorCode ===
+          "AUTHORIZATION_NOT_FOUND",
+      missingCertificationResult.success
+        ? "Enrollment unexpectedly succeeded without Branch Certification bootstrap custody."
+        : `Unexpected missing-certification result: ${missingCertificationResult.errorCode}: ${missingCertificationResult.error}`,
+    );
+
+    console.log(
+      "PASS: missing Branch Certification bootstrap custody fails closed pre-PREPARED",
+    );
+
+    const branchCertificationNativeBinding =
+      generateFinoraWindowsInstallationBindingMaterial(
+        new Date(
+          "2026-09-17T02:00:00.000Z",
+        ),
+        "FINORA-INSTALLATION-PORTABLE-AUTH-CERT-SELFTEST",
+      );
+
+    const branchCertificationKeyMaterial =
+      generateFinoraBranchCertificationKeyMaterial(
+        new Date(
+          "2026-09-17T02:01:00.000Z",
+        ),
+      );
+
+    const branchCertificationRequestId =
+      "FINORA-ENROLLMENT-PORTABLE-AUTH-CERT-SELFTEST-001";
+
+    const branchCertificationResponseId =
+      "FINORA-ENROLLMENT-RESPONSE-PORTABLE-AUTH-CERT-SELFTEST-001";
+
+    const branchCertificationGeneratedInput = {
+      requestId:
+        branchCertificationRequestId,
+
+      installationId:
+        branchCertificationNativeBinding.installationId,
+
+      bindingKeyId:
+        branchCertificationNativeBinding.bindingKeyId,
+
+      fingerprintAlgorithm:
+        branchCertificationNativeBinding.fingerprintAlgorithm,
+
+      publicKeyFingerprint:
+        branchCertificationNativeBinding.publicKeyFingerprint,
+
+      certificationKeyMaterial:
+        branchCertificationKeyMaterial,
+
+      generatedAt:
+        branchCertificationKeyMaterial.createdAt,
+    };
+
+    await persistFinoraBranchCertificationBootstrapGenerated(
+      branchCertificationGeneratedInput,
+    );
+
+    const unboundCertificationResult =
+      await enrollFinoraPortableBranchAuth({
+        request: {
+          username,
+
+          password,
+
+          securityCode,
+        },
+
+        portableStore,
+      });
+
+    assert(
+      !unboundCertificationResult.success &&
+        unboundCertificationResult.errorCode ===
+          "AUTHORIZATION_NOT_FOUND",
+      unboundCertificationResult.success
+        ? "Enrollment unexpectedly succeeded with GENERATED_FOR_REQUEST Branch Certification custody."
+        : `Unexpected unbound-certification result: ${unboundCertificationResult.errorCode}: ${unboundCertificationResult.error}`,
+    );
+
+    console.log(
+      "PASS: unbound Branch Certification bootstrap custody fails closed pre-PREPARED",
+    );
+
+    await bindFinoraBranchCertificationBootstrapToBranch({
+      requestId:
+        branchCertificationRequestId,
+
+      responseId:
+        branchCertificationResponseId,
+
+      ownerId,
+
+      businessId,
+
+      branchId:
+        `${branchId}-CERT-MISMATCH`,
+
+      boundAt:
+        "2026-09-17T02:02:00.000Z",
+    });
+
+    const mismatchedCertificationResult =
+      await enrollFinoraPortableBranchAuth({
+        request: {
+          username,
+
+          password,
+
+          securityCode,
+        },
+
+        portableStore,
+      });
+
+    assert(
+      !mismatchedCertificationResult.success &&
+        mismatchedCertificationResult.errorCode ===
+          "AUTHORIZATION_NOT_FOUND",
+      mismatchedCertificationResult.success
+        ? "Enrollment unexpectedly succeeded with mismatched Branch Certification scope."
+        : `Unexpected mismatched-certification result: ${mismatchedCertificationResult.errorCode}: ${mismatchedCertificationResult.error}`,
+    );
+
+    console.log(
+      "PASS: mismatched Branch Certification branch scope fails closed pre-PREPARED",
+    );
+
+    const certificationFailClosedStore =
+      await readFinoraControlStore();
+
+    assert(
+      certificationFailClosedStore.success &&
+        certificationFailClosedStore.data,
+      certificationFailClosedStore.error ??
+        "Unable to read Control Store after Branch Certification fail-closed matrix.",
+    );
+
+    assert(
+      (
+        certificationFailClosedStore.data
+          .portableBranchAuthEnrollmentTransactions
+          ?.length ??
+        0
+      ) ===
+        0 &&
+      (
+        certificationFailClosedStore.data
+          .branchCredentials
+          ?.length ??
+        0
+      ) ===
+        0 &&
+      usbResolverCalls ===
+        certificationResolverCallsBefore &&
+      localResolverCalls ===
+        0,
+      "Branch Certification fail-closed matrix mutated durable enrollment or portable storage.",
+    );
+
+    console.log(
+      "PASS: Branch Certification fail-closed matrix leaves zero PREPARED state and zero portable-storage access",
+    );
+
+    // TEST-ONLY reset after deliberate wrong-scope immutable bind.
+    // Production migration/destruction authority is not exercised here.
+    await rm(
+      getFinoraBranchCertificationBootstrapStorePath(),
+      {
+        force:
+          true,
+      },
+    );
+
+    await persistFinoraBranchCertificationBootstrapGenerated(
+      branchCertificationGeneratedInput,
+    );
+
+    const boundBranchCertification =
+      await bindFinoraBranchCertificationBootstrapToBranch({
+        requestId:
+          branchCertificationRequestId,
+
+        responseId:
+          branchCertificationResponseId,
+
+        ownerId,
+
+        businessId,
+
+        branchId,
+
+        boundAt:
+          "2026-09-17T02:03:00.000Z",
+      });
+
+    assert(
+      boundBranchCertification.state ===
+        "BRANCH_BOUND_AFTER_RESPONSE" &&
+      boundBranchCertification.branchBinding?.responseId ===
+        branchCertificationResponseId &&
+      boundBranchCertification.branchBinding?.ownerId ===
+        ownerId &&
+      boundBranchCertification.branchBinding?.businessId ===
+        businessId &&
+      boundBranchCertification.branchBinding?.branchId ===
+        branchId &&
+      boundBranchCertification.certificationKeyMaterial.keyId ===
+        branchCertificationKeyMaterial.keyId &&
+      boundBranchCertification.certificationKeyMaterial.privateKey ===
+        branchCertificationKeyMaterial.privateKey,
+      "Positive Branch Certification binding did not preserve exact custody.",
+    );
+
+    console.log(
+      "PASS: exact BRANCH_BOUND_AFTER_RESPONSE certification custody prepared for Portable Auth enrollment",
+    );
+
+    // ========================================================
     // FRESH PATH -> PREPARED -> USB FAILURE
     // ========================================================
 
@@ -1393,6 +1651,23 @@ async function runSelfTest():
       "PASS: PREPARED transaction snapshots exact I6 portability authority proof",
     );
 
+    assert(
+      preparedTransaction.branchCertificationProvenance
+        ?.requestId ===
+        branchCertificationRequestId &&
+      preparedTransaction.branchCertificationProvenance
+        ?.responseId ===
+        branchCertificationResponseId &&
+      preparedTransaction.branchCertificationProvenance
+        ?.certificationKeyId ===
+        branchCertificationKeyMaterial.keyId,
+      "PREPARED transaction did not snapshot exact Branch Certification migration provenance.",
+    );
+
+    console.log(
+      "PASS: PREPARED transaction snapshots exact Branch Certification migration provenance",
+    );
+
     const preparedTransactionId =
       preparedTransaction.transactionId;
 
@@ -1449,6 +1724,54 @@ async function runSelfTest():
 
     console.log(
       "PASS: encrypted Portable Auth preserves exact signed portability package + signer evidence",
+    );
+
+    assert(
+      preparedPayload.branchCertificationKeyMaterial !==
+        undefined &&
+      JSON.stringify(
+        preparedPayload.branchCertificationKeyMaterial,
+      ) ===
+        JSON.stringify(
+          branchCertificationKeyMaterial,
+        ),
+      "Encrypted Portable Auth did not preserve exact bound Branch Certification authority.",
+    );
+
+    console.log(
+      "PASS: encrypted Portable Auth contains exact bound Branch Certification private authority",
+    );
+
+    const preparedEnvelopeJson =
+      JSON.stringify(
+        preparedTransaction.portableEnvelope,
+      );
+
+    const preparedTransactionJson =
+      JSON.stringify(
+        preparedTransaction,
+      );
+
+    const preparedControlStoreJson =
+      JSON.stringify(
+        preparedStore.data,
+      );
+
+    assert(
+      !preparedEnvelopeJson.includes(
+        branchCertificationKeyMaterial.privateKey,
+      ) &&
+      !preparedTransactionJson.includes(
+        branchCertificationKeyMaterial.privateKey,
+      ) &&
+      !preparedControlStoreJson.includes(
+        branchCertificationKeyMaterial.privateKey,
+      ),
+      "Branch Certification private authority leaked outside encrypted Portable Auth payload.",
+    );
+
+    console.log(
+      "PASS: Branch Certification private authority is absent from outer envelope, journal and Control Store plaintext",
     );
 
     console.log(
@@ -1534,6 +1857,397 @@ async function runSelfTest():
     );
 
     // ========================================================
+    // 3D3D1E EXPLICIT CRASH MATRIX
+    //
+    // Each crash case is executed in its own Electron process
+    // with isolated userData. The default self-test continues
+    // through the ordinary production finalization path.
+    // ========================================================
+
+    const crashMatrixCase =
+      process.env.FINORA_3D3D1E_CRASH_CASE;
+
+    if (
+      crashMatrixCase ===
+        "A"
+    ) {
+      // ------------------------------------------------------
+      // A. Bootstrap disappears BEFORE durable migration.
+      //
+      // Recovery may advance Portable + Control state, but it
+      // must fail closed before CERTIFICATION_MIGRATED/COMPLETE.
+      // ------------------------------------------------------
+
+      usbConnected =
+        true;
+
+      await rm(
+        getFinoraBranchCertificationBootstrapStorePath(),
+        {
+          force:
+            true,
+        },
+      );
+
+      const crashAResult =
+        await enrollFinoraPortableBranchAuth({
+          request: {
+            username,
+
+            password,
+
+            securityCode,
+          },
+
+          portableStore,
+        });
+
+      assert(
+        !crashAResult.success &&
+          crashAResult.errorCode ===
+            "CERTIFICATION_BOOTSTRAP_DESTRUCTION_FAILED",
+        crashAResult.success
+          ? "Crash A unexpectedly completed without pre-migration Bootstrap custody."
+          : `Unexpected Crash A result: ${crashAResult.errorCode}: ${crashAResult.error}`,
+      );
+
+      const crashAStore =
+        await readFinoraControlStore();
+
+      assert(
+        crashAStore.success &&
+          crashAStore.data,
+        crashAStore.error ??
+          "Unable to inspect Crash A durable state.",
+      );
+
+      const crashATransaction =
+        crashAStore.data
+          .portableBranchAuthEnrollmentTransactions
+          ?.[0];
+
+      assert(
+        crashATransaction !==
+          undefined &&
+        crashATransaction.transactionId ===
+          preparedTransactionId &&
+        crashATransaction.status ===
+          "CONTROL_APPLIED" &&
+        crashATransaction.certificationMigratedAt ===
+          undefined &&
+        (
+          crashAStore.data
+            .branchCredentials
+            ?.length ??
+          0
+        ) ===
+          1 &&
+        (
+          crashAStore.data
+            .branchCredentialEnrollmentAuthorizations
+            ?.length ??
+          0
+        ) ===
+          0,
+        "Crash A did not fail closed at CONTROL_APPLIED before durable certification migration.",
+      );
+
+      const crashABootstrap =
+        await loadFinoraBranchCertificationBootstrap();
+
+      assert(
+        crashABootstrap ===
+          undefined,
+        "Crash A unexpectedly recreated missing Bootstrap custody.",
+      );
+
+      console.log(
+        "PASS: crash A missing Bootstrap before durable migration fails closed without CERTIFICATION_MIGRATED or COMPLETE",
+      );
+
+      return;
+    }
+
+    if (
+      crashMatrixCase ===
+        "B" ||
+      crashMatrixCase ===
+        "C"
+    ) {
+      // ------------------------------------------------------
+      // Build the exact durable crash point:
+      // PORTABLE_WRITTEN -> CONTROL_APPLIED ->
+      // CERTIFICATION_MIGRATED.
+      // ------------------------------------------------------
+
+      usbConnected =
+        true;
+
+      await portableStore.ensureExact(
+        preparedTransaction.storageMode,
+        preparedTransaction.portableEnvelope,
+      );
+
+      const crashPortableWritten =
+        await markFinoraPortableBranchAuthEnrollmentWritten({
+          transactionId:
+            preparedTransactionId,
+
+          transitionedAt:
+            new Date().toISOString(),
+        });
+
+      assert(
+        crashPortableWritten.success &&
+          crashPortableWritten.data,
+        crashPortableWritten.error ??
+          "Unable to build crash fixture PORTABLE_WRITTEN state.",
+      );
+
+      const crashControlApplied =
+        await applyFinoraPortableBranchAuthEnrollmentControlState({
+          transactionId:
+            preparedTransactionId,
+
+          transitionedAt:
+            new Date().toISOString(),
+        });
+
+      assert(
+        crashControlApplied.success &&
+          crashControlApplied.data,
+        crashControlApplied.error ??
+          "Unable to build crash fixture CONTROL_APPLIED state.",
+      );
+
+      const crashMigrated =
+        await markFinoraPortableBranchAuthEnrollmentCertificationMigrated({
+          transactionId:
+            preparedTransactionId,
+
+          transitionedAt:
+            new Date().toISOString(),
+        });
+
+      assert(
+        crashMigrated.success &&
+          crashMigrated.data,
+        crashMigrated.error ??
+          "Unable to build crash fixture CERTIFICATION_MIGRATED state.",
+      );
+
+      const crashMigratedTransaction =
+        crashMigrated.data.transaction;
+
+      assert(
+        crashMigratedTransaction.status ===
+          "CERTIFICATION_MIGRATED" &&
+        crashMigratedTransaction.certificationMigratedAt !==
+          undefined &&
+        crashMigratedTransaction.branchCertificationProvenance
+          ?.requestId ===
+          branchCertificationRequestId &&
+        crashMigratedTransaction.branchCertificationProvenance
+          ?.responseId ===
+          branchCertificationResponseId &&
+        crashMigratedTransaction.branchCertificationProvenance
+          ?.certificationKeyId ===
+          branchCertificationKeyMaterial.keyId,
+        "Crash fixture did not reach exact durable CERTIFICATION_MIGRATED state.",
+      );
+
+      if (
+        crashMatrixCase ===
+          "B"
+      ) {
+        // ----------------------------------------------------
+        // B. Crash AFTER migration evidence, BEFORE destroy.
+        //
+        // Bootstrap still exists. Coordinator retry must use
+        // durable provenance to destroy it and reach COMPLETE.
+        // ----------------------------------------------------
+
+        const crashBBootstrapBeforeRetry =
+          await loadFinoraBranchCertificationBootstrap();
+
+        assert(
+          crashBBootstrapBeforeRetry !==
+            undefined &&
+          crashBBootstrapBeforeRetry.state ===
+            "BRANCH_BOUND_AFTER_RESPONSE" &&
+          crashBBootstrapBeforeRetry.requestId ===
+            branchCertificationRequestId &&
+          crashBBootstrapBeforeRetry.branchBinding?.responseId ===
+            branchCertificationResponseId &&
+          crashBBootstrapBeforeRetry.certificationKeyMaterial.keyId ===
+            branchCertificationKeyMaterial.keyId,
+          "Crash B fixture lost exact Bootstrap custody before retry.",
+        );
+
+        const crashBRetry =
+          await enrollFinoraPortableBranchAuth({
+            request: {
+              username,
+
+              password,
+
+              securityCode,
+            },
+
+            portableStore,
+          });
+
+        assert(
+          crashBRetry.success &&
+            crashBRetry.data &&
+            crashBRetry.data.recovered ===
+              true &&
+            crashBRetry.data.transaction.status ===
+              "COMPLETE" &&
+            crashBRetry.data.transaction.transactionId ===
+              preparedTransactionId,
+          crashBRetry.success
+            ? "Crash B retry returned incorrect completed state."
+            : `Crash B retry failed: ${crashBRetry.errorCode}: ${crashBRetry.error}`,
+        );
+
+        const crashBBootstrapAfterRetry =
+          await loadFinoraBranchCertificationBootstrap();
+
+        assert(
+          crashBBootstrapAfterRetry ===
+            undefined,
+          "Crash B retry reached COMPLETE without destroying Bootstrap custody.",
+        );
+
+        console.log(
+          "PASS: crash B retry from CERTIFICATION_MIGRATED destroys exact Bootstrap custody and reaches COMPLETE",
+        );
+
+        return;
+      }
+
+      // ------------------------------------------------------
+      // C. Crash AFTER destroy, BEFORE COMPLETE.
+      //
+      // We execute the production destruction authority using
+      // the already-durable migration evidence, but deliberately
+      // do not call COMPLETE. Coordinator retry must accept the
+      // absent Bootstrap only because migration was already
+      // durable, then reach COMPLETE.
+      // ------------------------------------------------------
+
+      const crashCProvenance =
+        crashMigratedTransaction.branchCertificationProvenance;
+
+      const crashCMigratedAt =
+        crashMigratedTransaction.certificationMigratedAt;
+
+      assert(
+        crashCProvenance !==
+          undefined &&
+        crashCMigratedAt !==
+          undefined,
+        "Crash C fixture lacks durable migration evidence.",
+      );
+
+      const crashCDestroyed =
+        await destroyFinoraBranchCertificationBootstrapAfterMigration({
+          requestId:
+            crashCProvenance.requestId,
+
+          responseId:
+            crashCProvenance.responseId,
+
+          ownerId:
+            crashMigratedTransaction.ownerId,
+
+          businessId:
+            crashMigratedTransaction.businessId,
+
+          branchId:
+            crashMigratedTransaction.branchId,
+
+          certificationKeyId:
+            crashCProvenance.certificationKeyId,
+
+          migratedAt:
+            crashCMigratedAt,
+        });
+
+      assert(
+        crashCDestroyed,
+        "Crash C fixture could not destroy exact Bootstrap custody after durable migration.",
+      );
+
+      const crashCBootstrapBeforeRetry =
+        await loadFinoraBranchCertificationBootstrap();
+
+      assert(
+        crashCBootstrapBeforeRetry ===
+          undefined,
+        "Crash C fixture retained Bootstrap after production destruction.",
+      );
+
+      const crashCStoreBeforeRetry =
+        await readFinoraControlStore();
+
+      assert(
+        crashCStoreBeforeRetry.success &&
+          crashCStoreBeforeRetry.data &&
+          crashCStoreBeforeRetry.data
+            .portableBranchAuthEnrollmentTransactions
+            ?.[0]
+            .status ===
+            "CERTIFICATION_MIGRATED",
+        crashCStoreBeforeRetry.error ??
+          "Crash C fixture did not preserve CERTIFICATION_MIGRATED before retry.",
+      );
+
+      const crashCRetry =
+        await enrollFinoraPortableBranchAuth({
+          request: {
+            username,
+
+            password,
+
+            securityCode,
+          },
+
+          portableStore,
+        });
+
+      assert(
+        crashCRetry.success &&
+          crashCRetry.data &&
+          crashCRetry.data.recovered ===
+            true &&
+          crashCRetry.data.transaction.status ===
+            "COMPLETE" &&
+          crashCRetry.data.transaction.transactionId ===
+            preparedTransactionId,
+        crashCRetry.success
+          ? "Crash C retry returned incorrect completed state."
+          : `Crash C retry failed: ${crashCRetry.errorCode}: ${crashCRetry.error}`,
+      );
+
+      const crashCBootstrapAfterRetry =
+        await loadFinoraBranchCertificationBootstrap();
+
+      assert(
+        crashCBootstrapAfterRetry ===
+          undefined,
+        "Crash C retry recreated already-destroyed Bootstrap custody.",
+      );
+
+      console.log(
+        "PASS: crash C retry after Bootstrap destruction but before COMPLETE uses durable migration evidence and reaches COMPLETE",
+      );
+
+      return;
+    }
+
+    // ========================================================
     // USB RETURNS -> RECOVER EXACT PREPARED ARTIFACTS
     // ========================================================
 
@@ -1568,6 +2282,17 @@ async function runSelfTest():
           "COMPLETE" &&
         recoveryResult.data.transaction.transactionId ===
           preparedTransactionId &&
+        recoveryResult.data.transaction.certificationMigratedAt !==
+          undefined &&
+        recoveryResult.data.transaction.branchCertificationProvenance
+          ?.requestId ===
+          branchCertificationRequestId &&
+        recoveryResult.data.transaction.branchCertificationProvenance
+          ?.responseId ===
+          branchCertificationResponseId &&
+        recoveryResult.data.transaction.branchCertificationProvenance
+          ?.certificationKeyId ===
+          branchCertificationKeyMaterial.keyId &&
         recoveryResult.data.credential.credentialId ===
           preparedCredentialId,
       "Coordinator recovery did not complete the exact prepared transaction.",
@@ -1575,6 +2300,23 @@ async function runSelfTest():
 
     console.log(
       "PASS: correct recovery resumes exact PREPARED transaction to COMPLETE",
+    );
+
+    console.log(
+      "PASS: recovery COMPLETE contains durable Branch Certification migration evidence",
+    );
+
+    const certificationAfterRecovery =
+      await loadFinoraBranchCertificationBootstrap();
+
+    assert(
+      certificationAfterRecovery ===
+        undefined,
+      "Certification-aware COMPLETE retained bootstrap custody after durable migration.",
+    );
+
+    console.log(
+      "PASS: certification-aware COMPLETE destroys bootstrap custody only after durable migration evidence",
     );
 
     // ========================================================
@@ -1633,6 +2375,17 @@ async function runSelfTest():
           preparedTransactionId &&
         completeTransactions[0].credential.credentialId ===
           preparedCredentialId &&
+        completeTransactions[0].certificationMigratedAt !==
+          undefined &&
+        completeTransactions[0].branchCertificationProvenance
+          ?.requestId ===
+          branchCertificationRequestId &&
+        completeTransactions[0].branchCertificationProvenance
+          ?.responseId ===
+          branchCertificationResponseId &&
+        completeTransactions[0].branchCertificationProvenance
+          ?.certificationKeyId ===
+          branchCertificationKeyMaterial.keyId &&
         completeCredentials.length ===
           1 &&
         completeCredentials[0].credentialId ===
@@ -1651,6 +2404,10 @@ async function runSelfTest():
 
     console.log(
       "PASS: CONTROL_APPLIED atomically produced one credential and consumed signed authority",
+    );
+
+    console.log(
+      "PASS: completed coordinator state preserves exact Branch Certification migration evidence",
     );
 
     // ========================================================
@@ -1722,6 +2479,29 @@ async function runSelfTest():
           ?.[0]
           .status ===
           "COMPLETE" &&
+        finalStore.data
+          .portableBranchAuthEnrollmentTransactions
+          ?.[0]
+          .certificationMigratedAt !==
+          undefined &&
+        finalStore.data
+          .portableBranchAuthEnrollmentTransactions
+          ?.[0]
+          .branchCertificationProvenance
+          ?.requestId ===
+          branchCertificationRequestId &&
+        finalStore.data
+          .portableBranchAuthEnrollmentTransactions
+          ?.[0]
+          .branchCertificationProvenance
+          ?.responseId ===
+          branchCertificationResponseId &&
+        finalStore.data
+          .portableBranchAuthEnrollmentTransactions
+          ?.[0]
+          .branchCertificationProvenance
+          ?.certificationKeyId ===
+          branchCertificationKeyMaterial.keyId &&
         (
           finalStore.data
             .branchCredentials
@@ -1748,6 +2528,10 @@ async function runSelfTest():
       "PASS: completed retry preserves exactly one transaction and one credential",
     );
 
+    console.log(
+      "PASS: completed retry preserves exact Branch Certification migration evidence",
+    );
+
     // ========================================================
     // USB MODE MUST NEVER CONSULT LOCAL ROOT
     // ========================================================
@@ -1766,6 +2550,19 @@ async function runSelfTest():
 
     console.log(
       "PASS: USB enrollment and recovery have zero LOCAL fallback",
+    );
+
+    const certificationAfterCompletedRetry =
+      await loadFinoraBranchCertificationBootstrap();
+
+    assert(
+      certificationAfterCompletedRetry ===
+        undefined,
+      "COMPLETE retry recreated or retained already-destroyed Branch Certification bootstrap custody.",
+    );
+
+    console.log(
+      "PASS: COMPLETE retry accepts already-destroyed bootstrap only with durable migration evidence",
     );
 
     console.log(

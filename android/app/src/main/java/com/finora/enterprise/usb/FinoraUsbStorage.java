@@ -163,6 +163,62 @@ public final class FinoraUsbStorage {
         }
     }
 
+    /**
+     * Native-only Portable Branch Auth USB root authority result.
+     *
+     * This does not alter the configured FINORA USB selection.
+     *
+     * READY:
+     * - configured SAF tree is the removable USB volume root;
+     * - root is safe for FINORA/auth.
+     *
+     * REAUTHORIZATION_REQUIRED:
+     * - legacy FINORA/storage selection remains valid for
+     *   existing storage CRUD;
+     * - Portable Branch Auth requires the removable USB root
+     *   so FINORA/auth is reachable as a sibling of storage.
+     */
+    public static final class PortableAuthRoot {
+
+        public final String availability;
+
+        public final String storageId;
+
+        public final String message;
+
+        public final Uri treeUri;
+
+        public final DocumentFile root;
+
+        private PortableAuthRoot(
+            String availability,
+            String storageId,
+            String message,
+            Uri treeUri,
+            DocumentFile root
+        ) {
+            this.availability =
+                availability;
+
+            this.storageId =
+                storageId;
+
+            this.message =
+                message;
+
+            this.treeUri =
+                treeUri;
+
+            this.root =
+                root;
+        }
+
+        public boolean isReady() {
+            return "READY".equals(
+                availability
+            );
+        }
+    }
     // ========================================================
     // PUBLIC STATUS
     // ========================================================
@@ -232,6 +288,109 @@ public final class FinoraUsbStorage {
         );
     }
 
+    // ========================================================
+    // PORTABLE BRANCH AUTH USB ROOT AUTHORITY
+    // ========================================================
+
+    /**
+     * Resolve the currently configured USB selection for
+     * Portable Branch Auth.
+     *
+     * Existing FINORA/storage selections are intentionally
+     * preserved for the storage engine, but they cannot reach
+     * sibling FINORA/auth under Android SAF. Such selections
+     * therefore require one-time USB-root reauthorization.
+     *
+     * No LOCAL fallback exists here.
+     */
+    public PortableAuthRoot resolvePortableAuthRoot() {
+
+        UsbTarget target =
+            resolveConfiguredTarget();
+
+        if (!target.isReady()) {
+            return portableAuthRootFailure(
+                target.availability,
+                target.storageId,
+                target.message
+            );
+        }
+
+        if (
+            target.treeUri == null ||
+            target.root == null
+        ) {
+            return portableAuthRootFailure(
+                "ERROR",
+                target.storageId,
+                "FINORA USB root authority is unavailable."
+            );
+        }
+
+        final String treeDocumentId;
+
+        try {
+            treeDocumentId =
+                DocumentsContract
+                    .getTreeDocumentId(
+                        target.treeUri
+                    );
+        } catch (Exception error) {
+            return portableAuthRootFailure(
+                "ERROR",
+                target.storageId,
+                "FINORA USB root authority is invalid."
+            );
+        }
+
+        if (
+            !isPortableAuthUsbRootDocumentId(
+                treeDocumentId
+            )
+        ) {
+            return portableAuthRootFailure(
+                "REAUTHORIZATION_REQUIRED",
+                target.storageId,
+                "Portable Branch Auth requires selecting the removable USB root."
+            );
+        }
+
+        return new PortableAuthRoot(
+            "READY",
+            target.storageId,
+            "FINORA Portable Branch Auth USB root is ready.",
+            target.treeUri,
+            target.root
+        );
+    }
+
+    static boolean isPortableAuthUsbRootDocumentId(
+        String treeDocumentId
+    ) {
+
+        if (
+            treeDocumentId == null ||
+            treeDocumentId.length() == 0
+        ) {
+            return false;
+        }
+
+        int separatorIndex =
+            treeDocumentId.indexOf(
+                ':'
+            );
+
+        if (separatorIndex <= 0) {
+            return false;
+        }
+
+        String relativePath =
+            treeDocumentId.substring(
+                separatorIndex + 1
+            );
+
+        return relativePath.length() == 0;
+    }
     // ========================================================
     // CRUD: GET
     // ========================================================
@@ -2600,6 +2759,19 @@ public final class FinoraUsbStorage {
         return result;
     }
 
+    private PortableAuthRoot portableAuthRootFailure(
+        String availability,
+        String storageId,
+        String message
+    ) {
+        return new PortableAuthRoot(
+            availability,
+            storageId,
+            message,
+            null,
+            null
+        );
+    }
     private UsbTarget targetFailure(
         String availability,
         String storageId,

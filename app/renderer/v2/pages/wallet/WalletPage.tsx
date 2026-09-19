@@ -819,6 +819,23 @@ export default function WalletPage({
 
     try {
 
+      const session =
+        getSession();
+
+      const sessionId =
+        String(
+          session?.sessionId ??
+            "",
+        ).trim();
+
+      if (!sessionId) {
+        setError(
+          "An active FINORA login session is required to import the signed Wallet Recharge package.",
+        );
+
+        return;
+      }
+
       const importControlBundle =
         window.finora?.control
           ?.importControlBundle;
@@ -835,7 +852,9 @@ export default function WalletPage({
       }
 
       const result =
-        await importControlBundle();
+        await importControlBundle({
+          sessionId,
+        });
 
       if (!result.success) {
         setError(

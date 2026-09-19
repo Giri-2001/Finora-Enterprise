@@ -34,6 +34,7 @@
 import {
   applyFinoraVerifiedBranchAccessState,
   applyFinoraVerifiedBranchCredentialAuthorizationState,
+  applyFinoraVerifiedPortableBranchAccessState,
   readFinoraControlStore,
 } from "./finoraControlStore.js";
 
@@ -53,6 +54,7 @@ import type {
 } from "./finoraBranchAccessPackage.types.js";
 
 import {
+  verifyFinoraSignedControlPackageBranchScope,
   verifyFinoraSignedControlPackageNative,
 } from "./finoraSignedControlPackageVerifier.js";
 
@@ -226,6 +228,32 @@ function sanitizeRegistrationPayment(
 // ACCESS GRANT SANITIZER
 // ============================================================
 
+function isPortableBranchAccessLifecycleAction(
+  value:
+    unknown,
+): value is
+  | "ISSUE"
+  | "RENEW"
+  | "REPLACE"
+  | "SUSPEND"
+  | "RESUME"
+  | "REVOKE" {
+
+  return (
+    value ===
+      "ISSUE" ||
+    value ===
+      "RENEW" ||
+    value ===
+      "REPLACE" ||
+    value ===
+      "SUSPEND" ||
+    value ===
+      "RESUME" ||
+    value ===
+      "REVOKE"
+  );
+}
 function sanitizeBranchAccessGrant(
   value: unknown,
 ): FinoraControlBranchAccessGrant |
@@ -1072,6 +1100,250 @@ export async function applyFinoraSignedBranchAccessPackage(
   });
 }
 
+export async function applyFinoraSignedPortableBranchAccessPackage(
+  signedPackage:
+    unknown,
+
+  trustedKeys:
+    readonly FinoraBranchTrustedControlPublicKey[],
+
+  now:
+    Date,
+): Promise<
+  FinoraControlStoreResult<
+    FinoraVerifiedBranchAccessApplyResult
+  >
+> {
+  // ----------------------------------------------------------
+  // AUTHORITATIVE CURRENT BRANCH IDENTITY
+  //
+  // Portable signed packages are authorized against the
+  // permanent branch scope. The signed historical installation
+  // target remains immutable provenance and is never rebound to
+  // the current device.
+  // ----------------------------------------------------------
+
+  const storeResult =
+    await readFinoraControlStore();
+
+  if (
+    !storeResult.success ||
+    !storeResult.data
+  ) {
+    return failure(
+      storeResult.error ??
+        "Unable to load the FINORA Control Store.",
+    );
+  }
+
+  const installation =
+    storeResult.data.installation;
+
+  if (!installation) {
+    return failure(
+      "FINORA installation identity is required before applying portable Branch Access.",
+    );
+  }
+
+  // ----------------------------------------------------------
+  // BRANCH-SCOPE CRYPTOGRAPHIC VERIFICATION
+  // ----------------------------------------------------------
+
+  const verification =
+    verifyFinoraSignedControlPackageBranchScope(
+      signedPackage,
+      trustedKeys,
+      {
+        ownerId:
+          installation.ownerId,
+
+        businessId:
+          installation.businessId,
+
+        branchId:
+          installation.branchId,
+      },
+      now,
+    );
+
+  if (!verification.valid) {
+    return failure(
+      `${verification.reason}: ${verification.error}`,
+    );
+  }
+
+  const controlPackage =
+    verification.controlPackage;
+
+  // ----------------------------------------------------------
+  // PURPOSE / PAYLOAD VERSION
+  // ----------------------------------------------------------
+
+  if (
+    controlPackage.purpose !==
+      "BRANCH_ACCESS"
+  ) {
+    return failure(
+      "FINORA Control Package purpose must be BRANCH_ACCESS.",
+    );
+  }
+
+  if (
+    controlPackage.payloadVersion !==
+      FINORA_BRANCH_ACCESS_PAYLOAD_VERSION
+  ) {
+    return failure(
+      "FINORA BRANCH_ACCESS payload version is unsupported.",
+    );
+  }
+
+  // ----------------------------------------------------------
+  // DEFENSE-IN-DEPTH CURRENT BRANCH SCOPE
+  //
+  // Deliberately DO NOT compare historical installationId,
+  // bindingKeyId or fingerprint against the current device.
+  // ----------------------------------------------------------
+
+  if (
+    controlPackage.target.ownerId !==
+      installation.ownerId ||
+    controlPackage.target.businessId !==
+      installation.businessId ||
+    controlPackage.target.branchId !==
+      installation.branchId
+  ) {
+    return failure(
+      "FINORA portable BRANCH_ACCESS verified package target does not match this branch.",
+    );
+  }
+
+  // ----------------------------------------------------------
+  // EXACT PORTABLE DOMAIN PAYLOAD
+  // ----------------------------------------------------------
+
+  const payload =
+    controlPackage.payload;
+
+  if (
+    !isRecord(
+      payload,
+    ) ||
+    !hasExactKeys(
+      payload,
+      [
+        "action",
+        "issuedAt",
+        "schemaVersion",
+      ],
+      [
+        "accessGrant",
+        "credentialEnrollment",
+      ],
+    ) ||
+    !isPortableBranchAccessLifecycleAction(
+      payload.action,
+    ) ||
+    payload.schemaVersion !==
+      1 ||
+    !isTimestamp(
+      payload.issuedAt,
+    ) ||
+    payload.issuedAt !==
+      controlPackage.issuedAt
+  ) {
+    return failure(
+      "FINORA portable BRANCH_ACCESS payload structure is invalid.",
+    );
+  }
+
+  /*
+   * Presence itself is forbidden.
+   *
+   * This intentionally rejects even:
+   *
+   *   credentialEnrollment: undefined
+   *
+   * so malformed credential-bearing input can never cross into
+   * portable branch authority.
+   */
+  if (
+    Object.prototype.hasOwnProperty.call(
+      payload,
+      "credentialEnrollment",
+    )
+  ) {
+    return failure(
+      "FINORA portable BRANCH_ACCESS lifecycle package cannot carry credential enrollment authority.",
+    );
+  }
+
+  if (
+    payload.accessGrant ===
+      undefined
+  ) {
+    return failure(
+      "FINORA portable BRANCH_ACCESS lifecycle package requires a signed Access Grant.",
+    );
+  }
+
+  const accessGrant =
+    sanitizeBranchAccessGrant(
+      payload.accessGrant,
+    );
+
+  if (!accessGrant) {
+    return failure(
+      "FINORA portable BRANCH_ACCESS signed Access Grant is invalid.",
+    );
+  }
+
+  if (
+    accessGrant.ownerId !==
+      controlPackage.target.ownerId ||
+    accessGrant.businessId !==
+      controlPackage.target.businessId ||
+    accessGrant.branchId !==
+      controlPackage.target.branchId
+  ) {
+    return failure(
+      "FINORA portable BRANCH_ACCESS signed Access Grant scope does not match the verified package target.",
+    );
+  }
+
+  // ----------------------------------------------------------
+  // REPLAY-PROTECTED SERIALIZED ATOMIC PORTABLE APPLY
+  //
+  // The FULL SIGNED HISTORICAL target is forwarded unchanged.
+  // The Control Store portable lane performs current branch
+  // scope validation and branch-wide sequence enforcement.
+  // ----------------------------------------------------------
+
+  return applyFinoraVerifiedPortableBranchAccessState({
+    packageId:
+      controlPackage.packageId,
+
+    issuerId:
+      controlPackage.issuer.issuerId,
+
+    purpose:
+      "BRANCH_ACCESS",
+
+    action:
+      payload.action,
+
+    sequence:
+      controlPackage.sequence,
+
+    target: {
+      ...controlPackage.target,
+    },
+
+    accessGrant,
+
+    appliedAt:
+      now.toISOString(),
+  });
+}
 // ============================================================
 // END
 // ============================================================

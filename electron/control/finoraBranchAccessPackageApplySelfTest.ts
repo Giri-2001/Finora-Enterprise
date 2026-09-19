@@ -75,6 +75,7 @@ import {
 
 import {
   applyFinoraSignedBranchAccessPackage,
+  applyFinoraSignedPortableBranchAccessPackage,
 } from "./finoraBranchAccessPackageApplyService.js";
 
 
@@ -1267,6 +1268,724 @@ async function runSelfTest():
       "PASS: replay did not duplicate credential authorization",
     );
 
+
+    // ========================================================
+    // PORTABLE HISTORICAL-DEVICE BRANCH_ACCESS E2E
+    // ========================================================
+
+    const portableBaseline =
+      await readFinoraControlStore();
+
+    assert(
+      portableBaseline.success &&
+        portableBaseline.data,
+      portableBaseline.error ??
+        "Unable to read pre-portable Branch Access state.",
+    );
+
+    const portableBaselineJson =
+      JSON.stringify(
+        portableBaseline.data,
+      );
+
+    const nativeSequencesBeforePortable =
+      JSON.stringify(
+        portableBaseline.data.controlSequences ??
+          [],
+      );
+
+    const legacyBranchAccessHighWater =
+      (
+        portableBaseline.data.controlSequences ??
+        []
+      )
+        .filter(
+          (item) =>
+            item.issuerId ===
+              publicIdentity.issuerId &&
+            item.purpose ===
+              "BRANCH_ACCESS" &&
+            item.ownerId ===
+              ownerId &&
+            item.businessId ===
+              businessId &&
+            item.branchId ===
+              branchId,
+        )
+        .reduce(
+          (
+            current,
+            item,
+          ) =>
+            Math.max(
+              current,
+              item.lastSequence,
+            ),
+          0,
+        );
+
+    assert(
+      legacyBranchAccessHighWater >
+        0,
+      "Native lifecycle did not establish BRANCH_ACCESS sequence history.",
+    );
+
+    const portableSequence =
+      legacyBranchAccessHighWater +
+      1;
+
+    const historicalFingerprint =
+      "ab".repeat(
+        32,
+      );
+
+    const historicalTarget:
+      FinoraBranchAccessPackageTarget = {
+        ownerId,
+
+        businessId,
+
+        branchId,
+
+        installationId:
+          "INSTALLATION-BRANCH-ACCESS-HISTORICAL-PORTABLE-000001",
+
+        bindingKeyId:
+          `FINORA-BINDING-${historicalFingerprint
+            .slice(
+              0,
+              32,
+            )
+            .toUpperCase()}`,
+
+        fingerprintAlgorithm:
+          "SHA-256",
+
+        publicKeyFingerprint:
+          historicalFingerprint,
+      };
+
+    assert(
+      historicalTarget.installationId !==
+        target.installationId &&
+        historicalTarget.bindingKeyId !==
+          target.bindingKeyId &&
+        historicalTarget.publicKeyFingerprint !==
+          target.publicKeyFingerprint,
+      "Synthetic historical target unexpectedly matches current native target.",
+    );
+
+    const portableIssuedAt =
+      new Date(
+        now.getTime() +
+          20 *
+            60 *
+            1000,
+      ).toISOString();
+
+    const portableAccessGrant:
+      FinoraBranchAccessGrantPayload = {
+        ...accessGrant,
+
+        grantId:
+          "GRANT-BRANCH-ACCESS-HISTORICAL-PORTABLE-000001",
+
+        userId:
+          "USER-BRANCH-ACCESS-HISTORICAL-PORTABLE-000001",
+      };
+
+    const portableIssuePayload:
+      FinoraBranchAccessPayloadV1 = {
+        action:
+          "ISSUE",
+
+        accessGrant:
+          portableAccessGrant,
+
+        issuedAt:
+          portableIssuedAt,
+
+        schemaVersion:
+          1,
+      };
+
+    const portableHistoricalPackage =
+      await signFinoraBranchAccessPackage({
+        packageId:
+          "PACKAGE-BRANCH-ACCESS-PORTABLE-HISTORICAL-ISSUE",
+
+        sequence:
+          portableSequence,
+
+        issuedAt:
+          portableIssuedAt,
+
+        target:
+          historicalTarget,
+
+        payload:
+          portableIssuePayload,
+      });
+
+    const nativeHistoricalResult =
+      await applyFinoraSignedBranchAccessPackage(
+        portableHistoricalPackage,
+        trustedKeys,
+        new Date(
+          portableIssuedAt,
+        ),
+      );
+
+    expectFailure(
+      "historical-target package rejected by native Branch Access lane",
+      nativeHistoricalResult,
+    );
+
+    const afterNativeHistoricalReject =
+      await readFinoraControlStore();
+
+    assert(
+      afterNativeHistoricalReject.success &&
+        afterNativeHistoricalReject.data,
+      afterNativeHistoricalReject.error ??
+        "Unable to read Control Store after native historical-target rejection.",
+    );
+
+    assert(
+      JSON.stringify(
+        afterNativeHistoricalReject.data,
+      ) ===
+        portableBaselineJson,
+      "Native historical-target rejection mutated Control Store.",
+    );
+
+    console.log(
+      "PASS: historical installation target remains rejected by native BRANCH_ACCESS lane",
+    );
+
+    const portableApplyResult =
+      await applyFinoraSignedPortableBranchAccessPackage(
+        portableHistoricalPackage,
+        trustedKeys,
+        new Date(
+          portableIssuedAt,
+        ),
+      );
+
+    expectSuccess(
+      "historical-target package accepted by portable Branch Access lane",
+      portableApplyResult,
+    );
+
+    const afterPortableApply =
+      await readFinoraControlStore();
+
+    assert(
+      afterPortableApply.success &&
+        afterPortableApply.data,
+      afterPortableApply.error ??
+        "Unable to read Control Store after portable historical-target apply.",
+    );
+
+    const persistedPortableGrant =
+      afterPortableApply.data.branchAccessGrants
+        ?.find(
+          (item) =>
+            item.grantId ===
+              portableAccessGrant.grantId &&
+            item.userId ===
+              portableAccessGrant.userId &&
+            item.ownerId ===
+              ownerId &&
+            item.businessId ===
+              businessId &&
+            item.branchId ===
+              branchId,
+        );
+
+    assert(
+      persistedPortableGrant !==
+        undefined,
+      "Portable historical-target ISSUE did not persist its Access Grant.",
+    );
+
+    const historicalReplayRecord =
+      afterPortableApply.data.appliedControlPackages
+        ?.find(
+          (item) =>
+            item.packageId ===
+              "PACKAGE-BRANCH-ACCESS-PORTABLE-HISTORICAL-ISSUE",
+        );
+
+    assert(
+      historicalReplayRecord?.installationId ===
+        historicalTarget.installationId &&
+        historicalReplayRecord.ownerId ===
+          ownerId &&
+        historicalReplayRecord.businessId ===
+          businessId &&
+        historicalReplayRecord.branchId ===
+          branchId,
+      "Portable replay ledger did not preserve historical installation provenance.",
+    );
+
+    const portableSequenceRecord =
+      afterPortableApply.data.portableBranchAccessSequences
+        ?.find(
+          (item) =>
+            item.issuerId ===
+              publicIdentity.issuerId &&
+            item.ownerId ===
+              ownerId &&
+            item.businessId ===
+              businessId &&
+            item.branchId ===
+              branchId,
+        );
+
+    assert(
+      portableSequenceRecord?.lastSequence ===
+        portableSequence,
+      "Portable BRANCH_ACCESS branch high-water was not advanced.",
+    );
+
+    assert(
+      JSON.stringify(
+        afterPortableApply.data.controlSequences ??
+          [],
+      ) ===
+        nativeSequencesBeforePortable,
+      "Portable BRANCH_ACCESS apply mutated native installation-scoped controlSequences.",
+    );
+
+    assert(
+      afterPortableApply.data.installation
+        ?.installationId ===
+          target.installationId,
+      "Portable apply rebound the authoritative recipient installation identity.",
+    );
+
+    console.log(
+      "PASS: historical-target portable BRANCH_ACCESS ISSUE applied on replacement installation",
+    );
+
+    console.log(
+      "PASS: signed historical installationId preserved in replay evidence",
+    );
+
+    console.log(
+      "PASS: portable branch sequence advanced without mutating native controlSequences",
+    );
+
+    console.log(
+      "PASS: current recipient installation identity remained unchanged",
+    );
+
+    const portableNegativeBaselineJson =
+      JSON.stringify(
+        afterPortableApply.data,
+      );
+
+    const portableReplayResult =
+      await applyFinoraSignedPortableBranchAccessPackage(
+        portableHistoricalPackage,
+        trustedKeys,
+        new Date(
+          portableIssuedAt,
+        ),
+      );
+
+    expectFailure(
+      "portable historical package replay rejected",
+      portableReplayResult,
+    );
+
+    assert(
+      portableReplayResult.error?.includes(
+        "REPLAYED_PACKAGE",
+      ),
+      "Portable package replay did not reach global packageId replay authority.",
+    );
+
+    console.log(
+      "PASS: portable packageId replay rejected globally",
+    );
+
+    const stalePortableIssuedAt =
+      new Date(
+        now.getTime() +
+          21 *
+            60 *
+            1000,
+      ).toISOString();
+
+    const stalePortablePackage =
+      await signFinoraBranchAccessPackage({
+        packageId:
+          "PACKAGE-BRANCH-ACCESS-PORTABLE-HISTORICAL-STALE",
+
+        sequence:
+          portableSequence,
+
+        issuedAt:
+          stalePortableIssuedAt,
+
+        target:
+          historicalTarget,
+
+        payload: {
+          action:
+            "ISSUE",
+
+          accessGrant: {
+            ...portableAccessGrant,
+
+            grantId:
+              "GRANT-BRANCH-ACCESS-HISTORICAL-PORTABLE-STALE",
+
+            userId:
+              "USER-BRANCH-ACCESS-HISTORICAL-PORTABLE-STALE",
+          },
+
+          issuedAt:
+            stalePortableIssuedAt,
+
+          schemaVersion:
+            1,
+        },
+      });
+
+    const stalePortableResult =
+      await applyFinoraSignedPortableBranchAccessPackage(
+        stalePortablePackage,
+        trustedKeys,
+        new Date(
+          stalePortableIssuedAt,
+        ),
+      );
+
+    expectFailure(
+      "equal portable BRANCH_ACCESS sequence rejected",
+      stalePortableResult,
+    );
+
+    assert(
+      stalePortableResult.error?.includes(
+        "STALE_SEQUENCE",
+      ),
+      "Equal portable sequence did not reach portable stale-sequence authority.",
+    );
+
+    console.log(
+      "PASS: equal portable branch sequence rejected",
+    );
+
+    const wrongPortableBranch =
+      "BRANCH-BRANCH-ACCESS-PORTABLE-WRONG";
+
+    const wrongBranchIssuedAt =
+      new Date(
+        now.getTime() +
+          22 *
+            60 *
+            1000,
+      ).toISOString();
+
+    const portableWrongBranchPackage =
+      await signFinoraBranchAccessPackage({
+        packageId:
+          "PACKAGE-BRANCH-ACCESS-PORTABLE-WRONG-BRANCH",
+
+        sequence:
+          portableSequence +
+          1,
+
+        issuedAt:
+          wrongBranchIssuedAt,
+
+        target: {
+          ...historicalTarget,
+
+          branchId:
+            wrongPortableBranch,
+        },
+
+        payload: {
+          action:
+            "ISSUE",
+
+          accessGrant: {
+            ...portableAccessGrant,
+
+            grantId:
+              "GRANT-BRANCH-ACCESS-PORTABLE-WRONG-BRANCH",
+
+            userId:
+              "USER-BRANCH-ACCESS-PORTABLE-WRONG-BRANCH",
+
+            branchId:
+              wrongPortableBranch,
+          },
+
+          issuedAt:
+            wrongBranchIssuedAt,
+
+          schemaVersion:
+            1,
+        },
+      });
+
+    const wrongBranchPortableResult =
+      await applyFinoraSignedPortableBranchAccessPackage(
+        portableWrongBranchPackage,
+        trustedKeys,
+        new Date(
+          wrongBranchIssuedAt,
+        ),
+      );
+
+    expectFailure(
+      "portable wrong-branch package rejected",
+      wrongBranchPortableResult,
+    );
+
+    assert(
+      wrongBranchPortableResult.error?.includes(
+        "TARGET_MISMATCH",
+      ),
+      "Portable wrong branch did not fail at branch-scope verifier.",
+    );
+
+    console.log(
+      "PASS: portable wrong branch rejected by branch-scope authority",
+    );
+
+    const portableCredentialIssuedAt =
+      new Date(
+        now.getTime() +
+          23 *
+            60 *
+            1000,
+      ).toISOString();
+
+    const portableCredentialAuthorization = {
+      ...credentialEnrollment,
+
+      authorizationId:
+        "FINORA-CREDENTIAL-ENROLLMENT-PORTABLE-NATIVE-ONLY-ACTION",
+    };
+
+    const portableAuthorizeCredentialPackage =
+      await signFinoraBranchAccessPackage({
+        packageId:
+          "PACKAGE-BRANCH-ACCESS-PORTABLE-AUTHORIZE-CREDENTIAL",
+
+        sequence:
+          portableSequence +
+          1,
+
+        issuedAt:
+          portableCredentialIssuedAt,
+
+        target:
+          historicalTarget,
+
+        payload: {
+          action:
+            "AUTHORIZE_CREDENTIAL",
+
+          credentialEnrollment:
+            portableCredentialAuthorization,
+
+          issuedAt:
+            portableCredentialIssuedAt,
+
+          schemaVersion:
+            1,
+        },
+      });
+
+    const portableAuthorizeCredentialResult =
+      await applyFinoraSignedPortableBranchAccessPackage(
+        portableAuthorizeCredentialPackage,
+        trustedKeys,
+        new Date(
+          portableCredentialIssuedAt,
+        ),
+      );
+
+    expectFailure(
+      "AUTHORIZE_CREDENTIAL rejected by portable Branch Access lane",
+      portableAuthorizeCredentialResult,
+    );
+
+    console.log(
+      "PASS: AUTHORIZE_CREDENTIAL remains native-only",
+    );
+
+    const portableEnrollmentIssuedAt =
+      new Date(
+        now.getTime() +
+          24 *
+            60 *
+            1000,
+      ).toISOString();
+
+    const portableEnrollmentGrant:
+      FinoraBranchAccessGrantPayload = {
+        ...portableAccessGrant,
+
+        grantId:
+          "GRANT-BRANCH-ACCESS-PORTABLE-WITH-CREDENTIAL",
+
+        userId:
+          "USER-BRANCH-ACCESS-PORTABLE-WITH-CREDENTIAL",
+      };
+
+    const portableEnrollmentAuthorization = {
+      ...credentialEnrollment,
+
+      authorizationId:
+        "FINORA-CREDENTIAL-ENROLLMENT-PORTABLE-FORBIDDEN",
+
+      userId:
+        portableEnrollmentGrant.userId,
+    };
+
+    const portableCredentialBearingPackage =
+      await signFinoraBranchAccessPackage({
+        packageId:
+          "PACKAGE-BRANCH-ACCESS-PORTABLE-CREDENTIAL-BEARING-ISSUE",
+
+        sequence:
+          portableSequence +
+          1,
+
+        issuedAt:
+          portableEnrollmentIssuedAt,
+
+        target:
+          historicalTarget,
+
+        payload: {
+          action:
+            "ISSUE",
+
+          accessGrant:
+            portableEnrollmentGrant,
+
+          credentialEnrollment:
+            portableEnrollmentAuthorization,
+
+          issuedAt:
+            portableEnrollmentIssuedAt,
+
+          schemaVersion:
+            1,
+        },
+      });
+
+    const portableCredentialBearingResult =
+      await applyFinoraSignedPortableBranchAccessPackage(
+        portableCredentialBearingPackage,
+        trustedKeys,
+        new Date(
+          portableEnrollmentIssuedAt,
+        ),
+      );
+
+    expectFailure(
+      "credential-bearing ISSUE rejected by portable Branch Access lane",
+      portableCredentialBearingResult,
+    );
+
+    assert(
+      portableCredentialBearingResult.error?.includes(
+        "cannot carry credential enrollment authority",
+      ),
+      "Portable credential-bearing ISSUE did not reach explicit credential authority guard.",
+    );
+
+    console.log(
+      "PASS: ISSUE + credentialEnrollment remains native-only",
+    );
+
+    const tamperedPortablePackage = {
+      ...stalePortablePackage,
+
+      packageId:
+        "PACKAGE-BRANCH-ACCESS-PORTABLE-TAMPERED",
+
+      signature: {
+        ...stalePortablePackage.signature,
+
+        value:
+          Buffer.alloc(
+            64,
+          ).toString(
+            "base64",
+          ),
+      },
+    };
+
+    const tamperedPortableResult =
+      await applyFinoraSignedPortableBranchAccessPackage(
+        tamperedPortablePackage,
+        trustedKeys,
+        new Date(
+          stalePortableIssuedAt,
+        ),
+      );
+
+    expectFailure(
+      "tampered portable BRANCH_ACCESS signature rejected",
+      tamperedPortableResult,
+    );
+
+    assert(
+      tamperedPortableResult.error?.includes(
+        "INVALID_SIGNATURE",
+      ),
+      "Tampered portable package did not reach signature verification guard.",
+    );
+
+    console.log(
+      "PASS: tampered portable BRANCH_ACCESS signature rejected",
+    );
+
+    const portableNegativeFinal =
+      await readFinoraControlStore();
+
+    assert(
+      portableNegativeFinal.success &&
+        portableNegativeFinal.data,
+      portableNegativeFinal.error ??
+        "Unable to read Control Store after portable negative matrix.",
+    );
+
+    assert(
+      JSON.stringify(
+        portableNegativeFinal.data,
+      ) ===
+        portableNegativeBaselineJson,
+      "Rejected portable BRANCH_ACCESS matrix mutated authoritative Control Store state.",
+    );
+
+    console.log(
+      "PASS: rejected portable matrix left entire Control Store unchanged",
+    );
+
+    console.log(
+      "============================================================",
+    );
+
+    console.log(
+      "PASS: FINORA PORTABLE HISTORICAL-TARGET BRANCH_ACCESS E2E SELFTEST",
+    );
+
+    console.log(
+      "============================================================",
+    );
 
     // ========================================================
     // RECIPIENT NEGATIVE MATRIX BASELINE

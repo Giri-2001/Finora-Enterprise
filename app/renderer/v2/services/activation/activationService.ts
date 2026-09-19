@@ -434,6 +434,76 @@ export async function loadFinoraBusinessProfile(
   }
 }
 
+/**
+ * Read the signed BUSINESS_PROFILE through authenticated
+ * portable branch authority.
+ *
+ * Renderer provides only the opaque sessionId.
+ * Owner / Business / Branch scope is resolved in Electron main.
+ *
+ * READ ONLY.
+ */
+export async function loadFinoraPortableBusinessProfile(
+  sessionId:
+    string,
+): Promise<
+  StorageResult<
+    FinoraProvisionedBusinessProfileV1 | undefined
+  >
+> {
+
+  if (
+    !isNonEmptyString(
+      sessionId,
+    )
+  ) {
+    return {
+      success:
+        false,
+
+      error:
+        "A valid FINORA session ID is required to load the portable Business Profile.",
+    };
+  }
+
+  const bridge =
+    getFinoraActivationControlBridge();
+
+  if (!bridge) {
+    return bridgeUnavailable();
+  }
+
+  if (
+    typeof bridge.findPortableBusinessProfile !==
+      "function"
+  ) {
+    return {
+      success:
+        false,
+
+      error:
+        "FINORA portable Business Profile read capability is unavailable in this runtime.",
+    };
+  }
+
+  try {
+
+    return await bridge.findPortableBusinessProfile({
+      sessionId:
+        sessionId.trim(),
+    });
+  }
+  catch {
+    return {
+      success:
+        false,
+
+      error:
+        "Unable to read the authenticated FINORA portable Business Profile.",
+    };
+  }
+}
+
 // ============================================================
 
 /**

@@ -60,11 +60,14 @@ import {
 export const FINORA_BRANCH_DEVICE_TRUST_FORMAT =
   "FINORA_BRANCH_DEVICE_TRUST" as const;
 
+export const FINORA_BRANCH_DEVICE_TRUST_LEGACY_SCHEMA_VERSION = 1 as const;
+export const FINORA_BRANCH_DEVICE_TRUST_LEGACY_RECORD_SCHEMA_VERSION = 1 as const;
+
 export const FINORA_BRANCH_DEVICE_TRUST_SCHEMA_VERSION =
-  1 as const;
+  2 as const;
 
 export const FINORA_BRANCH_DEVICE_TRUST_RECORD_SCHEMA_VERSION =
-  1 as const;
+  2 as const;
 
 const FINORA_BRANCH_DEVICE_TRUST_MAX_RECORDS =
   64;
@@ -165,21 +168,49 @@ export interface FinoraBranchDeviceTrustRecordV1 {
     string;
 
   schemaVersion:
-    typeof FINORA_BRANCH_DEVICE_TRUST_RECORD_SCHEMA_VERSION;
+    typeof FINORA_BRANCH_DEVICE_TRUST_LEGACY_RECORD_SCHEMA_VERSION;
 }
+
+export interface FinoraBranchDeviceTrustLifecycleV2 {
+  status: "ACTIVE" | "REVOKED";
+  revokedAt?: string;
+}
+
+export interface FinoraBranchDeviceTrustRecordV2 extends Omit<FinoraBranchDeviceTrustRecordV1, "schemaVersion">, FinoraBranchDeviceTrustLifecycleV2 {
+  schemaVersion: 2;
+}
+
+export interface FinoraBranchDeviceTrustStoreStateV2 {
+  format: typeof FINORA_BRANCH_DEVICE_TRUST_FORMAT;
+  schemaVersion: 2;
+  records: FinoraBranchDeviceTrustRecordV2[];
+  updatedAt: string;
+}
+
+export function normalizeFinoraBranchDeviceTrustRecordV1(record: FinoraBranchDeviceTrustRecordV1): FinoraBranchDeviceTrustRecordV2 {
+  const { schemaVersion: _legacySchemaVersion, ...rest } = record;
+  return { ...rest, status: "ACTIVE", schemaVersion: 2 };
+}
+
+export type FinoraBranchDeviceTrustRecord = FinoraBranchDeviceTrustRecordV2;
+export type FinoraBranchDeviceTrustStoreState = FinoraBranchDeviceTrustStoreStateV2;
 
 export interface FinoraBranchDeviceTrustStoreStateV1 {
   format:
     typeof FINORA_BRANCH_DEVICE_TRUST_FORMAT;
 
   schemaVersion:
-    typeof FINORA_BRANCH_DEVICE_TRUST_SCHEMA_VERSION;
+    typeof FINORA_BRANCH_DEVICE_TRUST_LEGACY_SCHEMA_VERSION;
 
   records:
     FinoraBranchDeviceTrustRecordV1[];
 
   updatedAt:
     string;
+}
+
+export function normalizeFinoraBranchDeviceTrustStoreStateV1(state: FinoraBranchDeviceTrustStoreStateV1): FinoraBranchDeviceTrustStoreStateV2 {
+  return { format: state.format, schemaVersion: 2, records: state.records.map(normalizeFinoraBranchDeviceTrustRecordV1), updatedAt: state.updatedAt };
 }
 
 // ============================================================
@@ -542,12 +573,24 @@ function validateRecord(
 
   if (
     value.schemaVersion !==
-      FINORA_BRANCH_DEVICE_TRUST_RECORD_SCHEMA_VERSION
+      FINORA_BRANCH_DEVICE_TRUST_LEGACY_RECORD_SCHEMA_VERSION
   ) {
     throw new Error(
       "FINORA Branch Device Trust record schema version is unsupported.",
     );
   }
+}
+
+function validateRecordV2(value: unknown): asserts value is FinoraBranchDeviceTrustRecordV2 {
+  if (!isRecord(value)) throw new Error("FINORA Branch Device Trust V2 record must be an object.");
+  const keys = value.status === "REVOKED" ? [...expectedRecordKeys(value.dataContext), "status", "revokedAt"] : [...expectedRecordKeys(value.dataContext), "status"];
+  if (!hasExactKeys(value, keys)) throw new Error("FINORA Branch Device Trust V2 record contains unexpected fields.");
+  const { status: _status, revokedAt: _revokedAt, ...legacy } = value;
+  validateRecord({ ...legacy, schemaVersion: FINORA_BRANCH_DEVICE_TRUST_LEGACY_RECORD_SCHEMA_VERSION });
+  if (value.schemaVersion !== 2) throw new Error("FINORA Branch Device Trust V2 record schema version is unsupported.");
+  if (value.status === "ACTIVE") return;
+  if (value.status !== "REVOKED" || !isTimestamp(value.revokedAt)) throw new Error("FINORA REVOKED Device Trust record requires canonical revokedAt.");
+  if (typeof value.trustedAt !== "string" || typeof value.updatedAt !== "string" || Date.parse(value.revokedAt) < Date.parse(value.trustedAt) || Date.parse(value.revokedAt) > Date.parse(value.updatedAt)) throw new Error("FINORA Device Trust revocation timestamp is invalid.");
 }
 
 function createDeviceTrustKey(
@@ -589,6 +632,35 @@ function assertSafeStorageAvailable():
 // VALIDATION
 // ============================================================
 
+export function normalizeFinoraBranchDeviceTrustStoreState(value: unknown): FinoraBranchDeviceTrustStoreState {
+  if (!isRecord(value)) throw new Error("FINORA Branch Device Trust store must be an object.");
+  if (value.schemaVersion === FINORA_BRANCH_DEVICE_TRUST_LEGACY_SCHEMA_VERSION) {
+    validateFinoraBranchDeviceTrustStoreStateV1(value);
+    return normalizeFinoraBranchDeviceTrustStoreStateV1(value);
+  }
+  if (value.schemaVersion === 2) {
+    validateFinoraBranchDeviceTrustStoreStateV2(value);
+    return value;
+  }
+  throw new Error("FINORA Branch Device Trust store schema version is unsupported.");
+}
+
+export function validateFinoraBranchDeviceTrustStoreStateV2(value: unknown): asserts value is FinoraBranchDeviceTrustStoreStateV2 {
+  if (!isRecord(value)) throw new Error("FINORA Branch Device Trust V2 store must be an object.");
+  if (!hasExactKeys(value, ["format", "schemaVersion", "records", "updatedAt"])) throw new Error("FINORA Branch Device Trust V2 store contains unexpected fields.");
+  if (value.format !== FINORA_BRANCH_DEVICE_TRUST_FORMAT || value.schemaVersion !== 2) throw new Error("FINORA Branch Device Trust V2 store format is unsupported.");
+  if (!Array.isArray(value.records) || value.records.length > FINORA_BRANCH_DEVICE_TRUST_MAX_RECORDS) throw new Error("FINORA Branch Device Trust V2 record collection is invalid.");
+  if (!isTimestamp(value.updatedAt)) throw new Error("FINORA Branch Device Trust V2 store timestamp is invalid.");
+  const deviceTrustKeys = new Set<string>();
+  for (const item of value.records) {
+    validateRecordV2(item);
+    if (Date.parse(item.updatedAt) > Date.parse(value.updatedAt)) throw new Error("FINORA Branch Device Trust V2 record is newer than its store.");
+    const key = [item.ownerId,item.businessId,item.branchId,item.authStateId,String(item.authGeneration),item.portableAuthFingerprintAlgorithm,item.portableAuthFingerprint,item.platform,item.installationId,item.bindingKeyId,item.fingerprintAlgorithm,item.publicKeyFingerprint].join("\u0000");
+    if (deviceTrustKeys.has(key)) throw new Error("FINORA Branch Device Trust V2 store contains a duplicate exact device authority.");
+    deviceTrustKeys.add(key);
+  }
+}
+
 export function validateFinoraBranchDeviceTrustStoreStateV1(
   value:
     unknown,
@@ -623,7 +695,7 @@ export function validateFinoraBranchDeviceTrustStoreStateV1(
     value.format !==
       FINORA_BRANCH_DEVICE_TRUST_FORMAT ||
     value.schemaVersion !==
-      FINORA_BRANCH_DEVICE_TRUST_SCHEMA_VERSION
+      FINORA_BRANCH_DEVICE_TRUST_LEGACY_SCHEMA_VERSION
   ) {
     throw new Error(
       "FINORA Branch Device Trust store format is unsupported.",
@@ -721,7 +793,7 @@ export function getFinoraBranchDeviceTrustStorePath():
 
 export async function loadFinoraBranchDeviceTrustStore():
   Promise<
-    FinoraBranchDeviceTrustStoreStateV1 | undefined
+    FinoraBranchDeviceTrustStoreState | undefined
   > {
   assertSafeStorageAvailable();
 
@@ -809,11 +881,9 @@ export async function loadFinoraBranchDeviceTrustStore():
     );
   }
 
-  validateFinoraBranchDeviceTrustStoreStateV1(
+  return normalizeFinoraBranchDeviceTrustStoreState(
     parsed,
   );
-
-  return parsed;
 }
 
 // ============================================================
@@ -828,9 +898,9 @@ export async function loadFinoraBranchDeviceTrustStore():
 
 export async function persistFinoraBranchDeviceTrustStore(
   state:
-    FinoraBranchDeviceTrustStoreStateV1,
+    FinoraBranchDeviceTrustStoreState,
 ): Promise<void> {
-  validateFinoraBranchDeviceTrustStoreStateV1(
+  validateFinoraBranchDeviceTrustStoreStateV2(
     state,
   );
 

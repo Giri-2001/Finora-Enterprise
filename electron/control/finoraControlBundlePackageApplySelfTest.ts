@@ -81,6 +81,11 @@ import {
 // TYPES
 // ============================================================
 
+const BOOTSTRAP_IMPORT_AUTHORITY_CONTEXT = {
+  lane:
+    "BOOTSTRAP_NATIVE",
+} as const;
+
 interface SelfTestScope {
 
   ownerId:
@@ -728,6 +733,7 @@ async function expectBundleFailureWithoutMutation(
       signedBundle,
       trustedKeys,
       now,
+      BOOTSTRAP_IMPORT_AUTHORITY_CONTEXT,
     );
 
   expectFailure(
@@ -753,6 +759,99 @@ async function expectBundleFailureWithoutMutation(
   );
 }
 
+// ============================================================
+// AUTHORITY-CONTEXT FAILURE PROOF
+// ============================================================
+
+async function expectBundleFailureForAuthorityWithoutMutation(
+  label:
+    string,
+
+  signedBundle:
+    unknown,
+
+  trustedKeys:
+    readonly FinoraBranchTrustedControlPublicKey[],
+
+  now:
+    Date,
+
+  authorityContext:
+    Parameters<
+      typeof applyFinoraSignedControlBundlePackage
+    >[3],
+
+  expectedErrorFragment:
+    string,
+): Promise<void> {
+
+  const beforeStore =
+    await readFinoraControlStore();
+
+  assert(
+    beforeStore.success &&
+      beforeStore.data,
+    beforeStore.error ??
+      `${label}: unable to read pre-failure Control Store.`,
+  );
+
+  const before =
+    JSON.stringify(
+      beforeStore.data,
+    );
+
+  const result =
+    await applyFinoraSignedControlBundlePackage(
+      signedBundle,
+      trustedKeys,
+      now,
+      authorityContext,
+    );
+
+  assert(
+    !result.success,
+    `${label}: expected failure.`,
+  );
+
+  assert(
+    (
+      result.error ??
+        ""
+    ).includes(
+      expectedErrorFragment,
+    ),
+    `${label}: expected error containing "${expectedErrorFragment}", received "${result.error ?? ""}".`,
+  );
+
+  const afterStore =
+    await readFinoraControlStore();
+
+  assert(
+    afterStore.success &&
+      afterStore.data,
+    afterStore.error ??
+      `${label}: unable to read post-failure Control Store.`,
+  );
+
+  const after =
+    JSON.stringify(
+      afterStore.data,
+    );
+
+  assert(
+    before ===
+      after,
+    `${label}: rejected bundle mutated authoritative Control Store.`,
+  );
+
+  console.log(
+    `PASS: ${label} -> ${expectedErrorFragment}`,
+  );
+
+  console.log(
+    `PASS: ${label} produced zero full-store child mutation`,
+  );
+}
 // ============================================================
 // SIGNATURE TAMPER
 // ============================================================
@@ -1399,6 +1498,7 @@ async function runSelfTest():
         validPricingBundle,
         trustedKeys,
         now,
+        BOOTSTRAP_IMPORT_AUTHORITY_CONTEXT,
       );
 
     if (!validBundleResult.success) {
@@ -1542,6 +1642,7 @@ async function runSelfTest():
         nonAtomicBundle,
         trustedKeys,
         now,
+        BOOTSTRAP_IMPORT_AUTHORITY_CONTEXT,
       );
 
     if (!nonAtomicResult.success) {
@@ -1764,6 +1865,7 @@ async function runSelfTest():
         sevenPurposeBundle,
         trustedKeys,
         now,
+        BOOTSTRAP_IMPORT_AUTHORITY_CONTEXT,
       );
 
     if (!sevenPurposeResult.success) {
@@ -1816,6 +1918,1857 @@ async function runSelfTest():
 
     console.log(
       "PASS: CONTROL_BUNDLE seven-child cardinality aligned across recipient contract",
+    );
+
+    // ========================================================
+    // G4-3C — AUTHENTICATED PORTABLE OUTER VERIFICATION
+    //
+    // The outer bundle is signed for a valid historical device
+    // target belonging to this permanent branch.
+    //
+    // Portable authority allows the outer historical target by
+    // branch scope. Non-migrated child families remain strict-native;
+    // G5A migrates BRANCH_ACCESS lifecycle children only.
+    // ========================================================
+
+    const historicalFingerprint =
+      "12".repeat(
+        32,
+      );
+
+    const historicalTarget:
+      SelfTestPackageTarget = {
+
+        ownerId:
+          scope.ownerId,
+
+        businessId:
+          scope.businessId,
+
+        branchId:
+          scope.branchId,
+
+        installationId:
+          "INSTALLATION-CONTROL-BUNDLE-HISTORICAL-SELFTEST",
+
+        bindingKeyId:
+          `FINORA-BINDING-${historicalFingerprint
+            .slice(
+              0,
+              32,
+            )
+            .toUpperCase()}`,
+
+        fingerprintAlgorithm:
+          "SHA-256",
+
+        publicKeyFingerprint:
+          historicalFingerprint,
+      };
+
+    const historicalPricingPayload =
+      createPricingPayload({
+
+        scope,
+
+        target:
+          historicalTarget,
+
+        issuedAt,
+
+        validFrom:
+          pricingValidFrom,
+
+        validUntil:
+          pricingValidUntil,
+
+        amount:
+          13,
+      });
+
+    const historicalPricingPackage =
+      createSignedPackage({
+
+        packageId:
+          "FINORA-CONTROL-BUNDLE-G4-HISTORICAL-PRICING",
+
+        purpose:
+          "PRICING_POLICY",
+
+        target:
+          historicalTarget,
+
+        issuedAt,
+
+        sequence:
+          50,
+
+        payload:
+          historicalPricingPayload,
+
+        issuerId,
+
+        signingKeyId:
+          signingMaterial.signingKeyId,
+
+        privateKeyPkcs8DerBase64:
+          signingMaterial.privateKeyPkcs8DerBase64,
+      });
+
+    const historicalBundle =
+      createSignedBundle({
+
+        packageId:
+          "FINORA-CONTROL-BUNDLE-G4-HISTORICAL-OUTER",
+
+        sequence:
+          50,
+
+        issuedAt,
+
+        target:
+          historicalTarget,
+
+        children: [
+          historicalPricingPackage,
+        ],
+
+        issuerId,
+
+        signingMaterial,
+      });
+
+    const portableAuthorityContext = {
+      lane:
+        "AUTHENTICATED_PORTABLE",
+
+      principal: {
+        authGeneration:
+          1,
+
+        userId:
+          "USER-CONTROL-BUNDLE-PORTABLE-SELFTEST",
+
+        username:
+          "owner.portable.selftest",
+
+        ownerId:
+          scope.ownerId,
+
+        businessId:
+          scope.businessId,
+
+        branchId:
+          scope.branchId,
+
+        storageMode:
+          "LOCAL",
+
+        dataContext:
+          "REAL",
+      },
+
+      portableAuthFingerprint:
+        "PORTABLE-AUTH-FINGERPRINT-CONTROL-BUNDLE-SELFTEST",
+    } as const;
+
+    // ========================================================
+    // G5A-7E2 — PORTABLE HISTORICAL BRANCH_ACCESS CHILD
+    // ========================================================
+
+    const portableBundleSourcePayload =
+      accessPackage.payload as {
+        accessGrant?:
+          Record<string, unknown>;
+      };
+
+    assert(
+      portableBundleSourcePayload.accessGrant !==
+        undefined,
+      "Existing BRANCH_ACCESS bundle fixture does not expose an Access Grant.",
+    );
+
+    const portableBundleAccessGrant = {
+      ...portableBundleSourcePayload.accessGrant,
+
+      grantId:
+        "GRANT-CONTROL-BUNDLE-PORTABLE-HISTORICAL-000001",
+
+      userId:
+        "USER-CONTROL-BUNDLE-PORTABLE-HISTORICAL-000001",
+    };
+
+    const portableBundleBaseline =
+      await readFinoraControlStore();
+
+    assert(
+      portableBundleBaseline.success &&
+        portableBundleBaseline.data,
+      portableBundleBaseline.error ??
+        "Unable to read pre-portable Control Bundle state.",
+    );
+
+    const portableBundleLegacyHighWater =
+      (
+        portableBundleBaseline.data.controlSequences ??
+        []
+      )
+        .filter(
+          (item) =>
+            item.issuerId ===
+              issuerId &&
+            item.purpose ===
+              "BRANCH_ACCESS" &&
+            item.ownerId ===
+              scope.ownerId &&
+            item.businessId ===
+              scope.businessId &&
+            item.branchId ===
+              scope.branchId,
+        )
+        .reduce(
+          (
+            current,
+            item,
+          ) =>
+            Math.max(
+              current,
+              item.lastSequence,
+            ),
+          0,
+        );
+
+    const portableBundleExistingHighWater =
+      (
+        portableBundleBaseline.data.portableBranchAccessSequences ??
+        []
+      )
+        .filter(
+          (item) =>
+            item.issuerId ===
+              issuerId &&
+            item.ownerId ===
+              scope.ownerId &&
+            item.businessId ===
+              scope.businessId &&
+            item.branchId ===
+              scope.branchId,
+        )
+        .reduce(
+          (
+            current,
+            item,
+          ) =>
+            Math.max(
+              current,
+              item.lastSequence,
+            ),
+          0,
+        );
+
+    const portableBundleSequence =
+      Math.max(
+        portableBundleLegacyHighWater,
+        portableBundleExistingHighWater,
+      ) +
+      1;
+
+    const nativeSequencesBeforePortableBundle =
+      JSON.stringify(
+        portableBundleBaseline.data.controlSequences ??
+          [],
+      );
+
+    assert(
+      historicalTarget.installationId !==
+        target.installationId &&
+        historicalTarget.bindingKeyId !==
+          target.bindingKeyId &&
+        historicalTarget.publicKeyFingerprint !==
+          target.publicKeyFingerprint,
+      "Historical Control Bundle target unexpectedly matches current native target.",
+    );
+
+    const portableHistoricalBranchAccessPackage =
+      createSignedPackage({
+
+        packageId:
+          "FINORA-CONTROL-BUNDLE-G5A-PORTABLE-BRANCH-ACCESS-CHILD",
+
+        purpose:
+          "BRANCH_ACCESS",
+
+        target:
+          historicalTarget,
+
+        issuedAt,
+
+        sequence:
+          portableBundleSequence,
+
+        payload: {
+          action:
+            "ISSUE",
+
+          accessGrant:
+            portableBundleAccessGrant,
+
+          issuedAt,
+
+          schemaVersion:
+            1,
+        },
+
+        issuerId,
+
+        signingKeyId:
+          signingMaterial.signingKeyId,
+
+        privateKeyPkcs8DerBase64:
+          signingMaterial.privateKeyPkcs8DerBase64,
+      });
+
+    const portableHistoricalBranchAccessBundle =
+      createSignedBundle({
+
+        packageId:
+          "FINORA-CONTROL-BUNDLE-G5A-PORTABLE-BRANCH-ACCESS-OUTER",
+
+        sequence:
+          portableBundleSequence,
+
+        issuedAt,
+
+        target:
+          historicalTarget,
+
+        children: [
+          portableHistoricalBranchAccessPackage,
+        ],
+
+        issuerId,
+
+        signingMaterial,
+      });
+
+    const portableBundleResult =
+      await applyFinoraSignedControlBundlePackage(
+        portableHistoricalBranchAccessBundle,
+        trustedKeys,
+        now,
+        portableAuthorityContext,
+      );
+
+    if (!portableBundleResult.success) {
+      throw new Error(
+        portableBundleResult.error ??
+          "Portable historical BRANCH_ACCESS Control Bundle was rejected.",
+      );
+    }
+
+    assert(
+      portableBundleResult.data.childResults.length ===
+        1 &&
+        portableBundleResult.data.childResults[0]
+          ?.purpose ===
+          "BRANCH_ACCESS" &&
+        portableBundleResult.data.childResults[0]
+          ?.success ===
+          true &&
+        portableBundleResult.data.succeededCount ===
+          1 &&
+        portableBundleResult.data.failedCount ===
+          0 &&
+        portableBundleResult.data.allChildrenApplied ===
+          true,
+      "Portable historical BRANCH_ACCESS Control Bundle did not report one successful child.",
+    );
+
+    const afterPortableBundle =
+      await readFinoraControlStore();
+
+    assert(
+      afterPortableBundle.success &&
+        afterPortableBundle.data,
+      afterPortableBundle.error ??
+        "Unable to read Control Store after portable BRANCH_ACCESS bundle.",
+    );
+
+    const persistedPortableBundleGrant =
+      afterPortableBundle.data.branchAccessGrants
+        ?.find(
+          (item) =>
+            item.grantId ===
+              portableBundleAccessGrant.grantId &&
+            item.userId ===
+              portableBundleAccessGrant.userId &&
+            item.ownerId ===
+              scope.ownerId &&
+            item.businessId ===
+              scope.businessId &&
+            item.branchId ===
+              scope.branchId,
+        );
+
+    assert(
+      persistedPortableBundleGrant !==
+        undefined,
+      "Portable BRANCH_ACCESS Control Bundle did not persist its Access Grant.",
+    );
+
+    const portableBundleReplayRecord =
+      afterPortableBundle.data.appliedControlPackages
+        ?.find(
+          (item) =>
+            item.packageId ===
+              portableHistoricalBranchAccessPackage.packageId,
+        );
+
+    assert(
+      portableBundleReplayRecord?.installationId ===
+        historicalTarget.installationId &&
+        portableBundleReplayRecord.ownerId ===
+          scope.ownerId &&
+        portableBundleReplayRecord.businessId ===
+          scope.businessId &&
+        portableBundleReplayRecord.branchId ===
+          scope.branchId,
+      "Portable Control Bundle replay evidence did not preserve historical installation provenance.",
+    );
+
+    const portableBundleSequenceRecord =
+      afterPortableBundle.data.portableBranchAccessSequences
+        ?.find(
+          (item) =>
+            item.issuerId ===
+              issuerId &&
+            item.ownerId ===
+              scope.ownerId &&
+            item.businessId ===
+              scope.businessId &&
+            item.branchId ===
+              scope.branchId,
+        );
+
+    assert(
+      portableBundleSequenceRecord?.lastSequence ===
+        portableBundleSequence,
+      "Portable BRANCH_ACCESS Control Bundle did not advance branch-scoped sequence authority.",
+    );
+
+    assert(
+      JSON.stringify(
+        afterPortableBundle.data.controlSequences ??
+          [],
+      ) ===
+        nativeSequencesBeforePortableBundle,
+      "Portable BRANCH_ACCESS Control Bundle mutated native installation-scoped controlSequences.",
+    );
+
+    assert(
+      afterPortableBundle.data.installation
+        ?.installationId ===
+          target.installationId,
+      "Portable BRANCH_ACCESS Control Bundle rebound current recipient installation identity.",
+    );
+
+    console.log(
+      "PASS: authenticated portable historical BRANCH_ACCESS child applied through CONTROL_BUNDLE",
+    );
+
+    console.log(
+      "PASS: portable CONTROL_BUNDLE preserved historical installation replay provenance",
+    );
+
+    console.log(
+      "PASS: portable CONTROL_BUNDLE advanced branch sequence without mutating native controlSequences",
+    );
+
+    console.log(
+      "PASS: portable CONTROL_BUNDLE did not rebind recipient installation",
+    );
+
+    // ========================================================
+    // G5B-2B-4 ? PORTABLE HISTORICAL BUSINESS_PROFILE CHILD
+    //
+    // AUTHENTICATED_PORTABLE:
+    // - historical full installation target is signed provenance
+    // - current branch scope authorizes import
+    // - BUSINESS_PROFILE uses dedicated portable sequence state
+    // - current installation identity must never be rebound
+    //
+    // BOOTSTRAP_NATIVE proof follows and must reject the same
+    // historical target before child mutation.
+    // ========================================================
+
+    assert(
+      installation.businessCode ===
+        "CBT01" &&
+        installation.branchCode ===
+          "B01",
+      "Portable BUSINESS_PROFILE fixture requires authoritative installation numbering codes.",
+    );
+
+    const portableBusinessProfileLegacyHighWater =
+      (
+        afterPortableBundle.data.controlSequences ??
+        []
+      )
+        .filter(
+          (item) =>
+            item.issuerId ===
+              issuerId &&
+            item.purpose ===
+              "BUSINESS_PROFILE" &&
+            item.ownerId ===
+              scope.ownerId &&
+            item.businessId ===
+              scope.businessId &&
+            item.branchId ===
+              scope.branchId,
+        )
+        .reduce(
+          (
+            current,
+            item,
+          ) =>
+            Math.max(
+              current,
+              item.lastSequence,
+            ),
+          0,
+        );
+
+    const portableBusinessProfileExistingHighWater =
+      (
+        afterPortableBundle.data.portableBusinessProfileSequences ??
+        []
+      )
+        .filter(
+          (item) =>
+            item.issuerId ===
+              issuerId &&
+            item.ownerId ===
+              scope.ownerId &&
+            item.businessId ===
+              scope.businessId &&
+            item.branchId ===
+              scope.branchId,
+        )
+        .reduce(
+          (
+            current,
+            item,
+          ) =>
+            Math.max(
+              current,
+              item.lastSequence,
+            ),
+          0,
+        );
+
+    const portableBusinessProfileSequence =
+      Math.max(
+        portableBusinessProfileLegacyHighWater,
+        portableBusinessProfileExistingHighWater,
+      ) +
+      1;
+
+    const nativeSequencesBeforePortableBusinessProfileBundle =
+      JSON.stringify(
+        afterPortableBundle.data.controlSequences ??
+          [],
+      );
+
+    const portableBusinessProfileId =
+      "PROFILE-CONTROL-BUNDLE-G5B-PORTABLE-HISTORICAL";
+
+    const portableHistoricalBusinessProfilePayload = {
+      action:
+        "ISSUE" as const,
+
+      profile: {
+        profileId:
+          portableBusinessProfileId,
+
+        ownerId:
+          scope.ownerId,
+
+        businessId:
+          scope.businessId,
+
+        branchId:
+          scope.branchId,
+
+        businessCode:
+          installation.businessCode,
+
+        branchCode:
+          installation.branchCode,
+
+        businessName:
+          "FINORA Portable Bundle Business Profile Self Test",
+
+        branchName:
+          "FINORA Portable Bundle Branch",
+
+        createdAt:
+          validFrom,
+
+        updatedAt:
+          issuedAt,
+
+        schemaVersion:
+          1 as const,
+      },
+
+      installationBinding: {
+        installationId:
+          historicalTarget.installationId,
+
+        bindingKeyId:
+          historicalTarget.bindingKeyId,
+
+        fingerprintAlgorithm:
+          "SHA-256" as const,
+
+        publicKeyFingerprint:
+          historicalTarget.publicKeyFingerprint,
+
+        schemaVersion:
+          1 as const,
+      },
+
+      issuedAt,
+
+      schemaVersion:
+        1 as const,
+    };
+
+    const portableHistoricalBusinessProfilePackage =
+      createSignedPackage({
+
+        packageId:
+          "FINORA-CONTROL-BUNDLE-G5B-PORTABLE-BUSINESS-PROFILE-CHILD",
+
+        purpose:
+          "BUSINESS_PROFILE",
+
+        target:
+          historicalTarget,
+
+        issuedAt,
+
+        sequence:
+          portableBusinessProfileSequence,
+
+        payload:
+          portableHistoricalBusinessProfilePayload,
+
+        issuerId,
+
+        signingKeyId:
+          signingMaterial.signingKeyId,
+
+        privateKeyPkcs8DerBase64:
+          signingMaterial.privateKeyPkcs8DerBase64,
+      });
+
+    const portableHistoricalBusinessProfileBundle =
+      createSignedBundle({
+
+        packageId:
+          "FINORA-CONTROL-BUNDLE-G5B-PORTABLE-BUSINESS-PROFILE-OUTER",
+
+        sequence:
+          portableBusinessProfileSequence,
+
+        issuedAt,
+
+        target:
+          historicalTarget,
+
+        children: [
+          portableHistoricalBusinessProfilePackage,
+        ],
+
+        issuerId,
+
+        signingMaterial,
+      });
+
+    const portableBusinessProfileBundleResult =
+      await applyFinoraSignedControlBundlePackage(
+        portableHistoricalBusinessProfileBundle,
+        trustedKeys,
+        now,
+        portableAuthorityContext,
+      );
+
+    if (!portableBusinessProfileBundleResult.success) {
+      throw new Error(
+        portableBusinessProfileBundleResult.error ??
+          "Portable historical BUSINESS_PROFILE Control Bundle was rejected.",
+      );
+    }
+
+    assert(
+      portableBusinessProfileBundleResult.data.childResults.length ===
+        1 &&
+        portableBusinessProfileBundleResult.data.childResults[0]
+          ?.purpose ===
+          "BUSINESS_PROFILE" &&
+        portableBusinessProfileBundleResult.data.childResults[0]
+          ?.success ===
+          true &&
+        portableBusinessProfileBundleResult.data.succeededCount ===
+          1 &&
+        portableBusinessProfileBundleResult.data.failedCount ===
+          0 &&
+        portableBusinessProfileBundleResult.data.allChildrenApplied ===
+          true,
+      "Portable historical BUSINESS_PROFILE Control Bundle did not report one successful child.",
+    );
+
+    const afterPortableBusinessProfileBundle =
+      await readFinoraControlStore();
+
+    assert(
+      afterPortableBusinessProfileBundle.success &&
+        afterPortableBusinessProfileBundle.data,
+      afterPortableBusinessProfileBundle.error ??
+        "Unable to read Control Store after portable BUSINESS_PROFILE bundle.",
+    );
+
+    const persistedPortableBusinessProfile =
+      afterPortableBusinessProfileBundle.data.businessProfiles
+        ?.find(
+          (item) =>
+            item.profileId ===
+              portableBusinessProfileId,
+        );
+
+    assert(
+      persistedPortableBusinessProfile !==
+        undefined,
+      "Portable BUSINESS_PROFILE Control Bundle did not persist the profile.",
+    );
+
+    assert(
+      persistedPortableBusinessProfile.installationId ===
+        historicalTarget.installationId &&
+        persistedPortableBusinessProfile.bindingKeyId ===
+          historicalTarget.bindingKeyId &&
+        persistedPortableBusinessProfile.fingerprintAlgorithm ===
+          historicalTarget.fingerprintAlgorithm &&
+        persistedPortableBusinessProfile.publicKeyFingerprint ===
+          historicalTarget.publicKeyFingerprint,
+      "Portable BUSINESS_PROFILE Control Bundle did not preserve historical installation provenance.",
+    );
+
+    const portableBusinessProfileReplayRecord =
+      afterPortableBusinessProfileBundle.data.appliedControlPackages
+        ?.find(
+          (item) =>
+            item.packageId ===
+              portableHistoricalBusinessProfilePackage.packageId,
+        );
+
+    assert(
+      portableBusinessProfileReplayRecord?.installationId ===
+        historicalTarget.installationId &&
+        portableBusinessProfileReplayRecord.ownerId ===
+          scope.ownerId &&
+        portableBusinessProfileReplayRecord.businessId ===
+          scope.businessId &&
+        portableBusinessProfileReplayRecord.branchId ===
+          scope.branchId,
+      "Portable BUSINESS_PROFILE Control Bundle replay evidence did not preserve historical target.",
+    );
+
+    const portableBusinessProfileSequenceRecord =
+      afterPortableBusinessProfileBundle.data.portableBusinessProfileSequences
+        ?.find(
+          (item) =>
+            item.issuerId ===
+              issuerId &&
+            item.ownerId ===
+              scope.ownerId &&
+            item.businessId ===
+              scope.businessId &&
+            item.branchId ===
+              scope.branchId,
+        );
+
+    assert(
+      portableBusinessProfileSequenceRecord?.lastSequence ===
+        portableBusinessProfileSequence,
+      "Portable BUSINESS_PROFILE Control Bundle did not advance branch-scoped sequence authority.",
+    );
+
+    assert(
+      JSON.stringify(
+        afterPortableBusinessProfileBundle.data.controlSequences ??
+          [],
+      ) ===
+        nativeSequencesBeforePortableBusinessProfileBundle,
+      "Portable BUSINESS_PROFILE Control Bundle mutated native installation-scoped controlSequences.",
+    );
+
+    assert(
+      afterPortableBusinessProfileBundle.data.installation
+        ?.installationId ===
+          target.installationId,
+      "Portable BUSINESS_PROFILE Control Bundle rebound current recipient installation identity.",
+    );
+
+    console.log(
+      "PASS: authenticated portable historical BUSINESS_PROFILE child applied through CONTROL_BUNDLE",
+    );
+
+    console.log(
+      "PASS: portable BUSINESS_PROFILE bundle preserved signed historical installation provenance",
+    );
+
+    console.log(
+      "PASS: portable BUSINESS_PROFILE bundle advanced dedicated branch sequence without mutating native controlSequences",
+    );
+
+    console.log(
+      "PASS: portable BUSINESS_PROFILE bundle did not rebind recipient installation",
+    );
+
+    await expectBundleFailureForAuthorityWithoutMutation(
+      "bootstrap native rejected historical BUSINESS_PROFILE bundle before portable child routing",
+      portableHistoricalBusinessProfileBundle,
+      trustedKeys,
+      now,
+      BOOTSTRAP_IMPORT_AUTHORITY_CONTEXT,
+      "TARGET_MISMATCH: FINORA Control Package does not belong to this installation.",
+    );
+    // --------------------------------------------------------
+    // SAME HISTORICAL BUNDLE UNDER BOOTSTRAP_NATIVE
+    // --------------------------------------------------------
+
+    await expectBundleFailureForAuthorityWithoutMutation(
+      "bootstrap native rejected historical BRANCH_ACCESS bundle before portable child routing",
+      portableHistoricalBranchAccessBundle,
+      trustedKeys,
+      now,
+      BOOTSTRAP_IMPORT_AUTHORITY_CONTEXT,
+      "TARGET_MISMATCH: FINORA Control Package does not belong to this installation.",
+    );
+
+    // --------------------------------------------------------
+    // PORTABLE AUTHORIZE_CREDENTIAL IS NATIVE-ONLY
+    // --------------------------------------------------------
+
+    const portableAuthorizeCredentialPackage =
+      createSignedPackage({
+
+        packageId:
+          "FINORA-CONTROL-BUNDLE-G5A-PORTABLE-AUTHORIZE-CREDENTIAL-CHILD",
+
+        purpose:
+          "BRANCH_ACCESS",
+
+        target:
+          historicalTarget,
+
+        issuedAt,
+
+        sequence:
+          portableBundleSequence +
+          1,
+
+        payload: {
+          action:
+            "AUTHORIZE_CREDENTIAL",
+
+          credentialEnrollment: {},
+
+          issuedAt,
+
+          schemaVersion:
+            1,
+        },
+
+        issuerId,
+
+        signingKeyId:
+          signingMaterial.signingKeyId,
+
+        privateKeyPkcs8DerBase64:
+          signingMaterial.privateKeyPkcs8DerBase64,
+      });
+
+    const portableAuthorizeCredentialBundle =
+      createSignedBundle({
+
+        packageId:
+          "FINORA-CONTROL-BUNDLE-G5A-PORTABLE-AUTHORIZE-CREDENTIAL-OUTER",
+
+        sequence:
+          portableBundleSequence +
+          1,
+
+        issuedAt,
+
+        target:
+          historicalTarget,
+
+        children: [
+          portableAuthorizeCredentialPackage,
+        ],
+
+        issuerId,
+
+        signingMaterial,
+      });
+
+    await expectBundleFailureForAuthorityWithoutMutation(
+      "portable CONTROL_BUNDLE rejected native-only AUTHORIZE_CREDENTIAL during complete preflight",
+      portableAuthorizeCredentialBundle,
+      trustedKeys,
+      now,
+      portableAuthorityContext,
+      "BRANCH_ACCESS AUTHORIZE_CREDENTIAL is native-only.",
+    );
+
+    // --------------------------------------------------------
+    // PORTABLE ISSUE + credentialEnrollment IS NATIVE-ONLY
+    // --------------------------------------------------------
+
+    const portableCredentialBearingPackage =
+      createSignedPackage({
+
+        packageId:
+          "FINORA-CONTROL-BUNDLE-G5A-PORTABLE-CREDENTIAL-BEARING-CHILD",
+
+        purpose:
+          "BRANCH_ACCESS",
+
+        target:
+          historicalTarget,
+
+        issuedAt,
+
+        sequence:
+          portableBundleSequence +
+          1,
+
+        payload: {
+          action:
+            "ISSUE",
+
+          accessGrant:
+            portableBundleAccessGrant,
+
+          credentialEnrollment: {},
+
+          issuedAt,
+
+          schemaVersion:
+            1,
+        },
+
+        issuerId,
+
+        signingKeyId:
+          signingMaterial.signingKeyId,
+
+        privateKeyPkcs8DerBase64:
+          signingMaterial.privateKeyPkcs8DerBase64,
+      });
+
+    const portableCredentialBearingBundle =
+      createSignedBundle({
+
+        packageId:
+          "FINORA-CONTROL-BUNDLE-G5A-PORTABLE-CREDENTIAL-BEARING-OUTER",
+
+        sequence:
+          portableBundleSequence +
+          2,
+
+        issuedAt,
+
+        target:
+          historicalTarget,
+
+        children: [
+          portableCredentialBearingPackage,
+        ],
+
+        issuerId,
+
+        signingMaterial,
+      });
+
+    await expectBundleFailureForAuthorityWithoutMutation(
+      "portable CONTROL_BUNDLE rejected credential-bearing BRANCH_ACCESS ISSUE during complete preflight",
+      portableCredentialBearingBundle,
+      trustedKeys,
+      now,
+      portableAuthorityContext,
+      "portable BRANCH_ACCESS cannot carry credential enrollment authority.",
+    );
+
+    console.log(
+      "PASS: native-only BRANCH_ACCESS credential actions rejected before first bundle child mutation",
+    );
+
+    // --------------------------------------------------------
+    // PRICING_POLICY is now a migrated portable child family.
+    // BOOTSTRAP_NATIVE must still reject this historical target.
+    // A fresh isolated recipient below proves portable success
+    // without violating the native Pricing provenance already
+    // established earlier in this primary regression store.
+    // --------------------------------------------------------
+    await expectBundleFailureForAuthorityWithoutMutation(
+      "bootstrap native rejected historical outer target before child preflight",
+      historicalBundle,
+      trustedKeys,
+      now,
+      BOOTSTRAP_IMPORT_AUTHORITY_CONTEXT,
+      "TARGET_MISMATCH: FINORA Control Package does not belong to this installation.",
+    );
+
+    const wrongBranchPortableAuthorityContext = {
+      ...portableAuthorityContext,
+
+      principal: {
+        ...portableAuthorityContext.principal,
+
+        branchId:
+          "BRANCH-CONTROL-BUNDLE-PORTABLE-WRONG",
+      },
+    } as const;
+
+    await expectBundleFailureForAuthorityWithoutMutation(
+      "authenticated portable wrong principal branch rejected before package authorization",
+      historicalBundle,
+      trustedKeys,
+      now,
+      wrongBranchPortableAuthorityContext,
+      "FINORA authenticated portable Control Bundle session does not belong to the authoritative Control Store branch.",
+    );
+
+    const blankFingerprintPortableAuthorityContext = {
+      ...portableAuthorityContext,
+
+      portableAuthFingerprint:
+        "",
+    } as const;
+
+    await expectBundleFailureForAuthorityWithoutMutation(
+      "authenticated portable blank fingerprint rejected before package authorization",
+      historicalBundle,
+      trustedKeys,
+      now,
+      blankFingerprintPortableAuthorityContext,
+      "FINORA authenticated portable Control Bundle authority context is invalid.",
+    );
+
+
+
+    // ========================================================
+    // G5C ? PORTABLE HISTORICAL PRICING CHILD
+    //
+    // The primary bundle regression store already owns a
+    // native current-installation Pricing Policy. Portable
+    // Pricing correctly treats that provenance as immutable.
+    // Therefore this proof uses a second isolated recipient
+    // Control Store rather than clearing or rebinding state.
+    // ========================================================
+
+    const portablePricingBundleUserData =
+      await mkdtemp(
+        join(
+          tmpdir(),
+          "finora-control-bundle-portable-pricing-selftest-",
+        ),
+      );
+
+    try {
+
+      app.setPath(
+        "userData",
+        portablePricingBundleUserData,
+      );
+
+      const portablePricingRecipientBinding =
+        await ensureFinoraWindowsInstallationBinding();
+
+      assert(
+        portablePricingRecipientBinding.installationId !==
+          historicalTarget.installationId &&
+        portablePricingRecipientBinding.bindingKeyId !==
+          historicalTarget.bindingKeyId &&
+        portablePricingRecipientBinding.publicKeyFingerprint !==
+          historicalTarget.publicKeyFingerprint,
+        "Isolated portable Pricing recipient unexpectedly matches historical signed target.",
+      );
+
+      const portablePricingRecipientCreatedAt =
+        new Date(
+          now.getTime() -
+            60 *
+              60 *
+              1000,
+        ).toISOString();
+
+      const portablePricingRecipientInstallation:
+        FinoraControlInstallationIdentity = {
+
+          installationId:
+            portablePricingRecipientBinding.installationId,
+
+          ownerId:
+            scope.ownerId,
+
+          businessId:
+            scope.businessId,
+
+          branchId:
+            scope.branchId,
+
+          businessCode:
+            "CBP01",
+
+          branchCode:
+            "CB01",
+
+          createdAt:
+            portablePricingRecipientCreatedAt,
+
+          updatedAt:
+            portablePricingRecipientCreatedAt,
+
+          schemaVersion:
+            1,
+        };
+
+      const portablePricingInstallationResult =
+        await saveFinoraInstallationIdentity(
+          portablePricingRecipientInstallation,
+        );
+
+      expectSuccess(
+        "isolated portable Pricing bundle recipient installation identity persisted",
+        portablePricingInstallationResult,
+      );
+
+      const portablePricingBefore =
+        await readFinoraControlStore();
+
+      assert(
+        portablePricingBefore.success &&
+          portablePricingBefore.data,
+        portablePricingBefore.error ??
+          "Unable to read isolated portable Pricing bundle baseline.",
+      );
+
+      assert(
+        (
+          portablePricingBefore.data.pricingPolicies ??
+          []
+        ).length ===
+          0,
+        "Isolated portable Pricing bundle recipient unexpectedly contains prior Pricing state.",
+      );
+
+      const portablePricingNativeSequencesBefore =
+        JSON.stringify(
+          portablePricingBefore.data.controlSequences ??
+            [],
+        );
+
+      await expectBundleFailureForAuthorityWithoutMutation(
+        "isolated BOOTSTRAP_NATIVE still rejected historical Pricing bundle target",
+        historicalBundle,
+        trustedKeys,
+        now,
+        BOOTSTRAP_IMPORT_AUTHORITY_CONTEXT,
+        "TARGET_MISMATCH: FINORA Control Package does not belong to this installation.",
+      );
+
+      const portablePricingBundleResult =
+        await applyFinoraSignedControlBundlePackage(
+          historicalBundle,
+          trustedKeys,
+          now,
+          portableAuthorityContext,
+        );
+
+      if (!portablePricingBundleResult.success) {
+        throw new Error(
+          portablePricingBundleResult.error ??
+            "Authenticated portable historical Pricing bundle failed.",
+        );
+      }
+
+      assert(
+        portablePricingBundleResult.data.childResults.length ===
+          1 &&
+        portablePricingBundleResult.data.childResults[0]?.packageId ===
+          historicalPricingPackage.packageId &&
+        portablePricingBundleResult.data.childResults[0]?.purpose ===
+          "PRICING_POLICY" &&
+        portablePricingBundleResult.data.childResults[0]?.success ===
+          true &&
+        portablePricingBundleResult.data.succeededCount ===
+          1 &&
+        portablePricingBundleResult.data.failedCount ===
+          0 &&
+        portablePricingBundleResult.data.allChildrenApplied,
+        "Portable historical Pricing bundle did not report one successful Pricing child.",
+      );
+
+      console.log(
+        "PASS: authenticated portable CONTROL_BUNDLE accepted historical-target PRICING_POLICY child",
+      );
+
+      const afterPortablePricingBundle =
+        await readFinoraControlStore();
+
+      assert(
+        afterPortablePricingBundle.success &&
+          afterPortablePricingBundle.data,
+        afterPortablePricingBundle.error ??
+          "Unable to read Control Store after portable Pricing bundle apply.",
+      );
+
+      const persistedPortablePricingPolicy =
+        afterPortablePricingBundle.data.pricingPolicies
+          ?.find(
+            (item) =>
+              item.installationId ===
+                historicalTarget.installationId &&
+              item.ownerId ===
+                scope.ownerId &&
+              item.businessId ===
+                scope.businessId &&
+              item.branchId ===
+                scope.branchId,
+          );
+
+      assert(
+        persistedPortablePricingPolicy !==
+          undefined,
+        "Portable historical Pricing child was not persisted.",
+      );
+
+      assert(
+        persistedPortablePricingPolicy.installationId ===
+          historicalTarget.installationId &&
+        persistedPortablePricingPolicy.bindingKeyId ===
+          historicalTarget.bindingKeyId &&
+        persistedPortablePricingPolicy.fingerprintAlgorithm ===
+          historicalTarget.fingerprintAlgorithm &&
+        persistedPortablePricingPolicy.publicKeyFingerprint ===
+          historicalTarget.publicKeyFingerprint,
+        "Portable Pricing bundle did not preserve signed historical installation provenance.",
+      );
+
+      console.log(
+        "PASS: portable Pricing bundle preserved historical installation/binding/fingerprint provenance",
+      );
+
+      assert(
+        persistedPortablePricingPolicy.overrides.length ===
+          1 &&
+        persistedPortablePricingPolicy.overrides[0]?.amount ===
+          13,
+        "Portable Pricing bundle did not persist the signed Pricing override.",
+      );
+
+      console.log(
+        "PASS: portable Pricing bundle persisted signed override amount",
+      );
+
+      assert(
+        afterPortablePricingBundle.data.installation
+          ?.installationId ===
+          portablePricingRecipientBinding.installationId,
+        "Portable Pricing bundle rebound current recipient installation identity.",
+      );
+
+      console.log(
+        "PASS: portable Pricing bundle left current recipient installation unchanged",
+      );
+
+      const portablePricingReplayRecord =
+        afterPortablePricingBundle.data.appliedControlPackages
+          ?.find(
+            (item) =>
+              item.packageId ===
+                historicalPricingPackage.packageId,
+          );
+
+      assert(
+        portablePricingReplayRecord?.installationId ===
+          historicalTarget.installationId &&
+        portablePricingReplayRecord.ownerId ===
+          scope.ownerId &&
+        portablePricingReplayRecord.businessId ===
+          scope.businessId &&
+        portablePricingReplayRecord.branchId ===
+          scope.branchId,
+        "Portable Pricing bundle replay evidence did not preserve historical signed target.",
+      );
+
+      console.log(
+        "PASS: portable Pricing bundle replay evidence preserved historical target",
+      );
+
+      const portablePricingSequenceRecord =
+        afterPortablePricingBundle.data.portablePricingPolicySequences
+          ?.find(
+            (item) =>
+              item.issuerId ===
+                issuerId &&
+              item.ownerId ===
+                scope.ownerId &&
+              item.businessId ===
+                scope.businessId &&
+              item.branchId ===
+                scope.branchId,
+          );
+
+      assert(
+        portablePricingSequenceRecord?.lastSequence ===
+          50,
+        "Portable Pricing bundle did not advance dedicated branch Pricing sequence high-water.",
+      );
+
+      console.log(
+        "PASS: portable Pricing bundle advanced dedicated portable Pricing branch sequence",
+      );
+
+      assert(
+        JSON.stringify(
+          afterPortablePricingBundle.data.controlSequences ??
+            [],
+        ) ===
+          portablePricingNativeSequencesBefore,
+        "Portable Pricing bundle mutated native installation-scoped controlSequences.",
+      );
+
+      console.log(
+        "PASS: portable Pricing bundle did not mutate native controlSequences",
+      );
+
+    } finally {
+
+      await rm(
+        portablePricingBundleUserData,
+        {
+          recursive:
+            true,
+
+          force:
+            true,
+        },
+      );
+
+      console.log(
+        "PASS: isolated portable Pricing bundle recipient userData deleted",
+      );
+    }
+    // ========================================================
+    // G5D ? PORTABLE HISTORICAL STORAGE_ENTITLEMENT CHILD
+    //
+    // Use an isolated recipient Control Store. The signed
+    // entitlement remains bound to the historical device target,
+    // while current-device authorization is branch scoped.
+    // ========================================================
+
+    const portableStorageBundleUserData =
+      await mkdtemp(
+        join(
+          tmpdir(),
+          "finora-control-bundle-portable-storage-selftest-",
+        ),
+      );
+
+    try {
+
+      app.setPath(
+        "userData",
+        portableStorageBundleUserData,
+      );
+
+      const portableStorageRecipientBinding =
+        await ensureFinoraWindowsInstallationBinding();
+
+      assert(
+        portableStorageRecipientBinding.installationId !==
+          historicalTarget.installationId &&
+        portableStorageRecipientBinding.bindingKeyId !==
+          historicalTarget.bindingKeyId &&
+        portableStorageRecipientBinding.publicKeyFingerprint !==
+          historicalTarget.publicKeyFingerprint,
+        "Isolated portable Storage recipient unexpectedly matches historical signed target.",
+      );
+
+      const portableStorageRecipientCreatedAt =
+        new Date(
+          now.getTime() -
+            2 *
+              60 *
+              60 *
+              1000,
+        ).toISOString();
+
+      const portableStorageRecipientInstallation:
+        FinoraControlInstallationIdentity = {
+
+          installationId:
+            portableStorageRecipientBinding.installationId,
+
+          ownerId:
+            scope.ownerId,
+
+          businessId:
+            scope.businessId,
+
+          branchId:
+            scope.branchId,
+
+          businessCode:
+            "CBS01",
+
+          branchCode:
+            "CB01",
+
+          createdAt:
+            portableStorageRecipientCreatedAt,
+
+          updatedAt:
+            portableStorageRecipientCreatedAt,
+
+          schemaVersion:
+            1,
+        };
+
+      const portableStorageInstallationResult =
+        await saveFinoraInstallationIdentity(
+          portableStorageRecipientInstallation,
+        );
+
+      expectSuccess(
+        "isolated portable Storage bundle recipient installation identity persisted",
+        portableStorageInstallationResult,
+      );
+
+      const portableStorageBefore =
+        await readFinoraControlStore();
+
+      assert(
+        portableStorageBefore.success &&
+        portableStorageBefore.data,
+        portableStorageBefore.error ??
+          "Unable to read isolated portable Storage bundle baseline.",
+      );
+
+      assert(
+        (
+          portableStorageBefore.data.storageEntitlements ??
+          []
+        ).length ===
+          0,
+        "Isolated portable Storage bundle recipient unexpectedly contains prior Storage Entitlement state.",
+      );
+
+      const portableStorageLegacyHighWater =
+        (
+          portableStorageBefore.data.controlSequences ??
+          []
+        )
+          .filter(
+            (item) =>
+              item.issuerId ===
+                issuerId &&
+              item.purpose ===
+                "STORAGE_ENTITLEMENT" &&
+              item.ownerId ===
+                scope.ownerId &&
+              item.businessId ===
+                scope.businessId &&
+              item.branchId ===
+                scope.branchId,
+          )
+          .reduce(
+            (
+              current,
+              item,
+            ) =>
+              Math.max(
+                current,
+                item.lastSequence,
+              ),
+            0,
+          );
+
+      const portableStorageExistingHighWater =
+        (
+          portableStorageBefore.data.portableStorageEntitlementSequences ??
+          []
+        )
+          .filter(
+            (item) =>
+              item.issuerId ===
+                issuerId &&
+              item.ownerId ===
+                scope.ownerId &&
+              item.businessId ===
+                scope.businessId &&
+              item.branchId ===
+                scope.branchId,
+          )
+          .reduce(
+            (
+              current,
+              item,
+            ) =>
+              Math.max(
+                current,
+                item.lastSequence,
+              ),
+            0,
+          );
+
+      const portableStorageSequence =
+        Math.max(
+          portableStorageLegacyHighWater,
+          portableStorageExistingHighWater,
+        ) +
+        1;
+
+      const portableStorageNativeSequencesBefore =
+        JSON.stringify(
+          portableStorageBefore.data.controlSequences ??
+            [],
+        );
+
+      const portableStorageActivatedAt =
+        new Date(
+          now.getTime() -
+            30 *
+              60 *
+              1000,
+        ).toISOString();
+
+      const portableHistoricalStorageEntitlement = {
+
+        entitlementId:
+          "ENTITLEMENT-CONTROL-BUNDLE-G5D-PORTABLE-HISTORICAL-000001",
+
+        userId:
+          portableAuthorityContext.principal.userId,
+
+        ownerId:
+          scope.ownerId,
+
+        businessId:
+          scope.businessId,
+
+        branchId:
+          scope.branchId,
+
+        installationId:
+          historicalTarget.installationId,
+
+        bindingKeyId:
+          historicalTarget.bindingKeyId,
+
+        fingerprintAlgorithm:
+          historicalTarget.fingerprintAlgorithm,
+
+        publicKeyFingerprint:
+          historicalTarget.publicKeyFingerprint,
+
+        storageMode:
+          "LOCAL",
+
+        status:
+          "ACTIVE",
+
+        activatedAt:
+          portableStorageActivatedAt,
+
+        createdAt:
+          portableStorageRecipientCreatedAt,
+
+        updatedAt:
+          issuedAt,
+
+        schemaVersion:
+          1,
+      } as const;
+
+      const portableHistoricalStoragePackage =
+        createSignedPackage({
+
+          packageId:
+            "FINORA-CONTROL-BUNDLE-G5D-PORTABLE-STORAGE-CHILD",
+
+          purpose:
+            "STORAGE_ENTITLEMENT",
+
+          target:
+            historicalTarget,
+
+          issuedAt,
+
+          sequence:
+            portableStorageSequence,
+
+          payload: {
+
+            entitlement:
+              portableHistoricalStorageEntitlement,
+
+            issuedAt,
+
+            schemaVersion:
+              1,
+          },
+
+          issuerId,
+
+          signingKeyId:
+            signingMaterial.signingKeyId,
+
+          privateKeyPkcs8DerBase64:
+            signingMaterial.privateKeyPkcs8DerBase64,
+        });
+
+      const portableHistoricalStorageBundle =
+        createSignedBundle({
+
+          packageId:
+            "FINORA-CONTROL-BUNDLE-G5D-PORTABLE-STORAGE-OUTER",
+
+          sequence:
+            portableStorageSequence,
+
+          issuedAt,
+
+          target:
+            historicalTarget,
+
+          children: [
+            portableHistoricalStoragePackage,
+          ],
+
+          issuerId,
+
+          signingMaterial,
+        });
+
+      await expectBundleFailureForAuthorityWithoutMutation(
+        "isolated BOOTSTRAP_NATIVE still rejected historical Storage bundle target",
+        portableHistoricalStorageBundle,
+        trustedKeys,
+        now,
+        BOOTSTRAP_IMPORT_AUTHORITY_CONTEXT,
+        "TARGET_MISMATCH: FINORA Control Package does not belong to this installation.",
+      );
+
+      const portableStorageBundleResult =
+        await applyFinoraSignedControlBundlePackage(
+          portableHistoricalStorageBundle,
+          trustedKeys,
+          now,
+          portableAuthorityContext,
+        );
+
+      if (!portableStorageBundleResult.success) {
+        throw new Error(
+          portableStorageBundleResult.error ??
+            "Authenticated portable historical Storage bundle failed.",
+        );
+      }
+
+      assert(
+        portableStorageBundleResult.data.childResults.length ===
+          1 &&
+        portableStorageBundleResult.data.childResults[0]?.packageId ===
+          portableHistoricalStoragePackage.packageId &&
+        portableStorageBundleResult.data.childResults[0]?.purpose ===
+          "STORAGE_ENTITLEMENT" &&
+        portableStorageBundleResult.data.childResults[0]?.success ===
+          true &&
+        portableStorageBundleResult.data.succeededCount ===
+          1 &&
+        portableStorageBundleResult.data.failedCount ===
+          0 &&
+        portableStorageBundleResult.data.allChildrenApplied,
+        "Portable historical Storage bundle did not report one successful Storage child.",
+      );
+
+      console.log(
+        "PASS: authenticated portable CONTROL_BUNDLE accepted historical-target STORAGE_ENTITLEMENT child",
+      );
+
+      const afterPortableStorageBundle =
+        await readFinoraControlStore();
+
+      assert(
+        afterPortableStorageBundle.success &&
+        afterPortableStorageBundle.data,
+        afterPortableStorageBundle.error ??
+          "Unable to read Control Store after portable Storage bundle apply.",
+      );
+
+      const persistedPortableStorageEntitlement =
+        afterPortableStorageBundle.data.storageEntitlements
+          ?.find(
+            (item) =>
+              item.entitlementId ===
+                portableHistoricalStorageEntitlement.entitlementId &&
+              item.userId ===
+                portableHistoricalStorageEntitlement.userId &&
+              item.ownerId ===
+                scope.ownerId &&
+              item.businessId ===
+                scope.businessId &&
+              item.branchId ===
+                scope.branchId &&
+              item.storageMode ===
+                "LOCAL",
+          );
+
+      assert(
+        persistedPortableStorageEntitlement !==
+          undefined,
+        "Portable historical Storage child was not persisted.",
+      );
+
+      assert(
+        persistedPortableStorageEntitlement.installationId ===
+          historicalTarget.installationId &&
+        persistedPortableStorageEntitlement.bindingKeyId ===
+          historicalTarget.bindingKeyId &&
+        persistedPortableStorageEntitlement.fingerprintAlgorithm ===
+          historicalTarget.fingerprintAlgorithm &&
+        persistedPortableStorageEntitlement.publicKeyFingerprint ===
+          historicalTarget.publicKeyFingerprint,
+        "Portable Storage bundle did not preserve signed historical installation provenance.",
+      );
+
+      console.log(
+        "PASS: portable Storage bundle preserved historical installation/binding/fingerprint provenance",
+      );
+
+      assert(
+        persistedPortableStorageEntitlement.status ===
+          "ACTIVE" &&
+        persistedPortableStorageEntitlement.storageMode ===
+          "LOCAL" &&
+        persistedPortableStorageEntitlement.updatedAt ===
+          issuedAt,
+        "Portable Storage bundle did not persist the signed entitlement state.",
+      );
+
+      console.log(
+        "PASS: portable Storage bundle persisted signed ACTIVE LOCAL entitlement",
+      );
+
+      assert(
+        afterPortableStorageBundle.data.installation
+          ?.installationId ===
+          portableStorageRecipientBinding.installationId,
+        "Portable Storage bundle rebound current recipient installation identity.",
+      );
+
+      console.log(
+        "PASS: portable Storage bundle left current recipient installation unchanged",
+      );
+
+      const portableStorageReplayRecord =
+        afterPortableStorageBundle.data.appliedControlPackages
+          ?.find(
+            (item) =>
+              item.packageId ===
+                portableHistoricalStoragePackage.packageId,
+          );
+
+      assert(
+        portableStorageReplayRecord?.installationId ===
+          historicalTarget.installationId &&
+        portableStorageReplayRecord.ownerId ===
+          scope.ownerId &&
+        portableStorageReplayRecord.businessId ===
+          scope.businessId &&
+        portableStorageReplayRecord.branchId ===
+          scope.branchId,
+        "Portable Storage bundle replay evidence did not preserve historical signed target.",
+      );
+
+      console.log(
+        "PASS: portable Storage bundle replay evidence preserved historical target",
+      );
+
+      const portableStorageSequenceRecord =
+        afterPortableStorageBundle.data.portableStorageEntitlementSequences
+          ?.find(
+            (item) =>
+              item.issuerId ===
+                issuerId &&
+              item.ownerId ===
+                scope.ownerId &&
+              item.businessId ===
+                scope.businessId &&
+              item.branchId ===
+                scope.branchId,
+          );
+
+      assert(
+        portableStorageSequenceRecord?.lastSequence ===
+          portableStorageSequence,
+        "Portable Storage bundle did not advance dedicated branch Storage sequence high-water.",
+      );
+
+      console.log(
+        "PASS: portable Storage bundle advanced dedicated portable Storage branch sequence",
+      );
+
+      assert(
+        JSON.stringify(
+          afterPortableStorageBundle.data.controlSequences ??
+            [],
+        ) ===
+          portableStorageNativeSequencesBefore,
+        "Portable Storage bundle mutated native installation-scoped controlSequences.",
+      );
+
+      console.log(
+        "PASS: portable Storage bundle did not mutate native controlSequences",
+      );
+
+    } finally {
+
+      await rm(
+        portableStorageBundleUserData,
+        {
+          recursive:
+            true,
+
+          force:
+            true,
+        },
+      );
+
+      console.log(
+        "PASS: isolated portable Storage bundle recipient userData deleted",
+      );
+    }
+
+    console.log(
+      "PASS: G4 authenticated portable outer CONTROL_BUNDLE lane policy executable proof",
     );
 
     // ========================================================

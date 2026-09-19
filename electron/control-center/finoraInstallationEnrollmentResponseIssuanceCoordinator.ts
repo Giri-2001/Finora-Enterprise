@@ -46,6 +46,10 @@ import type {
   FinoraVerifiedInstallationEnrollmentRequest,
 } from "./finoraInstallationEnrollmentRequestVerifier.js";
 
+import {
+  assertFinoraBranchCertificationPublicKey,
+} from "../control/finoraBranchCertificationCrypto.js";
+
 import type {
   FinoraInstallationEnrollmentResponseTarget,
   FinoraSignedInstallationEnrollmentResponse,
@@ -134,6 +138,42 @@ function validateAssignment(
   ) {
     throw new Error(
       "FINORA Installation Enrollment operator assignment is incomplete.",
+    );
+  }
+}
+
+function validateLiveEnrollmentRequest(
+  verifiedEnrollment:
+    FinoraVerifiedInstallationEnrollmentRequest,
+): void {
+
+  /*
+   * V1 remains verifiable for historical evidence/backfill only.
+   *
+   * A new live provisioning operation must carry the branch-held
+   * certification public authority introduced by Request V2.
+   *
+   * This validation intentionally runs before issuance-ledger
+   * reservation so a legacy/malformed request consumes no sequence.
+   */
+  if (
+    verifiedEnrollment.requestSchemaVersion !==
+      2 ||
+    verifiedEnrollment.branchCertificationPublicKey ===
+      undefined
+  ) {
+    throw new Error(
+      "FINORA live Installation Enrollment Response issuance requires a verified V2 Enrollment Request with Branch Certification authority.",
+    );
+  }
+
+  try {
+    assertFinoraBranchCertificationPublicKey(
+      verifiedEnrollment.branchCertificationPublicKey,
+    );
+  } catch {
+    throw new Error(
+      "FINORA live Installation Enrollment Request contains invalid Branch Certification authority.",
     );
   }
 }
@@ -267,6 +307,10 @@ export function issueFinoraInstallationEnrollmentResponse(
 
       validateAssignment(
         input.assignment,
+      );
+
+      validateLiveEnrollmentRequest(
+        input.verifiedEnrollment,
       );
 
       const target =

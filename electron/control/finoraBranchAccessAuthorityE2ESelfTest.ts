@@ -78,6 +78,10 @@ import {
   registerFinoraControlHandlers,
 } from "./finoraControlIpc.js";
 
+import {
+  FinoraPortableBranchAuthStore,
+} from "./finoraPortableBranchAuthStore.js";
+
 // ============================================================
 // TYPES
 // ============================================================
@@ -594,8 +598,22 @@ async function runSelfTest():
     // REAL CONTROL IPC HANDLERS
     // --------------------------------------------------------
 
+    const portableBranchAuthStore =
+      new FinoraPortableBranchAuthStore({
+        resolveLocalRoot:
+          () =>
+            app.getPath(
+              "userData",
+            ),
+
+        resolveUsbRoot:
+          async () =>
+            null,
+      });
+
     registerFinoraControlHandlers(
       isTrustedRenderer,
+      portableBranchAuthStore,
     );
 
     console.log(

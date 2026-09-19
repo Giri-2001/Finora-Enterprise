@@ -517,6 +517,11 @@ interface FindBusinessProfileRequest {
   branchId: string;
 }
 
+interface FindPortableBusinessProfileRequest {
+
+  sessionId: string;
+}
+
 interface FindPricingPolicyRequest {
 
   ownerId: string;
@@ -880,6 +885,17 @@ interface FinoraControlBridge {
         >
       >;
 
+  findPortableBusinessProfile:
+    (
+      request:
+        FindPortableBusinessProfileRequest,
+    ) =>
+      Promise<
+        StorageResult<
+          FinoraControlBusinessProfileView | undefined
+        >
+      >;
+
   findPricingPolicy:
     (
       request:
@@ -1012,7 +1028,16 @@ interface FinoraControlBridge {
       >;
 
   importControlBundle:
-    () =>
+    (
+      ...args:
+        | []
+        | [
+            request: {
+              sessionId:
+                string;
+            },
+          ]
+    ) =>
       Promise<
         FinoraControlBundleImportResult
       >;
@@ -1258,6 +1283,9 @@ const CONTROL_CHANNELS = {
 
   FIND_BUSINESS_PROFILE:
     "finora:control:find-business-profile",
+
+  FIND_PORTABLE_BUSINESS_PROFILE:
+    "finora:control:find-portable-business-profile",
 
   FIND_PRICING_POLICY:
     "finora:control:find-pricing-policy",
@@ -1909,6 +1937,20 @@ const controlBridge:
         >
       >,
 
+  findPortableBusinessProfile:
+    (
+      request:
+        FindPortableBusinessProfileRequest,
+    ) =>
+      ipcRenderer.invoke(
+        CONTROL_CHANNELS.FIND_PORTABLE_BUSINESS_PROFILE,
+        request,
+      ) as Promise<
+        StorageResult<
+          FinoraControlBusinessProfileView | undefined
+        >
+      >,
+
   // ----------------------------------------------------------
   // VERIFIED PRICING POLICY
   //
@@ -2045,9 +2087,10 @@ const controlBridge:
       ),
 
   importControlBundle:
-    () =>
+    (...args) =>
       ipcRenderer.invoke(
         CONTROL_CHANNELS.IMPORT_CONTROL_BUNDLE,
+        ...args,
       ) as Promise<
         FinoraControlBundleImportResult
       >,
@@ -2148,9 +2191,433 @@ const loginSessionBridge:
 
 
 // ============================================================
+// PORTABLE BRANCH AUTH USB REPLACEMENT BRIDGE
+//
+// Renderer supplies credentials + expected branch scope only.
+// Filesystem SOURCE / TARGET roots remain Electron-main-owned.
+// ============================================================
+
+const FINORA_USB_REPLACEMENT_CHANNEL =
+  "finora:portable-branch-auth:replace-usb" as const;
+
+interface FinoraUsbReplacementScope {
+  ownerId:
+    string;
+
+  businessId:
+    string;
+
+  branchId:
+    string;
+}
+
+interface FinoraUsbReplacementRequest {
+  password:
+    string;
+
+  securityCode:
+    string;
+
+  expectedScope:
+    FinoraUsbReplacementScope;
+}
+
+interface FinoraUsbReplacementLifecycle {
+  schemaVersion:
+    1;
+
+  targetState:
+    "EXACT_VERIFIED_COPY";
+
+  crashRecovery:
+    "IDEMPOTENT_RETRY";
+
+  crashJournalRequired:
+    false;
+
+  sourceState:
+    "UNCHANGED_AND_STILL_VALID";
+
+  sourceRetirement:
+    "PHYSICAL_RETIREMENT_REQUIRED";
+
+  offlinePreexistingCloneRevocation:
+    "NOT_AVAILABLE";
+
+  authGeneration:
+    "UNCHANGED";
+
+  lostOrUnreadableSource:
+    "BACKUP_RESTORE_REQUIRED";
+}
+
+interface FinoraUsbReplacementSuccessData {
+  result:
+    | "WRITTEN"
+    | "ALREADY_MATCHED";
+
+  ownerId:
+    string;
+
+  businessId:
+    string;
+
+  branchId:
+    string;
+
+  authGeneration:
+    number;
+
+  certificationKeyId:
+    string;
+
+  lifecycle:
+    FinoraUsbReplacementLifecycle;
+}
+
+type FinoraUsbReplacementResult =
+  | {
+      success:
+        true;
+
+      cancelled:
+        true;
+
+      data:
+        null;
+
+      errorCode:
+        null;
+
+      error:
+        null;
+    }
+  | {
+      success:
+        true;
+
+      cancelled:
+        false;
+
+      data:
+        FinoraUsbReplacementSuccessData;
+
+      errorCode:
+        null;
+
+      error:
+        null;
+    }
+  | {
+      success:
+        false;
+
+      cancelled:
+        false;
+
+      data:
+        null;
+
+      errorCode:
+        string;
+
+      error:
+        string;
+    };
+
+interface FinoraUsbReplacementBridge {
+  replace(
+    request:
+      FinoraUsbReplacementRequest,
+  ):
+    Promise<
+      FinoraUsbReplacementResult
+    >;
+}
+
+const usbReplacementBridge:
+  FinoraUsbReplacementBridge = {
+    replace:
+      (
+        request,
+      ) =>
+        ipcRenderer.invoke(
+          FINORA_USB_REPLACEMENT_CHANNEL,
+          request,
+        ) as Promise<
+          FinoraUsbReplacementResult
+        >,
+  };
+
+// ============================================================
+// PORTABLE BRANCH AUTH BACKUP BRIDGE
+//
+// Renderer supplies only:
+// - authenticated sessionId
+// - Password
+// - Security Code
+//
+// Branch scope, storage authority, auth generation and filesystem
+// destination remain Electron-main-owned.
+// ============================================================
+
+const FINORA_PORTABLE_BRANCH_AUTH_BACKUP_CHANNEL =
+  "finora:portable-branch-auth:export-backup" as const;
+
+interface FinoraPortableBranchAuthBackupRequest {
+  sessionId:
+    string;
+
+  password:
+    string;
+
+  securityCode:
+    string;
+}
+
+interface FinoraPortableBranchAuthBackupSuccessData {
+  backupId:
+    string;
+
+  fileName:
+    string;
+
+  bytesWritten:
+    number;
+
+  sourceStorageMode:
+    | "LOCAL"
+    | "USB";
+
+  authGeneration:
+    number;
+}
+
+type FinoraPortableBranchAuthBackupResult =
+  | {
+      success:
+        true;
+
+      cancelled:
+        true;
+
+      data:
+        null;
+
+      errorCode:
+        null;
+
+      error:
+        null;
+    }
+  | {
+      success:
+        true;
+
+      cancelled:
+        false;
+
+      data:
+        FinoraPortableBranchAuthBackupSuccessData;
+
+      errorCode:
+        null;
+
+      error:
+        null;
+    }
+  | {
+      success:
+        false;
+
+      cancelled:
+        false;
+
+      data:
+        null;
+
+      errorCode:
+        string;
+
+      error:
+        string;
+    };
+
+interface FinoraPortableBranchAuthBackupBridge {
+  exportBackup(
+    request:
+      FinoraPortableBranchAuthBackupRequest,
+  ):
+    Promise<
+      FinoraPortableBranchAuthBackupResult
+    >;
+}
+
+const portableBranchAuthBackupBridge:
+  FinoraPortableBranchAuthBackupBridge = {
+    exportBackup:
+      (
+        request,
+      ) =>
+        ipcRenderer.invoke(
+          FINORA_PORTABLE_BRANCH_AUTH_BACKUP_CHANNEL,
+          request,
+        ) as Promise<
+          FinoraPortableBranchAuthBackupResult
+        >,
+  };
+// ============================================================
 // FINORA RENDERER BRIDGE
 // ============================================================
 
+// ============================================================
+// PORTABLE BRANCH AUTH RESTORE BRIDGE
+//
+// Renderer supplies only:
+// - Username
+// - Password
+// - Security Code
+//
+// Backup file selection, Backup bytes, branch scope, storage
+// authority, auth generation and Restore target remain
+// Electron-main-owned.
+// ============================================================
+
+const FINORA_PORTABLE_BRANCH_AUTH_RESTORE_CHANNEL =
+  "finora:portable-branch-auth:restore-backup" as const;
+
+interface FinoraPortableBranchAuthRestoreRequest {
+  username:
+    string;
+
+  password:
+    string;
+
+  securityCode:
+    string;
+}
+
+interface FinoraPortableBranchAuthRestoreSuccessData {
+  backupId:
+    string;
+
+  fileName:
+    string;
+
+  storageMode:
+    | "LOCAL"
+    | "USB";
+
+  authGeneration:
+    number;
+}
+
+type FinoraPortableBranchAuthRestoreErrorCode =
+  | "UNAUTHORIZED"
+  | "INVALID_REQUEST"
+  | "WINDOW_UNAVAILABLE"
+  | "SERVICE_FAILURE"
+  | "PARENT_WINDOW_UNAVAILABLE"
+  | "BACKUP_SELECTION_FAILED"
+  | "BACKUP_FILE_INVALID"
+  | "BACKUP_READ_FAILED"
+  | "TARGET_SELECTION_FAILED"
+  | "BACKUP_INVALID"
+  | "CREDENTIAL_AUTHENTICATION_FAILED"
+  | "BACKUP_AUTHENTICATION_FAILED"
+  | "SCOPE_MISMATCH"
+  | "STORAGE_MODE_MISMATCH"
+  | "STALE_BACKUP"
+  | "FUTURE_BACKUP"
+  | "CERTIFICATION_AUTHORITY_MISSING"
+  | "TARGET_UNAVAILABLE"
+  | "TARGET_WRITE_FAILED"
+  | "TARGET_READBACK_FAILED"
+  | "RESTORE_FAILED";
+
+type FinoraPortableBranchAuthRestoreResult =
+  | {
+      success:
+        true;
+
+      cancelled:
+        true;
+
+      data:
+        null;
+
+      errorCode:
+        null;
+
+      error:
+        null;
+    }
+  | {
+      success:
+        true;
+
+      cancelled:
+        false;
+
+      data:
+        FinoraPortableBranchAuthRestoreSuccessData;
+
+      errorCode:
+        null;
+
+      error:
+        null;
+    }
+  | {
+      success:
+        false;
+
+      cancelled:
+        false;
+
+      data:
+        null;
+
+      errorCode:
+        FinoraPortableBranchAuthRestoreErrorCode;
+
+      error:
+        string;
+    };
+
+interface FinoraPortableBranchAuthRestoreBridge {
+  restoreBackup(
+    request:
+      FinoraPortableBranchAuthRestoreRequest,
+  ):
+    Promise<
+      FinoraPortableBranchAuthRestoreResult
+    >;
+}
+
+const portableBranchAuthRestoreBridge:
+  FinoraPortableBranchAuthRestoreBridge = {
+    restoreBackup:
+      (
+        request:
+          FinoraPortableBranchAuthRestoreRequest,
+      ) =>
+        ipcRenderer.invoke(
+          FINORA_PORTABLE_BRANCH_AUTH_RESTORE_CHANNEL,
+          {
+            username:
+              request.username,
+
+            password:
+              request.password,
+
+            securityCode:
+              request.securityCode,
+          },
+        ) as Promise<
+          FinoraPortableBranchAuthRestoreResult
+        >,
+  };
 contextBridge.exposeInMainWorld(
   "finora",
   {
@@ -2167,6 +2634,14 @@ contextBridge.exposeInMainWorld(
       controlBridge,
     credentials:
       credentialBridge,
+
+    usbReplacement:
+      usbReplacementBridge,
+
+    portableBranchAuthBackup:
+      portableBranchAuthBackupBridge,
+    portableBranchAuthRestore:
+      portableBranchAuthRestoreBridge,
 
     notificationArtifacts:
       notificationArtifactBridge,

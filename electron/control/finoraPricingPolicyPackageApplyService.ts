@@ -40,10 +40,12 @@ import type {
 
 import {
   applyFinoraVerifiedPricingPolicyState,
+  applyFinoraVerifiedPortablePricingPolicyState,
   readFinoraControlStore,
 } from "./finoraControlStore.js";
 
 import {
+  verifyFinoraSignedControlPackageBranchScope,
   verifyFinoraSignedControlPackageNative,
 } from "./finoraSignedControlPackageVerifier.js";
 
@@ -747,6 +749,415 @@ export async function applyFinoraSignedPricingPolicyPackage(
 
       publicKeyFingerprint:
         nativeBinding.publicKeyFingerprint,
+    },
+
+    policy:
+      controlPolicy,
+
+    appliedAt:
+      now.toISOString(),
+  });
+}
+
+export async function applyFinoraSignedPortablePricingPolicyPackage(
+  signedPackage:
+    unknown,
+
+  trustedKeys:
+    readonly FinoraBranchTrustedControlPublicKey[],
+
+  now:
+    Date,
+): Promise<
+  FinoraControlStoreResult<
+    FinoraVerifiedPricingPolicyApplyResult
+  >
+> {
+
+  // ----------------------------------------------------------
+  // AUTHORITATIVE CONTROL STORE INSTALLATION
+  // ----------------------------------------------------------
+
+  const storeResult =
+    await readFinoraControlStore();
+
+  if (
+    !storeResult.success ||
+    !storeResult.data
+  ) {
+    return failure(
+      storeResult.error ??
+        "Unable to load the FINORA Control Store.",
+    );
+  }
+
+  const installation =
+    storeResult.data.installation;
+
+  if (!installation) {
+    return failure(
+      "FINORA installation identity is required before applying a Pricing Policy.",
+    );
+  }
+
+
+  // ----------------------------------------------------------
+  // PORTABLE BRANCH AUTHORIZATION
+  //
+  // Current-device authorization is owner/business/branch.
+  // Signed installation/binding/fingerprint remain immutable
+  // historical package provenance and are never rebound.
+  // ----------------------------------------------------------
+  // ----------------------------------------------------------
+  // CRYPTOGRAPHIC SIGNATURE + EXACT TARGET VERIFICATION
+  // ----------------------------------------------------------
+
+    const verification =
+    verifyFinoraSignedControlPackageBranchScope(
+      signedPackage,
+      trustedKeys,
+      {
+        ownerId:
+          installation.ownerId,
+
+        businessId:
+          installation.businessId,
+
+        branchId:
+          installation.branchId,
+      },
+      now,
+    );
+
+  if (!verification.valid) {
+    return failure(
+      `${verification.reason}: ${verification.error}`,
+    );
+  }
+
+  const controlPackage =
+    verification.controlPackage;
+
+
+  // ----------------------------------------------------------
+  // PURPOSE / PAYLOAD VERSION
+  // ----------------------------------------------------------
+
+  if (
+    controlPackage.purpose !==
+      "PRICING_POLICY"
+  ) {
+    return failure(
+      "FINORA signed package purpose must be PRICING_POLICY.",
+    );
+  }
+
+  if (
+    controlPackage.payloadVersion !==
+      1
+  ) {
+    return failure(
+      "FINORA Pricing Policy payloadVersion must be 1.",
+    );
+  }
+
+
+  // ----------------------------------------------------------
+  // PAYLOAD ROOT
+  // ----------------------------------------------------------
+
+  const payload =
+    controlPackage.payload;
+
+  if (!isRecord(payload)) {
+    return failure(
+      "FINORA signed PRICING_POLICY payload is invalid.",
+    );
+  }
+
+  const overrideSet =
+    payload.overrideSet;
+
+  const payloadBinding =
+    payload.installationBinding;
+
+  if (
+    payload.schemaVersion !==
+      1 ||
+    payload.action !==
+      "REPLACE" ||
+    !isRecord(
+      overrideSet,
+    ) ||
+    !isRecord(
+      payloadBinding,
+    )
+  ) {
+    return failure(
+      "FINORA signed PRICING_POLICY payload is invalid.",
+    );
+  }
+
+
+  // ----------------------------------------------------------
+  // PAYLOAD / PACKAGE ISSUANCE TIME
+  // ----------------------------------------------------------
+
+  const payloadIssuedAt =
+    payload.issuedAt;
+
+  const parsedPayloadIssuedAt =
+    parseCanonicalTimestamp(
+      payloadIssuedAt,
+    );
+
+  const parsedPackageIssuedAt =
+    parseCanonicalTimestamp(
+      controlPackage.issuedAt,
+    );
+
+  if (
+    !isNonEmptyString(
+      payloadIssuedAt,
+    ) ||
+    parsedPayloadIssuedAt ===
+      undefined ||
+    parsedPackageIssuedAt ===
+      undefined ||
+    payloadIssuedAt !==
+      controlPackage.issuedAt
+  ) {
+    return failure(
+      "FINORA Pricing Policy payload and package issuedAt timestamps must match exactly.",
+    );
+  }
+
+
+  // ----------------------------------------------------------
+  // AUTHORITATIVE OVERRIDE SET STRUCTURE
+  // ----------------------------------------------------------
+
+  const scope =
+    overrideSet.scope;
+
+  const signedOverrides =
+    overrideSet.overrides;
+
+  if (
+    overrideSet.schemaVersion !==
+      1 ||
+    !isNonEmptyString(
+      overrideSet.overrideSetId,
+    ) ||
+    !isRecord(
+      scope,
+    ) ||
+    !Array.isArray(
+      signedOverrides,
+    )
+  ) {
+    return failure(
+      "FINORA signed PRICING_POLICY override set is invalid.",
+    );
+  }
+
+  if (
+    !isNonEmptyString(
+      scope.ownerId,
+    ) ||
+    !isNonEmptyString(
+      scope.businessId,
+    ) ||
+    !isNonEmptyString(
+      scope.branchId,
+    )
+  ) {
+    return failure(
+      "FINORA Pricing Policy scope is invalid.",
+    );
+  }
+
+
+  // ----------------------------------------------------------
+  // POLICY SCOPE ↔ VERIFIED PACKAGE TARGET ↔ INSTALLATION
+  // ----------------------------------------------------------
+
+  if (
+    scope.ownerId !==
+      controlPackage.target.ownerId ||
+    scope.businessId !==
+      controlPackage.target.businessId ||
+    scope.branchId !==
+      controlPackage.target.branchId ||
+    scope.ownerId !==
+      installation.ownerId ||
+    scope.businessId !==
+      installation.businessId ||
+    scope.branchId !==
+      installation.branchId
+  ) {
+    return failure(
+      "FINORA Pricing Policy scope does not match the verified package target.",
+    );
+  }
+
+
+  // ----------------------------------------------------------
+  // SIGNED PAYLOAD INSTALLATION BINDING
+  // ----------------------------------------------------------
+
+  if (
+    payloadBinding.schemaVersion !==
+      1 ||
+    !isNonEmptyString(
+      payloadBinding.installationId,
+    ) ||
+    !bindingIdentityIsValid(
+      payloadBinding.bindingKeyId,
+      payloadBinding.fingerprintAlgorithm,
+      payloadBinding.publicKeyFingerprint,
+    )
+  ) {
+    return failure(
+      "FINORA PRICING_POLICY installation binding is invalid.",
+    );
+  }
+
+  if (
+    payloadBinding.installationId !==
+      controlPackage.target.installationId ||
+    payloadBinding.bindingKeyId !==
+      controlPackage.target.bindingKeyId ||
+    payloadBinding.fingerprintAlgorithm !==
+      controlPackage.target.fingerprintAlgorithm ||
+    payloadBinding.publicKeyFingerprint !==
+      controlPackage.target.publicKeyFingerprint
+  ) {
+    return failure(
+      "FINORA PRICING_POLICY signed installation binding does not match the verified package target.",
+    );
+  }
+
+
+  // ----------------------------------------------------------
+  // SIGNED OVERRIDE RULES -> TRUSTED STRUCTURAL DTO
+  //
+  // Duplicate IDs, overlapping windows, canonical charge-code
+  // membership and Base-enabled restrictions remain enforced
+  // by the hardened Control Store Pricing Policy validator.
+  // ----------------------------------------------------------
+
+  const controlOverrides:
+    FinoraControlPricingOverrideRule[] = [];
+
+  for (
+    let index = 0;
+    index < signedOverrides.length;
+    index += 1
+  ) {
+
+    const controlRule =
+      toControlPricingOverrideRule(
+        signedOverrides[
+          index
+        ],
+      );
+
+    if (!controlRule) {
+      return failure(
+        `FINORA PRICING_POLICY override rule at index ${index} is invalid.`,
+      );
+    }
+
+    controlOverrides.push(
+      controlRule,
+    );
+  }
+
+
+  // ----------------------------------------------------------
+  // TRUSTED CONTROL STORE DTO
+  // ----------------------------------------------------------
+
+  const controlPolicy:
+    FinoraControlPricingPolicy = {
+
+      overrideSetId:
+        overrideSet.overrideSetId,
+
+      ownerId:
+        scope.ownerId,
+
+      businessId:
+        scope.businessId,
+
+      branchId:
+        scope.branchId,
+
+      installationId:
+        payloadBinding.installationId,
+
+      bindingKeyId:
+        payloadBinding.bindingKeyId as string,
+
+      fingerprintAlgorithm:
+        "SHA-256",
+
+      publicKeyFingerprint:
+        payloadBinding.publicKeyFingerprint as string,
+
+      overrides:
+        controlOverrides,
+
+      issuedAt:
+        payloadIssuedAt,
+
+      schemaVersion:
+        1,
+    };
+
+
+  // ----------------------------------------------------------
+  // SERIALIZED REPLAY/SEQUENCE-SAFE ATOMIC APPLY
+  // ----------------------------------------------------------
+
+  return applyFinoraVerifiedPortablePricingPolicyState({
+    packageId:
+      controlPackage.packageId,
+
+    issuerId:
+      controlPackage.issuer.issuerId,
+
+    purpose:
+      "PRICING_POLICY",
+
+    sequence:
+      controlPackage.sequence,
+
+    action:
+      "REPLACE",
+
+    target: {
+      ownerId:
+        controlPackage.target.ownerId,
+
+      businessId:
+        controlPackage.target.businessId,
+
+      branchId:
+        controlPackage.target.branchId,
+
+      installationId:
+        controlPackage.target.installationId,
+
+      bindingKeyId:
+        controlPackage.target.bindingKeyId,
+
+      fingerprintAlgorithm:
+        controlPackage.target.fingerprintAlgorithm,
+
+      publicKeyFingerprint:
+        controlPackage.target.publicKeyFingerprint,
     },
 
     policy:

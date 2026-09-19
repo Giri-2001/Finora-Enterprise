@@ -320,6 +320,20 @@ function deriveScryptKey(
 // AUTHENTICATE
 // ============================================================
 
+// ============================================================
+// CREDENTIAL AUTH GENERATION
+// ============================================================
+
+export function resolveFinoraBranchCredentialAuthGeneration(
+  authGeneration:
+    number | undefined,
+): number {
+  return (
+    authGeneration ??
+    FINORA_PORTABLE_BRANCH_AUTH_INITIAL_GENERATION
+  );
+}
+
 export async function authenticateFinoraBranchCredential(
   input:
     unknown,
@@ -468,8 +482,9 @@ export async function authenticateFinoraBranchCredential(
           credential.credentialId,
 
         authGeneration:
-          credential.authGeneration ??
-            FINORA_PORTABLE_BRANCH_AUTH_INITIAL_GENERATION,
+          resolveFinoraBranchCredentialAuthGeneration(
+            credential.authGeneration,
+          ),
 
         userId:
           credential.userId,

@@ -50,6 +50,7 @@ import {
 
 import type {
   FinoraControlBundleApplySummary,
+  FinoraControlBundleImportAuthorityContext,
 } from "./finoraControlBundlePackageApplyService.js";
 
 // ============================================================
@@ -112,6 +113,9 @@ function failure(
 export async function importFinoraControlBundleFromNativeDialog(
   parentWindow:
     BrowserWindow,
+
+  authorityContext:
+    FinoraControlBundleImportAuthorityContext,
 
   now?:
     Date,
@@ -198,6 +202,7 @@ export async function importFinoraControlBundleFromNativeDialog(
     await applyFinoraSignedControlBundleWithAuthoritativeRecipientTrust(
       fileResult.signedBundle,
       acceptedNow,
+      authorityContext,
     );
 
   if (!applyResult.success) {

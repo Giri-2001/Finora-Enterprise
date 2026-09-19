@@ -6,6 +6,10 @@
 // ============================================================
 
 import type {
+  FinoraBranchCertificationKeyMaterialV1,
+} from "./finoraBranchCertificationContract.js";
+
+import type {
   FinoraPortableBranchAuthSourceAuthorizationVerificationEvidenceV1,
 } from "./finoraPortableBranchAuthContract.js";
 
@@ -88,6 +92,9 @@ export interface FinoraPortableBranchAuthCreateInputV1 {
 
   sourceAuthorizationVerificationEvidence:
     FinoraPortableBranchAuthSourceAuthorizationVerificationEvidenceV1;
+
+  branchCertificationKeyMaterial?:
+    FinoraBranchCertificationKeyMaterialV1;
 
   ownerId:
     string;
@@ -820,6 +827,18 @@ export async function createFinoraPortableBranchAuthEnrollmentMaterialV1(
           structuredClone(
             input.sourceAuthorizationVerificationEvidence,
           ),
+
+        ...(
+          input.branchCertificationKeyMaterial ===
+            undefined
+            ? {}
+            : {
+                branchCertificationKeyMaterial:
+                  structuredClone(
+                    input.branchCertificationKeyMaterial,
+                  ),
+              }
+        ),
 
         ownerId:
           input.ownerId,
