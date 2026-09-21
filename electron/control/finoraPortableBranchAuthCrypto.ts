@@ -1057,6 +1057,342 @@ export async function createFinoraPortableBranchAuthEnvelopeV1(
   return material.envelope;
 }
 // ============================================================
+// CERTIFICATION-ONLY RE-ENCRYPTION
+//
+// SECURITY INVARIANTS:
+//
+// - Authenticate current Password + Security Code first.
+// - Reuse the exact existing Password factor/verifier.
+// - Reuse the exact existing Security Code factor/verifier.
+// - Preserve authStateId, credential identity and authGeneration.
+// - Change only encrypted Branch Certification key material and
+//   caller-supplied updatedAt.
+// - Generate a fresh AES-GCM IV.
+// - Never generate new credential salts or verifiers.
+// ============================================================
+
+export interface FinoraPortableBranchAuthCertificationReencryptInputV1 {
+  currentEnvelope:
+    FinoraPortableBranchAuthEnvelopeV1;
+
+  password:
+    string;
+
+  securityCode:
+    string;
+
+  branchCertificationKeyMaterial:
+    FinoraBranchCertificationKeyMaterialV1;
+
+  updatedAt:
+    string;
+
+  expectedScope?:
+    FinoraPortableBranchAuthScopeV1;
+}
+
+export async function reencryptFinoraPortableBranchAuthCertificationV1(
+  input:
+    FinoraPortableBranchAuthCertificationReencryptInputV1,
+): Promise<FinoraPortableBranchAuthEnvelopeV1> {
+
+  validateFinoraPortableBranchAuthEnvelopeV1(
+    input.currentEnvelope,
+  );
+
+  /*
+   * This authenticates both factors and validates the current
+   * encrypted payload before any replacement material is used.
+   */
+  const currentPayload =
+    await decryptFinoraPortableBranchAuthEnvelopeV1(
+      input.currentEnvelope,
+      input.password,
+      input.securityCode,
+      {
+        ...(
+          input.expectedScope ===
+            undefined
+            ? {}
+            : {
+                expectedScope:
+                  input.expectedScope,
+              }
+        ),
+      },
+    );
+
+  const [
+    passwordDerived,
+    securityDerived,
+  ] =
+    await Promise.all([
+      derivePortableFactor(
+        input.password,
+        input.currentEnvelope.passwordFactor,
+      ),
+
+      derivePortableFactor(
+        input.securityCode,
+        input.currentEnvelope.securityFactor,
+      ),
+    ]);
+
+  const passwordSecretFactor =
+    getSecretFactor(
+      passwordDerived,
+    );
+
+  const securitySecretFactor =
+    getSecretFactor(
+      securityDerived,
+    );
+
+  const encryptionKey =
+    buildPortableEncryptionKey(
+      passwordSecretFactor,
+      securitySecretFactor,
+    );
+
+  try {
+    /*
+     * Spread the already-authenticated payload so credential
+     * verifier metadata, credential identity, source authority
+     * evidence and authGeneration remain unchanged.
+     */
+    const replacementPayload:
+      FinoraPortableBranchAuthPayloadV1 =
+      {
+        ...structuredClone(
+          currentPayload,
+        ),
+
+        branchCertificationKeyMaterial:
+          structuredClone(
+            input.branchCertificationKeyMaterial,
+          ),
+
+        updatedAt:
+          input.updatedAt,
+      };
+
+    validateFinoraPortableBranchAuthPayloadV1(
+      replacementPayload,
+    );
+
+    /*
+     * Explicitly prove that this cert-only mutation did not
+     * alter either encrypted credential verifier.
+     */
+    if (
+      !verifiersEqual(
+        replacementPayload.passwordVerifier,
+        currentPayload.passwordVerifier,
+      ) ||
+      !verifiersEqual(
+        replacementPayload.securityVerifier,
+        currentPayload.securityVerifier,
+      )
+    ) {
+      throw new Error(
+        "Portable Branch Auth certification rotation attempted to alter credential verifiers.",
+      );
+    }
+
+    if (
+      replacementPayload.authGeneration !==
+        currentPayload.authGeneration ||
+      replacementPayload.authStateId !==
+        currentPayload.authStateId ||
+      replacementPayload.ownerId !==
+        currentPayload.ownerId ||
+      replacementPayload.businessId !==
+        currentPayload.businessId ||
+      replacementPayload.branchId !==
+        currentPayload.branchId ||
+      replacementPayload.userId !==
+        currentPayload.userId ||
+      replacementPayload.canonicalUsername !==
+        currentPayload.canonicalUsername ||
+      replacementPayload.storageMode !==
+        currentPayload.storageMode
+    ) {
+      throw new Error(
+        "Portable Branch Auth certification rotation attempted to alter credential lineage.",
+      );
+    }
+
+    const iv =
+      randomBytes(
+        FINORA_PORTABLE_BRANCH_AUTH_IV_BYTES,
+      );
+
+    /*
+     * Outer KDF metadata is copied exactly from the current
+     * envelope. Only the AES-GCM IV/authTag/ciphertext rotate.
+     */
+    const envelopeWithoutCiphertext:
+      Omit<
+        FinoraPortableBranchAuthEnvelopeV1,
+        "ciphertext"
+      > =
+      {
+        format:
+          input.currentEnvelope.format,
+
+        schemaVersion:
+          input.currentEnvelope.schemaVersion,
+
+        canonicalUsername:
+          input.currentEnvelope.canonicalUsername,
+
+        branchScope:
+          structuredClone(
+            input.currentEnvelope.branchScope,
+          ),
+
+        passwordFactor:
+          structuredClone(
+            input.currentEnvelope.passwordFactor,
+          ),
+
+        securityFactor:
+          structuredClone(
+            input.currentEnvelope.securityFactor,
+          ),
+
+        encryption: {
+          algorithm:
+            input.currentEnvelope.encryption.algorithm,
+
+          keyDerivation:
+            input.currentEnvelope.encryption.keyDerivation,
+
+          iv:
+            iv.toString(
+              "base64",
+            ),
+
+          authTag:
+            Buffer.alloc(
+              FINORA_PORTABLE_BRANCH_AUTH_TAG_BYTES,
+            ).toString(
+              "base64",
+            ),
+        },
+      };
+
+    const aad =
+      buildPortableAad(
+        envelopeWithoutCiphertext,
+      );
+
+    const cipher =
+      createCipheriv(
+        "aes-256-gcm",
+        encryptionKey,
+        iv,
+        {
+          authTagLength:
+            FINORA_PORTABLE_BRANCH_AUTH_TAG_BYTES,
+        },
+      );
+
+    cipher.setAAD(
+      aad,
+    );
+
+    const plaintext =
+      Buffer.from(
+        JSON.stringify(
+          replacementPayload,
+        ),
+        "utf8",
+      );
+
+    const ciphertext =
+      Buffer.concat([
+        cipher.update(
+          plaintext,
+        ),
+        cipher.final(),
+      ]);
+
+    const authTag =
+      cipher.getAuthTag();
+
+    const replacementEnvelope:
+      FinoraPortableBranchAuthEnvelopeV1 =
+      {
+        ...envelopeWithoutCiphertext,
+
+        encryption: {
+          ...envelopeWithoutCiphertext.encryption,
+
+          authTag:
+            authTag.toString(
+              "base64",
+            ),
+        },
+
+        ciphertext:
+          ciphertext.toString(
+            "base64",
+          ),
+      };
+
+    validateFinoraPortableBranchAuthEnvelopeV1(
+      replacementEnvelope,
+    );
+
+    /*
+     * Outer Password factor carries the Password verifier.
+     * It must remain byte-for-byte semantically identical.
+     */
+    if (
+      JSON.stringify(
+        replacementEnvelope.passwordFactor,
+      ) !==
+        JSON.stringify(
+          input.currentEnvelope.passwordFactor,
+        ) ||
+      JSON.stringify(
+        replacementEnvelope.securityFactor,
+      ) !==
+        JSON.stringify(
+          input.currentEnvelope.securityFactor,
+        )
+    ) {
+      throw new Error(
+        "Portable Branch Auth certification rotation changed credential factor metadata.",
+      );
+    }
+
+    return replacementEnvelope;
+  }
+  finally {
+    passwordDerived.fill(
+      0,
+    );
+
+    securityDerived.fill(
+      0,
+    );
+
+    passwordSecretFactor.fill(
+      0,
+    );
+
+    securitySecretFactor.fill(
+      0,
+    );
+
+    encryptionKey.fill(
+      0,
+    );
+  }
+}
+// ============================================================
 // ENVELOPE DECRYPTION
 // ============================================================
 

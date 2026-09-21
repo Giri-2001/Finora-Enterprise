@@ -145,6 +145,11 @@ export function registerFinoraBranchLoginSessionHandlers(
 
   portableStore:
     FinoraPortableBranchAuthStore,
+
+  recoverFreshDevice?:
+    Parameters<
+      typeof createFinoraBranchLoginSession
+    >[2],
 ): void {
   if (
     loginSessionHandlersRegistered
@@ -179,6 +184,7 @@ export function registerFinoraBranchLoginSessionHandlers(
         return await createFinoraBranchLoginSession(
           request,
           portableStore,
+          recoverFreshDevice,
         );
       }
       catch {

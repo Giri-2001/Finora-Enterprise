@@ -330,6 +330,162 @@ function isSameBranchCertificationPublicKey(
   );
 }
 
+function validateBranchCertificationRotationEvidence(
+  record:
+    FinoraControlCenterBranchRegistryRecord,
+): void {
+
+  const evidence =
+    record.branchCertificationRotation;
+
+  if (
+    evidence ===
+      undefined
+  ) {
+    return;
+  }
+
+  if (
+    typeof evidence !==
+      "object" ||
+    evidence ===
+      null ||
+    Array.isArray(
+      evidence,
+    )
+  ) {
+    throw new Error(
+      "FINORA Control Center Branch Registry certification-rotation evidence is invalid.",
+    );
+  }
+
+  const legacyCertificationAdoption =
+    evidence.legacyCertificationAdoption ===
+      true;
+
+  const keys =
+    Object.keys(
+      evidence,
+    ).sort();
+
+  const expectedKeys =
+    [
+      "sourcePackageId",
+      "sequence",
+      "requestingInstallationId",
+      "requestingBindingKeyId",
+      "requestingFingerprintAlgorithm",
+      "requestingPublicKeyFingerprint",
+      ...(
+        legacyCertificationAdoption
+          ? [
+              "legacyCertificationAdoption",
+            ]
+          : [
+              "previousCertificationPublicKey",
+            ]
+      ),
+      "replacementCertificationPublicKey",
+      "rotatedAt",
+      "schemaVersion",
+    ].sort();
+
+  if (
+    keys.join("|") !==
+      expectedKeys.join("|") ||
+    !isNonEmptyString(
+      evidence.sourcePackageId,
+    ) ||
+    !Number.isSafeInteger(
+      evidence.sequence,
+    ) ||
+    evidence.sequence <=
+      0 ||
+    !isNonEmptyString(
+      evidence.requestingInstallationId,
+    ) ||
+    !isNonEmptyString(
+      evidence.requestingBindingKeyId,
+    ) ||
+    evidence.requestingFingerprintAlgorithm !==
+      "SHA-256" ||
+    !/^[0-9a-f]{64}$/.test(
+      evidence.requestingPublicKeyFingerprint,
+    ) ||
+    evidence.requestingBindingKeyId !==
+      `FINORA-BINDING-${evidence.requestingPublicKeyFingerprint
+        .slice(
+          0,
+          32,
+        )
+        .toUpperCase()}` ||
+    !isCanonicalTimestamp(
+      evidence.rotatedAt,
+    ) ||
+    evidence.schemaVersion !==
+      1
+  ) {
+    throw new Error(
+      "FINORA Control Center Branch Registry certification-rotation evidence is malformed.",
+    );
+  }
+
+  assertFinoraBranchCertificationPublicKey(
+    evidence.replacementCertificationPublicKey,
+  );
+
+  if (
+    legacyCertificationAdoption
+  ) {
+    if (
+      evidence.previousCertificationPublicKey !==
+        undefined
+    ) {
+      throw new Error(
+        "FINORA Control Center legacy Branch Certification adoption cannot contain a previous authority.",
+      );
+    }
+  }
+  else {
+    if (
+      evidence.previousCertificationPublicKey ===
+        undefined
+    ) {
+      throw new Error(
+        "FINORA Control Center Branch Certification Rotation evidence requires its previous authority.",
+      );
+    }
+
+    assertFinoraBranchCertificationPublicKey(
+      evidence.previousCertificationPublicKey,
+    );
+
+    if (
+      isSameBranchCertificationPublicKey(
+        evidence.previousCertificationPublicKey,
+        evidence.replacementCertificationPublicKey,
+      )
+    ) {
+      throw new Error(
+        "FINORA Control Center Branch Registry certification rotation cannot preserve the same authority.",
+      );
+    }
+  }
+
+  if (
+    record.branchCertificationPublicKey ===
+      undefined ||
+    !isSameBranchCertificationPublicKey(
+      record.branchCertificationPublicKey,
+      evidence.replacementCertificationPublicKey,
+    )
+  ) {
+    throw new Error(
+      "FINORA Control Center Branch Registry certification-rotation evidence does not match the current certification authority.",
+    );
+  }
+}
+
 function validateAuthorizedDevice(
   device:
     FinoraControlCenterBranchRegistryRecord["authorizedDevices"][number],
@@ -565,6 +721,10 @@ function validateRecord(
     );
   }
 
+  validateBranchCertificationRotationEvidence(
+    record,
+  );
+
   if (
     !Array.isArray(
       record.authorizedDevices,
@@ -595,6 +755,45 @@ function validateRecord(
     throw new Error(
       "FINORA Control Center Branch Registry initial authorized device must exactly match the immutable provisioned installation identity.",
     );
+  }
+
+  const rotationEvidence =
+    record.branchCertificationRotation;
+
+  if (
+    rotationEvidence !==
+      undefined
+  ) {
+
+    const requestingDeviceAuthorized =
+      record.authorizedDevices.some(
+        (
+          authorized,
+        ) => {
+
+          const installation =
+            authorized.installation;
+
+          return (
+            installation.installationId ===
+              rotationEvidence.requestingInstallationId &&
+            installation.bindingKeyId ===
+              rotationEvidence.requestingBindingKeyId &&
+            installation.fingerprintAlgorithm ===
+              rotationEvidence.requestingFingerprintAlgorithm &&
+            installation.publicKeyFingerprint ===
+              rotationEvidence.requestingPublicKeyFingerprint
+          );
+        },
+      );
+
+    if (
+      !requestingDeviceAuthorized
+    ) {
+      throw new Error(
+        "FINORA Control Center Branch Registry certification-rotation evidence references an unauthorized requesting installation.",
+      );
+    }
   }
 
   if (
@@ -2051,6 +2250,605 @@ async function registerInternal(
   };
 }
 
+
+// ============================================================
+// BRANCH CERTIFICATION ROTATION
+//
+// Registration remains immutable. Certification replacement is
+// only available through this dedicated transition.
+//
+// IMPORTANT:
+// - Uses the SAME branchRegistrationQueue as registration.
+// - Exact retry returns without clock observation or file rewrite.
+// - Stale/conflicting old authority fails closed.
+// - Replacement key identity must remain globally unique.
+// ============================================================
+
+export interface RotateFinoraControlCenterBranchCertificationInput {
+
+  ownerId:
+    string;
+
+  businessId:
+    string;
+
+  branchId:
+    string;
+
+  requestingInstallationId:
+    string;
+
+  requestingBindingKeyId:
+    string;
+
+  requestingFingerprintAlgorithm:
+    "SHA-256";
+
+  requestingPublicKeyFingerprint:
+    string;
+
+  sourcePackageId:
+    string;
+
+  sequence:
+    number;
+
+  legacyCertificationAdoption?:
+    true;
+
+  previousCertificationPublicKey?:
+    FinoraBranchCertificationPublicKeyV1;
+
+  replacementCertificationPublicKey:
+    FinoraBranchCertificationPublicKeyV1;
+}
+
+export interface RotateFinoraControlCenterBranchCertificationResult {
+
+  updated:
+    boolean;
+
+  record:
+    FinoraControlCenterBranchRegistryRecord;
+}
+
+function isExactCertificationRotationEvidence(
+  evidence:
+    NonNullable<
+      FinoraControlCenterBranchRegistryRecord[
+        "branchCertificationRotation"
+      ]
+    >,
+
+  input:
+    RotateFinoraControlCenterBranchCertificationInput,
+): boolean {
+
+  if (
+    evidence.sourcePackageId !==
+      input.sourcePackageId ||
+    evidence.sequence !==
+      input.sequence ||
+    evidence.requestingInstallationId !==
+      input.requestingInstallationId ||
+    evidence.requestingBindingKeyId !==
+      input.requestingBindingKeyId ||
+    evidence.requestingFingerprintAlgorithm !==
+      input.requestingFingerprintAlgorithm ||
+    evidence.requestingPublicKeyFingerprint !==
+      input.requestingPublicKeyFingerprint ||
+    evidence.legacyCertificationAdoption !==
+      input.legacyCertificationAdoption ||
+    !isSameBranchCertificationPublicKey(
+      evidence.replacementCertificationPublicKey,
+      input.replacementCertificationPublicKey,
+    )
+  ) {
+    return false;
+  }
+
+  if (
+    input.legacyCertificationAdoption ===
+      true
+  ) {
+    return (
+      evidence.previousCertificationPublicKey ===
+        undefined &&
+      input.previousCertificationPublicKey ===
+        undefined
+    );
+  }
+
+  return (
+    evidence.previousCertificationPublicKey !==
+      undefined &&
+    input.previousCertificationPublicKey !==
+      undefined &&
+    isSameBranchCertificationPublicKey(
+      evidence.previousCertificationPublicKey,
+      input.previousCertificationPublicKey,
+    )
+  );
+}
+
+function assertReplacementCertificationUnique(
+  branches:
+    readonly FinoraControlCenterBranchRegistryRecord[],
+
+  target:
+    FinoraControlCenterBranchRegistryRecord,
+
+  replacement:
+    FinoraBranchCertificationPublicKeyV1,
+): void {
+
+  for (
+    const record of
+    branches
+  ) {
+
+    if (
+      record ===
+        target
+    ) {
+      continue;
+    }
+
+    const existing =
+      record.branchCertificationPublicKey;
+
+    if (
+      existing ===
+        undefined
+    ) {
+      continue;
+    }
+
+    if (
+      existing.keyId ===
+        replacement.keyId
+    ) {
+      throw new Error(
+        "FINORA Control Center Branch Registry rejected a replacement Branch Certification keyId already assigned to another branch.",
+      );
+    }
+
+    if (
+      existing.publicKeyFingerprint ===
+        replacement.publicKeyFingerprint
+    ) {
+      throw new Error(
+        "FINORA Control Center Branch Registry rejected a replacement Branch Certification fingerprint already assigned to another branch.",
+      );
+    }
+
+    if (
+      existing.publicKey ===
+        replacement.publicKey
+    ) {
+      throw new Error(
+        "FINORA Control Center Branch Registry rejected a replacement Branch Certification public key already assigned to another branch.",
+      );
+    }
+  }
+}
+
+async function rotateCertificationInternal(
+  input:
+    RotateFinoraControlCenterBranchCertificationInput,
+): Promise<
+  RotateFinoraControlCenterBranchCertificationResult
+> {
+
+  if (
+    !isNonEmptyString(
+      input.ownerId,
+    ) ||
+    !isNonEmptyString(
+      input.businessId,
+    ) ||
+    !isNonEmptyString(
+      input.branchId,
+    ) ||
+    !isNonEmptyString(
+      input.requestingInstallationId,
+    ) ||
+    !isNonEmptyString(
+      input.requestingBindingKeyId,
+    ) ||
+    input.requestingFingerprintAlgorithm !==
+      "SHA-256" ||
+    !/^[0-9a-f]{64}$/.test(
+      input.requestingPublicKeyFingerprint,
+    ) ||
+    input.requestingBindingKeyId !==
+      `FINORA-BINDING-${input.requestingPublicKeyFingerprint
+        .slice(
+          0,
+          32,
+        )
+        .toUpperCase()}` ||
+    !isNonEmptyString(
+      input.sourcePackageId,
+    ) ||
+    !Number.isSafeInteger(
+      input.sequence,
+    ) ||
+    input.sequence <=
+      0
+  ) {
+    throw new Error(
+      "FINORA Control Center Branch Certification Rotation mutation input is invalid.",
+    );
+  }
+
+  assertFinoraBranchCertificationPublicKey(
+    input.replacementCertificationPublicKey,
+  );
+
+  if (
+    input.legacyCertificationAdoption ===
+      true
+  ) {
+    if (
+      input.previousCertificationPublicKey !==
+        undefined
+    ) {
+      throw new Error(
+        "FINORA legacy Branch Certification adoption cannot provide a previous certification authority.",
+      );
+    }
+  }
+  else {
+    const previousCertificationPublicKey =
+      input.previousCertificationPublicKey;
+
+    if (
+      previousCertificationPublicKey ===
+        undefined
+    ) {
+      throw new Error(
+        "FINORA Control Center Branch Certification Rotation requires its previous certification authority.",
+      );
+    }
+
+    assertFinoraBranchCertificationPublicKey(
+      previousCertificationPublicKey,
+    );
+
+    if (
+      isSameBranchCertificationPublicKey(
+        previousCertificationPublicKey,
+        input.replacementCertificationPublicKey,
+      )
+    ) {
+      throw new Error(
+        "FINORA Control Center Branch Certification Rotation replacement must differ from the previous authority.",
+      );
+    }
+  }
+
+  const registry =
+    await readRegistry();
+
+  if (
+    registry ===
+      undefined
+  ) {
+    throw new Error(
+      "FINORA Control Center Branch Registry is unavailable for certification rotation.",
+    );
+  }
+
+  const record =
+    registry.branches.find(
+      (
+        candidate,
+      ) =>
+        candidate.identity.ownerId ===
+          input.ownerId &&
+        candidate.identity.businessId ===
+          input.businessId &&
+        candidate.identity.branchId ===
+          input.branchId,
+    );
+
+  if (
+    record ===
+      undefined
+  ) {
+    throw new Error(
+      "FINORA Control Center Branch Certification Rotation rejected an unknown Registry branch.",
+    );
+  }
+
+  const requestingDeviceAuthorized =
+    record.authorizedDevices.some(
+      (
+        authorized,
+      ) => {
+
+        const installation =
+          authorized.installation;
+
+        return (
+          installation.installationId ===
+            input.requestingInstallationId &&
+          installation.bindingKeyId ===
+            input.requestingBindingKeyId &&
+          installation.fingerprintAlgorithm ===
+            input.requestingFingerprintAlgorithm &&
+          installation.publicKeyFingerprint ===
+            input.requestingPublicKeyFingerprint
+        );
+      },
+    );
+
+  if (
+    !requestingDeviceAuthorized
+  ) {
+    throw new Error(
+      "FINORA Control Center Branch Certification Rotation mutation rejected an unauthorized requesting installation.",
+    );
+  }
+
+  const current =
+    record.branchCertificationPublicKey;
+
+  if (
+    current !==
+      undefined &&
+    isSameBranchCertificationPublicKey(
+      current,
+      input.replacementCertificationPublicKey,
+    )
+  ) {
+    const evidence =
+      record.branchCertificationRotation;
+
+    if (
+      evidence !==
+        undefined &&
+      isExactCertificationRotationEvidence(
+        evidence,
+        input,
+      )
+    ) {
+      return {
+        updated:
+          false,
+
+        record:
+          cloneRegistryRecord(
+            record,
+          ),
+      };
+    }
+
+    throw new Error(
+      "FINORA Control Center Branch Certification Rotation rejected a conflicting retry for the current authority.",
+    );
+  }
+
+  const legacyCertificationAdoption =
+    input.legacyCertificationAdoption ===
+      true;
+
+  if (
+    legacyCertificationAdoption
+  ) {
+    if (
+      current !==
+        undefined
+    ) {
+      throw new Error(
+        "FINORA legacy Branch Certification adoption requires a Registry branch with no existing certification authority.",
+      );
+    }
+
+    if (
+      input.previousCertificationPublicKey !==
+        undefined
+    ) {
+      throw new Error(
+        "FINORA legacy Branch Certification adoption cannot provide a previous certification authority.",
+      );
+    }
+
+    if (
+      record.branchCertificationRotation !==
+        undefined
+    ) {
+      throw new Error(
+        "FINORA legacy Branch Certification adoption rejected a branch with prior certification-rotation evidence.",
+      );
+    }
+  }
+  else {
+    if (
+      current ===
+        undefined
+    ) {
+      throw new Error(
+        "FINORA Control Center Branch Certification Rotation requires an existing certification authority.",
+      );
+    }
+
+    if (
+      input.previousCertificationPublicKey ===
+        undefined
+    ) {
+      throw new Error(
+        "FINORA Control Center Branch Certification Rotation requires its previous certification authority.",
+      );
+    }
+
+    if (
+      !isSameBranchCertificationPublicKey(
+        current,
+        input.previousCertificationPublicKey,
+      )
+    ) {
+      throw new Error(
+        "FINORA Control Center Branch Certification Rotation previous authority is stale or conflicts with the current Registry anchor.",
+      );
+    }
+
+    const previousEvidence =
+      record.branchCertificationRotation;
+
+    if (
+      previousEvidence !==
+        undefined
+    ) {
+      if (
+        previousEvidence.sourcePackageId ===
+          input.sourcePackageId
+      ) {
+        throw new Error(
+          "FINORA Control Center Branch Certification Rotation packageId replay was rejected.",
+        );
+      }
+
+      const sameRequestingDevice =
+        previousEvidence.requestingInstallationId ===
+          input.requestingInstallationId &&
+        previousEvidence.requestingBindingKeyId ===
+          input.requestingBindingKeyId &&
+        previousEvidence.requestingPublicKeyFingerprint ===
+          input.requestingPublicKeyFingerprint;
+
+      if (
+        sameRequestingDevice &&
+        input.sequence <=
+          previousEvidence.sequence
+      ) {
+        throw new Error(
+          "FINORA Control Center Branch Certification Rotation sequence rollback/replay was rejected.",
+        );
+      }
+    }
+  }
+  /*
+   * Package IDs must not be reused across branch rotation evidence.
+   */
+  for (
+    const other of
+    registry.branches
+  ) {
+
+    if (
+      other ===
+        record
+    ) {
+      continue;
+    }
+
+    if (
+      other.branchCertificationRotation?.sourcePackageId ===
+        input.sourcePackageId
+    ) {
+      throw new Error(
+        "FINORA Control Center Branch Certification Rotation packageId is already assigned to another branch rotation.",
+      );
+    }
+  }
+
+  assertReplacementCertificationUnique(
+    registry.branches,
+    record,
+    input.replacementCertificationPublicKey,
+  );
+
+  /*
+   * All deterministic preflights have passed.
+   * Only now observe authoritative time and mutate.
+   */
+  const clockResult =
+    await observeFinoraControlCenterAuthoritativeWallClock();
+
+  if (
+    !clockResult.success
+  ) {
+    throw new Error(
+      clockResult.error,
+    );
+  }
+
+  const rotatedAt =
+    clockResult.data.observedAt;
+
+  record.branchCertificationPublicKey = {
+    ...input.replacementCertificationPublicKey,
+  };
+
+  record.branchCertificationRotation = {
+    sourcePackageId:
+      input.sourcePackageId,
+
+    sequence:
+      input.sequence,
+
+    requestingInstallationId:
+      input.requestingInstallationId,
+
+    requestingBindingKeyId:
+      input.requestingBindingKeyId,
+
+    requestingFingerprintAlgorithm:
+      input.requestingFingerprintAlgorithm,
+
+    requestingPublicKeyFingerprint:
+      input.requestingPublicKeyFingerprint,
+
+    ...(
+      input.legacyCertificationAdoption ===
+        true
+        ? {
+            legacyCertificationAdoption:
+              true as const,
+          }
+        : {
+            previousCertificationPublicKey: {
+              ...input.previousCertificationPublicKey!,
+            },
+          }
+    ),
+
+    replacementCertificationPublicKey: {
+      ...input.replacementCertificationPublicKey,
+    },
+
+    rotatedAt,
+
+    schemaVersion:
+      1,
+  };
+
+  record.updatedAt =
+    rotatedAt;
+
+  registry.updatedAt =
+    rotatedAt;
+
+  validateFinoraControlCenterBranchRegistry(
+    registry,
+  );
+
+  await writeRegistry(
+    registry,
+  );
+
+  return {
+    updated:
+      true,
+
+    record:
+      cloneRegistryRecord(
+        record,
+      ),
+  };
+}
 // ============================================================
 // SAME-PROCESS SERIALIZATION
 // ============================================================
@@ -2074,6 +2872,36 @@ export function registerFinoraControlCenterBranch(
         ),
       () =>
         registerInternal(
+          input,
+        ),
+    );
+
+  branchRegistrationQueue =
+    operation.then(
+      () =>
+        undefined,
+      () =>
+        undefined,
+    );
+
+  return operation;
+}
+
+export function rotateFinoraControlCenterBranchCertification(
+  input:
+    RotateFinoraControlCenterBranchCertificationInput,
+): Promise<
+  RotateFinoraControlCenterBranchCertificationResult
+> {
+
+  const operation =
+    branchRegistrationQueue.then(
+      () =>
+        rotateCertificationInternal(
+          input,
+        ),
+      () =>
+        rotateCertificationInternal(
           input,
         ),
     );

@@ -79,6 +79,17 @@ import {
 } from "./control/finoraBranchLoginSessionIpc.js";
 
 import {
+  createFinoraPortableFreshDeviceLoginRecovery,
+} from "./control/finoraPortableFreshDeviceLoginRecoveryService.js";
+import {
+  FinoraPortableFreshDeviceRuntimeAuthorityStore,
+} from "./control/finoraPortableFreshDeviceRuntimeAuthorityStore.js";
+
+import {
+  registerFinoraPortableFreshDeviceRuntimeAuthoritySeedHandlers,
+} from "./control/finoraPortableFreshDeviceRuntimeAuthoritySeedIpc.js";
+
+import {
   registerFinoraRecipientTrustMaintenanceHandlers,
 } from "./control/finoraRecipientTrustMaintenanceIpc.js";
 
@@ -1670,6 +1681,18 @@ app.whenReady().then(async () => {
           () =>
             findFinoraUsbRoot(),
       });
+    const portableFreshDeviceRuntimeAuthorityStore =
+      new FinoraPortableFreshDeviceRuntimeAuthorityStore({
+        resolveLocalRoot:
+          () =>
+            app.getPath(
+              "userData",
+            ),
+
+        resolveUsbRoot:
+          () =>
+            findFinoraUsbRoot(),
+      });
 
     // --------------------------------------------------------
     // PORTABLE CREDENTIAL ROTATION CRASH RECOVERY
@@ -1726,6 +1749,11 @@ app.whenReady().then(async () => {
         validateFinoraReplacementUsbRoot,
     });
 
+    registerFinoraPortableFreshDeviceRuntimeAuthoritySeedHandlers(
+      isTrustedRenderer,
+      portableBranchAuthStore,
+      portableFreshDeviceRuntimeAuthorityStore,
+    );
     registerFinoraPortableBranchAuthBackupHandlers({
       isTrustedRenderer,
 
@@ -1760,6 +1788,9 @@ app.whenReady().then(async () => {
     registerFinoraBranchLoginSessionHandlers(
       isTrustedRenderer,
       portableBranchAuthStore,
+      createFinoraPortableFreshDeviceLoginRecovery(
+        portableFreshDeviceRuntimeAuthorityStore,
+      ),
     );
 
     // --------------------------------------------------------

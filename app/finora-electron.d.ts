@@ -545,6 +545,159 @@ type FinoraElectronInstallationEnrollmentResponseImportResult =
       error: string;
     };
 
+interface FinoraElectronBranchCertificationRotationPrepareRequest {
+  sessionId:
+    string;
+
+  password:
+    string;
+
+  securityCode:
+    string;
+}
+
+type FinoraElectronBranchCertificationRotationPrepareResult =
+  | {
+      success:
+        true;
+
+      data: {
+        requestId:
+          string;
+
+        requestedAt:
+          string;
+
+        ownerId:
+          string;
+
+        businessId:
+          string;
+
+        branchId:
+          string;
+
+        storageMode:
+          "LOCAL" | "USB";
+
+        authStateId:
+          string;
+
+        authGeneration:
+          number;
+
+        portableAuthFingerprintAlgorithm:
+          "SHA-256";
+
+        portableAuthFingerprint:
+          string;
+
+        previousCertificationKeyId?:
+          string;
+
+        replacementCertificationKeyId:
+          string;
+
+        recoveredExistingPending:
+          boolean;
+      };
+    }
+  | {
+      success:
+        false;
+
+      errorCode?:
+        string;
+
+      error:
+        string;
+    };
+
+type FinoraElectronBranchCertificationRotationRequestExportResult =
+  | {
+      success:
+        true;
+
+      cancelled:
+        true;
+    }
+  | {
+      success:
+        true;
+
+      cancelled:
+        false;
+
+      fileName:
+        string;
+
+      bytesWritten:
+        number;
+
+      requestId:
+        string;
+
+      branchId:
+        string;
+
+      replacementCertificationKeyId:
+        string;
+    }
+  | {
+      success:
+        false;
+
+      error:
+        string;
+    };
+type FinoraElectronBranchCertificationRotationAuthorityApplyResult =
+  | {
+      success:
+        true;
+
+      cancelled:
+        true;
+    }
+  | {
+      success:
+        true;
+
+      cancelled:
+        false;
+
+      fileName:
+        string;
+
+      bytesRead:
+        number;
+
+      data: {
+        requestId:
+          string;
+
+        packageId:
+          string;
+
+        sequence:
+          number;
+
+        replacementCertificationKeyId:
+          string;
+
+        appliedAt:
+          string;
+
+        pendingDestroyed:
+          true;
+      };
+    }
+  | {
+      success:
+        false;
+
+      error:
+        string;
+    };
 interface FinoraElectronControlBridge {
   getInstallation():
     Promise<
@@ -621,6 +774,26 @@ interface FinoraElectronControlBridge {
       >
     >;
 
+  prepareBranchCertificationRotation(
+    request:
+      FinoraElectronBranchCertificationRotationPrepareRequest,
+  ):
+    Promise<
+      FinoraElectronBranchCertificationRotationPrepareResult
+    >;
+
+  exportBranchCertificationRotationRequest():
+    Promise<
+      FinoraElectronBranchCertificationRotationRequestExportResult
+    >;
+
+  importApplyBranchCertificationRotationAuthority(
+    request:
+      FinoraElectronBranchCertificationRotationPrepareRequest,
+  ):
+    Promise<
+      FinoraElectronBranchCertificationRotationAuthorityApplyResult
+    >;
   evaluateBranchAccess(
     request:
       FinoraFindBranchAccessGrantRequest,
@@ -1247,6 +1420,60 @@ interface FinoraElectronUsbReplacementBridge {
 // absent from the renderer request contract.
 // ============================================================
 
+interface FinoraElectronFreshDeviceRuntimeAuthoritySeedRequest {
+  sessionId:
+    string;
+
+  password:
+    string;
+
+  securityCode:
+    string;
+}
+
+interface FinoraElectronFreshDeviceRuntimeAuthoritySeedSuccessData {
+  authorityId:
+    string;
+
+  storageMode:
+    | "LOCAL"
+    | "USB";
+
+  portableAuthFingerprint:
+    string;
+
+  issuedAt:
+    string;
+}
+
+type FinoraElectronFreshDeviceRuntimeAuthoritySeedResult =
+  | {
+      success:
+        true;
+
+      data:
+        FinoraElectronFreshDeviceRuntimeAuthoritySeedSuccessData;
+    }
+  | {
+      success:
+        false;
+
+      errorCode:
+        string;
+
+      error:
+        string;
+    };
+
+interface FinoraElectronFreshDeviceRuntimeAuthoritySeedBridge {
+  seed(
+    request:
+      FinoraElectronFreshDeviceRuntimeAuthoritySeedRequest,
+  ):
+    Promise<
+      FinoraElectronFreshDeviceRuntimeAuthoritySeedResult
+    >;
+}
 interface FinoraElectronPortableBranchAuthBackupRequest {
   sessionId:
     string;
@@ -1483,6 +1710,9 @@ interface FinoraElectronRendererBridge {
    * Renderer supplies sessionId + Password + Security Code only.
    * Electron main owns branch authority and native save destination.
    */
+  freshDeviceRuntimeAuthority:
+    FinoraElectronFreshDeviceRuntimeAuthoritySeedBridge;
+
   portableBranchAuthBackup:
     FinoraElectronPortableBranchAuthBackupBridge;
   /**

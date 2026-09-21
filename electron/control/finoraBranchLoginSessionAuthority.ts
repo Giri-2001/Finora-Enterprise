@@ -1137,6 +1137,45 @@ async function authorizePrincipal(
 }
 
 // ============================================================
+// FRESH-DEVICE LOGIN RECOVERY INJECTION
+//
+// Production recovery is optional and main-process owned.
+// When absent, login semantics remain unchanged.
+//
+// Recovery may run only after ordinary local authentication
+// returns INVALID_CREDENTIALS. It must never run for other
+// authentication failures.
+//
+// After recovery succeeds, the local credential MUST be
+// authenticated again before Device Trust or session creation.
+// ============================================================
+
+export type FinoraBranchFreshDeviceRecoveryResult =
+  | {
+      success:
+        true;
+    }
+  | Extract<
+      FinoraBranchLoginResult,
+      {
+        success:
+          false;
+      }
+    >;
+
+export type FinoraBranchFreshDeviceRecovery =
+  (
+    request:
+      unknown,
+
+    portableStore:
+      FinoraPortableBranchAuthStore,
+  ) =>
+    Promise<
+      FinoraBranchFreshDeviceRecoveryResult
+    >;
+
+// ============================================================
 // SECURE LOGIN
 // ============================================================
 
@@ -1146,6 +1185,9 @@ export async function createFinoraBranchLoginSession(
 
   portableStore?:
     FinoraPortableBranchAuthStore,
+
+  recoverFreshDevice?:
+    FinoraBranchFreshDeviceRecovery,
 ): Promise<
   FinoraBranchLoginResult
 > {
@@ -1167,7 +1209,7 @@ export async function createFinoraBranchLoginSession(
     };
   }
 
-  const authenticationResult =
+  let authenticationResult =
     await authenticateFinoraBranchCredential({
       username:
         request.username,
@@ -1175,6 +1217,52 @@ export async function createFinoraBranchLoginSession(
       password:
         request.password,
     });
+
+  // ----------------------------------------------------------
+  // FRESH-DEVICE LOCAL-CREDENTIAL RECOVERY
+  //
+  // A genuinely fresh device has no local credential yet.
+  //
+  // We intentionally enter portability recovery only for the
+  // ordinary indistinguishable INVALID_CREDENTIALS result.
+  //
+  // Wrong Password remains INVALID_CREDENTIALS because the
+  // recovery implementation must verify Portable Auth Password
+  // before it can return SECURITY_CODE_REQUIRED.
+  //
+  // Any successful recovery must hydrate the local authority
+  // first. We then authenticate the newly hydrated local
+  // credential again before continuing to Device Trust.
+  // ----------------------------------------------------------
+
+  if (
+    !authenticationResult.success &&
+    authenticationResult.errorCode ===
+      "INVALID_CREDENTIALS" &&
+    portableStore !==
+      undefined &&
+    recoverFreshDevice !==
+      undefined
+  ) {
+    const recoveryResult =
+      await recoverFreshDevice(
+        request,
+        portableStore,
+      );
+
+    if (!recoveryResult.success) {
+      return recoveryResult;
+    }
+
+    authenticationResult =
+      await authenticateFinoraBranchCredential({
+        username:
+          request.username,
+
+        password:
+          request.password,
+      });
+  }
 
   if (
     !authenticationResult.success

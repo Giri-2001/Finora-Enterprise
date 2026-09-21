@@ -1,4 +1,4 @@
-﻿// ============================================================
+// ============================================================
 // FINORA ENTERPRISE OS™
 //
 // ENTERPRISE SETTINGS
@@ -34,6 +34,11 @@ import {
   useEffect,
   useState,
 } from "react";
+
+import {
+  Eye,
+  EyeOff,
+} from "lucide-react";
 
 import type {
   AuthSession,
@@ -125,8 +130,29 @@ export default function BusinessOwnerProfileSection() {
   ] = useState("");
 
   const [
+    showBackupPassword,
+    setShowBackupPassword,
+  ] = useState(
+    false,
+  );
+
+  const [
+    showBackupSecurityCode,
+    setShowBackupSecurityCode,
+  ] = useState(
+    false,
+  );
+
+  const [
     backupBusy,
     setBackupBusy,
+  ] = useState(
+    false,
+  );
+
+  const [
+    prepareDeviceBusy,
+    setPrepareDeviceBusy,
   ] = useState(
     false,
   );
@@ -561,7 +587,7 @@ export default function BusinessOwnerProfileSection() {
   async function handleBranchBackup():
     Promise<void> {
 
-    if (backupBusy) {
+    if (backupBusy || prepareDeviceBusy) {
       return;
     }
 
@@ -734,6 +760,524 @@ export default function BusinessOwnerProfileSection() {
   }
 
   // ==========================================================
+  // PREPARE NEW DEVICE
+  //
+  // Explicit authenticated portability action.
+  //
+  // Normal trusted-device login remains Password-only.
+  // Security Code is requested here only when the owner chooses
+  // to prepare the authoritative branch storage for a new device.
+  // ==========================================================
+
+  async function handlePrepareNewDevice():
+    Promise<void> {
+
+    if (
+      prepareDeviceBusy ||
+      backupBusy
+    ) {
+      return;
+    }
+
+    const currentSession =
+      getSession();
+
+    const sessionId =
+      String(
+        currentSession?.sessionId ??
+        "",
+      ).trim();
+
+    if (!sessionId) {
+      setFeedback({
+        kind:
+          "danger",
+
+        title:
+          "Authenticated Session Required",
+
+        message:
+          "Sign in again before preparing this FINORA branch for a new device.",
+      });
+
+      return;
+    }
+
+    if (
+      backupPassword.trim().length ===
+        0 ||
+      backupSecurityCode.trim().length ===
+        0
+    ) {
+      setFeedback({
+        kind:
+          "danger",
+
+        title:
+          "New Device Authentication Required",
+
+        message:
+          "Enter your current Password and Security Code before preparing a new device.",
+      });
+
+      return;
+    }
+
+    const freshDeviceBridge =
+      window.finora
+        ?.freshDeviceRuntimeAuthority;
+
+    if (
+      !freshDeviceBridge ||
+      typeof freshDeviceBridge.seed !==
+        "function"
+    ) {
+      setFeedback({
+        kind:
+          "danger",
+
+        title:
+          "New Device Preparation Unavailable",
+
+        message:
+          "FINORA fresh-device preparation is not available in this application build.",
+      });
+
+      return;
+    }
+
+    setPrepareDeviceBusy(
+      true,
+    );
+
+    setFeedback(
+      null,
+    );
+
+    const processingId =
+      startFinoraProcessing(
+        "Preparing FINORA for a new device...",
+      );
+
+    try {
+      const result =
+        await freshDeviceBridge.seed({
+          sessionId,
+
+          password:
+            backupPassword,
+
+          securityCode:
+            backupSecurityCode,
+        });
+
+      if (
+        result.success
+      ) {
+        setFeedback({
+          kind:
+            "success",
+
+          title:
+            "New Device Ready",
+
+          message:
+            "FINORA wrote the signed fresh-device authority to this branch's authoritative storage. You can now continue secure login on a new device.",
+        });
+
+        return;
+      }
+
+      const resultRecord =
+        result as unknown as Record<
+          string,
+          unknown
+        >;
+
+      const certificationAuthorityMissing =
+        result.error ===
+          "CERTIFICATION_AUTHORITY_MISSING" ||
+        result.error.includes(
+          "CERTIFICATION_AUTHORITY_MISSING",
+        ) ||
+        result.error.includes(
+          "FINORA Branch Certification bootstrap custody is unavailable for this legacy branch.",
+        ) ||
+        resultRecord.errorCode ===
+          "CERTIFICATION_AUTHORITY_MISSING";
+
+      if (
+        !certificationAuthorityMissing
+      ) {
+        setFeedback({
+          kind:
+            "danger",
+
+          title:
+            "New Device Preparation Failed",
+
+          message:
+            result.error,
+        });
+
+        return;
+      }
+
+      const controlBridge =
+        window.finora
+          ?.control;
+
+      if (
+        !controlBridge ||
+        typeof controlBridge.prepareBranchCertificationRotation !==
+          "function" ||
+        typeof controlBridge.exportBranchCertificationRotationRequest !==
+          "function"
+      ) {
+        setFeedback({
+          kind:
+            "danger",
+
+          title:
+            "Certification Recovery Unavailable",
+
+          message:
+            "This branch needs Branch Certification recovery, but this application build does not provide the recovery bridge.",
+        });
+
+        return;
+      }
+
+      const prepareResult =
+        await controlBridge.prepareBranchCertificationRotation({
+          sessionId,
+
+          password:
+            backupPassword,
+
+          securityCode:
+            backupSecurityCode,
+        });
+
+      if (
+        !prepareResult.success
+      ) {
+        setFeedback({
+          kind:
+            "danger",
+
+          title:
+            "Certification Recovery Preparation Failed",
+
+          message:
+            prepareResult.error,
+        });
+
+        return;
+      }
+
+      const exportResult =
+        await controlBridge.exportBranchCertificationRotationRequest();
+
+      if (
+        !exportResult.success
+      ) {
+        setFeedback({
+          kind:
+            "danger",
+
+          title:
+            "Recovery Request Export Failed",
+
+          message:
+            exportResult.error,
+        });
+
+        return;
+      }
+
+      if (
+        exportResult.cancelled
+      ) {
+        setFeedback({
+          kind:
+            "info",
+
+          title:
+            "Recovery Request Not Saved",
+
+          message:
+            "No Branch Certification recovery request file was written. Run Prepare New Device again when you are ready to save the request.",
+        });
+
+        return;
+      }
+
+      setFeedback({
+        kind:
+          "success",
+
+        title:
+          "Recovery Request Ready",
+
+        message:
+          (
+            "FINORA saved " +
+            exportResult.fileName +
+            ". Approve this request in Control Center, return with the signed authority file, enter your Password and Security Code again, then choose Apply Recovery Authority."
+          ),
+      });
+    }
+    catch {
+      setFeedback({
+        kind:
+          "danger",
+
+        title:
+          "New Device Preparation Failed",
+
+        message:
+          "FINORA could not prepare this branch for a new device.",
+      });
+    }
+    finally {
+      setBackupPassword(
+        "",
+      );
+
+      setBackupSecurityCode(
+        "",
+      );
+
+      stopFinoraProcessing(
+        processingId,
+      );
+
+      setPrepareDeviceBusy(
+        false,
+      );
+    }
+  }
+
+  async function handleApplyBranchCertificationRecovery():
+    Promise<void> {
+
+    if (
+      prepareDeviceBusy ||
+      backupBusy
+    ) {
+      return;
+    }
+
+    const currentSession =
+      getSession();
+
+    const sessionId =
+      String(
+        currentSession?.sessionId ??
+        "",
+      ).trim();
+
+    if (!sessionId) {
+      setFeedback({
+        kind:
+          "danger",
+
+        title:
+          "Authenticated Session Required",
+
+        message:
+          "Sign in again before applying Branch Certification recovery.",
+      });
+
+      return;
+    }
+
+    if (
+      backupPassword.trim().length ===
+        0 ||
+      backupSecurityCode.trim().length ===
+        0
+    ) {
+      setFeedback({
+        kind:
+          "danger",
+
+        title:
+          "Recovery Authentication Required",
+
+        message:
+          "Enter your current Password and Security Code before applying the signed recovery authority.",
+      });
+
+      return;
+    }
+
+    const controlBridge =
+      window.finora
+        ?.control;
+
+    const freshDeviceBridge =
+      window.finora
+        ?.freshDeviceRuntimeAuthority;
+
+    if (
+      !controlBridge ||
+      typeof controlBridge.importApplyBranchCertificationRotationAuthority !==
+        "function" ||
+      !freshDeviceBridge ||
+      typeof freshDeviceBridge.seed !==
+        "function"
+    ) {
+      setFeedback({
+        kind:
+          "danger",
+
+        title:
+          "Certification Recovery Unavailable",
+
+        message:
+          "FINORA Branch Certification recovery is not available in this application build.",
+      });
+
+      return;
+    }
+
+    setPrepareDeviceBusy(
+      true,
+    );
+
+    setFeedback(
+      null,
+    );
+
+    const processingId =
+      startFinoraProcessing(
+        "Applying FINORA Branch Certification recovery...",
+      );
+
+    try {
+      const applyResult =
+        await controlBridge.importApplyBranchCertificationRotationAuthority({
+          sessionId,
+
+          password:
+            backupPassword,
+
+          securityCode:
+            backupSecurityCode,
+        });
+
+      if (
+        !applyResult.success
+      ) {
+        setFeedback({
+          kind:
+            "danger",
+
+          title:
+            "Certification Recovery Failed",
+
+          message:
+            applyResult.error,
+        });
+
+        return;
+      }
+
+      if (
+        applyResult.cancelled
+      ) {
+        setFeedback({
+          kind:
+            "info",
+
+          title:
+            "Recovery Authority Not Selected",
+
+          message:
+            "No signed Branch Certification Rotation authority file was selected.",
+        });
+
+        return;
+      }
+
+      /*
+       * Certification rotation is now durable and pending private
+       * key custody has been destroyed. Re-run the original
+       * fresh-device seed immediately with the same authenticated
+       * factors so the owner finishes with one action.
+       */
+      const seedResult =
+        await freshDeviceBridge.seed({
+          sessionId,
+
+          password:
+            backupPassword,
+
+          securityCode:
+            backupSecurityCode,
+        });
+
+      if (
+        !seedResult.success
+      ) {
+        setFeedback({
+          kind:
+            "danger",
+
+          title:
+            "Certification Recovered — New Device Preparation Failed",
+
+          message:
+            seedResult.error,
+        });
+
+        return;
+      }
+
+      setFeedback({
+        kind:
+          "success",
+
+        title:
+          "New Device Ready",
+
+        message:
+          "Branch Certification recovery was applied successfully and FINORA wrote the signed fresh-device authority to the authoritative branch storage. You can now continue secure login on a new device.",
+      });
+    }
+    catch {
+      setFeedback({
+        kind:
+          "danger",
+
+        title:
+          "Certification Recovery Failed",
+
+        message:
+          "FINORA could not apply the signed Branch Certification recovery authority.",
+      });
+    }
+    finally {
+      setBackupPassword(
+        "",
+      );
+
+      setBackupSecurityCode(
+        "",
+      );
+
+      stopFinoraProcessing(
+        processingId,
+      );
+
+      setPrepareDeviceBusy(
+        false,
+      );
+    }
+  }
+  // ==========================================================
   // LOADING
   // ==========================================================
 
@@ -873,37 +1417,102 @@ export default function BusinessOwnerProfileSection() {
               Current Password
             </span>
 
-            <input
-              type="password"
-              autoComplete="current-password"
-              value={backupPassword}
-              disabled={backupBusy}
-              onChange={(event) => {
-                setBackupPassword(
-                  event.target.value,
-                );
-              }}
-              aria-label="Current Password for Branch Backup"
+            <div
               style={{
-                width:
-                  "100%",
-
-                boxSizing:
-                  "border-box",
-
-                padding:
-                  "10px 12px",
-
-                borderRadius:
-                  "8px",
-
-                border:
-                  "1px solid rgba(148, 163, 184, 0.45)",
-
-                font:
-                  "inherit",
+                position:
+                  "relative",
               }}
-            />
+            >
+              <input
+                type={
+                  showBackupPassword
+                    ? "text"
+                    : "password"
+                }
+                autoComplete="current-password"
+                value={backupPassword}
+                disabled={backupBusy || prepareDeviceBusy}
+                onChange={(event) => {
+                  setBackupPassword(
+                    event.target.value,
+                  );
+                }}
+                aria-label="Current Password for Branch Backup"
+                style={{
+                  width:
+                    "100%",
+
+                  boxSizing:
+                    "border-box",
+
+                  padding:
+                    "10px 42px 10px 12px",
+
+                  borderRadius:
+                    "8px",
+
+                  border:
+                    "1px solid rgba(148, 163, 184, 0.45)",
+
+                  font:
+                    "inherit",
+                }}
+              />
+
+              <button
+                type="button"
+                aria-label={
+                  showBackupPassword
+                    ? "Hide current password"
+                    : "Show current password"
+                }
+                disabled={backupBusy || prepareDeviceBusy}
+                onClick={() => {
+                  setShowBackupPassword(
+                    current =>
+                      !current,
+                  );
+                }}
+                style={{
+                  position:
+                    "absolute",
+
+                  top:
+                    "50%",
+
+                  right:
+                    "10px",
+
+                  transform:
+                    "translateY(-50%)",
+
+                  display:
+                    "inline-flex",
+
+                  alignItems:
+                    "center",
+
+                  justifyContent:
+                    "center",
+
+                  padding:
+                    0,
+
+                  border:
+                    0,
+
+                  background:
+                    "transparent",
+
+                  cursor:
+                    "pointer",
+                }}
+              >
+                {showBackupPassword
+                  ? <EyeOff size={18} />
+                  : <Eye size={18} />}
+              </button>
+            </div>
           </label>
 
           <label>
@@ -922,43 +1531,232 @@ export default function BusinessOwnerProfileSection() {
               Security Code
             </span>
 
-            <input
-              type="password"
-              autoComplete="off"
-              value={backupSecurityCode}
-              disabled={backupBusy}
-              onChange={(event) => {
-                setBackupSecurityCode(
-                  event.target.value,
-                );
-              }}
-              aria-label="Security Code for Branch Backup"
+            <div
               style={{
-                width:
-                  "100%",
-
-                boxSizing:
-                  "border-box",
-
-                padding:
-                  "10px 12px",
-
-                borderRadius:
-                  "8px",
-
-                border:
-                  "1px solid rgba(148, 163, 184, 0.45)",
-
-                font:
-                  "inherit",
+                position:
+                  "relative",
               }}
-            />
+            >
+              <input
+                type={
+                  showBackupSecurityCode
+                    ? "text"
+                    : "password"
+                }
+                autoComplete="off"
+                value={backupSecurityCode}
+                disabled={backupBusy || prepareDeviceBusy}
+                onChange={(event) => {
+                  setBackupSecurityCode(
+                    event.target.value,
+                  );
+                }}
+                aria-label="Security Code for Branch Backup"
+                style={{
+                  width:
+                    "100%",
+
+                  boxSizing:
+                    "border-box",
+
+                  padding:
+                    "10px 42px 10px 12px",
+
+                  borderRadius:
+                    "8px",
+
+                  border:
+                    "1px solid rgba(148, 163, 184, 0.45)",
+
+                  font:
+                    "inherit",
+                }}
+              />
+
+              <button
+                type="button"
+                aria-label={
+                  showBackupSecurityCode
+                    ? "Hide Security Code"
+                    : "Show Security Code"
+                }
+                disabled={backupBusy || prepareDeviceBusy}
+                onClick={() => {
+                  setShowBackupSecurityCode(
+                    current =>
+                      !current,
+                  );
+                }}
+                style={{
+                  position:
+                    "absolute",
+
+                  top:
+                    "50%",
+
+                  right:
+                    "10px",
+
+                  transform:
+                    "translateY(-50%)",
+
+                  display:
+                    "inline-flex",
+
+                  alignItems:
+                    "center",
+
+                  justifyContent:
+                    "center",
+
+                  padding:
+                    0,
+
+                  border:
+                    0,
+
+                  background:
+                    "transparent",
+
+                  cursor:
+                    "pointer",
+                }}
+              >
+                {showBackupSecurityCode
+                  ? <EyeOff size={18} />
+                  : <Eye size={18} />}
+              </button>
+            </div>
           </label>
         </div>
+
+        <p
+          style={{
+            margin:
+              "0 0 14px",
+
+            opacity:
+              0.78,
+
+            lineHeight:
+              1.5,
+          }}
+        >
+          Before using this branch on a new device, prepare the current
+          authoritative storage once with the signed fresh-device authority.
+          Older branches may first require Branch Certification recovery:
+          export the recovery request, approve it in Control Center, then
+          apply the signed recovery authority here.
+        </p>
 
         <button
           type="button"
           disabled={
+            prepareDeviceBusy ||
+            backupBusy ||
+            backupPassword.trim().length ===
+              0 ||
+            backupSecurityCode.trim().length ===
+              0
+          }
+          onClick={() => {
+            void handlePrepareNewDevice();
+          }}
+          style={{
+            minHeight:
+              "40px",
+
+            padding:
+              "0 16px",
+
+            marginRight:
+              "10px",
+
+            marginBottom:
+              "10px",
+
+            border:
+              0,
+
+            borderRadius:
+              "8px",
+
+            cursor:
+              (
+                prepareDeviceBusy ||
+                backupBusy
+              )
+                ? "not-allowed"
+                : "pointer",
+
+            font:
+              "inherit",
+
+            fontWeight:
+              600,
+          }}
+        >
+          {prepareDeviceBusy
+            ? "Preparing New Device..."
+            : "Prepare New Device"}
+        </button>
+
+        <button
+          type="button"
+          disabled={
+            prepareDeviceBusy ||
+            backupBusy ||
+            backupPassword.trim().length ===
+              0 ||
+            backupSecurityCode.trim().length ===
+              0
+          }
+          onClick={() => {
+            void handleApplyBranchCertificationRecovery();
+          }}
+          style={{
+            minHeight:
+              "40px",
+
+            padding:
+              "0 16px",
+
+            marginRight:
+              "10px",
+
+            marginBottom:
+              "10px",
+
+            border:
+              0,
+
+            borderRadius:
+              "8px",
+
+            cursor:
+              (
+                prepareDeviceBusy ||
+                backupBusy
+              )
+                ? "not-allowed"
+                : "pointer",
+
+            font:
+              "inherit",
+
+            fontWeight:
+              600,
+          }}
+        >
+          {prepareDeviceBusy
+            ? "Processing Recovery..."
+            : "Apply Recovery Authority"}
+        </button>
+
+        <button
+          type="button"
+          disabled={
+            prepareDeviceBusy ||
             backupBusy ||
             backupPassword.trim().length ===
               0 ||

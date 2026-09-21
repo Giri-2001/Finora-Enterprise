@@ -58,6 +58,7 @@ import {
 } from "./finoraInstallationBindingService.js";
 
 import {
+  applyFinoraBranchCertificationRotationControlState,
   applyFinoraPortableBranchAuthEnrollmentControlState,
   completeFinoraPortableBranchAuthEnrollmentTransaction,
   markFinoraPortableBranchAuthEnrollmentCertificationMigrated,
@@ -68,6 +69,7 @@ import {
 } from "./finoraControlStore.js";
 
 import type {
+  FinoraBranchCertificationRotationControlStateInput,
   FinoraControlBranchCredential,
   FinoraControlInstallationIdentity,
 } from "./finoraControlStore.js";
@@ -3171,6 +3173,14 @@ async function runSelfTest():
         legacyBaselineStore,
       );
 
+    // P6-B2 ZERO-PROVENANCE ROTATION RECOVERY
+    // The physical historical owner has no durable enrollment
+    // transaction. Force this fixture through that exact branch
+    // instead of accidentally matching a modern COMPLETE record.
+    zeroProvenanceLegacyStore
+      .portableBranchAuthEnrollmentTransactions =
+      [];
+
     zeroProvenanceLegacyStore
       .branchCredentialAuthorizationVerificationEvidence =
       (
@@ -3380,6 +3390,308 @@ async function runSelfTest():
 
     console.log(
       "PASS: pre-portability 0+0 legacy credential bootstraps one-time native-bound Security Code evidence",
+    );
+
+    // ========================================================
+    // P6-B2 ZERO-PROVENANCE ROTATION RECOVERY
+    // ========================================================
+
+    const zeroProvenanceBeforeRotation =
+      await readFinoraControlStore();
+
+    assert(
+      zeroProvenanceBeforeRotation.success &&
+        zeroProvenanceBeforeRotation.data,
+      zeroProvenanceBeforeRotation.error ??
+        "Unable to read 0+0 legacy state before rotation recovery.",
+    );
+
+    assert(
+      (
+        zeroProvenanceBeforeRotation.data
+          .portableBranchAuthEnrollmentTransactions ??
+        []
+      ).length ===
+        0,
+      "0+0 rotation regression fixture unexpectedly retained an enrollment transaction.",
+    );
+
+    assert(
+      zeroProvenanceBeforeRotation.data.installation?.installationId ===
+        nativeBinding.installationId,
+      "0+0 rotation regression fixture installation does not match native binding.",
+    );
+
+    const rotationAppliedAt =
+      new Date(
+        Date.parse(
+          nativeMigrationEvidence.migratedAt,
+        ) +
+          1_000,
+      ).toISOString();
+
+    const rotationRequestId =
+      "FIN-BCR-REQ-P6-B2-ZERO-PROVENANCE";
+
+    const rotationPackageId =
+      "FINORA-CC-PKG-P6-B2-ZERO-PROVENANCE";
+
+    const rotationCertificationKeyId =
+      "FINORA-BRANCH-CERT-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
+
+    const rotationInput:
+      FinoraBranchCertificationRotationControlStateInput =
+      {
+        packageId:
+          rotationPackageId,
+
+        issuerId:
+          "FINORA-SELFTEST-P6-B2-ISSUER",
+
+        purpose:
+          "BRANCH_CERTIFICATION_ROTATION",
+
+        sequence:
+          1,
+
+        target: {
+          ownerId:
+            zeroProvenancePayload.ownerId,
+
+          businessId:
+            zeroProvenancePayload.businessId,
+
+          branchId:
+            zeroProvenancePayload.branchId,
+
+          installationId:
+            nativeBinding.installationId,
+        },
+
+        storageMode:
+          zeroProvenancePayload.storageMode,
+
+        requestId:
+          rotationRequestId,
+
+        replacementCertificationKeyId:
+          rotationCertificationKeyId,
+
+        legacyEnrollmentRecovery: {
+          portableEnvelope:
+            zeroProvenanceEnvelope,
+
+          payload:
+            zeroProvenancePayload,
+        },
+
+        appliedAt:
+          rotationAppliedAt,
+      };
+
+    const missingRecoveryResult =
+      await applyFinoraBranchCertificationRotationControlState({
+        ...rotationInput,
+
+        legacyEnrollmentRecovery:
+          undefined,
+      });
+
+    assert(
+      !missingRecoveryResult.success &&
+        missingRecoveryResult.error ===
+          "FINORA Branch Certification Rotation could not resolve durable Portable Branch Auth enrollment provenance.",
+      missingRecoveryResult.success
+        ? "Missing recovery evidence unexpectedly succeeded."
+        : `Unexpected missing-recovery result: ${missingRecoveryResult.error}`,
+    );
+
+    console.log(
+      "PASS: zero-provenance rotation still fails closed without authenticated recovery evidence",
+    );
+
+    const tamperedRecoveryPayload =
+      structuredClone(
+        zeroProvenancePayload,
+      );
+
+    const tamperedRecoveryEvidence =
+      tamperedRecoveryPayload
+        .sourceAuthorizationVerificationEvidence;
+
+    if (
+      !(
+        "legacyNativeBoundMigrationEvidence" in
+          tamperedRecoveryEvidence
+      )
+    ) {
+      throw new Error(
+        "0+0 tamper fixture lost legacy native-bound migration evidence.",
+      );
+    }
+
+    tamperedRecoveryEvidence
+      .legacyNativeBoundMigrationEvidence
+      .installationId =
+      `${nativeBinding.installationId}-TAMPERED`;
+
+    const tamperedRecoveryResult =
+      await applyFinoraBranchCertificationRotationControlState({
+        ...rotationInput,
+
+        legacyEnrollmentRecovery: {
+          portableEnvelope:
+            zeroProvenanceEnvelope,
+
+          payload:
+            tamperedRecoveryPayload,
+        },
+      });
+
+    assert(
+      !tamperedRecoveryResult.success &&
+        tamperedRecoveryResult.error ===
+          "FINORA Branch Certification Rotation legacy enrollment recovery lineage is invalid.",
+      tamperedRecoveryResult.success
+        ? "Tampered native-bound migration lineage unexpectedly succeeded."
+        : `Unexpected tampered-recovery result: ${tamperedRecoveryResult.error}`,
+    );
+
+    const afterRejectedRecovery =
+      await readFinoraControlStore();
+
+    assert(
+      afterRejectedRecovery.success &&
+        afterRejectedRecovery.data &&
+        (
+          afterRejectedRecovery.data
+            .portableBranchAuthEnrollmentTransactions ??
+          []
+        ).length ===
+          0,
+      afterRejectedRecovery.error ??
+        "Rejected recovery mutated durable enrollment state.",
+    );
+
+    console.log(
+      "PASS: tampered native-bound migration lineage is rejected without durable mutation",
+    );
+
+    const recoveredRotationResult =
+      await applyFinoraBranchCertificationRotationControlState(
+        rotationInput,
+      );
+
+    assert(
+      recoveredRotationResult.success &&
+        recoveredRotationResult.data?.updatedEnrollmentTransactions ===
+          1,
+      recoveredRotationResult.success
+        ? "0+0 rotation recovery returned unexpected update count."
+        : recoveredRotationResult.error ?? "0+0 rotation recovery failed without an error message.",
+    );
+
+    const recoveredRotationStore =
+      await readFinoraControlStore();
+
+    assert(
+      recoveredRotationStore.success &&
+        recoveredRotationStore.data,
+      recoveredRotationStore.error ??
+        "Unable to read recovered 0+0 rotation Control Store.",
+    );
+
+    const recoveredTransactions =
+      (
+        recoveredRotationStore.data
+          .portableBranchAuthEnrollmentTransactions ??
+        []
+      ).filter(
+        (item) =>
+          item.sourceAuthorizationId ===
+            zeroProvenancePayload.sourceAuthorizationId,
+      );
+
+    assert(
+      recoveredTransactions.length ===
+        1,
+      "0+0 rotation recovery did not create exactly one durable enrollment transaction.",
+    );
+
+    const recoveredTransaction =
+      recoveredTransactions[0];
+
+    assert(
+      recoveredTransaction.transactionId ===
+        `${FINORA_PORTABLE_BRANCH_AUTH_ENROLLMENT_TRANSACTION_ID_PREFIX}LEGACY-RECOVERY-${rotationRequestId}` &&
+      recoveredTransaction.status ===
+        "COMPLETE" &&
+      recoveredTransaction.completedAt ===
+        rotationAppliedAt &&
+      recoveredTransaction.branchCertificationProvenance ===
+        undefined &&
+      recoveredTransaction.certificationMigratedAt ===
+        undefined &&
+      recoveredTransaction.certificationRotatedAt ===
+        rotationAppliedAt &&
+      recoveredTransaction.updatedAt ===
+        rotationAppliedAt &&
+      recoveredTransaction.portableEnvelopeSha256 ===
+        computeFinoraPortableBranchAuthEnvelopeSha256(
+          zeroProvenanceEnvelope,
+        ) &&
+      recoveredTransaction.branchCertificationRotationProvenance?.requestId ===
+        rotationRequestId &&
+      recoveredTransaction.branchCertificationRotationProvenance?.responseId ===
+        rotationPackageId &&
+      recoveredTransaction.branchCertificationRotationProvenance?.certificationKeyId ===
+        rotationCertificationKeyId,
+      "0+0 rotation recovery lost exact durable transaction or separate rotation provenance.",
+    );
+
+    console.log(
+      "PASS: exact 0+0 native-bound evidence reconstructs one COMPLETE enrollment transaction",
+    );
+
+    const beforeReplaySnapshot =
+      JSON.stringify(
+        recoveredRotationStore.data,
+      );
+
+    const replayedRotationResult =
+      await applyFinoraBranchCertificationRotationControlState(
+        rotationInput,
+      );
+
+    assert(
+      replayedRotationResult.success &&
+        replayedRotationResult.data?.updatedEnrollmentTransactions ===
+          1,
+      replayedRotationResult.success
+        ? "Exact rotation replay returned unexpected update count."
+        : replayedRotationResult.error ?? "Exact rotation replay failed without an error message.",
+    );
+
+    const afterReplayStore =
+      await readFinoraControlStore();
+
+    assert(
+      afterReplayStore.success &&
+        afterReplayStore.data &&
+        JSON.stringify(
+          afterReplayStore.data,
+        ) ===
+          beforeReplaySnapshot,
+      afterReplayStore.error ??
+        "Exact rotation replay mutated durable Control Store state.",
+    );
+
+    console.log(
+      "PASS: exact zero-provenance rotation replay is idempotent and creates no duplicate transaction",
+    );
+
+    console.log(
+      "PASS: P6-B2 ZERO-PROVENANCE ROTATION RECOVERY EXECUTABLE PROOF",
     );
 
     const zeroProvenancePrincipal = {

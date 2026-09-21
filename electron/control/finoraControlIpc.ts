@@ -97,6 +97,21 @@ import {
 import {
   evaluateFinoraAuthoritativeBranchAccess,
 } from "./finoraBranchAccessAuthorityService.js";
+import {
+  prepareFinoraBranchCertificationRotation,
+} from "./finoraBranchCertificationRotationPrepareService.js";
+
+import {
+  exportFinoraBranchCertificationRotationRequest,
+} from "./finoraBranchCertificationRotationRequestFileTransport.js";
+
+import {
+  openFinoraBranchCertificationRotationAuthorityFile,
+} from "./finoraBranchCertificationRotationAuthorityImportFileTransport.js";
+
+import {
+  applyFinoraBranchCertificationRotationWithAuthoritativeContext,
+} from "./finoraBranchCertificationRotationApplyService.js";
 
 // ============================================================
 // IPC CHANNELS
@@ -142,6 +157,14 @@ const CONTROL_IPC_CHANNELS = {
 
   EXPORT_WALLET_RECHARGE_REQUEST:
     "finora:control:export-wallet-recharge-request",
+  PREPARE_BRANCH_CERTIFICATION_ROTATION:
+    "finora:control:prepare-branch-certification-rotation",
+
+  EXPORT_BRANCH_CERTIFICATION_ROTATION_REQUEST:
+    "finora:control:export-branch-certification-rotation-request",
+
+  IMPORT_APPLY_BRANCH_CERTIFICATION_ROTATION_AUTHORITY:
+    "finora:control:import-apply-branch-certification-rotation-authority",
   HAS_ACTIVE_STORAGE_ENTITLEMENT:
     "finora:control:has-active-storage-entitlement",
 
@@ -1556,7 +1579,185 @@ export function registerFinoraControlHandlers(
   );
 
   // ----------------------------------------------------------
-  // INSTALLATION ENROLLMENT REQUEST EXPORT
+  // ----------------------------------------------------------
+  // BRANCH CERTIFICATION ROTATION PREPARE
+  //
+  // SECURITY:
+  //
+  // - Trusted application main frame only.
+  // - Renderer supplies only sessionId + Password + Security Code.
+  // - Authoritative branch/storage/generation are resolved in main.
+  // - Replacement private key remains only in protected pending
+  //   custody and never crosses this IPC boundary.
+  // ----------------------------------------------------------
+
+  ipcMain.handle(
+    CONTROL_IPC_CHANNELS.PREPARE_BRANCH_CERTIFICATION_ROTATION,
+    async (
+      event,
+      request:
+        unknown,
+    ) => {
+
+      if (
+        !isTrustedRenderer(
+          event.senderFrame,
+        )
+      ) {
+        return failure(
+          "FINORA Branch Certification Rotation prepare is restricted to the trusted renderer.",
+        );
+      }
+
+      const parentWindow =
+        BrowserWindow.fromWebContents(
+          event.sender,
+        );
+
+      if (
+        !parentWindow ||
+        parentWindow.isDestroyed()
+      ) {
+        return failure(
+          "The FINORA application window is not available for Branch Certification Rotation.",
+        );
+      }
+
+      if (
+        event.senderFrame !==
+          parentWindow.webContents.mainFrame
+      ) {
+        return failure(
+          "FINORA Branch Certification Rotation prepare is restricted to the trusted application main frame.",
+        );
+      }
+
+      const prepareResult =
+        await prepareFinoraBranchCertificationRotation(
+          request,
+          portableBranchAuthStore,
+        );
+
+      if (
+        !prepareResult.success
+      ) {
+        return prepareResult;
+      }
+
+      return {
+        success:
+          true,
+
+        data: {
+          requestId:
+            prepareResult.data.requestId,
+
+          requestedAt:
+            prepareResult.data.requestedAt,
+
+          ownerId:
+            prepareResult.data.ownerId,
+
+          businessId:
+            prepareResult.data.businessId,
+
+          branchId:
+            prepareResult.data.branchId,
+
+          storageMode:
+            prepareResult.data.storageMode,
+
+          authStateId:
+            prepareResult.data.authStateId,
+
+          authGeneration:
+            prepareResult.data.authGeneration,
+
+          portableAuthFingerprintAlgorithm:
+            prepareResult.data.portableAuthFingerprintAlgorithm,
+
+          portableAuthFingerprint:
+            prepareResult.data.portableAuthFingerprint,
+
+          ...(
+            prepareResult.data.previousCertificationKeyId ===
+              undefined
+              ? {}
+              : {
+                  previousCertificationKeyId:
+                    prepareResult.data.previousCertificationKeyId,
+                }
+          ),
+
+          replacementCertificationKeyId:
+            prepareResult.data.replacementCertificationPublicKey.keyId,
+
+          recoveredExistingPending:
+            prepareResult.data.recoveredExistingPending,
+        },
+      };
+    },
+  );
+
+  // ----------------------------------------------------------
+  // BRANCH CERTIFICATION ROTATION REQUEST EXPORT
+  //
+  // SECURITY:
+  //
+  // - Zero renderer payload.
+  // - Protected pending custody is loaded only in Electron main.
+  // - Native installation binding signs the exact request.
+  // - Renderer supplies no path, request body, public/private key
+  //   material, signature, or filesystem destination.
+  // - Native Save dialog remains main-process owned.
+  // ----------------------------------------------------------
+
+  ipcMain.handle(
+    CONTROL_IPC_CHANNELS.EXPORT_BRANCH_CERTIFICATION_ROTATION_REQUEST,
+    async (
+      event,
+    ) => {
+
+      if (
+        !isTrustedRenderer(
+          event.senderFrame,
+        )
+      ) {
+        return failure(
+          "FINORA Branch Certification Rotation request export is restricted to the trusted renderer.",
+        );
+      }
+
+      const parentWindow =
+        BrowserWindow.fromWebContents(
+          event.sender,
+        );
+
+      if (
+        !parentWindow ||
+        parentWindow.isDestroyed()
+      ) {
+        return failure(
+          "The FINORA application window is not available for Branch Certification Rotation request export.",
+        );
+      }
+
+      if (
+        event.senderFrame !==
+          parentWindow.webContents.mainFrame
+      ) {
+        return failure(
+          "FINORA Branch Certification Rotation request export is restricted to the trusted application main frame.",
+        );
+      }
+
+      return exportFinoraBranchCertificationRotationRequest(
+        parentWindow,
+      );
+    },
+  );
+
+  // ----------------------------------------------------------  // INSTALLATION ENROLLMENT REQUEST EXPORT
   //
   // SECURITY:
   //
@@ -1569,6 +1770,130 @@ export function registerFinoraControlHandlers(
   // - Trusted application main frame only.
   // ----------------------------------------------------------
 
+  // ----------------------------------------------------------
+  // BRANCH CERTIFICATION ROTATION AUTHORITY IMPORT + APPLY
+  //
+  // SECURITY:
+  // - Trusted renderer + exact application main frame only.
+  // - Renderer supplies only sessionId + Password + Security Code.
+  // - Native Open dialog owns the authority file selection.
+  // - Signed package, trusted signer keys, pending private-key
+  //   custody, current Portable Auth and native binding remain
+  //   entirely inside Electron main.
+  // ----------------------------------------------------------
+
+  ipcMain.handle(
+    CONTROL_IPC_CHANNELS.IMPORT_APPLY_BRANCH_CERTIFICATION_ROTATION_AUTHORITY,
+    async (
+      event,
+      request:
+        unknown,
+    ) => {
+
+      if (
+        !isTrustedRenderer(
+          event.senderFrame,
+        )
+      ) {
+        return failure(
+          "FINORA Branch Certification Rotation apply is restricted to the trusted renderer.",
+        );
+      }
+
+      const parentWindow =
+        BrowserWindow.fromWebContents(
+          event.sender,
+        );
+
+      if (
+        !parentWindow ||
+        parentWindow.isDestroyed()
+      ) {
+        return failure(
+          "The FINORA application window is not available for Branch Certification Rotation authority import.",
+        );
+      }
+
+      if (
+        event.senderFrame !==
+          parentWindow.webContents.mainFrame
+      ) {
+        return failure(
+          "FINORA Branch Certification Rotation apply is restricted to the trusted application main frame.",
+        );
+      }
+
+      const openResult =
+        await openFinoraBranchCertificationRotationAuthorityFile(
+          parentWindow,
+        );
+
+      if (
+        !openResult.success
+      ) {
+        return openResult;
+      }
+
+      if (
+        openResult.cancelled
+      ) {
+        return {
+          success:
+            true,
+
+          cancelled:
+            true,
+        };
+      }
+
+      const applyResult =
+        await applyFinoraBranchCertificationRotationWithAuthoritativeContext(
+          request,
+          openResult.authorityFile.signedPackage,
+          portableBranchAuthStore,
+        );
+
+      if (
+        !applyResult.success
+      ) {
+        return applyResult;
+      }
+
+      return {
+        success:
+          true,
+
+        cancelled:
+          false,
+
+        fileName:
+          openResult.fileName,
+
+        bytesRead:
+          openResult.bytesRead,
+
+        data: {
+          requestId:
+            applyResult.data.requestId,
+
+          packageId:
+            applyResult.data.packageId,
+
+          sequence:
+            applyResult.data.sequence,
+
+          replacementCertificationKeyId:
+            applyResult.data.replacementCertificationKeyId,
+
+          appliedAt:
+            applyResult.data.appliedAt,
+
+          pendingDestroyed:
+            applyResult.data.pendingDestroyed,
+        },
+      };
+    },
+  );
   ipcMain.handle(
     CONTROL_IPC_CHANNELS.EXPORT_INSTALLATION_ENROLLMENT_REQUEST,
     async (event) => {

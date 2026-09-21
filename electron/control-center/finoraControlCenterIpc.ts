@@ -128,6 +128,19 @@ import {
   isTrustedFinoraControlCenterRenderer,
 } from "./finoraControlCenterWindow.js";
 
+import {
+  openVerifiedFinoraBranchCertificationRotationRequest,
+} from "./finoraBranchCertificationRotationRequestFileTransport.js";
+
+import {
+  getFinoraVerifiedBranchCertificationRotationRequest,
+  rememberFinoraVerifiedBranchCertificationRotationRequest,
+  takeFinoraVerifiedBranchCertificationRotationRequest,
+} from "./finoraBranchCertificationRotationSessionAuthority.js";
+
+import {
+  issueExportAndCommitFinoraBranchCertificationRotation,
+} from "./finoraBranchCertificationRotationTransaction.js";
 // ============================================================
 // IPC CHANNELS
 // ============================================================
@@ -141,6 +154,11 @@ export const FINORA_CONTROL_CENTER_IPC_CHANNELS = {
 
   BACKFILL_HISTORICAL_ENROLLMENT_BRANCH:
     "finora:control-center:backfill-historical-enrollment-branch",
+  OPEN_BRANCH_CERTIFICATION_ROTATION_REQUEST:
+    "finora:control-center:open-branch-certification-rotation-request",
+
+  ISSUE_AND_EXPORT_BRANCH_CERTIFICATION_ROTATION:
+    "finora:control-center:issue-and-export-branch-certification-rotation",
   OPEN_INSTALLATION_ENROLLMENT_REQUEST:
     "finora:control-center:open-installation-enrollment-request",
 
@@ -754,6 +772,255 @@ export function registerFinoraControlCenterHandlers():
     },
   );
 
+  // ----------------------------------------------------------
+  // BRANCH CERTIFICATION ROTATION REQUEST — OPEN + VERIFY
+  // ----------------------------------------------------------
+  ipcMain.handle(
+    FINORA_CONTROL_CENTER_IPC_CHANNELS
+      .OPEN_BRANCH_CERTIFICATION_ROTATION_REQUEST,
+    async (
+      event,
+    ) => {
+
+      if (
+        !isTrustedFinoraControlCenterRenderer(
+          event.senderFrame,
+        )
+      ) {
+        return failure(
+          "FINORA Branch Certification Rotation Request access is restricted to the dedicated Control Center renderer.",
+        );
+      }
+
+      const parentWindow =
+        BrowserWindow.fromWebContents(
+          event.sender,
+        );
+
+      if (
+        !parentWindow ||
+        parentWindow.isDestroyed()
+      ) {
+        return failure(
+          "The FINORA Control Center window is unavailable for Branch Certification Rotation Request selection.",
+        );
+      }
+
+      if (
+        event.senderFrame !==
+          parentWindow.webContents.mainFrame
+      ) {
+        return failure(
+          "FINORA Branch Certification Rotation Request access is restricted to the dedicated Control Center main frame.",
+        );
+      }
+
+      const openResult =
+        await openVerifiedFinoraBranchCertificationRotationRequest(
+          parentWindow,
+        );
+
+      if (
+        !openResult.success
+      ) {
+        return failure(
+          openResult.error,
+        );
+      }
+
+      if (
+        openResult.cancelled
+      ) {
+        return success({
+          cancelled:
+            true as const,
+        });
+      }
+
+      const verifiedRequest =
+        openResult.verifiedRequest;
+
+      rememberFinoraVerifiedBranchCertificationRotationRequest(
+        event.sender,
+        verifiedRequest,
+      );
+
+      return success({
+        cancelled:
+          false as const,
+
+        fileName:
+          openResult.fileName,
+
+        bytesRead:
+          openResult.bytesRead,
+
+        requestId:
+          verifiedRequest.request.requestId,
+
+        ownerId:
+          verifiedRequest.request.ownerId,
+
+        businessId:
+          verifiedRequest.request.businessId,
+
+        branchId:
+          verifiedRequest.request.branchId,
+
+        requestingInstallationId:
+          verifiedRequest.request.requestingInstallationId,
+
+        requestedAt:
+          verifiedRequest.request.requestedAt,
+
+        previousCertificationKeyId:
+          verifiedRequest.request.previousCertificationKeyId,
+
+        replacementCertificationKeyId:
+          verifiedRequest.request.replacementCertificationPublicKey.keyId,
+      });
+    },
+  );
+
+  // ----------------------------------------------------------
+  // BRANCH CERTIFICATION ROTATION — ISSUE + EXPORT + COMMIT
+  //
+  // Verified native possession evidence is consumed before
+  // asynchronous issuance starts.
+  //
+  // Before export:
+  //   cancellation/failure restores the verified request only
+  //   if no newer request has replaced it.
+  //
+  // After export:
+  //   request is permanently consumed even if Registry commit
+  //   fails, because a signed authority now exists externally.
+  // ----------------------------------------------------------
+  ipcMain.handle(
+    FINORA_CONTROL_CENTER_IPC_CHANNELS
+      .ISSUE_AND_EXPORT_BRANCH_CERTIFICATION_ROTATION,
+    async (
+      event,
+    ) => {
+
+      if (
+        !isTrustedFinoraControlCenterRenderer(
+          event.senderFrame,
+        )
+      ) {
+        return failure(
+          "FINORA Branch Certification Rotation issuance is restricted to the dedicated Control Center renderer.",
+        );
+      }
+
+      const parentWindow =
+        BrowserWindow.fromWebContents(
+          event.sender,
+        );
+
+      if (
+        !parentWindow ||
+        parentWindow.isDestroyed()
+      ) {
+        return failure(
+          "The FINORA Control Center window is unavailable for Branch Certification Rotation issuance.",
+        );
+      }
+
+      if (
+        event.senderFrame !==
+          parentWindow.webContents.mainFrame
+      ) {
+        return failure(
+          "FINORA Branch Certification Rotation issuance is restricted to the dedicated Control Center main frame.",
+        );
+      }
+
+      const verifiedRequest =
+        takeFinoraVerifiedBranchCertificationRotationRequest(
+          event.sender,
+        );
+
+      if (
+        verifiedRequest ===
+          undefined
+      ) {
+        return failure(
+          "Open and cryptographically verify a Branch Certification Rotation Request before issuing its signed authority.",
+        );
+      }
+
+      let authorityExported =
+        false;
+
+      try {
+        const result =
+          await issueExportAndCommitFinoraBranchCertificationRotation(
+            parentWindow,
+            verifiedRequest,
+          );
+
+        authorityExported =
+          result.exported;
+
+        if (
+          !result.success
+        ) {
+          return failure(
+            result.error,
+          );
+        }
+
+        if (
+          result.cancelled
+        ) {
+          return success({
+            cancelled:
+              true as const,
+          });
+        }
+
+        return success({
+          cancelled:
+            false as const,
+
+          fileName:
+            result.fileName,
+
+          bytesWritten:
+            result.bytesWritten,
+
+          packageId:
+            result.packageId,
+
+          requestId:
+            result.requestId,
+
+          sequence:
+            result.sequence,
+
+          registryUpdated:
+            result.registryUpdated,
+        });
+      }
+      finally {
+
+        if (
+          !authorityExported &&
+          !event.sender.isDestroyed() &&
+          getFinoraVerifiedBranchCertificationRotationRequest(
+            event.sender,
+          ) ===
+            undefined
+        ) {
+          rememberFinoraVerifiedBranchCertificationRotationRequest(
+            event.sender,
+            verifiedRequest,
+          );
+        }
+      }
+    },
+  );
   // ----------------------------------------------------------
   // INSTALLATION ENROLLMENT REQUEST
   // ----------------------------------------------------------

@@ -854,6 +854,54 @@ type FinoraControlBundleImportResult =
         string;
     };
 
+type FinoraBranchCertificationRotationAuthorityApplyBridgeResult =
+  | {
+      success:
+        true;
+
+      cancelled:
+        true;
+    }
+  | {
+      success:
+        true;
+
+      cancelled:
+        false;
+
+      fileName:
+        string;
+
+      bytesRead:
+        number;
+
+      data: {
+        requestId:
+          string;
+
+        packageId:
+          string;
+
+        sequence:
+          number;
+
+        replacementCertificationKeyId:
+          string;
+
+        appliedAt:
+          string;
+
+        pendingDestroyed:
+          true;
+      };
+    }
+  | {
+      success:
+        false;
+
+      error:
+        string;
+    };
 interface FinoraControlBridge {
   getInstallation:
     () =>
@@ -935,6 +983,29 @@ interface FinoraControlBridge {
         FinoraWalletRechargeRequestExportResult
       >;
 
+  prepareBranchCertificationRotation:
+    (
+      request:
+        FinoraBranchCertificationRotationPrepareRequest,
+    ) =>
+      Promise<
+        FinoraBranchCertificationRotationPrepareBridgeResult
+      >;
+
+  exportBranchCertificationRotationRequest:
+    () =>
+      Promise<
+        FinoraBranchCertificationRotationRequestExportBridgeResult
+      >;
+
+  importApplyBranchCertificationRotationAuthority:
+    (
+      request:
+        FinoraBranchCertificationRotationPrepareRequest,
+    ) =>
+      Promise<
+        FinoraBranchCertificationRotationAuthorityApplyBridgeResult
+      >;
   evaluateBranchAccess:
     (
       request:
@@ -1270,6 +1341,115 @@ const USB_CHANNELS = {
 // CONTROL IPC CHANNELS
 // ============================================================
 
+// ============================================================
+// BRANCH CERTIFICATION ROTATION OWNER BRIDGE
+// ============================================================
+
+interface FinoraBranchCertificationRotationPrepareRequest {
+  sessionId:
+    string;
+
+  password:
+    string;
+
+  securityCode:
+    string;
+}
+
+type FinoraBranchCertificationRotationPrepareBridgeResult =
+  | {
+      success:
+        true;
+
+      data: {
+        requestId:
+          string;
+
+        requestedAt:
+          string;
+
+        ownerId:
+          string;
+
+        businessId:
+          string;
+
+        branchId:
+          string;
+
+        storageMode:
+          "LOCAL" | "USB";
+
+        authStateId:
+          string;
+
+        authGeneration:
+          number;
+
+        portableAuthFingerprintAlgorithm:
+          "SHA-256";
+
+        portableAuthFingerprint:
+          string;
+
+        previousCertificationKeyId?:
+          string;
+
+        replacementCertificationKeyId:
+          string;
+
+        recoveredExistingPending:
+          boolean;
+      };
+    }
+  | {
+      success:
+        false;
+
+      errorCode?:
+        string;
+
+      error:
+        string;
+    };
+
+type FinoraBranchCertificationRotationRequestExportBridgeResult =
+  | {
+      success:
+        true;
+
+      cancelled:
+        true;
+    }
+  | {
+      success:
+        true;
+
+      cancelled:
+        false;
+
+      fileName:
+        string;
+
+      bytesWritten:
+        number;
+
+      requestId:
+        string;
+
+      branchId:
+        string;
+
+      replacementCertificationKeyId:
+        string;
+    }
+  | {
+      success:
+        false;
+
+      error:
+        string;
+    };
 const CONTROL_CHANNELS = {
 
   GET_INSTALLATION:
@@ -1298,6 +1478,14 @@ const CONTROL_CHANNELS = {
 
   EXPORT_WALLET_RECHARGE_REQUEST:
     "finora:control:export-wallet-recharge-request",
+  PREPARE_BRANCH_CERTIFICATION_ROTATION:
+    "finora:control:prepare-branch-certification-rotation",
+
+  EXPORT_BRANCH_CERTIFICATION_ROTATION_REQUEST:
+    "finora:control:export-branch-certification-rotation-request",
+
+  IMPORT_APPLY_BRANCH_CERTIFICATION_ROTATION_AUTHORITY:
+    "finora:control:import-apply-branch-certification-rotation-authority",
   HAS_ACTIVE_STORAGE_ENTITLEMENT:
     "finora:control:has-active-storage-entitlement",
 
@@ -2018,6 +2206,41 @@ const controlBridge:
         FinoraWalletRechargeRequestExportResult
       >,
 
+  // ----------------------------------------------------------
+  // BRANCH CERTIFICATION ROTATION
+  // ----------------------------------------------------------
+
+  prepareBranchCertificationRotation:
+    (
+      request:
+        FinoraBranchCertificationRotationPrepareRequest,
+    ) =>
+      ipcRenderer.invoke(
+        CONTROL_CHANNELS.PREPARE_BRANCH_CERTIFICATION_ROTATION,
+        request,
+      ) as Promise<
+        FinoraBranchCertificationRotationPrepareBridgeResult
+      >,
+
+  exportBranchCertificationRotationRequest:
+    () =>
+      ipcRenderer.invoke(
+        CONTROL_CHANNELS.EXPORT_BRANCH_CERTIFICATION_ROTATION_REQUEST,
+      ) as Promise<
+        FinoraBranchCertificationRotationRequestExportBridgeResult
+      >,
+
+  importApplyBranchCertificationRotationAuthority:
+    (
+      request:
+        FinoraBranchCertificationRotationPrepareRequest,
+    ) =>
+      ipcRenderer.invoke(
+        CONTROL_CHANNELS.IMPORT_APPLY_BRANCH_CERTIFICATION_ROTATION_AUTHORITY,
+        request,
+      ) as Promise<
+        FinoraBranchCertificationRotationAuthorityApplyBridgeResult
+      >,
   evaluateBranchAccess:
     (
       request:
@@ -2350,6 +2573,99 @@ const usbReplacementBridge:
   };
 
 // ============================================================
+// FRESH-DEVICE RUNTIME AUTHORITY SEED BRIDGE
+//
+// Renderer supplies only:
+// - authenticated sessionId
+// - Password
+// - Security Code
+//
+// Scope, storage mode, signing authority and filesystem roots
+// remain Electron-main-owned.
+// ============================================================
+
+const FINORA_FRESH_DEVICE_RUNTIME_AUTHORITY_SEED_CHANNEL =
+  "finora:fresh-device-runtime-authority:seed" as const;
+
+interface FinoraFreshDeviceRuntimeAuthoritySeedRequest {
+  sessionId:
+    string;
+
+  password:
+    string;
+
+  securityCode:
+    string;
+}
+
+interface FinoraFreshDeviceRuntimeAuthoritySeedSuccessData {
+  authorityId:
+    string;
+
+  storageMode:
+    | "LOCAL"
+    | "USB";
+
+  portableAuthFingerprint:
+    string;
+
+  issuedAt:
+    string;
+}
+
+type FinoraFreshDeviceRuntimeAuthoritySeedResult =
+  | {
+      success:
+        true;
+
+      data:
+        FinoraFreshDeviceRuntimeAuthoritySeedSuccessData;
+    }
+  | {
+      success:
+        false;
+
+      errorCode:
+        string;
+
+      error:
+        string;
+    };
+
+interface FinoraFreshDeviceRuntimeAuthoritySeedBridge {
+  seed(
+    request:
+      FinoraFreshDeviceRuntimeAuthoritySeedRequest,
+  ):
+    Promise<
+      FinoraFreshDeviceRuntimeAuthoritySeedResult
+    >;
+}
+
+const freshDeviceRuntimeAuthoritySeedBridge:
+  FinoraFreshDeviceRuntimeAuthoritySeedBridge = {
+  seed:
+    (
+      request:
+        FinoraFreshDeviceRuntimeAuthoritySeedRequest,
+    ) =>
+      ipcRenderer.invoke(
+        FINORA_FRESH_DEVICE_RUNTIME_AUTHORITY_SEED_CHANNEL,
+        {
+          sessionId:
+            request.sessionId,
+
+          password:
+            request.password,
+
+          securityCode:
+            request.securityCode,
+        },
+      ) as Promise<
+        FinoraFreshDeviceRuntimeAuthoritySeedResult
+      >,
+  };
+// ============================================================
 // PORTABLE BRANCH AUTH BACKUP BRIDGE
 //
 // Renderer supplies only:
@@ -2637,6 +2953,9 @@ contextBridge.exposeInMainWorld(
 
     usbReplacement:
       usbReplacementBridge,
+
+    freshDeviceRuntimeAuthority:
+      freshDeviceRuntimeAuthoritySeedBridge,
 
     portableBranchAuthBackup:
       portableBranchAuthBackupBridge,

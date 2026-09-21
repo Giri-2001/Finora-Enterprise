@@ -259,6 +259,53 @@ export interface FinoraControlCenterBranchLastReportedWallet {
 }
 
 // ============================================================
+// BRANCH CERTIFICATION ROTATION EVIDENCE
+//
+// Durable evidence of the most recent successful Control Center
+// certification-authority transition.
+//
+// This is required to distinguish an exact idempotent retry from
+// a stale/conflicting rotation after the Registry already holds
+// the replacement authority.
+// ============================================================
+
+export interface FinoraControlCenterBranchCertificationRotationEvidence {
+
+  sourcePackageId:
+    string;
+
+  sequence:
+    number;
+
+  requestingInstallationId:
+    string;
+
+  requestingBindingKeyId:
+    string;
+
+  requestingFingerprintAlgorithm:
+    "SHA-256";
+
+  requestingPublicKeyFingerprint:
+    string;
+
+  legacyCertificationAdoption?:
+    true;
+
+  previousCertificationPublicKey?:
+    FinoraBranchCertificationPublicKeyV1;
+
+  replacementCertificationPublicKey:
+    FinoraBranchCertificationPublicKeyV1;
+
+  rotatedAt:
+    string;
+
+  schemaVersion:
+    1;
+}
+
+// ============================================================
 // BRANCH REGISTRY RECORD
 // ============================================================
 
@@ -271,14 +318,19 @@ export interface FinoraControlCenterBranchRegistryRecord {
     FinoraControlCenterBranchAuthorizedDevice[];
 
   /*
-   * Immutable branch-held public certification authority.
+   * Branch-held public certification authority.
+   *
+   * Registration treats an existing pin as immutable. The only
+   * permitted replacement is the dedicated cryptographically
+   * authorized Branch Certification Rotation path.
    *
    * Legacy Registry V2 records may legitimately omit this field.
-   * It may only be introduced from cryptographically verified
-   * Enrollment Request V2 evidence.
    */
   branchCertificationPublicKey?:
     FinoraBranchCertificationPublicKeyV1;
+
+  branchCertificationRotation?:
+    FinoraControlCenterBranchCertificationRotationEvidence;
 
   profile?:
     FinoraControlCenterBranchDisplayProfile;

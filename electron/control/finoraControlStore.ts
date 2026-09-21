@@ -76,6 +76,17 @@ import type {
 } from "./finoraPortableBranchAuthEnrollmentTransaction.js";
 
 import {
+  FINORA_PORTABLE_BRANCH_AUTH_ENROLLMENT_TRANSACTION_ID_PREFIX,
+  FINORA_PORTABLE_BRANCH_AUTH_ENROLLMENT_TRANSACTION_SCHEMA_VERSION,
+  computeFinoraPortableBranchAuthEnvelopeSha256,
+} from "./finoraPortableBranchAuthEnrollmentTransaction.js";
+
+import type {
+  FinoraPortableBranchAuthEnvelopeV1,
+  FinoraPortableBranchAuthPayloadV1,
+} from "./finoraPortableBranchAuthContract.js";
+
+import {
   canAdvanceFinoraPortableBranchAuthCredentialRotationTransaction,
   validateFinoraPortableBranchAuthCredentialRotationTransactionV1,
 } from "./finoraPortableBranchAuthCredentialRotationTransaction.js";
@@ -117,6 +128,18 @@ function hasExactPortableBranchAuthEnrollmentTransactionKeys(
       "branchCertificationProvenance",
     );
 
+  const hasCertificationRotationProvenance =
+    Object.prototype.hasOwnProperty.call(
+      value,
+      "branchCertificationRotationProvenance",
+    );
+
+  const hasCertificationRotatedAt =
+    Object.prototype.hasOwnProperty.call(
+      value,
+      "certificationRotatedAt",
+    );
+
   if (
     status === "PORTABLE_WRITTEN" ||
     status === "CONTROL_APPLIED" ||
@@ -136,6 +159,14 @@ function hasExactPortableBranchAuthEnrollmentTransactionKeys(
 
   if (hasCertificationProvenance) {
     expectedKeys.push("branchCertificationProvenance");
+  }
+
+  if (hasCertificationRotationProvenance) {
+    expectedKeys.push("branchCertificationRotationProvenance");
+  }
+
+  if (hasCertificationRotatedAt) {
+    expectedKeys.push("certificationRotatedAt");
   }
 
   if (
@@ -4346,6 +4377,897 @@ export async function commitFinoraDeviceRevocationReplay(
   return success({ committed: true });
 }
 
+// ============================================================
+// BRANCH CERTIFICATION ROTATION ATOMIC CONTROL-STORE APPLY
+//
+// This is deliberately a distinct replay/sequence namespace from
+// BRANCH_ACCESS. One encrypted Control Store write commits:
+//
+// 1. globally applied signed package evidence
+// 2. BRANCH_CERTIFICATION_ROTATION sequence high-water
+// 3. current local Branch Certification provenance
+//
+// Portable Auth CAS happens outside this store before this durable
+// evidence commit. Pending private-key custody is destroyed only
+// after this mutation succeeds or equivalent durable final state
+// is proven by the recovery coordinator.
+// ============================================================
+
+export interface FinoraBranchCertificationRotationControlStateInput {
+  packageId:
+    string;
+
+  issuerId:
+    string;
+
+  purpose:
+    "BRANCH_CERTIFICATION_ROTATION";
+
+  sequence:
+    number;
+
+  target: {
+    ownerId:
+      string;
+
+    businessId:
+      string;
+
+    branchId:
+      string;
+
+    installationId:
+      string;
+  };
+
+  storageMode:
+    "LOCAL" | "USB";
+
+  requestId:
+    string;
+
+  replacementCertificationKeyId:
+    string;
+
+  /**
+   * Compatibility-only evidence for a branch whose
+   * authenticated Portable Auth retains the native-bound
+   * 0+0 migration evidence but predates durable enrollment
+   * transactions.
+   */
+  legacyEnrollmentRecovery?: {
+    portableEnvelope:
+      FinoraPortableBranchAuthEnvelopeV1;
+
+    payload:
+      FinoraPortableBranchAuthPayloadV1;
+  };
+
+  appliedAt:
+    string;
+}
+
+export interface FinoraBranchCertificationRotationControlStateResult {
+  committed:
+    true;
+
+  updatedEnrollmentTransactions:
+    number;
+}
+
+export async function applyFinoraBranchCertificationRotationControlState(
+  input:
+    FinoraBranchCertificationRotationControlStateInput,
+): Promise<
+  FinoraControlStoreResult<
+    FinoraBranchCertificationRotationControlStateResult
+  >
+> {
+
+  if (
+    !isNonEmptyString(
+      input.packageId,
+    ) ||
+    !isNonEmptyString(
+      input.issuerId,
+    ) ||
+    input.purpose !==
+      "BRANCH_CERTIFICATION_ROTATION" ||
+    !Number.isSafeInteger(
+      input.sequence,
+    ) ||
+    input.sequence <=
+      0 ||
+    !isControlTimestamp(
+      input.appliedAt,
+    ) ||
+    !isNonEmptyString(
+      input.target.ownerId,
+    ) ||
+    !isNonEmptyString(
+      input.target.businessId,
+    ) ||
+    !isNonEmptyString(
+      input.target.branchId,
+    ) ||
+    !isNonEmptyString(
+      input.target.installationId,
+    ) ||
+    (
+      input.storageMode !==
+        "LOCAL" &&
+      input.storageMode !==
+        "USB"
+    ) ||
+    !isNonEmptyString(
+      input.requestId,
+    ) ||
+    !isNonEmptyString(
+      input.replacementCertificationKeyId,
+    )
+  ) {
+    return failure(
+      "A valid FINORA Branch Certification Rotation Control State input is required.",
+    );
+  }
+
+  const currentResult =
+    await readFinoraControlStore();
+
+  if (
+    !currentResult.success ||
+    !currentResult.data
+  ) {
+    return failure(
+      currentResult.error ??
+        "Unable to load the FINORA Control Store.",
+    );
+  }
+
+  const controlStore =
+    currentResult.data;
+
+  const installation =
+    controlStore.installation;
+
+  if (
+    installation ===
+      undefined ||
+    installation.installationId !==
+      input.target.installationId ||
+    installation.ownerId !==
+      input.target.ownerId ||
+    installation.businessId !==
+      input.target.businessId ||
+    installation.branchId !==
+      input.target.branchId
+  ) {
+    return failure(
+      "FINORA Branch Certification Rotation target does not match this installation.",
+    );
+  }
+
+  const appliedPackages = [
+    ...(
+      controlStore.appliedControlPackages ??
+      []
+    ),
+  ];
+
+  const sequenceStates = [
+    ...(
+      controlStore.controlSequences ??
+      []
+    ),
+  ];
+
+  const replayDecision =
+    evaluateFinoraControlReplay(
+      {
+        packageId:
+          input.packageId,
+
+        issuerId:
+          input.issuerId,
+
+        purpose:
+          input.purpose,
+
+        sequence:
+          input.sequence,
+
+        ownerId:
+          input.target.ownerId,
+
+        businessId:
+          input.target.businessId,
+
+        branchId:
+          input.target.branchId,
+
+        installationId:
+          input.target.installationId,
+      },
+      appliedPackages,
+      sequenceStates,
+    );
+
+  const replayedExactPackage =
+    !replayDecision.accepted &&
+    replayDecision.reason ===
+      "REPLAYED_PACKAGE";
+
+  if (
+    !replayDecision.accepted &&
+    !replayedExactPackage
+  ) {
+    return failure(
+      `${replayDecision.reason}: ${replayDecision.error}`,
+    );
+  }
+
+  const enrollmentTransactions = [
+    ...(
+      controlStore
+        .portableBranchAuthEnrollmentTransactions ??
+      []
+    ),
+  ];
+
+  const matchingIndexes:
+    number[] =
+    [];
+
+  for (
+    let index =
+      0;
+    index <
+      enrollmentTransactions.length;
+    index +=
+      1
+  ) {
+    const transaction =
+      enrollmentTransactions[
+        index
+      ];
+
+    if (
+      transaction.status ===
+        "COMPLETE" &&
+      transaction.ownerId ===
+        input.target.ownerId &&
+      transaction.businessId ===
+        input.target.businessId &&
+      transaction.branchId ===
+        input.target.branchId &&
+      transaction.storageMode ===
+        input.storageMode
+    ) {
+      matchingIndexes.push(
+        index,
+      );
+    }
+  }
+
+  if (
+    matchingIndexes.length ===
+      0
+  ) {
+    // ========================================================
+    // LEGACY ZERO-PROVENANCE ENROLLMENT RECOVERY
+    // ========================================================
+
+    const legacyRecovery =
+      input.legacyEnrollmentRecovery;
+
+    if (!legacyRecovery) {
+      return failure(
+        "FINORA Branch Certification Rotation could not resolve durable Portable Branch Auth enrollment provenance.",
+      );
+    }
+
+    const recoveryPayload =
+      legacyRecovery.payload;
+
+    const recoveryEvidence =
+      recoveryPayload
+        .sourceAuthorizationVerificationEvidence;
+
+    if (
+      !(
+        "legacyNativeBoundMigrationEvidence" in
+        recoveryEvidence
+      )
+    ) {
+      return failure(
+        "FINORA Branch Certification Rotation legacy enrollment recovery requires native-bound migration evidence.",
+      );
+    }
+
+    const migrationEvidence =
+      recoveryEvidence
+        .legacyNativeBoundMigrationEvidence;
+
+    if (
+      recoveryEvidence.authorizationId !==
+        recoveryPayload.sourceAuthorizationId ||
+      migrationEvidence.schemaVersion !==
+        1 ||
+      migrationEvidence.migrationMethod !==
+        "PASSWORD_AND_ACTIVE_NATIVE_STORAGE_ENTITLEMENT" ||
+      migrationEvidence.sourceAuthorizationId !==
+        recoveryPayload.sourceAuthorizationId ||
+      migrationEvidence.ownerId !==
+        recoveryPayload.ownerId ||
+      migrationEvidence.businessId !==
+        recoveryPayload.businessId ||
+      migrationEvidence.branchId !==
+        recoveryPayload.branchId ||
+      migrationEvidence.userId !==
+        recoveryPayload.userId ||
+      migrationEvidence.username !==
+        recoveryPayload.username ||
+      migrationEvidence.storageMode !==
+        recoveryPayload.storageMode ||
+      migrationEvidence.authGeneration !==
+        recoveryPayload.authGeneration ||
+      migrationEvidence.installationId !==
+        input.target.installationId ||
+      recoveryPayload.ownerId !==
+        input.target.ownerId ||
+      recoveryPayload.businessId !==
+        input.target.businessId ||
+      recoveryPayload.branchId !==
+        input.target.branchId ||
+      recoveryPayload.storageMode !==
+        input.storageMode
+    ) {
+      return failure(
+        "FINORA Branch Certification Rotation legacy enrollment recovery lineage is invalid.",
+      );
+    }
+
+    if (
+      enrollmentTransactions.some(
+        (transaction) =>
+          transaction.sourceAuthorizationId ===
+            recoveryPayload.sourceAuthorizationId,
+      )
+    ) {
+      return failure(
+        "FINORA Branch Certification Rotation legacy enrollment recovery found conflicting durable enrollment lineage.",
+      );
+    }
+
+    const recoveryCredentials =
+      (controlStore.branchCredentials ?? []).filter(
+        (credential) =>
+          credential.status ===
+            "ACTIVE" &&
+          credential.sourceAuthorizationId ===
+            recoveryPayload.sourceAuthorizationId &&
+          credential.ownerId ===
+            recoveryPayload.ownerId &&
+          credential.businessId ===
+            recoveryPayload.businessId &&
+          credential.branchId ===
+            recoveryPayload.branchId &&
+          credential.userId ===
+            recoveryPayload.userId &&
+          credential.username ===
+            recoveryPayload.username &&
+          credential.canonicalUsername ===
+            recoveryPayload.canonicalUsername &&
+          credential.fullName ===
+            recoveryPayload.fullName &&
+          credential.role ===
+            recoveryPayload.role &&
+          credential.storageMode ===
+            recoveryPayload.storageMode &&
+          credential.dataContext ===
+            recoveryPayload.dataContext &&
+          credential.demoId ===
+            recoveryPayload.demoId &&
+          credential.authGeneration ===
+            recoveryPayload.authGeneration &&
+          credential.createdAt ===
+            recoveryPayload.createdAt,
+      );
+
+    if (
+      recoveryCredentials.length !==
+        1
+    ) {
+      return failure(
+        "FINORA Branch Certification Rotation legacy enrollment recovery requires exactly one matching ACTIVE credential.",
+      );
+    }
+
+    const recoveryCredential =
+      recoveryCredentials[0];
+
+    const passwordVerifierMatches =
+      recoveryCredential.verifier.algorithm ===
+        "SCRYPT" &&
+      recoveryCredential.verifier.saltEncoding ===
+        "BASE64" &&
+      recoveryCredential.verifier.salt ===
+        recoveryPayload.passwordVerifier.salt &&
+      recoveryCredential.verifier.derivedKeyEncoding ===
+        "BASE64" &&
+      recoveryCredential.verifier.derivedKey ===
+        recoveryPayload.passwordVerifier.verifier &&
+      recoveryCredential.verifier.keyLength ===
+        32 &&
+      recoveryCredential.verifier.N ===
+        recoveryPayload.passwordVerifier.N &&
+      recoveryCredential.verifier.r ===
+        recoveryPayload.passwordVerifier.r &&
+      recoveryCredential.verifier.p ===
+        recoveryPayload.passwordVerifier.p;
+
+    const securityVerifier =
+      recoveryCredential.securityVerifier;
+
+    const securityVerifierMatches =
+      securityVerifier !==
+        undefined &&
+      securityVerifier.algorithm ===
+        "SCRYPT" &&
+      securityVerifier.saltEncoding ===
+        "BASE64" &&
+      securityVerifier.salt ===
+        recoveryPayload.securityVerifier.salt &&
+      securityVerifier.derivedKeyEncoding ===
+        "BASE64" &&
+      securityVerifier.derivedKey ===
+        recoveryPayload.securityVerifier.verifier &&
+      securityVerifier.keyLength ===
+        32 &&
+      securityVerifier.N ===
+        recoveryPayload.securityVerifier.N &&
+      securityVerifier.r ===
+        recoveryPayload.securityVerifier.r &&
+      securityVerifier.p ===
+        recoveryPayload.securityVerifier.p;
+
+    if (
+      !passwordVerifierMatches ||
+      !securityVerifierMatches
+    ) {
+      return failure(
+        "FINORA Branch Certification Rotation legacy enrollment recovery credential verifiers do not match authenticated Portable Auth.",
+      );
+    }
+
+    const recoveryEntitlements =
+      (
+        controlStore.storageEntitlements ??
+        []
+      ).filter(
+        (item) =>
+          item.status ===
+            "ACTIVE" &&
+          item.userId ===
+            recoveryCredential.userId &&
+          item.ownerId ===
+            recoveryCredential.ownerId &&
+          item.businessId ===
+            recoveryCredential.businessId &&
+          item.branchId ===
+            recoveryCredential.branchId &&
+          item.storageMode ===
+            recoveryCredential.storageMode &&
+          item.installationId ===
+            migrationEvidence.installationId &&
+          item.bindingKeyId ===
+            migrationEvidence.bindingKeyId &&
+          item.fingerprintAlgorithm ===
+            migrationEvidence.fingerprintAlgorithm &&
+          item.publicKeyFingerprint ===
+            migrationEvidence.publicKeyFingerprint,
+      );
+
+    if (
+      recoveryEntitlements.length !==
+        1
+    ) {
+      return failure(
+        "FINORA Branch Certification Rotation legacy enrollment recovery requires exactly one matching ACTIVE native-bound Storage Entitlement.",
+      );
+    }
+
+    const createdAtMs =
+      Date.parse(
+        recoveryPayload.createdAt,
+      );
+
+    const migratedAtMs =
+      Date.parse(
+        migrationEvidence.migratedAt,
+      );
+
+    const appliedAtMs =
+      Date.parse(
+        input.appliedAt,
+      );
+
+    if (
+      !Number.isFinite(createdAtMs) ||
+      !Number.isFinite(migratedAtMs) ||
+      !Number.isFinite(appliedAtMs) ||
+      createdAtMs >
+        migratedAtMs ||
+      migratedAtMs >
+        appliedAtMs
+    ) {
+      return failure(
+        "FINORA Branch Certification Rotation legacy enrollment recovery timestamps are invalid.",
+      );
+    }
+
+    const recoveredTransaction:
+      FinoraPortableBranchAuthEnrollmentTransactionV1 =
+      {
+        schemaVersion:
+          FINORA_PORTABLE_BRANCH_AUTH_ENROLLMENT_TRANSACTION_SCHEMA_VERSION,
+
+        transactionId:
+          `${FINORA_PORTABLE_BRANCH_AUTH_ENROLLMENT_TRANSACTION_ID_PREFIX}LEGACY-RECOVERY-${input.requestId}`,
+
+        sourceAuthorizationId:
+          recoveryPayload.sourceAuthorizationId,
+
+        sourceAuthorizationVerificationEvidence:
+          structuredClone(
+            recoveryEvidence,
+          ),
+
+        canonicalUsername:
+          recoveryPayload.canonicalUsername,
+
+        ownerId:
+          recoveryPayload.ownerId,
+
+        businessId:
+          recoveryPayload.businessId,
+
+        branchId:
+          recoveryPayload.branchId,
+
+        storageMode:
+          recoveryPayload.storageMode,
+
+        status:
+          "COMPLETE",
+
+        credential:
+          structuredClone(
+            recoveryCredential,
+          ),
+
+        portableEnvelope:
+          structuredClone(
+            legacyRecovery.portableEnvelope,
+          ),
+
+        portableEnvelopeSha256:
+          computeFinoraPortableBranchAuthEnvelopeSha256(
+            legacyRecovery.portableEnvelope,
+          ),
+
+        createdAt:
+          recoveryPayload.createdAt,
+
+        portableWrittenAt:
+          migrationEvidence.migratedAt,
+
+        controlAppliedAt:
+          migrationEvidence.migratedAt,
+
+        completedAt:
+          input.appliedAt,
+
+        updatedAt:
+          input.appliedAt,
+      };
+
+    try {
+      validateFinoraPortableBranchAuthEnrollmentTransactionV1(
+        recoveredTransaction,
+      );
+    }
+    catch (error) {
+      return failure(
+        error instanceof Error
+          ? `FINORA Branch Certification Rotation legacy enrollment recovery is invalid: ${error.message}`
+          : "FINORA Branch Certification Rotation legacy enrollment recovery is invalid.",
+      );
+    }
+
+    enrollmentTransactions.push(
+      recoveredTransaction,
+    );
+
+    matchingIndexes.push(
+      enrollmentTransactions.length -
+        1,
+    );
+  }
+
+  /*
+   * Crash recovery after the durable Control Store write:
+   *
+   * Generic replay policy correctly rejects the same packageId.
+   * We convert that rejection to idempotent success only when
+   * every durable field proves that this exact rotation package
+   * already completed for this exact installation and replacement
+   * certification key.
+   */
+  if (
+    replayedExactPackage
+  ) {
+    const appliedPackage =
+      appliedPackages.find(
+        (
+          item,
+        ) =>
+          item.packageId ===
+            input.packageId,
+      );
+
+    const sequenceState =
+      sequenceStates.find(
+        (
+          item,
+        ) =>
+          item.issuerId ===
+            input.issuerId &&
+          item.purpose ===
+            input.purpose &&
+          item.ownerId ===
+            input.target.ownerId &&
+          item.businessId ===
+            input.target.businessId &&
+          item.branchId ===
+            input.target.branchId &&
+          item.installationId ===
+            input.target.installationId,
+      );
+
+    const packageMatches =
+      appliedPackage !==
+        undefined &&
+      appliedPackage.issuerId ===
+        input.issuerId &&
+      appliedPackage.purpose ===
+        input.purpose &&
+      appliedPackage.sequence ===
+        input.sequence &&
+      appliedPackage.ownerId ===
+        input.target.ownerId &&
+      appliedPackage.businessId ===
+        input.target.businessId &&
+      appliedPackage.branchId ===
+        input.target.branchId &&
+      appliedPackage.installationId ===
+        input.target.installationId;
+
+    const sequenceMatches =
+      sequenceState !==
+        undefined &&
+      sequenceState.lastSequence ===
+        input.sequence;
+
+    const provenanceMatches =
+      matchingIndexes.every(
+        (
+          transactionIndex,
+        ) => {
+          const transaction =
+            enrollmentTransactions[
+              transactionIndex
+            ];
+
+          return (
+            transaction.branchCertificationRotationProvenance !==
+              undefined &&
+            transaction.branchCertificationRotationProvenance.requestId ===
+              input.requestId &&
+            transaction.branchCertificationRotationProvenance.responseId ===
+              input.packageId &&
+            transaction.branchCertificationRotationProvenance.certificationKeyId ===
+              input.replacementCertificationKeyId
+          );
+        },
+      );
+
+    if (
+      packageMatches &&
+      sequenceMatches &&
+      provenanceMatches
+    ) {
+      return success({
+        committed:
+          true,
+
+        updatedEnrollmentTransactions:
+          matchingIndexes.length,
+      });
+    }
+
+    return failure(
+      "FINORA Branch Certification Rotation replay conflicts with durable Control Store evidence.",
+    );
+  }
+
+  /*
+   * Every exact COMPLETE enrollment record for this authoritative
+   * branch/storage lineage is moved to the same current
+   * certification key. This intentionally repairs legacy absence
+   * or ambiguity without guessing an old key ID: the signed
+   * Control Center authority and native target verification are
+   * the authority for the replacement.
+   */
+  for (
+    const transactionIndex of
+    matchingIndexes
+  ) {
+    const transaction =
+      enrollmentTransactions[
+        transactionIndex
+      ];
+
+    enrollmentTransactions[
+      transactionIndex
+    ] = {
+      ...transaction,
+
+      branchCertificationRotationProvenance: {
+        requestId:
+          input.requestId,
+
+        responseId:
+          input.packageId,
+
+        certificationKeyId:
+          input.replacementCertificationKeyId,
+      },
+
+      certificationRotatedAt:
+        input.appliedAt,
+
+      updatedAt:
+        input.appliedAt,
+    };
+  }
+
+  appliedPackages.push({
+    packageId:
+      input.packageId,
+
+    issuerId:
+      input.issuerId,
+
+    purpose:
+      input.purpose,
+
+    sequence:
+      input.sequence,
+
+    ownerId:
+      input.target.ownerId,
+
+    businessId:
+      input.target.businessId,
+
+    branchId:
+      input.target.branchId,
+
+    installationId:
+      input.target.installationId,
+
+    appliedAt:
+      input.appliedAt,
+  });
+
+  const sequenceIndex =
+    sequenceStates.findIndex(
+      (
+        item,
+      ) =>
+        item.issuerId ===
+          input.issuerId &&
+        item.purpose ===
+          input.purpose &&
+        item.ownerId ===
+          input.target.ownerId &&
+        item.businessId ===
+          input.target.businessId &&
+        item.branchId ===
+          input.target.branchId &&
+        item.installationId ===
+          input.target.installationId,
+    );
+
+  const nextSequenceState:
+    FinoraControlSequenceStateRecord =
+    {
+      issuerId:
+        input.issuerId,
+
+      purpose:
+        input.purpose,
+
+      ownerId:
+        input.target.ownerId,
+
+      businessId:
+        input.target.businessId,
+
+      branchId:
+        input.target.branchId,
+
+      installationId:
+        input.target.installationId,
+
+      lastSequence:
+        input.sequence,
+
+      updatedAt:
+        input.appliedAt,
+    };
+
+  if (
+    sequenceIndex >=
+      0
+  ) {
+    sequenceStates[
+      sequenceIndex
+    ] =
+      nextSequenceState;
+  }
+  else {
+    sequenceStates.push(
+      nextSequenceState,
+    );
+  }
+
+  controlStore.appliedControlPackages =
+    appliedPackages;
+
+  controlStore.controlSequences =
+    sequenceStates;
+
+  controlStore.portableBranchAuthEnrollmentTransactions =
+    enrollmentTransactions;
+
+  controlStore.updatedAt =
+    input.appliedAt;
+
+  try {
+    await persistControlStorePackage(
+      controlStore,
+    );
+  }
+  catch (
+    error
+  ) {
+    return failure(
+      error instanceof Error
+        ? error.message
+        : "Unable to atomically persist FINORA Branch Certification Rotation Control State.",
+    );
+  }
+
+  return success({
+    committed:
+      true,
+
+    updatedEnrollmentTransactions:
+      matchingIndexes.length,
+  });
+}
 async function applyVerifiedBranchActivationInternal(
   input: FinoraVerifiedBranchActivationApplyInput,
 ): Promise<
@@ -5660,6 +6582,32 @@ export interface FinoraPortableBranchAuthEnrollmentTransitionInput {
   transitionedAt: string;
 }
 
+export interface FinoraPortableBranchAuthLegacyCertificationBackfillInput {
+  sourceAuthorizationId:
+    string;
+
+  ownerId:
+    string;
+
+  businessId:
+    string;
+
+  branchId:
+    string;
+
+  requestId:
+    string;
+
+  responseId:
+    string;
+
+  certificationKeyId:
+    string;
+
+  transitionedAt:
+    string;
+}
+
 export interface FinoraPortableBranchAuthEnrollmentMutationResult {
   transaction: FinoraPortableBranchAuthEnrollmentTransactionV1;
 }
@@ -6182,6 +7130,262 @@ async function applyPortableBranchAuthEnrollmentControlStateInternal(
   });
 }
 
+async function backfillPortableBranchAuthLegacyCertificationInternal(
+  input:
+    FinoraPortableBranchAuthLegacyCertificationBackfillInput,
+): Promise<
+  FinoraControlStoreResult<FinoraPortableBranchAuthEnrollmentMutationResult>
+> {
+  if (
+    !isNonEmptyString(
+      input.sourceAuthorizationId,
+    ) ||
+    !isNonEmptyString(
+      input.ownerId,
+    ) ||
+    !isNonEmptyString(
+      input.businessId,
+    ) ||
+    !isNonEmptyString(
+      input.branchId,
+    ) ||
+    !isNonEmptyString(
+      input.requestId,
+    ) ||
+    !isNonEmptyString(
+      input.responseId,
+    ) ||
+    !isNonEmptyString(
+      input.certificationKeyId,
+    ) ||
+    !isControlTimestamp(
+      input.transitionedAt,
+    )
+  ) {
+    return failure(
+      "A valid legacy Portable Branch Auth certification backfill is required.",
+    );
+  }
+
+  const currentResult =
+    await readFinoraControlStore();
+
+  if (
+    !currentResult.success ||
+    !currentResult.data
+  ) {
+    return failure(
+      currentResult.error ??
+        "Unable to load the FINORA Control Store.",
+    );
+  }
+
+  const controlStore =
+    currentResult.data;
+
+  const transactions = [
+    ...(
+      controlStore
+        .portableBranchAuthEnrollmentTransactions ??
+      []
+    ),
+  ];
+
+  const matchingIndexes =
+    transactions
+      .map(
+        (
+          item,
+          index,
+        ) => ({
+          item,
+          index,
+        }),
+      )
+      .filter(
+        ({
+          item,
+        }) =>
+          item.sourceAuthorizationId ===
+            input.sourceAuthorizationId &&
+          item.ownerId ===
+            input.ownerId &&
+          item.businessId ===
+            input.businessId &&
+          item.branchId ===
+            input.branchId,
+      )
+      .map(
+        ({
+          index,
+        }) =>
+          index,
+      );
+
+  if (
+    matchingIndexes.length !==
+      1
+  ) {
+    return failure(
+      "FINORA could not resolve one exact legacy Portable Branch Auth enrollment transaction.",
+    );
+  }
+
+  const transactionIndex =
+    matchingIndexes[0];
+
+  const transaction =
+    transactions[
+      transactionIndex
+    ];
+
+  const expectedProvenance = {
+    requestId:
+      input.requestId,
+
+    responseId:
+      input.responseId,
+
+    certificationKeyId:
+      input.certificationKeyId,
+  };
+
+  if (
+    transaction.branchCertificationProvenance !==
+      undefined ||
+    transaction.certificationMigratedAt !==
+      undefined
+  ) {
+    if (
+      transaction.branchCertificationProvenance !==
+        undefined &&
+      transaction.certificationMigratedAt !==
+        undefined &&
+      transaction.branchCertificationProvenance.requestId ===
+        expectedProvenance.requestId &&
+      transaction.branchCertificationProvenance.responseId ===
+        expectedProvenance.responseId &&
+      transaction.branchCertificationProvenance.certificationKeyId ===
+        expectedProvenance.certificationKeyId
+    ) {
+      return success({
+        transaction,
+      });
+    }
+
+    return failure(
+      "FINORA legacy Branch Certification migration provenance conflicts with existing durable state.",
+    );
+  }
+
+  if (
+    transaction.status !==
+      "COMPLETE"
+  ) {
+    return failure(
+      "FINORA legacy Branch Certification backfill requires an already-complete enrollment transaction.",
+    );
+  }
+
+  const existingCredential =
+    controlStore.branchCredentials?.find(
+      (
+        item,
+      ) =>
+        item.credentialId ===
+          transaction.credential.credentialId &&
+        item.sourceAuthorizationId ===
+          transaction.sourceAuthorizationId,
+    );
+
+  if (
+    !existingCredential ||
+    !portableBranchAuthCredentialsEqual(
+      existingCredential,
+      transaction.credential,
+    )
+  ) {
+    return failure(
+      "FINORA legacy Branch Certification backfill requires matching persisted credential evidence.",
+    );
+  }
+
+  if (
+    (
+      controlStore
+        .branchCredentialEnrollmentAuthorizations ??
+      []
+    ).some(
+      (
+        item,
+      ) =>
+        item.authorizationId ===
+          transaction.sourceAuthorizationId,
+    )
+  ) {
+    return failure(
+      "FINORA legacy Branch Certification backfill requires consumed enrollment authorization.",
+    );
+  }
+
+  const nextTransaction:
+    FinoraPortableBranchAuthEnrollmentTransactionV1 = {
+      ...transaction,
+
+      branchCertificationProvenance:
+        expectedProvenance,
+
+      certificationMigratedAt:
+        input.transitionedAt,
+
+      updatedAt:
+        input.transitionedAt,
+    };
+
+  try {
+    validateFinoraPortableBranchAuthEnrollmentTransactionV1(
+      nextTransaction,
+    );
+  }
+  catch {
+    return failure(
+      "FINORA legacy Portable Branch Auth certification backfill is invalid.",
+    );
+  }
+
+  transactions[
+    transactionIndex
+  ] =
+    nextTransaction;
+
+  controlStore
+    .portableBranchAuthEnrollmentTransactions =
+      transactions;
+
+  controlStore.updatedAt =
+    input.transitionedAt;
+
+  try {
+    await persistControlStorePackage(
+      controlStore,
+    );
+  }
+  catch (
+    error
+  ) {
+    return failure(
+      error instanceof Error
+        ? error.message
+        : "Unable to persist legacy Branch Certification migration evidence.",
+    );
+  }
+
+  return success({
+    transaction:
+      nextTransaction,
+  });
+}
+
 async function markPortableBranchAuthEnrollmentCertificationMigratedInternal(
   input: FinoraPortableBranchAuthEnrollmentTransitionInput,
 ): Promise<
@@ -6514,6 +7718,35 @@ export function applyFinoraPortableBranchAuthEnrollmentControlState(
     () => undefined,
     () => undefined,
   );
+
+  return operation;
+}
+
+export function backfillFinoraPortableBranchAuthLegacyCertification(
+  input:
+    FinoraPortableBranchAuthLegacyCertificationBackfillInput,
+): Promise<
+  FinoraControlStoreResult<FinoraPortableBranchAuthEnrollmentMutationResult>
+> {
+  const operation =
+    controlPackageApplyQueue.then(
+      () =>
+        backfillPortableBranchAuthLegacyCertificationInternal(
+          input,
+        ),
+      () =>
+        backfillPortableBranchAuthLegacyCertificationInternal(
+          input,
+        ),
+    );
+
+  controlPackageApplyQueue =
+    operation.then(
+      () =>
+        undefined,
+      () =>
+        undefined,
+    );
 
   return operation;
 }
@@ -10030,5 +11263,615 @@ export async function findFinoraBranchAccessGrant(
   return success(accessGrant);
 }
 
+
+// ============================================================
+// PORTABLE FRESH-DEVICE ATOMIC HYDRATION
+//
+// SECURITY BOUNDARY:
+//
+// - Called only after Password + Security Code Portable Auth
+//   verification and Branch-Certification runtime-authority
+//   verification have produced a READY_FOR_HYDRATION plan.
+// - Current native installation binding is supplied by the
+//   main-process hydration service.
+// - No Control Center package / sequence ledger is fabricated.
+// - Existing local authority state is never overwritten.
+// - One encrypted Control Store persistence is the commit point.
+// ============================================================
+
+export interface FinoraPortableFreshDeviceHydrationApplyInput {
+  installation:
+    FinoraControlInstallationIdentity;
+
+  activation:
+    FinoraControlBranchActivation;
+
+  storageEntitlement:
+    FinoraControlStorageEntitlement;
+
+  branchAccessGrant:
+    FinoraControlBranchAccessGrant;
+
+  credential:
+    FinoraControlBranchCredential;
+
+  credentialVerificationEvidence?:
+    FinoraBranchCredentialAuthorizationVerificationEvidence;
+
+  credentialPortabilityAuthorityProvenance?:
+    FinoraBranchCredentialPortabilityAuthorityProvenanceV1;
+
+  appliedAt:
+    string;
+}
+
+export interface FinoraPortableFreshDeviceHydrationApplyResult {
+  status:
+    "HYDRATED" |
+    "ALREADY_HYDRATED";
+
+  installation:
+    FinoraControlInstallationIdentity;
+
+  activation:
+    FinoraControlBranchActivation;
+
+  storageEntitlement:
+    FinoraControlStorageEntitlement;
+
+  branchAccessGrant:
+    FinoraControlBranchAccessGrant;
+
+  credential:
+    FinoraControlBranchCredential;
+}
+
+function portableFreshDeviceHydrationValuesEqual(
+  left:
+    unknown,
+
+  right:
+    unknown,
+): boolean {
+  return (
+    JSON.stringify(
+      left,
+    ) ===
+    JSON.stringify(
+      right,
+    )
+  );
+}
+
+async function applyPortableFreshDeviceHydrationInternal(
+  input:
+    FinoraPortableFreshDeviceHydrationApplyInput,
+): Promise<
+  FinoraControlStoreResult<
+    FinoraPortableFreshDeviceHydrationApplyResult
+  >
+> {
+  if (
+    !isInstallationIdentity(
+      input.installation,
+    ) ||
+    !isBranchActivation(
+      input.activation,
+    ) ||
+    !isStorageEntitlement(
+      input.storageEntitlement,
+    ) ||
+    !isBranchAccessGrant(
+      input.branchAccessGrant,
+    ) ||
+    !isBranchCredential(
+      input.credential,
+    ) ||
+    (
+      input.credentialVerificationEvidence !==
+        undefined &&
+      !isBranchCredentialAuthorizationVerificationEvidence(
+        input.credentialVerificationEvidence,
+      )
+    ) ||
+    (
+      input.credentialPortabilityAuthorityProvenance !==
+        undefined &&
+      !isFinoraBranchCredentialPortabilityAuthorityProvenanceV1(
+        input.credentialPortabilityAuthorityProvenance,
+      )
+    ) ||
+    !isControlTimestamp(
+      input.appliedAt,
+    )
+  ) {
+    return failure(
+      "A valid FINORA portable fresh-device hydration state is required.",
+    );
+  }
+
+  const {
+    installation,
+    activation,
+    storageEntitlement,
+    branchAccessGrant,
+    credential,
+    credentialVerificationEvidence,
+    credentialPortabilityAuthorityProvenance,
+  } =
+    input;
+
+  // ----------------------------------------------------------
+  // CROSS-RECORD BRANCH / USER / STORAGE IDENTITY
+  // ----------------------------------------------------------
+
+  if (
+    installation.ownerId !==
+      credential.ownerId ||
+    installation.businessId !==
+      credential.businessId ||
+    installation.branchId !==
+      credential.branchId ||
+    activation.ownerId !==
+      credential.ownerId ||
+    activation.businessId !==
+      credential.businessId ||
+    activation.branchId !==
+      credential.branchId ||
+    branchAccessGrant.userId !==
+      credential.userId ||
+    branchAccessGrant.ownerId !==
+      credential.ownerId ||
+    branchAccessGrant.businessId !==
+      credential.businessId ||
+    branchAccessGrant.branchId !==
+      credential.branchId ||
+    branchAccessGrant.storageMode !==
+      credential.storageMode ||
+    storageEntitlement.userId !==
+      credential.userId ||
+    storageEntitlement.ownerId !==
+      credential.ownerId ||
+    storageEntitlement.businessId !==
+      credential.businessId ||
+    storageEntitlement.branchId !==
+      credential.branchId ||
+    storageEntitlement.storageMode !==
+      credential.storageMode ||
+    storageEntitlement.installationId !==
+      installation.installationId
+  ) {
+    return failure(
+      "FINORA fresh-device hydration records do not share one exact branch identity.",
+    );
+  }
+
+  // ----------------------------------------------------------
+  // AUTHORITY STATUS / DATA CONTEXT
+  // ----------------------------------------------------------
+
+  if (
+    activation.status !==
+      "ACTIVE" ||
+    storageEntitlement.status !==
+      "ACTIVE" ||
+    branchAccessGrant.administrativeStatus !==
+      "ACTIVE" ||
+    credential.status !==
+      "ACTIVE"
+  ) {
+    return failure(
+      "FINORA fresh-device hydration requires ACTIVE authority state.",
+    );
+  }
+
+  if (
+    credential.dataContext ===
+      "REAL"
+  ) {
+    if (
+      branchAccessGrant.accessType !==
+        "REGISTERED" ||
+      branchAccessGrant.demoId !==
+        undefined ||
+      credential.demoId !==
+        undefined
+    ) {
+      return failure(
+        "FINORA REAL fresh-device hydration access context is invalid.",
+      );
+    }
+  }
+  else if (
+    branchAccessGrant.accessType !==
+      "DEMO" ||
+    !credential.demoId ||
+    branchAccessGrant.demoId !==
+      credential.demoId
+  ) {
+    return failure(
+      "FINORA DEMO fresh-device hydration access context is invalid.",
+    );
+  }
+
+  // ----------------------------------------------------------
+  // SOURCE AUTHORIZATION EVIDENCE
+  //
+  // Signed source evidence may be persisted exactly.
+  // Legacy native-bound migration lineage intentionally has no
+  // fabricated Control Center signer evidence.
+  // ----------------------------------------------------------
+
+  if (
+    credentialVerificationEvidence !==
+      undefined &&
+    credentialVerificationEvidence.authorizationId !==
+      credential.sourceAuthorizationId
+  ) {
+    return failure(
+      "FINORA fresh-device credential verification evidence does not match credential lineage.",
+    );
+  }
+
+  if (
+    credentialPortabilityAuthorityProvenance !==
+      undefined &&
+    (
+      credentialPortabilityAuthorityProvenance.sourceAuthorizationId !==
+        credential.sourceAuthorizationId ||
+      credentialVerificationEvidence ===
+        undefined
+    )
+  ) {
+    return failure(
+      "FINORA fresh-device portability provenance does not match signed credential lineage.",
+    );
+  }
+
+  if (
+    credentialVerificationEvidence !==
+      undefined &&
+    credentialPortabilityAuthorityProvenance !==
+      undefined &&
+    !portableFreshDeviceHydrationValuesEqual(
+      credentialVerificationEvidence.verifiedControlSigner,
+      credentialPortabilityAuthorityProvenance.verifiedControlSigner,
+    )
+  ) {
+    return failure(
+      "FINORA fresh-device portability provenance signer does not match credential verification evidence.",
+    );
+  }
+
+  // ----------------------------------------------------------
+  // LOAD ENCRYPTED LOCAL CONTROL STORE
+  // ----------------------------------------------------------
+
+  const currentResult =
+    await readFinoraControlStore();
+
+  if (
+    !currentResult.success ||
+    !currentResult.data
+  ) {
+    return failure(
+      currentResult.error ??
+        "Unable to load the FINORA Control Store.",
+    );
+  }
+
+  const controlStore =
+    currentResult.data;
+
+  const activations =
+    controlStore.activations ??
+    [];
+
+  const entitlements =
+    controlStore.storageEntitlements ??
+    [];
+
+  const accessGrants =
+    controlStore.branchAccessGrants ??
+    [];
+
+  const credentials =
+    controlStore.branchCredentials ??
+    [];
+
+  const verificationEvidence =
+    controlStore.branchCredentialAuthorizationVerificationEvidence ??
+    [];
+
+  const portabilityAuthorities =
+    controlStore.branchCredentialPortabilityAuthorities ??
+    [];
+
+  const enrollmentAuthorizations =
+    controlStore.branchCredentialEnrollmentAuthorizations ??
+    [];
+
+  const enrollmentTransactions =
+    controlStore.portableBranchAuthEnrollmentTransactions ??
+    [];
+
+  const rotationTransactions =
+    controlStore.portableBranchAuthCredentialRotationTransactions ??
+    [];
+
+  const expectedVerificationEvidence =
+    credentialVerificationEvidence ===
+      undefined
+      ? []
+      : [
+          credentialVerificationEvidence,
+        ];
+
+  const expectedPortabilityAuthorities =
+    credentialPortabilityAuthorityProvenance ===
+      undefined
+      ? []
+      : [
+          credentialPortabilityAuthorityProvenance,
+        ];
+
+  // ----------------------------------------------------------
+  // IDEMPOTENT EXACT REPLAY
+  //
+  // An already-completed atomic hydration may be retried.
+  // It succeeds only if every hydrated authority record is
+  // byte-for-byte semantically identical and no credential
+  // workflow residue exists.
+  // ----------------------------------------------------------
+
+  const exactExistingHydration =
+    controlStore.installation !==
+      undefined &&
+    portableFreshDeviceHydrationValuesEqual(
+      controlStore.installation,
+      installation,
+    ) &&
+    activations.length ===
+      1 &&
+    portableFreshDeviceHydrationValuesEqual(
+      activations[0],
+      activation,
+    ) &&
+    entitlements.length ===
+      1 &&
+    portableFreshDeviceHydrationValuesEqual(
+      entitlements[0],
+      storageEntitlement,
+    ) &&
+    accessGrants.length ===
+      1 &&
+    portableFreshDeviceHydrationValuesEqual(
+      accessGrants[0],
+      branchAccessGrant,
+    ) &&
+    credentials.length ===
+      1 &&
+    portableFreshDeviceHydrationValuesEqual(
+      credentials[0],
+      credential,
+    ) &&
+    portableFreshDeviceHydrationValuesEqual(
+      verificationEvidence,
+      expectedVerificationEvidence,
+    ) &&
+    portableFreshDeviceHydrationValuesEqual(
+      portabilityAuthorities,
+      expectedPortabilityAuthorities,
+    ) &&
+    enrollmentAuthorizations.length ===
+      0 &&
+    enrollmentTransactions.length ===
+      0 &&
+    rotationTransactions.length ===
+      0;
+
+  if (
+    exactExistingHydration
+  ) {
+    return success({
+      status:
+        "ALREADY_HYDRATED",
+
+      installation:
+        structuredClone(
+          installation,
+        ),
+
+      activation:
+        structuredClone(
+          activation,
+        ),
+
+      storageEntitlement:
+        structuredClone(
+          storageEntitlement,
+        ),
+
+      branchAccessGrant:
+        structuredClone(
+          branchAccessGrant,
+        ),
+
+      credential:
+        structuredClone(
+          credential,
+        ),
+    });
+  }
+
+  // ----------------------------------------------------------
+  // FRESH-DEVICE ONLY
+  //
+  // Never merge or overwrite an existing local credential /
+  // branch authority state here. Merge/restore is a separate
+  // portability phase.
+  // ----------------------------------------------------------
+
+  const hasExistingAuthorityState =
+    controlStore.installation !==
+      undefined ||
+    activations.length >
+      0 ||
+    entitlements.length >
+      0 ||
+    accessGrants.length >
+      0 ||
+    credentials.length >
+      0 ||
+    verificationEvidence.length >
+      0 ||
+    portabilityAuthorities.length >
+      0 ||
+    enrollmentAuthorizations.length >
+      0 ||
+    enrollmentTransactions.length >
+      0 ||
+    rotationTransactions.length >
+      0;
+
+  if (
+    hasExistingAuthorityState
+  ) {
+    return failure(
+      "FINORA fresh-device hydration refuses to overwrite existing local branch authority state.",
+    );
+  }
+
+  // ----------------------------------------------------------
+  // SINGLE LOGICAL ENCRYPTED CONTROL STORE COMMIT
+  //
+  // No Control Center applied-package or sequence ledger is
+  // invented here. Those remain exclusively Control Center
+  // signed-package authority.
+  // ----------------------------------------------------------
+
+  controlStore.installation =
+    structuredClone(
+      installation,
+    );
+
+  controlStore.activations =
+    [
+      structuredClone(
+        activation,
+      ),
+    ];
+
+  controlStore.storageEntitlements =
+    [
+      structuredClone(
+        storageEntitlement,
+      ),
+    ];
+
+  controlStore.branchAccessGrants =
+    [
+      structuredClone(
+        branchAccessGrant,
+      ),
+    ];
+
+  controlStore.branchCredentials =
+    [
+      structuredClone(
+        credential,
+      ),
+    ];
+
+  controlStore.branchCredentialAuthorizationVerificationEvidence =
+    structuredClone(
+      expectedVerificationEvidence,
+    );
+
+  controlStore.branchCredentialPortabilityAuthorities =
+    structuredClone(
+      expectedPortabilityAuthorities,
+    );
+
+  controlStore.updatedAt =
+    input.appliedAt;
+
+  try {
+    await persistControlStorePackage(
+      controlStore,
+    );
+  }
+  catch (
+    error
+  ) {
+    return failure(
+      error instanceof
+        Error
+        ? error.message
+        : "Unable to atomically persist FINORA fresh-device hydration.",
+    );
+  }
+
+  return success({
+    status:
+      "HYDRATED",
+
+    installation:
+      structuredClone(
+        installation,
+      ),
+
+    activation:
+      structuredClone(
+        activation,
+      ),
+
+    storageEntitlement:
+      structuredClone(
+        storageEntitlement,
+      ),
+
+    branchAccessGrant:
+      structuredClone(
+        branchAccessGrant,
+      ),
+
+    credential:
+      structuredClone(
+        credential,
+      ),
+  });
+}
+
+export function applyFinoraPortableFreshDeviceHydrationState(
+  input:
+    FinoraPortableFreshDeviceHydrationApplyInput,
+): Promise<
+  FinoraControlStoreResult<
+    FinoraPortableFreshDeviceHydrationApplyResult
+  >
+> {
+  const operation =
+    controlPackageApplyQueue.then(
+      () =>
+        applyPortableFreshDeviceHydrationInternal(
+          input,
+        ),
+      () =>
+        applyPortableFreshDeviceHydrationInternal(
+          input,
+        ),
+    );
+
+  controlPackageApplyQueue =
+    operation.then(
+      () =>
+        undefined,
+      () =>
+        undefined,
+    );
+
+  return operation;
+}
 // END
 // ============================================================

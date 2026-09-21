@@ -292,6 +292,8 @@ function isIssuancePurpose(
     value ===
       "BRANCH_ACCESS" ||
     value ===
+      "BRANCH_CERTIFICATION_ROTATION" ||
+    value ===
       "DEVICE_REVOCATION" ||
     value ===
       "STORAGE_ENTITLEMENT" ||

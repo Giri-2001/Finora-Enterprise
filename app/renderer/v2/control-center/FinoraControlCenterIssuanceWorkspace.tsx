@@ -4,6 +4,8 @@ import {
 import type { FinoraControlCenterBranchRegistryRecord } from "../../../../electron/control-center/finoraControlCenterBranchRegistry.types";
 
 import type {
+  FinoraControlCenterBranchCertificationRotationExportView,
+  FinoraControlCenterBranchCertificationRotationOpenView,
   FinoraControlCenterEnrollmentOpenView,
   FinoraControlCenterWalletRechargeRequestOpenView,
 } from "../../../../electron/control-center/finoraControlCenterPreload";
@@ -383,6 +385,45 @@ export default function FinoraControlCenterIssuanceWorkspace({
   const enrollmentResponseInFlightRef =
     useRef(false);
 
+  const [rotationOpenState, setRotationOpenState] =
+    useState<
+      "IDLE" | "OPENING" | "SUCCESS" | "ERROR"
+    >(
+      "IDLE",
+    );
+
+  const [rotationOpenError, setRotationOpenError] =
+    useState<string | undefined>();
+
+  const [verifiedRotation, setVerifiedRotation] =
+    useState<
+      FinoraControlCenterBranchCertificationRotationOpenView | undefined
+    >();
+
+  const rotationOpenInFlightRef =
+    useRef(
+      false,
+    );
+
+  const [rotationExportState, setRotationExportState] =
+    useState<
+      "IDLE" | "EXPORTING" | "SUCCESS" | "ERROR"
+    >(
+      "IDLE",
+    );
+
+  const [rotationExportError, setRotationExportError] =
+    useState<string | undefined>();
+
+  const [rotationExportResult, setRotationExportResult] =
+    useState<
+      FinoraControlCenterBranchCertificationRotationExportView | undefined
+    >();
+
+  const rotationExportInFlightRef =
+    useRef(
+      false,
+    );
   const [branchIssuanceState, setBranchIssuanceState] = useState<
     "IDLE" | "ISSUING" | "SUCCESS" | "ERROR"
   >("IDLE");
@@ -797,6 +838,207 @@ setEnrollmentOpenState(
     }
   }
 
+  async function openVerifiedBranchCertificationRotationRequest():
+    Promise<void> {
+
+    if (
+      rotationOpenInFlightRef.current ||
+      rotationExportInFlightRef.current
+    ) {
+      return;
+    }
+
+    rotationOpenInFlightRef.current =
+      true;
+
+    setRotationOpenState(
+      "OPENING",
+    );
+
+    setRotationOpenError(
+      undefined,
+    );
+
+    try {
+      const bridge =
+        window.finoraControlCenter;
+
+      if (!bridge) {
+        throw new Error(
+          "Dedicated FINORA Control Center preload bridge is unavailable.",
+        );
+      }
+
+      const result =
+        await bridge.openBranchCertificationRotationRequest();
+
+      if (!result.success) {
+        throw new Error(
+          result.error ??
+            "Unable to open the FINORA Branch Certification Rotation Request.",
+        );
+      }
+
+      const rotation =
+        result.data;
+
+      if (
+        rotation.cancelled
+      ) {
+        setRotationOpenState(
+          "IDLE",
+        );
+
+        return;
+      }
+
+      setVerifiedRotation(
+        rotation,
+      );
+
+      setRotationExportResult(
+        undefined,
+      );
+
+      setRotationExportError(
+        undefined,
+      );
+
+      setRotationExportState(
+        "IDLE",
+      );
+
+      setRotationOpenState(
+        "SUCCESS",
+      );
+    }
+    catch (
+      error
+    ) {
+      setVerifiedRotation(
+        undefined,
+      );
+
+      setRotationOpenError(
+        error instanceof Error
+          ? error.message
+          : "Unable to open the FINORA Branch Certification Rotation Request.",
+      );
+
+      setRotationOpenState(
+        "ERROR",
+      );
+    }
+    finally {
+      rotationOpenInFlightRef.current =
+        false;
+    }
+  }
+
+  async function approveAndExportBranchCertificationRotation():
+    Promise<void> {
+
+    if (
+      rotationExportInFlightRef.current ||
+      rotationOpenInFlightRef.current
+    ) {
+      return;
+    }
+
+    if (
+      !verifiedRotation ||
+      verifiedRotation.cancelled
+    ) {
+      setRotationExportError(
+        "Open and cryptographically verify a Branch Certification Rotation Request first.",
+      );
+
+      setRotationExportState(
+        "ERROR",
+      );
+
+      return;
+    }
+
+    rotationExportInFlightRef.current =
+      true;
+
+    setRotationExportState(
+      "EXPORTING",
+    );
+
+    setRotationExportError(
+      undefined,
+    );
+
+    setRotationExportResult(
+      undefined,
+    );
+
+    try {
+      const bridge =
+        window.finoraControlCenter;
+
+      if (!bridge) {
+        throw new Error(
+          "Dedicated FINORA Control Center preload bridge is unavailable.",
+        );
+      }
+
+      const result =
+        await bridge.issueAndExportBranchCertificationRotation();
+
+      if (!result.success) {
+        throw new Error(
+          result.error ??
+            "FINORA Branch Certification Rotation authority issuance failed.",
+        );
+      }
+
+      if (
+        result.data.cancelled
+      ) {
+        setRotationExportState(
+          "IDLE",
+        );
+
+        return;
+      }
+
+      setRotationExportResult(
+        result.data,
+      );
+
+      /*
+       * Successful native export permanently consumes the
+       * verified main-process request session.
+       */
+      setVerifiedRotation(
+        undefined,
+      );
+
+      setRotationExportState(
+        "SUCCESS",
+      );
+    }
+    catch (
+      error
+    ) {
+      setRotationExportError(
+        error instanceof Error
+          ? error.message
+          : "Unable to approve and export the FINORA Branch Certification Rotation authority.",
+      );
+
+      setRotationExportState(
+        "ERROR",
+      );
+    }
+    finally {
+      rotationExportInFlightRef.current =
+        false;
+    }
+  }
   function updateTarget(
     field: keyof Omit<FinoraControlCenterTargetDraft, "fingerprintAlgorithm">,
 
@@ -2012,6 +2254,312 @@ setEnrollmentOpenState(
               >
                 Owner, Business and Branch identity still require explicit
                 FINORA operator assignment and approval.
+              </span>
+            </div>
+          )}
+      </section>
+      <section
+        data-finora-branch-certification-rotation="true"
+        aria-live="polite"
+        style={{
+          marginBottom: "20px",
+          border: "1px solid rgba(251, 191, 36, 0.3)",
+          borderRadius: "11px",
+          padding: "16px",
+          background: "rgba(2, 6, 23, 0.34)",
+        }}
+      >
+        <div
+          style={{
+            display: "flex",
+            alignItems: "flex-start",
+            justifyContent: "space-between",
+            gap: "18px",
+          }}
+        >
+          <div
+            style={{
+              flex: 1,
+              minWidth: 0,
+            }}
+          >
+            <h3
+              style={{
+                margin: 0,
+                fontSize: "14px",
+                fontWeight: 650,
+              }}
+            >
+              Branch Certification Recovery
+            </h3>
+
+            <p
+              style={{
+                margin: "6px 0 0",
+                maxWidth: "760px",
+                fontSize: "12px",
+                lineHeight: 1.55,
+                opacity: 0.72,
+              }}
+            >
+              Open the native-signed Branch Certification Rotation Request
+              exported by the trusted branch installation. Approval replaces
+              only the Branch Certification public authority; Owner, Business
+              and Branch identity remain unchanged.
+            </p>
+          </div>
+
+          <button
+            type="button"
+            disabled={
+              rotationOpenState === "OPENING" ||
+              rotationExportState === "EXPORTING"
+            }
+            onClick={() => {
+              void openVerifiedBranchCertificationRotationRequest();
+            }}
+            style={{
+              minWidth: "210px",
+              minHeight: "42px",
+              border: "1px solid rgba(251, 191, 36, 0.62)",
+              borderRadius: "9px",
+              padding: "9px 14px",
+              fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
+              fontSize: "12px",
+              fontWeight: 650,
+              background: "rgba(146, 64, 14, 0.25)",
+              color: "#fef3c7",
+              cursor:
+                rotationOpenState === "OPENING" ||
+                rotationExportState === "EXPORTING"
+                  ? "not-allowed"
+                  : "pointer",
+            }}
+          >
+            {rotationOpenState === "OPENING"
+              ? "Opening & Verifying…"
+              : "Open Rotation Request"}
+          </button>
+        </div>
+
+        {rotationOpenState === "ERROR" &&
+          rotationOpenError && (
+            <p
+              style={{
+                margin: "12px 0 0",
+                fontSize: "12px",
+                lineHeight: 1.55,
+                color: "#fca5a5",
+              }}
+            >
+              {rotationOpenError}
+            </p>
+          )}
+
+        {rotationOpenState === "SUCCESS" &&
+          verifiedRotation &&
+          !verifiedRotation.cancelled && (
+            <div
+              style={{
+                marginTop: "14px",
+                display: "grid",
+                gap: "7px",
+                fontSize: "11px",
+                lineHeight: 1.5,
+                color: "#cbd5e1",
+              }}
+            >
+              <strong
+                style={{
+                  color: "#86efac",
+                }}
+              >
+                Verified native Branch Certification Rotation Request.
+              </strong>
+
+              <span>
+                File: {verifiedRotation.fileName}
+              </span>
+
+              <span>
+                Request ID: {verifiedRotation.requestId}
+              </span>
+
+              <span>
+                Owner ID: {verifiedRotation.ownerId}
+              </span>
+
+              <span>
+                Business ID: {verifiedRotation.businessId}
+              </span>
+
+              <span>
+                Branch ID: {verifiedRotation.branchId}
+              </span>
+
+              <span
+                style={{
+                  overflowWrap: "anywhere",
+                }}
+              >
+                Requesting Installation:{" "}
+                {verifiedRotation.requestingInstallationId}
+              </span>
+
+              <span>
+                Requested At: {verifiedRotation.requestedAt}
+              </span>
+
+              <span
+                style={{
+                  overflowWrap: "anywhere",
+                }}
+              >
+                Current Certification Key:{" "}
+                {verifiedRotation.previousCertificationKeyId}
+              </span>
+
+              <span
+                style={{
+                  overflowWrap: "anywhere",
+                }}
+              >
+                Replacement Certification Key:{" "}
+                {verifiedRotation.replacementCertificationKeyId}
+              </span>
+
+              <span
+                style={{
+                  color: "#fbbf24",
+                }}
+              >
+                Approve only after confirming this request belongs to the
+                intended branch. Successful export updates the authoritative
+                Control Center Registry to the replacement certification key.
+              </span>
+            </div>
+          )}
+
+        <div
+          style={{
+            marginTop: "14px",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: "16px",
+          }}
+        >
+          <p
+            style={{
+              margin: 0,
+              maxWidth: "720px",
+              fontSize: "11px",
+              lineHeight: 1.5,
+              color: "#94a3b8",
+            }}
+          >
+            Replacement private-key custody never enters the Control Center.
+            The exported authority contains only signed public rotation
+            evidence.
+          </p>
+
+          <button
+            type="button"
+            disabled={
+              !verifiedRotation ||
+              verifiedRotation.cancelled ||
+              rotationOpenState === "OPENING" ||
+              rotationExportState === "EXPORTING" ||
+              rotationExportState === "SUCCESS"
+            }
+            onClick={() => {
+              void approveAndExportBranchCertificationRotation();
+            }}
+            style={{
+              minWidth: "240px",
+              minHeight: "42px",
+              border: "1px solid rgba(34, 197, 94, 0.58)",
+              borderRadius: "9px",
+              padding: "9px 14px",
+              fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
+              fontSize: "12px",
+              fontWeight: 650,
+              background: "rgba(20, 83, 45, 0.28)",
+              color: "#dcfce7",
+              cursor:
+                !verifiedRotation ||
+                verifiedRotation.cancelled ||
+                rotationOpenState === "OPENING" ||
+                rotationExportState === "EXPORTING" ||
+                rotationExportState === "SUCCESS"
+                  ? "not-allowed"
+                  : "pointer",
+            }}
+          >
+            {rotationExportState === "EXPORTING"
+              ? "Approving & Exporting…"
+              : rotationExportState === "SUCCESS"
+                ? "Rotation Authority Exported"
+                : "Approve & Export Rotation Authority"}
+          </button>
+        </div>
+
+        {rotationExportState === "ERROR" &&
+          rotationExportError && (
+            <p
+              style={{
+                margin: "12px 0 0",
+                fontSize: "12px",
+                lineHeight: 1.55,
+                color: "#fca5a5",
+              }}
+            >
+              {rotationExportError}
+            </p>
+          )}
+
+        {rotationExportState === "SUCCESS" &&
+          rotationExportResult &&
+          !rotationExportResult.cancelled && (
+            <div
+              style={{
+                marginTop: "12px",
+                display: "grid",
+                gap: "6px",
+                fontSize: "11px",
+                lineHeight: 1.5,
+                color: "#bbf7d0",
+              }}
+            >
+              <strong>
+                Rotation authority exported and Registry transition completed.
+              </strong>
+
+              <span>
+                File: {rotationExportResult.fileName}
+              </span>
+
+              <span>
+                Request ID: {rotationExportResult.requestId}
+              </span>
+
+              <span>
+                Package ID: {rotationExportResult.packageId}
+              </span>
+
+              <span>
+                Sequence: {rotationExportResult.sequence}
+              </span>
+
+              <span>
+                Bytes: {rotationExportResult.bytesWritten}
+              </span>
+
+              <span>
+                Registry Updated:{" "}
+                {rotationExportResult.registryUpdated
+                  ? "Yes"
+                  : "Exact retry / already applied"}
               </span>
             </div>
           )}

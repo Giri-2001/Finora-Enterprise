@@ -47,6 +47,11 @@ const CONTROL_CENTER_CHANNELS = {
   BACKFILL_HISTORICAL_ENROLLMENT_BRANCH:
     "finora:control-center:backfill-historical-enrollment-branch",
 
+  OPEN_BRANCH_CERTIFICATION_ROTATION_REQUEST:
+    "finora:control-center:open-branch-certification-rotation-request",
+
+  ISSUE_AND_EXPORT_BRANCH_CERTIFICATION_ROTATION:
+    "finora:control-center:issue-and-export-branch-certification-rotation",
   OPEN_INSTALLATION_ENROLLMENT_REQUEST:
     "finora:control-center:open-installation-enrollment-request",
 
@@ -274,6 +279,73 @@ export type FinoraControlBundleExportView =
 // VERIFIED INSTALLATION ENROLLMENT VIEW
 // ============================================================
 
+export type FinoraControlCenterBranchCertificationRotationOpenView =
+  | {
+      cancelled:
+        true;
+    }
+  | {
+      cancelled:
+        false;
+
+      fileName:
+        string;
+
+      bytesRead:
+        number;
+
+      requestId:
+        string;
+
+      ownerId:
+        string;
+
+      businessId:
+        string;
+
+      branchId:
+        string;
+
+      requestingInstallationId:
+        string;
+
+      requestedAt:
+        string;
+
+      previousCertificationKeyId:
+        string;
+
+      replacementCertificationKeyId:
+        string;
+    };
+
+export type FinoraControlCenterBranchCertificationRotationExportView =
+  | {
+      cancelled:
+        true;
+    }
+  | {
+      cancelled:
+        false;
+
+      fileName:
+        string;
+
+      bytesWritten:
+        number;
+
+      packageId:
+        string;
+
+      requestId:
+        string;
+
+      sequence:
+        number;
+
+      registryUpdated:
+        boolean;
+    };
 export type FinoraControlCenterEnrollmentOpenView =
   | {
       cancelled:
@@ -570,6 +642,21 @@ export interface FinoraControlCenterBridge {
           FinoraControlCenterHistoricalBranchBackfillView
         >
       >;
+  openBranchCertificationRotationRequest:
+    () =>
+      Promise<
+        FinoraControlCenterResult<
+          FinoraControlCenterBranchCertificationRotationOpenView
+        >
+      >;
+
+  issueAndExportBranchCertificationRotation:
+    () =>
+      Promise<
+        FinoraControlCenterResult<
+          FinoraControlCenterBranchCertificationRotationExportView
+        >
+      >;
   openInstallationEnrollmentRequest:
     () =>
       Promise<
@@ -769,6 +856,27 @@ const controlCenterBridge:
       ) as Promise<
         FinoraControlCenterResult<
           FinoraControlCenterHistoricalBranchBackfillView
+        >
+      >,
+  openBranchCertificationRotationRequest:
+    () =>
+      ipcRenderer.invoke(
+        CONTROL_CENTER_CHANNELS
+          .OPEN_BRANCH_CERTIFICATION_ROTATION_REQUEST,
+      ) as Promise<
+        FinoraControlCenterResult<
+          FinoraControlCenterBranchCertificationRotationOpenView
+        >
+      >,
+
+  issueAndExportBranchCertificationRotation:
+    () =>
+      ipcRenderer.invoke(
+        CONTROL_CENTER_CHANNELS
+          .ISSUE_AND_EXPORT_BRANCH_CERTIFICATION_ROTATION,
+      ) as Promise<
+        FinoraControlCenterResult<
+          FinoraControlCenterBranchCertificationRotationExportView
         >
       >,
   openInstallationEnrollmentRequest:

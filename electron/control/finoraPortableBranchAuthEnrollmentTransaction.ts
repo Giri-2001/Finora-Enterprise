@@ -65,6 +65,17 @@ export interface FinoraPortableBranchAuthEnrollmentCertificationProvenanceV1 {
     string;
 }
 
+export interface FinoraPortableBranchAuthEnrollmentCertificationRotationProvenanceV1 {
+  requestId:
+    string;
+
+  responseId:
+    string;
+
+  certificationKeyId:
+    string;
+}
+
 export interface FinoraPortableBranchAuthEnrollmentTransactionV1 {
   schemaVersion:
     typeof FINORA_PORTABLE_BRANCH_AUTH_ENROLLMENT_TRANSACTION_SCHEMA_VERSION;
@@ -99,6 +110,9 @@ export interface FinoraPortableBranchAuthEnrollmentTransactionV1 {
   branchCertificationProvenance?:
     FinoraPortableBranchAuthEnrollmentCertificationProvenanceV1;
 
+  branchCertificationRotationProvenance?:
+    FinoraPortableBranchAuthEnrollmentCertificationRotationProvenanceV1;
+
   credential:
     FinoraControlBranchCredential;
 
@@ -121,6 +135,9 @@ export interface FinoraPortableBranchAuthEnrollmentTransactionV1 {
     string;
 
   certificationMigratedAt?:
+    string;
+
+  certificationRotatedAt?:
     string;
 
   completedAt?:
@@ -449,6 +466,92 @@ function validateFinoraPortableBranchAuthEnrollmentCertificationProvenanceV1(
   }
 }
 
+export function validateFinoraPortableBranchAuthEnrollmentCertificationRotationProvenanceV1(
+  value:
+    unknown,
+): asserts value is FinoraPortableBranchAuthEnrollmentCertificationRotationProvenanceV1 {
+  if (
+    typeof value !== "object" ||
+    value === null ||
+    Array.isArray(value)
+  ) {
+    throw new Error(
+      "Portable Branch Auth enrollment certification rotation provenance is invalid.",
+    );
+  }
+
+  const record =
+    value as Record<string, unknown>;
+
+  const actualKeys =
+    Object.keys(
+      record,
+    ).sort();
+
+  const expectedKeys =
+    [
+      "certificationKeyId",
+      "requestId",
+      "responseId",
+    ].sort();
+
+  if (
+    actualKeys.length !==
+      expectedKeys.length ||
+    !actualKeys.every(
+      (
+        key,
+        index,
+      ) =>
+        key ===
+          expectedKeys[index],
+    )
+  ) {
+    throw new Error(
+      "Portable Branch Auth enrollment certification rotation provenance fields are invalid.",
+    );
+  }
+
+  if (
+    typeof record.requestId !== "string" ||
+    record.requestId.length === 0 ||
+    record.requestId.length > 256 ||
+    record.requestId.trim() !== record.requestId ||
+    !record.requestId.startsWith(
+      "FIN-BCR-REQ-",
+    )
+  ) {
+    throw new Error(
+      "Portable Branch Auth enrollment certification rotation requestId is invalid.",
+    );
+  }
+
+  if (
+    typeof record.responseId !== "string" ||
+    record.responseId.length === 0 ||
+    record.responseId.length > 256 ||
+    record.responseId.trim() !== record.responseId ||
+    !record.responseId.startsWith(
+      "FINORA-CC-PKG-",
+    )
+  ) {
+    throw new Error(
+      "Portable Branch Auth enrollment certification rotation responseId is invalid.",
+    );
+  }
+
+  if (
+    typeof record.certificationKeyId !== "string" ||
+    !/^FINORA-BRANCH-CERT-[0-9A-F]{32}$/.test(
+      record.certificationKeyId,
+    )
+  ) {
+    throw new Error(
+      "Portable Branch Auth enrollment certification rotation keyId is not canonical.",
+    );
+  }
+}
+
 export function validateFinoraPortableBranchAuthEnrollmentTransactionV1(
   transaction:
     FinoraPortableBranchAuthEnrollmentTransactionV1,
@@ -629,6 +732,57 @@ export function validateFinoraPortableBranchAuthEnrollmentTransactionV1(
   ) {
     validateFinoraPortableBranchAuthEnrollmentCertificationProvenanceV1(
       branchCertificationProvenance,
+    );
+  }
+
+  const branchCertificationRotationProvenance =
+    transaction.branchCertificationRotationProvenance;
+
+  const certificationRotatedAt =
+    transaction.certificationRotatedAt;
+
+  if (
+    branchCertificationRotationProvenance !==
+      undefined
+  ) {
+    validateFinoraPortableBranchAuthEnrollmentCertificationRotationProvenanceV1(
+      branchCertificationRotationProvenance,
+    );
+  }
+
+  if (
+    certificationRotatedAt !==
+      undefined
+  ) {
+    assertTimestamp(
+      certificationRotatedAt,
+      "certificationRotatedAt",
+    );
+  }
+
+  if (
+    (
+      branchCertificationRotationProvenance ===
+        undefined
+    ) !==
+    (
+      certificationRotatedAt ===
+        undefined
+    )
+  ) {
+    throw new Error(
+      "Portable Branch Auth certification rotation provenance and timestamp must appear together.",
+    );
+  }
+
+  if (
+    branchCertificationRotationProvenance !==
+      undefined &&
+    transaction.status !==
+      "COMPLETE"
+  ) {
+    throw new Error(
+      "Portable Branch Auth certification rotation provenance is valid only on COMPLETE enrollment state.",
     );
   }
 
@@ -837,6 +991,23 @@ export function validateFinoraPortableBranchAuthEnrollmentTransactionV1(
       transaction.controlAppliedAt,
       transaction.completedAt,
       "controlAppliedAt/completedAt",
+    );
+  }
+
+  if (
+    certificationRotatedAt !==
+      undefined
+  ) {
+    assertTimestampOrder(
+      transaction.completedAt,
+      certificationRotatedAt,
+      "completedAt/certificationRotatedAt",
+    );
+
+    assertTimestampOrder(
+      certificationRotatedAt,
+      transaction.updatedAt,
+      "certificationRotatedAt/updatedAt",
     );
   }
 
