@@ -21,9 +21,14 @@ import {
 import {
   applyFinoraPortableFreshDeviceHydrationState,
   readFinoraControlStore,
+  saveFinoraBranchAccessGrant,
+  saveFinoraBranchActivation,
+  saveFinoraInstallationIdentity,
+  saveFinoraStorageEntitlement,
 } from "./finoraControlStore.js";
 
 import type {
+  FinoraControlBusinessProfile,
   FinoraPortableFreshDeviceHydrationApplyInput,
 } from "./finoraControlStore.js";
 
@@ -387,6 +392,90 @@ async function runSelfTest():
         1 as const,
     };
 
+    const historicalProfileInstallationId =
+      nativeBinding.installationId ===
+        "INSTALLATION-H6-HISTORICAL-PROFILE"
+        ? "INSTALLATION-H6-HISTORICAL-PROFILE-ALT"
+        : "INSTALLATION-H6-HISTORICAL-PROFILE";
+
+    const zeroFingerprint =
+      "0".repeat(
+        64,
+      );
+
+    const oneFingerprint =
+      "1".repeat(
+        64,
+      );
+
+    const historicalProfileFingerprint =
+      nativeBinding.publicKeyFingerprint.toLowerCase() ===
+        zeroFingerprint
+        ? oneFingerprint
+        : zeroFingerprint;
+
+    const historicalProfileBindingKeyId =
+      `FINORA-BINDING-${historicalProfileFingerprint
+        .slice(
+          0,
+          32,
+        )
+        .toUpperCase()}`;
+
+    assert(
+      historicalProfileInstallationId !==
+        nativeBinding.installationId &&
+      historicalProfileFingerprint !==
+        nativeBinding.publicKeyFingerprint.toLowerCase() &&
+      historicalProfileBindingKeyId !==
+        nativeBinding.bindingKeyId,
+      "Historical Business Profile fixture unexpectedly matches the current device binding.",
+    );
+
+    const signedBusinessProfile:
+      FinoraControlBusinessProfile = {
+        profileId:
+          "PROFILE-H6-SIGNED-HISTORICAL",
+
+        ownerId,
+
+        businessId,
+
+        branchId,
+
+        businessCode:
+          "H6B01",
+
+        branchCode:
+          "H6R01",
+
+        businessName:
+          "H6 Signed Business",
+
+        branchName:
+          "H6 Signed Branch",
+
+        installationId:
+          historicalProfileInstallationId,
+
+        bindingKeyId:
+          historicalProfileBindingKeyId,
+
+        fingerprintAlgorithm:
+          "SHA-256",
+
+        publicKeyFingerprint:
+          historicalProfileFingerprint,
+
+        createdAt,
+
+        updatedAt:
+          authorityUpdatedAt,
+
+        schemaVersion:
+          1,
+      };
+
     const hydration:
       FinoraPortableFreshDeviceHydrationApplyInput = {
         installation: {
@@ -539,6 +628,9 @@ async function runSelfTest():
             1,
         },
 
+        businessProfile:
+          signedBusinessProfile,
+
         credential: {
           credentialId:
             "CREDENTIAL-H6",
@@ -688,6 +780,39 @@ async function runSelfTest():
         hydration.credential,
       ),
       "Hydrated credential does not match.",
+    );
+
+    assert(
+      (
+        hydrated.businessProfiles ??
+        []
+      ).length ===
+        1 &&
+      exactEqual(
+        hydrated.businessProfiles?.[0],
+        signedBusinessProfile,
+      ),
+      "Hydrated signed Business Profile does not match the Runtime Authority snapshot.",
+    );
+
+    assert(
+      hydrated.businessProfiles?.[0]?.installationId ===
+        historicalProfileInstallationId &&
+      hydrated.businessProfiles?.[0]?.bindingKeyId ===
+        historicalProfileBindingKeyId &&
+      hydrated.businessProfiles?.[0]?.publicKeyFingerprint ===
+        historicalProfileFingerprint &&
+      hydrated.businessProfiles?.[0]?.installationId !==
+        nativeBinding.installationId &&
+      hydrated.businessProfiles?.[0]?.bindingKeyId !==
+        nativeBinding.bindingKeyId &&
+      hydrated.businessProfiles?.[0]?.publicKeyFingerprint !==
+        nativeBinding.publicKeyFingerprint,
+      "Hydration rebound historical Business Profile binding evidence to the current device.",
+    );
+
+    console.log(
+      "PASS: signed Business Profile persists with exact historical binding evidence",
     );
 
     assert(
@@ -862,6 +987,212 @@ async function runSelfTest():
     );
 
     // --------------------------------------------------------
+    // PROFILE-ONLY CONVERGENCE
+    //
+    // Reproduce the Windows Laptop 1 condition:
+    // core + credential authority already hydrated exactly,
+    // but the signed Business Profile is still missing.
+    // --------------------------------------------------------
+
+    const profileOnlyControlFile =
+      join(
+        temporaryUserData,
+        "FINORA",
+        "control",
+        "finora-control.bin",
+      );
+
+    await rm(
+      profileOnlyControlFile,
+      {
+        force:
+          true,
+      },
+    );
+
+    const hydrationWithoutBusinessProfile =
+      structuredClone(
+        hydration,
+      );
+
+    delete hydrationWithoutBusinessProfile.businessProfile;
+
+    const profileBaseApply =
+      await applyFinoraPortableFreshDeviceHydrationState(
+        hydrationWithoutBusinessProfile,
+      );
+
+    assert(
+      profileBaseApply.success &&
+        profileBaseApply.data?.status ===
+          "HYDRATED",
+      "Unable to create exact hydrated authority with the Business Profile intentionally absent.",
+    );
+
+    const profileOnlyBeforeResult =
+      await readFinoraControlStore();
+
+    assert(
+      profileOnlyBeforeResult.success &&
+        profileOnlyBeforeResult.data !==
+          undefined,
+      "Unable to read profile-only convergence fixture.",
+    );
+
+    const profileOnlyBefore =
+      profileOnlyBeforeResult.data;
+
+    assert(
+      (
+        profileOnlyBefore.businessProfiles ??
+        []
+      ).length ===
+        0 &&
+      (
+        profileOnlyBefore.branchCredentials ??
+        []
+      ).length ===
+        1 &&
+      exactEqual(
+        profileOnlyBefore.branchCredentials?.[0],
+        hydration.credential,
+      ),
+      "Profile-only fixture is not exact hydrated authority with only Business Profile missing.",
+    );
+
+    const profileRepairApply =
+      await applyFinoraPortableFreshDeviceHydrationState(
+        hydration,
+      );
+
+    assert(
+      profileRepairApply.success &&
+        profileRepairApply.data?.status ===
+          "HYDRATED",
+      profileRepairApply.success
+        ? "Profile-only convergence did not return HYDRATED."
+        : (
+            profileRepairApply.error ??
+            "Profile-only convergence failed."
+          ),
+    );
+
+    const profileOnlyAfterResult =
+      await readFinoraControlStore();
+
+    assert(
+      profileOnlyAfterResult.success &&
+        profileOnlyAfterResult.data !==
+          undefined,
+      "Unable to read profile-only converged Control Store.",
+    );
+
+    const profileOnlyAfter =
+      profileOnlyAfterResult.data;
+
+    assert(
+      exactEqual(
+        profileOnlyAfter.installation,
+        profileOnlyBefore.installation,
+      ) &&
+      exactEqual(
+        profileOnlyAfter.activations,
+        profileOnlyBefore.activations,
+      ) &&
+      exactEqual(
+        profileOnlyAfter.storageEntitlements,
+        profileOnlyBefore.storageEntitlements,
+      ) &&
+      exactEqual(
+        profileOnlyAfter.branchAccessGrants,
+        profileOnlyBefore.branchAccessGrants,
+      ) &&
+      exactEqual(
+        profileOnlyAfter.branchCredentials,
+        profileOnlyBefore.branchCredentials,
+      ) &&
+      exactEqual(
+        profileOnlyAfter.branchCredentialAuthorizationVerificationEvidence,
+        profileOnlyBefore.branchCredentialAuthorizationVerificationEvidence,
+      ) &&
+      exactEqual(
+        profileOnlyAfter.branchCredentialPortabilityAuthorities,
+        profileOnlyBefore.branchCredentialPortabilityAuthorities,
+      ) &&
+      (
+        profileOnlyAfter.businessProfiles ??
+        []
+      ).length ===
+        1 &&
+      exactEqual(
+        profileOnlyAfter.businessProfiles?.[0],
+        signedBusinessProfile,
+      ),
+      "Profile-only convergence changed existing authority or failed to persist the signed profile.",
+    );
+
+    assert(
+      (
+        profileOnlyAfter.appliedControlPackages ??
+        []
+      ).length ===
+        0 &&
+      (
+        profileOnlyAfter.portableBusinessProfileSequences ??
+        []
+      ).length ===
+        0,
+      "Profile-only convergence fabricated BUSINESS_PROFILE package or sequence authority.",
+    );
+
+    console.log(
+      "PASS: exact hydrated authority safely converges by adding only the missing signed Business Profile",
+    );
+
+    const mismatchedProfileInput:
+      FinoraPortableFreshDeviceHydrationApplyInput = {
+        ...hydration,
+
+        businessProfile: {
+          ...signedBusinessProfile,
+
+          branchId:
+            "BRANCH-H6-PROFILE-SCOPE-MISMATCH",
+        },
+
+        appliedAt:
+          "2026-09-20T10:02:00.000Z",
+      };
+
+    const mismatchedProfileApply =
+      await applyFinoraPortableFreshDeviceHydrationState(
+        mismatchedProfileInput,
+      );
+
+    assert(
+      !mismatchedProfileApply.success,
+      "Mismatched Business Profile scope unexpectedly hydrated.",
+    );
+
+    const afterMismatchedProfileResult =
+      await readFinoraControlStore();
+
+    assert(
+      afterMismatchedProfileResult.success &&
+        afterMismatchedProfileResult.data !==
+          undefined &&
+      exactEqual(
+        profileOnlyAfter,
+        afterMismatchedProfileResult.data,
+      ),
+      "Rejected mismatched Business Profile scope mutated durable Control Store state.",
+    );
+
+    console.log(
+      "PASS: mismatched Business Profile scope is rejected without durable mutation",
+    );
+
+    // --------------------------------------------------------
     // NATIVE BINDING ASSERTION
     // --------------------------------------------------------
 
@@ -879,6 +1210,273 @@ async function runSelfTest():
 
     console.log(
       "PASS: durable entitlement is bound to the current device P-256 identity",
+    );
+
+    // --------------------------------------------------------
+    // EXACT-COMPATIBLE PARTIAL AUTHORITY CONVERGENCE
+    //
+    // Recreate the real production cutover shape:
+    //
+    // - installation exists
+    // - activation exists
+    // - entitlement exists
+    // - access grant exists
+    // - credential is still absent
+    //
+    // Hydration must add the missing credential without
+    // replacing any exact-compatible authority record.
+    // --------------------------------------------------------
+
+    const isolatedControlFile =
+      join(
+        temporaryUserData,
+        "FINORA",
+        "control",
+        "finora-control.bin",
+      );
+
+    await rm(
+      isolatedControlFile,
+      {
+        force:
+          true,
+      },
+    );
+
+    const partialInstallationSeed =
+      await saveFinoraInstallationIdentity(
+        hydration.installation,
+      );
+
+    assert(
+      partialInstallationSeed.success,
+      partialInstallationSeed.error ??
+        "Unable to seed partial installation authority.",
+    );
+
+    const partialActivationSeed =
+      await saveFinoraBranchActivation(
+        hydration.activation,
+      );
+
+    assert(
+      partialActivationSeed.success,
+      partialActivationSeed.error ??
+        "Unable to seed partial activation authority.",
+    );
+
+    const partialEntitlementSeed =
+      await saveFinoraStorageEntitlement(
+        hydration.storageEntitlement,
+      );
+
+    assert(
+      partialEntitlementSeed.success,
+      partialEntitlementSeed.error ??
+        "Unable to seed partial Storage Entitlement authority.",
+    );
+
+    const partialAccessSeed =
+      await saveFinoraBranchAccessGrant(
+        hydration.branchAccessGrant,
+      );
+
+    assert(
+      partialAccessSeed.success,
+      partialAccessSeed.error ??
+        "Unable to seed partial Branch Access authority.",
+    );
+
+    const partialBeforeResult =
+      await readFinoraControlStore();
+
+    assert(
+      partialBeforeResult.success &&
+        partialBeforeResult.data !==
+          undefined,
+      "Unable to read exact-compatible partial authority fixture.",
+    );
+
+    const partialBefore =
+      partialBeforeResult.data;
+
+    assert(
+      exactEqual(
+        partialBefore.installation,
+        hydration.installation,
+      ) &&
+      partialBefore.activations.length ===
+        1 &&
+      exactEqual(
+        partialBefore.activations[0],
+        hydration.activation,
+      ) &&
+      partialBefore.storageEntitlements.length ===
+        1 &&
+      exactEqual(
+        partialBefore.storageEntitlements[0],
+        hydration.storageEntitlement,
+      ) &&
+      (
+        partialBefore.branchAccessGrants ??
+        []
+      ).length ===
+        1 &&
+      exactEqual(
+        partialBefore.branchAccessGrants?.[0],
+        hydration.branchAccessGrant,
+      ) &&
+      (
+        partialBefore.branchCredentials ??
+        []
+      ).length ===
+        0,
+      "Partial convergence fixture does not match the required credential-missing state.",
+    );
+
+    const partialApply =
+      await applyFinoraPortableFreshDeviceHydrationState(
+        hydration,
+      );
+
+    assert(
+      partialApply.success &&
+        partialApply.data?.status ===
+          "HYDRATED",
+      partialApply.success
+        ? "Exact-compatible partial convergence did not return HYDRATED."
+        : (
+            partialApply.error ??
+            "Exact-compatible partial convergence failed."
+          ),
+    );
+
+    const partialAfterResult =
+      await readFinoraControlStore();
+
+    assert(
+      partialAfterResult.success &&
+        partialAfterResult.data !==
+          undefined,
+      "Unable to read converged partial authority state.",
+    );
+
+    const partialAfter =
+      partialAfterResult.data;
+
+    assert(
+      exactEqual(
+        partialAfter.installation,
+        partialBefore.installation,
+      ) &&
+      exactEqual(
+        partialAfter.activations,
+        partialBefore.activations,
+      ) &&
+      exactEqual(
+        partialAfter.storageEntitlements,
+        partialBefore.storageEntitlements,
+      ) &&
+      exactEqual(
+        partialAfter.branchAccessGrants,
+        partialBefore.branchAccessGrants,
+      ) &&
+      (
+        partialAfter.branchCredentials ??
+        []
+      ).length ===
+        1 &&
+      exactEqual(
+        partialAfter.branchCredentials?.[0],
+        hydration.credential,
+      ),
+      "Partial convergence replaced existing authority or failed to add the missing credential.",
+    );
+
+    console.log(
+      "PASS: exact-compatible partial authority converges by adding the missing credential",
+    );
+
+    // --------------------------------------------------------
+    // MISMATCHED PARTIAL AUTHORITY MUST FAIL CLOSED
+    // --------------------------------------------------------
+
+    await rm(
+      isolatedControlFile,
+      {
+        force:
+          true,
+      },
+    );
+
+    const mismatchInstallationSeed =
+      await saveFinoraInstallationIdentity(
+        hydration.installation,
+      );
+
+    assert(
+      mismatchInstallationSeed.success,
+      mismatchInstallationSeed.error ??
+        "Unable to seed mismatch installation authority.",
+    );
+
+    const mismatchedActivation = {
+      ...hydration.activation,
+
+      activationId:
+        "ACTIVATION-H6-PARTIAL-MISMATCH",
+    };
+
+    const mismatchActivationSeed =
+      await saveFinoraBranchActivation(
+        mismatchedActivation,
+      );
+
+    assert(
+      mismatchActivationSeed.success,
+      mismatchActivationSeed.error ??
+        "Unable to seed mismatched activation authority.",
+    );
+
+    const mismatchBeforeResult =
+      await readFinoraControlStore();
+
+    assert(
+      mismatchBeforeResult.success &&
+        mismatchBeforeResult.data !==
+          undefined,
+      "Unable to read mismatched partial authority fixture.",
+    );
+
+    const mismatchBefore =
+      mismatchBeforeResult.data;
+
+    const mismatchApply =
+      await applyFinoraPortableFreshDeviceHydrationState(
+        hydration,
+      );
+
+    assert(
+      !mismatchApply.success,
+      "Mismatched partial authority unexpectedly hydrated.",
+    );
+
+    const mismatchAfterResult =
+      await readFinoraControlStore();
+
+    assert(
+      mismatchAfterResult.success &&
+        mismatchAfterResult.data !==
+          undefined &&
+      exactEqual(
+        mismatchBefore,
+        mismatchAfterResult.data,
+      ),
+      "Rejected mismatched partial authority mutated durable Control Store state.",
+    );
+
+    console.log(
+      "PASS: mismatched partial authority is rejected without durable mutation",
     );
 
     console.log(

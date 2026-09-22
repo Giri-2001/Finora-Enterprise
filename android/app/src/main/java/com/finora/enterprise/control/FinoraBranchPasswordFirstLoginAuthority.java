@@ -40,12 +40,27 @@ public final class FinoraBranchPasswordFirstLoginAuthority {
         ERROR_UNEXPECTED_AUTH_STATE =
             "UNEXPECTED_AUTH_STATE";
 
+    public static final String
+        STATUS_PASSWORD_AUTHENTICATED =
+            "PASSWORD_AUTHENTICATED";
+
     interface PasswordAuthenticationPort {
 
         PasswordAuthenticationResult authenticate(
             String username,
             String password
         ) throws Exception;
+
+        default PasswordAuthenticationResult authenticate(
+            String username,
+            String password,
+            String storageMode
+        ) throws Exception {
+            return authenticate(
+                username,
+                password
+            );
+        }
     }
 
     interface DeviceTrustCheckPort {
@@ -70,11 +85,26 @@ public final class FinoraBranchPasswordFirstLoginAuthority {
 
         public final String username;
         public final String password;
+        public final String storageMode;
         public final String securityCode;
 
         public Request(
             String username,
             String password,
+            String securityCode
+        ) {
+            this(
+                username,
+                password,
+                null,
+                securityCode
+            );
+        }
+
+        public Request(
+            String username,
+            String password,
+            String storageMode,
             String securityCode
         ) {
 
@@ -83,6 +113,9 @@ public final class FinoraBranchPasswordFirstLoginAuthority {
 
             this.password =
                 password;
+
+            this.storageMode =
+                storageMode;
 
             this.securityCode =
                 securityCode;
@@ -294,10 +327,27 @@ public final class FinoraBranchPasswordFirstLoginAuthority {
     private final DeviceTrustAuthorizationPort
         deviceTrustAuthorization;
 
+    private final boolean
+        deviceTrustRequired;
+
     FinoraBranchPasswordFirstLoginAuthority(
         PasswordAuthenticationPort passwordAuthentication,
         DeviceTrustCheckPort deviceTrustCheck,
         DeviceTrustAuthorizationPort deviceTrustAuthorization
+    ) {
+        this(
+            passwordAuthentication,
+            deviceTrustCheck,
+            deviceTrustAuthorization,
+            true
+        );
+    }
+
+    FinoraBranchPasswordFirstLoginAuthority(
+        PasswordAuthenticationPort passwordAuthentication,
+        DeviceTrustCheckPort deviceTrustCheck,
+        DeviceTrustAuthorizationPort deviceTrustAuthorization,
+        boolean deviceTrustRequired
     ) {
 
         if (
@@ -318,6 +368,9 @@ public final class FinoraBranchPasswordFirstLoginAuthority {
 
         this.deviceTrustAuthorization =
             deviceTrustAuthorization;
+
+        this.deviceTrustRequired =
+            deviceTrustRequired;
     }
 
     public Result login(
@@ -339,14 +392,20 @@ public final class FinoraBranchPasswordFirstLoginAuthority {
                 ? null
                 : request.securityCode;
 
-        final PasswordAuthenticationResult
+
+        String storageMode =
+            request == null
+                ? null
+                : request.storageMode;
+final PasswordAuthenticationResult
             passwordResult;
 
         try {
             passwordResult =
                 passwordAuthentication.authenticate(
                     username,
-                    password
+                    password,
+                    storageMode
                 );
         }
         catch (Exception error) {
@@ -377,6 +436,19 @@ public final class FinoraBranchPasswordFirstLoginAuthority {
             return Result.failure(
                 ERROR_PASSWORD_AUTHENTICATION_FAILED,
                 "FINORA Password authentication returned invalid state."
+            );
+        }
+        /*
+         * SIMPLE PORTABILITY MODE:
+         * Username + Password + exact provisioned storage are
+         * sufficient after native credential hydration.
+         * Device Trust remains available for legacy/strict flows
+         * but is not an ordinary production-login requirement.
+         */
+        if (!deviceTrustRequired) {
+            return Result.success(
+                STATUS_PASSWORD_AUTHENTICATED,
+                identity
             );
         }
 

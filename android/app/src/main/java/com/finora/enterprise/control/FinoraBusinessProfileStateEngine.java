@@ -1914,9 +1914,7 @@ public final class FinoraBusinessProfileStateEngine {
 
         return (
             value != null &&
-            value.matches(
-                "[A-Z0-9]{2,10}"
-            )
+            value.trim().length() > 0
         );
     }
 

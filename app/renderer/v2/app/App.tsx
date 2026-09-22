@@ -1123,7 +1123,14 @@ function BranchActivationGate({
 // AUTHENTICATED APPLICATION
 // ============================================================
 
-function AuthenticatedApplication() {
+interface AuthenticatedApplicationProps {
+  onProvisionBranch:
+    () => void;
+}
+
+function AuthenticatedApplication({
+  onProvisionBranch,
+}: AuthenticatedApplicationProps) {
   const { context, setContext, clearContext } = useBusinessContext();
 
   const [session, setSession] = useState<AuthSession | null>(() =>
@@ -1956,7 +1963,47 @@ function AuthenticatedApplication() {
   // ==========================================================
 
   if (!session) {
-    return <Login onLogin={handleLogin} />;
+    return (
+      <>
+        <Login onLogin={handleLogin} />
+
+        <button
+          type="button"
+          onClick={onProvisionBranch}
+          aria-label="Set up this device for a new FINORA branch"
+          style={{
+            position:
+              "fixed",
+            right:
+              "16px",
+            bottom:
+              "16px",
+            zIndex:
+              1000,
+            padding:
+              "9px 12px",
+            border:
+              "1px solid rgba(148, 163, 184, 0.45)",
+            borderRadius:
+              "10px",
+            background:
+              "rgba(15, 23, 42, 0.92)",
+            color:
+              "#e2e8f0",
+            fontFamily:
+              "Inter, ui-sans-serif, system-ui, sans-serif",
+            fontSize:
+              "12px",
+            fontWeight:
+              600,
+            cursor:
+              "pointer",
+          }}
+        >
+          Set up this device for a new FINORA branch
+        </button>
+      </>
+    );
   }
 
   // ==========================================================
@@ -2653,15 +2700,37 @@ function AuthenticatedV2Application({
 // ============================================================
 
 export default function App() {
+  const [provisioningMode, setProvisioningMode] =
+    useState<boolean>(
+      false,
+    );
+
+  const application = (
+    <BusinessContextProvider>
+      <AuthenticatedApplication
+        onProvisionBranch={() => {
+          setProvisioningMode(
+            true,
+          );
+        }}
+      />
+
+      <FinoraProcessingHost />
+
+      <FinoraDialogHost />
+    </BusinessContextProvider>
+  );
+
+  // Normal startup is owner-first on every supported device.
+  // Initial branch provisioning is an explicit action only;
+  // there is no permanent laptop or main-device assumption.
+  if (!provisioningMode) {
+    return application;
+  }
+
   return (
     <BranchActivationGate>
-      <BusinessContextProvider>
-        <AuthenticatedApplication />
-
-        <FinoraProcessingHost />
-
-        <FinoraDialogHost />
-      </BusinessContextProvider>
+      {application}
     </BranchActivationGate>
   );
 }

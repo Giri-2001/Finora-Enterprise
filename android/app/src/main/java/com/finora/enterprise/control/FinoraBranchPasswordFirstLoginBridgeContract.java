@@ -208,6 +208,11 @@ public final class FinoraBranchPasswordFirstLoginBridgeContract {
         }
 
         boolean authenticatedStatus =
+            FinoraBranchPasswordFirstLoginAuthority
+                .STATUS_PASSWORD_AUTHENTICATED
+                .equals(
+                    result.status
+                ) ||
             FinoraBranchDeviceTrustAuthority
                 .STATUS_TRUSTED
                 .equals(

@@ -21,6 +21,7 @@ public final class FinoraBranchLoginSessionProductionAuthorizationAdapter
     private final FinoraBranchAccessRuntimeAuthority branchAccessAuthority;
     private final FinoraBranchAccessRuntimeProductionAdapters.ValidatedControlStatePort controlState;
     private final DeviceTrustCheckPort deviceTrustCheck;
+    private final boolean deviceTrustRequired;
 
     public FinoraBranchLoginSessionProductionAuthorizationAdapter(
         FinoraBranchCredentialStore credentialStore,
@@ -28,13 +29,38 @@ public final class FinoraBranchLoginSessionProductionAuthorizationAdapter
         FinoraBranchAccessRuntimeProductionAdapters.ValidatedControlStatePort controlState,
         DeviceTrustCheckPort deviceTrustCheck
     ) {
-        if (credentialStore == null || branchAccessAuthority == null || controlState == null || deviceTrustCheck == null) {
-            throw new IllegalArgumentException("Session production authorization dependencies are required.");
+        this(
+            credentialStore,
+            branchAccessAuthority,
+            controlState,
+            deviceTrustCheck,
+            true
+        );
+    }
+
+    public FinoraBranchLoginSessionProductionAuthorizationAdapter(
+        FinoraBranchCredentialStore credentialStore,
+        FinoraBranchAccessRuntimeAuthority branchAccessAuthority,
+        FinoraBranchAccessRuntimeProductionAdapters.ValidatedControlStatePort controlState,
+        DeviceTrustCheckPort deviceTrustCheck,
+        boolean deviceTrustRequired
+    ) {
+        if (
+            credentialStore == null ||
+            branchAccessAuthority == null ||
+            controlState == null ||
+            deviceTrustCheck == null
+        ) {
+            throw new IllegalArgumentException(
+                "FINORA login-session production dependencies are required."
+            );
         }
+
         this.credentialStore = credentialStore;
         this.branchAccessAuthority = branchAccessAuthority;
         this.controlState = controlState;
         this.deviceTrustCheck = deviceTrustCheck;
+        this.deviceTrustRequired = deviceTrustRequired;
     }
 
     @Override
@@ -113,21 +139,24 @@ public final class FinoraBranchLoginSessionProductionAuthorizationAdapter
                 }
 
                 long authGeneration = credential.authGeneration == null ? 1L : credential.authGeneration.longValue();
-                FinoraBranchDeviceTrustAuthority.Principal deviceTrustPrincipal = new FinoraBranchDeviceTrustAuthority.Principal(
-                    authGeneration, credential.userId, credential.username, credential.ownerId, credential.businessId, credential.branchId, credential.storageMode, credential.dataContext, credential.demoId
-                );
-                FinoraBranchDeviceTrustAuthority.Result deviceTrust = deviceTrustCheck.check(deviceTrustPrincipal);
-                if (deviceTrust == null) {
-                    return failure(FinoraBranchLoginSessionAuthority.ERROR_DEVICE_TRUST_FAILED, "FINORA current device trust could not be validated.");
-                }
-                if (!deviceTrust.success) {
-                    if (FinoraBranchDeviceTrustAuthority.ERROR_NATIVE_BINDING_UNAVAILABLE.equals(deviceTrust.errorCode)) {
-                        return failure(FinoraBranchLoginSessionAuthority.ERROR_NATIVE_BINDING_UNAVAILABLE, "FINORA native installation binding is unavailable.");
+                if (deviceTrustRequired) {
+                    FinoraBranchDeviceTrustAuthority.Principal deviceTrustPrincipal = new FinoraBranchDeviceTrustAuthority.Principal(
+                        authGeneration, credential.userId, credential.username, credential.ownerId, credential.businessId, credential.branchId, credential.storageMode, credential.dataContext, credential.demoId
+                    );
+                    FinoraBranchDeviceTrustAuthority.Result deviceTrust = deviceTrustCheck.check(deviceTrustPrincipal);
+                    if (deviceTrust == null) {
+                        return failure(FinoraBranchLoginSessionAuthority.ERROR_DEVICE_TRUST_FAILED, "FINORA current device trust could not be validated.");
                     }
-                    return failure(FinoraBranchLoginSessionAuthority.ERROR_DEVICE_TRUST_FAILED, deviceTrust.error == null ? "FINORA current device trust failed." : deviceTrust.error);
-                }
-                if (!FinoraBranchDeviceTrustAuthority.STATUS_TRUSTED.equals(deviceTrust.status)) {
-                    return failure(FinoraBranchLoginSessionAuthority.ERROR_DEVICE_TRUST_FAILED, "FINORA current device is no longer trusted.");
+                    if (!deviceTrust.success) {
+                        if (FinoraBranchDeviceTrustAuthority.ERROR_NATIVE_BINDING_UNAVAILABLE.equals(deviceTrust.errorCode)) {
+                            return failure(FinoraBranchLoginSessionAuthority.ERROR_NATIVE_BINDING_UNAVAILABLE, "FINORA native installation binding is unavailable.");
+                        }
+                        return failure(FinoraBranchLoginSessionAuthority.ERROR_DEVICE_TRUST_FAILED, deviceTrust.error == null ? "FINORA current device trust failed." : deviceTrust.error);
+                    }
+                    if (!FinoraBranchDeviceTrustAuthority.STATUS_TRUSTED.equals(deviceTrust.status)) {
+                        return failure(FinoraBranchLoginSessionAuthority.ERROR_DEVICE_TRUST_FAILED, "FINORA current device is no longer trusted.");
+                    }
+
                 }
                 FinoraBranchLoginSessionAuthority.Principal principal = new FinoraBranchLoginSessionAuthority.Principal(
                     credential.credentialId,

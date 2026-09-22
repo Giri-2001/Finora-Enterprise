@@ -110,6 +110,31 @@ public final class FinoraPortableBranchAuthPayloadCodec {
             "portabilityAuthorityProof"
         );
 
+    private static final Set<String> LEGACY_SOURCE_EVIDENCE_KEYS =
+        immutableSet(
+            "authorizationId",
+            "legacyNativeBoundMigrationEvidence",
+            "schemaVersion"
+        );
+
+    private static final Set<String> LEGACY_NATIVE_BOUND_MIGRATION_KEYS =
+        immutableSet(
+            "schemaVersion",
+            "migrationMethod",
+            "sourceAuthorizationId",
+            "ownerId",
+            "businessId",
+            "branchId",
+            "userId",
+            "username",
+            "storageMode",
+            "authGeneration",
+            "installationId",
+            "bindingKeyId",
+            "fingerprintAlgorithm",
+            "publicKeyFingerprint",
+            "migratedAt"
+        );
     private static final Set<String> VERIFIED_SIGNER_REQUIRED_KEYS =
         immutableSet(
             "issuerId",
@@ -623,17 +648,123 @@ public final class FinoraPortableBranchAuthPayloadCodec {
                 schemaVersion;
         }
     }
+    public static final class LegacyNativeBoundMigrationEvidence {
+
+        public final int schemaVersion;
+        public final String migrationMethod;
+        public final String sourceAuthorizationId;
+        public final String ownerId;
+        public final String businessId;
+        public final String branchId;
+        public final String userId;
+        public final String username;
+        public final String storageMode;
+        public final long authGeneration;
+        public final String installationId;
+        public final String bindingKeyId;
+        public final String fingerprintAlgorithm;
+        public final String publicKeyFingerprint;
+        public final String migratedAt;
+
+        private LegacyNativeBoundMigrationEvidence(
+            int schemaVersion,
+            String migrationMethod,
+            String sourceAuthorizationId,
+            String ownerId,
+            String businessId,
+            String branchId,
+            String userId,
+            String username,
+            String storageMode,
+            long authGeneration,
+            String installationId,
+            String bindingKeyId,
+            String fingerprintAlgorithm,
+            String publicKeyFingerprint,
+            String migratedAt
+        ) {
+            this.schemaVersion =
+                schemaVersion;
+
+            this.migrationMethod =
+                migrationMethod;
+
+            this.sourceAuthorizationId =
+                sourceAuthorizationId;
+
+            this.ownerId =
+                ownerId;
+
+            this.businessId =
+                businessId;
+
+            this.branchId =
+                branchId;
+
+            this.userId =
+                userId;
+
+            this.username =
+                username;
+
+            this.storageMode =
+                storageMode;
+
+            this.authGeneration =
+                authGeneration;
+
+            this.installationId =
+                installationId;
+
+            this.bindingKeyId =
+                bindingKeyId;
+
+            this.fingerprintAlgorithm =
+                fingerprintAlgorithm;
+
+            this.publicKeyFingerprint =
+                publicKeyFingerprint;
+
+            this.migratedAt =
+                migratedAt;
+        }
+    }
+
     public static final class SourceAuthorizationEvidence {
 
         public final String authorizationId;
+
+        /*
+         * Signed Control Center lineage fields.
+         *
+         * These are populated for the signed V1 evidence form and null/zero
+         * for the canonical legacy migration evidence form.
+         */
         public final String packageId;
         public final String issuerId;
         public final long sequence;
         public final VerifiedControlSigner verifiedControlSigner;
         public final PortabilityAuthorityProof portabilityAuthorityProof;
         public final String verifiedAt;
+
+        /*
+         * Historical migration evidence only.
+         *
+         * installationId / bindingKeyId / fingerprint contained here prove
+         * the old migration record's internal consistency. They MUST NOT be
+         * interpreted as authorization of the current Android device or USB.
+         */
+        public final LegacyNativeBoundMigrationEvidence
+            legacyNativeBoundMigrationEvidence;
+
         public final int schemaVersion;
 
+        /*
+         * Backward-compatible signed-evidence constructor.
+         *
+         * Existing reflection-based callers/tests depend on this exact
+         * signature. Signed evidence has no legacy migration evidence.
+         */
         private SourceAuthorizationEvidence(
             String authorizationId,
             String packageId,
@@ -642,6 +773,30 @@ public final class FinoraPortableBranchAuthPayloadCodec {
             VerifiedControlSigner verifiedControlSigner,
             PortabilityAuthorityProof portabilityAuthorityProof,
             String verifiedAt,
+            int schemaVersion
+        ) {
+            this(
+                authorizationId,
+                packageId,
+                issuerId,
+                sequence,
+                verifiedControlSigner,
+                portabilityAuthorityProof,
+                verifiedAt,
+                null,
+                schemaVersion
+            );
+        }
+        private SourceAuthorizationEvidence(
+            String authorizationId,
+            String packageId,
+            String issuerId,
+            long sequence,
+            VerifiedControlSigner verifiedControlSigner,
+            PortabilityAuthorityProof portabilityAuthorityProof,
+            String verifiedAt,
+            LegacyNativeBoundMigrationEvidence
+                legacyNativeBoundMigrationEvidence,
             int schemaVersion
         ) {
             this.authorizationId =
@@ -665,10 +820,14 @@ public final class FinoraPortableBranchAuthPayloadCodec {
             this.verifiedAt =
                 verifiedAt;
 
+            this.legacyNativeBoundMigrationEvidence =
+                legacyNativeBoundMigrationEvidence;
+
             this.schemaVersion =
                 schemaVersion;
         }
     }
+
     public static Payload parseCorePayload(
         byte[] plaintext
     ) {
@@ -979,6 +1138,16 @@ public final class FinoraPortableBranchAuthPayloadCodec {
     private static SourceAuthorizationEvidence parseSourceAuthorizationEvidence(
         JSONObject evidence
     ) {
+        if (
+            evidence.has(
+                "legacyNativeBoundMigrationEvidence"
+            )
+        ) {
+            return parseLegacySourceAuthorizationEvidence(
+                evidence
+            );
+        }
+
         assertExactKeys(
             evidence,
             SOURCE_EVIDENCE_REQUIRED_KEYS,
@@ -1030,6 +1199,7 @@ public final class FinoraPortableBranchAuthPayloadCodec {
                 "Portable Branch Auth source authorization signer issuer does not match evidence issuer."
             );
         }
+
         PortabilityAuthorityProof portabilityAuthorityProof =
             null;
 
@@ -1128,7 +1298,260 @@ public final class FinoraPortableBranchAuthPayloadCodec {
             signer,
             portabilityAuthorityProof,
             verifiedAt,
+            null,
             schemaVersion
+        );
+    }
+
+    private static SourceAuthorizationEvidence parseLegacySourceAuthorizationEvidence(
+        JSONObject evidence
+    ) {
+        assertExactKeys(
+            evidence,
+            LEGACY_SOURCE_EVIDENCE_KEYS,
+            Collections.<String>emptySet(),
+            "sourceAuthorizationVerificationEvidence"
+        );
+
+        String authorizationId =
+            requireCanonicalString(
+                evidence,
+                "authorizationId",
+                512
+            );
+
+        int evidenceSchemaVersion =
+            requireExactInt(
+                evidence,
+                "schemaVersion"
+            );
+
+        if (
+            evidenceSchemaVersion !=
+            1
+        ) {
+            throw new IllegalArgumentException(
+                "Portable Branch Auth legacy source authorization verification evidence schemaVersion is unsupported."
+            );
+        }
+
+        JSONObject migrationEvidence =
+            requireObject(
+                evidence,
+                "legacyNativeBoundMigrationEvidence"
+            );
+
+        assertExactKeys(
+            migrationEvidence,
+            LEGACY_NATIVE_BOUND_MIGRATION_KEYS,
+            Collections.<String>emptySet(),
+            "legacyNativeBoundMigrationEvidence"
+        );
+
+        int migrationSchemaVersion =
+            requireExactInt(
+                migrationEvidence,
+                "schemaVersion"
+            );
+
+        String migrationMethod =
+            requireString(
+                migrationEvidence,
+                "migrationMethod"
+            );
+
+        if (
+            migrationSchemaVersion !=
+                1 ||
+            !"PASSWORD_AND_ACTIVE_NATIVE_STORAGE_ENTITLEMENT".equals(
+                migrationMethod
+            )
+        ) {
+            throw new IllegalArgumentException(
+                "Portable Branch Auth legacy native-bound migration evidence is unsupported."
+            );
+        }
+
+        String sourceAuthorizationId =
+            requireCanonicalString(
+                migrationEvidence,
+                "sourceAuthorizationId",
+                512
+            );
+
+        String ownerId =
+            requireCanonicalString(
+                migrationEvidence,
+                "ownerId",
+                256
+            );
+
+        String businessId =
+            requireCanonicalString(
+                migrationEvidence,
+                "businessId",
+                256
+            );
+
+        String branchId =
+            requireCanonicalString(
+                migrationEvidence,
+                "branchId",
+                256
+            );
+
+        String userId =
+            requireCanonicalString(
+                migrationEvidence,
+                "userId",
+                256
+            );
+
+        String username =
+            requireCanonicalString(
+                migrationEvidence,
+                "username",
+                128
+            );
+
+        String storageMode =
+            requireString(
+                migrationEvidence,
+                "storageMode"
+            );
+
+        if (
+            !"LOCAL".equals(
+                storageMode
+            ) &&
+            !"USB".equals(
+                storageMode
+            )
+        ) {
+            throw new IllegalArgumentException(
+                "Portable Branch Auth legacy migration storageMode is invalid."
+            );
+        }
+
+        long authGeneration =
+            requirePositiveSafeInteger(
+                migrationEvidence,
+                "authGeneration"
+            );
+
+        String installationId =
+            requireCanonicalString(
+                migrationEvidence,
+                "installationId",
+                512
+            );
+
+        String publicKeyFingerprint =
+            requireCanonicalString(
+                migrationEvidence,
+                "publicKeyFingerprint",
+                128
+            );
+
+        if (
+            !publicKeyFingerprint.matches(
+                "^[0-9a-fA-F]{64}$"
+            )
+        ) {
+            throw new IllegalArgumentException(
+                "Portable Branch Auth legacy migration publicKeyFingerprint is invalid."
+            );
+        }
+
+        String bindingKeyId =
+            requireCanonicalString(
+                migrationEvidence,
+                "bindingKeyId",
+                512
+            );
+
+        String expectedBindingKeyId =
+            "FINORA-BINDING-" +
+            publicKeyFingerprint
+                .substring(
+                    0,
+                    32
+                )
+                .toUpperCase(
+                    java.util.Locale.ROOT
+                );
+
+        if (
+            !bindingKeyId.equals(
+                expectedBindingKeyId
+            )
+        ) {
+            throw new IllegalArgumentException(
+                "Portable Branch Auth legacy migration bindingKeyId does not match its fingerprint."
+            );
+        }
+
+        String fingerprintAlgorithm =
+            requireString(
+                migrationEvidence,
+                "fingerprintAlgorithm"
+            );
+
+        if (
+            !"SHA-256".equals(
+                fingerprintAlgorithm
+            )
+        ) {
+            throw new IllegalArgumentException(
+                "Portable Branch Auth legacy migration fingerprintAlgorithm is invalid."
+            );
+        }
+
+        String migratedAt =
+            requireCanonicalTimestamp(
+                migrationEvidence,
+                "migratedAt"
+            );
+
+        if (
+            !sourceAuthorizationId.equals(
+                authorizationId
+            )
+        ) {
+            throw new IllegalArgumentException(
+                "Portable Branch Auth legacy migration evidence does not match authorizationId."
+            );
+        }
+
+        LegacyNativeBoundMigrationEvidence legacyEvidence =
+            new LegacyNativeBoundMigrationEvidence(
+                migrationSchemaVersion,
+                migrationMethod,
+                sourceAuthorizationId,
+                ownerId,
+                businessId,
+                branchId,
+                userId,
+                username,
+                storageMode,
+                authGeneration,
+                installationId,
+                bindingKeyId,
+                fingerprintAlgorithm,
+                publicKeyFingerprint,
+                migratedAt
+            );
+
+        return new SourceAuthorizationEvidence(
+            authorizationId,
+            null,
+            null,
+            0L,
+            null,
+            null,
+            null,
+            legacyEvidence,
+            evidenceSchemaVersion
         );
     }
 

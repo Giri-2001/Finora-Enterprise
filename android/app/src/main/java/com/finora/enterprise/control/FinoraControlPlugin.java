@@ -1,5 +1,7 @@
 package com.finora.enterprise.control;
 
+import android.util.Log;
+
 // ============================================================
 // FINORA ENTERPRISE OS™
 //
@@ -64,6 +66,35 @@ import org.json.JSONObject;
 public final class FinoraControlPlugin
     extends Plugin {
 
+    private static final String POSTLOGIN_DIAGNOSTIC_TAG =
+        "FINORA_POSTLOGIN_DIAG";
+
+    private static void postLoginDiagnosticInfo(
+        String message
+    ) {
+        try {
+            Log.i(
+                POSTLOGIN_DIAGNOSTIC_TAG,
+                message
+            );
+        } catch (Throwable ignored) {
+            // Android Log is unavailable in local JVM unit tests.
+        }
+    }
+
+    private static void postLoginDiagnosticWarn(
+        String message
+    ) {
+        try {
+            Log.w(
+                POSTLOGIN_DIAGNOSTIC_TAG,
+                message
+            );
+        } catch (Throwable ignored) {
+            // Android Log is unavailable in local JVM unit tests.
+        }
+    }
+
     // ========================================================
     // CONSTANTS
     // ========================================================
@@ -80,6 +111,9 @@ public final class FinoraControlPlugin
     private FinoraInstallationBindingService installationBindingService;
     private FinoraBranchPasswordFirstLoginAuthority
         passwordFirstLoginAuthority;
+
+    private FinoraPortableFreshDeviceLoginRecoveryCoordinator
+        freshDeviceLoginRecoveryCoordinator;
 
     private FinoraBranchAccessRuntimeAuthority
         branchAccessRuntimeAuthority;
@@ -120,6 +154,14 @@ public final class FinoraControlPlugin
                 portableBranchAuthStore,
                 this.installationBindingService,
                 branchDeviceTrustStore
+            );
+
+        this.freshDeviceLoginRecoveryCoordinator =
+            FinoraPortableFreshDeviceRecoveryProductionFactory.create(
+                getContext(),
+                portableBranchAuthStore,
+                this.installationBindingService,
+                this.controlStore
             );
         FinoraClockHighWaterStore branchAccessClockStore =
             new FinoraClockHighWaterStore(
@@ -191,7 +233,8 @@ public final class FinoraControlPlugin
                         ) {
                             return sessionDeviceTrust.check(principal);
                         }
-                    }
+                    },
+                    false
                 );
 
         this.loginSessionAuthority =
@@ -222,7 +265,10 @@ public final class FinoraControlPlugin
 
         try {
 
-            if (passwordFirstLoginAuthority == null) {
+            if (
+                passwordFirstLoginAuthority == null ||
+                freshDeviceLoginRecoveryCoordinator == null
+            ) {
 
                 JSObject unavailable =
                     new JSObject();
@@ -250,6 +296,151 @@ public final class FinoraControlPlugin
                 return;
             }
 
+                        FinoraPortableFreshDeviceLoginRecoveryCoordinator.Result
+                recoveryResult =
+                    freshDeviceLoginRecoveryCoordinator.recover(
+                        new FinoraPortableFreshDeviceLoginRecoveryCoordinator
+                            .Request(
+                                call.getString(
+                                    "username"
+                                ),
+                                call.getString(
+                                    "password"
+                                ),
+                                call.getString(
+                                    "storageMode"
+                                ),
+                                call.getString(
+                                    "securityCode"
+                                )
+                            )
+                    );
+
+            if (
+                recoveryResult == null
+            ) {
+                JSObject recoveryFailure =
+                    new JSObject();
+
+                recoveryFailure.put(
+                    "success",
+                    false
+                );
+
+                recoveryFailure.put(
+                    "errorCode",
+                    FinoraBranchPasswordFirstLoginBridgeContract
+                        .PASSWORD_FIRST_LOGIN_FAILED
+                );
+
+                recoveryFailure.put(
+                    "error",
+                    "FINORA fresh-device recovery returned no result."
+                );
+
+                call.resolve(
+                    recoveryFailure
+                );
+
+                return;
+            }
+
+            if (!recoveryResult.success) {
+                JSObject recoveryFailure =
+                    new JSObject();
+
+                recoveryFailure.put(
+                    "success",
+                    false
+                );
+
+                recoveryFailure.put(
+                    "errorCode",
+                    recoveryResult.errorCode
+                );
+
+                recoveryFailure.put(
+                    "error",
+                    recoveryResult.error
+                );
+
+                call.resolve(
+                    recoveryFailure
+                );
+
+                return;
+            }
+
+            if (
+                "SECURITY_CODE_REQUIRED".equals(
+                    recoveryResult.status
+                )
+            ) {
+                JSObject challenge =
+                    new JSObject();
+
+                challenge.put(
+                    "success",
+                    true
+                );
+
+                challenge.put(
+                    "status",
+                    "SECURITY_CODE_REQUIRED"
+                );
+
+                call.resolve(
+                    challenge
+                );
+
+                return;
+            }
+
+            if (
+                !"NOT_APPLICABLE".equals(
+                    recoveryResult.status
+                ) &&
+                !"RECOVERED".equals(
+                    recoveryResult.status
+                )
+            ) {
+                JSObject recoveryFailure =
+                    new JSObject();
+
+                recoveryFailure.put(
+                    "success",
+                    false
+                );
+
+                recoveryFailure.put(
+                    "errorCode",
+                    FinoraBranchPasswordFirstLoginBridgeContract
+                        .PASSWORD_FIRST_LOGIN_FAILED
+                );
+
+                recoveryFailure.put(
+                    "error",
+                    "FINORA fresh-device recovery returned an unexpected state."
+                );
+
+                call.resolve(
+                    recoveryFailure
+                );
+
+                return;
+            }
+
+            /*
+             * NOT_APPLICABLE:
+             *   local credential already exists.
+             *
+             * RECOVERED:
+             *   verified fresh-device hydration has just completed.
+             *
+             * In both cases continue through the canonical local
+             * Password-first + Device Trust authority below.
+             */
+
             FinoraBranchPasswordFirstLoginAuthority.Result
                 authorityResult =
                     passwordFirstLoginAuthority.login(
@@ -260,6 +451,9 @@ public final class FinoraControlPlugin
                                 ),
                                 call.getString(
                                     "password"
+                                ),
+                                call.getString(
+                                    "storageMode"
                                 ),
                                 call.getString(
                                     "securityCode"
@@ -422,7 +616,8 @@ public final class FinoraControlPlugin
     ) {
         if (
             passwordFirstLoginAuthority == null ||
-            loginSessionAuthority == null
+                freshDeviceLoginRecoveryCoordinator == null ||
+                loginSessionAuthority == null
         ) {
             resolveLoginSessionFailure(
                 call,
@@ -451,6 +646,85 @@ public final class FinoraControlPlugin
         }
 
         try {
+            FinoraPortableFreshDeviceLoginRecoveryCoordinator.Result
+                recoveryResult =
+                    freshDeviceLoginRecoveryCoordinator.recover(
+                        new FinoraPortableFreshDeviceLoginRecoveryCoordinator
+                            .Request(
+                                call.getString(
+                                    "username"
+                                ),
+                                call.getString(
+                                    "password"
+                                ),
+                                call.getString(
+                                    "storageMode"
+                                ),
+                                call.getString(
+                                    "securityCode"
+                                )
+                            )
+                    );
+
+            if (recoveryResult == null) {
+                resolveLoginSessionFailure(
+                    call,
+                    FinoraBranchLoginSessionAuthority
+                        .ERROR_CONTROL_STATE_FAILED,
+                    "FINORA fresh-device recovery returned no result."
+                );
+                return;
+            }
+
+            if (!recoveryResult.success) {
+                resolveLoginSessionFailure(
+                    call,
+                    recoveryResult.errorCode,
+                    recoveryResult.error
+                );
+                return;
+            }
+
+            if (
+                "SECURITY_CODE_REQUIRED".equals(
+                    recoveryResult.status
+                )
+            ) {
+                resolveLoginSessionFailure(
+                    call,
+                    "SECURITY_CODE_REQUIRED",
+                    "Security Code is required to authorize this device."
+                );
+                return;
+            }
+
+            if (
+                !"NOT_APPLICABLE".equals(
+                    recoveryResult.status
+                ) &&
+                !"RECOVERED".equals(
+                    recoveryResult.status
+                )
+            ) {
+                resolveLoginSessionFailure(
+                    call,
+                    FinoraBranchLoginSessionAuthority
+                        .ERROR_CONTROL_STATE_FAILED,
+                    "FINORA fresh-device recovery returned an unexpected state."
+                );
+                return;
+            }
+
+            /*
+             * NOT_APPLICABLE:
+             *   native credential already exists.
+             *
+             * RECOVERED:
+             *   verified fresh-device hydration completed.
+             *
+             * Continue through canonical password-first
+             * authentication and login-session issuance.
+             */
             FinoraBranchPasswordFirstLoginAuthority.Result
                 authorityResult =
                     passwordFirstLoginAuthority.login(
@@ -461,6 +735,9 @@ public final class FinoraControlPlugin
                                 ),
                                 call.getString(
                                     "password"
+                                ),
+                                call.getString(
+                                    "storageMode"
                                 ),
                                 call.getString(
                                     "securityCode"
@@ -992,42 +1269,17 @@ public final class FinoraControlPlugin
                 return;
             }
 
-
             // ------------------------------------------------
-            // CURRENT NATIVE INSTALLATION BINDING
+            // SIMPLE PORTABILITY
+            //
+            // The signed installation record remains evidence
+            // for the provisioned branch, but current Android
+            // device identity is not an ordinary login or
+            // Business Profile authorization gate.
+            //
+            // Exact Owner / Business / Branch scope remains
+            // mandatory below.
             // ------------------------------------------------
-
-            FinoraInstallationBindingService bindingService =
-                new FinoraInstallationBindingService(
-                    getContext()
-                );
-
-            FinoraInstallationBindingCrypto.PublicBinding nativeBinding =
-                bindingService.get();
-
-            if (nativeBinding == null) {
-
-                resolveFailure(
-                    call,
-                    "FINORA Android native installation binding is required before reading the Business Profile."
-                );
-
-                return;
-            }
-
-            if (
-                !installationId.equals(
-                    nativeBinding.installationId
-                )
-            ) {
-
-                resolveFailure(
-                    call,
-                    "FINORA native installation binding does not match the Control Store installation identity."
-                );
-
-                return;
-            }
 
 
             // ------------------------------------------------
@@ -1085,85 +1337,16 @@ public final class FinoraControlPlugin
                     continue;
                 }
 
-
                 // --------------------------------------------
-                // PROFILE -> INSTALLATION
+                // HISTORICAL BINDING EVIDENCE
+                //
+                // installationId / bindingKeyId / fingerprint
+                // fields remain signed historical evidence.
+                //
+                // They are deliberately not compared with the
+                // current Android device for ordinary portable
+                // authentication or Business Profile loading.
                 // --------------------------------------------
-
-                String profileInstallationId =
-                    normalizeRequiredString(
-                        profile.optString(
-                            "installationId",
-                            null
-                        )
-                    );
-
-                String profileBindingKeyId =
-                    normalizeRequiredString(
-                        profile.optString(
-                            "bindingKeyId",
-                            null
-                        )
-                    );
-
-                String profileFingerprintAlgorithm =
-                    normalizeRequiredString(
-                        profile.optString(
-                            "fingerprintAlgorithm",
-                            null
-                        )
-                    );
-
-                String profilePublicKeyFingerprint =
-                    normalizeRequiredString(
-                        profile.optString(
-                            "publicKeyFingerprint",
-                            null
-                        )
-                    );
-
-                if (
-                    profileInstallationId == null ||
-                    profileBindingKeyId == null ||
-                    profileFingerprintAlgorithm == null ||
-                    profilePublicKeyFingerprint == null ||
-                    !installationId.equals(
-                        profileInstallationId
-                    )
-                ) {
-
-                    resolveFailure(
-                        call,
-                        "FINORA Business Profile does not match the installed branch."
-                    );
-
-                    return;
-                }
-
-
-                // --------------------------------------------
-                // PROFILE -> CURRENT NATIVE BINDING
-                // --------------------------------------------
-
-                if (
-                    !nativeBinding.bindingKeyId.equals(
-                        profileBindingKeyId
-                    ) ||
-                    !"SHA-256".equals(
-                        profileFingerprintAlgorithm
-                    ) ||
-                    !nativeBinding.publicKeyFingerprint.equals(
-                        profilePublicKeyFingerprint
-                    )
-                ) {
-
-                    resolveFailure(
-                        call,
-                        "FINORA Business Profile native installation binding is invalid."
-                    );
-
-                    return;
-                }
 
 
                 // --------------------------------------------
@@ -1382,6 +1565,505 @@ public final class FinoraControlPlugin
      */
     // ========================================================
     // FIND PRICING POLICY
+    // ========================================================
+    // FIND PORTABLE BUSINESS PROFILE
+    // ========================================================
+
+    /**
+     * Read the signed FINORA Business / Branch Profile through
+     * one already-authenticated opaque login session.
+     *
+     * SECURITY:
+     *
+     * - Renderer supplies only sessionId.
+     * - Native session authority resolves branch scope.
+     * - Exact Owner / Business / Branch scope is mandatory.
+     * - Historical installation-binding fields remain evidence.
+     * - Current Android device binding is not an ordinary
+     *   portable login / Business Profile authorization gate.
+     * - Renderer receives only sanitized profile fields.
+     *
+     * READ ONLY.
+     */
+    @PluginMethod
+    public void findPortableBusinessProfile(
+        PluginCall call
+    ) {
+
+        if (loginSessionAuthority == null) {
+
+            resolveFailure(
+                call,
+                "FINORA secure login session authority is unavailable."
+            );
+
+            return;
+        }
+
+        String sessionId =
+            normalizeRequiredString(
+                call.getString(
+                    "sessionId"
+                )
+            );
+
+        if (sessionId == null) {
+
+            resolveFailure(
+                call,
+                "A valid FINORA portable Business Profile session is required."
+            );
+
+            return;
+        }
+
+        FinoraBranchLoginSessionAuthority.SessionResult sessionResult =
+            loginSessionAuthority.validate(
+                sessionId
+            );
+
+        if (
+            !sessionResult.success ||
+            sessionResult.data == null
+        ) {
+
+            resolveLoginSessionFailure(
+                call,
+                sessionResult.errorCode,
+                sessionResult.error
+            );
+
+            return;
+        }
+
+        String ownerId =
+            normalizeRequiredString(
+                sessionResult.data.ownerId
+            );
+
+        String businessId =
+            normalizeRequiredString(
+                sessionResult.data.businessId
+            );
+
+        String branchId =
+            normalizeRequiredString(
+                sessionResult.data.branchId
+            );
+
+        if (
+            ownerId == null ||
+            businessId == null ||
+            branchId == null
+        ) {
+
+            resolveFailure(
+                call,
+                "The authenticated FINORA session does not contain a valid branch scope."
+            );
+
+            return;
+        }
+
+        try {
+
+            JSONObject controlPackage =
+                readValidatedControlPackage();
+
+            if (controlPackage == null) {
+
+
+
+
+                try {
+
+                    android.util.Log.i(
+
+                        "FINORA_POSTLOGIN_DIAG",
+
+                        "PORTABLE_PROFILE_CONTROL_PACKAGE_MISSING"
+
+                    );
+
+                } catch (Throwable ignored) {
+
+                }
+                resolveSuccess(
+                    call
+                );
+
+                return;
+            }
+
+            // ------------------------------------------------
+            // LOGICAL INSTALLED BRANCH SCOPE
+            // ------------------------------------------------
+
+            JSONObject installation =
+                controlPackage.optJSONObject(
+                    "installation"
+                );
+
+            if (
+                installation == null ||
+                !isValidInstallation(
+                    installation
+                )
+            ) {
+
+                resolveFailure(
+                    call,
+                    "FINORA installation identity is required before reading the portable Business Profile."
+                );
+
+                return;
+            }
+
+            String installedOwnerId =
+                normalizeRequiredString(
+                    installation.optString(
+                        "ownerId",
+                        null
+                    )
+                );
+
+            String installedBusinessId =
+                normalizeRequiredString(
+                    installation.optString(
+                        "businessId",
+                        null
+                    )
+                );
+
+            String installedBranchId =
+                normalizeRequiredString(
+                    installation.optString(
+                        "branchId",
+                        null
+                    )
+                );
+
+            if (
+                installedOwnerId == null ||
+                installedBusinessId == null ||
+                installedBranchId == null
+            ) {
+
+                resolveFailure(
+                    call,
+                    "FINORA installation identity is invalid."
+                );
+
+                return;
+            }
+
+            if (
+                !ownerId.equals(
+                    installedOwnerId
+                ) ||
+                !businessId.equals(
+                    installedBusinessId
+                ) ||
+                !branchId.equals(
+                    installedBranchId
+                )
+            ) {
+
+                resolveFailure(
+                    call,
+                    "FINORA portable Business Profile request does not match the authenticated branch scope."
+                );
+
+                return;
+            }
+
+            JSONArray businessProfiles =
+                controlPackage.optJSONArray(
+                    "businessProfiles"
+                );
+
+            if (businessProfiles == null) {
+
+
+
+
+                try {
+
+                    android.util.Log.i(
+
+                        "FINORA_POSTLOGIN_DIAG",
+
+                        "PORTABLE_PROFILE_ARRAY_MISSING"
+
+                    );
+
+                } catch (Throwable ignored) {
+
+                }
+                resolveSuccess(
+                    call
+                );
+
+                return;
+            }
+
+                        try {
+                android.util.Log.i(
+                    "FINORA_POSTLOGIN_DIAG",
+                    "PORTABLE_PROFILE_ARRAY_COUNT count=" +
+                    businessProfiles.length() +
+                    " requestedOwnerId=" +
+                    ownerId +
+                    " requestedBusinessId=" +
+                    businessId +
+                    " requestedBranchId=" +
+                    branchId
+                );
+            } catch (Throwable ignored) {
+            }
+
+            for (
+                int index = 0;
+                index < businessProfiles.length();
+                index++
+            ) {
+
+                JSONObject profile =
+                    businessProfiles.getJSONObject(
+                        index
+                    );
+
+                boolean scopeMatches =
+                    ownerId.equals(
+                        profile.getString(
+                            "ownerId"
+                        )
+                    ) &&
+                    businessId.equals(
+                        profile.getString(
+                            "businessId"
+                        )
+                    ) &&
+                    branchId.equals(
+                        profile.getString(
+                            "branchId"
+                        )
+                    );
+
+                if (!scopeMatches) {
+                    continue;
+                }
+
+                try {
+                    android.util.Log.i(
+                        "FINORA_POSTLOGIN_DIAG",
+                        "PORTABLE_PROFILE_SCOPE_MATCH index=" +
+                        index
+                    );
+                } catch (Throwable ignored) {
+                }
+
+                // --------------------------------------------
+                // HISTORICAL BINDING EVIDENCE
+                //
+                // installationId / bindingKeyId / fingerprint
+                // remain signed historical evidence only.
+                // They are not rebound to this Android device.
+                // --------------------------------------------
+
+                String installedBusinessCode =
+                    normalizeRequiredString(
+                        installation.optString(
+                            "businessCode",
+                            null
+                        )
+                    );
+
+                String installedBranchCode =
+                    normalizeRequiredString(
+                        installation.optString(
+                            "branchCode",
+                            null
+                        )
+                    );
+
+                String profileBusinessCode =
+                    normalizeRequiredString(
+                        profile.optString(
+                            "businessCode",
+                            null
+                        )
+                    );
+
+                String profileBranchCode =
+                    normalizeRequiredString(
+                        profile.optString(
+                            "branchCode",
+                            null
+                        )
+                    );
+
+                if (
+                    (
+                        installedBusinessCode == null
+                    ) !=
+                    (
+                        installedBranchCode == null
+                    )
+                ) {
+
+                    resolveFailure(
+                        call,
+                        "FINORA installation numbering-code state is inconsistent."
+                    );
+
+                    return;
+                }
+
+                if (
+                    installedBusinessCode != null &&
+                    (
+                        !installedBusinessCode.equals(
+                            profileBusinessCode
+                        ) ||
+                        !installedBranchCode.equals(
+                            profileBranchCode
+                        )
+                    )
+                ) {
+
+                    resolveFailure(
+                        call,
+                        "FINORA portable Business Profile numbering codes do not match the installation identity."
+                    );
+
+                    return;
+                }
+
+                JSObject data =
+                    new JSObject();
+
+                data.put(
+                    "profileId",
+                    profile.getString(
+                        "profileId"
+                    )
+                );
+
+                data.put(
+                    "ownerId",
+                    profile.getString(
+                        "ownerId"
+                    )
+                );
+
+                data.put(
+                    "businessId",
+                    profile.getString(
+                        "businessId"
+                    )
+                );
+
+                data.put(
+                    "branchId",
+                    profile.getString(
+                        "branchId"
+                    )
+                );
+
+                data.put(
+                    "businessCode",
+                    profile.getString(
+                        "businessCode"
+                    )
+                );
+
+                data.put(
+                    "branchCode",
+                    profile.getString(
+                        "branchCode"
+                    )
+                );
+
+                data.put(
+                    "businessName",
+                    profile.getString(
+                        "businessName"
+                    )
+                );
+
+                data.put(
+                    "branchName",
+                    profile.getString(
+                        "branchName"
+                    )
+                );
+
+                data.put(
+                    "createdAt",
+                    profile.getString(
+                        "createdAt"
+                    )
+                );
+
+                data.put(
+                    "updatedAt",
+                    profile.getString(
+                        "updatedAt"
+                    )
+                );
+
+                data.put(
+                    "schemaVersion",
+                    profile.get(
+                        "schemaVersion"
+                    )
+                );
+
+                JSObject result =
+                    createSuccessResult();
+
+                result.put(
+                    "data",
+                    data
+                );
+
+                call.resolve(
+                    result
+                );
+
+                return;
+            }
+
+            try {
+                android.util.Log.i(
+                    "FINORA_POSTLOGIN_DIAG",
+                    "PORTABLE_PROFILE_NO_SCOPE_MATCH count=" +
+                    businessProfiles.length() +
+                    " requestedOwnerId=" +
+                    ownerId +
+                    " requestedBusinessId=" +
+                    businessId +
+                    " requestedBranchId=" +
+                    branchId
+                );
+            } catch (Throwable ignored) {
+            }
+
+            resolveSuccess(
+                call
+            );
+
+        } catch (Exception error) {
+
+            resolveFailure(
+                call,
+                error,
+                "Unable to read authenticated FINORA portable Business Profile."
+            );
+        }
+    }
+
     // ========================================================
 
     /**
@@ -2567,6 +3249,14 @@ public final class FinoraControlPlugin
             );
 
         if (!result.success) {
+            postLoginDiagnosticWarn(
+                "BRANCH_ACCESS_FAIL errorCode=" +
+                    result.errorCode +
+                    " clockErrorCode=" +
+                    result.clockErrorCode +
+                    " error=" +
+                    result.error
+            );
             JSObject failure = new JSObject();
             failure.put("success", false);
 
@@ -2589,11 +3279,120 @@ public final class FinoraControlPlugin
             return;
         }
 
+        postLoginDiagnosticInfo(
+            "BRANCH_ACCESS_SUCCESS allowed=" +
+                result.data.allowed +
+                " state=" +
+                result.data.state +
+                " reason=" +
+                result.data.reason
+        );
+
         JSObject decision = new JSObject();
         decision.put("allowed", result.data.allowed);
         decision.put("state", result.data.state);
         decision.put("reason", result.data.reason);
         decision.put("observedAt", result.data.observedAt);
+
+        boolean signedGrantAttached =
+            false;
+
+        try {
+            JSONObject controlPackage =
+                readValidatedControlPackage();
+
+            if (controlPackage != null) {
+                JSONArray grants =
+                    controlPackage.optJSONArray(
+                        "branchAccessGrants"
+                    );
+
+                if (grants != null) {
+                    for (
+                        int index = 0;
+                        index < grants.length();
+                        index++
+                    ) {
+                        JSONObject grant =
+                            grants.getJSONObject(
+                                index
+                            );
+
+                        if (
+                            userId.equals(
+                                grant.getString(
+                                    "userId"
+                                )
+                            ) &&
+                            ownerId.equals(
+                                grant.getString(
+                                    "ownerId"
+                                )
+                            ) &&
+                            businessId.equals(
+                                grant.getString(
+                                    "businessId"
+                                )
+                            ) &&
+                            branchId.equals(
+                                grant.getString(
+                                    "branchId"
+                                )
+                            )
+                        ) {
+                            decision.put(
+                                "grant",
+                                grant
+                            );
+
+                            signedGrantAttached =
+                                true;
+
+                            postLoginDiagnosticInfo(
+                                "BRANCH_ACCESS_GRANT_ATTACHED"
+                            );
+
+                            break;
+                        }
+                    }
+                }
+            }
+        } catch (Exception error) {
+            postLoginDiagnosticWarn(
+                "BRANCH_ACCESS_GRANT_LOOKUP_FAIL error=" +
+                    error.getMessage()
+            );
+
+            JSObject failure =
+                new JSObject();
+
+            failure.put(
+                "success",
+                false
+            );
+
+            failure.put(
+                "errorCode",
+                "CONTROL_STORE_FAILED"
+            );
+
+            failure.put(
+                "error",
+                "Unable to resolve the signed FINORA Branch Access Grant."
+            );
+
+            call.resolve(
+                failure
+            );
+
+            return;
+        }
+
+        if (!signedGrantAttached) {
+            postLoginDiagnosticWarn(
+                "BRANCH_ACCESS_GRANT_MISSING"
+            );
+        }
 
         JSObject response = createSuccessResult();
         response.put("data", decision);
@@ -2786,6 +3585,19 @@ public final class FinoraControlPlugin
                 )
             );
 
+        postLoginDiagnosticInfo(
+            "STORAGE_ENTITLEMENT_CALL userId=" +
+                userId +
+                " ownerId=" +
+                ownerId +
+                " businessId=" +
+                businessId +
+                " branchId=" +
+                branchId +
+                " storageMode=" +
+                storageMode
+        );
+
         if (
             userId == null ||
             ownerId == null ||
@@ -2814,6 +3626,10 @@ public final class FinoraControlPlugin
                 readValidatedControlPackage();
 
             if (controlPackage == null) {
+                postLoginDiagnosticWarn(
+                    "STORAGE_ENTITLEMENT_FALSE reason=CONTROL_PACKAGE_MISSING"
+                );
+
                 resolveBooleanSuccess(
                     call,
                     false
@@ -2822,34 +3638,17 @@ public final class FinoraControlPlugin
                 return;
             }
 
-            if (
-                installationBindingService == null
-            ) {
-                throw new IllegalStateException(
-                    "FINORA installation binding service is not initialized."
-                );
-            }
-
-
             // ------------------------------------------------
-            // AUTHORITATIVE ANDROIDKEYSTORE PUBLIC BINDING
+            // SIMPLE PORTABILITY
+            //
+            // Storage entitlement is logical branch authority.
+            // Current device identity is not an ordinary
+            // login/session authorization gate.
+            //
+            // Historical installation/binding fields remain
+            // signed evidence in the Control Store but are not
+            // compared with this Android device.
             // ------------------------------------------------
-
-            FinoraInstallationBindingCrypto.PublicBinding nativeBinding =
-                installationBindingService.get();
-
-            if (
-                !isValidRuntimeNativeBinding(
-                    nativeBinding
-                )
-            ) {
-                resolveBooleanSuccess(
-                    call,
-                    false
-                );
-
-                return;
-            }
 
 
             // ------------------------------------------------
@@ -2862,6 +3661,10 @@ public final class FinoraControlPlugin
                 );
 
             if (installation == null) {
+                postLoginDiagnosticWarn(
+                    "STORAGE_ENTITLEMENT_FALSE reason=INSTALLATION_MISSING"
+                );
+
                 resolveBooleanSuccess(
                     call,
                     false
@@ -2888,15 +3691,13 @@ public final class FinoraControlPlugin
                         "branchId",
                         ""
                     )
-                ) &&
-                nativeBinding.installationId.equals(
-                    installation.optString(
-                        "installationId",
-                        ""
-                    )
                 );
 
             if (!installationMatches) {
+                postLoginDiagnosticWarn(
+                    "STORAGE_ENTITLEMENT_FALSE reason=INSTALLATION_SCOPE_MISMATCH"
+                );
+
                 resolveBooleanSuccess(
                     call,
                     false
@@ -2926,30 +3727,13 @@ public final class FinoraControlPlugin
                     );
 
                 boolean identityMatches =
-                    userId.equals(
-                        entitlement.getString(
-                            "userId"
-                        )
-                    ) &&
-                    ownerId.equals(
-                        entitlement.getString(
-                            "ownerId"
-                        )
-                    ) &&
-                    businessId.equals(
-                        entitlement.getString(
-                            "businessId"
-                        )
-                    ) &&
-                    branchId.equals(
-                        entitlement.getString(
-                            "branchId"
-                        )
-                    ) &&
-                    storageMode.equals(
-                        entitlement.getString(
-                            "storageMode"
-                        )
+                    matchesLogicalStorageEntitlementIdentity(
+                        entitlement,
+                        userId,
+                        ownerId,
+                        businessId,
+                        branchId,
+                        storageMode
                     );
 
                 if (!identityMatches) {
@@ -2958,46 +3742,41 @@ public final class FinoraControlPlugin
 
 
                 // --------------------------------------------
-                // ACTIVE + EXACT NATIVE BINDING
+                // ACTIVE LOGICAL STORAGE ENTITLEMENT
+                //
+                // identityMatches above already proves:
+                // - user
+                // - owner
+                // - business
+                // - branch
+                // - exact LOCAL / USB mode
+                //
+                // Historical native-binding fields remain
+                // signed evidence only and are not a current
+                // device authorization gate.
                 // --------------------------------------------
 
-                boolean active =
-                    "ACTIVE".equals(
-                        entitlement.getString(
-                            "status"
-                        )
+                boolean activeLogicalEntitlement =
+                    isActiveLogicalStorageEntitlement(
+                        entitlement
                     );
 
-                boolean nativeBindingMatches =
-                    nativeBinding.installationId.equals(
-                        entitlement.getString(
-                            "installationId"
-                        )
-                    ) &&
-                    nativeBinding.bindingKeyId.equals(
-                        entitlement.getString(
-                            "bindingKeyId"
-                        )
-                    ) &&
-                    "SHA-256".equals(
-                        entitlement.getString(
-                            "fingerprintAlgorithm"
-                        )
-                    ) &&
-                    nativeBinding.publicKeyFingerprint.equals(
-                        entitlement.getString(
-                            "publicKeyFingerprint"
-                        )
-                    );
+                postLoginDiagnosticInfo(
+                    "STORAGE_ENTITLEMENT_MATCH result=" +
+                        activeLogicalEntitlement
+                );
 
                 resolveBooleanSuccess(
                     call,
-                    active &&
-                        nativeBindingMatches
+                    activeLogicalEntitlement
                 );
 
                 return;
             }
+
+            postLoginDiagnosticWarn(
+                "STORAGE_ENTITLEMENT_FALSE reason=NO_LOGICAL_MATCH"
+            );
 
             resolveBooleanSuccess(
                 call,
@@ -3005,6 +3784,10 @@ public final class FinoraControlPlugin
             );
 
         } catch (Exception error) {
+            postLoginDiagnosticWarn(
+                "STORAGE_ENTITLEMENT_EXCEPTION error=" +
+                    error.getMessage()
+            );
             resolveFailure(
                 call,
                 error,
@@ -3013,6 +3796,82 @@ public final class FinoraControlPlugin
         }
     }
 
+    // ========================================================
+    // SIMPLE-PORTABILITY LOGICAL STORAGE ENTITLEMENT
+    // ========================================================
+    //
+    // Package-private pure helpers intentionally evaluate only
+    // logical signed entitlement state:
+    //
+    // - user
+    // - owner
+    // - business
+    // - branch
+    // - exact LOCAL / USB mode
+    // - ACTIVE status
+    //
+    // Historical installation/binding fields remain evidence
+    // and are deliberately not inputs to these decisions.
+    // ========================================================
+
+    static boolean matchesLogicalStorageEntitlementIdentity(
+        JSONObject entitlement,
+        String userId,
+        String ownerId,
+        String businessId,
+        String branchId,
+        String storageMode
+    ) throws Exception {
+        if (
+            entitlement == null ||
+            userId == null ||
+            ownerId == null ||
+            businessId == null ||
+            branchId == null ||
+            storageMode == null
+        ) {
+            return false;
+        }
+
+        return
+            userId.equals(
+                entitlement.getString(
+                    "userId"
+                )
+            ) &&
+            ownerId.equals(
+                entitlement.getString(
+                    "ownerId"
+                )
+            ) &&
+            businessId.equals(
+                entitlement.getString(
+                    "businessId"
+                )
+            ) &&
+            branchId.equals(
+                entitlement.getString(
+                    "branchId"
+                )
+            ) &&
+            storageMode.equals(
+                entitlement.getString(
+                    "storageMode"
+                )
+            );
+    }
+
+    static boolean isActiveLogicalStorageEntitlement(
+        JSONObject entitlement
+    ) throws Exception {
+        return
+            entitlement != null &&
+            "ACTIVE".equals(
+                entitlement.getString(
+                    "status"
+                )
+            );
+    }
     // ========================================================
     // CONTROL PACKAGE READ
     // ========================================================
@@ -3157,12 +4016,6 @@ public final class FinoraControlPlugin
             ) ||
             businessCode == null ||
             branchCode == null ||
-            !businessCode.matches(
-                "[A-Z0-9]{2,10}"
-            ) ||
-            !branchCode.matches(
-                "[A-Z0-9]{2,10}"
-            ) ||
             bindingKeyId == null ||
             !"SHA-256".equals(
                 fingerprintAlgorithm

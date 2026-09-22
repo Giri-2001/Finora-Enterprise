@@ -40,6 +40,9 @@ export interface FinoraPortableFreshDeviceHydrationState {
   credential:
     FinoraControlBranchCredential;
 
+  businessProfile?:
+    import("./finoraControlStore.js").FinoraControlBusinessProfile;
+
   credentialVerificationEvidence?:
     FinoraBranchCredentialAuthorizationVerificationEvidence;
 
@@ -611,6 +614,42 @@ export function createFinoraPortableFreshDeviceHydrationState(
   );
 
   if (
+    plan.businessProfile !==
+      undefined
+  ) {
+    const businessProfile =
+      plan.businessProfile;
+
+    if (
+      businessProfile.ownerId !==
+        plan.ownerId ||
+      businessProfile.businessId !==
+        plan.businessId ||
+      businessProfile.branchId !==
+        plan.branchId
+    ) {
+      throw new Error(
+        "FINORA fresh-device Business Profile scope does not match the authenticated branch.",
+      );
+    }
+
+    if (
+      plan.businessCode ===
+        null ||
+      plan.branchCode ===
+        null ||
+      businessProfile.businessCode !==
+        plan.businessCode ||
+      businessProfile.branchCode !==
+        plan.branchCode
+    ) {
+      throw new Error(
+        "FINORA fresh-device Business Profile numbering codes do not match the hydrated branch authority.",
+      );
+    }
+  }
+
+  if (
     plan.dataContext ===
       "REAL"
   ) {
@@ -1008,6 +1047,16 @@ export function createFinoraPortableFreshDeviceHydrationState(
     storageEntitlement,
     branchAccessGrant,
     credential,
+    ...(
+      plan.businessProfile !== undefined
+        ? {
+            businessProfile:
+              structuredClone(
+                plan.businessProfile,
+              ),
+          }
+        : {}
+    ),
     ...sourceEvidence,
   };
 }

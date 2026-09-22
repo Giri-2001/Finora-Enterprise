@@ -1007,6 +1007,87 @@ export async function seedFinoraPortableFreshDeviceRuntimeAuthorityFromAuthentic
             }
           }
 
+          const profile =
+            (
+              controlStoreResult.data.businessProfiles ??
+              []
+            ).find(
+              (item) =>
+                item.ownerId ===
+                  credential.ownerId &&
+                item.businessId ===
+                  credential.businessId &&
+                item.branchId ===
+                  credential.branchId,
+            );
+
+          const businessProfile =
+            profile ===
+              undefined
+              ? undefined
+              : {
+                  profileId:
+                    profile.profileId,
+
+                  ownerId:
+                    profile.ownerId,
+
+                  businessId:
+                    profile.businessId,
+
+                  branchId:
+                    profile.branchId,
+
+                  businessCode:
+                    profile.businessCode,
+
+                  branchCode:
+                    profile.branchCode,
+
+                  businessName:
+                    profile.businessName,
+
+                  branchName:
+                    profile.branchName,
+
+                  installationId:
+                    profile.installationId,
+
+                  bindingKeyId:
+                    profile.bindingKeyId,
+
+                  fingerprintAlgorithm:
+                    profile.fingerprintAlgorithm,
+
+                  publicKeyFingerprint:
+                    profile.publicKeyFingerprint,
+
+                  createdAt:
+                    profile.createdAt,
+
+                  updatedAt:
+                    profile.updatedAt,
+
+                  schemaVersion:
+                    1 as const,
+                };
+
+          if (
+            businessProfile !==
+              undefined &&
+            (
+              businessCode ===
+                null ||
+              branchCode ===
+                null ||
+              businessProfile.businessCode !==
+                businessCode ||
+              businessProfile.branchCode !==
+                branchCode
+            )
+          ) {
+            return null;
+          }
           return {
             activationId:
               activationResult.data.activationId,
@@ -1017,6 +1098,15 @@ export async function seedFinoraPortableFreshDeviceRuntimeAuthorityFromAuthentic
             businessCode,
 
             branchCode,
+
+            ...(
+              businessProfile ===
+                undefined
+                ? {}
+                : {
+                    businessProfile,
+                  }
+            ),
 
             ...(
               activationResult.data.activatedAt ===

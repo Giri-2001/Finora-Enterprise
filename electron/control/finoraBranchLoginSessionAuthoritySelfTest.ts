@@ -819,6 +819,117 @@ async function main(): Promise<void> {
     );
 
     // ========================================================
+    // R84I
+    // VALID PASSWORD + MISSING BUSINESS PROFILE
+    // MUST ENTER SIGNED RECOVERY BEFORE DEVICE TRUST
+    // ========================================================
+
+    let r84iRecoveryFailureCalls =
+      0;
+
+    const r84iRecoveryFailure:
+      NonNullable<
+        Parameters<
+          typeof createFinoraBranchLoginSession
+        >[2]
+      > =
+      async () => {
+        r84iRecoveryFailureCalls +=
+          1;
+
+        return {
+          success:
+            false,
+
+          errorCode:
+            "CONTROL_STATE_FAILED",
+
+          error:
+            "R84I_MISSING_PROFILE_RECOVERY_SENTINEL",
+        };
+      };
+
+    const r84iRecoveryFailureResult =
+      await createFinoraBranchLoginSession(
+        {
+          username,
+          password,
+
+          storageMode:
+            "LOCAL",
+        },
+        portableStore,
+        r84iRecoveryFailure,
+      );
+
+    assert(
+      !r84iRecoveryFailureResult.success &&
+      r84iRecoveryFailureResult.errorCode ===
+        "CONTROL_STATE_FAILED" &&
+      r84iRecoveryFailureResult.error ===
+        "R84I_MISSING_PROFILE_RECOVERY_SENTINEL" &&
+      r84iRecoveryFailureCalls ===
+        1,
+      "Valid Password with missing Business Profile did not enter signed recovery exactly once.",
+    );
+
+    console.log(
+      "PASS: valid Password + missing Business Profile enters signed recovery before Device Trust",
+    );
+
+    // --------------------------------------------------------
+    // A recovery callback cannot merely report success.
+    // The signed Business Profile must exist durably afterward.
+    // --------------------------------------------------------
+
+    let r84iNonPersistingRecoveryCalls =
+      0;
+
+    const r84iNonPersistingRecovery:
+      NonNullable<
+        Parameters<
+          typeof createFinoraBranchLoginSession
+        >[2]
+      > =
+      async () => {
+        r84iNonPersistingRecoveryCalls +=
+          1;
+
+        return {
+          success:
+            true,
+        };
+      };
+
+    const r84iNonPersistingRecoveryResult =
+      await createFinoraBranchLoginSession(
+        {
+          username,
+          password,
+
+          storageMode:
+            "LOCAL",
+        },
+        portableStore,
+        r84iNonPersistingRecovery,
+      );
+
+    assert(
+      !r84iNonPersistingRecoveryResult.success &&
+      r84iNonPersistingRecoveryResult.errorCode ===
+        "CONTROL_STATE_FAILED" &&
+      r84iNonPersistingRecoveryResult.error ===
+        "The signed FINORA Business Profile is required for this branch." &&
+      r84iNonPersistingRecoveryCalls ===
+        1,
+      "Non-persisting Business Profile recovery did not fail closed.",
+    );
+
+    console.log(
+      "PASS: recovery success without durable signed Business Profile fails closed before Device Trust",
+    );
+
+    // ========================================================
     // MATRIX 1 + 2
     // WRONG PASSWORD MUST END BEFORE DEVICE TRUST CHALLENGE
     // ========================================================

@@ -9699,14 +9699,14 @@ export async function findFinoraBusinessProfile(
   }
 
   // ----------------------------------------------------------
-  // DEFENCE-IN-DEPTH INSTALLATION CONSISTENCY
+  // SIGNED HISTORICAL PROFILE PROVENANCE
+  //
+  // installationId / bindingKeyId / fingerprint belong to the
+  // signed historical BUSINESS_PROFILE authority. They are not
+  // current-device authorization gates for portable branch use.
+  // Owner / Business / Branch and authoritative branch codes
+  // remain validated below.
   // ----------------------------------------------------------
-
-  if (profile.installationId !== installation.installationId) {
-    return failure(
-      "FINORA Business Profile installation identity is inconsistent.",
-    );
-  }
 
   if (
     isNonEmptyString(installation.businessCode) &&
@@ -11295,6 +11295,9 @@ export interface FinoraPortableFreshDeviceHydrationApplyInput {
   credential:
     FinoraControlBranchCredential;
 
+  businessProfile?:
+    FinoraControlBusinessProfile;
+
   credentialVerificationEvidence?:
     FinoraBranchCredentialAuthorizationVerificationEvidence;
 
@@ -11368,6 +11371,13 @@ async function applyPortableFreshDeviceHydrationInternal(
       input.credential,
     ) ||
     (
+      input.businessProfile !==
+        undefined &&
+      !isBusinessProfile(
+        input.businessProfile,
+      )
+    ) ||
+    (
       input.credentialVerificationEvidence !==
         undefined &&
       !isBranchCredentialAuthorizationVerificationEvidence(
@@ -11396,6 +11406,7 @@ async function applyPortableFreshDeviceHydrationInternal(
     storageEntitlement,
     branchAccessGrant,
     credential,
+    businessProfile,
     credentialVerificationEvidence,
     credentialPortabilityAuthorityProvenance,
   } =
@@ -11444,6 +11455,39 @@ async function applyPortableFreshDeviceHydrationInternal(
     return failure(
       "FINORA fresh-device hydration records do not share one exact branch identity.",
     );
+  }
+
+  if (
+    businessProfile !==
+      undefined
+  ) {
+    if (
+      businessProfile.ownerId !==
+        credential.ownerId ||
+      businessProfile.businessId !==
+        credential.businessId ||
+      businessProfile.branchId !==
+        credential.branchId
+    ) {
+      return failure(
+        "FINORA fresh-device Business Profile does not match the authenticated branch scope.",
+      );
+    }
+
+    if (
+      installation.businessCode ===
+        undefined ||
+      installation.branchCode ===
+        undefined ||
+      businessProfile.businessCode !==
+        installation.businessCode ||
+      businessProfile.branchCode !==
+        installation.branchCode
+    ) {
+      return failure(
+        "FINORA fresh-device Business Profile numbering codes do not match hydrated branch authority.",
+      );
+    }
   }
 
   // ----------------------------------------------------------
@@ -11579,6 +11623,10 @@ async function applyPortableFreshDeviceHydrationInternal(
     controlStore.branchCredentials ??
     [];
 
+  const businessProfiles =
+    controlStore.businessProfiles ??
+    [];
+
   const verificationEvidence =
     controlStore.branchCredentialAuthorizationVerificationEvidence ??
     [];
@@ -11670,8 +11718,35 @@ async function applyPortableFreshDeviceHydrationInternal(
     rotationTransactions.length ===
       0;
 
+  const businessProfileAlreadyHydrated =
+    businessProfile ===
+      undefined ||
+    (
+      businessProfiles.length ===
+        1 &&
+      portableFreshDeviceHydrationValuesEqual(
+        businessProfiles[0],
+        businessProfile,
+      )
+    );
+
+  const businessProfileCompatible =
+    businessProfile ===
+      undefined ||
+    businessProfiles.length ===
+      0 ||
+    businessProfileAlreadyHydrated;
+
+  const profileOnlyConvergence =
+    exactExistingHydration &&
+    businessProfile !==
+      undefined &&
+    businessProfiles.length ===
+      0;
+
   if (
-    exactExistingHydration
+    exactExistingHydration &&
+    businessProfileAlreadyHydrated
   ) {
     return success({
       status:
@@ -11705,38 +11780,304 @@ async function applyPortableFreshDeviceHydrationInternal(
   }
 
   // ----------------------------------------------------------
-  // FRESH-DEVICE ONLY
+  // EXACT-COMPATIBLE PARTIAL CONVERGENCE
   //
-  // Never merge or overwrite an existing local credential /
-  // branch authority state here. Merge/restore is a separate
-  // portability phase.
+  // A branch may already hold activation / entitlement / access
+  // authority while the portable credential has not yet been
+  // hydrated.
+  //
+  // Hydration may continue only when every pre-existing core
+  // authority record is either absent or exactly identical to
+  // the already-verified incoming hydration plan.
+  //
+  // Existing credential / provenance / enrollment / rotation
+  // state remains a hard fail-closed boundary. No conflicting
+  // authority record is ever replaced here.
   // ----------------------------------------------------------
 
-  const hasExistingAuthorityState =
-    controlStore.installation !==
+  const installationCompatible =
+    controlStore.installation ===
       undefined ||
-    activations.length >
+    portableFreshDeviceHydrationValuesEqual(
+      controlStore.installation,
+      installation,
+    );
+
+  const activationCompatible =
+    activations.length ===
       0 ||
-    entitlements.length >
+    (
+      activations.length ===
+        1 &&
+      portableFreshDeviceHydrationValuesEqual(
+        activations[0],
+        activation,
+      )
+    );
+
+  const entitlementCompatible =
+    entitlements.length ===
       0 ||
-    accessGrants.length >
+    (
+      entitlements.length ===
+        1 &&
+      portableFreshDeviceHydrationValuesEqual(
+        entitlements[0],
+        storageEntitlement,
+      )
+    );
+
+  const accessGrantCompatible =
+    accessGrants.length ===
       0 ||
-    credentials.length >
-      0 ||
-    verificationEvidence.length >
-      0 ||
-    portabilityAuthorities.length >
-      0 ||
-    enrollmentAuthorizations.length >
-      0 ||
-    enrollmentTransactions.length >
-      0 ||
-    rotationTransactions.length >
+    (
+      accessGrants.length ===
+        1 &&
+      portableFreshDeviceHydrationValuesEqual(
+        accessGrants[0],
+        branchAccessGrant,
+      )
+    );
+
+  const credentialLayerEmpty =
+    credentials.length ===
+      0 &&
+    verificationEvidence.length ===
+      0 &&
+    portabilityAuthorities.length ===
+      0 &&
+    enrollmentAuthorizations.length ===
+      0 &&
+    enrollmentTransactions.length ===
+      0 &&
+    rotationTransactions.length ===
       0;
 
+  const partialConvergenceCompatible =
+    (
+      installationCompatible &&
+      activationCompatible &&
+      entitlementCompatible &&
+      accessGrantCompatible &&
+      credentialLayerEmpty &&
+      businessProfileCompatible
+    ) ||
+    profileOnlyConvergence;
+
   if (
-    hasExistingAuthorityState
+    !partialConvergenceCompatible
   ) {
+    if (
+      process.env.FINORA_DEV_HYDRATION_COMPAT_DIAGNOSTICS ===
+        "1"
+    ) {
+      const collectDifferencePaths = (
+        left:
+          unknown,
+
+        right:
+          unknown,
+
+        path:
+          string = "",
+      ): string[] => {
+        if (
+          portableFreshDeviceHydrationValuesEqual(
+            left,
+            right,
+          )
+        ) {
+          return [];
+        }
+
+        if (
+          Array.isArray(
+            left,
+          ) &&
+          Array.isArray(
+            right,
+          )
+        ) {
+          const length =
+            Math.max(
+              left.length,
+              right.length,
+            );
+
+          const differences:
+            string[] = [];
+
+          for (
+            let index = 0;
+            index < length;
+            index += 1
+          ) {
+            differences.push(
+              ...collectDifferencePaths(
+                left[index],
+                right[index],
+                `${path}[${index}]`,
+              ),
+            );
+          }
+
+          return differences;
+        }
+
+        if (
+          left !==
+            null &&
+          right !==
+            null &&
+          typeof left ===
+            "object" &&
+          typeof right ===
+            "object"
+        ) {
+          const leftRecord =
+            left as
+              Record<
+                string,
+                unknown
+              >;
+
+          const rightRecord =
+            right as
+              Record<
+                string,
+                unknown
+              >;
+
+          const keys =
+            Array.from(
+              new Set([
+                ...Object.keys(
+                  leftRecord,
+                ),
+
+                ...Object.keys(
+                  rightRecord,
+                ),
+              ]),
+            ).sort();
+
+          const differences:
+            string[] = [];
+
+          for (
+            const key of
+              keys
+          ) {
+            differences.push(
+              ...collectDifferencePaths(
+                leftRecord[key],
+                rightRecord[key],
+                path.length >
+                  0
+                  ? `${path}.${key}`
+                  : key,
+              ),
+            );
+          }
+
+          return differences;
+        }
+
+        return [
+          path.length >
+            0
+            ? path
+            : "<root>",
+        ];
+      };
+
+      console.error(
+        "[FINORA HYDRATION COMPAT]",
+        JSON.stringify({
+          installationCompatible,
+          activationCompatible,
+          entitlementCompatible,
+          accessGrantCompatible,
+          credentialLayerEmpty,
+
+          existingInstallation:
+            controlStore.installation !==
+              undefined,
+
+          activationCount:
+            activations.length,
+
+          entitlementCount:
+            entitlements.length,
+
+          accessGrantCount:
+            accessGrants.length,
+
+          credentialCount:
+            credentials.length,
+
+          verificationEvidenceCount:
+            verificationEvidence.length,
+
+          portabilityAuthorityCount:
+            portabilityAuthorities.length,
+
+          enrollmentAuthorizationCount:
+            enrollmentAuthorizations.length,
+
+          enrollmentTransactionCount:
+            enrollmentTransactions.length,
+
+          rotationTransactionCount:
+            rotationTransactions.length,
+
+          installationDiffPaths:
+            controlStore.installation ===
+              undefined
+              ? [
+                  "<missing>",
+                ]
+              : collectDifferencePaths(
+                  controlStore.installation,
+                  installation,
+                ),
+
+          activationDiffPaths:
+            activations.length ===
+              1
+              ? collectDifferencePaths(
+                  activations[0],
+                  activation,
+                )
+              : [
+                  "<count>",
+                ],
+
+          entitlementDiffPaths:
+            entitlements.length ===
+              1
+              ? collectDifferencePaths(
+                  entitlements[0],
+                  storageEntitlement,
+                )
+              : [
+                  "<count>",
+                ],
+
+          accessGrantDiffPaths:
+            accessGrants.length ===
+              1
+              ? collectDifferencePaths(
+                  accessGrants[0],
+                  branchAccessGrant,
+                )
+              : [
+                  "<count>",
+                ],
+        }),
+      );
+    }
+
     return failure(
       "FINORA fresh-device hydration refuses to overwrite existing local branch authority state.",
     );
@@ -11750,48 +12091,86 @@ async function applyPortableFreshDeviceHydrationInternal(
   // signed-package authority.
   // ----------------------------------------------------------
 
-  controlStore.installation =
-    structuredClone(
-      installation,
-    );
-
-  controlStore.activations =
-    [
+  if (
+    controlStore.installation ===
+      undefined
+  ) {
+    controlStore.installation =
       structuredClone(
-        activation,
-      ),
-    ];
+        installation,
+      );
+  }
 
-  controlStore.storageEntitlements =
-    [
+  if (
+    activations.length ===
+      0
+  ) {
+    controlStore.activations =
+      [
+        structuredClone(
+          activation,
+        ),
+      ];
+  }
+
+  if (
+    entitlements.length ===
+      0
+  ) {
+    controlStore.storageEntitlements =
+      [
+        structuredClone(
+          storageEntitlement,
+        ),
+      ];
+  }
+
+  if (
+    accessGrants.length ===
+      0
+  ) {
+    controlStore.branchAccessGrants =
+      [
+        structuredClone(
+          branchAccessGrant,
+        ),
+      ];
+  }
+
+  if (
+    businessProfile !==
+      undefined &&
+    businessProfiles.length ===
+      0
+  ) {
+    controlStore.businessProfiles =
+      [
+        structuredClone(
+          businessProfile,
+        ),
+      ];
+  }
+
+  if (
+    credentialLayerEmpty
+  ) {
+    controlStore.branchCredentials =
+      [
+        structuredClone(
+          credential,
+        ),
+      ];
+
+    controlStore.branchCredentialAuthorizationVerificationEvidence =
       structuredClone(
-        storageEntitlement,
-      ),
-    ];
+        expectedVerificationEvidence,
+      );
 
-  controlStore.branchAccessGrants =
-    [
+    controlStore.branchCredentialPortabilityAuthorities =
       structuredClone(
-        branchAccessGrant,
-      ),
-    ];
-
-  controlStore.branchCredentials =
-    [
-      structuredClone(
-        credential,
-      ),
-    ];
-
-  controlStore.branchCredentialAuthorizationVerificationEvidence =
-    structuredClone(
-      expectedVerificationEvidence,
-    );
-
-  controlStore.branchCredentialPortabilityAuthorities =
-    structuredClone(
-      expectedPortabilityAuthorities,
-    );
+        expectedPortabilityAuthorities,
+      );
+  }
 
   controlStore.updatedAt =
     input.appliedAt;

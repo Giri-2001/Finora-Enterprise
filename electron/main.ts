@@ -39,6 +39,38 @@ loadDotEnv();
 
 import { app, BrowserWindow, ipcMain, shell } from "electron";
 
+// ============================================================
+// DEVELOPMENT-ONLY ISOLATED USERDATA OVERRIDE
+//
+// Used only for fresh-device portability verification without
+// touching the operator's existing FINORA Control Store.
+//
+// - ignored in packaged production builds
+// - ignored unless explicitly supplied
+// - must be configured before Electron app readiness
+// ============================================================
+
+const finoraDevUserDataOverride =
+  process.env.FINORA_DEV_USERDATA_OVERRIDE
+    ?.trim();
+
+if (
+  !app.isPackaged &&
+  finoraDevUserDataOverride
+) {
+  app.setPath(
+    "userData",
+    finoraDevUserDataOverride,
+  );
+
+  console.log(
+    "[FINORA DEV USERDATA]",
+    app.getPath(
+      "userData",
+    ),
+  );
+}
+
 import path from "node:path";
 
 import fs from "node:fs/promises";

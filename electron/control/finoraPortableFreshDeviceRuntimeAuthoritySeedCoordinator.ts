@@ -156,6 +156,11 @@ export interface FinoraPortableFreshDeviceRuntimeAuthoritySeedControlState {
   branchCode:
     string | null;
 
+  businessProfile?:
+    NonNullable<
+      FinoraPortableFreshDeviceRuntimeAuthorityPayloadV1["businessProfile"]
+    >;
+
   activationActivatedAt?:
     string;
 
@@ -1000,6 +1005,16 @@ export async function seedFinoraPortableFreshDeviceRuntimeAuthority(
 
       branchCode:
         controlState.branchCode,
+
+      ...(
+        controlState.businessProfile ===
+          undefined
+          ? {}
+          : {
+              businessProfile:
+                controlState.businessProfile,
+            }
+      ),
 
       ...(
         controlState.activationActivatedAt ===

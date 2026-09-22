@@ -1,5 +1,7 @@
 package com.finora.enterprise.control;
 
+import android.util.Log;
+
 import java.security.SecureRandom;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -22,6 +24,37 @@ import java.util.Map;
  * - A new session for one credential revokes its previous session.
  */
 public final class FinoraBranchLoginSessionAuthority {
+
+    private static final String DIAGNOSTIC_TAG =
+        "FINORA_SESSION_DIAG";
+
+    private static void diagnosticInfo(
+        String tag,
+        String message
+    ) {
+        try {
+            Log.i(
+                tag,
+                message
+            );
+        } catch (Throwable ignored) {
+            // Android Log is unavailable in local JVM unit tests.
+        }
+    }
+
+    private static void diagnosticWarn(
+        String tag,
+        String message
+    ) {
+        try {
+            Log.w(
+                tag,
+                message
+            );
+        } catch (Throwable ignored) {
+            // Android Log is unavailable in local JVM unit tests.
+        }
+    }
 
     public static final String SESSION_PREFIX =
         "FINORA-SESSION-";
@@ -754,6 +787,18 @@ public final class FinoraBranchLoginSessionAuthority {
             record
         );
 
+        diagnosticInfo(
+            DIAGNOSTIC_TAG,
+            "ISSUE_SUCCESS sessionId=" +
+                sessionId +
+                " credentialId=" +
+                authenticatedPrincipal.credentialId +
+                " storageMode=" +
+                authenticatedPrincipal.storageMode +
+                " activeSessions=" +
+                activeSessions.size()
+        );
+
         return SessionResult.success(
             toSessionView(
                 record,
@@ -783,6 +828,16 @@ public final class FinoraBranchLoginSessionAuthority {
             activeSessions.get(
                 normalizedSessionId
             );
+
+        diagnosticInfo(
+            DIAGNOSTIC_TAG,
+            "VALIDATE_LOOKUP sessionId=" +
+                normalizedSessionId +
+                " found=" +
+                (record != null) +
+                " activeSessions=" +
+                activeSessions.size()
+        );
 
         if (record == null) {
             return SessionResult.failure(
@@ -818,7 +873,17 @@ public final class FinoraBranchLoginSessionAuthority {
 
         if (!authorization.success) {
 
-            activeSessions.remove(
+
+            diagnosticWarn(
+                DIAGNOSTIC_TAG,
+                "VALIDATE_AUTH_FAIL code=" +
+                    authorization.errorCode +
+                    " error=" +
+                    authorization.error +
+                    " sessionId=" +
+                    normalizedSessionId
+            );
+activeSessions.remove(
                 normalizedSessionId
             );
 
@@ -833,7 +898,17 @@ public final class FinoraBranchLoginSessionAuthority {
                 authorization.principal.credentialId
             )
         ) {
-            activeSessions.remove(
+
+            diagnosticWarn(
+                DIAGNOSTIC_TAG,
+                "VALIDATE_PRINCIPAL_MISMATCH sessionId=" +
+                    normalizedSessionId +
+                    " recordCredentialId=" +
+                    record.credentialId +
+                    " authorizedCredentialId=" +
+                    authorization.principal.credentialId
+            );
+activeSessions.remove(
                 normalizedSessionId
             );
 
@@ -842,6 +917,26 @@ public final class FinoraBranchLoginSessionAuthority {
                 "FINORA login session credential is no longer valid."
             );
         }
+
+
+
+        diagnosticInfo(
+            DIAGNOSTIC_TAG,
+            "VALIDATE_SUCCESS sessionId=" +
+                normalizedSessionId +
+                " credentialId=" +
+                authorization.principal.credentialId +
+                " role=" +
+                authorization.principal.role +
+                " dataContext=" +
+                authorization.principal.dataContext +
+                " ownerId=" +
+                authorization.principal.ownerId +
+                " businessId=" +
+                authorization.principal.businessId +
+                " branchId=" +
+                authorization.principal.branchId
+        );
 
         return SessionResult.success(
             toSessionView(

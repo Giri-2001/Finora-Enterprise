@@ -40,10 +40,47 @@ public final class FinoraBranchPortabilityAuthorityVerifier {
             return false;
         }
 
+        FinoraPortableBranchAuthPayloadCodec
+            .SourceAuthorizationEvidence sourceEvidence =
+                portablePayload
+                    .sourceAuthorizationVerificationEvidence;
+
+        /*
+         * Canonical legacy V1 lineage is authenticated by the
+         * encrypted Portable Branch Auth itself.
+         *
+         * Electron uses the same policy: legacy migration evidence
+         * is valid lineage and must never be converted into fabricated
+         * Control Center signer evidence.
+         *
+         * Historical installation/binding metadata remains evidence
+         * only and is NOT compared with the current Android device.
+         */
+        if (
+            sourceEvidence != null &&
+            sourceEvidence
+                .legacyNativeBoundMigrationEvidence !=
+                null
+        ) {
+            return verifyLegacyValues(
+                portablePayload.schemaVersion,
+                portablePayload.sourceAuthorizationId,
+                sourceEvidence,
+                portablePayload.userId,
+                portablePayload.username,
+                portablePayload.ownerId,
+                portablePayload.businessId,
+                portablePayload.branchId,
+                portablePayload.storageMode,
+                portablePayload.authGeneration,
+                now
+            );
+        }
+
         return verifyValues(
             portablePayload.schemaVersion,
             portablePayload.sourceAuthorizationId,
-            portablePayload.sourceAuthorizationVerificationEvidence,
+            sourceEvidence,
             portablePayload.userId,
             portablePayload.username,
             portablePayload.role,
@@ -84,6 +121,109 @@ public final class FinoraBranchPortabilityAuthorityVerifier {
         );
     }
 
+    static boolean verifyLegacyValues(
+        int portableAuthSchemaVersion,
+        String sourceAuthorizationId,
+        FinoraPortableBranchAuthPayloadCodec
+            .SourceAuthorizationEvidence sourceEvidence,
+        String userId,
+        String username,
+        String ownerId,
+        String businessId,
+        String branchId,
+        String storageMode,
+        long authGeneration,
+        Instant now
+    ) {
+
+        if (
+            now == null ||
+            portableAuthSchemaVersion != 1 ||
+            sourceEvidence == null ||
+            sourceEvidence.schemaVersion != 1 ||
+            sourceEvidence
+                .legacyNativeBoundMigrationEvidence ==
+                null
+        ) {
+            return false;
+        }
+
+        /*
+         * A legacy record must remain legacy-only. Never accept a
+         * mixed object that also projects signed Control Center
+         * evidence.
+         */
+        if (
+            sourceEvidence.packageId != null ||
+            sourceEvidence.issuerId != null ||
+            sourceEvidence.sequence != 0L ||
+            sourceEvidence.verifiedControlSigner != null ||
+            sourceEvidence.portabilityAuthorityProof != null ||
+            sourceEvidence.verifiedAt != null
+        ) {
+            return false;
+        }
+
+        FinoraPortableBranchAuthPayloadCodec
+            .LegacyNativeBoundMigrationEvidence legacy =
+                sourceEvidence
+                    .legacyNativeBoundMigrationEvidence;
+
+        if (
+            legacy.schemaVersion != 1 ||
+            !"PASSWORD_AND_ACTIVE_NATIVE_STORAGE_ENTITLEMENT"
+                .equals(
+                    legacy.migrationMethod
+                )
+        ) {
+            return false;
+        }
+
+        /*
+         * All values below are inside the authenticated Portable Auth
+         * plaintext. The legacy record must describe the same branch,
+         * user, storage authority and auth generation as that payload.
+         *
+         * installationId / bindingKeyId / fingerprint deliberately
+         * are not matched to the current device.
+         */
+        return (
+            same(
+                sourceAuthorizationId,
+                sourceEvidence.authorizationId
+            ) &&
+            same(
+                sourceEvidence.authorizationId,
+                legacy.sourceAuthorizationId
+            ) &&
+            same(
+                ownerId,
+                legacy.ownerId
+            ) &&
+            same(
+                businessId,
+                legacy.businessId
+            ) &&
+            same(
+                branchId,
+                legacy.branchId
+            ) &&
+            same(
+                userId,
+                legacy.userId
+            ) &&
+            same(
+                username,
+                legacy.username
+            ) &&
+            same(
+                storageMode,
+                legacy.storageMode
+            ) &&
+            authGeneration ==
+                legacy.authGeneration
+        );
+    }
     private static boolean verifyValues(
         int portableAuthSchemaVersion,
         String sourceAuthorizationId,

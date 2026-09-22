@@ -64,6 +64,52 @@ export interface FinoraPortableFreshDeviceRuntimeAuthorityRegistrationPayment {
     false;
 }
 
+export interface FinoraPortableFreshDeviceRuntimeAuthorityBusinessProfileV1 {
+  profileId:
+    string;
+
+  ownerId:
+    string;
+
+  businessId:
+    string;
+
+  branchId:
+    string;
+
+  businessCode:
+    string;
+
+  branchCode:
+    string;
+
+  businessName:
+    string;
+
+  branchName:
+    string;
+
+  installationId:
+    string;
+
+  bindingKeyId:
+    string;
+
+  fingerprintAlgorithm:
+    "SHA-256";
+
+  publicKeyFingerprint:
+    string;
+
+  createdAt:
+    string;
+
+  updatedAt:
+    string;
+
+  schemaVersion:
+    1;
+}
 export interface FinoraPortableFreshDeviceRuntimeAuthorityPayloadV1 {
   schemaVersion:
     typeof FINORA_PORTABLE_FRESH_DEVICE_RUNTIME_AUTHORITY_SCHEMA_VERSION;
@@ -103,6 +149,9 @@ export interface FinoraPortableFreshDeviceRuntimeAuthorityPayloadV1 {
 
   branchCode:
     string | null;
+
+  businessProfile?:
+    FinoraPortableFreshDeviceRuntimeAuthorityBusinessProfileV1;
 
   userId:
     string;
@@ -315,6 +364,138 @@ function assertPortableAuthFingerprint(
   }
 }
 
+function validateFinoraPortableFreshDeviceRuntimeAuthorityBusinessProfileV1(
+  value:
+    unknown,
+): asserts value is FinoraPortableFreshDeviceRuntimeAuthorityBusinessProfileV1 {
+  const profile =
+    asObject(
+      value,
+      "Portable fresh-device runtime authority Business Profile",
+    );
+
+  assertExactKeys(
+    profile,
+    [
+      "profileId",
+      "ownerId",
+      "businessId",
+      "branchId",
+      "businessCode",
+      "branchCode",
+      "businessName",
+      "branchName",
+      "installationId",
+      "bindingKeyId",
+      "fingerprintAlgorithm",
+      "publicKeyFingerprint",
+      "createdAt",
+      "updatedAt",
+      "schemaVersion",
+    ],
+    "Portable fresh-device runtime authority Business Profile",
+  );
+
+  for (
+    const key of [
+      "profileId",
+      "ownerId",
+      "businessId",
+      "branchId",
+      "businessCode",
+      "branchCode",
+      "businessName",
+      "branchName",
+      "installationId",
+      "bindingKeyId",
+    ] as const
+  ) {
+    assertNonEmptyString(
+      profile[key],
+      `businessProfile.${key}`,
+    );
+  }
+
+  if (
+    profile.fingerprintAlgorithm !==
+      "SHA-256"
+  ) {
+    throw new Error(
+      "businessProfile.fingerprintAlgorithm must be SHA-256.",
+    );
+  }
+
+  const fingerprint =
+    profile.publicKeyFingerprint;
+
+  if (
+    typeof fingerprint !==
+      "string" ||
+    !/^[0-9a-f]{64}$/.test(
+      fingerprint,
+    )
+  ) {
+    throw new Error(
+      "businessProfile.publicKeyFingerprint is invalid.",
+    );
+  }
+
+  const bindingKeyId =
+    profile.bindingKeyId;
+
+  assertNonEmptyString(
+    bindingKeyId,
+    "businessProfile.bindingKeyId",
+  );
+
+  const expectedBindingKeyId =
+    `FINORA-BINDING-${fingerprint
+      .slice(0, 32)
+      .toUpperCase()}`;
+
+  if (
+    bindingKeyId !==
+      expectedBindingKeyId
+  ) {
+    throw new Error(
+      "businessProfile.bindingKeyId does not match its fingerprint.",
+    );
+  }
+
+  const createdAt =
+    profile.createdAt;
+
+  const updatedAt =
+    profile.updatedAt;
+
+  assertCanonicalTimestamp(
+    createdAt,
+    "businessProfile.createdAt",
+  );
+
+  assertCanonicalTimestamp(
+    updatedAt,
+    "businessProfile.updatedAt",
+  );
+
+  if (
+    Date.parse(updatedAt) <
+      Date.parse(createdAt)
+  ) {
+    throw new Error(
+      "businessProfile.updatedAt cannot precede createdAt.",
+    );
+  }
+
+  if (
+    profile.schemaVersion !==
+      1
+  ) {
+    throw new Error(
+      "businessProfile.schemaVersion is unsupported.",
+    );
+  }
+}
 export function validateFinoraPortableFreshDeviceRuntimeAuthorityPayloadV1(
   value:
     unknown,
@@ -341,6 +522,14 @@ export function validateFinoraPortableFreshDeviceRuntimeAuthorityPayloadV1(
       "branchId",
       "businessCode",
       "branchCode",
+      ...(
+        Object.prototype.hasOwnProperty.call(
+          payload,
+          "businessProfile",
+        )
+          ? ["businessProfile"]
+          : []
+      ),
       "userId",
       "username",
       "canonicalUsername",
@@ -446,6 +635,38 @@ export function validateFinoraPortableFreshDeviceRuntimeAuthorityPayloadV1(
     );
   }
 
+  const businessProfile =
+    payload.businessProfile;
+
+  if (
+    businessProfile !==
+      undefined
+  ) {
+    validateFinoraPortableFreshDeviceRuntimeAuthorityBusinessProfileV1(
+      businessProfile,
+    );
+
+    if (
+      businessProfile.ownerId !==
+        payload.ownerId ||
+      businessProfile.businessId !==
+        payload.businessId ||
+      businessProfile.branchId !==
+        payload.branchId ||
+      payload.businessCode ===
+        null ||
+      payload.branchCode ===
+        null ||
+      businessProfile.businessCode !==
+        payload.businessCode ||
+      businessProfile.branchCode !==
+        payload.branchCode
+    ) {
+      throw new Error(
+        "Portable fresh-device runtime authority Business Profile does not match its signed branch scope.",
+      );
+    }
+  }
   if (
     payload.role !== "ADMIN" &&
     payload.role !== "MANAGER" &&
@@ -830,6 +1051,60 @@ export function canonicalizeFinoraPortableFreshDeviceRuntimeAuthorityPayloadV1(
 
     branchCode:
       payload.branchCode,
+
+    ...(
+      payload.businessProfile ===
+        undefined
+        ? {}
+        : {
+            businessProfile: {
+              profileId:
+                payload.businessProfile.profileId,
+
+              ownerId:
+                payload.businessProfile.ownerId,
+
+              businessId:
+                payload.businessProfile.businessId,
+
+              branchId:
+                payload.businessProfile.branchId,
+
+              businessCode:
+                payload.businessProfile.businessCode,
+
+              branchCode:
+                payload.businessProfile.branchCode,
+
+              businessName:
+                payload.businessProfile.businessName,
+
+              branchName:
+                payload.businessProfile.branchName,
+
+              installationId:
+                payload.businessProfile.installationId,
+
+              bindingKeyId:
+                payload.businessProfile.bindingKeyId,
+
+              fingerprintAlgorithm:
+                payload.businessProfile.fingerprintAlgorithm,
+
+              publicKeyFingerprint:
+                payload.businessProfile.publicKeyFingerprint,
+
+              createdAt:
+                payload.businessProfile.createdAt,
+
+              updatedAt:
+                payload.businessProfile.updatedAt,
+
+              schemaVersion:
+                payload.businessProfile.schemaVersion,
+            },
+          }
+    ),
 
     userId:
       payload.userId,

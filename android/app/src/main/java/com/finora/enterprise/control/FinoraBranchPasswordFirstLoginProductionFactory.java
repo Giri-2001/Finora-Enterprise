@@ -72,10 +72,78 @@ public final class FinoraBranchPasswordFirstLoginProductionFactory {
                         deviceTrustStore
                     );
 
-        return compose(
-            passwordAuthority,
-            deviceTrust,
-            deviceAuthorization
+        return composeDeviceAgnostic(
+            passwordAuthority
+        );
+    }
+
+    static FinoraBranchPasswordFirstLoginAuthority
+        composeDeviceAgnostic(
+            final FinoraBranchCredentialAuthenticationAuthority
+                passwordAuthority
+        ) {
+
+        if (passwordAuthority == null) {
+            throw new IllegalArgumentException(
+                "FINORA Password Authority is required."
+            );
+        }
+
+        return new FinoraBranchPasswordFirstLoginAuthority(
+            new FinoraBranchPasswordFirstLoginAuthority
+                .PasswordAuthenticationPort() {
+
+                @Override
+                public FinoraBranchPasswordFirstLoginAuthority
+                    .PasswordAuthenticationResult authenticate(
+                        String username,
+                        String password
+                    ) {
+
+                    FinoraBranchCredentialAuthenticationAuthority.Result
+                        result =
+                            passwordAuthority.authenticate(
+                                new FinoraBranchCredentialAuthenticationAuthority
+                                    .Request(
+                                        username,
+                                        password
+                                    )
+                            );
+
+                    return mapPasswordResult(
+                        result
+                    );
+                }
+            },
+            new FinoraBranchPasswordFirstLoginAuthority
+                .DeviceTrustCheckPort() {
+
+                @Override
+                public FinoraBranchDeviceTrustAuthority.Result check(
+                    FinoraBranchDeviceTrustAuthority.Principal principal
+                ) {
+                    throw new IllegalStateException(
+                        "Device Trust is disabled for simple portability login."
+                    );
+                }
+            },
+            new FinoraBranchPasswordFirstLoginAuthority
+                .DeviceTrustAuthorizationPort() {
+
+                @Override
+                public FinoraBranchDeviceTrustAuthorizationAuthority.Result
+                    authorize(
+                        FinoraBranchDeviceTrustAuthorizationAuthority
+                            .Principal principal,
+                        String password,
+                        String securityCode
+                    ) {
+                    throw new IllegalStateException(
+                        "Device authorization is disabled for simple portability login."
+                    );
+                }
+            },
+            false
         );
     }
 

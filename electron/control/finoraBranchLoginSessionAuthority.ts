@@ -1386,6 +1386,7 @@ export async function createFinoraBranchLoginSession(
         return createFinoraBranchLoginSession(
           request,
           portableStore,
+          recoverFreshDevice,
         );
       }
 
@@ -1458,7 +1459,97 @@ export async function createFinoraBranchLoginSession(
     return createFinoraBranchLoginSession(
       request,
       portableStore,
+      recoverFreshDevice,
     );
+  }
+
+  // ----------------------------------------------------------
+  // SIGNED BUSINESS PROFILE PARTIAL-HYDRATION REPAIR
+  //
+  // Password authentication has already succeeded.
+  //
+  // A previous fresh-device attempt may have committed the exact
+  // branch credential and authority before Business Profile
+  // hydration completed. Only an absent exact scoped profile
+  // re-enters the existing signed portability recovery path.
+  //
+  // Fully hydrated devices skip this block.
+  // ----------------------------------------------------------
+
+  const hasAuthenticatedBusinessProfile =
+    (
+      legacyControlStoreResult.data.businessProfiles ??
+      []
+    ).some(
+      (profile) =>
+        profile.ownerId ===
+          authenticationResult.data.ownerId &&
+        profile.businessId ===
+          authenticationResult.data.businessId &&
+        profile.branchId ===
+          authenticationResult.data.branchId,
+    );
+
+  if (
+    !hasAuthenticatedBusinessProfile &&
+    recoverFreshDevice !==
+      undefined
+  ) {
+    const profileRecoveryResult =
+      await recoverFreshDevice(
+        request,
+        portableStore,
+      );
+
+    if (!profileRecoveryResult.success) {
+      return profileRecoveryResult;
+    }
+
+    const repairedControlStoreResult =
+      await readFinoraControlStore();
+
+    if (
+      !repairedControlStoreResult.success ||
+      !repairedControlStoreResult.data
+    ) {
+      return {
+        success:
+          false,
+
+        errorCode:
+          "CONTROL_STATE_FAILED",
+
+        error:
+          "FINORA could not verify the repaired Business Profile state.",
+      };
+    }
+
+    const repairedBusinessProfile =
+      (
+        repairedControlStoreResult.data.businessProfiles ??
+        []
+      ).find(
+        (profile) =>
+          profile.ownerId ===
+            authenticationResult.data.ownerId &&
+          profile.businessId ===
+            authenticationResult.data.businessId &&
+          profile.branchId ===
+            authenticationResult.data.branchId,
+      );
+
+    if (!repairedBusinessProfile) {
+      return {
+        success:
+          false,
+
+        errorCode:
+          "CONTROL_STATE_FAILED",
+
+        error:
+          "The signed FINORA Business Profile is required for this branch.",
+      };
+    }
   }
 
   const deviceTrustResult =

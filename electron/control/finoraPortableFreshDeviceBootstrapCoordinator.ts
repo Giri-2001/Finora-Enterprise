@@ -176,6 +176,9 @@ export interface FinoraFreshDeviceRuntimeAuthorityView {
   branchCode:
     string | null;
 
+  businessProfile?:
+    import("./finoraControlStore.js").FinoraControlBusinessProfile;
+
   userId:
     string;
 
@@ -335,6 +338,9 @@ export interface FinoraFreshDeviceBootstrapHydrationPlan {
 
   branchCode:
     string | null;
+
+  businessProfile?:
+    import("./finoraControlStore.js").FinoraControlBusinessProfile;
 
   userId:
     string;
@@ -1086,6 +1092,15 @@ export async function prepareFinoraFreshDeviceBootstrap(
 
       branchCode:
         runtime.branchCode,
+
+      ...(
+        runtime.businessProfile !== undefined
+          ? {
+              businessProfile:
+                runtime.businessProfile,
+            }
+          : {}
+      ),
 
       userId:
         portable.userId,
