@@ -127,7 +127,7 @@ const PAYMENT_METHODS:
         "OTHER",
 
       label:
-        "Cash / Manual",
+        "Cash",
     },
   ];
 
@@ -190,7 +190,7 @@ export default function WalletRechargePanel({
         <div style={styles.headingGroup}>
           <h2 style={styles.title}>
             <WalletCards
-              size={tokens.icon.md}
+              size={tokens.icon.md + 2}
               strokeWidth={2}
               aria-hidden="true"
             />

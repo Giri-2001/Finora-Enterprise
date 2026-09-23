@@ -167,6 +167,15 @@ export function createWalletRechargePanelStyles(
       margin:
         0,
 
+      display:
+        "inline-flex",
+
+      alignItems:
+        "center",
+
+      gap:
+        6,
+
       color:
         "var(--finora-theme-text-primary)",
 
@@ -188,7 +197,7 @@ export function createWalletRechargePanelStyles(
         "var(--finora-theme-text-muted)",
 
       fontSize:
-        wallet.history.detailSize,
+        wallet.history.detailSize + 2,
 
       fontWeight:
         500,
@@ -236,7 +245,7 @@ export function createWalletRechargePanelStyles(
         "var(--finora-theme-text-secondary)",
 
       fontSize:
-        wallet.history.detailSize,
+        wallet.history.detailSize + 2,
 
       fontWeight:
         700,
@@ -294,10 +303,10 @@ export function createWalletRechargePanelStyles(
         "grid",
 
       gridTemplateColumns:
-        `repeat(${wallet.summary.columns}, minmax(0, 1fr))`,
+        "repeat(5, minmax(0, 1fr))",
 
       gap:
-        wallet.actions.gap,
+        6,
     },
 
     paymentButton: {
@@ -317,10 +326,10 @@ export function createWalletRechargePanelStyles(
         "center",
 
       gap:
-        wallet.actions.gap,
+        4,
 
       padding:
-        `0 ${wallet.actions.buttonPaddingX}px`,
+        `0 6px`,
 
       border:
         "1px solid var(--finora-theme-border-default)",
@@ -364,10 +373,10 @@ export function createWalletRechargePanelStyles(
         "center",
 
       gap:
-        wallet.actions.gap,
+        4,
 
       padding:
-        `0 ${wallet.actions.buttonPaddingX}px`,
+        `0 6px`,
 
       border:
         "1px solid var(--finora-theme-brand-primary)",
@@ -463,7 +472,7 @@ export function createWalletRechargePanelStyles(
         "var(--finora-theme-text-muted)",
 
       fontSize:
-        wallet.history.detailSize,
+        wallet.history.detailSize + 2,
 
       fontWeight:
         500,

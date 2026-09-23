@@ -50,6 +50,9 @@ export interface WalletTransactionHistoryStyles {
   subtitle:
     CSSProperties;
 
+  headerActions:
+    CSSProperties;
+
   count:
     CSSProperties;
 
@@ -150,6 +153,15 @@ export function createWalletTransactionHistoryStyles(
       margin:
         0,
 
+      display:
+        "inline-flex",
+
+      alignItems:
+        "center",
+
+      gap:
+        6,
+
       color:
         "var(--finora-theme-text-primary)",
 
@@ -178,6 +190,23 @@ export function createWalletTransactionHistoryStyles(
 
       lineHeight:
         1.4,
+    },
+
+    headerActions: {
+      flexShrink:
+        0,
+
+      display:
+        "inline-flex",
+
+      alignItems:
+        "center",
+
+      justifyContent:
+        "flex-end",
+
+      gap:
+        8,
     },
 
     count: {

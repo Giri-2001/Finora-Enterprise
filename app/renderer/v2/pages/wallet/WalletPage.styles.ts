@@ -156,9 +156,7 @@ export function getWalletPageStyles(
     isTablet;
 
   const pagePadding =
-    isMobile
-      ? tokens.spacing.medium
-      : tokens.spacing.page;
+    8;
 
   const workspaceColumns =
     isCompact
@@ -203,7 +201,7 @@ export function getWalletPageStyles(
         "100%",
 
       maxWidth:
-        wallet.page.maxWidth,
+        "none",
 
       margin:
         "0 auto",
@@ -218,7 +216,7 @@ export function getWalletPageStyles(
         "column",
 
       gap:
-        wallet.page.sectionGap,
+        8,
 
       boxSizing:
         "border-box",
@@ -240,7 +238,7 @@ export function getWalletPageStyles(
           : "center",
 
       justifyContent:
-        "space-between",
+        "flex-end",
 
       gap:
         wallet.summary.gap,
@@ -251,7 +249,7 @@ export function getWalletPageStyles(
         0,
 
       display:
-        "flex",
+        "none",
 
       flexDirection:
         "column",
@@ -337,7 +335,7 @@ export function getWalletPageStyles(
         "start",
 
       gap:
-        wallet.summary.gap,
+        8,
     },
 
     primaryColumn: {
@@ -351,7 +349,7 @@ export function getWalletPageStyles(
         "column",
 
       gap:
-        wallet.summary.gap,
+        8,
     },
 
     secondaryColumn: {
@@ -365,7 +363,7 @@ export function getWalletPageStyles(
         "column",
 
       gap:
-        wallet.summary.gap,
+        8,
     },
 
     refreshButton: {

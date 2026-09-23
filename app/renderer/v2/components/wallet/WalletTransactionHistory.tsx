@@ -18,6 +18,10 @@
    - No financial calculations.
 ============================================================ */
 
+import type {
+  ReactNode,
+} from "react";
+
 import {
   History,
 } from "lucide-react";
@@ -43,6 +47,9 @@ import {
 export interface WalletTransactionHistoryProps {
   transactions:
     WalletTransaction[];
+
+  headerAction?:
+    ReactNode;
 }
 
 /* ============================================================
@@ -51,6 +58,7 @@ export interface WalletTransactionHistoryProps {
 
 export default function WalletTransactionHistory({
   transactions,
+  headerAction,
 }: WalletTransactionHistoryProps) {
   const {
     tokens,
@@ -68,7 +76,7 @@ export default function WalletTransactionHistory({
         <div style={styles.headingGroup}>
           <h2 style={styles.title}>
             <History
-              size={tokens.icon.md}
+              size={tokens.icon.md + 2}
               strokeWidth={2}
               aria-hidden="true"
             />
@@ -81,9 +89,13 @@ export default function WalletTransactionHistory({
           </p>
         </div>
 
-        <span style={styles.count}>
-          {transactionCount}
-        </span>
+        <div style={styles.headerActions}>
+          {headerAction}
+
+          <span style={styles.count}>
+            {transactionCount}
+          </span>
+        </div>
       </header>
 
       {transactionCount > 0 ? (

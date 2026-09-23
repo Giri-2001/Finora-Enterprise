@@ -112,7 +112,7 @@ export function createWalletBalanceCardStyles(
         wallet.balanceCard.radius,
 
       background:
-        "linear-gradient(135deg, var(--finora-theme-brand-soft), var(--finora-theme-background-surface))",
+        "var(--finora-theme-background-surface)",
 
       boxShadow:
         "0 10px 28px var(--finora-theme-overlay-shadow)",
@@ -185,11 +185,20 @@ export function createWalletBalanceCardStyles(
       margin:
         0,
 
+      display:
+        "inline-flex",
+
+      alignItems:
+        "center",
+
+      gap:
+        6,
+
       color:
         "var(--finora-theme-text-primary)",
 
       fontSize:
-        wallet.balanceCard.titleSize,
+        wallet.balanceCard.titleSize + 2,
 
       fontWeight:
         800,
@@ -275,7 +284,7 @@ export function createWalletBalanceCardStyles(
         0,
 
       color:
-        "var(--finora-theme-text-primary)",
+        "var(--finora-theme-financial-credit)",
 
       fontSize:
         wallet.balanceCard.balanceSize,

@@ -81,7 +81,7 @@ export default function WalletBalanceCard({
 
           <h2 style={styles.title}>
             <WalletCards
-              size={tokens.icon.md}
+              size={tokens.icon.md + 2}
               strokeWidth={2}
               aria-hidden="true"
             />
@@ -96,10 +96,6 @@ export default function WalletBalanceCard({
       </div>
 
       <div style={styles.balanceGroup}>
-        <p style={styles.balanceLabel}>
-          Available Balance
-        </p>
-
         <p style={styles.balance}>
           {formatRupee(balance)}
         </p>

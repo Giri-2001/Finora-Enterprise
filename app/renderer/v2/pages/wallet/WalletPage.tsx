@@ -29,7 +29,6 @@ import {
 
 import {
   RefreshCw,
-  WalletCards,
 } from "lucide-react";
 
 import type {
@@ -1022,52 +1021,6 @@ export default function WalletPage({
   return (
     <main style={styles.page}>
       <div style={styles.pageInner}>
-        <header style={styles.header}>
-          <div style={styles.headingGroup}>
-            <p style={styles.eyebrow}>
-              FINORA Wallet
-            </p>
-
-            <h1 style={styles.title}>
-              <WalletCards
-                size={tokens.icon.lg}
-                strokeWidth={2}
-                aria-hidden="true"
-              />
-
-              Wallet
-            </h1>
-
-            <p style={styles.subtitle}>
-              Recharge when required and let FINORA
-              automatically deduct applicable platform charges
-              from the available balance.
-            </p>
-          </div>
-
-          <button
-            type="button"
-            onClick={() => {
-              void loadWorkspace();
-            }}
-            disabled={
-              loading ||
-              recharging ||
-              cancellingRecharge ||
-              importingControlBundle
-            }
-            aria-label="Refresh FINORA Wallet"
-            style={styles.refreshButton}
-          >
-            <RefreshCw
-              size={tokens.icon.sm}
-              strokeWidth={2}
-              aria-hidden="true"
-            />
-
-            Refresh
-          </button>
-        </header>
 
         {error ? (
           <section style={styles.stateCard}>
@@ -1188,6 +1141,30 @@ export default function WalletPage({
             <div style={styles.secondaryColumn}>
               <WalletTransactionHistory
                 transactions={snapshot.transactions}
+                headerAction={(
+                  <button
+                    type="button"
+                    onClick={() => {
+                      void loadWorkspace();
+                    }}
+                    disabled={
+                      loading ||
+                      recharging ||
+                      cancellingRecharge ||
+                      importingControlBundle
+                    }
+                    aria-label="Refresh FINORA Wallet"
+                    style={styles.refreshButton}
+                  >
+                    <RefreshCw
+                      size={tokens.icon.sm}
+                      strokeWidth={2}
+                      aria-hidden="true"
+                    />
+
+                    Refresh
+                  </button>
+                )}
               />
             </div>
           </div>
