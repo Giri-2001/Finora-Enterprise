@@ -1347,20 +1347,7 @@ export default function ReportsPage() {
               HEADER
           ================================================== */}
 
-          <header style={reportsPageStyles.header}>
-            <div style={reportsPageStyles.headerContent}>
-              <span style={reportsPageStyles.eyebrow}>
-                FINORA REPORTS ENGINE™
-              </span>
 
-              <h1 style={reportsPageStyles.title}>Reports & Statements</h1>
-
-              <p style={reportsPageStyles.subtitle}>
-                Generate authoritative business statements, printable PDFs and
-                shareable reports.
-              </p>
-            </div>
-          </header>
 
           {/* ==================================================
               WORKSPACE

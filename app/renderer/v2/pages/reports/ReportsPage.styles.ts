@@ -364,7 +364,7 @@ export function getReportsPageStyles(
 
       gridTemplateColumns: workspaceColumns,
 
-      gap: `${workspaceGap}px`,
+      gap: "8px",
 
       alignItems: "start",
 
@@ -386,7 +386,9 @@ export function getReportsPageStyles(
 
       flexDirection: isCompact ? undefined : "column",
 
-      gap: `${isMobile ? tokens.spacing.small : tokens.spacing.inline}px`,
+      gap: `${
+        (isMobile ? tokens.spacing.small : tokens.spacing.inline) + 2
+      }px`,
 
       padding: `${isMobile ? tokens.spacing.small + 2 : panelPadding}px`,
 
@@ -414,7 +416,9 @@ export function getReportsPageStyles(
 
       color: THEME.text,
 
-      fontSize: `${tokens.typography.label}px`,
+      textAlign: "center",
+
+      fontSize: `${tokens.typography.label + 4}px`,
 
       fontWeight: 800,
 
@@ -426,7 +430,7 @@ export function getReportsPageStyles(
 
       minWidth: 0,
 
-      minHeight: `${isMobile ? 46 : Math.max(50, tokens.control.minHeight)}px`,
+      minHeight: `${isMobile ? 54 : Math.max(58, tokens.control.minHeight + 8)}px`,
 
       display: "flex",
 
@@ -502,10 +506,10 @@ export function getReportsPageStyles(
       color: THEME.text,
 
       fontSize: `${
-        isMobile ? tokens.typography.caption : tokens.typography.small
+        (isMobile ? tokens.typography.caption : tokens.typography.small) + 2
       }px`,
 
-      fontWeight: 800,
+      fontWeight: 750,
 
       fontFamily: INTER,
     },
@@ -521,7 +525,9 @@ export function getReportsPageStyles(
 
       color: THEME.muted,
 
-      fontSize: `${tokens.typography.caption}px`,
+      fontSize: `${tokens.typography.caption + 1}px`,
+
+      fontWeight: 500,
 
       lineHeight: tokens.lineHeight.compact,
 
@@ -597,7 +603,7 @@ export function getReportsPageStyles(
 
       fontSize: `${panelTitleSize}px`,
 
-      fontWeight: 850,
+      fontWeight: 800,
 
       lineHeight: tokens.lineHeight.compact,
 
@@ -609,7 +615,9 @@ export function getReportsPageStyles(
 
       color: THEME.muted,
 
-      fontSize: `${tokens.typography.caption}px`,
+      fontSize: `${tokens.typography.caption + 1}px`,
+
+      fontWeight: 500,
 
       lineHeight: tokens.lineHeight.body,
 
@@ -649,7 +657,7 @@ export function getReportsPageStyles(
     label: {
       color: THEME.text,
 
-      fontSize: `${tokens.typography.caption}px`,
+      fontSize: `${tokens.typography.caption + 2}px`,
 
       fontWeight: 750,
 
@@ -807,7 +815,7 @@ export function getReportsPageStyles(
 
       fontSize: `${metricValueSize}px`,
 
-      fontWeight: 850,
+      fontWeight: 750,
 
       fontFamily: INTER,
     },
