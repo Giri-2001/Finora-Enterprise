@@ -55,16 +55,16 @@
   box-sizing: border-box;
 
   padding-top:
-    var(--finora-accounts-page-padding-top);
+    8px;
 
   padding-right:
-    var(--finora-accounts-page-padding-x);
+    8px;
 
   padding-bottom:
-    var(--finora-accounts-page-padding-bottom);
+    8px;
 
   padding-left:
-    var(--finora-accounts-page-padding-x);
+    8px;
 
   background:
     var(--finora-theme-background-page);
@@ -83,10 +83,10 @@
 
 .finora-accounts-office__content {
   width:
-    var(--finora-accounts-page-width);
+    100%;
 
   max-width:
-    var(--finora-accounts-page-max-width);
+    none;
 
   margin-right: auto;
   margin-left: auto;
@@ -95,7 +95,7 @@
   flex-direction: column;
 
   gap:
-    var(--finora-accounts-section-gap);
+    8px;
 
   box-sizing: border-box;
 }

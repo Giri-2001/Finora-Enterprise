@@ -175,7 +175,7 @@
     var(--finora-accounts-font-family);
 
   font-size:
-    var(--finora-accounts-font-page-title);
+    calc(var(--finora-accounts-font-page-title) - 4px);
 
   font-weight: 800;
 
