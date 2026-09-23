@@ -179,6 +179,10 @@ import type {
   FinoraUsbResetScope,
 } from "./finoraUsbResetScopePolicy.js";
 
+import {
+  resolveFinoraBranchOperationalSessionContext,
+} from "./control/finoraBranchLoginSessionAuthority.js";
+
 // ============================================================
 // PROMISIFIED SYSTEM COMMAND
 // ============================================================
@@ -192,14 +196,28 @@ const execFileAsync = promisify(execFile);
 interface StorageQuery {
   entity: string;
   id?: string;
+
+  sessionId?: string;
   ownerId?: string;
+
+  businessId?: string;
+
+  branchId?: string;
+
   demoId?: string;
   limit?: number;
   offset?: number;
 }
 
 interface StorageWriteOptions {
+  sessionId?: string;
+
   ownerId?: string;
+
+  businessId?: string;
+
+  branchId?: string;
+
   demoId?: string;
 }
 
@@ -211,6 +229,11 @@ interface PersistedStorageRecord {
   createdAt: string;
   updatedAt: string;
   ownerId?: string;
+
+  businessId?: string;
+
+  branchId?: string;
+
   demoId?: string;
 }
 
@@ -248,6 +271,9 @@ const IPC_CHANNELS = {
   REPLACE_ALL: "finora:usb:replace-all",
 
   CLEAR: "finora:usb:clear",
+
+  MIGRATE_LEGACY_TENANT_SCOPE:
+    "finora:usb:migrate-legacy-tenant-scope",
 
   RESET_FINORA_DATA: "finora:usb:reset-finora-data",
 } as const;
@@ -769,6 +795,544 @@ async function writeStoragePackage(
 }
 
 // ============================================================
+// LEGACY TENANT OUTER-ENVELOPE MIGRATION
+//
+// SECURITY / PORTABILITY RULES:
+//
+// - Renderer supplies ONLY opaque sessionId.
+// - ownerId / businessId / branchId come only from the
+//   authoritative in-memory FINORA login session resolver.
+// - REAL + USB only.
+// - Existing records must already belong to the authenticated
+//   Owner.
+// - Existing non-empty businessId / branchId must either match
+//   the authenticated tenant exactly or migration fails closed.
+// - Demo records are never adopted by a REAL branch.
+// - record.data is preserved without mutation.
+// - Operation is idempotent.
+// ============================================================
+
+function readTrimmedStorageAuthorityString(
+  record: Record<string, unknown>,
+  key: string,
+): string {
+  const value = record[key];
+
+  return typeof value === "string"
+    ? value.trim()
+    : "";
+}
+
+async function handleUsbMigrateLegacyTenantScope(
+  input: unknown,
+) {
+  if (
+    !input ||
+    typeof input !== "object" ||
+    Array.isArray(input)
+  ) {
+    return failure(
+      "A valid authenticated FINORA migration request is required.",
+    );
+  }
+
+  const request =
+    input as Record<string, unknown>;
+
+  const sessionId =
+    readTrimmedStorageAuthorityString(
+      request,
+      "sessionId",
+    );
+
+  if (!sessionId) {
+    return failure(
+      "A valid authenticated FINORA session is required.",
+    );
+  }
+
+  const resolutionUnknown: unknown =
+    await resolveFinoraBranchOperationalSessionContext({
+      sessionId,
+    });
+
+  if (
+    !resolutionUnknown ||
+    typeof resolutionUnknown !== "object" ||
+    Array.isArray(resolutionUnknown)
+  ) {
+    return failure(
+      "Unable to resolve the authenticated FINORA branch session.",
+    );
+  }
+
+  const resolution =
+    resolutionUnknown as Record<string, unknown>;
+
+  if (resolution.success !== true) {
+    const error =
+      readTrimmedStorageAuthorityString(
+        resolution,
+        "error",
+      );
+
+    return failure(
+      error ||
+        "The authenticated FINORA branch session is unavailable.",
+    );
+  }
+
+  const contextUnknown =
+    resolution.data;
+
+  if (
+    !contextUnknown ||
+    typeof contextUnknown !== "object" ||
+    Array.isArray(contextUnknown)
+  ) {
+    return failure(
+      "The authenticated FINORA operational session context is unavailable.",
+    );
+  }
+
+  const context =
+    contextUnknown as Record<string, unknown>;
+
+  const sessionUnknown =
+    context.session;
+
+  if (
+    !sessionUnknown ||
+    typeof sessionUnknown !== "object" ||
+    Array.isArray(sessionUnknown)
+  ) {
+    return failure(
+      "The authenticated FINORA login-session view is unavailable.",
+    );
+  }
+
+  const authoritativeSession =
+    sessionUnknown as Record<string, unknown>;
+
+  const principalUnknown =
+    context.principal;
+
+  if (
+    !principalUnknown ||
+    typeof principalUnknown !== "object" ||
+    Array.isArray(principalUnknown)
+  ) {
+    return failure(
+      "The authenticated FINORA operational principal is unavailable.",
+    );
+  }
+
+  const authoritativePrincipal =
+    principalUnknown as Record<string, unknown>;
+
+  const ownerId =
+    readTrimmedStorageAuthorityString(
+      authoritativeSession,
+      "ownerId",
+    );
+
+  const businessId =
+    readTrimmedStorageAuthorityString(
+      authoritativeSession,
+      "businessId",
+    );
+
+  const branchId =
+    readTrimmedStorageAuthorityString(
+      authoritativeSession,
+      "branchId",
+    );
+
+  const dataContext =
+    readTrimmedStorageAuthorityString(
+      authoritativeSession,
+      "dataContext",
+    );
+
+  const sessionStorageMode =
+    readTrimmedStorageAuthorityString(
+      authoritativeSession,
+      "storageMode",
+    );
+
+  const principalOwnerId =
+    readTrimmedStorageAuthorityString(
+      authoritativePrincipal,
+      "ownerId",
+    );
+
+  const principalBusinessId =
+    readTrimmedStorageAuthorityString(
+      authoritativePrincipal,
+      "businessId",
+    );
+
+  const principalBranchId =
+    readTrimmedStorageAuthorityString(
+      authoritativePrincipal,
+      "branchId",
+    );
+
+  const principalDataContext =
+    readTrimmedStorageAuthorityString(
+      authoritativePrincipal,
+      "dataContext",
+    );
+
+  const principalStorageMode =
+    readTrimmedStorageAuthorityString(
+      authoritativePrincipal,
+      "storageMode",
+    );
+
+  if (
+    !ownerId ||
+    !businessId ||
+    !branchId ||
+    !principalOwnerId ||
+    !principalBusinessId ||
+    !principalBranchId
+  ) {
+    return failure(
+      "The authenticated FINORA tenant scope is incomplete.",
+    );
+  }
+
+  if (
+    ownerId !== principalOwnerId ||
+    businessId !== principalBusinessId ||
+    branchId !== principalBranchId
+  ) {
+    return failure(
+      "The authenticated FINORA session and operational principal tenant scopes do not match.",
+    );
+  }
+
+  if (
+    dataContext !== "REAL" ||
+    principalDataContext !== "REAL" ||
+    dataContext !== principalDataContext
+  ) {
+    return failure(
+      "Legacy commercial storage migration requires one authoritative REAL branch context.",
+    );
+  }
+
+  if (
+    sessionStorageMode !== "USB" ||
+    principalStorageMode !== "USB" ||
+    sessionStorageMode !== principalStorageMode
+  ) {
+    return failure(
+      "Legacy USB storage migration requires one authoritative USB branch context.",
+    );
+  }
+
+  const usbRoot =
+    await findFinoraUsbRoot();
+
+  if (!usbRoot) {
+    return failure(
+      "FINORA Pendrive is disconnected.",
+    );
+  }
+
+  try {
+    const storagePackage =
+      await readStoragePackage(
+        usbRoot,
+      );
+
+    let migrationCount =
+      0;
+
+    let fullyScopedRecordCount =
+      0;
+
+    let legacyRecordCount =
+      0;
+
+    /*
+     * MIGRATION QUALIFICATION
+     *
+     * The physical USB package is a multi-tenant container.
+     *
+     * Fully-scoped records already carry explicit
+     * Owner + Business + Branch authority. They may belong
+     * to the active branch or to sibling tenants and must not
+     * be rejected or rewritten by legacy migration.
+     *
+     * Only a package consisting entirely of legacy Owner-only
+     * records for the authenticated Owner may be stamped.
+     */
+    for (const record of storagePackage.records) {
+      const recordOwnerId =
+        typeof record.ownerId === "string"
+          ? record.ownerId.trim()
+          : "";
+
+      const recordBusinessId =
+        typeof record.businessId === "string"
+          ? record.businessId.trim()
+          : "";
+
+      const recordBranchId =
+        typeof record.branchId === "string"
+          ? record.branchId.trim()
+          : "";
+
+      const recordDemoId =
+        typeof record.demoId === "string"
+          ? record.demoId.trim()
+          : "";
+
+      const hasOwnerId =
+        recordOwnerId.length > 0;
+
+      const hasBusinessId =
+        recordBusinessId.length > 0;
+
+      const hasBranchId =
+        recordBranchId.length > 0;
+
+      /*
+       * Business and Branch must either both exist or both
+       * be absent.
+       */
+      if (
+        hasBusinessId !==
+          hasBranchId
+      ) {
+        return failure(
+          "FINORA USB storage contains a partially-scoped tenant record.",
+        );
+      }
+
+      /*
+       * Fully-scoped records are authoritative in themselves.
+       * Sibling tenant scope is legitimate inside one USB
+       * physical container.
+       */
+      if (
+        hasBusinessId &&
+        hasBranchId
+      ) {
+        if (!hasOwnerId) {
+          return failure(
+            "FINORA USB storage contains a scoped record without Owner authority.",
+          );
+        }
+
+        fullyScopedRecordCount +=
+          1;
+
+        continue;
+      }
+
+      /*
+       * Business + Branch both absent:
+       * legacy Owner-only candidate.
+       */
+      legacyRecordCount +=
+        1;
+
+      if (recordDemoId) {
+        return failure(
+          "FINORA USB legacy migration cannot include Demo-scoped records.",
+        );
+      }
+
+      if (
+        !hasOwnerId ||
+        recordOwnerId !== ownerId
+      ) {
+        return failure(
+          "FINORA USB legacy migration Owner scope does not match the authenticated branch.",
+        );
+      }
+    }
+
+    /*
+     * Mixing already-scoped and legacy records is ambiguous.
+     * Never guess which scoped tenant owns the legacy records.
+     */
+    if (
+      fullyScopedRecordCount > 0 &&
+      legacyRecordCount > 0
+    ) {
+      return failure(
+        "FINORA USB storage cannot mix fully-scoped and legacy tenant records.",
+      );
+    }
+
+    migrationCount =
+      legacyRecordCount;
+    if (migrationCount === 0) {
+      return success({
+        migratedRecordCount:
+          0,
+
+        totalRecordCount:
+          storagePackage.records.length,
+
+        alreadyScoped:
+          true,
+      });
+    }
+
+    const originalRecords =
+      storagePackage.records;
+
+    const originalDataSnapshots =
+      originalRecords.map(
+        (record) =>
+          JSON.stringify(
+            record.data,
+          ),
+      );
+
+    const migratedRecords =
+      originalRecords.map(
+        (record) => ({
+          ...record,
+
+          ownerId,
+
+          businessId,
+
+          branchId,
+        }),
+      );
+
+    for (
+      let index = 0;
+      index < migratedRecords.length;
+      index += 1
+    ) {
+      const original =
+        originalRecords[index];
+
+      const migrated =
+        migratedRecords[index];
+
+      if (
+        !original ||
+        !migrated
+      ) {
+        throw new Error(
+          "FINORA migration record cardinality changed unexpectedly.",
+        );
+      }
+
+      if (
+        migrated.data !==
+        original.data
+      ) {
+        throw new Error(
+          "FINORA migration attempted to replace inner business data.",
+        );
+      }
+    }
+
+    storagePackage.records =
+      migratedRecords;
+
+    await writeStoragePackage(
+      usbRoot,
+      storagePackage,
+    );
+
+    const verifiedPackage =
+      await readStoragePackage(
+        usbRoot,
+      );
+
+    if (
+      verifiedPackage.records.length !==
+      originalRecords.length
+    ) {
+      throw new Error(
+        "FINORA migration read-back record count does not match.",
+      );
+    }
+
+    for (
+      let index = 0;
+      index < verifiedPackage.records.length;
+      index += 1
+    ) {
+      const original =
+        originalRecords[index];
+
+      const verified =
+        verifiedPackage.records[index];
+
+      if (
+        !original ||
+        !verified
+      ) {
+        throw new Error(
+          "FINORA migration read-back record is unavailable.",
+        );
+      }
+
+      if (
+        verified.id !== original.id ||
+        verified.entity !== original.entity ||
+        verified.createdAt !== original.createdAt ||
+        verified.updatedAt !== original.updatedAt ||
+        verified.ownerId !== ownerId ||
+        verified.businessId !== businessId ||
+        verified.branchId !== branchId ||
+        (
+          typeof verified.demoId === "string" &&
+          verified.demoId.trim().length > 0
+        )
+      ) {
+        throw new Error(
+          "FINORA migration read-back tenant envelope verification failed.",
+        );
+      }
+
+      if (
+        JSON.stringify(
+          verified.data,
+        ) !==
+        originalDataSnapshots[index]
+      ) {
+        throw new Error(
+          "FINORA migration changed inner business data.",
+        );
+      }
+    }
+
+    return success({
+      migratedRecordCount:
+        migrationCount,
+
+      totalRecordCount:
+        verifiedPackage.records.length,
+
+      alreadyScoped:
+        false,
+    });
+  } catch (error) {
+    invalidateUsbRootCache();
+
+    return failure(
+      error instanceof Error
+        ? error.message
+        : "Unable to migrate legacy FINORA tenant storage scope.",
+    );
+  }
+}
+
+// ============================================================
 // RECORD VALIDATION
 // ============================================================
 
@@ -809,6 +1373,20 @@ function recordMatchesQuery(
   }
 
   if (query.ownerId !== undefined && record.ownerId !== query.ownerId) {
+    return false;
+  }
+
+  if (
+    query.businessId !== undefined &&
+    record.businessId !== query.businessId
+  ) {
+    return false;
+  }
+
+  if (
+    query.branchId !== undefined &&
+    record.branchId !== query.branchId
+  ) {
     return false;
   }
 
@@ -1017,6 +1595,10 @@ async function handleUsbSave(
 
       ownerId: options?.ownerId,
 
+      businessId: options?.businessId,
+
+      branchId: options?.branchId,
+
       demoId: options?.demoId,
     };
 
@@ -1025,6 +1607,8 @@ async function handleUsbSave(
         item.id === id &&
         item.entity === entity &&
         item.ownerId === options?.ownerId &&
+        item.businessId === options?.businessId &&
+        item.branchId === options?.branchId &&
         item.demoId === options?.demoId,
     );
 
@@ -1089,6 +1673,8 @@ async function handleUsbUpdate(
         item.id === id &&
         item.entity === entity &&
         item.ownerId === options?.ownerId &&
+        item.businessId === options?.businessId &&
+        item.branchId === options?.branchId &&
         item.demoId === options?.demoId,
     );
 
@@ -1226,6 +1812,10 @@ async function handleUsbReplaceAll(
 
         ownerId: options?.ownerId,
 
+        businessId: options?.businessId,
+
+        branchId: options?.branchId,
+
         demoId: options?.demoId,
       };
     });
@@ -1235,6 +1825,8 @@ async function handleUsbReplaceAll(
         (replacement) =>
           replacement.entity === existing.entity &&
           replacement.ownerId === existing.ownerId &&
+          replacement.businessId === existing.businessId &&
+          replacement.branchId === existing.branchId &&
           replacement.demoId === existing.demoId,
       );
     });
@@ -1359,6 +1951,612 @@ async function handleUsbResetFinoraData(
 }
 
 // ============================================================
+
+// ============================================================
+// AUTHENTICATED USB STORAGE SCOPE
+//
+// SECURITY:
+//
+// Renderer scope is never authoritative.
+//
+// Every ordinary USB CRUD request must carry only an active
+// opaque FINORA sessionId. Electron main resolves that session
+// again and derives the exact Owner / Business / Branch scope.
+//
+// Renderer-provided tenant IDs may only agree with authority;
+// conflicting values fail closed.
+// ============================================================
+
+interface FinoraAuthenticatedUsbStorageScope {
+  sessionId: string;
+
+  ownerId: string;
+
+  businessId: string;
+
+  branchId: string;
+
+  dataContext:
+    | "REAL"
+    | "DEMO";
+
+  demoId?: string;
+}
+
+
+type FinoraAuthenticatedUsbStorageScopeResult =
+  | {
+      success: true;
+
+      scope:
+        FinoraAuthenticatedUsbStorageScope;
+    }
+  | {
+      success: false;
+
+      error: string;
+    };
+
+
+type FinoraAuthenticatedUsbQueryResult =
+  | {
+      success: true;
+
+      query:
+        StorageQuery;
+    }
+  | {
+      success: false;
+
+      error: string;
+    };
+
+
+type FinoraAuthenticatedUsbWriteResult =
+  | {
+      success: true;
+
+      options:
+        StorageWriteOptions;
+    }
+  | {
+      success: false;
+
+      error: string;
+    };
+
+
+function normalizeFinoraUsbAuthorityValue(
+  value:
+    unknown,
+): string {
+  return typeof value === "string"
+    ? value.trim()
+    : "";
+}
+
+
+async function resolveFinoraAuthenticatedUsbStorageScope(
+  sessionIdValue:
+    unknown,
+): Promise<
+  FinoraAuthenticatedUsbStorageScopeResult
+> {
+  const sessionId =
+    normalizeFinoraUsbAuthorityValue(
+      sessionIdValue,
+    );
+
+  if (!sessionId) {
+    return {
+      success:
+        false,
+
+      error:
+        "An authenticated FINORA session is required for USB storage access.",
+    };
+  }
+
+  const resolution =
+    await resolveFinoraBranchOperationalSessionContext({
+      sessionId,
+    });
+
+  if (!resolution.success) {
+    return {
+      success:
+        false,
+
+      error:
+        resolution.error,
+    };
+  }
+
+  const session =
+    resolution.data.session;
+
+  const principal =
+    resolution.data.principal;
+
+  const sessionOwnerId =
+    normalizeFinoraUsbAuthorityValue(
+      session.ownerId,
+    );
+
+  const sessionBusinessId =
+    normalizeFinoraUsbAuthorityValue(
+      session.businessId,
+    );
+
+  const sessionBranchId =
+    normalizeFinoraUsbAuthorityValue(
+      session.branchId,
+    );
+
+  const principalOwnerId =
+    normalizeFinoraUsbAuthorityValue(
+      principal.ownerId,
+    );
+
+  const principalBusinessId =
+    normalizeFinoraUsbAuthorityValue(
+      principal.businessId,
+    );
+
+  const principalBranchId =
+    normalizeFinoraUsbAuthorityValue(
+      principal.branchId,
+    );
+
+  if (
+    normalizeFinoraUsbAuthorityValue(
+      session.sessionId,
+    ) !==
+      sessionId
+  ) {
+    return {
+      success:
+        false,
+
+      error:
+        "FINORA USB storage session identity mismatch.",
+    };
+  }
+
+  if (
+    !sessionOwnerId ||
+    !sessionBusinessId ||
+    !sessionBranchId ||
+    sessionOwnerId !==
+      principalOwnerId ||
+    sessionBusinessId !==
+      principalBusinessId ||
+    sessionBranchId !==
+      principalBranchId
+  ) {
+    return {
+      success:
+        false,
+
+      error:
+        "FINORA USB tenant scope does not match the authenticated branch authority.",
+    };
+  }
+
+  if (
+    session.storageMode !==
+      "USB" ||
+    principal.storageMode !==
+      "USB"
+  ) {
+    return {
+      success:
+        false,
+
+      error:
+        "The authenticated FINORA session is not authorized for USB storage.",
+    };
+  }
+
+  if (
+    session.dataContext !==
+      principal.dataContext
+  ) {
+    return {
+      success:
+        false,
+
+      error:
+        "FINORA USB data context does not match the authenticated branch authority.",
+    };
+  }
+
+  const sessionDemoId =
+    normalizeFinoraUsbAuthorityValue(
+      session.demoId,
+    );
+
+  const principalDemoId =
+    normalizeFinoraUsbAuthorityValue(
+      principal.demoId,
+    );
+
+  if (
+    session.dataContext ===
+      "REAL"
+  ) {
+    if (
+      sessionDemoId ||
+      principalDemoId
+    ) {
+      return {
+        success:
+          false,
+
+        error:
+          "A REAL FINORA session cannot select Demo USB storage.",
+      };
+    }
+
+    return {
+      success:
+        true,
+
+      scope: {
+        sessionId,
+
+        ownerId:
+          sessionOwnerId,
+
+        businessId:
+          sessionBusinessId,
+
+        branchId:
+          sessionBranchId,
+
+        dataContext:
+          "REAL",
+      },
+    };
+  }
+
+  if (
+    session.dataContext !==
+      "DEMO" ||
+    !sessionDemoId ||
+    sessionDemoId !==
+      principalDemoId
+  ) {
+    return {
+      success:
+        false,
+
+      error:
+        "FINORA Demo USB scope does not match the authenticated branch authority.",
+    };
+  }
+
+  return {
+    success:
+      true,
+
+    scope: {
+      sessionId,
+
+      ownerId:
+        sessionOwnerId,
+
+      businessId:
+        sessionBusinessId,
+
+      branchId:
+        sessionBranchId,
+
+      dataContext:
+        "DEMO",
+
+      demoId:
+        sessionDemoId,
+    },
+  };
+}
+
+
+function bindFinoraUsbQueryToAuthenticatedScope(
+  query:
+    StorageQuery,
+
+  scope:
+    FinoraAuthenticatedUsbStorageScope,
+): FinoraAuthenticatedUsbQueryResult {
+  const suppliedOwnerId =
+    normalizeFinoraUsbAuthorityValue(
+      query.ownerId,
+    );
+
+  const suppliedBusinessId =
+    normalizeFinoraUsbAuthorityValue(
+      query.businessId,
+    );
+
+  const suppliedBranchId =
+    normalizeFinoraUsbAuthorityValue(
+      query.branchId,
+    );
+
+  const suppliedDemoId =
+    normalizeFinoraUsbAuthorityValue(
+      query.demoId,
+    );
+
+  if (
+    suppliedOwnerId &&
+    suppliedOwnerId !==
+      scope.ownerId
+  ) {
+    return {
+      success:
+        false,
+
+      error:
+        "USB Owner scope does not match the authenticated FINORA session.",
+    };
+  }
+
+  if (
+    suppliedBusinessId &&
+    suppliedBusinessId !==
+      scope.businessId
+  ) {
+    return {
+      success:
+        false,
+
+      error:
+        "USB Business scope does not match the authenticated FINORA session.",
+    };
+  }
+
+  if (
+    suppliedBranchId &&
+    suppliedBranchId !==
+      scope.branchId
+  ) {
+    return {
+      success:
+        false,
+
+      error:
+        "USB Branch scope does not match the authenticated FINORA session.",
+    };
+  }
+
+  if (
+    scope.dataContext ===
+      "REAL"
+  ) {
+    if (suppliedDemoId) {
+      return {
+        success:
+          false,
+
+        error:
+          "A REAL FINORA USB request cannot select Demo scope.",
+      };
+    }
+  }
+  else if (
+    suppliedDemoId &&
+    suppliedDemoId !==
+      scope.demoId
+  ) {
+    return {
+      success:
+        false,
+
+      error:
+        "USB Demo scope does not match the authenticated FINORA session.",
+    };
+  }
+
+  return {
+    success:
+      true,
+
+    query: {
+      ...query,
+
+      sessionId:
+        scope.sessionId,
+
+      ownerId:
+        scope.ownerId,
+
+      businessId:
+        scope.businessId,
+
+      branchId:
+        scope.branchId,
+
+      demoId:
+        scope.dataContext ===
+          "DEMO"
+          ? scope.demoId
+          : undefined,
+    },
+  };
+}
+
+
+function bindFinoraUsbWriteToAuthenticatedScope(
+  options:
+    StorageWriteOptions | undefined,
+
+  scope:
+    FinoraAuthenticatedUsbStorageScope,
+): FinoraAuthenticatedUsbWriteResult {
+  const suppliedOwnerId =
+    normalizeFinoraUsbAuthorityValue(
+      options?.ownerId,
+    );
+
+  const suppliedBusinessId =
+    normalizeFinoraUsbAuthorityValue(
+      options?.businessId,
+    );
+
+  const suppliedBranchId =
+    normalizeFinoraUsbAuthorityValue(
+      options?.branchId,
+    );
+
+  const suppliedDemoId =
+    normalizeFinoraUsbAuthorityValue(
+      options?.demoId,
+    );
+
+  if (
+    suppliedOwnerId &&
+    suppliedOwnerId !==
+      scope.ownerId
+  ) {
+    return {
+      success:
+        false,
+
+      error:
+        "USB write Owner scope does not match the authenticated FINORA session.",
+    };
+  }
+
+  if (
+    suppliedBusinessId &&
+    suppliedBusinessId !==
+      scope.businessId
+  ) {
+    return {
+      success:
+        false,
+
+      error:
+        "USB write Business scope does not match the authenticated FINORA session.",
+    };
+  }
+
+  if (
+    suppliedBranchId &&
+    suppliedBranchId !==
+      scope.branchId
+  ) {
+    return {
+      success:
+        false,
+
+      error:
+        "USB write Branch scope does not match the authenticated FINORA session.",
+    };
+  }
+
+  if (
+    scope.dataContext ===
+      "REAL"
+  ) {
+    if (suppliedDemoId) {
+      return {
+        success:
+          false,
+
+        error:
+          "A REAL FINORA USB write cannot select Demo scope.",
+      };
+    }
+  }
+  else if (
+    suppliedDemoId &&
+    suppliedDemoId !==
+      scope.demoId
+  ) {
+    return {
+      success:
+        false,
+
+      error:
+        "USB write Demo scope does not match the authenticated FINORA session.",
+    };
+  }
+
+  return {
+    success:
+      true,
+
+    options: {
+      ...options,
+
+      sessionId:
+        scope.sessionId,
+
+      ownerId:
+        scope.ownerId,
+
+      businessId:
+        scope.businessId,
+
+      branchId:
+        scope.branchId,
+
+      demoId:
+        scope.dataContext ===
+          "DEMO"
+          ? scope.demoId
+          : undefined,
+    },
+  };
+}
+
+
+async function authorizeFinoraUsbQuery(
+  query:
+    StorageQuery,
+): Promise<
+  FinoraAuthenticatedUsbQueryResult
+> {
+  const scopeResult =
+    await resolveFinoraAuthenticatedUsbStorageScope(
+      query?.sessionId,
+    );
+
+  if (!scopeResult.success) {
+    return scopeResult;
+  }
+
+  return bindFinoraUsbQueryToAuthenticatedScope(
+    query,
+    scopeResult.scope,
+  );
+}
+
+
+async function authorizeFinoraUsbWrite(
+  options:
+    StorageWriteOptions | undefined,
+): Promise<
+  FinoraAuthenticatedUsbWriteResult
+> {
+  const scopeResult =
+    await resolveFinoraAuthenticatedUsbStorageScope(
+      options?.sessionId,
+    );
+
+  if (!scopeResult.success) {
+    return scopeResult;
+  }
+
+  return bindFinoraUsbWriteToAuthenticatedScope(
+    options,
+    scopeResult.scope,
+  );
+}
+
 // REGISTER USB IPC HANDLERS
 // ============================================================
 
@@ -1406,7 +2604,20 @@ function registerUsbStorageHandlers(): void {
       return failure("Untrusted renderer.");
     }
 
-    return handleUsbGet(query);
+    const authorization =
+      await authorizeFinoraUsbQuery(
+        query,
+      );
+
+    if (!authorization.success) {
+      return failure(
+        authorization.error,
+      );
+    }
+
+    return handleUsbGet(
+      authorization.query,
+    );
   });
 
   // ----------------------------------------------------------
@@ -1418,7 +2629,20 @@ function registerUsbStorageHandlers(): void {
       return failure("Untrusted renderer.");
     }
 
-    return handleUsbGetAll(query);
+    const authorization =
+      await authorizeFinoraUsbQuery(
+        query,
+      );
+
+    if (!authorization.success) {
+      return failure(
+        authorization.error,
+      );
+    }
+
+    return handleUsbGetAll(
+      authorization.query,
+    );
   });
 
   // ----------------------------------------------------------
@@ -1432,7 +2656,21 @@ function registerUsbStorageHandlers(): void {
         return failure("Untrusted renderer.");
       }
 
-      return handleUsbSave(record, options);
+      const authorization =
+        await authorizeFinoraUsbWrite(
+          options,
+        );
+
+      if (!authorization.success) {
+        return failure(
+          authorization.error,
+        );
+      }
+
+      return handleUsbSave(
+        record,
+        authorization.options,
+      );
     },
   );
 
@@ -1447,7 +2685,21 @@ function registerUsbStorageHandlers(): void {
         return failure("Untrusted renderer.");
       }
 
-      return handleUsbUpdate(record, options);
+      const authorization =
+        await authorizeFinoraUsbWrite(
+          options,
+        );
+
+      if (!authorization.success) {
+        return failure(
+          authorization.error,
+        );
+      }
+
+      return handleUsbUpdate(
+        record,
+        authorization.options,
+      );
     },
   );
 
@@ -1460,7 +2712,20 @@ function registerUsbStorageHandlers(): void {
       return failure("Untrusted renderer.");
     }
 
-    return handleUsbDelete(query);
+    const authorization =
+      await authorizeFinoraUsbQuery(
+        query,
+      );
+
+    if (!authorization.success) {
+      return failure(
+        authorization.error,
+      );
+    }
+
+    return handleUsbDelete(
+      authorization.query,
+    );
   });
 
   // ----------------------------------------------------------
@@ -1474,7 +2739,21 @@ function registerUsbStorageHandlers(): void {
         return failure("Untrusted renderer.");
       }
 
-      return handleUsbReplaceAll(records, options);
+      const authorization =
+        await authorizeFinoraUsbWrite(
+          options,
+        );
+
+      if (!authorization.success) {
+        return failure(
+          authorization.error,
+        );
+      }
+
+      return handleUsbReplaceAll(
+        records,
+        authorization.options,
+      );
     },
   );
 
@@ -1487,8 +2766,44 @@ function registerUsbStorageHandlers(): void {
       return failure("Untrusted renderer.");
     }
 
-    return handleUsbClear(query);
+    const authorization =
+      await authorizeFinoraUsbQuery(
+        query,
+      );
+
+    if (!authorization.success) {
+      return failure(
+        authorization.error,
+      );
+    }
+
+    return handleUsbClear(
+      authorization.query,
+    );
   });
+
+  // ----------------------------------------------------------
+  // LEGACY TENANT SCOPE MIGRATION
+  //
+  // Renderer may provide only the opaque sessionId.
+  // Tenant scope is re-resolved in Electron main.
+  // ----------------------------------------------------------
+
+  ipcMain.handle(
+    IPC_CHANNELS.MIGRATE_LEGACY_TENANT_SCOPE,
+    async (
+      event,
+      request: unknown,
+    ) => {
+      if (!isTrustedRenderer(event.senderFrame)) {
+        return failure("Untrusted renderer.");
+      }
+
+      return handleUsbMigrateLegacyTenantScope(
+        request,
+      );
+    },
+  );
 
   // ----------------------------------------------------------
   // RESET FINORA DATA

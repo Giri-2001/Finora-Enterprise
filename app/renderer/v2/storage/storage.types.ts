@@ -180,6 +180,10 @@ export interface StorageConfiguration {
 
   ownerId?: string;
 
+  businessId?: string;
+
+  branchId?: string;
+
   demoId?: string;
 
   deviceId?: string;
@@ -289,7 +293,17 @@ export interface StorageQuery {
 
   id?: string;
 
+  /**
+   * Opaque authenticated FINORA session token.
+   * Native authority must re-resolve tenant scope.
+   */
+  sessionId?: string;
+
   ownerId?: string;
+
+  businessId?: string;
+
+  branchId?: string;
 
   demoId?: string;
 
@@ -309,7 +323,16 @@ export interface StorageQuery {
 // ============================================================
 
 export interface StorageWriteOptions {
+  /**
+   * Opaque authenticated FINORA session token.
+   */
+  sessionId?: string;
+
   ownerId?: string;
+
+  businessId?: string;
+
+  branchId?: string;
 
   demoId?: string;
 }
@@ -338,6 +361,10 @@ export interface StorageResetScope {
   dataContext: DataContext;
 
   ownerId?: string;
+
+  businessId?: string;
+
+  branchId?: string;
 
   demoId?: string;
 }

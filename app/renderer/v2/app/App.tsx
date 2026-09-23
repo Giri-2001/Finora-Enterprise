@@ -1149,6 +1149,9 @@ function AuthenticatedApplication({
     let active = true;
 
     async function establishContext(): Promise<void> {
+      storageManager.setAuthenticatedSessionId(
+        undefined,
+      );
       if (!session) {
         if (active) {
           await clearContext();
@@ -1311,6 +1314,10 @@ function AuthenticatedApplication({
 
         return;
       }
+
+      storageManager.setAuthenticatedSessionId(
+        authoritativeSession.sessionId,
+      );
 
       const revalidatedSession:
         AuthSession = {
@@ -1786,6 +1793,127 @@ function AuthenticatedApplication({
 
       const businessProfile =
         businessProfileResult.data;
+
+      // ======================================================
+      // LEGACY USB TENANT-SCOPE MIGRATION
+      //
+      // finora-electron.d.ts deliberately keeps `usb` opaque.
+      // USBStorageAdapter owns its existing narrow bridge
+      // contract. This lifecycle needs only one additional
+      // operation, so it narrows that opaque value locally.
+      //
+      // SECURITY:
+      //
+      // - Main-validated session controls USB/REAL gate.
+      // - Renderer sends only opaque sessionId.
+      // - Tenant IDs are re-resolved in Electron main.
+      // - LOCAL and DEMO never invoke this migration.
+      // - Non-Electron runtimes have no window.finora USB
+      //   bridge and therefore do not enter this Electron path.
+      // ======================================================
+
+      if (
+        authoritativeSession.storageMode ===
+          "USB" &&
+        authoritativeSession.dataContext ===
+          "REAL"
+      ) {
+        type LegacyTenantMigrationResult =
+          | {
+              success:
+                true;
+
+              data: {
+                migratedRecordCount:
+                  number;
+
+                totalRecordCount:
+                  number;
+
+                alreadyScoped:
+                  boolean;
+              };
+            }
+          | {
+              success:
+                false;
+
+              error:
+                string;
+            };
+
+        type LegacyTenantMigrationBridge = {
+          migrateLegacyTenantScope?:
+            (
+              request: {
+                sessionId:
+                  string;
+              },
+            ) =>
+              Promise<
+                LegacyTenantMigrationResult
+              >;
+        };
+
+        const opaqueUsbBridge =
+          window.finora?.usb;
+
+        const migrationBridge =
+          (
+            opaqueUsbBridge &&
+            typeof opaqueUsbBridge ===
+              "object"
+          )
+            ? (
+                opaqueUsbBridge as
+                  LegacyTenantMigrationBridge
+              )
+            : undefined;
+
+        const migrateLegacyTenantScope =
+          migrationBridge
+            ?.migrateLegacyTenantScope;
+
+        if (
+          migrationBridge &&
+          typeof migrateLegacyTenantScope !==
+            "function"
+        ) {
+          setContextReady(false);
+
+          setContextError(
+            "FINORA legacy USB tenant-scope migration capability is unavailable.",
+          );
+
+          return;
+        }
+
+        if (
+          typeof migrateLegacyTenantScope ===
+          "function"
+        ) {
+          const migrationResult =
+            await migrateLegacyTenantScope({
+              sessionId:
+                authoritativeSession.sessionId,
+            });
+
+          if (!active) {
+            return;
+          }
+
+          if (!migrationResult.success) {
+            setContextReady(false);
+
+            setContextError(
+              migrationResult.error ||
+                "Unable to establish the authenticated FINORA USB tenant scope.",
+            );
+
+            return;
+          }
+        }
+      }
 
       // ======================================================
       // ESTABLISH BUSINESS / DATA CONTEXT

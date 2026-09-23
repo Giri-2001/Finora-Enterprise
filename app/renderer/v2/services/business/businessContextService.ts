@@ -257,6 +257,12 @@ export async function setBusinessContext(
         ownerId:
           context.ownerId,
 
+        businessId:
+          context.businessId,
+
+        branchId:
+          context.branchId,
+
         demoId:
           dataContext === "DEMO"
             ? context.demoId
@@ -488,6 +494,12 @@ export async function replaceBusinessContext(
       {
         ownerId:
           context.ownerId,
+
+        businessId:
+          context.businessId,
+
+        branchId:
+          context.branchId,
 
         demoId:
           dataContext === "DEMO"

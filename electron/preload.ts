@@ -227,6 +227,45 @@ interface UsbStorageBridge {
   // No arbitrary delete operation is exposed.
   // ----------------------------------------------------------
 
+  // ----------------------------------------------------------
+  // AUTHENTICATED LEGACY TENANT-SCOPE MIGRATION
+  //
+  // Tenant IDs are intentionally absent.
+  // Electron main derives exact scope from sessionId.
+  // ----------------------------------------------------------
+
+  migrateLegacyTenantScope:
+    (
+      request: {
+        sessionId:
+          string;
+      },
+    ) =>
+      Promise<
+        | {
+            success:
+              true;
+
+            data: {
+              migratedRecordCount:
+                number;
+
+              totalRecordCount:
+                number;
+
+              alreadyScoped:
+                boolean;
+            };
+          }
+        | {
+            success:
+              false;
+
+            error:
+              string;
+          }
+      >;
+
   resetFinoraData:
     (
       scope:
@@ -1331,6 +1370,9 @@ const USB_CHANNELS = {
   CLEAR:
     "finora:usb:clear",
 
+  MIGRATE_LEGACY_TENANT_SCOPE:
+    "finora:usb:migrate-legacy-tenant-scope",
+
   RESET_FINORA_DATA:
     "finora:usb:reset-finora-data",
 
@@ -1948,6 +1990,45 @@ const usbBridge:
   //
   // The renderer cannot provide a filesystem path.
   // ==========================================================
+
+  // ==========================================================
+  // AUTHENTICATED LEGACY TENANT-SCOPE MIGRATION
+  // ==========================================================
+
+  migrateLegacyTenantScope:
+    (
+      request: {
+        sessionId:
+          string;
+      },
+    ) =>
+      ipcRenderer.invoke(
+        USB_CHANNELS.MIGRATE_LEGACY_TENANT_SCOPE,
+        request,
+      ) as Promise<
+        | {
+            success:
+              true;
+
+            data: {
+              migratedRecordCount:
+                number;
+
+              totalRecordCount:
+                number;
+
+              alreadyScoped:
+                boolean;
+            };
+          }
+        | {
+            success:
+              false;
+
+            error:
+              string;
+          }
+      >,
 
   resetFinoraData:
     (

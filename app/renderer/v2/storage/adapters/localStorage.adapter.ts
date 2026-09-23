@@ -66,6 +66,12 @@ import type {
 
 const STORAGE_PREFIX = "FINORA_V2";
 
+const CANONICAL_REAL_STORAGE_PREFIX =
+  "FINORA_V3_REAL";
+
+const CANONICAL_DEMO_STORAGE_PREFIX =
+  "FINORA_V3_DEMO";
+
 // ============================================================
 // ENTITY NAMES
 // ============================================================
@@ -182,26 +188,1016 @@ const FINORA_RESET_ENTITIES: readonly string[] = [
 // LOCAL STORAGE KEY BUILDER
 // ============================================================
 
+function normalizeStorageScopeId(
+  value: string | undefined,
+): string | undefined {
+  const normalized =
+    value?.trim();
+
+  return normalized
+    ? normalized
+    : undefined;
+}
+
+// ============================================================
+// LEGACY LOCAL STORAGE KEY BUILDER
+// ============================================================
+
+function buildLegacyStorageKey(
+  query: StorageQuery,
+  options?: StorageWriteOptions,
+): string {
+  const ownerId =
+    normalizeStorageScopeId(
+      options?.ownerId ??
+        query.ownerId,
+    );
+
+  const demoId =
+    normalizeStorageScopeId(
+      options?.demoId ??
+        query.demoId,
+    );
+
+  const context =
+    demoId
+      ? `${DataContext.DEMO}_${demoId}`
+      : ownerId
+        ? `${DataContext.REAL}_${ownerId}`
+        : DataContext.REAL;
+
+  return [
+    STORAGE_PREFIX,
+    context,
+    query.entity,
+  ].join("_");
+}
+
+// ============================================================
+// TRANSITIONAL SCOPED V2 REAL KEY BUILDER
+//
+// Compatibility only.
+//
+// FINORA_V2_REAL_<OWNER>_<BUSINESS>_<BRANCH>_<ENTITY>
+// ============================================================
+
+function buildTransitionalScopedRealKey(
+  query: StorageQuery,
+  options?: StorageWriteOptions,
+): string {
+  const ownerId =
+    normalizeStorageScopeId(
+      options?.ownerId ??
+        query.ownerId,
+    );
+
+  const businessId =
+    normalizeStorageScopeId(
+      options?.businessId ??
+        query.businessId,
+    );
+
+  const branchId =
+    normalizeStorageScopeId(
+      options?.branchId ??
+        query.branchId,
+    );
+
+  if (
+    !ownerId ||
+    !businessId ||
+    !branchId
+  ) {
+    throw new Error(
+      "Exact Owner, Business, and Branch scope is required for transitional REAL local storage.",
+    );
+  }
+
+  return [
+    STORAGE_PREFIX,
+    `${DataContext.REAL}_${ownerId}`,
+    businessId,
+    branchId,
+    query.entity,
+  ].join("_");
+}
+
+// ============================================================
+// CANONICAL V3 SEGMENT ENCODING
+//
+// Length-prefixing makes physical REAL keys injective even when
+// identifiers contain "_", "|", ":", or other delimiters.
+// ============================================================
+
+function encodeCanonicalStorageSegment(
+  value: string,
+): string {
+  return `${value.length}:${value}`;
+}
+
+// ============================================================
+// CURRENT LOCAL STORAGE KEY BUILDER
+//
+// REAL canonical:
+//
+// FINORA_V3_REAL|<len>:<OWNER>|<len>:<BUSINESS>|
+// <len>:<BRANCH>|<len>:<ENTITY>
+//
+// DEMO:
+//
+// DEMO now uses exact tenant-scoped V3 canonical grammar.
+// ============================================================
+
 function buildStorageKey(
   query: StorageQuery,
   options?: StorageWriteOptions,
 ): string {
-  const ownerId = options?.ownerId ?? query.ownerId;
+  const ownerId =
+    normalizeStorageScopeId(
+      options?.ownerId ??
+        query.ownerId,
+    );
 
-  const demoId = options?.demoId ?? query.demoId;
+  const businessId =
+    normalizeStorageScopeId(
+      options?.businessId ??
+        query.businessId,
+    );
 
-  const context = demoId
-    ? `${DataContext.DEMO}_${demoId}`
-    : ownerId
-      ? `${DataContext.REAL}_${ownerId}`
-      : DataContext.REAL;
+  const branchId =
+    normalizeStorageScopeId(
+      options?.branchId ??
+        query.branchId,
+    );
 
-  return [STORAGE_PREFIX, context, query.entity].join("_");
+  const demoId =
+    normalizeStorageScopeId(
+      options?.demoId ??
+        query.demoId,
+    );
+
+  if (demoId) {
+    if (
+      !ownerId ||
+      !businessId ||
+      !branchId
+    ) {
+      throw new Error(
+        "Exact Owner, Business, Branch, and Demo scope is required for DEMO local storage.",
+      );
+    }
+
+    return [
+      CANONICAL_DEMO_STORAGE_PREFIX,
+      encodeCanonicalStorageSegment(
+        ownerId,
+      ),
+      encodeCanonicalStorageSegment(
+        businessId,
+      ),
+      encodeCanonicalStorageSegment(
+        branchId,
+      ),
+      encodeCanonicalStorageSegment(
+        demoId,
+      ),
+      encodeCanonicalStorageSegment(
+        query.entity,
+      ),
+    ].join("|");
+  }
+
+  if (
+    !ownerId ||
+    !businessId ||
+    !branchId
+  ) {
+    throw new Error(
+      "Exact Owner, Business, and Branch scope is required for REAL local storage.",
+    );
+  }
+
+  return [
+    CANONICAL_REAL_STORAGE_PREFIX,
+    encodeCanonicalStorageSegment(
+      ownerId,
+    ),
+    encodeCanonicalStorageSegment(
+      businessId,
+    ),
+    encodeCanonicalStorageSegment(
+      branchId,
+    ),
+    encodeCanonicalStorageSegment(
+      query.entity,
+    ),
+  ].join("|");
 }
 
 // ============================================================
-// READ ARRAY
+// LEGACY DEMO LOCAL COMPATIBILITY GUARD
+//
+// Pre-V3 DEMO keys contain only demoId + entity.
+// They do NOT encode owner/business/branch.
+//
+// Historical record payloads do not universally contain
+// enough tenant fields to attribute that legacy namespace.
+// Therefore legacy DEMO data must never be silently assigned
+// to the currently active tenant.
+//
+// No broad localStorage enumeration is used.
+// Only FINORA-owned entity keys for the active demoId are read.
+//
+// Legacy bytes are preserved untouched on rejection.
 // ============================================================
+
+function guardLegacyDemoLocalTenant(
+  configuration: StorageConfiguration,
+): StorageResult<void> {
+  try {
+    if (
+      configuration.dataContext !==
+      DataContext.DEMO
+    ) {
+      return {
+        success: true,
+      };
+    }
+
+    const ownerId =
+      normalizeStorageScopeId(
+        configuration.ownerId,
+      );
+
+    const businessId =
+      normalizeStorageScopeId(
+        configuration.businessId,
+      );
+
+    const branchId =
+      normalizeStorageScopeId(
+        configuration.branchId,
+      );
+
+    const demoId =
+      normalizeStorageScopeId(
+        configuration.demoId,
+      );
+
+    if (
+      !ownerId ||
+      !businessId ||
+      !branchId ||
+      !demoId
+    ) {
+      return {
+        success: false,
+
+        error:
+          "Exact Owner, Business, Branch, and Demo scope is required before DEMO LOCAL storage initialization.",
+      };
+    }
+
+    for (
+      const entity
+      of FINORA_RESET_ENTITIES
+    ) {
+      const legacyKey =
+        buildLegacyStorageKey({
+          entity,
+
+          ownerId,
+
+          businessId,
+
+          branchId,
+
+          demoId,
+        });
+
+      if (
+        localStorage.getItem(
+          legacyKey,
+        ) !== null
+      ) {
+        return {
+          success: false,
+
+          error:
+            "Legacy DEMO LOCAL storage cannot be safely attributed to the active exact tenant.",
+        };
+      }
+    }
+
+    return {
+      success: true,
+    };
+  }
+  catch {
+    return {
+      success: false,
+
+      error:
+        "Unable to validate legacy DEMO LOCAL storage compatibility.",
+    };
+  }
+}
+
+// ============================================================
+// LEGACY REAL MIGRATION CONTRACTS
+// ============================================================
+
+interface LegacyRealLocalEntry {
+  entity: string;
+
+  sourceKeys: string[];
+
+  canonicalKey: string;
+
+  raw: string;
+
+  records: unknown[];
+}
+
+type StrictStoredArrayResult =
+  | {
+      success: true;
+
+      records: unknown[];
+    }
+  | {
+      success: false;
+
+      error: string;
+    };
+
+// ============================================================
+// STRICT RAW ARRAY PARSER
+//
+// Migration must never turn malformed persisted data into [].
+// ============================================================
+
+function parseStoredArrayStrict(
+  raw: string,
+  key: string,
+): StrictStoredArrayResult {
+  try {
+    const parsed =
+      JSON.parse(raw);
+
+    if (!Array.isArray(parsed)) {
+      return {
+        success: false,
+
+        error:
+          `Legacy LOCAL key ${key} does not contain a JSON array.`,
+      };
+    }
+
+    return {
+      success: true,
+
+      records:
+        parsed as unknown[],
+    };
+  } catch {
+    return {
+      success: false,
+
+      error:
+        `Legacy LOCAL key ${key} contains malformed JSON.`,
+    };
+  }
+}
+
+// ============================================================
+// EXPLICIT LEGACY TENANT VALIDATION
+//
+// Missing fields remain compatible with older records.
+//
+// But any explicit tenant field must:
+// - be a non-empty string
+// - equal the authenticated tenant
+//
+// REAL legacy records cannot carry a non-empty demoId.
+// ============================================================
+
+function validateExplicitLegacyTenantScope(
+  record: unknown,
+  ownerId: string,
+  businessId: string,
+  branchId: string,
+): string | null {
+  // Existing callers supply the full active tuple.
+  // Historical business/branch identifiers are provenance,
+  // not migration security boundaries.
+  void businessId;
+  void branchId;
+
+  if (
+    typeof record !== "object" ||
+    record === null
+  ) {
+    return (
+      "Legacy LOCAL record is not a valid object."
+    );
+  }
+
+  const value =
+    record as Record<string, unknown>;
+
+  if (
+    Object.prototype.hasOwnProperty.call(
+      value,
+      "ownerId",
+    )
+  ) {
+    const rawOwnerId =
+      value.ownerId;
+
+    if (
+      typeof rawOwnerId !== "string" ||
+      !rawOwnerId.trim()
+    ) {
+      return (
+        "Legacy LOCAL record has an invalid explicit ownerId."
+      );
+    }
+
+    if (
+      rawOwnerId.trim() !==
+      ownerId
+    ) {
+      return (
+        "Legacy LOCAL record ownerId does not match the active owner."
+      );
+    }
+  }
+
+  if (
+    Object.prototype.hasOwnProperty.call(
+      value,
+      "demoId",
+    )
+  ) {
+    const rawDemoId =
+      value.demoId;
+
+    if (
+      typeof rawDemoId !== "string"
+    ) {
+      return (
+        "Legacy REAL LOCAL record has an invalid explicit demoId."
+      );
+    }
+
+    if (rawDemoId.trim()) {
+      return (
+        "Legacy REAL LOCAL record cannot contain a nonblank demoId."
+      );
+    }
+  }
+
+  return null;
+}
+// ============================================================
+// BUSINESS_OWNER_PROFILE SUCCESSOR ANCHOR
+//
+// OWNER is the strict continuity boundary.
+// Historical business/branch tuples are preserved as provenance.
+// updatedAt selects the newest authoritative profile set.
+// Equal newest timestamps are accepted only when every profile
+// at that timestamp resolves to the active canonical tuple.
+// Array order is never used as successor authority.
+// ============================================================
+
+function validateLegacyOwnerProfileAnchor(
+  records: unknown[],
+  ownerId: string,
+  businessId: string,
+  branchId: string,
+): string | null {
+  if (!records.length) {
+    return (
+      "Legacy LOCAL BUSINESS_OWNER_PROFILE anchor is empty."
+    );
+  }
+
+  const expectedTuple =
+    [
+      ownerId,
+      businessId,
+      branchId,
+    ].join("::");
+
+  let hasCanonicalWitness =
+    false;
+
+  let newestUpdatedAt =
+    Number.NEGATIVE_INFINITY;
+
+  const newestTuples =
+    new Set<string>();
+
+  for (const record of records) {
+    if (
+      typeof record !== "object" ||
+      record === null
+    ) {
+      return (
+        "Legacy LOCAL BUSINESS_OWNER_PROFILE contains an invalid record."
+      );
+    }
+
+    const value =
+      record as Record<string, unknown>;
+
+    const profileOwnerId =
+      typeof value.ownerId === "string"
+        ? value.ownerId.trim()
+        : "";
+
+    const profileBusinessId =
+      typeof value.businessId === "string"
+        ? value.businessId.trim()
+        : "";
+
+    const profileBranchId =
+      typeof value.branchId === "string"
+        ? value.branchId.trim()
+        : "";
+
+    const profileUserId =
+      typeof value.userId === "string"
+        ? value.userId.trim()
+        : "";
+
+    if (
+      !profileOwnerId ||
+      !profileBusinessId ||
+      !profileBranchId ||
+      !profileUserId
+    ) {
+      return (
+        "Legacy LOCAL BUSINESS_OWNER_PROFILE contains an incomplete identity."
+      );
+    }
+
+    if (profileOwnerId !== ownerId) {
+      return (
+        "Legacy LOCAL BUSINESS_OWNER_PROFILE contains a foreign owner identity."
+      );
+    }
+
+    const rawUpdatedAt =
+      typeof value.updatedAt === "string"
+        ? value.updatedAt.trim()
+        : "";
+
+    if (!rawUpdatedAt) {
+      return (
+        "Legacy LOCAL BUSINESS_OWNER_PROFILE contains an invalid successor timestamp."
+      );
+    }
+
+    const parsedUpdatedAt =
+      Date.parse(rawUpdatedAt);
+
+    if (
+      !Number.isFinite(parsedUpdatedAt)
+    ) {
+      return (
+        "Legacy LOCAL BUSINESS_OWNER_PROFILE contains an invalid successor timestamp."
+      );
+    }
+
+    const tuple =
+      [
+        profileOwnerId,
+        profileBusinessId,
+        profileBranchId,
+      ].join("::");
+
+    if (tuple === expectedTuple) {
+      hasCanonicalWitness =
+        true;
+    }
+
+    if (
+      parsedUpdatedAt >
+      newestUpdatedAt
+    ) {
+      newestUpdatedAt =
+        parsedUpdatedAt;
+
+      newestTuples.clear();
+      newestTuples.add(tuple);
+    }
+    else if (
+      parsedUpdatedAt ===
+      newestUpdatedAt
+    ) {
+      newestTuples.add(tuple);
+    }
+  }
+
+  if (!hasCanonicalWitness) {
+    return (
+      "Legacy LOCAL BUSINESS_OWNER_PROFILE has no active canonical tenant witness."
+    );
+  }
+
+  if (
+    newestTuples.size !== 1 ||
+    !newestTuples.has(expectedTuple)
+  ) {
+    return (
+      "Legacy LOCAL BUSINESS_OWNER_PROFILE newest successor is ambiguous or does not match the active tenant."
+    );
+  }
+
+  return null;
+}
+// ============================================================
+// LEGACY REAL LOCAL MIGRATION
+//
+// PRE-FLIGHT:
+// - deterministic FINORA entities only
+// - strict raw JSON validation
+// - owner-profile consensus
+// - explicit tenant validation
+// - target collision validation
+// - ZERO writes until every check passes
+//
+// COMMIT:
+// - copy exact raw string
+// - exact read-back
+// - delete legacy key
+// - migrate owner-profile anchor LAST
+//
+// RESTART:
+// - equal target/source pairs are safe migration residue
+// ============================================================
+
+function migrateLegacyRealLocalTenant(
+  configuration: StorageConfiguration,
+): StorageResult<void> {
+  try {
+    if (
+      configuration.dataContext !==
+      DataContext.REAL
+    ) {
+      return {
+        success: true,
+      };
+    }
+
+    const ownerId =
+      normalizeStorageScopeId(
+        configuration.ownerId,
+      );
+
+    const businessId =
+      normalizeStorageScopeId(
+        configuration.businessId,
+      );
+
+    const branchId =
+      normalizeStorageScopeId(
+        configuration.branchId,
+      );
+
+    const suppliedScopeCount =
+      [
+        ownerId,
+        businessId,
+        branchId,
+      ].filter(Boolean).length;
+
+    // resetDataContext() may intentionally initialize a blank
+    // local adapter context. It has no migration target.
+    if (suppliedScopeCount === 0) {
+      return {
+        success: true,
+      };
+    }
+
+    if (
+      !ownerId ||
+      !businessId ||
+      !branchId
+    ) {
+      return {
+        success: false,
+
+        error:
+          "Exact Owner, Business, and Branch scope is required before REAL LOCAL migration.",
+      };
+    }
+
+    const entries:
+      LegacyRealLocalEntry[] = [];
+
+    for (
+      const entity
+      of FINORA_RESET_ENTITIES
+    ) {
+      const query:
+        StorageQuery = {
+        entity,
+
+        ownerId,
+
+        businessId,
+
+        branchId,
+      };
+
+      const legacyKey =
+        buildLegacyStorageKey(
+          query,
+        );
+
+      const transitionalKey =
+        buildTransitionalScopedRealKey(
+          query,
+        );
+
+      const canonicalKey =
+        buildStorageKey(
+          query,
+        );
+
+      const legacyRaw =
+        localStorage.getItem(
+          legacyKey,
+        );
+
+      const transitionalRaw =
+        localStorage.getItem(
+          transitionalKey,
+        );
+
+      if (
+        legacyRaw === null &&
+        transitionalRaw === null
+      ) {
+        continue;
+      }
+
+      if (
+        legacyRaw !== null &&
+        transitionalRaw !== null &&
+        legacyRaw !== transitionalRaw
+      ) {
+        return {
+          success: false,
+
+          error:
+            `Pre-V3 REAL LOCAL source conflict for ${entity}.`,
+        };
+      }
+
+      const raw =
+        legacyRaw ??
+        transitionalRaw;
+
+      if (raw === null) {
+        continue;
+      }
+
+      const parsed =
+        parseStoredArrayStrict(
+          raw,
+          legacyRaw !== null
+            ? legacyKey
+            : transitionalKey,
+        );
+
+      if (!parsed.success) {
+        return {
+          success: false,
+
+          error:
+            parsed.error,
+        };
+      }
+
+      const sourceKeys:
+        string[] = [];
+
+      if (legacyRaw !== null) {
+        sourceKeys.push(
+          legacyKey,
+        );
+      }
+
+      if (transitionalRaw !== null) {
+        sourceKeys.push(
+          transitionalKey,
+        );
+      }
+
+      entries.push({
+        entity,
+
+        sourceKeys,
+
+        canonicalKey,
+
+        raw,
+
+        records:
+          parsed.records,
+      });
+    }
+
+    if (!entries.length) {
+      return {
+        success: true,
+      };
+    }
+
+    const anchor =
+      entries.find(
+        (entry) =>
+          entry.entity ===
+          ENTITY_BUSINESS_OWNER_PROFILE,
+      );
+
+    if (!anchor) {
+      return {
+        success: false,
+
+        error:
+          "Pre-V3 REAL LOCAL data cannot be attributed because BUSINESS_OWNER_PROFILE is missing.",
+      };
+    }
+
+    const anchorError =
+      validateLegacyOwnerProfileAnchor(
+        anchor.records,
+        ownerId,
+        businessId,
+        branchId,
+      );
+
+    if (anchorError) {
+      return {
+        success: false,
+
+        error:
+          anchorError,
+      };
+    }
+
+    // --------------------------------------------------------
+    // COMPLETE PRE-FLIGHT
+    //
+    // No physical mutation occurs before:
+    // - all source JSON parses
+    // - all tenant fields validate
+    // - all dual-V2 source pairs agree
+    // - all canonical V3 targets are absent or exact-equal
+    // --------------------------------------------------------
+
+    for (const entry of entries) {
+      for (
+        const record
+        of entry.records
+      ) {
+        const validationError =
+          validateExplicitLegacyTenantScope(
+            record,
+            ownerId,
+            businessId,
+            branchId,
+          );
+
+        if (validationError) {
+          return {
+            success: false,
+
+            error:
+              `${entry.entity}: ${validationError}`,
+          };
+        }
+      }
+
+      const existingCanonicalRaw =
+        localStorage.getItem(
+          entry.canonicalKey,
+        );
+
+      if (
+        existingCanonicalRaw !== null &&
+        existingCanonicalRaw !== entry.raw
+      ) {
+        return {
+          success: false,
+
+          error:
+            `Canonical V3 REAL LOCAL target conflict for ${entry.entity}.`,
+        };
+      }
+    }
+
+    // --------------------------------------------------------
+    // COMMIT ORDER
+    //
+    // BUSINESS_OWNER_PROFILE is the attribution authority.
+    // Keep every pre-V3 anchor source until all non-anchor
+    // entities have copied and verified successfully.
+    // --------------------------------------------------------
+
+    const nonAnchorEntries =
+      entries.filter(
+        (entry) =>
+          entry.entity !==
+          ENTITY_BUSINESS_OWNER_PROFILE,
+      );
+
+    const anchorEntries =
+      entries.filter(
+        (entry) =>
+          entry.entity ===
+          ENTITY_BUSINESS_OWNER_PROFILE,
+      );
+
+    const commitOrder =
+      [
+        ...nonAnchorEntries,
+        ...anchorEntries,
+      ];
+
+    for (
+      const entry
+      of commitOrder
+    ) {
+      const existingCanonicalRaw =
+        localStorage.getItem(
+          entry.canonicalKey,
+        );
+
+      if (existingCanonicalRaw === null) {
+        localStorage.setItem(
+          entry.canonicalKey,
+          entry.raw,
+        );
+      }
+
+      const verifiedCanonicalRaw =
+        localStorage.getItem(
+          entry.canonicalKey,
+        );
+
+      if (
+        verifiedCanonicalRaw !==
+        entry.raw
+      ) {
+        return {
+          success: false,
+
+          error:
+            `Canonical V3 REAL LOCAL read-back failed for ${entry.entity}.`,
+        };
+      }
+
+      for (
+        const sourceKey
+        of entry.sourceKeys
+      ) {
+        localStorage.removeItem(
+          sourceKey,
+        );
+
+        if (
+          localStorage.getItem(
+            sourceKey,
+          ) !== null
+        ) {
+          return {
+            success: false,
+
+            error:
+              `Pre-V3 REAL LOCAL cleanup failed for ${entry.entity}.`,
+          };
+        }
+      }
+    }
+
+    return {
+      success: true,
+    };
+  } catch {
+    return {
+      success: false,
+
+      error:
+        "Unable to migrate pre-V3 REAL LOCAL storage.",
+    };
+  }
+}
 
 function readArray<T = unknown>(key: string): T[] {
   try {
@@ -611,6 +1607,38 @@ export class LocalStorageAdapter implements StorageAdapter {
           success: false,
 
           error: "Local storage adapter received an invalid storage mode.",
+        };
+      }
+
+      const migrationResult =
+        migrateLegacyRealLocalTenant(
+          configuration,
+        );
+
+      if (!migrationResult.success) {
+        return {
+          success: false,
+
+          error:
+            migrationResult.error ??
+            "Unable to migrate legacy REAL LOCAL storage.",
+        };
+      }
+
+      const demoCompatibilityResult =
+        guardLegacyDemoLocalTenant(
+          configuration,
+        );
+
+      if (
+        !demoCompatibilityResult.success
+      ) {
+        return {
+          success: false,
+
+          error:
+            demoCompatibilityResult.error ??
+            "Unable to establish exact DEMO LOCAL storage scope.",
         };
       }
 
@@ -1077,12 +2105,16 @@ export class LocalStorageAdapter implements StorageAdapter {
 
       if (
         this.configuration.dataContext === DataContext.REAL &&
-        !this.configuration.ownerId
+        (
+          !this.configuration.ownerId ||
+          !this.configuration.businessId ||
+          !this.configuration.branchId
+        )
       ) {
         return {
           success: false,
 
-          error: "A valid owner ID is required to reset REAL FINORA data.",
+          error: "Valid Owner, Business, and Branch IDs are required to reset REAL FINORA data.",
         };
       }
 
@@ -1109,6 +2141,10 @@ export class LocalStorageAdapter implements StorageAdapter {
         entity: ENTITY_GENERAL,
 
         ownerId: this.configuration.ownerId,
+
+        businessId: this.configuration.businessId,
+
+        branchId: this.configuration.branchId,
 
         demoId: this.configuration.demoId,
       };

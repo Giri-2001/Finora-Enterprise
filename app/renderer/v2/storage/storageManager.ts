@@ -79,6 +79,28 @@ export class StorageManager {
   private initialized = false;
 
   // ==========================================================
+  // AUTHENTICATED SESSION TOKEN
+  // ==========================================================
+
+  private authenticatedSessionId:
+    string | undefined =
+      undefined;
+
+  setAuthenticatedSessionId(
+    sessionId:
+      string | undefined,
+  ): void {
+    const normalizedSessionId =
+      typeof sessionId === "string"
+        ? sessionId.trim()
+        : "";
+
+    this.authenticatedSessionId =
+      normalizedSessionId ||
+      undefined;
+  }
+
+  // ==========================================================
   // CONSTRUCTOR
   // ==========================================================
 
@@ -284,6 +306,10 @@ export class StorageManager {
     identifiers?: {
       ownerId?: string;
 
+      businessId?: string;
+
+      branchId?: string;
+
       demoId?: string;
 
       deviceId?: string;
@@ -299,6 +325,12 @@ export class StorageManager {
       ownerId:
         identifiers?.ownerId,
 
+      businessId:
+        identifiers?.businessId,
+
+      branchId:
+        identifiers?.branchId,
+
       demoId:
         dataContext === DataContext.DEMO
           ? identifiers?.demoId
@@ -308,6 +340,23 @@ export class StorageManager {
 
       storageId: identifiers?.storageId ?? this.configuration.storageId,
     };
+
+    // --------------------------------------------------------
+    // EXACT TENANT CONTEXT
+    // --------------------------------------------------------
+
+    if (
+      !nextConfiguration.ownerId ||
+      !nextConfiguration.businessId ||
+      !nextConfiguration.branchId
+    ) {
+      return {
+        success: false,
+
+        error:
+          "Owner, Business, and Branch IDs are required for FINORA storage context.",
+      };
+    }
 
     // --------------------------------------------------------
     // DEMO CONTEXT REQUIRES DEMO ID
@@ -847,8 +896,20 @@ export class StorageManager {
     return {
       ...query,
 
+      sessionId:
+        this.configuration.storageMode ===
+          StorageMode.USB
+          ? this.authenticatedSessionId
+          : undefined,
+
       ownerId:
         this.configuration.ownerId,
+
+      businessId:
+        this.configuration.businessId,
+
+      branchId:
+        this.configuration.branchId,
 
       demoId:
         this.configuration.dataContext ===
@@ -873,8 +934,20 @@ export class StorageManager {
     return {
       ...options,
 
+      sessionId:
+        this.configuration.storageMode ===
+          StorageMode.USB
+          ? this.authenticatedSessionId
+          : undefined,
+
       ownerId:
         this.configuration.ownerId,
+
+      businessId:
+        this.configuration.businessId,
+
+      branchId:
+        this.configuration.branchId,
 
       demoId:
         this.configuration.dataContext ===
