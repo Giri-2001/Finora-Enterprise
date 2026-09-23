@@ -2527,7 +2527,10 @@ export default function Login({
                   {usbMessage}
                 </div>
 
-                {usbAvailability === "NOT_CONFIGURED" &&
+                {(
+                  usbAvailability === "NOT_CONFIGURED" ||
+                  usbAvailability === "DISCONNECTED"
+                ) &&
                   getFinoraUsbBridge()?.requestAccess && (
 
                   <button
@@ -2552,7 +2555,9 @@ export default function Login({
                       <span>
                         {usbAccessBusy
                           ? "Opening USB Picker..."
-                          : "Select USB Storage"}
+                          : usbAvailability === "DISCONNECTED"
+                            ? "Reconnect USB Storage"
+                            : "Select USB Storage"}
                       </span>
                     </span>
 

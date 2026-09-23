@@ -2587,21 +2587,32 @@ public final class FinoraUsbStorage {
                     new InputStreamReader(
                         inputStream,
                         StandardCharsets.UTF_8
-                    )
+                    ),
+                    64 * 1024
                 )
         ) {
-            String line;
+            char[] buffer =
+                new char[
+                    64 * 1024
+                ];
+
+            int readCount;
 
             while (
-                (line = reader.readLine()) !=
-                null
+                (
+                    readCount =
+                        reader.read(
+                            buffer,
+                            0,
+                            buffer.length
+                        )
+                ) !=
+                -1
             ) {
                 builder.append(
-                    line
-                );
-
-                builder.append(
-                    '\n'
+                    buffer,
+                    0,
+                    readCount
                 );
             }
         }
