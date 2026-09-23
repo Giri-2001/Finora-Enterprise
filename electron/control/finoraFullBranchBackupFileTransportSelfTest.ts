@@ -1,6 +1,6 @@
 // ============================================================
 // FINORA ENTERPRISE OS
-// FULL BRANCH BACKUP V2 NATIVE EXPORTER SELF-TEST
+// FULL BRANCH BACKUP V3 NATIVE EXPORTER SELF-TEST
 // ============================================================
 
 import assert from "node:assert/strict";
@@ -10,7 +10,7 @@ import type {
 } from "electron";
 
 import {
-  parseFinoraFullBranchBackupFileV2,
+  parseFinoraFullBranchBackupFileV3,
 } from "./finoraFullBranchBackupContract.js";
 
 import {
@@ -138,6 +138,118 @@ function makeStoragePackage():
   });
 }
 
+function makeUsbAuthBackupSuccess(
+  backupId:
+    string,
+) {
+  return {
+    success:
+      true as const,
+
+    data: {
+      backupId,
+
+      createdAt:
+        "2026-09-23T12:00:00.000Z",
+
+      branchScope: {
+        ownerId:
+          "OWNER-A",
+
+        businessId:
+          "BUSINESS-A",
+
+        branchId:
+          "BRANCH-A",
+      },
+
+      sourceStorageMode:
+        "USB" as const,
+
+      authGeneration:
+        3,
+
+      backupFile: {
+        portableAuthEnvelopeSerialized:
+          JSON.stringify({
+            portable:
+              "encrypted-auth-envelope",
+          }),
+      },
+    },
+  };
+}
+
+function makeRuntimeAuthorityFixture() {
+  return {
+    payload: {
+      ownerId:
+        "OWNER-A",
+
+      businessId:
+        "BUSINESS-A",
+
+      branchId:
+        "BRANCH-A",
+
+      storageMode:
+        "USB",
+
+      dataContext:
+        "REAL",
+
+      demoId:
+        null,
+
+      authGeneration:
+        3,
+
+      portableAuthFingerprint:
+        "a".repeat(
+          64,
+        ),
+    },
+  } as never;
+}
+
+function runtimeSecurityOverrides() {
+  return {
+    parsePortableAuth:
+      () =>
+        ({} as never),
+
+    decryptPortableAuth:
+      async () =>
+        ({
+          dataContext:
+            "REAL",
+
+          storageMode:
+            "USB",
+
+          authGeneration:
+            3,
+
+          branchCertificationKeyMaterial:
+            {},
+        } as never),
+
+    createPortableAuthFingerprint:
+      () =>
+        "a".repeat(
+          64,
+        ),
+
+    toBranchCertificationPublicKey:
+      () =>
+        ({} as never),
+
+    verifyRuntimeAuthorityPackage:
+      () =>
+        true,
+  };
+}
+
 export async function runFinoraFullBranchBackupFileTransportSelfTest():
   Promise<void> {
   let writtenPath =
@@ -147,6 +259,9 @@ export async function runFinoraFullBranchBackupFileTransportSelfTest():
     "";
 
   let readPath =
+    "";
+
+  let runtimeReadMode =
     "";
 
   const result =
@@ -194,9 +309,21 @@ export async function runFinoraFullBranchBackupFileTransportSelfTest():
             },
           }),
 
+        ...runtimeSecurityOverrides(),
+
         resolveUsbRoot:
           async () =>
             "X:\\",
+
+        readRuntimeAuthority:
+          async (
+            storageMode,
+          ) => {
+            runtimeReadMode =
+              storageMode;
+
+            return makeRuntimeAuthorityFixture();
+          },
 
         readTextFile:
           async (
@@ -251,13 +378,18 @@ export async function runFinoraFullBranchBackupFileTransportSelfTest():
     "C:\\Backups\\branch-copy.finora",
   );
 
+  assert.equal(
+    runtimeReadMode,
+    "USB",
+  );
+
   assert.ok(
     writtenContent.length >
       0,
   );
 
   const parsed =
-    parseFinoraFullBranchBackupFileV2(
+    parseFinoraFullBranchBackupFileV3(
       writtenContent,
     );
 
@@ -268,7 +400,7 @@ export async function runFinoraFullBranchBackupFileTransportSelfTest():
 
   assert.equal(
     parsed.schemaVersion,
-    2,
+    3,
   );
 
   assert.deepEqual(
@@ -285,12 +417,141 @@ export async function runFinoraFullBranchBackupFileTransportSelfTest():
     },
   );
 
+  assert.equal(
+    parsed.encryptedRuntimeAuthority.purpose,
+    "RUNTIME_AUTHORITY",
+  );
+
   console.log(
-    "PASS: native exporter writes one Full V2 .finora artifact",
+    "PASS: native exporter writes Full V3 artifact with encrypted signed Runtime Authority",
   );
 
   console.log(
     "PASS: source read path is exact FINORA USB storage file",
+  );
+
+  let missingRuntimeWriteCalled =
+    false;
+
+  const missingRuntime =
+    await exportFinoraFullBranchBackupFromNativeDialog(
+      parentWindow,
+      input,
+      portableStore,
+      {
+        ...runtimeSecurityOverrides(),
+
+        createAuthBackup:
+          async () =>
+            makeUsbAuthBackupSuccess(
+              "FULL-P2B2-RUNTIME-MISSING",
+            ),
+
+        resolveUsbRoot:
+          async () =>
+            "X:\\",
+
+        readTextFile:
+          async () =>
+            makeStoragePackage(),
+
+        readRuntimeAuthority:
+          async () =>
+            null,
+
+        showSaveDialog:
+          async () => ({
+            canceled:
+              false,
+
+            filePath:
+              "C:\\Backups\\runtime-missing.finora",
+          }),
+
+        writeTextFile:
+          async () => {
+            missingRuntimeWriteCalled =
+              true;
+          },
+      },
+    );
+
+  assert.equal(
+    missingRuntime.success,
+    false,
+  );
+
+  assert.equal(
+    missingRuntimeWriteCalled,
+    false,
+  );
+
+  console.log(
+    "PASS: missing Runtime Authority fails closed without backup write",
+  );
+
+  let invalidRuntimeSignatureWriteCalled =
+    false;
+
+  const invalidRuntimeSignature =
+    await exportFinoraFullBranchBackupFromNativeDialog(
+      parentWindow,
+      input,
+      portableStore,
+      {
+        ...runtimeSecurityOverrides(),
+
+        createAuthBackup:
+          async () =>
+            makeUsbAuthBackupSuccess(
+              "FULL-P2B2-RUNTIME-SIGNATURE",
+            ),
+
+        resolveUsbRoot:
+          async () =>
+            "X:\\",
+
+        readTextFile:
+          async () =>
+            makeStoragePackage(),
+
+        readRuntimeAuthority:
+          async () =>
+            makeRuntimeAuthorityFixture(),
+
+        verifyRuntimeAuthorityPackage:
+          () =>
+            false,
+
+        showSaveDialog:
+          async () => ({
+            canceled:
+              false,
+
+            filePath:
+              "C:\\Backups\\runtime-signature-invalid.finora",
+          }),
+
+        writeTextFile:
+          async () => {
+            invalidRuntimeSignatureWriteCalled =
+              true;
+          },
+      },
+    );
+
+  assert.equal(
+    invalidRuntimeSignature.success,
+    false,
+  );
+
+  assert.equal(
+    invalidRuntimeSignatureWriteCalled,
+    false,
+  );
+
+  console.log(
+    "PASS: invalid Runtime Authority signature fails closed without backup write",
   );
 
   let writeCalled =

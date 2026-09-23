@@ -1,6 +1,6 @@
 // ============================================================
 // FINORA ENTERPRISE OS
-// FULL BRANCH BACKUP V2 NATIVE FILE TRANSPORT
+// FULL BRANCH BACKUP V3 NATIVE FILE TRANSPORT
 // ============================================================
 //
 // Production purpose:
@@ -14,7 +14,7 @@
 // 2. strictly READS the existing USB storage package;
 // 3. captures only the exact REAL tenant snapshot;
 // 4. encrypts that snapshot with Password + Security Code;
-// 5. emits one Full Branch Backup V2 .finora artifact;
+// 5. emits one Full Branch Backup V3 .finora artifact;
 // 6. writes only the user-selected backup destination.
 //
 // IMPORTANT:
@@ -48,6 +48,31 @@ import {
 import {
   Buffer,
 } from "node:buffer";
+
+import type {
+  FinoraBranchCertificationPublicKeyV1,
+} from "./finoraBranchCertificationContract.js";
+
+import {
+  toFinoraBranchCertificationPublicKey,
+} from "./finoraBranchCertificationCrypto.js";
+
+import {
+  createFinoraPortableBranchAuthFingerprint,
+} from "./finoraBranchDeviceTrustAuthority.js";
+
+import {
+  decryptFinoraPortableBranchAuthEnvelopeV1,
+  parseFinoraPortableBranchAuth,
+} from "./finoraPortableBranchAuthCrypto.js";
+
+import type {
+  FinoraPortableFreshDeviceRuntimeAuthorityPackageV1,
+} from "./finoraPortableFreshDeviceRuntimeAuthorityContract.js";
+
+import {
+  verifyFinoraPortableFreshDeviceRuntimeAuthorityPackageV1,
+} from "./finoraPortableFreshDeviceRuntimeAuthorityCrypto.js";
 
 import {
   FINORA_FULL_BRANCH_BACKUP_FILE_EXTENSION,
@@ -157,6 +182,38 @@ export interface FinoraFullBranchBackupFileTransportDependencies {
 
   createFullBackup:
     typeof createFinoraFullBranchBackup;
+
+  parsePortableAuth:
+    typeof parseFinoraPortableBranchAuth;
+
+  decryptPortableAuth:
+    typeof decryptFinoraPortableBranchAuthEnvelopeV1;
+
+  createPortableAuthFingerprint:
+    typeof createFinoraPortableBranchAuthFingerprint;
+
+  toBranchCertificationPublicKey:
+    typeof toFinoraBranchCertificationPublicKey;
+
+  verifyRuntimeAuthorityPackage:
+    (
+      packageValue:
+        unknown,
+
+      certificationPublicKey:
+        FinoraBranchCertificationPublicKeyV1,
+    ) =>
+      boolean;
+
+  readRuntimeAuthority?:
+    (
+      storageMode:
+        "LOCAL" | "USB",
+    ) =>
+      Promise<
+        FinoraPortableFreshDeviceRuntimeAuthorityPackageV1 |
+        null
+      >;
 
   resolveUsbRoot:
     () =>
@@ -346,6 +403,21 @@ function createDefaultDependencies():
     createFullBackup:
       createFinoraFullBranchBackup,
 
+    parsePortableAuth:
+      parseFinoraPortableBranchAuth,
+
+    decryptPortableAuth:
+      decryptFinoraPortableBranchAuthEnvelopeV1,
+
+    createPortableAuthFingerprint:
+      createFinoraPortableBranchAuthFingerprint,
+
+    toBranchCertificationPublicKey:
+      toFinoraBranchCertificationPublicKey,
+
+    verifyRuntimeAuthorityPackage:
+      verifyFinoraPortableFreshDeviceRuntimeAuthorityPackageV1,
+
     readTextFile:
       (
         filePath,
@@ -524,7 +596,203 @@ export async function exportFinoraFullBranchBackupFromNativeDialog(
   }
 
   // ----------------------------------------------------------
-  // 4. COMPOSE FULL V2 ARTIFACT
+  // 4. SIGNED FRESH-DEVICE RUNTIME AUTHORITY
+  // ----------------------------------------------------------
+
+  const readRuntimeAuthority =
+    dependencies.readRuntimeAuthority;
+
+  if (!readRuntimeAuthority) {
+    return failure(
+      "FINORA Fresh Device Runtime Authority is unavailable for Full Branch Backup.",
+    );
+  }
+
+  let runtimeAuthority:
+    FinoraPortableFreshDeviceRuntimeAuthorityPackageV1 |
+    null;
+
+  try {
+    runtimeAuthority =
+      await readRuntimeAuthority(
+        authBackup.data.sourceStorageMode,
+      );
+  }
+  catch {
+    return failure(
+      "Unable to read FINORA Fresh Device Runtime Authority for Full Branch Backup.",
+    );
+  }
+
+  if (!runtimeAuthority) {
+    return failure(
+      "FINORA Fresh Device Runtime Authority is unavailable on the authoritative source storage.",
+    );
+  }
+
+  let portableEnvelope;
+
+  try {
+    portableEnvelope =
+      dependencies.parsePortableAuth(
+        authBackup.data.backupFile
+          .portableAuthEnvelopeSerialized,
+      );
+  }
+  catch {
+    return failure(
+      "FINORA Full Branch Backup contains invalid Portable Auth authority.",
+    );
+  }
+
+  let portableAuthFingerprint:
+    string;
+
+  try {
+    portableAuthFingerprint =
+      dependencies.createPortableAuthFingerprint(
+        portableEnvelope,
+      );
+  }
+  catch {
+    return failure(
+      "FINORA Portable Auth fingerprint could not be verified for Full Branch Backup.",
+    );
+  }
+
+  let portablePayload;
+
+  try {
+    portablePayload =
+      await dependencies.decryptPortableAuth(
+        portableEnvelope,
+        input.password,
+        input.securityCode,
+        {
+          expectedScope:
+            authBackup.data.branchScope,
+        },
+      );
+  }
+  catch {
+    return failure(
+      "FINORA Portable Auth could not authenticate the Runtime Authority for Full Branch Backup.",
+    );
+  }
+
+  if (
+    portablePayload.dataContext !==
+      "REAL" ||
+    portablePayload.storageMode !==
+      authBackup.data.sourceStorageMode ||
+    portablePayload.authGeneration !==
+      authBackup.data.authGeneration
+  ) {
+    return failure(
+      "FINORA Portable Auth lineage does not match the Full Branch Backup authority.",
+    );
+  }
+
+  const certificationKeyMaterial =
+    portablePayload.branchCertificationKeyMaterial;
+
+  if (!certificationKeyMaterial) {
+    return failure(
+      "FINORA Portable Auth does not contain Branch Certification authority.",
+    );
+  }
+
+  let certificationPublicKey:
+    FinoraBranchCertificationPublicKeyV1;
+
+  try {
+    certificationPublicKey =
+      dependencies.toBranchCertificationPublicKey(
+        certificationKeyMaterial,
+      );
+  }
+  catch {
+    return failure(
+      "FINORA Branch Certification public authority is invalid.",
+    );
+  }
+
+  let runtimeSignatureValid:
+    boolean;
+
+  try {
+    runtimeSignatureValid =
+      dependencies.verifyRuntimeAuthorityPackage(
+        runtimeAuthority,
+        certificationPublicKey,
+      );
+  }
+  catch {
+    runtimeSignatureValid =
+      false;
+  }
+
+  if (!runtimeSignatureValid) {
+    return failure(
+      "FINORA Fresh Device Runtime Authority signature is invalid.",
+    );
+  }
+
+  const runtimePayload =
+    runtimeAuthority.payload;
+
+  if (
+    runtimePayload.dataContext !==
+      "REAL" ||
+    runtimePayload.demoId !==
+      null ||
+    runtimePayload.ownerId !==
+      authBackup.data.branchScope.ownerId ||
+    runtimePayload.businessId !==
+      authBackup.data.branchScope.businessId ||
+    runtimePayload.branchId !==
+      authBackup.data.branchScope.branchId ||
+    runtimePayload.storageMode !==
+      authBackup.data.sourceStorageMode ||
+    runtimePayload.authGeneration !==
+      authBackup.data.authGeneration ||
+    runtimePayload.portableAuthFingerprint !==
+      portableAuthFingerprint
+  ) {
+    return failure(
+      "FINORA Fresh Device Runtime Authority does not match the authenticated Full Branch Backup authority.",
+    );
+  }
+
+  let runtimeAuthorityPackageSerialized:
+    string;
+
+  try {
+    runtimeAuthorityPackageSerialized =
+      JSON.stringify(
+        runtimeAuthority,
+      );
+  }
+  catch {
+    return failure(
+      "FINORA Fresh Device Runtime Authority could not be serialized for Full Branch Backup.",
+    );
+  }
+
+  if (
+    Buffer.byteLength(
+      runtimeAuthorityPackageSerialized,
+      "utf8",
+    ) <=
+      0
+  ) {
+    return failure(
+      "FINORA Fresh Device Runtime Authority is empty.",
+    );
+  }
+
+  // ----------------------------------------------------------
+  // 5. COMPOSE FULL V3 ARTIFACT
   // ----------------------------------------------------------
 
   let fullBackup:
@@ -559,6 +827,8 @@ export async function exportFinoraFullBranchBackupFromNativeDialog(
                 portableAuthEnvelopeSerialized:
                   authBackup.data.backupFile
                     .portableAuthEnvelopeSerialized,
+
+                runtimeAuthorityPackageSerialized,
               },
             }),
 

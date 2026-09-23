@@ -1,12 +1,12 @@
 // ============================================================
 // FINORA ENTERPRISE OS
-// FULL BRANCH BACKUP V2 COORDINATOR SELF-TEST
+// FULL BRANCH BACKUP V3 COORDINATOR SELF-TEST
 // ============================================================
 
 import assert from "node:assert/strict";
 
 import {
-  parseFinoraFullBranchBackupFileV2,
+  parseFinoraFullBranchBackupFileV3,
   parseFinoraFullBranchRealSnapshotV1,
 } from "./finoraFullBranchBackupContract.js";
 
@@ -61,6 +61,12 @@ const authority = {
     JSON.stringify({
       encrypted:
         "PORTABLE-AUTH-SELFTEST",
+    }),
+
+  runtimeAuthorityPackageSerialized:
+    JSON.stringify({
+      signed:
+        "RUNTIME-AUTHORITY-SELFTEST",
     }),
 };
 
@@ -254,7 +260,7 @@ export async function runFinoraFullBranchBackupCoordinatorSelfTest():
   );
 
   const file =
-    parseFinoraFullBranchBackupFileV2(
+    parseFinoraFullBranchBackupFileV3(
       result.data.serializedBackup,
     );
 
@@ -265,7 +271,7 @@ export async function runFinoraFullBranchBackupCoordinatorSelfTest():
 
   assert.equal(
     file.schemaVersion,
-    2,
+    3,
   );
 
   assert.deepEqual(
@@ -288,8 +294,13 @@ export async function runFinoraFullBranchBackupCoordinatorSelfTest():
     authority.portableAuthEnvelopeSerialized,
   );
 
+  assert.equal(
+    file.encryptedRuntimeAuthority.purpose,
+    "RUNTIME_AUTHORITY",
+  );
+
   console.log(
-    "PASS: one Full V2 artifact binds Portable Auth + REAL snapshot",
+    "PASS: one Full V3 artifact binds Portable Auth + Runtime Authority + REAL snapshot",
   );
 
   const decrypted =
@@ -351,7 +362,7 @@ export async function runFinoraFullBranchBackupCoordinatorSelfTest():
   );
 
   console.log(
-    "PASS: encrypted Full V2 artifact restores exact REAL tenant snapshot",
+    "PASS: encrypted Full V3 artifact restores exact REAL tenant snapshot",
   );
 
   assert.equal(
@@ -389,7 +400,50 @@ export async function runFinoraFullBranchBackupCoordinatorSelfTest():
   );
 
   console.log(
-    "PASS: sibling tenant + DEMO records absent from Full V2 artifact",
+    "PASS: sibling tenant + DEMO records absent from Full V3 artifact",
+  );
+
+  const runtimeAuthorityFailure =
+    await createFinoraFullBranchBackup(
+      request,
+      {
+        ...dependencies(),
+
+        createAuthenticatedBackupAuthority:
+          async () => ({
+            success:
+              true,
+
+            data: {
+              ...authority,
+
+              runtimeAuthorityPackageSerialized:
+                "",
+            },
+          }),
+      },
+    );
+
+  assert.equal(
+    runtimeAuthorityFailure.success,
+    false,
+  );
+
+  if (
+    runtimeAuthorityFailure.success
+  ) {
+    throw new Error(
+      "Expected Runtime Authority failure.",
+    );
+  }
+
+  assert.equal(
+    runtimeAuthorityFailure.errorCode,
+    "RUNTIME_AUTHORITY_UNAVAILABLE",
+  );
+
+  console.log(
+    "PASS: missing Runtime Authority blocks Full Branch Backup",
   );
 
   const authFailure =
@@ -505,7 +559,7 @@ export async function runFinoraFullBranchBackupCoordinatorSelfTest():
   );
 
   console.log(
-    "PASS: Full Branch Backup V2 coordinator self-test complete",
+    "PASS: Full Branch Backup V3 coordinator self-test complete",
   );
 }
 

@@ -1,6 +1,6 @@
 // ============================================================
 // FINORA ENTERPRISE OS
-// FULL BRANCH BACKUP V2
+// FULL BRANCH BACKUP V3
 // NATIVE RESTORE FILE TRANSPORT
 // ============================================================
 //
@@ -16,9 +16,9 @@
 // Main process owns:
 //
 // - backup file selection;
-// - bounded Full V2 file read;
+// - bounded Full V3 file read;
 // - current Branch Credential authority;
-// - Full V2 parse/decrypt;
+// - Full V3 parse/decrypt;
 // - target USB selection;
 // - target filesystem transaction;
 // - storage/auth readback and rollback.
@@ -50,12 +50,14 @@ import type {
 
 import {
   FINORA_FULL_BRANCH_BACKUP_FILE_EXTENSION,
+  FINORA_FULL_BRANCH_BACKUP_LEGACY_RUNTIME_LESS_V2_MESSAGE,
   FINORA_FULL_BRANCH_BACKUP_MAX_FILE_BYTES,
-  parseFinoraFullBranchBackupFileV2,
+  isFinoraLegacyRuntimeLessFullBranchBackupV2Serialized,
+  parseFinoraFullBranchBackupFileV3,
 } from "./finoraFullBranchBackupContract.js";
 
 import type {
-  FinoraFullBranchBackupFileV2,
+  FinoraFullBranchBackupFileV3,
 } from "./finoraFullBranchBackupContract.js";
 
 import {
@@ -119,7 +121,7 @@ export interface FinoraFullBranchRestoreFileTransportDependencies
     typeof authenticateFinoraBranchCredential;
 
   parseFullBackup?:
-    typeof parseFinoraFullBranchBackupFileV2;
+    typeof parseFinoraFullBranchBackupFileV3;
 
   prepareArtifact?:
     typeof prepareFinoraFullBranchRestoreArtifact;
@@ -253,7 +255,7 @@ async function selectBackupFileNative(
 }
 
 // ============================================================
-// BOUNDED FULL V2 READ
+// BOUNDED FULL V3 READ
 // ============================================================
 
 async function readBackupFileBounded(
@@ -358,7 +360,7 @@ async function readBackupFileBounded(
 
 function scopesMatch(
   backup:
-    FinoraFullBranchBackupFileV2,
+    FinoraFullBranchBackupFileV3,
   current:
     {
       ownerId:
@@ -447,6 +449,7 @@ function mapTransactionFailure(
     case "TARGET_CAPTURE_FAILED":
     case "TARGET_STORAGE_READBACK_FAILED":
     case "TARGET_AUTH_READBACK_FAILED":
+    case "TARGET_RUNTIME_AUTHORITY_READBACK_FAILED":
       return failure(
         "TARGET_READBACK_FAILED",
         result.error,
@@ -454,6 +457,7 @@ function mapTransactionFailure(
 
     case "TARGET_STORAGE_WRITE_FAILED":
     case "TARGET_AUTH_WRITE_FAILED":
+    case "TARGET_RUNTIME_AUTHORITY_WRITE_FAILED":
       return failure(
         "TARGET_WRITE_FAILED",
         result.error,
@@ -580,7 +584,7 @@ export async function restoreFinoraFullBranchFromNativeBackup(
   }
 
   // ----------------------------------------------------------
-  // 2. READ FULL V2 FILE
+  // 2. READ FULL V3 FILE
   // ----------------------------------------------------------
 
   let serializedBackup:
@@ -634,16 +638,27 @@ export async function restoreFinoraFullBranchFromNativeBackup(
     );
   }
 
+  if (
+    isFinoraLegacyRuntimeLessFullBranchBackupV2Serialized(
+      serializedBackup,
+    )
+  ) {
+    return failure(
+      "BACKUP_FILE_INVALID",
+      FINORA_FULL_BRANCH_BACKUP_LEGACY_RUNTIME_LESS_V2_MESSAGE,
+    );
+  }
+
   // ----------------------------------------------------------
-  // 3. STRICT FULL V2 OUTER PARSE
+  // 3. STRICT FULL V3 OUTER PARSE
   // ----------------------------------------------------------
 
   const parseFullBackup =
     dependencies.parseFullBackup ??
-    parseFinoraFullBranchBackupFileV2;
+    parseFinoraFullBranchBackupFileV3;
 
   let backup:
-    FinoraFullBranchBackupFileV2;
+    FinoraFullBranchBackupFileV3;
 
   try {
     backup =
@@ -654,7 +669,7 @@ export async function restoreFinoraFullBranchFromNativeBackup(
   catch {
     return failure(
       "BACKUP_FILE_INVALID",
-      "The selected file is not a valid FINORA Full Branch Backup V2 artifact.",
+      "The selected file is not a valid FINORA Full Branch Backup V3 artifact.",
     );
   }
 
@@ -961,7 +976,7 @@ export async function restoreFinoraFullBranchFromNativeBackup(
   }
 
   // ----------------------------------------------------------
-  // 8. VERIFIED STORAGE + AUTH TRANSACTION
+  // 8. VERIFIED STORAGE + AUTH + RUNTIME AUTHORITY TRANSACTION
   // ----------------------------------------------------------
 
   const executeTransaction =
@@ -986,6 +1001,9 @@ export async function restoreFinoraFullBranchFromNativeBackup(
 
           portableAuthEnvelopeSerialized:
             artifactResult.data.portableAuthEnvelopeSerialized,
+
+          runtimeAuthorityPackageSerialized:
+            artifactResult.data.runtimeAuthorityPackageSerialized,
 
           snapshot:
             artifactResult.data.snapshot,

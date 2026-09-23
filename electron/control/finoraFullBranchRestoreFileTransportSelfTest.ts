@@ -1,6 +1,6 @@
 // ============================================================
 // FINORA ENTERPRISE OS
-// FULL BRANCH BACKUP V2
+// FULL BRANCH BACKUP V3
 // NATIVE RESTORE TRANSPORT SELF-TEST
 // ============================================================
 //
@@ -16,7 +16,7 @@ import type {
 } from "electron";
 
 import type {
-  FinoraFullBranchBackupFileV2,
+  FinoraFullBranchBackupFileV3,
 } from "./finoraFullBranchBackupContract.js";
 
 import {
@@ -122,7 +122,7 @@ const parsedBackup =
 
     authGeneration:
       2,
-  } as unknown as FinoraFullBranchBackupFileV2;
+  } as unknown as FinoraFullBranchBackupFileV3;
 
 const artifactSuccess:
   FinoraFullBranchRestoreArtifactResult =
@@ -148,6 +148,9 @@ const artifactSuccess:
 
       portableAuthEnvelopeSerialized:
         "RESTORED-PORTABLE-AUTH",
+
+      runtimeAuthorityPackageSerialized:
+        "RESTORED-RUNTIME-AUTHORITY",
 
       snapshot,
 
@@ -395,6 +398,9 @@ export async function runFinoraFullBranchRestoreFileTransportSelfTest():
 
                 storageMode:
                   string;
+
+                runtimeAuthorityPackageSerialized:
+                  string;
               };
 
             assert.equal(
@@ -410,6 +416,11 @@ export async function runFinoraFullBranchRestoreFileTransportSelfTest():
             assert.equal(
               candidate.storageMode,
               "USB",
+            );
+
+            assert.equal(
+              candidate.runtimeAuthorityPackageSerialized,
+              "RESTORED-RUNTIME-AUTHORITY",
             );
 
             return {
@@ -486,7 +497,7 @@ export async function runFinoraFullBranchRestoreFileTransportSelfTest():
   );
 
   console.log(
-    "PASS: Full V2 native transport authenticates, selects pinned target and executes transaction",
+    "PASS: Full V3 native transport authenticates, selects pinned target and executes transaction",
   );
 
   // ========================================================
@@ -538,7 +549,104 @@ export async function runFinoraFullBranchRestoreFileTransportSelfTest():
   );
 
   console.log(
-    "PASS: Full V2 transport accepts a 13 MiB backup under the 256 MiB bound",
+    "PASS: Full V3 transport accepts a 13 MiB backup under the 256 MiB bound",
+  );
+
+  // ========================================================
+  // HISTORICAL RUNTIME-LESS FULL V2 REJECT
+  // ========================================================
+
+  let runtimeLessV2ParseCalled =
+    false;
+
+  const runtimeLessV2Result =
+    await restoreFinoraFullBranchFromNativeBackup(
+      credentials,
+      baseDependencies({
+        readBackupFile:
+          async () =>
+            JSON.stringify({
+              format:
+                "FINORA_FULL_BRANCH_BACKUP",
+
+              schemaVersion:
+                2,
+
+              backupId:
+                "LEGACY-RUNTIME-LESS-V2",
+
+              createdAt:
+                "2026-01-01T00:00:00.000Z",
+
+              branchScope: {
+                ownerId:
+                  "OWNER-A",
+
+                businessId:
+                  "BUSINESS-A",
+
+                branchId:
+                  "BRANCH-A",
+              },
+
+              dataContext:
+                "REAL",
+
+              sourceStorageMode:
+                "USB",
+
+              authGeneration:
+                1,
+
+              portableAuthEnvelopeSerialized:
+                "LEGACY-PORTABLE-AUTH",
+
+              portableAuthEnvelopeSha256:
+                "A".repeat(
+                  64,
+                ),
+
+              realSnapshot: {},
+            }),
+
+        parseFullBackup:
+          () => {
+            runtimeLessV2ParseCalled =
+              true;
+
+            throw new Error(
+              "Runtime-less V2 must be rejected before V3 parsing.",
+            );
+          },
+      }),
+    );
+
+  assert.equal(
+    runtimeLessV2Result.success,
+    false,
+  );
+
+  assert.equal(
+    runtimeLessV2ParseCalled,
+    false,
+  );
+
+  if (
+    !runtimeLessV2Result.success
+  ) {
+    assert.equal(
+      runtimeLessV2Result.errorCode,
+      "BACKUP_FILE_INVALID",
+    );
+
+    assert.match(
+      runtimeLessV2Result.error,
+      /legacy\/incomplete backup.*Runtime Authority/i,
+    );
+  }
+
+  console.log(
+    "PASS: historical Runtime-less Full V2 is explicitly rejected before V3 transport parsing",
   );
 
   // ========================================================
@@ -562,7 +670,7 @@ export async function runFinoraFullBranchRestoreFileTransportSelfTest():
         parseFullBackup:
           () => {
             throw new Error(
-              "Not Full V2.",
+              "Not Full V3.",
             );
           },
       }),
@@ -946,6 +1054,78 @@ export async function runFinoraFullBranchRestoreFileTransportSelfTest():
   // TRANSACTION FAILURE MAPPING
   // ========================================================
 
+  const runtimeWriteFailure =
+    await restoreFinoraFullBranchFromNativeBackup(
+      credentials,
+      baseDependencies({
+        executeTransaction:
+          async () => ({
+            success:
+              false as const,
+
+            errorCode:
+              "TARGET_RUNTIME_AUTHORITY_WRITE_FAILED" as const,
+
+            error:
+              "Runtime Authority write failure.",
+          }),
+      }),
+    );
+
+  assert.equal(
+    runtimeWriteFailure.success,
+    false,
+  );
+
+  if (
+    !runtimeWriteFailure.success
+  ) {
+    assert.equal(
+      runtimeWriteFailure.errorCode,
+      "TARGET_WRITE_FAILED",
+    );
+  }
+
+  console.log(
+    "PASS: Runtime Authority write failure maps to target-write failure",
+  );
+
+  const runtimeReadbackFailure =
+    await restoreFinoraFullBranchFromNativeBackup(
+      credentials,
+      baseDependencies({
+        executeTransaction:
+          async () => ({
+            success:
+              false as const,
+
+            errorCode:
+              "TARGET_RUNTIME_AUTHORITY_READBACK_FAILED" as const,
+
+            error:
+              "Runtime Authority readback failure.",
+          }),
+      }),
+    );
+
+  assert.equal(
+    runtimeReadbackFailure.success,
+    false,
+  );
+
+  if (
+    !runtimeReadbackFailure.success
+  ) {
+    assert.equal(
+      runtimeReadbackFailure.errorCode,
+      "TARGET_READBACK_FAILED",
+    );
+  }
+
+  console.log(
+    "PASS: Runtime Authority readback failure maps to target-readback failure",
+  );
+
   const rollbackFailure =
     await restoreFinoraFullBranchFromNativeBackup(
       credentials,
@@ -983,7 +1163,7 @@ export async function runFinoraFullBranchRestoreFileTransportSelfTest():
   );
 
   console.log(
-    "PASS: Full V2 native restore transport self-test complete",
+    "PASS: Full V3 native restore transport self-test complete",
   );
 }
 

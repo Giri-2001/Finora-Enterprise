@@ -3131,6 +3131,14 @@ app.whenReady().then(async () => {
               resolveUsbRoot:
                 () =>
                   findFinoraUsbRoot(),
+
+              readRuntimeAuthority:
+                (
+                  storageMode,
+                ) =>
+                  portableFreshDeviceRuntimeAuthorityStore.read(
+                    storageMode,
+                  ),
             },
           ),
     });

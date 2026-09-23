@@ -1,6 +1,6 @@
 // ============================================================
 // FINORA ENTERPRISE OS
-// FULL BRANCH BACKUP V2 CONTRACT
+// FULL BRANCH BACKUP V3 CONTRACT
 // ============================================================
 //
 // PURPOSE:
@@ -31,7 +31,13 @@ export const FINORA_FULL_BRANCH_BACKUP_FILE_FORMAT =
   "FINORA_FULL_BRANCH_BACKUP" as const;
 
 export const FINORA_FULL_BRANCH_BACKUP_SCHEMA_VERSION =
+  3 as const;
+
+export const FINORA_FULL_BRANCH_BACKUP_LEGACY_RUNTIME_LESS_SCHEMA_VERSION =
   2 as const;
+
+export const FINORA_FULL_BRANCH_BACKUP_LEGACY_RUNTIME_LESS_V2_MESSAGE =
+  "This FINORA Full Branch Backup V2 is a legacy/incomplete backup and cannot be used for complete branch restore because it does not contain Runtime Authority." as const;
 
 export const FINORA_FULL_BRANCH_BACKUP_FILE_EXTENSION =
   ".finora" as const;
@@ -100,7 +106,30 @@ export interface FinoraFullBranchBackupEncryptedRealSnapshotV2 {
     string;
 }
 
-export interface FinoraFullBranchBackupFileV2 {
+
+export interface FinoraFullBranchBackupEncryptedRuntimeAuthorityV2 {
+  purpose:
+    "RUNTIME_AUTHORITY";
+
+  algorithm:
+    "AES-256-GCM";
+
+  passwordKdf:
+    FinoraFullBranchBackupKdfV2;
+
+  securityKdf:
+    FinoraFullBranchBackupKdfV2;
+
+  iv:
+    string;
+
+  authTag:
+    string;
+
+  ciphertext:
+    string;
+}
+export interface FinoraFullBranchBackupFileV3 {
   format:
     typeof FINORA_FULL_BRANCH_BACKUP_FILE_FORMAT;
 
@@ -130,6 +159,9 @@ export interface FinoraFullBranchBackupFileV2 {
 
   portableAuthEnvelopeSha256:
     string;
+
+  encryptedRuntimeAuthority:
+    FinoraFullBranchBackupEncryptedRuntimeAuthorityV2;
 
   realSnapshot:
     FinoraFullBranchBackupEncryptedRealSnapshotV2;
@@ -288,6 +320,74 @@ function isCanonicalBase64(
   }
 }
 
+export function isFinoraLegacyRuntimeLessFullBranchBackupV2(
+  value:
+    unknown,
+): boolean {
+  if (
+    !isRecord(
+      value,
+    ) ||
+    !hasExactKeys(
+      value,
+      [
+        "format",
+        "schemaVersion",
+        "backupId",
+        "createdAt",
+        "branchScope",
+        "dataContext",
+        "sourceStorageMode",
+        "authGeneration",
+        "portableAuthEnvelopeSerialized",
+        "portableAuthEnvelopeSha256",
+        "realSnapshot",
+      ],
+    )
+  ) {
+    return false;
+  }
+
+  return (
+    value.format ===
+      FINORA_FULL_BRANCH_BACKUP_FILE_FORMAT &&
+    value.schemaVersion ===
+      FINORA_FULL_BRANCH_BACKUP_LEGACY_RUNTIME_LESS_SCHEMA_VERSION &&
+    value.dataContext ===
+      "REAL"
+  );
+}
+
+export function isFinoraLegacyRuntimeLessFullBranchBackupV2Serialized(
+  serialized:
+    string,
+): boolean {
+  if (
+    typeof serialized !==
+      "string" ||
+    serialized.length ===
+      0 ||
+    Buffer.byteLength(
+      serialized,
+      "utf8",
+    ) >
+      FINORA_FULL_BRANCH_BACKUP_MAX_FILE_BYTES
+  ) {
+    return false;
+  }
+
+  try {
+    return isFinoraLegacyRuntimeLessFullBranchBackupV2(
+      JSON.parse(
+        serialized,
+      ),
+    );
+  }
+  catch {
+    return false;
+  }
+}
+
 export function validateFinoraFullBranchBackupScopeV2(
   value:
     unknown,
@@ -415,6 +515,52 @@ export function validateFinoraFullBranchBackupEncryptedRealSnapshotV2(
   }
 }
 
+export function validateFinoraFullBranchBackupEncryptedRuntimeAuthorityV2(
+  value:
+    unknown,
+): asserts value is FinoraFullBranchBackupEncryptedRuntimeAuthorityV2 {
+  if (
+    !isRecord(value) ||
+    !hasExactKeys(
+      value,
+      [
+        "purpose",
+        "algorithm",
+        "passwordKdf",
+        "securityKdf",
+        "iv",
+        "authTag",
+        "ciphertext",
+      ],
+    ) ||
+    value.purpose !==
+      "RUNTIME_AUTHORITY"
+  ) {
+    throw new Error(
+      "Invalid FINORA encrypted Runtime Authority.",
+    );
+  }
+
+  validateFinoraFullBranchBackupEncryptedRealSnapshotV2({
+    algorithm:
+      value.algorithm,
+
+    passwordKdf:
+      value.passwordKdf,
+
+    securityKdf:
+      value.securityKdf,
+
+    iv:
+      value.iv,
+
+    authTag:
+      value.authTag,
+
+    ciphertext:
+      value.ciphertext,
+  });
+}
 export function validateFinoraFullBranchBackupBindingV2(
   value:
     unknown,
@@ -521,10 +667,10 @@ export function sha256Hex(
     .toUpperCase();
 }
 
-export function validateFinoraFullBranchBackupFileV2(
+export function validateFinoraFullBranchBackupFileV3(
   value:
     unknown,
-): asserts value is FinoraFullBranchBackupFileV2 {
+): asserts value is FinoraFullBranchBackupFileV3 {
   if (
     !isRecord(value) ||
     !hasExactKeys(
@@ -540,6 +686,7 @@ export function validateFinoraFullBranchBackupFileV2(
         "authGeneration",
         "portableAuthEnvelopeSerialized",
         "portableAuthEnvelopeSha256",
+        "encryptedRuntimeAuthority",
         "realSnapshot",
       ],
     ) ||
@@ -578,12 +725,16 @@ export function validateFinoraFullBranchBackupFileV2(
     )
   ) {
     throw new Error(
-      "Invalid FINORA Full Branch Backup V2 file.",
+      "Invalid FINORA Full Branch Backup V3 file.",
     );
   }
 
   validateFinoraFullBranchBackupScopeV2(
     value.branchScope,
+  );
+
+  validateFinoraFullBranchBackupEncryptedRuntimeAuthorityV2(
+    value.encryptedRuntimeAuthority,
   );
 
   validateFinoraFullBranchBackupEncryptedRealSnapshotV2(
@@ -602,18 +753,18 @@ export function validateFinoraFullBranchBackupFileV2(
   }
 }
 
-export function createFinoraFullBranchBackupFileV2(
+export function createFinoraFullBranchBackupFileV3(
   input:
     Omit<
-      FinoraFullBranchBackupFileV2,
+      FinoraFullBranchBackupFileV3,
       | "format"
       | "schemaVersion"
       | "dataContext"
       | "portableAuthEnvelopeSha256"
     >,
-): FinoraFullBranchBackupFileV2 {
+): FinoraFullBranchBackupFileV3 {
   const output:
-    FinoraFullBranchBackupFileV2 =
+    FinoraFullBranchBackupFileV3 =
     {
       format:
         FINORA_FULL_BRANCH_BACKUP_FILE_FORMAT,
@@ -647,22 +798,25 @@ export function createFinoraFullBranchBackupFileV2(
           input.portableAuthEnvelopeSerialized,
         ),
 
+      encryptedRuntimeAuthority:
+        input.encryptedRuntimeAuthority,
+
       realSnapshot:
         input.realSnapshot,
     };
 
-  validateFinoraFullBranchBackupFileV2(
+  validateFinoraFullBranchBackupFileV3(
     output,
   );
 
   return output;
 }
 
-export function serializeFinoraFullBranchBackupFileV2(
+export function serializeFinoraFullBranchBackupFileV3(
   value:
-    FinoraFullBranchBackupFileV2,
+    FinoraFullBranchBackupFileV3,
 ): string {
-  validateFinoraFullBranchBackupFileV2(
+  validateFinoraFullBranchBackupFileV3(
     value,
   );
 
@@ -671,10 +825,10 @@ export function serializeFinoraFullBranchBackupFileV2(
   );
 }
 
-export function parseFinoraFullBranchBackupFileV2(
+export function parseFinoraFullBranchBackupFileV3(
   serialized:
     string,
-): FinoraFullBranchBackupFileV2 {
+): FinoraFullBranchBackupFileV3 {
   if (
     typeof serialized !==
       "string" ||
@@ -697,7 +851,17 @@ export function parseFinoraFullBranchBackupFileV2(
       serialized,
     );
 
-  validateFinoraFullBranchBackupFileV2(
+  if (
+    isFinoraLegacyRuntimeLessFullBranchBackupV2(
+      parsed,
+    )
+  ) {
+    throw new Error(
+      FINORA_FULL_BRANCH_BACKUP_LEGACY_RUNTIME_LESS_V2_MESSAGE,
+    );
+  }
+
+  validateFinoraFullBranchBackupFileV3(
     parsed,
   );
 

@@ -1,6 +1,6 @@
 // ============================================================
 // FINORA ENTERPRISE OS
-// FULL BRANCH BACKUP V2 COMPOSITION COORDINATOR
+// FULL BRANCH BACKUP V3 COMPOSITION COORDINATOR
 // ============================================================
 //
 // This coordinator does not resolve filesystem roots itself.
@@ -15,25 +15,26 @@
 // - captures exact REAL tenant snapshot;
 // - encrypts that snapshot with Password + Security Code;
 // - binds ciphertext to backup/scope/storage/authGeneration;
-// - emits one Full Branch Backup V2 serialized .finora payload.
+// - emits one Full Branch Backup V3 serialized .finora payload.
 //
 // DEMO is never exported.
 // ============================================================
 
 import {
-  createFinoraFullBranchBackupFileV2,
-  serializeFinoraFullBranchBackupFileV2,
+  createFinoraFullBranchBackupFileV3,
+  serializeFinoraFullBranchBackupFileV3,
   serializeFinoraFullBranchRealSnapshotV1,
 } from "./finoraFullBranchBackupContract.js";
 
 import type {
-  FinoraFullBranchBackupFileV2,
+  FinoraFullBranchBackupFileV3,
   FinoraFullBranchBackupScopeV2,
   FinoraFullBranchBackupStorageMode,
 } from "./finoraFullBranchBackupContract.js";
 
 import {
   encryptFinoraFullBranchRealSnapshotV2,
+  encryptFinoraFullBranchRuntimeAuthorityV2,
 } from "./finoraFullBranchBackupCrypto.js";
 
 import {
@@ -68,6 +69,9 @@ export interface FinoraFullBranchAuthenticatedBackupAuthority {
     number;
 
   portableAuthEnvelopeSerialized:
+    string;
+
+  runtimeAuthorityPackageSerialized?:
     string;
 }
 
@@ -135,6 +139,9 @@ export interface FinoraFullBranchBackupCoordinatorDependencies {
 
   encryptSnapshot?:
     typeof encryptFinoraFullBranchRealSnapshotV2;
+
+  encryptRuntimeAuthority?:
+    typeof encryptFinoraFullBranchRuntimeAuthorityV2;
 }
 
 export type FinoraFullBranchBackupErrorCode =
@@ -142,6 +149,8 @@ export type FinoraFullBranchBackupErrorCode =
   | "AUTH_BACKUP_FAILED"
   | "REAL_STORAGE_READ_FAILED"
   | "SNAPSHOT_FAILED"
+  | "RUNTIME_AUTHORITY_UNAVAILABLE"
+  | "RUNTIME_AUTHORITY_ENCRYPTION_FAILED"
   | "BACKUP_ENCRYPTION_FAILED"
   | "BACKUP_CREATION_FAILED";
 
@@ -165,7 +174,7 @@ export interface FinoraFullBranchBackupSuccess {
     number;
 
   backupFile:
-    FinoraFullBranchBackupFileV2;
+    FinoraFullBranchBackupFileV3;
 
   serializedBackup:
     string;
@@ -364,6 +373,54 @@ export async function createFinoraFullBranchBackup(
       authority.authGeneration,
   };
 
+  const runtimeAuthorityPackageSerialized =
+    authority.runtimeAuthorityPackageSerialized;
+
+  if (
+    typeof runtimeAuthorityPackageSerialized !==
+      "string" ||
+    runtimeAuthorityPackageSerialized.trim().length ===
+      0
+  ) {
+    return failure(
+      "RUNTIME_AUTHORITY_UNAVAILABLE",
+      "FINORA Fresh Device Runtime Authority is unavailable for this Full Branch Backup.",
+    );
+  }
+
+  const encryptRuntimeAuthority =
+    dependencies.encryptRuntimeAuthority ??
+    encryptFinoraFullBranchRuntimeAuthorityV2;
+
+  let encryptedRuntimeAuthority;
+
+  try {
+    encryptedRuntimeAuthority =
+      await encryptRuntimeAuthority({
+        serializedRuntimeAuthority:
+          runtimeAuthorityPackageSerialized,
+
+        password:
+          request.password,
+
+        securityCode:
+          request.securityCode,
+
+        binding,
+      });
+  }
+  catch (
+    error:
+      unknown
+  ) {
+    return failure(
+      "RUNTIME_AUTHORITY_ENCRYPTION_FAILED",
+      error instanceof Error
+        ? error.message
+        : "FINORA could not encrypt the Fresh Device Runtime Authority.",
+    );
+  }
+
   const encryptSnapshot =
     dependencies.encryptSnapshot ??
     encryptFinoraFullBranchRealSnapshotV2;
@@ -396,7 +453,7 @@ export async function createFinoraFullBranchBackup(
 
   try {
     const backupFile =
-      createFinoraFullBranchBackupFileV2({
+      createFinoraFullBranchBackupFileV3({
         backupId:
           authority.backupId,
 
@@ -414,6 +471,9 @@ export async function createFinoraFullBranchBackup(
 
         portableAuthEnvelopeSerialized:
           authority.portableAuthEnvelopeSerialized,
+
+        encryptedRuntimeAuthority:
+          encryptedRuntimeAuthority,
 
         realSnapshot:
           encryptedSnapshot,
@@ -445,7 +505,7 @@ export async function createFinoraFullBranchBackup(
         backupFile,
 
         serializedBackup:
-          serializeFinoraFullBranchBackupFileV2(
+          serializeFinoraFullBranchBackupFileV3(
             backupFile,
           ),
       },

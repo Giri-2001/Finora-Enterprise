@@ -53,6 +53,15 @@ import type {
   FinoraPortableBranchAuthEnvelopeV1,
 } from "./finoraPortableBranchAuthContract.js";
 
+import {
+  validateFinoraPortableFreshDeviceRuntimeAuthorityPackageV1,
+} from "./finoraPortableFreshDeviceRuntimeAuthorityContract.js";
+
+import {
+  FINORA_PORTABLE_FRESH_DEVICE_RUNTIME_AUTHORITY_MAX_BYTES,
+  getFinoraPortableFreshDeviceRuntimeAuthorityFilePath,
+} from "./finoraPortableFreshDeviceRuntimeAuthorityStore.js";
+
 import type {
   FinoraFullBranchRestorePersistedRecord,
 } from "./finoraFullBranchRestoreStoragePlan.js";
@@ -164,6 +173,67 @@ function buildAuthFilePath(
     FINORA_PORTABLE_BRANCH_AUTH_SUBDIRECTORY,
     FINORA_PORTABLE_BRANCH_AUTH_FILE_NAME,
   );
+}
+
+function validateAndEncodeRuntimeAuthority(
+  serialized:
+    string,
+): Buffer {
+  if (
+    typeof serialized !==
+      "string" ||
+    serialized.trim().length ===
+      0
+  ) {
+    throw new Error(
+      "FINORA restored Runtime Authority serialization is invalid.",
+    );
+  }
+
+  const bytes =
+    Buffer.from(
+      serialized,
+      "utf8",
+    );
+
+  if (
+    bytes.byteLength <=
+      0 ||
+    bytes.byteLength >
+      FINORA_PORTABLE_FRESH_DEVICE_RUNTIME_AUTHORITY_MAX_BYTES
+  ) {
+    throw new Error(
+      "FINORA restored Runtime Authority serialized size is invalid.",
+    );
+  }
+
+  let parsed:
+    unknown;
+
+  try {
+    parsed =
+      JSON.parse(
+        serialized,
+      );
+  }
+  catch {
+    throw new Error(
+      "FINORA restored Runtime Authority serialization is malformed.",
+    );
+  }
+
+  try {
+    validateFinoraPortableFreshDeviceRuntimeAuthorityPackageV1(
+      parsed,
+    );
+  }
+  catch {
+    throw new Error(
+      "FINORA restored Runtime Authority package is invalid.",
+    );
+  }
+
+  return bytes;
 }
 
 // ============================================================
@@ -531,6 +601,11 @@ export function createFinoraFullBranchRestoreUsbTargetTransactionDependencies(
       targetUsbRoot,
     );
 
+  const runtimeAuthorityFilePath =
+    getFinoraPortableFreshDeviceRuntimeAuthorityFilePath(
+      targetUsbRoot,
+    );
+
   const portableStore =
     options.portableStore ??
     new FinoraPortableBranchAuthStore({
@@ -547,6 +622,14 @@ export function createFinoraFullBranchRestoreUsbTargetTransactionDependencies(
     false;
 
   let authPredecessor:
+    RawFileState |
+    null =
+    null;
+
+  let runtimeAuthorityPredecessorCaptured =
+    false;
+
+  let runtimeAuthorityPredecessor:
     RawFileState |
     null =
     null;
@@ -710,6 +793,88 @@ export function createFinoraFullBranchRestoreUsbTargetTransactionDependencies(
         await restoreRawFileState(
           authFilePath,
           authPredecessor,
+          0o600,
+        );
+      },
+
+    readTargetRuntimeAuthority:
+      async (): Promise<
+        string |
+        null
+      > => {
+        const raw =
+          await readRawFileState(
+            runtimeAuthorityFilePath,
+          );
+
+        if (
+          !runtimeAuthorityPredecessorCaptured
+        ) {
+          runtimeAuthorityPredecessor =
+            raw;
+
+          runtimeAuthorityPredecessorCaptured =
+            true;
+        }
+
+        if (
+          !raw.existed
+        ) {
+          return null;
+        }
+
+        if (
+          raw.bytes ===
+            null
+        ) {
+          throw new Error(
+            "FINORA Runtime Authority bytes are unavailable.",
+          );
+        }
+
+        const serialized =
+          raw.bytes.toString(
+            "utf8",
+          );
+
+        validateAndEncodeRuntimeAuthority(
+          serialized,
+        );
+
+        return serialized;
+      },
+
+    writeTargetRuntimeAuthority:
+      async (
+        serialized,
+      ) => {
+        const bytes =
+          validateAndEncodeRuntimeAuthority(
+            serialized,
+          );
+
+        await writeRawAtomic(
+          runtimeAuthorityFilePath,
+          bytes,
+          0o600,
+        );
+      },
+
+    rollbackTargetRuntimeAuthority:
+      async () => {
+        if (
+          !runtimeAuthorityPredecessorCaptured ||
+          runtimeAuthorityPredecessor ===
+            null
+        ) {
+          throw new Error(
+            "FINORA Runtime Authority predecessor was not captured.",
+          );
+        }
+
+        await restoreRawFileState(
+          runtimeAuthorityFilePath,
+          runtimeAuthorityPredecessor,
           0o600,
         );
       },

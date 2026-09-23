@@ -133,6 +133,12 @@ const expectedDigest =
     scope,
   );
 
+const restoredRuntimeAuthority =
+  "RUNTIME-AUTHORITY-RESTORED";
+
+const previousRuntimeAuthority =
+  "RUNTIME-AUTHORITY-PREVIOUS";
+
 const material:
   FinoraFullBranchRestoreTransactionMaterial =
   {
@@ -147,6 +153,9 @@ const material:
 
     portableAuthEnvelopeSerialized:
       "PORTABLE-AUTH-RESTORED",
+
+    runtimeAuthorityPackageSerialized:
+      restoredRuntimeAuthority,
 
     snapshot,
 
@@ -182,6 +191,11 @@ interface Harness {
       FinoraPortableBranchAuthEnvelopeV1 |
       null;
 
+  getRuntimeAuthority:
+    () =>
+      string |
+      null;
+
   state: {
     storageWriteCalls:
       number;
@@ -194,6 +208,18 @@ interface Harness {
 
     authRollbackCalls:
       number;
+
+    runtimeWriteCalls:
+      number;
+
+    runtimeRollbackCalls:
+      number;
+
+    writeOrder:
+      string[];
+
+    rollbackOrder:
+      string[];
   };
 }
 
@@ -222,6 +248,19 @@ function createHarness(
       boolean;
 
     rollbackStorageFails?:
+      boolean;
+
+    initialRuntimeAuthority?:
+      string |
+      null;
+
+    runtimeWriteMutatesThenFails?:
+      boolean;
+
+    corruptRuntimeReadback?:
+      boolean;
+
+    rollbackRuntimeFails?:
       boolean;
   } = {},
 ): Harness {
@@ -270,6 +309,12 @@ function createHarness(
       ? null
       : options.initialAuth;
 
+  let runtimeAuthority =
+    options.initialRuntimeAuthority ===
+      undefined
+      ? null
+      : options.initialRuntimeAuthority;
+
   const state = {
     storageWriteCalls:
       0,
@@ -282,6 +327,18 @@ function createHarness(
 
     authRollbackCalls:
       0,
+
+    runtimeWriteCalls:
+      0,
+
+    runtimeRollbackCalls:
+      0,
+
+    writeOrder:
+      [] as string[],
+
+    rollbackOrder:
+      [] as string[],
   };
 
   const dependencies:
@@ -332,6 +389,10 @@ function createHarness(
           state.storageWriteCalls +=
             1;
 
+          state.writeOrder.push(
+            "storage",
+          );
+
           storage =
             clone(
               [...records],
@@ -370,6 +431,10 @@ function createHarness(
           state.storageRollbackCalls +=
             1;
 
+          state.rollbackOrder.push(
+            "storage",
+          );
+
           if (
             options.rollbackStorageFails
           ) {
@@ -404,6 +469,10 @@ function createHarness(
           state.authWriteCalls +=
             1;
 
+          state.writeOrder.push(
+            "auth",
+          );
+
           auth =
             envelope;
 
@@ -423,7 +492,70 @@ function createHarness(
           state.authRollbackCalls +=
             1;
 
+          state.rollbackOrder.push(
+            "auth",
+          );
+
           auth =
+            previous;
+        },
+
+      readTargetRuntimeAuthority:
+        async () => {
+          if (
+            options.corruptRuntimeReadback &&
+            state.runtimeWriteCalls >
+              0
+          ) {
+            return previousRuntimeAuthority;
+          }
+
+          return runtimeAuthority;
+        },
+
+      writeTargetRuntimeAuthority:
+        async (
+          serialized,
+        ) => {
+          state.runtimeWriteCalls +=
+            1;
+
+          state.writeOrder.push(
+            "runtime",
+          );
+
+          runtimeAuthority =
+            serialized;
+
+          if (
+            options.runtimeWriteMutatesThenFails
+          ) {
+            throw new Error(
+              "Runtime Authority write failed after mutation.",
+            );
+          }
+        },
+
+      rollbackTargetRuntimeAuthority:
+        async (
+          previous,
+        ) => {
+          state.runtimeRollbackCalls +=
+            1;
+
+          state.rollbackOrder.push(
+            "runtime",
+          );
+
+          if (
+            options.rollbackRuntimeFails
+          ) {
+            throw new Error(
+              "Runtime Authority rollback failed.",
+            );
+          }
+
+          runtimeAuthority =
             previous;
         },
     };
@@ -440,6 +572,10 @@ function createHarness(
     getAuth:
       () =>
         auth,
+
+    getRuntimeAuthority:
+      () =>
+        runtimeAuthority,
 
     state,
   };
@@ -479,6 +615,30 @@ export async function runFinoraFullBranchRestoreTransactionSelfTest():
   assert.equal(
     successHarness.state.authRollbackCalls,
     0,
+  );
+
+  assert.equal(
+    successHarness.state.runtimeWriteCalls,
+    1,
+  );
+
+  assert.equal(
+    successHarness.state.runtimeRollbackCalls,
+    0,
+  );
+
+  assert.equal(
+    successHarness.getRuntimeAuthority(),
+    restoredRuntimeAuthority,
+  );
+
+  assert.deepEqual(
+    successHarness.state.writeOrder,
+    [
+      "storage",
+      "auth",
+      "runtime",
+    ],
   );
 
   const successIds =
@@ -685,7 +845,186 @@ export async function runFinoraFullBranchRestoreTransactionSelfTest():
   );
 
   console.log(
-    "PASS: Portable Auth readback mismatch rolls back both authorities",
+    "PASS: Portable Auth readback mismatch rolls back storage and Portable Auth before Runtime Authority mutation",
+  );
+
+  const runtimeWriteFailureHarness =
+    createHarness({
+      initialAuth:
+        previousEnvelope,
+
+      initialRuntimeAuthority:
+        previousRuntimeAuthority,
+
+      runtimeWriteMutatesThenFails:
+        true,
+    });
+
+  const beforeRuntimeWriteStorage =
+    runtimeWriteFailureHarness.getStorage();
+
+  const runtimeWriteFailure =
+    await executeFinoraFullBranchRestoreTransaction(
+      material,
+      runtimeWriteFailureHarness.dependencies,
+    );
+
+  assert.equal(
+    runtimeWriteFailure.success,
+    false,
+  );
+
+  if (
+    !runtimeWriteFailure.success
+  ) {
+    assert.equal(
+      runtimeWriteFailure.errorCode,
+      "TARGET_RUNTIME_AUTHORITY_WRITE_FAILED",
+    );
+  }
+
+  assert.deepEqual(
+    runtimeWriteFailureHarness.getStorage(),
+    beforeRuntimeWriteStorage,
+  );
+
+  assert.equal(
+    runtimeWriteFailureHarness.getAuth(),
+    previousEnvelope,
+  );
+
+  assert.equal(
+    runtimeWriteFailureHarness.getRuntimeAuthority(),
+    previousRuntimeAuthority,
+  );
+
+  assert.deepEqual(
+    runtimeWriteFailureHarness.state.rollbackOrder,
+    [
+      "runtime",
+      "auth",
+      "storage",
+    ],
+  );
+
+  console.log(
+    "PASS: Runtime Authority write failure rolls back Runtime Authority, Portable Auth and storage in reverse mutation order",
+  );
+
+  const runtimeReadbackHarness =
+    createHarness({
+      initialAuth:
+        previousEnvelope,
+
+      initialRuntimeAuthority:
+        previousRuntimeAuthority,
+
+      corruptRuntimeReadback:
+        true,
+    });
+
+  const beforeRuntimeReadbackStorage =
+    runtimeReadbackHarness.getStorage();
+
+  const runtimeReadbackFailure =
+    await executeFinoraFullBranchRestoreTransaction(
+      material,
+      runtimeReadbackHarness.dependencies,
+    );
+
+  assert.equal(
+    runtimeReadbackFailure.success,
+    false,
+  );
+
+  if (
+    !runtimeReadbackFailure.success
+  ) {
+    assert.equal(
+      runtimeReadbackFailure.errorCode,
+      "TARGET_RUNTIME_AUTHORITY_READBACK_FAILED",
+    );
+  }
+
+  assert.deepEqual(
+    runtimeReadbackHarness.getStorage(),
+    beforeRuntimeReadbackStorage,
+  );
+
+  assert.equal(
+    runtimeReadbackHarness.getAuth(),
+    previousEnvelope,
+  );
+
+  assert.equal(
+    runtimeReadbackHarness.getRuntimeAuthority(),
+    previousRuntimeAuthority,
+  );
+
+  assert.deepEqual(
+    runtimeReadbackHarness.state.rollbackOrder,
+    [
+      "runtime",
+      "auth",
+      "storage",
+    ],
+  );
+
+  console.log(
+    "PASS: Runtime Authority readback mismatch rolls back all three authorities",
+  );
+
+  const runtimeRollbackFailureHarness =
+    createHarness({
+      initialAuth:
+        previousEnvelope,
+
+      initialRuntimeAuthority:
+        previousRuntimeAuthority,
+
+      runtimeWriteMutatesThenFails:
+        true,
+
+      rollbackRuntimeFails:
+        true,
+    });
+
+  const runtimeRollbackFailure =
+    await executeFinoraFullBranchRestoreTransaction(
+      material,
+      runtimeRollbackFailureHarness.dependencies,
+    );
+
+  assert.equal(
+    runtimeRollbackFailure.success,
+    false,
+  );
+
+  if (
+    !runtimeRollbackFailure.success
+  ) {
+    assert.equal(
+      runtimeRollbackFailure.errorCode,
+      "ROLLBACK_FAILED",
+    );
+  }
+
+  assert.deepEqual(
+    runtimeRollbackFailureHarness.state.rollbackOrder,
+    [
+      "runtime",
+      "auth",
+      "storage",
+    ],
+  );
+
+  assert.equal(
+    runtimeRollbackFailureHarness.getAuth(),
+    previousEnvelope,
+  );
+
+  console.log(
+    "PASS: Runtime Authority rollback failure is surfaced while Portable Auth and storage rollback are still attempted",
   );
 
   const badDigestMaterial = {
@@ -732,6 +1071,107 @@ export async function runFinoraFullBranchRestoreTransactionSelfTest():
 
   console.log(
     "PASS: pre-write digest mismatch fails before any target mutation",
+  );
+
+  const missingRuntimeMaterialHarness =
+    createHarness();
+
+  const missingRuntimeMaterial = {
+    ...material,
+
+    runtimeAuthorityPackageSerialized:
+      undefined,
+  };
+
+  const missingRuntimeMaterialFailure =
+    await executeFinoraFullBranchRestoreTransaction(
+      missingRuntimeMaterial,
+      missingRuntimeMaterialHarness.dependencies,
+    );
+
+  assert.equal(
+    missingRuntimeMaterialFailure.success,
+    false,
+  );
+
+  if (
+    !missingRuntimeMaterialFailure.success
+  ) {
+    assert.equal(
+      missingRuntimeMaterialFailure.errorCode,
+      "INVALID_MATERIAL",
+    );
+  }
+
+  assert.equal(
+    missingRuntimeMaterialHarness.state.storageWriteCalls,
+    0,
+  );
+
+  assert.equal(
+    missingRuntimeMaterialHarness.state.authWriteCalls,
+    0,
+  );
+
+  assert.equal(
+    missingRuntimeMaterialHarness.state.runtimeWriteCalls,
+    0,
+  );
+
+  console.log(
+    "PASS: missing Runtime Authority material fails closed before any target mutation",
+  );
+
+  const missingRuntimeDependencyHarness =
+    createHarness();
+
+  const {
+    readTargetRuntimeAuthority:
+      omittedRuntimeAuthorityReader,
+
+    ...missingRuntimeDependencies
+  } =
+    missingRuntimeDependencyHarness.dependencies;
+
+  void omittedRuntimeAuthorityReader;
+
+  const missingRuntimeDependencyFailure =
+    await executeFinoraFullBranchRestoreTransaction(
+      material,
+      missingRuntimeDependencies,
+    );
+
+  assert.equal(
+    missingRuntimeDependencyFailure.success,
+    false,
+  );
+
+  if (
+    !missingRuntimeDependencyFailure.success
+  ) {
+    assert.equal(
+      missingRuntimeDependencyFailure.errorCode,
+      "TARGET_CAPTURE_FAILED",
+    );
+  }
+
+  assert.equal(
+    missingRuntimeDependencyHarness.state.storageWriteCalls,
+    0,
+  );
+
+  assert.equal(
+    missingRuntimeDependencyHarness.state.authWriteCalls,
+    0,
+  );
+
+  assert.equal(
+    missingRuntimeDependencyHarness.state.runtimeWriteCalls,
+    0,
+  );
+
+  console.log(
+    "PASS: missing Runtime Authority target dependency fails closed before any target mutation",
   );
 
   const rollbackFailureHarness =

@@ -34,6 +34,14 @@ import {
 } from "./finoraFullBranchBackupContract.js";
 
 import {
+  generateFinoraBranchCertificationKeyMaterial,
+} from "./finoraBranchCertificationCrypto.js";
+
+import type {
+  FinoraBranchCertificationKeyMaterialV1,
+} from "./finoraBranchCertificationContract.js";
+
+import {
   FINORA_PORTABLE_BRANCH_AUTH_DIRECTORY,
   FINORA_PORTABLE_BRANCH_AUTH_FILE_NAME,
   FINORA_PORTABLE_BRANCH_AUTH_SUBDIRECTORY,
@@ -42,6 +50,23 @@ import {
 import type {
   FinoraPortableBranchAuthEnvelopeV1,
 } from "./finoraPortableBranchAuthContract.js";
+
+import {
+  FINORA_PORTABLE_FRESH_DEVICE_RUNTIME_AUTHORITY_PURPOSE,
+  FINORA_PORTABLE_FRESH_DEVICE_RUNTIME_AUTHORITY_SCHEMA_VERSION,
+} from "./finoraPortableFreshDeviceRuntimeAuthorityContract.js";
+
+import type {
+  FinoraPortableFreshDeviceRuntimeAuthorityPayloadV1,
+} from "./finoraPortableFreshDeviceRuntimeAuthorityContract.js";
+
+import {
+  createFinoraPortableFreshDeviceRuntimeAuthorityPackageV1,
+} from "./finoraPortableFreshDeviceRuntimeAuthorityCrypto.js";
+
+import {
+  getFinoraPortableFreshDeviceRuntimeAuthorityFilePath,
+} from "./finoraPortableFreshDeviceRuntimeAuthorityStore.js";
 
 import {
   calculateFinoraFullBranchExactRealDigest,
@@ -58,6 +83,59 @@ import type {
 import {
   createFinoraFullBranchRestoreUsbTargetTransactionDependencies,
 } from "./finoraFullBranchRestoreUsbTargetAdapter.js";
+
+function createKeyMaterial(
+  createdAt:
+    string,
+): FinoraBranchCertificationKeyMaterialV1 {
+  const generator =
+    generateFinoraBranchCertificationKeyMaterial as unknown as
+      (
+        ...args:
+          unknown[]
+      ) =>
+        FinoraBranchCertificationKeyMaterialV1;
+
+  const attempts:
+    unknown[][] = [
+      [
+        createdAt,
+      ],
+      [
+        new Date(
+          createdAt,
+        ),
+      ],
+      [],
+    ];
+
+  let lastError:
+    unknown;
+
+  for (
+    const args of attempts
+  ) {
+    try {
+      return generator(
+        ...args,
+      );
+    }
+    catch (
+      error
+    ) {
+      lastError =
+        error;
+    }
+  }
+
+  throw (
+    lastError instanceof Error
+      ? lastError
+      : new Error(
+          "Unable to generate Branch Certification test key material.",
+        )
+  );
+}
 
 const scope = {
   ownerId:
@@ -81,6 +159,200 @@ const restoredEnvelope =
     schemaVersion:
       1,
   } as unknown as FinoraPortableBranchAuthEnvelopeV1;
+
+const runtimeKeyMaterial =
+  createKeyMaterial(
+    "2026-09-20T00:00:00.000Z",
+  );
+
+const runtimePayload:
+  FinoraPortableFreshDeviceRuntimeAuthorityPayloadV1 = {
+    schemaVersion:
+      FINORA_PORTABLE_FRESH_DEVICE_RUNTIME_AUTHORITY_SCHEMA_VERSION,
+
+    purpose:
+      FINORA_PORTABLE_FRESH_DEVICE_RUNTIME_AUTHORITY_PURPOSE,
+
+    authorityId:
+      "FINORA-FRESH-RUNTIME-AUTHORITY-RESTORE-001",
+
+    sourceAuthorizationId:
+      "FINORA-SOURCE-AUTH-RESTORE-001",
+
+    credentialId:
+      "FINORA-CREDENTIAL-RESTORE-001",
+
+    activationId:
+      "FINORA-ACTIVATION-RESTORE-001",
+
+    branchAccessGrantId:
+      "FINORA-ACCESS-GRANT-RESTORE-001",
+
+    storageEntitlementId:
+      "FINORA-STORAGE-ENTITLEMENT-RESTORE-001",
+
+    ownerId:
+      scope.ownerId,
+
+    businessId:
+      scope.businessId,
+
+    branchId:
+      scope.branchId,
+
+    userId:
+      "USER-RESTORE-001",
+
+    username:
+      "owner",
+
+    canonicalUsername:
+      "owner",
+
+    fullName:
+      "Owner",
+
+    role:
+      "ADMIN",
+
+    storageMode:
+      "USB",
+
+    dataContext:
+      "REAL",
+
+    demoId:
+      null,
+
+    authGeneration:
+      2,
+
+    activationStatus:
+      "ACTIVE",
+
+    businessCode:
+      null,
+
+    branchCode:
+      null,
+
+    activationActivatedAt:
+      "2026-01-01T00:00:00.000Z",
+
+    activationCreatedAt:
+      "2026-01-01T00:00:00.000Z",
+
+    activationUpdatedAt:
+      "2026-09-20T00:00:00.000Z",
+
+    branchAccessType:
+      "REGISTERED",
+
+    registrationPayment: {
+      amount:
+        2000,
+
+      currency:
+        "INR",
+
+      paymentMode:
+        "CASH",
+
+      paidAt:
+        "2026-01-01T00:00:00.000Z",
+
+      refundable:
+        false,
+    },
+
+    registrationCycle:
+      1,
+
+    demoRemarks:
+      null,
+
+    accessMode:
+      "ACTIVE",
+
+    accessValidFrom:
+      "2026-01-01T00:00:00.000Z",
+
+    accessValidUntil:
+      "2027-01-01T00:00:00.000Z",
+
+    branchAccessCreatedAt:
+      "2026-01-01T00:00:00.000Z",
+
+    branchAccessUpdatedAt:
+      "2026-09-20T00:00:00.000Z",
+
+    storageEntitlementStatus:
+      "ACTIVE",
+
+    storageEntitlementActivatedAt:
+      "2026-01-01T00:00:00.000Z",
+
+    storageEntitlementCreatedAt:
+      "2026-01-01T00:00:00.000Z",
+
+    storageEntitlementUpdatedAt:
+      "2026-09-20T00:00:00.000Z",
+
+    portableAuthFingerprint:
+      "a".repeat(
+        64,
+      ),
+
+    issuedAt:
+      "2026-09-20T00:00:00.000Z",
+  };
+
+const restoredRuntimeAuthorityPackage =
+  createFinoraPortableFreshDeviceRuntimeAuthorityPackageV1(
+    runtimePayload,
+    runtimeKeyMaterial,
+  );
+
+const previousRuntimeAuthorityPackage =
+  createFinoraPortableFreshDeviceRuntimeAuthorityPackageV1(
+    {
+      ...runtimePayload,
+
+      authorityId:
+        "FINORA-FRESH-RUNTIME-AUTHORITY-PREVIOUS-001",
+
+      authGeneration:
+        1,
+
+      portableAuthFingerprint:
+        "b".repeat(
+          64,
+        ),
+    },
+    runtimeKeyMaterial,
+  );
+
+const RESTORED_RUNTIME_SERIALIZED =
+  JSON.stringify(
+    restoredRuntimeAuthorityPackage,
+  );
+
+const PREVIOUS_RUNTIME_SERIALIZED =
+  JSON.stringify(
+    previousRuntimeAuthorityPackage,
+  );
+
+const RESTORED_RUNTIME_RAW =
+  Buffer.from(
+    RESTORED_RUNTIME_SERIALIZED,
+    "utf8",
+  );
+
+const PREVIOUS_RUNTIME_RAW =
+  Buffer.from(
+    PREVIOUS_RUNTIME_SERIALIZED,
+    "utf8",
+  );
 
 const PREVIOUS_AUTH_RAW =
   Buffer.from(
@@ -194,6 +466,9 @@ const material:
     portableAuthEnvelopeSerialized:
       RESTORED_AUTH_SERIALIZED,
 
+    runtimeAuthorityPackageSerialized:
+      RESTORED_RUNTIME_SERIALIZED,
+
     snapshot,
 
     snapshotRecordCount:
@@ -227,6 +502,15 @@ function authPath(
     FINORA_PORTABLE_BRANCH_AUTH_DIRECTORY,
     FINORA_PORTABLE_BRANCH_AUTH_SUBDIRECTORY,
     FINORA_PORTABLE_BRANCH_AUTH_FILE_NAME,
+  );
+}
+
+function runtimeAuthorityPath(
+  root:
+    string,
+): string {
+  return getFinoraPortableFreshDeviceRuntimeAuthorityFilePath(
+    root,
   );
 }
 
@@ -489,6 +773,51 @@ function withTransactionCryptoSeams(
   };
 }
 
+function withRuntimeReadbackMismatch(
+  dependencies:
+    ReturnType<
+      typeof createFinoraFullBranchRestoreUsbTargetTransactionDependencies
+    >,
+) {
+  const readRuntimeAuthority =
+    dependencies.readTargetRuntimeAuthority;
+
+  if (
+    !readRuntimeAuthority
+  ) {
+    throw new Error(
+      "Runtime Authority reader is unavailable in adapter self-test.",
+    );
+  }
+
+  let runtimeReadCalls =
+    0;
+
+  return {
+    ...withTransactionCryptoSeams(
+      dependencies,
+    ),
+
+    readTargetRuntimeAuthority:
+      async () => {
+        runtimeReadCalls +=
+          1;
+
+        const actual =
+          await readRuntimeAuthority();
+
+        if (
+          runtimeReadCalls ===
+            1
+        ) {
+          return actual;
+        }
+
+        return PREVIOUS_RUNTIME_SERIALIZED;
+      },
+  };
+}
+
 async function seedExistingTarget(
   root:
     string,
@@ -497,6 +826,9 @@ async function seedExistingTarget(
     Buffer;
 
   authBytes:
+    Buffer;
+
+  runtimeAuthorityBytes:
     Buffer;
 }> {
   const storageBytes =
@@ -540,11 +872,23 @@ async function seedExistingTarget(
     PREVIOUS_AUTH_RAW,
   );
 
+  await writeFile(
+    runtimeAuthorityPath(
+      root,
+    ),
+    PREVIOUS_RUNTIME_RAW,
+  );
+
   return {
     storageBytes,
     authBytes:
       Buffer.from(
         PREVIOUS_AUTH_RAW,
+      ),
+
+    runtimeAuthorityBytes:
+      Buffer.from(
+        PREVIOUS_RUNTIME_RAW,
       ),
   };
 }
@@ -680,8 +1024,21 @@ export async function runFinoraFullBranchRestoreUsbTargetAdapterSelfTest():
       true,
     );
 
+    assert.equal(
+      (
+        await readFile(
+          runtimeAuthorityPath(
+            successRoot,
+          ),
+        )
+      ).equals(
+        RESTORED_RUNTIME_RAW,
+      ),
+      true,
+    );
+
     console.log(
-      "PASS: native target adapter commits exact REAL storage and Portable Auth on temp target",
+      "PASS: native target adapter commits exact REAL storage, Portable Auth and Runtime Authority on temp target",
     );
 
     // ========================================================
@@ -706,10 +1063,6 @@ export async function runFinoraFullBranchRestoreUsbTargetAdapterSelfTest():
           portableStore:
             createFakePortableStore(
               rollbackRoot,
-              {
-                failAfterWrite:
-                  true,
-              },
             ),
         },
       );
@@ -717,7 +1070,7 @@ export async function runFinoraFullBranchRestoreUsbTargetAdapterSelfTest():
     const rollbackResult =
       await executeFinoraFullBranchRestoreTransaction(
         material,
-        withTransactionCryptoSeams(
+        withRuntimeReadbackMismatch(
           rollbackDependencies,
         ),
       );
@@ -732,7 +1085,7 @@ export async function runFinoraFullBranchRestoreUsbTargetAdapterSelfTest():
     ) {
       assert.equal(
         rollbackResult.errorCode,
-        "TARGET_AUTH_WRITE_FAILED",
+        "TARGET_RUNTIME_AUTHORITY_READBACK_FAILED",
       );
     }
 
@@ -746,6 +1099,13 @@ export async function runFinoraFullBranchRestoreUsbTargetAdapterSelfTest():
     const rolledBackAuth =
       await readFile(
         authPath(
+          rollbackRoot,
+        ),
+      );
+
+    const rolledBackRuntimeAuthority =
+      await readFile(
+        runtimeAuthorityPath(
           rollbackRoot,
         ),
       );
@@ -764,8 +1124,15 @@ export async function runFinoraFullBranchRestoreUsbTargetAdapterSelfTest():
       true,
     );
 
+    assert.equal(
+      rolledBackRuntimeAuthority.equals(
+        predecessor.runtimeAuthorityBytes,
+      ),
+      true,
+    );
+
     console.log(
-      "PASS: existing target rollback restores exact predecessor storage/auth bytes",
+      "PASS: existing target Runtime failure restores exact predecessor storage/auth/runtime bytes",
     );
 
     // ========================================================
@@ -793,10 +1160,6 @@ export async function runFinoraFullBranchRestoreUsbTargetAdapterSelfTest():
           portableStore:
             createFakePortableStore(
               blankRoot,
-              {
-                failAfterWrite:
-                  true,
-              },
             ),
         },
       );
@@ -804,7 +1167,7 @@ export async function runFinoraFullBranchRestoreUsbTargetAdapterSelfTest():
     const blankResult =
       await executeFinoraFullBranchRestoreTransaction(
         material,
-        withTransactionCryptoSeams(
+        withRuntimeReadbackMismatch(
           blankDependencies,
         ),
       );
@@ -819,7 +1182,7 @@ export async function runFinoraFullBranchRestoreUsbTargetAdapterSelfTest():
     ) {
       assert.equal(
         blankResult.errorCode,
-        "TARGET_AUTH_WRITE_FAILED",
+        "TARGET_RUNTIME_AUTHORITY_READBACK_FAILED",
       );
     }
 
@@ -841,8 +1204,17 @@ export async function runFinoraFullBranchRestoreUsbTargetAdapterSelfTest():
       false,
     );
 
+    assert.equal(
+      await fileExists(
+        runtimeAuthorityPath(
+          blankRoot,
+        ),
+      ),
+      false,
+    );
+
     console.log(
-      "PASS: blank replacement USB rollback removes newly created storage/auth files",
+      "PASS: blank replacement USB Runtime failure removes newly created storage/auth/runtime files",
     );
 
     // ========================================================

@@ -68,6 +68,15 @@ export interface FinoraFullBranchRestoreTransactionMaterial {
   portableAuthEnvelopeSerialized:
     string;
 
+  /**
+   * Transitional optionality exists only while the native target
+   * adapter / transport wiring lands in the next bounded phase.
+   *
+   * Execution remains fail-closed when this value is absent.
+   */
+  runtimeAuthorityPackageSerialized?:
+    string;
+
   snapshot:
     FinoraFullBranchRealSnapshotV1;
 
@@ -138,6 +147,33 @@ export interface FinoraFullBranchRestoreTransactionDependencies {
     ) =>
       Promise<void>;
 
+  /**
+   * Runtime Authority target seams are temporarily optional at the
+   * TypeScript boundary so P5G3C2 can land before the P5G3C3 native
+   * USB adapter wiring. Transaction execution requires all three.
+   */
+  readTargetRuntimeAuthority?:
+    () =>
+      Promise<
+        string |
+        null
+      >;
+
+  writeTargetRuntimeAuthority?:
+    (
+      serialized:
+        string,
+    ) =>
+      Promise<void>;
+
+  rollbackTargetRuntimeAuthority?:
+    (
+      previous:
+        string |
+        null,
+    ) =>
+      Promise<void>;
+
   parsePortableAuth?:
     (
       serialized:
@@ -163,6 +199,8 @@ export type FinoraFullBranchRestoreTransactionErrorCode =
   | "TARGET_STORAGE_READBACK_FAILED"
   | "TARGET_AUTH_WRITE_FAILED"
   | "TARGET_AUTH_READBACK_FAILED"
+  | "TARGET_RUNTIME_AUTHORITY_WRITE_FAILED"
+  | "TARGET_RUNTIME_AUTHORITY_READBACK_FAILED"
   | "ROLLBACK_FAILED";
 
 export type FinoraFullBranchRestoreTransactionResult =
@@ -277,6 +315,9 @@ function materialLooksValid(
     validText(
       material.portableAuthEnvelopeSerialized,
     ) &&
+    validText(
+      material.runtimeAuthorityPackageSerialized,
+    ) &&
     Number.isSafeInteger(
       material.snapshotRecordCount,
     ) &&
@@ -342,14 +383,41 @@ async function rollbackMutations(
     boolean,
   authMutated:
     boolean,
+  runtimeAuthorityMutated:
+    boolean,
   storageRollbackToken:
     unknown,
   previousAuth:
     FinoraPortableBranchAuthEnvelopeV1 |
     null,
+  previousRuntimeAuthority:
+    string |
+    null,
 ): Promise<boolean> {
   let rollbackSucceeded =
     true;
+
+  if (
+    runtimeAuthorityMutated
+  ) {
+    if (
+      !dependencies.rollbackTargetRuntimeAuthority
+    ) {
+      rollbackSucceeded =
+        false;
+    }
+    else {
+      try {
+        await dependencies.rollbackTargetRuntimeAuthority(
+          previousRuntimeAuthority,
+        );
+      }
+      catch {
+        rollbackSucceeded =
+          false;
+      }
+    }
+  }
 
   if (
     authMutated
@@ -413,6 +481,43 @@ export async function executeFinoraFullBranchRestoreTransaction(
     dependencies.serializePortableAuth ??
     serializeFinoraPortableBranchAuth;
 
+  const runtimeAuthorityPackageSerialized =
+    material.runtimeAuthorityPackageSerialized;
+
+  if (
+    !validText(
+      runtimeAuthorityPackageSerialized,
+    )
+  ) {
+    return failure(
+      "INVALID_MATERIAL",
+      "FINORA Full Branch restore Runtime Authority material is missing.",
+    );
+  }
+
+  const readTargetRuntimeAuthority =
+    dependencies.readTargetRuntimeAuthority;
+
+  const writeTargetRuntimeAuthority =
+    dependencies.writeTargetRuntimeAuthority;
+
+  const rollbackTargetRuntimeAuthority =
+    dependencies.rollbackTargetRuntimeAuthority;
+
+  if (
+    typeof readTargetRuntimeAuthority !==
+      "function" ||
+    typeof writeTargetRuntimeAuthority !==
+      "function" ||
+    typeof rollbackTargetRuntimeAuthority !==
+      "function"
+  ) {
+    return failure(
+      "TARGET_CAPTURE_FAILED",
+      "FINORA Runtime Authority target transaction dependencies are unavailable.",
+    );
+  }
+
   let restoredEnvelope:
     FinoraPortableBranchAuthEnvelopeV1;
 
@@ -436,14 +541,20 @@ export async function executeFinoraFullBranchRestoreTransaction(
     FinoraPortableBranchAuthEnvelopeV1 |
     null;
 
+  let previousRuntimeAuthority:
+    string |
+    null;
+
   try {
     [
       capturedStorage,
       previousAuth,
+      previousRuntimeAuthority,
     ] =
       await Promise.all([
         dependencies.captureTargetStorage(),
         dependencies.readTargetPortableAuth(),
+        readTargetRuntimeAuthority(),
       ]);
   }
   catch {
@@ -493,6 +604,9 @@ export async function executeFinoraFullBranchRestoreTransaction(
   let authMutated =
     false;
 
+  let runtimeAuthorityMutated =
+    false;
+
   // ----------------------------------------------------------
   // STORAGE WRITE
   // ----------------------------------------------------------
@@ -515,8 +629,10 @@ export async function executeFinoraFullBranchRestoreTransaction(
         dependencies,
         storageMutated,
         authMutated,
+        runtimeAuthorityMutated,
         capturedStorage.rollbackToken,
         previousAuth,
+        previousRuntimeAuthority,
       );
 
     return rolledBack
@@ -547,8 +663,10 @@ export async function executeFinoraFullBranchRestoreTransaction(
         dependencies,
         storageMutated,
         authMutated,
+        runtimeAuthorityMutated,
         capturedStorage.rollbackToken,
         previousAuth,
+        previousRuntimeAuthority,
       );
 
     return rolledBack
@@ -589,8 +707,10 @@ export async function executeFinoraFullBranchRestoreTransaction(
         dependencies,
         storageMutated,
         authMutated,
+        runtimeAuthorityMutated,
         capturedStorage.rollbackToken,
         previousAuth,
+        previousRuntimeAuthority,
       );
 
     return rolledBack
@@ -621,8 +741,10 @@ export async function executeFinoraFullBranchRestoreTransaction(
         dependencies,
         storageMutated,
         authMutated,
+        runtimeAuthorityMutated,
         capturedStorage.rollbackToken,
         previousAuth,
+        previousRuntimeAuthority,
       );
 
     return rolledBack
@@ -657,8 +779,10 @@ export async function executeFinoraFullBranchRestoreTransaction(
         dependencies,
         storageMutated,
         authMutated,
+        runtimeAuthorityMutated,
         capturedStorage.rollbackToken,
         previousAuth,
+        previousRuntimeAuthority,
       );
 
     return rolledBack
@@ -690,8 +814,10 @@ export async function executeFinoraFullBranchRestoreTransaction(
         dependencies,
         storageMutated,
         authMutated,
+        runtimeAuthorityMutated,
         capturedStorage.rollbackToken,
         previousAuth,
+        previousRuntimeAuthority,
       );
 
     return rolledBack
@@ -730,8 +856,10 @@ export async function executeFinoraFullBranchRestoreTransaction(
         dependencies,
         storageMutated,
         authMutated,
+        runtimeAuthorityMutated,
         capturedStorage.rollbackToken,
         previousAuth,
+        previousRuntimeAuthority,
       );
 
     return rolledBack
@@ -742,6 +870,106 @@ export async function executeFinoraFullBranchRestoreTransaction(
       : failure(
           "ROLLBACK_FAILED",
           "FINORA Portable Auth verification failed and predecessor rollback could not be completed.",
+        );
+  }
+
+  // ----------------------------------------------------------
+  // RUNTIME AUTHORITY WRITE
+  // ----------------------------------------------------------
+
+  try {
+    /*
+     * Same mutation rule as storage and Portable Auth:
+     * persistence may mutate and then report failure.
+     */
+    runtimeAuthorityMutated =
+      true;
+
+    await writeTargetRuntimeAuthority(
+      runtimeAuthorityPackageSerialized,
+    );
+  }
+  catch {
+    const rolledBack =
+      await rollbackMutations(
+        dependencies,
+        storageMutated,
+        authMutated,
+        runtimeAuthorityMutated,
+        capturedStorage.rollbackToken,
+        previousAuth,
+        previousRuntimeAuthority,
+      );
+
+    return rolledBack
+      ? failure(
+          "TARGET_RUNTIME_AUTHORITY_WRITE_FAILED",
+          "FINORA could not write the restored Runtime Authority.",
+        )
+      : failure(
+          "ROLLBACK_FAILED",
+          "FINORA Runtime Authority write failed and predecessor rollback could not be completed.",
+        );
+  }
+
+  // ----------------------------------------------------------
+  // RUNTIME AUTHORITY READBACK
+  // ----------------------------------------------------------
+
+  let runtimeAuthorityReadback:
+    string |
+    null;
+
+  try {
+    runtimeAuthorityReadback =
+      await readTargetRuntimeAuthority();
+  }
+  catch {
+    const rolledBack =
+      await rollbackMutations(
+        dependencies,
+        storageMutated,
+        authMutated,
+        runtimeAuthorityMutated,
+        capturedStorage.rollbackToken,
+        previousAuth,
+        previousRuntimeAuthority,
+      );
+
+    return rolledBack
+      ? failure(
+          "TARGET_RUNTIME_AUTHORITY_READBACK_FAILED",
+          "FINORA could not read back restored Runtime Authority.",
+        )
+      : failure(
+          "ROLLBACK_FAILED",
+          "FINORA Runtime Authority readback failed and predecessor rollback could not be completed.",
+        );
+  }
+
+  if (
+    runtimeAuthorityReadback !==
+      runtimeAuthorityPackageSerialized
+  ) {
+    const rolledBack =
+      await rollbackMutations(
+        dependencies,
+        storageMutated,
+        authMutated,
+        runtimeAuthorityMutated,
+        capturedStorage.rollbackToken,
+        previousAuth,
+        previousRuntimeAuthority,
+      );
+
+    return rolledBack
+      ? failure(
+          "TARGET_RUNTIME_AUTHORITY_READBACK_FAILED",
+          "FINORA restored Runtime Authority failed exact readback verification.",
+        )
+      : failure(
+          "ROLLBACK_FAILED",
+          "FINORA Runtime Authority verification failed and predecessor rollback could not be completed.",
         );
   }
 

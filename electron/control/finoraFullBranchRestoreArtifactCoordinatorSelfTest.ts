@@ -1,6 +1,6 @@
 // ============================================================
 // FINORA ENTERPRISE OS
-// FULL BRANCH BACKUP V2
+// FULL BRANCH BACKUP V3
 // RESTORE ARTIFACT COORDINATOR SELF-TEST
 // ============================================================
 
@@ -11,14 +11,15 @@ import {
 } from "node:buffer";
 
 import {
-  createFinoraFullBranchBackupFileV2,
+  createFinoraFullBranchBackupFileV3,
   createFinoraFullBranchRealSnapshotV1,
-  serializeFinoraFullBranchBackupFileV2,
+  serializeFinoraFullBranchBackupFileV3,
   serializeFinoraFullBranchRealSnapshotV1,
 } from "./finoraFullBranchBackupContract.js";
 
 import {
   encryptFinoraFullBranchRealSnapshotV2,
+  encryptFinoraFullBranchRuntimeAuthorityV2,
 } from "./finoraFullBranchBackupCrypto.js";
 
 import {
@@ -178,7 +179,118 @@ function portableAuthDependency(
       authGeneration:
         override?.authGeneration ??
         2,
+
+      portableAuthFingerprint:
+        "PORTABLE-AUTH-FINGERPRINT-SELFTEST",
+
+      branchCertificationPublicKey:
+        {} as never,
     };
+  };
+}
+
+function runtimeAuthorityDependencies(
+  override?:
+    Partial<{
+      ownerId:
+        string;
+
+      businessId:
+        string;
+
+      branchId:
+        string;
+
+      storageMode:
+        "LOCAL" | "USB";
+
+      authGeneration:
+        number;
+
+      dataContext:
+        "REAL" | "DEMO";
+
+      demoId:
+        string | null;
+
+      portableAuthFingerprint:
+        string;
+
+      signatureValid:
+        boolean;
+
+      parseFails:
+        boolean;
+    }>,
+): Pick<
+  FinoraFullBranchRestoreArtifactDependencies,
+  "parseRuntimeAuthority" |
+  "verifyRuntimeAuthorityPackage"
+> {
+  return {
+    parseRuntimeAuthority:
+      (
+        serialized,
+      ) => {
+        assert.equal(
+          serialized,
+          JSON.stringify({
+            signed:
+              "RUNTIME-AUTHORITY-RESTORE-SELFTEST",
+          }),
+        );
+
+        if (
+          override?.parseFails
+        ) {
+          throw new Error(
+            "Synthetic Runtime Authority parse failure.",
+          );
+        }
+
+        return {
+          payload: {
+            ownerId:
+              override?.ownerId ??
+              scope.ownerId,
+
+            businessId:
+              override?.businessId ??
+              scope.businessId,
+
+            branchId:
+              override?.branchId ??
+              scope.branchId,
+
+            storageMode:
+              override?.storageMode ??
+              "USB",
+
+            authGeneration:
+              override?.authGeneration ??
+              2,
+
+            dataContext:
+              override?.dataContext ??
+              "REAL",
+
+            demoId:
+              override?.demoId ===
+                undefined
+                ? null
+                : override.demoId,
+
+            portableAuthFingerprint:
+              override?.portableAuthFingerprint ??
+              "PORTABLE-AUTH-FINGERPRINT-SELFTEST",
+          },
+        } as never;
+      },
+
+    verifyRuntimeAuthorityPackage:
+      () =>
+        override?.signatureValid ??
+        true,
   };
 }
 
@@ -217,8 +329,21 @@ async function createSerializedBackup():
       binding,
     });
 
+  const encryptedRuntimeAuthority =
+    await encryptFinoraFullBranchRuntimeAuthorityV2({
+      serializedRuntimeAuthority:
+        JSON.stringify({
+          signed:
+            "RUNTIME-AUTHORITY-RESTORE-SELFTEST",
+        }),
+
+      password,
+      securityCode,
+      binding,
+    });
+
   const backup =
-    createFinoraFullBranchBackupFileV2({
+    createFinoraFullBranchBackupFileV3({
       backupId:
         binding.backupId,
 
@@ -237,11 +362,14 @@ async function createSerializedBackup():
       portableAuthEnvelopeSerialized:
         "PORTABLE-AUTH-ENCRYPTED-SELFTEST",
 
+      encryptedRuntimeAuthority:
+        encryptedRuntimeAuthority,
+
       realSnapshot:
         encryptedSnapshot,
     });
 
-  return serializeFinoraFullBranchBackupFileV2(
+  return serializeFinoraFullBranchBackupFileV3(
     backup,
   );
 }
@@ -260,6 +388,8 @@ export async function runFinoraFullBranchRestoreArtifactCoordinatorSelfTest():
         authenticatedAuthority,
       },
       {
+        ...runtimeAuthorityDependencies(),
+
         authenticatePortableAuth:
           portableAuthDependency(),
       },
@@ -298,6 +428,14 @@ export async function runFinoraFullBranchRestoreArtifactCoordinatorSelfTest():
       "PORTABLE-AUTH-ENCRYPTED-SELFTEST",
     );
 
+    assert.equal(
+      success.data.runtimeAuthorityPackageSerialized,
+      JSON.stringify({
+        signed:
+          "RUNTIME-AUTHORITY-RESTORE-SELFTEST",
+      }),
+    );
+
     assert.match(
       success.data.exactRealDigestSha256,
       /^[A-F0-9]{64}$/,
@@ -305,7 +443,109 @@ export async function runFinoraFullBranchRestoreArtifactCoordinatorSelfTest():
   }
 
   console.log(
-    "PASS: Full V2 artifact authenticates and decrypts exact REAL snapshot",
+    "PASS: Full V3 artifact authenticates Portable Auth, signed Runtime Authority and exact REAL snapshot",
+  );
+
+  let runtimeLessV2ParserCalled =
+    false;
+
+  const runtimeLessV2 =
+    await prepareFinoraFullBranchRestoreArtifact(
+      {
+        password,
+        securityCode,
+
+        serializedBackup:
+          JSON.stringify({
+            format:
+              "FINORA_FULL_BRANCH_BACKUP",
+
+            schemaVersion:
+              2,
+
+            backupId:
+              "LEGACY-RUNTIME-LESS-V2",
+
+            createdAt:
+              "2026-01-01T00:00:00.000Z",
+
+            branchScope: {
+              ownerId:
+                "OWNER-A",
+
+              businessId:
+                "BUSINESS-A",
+
+              branchId:
+                "BRANCH-A",
+            },
+
+            dataContext:
+              "REAL",
+
+            sourceStorageMode:
+              "USB",
+
+            authGeneration:
+              1,
+
+            portableAuthEnvelopeSerialized:
+              "LEGACY-PORTABLE-AUTH",
+
+            portableAuthEnvelopeSha256:
+              "A".repeat(
+                64,
+              ),
+
+            realSnapshot: {},
+          }),
+
+        authenticatedAuthority,
+      },
+      {
+        ...runtimeAuthorityDependencies(),
+
+        parseBackup:
+          () => {
+            runtimeLessV2ParserCalled =
+              true;
+
+            throw new Error(
+              "Runtime-less V2 must be rejected before V3 parsing.",
+            );
+          },
+
+        authenticatePortableAuth:
+          portableAuthDependency(),
+      },
+    );
+
+  assert.equal(
+    runtimeLessV2.success,
+    false,
+  );
+
+  assert.equal(
+    runtimeLessV2ParserCalled,
+    false,
+  );
+
+  if (
+    !runtimeLessV2.success
+  ) {
+    assert.equal(
+      runtimeLessV2.errorCode,
+      "BACKUP_FORMAT_INVALID",
+    );
+
+    assert.match(
+      runtimeLessV2.error,
+      /legacy\/incomplete backup.*Runtime Authority/i,
+    );
+  }
+
+  console.log(
+    "PASS: historical Runtime-less Full V2 is explicitly rejected before V3 artifact parsing",
   );
 
   const legacyV1 =
@@ -326,6 +566,8 @@ export async function runFinoraFullBranchRestoreArtifactCoordinatorSelfTest():
         authenticatedAuthority,
       },
       {
+        ...runtimeAuthorityDependencies(),
+
         authenticatePortableAuth:
           portableAuthDependency(),
       },
@@ -368,6 +610,8 @@ export async function runFinoraFullBranchRestoreArtifactCoordinatorSelfTest():
         },
       },
       {
+        ...runtimeAuthorityDependencies(),
+
         authenticatePortableAuth:
           portableAuthDependency(),
       },
@@ -406,6 +650,8 @@ export async function runFinoraFullBranchRestoreArtifactCoordinatorSelfTest():
         },
       },
       {
+        ...runtimeAuthorityDependencies(),
+
         authenticatePortableAuth:
           portableAuthDependency(),
       },
@@ -444,6 +690,8 @@ export async function runFinoraFullBranchRestoreArtifactCoordinatorSelfTest():
         },
       },
       {
+        ...runtimeAuthorityDependencies(),
+
         authenticatePortableAuth:
           portableAuthDependency(),
       },
@@ -476,6 +724,8 @@ export async function runFinoraFullBranchRestoreArtifactCoordinatorSelfTest():
         authenticatedAuthority,
       },
       {
+        ...runtimeAuthorityDependencies(),
+
         authenticatePortableAuth:
           portableAuthDependency({
             branchId:
@@ -511,6 +761,8 @@ export async function runFinoraFullBranchRestoreArtifactCoordinatorSelfTest():
         authenticatedAuthority,
       },
       {
+        ...runtimeAuthorityDependencies(),
+
         authenticatePortableAuth:
           async () => {
             throw new Error(
@@ -549,6 +801,8 @@ export async function runFinoraFullBranchRestoreArtifactCoordinatorSelfTest():
         authenticatedAuthority,
       },
       {
+        ...runtimeAuthorityDependencies(),
+
         authenticatePortableAuth:
           async () => ({
             branchScope:
@@ -559,6 +813,12 @@ export async function runFinoraFullBranchRestoreArtifactCoordinatorSelfTest():
 
             authGeneration:
               2,
+
+            portableAuthFingerprint:
+              "FULL-RESTORE-WRONG-PASSWORD-FINGERPRINT",
+
+            branchCertificationPublicKey:
+              {} as never,
           }),
       },
     );
@@ -620,6 +880,8 @@ export async function runFinoraFullBranchRestoreArtifactCoordinatorSelfTest():
         authenticatedAuthority,
       },
       {
+        ...runtimeAuthorityDependencies(),
+
         authenticatePortableAuth:
           portableAuthDependency(),
       },
@@ -641,6 +903,290 @@ export async function runFinoraFullBranchRestoreArtifactCoordinatorSelfTest():
 
   console.log(
     "PASS: encrypted REAL snapshot tamper fails closed",
+  );
+
+  const malformedRuntime =
+    await prepareFinoraFullBranchRestoreArtifact(
+      {
+        password,
+        securityCode,
+        serializedBackup,
+        authenticatedAuthority,
+      },
+      {
+        ...runtimeAuthorityDependencies({
+          parseFails:
+            true,
+        }),
+
+        authenticatePortableAuth:
+          portableAuthDependency(),
+      },
+    );
+
+  assert.equal(
+    malformedRuntime.success,
+    false,
+  );
+
+  if (
+    !malformedRuntime.success
+  ) {
+    assert.equal(
+      malformedRuntime.errorCode,
+      "BACKUP_FORMAT_INVALID",
+    );
+  }
+
+  console.log(
+    "PASS: malformed decrypted Runtime Authority fails closed",
+  );
+
+  const invalidRuntimeSignature =
+    await prepareFinoraFullBranchRestoreArtifact(
+      {
+        password,
+        securityCode,
+        serializedBackup,
+        authenticatedAuthority,
+      },
+      {
+        ...runtimeAuthorityDependencies({
+          signatureValid:
+            false,
+        }),
+
+        authenticatePortableAuth:
+          portableAuthDependency(),
+      },
+    );
+
+  assert.equal(
+    invalidRuntimeSignature.success,
+    false,
+  );
+
+  if (
+    !invalidRuntimeSignature.success
+  ) {
+    assert.equal(
+      invalidRuntimeSignature.errorCode,
+      "PORTABLE_AUTH_AUTHORITY_MISMATCH",
+    );
+  }
+
+  console.log(
+    "PASS: invalid Runtime Authority Branch Certification signature fails closed",
+  );
+
+  const runtimeScopeMismatch =
+    await prepareFinoraFullBranchRestoreArtifact(
+      {
+        password,
+        securityCode,
+        serializedBackup,
+        authenticatedAuthority,
+      },
+      {
+        ...runtimeAuthorityDependencies({
+          branchId:
+            "BRANCH-B",
+        }),
+
+        authenticatePortableAuth:
+          portableAuthDependency(),
+      },
+    );
+
+  assert.equal(
+    runtimeScopeMismatch.success,
+    false,
+  );
+
+  console.log(
+    "PASS: Runtime Authority exact branch-scope mismatch fails closed",
+  );
+
+  const runtimeModeMismatch =
+    await prepareFinoraFullBranchRestoreArtifact(
+      {
+        password,
+        securityCode,
+        serializedBackup,
+        authenticatedAuthority,
+      },
+      {
+        ...runtimeAuthorityDependencies({
+          storageMode:
+            "LOCAL",
+        }),
+
+        authenticatePortableAuth:
+          portableAuthDependency(),
+      },
+    );
+
+  assert.equal(
+    runtimeModeMismatch.success,
+    false,
+  );
+
+  console.log(
+    "PASS: Runtime Authority storageMode mismatch fails closed",
+  );
+
+  const runtimeGenerationMismatch =
+    await prepareFinoraFullBranchRestoreArtifact(
+      {
+        password,
+        securityCode,
+        serializedBackup,
+        authenticatedAuthority,
+      },
+      {
+        ...runtimeAuthorityDependencies({
+          authGeneration:
+            3,
+        }),
+
+        authenticatePortableAuth:
+          portableAuthDependency(),
+      },
+    );
+
+  assert.equal(
+    runtimeGenerationMismatch.success,
+    false,
+  );
+
+  console.log(
+    "PASS: Runtime Authority authGeneration mismatch fails closed",
+  );
+
+  const runtimeFingerprintMismatch =
+    await prepareFinoraFullBranchRestoreArtifact(
+      {
+        password,
+        securityCode,
+        serializedBackup,
+        authenticatedAuthority,
+      },
+      {
+        ...runtimeAuthorityDependencies({
+          portableAuthFingerprint:
+            "WRONG-PORTABLE-AUTH-FINGERPRINT",
+        }),
+
+        authenticatePortableAuth:
+          portableAuthDependency(),
+      },
+    );
+
+  assert.equal(
+    runtimeFingerprintMismatch.success,
+    false,
+  );
+
+  console.log(
+    "PASS: Runtime Authority Portable Auth fingerprint mismatch fails closed",
+  );
+
+  const runtimeDemoContext =
+    await prepareFinoraFullBranchRestoreArtifact(
+      {
+        password,
+        securityCode,
+        serializedBackup,
+        authenticatedAuthority,
+      },
+      {
+        ...runtimeAuthorityDependencies({
+          dataContext:
+            "DEMO",
+
+          demoId:
+            "DEMO-1",
+        }),
+
+        authenticatePortableAuth:
+          portableAuthDependency(),
+      },
+    );
+
+  assert.equal(
+    runtimeDemoContext.success,
+    false,
+  );
+
+  console.log(
+    "PASS: DEMO Runtime Authority cannot enter REAL Full Restore",
+  );
+
+  const runtimeTamperObject =
+    JSON.parse(
+      serializedBackup,
+    ) as {
+      encryptedRuntimeAuthority: {
+        ciphertext:
+          string;
+      };
+    };
+
+  const originalRuntimeCiphertext =
+    runtimeTamperObject
+      .encryptedRuntimeAuthority
+      .ciphertext;
+
+  runtimeTamperObject
+    .encryptedRuntimeAuthority
+    .ciphertext =
+      (
+        originalRuntimeCiphertext[0] ===
+          "A"
+          ? "B"
+          : "A"
+      ) +
+      originalRuntimeCiphertext.slice(
+        1,
+      );
+
+  const runtimeCiphertextTamper =
+    await prepareFinoraFullBranchRestoreArtifact(
+      {
+        password,
+        securityCode,
+
+        serializedBackup:
+          JSON.stringify(
+            runtimeTamperObject,
+          ),
+
+        authenticatedAuthority,
+      },
+      {
+        ...runtimeAuthorityDependencies(),
+
+        authenticatePortableAuth:
+          portableAuthDependency(),
+      },
+    );
+
+  assert.equal(
+    runtimeCiphertextTamper.success,
+    false,
+  );
+
+  if (
+    !runtimeCiphertextTamper.success
+  ) {
+    assert.equal(
+      runtimeCiphertextTamper.errorCode,
+      "PORTABLE_AUTH_AUTHENTICATION_FAILED",
+    );
+  }
+
+  console.log(
+    "PASS: encrypted Runtime Authority ciphertext tamper fails closed",
   );
 
   console.log(

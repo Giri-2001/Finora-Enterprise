@@ -27,12 +27,14 @@ import {
 import type {
   FinoraFullBranchBackupBindingV2,
   FinoraFullBranchBackupEncryptedRealSnapshotV2,
+  FinoraFullBranchBackupEncryptedRuntimeAuthorityV2,
   FinoraFullBranchBackupKdfV2,
 } from "./finoraFullBranchBackupContract.js";
 
 import {
   buildFinoraFullBranchBackupAadV2,
   validateFinoraFullBranchBackupEncryptedRealSnapshotV2,
+  validateFinoraFullBranchBackupEncryptedRuntimeAuthorityV2,
 } from "./finoraFullBranchBackupContract.js";
 
 const SCRYPT_N =
@@ -503,6 +505,345 @@ export async function decryptFinoraFullBranchRealSnapshotV2(
     throw new FinoraFullBranchBackupCryptoError(
       "AUTHENTICATION_FAILED",
       "FINORA Full Branch Backup authentication failed.",
+    );
+  }
+  finally {
+    passwordFactor.fill(
+      0,
+    );
+
+    securityFactor.fill(
+      0,
+    );
+
+    key.fill(
+      0,
+    );
+
+    passwordSalt.fill(
+      0,
+    );
+
+    securitySalt.fill(
+      0,
+    );
+  }
+}
+
+// ============================================================
+// ENCRYPTED FRESH-DEVICE RUNTIME AUTHORITY
+//
+// IMPORTANT:
+//
+// - Uses the same Password + Security Code factor policy as the
+//   encrypted REAL snapshot.
+// - Uses independent salts and IV.
+// - Uses a distinct AAD domain so REAL snapshot ciphertext and
+//   Runtime Authority ciphertext cannot be interchanged.
+// ============================================================
+
+const FINORA_FULL_BRANCH_RUNTIME_AUTHORITY_AAD_DOMAIN =
+  "FINORA_FULL_BRANCH_RUNTIME_AUTHORITY_V2";
+
+function buildFinoraFullBranchRuntimeAuthorityAadV2(
+  binding:
+    FinoraFullBranchBackupBindingV2,
+): string {
+  return (
+    FINORA_FULL_BRANCH_RUNTIME_AUTHORITY_AAD_DOMAIN +
+    "\u0000" +
+    buildFinoraFullBranchBackupAadV2(
+      binding,
+    )
+  );
+}
+
+export async function encryptFinoraFullBranchRuntimeAuthorityV2(
+  input: {
+    serializedRuntimeAuthority:
+      string;
+
+    password:
+      string;
+
+    securityCode:
+      string;
+
+    binding:
+      FinoraFullBranchBackupBindingV2;
+  },
+): Promise<FinoraFullBranchBackupEncryptedRuntimeAuthorityV2> {
+  assertSecret(
+    input.password,
+    "Password",
+  );
+
+  assertSecret(
+    input.securityCode,
+    "Security Code",
+  );
+
+  if (
+    typeof input.serializedRuntimeAuthority !==
+      "string" ||
+    input.serializedRuntimeAuthority.length ===
+      0
+  ) {
+    throw new FinoraFullBranchBackupCryptoError(
+      "INVALID_INPUT",
+      "FINORA Runtime Authority is empty.",
+    );
+  }
+
+  const passwordSalt =
+    randomBytes(
+      SALT_BYTES,
+    );
+
+  const securitySalt =
+    randomBytes(
+      SALT_BYTES,
+    );
+
+  const iv =
+    randomBytes(
+      IV_BYTES,
+    );
+
+  const [
+    passwordFactor,
+    securityFactor,
+  ] =
+    await Promise.all([
+      deriveFactor(
+        input.password,
+        passwordSalt,
+      ),
+
+      deriveFactor(
+        input.securityCode,
+        securitySalt,
+      ),
+    ]);
+
+  const key =
+    buildCombinedKey(
+      passwordFactor,
+      securityFactor,
+    );
+
+  try {
+    const cipher =
+      createCipheriv(
+        "aes-256-gcm",
+        key,
+        iv,
+        {
+          authTagLength:
+            AUTH_TAG_BYTES,
+        },
+      );
+
+    cipher.setAAD(
+      Buffer.from(
+        buildFinoraFullBranchRuntimeAuthorityAadV2(
+          input.binding,
+        ),
+        "utf8",
+      ),
+    );
+
+    const ciphertext =
+      Buffer.concat([
+        cipher.update(
+          input.serializedRuntimeAuthority,
+          "utf8",
+        ),
+
+        cipher.final(),
+      ]);
+
+    const authTag =
+      cipher.getAuthTag();
+
+    const output:
+      FinoraFullBranchBackupEncryptedRuntimeAuthorityV2 =
+      {
+        purpose:
+          "RUNTIME_AUTHORITY",
+
+        algorithm:
+          "AES-256-GCM",
+
+        passwordKdf:
+          createKdf(
+            passwordSalt,
+          ),
+
+        securityKdf:
+          createKdf(
+            securitySalt,
+          ),
+
+        iv:
+          iv.toString(
+            "base64",
+          ),
+
+        authTag:
+          authTag.toString(
+            "base64",
+          ),
+
+        ciphertext:
+          ciphertext.toString(
+            "base64",
+          ),
+      };
+
+    validateFinoraFullBranchBackupEncryptedRuntimeAuthorityV2(
+      output,
+    );
+
+    return output;
+  }
+  finally {
+    passwordFactor.fill(
+      0,
+    );
+
+    securityFactor.fill(
+      0,
+    );
+
+    key.fill(
+      0,
+    );
+
+    passwordSalt.fill(
+      0,
+    );
+
+    securitySalt.fill(
+      0,
+    );
+  }
+}
+
+export async function decryptFinoraFullBranchRuntimeAuthorityV2(
+  input: {
+    encryptedRuntimeAuthority:
+      FinoraFullBranchBackupEncryptedRuntimeAuthorityV2;
+
+    password:
+      string;
+
+    securityCode:
+      string;
+
+    binding:
+      FinoraFullBranchBackupBindingV2;
+  },
+): Promise<string> {
+  assertSecret(
+    input.password,
+    "Password",
+  );
+
+  assertSecret(
+    input.securityCode,
+    "Security Code",
+  );
+
+  validateFinoraFullBranchBackupEncryptedRuntimeAuthorityV2(
+    input.encryptedRuntimeAuthority,
+  );
+
+  const passwordSalt =
+    Buffer.from(
+      input.encryptedRuntimeAuthority.passwordKdf.salt,
+      "base64",
+    );
+
+  const securitySalt =
+    Buffer.from(
+      input.encryptedRuntimeAuthority.securityKdf.salt,
+      "base64",
+    );
+
+  const [
+    passwordFactor,
+    securityFactor,
+  ] =
+    await Promise.all([
+      deriveFactor(
+        input.password,
+        passwordSalt,
+      ),
+
+      deriveFactor(
+        input.securityCode,
+        securitySalt,
+      ),
+    ]);
+
+  const key =
+    buildCombinedKey(
+      passwordFactor,
+      securityFactor,
+    );
+
+  try {
+    const decipher =
+      createDecipheriv(
+        "aes-256-gcm",
+        key,
+        Buffer.from(
+          input.encryptedRuntimeAuthority.iv,
+          "base64",
+        ),
+        {
+          authTagLength:
+            AUTH_TAG_BYTES,
+        },
+      );
+
+    decipher.setAAD(
+      Buffer.from(
+        buildFinoraFullBranchRuntimeAuthorityAadV2(
+          input.binding,
+        ),
+        "utf8",
+      ),
+    );
+
+    decipher.setAuthTag(
+      Buffer.from(
+        input.encryptedRuntimeAuthority.authTag,
+        "base64",
+      ),
+    );
+
+    const plaintext =
+      Buffer.concat([
+        decipher.update(
+          Buffer.from(
+            input.encryptedRuntimeAuthority.ciphertext,
+            "base64",
+          ),
+        ),
+
+        decipher.final(),
+      ]);
+
+    return plaintext.toString(
+      "utf8",
+    );
+  }
+  catch {
+    throw new FinoraFullBranchBackupCryptoError(
+      "AUTHENTICATION_FAILED",
+      "FINORA Full Branch Backup Runtime Authority authentication failed.",
     );
   }
   finally {

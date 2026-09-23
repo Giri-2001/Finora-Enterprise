@@ -1,6 +1,6 @@
 // ============================================================
 // FINORA ENTERPRISE OS
-// FULL BRANCH BACKUP V2
+// FULL BRANCH BACKUP V3
 // RESTORE ARTIFACT AUTHENTICATION / DECRYPTION COORDINATOR
 // ============================================================
 //
@@ -16,7 +16,7 @@
 //
 // This coordinator then:
 //
-// 1. parses Full Branch Backup V2 only;
+// 1. parses Full Branch Backup V3 only;
 // 2. verifies outer scope/storage/generation;
 // 3. authenticates embedded Portable Branch Auth using
 //    Password + Security Code;
@@ -27,25 +27,52 @@
 // ============================================================
 
 import type {
-  FinoraFullBranchBackupFileV2,
+  FinoraFullBranchBackupFileV3,
   FinoraFullBranchBackupScopeV2,
   FinoraFullBranchBackupStorageMode,
   FinoraFullBranchRealSnapshotV1,
 } from "./finoraFullBranchBackupContract.js";
 
 import {
-  parseFinoraFullBranchBackupFileV2,
+  FINORA_FULL_BRANCH_BACKUP_LEGACY_RUNTIME_LESS_V2_MESSAGE,
+  isFinoraLegacyRuntimeLessFullBranchBackupV2Serialized,
+  parseFinoraFullBranchBackupFileV3,
   parseFinoraFullBranchRealSnapshotV1,
 } from "./finoraFullBranchBackupContract.js";
 
 import {
   decryptFinoraFullBranchRealSnapshotV2,
+  decryptFinoraFullBranchRuntimeAuthorityV2,
 } from "./finoraFullBranchBackupCrypto.js";
+
+import type {
+  FinoraBranchCertificationPublicKeyV1,
+} from "./finoraBranchCertificationContract.js";
+
+import {
+  toFinoraBranchCertificationPublicKey,
+} from "./finoraBranchCertificationCrypto.js";
+
+import {
+  createFinoraPortableBranchAuthFingerprint,
+} from "./finoraBranchDeviceTrustAuthority.js";
 
 import {
   parseFinoraPortableBranchAuth,
   decryptFinoraPortableBranchAuthEnvelopeV1,
 } from "./finoraPortableBranchAuthCrypto.js";
+
+import type {
+  FinoraPortableFreshDeviceRuntimeAuthorityPackageV1,
+} from "./finoraPortableFreshDeviceRuntimeAuthorityContract.js";
+
+import {
+  validateFinoraPortableFreshDeviceRuntimeAuthorityPackageV1,
+} from "./finoraPortableFreshDeviceRuntimeAuthorityContract.js";
+
+import {
+  verifyFinoraPortableFreshDeviceRuntimeAuthorityPackageV1,
+} from "./finoraPortableFreshDeviceRuntimeAuthorityCrypto.js";
 
 import {
   calculateFinoraFullBranchExactRealDigest,
@@ -89,6 +116,12 @@ export interface FinoraFullBranchRestorePortableAuthority {
 
   authGeneration:
     number;
+
+  portableAuthFingerprint:
+    string;
+
+  branchCertificationPublicKey:
+    FinoraBranchCertificationPublicKeyV1;
 }
 
 export interface FinoraFullBranchRestorePortableAuthenticationInput {
@@ -111,7 +144,7 @@ export interface FinoraFullBranchRestoreArtifactDependencies {
       serialized:
         string,
     ) =>
-      FinoraFullBranchBackupFileV2;
+      FinoraFullBranchBackupFileV3;
 
   authenticatePortableAuth?:
     (
@@ -121,6 +154,26 @@ export interface FinoraFullBranchRestoreArtifactDependencies {
       Promise<
         FinoraFullBranchRestorePortableAuthority
       >;
+
+  decryptRuntimeAuthority?:
+    typeof decryptFinoraFullBranchRuntimeAuthorityV2;
+
+  parseRuntimeAuthority?:
+    (
+      serialized:
+        string,
+    ) =>
+      FinoraPortableFreshDeviceRuntimeAuthorityPackageV1;
+
+  verifyRuntimeAuthorityPackage?:
+    (
+      packageValue:
+        unknown,
+
+      certificationPublicKey:
+        FinoraBranchCertificationPublicKeyV1,
+    ) =>
+      boolean;
 
   decryptRealSnapshot?:
     typeof decryptFinoraFullBranchRealSnapshotV2;
@@ -161,6 +214,9 @@ export interface FinoraFullBranchRestoreArtifactSuccess {
     number;
 
   portableAuthEnvelopeSerialized:
+    string;
+
+  runtimeAuthorityPackageSerialized:
     string;
 
   snapshot:
@@ -375,6 +431,34 @@ function sanitizeRequest(
   };
 }
 
+function parseRuntimeAuthorityDefault(
+  serialized:
+    string,
+): FinoraPortableFreshDeviceRuntimeAuthorityPackageV1 {
+  let parsed:
+    unknown;
+
+  try {
+    parsed =
+      JSON.parse(
+        serialized,
+      );
+  }
+  catch {
+    throw new Error(
+      "FINORA Runtime Authority JSON is invalid.",
+    );
+  }
+
+  validateFinoraPortableFreshDeviceRuntimeAuthorityPackageV1(
+    parsed,
+  );
+
+  return structuredClone(
+    parsed,
+  );
+}
+
 async function authenticatePortableAuthDefault(
   input:
     FinoraFullBranchRestorePortableAuthenticationInput,
@@ -397,6 +481,28 @@ async function authenticatePortableAuthDefault(
       },
     );
 
+  const branchCertificationKeyMaterial =
+    payload.branchCertificationKeyMaterial;
+
+  if (
+    branchCertificationKeyMaterial ===
+      undefined
+  ) {
+    throw new Error(
+      "FINORA migrated Branch Certification authority is required.",
+    );
+  }
+
+  const portableAuthFingerprint =
+    createFinoraPortableBranchAuthFingerprint(
+      envelope,
+    );
+
+  const branchCertificationPublicKey =
+    toFinoraBranchCertificationPublicKey(
+      branchCertificationKeyMaterial,
+    );
+
   return {
     branchScope: {
       ownerId:
@@ -414,6 +520,10 @@ async function authenticatePortableAuthDefault(
 
     authGeneration:
       payload.authGeneration,
+
+    portableAuthFingerprint,
+
+    branchCertificationPublicKey,
   };
 }
 
@@ -444,9 +554,20 @@ export async function prepareFinoraFullBranchRestoreArtifact(
     );
   }
 
+  if (
+    isFinoraLegacyRuntimeLessFullBranchBackupV2Serialized(
+      request.serializedBackup,
+    )
+  ) {
+    return failure(
+      "BACKUP_FORMAT_INVALID",
+      FINORA_FULL_BRANCH_BACKUP_LEGACY_RUNTIME_LESS_V2_MESSAGE,
+    );
+  }
+
   const parseBackup =
     dependencyOverrides.parseBackup ??
-    parseFinoraFullBranchBackupFileV2;
+    parseFinoraFullBranchBackupFileV3;
 
   const authenticatePortableAuth =
     dependencyOverrides.authenticatePortableAuth ??
@@ -460,8 +581,20 @@ export async function prepareFinoraFullBranchRestoreArtifact(
     dependencyOverrides.parseRealSnapshot ??
     parseFinoraFullBranchRealSnapshotV1;
 
+  const decryptRuntimeAuthority =
+    dependencyOverrides.decryptRuntimeAuthority ??
+    decryptFinoraFullBranchRuntimeAuthorityV2;
+
+  const parseRuntimeAuthority =
+    dependencyOverrides.parseRuntimeAuthority ??
+    parseRuntimeAuthorityDefault;
+
+  const verifyRuntimeAuthorityPackage =
+    dependencyOverrides.verifyRuntimeAuthorityPackage ??
+    verifyFinoraPortableFreshDeviceRuntimeAuthorityPackageV1;
+
   let backup:
-    FinoraFullBranchBackupFileV2;
+    FinoraFullBranchBackupFileV3;
 
   try {
     backup =
@@ -472,7 +605,7 @@ export async function prepareFinoraFullBranchRestoreArtifact(
   catch {
     return failure(
       "BACKUP_FORMAT_INVALID",
-      "The selected file is not a valid FINORA Full Branch Backup V2 artifact.",
+      "The selected file is not a valid FINORA Full Branch Backup V3 artifact.",
     );
   }
 
@@ -638,6 +771,101 @@ export async function prepareFinoraFullBranchRestoreArtifact(
     );
   }
 
+  let decryptedRuntimeAuthority:
+    string;
+
+  try {
+    decryptedRuntimeAuthority =
+      await decryptRuntimeAuthority({
+        encryptedRuntimeAuthority:
+          backup.encryptedRuntimeAuthority,
+
+        password:
+          request.password,
+
+        securityCode:
+          request.securityCode,
+
+        binding: {
+          backupId:
+            backup.backupId,
+
+          createdAt:
+            backup.createdAt,
+
+          branchScope:
+            backup.branchScope,
+
+          sourceStorageMode:
+            backup.sourceStorageMode,
+
+          authGeneration:
+            backup.authGeneration,
+        },
+      });
+  }
+  catch {
+    return failure(
+      "PORTABLE_AUTH_AUTHENTICATION_FAILED",
+      "FINORA could not authenticate or decrypt the signed Runtime Authority contained in this backup.",
+    );
+  }
+
+  let runtimeAuthority:
+    FinoraPortableFreshDeviceRuntimeAuthorityPackageV1;
+
+  try {
+    runtimeAuthority =
+      parseRuntimeAuthority(
+        decryptedRuntimeAuthority,
+      );
+  }
+  catch {
+    return failure(
+      "BACKUP_FORMAT_INVALID",
+      "FINORA Full Branch Backup contains an invalid signed Runtime Authority package.",
+    );
+  }
+
+  if (
+    !verifyRuntimeAuthorityPackage(
+      runtimeAuthority,
+      portableAuthority.branchCertificationPublicKey,
+    )
+  ) {
+    return failure(
+      "PORTABLE_AUTH_AUTHORITY_MISMATCH",
+      "FINORA Full Branch Backup Runtime Authority signature is invalid.",
+    );
+  }
+
+  const runtimePayload =
+    runtimeAuthority.payload;
+
+  if (
+    runtimePayload.dataContext !==
+      "REAL" ||
+    runtimePayload.demoId !==
+      null ||
+    runtimePayload.ownerId !==
+      backup.branchScope.ownerId ||
+    runtimePayload.businessId !==
+      backup.branchScope.businessId ||
+    runtimePayload.branchId !==
+      backup.branchScope.branchId ||
+    runtimePayload.storageMode !==
+      backup.sourceStorageMode ||
+    runtimePayload.authGeneration !==
+      backup.authGeneration ||
+    runtimePayload.portableAuthFingerprint !==
+      portableAuthority.portableAuthFingerprint
+  ) {
+    return failure(
+      "PORTABLE_AUTH_AUTHORITY_MISMATCH",
+      "FINORA Full Branch Backup Runtime Authority lineage is inconsistent.",
+    );
+  }
+
   return {
     success:
       true,
@@ -668,6 +896,9 @@ export async function prepareFinoraFullBranchRestoreArtifact(
 
       portableAuthEnvelopeSerialized:
         backup.portableAuthEnvelopeSerialized,
+
+      runtimeAuthorityPackageSerialized:
+        decryptedRuntimeAuthority,
 
       snapshot:
         structuredClone(
