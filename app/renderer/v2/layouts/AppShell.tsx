@@ -135,9 +135,11 @@ export default function AppShell({
                     ? "Reports"
                     : page === "notifications"
                       ? "Notification Center"
-                      : page === "wallet"
-                        ? "FINORA Wallet"
-                        : "Reception";
+                      : page === "settings"
+                        ? "Settings"
+                        : page === "wallet"
+                          ? "FINORA Wallet"
+                          : "Reception";
 
   // ==========================================================
   // RENDER

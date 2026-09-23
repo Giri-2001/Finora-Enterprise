@@ -1348,7 +1348,7 @@ export default function BusinessOwnerProfileSection() {
         aria-labelledby="finora-branch-backup-title"
         style={{
           marginTop:
-            "24px",
+            "8px",
 
           padding:
             "20px",
@@ -1358,6 +1358,9 @@ export default function BusinessOwnerProfileSection() {
 
           borderRadius:
             "12px",
+
+          background:
+            "var(--finora-theme-background-surface)",
         }}
       >
         <h3
@@ -1438,24 +1441,10 @@ export default function BusinessOwnerProfileSection() {
                   );
                 }}
                 aria-label="Current Password for Branch Backup"
+                className="finora-settings-form__input"
                 style={{
-                  width:
-                    "100%",
-
-                  boxSizing:
-                    "border-box",
-
-                  padding:
-                    "10px 42px 10px 12px",
-
-                  borderRadius:
-                    "8px",
-
-                  border:
-                    "1px solid rgba(148, 163, 184, 0.45)",
-
-                  font:
-                    "inherit",
+                  paddingRight:
+                    "42px",
                 }}
               />
 
@@ -1503,6 +1492,9 @@ export default function BusinessOwnerProfileSection() {
 
                   background:
                     "transparent",
+
+                  color:
+                    "var(--finora-theme-input-text)",
 
                   cursor:
                     "pointer",
@@ -1552,24 +1544,10 @@ export default function BusinessOwnerProfileSection() {
                   );
                 }}
                 aria-label="Security Code for Branch Backup"
+                className="finora-settings-form__input"
                 style={{
-                  width:
-                    "100%",
-
-                  boxSizing:
-                    "border-box",
-
-                  padding:
-                    "10px 42px 10px 12px",
-
-                  borderRadius:
-                    "8px",
-
-                  border:
-                    "1px solid rgba(148, 163, 184, 0.45)",
-
-                  font:
-                    "inherit",
+                  paddingRight:
+                    "42px",
                 }}
               />
 
@@ -1617,6 +1595,9 @@ export default function BusinessOwnerProfileSection() {
 
                   background:
                     "transparent",
+
+                  color:
+                    "var(--finora-theme-input-text)",
 
                   cursor:
                     "pointer",
