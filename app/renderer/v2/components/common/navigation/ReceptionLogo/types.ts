@@ -11,4 +11,6 @@ export interface ReceptionLogoProps {
 
   title?: string;
 
+
+  brandTitle?: string;
 }

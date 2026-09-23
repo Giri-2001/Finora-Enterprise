@@ -1,23 +1,6 @@
 ﻿/* ===========================================================
-   FINORA ENTERPRISE OS™
-
-   RECEPTION™
-   RECEPTION FOOTER™
-
-   THEME + RESPONSIVE ENGINE CONSUMER
-
-   IMPORTANT
-   -----------------------------------------------------------
-   Responsive geometry comes only from ResponsiveTokens.
-
-   Theme colors come only from FinoraTheme.
-
-   No local theme color definitions.
-=========================================================== */
-
-
-/* ===========================================================
-   IMPORTS
+   FINORA ENTERPRISE
+   RECEPTION FOOTER STYLES
 =========================================================== */
 
 import type {
@@ -33,62 +16,34 @@ import type {
 } from "../../../../themes/core/types";
 
 
-/* ===========================================================
-   TYPES
-=========================================================== */
-
 export interface ReceptionFooterStyles {
-
-  containerStyle:
-    CSSProperties;
-
-  contentStyle:
-    CSSProperties;
-
-  copyrightStyle:
-    CSSProperties;
-
-  versionStyle:
-    CSSProperties;
-
+  containerStyle: CSSProperties;
+  contentStyle: CSSProperties;
+  brandStyle: CSSProperties;
+  storageBadgeStyle: CSSProperties;
+  versionBadgeStyle: CSSProperties;
+  metadataLabelStyle: CSSProperties;
+  metadataDividerStyle: CSSProperties;
+  metadataValueStyle: CSSProperties;
 }
 
 
-/* ===========================================================
-   STYLE FACTORY
-=========================================================== */
-
 export function createReceptionFooterStyles(
-
-  tokens:
-    ResponsiveTokens,
-
-  theme:
-    FinoraTheme,
-
+  tokens: ResponsiveTokens,
+  theme: FinoraTheme,
 ): ReceptionFooterStyles {
 
+  const fontFamily =
+    "Inter, ui-sans-serif, system-ui, sans-serif";
 
-  /* =========================================================
-     SEMANTIC THEME COLORS
-  ========================================================= */
+  const chipPaddingY =
+    Math.max(
+      tokens.footer.paddingY - 2,
+      3,
+    );
 
-  const primaryText =
-    theme
-      .colors
-      .text
-      .primary;
-
-  const secondaryText =
-    theme
-      .colors
-      .text
-      .secondary;
-
-
-  /* =========================================================
-     ROOT
-  ========================================================= */
+  const chipRadius =
+    `${tokens.border.radius * 2}px`;
 
   const containerStyle:
     CSSProperties = {
@@ -102,17 +57,14 @@ export function createReceptionFooterStyles(
     minWidth:
       0,
 
-    display:
-      "flex",
+    minHeight:
+      `${tokens.footer.minHeight}px`,
 
-    justifyContent:
-      "center",
+    height:
+      `${tokens.footer.height}px`,
 
-    alignItems:
-      "center",
-
-    boxSizing:
-      "border-box",
+    padding:
+      `${tokens.footer.paddingY}px ${tokens.footer.paddingX}px`,
 
     marginTop:
       "auto",
@@ -123,14 +75,20 @@ export function createReceptionFooterStyles(
     flexShrink:
       0,
 
-    minHeight:
-      `${tokens.footer.minHeight}px`,
+    display:
+      "flex",
 
-    height:
-      `${tokens.footer.height}px`,
+    alignItems:
+      "center",
 
-    padding:
-      `${tokens.footer.paddingY}px ${tokens.footer.paddingX}px`,
+    justifyContent:
+      "center",
+
+    boxSizing:
+      "border-box",
+
+    border:
+      `${tokens.border.width}px solid ${theme.colors.border.strong}`,
 
     borderRadius:
       `${tokens.border.radius}px`,
@@ -138,26 +96,9 @@ export function createReceptionFooterStyles(
     background:
       "transparent",
 
-    border:
-      `${tokens.border.width}px solid ${
-        theme
-          .colors
-          .border
-          .strong
-      }`,
-
     boxShadow:
       "none",
-
-    letterSpacing:
-      "0.3px",
-
   };
-
-
-  /* =========================================================
-     CONTENT
-  ========================================================= */
 
   const contentStyle:
     CSSProperties = {
@@ -169,41 +110,136 @@ export function createReceptionFooterStyles(
       0,
 
     display:
-      "flex",
+      "grid",
 
-    flexWrap:
-      "wrap",
+    gridTemplateColumns:
+      "minmax(0, 1fr) auto minmax(0, 1fr)",
 
     alignItems:
       "center",
 
-    justifyContent:
-      "space-between",
-
-    gap:
-      `${tokens.spacing.small}px`,
+    columnGap:
+      `${tokens.spacing.medium}px`,
 
     boxSizing:
       "border-box",
-
   };
 
-
-  /* =========================================================
-     COPYRIGHT
-  ========================================================= */
-
-  const copyrightStyle:
+  const brandStyle:
     CSSProperties = {
 
     minWidth:
       0,
 
-    flex:
-      "1 1 auto",
+    justifySelf:
+      "start",
 
     color:
-      primaryText,
+      theme.colors.text.primary,
+
+    fontFamily,
+
+    fontSize:
+      `${tokens.footer.fontSize + 1}px`,
+
+    fontWeight:
+      700,
+
+    lineHeight:
+      tokens.lineHeight.body,
+
+    letterSpacing:
+      "0.1px",
+
+    whiteSpace:
+      "nowrap",
+  };
+
+  const sharedBadgeStyle:
+    CSSProperties = {
+
+    display:
+      "inline-flex",
+
+    alignItems:
+      "center",
+
+    justifyContent:
+      "center",
+
+    gap:
+      `${Math.max(tokens.spacing.small - 2, 4)}px`,
+
+    padding:
+      `${chipPaddingY}px ${tokens.spacing.small}px`,
+
+    border:
+      `${tokens.border.width}px solid ${theme.colors.border.default}`,
+
+    borderRadius:
+      chipRadius,
+
+    background:
+      theme.colors.background.surfaceElevated,
+
+    color:
+      theme.colors.text.primary,
+
+    fontFamily,
+
+    lineHeight:
+      tokens.lineHeight.body,
+
+    whiteSpace:
+      "nowrap",
+
+    boxSizing:
+      "border-box",
+  };
+
+  const storageBadgeStyle:
+    CSSProperties = {
+
+    ...sharedBadgeStyle,
+
+    justifySelf:
+      "center",
+  };
+
+  const versionBadgeStyle:
+    CSSProperties = {
+
+    ...sharedBadgeStyle,
+
+    justifySelf:
+      "end",
+  };
+
+  const metadataLabelStyle:
+    CSSProperties = {
+
+    color:
+      theme.colors.text.secondary,
+
+    fontFamily,
+
+    fontSize:
+      `${Math.max(tokens.footer.fontSize - 1, 10)}px`,
+
+    fontWeight:
+      500,
+
+    lineHeight:
+      tokens.lineHeight.body,
+  };
+
+  const metadataDividerStyle:
+    CSSProperties = {
+
+    color:
+      theme.colors.text.secondary,
+
+    fontFamily,
 
     fontSize:
       `${tokens.footer.fontSize}px`,
@@ -212,73 +248,38 @@ export function createReceptionFooterStyles(
       500,
 
     lineHeight:
-      tokens.lineHeight.body,
-
-    textAlign:
-      "left",
-
-    overflowWrap:
-      "anywhere",
-
+      1,
   };
 
-
-  /* =========================================================
-     VERSION
-     
-     Uses semantic secondary text so the right-side
-     footer content follows the active theme naturally.
-  ========================================================= */
-
-  const versionStyle:
+  const metadataValueStyle:
     CSSProperties = {
 
-    minWidth:
-      0,
-
-    flex:
-      "0 1 auto",
-
     color:
-      secondaryText,
+      theme.colors.text.primary,
+
+    fontFamily,
 
     fontSize:
       `${tokens.footer.fontSize}px`,
 
     fontWeight:
-      600,
+      700,
 
     lineHeight:
       tokens.lineHeight.body,
 
-    textAlign:
-      "right",
-
-    overflowWrap:
-      "anywhere",
-
+    letterSpacing:
+      "0.1px",
   };
-
-
-  /* =========================================================
-     RETURN
-  ========================================================= */
 
   return {
-
     containerStyle,
-
     contentStyle,
-
-    copyrightStyle,
-
-    versionStyle,
-
+    brandStyle,
+    storageBadgeStyle,
+    versionBadgeStyle,
+    metadataLabelStyle,
+    metadataDividerStyle,
+    metadataValueStyle,
   };
-
 }
-
-
-/* ===========================================================
-   END
-=========================================================== */

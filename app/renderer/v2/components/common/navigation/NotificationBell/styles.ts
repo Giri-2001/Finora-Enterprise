@@ -218,17 +218,20 @@ export function createNotificationBellStyles(
     right:
       0,
 
+    width:
+      `${icon.xs + 4}px`,
+
     minWidth:
-      `${icon.xs}px`,
+      `${icon.xs + 4}px`,
 
     height:
-      `${icon.xs}px`,
+      `${icon.xs + 4}px`,
 
     padding:
-      `0 ${tokens.spacing.small}px`,
+      0,
 
     borderRadius:
-      "999px",
+      "50%",
 
     background:
       danger,

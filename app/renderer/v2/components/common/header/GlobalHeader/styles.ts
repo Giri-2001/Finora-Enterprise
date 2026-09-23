@@ -436,7 +436,10 @@ export function createGlobalHeaderStyles(
       800,
 
     color:
-      headerContentColor,
+      activeTheme
+        .components
+        .header
+        .text,
 
     letterSpacing:
       ".5px",
@@ -775,14 +778,15 @@ export function createGlobalHeaderStyles(
       "none",
 
     background:
-      isMobile
-        ? "transparent"
-        : activeTheme
-            .colors
-            .background
-            .surfaceMuted,
+      "transparent",
     color:
-      headerContentColor,
+      activeTheme
+        .components
+        .header
+        .text,
+
+    fontFamily:
+      "Inter, ui-sans-serif, system-ui, sans-serif",
 
     display:
       "inline-flex",
@@ -794,10 +798,10 @@ export function createGlobalHeaderStyles(
       "center",
 
     fontSize:
-      `${isMobile ? button.fontSize + 2 : button.fontSize}px`,
+      `${isMobile ? button.fontSize + 3 : button.fontSize + 1}px`,
 
     fontWeight:
-      800,
+      750,
 
     lineHeight:
       1,

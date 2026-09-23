@@ -247,6 +247,9 @@ export function createDepartmentDoorStyles(
     width:
       "100%",
 
+    transform:
+      "translateY(-8px)",
+
   };
 
 

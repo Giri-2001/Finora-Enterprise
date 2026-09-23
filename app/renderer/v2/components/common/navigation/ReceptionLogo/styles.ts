@@ -152,10 +152,10 @@ export function createReceptionLogoStyles(
       headerText,
 
     fontSize:
-      `${header.titleSize}px`,
+      `${header.titleSize - 3}px`,
 
     fontWeight:
-      800,
+      750,
 
     letterSpacing:
       ".8px",

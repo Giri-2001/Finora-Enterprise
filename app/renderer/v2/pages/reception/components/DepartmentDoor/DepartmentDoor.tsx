@@ -79,6 +79,7 @@ function getReceptionIcon(
       return (
         <UsersRound
           aria-hidden="true"
+          size={30}
           strokeWidth={1.9}
         />
       );
@@ -89,6 +90,7 @@ function getReceptionIcon(
       return (
         <Banknote
           aria-hidden="true"
+          size={30}
           strokeWidth={1.9}
         />
       );
@@ -99,6 +101,7 @@ function getReceptionIcon(
       return (
         <CreditCard
           aria-hidden="true"
+          size={30}
           strokeWidth={1.9}
         />
       );
@@ -109,6 +112,7 @@ function getReceptionIcon(
       return (
         <NotebookTabs
           aria-hidden="true"
+          size={30}
           strokeWidth={1.9}
         />
       );
@@ -119,6 +123,7 @@ function getReceptionIcon(
       return (
         <ChartNoAxesCombined
           aria-hidden="true"
+          size={30}
           strokeWidth={1.9}
         />
       );
@@ -129,6 +134,7 @@ function getReceptionIcon(
       return (
         <Settings
           aria-hidden="true"
+          size={30}
           strokeWidth={1.9}
         />
       );

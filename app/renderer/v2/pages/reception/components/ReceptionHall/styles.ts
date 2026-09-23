@@ -47,6 +47,14 @@ export interface ReceptionHallStyles {
   wallStyle:
     CSSProperties;
 
+
+  wallBrandRowStyle:
+    CSSProperties;
+
+
+  wallBrandContentStyle:
+    CSSProperties;
+
   doorGridStyle:
     CSSProperties;
 
@@ -57,6 +65,10 @@ export interface ReceptionHallStyles {
     CSSProperties;
 
   wallDividerStyle:
+    CSSProperties;
+
+
+  wallGreetingStyle:
     CSSProperties;
 
   wallSubtitleStyle:
@@ -286,6 +298,98 @@ export function createReceptionHallStyles(
       `${tokens.spacing.large}px`,
 
   };
+  /* =========================================================
+     WALL BRAND ROW
+
+     Logo + title are horizontally centered as one unit.
+
+     Height intentionally equals the OLD vertical footprint:
+       old logo + old logo bottom gap + old title line height.
+
+     This prevents Reception wall/card height from changing.
+  ========================================================= */
+
+  const wallBrandRowStyle:
+    CSSProperties = {
+
+    width:
+      "fit-content",
+
+    maxWidth:
+      "100%",
+
+    height:
+      `${
+        tokens.reception.wallLogoSize +
+        tokens.reception.wallGap +
+        Math.round(
+          tokens.reception.titleSize *
+          tokens.lineHeight.title,
+        ) +
+        tokens.spacing.small +
+        tokens.border.strongWidth +
+        tokens.spacing.small +
+        Math.round(
+          (tokens.typography.caption + 1) *
+          tokens.lineHeight.body,
+        )
+      }px`,
+
+    display:
+      "flex",
+
+    alignItems:
+      "center",
+
+    justifyContent:
+      "center",
+
+    gap:
+      "8px",
+
+    margin:
+      0,
+
+    boxSizing:
+      "border-box",
+
+  };
+  /* =========================================================
+     WALL BRAND CONTENT
+
+     Title + divider + subtitle stay together as one
+     vertical block to the right of the FINORA logo.
+  ========================================================= */
+
+  const wallBrandContentStyle:
+    CSSProperties = {
+
+    display:
+      "flex",
+
+    flexDirection:
+      "column",
+
+    alignItems:
+      "center",
+
+    justifyContent:
+      "center",
+
+    minWidth:
+      0,
+
+    width:
+      "max-content",
+
+    maxWidth:
+      "100%",
+
+  };
+
+
+
+
 
   /* =========================================================
      WALL LOGO
@@ -295,10 +399,21 @@ export function createReceptionHallStyles(
     CSSProperties = {
 
     width:
-      `${tokens.reception.wallLogoSize}px`,
+      "auto",
+
+    height:
+      `${Math.min(
+        Math.round(tokens.reception.wallLogoSize * 2.25),
+        tokens.reception.wallLogoSize +
+          tokens.reception.wallGap +
+          Math.round(
+            tokens.reception.titleSize *
+            tokens.lineHeight.title,
+          ),
+      )}px`,
 
     marginBottom:
-      `${tokens.reception.wallGap}px`,
+      0,
 
     objectFit:
       "contain",
@@ -317,7 +432,7 @@ export function createReceptionHallStyles(
       theme.colors.text.primary,
 
     fontSize:
-      `${tokens.reception.titleSize}px`,
+      `${tokens.reception.titleSize - 2}px`,
 
     margin:
       0,
@@ -348,10 +463,10 @@ export function createReceptionHallStyles(
     CSSProperties = {
 
     width:
-      `${tokens.spacing.xxlarge * 10}px`,
+      "100%",
 
     maxWidth:
-      "80%",
+      "100%",
 
     height:
       `${tokens.border.strongWidth}px`,
@@ -373,6 +488,37 @@ export function createReceptionHallStyles(
       "background 180ms ease",
 
   };
+  /* =========================================================
+     WALL GREETING
+  ========================================================= */
+
+  const wallGreetingStyle:
+    CSSProperties = {
+
+    color:
+      theme.colors.text.primary,
+
+    margin:
+      "3px 0 0 0",
+
+    fontFamily:
+      "Inter, ui-sans-serif, system-ui, sans-serif",
+
+    fontSize:
+      `${tokens.typography.caption + 4}px`,
+
+    fontWeight:
+      600,
+
+    lineHeight:
+      tokens.lineHeight.body,
+
+    textAlign:
+      "center",
+
+  };
+
+
 
 
   /* =========================================================
@@ -389,10 +535,13 @@ export function createReceptionHallStyles(
       0,
 
     marginTop:
-      `${tokens.spacing.small}px`,
+      `${Math.max(tokens.spacing.small - 3, 0)}px`,
 
     fontSize:
-      `${tokens.typography.caption}px`,
+      `${tokens.typography.caption + 3}px`,
+
+    fontWeight:
+      500,
 
     lineHeight:
       tokens.lineHeight.body,
@@ -416,6 +565,10 @@ export function createReceptionHallStyles(
 
     wallStyle,
 
+    wallBrandRowStyle,
+
+    wallBrandContentStyle,
+
     doorGridStyle,
 
     wallLogoStyle,
@@ -423,6 +576,8 @@ export function createReceptionHallStyles(
     wallTitleStyle,
 
     wallDividerStyle,
+
+    wallGreetingStyle,
 
     wallSubtitleStyle,
 

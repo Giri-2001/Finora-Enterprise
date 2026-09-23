@@ -51,11 +51,11 @@ export const DOOR_NORMAL_TRANSFORM =
  * Keep the icon movement noticeable but restrained.
  */
 export const ICON_HOVER_TRANSFORM =
-  "translateY(-3px) scale(1.06)";
+  "translateY(-11px) scale(1.06)";
 
 
 export const ICON_NORMAL_TRANSFORM =
-  "translateY(0) scale(1)";
+  "translateY(-8px) scale(1)";
 
 
 /* ===========================================================

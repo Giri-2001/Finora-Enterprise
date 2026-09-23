@@ -11,9 +11,6 @@
    IMPORTS
 =========================================================== */
 
-import finoraLogo
-  from "../../../../app/assets/finoraenterprise.png";
-
 import {
   useResponsive,
 } from "../../../../utils/responsive";
@@ -21,6 +18,9 @@ import {
 import {
   useTheme,
 } from "../../../../themes/provider";
+import {
+  getSession,
+} from "../../../../store/authStore";
 
 import DepartmentDoor
   from "../DepartmentDoor";
@@ -41,6 +41,27 @@ import {
   createReceptionHallStyles,
 } from "./styles";
 
+
+
+
+/* ===========================================================
+   RECEPTION GREETING
+=========================================================== */
+
+function resolveReceptionGreeting(
+  hour: number,
+): string {
+
+  if (hour < 12) {
+    return "Good Morning";
+  }
+
+  if (hour < 17) {
+    return "Good Afternoon";
+  }
+
+  return "Good Evening";
+}
 
 /* ===========================================================
    COMPONENT
@@ -70,6 +91,26 @@ export default function ReceptionHall({
     theme,
   } = useTheme();
 
+  /* =========================================================
+     OWNER GREETING
+  ========================================================= */
+
+  const session =
+    getSession();
+
+  const ownerFullName =
+    session?.fullName?.trim() ?? "";
+
+  const greeting =
+    resolveReceptionGreeting(
+      new Date().getHours(),
+    );
+
+  const ownerGreeting =
+    ownerFullName
+      ? `${greeting}, ${ownerFullName}`
+      : greeting;
+
 
   /* =========================================================
      DEPARTMENT DOORS
@@ -92,11 +133,16 @@ export default function ReceptionHall({
 
     wallStyle,
 
-    wallLogoStyle,
+    wallBrandRowStyle,
+
+    wallBrandContentStyle,
+
 
     wallTitleStyle,
 
     wallDividerStyle,
+
+    wallGreetingStyle,
 
     wallSubtitleStyle,
 
@@ -122,32 +168,37 @@ export default function ReceptionHall({
 
       <section style={wallStyle}>
 
-        <img
-
-          src={finoraLogo}
-
-          alt="FINORA"
-
-          style={wallLogoStyle}
-
-        />
+                        <div style={wallBrandRowStyle}>
 
 
-        <h1 style={wallTitleStyle}>
+          <div style={wallBrandContentStyle}>
 
-          FINORA ENTERPRISE™
+            <h1 style={wallTitleStyle}>
 
-        </h1>
+              FINORA ENTERPRISE
+
+            </h1>
 
 
-        <div style={wallDividerStyle} />
+            <div style={wallDividerStyle} />
 
 
-        <p style={wallSubtitleStyle}>
+            <p style={wallGreetingStyle}>
 
-          Enterprise Reception Headquarters
+              {ownerGreeting}
 
-        </p>
+            </p>
+
+
+            <p style={wallSubtitleStyle}>
+
+              Welcome back to FINORA
+
+            </p>
+
+          </div>
+
+        </div>
 
       </section>
 

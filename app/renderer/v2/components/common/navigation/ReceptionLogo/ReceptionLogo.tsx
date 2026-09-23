@@ -49,6 +49,7 @@ export default function ReceptionLogo({
 
   title = "Go to Reception",
 
+brandTitle,
 }: ReceptionLogoProps) {
 
 
@@ -80,6 +81,11 @@ export default function ReceptionLogo({
     brandVisible,
   } =
     tokens.header;
+
+  const resolvedBrandTitle =
+    String(
+      brandTitle ?? "",
+    ).trim();
 
 
   /* =========================================================
@@ -132,6 +138,7 @@ export default function ReceptionLogo({
         }
 
         alt={
+          resolvedBrandTitle ||
           LOGO_TITLE
         }
 
@@ -148,7 +155,7 @@ export default function ReceptionLogo({
       ========================================== */}
 
       {
-        brandVisible && (
+        brandVisible && resolvedBrandTitle && (
 
           <span
             style={
@@ -156,7 +163,7 @@ export default function ReceptionLogo({
             }
           >
             {
-              LOGO_TITLE
+              resolvedBrandTitle
             }
           </span>
 

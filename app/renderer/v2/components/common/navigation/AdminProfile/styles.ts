@@ -137,7 +137,7 @@ export function createAdminProfileStyles(
       "center",
 
     gap:
-      "10px",
+      "6px",
 
     cursor:
       "pointer",
@@ -179,6 +179,9 @@ export function createAdminProfileStyles(
 
     fontSize:
       "15px",
+
+    fontFamily:
+      "Inter, ui-sans-serif, system-ui, sans-serif",
 
     fontWeight:
       700,

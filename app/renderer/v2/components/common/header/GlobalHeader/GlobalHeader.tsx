@@ -64,6 +64,10 @@ import {
 } from "../../../../services/business/businessDateService";
 
 import {
+  getBusinessContext,
+} from "../../../../services/business/businessContextService";
+
+import {
   useResponsive,
 } from "../../../../utils/responsive";
 
@@ -173,6 +177,16 @@ export default function GlobalHeader({
       authenticatedSession
         ?.businessDate,
     ) || "--";
+
+  const businessContext =
+    getBusinessContext();
+
+  const businessName =
+    String(
+      businessContext
+        ?.businessProfile
+        ?.businessName ?? "",
+    ).trim();
   // =========================================================
   // LIVE FINORA WALLET BALANCE
   // =========================================================
@@ -448,6 +462,7 @@ export default function GlobalHeader({
         <ReceptionLogo
           onClick={onRefreshCurrentPage}
           title="Refresh current page"
+        brandTitle={businessName}
         />
 
       </div>
@@ -728,8 +743,46 @@ export default function GlobalHeader({
 
                   pointerEvents:
                     "auto",
+
+                  width:
+                    "max-content",
+
+                  maxWidth:
+                    "none",
+
+                  flexShrink:
+                    0,
+
+                  overflow:
+                    "visible",
+
+                  textOverflow:
+                    "clip",
+
+                  color:
+                    departmentStyle.color,
                 }
-              : actionStyle
+              : {
+                  ...actionStyle,
+
+                  width:
+                    "max-content",
+
+                  maxWidth:
+                    "none",
+
+                  flexShrink:
+                    0,
+
+                  overflow:
+                    "visible",
+
+                  textOverflow:
+                    "clip",
+
+                  color:
+                    departmentStyle.color,
+                }
           }
 
         >
@@ -745,8 +798,17 @@ export default function GlobalHeader({
             }
           />
 
-          <span>
-            {walletBalanceDisplay}
+          <span
+            style={{
+              fontWeight: 750,
+            }}
+          >
+            {
+              walletBalanceDisplay.replace(
+                /^₹\s*/,
+                "₹ ",
+              )
+            }
           </span>
 
         </button>
