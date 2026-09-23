@@ -1,5 +1,5 @@
 // ============================================================
-// FINORA ENTERPRISE OSÃ¢â€žÂ¢
+// FINORA ENTERPRISE OSÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢
 // ELECTRON MAIN PROCESS
 // V2 USB / PENDRIVE STORAGE IPC
 //
@@ -96,8 +96,14 @@ import {
   registerFinoraPortableBranchAuthBackupHandlers,
 } from "./control/finoraPortableBranchAuthBackupIpc.js";
 import {
+  exportFinoraFullBranchBackupFromNativeDialog,
+} from "./control/finoraFullBranchBackupFileTransport.js";
+import {
   registerFinoraPortableBranchAuthRestoreHandlers,
 } from "./control/finoraPortableBranchAuthRestoreIpc.js";
+import {
+  restoreFinoraFullBranchFromNativeBackup,
+} from "./control/finoraFullBranchRestoreFileTransport.js";
 
 import {
   FinoraPortableBranchAuthStore,
@@ -3110,6 +3116,23 @@ app.whenReady().then(async () => {
 
       portableStore:
         portableBranchAuthStore,
+
+      exportBackup:
+        (
+          parentWindow,
+          input,
+          portableStore,
+        ) =>
+          exportFinoraFullBranchBackupFromNativeDialog(
+            parentWindow,
+            input,
+            portableStore,
+            {
+              resolveUsbRoot:
+                () =>
+                  findFinoraUsbRoot(),
+            },
+          ),
     });
     registerFinoraPortableBranchAuthRestoreHandlers({
       isTrustedRenderer,
@@ -3126,6 +3149,9 @@ app.whenReady().then(async () => {
 
       validateUsbRoot:
         validateFinoraReplacementUsbRoot,
+
+      restoreFromNativeBackup:
+        restoreFinoraFullBranchFromNativeBackup,
     });
 
     registerFinoraBranchCredentialHandlers(
