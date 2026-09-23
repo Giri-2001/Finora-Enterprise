@@ -90,13 +90,14 @@ const THEME = {
 // ============================================================
 
 export const collectionTableGridTemplate =
-  "5% 13% 14% 14% 8% 11% 11% 10% 8% 6%";
+  "4% 18% 12% 18% 5% 11% 11% 8% 8% 5%";
 
 // ============================================================
 // PAGE
 // ============================================================
 
 export const pageStyle: CSSProperties = {
+  fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
   width: "100%",
   minWidth: 0,
   minHeight: "100%",
@@ -126,7 +127,7 @@ export const pageTitleStyle: CSSProperties = {
   margin: 0,
   color: THEME.textPrimary,
   fontSize: "24px",
-  fontWeight: 800,
+  fontWeight: 750,
   lineHeight: 1.15,
   letterSpacing: "-0.02em",
 };
@@ -134,7 +135,7 @@ export const pageTitleStyle: CSSProperties = {
 export const pageSubtitleStyle: CSSProperties = {
   margin: "7px 0 0",
   color: THEME.textMuted,
-  fontSize: "13px",
+  fontSize: "14px",
   fontWeight: 450,
   lineHeight: 1.4,
 };
@@ -185,7 +186,7 @@ export const statisticLabelStyle: CSSProperties = {
   display: "block",
   marginBottom: "8px",
   color: THEME.textMuted,
-  fontSize: "12px",
+  fontSize: "14px",
   fontWeight: 550,
   lineHeight: 1.2,
 };
@@ -194,7 +195,7 @@ export const statisticValueStyle: CSSProperties = {
   display: "block",
   color: THEME.textPrimary,
   fontSize: "20px",
-  fontWeight: 600,
+  fontWeight: 750,
   lineHeight: 1.1,
 };
 
@@ -438,7 +439,7 @@ export const tableCellStyle: CSSProperties = {
   padding: "7px",
   boxSizing: "border-box",
   color: THEME.textSecondary,
-  fontSize: "13px",
+  fontSize: "14px",
   fontWeight: 550,
   lineHeight: 1.25,
   overflow: "hidden",
@@ -460,7 +461,7 @@ export const tableCellCenterStyle: CSSProperties = {
 
 export const serialCellStyle: CSSProperties = {
   ...tableCellCenterStyle,
-  fontSize: "13px",
+  fontSize: "14px",
   fontWeight: 700,
 };
 
@@ -477,7 +478,7 @@ export const receiptIdentityStyle: CSSProperties = {
 
 export const receiptNumberStyle: CSSProperties = {
   color: THEME.textPrimary,
-  fontSize: "13px",
+  fontSize: "14px",
   fontWeight: 750,
   lineHeight: 1.2,
   whiteSpace: "nowrap",
@@ -487,7 +488,7 @@ export const receiptNumberStyle: CSSProperties = {
 
 export const receiptReferenceStyle: CSSProperties = {
   color: THEME.textMuted,
-  fontSize: "11px",
+  fontSize: "13px",
   fontWeight: 500,
   whiteSpace: "nowrap",
   overflow: "hidden",
@@ -500,7 +501,7 @@ export const receiptReferenceStyle: CSSProperties = {
 
 export const customerNameStyle: CSSProperties = {
   color: THEME.textPrimary,
-  fontSize: "13px",
+  fontSize: "14px",
   fontWeight: 700,
   lineHeight: 1.2,
   whiteSpace: "nowrap",
@@ -511,7 +512,7 @@ export const customerNameStyle: CSSProperties = {
 export const customerPhoneStyle: CSSProperties = {
   marginTop: "4px",
   color: THEME.textMuted,
-  fontSize: "11px",
+  fontSize: "13px",
   fontWeight: 500,
   whiteSpace: "nowrap",
 };
@@ -529,7 +530,7 @@ export const loanIdentityStyle: CSSProperties = {
 
 export const loanNumberStyle: CSSProperties = {
   color: THEME.textPrimary,
-  fontSize: "12px",
+  fontSize: "13px",
   fontWeight: 750,
   lineHeight: 1.2,
   whiteSpace: "nowrap",
@@ -539,7 +540,7 @@ export const loanNumberStyle: CSSProperties = {
 
 export const loanIdStyle: CSSProperties = {
   color: THEME.textMuted,
-  fontSize: "10px",
+  fontSize: "12px",
   fontWeight: 500,
   lineHeight: 1.2,
   whiteSpace: "nowrap",
@@ -553,7 +554,7 @@ export const loanIdStyle: CSSProperties = {
 
 export const amountStyle: CSSProperties = {
   color: THEME.textPrimary,
-  fontSize: "13px",
+  fontSize: "14px",
   fontWeight: 700,
   whiteSpace: "nowrap",
 };
@@ -564,7 +565,7 @@ export const outstandingStyle: CSSProperties = {
   borderRadius: "6px",
   background: THEME.successSoft,
   color: THEME.success,
-  fontSize: "13px",
+  fontSize: "14px",
   fontWeight: 750,
   whiteSpace: "nowrap",
 };

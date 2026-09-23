@@ -42,6 +42,7 @@ import {
   subtitleStyle,
   receiptBadgeStyle,
   contentGridStyle,
+  lowerSectionSpacingStyle,
   columnStyle,
   sectionStyle,
   sectionTitleStyle,
@@ -402,11 +403,17 @@ export default function ViewCollectionDetails({
           </section>
         </div>
       </div>
-      <LoanDocuments documents={loanDocuments} />
+      <div style={lowerSectionSpacingStyle}>
+        <LoanDocuments documents={loanDocuments} />
+      </div>
 
-      <CollectionEmiSchedule loanId={collection.loanId} />
+      <div style={lowerSectionSpacingStyle}>
+        <CollectionEmiSchedule loanId={collection.loanId} />
+      </div>
 
-      <CollectionHistory loanId={collection.loanId} />
+      <div style={lowerSectionSpacingStyle}>
+        <CollectionHistory loanId={collection.loanId} />
+      </div>
 
       <footer style={footerStyle}>
         <button type="button" onClick={onBack} style={backButtonStyle}>

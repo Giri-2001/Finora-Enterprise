@@ -24,6 +24,7 @@ const C = {
 };
 
 export const pageStyle: CSSProperties = {
+  fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
   width: "100%",
   minHeight: "100%",
   boxSizing: "border-box",
@@ -61,15 +62,16 @@ export const backButtonStyle: CSSProperties = {
 
 export const titleStyle: CSSProperties = {
   margin: 0,
-  fontSize: "22px",
+  fontSize: "21px",
   fontWeight: 800,
   color: C.text,
 };
 
 export const subtitleStyle: CSSProperties = {
   margin: "5px 0 0",
-  fontSize: "11px",
+  fontSize: "13px",
   color: C.muted,
+  fontWeight: 500,
 };
 
 export const receiptBadgeStyle: CSSProperties = {
@@ -78,7 +80,7 @@ export const receiptBadgeStyle: CSSProperties = {
   borderRadius: "999px",
   background: C.accentSoft,
   color: C.brand,
-  fontSize: "10px",
+  fontSize: "12px",
   fontWeight: 750,
 };
 
@@ -88,6 +90,10 @@ export const contentGridStyle: CSSProperties = {
     "minmax(0,1.25fr) minmax(0,0.75fr)",
   gap: "16px",
   alignItems: "start",
+};
+
+export const lowerSectionSpacingStyle: CSSProperties = {
+  paddingTop: "10px",
 };
 
 export const columnStyle: CSSProperties = {
@@ -110,7 +116,7 @@ export const sectionStyle: CSSProperties = {
 export const sectionTitleStyle: CSSProperties = {
   margin: "0 0 13px",
   color: C.text,
-  fontSize: "13px",
+  fontSize: "15px",
   fontWeight: 750,
 };
 
@@ -133,21 +139,21 @@ export const labelStyle: CSSProperties = {
   display: "block",
   marginBottom: "5px",
   color: C.muted,
-  fontSize: "9px",
+  fontSize: "11px",
   fontWeight: 650,
   textTransform: "uppercase",
 };
 
 export const valueStyle: CSSProperties = {
   color: C.text,
-  fontSize: "11px",
+  fontSize: "13px",
   fontWeight: 650,
   overflowWrap: "anywhere",
 };
 
 export const amountValueStyle: CSSProperties = {
   ...valueStyle,
-  fontSize: "15px",
+  fontSize: "17px",
   fontWeight: 800,
 };
 
@@ -159,7 +165,7 @@ export const remarksStyle: CSSProperties = {
   borderRadius: "8px",
   background: C.mutedSurface,
   color: C.secondary,
-  fontSize: "11px",
+  fontSize: "13px",
   lineHeight: 1.55,
   whiteSpace: "pre-wrap",
   overflowWrap: "anywhere",
@@ -175,7 +181,7 @@ export const statusStyle: CSSProperties = {
   borderRadius: "999px",
   background: C.successSoft,
   color: C.success,
-  fontSize: "9px",
+  fontSize: "11px",
   fontWeight: 750,
 };
 

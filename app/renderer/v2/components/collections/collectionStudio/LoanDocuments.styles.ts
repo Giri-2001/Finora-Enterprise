@@ -252,7 +252,7 @@ export const loanDocumentsStyles: Record<string, CSSProperties> = {
 
     fontFamily: INTER_FONT,
 
-    fontSize: "10px",
+    fontSize: "12px",
 
     fontWeight: 500,
 
@@ -796,7 +796,7 @@ export const loanDocumentsStyles: Record<string, CSSProperties> = {
 
     fontFamily: INTER_FONT,
 
-    fontSize: "9px",
+    fontSize: "12px",
 
     fontWeight: 700,
 
@@ -810,7 +810,7 @@ export const loanDocumentsStyles: Record<string, CSSProperties> = {
 
     fontFamily: INTER_FONT,
 
-    fontSize: "8px",
+    fontSize: "10px",
 
     fontWeight: 700,
 

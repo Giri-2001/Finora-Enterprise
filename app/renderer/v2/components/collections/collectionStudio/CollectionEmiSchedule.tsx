@@ -547,9 +547,10 @@ export default function CollectionEmiSchedule({
                     }}
                   >
                     <span
-                      style={
-                        collectionEntryStyles.emiName
-                      }
+                      style={{
+                        ...collectionEntryStyles.emiName,
+                        fontSize: "12px",
+                      }}
                     >
                       EMI{" "}
                       {
@@ -558,9 +559,10 @@ export default function CollectionEmiSchedule({
                     </span>
 
                     <span
-                      style={
-                        collectionEntryStyles.scheduleTableCell
-                      }
+                      style={{
+                        ...collectionEntryStyles.scheduleTableCell,
+                        fontSize: "12px",
+                      }}
                     >
                       {formatEmiDate(
                         installment.dueDate,
@@ -568,9 +570,10 @@ export default function CollectionEmiSchedule({
                     </span>
 
                     <strong
-                      style={
-                        collectionEntryStyles.emiAmount
-                      }
+                      style={{
+                        ...collectionEntryStyles.emiAmount,
+                        fontSize: "14px",
+                      }}
                       title={`Remaining ${formatCurrency(
                         getRemainingAmount(
                           installment,
@@ -581,9 +584,10 @@ export default function CollectionEmiSchedule({
                     </strong>
 
                     <span
-                      style={
-                        statusStyle
-                      }
+                      style={{
+                        ...statusStyle,
+                        fontSize: "9px",
+                      }}
                     >
                       {getStatusLabel(
                         installment.status,
@@ -607,9 +611,10 @@ export default function CollectionEmiSchedule({
               }}
             >
               <strong
-                style={
-                  collectionEntryStyles.emiTotalLabel
-                }
+                style={{
+                  ...collectionEntryStyles.emiTotalLabel,
+                  fontSize: "12px",
+                }}
               >
                 TOTAL BALANCE
               </strong>
@@ -617,9 +622,10 @@ export default function CollectionEmiSchedule({
               <span />
 
               <strong
-                style={
-                  collectionEntryStyles.emiTotalAmount
-                }
+                style={{
+                  ...collectionEntryStyles.emiTotalAmount,
+                  fontSize: "14px",
+                }}
               >
                 {formatCurrency(
                   totalBalance,

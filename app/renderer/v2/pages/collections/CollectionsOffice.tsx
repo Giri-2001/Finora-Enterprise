@@ -188,7 +188,7 @@ function formatCurrency(value: number | undefined): string {
     currency: "INR",
 
     maximumFractionDigits: 0,
-  }).format(safeNumber(value));
+  }).format(safeNumber(value)).replace(/^₹\s*/, "₹ ");
 }
 
 function formatDate(value: string): string {
@@ -1011,7 +1011,7 @@ export default function CollectionsOffice() {
                 <>
                   <div style={tableWrapperStyle}>
                     <div style={tableHeaderStyle}>
-                      <div style={tableHeaderCenterStyle}>S.No.</div>
+                      <div style={tableHeaderCenterStyle}>S.No</div>
 
                       <div style={tableHeaderCellStyle}>Receipt</div>
 

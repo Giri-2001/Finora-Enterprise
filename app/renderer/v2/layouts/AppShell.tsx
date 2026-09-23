@@ -66,6 +66,8 @@ interface AppShellProps {
 
   pageRefreshKey: number;
 
+  constrainPageToViewport?: boolean;
+
   onNavigate: (page: AppPage) => void;
 
   onBack: () => void;
@@ -93,6 +95,8 @@ export default function AppShell({
   page,
 
   pageRefreshKey,
+
+  constrainPageToViewport = false,
 
   onNavigate: _onNavigate,
 
@@ -240,7 +244,7 @@ export default function AppShell({
 
           overflowX: "hidden",
 
-          overflowY: "auto",
+          overflowY: constrainPageToViewport ? "hidden" : "auto",
 
           WebkitOverflowScrolling: "touch",
         }}
@@ -297,7 +301,13 @@ export default function AppShell({
 
             flexDirection: "column",
 
-            flex: "1 0 auto",
+            flex: constrainPageToViewport
+              ? "1 1 0"
+              : "1 0 auto",
+
+            overflow: constrainPageToViewport
+              ? "hidden"
+              : undefined,
           }}
         >
           {children}

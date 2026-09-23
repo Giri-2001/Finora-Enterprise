@@ -269,7 +269,7 @@ export const collectionHistoryStyles: Record<string, CSSProperties> = {
 
     fontFamily: INTER_FONT,
 
-    fontSize: "10px",
+    fontSize: "12px",
 
     fontWeight: 500,
 

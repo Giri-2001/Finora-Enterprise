@@ -51,7 +51,7 @@ export const sectionStyle = {
   minWidth: 0,
   minHeight: 0,
   boxSizing: "border-box" as const,
-  padding: "18px",
+  padding: "18px 18px 4px",
   border: panelBorder,
   borderRadius: "13px",
   background: THEME.surfaceMuted,

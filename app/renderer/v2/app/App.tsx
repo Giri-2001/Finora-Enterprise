@@ -2705,6 +2705,9 @@ function AuthenticatedV2Application({
       <AppShell
         page={page}
           pageRefreshKey={pageRefreshKey}
+          constrainPageToViewport={
+            page === "loans" && loanStudioOpen
+          }
         onNavigate={handleNavigate}
         onBack={handleBack}
         canGoBack={

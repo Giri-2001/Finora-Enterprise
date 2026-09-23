@@ -472,7 +472,7 @@ export function createLoanStudioStyles(
 
       boxSizing: "border-box",
 
-      paddingBottom: isCompact ? "190px" : "96px",
+      paddingBottom: 0,
       overflow: "auto",
 
       scrollbarWidth: "thin",
@@ -483,14 +483,9 @@ export function createLoanStudioStyles(
     ======================================================= */
 
     footerStyle: {
-      position: "fixed",
-      left: `${spacing.medium}px`,
-      right: `calc(${spacing.medium}px + 12px)`,
-      bottom: "1px",
+      position: "relative",
 
-      zIndex: 100,
-
-      width: "auto",
+      width: "100%",
 
       minWidth: 0,
 
