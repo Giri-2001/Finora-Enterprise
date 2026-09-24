@@ -83,6 +83,8 @@ export default function DisbursementForm({
 
   const isMobile = tokens.meta.viewport === "mobile";
 
+  const isTablet = tokens.meta.viewport === "tablet";
+
   // ==========================================================
   // RENDER
   // ==========================================================
@@ -90,6 +92,94 @@ export default function DisbursementForm({
   return (
     <div style={disbursementFormStyle}>
       <SummaryCard title="Disbursement Mode">
+        {isTablet ? (
+          <div
+            style={{
+              width: "100%",
+              minWidth: 0,
+              display: "grid",
+              gridTemplateColumns:
+                "138px minmax(0, 1fr)",
+              columnGap: "10px",
+              rowGap: "12px",
+              alignItems: "center",
+              boxSizing: "border-box",
+            }}
+          >
+            <div
+              style={{
+                ...formLabelTextStyle,
+                fontSize: "13px",
+                whiteSpace: "nowrap",
+                display: "flex",
+                alignItems: "center",
+                gap: "4px",
+                minWidth: 0,
+              }}
+            >
+              <span>Disbursement Date</span>
+              <span
+                aria-hidden="true"
+                style={{
+                  color:
+                    "var(--finora-theme-brand-accent, #D39A00)",
+                }}
+              >
+                *
+              </span>
+            </div>
+
+            <div style={inputWrapperStyle}>
+              <div
+                className="finora-disbursement-date-compact"
+                title="This date is locked to the active FINORA Login Date."
+              >
+                <FinoraCalendar
+                  value={disbursementDate}
+                  onChange={() => undefined}
+                  disabled
+                  allowClear={false}
+                  showRelativeDay
+                  placeholder="DD/MM/YYYY"
+                  ariaLabel="Disbursement Date locked to Login Date"
+                />
+              </div>
+            </div>
+
+            <div
+              style={{
+                ...formLabelTextStyle,
+                fontSize: "13px",
+                whiteSpace: "nowrap",
+                display: "flex",
+                alignItems: "center",
+                gap: "4px",
+                minWidth: 0,
+              }}
+            >
+              <span>Disbursement Amount</span>
+              <span
+                aria-hidden="true"
+                style={{
+                  color:
+                    "var(--finora-theme-brand-accent, #D39A00)",
+                }}
+              >
+                *
+              </span>
+            </div>
+
+            <div style={inputWrapperStyle}>
+              <TextInput
+                type="text"
+                value={formattedDisbursement}
+                readOnly
+                disabled
+                style={amountInputStyle}
+              />
+            </div>
+          </div>
+        ) : (
         <div
           style={{
             ...fieldsGridStyle,
@@ -142,6 +232,7 @@ export default function DisbursementForm({
             </FormField>
           </div>
         </div>
+        )}
       </SummaryCard>
     </div>
   );

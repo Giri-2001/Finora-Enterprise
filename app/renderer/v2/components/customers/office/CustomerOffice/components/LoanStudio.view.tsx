@@ -1,4 +1,4 @@
-﻿// ============================================================
+// ============================================================
 // FINORA ENTERPRISE OS™
 // LOAN STUDIO™
 // PRESENTATION VIEW
@@ -835,7 +835,7 @@ export default function LoanStudioView(props: LoanStudioViewModel) {
 
 
       <footer style={footerStyle}>
-        {isMobile ? (
+        {isMobile || tokens.meta.viewport === "tablet" ? (
           <div
             style={{
               position: "relative",
@@ -855,7 +855,10 @@ export default function LoanStudioView(props: LoanStudioViewModel) {
                   bottom: "calc(100% + 6px)",
                   zIndex: 40,
                   display: "grid",
-                  gridTemplateColumns: "minmax(0, 1fr)",
+                  gridTemplateColumns:
+                    tokens.meta.viewport === "tablet"
+                      ? "repeat(2, minmax(0, 1fr))"
+                      : "minmax(0, 1fr)",
                   gap: "4px",
                   padding: "6px",
                   boxSizing: "border-box",
@@ -886,6 +889,26 @@ export default function LoanStudioView(props: LoanStudioViewModel) {
                         ...stepItemStyle,
                         cursor: "pointer",
                         textAlign: "left",
+                        minHeight:
+                          tokens.meta.viewport === "tablet"
+                            ? "58px"
+                            : undefined,
+                        flexDirection:
+                          tokens.meta.viewport === "tablet"
+                            ? "column"
+                            : undefined,
+                        alignItems:
+                          tokens.meta.viewport === "tablet"
+                            ? "flex-start"
+                            : undefined,
+                        justifyContent:
+                          tokens.meta.viewport === "tablet"
+                            ? "center"
+                            : undefined,
+                        gap:
+                          tokens.meta.viewport === "tablet"
+                            ? "3px"
+                            : undefined,
                         border:
                           "1px solid var(--finora-theme-border-default, rgba(148,163,184,0.18))",
                         background: active
@@ -904,6 +927,12 @@ export default function LoanStudioView(props: LoanStudioViewModel) {
                       >
                         {item.title}
                       </span>
+
+                      {tokens.meta.viewport === "tablet" ? (
+                        <span style={stepSubtitleStyle}>
+                          {item.subtitle}
+                        </span>
+                      ) : null}
                     </button>
                   );
                 })}

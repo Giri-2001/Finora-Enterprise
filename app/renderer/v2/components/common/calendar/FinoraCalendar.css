@@ -1,4 +1,4 @@
-﻿/* ===========================================================
+/* ===========================================================
    FINORA ENTERPRISE OS™
 
    FINORA DATE PICKER™
@@ -1104,6 +1104,17 @@
 
 .finora-calendar-input.has-relative-day {
   padding-right: 132px;
+}
+
+/* Step 6 tablet Disbursement Date: remove unused relative-day reserve. */
+.finora-disbursement-date-compact .finora-calendar-input.has-relative-day {
+  padding-right: 100px;
+}
+
+.finora-disbursement-date-compact .finora-calendar-relative-day {
+  right: 39px;
+  padding-left: 6px;
+  padding-right: 6px;
 }
 
 .finora-calendar-relative-day {

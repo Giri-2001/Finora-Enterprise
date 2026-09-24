@@ -1,4 +1,4 @@
-﻿// ============================================================
+// ============================================================
 // FINORA ENTERPRISE OS™
 // LOAN STUDIO™
 // RESPONSIVE LAYOUT STYLES
@@ -377,6 +377,8 @@ export function createLoanStudioStep6Layout(
 ): LoanStudioStep6Layout {
   const mobile = tokens.meta.viewport === "mobile";
 
+  const tablet = tokens.meta.viewport === "tablet";
+
   const gap = Math.max(8, tokens.spacing.small);
 
   return {
@@ -415,9 +417,7 @@ export function createLoanStudioStep6Layout(
 
       display: "grid",
 
-      gridTemplateColumns: mobile
-        ? "minmax(0, 1fr)"
-        : "minmax(0, 1fr) minmax(0, 1fr)",
+      gridTemplateColumns: mobile         ? "minmax(0, 1fr)"         : tablet           ? "minmax(0, 11fr) minmax(0, 9fr)"           : "minmax(0, 1fr) minmax(0, 1fr)",
 
       gridTemplateAreas: mobile
         ? `

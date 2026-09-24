@@ -86,7 +86,7 @@ export const MOBILE_STEP1_DETAILS_TOKENS: Step1DetailsResponsiveTokens = {
 export const TABLET_STEP1_DETAILS_TOKENS: Step1DetailsResponsiveTokens = {
   viewport: "tablet",
 
-  topColumns: 2,
+  topColumns: 1,
 
   topGap: 12,
 

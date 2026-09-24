@@ -760,7 +760,20 @@ export default function Loans() {
   const responsivePortfolioHeaderStyle: CSSProperties = {
     ...themedPortfolioHeaderStyle,
     ...createLoansOfficePortfolioHeaderStyle(responsiveTokens),
-    paddingTop: responsiveTokens.viewport === "mobile" ? "10px" : undefined,
+    paddingTop:
+      responsiveTokens.viewport === "mobile"
+        ? "10px"
+        : responsiveTokens.viewport === "tablet"
+          ? "8px"
+          : undefined,
+    paddingBottom:
+      responsiveTokens.viewport === "tablet"
+        ? "8px"
+        : undefined,
+    marginBottom:
+      responsiveTokens.viewport === "tablet"
+        ? "8px"
+        : undefined,
   };
 
   const responsivePortfolioActionsStyle: CSSProperties = {
