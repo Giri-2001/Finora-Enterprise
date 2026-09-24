@@ -1683,7 +1683,14 @@ interface FinoraElectronPortableBranchAuthRestoreBridge {
     >;
 }
 
+interface FinoraElectronWindowControlsBridge {
+  toggleFullscreen(): Promise<boolean>;
+}
+
 interface FinoraElectronRendererBridge {
+  windowControls:
+    FinoraElectronWindowControlsBridge;
+
   loginSession:
     FinoraElectronLoginSessionBridge;
 

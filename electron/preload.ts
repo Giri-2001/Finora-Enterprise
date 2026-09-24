@@ -3015,9 +3015,23 @@ const portableBranchAuthRestoreBridge:
           FinoraPortableBranchAuthRestoreResult
         >,
   };
+const FINORA_WINDOW_TOGGLE_FULLSCREEN_CHANNEL =
+  "finora:window:toggle-fullscreen";
+
+const windowControlsBridge = {
+  toggleFullscreen:
+    () =>
+      ipcRenderer.invoke(
+        FINORA_WINDOW_TOGGLE_FULLSCREEN_CHANNEL,
+      ) as Promise<boolean>,
+};
+
 contextBridge.exposeInMainWorld(
   "finora",
   {
+    windowControls:
+      windowControlsBridge,
+
     loginSession:
       loginSessionBridge,
 

@@ -171,6 +171,12 @@ export interface GoldRacksStyles {
 
   viewButton: CSSProperties;
 
+  bagList: CSSProperties;
+
+  bagItem: CSSProperties;
+
+  bagEmpty: CSSProperties;
+
   emptyState: CSSProperties;
 
   emptyIcon: CSSProperties;
@@ -745,6 +751,101 @@ export function getGoldRacksStyles(
        EMPTY STATE
     ======================================================= */
 
+    /* =======================================================
+       RACK BAG VIEW
+    ======================================================= */
+
+    bagList: {
+      width: "100%",
+
+      maxHeight: 176,
+
+      overflowY: "auto",
+
+      gridColumn: "1 / -1",
+
+      display: "flex",
+
+      flexDirection: "column",
+
+      gap: 6,
+
+      padding: 8,
+
+      border: "1px solid var(--finora-theme-border-default)",
+
+      borderRadius: moduleTokens.control.buttonRadius,
+
+      background: "var(--finora-theme-background-surface)",
+
+      boxSizing: "border-box",
+    },
+
+    bagItem: {
+      width: "100%",
+
+      minHeight: 34,
+
+      display: "flex",
+
+      alignItems: "center",
+
+      justifyContent: "center",
+
+      padding: "6px 10px",
+
+      border: "1px solid var(--finora-theme-border-subtle)",
+
+      borderRadius: moduleTokens.control.buttonRadius,
+
+      background: "var(--finora-theme-background-muted)",
+
+      color: "var(--finora-theme-text-primary)",
+
+      fontFamily: moduleTokens.fontFamily,
+
+      fontSize: moduleTokens.typography.buttonText,
+
+      fontWeight: 760,
+
+      lineHeight: 1.2,
+
+      cursor: "default",
+
+      userSelect: "none",
+
+      boxSizing: "border-box",
+    },
+
+    bagEmpty: {
+      width: "100%",
+
+      minHeight: 34,
+
+      display: "flex",
+
+      alignItems: "center",
+
+      justifyContent: "center",
+
+      padding: "6px 10px",
+
+      color: "var(--finora-theme-text-muted)",
+
+      fontFamily: moduleTokens.fontFamily,
+
+      fontSize: moduleTokens.typography.buttonText,
+
+      fontWeight: 650,
+
+      lineHeight: 1.2,
+
+      cursor: "default",
+
+      userSelect: "none",
+
+      boxSizing: "border-box",
+    },
     emptyState: {
       width: "100%",
 

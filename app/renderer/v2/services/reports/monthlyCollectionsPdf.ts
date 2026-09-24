@@ -46,6 +46,8 @@
 // IMPORTS
 // ============================================================
 
+import { getBusinessContext } from "../business/businessContextService";
+
 import type { jsPDF } from "jspdf";
 
 import { buildMonthlyCollectionsReport } from "./monthlyCollectionsDataService";
@@ -80,6 +82,20 @@ const CONTENT_START_Y = 47;
 // ============================================================
 // MONEY
 // ============================================================
+
+function resolveBusinessReportTitle(
+  reportTitle: string,
+): string {
+  const businessName = String(
+    getBusinessContext()
+      ?.businessProfile
+      ?.businessName ?? "",
+  ).trim();
+
+  return businessName
+    ? `${businessName} ${reportTitle}`
+    : reportTitle;
+}
 
 function formatMoney(value: number): string {
   const safeValue = Number.isFinite(value) ? Math.max(0, value) : 0;
@@ -145,7 +161,7 @@ function addContinuationPage(document: jsPDF): number {
   document.setTextColor(0);
 
   document.text(
-    "FINORA ENTERPRISE - MONTHLY COLLECTIONS",
+    `FINORA ENTERPRISE - ${resolveBusinessReportTitle("Monthly Collections")}`,
     PAGE_MARGIN_X,
     PAGE_TOP,
   );
@@ -819,7 +835,7 @@ export async function buildMonthlyCollectionsPdf(
   const document = createFinoraPdf({
     fileName: `FINORA_Monthly_Collections_${report.monthKey}.pdf`,
 
-    title: "MONTHLY COLLECTIONS",
+    title: resolveBusinessReportTitle("Monthly Collections"),
 
     subtitle: report.monthLabel,
   });

@@ -2834,6 +2834,28 @@ function registerUsbStorageHandlers(): void {
 // MAIN WINDOW CREATION
 // ============================================================
 
+const FINORA_WINDOW_TOGGLE_FULLSCREEN_CHANNEL =
+  "finora:window:toggle-fullscreen";
+
+ipcMain.handle(
+  FINORA_WINDOW_TOGGLE_FULLSCREEN_CHANNEL,
+  (event): boolean => {
+    const targetWindow =
+      BrowserWindow.fromWebContents(event.sender);
+
+    if (!targetWindow || targetWindow.isDestroyed()) {
+      return false;
+    }
+
+    const nextFullScreen =
+      !targetWindow.isFullScreen();
+
+    targetWindow.setFullScreen(nextFullScreen);
+
+    return nextFullScreen;
+  },
+);
+
 function createMainWindow(): void {
   const createdWindow = new BrowserWindow({
     width: 1400,

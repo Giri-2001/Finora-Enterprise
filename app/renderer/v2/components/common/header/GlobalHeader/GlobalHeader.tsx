@@ -30,6 +30,7 @@ import {
 } from "react";
 
 import {
+  Maximize2,
   WalletCards,
 } from "lucide-react";
 
@@ -812,6 +813,42 @@ export default function GlobalHeader({
           </span>
 
         </button>
+
+        {window.finora
+          ?.windowControls
+          ?.toggleFullscreen ? (
+          <button
+            type="button"
+            onClick={() => {
+              void window.finora
+                ?.windowControls
+                ?.toggleFullscreen();
+            }}
+            aria-label="Toggle Full Screen"
+            title="Toggle Full Screen"
+            style={{
+              ...actionStyle,
+              width: "42px",
+              minWidth: "42px",
+              maxWidth: "42px",
+              padding: 0,
+              flexShrink: 0,
+              justifyContent: "center",
+              color:
+                departmentStyle.color,
+            }}
+          >
+            <Maximize2
+              aria-hidden="true"
+              size={
+                globalHeaderTokens
+                  .icon
+                  .md
+              }
+              strokeWidth={2}
+            />
+          </button>
+        ) : null}
 
       </div>
 

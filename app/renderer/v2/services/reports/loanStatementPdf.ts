@@ -49,6 +49,8 @@
 // IMPORTS
 // ============================================================
 
+import { getBusinessContext } from "../business/businessContextService";
+
 import type { jsPDF } from "jspdf";
 
 import { buildLoanReportStatement } from "./reportDataService";
@@ -82,6 +84,20 @@ const CONTENT_START_Y = 47;
 // ============================================================
 // CURRENCY
 // ============================================================
+
+function resolveBusinessReportTitle(
+  reportTitle: string,
+): string {
+  const businessName = String(
+    getBusinessContext()
+      ?.businessProfile
+      ?.businessName ?? "",
+  ).trim();
+
+  return businessName
+    ? `${businessName} ${reportTitle}`
+    : reportTitle;
+}
 
 function formatMoney(value: number): string {
   const safeValue = Number.isFinite(value) ? Math.max(0, value) : 0;
@@ -146,7 +162,7 @@ function addContinuationPage(document: jsPDF): number {
 
   document.setTextColor(0);
 
-  document.text("FINORA ENTERPRISE - LOAN STATEMENT", PAGE_MARGIN_X, PAGE_TOP);
+  document.text(`FINORA ENTERPRISE - ${resolveBusinessReportTitle("Loan Statement")}`, PAGE_MARGIN_X, PAGE_TOP);
 
   document.setLineWidth(0.2);
 
@@ -836,7 +852,7 @@ export async function buildLoanStatementPdf(loanId: string): Promise<jsPDF> {
   const document = createFinoraPdf({
     fileName: `FINORA_Loan_Statement_${statement.loanNumber}.pdf`,
 
-    title: "LOAN STATEMENT",
+    title: resolveBusinessReportTitle("Loan Statement"),
 
     subtitle,
   });

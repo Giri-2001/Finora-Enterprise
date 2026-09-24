@@ -1457,6 +1457,9 @@ const eligibleValueStyle = {
               photo={selectedCustomer?.photo}
               customers={customerOptions}
               onCustomerSelect={setSelectedCustomer}
+              onCustomerClear={() => {
+                setSelectedCustomer(undefined);
+              }}
             />
           </div>
 

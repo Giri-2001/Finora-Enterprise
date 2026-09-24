@@ -40,7 +40,7 @@
 
 import { Check, Eye, Layers3, LockKeyhole, PackageOpen } from "lucide-react";
 
-import type { MouseEvent } from "react";
+import { useState, type MouseEvent } from "react";
 
 import type {
   GoldRackId,
@@ -147,6 +147,9 @@ function getRackDisplayName(rack: GoldRackView): string {
 export default function GoldRacks(props: GoldRacksProps) {
   const { racks, selectedRackId, onSelectRack, onViewRack } = props;
 
+  const [expandedRackId, setExpandedRackId] =
+    useState<GoldRackId | null>(null);
+
   /* =========================================================
      RESPONSIVE
   ========================================================= */
@@ -193,6 +196,12 @@ export default function GoldRacks(props: GoldRacksProps) {
     rack: GoldRackView,
   ): void {
     event.stopPropagation();
+
+    setExpandedRackId((currentRackId) =>
+      currentRackId === rack.configuration.id
+        ? null
+        : rack.configuration.id,
+    );
 
     onViewRack(rack);
   }
@@ -491,6 +500,36 @@ export default function GoldRacks(props: GoldRacksProps) {
                   />
                   View
                 </button>
+
+                {expandedRackId === rack.configuration.id ? (
+                  <div
+                    style={styles.bagList}
+                    onClick={(event) => {
+                      event.stopPropagation();
+                    }}
+                  >
+                    {rack.bags.length > 0 ? (
+                      rack.bags
+                        .slice()
+                        .sort(
+                          (left, right) =>
+                            right.bagNumber - left.bagNumber,
+                        )
+                        .map((bag) => (
+                          <div
+                            key={bag.id}
+                            style={styles.bagItem}
+                          >
+                            {bag.bagNumber}
+                          </div>
+                        ))
+                    ) : (
+                      <div style={styles.bagEmpty}>
+                        No bags stored
+                      </div>
+                    )}
+                  </div>
+                ) : null}
               </div>
             </article>
           );

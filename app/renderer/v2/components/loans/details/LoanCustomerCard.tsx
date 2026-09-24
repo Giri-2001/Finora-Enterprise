@@ -97,6 +97,8 @@ interface LoanCustomerCardProps {
     customer: LoanCustomerOption,
   ) => void;
 
+  onCustomerClear?: () => void;
+
 }
 
 
@@ -117,6 +119,8 @@ export default function LoanCustomerCard({
   customers = [],
 
   onCustomerSelect,
+
+  onCustomerClear,
 
 }: LoanCustomerCardProps) {
 
@@ -289,6 +293,16 @@ useEffect(() => {
      SELECT CUSTOMER
   ========================================================= */
 
+  function handleClearCustomer(): void {
+
+    onCustomerClear?.();
+
+    setSearch("");
+
+    setIsOpen(false);
+
+  }
+
   function handleSelectCustomer(
     customer: LoanCustomerOption,
   ): void {
@@ -460,6 +474,37 @@ useEffect(() => {
 
               aria-label="Customer list"
             >
+
+              {onCustomerClear ? (
+                <button
+                  type="button"
+                  role="option"
+                  aria-selected={!customerName}
+                  onClick={handleClearCustomer}
+                  style={{
+                    width: "100%",
+                    minHeight: 42,
+                    display: "flex",
+                    alignItems: "center",
+                    padding: "8px 10px",
+                    border: "none",
+                    borderBottom:
+                      "1px solid var(--finora-theme-border-subtle)",
+                    background:
+                      "var(--finora-theme-background-surface)",
+                    color:
+                      "var(--finora-theme-text-primary)",
+                    fontFamily: "inherit",
+                    fontSize: 13,
+                    fontWeight: 700,
+                    textAlign: "left",
+                    cursor: "pointer",
+                    boxSizing: "border-box",
+                  }}
+                >
+                  Select Customer
+                </button>
+              ) : null}
 
               {filteredCustomers.length > 0 ? (
 

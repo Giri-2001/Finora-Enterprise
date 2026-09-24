@@ -53,6 +53,16 @@
 // IMPORTS
 // ============================================================
 
+import {
+  customerOptionActiveStyle as loanCustomerOptionActiveStyle,
+  customerOptionHoverStyle as loanCustomerOptionHoverStyle,
+  customerOptionMetaStyle as loanCustomerOptionMetaStyle,
+  customerOptionNameStyle as loanCustomerOptionNameStyle,
+  customerOptionStyle as loanCustomerOptionStyle,
+} from "../../loans/details/LoanCustomerCard.styles";
+
+import finoraLogo
+  from "../../../app/assets/finoraenterprise.png";
 import type { CSSProperties } from "react";
 
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -680,6 +690,9 @@ export default function CollectionStudioPage() {
 
   const [customerSearch, setCustomerSearch] = useState<string>("");
 
+  const [hoveredCollectionCustomerId, setHoveredCollectionCustomerId] =
+    useState<string | null>(null);
+
   // ==========================================================
   // LOAN STATE
   // ==========================================================
@@ -1273,6 +1286,19 @@ export default function CollectionStudioPage() {
   // ==========================================================
 
   function handleCustomerChange(customerId: string): void {
+    if (!customerId) {
+      setSelectedCustomerId("");
+
+      setSelectedLoanId("");
+
+      setReviewData(createEmptyReviewData(activeBusinessDate));
+
+      setCustomerDropdownOpen(false);
+
+      setCustomerSearch("");
+
+      return;
+    }
     const nextCustomer = collectionCustomers.find(
       (customer: CollectionCustomerRecord) => customer.id === customerId,
     );
@@ -1439,10 +1465,41 @@ export default function CollectionStudioPage() {
                         style={customerDropdownStyles.searchInput}
                       />
 
+                      <button
+                        type="button"
+                        role="option"
+                        aria-selected={!selectedCustomerId}
+                        onClick={() =>
+                          handleCustomerChange("")
+                        }
+                        onMouseEnter={() =>
+                          setHoveredCollectionCustomerId("")
+                        }
+                        onMouseLeave={() =>
+                          setHoveredCollectionCustomerId(null)
+                        }
+                        style={
+  !selectedCustomerId
+    ? loanCustomerOptionActiveStyle
+    : hoveredCollectionCustomerId === ""
+      ? loanCustomerOptionHoverStyle
+      : loanCustomerOptionStyle
+}
+                      >
+                        <span
+                          style={loanCustomerOptionNameStyle}
+                        >
+                          Select Customer
+                        </span>
+                      </button>
+
                       {filteredCollectionCustomers.length > 0 ? (
                         filteredCollectionCustomers.map(
                           (customer: CollectionCustomerRecord) => {
                             const isActive = customer.id === selectedCustomerId;
+
+                            const isHovered =
+                              customer.id === hoveredCollectionCustomerId;
 
                             return (
                               <button
@@ -1453,22 +1510,28 @@ export default function CollectionStudioPage() {
                                 onClick={() =>
                                   handleCustomerChange(customer.id)
                                 }
-                                style={{
-                                  ...customerDropdownStyles.option,
-
-                                  ...(isActive
-                                    ? customerDropdownStyles.activeOption
-                                    : {}),
-                                }}
+                                onMouseEnter={() =>
+                                  setHoveredCollectionCustomerId(customer.id)
+                                }
+                                onMouseLeave={() =>
+                                  setHoveredCollectionCustomerId(null)
+                                }
+                                style={
+  isActive
+    ? loanCustomerOptionActiveStyle
+    : isHovered
+      ? loanCustomerOptionHoverStyle
+      : loanCustomerOptionStyle
+}
                               >
                                 <span
-                                  style={customerDropdownStyles.customerName}
+                                  style={loanCustomerOptionNameStyle}
                                 >
                                   {customer.name}
                                 </span>
 
                                 <span
-                                  style={customerDropdownStyles.customerMeta}
+                                  style={loanCustomerOptionMetaStyle}
                                 >
                                   {customer.phone || customer.id}
                                 </span>
@@ -1524,13 +1587,16 @@ export default function CollectionStudioPage() {
                   />
                 ) : (
                   <div style={responsivePhotoPlaceholderStyle}>
-                    <span style={collectionStudioStyles.photoPlaceholderMark}>
-                      F
-                    </span>
-
-                    <span style={collectionStudioStyles.photoPlaceholderText}>
-                      FINORA
-                    </span>
+                    <img
+  src={finoraLogo}
+  alt="FINORA"
+  style={{
+    width: "72%",
+    height: "72%",
+    objectFit: "contain",
+    display: "block",
+  }}
+/>
                   </div>
                 )}
               </div>

@@ -50,6 +50,8 @@
 // IMPORTS
 // ============================================================
 
+import { getBusinessContext } from "../business/businessContextService";
+
 import type { jsPDF } from "jspdf";
 
 import { buildCustomerReportStatement } from "./customerStatementDataService";
@@ -83,6 +85,20 @@ const CONTENT_START_Y = 47;
 // ============================================================
 // CURRENCY
 // ============================================================
+
+function resolveBusinessReportTitle(
+  reportTitle: string,
+): string {
+  const businessName = String(
+    getBusinessContext()
+      ?.businessProfile
+      ?.businessName ?? "",
+  ).trim();
+
+  return businessName
+    ? `${businessName} ${reportTitle}`
+    : reportTitle;
+}
 
 function formatMoney(value: number): string {
   const safeValue = Number.isFinite(value) ? Math.max(0, value) : 0;
@@ -148,7 +164,7 @@ function addContinuationPage(document: jsPDF): number {
   document.setTextColor(0);
 
   document.text(
-    "FINORA ENTERPRISE - CUSTOMER STATEMENT",
+    `FINORA ENTERPRISE - ${resolveBusinessReportTitle("Customer Statement")}`,
     PAGE_MARGIN_X,
     PAGE_TOP,
   );
@@ -1049,7 +1065,7 @@ export async function buildCustomerStatementPdf(
   const document = createFinoraPdf({
     fileName: `FINORA_Customer_Statement_${statement.customerId}.pdf`,
 
-    title: "CUSTOMER STATEMENT",
+    title: resolveBusinessReportTitle("Customer Statement"),
 
     subtitle,
   });

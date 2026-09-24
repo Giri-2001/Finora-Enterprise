@@ -31,6 +31,8 @@
 // IMPORTS
 // ============================================================
 
+import { getBusinessContext } from "../business/businessContextService";
+
 import type { jsPDF } from "jspdf";
 
 import { buildOutstandingLoansReport } from "./outstandingLoansDataService";
@@ -63,6 +65,20 @@ const CONTENT_START_Y = 47;
 // ============================================================
 // MONEY
 // ============================================================
+
+function resolveBusinessReportTitle(
+  reportTitle: string,
+): string {
+  const businessName = String(
+    getBusinessContext()
+      ?.businessProfile
+      ?.businessName ?? "",
+  ).trim();
+
+  return businessName
+    ? `${businessName} ${reportTitle}`
+    : reportTitle;
+}
 
 function formatMoney(value: number): string {
   const safeValue = Number.isFinite(value) ? Math.max(0, value) : 0;
@@ -128,7 +144,7 @@ function addContinuationPage(document: jsPDF): number {
   document.setTextColor(0);
 
   document.text(
-    "FINORA ENTERPRISE - OUTSTANDING LOANS",
+    `FINORA ENTERPRISE - ${resolveBusinessReportTitle("Outstanding Loans")}`,
     PAGE_MARGIN_X,
     PAGE_TOP,
   );
@@ -701,7 +717,7 @@ export async function buildOutstandingLoansPdf(): Promise<jsPDF> {
   const document = createFinoraPdf({
     fileName: "FINORA_Outstanding_Loans.pdf",
 
-    title: "OUTSTANDING LOANS",
+    title: resolveBusinessReportTitle("Outstanding Loans"),
 
     subtitle: "Current Authoritative Receivables",
   });

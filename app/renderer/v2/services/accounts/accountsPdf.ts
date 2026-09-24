@@ -46,6 +46,8 @@
    CONSTANTS
 =========================================================== */
 
+import { getBusinessContext } from "../business/businessContextService";
+
 import {
   ACCOUNTS_DOCUMENT_FILE_PREFIX,
   ACCOUNTS_DOCUMENT_SHARE_DIALOG_TITLE,
@@ -231,6 +233,22 @@ const ACCOUNTS_PDF_COLUMNS: readonly AccountsPdfColumn[] = [
 /* ===========================================================
    SAFE TEXT
 =========================================================== */
+
+function resolveAccountsDocumentTitle(
+  request: AccountsDocumentRequest,
+): string {
+  const businessName = String(
+    getBusinessContext()
+      ?.businessProfile
+      ?.businessName ?? "",
+  ).trim();
+
+  if (businessName) {
+    return `${businessName} Accounts Register`;
+  }
+
+  return request.title || ACCOUNTS_DOCUMENT_TITLE;
+}
 
 function safeText(value: unknown): string {
   const text = String(value ?? "").trim();
@@ -508,8 +526,6 @@ function drawTableHeader(
 ): number {
   let x = PAGE_MARGIN_X;
 
-  document.setFillColor(240, 240, 240);
-
   document.setDrawColor(170, 170, 170);
 
   document.setFont("helvetica", "bold");
@@ -517,7 +533,7 @@ function drawTableHeader(
   document.setFontSize(HEADER_FONT_SIZE);
 
   for (const column of ACCOUNTS_PDF_COLUMNS) {
-    document.rect(x, y, column.width, TABLE_HEADER_HEIGHT, "FD");
+    document.rect(x, y, column.width, TABLE_HEADER_HEIGHT, "D");
 
     if (column.key === "moneyOut") {
       document.setTextColor(185, 28, 28);
@@ -774,7 +790,7 @@ export function buildAccountsPdf(
   const document = createFinoraPdf({
     fileName,
 
-    title: request.title || ACCOUNTS_DOCUMENT_TITLE,
+    title: resolveAccountsDocumentTitle(request),
 
     subtitle: `Period: ${safeText(request.period.label)}`,
 
@@ -839,7 +855,7 @@ export async function shareAccountsPdf(
     {
       title: ACCOUNTS_DOCUMENT_SHARE_TITLE,
 
-      text: `${ACCOUNTS_DOCUMENT_TITLE} • ${safeText(request.period.label)}`,
+      text: `${resolveAccountsDocumentTitle(request)} • ${safeText(request.period.label)}`,
 
       dialogTitle: ACCOUNTS_DOCUMENT_SHARE_DIALOG_TITLE,
     },
