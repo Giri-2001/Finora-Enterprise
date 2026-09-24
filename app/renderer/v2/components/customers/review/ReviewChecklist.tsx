@@ -37,6 +37,8 @@ import {
   useTheme,
 } from "../../../themes/provider";
 
+import { useResponsive } from "../../../utils/responsive";
+
 
 /* ===========================================================
    PRESENTATION STYLES
@@ -81,12 +83,16 @@ function ChecklistItem({
 
   styles,
 
+  compactLabel = false,
+
 }: ReviewChecklistItem & {
 
   styles:
     ReturnType<
       typeof createReviewChecklistStyles
     >;
+
+  compactLabel?: boolean;
 
 }) {
 
@@ -134,7 +140,12 @@ function ChecklistItem({
 
       <span
         style={
-          styles.itemLabelStyle
+          {
+            ...styles.itemLabelStyle,
+            ...(compactLabel
+              ? { fontSize: "13px" as const }
+              : {}),
+          }
         }
       >
 
@@ -211,6 +222,8 @@ export default function ReviewChecklist({
     theme,
   } = useTheme();
 
+  const { tokens } = useResponsive();
+
 
   /* =========================================================
      THEME-AWARE STYLES
@@ -220,6 +233,25 @@ export default function ReviewChecklist({
     createReviewChecklistStyles(
       theme,
     );
+
+  const resolvedStyles =
+    tokens.meta.viewport === "mobile"
+      ? {
+          ...styles,
+          itemStyle: {
+            ...styles.itemStyle,
+            minHeight: "46px",
+          },
+          itemLabelStyle: {
+            ...styles.itemLabelStyle,
+            whiteSpace: "normal" as const,
+            overflow: "visible" as const,
+            textOverflow: "clip" as const,
+            overflowWrap: "anywhere" as const,
+            lineHeight: 1.3,
+          },
+        }
+      : styles;
 
 
   /* =========================================================
@@ -330,8 +362,12 @@ export default function ReviewChecklist({
                 completed={
                   item.completed
                 }
+                compactLabel={
+                  tokens.meta.viewport === "mobile" &&
+                  item.label.startsWith("KYC Pending")
+                }
                 styles={
-                  styles
+                  resolvedStyles
                 }
               />
 

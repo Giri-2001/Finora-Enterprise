@@ -39,6 +39,7 @@ import type {
 
 export function createNomineePreviewCardStyles(
   theme: FinoraTheme,
+  mobile: boolean,
 ) {
 
 
@@ -173,7 +174,7 @@ export function createNomineePreviewCardStyles(
     color:
       theme.colors.text.primary,
 
-    fontSize: "19px",
+    fontSize: mobile ? "17px" : "19px",
 
     lineHeight: 1.3,
 
@@ -193,7 +194,7 @@ export function createNomineePreviewCardStyles(
     color:
       theme.colors.text.secondary,
 
-    fontSize: "13px",
+    fontSize: mobile ? "12px" : "13px",
 
     lineHeight: 1.3,
 
@@ -267,13 +268,17 @@ export function createNomineePreviewCardStyles(
     display: "grid",
 
     gridTemplateColumns:
-      "30px 112px minmax(0,1fr)",
+      mobile ? "26px 104px minmax(0,1fr)" : "30px 112px minmax(0,1fr)",
 
     alignItems: "center",
 
-    gap: "12px",
+    gap: mobile ? "10px" : "12px",
 
-    minHeight: "38px",
+    minHeight: mobile ? "42px" : "38px",
+
+    paddingLeft: mobile ? "5px" : 0,
+
+    paddingRight: mobile ? "4px" : 0,
 
     borderBottom:
       `1px solid ${theme.colors.border.subtle}`,
@@ -332,7 +337,7 @@ export function createNomineePreviewCardStyles(
     color:
       theme.colors.text.primary,
 
-    fontSize: "11px",
+    fontSize: mobile ? "10px" : "11px",
 
     lineHeight: 1.2,
 
@@ -356,17 +361,17 @@ export function createNomineePreviewCardStyles(
     color:
       theme.colors.text.primary,
 
-    fontSize: "15px",
+    fontSize: mobile ? "13px" : "15px",
 
     lineHeight: 1.2,
 
     fontWeight: 750,
 
-    whiteSpace: "nowrap",
+    whiteSpace: mobile ? "normal" : "nowrap",
 
-    overflow: "hidden",
+    overflow: mobile ? "visible" : "hidden",
 
-    textOverflow: "ellipsis",
+    textOverflow: mobile ? "clip" : "ellipsis",
   };
 
 
@@ -380,7 +385,7 @@ export function createNomineePreviewCardStyles(
     color:
       theme.colors.text.disabled,
 
-    fontSize: "10px",
+    fontSize: mobile ? "9px" : "10px",
 
     fontWeight: 650,
   };
@@ -398,7 +403,7 @@ export function createNomineePreviewCardStyles(
     color:
       theme.colors.text.muted,
 
-    fontSize: "12px",
+    fontSize: mobile ? "11px" : "12px",
 
     lineHeight: 1.35,
 

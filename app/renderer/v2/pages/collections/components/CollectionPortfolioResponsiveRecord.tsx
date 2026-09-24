@@ -102,7 +102,7 @@ export default function CollectionPortfolioResponsiveRecord({
   const labelStyle: CSSProperties = {
     color: theme.colors.text.muted,
 
-    fontSize: `${tokens.typography.mobileLabel}px`,
+    fontSize: `${tokens.typography.mobileLabel + (tokens.viewport === "mobile" ? 1 : 0)}px`,
 
     fontWeight: 650,
 
@@ -116,7 +116,7 @@ export default function CollectionPortfolioResponsiveRecord({
   const valueStyle: CSSProperties = {
     color: theme.colors.text.primary,
 
-    fontSize: `${tokens.typography.mobileValue}px`,
+    fontSize: `${tokens.typography.mobileValue + (tokens.viewport === "mobile" ? 1 : 0)}px`,
 
     fontWeight: 650,
 
@@ -132,6 +132,40 @@ export default function CollectionPortfolioResponsiveRecord({
 
     color:
       theme.colors.text.secondary,
+  };
+
+  const mobileFontStyle = (
+    style: CSSProperties,
+  ): CSSProperties => {
+    if (tokens.viewport !== "mobile") {
+      return style;
+    }
+
+    const fontSize =
+      style.fontSize;
+
+    if (typeof fontSize === "number") {
+      return {
+        ...style,
+        fontSize: fontSize + 1,
+      };
+    }
+
+    if (typeof fontSize === "string") {
+      const match =
+        /^(\d+(?:\.\d+)?)px$/.exec(
+          fontSize,
+        );
+
+      if (match) {
+        return {
+          ...style,
+          fontSize: `${Number(match[1]) + 1}px`,
+        };
+      }
+    }
+
+    return style;
   };
 
   const recordStyle: CSSProperties = {
@@ -200,7 +234,7 @@ export default function CollectionPortfolioResponsiveRecord({
       <div style={receiptIdentityStyle}>
         <div
           style={{
-            ...receiptNumberStyle,
+            ...mobileFontStyle(receiptNumberStyle),
 
             whiteSpace: "normal",
 
@@ -215,7 +249,7 @@ export default function CollectionPortfolioResponsiveRecord({
 
         <div
           style={{
-            ...receiptReferenceStyle,
+            ...mobileFontStyle(receiptReferenceStyle),
 
             whiteSpace: "normal",
           }}
@@ -233,7 +267,7 @@ export default function CollectionPortfolioResponsiveRecord({
       <div>
         <div
           style={{
-            ...customerNameStyle,
+            ...mobileFontStyle(customerNameStyle),
 
             whiteSpace: "normal",
 
@@ -248,7 +282,7 @@ export default function CollectionPortfolioResponsiveRecord({
 
         <div
           style={{
-            ...customerPhoneStyle,
+            ...mobileFontStyle(customerPhoneStyle),
 
             whiteSpace: "normal",
           }}
@@ -265,7 +299,7 @@ export default function CollectionPortfolioResponsiveRecord({
       <div style={loanIdentityStyle}>
         <div
           style={{
-            ...loanNumberStyle,
+            ...mobileFontStyle(loanNumberStyle),
 
             whiteSpace: "normal",
 
@@ -280,7 +314,7 @@ export default function CollectionPortfolioResponsiveRecord({
 
         <div
           style={{
-            ...loanIdStyle,
+            ...mobileFontStyle(loanIdStyle),
 
             whiteSpace: "normal",
 
@@ -297,11 +331,7 @@ export default function CollectionPortfolioResponsiveRecord({
     field(
       "Type",
       <span
-        style={
-          collectionTypeBadgeStyle(
-            type,
-          )
-        }
+        style={mobileFontStyle(collectionTypeBadgeStyle(type))}
       >
         {type === "EMI"
           ? "EMI"
@@ -312,7 +342,7 @@ export default function CollectionPortfolioResponsiveRecord({
 
     field(
       "Collected",
-      <span style={amountStyle}>
+      <span style={mobileFontStyle(amountStyle)}>
         {formatCurrency(
           collection.paymentAmount,
         )}
@@ -322,7 +352,7 @@ export default function CollectionPortfolioResponsiveRecord({
 
     field(
       "Outstanding",
-      <span style={outstandingStyle}>
+      <span style={mobileFontStyle(outstandingStyle)}>
         {formatCurrency(
           collection.outstandingBalance,
         )}
@@ -343,11 +373,7 @@ export default function CollectionPortfolioResponsiveRecord({
     field(
       "Status",
       <span
-        style={
-          statusBadgeStyle(
-            collection.status,
-          )
-        }
+        style={mobileFontStyle(statusBadgeStyle(collection.status))}
       >
         {collection.status}
       </span>,
@@ -364,7 +390,7 @@ export default function CollectionPortfolioResponsiveRecord({
           )
         }
         style={{
-          ...viewButtonStyle,
+          ...mobileFontStyle(viewButtonStyle),
 
           minHeight: "32px",
 

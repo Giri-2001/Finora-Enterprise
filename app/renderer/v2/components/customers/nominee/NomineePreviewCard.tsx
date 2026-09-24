@@ -47,6 +47,8 @@ import {
   useTheme,
 } from "../../../themes/provider/ThemeProvider";
 
+import { useResponsive } from "../../../utils/responsive";
+
 
 /* ===========================================================
    STYLES
@@ -190,6 +192,8 @@ export default function NomineePreviewCard({
     theme,
   } = useTheme();
 
+  const { tokens } = useResponsive();
+
 
   /* =========================================================
      STYLES
@@ -202,6 +206,7 @@ export default function NomineePreviewCard({
   const styles =
     createNomineePreviewCardStyles(
       theme,
+      tokens.meta.viewport === "mobile",
     );
 
 

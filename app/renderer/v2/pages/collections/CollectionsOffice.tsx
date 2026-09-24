@@ -906,7 +906,27 @@ export default function CollectionsOffice() {
         {/* PORTFOLIO */}
 
         <section style={portfolioStyle}>
-          <header style={responsivePortfolioHeaderStyle}>
+          <header
+            style={{
+              ...responsivePortfolioHeaderStyle,
+              ...(responsiveTokens.viewport === "mobile"
+                ? {
+                    width: "100%",
+                    minHeight: 0,
+                    height: "auto",
+                    maxHeight: "none",
+                    padding: "18px 14px 16px",
+                    marginBottom: "20px",
+                    display: "flex",
+                    flexDirection: "column",
+                    alignItems: "stretch",
+                    gap: "12px",
+                    overflow: "visible",
+                    boxSizing: "border-box",
+                  }
+                : {}),
+            }}
+          >
             <div style={portfolioTitleStyle}>
               <span
                 style={{
@@ -926,10 +946,66 @@ export default function CollectionsOffice() {
               Collection Portfolio
             </div>
 
-            <div style={responsivePortfolioActionsStyle}>
-              <div style={filtersStyle}>
-                <div style={responsiveFiltersGridStyle}>
-                  <div style={filterFieldStyle}>
+            <div
+              style={{
+                ...responsivePortfolioActionsStyle,
+                ...(responsiveTokens.viewport === "mobile"
+                  ? {
+                      width: "100%",
+                      minWidth: 0,
+                      display: "grid",
+                      gridTemplateColumns: "minmax(0, 1fr)",
+                      gap: "8px",
+                      alignItems: "stretch",
+                      overflow: "visible",
+                      boxSizing: "border-box",
+                    }
+                  : {}),
+              }}
+            >
+              <div
+                style={{
+                  ...filtersStyle,
+                  ...(responsiveTokens.viewport === "mobile"
+                    ? {
+                        width: "100%",
+                        minWidth: 0,
+                        margin: 0,
+                        display: "block",
+                        overflow: "visible",
+                        boxSizing: "border-box",
+                      }
+                    : {}),
+                }}
+              >
+                <div
+                  style={{
+                    ...responsiveFiltersGridStyle,
+                    ...(responsiveTokens.viewport === "mobile"
+                      ? {
+                          width: "100%",
+                          minWidth: 0,
+                          display: "grid",
+                          gridTemplateColumns: "minmax(0, 1fr)",
+                          gap: "8px",
+                          alignItems: "stretch",
+                          overflow: "visible",
+                          boxSizing: "border-box",
+                        }
+                      : {}),
+                  }}
+                >
+                  <div style={{
+                      ...filterFieldStyle,
+                      ...(responsiveTokens.viewport === "mobile"
+                        ? {
+                            width: "100%",
+                            minWidth: 0,
+                            gridColumn: "1 / -1",
+                            boxSizing: "border-box",
+                          }
+                        : {}),
+                    }}>
                     <label style={filterLabelStyle}>Type</label>
 
                     <select
@@ -939,7 +1015,16 @@ export default function CollectionsOffice() {
                           event.target.value as CollectionFilterType,
                         )
                       }
-                      style={filterSelectStyle}
+                      style={{
+                        ...filterSelectStyle,
+                        ...(responsiveTokens.viewport === "mobile"
+                          ? {
+                              width: "100%",
+                              minWidth: 0,
+                              boxSizing: "border-box",
+                            }
+                          : {}),
+                      }}
                     >
                       <option value="ALL">All</option>
 
@@ -984,11 +1069,58 @@ export default function CollectionsOffice() {
                     />
                   </div>
 
-                  <div style={filterActionsStyle}>
+                  <div
+                    style={{
+                      ...filterActionsStyle,
+                      ...(responsiveTokens.viewport === "mobile"
+                        ? {
+                            width: "100%",
+                            minWidth: 0,
+                            maxWidth: "none",
+                            height: "auto",
+                            minHeight: "32px",
+                            maxHeight: "none",
+                            margin: 0,
+                            marginLeft: 0,
+                            marginRight: 0,
+                            paddingTop: "48px",
+                            display: "grid",
+                            gridTemplateColumns: "minmax(0, 1fr)",
+                            gridAutoRows: "minmax(32px, auto)",
+                            gap: "8px",
+                            gridColumn: "1 / -1",
+                            alignItems: "stretch",
+                            alignSelf: "stretch",
+                            position: "static",
+                            visibility: "visible",
+                            overflow: "visible",
+                            boxSizing: "border-box",
+                          }
+                        : {}),
+                    }}
+                  >
                     <button
                       type="button"
                       onClick={handleClearFilters}
-                      style={clearFilterButtonStyle}
+                      style={{
+                        ...clearFilterButtonStyle,
+                        ...(responsiveTokens.viewport === "mobile"
+                          ? {
+                              width: "100%",
+                              minWidth: 0,
+                              maxWidth: "none",
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              position: "static",
+                              visibility: "visible",
+                              opacity: 1,
+                              gridColumn: "1 / -1",
+                              alignSelf: "stretch",
+                              boxSizing: "border-box",
+                            }
+                          : {}),
+                      }}
                     >
                       Clear
                     </button>
@@ -996,7 +1128,25 @@ export default function CollectionsOffice() {
                     <button
                       type="button"
                       onClick={handleApplyFilters}
-                      style={applyFilterButtonStyle}
+                      style={{
+                        ...applyFilterButtonStyle,
+                        ...(responsiveTokens.viewport === "mobile"
+                          ? {
+                              width: "100%",
+                              minWidth: 0,
+                              maxWidth: "none",
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              position: "static",
+                              visibility: "visible",
+                              opacity: 1,
+                              gridColumn: "1 / -1",
+                              alignSelf: "stretch",
+                              boxSizing: "border-box",
+                            }
+                          : {}),
+                      }}
                     >
                       Apply
                     </button>
@@ -1008,12 +1158,44 @@ export default function CollectionsOffice() {
                 type="button"
                 disabled={refreshing}
                 onClick={() => void loadCollectionRecords(true)}
-                style={refreshButtonStyle}
+                style={{
+                        ...refreshButtonStyle,
+                        ...(responsiveTokens.viewport === "mobile"
+                          ? {
+                              width: "100%",
+                              minWidth: 0,
+                              maxWidth: "none",
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              position: "static",
+                              visibility: "visible",
+                              opacity: 1,
+                              gridColumn: "1 / -1",
+                              alignSelf: "stretch",
+                              boxSizing: "border-box",
+                            }
+                          : {}),
+                      }}
               >
                 {refreshing ? "Refreshing..." : "Refresh"}
               </button>
 
-              <span style={collectionCountStyle}>
+              <span style={{
+                ...collectionCountStyle,
+                ...(responsiveTokens.viewport === "mobile"
+                  ? {
+                      width: "100%",
+                      minWidth: 0,
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      gridColumn: "1 / -1",
+                      alignSelf: "stretch",
+                      boxSizing: "border-box",
+                    }
+                  : {}),
+              }}>
                 {filteredCollections.length}{" "}
                 {filteredCollections.length === 1
                   ? "Collection"

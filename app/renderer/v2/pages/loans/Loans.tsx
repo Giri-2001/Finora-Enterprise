@@ -1,4 +1,4 @@
-﻿// FINORA ENTERPRISE OS™
+// FINORA ENTERPRISE OS™
 //
 // V2 LOANS OFFICE™
 //
@@ -1454,9 +1454,26 @@ export default function Loans() {
                       ...(responsiveTokens.viewport === "mobile"
                         ? {
                             width: "100%",
+                            minWidth: 0,
+                            maxWidth: "none",
+                            height: "auto",
+                            minHeight: "32px",
+                            maxHeight: "none",
+                            margin: 0,
+                            marginLeft: 0,
+                            marginRight: 0,
+                            paddingTop: "48px",
                             display: "grid",
                             gridTemplateColumns: "minmax(0, 1fr)",
+                            gridAutoRows: "minmax(32px, auto)",
                             gap: "8px",
+                            gridColumn: "1 / -1",
+                            alignItems: "stretch",
+                            alignSelf: "stretch",
+                            position: "static",
+                            visibility: "visible",
+                            overflow: "visible",
+                            boxSizing: "border-box",
                           }
                         : {}),
                     }}
@@ -1466,9 +1483,22 @@ export default function Loans() {
                       onClick={handleClearFilters}
                       style={{
                         ...themedClearFilterButtonStyle,
-                        ...(responsiveTokens.viewport === "mobile"
-                          ? { width: "100%" }
-                          : {}),
+                    ...(responsiveTokens.viewport === "mobile"
+                      ? {
+                          width: "100%",
+                          minWidth: 0,
+                          maxWidth: "none",
+                          boxSizing: "border-box",
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              position: "static",
+                              visibility: "visible",
+                              opacity: 1,
+                              gridColumn: "1 / -1",
+                              alignSelf: "stretch",
+                        }
+                      : {}),
                       }}
                     >
                       Clear
@@ -1479,9 +1509,14 @@ export default function Loans() {
                       onClick={handleApplyFilters}
                       style={{
                         ...themedApplyFilterButtonStyle,
-                        ...(responsiveTokens.viewport === "mobile"
-                          ? { width: "100%" }
-                          : {}),
+                    ...(responsiveTokens.viewport === "mobile"
+                      ? {
+                          width: "100%",
+                          minWidth: 0,
+                          maxWidth: "none",
+                          boxSizing: "border-box",
+                        }
+                      : {}),
                       }}
                     >
                       Apply
@@ -1502,9 +1537,14 @@ export default function Loans() {
                 disabled={refreshing}
                 style={{
                   ...themedRefreshButtonStyle,
-                  ...(responsiveTokens.viewport === "mobile"
-                    ? { width: "100%" }
-                    : {}),
+                    ...(responsiveTokens.viewport === "mobile"
+                      ? {
+                          width: "100%",
+                          minWidth: 0,
+                          maxWidth: "none",
+                          boxSizing: "border-box",
+                        }
+                      : {}),
                 }}
               >
                 {refreshing ? "Refreshing..." : "Refresh"}
