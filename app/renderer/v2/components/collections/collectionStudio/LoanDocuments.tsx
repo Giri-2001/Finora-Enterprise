@@ -37,6 +37,8 @@
 
 import { useEffect, useMemo, useState } from "react";
 
+import { useResponsive } from "../../../utils/responsive";
+
 import { Files } from "lucide-react";
 
 import type { DocumentsStudioItem } from "../../loans/documents/DocumentsStudio";
@@ -106,6 +108,9 @@ function getDocumentTypeLabel(document: DocumentsStudioItem): string {
 // ============================================================
 
 export default function LoanDocuments({ documents = [] }: LoanDocumentsProps) {
+  const { tokens } = useResponsive();
+
+  const isTablet = tokens.meta.viewport === "tablet";
   // ==========================================================
   // NORMALIZED DOCUMENTS
   // ==========================================================
@@ -388,8 +393,18 @@ export default function LoanDocuments({ documents = [] }: LoanDocumentsProps) {
             </span>
           </div>
         ) : (
-          <div style={loanDocumentsStyles.grid}>
-            {normalizedDocuments.slice(0, 5).map((document) => (
+          <div
+  style={{
+    ...loanDocumentsStyles.grid,
+    ...(isTablet
+      ? {
+          gridTemplateColumns:
+            "repeat(3, minmax(0, 1fr))",
+        }
+      : {}),
+  }}
+>
+            {normalizedDocuments.slice(0, isTablet ? 3 : 5).map((document) => (
               <article
                 key={document.id}
                 style={loanDocumentsStyles.allDocumentCard}

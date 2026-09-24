@@ -1,4 +1,4 @@
-﻿// ============================================================
+// ============================================================
 // FINORA ENTERPRISE OS
 //
 // NOTIFICATIONS ENGINE
@@ -140,6 +140,59 @@ function formatDateTime(
   }
 
   return date.toLocaleString();
+}
+
+function formatOwnerNotificationDateTime(
+  value?:
+    string,
+): string {
+  const normalized =
+    normalizeString(
+      value,
+    );
+
+  if (!normalized) {
+    return "--";
+  }
+
+  const date =
+    new Date(
+      normalized,
+    );
+
+  if (
+    Number.isNaN(
+      date.getTime(),
+    )
+  ) {
+    return normalized;
+  }
+
+  const formattedDate =
+    `${String(
+      date.getDate(),
+    ).padStart(
+      2,
+      "0",
+    )}/${String(
+      date.getMonth() + 1,
+    ).padStart(
+      2,
+      "0",
+    )}/${date.getFullYear()}`;
+
+  const formattedTime =
+    date.toLocaleTimeString(
+      "en-IN",
+      {
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit",
+        hour12: true,
+      },
+    );
+
+  return `${formattedDate}, ${formattedTime}`;
 }
 
 function formatStructuredValue(
@@ -951,9 +1004,6 @@ export default function NotificationsPage({
 
         <header style={styles.header}>
           <div style={styles.headerContent}>
-            <span style={styles.eyebrow}>
-              Notifications Engine
-            </span>
 
             <h1 style={styles.title}>
               Notification Center
@@ -1189,7 +1239,7 @@ export default function NotificationsPage({
 
             {activeFilter !==
               "FAILED" && (
-              <section style={styles.panel}>
+              <section style={{ ...styles.panel, gridColumn: "1 / -1" }}>
                 <div style={styles.panelHeader}>
                   <div style={styles.panelHeading}>
                     <h2 style={styles.panelTitle}>
@@ -1218,7 +1268,15 @@ export default function NotificationsPage({
                     </p>
                   </div>
                 ) : (
-                  <div style={styles.list}>
+                  <div
+                    style={{
+                      ...styles.list,
+                      display: "grid",
+                      gridTemplateColumns:
+                        "repeat(auto-fit, minmax(max(300px, 48%), 1fr))",
+                      alignItems: "start",
+                    }}
+                  >
                     {visibleOwnerNotifications.map(
                       (
                         notification,
@@ -1230,6 +1288,22 @@ export default function NotificationsPage({
                         const isMarking =
                           markingNotificationId ===
                           notification.id;
+
+                        const ownerMessage =
+                          String(notification.message ?? "");
+
+                        const ownerMessageMatch =
+                          ownerMessage.match(
+                            /^(.*?)(?:\s+Outstanding:\s*)(.+)$/i,
+                          );
+
+                        const ownerMessagePrimary =
+                          ownerMessageMatch?.[1]?.trim() ||
+                          ownerMessage;
+
+                        const ownerOutstanding =
+                          ownerMessageMatch?.[2]?.trim() ||
+                          "";
 
                         return (
                           <article
@@ -1283,7 +1357,17 @@ export default function NotificationsPage({
                                 </h3>
 
                                 <p style={styles.listItemMessage}>
-                                  {notification.message}
+                                  <span>{ownerMessagePrimary}</span>
+
+                                  {ownerOutstanding ? (
+                                    <>
+                                      <br />
+
+                                      <span>
+                                        Outstanding : {ownerOutstanding}
+                                      </span>
+                                    </>
+                                  ) : null}
                                 </p>
                               </div>
 
@@ -1317,11 +1401,11 @@ export default function NotificationsPage({
                             <div style={styles.metadataGrid}>
                               <div style={styles.metadataItem}>
                                 <span style={styles.metadataLabel}>
-                                  Created
+                                  Generated At
                                 </span>
 
                                 <span style={styles.metadataValue}>
-                                  {formatDateTime(
+                                  {formatOwnerNotificationDateTime(
                                     notification.createdAt,
                                   )}
                                 </span>
@@ -1333,13 +1417,13 @@ export default function NotificationsPage({
                                 </span>
 
                                 <span style={styles.metadataValue}>
-                                  {formatDateTime(
+                                  {formatOwnerNotificationDateTime(
                                     notification.scheduledFor,
                                   )}
                                 </span>
                               </div>
 
-                              <div style={styles.metadataItem}>
+                              <div style={{ ...styles.metadataItem, display: "none" }}>
                                 <span style={styles.metadataLabel}>
                                   Source
                                 </span>
@@ -1351,7 +1435,7 @@ export default function NotificationsPage({
                                 </span>
                               </div>
 
-                              <div style={styles.metadataItem}>
+                              <div style={{ ...styles.metadataItem, display: "none" }}>
                                 <span style={styles.metadataLabel}>
                                   Read At
                                 </span>
@@ -1378,7 +1462,7 @@ export default function NotificationsPage({
 
             {activeFilter !==
               "UNREAD" && (
-              <section style={styles.panel}>
+              <section style={{ ...styles.panel, display: "none" }}>
                 <div style={styles.panelHeader}>
                   <div style={styles.panelHeading}>
                     <h2 style={styles.panelTitle}>

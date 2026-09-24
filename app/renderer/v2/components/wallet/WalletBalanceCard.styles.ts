@@ -1,4 +1,4 @@
-﻿/* ============================================================
+/* ============================================================
    FINORA ENTERPRISE OS™
 
    FINORA WALLET™
@@ -166,7 +166,7 @@ export function createWalletBalanceCardStyles(
         "var(--finora-theme-text-secondary)",
 
       fontSize:
-        wallet.balanceCard.captionSize,
+        wallet.balanceCard.captionSize + 4,
 
       fontWeight:
         700,

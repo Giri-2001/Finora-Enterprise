@@ -138,6 +138,12 @@ export default function GlobalHeader({
     isMobile,
   } = useResponsive();
 
+  const isTablet =
+    tokens.meta.viewport === "tablet";
+
+  const useTwoRowHeader =
+    isMobile || isTablet;
+
 
   /* =========================================================
      RESPONSIVE TOKEN CONTRACT ALIGNMENT
@@ -382,7 +388,22 @@ export default function GlobalHeader({
 
     <header
       style={
-        containerStyle
+        isTablet
+          ? {
+              ...containerStyle,
+              height: "102px",
+              minHeight: "102px",
+              paddingTop: "8px",
+              gridTemplateColumns:
+                "minmax(0, 1fr) auto minmax(0, 1fr)",
+              gridTemplateRows:
+                "44px 34px",
+              rowGap: "4px",
+              alignItems: "center",
+              overflow: "visible",
+              boxSizing: "border-box",
+            }
+          : containerStyle
       }
     >
 
@@ -393,7 +414,7 @@ export default function GlobalHeader({
 
       <div
         style={
-          isMobile
+          useTwoRowHeader
             ? {
                 ...leftStyle,
 
@@ -466,6 +487,28 @@ export default function GlobalHeader({
         brandTitle={businessName}
         />
 
+        {isTablet && businessName ? (
+          <span
+            style={{
+              minWidth: 0,
+              maxWidth: "220px",
+              overflow: "visible",
+              textOverflow: "clip",
+              flexShrink: 0,
+              whiteSpace: "nowrap",
+              fontFamily:
+                "Inter, ui-sans-serif, system-ui, sans-serif",
+              fontSize: "14px",
+              fontWeight: 700,
+              lineHeight: 1.2,
+              color: departmentStyle.color,
+            }}
+            title={businessName}
+          >
+            {businessName}
+          </span>
+        ) : null}
+
       </div>
 
 
@@ -475,13 +518,30 @@ export default function GlobalHeader({
 
       <div
         style={
-          centerStyle
+          useTwoRowHeader
+            ? {
+                ...centerStyle,
+                gridColumn: "2",
+                gridRow: "2",
+                width: "auto",
+                maxWidth: "none",
+                justifySelf: "center",
+                overflow: "visible",
+              }
+            : centerStyle
         }
       >
 
         <div
           style={
-            departmentStyle
+            isTablet
+              ? {
+                  ...departmentStyle,
+                  maxWidth: "none",
+                  overflow: "visible",
+                  textOverflow: "clip",
+                }
+              : departmentStyle
           }
         >
 
@@ -491,9 +551,14 @@ export default function GlobalHeader({
               department,
             ) === "Customer Department"
               ? "Customers"
-              : buildDepartmentTitle(
-                  department,
-                )
+              : isMobile &&
+                  buildDepartmentTitle(
+                    department,
+                  ) === "Notification Center"
+                ? "Notifications"
+                : buildDepartmentTitle(
+                    department,
+                  )
           }
 
         </div>
@@ -507,7 +572,7 @@ export default function GlobalHeader({
 
       <div
         style={
-          isMobile
+          useTwoRowHeader
             ? {
                 ...rightStyle,
 
@@ -543,7 +608,7 @@ export default function GlobalHeader({
 
         <span
           style={
-            isMobile
+            useTwoRowHeader
               ? {
                   ...loginDateStyle,
 
@@ -574,7 +639,7 @@ export default function GlobalHeader({
 
         <div
           style={
-            isMobile
+            useTwoRowHeader
               ? {
                   display:
                     "flex",
@@ -723,7 +788,7 @@ export default function GlobalHeader({
 
         <div
           style={
-            isMobile
+            useTwoRowHeader
               ? {
                   gridColumn: "3",
                   gridRow: "2",
@@ -752,7 +817,7 @@ export default function GlobalHeader({
           title="FINORA Wallet"
 
           style={
-            isMobile
+            useTwoRowHeader
               ? {
                   ...actionStyle,
 

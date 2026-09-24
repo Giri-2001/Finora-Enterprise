@@ -517,9 +517,9 @@ export function createLoanStudioStyles(
 
       boxShadow: `0 8px 24px ${colors.overlayShadow}`,
 
-      overflow: isMobile ? "visible" : "hidden",
+      overflow: isCompact ? "visible" : "hidden",
 
-      zIndex: isMobile ? 30 : undefined,
+      zIndex: isCompact ? 30 : undefined,
     },
 
     /* =======================================================

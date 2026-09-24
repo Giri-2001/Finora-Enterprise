@@ -770,10 +770,6 @@ export default function Loans() {
       responsiveTokens.viewport === "tablet"
         ? "8px"
         : undefined,
-    marginBottom:
-      responsiveTokens.viewport === "tablet"
-        ? "8px"
-        : undefined,
   };
 
   const responsivePortfolioActionsStyle: CSSProperties = {

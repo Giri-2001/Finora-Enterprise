@@ -194,6 +194,10 @@ export default function NomineePreviewCard({
 
   const { tokens } = useResponsive();
 
+  const {
+    tokens: nomineePreviewResponsiveTokens,
+  } = useResponsive();
+
 
   /* =========================================================
      STYLES
@@ -207,6 +211,7 @@ export default function NomineePreviewCard({
     createNomineePreviewCardStyles(
       theme,
       tokens.meta.viewport === "mobile",
+      nomineePreviewResponsiveTokens.meta.viewport === "tablet",
     );
 
 

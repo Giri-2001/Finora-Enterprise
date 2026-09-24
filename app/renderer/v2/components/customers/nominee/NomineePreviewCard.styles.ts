@@ -40,6 +40,7 @@ import type {
 export function createNomineePreviewCardStyles(
   theme: FinoraTheme,
   mobile: boolean,
+  tablet: boolean = false,
 ) {
 
 
@@ -268,11 +269,11 @@ export function createNomineePreviewCardStyles(
     display: "grid",
 
     gridTemplateColumns:
-      mobile ? "26px 104px minmax(0,1fr)" : "30px 112px minmax(0,1fr)",
+      mobile         ? "26px 104px minmax(0,1fr)"         : tablet           ? "30px 140px minmax(0,1fr)"           : "30px 112px minmax(0,1fr)",
 
     alignItems: "center",
 
-    gap: mobile ? "10px" : "12px",
+    gap:       mobile         ? "10px"         : tablet           ? "14px"           : "12px",
 
     minHeight: mobile ? "42px" : "38px",
 

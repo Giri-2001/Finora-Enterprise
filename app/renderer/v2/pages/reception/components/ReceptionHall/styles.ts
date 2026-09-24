@@ -1,4 +1,4 @@
-﻿/* ===========================================================
+/* ===========================================================
    FINORA ENTERPRISE OS™
 
    RECEPTION™
@@ -537,8 +537,11 @@ export function createReceptionHallStyles(
     marginTop:
       `${Math.max(tokens.spacing.small - 3, 0)}px`,
 
+    fontFamily:
+      "Inter, ui-sans-serif, system-ui, sans-serif",
+
     fontSize:
-      `${tokens.typography.caption + 3}px`,
+      `${tokens.typography.caption + 2}px`,
 
     fontWeight:
       500,

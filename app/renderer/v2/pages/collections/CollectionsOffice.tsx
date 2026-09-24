@@ -1,4 +1,4 @@
-﻿// ============================================================
+// ============================================================
 // FINORA ENTERPRISE OS™
 //
 // COLLECTIONS OFFICE™
@@ -419,6 +419,16 @@ export default function CollectionsOffice() {
     ...portfolioHeaderStyle,
 
     ...createLoansOfficePortfolioHeaderStyle(responsiveTokens),
+
+    paddingTop:
+      responsiveTokens.viewport === "tablet"
+        ? "8px"
+        : undefined,
+
+    paddingBottom:
+      responsiveTokens.viewport === "tablet"
+        ? "8px"
+        : undefined,
   };
 
   const responsivePortfolioActionsStyle: CSSProperties = {

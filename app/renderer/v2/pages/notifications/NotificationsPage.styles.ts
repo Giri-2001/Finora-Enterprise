@@ -479,7 +479,7 @@ export function getNotificationsPageStyles(
         }px`,
 
       fontWeight:
-        800,
+        750,
 
       fontFamily:
         INTER,
@@ -514,14 +514,10 @@ export function getNotificationsPageStyles(
         "pointer",
 
       fontSize:
-        `${
-          isMobile
-            ? tokens.typography.caption
-            : tokens.typography.small
-        }px`,
+        `${(isMobile ? tokens.typography.caption : tokens.typography.small) + 1}px`,
 
       fontWeight:
-        800,
+        750,
 
       fontFamily:
         INTER,
@@ -994,7 +990,10 @@ export function getNotificationsPageStyles(
         THEME.muted,
 
       fontSize:
-        `${tokens.typography.caption}px`,
+        `${tokens.typography.caption + 1}px`,
+
+      fontWeight:
+        450,
 
       lineHeight:
         tokens.lineHeight.body,
@@ -1177,10 +1176,10 @@ export function getNotificationsPageStyles(
         THEME.text,
 
       fontSize:
-        `${tokens.typography.small}px`,
+        `${(tokens.typography.small + 1) + 1}px`,
 
       fontWeight:
-        850,
+        800,
 
       lineHeight:
         tokens.lineHeight.compact,
@@ -1206,7 +1205,7 @@ export function getNotificationsPageStyles(
         THEME.muted,
 
       fontSize:
-        `${tokens.typography.caption}px`,
+        `${(tokens.typography.caption + 1) + 1}px`,
 
       fontWeight:
         500,
@@ -1318,10 +1317,7 @@ export function getNotificationsPageStyles(
         THEME.muted,
 
       fontSize:
-        `${Math.max(
-          9,
-          tokens.typography.caption - 1,
-        )}px`,
+        `${(Math.max( 9, tokens.typography.caption - 1, )) + 1}px`,
 
       fontWeight:
         750,
@@ -1347,7 +1343,7 @@ export function getNotificationsPageStyles(
         THEME.text,
 
       fontSize:
-        `${tokens.typography.caption}px`,
+        `${(tokens.typography.caption) + 1}px`,
 
       fontWeight:
         650,
@@ -1424,10 +1420,7 @@ export function getNotificationsPageStyles(
         "999px",
 
       fontSize:
-        `${Math.max(
-          9,
-          tokens.typography.caption - 1,
-        )}px`,
+        `${Math.max(7, (Math.max( 9, tokens.typography.caption - 1, )) - 2)}px`,
 
       fontWeight:
         850,

@@ -418,9 +418,9 @@ export function getReportsPageStyles(
 
       textAlign: "center",
 
-      fontSize: `${tokens.typography.label + 4}px`,
+      fontSize: `${tokens.typography.label + 4 + 1}px`,
 
-      fontWeight: 800,
+      fontWeight: 750,
 
       fontFamily: INTER,
     },
@@ -601,9 +601,9 @@ export function getReportsPageStyles(
 
       color: THEME.text,
 
-      fontSize: `${panelTitleSize}px`,
+      fontSize: `${panelTitleSize + 1}px`,
 
-      fontWeight: 800,
+      fontWeight: 750,
 
       lineHeight: tokens.lineHeight.compact,
 
@@ -727,9 +727,9 @@ export function getReportsPageStyles(
 
       color: THEME.text,
 
-      fontSize: `${tokens.typography.small}px`,
+      fontSize: `${tokens.typography.small + 1}px`,
 
-      fontWeight: 800,
+      fontWeight: 750,
 
       lineHeight: tokens.lineHeight.compact,
 

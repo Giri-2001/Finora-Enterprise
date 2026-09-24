@@ -239,6 +239,11 @@ export function buildAccountsResponsiveCssVariables(
 
     "--finora-accounts-content-gap": px(page.contentGap),
 
+    "--finora-accounts-header-summary-gap":
+      responsive.device === "mobile" || responsive.device === "tablet"
+        ? "8px"
+        : "0px",
+
     /* =======================================================
        GENERAL SPACING
     ======================================================= */

@@ -34,6 +34,8 @@
 =========================================================== */
 
 .finora-accounts-summary {
+  margin-top:
+    var(--finora-accounts-header-summary-gap);
   width: 100%;
 
   box-sizing: border-box;

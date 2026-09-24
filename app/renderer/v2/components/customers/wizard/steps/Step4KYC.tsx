@@ -248,6 +248,27 @@ export default function Step4KYC({
     ],
   );
 
+  const isTablet =
+    tokens.meta.viewport === "tablet";
+
+  const tabletPreviewRowStyle =
+    isTablet
+      ? {
+          ...styles.previewRowStyle,
+          padding:
+            `${kycTokens.previewRowPaddingY + 1.5}px ${kycTokens.previewPaddingX}px`,
+        }
+      : styles.previewRowStyle;
+
+  const tabletPreviewValueStyle =
+    isTablet
+      ? {
+          ...styles.previewValueStyle,
+          fontSize:
+            `${kycTokens.previewValueSize + 1}px`,
+        }
+      : styles.previewValueStyle;
+
   const themeVariables = useMemo(
     () =>
       createStep4ThemeVariables(
@@ -474,55 +495,55 @@ export default function Step4KYC({
             </div>
 
             <div style={styles.previewRowsStyle}>
-              <div style={styles.previewRowStyle}>
+              <div style={tabletPreviewRowStyle}>
                 <span style={styles.previewLabelStyle}>
                   CUSTOMER
                 </span>
-                <span style={styles.previewValueStyle}>
+                <span style={tabletPreviewValueStyle}>
                   {displayValue(
                     wizardData.fullName ?? "",
                   )}
                 </span>
               </div>
 
-              <div style={styles.previewRowStyle}>
+              <div style={tabletPreviewRowStyle}>
                 <span style={styles.previewLabelStyle}>
                   AADHAAR
                 </span>
-                <span style={styles.previewValueStyle}>
+                <span style={tabletPreviewValueStyle}>
                   {displayValue(
                     kycData.aadhaarNumber,
                   )}
                 </span>
               </div>
 
-              <div style={styles.previewRowStyle}>
+              <div style={tabletPreviewRowStyle}>
                 <span style={styles.previewLabelStyle}>
                   PAN
                 </span>
-                <span style={styles.previewValueStyle}>
+                <span style={tabletPreviewValueStyle}>
                   {displayValue(
                     kycData.panNumber,
                   )}
                 </span>
               </div>
 
-              <div style={styles.previewRowStyle}>
+              <div style={tabletPreviewRowStyle}>
                 <span style={styles.previewLabelStyle}>
                   VOTER ID
                 </span>
-                <span style={styles.previewValueStyle}>
+                <span style={tabletPreviewValueStyle}>
                   {displayValue(
                     kycData.voterId,
                   )}
                 </span>
               </div>
 
-              <div style={styles.previewRowStyle}>
+              <div style={tabletPreviewRowStyle}>
                 <span style={styles.previewLabelStyle}>
                   DRIVING LICENCE
                 </span>
-                <span style={styles.previewValueStyle}>
+                <span style={tabletPreviewValueStyle}>
                   {displayValue(
                     kycData.drivingLicense,
                   )}
