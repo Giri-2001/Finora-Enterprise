@@ -111,6 +111,7 @@ export default function ReceptionFooter() {
 
   const {
     tokens,
+    isMobile,
   } = useResponsive();
 
   const {
@@ -138,6 +139,7 @@ export default function ReceptionFooter() {
     createReceptionFooterStyles(
       tokens,
       theme,
+      isMobile,
     );
 
   return (

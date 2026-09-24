@@ -14,6 +14,8 @@ import { useState } from "react";
 
 import Button from "../../common/buttons/Button";
 
+import { useResponsive } from "../../../utils/responsive";
+
 import {
   accentStyle,
   actionButtonStyle,
@@ -63,6 +65,9 @@ export default function ApprovalActions({
 
   onRejectLoan,
 }: ApprovalActionsProps) {
+  const { tokens } = useResponsive();
+
+  const isMobile = tokens.meta.viewport === "mobile";
   const [
     isApproving,
     setIsApproving,
@@ -204,8 +209,27 @@ export default function ApprovalActions({
         </span>
       </div>
 
-      <div style={actionRowStyle}>
-        <div style={actionButtonStyle}>
+      <div
+        style={{
+          ...actionRowStyle,
+          ...(isMobile
+            ? {
+                flexDirection: "column",
+                alignItems: "stretch",
+                flexWrap: "nowrap",
+              }
+            : {}),
+        }}
+      >
+        <div style={
+            isMobile
+              ? {
+                  ...actionButtonStyle,
+                  width: "100%",
+                  minWidth: 0,
+                }
+              : actionButtonStyle
+          }>
           <Button
             onClick={onSaveDraft}
             disabled={
@@ -217,7 +241,15 @@ export default function ApprovalActions({
           </Button>
         </div>
 
-        <div style={actionButtonStyle}>
+        <div style={
+            isMobile
+              ? {
+                  ...actionButtonStyle,
+                  width: "100%",
+                  minWidth: 0,
+                }
+              : actionButtonStyle
+          }>
           <Button
             onClick={() => {
               void handleApproveLoan();
@@ -233,7 +265,15 @@ export default function ApprovalActions({
           </Button>
         </div>
 
-        <div style={actionButtonStyle}>
+        <div style={
+            isMobile
+              ? {
+                  ...actionButtonStyle,
+                  width: "100%",
+                  minWidth: 0,
+                }
+              : actionButtonStyle
+          }>
           <Button
             variant="danger"
             onClick={

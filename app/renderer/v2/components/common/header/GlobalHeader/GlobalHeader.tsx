@@ -486,9 +486,14 @@ export default function GlobalHeader({
         >
 
           {
+            isMobile &&
             buildDepartmentTitle(
               department,
-            )
+            ) === "Customer Department"
+              ? "Customers"
+              : buildDepartmentTitle(
+                  department,
+                )
           }
 
         </div>
@@ -716,6 +721,24 @@ export default function GlobalHeader({
            FINORA WALLET
         =================================================== */}
 
+        <div
+          style={
+            isMobile
+              ? {
+                  gridColumn: "3",
+                  gridRow: "2",
+                  justifySelf: "end",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "6px",
+                  minWidth: 0,
+                }
+              : {
+                  display: "contents",
+                }
+          }
+        >
+
         <button
 
           type="button"
@@ -801,7 +824,15 @@ export default function GlobalHeader({
 
           <span
             style={{
-              fontWeight: 750,
+              fontWeight:
+                isMobile
+                  ? 800
+                  : 750,
+
+              fontSize:
+                isMobile
+                  ? "calc(1em + 1px)"
+                  : undefined,
             }}
           >
             {
@@ -849,6 +880,8 @@ export default function GlobalHeader({
             />
           </button>
         ) : null}
+
+        </div>
 
       </div>
 

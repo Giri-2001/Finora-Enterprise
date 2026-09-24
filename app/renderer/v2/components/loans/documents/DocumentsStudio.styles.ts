@@ -62,6 +62,7 @@ export const sectionStyle = {
 export const headerStyle = {
   display: "flex",
   alignItems: "center",
+  flexWrap: "wrap" as const,
   gap: "10px",
   marginBottom: "16px",
 };
@@ -76,12 +77,13 @@ export const headerAccentStyle = {
 
 export const headerTextStyle = {
   minWidth: 0,
+  flex: "1 1 200px",
 };
 
 export const headerTitleStyle = {
   margin: 0,
   fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
-  fontSize: "20px",
+  fontSize: "clamp(17px, 4.5vw, 20px)",
   fontWeight: 750,
   color: THEME.textPrimary,
 };
@@ -90,8 +92,9 @@ export const headerDescriptionStyle = {
   margin: 0,
   color: THEME.textMuted,
   fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
-  fontSize: "14px",
+  fontSize: "clamp(11px, 3vw, 14px)",
   fontWeight: 500,
+  lineHeight: 1.35,
 };
 
 export const headerBadgeWrapStyle = {
@@ -118,7 +121,8 @@ export const sectionTitleRowStyle = {
   display: "flex",
   alignItems: "center",
   justifyContent: "space-between",
-  gap: "10px",
+  flexWrap: "wrap" as const,
+  gap: "6px 10px",
   marginTop: "16px",
   marginBottom: "8px",
 };
@@ -134,7 +138,8 @@ export const sectionTitleStyle = {
 export const sectionHintStyle = {
   color: THEME.textMuted,
   fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
-  fontSize: "12px",
+  fontSize: "clamp(10px, 2.8vw, 12px)",
+  lineHeight: 1.3,
 };
 
 export const badgeStyle = {
@@ -388,7 +393,8 @@ export const evidencePreviewMetaStyle = {
   marginTop: "5px",
   color: THEME.textSecondary,
   fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
-  fontSize: "14px",
+  fontSize: "clamp(11px, 3vw, 14px)",
+  lineHeight: 1.3,
 };
 
 export const evidencePreviewStripStyle = {

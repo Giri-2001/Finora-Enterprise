@@ -12,16 +12,39 @@ interface LoanStatisticsProps {
   totalLoans?: number;
   activeLoans?: number;
   totalDisbursed?: number;
+  singleColumn?: boolean;
 }
 
 export default function LoanStatistics({
   totalLoans = 0,
   activeLoans = 0,
   totalDisbursed = 0,
+  singleColumn = false,
 }: LoanStatisticsProps) {
   return (
-    <section style={cardStyle}>
-      <div style={statisticsGridStyle}>
+    <section
+      style={{
+        ...cardStyle,
+        ...(singleColumn
+          ? {
+              height: "auto",
+              alignItems: "stretch",
+            }
+          : {}),
+      }}
+    >
+      <div
+        style={{
+          ...statisticsGridStyle,
+          ...(singleColumn
+            ? {
+                gridTemplateColumns: "minmax(0, 1fr)",
+                height: "auto",
+                minHeight: 0,
+              }
+            : {}),
+        }}
+      >
 
         {/* ============================================================
             TOTAL LOANS

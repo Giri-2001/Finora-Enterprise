@@ -16,6 +16,8 @@
 // - No inline responsive logic.
 // ============================================================
 
+import { useState } from "react";
+
 import { formatIndianDate } from "./LoanStudio.helpers";
 
 import { useResponsive } from "../../../../../utils/responsive";
@@ -160,6 +162,10 @@ export default function LoanStudioView(props: LoanStudioViewModel) {
   ========================================================== */
 
   const { tokens } = useResponsive();
+
+  const isMobile = tokens.meta.viewport === "mobile";
+
+  const [mobileStepMenuOpen, setMobileStepMenuOpen] = useState(false);
 
   /* ==========================================================
      FINORA THEME ENGINE
@@ -380,6 +386,36 @@ export default function LoanStudioView(props: LoanStudioViewModel) {
 
   const previousNavigationDisabled = step === 1 || (isGoldLoan && step === 2);
 
+  const activeStepItem = STEP_ITEMS[step - 1] ?? STEP_ITEMS[0];
+
+  const handleStepSelection = (current: number): void => {
+    if (isGoldLoan && current === 1) {
+      props.onGoldStepOneDetails?.();
+
+      return;
+    }
+
+    if (current === 6) {
+      setStep(6);
+
+      return;
+    }
+
+    if (
+      step === 4 &&
+      current > 4 &&
+      guarantorVerificationStatus.trim().toLowerCase() !== "verified"
+    ) {
+      void finoraWarning(
+        "Guarantor verification must be Verified before proceeding to Review.",
+      );
+
+      return;
+    }
+
+    setStep(current);
+  };
+
   /* ==========================================================
      RENDER
   ========================================================== */
@@ -407,6 +443,7 @@ export default function LoanStudioView(props: LoanStudioViewModel) {
 
               <div style={step1OverviewStyle}>
                 <LoanStatistics
+                  singleColumn={isMobile}
                   totalLoans={loanStatistics.totalLoans}
                   activeLoans={loanStatistics.activeLoans}
                   totalDisbursed={loanStatistics.totalDisbursed}
@@ -798,7 +835,116 @@ export default function LoanStudioView(props: LoanStudioViewModel) {
 
 
       <footer style={footerStyle}>
-        <div style={stepListStyle}>
+        {isMobile ? (
+          <div
+            style={{
+              position: "relative",
+              width: "100%",
+              minWidth: 0,
+              zIndex: 20,
+            }}
+          >
+            {mobileStepMenuOpen ? (
+              <div
+                role="menu"
+                aria-label="Loan workflow steps"
+                style={{
+                  position: "absolute",
+                  left: 0,
+                  right: 0,
+                  bottom: "calc(100% + 6px)",
+                  zIndex: 40,
+                  display: "grid",
+                  gridTemplateColumns: "minmax(0, 1fr)",
+                  gap: "4px",
+                  padding: "6px",
+                  boxSizing: "border-box",
+                  border:
+                    "1px solid var(--finora-theme-border-default, rgba(148,163,184,0.18))",
+                  borderRadius: "10px",
+                  background:
+                    "var(--finora-theme-background-surface, #111C2E)",
+                  boxShadow:
+                    "0 -10px 28px var(--finora-theme-overlay-shadow, rgba(0,0,0,0.24))",
+                }}
+              >
+                {STEP_ITEMS.map((item, index) => {
+                  const current = index + 1;
+                  const active = current === step;
+                  const completed = current < step;
+
+                  return (
+                    <button
+                      key={item.title}
+                      type="button"
+                      role="menuitem"
+                      onClick={() => {
+                        setMobileStepMenuOpen(false);
+                        handleStepSelection(current);
+                      }}
+                      style={{
+                        ...stepItemStyle,
+                        cursor: "pointer",
+                        textAlign: "left",
+                        border:
+                          "1px solid var(--finora-theme-border-default, rgba(148,163,184,0.18))",
+                        background: active
+                          ? "var(--finora-theme-brand-accent-soft, rgba(37,99,235,0.14))"
+                          : "var(--finora-theme-background-surface-muted, #142238)",
+                      }}
+                    >
+                      <span
+                        style={
+                          active
+                            ? activeStepTitleStyle
+                            : completed
+                              ? completedStepTitleStyle
+                              : pendingStepTitleStyle
+                        }
+                      >
+                        {item.title}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            ) : null}
+
+            <button
+              type="button"
+              aria-haspopup="menu"
+              aria-expanded={mobileStepMenuOpen}
+              onClick={() => {
+                setMobileStepMenuOpen((current) => !current);
+              }}
+              style={{
+                ...stepItemStyle,
+                cursor: "pointer",
+                justifyContent: "space-between",
+                textAlign: "left",
+                border:
+                  "1px solid var(--finora-theme-border-default, rgba(148,163,184,0.18))",
+              }}
+            >
+              <span style={activeStepTitleStyle}>
+                {activeStepItem.title}
+              </span>
+
+              <span
+                aria-hidden="true"
+                style={{
+                  flexShrink: 0,
+                  fontSize: "14px",
+                  fontWeight: 800,
+                  lineHeight: 1,
+                }}
+              >
+                {mobileStepMenuOpen ? "▼" : "▲"}
+              </span>
+            </button>
+          </div>
+        ) : (
+          <div style={stepListStyle}>
           {STEP_ITEMS.map((item, index) => {
             const current = index + 1;
 
@@ -811,38 +957,7 @@ export default function LoanStudioView(props: LoanStudioViewModel) {
                 key={item.title}
                 style={stepItemStyle}
                 onClick={() => {
-                  /*
-                   * Gold Step 1 belongs to GoldLoanForm.
-                   *
-                   * Never allow the shared Loan Studio to expose the
-                   * Standard Loan Details page for a Gold Loan.
-                   */
-                  if (isGoldLoan && current === 1) {
-                    props.onGoldStepOneDetails?.();
-
-                    return;
-                  }
-
-                  if (current === 6) {
-                    setStep(6);
-
-                    return;
-                  }
-
-                  if (
-                    step === 4 &&
-                    current > 4 &&
-                    guarantorVerificationStatus.trim().toLowerCase() !==
-                      "verified"
-                  ) {
-                    void finoraWarning(
-                      "Guarantor verification must be Verified before proceeding to Review.",
-                    );
-
-                    return;
-                  }
-
-                  setStep(current);
+                  handleStepSelection(current);
                 }}
               >
                 <div
@@ -875,7 +990,8 @@ export default function LoanStudioView(props: LoanStudioViewModel) {
               </div>
             );
           })}
-        </div>
+          </div>
+        )}
 
         <div style={navigationStyle}>
           <button
@@ -885,6 +1001,8 @@ export default function LoanStudioView(props: LoanStudioViewModel) {
               if (previousNavigationDisabled) {
                 return;
               }
+
+              setMobileStepMenuOpen(false);
 
               if (step > 1) {
                 setStep(step - 1);
@@ -903,6 +1021,8 @@ export default function LoanStudioView(props: LoanStudioViewModel) {
             type="button"
             style={primaryNavigationButtonStyle}
             onClick={async () => {
+              setMobileStepMenuOpen(false);
+
               if (step < 6) {
                 /* ================================================
                    STANDARD LOAN STEP 1 REQUIRED VALIDATION

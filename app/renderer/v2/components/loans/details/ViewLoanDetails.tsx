@@ -115,6 +115,7 @@ import {
   footerStyle,
   footerBackButtonStyle,
   statusBadgeStyle,
+  COLORS,
 } from "./ViewLoanDetails.styles";
 
 // ============================================================
@@ -608,7 +609,20 @@ export default function ViewLoanDetails({
         <div className="finora-view-loan-header-meta" style={headerMetaStyle}>
           <span style={loanNumberBadgeStyle}>{loanNumber}</span>
 
-          <span style={statusBadgeStyle(loan.status)}>{status}</span>
+          <span
+            style={{
+              ...statusBadgeStyle(loan.status),
+              ...(status === "Closed"
+                ? {
+                    borderColor: COLORS.danger,
+                    background: COLORS.dangerSoft,
+                    color: COLORS.danger,
+                  }
+                : {}),
+            }}
+          >
+            {status}
+          </span>
         </div>
       </header>
 

@@ -748,11 +748,19 @@ export default function Loans() {
   const responsiveFiltersGridStyle: CSSProperties = {
     ...filtersGridStyle,
     ...createLoansOfficeFiltersGridStyle(responsiveTokens),
+    ...(responsiveTokens.viewport === "mobile"
+      ? {
+          gridTemplateColumns: "minmax(0, 1fr)",
+          width: "100%",
+          rowGap: "8px",
+        }
+      : {}),
   };
 
   const responsivePortfolioHeaderStyle: CSSProperties = {
     ...themedPortfolioHeaderStyle,
     ...createLoansOfficePortfolioHeaderStyle(responsiveTokens),
+    paddingTop: responsiveTokens.viewport === "mobile" ? "10px" : undefined,
   };
 
   const responsivePortfolioActionsStyle: CSSProperties = {
@@ -763,6 +771,14 @@ export default function Loans() {
       responsiveTokens.viewport === "tablet"
         ? "100%"
         : undefined,
+    ...(responsiveTokens.viewport === "mobile"
+      ? {
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "stretch",
+          gap: "8px",
+        }
+      : {}),
   };
 
   // ==========================================================
@@ -1370,7 +1386,17 @@ export default function Loans() {
 
               <div style={filtersStyle}>
                 <div style={responsiveFiltersGridStyle}>
-                  <div style={filterFieldStyle}>
+                  <div
+                    style={{
+                      ...filterFieldStyle,
+                      ...(responsiveTokens.viewport === "mobile"
+                        ? {
+                            width: "100%",
+                            minWidth: 0,
+                          }
+                        : {}),
+                    }}
+                  >
                     <label style={themedFilterLabelStyle}>Status</label>
 
                     <select
@@ -1381,6 +1407,9 @@ export default function Loans() {
                       style={{
                         ...filterSelectStyle,
                         ...themedFilterControlStyle,
+                        ...(responsiveTokens.viewport === "mobile"
+                          ? { width: "100%" }
+                          : {}),
                       }}
                     >
                       <option value="ALL">All</option>
@@ -1395,7 +1424,7 @@ export default function Loans() {
                     style={{
                       gridColumn:
                         responsiveTokens.viewport === "mobile"
-                          ? "auto"
+                          ? "1 / -1"
                           : "span 2",
                       minWidth: 0,
                       width: "100%",
@@ -1419,11 +1448,28 @@ export default function Loans() {
                     />
                   </div>
 
-                  <div style={filterActionsStyle}>
+                  <div
+                    style={{
+                      ...filterActionsStyle,
+                      ...(responsiveTokens.viewport === "mobile"
+                        ? {
+                            width: "100%",
+                            display: "grid",
+                            gridTemplateColumns: "minmax(0, 1fr)",
+                            gap: "8px",
+                          }
+                        : {}),
+                    }}
+                  >
                     <button
                       type="button"
                       onClick={handleClearFilters}
-                      style={themedClearFilterButtonStyle}
+                      style={{
+                        ...themedClearFilterButtonStyle,
+                        ...(responsiveTokens.viewport === "mobile"
+                          ? { width: "100%" }
+                          : {}),
+                      }}
                     >
                       Clear
                     </button>
@@ -1431,7 +1477,12 @@ export default function Loans() {
                     <button
                       type="button"
                       onClick={handleApplyFilters}
-                      style={themedApplyFilterButtonStyle}
+                      style={{
+                        ...themedApplyFilterButtonStyle,
+                        ...(responsiveTokens.viewport === "mobile"
+                          ? { width: "100%" }
+                          : {}),
+                      }}
                     >
                       Apply
                     </button>
@@ -1449,12 +1500,34 @@ export default function Loans() {
                   void loadLoans(true);
                 }}
                 disabled={refreshing}
-                style={themedRefreshButtonStyle}
+                style={{
+                  ...themedRefreshButtonStyle,
+                  ...(responsiveTokens.viewport === "mobile"
+                    ? { width: "100%" }
+                    : {}),
+                }}
               >
                 {refreshing ? "Refreshing..." : "Refresh"}
               </button>
 
-              <span style={themedLoanCountStyle}>
+              <span
+                style={{
+                  ...themedLoanCountStyle,
+                  marginBottom:
+                    responsiveTokens.viewport === "mobile"
+                      ? "10px"
+                      : undefined,
+                  ...(responsiveTokens.viewport === "mobile"
+                    ? {
+                        width: "100%",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        boxSizing: "border-box",
+                      }
+                    : {}),
+                }}
+              >
                 {filteredLoans.length}{" "}
                 {filteredLoans.length === 1 ? "Loan" : "Loans"}
               </span>
@@ -1720,7 +1793,10 @@ export default function Loans() {
                     boxSizing: "border-box",
                     display: "flex",
                     flexDirection: "column",
-                    gap: `${responsiveTokens.layout.mobileRecordGap}px`,
+                    gap:
+                      responsiveTokens.viewport === "mobile"
+                        ? "10px"
+                        : `${responsiveTokens.layout.mobileRecordGap}px`,
                   }}
                 >
                   {paginatedLoans.map((loan, index) => (
@@ -1734,6 +1810,19 @@ export default function Loans() {
                       formatCurrency={(value) => formatCurrency(value ?? 0)}
                       formatDate={formatDate}
                       formatStatus={formatStatus}
+                      statusStyle={{
+                        border: `1px solid ${
+                          isClosedLoan(loan)
+                            ? themeColors.danger
+                            : themeColors.successBorder
+                        }`,
+                        background: isClosedLoan(loan)
+                          ? themeColors.dangerSoft
+                          : themeColors.successSoft,
+                        color: isClosedLoan(loan)
+                          ? themeColors.danger
+                          : themeColors.success,
+                      }}
                       onView={handleViewLoan}
                     />
                   ))}

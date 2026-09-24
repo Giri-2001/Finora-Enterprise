@@ -375,7 +375,7 @@ export function createLoanStudioStyles(
     fontFamily:
       "Inter, ui-sans-serif, system-ui, sans-serif",
 
-    fontSize: tokens.typography.navigation + 1,
+    fontSize: isMobile ? tokens.typography.navigation + 3 : tokens.typography.navigation + 1,
 
     fontWeight: 700,
 
@@ -517,7 +517,9 @@ export function createLoanStudioStyles(
 
       boxShadow: `0 8px 24px ${colors.overlayShadow}`,
 
-      overflow: "hidden",
+      overflow: isMobile ? "visible" : "hidden",
+
+      zIndex: isMobile ? 30 : undefined,
     },
 
     /* =======================================================

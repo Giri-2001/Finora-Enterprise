@@ -61,6 +61,7 @@ export interface LoanPortfolioResponsiveRecordProps {
   formatCurrency: (value: number | undefined) => string;
   formatDate: (value: string) => string;
   formatStatus: (loan: Loan) => string;
+  statusStyle: CSSProperties;
   onView: (loan: Loan) => void;
 }
 
@@ -77,6 +78,7 @@ export default function LoanPortfolioResponsiveRecord({
   formatCurrency,
   formatDate,
   formatStatus,
+  statusStyle,
   onView,
 }: LoanPortfolioResponsiveRecordProps) {
   // ==========================================================
@@ -264,9 +266,7 @@ export default function LoanPortfolioResponsiveRecord({
       <span
         style={{
           ...statusBadgeStyle(loan.status),
-          borderColor: theme.colors.border.strong,
-          background: theme.colors.status.successSoft,
-          color: theme.colors.status.success,
+          ...statusStyle,
           fontSize: `${tokens.typography.mobileStatus}px`,
         }}
       >

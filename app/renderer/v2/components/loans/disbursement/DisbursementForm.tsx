@@ -24,6 +24,8 @@ import { FinoraCalendar, FormField, TextInput } from "../../common";
 
 import { formatCurrency } from "../../../utils/currency/formatCurrency";
 
+import { useResponsive } from "../../../utils/responsive";
+
 import {
   disbursementFormStyle,
   fieldsGridStyle,
@@ -77,6 +79,10 @@ export default function DisbursementForm({
 
   const formattedDisbursement = formatCurrency(calculatedDisbursement);
 
+  const { tokens } = useResponsive();
+
+  const isMobile = tokens.meta.viewport === "mobile";
+
   // ==========================================================
   // RENDER
   // ==========================================================
@@ -84,7 +90,16 @@ export default function DisbursementForm({
   return (
     <div style={disbursementFormStyle}>
       <SummaryCard title="Disbursement Mode">
-        <div style={fieldsGridStyle}>
+        <div
+          style={{
+            ...fieldsGridStyle,
+            ...(isMobile
+              ? {
+                  gridTemplateColumns: "minmax(0, 1fr)",
+                }
+              : {}),
+          }}
+        >
           {/* =================================================
               DISBURSEMENT DATE
           ================================================= */}

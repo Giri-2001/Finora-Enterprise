@@ -31,6 +31,7 @@ export interface ReceptionFooterStyles {
 export function createReceptionFooterStyles(
   tokens: ResponsiveTokens,
   theme: FinoraTheme,
+  isMobile: boolean,
 ): ReceptionFooterStyles {
 
   const fontFamily =
@@ -61,7 +62,9 @@ export function createReceptionFooterStyles(
       `${tokens.footer.minHeight}px`,
 
     height:
-      `${tokens.footer.height}px`,
+      isMobile
+        ? "auto"
+        : `${tokens.footer.height}px`,
 
     padding:
       `${tokens.footer.paddingY}px ${tokens.footer.paddingX}px`,
@@ -113,13 +116,20 @@ export function createReceptionFooterStyles(
       "grid",
 
     gridTemplateColumns:
-      "minmax(0, 1fr) auto minmax(0, 1fr)",
+      isMobile
+        ? "minmax(0, 1fr)"
+        : "minmax(0, 1fr) auto minmax(0, 1fr)",
 
     alignItems:
       "center",
 
     columnGap:
       `${tokens.spacing.medium}px`,
+
+    rowGap:
+      isMobile
+        ? `${tokens.spacing.small}px`
+        : 0,
 
     boxSizing:
       "border-box",
@@ -132,7 +142,48 @@ export function createReceptionFooterStyles(
       0,
 
     justifySelf:
-      "start",
+      isMobile
+        ? "stretch"
+        : "start",
+
+    width:
+      isMobile
+        ? "100%"
+        : "auto",
+
+    display:
+      isMobile
+        ? "flex"
+        : "block",
+
+    alignItems:
+      "center",
+
+    justifyContent:
+      "center",
+
+    padding:
+      isMobile
+        ? `${chipPaddingY}px ${tokens.spacing.small}px`
+        : 0,
+
+    border:
+      isMobile
+        ? `${tokens.border.width}px solid ${theme.colors.border.default}`
+        : "none",
+
+    borderRadius:
+      isMobile
+        ? chipRadius
+        : 0,
+
+    background:
+      isMobile
+        ? theme.colors.background.surfaceElevated
+        : "transparent",
+
+    boxSizing:
+      "border-box",
 
     color:
       theme.colors.text.primary,
@@ -203,7 +254,14 @@ export function createReceptionFooterStyles(
     ...sharedBadgeStyle,
 
     justifySelf:
-      "center",
+      isMobile
+        ? "stretch"
+        : "center",
+
+    width:
+      isMobile
+        ? "100%"
+        : "auto",
   };
 
   const versionBadgeStyle:
@@ -212,7 +270,14 @@ export function createReceptionFooterStyles(
     ...sharedBadgeStyle,
 
     justifySelf:
-      "end",
+      isMobile
+        ? "stretch"
+        : "end",
+
+    width:
+      isMobile
+        ? "100%"
+        : "auto",
   };
 
   const metadataLabelStyle:
