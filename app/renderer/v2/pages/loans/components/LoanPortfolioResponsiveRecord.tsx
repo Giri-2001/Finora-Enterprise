@@ -160,7 +160,7 @@ export default function LoanPortfolioResponsiveRecord({
   );
 
   const fields = [
-    field("S.No.", index + 1, "serial", "secondary"),
+    field("S.No", index + 1, "serial", "secondary"),
     field(
       "Loan",
       <div style={loanIdentityStyle}>

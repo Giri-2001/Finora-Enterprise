@@ -32,8 +32,7 @@ import {
   paginationCardStyle,
   paginationButtonStyle,
   paginationCenterStyle,
-  paginationDotStyle,
-  paginationActiveDotStyle,
+  paginationPageInputStyle,
   getCustomerHubSummaryCardsStyles,
 } from "./styles";
 
@@ -64,7 +63,7 @@ export default function CustomerHubSummaryCards({
 
   onNext,
 
-  onOpenWorkspace,
+  onPageChange,
 
   onOpenCustomerData,
 }: CustomerHubSummaryCardsProps) {
@@ -85,6 +84,52 @@ export default function CustomerHubSummaryCards({
   ========================================================= */
 
   const summaryStyles = getCustomerHubSummaryCardsStyles(tokens.meta.viewport);
+  /* =========================================================
+     DIRECT PAGE INPUT
+  ========================================================= */
+
+  function commitPageInput(
+    input: HTMLInputElement,
+  ) {
+
+    const raw =
+      input.value.trim();
+
+    if (
+      !/^\d+$/.test(raw)
+    ) {
+
+      input.value =
+        String(currentPage);
+
+      return;
+
+    }
+
+    const requestedPage =
+      Number(raw);
+
+    if (
+      !Number.isSafeInteger(requestedPage) ||
+      requestedPage < 1 ||
+      requestedPage > totalPages
+    ) {
+
+      input.value =
+        String(currentPage);
+
+      return;
+
+    }
+
+    onPageChange(
+      requestedPage,
+    );
+
+    input.value =
+      String(requestedPage);
+
+  }
 
   /* =========================================================
      THEME CSS VARIABLES
@@ -201,28 +246,63 @@ export default function CustomerHubSummaryCards({
           order: summaryStyles.paginationOrder,
         }}
       >
-        <button
+                <button
           type="button"
           onClick={onPrevious}
+          disabled={currentPage <= 1}
+          aria-label="Previous customer page"
           style={paginationButtonStyle(summaryStyles)}
         >
-          {"<"}
+          {"←"}
         </button>
 
         <div style={paginationCenterStyle(summaryStyles)}>
-          <span style={paginationActiveDotStyle(summaryStyles)} />
+          <input
+            key={currentPage}
+            type="text"
+            inputMode="numeric"
+            pattern="[0-9]*"
+            autoComplete="off"
+            spellCheck={false}
+            maxLength={String(totalPages).length}
+            defaultValue={String(currentPage)}
+            aria-label={`Customer page ${currentPage} of ${totalPages}`}
+            title={`Enter page 1 to ${totalPages}`}
+            style={paginationPageInputStyle(summaryStyles)}
+            onFocus={(event) => {
+              event.currentTarget.select();
+            }}
+            onChange={(event) => {
+              event.currentTarget.value =
+                event.currentTarget.value.replace(/\D/g, "");
+            }}
+            onKeyDown={(event) => {
+              if (event.key !== "Enter") {
+                return;
+              }
 
-          <span style={paginationDotStyle(summaryStyles)} />
+              event.preventDefault();
 
-          <span style={paginationDotStyle(summaryStyles)} />
+              commitPageInput(
+                event.currentTarget,
+              );
+            }}
+            onBlur={(event) => {
+              commitPageInput(
+                event.currentTarget,
+              );
+            }}
+          />
         </div>
 
         <button
           type="button"
           onClick={onNext}
+          disabled={currentPage >= totalPages}
+          aria-label="Next customer page"
           style={paginationButtonStyle(summaryStyles)}
         >
-          {">"}
+          {"→"}
         </button>
       </div>
 
@@ -236,7 +316,6 @@ export default function CustomerHubSummaryCards({
 
           order: summaryStyles.workDeskOrder,
         }}
-        onClick={onOpenWorkspace}
       >
         <div style={titleStyle(summaryStyles)}>Work Desk</div>
 

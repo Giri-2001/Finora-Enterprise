@@ -111,6 +111,8 @@ export default function SmartWallPanel({
 
   onNext,
 
+  onPageChange,
+
   searchText,
 
   onSearchChange,
@@ -597,9 +599,10 @@ export default function SmartWallPanel({
           totalCustomers={totalCustomers}
           activeCustomers={totalCustomers}
           currentPage={currentPage}
-          totalPages={Math.ceil(totalCustomers / customersPerPage)}
+          totalPages={Math.max(1, Math.ceil(totalCustomers / customersPerPage))}
           onPrevious={onPrevious}
           onNext={onNext}
+          onPageChange={onPageChange}
           /* ===============================================
              EXISTING WORK DESK DESTINATION
           =============================================== */

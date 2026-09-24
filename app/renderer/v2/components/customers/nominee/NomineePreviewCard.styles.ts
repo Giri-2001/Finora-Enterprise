@@ -267,11 +267,11 @@ export function createNomineePreviewCardStyles(
     display: "grid",
 
     gridTemplateColumns:
-      "18px 82px minmax(0,1fr)",
+      "30px 112px minmax(0,1fr)",
 
     alignItems: "center",
 
-    gap: "10px",
+    gap: "12px",
 
     minHeight: "38px",
 
@@ -341,9 +341,9 @@ export function createNomineePreviewCardStyles(
     textTransform: "uppercase",
 
     letterSpacing: ".3px",
+
+    whiteSpace: "nowrap",
   };
-
-
   /* =========================================================
      VALUE
   ========================================================= */
@@ -437,7 +437,6 @@ export function createNomineePreviewCardStyles(
     rowIconStyle,
 
     labelStyle,
-
     valueStyle,
 
     emptyValueStyle,

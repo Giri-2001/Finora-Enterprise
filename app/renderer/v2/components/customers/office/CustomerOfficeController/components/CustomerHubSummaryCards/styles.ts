@@ -277,6 +277,9 @@ export function titleStyle(
 
   return {
 
+    fontFamily:
+      "Inter, ui-sans-serif, system-ui, sans-serif",
+
     fontSize:
       `${tokens.titleSize + 2}px`,
 
@@ -313,6 +316,9 @@ export function valueStyle(
   CSSProperties {
 
   return {
+
+    fontFamily:
+      "Inter, ui-sans-serif, system-ui, sans-serif",
 
     marginTop:
       `${tokens.valueMarginTop}px`,
@@ -485,6 +491,82 @@ export function paginationButtonStyle(
 
 }
 
+
+/* ===========================================================
+   PAGINATION PAGE INPUT
+=========================================================== */
+
+export function paginationPageInputStyle(
+
+  tokens:
+    SummaryCardsStyles,
+
+):
+  CSSProperties {
+
+  return {
+
+    width:
+      `${Math.max(
+        tokens.paginationButtonSize + 10,
+        44,
+      )}px`,
+
+    height:
+      `${tokens.paginationButtonSize}px`,
+
+    boxSizing:
+      "border-box",
+
+    borderRadius:
+      "10px",
+
+    border:
+      `1px solid color-mix(
+        in srgb,
+        ${THEME.brand} 70%,
+        transparent
+      )`,
+
+    background:
+      "transparent",
+
+    color:
+      THEME.textPrimary,
+
+    outline:
+      "none",
+
+    textAlign:
+      "center",
+
+    padding:
+      "0 6px",
+
+    fontFamily:
+      "Inter, ui-sans-serif, system-ui, sans-serif",
+
+    fontSize:
+      "15px",
+
+    fontWeight:
+      700,
+
+    lineHeight:
+      1,
+
+    fontVariantNumeric:
+      "tabular-nums",
+
+    caretColor:
+      THEME.brand,
+
+    cursor:
+      "text",
+
+  };
+
+}
 
 /* ===========================================================
    ACTIVE DOT

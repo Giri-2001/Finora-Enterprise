@@ -81,6 +81,8 @@ export default function useCustomerOfficeController(
 
     previousPage: pagination.previousPage,
 
+    goToPage: pagination.goToPage,
+
     resetPage: pagination.resetPage,
 
     /* Smart Wall */

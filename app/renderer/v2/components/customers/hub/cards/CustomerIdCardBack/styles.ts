@@ -157,7 +157,7 @@ const THEME = {
 =========================================================== */
 
 const PREMIUM_NUMBER_FONT =
-  '"Cinzel", serif';
+  "Inter, ui-sans-serif, system-ui, sans-serif";
 
 
 /* ===========================================================
@@ -326,7 +326,7 @@ export function createCustomerIdStyle(
       )}px`,
 
     fontFamily:
-      PREMIUM_NUMBER_FONT,
+      "Inter, ui-sans-serif, system-ui, sans-serif",
 
     fontWeight:
       700,
@@ -534,6 +534,9 @@ export function createLabelStyle(
     minWidth:
       0,
 
+    fontFamily:
+      "Inter, ui-sans-serif, system-ui, sans-serif",
+
     fontSize:
       `${Math.max(
         tokens.customerCards.idSize,
@@ -573,6 +576,9 @@ export function createValueStyle(
 
     minWidth:
       0,
+
+    fontFamily:
+      "Inter, ui-sans-serif, system-ui, sans-serif",
 
     fontSize:
       `${Math.max(
@@ -663,6 +669,9 @@ export function createSectionTitleStyle(
 
     width:
       "100%",
+
+    fontFamily:
+      "Inter, ui-sans-serif, system-ui, sans-serif",
 
     fontSize:
       `${Math.max(
@@ -803,6 +812,9 @@ export function createLoanMetricLabelStyle(
 
     minWidth:
       0,
+
+    fontFamily:
+      "Inter, ui-sans-serif, system-ui, sans-serif",
 
     fontSize:
       `${Math.max(
@@ -958,6 +970,9 @@ export function createOutstandingLabelStyle(
     minWidth:
       0,
 
+    fontFamily:
+      "Inter, ui-sans-serif, system-ui, sans-serif",
+
     fontSize:
       `${Math.max(
         tokens.customerCards.idSize,
@@ -999,7 +1014,7 @@ export function createOutstandingValueStyle(
       "6px",
 
     fontFamily:
-      PREMIUM_NUMBER_FONT,
+      "Inter, ui-sans-serif, system-ui, sans-serif",
 
     fontSize:
       `${Math.max(
@@ -1155,6 +1170,9 @@ export function createLastPaymentLabelStyle(
 
     minWidth:
       0,
+
+    fontFamily:
+      "Inter, ui-sans-serif, system-ui, sans-serif",
 
     fontSize:
       `${Math.max(

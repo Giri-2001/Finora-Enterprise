@@ -38,6 +38,8 @@ export interface CustomerHubSummaryCardsProps {
 
   onNext: () => void;
 
+  onPageChange: (page: number) => void;
+
   /* =========================================================
      WORK DESK
      

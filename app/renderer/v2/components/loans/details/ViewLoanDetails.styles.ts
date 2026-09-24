@@ -84,6 +84,7 @@ export const COLORS = {
 // ============================================================
 
 export const pageStyle: CSSProperties = {
+  fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
   width: "100%",
 
   minHeight: "100%",
@@ -204,10 +205,8 @@ export const titleStyle: CSSProperties = {
 
   color: COLORS.text,
 
-  fontSize: "18px",
-
-  fontWeight: 800,
-
+  fontSize: "20px",
+  fontWeight: 750,
   lineHeight: 1.2,
 
   minWidth: 0,
@@ -218,10 +217,8 @@ export const subtitleStyle: CSSProperties = {
 
   color: COLORS.textMuted,
 
-  fontSize: "11px",
-
+  fontSize: "13px",
   fontWeight: 500,
-
   lineHeight: 1.3,
 
   overflowWrap: "anywhere",
@@ -414,10 +411,8 @@ export const sectionTitleStyle: CSSProperties = {
 
   color: COLORS.text,
 
-  fontSize: "13px",
-
+  fontSize: "15px",
   fontWeight: 750,
-
   lineHeight: 1.3,
 };
 
@@ -426,10 +421,8 @@ export const sectionSubtitleStyle: CSSProperties = {
 
   color: COLORS.textMuted,
 
-  fontSize: "10px",
-
+  fontSize: "12px",
   fontWeight: 500,
-
   lineHeight: 1.35,
 
   overflowWrap: "anywhere",
@@ -474,10 +467,8 @@ export const infoLabelStyle: CSSProperties = {
 
   color: COLORS.textMuted,
 
-  fontSize: "10px",
-
-  fontWeight: 550,
-
+  fontSize: "11px",
+  fontWeight: 650,
   lineHeight: 1.3,
 };
 
@@ -486,10 +477,8 @@ export const infoValueStyle: CSSProperties = {
 
   color: COLORS.textSecondary,
 
-  fontSize: "12px",
-
-  fontWeight: 700,
-
+  fontSize: "13px",
+  fontWeight: 650,
   overflow: "hidden",
 
   textOverflow: "ellipsis",
@@ -506,7 +495,7 @@ export const customerNameValueStyle: CSSProperties = {
 
   color: COLORS.text,
 
-  fontSize: "13px",
+  fontSize: "14px",
 };
 
 // ============================================================
@@ -546,10 +535,8 @@ export const financialLabelStyle: CSSProperties = {
 
   color: COLORS.textMuted,
 
-  fontSize: "10px",
-
-  fontWeight: 550,
-
+  fontSize: "11px",
+  fontWeight: 650,
   lineHeight: 1.3,
 };
 
@@ -558,10 +545,8 @@ export const financialValueStyle: CSSProperties = {
 
   color: COLORS.text,
 
-  fontSize: "14px",
-
+  fontSize: "17px",
   fontWeight: 800,
-
   overflowWrap: "anywhere",
 
   lineHeight: 1.3,
@@ -646,8 +631,7 @@ export const documentCardStyle: CSSProperties = {
 export const documentPreviewStyle: CSSProperties = {
   width: "100%",
 
-  height: "150px",
-
+  height: "180px",
   padding: 0,
 
   display: "flex",
@@ -740,18 +724,15 @@ export const documentNameStyle: CSSProperties = {
 
   color: COLORS.text,
 
-  fontSize: "11px",
-
+  fontSize: "12px",
   fontWeight: 700,
 };
 
 export const documentTypeStyle: CSSProperties = {
   color: COLORS.textMuted,
 
-  fontSize: "9px",
-
-  fontWeight: 600,
-
+  fontSize: "10px",
+  fontWeight: 700,
   textTransform: "uppercase",
 
   letterSpacing: "0.04em",
@@ -1009,10 +990,8 @@ export const scheduleHeaderStyle: CSSProperties = {
 export const scheduleHeaderCellStyle: CSSProperties = {
   color: COLORS.textMuted,
 
-  fontSize: "9px",
-
-  fontWeight: 700,
-
+  fontSize: "11px",
+  fontWeight: 650,
   textTransform: "uppercase",
 
   letterSpacing: "0.03em",
@@ -1034,9 +1013,8 @@ export const scheduleRowStyle: CSSProperties = {
 export const scheduleCellStyle: CSSProperties = {
   color: COLORS.textSecondary,
 
-  fontSize: "10px",
-
-  fontWeight: 600,
+  fontSize: "12px",
+  fontWeight: 650,
 };
 
 // ============================================================
@@ -1141,7 +1119,7 @@ export const scheduleEmptyStyle: CSSProperties = {
 
   color: COLORS.textMuted,
 
-  fontSize: "11px",
+  fontSize: "12px",
 };
 
 // ============================================================

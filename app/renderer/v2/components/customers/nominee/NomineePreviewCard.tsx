@@ -142,9 +142,7 @@ function PreviewRow({
       >
         {label}
       </span>
-
-
-      <span
+<span
         style={
           hasValue
             ? styles.valueStyle

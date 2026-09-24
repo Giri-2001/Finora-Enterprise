@@ -175,13 +175,14 @@ const THEME = {
 // ============================================================
 
 export const loanTableGridTemplate =
-  "56px minmax(120px, 1.2fr) minmax(130px, 1.25fr) minmax(80px, 0.8fr) minmax(100px, 0.9fr) minmax(110px, 1fr) minmax(95px, 0.8fr) minmax(80px, 0.7fr) 72px";
+  "4% 19% 17% 8% 13% 13% 10% 11% 5%";
 
 // ============================================================
 // PAGE
 // ============================================================
 
 export const pageStyle: CSSProperties = {
+  fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
   width: "100%",
 
   minWidth: 0,
@@ -231,11 +232,8 @@ export const pageTitleStyle: CSSProperties = {
   color: THEME.textPrimary,
 
   fontSize: "24px",
-
-  fontWeight: 800,
-
+  fontWeight: 750,
   lineHeight: 1.15,
-
   letterSpacing: "-0.02em",
 };
 
@@ -248,10 +246,8 @@ export const pageSubtitleStyle: CSSProperties = {
 
   color: THEME.textMuted,
 
-  fontSize: "13px",
-
+  fontSize: "14px",
   fontWeight: 450,
-
   lineHeight: 1.4,
 };
 
@@ -332,10 +328,8 @@ export const statisticLabelStyle: CSSProperties = {
 
   color: THEME.textMuted,
 
-  fontSize: "12px",
-
+  fontSize: "14px",
   fontWeight: 550,
-
   lineHeight: 1.2,
 };
 
@@ -349,9 +343,7 @@ export const statisticValueStyle: CSSProperties = {
   color: THEME.textPrimary,
 
   fontSize: "20px",
-
-  fontWeight: 600,
-
+  fontWeight: 750,
   lineHeight: 1.1,
 };
 
@@ -414,10 +406,8 @@ export const portfolioHeaderStyle: CSSProperties = {
 export const portfolioTitleStyle: CSSProperties = {
   color: THEME.textPrimary,
 
-  fontSize: "13px",
-
+  fontSize: "15px",
   fontWeight: 750,
-
   lineHeight: 1.2,
 };
 
@@ -457,10 +447,8 @@ export const refreshButtonStyle: CSSProperties = {
 
   color: THEME.textSecondary,
 
-  fontSize: "10px",
-
+  fontSize: "12px",
   fontWeight: 650,
-
   cursor: "pointer",
 
   whiteSpace: "nowrap",
@@ -489,10 +477,8 @@ export const loanCountStyle: CSSProperties = {
 
   color: THEME.success,
 
-  fontSize: "10px",
-
+  fontSize: "12px",
   fontWeight: 700,
-
   whiteSpace: "nowrap",
 };
 
@@ -558,10 +544,8 @@ export const filterFieldStyle: CSSProperties = {
 export const filterLabelStyle: CSSProperties = {
   color: THEME.textMuted,
 
-  fontSize: "10px",
-
+  fontSize: "12px",
   fontWeight: 650,
-
   whiteSpace: "nowrap",
 };
 
@@ -625,10 +609,8 @@ export const clearFilterButtonStyle: CSSProperties = {
 
   color: THEME.textSecondary,
 
-  fontSize: "10px",
-
+  fontSize: "12px",
   fontWeight: 650,
-
   cursor: "pointer",
 
   whiteSpace: "nowrap",
@@ -647,10 +629,8 @@ export const applyFilterButtonStyle: CSSProperties = {
 
   color: THEME.textInverse,
 
-  fontSize: "10px",
-
+  fontSize: "12px",
   fontWeight: 700,
-
   cursor: "pointer",
 
   whiteSpace: "nowrap",
@@ -702,18 +682,14 @@ export const tableHeaderStyle: CSSProperties = {
 export const tableHeaderCellStyle: CSSProperties = {
   minWidth: 0,
 
-  padding: "0 8px",
-
+  padding: "0 7px",
   boxSizing: "border-box",
 
   color: THEME.textMuted,
 
-  fontSize: "11px",
-
+  fontSize: "12px",
   fontWeight: 650,
-
   lineHeight: 1.2,
-
   textAlign: "left",
 
   whiteSpace: "nowrap",
@@ -785,18 +761,14 @@ export const tableRowStyle: CSSProperties = {
 export const tableCellStyle: CSSProperties = {
   minWidth: 0,
 
-  padding: "7px 8px",
-
+  padding: "7px",
   boxSizing: "border-box",
 
   color: THEME.textSecondary,
 
-  fontSize: "12px",
-
+  fontSize: "14px",
   fontWeight: 550,
-
   lineHeight: 1.25,
-
   textAlign: "left",
 
   overflow: "hidden",
@@ -851,10 +823,8 @@ export const serialCellStyle: CSSProperties = {
 
   color: THEME.textSecondary,
 
-  fontSize: "11px",
-
+  fontSize: "14px",
   fontWeight: 700,
-
   lineHeight: 1.2,
 };
 
@@ -881,12 +851,9 @@ export const loanNumberStyle: CSSProperties = {
 
   color: THEME.textPrimary,
 
-  fontSize: "11px",
-
+  fontSize: "13px",
   fontWeight: 750,
-
   lineHeight: 1.2,
-
   whiteSpace: "nowrap",
 
   overflow: "hidden",
@@ -903,12 +870,9 @@ export const loanTitleStyle: CSSProperties = {
 
   color: THEME.textMuted,
 
-  fontSize: "10px",
-
+  fontSize: "12px",
   fontWeight: 500,
-
   lineHeight: 1.2,
-
   whiteSpace: "nowrap",
 
   overflow: "hidden",
@@ -923,12 +887,9 @@ export const loanTitleStyle: CSSProperties = {
 export const customerNameStyle: CSSProperties = {
   color: THEME.textPrimary,
 
-  fontSize: "12px",
-
+  fontSize: "14px",
   fontWeight: 700,
-
   lineHeight: 1.2,
-
   whiteSpace: "nowrap",
 
   overflow: "hidden",
@@ -945,10 +906,8 @@ export const customerPhoneStyle: CSSProperties = {
 
   color: THEME.textMuted,
 
-  fontSize: "10px",
-
+  fontSize: "13px",
   fontWeight: 500,
-
   lineHeight: 1.1,
 
   whiteSpace: "nowrap",
@@ -961,10 +920,8 @@ export const customerPhoneStyle: CSSProperties = {
 export const amountStyle: CSSProperties = {
   color: THEME.textPrimary,
 
-  fontSize: "12px",
-
+  fontSize: "14px",
   fontWeight: 700,
-
   whiteSpace: "nowrap",
 };
 
@@ -975,8 +932,7 @@ export const amountStyle: CSSProperties = {
 export const loanTypeStyle: CSSProperties = {
   color: THEME.textPrimary,
 
-  fontSize: "12px",
-
+  fontSize: "14px",
   fontWeight: 700,
 
   lineHeight: 1.2,

@@ -913,8 +913,12 @@ export function createCustomerIdStyle(
     fontSize:
       `${tokens.customerCards.idSize + 1}px`,
 
+    fontFamily:
+      "Inter, ui-sans-serif, system-ui, sans-serif",
+
+
     fontWeight:
-      600,
+      650,
 
     lineHeight:
       tokens.lineHeight.compact,

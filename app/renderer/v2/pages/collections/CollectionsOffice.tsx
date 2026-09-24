@@ -448,7 +448,12 @@ export default function CollectionsOffice() {
 
   const [refreshing, setRefreshing] = useState(false);
 
-  const [currentPage, setCurrentPage] = useState(1);
+    const [currentPage, setCurrentPage] = useState(1);
+
+  const [
+    paginationWindowStart,
+    setPaginationWindowStart,
+  ] = useState(1);
 
   // ==========================================================
   // FILTERS
@@ -663,53 +668,99 @@ export default function CollectionsOffice() {
   // ----------------------------------------------------------
 
   useEffect(() => {
+
     if (currentPage > totalPages) {
       setCurrentPage(totalPages);
     }
-  }, [currentPage, totalPages]);
+
+    const lastWindowStart =
+      Math.floor(
+        (totalPages - 1) / 5,
+      ) * 5 + 1;
+
+    setPaginationWindowStart(
+      (start) =>
+        Math.min(
+          start,
+          lastWindowStart,
+        ),
+    );
+
+  }, [
+    currentPage,
+    totalPages,
+  ]);
 
   // ==========================================================
   // PAGINATION ITEMS
   // ==========================================================
 
+  const paginationWindowEnd =
+    Math.min(
+      totalPages,
+      paginationWindowStart + 4,
+    );
+
+  const hasPreviousPaginationWindow =
+    paginationWindowStart > 1;
+
+  const hasNextPaginationWindow =
+    paginationWindowEnd < totalPages;
+
   const paginationItems = useMemo<
     Array<number | "ellipsis-start" | "ellipsis-end">
   >(() => {
-    if (totalPages <= 7) {
-      return Array.from(
-        {
-          length: totalPages,
-        },
-        (_, index) => index + 1,
-      );
-    }
 
-    if (currentPage <= 4) {
-      return [1, 2, 3, 4, 5, "ellipsis-end", totalPages];
-    }
+    const visiblePageCount =
+      paginationWindowEnd -
+      paginationWindowStart +
+      1;
 
-    if (currentPage >= totalPages - 3) {
-      return [
-        1,
-        "ellipsis-start",
-        totalPages - 4,
-        totalPages - 3,
-        totalPages - 2,
-        totalPages - 1,
-        totalPages,
-      ];
-    }
+    return Array.from(
+      {
+        length:
+          visiblePageCount,
+      },
+      (_, index) =>
+        paginationWindowStart +
+        index,
+    );
 
-    return [
-      1,
-      "ellipsis-start",
-      currentPage - 1,
-      currentPage,
-      currentPage + 1,
-      "ellipsis-end",
-      totalPages,
-    ];
-  }, [currentPage, totalPages]);
+  }, [
+    paginationWindowEnd,
+    paginationWindowStart,
+  ]);
+
+
+  function showPreviousPaginationWindow(): void {
+
+    setPaginationWindowStart(
+      (start) =>
+        Math.max(
+          1,
+          start - 5,
+        ),
+    );
+
+  }
+
+
+  function showNextPaginationWindow(): void {
+
+    const lastWindowStart =
+      Math.floor(
+        (totalPages - 1) / 5,
+      ) * 5 + 1;
+
+    setPaginationWindowStart(
+      (start) =>
+        Math.min(
+          lastWindowStart,
+          start + 5,
+        ),
+    );
+
+  }
 
   // ==========================================================
   // ACTIONS
@@ -1132,16 +1183,16 @@ export default function CollectionsOffice() {
                     <div style={paginationControlsStyle}>
                       <button
                         type="button"
-                        disabled={currentPage === 1}
+                        disabled={!hasPreviousPaginationWindow}
                         onClick={() => {
-                          setCurrentPage((page) => Math.max(1, page - 1));
+                          showPreviousPaginationWindow();
                         }}
                         style={{
                           ...paginationNavButtonStyle,
 
-                          opacity: currentPage === 1 ? 0.45 : 1,
+                          opacity: !hasPreviousPaginationWindow ? 0.45 : 1,
 
-                          cursor: currentPage === 1 ? "default" : "pointer",
+                          cursor: !hasPreviousPaginationWindow ? "default" : "pointer",
                         }}
                       >
                         ← Previous
@@ -1177,19 +1228,16 @@ export default function CollectionsOffice() {
 
                       <button
                         type="button"
-                        disabled={currentPage === totalPages}
+                        disabled={!hasNextPaginationWindow}
                         onClick={() => {
-                          setCurrentPage((page) =>
-                            Math.min(totalPages, page + 1),
-                          );
+                          showNextPaginationWindow();
                         }}
                         style={{
                           ...paginationNavButtonStyle,
 
-                          opacity: currentPage === totalPages ? 0.45 : 1,
+                          opacity: !hasNextPaginationWindow ? 0.45 : 1,
 
-                          cursor:
-                            currentPage === totalPages ? "default" : "pointer",
+                          cursor: !hasNextPaginationWindow ? "default" : "pointer",
                         }}
                       >
                         Next →

@@ -181,6 +181,31 @@ export default function useCustomerPagination(
      RESET PAGE
   ========================================================= */
 
+  /* =========================================================
+     GO TO PAGE
+
+     Direct page navigation authority.
+
+     Only valid whole-number pages inside the authoritative
+     1..totalPages range are accepted.
+  ========================================================= */
+
+  function goToPage(
+    page: number,
+  ) {
+
+    if (
+      !Number.isSafeInteger(page) ||
+      page < 1 ||
+      page > totalPages
+    ) {
+      return;
+    }
+
+    setCurrentPage(page);
+
+  }
+
   function resetPage() {
 
     setCurrentPage(1);
@@ -203,6 +228,8 @@ export default function useCustomerPagination(
     nextPage,
 
     previousPage,
+
+    goToPage,
 
     resetPage,
 

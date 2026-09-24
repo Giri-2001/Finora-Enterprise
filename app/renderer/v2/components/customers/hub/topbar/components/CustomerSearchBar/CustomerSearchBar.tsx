@@ -171,7 +171,7 @@ export default function CustomerSearchBar({
     ------------------------------------------------------- */
 
     "--finora-theme-search-placeholder":
-      theme.colors.text.primary,
+      theme.colors.text.muted,
 
     "--finora-theme-border-default":
       theme.colors.border.default,

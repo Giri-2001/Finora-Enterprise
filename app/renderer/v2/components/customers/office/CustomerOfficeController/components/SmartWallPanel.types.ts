@@ -122,6 +122,8 @@ export interface SmartWallPanelProps {
   onPrevious: () => void;
 
   onNext: () => void;
+
+  onPageChange: (page: number) => void;
 }
 
 /* ===========================================================

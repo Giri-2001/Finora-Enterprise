@@ -278,6 +278,7 @@ export default function CustomerOfficeController({
             customersPerPage={controller.customersPerPage}
             onPrevious={controller.previousPage}
             onNext={controller.nextPage}
+            onPageChange={controller.goToPage}
           />
         </div>
       ) : (
