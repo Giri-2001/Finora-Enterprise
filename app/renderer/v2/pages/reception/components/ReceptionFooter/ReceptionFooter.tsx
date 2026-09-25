@@ -7,8 +7,9 @@ import {
   Database,
 } from "lucide-react";
 
-import packageMetadata
-  from "../../../../../../../package.json";
+import {
+  version as packageVersion,
+} from "../../../../../../../package.json";
 
 import {
   useResponsive,
@@ -123,7 +124,7 @@ export default function ReceptionFooter() {
 
   const appVersion =
     String(
-      packageMetadata.version ?? "",
+      packageVersion ?? "",
     ).trim() || "—";
 
   const {
