@@ -361,7 +361,7 @@ export const collectionEntryStyles: Record<string, CSSProperties> = {
 
     fontFamily: INTER_FONT,
 
-    fontSize: "10px",
+    fontSize: "11px",
 
     fontWeight: 500,
 

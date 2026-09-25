@@ -1,7 +1,7 @@
 /* ============================================================
-   FINORA ENTERPRISE OS™
+   FINORA ENTERPRISE OSâ„¢
 
-   CONTROL CENTER — BRANCH REGISTRY STORE
+   CONTROL CENTER â€” BRANCH REGISTRY STORE
 
    MODULE  : Control Center
    LAYER   : Privileged Main-Process Persistence
@@ -1643,6 +1643,110 @@ function migrateFinoraControlCenterBranchRegistryV1(
 // READ
 // ============================================================
 
+function migrateFinoraControlCenterBranchRegistryV2(
+  value:
+    unknown,
+): {
+  value:
+    unknown;
+  migrated:
+    boolean;
+} {
+
+  if (
+    typeof value !==
+      "object" ||
+    value ===
+      null ||
+    Array.isArray(
+      value,
+    )
+  ) {
+    return {
+      value,
+      migrated:
+        false,
+    };
+  }
+
+  const legacyRoot =
+    value as
+      Record<string, unknown>;
+
+  if (
+    legacyRoot.schemaVersion !==
+      2
+  ) {
+    return {
+      value,
+      migrated:
+        false,
+    };
+  }
+
+  if (
+    !Array.isArray(
+      legacyRoot.branches,
+    )
+  ) {
+    throw new Error(
+      "FINORA Control Center Branch Registry V2 persistence schema is invalid.",
+    );
+  }
+
+  const migratedBranches =
+    legacyRoot.branches.map(
+      (branchValue) => {
+
+        if (
+          typeof branchValue !==
+            "object" ||
+          branchValue ===
+            null ||
+          Array.isArray(
+            branchValue,
+          )
+        ) {
+          throw new Error(
+            "FINORA Control Center Branch Registry V2 branch record is invalid.",
+          );
+        }
+
+        const legacyRecord =
+          branchValue as
+            Record<string, unknown>;
+
+        if (
+          legacyRecord.schemaVersion !==
+            2
+        ) {
+          throw new Error(
+            "FINORA Control Center Branch Registry V2 branch metadata is invalid.",
+          );
+        }
+
+        return {
+          ...legacyRecord,
+          schemaVersion:
+            FINORA_CONTROL_CENTER_BRANCH_REGISTRY_SCHEMA_VERSION,
+        };
+      },
+    );
+
+  return {
+    value: {
+      ...legacyRoot,
+      branches:
+        migratedBranches,
+      schemaVersion:
+        FINORA_CONTROL_CENTER_BRANCH_REGISTRY_SCHEMA_VERSION,
+    },
+    migrated:
+      true,
+  };
+}
+
+
 async function readRegistry():
   Promise<
     FinoraControlCenterBranchRegistry | undefined
@@ -1721,20 +1825,26 @@ async function readRegistry():
     );
   }
 
-  const migration =
+  const migrationV1 =
     migrateFinoraControlCenterBranchRegistryV1(
       parsed,
     );
 
+  const migrationV2 =
+    migrateFinoraControlCenterBranchRegistryV2(
+      migrationV1.value,
+    );
+
   const registry =
-    migration.value;
+    migrationV2.value;
 
   validateFinoraControlCenterBranchRegistry(
     registry,
   );
 
   if (
-    migration.migrated
+    migrationV1.migrated ||
+    migrationV2.migrated
   ) {
     await writeRegistry(
       registry,

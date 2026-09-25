@@ -77,6 +77,9 @@ export type FinoraWalletRechargeRequestOpenResult =
       fileName:
         string;
 
+      filePath:
+        string;
+
       bytesRead:
         number;
 
@@ -255,6 +258,8 @@ export async function openVerifiedFinoraWalletRechargeRequest(
         basename(
           filePath,
         ),
+
+      filePath,
 
       bytesRead:
         bytes.byteLength,

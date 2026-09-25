@@ -10,7 +10,7 @@
     "dev": "concurrently -k \"vite\" \"npm:electron:dev\"",
     "electron:build": "tsc -p tsconfig.electron.json",
     "electron:dev": "npm run electron:build && wait-on tcp:5173 && electron .",
-    "build": "vite build && npm run electron:build",
+    "build": "node scripts/syncFinoraIncomePricing.mjs && vite build && npm run electron:build",
     "android:sync-recipient": "node scripts/syncAndroidRecipientAssets.mjs",
     "typecheck": "tsc --noEmit && tsc -p tsconfig.electron.json --noEmit",
     "package": "npm run build && electron-builder",

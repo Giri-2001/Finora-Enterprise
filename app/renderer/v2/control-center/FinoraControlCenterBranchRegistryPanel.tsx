@@ -3,10 +3,21 @@ import {
   useEffect,
   useState,
 } from "react";
+import FinoraControlCenterIncomePricingPanel from "./FinoraControlCenterIncomePricingPanel";
+import FinoraControlCenterBranchPricingPanel from "./FinoraControlCenterBranchPricingPanel";
+
 import type { FinoraControlCenterIssuanceWorkflow } from "./FinoraControlCenterIssuanceForm.types";
+
+import FinoraControlCenterWalletHistoryPanel, {
+  type FinoraControlCenterWalletHistoryScope,
+} from "./FinoraControlCenterWalletHistoryPanel";
 
 import type {
   FinoraControlCenterBranchRegistryView,
+} from "../../../../electron/control-center/finoraControlCenterPreload";
+
+import type {
+  FinoraControlCenterBranchDirectoryMetadataView,
 } from "../../../../electron/control-center/finoraControlCenterPreload";
 
 import type {
@@ -229,6 +240,11 @@ function BranchCard({
   selected,
   selectedWorkflow,
   onLaunchWorkflow,
+  onOpenWalletHistory,
+  directoryMetadata,
+  directorySummary = false,
+  forceExpanded = false,
+  onOpenDetails,
 }: {
   record:
     FinoraControlCenterBranchRegistryRecord;
@@ -241,6 +257,18 @@ function BranchCard({
       workflow:
         FinoraControlCenterIssuanceWorkflow,
     ) => void;
+
+  onOpenWalletHistory:
+    () => void;
+
+  directoryMetadata?:
+    FinoraControlCenterBranchDirectoryMetadataView;
+  directorySummary?:
+    boolean;
+  forceExpanded?:
+    boolean;
+  onOpenDetails?:
+    () => void;
 }) {
 
   const [
@@ -250,6 +278,13 @@ function BranchCard({
     false,
   );
 
+  const detailsExpanded =
+    !directorySummary &&
+    (
+      forceExpanded ||
+      expanded
+    );
+
   const identity =
     record.identity;
 
@@ -257,16 +292,304 @@ function BranchCard({
     record.authorizedDevices;
 
   const businessName =
+    directoryMetadata?.businessName ??
     record.profile?.businessName ??
     identity.businessCode;
 
   const branchName =
+    directoryMetadata?.branchName ??
     record.profile?.branchName ??
     identity.branchCode;
+
+  if (directorySummary) {
+
+    const summaryOwnerName =
+      directoryMetadata?.ownerName ??
+      "—";
+
+    const summaryBusinessName =
+      directoryMetadata?.businessName ??
+      record.profile?.businessName ??
+      "—";
+
+    const summaryBranchName =
+      directoryMetadata?.branchName ??
+      record.profile?.branchName ??
+      "—";
+
+    return (
+      <article
+        data-finora-control-center-branch-card="true"
+        onClick={() => {
+          setExpanded(
+            false,
+          );
+
+          onOpenDetails?.();
+        }}
+        style={{
+          minWidth:
+            0,
+          minHeight:
+            "250px",
+          height:
+            "100%",
+          boxSizing:
+            "border-box",
+          display:
+            "flex",
+          flexDirection:
+            "column",
+          border:
+            "1px solid rgba(148, 163, 184, 0.24)",
+          borderRadius:
+            "14px",
+          padding:
+            "18px",
+          background:
+            "linear-gradient(145deg, rgba(30, 41, 59, 0.90), rgba(15, 23, 42, 0.78))",
+          boxShadow:
+            "0 10px 26px rgba(2, 6, 23, 0.16)",
+          cursor:
+            "pointer",
+          transition:
+            "border-color 160ms ease, transform 160ms ease, box-shadow 160ms ease",
+        }}
+      >
+        <div
+          style={{
+            display:
+              "flex",
+            justifyContent:
+              "space-between",
+            alignItems:
+              "flex-start",
+            gap:
+              "12px",
+          }}
+        >
+          <h3
+            style={{
+              margin:
+                0,
+              fontSize:
+                "20px",
+              lineHeight:
+                1.2,
+              fontWeight:
+                800,
+              letterSpacing:
+                "-0.02em",
+              overflowWrap:
+                "anywhere",
+            }}
+          >
+            {identity.branchCode}
+          </h3>
+
+          <div
+            style={{
+              flex:
+                "0 0 auto",
+              border:
+                "1px solid rgba(148, 163, 184, 0.24)",
+              borderRadius:
+                "999px",
+              padding:
+                "5px 9px",
+              fontSize:
+                "10px",
+              fontWeight:
+                750,
+              letterSpacing:
+                "0.04em",
+            }}
+          >
+            {record.access?.administrativeStatus ??
+              "ENROLLED"}
+          </div>
+        </div>
+
+        <div
+          style={{
+            display:
+              "grid",
+            gap:
+              "11px",
+            marginTop:
+              "18px",
+          }}
+        >
+          <div>
+            <div
+              style={{
+                fontSize:
+                  "10px",
+                textTransform:
+                  "uppercase",
+                letterSpacing:
+                  "0.07em",
+                opacity:
+                  0.56,
+                marginBottom:
+                  "3px",
+              }}
+            >
+              Owner
+            </div>
+
+            <div
+              style={{
+                fontSize:
+                  "13px",
+                fontWeight:
+                  700,
+                overflowWrap:
+                  "anywhere",
+              }}
+            >
+              {summaryOwnerName}
+            </div>
+          </div>
+
+          <div>
+            <div
+              style={{
+                fontSize:
+                  "10px",
+                textTransform:
+                  "uppercase",
+                letterSpacing:
+                  "0.07em",
+                opacity:
+                  0.56,
+                marginBottom:
+                  "3px",
+              }}
+            >
+              Business
+            </div>
+
+            <div
+              style={{
+                fontSize:
+                  "13px",
+                fontWeight:
+                  700,
+                overflowWrap:
+                  "anywhere",
+              }}
+            >
+              {summaryBusinessName}
+            </div>
+          </div>
+
+          <div>
+            <div
+              style={{
+                fontSize:
+                  "10px",
+                textTransform:
+                  "uppercase",
+                letterSpacing:
+                  "0.07em",
+                opacity:
+                  0.56,
+                marginBottom:
+                  "3px",
+              }}
+            >
+              Branch
+            </div>
+
+            <div
+              style={{
+                fontSize:
+                  "13px",
+                fontWeight:
+                  700,
+                overflowWrap:
+                  "anywhere",
+              }}
+            >
+              {summaryBranchName}
+            </div>
+          </div>
+        </div>
+
+        <div
+          style={{
+            marginTop:
+              "auto",
+            paddingTop:
+              "18px",
+          }}
+        >
+          <div
+            style={{
+              paddingTop:
+                "12px",
+              borderTop:
+                "1px solid rgba(148, 163, 184, 0.14)",
+              fontSize:
+                "10px",
+              lineHeight:
+                1.45,
+              opacity:
+                0.62,
+              overflowWrap:
+                "anywhere",
+            }}
+          >
+            Branch ID: {identity.branchId}
+          </div>
+
+          <div
+            style={{
+              marginTop:
+                "12px",
+              minHeight:
+                "36px",
+              display:
+                "flex",
+              alignItems:
+                "center",
+              justifyContent:
+                "center",
+              border:
+                "1px solid rgba(148, 163, 184, 0.22)",
+              borderRadius:
+                "10px",
+              background:
+                "rgba(15, 23, 42, 0.34)",
+              fontSize:
+                "12px",
+              fontWeight:
+                800,
+              letterSpacing:
+                "0.01em",
+            }}
+          >
+            Open Branch Workspace →
+          </div>
+        </div>
+      </article>
+    );
+  }
 
   return (
     <article
       data-finora-control-center-branch-card="true"
+      onClick={
+        directorySummary
+          ? () => {
+              setExpanded(
+                false,
+              );
+              onOpenDetails?.();
+            }
+          : undefined
+      }
       style={{
         minWidth:
           0,
@@ -277,7 +600,19 @@ function BranchCard({
         padding:
           "18px",
         background:
-          "rgba(30, 41, 59, 0.72)",
+          directorySummary
+            ? "linear-gradient(180deg, rgba(30, 41, 59, 0.94) 0%, rgba(15, 23, 42, 0.90) 100%)"
+            : "rgba(30, 41, 59, 0.72)",
+        boxShadow:
+          directorySummary
+            ? "0 10px 30px rgba(2, 6, 23, 0.18)"
+            : "none",
+        transition:
+          "all 220ms ease",
+        cursor:
+          directorySummary
+            ? "pointer"
+            : "default",
       }}
     >
       <div
@@ -370,7 +705,9 @@ function BranchCard({
       <dl
         style={{
           display:
-            "grid",
+            directorySummary
+              ? "none"
+              : "grid",
           gridTemplateColumns:
             "minmax(0, 1fr) minmax(0, 1fr)",
           gap:
@@ -495,13 +832,62 @@ function BranchCard({
           </dd>
         </div>
       </dl>
+
+      {directorySummary && (
+        <div
+          aria-hidden="true"
+          style={{
+            marginTop:
+              "18px",
+            paddingTop:
+              "14px",
+            borderTop:
+              "1px solid rgba(148, 163, 184, 0.16)",
+            display:
+              "flex",
+            alignItems:
+              "center",
+            justifyContent:
+              "space-between",
+            gap:
+              "10px",
+            fontSize:
+              "12px",
+            lineHeight:
+              1.35,
+            fontWeight:
+              700,
+            letterSpacing:
+              "0.02em",
+            color:
+              "#bfdbfe",
+          }}
+        >
+          <span>
+            Open Branch Workspace
+          </span>
+          <span
+            style={{
+              fontSize:
+                "16px",
+              lineHeight:
+                1,
+            }}
+          >
+            →
+          </span>
+        </div>
+      )}
+
       <div
         data-finora-control-center-branch-actions="true"
         style={{
           marginTop:
             "16px",
           display:
-            "grid",
+            directorySummary
+              ? "none"
+              : "grid",
           gridTemplateColumns:
             "repeat(2, minmax(0, 1fr))",
           gap:
@@ -563,12 +949,54 @@ function BranchCard({
             );
           },
         )}
+
+        <button
+          type="button"
+          onClick={(event) => {
+            event.stopPropagation();
+
+            onOpenWalletHistory();
+          }}
+          style={{
+            minHeight:
+              "36px",
+
+            padding:
+              "7px 9px",
+
+            border:
+              "1px solid rgba(45, 212, 191, 0.34)",
+
+            borderRadius:
+              "8px",
+
+            background:
+              "rgba(13, 148, 136, 0.12)",
+
+            color:
+              "#e2e8f0",
+
+            fontFamily:
+              "Inter, ui-sans-serif, system-ui, sans-serif",
+
+            fontSize:
+              "11px",
+
+            fontWeight:
+              700,
+
+            cursor:
+              "pointer",
+          }}
+        >
+          Wallet History
+        </button>
       </div>
 
       <button
         type="button"
         aria-expanded={
-          expanded
+          detailsExpanded
         }
         onClick={() => {
           setExpanded(
@@ -577,6 +1005,10 @@ function BranchCard({
           );
         }}
         style={{
+          display:
+            directorySummary || forceExpanded
+              ? "none"
+              : "block",
           width:
             "100%",
           marginTop:
@@ -604,7 +1036,7 @@ function BranchCard({
           : "View Details"}
       </button>
 
-      {expanded && (
+      {detailsExpanded && (
         <section
           data-finora-control-center-branch-details="true"
           style={{
@@ -1078,6 +1510,8 @@ interface FinoraControlCenterBranchRegistryPanelProps {
     string;
   selectedWorkflow:
     FinoraControlCenterIssuanceWorkflow;
+  directoryMode?:
+    boolean;
   onLaunchBranchWorkflow:
     (
       record:
@@ -1090,8 +1524,35 @@ interface FinoraControlCenterBranchRegistryPanelProps {
 export default function FinoraControlCenterBranchRegistryPanel({
   selectedBranchId,
   selectedWorkflow,
+  directoryMode = false,
   onLaunchBranchWorkflow,
 }: FinoraControlCenterBranchRegistryPanelProps) {
+
+  const [
+    openedBranchId,
+    setOpenedBranchId,
+  ] = useState<
+    string | undefined
+  >();
+
+  const [
+    incomePricingOpen,
+    setIncomePricingOpen,
+  ] = useState(
+    false,
+  );
+  const [
+    branchPricingRecord,
+    setBranchPricingRecord,
+  ] = useState<
+    FinoraControlCenterBranchRegistryRecord | undefined
+  >();
+  const [
+    walletHistoryScope,
+    setWalletHistoryScope,
+  ] = useState<
+    FinoraControlCenterWalletHistoryScope | undefined
+  >();
 
   const [
     loadState,
@@ -1106,6 +1567,15 @@ export default function FinoraControlCenterBranchRegistryPanel({
   ] = useState<
     FinoraControlCenterBranchRegistryView | undefined
   >();
+
+  const [
+    directoryMetadata,
+    setDirectoryMetadata,
+  ] = useState<
+    FinoraControlCenterBranchDirectoryMetadataView[]
+  >(
+    [],
+  );
 
   const [
     errorMessage,
@@ -1170,6 +1640,15 @@ export default function FinoraControlCenterBranchRegistryPanel({
 
           setRegistry(
             result.data,
+          );
+
+          const directoryMetadataResult =
+            await bridge.getBranchDirectoryMetadata();
+
+          setDirectoryMetadata(
+            directoryMetadataResult.success
+              ? directoryMetadataResult.data
+              : [],
           );
 
           setErrorMessage(
@@ -1300,6 +1779,75 @@ export default function FinoraControlCenterBranchRegistryPanel({
     registry?.branches ??
     [];
 
+  const directoryMetadataByScope =
+    new Map(
+      directoryMetadata.map(
+        (metadata) => [
+          [
+            metadata.ownerId,
+            metadata.businessId,
+            metadata.branchId,
+          ].join(
+            "\u001f",
+          ),
+          metadata,
+        ] as const,
+      ),
+    );
+
+  const openedBranch =
+    directoryMode &&
+    openedBranchId
+      ? branches.find(
+          (record) =>
+            record.identity.branchId ===
+            openedBranchId,
+        )
+      : undefined;
+
+  if (incomePricingOpen) {
+
+    return (
+      <FinoraControlCenterIncomePricingPanel
+        onClose={() => {
+          setIncomePricingOpen(
+            false,
+          );
+        }}
+      />
+    );
+  }
+  if (branchPricingRecord) {
+
+    return (
+      <FinoraControlCenterBranchPricingPanel
+        record={
+          branchPricingRecord
+        }
+        onClose={() => {
+          setBranchPricingRecord(
+            undefined,
+          );
+        }}
+      />
+    );
+  }
+  if (walletHistoryScope) {
+
+    return (
+      <FinoraControlCenterWalletHistoryPanel
+        scope={
+          walletHistoryScope
+        }
+        onClose={() => {
+          setWalletHistoryScope(
+            undefined,
+          );
+        }}
+      />
+    );
+  }
+
   return (
     <section
       data-finora-control-center-branch-registry="true"
@@ -1342,7 +1890,7 @@ export default function FinoraControlCenterBranchRegistryPanel({
                 700,
             }}
           >
-            Branch Registry
+            {directoryMode ? "FINORA Branches" : "Branch Registry"}
           </h2>
 
           <p
@@ -1357,7 +1905,9 @@ export default function FinoraControlCenterBranchRegistryPanel({
                 0.7,
             }}
           >
-            Provisioned branch identities and last reported operational state.
+            {directoryMode
+              ? "Select a FINORA branch to open its complete administrative view."
+              : "Provisioned branch identities and last reported operational state."}
           </p>
         </div>
 
@@ -1375,6 +1925,88 @@ export default function FinoraControlCenterBranchRegistryPanel({
               "8px",
           }}
         >
+          {directoryMode && !openedBranch && (
+            <button
+              type="button"
+              onClick={() => {
+                setIncomePricingOpen(
+                  true,
+                );
+              }}
+              style={{
+                minHeight:
+                  "38px",
+
+                padding:
+                  "8px 14px",
+
+                border:
+                  "1px solid rgba(251, 191, 36, 0.38)",
+
+                borderRadius:
+                  "9px",
+
+                background:
+                  "rgba(217, 119, 6, 0.12)",
+
+                color:
+                  "#fef3c7",
+
+                fontFamily:
+                  "Inter, ui-sans-serif, system-ui, sans-serif",
+
+                fontWeight:
+                  700,
+
+                cursor:
+                  "pointer",
+              }}
+            >
+              FINORA Income
+            </button>
+          )}
+          {directoryMode && !openedBranch && (
+            <button
+              type="button"
+              onClick={() => {
+                setWalletHistoryScope({
+                  mode:
+                    "GLOBAL",
+                });
+              }}
+              style={{
+                minHeight:
+                  "38px",
+
+                padding:
+                  "8px 14px",
+
+                border:
+                  "1px solid rgba(45, 212, 191, 0.34)",
+
+                borderRadius:
+                  "9px",
+
+                background:
+                  "rgba(13, 148, 136, 0.12)",
+
+                color:
+                  "#e2e8f0",
+
+                fontFamily:
+                  "Inter, ui-sans-serif, system-ui, sans-serif",
+
+                fontWeight:
+                  700,
+
+                cursor:
+                  "pointer",
+              }}
+            >
+              FINORA Wallet History
+            </button>
+          )}
+
           <button
             type="button"
             onClick={() => {
@@ -1529,6 +2161,41 @@ export default function FinoraControlCenterBranchRegistryPanel({
         </p>
       )}
 
+      {directoryMode && openedBranch && (
+        <button
+          type="button"
+          onClick={() => {
+            setOpenedBranchId(
+              undefined,
+            );
+          }}
+          style={{
+            marginBottom:
+              "14px",
+            minHeight:
+              "38px",
+            padding:
+              "8px 14px",
+            border:
+              "1px solid rgba(148, 163, 184, 0.28)",
+            borderRadius:
+              "9px",
+            background:
+              "rgba(30, 41, 59, 0.72)",
+            color:
+              "#e2e8f0",
+            fontFamily:
+              "inherit",
+            fontWeight:
+              700,
+            cursor:
+              "pointer",
+          }}
+        >
+          ← Back to FINORA Branches
+        </button>
+      )}
+
       {(
         loadState ===
           "READY" &&
@@ -1556,20 +2223,28 @@ export default function FinoraControlCenterBranchRegistryPanel({
       {(
         loadState ===
           "READY" &&
-        branches.length >
-          0
+        (
+          branches.length >
+            0
+        )
       ) && (
         <div
           style={{
             display:
               "grid",
             gridTemplateColumns:
-              "repeat(auto-fit, minmax(320px, 1fr))",
+              directoryMode &&
+              !openedBranch
+                ? "repeat(5, minmax(0, 1fr))"
+                : "repeat(auto-fit, minmax(320px, 1fr))",
             gap:
-              "14px",
+              directoryMode &&
+              !openedBranch
+                ? "12px"
+                : "14px",
           }}
         >
-          {branches.map(
+          {(openedBranch ? [openedBranch] : branches).map(
             (record) => (
               <BranchCard
                 key={
@@ -1577,6 +2252,17 @@ export default function FinoraControlCenterBranchRegistryPanel({
                 }
                 record={
                   record
+                }
+                directoryMetadata={
+                  directoryMetadataByScope.get(
+                    [
+                      record.identity.ownerId,
+                      record.identity.businessId,
+                      record.identity.branchId,
+                    ].join(
+                      "\u001f",
+                    ),
+                  )
                 }
                 selected={
                   selectedBranchId ===
@@ -1588,7 +2274,49 @@ export default function FinoraControlCenterBranchRegistryPanel({
                     ? selectedWorkflow
                     : undefined
                 }
+                directorySummary={
+                  directoryMode &&
+                  !openedBranch
+                }
+                forceExpanded={
+                  false
+                }
+                onOpenDetails={() => {
+                  setOpenedBranchId(
+                    record.identity.branchId,
+                  );
+                }}
+                onOpenWalletHistory={() => {
+                  setWalletHistoryScope({
+                    mode:
+                      "BRANCH",
+
+                    ownerId:
+                      record.identity.ownerId,
+
+                    businessId:
+                      record.identity.businessId,
+
+                    branchId:
+                      record.identity.branchId,
+
+                    branchCode:
+                      record.identity.branchCode,
+                  });
+                }}
                 onLaunchWorkflow={(workflow) => {
+
+                  if (
+                    workflow ===
+                    "PRICING_POLICY"
+                  ) {
+                    setBranchPricingRecord(
+                      record,
+                    );
+
+                    return;
+                  }
+
                   onLaunchBranchWorkflow(
                     record,
                     workflow,

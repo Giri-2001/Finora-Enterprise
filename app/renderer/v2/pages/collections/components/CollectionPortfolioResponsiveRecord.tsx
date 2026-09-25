@@ -38,12 +38,12 @@ import type {
 import {
   receiptIdentityStyle,
   receiptNumberStyle,
-  receiptReferenceStyle,
+
   customerNameStyle,
   customerPhoneStyle,
   loanIdentityStyle,
   loanNumberStyle,
-  loanIdStyle,
+
   amountStyle,
   outstandingStyle,
   collectionTypeBadgeStyle,
@@ -246,18 +246,6 @@ export default function CollectionPortfolioResponsiveRecord({
           {collection.receiptNumber ||
             "--"}
         </div>
-
-        <div
-          style={{
-            ...mobileFontStyle(receiptReferenceStyle),
-
-            whiteSpace: "normal",
-          }}
-        >
-          {collection.paymentReference
-            ? `Ref: ${collection.paymentReference}`
-            : "No reference"}
-        </div>
       </div>,
       "receipt",
     ),
@@ -309,19 +297,6 @@ export default function CollectionPortfolioResponsiveRecord({
           }}
         >
           {collection.loanNumber ||
-            "--"}
-        </div>
-
-        <div
-          style={{
-            ...mobileFontStyle(loanIdStyle),
-
-            whiteSpace: "normal",
-
-            overflow: "visible",
-          }}
-        >
-          {collection.loanId ||
             "--"}
         </div>
       </div>,

@@ -1127,7 +1127,7 @@ async function runSelfTest():
     // ========================================================
 
     // ========================================================
-    // ENCRYPTED V1 -> V2 MIGRATION
+    // ENCRYPTED V1 -> V2 -> V3 MIGRATION
     // ========================================================
 
     const stableRegistryPlaintext =
@@ -1151,10 +1151,10 @@ async function runSelfTest():
 
     assert(
       stableRegistryValue.schemaVersion ===
-        2 &&
+        3 &&
       stableRegistryValue.branches.length ===
         2,
-      "Known-good V2 Branch Registry fixture is invalid before V1 migration proof.",
+      "Known-good V3 Branch Registry fixture is invalid before V1 migration proof.",
     );
 
     const legacyV1Registry = {
@@ -1205,13 +1205,13 @@ async function runSelfTest():
       migratedRegistry !==
         undefined &&
       migratedRegistry.schemaVersion ===
-        2 &&
+        3 &&
       migratedRegistry.branches.length ===
         2 &&
       migratedRegistry.branches.every(
         (branch) =>
           branch.schemaVersion ===
-            2 &&
+            3 &&
           branch.authorizedDevices.length ===
             1 &&
           branch.authorizedDevices[0].evidenceSource ===
@@ -1227,7 +1227,7 @@ async function runSelfTest():
           branch.authorizedDevices[0].updatedAt ===
             branch.createdAt,
       ),
-      "Encrypted V1 Branch Registry did not migrate to canonical V2 authorized-device state.",
+      "Encrypted V1 Branch Registry did not migrate through V2 to canonical V3 authorized-device state.",
     );
 
     const migratedAsLegacy = {
@@ -1270,7 +1270,7 @@ async function runSelfTest():
         JSON.stringify(
           legacyV1Registry,
         ),
-      "V1 -> V2 migration changed pre-existing Branch Registry data.",
+      "V1 -> V2 -> V3 migration changed pre-existing Branch Registry data.",
     );
 
     const migratedRegistryBytes =
@@ -1297,18 +1297,18 @@ async function runSelfTest():
 
     assert(
       persistedMigratedValue.schemaVersion ===
-        2 &&
+        3 &&
       persistedMigratedValue.branches.every(
         (branch) =>
           branch.schemaVersion ===
-            2 &&
+            3 &&
           Array.isArray(
             branch.authorizedDevices,
           ) &&
           branch.authorizedDevices.length ===
             1,
       ),
-      "Migrated V2 Branch Registry was not persisted after V1 load.",
+      "Migrated V3 Branch Registry was not persisted after V1 load.",
     );
 
     const bytesBeforeSecondMigratedLoad =
@@ -1328,15 +1328,15 @@ async function runSelfTest():
       secondMigratedLoad !==
         undefined &&
       secondMigratedLoad.schemaVersion ===
-        2 &&
+        3 &&
       bytesBeforeSecondMigratedLoad.equals(
         bytesAfterSecondMigratedLoad,
       ),
-      "Canonical migrated V2 registry was rewritten on the second load.",
+      "Canonical migrated V3 registry was rewritten on the second load.",
     );
 
     console.log(
-      "PASS: encrypted V1 registry migrated once to V2 with legacy data preserved",
+      "PASS: encrypted V1 registry migrated through V2 to V3 with legacy data preserved",
     );
 
     // ========================================================

@@ -73,6 +73,9 @@ export interface FinoraControlBundleExportSuccess {
   fileName:
     string;
 
+  filePath:
+    string;
+
   bytesWritten:
     number;
 }
@@ -594,6 +597,9 @@ export async function exportFinoraControlBundleFile(
 
       fileName:
         finalFileName,
+
+      filePath:
+        finalPath,
 
       bytesWritten:
         serialized.bytes,

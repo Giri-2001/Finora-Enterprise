@@ -43,6 +43,15 @@ type ControlCenterLoadState =
 
 export default function FinoraControlCenterShell() {
   const [
+    activeView,
+    setActiveView,
+  ] = useState<
+    "CONTROL" | "BRANCHES"
+  >(
+    "CONTROL",
+  );
+
+  const [
     selectedIssuanceBranch,
     setSelectedIssuanceBranch,
   ] = useState<
@@ -181,7 +190,7 @@ export default function FinoraControlCenterShell() {
         boxSizing:
           "border-box",
         padding:
-          "32px",
+          "8px",
         fontFamily:
           "Inter, ui-sans-serif, system-ui, sans-serif",
         background:
@@ -195,15 +204,27 @@ export default function FinoraControlCenterShell() {
           width:
             "100%",
           maxWidth:
-            "960px",
+            "none",
           margin:
-            "0 auto",
+            0,
+          display:
+            "flex",
+          flexDirection:
+            "column",
+          gap:
+            "8px",
+          boxSizing:
+            "border-box",
         }}
       >
         <header
           style={{
+            position:
+              "relative",
+            paddingRight:
+              "180px",
             marginBottom:
-              "28px",
+              0,
           }}
         >
           <div
@@ -254,9 +275,59 @@ export default function FinoraControlCenterShell() {
           >
             Dedicated administrative renderer for signed FINORA control operations.
           </p>
+
+          <button
+            type="button"
+            onClick={() => {
+              setActiveView(
+                (current) =>
+                  current ===
+                  "BRANCHES"
+                    ? "CONTROL"
+                    : "BRANCHES",
+              );
+            }}
+            style={{
+              position:
+                "absolute",
+              top:
+                0,
+              right:
+                0,
+              minHeight:
+                "40px",
+              padding:
+                "8px 16px",
+              border:
+                "1px solid rgba(96, 165, 250, 0.48)",
+              borderRadius:
+                "10px",
+              background:
+                activeView ===
+                "BRANCHES"
+                  ? "rgba(37, 99, 235, 0.28)"
+                  : "rgba(30, 64, 175, 0.18)",
+              color:
+                "#dbeafe",
+              fontFamily:
+                "Inter, ui-sans-serif, system-ui, sans-serif",
+              fontSize:
+                "13px",
+              fontWeight:
+                700,
+              cursor:
+                "pointer",
+            }}
+          >
+            {activeView ===
+            "BRANCHES"
+              ? "Control Center"
+              : "FINORA Branches"}
+          </button>
         </header>
 
         <section
+          hidden={activeView === "BRANCHES"}
           aria-live="polite"
           style={{
             border:
@@ -452,7 +523,10 @@ export default function FinoraControlCenterShell() {
           trustRecord
         ) && (
           <>
+            {activeView === "BRANCHES" && (
             <FinoraControlCenterBranchRegistryPanel
+              key={activeView}
+              directoryMode
               selectedBranchId={
                 selectedIssuanceBranch?.identity.branchId
               }
@@ -475,9 +549,15 @@ export default function FinoraControlCenterShell() {
                   (current) =>
                     current + 1,
                 );
+
+                setActiveView(
+                  "CONTROL",
+                );
               }}
             />
+            )}
 
+            {activeView === "CONTROL" && (
             <FinoraControlCenterIssuanceWorkspace
               selectedBranch={
                 selectedIssuanceBranch
@@ -497,6 +577,7 @@ export default function FinoraControlCenterShell() {
                 );
               }}
             />
+            )}
           </>
         )}
       </section>

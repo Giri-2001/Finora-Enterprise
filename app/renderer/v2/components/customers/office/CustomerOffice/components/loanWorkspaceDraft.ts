@@ -319,34 +319,30 @@ export function loadActiveLoanWorkspaceDraft():
         activeDraftKey,
       );
 
-    if (isDraftMode(activeMode)) {
-      const activeDraft =
-        loadLoanWorkspaceDraft(activeMode);
-
-      if (activeDraft) {
-        return activeDraft;
-      }
+    /*
+     * ACTIVE MARKER IS AUTHORITATIVE.
+     *
+     * saveLoanWorkspaceDraft() publishes both:
+     *
+     * 1. the scoped mode draft, and
+     * 2. the scoped active-draft marker.
+     *
+     * Terminal Loan completion clears both.
+     *
+     * Therefore a mode draft that exists without a valid active
+     * marker is an orphan snapshot and must never reopen Loan
+     * Studio automatically.
+     *
+     * This is especially important for older completed Loan
+     * snapshots that may remain from pre-terminal-cleanup builds.
+     */
+    if (!isDraftMode(activeMode)) {
+      return null;
     }
 
-    const standardDraft =
-      loadLoanWorkspaceDraft("STANDARD");
-
-    const goldDraft =
-      loadLoanWorkspaceDraft("GOLD");
-
-    if (standardDraft && goldDraft) {
-      const standardSavedAt =
-        Date.parse(standardDraft.savedAt);
-
-      const goldSavedAt =
-        Date.parse(goldDraft.savedAt);
-
-      return goldSavedAt > standardSavedAt
-        ? goldDraft
-        : standardDraft;
-    }
-
-    return standardDraft ?? goldDraft;
+    return loadLoanWorkspaceDraft(
+      activeMode,
+    );
   } catch {
     return null;
   }

@@ -110,6 +110,10 @@ import {
 import {
   customerService,
 } from "../../../../services/customer/customerService";
+import {
+  commitWalletPlatformCharge,
+  preflightWalletPlatformCharge,
+} from "../../../../services/wallet/walletPlatformChargeService";
 
 
 import {
@@ -1691,6 +1695,37 @@ export default function Step6Review({
         }
 
 
+        // ==================================================
+        // CUSTOMER CREATE WALLET CHARGE PREFLIGHT
+        //
+        // Price is resolved by the FINORA pricing authority.
+        // New-customer flow only. Customer edits are not billed.
+        // ==================================================
+
+        const customerChargePreflight =
+          await preflightWalletPlatformCharge({
+            ownerId:
+              notificationBusinessIdentity.ownerId,
+
+            businessId:
+              notificationBusinessIdentity.businessId,
+
+            branchId:
+              notificationBusinessIdentity.branchId,
+
+            chargeCode:
+              "CUSTOMER_NUMBER_GENERATION",
+          });
+
+        if (!customerChargePreflight.success) {
+
+          await finoraError(
+            customerChargePreflight.error,
+          );
+
+          return;
+        }
+
         const reservationResult =
           await reserveNextCustomerNumber();
 
@@ -2281,6 +2316,53 @@ export default function Step6Review({
         }
 
 
+        // ==================================================
+        // CUSTOMER CREATE WALLET CHARGE COMMIT
+        //
+        // Customer persistence succeeded first. Debit uses the
+        // exact preflight quote and canonical Customer identity.
+        // ==================================================
+
+        const customerChargeResult =
+          await commitWalletPlatformCharge({
+            walletId:
+              customerChargePreflight.data.walletId,
+
+            ownerId:
+              notificationBusinessIdentity.ownerId,
+
+            businessId:
+              notificationBusinessIdentity.businessId,
+
+            branchId:
+              notificationBusinessIdentity.branchId,
+
+            chargeCode:
+              "CUSTOMER_NUMBER_GENERATION",
+
+            sourceType:
+              "CUSTOMER",
+
+            sourceId:
+              finalCustomerId,
+
+            sourceReference:
+              finalCustomerId,
+
+            remarks:
+              `Customer created: ${finalCustomerId}`,
+
+            expectedPricingQuote:
+              customerChargePreflight.data.pricingQuote,
+          });
+
+        if (!customerChargeResult.success) {
+
+          throw new Error(
+            customerChargeResult.error,
+          );
+        }
+
         console.info(
           "FINORA CUSTOMER CREATED:",
           finalCustomerId,
@@ -2322,7 +2404,11 @@ export default function Step6Review({
 
 
         await finoraSuccess(
-          `Customer saved successfully. Customer ID: ${finalCustomerId}`,
+          `Customer Created Successfully
+
+Customer ID: ${finalCustomerId}
+FINORA Wallet Fee: ₹${customerChargeResult.data.amount}
+Available Balance: ₹${customerChargeResult.data.availableBalance}`,
         );
 
       } catch (error) {

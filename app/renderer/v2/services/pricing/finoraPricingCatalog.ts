@@ -25,6 +25,10 @@
 =========================================================== */
 
 import {
+  FINORA_INCOME_PRICING_DEFAULTS,
+} from "./finoraIncomePricingDefaults.generated";
+
+import {
   FINORA_WALLET_PLATFORM_CHARGE_TRANSACTION_TYPES,
 } from "../../types/wallet/wallet.transaction.types";
 
@@ -61,7 +65,7 @@ export const FINORA_BASE_PRICING_CATALOG:
         "FIXED",
 
       amount:
-        10,
+        FINORA_INCOME_PRICING_DEFAULTS.loanDisbursementFee,
 
       currency:
         "INR",
@@ -98,10 +102,13 @@ export const FINORA_BASE_PRICING_CATALOG:
         FINORA_WALLET_PLATFORM_CHARGE_TRANSACTION_TYPES.CUSTOMER_NUMBER_GENERATION,
 
       enabled:
-        false,
+        true,
 
       pricingModel:
         "FIXED",
+
+      amount:
+        FINORA_INCOME_PRICING_DEFAULTS.customerCreateFee,
 
       currency:
         "INR",

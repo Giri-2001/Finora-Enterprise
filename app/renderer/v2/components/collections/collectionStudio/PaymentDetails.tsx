@@ -153,6 +153,15 @@ import {
 import { getSession } from "../../../store/authStore";
 
 import {
+  getBusinessContext,
+} from "../../../services/business/businessContextService";
+
+import {
+  commitCollectionProcessingWalletCharge,
+  preflightCollectionProcessingWalletCharge,
+} from "../../../services/wallet/walletCollectionProcessingChargeService";
+
+import {
   resolveBusinessDate,
 } from "../../../services/business/businessDateService";
 
@@ -193,6 +202,37 @@ function safeNumber(value: unknown): number {
 
 function formatCurrency(value: number): string {
   return `₹ ${Math.round(safeNumber(value)).toLocaleString("en-IN")}`;
+}
+
+function escapeReceiptHtml(
+  value:
+    unknown,
+): string {
+
+  return String(
+    value ??
+    "",
+  )
+    .replace(
+      /&/g,
+      "&amp;",
+    )
+    .replace(
+      /</g,
+      "&lt;",
+    )
+    .replace(
+      />/g,
+      "&gt;",
+    )
+    .replace(
+      /"/g,
+      "&quot;",
+    )
+    .replace(
+      /'/g,
+      "&#039;",
+    );
 }
 
 // ============================================================
@@ -996,6 +1036,59 @@ export default function PaymentDetails() {
           numbering.receiptNumber,
         );
 
+      // ======================================================
+      // COLLECTION PROCESSING WALLET PREFLIGHT
+      //
+      // Slab basis is the authoritative Collection paymentAmount.
+      // Test configuration currently charges ₹10 in all 3 slabs.
+      // ======================================================
+
+      const collectionWalletScope = {
+        ownerId:
+          String(
+            authenticatedSession?.ownerId ??
+              "",
+          ).trim(),
+
+        businessId:
+          String(
+            authenticatedSession?.businessId ??
+              "",
+          ).trim(),
+
+        branchId:
+          String(
+            authenticatedSession?.branchId ??
+              "",
+          ).trim(),
+      };
+
+      if (
+        !collectionWalletScope.ownerId ||
+        !collectionWalletScope.businessId ||
+        !collectionWalletScope.branchId
+      ) {
+
+        throw new Error(
+          "Authenticated Owner, Business and Branch are required for the FINORA Collection Processing Wallet charge.",
+        );
+      }
+
+      const collectionChargePreflight =
+        await preflightCollectionProcessingWalletCharge({
+          ...collectionWalletScope,
+
+          collectionAmount:
+            saveData.paymentAmount,
+        });
+
+      if (!collectionChargePreflight.success) {
+
+        throw new Error(
+          collectionChargePreflight.error,
+        );
+      }
+
       console.info("FINORA COLLECTION SAVE", {
         loanId: saveData.loanId,
 
@@ -1081,6 +1174,40 @@ export default function PaymentDetails() {
           collectionSaveData,
           commercialWriteAuthorization,
         );
+
+      // ======================================================
+      // COLLECTION PROCESSING WALLET COMMIT
+      //
+      // The Collection itself is already persisted successfully.
+      // Debit is idempotent by Collection identity + charge code.
+      // ======================================================
+
+      const collectionChargeResult =
+        await commitCollectionProcessingWalletCharge({
+          ...collectionWalletScope,
+
+          walletId:
+            collectionChargePreflight.data.walletId,
+
+          collectionId:
+            saveData.collectionNumber,
+
+          collectionNumber:
+            saveData.collectionNumber,
+
+          collectionAmount:
+            saveData.paymentAmount,
+
+          expectedPricingQuote:
+            collectionChargePreflight.data.pricingQuote,
+        });
+
+      if (!collectionChargeResult.success) {
+
+        throw new Error(
+          collectionChargeResult.error,
+        );
+      }
 
       const savedCollectionDate =
         resolveOperationalDate(
@@ -1208,6 +1335,17 @@ export default function PaymentDetails() {
 
     const receiptDate = data.receiptDate || "--";
 
+    const receiptBusinessName =
+      escapeReceiptHtml(
+        String(
+          getBusinessContext()
+            ?.businessProfile
+            ?.businessName ??
+          "",
+        ).trim() ||
+        "FINORA Business",
+      );
+
     const settlementValue =
       safeNumber(data.paymentAmount) + safeNumber(data.discountAmount);
 
@@ -1234,64 +1372,20 @@ export default function PaymentDetails() {
 
           <style>
 
+            * {
+              box-sizing: border-box;
+            }
+
             body {
               margin: 0;
               padding: 32px;
-              font-family: Arial, sans-serif;
+              background: #f8fafc;
               color: #111827;
-              background: #ffffff;
-            }
-
-            .receipt {
-              max-width: 680px;
-              margin: 0 auto;
-              border: 1px solid #d5dce5;
-              padding: 28px;
-            }
-
-            h1 {
-              margin: 0 0 6px;
-              font-size: 24px;
-            }
-
-            .brand {
-              color: #a56f00;
-              font-weight: 800;
-              letter-spacing: .08em;
-            }
-
-            .meta {
-              margin: 18px 0;
-              display: grid;
-              grid-template-columns: 1fr 1fr;
-              gap: 10px;
-            }
-
-            .row {
-              display: flex;
-              justify-content: space-between;
-              gap: 20px;
-              padding: 11px 0;
-              border-bottom: 1px solid #e5e7eb;
-            }
-
-            .final {
-              margin-top: 18px;
-              padding: 16px;
-              border: 1px solid #23865a;
-              font-size: 20px;
-              font-weight: 800;
-              display: flex;
-              justify-content: space-between;
-            }
-
-            .muted {
-              color: #64748b;
-              font-size: 12px;
+              font-family: Inter, ui-sans-serif, system-ui, sans-serif;
+              line-height: 1.5;
             }
 
             .receipt-actions {
-              width: 100%;
               max-width: 720px;
               margin: 0 auto 14px;
               display: flex;
@@ -1299,28 +1393,164 @@ export default function PaymentDetails() {
             }
 
             .print-button {
-              padding: 10px 18px;
+              min-height: 40px;
+              padding: 9px 16px;
               border: 1px solid #a56f00;
-              border-radius: 8px;
-              background: #c89400;
+              border-radius: 9px;
+              background: #a56f00;
               color: #ffffff;
-              font-size: 13px;
+              font: inherit;
+              font-size: 12px;
               font-weight: 800;
+              letter-spacing: .04em;
               cursor: pointer;
             }
 
+            .receipt {
+              max-width: 720px;
+              margin: 0 auto;
+              padding: 32px 34px;
+              border: 1px solid #d8dee8;
+              border-radius: 16px;
+              background: #ffffff;
+              box-shadow: 0 16px 42px rgba(15, 23, 42, .08);
+            }
+
+            .brand {
+              color: #a56f00;
+              font-size: 11px;
+              font-weight: 850;
+              line-height: 1.4;
+              letter-spacing: .16em;
+              text-transform: uppercase;
+            }
+
+            .business-name {
+              margin-top: 7px;
+              color: #111827;
+              font-size: 18px;
+              font-weight: 800;
+              line-height: 1.35;
+              letter-spacing: -.01em;
+            }
+
+            h1 {
+              margin: 20px 0 5px;
+              color: #111827;
+              font-size: 24px;
+              font-weight: 850;
+              line-height: 1.2;
+              letter-spacing: -.02em;
+            }
+
+            .receipt-subtitle {
+              margin-top: 0;
+            }
+
+            .meta {
+              margin: 24px 0 20px;
+              padding: 18px;
+              display: grid;
+              grid-template-columns: 1fr 1fr;
+              gap: 16px 24px;
+              border: 1px solid #e2e8f0;
+              border-radius: 12px;
+              background: #f8fafc;
+            }
+
+            .meta > div {
+              min-width: 0;
+              color: #334155;
+              font-size: 13px;
+              line-height: 1.55;
+              overflow-wrap: anywhere;
+            }
+
+            .meta strong {
+              display: inline-block;
+              margin-bottom: 4px;
+              color: #64748b;
+              font-size: 10.5px;
+              font-weight: 800;
+              line-height: 1.4;
+              letter-spacing: .055em;
+              text-transform: uppercase;
+            }
+
+            .row {
+              display: flex;
+              align-items: center;
+              justify-content: space-between;
+              gap: 24px;
+              padding: 12px 2px;
+              border-bottom: 1px solid #e5e7eb;
+              color: #334155;
+              font-size: 13px;
+              line-height: 1.5;
+            }
+
+            .row strong {
+              flex-shrink: 0;
+              color: #111827;
+              font-size: 13.5px;
+              font-weight: 800;
+            }
+
+            .final {
+              margin-top: 20px;
+              padding: 17px 16px;
+              display: flex;
+              align-items: center;
+              justify-content: space-between;
+              gap: 20px;
+              border: 1px solid #23865a;
+              border-radius: 11px;
+              background: #f0fdf4;
+              color: #166534;
+              font-size: 18px;
+              font-weight: 850;
+              line-height: 1.3;
+            }
+
+            .muted {
+              margin: 14px 0 0;
+              color: #64748b;
+              font-size: 12px;
+              line-height: 1.65;
+            }
+
+            @media (max-width: 620px) {
+
+              body {
+                padding: 16px;
+              }
+
+              .receipt {
+                padding: 24px 20px;
+              }
+
+              .meta {
+                grid-template-columns: 1fr;
+              }
+
+            }
+
             @media print {
+
+              body {
+                padding: 0;
+                background: #ffffff;
+              }
 
               .receipt-actions {
                 display: none;
               }
 
-              body {
-                padding: 0;
-              }
-
               .receipt {
+                max-width: none;
                 border: 0;
+                border-radius: 0;
+                box-shadow: none;
               }
 
             }
@@ -1347,11 +1577,15 @@ export default function PaymentDetails() {
               FINORA ENTERPRISE
             </div>
 
+            <div class="business-name">
+              ${receiptBusinessName}
+            </div>
+
             <h1>
               COLLECTION RECEIPT
             </h1>
 
-            <div class="muted">
+            <div class="muted receipt-subtitle">
               Collection Studio™
             </div>
 
@@ -1597,7 +1831,7 @@ export default function PaymentDetails() {
             PAYMENT MODE
         ==================================================== */}
 
-        <div style={collectionPaymentDetailsStyles.field}>
+        <div style={responsiveFieldStyle}>
           <label
             htmlFor="finora-payment-mode"
             style={collectionPaymentDetailsStyles.label}
@@ -1625,7 +1859,7 @@ export default function PaymentDetails() {
             REFERENCE NUMBER
         ==================================================== */}
 
-        <div style={collectionPaymentDetailsStyles.field}>
+        <div style={responsiveFieldStyle}>
           <label
             htmlFor="finora-payment-reference"
             style={collectionPaymentDetailsStyles.label}

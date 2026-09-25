@@ -37,6 +37,8 @@ import type {
   WebContents,
 } from "electron";
 
+import path from "node:path";
+
 import type {
   FinoraVerifiedWalletRechargeRequest,
 } from "./finoraWalletRechargeRequestVerifier.js";
@@ -50,6 +52,40 @@ const verifiedWalletRechargeRequestByWebContents =
     WebContents,
     FinoraVerifiedWalletRechargeRequest
   >();
+
+export interface FinoraVerifiedWalletRechargeRequestFileEvidence {
+  requestId:
+    string;
+
+  fileName:
+    string;
+
+  filePath:
+    string;
+}
+
+const verifiedWalletRechargeRequestFileEvidenceByWebContents =
+  new WeakMap<
+    WebContents,
+    FinoraVerifiedWalletRechargeRequestFileEvidence
+  >();
+
+function cloneFileEvidence(
+  evidence:
+    FinoraVerifiedWalletRechargeRequestFileEvidence,
+): FinoraVerifiedWalletRechargeRequestFileEvidence {
+
+  return {
+    requestId:
+      evidence.requestId,
+
+    fileName:
+      evidence.fileName,
+
+    filePath:
+      evidence.filePath,
+  };
+}
 
 // ============================================================
 // DEFENSIVE SNAPSHOT
@@ -117,6 +153,126 @@ export function rememberFinoraVerifiedWalletRechargeRequest(
       request,
     ),
   );
+}
+
+// ============================================================
+// TRUSTED IMPORT FILE EVIDENCE
+//
+// The native file picker owns filePath.
+// This metadata never becomes signing or financial authority.
+// ============================================================
+
+export function rememberFinoraVerifiedWalletRechargeRequestFileEvidence(
+  webContents:
+    WebContents,
+
+  evidence:
+    FinoraVerifiedWalletRechargeRequestFileEvidence,
+): void {
+
+  if (
+    webContents.isDestroyed()
+  ) {
+    throw new Error(
+      "FINORA Control Center renderer is unavailable for Wallet Recharge Request file evidence.",
+    );
+  }
+
+  const requestId =
+    evidence.requestId.trim();
+
+  const fileName =
+    evidence.fileName.trim();
+
+  const filePath =
+    evidence.filePath.trim();
+
+  if (
+    !requestId ||
+    !fileName ||
+    !filePath
+  ) {
+    throw new Error(
+      "FINORA Wallet Recharge Request file evidence is incomplete.",
+    );
+  }
+
+  if (
+    !path.isAbsolute(
+      filePath,
+    )
+  ) {
+    throw new Error(
+      "FINORA Wallet Recharge Request file evidence path must be absolute.",
+    );
+  }
+
+  if (
+    path.basename(
+      filePath,
+    ).toLocaleLowerCase() !==
+    fileName.toLocaleLowerCase()
+  ) {
+    throw new Error(
+      "FINORA Wallet Recharge Request filename/path evidence does not match.",
+    );
+  }
+
+  verifiedWalletRechargeRequestFileEvidenceByWebContents.set(
+    webContents,
+    {
+      requestId,
+      fileName,
+      filePath,
+    },
+  );
+}
+
+export function getFinoraVerifiedWalletRechargeRequestFileEvidence(
+  webContents:
+    WebContents,
+): FinoraVerifiedWalletRechargeRequestFileEvidence | undefined {
+
+  if (
+    webContents.isDestroyed()
+  ) {
+    return undefined;
+  }
+
+  const evidence =
+    verifiedWalletRechargeRequestFileEvidenceByWebContents.get(
+      webContents,
+    );
+
+  return evidence ===
+    undefined
+    ? undefined
+    : cloneFileEvidence(
+        evidence,
+      );
+}
+
+export function clearFinoraVerifiedWalletRechargeRequestFileEvidence(
+  webContents:
+    WebContents,
+
+  requestId:
+    string,
+): void {
+
+  const evidence =
+    verifiedWalletRechargeRequestFileEvidenceByWebContents.get(
+      webContents,
+    );
+
+  if (
+    evidence?.requestId ===
+      requestId
+  ) {
+    verifiedWalletRechargeRequestFileEvidenceByWebContents.delete(
+      webContents,
+    );
+  }
 }
 
 // ============================================================
@@ -197,6 +353,10 @@ export function clearFinoraVerifiedWalletRechargeRequest(
 ): void {
 
   verifiedWalletRechargeRequestByWebContents.delete(
+    webContents,
+  );
+
+  verifiedWalletRechargeRequestFileEvidenceByWebContents.delete(
     webContents,
   );
 }

@@ -2558,16 +2558,22 @@ Available Balance: ₹${walletChargeResult.data.availableBalance}`,
       );
 
       /*
-       * Return both Standard and Gold workflows to Loans Office.
-       * Premium success confirmation remains visible above it.
+       * Terminal cleanup is already committed above.
+       *
+       * Keep the success confirmation visible until the Owner
+       * acknowledges the completed Loan.
+       *
+       * Only after OK do we leave Loan Studio, so the post-success
+       * destination is deterministically Loans Office and the
+       * completed Step 6 cannot remain actionable.
        */
+      await confirmation;
+
       window.dispatchEvent(
         new CustomEvent(
           "FINORA_V2_LOAN_WORKFLOW_COMPLETED",
         ),
       );
-
-      await confirmation;
   }
 
 

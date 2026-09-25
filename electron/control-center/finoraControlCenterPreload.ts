@@ -44,6 +44,23 @@ const CONTROL_CENTER_CHANNELS = {
   GET_BRANCH_REGISTRY:
     "finora:control-center:get-branch-registry",
 
+  GET_BRANCH_DIRECTORY_METADATA:
+    "finora:control-center:get-branch-directory-metadata",
+
+  GET_FINORA_INCOME_PRICING:
+    "finora:control-center:get-finora-income-pricing",
+
+  UPDATE_FINORA_INCOME_PRICING:
+    "finora:control-center:update-finora-income-pricing",
+  GET_FINORA_BRANCH_PRICING:
+    "finora:control-center:get-finora-branch-pricing",
+
+  UPDATE_FINORA_BRANCH_PRICING:
+    "finora:control-center:update-finora-branch-pricing",
+
+  GET_WALLET_HISTORY:
+    "finora:control-center:get-wallet-history",
+
   BACKFILL_HISTORICAL_ENROLLMENT_BRANCH:
     "finora:control-center:backfill-historical-enrollment-branch",
 
@@ -618,6 +635,206 @@ export type FinoraControlCenterAdminAuthorityRecoveryImportView =
         string;
     };
 
+export interface FinoraControlCenterBranchDirectoryMetadataView {
+  ownerId:
+    string;
+
+  businessId:
+    string;
+
+  branchId:
+    string;
+
+  ownerName?:
+    string;
+
+  businessName?:
+    string;
+
+  branchName?:
+    string;
+
+  lastSource:
+    | "OPERATOR_CONFIRMED"
+    | "BRANCH_ACCESS_ISSUANCE"
+    | "BUSINESS_PROFILE_ISSUANCE";
+
+  updatedAt:
+    string;
+
+  schemaVersion:
+    1;
+}
+export interface FinoraControlCenterWalletHistoryView {
+  historyId:
+    string;
+
+  decision:
+    | "APPROVED"
+    | "DECLINED";
+
+  ownerId:
+    string;
+
+  businessId:
+    string;
+
+  branchId:
+    string;
+
+  businessCode:
+    string;
+
+  branchCode:
+    string;
+
+  installationId:
+    string;
+
+  bindingKeyId:
+    string;
+
+  fingerprintAlgorithm:
+    string;
+
+  publicKeyFingerprint:
+    string;
+
+  requestId:
+    string;
+
+  paymentReference:
+    string;
+
+  amountMinor:
+    number;
+
+  currency:
+    string;
+
+  paymentMethod:
+    string;
+
+  paymentSource:
+    string;
+
+  requestedAt:
+    string;
+
+  decisionAt:
+    string;
+
+  recordedAt:
+    string;
+
+  controlBundlePackageId:
+    string;
+
+  importedRequestFileName:
+    string;
+
+  importedRequestFilePath:
+    string;
+
+  exportedResultFileName:
+    string;
+
+  exportedResultFilePath:
+    string;
+
+  schemaVersion:
+    1;
+}
+export interface FinoraControlCenterIncomePricingInput {
+  customerCreateFee:
+    number;
+
+  loanDisbursementFee:
+    number;
+
+  collectionBelow25000Fee:
+    number;
+
+  collection25000To50000Fee:
+    number;
+
+  collectionAbove50000Fee:
+    number;
+}
+
+export interface FinoraControlCenterIncomePricingView
+  extends FinoraControlCenterIncomePricingInput {
+
+  source:
+    | "MANDATORY_DEFAULT"
+    | "CONTROL_CENTER";
+
+  revision:
+    number;
+
+  updatedAt?:
+    string;
+
+  schemaVersion:
+    1;
+}
+export interface FinoraControlCenterBranchPricingScope {
+  ownerId:
+    string;
+
+  businessId:
+    string;
+
+  branchId:
+    string;
+}
+
+export interface FinoraControlCenterBranchPricingInput
+  extends FinoraControlCenterBranchPricingScope {
+
+  customerCreateFee?:
+    number | null;
+
+  loanDisbursementFee?:
+    number | null;
+
+  collectionBelow25000Fee?:
+    number | null;
+
+  collection25000To50000Fee?:
+    number | null;
+
+  collectionAbove50000Fee?:
+    number | null;
+}
+
+export interface FinoraControlCenterBranchPricingView
+  extends FinoraControlCenterBranchPricingScope {
+
+  customerCreateFee?:
+    number;
+
+  loanDisbursementFee?:
+    number;
+
+  collectionBelow25000Fee?:
+    number;
+
+  collection25000To50000Fee?:
+    number;
+
+  collectionAbove50000Fee?:
+    number;
+
+  revision:
+    number;
+
+  updatedAt:
+    string;
+
+  schemaVersion:
+    1;
+}
 export interface FinoraControlCenterBridge {
   getTrustRecord:
     () =>
@@ -632,6 +849,62 @@ export interface FinoraControlCenterBridge {
       Promise<
         FinoraControlCenterResult<
           FinoraControlCenterBranchRegistryView | undefined
+        >
+      >;
+
+  getBranchDirectoryMetadata:
+    () =>
+      Promise<
+        FinoraControlCenterResult<
+          FinoraControlCenterBranchDirectoryMetadataView[]
+        >
+      >;
+
+  getFinoraIncomePricing:
+    () =>
+      Promise<
+        FinoraControlCenterResult<
+          FinoraControlCenterIncomePricingView
+        >
+      >;
+
+  updateFinoraIncomePricing:
+    (
+      input:
+        FinoraControlCenterIncomePricingInput,
+    ) =>
+      Promise<
+        FinoraControlCenterResult<
+          FinoraControlCenterIncomePricingView
+        >
+      >;
+  getFinoraBranchPricing:
+    (
+      scope:
+        FinoraControlCenterBranchPricingScope,
+    ) =>
+      Promise<
+        FinoraControlCenterResult<
+          FinoraControlCenterBranchPricingView | undefined
+        >
+      >;
+
+  updateFinoraBranchPricing:
+    (
+      input:
+        FinoraControlCenterBranchPricingInput,
+    ) =>
+      Promise<
+        FinoraControlCenterResult<
+          FinoraControlCenterBranchPricingView | undefined
+        >
+      >;
+
+  getWalletHistory:
+    () =>
+      Promise<
+        FinoraControlCenterResult<
+          FinoraControlCenterWalletHistoryView[]
         >
       >;
 
@@ -845,6 +1118,74 @@ const controlCenterBridge:
       ) as Promise<
         FinoraControlCenterResult<
           FinoraControlCenterBranchRegistryView | undefined
+        >
+      >,
+
+  getBranchDirectoryMetadata:
+    () =>
+      ipcRenderer.invoke(
+        CONTROL_CENTER_CHANNELS.GET_BRANCH_DIRECTORY_METADATA,
+      ) as Promise<
+        FinoraControlCenterResult<
+          FinoraControlCenterBranchDirectoryMetadataView[]
+        >
+      >,
+
+  getFinoraIncomePricing:
+    () =>
+      ipcRenderer.invoke(
+        CONTROL_CENTER_CHANNELS.GET_FINORA_INCOME_PRICING,
+      ) as Promise<
+        FinoraControlCenterResult<
+          FinoraControlCenterIncomePricingView
+        >
+      >,
+
+  updateFinoraIncomePricing:
+    (
+      input,
+    ) =>
+      ipcRenderer.invoke(
+        CONTROL_CENTER_CHANNELS.UPDATE_FINORA_INCOME_PRICING,
+        input,
+      ) as Promise<
+        FinoraControlCenterResult<
+          FinoraControlCenterIncomePricingView
+        >
+      >,
+  getFinoraBranchPricing:
+    (
+      scope,
+    ) =>
+      ipcRenderer.invoke(
+        CONTROL_CENTER_CHANNELS.GET_FINORA_BRANCH_PRICING,
+        scope,
+      ) as Promise<
+        FinoraControlCenterResult<
+          FinoraControlCenterBranchPricingView | undefined
+        >
+      >,
+
+  updateFinoraBranchPricing:
+    (
+      input,
+    ) =>
+      ipcRenderer.invoke(
+        CONTROL_CENTER_CHANNELS.UPDATE_FINORA_BRANCH_PRICING,
+        input,
+      ) as Promise<
+        FinoraControlCenterResult<
+          FinoraControlCenterBranchPricingView | undefined
+        >
+      >,
+
+  getWalletHistory:
+    () =>
+      ipcRenderer.invoke(
+        CONTROL_CENTER_CHANNELS.GET_WALLET_HISTORY,
+      ) as Promise<
+        FinoraControlCenterResult<
+          FinoraControlCenterWalletHistoryView[]
         >
       >,
 

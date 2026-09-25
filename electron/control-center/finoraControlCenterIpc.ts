@@ -71,14 +71,22 @@ import {
 } from "./finoraWalletRechargeRequestFileTransport.js";
 
 import {
+  clearFinoraVerifiedWalletRechargeRequestFileEvidence,
   getFinoraVerifiedWalletRechargeRequest,
+  getFinoraVerifiedWalletRechargeRequestFileEvidence,
   rememberFinoraVerifiedWalletRechargeRequest,
+  rememberFinoraVerifiedWalletRechargeRequestFileEvidence,
   takeFinoraVerifiedWalletRechargeRequest,
 } from "./finoraWalletRechargeRequestSessionAuthority.js";
 
 import {
   issueFinoraVerifiedWalletRechargeApprovalBundle,
 } from "./finoraWalletRechargeRequestApprovalBundleService.js";
+
+import {
+  appendFinoraControlCenterWalletHistory,
+  loadFinoraControlCenterWalletHistory,
+} from "./finoraControlCenterWalletHistoryStore.js";
 import {
   issueFinoraVerifiedWalletRechargeDeclineBundle,
 } from "./finoraWalletRechargeRequestDeclineBundleService.js";
@@ -107,6 +115,10 @@ import {
   loadFinoraControlCenterBranchRegistry,
   registerFinoraControlCenterBranch,
 } from "./finoraControlCenterBranchRegistryStore.js";
+
+import {
+  loadFinoraControlCenterBranchDirectoryMetadata,
+} from "./finoraControlCenterBranchDirectoryMetadataStore.js";
 import {
   authorizeFinoraControlCenterRegistryBoundIssuanceTarget,
 } from "./finoraControlCenterBranchIssuanceAuthorization.js";
@@ -123,6 +135,16 @@ import {
   FINORA_CONTROL_CENTER_ADMIN_SECURITY_CODE_MAX_LENGTH,
   FINORA_CONTROL_CENTER_ADMIN_SECURITY_CODE_MIN_LENGTH,
 } from "./finoraControlCenterAdminAuthorityRecoveryBundle.js";
+
+import {
+  readFinoraControlCenterIncomePricing,
+  updateFinoraControlCenterIncomePricing,
+} from "./finoraControlCenterIncomePricingStore.js";
+
+import {
+  readFinoraControlCenterBranchPricing,
+  updateFinoraControlCenterBranchPricing,
+} from "./finoraControlCenterBranchPricingStore.js";
 
 import {
   isTrustedFinoraControlCenterRenderer,
@@ -151,6 +173,23 @@ export const FINORA_CONTROL_CENTER_IPC_CHANNELS = {
 
   GET_BRANCH_REGISTRY:
     "finora:control-center:get-branch-registry",
+
+  GET_BRANCH_DIRECTORY_METADATA:
+    "finora:control-center:get-branch-directory-metadata",
+
+  GET_FINORA_INCOME_PRICING:
+    "finora:control-center:get-finora-income-pricing",
+
+  UPDATE_FINORA_INCOME_PRICING:
+    "finora:control-center:update-finora-income-pricing",
+  GET_FINORA_BRANCH_PRICING:
+    "finora:control-center:get-finora-branch-pricing",
+
+  UPDATE_FINORA_BRANCH_PRICING:
+    "finora:control-center:update-finora-branch-pricing",
+
+  GET_WALLET_HISTORY:
+    "finora:control-center:get-wallet-history",
 
   BACKFILL_HISTORICAL_ENROLLMENT_BRANCH:
     "finora:control-center:backfill-historical-enrollment-branch",
@@ -578,6 +617,116 @@ function isFinoraControlCenterAdminSecurityCodeInput(
 
 export function registerFinoraControlCenterHandlers():
   void {
+  // ----------------------------------------------------------
+  // EXACT-BRANCH PRICING
+  // ----------------------------------------------------------
+
+  ipcMain.handle(
+    FINORA_CONTROL_CENTER_IPC_CHANNELS.GET_FINORA_BRANCH_PRICING,
+    async (
+      event,
+      request:
+        unknown,
+    ) => {
+
+      if (
+        !isTrustedFinoraControlCenterRenderer(
+          event.senderFrame,
+        )
+      ) {
+        return failure(
+          "FINORA Branch Pricing read is restricted to the dedicated Control Center renderer.",
+        );
+      }
+
+      return executePrivileged(
+        () =>
+          readFinoraControlCenterBranchPricing(
+            request,
+          ),
+      );
+    },
+  );
+
+  ipcMain.handle(
+    FINORA_CONTROL_CENTER_IPC_CHANNELS.UPDATE_FINORA_BRANCH_PRICING,
+    async (
+      event,
+      request:
+        unknown,
+    ) => {
+
+      if (
+        !isTrustedFinoraControlCenterRenderer(
+          event.senderFrame,
+        )
+      ) {
+        return failure(
+          "FINORA Branch Pricing mutation is restricted to the dedicated Control Center renderer.",
+        );
+      }
+
+      return executePrivileged(
+        () =>
+          updateFinoraControlCenterBranchPricing(
+            request,
+          ),
+      );
+    },
+  );
+  // ----------------------------------------------------------
+  // FINORA INCOME GLOBAL PRICING
+  // ----------------------------------------------------------
+
+  ipcMain.handle(
+    FINORA_CONTROL_CENTER_IPC_CHANNELS.GET_FINORA_INCOME_PRICING,
+    async (
+      event,
+    ) => {
+
+      if (
+        !isTrustedFinoraControlCenterRenderer(
+          event.senderFrame,
+        )
+      ) {
+        return failure(
+          "FINORA Income Pricing read is restricted to the dedicated Control Center renderer.",
+        );
+      }
+
+      return executePrivileged(
+        () =>
+          readFinoraControlCenterIncomePricing(),
+      );
+    },
+  );
+
+  ipcMain.handle(
+    FINORA_CONTROL_CENTER_IPC_CHANNELS.UPDATE_FINORA_INCOME_PRICING,
+    async (
+      event,
+      request:
+        unknown,
+    ) => {
+
+      if (
+        !isTrustedFinoraControlCenterRenderer(
+          event.senderFrame,
+        )
+      ) {
+        return failure(
+          "FINORA Income Pricing mutation is restricted to the dedicated Control Center renderer.",
+        );
+      }
+
+      return executePrivileged(
+        () =>
+          updateFinoraControlCenterIncomePricing(
+            request,
+          ),
+      );
+    },
+  );
 
   if (
     controlCenterHandlersRegistered
@@ -645,6 +794,76 @@ export function registerFinoraControlCenterHandlers():
       return executePrivileged(
         () =>
           loadFinoraControlCenterBranchRegistry(),
+      );
+    },
+  );
+
+  // ----------------------------------------------------------
+  // BRANCH DIRECTORY METADATA READ
+  //
+  // SECURITY:
+  //
+  // - Dedicated privileged Control Center renderer only.
+  // - Zero renderer arguments.
+  // - Display metadata only.
+  // - No Registry mutation.
+  // - No wallet mutation.
+  // ----------------------------------------------------------
+
+  ipcMain.handle(
+    FINORA_CONTROL_CENTER_IPC_CHANNELS.GET_BRANCH_DIRECTORY_METADATA,
+    async (
+      event,
+    ) => {
+
+      if (
+        !isTrustedFinoraControlCenterRenderer(
+          event.senderFrame,
+        )
+      ) {
+        return failure(
+          "FINORA Control Center Branch Directory metadata access is restricted to the dedicated privileged renderer.",
+        );
+      }
+
+      return executePrivileged(
+        () =>
+          loadFinoraControlCenterBranchDirectoryMetadata(),
+      );
+    },
+  );
+
+  // ----------------------------------------------------------
+  // WALLET HISTORY READ
+  //
+  // SECURITY:
+  //
+  // - Dedicated privileged Control Center renderer only.
+  // - Zero renderer arguments.
+  // - Read-only audit journal snapshot.
+  // - No Wallet mutation.
+  // - No issuance authority.
+  // ----------------------------------------------------------
+
+  ipcMain.handle(
+    FINORA_CONTROL_CENTER_IPC_CHANNELS.GET_WALLET_HISTORY,
+    async (
+      event,
+    ) => {
+
+      if (
+        !isTrustedFinoraControlCenterRenderer(
+          event.senderFrame,
+        )
+      ) {
+        return failure(
+          "FINORA Wallet History is restricted to the dedicated privileged Control Center renderer.",
+        );
+      }
+
+      return executePrivileged(
+        () =>
+          loadFinoraControlCenterWalletHistory(),
       );
     },
   );
@@ -1209,6 +1428,20 @@ export function registerFinoraControlCenterHandlers():
         request,
       );
 
+      rememberFinoraVerifiedWalletRechargeRequestFileEvidence(
+        event.sender,
+        {
+          requestId:
+            request.requestId,
+
+          fileName:
+            openResult.fileName,
+
+          filePath:
+            openResult.filePath,
+        },
+      );
+
       return success({
         cancelled:
           false as const,
@@ -1343,6 +1576,22 @@ export function registerFinoraControlCenterHandlers():
         false;
 
       try {
+
+        const importEvidence =
+          getFinoraVerifiedWalletRechargeRequestFileEvidence(
+            event.sender,
+          );
+
+        if (
+          !importEvidence ||
+          importEvidence.requestId !==
+            verifiedRequest.requestId
+        ) {
+          throw new Error(
+            "Trusted FINORA Wallet Recharge Request import file evidence is unavailable for approval.",
+          );
+        }
+
         const signedBundle =
           await issueFinoraVerifiedWalletRechargeApprovalBundle(
             verifiedRequest,
@@ -1388,6 +1637,82 @@ export function registerFinoraControlCenterHandlers():
               true as const,
           });
         }
+
+        await appendFinoraControlCenterWalletHistory({
+          decision:
+            "APPROVED",
+
+          ownerId:
+            verifiedRequest.target.ownerId,
+
+          businessId:
+            verifiedRequest.target.businessId,
+
+          branchId:
+            verifiedRequest.target.branchId,
+
+          businessCode:
+            verifiedRequest.target.businessCode,
+
+          branchCode:
+            verifiedRequest.target.branchCode,
+
+          installationId:
+            verifiedRequest.target.installationId,
+
+          bindingKeyId:
+            verifiedRequest.target.bindingKeyId,
+
+          fingerprintAlgorithm:
+            verifiedRequest.target.fingerprintAlgorithm,
+
+          publicKeyFingerprint:
+            verifiedRequest.target.publicKeyFingerprint,
+
+          requestId:
+            verifiedRequest.requestId,
+
+          paymentReference:
+            verifiedRequest.paymentReference,
+
+          amountMinor:
+            verifiedRequest.amountMinor,
+
+          currency:
+            verifiedRequest.currency,
+
+          paymentMethod:
+            verifiedRequest.paymentMethod,
+
+          paymentSource:
+            verifiedRequest.paymentSource,
+
+          requestedAt:
+            verifiedRequest.requestedAt,
+
+          decisionAt:
+            signedBundle.issuedAt,
+
+          controlBundlePackageId:
+            signedBundle.packageId,
+
+          importedRequestFileName:
+            importEvidence.fileName,
+
+          importedRequestFilePath:
+            importEvidence.filePath,
+
+          exportedResultFileName:
+            exportResult.fileName,
+
+          exportedResultFilePath:
+            exportResult.filePath,
+        });
+
+        clearFinoraVerifiedWalletRechargeRequestFileEvidence(
+          event.sender,
+          verifiedRequest.requestId,
+        );
 
         exportCompleted =
           true;
@@ -1738,6 +2063,21 @@ export function registerFinoraControlCenterHandlers():
 
       try {
 
+        const importEvidence =
+          getFinoraVerifiedWalletRechargeRequestFileEvidence(
+            event.sender,
+          );
+
+        if (
+          !importEvidence ||
+          importEvidence.requestId !==
+            verifiedRequest.requestId
+        ) {
+          throw new Error(
+            "Trusted FINORA Wallet Recharge Request import file evidence is unavailable for decline.",
+          );
+        }
+
         const signedBundle =
           await issueFinoraVerifiedWalletRechargeDeclineBundle(
             verifiedRequest,
@@ -1789,6 +2129,82 @@ export function registerFinoraControlCenterHandlers():
             },
           };
         }
+
+        await appendFinoraControlCenterWalletHistory({
+          decision:
+            "DECLINED",
+
+          ownerId:
+            verifiedRequest.target.ownerId,
+
+          businessId:
+            verifiedRequest.target.businessId,
+
+          branchId:
+            verifiedRequest.target.branchId,
+
+          businessCode:
+            verifiedRequest.target.businessCode,
+
+          branchCode:
+            verifiedRequest.target.branchCode,
+
+          installationId:
+            verifiedRequest.target.installationId,
+
+          bindingKeyId:
+            verifiedRequest.target.bindingKeyId,
+
+          fingerprintAlgorithm:
+            verifiedRequest.target.fingerprintAlgorithm,
+
+          publicKeyFingerprint:
+            verifiedRequest.target.publicKeyFingerprint,
+
+          requestId:
+            verifiedRequest.requestId,
+
+          paymentReference:
+            verifiedRequest.paymentReference,
+
+          amountMinor:
+            verifiedRequest.amountMinor,
+
+          currency:
+            verifiedRequest.currency,
+
+          paymentMethod:
+            verifiedRequest.paymentMethod,
+
+          paymentSource:
+            verifiedRequest.paymentSource,
+
+          requestedAt:
+            verifiedRequest.requestedAt,
+
+          decisionAt:
+            signedBundle.issuedAt,
+
+          controlBundlePackageId:
+            signedBundle.packageId,
+
+          importedRequestFileName:
+            importEvidence.fileName,
+
+          importedRequestFilePath:
+            importEvidence.filePath,
+
+          exportedResultFileName:
+            exportResult.fileName,
+
+          exportedResultFilePath:
+            exportResult.filePath,
+        });
+
+        clearFinoraVerifiedWalletRechargeRequestFileEvidence(
+          event.sender,
+          verifiedRequest.requestId,
+        );
 
         exportCompleted =
           true;

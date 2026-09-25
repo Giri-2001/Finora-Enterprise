@@ -911,7 +911,7 @@ export function createCustomerIdStyle(
 
 
     fontSize:
-      `${tokens.customerCards.idSize + 1}px`,
+      `${tokens.customerCards.idSize}px`,
 
     fontFamily:
       "Inter, ui-sans-serif, system-ui, sans-serif",

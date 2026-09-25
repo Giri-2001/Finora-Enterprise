@@ -178,7 +178,7 @@ export const collectionPaymentDetailsStyles: Record<string, CSSProperties> = {
 
     fontFamily: INTER_FONT,
 
-    fontSize: "14px",
+    fontSize: "15px",
 
     fontWeight: 800,
 
@@ -196,7 +196,7 @@ export const collectionPaymentDetailsStyles: Record<string, CSSProperties> = {
 
     fontFamily: INTER_FONT,
 
-    fontSize: "10px",
+    fontSize: "11px",
 
     fontWeight: 500,
 
@@ -212,7 +212,7 @@ export const collectionPaymentDetailsStyles: Record<string, CSSProperties> = {
   // Date 4/12 | Mode 4/12 | Reference 4/12
   //
   // ROW 2
-  // Remarks 6/12 | Final 3/12 | Actions 3/12
+  // Remarks 4/12 | Final 4/12 | Actions 4/12
   // ==========================================================
 
   body: {
@@ -222,7 +222,7 @@ export const collectionPaymentDetailsStyles: Record<string, CSSProperties> = {
   display: "grid",
 
   gridTemplateColumns:
-    "minmax(0, 1.25fr) minmax(0, 1.25fr) minmax(0, 1.20fr) repeat(4, minmax(0, 1fr))",
+    "repeat(12, minmax(0, 1fr))",
 
   gap: "9px",
 
@@ -240,7 +240,7 @@ export const collectionPaymentDetailsStyles: Record<string, CSSProperties> = {
   // ==========================================================
 
   field: {
-  gridColumn: "span 1",
+  gridColumn: "span 4",
 
   minWidth: 0,
 
@@ -324,7 +324,7 @@ export const collectionPaymentDetailsStyles: Record<string, CSSProperties> = {
   // ==========================================================
 
   remarksField: {
-  gridColumn: "span 1",
+  gridColumn: "span 4",
 
   minWidth: 0,
 
@@ -383,7 +383,7 @@ export const collectionPaymentDetailsStyles: Record<string, CSSProperties> = {
   // ==========================================================
 
   totalBar: {
-    gridColumn: "span 1",
+    gridColumn: "span 4",
 
     minWidth: 0,
 
@@ -443,7 +443,7 @@ export const collectionPaymentDetailsStyles: Record<string, CSSProperties> = {
 
     fontFamily: INTER_FONT,
 
-    fontSize: "9px",
+    fontSize: "11px",
 
     fontWeight: 850,
 
@@ -497,7 +497,7 @@ export const collectionPaymentDetailsStyles: Record<string, CSSProperties> = {
   // ==========================================================
 
   actions: {
-  gridColumn: "span 2",
+  gridColumn: "span 4",
 
   minWidth: 0,
 
@@ -545,7 +545,7 @@ export const collectionPaymentDetailsStyles: Record<string, CSSProperties> = {
 
     fontFamily: INTER_FONT,
 
-    fontSize: "9px",
+    fontSize: "11px",
 
     fontWeight: 800,
 
@@ -586,7 +586,7 @@ export const collectionPaymentDetailsStyles: Record<string, CSSProperties> = {
 
     fontFamily: INTER_FONT,
 
-    fontSize: "9px",
+    fontSize: "11px",
 
     fontWeight: 850,
 

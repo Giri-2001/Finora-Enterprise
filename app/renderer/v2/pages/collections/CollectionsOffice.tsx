@@ -106,12 +106,12 @@ import {
   tableCellCenterStyle,
   receiptIdentityStyle,
   receiptNumberStyle,
-  receiptReferenceStyle,
+
   customerNameStyle,
   customerPhoneStyle,
   loanIdentityStyle,
   loanNumberStyle,
-  loanIdStyle,
+
   amountStyle,
   outstandingStyle,
   collectionTypeBadgeStyle,
@@ -1295,12 +1295,6 @@ export default function CollectionsOffice() {
                               <div style={receiptNumberStyle}>
                                 {collection.receiptNumber || "--"}
                               </div>
-
-                              <div style={receiptReferenceStyle}>
-                                {collection.paymentReference
-                                  ? `Ref: ${collection.paymentReference}`
-                                  : "No reference"}
-                              </div>
                             </div>
 
                             <div style={tableCellStyle}>
@@ -1316,10 +1310,6 @@ export default function CollectionsOffice() {
                             <div style={loanIdentityStyle}>
                               <div style={loanNumberStyle}>
                                 {collection.loanNumber || "--"}
-                              </div>
-
-                              <div style={loanIdStyle}>
-                                {collection.loanId || "--"}
                               </div>
                             </div>
 

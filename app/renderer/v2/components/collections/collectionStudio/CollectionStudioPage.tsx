@@ -1628,7 +1628,12 @@ export default function CollectionStudioPage() {
 
               <div style={collectionStudioStyles.workflowSectionHeader}>
                 <div style={collectionStudioStyles.workflowSectionHeading}>
-                  <span style={collectionStudioStyles.workflowSectionEyebrow}>
+                  <span
+                    style={{
+                      ...collectionStudioStyles.workflowSectionEyebrow,
+                      fontSize: "12px",
+                    }}
+                  >
                     GOLD CUSTODY
                   </span>
 
@@ -1636,7 +1641,13 @@ export default function CollectionStudioPage() {
                     Physical Gold Location
                   </h2>
 
-                  <p style={collectionStudioStyles.workflowSectionSubtitle}>
+                  <p
+                    style={{
+                      ...collectionStudioStyles.workflowSectionSubtitle,
+                      fontSize: "12px",
+                      fontWeight: 450,
+                    }}
+                  >
                     Verify the secured Gold packet location before collection or
                     physical release.
                   </p>
@@ -1711,7 +1722,13 @@ export default function CollectionStudioPage() {
                   PHYSICAL DIRECTION
               ============================================== */}
 
-              <p style={collectionStudioStyles.futureSectionText}>
+              <p
+                  style={{
+                    ...collectionStudioStyles.futureSectionText,
+                    fontSize: "13px",
+                    fontWeight: 450,
+                  }}
+                >
                 Physical Direction: {selectedGoldCustody.location.roomName}
                 {" → "}
                 {selectedGoldCustody.location.lockerName}
@@ -1729,6 +1746,8 @@ export default function CollectionStudioPage() {
                 <p
                   style={{
                     ...collectionStudioStyles.goldCustodyReleaseHint,
+
+                    fontSize: "12px",
 
                     ...(canReleaseSelectedGold
                       ? collectionStudioStyles.goldCustodyReleaseHintReady

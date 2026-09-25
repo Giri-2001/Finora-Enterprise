@@ -1,7 +1,7 @@
 /* ============================================================
-   FINORA ENTERPRISE OS™
+   FINORA ENTERPRISE OSâ„¢
 
-   CONTROL CENTER — BRANCH REGISTRY CONTRACT
+   CONTROL CENTER â€” BRANCH REGISTRY CONTRACT
 
    MODULE  : Control Center
    LAYER   : Admin Authority Contract
@@ -40,7 +40,7 @@ import type {
 // ============================================================
 
 export const FINORA_CONTROL_CENTER_BRANCH_REGISTRY_SCHEMA_VERSION =
-  2 as const;
+  3 as const;
 
 export const FINORA_CONTROL_CENTER_BRANCH_REGISTRY_PLATFORM =
   "WINDOWS" as const;
@@ -309,6 +309,25 @@ export interface FinoraControlCenterBranchCertificationRotationEvidence {
 // BRANCH REGISTRY RECORD
 // ============================================================
 
+export interface FinoraControlCenterBranchRegistryRecoveryEvidence {
+
+  requestId:
+    string;
+
+  nonce:
+    string;
+
+  sourceAuthorizationId:
+    string;
+
+  recoveredAt:
+    string;
+}
+
+// ============================================================
+// REGISTRY RECORD
+// ============================================================
+
 export interface FinoraControlCenterBranchRegistryRecord {
 
   identity:
@@ -331,6 +350,14 @@ export interface FinoraControlCenterBranchRegistryRecord {
 
   branchCertificationRotation?:
     FinoraControlCenterBranchCertificationRotationEvidence;
+
+  /*
+   * Present only when this branch was authenticated through
+   * the portability recovery path. Enrollment-backed identity
+   * and installation evidence remain unchanged.
+   */
+  recoveryEvidence?:
+    FinoraControlCenterBranchRegistryRecoveryEvidence;
 
   profile?:
     FinoraControlCenterBranchDisplayProfile;
