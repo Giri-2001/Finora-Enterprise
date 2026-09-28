@@ -645,42 +645,124 @@ export default function LoansPage() {
   // ==========================================================
 
   useEffect(() => {
-function handleOpenGoldLoanStudio(): void {
-      if (!loanCreateGate?.canEnter) {
-        void finoraError(
-          loanCreateGate?.message ??
-            "Please recharge your wallet to unlock this button.",
-        );
+    function handleOpenGoldLoanStudio(): void {
+      void (async () => {
+        try {
+          const context =
+            requireBusinessContext();
 
-        return;
-      }
+          const ownerId =
+            context.ownerId?.trim() ?? "";
 
-      /*
-       * Every new Gold Loan starts from dedicated Gold Step 1.
-       */
-      setGoldLoanHandoff(null);
+          const businessId =
+            context.businessId?.trim() ?? "";
 
-      writeLoansWorkspaceSession("GOLD_LOAN_STEP_ONE");
-      setWorkspace("GOLD_LOAN_STEP_ONE");
+          const branchId =
+            context.branchId?.trim() ?? "";
+
+          if (!ownerId || !businessId || !branchId) {
+            void finoraError(
+              "Unable to verify FINORA commercial access.",
+            );
+            return;
+          }
+
+          const gateResult =
+            await resolveLoanCreateWalletEntryGate({
+              ownerId,
+              businessId,
+              branchId,
+            });
+
+          setLoanCreateGate(gateResult);
+
+          if (!gateResult.canEnter) {
+            void finoraError(
+              gateResult.message ??
+                "Please recharge your wallet to unlock this button.",
+            );
+            return;
+          }
+
+          setGoldLoanHandoff(null);
+
+          writeLoansWorkspaceSession(
+            "GOLD_LOAN_STEP_ONE",
+          );
+
+          setWorkspace(
+            "GOLD_LOAN_STEP_ONE",
+          );
+        } catch (error) {
+          console.error(
+            "[FINORA LOANS] Unable to authorize Gold Loan entry:",
+            error,
+          );
+
+          void finoraError(
+            "Unable to verify FINORA commercial access.",
+          );
+        }
+      })();
     }
 
     function handleOpenRejectedApplications(): void {
-      if (!loanCreateGate?.canEnter) {
-        void finoraError(
-          loanCreateGate?.message ??
-            "Please recharge your wallet to unlock this button.",
-        );
+      void (async () => {
+        try {
+          const context =
+            requireBusinessContext();
 
-        return;
-      }
+          const ownerId =
+            context.ownerId?.trim() ?? "";
 
-      writeLoansWorkspaceSession(
-        "REJECTED_APPLICATIONS",
-      );
+          const businessId =
+            context.businessId?.trim() ?? "";
 
-      setWorkspace(
-        "REJECTED_APPLICATIONS",
-      );
+          const branchId =
+            context.branchId?.trim() ?? "";
+
+          if (!ownerId || !businessId || !branchId) {
+            void finoraError(
+              "Unable to verify FINORA commercial access.",
+            );
+            return;
+          }
+
+          const gateResult =
+            await resolveLoanCreateWalletEntryGate({
+              ownerId,
+              businessId,
+              branchId,
+            });
+
+          setLoanCreateGate(gateResult);
+
+          if (!gateResult.canEnter) {
+            void finoraError(
+              gateResult.message ??
+                "Please recharge your wallet to unlock this button.",
+            );
+            return;
+          }
+
+          writeLoansWorkspaceSession(
+            "REJECTED_APPLICATIONS",
+          );
+
+          setWorkspace(
+            "REJECTED_APPLICATIONS",
+          );
+        } catch (error) {
+          console.error(
+            "[FINORA LOANS] Unable to authorize Rejected Applications entry:",
+            error,
+          );
+
+          void finoraError(
+            "Unable to verify FINORA commercial access.",
+          );
+        }
+      })();
     }
 
 window.addEventListener(

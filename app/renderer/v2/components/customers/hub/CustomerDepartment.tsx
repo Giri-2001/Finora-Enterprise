@@ -68,8 +68,13 @@ import { storageManager } from "../../../storage/storageManager";
 
 import { StorageMode } from "../../../storage/storage.types";
 
-import type {
-  FinoraWalletEntryGateResult,
+import {
+  requireBusinessContext,
+} from "../../../services/business/businessContextService";
+
+import {
+  resolveCustomerCreateWalletEntryGate,
+  type FinoraWalletEntryGateResult,
 } from "../../../services/wallet/walletEntryGateService";
 
 // ============================================================
@@ -416,25 +421,64 @@ export default function CustomerDepartment({
   // ==========================================================
 
   const handleOpenCustomerWizard = useCallback(() => {
-    if (!customerCreateGate?.canEnter) {
-      window.alert(
-        customerCreateGate?.message ??
-          "Please recharge your wallet to unlock this button.",
-      );
+    void (async () => {
+      try {
+        const context =
+          requireBusinessContext();
 
-      return;
-    }
+        const ownerId =
+          context.ownerId?.trim() ?? "";
 
-    setEditingCustomer(undefined);
+        const businessId =
+          context.businessId?.trim() ?? "";
 
-    setShowCustomerWizard(true);
+        const branchId =
+          context.branchId?.trim() ?? "";
 
-    // ------------------------------------------------------
-    // Tell App.tsx that the nested Customer Wizard is open.
-    // ------------------------------------------------------
+        if (!ownerId || !businessId || !branchId) {
+          window.alert(
+            "Unable to verify FINORA commercial access.",
+          );
+          return;
+        }
 
-    window.dispatchEvent(new CustomEvent(CUSTOMER_WIZARD_OPEN_EVENT));
-  }, [customerCreateGate]);
+        const gateResult =
+          await resolveCustomerCreateWalletEntryGate({
+            ownerId,
+            businessId,
+            branchId,
+          });
+
+
+        if (!gateResult.canEnter) {
+          window.alert(
+            gateResult.message ??
+              "Please recharge your wallet to unlock this button.",
+          );
+          return;
+        }
+
+        setEditingCustomer(undefined);
+
+        setShowCustomerWizard(true);
+
+        window.dispatchEvent(
+          new CustomEvent(
+            CUSTOMER_WIZARD_OPEN_EVENT,
+          ),
+        );
+      } catch (error) {
+        console.error(
+          "[FINORA CUSTOMER] Unable to authorize Customer entry:",
+          error,
+        );
+
+        window.alert(
+          "Unable to verify FINORA commercial access.",
+        );
+      }
+    })();
+  }, []);
 
   // ==========================================================
   // OPEN CUSTOMER WIZARD â€” EDIT MODE
@@ -542,8 +586,4 @@ export default function CustomerDepartment({
 // ============================================================
 // END
 // ============================================================
-
-
-
-
 

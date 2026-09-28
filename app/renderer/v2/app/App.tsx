@@ -2774,16 +2774,56 @@ function AuthenticatedV2Application({
 
   useEffect(() => {
     function handleCollectionStudioOpen(): void {
-      if (!collectionCreateGate?.canEnter) {
-        void finoraError(
-          collectionCreateGate?.message ??
-            "Please recharge your wallet to unlock this button.",
-        );
+      void (async () => {
+        try {
+          const context =
+            requireBusinessContext();
 
-        return;
-      }
+          const ownerId =
+            context.ownerId?.trim() ?? "";
 
-      setCollectionStudioOpen(true);
+          const businessId =
+            context.businessId?.trim() ?? "";
+
+          const branchId =
+            context.branchId?.trim() ?? "";
+
+          if (!ownerId || !businessId || !branchId) {
+            void finoraError(
+              "Unable to verify FINORA commercial access.",
+            );
+            return;
+          }
+
+          const gateResult =
+            await resolveCollectionCreateWalletEntryGate({
+              ownerId,
+              businessId,
+              branchId,
+            });
+
+          setCollectionCreateGate(gateResult);
+
+          if (!gateResult.canEnter) {
+            void finoraError(
+              gateResult.message ??
+                "Please recharge your wallet to unlock this button.",
+            );
+            return;
+          }
+
+          setCollectionStudioOpen(true);
+        } catch (error) {
+          console.error(
+            "[FINORA APP] Unable to authorize Collection entry:",
+            error,
+          );
+
+          void finoraError(
+            "Unable to verify FINORA commercial access.",
+          );
+        }
+      })();
     }
 
     window.addEventListener(
@@ -2797,7 +2837,7 @@ function AuthenticatedV2Application({
         handleCollectionStudioOpen,
       );
     };
-  }, [collectionCreateGate]);
+  }, []);
 
   // ==========================================================
   // NAVIGATION CHANGE EVENT

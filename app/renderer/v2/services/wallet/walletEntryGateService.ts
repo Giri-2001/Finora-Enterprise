@@ -29,10 +29,17 @@ import {
 } from "../pricing/finoraEffectivePricingAuthorityService";
 
 import {
-  FINORA_COLLECTION_PROCESSING_LOWER_THRESHOLD,
   FINORA_COLLECTION_PROCESSING_UPPER_THRESHOLD,
   resolveFinoraCollectionProcessingPrice,
 } from "../pricing/finoraCollectionProcessingPricing";
+
+import {
+  authorizeFinoraCommercialWrite,
+} from "../activation/finoraCommercialWriteGuard";
+
+import type {
+  FinoraCommercialWriteCapability,
+} from "../../types/activation/finoraBranchAccess.types";
 
 import {
   loadWalletBalance,
@@ -45,6 +52,7 @@ import {
 export type FinoraWalletEntryGateReason =
   | "NONE"
   | "WALLET_INSUFFICIENT"
+  | "COMMERCIAL_ACCESS_DENIED"
   | "UNAVAILABLE";
 
 export interface FinoraWalletEntryGateResult {
@@ -69,12 +77,41 @@ export interface FinoraWalletEntryGateResult {
 
 export const FINORA_WALLET_ENTRY_LOCK_MESSAGE =
   "Please recharge your wallet to unlock this button.";
+async function resolveCommercialAccessEntryGate(
+  capability: FinoraCommercialWriteCapability,
+): Promise<FinoraWalletEntryGateResult | null> {
+  const decision =
+    await authorizeFinoraCommercialWrite(
+      capability,
+    );
+
+  if (decision.allowed) {
+    return null;
+  }
+
+  return {
+    canEnter: false,
+    reason: "COMMERCIAL_ACCESS_DENIED",
+    requiredFee: null,
+    availableBalance: null,
+    message: decision.reason,
+  };
+}
 
 
 export async function resolveLoanCreateWalletEntryGate(
   scope: WalletScope,
 ): Promise<FinoraWalletEntryGateResult> {
-  const pricingResult =
+  const accessGate =
+    await resolveCommercialAccessEntryGate(
+      "DISBURSE_LOAN",
+    );
+
+  if (accessGate) {
+    return accessGate;
+  }
+
+const pricingResult =
     await resolveFinoraAuthoritativeEffectivePrice({
       chargeCode:
         "LOAN_DISBURSEMENT",
@@ -169,7 +206,16 @@ export async function resolveCustomerCreateWalletEntryGate(
   scope: WalletScope,
 ): Promise<FinoraWalletEntryGateResult> {
 
-  const pricingResult =
+  const accessGate =
+    await resolveCommercialAccessEntryGate(
+      "CREATE_CUSTOMER",
+    );
+
+  if (accessGate) {
+    return accessGate;
+  }
+
+const pricingResult =
     await resolveFinoraAuthoritativeEffectivePrice({
       chargeCode:
         "CUSTOMER_NUMBER_GENERATION",
@@ -257,6 +303,15 @@ export async function resolveCustomerCreateWalletEntryGate(
 export async function resolveCollectionCreateWalletEntryGate(
   scope: WalletScope,
 ): Promise<FinoraWalletEntryGateResult> {
+  const accessGate =
+    await resolveCommercialAccessEntryGate(
+      "POST_COLLECTION",
+    );
+
+  if (accessGate) {
+    return accessGate;
+  }
+
   const pricingScope = {
     ownerId:
       scope.ownerId,
@@ -268,29 +323,13 @@ export async function resolveCollectionCreateWalletEntryGate(
       scope.branchId,
   };
 
-  const belowResult =
-    resolveFinoraCollectionProcessingPrice(
-      1,
-      pricingScope,
-    );
-
-  const middleResult =
-    resolveFinoraCollectionProcessingPrice(
-      FINORA_COLLECTION_PROCESSING_LOWER_THRESHOLD,
-      pricingScope,
-    );
-
   const aboveResult =
     resolveFinoraCollectionProcessingPrice(
       FINORA_COLLECTION_PROCESSING_UPPER_THRESHOLD + 1,
       pricingScope,
     );
 
-  if (
-    !belowResult.success ||
-    !middleResult.success ||
-    !aboveResult.success
-  ) {
+  if (!aboveResult.success) {
     return {
       canEnter: false,
       reason: "UNAVAILABLE",
@@ -341,5 +380,4 @@ export async function resolveCollectionCreateWalletEntryGate(
         : FINORA_WALLET_ENTRY_LOCK_MESSAGE,
   };
 }
-
 
