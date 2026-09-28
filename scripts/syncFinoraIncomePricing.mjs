@@ -129,6 +129,193 @@ async function readJson(
   }
 }
 
+function extractGeneratedPrice(
+  source,
+  key,
+) {
+
+  const match =
+    new RegExp(
+      `${key}:\\s*([0-9]+(?:\\.[0-9]+)?)`,
+    ).exec(
+      source,
+    );
+
+  if (!match) {
+    return undefined;
+  }
+
+  const value =
+    Number(
+      match[1],
+    );
+
+  return isValidPrice(
+    value,
+  )
+    ? value
+    : undefined;
+}
+
+function extractGeneratedBranchArray(
+  source,
+  constantName,
+) {
+
+  const expression =
+    new RegExp(
+      `export const ${constantName}:[\\s\\S]*?Object\\.freeze\\(\\s*(\\[[\\s\\S]*?\\])\\s*,?\\s*\\);`,
+    );
+
+  const match =
+    expression.exec(
+      source,
+    );
+
+  if (!match) {
+    return [];
+  }
+
+  try {
+
+    const parsed =
+      JSON.parse(
+        match[1],
+      );
+
+    return Array.isArray(
+      parsed,
+    )
+      ? parsed
+      : [];
+
+  } catch {
+
+    return [];
+  }
+}
+
+function extractGeneratedPricingObject(
+  source,
+  constantName,
+) {
+
+  const markerIndex =
+    source.indexOf(
+      `export const ${constantName}:`,
+    );
+
+  if (markerIndex < 0) {
+    return undefined;
+  }
+
+  const tail =
+    source.slice(
+      markerIndex,
+    );
+
+  const pricing = {
+    customerCreateFee:
+      extractGeneratedPrice(
+        tail,
+        "customerCreateFee",
+      ),
+
+    loanDisbursementFee:
+      extractGeneratedPrice(
+        tail,
+        "loanDisbursementFee",
+      ),
+
+    collectionBelow25000Fee:
+      extractGeneratedPrice(
+        tail,
+        "collectionBelow25000Fee",
+      ),
+
+    collection25000To50000Fee:
+      extractGeneratedPrice(
+        tail,
+        "collection25000To50000Fee",
+      ),
+
+    collectionAbove50000Fee:
+      extractGeneratedPrice(
+        tail,
+        "collectionAbove50000Fee",
+      ),
+  };
+
+  return PRICE_KEYS.every(
+    (key) =>
+      isValidPrice(
+        pricing[key],
+      ),
+  )
+    ? pricing
+    : undefined;
+}
+
+async function readPreviousGeneratedRelease(
+  filePath,
+) {
+
+  if (
+    !await fileExists(
+      filePath,
+    )
+  ) {
+    return undefined;
+  }
+
+  const source =
+    await readFile(
+      filePath,
+      "utf8",
+    );
+
+  return {
+    currentPricing:
+      extractGeneratedPricingObject(
+        source,
+        "FINORA_INCOME_PRICING_DEFAULTS",
+      ),
+
+    previousPricing:
+      extractGeneratedPricingObject(
+        source,
+        "FINORA_PREVIOUS_INCOME_PRICING_DEFAULTS",
+      ),
+
+    currentBranches:
+      extractGeneratedBranchArray(
+        source,
+        "FINORA_BRANCH_PRICING_OVERRIDES",
+      ),
+
+    previousBranches:
+      extractGeneratedBranchArray(
+        source,
+        "FINORA_PREVIOUS_BRANCH_PRICING_OVERRIDES",
+      ),
+  };
+}
+
+function sameJson(
+  left,
+  right,
+) {
+
+  return (
+    JSON.stringify(
+      left,
+    ) ===
+    JSON.stringify(
+      right,
+    )
+  );
+}
+
 function validateGlobalPricing(
   value,
 ) {
@@ -462,9 +649,59 @@ branchPricing.sort(
   },
 );
 
+const previousGeneratedRelease =
+  await readPreviousGeneratedRelease(
+    generatedFile,
+  );
+
+const releaseUnchanged =
+  Boolean(
+    previousGeneratedRelease?.currentPricing,
+  ) &&
+  sameJson(
+    previousGeneratedRelease.currentPricing,
+    pricing,
+  ) &&
+  sameJson(
+    previousGeneratedRelease.currentBranches ?? [],
+    branchPricing,
+  );
+
+const previousPricing =
+  releaseUnchanged
+    ? previousGeneratedRelease?.previousPricing
+    : previousGeneratedRelease?.currentPricing;
+
+const previousBranchPricing =
+  releaseUnchanged
+    ? (
+        previousGeneratedRelease?.previousBranches ??
+        []
+      )
+    : (
+        previousGeneratedRelease?.currentBranches ??
+        []
+      );
+
 const branchLiteral =
   JSON.stringify(
     branchPricing,
+    null,
+    2,
+  );
+
+const previousPricingLiteral =
+  previousPricing
+    ? JSON.stringify(
+        previousPricing,
+        null,
+        2,
+      )
+    : "null";
+
+const previousBranchLiteral =
+  JSON.stringify(
+    previousBranchPricing,
     null,
     2,
   );
@@ -552,6 +789,18 @@ export const FINORA_BRANCH_PRICING_OVERRIDES:
   readonly FinoraBranchPricingOverride[] =
     Object.freeze(
       ${branchLiteral},
+    );
+
+export const FINORA_PREVIOUS_INCOME_PRICING_DEFAULTS:
+  Readonly<FinoraIncomePricingDefaults> | null =
+    ${previousPricingLiteral === "null"
+      ? "null"
+      : `Object.freeze(${previousPricingLiteral})`};
+
+export const FINORA_PREVIOUS_BRANCH_PRICING_OVERRIDES:
+  readonly FinoraBranchPricingOverride[] =
+    Object.freeze(
+      ${previousBranchLiteral},
     );
 `;
 

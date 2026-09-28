@@ -81,3 +81,13 @@ export const FINORA_BRANCH_PRICING_OVERRIDES:
     Object.freeze(
       [],
     );
+
+export const FINORA_PREVIOUS_INCOME_PRICING_DEFAULTS:
+  Readonly<FinoraIncomePricingDefaults> | null =
+    null;
+
+export const FINORA_PREVIOUS_BRANCH_PRICING_OVERRIDES:
+  readonly FinoraBranchPricingOverride[] =
+    Object.freeze(
+      [],
+    );

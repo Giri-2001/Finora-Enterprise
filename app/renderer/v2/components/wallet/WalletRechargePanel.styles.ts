@@ -1,4 +1,4 @@
-﻿/* ============================================================
+/* ============================================================
    FINORA ENTERPRISE OS™
 
    FINORA WALLET™
@@ -50,6 +50,9 @@ export interface WalletRechargePanelStyles {
     CSSProperties;
 
   subtitle:
+    CSSProperties;
+
+  feeChartButton:
     CSSProperties;
 
   form:
@@ -139,8 +142,15 @@ export function createWalletRechargePanelStyles(
       display:
         "flex",
 
+      flexDirection:
+        tokens.meta.viewport === "mobile"
+          ? "column"
+          : "row",
+
       alignItems:
-        "flex-start",
+        tokens.meta.viewport === "mobile"
+          ? "stretch"
+          : "flex-start",
 
       justifyContent:
         "space-between",
@@ -205,6 +215,63 @@ export function createWalletRechargePanelStyles(
       lineHeight:
         1.45,
     },
+
+    feeChartButton: {
+      flexShrink:
+        0,
+
+      minWidth:
+        118,
+
+      minHeight:
+        wallet.actions.buttonHeight,
+
+      display:
+        "inline-flex",
+
+      alignItems:
+        "center",
+
+      justifyContent:
+        "center",
+
+      gap:
+        6,
+
+      padding:
+        `0 ${wallet.actions.buttonPaddingX}px`,
+
+      border:
+        "1px solid var(--finora-theme-brand-primary)",
+
+      borderRadius:
+        wallet.actions.buttonRadius,
+
+      background:
+        "var(--finora-theme-brand-soft)",
+
+      color:
+        "var(--finora-theme-brand-primary)",
+
+      fontFamily:
+        "Inter, ui-sans-serif, system-ui, sans-serif",
+
+      fontSize:
+        wallet.actions.buttonFontSize,
+
+      fontWeight:
+        750,
+
+      lineHeight:
+        1,
+
+      cursor:
+        "pointer",
+
+      boxSizing:
+        "border-box",
+    },
+
 
     form: {
       width:
@@ -303,7 +370,7 @@ export function createWalletRechargePanelStyles(
         "grid",
 
       gridTemplateColumns:
-        "repeat(5, minmax(0, 1fr))",
+        "repeat(4, minmax(0, 1fr))",
 
       gap:
         6,

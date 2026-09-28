@@ -1,4 +1,4 @@
-﻿/* ============================================================
+/* ============================================================
    FINORA ENTERPRISE OS™
 
    FINORA WALLET™
@@ -70,6 +70,9 @@ export interface WalletRechargePanelProps {
   submitting?:
     boolean;
 
+  onOpenFeeChart:
+    () => void;
+
   onSubmit:
     (
       input: WalletRechargePanelSubmitInput,
@@ -116,14 +119,6 @@ const PAYMENT_METHODS:
 
     {
       value:
-        "UPI",
-
-      label:
-        "UPI",
-    },
-
-    {
-      value:
         "OTHER",
 
       label:
@@ -138,6 +133,7 @@ const PAYMENT_METHODS:
 export default function WalletRechargePanel({
   disabled = false,
   submitting = false,
+  onOpenFeeChart,
   onSubmit,
 }: WalletRechargePanelProps) {
   const {
@@ -147,6 +143,9 @@ export default function WalletRechargePanel({
   const styles =
     createWalletRechargePanelStyles(tokens);
 
+  const isMobile =
+    tokens.meta.viewport === "mobile";
+
   const [amountText, setAmountText] =
     useState("");
 
@@ -154,7 +153,7 @@ export default function WalletRechargePanel({
     paymentMethod,
     setPaymentMethod,
   ] = useState<WalletRechargePaymentMethod>(
-    "UPI",
+    "PHONEPE",
   );
 
   const amount =
@@ -204,6 +203,30 @@ export default function WalletRechargePanel({
             available wallet balance.
           </p>
         </div>
+
+        <button
+          type="button"
+          onClick={onOpenFeeChart}
+          style={{
+            ...styles.feeChartButton,
+
+            ...(isMobile
+              ? {
+                  width:
+                    "100%",
+                }
+              : {}),
+          }}
+        >
+          <IndianRupee
+            size={tokens.icon.sm}
+            strokeWidth={2}
+            aria-hidden="true"
+          />
+
+          Fee Chart
+        </button>
+
       </header>
 
       <div style={styles.form}>
@@ -253,13 +276,7 @@ export default function WalletRechargePanel({
                       : styles.paymentButton
                   }
                 >
-                  {method.value === "UPI" ? (
-                    <IndianRupee
-                      size={tokens.icon.sm}
-                      strokeWidth={2}
-                      aria-hidden="true"
-                    />
-                  ) : method.value === "PAYTM" ? (
+                  {method.value === "PAYTM" ? (
                     <CreditCard
                       size={tokens.icon.sm}
                       strokeWidth={2}

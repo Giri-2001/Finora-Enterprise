@@ -106,6 +106,12 @@ import type {
 
 import WalletTransactionHistory from "../../components/wallet/WalletTransactionHistory";
 
+import FinoraCommissionChartModal from "../../components/wallet/FinoraCommissionChartModal";
+
+import {
+  resolveFinoraFeeChartPricing,
+} from "../../services/pricing/finoraFeeChartPricing";
+
 import {
   startFinoraProcessing,
   stopFinoraProcessing,
@@ -197,6 +203,13 @@ export default function WalletPage({
   const [
     recharging,
     setRecharging,
+  ] = useState(
+    false,
+  );
+
+  const [
+    feeChartOpen,
+    setFeeChartOpen,
   ] = useState(
     false,
   );
@@ -1045,7 +1058,7 @@ export default function WalletPage({
 
           setImportRechargeMessage(
             resumeResult.completed
-              ? "Wallet Recharge completed successfully."
+              ? `${"FINORA Recharge successfully credited to GGB Wallet. " + new Date().toLocaleString("en-GB", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit", hour12: true }).replace("Sept", "Sep")}`
               : "Verified Wallet Recharge authorization is available, but Wallet credit was not completed.",
           );
 
@@ -1167,7 +1180,7 @@ export default function WalletPage({
 
       if (resumeResult.completed) {
         setImportRechargeMessage(
-          "Wallet Recharge completed successfully.",
+          `${"FINORA Recharge successfully credited to GGB Wallet. " + new Date().toLocaleString("en-GB", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit", hour12: true }).replace("Sept", "Sep")}`,
         );
       } else {
         setImportRechargeMessage(
@@ -1353,8 +1366,33 @@ export default function WalletPage({
                   Boolean(pendingRechargeReference)
                 }
                 submitting={recharging}
+                onOpenFeeChart={() => {
+                  setFeeChartOpen(
+                    true,
+                  );
+                }}
                 onSubmit={handleRechargeRequest}
               />
+
+              {feeChartOpen ? (
+                <FinoraCommissionChartModal
+                  pricing={resolveFinoraFeeChartPricing({
+                    ownerId:
+                      scope.ownerId,
+
+                    businessId:
+                      scope.businessId,
+
+                    branchId:
+                      scope.branchId,
+                  })}
+                  onClose={() => {
+                    setFeeChartOpen(
+                      false,
+                    );
+                  }}
+                />
+              ) : null}
 
               {pendingRechargeReference ? (
                 <section style={styles.stateCard}>
@@ -1463,7 +1501,13 @@ export default function WalletPage({
                       importingControlBundle
                     }
                     aria-label="Refresh FINORA Wallet"
-                    style={styles.refreshButton}
+                    style={{
+                      ...styles.refreshButton,
+                    
+                      ...(tokens.meta.viewport === "mobile"
+                        ? { width: "100%" }
+                        : {}),
+                    }}
                   >
                     <RefreshCw
                       size={tokens.icon.sm}
