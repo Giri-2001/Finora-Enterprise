@@ -1,4 +1,4 @@
-﻿// ============================================================
+// ============================================================
 // FINORA ENTERPRISE OS™
 // LOAN STUDIO STATE / BUSINESS ENGINE
 //
@@ -153,6 +153,7 @@ import {
 
 import {
   clearLoanWorkspaceDraft,
+  loadActiveLoanWorkspaceDraft,
   loadLoanWorkspaceDraft,
   saveLoanWorkspaceDraft,
   type LoanWorkspaceDraftStep,
@@ -314,10 +315,14 @@ export function useLoanStudio({
 
   const initialWorkspaceDraft =
     useMemo(
-      () =>
-        loadLoanWorkspaceDraft(
-          draftMode,
-        ),
+      () => {
+        const activeDraft =
+          loadActiveLoanWorkspaceDraft();
+
+        return activeDraft?.mode === draftMode
+          ? activeDraft
+          : null;
+      },
       [draftMode],
     );
 

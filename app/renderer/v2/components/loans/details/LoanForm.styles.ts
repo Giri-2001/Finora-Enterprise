@@ -274,7 +274,7 @@ export const inputStyle: CSSProperties = {
 
   color: COLORS.text,
 
-  fontSize: "14px",
+  fontSize: "13px",
 
   fontWeight: 550,
 
@@ -325,7 +325,7 @@ export const textareaStyle: CSSProperties = {
 
   color: COLORS.text,
 
-  fontSize: "14px",
+  fontSize: "13px",
 
   fontWeight: 550,
 

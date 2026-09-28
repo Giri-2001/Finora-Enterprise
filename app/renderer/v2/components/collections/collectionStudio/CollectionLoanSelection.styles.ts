@@ -1,9 +1,9 @@
 // ============================================================
-// FINORA ENTERPRISE OS™
+// FINORA ENTERPRISE OSâ„¢
 //
-// COLLECTION STUDIO™
+// COLLECTION STUDIOâ„¢
 //
-// CUSTOMER LOAN SELECTION — PREMIUM STYLES
+// CUSTOMER LOAN SELECTION â€” PREMIUM STYLES
 //
 // RESPONSIBILITY
 //
@@ -109,11 +109,11 @@ export interface CollectionLoanSelectionStyles extends Record<
 // Theme is owned centrally by FINORA Theme Engine.
 //
 // ThemeProvider
-//      ↓
+//      â†“
 // active FinoraTheme
-//      ↓
+//      â†“
 // theme.colors
-//      ↓
+//      â†“
 // this presentation layer
 //
 // ============================================================
@@ -344,11 +344,11 @@ export function createCollectionLoanSelectionStyles(
   const loanDropdownWrapper: CSSProperties = {
     position: "relative",
 
-    flex: "0 0 235px",
+    flex: "0 0 310px",
 
-    width: "235px",
+    width: "310px",
 
-    minWidth: "190px",
+    minWidth: "260px",
 
     boxSizing: "border-box",
   };
@@ -462,14 +462,14 @@ export function createCollectionLoanSelectionStyles(
   // The JSX already has the correct two-row structure:
   //
   // ROW 1
-  // ┌─────────────────────────────────┐
-  // │ LOAN NUMBER              ACTIVE │
-  // └─────────────────────────────────┘
+  // â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”
+  // â”‚ LOAN NUMBER              ACTIVE â”‚
+  // â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜
   //
   // ROW 2
-  // ┌─────────────────────────────────┐
-  // │ ₹ 20,000                MONTHLY │
-  // └─────────────────────────────────┘
+  // â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”
+  // â”‚ â‚¹ 20,000                MONTHLY â”‚
+  // â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜
   //
   // Therefore DO NOT use CSS Grid inside the card.
   //

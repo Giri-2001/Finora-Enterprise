@@ -224,6 +224,27 @@ function safeText(value: string | number | undefined): string {
   return String(value);
 }
 
+function formatGoldGrams(value: number | undefined): string {
+  const grams =
+    typeof value === "number" && Number.isFinite(value)
+      ? value
+      : 0;
+
+  return `${grams.toFixed(3)} grams`;
+}
+
+function formatGoldPercentage(value: number | undefined): string {
+  const percentage =
+    typeof value === "number" && Number.isFinite(value)
+      ? value
+      : 0;
+
+  return `${percentage.toFixed(2)}%`;
+}
+
+function formatGoldItemType(value: string | undefined): string {
+  return value ? value.replace(/_/g, " ") : "--";
+}
 // ============================================================
 // SCHEDULE VALUE HELPER
 //
@@ -489,6 +510,8 @@ export default function ViewLoanDetails({
   const schedule = Array.isArray(loan.schedule) ? loan.schedule : [];
 
   const documents = Array.isArray(loan.documents) ? loan.documents : [];
+
+  const goldStepOne = loan.goldStepOne;
 
   // ==========================================================
   // DOCUMENT VIEWER
@@ -788,11 +811,205 @@ export default function ViewLoanDetails({
           </section>
 
           {/* ================================================
-              LOAN DOCUMENTS / EVIDENCE
+              GOLD LOAN DETAILS — READ ONLY
           ================================================ */}
 
-          {/* ================================================
-    GOLD CUSTODY LOCATION — READ ONLY
+          {goldStepOne ? (
+            <section style={sectionStyle}>
+              <div
+                className="finora-view-loan-section-header"
+                style={sectionHeaderStyle}
+              >
+                <div>
+                  <h2 style={{ ...sectionTitleStyle, fontSize: "15px", fontWeight: 750 }}>Gold Loan Details</h2>
+
+                  <p style={sectionSubtitleStyle}>
+                    Gold valuation and pledged item details saved with this loan.
+                  </p>
+                </div>
+              </div>
+
+              <div className="finora-view-loan-info-grid" style={infoGridStyle}>
+                <div style={infoItemStyle}>
+                  <span style={infoLabelStyle}>Gold Items</span>
+                  <strong>
+                    {goldStepOne.items
+                      .map(
+                        (item) =>
+                          item.itemName ||
+                          formatGoldItemType(item.itemType),
+                      )
+                      .join(", ") || "--"}
+                  </strong>
+                </div>
+
+                <div style={infoItemStyle}>
+                  <span style={infoLabelStyle}>Gold Weight</span>
+                  <strong>
+                    {formatGoldGrams(
+                      goldStepOne.totals.totalGrossWeightGrams,
+                    )}
+                  </strong>
+                </div>
+
+                <div style={infoItemStyle}>
+                  <span style={infoLabelStyle}>Stone Weight</span>
+                  <strong>
+                    {formatGoldGrams(
+                      goldStepOne.totals.totalStoneWeightGrams,
+                    )}
+                  </strong>
+                </div>
+
+                <div style={infoItemStyle}>
+                  <span style={infoLabelStyle}>Other Deduction Weight</span>
+                  <strong>
+                    {formatGoldGrams(
+                      goldStepOne.totals.totalOtherDeductionWeightGrams,
+                    )}
+                  </strong>
+                </div>
+
+                <div style={infoItemStyle}>
+                  <span style={infoLabelStyle}>Net Gold Weight</span>
+                  <strong>
+                    {formatGoldGrams(
+                      goldStepOne.totals.totalNetWeightGrams,
+                    )}
+                  </strong>
+                </div>
+
+                <div style={infoItemStyle}>
+                  <span style={infoLabelStyle}>
+                    Effective Fine Gold Weight
+                  </span>
+                  <strong>
+                    {formatGoldGrams(
+                      goldStepOne.totals.totalFineGoldWeightGrams,
+                    )}
+                  </strong>
+                </div>
+
+                <div style={infoItemStyle}>
+                  <span style={infoLabelStyle}>Assessed Gold Value</span>
+                  <strong>
+                    {formatCurrency(goldStepOne.valuation.assessedValue)}
+                  </strong>
+                </div>
+
+                <div style={infoItemStyle}>
+                  <span style={infoLabelStyle}>Maximum LTV</span>
+                  <strong>
+                    {formatGoldPercentage(
+                      goldStepOne.valuation.maxLtvPercentage,
+                    )}
+                  </strong>
+                </div>
+
+                <div style={infoItemStyle}>
+                  <span style={infoLabelStyle}>Eligible Loan Amount</span>
+                  <strong>
+                    {formatCurrency(goldStepOne.valuation.eligibleAmount)}
+                  </strong>
+                </div>
+
+                <div style={infoItemStyle}>
+                  <span style={infoLabelStyle}>Requested Amount</span>
+                  <strong>
+                    {formatCurrency(goldStepOne.amounts.requestedAmount)}
+                  </strong>
+                </div>
+
+                <div style={infoItemStyle}>
+                  <span style={infoLabelStyle}>Sanctioned Amount</span>
+                  <strong>
+                    {formatCurrency(goldStepOne.amounts.sanctionedAmount)}
+                  </strong>
+                </div>
+
+                <div style={infoItemStyle}>
+                  <span style={infoLabelStyle}>Valuer Name</span>
+                  <strong>{safeText(goldStepOne.valuer.name)}</strong>
+                </div>
+
+                <div style={infoItemStyle}>
+                  <span style={infoLabelStyle}>Valuation Date</span>
+                  <strong>
+                    {formatDate(goldStepOne.valuer.valuationDate)}
+                  </strong>
+                </div>
+              </div>
+
+              {goldStepOne.items.map((item, index) => (
+                <div
+                  key={item.id || String(index)}
+                  style={{
+                    ...infoItemStyle,
+                    marginTop: "12px",
+                  }}
+                >
+                  <span style={infoLabelStyle}>
+                    Gold Item {index + 1}
+                  </span>
+
+                  <div className="finora-view-loan-info-grid" style={infoGridStyle}>
+                    <div style={infoItemStyle}>
+                      <span style={infoLabelStyle}>Item Name</span>
+                      <strong>{safeText(item.itemName)}</strong>
+                    </div>
+
+                    <div style={infoItemStyle}>
+                      <span style={infoLabelStyle}>Gross Weight</span>
+                      <strong>{formatGoldGrams(item.grossWeightGrams)}</strong>
+                    </div>
+
+                    <div style={infoItemStyle}>
+                      <span style={infoLabelStyle}>Stone Weight</span>
+                      <strong>{formatGoldGrams(item.stoneWeightGrams)}</strong>
+                    </div>
+
+                    <div style={infoItemStyle}>
+                      <span style={infoLabelStyle}>Other Deduction</span>
+                      <strong>
+                        {formatGoldGrams(
+                          item.otherDeductionWeightGrams,
+                        )}
+                      </strong>
+                    </div>
+
+                    <div style={infoItemStyle}>
+                      <span style={infoLabelStyle}>Net Gold Weight</span>
+                      <strong>{formatGoldGrams(item.netWeightGrams)}</strong>
+                    </div>
+
+                    <div style={infoItemStyle}>
+                      <span style={infoLabelStyle}>
+                        Effective Fine Gold Weight
+                      </span>
+                      <strong>
+                        {formatGoldGrams(item.fineGoldWeightGrams)}
+                      </strong>
+                    </div>
+
+                    <div style={infoItemStyle}>
+                      <span style={infoLabelStyle}>Purity</span>
+                      <strong>
+                        {item.purityKarat}K /{" "}
+                        {formatGoldPercentage(item.purityPercentage)}
+                      </strong>
+                    </div>
+
+                    <div style={infoItemStyle}>
+                      <span style={infoLabelStyle}>Assessed Value</span>
+                      <strong>{formatCurrency(item.assessedValue)}</strong>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </section>
+          ) : null}
+{/* ================================================
+              GOLD CUSTODY LOCATION — READ ONLY
 ================================================ */}
 
           {goldCustodyLocation ? (
@@ -802,7 +1019,7 @@ export default function ViewLoanDetails({
                 style={sectionHeaderStyle}
               >
                 <div>
-                  <h2 style={sectionTitleStyle}>Gold Custody Location</h2>
+                  <h2 style={{ ...sectionTitleStyle, fontSize: "15px", fontWeight: 750 }}>Gold Custody Location</h2>
 
                   <p style={sectionSubtitleStyle}>
                     Current physical location of the pledged Gold packet.
@@ -810,7 +1027,33 @@ export default function ViewLoanDetails({
                 </div>
               </div>
 
-              <div style={infoGridStyle}>
+              <div className="finora-view-loan-info-grid" style={infoGridStyle}>
+                {goldStepOne ? (
+                  <>
+                    <div style={infoItemStyle}>
+                      <span style={infoLabelStyle}>Gold Item</span>
+                      <strong>
+                        {goldStepOne.items
+                          .map(
+                            (item) =>
+                              item.itemName ||
+                              formatGoldItemType(item.itemType),
+                          )
+                          .join(", ") || "--"}
+                      </strong>
+                    </div>
+
+                    <div style={infoItemStyle}>
+                      <span style={infoLabelStyle}>Gold Weight</span>
+                      <strong>
+                        {formatGoldGrams(goldStepOne.totals.totalGrossWeightGrams)}
+                        {" \u2192 "}
+                        {formatGoldGrams(goldStepOne.totals.totalNetWeightGrams)}
+                      </strong>
+                    </div>
+                  </>
+                ) : null}
+
                 <div style={infoItemStyle}>
                   <span style={infoLabelStyle}>Custody Status</span>
 
@@ -871,6 +1114,10 @@ export default function ViewLoanDetails({
               </div>
             </section>
           ) : null}
+
+          {/* ================================================
+              LOAN DOCUMENTS / EVIDENCE
+          ================================================ */}
 
           <section style={sectionStyle}>
             <div
@@ -1053,7 +1300,7 @@ export default function ViewLoanDetails({
               </div>
             </div>
 
-            <div style={infoGridStyle}>
+            <div className="finora-view-loan-info-grid" style={infoGridStyle}>
               <div style={infoItemStyle}>
                 <span style={infoLabelStyle}>Guarantor Name</span>
 
@@ -1086,7 +1333,7 @@ export default function ViewLoanDetails({
               </div>
             </div>
 
-            <div style={infoGridStyle}>
+            <div className="finora-view-loan-info-grid" style={infoGridStyle}>
               <div style={infoItemStyle}>
                 <span style={infoLabelStyle}>Repayment Type</span>
 
@@ -1328,7 +1575,7 @@ export default function ViewLoanDetails({
                 style={documentViewerCloseStyle}
                 aria-label="Close document viewer"
               >
-                ×
+                {"×"}
               </button>
             </div>
 

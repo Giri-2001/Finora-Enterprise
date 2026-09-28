@@ -1,5 +1,5 @@
 // ============================================================
-// FINORA ENTERPRISE OSÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢
+// FINORA ENTERPRISE OSÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¾Ãƒâ€šÃ‚Â¢
 // ELECTRON MAIN PROCESS
 // V2 USB / PENDRIVE STORAGE IPC
 //
@@ -1397,6 +1397,9 @@ async function handleUsbMigrateLegacyTenantScope(
     let legacyRecordCount =
       0;
 
+    let conflictingScopedTenantForLegacy =
+      false;
+
     /*
      * MIGRATION QUALIFICATION
      *
@@ -1471,6 +1474,17 @@ async function handleUsbMigrateLegacyTenantScope(
         fullyScopedRecordCount +=
           1;
 
+        if (
+          recordOwnerId === ownerId &&
+          (
+            recordBusinessId !== businessId ||
+            recordBranchId !== branchId
+          )
+        ) {
+          conflictingScopedTenantForLegacy =
+            true;
+        }
+
         continue;
       }
 
@@ -1502,11 +1516,11 @@ async function handleUsbMigrateLegacyTenantScope(
      * Never guess which scoped tenant owns the legacy records.
      */
     if (
-      fullyScopedRecordCount > 0 &&
-      legacyRecordCount > 0
+      legacyRecordCount > 0 &&
+      conflictingScopedTenantForLegacy
     ) {
       return failure(
-        "FINORA USB storage cannot mix fully-scoped and legacy tenant records.",
+        "FINORA USB legacy tenant records are ambiguous across multiple scoped branches for the authenticated Owner.",
       );
     }
 
@@ -1538,15 +1552,35 @@ async function handleUsbMigrateLegacyTenantScope(
 
     const migratedRecords =
       originalRecords.map(
-        (record) => ({
-          ...record,
+        (record) => {
+          const recordBusinessId =
+            typeof record.businessId === "string"
+              ? record.businessId.trim()
+              : "";
 
-          ownerId,
+          const recordBranchId =
+            typeof record.branchId === "string"
+              ? record.branchId.trim()
+              : "";
 
-          businessId,
+          const isLegacy =
+            recordBusinessId.length === 0 &&
+            recordBranchId.length === 0;
 
-          branchId,
-        }),
+          if (!isLegacy) {
+            return record;
+          }
+
+          return {
+            ...record,
+
+            ownerId,
+
+            businessId,
+
+            branchId,
+          };
+        },
       );
 
     for (
@@ -1621,18 +1655,24 @@ async function handleUsbMigrateLegacyTenantScope(
         );
       }
 
+      const expected =
+        migratedRecords[index];
+
+      if (!expected) {
+        throw new Error(
+          "FINORA migration expected record is unavailable.",
+        );
+      }
+
       if (
-        verified.id !== original.id ||
-        verified.entity !== original.entity ||
-        verified.createdAt !== original.createdAt ||
-        verified.updatedAt !== original.updatedAt ||
-        verified.ownerId !== ownerId ||
-        verified.businessId !== businessId ||
-        verified.branchId !== branchId ||
-        (
-          typeof verified.demoId === "string" &&
-          verified.demoId.trim().length > 0
-        )
+        verified.id !== expected.id ||
+        verified.entity !== expected.entity ||
+        verified.createdAt !== expected.createdAt ||
+        verified.updatedAt !== expected.updatedAt ||
+        verified.ownerId !== expected.ownerId ||
+        verified.businessId !== expected.businessId ||
+        verified.branchId !== expected.branchId ||
+        verified.demoId !== expected.demoId
       ) {
         throw new Error(
           "FINORA migration read-back tenant envelope verification failed.",
@@ -3637,4 +3677,3 @@ app.on("window-all-closed", () => {
 // ============================================================
 // END
 // ============================================================
-

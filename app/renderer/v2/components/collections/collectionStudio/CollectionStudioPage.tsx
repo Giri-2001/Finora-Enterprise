@@ -1,4 +1,4 @@
-﻿// ============================================================
+// ============================================================
 // FINORA ENTERPRISE OS™
 //
 // COLLECTION STUDIO™
@@ -246,6 +246,8 @@ export interface CollectionLoanRecord {
   loanDate: string;
 
   documents: DocumentsStudioItem[];
+
+  goldStepOne?: Loan["goldStepOne"];
 }
 
 export interface CollectionCustomerRecord {
@@ -443,6 +445,8 @@ function mapLoanToCollectionLoan(loan: Loan): CollectionLoanRecord {
     loanDate: String(loan.loanDate ?? ""),
 
     documents: Array.isArray(loan.documents) ? loan.documents : [],
+
+    goldStepOne: loan.goldStepOne,
   };
 }
 
@@ -1661,6 +1665,40 @@ export default function CollectionStudioPage() {
               {/* ==============================================
                   ROOM
               ============================================== */}
+
+              {selectedLoan?.goldStepOne ? (
+                <>
+                  <div style={collectionStudioStyles.customerDetailLine}>
+                    <span style={collectionStudioStyles.detailLabel}>GOLD ITEM</span>
+
+                    <strong style={collectionStudioStyles.detailValue}>
+                      {selectedLoan.goldStepOne.items
+                        .map(
+                          (item) =>
+                            item.itemName ||
+                            String(item.itemType).replace(/_/g, " "),
+                        )
+                        .join(", ") || "--"}
+                    </strong>
+                  </div>
+
+                  <div
+                    style={{
+                      ...collectionStudioStyles.customerDetailLine,
+                      gridTemplateColumns: "96px minmax(0, 1fr)",
+                      gap: "12px",
+                    }}
+                  >
+                    <span style={collectionStudioStyles.detailLabel}>GOLD WEIGHT</span>
+
+                    <strong style={collectionStudioStyles.detailValue}>
+                      {selectedLoan.goldStepOne.totals.totalGrossWeightGrams.toFixed(3)} grams
+                      {" \u2192 "}
+                      {selectedLoan.goldStepOne.totals.totalNetWeightGrams.toFixed(3)} grams
+                    </strong>
+                  </div>
+                </>
+              ) : null}
 
               <div style={collectionStudioStyles.customerDetailLine}>
                 <span style={collectionStudioStyles.detailLabel}>ROOM</span>

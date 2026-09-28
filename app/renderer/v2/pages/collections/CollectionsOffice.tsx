@@ -1,7 +1,7 @@
 // ============================================================
-// FINORA ENTERPRISE OS™
+// FINORA ENTERPRISE OSâ„¢
 //
-// COLLECTIONS OFFICE™
+// COLLECTIONS OFFICEâ„¢
 //
 // RESPONSIBILITY:
 // - Default Collections workspace
@@ -188,7 +188,7 @@ function formatCurrency(value: number | undefined): string {
     currency: "INR",
 
     maximumFractionDigits: 0,
-  }).format(safeNumber(value)).replace(/^₹\s*/, "₹ ");
+  }).format(safeNumber(value)).replace(/^â‚¹\s*/, "â‚¹ ");
 }
 
 function formatDate(value: string): string {
@@ -421,9 +421,11 @@ export default function CollectionsOffice() {
     ...createLoansOfficePortfolioHeaderStyle(responsiveTokens),
 
     paddingTop:
-      responsiveTokens.viewport === "tablet"
-        ? "8px"
-        : undefined,
+      responsiveTokens.viewport === "mobile"
+        ? "10px"
+        : responsiveTokens.viewport === "tablet"
+          ? "8px"
+          : undefined,
 
     paddingBottom:
       responsiveTokens.viewport === "tablet"
@@ -925,8 +927,7 @@ export default function CollectionsOffice() {
                     minHeight: 0,
                     height: "auto",
                     maxHeight: "none",
-                    padding: "18px 14px 16px",
-                    marginBottom: "20px",
+
                     display: "flex",
                     flexDirection: "column",
                     alignItems: "stretch",
@@ -1193,6 +1194,10 @@ export default function CollectionsOffice() {
 
               <span style={{
                 ...collectionCountStyle,
+                marginBottom:
+                  responsiveTokens.viewport === "mobile"
+                    ? "10px"
+                    : undefined,
                 ...(responsiveTokens.viewport === "mobile"
                   ? {
                       width: "100%",
@@ -1377,7 +1382,7 @@ export default function CollectionsOffice() {
                           cursor: !hasPreviousPaginationWindow ? "default" : "pointer",
                         }}
                       >
-                        ← Previous
+                        â† Previous
                       </button>
 
                       {paginationItems.map((item) => {
@@ -1387,7 +1392,7 @@ export default function CollectionsOffice() {
                         ) {
                           return (
                             <span key={item} style={paginationEllipsisStyle}>
-                              …
+                              â€¦
                             </span>
                           );
                         }
@@ -1422,7 +1427,7 @@ export default function CollectionsOffice() {
                           cursor: !hasNextPaginationWindow ? "default" : "pointer",
                         }}
                       >
-                        Next →
+                        Next â†’
                       </button>
                     </div>
                   </div>

@@ -378,9 +378,9 @@ export const collectionStudioStyles: Record<string, CSSProperties> = {
   customerDetailLine: {
     display: "grid",
 
-    gridTemplateColumns: "72px minmax(0, 1fr)",
+    gridTemplateColumns: "96px minmax(0, 1fr)",
 
-    gap: "4px",
+    gap: "12px",
 
     alignItems: "center",
 

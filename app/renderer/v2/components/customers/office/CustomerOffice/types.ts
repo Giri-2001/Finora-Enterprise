@@ -1,4 +1,4 @@
-﻿/* ===========================================================
+/* ===========================================================
    FINORA ENTERPRISE OS™
 
    CUSTOMER OFFICE™
@@ -9,6 +9,8 @@
 import type { LoanInstallment } from "../../../loans/schedule/types";
 
 import type { DocumentsStudioItem } from "../../../loans/documents/DocumentsStudio";
+
+import type { GoldLoanPreparedStepOne } from "../../../../services/gold-loan/goldLoanService";
 
 /* ===========================================================
    LOAN
@@ -163,6 +165,14 @@ export interface Loan {
   documentsLinkedAt?: string;
 
   /* ==========================================
+     GOLD LOAN SNAPSHOT
+
+     Present only for Gold Loans.
+     STANDARD Loans remain unchanged.
+  ========================================== */
+
+  goldStepOne?: GoldLoanPreparedStepOne;
+/* ==========================================
      STATUS
   ========================================== */
 
