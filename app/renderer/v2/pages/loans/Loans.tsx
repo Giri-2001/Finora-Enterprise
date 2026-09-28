@@ -1,6 +1,6 @@
-// FINORA ENTERPRISE OS™
+﻿// FINORA ENTERPRISE OSâ„¢
 //
-// V2 LOANS OFFICE™
+// V2 LOANS OFFICEâ„¢
 //
 // LOANS PORTFOLIO
 //
@@ -391,7 +391,15 @@ function createThemeVisuals(theme: ReturnType<typeof useTheme>["theme"]) {
 // COMPONENT
 // ============================================================
 
-export default function Loans() {
+interface LoansProps {
+  loanCreateDisabled?: boolean;
+  loanCreateTitle?: string;
+}
+
+export default function Loans({
+  loanCreateDisabled,
+  loanCreateTitle,
+}: LoansProps) {
   // ==========================================================
   // FINORA THEME ENGINE
   // ==========================================================
@@ -858,11 +866,11 @@ export default function Loans() {
   // This fixes:
   //
   // Ctrl + R
-  //     ↓
+  //     â†“
   // fresh StorageManager
-  //     ↓
+  //     â†“
   // wrong/default runtime context
-  //     ↓
+  //     â†“
   // empty Loans Office
   //
   // ==========================================================
@@ -1290,9 +1298,14 @@ export default function Loans() {
               onClick={
                 handleOpenRejectedApplications
               }
-              style={
-                responsiveRejectedButtonStyle
-              }
+              disabled={loanCreateDisabled}
+              title={loanCreateTitle ?? "Rejected Applications"}
+              style={{
+                ...responsiveRejectedButtonStyle,
+                ...(loanCreateDisabled
+                  ? { opacity: 0.55, cursor: "not-allowed" }
+                  : {}),
+              }}
             >
               <ArchiveX
                 size={16}
@@ -1305,7 +1318,14 @@ export default function Loans() {
             <button
               type="button"
               onClick={handleCreateGoldLoan}
-              style={responsiveGoldCreateButtonStyle}
+              disabled={loanCreateDisabled}
+              title={loanCreateTitle ?? "Create Gold Loan"}
+              style={{
+                ...responsiveGoldCreateButtonStyle,
+                ...(loanCreateDisabled
+                  ? { opacity: 0.55, cursor: "not-allowed" }
+                  : {}),
+              }}
             >
               <Gem size={16} strokeWidth={1.9} />
               Create Gold Loan
@@ -1314,7 +1334,14 @@ export default function Loans() {
             <button
               type="button"
               onClick={handleCreateLoan}
-              style={responsiveCreateButtonStyle}
+              disabled={loanCreateDisabled}
+              title={loanCreateTitle ?? "Create New Loan"}
+              style={{
+                ...responsiveCreateButtonStyle,
+                ...(loanCreateDisabled
+                  ? { opacity: 0.55, cursor: "not-allowed" }
+                  : {}),
+              }}
             >
               <Plus size={16} strokeWidth={1.9} />
               Create New Loan
@@ -1613,7 +1640,14 @@ export default function Loans() {
                 <button
                   type="button"
                   onClick={handleCreateLoan}
-                  style={themedEmptyCreateButtonStyle}
+                  disabled={loanCreateDisabled}
+                  title={loanCreateTitle ?? "Create New Loan"}
+                  style={{
+                    ...themedEmptyCreateButtonStyle,
+                    ...(loanCreateDisabled
+                      ? { opacity: 0.55, cursor: "not-allowed" }
+                      : {}),
+                  }}
                 >
                   + Create New Loan
                 </button>
@@ -1783,7 +1817,7 @@ export default function Loans() {
                           cursor: !hasPreviousPaginationWindow ? "default" : "pointer",
                         }}
                       >
-                        ← Previous
+                        â† Previous
                       </button>
 
                       {paginationItems.map((item) => {
@@ -1796,7 +1830,7 @@ export default function Loans() {
                               key={item}
                               style={themedPaginationEllipsisStyle}
                             >
-                              …
+                              â€¦
                             </span>
                           );
                         }
@@ -1829,7 +1863,7 @@ export default function Loans() {
                           cursor: !hasNextPaginationWindow ? "default" : "pointer",
                         }}
                       >
-                        Next →
+                        Next â†’
                       </button>
                     </div>
                   </div>
@@ -1895,7 +1929,7 @@ export default function Loans() {
                           cursor: !hasPreviousPaginationWindow ? "default" : "pointer",
                         }}
                       >
-                        ← Previous
+                        â† Previous
                       </button>
 
                       {paginationItems.map((item) => {
@@ -1908,7 +1942,7 @@ export default function Loans() {
                               key={item}
                               style={themedPaginationEllipsisStyle}
                             >
-                              …
+                              â€¦
                             </span>
                           );
                         }
@@ -1941,7 +1975,7 @@ export default function Loans() {
                           cursor: !hasNextPaginationWindow ? "default" : "pointer",
                         }}
                       >
-                        Next →
+                        Next â†’
                       </button>
                     </div>
                   </div>
@@ -1958,3 +1992,5 @@ export default function Loans() {
 // ============================================================
 // END
 // ============================================================
+
+

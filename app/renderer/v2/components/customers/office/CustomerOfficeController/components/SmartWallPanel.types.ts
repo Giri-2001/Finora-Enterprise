@@ -1,7 +1,7 @@
-/* ===========================================================
-   FINORA ENTERPRISE OS™
+﻿/* ===========================================================
+   FINORA ENTERPRISE OSâ„¢
 
-   SMART WALL PANEL™
+   SMART WALL PANELâ„¢
 
    TYPES
 =========================================================== */
@@ -38,6 +38,10 @@ export interface SmartWallPanelProps {
   companyName?: string;
 
   branchName?: string;
+
+  addCustomerDisabled?: boolean;
+
+  addCustomerTitle?: string;
 
   /* =========================================================
      CUSTOMER SELECTION
@@ -129,3 +133,4 @@ export interface SmartWallPanelProps {
 /* ===========================================================
    END
 =========================================================== */
+

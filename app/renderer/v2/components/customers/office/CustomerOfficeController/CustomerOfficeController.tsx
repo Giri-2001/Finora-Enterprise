@@ -1,7 +1,7 @@
-/* ===========================================================
-   FINORA ENTERPRISE OS™
+﻿/* ===========================================================
+   FINORA ENTERPRISE OSâ„¢
 
-   CUSTOMER OFFICE CONTROLLER™
+   CUSTOMER OFFICE CONTROLLERâ„¢
 
    RECEPTION / WORKSPACE ASSEMBLY
 
@@ -46,7 +46,9 @@ export default function CustomerOfficeController({
 
   branchName,
 
-  onOpenCustomerWizard,
+  addCustomerDisabled,
+
+  addCustomerTitle,onOpenCustomerWizard,
 
   onEditCustomer,
 }: CustomerOfficeControllerProps) {
@@ -208,7 +210,7 @@ export default function CustomerOfficeController({
           }}
         >
           <SmartWallPanel
-            title={"FINORA Smart Customers Hub™"}
+            title={"FINORA Smart Customers Hubâ„¢"}
             /* =================================================
                  SMART WALL
               ================================================= */
@@ -221,6 +223,8 @@ export default function CustomerOfficeController({
             railCustomers={controller.paginatedCustomers}
             companyName={companyName}
             branchName={branchName}
+            addCustomerDisabled={addCustomerDisabled}
+            addCustomerTitle={addCustomerTitle}
             /* =================================================
                  SELECTION
               ================================================= */
@@ -307,3 +311,4 @@ export default function CustomerOfficeController({
 /* ===========================================================
    END
 =========================================================== */
+

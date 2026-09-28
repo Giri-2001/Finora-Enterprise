@@ -1,7 +1,7 @@
-// ============================================================
-// FINORA ENTERPRISE OS™
+﻿// ============================================================
+// FINORA ENTERPRISE OSâ„¢
 //
-// V2 LOANS OFFICE™
+// V2 LOANS OFFICEâ„¢
 //
 // ROUTE ENTRY
 //
@@ -23,7 +23,7 @@
 // - LoanStudio owns Standard Loan creation workflow
 // - GoldLoanForm owns Gold Loan Step 1
 // - Gold Loan Service owns authoritative Gold Step-1 preparation
-// - Existing Loan Studio Steps 2–6 remain production-owned
+// - Existing Loan Studio Steps 2â€“6 remain production-owned
 // - No hardcoded Gold locker/rack capacities
 // - No hardcoded Gold storage geometry
 // - UI assessed / eligible values are NOT trusted here
@@ -81,6 +81,19 @@ import type {
   GoldLoanStepOneServiceInput,
   GoldLoanStudioStepTwoHandoff,
 } from "../../services/gold-loan/goldLoanService";
+
+import {
+  requireBusinessContext,
+} from "../../services/business/businessContextService";
+
+import {
+  resolveLoanCreateWalletEntryGate,
+  type FinoraWalletEntryGateResult,
+} from "../../services/wallet/walletEntryGateService";
+
+import {
+  subscribeWalletBalanceUpdates,
+} from "../../services/wallet/walletBalanceEvent";
 
 // ============================================================
 // WORKSPACE
@@ -360,7 +373,7 @@ async function loadGoldLoanCustomers(): Promise<LoanCustomerOption[]> {
 }
 
 // ============================================================
-// GOLD FORM → DOMAIN SERVICE INPUT
+// GOLD FORM â†’ DOMAIN SERVICE INPUT
 //
 // IMPORTANT:
 //
@@ -451,6 +464,12 @@ export default function LoansPage() {
       [initialActiveLoanDraft],
     );
 
+  const [
+    loanCreateGate,
+    setLoanCreateGate,
+  ] = useState<FinoraWalletEntryGateResult | null>(
+    null,
+  );
   const [workspace, setWorkspace] =
     useState<LoansWorkspace>(
       () =>
@@ -461,6 +480,109 @@ export default function LoansPage() {
     );
 
 
+  useEffect(() => {
+    let active = true;
+
+    void (async () => {
+      try {
+        const context =
+          requireBusinessContext();
+
+        const ownerId =
+          context.ownerId?.trim() ?? "";
+
+        const businessId =
+          context.businessId?.trim() ?? "";
+
+        const branchId =
+          context.branchId?.trim() ?? "";
+
+        if (
+          !ownerId ||
+          !businessId ||
+          !branchId
+        ) {
+          if (active) {
+            setLoanCreateGate(null);
+          }
+
+          return;
+        }
+
+        const gateResult =
+          await resolveLoanCreateWalletEntryGate({
+            ownerId,
+            businessId,
+            branchId,
+          });
+
+        if (active) {
+          setLoanCreateGate(
+            gateResult,
+          );
+        }
+      } catch (error) {
+        console.error(
+          "[FINORA LOANS] Unable to resolve Loan Wallet Entry Gate:",
+          error,
+        );
+
+        if (active) {
+          setLoanCreateGate(null);
+        }
+      }
+    })();
+
+    return () => {
+      active = false;
+    };
+  }, []);
+  useEffect(() => {
+    const unsubscribe =
+      subscribeWalletBalanceUpdates(() => {
+        void (async () => {
+          try {
+            const context =
+              requireBusinessContext();
+
+            const ownerId =
+              context.ownerId?.trim() ?? "";
+
+            const businessId =
+              context.businessId?.trim() ?? "";
+
+            const branchId =
+              context.branchId?.trim() ?? "";
+
+            if (
+              !ownerId ||
+              !businessId ||
+              !branchId
+            ) {
+              return;
+            }
+
+            const gateResult =
+              await resolveLoanCreateWalletEntryGate({
+                ownerId,
+                businessId,
+                branchId,
+              });
+
+            setLoanCreateGate(
+              gateResult,
+            );
+          } catch (error) {
+            console.error(
+              "[FINORA LOANS] Unable to refresh Loan Wallet Entry Gate:",
+              error,
+            );
+          }
+        })();
+      });
+
+    return unsubscribe;
+  }, []);
   // ==========================================================
   // GOLD CUSTOMER OPTIONS
   // ==========================================================
@@ -475,8 +597,8 @@ export default function LoansPage() {
   // This state exists only between:
   //
   // Gold Step 1
-  //       ↓
-  // shared Loan Studio Step 2–6
+  //       â†“
+  // shared Loan Studio Step 2â€“6
   // ==========================================================
 
   const [goldLoanHandoff, setGoldLoanHandoff] =
@@ -524,6 +646,15 @@ export default function LoansPage() {
 
   useEffect(() => {
 function handleOpenGoldLoanStudio(): void {
+      if (!loanCreateGate?.canEnter) {
+        void finoraError(
+          loanCreateGate?.message ??
+            "Please recharge your wallet to unlock this button.",
+        );
+
+        return;
+      }
+
       /*
        * Every new Gold Loan starts from dedicated Gold Step 1.
        */
@@ -534,6 +665,15 @@ function handleOpenGoldLoanStudio(): void {
     }
 
     function handleOpenRejectedApplications(): void {
+      if (!loanCreateGate?.canEnter) {
+        void finoraError(
+          loanCreateGate?.message ??
+            "Please recharge your wallet to unlock this button.",
+        );
+
+        return;
+      }
+
       writeLoansWorkspaceSession(
         "REJECTED_APPLICATIONS",
       );
@@ -568,7 +708,7 @@ window.removeEventListener(
         handleOpenRejectedApplications,
       );
     };
-  }, []);
+  }, [loanCreateGate]);
 
   // ==========================================================
   // LOAN WORKFLOW COMPLETION
@@ -849,13 +989,13 @@ window.removeEventListener(
   // GOLD STEP-1 COMPLETE
   //
   // GoldLoanForm
-  //      ↓
-  // map UI form → domain service input
-  //      ↓
+  //      â†“
+  // map UI form â†’ domain service input
+  //      â†“
   // authoritative recalculation + validation
-  //      ↓
+  //      â†“
   // GoldLoanStudioStepTwoHandoff
-  //      ↓
+  //      â†“
   // existing Loan Studio Step 2
   // ==========================================================
 
@@ -1041,10 +1181,10 @@ window.removeEventListener(
   }
 
   // ==========================================================
-  // GOLD LOAN — KEEP-ALIVE STEP 1 ↔ STEP 2–6
+  // GOLD LOAN â€” KEEP-ALIVE STEP 1 â†” STEP 2â€“6
   //
   // LoanStudio remains mounted after the first Gold handoff.
-  // Step-1 editing only hides it, preserving all Step 2–6 data.
+  // Step-1 editing only hides it, preserving all Step 2â€“6 data.
   // ==========================================================
 
   if (
@@ -1092,7 +1232,7 @@ window.removeEventListener(
   }
 
   // ==========================================================
-  // GOLD LOAN — INITIAL STEP 1
+  // GOLD LOAN â€” INITIAL STEP 1
   //
   // First launch only. No LoanStudio draft exists yet.
   // ==========================================================
@@ -1119,16 +1259,38 @@ window.removeEventListener(
   // ==========================================================
 
   if (workspace === "GOLD_LOAN_STUDIO") {
-    return <Loans />;
+    return <Loans
+      loanCreateDisabled={!loanCreateGate?.canEnter}
+      loanCreateTitle={
+        loanCreateGate?.canEnter
+          ? undefined
+          : loanCreateGate?.message ??
+            "Please recharge your wallet to unlock this button."
+      }
+    />;
   }
 
   // ==========================================================
   // LOANS OFFICE
   // ==========================================================
 
-  return <Loans />;
+  return <Loans
+      loanCreateDisabled={!loanCreateGate?.canEnter}
+      loanCreateTitle={
+        loanCreateGate?.canEnter
+          ? undefined
+          : loanCreateGate?.message ??
+            "Please recharge your wallet to unlock this button."
+      }
+    />;
 }
 
 // ============================================================
 // END
 // ============================================================
+
+
+
+
+
+

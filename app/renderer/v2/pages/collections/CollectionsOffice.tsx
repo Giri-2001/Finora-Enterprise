@@ -1,7 +1,7 @@
-// ============================================================
-// FINORA ENTERPRISE OSâ„¢
+﻿// ============================================================
+// FINORA ENTERPRISE OSÃ¢â€žÂ¢
 //
-// COLLECTIONS OFFICEâ„¢
+// COLLECTIONS OFFICEÃ¢â€žÂ¢
 //
 // RESPONSIBILITY:
 // - Default Collections workspace
@@ -188,7 +188,7 @@ function formatCurrency(value: number | undefined): string {
     currency: "INR",
 
     maximumFractionDigits: 0,
-  }).format(safeNumber(value)).replace(/^â‚¹\s*/, "â‚¹ ");
+  }).format(safeNumber(value)).replace(/^Ã¢â€šÂ¹\s*/, "Ã¢â€šÂ¹ ");
 }
 
 function formatDate(value: string): string {
@@ -308,7 +308,15 @@ function PlusIcon() {
 // COMPONENT
 // ============================================================
 
-export default function CollectionsOffice() {
+interface CollectionsOfficeProps {
+  collectionCreateDisabled?: boolean;
+  collectionCreateTitle?: string;
+}
+
+export default function CollectionsOffice({
+  collectionCreateDisabled,
+  collectionCreateTitle,
+}: CollectionsOfficeProps) {
   // ==========================================================
   // ERP BUSINESS DATE
   // ==========================================================
@@ -865,8 +873,13 @@ export default function CollectionsOffice() {
           <button
             type="button"
             onClick={handleCreateCollection}
+            disabled={collectionCreateDisabled}
+            title={collectionCreateTitle ?? "New Collection"}
             style={{
               ...createButtonStyle,
+              ...(collectionCreateDisabled
+                ? { opacity: 0.55, cursor: "not-allowed" }
+                : {}),
 
               width:
                 responsiveTokens.viewport === "mobile" ? "100%" : undefined,
@@ -1256,6 +1269,8 @@ export default function CollectionsOffice() {
                 <button
                   type="button"
                   onClick={handleCreateCollection}
+            disabled={collectionCreateDisabled}
+            title={collectionCreateTitle ?? "New Collection"}
                   style={emptyCreateButtonStyle}
                 >
                   New Collection
@@ -1391,7 +1406,7 @@ export default function CollectionsOffice() {
                           cursor: !hasPreviousPaginationWindow ? "default" : "pointer",
                         }}
                       >
-                        â† Previous
+                        Ã¢â€ Â Previous
                       </button>
 
                       {paginationItems.map((item) => {
@@ -1401,7 +1416,7 @@ export default function CollectionsOffice() {
                         ) {
                           return (
                             <span key={item} style={paginationEllipsisStyle}>
-                              â€¦
+                              Ã¢â‚¬Â¦
                             </span>
                           );
                         }
@@ -1436,7 +1451,7 @@ export default function CollectionsOffice() {
                           cursor: !hasNextPaginationWindow ? "default" : "pointer",
                         }}
                       >
-                        Next â†’
+                        Next Ã¢â€ â€™
                       </button>
                     </div>
                   </div>
@@ -1494,3 +1509,4 @@ export default function CollectionsOffice() {
 // ============================================================
 // END
 // ============================================================
+

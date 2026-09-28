@@ -1,6 +1,23 @@
+﻿import {
+  requireBusinessContext,
+} from "../services/business/businessContextService";
+
+import {
+  resolveCollectionCreateWalletEntryGate,
+  resolveLoanCreateWalletEntryGate,
+  type FinoraWalletEntryGateResult,
+} from "../services/wallet/walletEntryGateService";
+
+import {
+  subscribeWalletBalanceUpdates,
+} from "../services/wallet/walletBalanceEvent";
+
+import {
+  finoraError,
+} from "../components/common/dialog/finoraDialog.service";
 import { getFinoraLoginSessionBridge } from "../services/auth/loginSessionBridge";
 // ============================================================
-// FINORA ENTERPRISE OS™
+// FINORA ENTERPRISE OSâ„¢
 //
 // V2 APPLICATION ENTRY
 //
@@ -228,9 +245,9 @@ const LOANS_GLOBAL_BACK_EVENT = "FINORA_V2_LOANS_GLOBAL_BACK";
 // These events create a small navigation bridge between:
 //
 // App.tsx
-//     ↓
+//     â†“
 // CustomerDepartment
-//     ↓
+//     â†“
 // CustomerWizard
 //
 // This allows the single GlobalHeader Back button to close
@@ -257,11 +274,11 @@ const CUSTOMER_DEPARTMENT_REFRESH_EVENT =
 // The bridge is:
 //
 // Loans Office
-//     ↓
+//     â†“
 // FINORA_V2_OPEN_LOAN_STUDIO
-//     ↓
+//     â†“
 // App.tsx
-//     ↓
+//     â†“
 // Loan Studio
 //
 // This keeps Loan Studio as the single existing workflow and
@@ -628,11 +645,11 @@ function BusinessContextErrorScreen({
 // STARTUP ORDER:
 //
 // App Start
-//   ↓
+//   â†“
 // Secure Installation Identity
-//   ↓
+//   â†“
 // Branch Activation
-//   ↓
+//   â†“
 // Existing Login / Authenticated Application
 //
 // IMPORTANT:
@@ -2499,7 +2516,115 @@ function AuthenticatedV2Application({
   const [collectionStudioOpen, setCollectionStudioOpen] =
     useState<boolean>(false);
 
+  const [
+    collectionCreateGate,
+    setCollectionCreateGate,
+  ] = useState<FinoraWalletEntryGateResult | null>(
+    null,
+  );
+
   // ==========================================================
+  useEffect(() => {
+    let active = true;
+
+    void (async () => {
+      try {
+        const context =
+          requireBusinessContext();
+
+        const ownerId =
+          context.ownerId?.trim() ?? "";
+
+        const businessId =
+          context.businessId?.trim() ?? "";
+
+        const branchId =
+          context.branchId?.trim() ?? "";
+
+        if (
+          !ownerId ||
+          !businessId ||
+          !branchId
+        ) {
+          if (active) {
+            setCollectionCreateGate(null);
+          }
+
+          return;
+        }
+
+        const gate =
+          await resolveCollectionCreateWalletEntryGate({
+            ownerId,
+            businessId,
+            branchId,
+          });
+
+        if (active) {
+          setCollectionCreateGate(gate);
+        }
+      } catch (error) {
+        console.error(
+          "[FINORA APP] Unable to resolve Collection Wallet Entry Gate:",
+          error,
+        );
+
+        if (active) {
+          setCollectionCreateGate(null);
+        }
+      }
+    })();
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    return subscribeWalletBalanceUpdates(() => {
+      void (async () => {
+        try {
+          const context =
+            requireBusinessContext();
+
+          const ownerId =
+            context.ownerId?.trim() ?? "";
+
+          const businessId =
+            context.businessId?.trim() ?? "";
+
+          const branchId =
+            context.branchId?.trim() ?? "";
+
+          if (
+            !ownerId ||
+            !businessId ||
+            !branchId
+          ) {
+            setCollectionCreateGate(null);
+
+            return;
+          }
+
+          const gate =
+            await resolveCollectionCreateWalletEntryGate({
+              ownerId,
+              businessId,
+              branchId,
+            });
+
+          setCollectionCreateGate(gate);
+        } catch (error) {
+          console.error(
+            "[FINORA APP] Unable to refresh Collection Wallet Entry Gate:",
+            error,
+          );
+
+          setCollectionCreateGate(null);
+        }
+      })();
+    });
+  }, []);
   // CUSTOMER WIZARD NAVIGATION BRIDGE
   // ==========================================================
 
@@ -2545,9 +2670,60 @@ function AuthenticatedV2Application({
 
   useEffect(() => {
     function handleLoanStudioOpen(): void {
-      setLoanStudioOpen(
-        true,
-      );
+      void (async () => {
+        try {
+          const context =
+            requireBusinessContext();
+
+          const ownerId =
+            context.ownerId?.trim() ?? "";
+
+          const businessId =
+            context.businessId?.trim() ?? "";
+
+          const branchId =
+            context.branchId?.trim() ?? "";
+
+          if (
+            !ownerId ||
+            !businessId ||
+            !branchId
+          ) {
+            void finoraError(
+              "Please recharge your wallet to unlock this button.",
+            );
+
+            return;
+          }
+
+          const gateResult =
+            await resolveLoanCreateWalletEntryGate({
+              ownerId,
+              businessId,
+              branchId,
+            });
+
+          if (!gateResult.canEnter) {
+            void finoraError(
+              gateResult.message ??
+                "Please recharge your wallet to unlock this button.",
+            );
+
+            return;
+          }
+
+          setLoanStudioOpen(true);
+        } catch (error) {
+          console.error(
+            "[FINORA APP] Unable to resolve Loan Wallet Entry Gate:",
+            error,
+          );
+
+          void finoraError(
+            "Please recharge your wallet to unlock this button.",
+          );
+        }
+      })();
     }
 
     function handleLoanWorkflowCompleted(): void {
@@ -2598,6 +2774,15 @@ function AuthenticatedV2Application({
 
   useEffect(() => {
     function handleCollectionStudioOpen(): void {
+      if (!collectionCreateGate?.canEnter) {
+        void finoraError(
+          collectionCreateGate?.message ??
+            "Please recharge your wallet to unlock this button.",
+        );
+
+        return;
+      }
+
       setCollectionStudioOpen(true);
     }
 
@@ -2612,7 +2797,7 @@ function AuthenticatedV2Application({
         handleCollectionStudioOpen,
       );
     };
-  }, []);
+  }, [collectionCreateGate]);
 
   // ==========================================================
   // NAVIGATION CHANGE EVENT
@@ -2865,7 +3050,15 @@ function AuthenticatedV2Application({
         ================================================== */}
 
         {page === "collections" && !collectionStudioOpen && (
-          <CollectionsOffice />
+          <CollectionsOffice
+            collectionCreateDisabled={!collectionCreateGate?.canEnter}
+            collectionCreateTitle={
+              collectionCreateGate?.canEnter
+                ? undefined
+                : collectionCreateGate?.message ??
+                  "Please recharge your wallet to unlock this button."
+            }
+          />
         )}
 
         {page === "collections" && collectionStudioOpen && (
@@ -2972,3 +3165,7 @@ export default function App() {
 // ============================================================
 // END
 // ============================================================
+
+
+
+

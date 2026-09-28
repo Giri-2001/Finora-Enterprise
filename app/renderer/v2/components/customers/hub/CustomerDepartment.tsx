@@ -1,7 +1,7 @@
-// ============================================================
-// FINORA ENTERPRISE OS™
+﻿// ============================================================
+// FINORA ENTERPRISE OSâ„¢
 //
-// CUSTOMER DEPARTMENT™
+// CUSTOMER DEPARTMENTâ„¢
 //
 // DIGITAL FINANCE OFFICE
 //
@@ -68,6 +68,10 @@ import { storageManager } from "../../../storage/storageManager";
 
 import { StorageMode } from "../../../storage/storage.types";
 
+import type {
+  FinoraWalletEntryGateResult,
+} from "../../../services/wallet/walletEntryGateService";
+
 // ============================================================
 // CONSTANTS
 // ============================================================
@@ -93,13 +97,13 @@ const CUSTOMER_DEPARTMENT_REFRESH_EVENT =
 // Flow:
 //
 // Customer Department
-//        ↓
+//        â†“
 // Customer Wizard
-//        ↓
+//        â†“
 // Global Header Back
-//        ↓
+//        â†“
 // CustomerDepartment closes Wizard
-//        ↓
+//        â†“
 // Customer Department
 //
 // ============================================================
@@ -150,6 +154,8 @@ interface CustomerDepartmentProps {
   companyName?: string;
 
   branchName?: string;
+
+  customerCreateGate?: FinoraWalletEntryGateResult | null;
 }
 
 
@@ -157,6 +163,8 @@ export default function CustomerDepartment({
   companyName,
 
   branchName,
+
+  customerCreateGate,
 }: CustomerDepartmentProps) {
   // ==========================================================
   // CUSTOMER WIZARD STATE
@@ -369,7 +377,7 @@ export default function CustomerDepartment({
         const customerProfiles = getCustomers();
 
         // ----------------------------------------------------
-        // MAP CUSTOMER DOMAIN → CUSTOMER OFFICE
+        // MAP CUSTOMER DOMAIN â†’ CUSTOMER OFFICE
         // ----------------------------------------------------
 
         const mappedCustomers = await customerOfficeMapper(customerProfiles);
@@ -408,6 +416,15 @@ export default function CustomerDepartment({
   // ==========================================================
 
   const handleOpenCustomerWizard = useCallback(() => {
+    if (!customerCreateGate?.canEnter) {
+      window.alert(
+        customerCreateGate?.message ??
+          "Please recharge your wallet to unlock this button.",
+      );
+
+      return;
+    }
+
     setEditingCustomer(undefined);
 
     setShowCustomerWizard(true);
@@ -417,10 +434,10 @@ export default function CustomerDepartment({
     // ------------------------------------------------------
 
     window.dispatchEvent(new CustomEvent(CUSTOMER_WIZARD_OPEN_EVENT));
-  }, []);
+  }, [customerCreateGate]);
 
   // ==========================================================
-  // OPEN CUSTOMER WIZARD — EDIT MODE
+  // OPEN CUSTOMER WIZARD â€” EDIT MODE
   // ==========================================================
 
   const handleEditCustomer = useCallback((customer: OfficeCustomer) => {
@@ -488,6 +505,13 @@ export default function CustomerDepartment({
               customers={customers}
               companyName={companyName}
               branchName={branchName}
+              addCustomerDisabled={!customerCreateGate?.canEnter}
+              addCustomerTitle={
+                customerCreateGate?.canEnter
+                  ? "Add Customer"
+                  : customerCreateGate?.message ??
+                    "Please recharge your wallet to unlock this button."
+              }
               onOpenCustomerWizard={handleOpenCustomerWizard}
               onEditCustomer={handleEditCustomer}
             />
@@ -518,3 +542,8 @@ export default function CustomerDepartment({
 // ============================================================
 // END
 // ============================================================
+
+
+
+
+

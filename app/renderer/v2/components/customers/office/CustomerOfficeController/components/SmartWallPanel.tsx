@@ -1,7 +1,7 @@
-/* ===========================================================
-   FINORA ENTERPRISE OS™
+﻿/* ===========================================================
+   FINORA ENTERPRISE OSâ„¢
 
-   SMART WALL PANEL™
+   SMART WALL PANELâ„¢
 
    CUSTOMER HUB PRESENTATION
 
@@ -85,7 +85,9 @@ export default function SmartWallPanel({
 
   branchName,
 
-  selectedCustomerId,
+  addCustomerDisabled,
+
+  addCustomerTitle,selectedCustomerId,
 
   selectedCustomer,
 
@@ -374,16 +376,25 @@ export default function SmartWallPanel({
         }}
       >
         {/* ===================================================
-            LEFT — ADD CUSTOMER
+            LEFT â€” ADD CUSTOMER
         =================================================== */}
 
         <div style={addCustomerCellStyle}>
           <button
             type="button"
             onClick={onOpenCustomerWizard}
+            disabled={addCustomerDisabled}
             aria-label="Add Customer"
-            title="Add Customer"
-            style={actionButtonStyle}
+            title={addCustomerTitle ?? "Add Customer"}
+            style={{
+              ...actionButtonStyle,
+              ...(addCustomerDisabled
+                ? {
+                    opacity: 0.55,
+                    cursor: "not-allowed",
+                  }
+                : {}),
+            }}
           >
             <UserPlus
               size={actionButtonIconSize}
@@ -406,7 +417,7 @@ export default function SmartWallPanel({
         </div>
 
         {/* ===================================================
-            CENTER — SEARCH
+            CENTER â€” SEARCH
         =================================================== */}
 
         <div style={searchCellStyle}>
@@ -416,7 +427,7 @@ export default function SmartWallPanel({
         </div>
 
         {/* ===================================================
-            RIGHT — EDIT CUSTOMER
+            RIGHT â€” EDIT CUSTOMER
         =================================================== */}
 
         <div
@@ -622,3 +633,4 @@ export default function SmartWallPanel({
 /* ===========================================================
    END
 =========================================================== */
+

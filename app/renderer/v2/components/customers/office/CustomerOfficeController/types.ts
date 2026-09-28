@@ -1,7 +1,7 @@
-/* ===========================================================
-   FINORA ENTERPRISE OS™
+﻿/* ===========================================================
+   FINORA ENTERPRISE OSâ„¢
 
-   CUSTOMER OFFICE CONTROLLER™
+   CUSTOMER OFFICE CONTROLLERâ„¢
 
    TYPES
 =========================================================== */
@@ -19,6 +19,10 @@ export interface CustomerOfficeControllerProps {
 
   branchName?: string;
 
+  addCustomerDisabled?: boolean;
+
+  addCustomerTitle?: string;
+
   /**
    * Opens the Customer Wizard from the Customer Hub.
    */
@@ -30,3 +34,4 @@ export interface CustomerOfficeControllerProps {
    */
   onEditCustomer?: (customer: OfficeCustomer) => void;
 }
+
