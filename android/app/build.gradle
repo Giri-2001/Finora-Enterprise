@@ -1,5 +1,9 @@
 apply plugin: 'com.android.application'
 
+def packageJsonFile = file("../../package.json")
+def packageJson = new groovy.json.JsonSlurper().parseText(packageJsonFile.text)
+def finoraVersionName = packageJson.version.toString()
+
 android {
     namespace = "com.finora.enterprise"
     compileSdk = rootProject.ext.compileSdkVersion
@@ -9,7 +13,7 @@ android {
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 1
-        versionName "1.0.0"
+        versionName finoraVersionName
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
 
         aaptOptions {

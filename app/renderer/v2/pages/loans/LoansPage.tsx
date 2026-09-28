@@ -1,4 +1,4 @@
-﻿// ============================================================
+// ============================================================
 // FINORA ENTERPRISE OS™
 //
 // V2 LOANS OFFICE™
@@ -54,6 +54,7 @@ import type { GoldLoanStepOneFormValue } from "../../components/gold-loan/GoldLo
 import type { LoanCustomerOption } from "../../components/loans/details/LoanCustomerCard";
 
 import {
+  clearLoanWorkspaceDraft,
   loadActiveLoanWorkspaceDraft,
   loadLoanWorkspaceDraft,
   saveLoanWorkspaceDraft,
@@ -575,6 +576,15 @@ window.removeEventListener(
 
   useEffect(() => {
     function handleLoanWorkflowCompleted(): void {
+      const completedDraft =
+        loadActiveLoanWorkspaceDraft();
+
+      if (completedDraft) {
+        clearLoanWorkspaceDraft(
+          completedDraft.mode,
+        );
+      }
+
       setGoldLoanHandoff(
         null,
       );

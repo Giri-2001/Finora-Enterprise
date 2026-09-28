@@ -319,9 +319,23 @@ export function useLoanStudio({
         const activeDraft =
           loadActiveLoanWorkspaceDraft();
 
-        return activeDraft?.mode === draftMode
-          ? activeDraft
-          : null;
+        if (
+          activeDraft?.mode !== draftMode
+        ) {
+          return null;
+        }
+
+        /*
+         * Steps 5 and 6 are terminal-stage workflow screens.
+         * They must never auto-reopen after leaving/reloading Loans.
+         */
+        if (activeDraft.step >= 5) {
+          clearLoanWorkspaceDraft(draftMode);
+
+          return null;
+        }
+
+        return activeDraft;
       },
       [draftMode],
     );

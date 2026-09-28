@@ -231,6 +231,18 @@ export default function Login({
       activeLoginTheme,
     );
 
+  const loginCredentialInputStyle = {
+    ...loginStyles.input,
+
+    fontSize:
+      typeof loginStyles.input.fontSize === "number"
+        ? loginStyles.input.fontSize + 1
+        : `calc(${loginStyles.input.fontSize} + 1px)`,
+
+    fontWeight:
+      550,
+  };
+
 
   // ==========================================================
   // ERP BUSINESS DATE STATE
@@ -2731,7 +2743,7 @@ export default function Login({
                     handleLoginInputFocus
                   }
                   style={
-                    loginStyles.input
+                    loginCredentialInputStyle
                   }
                 />
 
@@ -2798,7 +2810,7 @@ export default function Login({
                     handleLoginInputFocus
                   }
                   style={
-                    loginStyles.input
+                    loginCredentialInputStyle
                   }
                 />
 
@@ -3146,7 +3158,7 @@ export default function Login({
                       handleLoginInputFocus
                     }
                     style={
-                      loginStyles.input
+                      loginCredentialInputStyle
                     }
                   />
 

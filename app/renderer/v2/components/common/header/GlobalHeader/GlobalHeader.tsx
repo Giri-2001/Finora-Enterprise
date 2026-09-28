@@ -891,12 +891,27 @@ export default function GlobalHeader({
             style={{
               fontWeight:
                 isMobile
-                  ? 800
+                  ? 750
                   : 750,
 
               fontSize:
                 isMobile
                   ? "calc(1em + 1px)"
+                  : undefined,
+
+              fontFamily:
+                isMobile
+                  ? "Inter, ui-sans-serif, system-ui, sans-serif"
+                  : undefined,
+
+              letterSpacing:
+                isMobile
+                  ? ".04em"
+                  : undefined,
+
+              fontVariantNumeric:
+                isMobile
+                  ? "tabular-nums"
                   : undefined,
             }}
           >

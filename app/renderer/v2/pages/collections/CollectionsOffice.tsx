@@ -422,15 +422,17 @@ export default function CollectionsOffice() {
 
     paddingTop:
       responsiveTokens.viewport === "mobile"
-        ? "10px"
+        ? "18px"
         : responsiveTokens.viewport === "tablet"
           ? "8px"
           : undefined,
 
     paddingBottom:
-      responsiveTokens.viewport === "tablet"
-        ? "8px"
-        : undefined,
+      responsiveTokens.viewport === "mobile"
+        ? "12px"
+        : responsiveTokens.viewport === "tablet"
+          ? "8px"
+          : undefined,
   };
 
   const responsivePortfolioActionsStyle: CSSProperties = {
@@ -917,7 +919,14 @@ export default function CollectionsOffice() {
 
         {/* PORTFOLIO */}
 
-        <section style={portfolioStyle}>
+        <section
+          style={{
+            ...portfolioStyle,
+            ...(responsiveTokens.viewport === "mobile"
+              ? { paddingBottom: "18px" }
+              : {}),
+          }}
+        >
           <header
             style={{
               ...responsivePortfolioHeaderStyle,
