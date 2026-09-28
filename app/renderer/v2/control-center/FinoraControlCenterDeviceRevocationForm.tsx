@@ -73,7 +73,7 @@ export default function FinoraControlCenterDeviceRevocationForm({ target, onIssu
         <p style={{ margin: "7px 0 0", fontSize: "12px", lineHeight: 1.55, opacity: 0.7 }}>Issue a signed terminal revocation for the exact branch user and native device binding.</p>
       </header>
 
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: "14px" }}>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(var(--finora-cc-form-columns, 3), minmax(0, 1fr))", gap: "14px" }}>
         <Field label="User ID" value={draft.userId} placeholder="Branch user ID" onChange={(value) => update("userId", value)} />
         <Field label="Canonical Username" value={draft.canonicalUsername} placeholder="username" onChange={(value) => update("canonicalUsername", value)} />
         <SelectField<FinoraStorageModeDraft> label="Storage Mode" value={draft.storageMode} options={["LOCAL","USB"]} onChange={(value) => update("storageMode", value)} />

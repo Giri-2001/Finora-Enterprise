@@ -1,6 +1,7 @@
 package com.finora.enterprise.control;
 
 import android.content.Context;
+import android.provider.Settings;
 import android.security.keystore.KeyGenParameterSpec;
 import android.security.keystore.KeyProperties;
 import android.util.AtomicFile;
@@ -73,8 +74,11 @@ public final class FinoraClockHighWaterStore {
     // CONSTANTS
     // ========================================================
 
-    public static final int SCHEMA_VERSION =
+    public static final int LEGACY_SCHEMA_VERSION =
         1;
+
+    public static final int SCHEMA_VERSION =
+        2;
 
     private static final String FILE_NAME =
         "finora-clock-high-water.bin";
@@ -163,6 +167,8 @@ public final class FinoraClockHighWaterStore {
 
     private final AtomicFile atomicFile;
 
+    private final Context applicationContext;
+
     // ========================================================
     // CONSTRUCTOR
     // ========================================================
@@ -184,6 +190,9 @@ public final class FinoraClockHighWaterStore {
                 ? applicationContext
                 : context;
 
+        this.applicationContext =
+            storageContext;
+
         this.atomicFile =
             new AtomicFile(
                 new File(
@@ -191,6 +200,22 @@ public final class FinoraClockHighWaterStore {
                     FILE_NAME
                 )
             );
+    }
+
+    // ========================================================
+    // ANDROID AUTOMATIC TIME POLICY
+    // ========================================================
+
+    boolean isAutomaticSystemTimeEnabled() {
+        try {
+            return Settings.Global.getInt(
+                applicationContext.getContentResolver(),
+                Settings.Global.AUTO_TIME,
+                0
+            ) == 1;
+        } catch (Exception error) {
+            return false;
+        }
     }
 
     // ========================================================
@@ -272,6 +297,15 @@ public final class FinoraClockHighWaterStore {
             state
         );
 
+        if (
+            state.schemaVersion !=
+                SCHEMA_VERSION
+        ) {
+            throw new IllegalArgumentException(
+                "FINORA clock high-water writes require the current guarded schemaVersion."
+            );
+        }
+
         byte[] plaintext =
             serialize(
                 state
@@ -351,6 +385,8 @@ public final class FinoraClockHighWaterStore {
         }
 
         if (
+            state.schemaVersion !=
+                LEGACY_SCHEMA_VERSION &&
             state.schemaVersion !=
                 SCHEMA_VERSION
         ) {
@@ -451,12 +487,29 @@ public final class FinoraClockHighWaterStore {
             );
         }
 
+        final int parsedSchemaVersion;
+
         if (
             schemaNumber.compareTo(
-                BigDecimal.ONE
-            ) !=
+                BigDecimal.valueOf(
+                    LEGACY_SCHEMA_VERSION
+                )
+            ) ==
                 0
         ) {
+            parsedSchemaVersion =
+                LEGACY_SCHEMA_VERSION;
+        } else if (
+            schemaNumber.compareTo(
+                BigDecimal.valueOf(
+                    SCHEMA_VERSION
+                )
+            ) ==
+                0
+        ) {
+            parsedSchemaVersion =
+                SCHEMA_VERSION;
+        } else {
             throw new IllegalArgumentException(
                 "FINORA clock high-water schemaVersion is unsupported."
             );
@@ -476,7 +529,7 @@ public final class FinoraClockHighWaterStore {
 
         State state =
             new State(
-                SCHEMA_VERSION,
+                parsedSchemaVersion,
                 installationId,
                 highWaterAt
             );

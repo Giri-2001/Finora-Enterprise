@@ -69,6 +69,9 @@ public final class FinoraUsbStorage {
     private static final String BACKUP_FILE =
         "finora-storage.backup.json";
 
+    private static final String INVALID_STORAGE_MESSAGE =
+        "FINORA USB storage package is invalid or unreadable.";
+
     private static final String JSON_MIME_TYPE =
         "application/json";
 
@@ -1915,21 +1918,9 @@ public final class FinoraUsbStorage {
             }
         }
 
-        String raw =
-            readTextFile(
-                storageFile
-            );
-
-        JSONObject storagePackage =
-            new JSONObject(
-                raw
-            );
-
-        validateStoragePackage(
-            storagePackage
+        return readValidatedStorageFile(
+            storageFile
         );
-
-        return storagePackage;
     }
 
     // ========================================================
@@ -1958,6 +1949,30 @@ public final class FinoraUsbStorage {
         DocumentFile directory =
             target.storageDirectory;
 
+        /*
+         * Never overwrite a malformed main package automatically.
+         *
+         * A valid backup/temp may still be the only recoverable
+         * durable copy. Reads may use that candidate, but writes
+         * remain fail-closed until the main package is explicitly
+         * recovered.
+         */
+        DocumentFile existingMainFile =
+            directory.findFile(
+                STORAGE_FILE
+            );
+
+        if (
+            existingMainFile != null &&
+            !isValidStorageFile(
+                existingMainFile
+            )
+        ) {
+            throw new IllegalStateException(
+                INVALID_STORAGE_MESSAGE
+            );
+        }
+
         deleteIfPresent(
             directory,
             TEMP_FILE
@@ -1979,6 +1994,18 @@ public final class FinoraUsbStorage {
             tempFile,
             serialized
         );
+
+        if (
+            !isValidStorageFile(
+                tempFile
+            )
+        ) {
+            tempFile.delete();
+
+            throw new IllegalStateException(
+                "Unable to verify FINORA USB temporary storage file."
+            );
+        }
 
         DocumentFile currentFile =
             directory.findFile(
@@ -2016,6 +2043,18 @@ public final class FinoraUsbStorage {
                 serialized
             );
 
+            if (
+                !isValidStorageFile(
+                    finalFile
+                )
+            ) {
+                finalFile.delete();
+
+                throw new IllegalStateException(
+                    "Unable to verify FINORA USB storage file after writing."
+                );
+            }
+
             tempFile.delete();
 
             return;
@@ -2037,6 +2076,20 @@ public final class FinoraUsbStorage {
                 currentFile,
                 serialized
             );
+
+            if (
+                !isValidStorageFile(
+                    currentFile
+                )
+            ) {
+                /*
+                 * Keep the already-validated temp package intact.
+                 * The next read can recover from it.
+                 */
+                throw new IllegalStateException(
+                    "Unable to verify FINORA USB storage file after writing."
+                );
+            }
 
             tempFile.delete();
 
@@ -2061,6 +2114,16 @@ public final class FinoraUsbStorage {
                         finalFile,
                         serialized
                     );
+
+                    if (
+                        !isValidStorageFile(
+                            finalFile
+                        )
+                    ) {
+                        throw new IllegalStateException(
+                            "Unable to verify FINORA USB storage file after writing."
+                        );
+                    }
 
                     tempFile.delete();
 
@@ -2110,7 +2173,12 @@ public final class FinoraUsbStorage {
                 STORAGE_FILE
             );
 
-        if (finalFile != null) {
+        if (
+            finalFile != null &&
+            isValidStorageFile(
+                finalFile
+            )
+        ) {
             return finalFile;
         }
 
@@ -2119,15 +2187,16 @@ public final class FinoraUsbStorage {
                 BACKUP_FILE
             );
 
-        if (backupFile != null) {
-            if (
-                backupFile.renameTo(
-                    STORAGE_FILE
-                )
-            ) {
-                return backupFile;
-            }
-
+        if (
+            backupFile != null &&
+            isValidStorageFile(
+                backupFile
+            )
+        ) {
+            /*
+             * Read recovery is intentionally non-destructive.
+             * Do not rename/delete the malformed main package here.
+             */
             return backupFile;
         }
 
@@ -2136,34 +2205,79 @@ public final class FinoraUsbStorage {
                 TEMP_FILE
             );
 
-        if (tempFile != null) {
-            try {
-                JSONObject candidate =
-                    new JSONObject(
-                        readTextFile(
-                            tempFile
-                        )
-                    );
+        if (
+            tempFile != null &&
+            isValidStorageFile(
+                tempFile
+            )
+        ) {
+            /*
+             * A fully written temp package may be the only valid
+             * state after an interrupted provider write.
+             */
+            return tempFile;
+        }
 
-                validateStoragePackage(
-                    candidate
-                );
-
-                if (
-                    tempFile.renameTo(
-                        STORAGE_FILE
-                    )
-                ) {
-                    return tempFile;
-                }
-
-                return tempFile;
-            } catch (Exception ignored) {
-                tempFile.delete();
-            }
+        if (
+            finalFile != null ||
+            backupFile != null ||
+            tempFile != null
+        ) {
+            throw new IllegalStateException(
+                INVALID_STORAGE_MESSAGE
+            );
         }
 
         return null;
+    }
+
+    private JSONObject readValidatedStorageFile(
+        DocumentFile file
+    ) throws Exception {
+
+        try {
+            String raw =
+                readTextFile(
+                    file
+                );
+
+            JSONObject candidate =
+                new JSONObject(
+                    raw
+                );
+
+            validateStoragePackage(
+                candidate
+            );
+
+            return candidate;
+        } catch (Exception error) {
+            /*
+             * Parser/provider internals must never escape to renderer UI.
+             */
+            throw new IllegalStateException(
+                INVALID_STORAGE_MESSAGE
+            );
+        }
+    }
+
+    private boolean isValidStorageFile(
+        DocumentFile file
+    ) {
+
+        if (file == null) {
+            return false;
+        }
+
+        try {
+            readValidatedStorageFile(
+                file
+            );
+
+            return true;
+        } catch (Exception ignored) {
+            return false;
+        }
     }
 
     // ========================================================

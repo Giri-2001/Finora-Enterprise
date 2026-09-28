@@ -103,6 +103,10 @@ import type {
   FinoraPortableBranchAuthStore,
 } from "./finoraPortableBranchAuthStore.js";
 
+import {
+  findFinoraPortableBusinessProfile,
+} from "./finoraControlStore.js";
+
 // ============================================================
 // INTERNAL AUTHORITY SHAPE
 // ============================================================
@@ -901,6 +905,83 @@ export async function exportFinoraFullBranchBackupFromNativeDialog(
   }
 
   // ----------------------------------------------------------
+  // FILENAME DISPLAY IDENTITY
+  //
+  // READ ONLY.
+  // businessCode / branchCode affect only the suggested
+  // backup filename. They are not backup authorization.
+  // ----------------------------------------------------------
+
+  let backupBusinessCodeToken =
+    "";
+
+  let backupBranchCodeToken =
+    "";
+
+  try {
+    const profileResult =
+      await findFinoraPortableBusinessProfile(
+        fullBackup.data.branchScope.ownerId,
+        fullBackup.data.branchScope.businessId,
+        fullBackup.data.branchScope.branchId,
+      );
+
+    const profile =
+      profileResult.success
+        ? profileResult.data
+        : undefined;
+
+    if (profile) {
+      backupBusinessCodeToken =
+        String(
+          profile.businessCode ?? "",
+        )
+          .trim()
+          .toUpperCase()
+          .replace(
+            /[^A-Z0-9]/g,
+            "",
+          )
+          .slice(
+            0,
+            16,
+          );
+
+      backupBranchCodeToken =
+        String(
+          profile.branchCode ?? "",
+        )
+          .trim()
+          .toUpperCase()
+          .replace(
+            /[^A-Z0-9]/g,
+            "",
+          )
+          .slice(
+            0,
+            16,
+          );
+    }
+  }
+  catch {
+    /*
+     * Filename metadata lookup must never weaken or block
+     * the authenticated backup operation.
+     */
+  }
+
+  const backupScopeFileNamePrefix =
+    backupBusinessCodeToken.length > 0 &&
+    backupBranchCodeToken.length > 0
+      ? (
+          backupBusinessCodeToken +
+          "-" +
+          backupBranchCodeToken +
+          "-"
+        )
+      : "";
+
+  // ----------------------------------------------------------
   // 5. NATIVE DESTINATION SELECTION
   // ----------------------------------------------------------
 
@@ -924,7 +1005,30 @@ export async function exportFinoraFullBranchBackupFromNativeDialog(
           defaultPath:
             (
               "FINORA-BRANCH-BACKUP-" +
+              backupScopeFileNamePrefix +
               fullBackup.data.backupId +
+              "_" +
+              (() => {
+                const now = new Date();
+
+                const pad =
+                  (value: number): string =>
+                    String(value).padStart(2, "0");
+
+                return (
+                  pad(now.getDate()) +
+                  "-" +
+                  pad(now.getMonth() + 1) +
+                  "-" +
+                  now.getFullYear() +
+                  "_" +
+                  pad(
+                    now.getHours() % 12 || 12,
+                  ) +
+                  "：" +
+                  pad(now.getMinutes())
+                );
+              })() +
               FINORA_FULL_BRANCH_BACKUP_FILE_EXTENSION
             ),
 

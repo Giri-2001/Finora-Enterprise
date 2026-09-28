@@ -6,6 +6,10 @@ import {
 import FinoraControlCenterShell
   from "./FinoraControlCenterShell";
 
+import {
+  installFinoraAndroidDeveloperControlCenterBridge,
+} from "./finoraAndroidDeveloperControlCenterBridge";
+
 /* ===========================================================
    FINORA ENTERPRISE OS™
 
@@ -41,6 +45,8 @@ rootElement.setAttribute(
   "spellcheck",
   "false",
 );
+
+installFinoraAndroidDeveloperControlCenterBridge();
 
 createRoot(
   rootElement,

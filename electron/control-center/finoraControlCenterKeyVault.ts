@@ -843,6 +843,226 @@ export async function loadOrCreateFinoraControlCenterKeyVault():
 }
 
 // ============================================================
+// EXISTING VAULT PROBE
+//
+// SECURITY:
+// - READ ONLY.
+// - Does not generate a signing identity.
+// - Does not call loadOrCreate.
+// - Missing vault returns false.
+// - Corrupt / unreadable vault remains fail-closed through readVault.
+// - No private signing material leaves this boundary.
+// ============================================================
+
+export async function hasExistingFinoraControlCenterKeyVault():
+  Promise<boolean> {
+
+  const existing =
+    await readVault();
+
+  return existing !==
+    undefined;
+}
+
+// ============================================================
+// PUBLIC EXISTING AUTHORITY IDENTITY
+//
+// SECURITY:
+// - READ ONLY.
+// - Does not generate or initialize signing authority.
+// - Missing vault returns undefined.
+// - Corrupt / unreadable vault remains fail-closed via readVault.
+// - Private keys and retained signing material never leave
+//   the Key Vault module through this contract.
+// ============================================================
+
+export interface FinoraControlCenterPublicAuthorityIdentity {
+  issuerId:
+    string;
+
+  signingKeyId:
+    string;
+
+  createdAt:
+    string;
+}
+
+export async function
+readExistingFinoraControlCenterPublicAuthorityIdentity():
+  Promise<
+    FinoraControlCenterPublicAuthorityIdentity |
+    undefined
+  > {
+
+  const existing =
+    await readVault();
+
+  if (!existing) {
+    return undefined;
+  }
+
+  return {
+    issuerId:
+      existing.issuerId,
+
+    signingKeyId:
+      existing.signingKeyId,
+
+    createdAt:
+      existing.createdAt,
+  };
+}
+
+// ============================================================
+// EXISTING AUTHORITY PUBLIC MATCH
+//
+// PURPOSE:
+// - Prove that a cryptographically valid candidate/recovered
+//   Key Vault represents the same existing local authority.
+//
+// SECURITY:
+// - Candidate is fully cryptographically validated first.
+// - Existing authority is read through non-creating readVault.
+// - Only PUBLIC authority state participates in equality:
+//   issuer identity, current public signing identity, and the
+//   complete retained public signing-key history.
+// - Private signing material is neither returned nor compared.
+// - No authority is created or mutated.
+// ============================================================
+
+interface FinoraControlCenterPublicRetainedSigningKeyProjection {
+  signingKeyId:
+    string;
+
+  publicKeySpkiDerBase64:
+    string;
+
+  createdAt:
+    string;
+
+  retiredAt:
+    string;
+}
+
+interface FinoraControlCenterPublicAuthorityProjection {
+  schemaVersion:
+    number;
+
+  issuerId:
+    string;
+
+  signingKeyId:
+    string;
+
+  publicKeySpkiDerBase64:
+    string;
+
+  createdAt:
+    string;
+
+  retainedSigningKeys:
+    FinoraControlCenterPublicRetainedSigningKeyProjection[];
+}
+
+function buildFinoraControlCenterPublicAuthorityProjection(
+  record:
+    FinoraControlCenterKeyVaultRecord,
+): FinoraControlCenterPublicAuthorityProjection {
+
+  const retainedSigningKeys =
+    (
+      record.retainedSigningKeys ??
+      []
+    )
+      .map(
+        (
+          retainedKey,
+        ) => ({
+          signingKeyId:
+            retainedKey.signingKeyId,
+
+          publicKeySpkiDerBase64:
+            retainedKey.publicKeySpkiDerBase64,
+
+          createdAt:
+            retainedKey.createdAt,
+
+          retiredAt:
+            retainedKey.retiredAt,
+        }),
+      )
+      .sort(
+        (
+          left,
+          right,
+        ) =>
+          left.signingKeyId.localeCompare(
+            right.signingKeyId,
+          ),
+      );
+
+  return {
+    schemaVersion:
+      record.schemaVersion,
+
+    issuerId:
+      record.issuerId,
+
+    signingKeyId:
+      record.signingKeyId,
+
+    publicKeySpkiDerBase64:
+      record.publicKeySpkiDerBase64,
+
+    createdAt:
+      record.createdAt,
+
+    retainedSigningKeys,
+  };
+}
+
+export async function
+matchesExistingFinoraControlCenterKeyVaultPublicAuthority(
+  candidate:
+    FinoraControlCenterKeyVaultRecord,
+): Promise<boolean> {
+
+  /*
+   * This validates candidate schema AND current/retained
+   * signing-key cryptography before any identity comparison.
+   */
+  validateFinoraControlCenterKeyVaultRecord(
+    candidate,
+  );
+
+  const existing =
+    await readVault();
+
+  if (!existing) {
+    return false;
+  }
+
+  const existingProjection =
+    buildFinoraControlCenterPublicAuthorityProjection(
+      existing,
+    );
+
+  const candidateProjection =
+    buildFinoraControlCenterPublicAuthorityProjection(
+      candidate,
+    );
+
+  return (
+    JSON.stringify(
+      existingProjection,
+    ) ===
+    JSON.stringify(
+      candidateProjection,
+    )
+  );
+}
+
+// ============================================================
 // CONTROLLED VAULT REPLACEMENT
 //
 // This primitive persists a complete validated vault state.

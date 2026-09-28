@@ -25,6 +25,18 @@ import {
   contextBridge,
   ipcRenderer,
 } from "electron";
+import type {
+  resolveFinoraDeveloperControlCenterBootstrapState,
+} from "./finoraDeveloperControlCenterBootstrapAuthority.js";
+
+import type {
+  readFinoraDeveloperControlCenterSecuritySessionState,
+  unlockFinoraDeveloperControlCenter,
+} from "./finoraDeveloperControlCenterSecurityAuthority.js";
+
+import type {
+  FinoraDeveloperSecurityCodeRecoveryEnrollmentResult,
+} from "./finoraDeveloperControlCenterSecurityCodeRecoveryEnrollmentAuthority.js";
 
 import type {
   FinoraControlCenterBranchRegistry,
@@ -38,6 +50,21 @@ import type {
 // ============================================================
 
 const CONTROL_CENTER_CHANNELS = {
+  GET_DEVELOPER_SECURITY_STATE:
+    "finora:control-center:get-developer-security-state",
+
+  INITIALIZE_DEVELOPER_SECURITY_CODE_FROM_ADMIN_RECOVERY:
+    "finora:control-center:initialize-developer-security-code-from-admin-recovery",
+
+  UNLOCK_DEVELOPER_CONTROL_CENTER:
+    "finora:control-center:unlock-developer-control-center",
+
+  LOCK_DEVELOPER_CONTROL_CENTER:
+    "finora:control-center:lock-developer-control-center",
+
+  CHANGE_DEVELOPER_SECURITY_CODE:
+    "finora:control-center:change-developer-security-code",
+
   GET_TRUST_RECORD:
     "finora:control-center:get-trust-record",
 
@@ -111,6 +138,8 @@ const CONTROL_CENTER_CHANNELS = {
   ISSUE_AND_EXPORT_CONTROL_BUNDLE:
     "finora:control-center:issue-and-export-control-bundle",
 
+  EXPORT_PORTABLE_STATE:
+    "finora:control-center:export-portable-state",
   EXPORT_ADMIN_AUTHORITY_RECOVERY:
     "finora:control-center:export-admin-authority-recovery",
 
@@ -835,7 +864,179 @@ export interface FinoraControlCenterBranchPricingView
   schemaVersion:
     1;
 }
+export type FinoraDeveloperControlCenterBootstrapStateView =
+  Awaited<
+    ReturnType<
+      typeof resolveFinoraDeveloperControlCenterBootstrapState
+    >
+  >;
+
+export type FinoraDeveloperControlCenterSecuritySessionView =
+  ReturnType<
+    typeof readFinoraDeveloperControlCenterSecuritySessionState
+  >;
+
+export type FinoraDeveloperControlCenterUnlockView =
+  Awaited<
+    ReturnType<
+      typeof unlockFinoraDeveloperControlCenter
+    >
+  >;
+
+export interface FinoraDeveloperControlCenterSecurityStateView {
+  bootstrapStatus:
+    FinoraDeveloperControlCenterBootstrapStateView["status"];
+
+  authorityPresent:
+    boolean;
+
+  securityCodeConfigured:
+    boolean;
+
+  session:
+    FinoraDeveloperControlCenterSecuritySessionView;
+}
+
+export interface FinoraDeveloperControlCenterSecurityCodeInitializationRequest {
+  adminRecoverySecurityCode:
+    string;
+
+  newDeveloperSecurityCode:
+    string;
+}
+
+export type FinoraDeveloperControlCenterSecurityCodeInitializationView =
+  FinoraDeveloperSecurityCodeRecoveryEnrollmentResult;
+
+export interface FinoraDeveloperControlCenterLockView {
+  locked:
+    true;
+
+  session:
+    FinoraDeveloperControlCenterSecuritySessionView;
+}
+
+export interface FinoraDeveloperControlCenterSecurityCodeChangeRequest {
+  oldSecurityCode:
+    string;
+
+  newDeveloperSecurityCode:
+    string;
+}
+
+// ============================================================
+// DEVELOPER SECURITY BRIDGE
+// ============================================================
+
 export interface FinoraControlCenterBridge {
+  exportPortableState?:
+    (
+      input: {
+        readonly transferCode:
+          string;
+      },
+    ) =>
+      Promise<
+        FinoraControlCenterResult<
+          | {
+              readonly status:
+                "CANCELLED";
+            }
+          | {
+              readonly status:
+                "EXPORTED";
+
+              readonly bytes:
+                number;
+
+              readonly stateGeneration:
+                number;
+
+              readonly payloadSha256:
+                string;
+
+              readonly parentPayloadSha256:
+                string | null;
+
+              readonly transferBundleSha256:
+                string;
+            }
+        >
+      >;
+  importPortableState?:
+    (
+      input: {
+        readonly transferCode:
+          string;
+      },
+    ) =>
+      Promise<
+        FinoraControlCenterResult<{
+          readonly status:
+            | "ADOPTED"
+            | "ALREADY_ADOPTED"
+            | "CANCELLED";
+
+          readonly stateGeneration?:
+            number;
+
+          readonly payloadSha256?:
+            string;
+
+          readonly parentPayloadSha256?:
+            string | null;
+        }>
+      >;
+
+  getDeveloperSecurityState:
+    () =>
+      Promise<
+        FinoraControlCenterResult<
+          FinoraDeveloperControlCenterSecurityStateView
+        >
+      >;
+
+  initializeDeveloperSecurityCodeFromAdminRecovery:
+    (
+      request:
+        FinoraDeveloperControlCenterSecurityCodeInitializationRequest,
+    ) =>
+      Promise<
+        FinoraControlCenterResult<
+          FinoraDeveloperControlCenterSecurityCodeInitializationView
+        >
+      >;
+
+  unlockDeveloperControlCenter:
+    (
+      securityCode:
+        string,
+    ) =>
+      Promise<
+        FinoraControlCenterResult<
+          FinoraDeveloperControlCenterUnlockView
+        >
+      >;
+
+  lockDeveloperControlCenter:
+    () =>
+      Promise<
+        FinoraControlCenterResult<
+          FinoraDeveloperControlCenterLockView
+        >
+      >;
+
+  changeDeveloperSecurityCode:
+    (
+      request:
+        FinoraDeveloperControlCenterSecurityCodeChangeRequest,
+    ) =>
+      Promise<
+        FinoraControlCenterResult<
+          boolean
+        >
+      >;
+
   getTrustRecord:
     () =>
       Promise<
@@ -1100,6 +1301,105 @@ export interface FinoraControlCenterBridge {
 
 const controlCenterBridge:
   FinoraControlCenterBridge = {
+
+    exportPortableState:
+    (
+      input,
+    ) =>
+      ipcRenderer.invoke(
+        CONTROL_CENTER_CHANNELS
+          .EXPORT_PORTABLE_STATE,
+        input,
+      ) as Promise<
+        FinoraControlCenterResult<
+          | {
+              readonly status:
+                "CANCELLED";
+            }
+          | {
+              readonly status:
+                "EXPORTED";
+
+              readonly bytes:
+                number;
+
+              readonly stateGeneration:
+                number;
+
+              readonly payloadSha256:
+                string;
+
+              readonly parentPayloadSha256:
+                string | null;
+
+              readonly transferBundleSha256:
+                string;
+            }
+        >
+      >,
+getDeveloperSecurityState:
+    () =>
+      ipcRenderer.invoke(
+        CONTROL_CENTER_CHANNELS
+          .GET_DEVELOPER_SECURITY_STATE,
+      ) as Promise<
+        FinoraControlCenterResult<
+          FinoraDeveloperControlCenterSecurityStateView
+        >
+      >,
+
+  initializeDeveloperSecurityCodeFromAdminRecovery:
+    (
+      request,
+    ) =>
+      ipcRenderer.invoke(
+        CONTROL_CENTER_CHANNELS
+          .INITIALIZE_DEVELOPER_SECURITY_CODE_FROM_ADMIN_RECOVERY,
+        request,
+      ) as Promise<
+        FinoraControlCenterResult<
+          FinoraDeveloperControlCenterSecurityCodeInitializationView
+        >
+      >,
+
+  unlockDeveloperControlCenter:
+    (
+      securityCode,
+    ) =>
+      ipcRenderer.invoke(
+        CONTROL_CENTER_CHANNELS
+          .UNLOCK_DEVELOPER_CONTROL_CENTER,
+        securityCode,
+      ) as Promise<
+        FinoraControlCenterResult<
+          FinoraDeveloperControlCenterUnlockView
+        >
+      >,
+
+  lockDeveloperControlCenter:
+    () =>
+      ipcRenderer.invoke(
+        CONTROL_CENTER_CHANNELS
+          .LOCK_DEVELOPER_CONTROL_CENTER,
+      ) as Promise<
+        FinoraControlCenterResult<
+          FinoraDeveloperControlCenterLockView
+        >
+      >,
+
+  changeDeveloperSecurityCode:
+    (
+      request,
+    ) =>
+      ipcRenderer.invoke(
+        CONTROL_CENTER_CHANNELS
+          .CHANGE_DEVELOPER_SECURITY_CODE,
+        request,
+      ) as Promise<
+        FinoraControlCenterResult<
+          boolean
+        >
+      >,
 
   getTrustRecord:
     () =>

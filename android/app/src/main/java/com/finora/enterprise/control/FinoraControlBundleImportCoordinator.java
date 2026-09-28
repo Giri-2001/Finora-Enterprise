@@ -530,7 +530,19 @@ public final class FinoraControlBundleImportCoordinator {
             // ------------------------------------------------
 
             FinoraSignedControlPackageVerifier.Target expectedTarget =
-                resolveAuthoritativeTarget();
+                resolveAuthoritativeTarget(
+                    (
+                        bundle.children.size() == 1 &&
+                        "WALLET_RECHARGE".equals(
+                            bundle.children
+                                .get(0)
+                                .optString(
+                                    "purpose",
+                                    null
+                                )
+                        )
+                    )
+                );
 
             // ------------------------------------------------
             // AUTHORITATIVE ACCEPTED NOW
@@ -998,7 +1010,9 @@ public final class FinoraControlBundleImportCoordinator {
     // ========================================================
 
     private FinoraSignedControlPackageVerifier.Target
-        resolveAuthoritativeTarget()
+        resolveAuthoritativeTarget(
+            boolean allowPortableWalletRecharge
+        )
             throws Exception {
 
         String rawControlState =
@@ -1061,8 +1075,11 @@ public final class FinoraControlBundleImportCoordinator {
 
         if (
             binding.installationId == null ||
-            !installationId.equals(
-                binding.installationId
+            (
+                !allowPortableWalletRecharge &&
+                !installationId.equals(
+                    binding.installationId
+                )
             )
         ) {
             throw new IllegalStateException(
@@ -1074,7 +1091,11 @@ public final class FinoraControlBundleImportCoordinator {
             ownerId,
             businessId,
             branchId,
-            installationId,
+            (
+                allowPortableWalletRecharge
+                    ? binding.installationId
+                    : installationId
+            ),
             binding.bindingKeyId,
             binding.fingerprintAlgorithm,
             binding.publicKeyFingerprint

@@ -429,6 +429,13 @@ public final class
                     );
             }
 
+            FinoraWalletBranchCertificationSessionAuthority.install(
+                portablePayload.ownerId,
+                portablePayload.businessId,
+                portablePayload.branchId,
+                portablePayload.branchCertificationKeyMaterial
+            );
+
             return FinoraPortableFreshDeviceLoginRecoveryCoordinator
                 .CompletionResult.success();
         }

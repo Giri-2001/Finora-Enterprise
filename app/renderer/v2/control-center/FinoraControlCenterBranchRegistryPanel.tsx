@@ -709,7 +709,7 @@ function BranchCard({
               ? "none"
               : "grid",
           gridTemplateColumns:
-            "minmax(0, 1fr) minmax(0, 1fr)",
+            "repeat(var(--finora-cc-detail-columns, 2), minmax(0, 1fr))",
           gap:
             "14px",
           margin:
@@ -880,6 +880,9 @@ function BranchCard({
       )}
 
       <div
+        data-finora-control-center-branch-action-layout="true"
+      >
+      <div
         data-finora-control-center-branch-actions="true"
         style={{
           marginTop:
@@ -889,7 +892,7 @@ function BranchCard({
               ? "none"
               : "grid",
           gridTemplateColumns:
-            "repeat(2, minmax(0, 1fr))",
+            "repeat(var(--finora-cc-detail-columns, 2), minmax(0, 1fr))",
           gap:
             "8px",
         }}
@@ -994,6 +997,7 @@ function BranchCard({
       </div>
 
       <button
+        data-finora-control-center-view-details="true"
         type="button"
         aria-expanded={
           detailsExpanded
@@ -1035,6 +1039,7 @@ function BranchCard({
           ? "Hide Details"
           : "View Details"}
       </button>
+      </div>
 
       {detailsExpanded && (
         <section
@@ -1070,7 +1075,7 @@ function BranchCard({
               display:
                 "grid",
               gridTemplateColumns:
-                "repeat(2, minmax(0, 1fr))",
+                "repeat(var(--finora-cc-detail-columns, 2), minmax(0, 1fr))",
               gap:
                 "14px",
             }}
@@ -1267,7 +1272,7 @@ function BranchCard({
                       display:
                         "grid",
                       gridTemplateColumns:
-                        "repeat(2, minmax(0, 1fr))",
+                        "repeat(var(--finora-cc-detail-columns, 2), minmax(0, 1fr))",
                       gap:
                         "12px",
                     }}
@@ -1336,7 +1341,7 @@ function BranchCard({
               display:
                 "grid",
               gridTemplateColumns:
-                "repeat(2, minmax(0, 1fr))",
+                "repeat(var(--finora-cc-detail-columns, 2), minmax(0, 1fr))",
               gap:
                 "14px",
             }}
@@ -2235,8 +2240,8 @@ export default function FinoraControlCenterBranchRegistryPanel({
             gridTemplateColumns:
               directoryMode &&
               !openedBranch
-                ? "repeat(5, minmax(0, 1fr))"
-                : "repeat(auto-fit, minmax(320px, 1fr))",
+                ? "repeat(var(--finora-cc-card-columns, 4), minmax(0, 1fr))"
+                : "minmax(0, 1fr)",
             gap:
               directoryMode &&
               !openedBranch

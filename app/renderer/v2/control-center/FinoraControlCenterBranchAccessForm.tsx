@@ -421,7 +421,7 @@ export default function FinoraControlCenterBranchAccessForm({
           display:
             "grid",
           gridTemplateColumns:
-            "repeat(2, minmax(0, 1fr))",
+            "repeat(var(--finora-cc-form-columns, 3), minmax(0, 1fr))",
           gap:
             "14px",
         }}
@@ -633,7 +633,7 @@ export default function FinoraControlCenterBranchAccessForm({
               display:
                 "grid",
               gridTemplateColumns:
-                "repeat(2, minmax(0, 1fr))",
+                "repeat(var(--finora-cc-form-columns, 3), minmax(0, 1fr))",
               gap:
                 "14px",
             }}
@@ -777,7 +777,7 @@ export default function FinoraControlCenterBranchAccessForm({
               display:
                 "grid",
               gridTemplateColumns:
-                "repeat(2, minmax(0, 1fr))",
+                "repeat(var(--finora-cc-form-columns, 3), minmax(0, 1fr))",
               gap:
                 "14px",
             }}
@@ -917,7 +917,7 @@ export default function FinoraControlCenterBranchAccessForm({
               display:
                 "grid",
               gridTemplateColumns:
-                "repeat(2, minmax(0, 1fr))",
+                "repeat(var(--finora-cc-form-columns, 3), minmax(0, 1fr))",
               gap:
                 "14px",
             }}

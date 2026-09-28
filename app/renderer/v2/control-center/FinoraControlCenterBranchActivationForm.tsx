@@ -351,7 +351,7 @@ export default function FinoraControlCenterBranchActivationForm({
           display:
             "grid",
           gridTemplateColumns:
-            "repeat(2, minmax(0, 1fr))",
+            "repeat(var(--finora-cc-form-columns, 3), minmax(0, 1fr))",
           gap:
             "14px",
         }}

@@ -1,3 +1,23 @@
+import {
+  Capacitor,
+  registerPlugin,
+} from "@capacitor/core";
+
+interface FinoraRecipientTrustPairingResult {
+  success: boolean;
+  cancelled?: boolean;
+  error?: string;
+}
+
+interface FinoraRecipientTrustNativeBridge {
+  bootstrapPinnedRecipientOperationalTrust():
+    Promise<FinoraRecipientTrustPairingResult>;
+}
+
+const finoraRecipientTrustNative =
+  registerPlugin<FinoraRecipientTrustNativeBridge>(
+    "FinoraControl",
+  );
 /* ============================================================
    FINORA ENTERPRISE OS™
 
@@ -60,6 +80,7 @@ import {
 } from "../../services/wallet/walletBalanceService";
 
 import {
+  getFinoraWalletControlBundleImportBridge,
   getFinoraWalletRechargeRequestBridge,
 } from "../../services/wallet/finoraWalletRechargeRequestBridge";
 
@@ -194,6 +215,13 @@ export default function WalletPage({
   );
 
   const [
+    importRechargeMessage,
+    setImportRechargeMessage,
+  ] = useState<string | null>(
+    null,
+  );
+
+  const [
     downloadingRechargeRequest,
     setDownloadingRechargeRequest,
   ] = useState(
@@ -270,6 +298,91 @@ export default function WalletPage({
         let workspaceResult =
           result;
 
+        /*
+         * MOBILE AVAILABILITY BOUNDARY
+         *
+         * Base Wallet state is already authoritative here.
+         * Do not hide the Wallet while optional signed-result
+         * reconciliation performs additional native work.
+         */
+        setSnapshot(
+          workspaceResult.data,
+        );
+
+        setLoading(
+          false,
+        );
+
+        /*
+         * Surface the durable pending Recharge before signed
+         * reconciliation so mobile Download / Import / Cancel
+         * stay available.
+         */
+        const initialPendingResult =
+          await getPendingWalletRechargeIntentsForScope({
+            walletId:
+              workspaceResult.data.wallet.walletId,
+
+            ownerId:
+              scope.ownerId,
+
+            businessId:
+              scope.businessId,
+
+            branchId:
+              scope.branchId,
+          });
+
+        if (!initialPendingResult.success) {
+          setError(
+            initialPendingResult.error,
+          );
+
+          return;
+        }
+
+        if (initialPendingResult.data.length > 1) {
+          setPendingRechargeReference(
+            null,
+          );
+
+          setError(
+            "Multiple pending Wallet Recharge requests exist for this Wallet. Automatic selection is blocked.",
+          );
+
+          return;
+        }
+
+        const initialPendingIntent =
+          initialPendingResult.data[0];
+
+        const initialPendingPaymentReference =
+          initialPendingIntent
+            ? String(
+                initialPendingIntent.paymentReference ?? "",
+              ).trim()
+            : "";
+
+        if (
+          initialPendingIntent &&
+          !initialPendingPaymentReference
+        ) {
+          setPendingRechargeReference(
+            null,
+          );
+
+          setError(
+            "Pending Wallet Recharge request is missing its canonical payment reference.",
+          );
+
+          return;
+        }
+
+        setPendingRechargeReference(
+          initialPendingPaymentReference ||
+            null,
+        );
+
         const resumeResult =
           await resumeSignedWalletRecharge({
             walletId:
@@ -286,14 +399,15 @@ export default function WalletPage({
           });
 
         if (!resumeResult.success) {
-          setSnapshot(
-            null,
-          );
-
-          setPendingRechargeReference(
-            null,
-          );
-
+          /*
+           * Base Wallet workspace is already authoritative and loaded.
+           *
+           * Signed Recharge reconciliation failure must not hide the
+           * Wallet or block the Import Signed Recharge action.
+           *
+           * No Wallet credit occurs here. Signed DONE verification
+           * remains mandatory before recharge completion.
+           */
           setError(
             resumeResult.error,
           );
@@ -811,6 +925,10 @@ export default function WalletPage({
       null,
     );
 
+    setImportRechargeMessage(
+      null,
+    );
+
     const processingId =
       startFinoraProcessing(
         "Importing Signed Wallet Recharge...",
@@ -835,9 +953,13 @@ export default function WalletPage({
         return;
       }
 
+      const importBridge =
+        getFinoraWalletControlBundleImportBridge();
+
       const importControlBundle =
-        window.finora?.control
-          ?.importControlBundle;
+        importBridge?.importControlBundle.bind(
+          importBridge,
+        );
 
       if (
         typeof importControlBundle !==
@@ -850,36 +972,208 @@ export default function WalletPage({
         return;
       }
 
-      const result =
+      let result =
         await importControlBundle({
           sessionId,
         });
 
       if (!result.success) {
-        setError(
-          result.error ??
-            "Unable to import the signed FINORA Recharge package.",
+        const importError =
+          String(
+            result.error ??
+              "Unable to import the signed FINORA Recharge package.",
+          );
+
+        const authorizationAlreadyAvailable =
+          importError.includes(
+            "Wallet Recharge payment reference has already been authorized",
+          ) ||
+          importError.includes(
+            "Wallet Recharge signed package has already been applied",
+          );
+
+        if (authorizationAlreadyAvailable) {
+          /*
+           * Idempotent recovery only.
+           *
+           * Native replay protection remains intact:
+           * the duplicate signed package is NOT applied again.
+           *
+           * The previously verified and persisted authorization
+           * must still pass the normal signed Wallet Recharge
+           * resume / authorization-read pipeline before any
+           * Wallet balance mutation can occur.
+           */
+          if (!snapshot) {
+            setImportRechargeMessage(
+              "Verified Wallet Recharge authorization is available, but the Wallet workspace is unavailable.",
+            );
+
+            return;
+          }
+
+          const resumeResult =
+            await resumeSignedWalletRecharge({
+              walletId:
+                snapshot.wallet.walletId,
+
+              ownerId:
+                scope.ownerId,
+
+              businessId:
+                scope.businessId,
+
+              branchId:
+                scope.branchId,
+            });
+
+          if (!resumeResult.success) {
+            setError(
+              resumeResult.error ??
+                "Unable to resume the verified Wallet Recharge authorization.",
+            );
+
+            setImportRechargeMessage(
+              resumeResult.error ??
+                "Unable to resume the verified Wallet Recharge authorization.",
+            );
+
+            return;
+          }
+
+          await loadWorkspace();
+
+          setImportRechargeMessage(
+            resumeResult.completed
+              ? "Wallet Recharge completed successfully."
+              : "Verified Wallet Recharge authorization is available, but Wallet credit was not completed.",
+          );
+
+          return;
+        }
+
+        const recipientTrustMissing =
+          importError.includes(
+            "recipient operational trust has not been bootstrapped",
+          );
+
+        if (
+          recipientTrustMissing &&
+          Capacitor.isNativePlatform() &&
+          Capacitor.getPlatform() === "android"
+        ) {
+          /*
+           * Release-pinned trust bootstrap.
+           *
+           * No operator prompt.
+           * No imported trust record.
+           * No package-provided trust authority.
+           *
+           * The native layer validates the pinned public key
+           * against the independently confirmed release fingerprint.
+           */
+          const pairingResult =
+            await finoraRecipientTrustNative
+              .bootstrapPinnedRecipientOperationalTrust();
+
+          if (!pairingResult.success) {
+            setError(
+              pairingResult.error ??
+                "Unable to initialize signed recharge verification.",
+            );
+            return;
+          }
+
+          /*
+           * Retry the same normal signed bundle import path.
+           * Signature verification remains mandatory.
+           */
+          result =
+            await importControlBundle({
+              sessionId,
+            });
+
+          if (!result.success) {
+            setError(
+              result.error ??
+                "Unable to import the signed FINORA Recharge package.",
+            );
+            return;
+          }
+        } else {
+          setError(
+            importError,
+          );
+
+          return;
+        }
+      }
+
+      if (result.cancelled) {
+        setImportRechargeMessage(
+          "Signed Recharge file selection was cancelled.",
         );
 
         return;
       }
 
-      if (result.cancelled) {
+      /*
+       * Native import has verified and persisted the signed
+       * Control Bundle authority.
+       *
+       * Resolve the exact signed Wallet Recharge now so the
+       * owner receives a deterministic success/failure result.
+       */
+      if (!snapshot) {
+        setImportRechargeMessage(
+          "Signed Recharge was imported, but the Wallet workspace is unavailable.",
+        );
+
         return;
       }
 
-      /*
-       * Import only establishes native-verified Control authority.
-       *
-       * loadWorkspace() then resolves:
-       *
-       * 1. signed approval through the secured Wallet Recharge path;
-       * 2. signed decline through exact PENDING-intent cancellation.
-       *
-       * Approval is the only path that may credit Wallet balance.
-       * Decline never mutates Wallet financial state.
-       */
+      const resumeResult =
+        await resumeSignedWalletRecharge({
+          walletId:
+            snapshot.wallet.walletId,
+
+          ownerId:
+            scope.ownerId,
+
+          businessId:
+            scope.businessId,
+
+          branchId:
+            scope.branchId,
+        });
+
+      if (!resumeResult.success) {
+        const resumeError =
+          resumeResult.error ??
+            "Signed Recharge verification failed.";
+
+        setError(
+          resumeError,
+        );
+
+        setImportRechargeMessage(
+          resumeError,
+        );
+
+        return;
+      }
+
       await loadWorkspace();
+
+      if (resumeResult.completed) {
+        setImportRechargeMessage(
+          "Wallet Recharge completed successfully.",
+        );
+      } else {
+        setImportRechargeMessage(
+          "Signed Recharge imported successfully, but no Wallet credit was completed.",
+        );
+      }
 
     } catch (error) {
 
@@ -1003,7 +1297,7 @@ export default function WalletPage({
         null,
       );
 
-      await loadWorkspace();
+      void loadWorkspace();
     } finally {
       stopFinoraProcessing(
         processingId,
@@ -1022,7 +1316,7 @@ export default function WalletPage({
     <main style={styles.page}>
       <div style={styles.pageInner}>
 
-        {error ? (
+        {error && !snapshot ? (
           <section style={styles.stateCard}>
             <p style={styles.stateText}>
               {error}
@@ -1115,6 +1409,21 @@ export default function WalletPage({
                       ? "Importing..."
                       : "Import Signed Recharge"}
                   </button>
+
+                  {importRechargeMessage ? (
+                    <div
+                      role="status"
+                      aria-live="polite"
+                      style={{
+                        marginTop: 8,
+                        fontSize: 13,
+                        lineHeight: 1.4,
+                        overflowWrap: "anywhere",
+                      }}
+                    >
+                      {importRechargeMessage}
+                    </div>
+                  ) : null}
 
                   <button
                     type="button"

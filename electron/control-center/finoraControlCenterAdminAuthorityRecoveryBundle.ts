@@ -74,10 +74,10 @@ const MAX_CIPHERTEXT_BYTES =
   512 * 1024;
 
 export const FINORA_CONTROL_CENTER_ADMIN_SECURITY_CODE_MIN_LENGTH =
-  12;
+  10;
 
 export const FINORA_CONTROL_CENTER_ADMIN_SECURITY_CODE_MAX_LENGTH =
-  128;
+  20;
 
 // ============================================================
 // CONTRACT

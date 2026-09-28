@@ -60,6 +60,8 @@ import { useEffect, useState } from "react";
 
 import type { CSSProperties, ReactNode } from "react";
 
+import { Settings as ProvisionSettingsIcon } from "lucide-react";
+
 import AppShell from "../layouts/AppShell";
 
 import ReceptionPage from "../pages/reception";
@@ -646,13 +648,25 @@ type ActivationGateState =
 
 function BranchActivationGate({
   children,
+  forceRequired = false,
+  onForceRequiredResolved,
 }: {
   children: ReactNode;
+  forceRequired?: boolean;
+  onForceRequiredResolved?:
+    () => void;
 }) {
   const [state, setState] =
     useState<ActivationGateState>(
       "CHECKING",
     );
+
+  const [
+    manualProvisioningPending,
+    setManualProvisioningPending,
+  ] = useState<boolean>(
+    forceRequired,
+  );
 
   const [message, setMessage] =
     useState<string>(
@@ -699,6 +713,23 @@ function BranchActivationGate({
 
     async function verifyActivation():
       Promise<void> {
+
+      if (
+        manualProvisioningPending
+      ) {
+
+        if (active) {
+          setState(
+            "REQUIRED",
+          );
+
+          setMessage(
+            "Set up this device for a new FINORA branch.",
+          );
+        }
+
+        return;
+      }
 
       if (active) {
         setState(
@@ -809,9 +840,29 @@ function BranchActivationGate({
     return () => {
       active = false;
     };
-  }, [retryNonce]);
+  }, [
+    manualProvisioningPending,
+    retryNonce,
+  ]);
+
+  useEffect(() => {
+    if (
+      forceRequired &&
+      state === "ACTIVE"
+    ) {
+      onForceRequiredResolved?.();
+    }
+  }, [
+    forceRequired,
+    onForceRequiredResolved,
+    state,
+  ]);
 
   function handleRetry(): void {
+    setManualProvisioningPending(
+      false,
+    );
+
     setRetryNonce(
       (current) =>
         current + 1,
@@ -1132,6 +1183,17 @@ function AuthenticatedApplication({
   onProvisionBranch,
 }: AuthenticatedApplicationProps) {
   const { context, setContext, clearContext } = useBusinessContext();
+
+  const { theme } = useTheme();
+
+  const {
+    isMobile,
+    isTablet,
+  } = useResponsive();
+
+  const compactProvisionAction =
+    isMobile ||
+    isTablet;
 
   const [session, setSession] = useState<AuthSession | null>(() =>
     getSession(),
@@ -2095,7 +2157,7 @@ function AuthenticatedApplication({
       <>
         <Login onLogin={handleLogin} />
 
-        <button
+                <button
           type="button"
           onClick={onProvisionBranch}
           aria-label="Set up this device for a new FINORA branch"
@@ -2103,21 +2165,45 @@ function AuthenticatedApplication({
             position:
               "fixed",
             right:
-              "16px",
+              compactProvisionAction
+                ? "12px"
+                : "16px",
             bottom:
-              "16px",
+              compactProvisionAction
+                ? "12px"
+                : "16px",
             zIndex:
               1000,
+            width:
+              compactProvisionAction
+                ? "44px"
+                : undefined,
+            height:
+              compactProvisionAction
+                ? "44px"
+                : undefined,
             padding:
-              "9px 12px",
+              compactProvisionAction
+                ? 0
+                : "9px 12px",
+            display:
+              "inline-flex",
+            alignItems:
+              "center",
+            justifyContent:
+              "center",
             border:
-              "1px solid rgba(148, 163, 184, 0.45)",
+              `1px solid ${theme.colors.border.strong}`,
             borderRadius:
-              "10px",
+              compactProvisionAction
+                ? "12px"
+                : "10px",
             background:
-              "rgba(15, 23, 42, 0.92)",
+              theme.colors.background.surfaceElevated,
             color:
-              "#e2e8f0",
+              compactProvisionAction
+                ? theme.colors.brand.primary
+                : theme.colors.text.primary,
             fontFamily:
               "Inter, ui-sans-serif, system-ui, sans-serif",
             fontSize:
@@ -2126,9 +2212,19 @@ function AuthenticatedApplication({
               600,
             cursor:
               "pointer",
+            boxSizing:
+              "border-box",
           }}
         >
-          Set up this device for a new FINORA branch
+          {compactProvisionAction
+            ? (
+                <ProvisionSettingsIcon
+                  size={20}
+                  strokeWidth={2}
+                  aria-hidden="true"
+                />
+              )
+            : "Set up this device for a new FINORA branch"}
         </button>
       </>
     );
@@ -2860,7 +2956,14 @@ export default function App() {
   }
 
   return (
-    <BranchActivationGate>
+    <BranchActivationGate
+      forceRequired
+      onForceRequiredResolved={() => {
+        setProvisioningMode(
+          false,
+        );
+      }}
+    >
       {application}
     </BranchActivationGate>
   );

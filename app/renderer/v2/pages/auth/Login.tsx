@@ -46,6 +46,7 @@ import { getFinoraLoginSessionBridge } from "../../services/auth/loginSessionBri
 // ============================================================
 
 import type {
+  FocusEvent as ReactFocusEvent,
   KeyboardEvent as ReactKeyboardEvent,
 } from "react";
 
@@ -251,7 +252,7 @@ export default function Login({
     ownerStorage,
     setOwnerStorage,
   ] = useState<OwnerStorage>(
-    "local",
+    "usb",
   );
 
 
@@ -2071,6 +2072,71 @@ export default function Login({
   // INPUT KEY HANDLING
   // ==========================================================
 
+  // ==========================================================
+  // MOBILE KEYBOARD FOCUSED INPUT REVEAL
+  // ==========================================================
+
+  function handleLoginInputFocus(
+    event: ReactFocusEvent<HTMLInputElement>,
+  ): void {
+
+    const target =
+      event.currentTarget;
+
+    const coarsePointer =
+      window.matchMedia(
+        "(pointer: coarse)",
+      ).matches;
+
+    const compactViewport =
+      window.innerWidth <= 900;
+
+    if (
+      !coarsePointer &&
+      !compactViewport
+    ) {
+
+      return;
+
+    }
+
+    const reveal =
+      (): void => {
+
+        if (
+          document.activeElement !==
+          target
+        ) {
+
+          return;
+
+        }
+
+        target.scrollIntoView({
+          behavior: "smooth",
+          block: "center",
+          inline: "nearest",
+        });
+
+      };
+
+    window.requestAnimationFrame(
+      reveal,
+    );
+
+    window.setTimeout(
+      reveal,
+      180,
+    );
+
+    window.setTimeout(
+      reveal,
+      420,
+    );
+
+  }
+
+
   function handlePasswordKeyDown(
     event: ReactKeyboardEvent<HTMLInputElement>,
   ): void {
@@ -2427,26 +2493,6 @@ export default function Login({
                       type="button"
                       role="option"
                       aria-selected={
-                        ownerStorage === "local"
-                      }
-                      onClick={() => {
-                        handleStorageChange("local");
-                      }}
-                      style={
-                        ownerStorage === "local"
-                          ? loginStyles.customSelectOptionActive
-                          : loginStyles.customSelectOption
-                      }
-                    >
-                      <HardDrive />
-                      <span>Local Storage</span>
-                    </button>
-
-
-                    <button
-                      type="button"
-                      role="option"
-                      aria-selected={
                         ownerStorage === "usb"
                       }
                       onClick={() => {
@@ -2460,6 +2506,26 @@ export default function Login({
                     >
                       <Usb />
                       <span>USB Storage</span>
+                    </button>
+
+
+                    <button
+                      type="button"
+                      role="option"
+                      aria-selected={
+                        ownerStorage === "local"
+                      }
+                      onClick={() => {
+                        handleStorageChange("local");
+                      }}
+                      style={
+                        ownerStorage === "local"
+                          ? loginStyles.customSelectOptionActive
+                          : loginStyles.customSelectOption
+                      }
+                    >
+                      <HardDrive />
+                      <span>Local Storage</span>
                     </button>
 
 
@@ -2661,6 +2727,9 @@ export default function Login({
                   disabled={
                     loginBusy
                   }
+                  onFocus={
+                    handleLoginInputFocus
+                  }
                   style={
                     loginStyles.input
                   }
@@ -2724,6 +2793,9 @@ export default function Login({
                   }
                   onKeyDown={
                     handlePasswordKeyDown
+                  }
+                  onFocus={
+                    handleLoginInputFocus
                   }
                   style={
                     loginStyles.input
@@ -2802,6 +2874,9 @@ export default function Login({
                     onKeyDown={
                       handlePasswordKeyDown
                     }
+                    onFocus={
+                      handleLoginInputFocus
+                    }
                     style={
                       loginStyles.input
                     }
@@ -2848,6 +2923,9 @@ export default function Login({
                     }
                     onKeyDown={
                       handlePasswordKeyDown
+                    }
+                    onFocus={
+                      handleLoginInputFocus
                     }
                     style={
                       loginStyles.input
@@ -2896,6 +2974,9 @@ export default function Login({
                     onKeyDown={
                       handlePasswordKeyDown
                     }
+                    onFocus={
+                      handleLoginInputFocus
+                    }
                     style={
                       loginStyles.input
                     }
@@ -2942,6 +3023,9 @@ export default function Login({
                     }
                     onKeyDown={
                       handlePasswordKeyDown
+                    }
+                    onFocus={
+                      handleLoginInputFocus
                     }
                     style={
                       loginStyles.input
@@ -3057,6 +3141,9 @@ export default function Login({
                     }
                     onKeyDown={
                       handlePasswordKeyDown
+                    }
+                    onFocus={
+                      handleLoginInputFocus
                     }
                     style={
                       loginStyles.input

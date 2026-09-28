@@ -425,7 +425,7 @@ export function FinoraControlCenterWalletRechargeForm({
               "grid",
 
             gridTemplateColumns:
-              "repeat(auto-fit, minmax(240px, 1fr))",
+              "repeat(var(--finora-cc-form-columns, 3), minmax(0, 1fr))",
 
             gap:
               "12px",

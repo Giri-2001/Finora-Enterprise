@@ -2039,7 +2039,7 @@ setEnrollmentOpenState(
         aria-label="FINORA issuance workflow"
         style={{
           display: "grid",
-          gridTemplateColumns: "repeat(6, minmax(0, 1fr))",
+          gridTemplateColumns: "repeat(var(--finora-cc-workflow-columns, 4), minmax(0, 1fr))",
           gap: "10px",
           marginBottom: "22px",
         }}
@@ -2600,7 +2600,7 @@ setEnrollmentOpenState(
         <div
           style={{
             display: "grid",
-            gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
+            gridTemplateColumns: "repeat(var(--finora-cc-form-columns, 3), minmax(0, 1fr))",
             gap: "14px",
           }}
         >
@@ -2713,7 +2713,7 @@ setEnrollmentOpenState(
                   display:
                     "grid",
                   gridTemplateColumns:
-                    "repeat(2, minmax(0, 1fr))",
+                    "repeat(var(--finora-cc-form-columns, 3), minmax(0, 1fr))",
                   gap:
                     "12px 18px",
                 }}
@@ -3036,7 +3036,7 @@ setEnrollmentOpenState(
         <div
           style={{
             display: "grid",
-            gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
+            gridTemplateColumns: "repeat(var(--finora-cc-form-columns, 3), minmax(0, 1fr))",
             gap: "14px",
             marginTop: "14px",
           }}
@@ -3844,7 +3844,7 @@ setEnrollmentOpenState(
                   style={{
                     display: "grid",
                     gridTemplateColumns:
-                      "repeat(auto-fit, minmax(230px, 1fr))",
+                      "repeat(var(--finora-cc-form-columns, 3), minmax(0, 1fr))",
                     gap: "12px",
                     margin: 0,
                   }}
@@ -4085,10 +4085,7 @@ setEnrollmentOpenState(
                           overflowWrap: "anywhere",
                         }}
                       >
-                        Approval exported:{" "}
-                        <strong>
-                          {walletRechargeApprovalFileName}
-                        </strong>
+                        Wallet Recharge approved successfully. DONE file downloaded.
                       </span>
                     )}
                 </div>

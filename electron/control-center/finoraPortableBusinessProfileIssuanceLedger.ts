@@ -47,7 +47,7 @@ export interface FinoraPortableBusinessProfileIssuanceReservation {
     string;
 }
 
-interface FinoraPortableBusinessProfileSequenceRecord {
+export interface FinoraPortableBusinessProfileSequenceRecord {
   issuerId:
     string;
 
@@ -70,7 +70,7 @@ interface FinoraPortableBusinessProfileSequenceRecord {
     string;
 }
 
-interface FinoraPortableBusinessProfileIssuanceLedger {
+export interface FinoraPortableBusinessProfileIssuanceLedger {
   sequences:
     FinoraPortableBusinessProfileSequenceRecord[];
 
@@ -733,6 +733,39 @@ async function reserveInternal(
 let portableBusinessProfileIssuanceQueue:
   Promise<void> =
     Promise.resolve();
+
+export async function loadFinoraPortableBusinessProfileIssuanceLedgerSnapshot():
+  Promise<
+    FinoraPortableBusinessProfileIssuanceLedger | undefined
+  > {
+
+  const ledger =
+    await readLedger();
+
+  if (!ledger) {
+    return undefined;
+  }
+
+  return {
+    sequences:
+      ledger.sequences.map(
+        (
+          record,
+        ) => ({
+          ...record,
+        }),
+      ),
+
+    createdAt:
+      ledger.createdAt,
+
+    updatedAt:
+      ledger.updatedAt,
+
+    schemaVersion:
+      ledger.schemaVersion,
+  };
+}
 
 export function reserveFinoraPortableBusinessProfileIssuance(
   scope:

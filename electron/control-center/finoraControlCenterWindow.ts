@@ -20,6 +20,7 @@
 // - This module is not yet wired into Electron startup.
 // ============================================================
 
+import { lockFinoraDeveloperControlCenter } from "./finoraDeveloperControlCenterSecurityAuthority";
 import {
   app,
   BrowserWindow,
@@ -54,7 +55,7 @@ function getExpectedControlCenterUrl():
   return pathToFileURL(
     path.join(
       __dirname,
-      "../dist/control-center.html",
+      "../../dist/control-center.html",
     ),
   ).href;
 }
@@ -283,7 +284,7 @@ export async function openFinoraControlCenterWindow():
     await createdWindow.loadFile(
       path.join(
         __dirname,
-        "../dist/control-center.html",
+        "../../dist/control-center.html",
       ),
     );
   }
@@ -300,6 +301,7 @@ export async function openFinoraControlCenterWindow():
         controlCenterWindow ===
           createdWindow
       ) {
+        lockFinoraDeveloperControlCenter();
         controlCenterWindow =
           null;
       }

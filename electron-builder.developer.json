@@ -1,0 +1,39 @@
+{
+  "appId": "com.finora.developer.controlcenter",
+  "productName": "FINORA Developer Control Center",
+  "artifactName": "Finora_Control_Center.${ext}",
+  "icon": "assets/icons/finora.ico",
+  "asar": true,
+  "directories": {
+    "output": "release-developer"
+  },
+  "extraMetadata": {
+    "name": "finora-developer-controlcenter",
+    "main": "dist-electron/developerControlCenterMain.js"
+  },
+  "files": [
+    "dist/**/*",
+    "dist-electron/developerControlCenterMain.js",
+    "dist-electron/control/**/*.js",
+    "dist-electron/control-center/**/*.js",
+    "!dist-electron/control/**/*SelfTest.js",
+    "!dist-electron/control/**/*E2E*.js",
+    "!dist-electron/control-center/**/*SelfTest.js",
+    "!dist-electron/control-center/**/*E2E*.js",
+    "package.json"
+  ],
+  "win": {
+    "target": [
+      {
+        "target": "nsis",
+        "arch": [
+          "x64"
+        ]
+      }
+    ]
+  },
+  "nsis": {
+    "oneClick": false,
+    "allowToChangeInstallationDirectory": true
+  }
+}

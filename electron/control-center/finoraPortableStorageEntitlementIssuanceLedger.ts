@@ -47,7 +47,7 @@ export interface FinoraPortableStorageEntitlementIssuanceReservation {
     string;
 }
 
-interface FinoraPortableStorageEntitlementSequenceRecord {
+export interface FinoraPortableStorageEntitlementSequenceRecord {
   issuerId:
     string;
 
@@ -70,7 +70,7 @@ interface FinoraPortableStorageEntitlementSequenceRecord {
     string;
 }
 
-interface FinoraPortableStorageEntitlementIssuanceLedger {
+export interface FinoraPortableStorageEntitlementIssuanceLedger {
   sequences:
     FinoraPortableStorageEntitlementSequenceRecord[];
 
@@ -733,6 +733,39 @@ async function reserveInternal(
 let portableBusinessProfileIssuanceQueue:
   Promise<void> =
     Promise.resolve();
+
+export async function loadFinoraPortableStorageEntitlementIssuanceLedgerSnapshot():
+  Promise<
+    FinoraPortableStorageEntitlementIssuanceLedger | undefined
+  > {
+
+  const ledger =
+    await readLedger();
+
+  if (!ledger) {
+    return undefined;
+  }
+
+  return {
+    sequences:
+      ledger.sequences.map(
+        (
+          record,
+        ) => ({
+          ...record,
+        }),
+      ),
+
+    createdAt:
+      ledger.createdAt,
+
+    updatedAt:
+      ledger.updatedAt,
+
+    schemaVersion:
+      ledger.schemaVersion,
+  };
+}
 
 export function reserveFinoraPortableStorageEntitlementIssuance(
   scope:

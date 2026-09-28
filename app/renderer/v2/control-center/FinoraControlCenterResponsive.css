@@ -1,0 +1,461 @@
+/* ============================================================
+   FINORA DEVELOPER CONTROL CENTER
+   RESPONSIVE CONTRACT
+   ============================================================ */
+
+[data-finora-control-center-shell="true"],
+[data-finora-developer-security-gate="true"] {
+  --finora-cc-card-columns: 4;
+  --finora-cc-form-columns: 3;
+  --finora-cc-workflow-columns: 4;
+  --finora-cc-detail-columns: 2;
+}
+
+
+/* ============================================================
+   TABLET — 768px through 1199px
+   ============================================================ */
+
+@media (min-width: 768px) and (max-width: 1199px) {
+
+  [data-finora-control-center-shell="true"],
+  [data-finora-developer-security-gate="true"] {
+    --finora-cc-card-columns: 3;
+    --finora-cc-form-columns: 2;
+    --finora-cc-workflow-columns: 3;
+    --finora-cc-detail-columns: 2;
+  }
+
+  [data-finora-control-center-shell="true"] h1 {
+    font-size: 24px !important;
+    line-height: 1.22 !important;
+    font-weight: 650 !important;
+  }
+
+  [data-finora-control-center-shell="true"] h2 {
+    font-size: 18px !important;
+    line-height: 1.3 !important;
+    font-weight: 650 !important;
+  }
+
+  [data-finora-control-center-shell="true"] h3 {
+    font-size: 15px !important;
+    line-height: 1.35 !important;
+    font-weight: 650 !important;
+  }
+
+  [data-finora-developer-security-gate="true"] h1 {
+    font-size: 22px !important;
+    line-height: 1.3 !important;
+    font-weight: 650 !important;
+  }
+
+  [data-finora-control-center-shell="true"] button,
+  [data-finora-developer-security-gate="true"] button {
+    font-size: 12.5px !important;
+    font-weight: 650 !important;
+  }
+
+  [data-finora-control-center-shell="true"] input,
+  [data-finora-control-center-shell="true"] select,
+  [data-finora-control-center-shell="true"] textarea,
+  [data-finora-developer-security-gate="true"] input,
+  [data-finora-developer-security-gate="true"] select,
+  [data-finora-developer-security-gate="true"] textarea {
+    font-size: 12.5px !important;
+  }
+
+  [data-finora-control-center-shell="true"] p,
+  [data-finora-control-center-shell="true"] label,
+  [data-finora-control-center-shell="true"] dd,
+  [data-finora-developer-security-gate="true"] p,
+  [data-finora-developer-security-gate="true"] label {
+    font-size: 12.5px !important;
+  }
+}
+
+
+/* ============================================================
+   MOBILE — 767px and below
+   ============================================================ */
+
+@media (max-width: 767px) {
+
+  [data-finora-control-center-shell="true"],
+  [data-finora-developer-security-gate="true"] {
+    --finora-cc-card-columns: 1;
+    --finora-cc-form-columns: 1;
+    --finora-cc-workflow-columns: 1;
+    --finora-cc-detail-columns: 1;
+  }
+
+  [data-finora-control-center-shell="true"] {
+    padding: 6px !important;
+  }
+
+  [data-finora-control-center-shell="true"] h1 {
+    font-size: 21px !important;
+    line-height: 1.22 !important;
+    font-weight: 650 !important;
+  }
+
+  [data-finora-control-center-shell="true"] h2 {
+    font-size: 17px !important;
+    line-height: 1.3 !important;
+    font-weight: 650 !important;
+  }
+
+  [data-finora-control-center-shell="true"] h3 {
+    font-size: 14px !important;
+    line-height: 1.35 !important;
+    font-weight: 650 !important;
+  }
+
+  [data-finora-developer-security-gate="true"] h1 {
+    font-size: 20px !important;
+    line-height: 1.3 !important;
+    font-weight: 650 !important;
+  }
+
+  [data-finora-control-center-shell="true"] button,
+  [data-finora-developer-security-gate="true"] button {
+    font-size: 12px !important;
+    font-weight: 650 !important;
+    min-width: 0 !important;
+    max-width: 100%;
+  }
+
+  [data-finora-control-center-shell="true"] input,
+  [data-finora-control-center-shell="true"] select,
+  [data-finora-control-center-shell="true"] textarea,
+  [data-finora-developer-security-gate="true"] input,
+  [data-finora-developer-security-gate="true"] select,
+  [data-finora-developer-security-gate="true"] textarea {
+    font-size: 12px !important;
+    min-width: 0 !important;
+    max-width: 100%;
+  }
+
+  [data-finora-control-center-shell="true"] p,
+  [data-finora-control-center-shell="true"] label,
+  [data-finora-control-center-shell="true"] dd,
+  [data-finora-developer-security-gate="true"] p,
+  [data-finora-developer-security-gate="true"] label {
+    font-size: 12px !important;
+    line-height: 1.5 !important;
+  }
+
+  [data-finora-control-center-shell="true"] dt {
+    font-size: 11px !important;
+  }
+
+  [data-finora-developer-header-actions="true"] {
+    position: static !important;
+    width: 100%;
+    margin-top: 12px;
+    justify-content: flex-start !important;
+    flex-wrap: wrap;
+  }
+}
+
+/* ============================================================
+   FINORA SECURITY SETUP WRAP OVERRIDE
+   Desktop uses inline nowrap.
+   Tablet / Mobile may wrap naturally.
+   ============================================================ */
+
+@media (min-width: 768px) and (max-width: 1199px) {
+  [data-finora-developer-security-gate="true"] h1 {
+    white-space: normal !important;
+  }
+}
+
+@media (max-width: 767px) {
+  [data-finora-developer-security-gate="true"] h1 {
+    white-space: normal !important;
+  }
+}
+
+/* ============================================================
+   FINORA DEVELOPER MOBILE HEADER WIDTH FIX
+
+   - Remove desktop right-side reservation on mobile.
+   - Use all available mobile header width.
+   - Preserve existing mobile title/actions rules.
+============================================================ */
+
+@media (max-width: 767px) {
+  [data-finora-control-center-shell="true"]
+  [data-finora-developer-header="true"] {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    padding-right: 0 !important;
+    box-sizing: border-box !important;
+  }
+}
+
+/* ============================================================
+   FINORA INSTALLATION ENROLLMENT MOBILE STACK FIX
+
+   MOBILE ONLY:
+   - Stack Installation Enrollment text + action vertically.
+   - Give Open Enrollment Request full available width.
+   - Prevent action text from escaping/shrinking awkwardly.
+
+   TABLET / LAPTOP / DESKTOP:
+   - unchanged.
+============================================================ */
+
+@media (max-width: 767px) {
+  [data-finora-installation-enrollment="true"] > div:first-child {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    justify-content: flex-start !important;
+    gap: 12px !important;
+  }
+
+  [data-finora-installation-enrollment="true"] > div:first-child > button {
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+    align-self: stretch !important;
+    white-space: normal !important;
+    overflow-wrap: anywhere !important;
+    box-sizing: border-box !important;
+  }
+}
+/* ============================================================
+   FINORA REMAINING MOBILE FULL WIDTH ACTION FIX
+
+   MOBILE ONLY:
+   - stack remaining action rows
+   - make mobile action buttons full width
+   - keep tablet/laptop unchanged
+============================================================ */
+
+@media (max-width: 767px) {
+  [data-finora-branch-certification-rotation="true"],
+  [data-finora-control-bundle-export="true"] {
+    width: 100% !important;
+  }
+
+  [data-finora-branch-certification-rotation="true"],
+  [data-finora-control-bundle-export="true"] button {
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+    align-self: stretch !important;
+    white-space: normal !important;
+    overflow-wrap: anywhere !important;
+    box-sizing: border-box !important;
+  }
+
+  [data-finora-branch-certification-rotation="true"],
+  [data-finora-control-bundle-export="true"] > div {
+    align-items: stretch !important;
+  }
+
+  [data-finora-branch-certification-rotation="true"],
+  [data-finora-control-bundle-export="true"] > div:first-child,
+  [data-finora-branch-certification-rotation="true"],
+  [data-finora-control-bundle-export="true"] > div:nth-child(2),
+  [data-finora-branch-certification-rotation="true"],
+  [data-finora-control-bundle-export="true"] > div:nth-child(3) {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    justify-content: flex-start !important;
+    gap: 12px !important;
+  }
+}
+
+/* ============================================================
+   FINORA EXACT MOBILE ACTION ROW STACK FIX
+
+   Exact remaining mobile actions:
+   - Open Rotation Request
+   - Approve & Export Rotation Authority
+   - Issue & Export Response
+
+   Control Bundle Export is intentionally not changed here;
+   its mobile full-width state already passes.
+============================================================ */
+
+@media (max-width: 767px) {
+
+  [data-finora-branch-certification-rotation="true"]
+  div:has(> button) {
+    width: 100% !important;
+    min-width: 0 !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: stretch !important;
+    justify-content: flex-start !important;
+    gap: 12px !important;
+    box-sizing: border-box !important;
+  }
+
+  [data-finora-branch-certification-rotation="true"]
+  div:has(> button) > button {
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+    align-self: stretch !important;
+    white-space: normal !important;
+    overflow-wrap: anywhere !important;
+    box-sizing: border-box !important;
+  }
+
+  [data-finora-enrollment-response-export="true"]
+  div:has(> button) {
+    width: 100% !important;
+    min-width: 0 !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: stretch !important;
+    justify-content: flex-start !important;
+    gap: 12px !important;
+    box-sizing: border-box !important;
+  }
+
+  [data-finora-enrollment-response-export="true"]
+  div:has(> button) > button {
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+    align-self: stretch !important;
+    white-space: normal !important;
+    overflow-wrap: anywhere !important;
+    box-sizing: border-box !important;
+  }
+}
+
+/* ============================================================
+   FINORA BRANCH DIRECTORY MOBILE FULL WIDTH ACTIONS
+
+   MOBILE ONLY:
+   - FINORA Income
+   - FINORA Wallet History
+   - Backfill Existing Branch
+   - Refresh
+
+   Keep branch cards / workspace actions unchanged.
+============================================================ */
+
+@media (max-width: 767px) {
+
+  [data-finora-control-center-branch-registry="true"]
+  > div:first-child {
+    width: 100% !important;
+    min-width: 0 !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: stretch !important;
+    justify-content: flex-start !important;
+    gap: 14px !important;
+    box-sizing: border-box !important;
+  }
+
+  [data-finora-control-center-branch-registry="true"]
+  > div:first-child
+  > div:first-child {
+    width: 100% !important;
+    min-width: 0 !important;
+  }
+
+  [data-finora-control-center-branch-registry="true"]
+  > div:first-child
+  > div:last-child {
+    width: 100% !important;
+    min-width: 0 !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: stretch !important;
+    justify-content: flex-start !important;
+    gap: 8px !important;
+    box-sizing: border-box !important;
+  }
+
+  [data-finora-control-center-branch-registry="true"]
+  > div:first-child
+  > div:last-child
+  > button {
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+    align-self: stretch !important;
+    white-space: normal !important;
+    overflow-wrap: anywhere !important;
+    box-sizing: border-box !important;
+  }
+}
+
+/* ============================================================
+   FINORA MOBILE TOP NAV 50 50 FIX
+
+   MOBILE ONLY:
+   - Settings = equal left column
+   - FINORA Branches / Control Center = equal right column
+   - Same row
+   - Equal width
+============================================================ */
+
+@media (max-width: 767px) {
+
+  [data-finora-control-center-shell="true"]
+  [data-finora-developer-header-actions="true"] {
+    width: 100% !important;
+    min-width: 0 !important;
+    display: grid !important;
+    grid-template-columns:
+      repeat(2, minmax(0, 1fr)) !important;
+    align-items: stretch !important;
+    justify-content: stretch !important;
+    gap: 8px !important;
+    box-sizing: border-box !important;
+  }
+
+  [data-finora-control-center-shell="true"]
+  [data-finora-developer-header-actions="true"]
+  > button {
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: none !important;
+    margin: 0 !important;
+    align-self: stretch !important;
+    justify-self: stretch !important;
+    white-space: normal !important;
+    box-sizing: border-box !important;
+  }
+}
+
+/* ============================================================
+   FINORA BRANCH WORKSPACE DESKTOP 3X3 ACTION GRID
+
+   LAPTOP / DESKTOP — 1200px and above:
+   - 7 issuance actions + Wallet History + View Details
+   - 3 columns x 3 rows
+
+   TABLET / MOBILE:
+   - existing responsive layout remains unchanged.
+   ============================================================ */
+
+@media (min-width: 1200px) {
+  [data-finora-control-center-branch-action-layout="true"] {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+    margin-top: 16px;
+  }
+
+  [data-finora-control-center-branch-action-layout="true"]
+  > [data-finora-control-center-branch-actions="true"] {
+    display: contents !important;
+  }
+
+  [data-finora-control-center-branch-action-layout="true"]
+  > [data-finora-control-center-view-details="true"] {
+    width: 100% !important;
+    margin-top: 0 !important;
+  }
+}

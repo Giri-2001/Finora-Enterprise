@@ -31,6 +31,7 @@
 
 import {
   BrowserWindow,
+  dialog,
   ipcMain,
 } from "electron";
 
@@ -132,6 +133,9 @@ import {
 } from "./finoraControlCenterAdminAuthorityRecoveryCoordinator.js";
 
 import {
+  exportFinoraControlCenterPortableStateToPath,
+} from "./finoraControlCenterPortableStateExportService.js";
+import {
   FINORA_CONTROL_CENTER_ADMIN_SECURITY_CODE_MAX_LENGTH,
   FINORA_CONTROL_CENTER_ADMIN_SECURITY_CODE_MIN_LENGTH,
 } from "./finoraControlCenterAdminAuthorityRecoveryBundle.js";
@@ -151,6 +155,29 @@ import {
 } from "./finoraControlCenterWindow.js";
 
 import {
+  assertFinoraDeveloperControlCenterUnlocked,
+  changeFinoraDeveloperControlCenterSecurityCode,
+  lockFinoraDeveloperControlCenter,
+  readFinoraDeveloperControlCenterSecuritySessionState,
+  unlockFinoraDeveloperControlCenter,
+} from "./finoraDeveloperControlCenterSecurityAuthority.js";
+
+import {
+  enrollFinoraDeveloperSecurityCodeFromAdminRecovery,
+} from "./finoraDeveloperControlCenterSecurityCodeRecoveryEnrollmentProductionAuthority.js";
+import {
+  resolveFinoraDeveloperControlCenterBootstrapState,
+} from "./finoraDeveloperControlCenterBootstrapAuthority.js";
+
+import {
+  readFinoraDeveloperSecurityCodeConfigurationState,
+} from "./finoraDeveloperControlCenterSecurityCodeStore.js";
+
+import {
+  FINORA_DEVELOPER_SECURITY_CODE_MAX_LENGTH,
+} from "./finoraDeveloperControlCenterSecurityCodeCrypto.js";
+
+import {
   openVerifiedFinoraBranchCertificationRotationRequest,
 } from "./finoraBranchCertificationRotationRequestFileTransport.js";
 
@@ -168,6 +195,21 @@ import {
 // ============================================================
 
 export const FINORA_CONTROL_CENTER_IPC_CHANNELS = {
+  GET_DEVELOPER_SECURITY_STATE:
+    "finora:control-center:get-developer-security-state",
+
+  INITIALIZE_DEVELOPER_SECURITY_CODE_FROM_ADMIN_RECOVERY:
+    "finora:control-center:initialize-developer-security-code-from-admin-recovery",
+
+  UNLOCK_DEVELOPER_CONTROL_CENTER:
+    "finora:control-center:unlock-developer-control-center",
+
+  LOCK_DEVELOPER_CONTROL_CENTER:
+    "finora:control-center:lock-developer-control-center",
+
+  CHANGE_DEVELOPER_SECURITY_CODE:
+    "finora:control-center:change-developer-security-code",
+
   GET_TRUST_RECORD:
     "finora:control-center:get-trust-record",
 
@@ -240,6 +282,8 @@ export const FINORA_CONTROL_CENTER_IPC_CHANNELS = {
   ISSUE_AND_EXPORT_CONTROL_BUNDLE:
     "finora:control-center:issue-and-export-control-bundle",
 
+  EXPORT_PORTABLE_STATE:
+    "finora:control-center:export-portable-state",
   EXPORT_ADMIN_AUTHORITY_RECOVERY:
     "finora:control-center:export-admin-authority-recovery",
 
@@ -433,6 +477,147 @@ function isBaseIssuanceRequest(
 }
 
 // ============================================================
+// DEVELOPER SESSION IPC GATE
+//
+// DEFAULT:
+// - Every existing Control Center IPC handler requires an
+//   unlocked Developer Control Center session.
+//
+// EXACT LOCKED-STATE EXCEPTION:
+// - IMPORT_AND_RECOVER_ADMIN_AUTHORITY
+//
+// WHY:
+// - Fresh-machine Admin Authority Recovery must be possible
+//   before a local Developer Security Code session exists.
+// - The recovery handler still independently requires the
+//   dedicated trusted renderer, exact main frame, and valid
+//   Admin Authority Recovery Security Code.
+//
+// No other existing business / issuance / export handler may
+// execute while the Developer session is locked.
+// ============================================================
+
+type FinoraControlCenterInvokeHandler =
+  Parameters<
+    typeof ipcMain.handle
+  >[1];
+
+function registerFinoraDeveloperProtectedControlCenterHandler(
+  channel:
+    string,
+  handler:
+    FinoraControlCenterInvokeHandler,
+): void {
+
+  ipcMain.handle(
+    channel,
+    async (
+      event,
+      ...args
+    ) => {
+
+      const recoveryAllowedWhileLocked =
+        channel ===
+          FINORA_CONTROL_CENTER_IPC_CHANNELS
+            .IMPORT_AND_RECOVER_ADMIN_AUTHORITY;
+
+      if (
+        !recoveryAllowedWhileLocked
+      ) {
+        try {
+          assertFinoraDeveloperControlCenterUnlocked();
+        } catch (error) {
+          return failure(
+            getErrorMessage(
+              error,
+            ),
+          );
+        }
+      }
+
+      return handler(
+        event,
+        ...args,
+      );
+    },
+  );
+}
+
+const FINORA_ADMIN_RECOVERY_SECURITY_CODE_IPC_MAX_LENGTH =
+  20;
+
+// ============================================================
+// DEVELOPER SECURITY SESSION IPC
+//
+// These handlers are intentionally outside the normal unlocked
+// business/admin gate because they query, establish, or close
+// that in-memory Developer session.
+//
+// They are NOT public IPC:
+// - dedicated Control Center renderer required,
+// - exact owning BrowserWindow required,
+// - exact mainFrame required.
+// ============================================================
+
+function registerFinoraDeveloperSecurityControlCenterHandler(
+  channel:
+    string,
+  handler:
+    FinoraControlCenterInvokeHandler,
+): void {
+
+  ipcMain.handle(
+    channel,
+    async (
+      event,
+      ...args
+    ) => {
+
+      if (
+        !isTrustedFinoraControlCenterRenderer(
+          event.senderFrame,
+        )
+      ) {
+        return failure(
+          "FINORA Developer security access is restricted to the dedicated Control Center renderer.",
+        );
+      }
+
+      const parentWindow =
+        BrowserWindow.fromWebContents(
+          event.sender,
+        );
+
+      if (
+        !parentWindow ||
+        parentWindow.isDestroyed() ||
+        parentWindow.webContents !==
+          event.sender ||
+        event.senderFrame !==
+          parentWindow.webContents.mainFrame
+      ) {
+        return failure(
+          "FINORA Developer security access is restricted to the dedicated Control Center main frame.",
+        );
+      }
+
+      try {
+        return await handler(
+          event,
+          ...args,
+        );
+      } catch (error) {
+        return failure(
+          getErrorMessage(
+            error,
+          ),
+        );
+      }
+    },
+  );
+}
+
+// ============================================================
 // PRIVILEGED EXECUTION
 // ============================================================
 
@@ -621,7 +806,7 @@ export function registerFinoraControlCenterHandlers():
   // EXACT-BRANCH PRICING
   // ----------------------------------------------------------
 
-  ipcMain.handle(
+  registerFinoraDeveloperProtectedControlCenterHandler(
     FINORA_CONTROL_CENTER_IPC_CHANNELS.GET_FINORA_BRANCH_PRICING,
     async (
       event,
@@ -648,7 +833,7 @@ export function registerFinoraControlCenterHandlers():
     },
   );
 
-  ipcMain.handle(
+  registerFinoraDeveloperProtectedControlCenterHandler(
     FINORA_CONTROL_CENTER_IPC_CHANNELS.UPDATE_FINORA_BRANCH_PRICING,
     async (
       event,
@@ -678,7 +863,7 @@ export function registerFinoraControlCenterHandlers():
   // FINORA INCOME GLOBAL PRICING
   // ----------------------------------------------------------
 
-  ipcMain.handle(
+  registerFinoraDeveloperProtectedControlCenterHandler(
     FINORA_CONTROL_CENTER_IPC_CHANNELS.GET_FINORA_INCOME_PRICING,
     async (
       event,
@@ -701,7 +886,7 @@ export function registerFinoraControlCenterHandlers():
     },
   );
 
-  ipcMain.handle(
+  registerFinoraDeveloperProtectedControlCenterHandler(
     FINORA_CONTROL_CENTER_IPC_CHANNELS.UPDATE_FINORA_INCOME_PRICING,
     async (
       event,
@@ -738,10 +923,331 @@ export function registerFinoraControlCenterHandlers():
     true;
 
   // ----------------------------------------------------------
+  // DEVELOPER SECURITY SESSION STATE
+  //
+  // LOCKED-STATE CALLABLE.
+  // No private key / verifier / plaintext Security Code leaves
+  // the main process.
+  // ----------------------------------------------------------
+
+  registerFinoraDeveloperSecurityControlCenterHandler(
+    FINORA_CONTROL_CENTER_IPC_CHANNELS
+      .GET_DEVELOPER_SECURITY_STATE,
+    async () => {
+
+      const bootstrap =
+        await resolveFinoraDeveloperControlCenterBootstrapState();
+
+      let securityCodeConfigured =
+        false;
+
+      if (
+        bootstrap.status ===
+          "READY_WITH_EXISTING_AUTHORITY"
+      ) {
+        const configuration =
+          await readFinoraDeveloperSecurityCodeConfigurationState();
+
+        securityCodeConfigured =
+          configuration.configured;
+      }
+
+      return success({
+        bootstrapStatus:
+          bootstrap.status,
+
+        authorityPresent:
+          bootstrap.authorityPresent,
+
+        securityCodeConfigured,
+
+        session:
+          readFinoraDeveloperControlCenterSecuritySessionState(),
+      });
+    },
+  );
+
+  // ----------------------------------------------------------
+  // DEVELOPER SECURITY SESSION UNLOCK
+  //
+  // LOCKED-STATE CALLABLE.
+  // Candidate Security Code is forwarded directly to the
+  // main-process session verifier and is never persisted here.
+  // ----------------------------------------------------------
+
+  registerFinoraDeveloperSecurityControlCenterHandler(
+  FINORA_CONTROL_CENTER_IPC_CHANNELS
+    .INITIALIZE_DEVELOPER_SECURITY_CODE_FROM_ADMIN_RECOVERY,
+  async (
+    _event,
+    request:
+      unknown,
+  ) => {
+
+    if (
+      !isRecord(
+        request,
+      )
+    ) {
+      return failure(
+        "FINORA Developer Security Code initialization request is invalid.",
+      );
+    }
+
+    const requestKeys =
+      Object.keys(
+        request,
+      ).sort();
+
+    const expectedRequestKeys =
+      [
+        "adminRecoverySecurityCode",
+        "newDeveloperSecurityCode",
+      ];
+
+    if (
+      requestKeys.length !==
+        expectedRequestKeys.length ||
+      !requestKeys.every(
+        (
+          key,
+          index,
+        ) =>
+          key ===
+            expectedRequestKeys[index],
+      )
+    ) {
+      return failure(
+        "FINORA Developer Security Code initialization request is invalid.",
+      );
+    }
+
+    const adminRecoverySecurityCode =
+      request.adminRecoverySecurityCode;
+
+    const newDeveloperSecurityCode =
+      request.newDeveloperSecurityCode;
+
+    if (
+      typeof adminRecoverySecurityCode !==
+        "string" ||
+      adminRecoverySecurityCode.length ===
+        0 ||
+      adminRecoverySecurityCode.length >
+        FINORA_ADMIN_RECOVERY_SECURITY_CODE_IPC_MAX_LENGTH ||
+      typeof newDeveloperSecurityCode !==
+        "string" ||
+      newDeveloperSecurityCode.length ===
+        0 ||
+      newDeveloperSecurityCode.length >
+        FINORA_DEVELOPER_SECURITY_CODE_MAX_LENGTH
+    ) {
+      return failure(
+        "FINORA Developer Security Code initialization request is invalid.",
+      );
+    }
+
+    /*
+     * The Recovery-backed production authority owns:
+     * - native Recovery-file selection,
+     * - Admin Recovery authentication,
+     * - fresh restore / existing exact match,
+     * - first local Developer Security Code persistence.
+     *
+     * This IPC handler owns no recovery or persistence authority.
+     */
+    const result =
+      await enrollFinoraDeveloperSecurityCodeFromAdminRecovery(
+        adminRecoverySecurityCode,
+        newDeveloperSecurityCode,
+      );
+
+    /*
+     * Do NOT automatically unlock here.
+     *
+     * Successful first setup leaves the Developer session locked.
+     * The configured Developer Security Code must subsequently pass
+     * the normal UNLOCK_DEVELOPER_CONTROL_CENTER authority.
+     */
+    return success(
+      result,
+    );
+  },
+);
+registerFinoraDeveloperSecurityControlCenterHandler(
+    FINORA_CONTROL_CENTER_IPC_CHANNELS
+      .UNLOCK_DEVELOPER_CONTROL_CENTER,
+    async (
+      _event,
+      securityCode:
+        unknown,
+    ) => {
+
+      if (
+        typeof securityCode !==
+          "string" ||
+        Array.from(
+          securityCode,
+        ).length >
+          FINORA_DEVELOPER_SECURITY_CODE_MAX_LENGTH
+      ) {
+        return failure(
+          "A valid FINORA Developer Security Code input is required.",
+        );
+      }
+
+      return success(
+        await unlockFinoraDeveloperControlCenter(
+          securityCode,
+        ),
+      );
+    },
+  );
+
+  // ----------------------------------------------------------
+  // DEVELOPER SECURITY SESSION LOCK
+  //
+  // LOCKED-STATE CALLABLE and idempotent.
+  // ----------------------------------------------------------
+
+  registerFinoraDeveloperSecurityControlCenterHandler(
+    FINORA_CONTROL_CENTER_IPC_CHANNELS
+      .LOCK_DEVELOPER_CONTROL_CENTER,
+    async () => {
+
+      lockFinoraDeveloperControlCenter();
+
+      return success({
+        locked:
+          true as const,
+
+        session:
+          readFinoraDeveloperControlCenterSecuritySessionState(),
+      });
+    },
+  );
+
+  // ----------------------------------------------------------
   // PUBLIC TRUST RECORD
   // ----------------------------------------------------------
 
-  ipcMain.handle(
+  // ----------------------------------------------------------
+  // DEVELOPER SECURITY CODE CHANGE
+  //
+  // UNLOCKED-STATE ONLY.
+  //
+  // The normal protected-handler gate first requires an
+  // unlocked Developer Control Center session.
+  //
+  // The production change authority independently reasserts
+  // the unlocked session and the Security Code store verifies
+  // oldSecurityCode before replacing the verifier.
+  // ----------------------------------------------------------
+
+  registerFinoraDeveloperProtectedControlCenterHandler(
+    FINORA_CONTROL_CENTER_IPC_CHANNELS
+      .CHANGE_DEVELOPER_SECURITY_CODE,
+    async (
+      event,
+      request:
+        unknown,
+    ) => {
+
+      if (
+        !isTrustedFinoraControlCenterRenderer(
+          event.senderFrame,
+        )
+      ) {
+        return failure(
+          "FINORA Developer Security Code change is restricted to the dedicated Control Center renderer.",
+        );
+      }
+
+      if (
+        !isRecord(
+          request,
+        )
+      ) {
+        return failure(
+          "FINORA Developer Security Code change request is invalid.",
+        );
+      }
+
+      const requestKeys =
+        Object.keys(
+          request,
+        ).sort();
+
+      /*
+       * Object.keys(request) is sorted above.
+       * Keep expected keys in the same lexical order.
+       */
+      const expectedRequestKeys =
+        [
+          "newDeveloperSecurityCode",
+          "oldSecurityCode",
+        ];
+
+      if (
+        requestKeys.length !==
+          expectedRequestKeys.length ||
+        !requestKeys.every(
+          (
+            key,
+            index,
+          ) =>
+            key ===
+              expectedRequestKeys[index],
+        )
+      ) {
+        return failure(
+          "FINORA Developer Security Code change request is invalid.",
+        );
+      }
+
+      const oldSecurityCode =
+        request.oldSecurityCode;
+
+      const newDeveloperSecurityCode =
+        request.newDeveloperSecurityCode;
+
+      if (
+        typeof oldSecurityCode !==
+          "string" ||
+        Array.from(
+          oldSecurityCode,
+        ).length ===
+          0 ||
+        Array.from(
+          oldSecurityCode,
+        ).length >
+          FINORA_DEVELOPER_SECURITY_CODE_MAX_LENGTH ||
+        typeof newDeveloperSecurityCode !==
+          "string" ||
+        Array.from(
+          newDeveloperSecurityCode,
+        ).length ===
+          0 ||
+        Array.from(
+          newDeveloperSecurityCode,
+        ).length >
+          FINORA_DEVELOPER_SECURITY_CODE_MAX_LENGTH
+      ) {
+        return failure(
+          "FINORA Developer Security Code change request is invalid.",
+        );
+      }
+
+      return executePrivileged(
+        () =>
+          changeFinoraDeveloperControlCenterSecurityCode(
+            oldSecurityCode,
+            newDeveloperSecurityCode,
+          ),
+      );
+    },
+  );
+  registerFinoraDeveloperProtectedControlCenterHandler(
     FINORA_CONTROL_CENTER_IPC_CHANNELS.GET_TRUST_RECORD,
     async (
       event,
@@ -775,7 +1281,7 @@ export function registerFinoraControlCenterHandlers():
   // - No registry mutation capability crosses IPC.
   // ----------------------------------------------------------
 
-  ipcMain.handle(
+  registerFinoraDeveloperProtectedControlCenterHandler(
     FINORA_CONTROL_CENTER_IPC_CHANNELS.GET_BRANCH_REGISTRY,
     async (
       event,
@@ -810,7 +1316,7 @@ export function registerFinoraControlCenterHandlers():
   // - No wallet mutation.
   // ----------------------------------------------------------
 
-  ipcMain.handle(
+  registerFinoraDeveloperProtectedControlCenterHandler(
     FINORA_CONTROL_CENTER_IPC_CHANNELS.GET_BRANCH_DIRECTORY_METADATA,
     async (
       event,
@@ -845,7 +1351,7 @@ export function registerFinoraControlCenterHandlers():
   // - No issuance authority.
   // ----------------------------------------------------------
 
-  ipcMain.handle(
+  registerFinoraDeveloperProtectedControlCenterHandler(
     FINORA_CONTROL_CENTER_IPC_CHANNELS.GET_WALLET_HISTORY,
     async (
       event,
@@ -893,7 +1399,7 @@ export function registerFinoraControlCenterHandlers():
   // authoritative Electron-main responsibilities.
   // ----------------------------------------------------------
 
-  ipcMain.handle(
+  registerFinoraDeveloperProtectedControlCenterHandler(
     FINORA_CONTROL_CENTER_IPC_CHANNELS
       .BACKFILL_HISTORICAL_ENROLLMENT_BRANCH,
     async (
@@ -994,7 +1500,7 @@ export function registerFinoraControlCenterHandlers():
   // ----------------------------------------------------------
   // BRANCH CERTIFICATION ROTATION REQUEST — OPEN + VERIFY
   // ----------------------------------------------------------
-  ipcMain.handle(
+  registerFinoraDeveloperProtectedControlCenterHandler(
     FINORA_CONTROL_CENTER_IPC_CHANNELS
       .OPEN_BRANCH_CERTIFICATION_ROTATION_REQUEST,
     async (
@@ -1115,7 +1621,7 @@ export function registerFinoraControlCenterHandlers():
   //   request is permanently consumed even if Registry commit
   //   fails, because a signed authority now exists externally.
   // ----------------------------------------------------------
-  ipcMain.handle(
+  registerFinoraDeveloperProtectedControlCenterHandler(
     FINORA_CONTROL_CENTER_IPC_CHANNELS
       .ISSUE_AND_EXPORT_BRANCH_CERTIFICATION_ROTATION,
     async (
@@ -1243,7 +1749,7 @@ export function registerFinoraControlCenterHandlers():
   // ----------------------------------------------------------
   // INSTALLATION ENROLLMENT REQUEST
   // ----------------------------------------------------------
-  ipcMain.handle(
+  registerFinoraDeveloperProtectedControlCenterHandler(
     FINORA_CONTROL_CENTER_IPC_CHANNELS
       .OPEN_INSTALLATION_ENROLLMENT_REQUEST,
     async (
@@ -1362,7 +1868,7 @@ export function registerFinoraControlCenterHandlers():
   // later privileged Approve / Decline operation.
   // ----------------------------------------------------------
 
-  ipcMain.handle(
+  registerFinoraDeveloperProtectedControlCenterHandler(
     FINORA_CONTROL_CENTER_IPC_CHANNELS
       .OPEN_WALLET_RECHARGE_REQUEST,
     async (
@@ -1521,7 +2027,7 @@ export function registerFinoraControlCenterHandlers():
   //   request has replaced that WebContents session.
   // ----------------------------------------------------------
 
-  ipcMain.handle(
+  registerFinoraDeveloperProtectedControlCenterHandler(
     FINORA_CONTROL_CENTER_IPC_CHANNELS
       .APPROVE_AND_EXPORT_WALLET_RECHARGE_REQUEST,
     async (
@@ -1761,7 +2267,7 @@ export function registerFinoraControlCenterHandlers():
     },
   );
 
-  ipcMain.handle(
+  registerFinoraDeveloperProtectedControlCenterHandler(
     FINORA_CONTROL_CENTER_IPC_CHANNELS
       .ISSUE_AND_EXPORT_INSTALLATION_ENROLLMENT_RESPONSE,
     async (
@@ -2007,7 +2513,7 @@ export function registerFinoraControlCenterHandlers():
   // when no newer verified Request has replaced it.
   // ----------------------------------------------------------
 
-  ipcMain.handle(
+  registerFinoraDeveloperProtectedControlCenterHandler(
     FINORA_CONTROL_CENTER_IPC_CHANNELS
       .DECLINE_AND_EXPORT_WALLET_RECHARGE_REQUEST,
     async (
@@ -2264,7 +2770,7 @@ export function registerFinoraControlCenterHandlers():
   // ----------------------------------------------------------  // BRANCH ACTIVATION
   // ----------------------------------------------------------
 
-  ipcMain.handle(
+  registerFinoraDeveloperProtectedControlCenterHandler(
     FINORA_CONTROL_CENTER_IPC_CHANNELS.ISSUE_BRANCH_ACTIVATION,
     async (
       event,
@@ -2314,7 +2820,7 @@ export function registerFinoraControlCenterHandlers():
   // BRANCH ACCESS
   // ----------------------------------------------------------
 
-  ipcMain.handle(
+  registerFinoraDeveloperProtectedControlCenterHandler(
     FINORA_CONTROL_CENTER_IPC_CHANNELS.ISSUE_BRANCH_ACCESS,
     async (
       event,
@@ -2364,7 +2870,7 @@ export function registerFinoraControlCenterHandlers():
   // BRANCH DEVICE REVOCATION
   // ----------------------------------------------------------
 
-  ipcMain.handle(
+  registerFinoraDeveloperProtectedControlCenterHandler(
     FINORA_CONTROL_CENTER_IPC_CHANNELS.ISSUE_BRANCH_DEVICE_REVOCATION,
     async (
       event,
@@ -2414,7 +2920,7 @@ export function registerFinoraControlCenterHandlers():
   // STORAGE ENTITLEMENT
   // ----------------------------------------------------------
 
-  ipcMain.handle(
+  registerFinoraDeveloperProtectedControlCenterHandler(
     FINORA_CONTROL_CENTER_IPC_CHANNELS.ISSUE_STORAGE_ENTITLEMENT,
     async (
       event,
@@ -2464,7 +2970,7 @@ export function registerFinoraControlCenterHandlers():
   // PORTABLE STORAGE ENTITLEMENT
   // ----------------------------------------------------------
 
-  ipcMain.handle(
+  registerFinoraDeveloperProtectedControlCenterHandler(
     FINORA_CONTROL_CENTER_IPC_CHANNELS.ISSUE_PORTABLE_STORAGE_ENTITLEMENT,
     async (
       event,
@@ -2514,7 +3020,7 @@ export function registerFinoraControlCenterHandlers():
   // BUSINESS PROFILE
   // ----------------------------------------------------------
 
-  ipcMain.handle(
+  registerFinoraDeveloperProtectedControlCenterHandler(
     FINORA_CONTROL_CENTER_IPC_CHANNELS.ISSUE_BUSINESS_PROFILE,
     async (
       event,
@@ -2564,7 +3070,7 @@ export function registerFinoraControlCenterHandlers():
   // PRICING POLICY
   // ----------------------------------------------------------
 
-  ipcMain.handle(
+  registerFinoraDeveloperProtectedControlCenterHandler(
     FINORA_CONTROL_CENTER_IPC_CHANNELS.ISSUE_PRICING_POLICY,
     async (
       event,
@@ -2614,7 +3120,7 @@ export function registerFinoraControlCenterHandlers():
   // WALLET RECHARGE
   // ----------------------------------------------------------
 
-  ipcMain.handle(
+  registerFinoraDeveloperProtectedControlCenterHandler(
     FINORA_CONTROL_CENTER_IPC_CHANNELS.ISSUE_WALLET_RECHARGE,
     async (
       event,
@@ -2676,7 +3182,7 @@ export function registerFinoraControlCenterHandlers():
   // Issuance-ledger gaps are permitted by the current contract.
   // ----------------------------------------------------------
 
-  ipcMain.handle(
+  registerFinoraDeveloperProtectedControlCenterHandler(
     FINORA_CONTROL_CENTER_IPC_CHANNELS
       .ISSUE_AND_EXPORT_CONTROL_BUNDLE,
     async (
@@ -2753,7 +3259,262 @@ export function registerFinoraControlCenterHandlers():
   // No filesystem path or private signing material is returned.
   // ----------------------------------------------------------
 
-  ipcMain.handle(
+  // ----------------------------------------------------------
+  // PORTABLE STATE WINDOWS EXPORT
+  //
+  // Native Save dialog owns targetPath.
+  // Renderer supplies Transfer Code only.
+  // Service targetPath is deliberately stripped from response.
+  // ----------------------------------------------------------
+
+  registerFinoraDeveloperProtectedControlCenterHandler(
+    FINORA_CONTROL_CENTER_IPC_CHANNELS
+      .EXPORT_PORTABLE_STATE,
+    async (
+      event,
+      request:
+        unknown,
+    ) => {
+
+      if (
+        !isTrustedFinoraControlCenterRenderer(
+          event.senderFrame,
+        )
+      ) {
+
+        return failure(
+          "FINORA Portable State export is restricted to the dedicated Control Center renderer.",
+        );
+      }
+
+
+      const parentWindow =
+        BrowserWindow.fromWebContents(
+          event.sender,
+        );
+
+
+      if (
+        !parentWindow ||
+        parentWindow.isDestroyed() ||
+        parentWindow.webContents !==
+          event.sender ||
+        event.senderFrame !==
+          parentWindow.webContents.mainFrame
+      ) {
+
+        return failure(
+          "FINORA Portable State export is restricted to the dedicated Control Center main frame.",
+        );
+      }
+
+
+      if (
+        !isRecord(
+          request,
+        )
+      ) {
+
+        return failure(
+          "A valid FINORA Portable State export request is required.",
+        );
+      }
+
+
+      const requestKeys =
+        Object.keys(
+          request,
+        ).sort();
+
+
+      if (
+        requestKeys.length !==
+          1 ||
+        requestKeys[0] !==
+          "transferCode"
+      ) {
+
+        return failure(
+          "FINORA Portable State export request contains unsupported fields.",
+        );
+      }
+
+
+      const transferCode =
+        request.transferCode;
+
+
+      if (
+        typeof transferCode !==
+          "string"
+      ) {
+
+        return failure(
+          "A valid FINORA Portable State Transfer Code is required.",
+        );
+      }
+
+
+      const transferCodeLength =
+        Array.from(
+          transferCode,
+        ).length;
+
+
+      if (
+        transferCodeLength <
+          12 ||
+        transferCodeLength >
+          128 ||
+        transferCode.trim() !==
+          transferCode ||
+        /[\u0000-\u001F\u007F]/u.test(
+          transferCode,
+        )
+      ) {
+
+        return failure(
+          "A valid FINORA Portable State Transfer Code is required.",
+        );
+      }
+
+
+      return executePrivileged(
+        async () => {
+
+          const now =
+            new Date();
+
+
+          const two =
+            (
+              value:
+                number,
+            ) =>
+              String(
+                value,
+              ).padStart(
+                2,
+                "0",
+              );
+
+
+          const stamp =
+            String(
+              now.getFullYear(),
+            ) +
+            two(
+              now.getMonth() +
+                1,
+            ) +
+            two(
+              now.getDate(),
+            ) +
+            "-" +
+            two(
+              now.getHours(),
+            ) +
+            two(
+              now.getMinutes(),
+            ) +
+            two(
+              now.getSeconds(),
+            );
+
+
+          const selection =
+            await dialog.showSaveDialog(
+              parentWindow,
+              {
+                title:
+                  "Export FINORA Portable State",
+
+                defaultPath:
+                  `FINORA-Control-Center-Portable-State-${stamp}.finora`,
+
+                buttonLabel:
+                  "Export .finora",
+
+                filters: [
+                  {
+                    name:
+                      "FINORA Portable State",
+
+                    extensions: [
+                      "finora",
+                    ],
+                  },
+                ],
+
+                properties: [
+                  "showOverwriteConfirmation",
+                  "createDirectory",
+                ],
+              },
+            );
+
+
+          if (
+            selection.canceled ||
+            !selection.filePath
+          ) {
+
+            return {
+              status:
+                "CANCELLED" as const,
+            };
+          }
+
+
+          let targetPath =
+            selection.filePath;
+
+
+          if (
+            !targetPath
+              .toLowerCase()
+              .endsWith(
+                ".finora",
+              )
+          ) {
+
+            targetPath +=
+              ".finora";
+          }
+
+
+          const exported =
+            await exportFinoraControlCenterPortableStateToPath({
+              targetPath,
+              transferCode,
+            });
+
+
+          return {
+            status:
+              exported.status,
+
+            bytes:
+              exported.bytes,
+
+            stateGeneration:
+              exported.stateGeneration,
+
+            payloadSha256:
+              exported.payloadSha256,
+
+            parentPayloadSha256:
+              exported.parentPayloadSha256,
+
+            transferBundleSha256:
+              exported.transferBundleSha256,
+          };
+        },
+      );
+    },
+  );
+
+  registerFinoraDeveloperProtectedControlCenterHandler(
     FINORA_CONTROL_CENTER_IPC_CHANNELS
       .EXPORT_ADMIN_AUTHORITY_RECOVERY,
     async (
@@ -2815,7 +3576,7 @@ export function registerFinoraControlCenterHandlers():
   // Renderer supplies no path and no file bytes.
   // ----------------------------------------------------------
 
-  ipcMain.handle(
+  registerFinoraDeveloperProtectedControlCenterHandler(
     FINORA_CONTROL_CENTER_IPC_CHANNELS
       .IMPORT_AND_RECOVER_ADMIN_AUTHORITY,
     async (

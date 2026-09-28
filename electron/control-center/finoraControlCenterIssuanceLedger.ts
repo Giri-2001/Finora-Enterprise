@@ -167,7 +167,7 @@ export interface FinoraControlCenterIssuanceReservation {
     string;
 }
 
-interface FinoraControlCenterIssuanceSequenceRecord {
+export interface FinoraControlCenterIssuanceSequenceRecord {
   issuerId:
     string;
 
@@ -193,7 +193,7 @@ interface FinoraControlCenterIssuanceSequenceRecord {
     string;
 }
 
-interface FinoraControlCenterIssuanceLedger {
+export interface FinoraControlCenterIssuanceLedger {
   sequences:
     FinoraControlCenterIssuanceSequenceRecord[];
 
@@ -551,6 +551,39 @@ async function readLedger():
 // ============================================================
 // HISTORICAL BRANCH_ACCESS BRANCH HIGH-WATER
 // ============================================================
+
+export async function loadFinoraControlCenterIssuanceLedgerSnapshot():
+  Promise<
+    FinoraControlCenterIssuanceLedger | undefined
+  > {
+
+  const ledger =
+    await readLedger();
+
+  if (!ledger) {
+    return undefined;
+  }
+
+  return {
+    sequences:
+      ledger.sequences.map(
+        (
+          record,
+        ) => ({
+          ...record,
+        }),
+      ),
+
+    createdAt:
+      ledger.createdAt,
+
+    updatedAt:
+      ledger.updatedAt,
+
+    schemaVersion:
+      ledger.schemaVersion,
+  };
+}
 
 export async function getFinoraHistoricalBranchAccessIssuanceHighWater(
   scope:

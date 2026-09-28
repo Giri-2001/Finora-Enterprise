@@ -47,7 +47,7 @@ export interface FinoraPortableBranchAccessIssuanceReservation {
     string;
 }
 
-interface FinoraPortableBranchAccessSequenceRecord {
+export interface FinoraPortableBranchAccessSequenceRecord {
   issuerId:
     string;
 
@@ -70,7 +70,7 @@ interface FinoraPortableBranchAccessSequenceRecord {
     string;
 }
 
-interface FinoraPortableBranchAccessIssuanceLedger {
+export interface FinoraPortableBranchAccessIssuanceLedger {
   sequences:
     FinoraPortableBranchAccessSequenceRecord[];
 
@@ -733,6 +733,39 @@ async function reserveInternal(
 let portableBranchAccessIssuanceQueue:
   Promise<void> =
     Promise.resolve();
+
+export async function loadFinoraPortableBranchAccessIssuanceLedgerSnapshot():
+  Promise<
+    FinoraPortableBranchAccessIssuanceLedger | undefined
+  > {
+
+  const ledger =
+    await readLedger();
+
+  if (!ledger) {
+    return undefined;
+  }
+
+  return {
+    sequences:
+      ledger.sequences.map(
+        (
+          record,
+        ) => ({
+          ...record,
+        }),
+      ),
+
+    createdAt:
+      ledger.createdAt,
+
+    updatedAt:
+      ledger.updatedAt,
+
+    schemaVersion:
+      ledger.schemaVersion,
+  };
+}
 
 export function reserveFinoraPortableBranchAccessIssuance(
   scope:

@@ -121,6 +121,12 @@ public final class FinoraControlPlugin
     private FinoraBranchLoginSessionAuthority
         loginSessionAuthority;
 
+    private FinoraPortableBranchAuthStore
+        walletBranchCertificationPortableAuthStore;
+
+    private FinoraWalletBranchCertificationDeviceVault
+        walletBranchCertificationDeviceVault;
+
     // ========================================================
     // LOAD
     // ========================================================
@@ -140,6 +146,14 @@ public final class FinoraControlPlugin
 
         FinoraPortableBranchAuthStore portableBranchAuthStore =
             new FinoraPortableBranchAuthStore(
+                getContext()
+            );
+
+        this.walletBranchCertificationPortableAuthStore =
+            portableBranchAuthStore;
+
+        this.walletBranchCertificationDeviceVault =
+            new FinoraWalletBranchCertificationDeviceVault(
                 getContext()
             );
 
@@ -776,6 +790,15 @@ public final class FinoraControlPlugin
                 return;
             }
 
+            if (
+                !restoreWalletBranchCertificationAuthority(
+                    call,
+                    storageMode,
+                    authorityResult.data
+                )
+            ) {
+                return;
+            }
             resolveLoginSessionResult(
                 call,
                 loginSessionAuthority.issue(
@@ -793,6 +816,260 @@ public final class FinoraControlPlugin
         }
     }
 
+    private boolean restoreWalletBranchCertificationAuthority(
+        PluginCall call,
+        String storageMode,
+        FinoraBranchPasswordFirstLoginAuthority.AuthenticatedIdentity identity
+    ) {
+
+        if (
+            call == null ||
+            identity == null ||
+            walletBranchCertificationDeviceVault == null ||
+            walletBranchCertificationPortableAuthStore == null
+        ) {
+            resolveLoginSessionFailure(
+                call,
+                FinoraBranchLoginSessionAuthority
+                    .ERROR_CONTROL_STATE_FAILED,
+                "FINORA Wallet Branch Certification secure authority is unavailable."
+            );
+
+            return false;
+        }
+
+        FinoraBranchCertificationCryptoValidator.Material material;
+
+        try {
+            material =
+                walletBranchCertificationDeviceVault.read(
+                    identity.ownerId,
+                    identity.businessId,
+                    identity.branchId
+                );
+        }
+        catch (Exception error) {
+            resolveLoginSessionFailure(
+                call,
+                FinoraBranchLoginSessionAuthority
+                    .ERROR_CONTROL_STATE_FAILED,
+                "FINORA Wallet Branch Certification secure vault could not be validated."
+            );
+
+            return false;
+        }
+
+        if (material == null) {
+            String securityCode =
+                call.getString(
+                    "securityCode"
+                );
+
+            if (
+                securityCode == null ||
+                securityCode.trim().length() == 0
+            ) {
+                resolveLoginSessionFailure(
+                    call,
+                    FinoraBranchPasswordFirstLoginBridgeContract
+                        .SECURITY_CODE_REQUIRED,
+                    "Security Code is required once to secure Wallet Branch Certification on this device."
+                );
+
+                return false;
+            }
+
+            final String serializedPortableAuth;
+
+            try {
+                serializedPortableAuth =
+                    walletBranchCertificationPortableAuthStore.read(
+                        storageMode
+                    );
+            }
+            catch (Exception error) {
+                resolveLoginSessionFailure(
+                    call,
+                    FinoraBranchLoginSessionAuthority
+                        .ERROR_CONTROL_STATE_FAILED,
+                    "FINORA Portable Branch Auth could not be read for Wallet Branch Certification."
+                );
+
+                return false;
+            }
+
+            if (
+                serializedPortableAuth == null ||
+                serializedPortableAuth.trim().length() == 0
+            ) {
+                resolveLoginSessionFailure(
+                    call,
+                    FinoraBranchLoginSessionAuthority
+                        .ERROR_CONTROL_STATE_FAILED,
+                    "FINORA Portable Branch Auth is unavailable for Wallet Branch Certification."
+                );
+
+                return false;
+            }
+
+            final FinoraPortableBranchAuthEnvelopeCodec.Envelope envelope;
+
+            try {
+                envelope =
+                    FinoraPortableBranchAuthEnvelopeCodec.parse(
+                        serializedPortableAuth
+                    );
+            }
+            catch (IllegalArgumentException error) {
+                resolveLoginSessionFailure(
+                    call,
+                    FinoraBranchLoginSessionAuthority
+                        .ERROR_CONTROL_STATE_FAILED,
+                    "FINORA Portable Branch Auth envelope is invalid."
+                );
+
+                return false;
+            }
+
+            final FinoraPortableBranchAuthPayloadCodec.Payload payload;
+
+            try {
+                payload =
+                    FinoraPortableBranchAuthAuthenticatedDecryptAuthority
+                        .decrypt(
+                            envelope,
+                            call.getString(
+                                "password"
+                            ),
+                            securityCode,
+                            new FinoraPortableBranchAuthEnvelopeCodec.Scope(
+                                identity.ownerId,
+                                identity.businessId,
+                                identity.branchId
+                            )
+                        );
+            }
+            catch (
+                FinoraPortableBranchAuthDecryptAuthority.CryptoException
+                    error
+            ) {
+                resolveLoginSessionFailure(
+                    call,
+                    FinoraBranchPasswordFirstLoginBridgeContract
+                        .SECURITY_CODE_INVALID,
+                    "FINORA Security Code is invalid."
+                );
+
+                return false;
+            }
+
+            if (
+                payload == null ||
+                payload.branchCertificationKeyMaterial == null ||
+                payload.authGeneration != identity.authGeneration ||
+                !java.util.Objects.equals(
+                    payload.userId,
+                    identity.userId
+                ) ||
+                !java.util.Objects.equals(
+                    payload.username,
+                    identity.username
+                ) ||
+                !java.util.Objects.equals(
+                    payload.fullName,
+                    identity.fullName
+                ) ||
+                !java.util.Objects.equals(
+                    payload.role,
+                    identity.role
+                ) ||
+                !java.util.Objects.equals(
+                    payload.ownerId,
+                    identity.ownerId
+                ) ||
+                !java.util.Objects.equals(
+                    payload.businessId,
+                    identity.businessId
+                ) ||
+                !java.util.Objects.equals(
+                    payload.branchId,
+                    identity.branchId
+                ) ||
+                !java.util.Objects.equals(
+                    payload.storageMode,
+                    identity.storageMode
+                ) ||
+                !java.util.Objects.equals(
+                    payload.dataContext,
+                    identity.dataContext
+                ) ||
+                !java.util.Objects.equals(
+                    payload.demoId,
+                    identity.demoId
+                )
+            ) {
+                resolveLoginSessionFailure(
+                    call,
+                    FinoraBranchLoginSessionAuthority
+                        .ERROR_CONTROL_STATE_FAILED,
+                    "FINORA Portable Branch Auth does not match the authenticated Wallet branch."
+                );
+
+                return false;
+            }
+
+            material =
+                payload.branchCertificationKeyMaterial;
+
+            try {
+                FinoraBranchCertificationCryptoValidator.assertValid(
+                    material
+                );
+
+                walletBranchCertificationDeviceVault.write(
+                    identity.ownerId,
+                    identity.businessId,
+                    identity.branchId,
+                    material
+                );
+            }
+            catch (Exception error) {
+                resolveLoginSessionFailure(
+                    call,
+                    FinoraBranchLoginSessionAuthority
+                        .ERROR_CONTROL_STATE_FAILED,
+                    "FINORA Wallet Branch Certification could not be secured on this device."
+                );
+
+                return false;
+            }
+        }
+
+        try {
+            FinoraBranchCertificationCryptoValidator.assertValid(
+                material
+            );
+
+            FinoraWalletBranchCertificationSessionAuthority.install(
+                identity.ownerId,
+                identity.businessId,
+                identity.branchId,
+                material
+            );
+
+            return true;
+        }
+        catch (Exception error) {
+            resolveLoginSessionFailure(
+                call,
+                FinoraBranchLoginSessionAuthority
+                    .ERROR_CONTROL_STATE_FAILED,
+                "FINORA Wallet Branch Certification runtime authority could not be restored."
+            );
+
+            return false;
+        }
+    }
     @PluginMethod
     public void validate(
         PluginCall call
@@ -930,6 +1207,1963 @@ public final class FinoraControlPlugin
      *
      * The renderer therefore treats data as undefined.
      */
+    // ========================================================
+    // OWNER WALLET RECHARGE REQUEST EXPORT
+    // ========================================================
+
+    private static final long
+        OWNER_WALLET_REQUEST_MAX_SAFE_INTEGER =
+            9_007_199_254_740_991L;
+
+    private static final int
+        OWNER_WALLET_REQUEST_MAX_FILE_BYTES =
+            64 * 1024;
+
+
+    private static final class OwnerWalletRequestExport {
+
+        final byte[] bytes;
+        final String fileName;
+        final String requestId;
+        final String paymentReference;
+
+        OwnerWalletRequestExport(
+            byte[] bytes,
+            String fileName,
+            String requestId,
+            String paymentReference
+        ) {
+            this.bytes = bytes;
+            this.fileName = fileName;
+            this.requestId = requestId;
+            this.paymentReference = paymentReference;
+        }
+    }
+
+
+    private OwnerWalletRequestExport
+        pendingOwnerWalletRequestExport;
+
+
+    @PluginMethod
+    public void exportWalletRechargeRequest(
+        PluginCall call
+    ) {
+
+        if (call == null) {
+            return;
+        }
+
+
+        if (pendingOwnerWalletRequestExport != null) {
+
+            resolveOwnerWalletExportFailure(
+                call,
+                "A FINORA Wallet Recharge Request export is already in progress."
+            );
+
+            return;
+        }
+
+
+        try {
+
+            String sessionId =
+                requireOwnerWalletText(
+                    call.getString("sessionId"),
+                    "FINORA session ID"
+                );
+
+            String paymentReference =
+                requireOwnerWalletText(
+                    call.getString("paymentReference"),
+                    "Wallet Recharge payment reference"
+                );
+
+            String paymentMethod =
+                requireOwnerWalletText(
+                    call.getString("paymentMethod"),
+                    "Wallet Recharge payment method"
+                );
+
+            String paymentSource =
+                requireOwnerWalletText(
+                    call.getString("paymentSource"),
+                    "Wallet Recharge payment source"
+                );
+
+
+            Double rawAmount =
+                call.getDouble("amountMinor");
+
+
+            if (
+                rawAmount == null ||
+                !Double.isFinite(rawAmount.doubleValue()) ||
+                rawAmount.doubleValue() <= 0.0d ||
+                rawAmount.doubleValue() >
+                    OWNER_WALLET_REQUEST_MAX_SAFE_INTEGER ||
+                Math.rint(rawAmount.doubleValue()) !=
+                    rawAmount.doubleValue()
+            ) {
+
+                throw new IllegalArgumentException(
+                    "Wallet Recharge amountMinor must be a positive JavaScript-safe integer."
+                );
+            }
+
+
+            long amountMinor =
+                rawAmount.longValue();
+
+
+            if (
+                !ownerWalletPaymentMethodAllowed(paymentMethod) ||
+                !ownerWalletPaymentSourceAllowed(paymentSource)
+            ) {
+
+                throw new IllegalArgumentException(
+                    "Wallet Recharge payment method/source is invalid."
+                );
+            }
+
+
+            if (loginSessionAuthority == null) {
+
+                throw new IllegalStateException(
+                    "FINORA login session authority is unavailable."
+                );
+            }
+
+
+            FinoraBranchLoginSessionAuthority.SessionResult
+                sessionResult =
+                    loginSessionAuthority.validate(
+                        sessionId
+                    );
+
+
+            if (
+                sessionResult == null ||
+                !sessionResult.success ||
+                sessionResult.data == null
+            ) {
+
+                throw new IllegalStateException(
+                    sessionResult != null &&
+                    sessionResult.error != null
+                        ? sessionResult.error
+                        : "A valid FINORA login session is required."
+                );
+            }
+
+
+            FinoraBranchLoginSessionAuthority.SessionView
+                session =
+                    sessionResult.data;
+
+
+            if (
+                !"REAL".equals(session.dataContext) ||
+                !FinoraBranchLoginSessionAuthority
+                    .ACCESS_MODE_ACTIVE
+                    .equals(session.accessMode)
+            ) {
+
+                throw new IllegalStateException(
+                    "Only an ACTIVE REAL FINORA session may export a Wallet Recharge Request."
+                );
+            }
+
+
+            JSONObject controlPackage =
+                readValidatedControlPackage();
+
+
+            if (controlPackage == null) {
+
+                throw new IllegalStateException(
+                    "Validated FINORA Control State is unavailable."
+                );
+            }
+
+
+            org.json.JSONArray profiles =
+                controlPackage.optJSONArray(
+                    "businessProfiles"
+                );
+
+
+            if (profiles == null) {
+
+                throw new IllegalStateException(
+                    "Trusted FINORA Business Profile is unavailable."
+                );
+            }
+
+
+            JSONObject profile =
+                null;
+
+
+            for (
+                int index = 0;
+                index < profiles.length();
+                index++
+            ) {
+
+                JSONObject candidate =
+                    profiles.optJSONObject(
+                        index
+                    );
+
+
+                if (candidate == null) {
+                    continue;
+                }
+
+
+                if (
+                    session.ownerId.equals(
+                        candidate.optString("ownerId", "")
+                    ) &&
+                    session.businessId.equals(
+                        candidate.optString("businessId", "")
+                    ) &&
+                    session.branchId.equals(
+                        candidate.optString("branchId", "")
+                    )
+                ) {
+
+                    if (profile != null) {
+
+                        throw new IllegalStateException(
+                            "Multiple trusted FINORA Business Profiles match the active branch."
+                        );
+                    }
+
+
+                    profile =
+                        candidate;
+                }
+            }
+
+
+            if (profile == null) {
+
+                throw new IllegalStateException(
+                    "Trusted FINORA Business Profile does not match the active branch."
+                );
+            }
+
+
+            String businessCode =
+                requireOwnerWalletText(
+                    profile.optString(
+                        "businessCode",
+                        null
+                    ),
+                    "FINORA businessCode"
+                );
+
+            String branchCode =
+                requireOwnerWalletText(
+                    profile.optString(
+                        "branchCode",
+                        null
+                    ),
+                    "FINORA branchCode"
+                );
+
+
+            FinoraInstallationBindingCrypto.PublicBinding
+                binding =
+                    installationBindingService.get();
+
+
+            if (binding == null) {
+
+                throw new IllegalStateException(
+                    "FINORA Android installation binding is unavailable."
+                );
+            }
+            /*
+             * ANY-DEVICE WALLET REQUEST POLICY
+             *
+             * The authenticated FINORA branch session controls
+             * ownerId / businessId / branchId.
+             *
+             * A fresh authorized device has its own native P-256
+             * installation key. It MUST NOT be required to equal
+             * the historical installation recorded in the trusted
+             * Business Profile.
+             *
+             * The current native device key is still used below to
+             * sign request integrity. This block only removes the
+             * historical-device equality gate.
+             */
+
+
+            String requestId =
+                "FINORA-WAL-REQ-" +
+                ownerWalletSha256(
+                    "WALLET_RECHARGE_REQUEST" +
+                    "\u0000" +
+                    session.ownerId +
+                    "\u0000" +
+                    session.businessId +
+                    "\u0000" +
+                    session.branchId +
+                    "\u0000" +
+                    paymentReference
+                ).toUpperCase(
+                    java.util.Locale.ROOT
+                );
+
+
+            String requestedAt =
+                java.time.format.DateTimeFormatter
+                    .ofPattern(
+                        "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'"
+                    )
+                    .withZone(
+                        java.time.ZoneOffset.UTC
+                    )
+                    .format(
+                        java.time.Instant.now()
+                    );
+
+
+            JSONObject scope =
+                new JSONObject();
+
+            scope.put(
+                "ownerId",
+                session.ownerId
+            );
+
+            scope.put(
+                "businessId",
+                session.businessId
+            );
+
+            scope.put(
+                "branchId",
+                session.branchId
+            );
+
+
+            JSONObject displayIdentity =
+                new JSONObject();
+
+            displayIdentity.put(
+                "businessCode",
+                businessCode
+            );
+
+            displayIdentity.put(
+                "branchCode",
+                branchCode
+            );
+
+
+            JSONObject installation =
+                new JSONObject();
+
+            installation.put(
+                "installationId",
+                binding.installationId
+            );
+
+            installation.put(
+                "bindingKeyId",
+                binding.bindingKeyId
+            );
+
+            installation.put(
+                "fingerprintAlgorithm",
+                "SHA-256"
+            );
+
+            installation.put(
+                "publicKeyFingerprint",
+                binding.publicKeyFingerprint
+            );
+            installation.put(
+                "platform",
+                "ANDROID"
+            );
+            installation.put(
+                "algorithm",
+                "ECDSA_P256_SHA256"
+            );
+            installation.put(
+                "publicKeyFormat",
+                binding.publicKeyFormat
+            );
+            installation.put(
+                "publicKey",
+                binding.publicKey
+            );
+            installation.put(
+                "createdAt",
+                binding.createdAt
+            );
+            installation.put(
+                "schemaVersion",
+                binding.schemaVersion
+            );
+
+
+            JSONObject payload =
+                new JSONObject();
+
+            payload.put(
+                "purpose",
+                "WALLET_RECHARGE_REQUEST"
+            );
+
+            payload.put(
+                "requestId",
+                requestId
+            );
+
+            payload.put(
+                "paymentReference",
+                paymentReference
+            );
+
+            payload.put(
+                "scope",
+                scope
+            );
+
+            payload.put(
+                "displayIdentity",
+                displayIdentity
+            );
+
+            payload.put(
+                "installation",
+                installation
+            );
+
+            payload.put(
+                "amountMinor",
+                amountMinor
+            );
+
+            payload.put(
+                "currency",
+                "INR"
+            );
+
+            payload.put(
+                "paymentMethod",
+                paymentMethod
+            );
+
+            payload.put(
+                "paymentSource",
+                paymentSource
+            );
+
+            payload.put(
+                "requestedAt",
+                requestedAt
+            );
+
+            payload.put(
+                "schemaVersion",
+                2
+            );
+
+
+            String canonicalPayload =
+                FinoraCanonicalJson.canonicalize(
+                    FinoraJsonBridge.toMap(
+                        payload
+                    )
+                );
+
+
+            String signatureValue =
+                installationBindingService
+                    .signEnrollment(
+                        canonicalPayload
+                    );
+
+
+            byte[] signatureBytes =
+                android.util.Base64.decode(
+                    signatureValue,
+                    android.util.Base64.DEFAULT
+                );
+
+
+            if (signatureBytes.length != 64) {
+
+                throw new IllegalStateException(
+                    "FINORA Wallet Recharge Request signature is not canonical IEEE-P1363."
+                );
+            }
+
+
+            JSONObject signature =
+                new JSONObject();
+
+            signature.put(
+                "algorithm",
+                "ECDSA_P256_SHA256"
+            );
+
+            signature.put(
+                "encoding",
+                "IEEE_P1363"
+            );
+
+            signature.put(
+                "canonicalization",
+                "FINORA_CANONICAL_JSON_V1"
+            );
+
+            signature.put(
+                "bindingKeyId",
+                binding.bindingKeyId
+            );
+
+            signature.put(
+                "value",
+                signatureValue
+            );
+
+
+            FinoraBranchCertificationCryptoValidator.Material walletBranchCertificationMaterial =
+                FinoraWalletBranchCertificationSessionAuthority.require(
+                    session.ownerId,
+                    session.businessId,
+                    session.branchId
+                );
+
+            FinoraWalletBranchCertificationSigner.SignedValue branchCertificationSignedValue =
+                FinoraWalletBranchCertificationSigner.sign(
+                    canonicalPayload,
+                    walletBranchCertificationMaterial
+                );
+
+            JSONObject branchCertificationSignature = new JSONObject();
+            branchCertificationSignature.put(
+                "algorithm",
+                branchCertificationSignedValue.algorithm
+            );
+            branchCertificationSignature.put(
+                "encoding",
+                branchCertificationSignedValue.encoding
+            );
+            branchCertificationSignature.put(
+                "canonicalization",
+                branchCertificationSignedValue.canonicalization
+            );
+            branchCertificationSignature.put(
+                "keyId",
+                branchCertificationSignedValue.keyId
+            );
+            branchCertificationSignature.put(
+                "value",
+                branchCertificationSignedValue.value
+            );
+
+            JSONObject signedRequest =
+                new JSONObject();
+
+            signedRequest.put(
+                "payload",
+                payload
+            );
+
+            signedRequest.put(
+                "signature",
+                signature
+            );
+
+            signedRequest.put(
+                "branchCertificationSignature",
+                branchCertificationSignature
+            );
+            signedRequest.put(
+                "schemaVersion",
+                2
+            );
+
+
+            JSONObject file =
+                new JSONObject();
+
+            file.put(
+                "format",
+                "FINORA_WALLET_RECHARGE_REQUEST_V2"
+            );
+
+            file.put(
+                "request",
+                signedRequest
+            );
+
+            file.put(
+                "schemaVersion",
+                2
+            );
+
+
+            byte[] bytes =
+                file.toString()
+                    .getBytes(
+                        java.nio.charset.StandardCharsets.UTF_8
+                    );
+
+
+            if (
+                bytes.length >
+                    OWNER_WALLET_REQUEST_MAX_FILE_BYTES
+            ) {
+
+                throw new IllegalStateException(
+                    "FINORA Wallet Recharge Request exceeds the maximum file size."
+                );
+            }
+
+
+            String fileName =
+                createOwnerWalletRequestFileName(
+                    businessCode,
+                    branchCode,
+                    paymentMethod,
+                    amountMinor,
+                    requestId
+                );
+
+
+            pendingOwnerWalletRequestExport =
+                new OwnerWalletRequestExport(
+                    bytes,
+                    fileName,
+                    requestId,
+                    paymentReference
+                );
+
+
+            android.content.Intent intent =
+                new android.content.Intent(
+                    android.content.Intent.ACTION_CREATE_DOCUMENT
+                );
+
+            intent.addCategory(
+                android.content.Intent.CATEGORY_OPENABLE
+            );
+
+            intent.setType(
+                "application/octet-stream"
+            );
+
+            intent.putExtra(
+                android.content.Intent.EXTRA_TITLE,
+                fileName
+            );
+
+            intent.addFlags(
+                android.content.Intent.FLAG_GRANT_WRITE_URI_PERMISSION |
+                android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION
+            );
+
+
+            startActivityForResult(
+                call,
+                intent,
+                "ownerWalletRequestExportSelected"
+            );
+
+        } catch (Exception error) {
+
+            pendingOwnerWalletRequestExport =
+                null;
+
+            resolveOwnerWalletExportFailure(
+                call,
+                ownerWalletErrorMessage(
+                    error,
+                    "Unable to prepare the FINORA Wallet Recharge Request."
+                )
+            );
+        }
+    }
+
+
+    @com.getcapacitor.annotation.ActivityCallback
+    private void ownerWalletRequestExportSelected(
+        PluginCall call,
+        androidx.activity.result.ActivityResult result
+    ) {
+
+        OwnerWalletRequestExport pending =
+            pendingOwnerWalletRequestExport;
+
+        pendingOwnerWalletRequestExport =
+            null;
+
+
+        if (call == null) {
+            return;
+        }
+
+
+        if (pending == null) {
+
+            resolveOwnerWalletExportFailure(
+                call,
+                "FINORA Wallet Recharge Request export session is unavailable."
+            );
+
+            return;
+        }
+
+
+        if (
+            result == null ||
+            result.getResultCode() !=
+                android.app.Activity.RESULT_OK
+        ) {
+
+            JSObject cancelled =
+                new JSObject();
+
+            cancelled.put(
+                "success",
+                true
+            );
+
+            cancelled.put(
+                "cancelled",
+                true
+            );
+
+            call.resolve(
+                cancelled
+            );
+
+            return;
+        }
+
+
+        try {
+
+            android.content.Intent data =
+                result.getData();
+
+            android.net.Uri uri =
+                data == null
+                    ? null
+                    : data.getData();
+
+
+            if (uri == null) {
+
+                throw new IllegalStateException(
+                    "Android did not return a Wallet Recharge Request destination."
+                );
+            }
+
+
+            java.io.OutputStream output =
+                getContext()
+                    .getContentResolver()
+                    .openOutputStream(
+                        uri,
+                        "wt"
+                    );
+
+
+            if (output == null) {
+
+                throw new IllegalStateException(
+                    "Wallet Recharge Request destination could not be opened."
+                );
+            }
+
+
+            try {
+
+                output.write(
+                    pending.bytes
+                );
+
+                output.flush();
+
+            } finally {
+
+                output.close();
+            }
+
+
+            JSObject success =
+                new JSObject();
+
+            success.put(
+                "success",
+                true
+            );
+
+            success.put(
+                "cancelled",
+                false
+            );
+
+            success.put(
+                "fileName",
+                pending.fileName
+            );
+
+            success.put(
+                "bytesWritten",
+                pending.bytes.length
+            );
+
+            success.put(
+                "requestId",
+                pending.requestId
+            );
+
+            success.put(
+                "paymentReference",
+                pending.paymentReference
+            );
+
+
+            call.resolve(
+                success
+            );
+
+        } catch (Exception error) {
+
+            resolveOwnerWalletExportFailure(
+                call,
+                ownerWalletErrorMessage(
+                    error,
+                    "Unable to save the FINORA Wallet Recharge Request."
+                )
+            );
+        }
+    }
+
+
+    private static void resolveOwnerWalletExportFailure(
+        PluginCall call,
+        String error
+    ) {
+
+        JSObject response =
+            new JSObject();
+
+        response.put(
+            "success",
+            false
+        );
+
+        response.put(
+            "error",
+            error
+        );
+
+        call.resolve(
+            response
+        );
+    }
+
+
+    private static String ownerWalletErrorMessage(
+        Exception error,
+        String fallback
+    ) {
+
+        if (
+            error != null &&
+            error.getMessage() != null &&
+            !error.getMessage()
+                .trim()
+                .isEmpty()
+        ) {
+
+            return error
+                .getMessage()
+                .trim();
+        }
+
+
+        return fallback;
+    }
+
+
+    private static String requireOwnerWalletText(
+        String value,
+        String label
+    ) {
+
+        String normalized =
+            value == null
+                ? ""
+                : value.trim();
+
+
+        if (normalized.isEmpty()) {
+
+            throw new IllegalArgumentException(
+                label +
+                " is required."
+            );
+        }
+
+
+        return normalized;
+    }
+
+
+    private static String ownerWalletSha256(
+        String value
+    ) throws Exception {
+
+        byte[] bytes =
+            java.security.MessageDigest
+                .getInstance(
+                    "SHA-256"
+                )
+                .digest(
+                    value.getBytes(
+                        java.nio.charset.StandardCharsets.UTF_8
+                    )
+                );
+
+
+        StringBuilder output =
+            new StringBuilder(
+                bytes.length * 2
+            );
+
+
+        for (byte item : bytes) {
+
+            output.append(
+                String.format(
+                    java.util.Locale.ROOT,
+                    "%02x",
+                    item & 0xff
+                )
+            );
+        }
+
+
+        return output.toString();
+    }
+
+
+    private static boolean ownerWalletPaymentMethodAllowed(
+        String value
+    ) {
+
+        return
+            "UPI".equals(value) ||
+            "PHONEPE".equals(value) ||
+            "GOOGLE_PAY".equals(value) ||
+            "PAYTM".equals(value) ||
+            "RAZORPAY".equals(value) ||
+            "BANK_TRANSFER".equals(value) ||
+            "OTHER".equals(value);
+    }
+
+
+    private static boolean ownerWalletPaymentSourceAllowed(
+        String value
+    ) {
+
+        return
+            "PHONEPE".equals(value) ||
+            "RAZORPAY".equals(value) ||
+            "UPI".equals(value) ||
+            "GOOGLE_PAY".equals(value) ||
+            "PAYTM".equals(value) ||
+            "BANK_TRANSFER".equals(value) ||
+            "MANUAL".equals(value);
+    }
+
+
+    private static String createOwnerWalletRequestFileName(
+        String businessCode,
+        String branchCode,
+        String paymentMethod,
+        long amountMinor,
+        String requestId
+    ) {
+
+        return (
+            "FIN-WAL-REQ-" +
+            ownerWalletBusinessToken(
+                businessCode
+            ) +
+            "-" +
+            ownerWalletBranchToken(
+                branchCode
+            ) +
+            "-" +
+            ownerWalletPaymentToken(
+                paymentMethod
+            ) +
+            "-" +
+            ownerWalletAmountToken(
+                amountMinor
+            ) +
+            "-" +
+            ownerWalletRequestToken(
+                requestId
+            ) +
+            "_" +
+            new java.text.SimpleDateFormat(
+                "dd-MM-yyyy_hh：mm",
+                java.util.Locale.US
+            ).format(
+                new java.util.Date()
+            ) +
+            ".finora"
+        );
+    }
+
+
+    private static String ownerWalletBusinessToken(
+        String value
+    ) {
+
+        String token =
+            value
+                .trim()
+                .toUpperCase(
+                    java.util.Locale.ROOT
+                )
+                .replaceAll(
+                    "[^A-Z0-9]",
+                    ""
+                );
+
+
+        if (token.length() > 16) {
+
+            token =
+                token.substring(
+                    0,
+                    16
+                );
+        }
+
+
+        return token.isEmpty()
+            ? "BUS"
+            : token;
+    }
+
+
+    private static String ownerWalletBranchToken(
+        String value
+    ) {
+
+        String normalized =
+            value
+                .trim()
+                .toUpperCase(
+                    java.util.Locale.ROOT
+                );
+
+
+        String digits =
+            normalized.replaceAll(
+                "[^0-9]",
+                ""
+            );
+
+
+        if (!digits.isEmpty()) {
+
+            while (digits.length() < 3) {
+
+                digits =
+                    "0" +
+                    digits;
+            }
+
+
+            String token =
+                "BR" +
+                digits;
+
+
+            return token.length() > 18
+                ? token.substring(
+                    0,
+                    18
+                )
+                : token;
+        }
+
+
+        String fallback =
+            normalized.replaceAll(
+                "[^A-Z0-9]",
+                ""
+            );
+
+
+        if (fallback.length() > 16) {
+
+            fallback =
+                fallback.substring(
+                    0,
+                    16
+                );
+        }
+
+
+        return fallback.isEmpty()
+            ? "BRANCH"
+            : fallback;
+    }
+
+
+    private static String ownerWalletPaymentToken(
+        String value
+    ) {
+
+        String token =
+            value
+                .trim()
+                .toUpperCase(
+                    java.util.Locale.ROOT
+                )
+                .replaceAll(
+                    "[^A-Z0-9]",
+                    ""
+                );
+
+
+        return token.length() > 20
+            ? token.substring(
+                0,
+                20
+            )
+            : token;
+    }
+
+
+    private static String ownerWalletAmountToken(
+        long amountMinor
+    ) {
+
+        long whole =
+            amountMinor /
+            100L;
+
+        long paise =
+            amountMinor %
+            100L;
+
+
+        if (paise == 0L) {
+
+            return Long.toString(
+                whole
+            );
+        }
+
+
+        return (
+            Long.toString(
+                whole
+            ) +
+            "P" +
+            String.format(
+                java.util.Locale.ROOT,
+                "%02d",
+                paise
+            )
+        );
+    }
+
+
+    private static String ownerWalletRequestToken(
+        String requestId
+    ) {
+
+        String prefix =
+            "FINORA-WAL-REQ-";
+
+
+        String digest =
+            requestId.startsWith(
+                prefix
+            )
+                ? requestId.substring(
+                    prefix.length()
+                )
+                : requestId;
+
+
+        digest =
+            digest
+                .toUpperCase(
+                    java.util.Locale.ROOT
+                )
+                .replaceAll(
+                    "[^A-F0-9]",
+                    ""
+                );
+
+
+        if (digest.isEmpty()) {
+
+            throw new IllegalArgumentException(
+                "FINORA Wallet Recharge requestId token is invalid."
+            );
+        }
+
+
+        return digest.substring(
+            0,
+            Math.min(
+                6,
+                digest.length()
+            )
+        );
+    }
+
+    /**
+     * One-time recipient operational trust bootstrap.
+     *
+     * SECURITY:
+     *
+     * - The supplied public signing key is NOT trusted on its own.
+     * - expectedPublicKeyFingerprint must be supplied through an
+     *   independent operator-authenticated channel.
+     * - Existing recipient trust cannot be replaced here.
+     * - The production bootstrap service validates P-256 SPKI,
+     *   canonical signingKeyId, ACTIVE status and fingerprint.
+     * - No DONE / CONTROL_BUNDLE package is accepted as trust
+     *   authority by this method.
+     */
+    @PluginMethod
+    public void bootstrapRecipientOperationalTrust(
+        PluginCall call
+    ) {
+        if (call == null) {
+            return;
+        }
+
+        try {
+            String issuerId =
+                normalizeRequiredString(
+                    call.getString(
+                        "issuerId"
+                    )
+                );
+
+            String signingKeyId =
+                normalizeRequiredString(
+                    call.getString(
+                        "signingKeyId"
+                    )
+                );
+
+            String publicKey =
+                normalizeRequiredString(
+                    call.getString(
+                        "publicKey"
+                    )
+                );
+
+            String validFrom =
+                normalizeRequiredString(
+                    call.getString(
+                        "validFrom"
+                    )
+                );
+
+            String expectedPublicKeyFingerprint =
+                normalizeRequiredString(
+                    call.getString(
+                        "expectedPublicKeyFingerprint"
+                    )
+                );
+
+            if (
+                issuerId == null ||
+                signingKeyId == null ||
+                publicKey == null ||
+                validFrom == null ||
+                expectedPublicKeyFingerprint == null
+            ) {
+                JSObject response =
+                    new JSObject();
+
+                response.put(
+                    "success",
+                    false
+                );
+
+                response.put(
+                    "error",
+                    "FINORA recipient trust bootstrap requires issuerId, signingKeyId, publicKey, validFrom and an independently confirmed public-key fingerprint."
+                );
+
+                call.resolve(
+                    response
+                );
+
+                return;
+            }
+
+            FinoraRecipientTrustState.TrustedKeyRecord
+                trustedKey =
+                    new FinoraRecipientTrustState
+                        .TrustedKeyRecord(
+                            issuerId,
+                            signingKeyId,
+                            "ECDSA_P256_SHA256",
+                            "SPKI_DER_BASE64",
+                            publicKey,
+                            FinoraRecipientTrustState
+                                .STATUS_ACTIVE,
+                            validFrom,
+                            null
+                        );
+
+            FinoraRecipientTrustBootstrapService
+                bootstrapService =
+                    new FinoraRecipientTrustBootstrapService(
+                        new FinoraRecipientTrustStore(
+                            getContext()
+                        )
+                    );
+
+            FinoraRecipientTrustBootstrapService.Result
+                result =
+                    bootstrapService.bootstrap(
+                        new FinoraRecipientTrustBootstrapService
+                            .Request(
+                                trustedKey,
+                                expectedPublicKeyFingerprint
+                            )
+                    );
+
+            JSObject response =
+                new JSObject();
+
+            response.put(
+                "success",
+                result != null &&
+                    result.success
+            );
+
+            if (
+                result != null &&
+                result.success &&
+                result.data != null
+            ) {
+                JSObject data =
+                    new JSObject();
+
+                data.put(
+                    "issuerId",
+                    result.data.issuerId
+                );
+
+                data.put(
+                    "signingKeyId",
+                    result.data.signingKeyId
+                );
+
+                data.put(
+                    "publicKeyFingerprint",
+                    result.data.publicKeyFingerprint
+                );
+
+                response.put(
+                    "data",
+                    data
+                );
+            }
+            else {
+                response.put(
+                    "error",
+                    result != null &&
+                        result.error != null
+                            ? result.error
+                            : "FINORA recipient operational trust bootstrap failed."
+                );
+            }
+
+            call.resolve(
+                response
+            );
+        }
+        catch (Exception error) {
+            JSObject response =
+                new JSObject();
+
+            response.put(
+                "success",
+                false
+            );
+
+            response.put(
+                "error",
+                error.getMessage() != null
+                    ? error.getMessage()
+                    : "FINORA recipient operational trust bootstrap failed."
+            );
+
+            call.resolve(
+                response
+            );
+        }
+    }
+    /*
+     * RELEASE-PINNED RECIPIENT TRUST
+     *
+     * The signing public key and independently confirmed
+     * fingerprint below are release trust anchors.
+     *
+     * The imported DONE package is NOT used to establish trust.
+     * The production bootstrap service still validates:
+     *
+     * - P-256 SPKI public key
+     * - SHA-256 fingerprint
+     * - canonical signingKeyId
+     * - ACTIVE initial key policy
+     *
+     * Existing recipient trust cannot be replaced here.
+     */
+    @PluginMethod
+    public void bootstrapPinnedRecipientOperationalTrust(
+        PluginCall call
+    ) {
+
+        if (call == null) {
+            return;
+        }
+
+        try {
+            FinoraRecipientTrustState.TrustedKeyRecord
+                trustedKey =
+                    new FinoraRecipientTrustState
+                        .TrustedKeyRecord(
+                            "FINORA-CC-dc30c0f4-7803-4a7c-ba30-af9f01d9e89d",
+                            "FINORA-KEY-6384C74DCF2F1A9232ECE849",
+                            "ECDSA_P256_SHA256",
+                            "SPKI_DER_BASE64",
+                            "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEpN5+8+7gNeYB2RyUS2N4wORqsaKRJinBB9LjI2S4sDGlLRov61gHXMDzGxS1W7zf1lHmMfHJ4DBztG9dSQwvoA==",
+                            FinoraRecipientTrustState.STATUS_ACTIVE,
+                            "2026-09-06T14:32:24.118Z",
+                            null
+                        );
+
+            FinoraRecipientTrustBootstrapService
+                bootstrapService =
+                    new FinoraRecipientTrustBootstrapService(
+                        new FinoraRecipientTrustStore(
+                            getContext()
+                        )
+                    );
+
+            FinoraRecipientTrustBootstrapService.Result
+                result =
+                    bootstrapService.bootstrap(
+                        new FinoraRecipientTrustBootstrapService
+                            .Request(
+                                trustedKey,
+                                "6384c74dcf2f1a9232ece849bea73f10adf8ef5b2614837e5647de2f135b7e81"
+                            )
+                    );
+
+            JSObject response =
+                new JSObject();
+
+            response.put(
+                "success",
+                result != null &&
+                    result.success
+            );
+
+            if (
+                result == null ||
+                !result.success
+            ) {
+                response.put(
+                    "error",
+                    result != null &&
+                        result.error != null
+                            ? result.error
+                            : "FINORA signed recharge trust initialization failed."
+                );
+            }
+
+            call.resolve(
+                response
+            );
+        }
+        catch (Exception error) {
+            JSObject response =
+                new JSObject();
+
+            response.put(
+                "success",
+                false
+            );
+
+            response.put(
+                "error",
+                error.getMessage() != null
+                    ? error.getMessage()
+                    : "FINORA signed recharge trust initialization failed."
+            );
+
+            call.resolve(
+                response
+            );
+        }
+    }
+
+    @PluginMethod
+    public void importAndBootstrapRecipientOperationalTrust(
+        PluginCall call
+    ) {
+
+        if (call == null) {
+            return;
+        }
+
+        String expectedFingerprint =
+            normalizeRequiredString(
+                call.getString(
+                    "expectedPublicKeyFingerprint"
+                )
+            );
+
+        if (
+            expectedFingerprint == null ||
+            !expectedFingerprint.matches(
+                "^[0-9a-f]{64}$"
+            )
+        ) {
+            JSObject response =
+                new JSObject();
+
+            response.put(
+                "success",
+                false
+            );
+
+            response.put(
+                "error",
+                "FINORA recipient trust pairing requires the independently confirmed 64-character lowercase SHA-256 fingerprint shown by the unlocked Control Center."
+            );
+
+            call.resolve(
+                response
+            );
+
+            return;
+        }
+
+        try {
+            android.content.Intent intent =
+                new android.content.Intent(
+                    android.content.Intent.ACTION_OPEN_DOCUMENT
+                );
+
+            intent.addCategory(
+                android.content.Intent.CATEGORY_OPENABLE
+            );
+
+            intent.setType(
+                "application/json"
+            );
+
+            intent.addFlags(
+                android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION
+            );
+
+            startActivityForResult(
+                call,
+                intent,
+                "recipientTrustRecordSelected"
+            );
+        }
+        catch (Exception error) {
+            JSObject response =
+                new JSObject();
+
+            response.put(
+                "success",
+                false
+            );
+
+            response.put(
+                "error",
+                error.getMessage() != null
+                    ? error.getMessage()
+                    : "Unable to open the FINORA recipient trust-record selector."
+            );
+
+            call.resolve(
+                response
+            );
+        }
+    }
+
+
+    @com.getcapacitor.annotation.ActivityCallback
+    private void recipientTrustRecordSelected(
+        PluginCall call,
+        androidx.activity.result.ActivityResult result
+    ) {
+
+        if (call == null) {
+            return;
+        }
+
+        if (
+            result == null ||
+            result.getResultCode() !=
+                android.app.Activity.RESULT_OK
+        ) {
+            JSObject response =
+                new JSObject();
+
+            response.put(
+                "success",
+                true
+            );
+
+            response.put(
+                "cancelled",
+                true
+            );
+
+            call.resolve(
+                response
+            );
+
+            return;
+        }
+
+        String expectedFingerprint =
+            normalizeRequiredString(
+                call.getString(
+                    "expectedPublicKeyFingerprint"
+                )
+            );
+
+        if (
+            expectedFingerprint == null ||
+            !expectedFingerprint.matches(
+                "^[0-9a-f]{64}$"
+            )
+        ) {
+            JSObject response =
+                new JSObject();
+
+            response.put(
+                "success",
+                false
+            );
+
+            response.put(
+                "error",
+                "FINORA recipient trust pairing fingerprint is invalid."
+            );
+
+            call.resolve(
+                response
+            );
+
+            return;
+        }
+
+        try {
+            android.content.Intent resultData =
+                result.getData();
+
+            android.net.Uri uri =
+                resultData == null
+                    ? null
+                    : resultData.getData();
+
+            if (uri == null) {
+                throw new IllegalStateException(
+                    "FINORA recipient trust-record import returned no source file."
+                );
+            }
+
+            java.io.InputStream input =
+                getContext()
+                    .getContentResolver()
+                    .openInputStream(
+                        uri
+                    );
+
+            if (input == null) {
+                throw new IllegalStateException(
+                    "FINORA recipient trust-record source could not be opened."
+                );
+            }
+
+            java.io.ByteArrayOutputStream buffer =
+                new java.io.ByteArrayOutputStream();
+
+            byte[] chunk =
+                new byte[4096];
+
+            int total =
+                0;
+
+            try {
+                while (true) {
+                    int read =
+                        input.read(
+                            chunk
+                        );
+
+                    if (read < 0) {
+                        break;
+                    }
+
+                    total +=
+                        read;
+
+                    if (total > 65536) {
+                        throw new IllegalStateException(
+                            "FINORA recipient trust record exceeds the maximum allowed size."
+                        );
+                    }
+
+                    buffer.write(
+                        chunk,
+                        0,
+                        read
+                    );
+                }
+            }
+            finally {
+                java.util.Arrays.fill(
+                    chunk,
+                    (byte) 0
+                );
+
+                input.close();
+            }
+
+            String serialized =
+                new String(
+                    buffer.toByteArray(),
+                    java.nio.charset.StandardCharsets.UTF_8
+                );
+
+            JSONObject record =
+                new JSONObject(
+                    serialized
+                );
+
+            if (
+                record.optInt(
+                    "schemaVersion",
+                    -1
+                ) != 1 ||
+                !"ECDSA_P256_SHA256".equals(
+                    record.optString(
+                        "algorithm",
+                        ""
+                    )
+                ) ||
+                !"SPKI_DER_BASE64".equals(
+                    record.optString(
+                        "format",
+                        ""
+                    )
+                ) ||
+                !"SHA-256".equals(
+                    record.optString(
+                        "fingerprintAlgorithm",
+                        ""
+                    )
+                ) ||
+                !"ACTIVE".equals(
+                    record.optString(
+                        "status",
+                        ""
+                    )
+                )
+            ) {
+                throw new IllegalStateException(
+                    "FINORA Control Center trust record is invalid."
+                );
+            }
+
+            String embeddedFingerprint =
+                normalizeRequiredString(
+                    record.optString(
+                        "publicKeyFingerprint",
+                        null
+                    )
+                );
+
+            if (
+                embeddedFingerprint == null ||
+                !expectedFingerprint.equals(
+                    embeddedFingerprint
+                )
+            ) {
+                throw new IllegalStateException(
+                    "FINORA Control Center trust-record fingerprint does not match the independently confirmed fingerprint."
+                );
+            }
+
+            String issuerId =
+                normalizeRequiredString(
+                    record.getString(
+                        "issuerId"
+                    )
+                );
+
+            String signingKeyId =
+                normalizeRequiredString(
+                    record.getString(
+                        "signingKeyId"
+                    )
+                );
+
+            String publicKey =
+                normalizeRequiredString(
+                    record.getString(
+                        "publicKey"
+                    )
+                );
+
+            String validFrom =
+                normalizeRequiredString(
+                    record.optString(
+                        "validFrom",
+                        record.optString(
+                            "createdAt",
+                            null
+                        )
+                    )
+                );
+
+            if (
+                issuerId == null ||
+                signingKeyId == null ||
+                publicKey == null ||
+                validFrom == null
+            ) {
+                throw new IllegalStateException(
+                    "FINORA Control Center trust record is incomplete."
+                );
+            }
+
+            FinoraRecipientTrustState.TrustedKeyRecord
+                trustedKey =
+                    new FinoraRecipientTrustState
+                        .TrustedKeyRecord(
+                            issuerId,
+                            signingKeyId,
+                            "ECDSA_P256_SHA256",
+                            "SPKI_DER_BASE64",
+                            publicKey,
+                            FinoraRecipientTrustState
+                                .STATUS_ACTIVE,
+                            validFrom,
+                            null
+                        );
+
+            FinoraRecipientTrustBootstrapService
+                bootstrapService =
+                    new FinoraRecipientTrustBootstrapService(
+                        new FinoraRecipientTrustStore(
+                            getContext()
+                        )
+                    );
+
+            FinoraRecipientTrustBootstrapService.Result
+                bootstrapResult =
+                    bootstrapService.bootstrap(
+                        new FinoraRecipientTrustBootstrapService
+                            .Request(
+                                trustedKey,
+                                expectedFingerprint
+                            )
+                    );
+
+            JSObject response =
+                new JSObject();
+
+            response.put(
+                "success",
+                bootstrapResult != null &&
+                    bootstrapResult.success
+            );
+
+            response.put(
+                "cancelled",
+                false
+            );
+
+            if (
+                bootstrapResult == null ||
+                !bootstrapResult.success
+            ) {
+                response.put(
+                    "error",
+                    bootstrapResult != null &&
+                        bootstrapResult.error != null
+                            ? bootstrapResult.error
+                            : "FINORA recipient operational trust bootstrap failed."
+                );
+            }
+
+            call.resolve(
+                response
+            );
+        }
+        catch (Exception error) {
+            JSObject response =
+                new JSObject();
+
+            response.put(
+                "success",
+                false
+            );
+
+            response.put(
+                "cancelled",
+                false
+            );
+
+            response.put(
+                "error",
+                error.getMessage() != null
+                    ? error.getMessage()
+                    : "FINORA recipient trust-record import failed."
+            );
+
+            call.resolve(
+                response
+            );
+        }
+    }
+
     @PluginMethod
     public void getInstallation(
         PluginCall call
@@ -2812,19 +5046,20 @@ public final class FinoraControlPlugin
                 return;
             }
 
-            if (
-                !installationId.equals(
-                    nativeBinding.installationId
-                )
-            ) {
-
-                resolveFailure(
-                    call,
-                    "FINORA native installation binding does not match the Control Store installation identity."
-                );
-
-                return;
-            }
+            /*
+             * PORTABLE WALLET RECHARGE READ
+             *
+             * Current Android native binding is still required.
+             *
+             * The persisted Control Store installationId may belong
+             * to a historical authorized device, so Wallet Recharge
+             * authorization lookup does not require that historical
+             * installationId to equal this current device.
+             *
+             * Exact business scope, payment reference, trusted DONE
+             * verification and authorization binding integrity remain
+             * mandatory.
+             */
 
 
             // ------------------------------------------------
@@ -2931,9 +5166,6 @@ public final class FinoraControlPlugin
                     branchId.equals(
                         authorizationBranchId
                     ) &&
-                    installationId.equals(
-                        authorizationInstallationId
-                    ) &&
                     paymentReference.equals(
                         authorizationPaymentReference
                     )
@@ -2984,23 +5216,33 @@ public final class FinoraControlPlugin
                     )
                 );
 
+            /*
+             * Portable verified Wallet authorization:
+             *
+             * The historical installation binding belongs to the
+             * device that created the original Recharge request.
+             *
+             * It remains structurally/internally validated, but is
+             * deliberately NOT compared with this current device.
+             *
+             * The signed DONE import already established package
+             * authenticity and exact owner/business/branch scope.
+             */
             if (
                 authorizationBindingKeyId == null ||
                 !"SHA-256".equals(
                     authorizationFingerprintAlgorithm
                 ) ||
                 authorizationPublicKeyFingerprint == null ||
-                !nativeBinding.bindingKeyId.equals(
-                    authorizationBindingKeyId
-                ) ||
-                !nativeBinding.publicKeyFingerprint.equals(
+                !bindingKeyMatchesProfileFingerprint(
+                    authorizationBindingKeyId,
                     authorizationPublicKeyFingerprint
                 )
             ) {
 
                 resolveFailure(
                     call,
-                    "FINORA Wallet Recharge authorization native installation binding is inconsistent."
+                    "FINORA Wallet Recharge authorization binding metadata is invalid."
                 );
 
                 return;
@@ -3169,8 +5411,16 @@ public final class FinoraControlPlugin
                 1
             );
 
-            call.resolve(
+            JSObject result =
+                createSuccessResult();
+
+            result.put(
+                "data",
                 data
+            );
+
+            call.resolve(
+                result
             );
 
         } catch (Exception error) {

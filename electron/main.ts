@@ -259,6 +259,15 @@ const FINORA_STORAGE_DIRECTORY = "storage";
 
 const FINORA_STORAGE_FILE = "finora-storage.json";
 
+const FINORA_STORAGE_TEMP_FILE =
+  "finora-storage.tmp.json";
+
+const FINORA_STORAGE_BACKUP_FILE =
+  "finora-storage.backup.json";
+
+const FINORA_STORAGE_INVALID_MESSAGE =
+  "FINORA USB storage package is invalid or unreadable.";
+
 const IPC_CHANNELS = {
   IS_AVAILABLE: "finora:usb:is-available",
 
@@ -715,55 +724,216 @@ function createEmptyStoragePackage(): UsbStoragePackage {
 // READ STORAGE PACKAGE
 // ============================================================
 
-async function readStoragePackage(usbRoot: string): Promise<UsbStoragePackage> {
-  const storageDirectory = getFinoraStorageDirectory(usbRoot);
-
-  const storageFile = getFinoraStorageFile(usbRoot);
-
-  await fs.mkdir(storageDirectory, {
-    recursive: true,
-  });
-
-  try {
-    const raw = await fs.readFile(storageFile, "utf8");
-
-    const parsed: unknown = JSON.parse(raw);
-
-    if (!parsed || typeof parsed !== "object") {
-      throw new Error("Invalid FINORA USB storage package.");
-    }
-
-    const candidate = parsed as Partial<UsbStoragePackage>;
-
-    if (candidate.version !== "2.0" || !Array.isArray(candidate.records)) {
-      throw new Error("Unsupported FINORA USB storage package.");
-    }
-
-    return {
-      version: "2.0",
-
-      records: candidate.records as PersistedStorageRecord[],
-
-      updatedAt:
-        typeof candidate.updatedAt === "string"
-          ? candidate.updatedAt
-          : new Date().toISOString(),
-    };
-  } catch (error) {
-    if (
-      error instanceof Error &&
-      "code" in error &&
-      (error as NodeJS.ErrnoException).code === "ENOENT"
-    ) {
-      const emptyPackage = createEmptyStoragePackage();
-
-      await writeStoragePackage(usbRoot, emptyPackage);
-
-      return emptyPackage;
-    }
-
-    throw error;
+function normalizeUsbStoragePackage(
+  value: unknown,
+): UsbStoragePackage {
+  if (
+    !value ||
+    typeof value !== "object"
+  ) {
+    throw new Error(
+      FINORA_STORAGE_INVALID_MESSAGE,
+    );
   }
+
+  const candidate =
+    value as Partial<UsbStoragePackage>;
+
+  if (
+    candidate.version !== "2.0" ||
+    !Array.isArray(
+      candidate.records,
+    )
+  ) {
+    throw new Error(
+      FINORA_STORAGE_INVALID_MESSAGE,
+    );
+  }
+
+  for (
+    const record
+    of candidate.records
+  ) {
+    if (
+      !record ||
+      typeof record !== "object" ||
+      Array.isArray(
+        record,
+      )
+    ) {
+      throw new Error(
+        FINORA_STORAGE_INVALID_MESSAGE,
+      );
+    }
+  }
+
+  return {
+    version:
+      "2.0",
+
+    records:
+      candidate.records as
+        PersistedStorageRecord[],
+
+    updatedAt:
+      typeof candidate.updatedAt ===
+        "string"
+        ? candidate.updatedAt
+        : new Date().toISOString(),
+  };
+}
+
+async function tryReadValidStoragePackage(
+  filePath: string,
+): Promise<
+  UsbStoragePackage |
+  undefined
+> {
+  try {
+    const raw =
+      await fs.readFile(
+        filePath,
+        "utf8",
+      );
+
+    const parsed: unknown =
+      JSON.parse(
+        raw,
+      );
+
+    return normalizeUsbStoragePackage(
+      parsed,
+    );
+  } catch {
+    return undefined;
+  }
+}
+
+async function usbStorageFileExists(
+  filePath: string,
+): Promise<boolean> {
+  try {
+    await fs.access(
+      filePath,
+    );
+
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+async function readStoragePackage(
+  usbRoot: string,
+): Promise<UsbStoragePackage> {
+  const storageDirectory =
+    getFinoraStorageDirectory(
+      usbRoot,
+    );
+
+  const storageFile =
+    getFinoraStorageFile(
+      usbRoot,
+    );
+
+  const temporaryFile =
+    path.join(
+      storageDirectory,
+      FINORA_STORAGE_TEMP_FILE,
+    );
+
+  const backupFile =
+    path.join(
+      storageDirectory,
+      FINORA_STORAGE_BACKUP_FILE,
+    );
+
+  await fs.mkdir(
+    storageDirectory,
+    {
+      recursive:
+        true,
+    },
+  );
+
+  const mainExists =
+    await usbStorageFileExists(
+      storageFile,
+    );
+
+  if (mainExists) {
+    const mainPackage =
+      await tryReadValidStoragePackage(
+        storageFile,
+      );
+
+    if (mainPackage) {
+      return mainPackage;
+    }
+  }
+
+  const backupExists =
+    await usbStorageFileExists(
+      backupFile,
+    );
+
+  if (backupExists) {
+    const backupPackage =
+      await tryReadValidStoragePackage(
+        backupFile,
+      );
+
+    if (backupPackage) {
+      return backupPackage;
+    }
+  }
+
+  const temporaryExists =
+    await usbStorageFileExists(
+      temporaryFile,
+    );
+
+  if (temporaryExists) {
+    const temporaryPackage =
+      await tryReadValidStoragePackage(
+        temporaryFile,
+      );
+
+    if (temporaryPackage) {
+      return temporaryPackage;
+    }
+  }
+
+  if (
+    mainExists ||
+    backupExists ||
+    temporaryExists
+  ) {
+    throw new Error(
+      FINORA_STORAGE_INVALID_MESSAGE,
+    );
+  }
+
+  const emptyPackage =
+    createEmptyStoragePackage();
+
+  await writeStoragePackage(
+    usbRoot,
+    emptyPackage,
+  );
+
+  const initialized =
+    await tryReadValidStoragePackage(
+      storageFile,
+    );
+
+  if (!initialized) {
+    throw new Error(
+      FINORA_STORAGE_INVALID_MESSAGE,
+    );
+  }
+
+  return initialized;
 }
 
 // ============================================================
@@ -772,34 +942,198 @@ async function readStoragePackage(usbRoot: string): Promise<UsbStoragePackage> {
 
 async function writeStoragePackage(
   usbRoot: string,
-
   storagePackage: UsbStoragePackage,
 ): Promise<void> {
-  const storageDirectory = getFinoraStorageDirectory(usbRoot);
+  const storageDirectory =
+    getFinoraStorageDirectory(
+      usbRoot,
+    );
 
-  const storageFile = getFinoraStorageFile(usbRoot);
+  const storageFile =
+    getFinoraStorageFile(
+      usbRoot,
+    );
 
-  const temporaryFile = String(storageFile) + ".tmp";
+  const temporaryFile =
+    path.join(
+      storageDirectory,
+      FINORA_STORAGE_TEMP_FILE,
+    );
 
-  await fs.mkdir(storageDirectory, {
-    recursive: true,
-  });
+  const backupFile =
+    path.join(
+      storageDirectory,
+      FINORA_STORAGE_BACKUP_FILE,
+    );
 
-  const content = JSON.stringify(
+  await fs.mkdir(
+    storageDirectory,
     {
-      ...storagePackage,
-
-      updatedAt: new Date().toISOString(),
+      recursive:
+        true,
     },
-    null,
-    2,
   );
 
-  await fs.writeFile(temporaryFile, content, "utf8");
+  /*
+   * Normalize in-memory state before any filesystem mutation.
+   */
+  const normalized =
+    normalizeUsbStoragePackage(
+      storagePackage,
+    );
 
-  await fs.rename(temporaryFile, storageFile);
+  const mainExists =
+    await usbStorageFileExists(
+      storageFile,
+    );
+
+  if (mainExists) {
+    const existingMain =
+      await tryReadValidStoragePackage(
+        storageFile,
+      );
+
+    if (!existingMain) {
+      /*
+       * Never replace a malformed main automatically.
+       * A backup/temp candidate may be the only recoverable state.
+       */
+      throw new Error(
+        FINORA_STORAGE_INVALID_MESSAGE,
+      );
+    }
+  }
+
+  const content =
+    JSON.stringify(
+      {
+        ...normalized,
+
+        updatedAt:
+          new Date().toISOString(),
+      },
+      null,
+      2,
+    );
+
+  /*
+   * Remove only an old transaction temp artifact.
+   * Main/backup remain untouched until the new temp package
+   * has been completely written and read back successfully.
+   */
+  await fs.rm(
+    temporaryFile,
+    {
+      force:
+        true,
+    },
+  );
+
+  await fs.writeFile(
+    temporaryFile,
+    content,
+    "utf8",
+  );
+
+  const verifiedTemporary =
+    await tryReadValidStoragePackage(
+      temporaryFile,
+    );
+
+  if (!verifiedTemporary) {
+    throw new Error(
+      "Unable to verify FINORA USB temporary storage file.",
+    );
+  }
+
+  if (!mainExists) {
+    await fs.rename(
+      temporaryFile,
+      storageFile,
+    );
+
+    const verifiedMain =
+      await tryReadValidStoragePackage(
+        storageFile,
+      );
+
+    if (!verifiedMain) {
+      throw new Error(
+        "Unable to verify FINORA USB storage file after writing.",
+      );
+    }
+
+    return;
+  }
+
+  /*
+   * Preserve one previous known-good main package.
+   *
+   * This filename intentionally matches the Android recovery
+   * contract so either runtime can recognize the same artifact.
+   */
+  await fs.rm(
+    backupFile,
+    {
+      force:
+        true,
+    },
+  );
+
+  await fs.rename(
+    storageFile,
+    backupFile,
+  );
+
+  try {
+    await fs.rename(
+      temporaryFile,
+      storageFile,
+    );
+
+    const verifiedMain =
+      await tryReadValidStoragePackage(
+        storageFile,
+      );
+
+    if (!verifiedMain) {
+      throw new Error(
+        "Unable to verify FINORA USB storage file after writing.",
+      );
+    }
+  } catch (error) {
+    /*
+     * Restore the previous known-good package when publication
+     * fails. Do not expose parser/provider internals to renderer.
+     */
+    await fs.rm(
+      storageFile,
+      {
+        force:
+          true,
+      },
+    );
+
+    if (
+      await usbStorageFileExists(
+        backupFile,
+      )
+    ) {
+      await fs.rename(
+        backupFile,
+        storageFile,
+      );
+    }
+
+    throw new Error(
+      error instanceof Error &&
+      error.message ===
+        "Unable to verify FINORA USB storage file after writing."
+        ? error.message
+        : "Unable to replace FINORA USB storage file.",
+    );
+  }
 }
-
 // ============================================================
 // LEGACY TENANT OUTER-ENVELOPE MIGRATION
 //

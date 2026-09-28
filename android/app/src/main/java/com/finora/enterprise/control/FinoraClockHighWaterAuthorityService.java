@@ -73,6 +73,10 @@ public final class FinoraClockHighWaterAuthorityService {
             "INSTALLATION_ID_MISMATCH";
 
     public static final String
+        ERROR_SYSTEM_TIME_NOT_AUTOMATIC =
+            "SYSTEM_TIME_NOT_AUTOMATIC";
+
+    public static final String
         ERROR_CLOCK_ROLLBACK_DETECTED =
             "CLOCK_ROLLBACK_DETECTED";
 
@@ -285,6 +289,22 @@ public final class FinoraClockHighWaterAuthorityService {
          * after authoritative installation identity is resolved
          * and while this operation owns AUTHORITY_LOCK.
          */
+        /*
+         * Android wall clock must not advance durable FINORA
+         * high-water while Automatic date & time is disabled.
+         *
+         * This check happens before Instant.now() is accepted
+         * and before any high-water state can be written.
+         *
+         * Existing poisoned state is recovered separately.
+         */
+        if (!highWaterStore.isAutomaticSystemTimeEnabled()) {
+            return Result.failure(
+                ERROR_SYSTEM_TIME_NOT_AUTOMATIC,
+                "Enable Automatic date & time before using FINORA."
+            );
+        }
+
         Instant observedInstant;
 
         try {
@@ -409,6 +429,58 @@ public final class FinoraClockHighWaterAuthorityService {
         // ----------------------------------------------------
 
         if (comparison < 0) {
+            /*
+             * One-time migration for pre-guard schema v1.
+             *
+             * schema v1 could have been poisoned by a manually
+             * advanced Android wall clock before AUTO_TIME
+             * enforcement existed.
+             *
+             * AUTO_TIME has already been verified above.
+             * Replace only this installation-local legacy clock
+             * record with the accepted current observation and
+             * permanently migrate it to guarded schema v2.
+             *
+             * schema v2 never receives this recovery path.
+             */
+            if (
+                persisted.schemaVersion ==
+                    FinoraClockHighWaterStore.LEGACY_SCHEMA_VERSION
+            ) {
+                FinoraClockHighWaterStore.State recoveredState =
+                    new FinoraClockHighWaterStore.State(
+                        FinoraClockHighWaterStore.SCHEMA_VERSION,
+                        authoritativeBinding.installationId,
+                        observedAt
+                    );
+
+                try {
+                    highWaterStore.write(
+                        recoveredState
+                    );
+                } catch (
+                    Exception error
+                ) {
+                    return Result.failure(
+                        ERROR_STORAGE_FAILED,
+                        messageOrDefault(
+                            error,
+                            "FINORA legacy clock high-water recovery could not be persisted."
+                        )
+                    );
+                }
+
+                return Result.success(
+                    new AcceptedObservation(
+                        authoritativeBinding.installationId,
+                        observedAt,
+                        observedAt,
+                        false,
+                        false
+                    )
+                );
+            }
+
             return Result.failure(
                 ERROR_CLOCK_ROLLBACK_DETECTED,
                 "FINORA detected system clock rollback below the persisted high-water timestamp."
@@ -420,6 +492,34 @@ public final class FinoraClockHighWaterAuthorityService {
         // ----------------------------------------------------
 
         if (comparison == 0) {
+            if (
+                persisted.schemaVersion ==
+                    FinoraClockHighWaterStore.LEGACY_SCHEMA_VERSION
+            ) {
+                FinoraClockHighWaterStore.State migratedState =
+                    new FinoraClockHighWaterStore.State(
+                        FinoraClockHighWaterStore.SCHEMA_VERSION,
+                        authoritativeBinding.installationId,
+                        persisted.highWaterAt
+                    );
+
+                try {
+                    highWaterStore.write(
+                        migratedState
+                    );
+                } catch (
+                    Exception error
+                ) {
+                    return Result.failure(
+                        ERROR_STORAGE_FAILED,
+                        messageOrDefault(
+                            error,
+                            "FINORA legacy clock high-water migration could not be persisted."
+                        )
+                    );
+                }
+            }
+
             return Result.success(
                 new AcceptedObservation(
                     authoritativeBinding.installationId,

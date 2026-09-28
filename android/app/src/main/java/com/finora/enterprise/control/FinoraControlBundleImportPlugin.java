@@ -6,6 +6,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.database.Cursor;
 import android.net.Uri;
+import android.util.Log;
 import android.provider.OpenableColumns;
 
 import androidx.activity.result.ActivityResult;
@@ -83,6 +84,9 @@ import java.util.Locale;
 public final class FinoraControlBundleImportPlugin
     extends Plugin {
 
+    private static final String TRACE_TAG =
+        "FINORA_BUNDLE_IMPORT";
+
     // ========================================================
     // FILE CONTRACT
     // ========================================================
@@ -141,7 +145,17 @@ public final class FinoraControlBundleImportPlugin
         }
 
         try {
+            Log.i(
+                TRACE_TAG,
+                "IMPORT_START"
+            );
+
             ensureInitialized();
+
+            Log.i(
+                TRACE_TAG,
+                "IMPORT_INITIALIZED"
+            );
 
             Intent intent =
                 new Intent(
@@ -164,6 +178,11 @@ public final class FinoraControlBundleImportPlugin
 
             intent.addFlags(
                 Intent.FLAG_GRANT_READ_URI_PERMISSION
+            );
+
+            Log.i(
+                TRACE_TAG,
+                "PICKER_LAUNCH"
             );
 
             startActivityForResult(
@@ -194,7 +213,24 @@ public final class FinoraControlBundleImportPlugin
         PluginCall call,
         ActivityResult result
     ) {
+        Log.i(
+            TRACE_TAG,
+            "CALLBACK_ENTER resultCode=" +
+                (
+                    result == null
+                        ? "null"
+                        : String.valueOf(
+                            result.getResultCode()
+                        )
+                )
+        );
+
         if (call == null) {
+            Log.e(
+                TRACE_TAG,
+                "CALLBACK_CALL_NULL"
+            );
+
             return;
         }
 
@@ -226,6 +262,12 @@ public final class FinoraControlBundleImportPlugin
         Uri selectedUri =
             data.getData();
 
+        Log.i(
+            TRACE_TAG,
+            "CALLBACK_URI_PRESENT=" +
+                (selectedUri != null)
+        );
+
         if (selectedUri == null) {
             resolveFailure(
                 call,
@@ -244,13 +286,39 @@ public final class FinoraControlBundleImportPlugin
                     selectedUri
                 );
 
+            Log.i(
+                TRACE_TAG,
+                "FILE_READ_OK name=" +
+                    selectedFile.fileName +
+                    " bytes=" +
+                    selectedFile.bytesRead
+            );
+
             FinoraControlBundleImportCoordinator.Result
                 importResult =
                     importCoordinator.apply(
                         selectedFile.signedBundle
                     );
 
+            Log.i(
+                TRACE_TAG,
+                "COORDINATOR_RESULT success=" +
+                    importResult.success
+            );
+
             if (!importResult.success) {
+                Log.e(
+                    TRACE_TAG,
+                    "COORDINATOR_FAILURE errorCode=" +
+                        String.valueOf(
+                            importResult.errorCode
+                        ) +
+                        " error=" +
+                        String.valueOf(
+                            importResult.error
+                        )
+                );
+
                 resolveImportFailure(
                     call,
                     importResult
@@ -258,6 +326,11 @@ public final class FinoraControlBundleImportPlugin
 
                 return;
             }
+
+            Log.i(
+                TRACE_TAG,
+                "IMPORT_SUCCESS_RESOLVE"
+            );
 
             resolveSuccess(
                 call,
@@ -267,6 +340,17 @@ public final class FinoraControlBundleImportPlugin
         } catch (
             Exception error
         ) {
+            Log.e(
+                TRACE_TAG,
+                "IMPORT_EXCEPTION: " +
+                    error.getClass().getName() +
+                    ": " +
+                    String.valueOf(
+                        error.getMessage()
+                    ),
+                error
+            );
+
             resolveFailure(
                 call,
                 "FINORA_FILE_IMPORT_FAILED",

@@ -85,7 +85,7 @@ export interface FinoraControlCenterBranchPricingView
     typeof FINORA_CONTROL_CENTER_BRANCH_PRICING_SCHEMA_VERSION;
 }
 
-interface FinoraControlCenterBranchPricingStore {
+export interface FinoraControlCenterBranchPricingStore {
   schemaVersion:
     typeof FINORA_CONTROL_CENTER_BRANCH_PRICING_SCHEMA_VERSION;
 
@@ -506,6 +506,27 @@ async function writeStore(
     temporaryFile,
     filePath,
   );
+}
+
+export async function loadFinoraControlCenterBranchPricingSnapshot():
+  Promise<FinoraControlCenterBranchPricingStore> {
+
+  const store =
+    await readStore();
+
+  return {
+    schemaVersion:
+      store.schemaVersion,
+
+    records:
+      store.records.map(
+        (
+          record,
+        ) => ({
+          ...record,
+        }),
+      ),
+  };
 }
 
 export async function readFinoraControlCenterBranchPricing(
