@@ -140,6 +140,8 @@ const CONTROL_CENTER_CHANNELS = {
 
   EXPORT_PORTABLE_STATE:
     "finora:control-center:export-portable-state",
+  IMPORT_PORTABLE_STATE:
+    "finora:control-center:import-portable-state",
   EXPORT_ADMIN_AUTHORITY_RECOVERY:
     "finora:control-center:export-admin-authority-recovery",
 
@@ -1337,7 +1339,34 @@ const controlCenterBridge:
             }
         >
       >,
-getDeveloperSecurityState:
+
+    importPortableState:
+    (
+      input,
+    ) =>
+      ipcRenderer.invoke(
+        CONTROL_CENTER_CHANNELS
+          .IMPORT_PORTABLE_STATE,
+        input,
+      ) as Promise<
+        FinoraControlCenterResult<{
+          readonly status:
+            | "ADOPTED"
+            | "ALREADY_ADOPTED"
+            | "CANCELLED";
+
+          readonly stateGeneration?:
+            number;
+
+          readonly payloadSha256?:
+            string;
+
+          readonly parentPayloadSha256?:
+            string | null;
+        }>
+      >,
+
+  getDeveloperSecurityState:
     () =>
       ipcRenderer.invoke(
         CONTROL_CENTER_CHANNELS

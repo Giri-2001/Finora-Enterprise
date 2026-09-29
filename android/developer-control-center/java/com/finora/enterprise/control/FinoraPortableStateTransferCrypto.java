@@ -7,6 +7,7 @@ import org.json.JSONObject;
 
 import java.nio.charset.StandardCharsets;
 import java.security.GeneralSecurityException;
+import java.security.SecureRandom;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -91,6 +92,269 @@ final class FinoraPortableStateTransferCrypto {
     private FinoraPortableStateTransferCrypto() {
     }
 
+
+    static String encryptSerializedSignedEnvelope(
+        String serializedSignedEnvelope,
+        String transferCode
+    ) throws Exception {
+
+        validateTransferCode(transferCode);
+
+        if (
+            serializedSignedEnvelope == null ||
+            serializedSignedEnvelope.length() == 0
+        ) {
+            throw new IllegalArgumentException(
+                "FINORA Portable State signed envelope is required."
+            );
+        }
+
+        byte[] plaintext =
+            serializedSignedEnvelope.getBytes(
+                StandardCharsets.UTF_8
+            );
+
+        if (
+            plaintext.length <= 0 ||
+            plaintext.length > MAX_PLAINTEXT_BYTES
+        ) {
+            Arrays.fill(plaintext, (byte) 0);
+            throw new IllegalArgumentException(
+                "FINORA Portable State signed envelope size is invalid."
+            );
+        }
+
+        byte[] salt =
+            new byte[SCRYPT_SALT_BYTES];
+
+        byte[] iv =
+            new byte[AES_GCM_IV_BYTES];
+
+        byte[] transferCodeBytes =
+            transferCode.getBytes(StandardCharsets.UTF_8);
+
+        byte[] derivedKey = null;
+        byte[] encryptedWithTag = null;
+        byte[] ciphertext = null;
+        byte[] authTag = null;
+        byte[] aad = null;
+
+        try {
+
+            SecureRandom random =
+                new SecureRandom();
+
+            random.nextBytes(salt);
+            random.nextBytes(iv);
+
+            String saltBase64 =
+                Base64.encodeToString(
+                    salt,
+                    Base64.NO_WRAP
+                );
+
+            String ivBase64 =
+                Base64.encodeToString(
+                    iv,
+                    Base64.NO_WRAP
+                );
+
+            derivedKey =
+                SCrypt.generate(
+                    transferCodeBytes,
+                    salt,
+                    SCRYPT_N,
+                    SCRYPT_R,
+                    SCRYPT_P,
+                    DERIVED_KEY_BYTES
+                );
+
+            Cipher cipher =
+                Cipher.getInstance(
+                    CIPHER_TRANSFORMATION
+                );
+
+            cipher.init(
+                Cipher.ENCRYPT_MODE,
+                new SecretKeySpec(
+                    derivedKey,
+                    "AES"
+                ),
+                new GCMParameterSpec(
+                    AES_GCM_TAG_BITS,
+                    iv
+                )
+            );
+
+            aad =
+                buildAad(
+                    saltBase64,
+                    ivBase64
+                );
+
+            cipher.updateAAD(aad);
+
+            encryptedWithTag =
+                cipher.doFinal(plaintext);
+
+            int ciphertextLength =
+                encryptedWithTag.length -
+                    AES_GCM_TAG_BYTES;
+
+            if (
+                ciphertextLength <= 0 ||
+                ciphertextLength >
+                    MAX_CIPHERTEXT_BYTES
+            ) {
+                throw new IllegalArgumentException(
+                    "FINORA Portable State Transfer ciphertext size is invalid."
+                );
+            }
+
+            ciphertext =
+                Arrays.copyOfRange(
+                    encryptedWithTag,
+                    0,
+                    ciphertextLength
+                );
+
+            authTag =
+                Arrays.copyOfRange(
+                    encryptedWithTag,
+                    ciphertextLength,
+                    encryptedWithTag.length
+                );
+
+            JSONObject kdf =
+                new JSONObject();
+
+            kdf.put("algorithm", KDF_ALGORITHM);
+            kdf.put("N", SCRYPT_N);
+            kdf.put("r", SCRYPT_R);
+            kdf.put("p", SCRYPT_P);
+            kdf.put(
+                "salt",
+                saltBase64
+            );
+            kdf.put(
+                "derivedKeyBytes",
+                DERIVED_KEY_BYTES
+            );
+
+            JSONObject encryption =
+                new JSONObject();
+
+            encryption.put(
+                "algorithm",
+                ENCRYPTION_ALGORITHM
+            );
+            encryption.put(
+                "iv",
+                ivBase64
+            );
+            encryption.put(
+                "authTag",
+                Base64.encodeToString(
+                    authTag,
+                    Base64.NO_WRAP
+                )
+            );
+
+            JSONObject root =
+                new JSONObject();
+
+            root.put("format", FORMAT);
+            root.put(
+                "schemaVersion",
+                SCHEMA_VERSION
+            );
+            root.put("kdf", kdf);
+            root.put(
+                "encryption",
+                encryption
+            );
+            root.put(
+                "ciphertext",
+                Base64.encodeToString(
+                    ciphertext,
+                    Base64.NO_WRAP
+                )
+            );
+
+            String serialized =
+                root.toString();
+
+            if (
+                serialized.getBytes(
+                    StandardCharsets.UTF_8
+                ).length >
+                    MAX_SERIALIZED_BUNDLE_BYTES
+            ) {
+                throw new IllegalArgumentException(
+                    "FINORA Portable State Transfer serialization is too large."
+                );
+            }
+
+            return serialized;
+        }
+        finally {
+
+            Arrays.fill(
+                plaintext,
+                (byte) 0
+            );
+
+            Arrays.fill(
+                salt,
+                (byte) 0
+            );
+
+            Arrays.fill(
+                iv,
+                (byte) 0
+            );
+
+            Arrays.fill(
+                transferCodeBytes,
+                (byte) 0
+            );
+
+            if (derivedKey != null) {
+                Arrays.fill(
+                    derivedKey,
+                    (byte) 0
+                );
+            }
+
+            if (encryptedWithTag != null) {
+                Arrays.fill(
+                    encryptedWithTag,
+                    (byte) 0
+                );
+            }
+
+            if (ciphertext != null) {
+                Arrays.fill(
+                    ciphertext,
+                    (byte) 0
+                );
+            }
+
+            if (authTag != null) {
+                Arrays.fill(
+                    authTag,
+                    (byte) 0
+                );
+            }
+
+            if (aad != null) {
+                Arrays.fill(
+                    aad,
+                    (byte) 0
+                );
+            }
+        }
+    }
 
     static String decryptSerializedSignedEnvelope(
         String serializedBundle,

@@ -36,6 +36,10 @@ import {
 } from "electron";
 
 import {
+  readFile,
+} from "node:fs/promises";
+
+import {
   issueFinoraBranchActivationPackage,
   issueFinoraBranchAccessPackage,
   issueFinoraBranchDeviceRevocationPackage,
@@ -87,6 +91,7 @@ import {
 import {
   appendFinoraControlCenterWalletHistory,
   loadFinoraControlCenterWalletHistory,
+  mergeFinoraControlCenterWalletHistory,
 } from "./finoraControlCenterWalletHistoryStore.js";
 import {
   issueFinoraVerifiedWalletRechargeDeclineBundle,
@@ -135,6 +140,38 @@ import {
 import {
   exportFinoraControlCenterPortableStateToPath,
 } from "./finoraControlCenterPortableStateExportService.js";
+
+import {
+  parseFinoraControlCenterPortableStateTransferBundleV1,
+  decryptFinoraControlCenterPortableStateTransferBundleV1,
+} from "./finoraControlCenterPortableStateTransferCrypto.js";
+
+import {
+  FINORA_CONTROL_CENTER_PORTABLE_STATE_FORMAT,
+  FINORA_CONTROL_CENTER_PORTABLE_STATE_SCHEMA_VERSION,
+  type FinoraControlCenterPortableStateEnvelope,
+} from "./finoraControlCenterPortableState.types.js";
+
+import {
+  canonicalizeFinoraControlCenterValue,
+  createFinoraControlCenterSha256,
+} from "./finoraControlCenterCanonicalization.js";
+
+import {
+  verifyFinoraControlCenterCanonicalSignature,
+} from "./finoraControlCenterCrypto.js";
+
+import {
+  getFinoraControlCenterPublicIdentity,
+} from "./finoraControlCenterKeyVault.js";
+
+import {
+  adoptFinoraControlCenterPortableStateImportedHead,
+} from "./finoraControlCenterPortableStateHeadStore.js";
+
+import {
+  advanceFinoraControlCenterPortableStateGenerationFloor,
+} from "./finoraControlCenterPortableStateGenerationStore.js";
 import {
   FINORA_CONTROL_CENTER_ADMIN_SECURITY_CODE_MAX_LENGTH,
   FINORA_CONTROL_CENTER_ADMIN_SECURITY_CODE_MIN_LENGTH,
@@ -284,6 +321,8 @@ export const FINORA_CONTROL_CENTER_IPC_CHANNELS = {
 
   EXPORT_PORTABLE_STATE:
     "finora:control-center:export-portable-state",
+  IMPORT_PORTABLE_STATE:
+    "finora:control-center:import-portable-state",
   EXPORT_ADMIN_AUTHORITY_RECOVERY:
     "finora:control-center:export-admin-authority-recovery",
 
@@ -3400,25 +3439,25 @@ registerFinoraDeveloperSecurityControlCenterHandler(
 
 
           const stamp =
-            String(
-              now.getFullYear(),
-            ) +
-            two(
-              now.getMonth() +
-                1,
-            ) +
             two(
               now.getDate(),
             ) +
             "-" +
             two(
+              now.getMonth() +
+                1,
+            ) +
+            "-" +
+            String(
+              now.getFullYear(),
+            ) +
+            "_" +
+            two(
               now.getHours(),
             ) +
+            "-" +
             two(
               now.getMinutes(),
-            ) +
-            two(
-              now.getSeconds(),
             );
 
 
@@ -3430,7 +3469,7 @@ registerFinoraDeveloperSecurityControlCenterHandler(
                   "Export FINORA Portable State",
 
                 defaultPath:
-                  `FINORA-Control-Center-Portable-State-${stamp}.finora`,
+                  `FINORA_Developer_Laptop_to_Android_${stamp}.finora`,
 
                 buttonLabel:
                   "Export .finora",
@@ -3513,6 +3552,329 @@ registerFinoraDeveloperSecurityControlCenterHandler(
       );
     },
   );
+
+  // ----------------------------------------------------------
+  // PORTABLE STATE WINDOWS IMPORT
+  //
+  // Native Open dialog owns sourcePath.
+  // Renderer supplies Transfer Code only.
+  // Verified lineage is adopted before operational history merge.
+  // ----------------------------------------------------------
+
+  registerFinoraDeveloperProtectedControlCenterHandler(
+    FINORA_CONTROL_CENTER_IPC_CHANNELS
+      .IMPORT_PORTABLE_STATE,
+    async (
+      event,
+      request:
+        unknown,
+    ) => {
+
+      if (
+        !isTrustedFinoraControlCenterRenderer(
+          event.senderFrame,
+        )
+      ) {
+        return failure(
+          "FINORA Portable State import is restricted to the dedicated Control Center renderer.",
+        );
+      }
+
+
+      const parentWindow =
+        BrowserWindow.fromWebContents(
+          event.sender,
+        );
+
+
+      if (
+        !parentWindow ||
+        parentWindow.isDestroyed() ||
+        parentWindow.webContents !==
+          event.sender ||
+        event.senderFrame !==
+          parentWindow.webContents.mainFrame
+      ) {
+        return failure(
+          "FINORA Portable State import is restricted to the dedicated Control Center main frame.",
+        );
+      }
+
+
+      if (!isRecord(request)) {
+        return failure(
+          "A valid FINORA Portable State import request is required.",
+        );
+      }
+
+
+      const requestKeys =
+        Object.keys(
+          request,
+        ).sort();
+
+
+      if (
+        requestKeys.length !==
+          1 ||
+        requestKeys[0] !==
+          "transferCode"
+      ) {
+        return failure(
+          "FINORA Portable State import request contains unsupported fields.",
+        );
+      }
+
+
+      const transferCode =
+        request.transferCode;
+
+
+      if (
+        typeof transferCode !==
+          "string"
+      ) {
+        return failure(
+          "A valid FINORA Portable State Transfer Code is required.",
+        );
+      }
+
+
+      const transferCodeLength =
+        Array.from(
+          transferCode,
+        ).length;
+
+
+      if (
+        transferCodeLength <
+          12 ||
+        transferCodeLength >
+          128 ||
+        transferCode.trim() !==
+          transferCode ||
+        /[\u0000-\u001F\u007F]/u.test(
+          transferCode,
+        )
+      ) {
+        return failure(
+          "A valid FINORA Portable State Transfer Code is required.",
+        );
+      }
+
+
+      return executePrivileged(
+        async () => {
+
+          const selection =
+            await dialog.showOpenDialog(
+              parentWindow,
+              {
+                title:
+                  "Import FINORA Portable State",
+
+                buttonLabel:
+                  "Import .finora",
+
+                filters: [
+                  {
+                    name:
+                      "FINORA Portable State",
+
+                    extensions: [
+                      "finora",
+                    ],
+                  },
+                ],
+
+                properties: [
+                  "openFile",
+                ],
+              },
+            );
+
+
+          if (
+            selection.canceled ||
+            selection.filePaths.length !==
+              1
+          ) {
+            return {
+              status:
+                "CANCELLED" as const,
+            };
+          }
+
+
+          const serializedTransfer =
+            await readFile(
+              selection.filePaths[0],
+              "utf8",
+            );
+
+
+          const transferBundle =
+            parseFinoraControlCenterPortableStateTransferBundleV1(
+              serializedTransfer,
+            );
+
+
+          const serializedEnvelope =
+            await decryptFinoraControlCenterPortableStateTransferBundleV1(
+              transferBundle,
+              transferCode,
+            );
+
+
+          let parsedEnvelope:
+            unknown;
+
+          try {
+            parsedEnvelope =
+              JSON.parse(
+                serializedEnvelope,
+              );
+          } catch {
+            throw new Error(
+              "FINORA Portable State decrypted envelope contains invalid JSON.",
+            );
+          }
+
+
+          if (
+            typeof parsedEnvelope !==
+              "object" ||
+            parsedEnvelope ===
+              null ||
+            Array.isArray(
+              parsedEnvelope,
+            )
+          ) {
+            throw new Error(
+              "FINORA Portable State envelope is invalid.",
+            );
+          }
+
+
+          const envelope =
+            parsedEnvelope as
+              FinoraControlCenterPortableStateEnvelope;
+
+
+          if (
+            envelope.format !==
+              FINORA_CONTROL_CENTER_PORTABLE_STATE_FORMAT ||
+            envelope.schemaVersion !==
+              FINORA_CONTROL_CENTER_PORTABLE_STATE_SCHEMA_VERSION ||
+            envelope.payload?.format !==
+              FINORA_CONTROL_CENTER_PORTABLE_STATE_FORMAT ||
+            envelope.payload?.schemaVersion !==
+              FINORA_CONTROL_CENTER_PORTABLE_STATE_SCHEMA_VERSION
+          ) {
+            throw new Error(
+              "FINORA Portable State envelope format or schemaVersion is invalid.",
+            );
+          }
+
+
+          const canonicalPayload =
+            canonicalizeFinoraControlCenterValue(
+              envelope.payload,
+            );
+
+
+          const expectedPayloadSha256 =
+            createFinoraControlCenterSha256(
+              canonicalPayload,
+            );
+
+
+          if (
+            envelope.payloadSha256 !==
+              expectedPayloadSha256
+          ) {
+            throw new Error(
+              "FINORA Portable State envelope payload digest is invalid.",
+            );
+          }
+
+
+          const identity =
+            await getFinoraControlCenterPublicIdentity();
+
+
+          if (
+            envelope.payload.issuerId !==
+              identity.issuerId ||
+            envelope.payload.signingKeyId !==
+              identity.signingKeyId
+          ) {
+            throw new Error(
+              "FINORA Portable State envelope does not match the current signing authority.",
+            );
+          }
+
+
+          const signatureValid =
+            verifyFinoraControlCenterCanonicalSignature(
+              canonicalPayload,
+              envelope.signatureBase64,
+              identity.publicKeySpkiDerBase64,
+            );
+
+
+          if (!signatureValid) {
+            throw new Error(
+              "FINORA Portable State envelope signature is invalid.",
+            );
+          }
+
+
+          const adoption =
+            await adoptFinoraControlCenterPortableStateImportedHead({
+              issuerId:
+                envelope.payload.issuerId,
+
+              generation:
+                envelope.payload.stateGeneration,
+
+              payloadSha256:
+                envelope.payloadSha256,
+
+              parentPayloadSha256:
+                envelope.payload.parentPayloadSha256,
+            });
+
+
+          await advanceFinoraControlCenterPortableStateGenerationFloor(
+            envelope.payload.issuerId,
+            envelope.payload.stateGeneration,
+          );
+
+
+          await mergeFinoraControlCenterWalletHistory(
+            envelope.payload.walletHistory.records,
+          );
+
+
+          return {
+            status:
+              adoption.status,
+
+            stateGeneration:
+              envelope.payload.stateGeneration,
+
+            payloadSha256:
+              envelope.payloadSha256,
+
+            parentPayloadSha256:
+              envelope.payload.parentPayloadSha256,
+          };
+        },
+      );
+    },
+  );
+
 
   registerFinoraDeveloperProtectedControlCenterHandler(
     FINORA_CONTROL_CENTER_IPC_CHANNELS

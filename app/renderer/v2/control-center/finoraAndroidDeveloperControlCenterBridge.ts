@@ -101,6 +101,15 @@ function createAndroidBridge():
           "lockDeveloperControlCenter",
         ),
 
+    exportPortableState:
+      (
+        input,
+      ) =>
+        invokeNative(
+          "exportPortableState",
+          input,
+        ),
+
     importPortableState:
       (
         input,

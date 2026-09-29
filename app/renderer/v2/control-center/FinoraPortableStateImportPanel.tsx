@@ -438,13 +438,15 @@ export default function FinoraPortableStateImportPanel() {
               0.72,
           }}
         >
-          {exporterAvailable
-            ? "Export the current signed Control Center state for another authorized FINORA Control Center device."
-            : "Import an encrypted FINORA Portable State file from another authorized Control Center device."}
+          {exporterAvailable && importerAvailable
+            ? "Export or import the signed FINORA Control Center Portable State between authorized Control Center devices."
+            : exporterAvailable
+              ? "Export the current signed Control Center state for another authorized FINORA Control Center device."
+              : "Import an encrypted FINORA Portable State file from another authorized Control Center device."}
         </div>
       </div>
 
-      {exporterAvailable ? (
+      {exporterAvailable && (
         <>
           <div
             style={{
@@ -593,7 +595,9 @@ export default function FinoraPortableStateImportPanel() {
             </button>
           </div>
         </>
-      ) : (
+      )}
+
+      {importerAvailable && (
         <div
           style={{
             display:

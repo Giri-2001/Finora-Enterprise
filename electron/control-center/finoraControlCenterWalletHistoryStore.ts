@@ -370,6 +370,72 @@ function validateFileEvidence(
   }
 }
 
+function isAndroidContentEvidenceReference(
+  value:
+    string,
+): boolean {
+
+  /*
+   * Android Storage Access Framework returns opaque content://
+   * references rather than Windows/local filesystem paths.
+   *
+   * These values are provenance metadata only on the receiving
+   * desktop Control Center. They are never dereferenced as a
+   * Windows filesystem path.
+   */
+  return (
+    /^content:\/\/[^\s]+$/i.test(
+      value,
+    )
+  );
+}
+
+
+function validatePortableFileEvidence(
+  fileName:
+    string,
+  filePath:
+    string,
+  label:
+    string,
+): void {
+
+  if (
+    path.isAbsolute(
+      filePath,
+    )
+  ) {
+
+    validateFileEvidence(
+      fileName,
+      filePath,
+      label,
+    );
+
+    return;
+  }
+
+
+  if (
+    isAndroidContentEvidenceReference(
+      filePath,
+    )
+  ) {
+
+    /*
+     * Android content:// URI may intentionally not expose the
+     * original filename in its URI path. The signed Wallet
+     * History record separately preserves fileName.
+     */
+    return;
+  }
+
+
+  throw new Error(
+    `${label} evidence reference is neither an absolute local path nor an Android content URI.`,
+  );
+}
+
 function createHistoryId(
   controlBundlePackageId: string,
 ): string {
@@ -511,26 +577,13 @@ function validateRecord(
   const exportedPath =
     record.exportedResultFilePath as string;
 
-  if (
-    !path.isAbsolute(
-      importedPath,
-    ) ||
-    !path.isAbsolute(
-      exportedPath,
-    )
-  ) {
-    throw new Error(
-      "FINORA Control Center Wallet History file evidence path is invalid.",
-    );
-  }
-
-  validateFileEvidence(
+  validatePortableFileEvidence(
     record.importedRequestFileName as string,
     importedPath,
     "Imported Wallet Recharge Request",
   );
 
-  validateFileEvidence(
+  validatePortableFileEvidence(
     record.exportedResultFileName as string,
     exportedPath,
     "Exported Wallet Recharge result",
@@ -1198,6 +1251,223 @@ export function appendFinoraControlCenterWalletHistory(
 
   return operation;
 }
+
+function walletHistoryRecordsExactlyMatch(
+  left:
+    FinoraControlCenterWalletHistoryRecord,
+
+  right:
+    FinoraControlCenterWalletHistoryRecord,
+): boolean {
+
+  const leftRecord =
+    left as unknown as
+      Record<string, unknown>;
+
+  const rightRecord =
+    right as unknown as
+      Record<string, unknown>;
+
+  const leftKeys =
+    Object.keys(
+      leftRecord,
+    ).sort();
+
+  const rightKeys =
+    Object.keys(
+      rightRecord,
+    ).sort();
+
+  return (
+    leftKeys.length ===
+      rightKeys.length &&
+    leftKeys.every(
+      (
+        key,
+        index,
+      ) =>
+        key ===
+          rightKeys[index] &&
+        leftRecord[key] ===
+          rightRecord[key],
+    )
+  );
+}
+
+
+async function mergeWalletHistoryInternal(
+  incoming:
+    readonly FinoraControlCenterWalletHistoryRecord[],
+): Promise<number> {
+
+  if (!Array.isArray(incoming)) {
+    throw new Error(
+      "FINORA imported Wallet History records are invalid.",
+    );
+  }
+
+  const existingRoot =
+    await readStore();
+
+  const incomingRecords =
+    incoming.map(
+      (
+        candidate,
+      ) => {
+
+        validateRecord(
+          candidate,
+        );
+
+        return cloneRecord(
+          candidate,
+        );
+      },
+    );
+
+  if (
+    incomingRecords.length ===
+      0
+  ) {
+    return 0;
+  }
+
+  const firstRecordedAt =
+    incomingRecords
+      .map(
+        (record) =>
+          record.recordedAt,
+      )
+      .sort()[0];
+
+  const root:
+    FinoraControlCenterWalletHistoryRoot =
+      existingRoot ??
+      {
+        records:
+          [],
+
+        createdAt:
+          firstRecordedAt,
+
+        updatedAt:
+          firstRecordedAt,
+
+        schemaVersion:
+          FINORA_CONTROL_CENTER_WALLET_HISTORY_SCHEMA_VERSION,
+      };
+
+  let added =
+    0;
+
+  for (
+    const candidate of
+    incomingRecords
+  ) {
+
+    const sameHistoryId =
+      root.records.find(
+        (existing) =>
+          existing.historyId ===
+            candidate.historyId,
+      );
+
+    if (sameHistoryId) {
+
+      if (
+        !walletHistoryRecordsExactlyMatch(
+          sameHistoryId,
+          candidate,
+        )
+      ) {
+        throw new Error(
+          `Conflicting FINORA Wallet History record already exists for historyId ${candidate.historyId}.`,
+        );
+      }
+
+      continue;
+    }
+
+    const samePackageId =
+      root.records.find(
+        (existing) =>
+          existing.controlBundlePackageId ===
+            candidate.controlBundlePackageId,
+      );
+
+    if (samePackageId) {
+      throw new Error(
+        `Conflicting FINORA Wallet History Control Bundle package ID already exists: ${candidate.controlBundlePackageId}.`,
+      );
+    }
+
+    root.records.push(
+      candidate,
+    );
+
+    if (
+      Date.parse(
+        candidate.recordedAt,
+      ) >
+      Date.parse(
+        root.updatedAt,
+      )
+    ) {
+      root.updatedAt =
+        candidate.recordedAt;
+    }
+
+    added +=
+      1;
+  }
+
+  if (
+    added ===
+      0
+  ) {
+    return 0;
+  }
+
+  validateRoot(
+    root,
+  );
+
+  await writeStore(
+    root,
+  );
+
+  return added;
+}
+
+
+export function mergeFinoraControlCenterWalletHistory(
+  incoming:
+    readonly FinoraControlCenterWalletHistoryRecord[],
+): Promise<number> {
+
+  const operation =
+    mutationQueue.then(
+      () =>
+        mergeWalletHistoryInternal(
+          incoming,
+        ),
+      () =>
+        mergeWalletHistoryInternal(
+          incoming,
+        ),
+    );
+
+  mutationQueue =
+    operation.then(
+      () =>
+        undefined,
+      () =>
+        undefined,
+    );
+
+  return operation;
+}
+
 
 export async function loadFinoraControlCenterWalletHistory():
   Promise<

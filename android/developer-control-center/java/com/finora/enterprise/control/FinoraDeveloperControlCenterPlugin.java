@@ -3887,6 +3887,349 @@ public final class FinoraDeveloperControlCenterPlugin
 
 
     @PluginMethod
+    public void exportPortableState(
+        PluginCall call
+    ) {
+
+        if (!unlocked) {
+
+            resolveFailure(
+                call,
+                "FINORA Developer Control Center privileged authority is locked."
+            );
+
+            return;
+        }
+
+
+        String transferCode =
+            call.getString(
+                "transferCode"
+            );
+
+
+        if (
+            transferCode == null ||
+            transferCode.length() < 12 ||
+            transferCode.length() > 128 ||
+            !transferCode.equals(
+                transferCode.trim()
+            )
+        ) {
+
+            resolveFailure(
+                call,
+                "FINORA Portable State Transfer Code is invalid."
+            );
+
+            return;
+        }
+
+
+        try {
+
+            FinoraPortableStateAuthorityStore authorityStore =
+                new FinoraPortableStateAuthorityStore(
+                    getContext()
+                );
+
+            FinoraPortableStateAuthorityStore.Snapshot snapshot =
+                authorityStore.load();
+
+
+            if (snapshot == null) {
+
+                throw new IllegalStateException(
+                    "Import a verified FINORA Portable State before Android export."
+                );
+            }
+
+
+            JSONObject controlCenterRecord =
+                readStore();
+
+
+            if (controlCenterRecord == null) {
+
+                throw new IllegalStateException(
+                    "FINORA Developer Control Center signing authority is unavailable."
+                );
+            }
+
+
+            JSONObject vault =
+                controlCenterRecord.getJSONObject(
+                    "vault"
+                );
+
+
+            FinoraAndroidPortableStateExporter.Result preview =
+                FinoraAndroidPortableStateExporter.create(
+                    getContext(),
+                    snapshot,
+                    vault,
+                    transferCode
+                );
+
+
+            android.content.Intent intent =
+                new android.content.Intent(
+                    android.content.Intent.ACTION_CREATE_DOCUMENT
+                );
+
+            intent.addCategory(
+                android.content.Intent.CATEGORY_OPENABLE
+            );
+
+            intent.setType(
+                "application/octet-stream"
+            );
+
+            intent.putExtra(
+                android.content.Intent.EXTRA_TITLE,
+                preview.suggestedFileName
+            );
+
+            intent.addFlags(
+                android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION |
+                android.content.Intent.FLAG_GRANT_WRITE_URI_PERMISSION
+            );
+
+
+            startActivityForResult(
+                call,
+                intent,
+                "portableStateExportSelected"
+            );
+        }
+        catch (Exception error) {
+
+            resolveFailure(
+                call,
+                messageOrDefault(
+                    error,
+                    "FINORA Portable State export could not be prepared."
+                )
+            );
+        }
+    }
+
+
+    @com.getcapacitor.annotation.ActivityCallback
+    private void portableStateExportSelected(
+        PluginCall call,
+        androidx.activity.result.ActivityResult result
+    ) {
+
+        if (call == null) {
+            return;
+        }
+
+
+        if (
+            result == null ||
+            result.getResultCode() !=
+                android.app.Activity.RESULT_OK
+        ) {
+
+            JSObject cancelled =
+                new JSObject();
+
+            cancelled.put(
+                "status",
+                "CANCELLED"
+            );
+
+            resolveSuccess(
+                call,
+                cancelled
+            );
+
+            return;
+        }
+
+
+        try {
+
+            android.content.Intent data =
+                result.getData();
+
+            android.net.Uri uri =
+                data == null
+                    ? null
+                    : data.getData();
+
+
+            if (uri == null) {
+
+                throw new IllegalStateException(
+                    "FINORA Portable State export returned no destination file."
+                );
+            }
+
+
+            String transferCode =
+                call.getString(
+                    "transferCode"
+                );
+
+
+            FinoraPortableStateAuthorityStore authorityStore =
+                new FinoraPortableStateAuthorityStore(
+                    getContext()
+                );
+
+            FinoraPortableStateAuthorityStore.Snapshot snapshot =
+                authorityStore.load();
+
+
+            if (snapshot == null) {
+
+                throw new IllegalStateException(
+                    "FINORA Portable State authority disappeared before export."
+                );
+            }
+
+
+            JSONObject controlCenterRecord =
+                readStore();
+
+
+            if (controlCenterRecord == null) {
+
+                throw new IllegalStateException(
+                    "FINORA Developer Control Center signing authority is unavailable."
+                );
+            }
+
+
+            JSONObject vault =
+                controlCenterRecord.getJSONObject(
+                    "vault"
+                );
+
+
+            FinoraAndroidPortableStateExporter.Result exported =
+                FinoraAndroidPortableStateExporter.create(
+                    getContext(),
+                    snapshot,
+                    vault,
+                    transferCode
+                );
+
+
+            java.io.OutputStream output =
+                getContext()
+                    .getContentResolver()
+                    .openOutputStream(
+                        uri,
+                        "wt"
+                    );
+
+
+            if (output == null) {
+
+                throw new IllegalStateException(
+                    "FINORA Portable State destination could not be opened."
+                );
+            }
+
+
+            try {
+
+                output.write(
+                    exported.transferBytes
+                );
+
+                output.flush();
+            }
+            finally {
+
+                output.close();
+            }
+
+
+            /*
+             * Durability boundary:
+             * only after the .finora bytes are externalized do we
+             * advance the Android Portable State lineage head.
+             */
+            JSONObject trustRecord =
+                createControlCenterTrustRecord();
+
+            FinoraPortableStateEnvelopeVerifier.VerifiedEnvelope verified =
+                FinoraPortableStateEnvelopeVerifier.verify(
+                    exported.serializedEnvelope,
+                    trustRecord.getString(
+                        "issuerId"
+                    ),
+                    trustRecord.getString(
+                        "signingKeyId"
+                    ),
+                    trustRecord.getString(
+                        "publicKey"
+                    )
+                );
+
+
+            authorityStore.adoptVerifiedEnvelope(
+                verified
+            );
+
+
+            JSObject response =
+                new JSObject();
+
+            response.put(
+                "status",
+                "EXPORTED"
+            );
+
+            response.put(
+                "bytes",
+                exported.transferBytes.length
+            );
+
+            response.put(
+                "stateGeneration",
+                exported.stateGeneration
+            );
+
+            response.put(
+                "payloadSha256",
+                exported.payloadSha256
+            );
+
+            response.put(
+                "parentPayloadSha256",
+                exported.parentPayloadSha256
+            );
+
+            response.put(
+                "transferBundleSha256",
+                exported.transferBundleSha256
+            );
+
+
+            resolveSuccess(
+                call,
+                response
+            );
+        }
+        catch (Exception error) {
+
+            resolveFailure(
+                call,
+                messageOrDefault(
+                    error,
+                    "FINORA Portable State export failed."
+                )
+            );
+        }
+    }
+
+
+    @PluginMethod
     public void importPortableState(
         PluginCall call
     ) {
@@ -4080,6 +4423,42 @@ public final class FinoraDeveloperControlCenterPlugin
                 authorityStore.adoptVerifiedEnvelope(
                     verified
                 );
+
+
+            JSONObject verifiedWalletHistory =
+                verified.payload.optJSONObject(
+                    "walletHistory"
+                );
+
+            if (verifiedWalletHistory == null) {
+
+                throw new IllegalStateException(
+                    "FINORA verified Portable State Wallet History domain is missing."
+                );
+            }
+
+
+            org.json.JSONArray verifiedWalletHistoryRecords =
+                verifiedWalletHistory.optJSONArray(
+                    "records"
+                );
+
+            if (verifiedWalletHistoryRecords == null) {
+
+                throw new IllegalStateException(
+                    "FINORA verified Portable State Wallet History records are missing."
+                );
+            }
+
+
+            FinoraDeveloperControlCenterOperationalStore operationalStore =
+                new FinoraDeveloperControlCenterOperationalStore(
+                    getContext()
+                );
+
+            operationalStore.mergeWalletHistory(
+                verifiedWalletHistoryRecords
+            );
 
 
             FinoraPortableStateAuthorityStore.Snapshot persisted =
