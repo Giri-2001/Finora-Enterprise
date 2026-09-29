@@ -1193,6 +1193,56 @@ async function runSelfTest():
       "Final Branch Access lifecycle state is incorrect.",
     );
 
+    const renewalHistory =
+      finalStore.data.branchAccessRenewalHistory ??
+      [];
+
+    assert(
+      renewalHistory.length === 1,
+      "Branch Access renewal history must contain exactly one accepted renewal.",
+    );
+
+    const renewalHistoryRecord =
+      renewalHistory[0];
+
+    assert(
+      renewalHistoryRecord.packageId ===
+        "PACKAGE-BRANCH-ACCESS-RECIPIENT-RENEW" &&
+      renewalHistoryRecord.issuerId ===
+        publicIdentity.issuerId &&
+      renewalHistoryRecord.sequence ===
+        3 &&
+      renewalHistoryRecord.action ===
+        "RENEW" &&
+      renewalHistoryRecord.ownerId ===
+        ownerId &&
+      renewalHistoryRecord.businessId ===
+        businessId &&
+      renewalHistoryRecord.branchId ===
+        branchId &&
+      renewalHistoryRecord.installationId ===
+        target.installationId &&
+      renewalHistoryRecord.appliedAt ===
+        renewIssuedAt &&
+      renewalHistoryRecord.accessGrant.grantId ===
+        grantId &&
+      renewalHistoryRecord.accessGrant.accessType ===
+        "REGISTERED" &&
+      renewalHistoryRecord.accessGrant.registrationCycle ===
+        2 &&
+      renewalHistoryRecord.accessGrant.validity.validFrom ===
+        renewalValidFrom &&
+      renewalHistoryRecord.accessGrant.validity.validUntil ===
+        renewalValidUntil &&
+      JSON.stringify(
+        renewalHistoryRecord.accessGrant.registrationPayment,
+      ) ===
+        JSON.stringify(
+          renewGrant.registrationPayment,
+        ),
+      "Persisted Branch Access renewal history snapshot is incorrect.",
+    );
+
     const successfulPackageIds =
       [
         "PACKAGE-BRANCH-ACCESS-RECIPIENT-ISSUE",

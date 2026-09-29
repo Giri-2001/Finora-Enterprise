@@ -1,5 +1,5 @@
 // ============================================================
-// FINORA ENTERPRISE OS™
+// FINORA ENTERPRISE OSâ„¢
 //
 // V2 BUSINESS DOMAIN
 // BUSINESS CURRENCY CONSTANTS
@@ -32,7 +32,6 @@
 
 export const SUPPORTED_BUSINESS_CURRENCIES = [
   "INR",
-  "USD",
 ] as const;
 
 // ============================================================

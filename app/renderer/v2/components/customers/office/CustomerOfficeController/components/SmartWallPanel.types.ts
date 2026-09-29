@@ -1,4 +1,4 @@
-﻿/* ===========================================================
+/* ===========================================================
    FINORA ENTERPRISE OSâ„¢
 
    SMART WALL PANELâ„¢
@@ -120,6 +120,8 @@ export interface SmartWallPanelProps {
   currentPage: number;
 
   totalCustomers: number;
+
+  activeCustomers: number;
 
   customersPerPage: number;
 

@@ -41,26 +41,6 @@ export const BUSINESS_TIME_ZONE_OPTIONS = [
     label: "India",
     value: "Asia/Kolkata",
   },
-
-  {
-    label: "UAE",
-    value: "Asia/Dubai",
-  },
-
-  {
-    label: "United Kingdom",
-    value: "Europe/London",
-  },
-
-  {
-    label: "USA Eastern",
-    value: "America/New_York",
-  },
-
-  {
-    label: "Singapore",
-    value: "Asia/Singapore",
-  },
 ] as const;
 
 // ============================================================

@@ -1,5 +1,5 @@
 // ============================================================
-// FINORA ENTERPRISE OS™
+// FINORA ENTERPRISE OSâ„¢
 //
 // V2 BUSINESS DOMAIN
 // BUSINESS SETTINGS TYPES
@@ -97,7 +97,7 @@ export interface BusinessSettings {
   /**
    * Currency used by the business.
    *
-   * Current UI supports INR and USD.
+   * Current UI supports INR only.
    * Kept as string so future supported currencies
    * can be introduced without changing the storage
    * contract immediately.

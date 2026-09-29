@@ -1,4 +1,4 @@
-﻿/* ===========================================================
+/* ===========================================================
    FINORA ENTERPRISE OSâ„¢
 
    CUSTOMER OFFICE CONTROLLERâ„¢
@@ -17,7 +17,7 @@
    IMPORTS
 =========================================================== */
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import SmartWallPanel from "./components/SmartWallPanel";
 
@@ -28,6 +28,8 @@ import useCustomerOfficeController from "./hooks/useCustomerOfficeController";
 import type { CustomerRailItem } from "../../hub/sections/CustomerHangerRail/types";
 
 import type { CustomerOfficeControllerProps } from "./types";
+
+import { getLoansResult } from "../../../../repositories/loan/loanRepository";
 
 /* ===========================================================
    VIEW MODE
@@ -57,6 +59,69 @@ export default function CustomerOfficeController({
   ========================================================= */
 
   const controller = useCustomerOfficeController(customers);
+
+  const [activeCustomers, setActiveCustomers] =
+    useState(0);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadActiveCustomers() {
+      const result =
+        await getLoansResult();
+
+      if (
+        cancelled ||
+        !result.success
+      ) {
+        return;
+      }
+
+      const currentCustomerIds =
+        new Set(
+          customers
+            .map((customer) =>
+              String(customer.id ?? "").trim(),
+            )
+            .filter(Boolean),
+        );
+
+      const activeCustomerIds =
+        new Set(
+          (result.data ?? [])
+            .filter((loan) => {
+              const status =
+                String(loan.status ?? "")
+                  .trim()
+                  .toUpperCase();
+
+              return (
+                status === "ACTIVE" ||
+                status === "RUNNING"
+              );
+            })
+            .map((loan) =>
+              String(loan.customerId ?? "").trim(),
+            )
+            .filter((customerId) =>
+              Boolean(customerId) &&
+              currentCustomerIds.has(customerId),
+            ),
+        );
+
+      if (!cancelled) {
+        setActiveCustomers(
+          activeCustomerIds.size,
+        );
+      }
+    }
+
+    void loadActiveCustomers();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [customers]);
 
   /* =========================================================
      VIEW STATE
@@ -279,6 +344,7 @@ export default function CustomerOfficeController({
 
             currentPage={controller.currentPage}
             totalCustomers={controller.filteredCustomers.length}
+            activeCustomers={activeCustomers}
             customersPerPage={controller.customersPerPage}
             onPrevious={controller.previousPage}
             onNext={controller.nextPage}

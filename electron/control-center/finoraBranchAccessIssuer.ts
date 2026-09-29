@@ -21,6 +21,10 @@
    - No Business Date.
 =========================================================== */
 
+import {
+  app,
+} from "electron";
+
 import type {
   FinoraControlCenterPackageValidity,
   FinoraControlCenterSignedPackage,
@@ -150,10 +154,18 @@ export async function signFinoraBranchAccessPackage(
     );
   }
 
+  const allowDevelopmentOneHourRegisteredValidity =
+    !app.isPackaged &&
+    process.env.FINORA_DEV_BRANCH_ACCESS_SHORT_VALIDITY ===
+      "1";
+
   const policy =
     validateFinoraBranchAccessIssuance(
       input.payload,
       input.target,
+      {
+        allowDevelopmentOneHourRegisteredValidity,
+      },
     );
 
   if (!policy.valid) {

@@ -292,7 +292,7 @@ export default function NomineePreviewCard({
               }
             >
 
-              ✓ Linked
+              âœ“ Linked
 
             </div>
 
@@ -337,7 +337,7 @@ export default function NomineePreviewCard({
           icon={
             IdCard
           }
-          label="CUSTOMER NUMBER"
+          label="NOMINEE ID"
           value={
             value.nomineeCustomerId
           }

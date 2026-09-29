@@ -1,7 +1,7 @@
 /* ===========================================================
-   FINORA ENTERPRISE OS™
+   FINORA ENTERPRISE OSÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¾Ãƒâ€šÃ‚Â¢
 
-   CUSTOMER ID CARD BACK™
+   CUSTOMER ID CARD BACKÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¾Ãƒâ€šÃ‚Â¢
 
    PREMIUM PRESENTATION STYLES
 
@@ -59,11 +59,11 @@ import "@fontsource/cinzel/700.css";
    THEME VARIABLES
    -----------------------------------------------------------
    ThemeProvider
-        ↓
+        ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œ
    CustomerHanger
-        ↓
+        ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œ
    FINORA Theme CSS Variables
-        ↓
+        ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œ
    CustomerIdCardBack
 =========================================================== */
 
@@ -321,8 +321,8 @@ export function createCustomerIdStyle(
 
     fontSize:
       `${Math.max(
-        tokens.customerCards.idSize + 1,
-        13,
+        tokens.customerCards.idSize - 2,
+        12,
       )}px`,
 
     fontFamily:
@@ -1224,7 +1224,7 @@ export function createLastPaymentValueStyle(
       )}px`,
 
     fontWeight:
-      600,
+      650,
 
     lineHeight:
       1.05,

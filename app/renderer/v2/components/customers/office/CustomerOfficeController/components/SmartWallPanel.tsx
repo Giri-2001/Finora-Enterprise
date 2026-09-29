@@ -1,7 +1,7 @@
-﻿/* ===========================================================
-   FINORA ENTERPRISE OSâ„¢
+/* ===========================================================
+   FINORA ENTERPRISE OSÃ¢â€žÂ¢
 
-   SMART WALL PANELâ„¢
+   SMART WALL PANELÃ¢â€žÂ¢
 
    CUSTOMER HUB PRESENTATION
 
@@ -106,6 +106,8 @@ export default function SmartWallPanel({
   currentPage,
 
   totalCustomers,
+
+  activeCustomers,
 
   customersPerPage,
 
@@ -376,7 +378,7 @@ export default function SmartWallPanel({
         }}
       >
         {/* ===================================================
-            LEFT â€” ADD CUSTOMER
+            LEFT Ã¢â‚¬â€ ADD CUSTOMER
         =================================================== */}
 
         <div style={addCustomerCellStyle}>
@@ -417,7 +419,7 @@ export default function SmartWallPanel({
         </div>
 
         {/* ===================================================
-            CENTER â€” SEARCH
+            CENTER Ã¢â‚¬â€ SEARCH
         =================================================== */}
 
         <div style={searchCellStyle}>
@@ -427,7 +429,7 @@ export default function SmartWallPanel({
         </div>
 
         {/* ===================================================
-            RIGHT â€” EDIT CUSTOMER
+            RIGHT Ã¢â‚¬â€ EDIT CUSTOMER
         =================================================== */}
 
         <div
@@ -608,7 +610,7 @@ export default function SmartWallPanel({
       >
         <CustomerHubSummaryCards
           totalCustomers={totalCustomers}
-          activeCustomers={totalCustomers}
+          activeCustomers={activeCustomers}
           currentPage={currentPage}
           totalPages={Math.max(1, Math.ceil(totalCustomers / customersPerPage))}
           onPrevious={onPrevious}

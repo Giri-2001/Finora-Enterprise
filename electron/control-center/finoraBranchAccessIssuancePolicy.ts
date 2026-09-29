@@ -375,6 +375,9 @@ function validateAccessGrant(
 
   payloadIssuedAtMs:
     number,
+
+  options:
+    FinoraBranchAccessIssuancePolicyOptions,
 ): FinoraBranchAccessGrantPayload | undefined {
 
   if (
@@ -516,13 +519,28 @@ function validateAccessGrant(
       "REGISTERED"
   ) {
 
-    const registrationDurationMs =
+    const productionRegistrationDurationMs =
       365 * 24 * 60 * 60 * 1000;
 
-    if (
+    const developmentRegistrationDurationMs =
+      60 * 60 * 1000;
+
+    const actualRegistrationDurationMs =
       validUntil.milliseconds -
-        validFrom.milliseconds !==
-          registrationDurationMs ||
+      validFrom.milliseconds;
+
+    const registrationDurationAllowed =
+      actualRegistrationDurationMs ===
+        productionRegistrationDurationMs ||
+      (
+        options.allowDevelopmentOneHourRegisteredValidity ===
+          true &&
+        actualRegistrationDurationMs ===
+          developmentRegistrationDurationMs
+      );
+
+    if (
+      !registrationDurationAllowed ||
       !Number.isSafeInteger(
         value.registrationCycle,
       ) ||
@@ -866,12 +884,20 @@ function validateCredentialAuthorizationForTarget(
 // VALIDATE
 // ============================================================
 
+export interface FinoraBranchAccessIssuancePolicyOptions {
+  allowDevelopmentOneHourRegisteredValidity?:
+    boolean;
+}
+
 export function validateFinoraBranchAccessIssuance(
   payload:
     unknown,
 
   target:
     FinoraBranchAccessPackageTarget,
+
+  options:
+    FinoraBranchAccessIssuancePolicyOptions = {},
 ): FinoraBranchAccessIssuancePolicyResult {
 
   // ----------------------------------------------------------
@@ -1001,6 +1027,7 @@ export function validateFinoraBranchAccessIssuance(
       payload.accessGrant,
       target,
       issuedAt.milliseconds,
+      options,
     );
 
   if (!accessGrant) {
