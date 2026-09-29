@@ -404,6 +404,31 @@ accessType:
 
   schemaVersion: 1;
 }
+interface FinoraControlBranchAccessRenewalHistoryRecord {
+  schemaVersion: 1;
+
+  packageId: string;
+
+  issuerId: string;
+
+  sequence: number;
+
+  action: "RENEW";
+
+  ownerId: string;
+
+  businessId: string;
+
+  branchId: string;
+
+  installationId: string;
+
+  accessGrant:
+    FinoraControlBranchAccessGrant;
+
+  appliedAt: string;
+}
+
 interface FinoraControlBusinessProfileView {
 
   profileId: string;
@@ -1054,6 +1079,16 @@ interface FinoraControlBridge {
         FinoraControlBranchAccessAuthorityResult
       >;
 
+  listBranchAccessRenewalHistory:
+    (
+      request:
+        FindBranchAccessGrantRequest,
+    ) =>
+      Promise<
+        StorageResult<
+          FinoraControlBranchAccessRenewalHistoryRecord[]
+        >
+      >;
   hasActiveStorageEntitlement:
     (
       request:
@@ -1502,6 +1537,9 @@ const CONTROL_CHANNELS = {
 
   EVALUATE_BRANCH_ACCESS:
     "finora:control:evaluate-branch-access",
+
+  LIST_BRANCH_ACCESS_RENEWAL_HISTORY:
+    "finora:control:list-branch-access-renewal-history",
 
   FIND_BUSINESS_PROFILE:
     "finora:control:find-business-profile",
@@ -2334,6 +2372,19 @@ const controlBridge:
         FinoraControlBranchAccessAuthorityResult
       >,
 
+  listBranchAccessRenewalHistory:
+    (
+      request:
+        FindBranchAccessGrantRequest,
+    ) =>
+      ipcRenderer.invoke(
+        CONTROL_CHANNELS.LIST_BRANCH_ACCESS_RENEWAL_HISTORY,
+        request,
+      ) as Promise<
+        StorageResult<
+          FinoraControlBranchAccessRenewalHistoryRecord[]
+        >
+      >,
   // ----------------------------------------------------------
   // STORAGE ENTITLEMENT CHECK
   // ----------------------------------------------------------

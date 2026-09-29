@@ -113,6 +113,20 @@ export const SETTINGS_SECTIONS:
       description:
         "Manage Locker Rooms, Lockers, Racks and Gold custody capacity.",
     },
+
+    {
+      id:
+        "subscription",
+
+      label:
+        "Subscription",
+
+      shortLabel:
+        "Subscription",
+
+      description:
+        "View the active branch subscription, registration validity and renewal status.",
+    },
   ];
 
 // ============================================================

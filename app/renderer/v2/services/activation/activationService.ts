@@ -64,6 +64,7 @@ import type {
 
 import type {
   FinoraAuthoritativeBranchAccessResult,
+  FinoraBranchAccessRenewalHistoryRecord,
 } from "./activationControlBridge";
 
 import {
@@ -571,6 +572,68 @@ export async function hasActiveFinoraStorageEntitlement(
     };
   }
 }
+
+export async function loadFinoraBranchAccessRenewalHistory(
+  userId: string,
+  ownerId: string,
+  businessId: string,
+  branchId: string,
+): Promise<
+  StorageResult<
+    FinoraBranchAccessRenewalHistoryRecord[]
+  >
+> {
+  if (
+    !isNonEmptyString(userId) ||
+    !isNonEmptyString(ownerId) ||
+    !isNonEmptyString(businessId) ||
+    !isNonEmptyString(branchId)
+  ) {
+    return {
+      success: false,
+      error:
+        "A complete FINORA Branch Access renewal-history scope is required.",
+    };
+  }
+
+  const bridge =
+    getFinoraActivationControlBridge();
+
+  if (!bridge) {
+    return bridgeUnavailable<
+      FinoraBranchAccessRenewalHistoryRecord[]
+    >();
+  }
+
+  if (
+    typeof bridge.listBranchAccessRenewalHistory !==
+      "function"
+  ) {
+    return {
+      success: false,
+      error:
+        "FINORA Branch Access renewal history is unavailable on this platform.",
+    };
+  }
+
+  try {
+    return await bridge.listBranchAccessRenewalHistory({
+      userId,
+      ownerId,
+      businessId,
+      branchId,
+    });
+  } catch (error) {
+    return {
+      success: false,
+      error:
+        error instanceof Error
+          ? error.message
+          : "Unable to load FINORA Branch Access renewal history.",
+    };
+  }
+}
+
 
 // ============================================================
 // END

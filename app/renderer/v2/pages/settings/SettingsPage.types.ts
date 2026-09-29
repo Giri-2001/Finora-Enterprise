@@ -33,7 +33,8 @@ export type SettingsSectionId =
   | "branch"
   | "business-owner"
   | "numbering-series"
-  | "gold-storage";
+  | "gold-storage"
+  | "subscription";
 
 // ============================================================
 // SETTINGS SECTION

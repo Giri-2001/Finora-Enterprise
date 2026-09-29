@@ -722,6 +722,12 @@ public final class FinoraBranchActivationStateEngine {
                 "branchAccessGrants"
             );
 
+        List<Map<String, Object>> nextRenewalHistory =
+            ensureMapList(
+                nextState,
+                "branchAccessRenewalHistory"
+            );
+
         List<Map<String, Object>> nextAppliedPackages =
             ensureMapList(
                 nextState,
@@ -968,6 +974,73 @@ public final class FinoraBranchActivationStateEngine {
                 deepCopyMap(
                     accessGrant
                 )
+            );
+        }
+
+        if ("RENEW".equals(action)) {
+
+            Map<String, Object> renewalRecord =
+                new LinkedHashMap<>();
+
+            renewalRecord.put(
+                "schemaVersion",
+                1L
+            );
+
+            renewalRecord.put(
+                "packageId",
+                packageId
+            );
+
+            renewalRecord.put(
+                "issuerId",
+                issuerId
+            );
+
+            renewalRecord.put(
+                "sequence",
+                sequence
+            );
+
+            renewalRecord.put(
+                "action",
+                "RENEW"
+            );
+
+            renewalRecord.put(
+                "ownerId",
+                ownerId
+            );
+
+            renewalRecord.put(
+                "businessId",
+                businessId
+            );
+
+            renewalRecord.put(
+                "branchId",
+                branchId
+            );
+
+            renewalRecord.put(
+                "installationId",
+                installationId
+            );
+
+            renewalRecord.put(
+                "accessGrant",
+                deepCopyMap(
+                    accessGrant
+                )
+            );
+
+            renewalRecord.put(
+                "appliedAt",
+                appliedAt.toString()
+            );
+
+            nextRenewalHistory.add(
+                renewalRecord
             );
         }
 

@@ -5788,6 +5788,143 @@ public final class FinoraControlPlugin
         }
     }
 
+    // ========================================================
+    // BRANCH ACCESS RENEWAL HISTORY
+    // ========================================================
+
+    /**
+     * Read append-only verified REGISTERED Branch Access renewals
+     * for one exact user / owner / business / branch scope.
+     *
+     * READ ONLY.
+     */
+    @PluginMethod
+    public void listBranchAccessRenewalHistory(
+        PluginCall call
+    ) {
+        String userId =
+            normalizeRequiredString(
+                call.getString(
+                    "userId"
+                )
+            );
+
+        String ownerId =
+            normalizeRequiredString(
+                call.getString(
+                    "ownerId"
+                )
+            );
+
+        String businessId =
+            normalizeRequiredString(
+                call.getString(
+                    "businessId"
+                )
+            );
+
+        String branchId =
+            normalizeRequiredString(
+                call.getString(
+                    "branchId"
+                )
+            );
+
+        if (
+            userId == null ||
+            ownerId == null ||
+            businessId == null ||
+            branchId == null
+        ) {
+            resolveFailure(
+                call,
+                "User ID, Owner ID, Business ID and Branch ID are required."
+            );
+
+            return;
+        }
+
+        try {
+            JSONObject controlPackage =
+                readValidatedControlPackage();
+
+            JSONArray scopedHistory =
+                new JSONArray();
+
+            if (controlPackage != null) {
+                JSONArray history =
+                    controlPackage.optJSONArray(
+                        "branchAccessRenewalHistory"
+                    );
+
+                if (history != null) {
+                    for (
+                        int index = 0;
+                        index < history.length();
+                        index++
+                    ) {
+                        JSONObject record =
+                            history.getJSONObject(
+                                index
+                            );
+
+                        JSONObject grant =
+                            record.getJSONObject(
+                                "accessGrant"
+                            );
+
+                        if (
+                            userId.equals(
+                                grant.getString(
+                                    "userId"
+                                )
+                            ) &&
+                            ownerId.equals(
+                                record.getString(
+                                    "ownerId"
+                                )
+                            ) &&
+                            businessId.equals(
+                                record.getString(
+                                    "businessId"
+                                )
+                            ) &&
+                            branchId.equals(
+                                record.getString(
+                                    "branchId"
+                                )
+                            )
+                        ) {
+                            scopedHistory.put(
+                                record
+                            );
+                        }
+                    }
+                }
+            }
+
+            JSObject result =
+                createSuccessResult();
+
+            result.put(
+                "data",
+                scopedHistory
+            );
+
+            call.resolve(
+                result
+            );
+
+        } catch (Exception error) {
+            resolveFailure(
+                call,
+                error,
+                "Unable to read FINORA Branch Access renewal history."
+            );
+        }
+    }
+
+
 // ========================================================
     // ACTIVE STORAGE ENTITLEMENT CHECK
     // ========================================================
@@ -7390,6 +7527,12 @@ public final class FinoraControlPlugin
             controlPackage.optJSONArray(
                 "branchAccessGrants"
             );
+
+        JSONArray branchAccessRenewalHistory =
+            controlPackage.optJSONArray(
+                "branchAccessRenewalHistory"
+            );
+
         JSONArray businessProfiles =
             controlPackage.optJSONArray(
                 "businessProfiles"
@@ -7444,6 +7587,24 @@ public final class FinoraControlPlugin
             );
         }
 
+        /*
+         * branchAccessRenewalHistory is optional only for
+         * compatibility with encrypted Control Stores written
+         * before Subscription Renewal History support existed.
+         */
+        if (
+            controlPackage.has(
+                "branchAccessRenewalHistory"
+            ) &&
+            !controlPackage.isNull(
+                "branchAccessRenewalHistory"
+            ) &&
+            branchAccessRenewalHistory == null
+        ) {
+            throw new IllegalStateException(
+                "FINORA Branch Access Renewal History collection validation failed."
+            );
+        }
         if (
             controlPackage.has(
                 "installation"
@@ -7537,6 +7698,29 @@ public final class FinoraControlPlugin
             }
         }
 
+        if (branchAccessRenewalHistory != null) {
+            for (
+                int index = 0;
+                index < branchAccessRenewalHistory.length();
+                index++
+            ) {
+                JSONObject record =
+                    branchAccessRenewalHistory.optJSONObject(
+                        index
+                    );
+
+                if (
+                    record == null ||
+                    !isValidBranchAccessRenewalHistoryRecord(
+                        record
+                    )
+                ) {
+                    throw new IllegalStateException(
+                        "FINORA Branch Access Renewal History record validation failed."
+                    );
+                }
+            }
+        }
         ensureUniqueActivations(
             activations
         );
@@ -7551,6 +7735,11 @@ public final class FinoraControlPlugin
             );
         }
 
+        if (branchAccessRenewalHistory != null) {
+            ensureUniqueBranchAccessRenewalHistory(
+                branchAccessRenewalHistory
+            );
+        }
         /*
          * businessProfiles is optional only for encrypted
          * Control Stores written before Phase-4 Business Profile
@@ -8141,6 +8330,109 @@ String administrativeStatus =
         return false;
     }
 
+    private boolean isValidBranchAccessRenewalHistoryRecord(
+        JSONObject value
+    ) {
+        if (
+            value == null ||
+            value.optInt(
+                "schemaVersion",
+                -1
+            ) != 1 ||
+            !hasRequiredString(
+                value,
+                "packageId"
+            ) ||
+            !hasRequiredString(
+                value,
+                "issuerId"
+            ) ||
+            value.optLong(
+                "sequence",
+                -1L
+            ) <= 0L ||
+            !"RENEW".equals(
+                value.optString(
+                    "action",
+                    ""
+                )
+            ) ||
+            !hasRequiredString(
+                value,
+                "ownerId"
+            ) ||
+            !hasRequiredString(
+                value,
+                "businessId"
+            ) ||
+            !hasRequiredString(
+                value,
+                "branchId"
+            ) ||
+            !hasRequiredString(
+                value,
+                "installationId"
+            ) ||
+            !isCanonicalControlTimestamp(
+                value.optString(
+                    "appliedAt",
+                    null
+                )
+            )
+        ) {
+            return false;
+        }
+
+        JSONObject accessGrant =
+            value.optJSONObject(
+                "accessGrant"
+            );
+
+        if (
+            accessGrant == null ||
+            !isValidBranchAccessGrant(
+                accessGrant
+            ) ||
+            !"REGISTERED".equals(
+                accessGrant.optString(
+                    "accessType",
+                    ""
+                )
+            )
+        ) {
+            return false;
+        }
+
+        return (
+            value.optString(
+                "ownerId",
+                ""
+            ).equals(
+                accessGrant.optString(
+                    "ownerId",
+                    ""
+                )
+            ) &&
+            value.optString(
+                "businessId",
+                ""
+            ).equals(
+                accessGrant.optString(
+                    "businessId",
+                    ""
+                )
+            ) &&
+            value.optString(
+                "branchId",
+                ""
+            ).equals(
+                accessGrant.optString(
+                    "branchId",
+                    ""
+                )
+            )
+        );
+    }
 // ========================================================
     // ENTITLEMENT VALIDATION
     // ========================================================
@@ -8499,6 +8791,41 @@ private boolean isValidEntitlement(
         }
     }
 
+    private void ensureUniqueBranchAccessRenewalHistory(
+        JSONArray history
+    ) {
+        java.util.HashSet<String> packageIds =
+            new java.util.HashSet<>();
+
+        for (
+            int index = 0;
+            index < history.length();
+            index++
+        ) {
+            JSONObject record =
+                history.optJSONObject(
+                    index
+                );
+
+            if (record == null) {
+                throw new IllegalStateException(
+                    "Invalid FINORA Branch Access Renewal History record."
+                );
+            }
+
+            String packageId =
+                record.optString(
+                    "packageId",
+                    ""
+                );
+
+            if (!packageIds.add(packageId)) {
+                throw new IllegalStateException(
+                    "Duplicate FINORA Branch Access Renewal History package detected."
+                );
+            }
+        }
+    }
 // ========================================================
     // STRING VALIDATION
     // ========================================================

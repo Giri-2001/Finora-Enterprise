@@ -168,6 +168,31 @@ export interface FinoraBranchActivationRequest {
   branchId: string;
 }
 
+export interface FinoraBranchAccessRenewalHistoryRecord {
+  schemaVersion: 1;
+
+  packageId: string;
+
+  issuerId: string;
+
+  sequence: number;
+
+  action: "RENEW";
+
+  ownerId: string;
+
+  businessId: string;
+
+  branchId: string;
+
+  installationId: string;
+
+  accessGrant:
+    FinoraBranchAccessGrant;
+
+  appliedAt: string;
+}
+
 export interface FinoraBusinessProfileRequest {
 
   ownerId:
@@ -423,6 +448,21 @@ export interface FinoraActivationControlBridge {
       FinoraAuthoritativeBranchAccessResult
     >;
 
+  /**
+   * Read append-only cryptographically verified REGISTERED
+   * Branch Access renewal history for the exact login scope.
+   *
+   * READ ONLY.
+   */
+  listBranchAccessRenewalHistory?(
+    request:
+      FinoraBranchAccessGrantRequest,
+  ):
+    Promise<
+      StorageResult<
+        FinoraBranchAccessRenewalHistoryRecord[]
+      >
+    >;
   hasActiveStorageEntitlement(
     request:
       FinoraStorageEntitlementRequest,

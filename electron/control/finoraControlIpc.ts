@@ -43,6 +43,7 @@ import {
   findFinoraBranchActivation,
   getFinoraInstallationIdentity,
   hasActiveFinoraStorageEntitlement,
+  listFinoraBranchAccessRenewalHistory,
 } from "./finoraControlStore.js";
 
 import type {
@@ -139,6 +140,9 @@ const CONTROL_IPC_CHANNELS = {
 
   EVALUATE_BRANCH_ACCESS:
     "finora:control:evaluate-branch-access",
+
+  LIST_BRANCH_ACCESS_RENEWAL_HISTORY:
+    "finora:control:list-branch-access-renewal-history",
 
   FIND_BUSINESS_PROFILE:
     "finora:control:find-business-profile",
@@ -636,6 +640,47 @@ export function registerFinoraControlHandlers(
         branchId:
           request.branchId,
       });
+    },
+  );
+
+  // ----------------------------------------------------------
+  // BRANCH ACCESS RENEWAL HISTORY
+  //
+  // READ ONLY.
+  // ----------------------------------------------------------
+
+  ipcMain.handle(
+    CONTROL_IPC_CHANNELS.LIST_BRANCH_ACCESS_RENEWAL_HISTORY,
+    async (
+      event,
+      request: unknown,
+    ) => {
+      if (
+        !isTrustedRenderer(
+          event.senderFrame,
+        )
+      ) {
+        return failure(
+          "Untrusted renderer.",
+        );
+      }
+
+      if (
+        !isFindBranchAccessGrantRequest(
+          request,
+        )
+      ) {
+        return failure(
+          "A valid FINORA Branch Access renewal-history request is required.",
+        );
+      }
+
+      return listFinoraBranchAccessRenewalHistory(
+        request.userId,
+        request.ownerId,
+        request.businessId,
+        request.branchId,
+      );
     },
   );
 

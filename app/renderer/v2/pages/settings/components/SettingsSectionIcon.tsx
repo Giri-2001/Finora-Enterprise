@@ -25,6 +25,7 @@
 
 import {
   Building2,
+  CalendarClock,
   Gem,
   Hash,
   Landmark,

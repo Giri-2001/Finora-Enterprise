@@ -652,6 +652,316 @@ public final class FinoraBranchActivationApplyCoordinatorTest {
     }
 
 
+    @Test
+    public void acceptedRenewPersistsOneImmutableRenewalHistoryRecord()
+        throws Exception {
+
+        KeyPair signingKeyPair =
+            createSigningKeyPair();
+
+        List<
+            FinoraSignedControlPackageVerifier.TrustedKey
+        > trustedKeys =
+            Collections.singletonList(
+                new FinoraSignedControlPackageVerifier.TrustedKey(
+                    ISSUER_ID,
+                    SIGNING_KEY_ID,
+                    "ECDSA_P256_SHA256",
+                    "SPKI_DER_BASE64",
+                    Base64
+                        .getEncoder()
+                        .encodeToString(
+                            signingKeyPair
+                                .getPublic()
+                                .getEncoded()
+                        ),
+                    "ACTIVE",
+                    KEY_VALID_FROM,
+                    null
+                )
+            );
+
+        Harness harness =
+            new Harness();
+
+        Map<String, Object> activation =
+            createActivation();
+
+        Map<String, Object> initialGrant =
+            createRegisteredGrant(
+                "USER-RENEWAL-HISTORY",
+                "ACTIVE",
+                BASE_TIME
+            );
+
+        Map<String, Object> issuePackage =
+            createSignedActivationPackage(
+                signingKeyPair,
+                "FINORA-ANDROID-RENEWAL-HISTORY-ISSUE-1",
+                1L,
+                "ISSUE",
+                activation,
+                initialGrant
+            );
+
+        assertSuccess(
+            "renewal-history ISSUE",
+            harness.coordinator.apply(
+                issuePackage,
+                trustedKeys,
+                NOW
+            )
+        );
+
+        assertEquals(
+            1,
+            harness.statePort.writeCount
+        );
+
+        Map<String, Object> renewalGrant =
+            deepCopyMap(
+                initialGrant
+            );
+
+        String renewalValidFrom =
+            "2026-09-07T04:00:00Z";
+
+        String renewalValidUntil =
+            Instant
+                .parse(
+                    renewalValidFrom
+                )
+                .plusSeconds(
+                    365L *
+                    24L *
+                    60L *
+                    60L
+                )
+                .toString();
+
+        Map<String, Object> renewalValidity =
+            new LinkedHashMap<>();
+
+        renewalValidity.put(
+            "validFrom",
+            renewalValidFrom
+        );
+
+        renewalValidity.put(
+            "validUntil",
+            renewalValidUntil
+        );
+
+        renewalGrant.put(
+            "validity",
+            renewalValidity
+        );
+
+        renewalGrant.put(
+            "registrationCycle",
+            Long.valueOf(
+                2L
+            )
+        );
+
+        renewalGrant.put(
+            "updatedAt",
+            renewalValidFrom
+        );
+
+        @SuppressWarnings("unchecked")
+        Map<String, Object> renewalPayment =
+            (Map<String, Object>)
+                renewalGrant.get(
+                    "registrationPayment"
+                );
+
+        renewalPayment.put(
+            "paidAt",
+            renewalValidFrom
+        );
+
+        renewalPayment.put(
+            "reference",
+            "SELFTEST-RENEWAL-HISTORY-CYCLE-2"
+        );
+
+        Map<String, Object> renewPackage =
+            createSignedActivationPackage(
+                signingKeyPair,
+                "FINORA-ANDROID-RENEWAL-HISTORY-RENEW-2",
+                2L,
+                "RENEW",
+                activation,
+                renewalGrant
+            );
+
+        assertSuccess(
+            "renewal-history RENEW",
+            harness.coordinator.apply(
+                renewPackage,
+                trustedKeys,
+                NOW
+            )
+        );
+
+        assertEquals(
+            2,
+            harness.statePort.writeCount
+        );
+
+        List<Map<String, Object>> history =
+            readMapList(
+                harness.statePort.state,
+                "branchAccessRenewalHistory"
+            );
+
+        assertEquals(
+            1,
+            history.size()
+        );
+
+        Map<String, Object> record =
+            history.get(
+                0
+            );
+
+        assertEquals(
+            "FINORA-ANDROID-RENEWAL-HISTORY-RENEW-2",
+            record.get(
+                "packageId"
+            )
+        );
+
+        assertEquals(
+            "RENEW",
+            record.get(
+                "action"
+            )
+        );
+
+        assertEquals(
+            Long.valueOf(
+                2L
+            ),
+            record.get(
+                "sequence"
+            )
+        );
+
+        assertEquals(
+            OWNER_ID,
+            record.get(
+                "ownerId"
+            )
+        );
+
+        assertEquals(
+            BUSINESS_ID,
+            record.get(
+                "businessId"
+            )
+        );
+
+        assertEquals(
+            BRANCH_ID,
+            record.get(
+                "branchId"
+            )
+        );
+
+        assertEquals(
+            INSTALLATION_ID,
+            record.get(
+                "installationId"
+            )
+        );
+
+        @SuppressWarnings("unchecked")
+        Map<String, Object> historyGrant =
+            (Map<String, Object>)
+                record.get(
+                    "accessGrant"
+                );
+
+        assertNotNull(
+            historyGrant
+        );
+
+        assertEquals(
+            Long.valueOf(
+                2L
+            ),
+            historyGrant.get(
+                "registrationCycle"
+            )
+        );
+
+        @SuppressWarnings("unchecked")
+        Map<String, Object> historyValidity =
+            (Map<String, Object>)
+                historyGrant.get(
+                    "validity"
+                );
+
+        assertEquals(
+            renewalValidFrom,
+            historyValidity.get(
+                "validFrom"
+            )
+        );
+
+        assertEquals(
+            renewalValidUntil,
+            historyValidity.get(
+                "validUntil"
+            )
+        );
+
+        @SuppressWarnings("unchecked")
+        Map<String, Object> historyPayment =
+            (Map<String, Object>)
+                historyGrant.get(
+                    "registrationPayment"
+                );
+
+        assertEquals(
+            renewalValidFrom,
+            historyPayment.get(
+                "paidAt"
+            )
+        );
+
+        assertEquals(
+            "SELFTEST-RENEWAL-HISTORY-CYCLE-2",
+            historyPayment.get(
+                "reference"
+            )
+        );
+
+        assertRejectedWithoutWrite(
+            "renewal-history replay",
+            harness,
+            renewPackage,
+            trustedKeys,
+            2,
+            "already"
+        );
+
+        history =
+            readMapList(
+                harness.statePort.state,
+                "branchAccessRenewalHistory"
+            );
+
+        assertEquals(
+            "Rejected replay must not duplicate renewal history.",
+            1,
+            history.size()
+        );
+    }
+
+
     // =========================================================
     // ASSERTIONS
     // =========================================================

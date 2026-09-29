@@ -56,6 +56,8 @@ import NumberingSeriesSettingsSection from "./numbering/NumberingSeriesSettingsS
 
 import GoldStorageSettingsPage from "./GoldStorageSettingsPage";
 
+import SubscriptionSettingsSection from "./subscription/SubscriptionSettingsSection";
+
 import {
   useSettingsResponsive,
 } from "../../utils/responsive/settings/settings.index";
@@ -125,6 +127,15 @@ export default function SettingsPage() {
     ) {
       return (
         <GoldStorageSettingsPage />
+      );
+    }
+
+    if (
+      activeSection ===
+      "subscription"
+    ) {
+      return (
+        <SubscriptionSettingsSection />
       );
     }
 

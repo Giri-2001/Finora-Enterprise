@@ -1,0 +1,173 @@
+/* ===========================================================
+   FINORA ENTERPRISE OS
+
+   ENTERPRISE SETTINGS
+   SUBSCRIPTION SETTINGS
+
+   IMPORTANT:
+   - Theme variables only.
+   - Settings responsive variables only.
+   - No hardcoded theme colors.
+   - No media-query breakpoints.
+=========================================================== */
+
+.finora-settings-subscription-section {
+  width: 100%;
+  min-width: 0;
+}
+
+.finora-settings-subscription__grid {
+  min-width: 0;
+}
+
+.finora-settings-subscription__field {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--finora-settings-compact-gap);
+  padding: var(--finora-settings-content-gap);
+  border:
+    var(--finora-settings-panel-border-width)
+    solid
+    var(--finora-theme-panel-border);
+  border-radius:
+    var(--finora-settings-input-radius);
+  background:
+    var(--finora-theme-surface-muted);
+}
+
+.finora-settings-subscription__label {
+  color:
+    var(--finora-theme-text-secondary);
+  font-size:
+    var(--finora-settings-font-section-subtitle);
+  line-height: 1.4;
+}
+
+.finora-settings-subscription__value {
+  min-width: 0;
+  color:
+    var(--finora-theme-text-primary);
+  overflow-wrap: anywhere;
+  line-height: 1.4;
+}
+
+.finora-settings-subscription__status {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  padding:
+    var(--finora-settings-compact-gap)
+    var(--finora-settings-content-gap);
+  border:
+    var(--finora-settings-panel-border-width)
+    solid
+    currentColor;
+  border-radius:
+    var(--finora-settings-input-radius);
+  font-size:
+    var(--finora-settings-font-section-subtitle);
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.finora-settings-subscription__status--active {
+  color:
+    var(--finora-theme-success);
+  background:
+    var(--finora-theme-success-soft);
+}
+
+.finora-settings-subscription__status--warning {
+  color:
+    var(--finora-theme-warning);
+  background:
+    var(--finora-theme-warning-soft);
+}
+
+.finora-settings-subscription__status--danger {
+  color:
+    var(--finora-theme-danger);
+  background:
+    var(--finora-theme-danger-soft);
+}
+
+.finora-settings-subscription__status--info {
+  color:
+    var(--finora-theme-info);
+  background:
+    var(--finora-theme-info-soft);
+}
+
+.finora-settings-subscription__authority {
+  margin: 0;
+  color:
+    var(--finora-theme-text-secondary);
+  font-size:
+    var(--finora-settings-font-section-subtitle);
+  line-height: 1.5;
+}
+
+.finora-settings-subscription__history-section {
+  margin-top:
+    var(--finora-settings-content-gap);
+}
+
+.finora-settings-subscription__history-list {
+  display: flex;
+  flex-direction: column;
+  gap:
+    var(--finora-settings-content-gap);
+  min-width: 0;
+}
+
+.finora-settings-subscription__history-item {
+  display: flex;
+  flex-direction: column;
+  gap:
+    var(--finora-settings-content-gap);
+  min-width: 0;
+  padding:
+    var(--finora-settings-content-gap);
+  border:
+    var(--finora-settings-panel-border-width)
+    solid
+    var(--finora-theme-panel-border);
+  border-radius:
+    var(--finora-settings-input-radius);
+  background:
+    var(--finora-theme-surface);
+}
+
+.finora-settings-subscription__history-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap:
+    var(--finora-settings-content-gap);
+  min-width: 0;
+}
+
+.finora-settings-subscription__history-cycle {
+  color:
+    var(--finora-theme-text-primary);
+}
+
+.finora-settings-subscription__history-applied,
+.finora-settings-subscription__empty-history {
+  color:
+    var(--finora-theme-text-secondary);
+  font-size:
+    var(--finora-settings-font-section-subtitle);
+  line-height: 1.5;
+}
+
+.finora-settings-subscription__empty-history {
+  margin: 0;
+}
+
+
+/* ===========================================================
+   END
+=========================================================== */

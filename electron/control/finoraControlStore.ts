@@ -1,5 +1,5 @@
 // ============================================================
-// FINORA ENTERPRISE OS™
+// FINORA ENTERPRISE OSâ„¢
 //
 // ELECTRON CONTROL STORE
 //
@@ -795,6 +795,30 @@ export interface FinoraControlBranchAccessGrant {
   schemaVersion: 1;
 }
 
+export interface FinoraBranchAccessRenewalHistoryRecord {
+  schemaVersion: 1;
+
+  packageId: string;
+
+  issuerId: string;
+
+  sequence: number;
+
+  action: "RENEW";
+
+  ownerId: string;
+
+  businessId: string;
+
+  branchId: string;
+
+  installationId: string;
+
+  accessGrant: FinoraControlBranchAccessGrant;
+
+  appliedAt: string;
+}
+
 // ============================================================
 // LOCAL BRANCH CREDENTIAL
 //
@@ -1021,6 +1045,17 @@ export interface FinoraControlStorePackage {
    * Control Stores created before the Branch Access Engine.
    */
   branchAccessGrants?: FinoraControlBranchAccessGrant[];
+
+  /**
+   * Append-only verified REGISTERED renewal history.
+   *
+   * Optional only for backward compatibility with encrypted
+   * Control Stores created before Subscription History support.
+   *
+   * Each entry is created only from a successfully verified and
+   * accepted BRANCH_ACCESS RENEW package.
+   */
+  branchAccessRenewalHistory?: FinoraBranchAccessRenewalHistoryRecord[];
 
   /**
    * Pending one-time signed recipient credential enrollment
@@ -1833,6 +1868,46 @@ function isBranchAccessGrant(
       value.registrationPayment === undefined &&
       value.registrationCycle === undefined
     );
+  }
+
+  return false;
+}
+
+function isBranchAccessRenewalHistoryRecord(
+  value: unknown,
+): value is FinoraBranchAccessRenewalHistoryRecord {
+  return (
+    isRecord(value) &&
+    value.schemaVersion === 1 &&
+    isNonEmptyString(value.packageId) &&
+    isNonEmptyString(value.issuerId) &&
+    Number.isSafeInteger(value.sequence) &&
+    (value.sequence as number) > 0 &&
+    value.action === "RENEW" &&
+    isNonEmptyString(value.ownerId) &&
+    isNonEmptyString(value.businessId) &&
+    isNonEmptyString(value.branchId) &&
+    isNonEmptyString(value.installationId) &&
+    isBranchAccessGrant(value.accessGrant) &&
+    value.accessGrant.accessType === "REGISTERED" &&
+    value.accessGrant.ownerId === value.ownerId &&
+    value.accessGrant.businessId === value.businessId &&
+    value.accessGrant.branchId === value.branchId &&
+    isControlTimestamp(value.appliedAt)
+  );
+}
+
+function hasDuplicateBranchAccessRenewalHistoryPackageIds(
+  values: readonly FinoraBranchAccessRenewalHistoryRecord[],
+): boolean {
+  const packageIds = new Set<string>();
+
+  for (const value of values) {
+    if (packageIds.has(value.packageId)) {
+      return true;
+    }
+
+    packageIds.add(value.packageId);
   }
 
   return false;
@@ -2674,6 +2749,20 @@ function isControlStorePackage(
     }
   }
 
+  const branchAccessRenewalHistory = value.branchAccessRenewalHistory;
+
+  if (branchAccessRenewalHistory !== undefined) {
+    if (
+      !Array.isArray(branchAccessRenewalHistory) ||
+      !branchAccessRenewalHistory.every(isBranchAccessRenewalHistoryRecord) ||
+      hasDuplicateBranchAccessRenewalHistoryPackageIds(
+        branchAccessRenewalHistory as FinoraBranchAccessRenewalHistoryRecord[],
+      )
+    ) {
+      return false;
+    }
+  }
+
   // ----------------------------------------------------------
   // REPLAY LEDGER
   // ----------------------------------------------------------
@@ -3123,6 +3212,28 @@ function describeControlStorePackageValidationFailure(value: unknown): string {
     }
   }
 
+  if (value.branchAccessRenewalHistory !== undefined) {
+    if (!Array.isArray(value.branchAccessRenewalHistory)) {
+      return "BRANCH_ACCESS_RENEWAL_HISTORY_NOT_ARRAY";
+    }
+
+    const renewalHistoryInvalidIndex =
+      value.branchAccessRenewalHistory.findIndex(
+        (item) => !isBranchAccessRenewalHistoryRecord(item),
+      );
+
+    if (renewalHistoryInvalidIndex >= 0) {
+      return `BRANCH_ACCESS_RENEWAL_HISTORY_INVALID_INDEX_${renewalHistoryInvalidIndex}`;
+    }
+
+    const renewalHistory =
+      value.branchAccessRenewalHistory as FinoraBranchAccessRenewalHistoryRecord[];
+
+    if (hasDuplicateBranchAccessRenewalHistoryPackageIds(renewalHistory)) {
+      return "BRANCH_ACCESS_RENEWAL_HISTORY_DUPLICATE_PACKAGE";
+    }
+  }
+
   if (value.branchCredentialEnrollmentAuthorizations !== undefined) {
     if (!Array.isArray(value.branchCredentialEnrollmentAuthorizations)) {
       return "BRANCH_CREDENTIAL_ENROLLMENT_AUTHORIZATIONS_NOT_ARRAY";
@@ -3453,6 +3564,8 @@ function createEmptyControlStore(): FinoraControlStorePackage {
     walletRechargeDeclines: [],
 
     branchAccessGrants: [],
+
+    branchAccessRenewalHistory: [],
 
     branchCredentialEnrollmentAuthorizations: [],
 
@@ -5437,6 +5550,7 @@ async function applyVerifiedBranchActivationInternal(
     controlStore.activations.push(input.activation);
   }
 
+
   // ----------------------------------------------------------
   // REPLAY LEDGER
   // ----------------------------------------------------------
@@ -6232,6 +6346,31 @@ async function applyVerifiedBranchAccessInternal(
     }
   }
 
+  const renewalHistory = [
+    ...(controlStore.branchAccessRenewalHistory ?? []),
+  ];
+
+  if (input.action === "RENEW") {
+    if (renewalHistory.some((item) => item.packageId === input.packageId)) {
+      return failure(
+        "FINORA Branch Access renewal history already contains this package.",
+      );
+    }
+
+    renewalHistory.push({
+      schemaVersion: 1,
+      packageId: input.packageId,
+      issuerId: input.issuerId,
+      sequence: input.sequence,
+      action: "RENEW",
+      ownerId: input.target.ownerId,
+      businessId: input.target.businessId,
+      branchId: input.target.branchId,
+      installationId: input.target.installationId,
+      accessGrant: structuredClone(input.accessGrant),
+      appliedAt: input.appliedAt,
+    });
+  }
   if (accessIndex >= 0) {
     if (credentialAuthorization === undefined || input.action !== "REPLACE") {
       accessGrants[accessIndex] = input.accessGrant;
@@ -6364,6 +6503,8 @@ async function applyVerifiedBranchAccessInternal(
   }
 
   controlStore.branchAccessGrants = accessGrants;
+
+  controlStore.branchAccessRenewalHistory = renewalHistory;
 
   controlStore.branchCredentialEnrollmentAuthorizations =
     credentialAuthorizations;
@@ -8426,7 +8567,7 @@ export function completeFinoraPortableBranchAuthCredentialRotationTransaction(
 }
 
 /* ============================================================
-   LEGACY SECURITY CODE BOOTSTRAP — CREDENTIAL COMMIT
+   LEGACY SECURITY CODE BOOTSTRAP â€” CREDENTIAL COMMIT
 
    This authority is intentionally narrow:
    - existing ACTIVE credential only
@@ -8967,6 +9108,7 @@ async function applyVerifiedStorageEntitlementInternal(
     entitlements.push(input.entitlement);
   }
 
+
   // ----------------------------------------------------------
   // REPLAY LEDGER
   // ----------------------------------------------------------
@@ -9186,7 +9328,7 @@ async function applyVerifiedBusinessProfileInternal(
   }
 
   // ----------------------------------------------------------
-  // PROFILE ↔ TARGET
+  // PROFILE â†” TARGET
   // ----------------------------------------------------------
 
   if (
@@ -9241,7 +9383,7 @@ async function applyVerifiedBusinessProfileInternal(
   }
 
   // ----------------------------------------------------------
-  // CONTROL STORE INSTALLATION ↔ VERIFIED TARGET
+  // CONTROL STORE INSTALLATION â†” VERIFIED TARGET
   // ----------------------------------------------------------
 
   if (
@@ -9963,7 +10105,7 @@ async function applyVerifiedPricingPolicyInternal(
   }
 
   // ----------------------------------------------------------
-  // POLICY ↔ VERIFIED TARGET BINDING
+  // POLICY â†” VERIFIED TARGET BINDING
   // ----------------------------------------------------------
 
   if (
@@ -11263,6 +11405,46 @@ export async function findFinoraBranchAccessGrant(
   return success(accessGrant);
 }
 
+
+
+export async function listFinoraBranchAccessRenewalHistory(
+  userId: string,
+
+  ownerId: string,
+
+  businessId: string,
+
+  branchId: string,
+): Promise<
+  FinoraControlStoreResult<FinoraBranchAccessRenewalHistoryRecord[]>
+> {
+  const currentResult = await readFinoraControlStore();
+
+  if (!currentResult.success || !currentResult.data) {
+    return failure(
+      currentResult.error ?? "Unable to load the FINORA Control Store.",
+    );
+  }
+
+  const history =
+    currentResult.data.branchAccessRenewalHistory ??
+    [];
+
+  const scopedHistory =
+    history.filter(
+      (item) =>
+        item.accessGrant.userId === userId &&
+        item.ownerId === ownerId &&
+        item.businessId === businessId &&
+        item.branchId === branchId,
+    );
+
+  return success(
+    scopedHistory.map(
+      (item) => structuredClone(item),
+    ),
+  );
+}
 
 // ============================================================
 // PORTABLE FRESH-DEVICE ATOMIC HYDRATION
