@@ -1393,12 +1393,11 @@ String administrativeStatus =
             }
 
             if (
-                !isExactInteger(
+                positiveSafeLong(
                     payment.get(
                         "amount"
-                    ),
-                    2000L
-                ) ||
+                    )
+                ) == null ||
                 !"INR".equals(
                     payment.get(
                         "currency"

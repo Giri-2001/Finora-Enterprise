@@ -182,7 +182,9 @@ function sanitizeRegistrationPayment(
         "remarks",
       ],
     ) ||
-    value.amount !== 2000 ||
+    typeof value.amount !== "number" ||
+    !Number.isFinite(value.amount) ||
+    value.amount <= 0 ||
     value.currency !== "INR" ||
     (
       value.paymentMode !== "CASH" &&
@@ -199,7 +201,7 @@ function sanitizeRegistrationPayment(
   }
 
   return {
-    amount: 2000,
+    amount: value.amount,
     currency: "INR",
     paymentMode: value.paymentMode,
     paidAt: value.paidAt,
@@ -342,12 +344,9 @@ function sanitizeBranchAccessGrant(
   if (
     value.accessType === "REGISTERED"
   ) {
-    const registrationDuration =
-      365 * 24 * 60 * 60 * 1000;
 
     if (
-      validUntil - validFrom !==
-        registrationDuration ||
+      
       !Number.isSafeInteger(
         value.registrationCycle,
       ) ||

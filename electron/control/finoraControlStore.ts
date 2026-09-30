@@ -1830,10 +1830,9 @@ function isBranchAccessGrant(
   // ----------------------------------------------------------
 
   if (value.accessType === "REGISTERED") {
-    const registrationDuration = 365 * 24 * 60 * 60 * 1000;
 
     if (
-      validUntil - validFrom !== registrationDuration ||
+      
       !Number.isSafeInteger(value.registrationCycle) ||
       (value.registrationCycle as number) <= 0 ||
       !isRecord(value.registrationPayment) ||
@@ -1845,7 +1844,9 @@ function isBranchAccessGrant(
     const payment = value.registrationPayment;
 
     return (
-      payment.amount === 2000 &&
+      typeof payment.amount === "number" &&
+      Number.isFinite(payment.amount) &&
+      payment.amount > 0 &&
       payment.currency === "INR" &&
       (payment.paymentMode === "CASH" ||
         payment.paymentMode === "UPI" ||

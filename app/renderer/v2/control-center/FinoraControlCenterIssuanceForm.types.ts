@@ -157,6 +157,10 @@ export interface FinoraBranchAccessFormDraft {
   registrationCycle:
     string;
 
+
+  registrationPaymentAmount:
+    string;
+
   registrationPaymentMode:
     FinoraRegistrationPaymentModeDraft;
 

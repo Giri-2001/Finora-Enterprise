@@ -732,6 +732,12 @@ export function buildFinoraBranchAccessIssuanceRequest(
       );
     }
 
+    const registrationPaymentAmount =
+      positiveFiniteNumber(
+        draft.registrationPaymentAmount,
+        "Registration Payment Amount",
+      );
+
     const reference =
       optionalString(
         draft.registrationPaymentReference,
@@ -750,7 +756,7 @@ export function buildFinoraBranchAccessIssuanceRequest(
 
       registrationPayment: {
         amount:
-          REGISTRATION_FEE,
+          registrationPaymentAmount,
 
         currency:
           REGISTRATION_CURRENCY,

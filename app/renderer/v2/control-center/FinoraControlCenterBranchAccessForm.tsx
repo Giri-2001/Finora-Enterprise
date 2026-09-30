@@ -311,6 +311,10 @@ export default function FinoraControlCenterBranchAccessForm({
       registrationCycle:
         "1",
 
+
+      registrationPaymentAmount:
+        "2000",
+
       registrationPaymentMode:
         "CASH",
 
@@ -647,6 +651,18 @@ export default function FinoraControlCenterBranchAccessForm({
               ) => {
                 update(
                   "registrationCycle",
+                  value,
+                );
+              }}
+            />
+
+            <Field
+              label="Payment Amount (INR)"
+              type="number"
+              value={draft.registrationPaymentAmount}
+              onChange={(value) => {
+                update(
+                  "registrationPaymentAmount",
                   value,
                 );
               }}

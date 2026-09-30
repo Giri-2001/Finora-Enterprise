@@ -550,8 +550,9 @@ function validateAccessGrant(
           "refundable",
         ],
       ) ||
-      payment.amount !==
-        2000 ||
+      typeof payment.amount !== "number" ||
+      !Number.isFinite(payment.amount) ||
+      payment.amount <= 0 ||
       payment.currency !==
         "INR" ||
       (

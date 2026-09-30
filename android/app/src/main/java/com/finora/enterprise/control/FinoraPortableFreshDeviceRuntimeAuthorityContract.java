@@ -1932,7 +1932,7 @@ public final class
             );
 
         if (
-            amount != 2000L ||
+            amount <= 0L ||
             !"INR".equals(currency) ||
             !(
                 "CASH".equals(paymentMode) ||

@@ -1,5 +1,5 @@
-/* ============================================================
-   FINORA ENTERPRISE OS™
+﻿/* ============================================================
+   FINORA ENTERPRISE OSâ„¢
 
    CONTROL CENTER - WALLET RECHARGE REQUEST VERIFIER
 
@@ -43,8 +43,19 @@ import {
   verifyFinoraInstallationBindingCanonicalValue,
 } from "../control/finoraInstallationBindingCrypto.js";
 
-const REQUEST_FILE_FORMAT =
+import {
+  verifyFinoraBranchCertificationCanonicalValue,
+} from "../control/finoraBranchCertificationCrypto.js";
+
+import type {
+  FinoraBranchCertificationSignatureV1,
+} from "../control/finoraBranchCertificationContract.js";
+
+const REQUEST_FILE_FORMAT_V1 =
   "FINORA_WALLET_RECHARGE_REQUEST_V1" as const;
+
+const REQUEST_FILE_FORMAT_V2 =
+  "FINORA_WALLET_RECHARGE_REQUEST_V2" as const;
 
 const REQUEST_PURPOSE =
   "WALLET_RECHARGE_REQUEST" as const;
@@ -112,7 +123,7 @@ export interface FinoraVerifiedWalletRechargeRequest {
   paymentMethod: string;
   paymentSource: string;
   requestedAt: string;
-  schemaVersion: 1;
+  schemaVersion: 1 | 2;
 }
 
 export type FinoraWalletRechargeRequestVerificationErrorCode =
@@ -244,8 +255,6 @@ export function verifyFinoraWalletRechargeRequestAgainstRegistryRecord(
         "schemaVersion",
       ],
     ) ||
-    value.format !== REQUEST_FILE_FORMAT ||
-    value.schemaVersion !== 1 ||
     !isRecord(value.request)
   ) {
     return failure(
@@ -254,20 +263,49 @@ export function verifyFinoraWalletRechargeRequestAgainstRegistryRecord(
     );
   }
 
+  const historicalV1 =
+    value.format === REQUEST_FILE_FORMAT_V1 &&
+    value.schemaVersion === 1;
+
+  const portableV2 =
+    value.format === REQUEST_FILE_FORMAT_V2 &&
+    value.schemaVersion === 2;
+
+  if (!historicalV1 && !portableV2) {
+    return failure(
+      "INVALID_STRUCTURE",
+      "FINORA Wallet Recharge Request file structure is invalid or unsupported.",
+    );
+  }
+
   const request = value.request;
+
+  const expectedRequestKeys =
+    portableV2
+      ? [
+          "payload",
+          "signature",
+          "branchCertificationSignature",
+          "schemaVersion",
+        ]
+      : [
+          "payload",
+          "signature",
+          "schemaVersion",
+        ];
 
   if (
     !hasExactKeys(
       request,
-      [
-        "payload",
-        "signature",
-        "schemaVersion",
-      ],
+      expectedRequestKeys,
     ) ||
-    request.schemaVersion !== 1 ||
+    request.schemaVersion !== (portableV2 ? 2 : 1) ||
     !isRecord(request.payload) ||
-    !isRecord(request.signature)
+    !isRecord(request.signature) ||
+    (
+      portableV2 &&
+      !isRecord(request.branchCertificationSignature)
+    )
   ) {
     return failure(
       "INVALID_STRUCTURE",
@@ -276,6 +314,11 @@ export function verifyFinoraWalletRechargeRequestAgainstRegistryRecord(
   }
 
   const payload = request.payload;
+
+  const branchCertificationSignature =
+    portableV2
+      ? request.branchCertificationSignature
+      : undefined;
 
   if (
     !hasExactKeys(
@@ -296,7 +339,7 @@ export function verifyFinoraWalletRechargeRequestAgainstRegistryRecord(
       ],
     ) ||
     payload.purpose !== REQUEST_PURPOSE ||
-    payload.schemaVersion !== 1 ||
+    payload.schemaVersion !== (portableV2 ? 2 : 1) ||
     !hasText(payload.requestId, 128) ||
     !hasText(payload.paymentReference, 256) ||
     !Number.isSafeInteger(payload.amountMinor) ||
@@ -360,19 +403,49 @@ export function verifyFinoraWalletRechargeRequestAgainstRegistryRecord(
   const installation = payload.installation;
 
   if (
-    !hasExactKeys(
-      installation,
-      [
-        "installationId",
-        "bindingKeyId",
-        "fingerprintAlgorithm",
-        "publicKeyFingerprint",
-      ],
-    ) ||
-    !hasText(installation.installationId, 256) ||
-    !hasText(installation.bindingKeyId, 128) ||
-    installation.fingerprintAlgorithm !== FINGERPRINT_ALGORITHM ||
-    !isCanonicalFingerprint(installation.publicKeyFingerprint)
+    portableV2
+      ? (
+          !hasExactKeys(
+            installation,
+            [
+              "installationId",
+              "bindingKeyId",
+              "fingerprintAlgorithm",
+              "publicKeyFingerprint",
+              "platform",
+              "algorithm",
+              "publicKeyFormat",
+              "publicKey",
+              "createdAt",
+              "schemaVersion",
+            ],
+          ) ||
+          !hasText(installation.installationId, 256) ||
+          !hasText(installation.bindingKeyId, 128) ||
+          installation.fingerprintAlgorithm !== FINGERPRINT_ALGORITHM ||
+          !isCanonicalFingerprint(installation.publicKeyFingerprint) ||
+          !hasText(installation.platform, 64) ||
+          installation.algorithm !== SIGNATURE_ALGORITHM ||
+          installation.publicKeyFormat !== "SPKI_DER_BASE64" ||
+          !hasText(installation.publicKey, 4096) ||
+          !isCanonicalIsoTimestamp(installation.createdAt) ||
+          installation.schemaVersion !== 1
+        )
+      : (
+          !hasExactKeys(
+            installation,
+            [
+              "installationId",
+              "bindingKeyId",
+              "fingerprintAlgorithm",
+              "publicKeyFingerprint",
+            ],
+          ) ||
+          !hasText(installation.installationId, 256) ||
+          !hasText(installation.bindingKeyId, 128) ||
+          installation.fingerprintAlgorithm !== FINGERPRINT_ALGORITHM ||
+          !isCanonicalFingerprint(installation.publicKeyFingerprint)
+        )
   ) {
     return failure(
       "INVALID_STRUCTURE",
@@ -381,7 +454,7 @@ export function verifyFinoraWalletRechargeRequestAgainstRegistryRecord(
   }
 
   const expectedBindingKeyId =
-    `FINORA-BINDING-${installation.publicKeyFingerprint
+    `FINORA-BINDING-${(installation.publicKeyFingerprint as string)
       .slice(0, 32)
       .toUpperCase()}`;
 
@@ -429,10 +502,13 @@ export function verifyFinoraWalletRechargeRequestAgainstRegistryRecord(
   const registryInstallation = identity.installation;
 
   if (
-    registryInstallation.installationId !== installation.installationId ||
-    registryInstallation.bindingKeyId !== installation.bindingKeyId ||
-    registryInstallation.fingerprintAlgorithm !== installation.fingerprintAlgorithm ||
-    registryInstallation.publicKeyFingerprint !== installation.publicKeyFingerprint
+    !portableV2 &&
+    (
+      registryInstallation.installationId !== installation.installationId ||
+      registryInstallation.bindingKeyId !== installation.bindingKeyId ||
+      registryInstallation.fingerprintAlgorithm !== installation.fingerprintAlgorithm ||
+      registryInstallation.publicKeyFingerprint !== installation.publicKeyFingerprint
+    )
   ) {
     return failure(
       "INSTALLATION_MISMATCH",
@@ -456,7 +532,7 @@ export function verifyFinoraWalletRechargeRequestAgainstRegistryRecord(
     signature.algorithm !== SIGNATURE_ALGORITHM ||
     signature.encoding !== SIGNATURE_ENCODING ||
     signature.canonicalization !== CANONICALIZATION ||
-    signature.bindingKeyId !== registryInstallation.bindingKeyId ||
+    signature.bindingKeyId !== (portableV2 ? installation.bindingKeyId : registryInstallation.bindingKeyId) ||
     !hasText(signature.value, 512)
   ) {
     return failure(
@@ -526,7 +602,50 @@ export function verifyFinoraWalletRechargeRequestAgainstRegistryRecord(
       payload,
     );
 
+  if (portableV2) {
+    const certificationPublicKey =
+      registryRecord.branchCertificationPublicKey;
+
+    if (
+      certificationPublicKey === undefined ||
+      !isRecord(branchCertificationSignature) ||
+      !hasExactKeys(
+        branchCertificationSignature,
+        [
+          "algorithm",
+          "encoding",
+          "canonicalization",
+          "keyId",
+          "value",
+        ],
+      ) ||
+      !hasText(
+        branchCertificationSignature.value,
+        512,
+      )
+    ) {
+      return failure(
+        "INVALID_SIGNATURE",
+        "FINORA Wallet Recharge Request Branch Certification authority or signature envelope is invalid.",
+      );
+    }
+
+    if (
+      !verifyFinoraBranchCertificationCanonicalValue(
+        canonicalPayload,
+        branchCertificationSignature as unknown as FinoraBranchCertificationSignatureV1,
+        certificationPublicKey,
+      )
+    ) {
+      return failure(
+        "INVALID_SIGNATURE",
+        "FINORA Wallet Recharge Request Branch Certification signature verification failed.",
+      );
+    }
+  }
+
   if (
+    !portableV2 &&
     !verifyFinoraInstallationBindingCanonicalValue(
       canonicalPayload,
       signature.value,
@@ -566,7 +685,7 @@ export function verifyFinoraWalletRechargeRequestAgainstRegistryRecord(
           displayIdentity.branchCode,
 
         installationId:
-          installation.installationId,
+          installation.installationId as string,
 
         bindingKeyId:
           installation.bindingKeyId,
@@ -575,7 +694,7 @@ export function verifyFinoraWalletRechargeRequestAgainstRegistryRecord(
           FINGERPRINT_ALGORITHM,
 
         publicKeyFingerprint:
-          installation.publicKeyFingerprint,
+          installation.publicKeyFingerprint as string,
       },
 
       amountMinor:
@@ -594,7 +713,7 @@ export function verifyFinoraWalletRechargeRequestAgainstRegistryRecord(
         payload.requestedAt,
 
       schemaVersion:
-        1,
+        (portableV2 ? 2 : 1),
     },
   };
 }
@@ -652,3 +771,6 @@ export async function verifyFinoraWalletRechargeRequest(
 /* ============================================================
    END
 ============================================================ */
+
+
+
