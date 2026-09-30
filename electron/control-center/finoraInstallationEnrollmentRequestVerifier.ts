@@ -569,8 +569,12 @@ export function verifyFinoraInstallationEnrollmentRequestFile(
       deviceBinding.bindingKeyId,
       128,
     ) ||
-    deviceBinding.platform !==
-      "WINDOWS" ||
+    (
+      deviceBinding.platform !==
+        "WINDOWS" &&
+      deviceBinding.platform !==
+        "ANDROID"
+    ) ||
     deviceBinding.algorithm !==
       "ECDSA_P256_SHA256" ||
     deviceBinding.publicKeyFormat !==

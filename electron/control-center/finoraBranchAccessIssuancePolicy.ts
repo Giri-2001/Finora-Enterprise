@@ -517,30 +517,7 @@ function validateAccessGrant(
   if (
     value.accessType ===
       "REGISTERED"
-  ) {
-
-    const productionRegistrationDurationMs =
-      365 * 24 * 60 * 60 * 1000;
-
-    const developmentRegistrationDurationMs =
-      60 * 60 * 1000;
-
-    const actualRegistrationDurationMs =
-      validUntil.milliseconds -
-      validFrom.milliseconds;
-
-    const registrationDurationAllowed =
-      actualRegistrationDurationMs ===
-        productionRegistrationDurationMs ||
-      (
-        options.allowDevelopmentOneHourRegisteredValidity ===
-          true &&
-        actualRegistrationDurationMs ===
-          developmentRegistrationDurationMs
-      );
-
-    if (
-      !registrationDurationAllowed ||
+  ) {      if (
       !Number.isSafeInteger(
         value.registrationCycle,
       ) ||

@@ -1,5 +1,5 @@
 /* ============================================================
-   FINORA ENTERPRISE OS™
+   FINORA ENTERPRISE OSâ„¢
 
    CONTROL CENTER
 
@@ -129,6 +129,10 @@ export async function verifyFinoraHistoricalInstallationEnrollmentResponseAgains
       FinoraHistoricalEnrollmentResponseAuthorityProof[] =
         [];
 
+    const verificationFailures:
+      string[] =
+        [];
+
     /*
      * Do not inspect an untrusted response signingKeyId to select
      * one local key.
@@ -182,6 +186,10 @@ export async function verifyFinoraHistoricalInstallationEnrollmentResponseAgains
         });
 
       if (!verification.success) {
+        verificationFailures.push(
+          `${verificationKey.signingKeyId}: ${verification.error}`,
+        );
+
         continue;
       }
 
@@ -225,7 +233,10 @@ export async function verifyFinoraHistoricalInstallationEnrollmentResponseAgains
         0
     ) {
       return failure(
-        "FINORA historical Installation Enrollment Response could not be authenticated against this Control Center's current or retained signing-key history.",
+        verificationFailures.length ===
+          0
+          ? "FINORA historical Installation Enrollment Response could not be authenticated against this Control Center's current or retained signing-key history."
+          : `FINORA historical Installation Enrollment Response authentication failed. ${verificationFailures.join(" | ")}`,
       );
     }
 

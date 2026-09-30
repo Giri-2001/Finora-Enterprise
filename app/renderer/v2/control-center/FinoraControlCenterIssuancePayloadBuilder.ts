@@ -51,17 +51,6 @@ export type FinoraControlCenterBuiltIssuanceRequest =
    CONSTANTS
 ============================================================ */
 
-const REGISTERED_DURATION_MS =
-  365 * 24 * 60 * 60 * 1000;
-
-const DEVELOPMENT_REGISTERED_DURATION_MS =
-  60 * 60 * 1000;
-
-const ALLOW_DEVELOPMENT_SHORT_REGISTERED_VALIDITY =
-  import.meta.env.DEV &&
-  import.meta.env.VITE_FINORA_DEV_BRANCH_ACCESS_SHORT_VALIDITY ===
-    "1";
-
 const REGISTRATION_FEE =
   2000;
 
@@ -725,31 +714,6 @@ export function buildFinoraBranchAccessIssuanceRequest(
     draft.accessType ===
       "REGISTERED"
   ) {
-
-    const registeredDurationMs =
-      Date.parse(
-        validUntil,
-      ) -
-      Date.parse(
-        validFrom,
-      );
-
-    const registeredDurationAllowed =
-      registeredDurationMs ===
-        REGISTERED_DURATION_MS ||
-      (
-        ALLOW_DEVELOPMENT_SHORT_REGISTERED_VALIDITY &&
-        registeredDurationMs ===
-          DEVELOPMENT_REGISTERED_DURATION_MS
-      );
-
-    if (!registeredDurationAllowed) {
-      throw new Error(
-        ALLOW_DEVELOPMENT_SHORT_REGISTERED_VALIDITY
-          ? "REGISTERED access must contain exactly 365 days or the explicit development-only 1-hour test validity."
-          : "REGISTERED access must contain exactly 365 days of validity.",
-      );
-    }
 
     const registrationCycle =
       positiveSafeInteger(

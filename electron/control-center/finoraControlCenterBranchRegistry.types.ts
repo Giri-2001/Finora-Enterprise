@@ -1,7 +1,7 @@
 /* ============================================================
-   FINORA ENTERPRISE OSâ„¢
+   FINORA ENTERPRISE OSÃ¢â€žÂ¢
 
-   CONTROL CENTER â€” BRANCH REGISTRY CONTRACT
+   CONTROL CENTER Ã¢â‚¬â€ BRANCH REGISTRY CONTRACT
 
    MODULE  : Control Center
    LAYER   : Admin Authority Contract
@@ -45,6 +45,10 @@ export const FINORA_CONTROL_CENTER_BRANCH_REGISTRY_SCHEMA_VERSION =
 export const FINORA_CONTROL_CENTER_BRANCH_REGISTRY_PLATFORM =
   "WINDOWS" as const;
 
+export type FinoraControlCenterBranchRegistryPlatform =
+  | typeof FINORA_CONTROL_CENTER_BRANCH_REGISTRY_PLATFORM
+  | "ANDROID";
+
 export const FINORA_CONTROL_CENTER_BRANCH_REGISTRY_BINDING_ALGORITHM =
   "ECDSA_P256_SHA256" as const;
 
@@ -87,7 +91,7 @@ export interface FinoraControlCenterBranchInstallationIdentity {
     string;
 
   platform:
-    typeof FINORA_CONTROL_CENTER_BRANCH_REGISTRY_PLATFORM;
+    FinoraControlCenterBranchRegistryPlatform;
 
   algorithm:
     typeof FINORA_CONTROL_CENTER_BRANCH_REGISTRY_BINDING_ALGORITHM;

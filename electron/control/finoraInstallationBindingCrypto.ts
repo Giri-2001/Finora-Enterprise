@@ -1,5 +1,5 @@
 /* ===========================================================
-   FINORA ENTERPRISE OS™
+   FINORA ENTERPRISE OSâ„¢
 
    WINDOWS INSTALLATION BINDING CRYPTO
 
@@ -100,6 +100,43 @@ export interface FinoraWindowsInstallationBindingPublic {
     1;
 }
 
+export interface FinoraInstallationBindingVerificationPublic {
+
+  installationId:
+    string;
+
+  bindingKeyId:
+    string;
+
+  platform:
+    | typeof FINORA_INSTALLATION_BINDING_PLATFORM
+    | "ANDROID";
+
+  algorithm:
+    typeof FINORA_INSTALLATION_BINDING_ALGORITHM;
+
+  publicKeyFormat:
+    typeof FINORA_INSTALLATION_BINDING_PUBLIC_KEY_FORMAT;
+
+  publicKey:
+    string;
+
+  fingerprintAlgorithm:
+    typeof FINORA_INSTALLATION_BINDING_FINGERPRINT_ALGORITHM;
+
+  publicKeyFingerprint:
+    string;
+
+  createdAt:
+    string;
+
+  schemaVersion:
+    1;
+}
+
+// ============================================================
+// WINDOWS PRIVATE MATERIAL
+// ============================================================
 export interface FinoraWindowsInstallationBindingMaterial
   extends FinoraWindowsInstallationBindingPublic {
 
@@ -788,7 +825,7 @@ export function verifyFinoraInstallationBindingCanonicalValue(
     string,
 
   publicBinding:
-    FinoraWindowsInstallationBindingPublic,
+    FinoraInstallationBindingVerificationPublic,
 ): boolean {
 
   if (

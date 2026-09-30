@@ -1,6 +1,9 @@
+import {
+  getFinoraCredentialEnrollmentBridge,
+} from "../../services/auth/credentialEnrollmentBridge";
 import { getFinoraLoginSessionBridge } from "../../services/auth/loginSessionBridge";
 // ============================================================
-// FINORA ENTERPRISE OS™
+// FINORA ENTERPRISE OSâ„¢
 //
 // ENTERPRISE LOGIN
 //
@@ -1563,8 +1566,7 @@ export default function Login({
     }
 
     const enrollCredential =
-      window.finora?.credentials
-        ?.enroll;
+      getFinoraCredentialEnrollmentBridge()?.enroll;
 
 
     if (
@@ -2551,7 +2553,7 @@ export default function Login({
 
 
             {/* ==============================================
-                USB STATUS — ONLY FOR USB OWNER LOGIN
+                USB STATUS â€” ONLY FOR USB OWNER LOGIN
             ============================================== */}
 
             {!usbChecking &&
@@ -2683,10 +2685,10 @@ export default function Login({
                 }
               >
                 {credentialMode === "SET_PASSWORD"
-                  ? "First-time setup • Create your secure password"
+                  ? "First-time setup â€¢ Create your secure password"
                   : ownerStorage === "usb"
-                    ? "Owner authentication • FINORA Pendrive"
-                    : "Owner authentication • Local storage"}
+                    ? "Owner authentication â€¢ FINORA Pendrive"
+                    : "Owner authentication â€¢ Local storage"}
               </div>
 
             </div>

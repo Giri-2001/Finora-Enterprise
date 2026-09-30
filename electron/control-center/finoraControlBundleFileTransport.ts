@@ -309,7 +309,7 @@ function isExportableSignedControlBundle(
     payload.packages.length <
       1 ||
     payload.packages.length >
-      5 ||
+      7 ||
     payloadDigest.algorithm !==
       "SHA-256" ||
     typeof payloadDigest.value !==

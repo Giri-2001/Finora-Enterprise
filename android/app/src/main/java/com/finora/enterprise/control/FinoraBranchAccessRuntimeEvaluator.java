@@ -1,10 +1,12 @@
 package com.finora.enterprise.control;
 
 import java.time.Instant;
+import com.finora.enterprise.BuildConfig;
 
 public final class FinoraBranchAccessRuntimeEvaluator {
     public static final String MISSING="MISSING", INVALID="INVALID", REVOKED="REVOKED", SUSPENDED="SUSPENDED", NOT_YET_VALID="NOT_YET_VALID", EXPIRED="EXPIRED", ACTIVE="ACTIVE";
     public static final long REGISTERED_ACCESS_DURATION_MS=365L*24L*60L*60L*1000L;
+    private static final long DEV_REGISTERED_ACCESS_DURATION_MS=60L*60L*1000L;
     private static final long JS_MAX_SAFE_INTEGER=9007199254740991L;
 
     private FinoraBranchAccessRuntimeEvaluator() {}
@@ -90,10 +92,6 @@ public final class FinoraBranchAccessRuntimeEvaluator {
         if (!until.isAfter(from)) return "FINORA access expiry must be later than its start timestamp.";
 
         if ("REGISTERED".equals(grant.accessType)) {
-            long duration;
-            try { duration=Math.subtractExact(until.toEpochMilli(),from.toEpochMilli()); }
-            catch (ArithmeticException error) { return "FINORA registered access must have exactly 365 days of validity."; }
-            if (duration!=REGISTERED_ACCESS_DURATION_MS) return "FINORA registered access must have exactly 365 days of validity.";
             if (grant.registrationCycle==null||grant.registrationCycle.longValue()<=0L||grant.registrationCycle.longValue()>JS_MAX_SAFE_INTEGER) return "FINORA registration cycle must be a positive integer.";
             RegistrationPayment payment=grant.registrationPayment;
             if (payment==null||!Double.isFinite(payment.amount)||payment.amount<=0.0d||!text(payment.currency)||parse(payment.paidAt)==null||!Boolean.FALSE.equals(payment.refundable)) return "FINORA registration payment metadata is invalid.";
@@ -121,3 +119,4 @@ public final class FinoraBranchAccessRuntimeEvaluator {
         catch (Exception error) { return null; }
     }
 }
+

@@ -77,6 +77,14 @@ import {
 } from "./finoraControlBundleIssuer.js";
 
 import {
+  issueFinoraBranchPortabilityAuthorityPackage,
+} from "./finoraBranchPortabilityAuthorityIssuer.js";
+
+import type {
+  FinoraBranchCredentialEnrollmentAuthorization,
+} from "../control/finoraBranchAccessPackage.types.js";
+
+import {
   reserveFinoraControlCenterIssuance,
 } from "./finoraControlCenterIssuanceLedger.js";
 import {
@@ -1079,9 +1087,169 @@ export function issueFinoraControlBundlePackage(
             ),
         });
 
+      /*
+       * ONE-FILE USB ONBOARDING
+       *
+       * Renderer supplies already-signed normal child packages.
+       * Main process inspects the signed BRANCH_ACCESS child.
+       *
+       * When that child carries a USB credentialEnrollment
+       * authorization, the privileged Control Center automatically
+       * creates the correlated signed branch-only
+       * BRANCH_PORTABILITY_AUTHORITY child.
+       *
+       * No proof is synthesized and no signer authority moves to
+       * the renderer.
+       */
+
+      if (
+        !Array.isArray(
+          request.payload.packages,
+        )
+      ) {
+        throw new Error(
+          "FINORA Control Bundle packages are invalid.",
+        );
+      }
+
+      const packages = [
+        ...request.payload.packages,
+      ];
+
+      const branchAccessPackages =
+        packages.filter(
+          (
+            candidate,
+          ) => (
+            typeof candidate ===
+              "object" &&
+            candidate !==
+              null &&
+            !Array.isArray(
+              candidate,
+            ) &&
+            (
+              candidate as
+                Record<string, unknown>
+            ).purpose ===
+              "BRANCH_ACCESS"
+          ),
+        );
+
+      if (
+        branchAccessPackages.length >
+          1
+      ) {
+        throw new Error(
+          "FINORA Control Bundle contains more than one BRANCH_ACCESS child.",
+        );
+      }
+
+      const existingPortabilityPackages =
+        packages.filter(
+          (
+            candidate,
+          ) => (
+            typeof candidate ===
+              "object" &&
+            candidate !==
+              null &&
+            !Array.isArray(
+              candidate,
+            ) &&
+            (
+              candidate as
+                Record<string, unknown>
+            ).purpose ===
+              "BRANCH_PORTABILITY_AUTHORITY"
+          ),
+        );
+
+      if (
+        existingPortabilityPackages.length >
+          1
+      ) {
+        throw new Error(
+          "FINORA Control Bundle contains more than one BRANCH_PORTABILITY_AUTHORITY child.",
+        );
+      }
+
+      const branchAccessPackage =
+        branchAccessPackages[0] as
+          Record<string, unknown> |
+          undefined;
+
+      if (branchAccessPackage) {
+
+        const branchAccessPayload =
+          (
+            typeof branchAccessPackage.payload ===
+              "object" &&
+            branchAccessPackage.payload !==
+              null &&
+            !Array.isArray(
+              branchAccessPackage.payload,
+            )
+          )
+            ? branchAccessPackage.payload as
+                Record<string, unknown>
+            : undefined;
+
+        const credentialEnrollment =
+          branchAccessPayload?.credentialEnrollment;
+
+        if (
+          typeof credentialEnrollment ===
+            "object" &&
+          credentialEnrollment !==
+            null &&
+          !Array.isArray(
+            credentialEnrollment,
+          ) &&
+          (
+            credentialEnrollment as
+              Record<string, unknown>
+          ).storageMode ===
+            "USB"
+        ) {
+
+          if (
+            existingPortabilityPackages.length ===
+              0
+          ) {
+
+            const portabilityPackage =
+              await issueFinoraBranchPortabilityAuthorityPackage({
+                target: {
+                  ownerId:
+                    request.target.ownerId,
+
+                  businessId:
+                    request.target.businessId,
+
+                  branchId:
+                    request.target.branchId,
+                },
+
+                sourceAuthorization:
+                  credentialEnrollment as
+                    FinoraBranchCredentialEnrollmentAuthorization,
+              });
+
+            packages.push(
+              portabilityPackage,
+            );
+          }
+        }
+      }
+
       const payload =
         withAuthoritativeIssuedAt(
-          request.payload,
+          {
+            ...request.payload,
+
+            packages,
+          },
           reservation.issuedAt,
         );
 

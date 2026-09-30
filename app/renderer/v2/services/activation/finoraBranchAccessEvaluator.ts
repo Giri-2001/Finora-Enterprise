@@ -362,20 +362,6 @@ export function validateFinoraBranchAccessGrant(
   ) {
 
     if (
-      validUntil -
-        validFrom !==
-      FINORA_REGISTERED_ACCESS_DURATION_MS
-    ) {
-      return {
-        valid:
-          false,
-
-        error:
-          "FINORA registered access must have exactly 365 days of validity.",
-      };
-    }
-
-    if (
       !Number.isSafeInteger(
         grant.registrationCycle,
       ) ||

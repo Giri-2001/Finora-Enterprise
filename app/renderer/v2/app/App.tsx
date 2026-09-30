@@ -1,4 +1,4 @@
-﻿import {
+import {
   requireBusinessContext,
 } from "../services/business/businessContextService";
 
@@ -127,6 +127,13 @@ import {
 } from "../services/notifications/notificationDataChangeSignal";
 
 import BranchActivationRequired from "../pages/auth/BranchActivationRequired";
+import {
+  getFinoraActivationControlBridge,
+} from "../services/activation/activationControlBridge";
+
+import {
+  getFinoraWalletControlBundleImportBridge,
+} from "../services/wallet/finoraWalletRechargeRequestBridge";
 
 import {
   evaluateAuthoritativeFinoraBranchAccess,
@@ -902,8 +909,11 @@ function BranchActivationGate({
     );
 
     try {
+      const controlBridge =
+        getFinoraActivationControlBridge();
+
       const exportEnrollmentRequest =
-        window.finora?.control
+        controlBridge
           ?.exportInstallationEnrollmentRequest;
 
       if (
@@ -989,8 +999,11 @@ function BranchActivationGate({
     );
 
     try {
+      const controlBridge =
+        getFinoraActivationControlBridge();
+
       const importEnrollmentResponse =
-        window.finora?.control
+        controlBridge
           ?.importInstallationEnrollmentResponse;
 
       if (
@@ -1079,8 +1092,7 @@ function BranchActivationGate({
 
     try {
       const importControlBundle =
-        window.finora?.control
-          ?.importControlBundle;
+        getFinoraWalletControlBundleImportBridge()?.importControlBundle;
 
       if (
         typeof importControlBundle !==

@@ -1,0 +1,6 @@
+release-developer-control-center/*.exe filter=lfs diff=lfs merge=lfs -text
+release-developer-control-center-final/*.exe filter=lfs diff=lfs merge=lfs -text
+release-developer-control-center/win-unpacked/resources/app.asar filter=lfs diff=lfs merge=lfs -text
+release-developer-control-center-final/win-unpacked/resources/app.asar filter=lfs diff=lfs merge=lfs -text
+release-developer-control-center/win-unpacked/*.exe filter=lfs diff=lfs merge=lfs -text
+release-developer-control-center-final/win-unpacked/*.exe filter=lfs diff=lfs merge=lfs -text

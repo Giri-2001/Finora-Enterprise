@@ -18,7 +18,7 @@ import java.util.Set;
 import java.util.regex.Pattern;
 
 /* ============================================================
-   FINORA ENTERPRISE OS™
+   FINORA ENTERPRISE OSÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¾ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢
 
    ANDROID CONTROL BUNDLE IMPORT COORDINATOR
 
@@ -97,8 +97,7 @@ public final class FinoraControlBundleImportCoordinator {
     private static final String BUNDLE_FORMAT =
         "FINORA_CONTROL_BUNDLE_V1";
 
-    private static final int MAX_CHILD_PACKAGES =
-        5;
+    private static final int MAX_CHILD_PACKAGES = 7;
 
     private static final BigInteger MAX_SAFE_INTEGER =
         new BigInteger(
@@ -129,6 +128,14 @@ public final class FinoraControlBundleImportCoordinator {
 
         purposes.add(
             "BRANCH_ACTIVATION"
+        );
+
+        purposes.add(
+            "BRANCH_ACCESS"
+        );
+
+        purposes.add(
+            "BRANCH_PORTABILITY_AUTHORITY"
         );
 
         purposes.add(
@@ -352,6 +359,15 @@ public final class FinoraControlBundleImportCoordinator {
     private final FinoraBranchActivationPackageApplyService
         branchActivationService;
 
+    private final FinoraBranchAccessPackageApplyService
+        branchAccessService;
+
+    private final FinoraBranchCredentialEnrollmentPairApplyService
+        credentialEnrollmentPairService;
+
+    private final FinoraBranchPortabilityAuthorityRecoveryService
+        portabilityAuthorityRecoveryService;
+
     private final FinoraBusinessProfilePackageApplyService
         businessProfileService;
 
@@ -416,6 +432,22 @@ public final class FinoraControlBundleImportCoordinator {
                 bindingService
             );
 
+        this.branchAccessService =
+            new FinoraBranchAccessPackageApplyService(
+                controlStore,
+                bindingService
+            );
+
+        this.credentialEnrollmentPairService =
+            new FinoraBranchCredentialEnrollmentPairApplyService(
+                this.branchAccessService
+            );
+
+        this.portabilityAuthorityRecoveryService =
+            new FinoraBranchPortabilityAuthorityRecoveryService(
+                controlStore
+            );
+
         this.businessProfileService =
             new FinoraBusinessProfilePackageApplyService(
                 controlStore,
@@ -444,6 +476,312 @@ public final class FinoraControlBundleImportCoordinator {
     // ========================================================
     // PUBLIC APPLY
     // ========================================================
+
+    /**
+     * Repair one historically skipped BRANCH_ACCESS child from
+     * its original signed CONTROL_BUNDLE.
+     *
+     * SECURITY:
+     * - validates original bundle structure;
+     * - loads native recipient trust;
+     * - resolves authoritative current installation/binding;
+     * - obtains verification time from native clock authority;
+     * - verifies the original outer CONTROL_BUNDLE signature;
+     * - verifies the unchanged BRANCH_ACCESS child signature;
+     * - applies ONLY that child through the dedicated service;
+     * - normal replay / sequence protection remains authoritative.
+     *
+     * No other bundle child is dispatched.
+     */
+    public FinoraBranchAccessPackageApplyService.ApplyResult
+        recoverBranchAccessFromBundle(
+            JSONObject signedBundle
+        ) {
+
+        synchronized (
+            IMPORT_LOCK
+        ) {
+
+            try {
+
+                ValidatedBundle bundle =
+                    validateBundleStructure(
+                        signedBundle
+                    );
+
+                JSONObject branchAccessChild =
+                    null;
+
+                for (
+                    JSONObject child :
+                    bundle.children
+                ) {
+
+                    String purpose =
+                        requireNonEmptyString(
+                            child,
+                            "purpose"
+                        );
+
+                    if (
+                        "BRANCH_ACCESS".equals(
+                            purpose
+                        )
+                    ) {
+
+                        if (
+                            branchAccessChild !=
+                                null
+                        ) {
+                            return FinoraBranchAccessPackageApplyService
+                                .ApplyResult
+                                .failure(
+                                    "FINORA Control Bundle contains multiple BRANCH_ACCESS children."
+                                );
+                        }
+
+                        branchAccessChild =
+                            child;
+                    }
+                }
+
+                if (
+                    branchAccessChild ==
+                        null
+                ) {
+                    return FinoraBranchAccessPackageApplyService
+                        .ApplyResult
+                        .failure(
+                            "FINORA Control Bundle does not contain a BRANCH_ACCESS child."
+                        );
+                }
+
+                String serializedTrust =
+                    trustStore.read();
+
+                if (
+                    serializedTrust ==
+                        null
+                ) {
+                    return FinoraBranchAccessPackageApplyService
+                        .ApplyResult
+                        .failure(
+                            "FINORA recipient operational trust has not been bootstrapped."
+                        );
+                }
+
+                FinoraRecipientTrustState.State
+                    trustState =
+                        FinoraRecipientTrustState.parse(
+                            serializedTrust
+                        );
+
+                List<
+                    FinoraSignedControlPackageVerifier.TrustedKey
+                > trustedKeys =
+                    createVerifierTrustedKeys(
+                        trustState
+                    );
+
+                FinoraSignedControlPackageVerifier.Target
+                    expectedTarget =
+                        resolveAuthoritativeTarget(
+                            false
+                        );
+
+                FinoraClockHighWaterAuthorityService.Result
+                    clockResult =
+                        clockHighWaterAuthority.observe();
+
+                if (
+                    !clockResult.success ||
+                    clockResult.data ==
+                        null
+                ) {
+                    return FinoraBranchAccessPackageApplyService
+                        .ApplyResult
+                        .failure(
+                            clockResult.error != null
+                                ? clockResult.error
+                                : "FINORA recipient clock authority rejected Branch Access recovery."
+                        );
+                }
+
+                Instant acceptedNow =
+                    Instant.parse(
+                        clockResult.data.observedAt
+                    );
+
+                FinoraSignedControlPackageVerifier.Result
+                    outerVerification =
+                        verifySignedPackage(
+                            signedBundle,
+                            trustedKeys,
+                            expectedTarget,
+                            acceptedNow
+                        );
+
+                if (
+                    !outerVerification.valid
+                ) {
+                    return FinoraBranchAccessPackageApplyService
+                        .ApplyResult
+                        .failure(
+                            "FINORA Control Bundle verification failed: " +
+                            verificationError(
+                                outerVerification
+                            )
+                        );
+                }
+
+                FinoraSignedControlPackageVerifier.Result
+                    childVerification =
+                        verifySignedPackage(
+                            branchAccessChild,
+                            trustedKeys,
+                            expectedTarget,
+                            acceptedNow
+                        );
+
+                if (
+                    !childVerification.valid
+                ) {
+                    return FinoraBranchAccessPackageApplyService
+                        .ApplyResult
+                        .failure(
+                            "FINORA BRANCH_ACCESS child verification failed: " +
+                            verificationError(
+                                childVerification
+                            )
+                        );
+                }
+
+                return branchAccessService.apply(
+                    branchAccessChild,
+                    trustedKeys,
+                    acceptedNow
+                );
+
+            } catch (
+                Exception error
+            ) {
+
+                return FinoraBranchAccessPackageApplyService
+                    .ApplyResult
+                    .failure(
+                        error.getMessage() != null
+                            ? error.getMessage()
+                            : "FINORA Branch Access recovery failed."
+                    );
+            }
+        }
+    }
+
+    /**
+     * Targeted migration path for historical USB credential
+     * authorization state that already contains verified
+     * BRANCH_ACCESS evidence but is missing only the signed
+     * BRANCH_PORTABILITY_AUTHORITY proof.
+     *
+     * This method never dispatches or reapplies BRANCH_ACCESS.
+     */
+    public FinoraBranchPortabilityAuthorityRecoveryService.Result
+        recoverCredentialPortabilityAuthority(
+            JSONObject signedPortabilityAuthorityPackage
+        ) {
+
+        synchronized (
+            IMPORT_LOCK
+        ) {
+
+            try {
+
+                if (
+                    signedPortabilityAuthorityPackage == null
+                ) {
+                    return FinoraBranchPortabilityAuthorityRecoveryService
+                        .Result
+                        .failure(
+                            "FINORA signed Branch Portability Authority package is required."
+                        );
+                }
+
+                String serializedTrust =
+                    trustStore.read();
+
+                if (
+                    serializedTrust == null
+                ) {
+                    return FinoraBranchPortabilityAuthorityRecoveryService
+                        .Result
+                        .failure(
+                            "FINORA recipient operational trust has not been bootstrapped."
+                        );
+                }
+
+                FinoraRecipientTrustState.State
+                    trustState =
+                        FinoraRecipientTrustState.parse(
+                            serializedTrust
+                        );
+
+                List<
+                    FinoraSignedControlPackageVerifier.TrustedKey
+                > trustedKeys =
+                    createVerifierTrustedKeys(
+                        trustState
+                    );
+
+                FinoraSignedControlPackageVerifier.Target
+                    expectedTarget =
+                        resolveAuthoritativeTarget(
+                            false
+                        );
+
+                FinoraClockHighWaterAuthorityService.Result
+                    clockResult =
+                        clockHighWaterAuthority.observe();
+
+                if (
+                    !clockResult.success ||
+                    clockResult.data == null
+                ) {
+                    return FinoraBranchPortabilityAuthorityRecoveryService
+                        .Result
+                        .failure(
+                            clockResult.error != null
+                                ? clockResult.error
+                                : "FINORA recipient clock authority rejected portability recovery."
+                        );
+                }
+
+                Instant acceptedNow =
+                    Instant.parse(
+                        clockResult.data.observedAt
+                    );
+
+                return portabilityAuthorityRecoveryService
+                    .recover(
+                        signedPortabilityAuthorityPackage,
+                        trustedKeys,
+                        expectedTarget,
+                        acceptedNow
+                    );
+
+            } catch (
+                Exception error
+            ) {
+
+                return FinoraBranchPortabilityAuthorityRecoveryService
+                    .Result
+                    .failure(
+                        error.getMessage() != null
+                            ? error.getMessage()
+                            : "FINORA portability authority recovery failed."
+                    );
+            }
+        }
+    }
 
     public Result apply(
         JSONObject signedBundle
@@ -613,11 +951,38 @@ public final class FinoraControlBundleImportCoordinator {
             // mutation is allowed to begin.
             // ------------------------------------------------
 
+
             for (
                 JSONObject child :
                 bundle.children
             ) {
+                String childPurpose =
+                    requireNonEmptyString(
+                        child,
+                        "purpose"
+                    );
+
                 FinoraSignedControlPackageVerifier.Result
+                    childVerification;
+
+                if (
+                    "BRANCH_PORTABILITY_AUTHORITY".equals(
+                        childPurpose
+                    )
+                ) {
+                    childVerification =
+                        FinoraSignedControlPackageVerifier
+                            .verifyBranchScope(
+                                FinoraJsonBridge.toMap(
+                                    child
+                                ),
+                                trustedKeys,
+                                expectedTarget.ownerId,
+                                expectedTarget.businessId,
+                                expectedTarget.branchId,
+                                acceptedNow
+                            );
+                } else {
                     childVerification =
                         verifySignedPackage(
                             child,
@@ -625,6 +990,7 @@ public final class FinoraControlBundleImportCoordinator {
                             expectedTarget,
                             acceptedNow
                         );
+                }
 
                 if (!childVerification.valid) {
                     return Result.failure(
@@ -634,10 +1000,7 @@ public final class FinoraControlBundleImportCoordinator {
                         "CONTROL_BUNDLE_CHILD_PREFLIGHT_FAILED",
                         (
                             "FINORA Control Bundle child preflight failed for purpose " +
-                            requireNonEmptyString(
-                                child,
-                                "purpose"
-                            ) +
+                            childPurpose +
                             ": " +
                             verificationError(
                                 childVerification
@@ -648,10 +1011,63 @@ public final class FinoraControlBundleImportCoordinator {
             }
 
             // ------------------------------------------------
+            // OPTIONAL ONE-FILE CREDENTIAL ENROLLMENT PAIR
+            // ------------------------------------------------
+
+            JSONObject pairedBranchAccessChild =
+                null;
+
+            JSONObject pairedPortabilityChild =
+                null;
+
+            for (
+                JSONObject candidate :
+                bundle.children
+            ) {
+                String candidatePurpose =
+                    requireNonEmptyString(
+                        candidate,
+                        "purpose"
+                    );
+
+                if (
+                    "BRANCH_ACCESS".equals(
+                        candidatePurpose
+                    )
+                ) {
+                    pairedBranchAccessChild =
+                        candidate;
+                } else if (
+                    "BRANCH_PORTABILITY_AUTHORITY".equals(
+                        candidatePurpose
+                    )
+                ) {
+                    pairedPortabilityChild =
+                        candidate;
+                }
+            }
+
+            if (
+                pairedPortabilityChild != null &&
+                pairedBranchAccessChild == null
+            ) {
+                return Result.failure(
+                    bundlePackageId,
+                    verifiedAt,
+                    appliedChildren,
+                    "CONTROL_BUNDLE_CREDENTIAL_PAIR_INVALID",
+                    "FINORA Branch Portability Authority requires a BRANCH_ACCESS child."
+                );
+            }
+
+            boolean credentialPairApplied =
+                false;
+
+            // ------------------------------------------------
             // APPLY CHILDREN IN BUNDLE ORDER
             //
-            // From this point onward the operation is
-            // intentionally non-atomic across purposes.
+            // BRANCH_ACCESS + BRANCH_PORTABILITY_AUTHORITY are
+            // one verified credential-enrollment operation.
             // ------------------------------------------------
 
             for (
@@ -664,13 +1080,62 @@ public final class FinoraControlBundleImportCoordinator {
                         "purpose"
                     );
 
-                ChildApplyResult childResult =
-                    dispatchChild(
-                        purpose,
-                        child,
-                        trustedKeys,
-                        acceptedNow
-                    );
+                /*
+                 * Never independently mutate state for the
+                 * portability child.
+                 *
+                 * Its complete signed package becomes proof inside
+                 * the correlated Branch Access authorization
+                 * evidence.
+                 */
+                if (
+                    "BRANCH_PORTABILITY_AUTHORITY".equals(
+                        purpose
+                    )
+                ) {
+                    continue;
+                }
+
+                ChildApplyResult childResult;
+
+                if (
+                    "BRANCH_ACCESS".equals(
+                        purpose
+                    ) &&
+                    pairedPortabilityChild != null
+                ) {
+
+                    FinoraBranchCredentialEnrollmentPairApplyService.Result
+                        pairResult =
+                            credentialEnrollmentPairService.apply(
+                                child,
+                                pairedPortabilityChild,
+                                trustedKeys,
+                                expectedTarget,
+                                acceptedNow
+                            );
+
+                    childResult =
+                        new ChildApplyResult(
+                            pairResult.success,
+                            pairResult.error,
+                            pairResult.packageId,
+                            pairResult.sequence
+                        );
+
+                    credentialPairApplied =
+                        pairResult.success;
+
+                } else {
+
+                    childResult =
+                        dispatchChild(
+                            purpose,
+                            child,
+                            trustedKeys,
+                            acceptedNow
+                        );
+                }
 
                 if (!childResult.success) {
                     return Result.failure(
@@ -698,8 +1163,56 @@ public final class FinoraControlBundleImportCoordinator {
                         childResult.sequence
                     )
                 );
+
+                if (
+                    "BRANCH_ACCESS".equals(
+                        purpose
+                    ) &&
+                    pairedPortabilityChild != null &&
+                    credentialPairApplied
+                ) {
+                    long portabilitySequence =
+                        pairedPortabilityChild.getLong(
+                            "sequence"
+                        );
+
+                    if (portabilitySequence <= 0L) {
+                        return Result.failure(
+                            bundlePackageId,
+                            verifiedAt,
+                            appliedChildren,
+                            "CONTROL_BUNDLE_CREDENTIAL_PAIR_INVALID",
+                            "FINORA Branch Portability Authority sequence is invalid."
+                        );
+                    }
+
+                    appliedChildren.add(
+                        new AppliedChild(
+                            "BRANCH_PORTABILITY_AUTHORITY",
+                            requireNonEmptyString(
+                                pairedPortabilityChild,
+                                "packageId"
+                            ),
+                            Long.valueOf(
+                                portabilitySequence
+                            )
+                        )
+                    );
+                }
             }
 
+            if (
+                pairedPortabilityChild != null &&
+                !credentialPairApplied
+            ) {
+                return Result.failure(
+                    bundlePackageId,
+                    verifiedAt,
+                    appliedChildren,
+                    "CONTROL_BUNDLE_CREDENTIAL_PAIR_NOT_APPLIED",
+                    "FINORA credential enrollment pair was not applied."
+                );
+            }
             return Result.success(
                 bundlePackageId,
                 verifiedAt,
@@ -863,7 +1376,7 @@ public final class FinoraControlBundleImportCoordinator {
                 MAX_CHILD_PACKAGES
         ) {
             throw new IllegalArgumentException(
-                "FINORA Control Bundle must contain between one and five signed child packages."
+                "FINORA Control Bundle must contain between one and seven signed child packages."
             );
         }
 
@@ -1150,6 +1663,27 @@ public final class FinoraControlBundleImportCoordinator {
             FinoraBranchActivationPackageApplyService.ApplyResult
                 result =
                     branchActivationService.apply(
+                        child,
+                        trustedKeys,
+                        acceptedNow
+                    );
+
+            return new ChildApplyResult(
+                result.success,
+                result.error,
+                result.packageId,
+                result.sequence
+            );
+        }
+
+                if (
+            "BRANCH_ACCESS".equals(
+                purpose
+            )
+        ) {
+            FinoraBranchAccessPackageApplyService.ApplyResult
+                result =
+                    branchAccessService.apply(
                         child,
                         trustedKeys,
                         acceptedNow

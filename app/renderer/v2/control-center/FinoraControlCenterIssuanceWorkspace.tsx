@@ -606,7 +606,13 @@ export default function FinoraControlCenterIssuanceWorkspace({
       resetNormalIssuanceArtifacts();
     },
     [
-      selectedBranch,
+      selectedBranch?.identity.ownerId,
+      selectedBranch?.identity.businessId,
+      selectedBranch?.identity.branchId,
+      selectedBranch?.identity.installation.installationId,
+      selectedBranch?.identity.installation.bindingKeyId,
+      selectedBranch?.identity.installation.fingerprintAlgorithm,
+      selectedBranch?.identity.installation.publicKeyFingerprint,
     ],
   );
 

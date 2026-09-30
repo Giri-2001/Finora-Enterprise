@@ -31,7 +31,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.Locale;
 
 /* ============================================================
-   FINORA ENTERPRISE OS™
+   FINORA ENTERPRISE OSÃ¢â€žÂ¢
 
    ANDROID CONTROL BUNDLE IMPORT PLUGIN
 
@@ -365,6 +365,423 @@ public final class FinoraControlBundleImportPlugin
     // ========================================================
     // INITIALIZATION
     // ========================================================
+
+    // ========================================================
+    // BRANCH ACCESS RECOVERY FROM ORIGINAL CONTROL BUNDLE
+    //
+    // Zero authority input from renderer.
+    // Native picker supplies the original .finora document.
+    // Coordinator verifies outer bundle + unchanged signed
+    // BRANCH_ACCESS child and applies only that child.
+    // ========================================================
+
+    @PluginMethod
+    public void recoverBranchAccessFromControlBundle(
+        PluginCall call
+    ) {
+
+        if (call == null) {
+            return;
+        }
+
+        try {
+
+            ensureInitialized();
+
+            Intent intent =
+                new Intent(
+                    Intent.ACTION_OPEN_DOCUMENT
+                );
+
+            intent.addCategory(
+                Intent.CATEGORY_OPENABLE
+            );
+
+            intent.setType(
+                "*/*"
+            );
+
+            intent.addFlags(
+                Intent.FLAG_GRANT_READ_URI_PERMISSION
+            );
+
+            startActivityForResult(
+                call,
+                intent,
+                "branchAccessRecoveryBundleSelected"
+            );
+
+        } catch (
+            Exception error
+        ) {
+
+            resolveFailure(
+                call,
+                "BRANCH_ACCESS_RECOVERY_PICKER_FAILED",
+                messageOrDefault(
+                    error,
+                    "FINORA Branch Access recovery picker could not be opened."
+                )
+            );
+        }
+    }
+
+
+    @ActivityCallback
+    private void branchAccessRecoveryBundleSelected(
+        PluginCall call,
+        ActivityResult result
+    ) {
+
+        if (call == null) {
+            return;
+        }
+
+        if (
+            result == null ||
+            result.getResultCode() !=
+                Activity.RESULT_OK
+        ) {
+
+            resolveCancelled(
+                call
+            );
+
+            return;
+        }
+
+        Intent data =
+            result.getData();
+
+        if (data == null) {
+
+            resolveFailure(
+                call,
+                "BRANCH_ACCESS_RECOVERY_SELECTION_INVALID",
+                "Android did not return a FINORA Control Bundle selection."
+            );
+
+            return;
+        }
+
+        Uri selectedUri =
+            data.getData();
+
+        if (selectedUri == null) {
+
+            resolveFailure(
+                call,
+                "BRANCH_ACCESS_RECOVERY_SELECTION_INVALID",
+                "Android did not return a valid FINORA Control Bundle URI."
+            );
+
+            return;
+        }
+
+        try {
+
+            ensureInitialized();
+
+            SelectedFile selectedFile =
+                readSelectedFile(
+                    selectedUri
+                );
+
+            FinoraBranchAccessPackageApplyService.ApplyResult
+                recoveryResult =
+                    importCoordinator
+                        .recoverBranchAccessFromBundle(
+                            selectedFile.signedBundle
+                        );
+
+            if (
+                recoveryResult == null ||
+                !recoveryResult.success
+            ) {
+
+                resolveFailure(
+                    call,
+                    "BRANCH_ACCESS_RECOVERY_FAILED",
+                    recoveryResult != null &&
+                        recoveryResult.error != null
+                        ? recoveryResult.error
+                        : "FINORA signed Branch Access recovery failed."
+                );
+
+                return;
+            }
+
+            JSObject response =
+                new JSObject();
+
+            response.put(
+                "success",
+                true
+            );
+
+            response.put(
+                "cancelled",
+                false
+            );
+
+            response.put(
+                "fileName",
+                selectedFile.fileName
+            );
+
+            response.put(
+                "bytesRead",
+                selectedFile.bytesRead
+            );
+
+            response.put(
+                "packageId",
+                recoveryResult.packageId
+            );
+
+            response.put(
+                "sequence",
+                recoveryResult.sequence
+            );
+
+            call.resolve(
+                response
+            );
+
+        } catch (
+            Exception error
+        ) {
+
+            resolveFailure(
+                call,
+                "BRANCH_ACCESS_RECOVERY_FILE_FAILED",
+                messageOrDefault(
+                    error,
+                    "FINORA Branch Access recovery file processing failed."
+                )
+            );
+        }
+    }
+
+
+    // ========================================================
+    // INITIALIZATION
+    // ========================================================
+    // ========================================================
+    // TARGETED BRANCH PORTABILITY AUTHORITY RECOVERY
+    //
+    // Migration-only path for historical USB credential
+    // authorization state that is already present locally but
+    // lacks the signed portability authority proof.
+    //
+    // Renderer supplies ZERO authority data.
+    // Native picker supplies the signed .finora package.
+    // ========================================================
+
+    @PluginMethod
+    public void recoverCredentialPortabilityAuthority(
+        PluginCall call
+    ) {
+
+        if (call == null) {
+            return;
+        }
+
+        try {
+
+            ensureInitialized();
+
+            Intent intent =
+                new Intent(
+                    Intent.ACTION_OPEN_DOCUMENT
+                );
+
+            intent.addCategory(
+                Intent.CATEGORY_OPENABLE
+            );
+
+            intent.setType(
+                "*/*"
+            );
+
+            intent.addFlags(
+                Intent.FLAG_GRANT_READ_URI_PERMISSION
+            );
+
+            startActivityForResult(
+                call,
+                intent,
+                "credentialPortabilityAuthoritySelected"
+            );
+
+        } catch (
+            Exception error
+        ) {
+
+            resolveFailure(
+                call,
+                "PORTABILITY_AUTHORITY_RECOVERY_PICKER_FAILED",
+                messageOrDefault(
+                    error,
+                    "FINORA Branch Portability Authority recovery picker could not be opened."
+                )
+            );
+        }
+    }
+
+
+    @ActivityCallback
+    private void credentialPortabilityAuthoritySelected(
+        PluginCall call,
+        ActivityResult result
+    ) {
+
+        if (call == null) {
+            return;
+        }
+
+        if (
+            result == null ||
+            result.getResultCode() !=
+                Activity.RESULT_OK
+        ) {
+
+            resolveCancelled(
+                call
+            );
+
+            return;
+        }
+
+        Intent data =
+            result.getData();
+
+        if (data == null) {
+
+            resolveFailure(
+                call,
+                "PORTABILITY_AUTHORITY_RECOVERY_SELECTION_INVALID",
+                "Android did not return a FINORA portability authority selection."
+            );
+
+            return;
+        }
+
+        Uri selectedUri =
+            data.getData();
+
+        if (selectedUri == null) {
+
+            resolveFailure(
+                call,
+                "PORTABILITY_AUTHORITY_RECOVERY_SELECTION_INVALID",
+                "Android did not return a valid FINORA portability authority URI."
+            );
+
+            return;
+        }
+
+        try {
+
+            ensureInitialized();
+
+            SelectedFile selectedFile =
+                readSelectedFile(
+                    selectedUri
+                );
+
+            JSONObject signedPackage =
+                selectedFile.signedBundle;
+
+            if (
+                !"BRANCH_PORTABILITY_AUTHORITY".equals(
+                    signedPackage.optString(
+                        "purpose",
+                        null
+                    )
+                )
+            ) {
+
+                resolveFailure(
+                    call,
+                    "PORTABILITY_AUTHORITY_RECOVERY_PURPOSE_INVALID",
+                    "Selected FINORA package is not a BRANCH_PORTABILITY_AUTHORITY package."
+                );
+
+                return;
+            }
+
+            FinoraBranchPortabilityAuthorityRecoveryService.Result
+                recoveryResult =
+                    importCoordinator
+                        .recoverCredentialPortabilityAuthority(
+                            signedPackage
+                        );
+
+            if (
+                recoveryResult == null ||
+                !recoveryResult.success
+            ) {
+
+                resolveFailure(
+                    call,
+                    "PORTABILITY_AUTHORITY_RECOVERY_FAILED",
+                    recoveryResult != null &&
+                        recoveryResult.error != null
+                        ? recoveryResult.error
+                        : "FINORA Branch Portability Authority recovery failed."
+                );
+
+                return;
+            }
+
+            JSObject response =
+                new JSObject();
+
+            response.put(
+                "success",
+                true
+            );
+
+            response.put(
+                "cancelled",
+                false
+            );
+
+            response.put(
+                "fileName",
+                selectedFile.fileName
+            );
+
+            response.put(
+                "bytesRead",
+                selectedFile.bytesRead
+            );
+
+            response.put(
+                "authorizationId",
+                recoveryResult.authorizationId
+            );
+
+            call.resolve(
+                response
+            );
+
+        } catch (
+            Exception error
+        ) {
+
+            resolveFailure(
+                call,
+                "PORTABILITY_AUTHORITY_RECOVERY_FILE_FAILED",
+                messageOrDefault(
+                    error,
+                    "FINORA Branch Portability Authority recovery file processing failed."
+                )
+            );
+        }
+    }
+
 
     private synchronized void ensureInitialized() {
 

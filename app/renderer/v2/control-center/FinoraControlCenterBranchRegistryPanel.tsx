@@ -29,7 +29,7 @@ import {
 } from "../../../../electron/control-center/finoraControlCenterBranchValidity";
 
 /* ===========================================================
-   FINORA ENTERPRISE OS™
+   FINORA ENTERPRISE OSâ„¢
 
    CONTROL CENTER
    BRANCH REGISTRY PANEL
@@ -99,7 +99,7 @@ function formatLastReportedWallet(
     wallet.balanceMinor /
     100;
 
-  return `₹${new Intl.NumberFormat(
+  return `â‚¹${new Intl.NumberFormat(
     "en-IN",
     {
       minimumFractionDigits:
@@ -305,17 +305,17 @@ function BranchCard({
 
     const summaryOwnerName =
       directoryMetadata?.ownerName ??
-      "—";
+      "â€”";
 
     const summaryBusinessName =
       directoryMetadata?.businessName ??
       record.profile?.businessName ??
-      "—";
+      "â€”";
 
     const summaryBranchName =
       directoryMetadata?.branchName ??
       record.profile?.branchName ??
-      "—";
+      "â€”";
 
     return (
       <article
@@ -570,7 +570,7 @@ function BranchCard({
                 "0.01em",
             }}
           >
-            Open Branch Workspace →
+            Open Branch Workspace â†’
           </div>
         </div>
       </article>
@@ -740,7 +740,7 @@ function BranchCard({
             }}
           >
             {record.access
-              ? `${record.access.accessType} · ${record.access.storageMode}`
+              ? `${record.access.accessType} Â· ${record.access.storageMode}`
               : "Not provisioned"}
           </dd>
         </div>
@@ -874,7 +874,7 @@ function BranchCard({
                 1,
             }}
           >
-            →
+            â†’
           </span>
         </div>
       )}
@@ -1725,8 +1725,8 @@ export default function FinoraControlCenterBranchRegistryPanel({
         await bridge.backfillHistoricalEnrollmentBranch();
 
       if (!result.success) {
-        setErrorMessage(
-          result.error,
+        setHistoricalBackfillMessage(
+          `Backfill failed: ${result.error}`,
         );
 
         return;
@@ -1758,10 +1758,12 @@ export default function FinoraControlCenterBranchRegistryPanel({
       error
     ) {
 
-      setErrorMessage(
-        error instanceof Error
-          ? error.message
-          : "Unable to backfill the historical FINORA Branch.",
+      setHistoricalBackfillMessage(
+        `Backfill failed: ${
+          error instanceof Error
+            ? error.message
+            : "Unable to backfill the historical FINORA Branch."
+        }`,
       );
 
     } finally {
@@ -2059,7 +2061,7 @@ export default function FinoraControlCenterBranchRegistryPanel({
           >
             {historicalBackfillState ===
               "RUNNING"
-              ? "Backfill in progress…"
+              ? "Backfill in progressâ€¦"
               : "Backfill Existing Branch"}
           </button>
 
@@ -2103,7 +2105,7 @@ export default function FinoraControlCenterBranchRegistryPanel({
         >
           {loadState ===
             "LOADING"
-            ? "Loading…"
+            ? "Loadingâ€¦"
             : "Refresh"}
         </button>
         </div>
@@ -2197,7 +2199,7 @@ export default function FinoraControlCenterBranchRegistryPanel({
               "pointer",
           }}
         >
-          ← Back to FINORA Branches
+          â† Back to FINORA Branches
         </button>
       )}
 

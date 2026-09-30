@@ -354,7 +354,7 @@ public final class FinoraUsbStorage {
             return portableAuthRootFailure(
                 "REAUTHORIZATION_REQUIRED",
                 target.storageId,
-                "Portable Branch Auth requires selecting the removable USB root."
+                "Portable Branch Auth requires selecting the removable USB root or a top-level branch folder."
             );
         }
 
@@ -392,7 +392,42 @@ public final class FinoraUsbStorage {
                 separatorIndex + 1
             );
 
-        return relativePath.length() == 0;
+        /*
+         * Portable Branch Auth may use either:
+         *
+         * 1. the removable USB volume root; or
+         * 2. one top-level branch container such as "DSD GOLD".
+         *
+         * A branch container provides isolation:
+         *
+         *   <USB>/DSD GOLD/FINORA/storage
+         *   <USB>/DSD GOLD/FINORA/auth
+         *
+         * Nested selections such as FINORA/storage are rejected
+         * because Portable Auth must be able to create/access its
+         * sibling FINORA/auth directory.
+         */
+
+        if (relativePath.length() == 0) {
+            return true;
+        }
+
+        if (
+            relativePath.indexOf('/') >= 0 ||
+            relativePath.indexOf('\\') >= 0
+        ) {
+            return false;
+        }
+
+        if (
+            FINORA_DIRECTORY.equalsIgnoreCase(
+                relativePath
+            )
+        ) {
+            return false;
+        }
+
+        return true;
     }
     // ========================================================
     // CRUD: GET
@@ -1677,16 +1712,6 @@ public final class FinoraUsbStorage {
                     relativePath
                 );
 
-            if (
-                !selectedUsbRoot &&
-                !selectedFinoraStorageDirectory
-            ) {
-                return targetFailure(
-                    "UNAVAILABLE",
-                    "USB:" + volumeId,
-                    "Select the USB root or the FINORA/storage folder."
-                );
-            }
 
             if (
                 "primary".equalsIgnoreCase(

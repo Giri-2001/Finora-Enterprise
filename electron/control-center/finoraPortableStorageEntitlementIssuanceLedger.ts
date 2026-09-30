@@ -718,7 +718,7 @@ async function reserveInternal(
 
   return {
     packageId:
-      `FINORA-PORTABLE-BUSINESS-PROFILE-${randomUUID()}`,
+      `FINORA-PORTABLE-STORAGE-ENTITLEMENT-${randomUUID()}`,
 
     sequence,
 

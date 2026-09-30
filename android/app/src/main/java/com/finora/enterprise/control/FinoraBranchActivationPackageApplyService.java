@@ -61,7 +61,8 @@ public final class FinoraBranchActivationPackageApplyService {
         this.coordinator =
             new FinoraBranchActivationApplyCoordinator(
                 new EncryptedControlStatePort(
-                    controlStore
+                    controlStore,
+                    bindingService
                 ),
                 new AndroidNativeBindingPort(
                     bindingService
@@ -214,12 +215,19 @@ public final class FinoraBranchActivationPackageApplyService {
 
         private final FinoraControlStore controlStore;
 
+        private final FinoraInstallationBindingService
+            bindingService;
+
         private EncryptedControlStatePort(
-            FinoraControlStore controlStore
+            FinoraControlStore controlStore,
+            FinoraInstallationBindingService bindingService
         ) {
 
             this.controlStore =
                 controlStore;
+
+            this.bindingService =
+                bindingService;
         }
 
         @Override
@@ -237,6 +245,266 @@ public final class FinoraBranchActivationPackageApplyService {
                 new JSONObject(
                     raw
                 );
+            Object rawVersion =
+                controlState.opt(
+                    "version"
+                );
+
+            boolean versionMissing =
+                rawVersion == null ||
+                rawVersion == JSONObject.NULL ||
+                (
+                    rawVersion instanceof String &&
+                    ((String) rawVersion)
+                        .trim()
+                        .isEmpty()
+                );
+
+            boolean canonicalVersion =
+                rawVersion instanceof String &&
+                FinoraControlPlugin.CONTROL_VERSION.equals(
+                    ((String) rawVersion).trim()
+                );
+
+            boolean legacyNumericVersion =
+                rawVersion instanceof Number &&
+                Double.compare(
+                    ((Number) rawVersion).doubleValue(),
+                    1.0d
+                ) == 0;
+
+            boolean legacyStringVersion =
+                rawVersion instanceof String &&
+                "1".equals(
+                    ((String) rawVersion).trim()
+                );
+
+            if (!canonicalVersion) {
+
+                if (
+                    !versionMissing &&
+                    !legacyNumericVersion &&
+                    !legacyStringVersion
+                ) {
+                    throw new IllegalStateException(
+                        "Unsupported FINORA Android Control Store package version [SERVICE_VERSION]."
+                    );
+                }
+
+                JSONObject installation =
+                    controlState.optJSONObject(
+                        "installation"
+                    );
+
+                FinoraInstallationBindingCrypto.PublicBinding
+                    nativeBinding =
+                        bindingService.get();
+
+                if (
+                    installation == null ||
+                    nativeBinding == null
+                ) {
+                    throw new IllegalStateException(
+                        "Unsupported FINORA Android Control Store package version [SERVICE_BINDING_MISSING]."
+                    );
+                }
+
+                String installationId =
+                    installation.optString(
+                        "installationId",
+                        ""
+                    ).trim();
+
+                String bindingKeyId =
+                    installation.optString(
+                        "bindingKeyId",
+                        ""
+                    ).trim();
+
+                String fingerprint =
+                    installation.optString(
+                        "publicKeyFingerprint",
+                        ""
+                    ).trim();
+
+                String fingerprintAlgorithm =
+                    installation.optString(
+                        "fingerprintAlgorithm",
+                        ""
+                    ).trim();
+
+                /*
+                 * Legacy Enrollment schema repair.
+                 *
+                 * Older Android Enrollment final-commit persisted
+                 * installationId and branch identity, but omitted
+                 * the native binding metadata.
+                 *
+                 * Repair is allowed only when the persisted
+                 * installationId already matches the exact current
+                 * Android Keystore-backed native installation.
+                 *
+                 * Existing non-empty binding values are never
+                 * overwritten.
+                 */
+                if (
+                    !installationId.isEmpty() &&
+                    installationId.equals(
+                        nativeBinding.installationId
+                    )
+                ) {
+                    boolean repairedBinding =
+                        false;
+
+                    if (bindingKeyId.isEmpty()) {
+                        installation.put(
+                            "bindingKeyId",
+                            nativeBinding.bindingKeyId
+                        );
+
+                        bindingKeyId =
+                            nativeBinding.bindingKeyId;
+
+                        repairedBinding =
+                            true;
+                    }
+
+                    if (fingerprintAlgorithm.isEmpty()) {
+                        installation.put(
+                            "fingerprintAlgorithm",
+                            nativeBinding.fingerprintAlgorithm
+                        );
+
+                        fingerprintAlgorithm =
+                            nativeBinding.fingerprintAlgorithm;
+
+                        repairedBinding =
+                            true;
+                    }
+
+                    if (fingerprint.isEmpty()) {
+                        installation.put(
+                            "publicKeyFingerprint",
+                            nativeBinding.publicKeyFingerprint
+                        );
+
+                        fingerprint =
+                            nativeBinding.publicKeyFingerprint;
+
+                        repairedBinding =
+                            true;
+                    }
+
+                    Object rawInstallationSchemaVersion =
+                        installation.opt(
+                            "schemaVersion"
+                        );
+
+                    if (
+                        rawInstallationSchemaVersion == null ||
+                        rawInstallationSchemaVersion == JSONObject.NULL
+                    ) {
+                        installation.put(
+                            "schemaVersion",
+                            1L
+                        );
+
+                        repairedBinding =
+                            true;
+
+                    } else if (
+                        !(rawInstallationSchemaVersion instanceof Number) ||
+                        Double.compare(
+                            ((Number) rawInstallationSchemaVersion).doubleValue(),
+                            1.0d
+                        ) != 0
+                    ) {
+                        throw new IllegalStateException(
+                            "FINORA Android Control Store installation schema version is unsupported."
+                        );
+                    }
+
+                    if (repairedBinding) {
+                        controlStore.write(
+                            controlState.toString()
+                        );
+                    }
+                }
+
+                if (
+                    installationId.isEmpty()
+                ) {
+                    throw new IllegalStateException(
+                        "FINORA Android Control Store installation binding mismatch [INSTALLATION_ID_MISSING]."
+                    );
+                }
+
+                if (
+                    bindingKeyId.isEmpty()
+                ) {
+                    throw new IllegalStateException(
+                        "FINORA Android Control Store installation binding mismatch [BINDING_KEY_ID_MISSING]."
+                    );
+                }
+
+                if (
+                    fingerprint.isEmpty()
+                ) {
+                    throw new IllegalStateException(
+                        "FINORA Android Control Store installation binding mismatch [FINGERPRINT_MISSING]."
+                    );
+                }
+
+                if (
+                    !installationId.equals(
+                        nativeBinding.installationId
+                    )
+                ) {
+                    throw new IllegalStateException(
+                        "FINORA Android Control Store installation binding mismatch [INSTALLATION_ID]."
+                    );
+                }
+
+                if (
+                    !bindingKeyId.equals(
+                        nativeBinding.bindingKeyId
+                    )
+                ) {
+                    throw new IllegalStateException(
+                        "FINORA Android Control Store installation binding mismatch [BINDING_KEY_ID]."
+                    );
+                }
+
+                if (
+                    !fingerprint.equalsIgnoreCase(
+                        nativeBinding.publicKeyFingerprint
+                    )
+                ) {
+                    throw new IllegalStateException(
+                        "FINORA Android Control Store installation binding mismatch [FINGERPRINT]."
+                    );
+                }
+
+                /*
+                 * Canonical legacy migration:
+                 *
+                 * missing version
+                 * OR legacy numeric 1 / 1.0
+                 *
+                 * becomes exact string "1.0".
+                 *
+                 * Any other existing version remains rejected.
+                 */
+                controlState.put(
+                    "version",
+                    FinoraControlPlugin.CONTROL_VERSION
+                );
+
+                controlStore.write(
+                    controlState.toString()
+                );
+            }
+
 
             return FinoraJsonBridge
                 .toMap(

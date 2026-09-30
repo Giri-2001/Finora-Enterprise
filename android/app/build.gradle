@@ -48,8 +48,17 @@ android {
         }
     }
 
+    buildFeatures {
+        buildConfig true
+    }
+
     buildTypes {
+        debug {
+            buildConfigField "boolean", "FINORA_DEV_SHORT_REGISTERED_ACCESS", "true"
+        }
+
         release {
+            buildConfigField "boolean", "FINORA_DEV_SHORT_REGISTERED_ACCESS", "false"
             minifyEnabled false
             signingConfig signingConfigs.release
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'

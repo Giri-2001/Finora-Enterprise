@@ -3,7 +3,7 @@ package com.finora.enterprise.control;
 import android.util.Log;
 
 // ============================================================
-// FINORA ENTERPRISE OS™
+// FINORA ENTERPRISE OSÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¾Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¦ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¾ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢
 //
 // ANDROID CONTROL PLUGIN
 //
@@ -66,40 +66,13 @@ import org.json.JSONObject;
 public final class FinoraControlPlugin
     extends Plugin {
 
-    private static final String POSTLOGIN_DIAGNOSTIC_TAG =
-        "FINORA_POSTLOGIN_DIAG";
 
-    private static void postLoginDiagnosticInfo(
-        String message
-    ) {
-        try {
-            Log.i(
-                POSTLOGIN_DIAGNOSTIC_TAG,
-                message
-            );
-        } catch (Throwable ignored) {
-            // Android Log is unavailable in local JVM unit tests.
-        }
-    }
-
-    private static void postLoginDiagnosticWarn(
-        String message
-    ) {
-        try {
-            Log.w(
-                POSTLOGIN_DIAGNOSTIC_TAG,
-                message
-            );
-        } catch (Throwable ignored) {
-            // Android Log is unavailable in local JVM unit tests.
-        }
-    }
 
     // ========================================================
     // CONSTANTS
     // ========================================================
 
-    private static final String CONTROL_VERSION =
+    static final String CONTROL_VERSION =
         "1.0";
 
     // ========================================================
@@ -126,6 +99,9 @@ public final class FinoraControlPlugin
 
     private FinoraWalletBranchCertificationDeviceVault
         walletBranchCertificationDeviceVault;
+
+    private FinoraPortableBranchAuthEnrollmentAuthority
+        portableBranchAuthEnrollmentAuthority;
 
     // ========================================================
     // LOAD
@@ -155,6 +131,13 @@ public final class FinoraControlPlugin
         this.walletBranchCertificationDeviceVault =
             new FinoraWalletBranchCertificationDeviceVault(
                 getContext()
+            );
+
+        this.portableBranchAuthEnrollmentAuthority =
+            new FinoraPortableBranchAuthEnrollmentAuthority(
+                this.controlStore,
+                portableBranchAuthStore,
+                this.walletBranchCertificationDeviceVault
             );
 
         FinoraBranchDeviceTrustStore branchDeviceTrustStore =
@@ -272,6 +255,589 @@ public final class FinoraControlPlugin
      * Expected authentication failures resolve as structured
      * results. This method does not create a login session.
      */
+    // ========================================================
+    // SECURE RECIPIENT CREDENTIAL ENROLLMENT
+    //
+    // Renderer provides only:
+    // - username
+    // - password
+    // - securityCode
+    //
+    // Native authority derives authenticated user / owner /
+    // business / branch / storage scope exclusively from the
+    // signed pending Branch Access enrollment authorization.
+    // ========================================================
+
+    @PluginMethod
+    public void diagnoseCredentialEnrollment(
+        PluginCall call
+    ) {
+
+        if (call == null) {
+            return;
+        }
+
+        JSObject response =
+            new JSObject();
+
+        try {
+
+            String raw =
+                controlStore == null
+                    ? null
+                    : controlStore.read();
+
+            if (raw == null) {
+                response.put(
+                    "success",
+                    false
+                );
+
+                response.put(
+                    "error",
+                    "FINORA Control Store is unavailable."
+                );
+
+                call.resolve(
+                    response
+                );
+
+                return;
+            }
+
+            JSONObject root =
+                new JSONObject(
+                    raw
+                );
+
+            JSONArray authorizations =
+                root.optJSONArray(
+                    "branchCredentialEnrollmentAuthorizations"
+                );
+
+            JSONArray credentials =
+                root.optJSONArray(
+                    "branchCredentials"
+                );
+
+            JSONArray transactions =
+                root.optJSONArray(
+                    "portableBranchAuthEnrollmentTransactions"
+                );
+
+            JSObject data =
+                new JSObject();
+
+            data.put(
+                "authorizationCount",
+                authorizations == null
+                    ? 0
+                    : authorizations.length()
+            );
+
+            data.put(
+                "credentialCount",
+                credentials == null
+                    ? 0
+                    : credentials.length()
+            );
+
+            data.put(
+                "transactionCount",
+                transactions == null
+                    ? 0
+                    : transactions.length()
+            );
+
+            com.getcapacitor.JSArray authorizationViews =
+                new com.getcapacitor.JSArray();
+
+            if (authorizations != null) {
+
+                for (
+                    int i = 0;
+                    i < authorizations.length();
+                    i++
+                ) {
+
+                    JSONObject value =
+                        authorizations.optJSONObject(
+                            i
+                        );
+
+                    if (value == null) {
+                        continue;
+                    }
+
+                    JSObject view =
+                        new JSObject();
+
+                    view.put(
+                        "authorizationId",
+                        value.optString(
+                            "authorizationId",
+                            ""
+                        )
+                    );
+
+                    view.put(
+                        "username",
+                        value.optString(
+                            "username",
+                            ""
+                        )
+                    );
+
+                    view.put(
+                        "userId",
+                        value.optString(
+                            "userId",
+                            ""
+                        )
+                    );
+
+                    view.put(
+                        "branchId",
+                        value.optString(
+                            "branchId",
+                            ""
+                        )
+                    );
+
+                    view.put(
+                        "storageMode",
+                        value.optString(
+                            "storageMode",
+                            ""
+                        )
+                    );
+
+                    authorizationViews.put(
+                        view
+                    );
+                }
+            }
+
+            data.put(
+                "authorizations",
+                authorizationViews
+            );
+
+            JSONArray evidence =
+                root.optJSONArray(
+                    "branchCredentialAuthorizationVerificationEvidence"
+                );
+
+            JSONArray applied =
+                root.optJSONArray(
+                    "appliedControlPackages"
+                );
+
+            JSONArray grants =
+                root.optJSONArray(
+                    "branchAccessGrants"
+                );
+
+            data.put(
+                "verificationEvidenceCount",
+                evidence == null
+                    ? 0
+                    : evidence.length()
+            );
+
+            data.put(
+                "branchAccessGrantCount",
+                grants == null
+                    ? 0
+                    : grants.length()
+            );
+
+            com.getcapacitor.JSArray rootKeys =
+                new com.getcapacitor.JSArray();
+
+            java.util.Iterator<String> keys =
+                root.keys();
+
+            while (keys.hasNext()) {
+                rootKeys.put(
+                    keys.next()
+                );
+            }
+
+            data.put(
+                "rootKeys",
+                rootKeys
+            );
+
+            data.put(
+                "hasInstallation",
+                root.has(
+                    "installation"
+                )
+            );
+
+            data.put(
+                "hasBranchActivation",
+                root.has(
+                    "branchActivation"
+                )
+            );
+
+            data.put(
+                "hasBranchActivations",
+                root.has(
+                    "branchActivations"
+                )
+            );
+
+            data.put(
+                "hasStorageEntitlements",
+                root.has(
+                    "storageEntitlements"
+                )
+            );
+
+            JSONArray controlSequences =
+                root.optJSONArray(
+                    "controlSequences"
+                );
+
+            JSONArray portableBranchAccessSequences =
+                root.optJSONArray(
+                    "portableBranchAccessSequences"
+                );
+
+            JSONArray activations =
+                root.optJSONArray(
+                    "activations"
+                );
+
+            data.put(
+                "controlSequenceCount",
+                controlSequences == null
+                    ? 0
+                    : controlSequences.length()
+            );
+
+            data.put(
+                "portableBranchAccessSequenceCount",
+                portableBranchAccessSequences == null
+                    ? 0
+                    : portableBranchAccessSequences.length()
+            );
+
+            data.put(
+                "activationCount",
+                activations == null
+                    ? 0
+                    : activations.length()
+            );
+
+            com.getcapacitor.JSArray branchAccessSequences =
+                new com.getcapacitor.JSArray();
+
+            if (controlSequences != null) {
+                for (
+                    int i = 0;
+                    i < controlSequences.length();
+                    i++
+                ) {
+                    JSONObject value =
+                        controlSequences.optJSONObject(i);
+
+                    if (value == null) {
+                        continue;
+                    }
+
+                    if (
+                        "BRANCH_ACCESS".equals(
+                            value.optString(
+                                "purpose",
+                                ""
+                            )
+                        )
+                    ) {
+                        branchAccessSequences.put(
+                            value
+                        );
+                    }
+                }
+            }
+
+            data.put(
+                "branchAccessSequences",
+                branchAccessSequences
+            );
+
+            com.getcapacitor.JSArray relevantPackages =
+                new com.getcapacitor.JSArray();
+
+            if (applied != null) {
+
+                for (
+                    int i = 0;
+                    i < applied.length();
+                    i++
+                ) {
+
+                    JSONObject value =
+                        applied.optJSONObject(i);
+
+                    if (value == null) {
+                        continue;
+                    }
+
+                    String purpose =
+                        value.optString(
+                            "purpose",
+                            ""
+                        );
+
+                    String action =
+                        value.optString(
+                            "action",
+                            ""
+                        );
+
+                    if (
+                        "BRANCH_ACCESS".equals(purpose) ||
+                        "AUTHORIZE_CREDENTIAL".equals(action)
+                    ) {
+
+                        JSObject view =
+                            new JSObject();
+
+                        view.put(
+                            "packageId",
+                            value.optString(
+                                "packageId",
+                                ""
+                            )
+                        );
+
+                        view.put(
+                            "purpose",
+                            purpose
+                        );
+
+                        view.put(
+                            "action",
+                            action
+                        );
+
+                        view.put(
+                            "sequence",
+                            value.optInt(
+                                "sequence",
+                                0
+                            )
+                        );
+
+                        relevantPackages.put(
+                            view
+                        );
+                    }
+                }
+            }
+
+            data.put(
+                "relevantAppliedPackages",
+                relevantPackages
+            );
+
+            response.put(
+                "success",
+                true
+            );
+
+            response.put(
+                "data",
+                data
+            );
+
+            call.resolve(
+                response
+            );
+
+        }
+        catch (Exception error) {
+
+            response.put(
+                "success",
+                false
+            );
+
+            response.put(
+                "error",
+                error.getMessage() == null
+                    ? "Unable to inspect credential enrollment state."
+                    : error.getMessage()
+            );
+
+            call.resolve(
+                response
+            );
+        }
+    }
+
+
+    // ========================================================
+    // TEMPORARY READ-ONLY BRANCH CREDENTIAL EVIDENCE DIAGNOSTIC
+    // ========================================================
+
+
+    // ========================================================
+    // TEMPORARY GUARDED BRANCH2 PORTABILITY PROOF REPAIR
+    // ========================================================
+
+    @PluginMethod
+    public void enrollCredential(
+        PluginCall call
+    ) {
+
+        if (call == null) {
+            return;
+        }
+
+        if (
+            portableBranchAuthEnrollmentAuthority == null
+        ) {
+
+            JSObject response =
+                new JSObject();
+
+            response.put(
+                "success",
+                false
+            );
+
+            response.put(
+                "error",
+                "FINORA secure credential enrollment authority is unavailable."
+            );
+
+            call.resolve(
+                response
+            );
+
+            return;
+        }
+
+        try {
+
+            String username =
+                call.getString(
+                    "username"
+                );
+
+            String password =
+                call.getString(
+                    "password"
+                );
+
+            String securityCode =
+                call.getString(
+                    "securityCode"
+                );
+
+
+            FinoraPortableBranchAuthEnrollmentAuthority.Result
+                result =
+                    portableBranchAuthEnrollmentAuthority
+                        .enroll(
+                            username,
+                            password,
+                            securityCode
+                        );
+
+
+            JSObject response =
+                new JSObject();
+
+            response.put(
+                "success",
+                result.success
+            );
+
+
+            if (!result.success) {
+
+                response.put(
+                    "error",
+                    result.error == null
+                        ? "Unable to create the FINORA secure credential."
+                        : result.error
+                );
+
+                call.resolve(
+                    response
+                );
+
+                return;
+            }
+
+
+            JSObject data =
+                new JSObject();
+
+            data.put(
+                "credentialId",
+                result.credentialId
+            );
+
+            data.put(
+                "userId",
+                result.userId
+            );
+
+            data.put(
+                "username",
+                result.username
+            );
+
+            data.put(
+                "storageMode",
+                result.storageMode
+            );
+
+
+            response.put(
+                "data",
+                data
+            );
+
+            call.resolve(
+                response
+            );
+
+        }
+        catch (Exception error) {
+
+            JSObject response =
+                new JSObject();
+
+            response.put(
+                "success",
+                false
+            );
+
+            String message =
+                error.getMessage();
+
+            response.put(
+                "error",
+                message == null ||
+                    message.trim().isEmpty()
+                    ? "Unable to create the FINORA secure credential."
+                    : message
+            );
+
+            call.resolve(
+                response
+            );
+        }
+    }
+
     @PluginMethod
     public void passwordFirstLogin(
         PluginCall call
@@ -1207,6 +1773,675 @@ public final class FinoraControlPlugin
      *
      * The renderer therefore treats data as undefined.
      */
+
+    // ========================================================
+    // INSTALLATION ENROLLMENT REQUEST EXPORT
+    // ========================================================
+
+    private static final class PendingInstallationEnrollmentExport {
+
+        final byte[] bytes;
+        final String fileName;
+        final String requestId;
+
+        PendingInstallationEnrollmentExport(
+            byte[] bytes,
+            String fileName,
+            String requestId
+        ) {
+            this.bytes = bytes;
+            this.fileName = fileName;
+            this.requestId = requestId;
+        }
+    }
+
+    private PendingInstallationEnrollmentExport
+        pendingInstallationEnrollmentExport;
+
+    @PluginMethod
+    public void exportInstallationEnrollmentRequest(
+        PluginCall call
+    ) {
+
+        if (call == null) {
+            return;
+        }
+
+        if (pendingInstallationEnrollmentExport != null) {
+            resolveFailure(
+                call,
+                "A FINORA Installation Enrollment Request export is already in progress."
+            );
+            return;
+        }
+
+        try {
+
+            if (
+                installationBindingService == null ||
+                controlStore == null
+            ) {
+                throw new IllegalStateException(
+                    "FINORA native enrollment authority is unavailable."
+                );
+            }
+
+            FinoraInstallationBindingCrypto.PublicBinding binding =
+                installationBindingService.ensure();
+
+            if (binding == null) {
+                throw new IllegalStateException(
+                    "FINORA native installation binding is unavailable."
+                );
+            }
+
+            java.security.KeyPairGenerator certificationGenerator =
+                java.security.KeyPairGenerator.getInstance(
+                    "EC"
+                );
+
+            certificationGenerator.initialize(
+                new java.security.spec.ECGenParameterSpec(
+                    "secp256r1"
+                )
+            );
+
+            java.security.KeyPair certificationKeyPair =
+                certificationGenerator.generateKeyPair();
+
+            String certificationPublicKey =
+                java.util.Base64
+                    .getEncoder()
+                    .encodeToString(
+                        certificationKeyPair
+                            .getPublic()
+                            .getEncoded()
+                    );
+
+            String certificationPrivateKey =
+                java.util.Base64
+                    .getEncoder()
+                    .encodeToString(
+                        certificationKeyPair
+                            .getPrivate()
+                            .getEncoded()
+                    );
+
+            byte[] certificationFingerprintBytes =
+                java.security.MessageDigest
+                    .getInstance(
+                        "SHA-256"
+                    )
+                    .digest(
+                        certificationKeyPair
+                            .getPublic()
+                            .getEncoded()
+                    );
+
+            StringBuilder certificationFingerprintBuilder =
+                new StringBuilder(
+                    certificationFingerprintBytes.length * 2
+                );
+
+            for (byte item : certificationFingerprintBytes) {
+                certificationFingerprintBuilder.append(
+                    String.format(
+                        java.util.Locale.ROOT,
+                        "%02x",
+                        item & 0xff
+                    )
+                );
+            }
+
+            String certificationFingerprint =
+                certificationFingerprintBuilder.toString();
+
+            String certificationKeyId =
+                FinoraBranchCertificationCryptoValidator
+                    .KEY_ID_PREFIX +
+                certificationFingerprint
+                    .substring(
+                        0,
+                        32
+                    )
+                    .toUpperCase(
+                        java.util.Locale.ROOT
+                    );
+
+            String createdAt =
+                java.time.Instant
+                    .now()
+                    .toString();
+
+            FinoraBranchCertificationCryptoValidator.Material
+                certificationMaterial =
+                    new FinoraBranchCertificationCryptoValidator.Material(
+                        certificationKeyId,
+                        FinoraBranchCertificationCryptoValidator.ALGORITHM,
+                        FinoraBranchCertificationCryptoValidator.PUBLIC_KEY_FORMAT,
+                        certificationPublicKey,
+                        FinoraBranchCertificationCryptoValidator.FINGERPRINT_ALGORITHM,
+                        certificationFingerprint,
+                        createdAt,
+                        FinoraBranchCertificationCryptoValidator.SCHEMA_VERSION,
+                        FinoraBranchCertificationCryptoValidator.PRIVATE_KEY_FORMAT,
+                        certificationPrivateKey,
+                        FinoraBranchCertificationCryptoValidator.VAULT_SCHEMA_VERSION
+                    );
+
+            FinoraBranchCertificationCryptoValidator.assertValid(
+                certificationMaterial
+            );
+
+            String requestId =
+                "FINORA-ENROLLMENT-" +
+                java.util.UUID
+                    .randomUUID()
+                    .toString();
+
+            JSONObject deviceBinding =
+                new JSONObject();
+
+            deviceBinding.put(
+                "installationId",
+                binding.installationId
+            );
+
+            deviceBinding.put(
+                "bindingKeyId",
+                binding.bindingKeyId
+            );
+
+            deviceBinding.put(
+                "platform",
+                FinoraInstallationBindingCrypto.PLATFORM
+            );
+
+            deviceBinding.put(
+                "algorithm",
+                FinoraInstallationBindingCrypto.ALGORITHM
+            );
+
+            deviceBinding.put(
+                "publicKeyFormat",
+                FinoraInstallationBindingCrypto.PUBLIC_KEY_FORMAT
+            );
+
+            deviceBinding.put(
+                "publicKey",
+                binding.publicKey
+            );
+
+            deviceBinding.put(
+                "fingerprintAlgorithm",
+                binding.fingerprintAlgorithm
+            );
+
+            deviceBinding.put(
+                "publicKeyFingerprint",
+                binding.publicKeyFingerprint
+            );
+
+            deviceBinding.put(
+                "createdAt",
+                binding.createdAt
+            );
+
+            deviceBinding.put(
+                "schemaVersion",
+                1
+            );
+
+            JSONObject branchCertificationPublicKey =
+                new JSONObject();
+
+            branchCertificationPublicKey.put(
+                "keyId",
+                certificationMaterial.keyId
+            );
+
+            branchCertificationPublicKey.put(
+                "algorithm",
+                certificationMaterial.algorithm
+            );
+
+            branchCertificationPublicKey.put(
+                "publicKeyFormat",
+                certificationMaterial.publicKeyFormat
+            );
+
+            branchCertificationPublicKey.put(
+                "publicKey",
+                certificationMaterial.publicKey
+            );
+
+            branchCertificationPublicKey.put(
+                "fingerprintAlgorithm",
+                certificationMaterial.fingerprintAlgorithm
+            );
+
+            branchCertificationPublicKey.put(
+                "publicKeyFingerprint",
+                certificationMaterial.publicKeyFingerprint
+            );
+
+            branchCertificationPublicKey.put(
+                "createdAt",
+                certificationMaterial.createdAt
+            );
+
+            branchCertificationPublicKey.put(
+                "schemaVersion",
+                certificationMaterial.schemaVersion
+            );
+
+            JSONObject payload =
+                new JSONObject();
+
+            payload.put(
+                "requestId",
+                requestId
+            );
+
+            payload.put(
+                "deviceBinding",
+                deviceBinding
+            );
+
+            payload.put(
+                "branchCertificationPublicKey",
+                branchCertificationPublicKey
+            );
+
+            payload.put(
+                "requestedAt",
+                java.time.Instant
+                    .now()
+                    .toString()
+            );
+
+            payload.put(
+                "schemaVersion",
+                2
+            );
+
+            String canonicalPayload =
+                FinoraCanonicalJson.canonicalize(
+                    FinoraJsonBridge.toMap(
+                        payload
+                    )
+                );
+
+            String signatureValue =
+                FinoraInstallationBindingCrypto
+                    .signCanonicalEnrollment(
+                        canonicalPayload
+                    );
+
+            JSONObject signature =
+                new JSONObject();
+
+            signature.put(
+                "algorithm",
+                "ECDSA_P256_SHA256"
+            );
+
+            signature.put(
+                "encoding",
+                "IEEE_P1363"
+            );
+
+            signature.put(
+                "canonicalization",
+                "FINORA_CANONICAL_JSON_V1"
+            );
+
+            signature.put(
+                "bindingKeyId",
+                binding.bindingKeyId
+            );
+
+            signature.put(
+                "value",
+                signatureValue
+            );
+
+            JSONObject request =
+                new JSONObject();
+
+            request.put(
+                "payload",
+                payload
+            );
+
+            request.put(
+                "signature",
+                signature
+            );
+
+            request.put(
+                "schemaVersion",
+                2
+            );
+
+            JSONObject file =
+                new JSONObject();
+
+            file.put(
+                "format",
+                "FINORA_INSTALLATION_ENROLLMENT_REQUEST_V2"
+            );
+
+            file.put(
+                "request",
+                request
+            );
+
+            file.put(
+                "schemaVersion",
+                2
+            );
+
+            /*
+             * Preserve exact request provenance + Branch Certification
+             * private material inside FINORA encrypted Control Store.
+             *
+             * Renderer never receives this private material.
+             */
+            String serializedControl =
+                controlStore.read();
+
+            JSONObject controlRoot =
+                serializedControl == null ||
+                serializedControl.trim().isEmpty()
+                    ? new JSONObject()
+                    : new JSONObject(
+                        serializedControl
+                    );
+
+            JSONObject pendingEnrollment =
+                new JSONObject();
+
+            pendingEnrollment.put(
+                "requestId",
+                requestId
+            );
+
+            pendingEnrollment.put(
+                "installationId",
+                binding.installationId
+            );
+
+            pendingEnrollment.put(
+                "bindingKeyId",
+                binding.bindingKeyId
+            );
+
+            pendingEnrollment.put(
+                "publicKeyFingerprint",
+                binding.publicKeyFingerprint
+            );
+
+            pendingEnrollment.put(
+                "createdAt",
+                createdAt
+            );
+
+            pendingEnrollment.put(
+                "schemaVersion",
+                1
+            );
+
+            JSONObject pendingCertification =
+                new JSONObject();
+
+            pendingCertification.put(
+                "keyId",
+                certificationMaterial.keyId
+            );
+
+            pendingCertification.put(
+                "algorithm",
+                certificationMaterial.algorithm
+            );
+
+            pendingCertification.put(
+                "publicKeyFormat",
+                certificationMaterial.publicKeyFormat
+            );
+
+            pendingCertification.put(
+                "publicKey",
+                certificationMaterial.publicKey
+            );
+
+            pendingCertification.put(
+                "fingerprintAlgorithm",
+                certificationMaterial.fingerprintAlgorithm
+            );
+
+            pendingCertification.put(
+                "publicKeyFingerprint",
+                certificationMaterial.publicKeyFingerprint
+            );
+
+            pendingCertification.put(
+                "createdAt",
+                certificationMaterial.createdAt
+            );
+
+            pendingCertification.put(
+                "schemaVersion",
+                certificationMaterial.schemaVersion
+            );
+
+            pendingCertification.put(
+                "privateKeyFormat",
+                certificationMaterial.privateKeyFormat
+            );
+
+            pendingCertification.put(
+                "privateKey",
+                certificationMaterial.privateKey
+            );
+
+            pendingCertification.put(
+                "vaultSchemaVersion",
+                certificationMaterial.vaultSchemaVersion
+            );
+
+            pendingEnrollment.put(
+                "branchCertificationKeyMaterial",
+                pendingCertification
+            );
+
+            controlRoot.put(
+                "pendingInstallationEnrollment",
+                pendingEnrollment
+            );
+
+            controlStore.write(
+                controlRoot.toString()
+            );
+
+            byte[] bytes =
+                file
+                    .toString(
+                        2
+                    )
+                    .getBytes(
+                        java.nio.charset.StandardCharsets.UTF_8
+                    );
+
+            String fileName =
+                "FINORA-INSTALLATION-ENROLLMENT-" +
+                binding.installationId +
+                ".finora";
+
+            pendingInstallationEnrollmentExport =
+                new PendingInstallationEnrollmentExport(
+                    bytes,
+                    fileName,
+                    requestId
+                );
+
+            android.content.Intent intent =
+                new android.content.Intent(
+                    android.content.Intent.ACTION_CREATE_DOCUMENT
+                );
+
+            intent.addCategory(
+                android.content.Intent.CATEGORY_OPENABLE
+            );
+
+            intent.setType(
+                "application/octet-stream"
+            );
+
+            intent.putExtra(
+                android.content.Intent.EXTRA_TITLE,
+                fileName
+            );
+
+            startActivityForResult(
+                call,
+                intent,
+                "completeInstallationEnrollmentRequestExport"
+            );
+
+        } catch (Exception error) {
+
+            pendingInstallationEnrollmentExport =
+                null;
+
+            resolveFailure(
+                call,
+                error,
+                "Unable to export the FINORA Installation Enrollment Request."
+            );
+        }
+    }
+
+    @com.getcapacitor.annotation.ActivityCallback
+    private void completeInstallationEnrollmentRequestExport(
+        PluginCall call,
+        androidx.activity.result.ActivityResult result
+    ) {
+
+        PendingInstallationEnrollmentExport pending =
+            pendingInstallationEnrollmentExport;
+
+        pendingInstallationEnrollmentExport =
+            null;
+
+        if (
+            pending == null
+        ) {
+            resolveFailure(
+                call,
+                "FINORA Installation Enrollment Request export state is unavailable."
+            );
+            return;
+        }
+
+        if (
+            result == null ||
+            result.getResultCode() !=
+                android.app.Activity.RESULT_OK ||
+            result.getData() == null ||
+            result.getData().getData() == null
+        ) {
+            JSObject cancelled =
+                new JSObject();
+
+            cancelled.put(
+                "success",
+                true
+            );
+
+            cancelled.put(
+                "cancelled",
+                true
+            );
+
+            call.resolve(
+                cancelled
+            );
+
+            return;
+        }
+
+        try {
+
+            android.net.Uri uri =
+                result
+                    .getData()
+                    .getData();
+
+            try (
+                java.io.OutputStream output =
+                    getContext()
+                        .getContentResolver()
+                        .openOutputStream(
+                            uri,
+                            "wt"
+                        )
+            ) {
+
+                if (output == null) {
+                    throw new IllegalStateException(
+                        "Unable to open the selected FINORA Enrollment Request destination."
+                    );
+                }
+
+                output.write(
+                    pending.bytes
+                );
+
+                output.flush();
+            }
+
+            JSObject success =
+                new JSObject();
+
+            success.put(
+                "success",
+                true
+            );
+
+            success.put(
+                "cancelled",
+                false
+            );
+
+            success.put(
+                "fileName",
+                pending.fileName
+            );
+
+            success.put(
+                "bytesWritten",
+                pending.bytes.length
+            );
+
+            success.put(
+                "requestId",
+                pending.requestId
+            );
+
+            call.resolve(
+                success
+            );
+
+        } catch (Exception error) {
+
+            resolveFailure(
+                call,
+                error,
+                "Unable to save the FINORA Installation Enrollment Request."
+            );
+        }
+    }
     // ========================================================
     // OWNER WALLET RECHARGE REQUEST EXPORT
     // ========================================================
@@ -2225,7 +3460,7 @@ public final class FinoraControlPlugin
             ) +
             "_" +
             new java.text.SimpleDateFormat(
-                "dd-MM-yyyy_hh：mm",
+                "dd-MM-yyyy_hhÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¾Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¯ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¼ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¦ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¡mm",
                 java.util.Locale.US
             ).format(
                 new java.util.Date()
@@ -2453,7 +3688,354 @@ public final class FinoraControlPlugin
      * - No DONE / CONTROL_BUNDLE package is accepted as trust
      *   authority by this method.
      */
+    
+    // ========================================================
+    // INSTALLATION ENROLLMENT RESPONSE IMPORT
+    // ========================================================
+
     @PluginMethod
+    public void importInstallationEnrollmentResponse(
+        PluginCall call
+    ) {
+
+        if (call == null) {
+            return;
+        }
+
+        String expectedFingerprint =
+            normalizeRequiredString(
+                call.getString(
+                    "expectedControlCenterPublicKeyFingerprint"
+                )
+            );
+
+        if (expectedFingerprint == null) {
+
+            JSObject response =
+                new JSObject();
+
+            response.put(
+                "success",
+                false
+            );
+
+            response.put(
+                "error",
+                "FINORA independently confirmed Control Center public-key fingerprint is required."
+            );
+
+            call.resolve(
+                response
+            );
+
+            return;
+        }
+
+        try {
+
+            android.content.Intent intent =
+                new android.content.Intent(
+                    android.content.Intent.ACTION_OPEN_DOCUMENT
+                );
+
+            intent.addCategory(
+                android.content.Intent.CATEGORY_OPENABLE
+            );
+
+            intent.setType(
+                "application/octet-stream"
+            );
+
+            intent.addFlags(
+                android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION
+            );
+
+            startActivityForResult(
+                call,
+                intent,
+                "installationEnrollmentResponseSelected"
+            );
+
+        } catch (Exception error) {
+
+            resolveFailure(
+                call,
+                error,
+                "Unable to open the FINORA Installation Enrollment Response selector."
+            );
+        }
+    }
+
+    @com.getcapacitor.annotation.ActivityCallback
+    private void installationEnrollmentResponseSelected(
+        PluginCall call,
+        androidx.activity.result.ActivityResult result
+    ) {
+
+        if (call == null) {
+            return;
+        }
+
+        if (
+            result == null ||
+            result.getResultCode() !=
+                android.app.Activity.RESULT_OK ||
+            result.getData() == null ||
+            result.getData().getData() == null
+        ) {
+
+            JSObject cancelled =
+                new JSObject();
+
+            cancelled.put(
+                "success",
+                true
+            );
+
+            cancelled.put(
+                "cancelled",
+                true
+            );
+
+            call.resolve(
+                cancelled
+            );
+
+            return;
+        }
+
+        try {
+
+            String expectedFingerprint =
+                normalizeRequiredString(
+                    call.getString(
+                        "expectedControlCenterPublicKeyFingerprint"
+                    )
+                );
+
+            if (expectedFingerprint == null) {
+                throw new IllegalStateException(
+                    "FINORA independently confirmed Control Center fingerprint is unavailable."
+                );
+            }
+
+            android.net.Uri uri =
+                result
+                    .getData()
+                    .getData();
+
+            java.io.InputStream input =
+                getContext()
+                    .getContentResolver()
+                    .openInputStream(
+                        uri
+                    );
+
+            if (input == null) {
+                throw new IllegalStateException(
+                    "FINORA Installation Enrollment Response source could not be opened."
+                );
+            }
+
+            java.io.ByteArrayOutputStream buffer =
+                new java.io.ByteArrayOutputStream();
+
+            byte[] chunk =
+                new byte[4096];
+
+            int total =
+                0;
+
+            try {
+
+                while (true) {
+
+                    int read =
+                        input.read(
+                            chunk
+                        );
+
+                    if (read < 0) {
+                        break;
+                    }
+
+                    total +=
+                        read;
+
+                    if (total > 262144) {
+                        throw new IllegalStateException(
+                            "FINORA Installation Enrollment Response exceeds the maximum allowed size."
+                        );
+                    }
+
+                    buffer.write(
+                        chunk,
+                        0,
+                        read
+                    );
+                }
+
+            } finally {
+
+                input.close();
+            }
+
+            byte[] bytes =
+                buffer.toByteArray();
+
+            if (bytes.length == 0) {
+                throw new IllegalStateException(
+                    "FINORA Installation Enrollment Response is empty."
+                );
+            }
+
+            org.json.JSONObject file =
+                new org.json.JSONObject(
+                    new String(
+                        bytes,
+                        java.nio.charset.StandardCharsets.UTF_8
+                    )
+                );
+
+            FinoraInstallationEnrollmentImportService.Result imported =
+                FinoraInstallationEnrollmentImportService.apply(
+                    getContext(),
+                    file,
+                    bytes,
+                    expectedFingerprint
+                );
+
+            JSObject data =
+                new JSObject();
+
+            data.put(
+                "responseId",
+                imported.responseId
+            );
+
+            data.put(
+                "requestId",
+                imported.requestId
+            );
+
+            data.put(
+                "ownerId",
+                imported.ownerId
+            );
+
+            data.put(
+                "businessId",
+                imported.businessId
+            );
+
+            data.put(
+                "branchId",
+                imported.branchId
+            );
+
+            data.put(
+                "businessCode",
+                imported.businessCode
+            );
+
+            data.put(
+                "branchCode",
+                imported.branchCode
+            );
+
+            data.put(
+                "installationId",
+                imported.installationId
+            );
+
+            data.put(
+                "controlCenterPublicKeyFingerprint",
+                imported.controlCenterFingerprint
+            );
+
+            JSObject response =
+                new JSObject();
+
+            response.put(
+                "success",
+                true
+            );
+
+            response.put(
+                "cancelled",
+                false
+            );
+
+            response.put(
+                "data",
+                data
+            );
+
+            /*
+             * Preserve the full nested data object while also
+             * matching the renderer bridge's top-level metadata
+             * contract used by Electron.
+             */
+            response.put(
+                "responseId",
+                imported.responseId
+            );
+
+            response.put(
+                "requestId",
+                imported.requestId
+            );
+
+            response.put(
+                "ownerId",
+                imported.ownerId
+            );
+
+            response.put(
+                "businessId",
+                imported.businessId
+            );
+
+            response.put(
+                "branchId",
+                imported.branchId
+            );
+
+            response.put(
+                "businessCode",
+                imported.businessCode
+            );
+
+            response.put(
+                "branchCode",
+                imported.branchCode
+            );
+
+            response.put(
+                "installationId",
+                imported.installationId
+            );
+
+            response.put(
+                "controlCenterPublicKeyFingerprint",
+                imported.controlCenterFingerprint
+            );
+
+            call.resolve(
+                response
+            );
+
+        } catch (Exception error) {
+
+            resolveFailure(
+                call,
+                error,
+                "Unable to import the FINORA Installation Enrollment Response."
+            );
+        }
+    }
+
+@PluginMethod
     public void bootstrapRecipientOperationalTrust(
         PluginCall call
     ) {
@@ -3275,6 +4857,58 @@ public final class FinoraControlPlugin
                     "activations"
                 );
 
+            android.util.Log.i(
+                "FINORA_ACTIVATION_DIAG",
+                "REQUEST owner=" + ownerId +
+                " business=" + businessId +
+                " branch=" + branchId +
+                " activationCount=" + activations.length()
+            );
+
+            JSONArray appliedPackages =
+                controlPackage.optJSONArray(
+                    "appliedControlPackages"
+                );
+
+            if (appliedPackages != null) {
+                for (
+                    int appliedIndex = 0;
+                    appliedIndex < appliedPackages.length();
+                    appliedIndex++
+                ) {
+                    JSONObject applied =
+                        appliedPackages.optJSONObject(
+                            appliedIndex
+                        );
+
+                    if (
+                        applied != null &&
+                        "BRANCH_ACTIVATION".equals(
+                            applied.optString(
+                                "purpose",
+                                ""
+                            )
+                        )
+                    ) {
+                        android.util.Log.i(
+                            "FINORA_ACTIVATION_DIAG",
+                            "LEDGER package=" +
+                                applied.optString("packageId", "") +
+                            " owner=" +
+                                applied.optString("ownerId", "") +
+                            " business=" +
+                                applied.optString("businessId", "") +
+                            " branch=" +
+                                applied.optString("branchId", "") +
+                            " installation=" +
+                                applied.optString("installationId", "") +
+                            " sequence=" +
+                                applied.optLong("sequence", -1L)
+                        );
+                    }
+                }
+            }
+
             for (
                 int index = 0;
                 index < activations.length();
@@ -3284,6 +4918,21 @@ public final class FinoraControlPlugin
                     activations.getJSONObject(
                         index
                     );
+
+                android.util.Log.i(
+                    "FINORA_ACTIVATION_DIAG",
+                    "ACTIVATION index=" + index +
+                    " activationId=" +
+                        activation.optString("activationId", "") +
+                    " owner=" +
+                        activation.optString("ownerId", "") +
+                    " business=" +
+                        activation.optString("businessId", "") +
+                    " branch=" +
+                        activation.optString("branchId", "") +
+                    " status=" +
+                        activation.optString("status", "")
+                );
 
                 if (
                     ownerId.equals(
@@ -3909,19 +5558,6 @@ public final class FinoraControlPlugin
 
 
 
-                try {
-
-                    android.util.Log.i(
-
-                        "FINORA_POSTLOGIN_DIAG",
-
-                        "PORTABLE_PROFILE_CONTROL_PACKAGE_MISSING"
-
-                    );
-
-                } catch (Throwable ignored) {
-
-                }
                 resolveSuccess(
                     call
                 );
@@ -4021,19 +5657,6 @@ public final class FinoraControlPlugin
 
 
 
-                try {
-
-                    android.util.Log.i(
-
-                        "FINORA_POSTLOGIN_DIAG",
-
-                        "PORTABLE_PROFILE_ARRAY_MISSING"
-
-                    );
-
-                } catch (Throwable ignored) {
-
-                }
                 resolveSuccess(
                     call
                 );
@@ -4041,20 +5664,6 @@ public final class FinoraControlPlugin
                 return;
             }
 
-                        try {
-                android.util.Log.i(
-                    "FINORA_POSTLOGIN_DIAG",
-                    "PORTABLE_PROFILE_ARRAY_COUNT count=" +
-                    businessProfiles.length() +
-                    " requestedOwnerId=" +
-                    ownerId +
-                    " requestedBusinessId=" +
-                    businessId +
-                    " requestedBranchId=" +
-                    branchId
-                );
-            } catch (Throwable ignored) {
-            }
 
             for (
                 int index = 0;
@@ -4088,14 +5697,6 @@ public final class FinoraControlPlugin
                     continue;
                 }
 
-                try {
-                    android.util.Log.i(
-                        "FINORA_POSTLOGIN_DIAG",
-                        "PORTABLE_PROFILE_SCOPE_MATCH index=" +
-                        index
-                    );
-                } catch (Throwable ignored) {
-                }
 
                 // --------------------------------------------
                 // HISTORICAL BINDING EVIDENCE
@@ -4269,20 +5870,6 @@ public final class FinoraControlPlugin
                 return;
             }
 
-            try {
-                android.util.Log.i(
-                    "FINORA_POSTLOGIN_DIAG",
-                    "PORTABLE_PROFILE_NO_SCOPE_MATCH count=" +
-                    businessProfiles.length() +
-                    " requestedOwnerId=" +
-                    ownerId +
-                    " requestedBusinessId=" +
-                    businessId +
-                    " requestedBranchId=" +
-                    branchId
-                );
-            } catch (Throwable ignored) {
-            }
 
             resolveSuccess(
                 call
@@ -5499,14 +7086,6 @@ public final class FinoraControlPlugin
             );
 
         if (!result.success) {
-            postLoginDiagnosticWarn(
-                "BRANCH_ACCESS_FAIL errorCode=" +
-                    result.errorCode +
-                    " clockErrorCode=" +
-                    result.clockErrorCode +
-                    " error=" +
-                    result.error
-            );
             JSObject failure = new JSObject();
             failure.put("success", false);
 
@@ -5529,14 +7108,6 @@ public final class FinoraControlPlugin
             return;
         }
 
-        postLoginDiagnosticInfo(
-            "BRANCH_ACCESS_SUCCESS allowed=" +
-                result.data.allowed +
-                " state=" +
-                result.data.state +
-                " reason=" +
-                result.data.reason
-        );
 
         JSObject decision = new JSObject();
         decision.put("allowed", result.data.allowed);
@@ -5598,9 +7169,6 @@ public final class FinoraControlPlugin
                             signedGrantAttached =
                                 true;
 
-                            postLoginDiagnosticInfo(
-                                "BRANCH_ACCESS_GRANT_ATTACHED"
-                            );
 
                             break;
                         }
@@ -5608,10 +7176,6 @@ public final class FinoraControlPlugin
                 }
             }
         } catch (Exception error) {
-            postLoginDiagnosticWarn(
-                "BRANCH_ACCESS_GRANT_LOOKUP_FAIL error=" +
-                    error.getMessage()
-            );
 
             JSObject failure =
                 new JSObject();
@@ -5639,9 +7203,6 @@ public final class FinoraControlPlugin
         }
 
         if (!signedGrantAttached) {
-            postLoginDiagnosticWarn(
-                "BRANCH_ACCESS_GRANT_MISSING"
-            );
         }
 
         JSObject response = createSuccessResult();
@@ -5933,6 +7494,7 @@ public final class FinoraControlPlugin
      * Check whether one FINORA user/login currently owns an
      * ACTIVE entitlement for LOCAL or USB.
      */
+
     @PluginMethod
     public void hasActiveStorageEntitlement(
         PluginCall call
@@ -5972,18 +7534,6 @@ public final class FinoraControlPlugin
                 )
             );
 
-        postLoginDiagnosticInfo(
-            "STORAGE_ENTITLEMENT_CALL userId=" +
-                userId +
-                " ownerId=" +
-                ownerId +
-                " businessId=" +
-                businessId +
-                " branchId=" +
-                branchId +
-                " storageMode=" +
-                storageMode
-        );
 
         if (
             userId == null ||
@@ -6013,9 +7563,6 @@ public final class FinoraControlPlugin
                 readValidatedControlPackage();
 
             if (controlPackage == null) {
-                postLoginDiagnosticWarn(
-                    "STORAGE_ENTITLEMENT_FALSE reason=CONTROL_PACKAGE_MISSING"
-                );
 
                 resolveBooleanSuccess(
                     call,
@@ -6048,9 +7595,6 @@ public final class FinoraControlPlugin
                 );
 
             if (installation == null) {
-                postLoginDiagnosticWarn(
-                    "STORAGE_ENTITLEMENT_FALSE reason=INSTALLATION_MISSING"
-                );
 
                 resolveBooleanSuccess(
                     call,
@@ -6081,9 +7625,6 @@ public final class FinoraControlPlugin
                 );
 
             if (!installationMatches) {
-                postLoginDiagnosticWarn(
-                    "STORAGE_ENTITLEMENT_FALSE reason=INSTALLATION_SCOPE_MISMATCH"
-                );
 
                 resolveBooleanSuccess(
                     call,
@@ -6148,10 +7689,6 @@ public final class FinoraControlPlugin
                         entitlement
                     );
 
-                postLoginDiagnosticInfo(
-                    "STORAGE_ENTITLEMENT_MATCH result=" +
-                        activeLogicalEntitlement
-                );
 
                 resolveBooleanSuccess(
                     call,
@@ -6161,9 +7698,6 @@ public final class FinoraControlPlugin
                 return;
             }
 
-            postLoginDiagnosticWarn(
-                "STORAGE_ENTITLEMENT_FALSE reason=NO_LOGICAL_MATCH"
-            );
 
             resolveBooleanSuccess(
                 call,
@@ -6171,10 +7705,6 @@ public final class FinoraControlPlugin
             );
 
         } catch (Exception error) {
-            postLoginDiagnosticWarn(
-                "STORAGE_ENTITLEMENT_EXCEPTION error=" +
-                    error.getMessage()
-            );
             resolveFailure(
                 call,
                 error,
@@ -6289,6 +7819,111 @@ public final class FinoraControlPlugin
             new JSONObject(
                 raw
             );
+
+        try {
+            JSONObject installation =
+                controlPackage.optJSONObject(
+                    "installation"
+                );
+
+            if (
+                installation != null &&
+                !installation.has(
+                    "schemaVersion"
+                )
+            ) {
+                if (installationBindingService == null) {
+                    throw new IllegalStateException(
+                        "FINORA installation binding service is unavailable for legacy schema migration."
+                    );
+                }
+
+                FinoraInstallationBindingCrypto.PublicBinding nativeBinding =
+                    installationBindingService.get();
+
+                if (nativeBinding == null) {
+                    throw new IllegalStateException(
+                        "FINORA native installation binding is unavailable for legacy schema migration."
+                    );
+                }
+
+                String installationId =
+                    normalizeRequiredString(
+                        installation.optString(
+                            "installationId",
+                            null
+                        )
+                    );
+
+                String bindingKeyId =
+                    normalizeRequiredString(
+                        installation.optString(
+                            "bindingKeyId",
+                            null
+                        )
+                    );
+
+                String fingerprintAlgorithm =
+                    normalizeRequiredString(
+                        installation.optString(
+                            "fingerprintAlgorithm",
+                            null
+                        )
+                    );
+
+                String publicKeyFingerprint =
+                    normalizeRequiredString(
+                        installation.optString(
+                            "publicKeyFingerprint",
+                            null
+                        )
+                    );
+
+                if (
+                    installationId == null ||
+                    bindingKeyId == null ||
+                    fingerprintAlgorithm == null ||
+                    publicKeyFingerprint == null ||
+                    !installationId.equals(
+                        nativeBinding.installationId
+                    ) ||
+                    !bindingKeyId.equals(
+                        nativeBinding.bindingKeyId
+                    ) ||
+                    !"SHA-256".equals(
+                        fingerprintAlgorithm
+                    ) ||
+                    !publicKeyFingerprint.equalsIgnoreCase(
+                        nativeBinding.publicKeyFingerprint
+                    )
+                ) {
+                    throw new IllegalStateException(
+                        "FINORA legacy installation schema migration rejected due to native binding mismatch."
+                    );
+                }
+
+                installation.put(
+                    "schemaVersion",
+                    1
+                );
+
+                controlPackage.put(
+                    "installation",
+                    installation
+                );
+
+                controlStore.write(
+                    controlPackage.toString()
+                );
+
+                android.util.Log.i(
+                    "FINORA_INSTALLATION_MIGRATION",
+                    "Legacy installation schemaVersion migrated to 1."
+                );
+            }
+        } catch (Exception migrationError) {
+            throw migrationError;
+        }
 
         validateControlPackage(
             controlPackage
@@ -7624,6 +9259,7 @@ public final class FinoraControlPlugin
                     installation
                 )
             ) {
+
                 throw new IllegalStateException(
                     "FINORA installation identity validation failed."
                 );

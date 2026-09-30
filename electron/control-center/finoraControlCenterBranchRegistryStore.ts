@@ -1,7 +1,7 @@
 /* ============================================================
-   FINORA ENTERPRISE OSâ„¢
+   FINORA ENTERPRISE OSÃ¢â€žÂ¢
 
-   CONTROL CENTER â€” BRANCH REGISTRY STORE
+   CONTROL CENTER Ã¢â‚¬â€ BRANCH REGISTRY STORE
 
    MODULE  : Control Center
    LAYER   : Privileged Main-Process Persistence
@@ -206,8 +206,12 @@ function validateInstallationIdentity(
     !isNonEmptyString(
       installation.bindingKeyId,
     ) ||
-    installation.platform !==
-      FINORA_CONTROL_CENTER_BRANCH_REGISTRY_PLATFORM ||
+    (
+      installation.platform !==
+        FINORA_CONTROL_CENTER_BRANCH_REGISTRY_PLATFORM &&
+      installation.platform !==
+        "ANDROID"
+    ) ||
     installation.algorithm !==
       FINORA_CONTROL_CENTER_BRANCH_REGISTRY_BINDING_ALGORITHM ||
     installation.publicKeyFormat !==

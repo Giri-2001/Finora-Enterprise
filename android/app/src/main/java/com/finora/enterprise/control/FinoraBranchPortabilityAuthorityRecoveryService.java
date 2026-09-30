@@ -1,0 +1,651 @@
+package com.finora.enterprise.control;
+
+import org.json.JSONArray;
+import org.json.JSONObject;
+
+import java.time.Instant;
+import java.util.List;
+
+/**
+ * Targeted recovery for an already-applied signed credential
+ * authorization that is missing only its verified
+ * BRANCH_PORTABILITY_AUTHORITY proof.
+ *
+ * Security:
+ * - verifies the signed portability package against native trust;
+ * - branch scope must match the installed branch;
+ * - exact pending authorization must already exist;
+ * - exact existing signed Branch Access verification evidence
+ *   must already exist;
+ * - source authorization / user / branch / storage lineage must match;
+ * - signer lineage must match the existing verified Branch Access evidence;
+ * - never reapplies BRANCH_ACCESS;
+ * - never consumes the one-time authorization;
+ * - never creates a credential;
+ * - performs one encrypted Control Store write only after all checks pass.
+ */
+final class FinoraBranchPortabilityAuthorityRecoveryService {
+
+    static final class Result {
+
+        final boolean success;
+        final String error;
+        final String authorizationId;
+
+        private Result(
+            boolean success,
+            String error,
+            String authorizationId
+        ) {
+            this.success = success;
+            this.error = error;
+            this.authorizationId = authorizationId;
+        }
+
+        static Result success(
+            String authorizationId
+        ) {
+            return new Result(
+                true,
+                null,
+                authorizationId
+            );
+        }
+
+        static Result failure(
+            String error
+        ) {
+            return new Result(
+                false,
+                error,
+                null
+            );
+        }
+    }
+
+    private final FinoraControlStore controlStore;
+
+    FinoraBranchPortabilityAuthorityRecoveryService(
+        FinoraControlStore controlStore
+    ) {
+
+        if (controlStore == null) {
+            throw new IllegalArgumentException(
+                "FINORA portability recovery requires Control Store."
+            );
+        }
+
+        this.controlStore =
+            controlStore;
+    }
+
+    Result recover(
+        JSONObject portabilityAuthorityPackage,
+        List<FinoraSignedControlPackageVerifier.TrustedKey> trustedKeys,
+        FinoraSignedControlPackageVerifier.Target exactTarget,
+        Instant now
+    ) {
+
+        if (
+            portabilityAuthorityPackage == null ||
+            trustedKeys == null ||
+            trustedKeys.isEmpty() ||
+            exactTarget == null ||
+            now == null
+        ) {
+            return Result.failure(
+                "FINORA portability recovery input is invalid."
+            );
+        }
+
+        synchronized (FinoraControlPackageApplyLock.LOCK) {
+
+            try {
+
+                FinoraSignedControlPackageVerifier.Result
+                    verification =
+                        FinoraSignedControlPackageVerifier
+                            .verifyBranchScope(
+                                FinoraJsonBridge.toMap(
+                                    portabilityAuthorityPackage
+                                ),
+                                trustedKeys,
+                                exactTarget.ownerId,
+                                exactTarget.businessId,
+                                exactTarget.branchId,
+                                now
+                            );
+
+                if (
+                    verification == null ||
+                    !verification.valid
+                ) {
+                    return Result.failure(
+                        "FINORA BRANCH_PORTABILITY_AUTHORITY verification failed."
+                    );
+                }
+
+                if (
+                    !"BRANCH_PORTABILITY_AUTHORITY".equals(
+                        portabilityAuthorityPackage.optString(
+                            "purpose",
+                            null
+                        )
+                    )
+                ) {
+                    return Result.failure(
+                        "FINORA portability recovery package purpose is invalid."
+                    );
+                }
+
+                JSONObject portabilityPayload =
+                    portabilityAuthorityPackage.optJSONObject(
+                        "payload"
+                    );
+
+                JSONObject portabilityIssuer =
+                    portabilityAuthorityPackage.optJSONObject(
+                        "issuer"
+                    );
+
+                if (
+                    portabilityPayload == null ||
+                    portabilityIssuer == null
+                ) {
+                    return Result.failure(
+                        "FINORA portability recovery package is malformed."
+                    );
+                }
+
+                String authorizationId =
+                    required(
+                        portabilityPayload,
+                        "sourceAuthorizationId"
+                    );
+
+                if (
+                    !"SET_PASSWORD_ON_RECIPIENT".equals(
+                        portabilityPayload.optString(
+                            "sourceAuthorizationMethod",
+                            null
+                        )
+                    )
+                ) {
+                    return Result.failure(
+                        "FINORA portability recovery authorization method is invalid."
+                    );
+                }
+
+                String rawState =
+                    controlStore.read();
+
+                if (rawState == null) {
+                    return Result.failure(
+                        "FINORA Control Store is unavailable."
+                    );
+                }
+
+                JSONObject state =
+                    new JSONObject(
+                        rawState
+                    );
+
+                JSONArray authorizations =
+                    array(
+                        state,
+                        "branchCredentialEnrollmentAuthorizations"
+                    );
+
+                JSONObject authorization =
+                    findExactlyOne(
+                        authorizations,
+                        authorizationId
+                    );
+
+                if (authorization == null) {
+                    return Result.failure(
+                        "FINORA pending credential authorization was not found."
+                    );
+                }
+
+                if (
+                    !authorizationId.equals(
+                        authorization.optString(
+                            "authorizationId",
+                            null
+                        )
+                    ) ||
+                    !"SET_PASSWORD_ON_RECIPIENT".equals(
+                        authorization.optString(
+                            "method",
+                            null
+                        )
+                    )
+                ) {
+                    return Result.failure(
+                        "FINORA pending credential authorization is invalid."
+                    );
+                }
+
+                if (
+                    !same(
+                        authorization,
+                        portabilityPayload,
+                        "userId"
+                    ) ||
+                    !same(
+                        authorization,
+                        portabilityPayload,
+                        "username"
+                    ) ||
+                    !same(
+                        authorization,
+                        portabilityPayload,
+                        "role"
+                    ) ||
+                    !same(
+                        authorization,
+                        portabilityPayload,
+                        "ownerId"
+                    ) ||
+                    !same(
+                        authorization,
+                        portabilityPayload,
+                        "businessId"
+                    ) ||
+                    !same(
+                        authorization,
+                        portabilityPayload,
+                        "branchId"
+                    ) ||
+                    !same(
+                        authorization,
+                        portabilityPayload,
+                        "storageMode"
+                    ) ||
+                    !same(
+                        authorization,
+                        portabilityPayload,
+                        "dataContext"
+                    )
+                ) {
+                    return Result.failure(
+                        "FINORA portability recovery authorization identity or scope does not match."
+                    );
+                }
+
+                if (
+                    !exactTarget.ownerId.equals(
+                        authorization.optString(
+                            "ownerId",
+                            null
+                        )
+                    ) ||
+                    !exactTarget.businessId.equals(
+                        authorization.optString(
+                            "businessId",
+                            null
+                        )
+                    ) ||
+                    !exactTarget.branchId.equals(
+                        authorization.optString(
+                            "branchId",
+                            null
+                        )
+                    )
+                ) {
+                    return Result.failure(
+                        "FINORA portability recovery does not match the installed branch."
+                    );
+                }
+
+                if (
+                    !"USB".equals(
+                        authorization.optString(
+                            "storageMode",
+                            null
+                        )
+                    )
+                ) {
+                    return Result.failure(
+                        "FINORA portability recovery is valid only for USB credential authorization."
+                    );
+                }
+
+                JSONArray evidenceArray =
+                    array(
+                        state,
+                        "branchCredentialAuthorizationVerificationEvidence"
+                    );
+
+                JSONObject evidence =
+                    findExactlyOne(
+                        evidenceArray,
+                        authorizationId
+                    );
+
+                if (evidence == null) {
+                    return Result.failure(
+                        "FINORA signed Branch Access verification evidence was not found."
+                    );
+                }
+
+                if (
+                    evidence.has(
+                        "portabilityAuthorityProof"
+                    ) &&
+                    !evidence.isNull(
+                        "portabilityAuthorityProof"
+                    )
+                ) {
+                    return Result.failure(
+                        "FINORA portability authority proof already exists."
+                    );
+                }
+
+                JSONObject verifiedControlSigner =
+                    evidence.optJSONObject(
+                        "verifiedControlSigner"
+                    );
+
+                if (verifiedControlSigner == null) {
+                    return Result.failure(
+                        "FINORA existing verified Control signer evidence is missing."
+                    );
+                }
+
+                String sourceIssuerId =
+                    required(
+                        evidence,
+                        "issuerId"
+                    );
+
+                String proofIssuerId =
+                    required(
+                        portabilityIssuer,
+                        "issuerId"
+                    );
+
+                String proofSigningKeyId =
+                    required(
+                        portabilityIssuer,
+                        "signingKeyId"
+                    );
+
+                if (
+                    !sourceIssuerId.equals(
+                        proofIssuerId
+                    ) ||
+                    !proofIssuerId.equals(
+                        verifiedControlSigner.optString(
+                            "issuerId",
+                            null
+                        )
+                    ) ||
+                    !proofSigningKeyId.equals(
+                        verifiedControlSigner.optString(
+                            "signingKeyId",
+                            null
+                        )
+                    )
+                ) {
+                    return Result.failure(
+                        "FINORA portability recovery signer does not match existing verified Branch Access signer evidence."
+                    );
+                }
+
+                JSONObject portabilityProof =
+                    new JSONObject();
+
+                portabilityProof.put(
+                    "sourceAuthorizationId",
+                    authorizationId
+                );
+
+                portabilityProof.put(
+                    "signedPortabilityAuthorityPackage",
+                    new JSONObject(
+                        portabilityAuthorityPackage.toString()
+                    )
+                );
+
+                portabilityProof.put(
+                    "verifiedControlSigner",
+                    new JSONObject(
+                        verifiedControlSigner.toString()
+                    )
+                );
+
+                portabilityProof.put(
+                    "verifiedAt",
+                    required(
+                        evidence,
+                        "verifiedAt"
+                    )
+                );
+
+                portabilityProof.put(
+                    "schemaVersion",
+                    1
+                );
+
+                JSONObject evidenceCopy =
+                    new JSONObject(
+                        evidence.toString()
+                    );
+
+                evidenceCopy.put(
+                    "portabilityAuthorityProof",
+                    portabilityProof
+                );
+
+                int evidenceIndex =
+                    indexOfAuthorization(
+                        evidenceArray,
+                        authorizationId
+                    );
+
+                if (evidenceIndex < 0) {
+                    return Result.failure(
+                        "FINORA credential verification evidence index is unavailable."
+                    );
+                }
+
+                evidenceArray.put(
+                    evidenceIndex,
+                    evidenceCopy
+                );
+
+                state.put(
+                    "branchCredentialAuthorizationVerificationEvidence",
+                    evidenceArray
+                );
+
+                /*
+                 * Exactly one encrypted atomic Control Store write.
+                 *
+                 * No authorization is removed or consumed here.
+                 * No credential is created here.
+                 */
+                controlStore.write(
+                    state.toString()
+                );
+
+                return Result.success(
+                    authorizationId
+                );
+
+            } catch (Exception error) {
+
+                return Result.failure(
+                    error.getMessage() != null
+                        ? error.getMessage()
+                        : "FINORA portability authority recovery failed."
+                );
+            }
+        }
+    }
+
+    private static JSONArray array(
+        JSONObject state,
+        String key
+    ) throws Exception {
+
+        JSONArray value =
+            state.optJSONArray(
+                key
+            );
+
+        if (value == null) {
+            throw new IllegalStateException(
+                "FINORA Control Store collection is unavailable: " +
+                key
+            );
+        }
+
+        return value;
+    }
+
+    private static JSONObject findExactlyOne(
+        JSONArray values,
+        String authorizationId
+    ) throws Exception {
+
+        JSONObject found =
+            null;
+
+        for (
+            int i = 0;
+            i < values.length();
+            i++
+        ) {
+
+            JSONObject candidate =
+                values.optJSONObject(i);
+
+            if (candidate == null) {
+                throw new IllegalStateException(
+                    "FINORA credential authorization collection is malformed."
+                );
+            }
+
+            if (
+                authorizationId.equals(
+                    candidate.optString(
+                        "authorizationId",
+                        null
+                    )
+                )
+            ) {
+
+                if (found != null) {
+                    throw new IllegalStateException(
+                        "FINORA credential authorization state contains duplicate authorization IDs."
+                    );
+                }
+
+                found =
+                    candidate;
+            }
+        }
+
+        return found;
+    }
+
+    private static int indexOfAuthorization(
+        JSONArray values,
+        String authorizationId
+    ) throws Exception {
+
+        int found =
+            -1;
+
+        for (
+            int i = 0;
+            i < values.length();
+            i++
+        ) {
+
+            JSONObject candidate =
+                values.optJSONObject(i);
+
+            if (candidate == null) {
+                throw new IllegalStateException(
+                    "FINORA credential verification evidence collection is malformed."
+                );
+            }
+
+            if (
+                authorizationId.equals(
+                    candidate.optString(
+                        "authorizationId",
+                        null
+                    )
+                )
+            ) {
+
+                if (found >= 0) {
+                    throw new IllegalStateException(
+                        "FINORA credential verification evidence contains duplicate authorization IDs."
+                    );
+                }
+
+                found =
+                    i;
+            }
+        }
+
+        return found;
+    }
+
+    private static boolean same(
+        JSONObject left,
+        JSONObject right,
+        String key
+    ) throws Exception {
+
+        return required(
+            left,
+            key
+        ).equals(
+            required(
+                right,
+                key
+            )
+        );
+    }
+
+    private static String required(
+        JSONObject object,
+        String key
+    ) throws Exception {
+
+        if (
+            object == null ||
+            key == null
+        ) {
+            throw new IllegalArgumentException(
+                "FINORA required portability recovery property is missing."
+            );
+        }
+
+        String value =
+            object.optString(
+                key,
+                null
+            );
+
+        if (
+            value == null ||
+            value.trim().isEmpty()
+        ) {
+            throw new IllegalArgumentException(
+                "FINORA required portability recovery property is invalid: " +
+                key
+            );
+        }
+
+        return value;
+    }
+}
+

@@ -1,5 +1,5 @@
 // ============================================================
-// FINORA ENTERPRISE OS™
+// FINORA ENTERPRISE OSâ„¢
 //
 // V2 ACTIVATION DOMAIN
 // ACTIVATION CONTROL BRIDGE
@@ -463,6 +463,32 @@ export interface FinoraActivationControlBridge {
         FinoraBranchAccessRenewalHistoryRecord[]
       >
     >;
+  /**
+   * Export one native possession-signed Installation Enrollment
+   * Request for first-time branch provisioning.
+   */
+  exportInstallationEnrollmentRequest?():
+    Promise<{
+      success: boolean;
+      cancelled?: boolean;
+      fileName?: string;
+      error?: string;
+    }>;
+
+  /**
+   * Import and verify one Installation Enrollment Response using
+   * an independently supplied Control Center SHA-256 fingerprint.
+   */
+  importInstallationEnrollmentResponse?(
+    expectedControlCenterPublicKeyFingerprint:
+      string,
+  ):
+    Promise<{
+      success: boolean;
+      cancelled?: boolean;
+      error?: string;
+      [key: string]: unknown;
+    }>;
   hasActiveStorageEntitlement(
     request:
       FinoraStorageEntitlementRequest,
@@ -525,8 +551,72 @@ function getAndroidControlBridge():
   ) {
     return undefined;
   }
+  const nativePlugin =
+    finoraAndroidControlPlugin as unknown as {
+      importInstallationEnrollmentResponse?(
+        options: {
+          expectedControlCenterPublicKeyFingerprint:
+            string;
+        },
+      ):
+        Promise<{
+          success: boolean;
+          cancelled?: boolean;
+          error?: string;
+          [key: string]: unknown;
+        }>;
+      [key: string]:
+        unknown;
+    };
 
-  return finoraAndroidControlPlugin;
+  return new Proxy(
+    finoraAndroidControlPlugin,
+    {
+      get(
+        target,
+        property,
+        receiver,
+      ) {
+
+        if (
+          property ===
+          "importInstallationEnrollmentResponse"
+        ) {
+          return async (
+            expectedControlCenterPublicKeyFingerprint:
+              string,
+          ) => {
+
+            const nativeImport =
+              nativePlugin
+                .importInstallationEnrollmentResponse;
+
+            if (
+              typeof nativeImport !==
+                "function"
+            ) {
+              return {
+                success: false,
+                error:
+                  "FINORA Installation Enrollment Response import is unavailable on Android.",
+              };
+            }
+
+            return nativeImport({
+              expectedControlCenterPublicKeyFingerprint,
+            });
+          };
+        }
+
+        return Reflect.get(
+          target,
+          property,
+          receiver,
+        );
+      },
+    },
+  ) as unknown as
+    FinoraActivationControlBridge;
 }
 
 // ============================================================

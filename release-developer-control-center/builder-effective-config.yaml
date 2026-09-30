@@ -1,0 +1,27 @@
+directories:
+  output: release-developer-control-center
+  buildResources: build
+appId: com.finora.developer.controlcenter.desktop
+productName: FINORA Developer Control Center
+files:
+  - filter:
+      - dist/**/*
+      - dist-electron/developerControlCenterMain.js
+      - dist-electron/control-center/**/*.js
+      - dist-electron/control/**/*.js
+      - package.json
+extraMetadata:
+  main: dist-electron/developerControlCenterMain.js
+win:
+  target:
+    - target: nsis
+      arch:
+        - x64
+  icon: assets/icons/finora.ico
+nsis:
+  oneClick: false
+  allowToChangeInstallationDirectory: true
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
+  shortcutName: FINORA Developer Control Center
+electronVersion: 43.2.0

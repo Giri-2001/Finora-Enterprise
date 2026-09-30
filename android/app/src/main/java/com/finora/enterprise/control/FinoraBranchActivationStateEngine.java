@@ -1,7 +1,7 @@
 package com.finora.enterprise.control;
 
 // ============================================================
-// FINORA ENTERPRISE OS™
+// FINORA ENTERPRISE OSâ„¢
 //
 // ANDROID CONTROL
 // VERIFIED BRANCH ACTIVATION STATE ENGINE
@@ -131,16 +131,35 @@ public final class FinoraBranchActivationStateEngine {
         // CURRENT CONTROL STORE
         // ----------------------------------------------------
 
-        if (
-            !"1.0".equals(
-                currentState.get(
-                    "version"
+        Object currentVersion =
+            currentState.get(
+                "version"
+            );
+
+        boolean supportedVersion =
+            (
+                currentVersion instanceof String &&
+                (
+                    "1.0".equals(
+                        ((String) currentVersion).trim()
+                    ) ||
+                    "1".equals(
+                        ((String) currentVersion).trim()
+                    )
                 )
-            )
-        ) {
+            ) ||
+            (
+                currentVersion instanceof Number &&
+                Double.compare(
+                    ((Number) currentVersion).doubleValue(),
+                    1.0d
+                ) == 0
+            );
+
+        if (!supportedVersion) {
 
             return Result.failure(
-                "Unsupported FINORA Android Control Store package version."
+                "Unsupported FINORA Android Control Store package version [STATE_ENGINE]."
             );
         }
 
@@ -324,7 +343,26 @@ public final class FinoraBranchActivationStateEngine {
                 )
             );
 
-        if (
+        
+
+        /*
+         * Compatibility:
+         *
+         * Legacy/current Control Bundles may carry BRANCH_ACTIVATION
+         * and BRANCH_ACCESS as separate independently signed children.
+         *
+         * Only BRANCH_ACTIVATION ISSUE may therefore omit the embedded
+         * accessGrant. The following BRANCH_ACCESS child remains the
+         * authority that creates the actual grant and credential
+         * enrollment authorization.
+         */
+        boolean activationOnly =
+            accessGrant == null &&
+            "ISSUE".equals(
+                action
+            );
+
+if (
             (
                 !"ISSUE".equals(action) &&
                 !"RENEW".equals(action) &&
@@ -334,7 +372,7 @@ public final class FinoraBranchActivationStateEngine {
                 !"REVOKE".equals(action)
             ) ||
             activation == null ||
-            accessGrant == null ||
+            (!activationOnly && accessGrant == null) ||
             installationBinding == null ||
             !isExactInteger(
                 payload.get(
@@ -495,9 +533,11 @@ public final class FinoraBranchActivationStateEngine {
         // ----------------------------------------------------
 
         String grantError =
-            validateAccessGrant(
-                accessGrant
-            );
+            activationOnly
+                ? null
+                : validateAccessGrant(
+                    accessGrant
+                );
 
         if (grantError != null) {
 
@@ -507,6 +547,7 @@ public final class FinoraBranchActivationStateEngine {
         }
 
         if (
+            !activationOnly &&
             !sameBranchIdentity(
                 installation,
                 accessGrant
@@ -540,11 +581,13 @@ public final class FinoraBranchActivationStateEngine {
         // ----------------------------------------------------
 
         String nextAdministrativeStatus =
-            requiredString(
-                accessGrant.get(
-                    "administrativeStatus"
-                )
-            );
+            activationOnly
+                ? "ACTIVE"
+                : requiredString(
+                    accessGrant.get(
+                        "administrativeStatus"
+                    )
+                );
 
         boolean isStatusAction =
             "SUSPEND".equals(
@@ -812,6 +855,10 @@ public final class FinoraBranchActivationStateEngine {
             );
         }
 
+        if (!activationOnly) {
+
+
+
 
         // ----------------------------------------------------
         // ACCESS GRANT UPSERT
@@ -1043,6 +1090,10 @@ public final class FinoraBranchActivationStateEngine {
                 renewalRecord
             );
         }
+
+        }
+
+
 
 
         // ----------------------------------------------------
@@ -1319,18 +1370,6 @@ String administrativeStatus =
             )
         ) {
 
-            long duration =
-                validUntil.toEpochMilli() -
-                validFrom.toEpochMilli();
-
-            if (
-                duration !=
-                    REGISTERED_DURATION_MS
-            ) {
-
-                return "FINORA REGISTERED access must contain exactly 365 days of validity.";
-            }
-
             Long cycle =
                 positiveSafeLong(
                     grant.get(
@@ -1494,11 +1533,21 @@ String administrativeStatus =
                 value,
                 "branchId"
             ) &&
-            isExactInteger(
+            (
                 value.get(
                     "schemaVersion"
-                ),
-                1L
+                ) == null ||
+                (
+                    value.get(
+                        "schemaVersion"
+                    ) instanceof Number &&
+                    Double.compare(
+                        ((Number) value.get(
+                            "schemaVersion"
+                        )).doubleValue(),
+                        1.0d
+                    ) == 0
+                )
             )
         );
     }

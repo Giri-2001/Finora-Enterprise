@@ -65,6 +65,7 @@ export interface FinoraControlBundleIssuanceTarget {
 export type FinoraControlBundleChildPurpose =
   | "BRANCH_ACTIVATION"
   | "BRANCH_ACCESS"
+  | "BRANCH_PORTABILITY_AUTHORITY"
   | "STORAGE_ENTITLEMENT"
   | "BUSINESS_PROFILE"
   | "PRICING_POLICY"
@@ -75,6 +76,7 @@ const FINORA_CONTROL_BUNDLE_CHILD_PURPOSES:
   readonly FinoraControlBundleChildPurpose[] = [
     "BRANCH_ACTIVATION",
     "BRANCH_ACCESS",
+    "BRANCH_PORTABILITY_AUTHORITY",
     "STORAGE_ENTITLEMENT",
     "BUSINESS_PROFILE",
     "PRICING_POLICY",
@@ -232,6 +234,41 @@ function isSupportedChildPurpose(
   );
 }
 
+function branchScopeTargetMatches(
+  value:
+    unknown,
+
+  target:
+    FinoraControlBundleIssuanceTarget,
+): boolean {
+
+  if (!isRecord(value)) {
+    return false;
+  }
+
+  /*
+   * BRANCH_PORTABILITY_AUTHORITY is deliberately branch-scoped.
+   * It must contain exactly the permanent branch identity and
+   * must not acquire installation/binding authority.
+   */
+  if (
+    Object.keys(
+      value,
+    ).length !==
+      3
+  ) {
+    return false;
+  }
+
+  return (
+    value.ownerId ===
+      target.ownerId &&
+    value.businessId ===
+      target.businessId &&
+    value.branchId ===
+      target.branchId
+  );
+}
 function targetMatches(
   value:
     unknown,
@@ -537,14 +574,24 @@ export function validateFinoraControlBundleIssuance(
       );
     }
 
-    if (
-      !targetMatches(
-        childPackage.target,
-        target,
-      )
-    ) {
+    const childTargetMatches =
+      childPackage.purpose ===
+        "BRANCH_PORTABILITY_AUTHORITY"
+        ? branchScopeTargetMatches(
+            childPackage.target,
+            target,
+          )
+        : targetMatches(
+            childPackage.target,
+            target,
+          );
+
+    if (!childTargetMatches) {
       return rejected(
-        "FINORA CONTROL_BUNDLE child package target does not match the outer package target.",
+        childPackage.purpose ===
+          "BRANCH_PORTABILITY_AUTHORITY"
+          ? "FINORA CONTROL_BUNDLE Branch Portability Authority target does not match the outer branch scope."
+          : "FINORA CONTROL_BUNDLE child package target does not match the outer package target.",
       );
     }
 

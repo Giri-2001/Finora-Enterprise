@@ -37,7 +37,7 @@ import FinoraControlCenterIssuanceWorkspace from "./FinoraControlCenterIssuanceW
 import "./FinoraControlCenterResponsive.css";
 
 /* ===========================================================
-   FINORA ENTERPRISE OS™
+   FINORA ENTERPRISE OSâ„¢
 
    CONTROL CENTER
    SHELL FOUNDATION
@@ -1131,7 +1131,7 @@ export default function FinoraControlCenterShell() {
               }}
             >
               {submitting
-                ? "Configuring…"
+                ? "Configuringâ€¦"
                 : "Configure Developer Security Code"}
             </button>
 
@@ -1269,7 +1269,7 @@ export default function FinoraControlCenterShell() {
                     0.72,
                 }}
               >
-                Checking Developer security state…
+                Checking Developer security stateâ€¦
               </p>
             )}
 
@@ -1366,9 +1366,9 @@ export default function FinoraControlCenterShell() {
               }}
             >
               {checking
-                ? "Checking security…"
+                ? "Checking securityâ€¦"
                 : submitting
-                  ? "Verifying…"
+                  ? "Verifyingâ€¦"
                   : "Access Control Center"}
             </button>
           </form>
@@ -1807,7 +1807,7 @@ const [
                   0.76,
               }}
             >
-              Loading Control Center trust identity…
+              Loading Control Center trust identityâ€¦
             </p>
           )}
 
@@ -2444,7 +2444,14 @@ const [
             />
             )}
 
-            {activeView === "CONTROL" && (
+            <div
+              style={{
+                display:
+                  activeView === "CONTROL"
+                    ? "block"
+                    : "none",
+              }}
+            >
             <FinoraControlCenterIssuanceWorkspace
               selectedBranch={
                 selectedIssuanceBranch
@@ -2464,7 +2471,7 @@ const [
                 );
               }}
             />
-            )}
+            </div>
           </>
         )}
       </section>
