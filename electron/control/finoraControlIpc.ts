@@ -96,6 +96,10 @@ import {
 } from "./finoraInstallationEnrollmentBootstrapCoordinator.js";
 
 import {
+  loadFinoraRecipientTrustStore,
+} from "./finoraRecipientTrustStore.js";
+
+import {
   evaluateFinoraAuthoritativeBranchAccess,
 } from "./finoraBranchAccessAuthorityService.js";
 import {
@@ -134,6 +138,9 @@ import type {
 const CONTROL_IPC_CHANNELS = {
   GET_INSTALLATION:
     "finora:control:get-installation",
+
+  HAS_RECIPIENT_TRUST:
+    "finora:control:has-recipient-trust",
 
   FIND_BRANCH_ACTIVATION:
     "finora:control:find-branch-activation",
@@ -526,6 +533,43 @@ export function registerFinoraControlHandlers(
       }
 
       return getFinoraInstallationIdentity();
+    },
+  );
+
+  // ----------------------------------------------------------
+  // RECIPIENT CONTROL TRUST — READ ONLY
+  // ----------------------------------------------------------
+
+  ipcMain.handle(
+    CONTROL_IPC_CHANNELS.HAS_RECIPIENT_TRUST,
+    async (event) => {
+      if (
+        !isTrustedRenderer(
+          event.senderFrame,
+        )
+      ) {
+        return failure(
+          "Untrusted renderer.",
+        );
+      }
+
+      try {
+        const trust =
+          await loadFinoraRecipientTrustStore();
+
+        return {
+          success: true,
+          data:
+            trust !== undefined &&
+            trust.trustedKeys.length > 0,
+        };
+      } catch (error) {
+        return failure(
+          error instanceof Error
+            ? error.message
+            : "Unable to verify FINORA recipient trust.",
+        );
+      }
     },
   );
 

@@ -975,6 +975,12 @@ interface FinoraControlBridge {
         >
       >;
 
+  hasRecipientTrust?:
+    () =>
+      Promise<
+        StorageResult<boolean>
+      >;
+
   findBranchActivation:
     (
       request:
@@ -1531,6 +1537,9 @@ const CONTROL_CHANNELS = {
 
   GET_INSTALLATION:
     "finora:control:get-installation",
+
+  HAS_RECIPIENT_TRUST:
+    "finora:control:has-recipient-trust",
 
   FIND_BRANCH_ACTIVATION:
     "finora:control:find-branch-activation",
@@ -2198,6 +2207,14 @@ const controlBridge:
         StorageResult<
           FinoraControlInstallationIdentity | undefined
         >
+      >,
+
+  hasRecipientTrust:
+    () =>
+      ipcRenderer.invoke(
+        CONTROL_CHANNELS.HAS_RECIPIENT_TRUST,
+      ) as Promise<
+        StorageResult<boolean>
       >,
 
 

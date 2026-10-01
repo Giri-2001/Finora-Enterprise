@@ -850,6 +850,42 @@ function BranchActivationGate({
         return;
       }
 
+      const controlBridge =
+        getFinoraActivationControlBridge();
+
+      const hasRecipientTrust =
+        controlBridge?.hasRecipientTrust;
+
+      if (
+        typeof hasRecipientTrust ===
+          "function"
+      ) {
+        const recipientTrustResult =
+          await hasRecipientTrust();
+
+        if (!active) {
+          return;
+        }
+
+        if (
+          !recipientTrustResult.success ||
+          recipientTrustResult.data !== true
+        ) {
+          setState(
+            "REQUIRED",
+          );
+
+          setMessage(
+            recipientTrustResult.success
+              ? "FINORA recipient trust must be bootstrapped before signed Control Bundles can be imported."
+              : recipientTrustResult.error ??
+                  "FINORA recipient trust could not be verified.",
+          );
+
+          return;
+        }
+      }
+
       setState(
         "ACTIVE",
       );
@@ -3193,16 +3229,19 @@ export default function App() {
     </BusinessContextProvider>
   );
 
-  // Normal startup is owner-first on every supported device.
-  // Initial branch provisioning is an explicit action only;
-  // there is no permanent laptop or main-device assumption.
-  if (!provisioningMode) {
-    return application;
-  }
-
+  // Every startup must pass through the authoritative activation gate.
+  // Provisioning mode remounts the gate in force-required mode so the
+  // existing explicit branch-provisioning workflow remains unchanged.
   return (
     <BranchActivationGate
-      forceRequired
+      key={
+        provisioningMode
+          ? "PROVISIONING"
+          : "NORMAL"
+      }
+      forceRequired={
+        provisioningMode
+      }
       onForceRequiredResolved={() => {
         setProvisioningMode(
           false,

@@ -336,6 +336,11 @@ export interface FinoraActivationControlBridge {
       >
     >;
 
+  hasRecipientTrust?():
+    Promise<
+      StorageResult<boolean>
+    >;
+
   findBranchActivation(
     request:
       FinoraBranchActivationRequest,
