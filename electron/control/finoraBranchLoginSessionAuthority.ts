@@ -1,5 +1,5 @@
 /* ============================================================
-   FINORA ENTERPRISE OSâ„¢
+   FINORA ENTERPRISE OS™
 
    ELECTRON CONTROL
    BRANCH LOGIN SESSION AUTHORITY
