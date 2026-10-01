@@ -462,7 +462,7 @@ function getGoldItemDisplaySubtitle(item: GoldLoanItem): string {
     return description;
   }
 
-  return `${item.purityKarat}K • ${formatGoldWeight(
+  return `${item.purityKarat}K \u2022 ${formatGoldWeight(
     item.netWeightGrams,
   )} g net`;
 }
@@ -1221,7 +1221,7 @@ export default function GoldItems(props: GoldItemsProps) {
 
                 {/* ITEM NAME */}
 
-                <div style={styles.field}>
+                <div style={responsive.isMobile ? styles.field : responsive.isTablet ? { ...styles.field, gridColumn: "span 2" } : { ...styles.field, gridColumn: "span 3" }}>
                   <div style={styles.fieldLabelRow}>
                     <span style={styles.fieldLabel}>Item Name</span>
                   </div>
@@ -1288,37 +1288,8 @@ export default function GoldItems(props: GoldItemsProps) {
                   </div>
                 </div>
 
-                {/* DESCRIPTION */}
 
-                <div style={styles.fieldWide}>
-                  <div style={styles.fieldLabelRow}>
-                    <span style={styles.fieldLabel}>Description</span>
-                  </div>
 
-                  <div style={descriptionControlStyle}>
-                    <span style={styles.controlIcon}>
-                      <FileText
-                        size={moduleTokens.control.inputIconSize}
-                        strokeWidth={1.8}
-                      />
-                    </span>
-
-                    <input
-                      type="text"
-                      value={item.description}
-                      readOnly={readOnly}
-                      placeholder="Design, stones, identifying details..."
-                      onFocus={() => {
-                        handleFieldFocus(item.id, "description");
-                      }}
-                      onBlur={handleFieldBlur}
-                      onChange={(event) => {
-                        handleTextChange(event, item.id, "description");
-                      }}
-                      style={styles.inputWithIcon}
-                    />
-                  </div>
-                </div>
 
                 {/* GROSS WEIGHT */}
 
@@ -1587,127 +1558,31 @@ export default function GoldItems(props: GoldItemsProps) {
                     <span style={styles.inputSuffix}>INR/gm</span>
                   </div>
                 </div>
-
-                {/* HALLMARK STATUS */}
-
-                <div style={styles.field}>
+                <div
+                  style={
+                    responsive.isMobile
+                      ? styles.field
+                      : { ...styles.field, gridColumn: "span 2" }
+                  }
+                >
                   <div style={styles.fieldLabelRow}>
-                    <span style={styles.fieldLabel}>Hallmark Status</span>
+                    <span style={styles.fieldLabel}>Item Remarks</span>
                   </div>
 
-                  <div style={styles.selectControl}>
-                    <button
-                      type="button"
-                      disabled={readOnly}
-                      onClick={() => {
-                        toggleDropdown(item.id, "hallmark");
-                      }}
-                      style={styles.selectButton}
-                      aria-expanded={hallmarkDropdownOpen}
-                    >
-                      <span style={styles.selectButtonContent}>
-                        <BadgeCheck
-                          size={moduleTokens.control.inputIconSize}
-                          strokeWidth={1.8}
-                        />
-
-                        <span style={styles.selectValueGroup}>
-                          <span style={styles.selectPrimary}>
-                            {getHallmarkLabel(item.hallmarkStatus)}
-                          </span>
-
-                          <span style={styles.selectSecondary}>
-                            Hallmark verification
-                          </span>
-                        </span>
-                      </span>
-
-                      <span style={styles.selectChevron}>
-                        <ChevronDown size={16} strokeWidth={1.9} />
-                      </span>
-                    </button>
-
-                    {hallmarkDropdownOpen ? (
-                      <div style={styles.dropdown} role="listbox">
-                        {HALLMARK_OPTIONS.map((option) => {
-                          const selected = option.value === item.hallmarkStatus;
-
-                          const optionStyle = {
-                            ...styles.dropdownOption,
-                            ...getGoldItemDropdownOptionStateStyle({
-                              selected,
-                              disabled: false,
-                            }),
-                          };
-
-                          return (
-                            <button
-                              key={option.value}
-                              type="button"
-                              role="option"
-                              aria-selected={selected}
-                              onClick={() => {
-                                handleSelectHallmark(item.id, option.value);
-                              }}
-                              style={optionStyle}
-                            >
-                              <span style={styles.dropdownOptionIdentity}>
-                                <BadgeCheck size={15} strokeWidth={1.8} />
-
-                                <span style={styles.dropdownOptionTextGroup}>
-                                  <span style={styles.dropdownOptionPrimary}>
-                                    {option.label}
-                                  </span>
-
-                                  <span style={styles.dropdownOptionSecondary}>
-                                    {option.description}
-                                  </span>
-                                </span>
-                              </span>
-
-                              {selected ? (
-                                <span style={styles.dropdownOptionCheck}>
-                                  <Check size={15} strokeWidth={2} />
-                                </span>
-                              ) : null}
-                            </button>
-                          );
-                        })}
-                      </div>
-                    ) : null}
-                  </div>
-                </div>
-
-                {/* HALLMARK REFERENCE */}
-
-                <div style={styles.field}>
-                  <div style={styles.fieldLabelRow}>
-                    <span style={styles.fieldLabel}>
-                      Hallmark / HUID Reference
-                    </span>
-                  </div>
-
-                  <div style={hallmarkReferenceControlStyle}>
-                    <span style={styles.controlIcon}>
-                      <Hash
-                        size={moduleTokens.control.inputIconSize}
-                        strokeWidth={1.8}
-                      />
-                    </span>
-
+                  <div style={styles.controlShell}>
                     <input
                       type="text"
-                      value={item.hallmarkReference}
+                      value={item.remarks}
                       readOnly={readOnly}
-                      placeholder="Optional reference"
+                      placeholder="Condition, design or identifying remarks..."
                       onFocus={() => {
-                        handleFieldFocus(item.id, "hallmarkReference");
+                        handleFieldFocus(item.id, "remarks");
                       }}
                       onBlur={handleFieldBlur}
                       onChange={(event) => {
-                        handleTextChange(event, item.id, "hallmarkReference");
+                        updateGoldItem(item.id, { remarks: event.target.value });
                       }}
-                      style={styles.inputWithIcon}
+                      style={styles.input}
                     />
                   </div>
                 </div>
@@ -1781,29 +1656,6 @@ export default function GoldItems(props: GoldItemsProps) {
                 </div>
               </section>
 
-              {/* ==========================================
-                    REMARKS
-                ========================================== */}
-
-              <div style={styles.field}>
-                <div style={styles.fieldLabelRow}>
-                  <span style={styles.fieldLabel}>Item Remarks</span>
-                </div>
-
-                <textarea
-                  value={item.remarks}
-                  readOnly={readOnly}
-                  placeholder="Condition, design, identifying notes or internal remarks..."
-                  onFocus={() => {
-                    handleFieldFocus(item.id, "remarks");
-                  }}
-                  onBlur={handleFieldBlur}
-                  onChange={(event) => {
-                    handleRemarksChange(event, item.id);
-                  }}
-                  style={styles.remarksArea}
-                />
-              </div>
             </article>
           );
         })}

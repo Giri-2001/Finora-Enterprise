@@ -489,7 +489,9 @@ export function getGoldItemsStyles(
 
       display: "grid",
 
-      gridTemplateColumns: `repeat(${itemsLayout.columns}, minmax(0, 1fr))`,
+      gridTemplateColumns: compactDevice
+        ? `repeat(${itemsLayout.columns}, minmax(0, 1fr))`
+        : "minmax(0, 1fr)",
 
       gap: itemsLayout.gap,
 
@@ -714,7 +716,11 @@ export function getGoldItemsStyles(
 
       display: "grid",
 
-      gridTemplateColumns: `repeat(${formFieldColumns}, minmax(0, 1fr))`,
+      gridTemplateColumns: isMobile
+        ? "minmax(0, 1fr)"
+        : isTablet
+          ? "repeat(3, minmax(0, 1fr))"
+          : "repeat(6, minmax(0, 1fr))",
 
       gap: moduleTokens.spacing.fieldGap,
 

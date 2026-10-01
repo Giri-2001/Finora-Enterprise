@@ -590,25 +590,11 @@ export function validateGoldLoanStepOne(
 
   const sanctionedAmount = normalizeGoldLoanNumber(input.sanctionedAmount);
 
-  if (eligibleAmount <= 0) {
-    errors.push({
-      field: "eligibleAmount",
-
-      message: "Gold valuation must produce a positive eligible amount.",
-    });
-  }
-
   if (requestedAmount <= 0) {
     errors.push({
       field: "requestedAmount",
 
       message: "Requested amount must be greater than zero.",
-    });
-  } else if (requestedAmount > eligibleAmount) {
-    errors.push({
-      field: "requestedAmount",
-
-      message: "Requested amount cannot exceed Gold Loan eligibility.",
     });
   }
 
@@ -617,12 +603,6 @@ export function validateGoldLoanStepOne(
       field: "sanctionedAmount",
 
       message: "Sanctioned amount must be greater than zero.",
-    });
-  } else if (sanctionedAmount > eligibleAmount) {
-    errors.push({
-      field: "sanctionedAmount",
-
-      message: "Sanctioned amount cannot exceed Gold Loan eligibility.",
     });
   }
 

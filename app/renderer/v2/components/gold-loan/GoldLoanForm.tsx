@@ -513,37 +513,12 @@ function validateGoldStepOne(input: GoldStepOneValidationInput): string[] {
     errors.push("Max LTV must be greater than 0 and not exceed 100%.");
   }
 
-  if (input.eligibleAmount <= 0) {
-    errors.push("Gold valuation must produce a positive eligible loan amount.");
-  }
-
   if (input.requestedAmount <= 0) {
     errors.push("Enter the customer requested amount.");
   }
 
-  if (input.requestedAmount > input.eligibleAmount) {
-    errors.push(
-      "Requested amount cannot exceed the eligible Gold Loan amount.",
-    );
-  }
-
   if (input.sanctionedAmount <= 0) {
     errors.push("Enter the sanctioned Gold Loan amount.");
-  }
-
-  if (input.sanctionedAmount > input.eligibleAmount) {
-    errors.push(
-      "Sanctioned amount cannot exceed the eligible Gold Loan amount.",
-    );
-  }
-
-  if (
-    input.requestedAmount > 0 &&
-    input.sanctionedAmount > input.requestedAmount
-  ) {
-    errors.push(
-      "Sanctioned amount cannot exceed the customer requested amount.",
-    );
   }
 
   return errors;
@@ -1040,17 +1015,8 @@ export default function GoldLoanForm(props: GoldLoanFormProps) {
 
   const ltvInvalid = maxLtvPercentage <= 0 || maxLtvPercentage > 100;
 
-  const requestedInvalid =
-    requestedAmount <= 0 || requestedAmount > eligibleAmount;
-
-  const sanctionedExceedsRequested =
-    requestedAmount > 0 &&
-    sanctionedAmount > requestedAmount;
-
-  const sanctionedInvalid =
-    sanctionedAmount <= 0 ||
-    sanctionedAmount > eligibleAmount ||
-    sanctionedExceedsRequested;
+  const requestedInvalid = requestedAmount <= 0;
+  const sanctionedInvalid = sanctionedAmount <= 0;
 
   const bagInvalid = !bagNumber.trim();
 
@@ -1084,9 +1050,7 @@ export default function GoldLoanForm(props: GoldLoanFormProps) {
     ...getGoldLoanFieldStateStyle({
       focused: false,
 
-      invalid:
-        sanctionedExceedsRequested ||
-        (showValidation && sanctionedInvalid),
+      invalid: showValidation && sanctionedInvalid,
 
       readOnly: false,
     }),
@@ -1340,24 +1304,10 @@ const eligibleValueStyle = {
 
   function handleMoneyFieldChange(
     event: ChangeEvent<HTMLInputElement>,
-
     setter: (value: number) => void,
-
-    maximumValue: number,
   ): void {
-    const normalizedValue =
-      event.target.value.replace(/,/g, "");
-
-    const nextValue =
-      parsePositiveNumber(normalizedValue);
-
-    if (
-      maximumValue > 0 &&
-      nextValue > maximumValue
-    ) {
-      return;
-    }
-
+    const normalizedValue = event.target.value.replace(/,/g, "");
+    const nextValue = parsePositiveNumber(normalizedValue);
     setter(nextValue);
 
     setShowValidation(false);
@@ -1464,7 +1414,7 @@ const eligibleValueStyle = {
           </div>
 
           {/* =================================================
-              GOLD LOCKER ROOM — 70%
+              GOLD LOCKER ROOM —
           ================================================= */}
 
           <div style={styles.lockerPanel}>
@@ -1605,11 +1555,7 @@ const eligibleValueStyle = {
                         : ""
                     }
                     onChange={(event) => {
-                      handleMoneyFieldChange(
-                          event,
-                          setRequestedAmount,
-                          eligibleAmount,
-                        );
+                      handleMoneyFieldChange(event, setRequestedAmount);
                     }}
                     style={styles.controlInput}
                   />
@@ -1644,11 +1590,7 @@ const eligibleValueStyle = {
                         : ""
                     }
                     onChange={(event) => {
-                      handleMoneyFieldChange(
-                          event,
-                          setSanctionedAmount,
-                          requestedAmount,
-                        );
+                      handleMoneyFieldChange(event, setSanctionedAmount);
                     }}
                     style={styles.controlInput}
                   />
