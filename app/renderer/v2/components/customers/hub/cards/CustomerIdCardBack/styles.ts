@@ -1,7 +1,7 @@
 /* ===========================================================
-   FINORA ENTERPRISE OSÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¾Ãƒâ€šÃ‚Â¢
+   FINORA ENTERPRISE OS™
 
-   CUSTOMER ID CARD BACKÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¾Ãƒâ€šÃ‚Â¢
+   CUSTOMER ID CARD BACK™
 
    PREMIUM PRESENTATION STYLES
 
@@ -59,11 +59,11 @@ import "@fontsource/cinzel/700.css";
    THEME VARIABLES
    -----------------------------------------------------------
    ThemeProvider
-        ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œ
+        ↓
    CustomerHanger
-        ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œ
+        ↓
    FINORA Theme CSS Variables
-        ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œ
+        ↓
    CustomerIdCardBack
 =========================================================== */
 

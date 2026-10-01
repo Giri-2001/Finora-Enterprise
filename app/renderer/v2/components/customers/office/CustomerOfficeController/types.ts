@@ -1,7 +1,7 @@
 ﻿/* ===========================================================
-   FINORA ENTERPRISE OSâ„¢
+   FINORA ENTERPRISE OS™
 
-   CUSTOMER OFFICE CONTROLLERâ„¢
+   CUSTOMER OFFICE CONTROLLER™
 
    TYPES
 =========================================================== */

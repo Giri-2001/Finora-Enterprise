@@ -6567,7 +6567,7 @@ public final class FinoraDeveloperControlCenterPlugin
             ) +
             "_" +
             new java.text.SimpleDateFormat(
-                "dd-MM-yyyy_hh：mm",
+                "dd-MM-yyyy_HH-mm",
                 java.util.Locale.US
             ).format(
                 new java.util.Date()

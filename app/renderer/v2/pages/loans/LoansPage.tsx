@@ -1,7 +1,7 @@
 ﻿// ============================================================
-// FINORA ENTERPRISE OSâ„¢
+// FINORA ENTERPRISE OS™
 //
-// V2 LOANS OFFICEâ„¢
+// V2 LOANS OFFICE™
 //
 // ROUTE ENTRY
 //
@@ -23,7 +23,7 @@
 // - LoanStudio owns Standard Loan creation workflow
 // - GoldLoanForm owns Gold Loan Step 1
 // - Gold Loan Service owns authoritative Gold Step-1 preparation
-// - Existing Loan Studio Steps 2â€“6 remain production-owned
+// - Existing Loan Studio Steps 2–6 remain production-owned
 // - No hardcoded Gold locker/rack capacities
 // - No hardcoded Gold storage geometry
 // - UI assessed / eligible values are NOT trusted here
@@ -373,7 +373,7 @@ async function loadGoldLoanCustomers(): Promise<LoanCustomerOption[]> {
 }
 
 // ============================================================
-// GOLD FORM â†’ DOMAIN SERVICE INPUT
+// GOLD FORM → DOMAIN SERVICE INPUT
 //
 // IMPORTANT:
 //
@@ -597,8 +597,8 @@ export default function LoansPage() {
   // This state exists only between:
   //
   // Gold Step 1
-  //       â†“
-  // shared Loan Studio Step 2â€“6
+  //       ↓
+  // shared Loan Studio Step 2–6
   // ==========================================================
 
   const [goldLoanHandoff, setGoldLoanHandoff] =
@@ -1071,13 +1071,13 @@ window.removeEventListener(
   // GOLD STEP-1 COMPLETE
   //
   // GoldLoanForm
-  //      â†“
-  // map UI form â†’ domain service input
-  //      â†“
+  //      ↓
+  // map UI form → domain service input
+  //      ↓
   // authoritative recalculation + validation
-  //      â†“
+  //      ↓
   // GoldLoanStudioStepTwoHandoff
-  //      â†“
+  //      ↓
   // existing Loan Studio Step 2
   // ==========================================================
 
@@ -1263,10 +1263,10 @@ window.removeEventListener(
   }
 
   // ==========================================================
-  // GOLD LOAN â€” KEEP-ALIVE STEP 1 â†” STEP 2â€“6
+  // GOLD LOAN — KEEP-ALIVE STEP 1 ↔ STEP 2–6
   //
   // LoanStudio remains mounted after the first Gold handoff.
-  // Step-1 editing only hides it, preserving all Step 2â€“6 data.
+  // Step-1 editing only hides it, preserving all Step 2–6 data.
   // ==========================================================
 
   if (
@@ -1314,7 +1314,7 @@ window.removeEventListener(
   }
 
   // ==========================================================
-  // GOLD LOAN â€” INITIAL STEP 1
+  // GOLD LOAN — INITIAL STEP 1
   //
   // First launch only. No LoanStudio draft exists yet.
   // ==========================================================

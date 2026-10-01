@@ -1,7 +1,7 @@
 /* ===========================================================
-   FINORA ENTERPRISE OSÃ¢â€žÂ¢
+   FINORA ENTERPRISE OS™
 
-   SMART WALL PANELÃ¢â€žÂ¢
+   SMART WALL PANEL™
 
    CUSTOMER HUB PRESENTATION
 
@@ -378,7 +378,7 @@ export default function SmartWallPanel({
         }}
       >
         {/* ===================================================
-            LEFT Ã¢â‚¬â€ ADD CUSTOMER
+            LEFT — ADD CUSTOMER
         =================================================== */}
 
         <div style={addCustomerCellStyle}>
@@ -419,7 +419,7 @@ export default function SmartWallPanel({
         </div>
 
         {/* ===================================================
-            CENTER Ã¢â‚¬â€ SEARCH
+            CENTER — SEARCH
         =================================================== */}
 
         <div style={searchCellStyle}>
@@ -429,7 +429,7 @@ export default function SmartWallPanel({
         </div>
 
         {/* ===================================================
-            RIGHT Ã¢â‚¬â€ EDIT CUSTOMER
+            RIGHT — EDIT CUSTOMER
         =================================================== */}
 
         <div

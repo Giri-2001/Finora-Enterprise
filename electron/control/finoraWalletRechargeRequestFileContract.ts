@@ -1,5 +1,5 @@
 /* ============================================================
-   FINORA ENTERPRISE OS™
+   FINORA ENTERPRISE OSâ„¢
 
    WALLET RECHARGE REQUEST FILE CONTRACT
 
@@ -32,6 +32,9 @@ import type {
 export const FINORA_WALLET_RECHARGE_REQUEST_FILE_FORMAT =
   "FINORA_WALLET_RECHARGE_REQUEST_V1" as const;
 
+export const FINORA_WALLET_RECHARGE_REQUEST_FILE_FORMAT_V2 =
+  "FINORA_WALLET_RECHARGE_REQUEST_V2" as const;
+
 export const FINORA_WALLET_RECHARGE_REQUEST_FILE_EXTENSION =
   ".finora" as const;
 
@@ -50,8 +53,21 @@ export interface FinoraWalletRechargeRequestFileV1 {
     1;
 }
 
+export interface FinoraWalletRechargeRequestFileV2 {
+
+  format:
+    typeof FINORA_WALLET_RECHARGE_REQUEST_FILE_FORMAT_V2;
+
+  request:
+    Extract<FinoraSignedWalletRechargeRequest, { schemaVersion: 2 }>;
+
+  schemaVersion:
+    2;
+}
+
 export type FinoraWalletRechargeRequestFile =
-  FinoraWalletRechargeRequestFileV1;
+  | FinoraWalletRechargeRequestFileV1
+  | FinoraWalletRechargeRequestFileV2;
 
 function createBusinessCodeToken(
   value:
@@ -260,6 +276,19 @@ export function createFinoraWalletRechargeResultFileName(
     FinoraWalletRechargeResultFileOutcome,
 ): string {
 
+  const now = new Date();
+
+  const timestamp =
+    String(now.getDate()).padStart(2, "0") +
+    "-" +
+    String(now.getMonth() + 1).padStart(2, "0") +
+    "-" +
+    String(now.getFullYear()) +
+    "_" +
+    String(now.getHours()).padStart(2, "0") +
+    "-" +
+    String(now.getMinutes()).padStart(2, "0");
+
   return (
     "FIN-WAL-" +
     outcome +
@@ -283,6 +312,7 @@ export function createFinoraWalletRechargeResultFileName(
     createRequestToken(
       input.requestId,
     ) +
+    "_" + timestamp +
     FINORA_WALLET_RECHARGE_REQUEST_FILE_EXTENSION
   );
 }
@@ -294,6 +324,19 @@ export function createFinoraWalletRechargeRequestFileName(
 
   const payload =
     request.payload;
+
+  const now = new Date();
+
+  const timestamp =
+    String(now.getDate()).padStart(2, "0") +
+    "-" +
+    String(now.getMonth() + 1).padStart(2, "0") +
+    "-" +
+    String(now.getFullYear()) +
+    "_" +
+    String(now.getHours()).padStart(2, "0") +
+    "-" +
+    String(now.getMinutes()).padStart(2, "0");
 
   return (
     "FIN-WAL-REQ-" +
@@ -316,6 +359,8 @@ export function createFinoraWalletRechargeRequestFileName(
     createRequestToken(
       payload.requestId,
     ) +
+    "_" +
+    timestamp +
     FINORA_WALLET_RECHARGE_REQUEST_FILE_EXTENSION
   );
 }
@@ -324,6 +369,18 @@ export function createFinoraWalletRechargeRequestFile(
   request:
     FinoraSignedWalletRechargeRequest,
 ): FinoraWalletRechargeRequestFile {
+
+  if (request.schemaVersion === 2) {
+    return {
+      format:
+        FINORA_WALLET_RECHARGE_REQUEST_FILE_FORMAT_V2,
+
+      request,
+
+      schemaVersion:
+        2,
+    };
+  }
 
   return {
     format:

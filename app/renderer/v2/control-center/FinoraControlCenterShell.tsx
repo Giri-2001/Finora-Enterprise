@@ -37,7 +37,7 @@ import FinoraControlCenterIssuanceWorkspace from "./FinoraControlCenterIssuanceW
 import "./FinoraControlCenterResponsive.css";
 
 /* ===========================================================
-   FINORA ENTERPRISE OSâ„¢
+   FINORA ENTERPRISE OS™
 
    CONTROL CENTER
    SHELL FOUNDATION
@@ -1131,7 +1131,7 @@ export default function FinoraControlCenterShell() {
               }}
             >
               {submitting
-                ? "Configuringâ€¦"
+                ? "Configuring…"
                 : "Configure Developer Security Code"}
             </button>
 
@@ -1269,7 +1269,7 @@ export default function FinoraControlCenterShell() {
                     0.72,
                 }}
               >
-                Checking Developer security stateâ€¦
+                Checking Developer security state…
               </p>
             )}
 
@@ -1366,9 +1366,9 @@ export default function FinoraControlCenterShell() {
               }}
             >
               {checking
-                ? "Checking securityâ€¦"
+                ? "Checking security…"
                 : submitting
-                  ? "Verifyingâ€¦"
+                  ? "Verifying…"
                   : "Access Control Center"}
             </button>
           </form>
@@ -1807,7 +1807,7 @@ const [
                   0.76,
               }}
             >
-              Loading Control Center trust identityâ€¦
+              Loading Control Center trust identity…
             </p>
           )}
 

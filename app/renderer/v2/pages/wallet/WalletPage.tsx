@@ -1448,7 +1448,7 @@ export default function WalletPage({
                       : "Import Signed Recharge"}
                   </button>
 
-                  {importRechargeMessage ? (
+                  {(importRechargeMessage ?? error) ? (
                     <div
                       role="status"
                       aria-live="polite"
@@ -1459,7 +1459,7 @@ export default function WalletPage({
                         overflowWrap: "anywhere",
                       }}
                     >
-                      {importRechargeMessage}
+                      {importRechargeMessage ?? error}
                     </div>
                   ) : null}
 

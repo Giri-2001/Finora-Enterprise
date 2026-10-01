@@ -934,7 +934,7 @@ async function runSelfTest():
       getRawControlStoreFixtureFile();
 
     // --------------------------------------------------------
-    // CASE 1 ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â MISSING PORTABILITY PROVENANCE
+    // CASE 1 — MISSING PORTABILITY PROVENANCE
     // --------------------------------------------------------
 
     const missingProofStore =
@@ -1053,7 +1053,7 @@ async function runSelfTest():
     );
 
     // --------------------------------------------------------
-    // CASE 2 ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â CROSS-RECORD VERIFICATION / PROVENANCE MISMATCH
+    // CASE 2 — CROSS-RECORD VERIFICATION / PROVENANCE MISMATCH
     //
     // Keep each record structurally valid, but make the source
     // Branch Access verification timestamp disagree with the
@@ -1187,7 +1187,7 @@ async function runSelfTest():
     );
 
     // --------------------------------------------------------
-    // CASE 3 ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â AMBIGUOUS / DUPLICATE PORTABILITY PROVENANCE
+    // CASE 3 — AMBIGUOUS / DUPLICATE PORTABILITY PROVENANCE
     //
     // Production APIs cannot create this state: the Control
     // Store duplicate guard rejects it.

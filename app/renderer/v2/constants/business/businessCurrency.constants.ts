@@ -1,5 +1,5 @@
 // ============================================================
-// FINORA ENTERPRISE OSâ„¢
+// FINORA ENTERPRISE OS™
 //
 // V2 BUSINESS DOMAIN
 // BUSINESS CURRENCY CONSTANTS

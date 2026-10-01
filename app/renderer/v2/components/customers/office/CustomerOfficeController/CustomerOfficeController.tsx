@@ -1,7 +1,7 @@
 /* ===========================================================
-   FINORA ENTERPRISE OSâ„¢
+   FINORA ENTERPRISE OS™
 
-   CUSTOMER OFFICE CONTROLLERâ„¢
+   CUSTOMER OFFICE CONTROLLER™
 
    RECEPTION / WORKSPACE ASSEMBLY
 
@@ -275,7 +275,7 @@ export default function CustomerOfficeController({
           }}
         >
           <SmartWallPanel
-            title={"FINORA Smart Customers Hubâ„¢"}
+            title={"FINORA Smart Customers Hub™"}
             /* =================================================
                  SMART WALL
               ================================================= */

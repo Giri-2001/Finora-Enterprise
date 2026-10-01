@@ -1,6 +1,6 @@
 /* ===========================================================
-   FINORA ENTERPRISE OSï¿½
-   RESPONSIVE ENGINEï¿½
+   FINORA ENTERPRISE OS™
+   RESPONSIVE ENGINE™
 
    CENTRAL RESPONSIVE TOKENS
 

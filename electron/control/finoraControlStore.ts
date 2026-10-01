@@ -1,5 +1,5 @@
 // ============================================================
-// FINORA ENTERPRISE OSâ„¢
+// FINORA ENTERPRISE OS™
 //
 // ELECTRON CONTROL STORE
 //
@@ -8568,7 +8568,7 @@ export function completeFinoraPortableBranchAuthCredentialRotationTransaction(
 }
 
 /* ============================================================
-   LEGACY SECURITY CODE BOOTSTRAP â€” CREDENTIAL COMMIT
+   LEGACY SECURITY CODE BOOTSTRAP — CREDENTIAL COMMIT
 
    This authority is intentionally narrow:
    - existing ACTIVE credential only
@@ -9329,7 +9329,7 @@ async function applyVerifiedBusinessProfileInternal(
   }
 
   // ----------------------------------------------------------
-  // PROFILE â†” TARGET
+  // PROFILE ↔ TARGET
   // ----------------------------------------------------------
 
   if (
@@ -9384,7 +9384,7 @@ async function applyVerifiedBusinessProfileInternal(
   }
 
   // ----------------------------------------------------------
-  // CONTROL STORE INSTALLATION â†” VERIFIED TARGET
+  // CONTROL STORE INSTALLATION ↔ VERIFIED TARGET
   // ----------------------------------------------------------
 
   if (
@@ -10106,7 +10106,7 @@ async function applyVerifiedPricingPolicyInternal(
   }
 
   // ----------------------------------------------------------
-  // POLICY â†” VERIFIED TARGET BINDING
+  // POLICY ↔ VERIFIED TARGET BINDING
   // ----------------------------------------------------------
 
   if (

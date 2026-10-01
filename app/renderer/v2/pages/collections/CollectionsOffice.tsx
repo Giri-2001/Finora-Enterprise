@@ -1,7 +1,7 @@
 ﻿// ============================================================
-// FINORA ENTERPRISE OSÃ¢â€žÂ¢
+// FINORA ENTERPRISE OS™
 //
-// COLLECTIONS OFFICEÃ¢â€žÂ¢
+// COLLECTIONS OFFICE™
 //
 // RESPONSIBILITY:
 // - Default Collections workspace
@@ -188,7 +188,7 @@ function formatCurrency(value: number | undefined): string {
     currency: "INR",
 
     maximumFractionDigits: 0,
-  }).format(safeNumber(value)).replace(/^Ã¢â€šÂ¹\s*/, "Ã¢â€šÂ¹ ");
+  }).format(safeNumber(value)).replace(/^₹\s*/, "₹ ");
 }
 
 function formatDate(value: string): string {
@@ -1406,7 +1406,7 @@ export default function CollectionsOffice({
                           cursor: !hasPreviousPaginationWindow ? "default" : "pointer",
                         }}
                       >
-                        Ã¢â€ Â Previous
+                        ← Previous
                       </button>
 
                       {paginationItems.map((item) => {
@@ -1416,7 +1416,7 @@ export default function CollectionsOffice({
                         ) {
                           return (
                             <span key={item} style={paginationEllipsisStyle}>
-                              Ã¢â‚¬Â¦
+                              …
                             </span>
                           );
                         }
@@ -1451,7 +1451,7 @@ export default function CollectionsOffice({
                           cursor: !hasNextPaginationWindow ? "default" : "pointer",
                         }}
                       >
-                        Next Ã¢â€ â€™
+                        Next →
                       </button>
                     </div>
                   </div>

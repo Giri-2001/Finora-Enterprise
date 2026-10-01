@@ -1,5 +1,5 @@
 /* ============================================================
-   FINORA ENTERPRISE OSâ„¢
+   FINORA ENTERPRISE OS™
 
    CONTROL PLANE
    SIGNED WALLET RECHARGE DECLINE PACKAGE APPLY SERVICE

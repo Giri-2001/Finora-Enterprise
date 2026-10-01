@@ -1,5 +1,5 @@
-/* ============================================================
-   FINORA ENTERPRISE OS™
+﻿/* ============================================================
+   FINORA ENTERPRISE OSâ„¢
 
    WALLET RECHARGE REQUEST EXCHANGE
 
@@ -62,16 +62,24 @@ import {
 } from "./finoraInstallationBindingService.js";
 
 import {
+  signFinoraBranchCertificationCanonicalValue,
+} from "./finoraBranchCertificationCrypto.js";
+
+import {
+  requireFinoraWalletBranchCertificationSessionAuthority,
+} from "./finoraWalletBranchCertificationSessionAuthority.js";
+
+import {
   FINORA_WALLET_RECHARGE_REQUEST_CANONICALIZATION,
   FINORA_WALLET_RECHARGE_REQUEST_CURRENCY,
   FINORA_WALLET_RECHARGE_REQUEST_PURPOSE,
-  FINORA_WALLET_RECHARGE_REQUEST_SCHEMA_VERSION,
+  FINORA_WALLET_RECHARGE_REQUEST_SCHEMA_VERSION_V2,
   FINORA_WALLET_RECHARGE_REQUEST_SIGNATURE_ALGORITHM,
   FINORA_WALLET_RECHARGE_REQUEST_SIGNATURE_ENCODING,
   type FinoraSignedWalletRechargeRequest,
   type FinoraWalletRechargeRequestPaymentMethod,
   type FinoraWalletRechargeRequestPaymentSource,
-  type FinoraWalletRechargeRequestPayloadV1,
+  type FinoraWalletRechargeRequestPayloadV2,
 } from "./finoraWalletRechargeRequest.types.js";
 
 // ============================================================
@@ -461,7 +469,7 @@ export async function createFinoraWalletRechargeRequest(
   // ----------------------------------------------------------
 
   const payload:
-    FinoraWalletRechargeRequestPayloadV1 = {
+    FinoraWalletRechargeRequestPayloadV2 = {
 
       purpose:
         FINORA_WALLET_RECHARGE_REQUEST_PURPOSE,
@@ -501,6 +509,24 @@ export async function createFinoraWalletRechargeRequest(
 
         publicKeyFingerprint:
           installation.publicKeyFingerprint,
+
+        platform:
+          installation.platform,
+
+        algorithm:
+          installation.algorithm,
+
+        publicKeyFormat:
+          installation.publicKeyFormat,
+
+        publicKey:
+          installation.publicKey,
+
+        createdAt:
+          installation.createdAt,
+
+        schemaVersion:
+          installation.schemaVersion,
       },
 
       amountMinor:
@@ -519,7 +545,7 @@ export async function createFinoraWalletRechargeRequest(
         new Date().toISOString(),
 
       schemaVersion:
-        FINORA_WALLET_RECHARGE_REQUEST_SCHEMA_VERSION,
+        FINORA_WALLET_RECHARGE_REQUEST_SCHEMA_VERSION_V2,
     };
 
   // ----------------------------------------------------------
@@ -539,6 +565,19 @@ export async function createFinoraWalletRechargeRequest(
   assertCanonicalP1363Signature(
     signatureValue,
   );
+
+  const branchCertificationMaterial =
+    requireFinoraWalletBranchCertificationSessionAuthority(
+      session.ownerId,
+      session.businessId,
+      session.branchId,
+    );
+
+  const branchCertificationSignature =
+    signFinoraBranchCertificationCanonicalValue(
+      canonicalPayload,
+      branchCertificationMaterial,
+    );
 
   return {
     payload,
@@ -560,8 +599,10 @@ export async function createFinoraWalletRechargeRequest(
         signatureValue,
     },
 
+    branchCertificationSignature,
+
     schemaVersion:
-      FINORA_WALLET_RECHARGE_REQUEST_SCHEMA_VERSION,
+      FINORA_WALLET_RECHARGE_REQUEST_SCHEMA_VERSION_V2,
   };
 }
 

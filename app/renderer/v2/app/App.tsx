@@ -17,7 +17,7 @@ import {
 } from "../components/common/dialog/finoraDialog.service";
 import { getFinoraLoginSessionBridge } from "../services/auth/loginSessionBridge";
 // ============================================================
-// FINORA ENTERPRISE OSâ„¢
+// FINORA ENTERPRISE OS™
 //
 // V2 APPLICATION ENTRY
 //
@@ -252,9 +252,9 @@ const LOANS_GLOBAL_BACK_EVENT = "FINORA_V2_LOANS_GLOBAL_BACK";
 // These events create a small navigation bridge between:
 //
 // App.tsx
-//     â†“
+//     ↓
 // CustomerDepartment
-//     â†“
+//     ↓
 // CustomerWizard
 //
 // This allows the single GlobalHeader Back button to close
@@ -281,11 +281,11 @@ const CUSTOMER_DEPARTMENT_REFRESH_EVENT =
 // The bridge is:
 //
 // Loans Office
-//     â†“
+//     ↓
 // FINORA_V2_OPEN_LOAN_STUDIO
-//     â†“
+//     ↓
 // App.tsx
-//     â†“
+//     ↓
 // Loan Studio
 //
 // This keeps Loan Studio as the single existing workflow and
@@ -652,11 +652,11 @@ function BusinessContextErrorScreen({
 // STARTUP ORDER:
 //
 // App Start
-//   â†“
+//   ↓
 // Secure Installation Identity
-//   â†“
+//   ↓
 // Branch Activation
-//   â†“
+//   ↓
 // Existing Login / Authenticated Application
 //
 // IMPORTANT:

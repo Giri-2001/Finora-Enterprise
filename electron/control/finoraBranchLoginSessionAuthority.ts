@@ -1,5 +1,5 @@
 /* ============================================================
-   FINORA ENTERPRISE OS™
+   FINORA ENTERPRISE OSâ„¢
 
    ELECTRON CONTROL
    BRANCH LOGIN SESSION AUTHORITY
@@ -76,6 +76,10 @@ import type {
 import {
   bootstrapFinoraLegacySecurityCode,
 } from "./finoraLegacySecurityCodeBootstrapCoordinator.js";
+
+import {
+  restoreFinoraWalletBranchCertificationAuthority,
+} from "./finoraWalletBranchCertificationLoginAuthority.js";
 
 // ============================================================
 // CONSTANTS
@@ -1664,6 +1668,28 @@ export async function createFinoraBranchLoginSession(
     toPrincipalFromAuthentication(
       authenticationResult.data,
     );
+
+  const walletBranchCertificationResult =
+    await restoreFinoraWalletBranchCertificationAuthority({
+      ownerId: principal.ownerId,
+      businessId: principal.businessId,
+      branchId: principal.branchId,
+      userId: principal.userId,
+      username: principal.username,
+      fullName: principal.fullName,
+      role: principal.role,
+      authGeneration: principal.authGeneration,
+      storageMode: principal.storageMode,
+      dataContext: principal.dataContext,
+      ...(principal.demoId === undefined ? {} : { demoId: principal.demoId }),
+      password: request.password,
+      ...(request.securityCode === undefined ? {} : { securityCode: request.securityCode }),
+      portableStore,
+    });
+
+  if (!walletBranchCertificationResult.success) {
+    return walletBranchCertificationResult;
+  }
 
   const authorizationResult =
     await authorizePrincipal(

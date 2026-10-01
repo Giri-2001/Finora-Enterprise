@@ -1,5 +1,5 @@
 /* ===========================================================
-   FINORA ENTERPRISE OSâ„¢
+   FINORA ENTERPRISE OS™
 
    WINDOWS INSTALLATION BINDING CRYPTO
 

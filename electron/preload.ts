@@ -1,5 +1,5 @@
 // ============================================================
-// FINORA ENTERPRISE OSâ„¢
+// FINORA ENTERPRISE OS™
 // ELECTRON PRELOAD
 // V2 SECURE STORAGE BRIDGE
 //

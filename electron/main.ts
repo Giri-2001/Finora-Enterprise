@@ -1,5 +1,5 @@
 // ============================================================
-// FINORA ENTERPRISE OSÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¾Ãƒâ€šÃ‚Â¢
+// FINORA ENTERPRISE OS™
 // ELECTRON MAIN PROCESS
 // V2 USB / PENDRIVE STORAGE IPC
 //

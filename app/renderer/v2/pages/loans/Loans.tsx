@@ -1,6 +1,6 @@
-﻿// FINORA ENTERPRISE OSâ„¢
+﻿// FINORA ENTERPRISE OS™
 //
-// V2 LOANS OFFICEâ„¢
+// V2 LOANS OFFICE™
 //
 // LOANS PORTFOLIO
 //
@@ -866,11 +866,11 @@ export default function Loans({
   // This fixes:
   //
   // Ctrl + R
-  //     â†“
+  //     ↓
   // fresh StorageManager
-  //     â†“
+  //     ↓
   // wrong/default runtime context
-  //     â†“
+  //     ↓
   // empty Loans Office
   //
   // ==========================================================
@@ -1817,7 +1817,7 @@ export default function Loans({
                           cursor: !hasPreviousPaginationWindow ? "default" : "pointer",
                         }}
                       >
-                        â† Previous
+                        ← Previous
                       </button>
 
                       {paginationItems.map((item) => {
@@ -1830,7 +1830,7 @@ export default function Loans({
                               key={item}
                               style={themedPaginationEllipsisStyle}
                             >
-                              â€¦
+                              …
                             </span>
                           );
                         }
@@ -1863,7 +1863,7 @@ export default function Loans({
                           cursor: !hasNextPaginationWindow ? "default" : "pointer",
                         }}
                       >
-                        Next â†’
+                        Next →
                       </button>
                     </div>
                   </div>
@@ -1929,7 +1929,7 @@ export default function Loans({
                           cursor: !hasPreviousPaginationWindow ? "default" : "pointer",
                         }}
                       >
-                        â† Previous
+                        ← Previous
                       </button>
 
                       {paginationItems.map((item) => {
@@ -1942,7 +1942,7 @@ export default function Loans({
                               key={item}
                               style={themedPaginationEllipsisStyle}
                             >
-                              â€¦
+                              …
                             </span>
                           );
                         }
@@ -1975,7 +1975,7 @@ export default function Loans({
                           cursor: !hasNextPaginationWindow ? "default" : "pointer",
                         }}
                       >
-                        Next â†’
+                        Next →
                       </button>
                     </div>
                   </div>

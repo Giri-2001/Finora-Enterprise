@@ -5,44 +5,35 @@
 
    MODULE  : Wallet
    LAYER   : Native Shared Contract
-   VERSION : 1.0
+   VERSION : 2.0
    STATUS  : Production Foundation
 
-   RESPONSIBILITY:
-
-   - Define one canonical Owner -> Control Center Wallet Recharge
-     request artifact.
-   - Bind the request to the exact authenticated branch scope.
-   - Bind the request to the exact native installation identity.
-   - Carry stable paymentReference identity.
-   - Carry human-readable Business / Branch codes for operator UX.
-   - Carry one native installation-binding possession signature.
-
    SECURITY:
-
-   - The filename is NEVER authority.
-   - businessCode / branchCode are display + filename metadata only.
-   - ownerId / businessId / branchId + native installation binding
-     are authoritative request scope.
-   - Signature verification must use the provisioned Branch Registry
-     installation public key.
-   - No Control Center private signing material exists here.
-   - No Wallet credit is authorized by this request.
-   - This request only asks the Control Center to make a decision.
-
-   IMPORTANT:
-
-   - REQ != DONE.
-   - A valid REQ never credits Wallet balance.
-   - Only a separately signed Control Center WALLET_RECHARGE
-     authorization may credit the Wallet.
+   - V1 remains defined only for historical compatibility.
+   - New Owner Wallet Recharge Requests use portable V2.
+   - V2 carries the current installation public identity and
+     both installation-possession + Branch Certification proofs.
 ============================================================ */
+
+import type {
+  FinoraBranchCertificationSignatureV1,
+} from "./finoraBranchCertificationContract.js";
 
 export const FINORA_WALLET_RECHARGE_REQUEST_PURPOSE =
   "WALLET_RECHARGE_REQUEST" as const;
 
-export const FINORA_WALLET_RECHARGE_REQUEST_SCHEMA_VERSION =
+export const FINORA_WALLET_RECHARGE_REQUEST_SCHEMA_VERSION_V1 =
   1 as const;
+
+export const FINORA_WALLET_RECHARGE_REQUEST_SCHEMA_VERSION_V2 =
+  2 as const;
+
+/*
+ * Current production emission version.
+ * Historical V1 types use the explicit V1 constant above.
+ */
+export const FINORA_WALLET_RECHARGE_REQUEST_SCHEMA_VERSION =
+  FINORA_WALLET_RECHARGE_REQUEST_SCHEMA_VERSION_V1;
 
 export const FINORA_WALLET_RECHARGE_REQUEST_SIGNATURE_ALGORITHM =
   "ECDSA_P256_SHA256" as const;
@@ -60,7 +51,7 @@ export const FINORA_WALLET_RECHARGE_REQUEST_CURRENCY =
   "INR" as const;
 
 // ============================================================
-// PAYMENT METHOD
+// PAYMENT
 // ============================================================
 
 export type FinoraWalletRechargeRequestPaymentMethod =
@@ -82,11 +73,10 @@ export type FinoraWalletRechargeRequestPaymentSource =
   | "MANUAL";
 
 // ============================================================
-// AUTHORITATIVE BRANCH SCOPE
+// SCOPE / DISPLAY
 // ============================================================
 
 export interface FinoraWalletRechargeRequestScope {
-
   ownerId:
     string;
 
@@ -97,15 +87,7 @@ export interface FinoraWalletRechargeRequestScope {
     string;
 }
 
-// ============================================================
-// DISPLAY IDENTITY
-//
-// These values improve filename/operator readability.
-// They are NOT independent authorization authority.
-// ============================================================
-
 export interface FinoraWalletRechargeRequestDisplayIdentity {
-
   businessCode:
     string;
 
@@ -114,11 +96,10 @@ export interface FinoraWalletRechargeRequestDisplayIdentity {
 }
 
 // ============================================================
-// NATIVE INSTALLATION BINDING
+// INSTALLATION IDENTITY
 // ============================================================
 
-export interface FinoraWalletRechargeRequestInstallationBinding {
-
+export interface FinoraWalletRechargeRequestInstallationBindingV1 {
   installationId:
     string;
 
@@ -132,12 +113,39 @@ export interface FinoraWalletRechargeRequestInstallationBinding {
     string;
 }
 
+export interface FinoraWalletRechargeRequestInstallationBindingV2
+  extends FinoraWalletRechargeRequestInstallationBindingV1 {
+
+  platform:
+    string;
+
+  algorithm:
+    typeof FINORA_WALLET_RECHARGE_REQUEST_SIGNATURE_ALGORITHM;
+
+  publicKeyFormat:
+    "SPKI_DER_BASE64";
+
+  publicKey:
+    string;
+
+  createdAt:
+    string;
+
+  schemaVersion:
+    1;
+}
+
+/*
+ * Historical public name retained for V1 consumers.
+ */
+export type FinoraWalletRechargeRequestInstallationBinding =
+  FinoraWalletRechargeRequestInstallationBindingV1;
+
 // ============================================================
-// CANONICAL SIGNED PAYLOAD
+// PAYLOADS
 // ============================================================
 
-export interface FinoraWalletRechargeRequestPayloadV1 {
-
+interface FinoraWalletRechargeRequestPayloadBase {
   purpose:
     typeof FINORA_WALLET_RECHARGE_REQUEST_PURPOSE;
 
@@ -153,9 +161,6 @@ export interface FinoraWalletRechargeRequestPayloadV1 {
   displayIdentity:
     FinoraWalletRechargeRequestDisplayIdentity;
 
-  installation:
-    FinoraWalletRechargeRequestInstallationBinding;
-
   amountMinor:
     number;
 
@@ -170,9 +175,26 @@ export interface FinoraWalletRechargeRequestPayloadV1 {
 
   requestedAt:
     string;
+}
+
+export interface FinoraWalletRechargeRequestPayloadV1
+  extends FinoraWalletRechargeRequestPayloadBase {
+
+  installation:
+    FinoraWalletRechargeRequestInstallationBindingV1;
 
   schemaVersion:
-    typeof FINORA_WALLET_RECHARGE_REQUEST_SCHEMA_VERSION;
+    typeof FINORA_WALLET_RECHARGE_REQUEST_SCHEMA_VERSION_V1;
+}
+
+export interface FinoraWalletRechargeRequestPayloadV2
+  extends FinoraWalletRechargeRequestPayloadBase {
+
+  installation:
+    FinoraWalletRechargeRequestInstallationBindingV2;
+
+  schemaVersion:
+    typeof FINORA_WALLET_RECHARGE_REQUEST_SCHEMA_VERSION_V2;
 }
 
 // ============================================================
@@ -180,7 +202,6 @@ export interface FinoraWalletRechargeRequestPayloadV1 {
 // ============================================================
 
 export interface FinoraWalletRechargeRequestSignature {
-
   algorithm:
     typeof FINORA_WALLET_RECHARGE_REQUEST_SIGNATURE_ALGORITHM;
 
@@ -198,11 +219,10 @@ export interface FinoraWalletRechargeRequestSignature {
 }
 
 // ============================================================
-// SIGNED REQUEST
+// SIGNED REQUESTS
 // ============================================================
 
 export interface FinoraSignedWalletRechargeRequestV1 {
-
   payload:
     FinoraWalletRechargeRequestPayloadV1;
 
@@ -210,11 +230,26 @@ export interface FinoraSignedWalletRechargeRequestV1 {
     FinoraWalletRechargeRequestSignature;
 
   schemaVersion:
-    typeof FINORA_WALLET_RECHARGE_REQUEST_SCHEMA_VERSION;
+    typeof FINORA_WALLET_RECHARGE_REQUEST_SCHEMA_VERSION_V1;
+}
+
+export interface FinoraSignedWalletRechargeRequestV2 {
+  payload:
+    FinoraWalletRechargeRequestPayloadV2;
+
+  signature:
+    FinoraWalletRechargeRequestSignature;
+
+  branchCertificationSignature:
+    FinoraBranchCertificationSignatureV1;
+
+  schemaVersion:
+    typeof FINORA_WALLET_RECHARGE_REQUEST_SCHEMA_VERSION_V2;
 }
 
 export type FinoraSignedWalletRechargeRequest =
-  FinoraSignedWalletRechargeRequestV1;
+  | FinoraSignedWalletRechargeRequestV1
+  | FinoraSignedWalletRechargeRequestV2;
 
 /* ============================================================
    END

@@ -292,7 +292,7 @@ export default function NomineePreviewCard({
               }
             >
 
-              âœ“ Linked
+              ✓ Linked
 
             </div>
 

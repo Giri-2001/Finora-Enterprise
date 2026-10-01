@@ -1,7 +1,7 @@
 /* ===========================================================
-   FINORA ENTERPRISE OSâ„¢
+   FINORA ENTERPRISE OS™
 
-   SMART WALL PANELâ„¢
+   SMART WALL PANEL™
 
    TYPES
 =========================================================== */

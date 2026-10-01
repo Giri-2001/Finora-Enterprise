@@ -1,7 +1,7 @@
 /* ============================================================
-   FINORA ENTERPRISE OSÃ¢â€žÂ¢
+   FINORA ENTERPRISE OS™
 
-   CONTROL CENTER Ã¢â‚¬â€ BRANCH REGISTRY CONTRACT
+   CONTROL CENTER — BRANCH REGISTRY CONTRACT
 
    MODULE  : Control Center
    LAYER   : Admin Authority Contract

@@ -2544,7 +2544,7 @@ registerFinoraDeveloperSecurityControlCenterHandler(
 
   // ----------------------------------------------------------
   // ----------------------------------------------------------
-  // VERIFIED WALLET RECHARGE REQUEST â€” DECLINE + NATIVE EXPORT
+  // VERIFIED WALLET RECHARGE REQUEST — DECLINE + NATIVE EXPORT
   //
   // Renderer supplies ZERO target / financial authority args.
   // The main-process verified Request session is consumed before

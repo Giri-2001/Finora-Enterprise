@@ -1,7 +1,7 @@
 package com.finora.enterprise.control;
 
 // ============================================================
-// FINORA ENTERPRISE OSâ„¢
+// FINORA ENTERPRISE OS™
 //
 // ANDROID CONTROL
 // VERIFIED BRANCH ACTIVATION STATE ENGINE

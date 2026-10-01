@@ -1,5 +1,5 @@
 /* ============================================================
-   FINORA ENTERPRISE OSâ„¢
+   FINORA ENTERPRISE OS™
 
    CONTROL CENTER
    PRIVILEGED WALLET RECHARGE DECLINE ISSUER

@@ -1,4 +1,4 @@
-import {
+﻿import {
   useCallback,
   useEffect,
   useState,
@@ -29,7 +29,7 @@ import {
 } from "../../../../electron/control-center/finoraControlCenterBranchValidity";
 
 /* ===========================================================
-   FINORA ENTERPRISE OSâ„¢
+   FINORA ENTERPRISE OS™
 
    CONTROL CENTER
    BRANCH REGISTRY PANEL
@@ -99,7 +99,7 @@ function formatLastReportedWallet(
     wallet.balanceMinor /
     100;
 
-  return `â‚¹${new Intl.NumberFormat(
+  return `₹${new Intl.NumberFormat(
     "en-IN",
     {
       minimumFractionDigits:
@@ -303,19 +303,11 @@ function BranchCard({
 
   if (directorySummary) {
 
-    const summaryOwnerName =
-      directoryMetadata?.ownerName ??
-      "â€”";
+    const summaryOwnerName = directoryMetadata?.ownerName ?? identity.ownerId;
 
-    const summaryBusinessName =
-      directoryMetadata?.businessName ??
-      record.profile?.businessName ??
-      "â€”";
+    const summaryBusinessName = businessName;
 
-    const summaryBranchName =
-      directoryMetadata?.branchName ??
-      record.profile?.branchName ??
-      "â€”";
+    const summaryBranchName = branchName;
 
     return (
       <article
@@ -570,7 +562,7 @@ function BranchCard({
                 "0.01em",
             }}
           >
-            Open Branch Workspace â†’
+            Open Branch Workspace
           </div>
         </div>
       </article>
@@ -740,7 +732,7 @@ function BranchCard({
             }}
           >
             {record.access
-              ? `${record.access.accessType} Â· ${record.access.storageMode}`
+              ? `${record.access.accessType} · ${record.access.storageMode}`
               : "Not provisioned"}
           </dd>
         </div>
@@ -874,7 +866,7 @@ function BranchCard({
                 1,
             }}
           >
-            â†’
+            →
           </span>
         </div>
       )}
@@ -2061,7 +2053,7 @@ export default function FinoraControlCenterBranchRegistryPanel({
           >
             {historicalBackfillState ===
               "RUNNING"
-              ? "Backfill in progressâ€¦"
+              ? "Backfill in progress..."
               : "Backfill Existing Branch"}
           </button>
 
@@ -2105,7 +2097,7 @@ export default function FinoraControlCenterBranchRegistryPanel({
         >
           {loadState ===
             "LOADING"
-            ? "Loadingâ€¦"
+            ? "Loading…"
             : "Refresh"}
         </button>
         </div>
@@ -2199,7 +2191,7 @@ export default function FinoraControlCenterBranchRegistryPanel({
               "pointer",
           }}
         >
-          â† Back to FINORA Branches
+          Back to FINORA Branches
         </button>
       )}
 

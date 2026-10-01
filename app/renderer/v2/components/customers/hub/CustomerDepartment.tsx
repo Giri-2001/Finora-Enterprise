@@ -1,7 +1,7 @@
 ﻿// ============================================================
-// FINORA ENTERPRISE OSâ„¢
+// FINORA ENTERPRISE OS™
 //
-// CUSTOMER DEPARTMENTâ„¢
+// CUSTOMER DEPARTMENT™
 //
 // DIGITAL FINANCE OFFICE
 //
@@ -102,13 +102,13 @@ const CUSTOMER_DEPARTMENT_REFRESH_EVENT =
 // Flow:
 //
 // Customer Department
-//        â†“
+//        ↓
 // Customer Wizard
-//        â†“
+//        ↓
 // Global Header Back
-//        â†“
+//        ↓
 // CustomerDepartment closes Wizard
-//        â†“
+//        ↓
 // Customer Department
 //
 // ============================================================
@@ -382,7 +382,7 @@ export default function CustomerDepartment({
         const customerProfiles = getCustomers();
 
         // ----------------------------------------------------
-        // MAP CUSTOMER DOMAIN â†’ CUSTOMER OFFICE
+        // MAP CUSTOMER DOMAIN → CUSTOMER OFFICE
         // ----------------------------------------------------
 
         const mappedCustomers = await customerOfficeMapper(customerProfiles);
@@ -481,7 +481,7 @@ export default function CustomerDepartment({
   }, []);
 
   // ==========================================================
-  // OPEN CUSTOMER WIZARD â€” EDIT MODE
+  // OPEN CUSTOMER WIZARD — EDIT MODE
   // ==========================================================
 
   const handleEditCustomer = useCallback((customer: OfficeCustomer) => {

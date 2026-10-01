@@ -1,5 +1,5 @@
 // ============================================================
-// FINORA ENTERPRISE OSâ„¢
+// FINORA ENTERPRISE OS™
 //
 // V2 ACTIVATION DOMAIN
 // ACTIVATION CONTROL BRIDGE

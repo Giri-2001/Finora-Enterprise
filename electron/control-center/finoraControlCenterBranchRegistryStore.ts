@@ -1,7 +1,7 @@
 /* ============================================================
-   FINORA ENTERPRISE OSÃ¢â€žÂ¢
+   FINORA ENTERPRISE OS™
 
-   CONTROL CENTER Ã¢â‚¬â€ BRANCH REGISTRY STORE
+   CONTROL CENTER — BRANCH REGISTRY STORE
 
    MODULE  : Control Center
    LAYER   : Privileged Main-Process Persistence

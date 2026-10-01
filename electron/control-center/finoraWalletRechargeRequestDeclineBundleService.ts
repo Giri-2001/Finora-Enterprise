@@ -1,5 +1,5 @@
 /* ============================================================
-   FINORA ENTERPRISE OSâ„¢
+   FINORA ENTERPRISE OS™
 
    CONTROL CENTER
    WALLET RECHARGE REQUEST DECLINE BUNDLE SERVICE

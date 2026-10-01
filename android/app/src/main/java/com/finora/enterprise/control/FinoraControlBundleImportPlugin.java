@@ -31,7 +31,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.Locale;
 
 /* ============================================================
-   FINORA ENTERPRISE OSÃ¢â€žÂ¢
+   FINORA ENTERPRISE OS™
 
    ANDROID CONTROL BUNDLE IMPORT PLUGIN
 
