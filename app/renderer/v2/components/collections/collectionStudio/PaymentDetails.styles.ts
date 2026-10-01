@@ -178,7 +178,7 @@ export const collectionPaymentDetailsStyles: Record<string, CSSProperties> = {
 
     fontFamily: INTER_FONT,
 
-    fontSize: "15px",
+    fontSize: "16px",
 
     fontWeight: 800,
 
@@ -196,7 +196,7 @@ export const collectionPaymentDetailsStyles: Record<string, CSSProperties> = {
 
     fontFamily: INTER_FONT,
 
-    fontSize: "11px",
+    fontSize: "12px",
 
     fontWeight: 500,
 
@@ -264,7 +264,7 @@ export const collectionPaymentDetailsStyles: Record<string, CSSProperties> = {
 
     fontFamily: INTER_FONT,
 
-    fontSize: "12px",
+    fontSize: "13px",
 
     fontWeight: 700,
 
@@ -309,7 +309,7 @@ export const collectionPaymentDetailsStyles: Record<string, CSSProperties> = {
 
     fontFamily: INTER_FONT,
 
-    fontSize: "12px",
+    fontSize: "13px",
 
     fontWeight: 650,
 
@@ -370,7 +370,7 @@ export const collectionPaymentDetailsStyles: Record<string, CSSProperties> = {
 
     fontFamily: INTER_FONT,
 
-    fontSize: "12px",
+    fontSize: "13px",
 
     fontWeight: 650,
 
@@ -443,9 +443,9 @@ export const collectionPaymentDetailsStyles: Record<string, CSSProperties> = {
 
     fontFamily: INTER_FONT,
 
-    fontSize: "11px",
+    fontSize: "12px",
 
-    fontWeight: 850,
+    fontWeight: 750,
 
     letterSpacing: "0.055em",
 
@@ -481,9 +481,9 @@ export const collectionPaymentDetailsStyles: Record<string, CSSProperties> = {
 
     fontFamily: INTER_FONT,
 
-    fontSize: "16px",
+    fontSize: "17px",
 
-    fontWeight: 850,
+    fontWeight: 750,
 
     lineHeight: 1,
 
@@ -545,9 +545,9 @@ export const collectionPaymentDetailsStyles: Record<string, CSSProperties> = {
 
     fontFamily: INTER_FONT,
 
-    fontSize: "11px",
+    fontSize: "12px",
 
-    fontWeight: 800,
+    fontWeight: 750,
 
     lineHeight: 1.15,
 
@@ -586,9 +586,9 @@ export const collectionPaymentDetailsStyles: Record<string, CSSProperties> = {
 
     fontFamily: INTER_FONT,
 
-    fontSize: "11px",
+    fontSize: "12px",
 
-    fontWeight: 850,
+    fontWeight: 750,
 
     lineHeight: 1.15,
 

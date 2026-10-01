@@ -1,4 +1,4 @@
-﻿// ============================================================
+// ============================================================
 // FINORA ENTERPRISE OS™
 //
 // COLLECTION STUDIO™
@@ -134,7 +134,7 @@ export const collectionEntryStyles: Record<string, CSSProperties> = {
 
     display: "grid",
 
-    gridTemplateColumns: "minmax(0, 2fr) minmax(210px, 1fr) minmax(0, 2fr)",
+    gridTemplateColumns: "minmax(0, 40fr) minmax(210px, 25fr) minmax(0, 35fr)",
 
     gap: "10px",
 
@@ -862,11 +862,11 @@ export const collectionEntryStyles: Record<string, CSSProperties> = {
     display: "grid",
 
     gridTemplateColumns:
-      "minmax(55px, 0.7fr) minmax(90px, 1fr) minmax(95px, 1fr) minmax(70px, 0.8fr) 36px",
+      "minmax(55px, 0.65fr) minmax(72px, 0.72fr) minmax(145px, 1.55fr) minmax(58px, 0.6fr) 30px",
 
     alignItems: "center",
 
-    columnGap: "9px",
+    columnGap: "6px",
 
     minHeight: "42px",
 
@@ -923,11 +923,11 @@ export const collectionEntryStyles: Record<string, CSSProperties> = {
     display: "grid",
 
     gridTemplateColumns:
-      "minmax(55px, 0.7fr) minmax(90px, 1fr) minmax(95px, 1fr) minmax(70px, 0.8fr) 36px",
+      "minmax(90px, 0.95fr) minmax(90px, 1fr) minmax(95px, 1fr) minmax(70px, 0.8fr) 36px",
 
     alignItems: "center",
 
-    columnGap: "9px",
+    columnGap: "6px",
 
     minHeight: "42px",
 
@@ -957,9 +957,9 @@ export const collectionEntryStyles: Record<string, CSSProperties> = {
 
     fontFamily: INTER_FONT,
 
-    fontSize: "10px",
+    fontSize: "11px",
 
-    fontWeight: 800,
+    fontWeight: 750,
 
     letterSpacing: "0.035em",
 
@@ -985,9 +985,9 @@ export const collectionEntryStyles: Record<string, CSSProperties> = {
 
     fontFamily: INTER_FONT,
 
-    fontSize: "12px",
+    fontSize: "14px",
 
-    fontWeight: 800,
+    fontWeight: 750,
 
     lineHeight: 1.2,
   },
@@ -1007,7 +1007,7 @@ export const collectionEntryStyles: Record<string, CSSProperties> = {
 
     fontSize: "10px",
 
-    fontWeight: 800,
+    fontWeight: 750,
 
     letterSpacing: "0.04em",
 
@@ -1161,7 +1161,7 @@ export const collectionEntryStyles: Record<string, CSSProperties> = {
 
     fontFamily: INTER_FONT,
 
-    fontSize: "10px",
+    fontSize: "12px",
 
     fontWeight: 700,
   },
@@ -1179,7 +1179,7 @@ export const collectionEntryStyles: Record<string, CSSProperties> = {
 
     fontFamily: INTER_FONT,
 
-    fontSize: "10px",
+    fontSize: "12px",
 
     fontWeight: 800,
   },
@@ -1197,7 +1197,7 @@ export const collectionEntryStyles: Record<string, CSSProperties> = {
 
     fontFamily: INTER_FONT,
 
-    fontSize: "12px",
+    fontSize: "14px",
 
     fontWeight: 700,
   },
@@ -1227,7 +1227,7 @@ export const collectionEntryStyles: Record<string, CSSProperties> = {
 
     fontFamily: INTER_FONT,
 
-    fontSize: "7px",
+    fontSize: "9px",
 
     fontWeight: 800,
 
@@ -1321,7 +1321,7 @@ export const collectionEntryStyles: Record<string, CSSProperties> = {
 
     fontFamily: INTER_FONT,
 
-    fontSize: "13px",
+    fontSize: "15px",
 
     lineHeight: 1,
 

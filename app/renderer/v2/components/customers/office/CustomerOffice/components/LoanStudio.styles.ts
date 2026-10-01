@@ -409,6 +409,16 @@ export function createLoanStudioStyles(
 
     fontWeight: 600,
 
+    display: "inline-flex",
+
+    alignItems: "center",
+
+    justifyContent: "center",
+
+    gap: "6px",
+
+    lineHeight: 1,
+
     cursor: "pointer",
 
     whiteSpace: "nowrap",

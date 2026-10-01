@@ -1,4 +1,4 @@
-// ============================================================
+﻿// ============================================================
 // FINORA ENTERPRISE V2
 //
 // LOAN DETAILS STUDIO
@@ -35,6 +35,12 @@
 ============================================================ */
 
 import type { ChangeEvent } from "react";
+
+import { FinoraCalendar } from "../../common/calendar";
+
+import {
+  getCurrentLocalBusinessDate,
+} from "../../../services/business/businessDateService";
 
 /* ============================================================
    FINORA RESPONSIVE ENGINE
@@ -77,10 +83,10 @@ interface LoanFormProps {
 
   /*
    * STANDARD:
-   * false / undefined → existing editable Loan Amount.
+   * false / undefined â†’ existing editable Loan Amount.
    *
    * GOLD:
-   * true → sanctioned Gold principal is preserved and cannot
+   * true â†’ sanctioned Gold principal is preserved and cannot
    * be changed inside the shared Loan Studio.
    */
   loanAmountReadOnly?: boolean;
@@ -94,7 +100,10 @@ interface LoanFormProps {
   advanceDeduction: string;
 
   lateFee: string;
+
 
+  loanDate?: string;
+  collectionDate: string;
   repaymentType: string;
 
   duration: string;
@@ -118,7 +127,10 @@ interface LoanFormProps {
   onAdvanceDeductionChange: (value: string) => void;
 
   onLateFeeChange: (value: string) => void;
+
 
+  onLoanDateChange?: (value: string) => void;
+  onCollectionDateChange: (value: string) => void;
   onRepaymentTypeChange: (value: string) => void;
 
   onDurationChange: (value: string) => void;
@@ -136,6 +148,28 @@ interface LoanFormProps {
 
 const onlyDigits = (value: string): string => value.replace(/\D/g, "");
 
+const formatCollectionDateInput = (
+  value: string,
+): string => {
+  const normalized =
+    String(value ?? "").trim();
+
+  const legacyIso =
+    /^(\d{4})-(\d{2})-(\d{2})/.exec(normalized);
+
+  if (legacyIso) {
+    return `${legacyIso[3]}-${legacyIso[2]}`;
+  }
+
+  const digits =
+    onlyDigits(normalized).slice(0, 4);
+
+  if (digits.length <= 2) {
+    return digits;
+  }
+
+  return `${digits.slice(0, 2)}-${digits.slice(2)}`;
+};
 const formatIndianInteger = (value: string): string => {
   const digits = onlyDigits(value);
 
@@ -168,7 +202,10 @@ export default function LoanForm({
   advanceDeduction,
 
   lateFee,
+
 
+  loanDate = "",
+  collectionDate,
   duration,
 
   durationType,
@@ -188,7 +225,10 @@ export default function LoanForm({
   onAdvanceDeductionChange,
 
   onLateFeeChange,
+
 
+  onLoanDateChange = () => undefined,
+  onCollectionDateChange,
   onRepaymentTypeChange,
 
   onDurationChange,
@@ -259,6 +299,15 @@ export default function LoanForm({
 
   const handleLateFeeChange = (event: ChangeEvent<HTMLInputElement>): void => {
     handleMoneyChange(event.target.value, onLateFeeChange);
+  };
+  const handleCollectionDateChange = (
+    event: ChangeEvent<HTMLInputElement>,
+  ): void => {
+    onCollectionDateChange(
+      formatCollectionDateInput(
+        event.target.value,
+      ),
+    );
   };
 
   const handleInterestChange = (event: ChangeEvent<HTMLInputElement>): void => {
@@ -505,6 +554,49 @@ export default function LoanForm({
         <div style={sectionTitleStyle}>Loan Duration</div>
 
         <div style={resolvedFormGridStyle}>
+          {/* LOAN DATE */}
+
+          <div style={fieldGroupStyle}>
+            {renderLabel("Loan Date", true)}
+
+            <div className="finora-loan-date-control">
+              <FinoraCalendar
+                value={loanDate}
+                onChange={onLoanDateChange}
+                max={getCurrentLocalBusinessDate()}
+                allowClear={false}
+                showRelativeDay
+                placeholder="DD/MM/YYYY"
+                ariaLabel="Loan Date"
+              />
+            </div>
+          </div>
+
+          {/* COLLECTION DATE */}
+
+          <div style={fieldGroupStyle}>
+            {renderLabel("Collection Date - Every Month")}
+
+            <input
+              type="text"
+              inputMode="numeric"
+              value={formatCollectionDateInput(collectionDate)}
+              onChange={handleCollectionDateChange}
+              placeholder="Starts: DD-MM"
+              maxLength={5}
+              autoComplete="off"
+              aria-label="Collection Date DD-MM"
+              style={{
+                ...inputStyle,
+                height: "38px",
+                minHeight: "38px",
+                marginTop: "4px",
+              }}
+            />
+          </div>
+
+          {/* LOAN DURATION */}
+
           <div style={fieldGroupStyle}>
             {renderLabel("Loan Duration", true)}
 
@@ -516,13 +608,21 @@ export default function LoanForm({
                 onChange={handleDurationChange}
                 placeholder="Duration"
                 autoComplete="off"
-                style={inputStyle}
+                style={{
+                  ...inputStyle,
+                  height: "38px",
+                  minHeight: "38px",
+                }}
               />
 
               <select
                 value={durationType}
                 onChange={(event) => handleDurationTypeChange(event.target.value)}
-                style={selectStyle}
+                style={{
+                  ...selectStyle,
+                  height: "38px",
+                  minHeight: "38px",
+                }}
               >
                 <option value="months">Months</option>
 
@@ -586,3 +686,4 @@ export default function LoanForm({
 // ============================================================
 // END
 // ============================================================
+

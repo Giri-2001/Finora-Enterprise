@@ -126,14 +126,28 @@ function resolveCanonicalCustomerRoot(
     normalizedCustomerId.split("-");
 
   const canonicalShape =
+    parts.length === 4 &&
+    parts[0] === "FIN" &&
+    parts[1] === "CUS" &&
+    parts[2] === scope.businessCode &&
+    /^\d{6}$/.test(
+      parts[3] ?? "",
+    );
+
+  const legacyCanonicalShape =
     parts.length === 5 &&
     parts[0] === "FIN" &&
     parts[1] === "CUS" &&
+    parts[2] === scope.businessCode &&
+    parts[3] === scope.branchCode &&
     /^\d{6}$/.test(
       parts[4] ?? "",
     );
 
-  if (!canonicalShape) {
+  if (
+    !canonicalShape &&
+    !legacyCanonicalShape
+  ) {
     return {
       success: true,
       data: undefined,
@@ -141,7 +155,11 @@ function resolveCanonicalCustomerRoot(
   }
 
   const customerNumber =
-    Number(parts[4]);
+    Number(
+      legacyCanonicalShape
+        ? parts[4]
+        : parts[3],
+    );
 
   if (
     !Number.isSafeInteger(
@@ -181,9 +199,16 @@ function resolveCanonicalCustomerRoot(
     };
   }
 
+  const legacyCanonicalCustomerId =
+    `FIN-CUS-${scope.businessCode}-${scope.branchCode}-${String(
+      customerNumber,
+    ).padStart(6, "0")}`;
+
   if (
     canonicalCustomerId !==
-    normalizedCustomerId
+      normalizedCustomerId &&
+    legacyCanonicalCustomerId !==
+      normalizedCustomerId
   ) {
     return {
       success: false,
@@ -264,9 +289,16 @@ function resolveBindingRoot(
     };
   }
 
+  const legacyCanonicalCustomerId =
+    `FIN-CUS-${scope.businessCode}-${scope.branchCode}-${String(
+      binding.customerNumber,
+    ).padStart(6, "0")}`;
+
   if (
     binding.canonicalCustomerId !==
-    expectedCanonicalCustomerId
+      expectedCanonicalCustomerId &&
+    binding.canonicalCustomerId !==
+      legacyCanonicalCustomerId
   ) {
     return {
       success: false,
@@ -284,7 +316,7 @@ function resolveBindingRoot(
         binding.customerNumber,
 
       customerId:
-        binding.canonicalCustomerId,
+        expectedCanonicalCustomerId,
     },
   };
 }

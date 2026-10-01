@@ -1316,7 +1316,16 @@ export default function CollectionsOffice({
                               runtime.id ||
                               `${collection.receiptNumber}-${collection.loanId}-${index}`
                             }
-                            style={tableRowStyle}
+                            style={{
+                              ...tableRowStyle,
+                              ...(safeNumber(collection.outstandingBalance) <= 0
+                                ? {
+                                    borderBottom: `1px solid ${theme.colors.status.danger}`,
+                                    background: theme.colors.status.dangerSoft,
+                                    boxShadow: `inset 3px 0 0 ${theme.colors.status.danger}`,
+                                  }
+                                : {}),
+                            }}
                           >
                             <div style={serialCellStyle}>{index + 1}</div>
 
@@ -1365,8 +1374,21 @@ export default function CollectionsOffice({
                             </div>
 
                             <div style={tableCellCenterStyle}>
-                              <span style={statusBadgeStyle(collection.status)}>
-                                {collection.status}
+                              <span
+                                style={{
+                                  ...statusBadgeStyle(collection.status),
+                                  ...(safeNumber(collection.outstandingBalance) <= 0
+                                    ? {
+                                        border: `1px solid ${theme.colors.status.danger}`,
+                                        background: theme.colors.status.dangerSoft,
+                                        color: theme.colors.status.danger,
+                                      }
+                                    : {}),
+                                }}
+                              >
+                                {safeNumber(collection.outstandingBalance) <= 0
+                                  ? "Closed"
+                                  : collection.status}
                               </span>
                             </div>
 

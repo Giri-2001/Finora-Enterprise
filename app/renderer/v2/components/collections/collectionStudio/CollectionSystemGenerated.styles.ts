@@ -278,7 +278,7 @@ financialList: {
 
   fontFamily: INTER_FONT,
 
-  fontSize: "11px",
+  fontSize: "12px",
 
   fontWeight: 750,
 
@@ -304,7 +304,7 @@ financialValue: {
 
   fontFamily: INTER_FONT,
 
-  fontSize: "13px",
+  fontSize: "14px",
 
   fontWeight: 750,
 
@@ -364,7 +364,7 @@ financialValue: {
 
     fontFamily: INTER_FONT,
 
-    fontSize: "10px",
+    fontSize: "11px",
 
     fontWeight: 750,
 
@@ -396,7 +396,7 @@ financialValue: {
 
     fontFamily: INTER_FONT,
 
-    fontSize: "16px",
+    fontSize: "17px",
 
     fontWeight: 750,
 

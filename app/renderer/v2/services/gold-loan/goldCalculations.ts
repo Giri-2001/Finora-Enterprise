@@ -1,4 +1,4 @@
-/* ===========================================================
+﻿/* ===========================================================
    FINORA ENTERPRISE OS™
 
    GOLD LOAN ENGINE™
@@ -660,34 +660,6 @@ export function calculateGoldLoanAmounts(
 }
 
 /* ===========================================================
-   SANCTION WITHIN ELIGIBILITY
-=========================================================== */
-
-export function isGoldSanctionWithinEligibility(
-  sanctionedAmount: number,
-
-  eligibleAmount: number,
-): boolean {
-  return (
-    getSafeGoldNumber(sanctionedAmount) <= getSafeGoldNumber(eligibleAmount)
-  );
-}
-
-/* ===========================================================
-   REQUEST WITHIN ELIGIBILITY
-=========================================================== */
-
-export function isGoldRequestWithinEligibility(
-  requestedAmount: number,
-
-  eligibleAmount: number,
-): boolean {
-  return (
-    getSafeGoldNumber(requestedAmount) <= getSafeGoldNumber(eligibleAmount)
-  );
-}
-
-/* ===========================================================
    VALID WEIGHT RELATIONSHIP
 
    Gross Weight must never be lower than total deductions.
@@ -777,3 +749,4 @@ export function buildGoldCalculationSnapshot(
 /* ===========================================================
    END
 =========================================================== */
+

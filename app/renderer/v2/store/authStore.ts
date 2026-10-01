@@ -55,6 +55,9 @@ import {
 const SESSION_KEY =
   "finora_session";
 
+export const FINORA_BUSINESS_DATE_CHANGED_EVENT =
+  "FINORA_BUSINESS_DATE_CHANGED";
+
 // ============================================================
 // COMMIT LOGIN SESSION
 // ============================================================
@@ -383,6 +386,56 @@ export function persistRevalidatedSessionSnapshot(
   );
 
   return normalizedSession;
+}
+
+// ============================================================
+// UPDATE ERP BUSINESS DATE
+//
+// Updates only the authenticated renderer session snapshot.
+// Authentication identity and system audit timestamps remain
+// unchanged.
+// ============================================================
+
+export function updateSessionBusinessDate(
+  businessDate: string,
+): AuthSession | null {
+  const session =
+    getSession();
+
+  if (!session) {
+    return null;
+  }
+
+  const resolvedBusinessDate =
+    resolveBusinessDate(
+      businessDate,
+    );
+
+  if (!resolvedBusinessDate) {
+    throw new Error(
+      "A valid FINORA Business Date is required.",
+    );
+  }
+
+  const updatedSession =
+    persistRevalidatedSessionSnapshot({
+      ...session,
+      businessDate:
+        resolvedBusinessDate,
+    });
+
+  if (
+    updatedSession &&
+    typeof window !== "undefined"
+  ) {
+    window.dispatchEvent(
+      new Event(
+        FINORA_BUSINESS_DATE_CHANGED_EVENT,
+      ),
+    );
+  }
+
+  return updatedSession;
 }
 
 // ============================================================

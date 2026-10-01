@@ -150,7 +150,10 @@ import {
   validateCollectionDate,
 } from "../../../services/collection/collectionDateService";
 
-import { getSession } from "../../../store/authStore";
+import {
+  getSession,
+  updateSessionBusinessDate,
+} from "../../../store/authStore";
 
 import {
   getBusinessContext,
@@ -162,6 +165,7 @@ import {
 } from "../../../services/wallet/walletCollectionProcessingChargeService";
 
 import {
+  getCurrentLocalBusinessDate,
   resolveBusinessDate,
 } from "../../../services/business/businessDateService";
 
@@ -255,6 +259,39 @@ export default function PaymentDetails() {
         ?.businessDate,
     ) ?? "";
 
+  function handleCollectionBusinessDateChange(
+    nextDate: string,
+  ): void {
+    const resolvedDate =
+      resolveBusinessDate(nextDate);
+
+    if (!resolvedDate) {
+      return;
+    }
+
+    const currentLocalBusinessDate =
+      getCurrentLocalBusinessDate();
+
+    if (resolvedDate > currentLocalBusinessDate) {
+      void finoraWarning(
+        "Collection Date cannot be later than today.",
+      );
+
+      return;
+    }
+
+    const updatedSession =
+      updateSessionBusinessDate(resolvedDate);
+
+    if (!updatedSession) {
+      return;
+    }
+
+    updateField(
+      "receiptDate",
+      resolvedDate,
+    );
+  }
   useEffect(() => {
     if (
       activeBusinessDate &&
@@ -1816,15 +1853,7 @@ export default function PaymentDetails() {
             Collection Date *
           </label>
 
-          <FinoraCalendar
-              value={activeBusinessDate}
-              onChange={() => undefined}
-              disabled
-              allowClear={false}
-              showRelativeDay
-              placeholder="DD/MM/YYYY"
-              ariaLabel="Collection Date locked to Login Date"
-            />
+          <FinoraCalendar   value={reviewData.receiptDate}   onChange={handleCollectionBusinessDateChange}   max={getCurrentLocalBusinessDate()}   allowClear={false}   showRelativeDay   placeholder="DD/MM/YYYY"   ariaLabel="Collection Date" />
         </div>
 
         {/* ====================================================

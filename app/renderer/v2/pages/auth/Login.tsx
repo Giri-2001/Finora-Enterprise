@@ -246,6 +246,17 @@ export default function Login({
       550,
   };
 
+  const loginPrimaryCredentialInputStyle = {
+    ...loginCredentialInputStyle,
+
+    fontSize:
+      responsive.isMobile
+        ? typeof loginStyles.input.fontSize === "number"
+          ? loginStyles.input.fontSize + 2
+          : `calc(${loginStyles.input.fontSize} + 2px)`
+        : loginCredentialInputStyle.fontSize,
+  };
+
 
   // ==========================================================
   // ERP BUSINESS DATE STATE
@@ -2336,12 +2347,15 @@ export default function Login({
 
         {/* ==================================================
             ERP BUSINESS DATE
+            Hidden from Login UI; backend Business Date remains active.
         ================================================== */}
 
         <div
-          style={
-            loginStyles.fieldSection
-          }
+          aria-hidden="true"
+          style={{
+            ...loginStyles.fieldSection,
+            display: "none",
+          }}
         >
 
           <div
@@ -2745,7 +2759,7 @@ export default function Login({
                     handleLoginInputFocus
                   }
                   style={
-                    loginCredentialInputStyle
+                    loginPrimaryCredentialInputStyle
                   }
                 />
 
@@ -2812,7 +2826,7 @@ export default function Login({
                     handleLoginInputFocus
                   }
                   style={
-                    loginCredentialInputStyle
+                    loginPrimaryCredentialInputStyle
                   }
                 />
 

@@ -125,7 +125,11 @@ import { collectionSystemGeneratedStyles } from "./CollectionSystemGenerated.sty
 
 import { useCollectionController } from "../controller";
 
-import { fetchLoanContractualInterest, fetchLoanPrincipalDue } from "../../../services/loan/loanService";
+import {
+  fetchLoan,
+  fetchLoanContractualInterest,
+  fetchLoanPrincipalDue,
+} from "../../../services/loan/loanService";
 
 import { formatCurrency } from "../../../utils/currency/formatCurrency";
 
@@ -246,7 +250,7 @@ function parseCalendarDate(value: string): Date | null {
  *
  *   0 days
  *
- * Previous day → Collection Business Date:
+ * Previous day â†’ Collection Business Date:
  *
  *   1 day
  *
@@ -322,6 +326,244 @@ function calculateAccruedInterest(
   const accruedInterest = dailyInterest * elapsedDays;
 
   return roundFinancialValue(accruedInterest);
+}
+
+
+type PremiumScheduleMeta = {
+  finalDueDate: string;
+  cycleDay: number;
+};
+
+function readPersistedScheduleRows(
+  loan: unknown,
+): Array<Record<string, unknown>> {
+  if (!loan || typeof loan !== "object") {
+    return [];
+  }
+
+  const record =
+    loan as Record<string, unknown>;
+
+  const candidates = [
+    record.schedule,
+    record.emiSchedule,
+    record.installments,
+  ];
+
+  for (const candidate of candidates) {
+    if (Array.isArray(candidate)) {
+      return candidate.filter(
+        (
+          row,
+        ): row is Record<string, unknown> =>
+          Boolean(
+            row &&
+              typeof row === "object",
+          ),
+      );
+    }
+  }
+
+  return [];
+}
+
+function resolvePremiumScheduleMeta(
+  loan: unknown,
+): PremiumScheduleMeta | null {
+  if (!loan || typeof loan !== "object") {
+    return null;
+  }
+
+  const record =
+    loan as Record<string, unknown>;
+
+  const rows =
+    readPersistedScheduleRows(loan);
+
+  const validDates =
+    rows
+      .map((row) =>
+        String(
+          row.dueDate ??
+            row.date ??
+            row.installmentDate ??
+            "",
+        ).trim(),
+      )
+      .map((value) => ({
+        value,
+        date: parseCalendarDate(value),
+      }))
+      .filter(
+        (
+          item,
+        ): item is {
+          value: string;
+          date: Date;
+        } => item.date !== null,
+      );
+
+  if (validDates.length > 0) {
+    const sorted =
+      [...validDates].sort(
+        (left, right) =>
+          left.date.getTime() -
+          right.date.getTime(),
+      );
+
+    const finalItem =
+      sorted[sorted.length - 1];
+
+    /*
+     * Using the highest scheduled day preserves recurring
+     * 29 / 30 / 31 collection-day patterns even when a shorter
+     * month temporarily clamps an installment date.
+     */
+    const cycleDay =
+      Math.max(
+        ...sorted.map(
+          (item) =>
+            item.date.getDate(),
+        ),
+      );
+
+    return {
+      finalDueDate:
+        finalItem.value,
+      cycleDay,
+    };
+  }
+
+  /*
+   * Legacy fallback only.
+   *
+   * Modern Loans should resolve from the persisted EMI schedule.
+   */
+  const fallbackDueDate =
+    String(
+      record.dueDate ?? "",
+    ).trim();
+
+  const parsedFallback =
+    parseCalendarDate(
+      fallbackDueDate,
+    );
+
+  if (!parsedFallback) {
+    return null;
+  }
+
+  return {
+    finalDueDate:
+      fallbackDueDate,
+    cycleDay:
+      parsedFallback.getDate(),
+  };
+}
+
+function formatCalendarKey(
+  date: Date,
+): string {
+  const year =
+    date.getFullYear();
+
+  const month =
+    String(
+      date.getMonth() + 1,
+    ).padStart(2, "0");
+
+  const day =
+    String(
+      date.getDate(),
+    ).padStart(2, "0");
+
+  return `${year}-${month}-${day}`;
+}
+
+function formatPremiumDate(
+  value: string,
+): string {
+  const date =
+    parseCalendarDate(value);
+
+  if (!date) {
+    return "--";
+  }
+
+  return [
+    String(date.getDate()).padStart(2, "0"),
+    String(date.getMonth() + 1).padStart(2, "0"),
+    date.getFullYear(),
+  ].join("/");
+}
+
+function buildPremiumCycleDate(
+  year: number,
+  monthIndex: number,
+  requestedDay: number,
+): Date {
+  const maximumDay =
+    new Date(
+      year,
+      monthIndex + 1,
+      0,
+    ).getDate();
+
+  return new Date(
+    year,
+    monthIndex,
+    Math.min(
+      Math.max(1, requestedDay),
+      maximumDay,
+    ),
+  );
+}
+
+function resolveNextPremiumCycleDate(
+  businessDateValue: string,
+  cycleDay: number,
+): Date | null {
+  const businessDate =
+    parseCalendarDate(
+      businessDateValue,
+    );
+
+  if (
+    !businessDate ||
+    !Number.isFinite(cycleDay) ||
+    cycleDay <= 0
+  ) {
+    return null;
+  }
+
+  let candidate =
+    buildPremiumCycleDate(
+      businessDate.getFullYear(),
+      businessDate.getMonth(),
+      cycleDay,
+    );
+
+  /*
+   * "Next Cycle" always means the upcoming cycle.
+   * If today itself is the collection day, move to next month.
+   */
+  if (
+    candidate.getTime() <=
+    businessDate.getTime()
+  ) {
+    candidate =
+      buildPremiumCycleDate(
+        businessDate.getMonth() === 11
+          ? businessDate.getFullYear() + 1
+          : businessDate.getFullYear(),
+        businessDate.getMonth() === 11
+          ? 0
+          : businessDate.getMonth() + 1,
+        cycleDay,
+      );
+  }
+
+  return candidate;
 }
 
 // ============================================================
@@ -456,6 +698,112 @@ export default function CollectionSystemGenerated() {
       window.removeEventListener(
         "FINORA_COLLECTION_UPDATED",
         handleFinancialRefresh,
+      );
+    };
+  }, [reviewData.loanId]);
+
+
+  // ==========================================================
+  // PREMIUM READ-ONLY SCHEDULE SNAPSHOT
+  // ==========================================================
+  //
+  // IMPORTANT:
+  //
+  // - Read only.
+  // - No Loan mutation.
+  // - No Collection mutation.
+  // - No schedule generation.
+  // - No persistence.
+  //
+  // Used only for:
+  //
+  //   Final EMI Date
+  //   Close Today
+  //   Close By Next Cycle
+  //   Discount Eligible
+  //   Overdue Interest
+  //
+  // ==========================================================
+
+  const [
+    premiumScheduleMeta,
+    setPremiumScheduleMeta,
+  ] =
+    useState<PremiumScheduleMeta | null>(
+      null,
+    );
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const loanId =
+      String(
+        reviewData.loanId ?? "",
+      ).trim();
+
+    async function refreshPremiumSchedule(): Promise<void> {
+      if (!loanId) {
+        if (!cancelled) {
+          setPremiumScheduleMeta(null);
+        }
+
+        return;
+      }
+
+      try {
+        const loan =
+          await fetchLoan(
+            loanId,
+          );
+
+        if (cancelled) {
+          return;
+        }
+
+        setPremiumScheduleMeta(
+          resolvePremiumScheduleMeta(
+            loan,
+          ),
+        );
+      } catch (error) {
+        console.error(
+          "FINORA PREMIUM SCHEDULE REFRESH FAILED:",
+          error,
+        );
+
+        if (!cancelled) {
+          setPremiumScheduleMeta(null);
+        }
+      }
+    }
+
+    void refreshPremiumSchedule();
+
+    function handlePremiumRefresh(): void {
+      void refreshPremiumSchedule();
+    }
+
+    window.addEventListener(
+      "FINORA_LOAN_UPDATED",
+      handlePremiumRefresh,
+    );
+
+    window.addEventListener(
+      "FINORA_COLLECTION_UPDATED",
+      handlePremiumRefresh,
+    );
+
+    return () => {
+      cancelled = true;
+
+      window.removeEventListener(
+        "FINORA_LOAN_UPDATED",
+        handlePremiumRefresh,
+      );
+
+      window.removeEventListener(
+        "FINORA_COLLECTION_UPDATED",
+        handlePremiumRefresh,
       );
     };
   }, [reviewData.loanId]);
@@ -604,6 +952,215 @@ export default function CollectionSystemGenerated() {
 
   const generatedTotal = loanClosed ? 0 : currentOutstanding;
 
+
+  // ==========================================================
+  // PREMIUM COLLECTION INTELLIGENCE
+  // ==========================================================
+  //
+  // Existing FINORA accounting values above remain untouched.
+  //
+  // These values are projection-only and never persist.
+  //
+  // ==========================================================
+
+  const finalEmiDate =
+    premiumScheduleMeta?.finalDueDate ??
+    "";
+
+  const nextCycleDate =
+    premiumScheduleMeta
+      ? resolveNextPremiumCycleDate(
+          reviewData.receiptDate,
+          premiumScheduleMeta.cycleDay,
+        )
+      : null;
+
+  const nextCycleDateKey =
+    nextCycleDate
+      ? formatCalendarKey(
+          nextCycleDate,
+        )
+      : "";
+
+  /*
+   * Contract interest that has not yet been earned.
+   *
+   * Existing Outstanding includes the contractual collectible
+   * balance, so this future portion is the potential concession
+   * available for an early close.
+   */
+  const unearnedInterestToday =
+    loanClosed ||
+    contractualInterestCap === null
+      ? 0
+      : Math.max(
+          0,
+          contractualInterestCap -
+            accruedInterest,
+        );
+
+  /*
+   * Overdue Interest begins only AFTER the final scheduled EMI.
+   *
+   * It intentionally does not stop merely because the original
+   * schedule has matured.
+   *
+   * It stops only when the authoritative Loan is closed.
+   */
+  const overdueDaysToday =
+    loanClosed ||
+    !finalEmiDate
+      ? 0
+      : getElapsedLoanDays(
+          finalEmiDate,
+          reviewData.receiptDate,
+        );
+
+  const overdueInterest =
+    loanClosed
+      ? 0
+      : calculateAccruedInterest(
+          principalDue,
+          monthlyInterestRate,
+          overdueDaysToday,
+        );
+
+  /*
+   * CLOSE TODAY
+   *
+   * Current authoritative contractual balance
+   * - future / unearned contractual interest
+   * + post-maturity overdue interest.
+   */
+  const minimumCloseToday =
+    loanClosed
+      ? 0
+      : roundFinancialValue(
+          principalDue +
+            overdueInterest +
+            lateFee,
+        );
+
+  const closeToday =
+    loanClosed
+      ? 0
+      : roundFinancialValue(
+          Math.max(
+            minimumCloseToday,
+            currentOutstanding -
+              unearnedInterestToday +
+              overdueInterest,
+          ),
+        );
+
+  /*
+   * DISCOUNT ELIGIBLE
+   *
+   * Discount may remove only the future / unearned collectible
+   * portion. It must never reduce the authoritative Principal Due
+   * or applicable overdue / penalty amount.
+   */
+  const discountEligible =
+    loanClosed
+      ? 0
+      : roundFinancialValue(
+          Math.max(
+            0,
+            currentOutstanding -
+              closeToday,
+          ),
+        );
+
+  const projectedElapsedDays =
+    loanClosed ||
+    !nextCycleDateKey
+      ? elapsedDays
+      : getElapsedLoanDays(
+          reviewData.loanDate,
+          nextCycleDateKey,
+        );
+
+  const projectedRawContractInterest =
+    loanClosed
+      ? 0
+      : calculateAccruedInterest(
+          principalDue,
+          monthlyInterestRate,
+          projectedElapsedDays,
+        );
+
+  const projectedContractInterest =
+    loanClosed
+      ? 0
+      : contractualInterestCap !== null
+        ? Math.min(
+            projectedRawContractInterest,
+            contractualInterestCap,
+          )
+        : projectedRawContractInterest;
+
+  const projectedUnearnedInterest =
+    loanClosed ||
+    contractualInterestCap === null
+      ? 0
+      : Math.max(
+          0,
+          contractualInterestCap -
+            projectedContractInterest,
+        );
+
+  const projectedOverdueDays =
+    loanClosed ||
+    !finalEmiDate ||
+    !nextCycleDateKey
+      ? 0
+      : getElapsedLoanDays(
+          finalEmiDate,
+          nextCycleDateKey,
+        );
+
+  const projectedOverdueInterest =
+    loanClosed
+      ? 0
+      : calculateAccruedInterest(
+          principalDue,
+          monthlyInterestRate,
+          projectedOverdueDays,
+        );
+
+  /*
+   * CLOSE BY NEXT CYCLE
+   *
+   * The next cycle keeps moving month-by-month even after the
+   * original final EMI date.
+   */
+  const minimumCloseByNextCycle =
+    loanClosed
+      ? 0
+      : roundFinancialValue(
+          principalDue +
+            projectedOverdueInterest +
+            lateFee,
+        );
+
+  const closeByNextCycle =
+    loanClosed
+      ? 0
+      : roundFinancialValue(
+          Math.max(
+            minimumCloseByNextCycle,
+            closeToday +
+              Math.max(
+                0,
+                projectedContractInterest -
+                  accruedInterest,
+              ),
+            currentOutstanding -
+              projectedUnearnedInterest +
+              projectedOverdueInterest,
+          ),
+        );
+
   // ==========================================================
   // CURRENCY
   // ==========================================================
@@ -700,6 +1257,62 @@ export default function CollectionSystemGenerated() {
             {currency(lateFee)}
           </strong>
         </div>
+
+        {/* ==================================================
+            CLOSE TODAY
+        ================================================== */}
+
+        <div style={collectionSystemGeneratedStyles.financialRow}>
+          <span style={collectionSystemGeneratedStyles.financialLabel}>
+            Close Today
+          </span>
+
+          <strong style={collectionSystemGeneratedStyles.financialValue}>
+            {currency(closeToday)}
+          </strong>
+        </div>
+
+        {/* ==================================================
+            CLOSE BY NEXT CYCLE
+        ================================================== */}
+
+        <div style={collectionSystemGeneratedStyles.financialRow}>
+          <span style={collectionSystemGeneratedStyles.financialLabel}>
+            Close By Next Cycle
+          </span>
+
+          <strong style={collectionSystemGeneratedStyles.financialValue}>
+            {currency(closeByNextCycle)}
+          </strong>
+        </div>
+
+        {/* ==================================================
+            DISCOUNT ELIGIBLE
+        ================================================== */}
+
+        <div style={collectionSystemGeneratedStyles.financialRow}>
+          <span style={collectionSystemGeneratedStyles.financialLabel}>
+            Discount Eligible
+          </span>
+
+          <strong style={collectionSystemGeneratedStyles.financialValue}>
+            {currency(discountEligible)}
+          </strong>
+        </div>
+
+        {/* ==================================================
+            OVERDUE INTEREST
+        ================================================== */}
+
+        <div style={collectionSystemGeneratedStyles.financialRow}>
+          <span style={collectionSystemGeneratedStyles.financialLabel}>
+            Overdue Interest
+          </span>
+
+          <strong style={collectionSystemGeneratedStyles.financialValue}>
+            {currency(overdueInterest)}
+          </strong>
+        </div>
       </div>
 
       {/* ====================================================
@@ -711,9 +1324,21 @@ export default function CollectionSystemGenerated() {
           Outstanding Balance
         </span>
 
-        <strong style={collectionSystemGeneratedStyles.generatedTotalValue}>
-          {currency(generatedTotal)}
-        </strong>
+        <div
+          style={{
+            display: "grid",
+            justifyItems: "end",
+            gap: "6px",
+          }}
+        >
+          <strong style={collectionSystemGeneratedStyles.generatedTotalValue}>
+            {currency(generatedTotal)}
+          </strong>
+
+          <span style={collectionSystemGeneratedStyles.generatedTotalLabel}>
+            Final EMI: {formatPremiumDate(finalEmiDate)}
+          </span>
+        </div>
       </div>
     </section>
   );
@@ -722,4 +1347,5 @@ export default function CollectionSystemGenerated() {
 // ============================================================
 // END
 // ============================================================
+
 

@@ -10,6 +10,7 @@ import com.finora.enterprise.control.FinoraDevProvisioning;
 import com.finora.enterprise.control.FinoraInstallationBindingCrypto;
 import com.finora.enterprise.control.FinoraInstallationBindingService;
 import com.finora.enterprise.usb.FinoraUsbPlugin;
+import com.finora.enterprise.ui.FinoraFullscreenPlugin;
 import com.getcapacitor.BridgeActivity;
 
 public class MainActivity
@@ -43,6 +44,9 @@ public class MainActivity
 
         registerPlugin(
             FinoraUsbPlugin.class
+        );
+        registerPlugin(
+            FinoraFullscreenPlugin.class
         );
 
         /*

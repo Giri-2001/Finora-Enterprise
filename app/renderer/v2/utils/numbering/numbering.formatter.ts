@@ -144,9 +144,6 @@ export function formatCustomerId(
     normalizeNumberingCode(
       businessCode,
     ),
-    normalizeNumberingCode(
-      branchCode,
-    ),
     formatNumericSegment(
       customerNumber,
       CUSTOMER_NUMBER_LENGTH,
@@ -188,9 +185,6 @@ export function formatLoanNumber(
     FINORA_LOAN_PREFIX,
     normalizeNumberingCode(
       businessCode,
-    ),
-    normalizeNumberingCode(
-      branchCode,
     ),
     formatNumericSegment(
       customerNumber,
@@ -245,9 +239,6 @@ export function formatCollectionNumber(
     FINORA_COLLECTION_PREFIX,
     normalizeNumberingCode(
       businessCode,
-    ),
-    normalizeNumberingCode(
-      branchCode,
     ),
     formatNumericSegment(
       customerNumber,
@@ -305,9 +296,6 @@ export function formatReceiptNumber(
     FINORA_RECEIPT_PREFIX,
     normalizeNumberingCode(
       businessCode,
-    ),
-    normalizeNumberingCode(
-      branchCode,
     ),
     formatNumericSegment(
       customerNumber,

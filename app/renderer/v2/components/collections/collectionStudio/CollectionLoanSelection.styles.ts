@@ -693,9 +693,11 @@ export function createCollectionLoanSelectionStyles(
 
     display: "flex",
 
-    flexDirection: "column",
+    alignItems: "baseline",
 
-    gap: "2px",
+    flexDirection: "row",
+
+    gap: "6px",
   };
 
   const loanCardDateLabel: CSSProperties = {
@@ -703,7 +705,7 @@ export function createCollectionLoanSelectionStyles(
 
     fontFamily: FONTS.ui,
 
-    fontSize: "9px",
+    fontSize: "10px",
 
     fontWeight: 700,
 
@@ -727,7 +729,7 @@ export function createCollectionLoanSelectionStyles(
 
     fontFamily: FONTS.ui,
 
-    fontSize: "11px",
+    fontSize: "12px",
 
     fontWeight: 700,
 
@@ -756,6 +758,8 @@ export function createCollectionLoanSelectionStyles(
     alignItems: "center",
 
     justifyContent: "center",
+
+    marginTop: "2px",
 
     minHeight: "20px",
 

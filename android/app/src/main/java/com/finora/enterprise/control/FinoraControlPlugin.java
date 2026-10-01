@@ -10763,4 +10763,71 @@ private boolean isValidEntitlement(
     // ========================================================
     // END
     // ========================================================
+
+    // ========================================================
+    // RECIPIENT TRUST PRESENCE
+    // ========================================================
+
+    @PluginMethod
+    public void hasRecipientTrust(
+        PluginCall call
+    ) {
+        if (call == null) {
+            return;
+        }
+
+        JSObject response =
+            new JSObject();
+
+        try {
+            FinoraRecipientTrustStore trustStore =
+                new FinoraRecipientTrustStore(
+                    getContext()
+                );
+
+            boolean hasTrust =
+                false;
+
+            if (trustStore.exists()) {
+                String storedTrust =
+                    trustStore.read();
+
+                hasTrust =
+                    storedTrust != null &&
+                    !storedTrust.trim().isEmpty();
+            }
+
+            response.put(
+                "success",
+                true
+            );
+
+            response.put(
+                "data",
+                hasTrust
+            );
+        }
+        catch (Exception error) {
+            response.put(
+                "success",
+                false
+            );
+
+            response.put(
+                "data",
+                false
+            );
+
+            response.put(
+                "error",
+                error.getMessage() != null
+                    ? error.getMessage()
+                    : "Unable to read FINORA recipient trust state."
+            );
+        }
+
+        call.resolve(
+            response
+        );
+    }
 }

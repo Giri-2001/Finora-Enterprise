@@ -709,7 +709,7 @@
     var(--finora-theme-text-primary);
 
   font:
-    500 9px/1
+    550 9px/1
     var(
       --finora-theme-font-family,
       Inter,
@@ -918,6 +918,9 @@
   color:
     var(--finora-theme-brand-accent);
 
+  font-size:
+    12px;
+
 }
 
 
@@ -931,7 +934,7 @@
     center;
 
   font:
-    500 11px/1
+    550 12px/1
     var(
       --finora-theme-font-family,
       Inter,
@@ -1171,4 +1174,19 @@
   height: 40px;
   min-height: 40px;
   font-size: 14px;
+}
+
+/* Loan Studio Step 1 - align Loan Date with adjacent controls */
+.finora-loan-date-control,
+.finora-loan-date-control .finora-calendar-root,
+.finora-loan-date-control .finora-calendar-input-wrap {
+  height: 38px;
+  min-height: 38px;
+  margin: 0;
+}
+
+.finora-loan-date-control .finora-calendar-input {
+  height: 38px;
+  min-height: 38px;
+  box-sizing: border-box;
 }

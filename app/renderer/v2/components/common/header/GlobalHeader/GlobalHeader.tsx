@@ -28,11 +28,26 @@ import {
   useEffect,
   useState,
 } from "react";
+import {
+  Capacitor,
+  registerPlugin,
+} from "@capacitor/core";
 
 import {
   Maximize2,
   WalletCards,
 } from "lucide-react";
+interface FinoraFullscreenNativePlugin {
+  toggleFullscreen():
+    Promise<{
+      fullscreen: boolean;
+    }>;
+}
+
+const finoraFullscreenNative =
+  registerPlugin<FinoraFullscreenNativePlugin>(
+    "FinoraFullscreen",
+  );
 
 import type {
   GlobalHeaderProps,
@@ -57,6 +72,7 @@ import AdminProfile
 
 
 import {
+  FINORA_BUSINESS_DATE_CHANGED_EVENT,
   getSession,
 } from "../../../../store/authStore";
 
@@ -176,8 +192,35 @@ export default function GlobalHeader({
   // fresh authenticated Login session.
   // =========================================================
 
+  const [
+    businessDateRevision,
+    setBusinessDateRevision,
+  ] = useState(0);
+
+  useEffect(() => {
+    const refreshBusinessDate = () => {
+      setBusinessDateRevision(
+        (revision) => revision + 1,
+      );
+    };
+
+    window.addEventListener(
+      FINORA_BUSINESS_DATE_CHANGED_EVENT,
+      refreshBusinessDate,
+    );
+
+    return () => {
+      window.removeEventListener(
+        FINORA_BUSINESS_DATE_CHANGED_EVENT,
+        refreshBusinessDate,
+      );
+    };
+  }, []);
+
   const authenticatedSession =
     getSession();
+
+  void businessDateRevision;
 
   const loginDateDisplay =
     formatBusinessDateForDisplay(
@@ -925,15 +968,35 @@ export default function GlobalHeader({
 
         </button>
 
-        {window.finora
-          ?.windowControls
-          ?.toggleFullscreen ? (
+        {(
+          Boolean(
+            window.finora
+              ?.windowControls
+              ?.toggleFullscreen,
+          ) ||
+          Capacitor.getPlatform() === "android"
+        ) ? (
           <button
             type="button"
             onClick={() => {
-              void window.finora
-                ?.windowControls
-                ?.toggleFullscreen();
+              if (
+                Capacitor.getPlatform() === "android"
+              ) {
+                void finoraFullscreenNative
+                  .toggleFullscreen();
+
+                return;
+              }
+
+              if (
+                window.finora
+                  ?.windowControls
+                  ?.toggleFullscreen
+              ) {
+                void window.finora
+                  .windowControls
+                  .toggleFullscreen();
+              }
             }}
             aria-label="Toggle Full Screen"
             title="Toggle Full Screen"

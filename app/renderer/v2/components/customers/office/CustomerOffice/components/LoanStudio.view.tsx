@@ -18,6 +18,13 @@
 
 import { useState } from "react";
 
+import {
+  ArrowLeft,
+  ArrowRight,
+  ChevronDown,
+  ChevronUp,
+} from "lucide-react";
+
 import { formatIndianDate } from "./LoanStudio.helpers";
 
 import { useResponsive } from "../../../../../utils/responsive";
@@ -322,6 +329,10 @@ export default function LoanStudioView(props: LoanStudioViewModel) {
 
     emiCalculation,
     setEMICalculation,
+
+
+    firstInstallmentDate,
+    setFirstInstallmentDate,
     repaymentType,
     setRepaymentType,
     duration,
@@ -364,6 +375,8 @@ export default function LoanStudioView(props: LoanStudioViewModel) {
     principal,
     totalInstallments,
     loanDate,
+    loanBusinessDate,
+    handleLoanBusinessDateChange,
     maturityDate,
     schedule,
     totalInterest,
@@ -395,14 +408,71 @@ export default function LoanStudioView(props: LoanStudioViewModel) {
       return;
     }
 
-    if (current === 6) {
-      setStep(6);
+    /*
+     * Backward navigation remains free.
+     * Forward navigation must pass the same required gates
+     * used by the primary Next button.
+     */
+    if (current <= step) {
+      setStep(current);
 
       return;
     }
 
+    if (!isGoldLoan && step === 1) {
+      if (!activeCustomerId.trim()) {
+        void finoraWarning("Please select a customer before continuing.");
+
+        return;
+      }
+
+      const safeLoanAmount =
+        Number(String(loanAmount).replace(/,/g, "").trim());
+
+      if (
+        !Number.isFinite(safeLoanAmount) ||
+        safeLoanAmount <= 0
+      ) {
+        void finoraWarning("Please enter a valid Loan Amount.");
+
+        return;
+      }
+
+      const safeInterest =
+        Number(String(interest).trim());
+
+      if (
+        !Number.isFinite(safeInterest) ||
+        safeInterest <= 0
+      ) {
+        void finoraWarning("Please enter a valid Interest percentage.");
+
+        return;
+      }
+
+      const safeDuration =
+        Number(String(duration).trim());
+
+      if (
+        !Number.isFinite(safeDuration) ||
+        safeDuration <= 0
+      ) {
+        void finoraWarning("Please enter a valid Loan Duration.");
+
+        return;
+      }
+
+      if (
+        durationType !== "months" &&
+        durationType !== "years"
+      ) {
+        void finoraWarning("Please select a valid Loan Duration unit.");
+
+        return;
+      }
+    }
+
     if (
-      step === 4 &&
       current > 4 &&
       guarantorVerificationStatus.trim().toLowerCase() !== "verified"
     ) {
@@ -438,6 +508,7 @@ export default function LoanStudioView(props: LoanStudioViewModel) {
                   photo={selectedCustomer?.photo}
                   customers={loanCustomerOptions}
                   onCustomerSelect={setSelectedCustomer}
+                  onCustomerClear={() => setSelectedCustomer(undefined)}
                 />
               </div>
 
@@ -461,6 +532,12 @@ export default function LoanStudioView(props: LoanStudioViewModel) {
                   processingFee={processingFee}
                   advanceDeduction={advanceDeduction}
                   lateFee={lateFee}
+
+                  loanDate={loanBusinessDate}
+
+                  onLoanDateChange={handleLoanBusinessDateChange}
+
+                  collectionDate={firstInstallmentDate}
                   repaymentType={repaymentType}
                   duration={duration}
                   durationType={durationType}
@@ -472,6 +549,8 @@ export default function LoanStudioView(props: LoanStudioViewModel) {
                   onProcessingFeeChange={setProcessingFee}
                   onAdvanceDeductionChange={setAdvanceDeduction}
                   onLateFeeChange={setLateFee}
+
+                  onCollectionDateChange={setFirstInstallmentDate}
                   onRepaymentTypeChange={setRepaymentType}
                   onDurationChange={setDuration}
                   onDurationTypeChange={setDurationType}
@@ -547,6 +626,12 @@ export default function LoanStudioView(props: LoanStudioViewModel) {
                 processingFee={processingFee}
                 advanceDeduction={advanceDeduction}
                 lateFee={lateFee}
+
+                  loanDate={loanBusinessDate}
+
+                  onLoanDateChange={handleLoanBusinessDateChange}
+
+                  collectionDate={firstInstallmentDate}
                 repaymentType={repaymentType}
                 duration={duration}
                 durationType={durationType}
@@ -558,6 +643,8 @@ export default function LoanStudioView(props: LoanStudioViewModel) {
                 onProcessingFeeChange={setProcessingFee}
                 onAdvanceDeductionChange={setAdvanceDeduction}
                 onLateFeeChange={setLateFee}
+
+                  onCollectionDateChange={setFirstInstallmentDate}
                 onRepaymentTypeChange={setRepaymentType}
                 onDurationChange={setDuration}
                 onDurationTypeChange={setDurationType}
@@ -968,7 +1055,11 @@ export default function LoanStudioView(props: LoanStudioViewModel) {
                   lineHeight: 1,
                 }}
               >
-                {mobileStepMenuOpen ? "▼" : "▲"}
+                {mobileStepMenuOpen ? (
+                  <ChevronDown size={16} strokeWidth={2.5} aria-hidden="true" />
+                ) : (
+                  <ChevronUp size={16} strokeWidth={2.5} aria-hidden="true" />
+                )}
               </span>
             </button>
           </div>
@@ -1043,7 +1134,7 @@ export default function LoanStudioView(props: LoanStudioViewModel) {
                 : navigationButtonStyle
             }
           >
-            ← Previous
+            <ArrowLeft size={16} strokeWidth={2.5} aria-hidden="true" /> Previous
           </button>
 
           <button
@@ -1053,75 +1144,7 @@ export default function LoanStudioView(props: LoanStudioViewModel) {
               setMobileStepMenuOpen(false);
 
               if (step < 6) {
-                /* ================================================
-                   STANDARD LOAN STEP 1 REQUIRED VALIDATION
-                ================================================ */
-                if (!isGoldLoan && step === 1) {
-                  if (!activeCustomerId.trim()) {
-                    void finoraWarning("Please select a customer before continuing.");
-
-                    return;
-                  }
-
-                  const safeLoanAmount =
-                    Number(String(loanAmount).replace(/,/g, "").trim());
-
-                  if (
-                    !Number.isFinite(safeLoanAmount) ||
-                    safeLoanAmount <= 0
-                  ) {
-                    void finoraWarning("Please enter a valid Loan Amount.");
-
-                    return;
-                  }
-
-                  const safeInterest =
-                    Number(String(interest).trim());
-
-                  if (
-                    !Number.isFinite(safeInterest) ||
-                    safeInterest <= 0
-                  ) {
-                    void finoraWarning("Please enter a valid Interest percentage.");
-
-                    return;
-                  }
-
-                  const safeDuration =
-                    Number(String(duration).trim());
-
-                  if (
-                    !Number.isFinite(safeDuration) ||
-                    safeDuration <= 0
-                  ) {
-                    void finoraWarning("Please enter a valid Loan Duration.");
-
-                    return;
-                  }
-
-                  if (
-                    durationType !== "months" &&
-                    durationType !== "years"
-                  ) {
-                    void finoraWarning("Please select a valid Loan Duration unit.");
-
-                    return;
-                  }
-                }
-
-                if (
-                  step === 4 &&
-                  guarantorVerificationStatus.trim().toLowerCase() !==
-                    "verified"
-                ) {
-                  void finoraWarning(
-                    "Guarantor verification must be Verified before proceeding to Review.",
-                  );
-
-                  return;
-                }
-
-                setStep(step + 1);
+                handleStepSelection(step + 1);
 
                 return;
               }
@@ -1139,7 +1162,13 @@ export default function LoanStudioView(props: LoanStudioViewModel) {
               resetLoanWorkspace();
             }}
           >
-            {step === 6 ? "Finish Review" : "Next →"}
+            {step === 6 ? (
+              "Finish Review"
+            ) : (
+              <>
+                Next <ArrowRight size={16} strokeWidth={2.5} aria-hidden="true" />
+              </>
+            )}
           </button>
         </div>
       </footer>
@@ -1150,3 +1179,4 @@ export default function LoanStudioView(props: LoanStudioViewModel) {
 /* ============================================================
    END
 ============================================================ */
+

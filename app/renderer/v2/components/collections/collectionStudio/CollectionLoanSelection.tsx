@@ -462,9 +462,7 @@ export default function CollectionLoanSelection({
 
               <div style={styles.loanCardDateRow}>
                 <div style={styles.loanCardDateItem}>
-                  <span style={styles.loanCardDateLabel}>
-                    Loan Date
-                  </span>
+                  <span style={styles.loanCardDateLabel}>LOAN DATE -</span>
 
                   <span style={styles.loanCardDateValue}>
                     {formatOperationalDate(

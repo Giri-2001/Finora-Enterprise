@@ -54,9 +54,9 @@
 //
 // <LoanStudio />
 //
-// → Step 1
-// → empty principal
-// → existing workflow unchanged
+// â†’ Step 1
+// â†’ empty principal
+// â†’ existing workflow unchanged
 //
 // GOLD:
 //
@@ -67,9 +67,9 @@
 //   goldStepOne={preparedGoldStepOne}
 // />
 //
-// → Step 2
-// → sanctioned Gold principal preloaded
-// → Gold Step-1 snapshot remains available to shared workflow
+// â†’ Step 2
+// â†’ sanctioned Gold principal preloaded
+// â†’ Gold Step-1 snapshot remains available to shared workflow
 //
 // VERSION : 2.6
 // STATUS  : Production + Gold Entry Foundation
@@ -122,9 +122,13 @@ import {
   preflightLoanDisbursementWalletCharge,
 } from "../../../../../services/wallet/walletLoanDisbursementChargeService";
 
-import { getSession } from "../../../../../store/authStore";
+import {
+  getSession,
+  updateSessionBusinessDate,
+} from "../../../../../store/authStore";
 
 import {
+  getCurrentLocalBusinessDate,
   resolveBusinessDate,
 } from "../../../../../services/business/businessDateService";
 
@@ -182,6 +186,282 @@ function resolveInitialLoanAmount(value?: number): string {
   }
 
   return String(value);
+}
+/* ============================================================
+   COLLECTION DATE HELPERS
+
+   INPUT:
+   DD-MM only.
+
+   EMI TABLE / STORAGE:
+   Full dated dueDate values remain unchanged.
+
+   Example MONTHLY:
+   03-11
+   -> 03-11-2026
+   -> 03-12-2026
+   -> 03-01-2027
+============================================================ */
+
+function resolveCollectionDateParts(
+  value: string,
+): { day: number; month: number } | undefined {
+  const normalized =
+    String(value ?? "").trim();
+
+  const ddMmMatch =
+    /^(\d{2})-(\d{2})$/.exec(normalized);
+
+  if (ddMmMatch) {
+    const day =
+      Number(ddMmMatch[1]);
+
+    const month =
+      Number(ddMmMatch[2]);
+
+    if (
+      month < 1 ||
+      month > 12 ||
+      day < 1
+    ) {
+      return undefined;
+    }
+
+    const maximumDay =
+      new Date(
+        Date.UTC(
+          2000,
+          month,
+          0,
+        ),
+      ).getUTCDate();
+
+    if (day > maximumDay) {
+      return undefined;
+    }
+
+    return {
+      day,
+      month,
+    };
+  }
+
+  /*
+   * Backward compatibility:
+   * an older draft may contain YYYY-MM-DD.
+   */
+  const isoMatch =
+    /^(\d{4})-(\d{2})-(\d{2})/.exec(normalized);
+
+  if (!isoMatch) {
+    return undefined;
+  }
+
+  const day =
+    Number(isoMatch[3]);
+
+  const month =
+    Number(isoMatch[2]);
+
+  if (
+    month < 1 ||
+    month > 12 ||
+    day < 1
+  ) {
+    return undefined;
+  }
+
+  const maximumDay =
+    new Date(
+      Date.UTC(
+        2000,
+        month,
+        0,
+      ),
+    ).getUTCDate();
+
+  if (day > maximumDay) {
+    return undefined;
+  }
+
+  return {
+    day,
+    month,
+  };
+}
+
+function getCollectionMonthMaximumDay(
+  year: number,
+  monthIndex: number,
+): number {
+  return new Date(
+    Date.UTC(
+      year,
+      monthIndex + 1,
+      0,
+    ),
+  ).getUTCDate();
+}
+
+function buildCollectionDueDate(
+  year: number,
+  monthIndex: number,
+  requestedDay: number,
+): Date {
+  const safeDay =
+    Math.min(
+      requestedDay,
+      getCollectionMonthMaximumDay(
+        year,
+        monthIndex,
+      ),
+    );
+
+  return new Date(
+    Date.UTC(
+      year,
+      monthIndex,
+      safeDay,
+      0,
+      0,
+      0,
+      0,
+    ),
+  );
+}
+
+function resolveFirstCollectionDate(
+  collectionDateInput: string,
+  loanDate: Date,
+): Date | undefined {
+  const parts =
+    resolveCollectionDateParts(
+      collectionDateInput,
+    );
+
+  if (!parts) {
+    return undefined;
+  }
+
+  const loanYear =
+    loanDate.getUTCFullYear();
+
+  const loanTimestamp =
+    loanDate.getTime();
+
+  const candidates = [
+    buildCollectionDueDate(
+      loanYear - 1,
+      parts.month - 1,
+      parts.day,
+    ),
+
+    buildCollectionDueDate(
+      loanYear,
+      parts.month - 1,
+      parts.day,
+    ),
+
+    buildCollectionDueDate(
+      loanYear + 1,
+      parts.month - 1,
+      parts.day,
+    ),
+  ];
+
+  return candidates.reduce(
+    (nearest, candidate) => {
+      const nearestDistance =
+        Math.abs(
+          nearest.getTime() -
+          loanTimestamp,
+        );
+
+      const candidateDistance =
+        Math.abs(
+          candidate.getTime() -
+          loanTimestamp,
+        );
+
+      return candidateDistance <
+        nearestDistance
+        ? candidate
+        : nearest;
+    },
+  );
+}
+
+function applyCollectionDatePattern<
+  T extends { dueDate: string },
+>(
+  schedule: T[],
+  collectionDateInput: string,
+  loanDate: Date,
+  repaymentType: string,
+): T[] {
+  const firstDueDate =
+    resolveFirstCollectionDate(
+      collectionDateInput,
+      loanDate,
+    );
+
+  const parts =
+    resolveCollectionDateParts(
+      collectionDateInput,
+    );
+
+  if (
+    !firstDueDate ||
+    !parts
+  ) {
+    return schedule;
+  }
+
+  const firstYear =
+    firstDueDate.getUTCFullYear();
+
+  const firstMonth =
+    firstDueDate.getUTCMonth();
+
+  return schedule.map(
+    (installment, index) => {
+      if (repaymentType === "YEARLY") {
+        return {
+          ...installment,
+
+          dueDate:
+            buildCollectionDueDate(
+              firstYear + index,
+              firstMonth,
+              parts.day,
+            ).toISOString(),
+        };
+      }
+
+      const absoluteMonth =
+        firstMonth + index;
+
+      const year =
+        firstYear +
+        Math.floor(
+          absoluteMonth / 12,
+        );
+
+      const monthIndex =
+        absoluteMonth % 12;
+
+      return {
+        ...installment,
+
+        dueDate:
+          buildCollectionDueDate(
+            year,
+            monthIndex,
+            parts.day,
+          ).toISOString(),
+      };
+    },
+  );
 }
 
 /* ============================================================
@@ -306,6 +586,49 @@ export function useLoanStudio({
         ?.businessDate,
     ) ?? "";
 
+  const [
+    loanBusinessDate,
+    setLoanBusinessDate,
+  ] = useState(
+    activeBusinessDate,
+  );
+
+  function handleLoanBusinessDateChange(
+    nextDate: string,
+  ): void {
+    const resolvedDate =
+      resolveBusinessDate(
+        nextDate,
+      );
+
+    if (!resolvedDate) {
+      return;
+    }
+
+    const currentLocalBusinessDate =
+      getCurrentLocalBusinessDate();
+
+    if (resolvedDate > currentLocalBusinessDate) {
+      void finoraWarning(
+        "Loan Date cannot be later than today.",
+      );
+
+      return;
+    }
+
+    const updatedSession =
+      updateSessionBusinessDate(
+        resolvedDate,
+      );
+
+    if (!updatedSession) {
+      return;
+    }
+
+    setLoanBusinessDate(
+      resolvedDate,
+    );
+  }
   const isGoldLoan = entryMode === "GOLD";
 
   const draftMode =
@@ -869,7 +1192,7 @@ export function useLoanStudio({
   const [durationType, setDurationType] = useState(() => readInitialDraftString("durationType", "months"));
 
   /* ==========================================================
-     STEP 1 → STEP 2 REPAYMENT SYNC
+     STEP 1 â†’ STEP 2 REPAYMENT SYNC
   ========================================================== */
 
   const syncedRepaymentType =
@@ -969,7 +1292,7 @@ export function useLoanStudio({
    * cannot override the active session date.
    */
   const disbursementDate =
-    activeBusinessDate;
+    loanBusinessDate;
 
 
   const [paymentMode, setPaymentMode] = useState(() => readInitialDraftString("paymentMode", "cash"));
@@ -1165,12 +1488,14 @@ export function useLoanStudio({
 
   const loanDate =
     new Date(
-      `${activeBusinessDate}T00:00:00.000Z`,
+      `${loanBusinessDate}T00:00:00.000Z`,
     );
-
-  const scheduleStartDate = firstInstallmentDate
-    ? new Date(`${firstInstallmentDate}T00:00:00`)
-    : new Date(loanDate);
+  /*
+   * Collection Date changes installment due dates only.
+   * Existing Loan Date remains the financial calculation baseline.
+   */
+  const scheduleStartDate =
+    new Date(loanDate);
 
   const maturityDate =
     durationValue > 0 && durationType ? new Date(loanDate) : null;
@@ -1192,8 +1517,7 @@ export function useLoanStudio({
   /* ==========================================================
      REPAYMENT SCHEDULE
   ========================================================== */
-
-  const schedule =
+  const baseSchedule =
     totalInstallments > 0 &&
     (normalizedRepaymentType === "MONTHLY" ||
       normalizedRepaymentType === "YEARLY")
@@ -1215,6 +1539,27 @@ export function useLoanStudio({
           parseNumericValue(advanceDeduction),
         )
       : [];
+
+  /*
+   * IMPORTANT:
+   * Collection Date changes ONLY dueDate values.
+   *
+   * Financial values stay exactly as generated:
+   * - installmentAmount
+   * - principalAmount
+   * - interestAmount
+   * - totalInterest
+   * - totalPayable
+   */
+  const schedule =
+    firstInstallmentDate
+      ? applyCollectionDatePattern(
+          baseSchedule,
+          firstInstallmentDate,
+          loanDate,
+          normalizedRepaymentType,
+        )
+      : baseSchedule;
 
   /* ==========================================================
      FINAL INTEREST / PAYABLE
@@ -1970,6 +2315,19 @@ export function useLoanStudio({
 
       return;
     }
+    const currentLocalBusinessDate =
+      getCurrentLocalBusinessDate();
+
+    if (
+      !loanBusinessDate ||
+      loanBusinessDate > currentLocalBusinessDate
+    ) {
+      await finoraWarning(
+        "Loan Date cannot be later than today.",
+      );
+
+      return;
+    }
 
     if (loanApproved) {
       await finoraWarning("Loan already created");
@@ -2292,13 +2650,13 @@ export function useLoanStudio({
    GOLD flow:
 
    Loan persisted
-        ↓
+        â†“
    Build physical custody request
-        ↓
+        â†“
    Re-load latest Gold Storage state
-        ↓
+        â†“
    Re-check Rack capacity
-        ↓
+        â†“
    Persist OCCUPIED custody allocation
 
    If custody fails, the just-created Loan is removed through
@@ -2543,8 +2901,8 @@ export function useLoanStudio({
           `${loanSuccessMessage}
 
 Loan Number: ${finalizedLoanNumber}
-FINORA Wallet Fee: ₹${walletChargeResult.data.amount}
-Available Balance: ₹${walletChargeResult.data.availableBalance}`,
+FINORA Wallet Fee: \u20B9${walletChargeResult.data.amount}
+Available Balance: \u20B9${walletChargeResult.data.availableBalance}`,
           {
             heading:
               "Loan Created Successfully",
@@ -2852,6 +3210,9 @@ Available Balance: ₹${walletChargeResult.data.availableBalance}`,
 
     loanDate,
 
+    loanBusinessDate,
+    handleLoanBusinessDateChange,
+
     scheduleStartDate,
 
     maturityDate,
@@ -2891,3 +3252,5 @@ Available Balance: ₹${walletChargeResult.data.availableBalance}`,
     resetLoanWorkspace,
   };
 }
+
+

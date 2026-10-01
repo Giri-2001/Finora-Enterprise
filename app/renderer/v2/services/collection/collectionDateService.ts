@@ -19,6 +19,7 @@
 ============================================================ */
 
 import {
+  getCurrentLocalBusinessDate,
   resolveBusinessDate,
 } from "../business/businessDateService";
 
@@ -187,6 +188,21 @@ export function validateCollectionDate(
   if (!activeBusinessDate) {
     throw new Error(
       "A valid FINORA Login Date is required before Collection.",
+    );
+  }
+
+  const currentLocalBusinessDate =
+    getCurrentLocalBusinessDate();
+
+  if (activeBusinessDate > currentLocalBusinessDate) {
+    throw new Error(
+      "FINORA Business Date cannot be later than today.",
+    );
+  }
+
+  if (collectionDate > currentLocalBusinessDate) {
+    throw new Error(
+      "Collection Date cannot be later than today.",
     );
   }
 

@@ -129,10 +129,19 @@ function parseCanonicalLoanNumber(
   const parts =
     normalizedLoanNumber.split("-");
 
+  const isCurrentCanonicalShape =
+    parts.length === 5 &&
+    parts[0] === "FIN" &&
+    parts[1] === "LOAN";
+
+  const isPreviousCanonicalShape =
+    parts.length === 6 &&
+    parts[0] === "FIN" &&
+    parts[1] === "LOAN";
+
   if (
-    parts.length !== 6 ||
-    parts[0] !== "FIN" ||
-    parts[1] !== "LOAN"
+    !isCurrentCanonicalShape &&
+    !isPreviousCanonicalShape
   ) {
     return {
       success: false,
@@ -143,10 +152,14 @@ function parseCanonicalLoanNumber(
   }
 
   const customerNumberText =
-    parts[4];
+    isCurrentCanonicalShape
+      ? parts[3]
+      : parts[4];
 
   const loanSequenceText =
-    parts[5];
+    isCurrentCanonicalShape
+      ? parts[4]
+      : parts[5];
 
   if (!/^\d{6}$/.test(customerNumberText)) {
     return {
@@ -383,17 +396,45 @@ async function resolveExistingCustomerNumber(
       .toUpperCase()
       .split("-");
 
-  const canonicalShape =
+  const normalizedCustomerIdUpper =
+    normalizedCustomerId.toUpperCase();
+
+  const normalizedBusinessCode =
+    scope.businessCode.trim().toUpperCase();
+
+  const normalizedBranchCode =
+    scope.branchCode.trim().toUpperCase();
+
+  const isCurrentCanonicalShape =
+    canonicalParts.length === 4 &&
+    canonicalParts[0] === "FIN" &&
+    canonicalParts[1] === "CUS" &&
+    canonicalParts[2] === normalizedBusinessCode &&
+    /^\d{6}$/.test(
+      canonicalParts[3] ?? "",
+    );
+
+  const isPreviousCanonicalShape =
     canonicalParts.length === 5 &&
     canonicalParts[0] === "FIN" &&
     canonicalParts[1] === "CUS" &&
+    canonicalParts[2] === normalizedBusinessCode &&
+    canonicalParts[3] === normalizedBranchCode &&
     /^\d{6}$/.test(
       canonicalParts[4] ?? "",
     );
 
-  if (canonicalShape) {
+  if (
+    isCurrentCanonicalShape ||
+    isPreviousCanonicalShape
+  ) {
+    const customerNumberText =
+      isCurrentCanonicalShape
+        ? canonicalParts[3]
+        : canonicalParts[4];
+
     const customerNumber =
-      Number(canonicalParts[4]);
+      Number(customerNumberText);
 
     if (
       !Number.isSafeInteger(customerNumber) ||
@@ -405,39 +446,6 @@ async function resolveExistingCustomerNumber(
 
         error:
           "Customer number is outside the supported FINORA range.",
-      };
-    }
-
-    let canonicalCustomerId:
-      string;
-
-    try {
-      canonicalCustomerId =
-        formatCustomerId(
-          scope.businessCode,
-          scope.branchCode,
-          customerNumber,
-        );
-    } catch (error) {
-      return {
-        success: false,
-
-        error:
-          error instanceof Error
-            ? error.message
-            : "Unable to validate the Customer ID.",
-      };
-    }
-
-    if (
-      normalizedCustomerId.toUpperCase() !==
-      canonicalCustomerId
-    ) {
-      return {
-        success: false,
-
-        error:
-          "Customer ID does not belong to the provisioned FINORA Business and Branch.",
       };
     }
 
@@ -637,7 +645,8 @@ function looksLikeCanonicalLoanNumber(
       .split("-");
 
   return (
-    parts.length === 6 &&
+    (parts.length === 5 ||
+      parts.length === 6) &&
     parts[0] === "FIN" &&
     parts[1] === "LOAN"
   );

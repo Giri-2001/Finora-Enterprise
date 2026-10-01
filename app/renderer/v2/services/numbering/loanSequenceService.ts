@@ -43,6 +43,10 @@ import {
 } from "../../repositories/numbering/loanSequenceRepository";
 
 import {
+  getLoansResult,
+} from "../../repositories/loan/loanRepository";
+
+import {
   resolveFinoraNumberingScope,
 } from "./finoraNumberingScopeService";
 
@@ -116,7 +120,7 @@ function parseCanonicalCustomerNumber(
     normalizedCustomerId.split("-");
 
   if (
-    parts.length !== 5 ||
+    parts.length !== 4 ||
     parts[0] !== "FIN" ||
     parts[1] !== "CUS"
   ) {
@@ -129,7 +133,7 @@ function parseCanonicalCustomerNumber(
   }
 
   const customerNumberText =
-    parts[4];
+    parts[3];
 
   if (!/^\d{6}$/.test(customerNumberText)) {
     return {
@@ -373,6 +377,123 @@ async function withLoanReservationLock<T>(
   }
 }
 
+async function resolveNextLoanSequenceWithLoanBootstrap(
+  scope: ResolvedLoanCustomerScope,
+  state: LoanSequenceState | undefined,
+): Promise<StorageResult<number>> {
+
+  if (state) {
+    return resolveNextLoanSequence(state);
+  }
+
+  const loansResult =
+    await getLoansResult();
+
+  if (!loansResult.success) {
+    return {
+      success: false,
+
+      error:
+        loansResult.error ??
+        "Unable to inspect existing Loan records for sequence continuity.",
+    };
+  }
+
+  const loans =
+    loansResult.data ?? [];
+
+  let highestExistingSequence = 0;
+
+  for (const loan of loans) {
+    const normalizedLoanNumber =
+      String(loan.loanNumber ?? "")
+        .trim()
+        .toUpperCase();
+
+    if (!normalizedLoanNumber) {
+      continue;
+    }
+
+    const parts =
+      normalizedLoanNumber.split("-");
+
+    let customerNumberText:
+      string | undefined;
+
+    let loanSequenceText:
+      string | undefined;
+
+    const currentShape =
+      parts.length === 5 &&
+      parts[0] === "FIN" &&
+      parts[1] === "LOAN" &&
+      parts[2] === scope.businessCode &&
+      /^\d{6}$/.test(parts[3] ?? "") &&
+      /^\d{3}$/.test(parts[4] ?? "");
+
+    const previousCanonicalShape =
+      parts.length === 6 &&
+      parts[0] === "FIN" &&
+      parts[1] === "LOAN" &&
+      parts[2] === scope.businessCode &&
+      parts[3] === scope.branchCode &&
+      /^\d{6}$/.test(parts[4] ?? "") &&
+      /^\d{3}$/.test(parts[5] ?? "");
+
+    if (currentShape) {
+      customerNumberText = parts[3];
+      loanSequenceText = parts[4];
+    } else if (previousCanonicalShape) {
+      customerNumberText = parts[4];
+      loanSequenceText = parts[5];
+    } else {
+      continue;
+    }
+
+    const customerNumber =
+      Number(customerNumberText);
+
+    const loanSequence =
+      Number(loanSequenceText);
+
+    if (
+      customerNumber !== scope.customerNumber ||
+      !Number.isInteger(loanSequence) ||
+      loanSequence < LOAN_SEQUENCE_MIN ||
+      loanSequence > LOAN_SEQUENCE_MAX
+    ) {
+      continue;
+    }
+
+    highestExistingSequence =
+      Math.max(
+        highestExistingSequence,
+        loanSequence,
+      );
+  }
+
+  if (highestExistingSequence === 0) {
+    return resolveNextLoanSequence(undefined);
+  }
+
+  if (
+    highestExistingSequence >=
+    LOAN_SEQUENCE_MAX
+  ) {
+    return {
+      success: false,
+
+      error:
+        "This Customer has reached the maximum FINORA Loan sequence.",
+    };
+  }
+
+  return {
+    success: true,
+    data: highestExistingSequence + 1,
+  };
+}
+
 // ============================================================
 // NEXT LOAN SEQUENCE
 // ============================================================
@@ -460,7 +581,8 @@ export async function previewNextLoanNumber(
   }
 
   const nextSequenceResult =
-    resolveNextLoanSequence(
+    await resolveNextLoanSequenceWithLoanBootstrap(
+      scope,
       stateResult.data,
     );
 
@@ -574,7 +696,8 @@ async function reserveNextLoanNumberUnlocked(
     stateResult.data;
 
   const nextSequenceResult =
-    resolveNextLoanSequence(
+    await resolveNextLoanSequenceWithLoanBootstrap(
+      scope,
       existingState,
     );
 

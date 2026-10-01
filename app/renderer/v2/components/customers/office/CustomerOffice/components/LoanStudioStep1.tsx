@@ -1,4 +1,4 @@
-/* ===========================================================
+﻿/* ===========================================================
    FINORA ENTERPRISE OS™
    LOAN STUDIO™ — STEP 1
 
@@ -99,7 +99,11 @@ type LoanStudioStep1Props = {
   ) => void;
 
   lateFee: string;
+
 
+  firstInstallmentDate?: string;
+
+  setFirstInstallmentDate?: (value: string) => void;
   setLateFee: (
     value: string,
   ) => void;
@@ -180,7 +184,10 @@ export default function LoanStudioStep1(
 
     lateFee,
     setLateFee,
+
 
+    firstInstallmentDate = "",
+    setFirstInstallmentDate,
     repaymentType,
     setRepaymentType,
 
@@ -235,7 +242,8 @@ export default function LoanStudioStep1(
             interest={interest}
             processingFee={processingFee}
             advanceDeduction={advanceDeduction}
-            lateFee={lateFee}
+            lateFee={lateFee}
+            collectionDate={firstInstallmentDate}
             repaymentType={repaymentType}
             duration={duration}
             durationType={durationType}
@@ -247,6 +255,9 @@ export default function LoanStudioStep1(
             onProcessingFeeChange={setProcessingFee}
             onAdvanceDeductionChange={setAdvanceDeduction}
             onLateFeeChange={setLateFee}
+            onCollectionDateChange={(value) =>
+              setFirstInstallmentDate?.(value)
+            }
             onRepaymentTypeChange={setRepaymentType}
             onDurationChange={setDuration}
             onDurationTypeChange={setDurationType}
@@ -286,3 +297,5 @@ export default function LoanStudioStep1(
     </section>
   );
 }
+
+
