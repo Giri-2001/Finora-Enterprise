@@ -7,6 +7,11 @@ Reusable header for Customer Identity Studio.
 
 import type { CSSProperties } from "react";
 
+import {
+  formTitleStyle,
+  formSubtitleStyle,
+} from "../wizard/steps/Step2Basic.styles";
+
 interface IdentityHeaderProps {
   title: string;
   subtitle: string;
@@ -14,21 +19,13 @@ interface IdentityHeaderProps {
 
 const wrapperStyle: CSSProperties = {
   marginBottom: "28px",
+  fontFamily:
+    "Inter, ui-sans-serif, system-ui, sans-serif",
 };
 
-const titleStyle: CSSProperties = {
-  margin: 0,
-  fontSize: "30px",
-  fontWeight: 700,
-  color: "#111827",
-};
 
-const subtitleStyle: CSSProperties = {
-  marginTop: "10px",
-  color: "#6b7280",
-  fontSize: "15px",
-  lineHeight: 1.7,
-};
+
+
 
 export default function IdentityHeader({
   title,
@@ -37,11 +34,11 @@ export default function IdentityHeader({
   return (
     <header style={wrapperStyle}>
 
-      <h2 style={titleStyle}>
+      <h1 style={{ fontSize: "19px", fontWeight: 750, fontFamily: "var(--finora-theme-font-family, Inter, sans-serif)", margin: 0, color: "var(--finora-theme-text-primary, #F5F2EA)" }}>
         {title}
-      </h2>
+      </h1>
 
-      <p style={subtitleStyle}>
+      <p style={{ fontSize: "12px", fontWeight: 500, fontFamily: "var(--finora-theme-font-family, Inter, sans-serif)", marginTop: "6px", maxWidth: "100%", whiteSpace: "normal", overflowWrap: "break-word", color: "var(--finora-theme-text-secondary, #B9B5AC)" }}>
         {subtitle}
       </p>
 

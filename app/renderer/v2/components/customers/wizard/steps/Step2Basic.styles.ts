@@ -1,8 +1,8 @@
 /* ===========================================================
-   FINORA ENTERPRISE OS™
+   FINORA ENTERPRISE OSâ„¢
 
    CUSTOMER WIZARD
-   STEP 2 — BASIC DETAILS
+   STEP 2 â€” BASIC DETAILS
 
    Version     : 3.0
    Phase       : Phase 2
@@ -26,13 +26,13 @@
    THEME CONTRACT:
 
    ThemeProvider
-        ↓
+        â†“
    FinoraTheme
-        ↓
+        â†“
    Step2Basic theme CSS variables
-        ↓
+        â†“
    Step2Basic styles
-        ↓
+        â†“
    BasicForm / OccupationCard / FamilyDetails
 =========================================================== */
 
@@ -435,10 +435,10 @@ export function createStep2BasicHeaderStyles(
       THEME.textPrimary,
 
     fontSize:
-      `${tokens.typography.heading - 3}px`,
+    `${tokens.typography.heading - 4}px`,
 
     fontWeight:
-      600,
+    400,
 
     lineHeight:
       tokens.lineHeight.heading,
@@ -446,8 +446,7 @@ export function createStep2BasicHeaderStyles(
     letterSpacing:
       ".1px",
 
-    fontFamily:
-      "Georgia, 'Times New Roman', serif",
+    fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
 
   };
 
@@ -469,16 +468,15 @@ export function createStep2BasicHeaderStyles(
       THEME.textSecondary,
 
     fontSize:
-      `${tokens.typography.body - 1}px`,
+    `${tokens.typography.body - 2}px`,
 
     lineHeight:
       tokens.lineHeight.body,
 
     fontWeight:
-      500,
+    400,
 
-    fontFamily:
-      "Georgia, 'Times New Roman', serif",
+    fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
 
   };
 

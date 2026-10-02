@@ -1,8 +1,8 @@
 /* ===========================================================
-   FINORA ENTERPRISE OS™
+   FINORA ENTERPRISE OSâ„¢
 
    CUSTOMER WIZARD
-   STEP 3 — ADDRESS STUDIO™
+   STEP 3 â€” ADDRESS STUDIOâ„¢
 
    Version     : 3.0
    Phase       : Phase 2
@@ -787,8 +787,7 @@ export const inputStyle:
   color:
     "var(--finora-theme-text-primary, #F5F2EA)",
 
-  fontFamily:
-    "var(--finora-theme-font-family, Inter, system-ui, sans-serif)",
+  fontFamily: "var(--finora-theme-font-family, Inter, ui-sans-serif, system-ui, sans-serif)",
 
   fontWeight:
     600,  

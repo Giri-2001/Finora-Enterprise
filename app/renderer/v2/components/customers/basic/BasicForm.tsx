@@ -216,9 +216,7 @@ export default function BasicForm({
             }
           >
 
-            <FieldLabel
-              required
-            >
+            <FieldLabel>
               Father / Spouse Name
             </FieldLabel>
 

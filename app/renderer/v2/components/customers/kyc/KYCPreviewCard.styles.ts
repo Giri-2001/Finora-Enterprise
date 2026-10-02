@@ -23,7 +23,7 @@ export const cardStyle: CSSProperties = {
 
   flexDirection: "column",
 
-  padding: "14px 15px",
+  padding: "18px 18px",
 
   borderRadius: "16px",
 
@@ -82,14 +82,15 @@ export const rowStyle: CSSProperties = {
 
   display: "grid",
 
-  gridTemplateColumns:
-    "78px minmax(0,1fr)",
+  gridTemplateColumns: "90px minmax(0,1fr)",
 
-  alignItems: "center",
+  alignItems: "flex-start",
 
-  gap: "9px",
+  rowGap: "18px",
 
-  padding: "8px 0",
+  columnGap: "24px",
+
+  padding: "18px 0",
 
   borderBottom:
     "1px solid var(--finora-theme-border-default, #D9DEE7)",
@@ -107,7 +108,7 @@ export const labelStyle: CSSProperties = {
 
   fontSize: "9px",
 
-  fontWeight: 750,
+  fontWeight: 700,
 
   textTransform: "uppercase",
 
@@ -125,11 +126,11 @@ export const valueStyle: CSSProperties = {
 
   width: "100%",
 
-  minHeight: "45px",
+  minHeight: "62px",
 
   display: "flex",
 
-  alignItems: "center",
+  alignItems: "flex-start",
 
   padding: "0 14px",
 
@@ -144,9 +145,13 @@ export const valueStyle: CSSProperties = {
   color:
     "var(--finora-theme-text-primary, #FFFFFF)",
 
-  fontSize: "11px",
+  fontFamily: "var(--finora-theme-font-family, Inter, sans-serif)",
 
-  fontWeight: 750,
+  fontSize: "16px",
+
+  fontWeight: 700,
+
+  marginTop: "6px",
 
   overflow: "hidden",
 
@@ -171,7 +176,7 @@ export const statusStyle = (
       ? "var(--finora-theme-status-success, #86EFAC)"
       : "var(--finora-theme-brand-accent, #4D82E6)",
 
-  fontSize: "11px",
+  fontSize: "12px",
 
   fontWeight: 850,
   

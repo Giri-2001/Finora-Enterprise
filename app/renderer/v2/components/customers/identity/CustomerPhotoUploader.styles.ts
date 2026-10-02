@@ -203,8 +203,13 @@ export const descriptionStyle: CSSProperties = {
  color:
   "var(--finora-theme-text-muted, var(--finora-theme-text-secondary))",
 
-  fontSize:
-    "11px",
+  fontSize: "12px",
+
+  maxWidth: "100%",
+
+  whiteSpace: "normal",
+
+  overflowWrap: "break-word",
 
   lineHeight:
     1.55,

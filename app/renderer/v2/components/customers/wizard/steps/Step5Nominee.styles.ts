@@ -1,8 +1,8 @@
 /* ===========================================================
-   FINORA ENTERPRISE OS™
+   FINORA ENTERPRISE OSâ„¢
 
    CUSTOMER WIZARD
-   STEP 3 — NOMINEE + FINAL REVIEW WORKSPACE
+   STEP 3 â€” NOMINEE + FINAL REVIEW WORKSPACE
 
    VERSION     : 3.0
    PHASE       : Phase 2
@@ -71,7 +71,7 @@ export type Step3ThemeStyle =
 
 export function createStep3ThemeVariables(): Step3ThemeStyle {
 
-  return {
+  return { fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
 
     "--finora-theme-page":
       "var(--finora-theme-background-page, #0B1220)",
@@ -114,7 +114,7 @@ export function createPageStyle(
     ResponsiveTokens,
 ): CSSProperties {
 
-  return {
+  return { fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
 
     width:
       "100%",
@@ -166,7 +166,7 @@ export function createWorkspaceStyle(
     ResponsiveTokens,
 ): CSSProperties {
 
-  return {
+  return { fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
 
     width:
       "100%",
@@ -225,7 +225,7 @@ export function createSectionStyle(
     ResponsiveTokens,
 ): CSSProperties {
 
-  return {
+  return { fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
 
     width:
       "100%",
@@ -280,7 +280,7 @@ export function createSectionHeaderStyle(
     ResponsiveTokens,
 ): CSSProperties {
 
-  return {
+  return { fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
 
     flexShrink:
       0,
@@ -323,7 +323,7 @@ export function createSectionTitleStyle(
     ResponsiveTokens,
 ): CSSProperties {
 
-  return {
+  return { fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
 
     margin:
       0,
@@ -354,7 +354,7 @@ export function createSectionSubtitleStyle(
     ResponsiveTokens,
 ): CSSProperties {
 
-  return {
+  return { fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
 
     margin:
       0,
@@ -385,7 +385,7 @@ export function createActionPanelStyle(
     ResponsiveTokens,
 ): CSSProperties {
 
-  return {
+  return { fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
 
     width:
       "100%",
@@ -425,7 +425,7 @@ export function createResponsiveStyle(
     ResponsiveTokens,
 ): CSSProperties {
 
-  return {
+  return { fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
 
     width:
       "100%",

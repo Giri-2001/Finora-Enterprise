@@ -1,5 +1,5 @@
 /* ===========================================================
-   FINORA ENTERPRISE OS™
+   FINORA ENTERPRISE OSâ„¢
 
    CUSTOMER REVIEW SUMMARY
    PRESENTATION STYLES
@@ -137,6 +137,8 @@ export function createCustomerSummaryStyles(
 
   const cardStyle: CSSProperties = {
 
+
+    fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
     minWidth: 0,
 
     minHeight: 0,
@@ -169,6 +171,8 @@ export function createCustomerSummaryStyles(
 
   const headerStyle: CSSProperties = {
 
+
+    fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
     minWidth: 0,
 
     display: "flex",
@@ -185,6 +189,8 @@ export function createCustomerSummaryStyles(
 
   const headerIconStyle: CSSProperties = {
 
+
+    fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
     flexShrink: 0,
 
     width: "36px",
@@ -220,6 +226,8 @@ export function createCustomerSummaryStyles(
 
   const headerTextStyle: CSSProperties = {
 
+
+    fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
     minWidth: 0,
 
     flex: 1,
@@ -238,6 +246,8 @@ export function createCustomerSummaryStyles(
 
   const titleStyle: CSSProperties = {
 
+
+    fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
     margin: 0,
 
     padding: 0,
@@ -249,7 +259,7 @@ export function createCustomerSummaryStyles(
 
     lineHeight: 1.3,
 
-    fontWeight: 800,
+    fontWeight: 750,
 
     letterSpacing: ".1px",
   };
@@ -261,6 +271,8 @@ export function createCustomerSummaryStyles(
 
   const subtitleStyle: CSSProperties = {
 
+
+    fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
     margin: 0,
 
     padding: 0,
@@ -272,7 +284,7 @@ export function createCustomerSummaryStyles(
 
     lineHeight: 1.3,
 
-    fontWeight: 550,
+    fontWeight: 500,
   };
 
 
@@ -282,6 +294,8 @@ export function createCustomerSummaryStyles(
 
   const statusStyle: CSSProperties = {
 
+
+    fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
     flexShrink: 0,
 
     display: "inline-flex",
@@ -327,6 +341,8 @@ export function createCustomerSummaryStyles(
 
   const dividerStyle: CSSProperties = {
 
+
+    fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
     width: "100%",
 
     height: "1px",
@@ -346,6 +362,8 @@ export function createCustomerSummaryStyles(
 
   const rowStyle: CSSProperties = {
 
+
+    fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
     minWidth: 0,
 
     display: "grid",
@@ -371,6 +389,8 @@ export function createCustomerSummaryStyles(
 
   const rowIconStyle: CSSProperties = {
 
+
+    fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
     width: "36px",
 
     height: "36px",
@@ -400,6 +420,8 @@ export function createCustomerSummaryStyles(
 
   const labelStyle: CSSProperties = {
 
+
+    fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
     minWidth: 0,
 
     color:
@@ -423,6 +445,8 @@ export function createCustomerSummaryStyles(
 
   const valueStyle: CSSProperties = {
 
+
+    fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
     minWidth: 0,
 
     color:
@@ -448,6 +472,8 @@ export function createCustomerSummaryStyles(
 
   const emptyValueStyle: CSSProperties = {
 
+
+    fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
     minWidth: 0,
 
     color:
@@ -471,7 +497,7 @@ export function createCustomerSummaryStyles(
      RETURN
   ========================================================= */
 
-  return {
+  return { fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
 
     cardStyle,
 

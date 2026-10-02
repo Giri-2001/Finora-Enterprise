@@ -1,5 +1,5 @@
 /* ===========================================================
-   FINORA ENTERPRISE OS™
+   FINORA ENTERPRISE OSâ„¢
 
    CUSTOMER NOMINEE PREVIEW
    PRESENTATION STYLES
@@ -51,6 +51,8 @@ export function createNomineePreviewCardStyles(
   const cardStyle:
     CSSProperties = {
 
+
+    fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
     minWidth: 0,
 
     minHeight: 0,
@@ -84,6 +86,8 @@ export function createNomineePreviewCardStyles(
   const headerStyle:
     CSSProperties = {
 
+
+    fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
     minWidth: 0,
 
     display: "flex",
@@ -103,6 +107,8 @@ export function createNomineePreviewCardStyles(
   const headerContentStyle:
     CSSProperties = {
 
+
+    fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
     minWidth: 0,
 
     display: "flex",
@@ -120,6 +126,8 @@ export function createNomineePreviewCardStyles(
   const headerIconWrapperStyle:
     CSSProperties = {
 
+
+    fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
     flexShrink: 0,
 
     display: "inline-flex",
@@ -152,6 +160,8 @@ export function createNomineePreviewCardStyles(
   const headerIconStyle:
     CSSProperties = {
 
+
+    fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
     width: "24px",
 
     height: "24px",
@@ -170,6 +180,8 @@ export function createNomineePreviewCardStyles(
   const titleStyle:
     CSSProperties = {
 
+
+    fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
     margin: 0,
 
     color:
@@ -179,7 +191,7 @@ export function createNomineePreviewCardStyles(
 
     lineHeight: 1.3,
 
-    fontWeight: 850,
+    fontWeight: 800,
   };
 
 
@@ -190,6 +202,8 @@ export function createNomineePreviewCardStyles(
   const subtitleStyle:
     CSSProperties = {
 
+
+    fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
     margin: "5px 0 0",
 
     color:
@@ -199,7 +213,7 @@ export function createNomineePreviewCardStyles(
 
     lineHeight: 1.3,
 
-    fontWeight: 550,
+    fontWeight: 500,
   };
 
 
@@ -210,6 +224,8 @@ export function createNomineePreviewCardStyles(
   const linkedBadgeStyle:
     CSSProperties = {
 
+
+    fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
     flexShrink: 0,
 
     display: "inline-flex",
@@ -244,6 +260,8 @@ export function createNomineePreviewCardStyles(
   const dividerStyle:
     CSSProperties = {
 
+
+    fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
     width: "100%",
 
     height: "1px",
@@ -264,6 +282,8 @@ export function createNomineePreviewCardStyles(
   const rowStyle:
     CSSProperties = {
 
+
+    fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
     minWidth: 0,
 
     display: "grid",
@@ -293,6 +313,8 @@ export function createNomineePreviewCardStyles(
   const rowIconWrapperStyle:
     CSSProperties = {
 
+
+    fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
     width: "18px",
 
     height: "18px",
@@ -315,6 +337,8 @@ export function createNomineePreviewCardStyles(
   const rowIconStyle:
     CSSProperties = {
 
+
+    fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
     width: "18px",
 
     height: "18px",
@@ -335,6 +359,8 @@ export function createNomineePreviewCardStyles(
   const labelStyle:
     CSSProperties = {
 
+
+    fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
     color:
       theme.colors.text.primary,
 
@@ -357,6 +383,8 @@ export function createNomineePreviewCardStyles(
   const valueStyle:
     CSSProperties = {
 
+
+    fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
     minWidth: 0,
 
     color:
@@ -383,6 +411,8 @@ export function createNomineePreviewCardStyles(
   const emptyValueStyle:
     CSSProperties = {
 
+
+    fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
     color:
       theme.colors.text.disabled,
 
@@ -399,6 +429,8 @@ export function createNomineePreviewCardStyles(
   const footerStyle:
     CSSProperties = {
 
+
+    fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
     marginTop: "12px",
 
     color:
@@ -416,7 +448,7 @@ export function createNomineePreviewCardStyles(
      RETURN STYLE CONTRACT
   ========================================================= */
 
-  return {
+  return { fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
 
     cardStyle,
 

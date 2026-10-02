@@ -1,8 +1,8 @@
 /* ===========================================================
-   FINORA ENTERPRISE OS™
+   FINORA ENTERPRISE OSâ„¢
 
    CUSTOMER WIZARD
-   STEP 6 — REVIEW RESPONSIVE LAYOUT™
+   STEP 6 â€” REVIEW RESPONSIVE LAYOUTâ„¢
 
    RESPONSIBILITY:
 
@@ -28,7 +28,7 @@ export function createStep6ReviewWorkspaceStyle(
     ReviewResponsiveTokens,
 ): CSSProperties {
 
-  return {
+  return { fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
 
     width:
       "100%",
@@ -93,7 +93,7 @@ export function createStep6ReviewWorkspaceStyle(
 export function createStep6ReviewColumnStyle():
   CSSProperties {
 
-  return {
+  return { fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
 
     display:
       "contents",
@@ -112,7 +112,7 @@ export function createStep6ReviewActionPanelStyle(
     ReviewResponsiveTokens,
 ): CSSProperties {
 
-  return {
+  return { fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
 
     minWidth:
       0,
@@ -159,7 +159,7 @@ export function createStep6ReviewActionPanelStyle(
 export function createStep6ReviewDraftAreaStyle():
   CSSProperties {
 
-  return {
+  return { fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
 
     width:
       "100%",
@@ -185,7 +185,7 @@ export function createStep6ReviewDraftAreaStyle():
 export function createStep6ReviewActionAreaStyle():
   CSSProperties {
 
-  return {
+  return { fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
 
     width:
       "100%",
@@ -220,7 +220,7 @@ export function createStep6ReviewActionAreaStyle():
 export function createStep6ReviewResponsiveStyle():
   CSSProperties {
 
-  return {
+  return { fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
 
     width:
       "100%",

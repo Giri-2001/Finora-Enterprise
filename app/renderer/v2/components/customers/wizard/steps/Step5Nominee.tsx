@@ -1,8 +1,8 @@
 /* ===========================================================
-   FINORA ENTERPRISE OS™
+   FINORA ENTERPRISE OSâ„¢
 
    CUSTOMER WIZARD
-   STEP 5 — NOMINEE STUDIO™
+   STEP 5 â€” NOMINEE STUDIOâ„¢
 
    Version     : 4.0
    Phase       : Phase 2
@@ -711,7 +711,7 @@ export default function Step5Nominee({
       >
 
         {/* =================================================
-            1 — NOMINEE INFORMATION
+            1 â€” NOMINEE INFORMATION
         ================================================= */}
 
         <div
@@ -744,7 +744,7 @@ export default function Step5Nominee({
 
 
         {/* =================================================
-            2 — NOMINEE PREVIEW
+            2 â€” NOMINEE PREVIEW
         ================================================= */}
 
         <div
@@ -782,7 +782,7 @@ export default function Step5Nominee({
 
 
         {/* =================================================
-            3 — CUSTOMER SUMMARY
+            3 â€” CUSTOMER SUMMARY
         ================================================= */}
 
         <div

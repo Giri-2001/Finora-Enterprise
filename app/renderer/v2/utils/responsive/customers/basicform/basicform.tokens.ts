@@ -1,5 +1,5 @@
 /* ===========================================================
-   FINORA ENTERPRISE OS™
+   FINORA ENTERPRISE OSâ„¢
 
    CUSTOMER BASIC FORM
    RESPONSIVE TOKENS
@@ -269,21 +269,21 @@ export const MOBILE_BASICFORM_TOKENS:
   --------------------------------------------------------- */
 
   labelFontSize:
-    10,
+    11,
 
   labelFontWeight:
-    600,
+    650,
 
   labelLetterSpacing:
     0.45,
 
   inputFontSize:
-    11,
+    12,
 
     
 
   inputFontWeight:
-    500,
+    550,
 
   optionFontSize:
     11,
@@ -438,16 +438,16 @@ export const TABLET_BASICFORM_TOKENS:
   --------------------------------------------------------- */
 
   labelFontSize:
-    10,
+    11,
 
   labelFontWeight:
-    600,
+    650,
 
   labelLetterSpacing:
     0.45,
 
   inputFontSize:
-    11,
+    12,
 
   basicLabelFontSize:
     9,
@@ -459,7 +459,7 @@ export const TABLET_BASICFORM_TOKENS:
     10,
 
   inputFontWeight:
-    500,
+    550,
 
   optionFontSize:
     11,
@@ -607,10 +607,10 @@ export const LAPTOP_BASICFORM_TOKENS:
   --------------------------------------------------------- */
 
   labelFontSize:
-    10,
+    11,
 
   labelFontWeight:
-    600,
+    650,
 
   labelLetterSpacing:
     0.45,
@@ -628,7 +628,7 @@ export const LAPTOP_BASICFORM_TOKENS:
     10,
 
   inputFontWeight:
-    500,
+    550,
 
   optionFontSize:
     11,
@@ -776,16 +776,16 @@ export const DESKTOP_BASICFORM_TOKENS:
   --------------------------------------------------------- */
 
   labelFontSize:
-    10,
+    11,
 
   labelFontWeight:
-    600,
+    650,
 
   labelLetterSpacing:
     0.45,
 
   inputFontSize:
-    11,
+    12,
 
   basicLabelFontSize:
     9,
@@ -797,7 +797,7 @@ export const DESKTOP_BASICFORM_TOKENS:
     10,
 
   inputFontWeight:
-    500,
+    550,
 
   optionFontSize:
     11,

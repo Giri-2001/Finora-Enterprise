@@ -54,9 +54,7 @@ export function createAddressPageStyle(
 ):
   CSSProperties {
 
-  return {
-
-    width:
+  return {    fontFamily: "var(--finora-theme-font-family, Inter, sans-serif)",    width:
       "100%",
 
     minWidth:
@@ -546,9 +544,7 @@ export function createAddressInputWrapperStyle(
 ):
   CSSProperties {
 
-  return {
-
-    position:
+  return {    fontFamily: "var(--finora-theme-font-family, Inter, sans-serif)",    position:
       "relative",
 
     width:
@@ -694,9 +690,7 @@ export function createAddressLongInputStyle(
 ):
   CSSProperties {
 
-  return {
-
-    ...createAddressInputStyle(
+  return {    fontFamily: "var(--finora-theme-font-family, Inter, sans-serif)",    ...createAddressInputStyle(
       tokens,
     ),
 
@@ -721,9 +715,7 @@ export function createAddressSelectChevronStyle(
 ):
   CSSProperties {
 
-  return {
-
-    position:
+  return {    fontFamily: "var(--finora-theme-font-family, Inter, sans-serif)",    position:
       "absolute",
 
     right:
@@ -889,7 +881,7 @@ export function createAddressPreviewTitleStyle(
     color:
       "var(--finora-theme-text-primary, #171A21)",
 
-    fontFamily: 'Georgia, "Times New Roman", serif',
+    fontFamily: "var(--finora-theme-font-family, Inter, sans-serif)",
 
     fontSize:
       `${tokens.previewTitleSize}px`,
@@ -915,9 +907,7 @@ export function createAddressPreviewSubtitleStyle(
 ):
   CSSProperties {
 
-  return {
-
-    margin:
+  return {    fontFamily: "var(--finora-theme-font-family, Inter, sans-serif)",    margin:
       "6px 0 0",
 
     color:
@@ -947,9 +937,7 @@ export function createAddressPreviewRowsStyle(
 ):
   CSSProperties {
 
-  return {
-
-    width:
+  return {    fontFamily: "var(--finora-theme-font-family, Inter, sans-serif)",    width:
       "100%",
 
     minWidth:
@@ -991,7 +979,7 @@ export function createAddressPreviewRowStyle(
       0,
 
     padding:
-      `${tokens.previewRowPaddingY}px ${tokens.previewPaddingX}px`,
+      `${tokens.previewRowPaddingY + 4}px ${tokens.previewPaddingX}px`,
 
     boxSizing:
       "border-box",
@@ -1064,15 +1052,7 @@ export function createAddressPreviewLabelStyle(
    PREVIEW VALUE
 =========================================================== */
 
-export function createAddressPreviewValueStyle(
-  tokens:
-    AddressResponsiveTokens,
-):
-  CSSProperties {
-
-  return {
-
-    margin:
+export function createAddressPreviewValueStyle($tokens: AddressResponsiveTokens): CSSProperties {  return {    fontFamily: "var(--finora-theme-font-family, Inter, sans-serif)",    margin:
       0,
 
     color:
@@ -1081,8 +1061,9 @@ export function createAddressPreviewValueStyle(
     fontSize:
       `${tokens.previewValueSize}px`,
 
-    fontWeight:
-      650,
+    fontFamily: "var(--finora-theme-font-family, Inter, sans-serif)",
+
+    fontWeight: 650,
 
     lineHeight:
       1.25,
@@ -1151,7 +1132,7 @@ export function createAddressPreviewMetaItemStyle(
       0,
 
     padding:
-      `${tokens.previewRowPaddingY}px ${tokens.previewPaddingX}px`,
+      `${tokens.previewRowPaddingY + 4}px ${tokens.previewPaddingX}px`,
 
     borderRadius:
       `${Math.max(8, tokens.previewRadius - 2)}px`,
@@ -1161,6 +1142,15 @@ export function createAddressPreviewMetaItemStyle(
 
     background:
   "var(--finora-theme-background-surface-muted, #F3F5F8)",
+
+    display:
+      "flex",
+
+    flexDirection:
+      "column",
+
+    gap:
+      "5px",
 
     boxSizing:
       "border-box",

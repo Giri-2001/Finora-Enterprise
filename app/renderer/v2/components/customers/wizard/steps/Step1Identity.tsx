@@ -749,23 +749,16 @@ export default function Step1Identity({
       }}
     >
 
-      <h1
-        style={{
-          ...formTitleStyle,
-
-          margin: 0,
+      <h1 style={{
+          ...formTitleStyle, fontSize: "23px", fontWeight: 750, margin: 0,
         }}
       >
         Customer Identity
       </h1>
 
 
-      <p
-        style={{
-          ...formSubtitleStyle,
-
-          margin:
-            "3px 0 0",
+      <p style={{
+          ...formSubtitleStyle, fontSize: "12px", fontWeight: 550, margin: "3px 0 0", maxWidth: "100%", whiteSpace: "normal", overflowWrap: "break-word", wordBreak: "break-word",
         }}
       >
         Create the customer's permanent

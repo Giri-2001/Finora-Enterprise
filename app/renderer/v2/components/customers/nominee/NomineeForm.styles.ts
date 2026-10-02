@@ -1,5 +1,5 @@
 /* ===========================================================
-   FINORA ENTERPRISE OS™
+   FINORA ENTERPRISE OSâ„¢
 
    CUSTOMER NOMINEE FORM
    PRESENTATION STYLES
@@ -100,7 +100,7 @@ export function createNomineeFormStyles(
     tokens.spacing;
 
 
-  return {
+  return { fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
 
 
     /* =======================================================
@@ -109,6 +109,8 @@ export function createNomineeFormStyles(
 
     wrapperStyle: {
 
+
+      fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
       minWidth: 0,
 
       minHeight: 0,
@@ -141,6 +143,8 @@ export function createNomineeFormStyles(
 
     headerStyle: {
 
+
+      fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
       flexShrink: 0,
 
       display: "flex",
@@ -159,6 +163,8 @@ export function createNomineeFormStyles(
 
     headerIconStyle: {
 
+
+      fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
       width: "38px",
 
       height: "38px",
@@ -190,6 +196,8 @@ export function createNomineeFormStyles(
 
 titleStyle: {
 
+
+  fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
   margin: 0,
 
   color:
@@ -202,7 +210,7 @@ titleStyle: {
     lineHeight.heading,
 
   fontWeight:
-    800,
+    750,
 
   letterSpacing:
     ".1px",
@@ -214,6 +222,8 @@ titleStyle: {
 
 subtitleStyle: {
 
+
+  fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
   margin:
     `${spacing.small - 5}px 0 0`,
 
@@ -227,7 +237,7 @@ subtitleStyle: {
     lineHeight.body,
 
   fontWeight:
-    600,
+    550,
 },
 
 
@@ -237,6 +247,8 @@ subtitleStyle: {
 
     sectionDividerStyle: {
 
+
+      fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
       width: "100%",
 
       height: "1px",
@@ -257,6 +269,8 @@ subtitleStyle: {
 
     gridStyle: {
 
+
+      fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
       width: "100%",
 
       minWidth: 0,
@@ -284,6 +298,8 @@ rowGap:
 
     fieldStyle: {
 
+
+      fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
       minWidth: 0,
 
       display: "flex",
@@ -300,6 +316,8 @@ rowGap:
 
 labelStyle: {
 
+
+  fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
   color:
     theme.typography.label,
 
@@ -318,8 +336,7 @@ labelStyle: {
   textTransform:
     "uppercase",
 
-    fontFamily:
-  "var(--finora-theme-font-family, Inter, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif)",
+    fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
 },
 
 
@@ -329,6 +346,8 @@ labelStyle: {
 
     inputWrapperStyle: {
 
+
+      fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
       position: "relative",
 
       width: "100%",
@@ -343,6 +362,8 @@ labelStyle: {
 
     inputIconStyle: {
 
+
+      fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
       position: "absolute",
 
       left: "11px",
@@ -373,6 +394,8 @@ labelStyle: {
 
 inputStyle: {
 
+
+  fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
   width: "100%",
 
   height: "39px",
@@ -397,8 +420,7 @@ inputStyle: {
 
   fontSize: "12px",
 
-  fontFamily:
-  "var(--finora-theme-font-family, Inter, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif)",
+  fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
 
   fontWeight: 650,
 },
@@ -410,6 +432,8 @@ inputStyle: {
 
     readonlyInputStyle: {
 
+
+      fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
       width: "100%",
 
       height: "39px",
@@ -446,6 +470,8 @@ inputStyle: {
 
     selectStyle: {
 
+
+      fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
       width: "100%",
 
       height: "39px",
@@ -482,6 +508,8 @@ inputStyle: {
 
     helperStyle: {
 
+
+      fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
       marginTop: 0,
 
       color:

@@ -1,8 +1,8 @@
 /* ===========================================================
-   FINORA ENTERPRISE OS™
+   FINORA ENTERPRISE OSâ„¢
 
    CUSTOMER WIZARD
-   STEP 3 — ADDRESS STUDIO™
+   STEP 3 â€” ADDRESS STUDIOâ„¢
 
    Version     : 3.0
    Phase       : Phase 2
@@ -399,7 +399,8 @@ export default function Step3Address({
       style={{
         ...styles.pageStyle,
         ...themeVariables,
-      }}
+        fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
+}}
     >
 
       {/* =====================================================
@@ -425,7 +426,7 @@ export default function Step3Address({
 
 
         {/* ===================================================
-            SECTION 1 — ADDRESS INFORMATION
+            SECTION 1 â€” ADDRESS INFORMATION
         =================================================== */}
 
         <section
@@ -514,7 +515,7 @@ export default function Step3Address({
 
 
         {/* ===================================================
-            SECTION 2 — LIVE ADDRESS PREVIEW
+            SECTION 2 â€” LIVE ADDRESS PREVIEW
         =================================================== */}
 
         <section

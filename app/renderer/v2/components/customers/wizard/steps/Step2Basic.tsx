@@ -525,7 +525,8 @@ function Step2Basic({
         ...pageStyle,
 
         ...themeStyle,
-      }}
+        fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
+}}
     >
 
       {/* =================================================
@@ -599,7 +600,7 @@ function Step2Basic({
       style={{
         ...formTitleStyle,
 
-        ...resolvedFormTitleStyle,
+        ...resolvedFormTitleStyle, fontSize: "21px", fontWeight: 750, fontFamily: "var(--finora-theme-font-family, Inter, sans-serif)", maxWidth: "100%", whiteSpace: "normal", overflowWrap: "break-word",
 
       }}
     >
@@ -611,7 +612,7 @@ function Step2Basic({
       style={{
         ...formSubtitleStyle,
 
-        ...resolvedFormSubtitleStyle,
+        ...resolvedFormSubtitleStyle, fontSize: "12px", fontWeight: 500, fontFamily: "var(--finora-theme-font-family, Inter, sans-serif)", maxWidth: "100%", whiteSpace: "normal", overflowWrap: "break-word",
 
       }}
     >
@@ -632,7 +633,8 @@ function Step2Basic({
             ...contentStyle,
 
             ...themeStyle,
-          }}
+        fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
+}}
         >
 
           {/* =============================================

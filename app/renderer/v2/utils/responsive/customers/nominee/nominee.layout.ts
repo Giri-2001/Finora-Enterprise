@@ -1,8 +1,8 @@
 /* ===========================================================
-   FINORA ENTERPRISE OS™
+   FINORA ENTERPRISE OSâ„¢
 
    CUSTOMER WIZARD
-   STEP 5 — NOMINEE RESPONSIVE LAYOUT™
+   STEP 5 â€” NOMINEE RESPONSIVE LAYOUTâ„¢
 
    Version     : 2.0
    Phase       : Phase 2
@@ -14,8 +14,8 @@
    - Convert NomineeResponsiveTokens into presentation styles.
    - Keep Step 5 workspace geometry responsive.
    - Keep left/right review areas separated.
-   - Mobile / Tablet → single vertical workspace.
-   - Laptop / Desktop → exact workspace geometry from tokens.
+   - Mobile / Tablet â†’ single vertical workspace.
+   - Laptop / Desktop â†’ exact workspace geometry from tokens.
    - Apply responsive stack ordering from the Responsive Engine.
 
    IMPORTANT:
@@ -317,7 +317,7 @@ export function createStep5NomineeStyles(
      RETURN
   ========================================================= */
 
-    return {
+    return { fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
 
     containerStyle,
 

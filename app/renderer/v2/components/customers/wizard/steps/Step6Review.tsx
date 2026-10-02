@@ -1,4 +1,4 @@
-﻿/* ==========================================================
+/* ==========================================================
    FINORA ENTERPRISE OS™
 
    CUSTOMER WIZARD
@@ -830,8 +830,9 @@ export default function Step6Review({
 
   const kycVerified =
     Boolean(
-      aadhaarProvided &&
-      nomineeAdded,
+      identityComplete &&
+      addressComplete &&
+      aadhaarProvided,
     );
 
 
@@ -2407,8 +2408,8 @@ export default function Step6Review({
           `Customer Created Successfully
 
 Customer ID: ${finalCustomerId}
-FINORA Wallet Fee: ₹${customerChargeResult.data.amount}
-Available Balance: ₹${customerChargeResult.data.availableBalance}`,
+FINORA Wallet Fee: ?${customerChargeResult.data.amount}
+Available Balance: ?${customerChargeResult.data.availableBalance}`,
         );
 
       } catch (error) {
@@ -2599,20 +2600,3 @@ Available Balance: ₹${customerChargeResult.data.availableBalance}`,
 /* ==========================================================
    END
 ========================================================== */
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

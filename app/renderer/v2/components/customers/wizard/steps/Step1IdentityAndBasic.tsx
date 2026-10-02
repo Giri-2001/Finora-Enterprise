@@ -237,9 +237,10 @@ const combinedPageStyle:
   return (
 
     <div
-      style={
-        pageStyle
-      }
+      style={{
+        ...pageStyle,
+        fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
+      }}
     >
 
       <div

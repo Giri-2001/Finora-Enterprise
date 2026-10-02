@@ -33,9 +33,9 @@ const titleStyle: CSSProperties = {
 
   margin: 0,
 
-  fontSize: "30px",
+  fontSize: "28px",
 
-  fontWeight: 700,
+  fontWeight: 600,
 
   color: "#111827",
 
@@ -47,7 +47,7 @@ const subtitleStyle: CSSProperties = {
 
   color: "#6b7280",
 
-  fontSize: "15px",
+  fontSize: "16px",
 
   lineHeight: 1.7,
 

@@ -1,5 +1,5 @@
 /* ===========================================================
-   FINORA ENTERPRISE OS™
+   FINORA ENTERPRISE OSâ„¢
 
    ADDRESS PREVIEW CARD
 
@@ -228,16 +228,22 @@ export default function AddressPreviewCard({
     );
 
 
-  const previewTitleStyle =
-    createAddressPreviewTitleStyle(
+  const previewTitleStyle = {
+    ...createAddressPreviewTitleStyle(
       addressTokens,
-    );
+    ),
+    fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
+    fontSize: `${addressTokens.previewTitleSize + 1}px`,
+  };
 
 
-  const previewSubtitleStyle =
-    createAddressPreviewSubtitleStyle(
+  const previewSubtitleStyle = {
+    ...createAddressPreviewSubtitleStyle(
       addressTokens,
-    );
+    ),
+    fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
+    fontSize: `${addressTokens.previewSubtitleSize + 1}px`,
+  };
 
 
   const previewRowsStyle =
@@ -258,14 +264,14 @@ export default function AddressPreviewCard({
     );
 
 
-  const previewValueStyle =
-    {
+  const previewValueStyle = {
+      fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
       ...createAddressPreviewTitleStyle(
         addressTokens,
       ),
 
       fontSize:
-        `${addressTokens.previewValueSize}px`,
+        `${addressTokens.previewValueSize + 1}px`,
 
       fontWeight:
         650,
@@ -379,7 +385,7 @@ export default function AddressPreviewCard({
                 ...previewValueStyle,
 
                 fontSize:
-                  `${addressTokens.previewValueSize}px`,
+                  `${addressTokens.previewValueSize + 1}px`,
 
                 fontWeight:
                   650,
@@ -455,7 +461,7 @@ export default function AddressPreviewCard({
               ...previewValueStyle,
 
               fontSize:
-                `${addressTokens.previewValueSize}px`,
+                `${addressTokens.previewValueSize + 1}px`,
 
               fontWeight:
                 650,
@@ -529,7 +535,7 @@ export default function AddressPreviewCard({
                 ...previewValueStyle,
 
                 fontSize:
-                  `${addressTokens.previewValueSize}px`,
+                  `${addressTokens.previewValueSize + 1}px`,
 
               }}
             >
@@ -588,7 +594,7 @@ export default function AddressPreviewCard({
                 ...previewValueStyle,
 
                 fontSize:
-                  `${addressTokens.previewValueSize}px`,
+                  `${addressTokens.previewValueSize + 1}px`,
 
               }}
             >
@@ -647,7 +653,7 @@ export default function AddressPreviewCard({
                 ...previewValueStyle,
 
                 fontSize:
-                  `${addressTokens.previewValueSize}px`,
+                  `${addressTokens.previewValueSize + 1}px`,
 
               }}
             >

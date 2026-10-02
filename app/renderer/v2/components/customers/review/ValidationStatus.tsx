@@ -153,8 +153,8 @@ function StatusRow({
 <span
   style={
     ok
-      ? styles.statusIconCompleteStyle
-      : styles.statusIconPendingStyle
+      ? { ...styles.statusIconCompleteStyle, color: "var(--finora-theme-status-success, #16A34A)" }
+      : { ...styles.statusIconPendingStyle, color: "var(--finora-theme-status-danger, #DC2626)" }
   }
   aria-hidden="true"
 >
@@ -178,11 +178,7 @@ function StatusRow({
         }
       >
 
-        {
-          ok
-            ? "Complete"
-            : "Pending"
-        }
+        <span style={{ color: ok ? "var(--finora-theme-status-success, #16A34A)" : "var(--finora-theme-status-danger, #DC2626)" }}>{ok ? "Complete" : "Pending"}</span>
 
       </strong>
 

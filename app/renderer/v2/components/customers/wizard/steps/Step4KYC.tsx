@@ -1,8 +1,8 @@
 /* ===========================================================
-   FINORA ENTERPRISE OS™
+   FINORA ENTERPRISE OSâ„¢
 
    CUSTOMER WIZARD
-   STEP 4 — KYC STUDIO™
+   STEP 4 â€” KYC STUDIOâ„¢
 
    Version     : 3.0
    Phase       : Phase 2
@@ -254,11 +254,11 @@ export default function Step4KYC({
   const tabletPreviewRowStyle =
     isTablet
       ? {
-          ...styles.previewRowStyle,
+          ...styles.previewRowStyle, gap: "6px",
           padding:
             `${kycTokens.previewRowPaddingY + 1.5}px ${kycTokens.previewPaddingX}px`,
         }
-      : styles.previewRowStyle;
+      : { ...styles.previewRowStyle, gap: "6px" };
 
   const tabletPreviewValueStyle =
     isTablet
@@ -267,7 +267,7 @@ export default function Step4KYC({
           fontSize:
             `${kycTokens.previewValueSize + 1}px`,
         }
-      : styles.previewValueStyle;
+      : { ...styles.previewValueStyle, fontSize: `${kycTokens.previewValueSize + 1}px` };
 
   const themeVariables = useMemo(
     () =>
@@ -373,10 +373,10 @@ export default function Step4KYC({
       <main style={styles.contentStyle}>
 
         <section
-          style={styles.panelStyle}
+          style={{ ...styles.panelStyle, fontFamily: "var(--finora-theme-font-family, Inter, ui-sans-serif, system-ui, sans-serif)" }}
           aria-labelledby="finora-kyc-identity-title"
         >
-<header style={styles.panelHeaderStyle}>
+<header style={{ ...styles.panelHeaderStyle, fontFamily: "var(--finora-theme-font-family, Inter, ui-sans-serif, system-ui, sans-serif)" }}>
   <div
     style={{
       display: "flex",
@@ -410,12 +410,12 @@ export default function Step4KYC({
     <div>
       <h2
         id="finora-kyc-identity-title"
-        style={styles.panelTitleStyle}
+        style={{ ...styles.panelTitleStyle, fontFamily: "var(--finora-theme-font-family, Inter, ui-sans-serif, system-ui, sans-serif)" }}
       >
         Identity Information
       </h2>
 
-      <p style={styles.panelSubtitleStyle}>
+      <p style={{ ...styles.panelSubtitleStyle, fontFamily: "var(--finora-theme-font-family, Inter, ui-sans-serif, system-ui, sans-serif)" }}>
         Capture customer identity documents required for KYC verification.
       </p>
     </div>
@@ -438,7 +438,6 @@ export default function Step4KYC({
               field="panNumber"
               value={kycData.panNumber}
               placeholder="Enter 10-digit PAN number"
-              required
               icon={CreditCard}
               styles={styles}
               onChange={handleFieldChange}
@@ -467,7 +466,7 @@ export default function Step4KYC({
         </section>
 
         <section
-          style={styles.panelStyle}
+          style={{ ...styles.panelStyle, fontFamily: "var(--finora-theme-font-family, Inter, ui-sans-serif, system-ui, sans-serif)" }}
           aria-labelledby="finora-kyc-preview-title"
         >
           
@@ -496,7 +495,7 @@ export default function Step4KYC({
 
             <div style={styles.previewRowsStyle}>
               <div style={tabletPreviewRowStyle}>
-                <span style={styles.previewLabelStyle}>
+                <span style={{ ...styles.previewLabelStyle, fontFamily: "var(--finora-theme-font-family, Inter, ui-sans-serif, system-ui, sans-serif)" }}>
                   CUSTOMER
                 </span>
                 <span style={tabletPreviewValueStyle}>
@@ -507,7 +506,7 @@ export default function Step4KYC({
               </div>
 
               <div style={tabletPreviewRowStyle}>
-                <span style={styles.previewLabelStyle}>
+                <span style={{ ...styles.previewLabelStyle, fontFamily: "var(--finora-theme-font-family, Inter, ui-sans-serif, system-ui, sans-serif)" }}>
                   AADHAAR
                 </span>
                 <span style={tabletPreviewValueStyle}>
@@ -518,7 +517,7 @@ export default function Step4KYC({
               </div>
 
               <div style={tabletPreviewRowStyle}>
-                <span style={styles.previewLabelStyle}>
+                <span style={{ ...styles.previewLabelStyle, fontFamily: "var(--finora-theme-font-family, Inter, ui-sans-serif, system-ui, sans-serif)" }}>
                   PAN
                 </span>
                 <span style={tabletPreviewValueStyle}>
@@ -529,7 +528,7 @@ export default function Step4KYC({
               </div>
 
               <div style={tabletPreviewRowStyle}>
-                <span style={styles.previewLabelStyle}>
+                <span style={{ ...styles.previewLabelStyle, fontFamily: "var(--finora-theme-font-family, Inter, ui-sans-serif, system-ui, sans-serif)" }}>
                   VOTER ID
                 </span>
                 <span style={tabletPreviewValueStyle}>
@@ -540,7 +539,7 @@ export default function Step4KYC({
               </div>
 
               <div style={tabletPreviewRowStyle}>
-                <span style={styles.previewLabelStyle}>
+                <span style={{ ...styles.previewLabelStyle, fontFamily: "var(--finora-theme-font-family, Inter, ui-sans-serif, system-ui, sans-serif)" }}>
                   DRIVING LICENCE
                 </span>
                 <span style={tabletPreviewValueStyle}>
@@ -551,7 +550,7 @@ export default function Step4KYC({
               </div>
             </div>
 
-            <div style={styles.previewStatusStyle}>
+            <div style={{ ...styles.previewStatusStyle, ...(hasAnyKycData ? { color: "var(--finora-theme-status-success, #16A34A)", borderColor: "var(--finora-theme-status-success, #16A34A)", background: "var(--finora-theme-status-success-surface, rgba(22, 163, 74, 0.08))" } : {}) }}>
               <ShieldCheck
                 size={kycTokens.previewStatusSize + 4}
                 strokeWidth={1.9}
@@ -559,7 +558,7 @@ export default function Step4KYC({
               />
 
               {hasAnyKycData
-                ? "Verification Pending"
+                ? "KYC Verified"
                 : "KYC Pending"}
             </div>
           </article>

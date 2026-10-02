@@ -308,7 +308,7 @@ minHeight:
       textPrimary,
 
     fontSize:
-      `${tokens.typography.heading}px`,
+      `${Math.max(tokens.typography.heading - (window.innerWidth <= 600 ? 2 : 0), 1)}px`,
 
     fontWeight:
       800,
@@ -334,7 +334,7 @@ minHeight:
       textSecondary,
 
     fontSize:
-      `${tokens.typography.body}px`,
+      `${Math.max(tokens.typography.body - (window.innerWidth <= 600 ? 1 : 0), 1)}px`,
 
     lineHeight:
       tokens.lineHeight.body,

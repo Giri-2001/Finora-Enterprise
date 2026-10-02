@@ -171,7 +171,7 @@ function ChecklistItem({
 
   <span
     style={
-      styles.statusIndicatorStyle
+      { ...styles.statusIndicatorStyle, color: completed ? "var(--finora-theme-status-success, #16A34A)" : "var(--finora-theme-status-danger, #DC2626)" }
     }
     aria-hidden="true"
   >
@@ -186,11 +186,7 @@ function ChecklistItem({
 
   <span>
 
-    {
-      completed
-        ? "Complete"
-        : "Pending"
-    }
+    <span style={{ color: completed ? "var(--finora-theme-status-success, #16A34A)" : "var(--finora-theme-status-danger, #DC2626)" }}>{completed ? "Complete" : "Pending"}</span>
 
   </span>
 

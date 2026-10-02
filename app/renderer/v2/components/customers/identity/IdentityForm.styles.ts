@@ -1,7 +1,7 @@
 /* ===========================================================
-   FINORA ENTERPRISE OS™
+   FINORA ENTERPRISE OSâ„¢
 
-   CUSTOMER IDENTITY FORM™
+   CUSTOMER IDENTITY FORMâ„¢
 
    PRESENTATION STYLES
 
@@ -38,15 +38,15 @@ import type {
 /*
  * ThemeProvider
  *
- *      ↓
+ *      â†“
  *
  * FinoraTheme
  *
- *      ↓
+ *      â†“
  *
  * CSS variables on IdentityForm root
  *
- *      ↓
+ *      â†“
  *
  * Presentation styles
  *
@@ -238,7 +238,10 @@ export const labelStyle:
     "var(--finora-theme-font-family, Inter, system-ui, sans-serif)",
 
   fontWeight:
-    800,
+    650,
+
+  fontSize:
+    "13px",
 
   textTransform:
     "uppercase",
@@ -326,7 +329,10 @@ export const inputStyle:
     "var(--finora-theme-font-family, Inter, system-ui, sans-serif)",
 
   fontWeight:
-    800,
+    650,
+
+  fontSize:
+    "14px",
 
   lineHeight:
     1.35,
