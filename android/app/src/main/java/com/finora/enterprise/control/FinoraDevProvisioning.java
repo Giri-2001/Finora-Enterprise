@@ -1,7 +1,7 @@
 package com.finora.enterprise.control;
 
 // ============================================================
-// FINORA ENTERPRISE OS™
+// FINORA ENTERPRISE OSâ„¢
 //
 // ANDROID DEVELOPMENT PROVISIONING
 //
@@ -58,6 +58,9 @@ public final class FinoraDevProvisioning {
 
     public static final String EXTRA_PROVISION_BRANCH =
         "finora_dev_provision_branch";
+
+    public static final String EXTRA_RESET_CONTROL_STATE =
+        "finora_dev_reset_control_state";
 
     public static final String EXTRA_PROVISION_LOCAL_ENTITLEMENT =
         "finora_dev_provision_local_entitlement";
@@ -146,6 +149,109 @@ public final class FinoraDevProvisioning {
         }
 
         if (!isDebuggable(context)) {
+            return;
+        }
+
+        // BRANCH3 DEBUG-ONLY RECOVERY PROBE.
+        // Validates original encrypted certification authority.
+        // Never log or export private key material.
+        try {
+            FinoraWalletBranchCertificationDeviceVault branch3Vault =
+                new FinoraWalletBranchCertificationDeviceVault(
+                    context
+                );
+
+            FinoraBranchCertificationCryptoValidator.Material branch3Material =
+                branch3Vault.read(
+                    "OWNER-C04E782A-F2F9-4463-B827-E8460569115A",
+                    "BUSINESS-E85D70F4-0EE0-4182-9046-A5066B8C9584",
+                    "BRANCH-550F6660-B944-4C25-B2F2-5B3D1D5D769E"
+                );
+
+            if (branch3Material == null) {
+                Log.i(
+                    TAG,
+                    "BRANCH3_VAULT_PROBE: MISSING"
+                );
+            } else {
+                FinoraBranchCertificationCryptoValidator.assertValid(
+                    branch3Material
+                );
+
+                Log.i(
+                    TAG,
+                    "BRANCH3_VAULT_PROBE: keyId=" +
+                    branch3Material.keyId +
+                    " fingerprint=" +
+                    branch3Material.publicKeyFingerprint
+                );
+            }
+        }
+        catch (Exception error) {
+            Log.e(
+                TAG,
+                "BRANCH3_VAULT_PROBE: FAILED: " +
+                error.getClass().getSimpleName()
+            );
+        }
+
+
+        boolean shouldResetControlState =
+            intent.getBooleanExtra(
+                EXTRA_RESET_CONTROL_STATE,
+                false
+            );
+
+        if (shouldResetControlState) {
+            FinoraControlStore resetControlStore =
+                new FinoraControlStore(
+                    context.getApplicationContext()
+                );
+
+            JSONObject freshControlPackage =
+                new JSONObject();
+
+            freshControlPackage.put(
+                "version",
+                CONTROL_VERSION
+            );
+
+            freshControlPackage.put(
+                "activations",
+                new JSONArray()
+            );
+
+            freshControlPackage.put(
+                "storageEntitlements",
+                new JSONArray()
+            );
+
+            freshControlPackage.put(
+                "branchAccessGrants",
+                new JSONArray()
+            );
+
+            freshControlPackage.put(
+                "businessProfiles",
+                new JSONArray()
+            );
+
+            freshControlPackage.put(
+                "updatedAt",
+                java.time.Instant
+                    .now()
+                    .toString()
+            );
+
+            resetControlStore.write(
+                freshControlPackage.toString()
+            );
+
+            Log.i(
+                TAG,
+                "FINORA debug Control Store reset completed; native installation binding preserved."
+            );
+
             return;
         }
 

@@ -43,16 +43,13 @@ import {
 } from "./finoraControlStore.js";
 
 import {
-  verifyFinoraSignedControlPackageNative,
+  verifyFinoraSignedControlPackageBranchScope,
 } from "./finoraSignedControlPackageVerifier.js";
 
 import type {
   FinoraBranchTrustedControlPublicKey,
 } from "./finoraSignedControlPackageVerifier.js";
 
-import {
-  getFinoraWindowsInstallationBinding,
-} from "./finoraInstallationBindingService.js";
 
 // ============================================================
 // HELPERS
@@ -266,46 +263,20 @@ export async function applyFinoraSignedWalletRechargePackage(
   }
 
   // ----------------------------------------------------------
-  // AUTHORITATIVE WINDOWS NATIVE BINDING
+  // PORTABLE RESTORE AUTHORITY
+  //
+  // Recharge approval belongs to the authenticated branch.
+  // The original request installation identity remains inside
+  // the signed package as historical possession evidence.
+  // A replacement PC / USB does not need to reproduce it.
   // ----------------------------------------------------------
-
-  let nativeBinding;
-
-  try {
-
-    nativeBinding =
-      await getFinoraWindowsInstallationBinding();
-
-  } catch (error) {
-
-    return failure(
-      error instanceof Error
-        ? error.message
-        : "Unable to load the FINORA Windows native installation binding.",
-    );
-  }
-
-  if (!nativeBinding) {
-    return failure(
-      "FINORA Windows native installation binding is required before applying a Wallet Recharge authorization.",
-    );
-  }
-
-  if (
-    nativeBinding.installationId !==
-      installation.installationId
-  ) {
-    return failure(
-      "FINORA native installation binding does not match the Control Store installation identity.",
-    );
-  }
 
   // ----------------------------------------------------------
   // CRYPTOGRAPHIC SIGNATURE + EXACT TARGET VERIFICATION
   // ----------------------------------------------------------
 
   const verification =
-    verifyFinoraSignedControlPackageNative(
+    verifyFinoraSignedControlPackageBranchScope(
       signedPackage,
       trustedKeys,
       {
@@ -317,18 +288,6 @@ export async function applyFinoraSignedWalletRechargePackage(
 
         branchId:
           installation.branchId,
-
-        installationId:
-          nativeBinding.installationId,
-
-        bindingKeyId:
-          nativeBinding.bindingKeyId,
-
-        fingerprintAlgorithm:
-          nativeBinding.fingerprintAlgorithm,
-
-        publicKeyFingerprint:
-          nativeBinding.publicKeyFingerprint,
       },
       now,
     );
@@ -508,29 +467,21 @@ export async function applyFinoraSignedWalletRechargePackage(
   }
 
   // ----------------------------------------------------------
-  // PAYLOAD BINDING <-> NATIVE BINDING <-> SIGNED TARGET
+  // ORIGINAL REQUEST BINDING <-> SIGNED PACKAGE TARGET
   // ----------------------------------------------------------
 
   if (
     payloadBinding.installationId !==
-      nativeBinding.installationId ||
-    payloadBinding.installationId !==
       controlPackage.target.installationId ||
-    payloadBinding.bindingKeyId !==
-      nativeBinding.bindingKeyId ||
     payloadBinding.bindingKeyId !==
       controlPackage.target.bindingKeyId ||
     payloadBinding.fingerprintAlgorithm !==
-      nativeBinding.fingerprintAlgorithm ||
-    payloadBinding.fingerprintAlgorithm !==
       controlPackage.target.fingerprintAlgorithm ||
-    payloadBinding.publicKeyFingerprint !==
-      nativeBinding.publicKeyFingerprint ||
     payloadBinding.publicKeyFingerprint !==
       controlPackage.target.publicKeyFingerprint
   ) {
     return failure(
-      "FINORA WALLET_RECHARGE native installation binding does not match the verified package target.",
+      "FINORA WALLET_RECHARGE signed request binding does not match the verified package target.",
     );
   }
 
@@ -644,16 +595,16 @@ export async function applyFinoraSignedWalletRechargePackage(
         controlPackage.target.branchId,
 
       installationId:
-        nativeBinding.installationId,
+        controlPackage.target.installationId,
 
       bindingKeyId:
-        nativeBinding.bindingKeyId,
+        controlPackage.target.bindingKeyId,
 
       fingerprintAlgorithm:
-        nativeBinding.fingerprintAlgorithm,
+        controlPackage.target.fingerprintAlgorithm,
 
       publicKeyFingerprint:
-        nativeBinding.publicKeyFingerprint,
+        controlPackage.target.publicKeyFingerprint,
     },
 
     authorization,

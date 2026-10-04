@@ -1,5 +1,5 @@
-/* ============================================================
-   FINORA ENTERPRISE OS™
+﻿/* ============================================================
+   FINORA ENTERPRISE OSâ„¢
 
    ELECTRON CONTROL
    BRANCH LOGIN SESSION AUTHORITY
@@ -162,6 +162,9 @@ export interface FinoraBranchLoginSessionView {
 
   demoId?:
     string;
+
+  credentialChangeRequired?:
+    boolean;
 
   accessMode:
     FinoraBranchLoginAccessMode;
@@ -379,6 +382,9 @@ type FinoraBranchLoginPrincipal = {
 
   authGeneration:
     number;
+
+  credentialChangeRequired?:
+    boolean;
 
   userId:
     string;
@@ -703,6 +709,9 @@ function toPrincipalFromAuthentication(
     authGeneration:
       value.authGeneration,
 
+    credentialChangeRequired:
+      value.credentialChangeRequired === true,
+
     userId:
       value.userId,
 
@@ -754,6 +763,9 @@ function toPrincipalFromCredential(
       resolveFinoraBranchCredentialAuthGeneration(
         credential.authGeneration,
       ),
+
+    credentialChangeRequired:
+      credential.credentialChangeRequired === true,
 
     userId:
       credential.userId,
@@ -807,6 +819,9 @@ function toSessionView(
   return {
     sessionId:
       record.sessionId,
+
+    credentialChangeRequired:
+      principal.credentialChangeRequired === true,
 
     userId:
       principal.userId,
@@ -894,46 +909,6 @@ async function authorizePrincipal(
   }
 
 
-  const activationResult =
-    await findFinoraBranchActivation(
-      principal.ownerId,
-      principal.businessId,
-      principal.branchId,
-    );
-
-  if (
-    !activationResult.success
-  ) {
-    return {
-      success:
-        false,
-
-      errorCode:
-        "CONTROL_STATE_FAILED",
-
-      error:
-        activationResult.error ??
-        "Unable to verify FINORA Branch Activation.",
-    };
-  }
-
-  if (
-    !activationResult.data ||
-    activationResult.data.status !==
-      "ACTIVE"
-  ) {
-    return {
-      success:
-        false,
-
-      errorCode:
-        "ACTIVATION_REQUIRED",
-
-      error:
-        "An ACTIVE FINORA Branch Activation is required.",
-    };
-  }
-
   const accessResult =
     await evaluateFinoraAuthoritativeBranchAccess({
       userId:
@@ -981,6 +956,65 @@ async function authorizePrincipal(
       error:
         accessDecision.reason,
     };
+  }
+
+  const portableUsbAccess =
+    accessGrant.deviceAccessPolicy ===
+      "PORTABLE_USB" &&
+    accessGrant.storageMode ===
+      "USB" &&
+    principal.storageMode ===
+      "USB" &&
+    requestedStorageMode ===
+      "USB";
+
+  /*
+   * Legacy grants preserve the original Branch Activation gate.
+   *
+   * PORTABLE_USB grants are intentionally branch-portable:
+   * the signed Branch Access Grant + exact logical USB entitlement
+   * are the authority. No installation/device activation is required.
+   */
+  if (!portableUsbAccess) {
+    const activationResult =
+      await findFinoraBranchActivation(
+        principal.ownerId,
+        principal.businessId,
+        principal.branchId,
+      );
+
+    if (
+      !activationResult.success
+    ) {
+      return {
+        success:
+          false,
+
+        errorCode:
+          "CONTROL_STATE_FAILED",
+
+        error:
+          activationResult.error ??
+          "Unable to verify FINORA Branch Activation.",
+      };
+    }
+
+    if (
+      !activationResult.data ||
+      activationResult.data.status !==
+        "ACTIVE"
+    ) {
+      return {
+        success:
+          false,
+
+        errorCode:
+          "ACTIVATION_REQUIRED",
+
+        error:
+          "An ACTIVE FINORA Branch Activation is required.",
+      };
+    }
   }
 
   const identityMatches =
@@ -1366,7 +1400,25 @@ export async function createFinoraBranchLoginSession(
     };
   }
 
-  if (authenticatedCredential.securityVerifier === undefined) {
+  const authenticatedAccessGrant =
+    legacyControlStoreResult.data.branchAccessGrants?.find(
+      (item) =>
+        item.userId === authenticationResult.data.userId &&
+        item.ownerId === authenticationResult.data.ownerId &&
+        item.businessId === authenticationResult.data.businessId &&
+        item.branchId === authenticationResult.data.branchId,
+    );
+
+  const portableUsbAccess =
+    authenticatedAccessGrant?.deviceAccessPolicy === "PORTABLE_USB" &&
+    authenticatedAccessGrant.storageMode === "USB" &&
+    authenticationResult.data.storageMode === "USB" &&
+    request.storageMode === "USB";
+
+  if (
+    !portableUsbAccess &&
+    authenticatedCredential.securityVerifier === undefined
+  ) {
     if (request.securityCode === undefined) {
       return {
         success: false,
@@ -1556,111 +1608,113 @@ export async function createFinoraBranchLoginSession(
     }
   }
 
-  const deviceTrustResult =
-    await checkFinoraCurrentBranchDeviceTrust({
-      principal:
-        authenticationResult.data,
-
-      portableStore,
-    });
-
-  if (
-    !deviceTrustResult.success
-  ) {
-    return {
-      success:
-        false,
-
-      errorCode:
-        deviceTrustResult.errorCode ===
-          "NATIVE_BINDING_UNAVAILABLE"
-          ? "NATIVE_BINDING_UNAVAILABLE"
-          : "DEVICE_TRUST_FAILED",
-
-      error:
-        "FINORA could not verify this device for the authenticated branch.",
-    };
-  }
-
-  if (
-    deviceTrustResult.status ===
-      "SECURITY_CODE_REQUIRED"
-  ) {
-    if (
-      request.securityCode ===
-        undefined
-    ) {
-      return {
-        success:
-          false,
-
-        errorCode:
-          "SECURITY_CODE_REQUIRED",
-
-        error:
-          "Security Code is required to authorize this device.",
-      };
-    }
-
-    const deviceAuthorizationResult =
-      await authorizeFinoraCurrentBranchDevice({
+  if (!portableUsbAccess) {
+    const deviceTrustResult =
+      await checkFinoraCurrentBranchDeviceTrust({
         principal:
           authenticationResult.data,
 
         portableStore,
-
-        password:
-          request.password,
-
-        securityCode:
-          request.securityCode,
       });
 
     if (
-      !deviceAuthorizationResult.success
+      !deviceTrustResult.success
     ) {
-      if (
-        deviceAuthorizationResult.errorCode ===
-          "NATIVE_BINDING_UNAVAILABLE"
-      ) {
-        return {
-          success:
-            false,
-
-          errorCode:
-            "NATIVE_BINDING_UNAVAILABLE",
-
-          error:
-            "FINORA native device binding is unavailable.",
-        };
-      }
-
-      if (
-        deviceAuthorizationResult.errorCode ===
-          "PORTABLE_AUTH_AUTHENTICATION_FAILED"
-      ) {
-        return {
-          success:
-            false,
-
-          errorCode:
-            "SECURITY_CODE_INVALID",
-
-          error:
-            "Security Code could not authorize this device.",
-        };
-      }
-
       return {
         success:
           false,
 
         errorCode:
-          "DEVICE_TRUST_FAILED",
+          deviceTrustResult.errorCode ===
+            "NATIVE_BINDING_UNAVAILABLE"
+            ? "NATIVE_BINDING_UNAVAILABLE"
+            : "DEVICE_TRUST_FAILED",
 
         error:
-          "FINORA could not securely authorize this device.",
+          "FINORA could not verify this device for the authenticated branch.",
       };
+    }
+
+    if (
+      deviceTrustResult.status ===
+        "SECURITY_CODE_REQUIRED"
+    ) {
+      if (
+        request.securityCode ===
+          undefined
+      ) {
+        return {
+          success:
+            false,
+
+          errorCode:
+            "SECURITY_CODE_REQUIRED",
+
+          error:
+            "Security Code is required to authorize this device.",
+        };
+      }
+
+      const deviceAuthorizationResult =
+        await authorizeFinoraCurrentBranchDevice({
+          principal:
+            authenticationResult.data,
+
+          portableStore,
+
+          password:
+            request.password,
+
+          securityCode:
+            request.securityCode,
+        });
+
+      if (
+        !deviceAuthorizationResult.success
+      ) {
+        if (
+          deviceAuthorizationResult.errorCode ===
+            "NATIVE_BINDING_UNAVAILABLE"
+        ) {
+          return {
+            success:
+              false,
+
+            errorCode:
+              "NATIVE_BINDING_UNAVAILABLE",
+
+            error:
+              "FINORA native device binding is unavailable.",
+          };
+        }
+
+        if (
+          deviceAuthorizationResult.errorCode ===
+            "PORTABLE_AUTH_AUTHENTICATION_FAILED"
+        ) {
+          return {
+            success:
+              false,
+
+            errorCode:
+              "SECURITY_CODE_INVALID",
+
+            error:
+              "Security Code could not authorize this device.",
+          };
+        }
+
+        return {
+          success:
+            false,
+
+          errorCode:
+            "DEVICE_TRUST_FAILED",
+
+          error:
+            "FINORA could not securely authorize this device.",
+        };
+      }
     }
   }
 
@@ -1684,6 +1738,7 @@ export async function createFinoraBranchLoginSession(
       ...(principal.demoId === undefined ? {} : { demoId: principal.demoId }),
       password: request.password,
       ...(request.securityCode === undefined ? {} : { securityCode: request.securityCode }),
+      portableSessionOnly: portableUsbAccess,
       portableStore,
     });
 
@@ -2117,3 +2172,4 @@ export function invalidateFinoraBranchLoginSession(
 // ============================================================
 // END
 // ============================================================
+

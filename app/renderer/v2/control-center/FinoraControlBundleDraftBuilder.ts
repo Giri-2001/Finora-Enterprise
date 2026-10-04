@@ -1,5 +1,5 @@
-// ============================================================
-// FINORA ENTERPRISE OS™
+﻿// ============================================================
+// FINORA ENTERPRISE OSâ„¢
 //
 // CONTROL CENTER
 // CONTROL BUNDLE RENDERER DRAFT BUILDER

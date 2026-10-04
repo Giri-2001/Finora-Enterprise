@@ -283,6 +283,7 @@ function sanitizeBranchAccessGrant(
         "registrationCycle",
         "demoId",
         "demoRemarks",
+        "deviceAccessPolicy",
       ],
     ) ||
     !isNonEmptyString(value.grantId) ||
@@ -320,6 +321,10 @@ function sanitizeBranchAccessGrant(
     !isTimestamp(value.createdAt) ||
     !isTimestamp(value.updatedAt) ||
     !isOptionalString(value.demoRemarks) ||
+    (
+      value.deviceAccessPolicy !== undefined &&
+      value.deviceAccessPolicy !== "PORTABLE_USB"
+    ) ||
     value.schemaVersion !== 1
   ) {
     return undefined;
@@ -374,6 +379,12 @@ function sanitizeBranchAccessGrant(
       businessId: value.businessId,
       branchId: value.branchId,
       storageMode: value.storageMode,
+      
+      ...(
+        value.deviceAccessPolicy === undefined
+          ? {}
+          : { deviceAccessPolicy: value.deviceAccessPolicy as "PORTABLE_USB" }
+      ),
       accessType: "REGISTERED",
       administrativeStatus:
         value.administrativeStatus,
@@ -426,6 +437,12 @@ function sanitizeBranchAccessGrant(
     businessId: value.businessId,
     branchId: value.branchId,
     storageMode: value.storageMode,
+    
+    ...(
+      value.deviceAccessPolicy === undefined
+        ? {}
+        : { deviceAccessPolicy: value.deviceAccessPolicy as "PORTABLE_USB" }
+    ),
     accessType: "DEMO",
     administrativeStatus:
       value.administrativeStatus,
@@ -490,6 +507,7 @@ function sanitizeCredentialEnrollmentAuthorization(
       ],
       [
         "demoId",
+        "deviceAccessPolicy",
       ],
     ) ||
     !isNonEmptyString(
@@ -526,6 +544,14 @@ function sanitizeCredentialEnrollmentAuthorization(
     (
       value.dataContext !== "REAL" &&
       value.dataContext !== "DEMO"
+    ) ||
+    (
+      value.deviceAccessPolicy !== undefined &&
+      value.deviceAccessPolicy !== "PORTABLE_USB"
+    ) ||
+    (
+      value.deviceAccessPolicy === "PORTABLE_USB" &&
+      value.storageMode !== "USB"
     ) ||
     value.method !==
       FINORA_BRANCH_ACCESS_CREDENTIAL_ENROLLMENT_METHOD ||
@@ -594,6 +620,15 @@ function sanitizeCredentialEnrollmentAuthorization(
 
     dataContext:
       value.dataContext,
+
+    ...(
+      value.deviceAccessPolicy === undefined
+        ? {}
+        : {
+            deviceAccessPolicy:
+              value.deviceAccessPolicy as "PORTABLE_USB",
+          }
+    ),
 
     ...(
       sanitizedDemoId === undefined
@@ -1017,6 +1052,8 @@ export async function applyFinoraSignedBranchAccessPackage(
         accessGrant.branchId ||
       credentialEnrollmentAuthorization.storageMode !==
         accessGrant.storageMode ||
+      credentialEnrollmentAuthorization.deviceAccessPolicy !==
+        accessGrant.deviceAccessPolicy ||
       credentialEnrollmentAuthorization.dataContext !==
         expectedDataContext ||
       (

@@ -1,3 +1,4 @@
+import { ChevronDown } from "lucide-react";
 import {
   useState,
 } from "react";
@@ -14,7 +15,7 @@ import type {
 } from "./FinoraControlCenterIssuanceForm.types";
 
 /* ===========================================================
-   FINORA ENTERPRISE OS™
+   FINORA ENTERPRISE OS
 
    CONTROL CENTER
    BRANCH ACCESS FORM
@@ -24,7 +25,7 @@ import type {
    - Collect dedicated signed Branch Access draft data
    - Keep Branch Activation state out of this workflow
    - Support REGISTERED and DEMO access
-   - Support one-time recipient credential authorization
+   - Support one-time Owner Login Setup
    - Preserve shared installation target from workspace
 
    SECURITY:
@@ -40,6 +41,33 @@ import type {
 interface Props {
   target:
     FinoraControlCenterTargetDraft;
+
+  initialAction?:
+    FinoraBranchAccessActionDraft;
+
+  initialGrantId?:
+    string;
+
+  initialUserId?:
+    string;
+
+  initialGrantCreatedAt?:
+    string;
+
+  initialAccessType?:
+    "REGISTERED" | "DEMO";
+
+  initialAdministrativeStatus?:
+    "ACTIVE" | "SUSPENDED" | "REVOKED";
+
+  initialStorageMode?:
+    "LOCAL" | "USB";
+
+  initialDeviceAccessPolicy?:
+    "PORTABLE_USB";
+
+  initialCurrentValidUntil?:
+    string;
 
   onIssue:
     (
@@ -205,7 +233,8 @@ function SelectField<
         {label}
       </span>
 
-      <select
+      <div className="finora-select-shell">
+<select
         value={value}
         onChange={(
           event,
@@ -252,6 +281,8 @@ function SelectField<
           ),
         )}
       </select>
+<ChevronDown className="finora-select-chevron" size={17} strokeWidth={2} aria-hidden="true" />
+</div>
     </label>
   );
 }
@@ -268,6 +299,15 @@ type BranchAccessDraftState =
 
 export default function FinoraControlCenterBranchAccessForm({
   target,
+  initialAction = "ISSUE",
+  initialGrantId = "",
+  initialUserId = "",
+  initialGrantCreatedAt = "",
+  initialAccessType = "REGISTERED",
+  initialAdministrativeStatus = "ACTIVE",
+  initialStorageMode = "USB",
+  initialDeviceAccessPolicy,
+  initialCurrentValidUntil = "",
   onIssue,
 }: Props) {
 
@@ -278,23 +318,32 @@ export default function FinoraControlCenterBranchAccessForm({
     useState<
       BranchAccessDraftState
     >({
-      action:
-        "ISSUE",
+      action: initialAction,
 
       grantId:
-        "",
+        initialGrantId ||
+        (
+          initialAction === "ISSUE"
+            ? `GRANT-BRANCH-ACCESS-${crypto.randomUUID().toUpperCase()}`
+            : ""
+        ),
 
-      userId:
-        "",
+      userId: initialUserId,
 
-      storageMode:
-        "LOCAL",
+      storageMode: initialStorageMode,
 
-      administrativeStatus:
-        "ACTIVE",
+      ...(
+        initialDeviceAccessPolicy !== undefined
+          ? { deviceAccessPolicy: initialDeviceAccessPolicy }
+          : initialAction === "ISSUE" &&
+              initialStorageMode === "USB"
+            ? { deviceAccessPolicy: "PORTABLE_USB" as const }
+            : {}
+      ),
 
-      accessType:
-        "REGISTERED",
+      administrativeStatus: initialAdministrativeStatus,
+
+      accessType: initialAccessType,
 
       validFrom:
         "",
@@ -303,11 +352,16 @@ export default function FinoraControlCenterBranchAccessForm({
         "",
 
       grantCreatedAt:
-        "",
-
+        initialGrantCreatedAt ||
+        (
+          initialAction === "ISSUE"
+            ? new Date().toISOString()
+            : ""
+        ),
       grantUpdatedAt:
-        "",
-
+        initialAction === "ISSUE"
+          ? new Date().toISOString()
+          : "",
       registrationCycle:
         "1",
 
@@ -334,7 +388,8 @@ export default function FinoraControlCenterBranchAccessForm({
         "",
 
       credentialEnrollmentEnabled:
-        true,
+        initialAction === "ISSUE" ||
+        initialAction === "AUTHORIZE_CREDENTIAL",
 
       credentialAuthorizationId:
         "",
@@ -373,6 +428,23 @@ export default function FinoraControlCenterBranchAccessForm({
     draft.action === "ISSUE" ||
     draft.action === "AUTHORIZE_CREDENTIAL";
 
+    function generateCredentialAuthorizationId(): void {
+    update(
+      "credentialAuthorizationId",
+      `FINORA-CREDENTIAL-ENROLLMENT-${crypto.randomUUID().toUpperCase()}`,
+    );
+  }
+  const isRenewalMode =
+    draft.action === "RENEW";
+
+  const renewalMetadataComplete =
+    Boolean(
+      initialGrantId.trim() &&
+      initialUserId.trim() &&
+      initialGrantCreatedAt.trim() &&
+      initialCurrentValidUntil.trim(),
+    );
+
   return (
     <section
       data-finora-control-center-branch-access-form="true"
@@ -398,7 +470,7 @@ export default function FinoraControlCenterBranchAccessForm({
               "#e2e8f0",
           }}
         >
-          Branch Access
+          {isRenewalMode ? "Renew Subscription" : "Branch Access"}
         </h3>
 
         <p
@@ -415,11 +487,13 @@ export default function FinoraControlCenterBranchAccessForm({
               "#94a3b8",
           }}
         >
-          Issue or manage signed access for the verified
-          Owner / Business / Branch / Installation target.
+          {isRenewalMode
+            ? "Extend the selected FINORA branch subscription using its existing signed access identity."
+            : "Issue or manage signed access for the verified Owner / Business / Branch / Installation target."}
         </p>
       </header>
 
+      {!isRenewalMode && ( /* finora-renew-hide-access-grid */
       <div
         style={{
           display:
@@ -485,19 +559,6 @@ export default function FinoraControlCenterBranchAccessForm({
           }}
         />
 
-        <Field
-          label="Grant ID"
-          value={draft.grantId}
-          placeholder="ACCESS-..."
-          onChange={(
-            value,
-          ) => {
-            update(
-              "grantId",
-              value,
-            );
-          }}
-        />
 
         <Field
           label="User ID"
@@ -517,7 +578,6 @@ export default function FinoraControlCenterBranchAccessForm({
           label="Storage Mode"
           value={draft.storageMode}
           options={[
-            "LOCAL",
             "USB",
           ]}
           onChange={(
@@ -576,34 +636,115 @@ export default function FinoraControlCenterBranchAccessForm({
           }}
         />
 
-        <Field
-          label="Grant Created At"
-          type="datetime-local"
-          value={draft.grantCreatedAt}
-          onChange={(
-            value,
-          ) => {
-            update(
-              "grantCreatedAt",
-              value,
-            );
-          }}
-        />
 
-        <Field
-          label="Grant Updated At"
-          type="datetime-local"
-          value={draft.grantUpdatedAt}
-          onChange={(
-            value,
-          ) => {
-            update(
-              "grantUpdatedAt",
-              value,
-            );
-          }}
-        />
       </div>
+
+      )}
+      {isRenewalMode && (
+        <section
+          data-finora-renew-subscription-panel="true"
+          style={{
+            display: "grid",
+            gap: "14px",
+            borderTop:
+              "1px solid rgba(148, 163, 184, 0.18)",
+            paddingTop: "18px",
+          }}
+        >
+          <strong
+            style={{
+              fontFamily:
+                "Inter, ui-sans-serif, system-ui, sans-serif",
+              fontSize: "13px",
+              color: "#e2e8f0",
+            }}
+          >
+            Subscription Validity
+          </strong>
+
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns:
+                "repeat(var(--finora-cc-form-columns, 3), minmax(0, 1fr))",
+              gap: "14px",
+            }}
+          >
+            <div
+              style={{
+                minHeight: "42px",
+                display: "grid",
+                alignContent: "center",
+                gap: "4px",
+                border:
+                  "1px solid rgba(148, 163, 184, 0.2)",
+                borderRadius: "9px",
+                padding: "7px 12px",
+                background:
+                  "rgba(15, 23, 42, 0.48)",
+              }}
+            >
+              <span
+                style={{
+                  fontSize: "11px",
+                  color: "#94a3b8",
+                }}
+              >
+                Current Valid Until
+              </span>
+
+              <strong
+                style={{
+                  fontSize: "12px",
+                  color: "#e2e8f0",
+                }}
+              >
+                {initialCurrentValidUntil ||
+                  "Legacy metadata unavailable"}
+              </strong>
+            </div>
+
+            <Field
+              label="New Valid From"
+              type="datetime-local"
+              value={draft.validFrom}
+              onChange={(value) => {
+                update("validFrom", value);
+              }}
+            />
+
+            <Field
+              label="New Valid Until"
+              type="datetime-local"
+              value={draft.validUntil}
+              onChange={(value) => {
+                update("validUntil", value);
+              }}
+            />
+          </div>
+
+          {!renewalMetadataComplete && (
+            <div
+              style={{
+                border:
+                  "1px solid rgba(245, 158, 11, 0.42)",
+                borderRadius: "9px",
+                padding: "11px 12px",
+                fontFamily:
+                  "Inter, ui-sans-serif, system-ui, sans-serif",
+                fontSize: "12px",
+                lineHeight: 1.55,
+                color: "#fbbf24",
+                background:
+                  "rgba(120, 53, 15, 0.16)",
+              }}
+            >
+              Legacy branch metadata is incomplete for the new automatic renewal workflow.
+              No branch data has been changed.
+            </div>
+          )}
+        </section>
+      )}
 
       {draft.accessType ===
         "REGISTERED" && (
@@ -629,7 +770,7 @@ export default function FinoraControlCenterBranchAccessForm({
                 "#e2e8f0",
             }}
           >
-            Registration
+            {isRenewalMode ? "Renewal Payment" : "Registration"}
           </strong>
 
           <div
@@ -642,6 +783,7 @@ export default function FinoraControlCenterBranchAccessForm({
                 "14px",
             }}
           >
+            {!isRenewalMode && ( /* finora-hide-cycle-on-renew */
             <Field
               label="Registration Cycle"
               type="number"
@@ -655,6 +797,7 @@ export default function FinoraControlCenterBranchAccessForm({
                 );
               }}
             />
+            )}
 
             <Field
               label="Payment Amount (INR)"
@@ -755,7 +898,7 @@ export default function FinoraControlCenterBranchAccessForm({
                   "rgba(15, 23, 42, 0.48)",
               }}
             >
-              ₹2,000 · INR · Non-refundable
+              2,000  INR  Non-refundable
             </div>
           </div>
         </section>
@@ -829,6 +972,7 @@ export default function FinoraControlCenterBranchAccessForm({
         </section>
       )}
 
+      {!isRenewalMode && ( /* finora-hide-owner-login-on-renew */
       <section
         style={{
           display:
@@ -851,7 +995,7 @@ export default function FinoraControlCenterBranchAccessForm({
               "#e2e8f0",
           }}
         >
-          Recipient Credential Authorization
+          Owner Login Setup
         </strong>
 
         <label
@@ -903,7 +1047,7 @@ export default function FinoraControlCenterBranchAccessForm({
             }}
           />
 
-          Authorize one-time credential setup on recipient
+          Create owner login credentials
         </label>
 
         {!credentialEnrollmentAvailable && (
@@ -938,21 +1082,71 @@ export default function FinoraControlCenterBranchAccessForm({
                 "14px",
             }}
           >
-            <Field
-              label="Authorization ID"
-              value={draft.credentialAuthorizationId}
-              placeholder="AUTH-..."
-              onChange={(
-                value,
-              ) => {
-                update(
-                  "credentialAuthorizationId",
-                  value,
-                );
-              }}
-            />
 
-            <Field
+                        <div
+              style={{
+                display:
+                  "grid",
+                gridTemplateColumns:
+                  "minmax(0, 1fr) auto",
+                gap:
+                  "10px",
+                alignItems:
+                  "end",
+              }}
+            >
+              <Field
+                label="Authorization ID"
+                value={
+                  draft.credentialAuthorizationId
+                }
+                placeholder="FINORA-CREDENTIAL-ENROLLMENT-..."
+                onChange={(
+                  value,
+                ) => {
+                  update(
+                    "credentialAuthorizationId",
+                    value,
+                  );
+                }}
+              />
+
+              <button
+                type="button"
+                onClick={
+                  generateCredentialAuthorizationId
+                }
+                style={{
+                  minHeight:
+                    "42px",
+                  padding:
+                    "0 14px",
+                  border:
+                    "1px solid rgba(59, 130, 246, 0.48)",
+                  borderRadius:
+                    "9px",
+                  background:
+                    "rgba(59, 130, 246, 0.14)",
+                  color:
+                    "#dbeafe",
+                  fontFamily:
+                    "Inter, ui-sans-serif, system-ui, sans-serif",
+                  fontSize:
+                    "12px",
+                  fontWeight:
+                    700,
+                  cursor:
+                    "pointer",
+                  boxSizing:
+                    "border-box",
+                  whiteSpace:
+                    "nowrap",
+                }}
+              >
+                Generate Authorization ID
+              </button>
+            </div>
+<Field
               label="Username"
               value={draft.credentialUsername}
               placeholder="Username"
@@ -980,27 +1174,10 @@ export default function FinoraControlCenterBranchAccessForm({
               }}
             />
 
-            <SelectField<FinoraBranchAccessUserRoleDraft>
-              label="Role"
-              value={draft.credentialRole}
-              options={[
-                "ADMIN",
-                "MANAGER",
-                "COLLECTOR",
-                "VIEWER",
-              ]}
-              onChange={(
-                value,
-              ) => {
-                update(
-                  "credentialRole",
-                  value,
-                );
-              }}
-            />
           </div>
         )}
       </section>
+      )}
 
       <div
         style={{
@@ -1014,6 +1191,7 @@ export default function FinoraControlCenterBranchAccessForm({
       >
         <button
           type="button"
+          disabled={isRenewalMode && !renewalMetadataComplete}
           onClick={() => {
             onIssue({
               target,
@@ -1043,7 +1221,7 @@ export default function FinoraControlCenterBranchAccessForm({
               "pointer",
           }}
         >
-          Issue Branch Access
+          {isRenewalMode ? "Generate Renewal" : "Issue Branch Access"}
         </button>
       </div>
     </section>
@@ -1053,3 +1231,8 @@ export default function FinoraControlCenterBranchAccessForm({
 /* ============================================================
    END
 ============================================================ */
+
+
+
+
+

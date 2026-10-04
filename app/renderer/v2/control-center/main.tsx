@@ -1,4 +1,4 @@
-import React from "react";
+﻿import React from "react";
 import {
   createRoot,
 } from "react-dom/client";
@@ -11,7 +11,7 @@ import {
 } from "./finoraAndroidDeveloperControlCenterBridge";
 
 /* ===========================================================
-   FINORA ENTERPRISE OS™
+   FINORA ENTERPRISE OSâ„¢
 
    CONTROL CENTER
    DEDICATED RENDERER ENTRY

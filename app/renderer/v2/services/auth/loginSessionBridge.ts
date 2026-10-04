@@ -1,4 +1,4 @@
-import {
+﻿import {
   Capacitor,
   registerPlugin,
 } from "@capacitor/core";
@@ -34,6 +34,9 @@ export interface FinoraLoginSessionView {
   storageMode: "LOCAL" | "USB";
   dataContext: "REAL" | "DEMO";
   demoId?: string;
+  credentialChangeRequired:
+    boolean;
+
   accessMode: FinoraLoginSessionAccessMode;
   loginTime: string;
   lastActivity: string;

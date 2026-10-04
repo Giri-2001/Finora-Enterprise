@@ -1509,6 +1509,277 @@ export function validateFinoraPortableBranchAuthPayloadV1(
 }
 
 // ============================================================
+// PORTABLE AUTH V2 FOUNDATION
+//
+// Additive contract only.
+// Existing V1 runtime/storage APIs remain unchanged.
+//
+// V2 design:
+// - encrypted payload protected by a random Branch Master Key
+// - Password Wrap unlocks the master key for normal login
+// - Recovery Wrap unlocks the same master key with Security Code
+// ============================================================
+
+export const FINORA_PORTABLE_BRANCH_AUTH_SCHEMA_VERSION_V2 =
+  2 as const;
+
+export const FINORA_PORTABLE_BRANCH_AUTH_V2_PASSWORD_WRAP_KEY_DERIVATION =
+  "FINORA-PORTABLE-BRANCH-AUTH-PASSWORD-WRAP-V2" as const;
+
+export const FINORA_PORTABLE_BRANCH_AUTH_V2_RECOVERY_WRAP_KEY_DERIVATION =
+  "FINORA-PORTABLE-BRANCH-AUTH-RECOVERY-WRAP-V2" as const;
+
+export interface FinoraPortableBranchAuthKeyWrapV2 {
+  algorithm:
+    typeof FINORA_PORTABLE_BRANCH_AUTH_ENCRYPTION_ALGORITHM;
+
+  keyDerivation:
+    | typeof FINORA_PORTABLE_BRANCH_AUTH_V2_PASSWORD_WRAP_KEY_DERIVATION
+    | typeof FINORA_PORTABLE_BRANCH_AUTH_V2_RECOVERY_WRAP_KEY_DERIVATION;
+
+  iv:
+    string;
+
+  authTag:
+    string;
+
+  wrappedKey:
+    string;
+}
+
+export interface FinoraPortableBranchAuthPayloadEncryptionV2 {
+  algorithm:
+    typeof FINORA_PORTABLE_BRANCH_AUTH_ENCRYPTION_ALGORITHM;
+
+  iv:
+    string;
+
+  authTag:
+    string;
+}
+
+export interface FinoraPortableBranchAuthEnvelopeV2 {
+  format:
+    typeof FINORA_PORTABLE_BRANCH_AUTH_FORMAT;
+
+  schemaVersion:
+    typeof FINORA_PORTABLE_BRANCH_AUTH_SCHEMA_VERSION_V2;
+
+  canonicalUsername:
+    string;
+
+  branchScope:
+    FinoraPortableBranchAuthScopeV1;
+
+  passwordFactor:
+    FinoraPortableBranchAuthVerifierV1;
+
+  securityFactor:
+    FinoraPortableBranchAuthVerifierV1;
+
+  payloadEncryption:
+    FinoraPortableBranchAuthPayloadEncryptionV2;
+
+  passwordWrap:
+    FinoraPortableBranchAuthKeyWrapV2;
+
+  recoveryWrap:
+    FinoraPortableBranchAuthKeyWrapV2;
+
+  ciphertext:
+    string;
+}
+
+export type FinoraPortableBranchAuthEnvelope =
+  | FinoraPortableBranchAuthEnvelopeV1
+  | FinoraPortableBranchAuthEnvelopeV2;
+
+function validateFinoraPortableBranchAuthKeyWrapV2(
+  value: unknown,
+  expectedKeyDerivation:
+    | typeof FINORA_PORTABLE_BRANCH_AUTH_V2_PASSWORD_WRAP_KEY_DERIVATION
+    | typeof FINORA_PORTABLE_BRANCH_AUTH_V2_RECOVERY_WRAP_KEY_DERIVATION,
+  label: string,
+): asserts value is FinoraPortableBranchAuthKeyWrapV2 {
+  const objectValue =
+    assertObject(
+      value,
+      label,
+    );
+
+  assertExactKeys(
+    objectValue,
+    [
+      "algorithm",
+      "keyDerivation",
+      "iv",
+      "authTag",
+      "wrappedKey",
+    ],
+    [],
+    label,
+  );
+
+  if (
+    objectValue.algorithm !==
+      FINORA_PORTABLE_BRANCH_AUTH_ENCRYPTION_ALGORITHM ||
+    objectValue.keyDerivation !==
+      expectedKeyDerivation
+  ) {
+    throw new Error(
+      `${label} metadata is unsupported.`,
+    );
+  }
+
+  assertBase64Length(
+    objectValue.iv,
+    FINORA_PORTABLE_BRANCH_AUTH_IV_BYTES,
+    `${label}.iv`,
+  );
+
+  assertBase64Length(
+    objectValue.authTag,
+    FINORA_PORTABLE_BRANCH_AUTH_TAG_BYTES,
+    `${label}.authTag`,
+  );
+
+  assertBase64Length(
+    objectValue.wrappedKey,
+    FINORA_PORTABLE_BRANCH_AUTH_SECRET_FACTOR_BYTES,
+    `${label}.wrappedKey`,
+  );
+}
+
+export function validateFinoraPortableBranchAuthEnvelopeV2(
+  value: unknown,
+): asserts value is FinoraPortableBranchAuthEnvelopeV2 {
+  const objectValue =
+    assertObject(
+      value,
+      "portableBranchAuthEnvelopeV2",
+    );
+
+  assertExactKeys(
+    objectValue,
+    [
+      "format",
+      "schemaVersion",
+      "canonicalUsername",
+      "branchScope",
+      "passwordFactor",
+      "securityFactor",
+      "payloadEncryption",
+      "passwordWrap",
+      "recoveryWrap",
+      "ciphertext",
+    ],
+    [],
+    "portableBranchAuthEnvelopeV2",
+  );
+
+  if (
+    objectValue.format !==
+      FINORA_PORTABLE_BRANCH_AUTH_FORMAT
+  ) {
+    throw new Error(
+      "Portable Branch Auth V2 format is invalid.",
+    );
+  }
+
+  if (
+    objectValue.schemaVersion !==
+      FINORA_PORTABLE_BRANCH_AUTH_SCHEMA_VERSION_V2
+  ) {
+    throw new Error(
+      "Portable Branch Auth V2 schemaVersion is unsupported.",
+    );
+  }
+
+  assertCanonicalUsername(
+    objectValue.canonicalUsername,
+  );
+
+  validateFinoraPortableBranchAuthScopeV1(
+    objectValue.branchScope,
+  );
+
+  validateFinoraPortableBranchAuthVerifierV1(
+    objectValue.passwordFactor,
+    "passwordFactor",
+  );
+
+  validateFinoraPortableBranchAuthVerifierV1(
+    objectValue.securityFactor,
+    "securityFactor",
+  );
+
+  const payloadEncryption =
+    assertObject(
+      objectValue.payloadEncryption,
+      "payloadEncryption",
+    );
+
+  assertExactKeys(
+    payloadEncryption,
+    [
+      "algorithm",
+      "iv",
+      "authTag",
+    ],
+    [],
+    "payloadEncryption",
+  );
+
+  if (
+    payloadEncryption.algorithm !==
+      FINORA_PORTABLE_BRANCH_AUTH_ENCRYPTION_ALGORITHM
+  ) {
+    throw new Error(
+      "Portable Branch Auth V2 payload encryption algorithm is unsupported.",
+    );
+  }
+
+  assertBase64Length(
+    payloadEncryption.iv,
+    FINORA_PORTABLE_BRANCH_AUTH_IV_BYTES,
+    "payloadEncryption.iv",
+  );
+
+  assertBase64Length(
+    payloadEncryption.authTag,
+    FINORA_PORTABLE_BRANCH_AUTH_TAG_BYTES,
+    "payloadEncryption.authTag",
+  );
+
+  validateFinoraPortableBranchAuthKeyWrapV2(
+    objectValue.passwordWrap,
+    FINORA_PORTABLE_BRANCH_AUTH_V2_PASSWORD_WRAP_KEY_DERIVATION,
+    "passwordWrap",
+  );
+
+  validateFinoraPortableBranchAuthKeyWrapV2(
+    objectValue.recoveryWrap,
+    FINORA_PORTABLE_BRANCH_AUTH_V2_RECOVERY_WRAP_KEY_DERIVATION,
+    "recoveryWrap",
+  );
+
+  const ciphertext =
+    decodeCanonicalBase64(
+      objectValue.ciphertext,
+      "ciphertext",
+    );
+
+  if (
+    ciphertext.length >
+      FINORA_PORTABLE_BRANCH_AUTH_MAX_CIPHERTEXT_BYTES
+  ) {
+    throw new Error(
+      "Portable Branch Auth V2 ciphertext exceeds maximum size.",
+    );
+  }
+}
+
+// ============================================================
 // SERIALIZATION
 // ============================================================
 
@@ -1554,6 +1825,97 @@ export function parseFinoraPortableBranchAuthEnvelopeV1(
   }
 
   validateFinoraPortableBranchAuthEnvelopeV1(
+    parsed,
+  );
+
+  return parsed;
+}
+
+// ============================================================
+// VERSION-AWARE ADDITIVE API
+//
+// Existing V1 APIs above stay authoritative for current callers.
+// These generic APIs will be used only by the future V2 store lane.
+// ============================================================
+
+export function validateFinoraPortableBranchAuthEnvelope(
+  value: unknown,
+): asserts value is FinoraPortableBranchAuthEnvelope {
+  const objectValue =
+    assertObject(
+      value,
+      "portableBranchAuthEnvelope",
+    );
+
+  if (
+    objectValue.schemaVersion ===
+      FINORA_PORTABLE_BRANCH_AUTH_SCHEMA_VERSION
+  ) {
+    validateFinoraPortableBranchAuthEnvelopeV1(
+      value,
+    );
+
+    return;
+  }
+
+  if (
+    objectValue.schemaVersion ===
+      FINORA_PORTABLE_BRANCH_AUTH_SCHEMA_VERSION_V2
+  ) {
+    validateFinoraPortableBranchAuthEnvelopeV2(
+      value,
+    );
+
+    return;
+  }
+
+  throw new Error(
+    "Portable Branch Auth schemaVersion is unsupported.",
+  );
+}
+
+export function serializeFinoraPortableBranchAuthEnvelope(
+  envelope:
+    FinoraPortableBranchAuthEnvelope,
+): string {
+  validateFinoraPortableBranchAuthEnvelope(
+    envelope,
+  );
+
+  return JSON.stringify(
+    envelope,
+  );
+}
+
+export function parseFinoraPortableBranchAuthEnvelope(
+  serialized:
+    string,
+): FinoraPortableBranchAuthEnvelope {
+  if (
+    typeof serialized !== "string" ||
+    serialized.length === 0
+  ) {
+    throw new Error(
+      "Portable Branch Auth envelope is empty.",
+    );
+  }
+
+  let parsed:
+    unknown;
+
+  try {
+    parsed =
+      JSON.parse(
+        serialized,
+      );
+  }
+  catch {
+    throw new Error(
+      "Portable Branch Auth envelope is not valid JSON.",
+    );
+  }
+
+  validateFinoraPortableBranchAuthEnvelope(
     parsed,
   );
 

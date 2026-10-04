@@ -1,5 +1,5 @@
-// ============================================================
-// FINORA ENTERPRISE OS™
+﻿// ============================================================
+// FINORA ENTERPRISE OSâ„¢
 // ELECTRON MAIN PROCESS
 // V2 USB / PENDRIVE STORAGE IPC
 //
@@ -84,6 +84,15 @@ import { randomUUID } from "node:crypto";
 import {
   registerFinoraControlHandlers,
 } from "./control/finoraControlIpc.js";
+
+import {
+  createUnavailableFinoraCanonicalWalletAuthorityProvider,
+  registerFinoraCanonicalWalletAuthorityHandlers,
+} from "./control/finoraCanonicalWalletAuthorityIpc.js";
+
+import {
+  createFinoraPersistentCanonicalWalletAuthorityProvider,
+} from "./control/finoraCanonicalWalletAuthorityProvider.js";
 import {
   registerFinoraBranchCredentialHandlers,
 } from "./control/finoraBranchCredentialIpc.js";
@@ -108,6 +117,10 @@ import {
 import {
   FinoraPortableBranchAuthStore,
 } from "./control/finoraPortableBranchAuthStore.js";
+
+import {
+  FinoraPortableBranchAuthV2Store,
+} from "./control/finoraPortableBranchAuthV2Store.js";
 
 import {
   recoverFinoraPortableBranchAuthCredentialRotations,
@@ -3430,6 +3443,19 @@ app.whenReady().then(async () => {
           () =>
             findFinoraUsbRoot(),
       });
+    const portableBranchAuthV2Store =
+      new FinoraPortableBranchAuthV2Store({
+        resolveLocalRoot:
+          () =>
+            app.getPath(
+              "userData",
+            ),
+
+        resolveUsbRoot:
+          () =>
+            findFinoraUsbRoot(),
+      });
+
     const portableFreshDeviceRuntimeAuthorityStore =
       new FinoraPortableFreshDeviceRuntimeAuthorityStore({
         resolveLocalRoot:
@@ -3485,6 +3511,11 @@ app.whenReady().then(async () => {
     registerFinoraControlHandlers(
       isTrustedRenderer,
       portableBranchAuthStore,
+    );
+
+    registerFinoraCanonicalWalletAuthorityHandlers(
+      isTrustedRenderer,
+      createFinoraPersistentCanonicalWalletAuthorityProvider(),
     );
 
     registerFinoraPortableBranchAuthUsbReplacementHandlers({
@@ -3560,7 +3591,7 @@ app.whenReady().then(async () => {
 
     registerFinoraBranchCredentialHandlers(
       isTrustedRenderer,
-      portableBranchAuthStore,
+      portableBranchAuthV2Store,
     );
     registerFinoraBranchLoginSessionHandlers(
       isTrustedRenderer,
@@ -3677,3 +3708,5 @@ app.on("window-all-closed", () => {
 // ============================================================
 // END
 // ============================================================
+
+

@@ -1,4 +1,4 @@
-import {
+﻿import {
   Capacitor,
   registerPlugin,
 } from "@capacitor/core";

@@ -1,4 +1,4 @@
-import { useState } from "react";
+﻿import { useState } from "react";
 
 import type {
   FinoraBranchDeviceRevocationDataContextDraft,
@@ -90,3 +90,4 @@ export default function FinoraControlCenterDeviceRevocationForm({ target, onIssu
     </section>
   );
 }
+

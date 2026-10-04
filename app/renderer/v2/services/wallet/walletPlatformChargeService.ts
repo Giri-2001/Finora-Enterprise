@@ -1,7 +1,7 @@
-/* ============================================================
-   FINORA ENTERPRISE OS™
+﻿/* ============================================================
+   FINORA ENTERPRISE OSâ„¢
 
-   V2 WALLET ENGINE™
+   V2 WALLET ENGINEâ„¢
 
    GENERIC PLATFORM CHARGE SERVICE
 
@@ -116,7 +116,7 @@ export interface WalletPlatformChargePreflightSuccess {
       number;
 
     availableBalanceAfterCharge:
-      number;
+        undefined,
   };
 }
 
@@ -338,24 +338,6 @@ export async function preflightWalletPlatformCharge(
     };
   }
 
-  const balanceResult =
-    calculateWalletDebit(
-      wallet.balance,
-      pricingQuote.amount,
-    );
-
-  if (!balanceResult.success) {
-    return {
-      success:
-        false,
-
-      errorCode:
-        "INSUFFICIENT_BALANCE",
-
-      error:
-        `Insufficient FINORA Wallet balance. A ₹${pricingQuote.amount} platform fee is required.`,
-    };
-  }
 
   return {
     success:
@@ -374,7 +356,7 @@ export async function preflightWalletPlatformCharge(
         wallet.balance,
 
       availableBalanceAfterCharge:
-        balanceResult.transition.balanceAfter,
+        undefined,
     },
   };
 }

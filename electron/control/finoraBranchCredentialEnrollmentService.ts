@@ -37,8 +37,8 @@ import {
 } from "./finoraPortableBranchAuthEnrollmentCoordinator.js";
 
 import type {
-  FinoraPortableBranchAuthStore,
-} from "./finoraPortableBranchAuthStore.js";
+  FinoraPortableBranchAuthV2Store,
+} from "./finoraPortableBranchAuthV2Store.js";
 
 // ============================================================
 // PASSWORD / KDF POLICY
@@ -304,7 +304,7 @@ export async function enrollFinoraBranchCredentialWithPortableStore(
     unknown,
 
   portableStore:
-    FinoraPortableBranchAuthStore,
+    FinoraPortableBranchAuthV2Store,
 ): Promise<
   FinoraBranchCredentialEnrollmentResult
 > {

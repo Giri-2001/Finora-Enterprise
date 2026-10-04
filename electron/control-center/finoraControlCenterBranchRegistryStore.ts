@@ -1,7 +1,7 @@
-/* ============================================================
-   FINORA ENTERPRISE OS™
+﻿/* ============================================================
+   FINORA ENTERPRISE OSâ„¢
 
-   CONTROL CENTER — BRANCH REGISTRY STORE
+   CONTROL CENTER â€” BRANCH REGISTRY STORE
 
    MODULE  : Control Center
    LAYER   : Privileged Main-Process Persistence
@@ -594,6 +594,15 @@ function validateAccess(
   if (
     !isOptionalNonEmptyString(
       access.grantId,
+    ) ||
+    !isOptionalNonEmptyString(
+      access.userId,
+    ) ||
+    (
+      access.grantCreatedAt !== undefined &&
+      !isCanonicalTimestamp(
+        access.grantCreatedAt,
+      )
     ) ||
     (
       access.accessType !==
@@ -2365,6 +2374,152 @@ async function registerInternal(
 }
 
 
+
+// ============================================================
+// BRANCH ACCESS SUMMARY UPDATE
+//
+// Durable Control Center metadata only.
+// No recipient password, Security Code, hash or secret.
+// ============================================================
+
+export interface UpdateFinoraControlCenterBranchAccessSummaryInput {
+
+  ownerId:
+    string;
+
+  businessId:
+    string;
+
+  branchId:
+    string;
+
+  access:
+    Omit<
+      FinoraControlCenterBranchAccessSummary,
+      "updatedAt"
+    >;
+}
+
+export interface UpdateFinoraControlCenterBranchAccessSummaryResult {
+
+  updated:
+    boolean;
+
+  record:
+    FinoraControlCenterBranchRegistryRecord;
+}
+
+async function updateBranchAccessSummaryInternal(
+  input:
+    UpdateFinoraControlCenterBranchAccessSummaryInput,
+): Promise<
+  UpdateFinoraControlCenterBranchAccessSummaryResult
+> {
+
+  if (
+    !isNonEmptyString(
+      input.ownerId,
+    ) ||
+    !isNonEmptyString(
+      input.businessId,
+    ) ||
+    !isNonEmptyString(
+      input.branchId,
+    )
+  ) {
+    throw new Error(
+      "FINORA Control Center Branch Access Summary target is invalid.",
+    );
+  }
+
+  const existingRegistry =
+    await readRegistry();
+
+  if (!existingRegistry) {
+    throw new Error(
+      "FINORA Control Center Branch Registry does not exist.",
+    );
+  }
+
+  const registry =
+    existingRegistry;
+
+  const record =
+    registry.branches.find(
+      (candidate) =>
+        candidate.identity.ownerId ===
+          input.ownerId &&
+        candidate.identity.businessId ===
+          input.businessId &&
+        candidate.identity.branchId ===
+          input.branchId,
+    );
+
+  if (!record) {
+    throw new Error(
+      "FINORA Control Center Branch Access Summary target branch was not found.",
+    );
+  }
+
+  const clockResult =
+    await observeFinoraControlCenterAuthoritativeWallClock();
+
+  if (!clockResult.success) {
+    throw new Error(
+      clockResult.error,
+    );
+  }
+
+  const observedAt =
+    clockResult.data.observedAt;
+
+  const nextAccess:
+    FinoraControlCenterBranchAccessSummary = {
+      ...JSON.parse(
+        JSON.stringify(
+          input.access,
+        ),
+      ) as Omit<
+        FinoraControlCenterBranchAccessSummary,
+        "updatedAt"
+      >,
+
+      updatedAt:
+        observedAt,
+    };
+
+  validateAccess(
+    nextAccess,
+  );
+
+  record.access =
+    nextAccess;
+
+  record.updatedAt =
+    observedAt;
+
+  registry.updatedAt =
+    observedAt;
+
+  validateFinoraControlCenterBranchRegistry(
+    registry,
+  );
+
+  await writeRegistry(
+    registry,
+  );
+
+  return {
+    updated:
+      true,
+
+    record:
+      cloneRegistryRecord(
+        record,
+      ),
+  };
+}
+
 // ============================================================
 // BRANCH CERTIFICATION ROTATION
 //
@@ -3000,6 +3155,37 @@ export function registerFinoraControlCenterBranch(
 
   return operation;
 }
+
+export function updateFinoraControlCenterBranchAccessSummary(
+  input:
+    UpdateFinoraControlCenterBranchAccessSummaryInput,
+): Promise<
+  UpdateFinoraControlCenterBranchAccessSummaryResult
+> {
+
+  const operation =
+    branchRegistrationQueue.then(
+      () =>
+        updateBranchAccessSummaryInternal(
+          input,
+        ),
+      () =>
+        updateBranchAccessSummaryInternal(
+          input,
+        ),
+    );
+
+  branchRegistrationQueue =
+    operation.then(
+      () =>
+        undefined,
+      () =>
+        undefined,
+    );
+
+  return operation;
+}
+
 
 export function rotateFinoraControlCenterBranchCertification(
   input:

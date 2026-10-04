@@ -1,7 +1,7 @@
-/* ============================================================
-   FINORA ENTERPRISE OS™
+﻿/* ============================================================
+   FINORA ENTERPRISE OSâ„¢
 
-   V2 WALLET ENGINE™
+   V2 WALLET ENGINEâ„¢
 
    WALLET DEBIT SERVICE
 
@@ -88,7 +88,10 @@ export interface WalletDebitServiceFailure {
     | "INSUFFICIENT_BALANCE"
     | "DUPLICATE_DEBIT"
     | "PENDING_RECOVERY_FAILED"
-    | "DEBIT_IN_PROGRESS"
+    | "AUTHORITY_UNAVAILABLE"
+    | "AUTHORITY_BLOCKED"
+    | "AUTHORITY_SCOPE_MISMATCH"
+    | "AUTHORITY_CONFLICT"    | "DEBIT_IN_PROGRESS"
     | "LEDGER_WRITE_FAILED"
     | "WALLET_UPDATE_FAILED"
     | "LEDGER_FINALIZE_FAILED";
@@ -502,9 +505,94 @@ export async function commitWalletDebit(
      BALANCE TRANSITION
   ========================================================== */
 
+  /* ==========================================================
+     CANONICAL WALLET AUTHORITY
+     ==========================================================
+     The removable Wallet balance is not spend authority.
+     The privileged canonical authority is the financial
+     decision source for every new debit.
+  ========================================================== */
+
+  const authorityReadResult =
+    await window.finora.control.readCanonicalWalletAuthority({
+      ownerId:
+        input.ownerId,
+
+      businessId:
+        input.businessId,
+
+      branchId:
+        input.branchId,
+
+      walletId:
+        wallet.walletId,
+    });
+
+  if (!authorityReadResult.success) {
+    return {
+      success:
+        false,
+
+      errorCode:
+        
+"AUTHORITY_UNAVAILABLE",
+
+      error:
+        authorityReadResult.error ??
+        
+"FINORA canonical Wallet Authority could not be read.",
+    };
+  }
+
+  const authority =
+    authorityReadResult.data;
+
+  if (
+    authority.ownerId !==
+      input.ownerId ||
+    authority.businessId !==
+      input.businessId ||
+    authority.branchId !==
+      input.branchId ||
+    authority.walletId !==
+      wallet.walletId
+  ) {
+    return {
+      success:
+        false,
+
+      errorCode:
+        
+"AUTHORITY_SCOPE_MISMATCH",
+
+      error:
+        
+"FINORA canonical Wallet Authority scope does not match the Wallet.",
+    };
+  }
+
+  if (
+    authority.status !==
+      
+"ACTIVE"
+  ) {
+    return {
+      success:
+        false,
+
+      errorCode:
+        
+"AUTHORITY_BLOCKED",
+
+      error:
+        
+"FINORA canonical Wallet Authority is not active.",
+    };
+  }
+
   const balanceResult =
     calculateWalletDebit(
-      wallet.balance,
+      authority.authoritativeBalance,
       input.amount,
     );
 
@@ -661,11 +749,128 @@ export async function commitWalletDebit(
      UPDATE WALLET
   ========================================================== */
 
+
+  /* ==========================================================
+     PHASE 2 - COMMIT CANONICAL WALLET AUTHORITY
+  ========================================================== */
+
+  const canonicalMutationResult =
+    await window.finora.control.commitCanonicalWalletAuthorityMutation({
+      ownerId:
+        input.ownerId,
+
+      businessId:
+        input.businessId,
+
+      branchId:
+        input.branchId,
+
+      walletId:
+        wallet.walletId,
+
+      expectedAuthorityGeneration:
+        authority.authorityGeneration,
+
+      expectedSpendCounter:
+        authority.spendCounter,
+
+      expectedHeadHash:
+        authority.headHash,
+
+      amount:
+        input.amount,
+
+      mutationKind:
+        "DEBIT",
+
+      mutationId:
+        transactionId,
+
+      occurredAt:
+        now,
+    });
+
+  if (!canonicalMutationResult.success) {
+
+    const failedTransaction:
+      WalletDebitTransaction = {
+        ...pendingTransaction,
+
+        status:
+          "FAILED",
+
+        remarks:
+          `${remarks} Canonical Wallet Authority debit was not committed.`,
+
+        updatedAt:
+          new Date().toISOString(),
+      };
+
+    const failedLedgerResult =
+      await finalizePendingWalletTransaction(
+        failedTransaction,
+      );
+
+    if (!failedLedgerResult.success) {
+      return {
+        success:
+          false,
+
+        errorCode:
+          "LEDGER_FINALIZE_FAILED",
+
+        error:
+          failedLedgerResult.error ??
+          "Canonical authority debit failed and pending ledger cleanup failed.",
+      };
+    }
+
+    return {
+      success:
+        false,
+
+      errorCode:
+        canonicalMutationResult.errorCode ===
+          "AUTHORITY_BLOCKED"
+          ? "AUTHORITY_BLOCKED"
+          : canonicalMutationResult.errorCode ===
+              "AUTHORITY_SCOPE_MISMATCH"
+            ? "AUTHORITY_SCOPE_MISMATCH"
+            : canonicalMutationResult.errorCode ===
+                "AUTHORITY_CONFLICT"
+              ? "AUTHORITY_CONFLICT"
+              : "AUTHORITY_UNAVAILABLE",
+
+      error:
+        canonicalMutationResult.error ??
+        "FINORA canonical Wallet Authority debit was not committed.",
+    };
+  }
+
+  const canonicalAfter =
+    canonicalMutationResult.data;
+
+  if (
+    canonicalAfter.authoritativeBalance !==
+      balanceResult.transition.balanceAfter
+  ) {
+    return {
+      success:
+        false,
+
+      errorCode:
+        "AUTHORITY_CONFLICT",
+
+      error:
+        "FINORA canonical Wallet Authority after-state does not match the debit transition.",
+    };
+  }
+
   const updatedWallet: WalletAccount = {
     ...wallet,
 
     balance:
-      recoverySnapshot.walletAfter.balance,
+      canonicalAfter.authoritativeBalance,
 
     transactionCount:
       recoverySnapshot.walletAfter.transactionCount,
@@ -786,3 +991,4 @@ export async function commitWalletDebit(
 /* ============================================================
    END
 ============================================================ */
+

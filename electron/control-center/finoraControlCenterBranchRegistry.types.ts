@@ -1,7 +1,7 @@
 /* ============================================================
-   FINORA ENTERPRISE OS™
+   FINORA ENTERPRISE OSâ„¢
 
-   CONTROL CENTER — BRANCH REGISTRY CONTRACT
+   CONTROL CENTER â€” BRANCH REGISTRY CONTRACT
 
    MODULE  : Control Center
    LAYER   : Admin Authority Contract
@@ -193,6 +193,12 @@ export interface FinoraControlCenterBranchAccessSummary {
   grantId?:
     string;
 
+  userId?:
+    string;
+
+  grantCreatedAt?:
+    string;
+
   accessType:
     FinoraControlCenterBranchAccessType;
 
@@ -201,6 +207,9 @@ export interface FinoraControlCenterBranchAccessSummary {
 
   storageMode:
     FinoraControlCenterBranchStorageMode;
+
+  deviceAccessPolicy?:
+    "PORTABLE_USB";
 
   validFrom:
     string;

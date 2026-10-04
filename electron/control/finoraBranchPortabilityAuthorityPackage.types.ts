@@ -51,6 +51,9 @@ export interface FinoraBranchPortabilityAuthorityPayloadV1 {
   storageMode:
     FinoraBranchAccessStorageMode;
 
+  deviceAccessPolicy?:
+    "PORTABLE_USB";
+
   dataContext:
     FinoraBranchAccessDataContext;
 

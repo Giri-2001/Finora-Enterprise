@@ -1,5 +1,5 @@
-// ============================================================
-// FINORA ENTERPRISE OS™
+﻿// ============================================================
+// FINORA ENTERPRISE OSâ„¢
 //
 // GLOBAL PREMIUM DIALOG HOST
 //
@@ -35,15 +35,6 @@ import {
   messageStyle,
   titleDividerStyle,
 } from "./FinoraDialog.styles";
-
-const ICON_MARKS:
-  Record<FinoraDialogKind, string> = {
-    success: "✓",
-    error: "×",
-    warning: "!",
-    info: "i",
-    confirm: "?",
-  };
 
 export default function FinoraDialogHost() {
   const [
@@ -242,12 +233,16 @@ export default function FinoraDialogHost() {
             aria-hidden="true"
           >
             <span className="finora-dialog-icon-mark">
-              {
-                ICON_MARKS[
-                  activeRequest.kind
-                ]
-              }
-            </span>
+  {dialog.type === "success" ? (
+    <CheckCircle2 size={28} strokeWidth={2.2} />
+  ) : dialog.type === "error" ? (
+    <XCircle size={28} strokeWidth={2.2} />
+  ) : dialog.type === "warning" ? (
+    <TriangleAlert size={28} strokeWidth={2.2} />
+  ) : (
+    <Info size={28} strokeWidth={2.2} />
+  )}
+</span>
           </div>
 
           <h2
@@ -304,3 +299,4 @@ export default function FinoraDialogHost() {
 // ============================================================
 // END
 // ============================================================
+

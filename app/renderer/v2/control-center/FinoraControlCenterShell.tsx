@@ -37,7 +37,7 @@ import FinoraControlCenterIssuanceWorkspace from "./FinoraControlCenterIssuanceW
 import "./FinoraControlCenterResponsive.css";
 
 /* ===========================================================
-   FINORA ENTERPRISE OS™
+   FINORA ENTERPRISE OSÃ¢â€žÂ¢
 
    CONTROL CENTER
    SHELL FOUNDATION
@@ -1131,7 +1131,7 @@ export default function FinoraControlCenterShell() {
               }}
             >
               {submitting
-                ? "Configuring…"
+                ? "Configuringâ€¦"
                 : "Configure Developer Security Code"}
             </button>
 
@@ -1269,7 +1269,7 @@ export default function FinoraControlCenterShell() {
                     0.72,
                 }}
               >
-                Checking Developer security state…
+                Checking Developer security stateâ€¦
               </p>
             )}
 
@@ -1366,9 +1366,9 @@ export default function FinoraControlCenterShell() {
               }}
             >
               {checking
-                ? "Checking security…"
+                ? "Checking securityâ€¦"
                 : submitting
-                  ? "Verifying…"
+                  ? "Verifyingâ€¦"
                   : "Access Control Center"}
             </button>
           </form>
@@ -1447,16 +1447,24 @@ const [
   const [
     issuanceWorkflow,
     setIssuanceWorkflow,
-  ] = useState<
-    FinoraControlCenterIssuanceWorkflow
-  >(
-    "BRANCH_ACTIVATION",
-  );
+  ] = useState<FinoraControlCenterIssuanceWorkflow>("BRANCH_ACCESS");
+
+  const [
+    newBranchProvisioning,
+    setNewBranchProvisioning,
+  ] = useState(false);
 
   const [
     workspaceFocusRequestId,
     setWorkspaceFocusRequestId,
   ] = useState(0);
+
+  const [
+    branchAccessLaunchAction,
+    setBranchAccessLaunchAction,
+  ] = useState<"ISSUE" | "RENEW">(
+    "ISSUE",
+  );
   const [
     loadState,
     setLoadState,
@@ -1774,7 +1782,7 @@ const [
           hidden={activeView !== "CONTROL"}
           aria-live="polite"
           style={{
-            border:
+            display: "none", border:
               "1px solid rgba(148, 163, 184, 0.22)",
             borderRadius:
               "14px",
@@ -1807,7 +1815,7 @@ const [
                   0.76,
               }}
             >
-              Loading Control Center trust identity…
+              Loading Control Center trust identityâ€¦
             </p>
           )}
 
@@ -2420,16 +2428,51 @@ const [
               selectedWorkflow={
                 issuanceWorkflow
               }
+              onCreateBranch={() => {
+                setNewBranchProvisioning(true);
+                setSelectedIssuanceBranch(
+                  undefined,
+                );
+
+                setIssuanceWorkflow(
+                  "BRANCH_ACTIVATION",
+                );
+
+                setBranchAccessLaunchAction(
+                  "ISSUE",
+                );
+
+                setWorkspaceFocusRequestId(
+                  (current) =>
+                    current + 1,
+                );
+
+                setActiveView(
+                  "CONTROL",
+                );
+              }}
               onLaunchBranchWorkflow={(
                 record,
                 workflow,
+                branchAccessAction,
               ) => {
+                setNewBranchProvisioning(
+                  workflow === "BRANCH_ACTIVATION",
+                );
+
                 setSelectedIssuanceBranch(
                   record,
                 );
 
                 setIssuanceWorkflow(
                   workflow,
+                );
+
+                setBranchAccessLaunchAction(
+                  workflow === "BRANCH_ACCESS" &&
+                  branchAccessAction === "RENEW"
+                    ? "RENEW"
+                    : "ISSUE",
                 );
 
                 setWorkspaceFocusRequestId(
@@ -2462,6 +2505,12 @@ const [
               workspaceFocusRequestId={
                 workspaceFocusRequestId
               }
+              branchAccessInitialAction={
+                branchAccessLaunchAction
+              }
+              newBranchProvisioning={
+                newBranchProvisioning
+              }
               onWorkflowChange={
                 setIssuanceWorkflow
               }
@@ -2478,3 +2527,5 @@ const [
     </main>
   );
 }
+
+

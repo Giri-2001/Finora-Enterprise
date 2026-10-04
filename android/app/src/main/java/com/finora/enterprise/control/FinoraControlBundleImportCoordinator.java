@@ -18,7 +18,7 @@ import java.util.Set;
 import java.util.regex.Pattern;
 
 /* ============================================================
-   FINORA ENTERPRISE OS™
+   FINORA ENTERPRISE OSâ„¢
 
    ANDROID CONTROL BUNDLE IMPORT COORDINATOR
 
@@ -1137,6 +1137,117 @@ public final class FinoraControlBundleImportCoordinator {
                         );
                 }
 
+                /*
+                 * A CONTROL_BUNDLE may be retried after an earlier
+                 * attempt applied some provisioning children and then
+                 * stopped on a later child.
+                 *
+                 * These provisioning purposes are state-setting and
+                 * may treat the exact already-applied signed package
+                 * as satisfied after full bundle/child preflight.
+                 *
+                 * BRANCH_ACCESS and WALLET_RECHARGE deliberately stay
+                 * strict. Their replay / sequence protections must not
+                 * be converted into bundle-level success.
+                 */
+                boolean replaySafeProvisioningPurpose =
+                    (
+                        "BRANCH_ACTIVATION".equals(
+                            purpose
+                        ) ||
+                        "STORAGE_ENTITLEMENT".equals(
+                            purpose
+                        ) ||
+                        "BUSINESS_PROFILE".equals(
+                            purpose
+                        ) ||
+                        "PRICING_POLICY".equals(
+                            purpose
+                        )
+                    );
+
+                boolean alreadyAppliedSafeProvisioningChild =
+                    (
+                        !childResult.success &&
+                        replaySafeProvisioningPurpose &&
+                        childResult.error != null &&
+                        childResult.error.contains(
+                            "REPLAYED_PACKAGE"
+                        )
+                    );
+
+                /*
+                 * Credential enrollment is applied together with its
+                 * verified portability proof in one Branch Access
+                 * Control Store mutation.
+                 *
+                 * On a CONTROL_BUNDLE retry, REPLAY_DETECTED means the
+                 * exact BRANCH_ACCESS packageId is already present in
+                 * appliedPackages. Treat only that exact replay as an
+                 * already-satisfied bundle child.
+                 *
+                 * SEQUENCE_REJECTED remains a hard failure.
+                 */
+                boolean alreadyAppliedExactBranchAccessChild =
+                    (
+                        !childResult.success &&
+                        "BRANCH_ACCESS".equals(
+                            purpose
+                        ) &&
+                        childResult.error != null &&
+                        childResult.error.contains(
+                            "REPLAY_DETECTED"
+                        )
+                    );
+
+                /*
+                 * WALLET_RECHARGE remains financially strict.
+                 * Only the exact signed package replay is
+                 * considered already satisfied on bundle retry.
+                 * Different-package payment-reference duplicates
+                 * and sequence failures remain hard failures.
+                 */
+                boolean alreadyAppliedExactWalletRechargeChild =
+                    (
+                        !childResult.success &&
+                        "WALLET_RECHARGE".equals(
+                            purpose
+                        ) &&
+                        childResult.error != null &&
+                        childResult.error.contains(
+                            "FINORA Wallet Recharge signed package has already been applied."
+                        )
+                    );
+
+                if (
+                    alreadyAppliedSafeProvisioningChild ||
+                    alreadyAppliedExactBranchAccessChild ||
+                    alreadyAppliedExactWalletRechargeChild
+                ) {
+                    childResult =
+                        new ChildApplyResult(
+                            true,
+                            null,
+                            childResult.packageId,
+                            childResult.sequence
+                        );
+
+                    /*
+                     * Exact BRANCH_ACCESS replay proves that the
+                     * earlier credential-enrollment pair mutation
+                     * already persisted Branch Access together with
+                     * its verified portability proof.
+                     *
+                     * Only REPLAY_DETECTED reaches this condition.
+                     * Sequence and other failures remain strict.
+                     */
+                    if (
+                        alreadyAppliedExactBranchAccessChild &&
+                        pairedPortabilityChild != null
+                    ) {
+                        credentialPairApplied = true;
+                    }
+                }
                 if (!childResult.success) {
                     return Result.failure(
                         bundlePackageId,
@@ -2095,3 +2206,4 @@ public final class FinoraControlBundleImportCoordinator {
 /* ============================================================
    END
 ============================================================ */
+

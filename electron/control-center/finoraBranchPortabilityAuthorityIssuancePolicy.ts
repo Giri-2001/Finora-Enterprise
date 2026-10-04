@@ -242,10 +242,12 @@ export function validateFinoraBranchPortabilityAuthorityIssuance(
         "businessId",
         "branchId",
         "storageMode",
+        "deviceAccessPolicy",
         "dataContext",
         "demoId",
         "method",
         "oneTime",
+        "credentialLifecycle",
         "schemaVersion",
       ],
     )
@@ -292,6 +294,18 @@ export function validateFinoraBranchPortabilityAuthorityIssuance(
     ) ||
     !isStorageMode(
       sourceAuthorization.storageMode,
+    ) ||
+    (
+      sourceAuthorization.deviceAccessPolicy !== undefined &&
+      sourceAuthorization.deviceAccessPolicy !== "PORTABLE_USB"
+    ) ||
+    (
+      sourceAuthorization.deviceAccessPolicy === "PORTABLE_USB" &&
+      sourceAuthorization.storageMode !== "USB"
+    ) ||
+    (
+      sourceAuthorization.credentialLifecycle !== undefined &&
+      sourceAuthorization.credentialLifecycle !== "TEMPORARY_FIRST_LOGIN"
     ) ||
     !isDataContext(
       sourceAuthorization.dataContext,
@@ -377,6 +391,15 @@ export function validateFinoraBranchPortabilityAuthorityIssuance(
 
       storageMode:
         authorization.storageMode,
+
+      ...(
+        authorization.deviceAccessPolicy === undefined
+          ? {}
+          : {
+              deviceAccessPolicy:
+                authorization.deviceAccessPolicy,
+            }
+      ),
 
       dataContext:
         authorization.dataContext,

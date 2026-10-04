@@ -1,7 +1,7 @@
-/* ============================================================
-   FINORA ENTERPRISE OS™
+﻿/* ============================================================
+   FINORA ENTERPRISE OSâ„¢
 
-   V2 WALLET ENGINE™
+   V2 WALLET ENGINEâ„¢
 
    WALLET RECHARGE SERVICE
 
@@ -97,6 +97,10 @@ export interface WalletRechargeServiceFailure {
     | "SIGNED_AUTHORIZATION_FAILED"
     | "RECHARGE_IN_PROGRESS"
     | "BALANCE_ERROR"
+    | "AUTHORITY_UNAVAILABLE"
+    | "AUTHORITY_BLOCKED"
+    | "AUTHORITY_SCOPE_MISMATCH"
+    | "AUTHORITY_CONFLICT"
     | "LEDGER_WRITE_FAILED"
     | "WALLET_UPDATE_FAILED"
     | "LEDGER_FINALIZE_FAILED";
@@ -500,9 +504,87 @@ export async function commitVerifiedWalletRecharge(
      BALANCE TRANSITION
   ========================================================== */
 
+  /* ==========================================================
+     CANONICAL WALLET AUTHORITY
+     ==========================================================
+     Verified recharge credit is calculated from the
+     privileged canonical Wallet Authority, never from a
+     potentially stale removable Wallet snapshot.
+  ========================================================== */
+
+  const authorityReadResult =
+    await window.finora.control.readCanonicalWalletAuthority({
+      ownerId:
+        wallet.ownerId,
+
+      businessId:
+        wallet.businessId,
+
+      branchId:
+        wallet.branchId,
+
+      walletId:
+        wallet.walletId,
+    });
+
+  if (!authorityReadResult.success) {
+    return {
+      success:
+        false,
+
+      errorCode:
+        "AUTHORITY_UNAVAILABLE",
+
+      error:
+        authorityReadResult.error ??
+        "FINORA canonical Wallet Authority could not be read.",
+    };
+  }
+
+  const authority =
+    authorityReadResult.data;
+
+  if (
+    authority.ownerId !==
+      wallet.ownerId ||
+    authority.businessId !==
+      wallet.businessId ||
+    authority.branchId !==
+      wallet.branchId ||
+    authority.walletId !==
+      wallet.walletId
+  ) {
+    return {
+      success:
+        false,
+
+      errorCode:
+        "AUTHORITY_SCOPE_MISMATCH",
+
+      error:
+        "FINORA canonical Wallet Authority scope does not match the Wallet.",
+    };
+  }
+
+  if (
+    authority.status !==
+      "ACTIVE"
+  ) {
+    return {
+      success:
+        false,
+
+      errorCode:
+        "AUTHORITY_BLOCKED",
+
+      error:
+        "FINORA canonical Wallet Authority is not active.",
+    };
+  }
+
   const balanceResult =
     calculateWalletRecharge(
-      wallet.balance,
+      authority.authoritativeBalance,
       verification.amount,
     );
 
@@ -673,6 +755,108 @@ export async function commitVerifiedWalletRecharge(
     };
   }
 
+
+  /* ==========================================================
+     PHASE 2 - COMMIT CANONICAL WALLET AUTHORITY
+  ========================================================== */
+
+  const canonicalMutationResult =
+    await window.finora.control.commitCanonicalWalletAuthorityMutation({
+      ownerId:
+        wallet.ownerId,
+
+      businessId:
+        wallet.businessId,
+
+      branchId:
+        wallet.branchId,
+
+      walletId:
+        wallet.walletId,
+
+      expectedAuthorityGeneration:
+        authority.authorityGeneration,
+
+      expectedSpendCounter:
+        authority.spendCounter,
+
+      expectedHeadHash:
+        authority.headHash,
+
+      amount:
+        verification.amount,
+
+      mutationKind:
+        "RECHARGE",
+
+      mutationId:
+        transactionId,
+
+      occurredAt:
+        now,
+    });
+
+  if (!canonicalMutationResult.success) {
+
+    const failedTransaction:
+      WalletRechargeTransaction = {
+        ...pendingTransaction,
+
+        status:
+          "FAILED",
+
+        remarks:
+          "FINORA Wallet recharge was not committed by canonical authority.",
+
+        updatedAt:
+          new Date().toISOString(),
+      };
+
+    await finalizePendingWalletTransaction(
+      failedTransaction,
+    );
+
+    return {
+      success:
+        false,
+
+      errorCode:
+        canonicalMutationResult.errorCode ===
+          "AUTHORITY_BLOCKED"
+          ? "AUTHORITY_BLOCKED"
+          : canonicalMutationResult.errorCode ===
+              "AUTHORITY_SCOPE_MISMATCH"
+            ? "AUTHORITY_SCOPE_MISMATCH"
+            : canonicalMutationResult.errorCode ===
+                "AUTHORITY_CONFLICT"
+              ? "AUTHORITY_CONFLICT"
+              : "AUTHORITY_UNAVAILABLE",
+
+      error:
+        canonicalMutationResult.error ??
+        "FINORA canonical Wallet Authority recharge credit was not committed.",
+    };
+  }
+
+  const canonicalAfter =
+    canonicalMutationResult.data;
+
+  if (
+    canonicalAfter.authoritativeBalance !==
+      balanceResult.transition.balanceAfter
+  ) {
+    return {
+      success:
+        false,
+
+      errorCode:
+        "AUTHORITY_CONFLICT",
+
+      error:
+        "FINORA canonical Wallet Authority recharge after-state does not match the recharge transition.",
+    };
+  }
+
   /* ==========================================================
      UPDATED WALLET
   ========================================================== */
@@ -681,7 +865,7 @@ export async function commitVerifiedWalletRecharge(
     ...wallet,
 
     balance:
-      recoverySnapshot.walletAfter.balance,
+      canonicalAfter.authoritativeBalance,
 
     transactionCount:
       recoverySnapshot.walletAfter.transactionCount,

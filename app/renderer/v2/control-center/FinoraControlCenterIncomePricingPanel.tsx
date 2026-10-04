@@ -1,4 +1,4 @@
-import {
+﻿import {
   useEffect,
   useState,
 } from "react";
@@ -380,7 +380,7 @@ export default function FinoraControlCenterIncomePricingPanel({
           "collection25000To50000Fee",
 
         title:
-          "Collection ₹25,000 – ₹50,000",
+          "Collection ₹25,000 â€“ ₹50,000",
 
         description:
           "Default Collection Processing fee from ₹25,000 through ₹50,000 inclusive.",

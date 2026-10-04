@@ -1,5 +1,5 @@
-// ============================================================
-// FINORA ENTERPRISE OS™
+﻿// ============================================================
+// FINORA ENTERPRISE OSâ„¢
 //
 // CONTROL PLANE
 // SIGNED WALLET RECHARGE PACKAGE APPLY SELF TEST
@@ -44,6 +44,7 @@ import {
 
 import {
   mkdtemp,
+  rename,
   rm,
 } from "node:fs/promises";
 
@@ -2120,6 +2121,145 @@ async function runSelfTest():
       "PASS: rejected decline attempts did not mutate durable decline count or burn next sequence",
     );
 
+
+    // ========================================================
+    // TEST 25 - PORTABLE DECLINE WITHOUT ORIGINAL NATIVE VAULT
+    // ========================================================
+
+    const portableDeclinePaymentReference =
+      "FINORA-WALLET-RECHARGE-SELFTEST-DECLINE-PORTABLE";
+
+    const portableDeclineRequestId =
+      "FINORA-WAL-REQ-5555555555555555555555555555555555555555555555555555555555555555";
+
+    const portableDeclinePackage =
+      createSignedPackage({
+        packageId:
+          "FINORA-WALLET-RECHARGE-DECLINE-SELFTEST-PORTABLE",
+
+        purpose:
+          "WALLET_RECHARGE_DECLINE",
+
+        target:
+          packageTarget,
+
+        issuedAt,
+
+        sequence:
+          3,
+
+        payload:
+          createDeclinePayload({
+            paymentReference:
+              portableDeclinePaymentReference,
+
+            requestId:
+              portableDeclineRequestId,
+          }),
+
+        issuerId,
+
+        signingKeyId:
+          signingMaterial.signingKeyId,
+
+        privateKeyPkcs8DerBase64:
+          signingMaterial.privateKeyPkcs8DerBase64,
+      });
+
+    const nativeVaultPath =
+      join(
+        temporaryUserData,
+        "FINORA",
+        "control",
+        "finora-installation-binding.bin",
+      );
+
+    const nativeVaultBackupPath =
+      `${nativeVaultPath}.portability-selftest.bak`;
+
+    await rename(
+      nativeVaultPath,
+      nativeVaultBackupPath,
+    );
+
+    console.log(
+      "PASS: original native installation-binding vault temporarily unavailable",
+    );
+
+    try {
+
+      const portableDeclineResult =
+        await applyFinoraSignedWalletRechargeDeclinePackage(
+          portableDeclinePackage,
+          trustedKeys,
+          now,
+        );
+
+      assert(
+        portableDeclineResult.success,
+        portableDeclineResult.error ??
+          "Portable Wallet Recharge decline was rejected without the original native vault.",
+      );
+
+      console.log(
+        "PASS: signed Wallet Recharge decline accepted without original native vault",
+      );
+
+      const portablePersistedDecline =
+        await findFinoraWalletRechargeDecline(
+          scope.ownerId,
+          scope.businessId,
+          scope.branchId,
+          portableDeclinePaymentReference,
+        );
+
+      assert(
+        portablePersistedDecline.success &&
+          portablePersistedDecline.data?.requestId ===
+            portableDeclineRequestId &&
+          portablePersistedDecline.data?.installationId ===
+            bindingTarget.installationId &&
+          portablePersistedDecline.data?.bindingKeyId ===
+            bindingTarget.bindingKeyId &&
+          portablePersistedDecline.data?.fingerprintAlgorithm ===
+            bindingTarget.fingerprintAlgorithm &&
+          portablePersistedDecline.data?.publicKeyFingerprint ===
+            bindingTarget.publicKeyFingerprint,
+        portablePersistedDecline.error ??
+          "Portable decline did not retain original signed request binding evidence.",
+      );
+
+      console.log(
+        "PASS: portable decline retained original signed request binding evidence",
+      );
+
+      const portableDeclineReplay =
+        await applyFinoraSignedWalletRechargeDeclinePackage(
+          portableDeclinePackage,
+          trustedKeys,
+          now,
+        );
+
+      expectFailure(
+        "portable signed Wallet Recharge decline replay rejected",
+        portableDeclineReplay,
+      );
+
+      console.log(
+        "PASS: portable decline replay protection preserved",
+      );
+
+    } finally {
+
+      await rename(
+        nativeVaultBackupPath,
+        nativeVaultPath,
+      );
+
+      console.log(
+        "PASS: native installation-binding vault restored after portability test",
+      );
+    }
     console.log(
       "PASS: FINORA SIGNED WALLET RECHARGE DECLINE E2E",
     );
@@ -2207,3 +2347,4 @@ void runSelfTest()
 // ============================================================
 // END
 // ============================================================
+

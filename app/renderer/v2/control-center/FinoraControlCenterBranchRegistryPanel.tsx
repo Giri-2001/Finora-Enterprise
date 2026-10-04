@@ -1,4 +1,4 @@
-﻿import {
+import {
   useCallback,
   useEffect,
   useState,
@@ -29,7 +29,7 @@ import {
 } from "../../../../electron/control-center/finoraControlCenterBranchValidity";
 
 /* ===========================================================
-   FINORA ENTERPRISE OS™
+   FINORA ENTERPRISE OSâ„¢
 
    CONTROL CENTER
    BRANCH REGISTRY PANEL
@@ -99,7 +99,7 @@ function formatLastReportedWallet(
     wallet.balanceMinor /
     100;
 
-  return `₹${new Intl.NumberFormat(
+  return `â‚¹${new Intl.NumberFormat(
     "en-IN",
     {
       minimumFractionDigits:
@@ -134,6 +134,187 @@ function formatValidity(
   return `${validity.remainingDays} days`;
 }
 
+function getSubscriptionHealth(
+  record:
+    FinoraControlCenterBranchRegistryRecord,
+): {
+  status:
+    "ACTIVE" |
+    "EXPIRING SOON" |
+    "EXPIRED" |
+    "LEGACY";
+  detail:
+    string;
+  tone:
+    string;
+  border:
+    string;
+} {
+
+  if (!record.access?.validUntil) {
+    return {
+      status:
+        "LEGACY",
+      detail:
+        "Status metadata unavailable",
+      tone:
+        "#94a3b8",
+      border:
+        "rgba(148, 163, 184, 0.24)",
+    };
+  }
+
+  const validUntil =
+    Date.parse(
+      record.access.validUntil,
+    );
+
+  if (!Number.isFinite(validUntil)) {
+    return {
+      status:
+        "LEGACY",
+      detail:
+        "Status metadata unavailable",
+      tone:
+        "#94a3b8",
+      border:
+        "rgba(148, 163, 184, 0.24)",
+    };
+  }
+
+  const now =
+    Date.now();
+
+  const millisecondsPerDay =
+    86_400_000;
+
+  if (now >= validUntil) {
+
+    const elapsed =
+      now - validUntil;
+
+    const expiredDays =
+      Math.floor(
+        elapsed /
+          millisecondsPerDay,
+      );
+
+    return {
+      status:
+        "EXPIRED",
+      detail:
+        expiredDays <= 0
+          ? "Expired today"
+          : `Expired +${expiredDays} day${expiredDays === 1 ? "" : "s"}`,
+      tone:
+        "#f87171",
+      border:
+        "rgba(248, 113, 113, 0.34)",
+    };
+  }
+
+  const remainingDays =
+    Math.ceil(
+      (validUntil - now) /
+        millisecondsPerDay,
+    );
+
+  if (remainingDays <= 3) {
+    return {
+      status:
+        "EXPIRING SOON",
+      detail:
+        `Expires in ${remainingDays} day${remainingDays === 1 ? "" : "s"}`,
+      tone:
+        "#fbbf24",
+      border:
+        "rgba(251, 191, 36, 0.34)",
+    };
+  }
+
+  return {
+    status:
+      "ACTIVE",
+    detail:
+      `Expires in ${remainingDays} days`,
+    tone:
+      "#34d399",
+    border:
+      "rgba(52, 211, 153, 0.30)",
+  };
+}
+
+function SubscriptionHealthRow({
+  record,
+}: {
+  record:
+    FinoraControlCenterBranchRegistryRecord;
+}) {
+
+  const health =
+    getSubscriptionHealth(
+      record,
+    );
+
+  return (
+    <div
+      style={{
+        display:
+          "flex",
+        alignItems:
+          "center",
+        justifyContent:
+          "space-between",
+        gap:
+          "10px",
+        minHeight:
+          "34px",
+        border:
+          `1px solid ${health.border}`,
+        borderRadius:
+          "9px",
+        padding:
+          "6px 10px",
+        background:
+          "rgba(15, 23, 42, 0.50)",
+      }}
+    >
+      <span
+        style={{
+          fontSize:
+            "11px",
+          fontWeight:
+            650,
+          color:
+            "#cbd5e1",
+        }}
+      >
+        Subscription
+      </span>
+
+      <span
+        style={{
+          minWidth:
+            0,
+          fontSize:
+            "10px",
+          fontWeight:
+            800,
+          letterSpacing:
+            "0.035em",
+          color:
+            health.tone,
+          textAlign:
+            "right",
+          overflowWrap:
+            "anywhere",
+        }}
+      >
+        {health.status} Ã‚Â· {health.detail}
+      </span>
+    </div>
+  );
+}
 function DetailRow({
   label,
   value,
@@ -194,45 +375,27 @@ const BRANCH_ISSUANCE_ACTIONS: readonly {
 }[] = [
   {
     workflow:
-      "BRANCH_ACTIVATION",
+      "WALLET_RECHARGE",
     label:
-      "Activation",
+      "Recharge",
   },
   {
     workflow:
       "BRANCH_ACCESS",
     label:
-      "Access",
-  },
-  {
-    workflow:
-      "DEVICE_REVOCATION",
-    label:
-      "Revoke Device",
-  },
-  {
-    workflow:
-      "STORAGE_ENTITLEMENT",
-    label:
-      "Storage",
-  },
-  {
-    workflow:
-      "BUSINESS_PROFILE",
-    label:
-      "Edit Profile",
+      "Renew Subscription",
   },
   {
     workflow:
       "PRICING_POLICY",
     label:
-      "Pricing",
+      "Update Fee",
   },
   {
     workflow:
-      "WALLET_RECHARGE",
+      "BRANCH_ACTIVATION",
     label:
-      "Wallet Recharge",
+      "Continue Provisioning",
   },
 ];
 function BranchCard({
@@ -412,6 +575,8 @@ function BranchCard({
               "18px",
           }}
         >
+          <SubscriptionHealthRow record={record} />
+
           <div>
             <div
               style={{
@@ -732,7 +897,7 @@ function BranchCard({
             }}
           >
             {record.access
-              ? `${record.access.accessType} · ${record.access.storageMode}`
+              ? `${record.access.accessType} Â· ${record.access.storageMode}`
               : "Not provisioned"}
           </dd>
         </div>
@@ -866,7 +1031,7 @@ function BranchCard({
                 1,
             }}
           >
-            →
+            â†’
           </span>
         </div>
       )}
@@ -1163,6 +1328,22 @@ function BranchCard({
                 identity.installation.bindingCreatedAt,
               )}
             />
+
+            {record.branchCertificationPublicKey && (
+              <>
+                <DetailRow
+                  label="Branch Certification Key ID"
+                  value={record.branchCertificationPublicKey.keyId}
+                  monospace
+                />
+
+                <DetailRow
+                  label="Branch Certification Fingerprint"
+                  value={record.branchCertificationPublicKey.publicKeyFingerprint}
+                  monospace
+                />
+              </>
+            )}
           </div>
 
           <div
@@ -1509,12 +1690,16 @@ interface FinoraControlCenterBranchRegistryPanelProps {
     FinoraControlCenterIssuanceWorkflow;
   directoryMode?:
     boolean;
+  onCreateBranch?: () => void;
+
   onLaunchBranchWorkflow:
     (
       record:
         FinoraControlCenterBranchRegistryRecord,
       workflow:
         FinoraControlCenterIssuanceWorkflow,
+      branchAccessAction?:
+        "RENEW",
     ) => void;
 }
 
@@ -1522,6 +1707,7 @@ export default function FinoraControlCenterBranchRegistryPanel({
   selectedBranchId,
   selectedWorkflow,
   directoryMode = false,
+  onCreateBranch,
   onLaunchBranchWorkflow,
 }: FinoraControlCenterBranchRegistryPanelProps) {
 
@@ -1924,6 +2110,38 @@ export default function FinoraControlCenterBranchRegistryPanel({
               "8px",
           }}
         >
+          {directoryMode && !openedBranch && onCreateBranch && (
+            <button
+              type="button"
+              data-finora-control-center-action="create-branch"
+              onClick={() => {
+                onCreateBranch();
+              }}
+              style={{
+                minHeight:
+                  "38px",
+                padding:
+                  "8px 14px",
+                border:
+                  "1px solid rgba(45, 212, 191, 0.42)",
+                borderRadius:
+                  "9px",
+                background:
+                  "rgba(13, 148, 136, 0.14)",
+                color:
+                  "#ccfbf1",
+                fontFamily:
+                  "Inter, ui-sans-serif, system-ui, sans-serif",
+                fontWeight:
+                  700,
+                cursor:
+                  "pointer",
+              }}
+            >
+              Create New Branch
+            </button>
+          )}
+
           {directoryMode && !openedBranch && (
             <button
               type="button"
@@ -2097,7 +2315,7 @@ export default function FinoraControlCenterBranchRegistryPanel({
         >
           {loadState ===
             "LOADING"
-            ? "Loading…"
+            ? "Loadingâ€¦"
             : "Refresh"}
         </button>
         </div>
@@ -2319,6 +2537,9 @@ export default function FinoraControlCenterBranchRegistryPanel({
                   onLaunchBranchWorkflow(
                     record,
                     workflow,
+                    workflow === "BRANCH_ACCESS"
+                      ? "RENEW"
+                      : undefined,
                   );
                 }}
               />
@@ -2329,3 +2550,7 @@ export default function FinoraControlCenterBranchRegistryPanel({
     </section>
   );
 }
+
+
+
+

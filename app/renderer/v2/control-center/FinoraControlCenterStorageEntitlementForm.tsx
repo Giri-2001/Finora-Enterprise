@@ -10,7 +10,7 @@ import type {
 } from "./FinoraControlCenterIssuanceForm.types";
 
 /* ===========================================================
-   FINORA ENTERPRISE OS™
+   FINORA ENTERPRISE OSâ„¢
 
    CONTROL CENTER
    STORAGE ENTITLEMENT FORM FOUNDATION
@@ -276,7 +276,7 @@ export default function FinoraControlCenterStorageEntitlementForm({
       "",
 
     storageMode:
-      "LOCAL",
+      "USB",
 
     status:
       "ACTIVE",
@@ -402,8 +402,8 @@ export default function FinoraControlCenterStorageEntitlementForm({
           label="Storage Mode"
           value={draft.storageMode}
           options={[
-            "LOCAL",
             "USB",
+            "LOCAL",
           ]}
           onChange={(
             value,
@@ -569,7 +569,7 @@ export default function FinoraControlCenterStorageEntitlementForm({
             0.58,
         }}
       >
-        Target scope: {target.ownerId || "—"} / {target.businessId || "—"} / {target.branchId || "—"} / {target.installationId || "—"}
+        Target scope: {target.ownerId || "â€”"} / {target.businessId || "â€”"} / {target.branchId || "â€”"} / {target.installationId || "â€”"}
       </div>
     </section>
   );

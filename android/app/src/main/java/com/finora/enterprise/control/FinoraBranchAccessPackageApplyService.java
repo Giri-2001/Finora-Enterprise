@@ -288,58 +288,72 @@ public final class FinoraBranchAccessPackageApplyService {
                     !"REPLACE".equals(action) &&
                     !"SUSPEND".equals(action) &&
                     !"RESUME".equals(action) &&
-                    !"REVOKE".equals(action)
+                    !"REVOKE".equals(action) &&
+                    !"AUTHORIZE_CREDENTIAL".equals(action)
                 ) {
                     return ApplyResult.failure(
                         "FINORA Branch Access lifecycle action is invalid."
                     );
                 }
 
+                boolean credentialAuthorizationOnly =
+                    "AUTHORIZE_CREDENTIAL".equals(
+                        action
+                    );
+
                 JSONObject accessGrant =
                     payload.optJSONObject(
                         "accessGrant"
                     );
 
-                if (accessGrant == null) {
-                    return ApplyResult.failure(
-                        "FINORA Branch Access grant is required."
-                    );
-                }
+                if (credentialAuthorizationOnly) {
+                    if (accessGrant != null) {
+                        return ApplyResult.failure(
+                            "FINORA AUTHORIZE_CREDENTIAL must not contain an Access Grant snapshot."
+                        );
+                    }
+                } else {
+                    if (accessGrant == null) {
+                        return ApplyResult.failure(
+                            "FINORA Branch Access grant is required."
+                        );
+                    }
 
-                String grantError =
-                    validateGrant(
-                        accessGrant
-                    );
+                    String grantError =
+                        validateGrant(
+                            accessGrant
+                        );
 
-                if (grantError != null) {
-                    return ApplyResult.failure(
-                        grantError
-                    );
-                }
+                    if (grantError != null) {
+                        return ApplyResult.failure(
+                            grantError
+                        );
+                    }
 
-                if (
-                    !ownerId.equals(
-                        required(
-                            accessGrant,
-                            "ownerId"
+                    if (
+                        !ownerId.equals(
+                            required(
+                                accessGrant,
+                                "ownerId"
+                            )
+                        ) ||
+                        !businessId.equals(
+                            required(
+                                accessGrant,
+                                "businessId"
+                            )
+                        ) ||
+                        !branchId.equals(
+                            required(
+                                accessGrant,
+                                "branchId"
+                            )
                         )
-                    ) ||
-                    !businessId.equals(
-                        required(
-                            accessGrant,
-                            "businessId"
-                        )
-                    ) ||
-                    !branchId.equals(
-                        required(
-                            accessGrant,
-                            "branchId"
-                        )
-                    )
-                ) {
-                    return ApplyResult.failure(
-                        "FINORA Branch Access Grant does not match this installation."
-                    );
+                    ) {
+                        return ApplyResult.failure(
+                            "FINORA Branch Access Grant does not match this installation."
+                        );
+                    }
                 }
 
                 JSONArray appliedPackages =
@@ -467,24 +481,30 @@ public final class FinoraBranchAccessPackageApplyService {
                         "branchAccessGrants"
                     );
 
-                int grantIndex =
-                    findGrant(
-                        grants,
-                        accessGrant
-                    );
+                int grantIndex = -1;
+                JSONObject existingGrant = null;
+                String nextStatus = null;
 
-                JSONObject existingGrant =
-                    grantIndex >= 0
-                        ? grants.getJSONObject(
-                            grantIndex
-                        )
-                        : null;
+                if (!credentialAuthorizationOnly) {
+                    grantIndex =
+                        findGrant(
+                            grants,
+                            accessGrant
+                        );
 
-                String nextStatus =
-                    required(
-                        accessGrant,
-                        "administrativeStatus"
-                    );
+                    existingGrant =
+                        grantIndex >= 0
+                            ? grants.getJSONObject(
+                                grantIndex
+                            )
+                            : null;
+
+                    nextStatus =
+                        required(
+                            accessGrant,
+                            "administrativeStatus"
+                        );
+                }
 
                 if (
                     "ISSUE".equals(action) &&
@@ -522,7 +542,8 @@ public final class FinoraBranchAccessPackageApplyService {
                     );
                 }
 
-                if ("ISSUE".equals(action)) {
+                if (!credentialAuthorizationOnly) {
+                    if ("ISSUE".equals(action)) {
 
                     if (existingGrant != null) {
                         return ApplyResult.failure(
@@ -634,6 +655,7 @@ public final class FinoraBranchAccessPackageApplyService {
                     }
                 }
 
+                }
                 JSONObject credentialEnrollment =
                     payload.optJSONObject(
                         "credentialEnrollment"
@@ -642,19 +664,38 @@ public final class FinoraBranchAccessPackageApplyService {
                 JSONObject signerEvidence =
                     null;
 
+                if (
+                    credentialAuthorizationOnly &&
+                    credentialEnrollment == null
+                ) {
+                    return ApplyResult.failure(
+                        "FINORA AUTHORIZE_CREDENTIAL requires credential enrollment authority."
+                    );
+                }
+
                 if (credentialEnrollment != null) {
 
-                    if (!"ISSUE".equals(action)) {
+                    if (
+                        !"ISSUE".equals(action) &&
+                        !credentialAuthorizationOnly
+                    ) {
                         return ApplyResult.failure(
-                            "Credential enrollment authorization is permitted only with ISSUE."
+                            "Credential enrollment authorization is permitted only with ISSUE or AUTHORIZE_CREDENTIAL."
                         );
                     }
 
                     String credentialError =
-                        validateCredentialEnrollment(
-                            credentialEnrollment,
-                            accessGrant
-                        );
+                        credentialAuthorizationOnly
+                            ? validateCredentialAuthorizationForTarget(
+                                credentialEnrollment,
+                                ownerId,
+                                businessId,
+                                branchId
+                            )
+                            : validateCredentialEnrollment(
+                                credentialEnrollment,
+                                accessGrant
+                            );
 
                     if (credentialError != null) {
                         return ApplyResult.failure(
@@ -892,26 +933,28 @@ public final class FinoraBranchAccessPackageApplyService {
                     }
                 }
 
-                JSONObject grantCopy =
-                    new JSONObject(
-                        accessGrant.toString()
-                    );
+                if (!credentialAuthorizationOnly) {
+                    JSONObject grantCopy =
+                        new JSONObject(
+                            accessGrant.toString()
+                        );
 
-                if (grantIndex >= 0) {
-                    grants.put(
-                        grantIndex,
-                        grantCopy
-                    );
-                } else {
-                    grants.put(
-                        grantCopy
+                    if (grantIndex >= 0) {
+                        grants.put(
+                            grantIndex,
+                            grantCopy
+                        );
+                    } else {
+                        grants.put(
+                            grantCopy
+                        );
+                    }
+
+                    state.put(
+                        "branchAccessGrants",
+                        grants
                     );
                 }
-
-                state.put(
-                    "branchAccessGrants",
-                    grants
-                );
 
                 if (
                     "RENEW".equals(action)
@@ -1350,6 +1393,157 @@ public final class FinoraBranchAccessPackageApplyService {
             );
     }
 
+    private static String validateCredentialAuthorizationForTarget(
+        JSONObject authorization,
+        String ownerId,
+        String businessId,
+        String branchId
+    ) throws Exception {
+
+        if (
+            authorization.optInt(
+                "schemaVersion",
+                -1
+            ) != 1 ||
+            !authorization.optBoolean(
+                "oneTime",
+                false
+            ) ||
+            !"SET_PASSWORD_ON_RECIPIENT".equals(
+                authorization.optString(
+                    "method",
+                    null
+                )
+            )
+        ) {
+            return "FINORA credential enrollment authorization is invalid.";
+        }
+
+        String authorizationId =
+            required(
+                authorization,
+                "authorizationId"
+            );
+
+        if (
+            !authorizationId.startsWith(
+                "FINORA-CREDENTIAL-ENROLLMENT-"
+            )
+        ) {
+            return "FINORA credential enrollment authorization ID is invalid.";
+        }
+
+        required(
+            authorization,
+            "userId"
+        );
+
+        required(
+            authorization,
+            "username"
+        );
+
+        required(
+            authorization,
+            "fullName"
+        );
+
+        String role =
+            required(
+                authorization,
+                "role"
+            );
+
+        if (
+            !"ADMIN".equals(role) &&
+            !"MANAGER".equals(role) &&
+            !"COLLECTOR".equals(role) &&
+            !"VIEWER".equals(role)
+        ) {
+            return "FINORA credential role is invalid.";
+        }
+
+        if (
+            !ownerId.equals(
+                required(
+                    authorization,
+                    "ownerId"
+                )
+            ) ||
+            !businessId.equals(
+                required(
+                    authorization,
+                    "businessId"
+                )
+            ) ||
+            !branchId.equals(
+                required(
+                    authorization,
+                    "branchId"
+                )
+            )
+        ) {
+            return "FINORA credential authorization does not match this installation target.";
+        }
+
+        String storageMode =
+            required(
+                authorization,
+                "storageMode"
+            );
+
+        if (
+            !"LOCAL".equals(storageMode) &&
+            !"USB".equals(storageMode)
+        ) {
+            return "FINORA credential storage mode is invalid.";
+        }
+
+        String dataContext =
+            required(
+                authorization,
+                "dataContext"
+            );
+
+        if (
+            !"REAL".equals(dataContext) &&
+            !"DEMO".equals(dataContext)
+        ) {
+            return "FINORA credential data context is invalid.";
+        }
+
+        if (
+            "REAL".equals(dataContext) &&
+            authorization.has(
+                "demoId"
+            )
+        ) {
+            return "FINORA REAL credential authorization must not contain demoId.";
+        }
+
+        if ("DEMO".equals(dataContext)) {
+            required(
+                authorization,
+                "demoId"
+            );
+        }
+
+        if (
+            authorization.has(
+                "credentialLifecycle"
+            ) &&
+            !"TEMPORARY_FIRST_LOGIN".equals(
+                required(
+                    authorization,
+                    "credentialLifecycle"
+                )
+            )
+        ) {
+            return "FINORA credential lifecycle is invalid.";
+        }
+
+        return null;
+    }
     private static String validateCredentialEnrollment(
         JSONObject authorization,
         JSONObject grant

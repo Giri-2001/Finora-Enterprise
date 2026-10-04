@@ -1,4 +1,4 @@
-/* ============================================================
+﻿/* ============================================================
    FINORA DEVELOPER CONTROL CENTER
    RESPONSIVE CONTRACT
    ============================================================ */
@@ -13,7 +13,7 @@
 
 
 /* ============================================================
-   TABLET — 768px through 1199px
+   TABLET â€” 768px through 1199px
    ============================================================ */
 
 @media (min-width: 768px) and (max-width: 1199px) {
@@ -76,7 +76,7 @@
 
 
 /* ============================================================
-   MOBILE — 767px and below
+   MOBILE â€” 767px and below
    ============================================================ */
 
 @media (max-width: 767px) {
@@ -432,7 +432,7 @@
 /* ============================================================
    FINORA BRANCH WORKSPACE DESKTOP 3X3 ACTION GRID
 
-   LAPTOP / DESKTOP — 1200px and above:
+   LAPTOP / DESKTOP â€” 1200px and above:
    - 7 issuance actions + Wallet History + View Details
    - 3 columns x 3 rows
 
@@ -459,3 +459,28 @@
     margin-top: 0 !important;
   }
 }
+
+
+/* FINORA_NATIVE_SELECT_ARROW_SUPPRESSION */
+.finora-select-shell { position: relative; width: 100%; }
+.finora-select-shell > select {
+  width: 100%;
+  appearance: none !important;
+  -webkit-appearance: none !important;
+  -moz-appearance: none !important;
+  background-image: none !important;
+  padding-right: 42px !important;
+}
+.finora-select-chevron {
+  position: absolute;
+  right: 13px;
+  top: 50%;
+  transform: translateY(-50%);
+  pointer-events: none;
+  color: #94a3b8;
+}
+select { appearance: none; -webkit-appearance: none; -moz-appearance: none; background-image: none !important; }
+select::-ms-expand { display: none; }
+input[type="number"] { appearance: textfield; -moz-appearance: textfield; }
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }

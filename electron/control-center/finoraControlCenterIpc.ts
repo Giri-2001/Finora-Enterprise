@@ -1,5 +1,5 @@
-// ============================================================
-// FINORA ENTERPRISE OS™
+﻿// ============================================================
+// FINORA ENTERPRISE OSÃ¢â€žÂ¢
 //
 // CONTROL CENTER
 // PRIVILEGED IPC
@@ -58,6 +58,10 @@ import {
   type IssueFinoraStorageEntitlementRequest,
   type IssueFinoraWalletRechargeRequest,
 } from "./finoraControlCenterIssuanceCoordinator.js";
+
+import {
+  updateFinoraControlCenterBranchAccessSummary,
+} from "./finoraControlCenterBranchRegistryStore.js";
 
 import {
   getFinoraControlCenterTrustRecord,
@@ -297,6 +301,10 @@ export const FINORA_CONTROL_CENTER_IPC_CHANNELS = {
 
   ISSUE_BRANCH_ACCESS:
     "finora:control-center:issue-branch-access",
+
+  ISSUE_TEMPORARY_CREDENTIAL:
+
+    "finora:control-center:issue-temporary-credential",
 
   ISSUE_BRANCH_DEVICE_REVOCATION:
     "finora:control-center:issue-branch-device-revocation",
@@ -1537,7 +1545,7 @@ registerFinoraDeveloperSecurityControlCenterHandler(
   );
 
   // ----------------------------------------------------------
-  // BRANCH CERTIFICATION ROTATION REQUEST — OPEN + VERIFY
+  // BRANCH CERTIFICATION ROTATION REQUEST Ã¢â‚¬â€ OPEN + VERIFY
   // ----------------------------------------------------------
   registerFinoraDeveloperProtectedControlCenterHandler(
     FINORA_CONTROL_CENTER_IPC_CHANNELS
@@ -1647,7 +1655,7 @@ registerFinoraDeveloperSecurityControlCenterHandler(
   );
 
   // ----------------------------------------------------------
-  // BRANCH CERTIFICATION ROTATION — ISSUE + EXPORT + COMMIT
+  // BRANCH CERTIFICATION ROTATION Ã¢â‚¬â€ ISSUE + EXPORT + COMMIT
   //
   // Verified native possession evidence is consumed before
   // asynchronous issuance starts.
@@ -1886,7 +1894,7 @@ registerFinoraDeveloperSecurityControlCenterHandler(
   );
 
   // ----------------------------------------------------------
-  // INSTALLATION ENROLLMENT RESPONSE — ISSUE + EXPORT
+  // INSTALLATION ENROLLMENT RESPONSE Ã¢â‚¬â€ ISSUE + EXPORT
   //
   // Renderer authority is limited to the five operator
   // assignment strings validated above.
@@ -2544,7 +2552,7 @@ registerFinoraDeveloperSecurityControlCenterHandler(
 
   // ----------------------------------------------------------
   // ----------------------------------------------------------
-  // VERIFIED WALLET RECHARGE REQUEST — DECLINE + NATIVE EXPORT
+  // VERIFIED WALLET RECHARGE REQUEST Ã¢â‚¬â€ DECLINE + NATIVE EXPORT
   //
   // Renderer supplies ZERO target / financial authority args.
   // The main-process verified Request session is consumed before
@@ -2897,11 +2905,292 @@ registerFinoraDeveloperSecurityControlCenterHandler(
             authorizedRequest.target,
           );
 
-          return issueFinoraBranchAccessPackage(
-            authorizedRequest,
-          );
+          const signedPackage =
+            await issueFinoraBranchAccessPackage(
+              authorizedRequest,
+            );
+
+          const signedPayload =
+            signedPackage.payload as
+              Record<string, unknown>;
+
+          const rawAccessGrant =
+            signedPayload.accessGrant;
+
+          if (
+            rawAccessGrant !== undefined &&
+            typeof rawAccessGrant === "object" &&
+            rawAccessGrant !== null &&
+            !Array.isArray(
+              rawAccessGrant,
+            )
+          ) {
+            const accessGrant =
+              rawAccessGrant as {
+                grantId: string;
+                userId: string;
+                accessType:
+                  | "REGISTERED"
+                  | "DEMO";
+                administrativeStatus:
+                  | "ACTIVE"
+                  | "SUSPENDED"
+                  | "REVOKED";
+                storageMode:
+                  | "LOCAL"
+                  | "USB";
+                deviceAccessPolicy?: "PORTABLE_USB";
+                validity: {
+                  validFrom: string;
+                  validUntil: string;
+                };
+                createdAt: string;
+              };
+
+            await updateFinoraControlCenterBranchAccessSummary({
+              ownerId:
+                authorizedRequest.target.ownerId,
+
+              businessId:
+                authorizedRequest.target.businessId,
+
+              branchId:
+                authorizedRequest.target.branchId,
+
+              access: {
+                grantId:
+                  accessGrant.grantId,
+
+                userId:
+                  accessGrant.userId,
+
+                grantCreatedAt:
+                  accessGrant.createdAt,
+
+                accessType:
+                  accessGrant.accessType,
+
+                administrativeStatus:
+                  accessGrant.administrativeStatus,
+
+                storageMode:
+                  accessGrant.storageMode,
+                ...(
+                  accessGrant.deviceAccessPolicy === undefined
+                    ? {}
+                    : { deviceAccessPolicy: accessGrant.deviceAccessPolicy }
+                ),
+
+                validFrom:
+                  accessGrant.validity.validFrom,
+
+                validUntil:
+                  accessGrant.validity.validUntil,
+
+                sourcePackageId:
+                  signedPackage.packageId,
+              },
+            });
+          }
+
+          return signedPackage;
         },
       );
+    },
+  );
+  // ----------------------------------------------------------
+  // BRANCH3 TEMPORARY FIRST-LOGIN CREDENTIAL
+  // ----------------------------------------------------------
+
+  registerFinoraDeveloperProtectedControlCenterHandler(
+    FINORA_CONTROL_CENTER_IPC_CHANNELS
+      .ISSUE_TEMPORARY_CREDENTIAL,
+    async (
+      event,
+      request:
+        unknown,
+    ) => {
+
+      if (
+        !isTrustedFinoraControlCenterRenderer(
+          event.senderFrame,
+        )
+      ) {
+        return failure(
+          "FINORA temporary credential provisioning is restricted to the dedicated Control Center renderer.",
+        );
+      }
+
+      if (
+        !request ||
+        typeof request !==
+          "object" ||
+        Array.isArray(request)
+      ) {
+        return failure(
+          "A valid temporary credential provisioning request is required.",
+        );
+      }
+
+      const candidate =
+        request as Record<
+          string,
+          unknown
+        >;
+
+      if (
+        candidate.credentialLifecycle !==
+          "TEMPORARY_FIRST_LOGIN"
+      ) {
+        return failure(
+          "Temporary credentials are restricted to TEMPORARY_FIRST_LOGIN.",
+        );
+      }
+
+      const requiredFields = [
+        "installationId",
+        "bindingKeyId",
+        "fingerprintAlgorithm",
+        "publicKeyFingerprint",
+        "credentialAuthorizationId",
+        "credentialUserId",
+        "credentialUsername",
+        "credentialFullName",
+        "credentialRole",
+        "storageMode",
+        "dataContext",
+        "deviceAccessPolicy",
+      ];
+
+      for (
+        const field of requiredFields
+      ) {
+        const value =
+          candidate[field];
+
+        if (
+          typeof value !==
+            "string" ||
+          value.trim().length ===
+            0
+        ) {
+          return failure(
+            `Temporary credential provisioning field is missing: ${field}.`,
+          );
+        }
+      }
+
+      if (
+        candidate.fingerprintAlgorithm !==
+          "SHA-256"
+      ) {
+        return failure(
+          "Unsupported recipient fingerprint algorithm.",
+        );
+      }
+
+      if (
+        candidate.storageMode !==
+          "PORTABLE_USB"
+      ) {
+        return failure(
+          "Temporary first-login provisioning requires PORTABLE_USB.",
+        );
+      }
+
+      if (
+        candidate.dataContext !==
+          "REAL"
+      ) {
+        return failure(
+          "Temporary first-login provisioning is restricted to REAL owner provisioning.",
+        );
+      }
+
+      if (
+        candidate.deviceAccessPolicy !==
+          "PORTABLE_USB"
+      ) {
+        return failure(
+          "Temporary first-login provisioning requires PORTABLE_USB device access.",
+        );
+      }
+
+      try {
+
+        const {
+          provisionFinoraTemporaryFirstLoginCredential,
+        } =
+          await import(
+            "./finoraBranchTemporaryCredentialProvisioner.js"
+          );
+
+
+
+        const provisioningRequest =
+          candidate as unknown as
+            Parameters<
+              typeof provisionFinoraTemporaryFirstLoginCredential
+            >[0];
+
+        const result =
+          await provisionFinoraTemporaryFirstLoginCredential(
+            provisioningRequest,
+          );
+
+        if (
+          !result ||
+          typeof result !==
+            "object"
+        ) {
+          return failure(
+            "Temporary credential provisioning returned an invalid result.",
+          );
+        }
+
+        if (
+          result.credentialChangeRequired !==
+            true ||
+          result.credentialLifecycle !==
+            "TEMPORARY_FIRST_LOGIN" ||
+          typeof result.password !==
+            "string" ||
+          typeof result.securityCode !==
+            "string"
+        ) {
+          return failure(
+            "Temporary credential provisioning returned an invalid lifecycle result.",
+          );
+        }
+
+        return {
+          success:
+            true,
+
+          data: {
+            temporaryPassword:
+              result.password,
+
+            temporarySecurityCode:
+              result.securityCode,
+
+            credentialChangeRequired:
+              true,
+
+            credentialLifecycle:
+              "TEMPORARY_FIRST_LOGIN",
+          },
+        };
+
+      } catch (error) {
+
+        return failure(
+          error instanceof Error
+            ? error.message
+            : "Unable to provision temporary FINORA credentials.",
+        );
+
+      }
     },
   );
 
@@ -3206,7 +3495,7 @@ registerFinoraDeveloperSecurityControlCenterHandler(
   );
 
   // ----------------------------------------------------------
-  // CONTROL BUNDLE — ISSUE + NATIVE .FINORA EXPORT
+  // CONTROL BUNDLE Ã¢â‚¬â€ ISSUE + NATIVE .FINORA EXPORT
   //
   // The renderer supplies only the issuance draft.
   //
@@ -3292,7 +3581,7 @@ registerFinoraDeveloperSecurityControlCenterHandler(
   );
 
   // ----------------------------------------------------------
-  // ADMIN AUTHORITY RECOVERY — ENCRYPTED EXPORT
+  // ADMIN AUTHORITY RECOVERY Ã¢â‚¬â€ ENCRYPTED EXPORT
   //
   // Security Code is a one-shot main-process input only.
   // No filesystem path or private signing material is returned.
@@ -3932,7 +4221,7 @@ registerFinoraDeveloperSecurityControlCenterHandler(
   );
 
   // ----------------------------------------------------------
-  // ADMIN AUTHORITY RECOVERY — IMPORT + FRESH-MACHINE RESTORE
+  // ADMIN AUTHORITY RECOVERY Ã¢â‚¬â€ IMPORT + FRESH-MACHINE RESTORE
   //
   // Native file selection happens inside privileged transport.
   // Renderer supplies no path and no file bytes.
@@ -3997,3 +4286,7 @@ registerFinoraDeveloperSecurityControlCenterHandler(
 // ============================================================
 // END
 // ============================================================
+
+
+
+

@@ -1,7 +1,7 @@
-/* ============================================================
-   FINORA ENTERPRISE OS™
+﻿/* ============================================================
+   FINORA ENTERPRISE OSâ„¢
 
-   V2 WALLET ENGINE™
+   V2 WALLET ENGINEâ„¢
 
    WALLET INITIALIZATION SERVICE
 
@@ -203,6 +203,58 @@ export async function ensureWalletForScope(
     await addWallet(wallet);
 
   if (createResult.success) {
+
+    try {
+
+      const authorityResult =
+        await window.finora.control.initializeCanonicalWalletAuthority({
+          ownerId:
+            wallet.ownerId,
+
+          businessId:
+            wallet.businessId,
+
+          branchId:
+            wallet.branchId,
+
+          walletId:
+            wallet.walletId,
+        });
+
+      if (
+        !authorityResult.success
+      ) {
+        return {
+          success:
+            false,
+
+          errorCode:
+            "WALLET_CREATE_FAILED",
+
+          error:
+            authorityResult.error ??
+            "FINORA canonical Wallet Authority could not be initialized.",
+        };
+      }
+
+    }
+    catch (error) {
+
+      return {
+        success:
+          false,
+
+        errorCode:
+          "WALLET_CREATE_FAILED",
+
+        error:
+          error instanceof Error
+            ? error.message
+            : "FINORA canonical Wallet Authority initialization failed.",
+      };
+
+    }
+
     return {
       success:
         true,
@@ -259,3 +311,4 @@ export async function ensureWalletForScope(
 /* ============================================================
    END
 ============================================================ */
+

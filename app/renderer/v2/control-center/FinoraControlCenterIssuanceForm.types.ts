@@ -1,5 +1,5 @@
 /* ===========================================================
-   FINORA ENTERPRISE OS™
+   FINORA ENTERPRISE OSÃ¢â€žÂ¢
 
    CONTROL CENTER
    ISSUANCE FORM DRAFT CONTRACTS
@@ -136,6 +136,9 @@ export interface FinoraBranchAccessFormDraft {
   storageMode:
     FinoraStorageModeDraft;
 
+  deviceAccessPolicy?:
+    "PORTABLE_USB";
+
   administrativeStatus:
     FinoraBranchAccessAdministrativeStatusDraft;
 
@@ -193,6 +196,13 @@ export interface FinoraBranchAccessFormDraft {
 
   credentialRole:
     FinoraBranchAccessUserRoleDraft;
+
+  /**
+   * Optional signed credential lifecycle authority.
+   * Omitted for ordinary credential enrollment.
+   */
+  credentialLifecycle?:
+    "TEMPORARY_FIRST_LOGIN";
 }
 /* ============================================================
    DEVICE REVOCATION

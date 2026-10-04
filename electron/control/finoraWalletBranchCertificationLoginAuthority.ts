@@ -1,4 +1,4 @@
-﻿import {
+import {
   decryptFinoraPortableBranchAuthEnvelopeV1,
 } from "./finoraPortableBranchAuthCrypto.js";
 
@@ -51,6 +51,14 @@ export interface RestoreFinoraWalletBranchCertificationAuthorityInput {
   securityCode?:
     string;
 
+  /**
+   * PORTABLE_USB owner access:
+   * restore Branch Certification directly from encrypted Portable Auth
+   * into the runtime session. Do not require or create a device vault.
+   */
+  portableSessionOnly?:
+    boolean;
+
   portableStore:
     FinoraPortableBranchAuthStore;
 }
@@ -79,25 +87,35 @@ export async function restoreFinoraWalletBranchCertificationAuthority(
 > {
   let material;
 
-  try {
-    material =
-      await readFinoraWalletBranchCertificationDeviceVault(
-        input.ownerId,
-        input.businessId,
-        input.branchId,
-      );
-  }
-  catch {
-    return {
-      success:
-        false,
+  /*
+   * Legacy access keeps the existing device-vault optimization.
+   *
+   * PORTABLE_USB access deliberately avoids device custody:
+   * the encrypted Portable Auth on the currently selected USB is
+   * authenticated for this session and its exact branch-scoped
+   * certification authority is installed in memory only.
+   */
+  if (!input.portableSessionOnly) {
+    try {
+      material =
+        await readFinoraWalletBranchCertificationDeviceVault(
+          input.ownerId,
+          input.businessId,
+          input.branchId,
+        );
+    }
+    catch {
+      return {
+        success:
+          false,
 
-      errorCode:
-        "CONTROL_STATE_FAILED",
+        errorCode:
+          "CONTROL_STATE_FAILED",
 
-      error:
-        "FINORA Wallet Branch Certification secure vault could not be validated.",
-    };
+        error:
+          "FINORA Wallet Branch Certification secure vault could not be validated.",
+      };
+    }
   }
 
   if (!material) {
@@ -113,7 +131,9 @@ export async function restoreFinoraWalletBranchCertificationAuthority(
           "SECURITY_CODE_REQUIRED",
 
         error:
-          "Security Code is required once to secure Wallet Branch Certification on this device.",
+          input.portableSessionOnly
+            ? "Security Code is required to unlock this FINORA portable branch."
+            : "Security Code is required once to secure Wallet Branch Certification on this device.",
       };
     }
 
@@ -215,25 +235,27 @@ export async function restoreFinoraWalletBranchCertificationAuthority(
     material =
       payload.branchCertificationKeyMaterial;
 
-    try {
-      await writeFinoraWalletBranchCertificationDeviceVault(
-        input.ownerId,
-        input.businessId,
-        input.branchId,
-        material,
-      );
-    }
-    catch {
-      return {
-        success:
-          false,
+    if (!input.portableSessionOnly) {
+      try {
+        await writeFinoraWalletBranchCertificationDeviceVault(
+          input.ownerId,
+          input.businessId,
+          input.branchId,
+          material,
+        );
+      }
+      catch {
+        return {
+          success:
+            false,
 
-        errorCode:
-          "CONTROL_STATE_FAILED",
+          errorCode:
+            "CONTROL_STATE_FAILED",
 
-        error:
-          "FINORA Wallet Branch Certification could not be secured on this device.",
-      };
+          error:
+            "FINORA Wallet Branch Certification could not be secured on this device.",
+        };
+      }
     }
   }
 

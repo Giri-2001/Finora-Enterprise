@@ -1,5 +1,5 @@
-/* ============================================================
-   FINORA ENTERPRISE OS™
+﻿/* ============================================================
+   FINORA ENTERPRISE OSâ„¢
 
    ELECTRON CONTROL
    BRANCH CREDENTIAL IPC
@@ -44,9 +44,13 @@ import {
   enrollFinoraBranchCredentialWithPortableStore,
 } from "./finoraBranchCredentialEnrollmentService.js";
 
+import {
+  rotateFinoraPortableBranchAuthCredentialV2,
+} from "./finoraPortableBranchAuthCredentialRotationCoordinatorV2.js";
+
 import type {
-  FinoraPortableBranchAuthStore,
-} from "./finoraPortableBranchAuthStore.js";
+  FinoraPortableBranchAuthV2Store,
+} from "./finoraPortableBranchAuthV2Store.js";
 
 // ============================================================
 // CHANNELS
@@ -55,6 +59,9 @@ import type {
 const BRANCH_CREDENTIAL_IPC_CHANNELS = {
   ENROLL:
     "finora:credential:enroll",
+
+  ROTATE_V2:
+    "finora:credential:rotate-v2",
 
 } as const;
 
@@ -129,8 +136,8 @@ export function registerFinoraBranchCredentialHandlers(
   isTrustedRenderer:
     FinoraControlRendererValidator,
 
-  portableStore:
-    FinoraPortableBranchAuthStore,
+  portableV2Store:
+    FinoraPortableBranchAuthV2Store,
 ): void {
   if (
     credentialHandlersRegistered
@@ -164,8 +171,121 @@ export function registerFinoraBranchCredentialHandlers(
       try {
         return await enrollFinoraBranchCredentialWithPortableStore(
           request,
-          portableStore,
+          portableV2Store,
         );
+      }
+      catch {
+        return serviceFailure();
+      }
+    },
+  );
+
+  // ----------------------------------------------------------
+  // PORTABLE BRANCH AUTH V2 CREDENTIAL ROTATION
+  //
+  // SECURITY:
+  // - trusted ordinary FINORA renderer only
+  // - main frame only
+  // - renderer supplies no user/scope/role/storage authority
+  // - Password / Security Code remain process-memory-only
+  // - V2 coordinator owns validation, authentication,
+  //   durable recovery and request-level idempotency
+  // ----------------------------------------------------------
+
+  ipcMain.handle(
+    BRANCH_CREDENTIAL_IPC_CHANNELS.ROTATE_V2,
+    async (
+      event,
+      request:
+        unknown,
+    ) => {
+      if (
+        !isAuthorizedCredentialRenderer(
+          event,
+          isTrustedRenderer,
+        )
+      ) {
+        return unauthorized();
+      }
+
+      try {
+        const rotationResult =
+          await rotateFinoraPortableBranchAuthCredentialV2({
+            request:
+              request as Parameters<
+                typeof rotateFinoraPortableBranchAuthCredentialV2
+              >[0]["request"],
+
+            portableStore:
+              portableV2Store,
+          });
+
+        if (!rotationResult.success) {
+          return rotationResult;
+        }
+
+        const credential =
+          rotationResult.data.credential;
+
+        return {
+          success:
+            true,
+
+          data: {
+            transactionId:
+              rotationResult.data.transactionId,
+
+            credential: {
+              credentialId:
+                credential.credentialId,
+
+              userId:
+                credential.userId,
+
+              username:
+                credential.username,
+
+              fullName:
+                credential.fullName,
+
+              role:
+                credential.role,
+
+              ownerId:
+                credential.ownerId,
+
+              businessId:
+                credential.businessId,
+
+              branchId:
+                credential.branchId,
+
+              storageMode:
+                credential.storageMode,
+
+              dataContext:
+                credential.dataContext,
+
+              ...(
+                credential.demoId === undefined
+                  ? {}
+                  : {
+                      demoId:
+                        credential.demoId,
+                    }
+              ),
+
+              enrolledAt:
+                credential.updatedAt,
+            },
+
+            authGeneration:
+              rotationResult.data.authGeneration,
+
+            portableReplaceResult:
+              rotationResult.data.portableReplaceResult,
+          },
+        };
       }
       catch {
         return serviceFailure();
@@ -179,3 +299,5 @@ export function registerFinoraBranchCredentialHandlers(
 // ============================================================
 // END
 // ============================================================
+
+

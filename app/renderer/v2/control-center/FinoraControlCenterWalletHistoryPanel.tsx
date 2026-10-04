@@ -1,4 +1,4 @@
-import {
+﻿import {
   useCallback,
   useEffect,
   useMemo,
@@ -346,7 +346,7 @@ function formatApprovedTotals(
     totals.size ===
       0
   ) {
-    return "—";
+    return "â€”";
   }
 
   return Array.from(
@@ -892,7 +892,7 @@ export default function FinoraControlCenterWalletHistoryPanel({
               buttonStyle
             }
           >
-            ← Back
+            â† Back
           </button>
         </div>
       </div>

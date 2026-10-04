@@ -1835,85 +1835,146 @@ public final class FinoraControlPlugin
                 );
             }
 
-            java.security.KeyPairGenerator certificationGenerator =
-                java.security.KeyPairGenerator.getInstance(
-                    "EC"
-                );
-
-            certificationGenerator.initialize(
-                new java.security.spec.ECGenParameterSpec(
-                    "secp256r1"
-                )
-            );
-
-            java.security.KeyPair certificationKeyPair =
-                certificationGenerator.generateKeyPair();
-
-            String certificationPublicKey =
-                java.util.Base64
-                    .getEncoder()
-                    .encodeToString(
-                        certificationKeyPair
-                            .getPublic()
-                            .getEncoded()
-                    );
-
-            String certificationPrivateKey =
-                java.util.Base64
-                    .getEncoder()
-                    .encodeToString(
-                        certificationKeyPair
-                            .getPrivate()
-                            .getEncoded()
-                    );
-
-            byte[] certificationFingerprintBytes =
-                java.security.MessageDigest
-                    .getInstance(
-                        "SHA-256"
-                    )
-                    .digest(
-                        certificationKeyPair
-                            .getPublic()
-                            .getEncoded()
-                    );
-
-            StringBuilder certificationFingerprintBuilder =
-                new StringBuilder(
-                    certificationFingerprintBytes.length * 2
-                );
-
-            for (byte item : certificationFingerprintBytes) {
-                certificationFingerprintBuilder.append(
-                    String.format(
-                        java.util.Locale.ROOT,
-                        "%02x",
-                        item & 0xff
-                    )
-                );
-            }
-
-            String certificationFingerprint =
-                certificationFingerprintBuilder.toString();
-
-            String certificationKeyId =
-                FinoraBranchCertificationCryptoValidator
-                    .KEY_ID_PREFIX +
-                certificationFingerprint
-                    .substring(
-                        0,
-                        32
-                    )
-                    .toUpperCase(
-                        java.util.Locale.ROOT
-                    );
-
-            String createdAt =
-                java.time.Instant
-                    .now()
-                    .toString();
-
             FinoraBranchCertificationCryptoValidator.Material
+                certificationMaterial;
+
+            String createdAt;
+
+            boolean branch3Recovery =
+                (getContext().getApplicationInfo().flags &
+                    android.content.pm.ApplicationInfo.FLAG_DEBUGGABLE) != 0 &&
+                getActivity() != null &&
+                getActivity().getIntent() != null &&
+                getActivity().getIntent().getBooleanExtra(
+                    "finora_dev_branch3_recover_certification",
+                    false
+                );
+
+            if (branch3Recovery) {
+
+                if (walletBranchCertificationDeviceVault == null) {
+                    throw new IllegalStateException(
+                        "FINORA Branch Certification device vault is unavailable."
+                    );
+                }
+
+                certificationMaterial =
+                    walletBranchCertificationDeviceVault.read(
+                        "OWNER-C04E782A-F2F9-4463-B827-E8460569115A",
+                        "BUSINESS-E85D70F4-0EE0-4182-9046-A5066B8C9584",
+                        "BRANCH-550F6660-B944-4C25-B2F2-5B3D1D5D769E"
+                    );
+
+                if (certificationMaterial == null) {
+                    throw new IllegalStateException(
+                        "FINORA Branch3 recovery certification material is unavailable."
+                    );
+                }
+
+                FinoraBranchCertificationCryptoValidator.assertValid(
+                    certificationMaterial
+                );
+
+                if (
+                    !"FINORA-BRANCH-CERT-5ACA35B32C3F003F0F2B6B1B3579572B"
+                        .equals(
+                            certificationMaterial.keyId
+                        ) ||
+                    !"5aca35b32c3f003f0f2b6b1b3579572bcc70c2899f62777cf9f95e25745c449d"
+                        .equals(
+                            certificationMaterial.publicKeyFingerprint
+                        )
+                ) {
+                    throw new IllegalStateException(
+                        "FINORA Branch3 recovery certification does not match the expected pinned authority."
+                    );
+                }
+
+                createdAt =
+                    java.time.Instant
+                        .now()
+                        .toString();
+
+            } else {
+
+                java.security.KeyPairGenerator certificationGenerator =
+                    java.security.KeyPairGenerator.getInstance(
+                        "EC"
+                    );
+
+                certificationGenerator.initialize(
+                    new java.security.spec.ECGenParameterSpec(
+                        "secp256r1"
+                    )
+                );
+
+                java.security.KeyPair certificationKeyPair =
+                    certificationGenerator.generateKeyPair();
+
+                String certificationPublicKey =
+                    java.util.Base64
+                        .getEncoder()
+                        .encodeToString(
+                            certificationKeyPair
+                                .getPublic()
+                                .getEncoded()
+                        );
+
+                String certificationPrivateKey =
+                    java.util.Base64
+                        .getEncoder()
+                        .encodeToString(
+                            certificationKeyPair
+                                .getPrivate()
+                                .getEncoded()
+                        );
+
+                byte[] certificationFingerprintBytes =
+                    java.security.MessageDigest
+                        .getInstance(
+                            "SHA-256"
+                        )
+                        .digest(
+                            certificationKeyPair
+                                .getPublic()
+                                .getEncoded()
+                        );
+
+                StringBuilder certificationFingerprintBuilder =
+                    new StringBuilder(
+                        certificationFingerprintBytes.length * 2
+                    );
+
+                for (byte item : certificationFingerprintBytes) {
+                    certificationFingerprintBuilder.append(
+                        String.format(
+                            java.util.Locale.ROOT,
+                            "%02x",
+                            item & 0xff
+                        )
+                    );
+                }
+
+                String certificationFingerprint =
+                    certificationFingerprintBuilder.toString();
+
+                String certificationKeyId =
+                    FinoraBranchCertificationCryptoValidator
+                        .KEY_ID_PREFIX +
+                    certificationFingerprint
+                        .substring(
+                            0,
+                            32
+                        )
+                        .toUpperCase(
+                            java.util.Locale.ROOT
+                        );
+
+                createdAt =
+                    java.time.Instant
+                        .now()
+                        .toString();
+
                 certificationMaterial =
                     new FinoraBranchCertificationCryptoValidator.Material(
                         certificationKeyId,
@@ -1929,10 +1990,10 @@ public final class FinoraControlPlugin
                         FinoraBranchCertificationCryptoValidator.VAULT_SCHEMA_VERSION
                     );
 
-            FinoraBranchCertificationCryptoValidator.assertValid(
-                certificationMaterial
-            );
-
+                FinoraBranchCertificationCryptoValidator.assertValid(
+                    certificationMaterial
+                );
+            }
             String requestId =
                 "FINORA-ENROLLMENT-" +
                 java.util.UUID

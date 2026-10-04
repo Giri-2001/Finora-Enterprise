@@ -348,7 +348,15 @@ function isPortabilityPayload(
     ) ||
     value.sourceAuthorizationMethod !==
       FINORA_BRANCH_ACCESS_CREDENTIAL_ENROLLMENT_METHOD ||
-    value.schemaVersion !==
+    (
+      value.deviceAccessPolicy !== undefined &&
+      value.deviceAccessPolicy !== "PORTABLE_USB"
+    ) ||
+    (
+      value.deviceAccessPolicy === "PORTABLE_USB" &&
+      value.storageMode !== "USB"
+    ) ||
+value.schemaVersion !==
       1
   ) {
     return false;

@@ -33,12 +33,14 @@ import {
 
 import {
   FINORA_PORTABLE_BRANCH_AUTH_INITIAL_GENERATION,
+  FINORA_PORTABLE_BRANCH_AUTH_PAYLOAD_SCHEMA_VERSION,
 } from "./finoraPortableBranchAuthContract.js";
 
 import {
-  createFinoraPortableBranchAuthEnrollmentMaterialV1,
-  decryptFinoraPortableBranchAuthEnvelopeV1,
-} from "./finoraPortableBranchAuthCrypto.js";
+  createFinoraPortableBranchAuthEnrollmentMaterialV2,
+  decryptFinoraPortableBranchAuthEnvelopeV2WithPassword,
+  decryptFinoraPortableBranchAuthEnvelopeV2WithRecoveryCode,
+} from "./finoraPortableBranchAuthV2Crypto.js";
 
 import {
   assertFinoraBranchCertificationKeyMaterial,
@@ -50,32 +52,32 @@ import {
 } from "./finoraBranchCertificationBootstrapStore.js";
 
 import {
-  FINORA_PORTABLE_BRANCH_AUTH_ENROLLMENT_TRANSACTION_ID_PREFIX,
-  FINORA_PORTABLE_BRANCH_AUTH_ENROLLMENT_TRANSACTION_SCHEMA_VERSION,
-  computeFinoraPortableBranchAuthEnvelopeSha256,
-} from "./finoraPortableBranchAuthEnrollmentTransaction.js";
+  FINORA_PORTABLE_BRANCH_AUTH_V2_ENROLLMENT_TRANSACTION_ID_PREFIX,
+  FINORA_PORTABLE_BRANCH_AUTH_V2_ENROLLMENT_TRANSACTION_SCHEMA_VERSION,
+  computeFinoraPortableBranchAuthV2EnvelopeSha256,
+} from "./finoraPortableBranchAuthV2EnrollmentTransaction.js";
 
 import {
-  applyFinoraPortableBranchAuthEnrollmentControlState,
+  applyFinoraPortableBranchAuthV2EnrollmentControlState,
   canonicalizeFinoraCredentialUsername,
-  completeFinoraPortableBranchAuthEnrollmentTransaction,
-  markFinoraPortableBranchAuthEnrollmentCertificationMigrated,
-  markFinoraPortableBranchAuthEnrollmentWritten,
-  prepareFinoraPortableBranchAuthEnrollmentTransaction,
+  completeFinoraPortableBranchAuthV2EnrollmentTransaction,
+  markFinoraPortableBranchAuthV2EnrollmentCertificationMigrated,
+  markFinoraPortableBranchAuthV2EnrollmentWritten,
+  prepareFinoraPortableBranchAuthV2EnrollmentTransaction,
   readFinoraControlStore,
 } from "./finoraControlStore.js";
 
 import type {
-  FinoraPortableBranchAuthEnrollmentTransactionV1,
-} from "./finoraPortableBranchAuthEnrollmentTransaction.js";
+  FinoraPortableBranchAuthEnrollmentTransactionV2,
+} from "./finoraPortableBranchAuthV2EnrollmentTransaction.js";
 
 import type {
   FinoraPortableBranchAuthVerifierV1,
 } from "./finoraPortableBranchAuthContract.js";
 
 import type {
-  FinoraPortableBranchAuthStore,
-} from "./finoraPortableBranchAuthStore.js";
+  FinoraPortableBranchAuthV2Store,
+} from "./finoraPortableBranchAuthV2Store.js";
 
 import type {
   FinoraControlBranchCredential,
@@ -102,7 +104,7 @@ export interface FinoraPortableBranchAuthEnrollmentCoordinatorInput {
     FinoraPortableBranchAuthEnrollmentRequest;
 
   portableStore:
-    FinoraPortableBranchAuthStore;
+    FinoraPortableBranchAuthV2Store;
 }
 
 export type FinoraPortableBranchAuthEnrollmentCoordinatorErrorCode =
@@ -123,7 +125,7 @@ export type FinoraPortableBranchAuthEnrollmentCoordinatorErrorCode =
 
 export interface FinoraPortableBranchAuthEnrollmentCoordinatorSuccess {
   transaction:
-    FinoraPortableBranchAuthEnrollmentTransactionV1;
+    FinoraPortableBranchAuthEnrollmentTransactionV2;
 
   credential:
     FinoraControlBranchCredential;
@@ -188,7 +190,7 @@ function failure(
 
 function success(
   transaction:
-    FinoraPortableBranchAuthEnrollmentTransactionV1,
+    FinoraPortableBranchAuthEnrollmentTransactionV2,
   recovered:
     boolean,
 ): FinoraPortableBranchAuthEnrollmentCoordinatorResult {
@@ -274,36 +276,43 @@ function controlCredentialVerifiersEqual(
 
 async function validateRecoveryFactorsAndPayload(
   transaction:
-    FinoraPortableBranchAuthEnrollmentTransactionV1,
+    FinoraPortableBranchAuthEnrollmentTransactionV2,
   request:
     FinoraPortableBranchAuthEnrollmentRequest,
 ): Promise<boolean> {
-  let payload;
+  let passwordPayload;
+  let recoveryPayload;
 
   try {
-    payload =
-      await decryptFinoraPortableBranchAuthEnvelopeV1(
+    passwordPayload =
+      await decryptFinoraPortableBranchAuthEnvelopeV2WithPassword(
         transaction.portableEnvelope,
         request.password,
+      );
+
+    recoveryPayload =
+      await decryptFinoraPortableBranchAuthEnvelopeV2WithRecoveryCode(
+        transaction.portableEnvelope,
         request.securityCode,
-        {
-          expectedScope: {
-            ownerId:
-              transaction.ownerId,
-
-            businessId:
-              transaction.businessId,
-
-            branchId:
-              transaction.branchId,
-          },
-        },
       );
   }
   catch {
     return false;
   }
 
+  if (
+    JSON.stringify(
+      passwordPayload,
+    ) !==
+    JSON.stringify(
+      recoveryPayload,
+    )
+  ) {
+    return false;
+  }
+
+  const payload =
+    passwordPayload;
   const credential =
     transaction.credential;
 
@@ -377,9 +386,9 @@ async function validateRecoveryFactorsAndPayload(
 
 async function advanceDurableTransaction(
   transaction:
-    FinoraPortableBranchAuthEnrollmentTransactionV1,
+    FinoraPortableBranchAuthEnrollmentTransactionV2,
   portableStore:
-    FinoraPortableBranchAuthStore,
+    FinoraPortableBranchAuthV2Store,
   recovered:
     boolean,
 ): Promise<
@@ -403,7 +412,7 @@ async function advanceDurableTransaction(
   }
 
   const portableWrittenResult =
-    await markFinoraPortableBranchAuthEnrollmentWritten({
+    await markFinoraPortableBranchAuthV2EnrollmentWritten({
       transactionId:
         transaction.transactionId,
 
@@ -423,7 +432,7 @@ async function advanceDurableTransaction(
   }
 
   const controlApplyResult =
-    await applyFinoraPortableBranchAuthEnrollmentControlState({
+    await applyFinoraPortableBranchAuthV2EnrollmentControlState({
       transactionId:
         transaction.transactionId,
 
@@ -517,7 +526,7 @@ async function advanceDurableTransaction(
 
     if (!certificationMigrationWasAlreadyDurable) {
       const certificationMigrationResult =
-        await markFinoraPortableBranchAuthEnrollmentCertificationMigrated({
+        await markFinoraPortableBranchAuthV2EnrollmentCertificationMigrated({
           transactionId:
             controlAppliedTransaction.transactionId,
 
@@ -608,7 +617,7 @@ async function advanceDurableTransaction(
   }
 
   const completeResult =
-    await completeFinoraPortableBranchAuthEnrollmentTransaction({
+    await completeFinoraPortableBranchAuthV2EnrollmentTransaction({
       transactionId:
         transaction.transactionId,
 
@@ -674,7 +683,7 @@ async function enrollFinoraPortableBranchAuthInternal(
 
   const durableMatches =
     (
-      controlStore.portableBranchAuthEnrollmentTransactions ??
+      controlStore.portableBranchAuthV2EnrollmentTransactions ??
       []
     ).filter(
       (
@@ -1070,73 +1079,88 @@ async function enrollFinoraPortableBranchAuthInternal(
     `FINORA-CREDENTIAL-${randomUUID()}`;
 
   const transactionId =
-    `${FINORA_PORTABLE_BRANCH_AUTH_ENROLLMENT_TRANSACTION_ID_PREFIX}${randomUUID()}`;
+    `${FINORA_PORTABLE_BRANCH_AUTH_V2_ENROLLMENT_TRANSACTION_ID_PREFIX}${randomUUID()}`;
 
   const authStateId =
     `FINORA-PORTABLE-AUTH-STATE-${randomUUID()}`;
 
-  let material;
+  let material:
+    Awaited<
+      ReturnType<
+        typeof createFinoraPortableBranchAuthEnrollmentMaterialV2
+      >
+    >;
 
   try {
     material =
-      await createFinoraPortableBranchAuthEnrollmentMaterialV1({
-        authStateId,
+      await createFinoraPortableBranchAuthEnrollmentMaterialV2({
+        payload: {
+          schemaVersion:
+            FINORA_PORTABLE_BRANCH_AUTH_PAYLOAD_SCHEMA_VERSION,
 
-        sourceAuthorizationId:
-          authorization.authorizationId,
+          authStateId,
 
-        sourceAuthorizationVerificationEvidence,
+          sourceAuthorizationId:
+            authorization.authorizationId,
 
-        ownerId:
-          authorization.ownerId,
+          sourceAuthorizationVerificationEvidence:
+            structuredClone(
+              sourceAuthorizationVerificationEvidence,
+            ),
 
-        businessId:
-          authorization.businessId,
+          canonicalUsername,
 
-        branchId:
-          authorization.branchId,
+          ownerId:
+            authorization.ownerId,
 
-        userId:
-          authorization.userId,
+          businessId:
+            authorization.businessId,
 
-        username:
-          authorization.username,
+          branchId:
+            authorization.branchId,
 
-        fullName:
-          authorization.fullName,
+          userId:
+            authorization.userId,
 
-        role:
-          authorization.role,
+          username:
+            authorization.username,
 
-        dataContext:
-          authorization.dataContext,
+          fullName:
+            authorization.fullName,
 
-        ...(
-          authorization.demoId ===
-            undefined
-            ? {}
-            : {
-                demoId:
-                  authorization.demoId,
-              }
-        ),
+          role:
+            authorization.role,
 
-        storageMode:
-          authorization.storageMode,
+          dataContext:
+            authorization.dataContext,
 
-        branchCertificationKeyMaterial:
-          structuredClone(
-            branchCertificationBootstrap.certificationKeyMaterial,
+          ...(
+            authorization.demoId ===
+              undefined
+              ? {}
+              : {
+                  demoId:
+                    authorization.demoId,
+                }
           ),
 
-        authGeneration:
-          FINORA_PORTABLE_BRANCH_AUTH_INITIAL_GENERATION,
+          storageMode:
+            authorization.storageMode,
 
-        createdAt:
-          preparedAt,
+          branchCertificationKeyMaterial:
+            structuredClone(
+              branchCertificationBootstrap.certificationKeyMaterial,
+            ),
 
-        updatedAt:
-          preparedAt,
+          authGeneration:
+            FINORA_PORTABLE_BRANCH_AUTH_INITIAL_GENERATION,
+
+          createdAt:
+            preparedAt,
+
+          updatedAt:
+            preparedAt,
+        },
 
         password:
           input.request.password,
@@ -1152,10 +1176,9 @@ async function enrollFinoraPortableBranchAuthInternal(
       "MATERIAL_DERIVATION_FAILED",
       error instanceof Error
         ? error.message
-        : "Unable to derive Portable Branch Auth enrollment material.",
+        : "Unable to derive Portable Branch Auth V2 enrollment material.",
     );
   }
-
   const credential:
     FinoraControlBranchCredential = {
       credentialId,
@@ -1165,6 +1188,10 @@ async function enrollFinoraPortableBranchAuthInternal(
 
       authGeneration:
         FINORA_PORTABLE_BRANCH_AUTH_INITIAL_GENERATION,
+
+      credentialChangeRequired:
+        authorization.credentialLifecycle ===
+          "TEMPORARY_FIRST_LOGIN",
 
       userId:
         authorization.userId,
@@ -1229,9 +1256,9 @@ async function enrollFinoraPortableBranchAuthInternal(
     };
 
   const preparedTransaction:
-    FinoraPortableBranchAuthEnrollmentTransactionV1 = {
+    FinoraPortableBranchAuthEnrollmentTransactionV2 = {
       schemaVersion:
-        FINORA_PORTABLE_BRANCH_AUTH_ENROLLMENT_TRANSACTION_SCHEMA_VERSION,
+        FINORA_PORTABLE_BRANCH_AUTH_V2_ENROLLMENT_TRANSACTION_SCHEMA_VERSION,
 
       transactionId,
 
@@ -1277,7 +1304,7 @@ async function enrollFinoraPortableBranchAuthInternal(
         material.envelope,
 
       portableEnvelopeSha256:
-        computeFinoraPortableBranchAuthEnvelopeSha256(
+        computeFinoraPortableBranchAuthV2EnvelopeSha256(
           material.envelope,
         ),
 
@@ -1289,7 +1316,7 @@ async function enrollFinoraPortableBranchAuthInternal(
     };
 
   const prepareResult =
-    await prepareFinoraPortableBranchAuthEnrollmentTransaction({
+    await prepareFinoraPortableBranchAuthV2EnrollmentTransaction({
       transaction:
         preparedTransaction,
     });

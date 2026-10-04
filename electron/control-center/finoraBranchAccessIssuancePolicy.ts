@@ -393,6 +393,8 @@ function validateAccessGrant(
         "businessId",
         "branchId",
         "storageMode",
+        
+        "deviceAccessPolicy",
         "accessType",
         "administrativeStatus",
         "validity",
@@ -434,6 +436,10 @@ function validateAccessGrant(
     ) ||
     !isStorageMode(
       value.storageMode,
+    ) ||
+    (
+      value.deviceAccessPolicy !== undefined &&
+      value.deviceAccessPolicy !== "PORTABLE_USB"
     ) ||
     !isAccessType(
       value.accessType,
@@ -648,6 +654,7 @@ function validateCredentialEnrollment(
         "demoId",
         "method",
         "oneTime",
+        "credentialLifecycle",
         "schemaVersion",
       ],
     )
@@ -705,6 +712,7 @@ function validateCredentialEnrollment(
       FINORA_BRANCH_ACCESS_CREDENTIAL_ENROLLMENT_METHOD ||
     value.oneTime !==
       true ||
+    (       value.credentialLifecycle !== undefined &&       value.credentialLifecycle !== "TEMPORARY_FIRST_LOGIN"     ) ||
     value.schemaVersion !==
       1
   ) {
@@ -784,6 +792,7 @@ function validateCredentialAuthorizationForTarget(
         "demoId",
         "method",
         "oneTime",
+        "credentialLifecycle",
         "schemaVersion",
       ],
     ) ||
@@ -828,6 +837,7 @@ function validateCredentialAuthorizationForTarget(
       FINORA_BRANCH_ACCESS_CREDENTIAL_ENROLLMENT_METHOD ||
     value.oneTime !==
       true ||
+    (       value.credentialLifecycle !== undefined &&       value.credentialLifecycle !== "TEMPORARY_FIRST_LOGIN"     ) ||
     value.schemaVersion !==
       1
   ) {
@@ -983,7 +993,69 @@ export function validateFinoraBranchAccessIssuance(
 
     if (!credentialEnrollment) {
       return rejected(
-        "FINORA AUTHORIZE_CREDENTIAL credential authorization is invalid.",
+        `FINORA AUTHORIZE_CREDENTIAL credential authorization is invalid [${
+  !isRecord(payload.credentialEnrollment)
+    ? "NOT_RECORD"
+    : !hasOnlyKeys(
+        payload.credentialEnrollment,
+        [
+          "authorizationId",
+          "userId",
+          "username",
+          "fullName",
+          "role",
+          "ownerId",
+          "businessId",
+          "branchId",
+          "storageMode",
+          "dataContext",
+          "demoId",
+          "method",
+          "oneTime",
+          "credentialLifecycle",
+          "schemaVersion",
+        ],
+      )
+      ? `KEY_SHAPE:${Object.keys(payload.credentialEnrollment).sort().join(",")}`
+      : !hasText(payload.credentialEnrollment.authorizationId, 256) ||
+          !payload.credentialEnrollment.authorizationId.startsWith("FINORA-CREDENTIAL-ENROLLMENT-")
+        ? "AUTHORIZATION_ID"
+        : !hasText(payload.credentialEnrollment.userId, 256)
+          ? "USER_ID"
+          : !hasText(payload.credentialEnrollment.username, 128)
+            ? "USERNAME"
+            : !hasText(payload.credentialEnrollment.fullName, 256)
+              ? "FULL_NAME"
+              : !isUserRole(payload.credentialEnrollment.role)
+                ? `ROLE:${String(payload.credentialEnrollment.role)}`
+                : payload.credentialEnrollment.ownerId !== target.ownerId
+                  ? "OWNER_ID"
+                  : payload.credentialEnrollment.businessId !== target.businessId
+                    ? "BUSINESS_ID"
+                    : payload.credentialEnrollment.branchId !== target.branchId
+                      ? "BRANCH_ID"
+                      : !isStorageMode(payload.credentialEnrollment.storageMode)
+                        ? `STORAGE_MODE:${String(payload.credentialEnrollment.storageMode)}`
+                        : payload.credentialEnrollment.dataContext !== "REAL" &&
+                            payload.credentialEnrollment.dataContext !== "DEMO"
+                          ? `DATA_CONTEXT:${String(payload.credentialEnrollment.dataContext)}`
+                          : payload.credentialEnrollment.method !== FINORA_BRANCH_ACCESS_CREDENTIAL_ENROLLMENT_METHOD
+                            ? `METHOD:${String(payload.credentialEnrollment.method)}`
+                            : payload.credentialEnrollment.oneTime !== true
+                              ? "ONE_TIME"
+                              : payload.credentialEnrollment.credentialLifecycle !== undefined &&
+                                  payload.credentialEnrollment.credentialLifecycle !== "TEMPORARY_FIRST_LOGIN"
+                                ? `LIFECYCLE:${String(payload.credentialEnrollment.credentialLifecycle)}`
+                                : payload.credentialEnrollment.schemaVersion !== 1
+                                  ? `SCHEMA:${String(payload.credentialEnrollment.schemaVersion)}`
+                                  : payload.credentialEnrollment.dataContext === "REAL" &&
+                                      payload.credentialEnrollment.demoId !== undefined
+                                    ? "REAL_HAS_DEMO_ID"
+                                    : payload.credentialEnrollment.dataContext === "DEMO" &&
+                                        !hasText(payload.credentialEnrollment.demoId, 256)
+                                      ? "DEMO_ID"
+                                      : "UNKNOWN"
+}].`,
       );
     }
 

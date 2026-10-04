@@ -32,3 +32,9 @@ Finora_Enterprise.apk
 Finora.apk
 
 release-developer/
+
+# Local FINORA development backups
+*.bak-*
+*.corrupt
+*.corrupt-*
+_finora-*-backup-*/

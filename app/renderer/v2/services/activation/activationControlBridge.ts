@@ -481,6 +481,16 @@ export interface FinoraActivationControlBridge {
     }>;
 
   /**
+   * Establish the release-pinned Control Center trust anchor.
+   * Native authority validates the pinned public key and fingerprint.
+   */
+  bootstrapPinnedRecipientOperationalTrust?():
+    Promise<{
+      success: boolean;
+      error?: string;
+    }>;
+
+  /**
    * Import and verify one Installation Enrollment Response using
    * an independently supplied Control Center SHA-256 fingerprint.
    */
@@ -558,6 +568,12 @@ function getAndroidControlBridge():
   }
   const nativePlugin =
     finoraAndroidControlPlugin as unknown as {
+      bootstrapPinnedRecipientOperationalTrust?():
+        Promise<{
+          success: boolean;
+          error?: string;
+        }>;
+
       importInstallationEnrollmentResponse?(
         options: {
           expectedControlCenterPublicKeyFingerprint:

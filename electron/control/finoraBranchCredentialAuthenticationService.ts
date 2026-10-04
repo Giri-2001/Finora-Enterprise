@@ -1,5 +1,5 @@
-/* ============================================================
-   FINORA ENTERPRISE OS™
+﻿/* ============================================================
+   FINORA ENTERPRISE OSâ„¢
 
    ELECTRON CONTROL
    BRANCH CREDENTIAL AUTHENTICATION SERVICE
@@ -96,6 +96,9 @@ export interface FinoraBranchCredentialAuthenticationSuccess {
    */
   authGeneration:
     number;
+
+  credentialChangeRequired?:
+    boolean;
 
   userId:
     string;
@@ -486,6 +489,9 @@ export async function authenticateFinoraBranchCredential(
             credential.authGeneration,
           ),
 
+        credentialChangeRequired:
+          credential.credentialChangeRequired === true,
+
         userId:
           credential.userId,
 
@@ -558,3 +564,4 @@ export async function authenticateFinoraBranchCredential(
 // ============================================================
 // END
 // ============================================================
+

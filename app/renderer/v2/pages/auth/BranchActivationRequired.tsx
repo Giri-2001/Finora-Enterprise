@@ -1,5 +1,5 @@
 // ============================================================
-// FINORA ENTERPRISE OS™
+// FINORA ENTERPRISE OS
 //
 // BRANCH ACTIVATION REQUIRED
 //
@@ -23,7 +23,6 @@
 // ============================================================
 
 import {
-  useState,
   type CSSProperties,
 } from "react";
 
@@ -47,10 +46,7 @@ interface BranchActivationRequiredProps {
   onExportEnrollmentRequest():
     void | Promise<void>;
 
-  onImportEnrollmentResponse(
-    expectedControlCenterPublicKeyFingerprint:
-      string,
-  ):
+  onImportEnrollmentResponse():
     void | Promise<void>;
 
   onImportControlBundle():
@@ -102,16 +98,6 @@ export default function BranchActivationRequired({
 
   const { tokens } =
     useResponsive();
-
-  const [controlCenterFingerprint, setControlCenterFingerprint] =
-    useState<string>(
-      "",
-    );
-
-  const fingerprintValid =
-    /^[0-9a-f]{64}$/.test(
-      controlCenterFingerprint.trim(),
-    );
 
   const interactionBusy =
     retrying ||
@@ -406,36 +392,7 @@ export default function BranchActivationRequired({
           <p style={noteStyle}>
             {controlBundleImportMessage}
           </p>
-        ) : null}        <div style={fingerprintFieldStyle}>
-          <label
-            htmlFor="finora-control-center-fingerprint"
-            style={fingerprintLabelStyle}
-          >
-            FINORA Control Center SHA-256 Fingerprint
-          </label>
-
-          <input
-            id="finora-control-center-fingerprint"
-            type="text"
-            value={controlCenterFingerprint}
-            onChange={(event) => {
-              setControlCenterFingerprint(
-                event.target.value,
-              );
-            }}
-            placeholder="64 lowercase hexadecimal characters"
-            autoCapitalize="none"
-            autoCorrect="off"
-            spellCheck={false}
-            disabled={interactionBusy}
-            style={fingerprintInputStyle}
-          />
-
-          <span style={noteStyle}>
-            Enter the fingerprint supplied independently by FINORA Control Center.
-          </span>
-        </div>
-
+        ) : null}
         <div style={actionRowStyle}>
           <button
             type="button"
@@ -455,14 +412,9 @@ export default function BranchActivationRequired({
           <button
             type="button"
             onClick={() => {
-              void onImportEnrollmentResponse(
-                controlCenterFingerprint.trim(),
-              );
+              void onImportEnrollmentResponse();
             }}
-            disabled={
-              interactionBusy ||
-              !fingerprintValid
-            }
+            disabled={interactionBusy}
             style={buttonStyle}
           >
             {enrollmentImporting
@@ -481,7 +433,9 @@ export default function BranchActivationRequired({
             {controlBundleImporting
               ? "Importing Control Bundle..."
               : "Import Control Bundle"}
-          </button>          <button
+          </button>
+
+          <button
             type="button"
             onClick={onRetry}
             disabled={

@@ -1,5 +1,5 @@
-// ============================================================
-// FINORA ENTERPRISE OS™
+﻿// ============================================================
+// FINORA ENTERPRISE OSâ„¢
 //
 // ELECTRON CONTROL
 // SIGNED CONTROL BUNDLE PACKAGE APPLY SERVICE
@@ -90,6 +90,10 @@ import {
 } from "./finoraWalletRechargePackageApplyService.js";
 
 import {
+  applyFinoraSignedWalletOpeningBalancePackage,
+} from "./finoraWalletOpeningBalancePackageApplyService.js";
+
+import {
   applyFinoraSignedWalletRechargeDeclinePackage,
 } from "./finoraWalletRechargeDeclinePackageApplyService.js";
 
@@ -107,7 +111,8 @@ export type FinoraControlBundleChildPurpose =
   | "BUSINESS_PROFILE"
   | "PRICING_POLICY"
   | "WALLET_RECHARGE"
-  | "WALLET_RECHARGE_DECLINE";
+  | "WALLET_RECHARGE_DECLINE"
+  | "WALLET_OPENING_BALANCE";
 
 export type FinoraControlBundleImportAuthorityContext =
   | {
@@ -276,7 +281,9 @@ function isSupportedChildPurpose(
     value ===
       "WALLET_RECHARGE" ||
     value ===
-      "WALLET_RECHARGE_DECLINE"
+      "WALLET_RECHARGE_DECLINE" ||
+    value ===
+      "WALLET_OPENING_BALANCE"
   );
 }
 
@@ -572,6 +579,29 @@ async function applyChildPackage(
           };
     }
 
+    case "WALLET_OPENING_BALANCE": {
+
+      const result =
+        await applyFinoraSignedWalletOpeningBalancePackage(
+          signedPackage,
+          trustedKeys,
+          now,
+        );
+
+      return result.success
+        ? {
+            success:
+              true,
+          }
+        : {
+            success:
+              false,
+
+            error:
+              result.error ??
+              "FINORA Wallet Opening Balance child apply failed.",
+          };
+    }
     case "WALLET_RECHARGE_DECLINE": {
 
       const result =
@@ -1247,3 +1277,5 @@ export async function applyFinoraSignedControlBundlePackage(
 // ============================================================
 // END
 // ============================================================
+
+

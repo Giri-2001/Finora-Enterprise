@@ -1,4 +1,4 @@
-import {
+﻿import {
   useEffect,
   useMemo,
   useState,
@@ -459,7 +459,7 @@ export default function FinoraControlCenterBranchPricingPanel({
           "collection25000To50000Fee",
 
         label:
-          "Collection ₹25,000 – ₹50,000",
+          "Collection ₹25,000 â€“ ₹50,000",
 
         defaultValue:
           defaults?.collection25000To50000Fee,
@@ -691,8 +691,8 @@ export default function FinoraControlCenterBranchPricingPanel({
                   }}
                 >
                   {customValue === undefined
-                    ? `FINORA Income ₹${field.defaultValue ?? "—"}`
-                    : `Branch custom ₹${customValue} · Effective ₹${effective ?? "—"}`}
+                    ? `FINORA Income ₹${field.defaultValue ?? "â€”"}`
+                    : `Branch custom ₹${customValue} · Effective ₹${effective ?? "â€”"}`}
                 </span>
 
                 <div

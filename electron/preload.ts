@@ -1,5 +1,5 @@
-// ============================================================
-// FINORA ENTERPRISE OS™
+﻿// ============================================================
+// FINORA ENTERPRISE OSâ„¢
 // ELECTRON PRELOAD
 // V2 SECURE STORAGE BRIDGE
 //
@@ -966,6 +966,76 @@ type FinoraBranchCertificationRotationAuthorityApplyBridgeResult =
       error:
         string;
     };
+interface FinoraCanonicalWalletAuthorityReadRequest {
+  ownerId:
+    string;
+
+  businessId:
+    string;
+
+  branchId:
+    string;
+
+  walletId:
+    string;
+}
+
+interface FinoraCanonicalWalletAuthorityMutationRequest
+  extends FinoraCanonicalWalletAuthorityReadRequest {
+
+  expectedAuthorityGeneration:
+    number;
+
+  expectedSpendCounter:
+    number;
+
+  expectedHeadHash:
+    string;
+
+  nextBalance:
+    number;
+
+  mutationKind:
+    | "DEBIT"
+    | "RECHARGE";
+
+  mutationId:
+    string;
+
+  occurredAt:
+    string;
+}
+
+interface FinoraCanonicalWalletAuthorityInitializationRequest {
+  ownerId:
+    string;
+
+  businessId:
+    string;
+
+  branchId:
+    string;
+
+  walletId:
+    string;
+}
+
+type FinoraCanonicalWalletAuthorityInitializationResult =
+  | {
+      success:
+        true;
+
+      data:
+        FinoraCanonicalWalletAuthorityState;
+    }
+  | {
+      success:
+        false;
+
+      error:
+        string;
+    };
+
 interface FinoraControlBridge {
   getInstallation:
     () =>
@@ -1024,6 +1094,33 @@ interface FinoraControlBridge {
           FinoraControlPricingOverrideSetView | undefined
         >
       >;
+
+  initializeCanonicalWalletAuthority:
+    (
+      request:
+        FinoraCanonicalWalletAuthorityInitializationRequest,
+    ) =>
+      Promise<
+        FinoraCanonicalWalletAuthorityInitializationResult
+      >;
+
+  readCanonicalWalletAuthority:
+    (
+      request:
+        FinoraCanonicalWalletAuthorityReadRequest,
+    ) =>
+      Promise<
+        FinoraCanonicalWalletAuthorityReadResult
+      >,
+
+  commitCanonicalWalletAuthorityMutation:
+    (
+      request:
+        FinoraCanonicalWalletAuthorityMutationRequest,
+    ) =>
+      Promise<
+        FinoraCanonicalWalletAuthorityMutationResult
+      >,
 
   findWalletRechargeAuthorization:
     (
@@ -1533,6 +1630,14 @@ type FinoraBranchCertificationRotationRequestExportBridgeResult =
       error:
         string;
     };
+
+import type {
+  FinoraCanonicalWalletAuthorityMutationInput,
+  FinoraCanonicalWalletAuthorityMutationResult,
+  FinoraCanonicalWalletAuthorityReadInput,
+  FinoraCanonicalWalletAuthorityReadResult,
+  FinoraCanonicalWalletAuthorityState,
+} from "./control/finoraCanonicalWalletAuthority.js";
 const CONTROL_CHANNELS = {
 
   GET_INSTALLATION:
@@ -1558,6 +1663,15 @@ const CONTROL_CHANNELS = {
 
   FIND_PRICING_POLICY:
     "finora:control:find-pricing-policy",
+
+  INITIALIZE_CANONICAL_WALLET_AUTHORITY:
+    "finora:wallet-authority:initialize",
+
+  READ_CANONICAL_WALLET_AUTHORITY:
+    "finora:wallet-authority:read",
+
+  COMMIT_CANONICAL_WALLET_AUTHORITY_MUTATION:
+    "finora:wallet-authority:commit-mutation",
 
   FIND_WALLET_RECHARGE_AUTHORIZATION:
     "finora:control:find-wallet-recharge-authorization",
@@ -1597,6 +1711,9 @@ const BRANCH_CREDENTIAL_CHANNELS = {
 
   ENROLL:
     "finora:credential:enroll",
+
+  ROTATE_V2:
+    "finora:credential:rotate-v2",
 
 } as const;
 
@@ -1683,6 +1800,41 @@ interface FinoraCredentialEnrollmentView {
     string;
 }
 
+interface FinoraCredentialRotationRequestV2 {
+  rotationRequestId:
+    string;
+
+  username:
+    string;
+
+  currentPassword:
+    string;
+
+  currentSecurityCode:
+    string;
+
+  newPassword?:
+    string;
+
+  newSecurityCode?:
+    string;
+}
+
+interface FinoraCredentialRotationViewV2 {
+  transactionId:
+    string;
+
+  credential:
+    FinoraCredentialEnrollmentView;
+
+  authGeneration:
+    number;
+
+  portableReplaceResult:
+    | "REPLACED"
+    | "ALREADY_MATCHED";
+}
+
 interface FinoraCredentialBridge {
 
   enroll(
@@ -1696,6 +1848,16 @@ interface FinoraCredentialBridge {
     >;
 
 
+
+  rotateV2(
+    request:
+      FinoraCredentialRotationRequestV2,
+  ):
+    Promise<
+      FinoraCredentialBridgeResult<
+        FinoraCredentialRotationViewV2
+      >
+    >;
 }
 
 // ============================================================
@@ -1782,6 +1944,9 @@ interface FinoraLoginSessionView {
 
   demoId?:
     string;
+
+  credentialChangeRequired:
+    boolean;
 
   accessMode:
     FinoraLoginSessionAccessMode;
@@ -2301,6 +2466,45 @@ const controlBridge:
   // READ ONLY.
   // ----------------------------------------------------------
 
+  initializeCanonicalWalletAuthority:
+    (
+      request:
+        FinoraCanonicalWalletAuthorityInitializationRequest,
+    ) =>
+      ipcRenderer.invoke(
+        CONTROL_CHANNELS
+          .INITIALIZE_CANONICAL_WALLET_AUTHORITY,
+        request,
+      ) as Promise<
+        FinoraCanonicalWalletAuthorityInitializationResult
+      >,
+
+  readCanonicalWalletAuthority:
+    (
+      request:
+        FinoraCanonicalWalletAuthorityReadRequest,
+    ) =>
+      ipcRenderer.invoke(
+        CONTROL_CHANNELS
+          .READ_CANONICAL_WALLET_AUTHORITY,
+        request,
+      ) as Promise<
+        FinoraCanonicalWalletAuthorityReadResult
+      >,
+
+  commitCanonicalWalletAuthorityMutation:
+    (
+      request:
+        FinoraCanonicalWalletAuthorityMutationRequest,
+    ) =>
+      ipcRenderer.invoke(
+        CONTROL_CHANNELS
+          .COMMIT_CANONICAL_WALLET_AUTHORITY_MUTATION,
+        request,
+      ) as Promise<
+        FinoraCanonicalWalletAuthorityMutationResult
+      >,
+
   findWalletRechargeAuthorization:
     (
       request:
@@ -2491,6 +2695,20 @@ const credentialBridge:
       >,
 
 
+
+    rotateV2:
+      (
+        request:
+          FinoraCredentialRotationRequestV2,
+      ) =>
+        ipcRenderer.invoke(
+          BRANCH_CREDENTIAL_CHANNELS.ROTATE_V2,
+          request,
+        ) as Promise<
+          FinoraCredentialBridgeResult<
+            FinoraCredentialRotationViewV2
+          >
+        >,
 };
 
 // ============================================================
@@ -3140,3 +3358,5 @@ contextBridge.exposeInMainWorld(
 // ============================================================
 
 export {};
+
+

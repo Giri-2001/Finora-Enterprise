@@ -1,5 +1,5 @@
-/* ============================================================
-   FINORA ENTERPRISE OS™
+﻿/* ============================================================
+   FINORA ENTERPRISE OSâ„¢
 
    WALLET RECHARGE REQUEST SERVICE RUNTIME SELF TEST
 
@@ -96,6 +96,10 @@ import type {
 import {
   FinoraPortableBranchAuthStore,
 } from "./finoraPortableBranchAuthStore.js";
+
+import {
+  FinoraPortableBranchAuthV2Store,
+} from "./finoraPortableBranchAuthV2Store.js";
 
 import {
   enrollFinoraBranchCredentialWithPortableStore,
@@ -510,6 +514,25 @@ async function main(): Promise<void> {
           },
       });
 
+    const portableV2Store =
+      new FinoraPortableBranchAuthV2Store({
+        resolveLocalRoot:
+          () => {
+            localResolverCalls +=
+              1;
+
+            return temporaryUserData;
+          },
+
+        resolveUsbRoot:
+          async () => {
+            usbResolverCalls +=
+              1;
+
+            return null;
+          },
+      });
+
     const enrollment =
       await enrollFinoraBranchCredentialWithPortableStore(
         {
@@ -517,7 +540,7 @@ async function main(): Promise<void> {
           password,
           securityCode,
         },
-        portableStore,
+        portableV2Store,
       );
 
     assert(

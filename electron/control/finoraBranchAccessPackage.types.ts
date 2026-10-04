@@ -1,5 +1,5 @@
 /* ===========================================================
-   FINORA ENTERPRISE OS™
+   FINORA ENTERPRISE OSâ„¢
 
    SIGNED BRANCH ACCESS PACKAGE CONTRACT
 
@@ -153,6 +153,9 @@ export interface FinoraBranchAccessGrantPayload {
   storageMode:
     FinoraBranchAccessStorageMode;
 
+  deviceAccessPolicy?:
+    "PORTABLE_USB";
+
   accessType:
     FinoraBranchAccessType;
 
@@ -227,6 +230,19 @@ export interface FinoraBranchCredentialEnrollmentAuthorization {
 
   storageMode:
     FinoraBranchAccessStorageMode;
+
+  deviceAccessPolicy?:
+    "PORTABLE_USB";
+
+  /**
+   * Signed credential lifecycle authority.
+   *
+   * TEMPORARY_FIRST_LOGIN requires replacement of the
+   * temporary credential before application access.
+   * Existing authorizations omit this field.
+   */
+  credentialLifecycle?:
+    "TEMPORARY_FIRST_LOGIN";
 
   dataContext:
     FinoraBranchAccessDataContext;

@@ -1,5 +1,5 @@
-// ============================================================
-// FINORA ENTERPRISE OS™
+﻿// ============================================================
+// FINORA ENTERPRISE OSâ„¢
 //
 // CONTROL CENTER
 // DEDICATED PRIVILEGED PRELOAD
@@ -116,6 +116,10 @@ const CONTROL_CENTER_CHANNELS = {
 
   ISSUE_BRANCH_ACCESS:
     "finora:control-center:issue-branch-access",
+
+  ISSUE_TEMPORARY_CREDENTIAL:
+
+    "finora:control-center:issue-temporary-credential",
 
   ISSUE_BRANCH_DEVICE_REVOCATION:
     "finora:control-center:issue-branch-device-revocation",
@@ -1196,6 +1200,26 @@ export interface FinoraControlCenterBridge {
           FinoraControlCenterSignedPackageView
         >
       >;
+  issueTemporaryCredential:
+    (
+      request:
+        Record<string, unknown>,
+    ) =>
+      Promise<
+        FinoraControlCenterResult<{
+          temporaryPassword:
+            string;
+
+          temporarySecurityCode:
+            string;
+
+          credentialChangeRequired:
+            true;
+
+          credentialLifecycle:
+            "TEMPORARY_FIRST_LOGIN";
+        }>
+      >;
 
   issueBranchDeviceRevocation:
     (
@@ -1630,6 +1654,29 @@ const controlCenterBridge:
         FinoraControlCenterResult<
           FinoraControlCenterSignedPackageView
         >
+      >,
+  issueTemporaryCredential:
+    (
+      request,
+    ) =>
+      ipcRenderer.invoke(
+        CONTROL_CENTER_CHANNELS
+          .ISSUE_TEMPORARY_CREDENTIAL,
+        request,
+      ) as Promise<
+        FinoraControlCenterResult<{
+          temporaryPassword:
+            string;
+
+          temporarySecurityCode:
+            string;
+
+          credentialChangeRequired:
+            true;
+
+          credentialLifecycle:
+            "TEMPORARY_FIRST_LOGIN";
+        }>
       >,
 
   issueBranchDeviceRevocation:

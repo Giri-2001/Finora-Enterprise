@@ -1,5 +1,5 @@
 /* ===========================================================
-   FINORA ENTERPRISE OS™
+   FINORA ENTERPRISE OSÃ¢â€žÂ¢
 
    CONTROL CENTER
    CANONICAL ISSUANCE PAYLOAD BUILDER
@@ -559,6 +559,16 @@ export function buildFinoraBranchAccessIssuanceRequest(
       oneTime:
         true as const,
 
+      ...(
+        draft.credentialLifecycle ===
+          "TEMPORARY_FIRST_LOGIN"
+          ? {
+              credentialLifecycle:
+                "TEMPORARY_FIRST_LOGIN" as const,
+            }
+          : {}
+      ),
+
       schemaVersion:
         1 as const,
     };
@@ -683,6 +693,12 @@ export function buildFinoraBranchAccessIssuanceRequest(
 
     storageMode:
       draft.storageMode,
+
+    ...(
+      draft.deviceAccessPolicy === undefined
+        ? {}
+        : { deviceAccessPolicy: draft.deviceAccessPolicy }
+    ),
 
     administrativeStatus,
 
@@ -911,6 +927,16 @@ export function buildFinoraBranchAccessIssuanceRequest(
 
       oneTime:
         true as const,
+
+      ...(
+        draft.credentialLifecycle ===
+          "TEMPORARY_FIRST_LOGIN"
+          ? {
+              credentialLifecycle:
+                "TEMPORARY_FIRST_LOGIN" as const,
+            }
+          : {}
+      ),
 
       schemaVersion:
         1 as const,

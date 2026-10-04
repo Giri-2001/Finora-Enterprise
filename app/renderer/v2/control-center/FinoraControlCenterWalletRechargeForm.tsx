@@ -1,5 +1,5 @@
-/* ===========================================================
-   FINORA ENTERPRISE OS™
+﻿/* ===========================================================
+   FINORA ENTERPRISE OSâ„¢
 
    CONTROL CENTER
    WALLET RECHARGE FORM

@@ -999,30 +999,13 @@ function BranchActivationGate({
     }
   }
 
-  async function handleImportEnrollmentResponse(
-    expectedControlCenterPublicKeyFingerprint:
-      string,
-  ): Promise<void> {
+  async function handleImportEnrollmentResponse():
+    Promise<void> {
 
     if (
       enrollmentImporting ||
       enrollmentExporting
     ) {
-      return;
-    }
-
-    const fingerprint =
-      expectedControlCenterPublicKeyFingerprint.trim();
-
-    if (
-      !/^[0-9a-f]{64}$/.test(
-        fingerprint,
-      )
-    ) {
-      setEnrollmentImportMessage(
-        "Enter the independently supplied lowercase 64-character FINORA Control Center SHA-256 fingerprint.",
-      );
-
       return;
     }
 
@@ -1038,16 +1021,44 @@ function BranchActivationGate({
       const controlBridge =
         getFinoraActivationControlBridge();
 
+      const bootstrapPinnedTrust =
+        controlBridge
+          ?.bootstrapPinnedRecipientOperationalTrust;
+
       const importEnrollmentResponse =
         controlBridge
           ?.importInstallationEnrollmentResponse;
 
       if (
+        typeof bootstrapPinnedTrust !==
+          "function" ||
         typeof importEnrollmentResponse !==
           "function"
       ) {
         setEnrollmentImportMessage(
-          "FINORA Installation Enrollment Response import is unavailable in this application build.",
+          "FINORA trusted Installation Enrollment Response import is unavailable in this application build.",
+        );
+
+        return;
+      }
+
+      const trustResult =
+        await bootstrapPinnedTrust();
+
+      const trustAlreadyEstablished =
+        trustResult.error
+          ?.toLowerCase()
+          .includes(
+            "already bootstrapped",
+          ) === true;
+
+      if (
+        !trustResult.success &&
+        !trustAlreadyEstablished
+      ) {
+        setEnrollmentImportMessage(
+          trustResult.error ??
+            "Unable to initialize FINORA release-pinned Control Center trust.",
         );
 
         return;
@@ -1055,7 +1066,7 @@ function BranchActivationGate({
 
       const result =
         await importEnrollmentResponse(
-          fingerprint,
+          "6384c74dcf2f1a9232ece849bea73f10adf8ef5b2614837e5647de2f135b7e81",
         );
 
       if (!result.success) {
@@ -1083,14 +1094,6 @@ function BranchActivationGate({
           ". Continue with the signed FINORA Control Bundle, then check activation.",
       );
 
-      /*
-       * Enrollment establishes installation identity + trust.
-       * It does not itself activate the branch.
-       *
-       * Re-evaluate immediately so authoritative state is fresh.
-       * The gate may correctly remain REQUIRED until the signed
-       * Control Bundle is imported.
-       */
       handleRetry();
 
     } catch (error) {

@@ -1,7 +1,7 @@
-/* ============================================================
-   FINORA ENTERPRISE OS™
+﻿/* ============================================================
+   FINORA ENTERPRISE OSâ„¢
 
-   V2 WALLET ENGINE™
+   V2 WALLET ENGINEâ„¢
 
    COLLECTION PROCESSING WALLET CHARGE SERVICE
 
@@ -227,25 +227,6 @@ export async function preflightCollectionProcessingWalletCharge(
     };
   }
 
-  const balanceResult =
-    calculateWalletDebit(
-      wallet.balance,
-      pricingQuote.amount,
-    );
-
-  if (!balanceResult.success) {
-
-    return {
-      success:
-        false,
-
-      errorCode:
-        "INSUFFICIENT_BALANCE",
-
-      error:
-        `Insufficient FINORA Wallet balance. A ₹${pricingQuote.amount} Collection Processing fee is required.`,
-    };
-  }
 
   return {
     success:
@@ -268,7 +249,7 @@ export async function preflightCollectionProcessingWalletCharge(
         wallet.balance,
 
       availableBalanceAfterCharge:
-        balanceResult.transition.balanceAfter,
+        undefined,
     },
   };
 }

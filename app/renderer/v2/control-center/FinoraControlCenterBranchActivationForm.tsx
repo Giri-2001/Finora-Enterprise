@@ -1,4 +1,4 @@
-import {
+﻿import {
   useState,
 } from "react";
 
@@ -9,7 +9,7 @@ import type {
 } from "./FinoraControlCenterIssuanceForm.types";
 
 /* ===========================================================
-   FINORA ENTERPRISE OS™
+   FINORA ENTERPRISE OSâ„¢
 
    CONTROL CENTER
    BRANCH ACTIVATION FORM FOUNDATION
@@ -485,7 +485,7 @@ export default function FinoraControlCenterBranchActivationForm({
             0.58,
         }}
       >
-        Target scope: {target.ownerId || "—"} / {target.businessId || "—"} / {target.branchId || "—"}
+        Target scope: {target.ownerId || "â€”"} / {target.businessId || "â€”"} / {target.branchId || "â€”"}
       </div>
     </section>
   );

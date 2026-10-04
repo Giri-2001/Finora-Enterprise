@@ -1,4 +1,5 @@
 import {
+  useEffect,
   useState,
 } from "react";
 
@@ -9,7 +10,7 @@ import type {
 } from "./FinoraControlCenterIssuanceForm.types";
 
 /* ===========================================================
-   FINORA ENTERPRISE OS™
+   FINORA ENTERPRISE OSÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢
 
    CONTROL CENTER
    BUSINESS PROFILE FORM FOUNDATION
@@ -33,6 +34,27 @@ import type {
 interface Props {
   target:
     FinoraControlCenterTargetDraft;
+
+  initialProfileId?:
+    string;
+
+  initialBusinessCode?:
+    string;
+
+  initialBranchCode?:
+    string;
+
+  initialBusinessName?:
+    string;
+
+  initialBranchName?:
+    string;
+
+  initialCreatedAt?:
+    string;
+
+  initialUpdatedAt?:
+    string;
 
   onIssue?:
     (
@@ -231,6 +253,13 @@ function ActionField({
 
 export default function FinoraControlCenterBusinessProfileForm({
   target,
+  initialProfileId = "",
+  initialBusinessCode = "",
+  initialBranchCode = "",
+  initialBusinessName = "",
+  initialBranchName = "",
+  initialCreatedAt = "",
+  initialUpdatedAt = "",
   onIssue,
 }: Props) {
 
@@ -247,26 +276,48 @@ export default function FinoraControlCenterBusinessProfileForm({
       "ISSUE",
 
     profileId:
-      "",
+      initialProfileId,
 
     businessCode:
-      "",
+      initialBusinessCode,
 
     branchCode:
-      "",
+      initialBranchCode,
 
     businessName:
-      "",
+      initialBusinessName,
 
     branchName:
-      "",
+      initialBranchName,
 
     createdAt:
-      "",
+      initialCreatedAt,
 
     updatedAt:
-      "",
+      initialUpdatedAt,
   });
+
+
+  useEffect(() => {
+    setDraft((current) => ({
+      ...current,
+      profileId: initialProfileId,
+      businessCode: initialBusinessCode,
+      branchCode: initialBranchCode,
+      businessName: initialBusinessName,
+      branchName: initialBranchName,
+      createdAt: initialCreatedAt,
+      updatedAt: initialUpdatedAt,
+    }));
+  }, [
+    initialProfileId,
+    initialBusinessCode,
+    initialBranchCode,
+    initialBusinessName,
+    initialBranchName,
+    initialCreatedAt,
+    initialUpdatedAt,
+  ]);
 
   function update<
     K extends keyof typeof draft,
@@ -517,7 +568,7 @@ export default function FinoraControlCenterBusinessProfileForm({
             0.58,
         }}
       >
-        Target scope: {target.ownerId || "—"} / {target.businessId || "—"} / {target.branchId || "—"} / {target.installationId || "—"}
+        Target scope: {target.ownerId || "ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â"} / {target.businessId || "ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â"} / {target.branchId || "ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â"} / {target.installationId || "ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â"}
       </div>
     </section>
   );

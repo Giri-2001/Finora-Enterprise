@@ -624,18 +624,6 @@ public final class FinoraWalletRechargeStateEngine {
                 }
             }
 
-            if (
-                paymentReferences.contains(
-                    paymentReference
-                )
-            ) {
-
-                return Result.failure(
-                    "FINORA Wallet Recharge payment reference has already been authorized."
-                );
-            }
-
-
             // ------------------------------------------------
             // APPLIED PACKAGE REPLAY LEDGER
             // ------------------------------------------------
@@ -699,6 +687,23 @@ public final class FinoraWalletRechargeStateEngine {
 
                 return Result.failure(
                     "FINORA Wallet Recharge signed package has already been applied."
+                );
+            }
+
+
+            /*
+             * Exact signed package replay is checked first.
+             * A different package reusing an authorized
+             * paymentReference remains a hard failure.
+             */
+            if (
+                paymentReferences.contains(
+                    paymentReference
+                )
+            ) {
+
+                return Result.failure(
+                    "FINORA Wallet Recharge payment reference has already been authorized."
                 );
             }
 

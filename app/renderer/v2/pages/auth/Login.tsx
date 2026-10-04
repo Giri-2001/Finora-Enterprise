@@ -1,9 +1,10 @@
 import {
   getFinoraCredentialEnrollmentBridge,
+  getFinoraCredentialRotationBridgeV2,
 } from "../../services/auth/credentialEnrollmentBridge";
 import { getFinoraLoginSessionBridge } from "../../services/auth/loginSessionBridge";
 // ============================================================
-// FINORA ENTERPRISE OS™
+// FINORA ENTERPRISE OS
 //
 // ENTERPRISE LOGIN
 //
@@ -111,6 +112,13 @@ import {
 import useResponsive from "../../utils/responsive/useResponsive";
 
 import {
+  useTheme,
+} from "../../themes/provider";
+
+import type {
+  ThemeId,
+} from "../../themes/core/types";
+import {
   getLoginStyles,
   getUsbStatusStyle,
   getUsbStatusIndicatorStyle,
@@ -200,6 +208,8 @@ async function activateStorageMode(
 export default function Login({
   onLogin,
 }: LoginProps) {
+
+  const { setTheme } = useTheme();
 
 
   // ==========================================================
@@ -313,11 +323,47 @@ export default function Login({
 
 
   const [
+    forgotCurrentPassword,
+    setForgotCurrentPassword,
+  ] = useState<string>("");
+
+  const [
+    forgotNewPassword,
+    setForgotNewPassword,
+  ] = useState<string>("");
+
+  const [
+    forgotSecurityCode,
+    setForgotSecurityCode,
+  ] = useState<string>("");
+
+  const [
+    forgotPasswordMode,
+    setForgotPasswordMode,
+  ] = useState<boolean>(false);
+
+  const [
+    forgotPasswordBusy,
+    setForgotPasswordBusy,
+  ] = useState<boolean>(false);
+
+  const [
+    forgotPasswordError,
+    setForgotPasswordError,
+  ] = useState<string | undefined>();
+
+  const [
+    forgotPasswordSuccess,
+    setForgotPasswordSuccess,
+  ] = useState<string | undefined>();
+
+  const [
     credentialMode,
     setCredentialMode,
   ] = useState<
     "LOGIN" |
     "SET_PASSWORD" |
+    "FORCE_CREDENTIAL_CHANGE" |
     "RESTORE_BACKUP"
   >(
     "LOGIN",
@@ -338,6 +384,17 @@ export default function Login({
     confirmSecurityCode,
     setConfirmSecurityCode,
   ] = useState("");
+  // First-login temporary credentials stay in renderer memory only.
+  // Never persist or log these values.
+  const firstLoginCurrentPasswordRef =
+    useRef<string | null>(null);
+
+  const firstLoginCurrentSecurityCodeRef =
+    useRef<string | null>(null);
+  // One UUID per logical rotation submission.
+  // Retained across uncertain retries until success/reset.
+  const firstLoginRotationRequestIdRef =
+    useRef<string | null>(null);
 
 
   const [
@@ -910,6 +967,158 @@ export default function Login({
   // OWNER AUTHENTICATION
   // ==========================================================
 
+  async function completeRequiredCredentialChange(): Promise<void> {
+
+    setError("");
+
+    const currentPassword =
+      firstLoginCurrentPasswordRef.current;
+
+    const currentSecurityCode =
+      firstLoginCurrentSecurityCodeRef.current;
+    if (
+      !currentPassword ||
+      !currentSecurityCode
+    ) {
+      setError(
+        "Temporary FINORA credential context is unavailable. Sign in again.",
+      );
+      return;
+    }
+
+    if (
+      Array.from(password).length < 8 ||
+      Array.from(password).length > 128 ||
+      password.trim().length === 0
+    ) {
+      setError(
+        "Permanent Password must contain between 8 and 128 characters.",
+      );
+      return;
+    }
+
+    if (password !== confirmPassword) {
+      setError(
+        "Permanent Password and Confirm Password do not match.",
+      );
+      return;
+    }
+
+    if (
+      Array.from(securityCode).length < 8 ||
+      Array.from(securityCode).length > 128 ||
+      securityCode.trim().length === 0
+    ) {
+      setError(
+        "Permanent Security Code must contain between 8 and 128 characters.",
+      );
+      return;
+    }
+
+    if (securityCode !== confirmSecurityCode) {
+      setError(
+        "Permanent Security Code and Confirm Security Code do not match.",
+      );
+      return;
+    }
+
+    const rotationBridge =
+      getFinoraCredentialRotationBridgeV2();
+
+    if (!rotationBridge?.rotateV2) {
+      setError(
+        "FINORA secure credential rotation is unavailable in this application build.",
+      );
+      return;
+    }
+
+    if (!firstLoginRotationRequestIdRef.current) {
+
+      if (
+        typeof crypto === "undefined" ||
+        typeof crypto.randomUUID !== "function"
+      ) {
+        setError(
+          "Secure request identifier generation is unavailable.",
+        );
+        return;
+      }
+
+      firstLoginRotationRequestIdRef.current =
+        crypto.randomUUID();
+    }
+
+    setLoginBusy(true);
+
+    try {
+
+      const result =
+        await rotationBridge.rotateV2({
+          rotationRequestId:
+            firstLoginRotationRequestIdRef.current,
+
+          username:
+            username.trim(),
+
+          currentPassword,
+          currentSecurityCode,
+
+          newPassword:
+            password,
+
+          newSecurityCode:
+            securityCode,
+        });
+
+      if (!result.success) {
+        setError(
+          result.error ??
+            "Unable to save permanent FINORA credentials.",
+        );
+        return;
+      }
+
+      // Credential replacement is already durable here.
+      // The temporary authenticated session must never be reused.
+
+      firstLoginCurrentPasswordRef.current =
+        null;
+
+      firstLoginCurrentSecurityCodeRef.current =
+        null;
+      firstLoginRotationRequestIdRef.current =
+        null;
+
+      setPassword("");
+      setConfirmPassword("");
+      setSecurityCode("");
+      setConfirmSecurityCode("");
+
+      setDeviceSecurityCodeRequired(false);
+      setDeviceSecurityCode("");
+
+      setLegacySecurityCodeSetupRequired(false);
+
+      setCredentialMode("LOGIN");
+
+      setCredentialEnrollmentMessage(
+        "Permanent credentials saved. Sign in with your new Password.",
+      );
+
+      setError("");
+    }
+    catch {
+
+      // Preserve rotationRequestId for safe retry.
+      setError(
+        "Unable to confirm the permanent credential update. Retry the same submission.",
+      );
+    }
+    finally {
+      setLoginBusy(false);
+    }
+  }
+
   async function authenticateOwner(): Promise<void> {
 
     setError("");
@@ -1263,7 +1472,63 @@ export default function Login({
         authoritativeSession.sessionId;
 
 
-      // ======================================================
+      
+      if (
+        authoritativeSession.credentialChangeRequired ===
+          true
+      ) {
+
+        const submittedSecurityCode =
+          deviceSecurityCodeRequired
+            ? deviceSecurityCode
+            : securityCode;
+
+        if (!submittedSecurityCode) {
+          setError(
+            "Security Code is required to replace temporary FINORA credentials.",
+          );
+          return;
+        }
+
+        firstLoginCurrentPasswordRef.current =
+          password;
+
+        firstLoginCurrentSecurityCodeRef.current =
+          submittedSecurityCode;
+        firstLoginRotationRequestIdRef.current =
+          null;
+
+        /*
+         * The temporary authenticated session is intentionally
+         * NOT committed to renderer application state.
+         *
+         * issuedSessionId deliberately remains populated so
+         * authenticateOwner's existing finally-path invalidates
+         * this temporary authenticated session.
+         */
+        setPassword("");
+        setConfirmPassword("");
+        setSecurityCode("");
+        setConfirmSecurityCode("");
+
+        setDeviceSecurityCodeRequired(false);
+        setDeviceSecurityCode("");
+
+        setLegacySecurityCodeSetupRequired(false);
+
+        setCredentialMode(
+          "FORCE_CREDENTIAL_CHANGE",
+        );
+
+        setCredentialEnrollmentMessage(
+          "Create your permanent Password and permanent Security Code to continue.",
+        );
+
+        setError("");
+
+        return;
+      }
+// ======================================================
       // 3. BUILD RENDERER SESSION SNAPSHOT
       //
       // SECURITY:
@@ -2071,27 +2336,142 @@ export default function Login({
   // FORGOT PASSWORD
   // ==========================================================
 
+
   function handleForgotPassword(): void {
-
-
-    if (ownerStorage === "usb") {
-
-      showComingSoon(
-        "USB Owner password recovery is coming soon.",
-      );
-
-      return;
-
-    }
-
-
-
-    showComingSoon(
-      "Owner password recovery is coming soon.",
-    );
-
+    setForgotPasswordMode(true);
+    setForgotPasswordError(undefined);
+    setForgotPasswordSuccess(undefined);
+    setForgotCurrentPassword("");
+    setForgotNewPassword("");
+    setForgotSecurityCode("");
   }
 
+  async function submitForgotPasswordRecovery(): Promise<void> {
+    if (forgotPasswordBusy) {
+      return;
+    }
+
+    setForgotPasswordError(undefined);
+    setForgotPasswordSuccess(undefined);
+
+    const trimmedUsername =
+      username.trim();
+
+    if (!trimmedUsername) {
+      setForgotPasswordError(
+        "Enter your User ID.",
+      );
+      return;
+    }
+
+    if (!forgotCurrentPassword) {
+      setForgotPasswordError(
+        "Enter your old Password.",
+      );
+      return;
+    }
+
+    if (!forgotNewPassword) {
+      setForgotPasswordError(
+        "Enter your new Password.",
+      );
+      return;
+    }
+
+    if (
+      forgotCurrentPassword ===
+      forgotNewPassword
+    ) {
+      setForgotPasswordError(
+        "New Password must be different from the old Password.",
+      );
+      return;
+    }
+
+    if (!forgotSecurityCode) {
+      setForgotPasswordError(
+        "Enter your current Security Code.",
+      );
+      return;
+    }
+
+    setForgotPasswordBusy(true);
+
+    try {
+      const bridge =
+        window.finora?.credentials;
+
+      if (
+        !bridge ||
+        typeof bridge.rotateV2 !==
+          "function"
+      ) {
+        throw new Error(
+          "FINORA credential rotation bridge is unavailable.",
+        );
+      }
+
+      const result =
+        await bridge.rotateV2({
+          rotationRequestId:
+            `FINORA-PASSWORD-CHANGE-${crypto.randomUUID()}`,
+
+          username:
+            trimmedUsername,
+
+          currentPassword:
+            forgotCurrentPassword,
+
+          currentSecurityCode:
+            forgotSecurityCode,
+
+          newPassword:
+            forgotNewPassword,
+        });
+
+      if (!result.success) {
+        throw new Error(
+          result.error ??
+            "FINORA Password change failed.",
+        );
+      }
+
+      setForgotPasswordSuccess(
+        "Password changed successfully. Please log in with the new Password.",
+      );
+
+      setPassword("");
+      setConfirmPassword("");
+      setSecurityCode("");
+      setConfirmSecurityCode("");
+
+      setForgotCurrentPassword("");
+      setForgotNewPassword("");
+      setForgotSecurityCode("");
+
+    } catch (error) {
+      setForgotPasswordError(
+        error instanceof Error
+          ? error.message
+          : "Unable to change the FINORA Password.",
+      );
+    } finally {
+      setForgotPasswordBusy(false);
+    }
+  }
+
+  function closeForgotPasswordMode(): void {
+    if (forgotPasswordBusy) {
+      return;
+    }
+
+    setForgotPasswordMode(false);
+    setForgotPasswordError(undefined);
+    setForgotPasswordSuccess(undefined);
+    setForgotCurrentPassword("");
+    setForgotNewPassword("");
+    setForgotSecurityCode("");
+  }
 
   // ==========================================================
   // INPUT KEY HANDLING
@@ -2182,7 +2562,7 @@ export default function Login({
   const storageLabel =
     ownerStorage === "usb"
       ? "USB Storage"
-      : "Local Storage";
+      : "USB Storage";
 
   const storageIcon =
     ownerStorage === "usb"
@@ -2200,6 +2580,10 @@ export default function Login({
 
     setLoginThemeId(
       themeId,
+    );
+
+    setTheme(
+      themeId as ThemeId,
     );
 
     setOpenDropdown(
@@ -2540,20 +2924,25 @@ export default function Login({
                     <button
                       type="button"
                       role="option"
-                      aria-selected={
-                        ownerStorage === "local"
-                      }
+                      aria-selected={false}
                       onClick={() => {
-                        handleStorageChange("local");
+                        /*
+                         * Multi-branch owner flow:
+                         * keep USB mode, clear any typed credentials, then
+                         * reuse the existing native FINORA USB/folder picker.
+                         *
+                         * LOCAL support remains available in the backend for
+                         * a future release; it is intentionally hidden here.
+                         */
+                        handleStorageChange("usb");
+                        void handleRequestUsbAccess();
                       }}
                       style={
-                        ownerStorage === "local"
-                          ? loginStyles.customSelectOptionActive
-                          : loginStyles.customSelectOption
+                        loginStyles.customSelectOption
                       }
                     >
                       <HardDrive />
-                      <span>Local Storage</span>
+                      <span>Change USB Storage</span>
                     </button>
 
 
@@ -2567,7 +2956,7 @@ export default function Login({
 
 
             {/* ==============================================
-                USB STATUS — ONLY FOR USB OWNER LOGIN
+                USB STATUS
             ============================================== */}
 
             {!usbChecking &&
@@ -2698,11 +3087,455 @@ export default function Login({
                   loginStyles.modeNoticeSubtext
                 }
               >
-                {credentialMode === "SET_PASSWORD"
-                  ? "First-time setup • Create your secure password"
+                {forgotPasswordMode && (
+            <section
+              aria-labelledby="finora-change-password-title"
+              style={{
+                width: "100%",
+                marginTop: "18px",
+                marginBottom: "18px",
+                padding: responsive === "mobile"
+                  ? "18px"
+                  : "22px",
+                border:
+                  `1px solid ${activeLoginTheme.borderStrong}`,
+                borderRadius:
+                  responsive === "mobile"
+                    ? "14px"
+                    : "16px",
+                background:
+                  activeLoginTheme.surface,
+                color:
+                  activeLoginTheme.text,
+                boxShadow:
+                  `0 18px 42px ${activeLoginTheme.shadow}`,
+                boxSizing: "border-box",
+              }}
+            >
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "flex-start",
+                  justifyContent: "space-between",
+                  gap: "14px",
+                  marginBottom: "18px",
+                }}
+              >
+                <div
+                  style={{
+                    minWidth: 0,
+                  }}
+                >
+                  <div
+                    style={{
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: "8px",
+                      marginBottom: "7px",
+                    }}
+                  >
+                    <KeyRound
+                      size={18}
+                      strokeWidth={2}
+                      color={
+                        activeLoginTheme.primary
+                      }
+                      aria-hidden="true"
+                    />
+
+                    <span
+                      style={{
+                        color:
+                          activeLoginTheme.primary,
+                        fontSize: "10px",
+                        fontWeight: 800,
+                        letterSpacing:
+                          "0.1em",
+                        textTransform:
+                          "uppercase",
+                      }}
+                    >
+                      Account Security
+                    </span>
+                  </div>
+
+                  <h2
+                    id="finora-change-password-title"
+                    style={{
+                      margin: 0,
+                      color:
+                        activeLoginTheme.text,
+                      fontSize:
+                        responsive === "mobile"
+                          ? "18px"
+                          : "20px",
+                      fontWeight: 800,
+                      letterSpacing:
+                        "-0.02em",
+                      lineHeight: 1.2,
+                    }}
+                  >
+                    Change Password
+                  </h2>
+
+                  <p
+                    style={{
+                      margin:
+                        "7px 0 0",
+                      maxWidth: "52ch",
+                      color:
+                        activeLoginTheme.textSoft,
+                      fontSize: "12px",
+                      fontWeight: 500,
+                      lineHeight: 1.55,
+                    }}
+                  >
+                    Enter your current password and Security Code, then create a new password.
+                  </p>
+                </div>
+              </div>
+
+              <div
+                style={{
+                  display: "grid",
+                  gap: "12px",
+                }}
+              >
+                <label
+                  style={{
+                    display: "grid",
+                    gap: "7px",
+                  }}
+                >
+                  <span
+                    style={{
+                      color:
+                        activeLoginTheme.textSoft,
+                      fontSize: "10px",
+                      fontWeight: 750,
+                      letterSpacing:
+                        "0.08em",
+                      textTransform:
+                        "uppercase",
+                    }}
+                  >
+                    Old Password
+                  </span>
+
+                  <div
+                    style={{
+                      ...loginStyles.inputWrapper,
+                      border:
+                        `1px solid ${activeLoginTheme.border}`,
+                      borderRadius: "12px",
+                      background:
+                        activeLoginTheme.surfaceSoft,
+                    }}
+                  >
+                    <input
+                      type="password"
+                      value={
+                        forgotCurrentPassword
+                      }
+                      onChange={(event) => {
+                        setForgotCurrentPassword(
+                          event.target.value,
+                        );
+                        setForgotPasswordError(
+                          undefined,
+                        );
+                        setForgotPasswordSuccess(
+                          undefined,
+                        );
+                      }}
+                      placeholder="Enter old password"
+                      aria-label="Old Password"
+                      autoComplete="current-password"
+                      disabled={
+                        forgotPasswordBusy
+                      }
+                      style={{
+                        ...loginCredentialInputStyle,
+                        width: "100%",
+                        minHeight: "46px",
+                        border: "none",
+                        background:
+                          "transparent",
+                        color:
+                          activeLoginTheme.text,
+                        boxShadow: "none",
+                      }}
+                    />
+                  </div>
+                </label>
+
+                <label
+                  style={{
+                    display: "grid",
+                    gap: "7px",
+                  }}
+                >
+                  <span
+                    style={{
+                      color:
+                        activeLoginTheme.textSoft,
+                      fontSize: "10px",
+                      fontWeight: 750,
+                      letterSpacing:
+                        "0.08em",
+                      textTransform:
+                        "uppercase",
+                    }}
+                  >
+                    New Password
+                  </span>
+
+                  <div
+                    style={{
+                      ...loginStyles.inputWrapper,
+                      border:
+                        `1px solid ${activeLoginTheme.border}`,
+                      borderRadius: "12px",
+                      background:
+                        activeLoginTheme.surfaceSoft,
+                    }}
+                  >
+                    <input
+                      type="password"
+                      value={
+                        forgotNewPassword
+                      }
+                      onChange={(event) => {
+                        setForgotNewPassword(
+                          event.target.value,
+                        );
+                        setForgotPasswordError(
+                          undefined,
+                        );
+                        setForgotPasswordSuccess(
+                          undefined,
+                        );
+                      }}
+                      placeholder="Enter new password"
+                      aria-label="New Password"
+                      autoComplete="new-password"
+                      disabled={
+                        forgotPasswordBusy
+                      }
+                      style={{
+                        ...loginCredentialInputStyle,
+                        width: "100%",
+                        minHeight: "46px",
+                        border: "none",
+                        background:
+                          "transparent",
+                        color:
+                          activeLoginTheme.text,
+                        boxShadow: "none",
+                      }}
+                    />
+                  </div>
+                </label>
+
+                <label
+                  style={{
+                    display: "grid",
+                    gap: "7px",
+                  }}
+                >
+                  <span
+                    style={{
+                      color:
+                        activeLoginTheme.textSoft,
+                      fontSize: "10px",
+                      fontWeight: 750,
+                      letterSpacing:
+                        "0.08em",
+                      textTransform:
+                        "uppercase",
+                    }}
+                  >
+                    Security Code
+                  </span>
+
+                  <div
+                    style={{
+                      ...loginStyles.inputWrapper,
+                      border:
+                        `1px solid ${activeLoginTheme.border}`,
+                      borderRadius: "12px",
+                      background:
+                        activeLoginTheme.surfaceSoft,
+                    }}
+                  >
+                    <input
+                      type="password"
+                      value={
+                        forgotSecurityCode
+                      }
+                      onChange={(event) => {
+                        setForgotSecurityCode(
+                          event.target.value,
+                        );
+                        setForgotPasswordError(
+                          undefined,
+                        );
+                        setForgotPasswordSuccess(
+                          undefined,
+                        );
+                      }}
+                      placeholder="Enter Security Code"
+                      aria-label="Security Code"
+                      autoComplete="off"
+                      disabled={
+                        forgotPasswordBusy
+                      }
+                      style={{
+                        ...loginCredentialInputStyle,
+                        width: "100%",
+                        minHeight: "46px",
+                        border: "none",
+                        background:
+                          "transparent",
+                        color:
+                          activeLoginTheme.text,
+                        boxShadow: "none",
+                      }}
+                    />
+                  </div>
+                </label>
+
+                {forgotPasswordError && (
+                  <div
+                    role="alert"
+                    style={{
+                      marginTop: "2px",
+                      padding:
+                        "10px 12px",
+                      border:
+                        `1px solid ${activeLoginTheme.border}`,
+                      borderRadius: "10px",
+                      background:
+                        activeLoginTheme.surfaceSoft,
+                      color:
+                        activeLoginTheme.text,
+                      fontSize: "12px",
+                      lineHeight: 1.5,
+                    }}
+                  >
+                    {forgotPasswordError}
+                  </div>
+                )}
+
+                {forgotPasswordSuccess && (
+                  <div
+                    role="status"
+                    style={{
+                      marginTop: "2px",
+                      padding:
+                        "10px 12px",
+                      border:
+                        `1px solid ${activeLoginTheme.borderStrong}`,
+                      borderRadius: "10px",
+                      background:
+                        activeLoginTheme.surfaceSoft,
+                      color:
+                        activeLoginTheme.text,
+                      fontSize: "12px",
+                      lineHeight: 1.5,
+                    }}
+                  >
+                    {forgotPasswordSuccess}
+                  </div>
+                )}
+
+                <div
+                  style={{
+                    display: "grid",
+                    gridTemplateColumns:
+                      responsive === "mobile"
+                        ? "1fr"
+                        : "minmax(0, 1.15fr) minmax(0, 0.85fr)",
+                    gap: "10px",
+                    marginTop: "4px",
+                  }}
+                >
+                  <button
+                    type="button"
+                    onClick={() => {
+                      void submitForgotPasswordRecovery();
+                    }}
+                    disabled={
+                      forgotPasswordBusy
+                    }
+                    style={{
+                      minHeight: "46px",
+                      padding:
+                        "0 18px",
+                      border:
+                        `1px solid ${activeLoginTheme.borderStrong}`,
+                      borderRadius: "12px",
+                      background:
+                        activeLoginTheme.primary,
+                      color:
+                        "#FFFFFF",
+                      font: "inherit",
+                      fontSize: "12px",
+                      fontWeight: 800,
+                      letterSpacing:
+                        "0.01em",
+                      cursor:
+                        forgotPasswordBusy
+                          ? "wait"
+                          : "pointer",
+                      boxShadow:
+                        `0 8px 20px ${activeLoginTheme.shadow}`,
+                    }}
+                  >
+                    {forgotPasswordBusy
+                      ? "Updating..."
+                      : "Set Password"}
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={
+                      closeForgotPasswordMode
+                    }
+                    disabled={
+                      forgotPasswordBusy
+                    }
+                    style={{
+                      minHeight: "46px",
+                      padding:
+                        "0 18px",
+                      border:
+                        `1px solid ${activeLoginTheme.border}`,
+                      borderRadius: "12px",
+                      background:
+                        activeLoginTheme.surfaceSoft,
+                      color:
+                        activeLoginTheme.text,
+                      font: "inherit",
+                      fontSize: "12px",
+                      fontWeight: 700,
+                      cursor:
+                        forgotPasswordBusy
+                          ? "not-allowed"
+                          : "pointer",
+                    }}
+                  >
+                    Back to Login
+                  </button>
+                </div>
+              </div>
+            </section>
+          )}
+          {credentialMode === "SET_PASSWORD"
+                  ? "First-time setup  Create your secure password"
                   : ownerStorage === "usb"
-                    ? "Owner authentication • FINORA Pendrive"
-                    : "Owner authentication • Local storage"}
+                    ? "Owner authentication - FINORA Pendrive"
+                    : "Owner authentication - Local storage"}
               </div>
 
             </div>
@@ -2753,8 +3586,9 @@ export default function Login({
                   autoComplete="username"
                   autoFocus
                   disabled={
-                    loginBusy
-                  }
+                      loginBusy ||
+                      credentialMode === "FORCE_CREDENTIAL_CHANGE"
+                    }
                   onFocus={
                     handleLoginInputFocus
                   }
@@ -2797,12 +3631,12 @@ export default function Login({
                     setError("");
                   }}
                   placeholder={
-                    credentialMode === "SET_PASSWORD"
+                    (credentialMode === "SET_PASSWORD" || credentialMode === "FORCE_CREDENTIAL_CHANGE")
                       ? "New Password"
                       : "Password"
                   }
                   aria-label={
-                    credentialMode === "SET_PASSWORD"
+                    (credentialMode === "SET_PASSWORD" || credentialMode === "FORCE_CREDENTIAL_CHANGE")
                       ? "New Password"
                       : "Password"
                   }
@@ -2812,13 +3646,14 @@ export default function Login({
                       : "password"
                   }
                   autoComplete={
-                    credentialMode === "SET_PASSWORD"
+                    (credentialMode === "SET_PASSWORD" || credentialMode === "FORCE_CREDENTIAL_CHANGE")
                       ? "new-password"
                       : "current-password"
                   }
                   disabled={
-                    loginBusy
-                  }
+                      loginBusy ||
+                      credentialMode === "FORCE_CREDENTIAL_CHANGE"
+                    }
                   onKeyDown={
                     handlePasswordKeyDown
                   }
@@ -2860,7 +3695,7 @@ export default function Login({
               </div>
 
 
-              {credentialMode === "SET_PASSWORD" && (
+              {(credentialMode === "SET_PASSWORD" || credentialMode === "FORCE_CREDENTIAL_CHANGE") && (
 
                 <div
                   style={
@@ -2897,7 +3732,8 @@ export default function Login({
                     }
                     autoComplete="new-password"
                     disabled={
-                      loginBusy
+                      loginBusy ||
+                      credentialMode === "FORCE_CREDENTIAL_CHANGE"
                     }
                     onKeyDown={
                       handlePasswordKeyDown
@@ -2914,7 +3750,7 @@ export default function Login({
 
               )}
 
-              {credentialMode === "SET_PASSWORD" && (
+              {(credentialMode === "SET_PASSWORD" || credentialMode === "FORCE_CREDENTIAL_CHANGE") && (
 
                 <div
                   style={
@@ -2947,7 +3783,8 @@ export default function Login({
                     type="password"
                     autoComplete="new-password"
                     disabled={
-                      loginBusy
+                      loginBusy ||
+                      credentialMode === "FORCE_CREDENTIAL_CHANGE"
                     }
                     onKeyDown={
                       handlePasswordKeyDown
@@ -2964,7 +3801,7 @@ export default function Login({
 
               )}
 
-              {credentialMode === "SET_PASSWORD" && (
+              {(credentialMode === "SET_PASSWORD" || credentialMode === "FORCE_CREDENTIAL_CHANGE") && (
 
                 <div
                   style={
@@ -2997,7 +3834,8 @@ export default function Login({
                     type="password"
                     autoComplete="new-password"
                     disabled={
-                      loginBusy
+                      loginBusy ||
+                      credentialMode === "FORCE_CREDENTIAL_CHANGE"
                     }
                     onKeyDown={
                       handlePasswordKeyDown
@@ -3047,7 +3885,8 @@ export default function Login({
                     type="password"
                     autoComplete="off"
                     disabled={
-                      loginBusy
+                      loginBusy ||
+                      credentialMode === "FORCE_CREDENTIAL_CHANGE"
                     }
                     onKeyDown={
                       handlePasswordKeyDown
@@ -3165,7 +4004,8 @@ export default function Login({
                     }
                     autoComplete="off"
                     disabled={
-                      loginBusy
+                      loginBusy ||
+                      credentialMode === "FORCE_CREDENTIAL_CHANGE"
                     }
                     onKeyDown={
                       handlePasswordKeyDown
@@ -3239,11 +4079,14 @@ export default function Login({
             <button
               type="button"
               onClick={
-                handleLogin
+                credentialMode === "FORCE_CREDENTIAL_CHANGE"
+                  ? completeRequiredCredentialChange
+                  : handleLogin
               }
               disabled={
-                loginBusy
-              }
+                      loginBusy ||
+                      credentialMode === "FORCE_CREDENTIAL_CHANGE"
+                    }
               style={
                 loginStyles.primaryButton
               }
@@ -3257,13 +4100,17 @@ export default function Login({
                 <KeyRound />
                 <span>
                   {loginBusy
-                    ? credentialMode === "SET_PASSWORD"
-                      ? "Creating Password..."
+                    ? credentialMode === "FORCE_CREDENTIAL_CHANGE"
+                      ? "Saving Permanent Credentials..."
+                      : credentialMode === "SET_PASSWORD"
+                        ? "Creating Password..."
                       : credentialMode === "RESTORE_BACKUP"
                         ? "Restoring Backup..."
                         : "Authenticating..."
-                    : credentialMode === "SET_PASSWORD"
-                      ? "Set Password"
+                    : credentialMode === "FORCE_CREDENTIAL_CHANGE"
+                      ? "Save Permanent Credentials"
+                      : credentialMode === "SET_PASSWORD"
+                        ? "Set Password"
                       : credentialMode === "RESTORE_BACKUP"
                         ? "Restore Branch Backup"
                         : "Login"}
@@ -3283,8 +4130,9 @@ export default function Login({
                         openSetPasswordMode
                       }
                       disabled={
-                        loginBusy
-                      }
+                      loginBusy ||
+                      credentialMode === "FORCE_CREDENTIAL_CHANGE"
+                    }
                       style={
                         loginStyles.forgotPassword
                       }
@@ -3298,8 +4146,9 @@ export default function Login({
                         handleForgotPassword
                       }
                       disabled={
-                        loginBusy
-                      }
+                      loginBusy ||
+                      credentialMode === "FORCE_CREDENTIAL_CHANGE"
+                    }
                       style={
                         loginStyles.forgotPassword
                       }
@@ -3312,8 +4161,9 @@ export default function Login({
                         openRestoreBackupMode
                       }
                       disabled={
-                        loginBusy
-                      }
+                      loginBusy ||
+                      credentialMode === "FORCE_CREDENTIAL_CHANGE"
+                    }
                       style={
                         loginStyles.forgotPassword
                       }
@@ -3327,10 +4177,13 @@ export default function Login({
                   <button
                     type="button"
                     onClick={
-                      returnToLoginMode
+                      credentialMode === "FORCE_CREDENTIAL_CHANGE"
+                        ? undefined
+                        : returnToLoginMode
                     }
                     disabled={
-                      loginBusy
+                      loginBusy ||
+                      credentialMode === "FORCE_CREDENTIAL_CHANGE"
                     }
                     style={
                       loginStyles.forgotPassword
@@ -3355,3 +4208,4 @@ export default function Login({
 // ============================================================
 // END
 // ============================================================
+

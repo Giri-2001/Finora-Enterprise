@@ -1,5 +1,5 @@
-// ============================================================
-// FINORA ENTERPRISE OS™
+﻿// ============================================================
+// FINORA ENTERPRISE OS
 //
 // CONTROL CENTER
 // ISSUANCE SEQUENCE LEDGER
@@ -99,6 +99,15 @@ export interface ReserveFinoraControlCenterIssuanceInput {
 
   scope:
     FinoraControlCenterIssuanceScope;
+
+  /*
+   * Optional already-consumed sequence floor from another
+   * issuance lane that shares the same signed purpose namespace.
+   *
+   * The next reservation is strictly greater than this value.
+   */
+  minimumPreviousSequence?:
+    number;
 }
 
 export interface FinoraHistoricalBranchAccessIssuanceHighWaterScope {
@@ -1160,13 +1169,35 @@ async function reserveInternal(
         ),
     );
 
-  const previousSequence =
+  const installationPreviousSequence =
     existingIndex >=
       0
       ? ledger.sequences[
           existingIndex
         ].lastReservedSequence
       : 0;
+
+  const minimumPreviousSequence =
+    input.minimumPreviousSequence ??
+      0;
+
+  if (
+    !Number.isSafeInteger(
+      minimumPreviousSequence,
+    ) ||
+    minimumPreviousSequence <
+      0
+  ) {
+    throw new Error(
+      "FINORA Control Center issuance minimum previous sequence is invalid.",
+    );
+  }
+
+  const previousSequence =
+    Math.max(
+      installationPreviousSequence,
+      minimumPreviousSequence,
+    );
 
   const sequence =
     previousSequence +
@@ -1298,3 +1329,4 @@ export function reserveFinoraControlCenterIssuance(
 // ============================================================
 // END
 // ============================================================
+

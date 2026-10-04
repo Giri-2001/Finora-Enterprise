@@ -1,5 +1,5 @@
-// ============================================================
-// FINORA ENTERPRISE OS™
+﻿// ============================================================
+// FINORA ENTERPRISE OS
 //
 // CONTROL CENTER
 // PRIVILEGED ISSUANCE COORDINATOR
@@ -88,6 +88,7 @@ import {
   reserveFinoraControlCenterIssuance,
 } from "./finoraControlCenterIssuanceLedger.js";
 import {
+  loadFinoraPortableBranchAccessIssuanceLedgerSnapshot,
   reserveFinoraPortableBranchAccessIssuance,
 } from "./finoraPortableBranchAccessIssuanceLedger.js";
 import {
@@ -586,13 +587,46 @@ export function issueFinoraBranchAccessPackage(
           request.payload,
         );
 
+      const portableScope =
+        toPortableBranchAccessIssuanceScope(
+          request.target,
+        );
+
+      const portableSnapshot =
+        sequenceLane ===
+          "NATIVE_INSTALLATION"
+          ? await loadFinoraPortableBranchAccessIssuanceLedgerSnapshot()
+          : undefined;
+
+      const portablePreviousSequence =
+        portableSnapshot?.sequences
+          .filter(
+            (record) =>
+              record.ownerId ===
+                portableScope.ownerId &&
+              record.businessId ===
+                portableScope.businessId &&
+              record.branchId ===
+                portableScope.branchId,
+          )
+          .reduce(
+            (
+              highWater,
+              record,
+            ) =>
+              Math.max(
+                highWater,
+                record.lastReservedSequence,
+              ),
+            0,
+          ) ??
+        0;
+
       const reservation =
         sequenceLane ===
           "PORTABLE_BRANCH"
           ? await reserveFinoraPortableBranchAccessIssuance(
-              toPortableBranchAccessIssuanceScope(
-                request.target,
-              ),
+              portableScope,
             )
           : await reserveFinoraControlCenterIssuance({
               purpose:
@@ -602,6 +636,9 @@ export function issueFinoraBranchAccessPackage(
                 toIssuanceScope(
                   request.target,
                 ),
+
+              minimumPreviousSequence:
+                portablePreviousSequence,
             });
 
       const payload =
@@ -1275,3 +1312,4 @@ export function issueFinoraControlBundlePackage(
 // ============================================================
 // END
 // ============================================================
+

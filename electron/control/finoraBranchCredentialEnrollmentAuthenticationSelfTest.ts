@@ -1,4 +1,4 @@
-/* ===========================================================
+﻿/* ===========================================================
    FINORA ENTERPRISE OS
 
    BRANCH CREDENTIAL ENROLLMENT + AUTHENTICATION SELF TEST
@@ -95,6 +95,10 @@ import {
 import {
   FinoraPortableBranchAuthStore,
 } from "./finoraPortableBranchAuthStore.js";
+
+import {
+  FinoraPortableBranchAuthV2Store,
+} from "./finoraPortableBranchAuthV2Store.js";
 
 import {
   authenticateFinoraBranchCredential,
@@ -754,6 +758,29 @@ async function runSelfTest():
             );
           },
       });
+
+    const portableV2Store =
+      new FinoraPortableBranchAuthV2Store({
+        resolveLocalRoot:
+          () => {
+            portableLocalResolverCalls +=
+              1;
+
+            return app.getPath(
+              "userData",
+            );
+          },
+
+        resolveUsbRoot:
+          async () => {
+            portableUsbResolverCalls +=
+              1;
+
+            return app.getPath(
+              "userData",
+            );
+          },
+      });
     // ========================================================
     // RECIPIENT SET PASSWORD
     // ========================================================
@@ -766,7 +793,7 @@ async function runSelfTest():
 
           password,
         },
-        portableStore,
+        portableV2Store,
       );
 
     assert(
@@ -786,7 +813,7 @@ async function runSelfTest():
           password,
           securityCode,
         },
-        portableStore,
+        portableV2Store,
       );
 
     assert(
@@ -1251,7 +1278,7 @@ async function runSelfTest():
 
           securityCode,
         },
-        portableStore,
+        portableV2Store,
       );
 
     assert(
@@ -1278,7 +1305,7 @@ async function runSelfTest():
 
           securityCode,
         },
-        portableStore,
+        portableV2Store,
       );
 
     assert(

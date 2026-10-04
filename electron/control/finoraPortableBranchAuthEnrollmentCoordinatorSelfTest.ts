@@ -1,4 +1,4 @@
-// ============================================================
+﻿// ============================================================
 // FINORA ENTERPRISE OS
 // PORTABLE BRANCH AUTH ENROLLMENT COORDINATOR SELF-TEST
 // VERSION : 1.0
@@ -89,6 +89,10 @@ import {
 import {
   bootstrapFinoraLegacySecurityCode,
 } from "./finoraLegacySecurityCodeBootstrapCoordinator.js";
+
+import {
+  FinoraPortableBranchAuthV2Store,
+} from "./finoraPortableBranchAuthV2Store.js";
 
 import {
   FinoraPortableBranchAuthStore,
@@ -886,7 +890,7 @@ async function runSelfTest():
       0;
 
     const portableStore =
-      new FinoraPortableBranchAuthStore({
+      new FinoraPortableBranchAuthV2Store({
         resolveLocalRoot:
           () => {
             localResolverCalls +=
@@ -903,6 +907,38 @@ async function runSelfTest():
         resolveUsbRoot:
           async () => {
             usbResolverCalls +=
+              1;
+
+            return usbConnected
+              ? portableUsbRoot
+              : null;
+          },
+      });
+
+    let legacyUsbResolverCalls =
+      0;
+
+    let legacyLocalResolverCalls =
+      0;
+
+    const legacyPortableStore =
+      new FinoraPortableBranchAuthStore({
+        resolveLocalRoot:
+          () => {
+            legacyLocalResolverCalls +=
+              1;
+
+            return join(
+              app.getPath(
+                "userData",
+              ),
+              "portable-local",
+            );
+          },
+
+        resolveUsbRoot:
+          async () => {
+            legacyUsbResolverCalls +=
               1;
 
             return usbConnected
@@ -934,7 +970,7 @@ async function runSelfTest():
       getRawControlStoreFixtureFile();
 
     // --------------------------------------------------------
-    // CASE 1 — MISSING PORTABILITY PROVENANCE
+    // CASE 1 â€” MISSING PORTABILITY PROVENANCE
     // --------------------------------------------------------
 
     const missingProofStore =
@@ -1053,7 +1089,7 @@ async function runSelfTest():
     );
 
     // --------------------------------------------------------
-    // CASE 2 — CROSS-RECORD VERIFICATION / PROVENANCE MISMATCH
+    // CASE 2 â€” CROSS-RECORD VERIFICATION / PROVENANCE MISMATCH
     //
     // Keep each record structurally valid, but make the source
     // Branch Access verification timestamp disagree with the
@@ -1187,7 +1223,7 @@ async function runSelfTest():
     );
 
     // --------------------------------------------------------
-    // CASE 3 — AMBIGUOUS / DUPLICATE PORTABILITY PROVENANCE
+    // CASE 3 â€” AMBIGUOUS / DUPLICATE PORTABILITY PROVENANCE
     //
     // Production APIs cannot create this state: the Control
     // Store duplicate guard rejects it.
@@ -2018,7 +2054,7 @@ async function runSelfTest():
       usbConnected =
         true;
 
-      await portableStore.ensureExact(
+      await legacyPortableStore.ensureExact(
         preparedTransaction.storageMode,
         preparedTransaction.portableEnvelope,
       );
@@ -2673,7 +2709,7 @@ async function runSelfTest():
         principal:
           recoveryPrincipal,
 
-        portableStore,
+        portableStore: legacyPortableStore,
       });
 
     assert(
@@ -2701,7 +2737,7 @@ async function runSelfTest():
         principal:
           recoveryPrincipal,
 
-        portableStore,
+        portableStore: legacyPortableStore,
 
         password,
         securityCode,
@@ -2736,7 +2772,7 @@ async function runSelfTest():
         principal:
           recoveryPrincipal,
 
-        portableStore,
+        portableStore: legacyPortableStore,
       });
 
     assert(
@@ -2945,7 +2981,7 @@ async function runSelfTest():
           securityCode:
             legacyBootstrapSecurityCode,
         },
-        portableStore,
+        legacyPortableStore,
       );
 
     assert(
@@ -2989,7 +3025,7 @@ async function runSelfTest():
     );
 
     const successfulLegacyEnvelope =
-      await portableStore.read(
+      await legacyPortableStore.read(
         "USB",
       );
 
@@ -3068,7 +3104,7 @@ async function runSelfTest():
           securityCode:
             legacyBootstrapSecurityCode,
         },
-        portableStore,
+        legacyPortableStore,
       );
 
     assert(
@@ -3132,7 +3168,7 @@ async function runSelfTest():
           securityCode:
             `${legacyBootstrapSecurityCode}-WRONG`,
         },
-        portableStore,
+        legacyPortableStore,
       );
 
     assert(
@@ -3257,7 +3293,7 @@ async function runSelfTest():
           securityCode:
             legacyBootstrapSecurityCode,
         },
-        portableStore,
+        legacyPortableStore,
       );
 
     assert(
@@ -3303,7 +3339,7 @@ async function runSelfTest():
     );
 
     const zeroProvenanceEnvelope =
-      await portableStore.read(
+      await legacyPortableStore.read(
         "USB",
       );
 
@@ -3753,7 +3789,7 @@ async function runSelfTest():
         principal:
           zeroProvenancePrincipal,
 
-        portableStore,
+        portableStore: legacyPortableStore,
 
         password,
 
@@ -3801,7 +3837,7 @@ async function runSelfTest():
           securityCode:
             legacyBootstrapSecurityCode,
         },
-        portableStore,
+        legacyPortableStore,
       );
 
     assert(
@@ -3868,7 +3904,7 @@ async function runSelfTest():
           securityCode:
             legacyBootstrapSecurityCode,
         },
-        portableStore,
+        legacyPortableStore,
       );
 
     assert(
@@ -3914,7 +3950,7 @@ async function runSelfTest():
           securityCode:
             legacyBootstrapSecurityCode,
         },
-        portableStore,
+        legacyPortableStore,
       );
 
     assert(

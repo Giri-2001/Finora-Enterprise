@@ -414,6 +414,7 @@ function isCredentialEnrollment(
         "businessId",
         "branchId",
         "storageMode",
+        "credentialLifecycle",
         "dataContext",
         "demoId",
         "method",
@@ -460,6 +461,12 @@ function isCredentialEnrollment(
     ) ||
     !isDataContext(
       value.dataContext,
+    ) ||
+    (
+      value.credentialLifecycle !==
+        undefined &&
+      value.credentialLifecycle !==
+        "TEMPORARY_FIRST_LOGIN"
     ) ||
     value.method !==
       FINORA_BRANCH_ACCESS_CREDENTIAL_ENROLLMENT_METHOD ||

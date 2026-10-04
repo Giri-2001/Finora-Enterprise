@@ -67,6 +67,61 @@ export type WalletId = string;
 export type WalletTransactionId = string;
 
 /**
+ * Stable canonical Wallet Authority lineage identifier.
+ *
+ * This identity is intentionally separate from removable storage identity.
+ * Multiple FINORA data USBs for the same branch must resolve to the same
+ * canonical Wallet Authority.
+ */
+export type WalletAuthorityId = string;
+
+/**
+ * Canonical Wallet Authority lifecycle.
+ *
+ * ACTIVE:
+ *   Financial mutations may continue.
+ *
+ * CONTINUATION_REQUIRED:
+ *   Historical/restored Wallet data is available, but paid mutations must
+ *   fail closed until canonical authority continuation is established.
+ *
+ * BLOCKED:
+ *   Financial mutations are explicitly disabled.
+ */
+export type WalletAuthorityStatus =
+  | "ACTIVE"
+  | "CONTINUATION_REQUIRED"
+  | "BLOCKED";
+
+/**
+ * Canonical anti-rollback / anti-fork Wallet Authority state.
+ *
+ * IMPORTANT:
+ * - This is Wallet spend authority, not USB identity.
+ * - Backups may carry historical evidence, but must never be allowed to
+ *   silently replace a newer canonical authority head.
+ * - authorityGeneration and spendCounter are monotonic.
+ * - headHash binds the current canonical authority lineage.
+ */
+export interface WalletAuthorityState {
+  authorityId: WalletAuthorityId;
+
+  authorityGeneration: number;
+
+  spendCounter: number;
+
+  headHash: string;
+
+  previousHeadHash?: string;
+
+  status: WalletAuthorityStatus;
+
+  updatedAt: string;
+
+  schemaVersion: 1;
+}
+
+/**
  * Optional durable payment reference created by the
  * payment / recharge layer.
  */
@@ -587,3 +642,4 @@ export interface WalletView {
 /* ============================================================
    END
 ============================================================ */
+

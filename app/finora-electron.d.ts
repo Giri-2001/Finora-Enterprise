@@ -1,5 +1,5 @@
-// ============================================================
-// FINORA ENTERPRISE OS™
+﻿// ============================================================
+// FINORA ENTERPRISE OSâ„¢
 //
 // RENDERER ELECTRON BRIDGE DECLARATIONS
 //
@@ -86,6 +86,153 @@ type FinoraElectronWalletRechargeAuthorizationView =
     FinoraVerifiedWalletRechargeAuthorization,
     "installationBinding"
   >;
+
+interface FinoraElectronCanonicalWalletAuthorityInitializationRequest {
+
+  ownerId:
+    string;
+
+  businessId:
+    string;
+
+  branchId:
+    string;
+
+  walletId:
+    string;
+}
+
+type FinoraElectronCanonicalWalletAuthorityInitializationResult =
+  | {
+      success:
+        true;
+
+      data:
+        FinoraElectronCanonicalWalletAuthorityState;
+    }
+  | {
+      success:
+        false;
+
+      error:
+        string;
+    };
+
+interface FinoraElectronCanonicalWalletAuthorityReadRequest {
+  ownerId:
+    string;
+
+  businessId:
+    string;
+
+  branchId:
+    string;
+
+  walletId:
+    string;
+}
+
+interface FinoraElectronCanonicalWalletAuthorityState
+  extends FinoraElectronCanonicalWalletAuthorityReadRequest {
+
+  authorityId:
+    string;
+
+  authoritativeBalance:
+    number;
+
+  authorityGeneration:
+    number;
+
+  spendCounter:
+    number;
+
+  headHash:
+    string;
+
+  previousHeadHash?:
+    string;
+
+  lastMutationId?:
+    string;
+
+  status:
+    | "ACTIVE"
+    | "CONTINUATION_REQUIRED"
+    | "BLOCKED";
+
+  updatedAt:
+    string;
+
+  schemaVersion:
+    1;
+}
+
+type FinoraElectronCanonicalWalletAuthorityReadResult =
+  | {
+      success:
+        true;
+
+      data:
+        FinoraElectronCanonicalWalletAuthorityState;
+    }
+  | {
+      success:
+        false;
+
+      error:
+        string;
+    };
+
+interface FinoraElectronCanonicalWalletAuthorityMutationRequest
+  extends FinoraElectronCanonicalWalletAuthorityReadRequest {
+
+  expectedAuthorityGeneration:
+    number;
+
+  expectedSpendCounter:
+    number;
+
+  expectedHeadHash:
+    string;
+
+  amount:
+    number;
+
+  mutationKind:
+    | "DEBIT"
+    | "RECHARGE";
+
+  mutationId:
+    string;
+
+  occurredAt:
+    string;
+}
+
+type FinoraElectronCanonicalWalletAuthorityMutationResult =
+  | {
+      success:
+        true;
+
+      data:
+        FinoraElectronCanonicalWalletAuthorityState;
+    }
+  | {
+      success:
+        false;
+
+      errorCode:
+        | "AUTHORITY_UNAVAILABLE"
+        | "AUTHORITY_BLOCKED"
+        | "AUTHORITY_SCOPE_MISMATCH"
+        | "AUTHORITY_ROLLBACK_DETECTED"
+        | "AUTHORITY_CONFLICT"
+        | "INVALID_MUTATION";
+
+      error:
+        string;
+    };
 
 interface FinoraFindWalletRechargeAuthorizationRequest {
 
@@ -284,7 +431,7 @@ type FinoraElectronControlBundleImportResult =
     };
 
 // ============================================================
-// CONTROL BRIDGE — STRONGLY TYPED RENDERER CONTRACT
+// CONTROL BRIDGE â€” STRONGLY TYPED RENDERER CONTRACT
 // ============================================================
 
 interface FinoraFindBranchAccessGrantRequest {
@@ -746,6 +893,30 @@ interface FinoraElectronControlBridge {
       >
     >;
 
+  initializeCanonicalWalletAuthority(
+    request:
+      FinoraElectronCanonicalWalletAuthorityInitializationRequest,
+  ):
+    Promise<
+      FinoraElectronCanonicalWalletAuthorityInitializationResult
+    >;
+
+  readCanonicalWalletAuthority(
+    request:
+      FinoraElectronCanonicalWalletAuthorityReadRequest,
+  ):
+    Promise<
+      FinoraElectronCanonicalWalletAuthorityReadResult
+    >;
+
+  commitCanonicalWalletAuthorityMutation(
+    request:
+      FinoraElectronCanonicalWalletAuthorityMutationRequest,
+  ):
+    Promise<
+      FinoraElectronCanonicalWalletAuthorityMutationResult
+    >;
+
   findWalletRechargeAuthorization(
     request:
       FinoraFindWalletRechargeAuthorizationRequest,
@@ -910,6 +1081,41 @@ type FinoraElectronCredentialResult<T> =
         string;
     };
 
+interface FinoraElectronCredentialRotationRequestV2 {
+  rotationRequestId:
+    string;
+
+  username:
+    string;
+
+  currentPassword:
+    string;
+
+  currentSecurityCode:
+    string;
+
+  newPassword?:
+    string;
+
+  newSecurityCode?:
+    string;
+}
+
+interface FinoraElectronCredentialRotationViewV2 {
+  transactionId:
+    string;
+
+  credential:
+    FinoraElectronCredentialEnrollmentView;
+
+  authGeneration:
+    number;
+
+  portableReplaceResult:
+    | "REPLACED"
+    | "ALREADY_MATCHED";
+}
+
 interface FinoraElectronCredentialBridge {
   enroll(
     request:
@@ -922,6 +1128,16 @@ interface FinoraElectronCredentialBridge {
     >;
 
 
+
+  rotateV2(
+    request:
+      FinoraElectronCredentialRotationRequestV2,
+  ):
+    Promise<
+      FinoraElectronCredentialResult<
+        FinoraElectronCredentialRotationViewV2
+      >
+    >;
 }
 
 // ============================================================
@@ -1187,6 +1403,9 @@ interface FinoraElectronLoginSessionView {
 
   demoId?:
     string;
+
+  credentialChangeRequired:
+    boolean;
 
   accessMode:
     FinoraElectronLoginSessionAccessMode;
@@ -1783,3 +2002,7 @@ declare global {
 }
 
 export {};
+
+
+
+
