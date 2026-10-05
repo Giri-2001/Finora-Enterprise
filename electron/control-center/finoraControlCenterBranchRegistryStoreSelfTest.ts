@@ -1,7 +1,7 @@
 /* ============================================================
-   FINORA ENTERPRISE OS™
+   FINORA ENTERPRISE OSâ„¢
 
-   CONTROL CENTER — BRANCH REGISTRY STORE SELF TEST
+   CONTROL CENTER â€” BRANCH REGISTRY STORE SELF TEST
 
    VERIFY:
 
@@ -868,7 +868,7 @@ async function runSelfTest():
           identity:
             duplicateInstallation,
         }),
-      "Installation ID already assigned",
+      "partial or conflicting installation identity alias across branch scopes",
       "Duplicate Installation ID",
     );
 
@@ -917,7 +917,7 @@ async function runSelfTest():
           identity:
             duplicateRecipientBinding,
         }),
-      "Binding Key ID already assigned",
+      "partial or conflicting installation identity alias across branch scopes",
       "Duplicate recipient binding",
     );
 
@@ -1123,7 +1123,7 @@ async function runSelfTest():
     );
 
     // ========================================================
-    // ENCRYPTED MALFORMED SCHEMA — FAIL CLOSED
+    // ENCRYPTED MALFORMED SCHEMA â€” FAIL CLOSED
     // ========================================================
 
     // ========================================================
@@ -1340,7 +1340,7 @@ async function runSelfTest():
     );
 
     // ========================================================
-    // MALFORMED AUTHORIZED-DEVICE EVIDENCE — FAIL CLOSED
+    // MALFORMED AUTHORIZED-DEVICE EVIDENCE â€” FAIL CLOSED
     // ========================================================
 
     const malformedAuthorizedDeviceRegistry =
@@ -1452,7 +1452,7 @@ async function runSelfTest():
     );
 
     // ========================================================
-    // CORRUPT CIPHERTEXT — FAIL CLOSED
+    // CORRUPT CIPHERTEXT â€” FAIL CLOSED
     // ========================================================
 
     await writeFile(
@@ -1489,6 +1489,75 @@ async function runSelfTest():
       finalRegistry.branches.length ===
         2,
       "Final restored Branch Registry is invalid.",
+    );
+
+
+    // ========================================================
+    // EXACT SAME DEVICE — DIFFERENT BRANCH SCOPE
+    // ========================================================
+
+    const sameDeviceDifferentBranch:
+      FinoraControlCenterBranchProvisionedIdentity = {
+        ...branchA,
+
+        ownerId:
+          "OWNER-SELFTEST-SAME-DEVICE",
+
+        businessId:
+          "BUSINESS-SELFTEST-SAME-DEVICE",
+
+        branchId:
+          "BRANCH-SELFTEST-SAME-DEVICE-001",
+
+        businessCode:
+          "STSD",
+
+        branchCode:
+          "STSD01",
+
+        installation: {
+          ...branchA.installation,
+        },
+      };
+
+    const sameDeviceRegistration =
+      await registerFinoraControlCenterBranch({
+        identity:
+          sameDeviceDifferentBranch,
+      });
+
+    assert(
+      sameDeviceRegistration.created ===
+        true,
+      "Exact same installation identity was not accepted for a different branch scope.",
+    );
+
+    const sameDeviceRegistry =
+      await loadFinoraControlCenterBranchRegistry();
+
+    assert(
+      sameDeviceRegistry !==
+        undefined &&
+      sameDeviceRegistry.branches.length ===
+        3 &&
+      sameDeviceRegistry.branches.some(
+        (record) =>
+          record.identity.branchId ===
+            sameDeviceDifferentBranch.branchId &&
+          record.identity.installation.installationId ===
+            branchA.installation.installationId &&
+          record.identity.installation.bindingKeyId ===
+            branchA.installation.bindingKeyId &&
+          record.identity.installation.publicKeyFingerprint ===
+            branchA.installation.publicKeyFingerprint &&
+          record.identity.installation.publicKey ===
+            branchA.installation.publicKey,
+      ),
+      "Exact same-device multi-branch registry state is incorrect.",
+    );
+
+    console.log(
+      "PASS: exact same complete installation identity registered under a different branch scope",
     );
 
     // ========================================================
