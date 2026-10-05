@@ -3,6 +3,10 @@ import {
   useEffect,
   useState,
 } from "react";
+
+import {
+  Trash2,
+} from "lucide-react";
 import FinoraControlCenterIncomePricingPanel from "./FinoraControlCenterIncomePricingPanel";
 import FinoraControlCenterBranchPricingPanel from "./FinoraControlCenterBranchPricingPanel";
 
@@ -310,7 +314,7 @@ function SubscriptionHealthRow({
             "anywhere",
         }}
       >
-        {health.status} Ã‚Â· {health.detail}
+        {health.status} - {health.detail}
       </span>
     </div>
   );
@@ -408,6 +412,7 @@ function BranchCard({
   directorySummary = false,
   forceExpanded = false,
   onOpenDetails,
+  onRegistryDeleted,
 }: {
   record:
     FinoraControlCenterBranchRegistryRecord;
@@ -432,6 +437,13 @@ function BranchCard({
     boolean;
   onOpenDetails?:
     () => void;
+
+  onRegistryDeleted:
+    (
+      registry:
+        FinoraControlCenterBranchRegistryView,
+    ) => void;
+
 }) {
 
   const [
@@ -440,6 +452,127 @@ function BranchCard({
   ] = useState(
     false,
   );
+
+  // FINORA_BRANCH_DELETE_UI_V3
+  const [
+    deleteDialogOpen,
+    setDeleteDialogOpen,
+  ] = useState(
+    false,
+  );
+
+  const [
+    deleteConfirmation,
+    setDeleteConfirmation,
+  ] = useState(
+    "",
+  );
+
+  const [
+    deleteRunning,
+    setDeleteRunning,
+  ] = useState(
+    false,
+  );
+
+  const [
+    deleteError,
+    setDeleteError,
+  ] = useState<
+    string | undefined
+  >();
+
+  const deleteConfirmationCount =
+    deleteConfirmation.replace(
+      /\s/g,
+      "",
+    ).length;
+
+  async function handleDeleteBranch():
+    Promise<void> {
+
+    if (
+      deleteRunning ||
+      deleteConfirmationCount <
+        15
+    ) {
+      return;
+    }
+
+    const bridge =
+      window.finoraControlCenter;
+
+    if (
+      !bridge
+    ) {
+      setDeleteError(
+        "Dedicated FINORA Control Center preload bridge is unavailable.",
+      );
+
+      return;
+    }
+
+    setDeleteRunning(
+      true,
+    );
+
+    setDeleteError(
+      undefined,
+    );
+
+    try {
+      const result =
+        await bridge.deleteBranchRegistryRecord({
+          ownerId:
+            record.identity.ownerId,
+
+          businessId:
+            record.identity.businessId,
+
+          branchId:
+            record.identity.branchId,
+
+          confirmationText:
+            deleteConfirmation,
+        });
+
+      if (
+        !result.success
+      ) {
+        setDeleteError(
+          result.error,
+        );
+
+        return;
+      }
+
+      onRegistryDeleted(
+        result.data,
+      );
+
+      setDeleteDialogOpen(
+        false,
+      );
+
+      setDeleteConfirmation(
+        "",
+      );
+    }
+    catch (
+      error
+    ) {
+      setDeleteError(
+        error instanceof Error
+          ? error.message
+          : "Unable to delete the FINORA Branch Registry record.",
+      );
+    }
+    finally {
+      setDeleteRunning(
+        false,
+      );
+    }
+  }
 
   const detailsExpanded =
     !directorySummary &&
@@ -466,11 +599,44 @@ function BranchCard({
 
   if (directorySummary) {
 
-    const summaryOwnerName = directoryMetadata?.ownerName ?? identity.ownerId;
+    // FINORA_BRANCH3_DISPLAY_ALIAS_V1
+    const isHistoricalBranch3 =
+      identity.branchId ===
+        "BRANCH-550F6660-B944-4C25-B2F2-5B3D1D5D769E";
 
-    const summaryBusinessName = businessName;
+    const summaryOwnerName =
+      directoryMetadata?.ownerName ??
+      (
+        isHistoricalBranch3
+          ? "Girish"
+          : identity.ownerId
+      );
 
-    const summaryBranchName = branchName;
+    const summaryBusinessName =
+      directoryMetadata?.businessName ??
+      (
+        isHistoricalBranch3
+          ? "Girish Finance"
+          : businessName
+      );
+
+    const summaryBranchName =
+      directoryMetadata?.branchName ??
+      (
+        isHistoricalBranch3
+          ? "RGG Main Branch"
+          : branchName
+      );
+
+    const summaryBranchCode =
+      isHistoricalBranch3
+        ? "GFI-01"
+        : identity.branchCode;
+
+    const summaryBranchId =
+      isHistoricalBranch3
+        ? "BRANCH-GFI-001"
+        : identity.branchId;
 
     return (
       <article
@@ -539,8 +705,63 @@ function BranchCard({
                 "anywhere",
             }}
           >
-            {identity.branchCode}
+            {summaryBranchCode}
           </h3>
+
+          
+          <button
+            type="button"
+            title="Delete Branch"
+            aria-label="Delete Branch"
+            onClick={(
+              event,
+            ) => {
+              event.stopPropagation();
+
+              setDeleteConfirmation(
+                "",
+              );
+
+              setDeleteError(
+                undefined,
+              );
+
+              setDeleteDialogOpen(
+                true,
+              );
+            }}
+            style={{
+              width:
+                "34px",
+              height:
+                "34px",
+              marginLeft:
+                "auto",
+              display:
+                "inline-flex",
+              alignItems:
+                "center",
+              justifyContent:
+                "center",
+              flex:
+                "0 0 auto",
+              border:
+                "1px solid rgba(248, 113, 113, 0.34)",
+              borderRadius:
+                "9px",
+              background:
+                "rgba(127, 29, 29, 0.12)",
+              color:
+                "#fca5a5",
+              cursor:
+                "pointer",
+            }}
+          >
+            <Trash2
+              size={17}
+              strokeWidth={2}
+            />
+          </button>
 
           <div
             style={{
@@ -698,7 +919,7 @@ function BranchCard({
                 "anywhere",
             }}
           >
-            Branch ID: {identity.branchId}
+            Branch ID: {summaryBranchId}
           </div>
 
           <div
@@ -730,6 +951,318 @@ function BranchCard({
             Open Branch Workspace
           </div>
         </div>
+      
+
+        {deleteDialogOpen && (
+          <div
+            role="presentation"
+            onClick={(
+              event,
+            ) => {
+              event.stopPropagation();
+            }}
+            style={{
+              position:
+                "fixed",
+              inset:
+                0,
+              zIndex:
+                5000,
+              display:
+                "flex",
+              alignItems:
+                "center",
+              justifyContent:
+                "center",
+              padding:
+                "24px",
+              background:
+                "rgba(2, 6, 23, 0.78)",
+              backdropFilter:
+                "blur(5px)",
+            }}
+          >
+            <div
+              role="dialog"
+              aria-modal="true"
+              aria-label="Delete FINORA Branch"
+              style={{
+                width:
+                  "min(520px, 100%)",
+                padding:
+                  "22px",
+                border:
+                  "1px solid rgba(248, 113, 113, 0.30)",
+                borderRadius:
+                  "16px",
+                background:
+                  "#0f172a",
+                color:
+                  "#e2e8f0",
+                boxShadow:
+                  "0 24px 70px rgba(0,0,0,0.50)",
+              }}
+            >
+              <div
+                style={{
+                  display:
+                    "flex",
+                  alignItems:
+                    "center",
+                  gap:
+                    "10px",
+                }}
+              >
+                <Trash2
+                  size={22}
+                  strokeWidth={2}
+                />
+
+                <h3
+                  style={{
+                    margin:
+                      0,
+                    fontSize:
+                      "18px",
+                  }}
+                >
+                  Delete Branch
+                </h3>
+              </div>
+
+              <p
+                style={{
+                  margin:
+                    "14px 0 0",
+                  lineHeight:
+                    1.55,
+                  opacity:
+                    0.82,
+                }}
+              >
+                This removes only this branch from the FINORA
+                Control Center Registry. Recipient USB data is
+                not erased.
+              </p>
+
+              <div
+                style={{
+                  marginTop:
+                    "16px",
+                  display:
+                    "grid",
+                  gap:
+                    "6px",
+                  padding:
+                    "12px",
+                  border:
+                    "1px solid rgba(148, 163, 184, 0.18)",
+                  borderRadius:
+                    "10px",
+                  background:
+                    "rgba(2, 6, 23, 0.38)",
+                  fontSize:
+                    "12px",
+                  overflowWrap:
+                    "anywhere",
+                }}
+              >
+                <strong>
+                  {summaryBusinessName}
+                </strong>
+
+                <span>
+                  {summaryBranchName}
+                </span>
+
+                <span
+                  style={{
+                    opacity:
+                      0.65,
+                  }}
+                >
+                  {identity.branchId}
+                </span>
+              </div>
+
+              <label
+                style={{
+                  display:
+                    "grid",
+                  gap:
+                    "7px",
+                  marginTop:
+                    "18px",
+                  fontSize:
+                    "12px",
+                  fontWeight:
+                    700,
+                }}
+              >
+                Confirmation
+
+                <input
+                  autoFocus
+                  value={
+                    deleteConfirmation
+                  }
+                  onChange={(
+                    event,
+                  ) => {
+                    setDeleteConfirmation(
+                      event.target.value,
+                    );
+
+                    setDeleteError(
+                      undefined,
+                    );
+                  }}
+                  placeholder="Type minimum 15 characters"
+                  style={{
+                    minHeight:
+                      "42px",
+                    padding:
+                      "8px 10px",
+                    border:
+                      "1px solid rgba(148, 163, 184, 0.30)",
+                    borderRadius:
+                      "9px",
+                    background:
+                      "rgba(2, 6, 23, 0.55)",
+                    color:
+                      "#f8fafc",
+                    outline:
+                      "none",
+                  }}
+                />
+              </label>
+
+              <div
+                style={{
+                  marginTop:
+                    "7px",
+                  fontSize:
+                    "11px",
+                  opacity:
+                    0.66,
+                }}
+              >
+                {deleteConfirmationCount} / 15 non-space characters
+              </div>
+
+              {deleteError && (
+                <div
+                  style={{
+                    marginTop:
+                      "12px",
+                    padding:
+                      "10px",
+                    border:
+                      "1px solid rgba(248, 113, 113, 0.28)",
+                    borderRadius:
+                      "9px",
+                    background:
+                      "rgba(127, 29, 29, 0.15)",
+                    color:
+                      "#fecaca",
+                    fontSize:
+                      "12px",
+                  }}
+                >
+                  {deleteError}
+                </div>
+              )}
+
+              <div
+                style={{
+                  marginTop:
+                    "20px",
+                  display:
+                    "flex",
+                  justifyContent:
+                    "flex-end",
+                  gap:
+                    "10px",
+                }}
+              >
+                <button
+                  type="button"
+                  disabled={
+                    deleteRunning
+                  }
+                  onClick={() => {
+                    setDeleteDialogOpen(
+                      false,
+                    );
+
+                    setDeleteConfirmation(
+                      "",
+                    );
+
+                    setDeleteError(
+                      undefined,
+                    );
+                  }}
+                  style={{
+                    minHeight:
+                      "40px",
+                    padding:
+                      "0 16px",
+                    border:
+                      "1px solid rgba(148, 163, 184, 0.28)",
+                    borderRadius:
+                      "9px",
+                    background:
+                      "rgba(30, 41, 59, 0.72)",
+                    color:
+                      "#e2e8f0",
+                  }}
+                >
+                  Cancel
+                </button>
+
+                <button
+                  type="button"
+                  disabled={
+                    deleteRunning ||
+                    deleteConfirmationCount <
+                      15
+                  }
+                  onClick={() => {
+                    void handleDeleteBranch();
+                  }}
+                  style={{
+                    minHeight:
+                      "40px",
+                    padding:
+                      "0 16px",
+                    border:
+                      "1px solid rgba(248, 113, 113, 0.42)",
+                    borderRadius:
+                      "9px",
+                    background:
+                      deleteRunning ||
+                      deleteConfirmationCount <
+                        15
+                        ? "rgba(127, 29, 29, 0.20)"
+                        : "rgba(185, 28, 28, 0.88)",
+                    color:
+                      "#fff",
+                    fontWeight:
+                      800,
+                  }}
+                >
+                  {
+                    deleteRunning
+                      ? "Deleting..."
+                      : "Delete Branch"
+                  }
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
       </article>
     );
   }
@@ -2542,7 +3075,25 @@ export default function FinoraControlCenterBranchRegistryPanel({
                       : undefined,
                   );
                 }}
-              />
+              
+                onRegistryDeleted={(
+                  nextRegistry,
+                ) => {
+                  setRegistry(
+                    nextRegistry,
+                  );
+
+                  setOpenedBranchId(
+                    (
+                      current,
+                    ) =>
+                      current ===
+                        record.identity.branchId
+                        ? undefined
+                        : current,
+                  );
+                }}
+/>
             ),
           )}
         </div>

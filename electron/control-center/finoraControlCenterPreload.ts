@@ -71,8 +71,17 @@ const CONTROL_CENTER_CHANNELS = {
   GET_BRANCH_REGISTRY:
     "finora:control-center:get-branch-registry",
 
+  DELETE_BRANCH_REGISTRY_RECORD:
+    "finora:control-center:delete-branch-registry-record",
+
   GET_BRANCH_DIRECTORY_METADATA:
     "finora:control-center:get-branch-directory-metadata",
+
+  GET_PROVISIONING_RESUME:
+    "finora:control-center:get-provisioning-resume",
+
+  UPSERT_PROVISIONING_RESUME:
+    "finora:control-center:upsert-provisioning-resume",
 
   GET_FINORA_INCOME_PRICING:
     "finora:control-center:get-finora-income-pricing",
@@ -670,6 +679,63 @@ export type FinoraControlCenterAdminAuthorityRecoveryImportView =
         string;
     };
 
+export interface FinoraControlCenterProvisioningResumeView {
+  ownerId:
+    string;
+
+  businessId:
+    string;
+
+  branchId:
+    string;
+
+  ownerName:
+    string;
+
+  businessName:
+    string;
+
+  branchName:
+    string;
+
+  userId:
+    string;
+
+  username:
+    string;
+
+  updatedAt:
+    string;
+
+  schemaVersion:
+    1;
+}
+
+export interface FinoraControlCenterProvisioningResumeInput {
+  ownerId:
+    string;
+
+  businessId:
+    string;
+
+  branchId:
+    string;
+
+  ownerName:
+    string;
+
+  businessName:
+    string;
+
+  branchName:
+    string;
+
+  userId:
+    string;
+
+  username:
+    string;
+}
 export interface FinoraControlCenterBranchDirectoryMetadataView {
   ownerId:
     string;
@@ -1059,11 +1125,55 @@ export interface FinoraControlCenterBridge {
         >
       >;
 
+  deleteBranchRegistryRecord:
+    (
+      request: {
+        ownerId:
+          string;
+        businessId:
+          string;
+        branchId:
+          string;
+        confirmationText:
+          string;
+      },
+    ) =>
+      Promise<
+        FinoraControlCenterResult<
+          FinoraControlCenterBranchRegistryView
+        >
+      >;
+
   getBranchDirectoryMetadata:
     () =>
       Promise<
         FinoraControlCenterResult<
           FinoraControlCenterBranchDirectoryMetadataView[]
+        >
+      >;
+
+  getProvisioningResume:
+    (
+      scope: {
+        ownerId: string;
+        businessId: string;
+        branchId: string;
+      },
+    ) =>
+      Promise<
+        FinoraControlCenterResult<
+          FinoraControlCenterProvisioningResumeView | undefined
+        >
+      >;
+
+  upsertProvisioningResume:
+    (
+      input:
+        FinoraControlCenterProvisioningResumeInput,
+    ) =>
+      Promise<
+        FinoraControlCenterResult<
+          FinoraControlCenterProvisioningResumeView
         >
       >;
 
@@ -1474,6 +1584,19 @@ const controlCenterBridge:
         >
       >,
 
+  deleteBranchRegistryRecord:
+    (
+      request,
+    ) =>
+      ipcRenderer.invoke(
+        CONTROL_CENTER_CHANNELS.DELETE_BRANCH_REGISTRY_RECORD,
+        request,
+      ) as Promise<
+        FinoraControlCenterResult<
+          FinoraControlCenterBranchRegistryView
+        >
+      >,
+
   getBranchDirectoryMetadata:
     () =>
       ipcRenderer.invoke(
@@ -1481,6 +1604,32 @@ const controlCenterBridge:
       ) as Promise<
         FinoraControlCenterResult<
           FinoraControlCenterBranchDirectoryMetadataView[]
+        >
+      >,
+
+  getProvisioningResume:
+    (
+      scope,
+    ) =>
+      ipcRenderer.invoke(
+        CONTROL_CENTER_CHANNELS.GET_PROVISIONING_RESUME,
+        scope,
+      ) as Promise<
+        FinoraControlCenterResult<
+          FinoraControlCenterProvisioningResumeView | undefined
+        >
+      >,
+
+  upsertProvisioningResume:
+    (
+      input,
+    ) =>
+      ipcRenderer.invoke(
+        CONTROL_CENTER_CHANNELS.UPSERT_PROVISIONING_RESUME,
+        input,
+      ) as Promise<
+        FinoraControlCenterResult<
+          FinoraControlCenterProvisioningResumeView
         >
       >,
 
@@ -1812,3 +1961,4 @@ contextBridge.exposeInMainWorld(
 // ============================================================
 // END
 // ============================================================
+

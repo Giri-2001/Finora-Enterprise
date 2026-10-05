@@ -61,6 +61,7 @@ import {
 
 import {
   updateFinoraControlCenterBranchAccessSummary,
+  deleteFinoraControlCenterBranchRegistryRecord,
 } from "./finoraControlCenterBranchRegistryStore.js";
 
 import {
@@ -129,6 +130,11 @@ import {
 import {
   loadFinoraControlCenterBranchDirectoryMetadata,
 } from "./finoraControlCenterBranchDirectoryMetadataStore.js";
+
+import {
+  findFinoraControlCenterProvisioningResume,
+  upsertFinoraControlCenterProvisioningResume,
+} from "./finoraControlCenterProvisioningResumeStore.js";
 import {
   authorizeFinoraControlCenterRegistryBoundIssuanceTarget,
 } from "./finoraControlCenterBranchIssuanceAuthorization.js";
@@ -257,8 +263,17 @@ export const FINORA_CONTROL_CENTER_IPC_CHANNELS = {
   GET_BRANCH_REGISTRY:
     "finora:control-center:get-branch-registry",
 
+  DELETE_BRANCH_REGISTRY_RECORD:
+    "finora:control-center:delete-branch-registry-record",
+
   GET_BRANCH_DIRECTORY_METADATA:
     "finora:control-center:get-branch-directory-metadata",
+
+  GET_PROVISIONING_RESUME:
+    "finora:control-center:get-provisioning-resume",
+
+  UPSERT_PROVISIONING_RESUME:
+    "finora:control-center:upsert-provisioning-resume",
 
   GET_FINORA_INCOME_PRICING:
     "finora:control-center:get-finora-income-pricing",
@@ -1362,6 +1377,114 @@ registerFinoraDeveloperSecurityControlCenterHandler(
   // - No Registry mutation.
   // - No wallet mutation.
   // ----------------------------------------------------------
+  // ----------------------------------------------------------
+  // BRANCH REGISTRY DELETE
+  //
+  // Exact immutable scope + 15 non-space confirmation chars.
+  // ----------------------------------------------------------
+
+  registerFinoraDeveloperProtectedControlCenterHandler(
+    FINORA_CONTROL_CENTER_IPC_CHANNELS.DELETE_BRANCH_REGISTRY_RECORD,
+    async (
+      event,
+      request:
+        unknown,
+    ) => {
+
+      if (
+        !isTrustedFinoraControlCenterRenderer(
+          event.senderFrame,
+        )
+      ) {
+        return failure(
+          "FINORA Branch deletion is restricted to the dedicated privileged Control Center renderer.",
+        );
+      }
+
+      if (
+        request === null ||
+        typeof request !== "object" ||
+        Array.isArray(request)
+      ) {
+        return failure(
+          "FINORA Branch delete request is invalid.",
+        );
+      }
+
+      const value =
+        request as
+          Record<
+            string,
+            unknown
+          >;
+
+      const actualKeys =
+        Object.keys(
+          value,
+        ).sort();
+
+      const requiredKeys = [
+        "branchId",
+        "businessId",
+        "confirmationText",
+        "ownerId",
+      ];
+
+      if (
+        actualKeys.length !==
+          requiredKeys.length ||
+        actualKeys.some(
+          (
+            key,
+            index,
+          ) =>
+            key !==
+              requiredKeys[index],
+        )
+      ) {
+        return failure(
+          "FINORA Branch delete request contains unsupported fields.",
+        );
+      }
+
+      if (
+        typeof value.ownerId !== "string" ||
+        value.ownerId.trim().length === 0 ||
+        typeof value.businessId !== "string" ||
+        value.businessId.trim().length === 0 ||
+        typeof value.branchId !== "string" ||
+        value.branchId.trim().length === 0 ||
+        typeof value.confirmationText !== "string" ||
+        value.confirmationText.replace(
+          /\s/g,
+          "",
+        ).length < 15
+      ) {
+        return failure(
+          "FINORA Branch delete confirmation requires exact branch scope and at least 15 non-space characters.",
+        );
+      }
+
+      return executePrivileged(
+        () =>
+          deleteFinoraControlCenterBranchRegistryRecord({
+            ownerId:
+              value.ownerId as string,
+
+            businessId:
+              value.businessId as string,
+
+            branchId:
+              value.branchId as string,
+
+            confirmationText:
+              value.confirmationText as string,
+          }),
+      );
+    },
+  );
+
+
 
   registerFinoraDeveloperProtectedControlCenterHandler(
     FINORA_CONTROL_CENTER_IPC_CHANNELS.GET_BRANCH_DIRECTORY_METADATA,
@@ -1397,6 +1520,153 @@ registerFinoraDeveloperSecurityControlCenterHandler(
   // - No Wallet mutation.
   // - No issuance authority.
   // ----------------------------------------------------------
+
+  // ----------------------------------------------------------
+  // PROVISIONING RESUME HANDLERS
+  //
+  // Non-secret new-branch provisioning metadata only.
+  // Password and Security Code are never accepted here.
+  // ----------------------------------------------------------
+
+  registerFinoraDeveloperProtectedControlCenterHandler(
+    FINORA_CONTROL_CENTER_IPC_CHANNELS.GET_PROVISIONING_RESUME,
+    async (
+      event,
+      request:
+        unknown,
+    ) => {
+      if (
+        !isTrustedFinoraControlCenterRenderer(
+          event.senderFrame,
+        )
+      ) {
+        return failure(
+          "FINORA Control Center provisioning resume access is restricted to the dedicated privileged renderer.",
+        );
+      }
+
+      if (
+        request === null ||
+        typeof request !== "object" ||
+        Array.isArray(request)
+      ) {
+        return failure(
+          "FINORA provisioning resume lookup requires a valid branch scope.",
+        );
+      }
+
+      const candidate =
+        request as Record<string, unknown>;
+
+      const ownerId =
+        typeof candidate.ownerId === "string"
+          ? candidate.ownerId.trim()
+          : "";
+
+      const businessId =
+        typeof candidate.businessId === "string"
+          ? candidate.businessId.trim()
+          : "";
+
+      const branchId =
+        typeof candidate.branchId === "string"
+          ? candidate.branchId.trim()
+          : "";
+
+      if (
+        ownerId.length === 0 ||
+        businessId.length === 0 ||
+        branchId.length === 0
+      ) {
+        return failure(
+          "FINORA provisioning resume lookup requires ownerId, businessId and branchId.",
+        );
+      }
+
+      return executePrivileged(
+        () =>
+          findFinoraControlCenterProvisioningResume(
+            ownerId,
+            businessId,
+            branchId,
+          ),
+      );
+    },
+  );
+
+  registerFinoraDeveloperProtectedControlCenterHandler(
+    FINORA_CONTROL_CENTER_IPC_CHANNELS.UPSERT_PROVISIONING_RESUME,
+    async (
+      event,
+      request:
+        unknown,
+    ) => {
+      if (
+        !isTrustedFinoraControlCenterRenderer(
+          event.senderFrame,
+        )
+      ) {
+        return failure(
+          "FINORA Control Center provisioning resume mutation is restricted to the dedicated privileged renderer.",
+        );
+      }
+
+      if (
+        request === null ||
+        typeof request !== "object" ||
+        Array.isArray(request)
+      ) {
+        return failure(
+          "FINORA provisioning resume mutation requires a valid draft.",
+        );
+      }
+
+      const candidate =
+        request as Record<string, unknown>;
+
+      function requiredResumeString(
+        field: string,
+      ): string {
+        const value =
+          candidate[field];
+
+        if (
+          typeof value !== "string" ||
+          value.trim().length === 0
+        ) {
+          throw new Error(
+            `FINORA provisioning resume requires ${field}.`,
+          );
+        }
+
+        return value.trim();
+      }
+
+      return executePrivileged(
+        () =>
+          upsertFinoraControlCenterProvisioningResume({
+            ownerId:
+              requiredResumeString("ownerId"),
+            businessId:
+              requiredResumeString("businessId"),
+            branchId:
+              requiredResumeString("branchId"),
+
+            ownerName:
+              requiredResumeString("ownerName"),
+            businessName:
+              requiredResumeString("businessName"),
+            branchName:
+              requiredResumeString("branchName"),
+
+            userId:
+              requiredResumeString("userId"),
+            username:
+              requiredResumeString("username"),
+          }),
+      );
+    },
+  );
 
   registerFinoraDeveloperProtectedControlCenterHandler(
     FINORA_CONTROL_CENTER_IPC_CHANNELS.GET_WALLET_HISTORY,

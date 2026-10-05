@@ -1,4 +1,4 @@
-import {
+﻿import {
   useEffect, useRef, useState } from "react";
 
 import type { FinoraControlCenterBranchRegistryRecord } from "../../../../electron/control-center/finoraControlCenterBranchRegistry.types";
@@ -632,25 +632,85 @@ export default function FinoraControlCenterIssuanceWorkspace({
       });
 
       if (newBranchProvisioning) {
+        /*
+         * ===== FINORA GENERIC PROVISIONING RESUME =====
+         *
+         * Immutable branch scope comes only from Registry.
+         * Non-secret provisioning metadata is restored from
+         * the encrypted main-process resume store.
+         *
+         * Password and Security Code are never persisted.
+         */
+        const fallbackBusinessName =
+          selectedBranch.profile?.businessName ?? "";
+
+        const fallbackBranchName =
+          selectedBranch.profile?.branchName ?? "";
+
+        setProvisioningOwnerName("");
         setProvisioningBusinessName(
-          selectedBranch.profile?.businessName ?? "",
+          fallbackBusinessName,
         );
-
         setProvisioningBranchName(
-          selectedBranch.profile?.branchName ?? "",
+          fallbackBranchName,
         );
+        setProvisioningUserId("");
+        setProvisioningUsername("");
 
-        if (
-          selectedBranch.identity.branchId ===
-          "BRANCH-550F6660-B944-4C25-B2F2-5B3D1D5D769E"
-        ) {
-          setProvisioningOwnerName("Girish");
-      setProvisioningBusinessName("Girish Finance");
-      setProvisioningBranchName("RGG");
-          setProvisioningUserId(
-            "USER-7B7BD745-55C1-4981-9114-636D3785ECCC",
-          );
-          setProvisioningUsername("girish123");
+        const bridge =
+          window.finoraControlCenter;
+
+        if (bridge) {
+          void bridge
+            .getProvisioningResume({
+              ownerId:
+                identity.ownerId,
+              businessId:
+                identity.businessId,
+              branchId:
+                identity.branchId,
+            })
+            .then((result) => {
+              if (
+                !result.success ||
+                !result.data
+              ) {
+                return;
+              }
+
+              const resume =
+                result.data;
+
+              if (
+                resume.ownerId !== identity.ownerId ||
+                resume.businessId !== identity.businessId ||
+                resume.branchId !== identity.branchId
+              ) {
+                return;
+              }
+
+              setProvisioningOwnerName(
+                resume.ownerName,
+              );
+              setProvisioningBusinessName(
+                resume.businessName,
+              );
+              setProvisioningBranchName(
+                resume.branchName,
+              );
+              setProvisioningUserId(
+                resume.userId,
+              );
+              setProvisioningUsername(
+                resume.username,
+              );
+            })
+            .catch(() => {
+              /*
+               * Optional non-secret resume metadata failure
+               * must not mutate Registry identity.
+               */
+            });
         }
 
         setProvisioningDraftGenerated(true);
@@ -848,6 +908,31 @@ export default function FinoraControlCenterIssuanceWorkspace({
         setEnrollmentBranchId(
           target.branchId,
         );
+
+        const compactBranchMatch =
+          /^BRANCH-([A-Z0-9]{3})-(\d{3})$/.exec(
+            target.branchId,
+          );
+
+        if (compactBranchMatch) {
+          const compactBusinessCode =
+            compactBranchMatch[1];
+
+          const compactBranchNumber =
+            Number(
+              compactBranchMatch[2],
+            );
+
+          setEnrollmentBusinessCode(
+            compactBusinessCode,
+          );
+
+          setEnrollmentBranchCode(
+            `${compactBusinessCode}-${String(
+              compactBranchNumber,
+            ).padStart(2, "0")}`,
+          );
+        }
 
         setEnrollmentBusinessCode(
           target.businessId,
@@ -3564,6 +3649,22 @@ setEnrollmentOpenState(
                   setProvisioningDraftGenerated(false);
                 }}
               />
+
+              <TargetField
+                label="Username"
+                value={provisioningUsername}
+                placeholder="Username (4-12 characters)"
+                onChange={(value) => {
+                  setProvisioningUsername(
+                    value
+                      .trimStart()
+                      .toLowerCase()
+                      .replace(/[^a-z0-9._-]/g, "")
+                      .slice(0, 12),
+                  );
+                  setProvisioningDraftGenerated(false);
+                }}
+              />
             </div>
 
             <div>
@@ -3572,32 +3673,64 @@ setEnrollmentOpenState(
                 disabled={
                   provisioningOwnerName.trim().length === 0 ||
                   provisioningBusinessName.trim().length === 0 ||
-                  provisioningBranchName.trim().length === 0
+                  provisioningBranchName.trim().length === 0 ||
+                  provisioningUsername.trim().length < 4 || provisioningUsername.trim().length > 12
                 }
-                onClick={() => {
+                onClick={async () => {
+                  // FINORA_COMPACT_BRANCH_ID_V1
                   const ownerId =
                     `OWNER-${crypto.randomUUID().toUpperCase()}`;
 
                   const businessId =
                     `BUSINESS-${crypto.randomUUID().toUpperCase()}`;
 
+                  /*
+                   * Human-readable branch identity.
+                   *
+                   * Example:
+                   *   Girish Finance -> GFI
+                   *   Card code      -> GFI-01
+                   *   Branch ID      -> BRANCH-GFI-001
+                   *
+                   * Owner / Business / User security IDs remain UUID-backed.
+                   */
+                  const normalizedBusinessWords =
+                    provisioningBusinessName
+                      .trim()
+                      .toUpperCase()
+                      .replace(/[^A-Z0-9 ]+/g, " ")
+                      .split(/\s+/)
+                      .filter(Boolean);
+
+                  const businessCode =
+                    (
+                      normalizedBusinessWords.length >= 2
+                        ? (
+                            normalizedBusinessWords
+                              .map((word) => word[0])
+                              .join("") +
+                            normalizedBusinessWords[0].slice(1)
+                          )
+                        : (
+                            normalizedBusinessWords[0] ??
+                            "FIN"
+                          )
+                    )
+                      .replace(/[^A-Z0-9]/g, "")
+                      .slice(0, 3)
+                      .padEnd(3, "X");
+
+                  const branchSequence =
+                    "001";
+
+                  const branchCode =
+                    `${businessCode}-01`;
+
                   const branchId =
-                    `BRANCH-${crypto.randomUUID().toUpperCase()}`;
+                    `BRANCH-${businessCode}-${branchSequence}`;
 
                   const userId =
                     `USER-${crypto.randomUUID().toUpperCase()}`;
-
-                  const usernameBase =
-                    provisioningOwnerName
-                      .trim()
-                      .toLowerCase()
-                      .replace(/[^a-z0-9]+/g, "")
-                      .slice(0, 16) || "owner";
-
-                  const usernameSuffix =
-                    crypto.randomUUID()
-                      .replace(/-/g, "")
-                      .slice(0, 6);
 
                   setTarget((current) => ({
                     ...current,
@@ -3606,9 +3739,49 @@ setEnrollmentOpenState(
                     branchId,
                   }));
 
-                  setProvisioningUserId(userId);
+                  const username =
+                    provisioningUsername.trim();
+
+                  const bridge =
+                    window.finoraControlCenter;
+
+                  if (!bridge) {
+                    throw new Error(
+                      "Dedicated FINORA Control Center preload bridge is unavailable.",
+                    );
+                  }
+
+                  const resumeResult =
+                    await bridge.upsertProvisioningResume({
+                      ownerId,
+                      businessId,
+                      branchId,
+
+                      ownerName:
+                        provisioningOwnerName.trim(),
+
+                      businessName:
+                        provisioningBusinessName.trim(),
+
+                      branchName:
+                        provisioningBranchName.trim(),
+
+                      userId,
+                      username,
+                    });
+
+                  if (!resumeResult.success) {
+                    throw new Error(
+                      resumeResult.error ||
+                        "FINORA provisioning draft could not be persisted.",
+                    );
+                  }
+
+                  setProvisioningUserId(
+                    userId,
+                  );
                   setProvisioningUsername(
-                    `${usernameBase}${usernameSuffix}`,
+                    username,
                   );
 
                   setProvisioningDraftGenerated(true);
@@ -3622,7 +3795,8 @@ setEnrollmentOpenState(
                   cursor:
                     provisioningOwnerName.trim().length === 0 ||
                     provisioningBusinessName.trim().length === 0 ||
-                    provisioningBranchName.trim().length === 0
+                    provisioningBranchName.trim().length === 0 ||
+                    provisioningUsername.trim().length < 4 || provisioningUsername.trim().length > 12
                       ? "not-allowed"
                       : "pointer",
                 }}

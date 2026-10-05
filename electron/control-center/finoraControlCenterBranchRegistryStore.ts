@@ -1,4 +1,4 @@
-﻿/* ============================================================
+/* ============================================================
    FINORA ENTERPRISE OSâ„¢
 
    CONTROL CENTER â€” BRANCH REGISTRY STORE
@@ -959,30 +959,6 @@ function validateRegistryUniqueness(
   const branchCodes =
     new Set<string>();
 
-  const installationIds =
-    new Set<string>();
-
-  const bindingKeyIds =
-    new Set<string>();
-
-  const fingerprints =
-    new Set<string>();
-
-  const publicKeys =
-    new Set<string>();
-
-  const authorizedInstallationIds =
-    new Set<string>();
-
-  const authorizedBindingKeyIds =
-    new Set<string>();
-
-  const authorizedFingerprints =
-    new Set<string>();
-
-  const authorizedPublicKeys =
-    new Set<string>();
-
   const branchCertificationKeyIds =
     new Set<string>();
 
@@ -1091,46 +1067,6 @@ function validateRegistryUniqueness(
       );
     }
 
-    if (
-      installationIds.has(
-        identity.installation.installationId,
-      )
-    ) {
-      throw new Error(
-        "FINORA Control Center Branch Registry contains a duplicate Installation ID.",
-      );
-    }
-
-    if (
-      bindingKeyIds.has(
-        identity.installation.bindingKeyId,
-      )
-    ) {
-      throw new Error(
-        "FINORA Control Center Branch Registry contains a duplicate Binding Key ID.",
-      );
-    }
-
-    if (
-      fingerprints.has(
-        identity.installation.publicKeyFingerprint,
-      )
-    ) {
-      throw new Error(
-        "FINORA Control Center Branch Registry contains a duplicate recipient public-key fingerprint.",
-      );
-    }
-
-    if (
-      publicKeys.has(
-        identity.installation.publicKey,
-      )
-    ) {
-      throw new Error(
-        "FINORA Control Center Branch Registry contains a duplicate recipient public key.",
-      );
-    }
-
     for (
       const device of
         record.authorizedDevices
@@ -1139,61 +1075,6 @@ function validateRegistryUniqueness(
       const installation =
         device.installation;
 
-      if (
-        authorizedInstallationIds.has(
-          installation.installationId,
-        )
-      ) {
-        throw new Error(
-          "FINORA Control Center Branch Registry contains a duplicate authorized-device Installation ID.",
-        );
-      }
-
-      if (
-        authorizedBindingKeyIds.has(
-          installation.bindingKeyId,
-        )
-      ) {
-        throw new Error(
-          "FINORA Control Center Branch Registry contains a duplicate authorized-device Binding Key ID.",
-        );
-      }
-
-      if (
-        authorizedFingerprints.has(
-          installation.publicKeyFingerprint,
-        )
-      ) {
-        throw new Error(
-          "FINORA Control Center Branch Registry contains a duplicate authorized-device public-key fingerprint.",
-        );
-      }
-
-      if (
-        authorizedPublicKeys.has(
-          installation.publicKey,
-        )
-      ) {
-        throw new Error(
-          "FINORA Control Center Branch Registry contains a duplicate authorized-device public key.",
-        );
-      }
-
-      authorizedInstallationIds.add(
-        installation.installationId,
-      );
-
-      authorizedBindingKeyIds.add(
-        installation.bindingKeyId,
-      );
-
-      authorizedFingerprints.add(
-        installation.publicKeyFingerprint,
-      );
-
-      authorizedPublicKeys.add(
-        installation.publicKey,
-      );
     }
 
     scopes.add(
@@ -1208,21 +1089,6 @@ function validateRegistryUniqueness(
       codeScope,
     );
 
-    installationIds.add(
-      identity.installation.installationId,
-    );
-
-    bindingKeyIds.add(
-      identity.installation.bindingKeyId,
-    );
-
-    fingerprints.add(
-      identity.installation.publicKeyFingerprint,
-    );
-
-    publicKeys.add(
-      identity.installation.publicKey,
-    );
   }
 }
 
@@ -2089,41 +1955,39 @@ function assertNoRegistrationCollision(
       );
     }
 
+
+    const existingInstallation =
+      existing.installation;
+
+    const incomingInstallation =
+      identity.installation;
+
+    const sharesInstallationIdentityComponent =
+      existingInstallation.installationId ===
+        incomingInstallation.installationId ||
+      existingInstallation.bindingKeyId ===
+        incomingInstallation.bindingKeyId ||
+      existingInstallation.publicKeyFingerprint ===
+        incomingInstallation.publicKeyFingerprint ||
+      existingInstallation.publicKey ===
+        incomingInstallation.publicKey;
+
     if (
-      existing.installation.installationId ===
-        identity.installation.installationId
+      sharesInstallationIdentityComponent &&
+      !isSameInstallationIdentity(
+        existingInstallation,
+        incomingInstallation,
+      )
     ) {
       throw new Error(
-        "FINORA Control Center Branch Registry rejected an Installation ID already assigned to another branch.",
+        "FINORA Control Center Branch Registry rejected a partial or conflicting installation identity alias across branch scopes.",
       );
     }
 
-    if (
-      existing.installation.bindingKeyId ===
-        identity.installation.bindingKeyId
-    ) {
-      throw new Error(
-        "FINORA Control Center Branch Registry rejected a Binding Key ID already assigned to another branch.",
-      );
-    }
+    // Same physical FINORA installation may serve multiple
+    // independent branch scopes only when the complete immutable
+    // installation identity tuple is exactly identical.
 
-    if (
-      existing.installation.publicKeyFingerprint ===
-        identity.installation.publicKeyFingerprint
-    ) {
-      throw new Error(
-        "FINORA Control Center Branch Registry rejected a recipient fingerprint already assigned to another branch.",
-      );
-    }
-
-    if (
-      existing.installation.publicKey ===
-        identity.installation.publicKey
-    ) {
-      throw new Error(
-        "FINORA Control Center Branch Registry rejected a recipient public key already assigned to another branch.",
-      );
-    }
   }
 }
 
@@ -3220,3 +3084,208 @@ export function rotateFinoraControlCenterBranchCertification(
 // ============================================================
 // END
 // ============================================================
+
+
+// ============================================================
+// EXACT BRANCH REGISTRY DELETE
+//
+// Control Center registry card only.
+// Does NOT delete recipient USB data or recipient Control Store.
+// ============================================================
+
+export interface DeleteFinoraControlCenterBranchRegistryRecordInput {
+  ownerId:
+    string;
+  businessId:
+    string;
+  branchId:
+    string;
+  confirmationText:
+    string;
+}
+
+async function deleteFinoraControlCenterBranchRegistryRecordInternal(
+  input:
+    DeleteFinoraControlCenterBranchRegistryRecordInput,
+): Promise<
+  FinoraControlCenterBranchRegistry
+> {
+
+  if (
+    !isNonEmptyString(
+      input.ownerId,
+    ) ||
+    !isNonEmptyString(
+      input.businessId,
+    ) ||
+    !isNonEmptyString(
+      input.branchId,
+    ) ||
+    typeof input.confirmationText !==
+      "string"
+  ) {
+    throw new Error(
+      "FINORA Branch delete request is incomplete.",
+    );
+  }
+
+  const confirmationCount =
+    input.confirmationText.replace(
+      /\s/g,
+      "",
+    ).length;
+
+  if (
+    confirmationCount <
+      15
+  ) {
+    throw new Error(
+      "FINORA Branch delete confirmation requires at least 15 non-space characters.",
+    );
+  }
+
+  const registry =
+    await readRegistry();
+
+  if (
+    registry ===
+      undefined
+  ) {
+    throw new Error(
+      "FINORA Control Center Branch Registry does not exist.",
+    );
+  }
+
+  const matches =
+    registry.branches.filter(
+      (
+        branch,
+      ) =>
+        branch.identity.ownerId ===
+          input.ownerId &&
+        branch.identity.businessId ===
+          input.businessId &&
+        branch.identity.branchId ===
+          input.branchId,
+    );
+
+  if (
+    matches.length !==
+      1
+  ) {
+    throw new Error(
+      `FINORA exact Branch delete expected 1 Registry record but found ${matches.length}.`,
+    );
+  }
+
+  const nextBranches =
+    registry.branches.filter(
+      (
+        branch,
+      ) =>
+        !(
+          branch.identity.ownerId ===
+            input.ownerId &&
+          branch.identity.businessId ===
+            input.businessId &&
+          branch.identity.branchId ===
+            input.branchId
+        ),
+    );
+
+  if (
+    nextBranches.length !==
+      registry.branches.length -
+        1
+  ) {
+    throw new Error(
+      "FINORA exact Branch delete cardinality validation failed.",
+    );
+  }
+
+  const nextRegistry:
+    FinoraControlCenterBranchRegistry = {
+      ...registry,
+
+      branches:
+        nextBranches,
+
+      updatedAt:
+        new Date().toISOString(),
+    };
+
+  validateFinoraControlCenterBranchRegistry(
+    nextRegistry,
+  );
+
+  const registryPath =
+    getRegistryPath();
+
+  await fs.copyFile(
+    registryPath,
+    `${registryPath}.branch-delete-${Date.now()}.bak`,
+  );
+
+  await writeRegistry(
+    nextRegistry,
+  );
+
+  const verification =
+    await readRegistry();
+
+  if (
+    verification ===
+      undefined ||
+    verification.branches.length !==
+      nextBranches.length ||
+    verification.branches.some(
+      (
+        branch,
+      ) =>
+        branch.identity.ownerId ===
+          input.ownerId &&
+        branch.identity.businessId ===
+          input.businessId &&
+        branch.identity.branchId ===
+          input.branchId,
+    )
+  ) {
+    throw new Error(
+      "FINORA Branch delete post-write verification failed.",
+    );
+  }
+
+  return cloneRegistry(
+    verification,
+  );
+}
+
+export function deleteFinoraControlCenterBranchRegistryRecord(
+  input:
+    DeleteFinoraControlCenterBranchRegistryRecordInput,
+): Promise<
+  FinoraControlCenterBranchRegistry
+> {
+
+  const operation =
+    branchRegistrationQueue.then(
+      () =>
+        deleteFinoraControlCenterBranchRegistryRecordInternal(
+          input,
+        ),
+      () =>
+        deleteFinoraControlCenterBranchRegistryRecordInternal(
+          input,
+        ),
+    );
+
+  branchRegistrationQueue =
+    operation.then(
+      () =>
+        undefined,
+      () =>
+        undefined,
+    );
+
+  return operation;
+}
