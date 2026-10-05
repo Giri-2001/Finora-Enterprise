@@ -1,4 +1,4 @@
-﻿import {
+import {
   useEffect, useRef, useState } from "react";
 
 import type { FinoraControlCenterBranchRegistryRecord } from "../../../../electron/control-center/finoraControlCenterBranchRegistry.types";
@@ -3720,11 +3720,145 @@ setEnrollmentOpenState(
                       .slice(0, 3)
                       .padEnd(3, "X");
 
+                  // FINORA_DYNAMIC_BRANCH_SEQUENCE_V4
+                  const registryBridge =
+                    window.finoraControlCenter;
+
+                  if (!registryBridge) {
+                    throw new Error(
+                      "Dedicated FINORA Control Center preload bridge is unavailable.",
+                    );
+                  }
+
+                  const registryResult =
+                    await registryBridge.getBranchRegistry();
+
+                  if (!registryResult.success) {
+                    throw new Error(
+                      registryResult.error ??
+                        "Unable to load FINORA Branch Registry for compact Branch allocation.",
+                    );
+                  }
+
+                  const existingBranches =
+                    registryResult.data?.branches ??
+                    [];
+
+                  const idPrefix =
+                    `BRANCH-${businessCode}-`;
+
+                  const codePrefix =
+                    `${businessCode}-`;
+
+                  const usedBranchSequences =
+                    existingBranches
+                      .flatMap(
+                        (
+                          existingBranch,
+                        ) => {
+
+                          const existingBranchId =
+                            existingBranch.identity.branchId;
+
+                          if (
+                            existingBranchId.startsWith(
+                              idPrefix,
+                            )
+                          ) {
+                            const suffix =
+                              existingBranchId.slice(
+                                idPrefix.length,
+                              );
+
+                            if (
+                              /^\d{3}$/.test(
+                                suffix,
+                              )
+                            ) {
+                              return [
+                                Number(
+                                  suffix,
+                                ),
+                              ];
+                            }
+                          }
+
+                          const existingBranchCode =
+                            existingBranch.identity.branchCode;
+
+                          if (
+                            existingBranchCode.startsWith(
+                              codePrefix,
+                            )
+                          ) {
+                            const suffix =
+                              existingBranchCode.slice(
+                                codePrefix.length,
+                              );
+
+                            if (
+                              /^\d{2,3}$/.test(
+                                suffix,
+                              )
+                            ) {
+                              return [
+                                Number(
+                                  suffix,
+                                ),
+                              ];
+                            }
+                          }
+
+                          return [];
+                        },
+                      )
+                      .filter(
+                        (
+                          sequence,
+                        ) =>
+                          Number.isSafeInteger(
+                            sequence,
+                          ) &&
+                          sequence > 0,
+                      );
+
+                  const nextBranchSequenceNumber =
+                    (
+                      usedBranchSequences.length ===
+                        0
+                        ? 0
+                        : Math.max(
+                            ...usedBranchSequences,
+                          )
+                    ) + 1;
+
+                  if (
+                    nextBranchSequenceNumber >
+                      999
+                  ) {
+                    throw new Error(
+                      `FINORA compact Branch sequence exhausted for Business Code ${businessCode}.`,
+                    );
+                  }
+
                   const branchSequence =
-                    "001";
+                    String(
+                      nextBranchSequenceNumber,
+                    ).padStart(
+                      3,
+                      "0",
+                    );
+
+                  const branchCodeSequence =
+                    String(
+                      nextBranchSequenceNumber,
+                    ).padStart(
+                      2,
+                      "0",
+                    );
 
                   const branchCode =
-                    `${businessCode}-01`;
+                    `${businessCode}-${branchCodeSequence}`;
 
                   const branchId =
                     `BRANCH-${businessCode}-${branchSequence}`;
