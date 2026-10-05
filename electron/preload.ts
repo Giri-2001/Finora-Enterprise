@@ -1,4 +1,4 @@
-﻿// ============================================================
+// ============================================================
 // FINORA ENTERPRISE OSâ„¢
 // ELECTRON PRELOAD
 // V2 SECURE STORAGE BRIDGE
@@ -103,6 +103,13 @@ interface UsbStorageBridge {
 
   isAvailable:
     () => Promise<boolean>;
+
+  requestAccess:
+    () => Promise<{
+      success: boolean;
+      cancelled?: boolean;
+      error?: string;
+    }>;
 
 
   // ----------------------------------------------------------
@@ -1273,7 +1280,25 @@ interface FinoraControlBridge {
             error:
               string;
           }
-      >;
+      >;  importCredentialAuthorization?:
+    () =>
+      Promise<{
+        success: boolean;
+        cancelled?: boolean;
+        fileName?: string;
+        error?: string;
+        [key: string]: unknown;
+      }>;
+
+  importPricingUpdate?:
+    () =>
+      Promise<{
+        success: boolean;
+        cancelled?: boolean;
+        fileName?: string;
+        error?: string;
+        [key: string]: unknown;
+      }>;
 
   importControlBundle:
     (
@@ -1693,10 +1718,14 @@ const CONTROL_CHANNELS = {
     "finora:control:has-active-storage-entitlement",
 
   EXPORT_INSTALLATION_ENROLLMENT_REQUEST:
-    "finora:control:export-installation-enrollment-request",
-
-  IMPORT_INSTALLATION_ENROLLMENT_RESPONSE:
+    "finora:control:export-installation-enrollment-request",  IMPORT_INSTALLATION_ENROLLMENT_RESPONSE:
     "finora:control:import-installation-enrollment-response",
+
+  IMPORT_CREDENTIAL_AUTHORIZATION:
+    "finora:control:import-credential-authorization",
+
+  IMPORT_PRICING_UPDATE:
+    "finora:control:import-pricing-update",
 
   IMPORT_CONTROL_BUNDLE:
     "finora:control:import-control-bundle",
@@ -2042,6 +2071,13 @@ const usbBridge:
     () =>
       ipcRenderer.invoke(
         USB_CHANNELS.IS_AVAILABLE,
+      ),
+
+
+  requestAccess:
+    () =>
+      ipcRenderer.invoke(
+        "finora:usb:request-access",
       ),
 
 
@@ -2660,6 +2696,16 @@ const controlBridge:
         CONTROL_CHANNELS
           .IMPORT_INSTALLATION_ENROLLMENT_RESPONSE,
         expectedControlCenterPublicKeyFingerprint,
+      ),  importCredentialAuthorization:
+    () =>
+      ipcRenderer.invoke(
+        CONTROL_CHANNELS.IMPORT_CREDENTIAL_AUTHORIZATION,
+      ),
+
+  importPricingUpdate:
+    () =>
+      ipcRenderer.invoke(
+        CONTROL_CHANNELS.IMPORT_PRICING_UPDATE,
       ),
 
   importControlBundle:

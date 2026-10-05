@@ -1,4 +1,4 @@
-﻿import {
+import {
   useState,
 } from "react";
 
@@ -265,16 +265,16 @@ export default function FinoraControlCenterBranchActivationForm({
       "ISSUE",
 
     activationId:
-      "",
+      `ACTIVATION-${crypto.randomUUID().toUpperCase()}`,
 
     activationActivatedAt:
-      "",
+      new Date().toISOString(),
 
     activationCreatedAt:
-      "",
+      new Date().toISOString(),
 
     activationUpdatedAt:
-      "",
+      new Date().toISOString(),
   });
 
   function update<

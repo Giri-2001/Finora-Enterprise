@@ -1,5 +1,5 @@
 /* ===========================================================
-   FINORA ENTERPRISE OS™
+   FINORA ENTERPRISE OSÃ¢â€žÂ¢
 
    INSTALLATION ENROLLMENT REQUEST FILE TRANSPORT
 
@@ -230,29 +230,39 @@ export async function exportFinoraInstallationEnrollmentRequestFromNativeDialog(
     const existingBranchCertificationBootstrap =
       await loadFinoraBranchCertificationBootstrap();
 
-    if (
-      existingBranchCertificationBootstrap !==
-        undefined &&
-      existingBranchCertificationBootstrap.state !==
-        "GENERATED_FOR_REQUEST"
-    ) {
-      throw new Error(
-        "FINORA Branch Certification bootstrap is already branch-bound; a new Installation Enrollment Request cannot replace it.",
-      );
-    }
+    /*
+     * MULTI-BRANCH SAME-HOST ENROLLMENT
+     *
+     * An already branch-bound bootstrap belongs to a completed
+     * enrollment and must not permanently block this FINORA host
+     * from preparing a new branch enrollment request.
+     *
+     * The bootstrap store preserves the previous bound record
+     * while installing the fresh GENERATED_FOR_REQUEST custody.
+     */
 
     /*
      * One branch holds one immutable Branch Certification keypair.
      *
-     * A replacement Enrollment Request reuses the same keypair.
-     * A fresh installation bootstrap generates the keypair once.
+     * While one enrollment request is still pending, replacement
+     * exports reuse that pending request's keypair.
+     *
+     * A completed BRANCH_BOUND_AFTER_RESPONSE bootstrap belongs to
+     * the previous branch. A new branch enrollment on the same host
+     * must start with fresh Branch Certification key material.
      */
     const certificationKeyMaterial =
-      existingBranchCertificationBootstrap
-        ?.certificationKeyMaterial ??
-      generateFinoraBranchCertificationKeyMaterial(
-        new Date(),
-      );
+      existingBranchCertificationBootstrap ===
+        undefined ||
+      existingBranchCertificationBootstrap.state ===
+        "BRANCH_BOUND_AFTER_RESPONSE"
+        ? generateFinoraBranchCertificationKeyMaterial(
+            new Date(),
+          )
+        : {
+            ...existingBranchCertificationBootstrap
+              .certificationKeyMaterial,
+          };
 
     const branchCertificationPublicKey =
       toFinoraBranchCertificationPublicKey(

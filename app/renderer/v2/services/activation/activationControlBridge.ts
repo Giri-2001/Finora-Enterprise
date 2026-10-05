@@ -1,5 +1,5 @@
 // ============================================================
-// FINORA ENTERPRISE OS™
+// FINORA ENTERPRISE OSâ„¢
 //
 // V2 ACTIVATION DOMAIN
 // ACTIVATION CONTROL BRIDGE
@@ -504,6 +504,32 @@ export interface FinoraActivationControlBridge {
       error?: string;
       [key: string]: unknown;
     }>;
+
+  /**
+   * Import one signed native BRANCH_ACCESS / AUTHORIZE_CREDENTIAL
+   * package for first-login credential recovery.
+   */
+  importCredentialAuthorization?():
+    Promise<{
+      success: boolean;
+      cancelled?: boolean;
+      fileName?: string;
+      error?: string;
+      [key: string]: unknown;
+    }>;
+
+  /**
+   * Import one signed PRICING_POLICY package.
+   */
+  importPricingUpdate?():
+    Promise<{
+      success: boolean;
+      cancelled?: boolean;
+      fileName?: string;
+      error?: string;
+      [key: string]: unknown;
+    }>;
+
   hasActiveStorageEntitlement(
     request:
       FinoraStorageEntitlementRequest,

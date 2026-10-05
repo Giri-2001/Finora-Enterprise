@@ -508,6 +508,7 @@ function sanitizeCredentialEnrollmentAuthorization(
       [
         "demoId",
         "deviceAccessPolicy",
+        "credentialLifecycle",
       ],
     ) ||
     !isNonEmptyString(
@@ -552,6 +553,10 @@ function sanitizeCredentialEnrollmentAuthorization(
     (
       value.deviceAccessPolicy === "PORTABLE_USB" &&
       value.storageMode !== "USB"
+    ) ||
+    (
+      value.credentialLifecycle !== undefined &&
+      value.credentialLifecycle !== "TEMPORARY_FIRST_LOGIN"
     ) ||
     value.method !==
       FINORA_BRANCH_ACCESS_CREDENTIAL_ENROLLMENT_METHOD ||
@@ -627,6 +632,15 @@ function sanitizeCredentialEnrollmentAuthorization(
         : {
             deviceAccessPolicy:
               value.deviceAccessPolicy as "PORTABLE_USB",
+          }
+    ),
+
+    ...(
+      value.credentialLifecycle === undefined
+        ? {}
+        : {
+            credentialLifecycle:
+              value.credentialLifecycle as "TEMPORARY_FIRST_LOGIN",
           }
     ),
 
@@ -865,10 +879,16 @@ export async function applyFinoraSignedBranchAccessPackage(
     credentialPortabilityAuthorityProvenance !==
       undefined &&
     payload.action !==
-      "AUTHORIZE_CREDENTIAL"
+      "AUTHORIZE_CREDENTIAL" &&
+    !(
+      payload.action ===
+        "ISSUE" &&
+      payload.credentialEnrollment !==
+        undefined
+    )
   ) {
     return failure(
-      "FINORA credential portability authority provenance is valid only for AUTHORIZE_CREDENTIAL.",
+      "FINORA credential portability authority provenance is valid only for AUTHORIZE_CREDENTIAL or ISSUE carrying credential enrollment authority.",
     );
   }
 
@@ -1128,6 +1148,15 @@ export async function applyFinoraSignedBranchAccessPackage(
             verifiedControlSigner: {
               ...verification.verifiedTrustedKey,
             },
+
+            ...(
+              credentialPortabilityAuthorityProvenance ===
+                undefined
+                ? {}
+                : {
+                    credentialPortabilityAuthorityProvenance,
+                  }
+            ),
           }
     ),
 

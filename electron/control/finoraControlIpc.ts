@@ -67,6 +67,11 @@ import {
   importFinoraControlBundleFromNativeDialog,
 } from "./finoraControlBundleImportCoordinator.js";
 
+import {
+  importFinoraCredentialAuthorizationFromNativeDialog,
+  importFinoraPricingPolicyFromNativeDialog,
+} from "./finoraStandaloneSignedControlPackageImport.js";
+
 import type {
   FinoraControlBundleImportAuthorityContext,
 } from "./finoraControlBundlePackageApplyService.js";
@@ -184,6 +189,12 @@ const CONTROL_IPC_CHANNELS = {
 
   IMPORT_INSTALLATION_ENROLLMENT_RESPONSE:
     "finora:control:import-installation-enrollment-response",
+
+  IMPORT_CREDENTIAL_AUTHORIZATION:
+    "finora:control:import-credential-authorization",
+
+  IMPORT_PRICING_UPDATE:
+    "finora:control:import-pricing-update",
 
   IMPORT_CONTROL_BUNDLE:
     "finora:control:import-control-bundle",
@@ -2191,6 +2202,118 @@ export function registerFinoraControlHandlers(
   // - Sender must also be the exact main frame of its owning
   //   BrowserWindow; trusted-origin subframes are rejected.
   // ----------------------------------------------------------
+
+  // ----------------------------------------------------------
+  // STANDALONE SIGNED CREDENTIAL AUTHORIZATION IMPORT
+  // ----------------------------------------------------------
+
+  ipcMain.handle(
+    CONTROL_IPC_CHANNELS.IMPORT_CREDENTIAL_AUTHORIZATION,
+    async (
+      event,
+      ...args:
+        unknown[]
+    ) => {
+      if (args.length !== 0) {
+        return failure(
+          "FINORA Credential Authorization import does not accept renderer-supplied package data.",
+        );
+      }
+
+      if (
+        !isTrustedRenderer(
+          event.senderFrame,
+        )
+      ) {
+        return failure(
+          "FINORA Credential Authorization import is restricted to the trusted renderer.",
+        );
+      }
+
+      const parentWindow =
+        BrowserWindow.fromWebContents(
+          event.sender,
+        );
+
+      if (
+        !parentWindow ||
+        parentWindow.isDestroyed()
+      ) {
+        return failure(
+          "The FINORA application window is not available for Credential Authorization import.",
+        );
+      }
+
+      if (
+        event.senderFrame !==
+          parentWindow.webContents.mainFrame
+      ) {
+        return failure(
+          "FINORA Credential Authorization import is restricted to the trusted application main frame.",
+        );
+      }
+
+      return importFinoraCredentialAuthorizationFromNativeDialog(
+        parentWindow,
+      );
+    },
+  );
+
+  // ----------------------------------------------------------
+  // STANDALONE SIGNED PRICING UPDATE IMPORT
+  // ----------------------------------------------------------
+
+  ipcMain.handle(
+    CONTROL_IPC_CHANNELS.IMPORT_PRICING_UPDATE,
+    async (
+      event,
+      ...args:
+        unknown[]
+    ) => {
+      if (args.length !== 0) {
+        return failure(
+          "FINORA Pricing Update import does not accept renderer-supplied package data.",
+        );
+      }
+
+      if (
+        !isTrustedRenderer(
+          event.senderFrame,
+        )
+      ) {
+        return failure(
+          "FINORA Pricing Update import is restricted to the trusted renderer.",
+        );
+      }
+
+      const parentWindow =
+        BrowserWindow.fromWebContents(
+          event.sender,
+        );
+
+      if (
+        !parentWindow ||
+        parentWindow.isDestroyed()
+      ) {
+        return failure(
+          "The FINORA application window is not available for Pricing Update import.",
+        );
+      }
+
+      if (
+        event.senderFrame !==
+          parentWindow.webContents.mainFrame
+      ) {
+        return failure(
+          "FINORA Pricing Update import is restricted to the trusted application main frame.",
+        );
+      }
+
+      return importFinoraPricingPolicyFromNativeDialog(
+        parentWindow,
+      );
+    },
+  );
 
   ipcMain.handle(
     CONTROL_IPC_CHANNELS.IMPORT_CONTROL_BUNDLE,

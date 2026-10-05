@@ -50,7 +50,15 @@ interface BranchActivationRequiredProps {
     void | Promise<void>;
 
   onImportControlBundle():
-    void | Promise<void>;  retrying?: boolean;
+    void | Promise<void>;
+
+  onImportCredentialAuthorization():
+    void | Promise<void>;
+
+  onImportPricingUpdate():
+    void | Promise<void>;
+
+  retrying?: boolean;
 
   enrollmentExporting?: boolean;
 
@@ -62,6 +70,12 @@ interface BranchActivationRequiredProps {
   controlBundleImporting?: boolean;
 
   controlBundleImportMessage?: string;
+
+  credentialAuthorizationImporting?: boolean;
+  credentialAuthorizationImportMessage?: string;
+
+  pricingUpdateImporting?: boolean;
+  pricingUpdateImportMessage?: string;
 }
 
 // ============================================================
@@ -80,6 +94,10 @@ export default function BranchActivationRequired({
 
   onImportControlBundle,
 
+  onImportCredentialAuthorization,
+
+  onImportPricingUpdate,
+
   retrying = false,
 
   enrollmentExporting = false,
@@ -92,6 +110,12 @@ export default function BranchActivationRequired({
   controlBundleImporting = false,
 
   controlBundleImportMessage = "",
+
+  credentialAuthorizationImporting = false,
+  credentialAuthorizationImportMessage = "",
+
+  pricingUpdateImporting = false,
+  pricingUpdateImportMessage = "",
 }: BranchActivationRequiredProps) {
   const { theme } =
     useTheme();
@@ -103,7 +127,9 @@ export default function BranchActivationRequired({
     retrying ||
     enrollmentExporting ||
     enrollmentImporting ||
-    controlBundleImporting;
+    controlBundleImporting ||
+    credentialAuthorizationImporting ||
+    pricingUpdateImporting;
 
   // ==========================================================
   // STYLES
@@ -393,6 +419,18 @@ export default function BranchActivationRequired({
             {controlBundleImportMessage}
           </p>
         ) : null}
+
+        {credentialAuthorizationImportMessage ? (
+          <p style={noteStyle}>
+            {credentialAuthorizationImportMessage}
+          </p>
+        ) : null}
+
+        {pricingUpdateImportMessage ? (
+          <p style={noteStyle}>
+            {pricingUpdateImportMessage}
+          </p>
+        ) : null}
         <div style={actionRowStyle}>
           <button
             type="button"
@@ -433,6 +471,32 @@ export default function BranchActivationRequired({
             {controlBundleImporting
               ? "Importing Control Bundle..."
               : "Import Control Bundle"}
+          </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              void onImportCredentialAuthorization();
+            }}
+            disabled={interactionBusy}
+            style={buttonStyle}
+          >
+            {credentialAuthorizationImporting
+              ? "Importing Credential Authorization..."
+              : "Import Credential Authorization"}
+          </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              void onImportPricingUpdate();
+            }}
+            disabled={interactionBusy}
+            style={buttonStyle}
+          >
+            {pricingUpdateImporting
+              ? "Importing Pricing Update..."
+              : "Import Pricing Update"}
           </button>
 
           <button

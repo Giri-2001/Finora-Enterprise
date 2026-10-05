@@ -82,6 +82,7 @@ import type {
 
 import {
   getFinoraInstallationIdentity,
+  rebindFinoraInstallationIdentityBranchScope,
   saveFinoraInstallationIdentity,
 } from "./finoraControlStore.js";
 
@@ -506,19 +507,30 @@ export function applyVerifiedFinoraInstallationEnrollmentResponse(
             undefined
         ) {
 
+          /*
+           * The native installation binding was already checked
+           * above against both the pending request and the signed
+           * response.
+           *
+           * The legacy Control Store installation record also
+           * contains branch scope. A different branch on the same
+           * physical FINORA installation is therefore permitted
+           * only when installationId remains exact.
+           */
           if (
-            !isExactInstallationRecoveryState(
-              existingInstallation,
-              response,
-            )
+            existingInstallation.installationId !==
+              response.target.installationId
           ) {
             return failure(
-              "FINORA installation identity already exists but does not exactly match this Enrollment Response.",
+              "FINORA installation identity already exists for a different native installation.",
             );
           }
 
           installationRecovered =
-            true;
+            isExactInstallationRecoveryState(
+              existingInstallation,
+              response,
+            );
         }
 
         // ----------------------------------------------------
@@ -699,6 +711,70 @@ export function applyVerifiedFinoraInstallationEnrollmentResponse(
           }
         }
 
+        if (
+          existingInstallation !==
+            undefined &&
+          !installationRecovered
+        ) {
+          const now =
+            new Date().toISOString();
+
+          const reboundInstallation:
+            FinoraControlInstallationIdentity = {
+              installationId:
+                response.target.installationId,
+
+              ownerId:
+                response.target.ownerId,
+
+              businessId:
+                response.target.businessId,
+
+              branchId:
+                response.target.branchId,
+
+              businessCode:
+                response.businessCode,
+
+              branchCode:
+                response.branchCode,
+
+              /*
+               * Physical installation continuity is preserved.
+               * createdAt therefore remains the original device
+               * installation timestamp.
+               */
+              createdAt:
+                existingInstallation.createdAt,
+
+              updatedAt:
+                now,
+
+              schemaVersion:
+                1,
+            };
+
+          const rebindResult =
+            await rebindFinoraInstallationIdentityBranchScope(
+              reboundInstallation,
+            );
+
+          if (
+            !rebindResult.success ||
+            !rebindResult.data
+          ) {
+            return failure(
+              rebindResult.error ??
+                "FINORA installation branch-scope rebind failed.",
+            );
+          }
+
+          existingInstallation =
+            rebindResult.data;
+
+          installationRecovered =
+            true;
+        }
         // ----------------------------------------------------
         // INSTALLATION READ-BACK CONFIRMATION
         // ----------------------------------------------------

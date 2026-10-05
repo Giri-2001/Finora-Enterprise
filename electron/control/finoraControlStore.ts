@@ -1,5 +1,5 @@
-﻿// ============================================================
-// FINORA ENTERPRISE OSÃ¢â€žÂ¢
+// ============================================================
+// FINORA ENTERPRISE OSÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢
 //
 // ELECTRON CONTROL STORE
 //
@@ -2091,6 +2091,10 @@ function hasExactBranchCredentialAuthorizationKeys(
     expectedKeys.push("demoId");
   }
 
+  if (value.credentialLifecycle !== undefined) {
+    expectedKeys.push("credentialLifecycle");
+  }
+
   const actualKeys = Object.keys(value).sort();
   expectedKeys.sort();
 
@@ -2123,6 +2127,10 @@ function isBranchCredentialEnrollmentAuthorization(
     (value.dataContext !== "REAL" && value.dataContext !== "DEMO") ||
     value.method !== "SET_PASSWORD_ON_RECIPIENT" ||
     value.oneTime !== true ||
+    (
+      value.credentialLifecycle !== undefined &&
+      value.credentialLifecycle !== "TEMPORARY_FIRST_LOGIN"
+    ) ||
     value.schemaVersion !== 1
   ) {
     return false;
@@ -4142,6 +4150,88 @@ export async function getFinoraInstallationIdentity(): Promise<
 // SAVE INSTALLATION IDENTITY
 // ============================================================
 
+/**
+ * SAME-PHYSICAL-INSTALLATION BRANCH-SCOPE REBIND
+ *
+ * This is intentionally narrower than normal installation save.
+ *
+ * The enrollment coordinator must already have verified:
+ * - pending Enrollment Request provenance
+ * - signed Enrollment Response
+ * - exact native installation binding
+ *
+ * Only the legacy singleton branch projection is changed.
+ * No other Control Store authority collection is removed.
+ */
+export async function rebindFinoraInstallationIdentityBranchScope(
+  installation: FinoraControlInstallationIdentity,
+): Promise<FinoraControlStoreResult<FinoraControlInstallationIdentity>> {
+  if (!isInstallationIdentity(installation)) {
+    return failure(
+      "A valid FINORA installation identity is required for branch-scope rebind.",
+    );
+  }
+
+  const currentResult =
+    await readFinoraControlStore();
+
+  if (
+    !currentResult.success ||
+    !currentResult.data
+  ) {
+    return failure(
+      currentResult.error ??
+        "Unable to load the FINORA Control Store.",
+    );
+  }
+
+  const controlStore =
+    currentResult.data;
+
+  const existing =
+    controlStore.installation;
+
+  if (!existing) {
+    return failure(
+      "FINORA installation identity is unavailable for branch-scope rebind.",
+    );
+  }
+
+  if (
+    existing.installationId !==
+      installation.installationId
+  ) {
+    return failure(
+      "FINORA installation branch-scope rebind rejected a different installationId.",
+    );
+  }
+
+  controlStore.installation =
+    installation;
+
+  controlStore.updatedAt =
+    new Date().toISOString();
+
+  try {
+    await persistControlStorePackage(
+      controlStore,
+    );
+
+    return success(
+      installation,
+    );
+  } catch (error) {
+    return failure(
+      error instanceof Error
+        ? error.message
+        : "Unable to persist FINORA installation branch-scope rebind.",
+    );
+  }
+}
+
+// ============================================================
+// SAVE INSTALLATION IDENTITY
+// ============================================================
 export async function saveFinoraInstallationIdentity(
   installation: FinoraControlInstallationIdentity,
 ): Promise<FinoraControlStoreResult<FinoraControlInstallationIdentity>> {
@@ -10621,7 +10711,7 @@ export function completeFinoraPortableBranchAuthV2CredentialRotationTransaction(
 
 
 /* ============================================================
-   LEGACY SECURITY CODE BOOTSTRAP Ã¢â‚¬â€ CREDENTIAL COMMIT
+   LEGACY SECURITY CODE BOOTSTRAP ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â CREDENTIAL COMMIT
 
    This authority is intentionally narrow:
    - existing ACTIVE credential only
@@ -11382,7 +11472,7 @@ async function applyVerifiedBusinessProfileInternal(
   }
 
   // ----------------------------------------------------------
-  // PROFILE Ã¢â€ â€ TARGET
+  // PROFILE ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬Â TARGET
   // ----------------------------------------------------------
 
   if (
@@ -11437,7 +11527,7 @@ async function applyVerifiedBusinessProfileInternal(
   }
 
   // ----------------------------------------------------------
-  // CONTROL STORE INSTALLATION Ã¢â€ â€ VERIFIED TARGET
+  // CONTROL STORE INSTALLATION ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬Â VERIFIED TARGET
   // ----------------------------------------------------------
 
   if (
@@ -12159,7 +12249,7 @@ async function applyVerifiedPricingPolicyInternal(
   }
 
   // ----------------------------------------------------------
-  // POLICY Ã¢â€ â€ VERIFIED TARGET BINDING
+  // POLICY ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬Â VERIFIED TARGET BINDING
   // ----------------------------------------------------------
 
   if (

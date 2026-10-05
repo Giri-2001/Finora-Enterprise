@@ -37,7 +37,7 @@ import { config as loadDotEnv } from "dotenv";
 
 loadDotEnv();
 
-import { app, BrowserWindow, ipcMain, shell } from "electron";
+import { app, BrowserWindow, dialog, ipcMain, shell } from "electron";
 
 // ============================================================
 // DEVELOPMENT-ONLY ISOLATED USERDATA OVERRIDE
@@ -618,6 +618,62 @@ async function detectAndCacheUsbRoot(): Promise<string | null> {
   })();
 
   return usbRootDetectionPromise;
+}
+
+async function selectFinoraUsbRootFromNativeDialog(): Promise<string | null> {
+  if (
+    !mainWindow ||
+    mainWindow.isDestroyed()
+  ) {
+    throw new Error(
+      "FINORA window is unavailable for USB selection.",
+    );
+  }
+
+  const selection =
+    await dialog.showOpenDialog(
+      mainWindow,
+      {
+        title:
+          "Select FINORA USB Storage",
+
+        buttonLabel:
+          "Use This USB",
+
+        properties: [
+          "openDirectory",
+        ],
+      },
+    );
+
+  if (
+    selection.canceled ||
+    selection.filePaths.length === 0
+  ) {
+    return null;
+  }
+
+  const candidateRoot =
+    selection.filePaths[0];
+
+  if (
+    !candidateRoot ||
+    !(await validateFinoraReplacementUsbRoot(
+      candidateRoot,
+    ))
+  ) {
+    throw new Error(
+      "Please select the root of a connected removable USB drive.",
+    );
+  }
+
+  cachedUsbRoot =
+    path.resolve(candidateRoot);
+
+  cachedUsbRootAt =
+    Date.now();
+
+  return cachedUsbRoot;
 }
 
 async function findFinoraUsbRoot(forceRefresh = false): Promise<string | null> {
@@ -3508,6 +3564,58 @@ app.whenReady().then(async () => {
       );
     }
 
+    ipcMain.removeHandler(
+      "finora:usb:request-access",
+    );
+
+    ipcMain.handle(
+      "finora:usb:request-access",
+      async (event) => {
+        const senderFrame =
+          event.senderFrame;
+
+        if (
+          senderFrame === null ||
+          senderFrame !==
+            event.sender.mainFrame ||
+          !isTrustedRenderer(
+            senderFrame,
+          )
+        ) {
+          return {
+            success: false,
+            error:
+              "Unauthorized FINORA USB selection request.",
+          };
+        }
+
+        try {
+          const selectedRoot =
+            await selectFinoraUsbRootFromNativeDialog();
+
+          if (!selectedRoot) {
+            return {
+              success: true,
+              cancelled: true,
+            };
+          }
+
+          return {
+            success: true,
+            cancelled: false,
+          };
+        } catch (error) {
+          return {
+            success: false,
+            error:
+              error instanceof Error
+                ? error.message
+                : "FINORA USB selection failed.",
+          };
+        }
+      },
+    );
+
     registerFinoraControlHandlers(
       isTrustedRenderer,
       portableBranchAuthStore,
@@ -3708,5 +3816,6 @@ app.on("window-all-closed", () => {
 // ============================================================
 // END
 // ============================================================
+
 
 

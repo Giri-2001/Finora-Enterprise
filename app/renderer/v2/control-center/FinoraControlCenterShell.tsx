@@ -1779,10 +1779,10 @@ const [
         </header>
 
         <section
-          hidden={activeView !== "CONTROL"}
+          hidden={activeView !== "SETTINGS"}
           aria-live="polite"
           style={{
-            display: "none", border:
+            display: activeView === "SETTINGS" ? "block" : "none", border:
               "1px solid rgba(148, 163, 184, 0.22)",
             borderRadius:
               "14px",

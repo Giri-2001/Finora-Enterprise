@@ -1037,9 +1037,32 @@ export function persistFinoraBranchCertificationBootstrapGenerated(
         existing.state ===
           "BRANCH_BOUND_AFTER_RESPONSE"
       ) {
-        throw new Error(
-          "FINORA Branch Certification bootstrap is already branch-bound and cannot be replaced by a new Enrollment Request.",
+        /*
+         * MULTI-BRANCH SAME-HOST ENROLLMENT
+         *
+         * Branch Certification bootstrap custody is transitional
+         * enrollment state, not the owner's branch selector.
+         *
+         * A completed/bound bootstrap must not permanently prevent
+         * this FINORA host from preparing another branch enrollment.
+         *
+         * Preserve the previous record for the caller's existing
+         * rollback path, then make the fresh GENERATED_FOR_REQUEST
+         * record the current enrollment bootstrap.
+         *
+         * This does not modify login, Change USB Storage, portable
+         * branch authority, or an existing branch USB store.
+         */
+        const previous =
+          cloneRecord(
+            existing,
+          );
+
+        await writeInternal(
+          record,
         );
+
+        return previous;
       }
 
       if (

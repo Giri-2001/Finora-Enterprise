@@ -17,7 +17,7 @@ import {
 } from "../components/common/dialog/finoraDialog.service";
 import { getFinoraLoginSessionBridge } from "../services/auth/loginSessionBridge";
 // ============================================================
-// FINORA ENTERPRISE OS™
+// FINORA ENTERPRISE OSâ„¢
 //
 // V2 APPLICATION ENTRY
 //
@@ -252,9 +252,9 @@ const LOANS_GLOBAL_BACK_EVENT = "FINORA_V2_LOANS_GLOBAL_BACK";
 // These events create a small navigation bridge between:
 //
 // App.tsx
-//     ↓
+//     â†“
 // CustomerDepartment
-//     ↓
+//     â†“
 // CustomerWizard
 //
 // This allows the single GlobalHeader Back button to close
@@ -281,11 +281,11 @@ const CUSTOMER_DEPARTMENT_REFRESH_EVENT =
 // The bridge is:
 //
 // Loans Office
-//     ↓
+//     â†“
 // FINORA_V2_OPEN_LOAN_STUDIO
-//     ↓
+//     â†“
 // App.tsx
-//     ↓
+//     â†“
 // Loan Studio
 //
 // This keeps Loan Studio as the single existing workflow and
@@ -652,11 +652,11 @@ function BusinessContextErrorScreen({
 // STARTUP ORDER:
 //
 // App Start
-//   ↓
+//   â†“
 // Secure Installation Identity
-//   ↓
+//   â†“
 // Branch Activation
-//   ↓
+//   â†“
 // Existing Login / Authenticated Application
 //
 // IMPORTANT:
@@ -731,6 +731,26 @@ function BranchActivationGate({
     useState<string>(
       "",
     );
+
+  const [
+    credentialAuthorizationImporting,
+    setCredentialAuthorizationImporting,
+  ] = useState<boolean>(false);
+
+  const [
+    credentialAuthorizationImportMessage,
+    setCredentialAuthorizationImportMessage,
+  ] = useState<string>("");
+
+  const [
+    pricingUpdateImporting,
+    setPricingUpdateImporting,
+  ] = useState<boolean>(false);
+
+  const [
+    pricingUpdateImportMessage,
+    setPricingUpdateImportMessage,
+  ] = useState<string>("");
 
   useEffect(() => {
     let active = true;
@@ -1030,8 +1050,6 @@ function BranchActivationGate({
           ?.importInstallationEnrollmentResponse;
 
       if (
-        typeof bootstrapPinnedTrust !==
-          "function" ||
         typeof importEnrollmentResponse !==
           "function"
       ) {
@@ -1042,26 +1060,37 @@ function BranchActivationGate({
         return;
       }
 
-      const trustResult =
-        await bootstrapPinnedTrust();
-
-      const trustAlreadyEstablished =
-        trustResult.error
-          ?.toLowerCase()
-          .includes(
-            "already bootstrapped",
-          ) === true;
-
+      /*
+       * Android exposes release-pinned native trust bootstrap.
+       * Electron performs enrollment-response verification in
+       * the hardened main-process import path using the pinned
+       * Control Center fingerprint supplied below.
+       */
       if (
-        !trustResult.success &&
-        !trustAlreadyEstablished
+        typeof bootstrapPinnedTrust ===
+          "function"
       ) {
-        setEnrollmentImportMessage(
-          trustResult.error ??
-            "Unable to initialize FINORA release-pinned Control Center trust.",
-        );
+        const trustResult =
+          await bootstrapPinnedTrust();
 
-        return;
+        const trustAlreadyEstablished =
+          trustResult.error
+            ?.toLowerCase()
+            .includes(
+              "already bootstrapped",
+            ) === true;
+
+        if (
+          !trustResult.success &&
+          !trustAlreadyEstablished
+        ) {
+          setEnrollmentImportMessage(
+            trustResult.error ??
+              "Unable to initialize FINORA release-pinned Control Center trust.",
+          );
+
+          return;
+        }
       }
 
       const result =
@@ -1192,6 +1221,131 @@ function BranchActivationGate({
       );
     }
   }
+  async function handleImportCredentialAuthorization():
+    Promise<void> {
+
+    if (
+      credentialAuthorizationImporting ||
+      pricingUpdateImporting ||
+      controlBundleImporting ||
+      enrollmentImporting ||
+      enrollmentExporting
+    ) {
+      return;
+    }
+
+    setCredentialAuthorizationImporting(true);
+    setCredentialAuthorizationImportMessage("");
+
+    try {
+      const fn =
+        getFinoraActivationControlBridge()
+          ?.importCredentialAuthorization;
+
+      if (typeof fn !== "function") {
+        setCredentialAuthorizationImportMessage(
+          "FINORA Credential Authorization import is unavailable in this application build.",
+        );
+        return;
+      }
+
+      const result =
+        await fn();
+
+      if (!result.success) {
+        setCredentialAuthorizationImportMessage(
+          result.error ??
+            "Unable to import FINORA Credential Authorization.",
+        );
+        return;
+      }
+
+      if (result.cancelled) {
+        setCredentialAuthorizationImportMessage(
+          "FINORA Credential Authorization import was cancelled.",
+        );
+        return;
+      }
+
+      setCredentialAuthorizationImportMessage(
+        `FINORA Credential Authorization ${String(result.fileName ?? "")} was verified and applied.`,
+      );
+    }
+    catch (error) {
+      setCredentialAuthorizationImportMessage(
+        error instanceof Error
+          ? error.message
+          : "Unable to import FINORA Credential Authorization.",
+      );
+    }
+    finally {
+      setCredentialAuthorizationImporting(false);
+    }
+  }
+
+  async function handleImportPricingUpdate():
+    Promise<void> {
+
+    if (
+      credentialAuthorizationImporting ||
+      pricingUpdateImporting ||
+      controlBundleImporting ||
+      enrollmentImporting ||
+      enrollmentExporting
+    ) {
+      return;
+    }
+
+    setPricingUpdateImporting(true);
+    setPricingUpdateImportMessage("");
+
+    try {
+      const fn =
+        getFinoraActivationControlBridge()
+          ?.importPricingUpdate;
+
+      if (typeof fn !== "function") {
+        setPricingUpdateImportMessage(
+          "FINORA Pricing Update import is unavailable in this application build.",
+        );
+        return;
+      }
+
+      const result =
+        await fn();
+
+      if (!result.success) {
+        setPricingUpdateImportMessage(
+          result.error ??
+            "Unable to import FINORA Pricing Update.",
+        );
+        return;
+      }
+
+      if (result.cancelled) {
+        setPricingUpdateImportMessage(
+          "FINORA Pricing Update import was cancelled.",
+        );
+        return;
+      }
+
+      setPricingUpdateImportMessage(
+        `FINORA Pricing Update ${String(result.fileName ?? "")} was verified and applied.`,
+      );
+    }
+    catch (error) {
+      setPricingUpdateImportMessage(
+        error instanceof Error
+          ? error.message
+          : "Unable to import FINORA Pricing Update.",
+      );
+    }
+    finally {
+      setPricingUpdateImporting(false);
+    }
+  }
+
+
 
   if (state === "CHECKING") {
     return (
@@ -1213,6 +1367,12 @@ function BranchActivationGate({
         onImportControlBundle={
           handleImportControlBundle
         }
+        onImportCredentialAuthorization={
+          handleImportCredentialAuthorization
+        }
+        onImportPricingUpdate={
+          handleImportPricingUpdate
+        }
         enrollmentExporting={
           enrollmentExporting
         }
@@ -1230,6 +1390,18 @@ function BranchActivationGate({
         }
         controlBundleImportMessage={
           controlBundleImportMessage
+        }
+        credentialAuthorizationImporting={
+          credentialAuthorizationImporting
+        }
+        credentialAuthorizationImportMessage={
+          credentialAuthorizationImportMessage
+        }
+        pricingUpdateImporting={
+          pricingUpdateImporting
+        }
+        pricingUpdateImportMessage={
+          pricingUpdateImportMessage
         }
       />
     );

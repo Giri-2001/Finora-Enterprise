@@ -1,5 +1,5 @@
-﻿// ============================================================
-// FINORA ENTERPRISE OSâ„¢
+// ============================================================
+// FINORA ENTERPRISE OSÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢
 //
 // ELECTRON CONTROL
 // SIGNED CONTROL BUNDLE PACKAGE APPLY SERVICE
@@ -49,6 +49,7 @@ import {
 } from "./finoraInstallationBindingService.js";
 
 import {
+  verifyFinoraSignedBranchPortabilityAuthorityPackage,
   verifyFinoraSignedControlPackageBranchScope,
   verifyFinoraSignedControlPackageNative,
 } from "./finoraSignedControlPackageVerifier.js";
@@ -56,6 +57,14 @@ import {
 import type {
   FinoraBranchTrustedControlPublicKey,
 } from "./finoraSignedControlPackageVerifier.js";
+
+import {
+  isFinoraBranchCredentialPortabilityAuthorityProvenanceV1,
+} from "./finoraBranchCredentialPortabilityAuthorityProvenance.js";
+
+import type {
+  FinoraBranchCredentialPortabilityAuthorityProvenanceV1,
+} from "./finoraBranchCredentialPortabilityAuthorityProvenance.js";
 
 import type {
   FinoraBranchOperationalSessionPrincipal,
@@ -112,7 +121,8 @@ export type FinoraControlBundleChildPurpose =
   | "PRICING_POLICY"
   | "WALLET_RECHARGE"
   | "WALLET_RECHARGE_DECLINE"
-  | "WALLET_OPENING_BALANCE";
+  | "WALLET_OPENING_BALANCE"
+  | "BRANCH_PORTABILITY_AUTHORITY";
 
 export type FinoraControlBundleImportAuthorityContext =
   | {
@@ -224,6 +234,26 @@ function isRecord(
   );
 }
 
+function verifiedSignersMatchExactly(
+  left:
+    FinoraBranchTrustedControlPublicKey,
+
+  right:
+    FinoraBranchTrustedControlPublicKey,
+): boolean {
+
+  return (
+    left.issuerId === right.issuerId &&
+    left.signingKeyId === right.signingKeyId &&
+    left.algorithm === right.algorithm &&
+    left.format === right.format &&
+    left.publicKey === right.publicKey &&
+    left.status === right.status &&
+    left.validFrom === right.validFrom &&
+    left.validUntil === right.validUntil
+  );
+}
+
 function isNonEmptyString(
   value:
     unknown,
@@ -283,7 +313,9 @@ function isSupportedChildPurpose(
     value ===
       "WALLET_RECHARGE_DECLINE" ||
     value ===
-      "WALLET_OPENING_BALANCE"
+      "WALLET_OPENING_BALANCE" ||
+    value ===
+      "BRANCH_PORTABILITY_AUTHORITY"
   );
 }
 
@@ -395,6 +427,9 @@ async function applyChildPackage(
 
   now:
     Date,
+
+  credentialPortabilityAuthorityProvenance?:
+    FinoraBranchCredentialPortabilityAuthorityProvenanceV1,
 ): Promise<
   {
     success:
@@ -445,6 +480,7 @@ async function applyChildPackage(
               signedPackage,
               trustedKeys,
               now,
+              credentialPortabilityAuthorityProvenance,
             );
 
       return result.success
@@ -625,6 +661,24 @@ async function applyChildPackage(
               "FINORA Wallet Recharge Decline child apply failed.",
           };
     }
+    case "BRANCH_PORTABILITY_AUTHORITY": {
+
+      /*
+       * Supporting cryptographic proof only.
+       *
+       * Signature, branch target, credential lineage and exact
+       * Control Center signer are verified during whole-bundle
+       * preflight before any child mutation begins.
+       *
+       * This proof is intentionally not independently replay- or
+       * sequence-consumed.
+       */
+      return {
+        success:
+          true,
+      };
+    }
+
   }
 }
 
@@ -922,6 +976,32 @@ export async function applyFinoraSignedControlBundlePackage(
     }[] =
       [];
 
+  let verifiedUsbCredentialBranchAccess:
+    {
+      signedPackage:
+        Record<string, unknown>;
+
+      verifiedTrustedKey:
+        FinoraBranchTrustedControlPublicKey;
+
+      credentialEnrollment:
+        Record<string, unknown>;
+    } |
+    undefined;
+
+  let verifiedUsbPortabilityProof:
+    {
+      signedPackage:
+        Record<string, unknown>;
+
+      verifiedTrustedKey:
+        FinoraBranchTrustedControlPublicKey;
+
+      payload:
+        Record<string, unknown>;
+    } |
+    undefined;
+
   for (
     const child of
       payload.packages
@@ -955,12 +1035,26 @@ export async function applyFinoraSignedControlBundlePackage(
       );
     }
 
-    if (
-      !targetsMatch(
-        child.target,
-        controlBundle.target,
-      )
-    ) {
+    const childTargetMatches =
+      child.purpose ===
+        "BRANCH_PORTABILITY_AUTHORITY"
+        ? (
+            isRecord(
+              child.target,
+            ) &&
+            child.target.ownerId ===
+              controlBundle.target.ownerId &&
+            child.target.businessId ===
+              controlBundle.target.businessId &&
+            child.target.branchId ===
+              controlBundle.target.branchId
+          )
+        : targetsMatch(
+            child.target,
+            controlBundle.target,
+          );
+
+    if (!childTargetMatches) {
       return failure(
         "FINORA CONTROL_BUNDLE child package target does not match the verified outer bundle target.",
       );
@@ -979,12 +1073,67 @@ export async function applyFinoraSignedControlBundlePackage(
      * defense-in-depth boundary while preserving those services
      * as the authoritative domain/replay/state validators.
      */
+    /*
+     * Credential-bearing BRANCH_ACCESS is intentionally native-only.
+     *
+     * AUTHENTICATED_PORTABLE authorizes portable lifecycle operations,
+     * but it must never reroute ISSUE/AUTHORIZE_CREDENTIAL enrollment
+     * authority into the portable lifecycle lane.
+     *
+     * The verified native BRANCH_ACCESS service persists the pending
+     * one-time authorization; the separately verified portability
+     * authority is retained as provenance.
+     */
+    const childCarriesCredentialEnrollment =
+      child.purpose === "BRANCH_ACCESS" &&
+      isRecord(child.payload) &&
+      Object.prototype.hasOwnProperty.call(
+        child.payload,
+        "credentialEnrollment",
+      );
+
+    const childIsCredentialAuthorization =
+      child.purpose === "BRANCH_ACCESS" &&
+      isRecord(child.payload) &&
+      child.payload.action === "AUTHORIZE_CREDENTIAL";
+
+    /*
+     * Portable historical bundles must fail closed for credential
+     * enrollment operations before native target verification.
+     *
+     * A genuine new-owner credential-bearing ISSUE is still routed to
+     * the native lane below; this guard applies only when the signed
+     * package target is historical relative to the current installation.
+     */
+    if (
+      authorityContext.lane === "AUTHENTICATED_PORTABLE" &&
+      child.purpose === "BRANCH_ACCESS" &&
+      isRecord(child.payload) &&
+      (
+        child.payload.action === "AUTHORIZE_CREDENTIAL" ||
+        Object.prototype.hasOwnProperty.call(
+          child.payload,
+          "credentialEnrollment",
+        )
+      ) &&
+      isRecord(child.target) &&
+      child.target.installationId !==
+        nativeExpectedTarget.installationId
+    ) {
+      return failure(
+        child.payload.action === "AUTHORIZE_CREDENTIAL"
+          ? `FINORA CONTROL_BUNDLE child ${child.packageId} BRANCH_ACCESS AUTHORIZE_CREDENTIAL is native-only.`
+          : `FINORA CONTROL_BUNDLE child ${child.packageId} portable BRANCH_ACCESS cannot carry credential enrollment authority.`,
+      );
+    }
     const branchAccessLane:
       FinoraControlBundleBranchAccessChildLane =
         authorityContext.lane ===
           "AUTHENTICATED_PORTABLE" &&
         child.purpose ===
-          "BRANCH_ACCESS"
+          "BRANCH_ACCESS" &&
+        !childCarriesCredentialEnrollment &&
+        !childIsCredentialAuthorization
           ? "PORTABLE_BRANCH_ACCESS"
           : "NATIVE_BRANCH_ACCESS";
 
@@ -1016,28 +1165,36 @@ export async function applyFinoraSignedControlBundlePackage(
           : "NATIVE_PRICING_POLICY";
 
     const childVerification =
-      (
-        branchAccessLane ===
-          "PORTABLE_BRANCH_ACCESS" ||
-        storageEntitlementLane ===
-          "PORTABLE_STORAGE_ENTITLEMENT" ||
-        businessProfileLane ===
-          "PORTABLE_BUSINESS_PROFILE" ||
-        pricingPolicyLane ===
-          "PORTABLE_PRICING_POLICY"
-      )
-        ? verifyFinoraSignedControlPackageBranchScope(
+      child.purpose ===
+        "BRANCH_PORTABILITY_AUTHORITY"
+        ? verifyFinoraSignedBranchPortabilityAuthorityPackage(
             child,
             trustedKeys,
             expectedBranchScope,
             now,
           )
-        : verifyFinoraSignedControlPackageNative(
-            child,
-            trustedKeys,
-            nativeExpectedTarget,
-            now,
-          );
+        : (
+            branchAccessLane ===
+              "PORTABLE_BRANCH_ACCESS" ||
+            storageEntitlementLane ===
+              "PORTABLE_STORAGE_ENTITLEMENT" ||
+            businessProfileLane ===
+              "PORTABLE_BUSINESS_PROFILE" ||
+            pricingPolicyLane ===
+              "PORTABLE_PRICING_POLICY"
+          )
+          ? verifyFinoraSignedControlPackageBranchScope(
+              child,
+              trustedKeys,
+              expectedBranchScope,
+              now,
+            )
+          : verifyFinoraSignedControlPackageNative(
+              child,
+              trustedKeys,
+              nativeExpectedTarget,
+              now,
+            );
 
     if (!childVerification.valid) {
       return failure(
@@ -1107,6 +1264,63 @@ export async function applyFinoraSignedControlBundlePackage(
     }
 
     if (
+      child.purpose ===
+        "BRANCH_ACCESS" &&
+      branchAccessLane ===
+        "NATIVE_BRANCH_ACCESS"
+    ) {
+      const verifiedPayload =
+        childVerification.controlPackage.payload;
+
+      if (
+        isRecord(verifiedPayload) &&
+        verifiedPayload.action ===
+          "ISSUE" &&
+        isRecord(
+          verifiedPayload.credentialEnrollment,
+        )
+      ) {
+        verifiedUsbCredentialBranchAccess = {
+          signedPackage:
+            child,
+
+          verifiedTrustedKey: {
+            ...childVerification.verifiedTrustedKey,
+          },
+
+          credentialEnrollment:
+            verifiedPayload.credentialEnrollment,
+        };
+      }
+    }
+
+    if (
+      child.purpose ===
+        "BRANCH_PORTABILITY_AUTHORITY"
+    ) {
+      const verifiedPayload =
+        childVerification.controlPackage.payload;
+
+      if (!isRecord(verifiedPayload)) {
+        return failure(
+          "FINORA CONTROL_BUNDLE verified BRANCH_PORTABILITY_AUTHORITY payload is invalid.",
+        );
+      }
+
+      verifiedUsbPortabilityProof = {
+        signedPackage:
+          child,
+
+        verifiedTrustedKey: {
+          ...childVerification.verifiedTrustedKey,
+        },
+
+        payload:
+          verifiedPayload,
+      };
+    }
+
+    if (
       packageIds.has(
         child.packageId,
       )
@@ -1159,6 +1373,153 @@ export async function applyFinoraSignedControlBundlePackage(
     });
   }
 
+  let credentialPortabilityAuthorityProvenance:
+    FinoraBranchCredentialPortabilityAuthorityProvenanceV1 |
+    undefined;
+
+  if (
+    verifiedUsbCredentialBranchAccess !==
+      undefined ||
+    verifiedUsbPortabilityProof !==
+      undefined
+  ) {
+    if (
+      verifiedUsbCredentialBranchAccess ===
+        undefined ||
+      verifiedUsbPortabilityProof ===
+        undefined
+    ) {
+      return failure(
+        "FINORA CONTROL_BUNDLE USB credential enrollment requires its correlated BRANCH_PORTABILITY_AUTHORITY proof.",
+      );
+    }
+
+    const credentialEnrollment =
+      verifiedUsbCredentialBranchAccess
+        .credentialEnrollment;
+
+    const portabilityPayload =
+      verifiedUsbPortabilityProof
+        .payload;
+
+    if (
+      credentialEnrollment.authorizationId !==
+        portabilityPayload.sourceAuthorizationId ||
+      credentialEnrollment.userId !==
+        portabilityPayload.userId ||
+      credentialEnrollment.username !==
+        portabilityPayload.username ||
+      credentialEnrollment.role !==
+        portabilityPayload.role ||
+      credentialEnrollment.ownerId !==
+        portabilityPayload.ownerId ||
+      credentialEnrollment.businessId !==
+        portabilityPayload.businessId ||
+      credentialEnrollment.branchId !==
+        portabilityPayload.branchId ||
+      credentialEnrollment.storageMode !==
+        portabilityPayload.storageMode ||
+      credentialEnrollment.dataContext !==
+        portabilityPayload.dataContext ||
+      credentialEnrollment.method !==
+        portabilityPayload.sourceAuthorizationMethod ||
+      credentialEnrollment.demoId !==
+        portabilityPayload.demoId
+    ) {
+      return failure(
+        "FINORA CONTROL_BUNDLE USB credential enrollment and Branch Portability Authority lineage do not match.",
+      );
+    }
+
+    if (
+      credentialEnrollment.ownerId !==
+        controlBundle.target.ownerId ||
+      credentialEnrollment.businessId !==
+        controlBundle.target.businessId ||
+      credentialEnrollment.branchId !==
+        controlBundle.target.branchId
+    ) {
+      return failure(
+        "FINORA CONTROL_BUNDLE USB credential authorization does not match the verified bundle branch target.",
+      );
+    }
+
+    if (
+      !verifiedSignersMatchExactly(
+        verifiedUsbCredentialBranchAccess
+          .verifiedTrustedKey,
+        verifiedUsbPortabilityProof
+          .verifiedTrustedKey,
+      )
+    ) {
+      return failure(
+        "FINORA CONTROL_BUNDLE USB credential children were not verified by the exact same trusted Control Center signing key.",
+      );
+    }
+
+    const branchAccessIssuer =
+      verifiedUsbCredentialBranchAccess
+        .signedPackage.issuer;
+
+    const portabilityIssuer =
+      verifiedUsbPortabilityProof
+        .signedPackage.issuer;
+
+    if (
+      !isRecord(branchAccessIssuer) ||
+      !isRecord(portabilityIssuer) ||
+      branchAccessIssuer.issuerId !==
+        verifiedUsbCredentialBranchAccess
+          .verifiedTrustedKey.issuerId ||
+      branchAccessIssuer.signingKeyId !==
+        verifiedUsbCredentialBranchAccess
+          .verifiedTrustedKey.signingKeyId ||
+      portabilityIssuer.issuerId !==
+        verifiedUsbPortabilityProof
+          .verifiedTrustedKey.issuerId ||
+      portabilityIssuer.signingKeyId !==
+        verifiedUsbPortabilityProof
+          .verifiedTrustedKey.signingKeyId
+    ) {
+      return failure(
+        "FINORA CONTROL_BUNDLE USB credential signer identity does not match verified trusted-key evidence.",
+      );
+    }
+
+    const provenanceCandidate = {
+      sourceAuthorizationId:
+        portabilityPayload.sourceAuthorizationId,
+
+      signedPortabilityAuthorityPackage:
+        verifiedUsbPortabilityProof
+          .signedPackage,
+
+      verifiedControlSigner: {
+        ...verifiedUsbPortabilityProof
+          .verifiedTrustedKey,
+      },
+
+      verifiedAt:
+        now.toISOString(),
+
+      schemaVersion:
+        1,
+    };
+
+    if (
+      !isFinoraBranchCredentialPortabilityAuthorityProvenanceV1(
+        provenanceCandidate,
+      )
+    ) {
+      return failure(
+        "FINORA CONTROL_BUNDLE verified Branch Portability Authority provenance is invalid.",
+      );
+    }
+
+    credentialPortabilityAuthorityProvenance =
+      provenanceCandidate;
+  }
+
   // ----------------------------------------------------------
   // BEST-EFFORT ORDERED CHILD APPLY
   //
@@ -1189,6 +1550,10 @@ export async function applyFinoraSignedControlBundlePackage(
           child.signedPackage,
           trustedKeys,
           now,
+          child.purpose ===
+              "BRANCH_ACCESS"
+            ? credentialPortabilityAuthorityProvenance
+            : undefined,
         );
 
       childResults.push({
