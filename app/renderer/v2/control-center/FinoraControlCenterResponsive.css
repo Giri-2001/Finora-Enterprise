@@ -1,4 +1,4 @@
-﻿/* ============================================================
+/* ============================================================
    FINORA DEVELOPER CONTROL CENTER
    RESPONSIVE CONTRACT
    ============================================================ */
@@ -484,3 +484,1263 @@ select::-ms-expand { display: none; }
 input[type="number"] { appearance: textfield; -moz-appearance: textfield; }
 input[type="number"]::-webkit-inner-spin-button,
 input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+/* ============================================================
+   FINORA OWNER OPERATIONS RESPONSIVE GRID
+   Isolated from all other Control Center workflow grids.
+   ============================================================ */
+
+@media (min-width: 1200px) {
+  [data-finora-owner-operations-grid="true"] {
+    --finora-cc-workflow-columns: 5;
+  }
+}
+
+@media (min-width: 768px) and (max-width: 1199px) {
+  [data-finora-owner-operations-grid="true"] {
+    --finora-cc-workflow-columns: 3;
+  }
+}
+
+@media (max-width: 767px) {
+  [data-finora-owner-operations-grid="true"] {
+    --finora-cc-workflow-columns: 1;
+  }
+}
+
+/* ============================================================
+   FINORA SELECTED BRANCH CONTROL BUNDLE 60 40
+   ============================================================ */
+
+[data-finora-selected-branch-bundle-layout="true"] {
+  display: grid;
+  gap: 14px;
+  align-items: stretch;
+  margin-bottom: 14px;
+}
+
+[data-finora-selected-branch-card="true"],
+[data-finora-control-bundle-export="true"],
+[data-finora-branch-access-card="true"] {
+  min-width: 0;
+}
+
+[data-finora-branch-access-card="true"] {
+  margin-top: 0;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  border-radius: 11px;
+  padding: 16px;
+  background: rgba(2, 6, 23, 0.34);
+}
+
+[data-finora-branch-access-card-title="true"] {
+  margin-bottom: 14px;
+  font-size: 15px;
+  font-weight: 650;
+}
+
+@media (min-width: 1200px) {
+  [data-finora-selected-branch-bundle-layout="true"] {
+    grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+  }
+}
+
+@media (max-width: 1199px) {
+  [data-finora-selected-branch-bundle-layout="true"] {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* ============================================================
+   FINORA BRANCH ACCESS FINAL RESPONSIVE 4 3 1
+   Desktop/Laptop : 4
+   Tablet         : 3
+   Mobile         : 1
+   ============================================================ */
+
+[data-finora-branch-access-card="true"] {
+  --finora-cc-branch-access-columns: 4;
+}
+
+@media (min-width: 768px) and (max-width: 1199px) {
+  [data-finora-branch-access-card="true"] {
+    --finora-cc-branch-access-columns: 3;
+  }
+}
+
+@media (max-width: 767px) {
+  [data-finora-branch-access-card="true"] {
+    --finora-cc-branch-access-columns: 1;
+  }
+}
+
+/* ============================================================
+   FINORA OWNER LOGIN EXACT TWO ROW RESPONSIVE
+
+   Desktop >=1200:
+   Row 1:
+   [Create Credentials] [Authorization ID] [Generate ID] [empty]
+
+   Row 2:
+   [Username] [Full Name] [empty] [Issue Branch Access]
+
+   Tablet: 3 columns
+   Mobile: 1 column
+   ============================================================ */
+
+[data-finora-owner-login-layout="true"] {
+  --finora-cc-owner-login-columns: 4;
+  min-width: 0;
+}
+
+[data-finora-owner-login-layout="true"] > * {
+  min-width: 0;
+}
+
+@media (min-width: 1200px) {
+  [data-finora-owner-login-create="true"] {
+    grid-column: 1;
+    grid-row: 1;
+  }
+
+  [data-finora-owner-login-auth="true"] {
+    grid-column: 2;
+    grid-row: 1;
+  }
+
+  [data-finora-owner-login-generate="true"] {
+    grid-column: 3;
+    grid-row: 1;
+  }
+
+  [data-finora-owner-login-username="true"] {
+    grid-column: 1;
+    grid-row: 2;
+  }
+
+  [data-finora-owner-login-full-name="true"] {
+    grid-column: 2;
+    grid-row: 2;
+  }
+
+  [data-finora-owner-login-issue="true"] {
+    grid-column: 4;
+    grid-row: 2;
+  }
+
+  [data-finora-owner-login-warning="true"] {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (min-width: 768px) and (max-width: 1199px) {
+  [data-finora-owner-login-layout="true"] {
+    --finora-cc-owner-login-columns: 3;
+  }
+}
+
+@media (max-width: 767px) {
+  [data-finora-owner-login-layout="true"] {
+    --finora-cc-owner-login-columns: 1;
+  }
+
+  [data-finora-owner-login-issue="true"] {
+    width: 100% !important;
+  }
+}
+
+/* ============================================================
+   FINORA OWNER LOGIN DEFINITIVE 3 X 2
+
+   Desktop/Laptop + Tablet:
+   Row 1:
+   Create Credentials | Authorization ID | Generate Authorization ID
+
+   Row 2:
+   Username | Full Name | Issue Branch Access
+
+   Mobile:
+   1 per row
+   ============================================================ */
+
+[data-finora-owner-login-layout="true"] {
+  --finora-cc-owner-login-columns: 3 !important;
+  grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+}
+
+[data-finora-owner-login-create="true"] {
+  grid-column: 1 !important;
+  grid-row: 1 !important;
+  width: 100% !important;
+  min-width: 0 !important;
+}
+
+[data-finora-owner-login-auth="true"] {
+  grid-column: 2 !important;
+  grid-row: 1 !important;
+  min-width: 0 !important;
+}
+
+[data-finora-owner-login-generate="true"] {
+  grid-column: 3 !important;
+  grid-row: 1 !important;
+  width: 100% !important;
+  min-width: 0 !important;
+}
+
+[data-finora-owner-login-username="true"] {
+  grid-column: 1 !important;
+  grid-row: 2 !important;
+  min-width: 0 !important;
+}
+
+[data-finora-owner-login-full-name="true"] {
+  grid-column: 2 !important;
+  grid-row: 2 !important;
+  min-width: 0 !important;
+}
+
+[data-finora-owner-login-issue="true"] {
+  grid-column: 3 !important;
+  grid-row: 2 !important;
+  width: calc(100% + 3px) !important;
+  min-width: 0 !important;
+  justify-self: end !important;
+}
+
+[data-finora-owner-login-warning="true"] {
+  grid-column: 1 / -1 !important;
+}
+
+/* Tablet remains 3 per row */
+@media (min-width: 768px) and (max-width: 1199px) {
+  [data-finora-owner-login-layout="true"] {
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  }
+
+  [data-finora-owner-login-create="true"] {
+    grid-column: 1 !important;
+    grid-row: 1 !important;
+  }
+
+  [data-finora-owner-login-auth="true"] {
+    grid-column: 2 !important;
+    grid-row: 1 !important;
+  }
+
+  [data-finora-owner-login-generate="true"] {
+    grid-column: 3 !important;
+    grid-row: 1 !important;
+  }
+
+  [data-finora-owner-login-username="true"] {
+    grid-column: 1 !important;
+    grid-row: 2 !important;
+  }
+
+  [data-finora-owner-login-full-name="true"] {
+    grid-column: 2 !important;
+    grid-row: 2 !important;
+  }
+
+  [data-finora-owner-login-issue="true"] {
+    grid-column: 3 !important;
+    grid-row: 2 !important;
+    width: 100% !important;
+  }
+}
+
+/* Mobile = one per row */
+@media (max-width: 767px) {
+  [data-finora-owner-login-layout="true"] {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+
+  [data-finora-owner-login-create="true"],
+  [data-finora-owner-login-auth="true"],
+  [data-finora-owner-login-generate="true"],
+  [data-finora-owner-login-username="true"],
+  [data-finora-owner-login-full-name="true"],
+  [data-finora-owner-login-issue="true"] {
+    grid-column: auto !important;
+    grid-row: auto !important;
+    width: 100% !important;
+  }
+}
+
+/* ============================================================
+   FINORA BRANCH SIX ACTIONS SAFE FINAL
+
+   Desktop/Laptop = 6 in one row
+   Tablet         = 3 per row
+   Mobile         = 1 per row
+
+   Height 36 -> 39
+   Font   11 -> 13
+   ============================================================ */
+
+[data-finora-control-center-branch-action-layout="true"] {
+  display: grid !important;
+  grid-template-columns: repeat(6, minmax(0, 1fr)) !important;
+  gap: 8px !important;
+  align-items: stretch !important;
+  margin-top: 16px !important;
+}
+
+[data-finora-control-center-branch-action-layout="true"]
+> [data-finora-control-center-branch-actions="true"] {
+  display: contents !important;
+}
+
+[data-finora-control-center-branch-action-layout="true"]
+> [data-finora-control-center-branch-actions="true"]
+> button,
+[data-finora-control-center-branch-action-layout="true"]
+> [data-finora-control-center-view-details="true"] {
+  min-height: 39px !important;
+  width: 100% !important;
+  min-width: 0 !important;
+  margin-top: 0 !important;
+  box-sizing: border-box !important;
+  font-size: 13px !important;
+  line-height: 1.25 !important;
+  white-space: normal !important;
+  overflow-wrap: anywhere !important;
+}
+
+/* Tablet */
+@media (min-width: 768px) and (max-width: 1199px) {
+  [data-finora-control-center-branch-action-layout="true"] {
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  }
+}
+
+/* Mobile */
+@media (max-width: 767px) {
+  [data-finora-control-center-branch-action-layout="true"] {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+
+  [data-finora-control-center-branch-action-layout="true"]
+  > [data-finora-control-center-branch-actions="true"]
+  > button,
+  [data-finora-control-center-branch-action-layout="true"]
+  > [data-finora-control-center-view-details="true"] {
+    min-height: 39px !important;
+    font-size: 13px !important;
+    width: 100% !important;
+  }
+}
+
+/* ============================================================
+   FINORA BRANCH ACTIONS 6 3 1 FINAL
+
+   Desktop >= 1200 : 6 x 1
+   Tablet 768-1199 : 3 x 2
+   Mobile <= 767   : 1 x 6
+
+   Button height : 36px -> 39px
+   Button text   : 11px -> 13px
+   ============================================================ */
+
+@media (min-width: 1200px) {
+  [data-finora-control-center-branch-action-layout="true"] {
+    grid-template-columns:
+      repeat(6, minmax(0, 1fr)) !important;
+  }
+}
+
+@media (min-width: 768px) and (max-width: 1199px) {
+  [data-finora-control-center-branch-action-layout="true"] {
+    grid-template-columns:
+      repeat(3, minmax(0, 1fr)) !important;
+  }
+}
+
+@media (max-width: 767px) {
+  [data-finora-control-center-branch-action-layout="true"] {
+    grid-template-columns:
+      minmax(0, 1fr) !important;
+  }
+}
+
+[data-finora-control-center-branch-action-layout="true"]
+> [data-finora-control-center-branch-actions="true"] {
+  display: contents !important;
+}
+
+[data-finora-control-center-branch-action-layout="true"]
+> [data-finora-control-center-branch-actions="true"]
+> button,
+[data-finora-control-center-branch-action-layout="true"]
+> [data-finora-control-center-view-details="true"] {
+  min-height: 39px !important;
+  height: auto !important;
+  width: 100% !important;
+  min-width: 0 !important;
+  margin-top: 0 !important;
+  box-sizing: border-box !important;
+
+  font-size: 13px !important;
+  line-height: 1.25 !important;
+
+  white-space: normal !important;
+  overflow-wrap: anywhere !important;
+}
+
+@media (max-width: 767px) {
+  [data-finora-control-center-branch-action-layout="true"]
+  > [data-finora-control-center-branch-actions="true"]
+  > button,
+  [data-finora-control-center-branch-action-layout="true"]
+  > [data-finora-control-center-view-details="true"] {
+    min-height: 39px !important;
+    font-size: 13px !important;
+  }
+}
+
+/* ============================================================
+   FINORA BRANCH CARD FINAL SIZING V2
+
+   HEADER
+   Business Name         : 12px -> 16px
+   Business / Branch Code: 12px -> 14px
+
+   SUMMARY
+   Desktop >=1200 : 4 in one row
+   Tablet 768-1199: 2 per row
+   Mobile <=767   : 1 per row
+   Summary titles : 11px -> 13px
+
+   ACTIONS
+   Height : 39px -> 41px
+   Text   : 13px -> 14px
+
+   FOOTER
+   Branch ID                 : 11px -> 13px
+   Provisioned Installation : 11px -> 12px
+   ============================================================ */
+
+
+/* ---------------- HEADER TEXT ---------------- */
+
+[data-finora-branch-card-business-name="true"] {
+  font-size: 16px !important;
+}
+
+[data-finora-branch-card-code="true"] {
+  font-size: 14px !important;
+}
+
+
+/* ---------------- 4 SUMMARY ITEMS ---------------- */
+
+[data-finora-branch-card-summary-stats="true"] {
+  display: grid !important;
+  gap: 14px !important;
+  margin: 0 !important;
+}
+
+@media (min-width: 1200px) {
+  [data-finora-branch-card-summary-stats="true"] {
+    grid-template-columns:
+      repeat(4, minmax(0, 1fr)) !important;
+  }
+}
+
+@media (min-width: 768px) and (max-width: 1199px) {
+  [data-finora-branch-card-summary-stats="true"] {
+    grid-template-columns:
+      repeat(2, minmax(0, 1fr)) !important;
+  }
+}
+
+@media (max-width: 767px) {
+  [data-finora-branch-card-summary-stats="true"] {
+    grid-template-columns:
+      minmax(0, 1fr) !important;
+  }
+}
+
+[data-finora-branch-card-summary-stats="true"]
+> div {
+  min-width: 0 !important;
+}
+
+[data-finora-branch-card-summary-stats="true"]
+> div
+> dt {
+  font-size: 13px !important;
+  line-height: 1.25 !important;
+}
+
+
+/* ---------------- 6 ACTION BUTTONS ---------------- */
+
+[data-finora-control-center-branch-action-layout="true"]
+> [data-finora-control-center-branch-actions="true"]
+> button,
+[data-finora-control-center-branch-action-layout="true"]
+> [data-finora-control-center-view-details="true"] {
+  min-height: 41px !important;
+  font-size: 14px !important;
+  line-height: 1.25 !important;
+}
+
+
+/* ---------------- BOTTOM IDS ---------------- */
+
+[data-finora-branch-card-id-footer="true"]
+> div:first-child {
+  font-size: 13px !important;
+}
+
+[data-finora-branch-card-id-footer="true"]
+> div:nth-child(2) {
+  font-size: 12px !important;
+}
+
+/* ============================================================
+   FINORA WALLET BALANCE VALUE FONT MATCH LAST SYNC
+   Only fixes the value under "Last Reported Wallet Balance".
+   ============================================================ */
+
+[data-finora-branch-card-summary-stats="true"]
+> div:nth-child(3)
+> dd {
+  font-size: 13px !important;
+  font-weight: 600 !important;
+}
+
+/* ============================================================
+   FINORA PORTABLE STATE 30 10 10 30 10 FINAL
+
+   DESKTOP ONLY:
+   Export Code Input = 30%
+   Generate Code     = 10%
+   Export .finora    = 10%
+   Import Code Input = 30%
+   Import .finora    = 10%
+
+   Four gaps = 2.5% each
+   Total = 100%
+   ============================================================ */
+
+@media (min-width: 1200px) {
+
+  [data-finora-portable-state-five-column-layout="true"] {
+    display: grid !important;
+
+    grid-template-columns:
+      30% 10% 10% 30% 10% !important;
+
+    column-gap: 2.5% !important;
+    row-gap: 10px !important;
+
+    align-items: center !important;
+  }
+
+
+  /* Title + subtitle stay full width */
+  [data-finora-portable-state-five-column-layout="true"]
+  > div:first-child {
+    grid-column: 1 / -1 !important;
+  }
+
+
+  /*
+    Rendered structure when Export + Import are available:
+
+    child 1 = title / subtitle
+    child 2 = Export Transfer Code field
+    child 3 = Generate + Export buttons wrapper
+    child 4 = Import input + Import button wrapper
+
+    display:contents exposes the 3 buttons/import input
+    directly to the 5-column parent grid.
+  */
+
+  [data-finora-portable-state-five-column-layout="true"]
+  > div:nth-child(3),
+
+  [data-finora-portable-state-five-column-layout="true"]
+  > div:nth-child(4) {
+    display: contents !important;
+  }
+
+
+  /* All five row controls fill their allocated column */
+  [data-finora-portable-state-five-column-layout="true"]
+  input,
+
+  [data-finora-portable-state-five-column-layout="true"]
+  button {
+    width: 100% !important;
+    min-width: 0 !important;
+    box-sizing: border-box !important;
+  }
+
+
+  /* Status / error message remains below the row */
+  [data-finora-portable-state-five-column-layout="true"]
+  > [role="status"],
+
+  [data-finora-portable-state-five-column-layout="true"]
+  > [role="alert"] {
+    grid-column: 1 / -1 !important;
+  }
+}
+
+/* ============================================================
+   FINORA PORTABLE STATE TIGHT GAP + FONT FINAL
+
+   - Gap between all 5 controls = 5px
+   - Input value font +1px
+   - Button title font +1px
+   ============================================================ */
+
+@media (min-width: 1200px) {
+
+  [data-finora-portable-state-five-column-layout="true"] {
+    grid-template-columns:
+      30% 10% 10% 30% 10% !important;
+
+    column-gap: 5px !important;
+    row-gap: 5px !important;
+  }
+
+  [data-finora-portable-state-five-column-layout="true"]
+  input {
+    font-size: 14px !important;
+  }
+
+  [data-finora-portable-state-five-column-layout="true"]
+  button {
+    font-size: 14px !important;
+  }
+}
+
+/* ============================================================
+   FINORA PORTABLE 35 10 10 35 10 + CARD GAP FINAL
+
+   Controls:
+   Export input  = 35 parts
+   Generate      = 10 parts
+   Export        = 10 parts
+   Import input  = 35 parts
+   Import        = 10 parts
+
+   Exact gap between controls = 5px
+
+   Card spacing:
+   Top    = 3px
+   Below  = 5px before FINORA Branches
+   ============================================================ */
+
+[data-finora-portable-state-five-column-layout="true"] {
+  margin-top: 3px !important;
+  margin-bottom: 5px !important;
+}
+
+@media (min-width: 1200px) {
+  [data-finora-portable-state-five-column-layout="true"] {
+    grid-template-columns:
+      minmax(0, 35fr)
+      minmax(0, 10fr)
+      minmax(0, 10fr)
+      minmax(0, 35fr)
+      minmax(0, 10fr) !important;
+
+    column-gap: 5px !important;
+    row-gap: 5px !important;
+  }
+}
+
+/* Reduce the space before the FINORA Branches card */
+[data-finora-portable-state-five-column-layout="true"]
++ [data-finora-control-center-branch-registry="true"] {
+  margin-top: 5px !important;
+}
+
+/* Fallback for the registry section if it is not a direct sibling */
+[data-finora-control-center-branch-registry="true"] {
+  margin-top: 5px !important;
+}
+
+/* ============================================================
+   FINORA BRANCHES CARD PADDING MINUS 4 FINAL
+   Reduce only the outer FINORA Branches card inner padding by 4px.
+   ============================================================ */
+
+[data-finora-control-center-branch-registry="true"] {
+  padding: 18px !important;
+}
+
+/* ============================================================
+   FINORA VIEW DETAILS TRUE 4 COL FINAL
+
+   Desktop/Laptop >=1200 : 4 items per row
+   Tablet 768-1199       : 2 items per row
+   Mobile <=767          : 1 item per row
+
+   Detail label : 11px -> 12px
+   Detail value : 12px -> 13px
+
+   Section/content text inside View Details also +1px
+   ============================================================ */
+
+
+/* ---------------- DESKTOP ---------------- */
+
+@media (min-width: 1200px) {
+  [data-finora-view-details-main-grid="true"],
+  [data-finora-view-details-authorized-grid="true"],
+  [data-finora-view-details-operational-grid="true"] {
+    grid-template-columns:
+      repeat(4, minmax(0, 1fr)) !important;
+  }
+}
+
+
+/* ---------------- TABLET ---------------- */
+
+@media (min-width: 768px) and (max-width: 1199px) {
+  [data-finora-view-details-main-grid="true"],
+  [data-finora-view-details-authorized-grid="true"],
+  [data-finora-view-details-operational-grid="true"] {
+    grid-template-columns:
+      repeat(2, minmax(0, 1fr)) !important;
+  }
+}
+
+
+/* ---------------- MOBILE ---------------- */
+
+@media (max-width: 767px) {
+  [data-finora-view-details-main-grid="true"],
+  [data-finora-view-details-authorized-grid="true"],
+  [data-finora-view-details-operational-grid="true"] {
+    grid-template-columns:
+      minmax(0, 1fr) !important;
+  }
+}
+
+
+/* ---------------- FIELD TITLE + VALUE ---------------- */
+
+[data-finora-control-center-branch-details="true"]
+[data-finora-view-detail-label="true"] {
+  font-size: 12px !important;
+}
+
+[data-finora-control-center-branch-details="true"]
+[data-finora-view-detail-value="true"] {
+  font-size: 13px !important;
+}
+
+
+/* ---------------- SECTION HEADINGS +1PX ---------------- */
+
+/* Provisioned Identity */
+[data-finora-control-center-branch-details="true"]
+> div:first-child {
+  font-size: 13px !important;
+}
+
+/* Provisioned Device full-row heading */
+[data-finora-view-details-main-grid="true"]
+> div[style*="grid-column"] {
+  font-size: 13px !important;
+}
+
+/* Authorized Devices and Operational Summary headings */
+[data-finora-control-center-branch-details="true"]
+> div {
+  line-height: 1.45;
+}
+
+
+/* Authorized Devices helper line */
+[data-finora-control-center-branch-details="true"]
+> div[style*="margin-bottom"] {
+  font-size: 12px;
+}
+
+
+/* Prevent long IDs from breaking 4-column layout */
+[data-finora-view-details-main-grid="true"] > *,
+[data-finora-view-details-authorized-grid="true"] > *,
+[data-finora-view-details-operational-grid="true"] > * {
+  min-width: 0 !important;
+  overflow-wrap: anywhere !important;
+}
+
+/* ============================================================
+   FINORA MOBILE SETTINGS ONE-COLUMN + DELETED REFRESH FINAL
+   MOBILE ONLY
+   ============================================================ */
+
+@media (max-width: 767px) {
+
+  /* ==========================================================
+     SETTINGS
+     Old Security Code
+     New Security Code
+     Save
+     = ONE ITEM PER ROW
+     ========================================================== */
+
+  [data-finora-developer-security-card="true"] form {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) !important;
+    gap: 12px !important;
+    align-items: stretch !important;
+  }
+
+  [data-finora-developer-security-card="true"] form > * {
+    grid-column: auto !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: none !important;
+    box-sizing: border-box !important;
+  }
+
+  [data-finora-developer-security-card="true"] form > label {
+    width: 100% !important;
+    min-width: 0 !important;
+  }
+
+  [data-finora-developer-security-card="true"] form > label > div {
+    width: 100% !important;
+    min-width: 0 !important;
+  }
+
+  [data-finora-developer-security-card="true"] form input {
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: none !important;
+    box-sizing: border-box !important;
+  }
+
+  [data-finora-developer-security-card="true"]
+  form button[type="submit"] {
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: none !important;
+    justify-self: stretch !important;
+  }
+
+
+  /* ==========================================================
+     DELETED BRANCHES HEADER
+     Title + description first
+     Refresh = next row full width
+     ========================================================== */
+
+  [data-finora-deleted-branches="true"] > div:first-child {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) !important;
+    gap: 10px !important;
+    align-items: stretch !important;
+  }
+
+  [data-finora-deleted-branches="true"]
+  > div:first-child
+  > div {
+    width: 100% !important;
+    min-width: 0 !important;
+  }
+
+  [data-finora-deleted-branches="true"]
+  > div:first-child
+  > button {
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: none !important;
+    justify-self: stretch !important;
+    box-sizing: border-box !important;
+  }
+}
+
+/* ============================================================
+   FINORA MOBILE SIGNING TRUST + DELETED RESTORE FULL WIDTH
+   MOBILE ONLY
+   ============================================================ */
+
+@media (max-width: 767px) {
+
+  /* ==========================================================
+     SIGNING TRUST IDENTITY
+     Better mobile readability
+     ========================================================== */
+
+  section:has([data-finora-signing-trust-title="true"]) {
+    padding: 18px !important;
+  }
+
+  section:has([data-finora-signing-trust-title="true"]) h2 {
+    font-size: 18px !important;
+    line-height: 1.3 !important;
+    margin-bottom: 14px !important;
+  }
+
+  section:has([data-finora-signing-trust-title="true"]) dl {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) !important;
+    gap: 12px !important;
+    margin: 0 !important;
+  }
+
+  section:has([data-finora-signing-trust-title="true"]) dt,
+  section:has([data-finora-signing-trust-title="true"]) dd {
+    grid-column: 1 / -1 !important;
+    min-width: 0 !important;
+    width: 100% !important;
+  }
+
+  section:has([data-finora-signing-trust-title="true"]) dt {
+    margin: 0 0 4px 0 !important;
+    font-size: 13px !important;
+    line-height: 1.45 !important;
+    opacity: 0.82 !important;
+    overflow-wrap: anywhere !important;
+    word-break: break-word !important;
+  }
+
+  section:has([data-finora-signing-trust-title="true"]) dd {
+    margin: 0 !important;
+    font-size: 14px !important;
+    line-height: 1.55 !important;
+    overflow-wrap: anywhere !important;
+    word-break: break-word !important;
+  }
+
+  section:has([data-finora-signing-trust-title="true"]) * {
+    min-width: 0 !important;
+  }
+
+
+  /* ==========================================================
+     DELETED BRANCHES
+     Refresh + Restore buttons full width on mobile
+     ========================================================== */
+
+  [data-finora-deleted-branches="true"] button {
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: none !important;
+    box-sizing: border-box !important;
+    display: flex !important;
+    justify-content: center !important;
+    align-items: center !important;
+  }
+
+  [data-finora-deleted-branches="true"] button svg {
+    flex: 0 0 auto !important;
+  }
+
+  [data-finora-deleted-branches="true"] * {
+    min-width: 0 !important;
+  }
+}
+
+/* ============================================================
+   FINORA DELETED BRANCHES RESTORE FULL WIDTH MOBILE FINAL
+   ============================================================ */
+@media (max-width: 767px) {
+
+  /* Deleted Branches mobile common layout */
+  [data-finora-deleted-branches="true"] * {
+    min-width: 0 !important;
+    box-sizing: border-box !important;
+  }
+
+  /* Any mobile flex rows inside Deleted Branches should stack */
+  [data-finora-deleted-branches="true"] [style*="display: flex"] {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    justify-content: flex-start !important;
+    gap: 12px !important;
+    width: 100% !important;
+  }
+
+  /* Entry cards also full width */
+  [data-finora-deleted-branches="true"] [style*="display: grid"] {
+    width: 100% !important;
+  }
+
+  /* Refresh + Restore buttons full width */
+  [data-finora-deleted-branches="true"] button,
+  [data-finora-deleted-branches="true"] button[type="button"] {
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: none !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    text-align: center !important;
+  }
+
+  /* If button is inside an extra wrapper, wrapper also must stretch */
+  [data-finora-deleted-branches="true"] button:last-child,
+  [data-finora-deleted-branches="true"] button:last-child:only-child {
+    width: 100% !important;
+  }
+
+  /* Restore button icon + text center */
+  [data-finora-deleted-branches="true"] button svg {
+    flex: 0 0 auto !important;
+  }
+}
+
+/* ============================================================
+   FINORA MOBILE RESTORE OWN ROW FINAL
+   MOBILE ONLY
+   ============================================================ */
+
+@media (max-width: 767px) {
+
+  [data-finora-deleted-entry-row="true"] {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) !important;
+    gap: 12px !important;
+    align-items: stretch !important;
+  }
+
+  [data-finora-deleted-entry-row="true"] > * {
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: none !important;
+    box-sizing: border-box !important;
+  }
+
+  [data-finora-deleted-entry-row="true"] > button {
+    grid-column: 1 / -1 !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: none !important;
+    justify-self: stretch !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+  }
+}
+
+/* ============================================================
+   FINORA MOBILE PORTABLE STATE FINAL STACK
+
+   Mobile:
+   Row 1: Export input = full width
+   Row 2: Generate = 50% | Export = 50%
+   Row 3: Import input = full width
+   Row 4: Import button = full width
+   ============================================================ */
+
+@media (max-width: 767px) {
+
+  [data-finora-portable-state-five-column-layout="true"] {
+    display: grid !important;
+    grid-template-columns:
+      repeat(2, minmax(0, 1fr)) !important;
+    gap: 10px !important;
+    align-items: stretch !important;
+  }
+
+  /* Title/subtitle block stays full width */
+  [data-finora-portable-state-five-column-layout="true"]
+  > div:first-child {
+    grid-column: 1 / -1 !important;
+  }
+
+  /* Existing export button wrapper:
+     expose Generate + Export as 2 grid items */
+  [data-finora-portable-state-five-column-layout="true"]
+  > div:nth-child(3) {
+    display: contents !important;
+  }
+
+  /* Existing import input/button wrapper:
+     expose both as direct grid items */
+  [data-finora-portable-state-five-column-layout="true"]
+  > div:nth-child(4) {
+    display: contents !important;
+  }
+
+  /* First/export input = full row */
+  [data-finora-portable-state-five-column-layout="true"]
+  input[type="text"] {
+    grid-column: 1 / -1 !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    box-sizing: border-box !important;
+  }
+
+  /* Generate + Export = 50 / 50 */
+  [data-finora-portable-state-five-column-layout="true"]
+  > button,
+  [data-finora-portable-state-five-column-layout="true"]
+  > div:nth-child(3)
+  > button {
+    width: 100% !important;
+    min-width: 0 !important;
+    box-sizing: border-box !important;
+  }
+
+  /* Import password input = full row */
+  [data-finora-portable-state-five-column-layout="true"]
+  input[type="password"] {
+    grid-column: 1 / -1 !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    box-sizing: border-box !important;
+  }
+
+  /* Import button = full row */
+  [data-finora-portable-state-five-column-layout="true"]
+  > div:nth-child(4)
+  > button,
+  [data-finora-portable-state-five-column-layout="true"]
+  button:last-of-type {
+    grid-column: 1 / -1 !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    box-sizing: border-box !important;
+  }
+}
+
+/* ============================================================
+   FINORA TABLET BRANCH CARDS TWO COLUMN FINAL
+   Tablet only: 768px - 1199px
+   ============================================================ */
+
+@media (min-width: 768px) and (max-width: 1199px) {
+
+  [data-finora-control-center-branch-registry-grid="true"] {
+    grid-template-columns:
+      repeat(2, minmax(0, 1fr)) !important;
+  }
+}
+
+/* ============================================================
+   FINORA TABLET REAL BRANCH GRID TWO COLUMNS
+
+   Actual branch directory grid uses:
+   --finora-cc-card-columns
+
+   Tablet 768-1199:
+   2 equal-width cards per row
+   ============================================================ */
+
+@media (min-width: 768px) and (max-width: 1199px) {
+
+  [data-finora-control-center-branch-registry="true"] {
+    --finora-cc-card-columns: 2 !important;
+  }
+}
+
+/* ============================================================
+   FINORA BRANCH SEARCH PAGINATION RESPONSIVE V2
+   ============================================================ */
+
+[data-finora-branch-directory-search="true"] {
+  display: flex !important;
+  justify-content: center !important;
+  width: 100% !important;
+  margin: 0 0 14px !important;
+}
+
+[data-finora-branch-directory-search="true"] input {
+  width: 40% !important;
+  min-width: 280px !important;
+  max-width: 680px !important;
+  min-height: 42px !important;
+  padding: 9px 13px !important;
+  border: 1px solid rgba(148, 163, 184, 0.34) !important;
+  border-radius: 10px !important;
+  background: rgba(15, 23, 42, 0.78) !important;
+  color: #f8fafc !important;
+  font: inherit !important;
+  font-size: 14px !important;
+  box-sizing: border-box !important;
+}
+
+[data-finora-branch-directory-no-results="true"] {
+  width: 100% !important;
+  margin: 0 0 14px !important;
+  padding: 16px !important;
+  text-align: center !important;
+  border: 1px dashed rgba(148, 163, 184, 0.28) !important;
+  border-radius: 10px !important;
+  box-sizing: border-box !important;
+}
+
+[data-finora-branch-directory-pagination="true"] {
+  display: grid !important;
+  grid-template-columns:
+    repeat(3, minmax(110px, 145px)) !important;
+  justify-content: center !important;
+  gap: 8px !important;
+  width: 100% !important;
+  margin-top: 14px !important;
+}
+
+[data-finora-branch-directory-pagination="true"] button,
+[data-finora-branch-directory-pagination="true"] input {
+  width: 100% !important;
+  min-width: 0 !important;
+  min-height: 38px !important;
+  box-sizing: border-box !important;
+  border-radius: 8px !important;
+  font: inherit !important;
+  font-size: 13px !important;
+  font-weight: 700 !important;
+  text-align: center !important;
+}
+
+[data-finora-branch-directory-pagination="true"] button {
+  padding: 7px 11px !important;
+  border: 1px solid rgba(96, 165, 250, 0.36) !important;
+  background: rgba(30, 64, 175, 0.18) !important;
+  color: #e2e8f0 !important;
+}
+
+[data-finora-branch-directory-pagination="true"] button:disabled {
+  opacity: 0.42 !important;
+}
+
+[data-finora-branch-directory-pagination="true"] input {
+  padding: 7px 9px !important;
+  border: 1px solid rgba(148, 163, 184, 0.34) !important;
+  background: rgba(15, 23, 42, 0.78) !important;
+  color: #f8fafc !important;
+}
+
+
+/* TABLET */
+@media (min-width: 768px) and (max-width: 1199px) {
+
+  [data-finora-branch-directory-search="true"] input {
+    width: 50% !important;
+    min-width: 0 !important;
+  }
+
+  [data-finora-branch-directory-pagination="true"] {
+    grid-template-columns:
+      repeat(3, minmax(100px, 135px)) !important;
+  }
+}
+
+
+/* MOBILE */
+@media (max-width: 767px) {
+
+  [data-finora-branch-directory-search="true"] input {
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: none !important;
+  }
+
+  [data-finora-branch-directory-pagination="true"] {
+    grid-template-columns:
+      minmax(0, 1fr) !important;
+  }
+}

@@ -145,8 +145,7 @@ function getSubscriptionHealth(
   status:
     "ACTIVE" |
     "EXPIRING SOON" |
-    "EXPIRED" |
-    "LEGACY";
+    "EXPIRED";
   detail:
     string;
   tone:
@@ -158,13 +157,13 @@ function getSubscriptionHealth(
   if (!record.access?.validUntil) {
     return {
       status:
-        "LEGACY",
+        "EXPIRED",
       detail:
-        "Status metadata unavailable",
+        "No active subscription grant on record",
       tone:
-        "#94a3b8",
+        "#f87171",
       border:
-        "rgba(148, 163, 184, 0.24)",
+        "rgba(248, 113, 113, 0.34)",
     };
   }
 
@@ -176,13 +175,13 @@ function getSubscriptionHealth(
   if (!Number.isFinite(validUntil)) {
     return {
       status:
-        "LEGACY",
+        "EXPIRED",
       detail:
-        "Status metadata unavailable",
+        "Invalid subscription expiry evidence",
       tone:
-        "#94a3b8",
+        "#f87171",
       border:
-        "rgba(148, 163, 184, 0.24)",
+        "rgba(248, 113, 113, 0.34)",
     };
   }
 
@@ -339,6 +338,7 @@ function DetailRow({
       }}
     >
       <div
+        data-finora-view-detail-label="true"
         style={{
           fontSize:
             "11px",
@@ -352,6 +352,7 @@ function DetailRow({
       </div>
 
       <div
+        data-finora-view-detail-value="true"
         style={{
           fontSize:
             "12px",
@@ -1326,6 +1327,7 @@ function BranchCard({
           }}
         >
           <div
+            data-finora-branch-card-business-name="true"
             style={{
               fontSize:
                 "12px",
@@ -1356,6 +1358,7 @@ function BranchCard({
           </h3>
 
           <div
+            data-finora-branch-card-code="true"
             style={{
               marginTop:
                 "5px",
@@ -1393,6 +1396,7 @@ function BranchCard({
       </div>
 
       <dl
+        data-finora-branch-card-summary-stats="true"
         style={{
           display:
             directorySummary
@@ -1571,6 +1575,14 @@ function BranchCard({
 
       <div
         data-finora-control-center-branch-action-layout="true"
+        style={{
+          display:
+            directorySummary
+              ? "none"
+              : "grid",
+          gap:
+            "8px",
+        }}
       >
       <div
         data-finora-control-center-branch-actions="true"
@@ -1761,6 +1773,7 @@ function BranchCard({
           </div>
 
           <div
+            data-finora-view-details-main-grid="true"
             style={{
               display:
                 "grid",
@@ -1974,6 +1987,7 @@ function BranchCard({
                   </div>
 
                   <div
+                    data-finora-view-details-authorized-grid="true"
                     style={{
                       display:
                         "grid",
@@ -2043,6 +2057,7 @@ function BranchCard({
           </div>
 
           <div
+            data-finora-view-details-operational-grid="true"
             style={{
               display:
                 "grid",
@@ -2184,6 +2199,7 @@ function BranchCard({
       )}
 
       <div
+        data-finora-branch-card-id-footer="true"
         style={{
           marginTop:
             "16px",
@@ -2250,6 +2266,94 @@ export default function FinoraControlCenterBranchRegistryPanel({
   ] = useState<
     string | undefined
   >();
+
+  /*
+   * FINORA BRANCH DIRECTORY SEARCH PAGINATION STATE V2
+   */
+  const [
+    directorySearchQuery,
+    setDirectorySearchQuery,
+  ] = useState(
+    "",
+  );
+
+  const [
+    directoryPage,
+    setDirectoryPage,
+  ] = useState(
+    1,
+  );
+
+  const [
+    directoryPageSize,
+    setDirectoryPageSize,
+  ] = useState(
+    () => {
+      if (
+        typeof window ===
+        "undefined"
+      ) {
+        return 4;
+      }
+
+      if (
+        window.innerWidth <=
+        767
+      ) {
+        return 1;
+      }
+
+      if (
+        window.innerWidth <=
+        1199
+      ) {
+        return 2;
+      }
+
+      return 4;
+    },
+  );
+
+  useEffect(
+    () => {
+      if (!directoryMode) {
+        return;
+      }
+
+      const updatePageSize =
+        () => {
+          const nextPageSize =
+            window.innerWidth <=
+            767
+              ? 1
+              : window.innerWidth <=
+                  1199
+                ? 2
+                : 4;
+
+          setDirectoryPageSize(
+            nextPageSize,
+          );
+        };
+
+      updatePageSize();
+
+      window.addEventListener(
+        "resize",
+        updatePageSize,
+      );
+
+      return () => {
+        window.removeEventListener(
+          "resize",
+          updatePageSize,
+        );
+      };
+    },
+    [
+      directoryMode,
+    ],
+  );
 
   const [
     incomePricingOpen,
@@ -2512,6 +2616,104 @@ export default function FinoraControlCenterBranchRegistryPanel({
         ] as const,
       ),
     );
+
+  /*
+   * FINORA BRANCH DIRECTORY FILTER PAGE LOGIC V2
+   *
+   * Partial + case-insensitive matching.
+   * Searches registry record + directory metadata.
+   */
+  const normalizedDirectorySearchQuery =
+    directorySearchQuery
+      .trim()
+      .toLocaleLowerCase();
+
+  const filteredDirectoryBranches =
+    directoryMode
+      ? branches.filter(
+          (record) => {
+            if (
+              normalizedDirectorySearchQuery.length ===
+              0
+            ) {
+              return true;
+            }
+
+            const metadata =
+              directoryMetadataByScope.get(
+                [
+                  record.identity.ownerId,
+                  record.identity.businessId,
+                  record.identity.branchId,
+                ].join(
+                  "\u001f",
+                ),
+              );
+
+            const searchableText =
+              JSON.stringify({
+                record,
+                metadata:
+                  metadata ??
+                  null,
+              })
+                .toLocaleLowerCase();
+
+            return searchableText.includes(
+              normalizedDirectorySearchQuery,
+            );
+          },
+        )
+      : branches;
+
+  const directoryTotalPages =
+    Math.max(
+      1,
+      Math.ceil(
+        filteredDirectoryBranches.length /
+          directoryPageSize,
+      ),
+    );
+
+  const directoryCurrentPage =
+    Math.min(
+      Math.max(
+        directoryPage,
+        1,
+      ),
+      directoryTotalPages,
+    );
+
+  const directoryStartIndex =
+    (
+      directoryCurrentPage -
+      1
+    ) *
+    directoryPageSize;
+
+  const directoryVisibleBranches =
+    filteredDirectoryBranches.slice(
+      directoryStartIndex,
+      directoryStartIndex +
+        directoryPageSize,
+    );
+
+  useEffect(
+    () => {
+      if (
+        directoryPage !==
+        directoryCurrentPage
+      ) {
+        setDirectoryPage(
+          directoryCurrentPage,
+        );
+      }
+    },
+    [
+      directoryPage,
+      directoryCurrentPage,
+    ],
+  );
 
   const openedBranch =
     directoryMode &&
@@ -2911,6 +3113,42 @@ export default function FinoraControlCenterBranchRegistryPanel({
         </p>
       )}
 
+      {directoryMode && !openedBranch && (
+        <div
+          data-finora-branch-directory-search="true"
+        >
+          <input
+            type="search"
+            value={
+              directorySearchQuery
+            }
+            placeholder="Search owner, business, branch or card code"
+            aria-label="Search FINORA branches"
+            autoComplete="off"
+            onChange={(event) => {
+              setDirectorySearchQuery(
+                event.target.value,
+              );
+
+              setDirectoryPage(
+                1,
+              );
+            }}
+          />
+        </div>
+      )}
+
+      {directoryMode &&
+        !openedBranch &&
+        branches.length > 0 &&
+        filteredDirectoryBranches.length === 0 && (
+          <div
+            data-finora-branch-directory-no-results="true"
+          >
+            No matching FINORA branches found.
+          </div>
+        )}
+
       {directoryMode && openedBranch && (
         <button
           type="button"
@@ -2994,7 +3232,7 @@ export default function FinoraControlCenterBranchRegistryPanel({
                 : "14px",
           }}
         >
-          {(openedBranch ? [openedBranch] : branches).map(
+          {(openedBranch ? [openedBranch] : directoryVisibleBranches).map(
             (record) => (
               <BranchCard
                 key={
@@ -3098,6 +3336,90 @@ export default function FinoraControlCenterBranchRegistryPanel({
           )}
         </div>
       )}
+      {directoryMode &&
+        !openedBranch &&
+        filteredDirectoryBranches.length > 0 && (
+          <div
+            data-finora-branch-directory-pagination="true"
+          >
+            <button
+              type="button"
+              disabled={
+                directoryCurrentPage <=
+                1
+              }
+              onClick={() => {
+                setDirectoryPage(
+                  Math.max(
+                    1,
+                    directoryCurrentPage -
+                      1,
+                  ),
+                );
+              }}
+            >
+              Previous
+            </button>
+
+            <input
+              type="number"
+              min={1}
+              max={
+                directoryTotalPages
+              }
+              value={
+                directoryCurrentPage
+              }
+              aria-label="Branch directory page number"
+              title={`Page ${directoryCurrentPage} of ${directoryTotalPages}`}
+              onChange={(event) => {
+                const requestedPage =
+                  Number.parseInt(
+                    event.target.value,
+                    10,
+                  );
+
+                if (
+                  Number.isNaN(
+                    requestedPage,
+                  )
+                ) {
+                  return;
+                }
+
+                setDirectoryPage(
+                  Math.min(
+                    directoryTotalPages,
+                    Math.max(
+                      1,
+                      requestedPage,
+                    ),
+                  ),
+                );
+              }}
+            />
+
+            <button
+              type="button"
+              disabled={
+                directoryCurrentPage >=
+                directoryTotalPages
+              }
+              onClick={() => {
+                setDirectoryPage(
+                  Math.min(
+                    directoryTotalPages,
+                    directoryCurrentPage +
+                      1,
+                  ),
+                );
+              }}
+            >
+              Next
+            </button>
+          </div>
+        )}
+
     </section>
   );
 }

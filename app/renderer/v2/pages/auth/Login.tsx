@@ -752,14 +752,10 @@ export default function Login({
 
   function resetCredentials(): void {
 
-    setUsername("");
-
-    setPassword("");
-
-
+    /*
+     * Preserve entered credentials across storage/USB state refreshes.
+     */
     setShowPassword(false);
-
-    setError("");
 
     setLoginBusy(false);
 
@@ -1286,18 +1282,27 @@ export default function Login({
         }
       }
 
-      if (
-        deviceSecurityCodeRequired &&
-        deviceSecurityCode.length === 0
-      ) {
-        setError(
-          "Enter your Security Code to authorize this device.",
-        );
 
-        return;
-      }
-
-      const loginSessionBridge =
+          /*
+     * FINORA_NEW_DEVICE_SECURITY_VALIDATION
+     *
+     * Known device:
+     *   User ID + Password.
+     *
+     * New / untrusted device:
+     *   Electron main first returns SECURITY_CODE_REQUIRED.
+     *   Only then is Security Code required and displayed.
+     */
+    if (
+      deviceSecurityCodeRequired &&
+      deviceSecurityCode.trim().length === 0
+    ) {
+      setError(
+        "Enter your Security Code to authorize this device.",
+      );
+      return;
+    }
+const loginSessionBridge =
         getFinoraLoginSessionBridge();
 
       if (
@@ -1324,12 +1329,15 @@ export default function Login({
             ? {
                 securityCode,
               }
-            : deviceSecurityCodeRequired
-              ? {
-                  securityCode:
-                    deviceSecurityCode,
-                }
-              : {}),
+            : ownerStorage === "usb" &&
+              deviceSecurityCode.trim().length > 0
+            ? {
+                securityCode:
+          deviceSecurityCodeRequired
+            ? deviceSecurityCode.trim()
+            : undefined,
+              }
+            : {}),
         });
 
       if (!loginResult.success) {
@@ -1417,11 +1425,7 @@ export default function Login({
             false,
           );
 
-          setDeviceSecurityCode("");
-
           setLegacySecurityCodeSetupRequired(false);
-          setSecurityCode("");
-          setConfirmSecurityCode("");
 
           registerFailedLogin(
             trimmedUsername,
@@ -3976,6 +3980,9 @@ export default function Login({
                 </>
               )}
 
+
+
+                        {/* FINORA_NEW_DEVICE_SECURITY_CHALLENGE */}
             {credentialMode === "LOGIN" &&
               deviceSecurityCodeRequired && (
                 <div
@@ -4003,10 +4010,7 @@ export default function Login({
                         : "password"
                     }
                     autoComplete="off"
-                    disabled={
-                      loginBusy ||
-                      credentialMode === "FORCE_CREDENTIAL_CHANGE"
-                    }
+                    disabled={loginBusy}
                     onKeyDown={
                       handlePasswordKeyDown
                     }
@@ -4046,9 +4050,7 @@ export default function Login({
                   </button>
                 </div>
               )}
-
-
-            {credentialEnrollmentMessage && (
+{credentialEnrollmentMessage && (
 
               <p
                 role="status"

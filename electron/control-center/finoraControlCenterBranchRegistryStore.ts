@@ -3086,6 +3086,429 @@ export function rotateFinoraControlCenterBranchCertification(
 // ============================================================
 
 
+
+// ============================================================
+// FINORA_BRANCH_RESTORE_BIN_V1
+//
+// IMPORTANT:
+// - Delete is registry visibility removal only.
+// - Exact original Branch Registry record is preserved.
+// - Subscription, wallet/recharge, pricing, entitlement,
+//   issuance authority and recipient data are NOT revoked here.
+// - Restore reinserts the exact original record and identity.
+// ============================================================
+
+interface FinoraDeletedBranchRestoreEntry {
+  schemaVersion:
+    1;
+
+  deletedAt:
+    string;
+
+  originalIndex:
+    number;
+
+  record:
+    FinoraControlCenterBranchRegistry["branches"][number];
+}
+
+interface FinoraDeletedBranchRestoreBin {
+  format:
+    "FINORA_BRANCH_RESTORE_BIN_V1";
+
+  schemaVersion:
+    1;
+
+  entries:
+    FinoraDeletedBranchRestoreEntry[];
+}
+
+function getBranchRestoreBinPath(): string {
+
+  return `${getRegistryPath()}.restore-bin.json`;
+}
+
+async function readBranchRestoreBin(): Promise<
+  FinoraDeletedBranchRestoreBin
+> {
+
+  const restorePath =
+    getBranchRestoreBinPath();
+
+  try {
+
+    const serialized =
+      await fs.readFile(
+        restorePath,
+        "utf8",
+      );
+
+    const parsed =
+      JSON.parse(
+        serialized,
+      ) as FinoraDeletedBranchRestoreBin;
+
+    if (
+      parsed.format !==
+        "FINORA_BRANCH_RESTORE_BIN_V1" ||
+      parsed.schemaVersion !==
+        1 ||
+      !Array.isArray(
+        parsed.entries,
+      )
+    ) {
+      throw new Error(
+        "FINORA Branch Restore Bin format is invalid.",
+      );
+    }
+
+    return parsed;
+
+  } catch (error) {
+
+    if (
+      typeof error ===
+        "object" &&
+      error !==
+        null &&
+      "code" in error &&
+      (
+        error as {
+          code?: unknown;
+        }
+      ).code ===
+        "ENOENT"
+    ) {
+      return {
+        format:
+          "FINORA_BRANCH_RESTORE_BIN_V1",
+
+        schemaVersion:
+          1,
+
+        entries:
+          [],
+      };
+    }
+
+    throw error;
+  }
+}
+
+async function writeBranchRestoreBin(
+  restoreBin:
+    FinoraDeletedBranchRestoreBin,
+): Promise<void> {
+
+  const restorePath =
+    getBranchRestoreBinPath();
+
+  const temporaryPath =
+    `${restorePath}.tmp-${process.pid}-${Date.now()}`;
+
+  const serialized =
+    `${JSON.stringify(
+      restoreBin,
+      null,
+      2,
+    )}\n`;
+
+  try {
+
+    await fs.writeFile(
+      temporaryPath,
+      serialized,
+      "utf8",
+    );
+
+    await fs.rename(
+      temporaryPath,
+      restorePath,
+    );
+
+  } catch (error) {
+
+    await fs.rm(
+      temporaryPath,
+      {
+        force:
+          true,
+      },
+    ).catch(
+      () =>
+        undefined,
+    );
+
+    throw error;
+  }
+}
+
+function branchRestoreIdentityMatches(
+  branch:
+    FinoraControlCenterBranchRegistry["branches"][number],
+  identity: {
+    ownerId:
+      string;
+    businessId:
+      string;
+    branchId:
+      string;
+  },
+): boolean {
+
+  return (
+    branch.identity.ownerId ===
+      identity.ownerId &&
+    branch.identity.businessId ===
+      identity.businessId &&
+    branch.identity.branchId ===
+      identity.branchId
+  );
+}
+
+export interface FinoraDeletedBranchRestoreView {
+  deletedAt:
+    string;
+
+  originalIndex:
+    number;
+
+  record:
+    FinoraControlCenterBranchRegistry["branches"][number];
+}
+
+export async function loadFinoraDeletedBranchRestoreBin(): Promise<
+  FinoraDeletedBranchRestoreView[]
+> {
+
+  const restoreBin =
+    await readBranchRestoreBin();
+
+  const registry =
+    await readRegistry();
+
+  return restoreBin.entries
+    /*
+     * Restore Bin is the authoritative source for the Deleted Branches UI.
+     *
+     * Do not suppress persisted delete records merely because the Registry
+     * currently contains the same identity. Restore itself still performs
+     * the strict active-branch duplicate guard before any write.
+     */
+    .map(
+      (entry) =>
+        JSON.parse(
+          JSON.stringify(
+            entry,
+          ),
+        ) as FinoraDeletedBranchRestoreView,
+    );
+}
+
+export interface RestoreFinoraControlCenterBranchRegistryRecordInput {
+  ownerId:
+    string;
+
+  businessId:
+    string;
+
+  branchId:
+    string;
+}
+
+async function restoreFinoraControlCenterBranchRegistryRecordInternal(
+  input:
+    RestoreFinoraControlCenterBranchRegistryRecordInput,
+): Promise<
+  FinoraControlCenterBranchRegistry
+> {
+
+  if (
+    !isNonEmptyString(
+      input.ownerId,
+    ) ||
+    !isNonEmptyString(
+      input.businessId,
+    ) ||
+    !isNonEmptyString(
+      input.branchId,
+    )
+  ) {
+    throw new Error(
+      "FINORA Branch restore request is incomplete.",
+    );
+  }
+
+  const registry =
+    await readRegistry();
+
+  if (
+    registry ===
+      undefined
+  ) {
+    throw new Error(
+      "FINORA Control Center Branch Registry does not exist.",
+    );
+  }
+
+  if (
+    registry.branches.some(
+      (branch) =>
+        branchRestoreIdentityMatches(
+          branch,
+          input,
+        ),
+    )
+  ) {
+    throw new Error(
+      "FINORA Branch is already active in the Registry.",
+    );
+  }
+
+  const restoreBin =
+    await readBranchRestoreBin();
+
+  const matches =
+    restoreBin.entries.filter(
+      (entry) =>
+        branchRestoreIdentityMatches(
+          entry.record,
+          input,
+        ),
+    );
+
+  if (
+    matches.length !==
+      1
+  ) {
+    throw new Error(
+      `FINORA Branch restore expected exactly 1 deleted record but found ${matches.length}.`,
+    );
+  }
+
+  const entry =
+    matches[0];
+
+  const nextBranches =
+    [
+      ...registry.branches,
+    ];
+
+  const insertionIndex =
+    Math.min(
+      Math.max(
+        entry.originalIndex,
+        0,
+      ),
+      nextBranches.length,
+    );
+
+  nextBranches.splice(
+    insertionIndex,
+    0,
+    JSON.parse(
+      JSON.stringify(
+        entry.record,
+      ),
+    ),
+  );
+
+  const nextRegistry:
+    FinoraControlCenterBranchRegistry = {
+      ...registry,
+
+      branches:
+        nextBranches,
+
+      updatedAt:
+        new Date().toISOString(),
+    };
+
+  validateFinoraControlCenterBranchRegistry(
+    nextRegistry,
+  );
+
+  const registryPath =
+    getRegistryPath();
+
+  await fs.copyFile(
+    registryPath,
+    `${registryPath}.branch-restore-${Date.now()}.bak`,
+  );
+
+  await writeRegistry(
+    nextRegistry,
+  );
+
+  const verification =
+    await readRegistry();
+
+  if (
+    verification ===
+      undefined ||
+    !verification.branches.some(
+      (branch) =>
+        branchRestoreIdentityMatches(
+          branch,
+          input,
+        ),
+    )
+  ) {
+    throw new Error(
+      "FINORA Branch restore post-write verification failed.",
+    );
+  }
+
+  const nextRestoreBin:
+    FinoraDeletedBranchRestoreBin = {
+      ...restoreBin,
+
+      entries:
+        restoreBin.entries.filter(
+          (candidate) =>
+            candidate !==
+              entry,
+        ),
+    };
+
+  await writeBranchRestoreBin(
+    nextRestoreBin,
+  );
+
+  return cloneRegistry(
+    verification,
+  );
+}
+
+export function restoreFinoraControlCenterBranchRegistryRecord(
+  input:
+    RestoreFinoraControlCenterBranchRegistryRecordInput,
+): Promise<
+  FinoraControlCenterBranchRegistry
+> {
+
+  const operation =
+    branchRegistrationQueue.then(
+      () =>
+        restoreFinoraControlCenterBranchRegistryRecordInternal(
+          input,
+        ),
+      () =>
+        restoreFinoraControlCenterBranchRegistryRecordInternal(
+          input,
+        ),
+    );
+
+  branchRegistrationQueue =
+    operation.then(
+      () =>
+        undefined,
+      () =>
+        undefined,
+    );
+
+  return operation;
+}
 // ============================================================
 // EXACT BRANCH REGISTRY DELETE
 //
@@ -3177,6 +3600,84 @@ async function deleteFinoraControlCenterBranchRegistryRecordInternal(
       `FINORA exact Branch delete expected 1 Registry record but found ${matches.length}.`,
     );
   }
+
+  const originalIndex =
+    registry.branches.findIndex(
+      (branch) =>
+        branchRestoreIdentityMatches(
+          branch,
+          input,
+        ),
+    );
+
+  if (
+    originalIndex <
+      0
+  ) {
+    throw new Error(
+      "FINORA Branch delete could not determine original Registry position.",
+    );
+  }
+
+  const restoreBin =
+    await readBranchRestoreBin();
+
+  const duplicateRestoreEntry =
+    restoreBin.entries.some(
+      (entry) =>
+        branchRestoreIdentityMatches(
+          entry.record,
+          input,
+        ),
+    );
+
+  if (
+    duplicateRestoreEntry
+  ) {
+    throw new Error(
+      "FINORA Branch already exists in the Restore Bin.",
+    );
+  }
+
+  const deletedRecord =
+    JSON.parse(
+      JSON.stringify(
+        matches[0],
+      ),
+    ) as FinoraControlCenterBranchRegistry["branches"][number];
+
+  const nextRestoreBin:
+    FinoraDeletedBranchRestoreBin = {
+      ...restoreBin,
+
+      entries: [
+        ...restoreBin.entries,
+
+        {
+          schemaVersion:
+            1,
+
+          deletedAt:
+            new Date().toISOString(),
+
+          originalIndex,
+
+          record:
+            deletedRecord,
+        },
+      ],
+    };
+
+  /*
+   * Persist exact full record BEFORE hiding it from active Registry.
+   *
+   * If the following Registry mutation fails, the restore entry is
+   * intentionally harmless because loadFinoraDeletedBranchRestoreBin()
+   * suppresses entries whose exact branch is still active.
+   */
+  await writeBranchRestoreBin(
+    nextRestoreBin,
+  );
 
   const nextBranches =
     registry.branches.filter(

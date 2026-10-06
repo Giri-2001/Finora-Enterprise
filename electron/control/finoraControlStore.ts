@@ -1,5 +1,5 @@
 // ============================================================
-// FINORA ENTERPRISE OSÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢
+// FINORA ENTERPRISE OSÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¾ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢
 //
 // ELECTRON CONTROL STORE
 //
@@ -10711,7 +10711,7 @@ export function completeFinoraPortableBranchAuthV2CredentialRotationTransaction(
 
 
 /* ============================================================
-   LEGACY SECURITY CODE BOOTSTRAP ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â CREDENTIAL COMMIT
+   LEGACY SECURITY CODE BOOTSTRAP ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â CREDENTIAL COMMIT
 
    This authority is intentionally narrow:
    - existing ACTIVE credential only
@@ -11472,7 +11472,7 @@ async function applyVerifiedBusinessProfileInternal(
   }
 
   // ----------------------------------------------------------
-  // PROFILE ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬Â TARGET
+  // PROFILE ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â TARGET
   // ----------------------------------------------------------
 
   if (
@@ -11527,7 +11527,7 @@ async function applyVerifiedBusinessProfileInternal(
   }
 
   // ----------------------------------------------------------
-  // CONTROL STORE INSTALLATION ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬Â VERIFIED TARGET
+  // CONTROL STORE INSTALLATION ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â VERIFIED TARGET
   // ----------------------------------------------------------
 
   if (
@@ -12047,28 +12047,20 @@ export async function findFinoraPortableBusinessProfile(
       currentResult.error ?? "Unable to load the FINORA Control Store.",
     );
   }
+  /*
+   * PORTABLE BUSINESS PROFILE AUTHORITY
+   *
+   * ownerId / businessId / branchId originate from the already
+   * authenticated Electron login session.
+   *
+   * A single FINORA laptop may access multiple independently
+   * authorized PORTABLE_USB branches. Therefore this portable
+   * profile read must not require the singleton installation
+   * identity to equal the authenticated branch.
+   *
+   * Signed profile provenance remains immutable.
+   */
 
-  const installation = currentResult.data.installation;
-
-  if (!installation) {
-    return failure(
-      "FINORA installation identity is required before reading the Business Profile.",
-    );
-  }
-
-  // ----------------------------------------------------------
-  // CALLER SCOPE MUST BE THIS BRANCH
-  // ----------------------------------------------------------
-
-  if (
-    installation.ownerId !== ownerId ||
-    installation.businessId !== businessId ||
-    installation.branchId !== branchId
-  ) {
-    return failure(
-      "FINORA portable Business Profile request does not match the current branch identity.",
-    );
-  }
 
   const profiles = currentResult.data.businessProfiles ?? [];
 
@@ -12092,23 +12084,6 @@ export async function findFinoraPortableBusinessProfile(
   // Current authorization is owner/business/branch scoped.
   // ----------------------------------------------------------
 
-  if (
-    isNonEmptyString(installation.businessCode) &&
-    installation.businessCode !== profile.businessCode
-  ) {
-    return failure(
-      "FINORA Business Profile businessCode does not match the installation identity.",
-    );
-  }
-
-  if (
-    isNonEmptyString(installation.branchCode) &&
-    installation.branchCode !== profile.branchCode
-  ) {
-    return failure(
-      "FINORA Business Profile branchCode does not match the installation identity.",
-    );
-  }
 
   return success(profile);
 }
@@ -12249,7 +12224,7 @@ async function applyVerifiedPricingPolicyInternal(
   }
 
   // ----------------------------------------------------------
-  // POLICY ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬Â VERIFIED TARGET BINDING
+  // POLICY ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â VERIFIED TARGET BINDING
   // ----------------------------------------------------------
 
   if (
@@ -14119,9 +14094,44 @@ async function applyPortableFreshDeviceHydrationInternal(
   // authority record is ever replaced here.
   // ----------------------------------------------------------
 
+  /*
+   * FRESH DEVICE LOCAL CONTROL-STORE SHELL
+   *
+   * A new Android / desktop device may already contain a locally
+   * generated installation identity before portable login.
+   *
+   * That installation identity alone is not branch authority.
+   *
+   * It may converge to the already-verified portable hydration
+   * plan only while ALL durable branch-authority layers are empty.
+   * Existing branch authority remains fail-closed.
+   */
+  const freshDeviceLocalAuthorityShell =
+    activations.length ===
+      0 &&
+    entitlements.length ===
+      0 &&
+    accessGrants.length ===
+      0 &&
+    credentials.length ===
+      0 &&
+    businessProfiles.length ===
+      0 &&
+    verificationEvidence.length ===
+      0 &&
+    portabilityAuthorities.length ===
+      0 &&
+    enrollmentAuthorizations.length ===
+      0 &&
+    enrollmentTransactions.length ===
+      0 &&
+    rotationTransactions.length ===
+      0;
+
   const installationCompatible =
     controlStore.installation ===
       undefined ||
+    freshDeviceLocalAuthorityShell ||
     portableFreshDeviceHydrationValuesEqual(
       controlStore.installation,
       installation,
@@ -14417,8 +14427,13 @@ async function applyPortableFreshDeviceHydrationInternal(
 
   if (
     controlStore.installation ===
-      undefined
+      undefined ||
+    freshDeviceLocalAuthorityShell
   ) {
+    /*
+     * Replace only the installation identity of a verified
+     * branch-authority-empty fresh-device shell.
+     */
     controlStore.installation =
       structuredClone(
         installation,

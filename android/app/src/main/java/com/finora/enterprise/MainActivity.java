@@ -3,6 +3,7 @@ package com.finora.enterprise;
 import android.os.Bundle;
 
 import com.finora.enterprise.control.FinoraControlPlugin;
+import com.finora.enterprise.control.FinoraDeveloperControlCenterPlugin;
 import com.finora.enterprise.control.FinoraControlBundleImportPlugin;
 import com.finora.enterprise.control.FinoraRecipientTrustTransitionImportPlugin;
 import com.finora.enterprise.control.FinoraRecipientTrustRecoveryImportPlugin;
@@ -28,6 +29,10 @@ public class MainActivity
          */
         registerPlugin(
             FinoraControlPlugin.class
+        );
+
+        registerPlugin(
+            FinoraDeveloperControlCenterPlugin.class
         );
 
         registerPlugin(

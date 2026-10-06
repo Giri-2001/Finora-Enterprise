@@ -1,4 +1,4 @@
-﻿import {
+import {
   useState,
 } from "react";
 
@@ -70,8 +70,16 @@ export default function FinoraPortableStateImportPanel() {
 
 
   const [
-    transferCode,
-    setTransferCode,
+    exportTransferCode,
+    setExportTransferCode,
+  ] = useState(
+    "",
+  );
+
+
+  const [
+    importTransferCode,
+    setImportTransferCode,
   ] = useState(
     "",
   );
@@ -107,7 +115,7 @@ export default function FinoraPortableStateImportPanel() {
 
     try {
 
-      setTransferCode(
+      setExportTransferCode(
         createPortableStateTransferCode(),
       );
 
@@ -121,7 +129,7 @@ export default function FinoraPortableStateImportPanel() {
     }
     catch (error) {
 
-      setTransferCode(
+      setExportTransferCode(
         "",
       );
 
@@ -162,7 +170,7 @@ export default function FinoraPortableStateImportPanel() {
 
 
     const code =
-      transferCode;
+      exportTransferCode;
 
 
     if (
@@ -281,7 +289,7 @@ export default function FinoraPortableStateImportPanel() {
 
 
     const code =
-      transferCode;
+      importTransferCode;
 
 
     if (
@@ -316,7 +324,7 @@ export default function FinoraPortableStateImportPanel() {
      * The Android native invocation receives its own local
      * argument. Clear the React state before file selection.
      */
-    setTransferCode(
+    setImportTransferCode(
       "",
     );
 
@@ -398,6 +406,7 @@ export default function FinoraPortableStateImportPanel() {
 
   return (
     <section
+      data-finora-portable-state-five-column-layout="true"
       data-finora-portable-state-handoff="true"
       style={{
         border:
@@ -456,21 +465,11 @@ export default function FinoraPortableStateImportPanel() {
                 "8px",
             }}
           >
-            <div
-              style={{
-                fontSize:
-                  "12px",
-                fontWeight:
-                  650,
-              }}
-            >
-              Portable State Transfer Code
-            </div>
 
             <input
               type="text"
               readOnly
-              value={transferCode}
+              value={exportTransferCode}
               spellCheck={false}
               placeholder="Generate a new Transfer Code"
               aria-label="Portable State Transfer Code"
@@ -501,19 +500,6 @@ export default function FinoraPortableStateImportPanel() {
                   "none",
               }}
             />
-
-            <div
-              style={{
-                fontSize:
-                  "11px",
-                lineHeight:
-                  1.5,
-                opacity:
-                  0.68,
-              }}
-            >
-              This Transfer Code is generated locally and is not saved by FINORA. Keep it until the receiving Android device completes import.
-            </div>
           </div>
 
           <div
@@ -553,8 +539,7 @@ export default function FinoraPortableStateImportPanel() {
                     : "pointer",
               }}
             >
-              {transferCode
-                ? "Regenerate Code"
+              {exportTransferCode ? "Regenerate Code"
                 : "Generate Code"}
             </button>
 
@@ -562,7 +547,7 @@ export default function FinoraPortableStateImportPanel() {
               type="button"
               disabled={
                 isWorking ||
-                transferCode.length ===
+                exportTransferCode.length ===
                   0
               }
               onClick={() => {
@@ -612,13 +597,13 @@ export default function FinoraPortableStateImportPanel() {
         >
           <input
             type="password"
-            value={transferCode}
+            value={importTransferCode}
             autoComplete="new-password"
             spellCheck={false}
-            placeholder="Portable State Transfer Code"
+            placeholder="Paste Transfer Code from Android phone"
             disabled={isWorking}
             onChange={(event) => {
-              setTransferCode(
+              setImportTransferCode(
                 event.target.value,
               );
             }}

@@ -83,6 +83,8 @@ const ADMIN_RECOVERY_SECURITY_CODE_INPUT_MIN_LENGTH =
 const ADMIN_RECOVERY_SECURITY_CODE_INPUT_MAX_LENGTH =
   20;
 
+import FinoraDeletedBranchRestorePanel from "./FinoraDeletedBranchRestorePanel";
+
 export default function FinoraControlCenterShell() {
   const [
     gateMode,
@@ -1622,25 +1624,6 @@ const [
               0,
           }}
         >
-          <div
-            style={{
-              fontSize:
-                "12px",
-              fontWeight:
-                700,
-              letterSpacing:
-                "0.14em",
-              textTransform:
-                "uppercase",
-              opacity:
-                0.72,
-              marginBottom:
-                "8px",
-            }}
-          >
-            Privileged Administration
-          </div>
-
           <h1
             style={{
               margin:
@@ -1655,21 +1638,6 @@ const [
           >
             FINORA Control Center
           </h1>
-
-          <p
-            style={{
-              margin:
-                "10px 0 0",
-              maxWidth:
-                "680px",
-              lineHeight:
-                1.6,
-              opacity:
-                0.78,
-            }}
-          >
-            Dedicated administrative renderer for signed FINORA control operations.
-          </p>
 
           <div
             data-finora-developer-header-actions="true"
@@ -1792,7 +1760,7 @@ const [
               "rgba(15, 23, 42, 0.72)",
           }}
         >
-          <h2
+          <h2 data-finora-signing-trust-title="true"
             style={{
               margin:
                 "0 0 16px",
@@ -1801,9 +1769,7 @@ const [
               fontWeight:
                 650,
             }}
-          >
-            Signing Trust Identity
-          </h2>
+          >Signing Trust Identity</h2>
 
           {loadState ===
             "LOADING" && (
@@ -2050,6 +2016,19 @@ const [
               Settings
             </h2>
 
+            <div
+              data-finora-developer-security-card="true"
+              style={{
+                border:
+                  "1px solid rgba(148, 163, 184, 0.22)",
+                borderRadius:
+                  "12px",
+                padding:
+                  "16px",
+                background:
+                  "rgba(15, 23, 42, 0.46)",
+              }}
+            >
             <p
               style={{
                 margin:
@@ -2207,7 +2186,7 @@ const [
                 display:
                   "grid",
                 gridTemplateColumns:
-                  "repeat(auto-fit, minmax(220px, 1fr))",
+                  "repeat(3, minmax(0, 1fr))",
                 gap:
                   "14px",
                 alignItems:
@@ -2333,11 +2312,13 @@ const [
               <div
                 style={{
                   gridColumn:
-                    "1 / -1",
+                    "3",
                   display:
                     "flex",
                   alignItems:
                     "center",
+                  alignSelf:
+                    "end",
                   gap:
                     "12px",
                   flexWrap:
@@ -2405,6 +2386,9 @@ const [
                 )}
               </div>
             </form>
+            </div>
+
+            <FinoraDeletedBranchRestorePanel />
           </section>
         )}
 

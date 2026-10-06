@@ -1,5 +1,5 @@
-﻿// ============================================================
-// FINORA ENTERPRISE OSâ„¢
+// ============================================================
+// FINORA ENTERPRISE OSÃ¢â€žÂ¢
 //
 // CONTROL CENTER
 // DEDICATED PRIVILEGED PRELOAD
@@ -73,6 +73,12 @@ const CONTROL_CENTER_CHANNELS = {
 
   DELETE_BRANCH_REGISTRY_RECORD:
     "finora:control-center:delete-branch-registry-record",
+
+  GET_DELETED_BRANCH_RESTORE_BIN:
+    "finora:control-center:get-deleted-branch-restore-bin",
+
+  RESTORE_BRANCH_REGISTRY_RECORD:
+    "finora:control-center:restore-branch-registry-record",
 
   GET_BRANCH_DIRECTORY_METADATA:
     "finora:control-center:get-branch-directory-metadata",
@@ -1144,6 +1150,40 @@ export interface FinoraControlCenterBridge {
         >
       >;
 
+  getDeletedBranchRestoreBin:
+    () =>
+      Promise<
+        FinoraControlCenterResult<
+          Array<{
+            deletedAt:
+              string;
+            originalIndex:
+              number;
+            record:
+              FinoraControlCenterBranchRegistryView["branches"][number];
+          }>
+        >
+      >;
+
+  restoreBranchRegistryRecord:
+    (
+      request: {
+        ownerId:
+          string;
+        businessId:
+          string;
+        branchId:
+          string;
+      },
+    ) =>
+      Promise<
+        FinoraControlCenterResult<
+          FinoraControlCenterBranchRegistryView
+        >
+      >;
+
+
+
   getBranchDirectoryMetadata:
     () =>
       Promise<
@@ -1596,6 +1636,23 @@ const controlCenterBridge:
           FinoraControlCenterBranchRegistryView
         >
       >,
+
+  getDeletedBranchRestoreBin:
+    () =>
+      ipcRenderer.invoke(
+        CONTROL_CENTER_CHANNELS.GET_DELETED_BRANCH_RESTORE_BIN,
+      ),
+
+  restoreBranchRegistryRecord:
+    (
+      request,
+    ) =>
+      ipcRenderer.invoke(
+        CONTROL_CENTER_CHANNELS.RESTORE_BRANCH_REGISTRY_RECORD,
+        request,
+      ),
+
+
 
   getBranchDirectoryMetadata:
     () =>

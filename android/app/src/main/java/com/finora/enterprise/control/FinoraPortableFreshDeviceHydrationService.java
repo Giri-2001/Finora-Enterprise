@@ -239,15 +239,27 @@ public final class
             synchronized (
                 FinoraControlPackageApplyLock.LOCK
             ) {
-                String existing =
-                    controlState.read();
-
-                if (existing != null) {
-                    return Result.failure(
-                        ERROR_CONTROL_STATE_EXISTS,
-                        "FINORA fresh-device hydration refuses to replace an existing Control Store."
-                    );
-                }
+                                /*
+                 * PORTABLE_USB ANY-DEVICE AUTHORITY
+                 *
+                 * This hydration request has already passed the
+                 * portable credential / runtime-authority recovery
+                 * pipeline before reaching this commit boundary.
+                 *
+                 * A device-local Control Store is therefore NOT
+                 * branch ownership authority.
+                 *
+                 * The same owner must be able to use an authorized
+                 * FINORA USB on a new phone, tablet, laptop, or on
+                 * a device that previously opened another branch.
+                 *
+                 * The verified portable branch state below replaces
+                 * the current local runtime Control Store atomically.
+                 *
+                 * Authentication still requires the verified USB
+                 * authority plus Owner User ID / Password and the
+                 * Security Code challenge for an unknown device.
+                 */
 
                 JSONObject root =
                     buildRoot(

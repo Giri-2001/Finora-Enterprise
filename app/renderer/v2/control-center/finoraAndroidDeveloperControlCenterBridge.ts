@@ -1,4 +1,4 @@
-﻿import {
+import {
   Capacitor,
   registerPlugin,
 } from "@capacitor/core";
@@ -129,6 +129,32 @@ function createAndroidBridge():
         invokeNative(
           "getBranchRegistry",
         ),
+
+    deleteBranchRegistryRecord:
+      (
+        request,
+      ) =>
+        invokeNative(
+          "deleteBranchRegistryRecord",
+          request,
+        ),
+
+    getDeletedBranchRestoreBin:
+      () =>
+        invokeNative(
+          "getDeletedBranchRestoreBin",
+        ),
+
+    restoreBranchRegistryRecord:
+      (
+        request,
+      ) =>
+        invokeNative(
+          "restoreBranchRegistryRecord",
+          request,
+        ),
+
+
 
     getBranchDirectoryMetadata:
       () =>

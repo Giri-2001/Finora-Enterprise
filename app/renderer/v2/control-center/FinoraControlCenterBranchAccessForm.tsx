@@ -480,7 +480,7 @@ export default function FinoraControlCenterBranchAccessForm({
             fontFamily:
               "Inter, ui-sans-serif, system-ui, sans-serif",
             fontSize:
-              "12px",
+              "13px",
             lineHeight:
               1.55,
             color:
@@ -499,7 +499,7 @@ export default function FinoraControlCenterBranchAccessForm({
           display:
             "grid",
           gridTemplateColumns:
-            "repeat(var(--finora-cc-form-columns, 3), minmax(0, 1fr))",
+            "repeat(var(--finora-cc-branch-access-columns, 4), minmax(0, 1fr))",
           gap:
             "14px",
         }}
@@ -765,7 +765,7 @@ export default function FinoraControlCenterBranchAccessForm({
               fontFamily:
                 "Inter, ui-sans-serif, system-ui, sans-serif",
               fontSize:
-                "13px",
+                "17px",
               color:
                 "#e2e8f0",
             }}
@@ -778,7 +778,7 @@ export default function FinoraControlCenterBranchAccessForm({
               display:
                 "grid",
               gridTemplateColumns:
-                "repeat(var(--finora-cc-form-columns, 3), minmax(0, 1fr))",
+                "repeat(var(--finora-cc-branch-access-columns, 4), minmax(0, 1fr))",
               gap:
                 "14px",
             }}
@@ -975,255 +975,222 @@ export default function FinoraControlCenterBranchAccessForm({
       {!isRenewalMode && ( /* finora-hide-owner-login-on-renew */
       <section
         style={{
-          display:
-            "grid",
-          gap:
-            "14px",
-          borderTop:
-            "1px solid rgba(148, 163, 184, 0.18)",
-          paddingTop:
-            "18px",
+          display: "grid",
+          gap: "14px",
+          borderTop: "1px solid rgba(148, 163, 184, 0.18)",
+          paddingTop: "18px",
         }}
       >
         <strong
           style={{
-            fontFamily:
-              "Inter, ui-sans-serif, system-ui, sans-serif",
-            fontSize:
-              "13px",
-            color:
-              "#e2e8f0",
+            fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
+            fontSize: "16px",
+            color: "#e2e8f0",
           }}
         >
           Owner Login Setup
         </strong>
 
-        <label
+        <div
+          data-finora-owner-login-layout="true"
           style={{
-            display:
-              "flex",
-            alignItems:
-              "center",
-            gap:
-              "10px",
-            minHeight:
-              "42px",
-            border:
-              "1px solid rgba(148, 163, 184, 0.2)",
-            borderRadius:
-              "9px",
-            padding:
-              "0 12px",
-            fontFamily:
-              "Inter, ui-sans-serif, system-ui, sans-serif",
-            fontSize:
-              "12px",
-            color:
-              credentialEnrollmentAvailable
-                ? "#cbd5e1"
-                : "#64748b",
-            background:
-              "rgba(15, 23, 42, 0.48)",
+            display: "grid",
+            gridTemplateColumns:
+              "repeat(var(--finora-cc-owner-login-columns, 4), minmax(0, 1fr))",
+            gap: "14px",
+            alignItems: "end",
           }}
         >
-          <input
-            type="checkbox"
-            checked={
-              draft
-                .credentialEnrollmentEnabled
-            }
-            disabled={
-              !credentialEnrollmentAvailable ||
-              draft.action ===
-                "AUTHORIZE_CREDENTIAL"
-            }
-            onChange={(
-              event,
-            ) => {
-              update(
-                "credentialEnrollmentEnabled",
-                event.target.checked,
-              );
-            }}
-          />
-
-          Create owner login credentials
-        </label>
-
-        {!credentialEnrollmentAvailable && (
-          <p
+          <label
+            data-finora-owner-login-create="true"
             style={{
-              margin:
-                0,
-              fontFamily:
-                "Inter, ui-sans-serif, system-ui, sans-serif",
-              fontSize:
-                "11px",
-              lineHeight:
-                1.5,
-              color:
-                "#94a3b8",
+              display: "flex",
+              alignItems: "center",
+              gap: "10px",
+              width: "100%",
+              minWidth: 0,
+              minHeight: "42px",
+              boxSizing: "border-box",
+              border: "1px solid rgba(148, 163, 184, 0.2)",
+              borderRadius: "9px",
+              padding: "0 12px",
+              fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
+              fontSize: "12px",
+              color: credentialEnrollmentAvailable
+                ? "#cbd5e1"
+                : "#64748b",
+              background: "rgba(15, 23, 42, 0.48)",
             }}
           >
-            Credential enrollment authorization is available
-            only for ISSUE or AUTHORIZE_CREDENTIAL actions.
-          </p>
-        )}
+            <input
+              type="checkbox"
+              checked={draft.credentialEnrollmentEnabled}
+              disabled={
+                !credentialEnrollmentAvailable ||
+                draft.action === "AUTHORIZE_CREDENTIAL"
+              }
+              onChange={(event) => {
+                update(
+                  "credentialEnrollmentEnabled",
+                  event.target.checked,
+                );
+              }}
+            />
 
-        {draft.credentialEnrollmentEnabled &&
-          credentialEnrollmentAvailable && (
-          <div
-            style={{
-              display:
-                "grid",
-              gridTemplateColumns:
-                "repeat(var(--finora-cc-form-columns, 3), minmax(0, 1fr))",
-              gap:
-                "14px",
-            }}
-          >
+            Create owner login credentials
+          </label>
 
-                        <div
+          {!credentialEnrollmentAvailable && (
+            <p
+              data-finora-owner-login-warning="true"
               style={{
-                display:
-                  "grid",
-                gridTemplateColumns:
-                  "minmax(0, 1fr) auto",
-                gap:
-                  "10px",
-                alignItems:
-                  "end",
+                margin: 0,
+                fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
+                fontSize: "11px",
+                lineHeight: 1.5,
+                color: "#94a3b8",
               }}
             >
-              <Field
-                label="Authorization ID"
-                value={
-                  draft.credentialAuthorizationId
-                }
-                placeholder="FINORA-CREDENTIAL-ENROLLMENT-..."
-                onChange={(
-                  value,
-                ) => {
-                  update(
-                    "credentialAuthorizationId",
-                    value,
-                  );
-                }}
-              />
+              Credential enrollment authorization is available
+              only for ISSUE or AUTHORIZE_CREDENTIAL actions.
+            </p>
+          )}
 
-              <button
-                type="button"
-                onClick={
-                  generateCredentialAuthorizationId
-                }
-                style={{
-                  minHeight:
-                    "42px",
-                  padding:
-                    "0 14px",
-                  border:
-                    "1px solid rgba(59, 130, 246, 0.48)",
-                  borderRadius:
-                    "9px",
-                  background:
-                    "rgba(59, 130, 246, 0.14)",
-                  color:
-                    "#dbeafe",
-                  fontFamily:
-                    "Inter, ui-sans-serif, system-ui, sans-serif",
-                  fontSize:
-                    "12px",
-                  fontWeight:
-                    700,
-                  cursor:
-                    "pointer",
-                  boxSizing:
-                    "border-box",
-                  whiteSpace:
-                    "nowrap",
-                }}
-              >
-                Generate Authorization ID
-              </button>
-            </div>
-<Field
-              label="Username"
-              value={draft.credentialUsername}
-              placeholder="Username"
-              onChange={(
-                value,
-              ) => {
-                update(
-                  "credentialUsername",
-                  value,
-                );
-              }}
-            />
+          {draft.credentialEnrollmentEnabled &&
+            credentialEnrollmentAvailable && (
+              <>
+                <div data-finora-owner-login-auth="true">
+                  <Field
+                    label="Authorization ID"
+                    value={draft.credentialAuthorizationId}
+                    placeholder="FINORA-CREDENTIAL-ENROLLMENT-..."
+                    onChange={(value) => {
+                      update(
+                        "credentialAuthorizationId",
+                        value,
+                      );
+                    }}
+                  />
+                </div>
 
-            <Field
-              label="Full Name"
-              value={draft.credentialFullName}
-              placeholder="Authorized user name"
-              onChange={(
-                value,
-              ) => {
-                update(
-                  "credentialFullName",
-                  value,
-                );
-              }}
-            />
+                <button
+                  data-finora-owner-login-generate="true"
+                  type="button"
+                  onClick={generateCredentialAuthorizationId}
+                  style={{
+                    width: "100%",
+                    minWidth: 0,
+                    minHeight: "42px",
+                    boxSizing: "border-box",
+                    padding: "0 14px",
+                    border: "1px solid rgba(59, 130, 246, 0.48)",
+                    borderRadius: "9px",
+                    background: "rgba(59, 130, 246, 0.14)",
+                    color: "#dbeafe",
+                    fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
+                    fontSize: "12px",
+                    fontWeight: 700,
+                    cursor: "pointer",
+                    whiteSpace: "nowrap",
+                  }}
+                >
+                  Generate Authorization ID
+                </button>
 
-          </div>
-        )}
+                <div data-finora-owner-login-username="true">
+                  <Field
+                    label="Username"
+                    value={draft.credentialUsername}
+                    placeholder="Username"
+                    onChange={(value) => {
+                      update(
+                        "credentialUsername",
+                        value,
+                      );
+                    }}
+                  />
+                </div>
+
+                <div data-finora-owner-login-full-name="true">
+                  <Field
+                    label="Full Name"
+                    value={draft.credentialFullName}
+                    placeholder="Authorized user name"
+                    onChange={(value) => {
+                      update(
+                        "credentialFullName",
+                        value,
+                      );
+                    }}
+                  />
+                </div>
+              </>
+            )}
+
+          <button
+            data-finora-owner-login-issue="true"
+            type="button"
+            onClick={() => {
+              onIssue({
+                target,
+                ...draft,
+              });
+            }}
+            style={{
+              width: "calc(100% + 3px)",
+              justifySelf: "end",
+              minHeight: "42px",
+              border: "1px solid rgba(96, 165, 250, 0.72)",
+              borderRadius: "9px",
+              padding: "9px 16px",
+              fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
+              fontSize: "14px",
+              fontWeight: 650,
+              background: "rgba(30, 64, 175, 0.28)",
+              color: "#e2e8f0",
+              cursor: "pointer",
+            }}
+          >
+            Issue Branch Access
+          </button>
+        </div>
       </section>
       )}
 
-      <div
-        style={{
-          display:
-            "flex",
-          justifyContent:
-            "flex-end",
-          marginTop:
-            "2px",
-        }}
-      >
-        <button
-          type="button"
-          disabled={isRenewalMode && !renewalMetadataComplete}
-          onClick={() => {
-            onIssue({
-              target,
-              ...draft,
-            });
-          }}
+      {isRenewalMode && (
+        <div
           style={{
-            minHeight:
-              "42px",
-            border:
-              "1px solid rgba(96, 165, 250, 0.72)",
-            borderRadius:
-              "9px",
-            padding:
-              "9px 16px",
-            fontFamily:
-              "Inter, ui-sans-serif, system-ui, sans-serif",
-            fontSize:
-              "13px",
-            fontWeight:
-              650,
-            background:
-              "rgba(30, 64, 175, 0.28)",
-            color:
-              "#e2e8f0",
-            cursor:
-              "pointer",
+            display: "flex",
+            justifyContent: "flex-end",
+            marginTop: "2px",
           }}
         >
-          {isRenewalMode ? "Generate Renewal" : "Issue Branch Access"}
-        </button>
-      </div>
+          <button
+            type="button"
+            disabled={!renewalMetadataComplete}
+            onClick={() => {
+              onIssue({
+                target,
+                ...draft,
+              });
+            }}
+            style={{
+              minHeight: "42px",
+              border: "1px solid rgba(96, 165, 250, 0.72)",
+              borderRadius: "9px",
+              padding: "9px 16px",
+              fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
+              fontSize: "13px",
+              fontWeight: 650,
+              background: "rgba(30, 64, 175, 0.28)",
+              color: "#e2e8f0",
+              cursor: "pointer",
+            }}
+          >
+            Generate Renewal
+          </button>
+        </div>
+      )}
     </section>
   );
 }

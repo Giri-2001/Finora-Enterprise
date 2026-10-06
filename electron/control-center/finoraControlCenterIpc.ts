@@ -1,4 +1,4 @@
-﻿// ============================================================
+// ============================================================
 // FINORA ENTERPRISE OSÃ¢â€žÂ¢
 //
 // CONTROL CENTER
@@ -62,6 +62,8 @@ import {
 import {
   updateFinoraControlCenterBranchAccessSummary,
   deleteFinoraControlCenterBranchRegistryRecord,
+  loadFinoraDeletedBranchRestoreBin,
+  restoreFinoraControlCenterBranchRegistryRecord,
 } from "./finoraControlCenterBranchRegistryStore.js";
 
 import {
@@ -265,6 +267,12 @@ export const FINORA_CONTROL_CENTER_IPC_CHANNELS = {
 
   DELETE_BRANCH_REGISTRY_RECORD:
     "finora:control-center:delete-branch-registry-record",
+
+  GET_DELETED_BRANCH_RESTORE_BIN:
+    "finora:control-center:get-deleted-branch-restore-bin",
+
+  RESTORE_BRANCH_REGISTRY_RECORD:
+    "finora:control-center:restore-branch-registry-record",
 
   GET_BRANCH_DIRECTORY_METADATA:
     "finora:control-center:get-branch-directory-metadata",
@@ -1367,6 +1375,97 @@ registerFinoraDeveloperSecurityControlCenterHandler(
   );
 
   // ----------------------------------------------------------
+  // ----------------------------------------------------------
+  // FINORA BRANCH RESTORE BIN V1
+  // ----------------------------------------------------------
+
+  registerFinoraDeveloperProtectedControlCenterHandler(
+    FINORA_CONTROL_CENTER_IPC_CHANNELS.GET_DELETED_BRANCH_RESTORE_BIN,
+    async (
+      event,
+    ) => {
+
+      if (
+        !isTrustedFinoraControlCenterRenderer(
+          event.senderFrame,
+        )
+      ) {
+        return failure(
+          "FINORA Branch Restore Bin access is restricted to the dedicated privileged Control Center renderer.",
+        );
+      }
+
+      return executePrivileged(
+        () =>
+          loadFinoraDeletedBranchRestoreBin(),
+      );
+    },
+  );
+
+  registerFinoraDeveloperProtectedControlCenterHandler(
+    FINORA_CONTROL_CENTER_IPC_CHANNELS.RESTORE_BRANCH_REGISTRY_RECORD,
+    async (
+      event,
+      request:
+        unknown,
+    ) => {
+
+      if (
+        !isTrustedFinoraControlCenterRenderer(
+          event.senderFrame,
+        )
+      ) {
+        return failure(
+          "FINORA Branch restore is restricted to the dedicated privileged Control Center renderer.",
+        );
+      }
+
+      if (
+        request ===
+          null ||
+        typeof request !==
+          "object"
+      ) {
+        return failure(
+          "FINORA Branch restore request is invalid.",
+        );
+      }
+
+      const candidate =
+        request as {
+          ownerId?: unknown;
+          businessId?: unknown;
+          branchId?: unknown;
+        };
+
+      if (
+        typeof candidate.ownerId !==
+          "string" ||
+        typeof candidate.businessId !==
+          "string" ||
+        typeof candidate.branchId !==
+          "string"
+      ) {
+        return failure(
+          "FINORA Branch restore identity is invalid.",
+        );
+      }
+
+      return executePrivileged(
+        () =>
+          restoreFinoraControlCenterBranchRegistryRecord({
+            ownerId:
+              candidate.ownerId as string,
+
+            businessId:
+              candidate.businessId as string,
+
+            branchId:
+              candidate.branchId as string,
+          }),
+      );
+    },
+  );
   // BRANCH DIRECTORY METADATA READ
   //
   // SECURITY:

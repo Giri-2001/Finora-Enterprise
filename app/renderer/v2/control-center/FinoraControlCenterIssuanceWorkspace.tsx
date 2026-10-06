@@ -2282,13 +2282,13 @@ setEnrollmentOpenState(
         scrollMarginTop: "16px",
         border: "1px solid rgba(148, 163, 184, 0.22)",
         borderRadius: "14px",
-        padding: "22px",
+        padding: "16px",
         background: "rgba(15, 23, 42, 0.72)",
       }}
     >
       <header
         style={{
-          marginBottom: "20px",
+          marginBottom: "14px",
         }}
       >
         <h2
@@ -2317,11 +2317,12 @@ setEnrollmentOpenState(
       <div
         role="group"
         aria-label="FINORA issuance workflow"
+        data-finora-owner-operations-grid="true"
         style={{
           display: "grid",
           gridTemplateColumns: "repeat(var(--finora-cc-workflow-columns, 4), minmax(0, 1fr))",
           gap: "10px",
-          marginBottom: "22px",
+          marginBottom: "12px",
         }}
       >
         {WORKFLOWS
@@ -2386,7 +2387,7 @@ setEnrollmentOpenState(
         data-finora-installation-enrollment="true"
         aria-live="polite"
         style={{
-          display: "none", marginBottom: "20px",
+          display: "none", marginBottom: "14px",
           border: "1px solid rgba(96, 165, 250, 0.28)",
           borderRadius: "11px",
           padding: "16px",
@@ -2548,7 +2549,7 @@ setEnrollmentOpenState(
         data-finora-branch-certification-rotation="true"
         aria-live="polite"
         style={{
-          display: "none", marginBottom: "20px",
+          display: "none", marginBottom: "14px",
           border: "1px solid rgba(251, 191, 36, 0.3)",
           borderRadius: "11px",
           padding: "16px",
@@ -2851,7 +2852,8 @@ setEnrollmentOpenState(
           )}
       </section>
 
-      <section>
+      <div         data-finora-selected-branch-bundle-layout="true"       >
+      <section         data-finora-selected-branch-card="true"         style={{           minWidth: 0,           border: "1px solid rgba(148, 163, 184, 0.2)",           borderRadius: "11px",           padding: "16px",           background: "rgba(2, 6, 23, 0.34)",         }}       >
         <div
           style={{
             display: "flex",
@@ -3205,6 +3207,151 @@ setEnrollmentOpenState(
       </section>
 
       <section
+        data-finora-control-bundle-export="true"
+        aria-live="polite"
+        style={{
+          display: "block",
+          marginTop: "0",
+          border: "1px solid rgba(148, 163, 184, 0.2)",
+          borderRadius: "11px",
+          padding: "16px",
+          background: "rgba(2, 6, 23, 0.34)",
+        }}
+      >
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: "18px",
+          }}
+        >
+          <div
+            style={{
+              minWidth: 0,
+            }}
+          >
+            <h3
+              style={{
+                margin: 0,
+                fontSize: "14px",
+                fontWeight: 650,
+              }}
+            >
+              Control Bundle Export
+            </h3>
+
+            <p
+              style={{
+                margin: "6px 0 0",
+                maxWidth: "none",
+                fontSize: "12px",
+                lineHeight: 1.55,
+                opacity: 0.7,
+              }}
+            >
+              Bundle all issued signed packages for this installation target into one signed FINORA .finora file.
+            </p>
+          </div>
+
+        </div>
+
+        <div           data-finora-control-bundle-status-row="true"           style={{             marginTop: "10px",             display: "flex",             alignItems: "center",             justifyContent: "space-between",             gap: "14px",           }}         >           <div             style={{               flex: 1,               minWidth: 0,             }}           >
+        <p
+          style={{
+            margin: 0,
+            fontSize: "14px",
+            opacity: 0.62,
+          }}
+        >
+          Available signed packages: {availableBundlePackageCount} / {WORKFLOWS.length}
+        </p>
+
+        {availableBundlePackageCount === 0 && (
+          <p
+            style={{
+              margin: "8px 0 0",
+              fontSize: "11px",
+              lineHeight: 1.5,
+              color: "#fbbf24",
+            }}
+          >
+            Issue at least one signed package before exporting a Control Bundle.
+          </p>
+        )}
+          </div>
+          <button
+          type="button"
+          disabled={
+          availableBundlePackageCount === 0 ||
+          bundleExportState === "EXPORTING"
+          }
+          onClick={() => {
+          void exportCurrentControlBundle();
+          }}
+          style={{
+          minWidth: "150px",
+          minHeight: "42px",
+          border: "1px solid rgba(96, 165, 250, 0.62)",
+          borderRadius: "9px",
+          padding: "9px 14px",
+          fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
+          fontSize: "12px",
+          fontWeight: 650,
+          background:
+          availableBundlePackageCount === 0
+          ? "rgba(30, 41, 59, 0.46)"
+          : "rgba(30, 64, 175, 0.3)",
+          color:
+          availableBundlePackageCount === 0
+          ? "rgba(203, 213, 225, 0.48)"
+          : "#dbeafe",
+          cursor:
+          availableBundlePackageCount === 0 ||
+          bundleExportState === "EXPORTING"
+          ? "not-allowed"
+          : "pointer",
+          }}
+          >
+          {bundleExportState === "EXPORTING"
+          ? "Exporting..."
+          : "Export .finora"}
+          </button>
+        </div>
+
+        {bundleExportState === "ERROR" &&
+          bundleExportError && (
+            <p
+              style={{
+                margin: "10px 0 0",
+                fontSize: "12px",
+                lineHeight: 1.55,
+                color: "#fca5a5",
+              }}
+            >
+              {bundleExportError}
+            </p>
+          )}
+
+        {bundleExportState === "SUCCESS" &&
+          bundleExportResult && (
+            <p
+              style={{
+                margin: "10px 0 0",
+                fontSize: "12px",
+                lineHeight: 1.55,
+                color: "#86efac",
+              }}
+            >
+              Exported {bundleExportResult.fileName} (
+              {bundleExportResult.bytesWritten.toLocaleString()} bytes).
+            </p>
+          )}
+      </section>
+      </div>
+
+
+      <section
         data-finora-enrollment-response-export="true"
         aria-live="polite"
         style={{
@@ -3433,154 +3580,13 @@ setEnrollmentOpenState(
           )}
       </section>
 
-      <section
-        data-finora-control-bundle-export="true"
-        aria-live="polite"
-        style={{
-          display: "block",
-          marginTop: "20px",
-          border: "1px solid rgba(148, 163, 184, 0.2)",
-          borderRadius: "11px",
-          padding: "16px",
-          background: "rgba(2, 6, 23, 0.34)",
-        }}
-      >
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            gap: "18px",
-          }}
-        >
-          <div
-            style={{
-              minWidth: 0,
-            }}
-          >
-            <h3
-              style={{
-                margin: 0,
-                fontSize: "14px",
-                fontWeight: 650,
-              }}
-            >
-              Control Bundle Export
-            </h3>
-
-            <p
-              style={{
-                margin: "6px 0 0",
-                maxWidth: "720px",
-                fontSize: "12px",
-                lineHeight: 1.55,
-                opacity: 0.7,
-              }}
-            >
-              Export all currently issued signed packages for this exact
-              installation target as one signed FINORA .finora bundle.
-            </p>
-          </div>
-
-          <button
-            type="button"
-            disabled={
-              availableBundlePackageCount === 0 ||
-              bundleExportState === "EXPORTING"
-            }
-            onClick={() => {
-              void exportCurrentControlBundle();
-            }}
-            style={{
-              minWidth: "150px",
-              minHeight: "42px",
-              border: "1px solid rgba(96, 165, 250, 0.62)",
-              borderRadius: "9px",
-              padding: "9px 14px",
-              fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
-              fontSize: "12px",
-              fontWeight: 650,
-              background:
-                availableBundlePackageCount === 0
-                  ? "rgba(30, 41, 59, 0.46)"
-                  : "rgba(30, 64, 175, 0.3)",
-              color:
-                availableBundlePackageCount === 0
-                  ? "rgba(203, 213, 225, 0.48)"
-                  : "#dbeafe",
-              cursor:
-                availableBundlePackageCount === 0 ||
-                bundleExportState === "EXPORTING"
-                  ? "not-allowed"
-                  : "pointer",
-            }}
-          >
-            {bundleExportState === "EXPORTING"
-              ? "Exporting..."
-              : "Export .finora"}
-          </button>
-        </div>
-
-        <p
-          style={{
-            margin: "12px 0 0",
-            fontSize: "11px",
-            opacity: 0.62,
-          }}
-        >
-          Available signed packages: {availableBundlePackageCount} / {WORKFLOWS.length}
-        </p>
-
-        {availableBundlePackageCount === 0 && (
-          <p
-            style={{
-              margin: "8px 0 0",
-              fontSize: "11px",
-              lineHeight: 1.5,
-              color: "#fbbf24",
-            }}
-          >
-            Issue at least one signed package before exporting a Control Bundle.
-          </p>
-        )}
-
-        {bundleExportState === "ERROR" &&
-          bundleExportError && (
-            <p
-              style={{
-                margin: "10px 0 0",
-                fontSize: "12px",
-                lineHeight: 1.55,
-                color: "#fca5a5",
-              }}
-            >
-              {bundleExportError}
-            </p>
-          )}
-
-        {bundleExportState === "SUCCESS" &&
-          bundleExportResult && (
-            <p
-              style={{
-                margin: "10px 0 0",
-                fontSize: "12px",
-                lineHeight: 1.55,
-                color: "#86efac",
-              }}
-            >
-              Exported {bundleExportResult.fileName} (
-              {bundleExportResult.bytesWritten.toLocaleString()} bytes).
-            </p>
-          )}
-      </section>
-
       {workflow === "BRANCH_ACTIVATION" &&
         newBranchProvisioning && (
           <section
             style={{
               display: "grid",
               gap: "18px",
-              padding: "22px",
+              padding: "16px",
               border:
                 "1px solid rgba(148, 163, 184, 0.22)",
               borderRadius: "16px",
@@ -4442,6 +4448,7 @@ setEnrollmentOpenState(
         )}
 
       {workflow === "BRANCH_ACCESS" && (
+        <section           data-finora-branch-access-card="true"         >
         <FinoraControlCenterBranchAccessForm
           key={`${selectedBranch?.identity.branchId ?? "manual"}:${branchAccessInitialAction}:${workspaceFocusRequestId}`}
           target={target}
@@ -4476,6 +4483,7 @@ setEnrollmentOpenState(
             void issueBranchAccessDraft(draft);
           }}
         />
+        </section>
       )}
       {workflow === "DEVICE_REVOCATION" && (
         <FinoraControlCenterDeviceRevocationForm
@@ -4824,7 +4832,7 @@ setEnrollmentOpenState(
         <section
           aria-live="polite"
           style={{
-            marginBottom: "20px",
+            marginBottom: "14px",
             border: "1px solid rgba(56, 189, 248, 0.24)",
             borderRadius: "12px",
             padding: "16px",
