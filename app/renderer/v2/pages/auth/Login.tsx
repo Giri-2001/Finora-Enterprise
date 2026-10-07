@@ -1,6 +1,4 @@
 import {
-  getFinoraCredentialEnrollmentBridge,
-  getFinoraCredentialRotationBridgeV2,
 } from "../../services/auth/credentialEnrollmentBridge";
 import { getFinoraLoginSessionBridge } from "../../services/auth/loginSessionBridge";
 // ============================================================
@@ -81,8 +79,6 @@ import {
   commitLoginSession,
 } from "../../store/authStore";
 import {
-  isAccountLocked,
-  registerFailedLogin,
   resetLoginAttempts,
 } from "../../store/loginSecurityStore";
 
@@ -323,8 +319,8 @@ export default function Login({
 
 
   const [
-    forgotCurrentPassword,
-    setForgotCurrentPassword,
+    forgotConfirmNewPassword,
+    setForgotConfirmNewPassword,
   ] = useState<string>("");
 
   const [
@@ -357,12 +353,16 @@ export default function Login({
     setForgotPasswordSuccess,
   ] = useState<string | undefined>();
 
+  // One UUID per logical Forgot Password request.
+  // Preserve it across uncertain retries; never persist it.
+  const forgotPasswordRecoveryRequestIdRef =
+    useRef<string | null>(null);
+
   const [
     credentialMode,
     setCredentialMode,
   ] = useState<
     "LOGIN" |
-    "SET_PASSWORD" |
     "FORCE_CREDENTIAL_CHANGE" |
     "RESTORE_BACKUP"
   >(
@@ -416,6 +416,21 @@ export default function Login({
   const [
     showPassword,
     setShowPassword,
+  ] = useState(false);
+
+  const [
+    showConfirmPermanentPassword,
+    setShowConfirmPermanentPassword,
+  ] = useState(false);
+
+  const [
+    showPermanentSecurityCode,
+    setShowPermanentSecurityCode,
+  ] = useState(false);
+
+  const [
+    showConfirmPermanentSecurityCode,
+    setShowConfirmPermanentSecurityCode,
   ] = useState(false);
 
   const [
@@ -1016,11 +1031,11 @@ export default function Login({
 
     if (
       Array.from(securityCode).length < 8 ||
-      Array.from(securityCode).length > 128 ||
+      Array.from(securityCode).length > 15 ||
       securityCode.trim().length === 0
     ) {
       setError(
-        "Permanent Security Code must contain between 8 and 128 characters.",
+        "Permanent Security Code must contain between 8 and 15 characters.",
       );
       return;
     }
@@ -1032,12 +1047,12 @@ export default function Login({
       return;
     }
 
-    const rotationBridge =
-      getFinoraCredentialRotationBridgeV2();
+    const credentialBridge =
+      window.finora?.credentials;
 
-    if (!rotationBridge?.rotateV2) {
+    if (!credentialBridge?.completeFirstLoginV2) {
       setError(
-        "FINORA secure credential rotation is unavailable in this application build.",
+        "FINORA secure first-login credential completion is unavailable in this application build.",
       );
       return;
     }
@@ -1063,7 +1078,7 @@ export default function Login({
     try {
 
       const result =
-        await rotationBridge.rotateV2({
+        await credentialBridge.completeFirstLoginV2({
           rotationRequestId:
             firstLoginRotationRequestIdRef.current,
 
@@ -1088,7 +1103,7 @@ export default function Login({
         return;
       }
 
-      // Credential replacement is already durable here.
+      // Server + Portable Auth + Control credential replacement is durable here.
       // The temporary authenticated session must never be reused.
 
       firstLoginCurrentPasswordRef.current =
@@ -1119,7 +1134,7 @@ export default function Login({
     }
     catch {
 
-      // Preserve rotationRequestId for safe retry.
+      // Preserve rotationRequestId for exact server/local retry.
       setError(
         "Unable to confirm the permanent credential update. Retry the same submission.",
       );
@@ -1215,29 +1230,14 @@ export default function Login({
       false;
 
     try {
-
       // ======================================================
-      // 1. SUPPLEMENTAL LOCAL LOGIN LOCKOUT
+      // AUTHORITATIVE OWNER LOGIN
       //
-      // This remains renderer-local UX protection only.
-      //
-      // It is NOT credential or access authority.
+      // Renderer does not make account-lock decisions.
+      // Authentication / provisioning authority is Electron + server.
       // ======================================================
 
-      if (
-        isAccountLocked(
-          trimmedUsername,
-        )
-      ) {
-        setError(
-          "Invalid username or password",
-        );
-
-        return;
-      }
-
-
-      // ======================================================
+// ======================================================
       // 2. MAIN-PROCESS SECURE LOGIN AUTHORITY
       //
       // Main process owns:
@@ -1272,11 +1272,11 @@ export default function Login({
 
         if (
           legacySecurityCodeLength < 8 ||
-          legacySecurityCodeLength > 128 ||
+          legacySecurityCodeLength > 15 ||
           securityCode.trim().length === 0
         ) {
           setError(
-            "Security Code must contain between 8 and 128 characters.",
+            "Security Code must contain between 8 and 15 characters.",
           );
           return;
         }
@@ -1440,12 +1440,7 @@ const loginSessionBridge =
           );
 
           setLegacySecurityCodeSetupRequired(false);
-
-          registerFailedLogin(
-            trimmedUsername,
-          );
-
-          setError(
+setError(
             "Invalid username or password",
           );
         }
@@ -1465,7 +1460,10 @@ const loginSessionBridge =
                 ? "Unable to verify the current date/time. Check your internet connection and try again."
                 : loginResult.errorCode ===
                     "DEVICE_TRUST_FAILED"
-                  ? "Unable to authorize this device."
+? (
+                      loginResult.error ??
+                      "Unable to authorize this device."
+                    )
                   : loginResult.error ??
                     "Unable to authorize this FINORA login.",
           );
@@ -1496,7 +1494,7 @@ const loginSessionBridge =
         authoritativeSession.sessionId;
 
 
-      
+
       if (
         authoritativeSession.credentialChangeRequired ===
           true
@@ -1749,273 +1747,20 @@ const loginSessionBridge =
 
 
   // ==========================================================
-  // FIRST-TIME LOCAL CREDENTIAL ENROLLMENT
-  //
-  // SECURITY:
-  //
-  // - Renderer supplies username + password only.
-  // - Signed pending authorization is resolved in Electron main.
-  // - No authorization ID is exposed to this UI.
-  // - Successful enrollment does NOT authenticate the user.
-  // ==========================================================
-
-  async function enrollOwnerCredential():
-    Promise<void> {
-
-    setError(
-      "",
-    );
-
-    setCredentialEnrollmentMessage(
-      "",
-    );
-
-    const trimmedUsername =
-      username.trim();
-
-    if (!trimmedUsername) {
-
-      setError(
-        "Enter your User ID.",
-      );
-
-      return;
-    }
-
-
-    const passwordLength =
-      Array.from(
-        password,
-      ).length;
-
-
-    if (
-      passwordLength < 8 ||
-      passwordLength > 128 ||
-      password.trim().length === 0
-    ) {
-
-      setError(
-        "Password must contain between 8 and 128 characters.",
-      );
-
-      return;
-    }
-
-
-    if (!confirmPassword) {
-
-      setError(
-        "Confirm your new password.",
-      );
-
-      return;
-    }
-
-
-    if (
-      password !==
-        confirmPassword
-    ) {
-
-      setError(
-        "New Password and Confirm Password do not match.",
-      );
-
-      return;
-    }
-
-
-    const securityCodeLength =
-      Array.from(
-        securityCode,
-      ).length;
-
-    if (
-      securityCodeLength <
-        8 ||
-      securityCodeLength >
-        128 ||
-      securityCode.trim().length ===
-        0
-    ) {
-      setError(
-        "Security Code must contain between 8 and 128 characters.",
-      );
-
-      return;
-    }
-
-    if (!confirmSecurityCode) {
-      setError(
-        "Confirm your Security Code.",
-      );
-
-      return;
-    }
-
-    if (
-      securityCode !==
-        confirmSecurityCode
-    ) {
-      setError(
-        "Security Code and Confirm Security Code do not match.",
-      );
-
-      return;
-    }
-
-    const enrollCredential =
-      getFinoraCredentialEnrollmentBridge()?.enroll;
-
-
-    if (
-      typeof enrollCredential !==
-        "function"
-    ) {
-
-      setError(
-        "FINORA secure credential enrollment is unavailable in this application build.",
-      );
-
-      return;
-    }
-
-
-    setLoginBusy(
-      true,
-    );
-
-    const processingId =
-      startFinoraProcessing(
-        "Creating secure FINORA password...",
-      );
-
-
-    try {
-
-      const result =
-        await enrollCredential({
-          username:
-            trimmedUsername,
-
-          password,
-
-          securityCode,
-        });
-
-
-      if (!result.success) {
-
-        setError(
-          result.error ??
-            "Unable to create the FINORA password.",
-        );
-
-        return;
-      }
-
-
-      setPassword(
-        "",
-      );
-
-      setConfirmPassword(
-        "",
-      );
-
-      setSecurityCode(
-        "",
-      );
-
-      setConfirmSecurityCode(
-        "",
-      );
-
-      setShowPassword(
-        false,
-      );
-
-      setCredentialMode(
-        "LOGIN",
-      );
-
-      setCredentialEnrollmentMessage(
-        "Password and Security Code created successfully. Sign in with your new password.",
-      );
-
-    } catch (enrollmentError) {
-
-      console.error(
-        "FINORA CREDENTIAL ENROLLMENT FAILED:",
-        enrollmentError,
-      );
-
-      setError(
-        "Unable to complete FINORA password setup.",
-      );
-
-    } finally {
-
-      stopFinoraProcessing(
-        processingId,
-      );
-
-      setLoginBusy(
-        false,
-      );
-
-    }
-
-  }
-
-
-  // ==========================================================
   // CREDENTIAL MODE
   // ==========================================================
 
-  function openSetPasswordMode(): void {
-
-    setDeviceSecurityCodeRequired(false);
-
-    setDeviceSecurityCode("");
-
-    setCredentialMode(
-      "SET_PASSWORD",
-    );
-
-    setPassword(
-      "",
-    );
-
-    setConfirmPassword(
-      "",
-    );
-
-    setSecurityCode(
-      "",
-    );
-
-    setConfirmSecurityCode(
-      "",
-    );
-
-    setShowPassword(
-      false,
-    );
-
-    setCredentialEnrollmentMessage(
-      "",
-    );
-
-    setError(
-      "",
-    );
-
-  }
-
-
   function returnToLoginMode(): void {
+
+    // Clear verified temporary first-login secrets when leaving this page.
+    firstLoginCurrentPasswordRef.current =
+      null;
+
+    firstLoginCurrentSecurityCodeRef.current =
+      null;
+
+    firstLoginRotationRequestIdRef.current =
+      null;
 
     setDeviceSecurityCodeRequired(false);
 
@@ -2155,13 +1900,13 @@ const loginSessionBridge =
       securityCode.length <
         8 ||
       securityCode.length >
-        128 ||
+        15 ||
       securityCode.trim().length ===
         0
     ) {
 
       setError(
-        "Security Code must contain between 8 and 128 characters.",
+        "Security Code must contain between 8 and 15 characters.",
       );
 
       return;
@@ -2329,19 +2074,7 @@ const loginSessionBridge =
   // ==========================================================
 
   function handleLogin(): void {
-
-    if (
-      credentialMode ===
-        "SET_PASSWORD"
-    ) {
-
-      void enrollOwnerCredential();
-
-      return;
-    }
-
-
-    if (
+if (
       credentialMode ===
         "RESTORE_BACKUP"
     ) {
@@ -2365,9 +2098,11 @@ const loginSessionBridge =
     setForgotPasswordMode(true);
     setForgotPasswordError(undefined);
     setForgotPasswordSuccess(undefined);
-    setForgotCurrentPassword("");
+    setForgotConfirmNewPassword("");
     setForgotNewPassword("");
     setForgotSecurityCode("");
+    forgotPasswordRecoveryRequestIdRef.current =
+      null;
   }
 
   async function submitForgotPasswordRecovery(): Promise<void> {
@@ -2388,30 +2123,6 @@ const loginSessionBridge =
       return;
     }
 
-    if (!forgotCurrentPassword) {
-      setForgotPasswordError(
-        "Enter your old Password.",
-      );
-      return;
-    }
-
-    if (!forgotNewPassword) {
-      setForgotPasswordError(
-        "Enter your new Password.",
-      );
-      return;
-    }
-
-    if (
-      forgotCurrentPassword ===
-      forgotNewPassword
-    ) {
-      setForgotPasswordError(
-        "New Password must be different from the old Password.",
-      );
-      return;
-    }
-
     if (!forgotSecurityCode) {
       setForgotPasswordError(
         "Enter your current Security Code.",
@@ -2419,32 +2130,74 @@ const loginSessionBridge =
       return;
     }
 
+    if (
+      Array.from(forgotNewPassword).length < 8 ||
+      Array.from(forgotNewPassword).length > 128 ||
+      forgotNewPassword.trim().length === 0
+    ) {
+      setForgotPasswordError(
+        "New Password must contain between 8 and 128 characters.",
+      );
+      return;
+    }
+
+    if (!forgotConfirmNewPassword) {
+      setForgotPasswordError(
+        "Confirm your new Password.",
+      );
+      return;
+    }
+
+    if (
+      forgotNewPassword !==
+      forgotConfirmNewPassword
+    ) {
+      setForgotPasswordError(
+        "New Password and Confirm New Password do not match.",
+      );
+      return;
+    }
+
+    const bridge =
+      window.finora?.credentials;
+
+    if (
+      !bridge ||
+      typeof bridge.resetPasswordV2 !==
+        "function"
+    ) {
+      setForgotPasswordError(
+        "FINORA secure Password recovery is unavailable in this application build.",
+      );
+      return;
+    }
+
+    if (!forgotPasswordRecoveryRequestIdRef.current) {
+      if (
+        typeof crypto === "undefined" ||
+        typeof crypto.randomUUID !==
+          "function"
+      ) {
+        setForgotPasswordError(
+          "Secure request identifier generation is unavailable.",
+        );
+        return;
+      }
+
+      forgotPasswordRecoveryRequestIdRef.current =
+        crypto.randomUUID();
+    }
+
     setForgotPasswordBusy(true);
 
     try {
-      const bridge =
-        window.finora?.credentials;
-
-      if (
-        !bridge ||
-        typeof bridge.rotateV2 !==
-          "function"
-      ) {
-        throw new Error(
-          "FINORA credential rotation bridge is unavailable.",
-        );
-      }
-
       const result =
-        await bridge.rotateV2({
-          rotationRequestId:
-            `FINORA-PASSWORD-CHANGE-${crypto.randomUUID()}`,
+        await bridge.resetPasswordV2({
+          recoveryRequestId:
+            forgotPasswordRecoveryRequestIdRef.current,
 
           username:
             trimmedUsername,
-
-          currentPassword:
-            forgotCurrentPassword,
 
           currentSecurityCode:
             forgotSecurityCode,
@@ -2456,12 +2209,12 @@ const loginSessionBridge =
       if (!result.success) {
         throw new Error(
           result.error ??
-            "FINORA Password change failed.",
+            "FINORA Password recovery failed.",
         );
       }
 
       setForgotPasswordSuccess(
-        "Password changed successfully. Please log in with the new Password.",
+        "Password reset successfully. Please log in with the new Password.",
       );
 
       setPassword("");
@@ -2469,17 +2222,22 @@ const loginSessionBridge =
       setSecurityCode("");
       setConfirmSecurityCode("");
 
-      setForgotCurrentPassword("");
+      setForgotConfirmNewPassword("");
       setForgotNewPassword("");
       setForgotSecurityCode("");
 
-    } catch (error) {
+      forgotPasswordRecoveryRequestIdRef.current =
+        null;
+    }
+    catch (error) {
+      // Preserve recoveryRequestId across an uncertain retry.
       setForgotPasswordError(
         error instanceof Error
           ? error.message
-          : "Unable to change the FINORA Password.",
+          : "Unable to reset the FINORA Password.",
       );
-    } finally {
+    }
+    finally {
       setForgotPasswordBusy(false);
     }
   }
@@ -2492,9 +2250,11 @@ const loginSessionBridge =
     setForgotPasswordMode(false);
     setForgotPasswordError(undefined);
     setForgotPasswordSuccess(undefined);
-    setForgotCurrentPassword("");
+    setForgotConfirmNewPassword("");
     setForgotNewPassword("");
     setForgotSecurityCode("");
+    forgotPasswordRecoveryRequestIdRef.current =
+      null;
   }
 
   // ==========================================================
@@ -3204,7 +2964,7 @@ const loginSessionBridge =
                       lineHeight: 1.2,
                     }}
                   >
-                    Change Password
+                    Reset Password
                   </h2>
 
                   <p
@@ -3219,7 +2979,7 @@ const loginSessionBridge =
                       lineHeight: 1.55,
                     }}
                   >
-                    Enter your current password and Security Code, then create a new password.
+                    Verify your current Security Code, then create a new Password.
                   </p>
                 </div>
               </div>
@@ -3248,7 +3008,7 @@ const loginSessionBridge =
                         "uppercase",
                     }}
                   >
-                    Old Password
+                    Confirm New Password
                   </span>
 
                   <div
@@ -3264,12 +3024,14 @@ const loginSessionBridge =
                     <input
                       type="password"
                       value={
-                        forgotCurrentPassword
+                        forgotConfirmNewPassword
                       }
                       onChange={(event) => {
-                        setForgotCurrentPassword(
+                        setForgotConfirmNewPassword(
                           event.target.value,
                         );
+                        forgotPasswordRecoveryRequestIdRef.current =
+                          null;
                         setForgotPasswordError(
                           undefined,
                         );
@@ -3277,9 +3039,9 @@ const loginSessionBridge =
                           undefined,
                         );
                       }}
-                      placeholder="Enter old password"
-                      aria-label="Old Password"
-                      autoComplete="current-password"
+                      placeholder="Confirm new password"
+                      aria-label="Confirm New Password"
+                      autoComplete="new-password"
                       disabled={
                         forgotPasswordBusy
                       }
@@ -3338,6 +3100,8 @@ const loginSessionBridge =
                         setForgotNewPassword(
                           event.target.value,
                         );
+                        forgotPasswordRecoveryRequestIdRef.current =
+                          null;
                         setForgotPasswordError(
                           undefined,
                         );
@@ -3406,6 +3170,8 @@ const loginSessionBridge =
                         setForgotSecurityCode(
                           event.target.value,
                         );
+                        forgotPasswordRecoveryRequestIdRef.current =
+                          null;
                         setForgotPasswordError(
                           undefined,
                         );
@@ -3523,17 +3289,13 @@ const loginSessionBridge =
                   >
                     {forgotPasswordBusy
                       ? "Updating..."
-                      : "Set Password"}
+                      : "Reset Password"}
                   </button>
 
                   <button
                     type="button"
-                    onClick={
-                      closeForgotPasswordMode
-                    }
-                    disabled={
-                      forgotPasswordBusy
-                    }
+                    onClick={returnToLoginMode}
+                    disabled={loginBusy}
                     style={{
                       minHeight: "46px",
                       padding:
@@ -3560,9 +3322,7 @@ const loginSessionBridge =
               </div>
             </section>
           )}
-          {credentialMode === "SET_PASSWORD"
-                  ? "First-time setup  Create your secure password"
-                  : ownerStorage === "usb"
+          {ownerStorage === "usb"
                     ? "Owner authentication - FINORA Pendrive"
                     : "Owner authentication - Local storage"}
               </div>
@@ -3604,6 +3364,11 @@ const loginSessionBridge =
                     setUsername(
                       event.target.value,
                     );
+
+                    if (forgotPasswordMode) {
+                      forgotPasswordRecoveryRequestIdRef.current =
+                        null;
+                    }
                     setDeviceSecurityCodeRequired(
                       false,
                     );
@@ -3653,6 +3418,15 @@ const loginSessionBridge =
                     setPassword(
                       event.target.value,
                     );
+
+                    if (
+                      credentialMode ===
+                        "FORCE_CREDENTIAL_CHANGE"
+                    ) {
+                      firstLoginRotationRequestIdRef.current =
+                        null;
+                    }
+
                     setDeviceSecurityCodeRequired(
                       false,
                     );
@@ -3660,12 +3434,12 @@ const loginSessionBridge =
                     setError("");
                   }}
                   placeholder={
-                    (credentialMode === "SET_PASSWORD" || credentialMode === "FORCE_CREDENTIAL_CHANGE")
+                    credentialMode === "FORCE_CREDENTIAL_CHANGE"
                       ? "New Password"
                       : "Password"
                   }
                   aria-label={
-                    (credentialMode === "SET_PASSWORD" || credentialMode === "FORCE_CREDENTIAL_CHANGE")
+                    credentialMode === "FORCE_CREDENTIAL_CHANGE"
                       ? "New Password"
                       : "Password"
                   }
@@ -3675,14 +3449,11 @@ const loginSessionBridge =
                       : "password"
                   }
                   autoComplete={
-                    (credentialMode === "SET_PASSWORD" || credentialMode === "FORCE_CREDENTIAL_CHANGE")
+                    credentialMode === "FORCE_CREDENTIAL_CHANGE"
                       ? "new-password"
                       : "current-password"
                   }
-                  disabled={
-                      loginBusy ||
-                      credentialMode === "FORCE_CREDENTIAL_CHANGE"
-                    }
+                  disabled={loginBusy}
                   onKeyDown={
                     handlePasswordKeyDown
                   }
@@ -3724,7 +3495,7 @@ const loginSessionBridge =
               </div>
 
 
-              {(credentialMode === "SET_PASSWORD" || credentialMode === "FORCE_CREDENTIAL_CHANGE") && (
+              {credentialMode === "FORCE_CREDENTIAL_CHANGE" && (
 
                 <div
                   style={
@@ -3755,15 +3526,12 @@ const loginSessionBridge =
                     placeholder="Confirm Password"
                     aria-label="Confirm Password"
                     type={
-                      showPassword
+                      showConfirmPermanentPassword
                         ? "text"
                         : "password"
                     }
                     autoComplete="new-password"
-                    disabled={
-                      loginBusy ||
-                      credentialMode === "FORCE_CREDENTIAL_CHANGE"
-                    }
+                    disabled={loginBusy}
                     onKeyDown={
                       handlePasswordKeyDown
                     }
@@ -3775,11 +3543,36 @@ const loginSessionBridge =
                     }
                   />
 
+                  <button
+                    type="button"
+                    aria-label={
+                      showConfirmPermanentPassword
+                        ? "Hide Confirm Password"
+                        : "Show Confirm Password"
+                    }
+                    onClick={() => {
+                      setShowConfirmPermanentPassword(
+                        current =>
+                          !current,
+                      );
+                    }}
+                    onMouseDown={(event) => {
+                      event.preventDefault();
+                    }}
+                    style={
+                      loginStyles.passwordToggle
+                    }
+                  >
+                    {showConfirmPermanentPassword
+                      ? <EyeOff />
+                      : <Eye />}
+                  </button>
+
                 </div>
 
               )}
 
-              {(credentialMode === "SET_PASSWORD" || credentialMode === "FORCE_CREDENTIAL_CHANGE") && (
+              {credentialMode === "FORCE_CREDENTIAL_CHANGE" && (
 
                 <div
                   style={
@@ -3805,16 +3598,21 @@ const loginSessionBridge =
                       setSecurityCode(
                         event.target.value,
                       );
+
+                      firstLoginRotationRequestIdRef.current =
+                        null;
+
                       setError("");
                     }}
                     placeholder="Security Code"
                     aria-label="Security Code"
-                    type="password"
-                    autoComplete="new-password"
-                    disabled={
-                      loginBusy ||
-                      credentialMode === "FORCE_CREDENTIAL_CHANGE"
+                    type={
+                      showPermanentSecurityCode
+                        ? "text"
+                        : "password"
                     }
+                    autoComplete="new-password"
+                    disabled={loginBusy}
                     onKeyDown={
                       handlePasswordKeyDown
                     }
@@ -3826,11 +3624,36 @@ const loginSessionBridge =
                     }
                   />
 
+                  <button
+                    type="button"
+                    aria-label={
+                      showPermanentSecurityCode
+                        ? "Hide Security Code"
+                        : "Show Security Code"
+                    }
+                    onClick={() => {
+                      setShowPermanentSecurityCode(
+                        current =>
+                          !current,
+                      );
+                    }}
+                    onMouseDown={(event) => {
+                      event.preventDefault();
+                    }}
+                    style={
+                      loginStyles.passwordToggle
+                    }
+                  >
+                    {showPermanentSecurityCode
+                      ? <EyeOff />
+                      : <Eye />}
+                  </button>
+
                 </div>
 
               )}
 
-              {(credentialMode === "SET_PASSWORD" || credentialMode === "FORCE_CREDENTIAL_CHANGE") && (
+              {credentialMode === "FORCE_CREDENTIAL_CHANGE" && (
 
                 <div
                   style={
@@ -3860,12 +3683,13 @@ const loginSessionBridge =
                     }}
                     placeholder="Confirm Security Code"
                     aria-label="Confirm Security Code"
-                    type="password"
-                    autoComplete="new-password"
-                    disabled={
-                      loginBusy ||
-                      credentialMode === "FORCE_CREDENTIAL_CHANGE"
+                    type={
+                      showConfirmPermanentSecurityCode
+                        ? "text"
+                        : "password"
                     }
+                    autoComplete="new-password"
+                    disabled={loginBusy}
                     onKeyDown={
                       handlePasswordKeyDown
                     }
@@ -3876,6 +3700,31 @@ const loginSessionBridge =
                       loginStyles.input
                     }
                   />
+
+                  <button
+                    type="button"
+                    aria-label={
+                      showConfirmPermanentSecurityCode
+                        ? "Hide Confirm Security Code"
+                        : "Show Confirm Security Code"
+                    }
+                    onClick={() => {
+                      setShowConfirmPermanentSecurityCode(
+                        current =>
+                          !current,
+                      );
+                    }}
+                    onMouseDown={(event) => {
+                      event.preventDefault();
+                    }}
+                    style={
+                      loginStyles.passwordToggle
+                    }
+                  >
+                    {showConfirmPermanentSecurityCode
+                      ? <EyeOff />
+                      : <Eye />}
+                  </button>
 
                 </div>
 
@@ -4015,6 +3864,14 @@ const loginSessionBridge =
                     loginStyles.inputWrapper
                   }
                 >
+                  <span
+                    style={
+                      loginStyles.inputIcon
+                    }
+                  >
+                    <LockKeyhole />
+                  </span>
+
                   <input
                     value={
                       deviceSecurityCode
@@ -4110,10 +3967,7 @@ const loginSessionBridge =
                   ? completeRequiredCredentialChange
                   : handleLogin
               }
-              disabled={
-                      loginBusy ||
-                      credentialMode === "FORCE_CREDENTIAL_CHANGE"
-                    }
+              disabled={loginBusy}
               style={
                 loginStyles.primaryButton
               }
@@ -4129,15 +3983,11 @@ const loginSessionBridge =
                   {loginBusy
                     ? credentialMode === "FORCE_CREDENTIAL_CHANGE"
                       ? "Saving Permanent Credentials..."
-                      : credentialMode === "SET_PASSWORD"
-                        ? "Creating Password..."
                       : credentialMode === "RESTORE_BACKUP"
                         ? "Restoring Backup..."
                         : "Authenticating..."
                     : credentialMode === "FORCE_CREDENTIAL_CHANGE"
                       ? "Save Permanent Credentials"
-                      : credentialMode === "SET_PASSWORD"
-                        ? "Set Password"
                       : credentialMode === "RESTORE_BACKUP"
                         ? "Restore Branch Backup"
                         : "Login"}
@@ -4151,21 +4001,7 @@ const loginSessionBridge =
               ? (
                   <>
 
-                    <button
-                      type="button"
-                      onClick={
-                        openSetPasswordMode
-                      }
-                      disabled={
-                      loginBusy ||
-                      credentialMode === "FORCE_CREDENTIAL_CHANGE"
-                    }
-                      style={
-                        loginStyles.forgotPassword
-                      }
-                    >
-                      Set Password
-                    </button>
+
 
                     <button
                       type="button"
@@ -4235,4 +4071,3 @@ const loginSessionBridge =
 // ============================================================
 // END
 // ============================================================
-

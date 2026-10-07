@@ -25,6 +25,14 @@ import type {
   FinoraBranchCredentialPortabilityAuthorityProvenanceV1,
 } from "./finoraBranchCredentialPortabilityAuthorityProvenance.js";
 
+import {
+  verifyFinoraServerFirstLoginSignedBootstrap,
+} from "./finoraServerFirstLoginBootstrapVerifier.js";
+
+import type {
+  FinoraServerFirstLoginSignedBootstrapV1,
+} from "./finoraServerFirstLoginBootstrapVerifier.js";
+
 // ============================================================
 // CONSTANTS
 // ============================================================
@@ -280,6 +288,24 @@ export interface FinoraPortableBranchAuthSignedSourceAuthorizationVerificationEv
     1;
 }
 
+export interface FinoraPortableBranchAuthServerFirstLoginSourceAuthorizationVerificationEvidenceV1 {
+
+  authorizationId:
+    string;
+
+  provenanceType:
+    "SERVER_FIRST_LOGIN_SIGNED_BOOTSTRAP";
+
+  signedBootstrap:
+    FinoraServerFirstLoginSignedBootstrapV1;
+
+  verifiedAt:
+    string;
+
+  schemaVersion:
+    1;
+}
+
 export interface FinoraPortableBranchAuthLegacySourceAuthorizationVerificationEvidenceV1 {
 
   authorizationId:
@@ -294,6 +320,7 @@ export interface FinoraPortableBranchAuthLegacySourceAuthorizationVerificationEv
 
 export type FinoraPortableBranchAuthSourceAuthorizationVerificationEvidenceV1 =
   | FinoraPortableBranchAuthSignedSourceAuthorizationVerificationEvidenceV1
+  | FinoraPortableBranchAuthServerFirstLoginSourceAuthorizationVerificationEvidenceV1
   | FinoraPortableBranchAuthLegacySourceAuthorizationVerificationEvidenceV1;
 export interface FinoraPortableBranchAuthPayloadV1 {
   schemaVersion:
@@ -967,6 +994,66 @@ export function validateFinoraPortableBranchAuthSourceAuthorizationVerificationE
       value,
       "sourceAuthorizationVerificationEvidence",
     );
+
+
+  if (
+    evidence.provenanceType ===
+      "SERVER_FIRST_LOGIN_SIGNED_BOOTSTRAP"
+  ) {
+    assertExactKeys(
+      evidence,
+      [
+        "authorizationId",
+        "provenanceType",
+        "signedBootstrap",
+        "verifiedAt",
+        "schemaVersion",
+      ],
+      [],
+      "sourceAuthorizationVerificationEvidence",
+    );
+
+    assertNonEmptyString(
+      evidence.authorizationId,
+      "sourceAuthorizationVerificationEvidence.authorizationId",
+    );
+
+    assertCanonicalIsoTimestamp(
+      evidence.verifiedAt,
+      "sourceAuthorizationVerificationEvidence.verifiedAt",
+    );
+
+    if (
+      evidence.schemaVersion !==
+        1
+    ) {
+      throw new Error(
+        "Portable Branch Auth server-first source authorization verification evidence schemaVersion is unsupported.",
+      );
+    }
+
+    const verifiedBootstrap =
+      verifyFinoraServerFirstLoginSignedBootstrap(
+        evidence.signedBootstrap,
+      );
+
+    if (!verifiedBootstrap) {
+      throw new Error(
+        "Portable Branch Auth server-first signed bootstrap verification failed.",
+      );
+    }
+
+    if (
+      verifiedBootstrap.payload.sourceAuthorizationId !==
+        evidence.authorizationId
+    ) {
+      throw new Error(
+        "Portable Branch Auth server-first signed bootstrap source authorization mismatch.",
+      );
+    }
+
+    return;
+  }
 
   if (
     evidence.legacyNativeBoundMigrationEvidence !==

@@ -361,9 +361,11 @@ async function main(): Promise<void> {
       .sourceAuthorizationVerificationEvidence;
 
   if (
-    "legacyNativeBoundMigrationEvidence" in
-      structurallyTamperedSourceEvidence
-  ) {
+      "legacyNativeBoundMigrationEvidence" in
+        structurallyTamperedSourceEvidence ||
+      "provenanceType" in
+        structurallyTamperedSourceEvidence
+    ) {
     throw new Error(
       "Enrollment transaction signed fixture unexpectedly used legacy migration evidence.",
     );

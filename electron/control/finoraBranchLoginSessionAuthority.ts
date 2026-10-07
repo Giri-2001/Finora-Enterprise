@@ -147,10 +147,7 @@ export interface FinoraBranchLoginSessionView {
     string;
 
   role:
-    | "ADMIN"
-    | "MANAGER"
-    | "COLLECTOR"
-    | "VIEWER";
+    | "OWNER" | "ADMIN" | "MANAGER" | "COLLECTOR" | "VIEWER";
 
   ownerId:
     string;
@@ -199,6 +196,7 @@ export type FinoraBranchLoginErrorCode =
   | "ACTIVATION_REQUIRED"
   | "BRANCH_ACCESS_DENIED"
   | "STORAGE_MODE_MISMATCH"
+  | "RUNTIME_AUTHORITY_MISSING"
   | "STORAGE_ENTITLEMENT_DENIED"
   | "CONTROL_STATE_FAILED"
   | "SYSTEM_CLOCK_INVALID"
@@ -412,10 +410,7 @@ type FinoraBranchLoginPrincipal = {
     string;
 
   role:
-    | "ADMIN"
-    | "MANAGER"
-    | "COLLECTOR"
-    | "VIEWER";
+    | "OWNER" | "ADMIN" | "MANAGER" | "COLLECTOR" | "VIEWER";
 
   ownerId:
     string;
@@ -1651,7 +1646,13 @@ export async function createFinoraBranchLoginSession(
     }
   }
 
-  if (!portableUsbAccess) {
+  // Portable USB does NOT bypass current-device trust.
+  // Branch Activation portability remains separate above.
+  //
+  // Exact flow:
+  // Password -> Device Trust -> Security Code when required
+  // -> trusted session -> portable Business Profile.
+  {
     const deviceTrustResult =
       await checkFinoraCurrentBranchDeviceTrust({
         principal:
@@ -1676,7 +1677,7 @@ export async function createFinoraBranchLoginSession(
             : "DEVICE_TRUST_FAILED",
 
         error:
-          "FINORA could not verify this device for the authenticated branch.",
+           `FINORA device trust check failed (${deviceTrustResult.errorCode}): ${deviceTrustResult.error}`,
       };
     }
 
@@ -1759,7 +1760,7 @@ export async function createFinoraBranchLoginSession(
             "DEVICE_TRUST_FAILED",
 
           error:
-            "FINORA could not securely authorize this device.",
+             `FINORA device authorization failed (${deviceAuthorizationResult.errorCode}): ${deviceAuthorizationResult.error}`,
         };
       }
     }

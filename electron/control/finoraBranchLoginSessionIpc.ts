@@ -155,8 +155,14 @@ export function registerFinoraBranchLoginSessionHandlers(
       typeof createFinoraBranchLoginSession
     >[2],
 
-  portableV2Store?:
-    FinoraPortableBranchAuthV2Store,
+  resolvePortableV2Store?:
+    (
+      request:
+        unknown,
+    ) =>
+      Promise<
+        FinoraPortableBranchAuthV2Store | undefined
+      >,
 ): void {
   if (
     loginSessionHandlersRegistered
@@ -188,11 +194,18 @@ export function registerFinoraBranchLoginSessionHandlers(
       }
 
       try {
+        const requestScopedPortableV2Store =
+          resolvePortableV2Store
+            ? await resolvePortableV2Store(
+                request,
+              )
+            : undefined;
+
         return await createFinoraBranchLoginSession(
           request,
           portableStore,
           recoverFreshDevice,
-          portableV2Store,
+          requestScopedPortableV2Store,
         );
       }
       catch {

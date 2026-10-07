@@ -76,10 +76,7 @@ export type FinoraBranchAccessAdministrativeStatus =
   | "REVOKED";
 
 export type FinoraBranchAccessUserRole =
-  | "ADMIN"
-  | "MANAGER"
-  | "COLLECTOR"
-  | "VIEWER";
+  | "OWNER" | "ADMIN" | "MANAGER" | "COLLECTOR" | "VIEWER";
 
 export type FinoraBranchAccessDataContext =
   | "REAL"

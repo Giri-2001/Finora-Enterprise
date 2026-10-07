@@ -1431,7 +1431,8 @@ function AuthenticatedApplication() {
    */
   const [session, setSession] =
     useState<AuthSession | null>(
-      null,
+      () =>
+        getSession(),
     );
 
   const [contextReady, setContextReady] = useState<boolean>(false);
@@ -1583,24 +1584,85 @@ function AuthenticatedApplication() {
           ReturnType<
             typeof validateLoginSession
           >
-        >;
+        > | undefined;
 
-      try {
-        validationResult =
-          await validateLoginSession({
-            sessionId:
-              session.sessionId,
-          });
-      }
-      catch {
-        await rejectUnverifiedSession(
-          "FINORA secure login-session validation failed.",
-        );
+// FINORA RENDERER RELOAD SESSION RETRY
+//
+// Ctrl+R recreates only the renderer. The main-process
+// authenticated session remains authoritative.
+// A transient IPC/navigation race must therefore not
+// invalidate an otherwise valid authenticated session.
+// Explicit validation denial below still fails closed.
+for (let attempt = 0; attempt < 3; attempt += 1) {
+  try {
+    validationResult =
+      await validateLoginSession({
+        sessionId:
+          session.sessionId,
+      });
 
+    break;
+  }
+  catch {
+    if (attempt < 2) {
+      await new Promise<void>(
+        (resolve) =>
+          window.setTimeout(resolve, 150),
+      );
+    }
+  }
+}
+
+if (!validationResult) {
+  setContextReady(false);
+
+  setContextError(
+    "FINORA secure session could not be revalidated after renderer reload. Please retry the reload.",
+  );
+
+  return;
+}
+      if (!active) {
         return;
       }
 
-      if (!active) {
+      // FINORA FRESH APP STALE SESSION CLEANUP
+      //
+      // Ctrl+R keeps the Electron main process alive, so a valid
+      // main-process session remains available and revalidates.
+      // A full app restart intentionally loses that in-memory
+      // session. In that specific SESSION_NOT_FOUND case, clear
+      // only the stale renderer snapshot and show a clean Login.
+      if (
+        !validationResult.success &&
+        validationResult.errorCode === "SESSION_NOT_FOUND"
+      ) {
+        invalidateSession();
+
+        try {
+          window.sessionStorage.removeItem(
+            FINORA_STORAGE_MODE_SESSION_KEY,
+          );
+
+          window.sessionStorage.removeItem(
+            FINORA_LOGIN_KICKOUT_STAGE,
+          );
+        }
+        catch {
+          // Session cleanup is best-effort only.
+        }
+
+        await clearContext();
+
+        if (!active) {
+          return;
+        }
+
+        setSession(null);
+        setContextReady(true);
+        setContextError(null);
+        setLoginRejectionError(null);
+
         return;
       }
 
@@ -1629,6 +1691,24 @@ function AuthenticatedApplication() {
         return;
       }
 
+      // FINORA AUTHORITATIVE STORAGE RESTORE
+      //
+      // Renderer sessionStorage is convenience state only.
+      // After main-process session validation succeeds, restore
+      // LOCAL/USB from the authoritative session so renderer
+      // reload cannot incorrectly kick a valid owner to Login.
+      try {
+        window.sessionStorage.setItem(
+          FINORA_STORAGE_MODE_SESSION_KEY,
+          authoritativeSession.storageMode,
+        );
+      }
+      catch (storageSessionError) {
+        console.error(
+          "FINORA AUTHORITATIVE STORAGE MODE RESTORE FAILED:",
+          storageSessionError,
+        );
+      }
       storageManager.setAuthenticatedSessionId(
         authoritativeSession.sessionId,
       );
@@ -1695,6 +1775,13 @@ function AuthenticatedApplication() {
         return;
       }
 
+      // FINORA SESSION REVALIDATION STABILITY
+      //
+      // validateFinoraBranchLoginSession() refreshes authoritative
+      // lastActivity on every successful validation. lastActivity is
+      // therefore intentionally excluded from equality below.
+      // Identity, role, branch scope and data context remain exact.
+      // The refreshed authoritative snapshot is still persisted.
       const rendererSnapshotMatchesAuthority =
         session.userId ===
           persistedRevalidatedSession.userId &&
@@ -1710,8 +1797,6 @@ function AuthenticatedApplication() {
           persistedRevalidatedSession.businessDate &&
         session.sessionId ===
           persistedRevalidatedSession.sessionId &&
-        session.lastActivity ===
-          persistedRevalidatedSession.lastActivity &&
         session.ownerId ===
           persistedRevalidatedSession.ownerId &&
         session.businessId ===

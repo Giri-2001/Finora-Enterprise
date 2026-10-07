@@ -98,9 +98,11 @@ async function main():
     });
 
   if (
-    "legacyNativeBoundMigrationEvidence" in
-      evidence
-  ) {
+      "legacyNativeBoundMigrationEvidence" in
+        evidence ||
+      "provenanceType" in
+        evidence
+    ) {
     throw new Error(
       "Encrypted signer fixture unexpectedly used legacy migration evidence.",
     );
@@ -166,9 +168,11 @@ async function main():
     payload.sourceAuthorizationVerificationEvidence;
 
   if (
-    "legacyNativeBoundMigrationEvidence" in
-      decryptedEvidence
-  ) {
+      "legacyNativeBoundMigrationEvidence" in
+        decryptedEvidence ||
+      "provenanceType" in
+        decryptedEvidence
+    ) {
     throw new Error(
       "Decrypted signer fixture unexpectedly returned legacy migration evidence.",
     );

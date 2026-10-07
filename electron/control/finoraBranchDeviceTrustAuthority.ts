@@ -1005,7 +1005,72 @@ async function authorizeCurrentDeviceInternal(
       );
     }
   }
-  else {
+  else if (
+    "provenanceType" in
+      sourceVerificationEvidence &&
+    sourceVerificationEvidence.provenanceType ===
+      "SERVER_FIRST_LOGIN_SIGNED_BOOTSTRAP"
+  ) {
+    const serverPayload =
+      sourceVerificationEvidence
+        .signedBootstrap
+        .payload;
+
+    // SERVER-FIRST IMMUTABLE PROVENANCE
+    //
+    // signedBootstrap proves the original server-authorized
+    // owner/business/branch/user lineage. It is intentionally
+    // retained unchanged across Password/Security Code rotation.
+    //
+    // Current credential freshness is enforced independently
+    // above by payload.authGeneration === principal.authGeneration.
+    // Therefore bootstrap authGeneration must not be compared
+    // against the rotated current generation.
+    const exactServerFirstLoginLineageMatched =
+      serverPayload.sourceAuthorizationId ===
+        payload.sourceAuthorizationId &&
+      sourceVerificationEvidence.authorizationId ===
+        payload.sourceAuthorizationId &&
+      serverPayload.ownerId ===
+        payload.ownerId &&
+      serverPayload.businessId ===
+        payload.businessId &&
+      serverPayload.branchId ===
+        payload.branchId &&
+      serverPayload.userId ===
+        payload.userId &&
+      serverPayload.username ===
+        payload.username &&
+      serverPayload.canonicalUsername ===
+        payload.canonicalUsername &&
+      serverPayload.role ===
+        payload.role &&
+      serverPayload.storageMode ===
+        payload.storageMode &&
+      serverPayload.dataContext ===
+        payload.dataContext &&
+      serverPayload.ownerId ===
+        input.principal.ownerId &&
+      serverPayload.businessId ===
+        input.principal.businessId &&
+      serverPayload.branchId ===
+        input.principal.branchId &&
+      serverPayload.userId ===
+        input.principal.userId;
+
+    if (
+      !exactServerFirstLoginLineageMatched
+    ) {
+      return authorizeFailure(
+        "PORTABILITY_AUTH_VERIFICATION_FAILED",
+        "FINORA Server first-login bootstrap does not match the exact encrypted credential and branch lineage.",
+      );
+    }
+  }
+  else if (
+    "verifiedControlSigner" in
+      sourceVerificationEvidence
+  ) {
     const portabilityAuthorityProof =
       sourceVerificationEvidence
         .portabilityAuthorityProof;
@@ -1165,6 +1230,13 @@ async function authorizeCurrentDeviceInternal(
       );
     }
   }
+  else {
+    return authorizeFailure(
+      "PORTABILITY_AUTH_VERIFICATION_FAILED",
+      "FINORA Portable Branch Auth source authorization evidence type is unsupported.",
+    );
+  }
+
   let existingStore:
     FinoraBranchDeviceTrustStoreState | undefined;
 

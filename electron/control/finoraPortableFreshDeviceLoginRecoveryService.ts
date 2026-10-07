@@ -581,8 +581,13 @@ export function createFinoraPortableFreshDeviceLoginRecovery(
             bootstrapResult.error,
           );
 
-        case "PORTABILITY_AUTH_VERIFICATION_FAILED":
         case "RUNTIME_AUTHORITY_MISSING":
+          return loginFailure(
+            "RUNTIME_AUTHORITY_MISSING",
+            bootstrapResult.error,
+          );
+
+        case "PORTABILITY_AUTH_VERIFICATION_FAILED":
         case "RUNTIME_AUTHORITY_INVALID":
         case "RUNTIME_AUTHORITY_MISMATCH":
           return loginFailure(

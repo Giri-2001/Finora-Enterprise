@@ -105,7 +105,7 @@ function sanitizeRequest(value: unknown): FinoraLegacySecurityCodeBootstrapReque
     typeof value.securityCode !== "string" ||
     value.securityCode.trim().length === 0 ||
     Array.from(value.securityCode).length < 8 ||
-    Array.from(value.securityCode).length > 128
+    Array.from(value.securityCode).length > 15
   ) {
     return null;
   }

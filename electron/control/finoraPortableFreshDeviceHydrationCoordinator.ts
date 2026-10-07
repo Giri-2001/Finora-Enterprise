@@ -256,11 +256,14 @@ function assertRole(
   role:
     unknown,
 ): asserts role is
+  | "OWNER"
   | "ADMIN"
   | "MANAGER"
   | "COLLECTOR"
   | "VIEWER" {
   if (
+    role !==
+      "OWNER" &&
     role !==
       "ADMIN" &&
     role !==
@@ -495,6 +498,39 @@ function resolveSourceEvidence(
   }
 
   // ----------------------------------------------------------
+  // ----------------------------------------------------------
+  // SERVER-FIRST SIGNED-BOOTSTRAP SOURCE
+  //
+  // This provenance was already signature-verified against
+  // the pinned FINORA server identity before hydration.
+  // Do not fabricate Control Center signer provenance here.
+  // The encrypted Portable Auth preserves the signed source
+  // evidence and Runtime Authority preserves branch signing.
+  // ----------------------------------------------------------
+
+  if (
+    Object.prototype.hasOwnProperty.call(
+      value,
+      "provenanceType",
+    ) &&
+    value.provenanceType ===
+      "SERVER_FIRST_LOGIN_SIGNED_BOOTSTRAP" &&
+    Object.prototype.hasOwnProperty.call(
+      value,
+      "authorizationId",
+    ) &&
+    Object.prototype.hasOwnProperty.call(
+      value,
+      "signedBootstrap",
+    ) &&
+    Object.prototype.hasOwnProperty.call(
+      value,
+      "verifiedAt",
+    )
+  ) {
+    return {};
+  }
+
   // LEGACY NATIVE-BOUND MIGRATION SOURCE
   //
   // Legacy evidence is valid Portable Auth lineage, but it must
@@ -698,6 +734,17 @@ export function createFinoraPortableFreshDeviceHydrationState(
     );
   }
 
+  if (
+    plan.credentialChangeRequired !==
+      undefined &&
+    typeof plan.credentialChangeRequired !==
+      "boolean"
+  ) {
+    throw new Error(
+      "FINORA fresh-device credential lifecycle evidence is invalid.",
+    );
+  }
+
   const requiredTimestamps =
     [
       plan.activationCreatedAt,
@@ -897,6 +944,16 @@ export function createFinoraPortableFreshDeviceHydrationState(
       storageMode:
         plan.storageMode,
 
+      ...(
+        plan.storageMode ===
+          "USB"
+          ? {
+              deviceAccessPolicy:
+                "PORTABLE_USB" as const,
+            }
+          : {}
+      ),
+
       accessType:
         plan.branchAccessType,
 
@@ -982,6 +1039,10 @@ export function createFinoraPortableFreshDeviceHydrationState(
 
       authGeneration:
         plan.authGeneration,
+
+      credentialChangeRequired:
+        plan.credentialChangeRequired ===
+          true,
 
       userId:
         plan.userId,

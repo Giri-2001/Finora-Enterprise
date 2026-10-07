@@ -1,4 +1,4 @@
-﻿/* ============================================================
+/* ============================================================
    FINORA ENTERPRISE OSâ„¢
 
    ELECTRON CONTROL
@@ -110,10 +110,7 @@ export interface FinoraBranchCredentialAuthenticationSuccess {
     string;
 
   role:
-    | "ADMIN"
-    | "MANAGER"
-    | "COLLECTOR"
-    | "VIEWER";
+    | "OWNER" | "ADMIN" | "MANAGER" | "COLLECTOR" | "VIEWER";
 
   ownerId:
     string;

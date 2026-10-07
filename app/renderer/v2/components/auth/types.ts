@@ -1,5 +1,5 @@
 // ============================================================
-// FINORA ENTERPRISE OS™
+// FINORA ENTERPRISE OSâ„¢
 //
 // AUTHENTICATION TYPES
 //
@@ -28,6 +28,7 @@
 // ============================================================
 
 export type UserRole =
+  | "OWNER"
   | "ADMIN"
   | "MANAGER"
   | "COLLECTOR"

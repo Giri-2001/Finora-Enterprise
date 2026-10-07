@@ -1,4 +1,4 @@
-﻿// ============================================================
+// ============================================================
 // FINORA ENTERPRISE OS
 // PORTABLE BRANCH AUTH V2 CREDENTIAL ROTATION RECOVERY SELF TEST
 //
@@ -50,6 +50,8 @@ import {
 
 import {
   createFinoraPortableBranchAuthEnrollmentMaterialV2,
+  decryptFinoraPortableBranchAuthEnvelopeV2WithPassword,
+  decryptFinoraPortableBranchAuthEnvelopeV2WithRecoveryCode,
 } from "./finoraPortableBranchAuthV2Crypto.js";
 
 import type {
@@ -1171,6 +1173,213 @@ async function runSelfTest():
         `PASS: ${label}`,
       );
     }
+    // ========================================================
+    // LIVE NORMAL ROTATION LINEAGE REGRESSION
+    //
+    // This exercises the production V2 rotation path from an
+    // authoritative generation-1 Control credential + Portable
+    // envelope. It specifically guards the encrypted Portable
+    // payload authGeneration / updatedAt synchronization contract.
+    // ========================================================
+
+    {
+      const liveFixture:
+        FinoraControlStorePackage =
+        cloneJson(
+          emptyStore,
+        );
+
+      liveFixture.branchCredentials = [
+        cloneJson(
+          expectedCredential,
+        ),
+      ];
+
+      liveFixture.portableBranchAuthV2CredentialRotationTransactions =
+        [];
+
+      liveFixture.updatedAt =
+        initialAt;
+
+      await writeEncryptedControlFixture(
+        temporaryUserData!,
+        liveFixture,
+      );
+
+      const livePortable =
+        await createPortableCase(
+          "live-normal-rotation-lineage",
+          expectedMaterial.envelope,
+        );
+
+      const liveRotationResult =
+        await rotateFinoraPortableBranchAuthCredentialV2({
+          request: {
+            rotationRequestId:
+              "ROTATION-REQUEST-LIVE-LINEAGE-000001",
+
+            username:
+              "admin",
+
+            currentPassword:
+              oldPassword,
+
+            currentSecurityCode:
+              oldSecurityCode,
+
+            newPassword,
+            newSecurityCode,
+          },
+
+          portableStore:
+            livePortable.store,
+        });
+
+      assert(
+        liveRotationResult.success,
+        liveRotationResult.success
+          ? "Unexpected live rotation assertion state."
+          : liveRotationResult.error,
+      );
+
+      assert(
+        liveRotationResult.data.authGeneration ===
+          2,
+        "Live V2 rotation did not advance authGeneration exactly once.",
+      );
+
+      assert(
+        liveRotationResult.data.credential.authGeneration ===
+          2,
+        "Live V2 replacement Control credential has the wrong authGeneration.",
+      );
+
+      assert(
+        liveRotationResult.data.credential.createdAt ===
+          initialAt,
+        "Live V2 rotation changed immutable credential createdAt.",
+      );
+
+      const liveEnvelope =
+        await livePortable.store.read(
+          "LOCAL",
+        );
+
+      assert(
+        liveEnvelope !==
+          null,
+        "Live V2 rotation did not persist successor Portable Auth.",
+      );
+
+      const livePasswordPayload =
+        await decryptFinoraPortableBranchAuthEnvelopeV2WithPassword(
+          liveEnvelope,
+          newPassword,
+        );
+
+      const liveRecoveryPayload =
+        await decryptFinoraPortableBranchAuthEnvelopeV2WithRecoveryCode(
+          liveEnvelope,
+          newSecurityCode,
+        );
+
+      assert(
+        jsonEqual(
+          livePasswordPayload,
+          liveRecoveryPayload,
+        ),
+        "Successor Password and Security Code did not decrypt the same Portable payload.",
+      );
+
+      assert(
+        livePasswordPayload.authGeneration ===
+          liveRotationResult.data.authGeneration,
+        "Portable successor authGeneration does not match coordinator result.",
+      );
+
+      assert(
+        livePasswordPayload.authGeneration ===
+          liveRotationResult.data.credential.authGeneration,
+        "Portable successor authGeneration does not match Control credential.",
+      );
+
+      assert(
+        livePasswordPayload.updatedAt ===
+          liveRotationResult.data.credential.updatedAt,
+        "Portable successor updatedAt does not match Control credential.",
+      );
+
+      assert(
+        livePasswordPayload.createdAt ===
+          initialAt,
+        "Portable successor changed immutable createdAt.",
+      );
+
+      let predecessorPasswordRejected =
+        false;
+
+      try {
+        await decryptFinoraPortableBranchAuthEnvelopeV2WithPassword(
+          liveEnvelope,
+          oldPassword,
+        );
+      }
+      catch {
+        predecessorPasswordRejected =
+          true;
+      }
+
+      assert(
+        predecessorPasswordRejected,
+        "Predecessor Password still decrypts successor Portable Auth.",
+      );
+
+      const liveControlAfter =
+        await readFinoraControlStore();
+
+      assert(
+        liveControlAfter.success &&
+        liveControlAfter.data,
+        liveControlAfter.error ??
+          "Unable to read Control Store after live V2 rotation.",
+      );
+
+      const liveAuthoritativeCredential =
+        liveControlAfter.data.branchCredentials?.find(
+          (credential) =>
+            credential.credentialId ===
+              credentialId,
+        );
+
+      assert(
+        liveAuthoritativeCredential !==
+          undefined,
+        "Live V2 rotation lost authoritative Control credential.",
+      );
+
+      assert(
+        liveAuthoritativeCredential.authGeneration ===
+          livePasswordPayload.authGeneration &&
+        liveAuthoritativeCredential.updatedAt ===
+          livePasswordPayload.updatedAt,
+        "Control Store and Portable V2 lineage diverged after live rotation.",
+      );
+
+      assert(
+        livePortable.getUsbCalls() ===
+          0,
+        "LOCAL live V2 rotation unexpectedly consulted USB resolver.",
+      );
+
+      console.log(
+        "PASS: live V2 rotation kept Portable payload generation/timestamp synchronized with Control credential",
+      );
+
+      console.log(
+        "PASS: successor Password/Security Code converge on one payload and predecessor Password is stale",
+      );
+    }
+
 
     // ========================================================
     // POSITIVE CRASH WINDOWS

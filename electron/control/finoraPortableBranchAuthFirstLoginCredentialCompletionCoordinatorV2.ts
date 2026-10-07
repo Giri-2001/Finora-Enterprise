@@ -3,6 +3,10 @@ import {
 } from "node:crypto";
 
 import {
+  completeFinoraOwnerFirstLoginCredentialsOnServer,
+} from "./finoraServerFirstLoginCredentialCompletionClient.js";
+
+import {
   authenticateFinoraBranchCredential,
 } from "./finoraBranchCredentialAuthenticationService.js";
 import {
@@ -137,7 +141,11 @@ export type FinoraPortableBranchAuthCredentialRotationCoordinatorV2ErrorCode =
   | "PORTABLE_REPLACE_FAILED"
   | "PORTABLE_REPLACED_STATE_FAILED"
   | "CONTROL_APPLY_FAILED"
-  | "COMPLETE_FAILED";
+  | "COMPLETE_FAILED"
+  | "SERVER_REJECTED"
+  | "SERVER_UNAVAILABLE"
+  | "SERVER_RESPONSE_INVALID"
+  | "NEW_CREDENTIALS_MUST_DIFFER";
 
 export interface FinoraPortableBranchAuthCredentialRotationCoordinatorV2Success {
   transactionId:
@@ -1155,10 +1163,110 @@ async function rotatePortableBranchAuthCredentialV2Internal(
   }
 
   // ==========================================================
-  // 8. PREPARED â€” DURABLE CONTROL STORE JOURNAL
+  // 8. PREPARED - DURABLE TRANSACTION
   // ==========================================================
 
-  const prepareResult =
+    // ==========================================================
+  // FIRST-LOGIN SERVER AUTHORITY - SERVER FIRST
+  //
+  // The complete local successor is already derived and
+  // validated in memory at this point.
+  //
+  // PREPARED must NOT become durable until the FINORA server
+  // has committed the permanent Password + Security Code.
+  //
+  // Server retry is idempotent for the exact already-applied
+  // permanent credential pair.
+  // ==========================================================
+
+  if (
+    typeof request.newPassword !== "string" ||
+    typeof request.newSecurityCode !== "string"
+  ) {
+    return failure(
+      "INVALID_REQUEST",
+      "Permanent Password and permanent Security Code are required for first login.",
+    );
+  }
+
+  const serverCompletion =
+    await completeFinoraOwnerFirstLoginCredentialsOnServer({
+      username:
+        currentCredential.username,
+
+      currentPassword:
+        request.currentPassword,
+
+      currentSecurityCode:
+        request.currentSecurityCode,
+
+      newPassword:
+        request.newPassword,
+
+      newSecurityCode:
+        request.newSecurityCode,
+    });
+
+  if (!serverCompletion.success) {
+    if (
+      serverCompletion.errorCode ===
+        "INVALID_CREDENTIALS"
+    ) {
+      return failure(
+        "INVALID_CREDENTIALS",
+        serverCompletion.error,
+      );
+    }
+
+    if (
+      serverCompletion.errorCode ===
+        "INVALID_REQUEST"
+    ) {
+      return failure(
+        "INVALID_REQUEST",
+        serverCompletion.error,
+      );
+    }
+
+    if (
+      serverCompletion.errorCode ===
+        "NEW_CREDENTIALS_MUST_DIFFER"
+    ) {
+      return failure(
+        "NEW_CREDENTIALS_MUST_DIFFER",
+        serverCompletion.error,
+      );
+    }
+
+    if (
+      serverCompletion.errorCode ===
+        "SERVER_UNAVAILABLE"
+    ) {
+      return failure(
+        "SERVER_UNAVAILABLE",
+        serverCompletion.error,
+      );
+    }
+
+    if (
+      serverCompletion.errorCode ===
+        "INVALID_SERVER_RESPONSE"
+    ) {
+      return failure(
+        "SERVER_RESPONSE_INVALID",
+        serverCompletion.error,
+      );
+    }
+
+    return failure(
+      "SERVER_REJECTED",
+      serverCompletion.error,
+    );
+  }
+
+  // Server success is now authoritative.
+  // Only from here may PREPARED become durable.
+const prepareResult =
     await prepareFinoraPortableBranchAuthV2CredentialRotationTransaction({
       transaction:
         preparedTransaction,
@@ -1447,7 +1555,7 @@ async function resumePortableBranchAuthCredentialRotationV2Internal(
 // PUBLIC SERIALIZED ENTRYPOINT
 // ============================================================
 
-export function rotateFinoraPortableBranchAuthCredentialV2(
+export function completeFinoraPortableBranchAuthFirstLoginCredentialsV2(
   input:
     FinoraPortableBranchAuthCredentialRotationCoordinatorV2Input,
 ): Promise<

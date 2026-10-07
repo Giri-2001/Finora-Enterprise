@@ -106,6 +106,23 @@ export interface FinoraPortableBranchAuthPasswordRotationV2 {
   passwordVerifier:
     FinoraPortableBranchAuthVerifierV1;
 }
+export interface FinoraPortableBranchAuthPasswordRotationSuccessorV2 {
+  /**
+   * Exact successor credential generation authorized by the
+   * serialized credential-mutation coordinator.
+   *
+   * MUST equal the authenticated current payload generation + 1.
+   */
+  authGeneration:
+    number;
+
+  /**
+   * Exact successor credential timestamp shared by Portable Auth
+   * and the replacement Control Store credential.
+   */
+  updatedAt:
+    string;
+}
 
 export interface FinoraPortableBranchAuthRecoveryRotationV2 {
   envelope:
@@ -1222,6 +1239,8 @@ export async function rotateFinoraPortableBranchAuthV2PasswordByRecoveryCode(
     string,
   newPassword:
     string,
+  successor:
+    FinoraPortableBranchAuthPasswordRotationSuccessorV2,
 ): Promise<
   FinoraPortableBranchAuthPasswordRotationV2
 > {
@@ -1364,12 +1383,59 @@ export async function rotateFinoraPortableBranchAuthV2PasswordByRecoveryCode(
             masterKey,
           );
 
+        if (
+          !successor ||
+          !Number.isSafeInteger(
+            successor.authGeneration,
+          ) ||
+          successor.authGeneration !==
+            currentPayload.authGeneration +
+              1
+        ) {
+          throw new FinoraPortableBranchAuthV2CryptoError(
+            "INVALID_INPUT",
+            "Password rotation successor authGeneration is invalid.",
+          );
+        }
+
+        const successorUpdatedAtMillis =
+          Date.parse(
+            successor.updatedAt,
+          );
+
+        if (
+          typeof successor.updatedAt !==
+            "string" ||
+          !Number.isFinite(
+            successorUpdatedAtMillis,
+          ) ||
+          new Date(
+            successorUpdatedAtMillis,
+          ).toISOString() !==
+            successor.updatedAt ||
+          successorUpdatedAtMillis <
+            Date.parse(
+              currentPayload.updatedAt,
+            )
+        ) {
+          throw new FinoraPortableBranchAuthV2CryptoError(
+            "INVALID_INPUT",
+            "Password rotation successor updatedAt is invalid.",
+          );
+        }
+
         const replacementPayload:
           FinoraPortableBranchAuthPayloadV1 =
           {
             ...structuredClone(
               currentPayload,
             ),
+            authGeneration:
+              successor.authGeneration,
+
+            updatedAt:
+              successor.updatedAt,
+
 
             passwordVerifier,
           };

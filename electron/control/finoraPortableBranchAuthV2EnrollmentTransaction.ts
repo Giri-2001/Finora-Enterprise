@@ -309,6 +309,47 @@ export function finoraPortableBranchAuthSourceAuthorizationVerificationEvidenceE
     return false;
   }
 
+
+  if (
+    "provenanceType" in
+      left
+  ) {
+    if (
+      !(
+        "provenanceType" in
+          right
+      )
+    ) {
+      return false;
+    }
+
+    return (
+      left.provenanceType ===
+        "SERVER_FIRST_LOGIN_SIGNED_BOOTSTRAP" &&
+      right.provenanceType ===
+        "SERVER_FIRST_LOGIN_SIGNED_BOOTSTRAP" &&
+      left.authorizationId ===
+        right.authorizationId &&
+      left.verifiedAt ===
+        right.verifiedAt &&
+      left.schemaVersion ===
+        right.schemaVersion &&
+      JSON.stringify(
+        left.signedBootstrap,
+      ) ===
+        JSON.stringify(
+          right.signedBootstrap,
+        )
+    );
+  }
+
+  if (
+    "provenanceType" in
+      right
+  ) {
+    return false;
+  }
+
   const leftSigner =
     left.verifiedControlSigner;
 

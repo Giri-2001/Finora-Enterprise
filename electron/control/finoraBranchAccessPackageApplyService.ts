@@ -524,6 +524,7 @@ function sanitizeCredentialEnrollmentAuthorization(
       value.fullName,
     ) ||
     (
+      value.role !== "OWNER" &&
       value.role !== "ADMIN" &&
       value.role !== "MANAGER" &&
       value.role !== "COLLECTOR" &&

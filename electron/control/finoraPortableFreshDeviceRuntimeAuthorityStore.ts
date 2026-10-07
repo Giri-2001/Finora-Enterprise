@@ -69,6 +69,12 @@ export type FinoraPortableFreshDeviceRuntimeAuthorityStoreErrorCode =
   | "STORAGE_UNAVAILABLE"
   | "IO_FAILURE";
 
+export interface FinoraPortableFreshDeviceRuntimeAuthorityEnsureExactResult {
+  status:
+    | "CREATED"
+    | "UNCHANGED";
+}
+
 export class FinoraPortableFreshDeviceRuntimeAuthorityStoreError
   extends Error {
 
@@ -331,6 +337,197 @@ export class FinoraPortableFreshDeviceRuntimeAuthorityStore {
     return structuredClone(
       parsed,
     );
+  }
+
+  async ensureExact(
+    storageMode:
+      FinoraPortableFreshDeviceRuntimeAuthorityStorageMode,
+
+    packageValue:
+      FinoraPortableFreshDeviceRuntimeAuthorityPackageV1,
+  ): Promise<
+    FinoraPortableFreshDeviceRuntimeAuthorityEnsureExactResult
+  > {
+    const operation =
+      this.writeBarrier.then(
+        () =>
+          this.ensureExactInternal(
+            storageMode,
+            packageValue,
+          ),
+        () =>
+          this.ensureExactInternal(
+            storageMode,
+            packageValue,
+          ),
+      );
+
+    this.writeBarrier =
+      operation.then(
+        () =>
+          undefined,
+        () =>
+          undefined,
+      );
+
+    return operation;
+  }
+
+  private async ensureExactInternal(
+    storageMode:
+      FinoraPortableFreshDeviceRuntimeAuthorityStorageMode,
+
+    packageValue:
+      FinoraPortableFreshDeviceRuntimeAuthorityPackageV1,
+  ): Promise<
+    FinoraPortableFreshDeviceRuntimeAuthorityEnsureExactResult
+  > {
+    try {
+      validateFinoraPortableFreshDeviceRuntimeAuthorityPackageV1(
+        packageValue,
+      );
+    }
+    catch {
+      throw new FinoraPortableFreshDeviceRuntimeAuthorityStoreError(
+        "INVALID_STORAGE",
+        "Refusing to ensure an invalid FINORA portable runtime authority.",
+      );
+    }
+
+    const expectedSerialized =
+      JSON.stringify(
+        packageValue,
+      );
+
+    const expectedBytes =
+      Buffer.byteLength(
+        expectedSerialized,
+        "utf8",
+      );
+
+    if (
+      expectedBytes <= 0 ||
+      expectedBytes >
+        FINORA_PORTABLE_FRESH_DEVICE_RUNTIME_AUTHORITY_MAX_BYTES
+    ) {
+      throw new FinoraPortableFreshDeviceRuntimeAuthorityStoreError(
+        "INVALID_STORAGE",
+        "FINORA portable runtime-authority serialized size is invalid.",
+      );
+    }
+
+    const root =
+      await this.resolveRoot(
+        storageMode,
+      );
+
+    const filePath =
+      getFinoraPortableFreshDeviceRuntimeAuthorityFilePath(
+        root,
+      );
+
+    let fileStat;
+
+    try {
+      fileStat =
+        await stat(
+          filePath,
+        );
+    }
+    catch (
+      error
+    ) {
+      if (
+        error &&
+        typeof error === "object" &&
+        "code" in error &&
+        error.code === "ENOENT"
+      ) {
+        await this.writeInternal(
+          storageMode,
+          packageValue,
+        );
+
+        return {
+          status:
+            "CREATED",
+        };
+      }
+
+      throw new FinoraPortableFreshDeviceRuntimeAuthorityStoreError(
+        "IO_FAILURE",
+        "Unable to inspect FINORA portable runtime authority.",
+      );
+    }
+
+    if (
+      !fileStat.isFile() ||
+      fileStat.size <= 0 ||
+      fileStat.size >
+        FINORA_PORTABLE_FRESH_DEVICE_RUNTIME_AUTHORITY_MAX_BYTES
+    ) {
+      throw new FinoraPortableFreshDeviceRuntimeAuthorityStoreError(
+        "INVALID_STORAGE",
+        "FINORA portable runtime-authority file is invalid.",
+      );
+    }
+
+    let existingSerialized:
+      string;
+
+    try {
+      existingSerialized =
+        await readFile(
+          filePath,
+          "utf8",
+        );
+    }
+    catch {
+      throw new FinoraPortableFreshDeviceRuntimeAuthorityStoreError(
+        "IO_FAILURE",
+        "Unable to read FINORA portable runtime authority.",
+      );
+    }
+
+    let existingPackage:
+      unknown;
+
+    try {
+      existingPackage =
+        JSON.parse(
+          existingSerialized,
+        );
+
+      validateFinoraPortableFreshDeviceRuntimeAuthorityPackageV1(
+        existingPackage,
+      );
+    }
+    catch {
+      throw new FinoraPortableFreshDeviceRuntimeAuthorityStoreError(
+        "INVALID_STORAGE",
+        "Existing FINORA portable runtime authority is invalid.",
+      );
+    }
+
+    const normalizedExisting =
+      JSON.stringify(
+        existingPackage,
+      );
+
+    if (
+      normalizedExisting !==
+        expectedSerialized
+    ) {
+      throw new FinoraPortableFreshDeviceRuntimeAuthorityStoreError(
+        "INVALID_STORAGE",
+        "Refusing to overwrite a different FINORA portable runtime authority.",
+      );
+    }
+
+    return {
+      status:
+        "UNCHANGED",
+    };
   }
 
   async write(

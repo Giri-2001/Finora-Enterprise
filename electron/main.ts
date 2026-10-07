@@ -38,6 +38,15 @@ import { config as loadDotEnv } from "dotenv";
 loadDotEnv();
 
 import { app, BrowserWindow, dialog, ipcMain, shell } from "electron";
+const FINORA_SINGLE_INSTANCE_LOCK_V1 =
+  app.requestSingleInstanceLock();
+
+if (
+  !FINORA_SINGLE_INSTANCE_LOCK_V1
+) {
+  app.exit(0);
+}
+
 
 // ============================================================
 // DEVELOPMENT-ONLY ISOLATED USERDATA OVERRIDE
@@ -565,6 +574,96 @@ async function detectAndCacheUsbRoot(): Promise<string | null> {
       }
 
       // ----------------------------------------------------
+      // PREFER ONE EXACT FINORA BRANCH FOLDER
+      //
+      // New owner layout:
+      //   <REMOVABLE_ROOT>\<username>\FINORA\auth\finora-branch-auth.bin
+      //
+      // When exactly one branch folder exists, use that folder
+      // as the complete FINORA USB root automatically.
+      //
+      // Legacy <REMOVABLE_ROOT>\FINORA is intentionally NOT
+      // treated as a username / branch folder.
+      // ----------------------------------------------------
+
+      const discoveredBranchRoots: string[] =
+        [];
+
+      for (const removableRoot of roots) {
+        let entries;
+
+        try {
+          entries =
+            await fs.readdir(
+              removableRoot,
+              {
+                withFileTypes:
+                  true,
+              },
+            );
+        }
+        catch {
+          continue;
+        }
+
+        for (const entry of entries) {
+          if (!entry.isDirectory()) {
+            continue;
+          }
+
+          if (
+            entry.name.toLowerCase() ===
+              FINORA_DIRECTORY.toLowerCase()
+          ) {
+            continue;
+          }
+
+          const branchRoot =
+            path.join(
+              removableRoot,
+              entry.name,
+            );
+
+          const branchAuthFile =
+            path.join(
+              branchRoot,
+              FINORA_DIRECTORY,
+              "auth",
+              "finora-branch-auth.bin",
+            );
+
+          try {
+            await fs.access(
+              branchAuthFile,
+            );
+
+            discoveredBranchRoots.push(
+              branchRoot,
+            );
+          }
+          catch {
+            // Not an exact FINORA branch folder.
+          }
+        }
+      }
+
+      if (
+        discoveredBranchRoots.length ===
+          1
+      ) {
+        const branchRoot =
+          discoveredBranchRoots[0];
+
+        cachedUsbRoot =
+          branchRoot;
+
+        cachedUsbRootAt =
+          Date.now();
+
+        return branchRoot;
+      }
+
+      // ----------------------------------------------------
       // PREFER A DRIVE THAT ALREADY CONTAINS FINORA STORAGE
       // ----------------------------------------------------
 
@@ -649,14 +748,78 @@ async function selectFinoraUsbRootFromNativeDialog(): Promise<string | null> {
   const candidateRoot =
     selection.filePaths[0];
 
-  if (
-    !candidateRoot ||
-    !(await validateFinoraReplacementUsbRoot(
+  if (!candidateRoot) {
+    throw new Error(
+      "Please select a FINORA USB branch folder.",
+    );
+  }
+
+  const resolvedCandidate =
+    path.resolve(
       candidateRoot,
-    ))
+    );
+
+  const removableRoots =
+    await detectWindowsUsbRoots();
+
+  const directRemovableRoot =
+    removableRoots.some(
+      (root) =>
+        path.resolve(root).toLowerCase() ===
+          resolvedCandidate.toLowerCase(),
+    );
+
+  const candidateDriveRoot =
+    path.parse(
+      resolvedCandidate,
+    ).root;
+
+  const candidateParent =
+    path.dirname(
+      resolvedCandidate,
+    );
+
+  const candidateIsDirectChildOfRemovable =
+    removableRoots.some(
+      (root) =>
+        path.resolve(root).toLowerCase() ===
+          path.resolve(candidateDriveRoot).toLowerCase() &&
+        path.resolve(root).toLowerCase() ===
+          path.resolve(candidateParent).toLowerCase(),
+    );
+
+  const candidateAuthFile =
+    path.join(
+      resolvedCandidate,
+      FINORA_DIRECTORY,
+      "auth",
+      "finora-branch-auth.bin",
+    );
+
+  let isExactFinoraBranchFolder =
+    false;
+
+  if (candidateIsDirectChildOfRemovable) {
+    try {
+      await fs.access(
+        candidateAuthFile,
+      );
+
+      isExactFinoraBranchFolder =
+        true;
+    }
+    catch {
+      isExactFinoraBranchFolder =
+        false;
+    }
+  }
+
+  if (
+    !directRemovableRoot &&
+    !isExactFinoraBranchFolder
   ) {
     throw new Error(
-      "Please select the root of a connected removable USB drive.",
+      "Select the connected removable USB root or an exact FINORA branch folder.",
     );
   }
 
@@ -1894,7 +2057,7 @@ async function getUsbStatus() {
 
       storagePath: usbRoot,
 
-      message: "FINORA Pendrive is connected and ready.",
+      message: `FINORA Branch Storage Ready: ${usbRoot}`,
     };
   } catch (error) {
     // A failed filesystem access can mean the removable drive
@@ -3631,6 +3794,47 @@ app.whenReady().then(async () => {
     registerFinoraControlHandlers(
       isTrustedRenderer,
       portableBranchAuthStore,
+      async (username) => {
+        const canonicalUsername =
+          username
+            .trim()
+            .normalize("NFKC")
+            .toLowerCase();
+
+        if (!canonicalUsername) {
+          return undefined;
+        }
+
+        const detectedUsbRoot =
+          await findFinoraUsbRoot();
+
+        if (!detectedUsbRoot) {
+          return undefined;
+        }
+
+        const detectedFolder =
+          path.basename(detectedUsbRoot)
+            .normalize("NFKC")
+            .toLowerCase();
+
+        const controlScopedUsbRoot =
+          detectedFolder === canonicalUsername
+            ? detectedUsbRoot
+            : path.join(
+                path.parse(detectedUsbRoot).root,
+                canonicalUsername,
+              );
+
+        return new FinoraPortableBranchAuthV2Store({
+          resolveLocalRoot:
+            () =>
+              app.getPath("userData"),
+
+          resolveUsbRoot:
+            async () =>
+              controlScopedUsbRoot,
+        });
+      },
     );
 
     registerFinoraCanonicalWalletAuthorityHandlers(
@@ -3713,14 +3917,638 @@ app.whenReady().then(async () => {
       isTrustedRenderer,
       portableBranchAuthV2Store,
     );
-    registerFinoraBranchLoginSessionHandlers(
-      isTrustedRenderer,
-      portableBranchAuthStore,
+    const portableFreshDeviceLoginRecovery =
       createFinoraPortableFreshDeviceLoginRecovery(
         portableFreshDeviceRuntimeAuthorityStore,
         portableBranchAuthV2Store,
-      ),
-      portableBranchAuthV2Store,
+      );
+
+    registerFinoraBranchLoginSessionHandlers(
+      isTrustedRenderer,
+      portableBranchAuthStore,
+      async (
+        input,
+        portableStore,
+      ) => {
+        // ========================================================
+        // SERVER-FIRST PRECEDENCE
+        //
+        // New production Owner provisioning MUST verify the
+        // server/database before any legacy portable recovery
+        // is allowed to mutate local Control Store state.
+        // ========================================================
+
+        if (
+          input &&
+          typeof input === "object" &&
+          !Array.isArray(input)
+        ) {
+          const serverCandidate =
+            input as Record<string, unknown>;
+
+          const serverUsername =
+            typeof serverCandidate.username === "string"
+              ? serverCandidate.username.trim()
+              : "";
+
+          const serverPassword =
+            typeof serverCandidate.password === "string"
+              ? serverCandidate.password
+              : "";
+
+          const serverSecurityCode =
+            typeof serverCandidate.securityCode === "string"
+              ? serverCandidate.securityCode
+              : "";
+
+          if (
+            serverUsername.length > 0 &&
+            serverPassword.length > 0
+          ) {
+            if (serverSecurityCode.length === 0) {
+              return {
+                success: false,
+                errorCode: "SECURITY_CODE_REQUIRED",
+                error:
+                  "Enter your Security Code to verify this FINORA Owner with the server.",
+              };
+            }
+
+            const detectedUsbRoot =
+              await findFinoraUsbRoot();
+
+            if (detectedUsbRoot) {
+              const {
+                basename,
+                join,
+                parse,
+              } =
+                await import("node:path");
+
+              const canonicalUsername =
+                serverUsername
+                  .normalize("NFKC")
+                  .toLowerCase();
+
+              const detectedFolder =
+                basename(detectedUsbRoot)
+                  .normalize("NFKC")
+                  .toLowerCase();
+
+              const selectedUsbRoot =
+                detectedFolder === canonicalUsername
+                  ? detectedUsbRoot
+                  : join(
+                      parse(detectedUsbRoot).root,
+                      canonicalUsername,
+                    );
+
+              if (
+                basename(selectedUsbRoot)
+                  .normalize("NFKC")
+                  .toLowerCase() ===
+                canonicalUsername
+              ) {
+                const {
+                  FinoraPortableBranchAuthV2Store,
+                } =
+                  await import(
+                    "./control/finoraPortableBranchAuthV2Store.js"
+                  );
+
+                const {
+                  FinoraPortableFreshDeviceRuntimeAuthorityStore,
+                } =
+                  await import(
+                    "./control/finoraPortableFreshDeviceRuntimeAuthorityStore.js"
+                  );
+
+                const {
+                  enrollFinoraServerFirstLogin,
+                } =
+                  await import(
+                    "./control/finoraServerFirstLoginEnrollmentService.js"
+                  );
+
+                const serverPortableStore =
+                  new FinoraPortableBranchAuthV2Store({
+                    resolveLocalRoot:
+                      () => app.getPath(
+                        "userData",
+                      ),
+
+                    resolveUsbRoot:
+                      async () =>
+                        selectedUsbRoot,
+                  });
+
+                const serverRuntimeStore =
+                  new FinoraPortableFreshDeviceRuntimeAuthorityStore({
+                    resolveLocalRoot:
+                      () => app.getPath(
+                        "userData",
+                      ),
+
+                    resolveUsbRoot:
+                      async () =>
+                        selectedUsbRoot,
+                  });
+
+                const serverFirstResult =
+                  await enrollFinoraServerFirstLogin(
+                    {
+                      username: serverUsername,
+                      password: serverPassword,
+                      securityCode:
+                        serverSecurityCode,
+                      selectedUsbRoot,
+                    },
+                    serverPortableStore,
+                    serverRuntimeStore,
+                  );
+
+                if (serverFirstResult.success) {
+                  console.log(
+                    "[FINORA SERVER-FIRST PRECEDENCE] ENROLLED_AND_HYDRATED",
+                  );
+
+                  return {
+                    success: true,
+                  };
+                }
+
+                console.error(
+                  "[FINORA SERVER-FIRST PRECEDENCE]",
+                  serverFirstResult.errorCode,
+                  serverFirstResult.error,
+                );
+
+                /*
+                 * SERVER-FIRST IS AUTHORITATIVE FOR NEW OWNER LOGIN.
+                 *
+                 * After the server-first path has actually run,
+                 * do not fall through into legacy/offline recovery.
+                 */
+                if (
+                  serverFirstResult.errorCode ===
+                    "SERVER_VERIFICATION_FAILED" ||
+                  serverFirstResult.errorCode ===
+                    "INVALID_REQUEST"
+                ) {
+                  return {
+                    success: false,
+                    errorCode: "INVALID_CREDENTIALS",
+                    error:
+                      "Invalid username or password.",
+                  };
+                }
+
+                return {
+                  success: false,
+                  errorCode: "CONTROL_STATE_FAILED",
+                  error:
+                    serverFirstResult.error,
+                };
+              }
+            }
+          }
+        }
+
+        const portableRecoveryResult =
+          await portableFreshDeviceLoginRecovery(
+            input,
+            portableStore,
+          );
+
+        if (
+          portableRecoveryResult.success
+        ) {
+          /*
+           * A successful portable recovery is not sufficient to
+           * stop the server-first chain when the exact authenticated
+           * Business Profile is still absent.
+           *
+           * This matters for server-provisioned owners because the
+           * runtime/portable authority can restore credentials before
+           * the signed server Business Profile has been hydrated.
+           */
+          const recoveryCandidate =
+            input &&
+            typeof input === "object" &&
+            !Array.isArray(input)
+              ? input as Record<string, unknown>
+              : undefined;
+
+          const recoveryUsername =
+            typeof recoveryCandidate?.username === "string"
+              ? recoveryCandidate.username
+                  .trim()
+                  .normalize("NFKC")
+                  .toLowerCase()
+              : "";
+
+          let recoveredProfileExists =
+            false;
+
+          if (recoveryUsername.length > 0) {
+            try {
+              const {
+                readFinoraControlStore,
+              } =
+                await import(
+                  "./control/finoraControlStore.js"
+                );
+
+              const controlResult =
+                await readFinoraControlStore();
+
+              if (
+                controlResult.success &&
+                controlResult.data
+              ) {
+                const recoveredCredential =
+                  (
+                    controlResult.data.branchCredentials ??
+                    []
+                  ).find(
+                    (credential) =>
+                      credential.canonicalUsername ===
+                        recoveryUsername,
+                  );
+
+                recoveredProfileExists =
+                  recoveredCredential !==
+                    undefined &&
+                  (
+                    controlResult.data.businessProfiles ??
+                    []
+                  ).some(
+                    (profile) =>
+                      profile.ownerId ===
+                        recoveredCredential.ownerId &&
+                      profile.businessId ===
+                        recoveredCredential.businessId &&
+                      profile.branchId ===
+                        recoveredCredential.branchId,
+                  );
+              }
+            }
+            catch {
+              recoveredProfileExists =
+                false;
+            }
+          }
+
+          if (recoveredProfileExists) {
+            return portableRecoveryResult;
+          }
+
+          // Missing profile: continue below into the already
+          // pinned/signature-verified server-first enrollment path.
+        }
+        else if (
+          portableRecoveryResult.errorCode !==
+            "INVALID_CREDENTIALS" &&
+          portableRecoveryResult.errorCode !==
+            "RUNTIME_AUTHORITY_MISSING"
+        ) {
+          return portableRecoveryResult;
+        }
+
+        if (
+          !input ||
+          typeof input !==
+            "object" ||
+          Array.isArray(input)
+        ) {
+          return portableRecoveryResult;
+        }
+
+        const candidate =
+          input as Record<
+            string,
+            unknown
+          >;
+
+        const username =
+          typeof candidate.username ===
+            "string"
+            ? candidate.username.trim()
+            : "";
+
+        const password =
+          typeof candidate.password ===
+            "string"
+            ? candidate.password
+            : "";
+
+        const securityCode =
+          typeof candidate.securityCode ===
+            "string"
+            ? candidate.securityCode
+            : "";
+
+        if (
+          username.length ===
+            0 ||
+          password.length ===
+            0
+        ) {
+          return portableRecoveryResult;
+        }
+
+        if (
+          securityCode.length ===
+            0
+        ) {
+          return {
+            success:
+              false,
+            errorCode:
+              "SECURITY_CODE_REQUIRED",
+            error:
+              "Enter your Security Code to authorize this device.",
+          };
+        }
+
+        const detectedUsbRoot =
+          await findFinoraUsbRoot();
+
+        if (!detectedUsbRoot) {
+          return portableRecoveryResult;
+        }
+
+        const {
+          basename,
+          join,
+          parse,
+        } =
+          await import(
+            "node:path"
+          );
+
+        const canonicalUsername =
+          username
+            .normalize(
+              "NFKC",
+            )
+            .toLowerCase();
+
+        const detectedFolder =
+          basename(
+            detectedUsbRoot,
+          )
+            .normalize(
+              "NFKC",
+            )
+            .toLowerCase();
+
+        const selectedUsbRoot =
+          detectedFolder ===
+            canonicalUsername
+            ? detectedUsbRoot
+            : join(
+                parse(
+                  detectedUsbRoot,
+                ).root,
+                canonicalUsername,
+              );
+
+        const selectedFolder =
+          basename(
+            selectedUsbRoot,
+          )
+            .normalize(
+              "NFKC",
+            )
+            .toLowerCase();
+
+        if (
+          selectedFolder !==
+            canonicalUsername
+        ) {
+          return portableRecoveryResult;
+        }
+
+        const {
+          FinoraPortableBranchAuthV2Store,
+        } =
+          await import(
+            "./control/finoraPortableBranchAuthV2Store.js"
+          );
+
+        const {
+          FinoraPortableFreshDeviceRuntimeAuthorityStore,
+        } =
+          await import(
+            "./control/finoraPortableFreshDeviceRuntimeAuthorityStore.js"
+          );
+
+        const {
+          enrollFinoraServerFirstLogin,
+        } =
+          await import(
+            "./control/finoraServerFirstLoginEnrollmentService.js"
+          );
+
+        const scopedPortableV2Store =
+          new FinoraPortableBranchAuthV2Store({
+            resolveLocalRoot:
+              () =>
+                app.getPath(
+                  "userData",
+                ),
+
+            resolveUsbRoot:
+              async () =>
+                selectedUsbRoot,
+          });
+
+        const scopedRuntimeAuthorityStore =
+          new FinoraPortableFreshDeviceRuntimeAuthorityStore({
+            resolveLocalRoot:
+              () =>
+                app.getPath(
+                  "userData",
+                ),
+
+            resolveUsbRoot:
+              async () =>
+                selectedUsbRoot,
+          });
+
+        let serverFirstResult:
+          Awaited<
+            ReturnType<
+              typeof enrollFinoraServerFirstLogin
+            >
+          >;
+
+        try {
+          serverFirstResult =
+            await enrollFinoraServerFirstLogin(
+              {
+                username,
+                password,
+                securityCode,
+                selectedUsbRoot,
+              },
+              scopedPortableV2Store,
+              scopedRuntimeAuthorityStore,
+            );
+        }
+        catch (error) {
+          const safeName =
+            error instanceof Error
+              ? error.name
+              : "UnknownError";
+
+          const safeMessage =
+            error instanceof Error
+              ? error.message
+              : String(error);
+
+          console.error(
+            "[FINORA SERVER-FIRST EXCEPTION]",
+            safeName,
+            safeMessage,
+          );
+
+          try {
+            const { appendFile } =
+              await import("node:fs/promises");
+
+            const { join } =
+              await import("node:path");
+
+            await appendFile(
+              join(
+                app.getPath("temp"),
+                "finora-server-first-login.log",
+              ),
+              `[FINORA SERVER-FIRST EXCEPTION] ${safeName} ${safeMessage}` + "\n",
+              "utf8",
+            );
+          }
+          catch {
+            // Diagnostic logging must never alter authentication behavior.
+          }
+
+          return {
+            success: false,
+            errorCode: "INVALID_CREDENTIALS",
+            error:
+              "FINORA server-first enrollment failed unexpectedly.",
+          };
+        }
+
+        if (
+          !serverFirstResult.success
+        ) {
+          console.error(
+            "[FINORA SERVER-FIRST LOGIN]",
+            serverFirstResult.errorCode,
+            serverFirstResult.error,
+          );
+
+          try {
+            const {
+              appendFile,
+            } =
+              await import(
+                "node:fs/promises"
+              );
+
+            const {
+              join,
+            } =
+              await import(
+                "node:path"
+              );
+
+            await appendFile(
+              join(
+                app.getPath("temp"),
+                "finora-server-first-login.log",
+              ),
+              `[FINORA SERVER-FIRST LOGIN] ${serverFirstResult.errorCode} ${serverFirstResult.error}` +
+                "\n",
+              "utf8",
+            );
+          }
+          catch {
+            // Diagnostic logging must never alter authentication behavior.
+          }
+
+          return {
+            success:
+              false,
+            errorCode:
+              "INVALID_CREDENTIALS",
+            error:
+              `First-login verification failed: ${serverFirstResult.errorCode} - ${serverFirstResult.error}`,
+          };
+        }
+
+        return {
+          success:
+            true,
+        };
+      },
+      async (request) => {
+        if (
+          !request ||
+          typeof request !== "object" ||
+          Array.isArray(request)
+        ) {
+          return undefined;
+        }
+
+        const candidate =
+          request as Record<string, unknown>;
+
+        const username =
+          typeof candidate.username === "string"
+            ? candidate.username
+                .trim()
+                .normalize("NFKC")
+                .toLowerCase()
+            : "";
+
+        if (!username) {
+          return undefined;
+        }
+
+        const detectedUsbRoot =
+          await findFinoraUsbRoot();
+
+        if (!detectedUsbRoot) {
+          return undefined;
+        }
+
+        const detectedFolder =
+          path.basename(detectedUsbRoot)
+            .normalize("NFKC")
+            .toLowerCase();
+
+        const requestScopedUsbRoot =
+          detectedFolder === username
+            ? detectedUsbRoot
+            : path.join(
+                path.parse(detectedUsbRoot).root,
+                username,
+              );
+
+        return new FinoraPortableBranchAuthV2Store({
+          resolveLocalRoot:
+            () =>
+              app.getPath("userData"),
+
+          resolveUsbRoot:
+            async () =>
+              requestScopedUsbRoot,
+        });
+      },
     );
 
     // --------------------------------------------------------

@@ -375,6 +375,9 @@ export interface FinoraFreshDeviceBootstrapHydrationPlan {
   authGeneration:
     number;
 
+  credentialChangeRequired?:
+    boolean;
+
   branchAccessType:
     FinoraFreshDeviceBootstrapAccessType;
 

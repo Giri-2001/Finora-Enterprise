@@ -20,7 +20,7 @@ export const FINORA_PORTABLE_FRESH_DEVICE_RUNTIME_AUTHORITY_PURPOSE =
 // ============================================================
 
 export type FinoraPortableFreshDeviceRuntimeAuthorityRole =
-  | "ADMIN"
+  | "OWNER" | "ADMIN"
   | "MANAGER"
   | "COLLECTOR"
   | "VIEWER";
@@ -668,6 +668,7 @@ export function validateFinoraPortableFreshDeviceRuntimeAuthorityPayloadV1(
     }
   }
   if (
+    payload.role !== "OWNER" &&
     payload.role !== "ADMIN" &&
     payload.role !== "MANAGER" &&
     payload.role !== "COLLECTOR" &&
@@ -731,7 +732,13 @@ export function validateFinoraPortableFreshDeviceRuntimeAuthorityPayloadV1(
 
   if (
     payload.branchAccessType ===
-      "REGISTERED"
+      "REGISTERED" &&
+    (
+      payload.registrationPayment !==
+        null ||
+      payload.registrationCycle !==
+        null
+    )
   ) {
     if (
       !payload.registrationPayment ||

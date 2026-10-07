@@ -1,5 +1,5 @@
-﻿/* ============================================================
-   FINORA ENTERPRISE OSâ„¢
+/* ============================================================
+   FINORA ENTERPRISE OS
 
    ELECTRON CONTROL
    BRANCH CREDENTIAL IPC
@@ -48,6 +48,13 @@ import {
   rotateFinoraPortableBranchAuthCredentialV2,
 } from "./finoraPortableBranchAuthCredentialRotationCoordinatorV2.js";
 
+import {
+  recoverFinoraPortableBranchAuthPasswordV2,
+} from "./finoraPortableBranchAuthPasswordRecoveryCoordinatorV2.js";
+import {
+  completeFinoraPortableBranchAuthFirstLoginCredentialsV2,
+} from "./finoraPortableBranchAuthFirstLoginCredentialCompletionCoordinatorV2.js";
+
 import type {
   FinoraPortableBranchAuthV2Store,
 } from "./finoraPortableBranchAuthV2Store.js";
@@ -62,6 +69,12 @@ const BRANCH_CREDENTIAL_IPC_CHANNELS = {
 
   ROTATE_V2:
     "finora:credential:rotate-v2",
+
+  PASSWORD_RECOVERY_V2:
+    "finora:credential:password-recovery-v2",
+
+  FIRST_LOGIN_COMPLETION_V2:
+    "finora:credential:first-login-completion-v2",
 
 } as const;
 
@@ -294,10 +307,233 @@ export function registerFinoraBranchCredentialHandlers(
   );
 
 
+  // ----------------------------------------------------------
+  // SECURITY-CODE FORGOT PASSWORD V2
+  //
+  // SECURITY:
+  // - trusted ordinary FINORA renderer only
+  // - main frame only
+  // - old Password is NOT required
+  // - Security Code is recovery authority
+  // - secrets remain process-memory-only
+  // - coordinator owns server-first durable recovery ordering
+  // ----------------------------------------------------------
+
+  ipcMain.handle(
+    BRANCH_CREDENTIAL_IPC_CHANNELS.PASSWORD_RECOVERY_V2,
+    async (
+      event,
+      request:
+        unknown,
+    ) => {
+      if (
+        !isAuthorizedCredentialRenderer(
+          event,
+          isTrustedRenderer,
+        )
+      ) {
+        return unauthorized();
+      }
+
+      try {
+        const recoveryResult =
+          await recoverFinoraPortableBranchAuthPasswordV2({
+            request:
+              request as Parameters<
+                typeof recoverFinoraPortableBranchAuthPasswordV2
+              >[0]["request"],
+
+            portableStore:
+              portableV2Store,
+          });
+
+        if (!recoveryResult.success) {
+          return recoveryResult;
+        }
+
+        const credential =
+          recoveryResult.data.credential;
+
+        return {
+          success:
+            true,
+
+          data: {
+            transactionId:
+              recoveryResult.data.transactionId,
+
+            credential: {
+              credentialId:
+                credential.credentialId,
+
+              userId:
+                credential.userId,
+
+              username:
+                credential.username,
+
+              fullName:
+                credential.fullName,
+
+              role:
+                credential.role,
+
+              ownerId:
+                credential.ownerId,
+
+              businessId:
+                credential.businessId,
+
+              branchId:
+                credential.branchId,
+
+              storageMode:
+                credential.storageMode,
+
+              dataContext:
+                credential.dataContext,
+
+              ...(
+                credential.demoId ===
+                  undefined
+                  ? {}
+                  : {
+                      demoId:
+                        credential.demoId,
+                    }
+              ),
+
+              enrolledAt:
+                credential.updatedAt,
+            },
+
+            authGeneration:
+              recoveryResult.data.authGeneration,
+
+            portableReplaceResult:
+              recoveryResult.data.portableReplaceResult,
+          },
+        };
+      }
+      catch {
+        return serviceFailure();
+      }
+    },
+  );
+
+  // ----------------------------------------------------------
+  // FIRST-LOGIN PERMANENT CREDENTIAL COMPLETION V2
+  //
+  // SECURITY:
+  // - trusted ordinary FINORA renderer only
+  // - main frame only
+  // - secrets remain process-memory-only
+  // - server success is required before PREPARED durability
+  // ----------------------------------------------------------
+
+  ipcMain.handle(
+    BRANCH_CREDENTIAL_IPC_CHANNELS.FIRST_LOGIN_COMPLETION_V2,
+    async (
+      event,
+      request:
+        unknown,
+    ) => {
+      if (
+        !isAuthorizedCredentialRenderer(
+          event,
+          isTrustedRenderer,
+        )
+      ) {
+        return unauthorized();
+      }
+
+      try {
+        const completionResult =
+          await completeFinoraPortableBranchAuthFirstLoginCredentialsV2({
+            request:
+              request as Parameters<
+                typeof completeFinoraPortableBranchAuthFirstLoginCredentialsV2
+              >[0]["request"],
+
+            portableStore:
+              portableV2Store,
+          });
+
+        if (!completionResult.success) {
+          return completionResult;
+        }
+
+        const credential =
+          completionResult.data.credential;
+
+        return {
+          success:
+            true,
+
+          data: {
+            transactionId:
+              completionResult.data.transactionId,
+
+            credential: {
+              credentialId:
+                credential.credentialId,
+
+              userId:
+                credential.userId,
+
+              username:
+                credential.username,
+
+              fullName:
+                credential.fullName,
+
+              role:
+                credential.role,
+
+              ownerId:
+                credential.ownerId,
+
+              businessId:
+                credential.businessId,
+
+              branchId:
+                credential.branchId,
+
+              storageMode:
+                credential.storageMode,
+
+              dataContext:
+                credential.dataContext,
+
+              ...(
+                credential.demoId === undefined
+                  ? {}
+                  : {
+                      demoId:
+                        credential.demoId,
+                    }
+              ),
+
+              enrolledAt:
+                credential.updatedAt,
+            },
+
+            authGeneration:
+              completionResult.data.authGeneration,
+
+            portableReplaceResult:
+              completionResult.data.portableReplaceResult,
+          },
+        };
+      }
+      catch {
+        return serviceFailure();
+      }
+    },
+  );
+
 }
 
 // ============================================================
 // END
 // ============================================================
-
-

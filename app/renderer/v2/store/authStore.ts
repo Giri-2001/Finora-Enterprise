@@ -1,5 +1,5 @@
 // ============================================================
-// FINORA ENTERPRISE OS™
+// FINORA ENTERPRISE OSâ„¢
 //
 // AUTHENTICATION STORE
 //
@@ -349,6 +349,7 @@ export function persistRevalidatedSessionSnapshot(
     !session.businessId ||
     !session.branchId ||
     (
+      session.role !== "OWNER" &&
       session.role !== "ADMIN" &&
       session.role !== "MANAGER" &&
       session.role !== "COLLECTOR" &&

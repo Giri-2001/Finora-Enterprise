@@ -771,6 +771,8 @@ async function runSelfTest():
 
     if (
       "legacyNativeBoundMigrationEvidence" in
+        missingProofEvidence ||
+      "provenanceType" in
         missingProofEvidence
     ) {
       throw new Error(

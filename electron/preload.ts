@@ -1746,6 +1746,12 @@ const BRANCH_CREDENTIAL_CHANNELS = {
   ROTATE_V2:
     "finora:credential:rotate-v2",
 
+  PASSWORD_RECOVERY_V2:
+    "finora:credential:password-recovery-v2",
+
+  FIRST_LOGIN_COMPLETION_V2:
+    "finora:credential:first-login-completion-v2",
+
 } as const;
 
 
@@ -1851,6 +1857,41 @@ interface FinoraCredentialRotationRequestV2 {
     string;
 }
 
+interface FinoraCredentialPasswordRecoveryRequestV2 {
+
+  recoveryRequestId:
+    string;
+
+  username:
+    string;
+
+  currentSecurityCode:
+    string;
+
+  newPassword:
+    string;
+}
+
+interface FinoraCredentialFirstLoginCompletionRequestV2 {
+  rotationRequestId:
+    string;
+
+  username:
+    string;
+
+  currentPassword:
+    string;
+
+  currentSecurityCode:
+    string;
+
+  newPassword:
+    string;
+
+  newSecurityCode:
+    string;
+}
+
 interface FinoraCredentialRotationViewV2 {
   transactionId:
     string;
@@ -1889,7 +1930,26 @@ interface FinoraCredentialBridge {
         FinoraCredentialRotationViewV2
       >
     >;
-}
+
+  resetPasswordV2(
+    request:
+      FinoraCredentialPasswordRecoveryRequestV2,
+  ):
+    Promise<
+      FinoraCredentialBridgeResult<
+        FinoraCredentialRotationViewV2
+      >
+    >;
+
+  completeFirstLoginV2:
+    (
+      request:
+        FinoraCredentialFirstLoginCompletionRequestV2,
+    ) => Promise<
+      FinoraCredentialBridgeResult<
+        FinoraCredentialRotationViewV2
+      >
+    >;}
 
 // ============================================================
 // BRANCH LOGIN SESSION IPC CHANNELS
@@ -2757,6 +2817,33 @@ const credentialBridge:
             FinoraCredentialRotationViewV2
           >
         >,
+
+    resetPasswordV2:
+      (
+        request:
+          FinoraCredentialPasswordRecoveryRequestV2,
+      ) =>
+        ipcRenderer.invoke(
+          BRANCH_CREDENTIAL_CHANNELS.PASSWORD_RECOVERY_V2,
+          request,
+        ) as Promise<
+          FinoraCredentialBridgeResult<
+            FinoraCredentialRotationViewV2
+          >
+        >,
+    completeFirstLoginV2:
+      (
+        request:
+          FinoraCredentialFirstLoginCompletionRequestV2,
+      ) =>
+        ipcRenderer.invoke(
+          BRANCH_CREDENTIAL_CHANNELS.FIRST_LOGIN_COMPLETION_V2,
+          request,
+        ) as Promise<
+          FinoraCredentialBridgeResult<
+            FinoraCredentialRotationViewV2
+          >
+        >,
 };
 
 // ============================================================
@@ -3406,5 +3493,3 @@ contextBridge.exposeInMainWorld(
 // ============================================================
 
 export {};
-
-

@@ -1,5 +1,5 @@
 // ============================================================
-// FINORA ENTERPRISE OS™
+// FINORA ENTERPRISE OSÃ¢â€žÂ¢
 //
 // ELECTRON CONTROL IPC
 //
@@ -79,6 +79,9 @@ import type {
 import type {
   FinoraPortableBranchAuthStore,
 } from "./finoraPortableBranchAuthStore.js";
+import type {
+  FinoraPortableBranchAuthV2Store,
+} from "./finoraPortableBranchAuthV2Store.js";
 
 import {
   resolveFinoraBranchOperationalSessionContext,
@@ -519,6 +522,15 @@ export function registerFinoraControlHandlers(
 
   portableBranchAuthStore:
     FinoraPortableBranchAuthStore,
+
+  resolvePortableV2Store?:
+    (
+      username:
+        string,
+    ) =>
+      Promise<
+        FinoraPortableBranchAuthV2Store | undefined
+      >,
 ): void {
   if (controlHandlersRegistered) {
     return;
@@ -548,7 +560,7 @@ export function registerFinoraControlHandlers(
   );
 
   // ----------------------------------------------------------
-  // RECIPIENT CONTROL TRUST — READ ONLY
+  // RECIPIENT CONTROL TRUST Ã¢â‚¬â€ READ ONLY
   // ----------------------------------------------------------
 
   ipcMain.handle(
@@ -971,12 +983,22 @@ export function registerFinoraControlHandlers(
       const principal =
         sessionContextResult.data.principal;
 
+      const requestScopedPortableV2Store =
+        resolvePortableV2Store
+          ? await resolvePortableV2Store(
+              principal.username,
+            )
+          : undefined;
+
       const deviceTrustResult =
         await checkFinoraCurrentBranchDeviceTrust({
           principal,
 
           portableStore:
             portableBranchAuthStore,
+
+          portableV2Store:
+            requestScopedPortableV2Store,
         });
 
       if (
@@ -2038,7 +2060,7 @@ export function registerFinoraControlHandlers(
   );
 
   // ----------------------------------------------------------
-  // INSTALLATION ENROLLMENT RESPONSE — IMPORT + BOOTSTRAP
+  // INSTALLATION ENROLLMENT RESPONSE Ã¢â‚¬â€ IMPORT + BOOTSTRAP
   //
   // SECURITY:
   //

@@ -1,4 +1,4 @@
-﻿// ============================================================
+// ============================================================
 // FINORA ENTERPRISE OS
 // PORTABLE BRANCH AUTH ENROLLMENT COORDINATOR SELF-TEST
 // VERSION : 1.0
@@ -1679,6 +1679,8 @@ async function runSelfTest():
 
     if (
       "legacyNativeBoundMigrationEvidence" in
+        preparedSourceEvidence ||
+      "provenanceType" in
         preparedSourceEvidence
     ) {
       throw new Error(
@@ -1758,6 +1760,8 @@ async function runSelfTest():
 
     if (
       "legacyNativeBoundMigrationEvidence" in
+        encryptedSourceEvidence ||
+      "provenanceType" in
         encryptedSourceEvidence
     ) {
       throw new Error(
@@ -3055,6 +3059,8 @@ async function runSelfTest():
 
     if (
       "legacyNativeBoundMigrationEvidence" in
+        successfulLegacyEvidence ||
+      "provenanceType" in
         successfulLegacyEvidence
     ) {
       throw new Error(

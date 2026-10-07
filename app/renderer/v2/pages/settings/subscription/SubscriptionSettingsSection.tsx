@@ -62,9 +62,11 @@ function pad2(value: number): string {
   return String(value).padStart(2, "0");
 }
 
-function formatDateTime(
-  value: string,
-): string {
+function formatDateTime(value: string | null | undefined): string {
+  if (!value) {
+    return "Not recorded";
+  }
+
   const date =
     new Date(value);
 
@@ -451,21 +453,9 @@ export default function SubscriptionSettingsSection() {
 
       void load();
 
-      const interval =
-        window.setInterval(
-          () => {
-            void load();
-          },
-          REFRESH_INTERVAL_MS,
-        );
-
       return () => {
         active =
           false;
-
-        window.clearInterval(
-          interval,
-        );
       };
     },
     [],
@@ -630,8 +620,8 @@ export default function SubscriptionSettingsSection() {
                 </span>
                 <strong className="finora-settings-subscription__value">
                   {formatMoney(
-                    grant.registrationPayment.amount,
-                    grant.registrationPayment.currency,
+                    grant.registrationPayment?.amount,
+                    grant.registrationPayment?.currency,
                   )}
                 </strong>
               </div>
@@ -641,7 +631,7 @@ export default function SubscriptionSettingsSection() {
                   Payment Mode
                 </span>
                 <strong className="finora-settings-subscription__value">
-                  {grant.registrationPayment.paymentMode.replaceAll("_", " ")}
+                  {grant.registrationPayment?.paymentMode.replaceAll("_", " ") ?? "Not recorded"}
                 </strong>
               </div>
 
@@ -651,7 +641,7 @@ export default function SubscriptionSettingsSection() {
                 </span>
                 <strong className="finora-settings-subscription__value">
                   {formatDateTime(
-                    grant.registrationPayment.paidAt,
+                    grant.registrationPayment?.paidAt,
                   )}
                 </strong>
               </div>
@@ -661,7 +651,7 @@ export default function SubscriptionSettingsSection() {
                   Registration Cycle
                 </span>
                 <strong className="finora-settings-subscription__value">
-                  {grant.registrationCycle}
+                  {grant.registrationCycle ?? "Not recorded"}
                 </strong>
               </div>
             </>
@@ -723,7 +713,7 @@ export default function SubscriptionSettingsSection() {
                   >
                     <div className="finora-settings-subscription__history-heading">
                       <strong className="finora-settings-subscription__history-cycle">
-                        Cycle {historyGrant.registrationCycle ?? "—"}
+                        Cycle {historyGrant.registrationCycle ?? "ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â"}
                       </strong>
 
                       <span className="finora-settings-subscription__history-applied">

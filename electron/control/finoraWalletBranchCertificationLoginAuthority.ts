@@ -36,10 +36,7 @@ export interface RestoreFinoraWalletBranchCertificationAuthorityInput {
   fullName: string;
 
   role:
-    | "ADMIN"
-    | "MANAGER"
-    | "COLLECTOR"
-    | "VIEWER";
+    | "OWNER" | "ADMIN" | "MANAGER" | "COLLECTOR" | "VIEWER";
 
   authGeneration: number;
 

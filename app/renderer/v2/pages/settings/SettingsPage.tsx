@@ -1,5 +1,5 @@
 // ============================================================
-// FINORA ENTERPRISE OS™
+// FINORA ENTERPRISE OSÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢
 //
 // ENTERPRISE SETTINGS
 // SETTINGS PAGE
@@ -66,6 +66,35 @@ import {
 // COMPONENT
 // ============================================================
 
+const FINORA_SETTINGS_ACTIVE_SECTION =
+  "FINORA_SETTINGS_ACTIVE_SECTION";
+
+function readPersistedSettingsSection():
+  SettingsSectionId {
+  try {
+    const value =
+      window.sessionStorage.getItem(
+        FINORA_SETTINGS_ACTIVE_SECTION,
+      );
+
+    if (
+      value === "business" ||
+      value === "branch" ||
+      value === "business-owner" ||
+      value === "numbering-series" ||
+      value === "gold-storage" ||
+      value === "subscription"
+    ) {
+      return value;
+    }
+  }
+  catch {
+    // UI navigation persistence is best-effort only.
+  }
+
+  return DEFAULT_SETTINGS_SECTION;
+}
+
 export default function SettingsPage() {
 
   const [
@@ -74,7 +103,7 @@ export default function SettingsPage() {
   ] = useState<
     SettingsSectionId
   >(
-    DEFAULT_SETTINGS_SECTION,
+    readPersistedSettingsSection,
   );
 
   // ==========================================================
@@ -155,7 +184,21 @@ export default function SettingsPage() {
           <SettingsNavigation
             activeSection={activeSection}
             onSectionChange={
-              setActiveSection
+              (nextSection) => {
+                try {
+                  window.sessionStorage.setItem(
+                    FINORA_SETTINGS_ACTIVE_SECTION,
+                    nextSection,
+                  );
+                }
+                catch {
+                  // UI navigation persistence is best-effort only.
+                }
+
+                setActiveSection(
+                  nextSection,
+                );
+              }
             }
           />
         </aside>
