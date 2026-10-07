@@ -1,5 +1,5 @@
 /* ============================================================
-   FINORA ENTERPRISE OS™
+   FINORA ENTERPRISE OS
 
    ELECTRON CONTROL
    BRANCH LOGIN SESSION IPC
@@ -46,6 +46,10 @@ import type {
 import type {
   FinoraPortableBranchAuthStore,
 } from "./finoraPortableBranchAuthStore.js";
+
+import type {
+  FinoraPortableBranchAuthV2Store,
+} from "./finoraPortableBranchAuthV2Store.js";
 
 import {
   createFinoraBranchLoginSession,
@@ -150,6 +154,9 @@ export function registerFinoraBranchLoginSessionHandlers(
     Parameters<
       typeof createFinoraBranchLoginSession
     >[2],
+
+  portableV2Store?:
+    FinoraPortableBranchAuthV2Store,
 ): void {
   if (
     loginSessionHandlersRegistered
@@ -185,6 +192,7 @@ export function registerFinoraBranchLoginSessionHandlers(
           request,
           portableStore,
           recoverFreshDevice,
+          portableV2Store,
         );
       }
       catch {

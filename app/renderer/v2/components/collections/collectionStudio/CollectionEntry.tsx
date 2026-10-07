@@ -1105,7 +1105,20 @@ export default function CollectionEntry({ middleSlot }: CollectionEntryProps) {
                 <div
                   role="listbox"
                   aria-label="EMI schedule"
-                  style={collectionEntryStyles.emiDropdownPanel}
+                  style={{
+                    ...collectionEntryStyles.emiDropdownPanel,
+
+                    ...(viewport === "mobile"
+                      ? {
+                          width: "100%",
+                          maxWidth: "100%",
+                          minWidth: 0,
+                          overflowX: "auto",
+                          overflowY: "auto",
+                          WebkitOverflowScrolling: "touch",
+                        }
+                      : {}),
+                  }}
                 >
                   <div style={collectionEntryStyles.emiDropdownHeader}>
                     <span style={collectionEntryStyles.scheduleHeader}>
@@ -1133,7 +1146,18 @@ export default function CollectionEntry({ middleSlot }: CollectionEntryProps) {
                       No EMI schedule is stored for the selected loan.
                     </div>
                   ) : (
-                    <div style={collectionEntryStyles.emiDropdownList}>
+                    <div
+                      style={{
+                        ...collectionEntryStyles.emiDropdownList,
+
+                        ...(viewport === "mobile"
+                          ? {
+                              width: "max-content",
+                              minWidth: "430px",
+                            }
+                          : {}),
+                      }}
+                    >
                       {emiSchedule.map((installment) => {
                         const locked = isLockedStatus(installment.status);
 

@@ -1,5 +1,5 @@
-﻿// ============================================================
-// FINORA ENTERPRISE OSâ„¢
+// ============================================================
+// FINORA ENTERPRISE OS
 //
 // RENDERER ELECTRON BRIDGE DECLARATIONS
 //
@@ -431,7 +431,7 @@ type FinoraElectronControlBundleImportResult =
     };
 
 // ============================================================
-// CONTROL BRIDGE â€” STRONGLY TYPED RENDERER CONTRACT
+// CONTROL BRIDGE - STRONGLY TYPED RENDERER CONTRACT
 // ============================================================
 
 interface FinoraFindBranchAccessGrantRequest {

@@ -1,5 +1,5 @@
 // ============================================================
-// FINORA ENTERPRISE OS™
+// FINORA ENTERPRISE OS
 //
 // V2 USB STORAGE
 // CROSS-PLATFORM USB BRIDGE
@@ -46,6 +46,9 @@ export interface FinoraUsbStatus {
     StorageAvailability;
 
   storageId?:
+    string;
+
+  storagePath?:
     string;
 
   message?:

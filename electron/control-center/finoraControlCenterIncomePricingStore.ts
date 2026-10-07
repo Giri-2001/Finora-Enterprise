@@ -44,6 +44,43 @@ export interface FinoraControlCenterIncomePricingInput {
 
   collectionAbove50000Fee:
     number;
+
+  /**
+   * Global-only FINORA subscription pricing.
+   *
+   * These values never participate in Branch Pricing overrides.
+   * Zero is explicitly valid so FINORA can publish genuine
+   * promotional/free subscription periods.
+   *
+   * Undefined means the plan has not yet been configured.
+   */
+  subscription1MonthFee?:
+    number;
+
+  subscription3MonthFee?:
+    number;
+
+  subscription6MonthFee?:
+    number;
+
+  subscription12MonthFee?:
+    number;
+
+  /**
+   * Optional global Pricing announcement displayed to owners
+   * after the published pricing revision reaches their app.
+   */
+  pricingNoticeTitle?:
+    string;
+
+  pricingNoticeMessage?:
+    string;
+
+  pricingNoticeEffectiveFrom?:
+    string;
+
+  pricingNoticeEffectiveUntil?:
+    string;
 }
 
 export interface FinoraControlCenterIncomePricingView
@@ -141,6 +178,160 @@ function isValidPrice(
   );
 }
 
+function isValidSubscriptionPrice(
+  value:
+    unknown,
+): value is number {
+
+  if (
+    typeof value !==
+      "number" ||
+    !Number.isFinite(
+      value,
+    ) ||
+    value < 0 ||
+    value > 1_000_000
+  ) {
+    return false;
+  }
+
+  const minor =
+    value *
+    100;
+
+  return (
+    Math.abs(
+      minor -
+      Math.round(
+        minor,
+      ),
+    ) <
+    0.000001
+  );
+}
+
+function normalizeOptionalText(
+  value:
+    unknown,
+  maximumLength:
+    number,
+): string | undefined {
+
+  if (
+    value ===
+      undefined ||
+    value ===
+      null
+  ) {
+    return undefined;
+  }
+
+  if (
+    typeof value !==
+      "string"
+  ) {
+    throw new Error(
+      "FINORA Pricing notice text must be a string.",
+    );
+  }
+
+  const normalized =
+    value.trim();
+
+  if (!normalized) {
+    return undefined;
+  }
+
+  if (
+    normalized.length >
+      maximumLength
+  ) {
+    throw new Error(
+      "FINORA Pricing notice text is too long.",
+    );
+  }
+
+  return normalized;
+}
+
+function normalizeOptionalDateTime(
+  value:
+    unknown,
+): string | undefined {
+
+  const normalized =
+    normalizeOptionalText(
+      value,
+      64,
+    );
+
+  if (!normalized) {
+    return undefined;
+  }
+
+  const parsed =
+    Date.parse(
+      normalized,
+    );
+
+  if (Number.isNaN(parsed)) {
+    throw new Error(
+      "FINORA Pricing notice date is invalid.",
+    );
+  }
+
+  return new Date(
+    parsed,
+  ).toISOString();
+}
+
+function isOptionalSubscriptionPrice(
+  value:
+    unknown,
+): boolean {
+
+  return (
+    value ===
+      undefined ||
+    isValidSubscriptionPrice(
+      value,
+    )
+  );
+}
+
+function isOptionalString(
+  value:
+    unknown,
+): boolean {
+
+  return (
+    value ===
+      undefined ||
+    typeof value ===
+      "string"
+  );
+}
+
+function isOptionalIsoDateTime(
+  value:
+    unknown,
+): boolean {
+
+  return (
+    value ===
+      undefined ||
+    (
+      typeof value ===
+        "string" &&
+      !Number.isNaN(
+        Date.parse(
+          value,
+        ),
+      )
+    )
+  );
+}
+
 function sanitizeInput(
   value:
     unknown,
@@ -203,6 +394,142 @@ function sanitizeInput(
 
     collectionAbove50000Fee:
       candidate.collectionAbove50000Fee,
+
+    ...(
+      candidate.subscription1MonthFee ===
+        undefined
+        ? {}
+        : (
+            isValidSubscriptionPrice(
+              candidate.subscription1MonthFee,
+            )
+              ? {
+                  subscription1MonthFee:
+                    candidate.subscription1MonthFee,
+                }
+              : (() => {
+                  throw new Error(
+                    "FINORA 1 Month Subscription price must be a non-negative INR amount with at most two decimal places.",
+                  );
+                })()
+          )
+    ),
+
+    ...(
+      candidate.subscription3MonthFee ===
+        undefined
+        ? {}
+        : (
+            isValidSubscriptionPrice(
+              candidate.subscription3MonthFee,
+            )
+              ? {
+                  subscription3MonthFee:
+                    candidate.subscription3MonthFee,
+                }
+              : (() => {
+                  throw new Error(
+                    "FINORA 3 Month Subscription price must be a non-negative INR amount with at most two decimal places.",
+                  );
+                })()
+          )
+    ),
+
+    ...(
+      candidate.subscription6MonthFee ===
+        undefined
+        ? {}
+        : (
+            isValidSubscriptionPrice(
+              candidate.subscription6MonthFee,
+            )
+              ? {
+                  subscription6MonthFee:
+                    candidate.subscription6MonthFee,
+                }
+              : (() => {
+                  throw new Error(
+                    "FINORA 6 Month Subscription price must be a non-negative INR amount with at most two decimal places.",
+                  );
+                })()
+          )
+    ),
+
+    ...(
+      candidate.subscription12MonthFee ===
+        undefined
+        ? {}
+        : (
+            isValidSubscriptionPrice(
+              candidate.subscription12MonthFee,
+            )
+              ? {
+                  subscription12MonthFee:
+                    candidate.subscription12MonthFee,
+                }
+              : (() => {
+                  throw new Error(
+                    "FINORA 12 Month Subscription price must be a non-negative INR amount with at most two decimal places.",
+                  );
+                })()
+          )
+    ),
+
+    ...(
+      normalizeOptionalText(
+        candidate.pricingNoticeTitle,
+        120,
+      )
+        ? {
+            pricingNoticeTitle:
+              normalizeOptionalText(
+                candidate.pricingNoticeTitle,
+                120,
+              ),
+          }
+        : {}
+    ),
+
+    ...(
+      normalizeOptionalText(
+        candidate.pricingNoticeMessage,
+        500,
+      )
+        ? {
+            pricingNoticeMessage:
+              normalizeOptionalText(
+                candidate.pricingNoticeMessage,
+                500,
+              ),
+          }
+        : {}
+    ),
+
+    ...(
+      normalizeOptionalDateTime(
+        candidate.pricingNoticeEffectiveFrom,
+      )
+        ? {
+            pricingNoticeEffectiveFrom:
+              normalizeOptionalDateTime(
+                candidate.pricingNoticeEffectiveFrom,
+              ),
+          }
+        : {}
+    ),
+
+    ...(
+      normalizeOptionalDateTime(
+        candidate.pricingNoticeEffectiveUntil,
+      )
+        ? {
+            pricingNoticeEffectiveUntil:
+              normalizeOptionalDateTime(
+                candidate.pricingNoticeEffectiveUntil,
+              ),
+          }
+        : {}
+    ),
   };
 }
 
@@ -261,6 +588,30 @@ function isPersistedView(
     ) &&
     isValidPrice(
       candidate.collectionAbove50000Fee,
+    ) &&
+    isOptionalSubscriptionPrice(
+      candidate.subscription1MonthFee,
+    ) &&
+    isOptionalSubscriptionPrice(
+      candidate.subscription3MonthFee,
+    ) &&
+    isOptionalSubscriptionPrice(
+      candidate.subscription6MonthFee,
+    ) &&
+    isOptionalSubscriptionPrice(
+      candidate.subscription12MonthFee,
+    ) &&
+    isOptionalString(
+      candidate.pricingNoticeTitle,
+    ) &&
+    isOptionalString(
+      candidate.pricingNoticeMessage,
+    ) &&
+    isOptionalIsoDateTime(
+      candidate.pricingNoticeEffectiveFrom,
+    ) &&
+    isOptionalIsoDateTime(
+      candidate.pricingNoticeEffectiveUntil,
     )
   );
 }

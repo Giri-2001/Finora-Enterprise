@@ -1,5 +1,5 @@
 // ============================================================
-// FINORA ENTERPRISE OSÃ¢â€žÂ¢
+// FINORA ENTERPRISE OS
 //
 // CONTROL CENTER
 // PRIVILEGED IPC
@@ -223,6 +223,19 @@ import {
 } from "./finoraDeveloperControlCenterSecurityCodeStore.js";
 
 import {
+  verifyFinoraServerAdminCredential,
+  provisionFinoraServerOwner,
+  type FinoraServerProvisionOwnerInput,
+} from "./finoraServerAdminClient.js";
+
+import {
+  hasFinoraServerAdminCredential,
+  clearFinoraServerAdminCredential,
+  readFinoraServerAdminCredential,
+  storeFinoraServerAdminCredential,
+} from "./finoraServerAdminCredentialVault.js";
+
+import {
   FINORA_DEVELOPER_SECURITY_CODE_MAX_LENGTH,
 } from "./finoraDeveloperControlCenterSecurityCodeCrypto.js";
 
@@ -282,6 +295,21 @@ export const FINORA_CONTROL_CENTER_IPC_CHANNELS = {
 
   UPSERT_PROVISIONING_RESUME:
     "finora:control-center:upsert-provisioning-resume",
+
+  HAS_SERVER_ADMIN_CREDENTIAL:
+    "finora:control-center:has-server-admin-credential",
+
+  CONFIGURE_SERVER_ADMIN_CREDENTIAL:
+    "finora:control-center:configure-server-admin-credential",
+
+  VERIFY_SERVER_ADMIN_CREDENTIAL:
+    "finora:control-center:verify-server-admin-credential",
+
+  DISCONNECT_SERVER_ADMIN_CREDENTIAL:
+    "finora:control-center:disconnect-server-admin-credential",
+
+  PROVISION_SERVER_OWNER:
+    "finora:control-center:provision-server-owner",
 
   GET_FINORA_INCOME_PRICING:
     "finora:control-center:get-finora-income-pricing",
@@ -991,6 +1019,232 @@ export function registerFinoraControlCenterHandlers():
 
   controlCenterHandlersRegistered =
     true;
+
+  // ----------------------------------------------------------
+  // FINORA PRODUCTION SERVER ADMINISTRATION
+  //
+  // The administrator API credential remains encrypted in the
+  // Electron main-process vault and is never returned to the
+  // renderer.
+  // ----------------------------------------------------------
+
+  registerFinoraDeveloperProtectedControlCenterHandler(
+    FINORA_CONTROL_CENTER_IPC_CHANNELS
+      .HAS_SERVER_ADMIN_CREDENTIAL,
+    async (event) => {
+      if (
+        !isTrustedFinoraControlCenterRenderer(
+          event.senderFrame,
+        )
+      ) {
+        return failure(
+          "FINORA Server credential status is restricted to the dedicated Control Center renderer.",
+        );
+      }
+
+      return executePrivileged(
+        () =>
+          hasFinoraServerAdminCredential(),
+      );
+    },
+  );
+
+  registerFinoraDeveloperProtectedControlCenterHandler(
+    FINORA_CONTROL_CENTER_IPC_CHANNELS
+      .CONFIGURE_SERVER_ADMIN_CREDENTIAL,
+    async (
+      event,
+      apiKey:
+        unknown,
+    ) => {
+      if (
+        !isTrustedFinoraControlCenterRenderer(
+          event.senderFrame,
+        )
+      ) {
+        return failure(
+          "FINORA Server administration is restricted to the dedicated Control Center renderer.",
+        );
+      }
+
+      if (
+        typeof apiKey !==
+        "string"
+      ) {
+        return failure(
+          "FINORA Server administrator credential is invalid.",
+        );
+      }
+
+      return executePrivileged(
+        async () => {
+          await storeFinoraServerAdminCredential(
+            apiKey,
+          );
+
+
+// FINORA_CONFIGURE_ADMIN_LIVE_VERIFY_V1
+
+try {
+
+  await verifyFinoraServerAdminCredential(
+
+    apiKey,
+
+  );
+
+} catch (error) {
+
+  if (
+
+    error instanceof Error &&
+
+    error.message ===
+
+      "FINORA Server rejected the Control Center administrator credential."
+
+  ) {
+
+    await clearFinoraServerAdminCredential();
+
+  }
+
+
+  throw error;
+
+}
+
+          return true;
+        },
+      );
+    },
+  );
+
+  // FINORA_SERVER_ADMIN_VERIFY_HANDLER_V1
+  registerFinoraDeveloperProtectedControlCenterHandler(
+    FINORA_CONTROL_CENTER_IPC_CHANNELS
+      .VERIFY_SERVER_ADMIN_CREDENTIAL,
+    async (event) => {
+      if (
+        !isTrustedFinoraControlCenterRenderer(
+          event.senderFrame,
+        )
+      ) {
+        return failure(
+          "FINORA Server verification is restricted to the dedicated Control Center renderer.",
+        );
+      }
+
+      return executePrivileged(
+        async () => {
+          const adminApiKey =
+            await readFinoraServerAdminCredential();
+
+          try {
+            await verifyFinoraServerAdminCredential(
+              adminApiKey,
+            );
+
+            return true;
+          } catch (error) {
+            if (
+              error instanceof Error &&
+              error.message ===
+                "FINORA Server rejected the Control Center administrator credential."
+            ) {
+              await clearFinoraServerAdminCredential();
+            }
+
+            throw error;
+          }
+        },
+      );
+    },
+  );
+
+  registerFinoraDeveloperProtectedControlCenterHandler(
+    FINORA_CONTROL_CENTER_IPC_CHANNELS
+      .DISCONNECT_SERVER_ADMIN_CREDENTIAL,
+    async (event) => {
+      if (
+        !isTrustedFinoraControlCenterRenderer(
+          event.senderFrame,
+        )
+      ) {
+        return failure(
+          "FINORA Server disconnect is restricted to the dedicated Control Center renderer.",
+        );
+      }
+
+      return executePrivileged(
+        async () => {
+          await clearFinoraServerAdminCredential();
+
+          return true;
+        },
+      );
+    },
+  );
+
+
+  registerFinoraDeveloperProtectedControlCenterHandler(
+    FINORA_CONTROL_CENTER_IPC_CHANNELS
+      .PROVISION_SERVER_OWNER,
+    async (
+      event,
+      input:
+        unknown,
+    ) => {
+      if (
+        !isTrustedFinoraControlCenterRenderer(
+          event.senderFrame,
+        )
+      ) {
+        return failure(
+          "FINORA Server provisioning is restricted to the dedicated Control Center renderer.",
+        );
+      }
+
+      if (
+        typeof input !==
+          "object" ||
+        input === null ||
+        Array.isArray(
+          input,
+        )
+      ) {
+        return failure(
+          "FINORA Server provisioning request is invalid.",
+        );
+      }
+
+      return executePrivileged(
+        async () => {
+          const adminApiKey =
+            await readFinoraServerAdminCredential();
+
+          // FINORA_PROVISION_ADMIN_REJECTION_CLEAR_V1
+          try {
+            return await provisionFinoraServerOwner(
+              input as FinoraServerProvisionOwnerInput,
+              adminApiKey,
+            );
+          } catch (error) {
+            if (
+              error instanceof Error &&
+              error.message ===
+                "FINORA Server rejected the Control Center administrator credential."
+            ) {
+              await clearFinoraServerAdminCredential();
+            }
+
+            throw error;
+          }
+        },
+      );
+    },
+  );
+
 
   // ----------------------------------------------------------
   // DEVELOPER SECURITY SESSION STATE
@@ -1914,7 +2168,7 @@ registerFinoraDeveloperSecurityControlCenterHandler(
   );
 
   // ----------------------------------------------------------
-  // BRANCH CERTIFICATION ROTATION REQUEST Ã¢â‚¬â€ OPEN + VERIFY
+  // BRANCH CERTIFICATION ROTATION REQUEST
   // ----------------------------------------------------------
   registerFinoraDeveloperProtectedControlCenterHandler(
     FINORA_CONTROL_CENTER_IPC_CHANNELS
@@ -2024,7 +2278,7 @@ registerFinoraDeveloperSecurityControlCenterHandler(
   );
 
   // ----------------------------------------------------------
-  // BRANCH CERTIFICATION ROTATION Ã¢â‚¬â€ ISSUE + EXPORT + COMMIT
+  // BRANCH CERTIFICATION ROTATION
   //
   // Verified native possession evidence is consumed before
   // asynchronous issuance starts.
@@ -2263,7 +2517,7 @@ registerFinoraDeveloperSecurityControlCenterHandler(
   );
 
   // ----------------------------------------------------------
-  // INSTALLATION ENROLLMENT RESPONSE Ã¢â‚¬â€ ISSUE + EXPORT
+  // INSTALLATION ENROLLMENT RESPONSE
   //
   // Renderer authority is limited to the five operator
   // assignment strings validated above.
@@ -2921,7 +3175,7 @@ registerFinoraDeveloperSecurityControlCenterHandler(
 
   // ----------------------------------------------------------
   // ----------------------------------------------------------
-  // VERIFIED WALLET RECHARGE REQUEST Ã¢â‚¬â€ DECLINE + NATIVE EXPORT
+  // VERIFIED WALLET RECHARGE REQUEST
   //
   // Renderer supplies ZERO target / financial authority args.
   // The main-process verified Request session is consumed before
@@ -3864,7 +4118,7 @@ registerFinoraDeveloperSecurityControlCenterHandler(
   );
 
   // ----------------------------------------------------------
-  // CONTROL BUNDLE Ã¢â‚¬â€ ISSUE + NATIVE .FINORA EXPORT
+  // CONTROL BUNDLE
   //
   // The renderer supplies only the issuance draft.
   //
@@ -3950,7 +4204,7 @@ registerFinoraDeveloperSecurityControlCenterHandler(
   );
 
   // ----------------------------------------------------------
-  // ADMIN AUTHORITY RECOVERY Ã¢â‚¬â€ ENCRYPTED EXPORT
+  // ADMIN AUTHORITY RECOVERY
   //
   // Security Code is a one-shot main-process input only.
   // No filesystem path or private signing material is returned.
@@ -4590,7 +4844,7 @@ registerFinoraDeveloperSecurityControlCenterHandler(
   );
 
   // ----------------------------------------------------------
-  // ADMIN AUTHORITY RECOVERY Ã¢â‚¬â€ IMPORT + FRESH-MACHINE RESTORE
+  // ADMIN AUTHORITY RECOVERY
   //
   // Native file selection happens inside privileged transport.
   // Renderer supplies no path and no file bytes.

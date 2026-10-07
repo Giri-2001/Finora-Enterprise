@@ -154,7 +154,7 @@ type OwnerStorage =
 // ============================================================
 
 const USB_STATUS_POLL_INTERVAL_MS =
-  2000;
+  500;
 
 
 // ============================================================
@@ -466,6 +466,11 @@ export default function Login({
   ] = useState<string | null>(null);
 
   const [
+    usbStoragePath,
+    setUsbStoragePath,
+  ] = useState("");
+
+  const [
     usbAccessBusy,
     setUsbAccessBusy,
   ] = useState(false);
@@ -549,16 +554,16 @@ export default function Login({
             available,
           );
 
+          setUsbStoragePath(
+            available
+              ? (status.storagePath ?? status.storageId ?? "")
+              : "",
+          );
+
           setUsbMessage(
             available
-              ? (
-                status.message ??
-                "FINORA USB detected."
-              )
-              : (
-                status.message ??
-                "FINORA Pendrive is not connected."
-              ),
+              ? "FINORA USB detected."
+              : "No USB detected.",
           );
 
           if (initialCheck) {
@@ -587,10 +592,16 @@ export default function Login({
             available,
           );
 
+          setUsbStoragePath(
+            available
+              ? (status.storagePath ?? status.storageId ?? "")
+              : "",
+          );
+
           setUsbMessage(
             available
               ? "FINORA USB detected."
-              : "FINORA Pendrive is not connected.",
+              : "No USB detected.",
           );
 
           if (initialCheck) {
@@ -861,13 +872,16 @@ export default function Login({
         available,
       );
 
+      setUsbStoragePath(
+        available
+          ? (status.storagePath ?? status.storageId ?? "")
+          : "",
+      );
+
       setUsbMessage(
-        status.message ??
-          (
-            available
-              ? "FINORA USB detected."
-              : "FINORA USB is not ready."
-          ),
+        available
+          ? "FINORA USB detected."
+          : "No USB detected.",
       );
 
     } catch (usbAccessError) {
@@ -1444,10 +1458,16 @@ const loginSessionBridge =
 
           setError(
             loginResult.errorCode ===
-              "DEVICE_TRUST_FAILED"
-              ? "Unable to authorize this device."
-              : loginResult.error ??
-                "Unable to authorize this FINORA login.",
+              "SYSTEM_CLOCK_INVALID"
+              ? "System date/time is incorrect. Correct it and try again."
+              : loginResult.errorCode ===
+                  "SERVER_TIME_UNAVAILABLE"
+                ? "Unable to verify the current date/time. Check your internet connection and try again."
+                : loginResult.errorCode ===
+                    "DEVICE_TRUST_FAILED"
+                  ? "Unable to authorize this device."
+                  : loginResult.error ??
+                    "Unable to authorize this FINORA login.",
           );
         }
 
@@ -3012,6 +3032,11 @@ const loginSessionBridge =
                   }
                 >
                   {usbMessage}
+                  {usbAvailable && usbStoragePath && (
+                    <div style={{ marginTop: "4px", fontSize: "12px", opacity: 0.78, wordBreak: "break-all" }}>
+                      USB Storage: {usbStoragePath}
+                    </div>
+                  )}
                 </div>
 
                 {(

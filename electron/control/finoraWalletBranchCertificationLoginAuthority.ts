@@ -3,6 +3,10 @@ import {
 } from "./finoraPortableBranchAuthCrypto.js";
 
 import {
+  decryptFinoraPortableBranchAuthEnvelopeV2WithRecoveryCode,
+} from "./finoraPortableBranchAuthV2Crypto.js";
+
+import {
   readFinoraWalletBranchCertificationDeviceVault,
   writeFinoraWalletBranchCertificationDeviceVault,
 } from "./finoraWalletBranchCertificationDeviceVault.js";
@@ -14,6 +18,10 @@ import {
 import type {
   FinoraPortableBranchAuthStore,
 } from "./finoraPortableBranchAuthStore.js";
+
+import type {
+  FinoraPortableBranchAuthV2Store,
+} from "./finoraPortableBranchAuthV2Store.js";
 
 import type {
   FinoraControlStorageMode,
@@ -61,6 +69,9 @@ export interface RestoreFinoraWalletBranchCertificationAuthorityInput {
 
   portableStore:
     FinoraPortableBranchAuthStore;
+
+  portableV2Store?:
+    FinoraPortableBranchAuthV2Store;
 }
 
 export type RestoreFinoraWalletBranchCertificationAuthorityResult =
@@ -137,28 +148,43 @@ export async function restoreFinoraWalletBranchCertificationAuthority(
       };
     }
 
-    let envelope;
+    let v2Envelope;
+    let v1Envelope;
 
-    try {
-      envelope =
-        await input.portableStore.read(
-          input.storageMode,
-        );
-    }
-    catch {
-      return {
-        success:
-          false,
-
-        errorCode:
-          "CONTROL_STATE_FAILED",
-
-        error:
-          "FINORA Portable Branch Auth could not be read for Wallet Branch Certification.",
-      };
+    if (input.portableV2Store) {
+      try {
+        v2Envelope =
+          await input.portableV2Store.read(
+            input.storageMode,
+          );
+      }
+      catch {
+        // Same physical file may contain legacy V1 auth.
+      }
     }
 
-    if (!envelope) {
+    if (!v2Envelope) {
+      try {
+        v1Envelope =
+          await input.portableStore.read(
+            input.storageMode,
+          );
+      }
+      catch {
+        return {
+          success:
+            false,
+
+          errorCode:
+            "CONTROL_STATE_FAILED",
+
+          error:
+            "FINORA Portable Branch Auth could not be read for Wallet Branch Certification.",
+        };
+      }
+    }
+
+    if (!v2Envelope && !v1Envelope) {
       return {
         success:
           false,
@@ -174,24 +200,37 @@ export async function restoreFinoraWalletBranchCertificationAuthority(
     let payload;
 
     try {
-      payload =
-        await decryptFinoraPortableBranchAuthEnvelopeV1(
-          envelope,
-          input.password,
-          input.securityCode,
-          {
-            expectedScope: {
-              ownerId:
-                input.ownerId,
+      if (v2Envelope) {
+        payload =
+          await decryptFinoraPortableBranchAuthEnvelopeV2WithRecoveryCode(
+            v2Envelope,
+            input.securityCode,
+          );
+      }
+      else {
+        if (!v1Envelope) {
+          throw new Error("Portable Auth unavailable.");
+        }
 
-              businessId:
-                input.businessId,
+        payload =
+          await decryptFinoraPortableBranchAuthEnvelopeV1(
+            v1Envelope,
+            input.password,
+            input.securityCode,
+            {
+              expectedScope: {
+                ownerId:
+                  input.ownerId,
 
-              branchId:
-                input.branchId,
+                businessId:
+                  input.businessId,
+
+                branchId:
+                  input.branchId,
+              },
             },
-          },
-        );
+          );
+      }
     }
     catch {
       return {

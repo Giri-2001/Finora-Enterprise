@@ -1,5 +1,5 @@
 // ============================================================
-// FINORA ENTERPRISE OSÃ¢â€žÂ¢
+// FINORA ENTERPRISE OS
 //
 // CONTROL CENTER
 // DEDICATED PRIVILEGED PRELOAD
@@ -88,6 +88,21 @@ const CONTROL_CENTER_CHANNELS = {
 
   UPSERT_PROVISIONING_RESUME:
     "finora:control-center:upsert-provisioning-resume",
+
+  HAS_SERVER_ADMIN_CREDENTIAL:
+    "finora:control-center:has-server-admin-credential",
+
+  CONFIGURE_SERVER_ADMIN_CREDENTIAL:
+    "finora:control-center:configure-server-admin-credential",
+
+  VERIFY_SERVER_ADMIN_CREDENTIAL:
+    "finora:control-center:verify-server-admin-credential",
+
+  DISCONNECT_SERVER_ADMIN_CREDENTIAL:
+    "finora:control-center:disconnect-server-admin-credential",
+
+  PROVISION_SERVER_OWNER:
+    "finora:control-center:provision-server-owner",
 
   GET_FINORA_INCOME_PRICING:
     "finora:control-center:get-finora-income-pricing",
@@ -742,6 +757,64 @@ export interface FinoraControlCenterProvisioningResumeInput {
   username:
     string;
 }
+export interface FinoraServerProvisionOwnerInput {
+  ownerName: string;
+  mobile: string;
+  aadhaar?: string;
+  aadhaarConsent?: boolean;
+  businessName: string;
+  branchName: string;
+  username: string;
+  validFrom: string;
+  validUntil: string;
+  openingWalletBalance: number;
+}
+
+export interface FinoraServerProvisionOwnerView {
+  ok: true;
+  owner: {
+    ownerId: string;
+    ownerName: string;
+    mobile: string;
+    aadhaar: {
+      masked: string;
+      last4: string;
+      kycStatus: string;
+      consentAt: string | null;
+      verifiedAt: string | null;
+    } | null;
+  };
+  business: {
+    businessId: string;
+    businessName: string;
+  };
+  branch: {
+    branchId: string;
+    branchName: string;
+    storageMode: "USB";
+    status: string;
+  };
+  credentials: {
+    userId: string;
+    username: string;
+    temporaryPassword: string;
+    temporarySecurityCode: string;
+    mustChangePassword: boolean;
+    mustChangeSecurityCode: boolean;
+  };
+  subscription: {
+    subscriptionId: string;
+    validFrom: string;
+    validUntil: string;
+    remainingDays: number;
+    status: string;
+  };
+  wallet: {
+    walletId: string;
+    balanceInr: number;
+  };
+}
+
 export interface FinoraControlCenterBranchDirectoryMetadataView {
   ownerId:
     string;
@@ -1217,6 +1290,36 @@ export interface FinoraControlCenterBridge {
         >
       >;
 
+  hasServerAdminCredential:
+    () =>
+      Promise<
+        FinoraControlCenterResult<boolean>
+      >;
+
+  configureServerAdminCredential:
+    (apiKey: string) =>
+      Promise<
+        FinoraControlCenterResult<boolean>
+      >;
+
+  verifyServerAdminCredential:
+    () =>
+      Promise<
+        FinoraControlCenterResult<boolean>
+      >;
+
+  disconnectServerAdminCredential:
+    () =>
+      Promise<
+        FinoraControlCenterResult<boolean>
+      >;
+
+  provisionServerOwner:
+    (input: FinoraServerProvisionOwnerInput) =>
+      Promise<
+        FinoraControlCenterResult<FinoraServerProvisionOwnerView>
+      >;
+
   getFinoraIncomePricing:
     () =>
       Promise<
@@ -1688,6 +1791,48 @@ const controlCenterBridge:
         FinoraControlCenterResult<
           FinoraControlCenterProvisioningResumeView
         >
+      >,
+
+  hasServerAdminCredential:
+    () =>
+      ipcRenderer.invoke(
+        CONTROL_CENTER_CHANNELS.HAS_SERVER_ADMIN_CREDENTIAL,
+      ) as Promise<
+        FinoraControlCenterResult<boolean>
+      >,
+
+  configureServerAdminCredential:
+    (apiKey) =>
+      ipcRenderer.invoke(
+        CONTROL_CENTER_CHANNELS.CONFIGURE_SERVER_ADMIN_CREDENTIAL,
+        apiKey,
+      ) as Promise<
+        FinoraControlCenterResult<boolean>
+      >,
+
+  verifyServerAdminCredential:
+    () =>
+      ipcRenderer.invoke(
+        CONTROL_CENTER_CHANNELS.VERIFY_SERVER_ADMIN_CREDENTIAL,
+      ) as Promise<
+        FinoraControlCenterResult<boolean>
+      >,
+
+  disconnectServerAdminCredential:
+    () =>
+      ipcRenderer.invoke(
+        CONTROL_CENTER_CHANNELS.DISCONNECT_SERVER_ADMIN_CREDENTIAL,
+      ) as Promise<
+        FinoraControlCenterResult<boolean>
+      >,
+
+  provisionServerOwner:
+    (input) =>
+      ipcRenderer.invoke(
+        CONTROL_CENTER_CHANNELS.PROVISION_SERVER_OWNER,
+        input,
+      ) as Promise<
+        FinoraControlCenterResult<FinoraServerProvisionOwnerView>
       >,
 
   getFinoraIncomePricing:

@@ -1,3 +1,5 @@
+import { generateFinoraHumanId } from "./finoraHumanReadableId";
+
 import { ChevronDown } from "lucide-react";
 import {
   useState,
@@ -324,7 +326,7 @@ export default function FinoraControlCenterBranchAccessForm({
         initialGrantId ||
         (
           initialAction === "ISSUE"
-            ? `GRANT-BRANCH-ACCESS-${crypto.randomUUID().toUpperCase()}`
+            ? generateFinoraHumanId()
             : ""
         ),
 
@@ -431,7 +433,7 @@ export default function FinoraControlCenterBranchAccessForm({
     function generateCredentialAuthorizationId(): void {
     update(
       "credentialAuthorizationId",
-      `FINORA-CREDENTIAL-ENROLLMENT-${crypto.randomUUID().toUpperCase()}`,
+      generateFinoraHumanId(),
     );
   }
   const isRenewalMode =

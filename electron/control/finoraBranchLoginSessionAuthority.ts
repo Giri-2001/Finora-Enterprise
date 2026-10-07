@@ -1,5 +1,5 @@
-﻿/* ============================================================
-   FINORA ENTERPRISE OSâ„¢
+/* ============================================================
+   FINORA ENTERPRISE OS
 
    ELECTRON CONTROL
    BRANCH LOGIN SESSION AUTHORITY
@@ -73,6 +73,10 @@ import type {
   FinoraPortableBranchAuthStore,
 } from "./finoraPortableBranchAuthStore.js";
 
+import type {
+  FinoraPortableBranchAuthV2Store,
+} from "./finoraPortableBranchAuthV2Store.js";
+
 import {
   bootstrapFinoraLegacySecurityCode,
 } from "./finoraLegacySecurityCodeBootstrapCoordinator.js";
@@ -80,6 +84,10 @@ import {
 import {
   restoreFinoraWalletBranchCertificationAuthority,
 } from "./finoraWalletBranchCertificationLoginAuthority.js";
+
+import {
+  observeFinoraServerTimeAuthority,
+} from "./finoraServerTimeAuthority.js";
 
 // ============================================================
 // CONSTANTS
@@ -192,7 +200,9 @@ export type FinoraBranchLoginErrorCode =
   | "BRANCH_ACCESS_DENIED"
   | "STORAGE_MODE_MISMATCH"
   | "STORAGE_ENTITLEMENT_DENIED"
-  | "CONTROL_STATE_FAILED";
+  | "CONTROL_STATE_FAILED"
+  | "SYSTEM_CLOCK_INVALID"
+  | "SERVER_TIME_UNAVAILABLE";
 
 export type FinoraBranchLoginResult =
   | {
@@ -363,6 +373,12 @@ interface FinoraBranchLoginSessionRecord {
     string;
 
   lastActivityMonotonicMs:
+    bigint;
+
+  authoritativeBaseTimeMs:
+    number;
+
+  authoritativeBaseMonotonicMs:
     bigint;
 }
 
@@ -633,6 +649,25 @@ function monotonicNowMs():
   );
 }
 
+function resolveSessionAuthoritativeNow(
+  record:
+    FinoraBranchLoginSessionRecord,
+
+  currentMonotonicMs:
+    bigint,
+): Date {
+  const elapsedMs =
+    Number(
+      currentMonotonicMs -
+      record.authoritativeBaseMonotonicMs,
+    );
+
+  return new Date(
+    record.authoritativeBaseTimeMs +
+      elapsedMs,
+  );
+}
+
 function isSessionExpired(
   record:
     FinoraBranchLoginSessionRecord,
@@ -889,6 +924,9 @@ async function authorizePrincipal(
 
   requestedStorageMode:
     FinoraControlStorageMode,
+
+  trustedObservedNow?:
+    Date,
 ): Promise<
   FinoraBranchAuthorizationResult
 > {
@@ -922,7 +960,9 @@ async function authorizePrincipal(
 
       branchId:
         principal.branchId,
-    });
+    },
+      trustedObservedNow,
+    );
 
   if (
     !accessResult.success
@@ -1226,6 +1266,9 @@ export async function createFinoraBranchLoginSession(
 
   recoverFreshDevice?:
     FinoraBranchFreshDeviceRecovery,
+
+  portableV2Store?:
+    FinoraPortableBranchAuthV2Store,
 ): Promise<
   FinoraBranchLoginResult
 > {
@@ -1615,6 +1658,8 @@ export async function createFinoraBranchLoginSession(
           authenticationResult.data,
 
         portableStore,
+
+        portableV2Store,
       });
 
     if (
@@ -1661,6 +1706,8 @@ export async function createFinoraBranchLoginSession(
             authenticationResult.data,
 
           portableStore,
+
+          portableV2Store,
 
           password:
             request.password,
@@ -1718,6 +1765,28 @@ export async function createFinoraBranchLoginSession(
     }
   }
 
+  const serverTimeResult =
+    await observeFinoraServerTimeAuthority();
+
+  if (!serverTimeResult.success) {
+    return {
+      success:
+        false,
+
+      errorCode:
+        serverTimeResult.errorCode ===
+          "SYSTEM_CLOCK_INVALID"
+          ? "SYSTEM_CLOCK_INVALID"
+          : "SERVER_TIME_UNAVAILABLE",
+
+      error:
+        serverTimeResult.error,
+    };
+  }
+
+  const authoritativeLoginTime =
+    serverTimeResult.data.serverTime;
+
   const principal =
     toPrincipalFromAuthentication(
       authenticationResult.data,
@@ -1740,6 +1809,7 @@ export async function createFinoraBranchLoginSession(
       ...(request.securityCode === undefined ? {} : { securityCode: request.securityCode }),
       portableSessionOnly: portableUsbAccess,
       portableStore,
+      portableV2Store,
     });
 
   if (!walletBranchCertificationResult.success) {
@@ -1750,6 +1820,7 @@ export async function createFinoraBranchLoginSession(
     await authorizePrincipal(
       principal,
       request.storageMode,
+      new Date(serverTimeResult.data.serverTimeMs),
     );
 
   if (
@@ -1781,7 +1852,7 @@ export async function createFinoraBranchLoginSession(
   }
 
   const now =
-    new Date().toISOString();
+    authoritativeLoginTime;
 
   const sessionId =
     createOpaqueSessionId();
@@ -1803,6 +1874,12 @@ export async function createFinoraBranchLoginSession(
         now,
 
       lastActivityMonotonicMs:
+        monotonicNowMs(),
+
+      authoritativeBaseTimeMs:
+        serverTimeResult.data.serverTimeMs,
+
+      authoritativeBaseMonotonicMs:
         monotonicNowMs(),
     };
 
@@ -1962,6 +2039,7 @@ export async function resolveFinoraBranchOperationalSessionContext(
     await authorizePrincipal(
       principal,
       record.selectedStorageMode,
+      resolveSessionAuthoritativeNow(record, monotonicNowMs()),
     );
 
   if (
@@ -2126,7 +2204,7 @@ export function touchFinoraBranchLoginSession(
   }
 
   const lastActivity =
-    new Date().toISOString();
+    resolveSessionAuthoritativeNow(record, currentMonotonicMs).toISOString();
 
   record.lastActivity =
     lastActivity;

@@ -1,5 +1,5 @@
 /* ===========================================================
-   FINORA ENTERPRISE OS™
+   FINORA ENTERPRISE OS
 
    BRANCH ACCESS AUTHORITY SERVICE
 
@@ -244,6 +244,9 @@ function validateRequest(
 export async function evaluateFinoraAuthoritativeBranchAccess(
   request:
     FinoraBranchAccessAuthorityRequest,
+
+  trustedObservedNow?:
+    Date,
 ): Promise<
   FinoraBranchAccessAuthorityResult
 > {
@@ -266,19 +269,43 @@ export async function evaluateFinoraAuthoritativeBranchAccess(
   // on this production authorization API.
   // ----------------------------------------------------------
 
-  const clockResult =
-    await observeFinoraAuthoritativeWallClock();
+  let observedAt:
+    string;
 
-  if (!clockResult.success) {
-    return failure(
-      "CLOCK_AUTHORITY_FAILED",
-      clockResult.error,
-      clockResult.errorCode,
-    );
+  if (trustedObservedNow) {
+    const trustedObservedAtMs =
+      trustedObservedNow.getTime();
+
+    if (
+      !Number.isFinite(
+        trustedObservedAtMs,
+      )
+    ) {
+      return failure(
+        "CLOCK_AUTHORITY_FAILED",
+        "FINORA trusted server-time observation is invalid.",
+      );
+    }
+
+    observedAt =
+      new Date(
+        trustedObservedAtMs,
+      ).toISOString();
+  } else {
+    const clockResult =
+      await observeFinoraAuthoritativeWallClock();
+
+    if (!clockResult.success) {
+      return failure(
+        "CLOCK_AUTHORITY_FAILED",
+        clockResult.error,
+        clockResult.errorCode,
+      );
+    }
+
+    observedAt =
+      clockResult.data.observedAt;
   }
-
-  const observedAt =
-    clockResult.data.observedAt;
 
   const currentTime =
     Date.parse(

@@ -23,6 +23,7 @@ import {
   useEffect,
   useState,
 } from "react";
+import { LoaderCircle, ShieldCheck } from "lucide-react";
 
 import type {
   FinoraControlCenterTrustRecordView,
@@ -37,7 +38,7 @@ import FinoraControlCenterIssuanceWorkspace from "./FinoraControlCenterIssuanceW
 import "./FinoraControlCenterResponsive.css";
 
 /* ===========================================================
-   FINORA ENTERPRISE OSÃ¢â€žÂ¢
+   FINORA ENTERPRISE OS
 
    CONTROL CENTER
    SHELL FOUNDATION
@@ -1133,7 +1134,7 @@ export default function FinoraControlCenterShell() {
               }}
             >
               {submitting
-                ? "Configuringâ€¦"
+                ? "Configuring..."
                 : "Configure Developer Security Code"}
             </button>
 
@@ -1271,7 +1272,7 @@ export default function FinoraControlCenterShell() {
                     0.72,
                 }}
               >
-                Checking Developer security stateâ€¦
+                Checking Developer security state...
               </p>
             )}
 
@@ -1367,11 +1368,22 @@ export default function FinoraControlCenterShell() {
                     : 1,
               }}
             >
-              {checking
-                ? "Checking securityâ€¦"
-                : submitting
-                  ? "Verifyingâ€¦"
-                  : "Access Control Center"}
+              {checking ? (
+                <>
+                  <LoaderCircle size={16} aria-hidden="true" />
+                  <span>Checking security...</span>
+                </>
+              ) : submitting ? (
+                <>
+                  <LoaderCircle size={16} aria-hidden="true" />
+                  <span>Verifying...</span>
+                </>
+              ) : (
+                <>
+                  <ShieldCheck size={16} aria-hidden="true" />
+                  <span>Access Control Center</span>
+                </>
+              )}
             </button>
           </form>
         )}
@@ -1781,7 +1793,7 @@ const [
                   0.76,
               }}
             >
-              Loading Control Center trust identityâ€¦
+              Loading Control Center trust identity...
             </p>
           )}
 

@@ -1,3 +1,5 @@
+import { generateFinoraHumanId } from "./finoraHumanReadableId";
+
 import {
   useState,
 } from "react";
@@ -9,7 +11,7 @@ import type {
 } from "./FinoraControlCenterIssuanceForm.types";
 
 /* ===========================================================
-   FINORA ENTERPRISE OSâ„¢
+    FINORA ENTERPRISE OS
 
    CONTROL CENTER
    BRANCH ACTIVATION FORM FOUNDATION
@@ -265,7 +267,7 @@ export default function FinoraControlCenterBranchActivationForm({
       "ISSUE",
 
     activationId:
-      `ACTIVATION-${crypto.randomUUID().toUpperCase()}`,
+      generateFinoraHumanId(),
 
     activationActivatedAt:
       new Date().toISOString(),
@@ -485,7 +487,7 @@ export default function FinoraControlCenterBranchActivationForm({
             0.58,
         }}
       >
-        Target scope: {target.ownerId || "â€”"} / {target.businessId || "â€”"} / {target.branchId || "â€”"}
+        Target scope: {target.ownerId || "-"} / {target.businessId || "-"} / {target.branchId || "-"}
       </div>
     </section>
   );

@@ -1,5 +1,5 @@
 /* ============================================================
-   FINORA ENTERPRISE OS™
+   FINORA ENTERPRISE OS
 
    PORTABLE FRESH-DEVICE LOGIN RECOVERY SERVICE
 
@@ -36,6 +36,12 @@ import {
 } from "./finoraPortableBranchAuthCrypto.js";
 
 import {
+  FinoraPortableBranchAuthV2CryptoError,
+  decryptFinoraPortableBranchAuthEnvelopeV2WithPassword,
+  decryptFinoraPortableBranchAuthEnvelopeV2WithRecoveryCode,
+} from "./finoraPortableBranchAuthV2Crypto.js";
+
+import {
   createFinoraPortableBranchAuthFingerprint,
 } from "./finoraBranchDeviceTrustAuthority.js";
 
@@ -62,6 +68,10 @@ import type {
 import type {
   FinoraPortableBranchAuthStore,
 } from "./finoraPortableBranchAuthStore.js";
+
+import type {
+  FinoraPortableBranchAuthV2Store,
+} from "./finoraPortableBranchAuthV2Store.js";
 
 import type {
   FinoraBranchFreshDeviceRecovery,
@@ -258,6 +268,8 @@ function loginFailure(
 export function createFinoraPortableFreshDeviceLoginRecovery(
   runtimeAuthorityStore:
     FinoraPortableFreshDeviceRuntimeAuthorityStore,
+  portableV2Store?:
+    FinoraPortableBranchAuthV2Store,
 ): FinoraBranchFreshDeviceRecovery {
   return async (
     request,
@@ -266,6 +278,8 @@ export function createFinoraPortableFreshDeviceLoginRecovery(
   ): Promise<
     FinoraBranchFreshDeviceRecoveryResult
   > => {
+    let activePortableAuthVersion: "V1" | "V2" = "V1";
+
     const bootstrapResult =
       await prepareFinoraFreshDeviceBootstrap(
         request,
@@ -274,24 +288,60 @@ export function createFinoraPortableFreshDeviceLoginRecovery(
             canonicalizeFinoraPortableBranchUsername,
 
           readPortableAuth:
-            (
+            async (
               storageMode,
-            ) =>
-              portableStore.read(
+            ) => {
+              if (portableV2Store) {
+                try {
+                  const v2Envelope =
+                    await portableV2Store.read(
+                      storageMode,
+                    );
+
+                  if (v2Envelope) {
+                    activePortableAuthVersion = "V2";
+                    return v2Envelope;
+                  }
+                }
+                catch {
+                  // Legacy V1 auth may occupy the same physical path.
+                }
+              }
+
+              activePortableAuthVersion = "V1";
+              return portableStore.read(
                 storageMode,
-              ),
+              );
+            },
 
           verifyPortablePassword:
             async (
               envelope,
               password,
-            ) =>
-              verifyFinoraPortableBranchAuthPassword(
+            ) => {
+              if (activePortableAuthVersion === "V2") {
+                try {
+                  await decryptFinoraPortableBranchAuthEnvelopeV2WithPassword(
+                    envelope as Parameters<
+                      typeof decryptFinoraPortableBranchAuthEnvelopeV2WithPassword
+                    >[0],
+                    password,
+                  );
+
+                  return true;
+                }
+                catch {
+                  return false;
+                }
+              }
+
+              return verifyFinoraPortableBranchAuthPassword(
                 toPortableEnvelope(
                   envelope,
                 ),
                 password,
-              ),
+              );
+            },
 
           decryptPortableAuth:
             async (
@@ -299,6 +349,63 @@ export function createFinoraPortableFreshDeviceLoginRecovery(
               password,
               securityCode,
             ) => {
+              if (activePortableAuthVersion === "V2") {
+                try {
+                  const v2Envelope =
+                    envelope as Parameters<
+                      typeof decryptFinoraPortableBranchAuthEnvelopeV2WithPassword
+                    >[0];
+
+                  const passwordPayload =
+                    await decryptFinoraPortableBranchAuthEnvelopeV2WithPassword(
+                      v2Envelope,
+                      password,
+                    );
+
+                  const recoveryPayload =
+                    await decryptFinoraPortableBranchAuthEnvelopeV2WithRecoveryCode(
+                      v2Envelope,
+                      securityCode,
+                    );
+
+                  if (
+                    JSON.stringify(passwordPayload) !==
+                    JSON.stringify(recoveryPayload)
+                  ) {
+                    return {
+                      success: false,
+                      errorCode: "PORTABILITY_AUTH_VERIFICATION_FAILED",
+                    };
+                  }
+
+                  return {
+                    success: true,
+                    payload: toFreshDevicePortablePayload(
+                      passwordPayload,
+                    ),
+                  };
+                }
+                catch (error) {
+                  if (
+                    error instanceof FinoraPortableBranchAuthV2CryptoError &&
+                    (
+                      error.code === "INVALID_CREDENTIALS" ||
+                      error.code === "AUTHENTICATION_FAILED"
+                    )
+                  ) {
+                    return {
+                      success: false,
+                      errorCode: "SECURITY_CODE_INVALID",
+                    };
+                  }
+
+                  return {
+                    success: false,
+                    errorCode: "PORTABILITY_AUTH_VERIFICATION_FAILED",
+                  };
+                }
+              }
+
               try {
                 const payload =
                   await decryptFinoraPortableBranchAuthEnvelopeV1(

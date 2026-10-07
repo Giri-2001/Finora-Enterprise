@@ -10,7 +10,7 @@ import type {
 } from "./FinoraControlCenterIssuanceForm.types";
 
 /* ===========================================================
-   FINORA ENTERPRISE OSÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢
+    FINORA ENTERPRISE OS
 
    CONTROL CENTER
    BUSINESS PROFILE FORM FOUNDATION
@@ -568,7 +568,7 @@ export default function FinoraControlCenterBusinessProfileForm({
             0.58,
         }}
       >
-        Target scope: {target.ownerId || "ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â"} / {target.businessId || "ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â"} / {target.branchId || "ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â"} / {target.installationId || "ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â"}
+        Target scope: {target.ownerId || "-"} / {target.businessId || "-"} / {target.branchId || "-"}
       </div>
     </section>
   );

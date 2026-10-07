@@ -61,6 +61,11 @@ import {
 } from "./finoraPortableBranchAuthCrypto.js";
 
 import {
+  decryptFinoraPortableBranchAuthEnvelopeV2WithRecoveryCode,
+} from "./finoraPortableBranchAuthV2Crypto.js";
+
+import {
+  serializeFinoraPortableBranchAuthEnvelope,
   serializeFinoraPortableBranchAuthEnvelopeV1,
 } from "./finoraPortableBranchAuthContract.js";
 
@@ -78,11 +83,16 @@ import type {
 
 import type {
   FinoraPortableBranchAuthEnvelopeV1,
+  FinoraPortableBranchAuthEnvelopeV2,
 } from "./finoraPortableBranchAuthContract.js";
 
 import type {
   FinoraPortableBranchAuthStore,
 } from "./finoraPortableBranchAuthStore.js";
+
+import type {
+  FinoraPortableBranchAuthV2Store,
+} from "./finoraPortableBranchAuthV2Store.js";
 
 import type {
   FinoraBranchDeviceTrustRecord,
@@ -141,6 +151,9 @@ export interface FinoraBranchDeviceTrustCheckInput {
 
   portableStore:
     FinoraPortableBranchAuthStore;
+
+  portableV2Store?:
+    FinoraPortableBranchAuthV2Store;
 }
 
 export interface FinoraBranchDeviceTrustAuthorizeInput {
@@ -149,6 +162,9 @@ export interface FinoraBranchDeviceTrustAuthorizeInput {
 
   portableStore:
     FinoraPortableBranchAuthStore;
+
+  portableV2Store?:
+    FinoraPortableBranchAuthV2Store;
 
   password:
     string;
@@ -315,7 +331,7 @@ function contextsEqual(
 
 function outerEnvelopeMatchesPrincipal(
   envelope:
-    FinoraPortableBranchAuthEnvelopeV1,
+    FinoraDeviceTrustPortableEnvelope,
 
   principal:
     FinoraBranchDeviceTrustCheckPrincipal,
@@ -440,18 +456,93 @@ function principalMatchesRecord(
   );
 }
 
+type FinoraDeviceTrustPortableEnvelope =
+  | FinoraPortableBranchAuthEnvelopeV1
+  | FinoraPortableBranchAuthEnvelopeV2;
+
+function isFinoraPortableBranchAuthEnvelopeV2(
+  envelope:
+    FinoraDeviceTrustPortableEnvelope,
+): envelope is FinoraPortableBranchAuthEnvelopeV2 {
+  return envelope.schemaVersion === 2;
+}
+
+async function readFinoraDeviceTrustPortableEnvelope(
+  input:
+    Pick<
+      FinoraBranchDeviceTrustCheckInput,
+      "principal" | "portableStore" | "portableV2Store"
+    >,
+): Promise<
+  {
+    envelope:
+      FinoraDeviceTrustPortableEnvelope | null;
+
+    source:
+      "V1" | "V2" | "NONE";
+  }
+> {
+  if (input.portableV2Store) {
+    try {
+      const envelope =
+        await input.portableV2Store.read(
+          input.principal.storageMode,
+        );
+
+      if (envelope) {
+        return {
+          envelope,
+          source:
+            "V2",
+        };
+      }
+    }
+    catch {
+      // Legacy V1 data may occupy the same physical path.
+    }
+  }
+
+  try {
+    const envelope =
+      await input.portableStore.read(
+        input.principal.storageMode,
+      );
+
+    return {
+      envelope,
+      source:
+        envelope
+          ? "V1"
+          : "NONE",
+    };
+  }
+  catch {
+    return {
+      envelope:
+        null,
+      source:
+        "NONE",
+    };
+  }
+}
 // ============================================================
 // CANONICAL PORTABLE AUTH FINGERPRINT
 // ============================================================
 
 export function createFinoraPortableBranchAuthFingerprint(
   envelope:
-    FinoraPortableBranchAuthEnvelopeV1,
+    FinoraDeviceTrustPortableEnvelope,
 ): string {
   const canonical =
-    serializeFinoraPortableBranchAuthEnvelopeV1(
+    isFinoraPortableBranchAuthEnvelopeV2(
       envelope,
-    );
+    )
+      ? serializeFinoraPortableBranchAuthEnvelope(
+          envelope,
+        )
+      : serializeFinoraPortableBranchAuthEnvelopeV1(
+          envelope,
+        );
 
   return createHash(
     "sha256",
@@ -480,21 +571,14 @@ export async function checkFinoraCurrentBranchDeviceTrust(
 ): Promise<
   FinoraBranchDeviceTrustCheckResult
 > {
-  let envelope:
-    FinoraPortableBranchAuthEnvelopeV1 | null;
-
-  try {
-    envelope =
-      await input.portableStore.read(
-        input.principal.storageMode,
-      );
-  }
-  catch {
-    return checkFailure(
-      "PORTABLE_AUTH_UNAVAILABLE",
-      "FINORA Portable Branch Auth state is unavailable.",
+  const portableRead =
+    await readFinoraDeviceTrustPortableEnvelope(
+      input,
     );
-  }
+
+  let envelope:
+    FinoraDeviceTrustPortableEnvelope | null =
+      portableRead.envelope;
 
   if (!envelope) {
     /*
@@ -689,21 +773,13 @@ async function authorizeCurrentDeviceInternal(
 ): Promise<
   FinoraBranchDeviceTrustAuthorizeResult
 > {
-  let envelope:
-    FinoraPortableBranchAuthEnvelopeV1 | null;
-
-  try {
-    envelope =
-      await input.portableStore.read(
-        input.principal.storageMode,
-      );
-  }
-  catch {
-    return authorizeFailure(
-      "PORTABLE_AUTH_UNAVAILABLE",
-      "FINORA Portable Branch Auth state is unavailable.",
+  const portableRead =
+    await readFinoraDeviceTrustPortableEnvelope(
+      input,
     );
-  }
+
+  const envelope =
+    portableRead.envelope;
 
   if (!envelope) {
     return authorizeFailure(
@@ -762,24 +838,37 @@ async function authorizeCurrentDeviceInternal(
     >;
 
   try {
-    payload =
-      await decryptFinoraPortableBranchAuthEnvelopeV1(
+    if (
+      isFinoraPortableBranchAuthEnvelopeV2(
         envelope,
-        input.password,
-        input.securityCode,
-        {
-          expectedScope: {
-            ownerId:
-              input.principal.ownerId,
+      )
+    ) {
+      payload =
+        await decryptFinoraPortableBranchAuthEnvelopeV2WithRecoveryCode(
+          envelope,
+          input.securityCode,
+        );
+    }
+    else {
+      payload =
+        await decryptFinoraPortableBranchAuthEnvelopeV1(
+          envelope,
+          input.password,
+          input.securityCode,
+          {
+            expectedScope: {
+              ownerId:
+                input.principal.ownerId,
 
-            businessId:
-              input.principal.businessId,
+              businessId:
+                input.principal.businessId,
 
-            branchId:
-              input.principal.branchId,
+              branchId:
+                input.principal.branchId,
+            },
           },
-        },
-      );
+        );
+    }
   }
   catch {
     return authorizeFailure(

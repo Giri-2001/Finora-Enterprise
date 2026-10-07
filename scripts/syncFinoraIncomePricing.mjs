@@ -73,6 +73,103 @@ function isValidPrice(
   );
 }
 
+function isValidSubscriptionPrice(
+  value,
+) {
+
+  if (
+    typeof value !== "number" ||
+    !Number.isFinite(
+      value,
+    ) ||
+    value < 0 ||
+    value > 1000000
+  ) {
+    return false;
+  }
+
+  const minor =
+    value *
+    100;
+
+  return (
+    Math.abs(
+      minor -
+      Math.round(
+        minor,
+      ),
+    ) <
+    0.000001
+  );
+}
+
+function normalizeOptionalText(
+  value,
+  maximumLength,
+) {
+
+  if (
+    value === undefined ||
+    value === null
+  ) {
+    return undefined;
+  }
+
+  if (typeof value !== "string") {
+    throw new Error(
+      "FINORA Pricing notice text must be a string.",
+    );
+  }
+
+  const normalized =
+    value.trim();
+
+  if (!normalized) {
+    return undefined;
+  }
+
+  if (
+    normalized.length >
+      maximumLength
+  ) {
+    throw new Error(
+      "FINORA Pricing notice text is too long.",
+    );
+  }
+
+  return normalized;
+}
+
+function normalizeOptionalDateTime(
+  value,
+) {
+
+  const normalized =
+    normalizeOptionalText(
+      value,
+      64,
+    );
+
+  if (!normalized) {
+    return undefined;
+  }
+
+  const timestamp =
+    Date.parse(
+      normalized,
+    );
+
+  if (Number.isNaN(timestamp)) {
+    throw new Error(
+      "FINORA Pricing notice date is invalid.",
+    );
+  }
+
+  return new Date(
+    timestamp,
+  ).toISOString();
+}
+
 function isValidId(
   value,
 ) {
@@ -155,6 +252,64 @@ function extractGeneratedPrice(
   )
     ? value
     : undefined;
+}
+
+function extractGeneratedSubscriptionPrice(
+  source,
+  key,
+) {
+
+  const match =
+    new RegExp(
+      `${key}:\\s*([0-9]+(?:\\.[0-9]+)?)`,
+    ).exec(
+      source,
+    );
+
+  if (!match) {
+    return undefined;
+  }
+
+  const value =
+    Number(
+      match[1],
+    );
+
+  return isValidSubscriptionPrice(
+    value,
+  )
+    ? value
+    : undefined;
+}
+
+function extractGeneratedString(
+  source,
+  key,
+) {
+
+  const match =
+    new RegExp(
+      `${key}:\\s*("(?:\\\\.|[^"\\\\])*")`,
+    ).exec(
+      source,
+    );
+
+  if (!match) {
+    return undefined;
+  }
+
+  try {
+    const value =
+      JSON.parse(
+        match[1],
+      );
+
+    return typeof value === "string"
+      ? value
+      : undefined;
+  } catch {
+    return undefined;
+  }
 }
 
 function extractGeneratedBranchArray(
@@ -243,6 +398,54 @@ function extractGeneratedPricingObject(
       extractGeneratedPrice(
         tail,
         "collectionAbove50000Fee",
+      ),
+
+    subscription1MonthFee:
+      extractGeneratedSubscriptionPrice(
+        tail,
+        "subscription1MonthFee",
+      ),
+
+    subscription3MonthFee:
+      extractGeneratedSubscriptionPrice(
+        tail,
+        "subscription3MonthFee",
+      ),
+
+    subscription6MonthFee:
+      extractGeneratedSubscriptionPrice(
+        tail,
+        "subscription6MonthFee",
+      ),
+
+    subscription12MonthFee:
+      extractGeneratedSubscriptionPrice(
+        tail,
+        "subscription12MonthFee",
+      ),
+
+    pricingNoticeTitle:
+      extractGeneratedString(
+        tail,
+        "pricingNoticeTitle",
+      ),
+
+    pricingNoticeMessage:
+      extractGeneratedString(
+        tail,
+        "pricingNoticeMessage",
+      ),
+
+    pricingNoticeEffectiveFrom:
+      extractGeneratedString(
+        tail,
+        "pricingNoticeEffectiveFrom",
+      ),
+
+    pricingNoticeEffectiveUntil:
+      extractGeneratedString(
+        tail,
+        "pricingNoticeEffectiveUntil",
       ),
   };
 
@@ -341,6 +544,64 @@ function validateGlobalPricing(
     }
   }
 
+  const subscriptionKeys = [
+    "subscription1MonthFee",
+    "subscription3MonthFee",
+    "subscription6MonthFee",
+    "subscription12MonthFee",
+  ];
+
+  for (const key of subscriptionKeys) {
+
+    if (
+      value[key] !== undefined &&
+      !isValidSubscriptionPrice(
+        value[key],
+      )
+    ) {
+      throw new Error(
+        `FINORA Subscription Pricing field ${key} is invalid.`,
+      );
+    }
+  }
+
+  const pricingNoticeTitle =
+    normalizeOptionalText(
+      value.pricingNoticeTitle,
+      120,
+    );
+
+  const pricingNoticeMessage =
+    normalizeOptionalText(
+      value.pricingNoticeMessage,
+      500,
+    );
+
+  const pricingNoticeEffectiveFrom =
+    normalizeOptionalDateTime(
+      value.pricingNoticeEffectiveFrom,
+    );
+
+  const pricingNoticeEffectiveUntil =
+    normalizeOptionalDateTime(
+      value.pricingNoticeEffectiveUntil,
+    );
+
+  if (
+    pricingNoticeEffectiveFrom &&
+    pricingNoticeEffectiveUntil &&
+    Date.parse(
+      pricingNoticeEffectiveUntil,
+    ) <=
+      Date.parse(
+        pricingNoticeEffectiveFrom,
+      )
+  ) {
+    throw new Error(
+      "FINORA Pricing notice valid-until must be later than valid-from.",
+    );
+  }
+
   return {
     customerCreateFee:
       value.customerCreateFee,
@@ -356,6 +617,58 @@ function validateGlobalPricing(
 
     collectionAbove50000Fee:
       value.collectionAbove50000Fee,
+
+    ...(value.subscription1MonthFee === undefined
+      ? {}
+      : {
+          subscription1MonthFee:
+            value.subscription1MonthFee,
+        }),
+
+    ...(value.subscription3MonthFee === undefined
+      ? {}
+      : {
+          subscription3MonthFee:
+            value.subscription3MonthFee,
+        }),
+
+    ...(value.subscription6MonthFee === undefined
+      ? {}
+      : {
+          subscription6MonthFee:
+            value.subscription6MonthFee,
+        }),
+
+    ...(value.subscription12MonthFee === undefined
+      ? {}
+      : {
+          subscription12MonthFee:
+            value.subscription12MonthFee,
+        }),
+
+    ...(pricingNoticeTitle
+      ? {
+          pricingNoticeTitle,
+        }
+      : {}),
+
+    ...(pricingNoticeMessage
+      ? {
+          pricingNoticeMessage,
+        }
+      : {}),
+
+    ...(pricingNoticeEffectiveFrom
+      ? {
+          pricingNoticeEffectiveFrom,
+        }
+      : {}),
+
+    ...(pricingNoticeEffectiveUntil
+      ? {
+          pricingNoticeEffectiveUntil,
+        }
+      : {}),
   };
 }
 
@@ -737,6 +1050,30 @@ export interface FinoraIncomePricingDefaults {
 
   collectionAbove50000Fee:
     number;
+
+  subscription1MonthFee?:
+    number;
+
+  subscription3MonthFee?:
+    number;
+
+  subscription6MonthFee?:
+    number;
+
+  subscription12MonthFee?:
+    number;
+
+  pricingNoticeTitle?:
+    string;
+
+  pricingNoticeMessage?:
+    string;
+
+  pricingNoticeEffectiveFrom?:
+    string;
+
+  pricingNoticeEffectiveUntil?:
+    string;
 }
 
 export interface FinoraBranchPricingOverride {
@@ -783,6 +1120,46 @@ export const FINORA_INCOME_PRICING_DEFAULTS:
 
       collectionAbove50000Fee:
         ${pricing.collectionAbove50000Fee},
+${pricing.subscription1MonthFee === undefined
+  ? ""
+  : `
+      subscription1MonthFee:
+        ${pricing.subscription1MonthFee},`}
+${pricing.subscription3MonthFee === undefined
+  ? ""
+  : `
+      subscription3MonthFee:
+        ${pricing.subscription3MonthFee},`}
+${pricing.subscription6MonthFee === undefined
+  ? ""
+  : `
+      subscription6MonthFee:
+        ${pricing.subscription6MonthFee},`}
+${pricing.subscription12MonthFee === undefined
+  ? ""
+  : `
+      subscription12MonthFee:
+        ${pricing.subscription12MonthFee},`}
+${pricing.pricingNoticeTitle === undefined
+  ? ""
+  : `
+      pricingNoticeTitle:
+        ${JSON.stringify(pricing.pricingNoticeTitle)},`}
+${pricing.pricingNoticeMessage === undefined
+  ? ""
+  : `
+      pricingNoticeMessage:
+        ${JSON.stringify(pricing.pricingNoticeMessage)},`}
+${pricing.pricingNoticeEffectiveFrom === undefined
+  ? ""
+  : `
+      pricingNoticeEffectiveFrom:
+        ${JSON.stringify(pricing.pricingNoticeEffectiveFrom)},`}
+${pricing.pricingNoticeEffectiveUntil === undefined
+  ? ""
+  : `
+      pricingNoticeEffectiveUntil:
+        ${JSON.stringify(pricing.pricingNoticeEffectiveUntil)},`}
     });
 
 export const FINORA_BRANCH_PRICING_OVERRIDES:
@@ -819,6 +1196,11 @@ console.log(
     `CollectionBelow25000=${pricing.collectionBelow25000Fee}`,
     `Collection25000To50000=${pricing.collection25000To50000Fee}`,
     `CollectionAbove50000=${pricing.collectionAbove50000Fee}`,
+    `Subscription1M=${pricing.subscription1MonthFee ?? "NOT_CONFIGURED"}`,
+    `Subscription3M=${pricing.subscription3MonthFee ?? "NOT_CONFIGURED"}`,
+    `Subscription6M=${pricing.subscription6MonthFee ?? "NOT_CONFIGURED"}`,
+    `Subscription12M=${pricing.subscription12MonthFee ?? "NOT_CONFIGURED"}`,
+    `PricingNotice=${pricing.pricingNoticeTitle ?? "NONE"}`,
     `BranchCustomRecords=${branchPricing.length}`,
   ].join(" | "),
 );

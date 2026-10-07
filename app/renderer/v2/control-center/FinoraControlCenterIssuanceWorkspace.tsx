@@ -1,3 +1,5 @@
+import { generateFinoraHumanId } from "./finoraHumanReadableId";
+
 import {
   useEffect, useRef, useState } from "react";
 
@@ -292,6 +294,49 @@ export default function FinoraControlCenterIssuanceWorkspace({
     useState("");
 
 
+  const [provisioningMobile, setProvisioningMobile] =
+    useState("");
+
+  const [provisioningAadhaar, setProvisioningAadhaar] =
+    useState("");
+
+  const [provisioningAadhaarConsent, setProvisioningAadhaarConsent] =
+    useState(false);
+
+  const [provisioningValidFrom, setProvisioningValidFrom] =
+    useState("");
+
+  const [provisioningValidUntil, setProvisioningValidUntil] =
+    useState("");
+
+  const [provisioningOpeningWalletBalance, setProvisioningOpeningWalletBalance] =
+    useState("0");
+
+  const [serverProvisioningState, setServerProvisioningState] =
+    useState<"IDLE" | "CREATING" | "SUCCESS" | "ERROR">("IDLE");
+
+  const [serverProvisioningError, setServerProvisioningError] =
+    useState<string | undefined>();
+
+  const [serverProvisioningResult, setServerProvisioningResult] =
+    useState<
+      import("../../../electron/control-center/finoraControlCenterPreload").FinoraServerProvisionOwnerView | undefined
+    >();
+
+  const [serverAdminCredentialConfigured, setServerAdminCredentialConfigured] =
+    useState<boolean | undefined>();
+
+  const [serverAdminCredentialInput, setServerAdminCredentialInput] =
+    useState("");
+
+  const [serverAdminCredentialState, setServerAdminCredentialState] =
+    useState<"IDLE" | "SAVING" | "SUCCESS" | "ERROR">("IDLE");
+
+  const [serverAdminCredentialError, setServerAdminCredentialError] =
+    useState<string | undefined>();
+
+
+
   useEffect(
     () => {
       if (
@@ -315,6 +360,88 @@ export default function FinoraControlCenterIssuanceWorkspace({
     [
       workspaceFocusRequestId,
     ],
+  );
+
+
+  // FINORA_SERVER_ADMIN_CREDENTIAL_STATUS_V1
+  useEffect(
+    () => {
+      if (!newBranchProvisioning) {
+        return;
+      }
+
+      const bridge =
+        window.finoraControlCenter;
+
+      if (!bridge) {
+        setServerAdminCredentialConfigured(false);
+        return;
+      }
+
+      let cancelled = false;
+
+      // FINORA_SERVER_ADMIN_STATUS_LIVE_VERIFY_V1
+      void (async () => {
+        try {
+          const status =
+            await bridge.hasServerAdminCredential();
+
+          if (cancelled) {
+            return;
+          }
+
+          if (!status.success) {
+            setServerAdminCredentialConfigured(false);
+            setServerAdminCredentialState("ERROR");
+            setServerAdminCredentialError(status.error);
+            return;
+          }
+
+          if (!status.data) {
+            setServerAdminCredentialConfigured(false);
+            setServerAdminCredentialState("IDLE");
+            setServerAdminCredentialError(undefined);
+            return;
+          }
+
+          const verification =
+            await bridge.verifyServerAdminCredential();
+
+          if (cancelled) {
+            return;
+          }
+
+          if (!verification.success) {
+            setServerAdminCredentialConfigured(false);
+            setServerAdminCredentialState("ERROR");
+            setServerAdminCredentialError(
+              verification.error,
+            );
+            return;
+          }
+
+          setServerAdminCredentialConfigured(true);
+          setServerAdminCredentialState("SUCCESS");
+          setServerAdminCredentialError(undefined);
+        } catch (error) {
+          if (cancelled) {
+            return;
+          }
+
+          setServerAdminCredentialConfigured(false);
+          setServerAdminCredentialState("ERROR");
+          setServerAdminCredentialError(
+            error instanceof Error
+              ? error.message
+              : "Unable to verify FINORA Server access.",
+          );
+        }
+      })();
+      return () => {
+        cancelled = true;
+      };
+    },
+    [newBranchProvisioning],
   );
 
   const [walletRechargeRequestOpenState, setWalletRechargeRequestOpenState] =
@@ -2273,6 +2400,95 @@ setEnrollmentOpenState(
         candidate !== undefined,
     ).length;
 
+  const serverProvisioningValidationErrors: string[] = [];
+
+  if (serverAdminCredentialConfigured !== true) {
+    serverProvisioningValidationErrors.push("Production Server Access must be connected.");
+  }
+
+  if (provisioningOwnerName.trim().length === 0) {
+    serverProvisioningValidationErrors.push("Owner Name is required.");
+  }
+
+  if (provisioningMobile.length !== 10) {
+    serverProvisioningValidationErrors.push("Mobile Number must contain exactly 10 digits.");
+  }
+
+  if (
+    provisioningAadhaar.length !== 0 &&
+    provisioningAadhaar.length !== 12
+  ) {
+    serverProvisioningValidationErrors.push("Aadhaar must contain exactly 12 digits or remain blank.");
+  }
+
+  if (
+    provisioningAadhaar.length === 12 &&
+    !provisioningAadhaarConsent
+  ) {
+    serverProvisioningValidationErrors.push("Owner consent is required when Aadhaar is provided.");
+  }
+
+  if (provisioningBusinessName.trim().length === 0) {
+    serverProvisioningValidationErrors.push("Business Name is required.");
+  }
+
+  if (provisioningBranchName.trim().length === 0) {
+    serverProvisioningValidationErrors.push("Branch Name is required.");
+  }
+
+  if (
+    provisioningUsername.trim().length < 4 ||
+    provisioningUsername.trim().length > 12
+  ) {
+    serverProvisioningValidationErrors.push("Username must contain 4 to 12 characters.");
+  }
+
+  if (
+    provisioningUsername.length > 0 &&
+    !/^[a-z0-9._-]+$/.test(provisioningUsername)
+  ) {
+    serverProvisioningValidationErrors.push("Username may use letters, numbers, dot, underscore and hyphen only.");
+  }
+
+  if (provisioningValidFrom.length === 0) {
+    serverProvisioningValidationErrors.push("Valid From date is required.");
+  }
+
+  if (provisioningValidUntil.length === 0) {
+    serverProvisioningValidationErrors.push("Valid Until date is required.");
+  }
+
+  if (
+    provisioningValidFrom.length > 0 &&
+    provisioningValidUntil.length > 0 &&
+    new Date(provisioningValidUntil).getTime() <=
+      new Date(provisioningValidFrom).getTime()
+  ) {
+    serverProvisioningValidationErrors.push("Valid Until must be later than Valid From.");
+  }
+
+  const openingWalletBalanceNumber =
+    Number(provisioningOpeningWalletBalance);
+
+  if (
+    !Number.isFinite(openingWalletBalanceNumber) ||
+    openingWalletBalanceNumber < 0 ||
+    openingWalletBalanceNumber > 100000000
+  ) {
+    serverProvisioningValidationErrors.push("Opening Wallet Balance must be between 0 and 100,000,000.");
+  }
+
+  const serverProvisioningHasInput =
+    provisioningOwnerName.trim().length > 0 ||
+    provisioningMobile.length > 0 ||
+    provisioningAadhaar.length > 0 ||
+    provisioningBusinessName.trim().length > 0 ||
+    provisioningBranchName.trim().length > 0 ||
+    provisioningUsername.trim().length > 0 ||
+    provisioningValidFrom.length > 0 ||
+    provisioningValidUntil.length > 0 ||
+    provisioningOpeningWalletBalance !== "0";
+
   return (
     <section
       ref={workspaceRef}
@@ -2288,6 +2504,7 @@ setEnrollmentOpenState(
     >
       <header
         style={{
+          display: newBranchProvisioning ? "none" : "block",
           marginBottom: "14px",
         }}
       >
@@ -2319,7 +2536,7 @@ setEnrollmentOpenState(
         aria-label="FINORA issuance workflow"
         data-finora-owner-operations-grid="true"
         style={{
-          display: "grid",
+          display: newBranchProvisioning ? "none" : "grid",
           gridTemplateColumns: "repeat(var(--finora-cc-workflow-columns, 4), minmax(0, 1fr))",
           gap: "10px",
           marginBottom: "12px",
@@ -2852,7 +3069,12 @@ setEnrollmentOpenState(
           )}
       </section>
 
-      <div         data-finora-selected-branch-bundle-layout="true"       >
+      <div
+        data-finora-selected-branch-bundle-layout="true"
+        style={{
+          display: newBranchProvisioning ? "none" : "block",
+        }}
+      >
       <section         data-finora-selected-branch-card="true"         style={{           minWidth: 0,           border: "1px solid rgba(148, 163, 184, 0.2)",           borderRadius: "11px",           padding: "16px",           background: "rgba(2, 6, 23, 0.34)",         }}       >
         <div
           style={{
@@ -3210,7 +3432,7 @@ setEnrollmentOpenState(
         data-finora-control-bundle-export="true"
         aria-live="polite"
         style={{
-          display: "block",
+          display: newBranchProvisioning ? "none" : "block",
           marginTop: "0",
           border: "1px solid rgba(148, 163, 184, 0.2)",
           borderRadius: "11px",
@@ -3614,7 +3836,7 @@ setEnrollmentOpenState(
                 }}
               >
                 Prepare a new FINORA owner, business and branch.
-                This phase does not persist or issue credential secrets.
+                Production provisioning securely creates the owner, business, branch, subscription, wallet and temporary login credentials.
               </p>
             </div>
 
@@ -3626,6 +3848,267 @@ setEnrollmentOpenState(
                 gap: "14px",
               }}
             >
+              <div
+                style={{
+                  gridColumn: "1 / -1",
+                  display: "grid",
+                  gap: "12px",
+                  padding: "14px",
+                  borderRadius: "12px",
+                  border:
+                    serverAdminCredentialConfigured
+                      ? "1px solid rgba(34, 197, 94, 0.34)"
+                      : "1px solid rgba(245, 158, 11, 0.34)",
+                  background:
+                    serverAdminCredentialConfigured
+                      ? "rgba(34, 197, 94, 0.07)"
+                      : "rgba(245, 158, 11, 0.06)",
+                }}
+              >
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    gap: "12px",
+                    alignItems: "center",
+                    flexWrap: "wrap",
+                  }}
+                >
+                  <div>
+                    <div
+                      style={{
+                        fontSize: "13px",
+                        fontWeight: 750,
+                        color: "#f8fafc",
+                      }}
+                    >
+                      FINORA Production Server Access
+                    </div>
+
+                    <div
+                      style={{
+                        marginTop: "4px",
+                        fontSize: "12px",
+                        color: "#94a3b8",
+                      }}
+                    >
+                      {serverAdminCredentialConfigured === undefined
+                        ? "Checking secure server credential..."
+                        : serverAdminCredentialConfigured
+                          ? "Production server administrator credential is verified and connected."
+                          : "Configure the administrator credential once before creating production owners."}
+                    </div>
+                  </div>
+
+                  <strong
+                    style={{
+                      fontSize: "12px",
+                      color:
+                        serverAdminCredentialConfigured
+                          ? "#86efac"
+                          : "#fbbf24",
+                    }}
+                  >
+                    {serverAdminCredentialConfigured
+                      ? "CONNECTED"
+                      : "SETUP REQUIRED"}
+                  </strong>
+                  {/* FINORA_SERVER_ADMIN_DISCONNECT_BUTTON_V1 */}
+
+                  {serverAdminCredentialConfigured === true && (
+                    <button
+                      type="button"
+                      disabled={serverAdminCredentialState === "SAVING"}
+                      onClick={async () => {
+                        const bridge =
+                          window.finoraControlCenter;
+
+                        if (!bridge) {
+                          setServerAdminCredentialState("ERROR");
+                          setServerAdminCredentialError(
+                            "Dedicated FINORA Control Center preload bridge is unavailable.",
+                          );
+                          return;
+                        }
+
+                        setServerAdminCredentialState("SAVING");
+                        setServerAdminCredentialError(undefined);
+
+                        try {
+                          const result =
+                            await bridge.disconnectServerAdminCredential();
+
+                          if (!result.success) {
+                            throw new Error(
+                              result.error ??
+                                "Unable to disconnect FINORA Production Server Access.",
+                            );
+                          }
+
+                          setServerAdminCredentialConfigured(false);
+                          setServerAdminCredentialInput("");
+                          setServerAdminCredentialState("IDLE");
+                          setServerAdminCredentialError(undefined);
+                          setServerProvisioningError(undefined);
+                        } catch (error) {
+                          setServerAdminCredentialState("ERROR");
+                          setServerAdminCredentialError(
+                            error instanceof Error
+                              ? error.message
+                              : "Unable to disconnect FINORA Production Server Access.",
+                          );
+                        }
+                      }}
+                      style={{
+                        minHeight: "34px",
+                        padding: "0 12px",
+                        borderRadius: "8px",
+                        border: "1px solid rgba(248, 113, 113, 0.34)",
+                        background: "rgba(127, 29, 29, 0.18)",
+                        color: "#fecaca",
+                        fontWeight: 700,
+                        cursor:
+                          serverAdminCredentialState === "SAVING"
+                            ? "wait"
+                            : "pointer",
+                      }}
+                    >
+                      Disconnect Secure Access
+                    </button>
+                  )}
+                </div>
+
+                {serverAdminCredentialConfigured !== true && (
+                  <div
+                    style={{
+                      display: "grid",
+                      gridTemplateColumns:
+                        "minmax(260px, 1fr) auto",
+                      gap: "10px",
+                      alignItems: "end",
+                    }}
+                  >
+                    <label
+                      style={{
+                        display: "grid",
+                        gap: "6px",
+                      }}
+                    >
+                      <span
+                        style={{
+                          fontSize: "12px",
+                          fontWeight: 650,
+                          color: "#cbd5e1",
+                        }}
+                      >
+                        Administrator Credential
+                      </span>
+
+                      <input
+                        type="password"
+                        autoComplete="off"
+                        value={serverAdminCredentialInput}
+                        placeholder="Enter FINORA Server administrator credential"
+                        onChange={(event) => {
+                          setServerAdminCredentialInput(
+                            event.currentTarget.value,
+                          );
+                          setServerAdminCredentialState("IDLE");
+                          setServerAdminCredentialError(undefined);
+                        }}
+                        style={{
+                          minHeight: "42px",
+                          borderRadius: "9px",
+                          border: "1px solid rgba(148, 163, 184, 0.28)",
+                          background: "rgba(15, 23, 42, 0.78)",
+                          color: "#f8fafc",
+                          padding: "0 11px",
+                        }}
+                      />
+                    </label>
+
+                    <button
+                      type="button"
+                      disabled={
+                        serverAdminCredentialState === "SAVING" ||
+                        serverAdminCredentialInput.trim().length < 32
+                      }
+                      onClick={async () => {
+                        const bridge =
+                          window.finoraControlCenter;
+
+                        if (!bridge) {
+                          setServerAdminCredentialState("ERROR");
+                          setServerAdminCredentialError(
+                            "Dedicated FINORA Control Center preload bridge is unavailable.",
+                          );
+                          return;
+                        }
+
+                        setServerAdminCredentialState("SAVING");
+                        setServerAdminCredentialError(undefined);
+
+                        try {
+                          const result =
+                            await bridge.configureServerAdminCredential(
+                              serverAdminCredentialInput,
+                            );
+
+                          if (!result.success) {
+                            throw new Error(
+                              result.error ??
+                                "Unable to save FINORA Server administrator credential.",
+                            );
+                          }
+
+                          setServerAdminCredentialInput("");
+                          setServerAdminCredentialConfigured(true);
+                          setServerAdminCredentialState("SUCCESS");
+                        } catch (error) {
+                          // FINORA_CONFIGURE_REJECTION_UI_V1
+                          setServerAdminCredentialConfigured(false);
+                          setServerAdminCredentialState("ERROR");
+                          setServerAdminCredentialError(
+                            error instanceof Error
+                              ? error.message
+                              : "Unable to save FINORA Server administrator credential.",
+                          );
+                        }
+                      }}
+                      style={{
+                        minHeight: "42px",
+                        padding: "0 16px",
+                        border: 0,
+                        borderRadius: "9px",
+                        fontWeight: 700,
+                        cursor:
+                          serverAdminCredentialState === "SAVING"
+                            ? "wait"
+                            : serverAdminCredentialInput.trim().length < 32
+                              ? "not-allowed"
+                              : "pointer",
+                      }}
+                    >
+                      {serverAdminCredentialState === "SAVING"
+                        ? "Saving Securely..."
+                        : serverAdminCredentialConfigured ? "Replace Secure Access" : "Configure Secure Access"}
+                    </button>
+                  </div>
+                )}
+
+                {serverAdminCredentialState === "ERROR" &&
+                  serverAdminCredentialError && (
+                    <div
+                      style={{
+                        fontSize: "12px",
+                        color: "#fca5a5",
+                      }}
+                    >
+                      {serverAdminCredentialError}
+                    </div>
+                  )}
+              </div>
+
               <TargetField
                 label="Owner Name"
                 value={provisioningOwnerName}
@@ -3635,6 +4118,59 @@ setEnrollmentOpenState(
                   setProvisioningDraftGenerated(false);
                 }}
               />
+
+              <TargetField
+                label="Mobile Number"
+                value={provisioningMobile}
+                placeholder="10 digit mobile number"
+                onChange={(value) => {
+                  setProvisioningMobile(
+                    value.replace(/\D/g, "").slice(0, 10),
+                  );
+                  setProvisioningDraftGenerated(false);
+                  setServerProvisioningState("IDLE");
+                  setServerProvisioningError(undefined);
+                }}
+              />
+
+              <TargetField
+                label="Aadhaar (Optional)"
+                value={provisioningAadhaar}
+                placeholder="12 digit Aadhaar - optional"
+                onChange={(value) => {
+                  setProvisioningAadhaar(
+                    value.replace(/\D/g, "").slice(0, 12),
+                  );
+                  setProvisioningDraftGenerated(false);
+                  setServerProvisioningState("IDLE");
+                  setServerProvisioningError(undefined);
+                }}
+              />
+
+              <label
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "9px",
+                  minHeight: "42px",
+                  fontSize: "12px",
+                  color: "#cbd5e1",
+                }}
+              >
+                <input
+                  type="checkbox"
+                  checked={provisioningAadhaarConsent}
+                  disabled={provisioningAadhaar.length === 0}
+                  onChange={(event) => {
+                    setProvisioningAadhaarConsent(
+                      event.currentTarget.checked,
+                    );
+                    setServerProvisioningState("IDLE");
+                    setServerProvisioningError(undefined);
+                  }}
+                />
+                Aadhaar details provided with owner consent
+              </label>
 
               <TargetField
                 label="Business Name"
@@ -3671,279 +4207,518 @@ setEnrollmentOpenState(
                   setProvisioningDraftGenerated(false);
                 }}
               />
+
+              <div
+                style={{
+                  gridColumn: "1 / -1",
+                  marginTop: "4px",
+                  paddingTop: "14px",
+                  borderTop: "1px solid rgba(148, 163, 184, 0.16)",
+                }}
+              >
+                <div
+                  style={{
+                    fontSize: "13px",
+                    fontWeight: 700,
+                    color: "#e2e8f0",
+                  }}
+                >
+                  Subscription & Wallet
+                </div>
+              </div>
+
+              <label
+                style={{
+                  display: "grid",
+                  gap: "6px",
+                }}
+              >
+                <span
+                  style={{
+                    fontSize: "12px",
+                    fontWeight: 650,
+                    color: "#cbd5e1",
+                  }}
+                >
+                  Valid From
+                </span>
+                <input
+                  type="date"
+                  value={provisioningValidFrom}
+                  onChange={(event) => {
+                    setProvisioningValidFrom(event.currentTarget.value);
+                    setServerProvisioningState("IDLE");
+                    setServerProvisioningError(undefined);
+                  }}
+                  style={{
+                    minHeight: "42px",
+                    borderRadius: "9px",
+                    border: "1px solid rgba(148, 163, 184, 0.28)",
+                    background: "rgba(15, 23, 42, 0.78)",
+                    color: "#f8fafc",
+                    padding: "0 11px",
+                  }}
+                />
+              </label>
+
+              <label
+                style={{
+                  display: "grid",
+                  gap: "6px",
+                }}
+              >
+                <span
+                  style={{
+                    fontSize: "12px",
+                    fontWeight: 650,
+                    color: "#cbd5e1",
+                  }}
+                >
+                  Valid Until
+                </span>
+                <input
+                  type="date"
+                  value={provisioningValidUntil}
+                  onChange={(event) => {
+                    setProvisioningValidUntil(event.currentTarget.value);
+                    setServerProvisioningState("IDLE");
+                    setServerProvisioningError(undefined);
+                  }}
+                  style={{
+                    minHeight: "42px",
+                    borderRadius: "9px",
+                    border: "1px solid rgba(148, 163, 184, 0.28)",
+                    background: "rgba(15, 23, 42, 0.78)",
+                    color: "#f8fafc",
+                    padding: "0 11px",
+                  }}
+                />
+              </label>
+
+              <div
+                style={{
+                  display: "grid",
+                  gap: "6px",
+                }}
+              >
+                <span
+                  style={{
+                    fontSize: "12px",
+                    fontWeight: 650,
+                    color: "#cbd5e1",
+                  }}
+                >
+                  Remaining Days
+                </span>
+                <div
+                  style={{
+                    minHeight: "42px",
+                    display: "flex",
+                    alignItems: "center",
+                    borderRadius: "9px",
+                    border: "1px solid rgba(34, 197, 94, 0.28)",
+                    background: "rgba(34, 197, 94, 0.08)",
+                    color: "#86efac",
+                    padding: "0 11px",
+                    fontWeight: 700,
+                  }}
+                >
+                  {provisioningValidFrom && provisioningValidUntil
+                    ? Math.max(
+                        0,
+                        Math.ceil(
+                          (new Date(provisioningValidUntil).getTime() -
+                            new Date(provisioningValidFrom).getTime()) /
+                            86400000,
+                        ),
+                      )
+                    : 0}
+                </div>
+              </div>
+
+              <TargetField
+                label="Opening Wallet Balance"
+                value={provisioningOpeningWalletBalance}
+                placeholder="0"
+                onChange={(value) => {
+                  setProvisioningOpeningWalletBalance(
+                    value.replace(/[^0-9.]/g, ""),
+                  );
+                  setServerProvisioningState("IDLE");
+                  setServerProvisioningError(undefined);
+                }}
+              />
             </div>
 
             <div>
+              {/* FINORA_SERVER_OWNER_CREATE_V1 */}
               <button
                 type="button"
                 disabled={
-                  provisioningOwnerName.trim().length === 0 ||
-                  provisioningBusinessName.trim().length === 0 ||
-                  provisioningBranchName.trim().length === 0 ||
-                  provisioningUsername.trim().length < 4 || provisioningUsername.trim().length > 12
+                  serverProvisioningState === "CREATING" ||
+                  serverProvisioningValidationErrors.length > 0
                 }
                 onClick={async () => {
-                  // FINORA_COMPACT_BRANCH_ID_V1
-                  const ownerId =
-                    `OWNER-${crypto.randomUUID().toUpperCase()}`;
-
-                  const businessId =
-                    `BUSINESS-${crypto.randomUUID().toUpperCase()}`;
-
-                  /*
-                   * Human-readable branch identity.
-                   *
-                   * Example:
-                   *   Girish Finance -> GFI
-                   *   Card code      -> GFI-01
-                   *   Branch ID      -> BRANCH-GFI-001
-                   *
-                   * Owner / Business / User security IDs remain UUID-backed.
-                   */
-                  const normalizedBusinessWords =
-                    provisioningBusinessName
-                      .trim()
-                      .toUpperCase()
-                      .replace(/[^A-Z0-9 ]+/g, " ")
-                      .split(/\s+/)
-                      .filter(Boolean);
-
-                  const businessCode =
-                    (
-                      normalizedBusinessWords.length >= 2
-                        ? (
-                            normalizedBusinessWords
-                              .map((word) => word[0])
-                              .join("") +
-                            normalizedBusinessWords[0].slice(1)
-                          )
-                        : (
-                            normalizedBusinessWords[0] ??
-                            "FIN"
-                          )
-                    )
-                      .replace(/[^A-Z0-9]/g, "")
-                      .slice(0, 3)
-                      .padEnd(3, "X");
-
-                  // FINORA_DYNAMIC_BRANCH_SEQUENCE_V4
-                  const registryBridge =
-                    window.finoraControlCenter;
-
-                  if (!registryBridge) {
-                    throw new Error(
-                      "Dedicated FINORA Control Center preload bridge is unavailable.",
-                    );
-                  }
-
-                  const registryResult =
-                    await registryBridge.getBranchRegistry();
-
-                  if (!registryResult.success) {
-                    throw new Error(
-                      registryResult.error ??
-                        "Unable to load FINORA Branch Registry for compact Branch allocation.",
-                    );
-                  }
-
-                  const existingBranches =
-                    registryResult.data?.branches ??
-                    [];
-
-                  const idPrefix =
-                    `BRANCH-${businessCode}-`;
-
-                  const codePrefix =
-                    `${businessCode}-`;
-
-                  const usedBranchSequences =
-                    existingBranches
-                      .flatMap(
-                        (
-                          existingBranch,
-                        ) => {
-
-                          const existingBranchId =
-                            existingBranch.identity.branchId;
-
-                          if (
-                            existingBranchId.startsWith(
-                              idPrefix,
-                            )
-                          ) {
-                            const suffix =
-                              existingBranchId.slice(
-                                idPrefix.length,
-                              );
-
-                            if (
-                              /^\d{3}$/.test(
-                                suffix,
-                              )
-                            ) {
-                              return [
-                                Number(
-                                  suffix,
-                                ),
-                              ];
-                            }
-                          }
-
-                          const existingBranchCode =
-                            existingBranch.identity.branchCode;
-
-                          if (
-                            existingBranchCode.startsWith(
-                              codePrefix,
-                            )
-                          ) {
-                            const suffix =
-                              existingBranchCode.slice(
-                                codePrefix.length,
-                              );
-
-                            if (
-                              /^\d{2,3}$/.test(
-                                suffix,
-                              )
-                            ) {
-                              return [
-                                Number(
-                                  suffix,
-                                ),
-                              ];
-                            }
-                          }
-
-                          return [];
-                        },
-                      )
-                      .filter(
-                        (
-                          sequence,
-                        ) =>
-                          Number.isSafeInteger(
-                            sequence,
-                          ) &&
-                          sequence > 0,
-                      );
-
-                  const nextBranchSequenceNumber =
-                    (
-                      usedBranchSequences.length ===
-                        0
-                        ? 0
-                        : Math.max(
-                            ...usedBranchSequences,
-                          )
-                    ) + 1;
-
-                  if (
-                    nextBranchSequenceNumber >
-                      999
-                  ) {
-                    throw new Error(
-                      `FINORA compact Branch sequence exhausted for Business Code ${businessCode}.`,
-                    );
-                  }
-
-                  const branchSequence =
-                    String(
-                      nextBranchSequenceNumber,
-                    ).padStart(
-                      3,
-                      "0",
-                    );
-
-                  const branchCodeSequence =
-                    String(
-                      nextBranchSequenceNumber,
-                    ).padStart(
-                      2,
-                      "0",
-                    );
-
-                  const branchCode =
-                    `${businessCode}-${branchCodeSequence}`;
-
-                  const branchId =
-                    `BRANCH-${businessCode}-${branchSequence}`;
-
-                  const userId =
-                    `USER-${crypto.randomUUID().toUpperCase()}`;
-
-                  setTarget((current) => ({
-                    ...current,
-                    ownerId,
-                    businessId,
-                    branchId,
-                  }));
-
-                  const username =
-                    provisioningUsername.trim();
-
                   const bridge =
                     window.finoraControlCenter;
 
                   if (!bridge) {
-                    throw new Error(
+                    setServerProvisioningState("ERROR");
+                    setServerProvisioningError(
                       "Dedicated FINORA Control Center preload bridge is unavailable.",
                     );
+                    return;
                   }
 
-                  const resumeResult =
-                    await bridge.upsertProvisioningResume({
-                      ownerId,
-                      businessId,
-                      branchId,
-
-                      ownerName:
-                        provisioningOwnerName.trim(),
-
-                      businessName:
-                        provisioningBusinessName.trim(),
-
-                      branchName:
-                        provisioningBranchName.trim(),
-
-                      userId,
-                      username,
-                    });
-
-                  if (!resumeResult.success) {
-                    throw new Error(
-                      resumeResult.error ||
-                        "FINORA provisioning draft could not be persisted.",
+                  if (serverAdminCredentialConfigured !== true) {
+                    setServerProvisioningState("ERROR");
+                    setServerProvisioningError(
+                      "Configure FINORA Production Server Access before creating an owner.",
                     );
+                    return;
                   }
 
-                  setProvisioningUserId(
-                    userId,
-                  );
-                  setProvisioningUsername(
-                    username,
-                  );
+                  setServerProvisioningState("CREATING");
+                  setServerProvisioningError(undefined);
+                  setServerProvisioningResult(undefined);
+                  setProvisioningDraftGenerated(false);
 
-                  setProvisioningDraftGenerated(true);
+                  try {
+                    const result =
+                      await bridge.provisionServerOwner({
+                        ownerName:
+                          provisioningOwnerName.trim(),
+
+                        mobile:
+                          provisioningMobile,
+
+                        aadhaar:
+                          provisioningAadhaar.length === 12
+                            ? provisioningAadhaar
+                            : undefined,
+
+                        aadhaarConsent:
+                          provisioningAadhaar.length === 12
+                            ? provisioningAadhaarConsent
+                            : undefined,
+
+                        businessName:
+                          provisioningBusinessName.trim(),
+
+                        branchName:
+                          provisioningBranchName.trim(),
+
+                        username:
+                          provisioningUsername.trim(),
+
+                        validFrom:
+                          provisioningValidFrom,
+
+                        validUntil:
+                          provisioningValidUntil,
+
+                        openingWalletBalance:
+                          Number(
+                            provisioningOpeningWalletBalance,
+                          ),
+                      });
+
+                    if (!result.success) {
+                      // FINORA_PROVISION_REJECTION_UI_SYNC_V1
+                      if (
+                        result.error?.toLowerCase().includes(
+                          "administrator credential",
+                        )
+                      ) {
+                        setServerAdminCredentialConfigured(false);
+                        setServerAdminCredentialState("ERROR");
+                        setServerAdminCredentialError(result.error);
+                      }
+                      throw new Error(
+                        result.error ??
+                          "FINORA production owner provisioning failed.",
+                      );
+                    }
+
+                    if (!result.data) {
+                      throw new Error(
+                        "FINORA production server returned no provisioning result.",
+                      );
+                    }
+
+                    setServerProvisioningResult(
+                      result.data,
+                    );
+
+                    setTarget((current) => ({
+                      ...current,
+                      ownerId:
+                        result.data.owner.ownerId,
+                      businessId:
+                        result.data.business.businessId,
+                      branchId:
+                        result.data.branch.branchId,
+                    }));
+
+                    setProvisioningUserId(
+                      result.data.credentials.userId,
+                    );
+
+                    setProvisioningUsername(
+                      result.data.credentials.username,
+                    );
+
+                    setServerProvisioningState("SUCCESS");
+                  } catch (error) {
+                    setServerProvisioningError(
+                      error instanceof Error
+                        ? error.message
+                        : "Unable to create FINORA production owner and branch.",
+                    );
+
+                    setServerProvisioningState("ERROR");
+                  }
                 }}
                 style={{
-                  minHeight: "42px",
-                  padding: "0 18px",
+                  minHeight: "44px",
+                  padding: "0 20px",
                   border: 0,
                   borderRadius: "10px",
-                  fontWeight: 700,
+                  fontWeight: 750,
                   cursor:
-                    provisioningOwnerName.trim().length === 0 ||
-                    provisioningBusinessName.trim().length === 0 ||
-                    provisioningBranchName.trim().length === 0 ||
-                    provisioningUsername.trim().length < 4 || provisioningUsername.trim().length > 12
-                      ? "not-allowed"
-                      : "pointer",
+                    serverProvisioningState === "CREATING"
+                      ? "wait"
+                      : serverAdminCredentialConfigured !== true
+                        ? "not-allowed"
+                        : "pointer",
                 }}
               >
-                Generate Provisioning Draft
+                {serverProvisioningState === "CREATING"
+                  ? "Creating Owner & Branch..."
+                  : "Create Owner & Branch"}
               </button>
+
+              {/* FINORA_SERVER_OWNER_VALIDATION_SUMMARY_V1 */}
+              {serverProvisioningHasInput &&
+                serverProvisioningValidationErrors.length > 0 && (
+                  <div
+                    style={{
+                      marginTop: "10px",
+                      maxWidth: "720px",
+                      padding: "10px 12px",
+                      borderRadius: "9px",
+                      border:
+                        "1px solid rgba(248, 113, 113, 0.26)",
+                      background:
+                        "rgba(127, 29, 29, 0.10)",
+                      color: "#fecaca",
+                      fontSize: "11px",
+                      lineHeight: 1.55,
+                    }}
+                  >
+                    <strong>Complete before creating:</strong>
+                    <ul
+                      style={{
+                        margin: "6px 0 0",
+                        paddingLeft: "18px",
+                      }}
+                    >
+                      {serverProvisioningValidationErrors.map(
+                        (message) => (
+                          <li key={message}>{message}</li>
+                        ),
+                      )}
+                    </ul>
+                  </div>
+                )}
             </div>
+
+            {/* FINORA_SERVER_OWNER_SUCCESS_CARD_V1 */}
+            {serverProvisioningState === "ERROR" &&
+              serverProvisioningError && (
+                <div
+                  role="alert"
+                  style={{
+                    padding: "14px 16px",
+                    borderRadius: "12px",
+                    border:
+                      "1px solid rgba(248, 113, 113, 0.34)",
+                    background:
+                      "rgba(127, 29, 29, 0.16)",
+                    color: "#fecaca",
+                    fontSize: "12px",
+                    lineHeight: 1.6,
+                  }}
+                >
+                  {serverProvisioningError}
+                </div>
+              )}
+
+            {serverProvisioningState === "SUCCESS" &&
+              serverProvisioningResult && (
+                <div
+                  style={{
+                    display: "grid",
+                    gap: "16px",
+                    padding: "18px",
+                    borderRadius: "14px",
+                    border:
+                      "1px solid rgba(34, 197, 94, 0.36)",
+                    background:
+                      "rgba(20, 83, 45, 0.14)",
+                  }}
+                >
+                  <div
+                    style={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "flex-start",
+                      gap: "14px",
+                      flexWrap: "wrap",
+                    }}
+                  >
+                    <div>
+                      <div
+                        style={{
+                          fontSize: "16px",
+                          fontWeight: 800,
+                          color: "#86efac",
+                        }}
+                      >
+                        Owner & Branch Created Successfully
+                      </div>
+
+                      <div
+                        style={{
+                          marginTop: "5px",
+                          fontSize: "12px",
+                          color: "#cbd5e1",
+                        }}
+                      >
+                        Production records are active. Share the temporary credentials securely with the owner.
+                      </div>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const credentialsText = [
+                          `User ID: ${serverProvisioningResult.credentials.userId}`,
+                          `Username: ${serverProvisioningResult.credentials.username}`,
+                          `Temporary Password: ${serverProvisioningResult.credentials.temporaryPassword}`,
+                          `Temporary Security Code: ${serverProvisioningResult.credentials.temporarySecurityCode}`,
+                        ].join("\n");
+
+                        void navigator.clipboard.writeText(
+                          credentialsText,
+                        );
+                      }}
+                      style={{
+                        minHeight: "38px",
+                        padding: "0 14px",
+                        borderRadius: "9px",
+                        border:
+                          "1px solid rgba(34, 197, 94, 0.42)",
+                        background:
+                          "rgba(34, 197, 94, 0.12)",
+                        color: "#dcfce7",
+                        fontWeight: 750,
+                        cursor: "pointer",
+                      }}
+                    >
+                      Copy Credentials
+                    </button>
+                  </div>
+
+                  <div
+                    style={{
+                      display: "grid",
+                      gridTemplateColumns:
+                        "repeat(auto-fit, minmax(220px, 1fr))",
+                      gap: "10px",
+                    }}
+                  >
+                    {[
+                      ["Owner ID", serverProvisioningResult.owner.ownerId],
+                      ["Business ID", serverProvisioningResult.business.businessId],
+                      ["Branch ID", serverProvisioningResult.branch.branchId],
+                      ["User ID", serverProvisioningResult.credentials.userId],
+                      ["Username", serverProvisioningResult.credentials.username],
+                      ["Temporary Password", serverProvisioningResult.credentials.temporaryPassword],
+                      ["Temporary Security Code", serverProvisioningResult.credentials.temporarySecurityCode],
+                      ["Subscription ID", serverProvisioningResult.subscription.subscriptionId],
+                      ["Valid From", serverProvisioningResult.subscription.validFrom],
+                      ["Valid Until", serverProvisioningResult.subscription.validUntil],
+                      ["Remaining Days", String(serverProvisioningResult.subscription.remainingDays)],
+                      ["Wallet ID", serverProvisioningResult.wallet.walletId],
+                      ["Wallet Balance", `${String.fromCharCode(8377)}${serverProvisioningResult.wallet.balanceInr}`],
+                    ].map(([label, value]) => (
+                      <div
+                        key={label}
+                        style={{
+                          padding: "10px 12px",
+                          borderRadius: "10px",
+                          border:
+                            "1px solid rgba(148, 163, 184, 0.18)",
+                          background:
+                            "rgba(15, 23, 42, 0.48)",
+                        }}
+                      >
+                        <div
+                          style={{
+                            fontSize: "10px",
+                            fontWeight: 750,
+                            letterSpacing: "0.05em",
+                            color: "#94a3b8",
+                            textTransform:
+                              "uppercase",
+                          }}
+                        >
+                          {label}
+                        </div>
+
+                        <div
+                          style={{
+                            marginTop: "5px",
+                            fontSize: "13px",
+                            fontWeight: 700,
+                            color: "#f8fafc",
+                            overflowWrap:
+                              "anywhere",
+                          }}
+                        >
+                          {value}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {serverProvisioningResult.owner.aadhaar && (
+                    <div
+                      style={{
+                        fontSize: "12px",
+                        color: "#94a3b8",
+                      }}
+                    >
+                      Aadhaar: {serverProvisioningResult.owner.aadhaar.masked}
+                      {" "}
+                      ({serverProvisioningResult.owner.aadhaar.kycStatus})
+                    </div>
+                  )}
+
+                  <div
+                    style={{
+                      paddingTop: "4px",
+                      fontSize: "11px",
+                      lineHeight: 1.55,
+                      color: "#fbbf24",
+                    }}
+                  >
+                    Temporary credentials should be shared once through a secure channel. The owner must change the password and security code at first login.
+                  </div>
+                </div>
+              )}
+
 
             {provisioningDraftGenerated && (
               <div
@@ -4249,7 +5024,7 @@ setEnrollmentOpenState(
                         credentialEnrollmentEnabled: true,
 
                         credentialAuthorizationId:
-                          `FINORA-CREDENTIAL-ENROLLMENT-${crypto.randomUUID().toUpperCase()}`,
+                          generateFinoraHumanId(),
 
                         credentialUsername:
                           provisioningUsername,
@@ -4438,7 +5213,7 @@ setEnrollmentOpenState(
           </section>
         )}
 
-      {workflow === "BRANCH_ACTIVATION" && (
+      {workflow === "BRANCH_ACTIVATION" && !newBranchProvisioning && (
           <FinoraControlCenterBranchActivationForm
             target={target}
             onIssue={(draft) => {

@@ -1,5 +1,5 @@
-﻿/* ============================================================
-   FINORA ENTERPRISE OSâ„¢
+/* ============================================================
+    FINORA ENTERPRISE OS
 
    BRANCH LOGIN SESSION AUTHORITY SELF TEST
 
@@ -883,6 +883,7 @@ async function main(): Promise<void> {
         },
         portableStore,
         r84iRecoveryFailure,
+        portableV2Store,
       );
 
     assert(
@@ -935,6 +936,7 @@ async function main(): Promise<void> {
         },
         portableStore,
         r84iNonPersistingRecovery,
+        portableV2Store,
       );
 
     assert(
@@ -968,6 +970,8 @@ async function main(): Promise<void> {
             "LOCAL",
         },
         portableStore,
+        undefined,
+        portableV2Store,
       );
 
     assert(
@@ -1006,6 +1010,8 @@ async function main(): Promise<void> {
             "LOCAL",
         },
         portableStore,
+        undefined,
+        portableV2Store,
       );
 
     assert(
@@ -1037,6 +1043,8 @@ async function main(): Promise<void> {
             "WRONG-FINORA-SECURITY-CODE",
         },
         portableStore,
+        undefined,
+        portableV2Store,
       );
 
     assert(
@@ -1069,6 +1077,8 @@ async function main(): Promise<void> {
             "LOCAL",
         },
         portableStore,
+        undefined,
+        portableV2Store,
       );
 
     assert(
@@ -1096,6 +1106,8 @@ async function main(): Promise<void> {
           securityCode,
         },
         portableStore,
+        undefined,
+        portableV2Store,
       );
 
     assert(
@@ -1191,6 +1203,8 @@ async function main(): Promise<void> {
             "LOCAL",
         },
         portableStore,
+        undefined,
+        portableV2Store,
       );
 
     assert(
@@ -1246,6 +1260,8 @@ async function main(): Promise<void> {
             "LOCAL",
         },
         portableStore,
+        undefined,
+        portableV2Store,
       );
 
     assert(
@@ -1297,6 +1313,8 @@ async function main(): Promise<void> {
             "USB",
         },
         portableStore,
+        undefined,
+        portableV2Store,
       );
 
     assert(

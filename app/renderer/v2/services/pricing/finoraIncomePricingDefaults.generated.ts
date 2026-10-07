@@ -28,6 +28,30 @@ export interface FinoraIncomePricingDefaults {
 
   collectionAbove50000Fee:
     number;
+
+  subscription1MonthFee?:
+    number;
+
+  subscription3MonthFee?:
+    number;
+
+  subscription6MonthFee?:
+    number;
+
+  subscription12MonthFee?:
+    number;
+
+  pricingNoticeTitle?:
+    string;
+
+  pricingNoticeMessage?:
+    string;
+
+  pricingNoticeEffectiveFrom?:
+    string;
+
+  pricingNoticeEffectiveUntil?:
+    string;
 }
 
 export interface FinoraBranchPricingOverride {
@@ -74,6 +98,14 @@ export const FINORA_INCOME_PRICING_DEFAULTS:
 
       collectionAbove50000Fee:
         30,
+
+
+
+
+
+
+
+
     });
 
 export const FINORA_BRANCH_PRICING_OVERRIDES:

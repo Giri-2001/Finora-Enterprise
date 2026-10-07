@@ -1,5 +1,5 @@
-﻿// ============================================================
-// FINORA ENTERPRISE OSâ„¢
+// ============================================================
+// FINORA ENTERPRISE OS
 // ELECTRON MAIN PROCESS
 // V2 USB / PENDRIVE STORAGE IPC
 //
@@ -484,31 +484,20 @@ async function validateFinoraReplacementUsbRoot(
       candidateRoot,
     );
 
-  const parsedRoot =
+  const candidateDriveRoot =
     path.resolve(
       path.parse(
         normalizedCandidate,
       ).root,
-    );
-
-  if (
-    normalizedCandidate.toLowerCase() !==
-      parsedRoot.toLowerCase()
-  ) {
-    return false;
-  }
+    ).toLowerCase();
 
   const removableRoots =
     await detectWindowsUsbRoots();
 
   return removableRoots.some(
-    (
-      root,
-    ) =>
-      path.resolve(
-        root,
-      ).toLowerCase() ===
-      normalizedCandidate.toLowerCase(),
+    (root) =>
+      path.resolve(root).toLowerCase() ===
+      candidateDriveRoot,
   );
 }
 
@@ -546,10 +535,14 @@ let cachedUsbRoot: string | null = null;
 
 let cachedUsbRootAt = 0;
 
+let manuallySelectedUsbRoot: string | null = null;
+
 let usbRootDetectionPromise: Promise<string | null> | null = null;
 
 function invalidateUsbRootCache(): void {
   cachedUsbRoot = null;
+
+  manuallySelectedUsbRoot = null;
 
   cachedUsbRootAt = 0;
 }
@@ -670,6 +663,9 @@ async function selectFinoraUsbRootFromNativeDialog(): Promise<string | null> {
   cachedUsbRoot =
     path.resolve(candidateRoot);
 
+  manuallySelectedUsbRoot =
+    cachedUsbRoot;
+
   cachedUsbRootAt =
     Date.now();
 
@@ -678,6 +674,20 @@ async function selectFinoraUsbRootFromNativeDialog(): Promise<string | null> {
 
 async function findFinoraUsbRoot(forceRefresh = false): Promise<string | null> {
   const now = Date.now();
+
+  if (!forceRefresh && manuallySelectedUsbRoot) {
+    try {
+      await fs.access(manuallySelectedUsbRoot);
+
+      cachedUsbRoot = manuallySelectedUsbRoot;
+      cachedUsbRootAt = now;
+
+      return manuallySelectedUsbRoot;
+    } catch {
+      invalidateUsbRootCache();
+      return null;
+    }
+  }
 
   // ----------------------------------------------------------
   // FAST PATH
@@ -1881,6 +1891,8 @@ async function getUsbStatus() {
       availability: "READY",
 
       storageId: path.parse(usbRoot).root,
+
+      storagePath: usbRoot,
 
       message: "FINORA Pendrive is connected and ready.",
     };
@@ -3706,7 +3718,9 @@ app.whenReady().then(async () => {
       portableBranchAuthStore,
       createFinoraPortableFreshDeviceLoginRecovery(
         portableFreshDeviceRuntimeAuthorityStore,
+        portableBranchAuthV2Store,
       ),
+      portableBranchAuthV2Store,
     );
 
     // --------------------------------------------------------
