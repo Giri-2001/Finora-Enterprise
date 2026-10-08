@@ -1,4 +1,4 @@
-﻿import {
+import {
   app,
   safeStorage,
 } from "electron";
@@ -59,6 +59,8 @@ type VaultScope = {
 };
 
 type VaultRecord = {
+  // D222B_WALLET_CONTINUITY
+  authGeneration?: number;
   schemaVersion:
     typeof VAULT_SCHEMA_VERSION;
 
@@ -187,6 +189,7 @@ export async function readFinoraWalletBranchCertificationDeviceVault(
   ownerId: string,
   businessId: string,
   branchId: string,
+  expectedAuthGeneration?: number,
 ): Promise<
   FinoraBranchCertificationKeyMaterialV1 |
   undefined
@@ -280,6 +283,13 @@ export async function readFinoraWalletBranchCertificationDeviceVault(
     );
   }
 
+  if (
+    expectedAuthGeneration !== undefined &&
+    record.authGeneration !== expectedAuthGeneration
+  ) {
+    return undefined;
+  }
+
   assertFinoraBranchCertificationKeyMaterial(
     record.material,
   );
@@ -292,6 +302,7 @@ export async function writeFinoraWalletBranchCertificationDeviceVault(
   businessId: string,
   branchId: string,
   material: FinoraBranchCertificationKeyMaterialV1,
+  authGeneration?: number,
 ): Promise<void> {
   const scope =
     createScope(
@@ -308,6 +319,9 @@ export async function writeFinoraWalletBranchCertificationDeviceVault(
 
   const record:
     VaultRecord = {
+      ...(authGeneration === undefined
+        ? {}
+        : { authGeneration }),
       schemaVersion:
         VAULT_SCHEMA_VERSION,
 

@@ -103,13 +103,18 @@ export async function restoreFinoraWalletBranchCertificationAuthority(
    * authenticated for this session and its exact branch-scoped
    * certification authority is installed in memory only.
    */
-  if (!input.portableSessionOnly) {
+  {
+    // D222B_WALLET_CONTINUITY
+    // Login authority verifies Device Trust before calling this service.
     try {
       material =
         await readFinoraWalletBranchCertificationDeviceVault(
           input.ownerId,
           input.businessId,
           input.branchId,
+          input.portableSessionOnly
+            ? input.authGeneration
+            : undefined,
         );
     }
     catch {
@@ -271,13 +276,17 @@ export async function restoreFinoraWalletBranchCertificationAuthority(
     material =
       payload.branchCertificationKeyMaterial;
 
-    if (!input.portableSessionOnly) {
+    {
+      // Persist Windows-encrypted certification after valid Security Code.
       try {
         await writeFinoraWalletBranchCertificationDeviceVault(
           input.ownerId,
           input.businessId,
           input.branchId,
           material,
+          input.portableSessionOnly
+            ? input.authGeneration
+            : undefined,
         );
       }
       catch {

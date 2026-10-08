@@ -679,6 +679,16 @@ export async function checkFinoraCurrentBranchDeviceTrust(
     );
   }
 
+  console.log(
+    "[FINORA D203 STORE]",
+    JSON.stringify({
+      present:
+        store !== undefined,
+      recordCount:
+        store?.records.length ?? 0,
+    }),
+  );
+
   if (!store) {
     return {
       success:
@@ -719,6 +729,65 @@ export async function checkFinoraCurrentBranchDeviceTrust(
           nativeBinding,
         ),
     );
+
+  console.log(
+    "[FINORA D203 MATCH]",
+    JSON.stringify({
+      storeRecordCount:
+        store.records.length,
+      matchingRecordCount:
+        matchingRecords.length,
+      records:
+        store.records.map(
+          record => ({
+            principalMatch:
+              principalMatchesRecord(
+                record,
+                input.principal,
+              ),
+            bindingMatch:
+              bindingMatchesRecord(
+                record,
+                nativeBinding,
+              ),
+            userIdMatch:
+              record.userId === input.principal.userId,
+            canonicalUsernameMatch:
+              record.canonicalUsername ===
+                canonicalizeFinoraCredentialUsername(
+                  input.principal.username,
+                ),
+            ownerIdMatch:
+              record.ownerId === input.principal.ownerId,
+            businessIdMatch:
+              record.businessId === input.principal.businessId,
+            branchIdMatch:
+              record.branchId === input.principal.branchId,
+            storageModeMatch:
+              record.storageMode === input.principal.storageMode,
+            dataContextMatch:
+              contextsEqual(
+                input.principal,
+                record.dataContext,
+                record.demoId,
+              ),
+            installationIdMatch:
+              record.installationId === nativeBinding.installationId,
+            bindingKeyIdMatch:
+              record.bindingKeyId === nativeBinding.bindingKeyId,
+            fingerprintAlgorithmMatch:
+              record.fingerprintAlgorithm ===
+                nativeBinding.fingerprintAlgorithm,
+            publicKeyFingerprintMatch:
+              record.publicKeyFingerprint ===
+                nativeBinding.publicKeyFingerprint,
+            status:
+              record.status,
+          }),
+        ),
+    }),
+  );
+
 
   if (
     matchingRecords.length ===

@@ -1293,6 +1293,21 @@ export async function createFinoraBranchLoginSession(
       password:
         request.password,
     });
+  // D211B: Safe login-route diagnostics.
+  // Never log credentials, identities, tokens or secrets.
+  console.log(
+    "[FINORA D211 LOCAL AUTH]",
+    JSON.stringify({
+      success: authenticationResult.success,
+      errorCode: authenticationResult.success
+        ? "NONE"
+        : authenticationResult.errorCode,
+      recoveryAvailable:
+        portableStore !== undefined &&
+        recoverFreshDevice !== undefined,
+    }),
+  );
+
 
   // ----------------------------------------------------------
   // FRESH-DEVICE LOCAL-CREDENTIAL RECOVERY
@@ -1583,6 +1598,19 @@ export async function createFinoraBranchLoginSession(
         profile.branchId ===
           authenticationResult.data.branchId,
     );
+  // D216: Boolean-only Business Profile diagnostics.
+  // No credentials, IDs, paths or secrets.
+  console.log(
+    "[FINORA D216 PROFILE]",
+    JSON.stringify({
+      profilePresent: hasAuthenticatedBusinessProfile,
+      recoveryAvailable: recoverFreshDevice !== undefined,
+      recoveryRequired:
+        !hasAuthenticatedBusinessProfile &&
+        recoverFreshDevice !== undefined,
+    }),
+  );
+
 
   if (
     !hasAuthenticatedBusinessProfile &&
@@ -1662,6 +1690,7 @@ export async function createFinoraBranchLoginSession(
 
         portableV2Store,
       });
+
 
     if (
       !deviceTrustResult.success
