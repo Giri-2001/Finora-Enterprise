@@ -76,11 +76,10 @@ public final class FinoraBranchAccessRuntimeEvaluatorTest {
     }
 
     @Test
-    public void malformedRegisteredDurationIsInvalid() {
+    public void serverDefinedRegisteredDurationIsActive() {
         FinoraBranchAccessRuntimeEvaluator.Decision result = FinoraBranchAccessRuntimeEvaluator.evaluate(registered("ACTIVE",FROM,"2026-12-31T23:59:59Z"),"2026-06-01T00:00:00Z");
-        assertFalse(result.allowed);
-        assertEquals(FinoraBranchAccessRuntimeEvaluator.INVALID,result.state);
-        assertEquals("FINORA registered access must have exactly 365 days of validity.",result.reason);
+        assertTrue(result.allowed);
+        assertEquals(FinoraBranchAccessRuntimeEvaluator.ACTIVE,result.state);
     }
 
     @Test

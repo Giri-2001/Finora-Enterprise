@@ -13,6 +13,10 @@ import {
   assertFinoraBranchCertificationKeyMaterial,
 } from "./finoraBranchCertificationCrypto.js";
 
+import type {
+  FinoraOwnerWalletProofKeyMaterialV1,
+} from "./finoraOwnerWalletProofCrypto.js";
+
 import {
   Buffer,
 } from "node:buffer";
@@ -344,6 +348,14 @@ export interface FinoraPortableBranchAuthPayloadV1 {
    */
   branchCertificationKeyMaterial?:
     FinoraBranchCertificationKeyMaterialV1;
+
+  /**
+   * Dedicated owner-wallet signing key.
+   * Private material stays inside encrypted Portable Auth payload.
+   * This field is optional for existing credentials.
+   */
+  walletProofKeyMaterial?:
+    FinoraOwnerWalletProofKeyMaterialV1;
 
   ownerId:
     string;
@@ -1420,6 +1432,7 @@ export function validateFinoraPortableBranchAuthPayloadV1(
     [
       "demoId",
       "branchCertificationKeyMaterial",
+      "walletProofKeyMaterial",
     ],
     "portableBranchAuthPayload",
   );
@@ -1434,6 +1447,59 @@ export function validateFinoraPortableBranchAuthPayloadV1(
     );
   }
 
+  if (
+    objectValue.walletProofKeyMaterial !== undefined
+  ) {
+    const walletKey =
+      objectValue.walletProofKeyMaterial;
+
+    if (
+      typeof walletKey !== "object" ||
+      walletKey === null ||
+      Array.isArray(walletKey)
+    ) {
+      throw new Error(
+        "Portable wallet proof key material is invalid.",
+      );
+    }
+
+    const key =
+      walletKey as Record<string, unknown>;
+
+    const requiredKeys = [
+      "schemaVersion",
+      "keyId",
+      "algorithm",
+      "publicKeySpkiDerBase64",
+      "publicKeySha256",
+      "privateKeyPkcs8DerBase64",
+    ];
+
+    if (
+      Object.keys(key).length !== requiredKeys.length ||
+      Object.keys(key).some(
+        name => !requiredKeys.includes(name),
+      ) ||
+      key.schemaVersion !== 1 ||
+      key.algorithm !== "ECDSA_P256_SHA256" ||
+      typeof key.keyId !== "string" ||
+      !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
+        key.keyId,
+      ) ||
+      typeof key.publicKeySpkiDerBase64 !== "string" ||
+      key.publicKeySpkiDerBase64.length === 0 ||
+      key.publicKeySpkiDerBase64.length > 512 ||
+      typeof key.privateKeyPkcs8DerBase64 !== "string" ||
+      key.privateKeyPkcs8DerBase64.length === 0 ||
+      key.privateKeyPkcs8DerBase64.length > 2048 ||
+      typeof key.publicKeySha256 !== "string" ||
+      !/^[a-f0-9]{64}$/.test(key.publicKeySha256)
+    ) {
+      throw new Error(
+        "Portable wallet proof key contract is invalid.",
+      );
+    }
+  }
   if (
     objectValue.schemaVersion !==
       FINORA_PORTABLE_BRANCH_AUTH_PAYLOAD_SCHEMA_VERSION

@@ -1,3 +1,5 @@
+import ServerWalletPage from "../pages/wallet/ServerWalletPage";
+import { endFinoraServerWalletAccess } from "../services/wallet/finoraServerWalletExit";
 import {
   requireBusinessContext,
 } from "../services/business/businessContextService";
@@ -2353,6 +2355,26 @@ if (!validationResult) {
 
   async function handleLogout():
     Promise<void> {
+    // FINORA_P551C: revoke before business invalidation clears the token.
+    const walletExit = await endFinoraServerWalletAccess();
+    if (
+      walletExit.serverStatus !== "BRIDGE_UNAVAILABLE" &&
+      !walletExit.localCleared
+    ) {
+      setContextError(
+        "Unable to clear wallet access. Please try Logout again.",
+      );
+      return;
+    }
+
+    if (
+      walletExit.localCleared &&
+      walletExit.serverStatus !== "REVOKED" &&
+      walletExit.serverStatus !== "NO_LOCAL_SESSION"
+    ) {
+      console.warn("FINORA wallet access cleared locally; server revocation unconfirmed.");
+    }
+
     const currentSessionId =
       session?.sessionId;
 
@@ -3425,6 +3447,7 @@ function AuthenticatedV2Application({
         ================================================== */}
 
         {page === "wallet" && (
+          session.dataContext === "DEMO" ? (
           <WalletPage
             scope={{
               ownerId: session.ownerId ?? "",
@@ -3432,6 +3455,17 @@ function AuthenticatedV2Application({
               branchId: session.branchId ?? "",
             }}
           />
+          ) : session.role === "OWNER" ? (
+            <ServerWalletPage
+              key={JSON.stringify([
+                session.userId, session.ownerId,
+                session.businessId, session.branchId, session.sessionId,
+              ])}
+              username={session.username}
+            />
+          ) : (
+            <p role="status">Server wallet access requires an Owner account.</p>
+          )
         )}
       </AppShell>
     </SessionGuard>

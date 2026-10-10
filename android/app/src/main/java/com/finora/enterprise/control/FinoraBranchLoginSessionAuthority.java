@@ -1189,6 +1189,7 @@ activeSessions.remove(
     ) {
 
         if (
+            "OWNER".equals(value) ||
             "ADMIN".equals(value) ||
             "MANAGER".equals(value) ||
             "COLLECTOR".equals(value) ||

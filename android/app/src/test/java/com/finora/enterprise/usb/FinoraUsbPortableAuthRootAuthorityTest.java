@@ -41,6 +41,32 @@ public final class FinoraUsbPortableAuthRootAuthorityTest {
     }
 
     @Test
+    public void legacyBranchFolderWithSpacesIsSupported() {
+        assertTrue(
+            FinoraUsbStorage.isPortableAuthUsbRootDocumentId(
+                "ABCD-1234:DSD GOLD"
+            )
+        );
+    }
+
+    @Test
+    public void accountScopedFolderIsSupported() {
+        assertTrue(
+            FinoraUsbStorage.isPortableAuthUsbRootDocumentId(
+                "ABCD-1234:testadmin"
+            )
+        );
+    }
+
+    @Test
+    public void nestedAccountFolderIsRejected() {
+        assertFalse(
+            FinoraUsbStorage.isPortableAuthUsbRootDocumentId(
+                "ABCD-1234:testadmin/FINORA"
+            )
+        );
+    }
+    @Test
     public void malformedDocumentIdsFailClosed() {
 
         assertFalse(

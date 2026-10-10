@@ -3447,9 +3447,69 @@ const windowControlsBridge = {
       ) as Promise<boolean>,
 };
 
+
+// FINORA_P549E_SERVER_WALLET_PRELOAD
+// Fixed channels only. Main validates sender and the complete input payload.
+// No token, private key, filesystem path or arbitrary IPC capability is exposed.
+const serverWalletBridge = Object.freeze({
+  recharge: async (input: unknown) => {
+    try {
+      return await ipcRenderer.invoke("finora:server-wallet:recharge", input);
+    } catch {
+      return { success: false, errorCode: "SERVER_UNAVAILABLE" };
+    }
+  },
+  enroll: async (input: unknown) => {
+    try {
+      return await ipcRenderer.invoke("finora:server-wallet:enroll", input);
+    } catch {
+      return { success: false, errorCode: "SERVER_UNAVAILABLE" };
+    }
+  },
+  signIn: async (input: unknown) => {
+    try {
+      return await ipcRenderer.invoke("finora:server-wallet:sign-in", input);
+    } catch {
+      return { success: false, errorCode: "SERVER_UNAVAILABLE" };
+    }
+  },
+  balance: async () => {
+    try {
+      return await ipcRenderer.invoke("finora:server-wallet:balance");
+    } catch {
+      return { success: false, errorCode: "SERVER_UNAVAILABLE" };
+    }
+  },
+
+  // FINORA_P565M2_PRICING
+  // Renderer cannot supply token, branch or API endpoint.
+  pricing: async () => {
+    try {
+      return await ipcRenderer.invoke(
+        "finora:server-wallet:pricing",
+      );
+    } catch {
+      return {
+        success: false,
+        errorCode: "SERVER_UNAVAILABLE",
+      };
+    }
+  },
+  logout: async () => {
+    try {
+      return await ipcRenderer.invoke("finora:server-wallet:logout");
+    } catch {
+      // IPC failure does not prove that main cleared or server revoked access.
+      return { localCleared: false, serverStatus: "SERVER_UNAVAILABLE" };
+    }
+  },
+});
+
 contextBridge.exposeInMainWorld(
   "finora",
   {
+    serverWallet: serverWalletBridge,
+
     windowControls:
       windowControlsBridge,
 

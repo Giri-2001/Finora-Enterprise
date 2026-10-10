@@ -1427,10 +1427,14 @@ public final class
                 "issuedAt"
             );
 
+        // FINORA_P1_107_WINDOWS_NULL_PAIR_PARITY
+        // Server-first REGISTERED authority legitimately has both null.
+        // Reject partial payment/cycle metadata; validate supplied
+        // payment records using the existing strict parser.
         if ("REGISTERED".equals(branchAccessType)) {
             if (
-                registrationPayment == null ||
-                registrationCycle == null
+                (registrationPayment == null) !=
+                (registrationCycle == null)
             ) {
                 throw invalid(
                     "REGISTERED Runtime Authority access metadata is invalid."

@@ -382,3 +382,171 @@ export async function verifyFinoraServerAdminCredential(
 
   return true;
 }
+// FINORA_P292_LIVE_WALLET_CLIENT
+// Electron main process only. Never expose admin credentials to renderer.
+
+export interface FinoraServerLiveWalletRecord {
+  owner_id: string;
+  owner_name: string;
+  owner_mobile?: string;
+  business_id: string;
+  business_name: string;
+  branch_id: string;
+  branch_name: string;
+  wallet_id: string;
+  balance_inr: string;
+  wallet_status: string;
+  wallet_updated_at: string;
+}
+
+export interface FinoraServerLiveWalletPage {
+  ok: true;
+  source: "POSTGRESQL_WALLETS";
+  wallets: FinoraServerLiveWalletRecord[];
+  limit: number;
+  offset: number;
+  hasMore: boolean;
+}
+
+export async function fetchFinoraServerLiveWallets(
+  adminApiKey: string,
+  limit = 100,
+  offset = 0,
+): Promise<FinoraServerLiveWalletPage> {
+  const protectedKey = assertAdminApiKey(adminApiKey);
+
+  if (
+    !Number.isSafeInteger(limit) ||
+    limit < 1 ||
+    limit > 100 ||
+    !Number.isSafeInteger(offset) ||
+    offset < 0 ||
+    offset > 99999999
+  ) {
+    throw new Error("FINORA wallet pagination is invalid.");
+  }
+
+  let response: Response;
+
+  try {
+    response = await fetch(
+      `${FINORA_API_BASE_URL}/admin/wallets/live?limit=${limit}&offset=${offset}`,
+      {
+        method: "GET",
+        headers: {
+          "x-finora-admin-key": protectedKey,
+        },
+        signal: AbortSignal.timeout(
+          FINORA_SERVER_REQUEST_TIMEOUT_MS,
+        ),
+        cache: "no-store",
+      },
+    );
+  } catch {
+    throw new Error(
+      "Unable to reach the FINORA live Wallet server.",
+    );
+  }
+
+  let body: unknown;
+
+  try {
+    body = await response.json();
+  } catch {
+    throw new Error(
+      "FINORA live Wallet response is unreadable.",
+    );
+  }
+
+  if (!response.ok) {
+    throw new Error(
+      getServerErrorMessage(
+        response.status,
+        typeof body === "object" &&
+        body !== null &&
+        !Array.isArray(body)
+          ? body as FinoraServerErrorResponse
+          : undefined,
+      ),
+    );
+  }
+
+  if (
+    typeof body !== "object" ||
+    body === null ||
+    Array.isArray(body)
+  ) {
+    throw new Error("FINORA live Wallet response is invalid.");
+  }
+
+  const candidate = body as Record<string, unknown>;
+
+  if (
+    candidate.ok !== true ||
+    candidate.source !== "POSTGRESQL_WALLETS" ||
+    !Array.isArray(candidate.wallets) ||
+    candidate.limit !== limit ||
+    candidate.offset !== offset ||
+    typeof candidate.hasMore !== "boolean"
+  ) {
+    throw new Error("FINORA live Wallet response is invalid.");
+  }
+
+  for (const item of candidate.wallets) {
+    if (
+      typeof item !== "object" ||
+      item === null ||
+      Array.isArray(item)
+    ) {
+      throw new Error("FINORA live Wallet record is invalid.");
+    }
+
+    const wallet = item as Record<string, unknown>;
+
+    for (const key of [
+      "owner_id",
+      "owner_name",
+      "business_id",
+      "business_name",
+      "branch_id",
+      "branch_name",
+      "wallet_id",
+      "wallet_status",
+      "wallet_updated_at",
+    ]) {
+      if (
+        typeof wallet[key] !== "string" ||
+        (wallet[key] as string).trim().length === 0
+      ) {
+        throw new Error("FINORA live Wallet record is incomplete.");
+      }
+    }
+
+    if (
+      wallet.owner_mobile !== undefined &&
+      (
+        typeof wallet.owner_mobile !== "string" ||
+        !/^[6-9][0-9]{9}$/.test(wallet.owner_mobile)
+      )
+    ) {
+      throw new Error("FINORA live Wallet owner mobile is invalid.");
+    }
+
+    const balance = wallet.balance_inr;
+
+    if (
+      !(typeof balance === "string" ||
+        typeof balance === "number") ||
+      !/^\d{1,10}(\.\d{1,2})?$/.test(String(balance)) ||
+      !Number.isFinite(Number(balance))
+    ) {
+      throw new Error("FINORA live Wallet balance is invalid.");
+    }
+  }
+
+  if (candidate.wallets.length > limit) {
+    throw new Error("FINORA live Wallet page exceeds limit.");
+  }
+
+  return candidate as unknown as FinoraServerLiveWalletPage;
+}

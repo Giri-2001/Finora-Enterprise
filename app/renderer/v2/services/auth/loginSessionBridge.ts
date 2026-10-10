@@ -1,4 +1,4 @@
-﻿import {
+import {
   Capacitor,
   registerPlugin,
 } from "@capacitor/core";
@@ -53,6 +53,68 @@ export type FinoraLoginSessionResult<T> =
       errorCode?: string;
       error: string;
     };
+
+export interface FinoraServerFirstV2RecoveryRequest {
+  username: string;
+  password: string;
+  securityCode: string;
+}
+
+export type FinoraServerFirstV2RecoveryResult =
+  | {
+      success: true;
+      status: "RECOVERED";
+      loginAuthorized: false;
+    }
+  | {
+      success: false;
+      errorCode?: string;
+      loginAuthorized: false;
+    };
+
+interface FinoraAndroidServerFirstV2Plugin {
+  enrollServerFirstLoginV2(
+    request: FinoraServerFirstV2RecoveryRequest,
+  ): Promise<{
+    success: boolean;
+    loginAuthorized: false;
+    enrollmentStatus?: string;
+    errorCode?: string;
+  }>;
+  checkServerFirstV2RecoveryEligibility(
+    request: { username: string },
+  ): Promise<{
+    eligible: boolean;
+    errorCode?: string;
+  }>;
+  recoverServerFirstLoginV2(
+    request: FinoraServerFirstV2RecoveryRequest,
+  ): Promise<FinoraServerFirstV2RecoveryResult>;
+}
+
+const finoraAndroidServerFirstV2Plugin =
+  registerPlugin<FinoraAndroidServerFirstV2Plugin>(
+    "FinoraControl",
+  );
+
+/**
+ * Android-only explicit V2 recovery operation.
+ * This is NOT a login session and cannot authorize the UI.
+ */
+export function getFinoraAndroidServerFirstV2Recovery():
+  | FinoraAndroidServerFirstV2Plugin
+  | undefined {
+
+  if (
+    !Capacitor.isNativePlatform() ||
+    Capacitor.getPlatform() !== "android" ||
+    !Capacitor.isPluginAvailable("FinoraControl")
+  ) {
+    return undefined;
+  }
+
+  return finoraAndroidServerFirstV2Plugin;
+}
 
 export interface FinoraLoginSessionBridge {
   login(

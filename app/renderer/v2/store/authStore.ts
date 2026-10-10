@@ -1,3 +1,4 @@
+import { endFinoraServerWalletAccess } from "../services/wallet/finoraServerWalletExit";
 // ============================================================
 // FINORA ENTERPRISE OSâ„¢
 //
@@ -483,6 +484,8 @@ export function updateSessionActivity():
 
 export function invalidateSession():
   void {
+  // FINORA_P551C: also covers exits without a business session ID.
+  void endFinoraServerWalletAccess();
 
   localStorage.removeItem(
     SESSION_KEY,
@@ -495,6 +498,8 @@ export function invalidateSession():
 
 export function logout():
   void {
+  // FINORA_P551C: also covers exits without a business session ID.
+  void endFinoraServerWalletAccess();
 
   const session =
     getSession();

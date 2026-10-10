@@ -38,6 +38,21 @@ import { config as loadDotEnv } from "dotenv";
 loadDotEnv();
 
 import { app, BrowserWindow, dialog, ipcMain, shell } from "electron";
+
+// FINORA_P549E_SERVER_WALLET_IMPORTS
+import {
+  createFinoraServerWalletKeyVault,
+} from "./control/finoraServerWalletKeyVault.js";
+import {
+  createFinoraServerWalletOnlineAccess,
+} from "./control/finoraServerWalletOnlineAccess.js";
+import {
+  registerFinoraServerWalletIpc,
+} from "./control/finoraServerWalletIpcRegistration.js";
+import {
+  bindFinoraServerWalletBusinessLifecycle,
+} from "./control/finoraServerWalletBusinessLifecycle.js";
+
 const FINORA_SINGLE_INSTANCE_LOCK_V1 =
   app.requestSingleInstanceLock();
 
@@ -3502,6 +3517,37 @@ function createMainWindow(): void {
   });
 
   mainWindow = createdWindow;
+
+  // FINORA_P549E_SERVER_WALLET_WINDOW
+  // Windows OS-encrypted key storage. Other platforms need their own adapter.
+  // Construction performs no login, enrollment or wallet API request.
+  // Registration is bound to this exact main WebContents.
+  if (process.platform === "win32") {
+    const serverWalletAccess = createFinoraServerWalletOnlineAccess({
+      vault: createFinoraServerWalletKeyVault(),
+    });
+
+    const serverWalletRegistration = registerFinoraServerWalletIpc({
+      ipc: ipcMain,
+      owner: createdWindow.webContents,
+      packaged: app.isPackaged,
+      ownerEntryPath: path.join(__dirname, "../dist/index.html"),
+      service: serverWalletAccess,
+    });
+
+    // FINORA_P550C_BUSINESS_WALLET_LIFECYCLE
+    const releaseWalletBusinessLifecycle =
+      bindFinoraServerWalletBusinessLifecycle(
+        createdWindow.webContents,
+        () => serverWalletRegistration.invalidate(),
+      );
+
+    createdWindow.webContents.once(
+      "destroyed",
+      releaseWalletBusinessLifecycle,
+    );
+  }
+
 
   // ----------------------------------------------------------
   // EXTERNAL LINKS

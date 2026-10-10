@@ -57,6 +57,9 @@ import {
   touchFinoraBranchLoginSession,
   validateFinoraBranchLoginSession,
 } from "./finoraBranchLoginSessionAuthority.js";
+import {
+  invalidateFinoraServerWalletForBusinessTransition,
+} from "./finoraServerWalletBusinessLifecycle.js";
 
 // ============================================================
 // CHANNELS
@@ -163,6 +166,16 @@ export function registerFinoraBranchLoginSessionHandlers(
       Promise<
         FinoraPortableBranchAuthV2Store | undefined
       >,
+  // FINORA_P566E2_HANDOFF
+  // Main-process dependency only; not an IPC request parameter.
+  onVerifiedOwnerLogin?:
+    (session: {
+      sessionId: string;
+      userId: string;
+      ownerId: string;
+      businessId: string;
+      branchId: string;
+    }) => Promise<void>,
 ): void {
   if (
     loginSessionHandlersRegistered
@@ -176,6 +189,11 @@ export function registerFinoraBranchLoginSessionHandlers(
   // ----------------------------------------------------------
   // SECURE LOGIN
   // ----------------------------------------------------------
+
+  // FINORA_P566G3_RACE_GUARD
+  // Never exposed to the renderer.
+  const finoraLoginGenerationBySender =
+    new WeakMap<object, number>();
 
   ipcMain.handle(
     BRANCH_LOGIN_SESSION_IPC_CHANNELS.LOGIN,
@@ -191,9 +209,23 @@ export function registerFinoraBranchLoginSessionHandlers(
         )
       ) {
         return unauthorized();
-      }
+      }      // FINORA_P566G3_RACE_GUARD
+      // This generation belongs to the trusted IPC sender.
+      const loginGeneration =
+        (finoraLoginGenerationBySender.get(event.sender) ?? 0) + 1;
+
+      finoraLoginGenerationBySender.set(
+        event.sender,
+        loginGeneration,
+      );
+
+      let loginResult:
+        Awaited<ReturnType<typeof createFinoraBranchLoginSession>>
+        | null = null;
 
       try {
+        // FINORA_P550C: only the authorized sender's wallet is cleared.
+        invalidateFinoraServerWalletForBusinessTransition(event.sender);
         const requestScopedPortableV2Store =
           resolvePortableV2Store
             ? await resolvePortableV2Store(
@@ -201,7 +233,7 @@ export function registerFinoraBranchLoginSessionHandlers(
               )
             : undefined;
 
-        return await createFinoraBranchLoginSession(
+        loginResult = await createFinoraBranchLoginSession(
           request,
           portableStore,
           recoverFreshDevice,
@@ -211,6 +243,43 @@ export function registerFinoraBranchLoginSessionHandlers(
       catch {
         return serviceFailure();
       }
+      finally {
+        // Suppress wallet work started while the business transition awaited.
+        if (
+          finoraLoginGenerationBySender.get(event.sender) ===
+          loginGeneration
+        ) {
+          invalidateFinoraServerWalletForBusinessTransition(event.sender);
+        }
+      }
+
+      // FINORA_P566E2_HANDOFF
+      // Only a verified, active Owner session qualifies.
+      // Wallet authority must still be verified independently by server.
+      if (
+        finoraLoginGenerationBySender.get(event.sender) ===
+          loginGeneration &&
+        !event.sender.isDestroyed() &&
+        loginResult?.success === true &&
+        loginResult.data.role === "OWNER" &&
+        loginResult.data.accessMode === "ACTIVE" &&
+        onVerifiedOwnerLogin
+      ) {
+        try {
+          await onVerifiedOwnerLogin({
+            sessionId: loginResult.data.sessionId,
+            userId: loginResult.data.userId,
+            ownerId: loginResult.data.ownerId,
+            businessId: loginResult.data.businessId,
+            branchId: loginResult.data.branchId,
+          });
+        } catch {
+          // Keep Main Login result; Wallet remains inaccessible
+          // unless its separate server authorization succeeds.
+        }
+      }
+
+      return loginResult ?? serviceFailure();
     },
   );
 
@@ -297,6 +366,8 @@ export function registerFinoraBranchLoginSessionHandlers(
       }
 
       try {
+        // FINORA_P550C: only the authorized sender's wallet is cleared.
+        invalidateFinoraServerWalletForBusinessTransition(event.sender);
         return {
           success:
             true,
@@ -311,6 +382,10 @@ export function registerFinoraBranchLoginSessionHandlers(
       }
       catch {
         return serviceFailure();
+      }
+      finally {
+        // Suppress wallet work started while the business transition awaited.
+        invalidateFinoraServerWalletForBusinessTransition(event.sender);
       }
     },
   );

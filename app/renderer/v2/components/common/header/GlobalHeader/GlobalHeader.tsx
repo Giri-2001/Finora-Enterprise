@@ -969,12 +969,7 @@ export default function GlobalHeader({
         </button>
 
         {(
-          Boolean(
-            window.finora
-              ?.windowControls
-              ?.toggleFullscreen,
-          ) ||
-          Capacitor.getPlatform() === "android"
+          Capacitor.getPlatform() !== "android" && Boolean(window.finora?.windowControls?.toggleFullscreen)
         ) ? (
           <button
             type="button"

@@ -1,5 +1,7 @@
 package com.finora.enterprise.control;
 
+import com.finora.enterprise.usb.FinoraUsbStorage;
+
 import android.util.Log;
 
 // ============================================================
@@ -1190,6 +1192,521 @@ public final class FinoraControlPlugin
     // AUTHORITATIVE LOGIN SESSION LIFECYCLE
     // ========================================================
 
+    /**
+     * Explicit server-first enrollment into an already
+     * SAF-authorized account-scoped V2 USB folder.
+     *
+     * Enrollment does not establish an authenticated login session.
+     * Legacy V1 login and offline collection paths remain unchanged.
+     */
+    @PluginMethod
+    public void enrollServerFirstLoginV2(
+        final PluginCall call
+    ) {
+        if (call == null) {
+            return;
+        }
+
+        final String username = call.getString("username");
+        final String password = call.getString("password");
+        final String securityCode = call.getString("securityCode");
+
+        final android.content.Context context = getContext();
+
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                com.getcapacitor.JSObject response =
+                    new com.getcapacitor.JSObject();
+
+                try {
+                    String canonical =
+                        FinoraPortableBranchAccountUsbRoot
+                            .canonicalUsername(username);
+
+                    if (
+                        password == null ||
+                        password.isEmpty() ||
+                        securityCode == null ||
+                        securityCode.isEmpty()
+                    ) {
+                        response.put("success", false);
+                        response.put("errorCode", "INVALID_REQUEST");
+                        call.resolve(response);
+                        return;
+                    }
+
+                    com.finora.enterprise.usb.FinoraUsbStorage
+                        .PortableAuthRoot usb =
+                            new com.finora.enterprise.usb
+                                .FinoraUsbStorage(context)
+                                    .resolvePortableAuthRoot();
+
+                    if (
+                        usb == null ||
+                        !usb.isReady() ||
+                        usb.root == null
+                    ) {
+                        response.put("success", false);
+                        response.put(
+                            "errorCode",
+                            "USB_AUTHORITY_UNAVAILABLE"
+                        );
+                        call.resolve(response);
+                        return;
+                    }
+
+
+                    FinoraServerFirstLoginClient.Result server =
+                        FinoraServerFirstLoginClient.verify(
+                            username,
+                            password,
+                            securityCode
+                        );
+
+                    if (
+                        server == null ||
+                        !server.success ||
+                        server.signedBootstrap == null
+                    ) {
+                        response.put("success", false);
+                        response.put(
+                            "errorCode",
+                            server != null && server.errorCode != null
+                                ? server.errorCode
+                                : "SERVER_VERIFICATION_FAILED"
+                        );
+                        call.resolve(response);
+                        return;
+                    }
+
+                    // FINORA_P1_082S_VERIFIED_FOLDER
+                    // Server signature and scope verified above.
+                    androidx.documentfile.provider.DocumentFile account =
+                        FinoraPortableBranchAccountUsbRoot
+                            .resolveExisting(usb.root, canonical);
+
+                    if (account == null) {
+                        if (!usb.root.canWrite()) {
+                            response.put("success", false);
+                            response.put("errorCode", "USB_ROOT_NOT_WRITABLE");
+                            call.resolve(response);
+                            return;
+                        }
+
+                        androidx.documentfile.provider.DocumentFile conflict =
+                            usb.root.findFile(canonical);
+
+                        if (conflict != null) {
+                            response.put("success", false);
+                            response.put("errorCode", "ACCOUNT_FOLDER_CONFLICT");
+                            call.resolve(response);
+                            return;
+                        }
+
+                        account = usb.root.createDirectory(canonical);
+                    }
+
+                    if (
+                        account == null ||
+                        !account.isDirectory() ||
+                        !account.canWrite() ||
+                        !FinoraServerFirstLoginRuntimeAuthorityUsbStore
+                            .accountMatches(account.getName(), canonical)
+                    ) {
+                        response.put("success", false);
+                        response.put(
+                            "errorCode",
+                            "ACCOUNT_USB_FOLDER_UNAVAILABLE"
+                        );
+                        call.resolve(response);
+                        return;
+                    }
+
+                    FinoraServerFirstLoginV2UsbEnrollmentCoordinator
+                        .Result enrollment =
+                            FinoraServerFirstLoginV2UsbEnrollmentCoordinator
+                                .enrollNew(
+                                    context.getContentResolver(),
+                                    account,
+                                    server,
+                                    username,
+                                    password,
+                                    securityCode
+                                );
+
+                    // FINORA_P1_097_GUARDED_RUNTIME_REPAIR
+                    FinoraServerFirstLoginV2PartialEnrollmentRepair.Status
+                        repairStatus = null;
+
+                    if (
+                        enrollment != null &&
+                        (
+                            enrollment.success() ||
+                            enrollment.status ==
+                                FinoraServerFirstLoginV2UsbEnrollmentCoordinator
+                                    .Status.EXISTING_AUTH_CONFLICT
+                        )
+                    ) {
+                        repairStatus =
+                            FinoraServerFirstLoginV2PartialEnrollmentRepair
+                                .repair(
+                                    context,
+                                    account,
+                                    server,
+                                    username,
+                                    password,
+                                    securityCode
+                                );
+                    }
+
+                    if (enrollment == null) {
+                        response.put("success", false);
+                        response.put(
+                            "errorCode",
+                            "V2_ENROLLMENT_UNAVAILABLE"
+                        );
+                    }
+                    else {
+                        response.put(
+                            "enrollmentStatus",
+                            String.valueOf(enrollment.status)
+                        );
+
+                        // Enrollment is NOT an authenticated session.
+                        boolean complete =
+                            repairStatus ==
+                                FinoraServerFirstLoginV2PartialEnrollmentRepair
+                                    .Status.WRITTEN;
+
+                        response.put("success", complete);
+                        if (!complete && repairStatus != null) {
+                            response.put(
+                                "errorCode",
+                                "RUNTIME_REPAIR_" + repairStatus.name()
+                            );
+                        }
+                        response.put("loginAuthorized", false);
+                    }
+
+                    call.resolve(response);
+                }
+                catch (Exception error) {
+                    response.put("success", false);
+                    response.put(
+                        "errorCode",
+                        "SERVER_FIRST_LOGIN_ENROLLMENT_FAILED"
+                    );
+                    call.resolve(response);
+                }
+            }
+        }, "finora-server-first-login-v2").start();
+    }
+
+    /**
+     * Explicit V2 recovery on an already authorized account USB.
+     * No server bypass and no login-session issuance.
+     */
+    /**
+     * Read-only local credential presence check.
+     * Errors fail closed; this method never issues a session.
+     */
+    @PluginMethod
+    public void checkServerFirstV2RecoveryEligibility(
+        PluginCall call
+    ) {
+        JSObject result = new JSObject();
+        result.put("eligible", false);
+
+        try {
+            String username = call.getString("username");
+            if (username == null || username.trim().isEmpty()) {
+                result.put("errorCode", "INVALID_REQUEST");
+            } else {
+                FinoraBranchCredentialStore store =
+                    new FinoraBranchCredentialStore(getContext());
+
+                if (store.findActiveByUsername(username) == null) {
+                    result.put("eligible", true);
+                } else {
+                    result.put("errorCode", "LOCAL_CREDENTIAL_EXISTS");
+                }
+            }
+        } catch (Exception error) {
+            result.put("errorCode", "CREDENTIAL_PRESENCE_CHECK_FAILED");
+        }
+
+        call.resolve(result);
+    }
+
+    @PluginMethod
+    public void recoverServerFirstLoginV2(
+        final PluginCall call
+    ) {
+        if (call == null) {
+            return;
+        }
+
+        final String username = call.getString("username");
+        final String password = call.getString("password");
+        final String securityCode = call.getString("securityCode");
+
+        final android.content.Context context = getContext();
+
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                com.getcapacitor.JSObject response =
+                    new com.getcapacitor.JSObject();
+
+                response.put("success", false);
+                response.put("loginAuthorized", false);
+
+                String finoraP1085Stage = "REQUEST_VALIDATION";
+
+                try {
+                    if (
+                        username == null ||
+                        username.trim().isEmpty() ||
+                        password == null ||
+                        password.isEmpty()
+                    ) {
+                        response.put("errorCode", "INVALID_REQUEST");
+                        call.resolve(response);
+                        return;
+                    }
+
+                    if (
+                        securityCode == null ||
+                        securityCode.trim().isEmpty()
+                    ) {
+                        response.put(
+                            "errorCode",
+                            "SECURITY_CODE_REQUIRED"
+                        );
+                        call.resolve(response);
+                        return;
+                    }
+
+                    if (
+                        context == null ||
+                        controlStore == null ||
+                        installationBindingService == null
+                    ) {
+                        response.put(
+                            "errorCode",
+                            "NATIVE_AUTHORITY_UNAVAILABLE"
+                        );
+                        call.resolve(response);
+                        return;
+                    }
+
+                    /*
+                     * Never silently replace existing local FINORA
+                     * Control State during server-first V2 recovery.
+                     * Existing owners must use the established
+                     * branch-switch / restore authority instead.
+                     */
+                    String currentControlState = controlStore.read();
+
+                    if (
+                        currentControlState != null &&
+                        !currentControlState.trim().isEmpty()
+                    ) {
+                        response.put(
+                            "errorCode",
+                            "EXISTING_LOCAL_CONTROL_STATE"
+                        );
+                        call.resolve(response);
+                        return;
+                    }
+
+                    finoraP1085Stage = "V2_USB_AUTH_VERIFICATION";
+                    FinoraServerFirstLoginV2RecoveryVerificationGate
+                        .VerifiedPair verified =
+                            new FinoraServerFirstLoginV2UsbRecoveryBridge(
+                                context
+                            ).verifyExisting(
+                                username,
+                                password,
+                                securityCode
+                            );
+
+                    finoraP1085Stage = "CREDENTIAL_PROJECTION";
+
+                    // FINORA_P1_113_PROJECTION_MAPPING
+                    FinoraBranchCredentialContract.Credential credential;
+
+                    try {
+                        credential =
+                            FinoraServerFirstLoginV2CredentialProjector
+                                .project(verified);
+                    } catch (Exception projectionError) {
+                        String projectionMarker =
+                            projectionError.getMessage();
+
+                        if ("P112_PASSWORD_FACTOR".equals(projectionMarker)) {
+                            finoraP1085Stage =
+                                "CREDENTIAL_PROJECTION_PASSWORD_FACTOR";
+                        } else if ("P112_SECURITY_FACTOR".equals(projectionMarker)) {
+                            finoraP1085Stage =
+                                "CREDENTIAL_PROJECTION_SECURITY_FACTOR";
+                        } else if ("P117_SCOPE_CONTINUITY".equals(projectionMarker)) {
+                            finoraP1085Stage =
+                                "CREDENTIAL_PROJECTION_SCOPE";
+                        } else if (
+                            projectionMarker != null &&
+                            projectionMarker.startsWith("P119_NATIVE_") &&
+                            projectionMarker.matches(
+                                "P119_NATIVE_(CREATED_AT|UPDATED_AT|USERNAME|ROLE|VERIFIER|SCHEMA|DEMO_SCOPE|CREDENTIAL_ID|AUTHORIZATION_ID|AUTH_GENERATION|OTHER)"
+                            )
+                        ) {
+                            finoraP1085Stage =
+                                "CREDENTIAL_PROJECTION_" + projectionMarker;
+                        } else if ("P117_NATIVE_CREDENTIAL_VALIDATION".equals(projectionMarker)) {
+                            finoraP1085Stage =
+                                "CREDENTIAL_PROJECTION_NATIVE_VALIDATION";
+                        } else {
+                            finoraP1085Stage =
+                                "CREDENTIAL_PROJECTION_OTHER";
+                        }
+
+                        // Never return verifier values, decrypted
+                        // credentials, private keys or raw exceptions.
+                        throw new SecurityException(
+                            "V2 credential projection rejected."
+                        );
+                    }
+
+                    finoraP1085Stage = "INSTALLATION_BINDING";
+                    FinoraInstallationBindingCrypto.PublicBinding binding =
+                        installationBindingService.ensure();
+
+                    if (binding == null) {
+                        response.put(
+                            "errorCode",
+                            "INSTALLATION_BINDING_UNAVAILABLE"
+                        );
+                        call.resolve(response);
+                        return;
+                    }
+
+                    finoraP1085Stage = "NATIVE_HYDRATION";
+                    FinoraPortableFreshDeviceHydrationService hydration =
+                        new FinoraPortableFreshDeviceHydrationService(
+                            new FinoraPortableFreshDeviceHydrationService
+                                .ControlStatePort() {
+                                @Override
+                                public String read() throws Exception {
+                                    return controlStore.read();
+                                }
+
+                                @Override
+                                public void write(
+                                    String serialized
+                                ) throws Exception {
+                                    controlStore.write(serialized);
+                                }
+                            }
+                        );
+
+                    FinoraPortableFreshDeviceHydrationService.Result result =
+                        hydration.hydrate(
+                            new FinoraPortableFreshDeviceHydrationService
+                                .Request(
+                                    credential,
+                                    verified.runtimeAuthority,
+                                    verified.portableAuthFingerprint,
+                                    new FinoraPortableFreshDeviceHydrationService
+                                        .NativeBinding(
+                                            binding.installationId,
+                                            binding.bindingKeyId,
+                                            binding.fingerprintAlgorithm,
+                                            binding.publicKeyFingerprint
+                                        ),
+                                    java.time.Instant.now().toString()
+                                )
+                        );
+
+                    if (result == null || !result.success) {
+                        response.put(
+                            "errorCode",
+                            result != null && result.errorCode != null
+                                ? result.errorCode
+                                : "V2_HYDRATION_FAILED"
+                        );
+                        call.resolve(response);
+                        return;
+                    }
+
+                    // FINORA_P159_V2_WALLET_CERTIFICATION
+                    // Only material from the independently verified
+                    // Server-First V2 password + Security Code pair
+                    // may initialize the branch-scoped secure vault.
+                    try {
+                        org.json.JSONObject key =
+                            verified.portablePayload.getJSONObject(
+                                "branchCertificationKeyMaterial"
+                            );
+
+                        FinoraBranchCertificationCryptoValidator.Material
+                            v2Material =
+                                new FinoraBranchCertificationCryptoValidator.Material(
+                                    key.getString("keyId"),
+                                    key.getString("algorithm"),
+                                    key.getString("publicKeyFormat"),
+                                    key.getString("publicKey"),
+                                    key.getString("fingerprintAlgorithm"),
+                                    key.getString("publicKeyFingerprint"),
+                                    key.getString("createdAt"),
+                                    key.getInt("schemaVersion"),
+                                    key.getString("privateKeyFormat"),
+                                    key.getString("privateKey"),
+                                    key.getInt("vaultSchemaVersion")
+                                );
+
+                        FinoraBranchCertificationCryptoValidator.assertValid(
+                            v2Material
+                        );
+
+                        if (walletBranchCertificationDeviceVault == null) {
+                            throw new SecurityException(
+                                "V2 certification vault unavailable."
+                            );
+                        }
+
+                        walletBranchCertificationDeviceVault.write(
+                            verified.runtimeAuthority.ownerId,
+                            verified.runtimeAuthority.businessId,
+                            verified.runtimeAuthority.branchId,
+                            v2Material
+                        );
+                    }
+                    catch (Exception certificationError) {
+                        response.put(
+                            "errorCode",
+                            "V2_WALLET_CERTIFICATION_RESTORE_FAILED"
+                        );
+                        call.resolve(response);
+                        return;
+                    }
+                    // Hydration is not login authorization.
+                    response.put("success", true);
+                    response.put("status", "RECOVERED");
+                    response.put("loginAuthorized", false);
+                    call.resolve(response);
+                }
+                catch (Exception error) {
+                    response.put(
+                        "errorCode",
+                        "V2_FAILED_" + finoraP1085Stage
+                    );
+                    call.resolve(response);
+                }
+            }
+        }, "finora-v2-verified-recovery").start();
+    }
+
     @PluginMethod
     public void login(
         PluginCall call
@@ -1365,6 +1882,13 @@ public final class FinoraControlPlugin
             ) {
                 return;
             }
+            // FINORA_P249_VERIFIED_SERVER_PROFILE_REPAIR
+            repairMissingServerFirstBusinessProfile(
+                call,
+                storageMode,
+                authorityResult.data
+            );
+
             resolveLoginSessionResult(
                 call,
                 loginSessionAuthority.issue(
@@ -1382,6 +1906,160 @@ public final class FinoraControlPlugin
         }
     }
 
+    // FINORA_P249_VERIFIED_SERVER_PROFILE_REPAIR
+    // Only the original server-signed bootstrap authorizes profile identity.
+    // USB Runtime Authority is read-only. No new signing authority is minted.
+    private void repairMissingServerFirstBusinessProfile(
+        PluginCall call,
+        String storageMode,
+        FinoraBranchPasswordFirstLoginAuthority.AuthenticatedIdentity identity
+    ) throws Exception {
+        if (!"USB".equals(storageMode) || identity == null) {
+            return;
+        }
+
+        // Normal password-only login remains unchanged. The security
+        // code is required only for a one-time missing-profile repair.
+        // FINORA_P261_HARDENED_REPAIR
+        // One-time repair only; never require Security Code
+        // for an ordinary password-only login.
+        String securityCode = call.getString("securityCode");
+        if (securityCode == null || securityCode.trim().isEmpty()) {
+            return;
+        }
+
+        if (controlStore == null || installationBindingService == null) {
+            throw new SecurityException("FINORA profile repair prerequisites unavailable.");
+        }
+
+        synchronized (FinoraControlPackageApplyLock.LOCK) {
+            String serialized = controlStore.read();
+            if (serialized == null || serialized.trim().isEmpty()) {
+                throw new SecurityException("FINORA Control Store unavailable.");
+            }
+
+            JSONObject root = new JSONObject(serialized);
+            JSONArray profiles = root.optJSONArray("businessProfiles");
+            if (profiles == null) {
+                throw new SecurityException("FINORA Business Profile store malformed.");
+            }
+
+            // Existing branch profile must never be overwritten.
+            for (int i = 0; i < profiles.length(); i++) {
+                JSONObject existing = profiles.getJSONObject(i);
+                if (identity.ownerId.equals(existing.optString("ownerId")) &&
+                    identity.businessId.equals(existing.optString("businessId")) &&
+                    identity.branchId.equals(existing.optString("branchId"))) {
+                    return;
+                }
+            }
+
+            FinoraServerFirstLoginV2RecoveryVerificationGate.VerifiedPair
+                verified = new FinoraServerFirstLoginV2UsbRecoveryBridge(
+                    getContext()
+                ).verifyExisting(
+                    identity.username,
+                    call.getString("password"),
+                    securityCode
+                );
+
+            JSONObject portable = verified.portablePayload;
+            FinoraPortableFreshDeviceRuntimeAuthorityContract.Payload
+                runtime = verified.runtimeAuthority;
+
+            JSONObject evidence = portable.getJSONObject(
+                "sourceAuthorizationVerificationEvidence"
+            );
+            JSONObject server = evidence.getJSONObject(
+                "signedBootstrap"
+            ).getJSONObject("payload");
+
+            if (!identity.ownerId.equals(runtime.ownerId) ||
+                !identity.businessId.equals(runtime.businessId) ||
+                !identity.branchId.equals(runtime.branchId) ||
+                !identity.userId.equals(runtime.userId) ||
+                !identity.username.equals(runtime.username) ||
+                !identity.role.equals(runtime.role) ||
+                identity.authGeneration != runtime.authGeneration ||
+                !identity.ownerId.equals(server.getString("ownerId")) ||
+                !identity.businessId.equals(server.getString("businessId")) ||
+                !identity.branchId.equals(server.getString("branchId")) ||
+                !identity.userId.equals(server.getString("userId")) ||
+                !identity.username.equals(server.getString("username")) ||
+                !"USB".equals(runtime.storageMode) ||
+                !"REAL".equals(runtime.dataContext) ||
+                !"REGISTERED".equals(runtime.branchAccessType) ||
+                !"ACTIVE".equals(runtime.accessMode) ||
+                !"ACTIVE".equals(runtime.activationStatus) ||
+                !"ACTIVE".equals(runtime.storageEntitlementStatus) ||
+                !verified.portableAuthFingerprint.equals(
+                    runtime.portableAuthFingerprint
+                )) {
+                throw new SecurityException("FINORA verified profile scope mismatch.");
+            }
+
+            JSONObject installation = root.getJSONObject("installation");
+            if (!identity.ownerId.equals(installation.getString("ownerId")) ||
+                !identity.businessId.equals(installation.getString("businessId")) ||
+                !identity.branchId.equals(installation.getString("branchId"))) {
+                throw new SecurityException("FINORA installed profile scope mismatch.");
+            }
+
+            FinoraInstallationBindingCrypto.PublicBinding binding =
+                installationBindingService.get();
+
+            if (binding == null ||
+                !binding.installationId.equals(
+                    installation.getString("installationId")
+                )) {
+                throw new SecurityException("FINORA native binding mismatch.");
+            }
+
+            String businessName = server.getString("businessName");
+            String branchName = server.getString("branchName");
+
+            if (businessName.trim().isEmpty() ||
+                branchName.trim().isEmpty()) {
+                throw new SecurityException("FINORA signed business identity missing.");
+            }
+
+            JSONObject profile = new JSONObject();
+            profile.put("profileId",
+                "FINORA-SERVER-PROFILE-" + identity.branchId);
+            profile.put("ownerId", identity.ownerId);
+            profile.put("businessId", identity.businessId);
+            profile.put("branchId", identity.branchId);
+
+            String businessCode = server.optString("businessCode", "");
+            String branchCode = server.optString("branchCode", "");
+
+            // Optional signed codes: use only server-authorized values.
+            // Do not invent or substitute local identifiers.
+            profile.put("businessCode", businessCode);
+            profile.put("branchCode", branchCode);
+
+            profile.put("businessName", businessName);
+            profile.put("branchName", branchName);
+            profile.put("installationId", binding.installationId);
+            profile.put("bindingKeyId", binding.bindingKeyId);
+            profile.put("fingerprintAlgorithm", binding.fingerprintAlgorithm);
+            profile.put("publicKeyFingerprint", binding.publicKeyFingerprint);
+            profile.put("createdAt", server.getString("issuedAt"));
+            profile.put("updatedAt", server.getString("issuedAt"));
+            profile.put("schemaVersion", 1);
+
+            // No modifications to credentials, subscriptions, wallet,
+            // activation, customers, loans or USB artifacts.
+            profiles.put(profile);
+            root.put("businessProfiles", profiles);
+            controlStore.write(root.toString());
+
+            android.util.Log.i(
+                "FINORA_P249",
+                "Verified server-first Business Profile restored."
+            );
+        }
+    }
     private boolean restoreWalletBranchCertificationAuthority(
         PluginCall call,
         String storageMode,
@@ -1425,6 +2103,120 @@ public final class FinoraControlPlugin
             return false;
         }
 
+        // FINORA_P174_V2_WALLET_SELF_REPAIR
+        // Existing native password authentication has succeeded.
+        // A missing USB wallet vault may be restored only using
+        // independently verified V2 authentication and signed scope.
+        if (
+            material == null &&
+            "USB".equals(storageMode)
+        ) {
+            try {
+                String v2Password =
+                    call.getString("password");
+
+                String v2SecurityCode =
+                    call.getString("securityCode");
+
+                FinoraServerFirstLoginV2RecoveryVerificationGate
+                    .VerifiedPair v2Verified =
+                        new FinoraServerFirstLoginV2UsbRecoveryBridge(
+                            getContext()
+                        ).verifyExisting(
+                            identity.username,
+                            v2Password,
+                            v2SecurityCode
+                        );
+
+                org.json.JSONObject v2Payload =
+                    v2Verified.portablePayload;
+
+                FinoraPortableFreshDeviceRuntimeAuthorityContract
+                    .Payload v2Runtime =
+                        v2Verified.runtimeAuthority;
+
+                if (
+                    !java.util.Objects.equals(
+                        identity.ownerId,
+                        v2Runtime.ownerId
+                    ) ||
+                    !java.util.Objects.equals(
+                        identity.businessId,
+                        v2Runtime.businessId
+                    ) ||
+                    !java.util.Objects.equals(
+                        identity.branchId,
+                        v2Runtime.branchId
+                    ) ||
+                    !java.util.Objects.equals(
+                        identity.ownerId,
+                        v2Payload.getString("ownerId")
+                    ) ||
+                    !java.util.Objects.equals(
+                        identity.businessId,
+                        v2Payload.getString("businessId")
+                    ) ||
+                    !java.util.Objects.equals(
+                        identity.branchId,
+                        v2Payload.getString("branchId")
+                    ) ||
+                    !java.util.Objects.equals(
+                        identity.userId,
+                        v2Payload.getString("userId")
+                    ) ||
+                    !java.util.Objects.equals(
+                        identity.username,
+                        v2Payload.getString("username")
+                    ) ||
+                    !java.util.Objects.equals(
+                        identity.role,
+                        v2Payload.getString("role")
+                    ) ||
+                    identity.authGeneration !=
+                        v2Payload.getLong("authGeneration")
+                ) {
+                    throw new SecurityException(
+                        "V2 Wallet Certification identity mismatch."
+                    );
+                }
+
+                FinoraBranchCertificationCryptoValidator.Material
+                    verifiedV2Material =
+                        FinoraPortableBranchAuthCertificationMaterialParser
+                            .parse(
+                                v2Payload.getJSONObject(
+                                    "branchCertificationKeyMaterial"
+                                )
+                            );
+
+                // Never replace an existing vault record.
+                FinoraBranchCertificationCryptoValidator.Material
+                    currentV2Material =
+                        walletBranchCertificationDeviceVault.read(
+                            identity.ownerId,
+                            identity.businessId,
+                            identity.branchId
+                        );
+
+                if (currentV2Material == null) {
+                    walletBranchCertificationDeviceVault.write(
+                        identity.ownerId,
+                        identity.businessId,
+                        identity.branchId,
+                        verifiedV2Material
+                    );
+                    material = verifiedV2Material;
+                }
+                else {
+                    material = currentV2Material;
+                }
+            }
+            catch (Exception v2RepairError) {
+                // Legacy V1 authentication remains authoritative
+                // for legacy credentials. Never treat a failed
+                // V2 verification as successful authorization.
+            }
+        }
         if (material == null) {
             String securityCode =
                 call.getString(
@@ -5713,6 +6505,7 @@ public final class FinoraControlPlugin
                     "businessProfiles"
                 );
 
+
             if (businessProfiles == null) {
 
 
@@ -5753,6 +6546,7 @@ public final class FinoraControlPlugin
                             "branchId"
                         )
                     );
+
 
                 if (!scopeMatches) {
                     continue;
@@ -9944,24 +10738,39 @@ String administrativeStatus =
                 accessType
             )
         ) {
-            JSONObject registrationPayment =
-                value.optJSONObject(
-                    "registrationPayment"
-                );
+            // FINORA_P184_REGISTERED_NULL_PAIR
+            // Server-First V2 REGISTERED grants may carry both
+            // registration fields as null. Partial metadata is invalid.
+            boolean hasPayment =
+                value.has("registrationPayment") &&
+                !value.isNull("registrationPayment");
 
-            int registrationCycle =
-                value.optInt(
-                    "registrationCycle",
-                    -1
-                );
+            boolean hasCycle =
+                value.has("registrationCycle") &&
+                !value.isNull("registrationCycle");
 
-            if (
-                !isValidRegistrationPayment(
-                    registrationPayment
-                ) ||
-                registrationCycle < 1
-            ) {
+            if (hasPayment != hasCycle) {
                 return false;
+            }
+
+            if (hasPayment) {
+                JSONObject registrationPayment =
+                    value.optJSONObject("registrationPayment");
+
+                Object cycleValue =
+                    value.opt("registrationCycle");
+
+                if (
+                    !isValidRegistrationPayment(
+                        registrationPayment
+                    ) ||
+                    !(cycleValue instanceof Number) ||
+                    ((Number) cycleValue).doubleValue() < 1 ||
+                    ((Number) cycleValue).doubleValue() !=
+                        ((Number) cycleValue).intValue()
+                ) {
+                    return false;
+                }
             }
 
             /*

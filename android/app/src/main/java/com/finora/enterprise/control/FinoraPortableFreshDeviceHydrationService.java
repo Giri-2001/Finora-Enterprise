@@ -213,8 +213,10 @@ public final class
             );
         }
 
+        String p128Stage = "AUTHORITY";
+        // FINORA_P128_STAGE
         try {
-            assertAuthorityContinuity(
+assertAuthorityContinuity(
                 request
             );
 
@@ -223,6 +225,7 @@ public final class
              * included in the root. This preserves the same
              * canonical validation boundary as BranchCredentialStore.
              */
+            p128Stage = "CREDENTIAL_SERIALIZE";
             String credentialSerialized =
                 FinoraBranchCredentialContract
                     .serialize(
@@ -236,6 +239,7 @@ public final class
                             credentialSerialized
                         );
 
+            p128Stage = "ROOT_BUILD";
             synchronized (
                 FinoraControlPackageApplyLock.LOCK
             ) {
@@ -277,6 +281,7 @@ public final class
                  * FinoraControlStore.write(), which provides
                  * Android Keystore AES-GCM + AtomicFile semantics.
                  */
+                p128Stage = "CONTROL_WRITE";
                 controlState.write(
                     root.toString()
                 );
@@ -291,8 +296,41 @@ public final class
             );
         }
         catch (Exception error) {
+            // FINORA_P146_ARGUMENT_DIAGNOSTIC
+            // Fixed categories only. Never expose raw exception values.
+            if (error instanceof IllegalArgumentException) {
+                String p146Message = error.getMessage();
+
+                String p146Category =
+                    "FINORA REGISTERED Runtime Authority payment is required."
+                        .equals(p146Message)
+                            ? "PAYMENT_REQUIRED"
+                            : "OTHER";
+
+                return Result.failure(
+                    ERROR_HYDRATION_FAILED +
+                        "_P146_" + p128Stage +
+                        "_ARGUMENT_" + p146Category,
+                    "FINORA native hydration argument validation failed."
+                );
+            }
+
+            // FINORA_P142_ROOT_DIAGNOSTIC
+            // Diagnostic is limited to exception class, never values.
+            String p142Class =
+                error instanceof org.json.JSONException
+                    ? "JSON"
+                    : error instanceof SecurityException
+                        ? "SECURITY"
+                        : error instanceof IllegalArgumentException
+                            ? "ARGUMENT"
+                            : error instanceof NullPointerException
+                                ? "NULL"
+                                : "OTHER";
+
             return Result.failure(
-                ERROR_HYDRATION_FAILED,
+                ERROR_HYDRATION_FAILED + "_P142_" +
+                    p128Stage + "_" + p142Class,
                 messageOrDefault(
                     error,
                     "FINORA fresh-device native hydration failed."
@@ -317,6 +355,7 @@ public final class
             CONTROL_VERSION
         );
 
+        try { android.util.Log.i("FINORA_P135", "ROOT_STAGE=INSTALLATION"); } catch (RuntimeException ignored) {} // FINORA_P135_ROOT_STAGE
         root.put(
             "installation",
             buildInstallation(
@@ -329,6 +368,7 @@ public final class
         JSONArray activations =
             new JSONArray();
 
+        try { android.util.Log.i("FINORA_P135", "ROOT_STAGE=ACTIVATION"); } catch (RuntimeException ignored) {} // FINORA_P135_ROOT_STAGE
         activations.put(
             buildActivation(
                 runtime
@@ -343,6 +383,7 @@ public final class
         JSONArray entitlements =
             new JSONArray();
 
+        try { android.util.Log.i("FINORA_P135", "ROOT_STAGE=ENTITLEMENT"); } catch (RuntimeException ignored) {} // FINORA_P135_ROOT_STAGE
         entitlements.put(
             buildStorageEntitlement(
                 runtime,
@@ -358,6 +399,7 @@ public final class
         JSONArray grants =
             new JSONArray();
 
+        try { android.util.Log.i("FINORA_P135", "ROOT_STAGE=BRANCH_ACCESS"); } catch (RuntimeException ignored) {} // FINORA_P135_ROOT_STAGE
         grants.put(
             buildBranchAccessGrant(
                 runtime
@@ -373,6 +415,7 @@ public final class
             new JSONArray();
 
         if (runtime.businessProfile != null) {
+            try { android.util.Log.i("FINORA_P135", "ROOT_STAGE=BUSINESS_PROFILE"); } catch (RuntimeException ignored) {} // FINORA_P135_ROOT_STAGE
             businessProfiles.put(
                 buildBusinessProfile(
                     runtime.businessProfile
@@ -388,6 +431,7 @@ public final class
         JSONArray credentials =
             new JSONArray();
 
+        try { android.util.Log.i("FINORA_P135", "ROOT_STAGE=CREDENTIAL"); } catch (RuntimeException ignored) {} // FINORA_P135_ROOT_STAGE
         credentials.put(
             new JSONObject(
                 FinoraBranchCredentialContract
@@ -730,17 +774,41 @@ public final class
                 runtime.branchAccessType
             )
         ) {
-            grant.put(
-                "registrationPayment",
-                buildRegistrationPayment(
-                    runtime.registrationPayment
-                )
-            );
+            // FINORA_P150_SERVER_FIRST_PAYMENT_PARITY
+            // The signed server-first REGISTERED authority may
+            // legitimately carry a null payment/cycle pair.
+            // Partial metadata is never accepted.
+            if (
+                (runtime.registrationPayment == null) !=
+                (runtime.registrationCycle == null)
+            ) {
+                throw new SecurityException(
+                    "FINORA REGISTERED payment metadata is inconsistent."
+                );
+            }
 
-            grant.put(
-                "registrationCycle",
-                runtime.registrationCycle
-            );
+            if (runtime.registrationPayment == null) {
+                grant.put(
+                    "registrationPayment",
+                    JSONObject.NULL
+                );
+                grant.put(
+                    "registrationCycle",
+                    JSONObject.NULL
+                );
+            }
+            else {
+                grant.put(
+                    "registrationPayment",
+                    buildRegistrationPayment(
+                        runtime.registrationPayment
+                    )
+                );
+                grant.put(
+                    "registrationCycle",
+                    runtime.registrationCycle
+                );
+            }
         }
         else {
             grant.put(

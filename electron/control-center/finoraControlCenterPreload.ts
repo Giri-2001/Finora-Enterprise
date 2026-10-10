@@ -104,6 +104,9 @@ const CONTROL_CENTER_CHANNELS = {
   PROVISION_SERVER_OWNER:
     "finora:control-center:provision-server-owner",
 
+  GET_SERVER_LIVE_WALLETS:
+    "finora:control-center:get-server-live-wallets",
+
   GET_FINORA_INCOME_PRICING:
     "finora:control-center:get-finora-income-pricing",
 
@@ -757,6 +760,30 @@ export interface FinoraControlCenterProvisioningResumeInput {
   username:
     string;
 }
+// FINORA_P295_LIVE_WALLET_PRELOAD
+// No administrative credentials are exposed in these response types.
+export interface FinoraServerLiveWalletRecordView {
+  owner_id: string;
+  owner_name: string;
+  owner_mobile?: string;
+  business_id: string;
+  business_name: string;
+  branch_id: string;
+  branch_name: string;
+  wallet_id: string;
+  balance_inr: string;
+  wallet_status: string;
+  wallet_updated_at: string;
+}
+
+export interface FinoraServerLiveWalletPageView {
+  ok: true;
+  source: "POSTGRESQL_WALLETS";
+  wallets: FinoraServerLiveWalletRecordView[];
+  limit: number;
+  offset: number;
+  hasMore: boolean;
+}
 export interface FinoraServerProvisionOwnerInput {
   ownerName: string;
   mobile: string;
@@ -1319,6 +1346,11 @@ export interface FinoraControlCenterBridge {
       Promise<
         FinoraControlCenterResult<FinoraServerProvisionOwnerView>
       >;
+  getServerLiveWallets:
+    (input: { limit: number; offset: number }) =>
+      Promise<
+        FinoraControlCenterResult<FinoraServerLiveWalletPageView>
+      >;
 
   getFinoraIncomePricing:
     () =>
@@ -1826,6 +1858,14 @@ const controlCenterBridge:
         FinoraControlCenterResult<boolean>
       >,
 
+  getServerLiveWallets:
+    (input) =>
+      ipcRenderer.invoke(
+        CONTROL_CENTER_CHANNELS.GET_SERVER_LIVE_WALLETS,
+        input,
+      ) as Promise<
+        FinoraControlCenterResult<FinoraServerLiveWalletPageView>
+      >,
   provisionServerOwner:
     (input) =>
       ipcRenderer.invoke(

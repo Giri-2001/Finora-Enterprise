@@ -184,7 +184,7 @@ public final class
     }
 
     @Test
-    public void existingControlStateIsNeverReplaced()
+    public void verifiedPortableAuthorityCanReplaceLocalControlState()
         throws Exception {
 
         RecordingPort port =
@@ -211,19 +211,11 @@ public final class
                 )
             );
 
-        assertFalse(
+        assertTrue(
             result.success
         );
 
-        assertEquals(
-            "CONTROL_STATE_ALREADY_EXISTS",
-            result.errorCode
-        );
-
-        assertEquals(
-            0,
-            port.writeCount
-        );
+        assertEquals(1, port.writeCount);
     }
 
     @Test

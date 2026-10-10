@@ -225,6 +225,7 @@ import {
 import {
   verifyFinoraServerAdminCredential,
   provisionFinoraServerOwner,
+  fetchFinoraServerLiveWallets,
   type FinoraServerProvisionOwnerInput,
 } from "./finoraServerAdminClient.js";
 
@@ -310,6 +311,8 @@ export const FINORA_CONTROL_CENTER_IPC_CHANNELS = {
 
   PROVISION_SERVER_OWNER:
     "finora:control-center:provision-server-owner",
+  GET_SERVER_LIVE_WALLETS:
+    "finora:control-center:get-server-live-wallets",
 
   GET_FINORA_INCOME_PRICING:
     "finora:control-center:get-finora-income-pricing",
@@ -1253,6 +1256,78 @@ try {
   // No private key / verifier / plaintext Security Code leaves
   // the main process.
   // ----------------------------------------------------------
+
+  // FINORA_P294_LIVE_WALLET_IPC
+  // Admin credentials remain in the privileged Electron process.
+  registerFinoraDeveloperProtectedControlCenterHandler(
+    FINORA_CONTROL_CENTER_IPC_CHANNELS
+      .GET_SERVER_LIVE_WALLETS,
+    async (event, input: unknown) => {
+      if (
+        !isTrustedFinoraControlCenterRenderer(
+          event.senderFrame,
+        )
+      ) {
+        return failure(
+          "FINORA Live Wallet access is restricted to the dedicated Control Center renderer.",
+        );
+      }
+
+      if (
+        typeof input !== "object" ||
+        input === null ||
+        Array.isArray(input)
+      ) {
+        return failure(
+          "FINORA Live Wallet pagination request is invalid.",
+        );
+      }
+
+      const request = input as Record<string, unknown>;
+      const limit = request.limit;
+      const offset = request.offset;
+
+      if (
+        typeof limit !== "number" ||
+        typeof offset !== "number" ||
+        !Number.isSafeInteger(limit) ||
+        !Number.isSafeInteger(offset) ||
+        limit < 1 ||
+        limit > 100 ||
+        offset < 0 ||
+        offset > 99999999
+      ) {
+        return failure(
+          "FINORA Live Wallet pagination request is invalid.",
+        );
+      }
+
+      return executePrivileged(
+        async () => {
+          const adminApiKey =
+            await readFinoraServerAdminCredential();
+
+          try {
+            return await fetchFinoraServerLiveWallets(
+              adminApiKey,
+              limit,
+              offset,
+            );
+          } catch (error) {
+            if (
+              error instanceof Error &&
+              error.message ===
+                "FINORA Server rejected the Control Center administrator credential."
+            ) {
+              await clearFinoraServerAdminCredential();
+            }
+
+            throw error;
+          }
+        },
+      );
+    },
+  );
 
   registerFinoraDeveloperSecurityControlCenterHandler(
     FINORA_CONTROL_CENTER_IPC_CHANNELS

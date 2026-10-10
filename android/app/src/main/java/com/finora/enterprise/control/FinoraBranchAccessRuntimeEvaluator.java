@@ -92,9 +92,34 @@ public final class FinoraBranchAccessRuntimeEvaluator {
         if (!until.isAfter(from)) return "FINORA access expiry must be later than its start timestamp.";
 
         if ("REGISTERED".equals(grant.accessType)) {
-            if (grant.registrationCycle==null||grant.registrationCycle.longValue()<=0L||grant.registrationCycle.longValue()>JS_MAX_SAFE_INTEGER) return "FINORA registration cycle must be a positive integer.";
-            RegistrationPayment payment=grant.registrationPayment;
-            if (payment==null||!Double.isFinite(payment.amount)||payment.amount<=0.0d||!text(payment.currency)||parse(payment.paidAt)==null||!Boolean.FALSE.equals(payment.refundable)) return "FINORA registration payment metadata is invalid.";
+            // FINORA_P186_REGISTERED_NULL_PAIR
+            // Server-First V2 allows both payment fields to be null.
+            // Reject partial metadata. Preserve strict paid-grant checks.
+            boolean hasCycle = grant.registrationCycle != null;
+            boolean hasPayment = grant.registrationPayment != null;
+
+            if (hasCycle != hasPayment) {
+                return "FINORA registration metadata pair is incomplete.";
+            }
+
+            if (hasCycle) {
+                if (grant.registrationCycle.longValue() <= 0L ||
+                    grant.registrationCycle.longValue() > JS_MAX_SAFE_INTEGER)
+                    return "FINORA registration cycle must be a positive integer.";
+
+                RegistrationPayment payment = grant.registrationPayment;
+
+                if (!Double.isFinite(payment.amount) ||
+                    payment.amount <= 0.0d ||
+                    !text(payment.currency) ||
+                    parse(payment.paidAt) == null ||
+                    !Boolean.FALSE.equals(payment.refundable))
+                    return "FINORA registration payment metadata is invalid.";
+            }
+            // FINORA_P189_SERVER_CONTROLLED_VALIDITY
+            // The verified server authority controls subscription length.
+            // Start/end order and live expiry remain strictly enforced.
+            // No Android-specific 365-day or development duration limit.
             return null;
         }
 

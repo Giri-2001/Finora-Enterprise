@@ -237,8 +237,12 @@ createFinoraDeveloperControlCenterSessionAuthority(
       };
     }
 
+    console.info("[FINORA P423 UNLOCK] stage=throttle-read-start");
+
     const persistedThrottle =
       await readThrottleState();
+
+    console.info("[FINORA P423 UNLOCK] stage=throttle-read-complete");
 
     if (
       !Number.isSafeInteger(
@@ -284,9 +288,13 @@ createFinoraDeveloperControlCenterSessionAuthority(
       };
     }
 
+    console.info("[FINORA P423 UNLOCK] stage=configuration-read-start");
+
     const configuration =
       await dependencies
         .readConfigurationState();
+
+    console.info("[FINORA P423 UNLOCK] stage=configuration-read-complete");
 
     if (
       !configuration.configured
@@ -306,11 +314,15 @@ createFinoraDeveloperControlCenterSessionAuthority(
       };
     }
 
+    console.info("[FINORA P423 UNLOCK] stage=verification-start");
+
     const verified =
       await dependencies
         .verifySecurityCode(
           securityCode,
         );
+
+    console.info("[FINORA P423 UNLOCK] stage=verification-complete");
 
     if (!verified) {
       failedAttempts +=
@@ -325,11 +337,15 @@ createFinoraDeveloperControlCenterSessionAuthority(
       now() +
       backoffMilliseconds;
 
+    console.info("[FINORA P423 UNLOCK] stage=throttle-write-start");
+
     await writeThrottleState({
       failedAttempts,
 
       blockedUntilMilliseconds,
     });
+
+    console.info("[FINORA P423 UNLOCK] stage=throttle-write-complete");
 
       return {
         success:
@@ -346,7 +362,11 @@ createFinoraDeveloperControlCenterSessionAuthority(
       };
     }
 
+    console.info("[FINORA P423 UNLOCK] stage=throttle-clear-start");
+
     await clearThrottleState();
+
+    console.info("[FINORA P423 UNLOCK] stage=throttle-clear-complete");
 
     unlocked =
       true;

@@ -370,64 +370,75 @@ public final class FinoraUsbStorage {
     static boolean isPortableAuthUsbRootDocumentId(
         String treeDocumentId
     ) {
-
         if (
             treeDocumentId == null ||
-            treeDocumentId.length() == 0
+            treeDocumentId.isEmpty()
         ) {
             return false;
         }
 
-        int separatorIndex =
-            treeDocumentId.indexOf(
-                ':'
-            );
+        int separator = treeDocumentId.indexOf(':');
 
-        if (separatorIndex <= 0) {
+        if (
+            separator <= 0 ||
+            separator != treeDocumentId.lastIndexOf(':')
+        ) {
             return false;
         }
 
-        String relativePath =
-            treeDocumentId.substring(
-                separatorIndex + 1
-            );
+        String volume = treeDocumentId.substring(0, separator);
+        String relative = treeDocumentId.substring(separator + 1);
 
-        /*
-         * Portable Branch Auth may use either:
-         *
-         * 1. the removable USB volume root; or
-         * 2. one top-level branch container such as "DSD GOLD".
-         *
-         * A branch container provides isolation:
-         *
-         *   <USB>/DSD GOLD/FINORA/storage
-         *   <USB>/DSD GOLD/FINORA/auth
-         *
-         * Nested selections such as FINORA/storage are rejected
-         * because Portable Auth must be able to create/access its
-         * sibling FINORA/auth directory.
-         */
+        if (
+            volume.isEmpty() ||
+            volume.contains("/") ||
+            volume.contains("\\")
+        ) {
+            return false;
+        }
 
-        if (relativePath.length() == 0) {
+        // Selecting the removable-volume root is allowed.
+        if (relative.isEmpty()) {
             return true;
         }
 
+        // Top-level account folders are allowed, but arbitrary
+        // folders cannot be treated as authorization roots.
         if (
-            relativePath.indexOf('/') >= 0 ||
-            relativePath.indexOf('\\') >= 0
+            relative.contains("/") ||
+            relative.contains("\\") ||
+            relative.equals(".") ||
+            relative.equals("..")
         ) {
             return false;
         }
 
+        String canonical = relative.toLowerCase(
+            java.util.Locale.ROOT
+        );
+
         if (
-            FINORA_DIRECTORY.equalsIgnoreCase(
-                relativePath
-            )
+            canonical.equals("documents") ||
+            canonical.equals("downloads") ||
+            canonical.equals("download") ||
+            canonical.equals("pictures") ||
+            canonical.equals("movies") ||
+            canonical.equals("music") ||
+            canonical.equals("android") ||
+            canonical.equals("finora")
         ) {
             return false;
         }
 
-        return true;
+        // Existing branch containers may contain spaces.
+        // This document-ID check is not an authentication decision.
+        // Actual account identity must be checked separately.
+        return relative.length() <= 128
+            && relative.equals(relative.trim())
+            && !relative.isEmpty()
+            && !relative.equals(".")
+            && !relative.equals("..")
+            && relative.matches("[A-Za-z0-9][A-Za-z0-9._ -]*");
     }
     // ========================================================
     // CRUD: GET

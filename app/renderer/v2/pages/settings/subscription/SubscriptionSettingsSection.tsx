@@ -105,107 +105,76 @@ function formatDateTime(value: string | null | undefined): string {
 }
 
 function formatMoney(
-  amount: number,
-  currency: string,
+  amount: number | null | undefined,
+  currency: string | null | undefined,
 ): string {
+  if (
+    typeof amount !== "number" ||
+    !Number.isFinite(amount) ||
+    typeof currency !== "string" ||
+    currency.trim().length === 0
+  ) {
+    return "Not recorded";
+  }
+
   try {
-    return new Intl.NumberFormat(
-      "en-IN",
-      {
-        style:
-          "currency",
-
-        currency,
-
-        maximumFractionDigits:
-          2,
-      },
-    ).format(amount);
+    return new Intl.NumberFormat("en-IN", {
+      style: "currency",
+      currency: currency.trim(),
+      maximumFractionDigits: 2,
+    }).format(amount);
   } catch {
-    return `${currency} ${amount}`;
+    return "Not recorded";
   }
 }
 
 function resolveRemainingLabel(
-  decision:
-    FinoraAuthoritativeBranchAccessDecision,
+  decision: FinoraAuthoritativeBranchAccessDecision,
 ): string {
-  const grant =
-    decision.grant;
+  const grant = decision.grant;
 
   if (!grant) {
     return "Unavailable";
   }
 
-  const observedAt =
-    new Date(
-      decision.observedAt,
-    ).getTime();
+  // Presentation only. Never changes subscription authority.
+  const observedAt = new Date(decision.observedAt).getTime();
+  const validUntil = new Date(grant.validity.validUntil).getTime();
 
-  const validUntil =
-    new Date(
-      grant.validity.validUntil,
-    ).getTime();
-
-  if (
-    !Number.isFinite(observedAt) ||
-    !Number.isFinite(validUntil)
-  ) {
+  if (!Number.isFinite(observedAt) ||
+      !Number.isFinite(validUntil)) {
     return "Unavailable";
   }
 
-  const difference =
-    validUntil -
-    observedAt;
+  const difference = validUntil - observedAt;
+  const expired = difference <= 0;
 
-  const absolute =
-    Math.abs(difference);
+  // Before expiry round upward so 10 seconds does not show 0m.
+  // After expiry show completed elapsed minutes.
+  const totalMinutes = expired
+    ? Math.floor(Math.abs(difference) / 60000)
+    : Math.ceil(difference / 60000);
 
-  const days =
-    Math.floor(
-      absolute /
-      (24 * 60 * 60 * 1000),
-    );
+  const days = Math.floor(totalMinutes / 1440);
+  const hours = Math.floor((totalMinutes % 1440) / 60);
+  const minutes = totalMinutes % 60;
 
-  const hours =
-    Math.floor(
-      (
-        absolute %
-        (24 * 60 * 60 * 1000)
-      ) /
-      (60 * 60 * 1000),
-    );
-
-  const minutes =
-    Math.floor(
-      (
-        absolute %
-        (60 * 60 * 1000)
-      ) /
-      (60 * 1000),
-    );
-
-  if (difference <= 0) {
-    if (days > 0) {
-      return `Expired +${days} day${days === 1 ? "" : "s"}`;
-    }
-
-    if (hours > 0) {
-      return `Expired +${hours}h ${minutes}m`;
-    }
-
-    return `Expired +${minutes}m`;
-  }
+  let duration: string;
 
   if (days > 0) {
-    return `Expires in ${days} day${days === 1 ? "" : "s"}`;
+    duration = `${days}d`;
+    if (hours > 0) duration += ` ${hours}h`;
+    if (minutes > 0) duration += ` ${minutes}m`;
+  } else if (hours > 0) {
+    duration = `${hours}h`;
+    if (minutes > 0) duration += ` ${minutes}m`;
+  } else {
+    duration = `${minutes}m`;
   }
 
-  if (hours > 0) {
-    return `Expires in ${hours}h ${minutes}m`;
-  }
-
-  return `Expires in ${minutes}m`;
+  return expired
+    ? `+${duration} - Expired`
+    : `-${duration}`;
 }
 
 function resolveStatus(

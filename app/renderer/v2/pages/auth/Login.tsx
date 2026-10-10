@@ -1,3 +1,5 @@
+import { getFinoraAndroidServerFirstV2Recovery } from "../../services/auth/loginSessionBridge";
+import { Capacitor as FinoraP1075Capacitor } from "@capacitor/core";
 import {
 } from "../../services/auth/credentialEnrollmentBridge";
 import { getFinoraLoginSessionBridge } from "../../services/auth/loginSessionBridge";
@@ -982,6 +984,8 @@ export default function Login({
     setDeviceSecurityCode,
   ] = useState("");
 
+
+
   const [
     legacySecurityCodeSetupRequired,
     setLegacySecurityCodeSetupRequired,
@@ -1329,7 +1333,7 @@ const loginSessionBridge =
         return;
       }
 
-      const loginResult =
+      let loginResult =
         await loginSessionBridge.login({
           username:
             trimmedUsername,
@@ -1347,12 +1351,149 @@ const loginSessionBridge =
               deviceSecurityCode.trim().length > 0
             ? {
                 securityCode:
-          deviceSecurityCodeRequired
-            ? deviceSecurityCode.trim()
-            : undefined,
+          deviceSecurityCodeRequired ? deviceSecurityCode.trim() : undefined,
               }
             : {}),
         });
+
+      /*
+       * FINORA_P1_075_ANDROID_V2_RECOVERY
+       *
+       * Android USB only.
+       * Existing native login runs first.
+       * No V2 enrollment or login-session fabrication.
+       */
+      if (
+        !loginResult.success &&
+        entitlementStorageMode === "USB" &&
+        FinoraP1075Capacitor.isNativePlatform() &&
+        FinoraP1075Capacitor.getPlatform() === "android" &&
+        loginResult.errorCode === "INVALID_CREDENTIALS"
+      ) {
+        const v2Recovery =
+          getFinoraAndroidServerFirstV2Recovery();
+
+        if (v2Recovery) {
+          const eligibility =
+            await v2Recovery.checkServerFirstV2RecoveryEligibility({
+              username: trimmedUsername,
+            });
+
+          if (!eligibility.eligible) {
+            setError(
+              eligibility.errorCode === "LOCAL_CREDENTIAL_EXISTS"
+                ? "Invalid username or password"
+                : "Unable to verify first-device recovery eligibility.",
+            );
+            return;
+          }
+
+          const recoverySecurityCode =
+            deviceSecurityCode.trim();
+
+          if (!recoverySecurityCode) {
+            setLegacySecurityCodeSetupRequired(false);
+            setDeviceSecurityCodeRequired(true);
+            setDeviceSecurityCode("");
+            setError(
+              "For first-time Android USB access, enter your Security Code and try again.",
+            );
+            return;
+          }
+
+          // FINORA_P1_083_SERVER_ENROLLMENT
+          // First try recovery from existing signed V2 USB.
+          let recovered =
+            await v2Recovery.recoverServerFirstLoginV2({
+              username: trimmedUsername,
+              password,
+              securityCode: recoverySecurityCode,
+            });
+
+          // A genuinely new USB has no signed V2 auth files.
+          // Native enrollment MUST verify the signed server
+          // response before it creates any account files.
+          if (
+            !recovered.success &&
+            (
+              recovered.errorCode ===
+                "V2_VERIFICATION_OR_RECOVERY_FAILED" ||
+              recovered.errorCode ===
+                "V2_FAILED_V2_USB_AUTH_VERIFICATION"
+            )
+          ) {
+            const enrollment =
+              await v2Recovery.enrollServerFirstLoginV2({
+                username: trimmedUsername,
+                password,
+                securityCode: recoverySecurityCode,
+              });
+
+            if (!enrollment.success) {
+              setError(
+                "Server-first enrollment failed: " +
+                (
+                  enrollment.errorCode ??
+                  enrollment.enrollmentStatus ??
+                  "UNKNOWN_ENROLLMENT_ERROR"
+                ),
+              );
+              return;
+            }
+
+            // Enrollment is NOT an authenticated login.
+            // The newly written V2 USB authority must
+            // pass full verification and hydration.
+            recovered =
+              await v2Recovery.recoverServerFirstLoginV2({
+                username: trimmedUsername,
+                password,
+                securityCode: recoverySecurityCode,
+              });
+          }
+
+          if (
+            recovered.success &&
+            recovered.status === "RECOVERED"
+          ) {
+            // Existing authority must independently issue the session.
+            loginResult = await loginSessionBridge.login({
+              username: trimmedUsername,
+              password,
+              storageMode: entitlementStorageMode,
+              securityCode: recoverySecurityCode,
+            });
+          } else {
+            const recoveryCode =
+              recovered.success
+                ? "RECOVERY_INCOMPLETE"
+                : recovered.errorCode;
+
+            if (
+              recoveryCode === "EXISTING_LOCAL_CONTROL_STATE"
+            ) {
+              setError(
+                "This device already has FINORA local branch state. Use the authorized branch restore or switch process.",
+              );
+            } else {
+              // FINORA_P1_086_SAFE_FAILURE_CODE
+              // Show only the native diagnostic stage/code.
+              // Never display credentials or raw exception details.
+              setError(
+                "FINORA first-device verification failed [" +
+                (
+                  recoveryCode &&
+                  /^[A-Z0-9_]+$/.test(recoveryCode)
+                    ? recoveryCode
+                    : "UNKNOWN"
+                ) +
+                "].",
+              );
+            }
+            return;
+          }
+        }
+      }
 
       if (!loginResult.success) {
         if (
@@ -3857,8 +3998,8 @@ if (
 
 
                         {/* FINORA_NEW_DEVICE_SECURITY_CHALLENGE */}
-            {credentialMode === "LOGIN" &&
-              deviceSecurityCodeRequired && (
+
+{credentialMode === "LOGIN" && deviceSecurityCodeRequired && (
                 <div
                   style={
                     loginStyles.inputWrapper

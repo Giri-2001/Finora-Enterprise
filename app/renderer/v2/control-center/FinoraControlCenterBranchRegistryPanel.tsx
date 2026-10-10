@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 import FinoraControlCenterIncomePricingPanel from "./FinoraControlCenterIncomePricingPanel";
 import FinoraControlCenterBranchPricingPanel from "./FinoraControlCenterBranchPricingPanel";
+import FinoraBranchCardLiveWallet from "./FinoraBranchCardLiveWallet";
 
 import type { FinoraControlCenterIssuanceWorkflow } from "./FinoraControlCenterIssuanceForm.types";
 
@@ -896,6 +897,11 @@ function BranchCard({
           </div>
         </div>
 
+        <FinoraBranchCardLiveWallet
+          ownerId={identity.ownerId}
+          businessId={identity.businessId}
+          branchId={identity.branchId}
+        />
         <div
           style={{
             marginTop:
