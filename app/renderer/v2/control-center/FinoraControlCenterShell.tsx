@@ -33,7 +33,7 @@ import type { FinoraControlCenterBranchRegistryRecord } from "../../../../electr
 import type { FinoraControlCenterIssuanceWorkflow } from "./FinoraControlCenterIssuanceForm.types";
 
 import FinoraControlCenterBranchRegistryPanel from "./FinoraControlCenterBranchRegistryPanel";
-import FinoraPortableStateImportPanel from "./FinoraPortableStateImportPanel";
+import FinoraControlCenterLiveWalletPanel from "./FinoraControlCenterLiveWalletPanel";
 import FinoraControlCenterIssuanceWorkspace from "./FinoraControlCenterIssuanceWorkspace";
 import "./FinoraControlCenterResponsive.css";
 
@@ -1758,6 +1758,199 @@ const [
           </div>
         </header>
 
+        {activeView === "CONTROL" && (
+          <section
+            data-finora-operations-dashboard="P566BH"
+            aria-label="FINORA operations dashboard"
+            style={{
+              padding: "20px",
+              borderRadius: "18px",
+              border: "1px solid rgba(96,165,250,0.25)",
+              background: "linear-gradient(120deg,#172554,#0f172a 70%)",
+              color: "#f8fafc",
+              display: "grid",
+              gap: "18px",
+              minWidth: 0,
+              boxSizing: "border-box",
+            }}
+          >
+            <div
+              style={{
+                display: "flex",
+                flexWrap: "wrap",
+                justifyContent: "space-between",
+                alignItems: "center",
+                gap: "12px",
+              }}
+            >
+              <div>
+                <span
+                  style={{
+                    fontSize: "11px",
+                    fontWeight: 700,
+                    letterSpacing: "0.13em",
+                    color: "#93c5fd",
+                  }}
+                >
+                  FINORA ENTERPRISE / NATIONAL OPERATIONS
+                </span>
+                <h2
+                  style={{
+                    margin: "8px 0",
+                    fontSize: "clamp(20px,3vw,28px)",
+                  }}
+                >
+                  Business Control Center
+                </h2>
+                <p
+                  style={{
+                    margin: 0,
+                    color: "#cbd5e1",
+                    fontSize: "13px",
+                    lineHeight: 1.6,
+                  }}
+                >
+                  Owners, branches, subscriptions, wallet operations,
+                  pricing timeline and audit history.
+                </p>
+              </div>
+              <span
+                style={{
+                  borderRadius: "999px",
+                  border: "1px solid rgba(148,163,184,.4)",
+                  padding: "8px 12px",
+                  fontSize: "11px",
+                  color: "#cbd5e1",
+                }}
+              >
+                Live reporting API pending
+              </span>
+            </div>
+
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns:
+                  "repeat(auto-fit,minmax(min(100%,220px),1fr))",
+                gap: "12px",
+              }}
+            >
+              {[
+                {
+                  name: "Owners & Branches",
+                  description: "Owner directory and branch control",
+                  note: "Manage authorized branches",
+                  view: "BRANCHES" as const,
+                  action: "Open Branches",
+                },
+                {
+                  name: "Subscriptions",
+                  description: "Plans, renewal and expiry tracking",
+                  note: "Server reporting not connected",
+                  view: "CONTROL" as const,
+                  action: "View Control Workspace",
+                },
+                {
+                  name: "Wallet Operations",
+                  description: "Branch wallets and recharge activity",
+                  note: "Existing Wallet panel available",
+                  view: "BRANCHES" as const,
+                  action: "Open Wallets",
+                },
+                {
+                  name: "Pricing Timeline",
+                  description: "Historical prices and effective dates",
+                  note: "Timeline API integration pending",
+                  view: "CONTROL" as const,
+                  action: "View Pricing Workspace",
+                },
+                {
+                  name: "Income & Revenue",
+                  description: "Owner-wise and branch-wise earnings",
+                  note: "Verified revenue feed pending",
+                  view: "CONTROL" as const,
+                  action: "View Control Workspace",
+                },
+                {
+                  name: "Staff Audit History",
+                  description: "Who changed what, when and why",
+                  note: "Central audit API pending",
+                  view: "CONTROL" as const,
+                  action: "View Control Workspace",
+                },
+              ].map((item) => (
+                <article
+                  key={item.name}
+                  style={{
+                    minWidth: 0,
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: "10px",
+                    padding: "16px",
+                    borderRadius: "13px",
+                    background: "rgba(15,23,42,.68)",
+                    border: "1px solid rgba(148,163,184,.24)",
+                  }}
+                >
+                  <strong style={{ fontSize: "15px" }}>
+                    {item.name}
+                  </strong>
+                  <div style={{ color: "#cbd5e1", fontSize: "12px" }}>
+                    {item.description}
+                  </div>
+                  <div
+                    style={{
+                      color: "#94a3b8",
+                      fontSize: "11px",
+                      flex: 1,
+                    }}
+                  >
+                    {item.note}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setActiveView(item.view)}
+                    disabled={item.view === "CONTROL"}
+                    style={{
+                      minHeight: "40px",
+                      borderRadius: "10px",
+                      border: "1px solid rgba(96,165,250,.4)",
+                      background: "rgba(37,99,235,.25)",
+                      color: "#dbeafe",
+                      fontSize: "12px",
+                      fontWeight: 700,
+                      cursor:
+                        item.view === "CONTROL"
+                          ? "not-allowed"
+                          : "pointer",
+                      opacity: item.view === "CONTROL" ? 0.55 : 1,
+                    }}
+                  >
+                    {item.view === "CONTROL"
+                      ? "Coming Soon"
+                      : item.action}
+                  </button>
+                </article>
+              ))}
+            </div>
+
+            <div
+              style={{
+                padding: "12px",
+                borderRadius: "10px",
+                background: "rgba(15,23,42,.6)",
+                color: "#cbd5e1",
+                fontSize: "12px",
+                lineHeight: 1.6,
+              }}
+            >
+              Financial figures are hidden until authenticated,
+              server-verified reporting is available.
+              No simulated revenue or Wallet balances.
+            </div>
+          </section>
+        )}
+
         <section
           hidden={activeView !== "SETTINGS"}
           aria-live="polite"
@@ -2410,9 +2603,10 @@ const [
           trustRecord
         ) && (
           <>
-            {activeView === "BRANCHES" && (
-              <FinoraPortableStateImportPanel />
+                        {activeView === "BRANCHES" && (
+              <FinoraControlCenterLiveWalletPanel />
             )}
+
 
             {activeView === "BRANCHES" && (
             <FinoraControlCenterBranchRegistryPanel
