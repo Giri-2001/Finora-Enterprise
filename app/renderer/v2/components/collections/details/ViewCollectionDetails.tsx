@@ -1,4 +1,5 @@
-﻿// ============================================================
+import { formatFinoraDate, formatFinoraDateTime } from "../../../../shared/finoraDateTimeDisplay";
+// ============================================================
 // FINORA ENTERPRISE OS™
 //
 // VIEW COLLECTION DETAILS
@@ -98,33 +99,15 @@ function safeText(value: string | number | undefined): string {
 }
 
 function formatDate(value: string | undefined): string {
-  if (!value) {
-    return "--";
-  }
-
-  const date = new Date(value);
-
-  if (Number.isNaN(date.getTime())) {
-    return "--";
-  }
-
-  return `${String(date.getDate()).padStart(2, "0")}/${String(
-    date.getMonth() + 1,
-  ).padStart(2, "0")}/${date.getFullYear()}`;
+  if (!value) return "--";
+  const result = formatFinoraDate(value);
+  return result === "\u2014" ? "--" : result;
 }
 
 function formatDateTime(value: string | undefined): string {
-  if (!value) {
-    return "--";
-  }
-
-  const date = new Date(value);
-
-  if (Number.isNaN(date.getTime())) {
-    return "--";
-  }
-
-  return date.toLocaleString("en-IN");
+  if (!value) return "--";
+  const result = formatFinoraDateTime(value);
+  return result === "\u2014" ? "--" : result;
 }
 
 function getCollectionType(collection: CollectionReviewData): string {

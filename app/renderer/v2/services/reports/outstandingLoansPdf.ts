@@ -1,3 +1,4 @@
+import { formatFinoraDate } from "../../../shared/finoraDateTimeDisplay";
 // ============================================================
 // FINORA ENTERPRISE OS™
 //
@@ -102,24 +103,9 @@ function safeText(value: unknown, fallback = "--"): string {
 
 function formatDate(value: string): string {
   const raw = String(value ?? "").trim();
-
-  if (!raw) {
-    return "--";
-  }
-
-  const date = new Date(raw);
-
-  if (Number.isNaN(date.getTime())) {
-    return raw;
-  }
-
-  return date.toLocaleDateString("en-IN", {
-    day: "2-digit",
-
-    month: "short",
-
-    year: "numeric",
-  });
+  if (!raw) return "";
+  const result = formatFinoraDate(raw);
+  return result === "\u2014" ? raw : result;
 }
 
 // ============================================================

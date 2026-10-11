@@ -1,3 +1,4 @@
+import { formatFinoraDate, formatFinoraDateTime } from "../../../../shared/finoraDateTimeDisplay";
 /* ===========================================================
    FINORA ENTERPRISE OS™
 
@@ -100,29 +101,15 @@ export interface AccountsLedgerRowProps {
 function formatLedgerDate(dateKey: string): string {
   const raw = String(dateKey ?? "").trim();
 
-  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(raw);
-
-  if (!match) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(raw)) {
     return ACCOUNTS_EMPTY_VALUE;
   }
 
-  const year = Number(match[1]);
+  const result = formatFinoraDate(raw);
 
-  const month = Number(match[2]);
-
-  const day = Number(match[3]);
-
-  const date = new Date(year, month - 1, day);
-
-  if (Number.isNaN(date.getTime())) {
-    return ACCOUNTS_EMPTY_VALUE;
-  }
-
-  return date.toLocaleDateString(ACCOUNTS_NUMBER_LOCALE, {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-  });
+  return result === "\u2014"
+    ? ACCOUNTS_EMPTY_VALUE
+    : result;
 }
 
 /* ===========================================================
@@ -139,17 +126,11 @@ function formatLedgerTime(occurredAt: string): string {
     return ACCOUNTS_EMPTY_VALUE;
   }
 
-  const date = new Date(raw);
+  const result = formatFinoraDateTime(raw);
 
-  if (Number.isNaN(date.getTime())) {
-    return ACCOUNTS_EMPTY_VALUE;
-  }
-
-  return date.toLocaleTimeString(ACCOUNTS_NUMBER_LOCALE, {
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: true,
-  });
+  return result === "\u2014"
+    ? ACCOUNTS_EMPTY_VALUE
+    : result.split(" ")[1] ?? ACCOUNTS_EMPTY_VALUE;
 }
 
 /* ===========================================================

@@ -72,3 +72,13 @@ export function formatFinoraDateTime(
 
   return `${day}-${month}-${year} ${hour}:${minute}`;
 }
+
+// FINORA_P566EL_DATE_ONLY
+// Presentation only. Never alters stored calendar dates or timestamps.
+export function formatFinoraDate(
+  value: string | number | Date | null | undefined,
+): string {
+  const formatted = formatFinoraDateTime(value);
+  if (formatted === "\u2014") return formatted;
+  return formatted.split(" ")[0];
+}

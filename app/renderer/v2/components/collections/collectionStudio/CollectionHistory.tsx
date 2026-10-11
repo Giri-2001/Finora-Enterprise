@@ -1,3 +1,4 @@
+import { formatFinoraDate } from "../../../../shared/finoraDateTimeDisplay";
 ﻿// ============================================================
 // FINORA ENTERPRISE OS™
 //
@@ -88,21 +89,11 @@ function formatCurrency(value: number): string {
 // ============================================================
 
 function formatCollectionDate(value: string): string {
-  if (!value) {
-    return "--";
-  }
+  if (!value) return "--";
 
-  const date = new Date(value.includes("T") ? value : `${value}T00:00:00`);
+  const result = formatFinoraDate(value);
 
-  if (Number.isNaN(date.getTime())) {
-    return value;
-  }
-
-  return date.toLocaleDateString("en-IN", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-  });
+  return result === "\u2014" ? value : result;
 }
 
 // ============================================================
